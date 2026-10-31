@@ -1943,6 +1943,17 @@
     ? d.revenue.delta
     : withDelta([d.tx && d.tx.delta, d.panier && d.panier.delta], (a, b) => a + b);
 
+  /* Une marge mesurée sur une partie des ventes seulement (des articles sans
+   * prix d'achat) est étendue au reste : la tuile le dit, avec la part
+   * réellement chiffrée, plutôt que de passer une estimation pour un compte. */
+  const costedNote = (d) => {
+    const p = d.marge && d.marge.costedPct;
+    if (p == null || p >= 99.5) return '';
+    const n = Math.round(p), lang = getLang();
+    if (lang === 'en') return `Estimate · cost known on ${n} % of sales`;
+    if (lang === 'ar') return `تقدير · التكلفة معروفة لـ ${n} % من المبيعات`;
+    return `Estimation · coût connu sur ${n} % des ventes`;
+  };
   const KPI_CATALOG = {
     tx:         { labels: { default: 'Commandes', spa: 'Rendez-vous' }, i18n: 'dash.kpi.tx',
                   desc: 'Nombre de ventes sur la période', derive: (d) => d.tx || null },
@@ -1959,7 +1970,7 @@
     marge:      { labels: { default: 'Marge brute' }, i18n: 'dash.kpi.margin',
                   desc: 'Part du CA conservée après coût matière', derive: (d) => d.marge || null },
     profit:     { labels: { default: 'Bénéfice brut' }, i18n: 'dash.kpi.grossProfit',
-                  desc: 'Chiffre d’affaires moins le coût matière', derive: (d, ctx) => { const r = revOf(d), m = margeOf(d, ctx); return (r == null || m == null) ? null : { value: r * m / 100, unit: 'MAD', fmt: 'int', delta: withDelta([revDelta(d), d.marge ? d.marge.delta : 0], (a, b) => a + b) }; } },
+                  desc: 'Chiffre d’affaires moins le coût matière', derive: (d, ctx) => { const r = revOf(d), m = margeOf(d, ctx); return (r == null || m == null) ? null : { value: r * m / 100, unit: 'MAD', fmt: 'int', delta: withDelta([revDelta(d), d.marge ? d.marge.delta : 0], (a, b) => a + b), note: costedNote(d) }; } },
     cogs:       { labels: { default: 'Coût matière' }, i18n: 'dash.kpi.cogs',
                   desc: 'Dépense en matières premières', derive: (d, ctx) => { const r = revOf(d), m = margeOf(d, ctx); return (r == null || m == null) ? null : { value: r * (1 - m / 100), unit: 'MAD', fmt: 'int', delta: withDelta([revDelta(d), d.marge ? d.marge.delta : 0], (a, b) => a - b) }; } },
     /* Chez un vrai commerçant, les pourboires sont ceux que la caisse a

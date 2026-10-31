@@ -25,9 +25,9 @@ const catalogAt = SRC.indexOf('const KPI_CATALOG');
 const to = SRC.indexOf('\n  };', catalogAt) + 5;
 assert.ok(from > 0 && catalogAt > from && to > catalogAt, 'le catalogue est extractible');
 
-function load({ own = true, closedTips = null } = {}) {
-  const doubles = { ownData: () => own, realClosedTips: () => closedTips };
-  return new Function('ownData', 'realClosedTips', `const DEFAULT_MARGIN = { restaurant: 69, spa: 78, boutique: 54, fusion: 69 }; const TIP_RATE = { restaurant: 0.072, spa: 0.055, boutique: 0, fusion: 0.06 };\n${SRC.slice(from, to)}\nreturn KPI_CATALOG;`)(doubles.ownData, doubles.realClosedTips);
+function load({ own = true, closedTips = null, lang = 'fr' } = {}) {
+  const doubles = { ownData: () => own, realClosedTips: () => closedTips, getLang: () => lang };
+  return new Function('ownData', 'realClosedTips', 'getLang', `const DEFAULT_MARGIN = { restaurant: 69, spa: 78, boutique: 54, fusion: 69 }; const TIP_RATE = { restaurant: 0.072, spa: 0.055, boutique: 0, fusion: 0.06 };\n${SRC.slice(from, to)}\nreturn KPI_CATALOG;`)(doubles.ownData, doubles.realClosedTips, doubles.getLang);
 }
 const derive = (cat, key, d, ctx) => cat[key].derive(d, ctx);
 const CTX = { nbDays: 4, venueType: 'boutique', range: { from: 0, to: 1 } };
@@ -137,6 +137,23 @@ ok('une tuile absente de la période n\'invente pas de valeur (marge, succès, r
   const cat = load({ own: true });
   for (const k of ['marge', 'success', 'ratio', 'occupation', 'adr', 'regulars']) assert.equal(derive(cat, k, {}, CTX), null, k);
   assert.equal(derive(cat, 'marge', { marge: { value: 55, delta: 1 } }, CTX).value, 55);
+});
+
+ok('bénéfice brut sur une marge partiellement chiffrée : la tuile dit sur quelle part des ventes, dans la langue de l\'écran', () => {
+  const partial = { ...REAL, marge: { value: 31.6, costedPct: 69.3 } };
+  assert.equal(derive(load({ own: true }), 'profit', partial, CTX).note, 'Estimation · coût connu sur 69 % des ventes');
+  assert.equal(derive(load({ own: true, lang: 'en' }), 'profit', partial, CTX).note, 'Estimate · cost known on 69 % of sales');
+  assert.ok(/69/.test(derive(load({ own: true, lang: 'ar' }), 'profit', partial, CTX).note));
+  assert.equal(derive(load({ own: true }), 'profit', { ...REAL, marge: { value: 40, costedPct: 100 } }, CTX).note, '', 'tout chiffré : pas de mention');
+  assert.equal(derive(load({ own: true }), 'profit', REAL, CTX).note, '', 'démo et marge sans couverture : pas de mention');
+});
+
+ok('la bande par défaut d\'une boutique montre ventes nettes et bénéfice brut', () => {
+  const data = coreTestSource.readFileSync(path.join(__dirname, '..', 'assets/venues/data.js'), 'utf8');
+  const at = data.indexOf('    boutique: [\n      { key: \'tx\'');
+  assert.ok(at > 0, 'bande boutique introuvable');
+  const keys = [...data.slice(at, data.indexOf('],', at)).matchAll(/key: '([a-zA-Z]+)'/g)].map((m) => m[1]);
+  assert.deepEqual(keys, ['tx', 'panier', 'revenue', 'profit', 'tauxRetour', 'ratio']);
 });
 
 ok('toutes les tuiles du catalogue répondent sans lever sur une période vide et sur la période réelle', () => {

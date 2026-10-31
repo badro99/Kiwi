@@ -1016,13 +1016,17 @@
        * the six above. Stays off the default so the strip keeps its
        * familiar layout. */
     ],
+    /* Une boutique lit d'abord ce qu'elle a vendu et ce qu'elle a gagné :
+     * « Bénéfice brut » vient du prix d'achat saisi sur chaque article
+     * (KiwiCost). « Taux succès » et « Clients fidèles » restent dans
+     * Personnaliser ; chez un vrai commerçant ils n'avaient pas de source. */
     boutique: [
       { key: 'tx',         label: 'Commandes',         i18n: 'dash.kpi.tx' },
       { key: 'panier',     label: 'Panier moyen',      i18n: 'dash.kpi.basket' },
+      { key: 'revenue' },  // libellé du catalogue (FR · EN · AR)
+      { key: 'profit',     label: 'Bénéfice brut',     i18n: 'dash.kpi.grossProfit' },
       { key: 'tauxRetour', label: 'Taux retour',       i18n: 'dash.kpi.returnRate' },
-      { key: 'success',    label: 'Taux succès',       i18n: 'dash.kpi.success' },
       { key: 'ratio',      label: 'Ratio card / cash', i18n: 'dash.kpi.ratio' },
-      { key: 'regulars',   label: 'Clients fidèles',   i18n: 'dash.kpi.loyalCustomers' },
     ],
     spa: [
       { key: 'tx',         label: 'Rendez-vous',       i18n: 'dash.kpi.appointments' },
