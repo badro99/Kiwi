@@ -30,7 +30,7 @@ ok(!/kiwi-employee-k-/.test(manifest), 'the caisse manifest cannot reuse a legac
 ok(/kiwi-employee-192\.png\?v=2/.test(manifest) && /kiwi-employee-512\.png\?v=2/.test(manifest), 'the manifest icons are the current mark');
 
 ok(/menuArt\(m\.id, m\.cat, m\.name, m\.subLabel, m\.photo\)/.test(catalogue), 'the renderer passes the real product name, subcategory and the merchant photo to the picture resolver');
-ok(/photo: ownMenuPhoto\(it\.photo\)/.test(catalogue), 'the published menu keeps the photo the merchant put on each dish');
+ok(/photo: \/\^\\\/api\\\/media[^\n]*\.test\(it\.photo \|\| ''\) \? it\.photo : ''/.test(catalogue), 'the published menu keeps the photo the merchant put on each dish');
 ok(!/<svg class="menu-art/.test(catalogue) && !/const _bowl|const _tajine|MENU_LIVE_ART|MENU_LIBRARY_ART/.test(app + catalogue),
   'no hand-drawn dish path is left: the pictures are the photographs');
 
@@ -54,8 +54,8 @@ const liveCards = [
 // The merchant's own photo (Pasta Corner, 2 November 2026): when a dish has
 // one, the tile shows it, cropped into an icon, and keeps the library picture
 // to fall back on when it does not load (offline, deleted).
-const ownSrc = catalogue.slice(catalogue.indexOf('    function ownMenuPhoto'), catalogue.indexOf('    const normalizeMenuArtName'));
-const own = new Function(`${ownSrc}\nreturn ownMenuPhoto;`)();
+const photoRule = catalogue.match(/photo: (\/\^\\\/api[^\n]*?\/i)\.test\(it\.photo/)[1];
+const own = new Function('src', `return ${photoRule}.test(src || '') ? src : '';`);
 eq(own('/api/media/media/pasta-corner/mvu9ly2b-32718ef1.jpg'), '/api/media/media/pasta-corner/mvu9ly2b-32718ef1.jpg', 'an uploaded menu photo is kept');
 eq(own('/api/media/media/pasta-corner/clip.mp4'), '', 'a video does not go into a tile');
 eq(own('https://evil.example/x.jpg'), '', 'a photo from anywhere else is refused');

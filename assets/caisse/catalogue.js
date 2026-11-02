@@ -273,9 +273,8 @@
           /* Les groupes d'options que ce produit demande. Des identifiants : le
              libellé vit une seule fois, dans carteState.opts. */
           opts: Array.isArray(it.opts) ? it.opts.slice() : [], formula: it.formula || null,
-          /* La photo que le patron a mise sur sa carte : la tuile la montre
-             avant la photo de la bibliothèque (owner, 2 novembre 2026). */
-          photo: ownMenuPhoto(it.photo),
+          /* Sa photo de carte (nos médias, une image) passe avant la bibliothèque. */
+          photo: /^\/api\/media\/[A-Za-z0-9/_-]{1,200}\.(?:jpe?g|png|webp|avif|gif)$/i.test(it.photo || '') ? it.photo : '',
           avail: it.avail !== false, formulaOnly: it.formulaOnly === true, archived: it.archived === true };
       });
       const items = allItems.filter((it) => it.avail !== false && !it.formulaOnly && !it.archived);
@@ -460,13 +459,6 @@
       // French: 0 and 1 take the singular.
       $('#vrap-item-count').textContent = `${menuItems.length} ${menuItems.length > 1 ? 'articles' : 'article'}`;
       $('#vrap-cat-count').textContent = `${cats.length - 1} ${cats.length - 1 > 1 ? 'catégories' : 'catégorie'}`;
-    }
-
-    /* Une photo publiée par le patron : seulement nos propres médias, et une
-       image (une vidéo ne tient pas dans une tuile). */
-    function ownMenuPhoto(src) {
-      const v = String(src || '');
-      return /^\/api\/media\/[A-Za-z0-9/_-]{1,200}\.(?:jpe?g|png|webp|avif|gif)$/i.test(v) ? v : '';
     }
 
     const normalizeMenuArtName = (value) => String(value || '').replace(/œ/gi, 'oe').replace(/æ/gi, 'ae')
@@ -690,18 +682,10 @@
       'menu-enfant': 'menu enfant|menu kids|kids menu|menu junior|enfant',
       'combo': '~formule|~menu|combo|~formule midi|meal',
       'sauce': '~sauce|~sauces|supplement sauce|ketchup',
-      /* Une sauce nommée par sa couleur ou son goût a sa propre coupelle :
-         « Sauce Blanche » n'est pas un ketchup (Pasta Corner, 2 novembre 2026).
-         Mots faibles : « Kefta sauce blanche » reste une kefta. */
-      'sauce-blanche': '~sauce blanche|~sauce ail|~sauce yaourt|~white sauce|~garlic sauce|~toum',
-      'sauce-champignon': '~sauce champignon|~sauce forestiere|~mushroom sauce',
-      'sauce-fromage': '~sauce fromage|~sauce fromagere|~sauce cheddar|~cheese sauce',
-      'mayonnaise': '~mayonnaise|~mayo|~aioli',
-      'sauce-algerienne': '~sauce algerienne|~algerienne|~samourai|~sauce biggy|~sauce andalouse',
-      'sauce-barbecue': '~sauce barbecue|~sauce bbq|~barbecue sauce|~bbq sauce',
-      'sauce-verte': '~sauce verte|~sauce pesto|~pesto sauce|~chimichurri',
-      'sauce-tomate': '~sauce tomate|~tomato sauce|~sauce napolitaine|~coulis tomate',
-      'sauce-piquante': '~sauce piquante|~harissa|~hot sauce|~chili sauce|~sauce pimentee',
+      /* « Sauce Blanche » n'est pas un ketchup ; mots faibles, « Kefta sauce blanche » reste une kefta. */
+      'sauce-blanche': '~sauce blanche|~sauce ail|~sauce yaourt|~white sauce|~garlic sauce|~toum', 'sauce-champignon': '~sauce champignon|~sauce forestiere|~mushroom sauce', 'sauce-fromage': '~sauce fromage|~sauce fromagere|~sauce cheddar|~cheese sauce',
+      'mayonnaise': '~mayonnaise|~mayo|~aioli', 'sauce-algerienne': '~sauce algerienne|~algerienne|~samourai|~sauce biggy|~sauce andalouse', 'sauce-barbecue': '~sauce barbecue|~sauce bbq|~barbecue sauce|~bbq sauce',
+      'sauce-verte': '~sauce verte|~sauce pesto|~pesto sauce|~chimichurri', 'sauce-tomate': '~sauce tomate|~tomato sauce|~sauce napolitaine|~coulis tomate', 'sauce-piquante': '~sauce piquante|~harissa|~hot sauce|~chili sauce|~sauce pimentee',
       'olives': 'olive|olives|زيتون',
       'frites-fromage': 'frites fromage|cheese fries|frites cheddar|poutine',
       'brochettes-poulet': 'brochettes poulet|brochette poulet|brochettes de poulet|chich taouk|shish taouk|taouk',
@@ -834,34 +818,17 @@
     /* Bumped when a photo is redrawn (tools/caisse-product-art-test.mjs checks
        every key has its file): the photos sit outside the stamped shell. */
     const DISH_PHOTOS_V = 2;
-    const libraryArt = (id, cat, name, sub) => `assets/dishes/${menuArtKey(id, cat, name, sub)}.webp?v=${DISH_PHOTOS_V}`;
-    /* Le patron qui a photographié ses plats les voit sur la caisse, recadrés
-       en icône : « Ravioli 4 Fromage » montre SES raviolis, pas une part de
-       pizza trouvée par un mot (Pasta Corner, 2 novembre 2026). Hors ligne,
-       ou si la photo ne charge pas, la tuile retombe sur la bibliothèque. */
-    /* Les photos du patron redessinées en icônes détourées, dans le style de
-       la bibliothèque (tools/dish-photos/gen-own.sh) : assets/dishes/own/
-       <commerce>/<fichier>.webp. Une photo est immuable (un nouvel envoi = un
-       nouveau nom), donc une photo changée reprend la photo recadrée jusqu'à
-       ce qu'elle ait son icône. */
-    const OWN_ICONS_V = 1;
-    const OWN_ICONS = new Set([
-      /* Pasta Corner, 2 novembre 2026 : ses 28 photos de carte. */
-      ...'mtj7sa5n-669991bd mtj7shja-ee2bf0bc mtlcofmg-7f17d0b6 mtlcp30w-c08ceec9 mtld61s1-0184723c mtqc8k1e-085e7416 mtqcuilb-7fb006bd mtqdq13k-e11e384f mtqdq92d-9b4192c5 mtqdqrvf-2d308134 mtqds7r4-0325555b mtqdsov7-9efa2ba4 mtqdtjq8-6c4edb87 mtqdxhc6-f1fc1b26 mtqe2avj-3cbde6a3 mtqeh9fj-f0d96864 mtqehh4m-5b61594b mtqejqvk-d2c1702b mtrcojw0-d1bea359 mtrcq4nt-049db438 mua8inm6-bd4e2799 mua9epk6-c8f63a3c mua9klme-b6a2da94 muemg9qr-7e52f7f2 muemphko-2377e587 muempzrt-859d1fb1 muemtldk-77324fe0 mvu9ly2b-32718ef1'.split(' ').map((f) => 'pasta-corner/' + f),
-    ]);
-    const ownIconKey = (photo) => { const m = /\/([a-z0-9][a-z0-9_-]{0,79})\/([A-Za-z0-9_-]+)\.[a-z]+$/i.exec(photo || ''); return m ? m[1] + '/' + m[2] : ''; };
+    /* La photo du patron (Pasta Corner, 2 novembre 2026) : son icône détourée si elle existe
+       (tools/dish-photos/gen-own.sh, assets/dishes/own/<commerce>/<fichier>.webp), sinon la photo
+       recadrée, qui retombe sur la bibliothèque si elle ne charge pas (hors ligne). */
+    const OWN_ICONS_V = 1, OWN_ICONS = new Set('mtj7sa5n-669991bd mtj7shja-ee2bf0bc mtlcofmg-7f17d0b6 mtlcp30w-c08ceec9 mtld61s1-0184723c mtqc8k1e-085e7416 mtqcuilb-7fb006bd mtqdq13k-e11e384f mtqdq92d-9b4192c5 mtqdqrvf-2d308134 mtqds7r4-0325555b mtqdsov7-9efa2ba4 mtqdtjq8-6c4edb87 mtqdxhc6-f1fc1b26 mtqe2avj-3cbde6a3 mtqeh9fj-f0d96864 mtqehh4m-5b61594b mtqejqvk-d2c1702b mtrcojw0-d1bea359 mtrcq4nt-049db438 mua8inm6-bd4e2799 mua9epk6-c8f63a3c mua9klme-b6a2da94 muemg9qr-7e52f7f2 muemphko-2377e587 muempzrt-859d1fb1 muemtldk-77324fe0 mvu9ly2b-32718ef1'.split(' ').map((f) => 'pasta-corner/' + f));
     const menuArt = (id, cat, name, sub, photo) => {
-      const lib = libraryArt(id, cat, name, sub);
-      const icon = photo && OWN_ICONS.has(ownIconKey(photo)) ? `assets/dishes/own/${ownIconKey(photo)}.webp?v=${OWN_ICONS_V}` : '';
-      return photo && !icon
-        ? `<img class="menu-photo is-own" src="${photo}" data-lib="${lib}" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">`
-        : `<img class="menu-photo" src="${icon || lib}" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">`;
+      const lib = `assets/dishes/${menuArtKey(id, cat, name, sub)}.webp?v=${DISH_PHOTOS_V}`, m = /\/([a-z0-9][a-z0-9_-]{0,79})\/([A-Za-z0-9_-]+)\.[a-z]+$/i.exec(photo || '');
+      const icon = m && OWN_ICONS.has(m[1] + '/' + m[2]) ? `assets/dishes/own/${m[1]}/${m[2]}.webp?v=${OWN_ICONS_V}` : '';
+      return `<img class="menu-photo${photo && !icon ? ' is-own' : ''}" src="${icon || photo || lib}"${photo && !icon ? ` data-lib="${lib}"` : ''} alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">`;
     };
     if (typeof document !== 'undefined') document.addEventListener('error', (e) => {
-      const img = e.target;
-      if (!img || !img.classList || !img.classList.contains('is-own') || !img.dataset.lib) return;
-      img.classList.remove('is-own');
-      img.src = img.dataset.lib;
+      const img = e.target; if (img && img.classList && img.classList.contains('is-own') && img.dataset.lib) { img.classList.remove('is-own'); img.src = img.dataset.lib; }
     }, true);
 
     /* Une carte vide n'est pas une panne : c'est un patron qui n'a pas encore
