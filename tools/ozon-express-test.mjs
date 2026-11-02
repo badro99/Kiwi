@@ -26,6 +26,8 @@ import * as notes from '../functions/api/ozon/notes.js';
 import { onRequestGet as receivablesGet } from '../functions/api/receivables.js';
 import { onRequestPost as salePost } from '../functions/api/sale.js';
 import { readStatus as ozonStatusOf, __resetCities } from '../functions/api/ozon/_lib.js';
+import fs from 'node:fs';
+import vm from 'node:vm';
 
 const MERCHANT = 'ozon-test-shop', OTHER = 'ozon-other-shop', SECRET = 'ozon-express-test-secret-0123456789';
 const KEY = 'test-ozon-key-abcdef123456';
@@ -291,6 +293,32 @@ await ok('a delivery sale whose card names an Ozon city creates its parcel by it
   assert.equal(label.body.parcels, 1, 'the label note holds only that parcel');
   assert.ok(/pdf-delivery-note-tickets-4-4\?dn-ref=/.test(label.body.pdf.labels10x10));
   assert.equal(sqlite.prepare("SELECT bl_ref FROM ozon_parcels WHERE merchant = ? AND sale_id = 'dlv-auto-1'").get(MERCHANT).bl_ref, label.body.ref);
+});
+/* Santos, 2 Nov 2026: the till never posts a sale itself, it hands it to its
+   sending queue (assets/live-link/queue-store.js), which rebuilds the body
+   field by field. The queue kept the recipient but dropped the Ozon city
+   number, so no parcel ever left from the till while it said one had. */
+await ok('a delivery sale sent through the till queue keeps its Ozon city and its parcel leaves', async () => {
+  const store = new Map();
+  const localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
+  const window = { localStorage };
+  vm.runInNewContext(fs.readFileSync(new URL('../assets/live-link/queue-store.js', import.meta.url), 'utf8'), { window, localStorage, console });
+  const queue = window.KiwiSaleQueueStore.create({ on: () => true, merchant: () => MERCHANT, tenantHold: () => null, stableId: (m, e) => e.id,
+    serverSession: () => '', pingLocal() {}, flushQueue() {} });
+  const ts = Date.now();
+  queue.enqueue({ id: 'dlv-queue-1', merchant: MERCHANT, amount: 0, amountCents: 0, method: 'delivery', channel: 'delivery', settlementKind: 'receivable',
+    paymentParts: [{ method: 'delivery', amountCents: 20000 }], ticketAmountCents: 20000, label: 'Ensemble', ref: 'DLV-QUEUE-1', ts, time: ts,
+    lines: [{ itemId: 'prod_1', variantId: 'prod_1:TU:noir', name: 'Ensemble TU', qty: 1, total: 200, cat: 'Ensembles', unit: 'piece', kind: 'product' }],
+    deliveryCard: { name: 'Nadia WhatsApp', phone: '0612345678', city: 'Agadir', cityId: 37, address: 'Hay Salam, rue 9' } });
+  const body = JSON.parse(store.get('kiwiSaleQueue') || '[]').find((x) => x.id === 'dlv-queue-1');
+  assert.ok(body && body.deliveryCard, 'the queue holds the sale with its card');
+  assert.equal(body.deliveryCard.cityId, 37, 'the queued card keeps the Ozon city number');
+  const before = calls.filter((c) => c.path === 'add-parcel').length;
+  const res = await salePost({ request: new Request('https://kiwi.test/api/sale', { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: till }, body: JSON.stringify(body) }), env });
+  assert.equal(res.status, 200);
+  assert.equal(calls.filter((c) => c.path === 'add-parcel').length, before + 1, 'the queued sale reaches Ozon');
+  const row = sqlite.prepare("SELECT * FROM ozon_parcels WHERE merchant = ? AND sale_id = 'dlv-queue-1'").get(MERCHANT);
+  assert.ok(row && row.city_id === 37 && row.receiver === 'Nadia WhatsApp', 'parcel created for Agadir');
 });
 await ok('a card without an Ozon city creates no parcel; a refused one is shown on the delivery', async () => {
   const before = calls.filter((c) => c.path === 'add-parcel').length;

@@ -687,6 +687,9 @@ function postSale(entry) {
       var dc = entry.deliveryCard;
       body.deliveryCard = { name: String(dc.name || '').slice(0, 80), phone: String(dc.phone || '').slice(0, 24),
         city: String(dc.city || '').slice(0, 60), address: String(dc.address || '').slice(0, 200), note: String(dc.note || '').slice(0, 300) };
+      /* Le numéro de ville Ozon : sans lui, le serveur ne crée pas le colis. */
+      var cityId = Number(dc.cityId);
+      if (cityId > 0 && cityId === Math.floor(cityId)) body.deliveryCard.cityId = cityId;
     }
     /* Le pourboire, hors du montant (recordSale le garde à part). */
     if (+entry.tip > 0) body.tipCents = Math.round(+entry.tip * 100);
