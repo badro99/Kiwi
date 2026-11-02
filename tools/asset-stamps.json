@@ -132,8 +132,8 @@
     "sha": "42bd74df49f8a10c"
   },
   "assets/boutique-promos-dashboard.js": {
-    "v": "23",
-    "sha": "fd42eade73417d7e"
+    "v": "24",
+    "sha": "264c5036af571ca4"
   },
   "assets/boutique-size-codes.js": {
     "v": "3",
@@ -1380,8 +1380,8 @@
     "sha": "4f0facbf1ccf4020"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "125",
-    "sha": "01e8f9cecc611746"
+    "v": "126",
+    "sha": "3841798147ada328"
   },
   "assets/pages/tables-data.js": {
     "v": "1",

@@ -506,17 +506,25 @@
       q.oninput = paint; q.onkeydown = function(e){if(e.key==='Enter'){e.preventDefault();paint();}};
     }
     el.querySelectorAll('[data-pra]').forEach(function(b){b.onclick=function(){d.scope.before=startOfDay(new Date(Date.now()-(+b.dataset.pra)*30*DAY));redraw();};});
-    var before=el.querySelector('#bpd-before');if(before)before.onchange=function(){d.scope.before=before.value?startOfDay(before.value):0;redraw();};
+    /* Les champs date et heure ne reconstruisent PAS le formulaire : Chrome
+       émet « change » à chaque chiffre tapé, et la reconstruction renvoyait en
+       haut de la fenêtre avec le champ désélectionné au milieu de la saisie.
+       Seuls l'aperçu et le pied (message, bouton) sont rafraîchis. */
+    var soft=function(){var tmp=document.createElement('div');tmp.innerHTML=composerHtml(ctx);['.bpd-preview','.bpd-compose-foot'].forEach(function(sel){var a=el.querySelector(sel),b=tmp.querySelector(sel);if(a&&b)a.replaceWith(b);});bindFoot();icons();};
+    var before=el.querySelector('#bpd-before');if(before)before.onchange=function(){d.scope.before=before.value?startOfDay(before.value):0;soft();};
     el.querySelectorAll('[data-prm]').forEach(function(b){b.onclick=function(){d.scope.max=+b.dataset.prm;redraw();};});
     var max=el.querySelector('#bpd-max');if(max)max.onchange=function(){d.scope.max=Math.max(0,Math.round(+max.value||0));redraw();};
     el.querySelectorAll('[data-prw]').forEach(function(b){b.onclick=function(){var key=b.dataset.prw,now=new Date();if(key==='none')d.to=0;else if(key==='today')d.to=endOfDay(now);else if(key==='we')d.to=endOfDay(new Date(now.getTime()+((7-new Date(toInput(+now)+'T12:00:00Z').getUTCDay())%7)*DAY));else d.to=endOfDay(new Date(now.getTime()+(+key)*DAY));redraw();};});
-    var from=el.querySelector('#bpd-from');if(from)from.onchange=function(){d.from=from.value?startOfDay(from.value):0;redraw();};
-    var to=el.querySelector('#bpd-to');if(to)to.onchange=function(){d.to=to.value?endOfDay(to.value):0;redraw();};
+    var from=el.querySelector('#bpd-from');if(from)from.onchange=function(){d.from=from.value?startOfDay(from.value):0;soft();};
+    var to=el.querySelector('#bpd-to');if(to)to.onchange=function(){d.to=to.value?endOfDay(to.value):0;soft();};
     el.querySelectorAll('[data-prd]').forEach(function(b){b.onclick=function(){var wd=+b.dataset.prd,days=(d.days||[]).slice(),i=days.indexOf(wd);if(i>=0)days.splice(i,1);else days.push(wd);d.days=days.length===7?[]:days.sort(function(a,z){return a-z;});redraw();};});
-    var hStart=el.querySelector('#bpd-start');if(hStart)hStart.onchange=function(){d.start=hStart.value||'';redraw();};
-    var hEnd=el.querySelector('#bpd-end');if(hEnd)hEnd.onchange=function(){d.end=hEnd.value||'';redraw();};
+    var hStart=el.querySelector('#bpd-start');if(hStart)hStart.onchange=function(){d.start=hStart.value||'';soft();};
+    var hEnd=el.querySelector('#bpd-end');if(hEnd)hEnd.onchange=function(){d.end=hEnd.value||'';soft();};
+    bindFoot();
+    function bindFoot(){
     el.querySelector('[data-bpd-cancel]').onclick=function(){promoModal.close();};
     var save=el.querySelector('#bpd-save');if(save)save.onclick=function(){if(valid(d))return;if(!d.name.trim())d.name=autoName(ctx,d);if(composer.editing)d.id=composer.editing;PRM().save(d);promoModal.close();announce(composer.editing?L(d.name+' enregistrée',d.name+' saved','تم حفظ '+d.name):(tillApplies()?L(d.name+' lancée, la caisse est à jour',d.name+' launched, the till is up to date','تم إطلاق '+d.name+'، الصندوق محدّث'):L(d.name+' enregistrée · la remise se saisit au comptoir',d.name+' saved · enter the discount at the counter','تم حفظ '+d.name+' · يُدخل الخصم عند المنضدة')),L(d.name+' enregistrée',d.name+' saved','تم حفظ '+d.name),'success');renderPage();};
+    }
   }
 
   function labelFor(ctx, pid, variant) {
