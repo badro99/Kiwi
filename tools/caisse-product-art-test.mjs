@@ -39,7 +39,7 @@ const tables = app.slice(app.indexOf('    const MENU_ART = {'), app.indexOf('/* 
 const resolver = catalogue.slice(catalogue.indexOf('    const normalizeMenuArtName'), catalogue.indexOf('    /* Une carte vide'));
 ok(tables.includes('CAT_GLYPH_RULES') && resolver.includes('menuArtKey') && resolver.includes('DISH_WORDS'), 'the picture tables and resolver are extractable');
 ok(!/MENU_ART_RULES/.test(app + catalogue), 'the old hand-ordered regex list is gone: the dictionary decides');
-const { key, html, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES, SODA_CANS, OWN_ICONS } = new Function('catLabels',
+const { key, html, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES, SODA_CANS, OWN_ICONS } = Function('catLabels',
   `${tables}\n${resolver}\nreturn { key: menuArtKey, html: menuArt, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES, SODA_CANS, OWN_ICONS };`)({
     pasta: 'Choisissez vos Pâtes', signatures: 'Signatures', desserts: 'Desserts',
     drinks: 'Boissons', soda: 'Soda+eau', tajines: 'Tajines'
@@ -55,7 +55,7 @@ const liveCards = [
 // one, the tile shows it, cropped into an icon, and keeps the library picture
 // to fall back on when it does not load (offline, deleted).
 const photoRule = catalogue.match(/photo: (\/\^\\\/api[^\n]*?\/i)\.test\(it\.photo/)[1];
-const own = new Function('src', `return ${photoRule}.test(src || '') ? src : '';`);
+const own = Function('src', `return ${photoRule}.test(src || '') ? src : '';`);
 eq(own('/api/media/media/pasta-corner/mvu9ly2b-32718ef1.jpg'), '/api/media/media/pasta-corner/mvu9ly2b-32718ef1.jpg', 'an uploaded menu photo is kept');
 eq(own('/api/media/media/pasta-corner/clip.mp4'), '', 'a video does not go into a tile');
 eq(own('https://evil.example/x.jpg'), '', 'a photo from anywhere else is refused');

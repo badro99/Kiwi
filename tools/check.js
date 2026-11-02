@@ -1772,7 +1772,7 @@ section('Whole-project regressions');
     /* « Gestion complète de l’inventaire sur la caisse » vaut aussi à la caisse boutique (Santos, 29 oct.) : éteint, le verrou d'août ; allumé, créer, modifier, supprimer en vrais clics. */
     'boutique-till-catalog-admin-browser-test.mjs',
     /* God Mode entre dans la caisse boutique sans écran de fond ni poste ouvert ; sans preuve /api/me, l'écran revient (propriétaire, 29 oct.). */
-    'boutique-operator-entry-browser-test.mjs',
+    'boutique-operator-entry-browser-test.mjs', 'caisse-operator-entry-browser-test.mjs',
     'till-inventory-access-test.mjs',
     /* Un carton réparti sur ses tailles en un geste : comme les ventes de la boutique, égal, saisie rapide « M3 L5 XL2 », le reste sur la dernière taille (propriétaire, 29 oct.). */
     'boutique-size-split-test.mjs',

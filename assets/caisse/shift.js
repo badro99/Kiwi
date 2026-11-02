@@ -64,6 +64,14 @@
        * run from openService(), once the cashier opens the register. */
       const clockinEl = document.getElementById('clockin-screen');
 
+      /* God Mode prouvé par /api/me pour CE magasin (caisse-pairing.js pose
+         kiwi:tillOperator:v1) entre sans écran de fond d'ouverture, comme la
+         boutique (f41e75a4) : il regarde la caisse, n'ouvre ni ne reprend aucun
+         service, rien n'est écrit chez le commerçant (owner, 2 nov. 2026). */
+      let proven = false;
+      try { proven = operatorCaisseRequested() && sessionStorage.getItem('kiwi:tillOperator:v1') === currentMerchantSlug(); } catch (_) {}
+      if (proven) { enterShellDirectly(); return; }
+
       if (operatorCaisseRequested()) {
         const notice = document.getElementById('operator-service-notice');
         if (notice) notice.hidden = false;

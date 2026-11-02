@@ -42,6 +42,30 @@ for (const search of ['?pair=1&op=1&direct=1&merchant=shop', '?op=1&merchant=sho
   assert.equal(syncs, operator ? 1 : 0);
   count++;
 }
+// God Mode proven by /api/me for this store (caisse-pairing.js sets
+// kiwi:tillOperator:v1): straight into the till, no float screen, and still no
+// service opened, read or resumed (owner, 2 November 2026, as on the boutique).
+for (const [flag, proven] of [['shop', true], ['other-shop', false], [null, false]]) {
+  const nodes = new Map();
+  const element = id => {
+    if (!nodes.has(id)) nodes.set(id, { hidden: true, style: {}, classList: { add() {}, remove() {} }, setAttribute() {} });
+    return nodes.get(id);
+  };
+  let opens = 0, reads = 0, shells = 0;
+  const ctx = vm.createContext({
+    URLSearchParams, location: { search: '?pair=1&op=1&merchant=shop' }, document: { getElementById: element },
+    sessionStorage: { getItem: (k) => (k === 'kiwi:tillOperator:v1' ? flag : null) },
+    pinScreen: element('pin-screen'), $$: () => [], setTimeout() {},
+    currentMerchantSlug: () => 'shop', shiftOpenedAt: null, doOpenService: () => opens++,
+    loadPersistedShift: () => { reads++; return null; }, enterShellDirectly: () => shells++,
+  });
+  vm.runInContext(['operatorCaisseRequested', 'unlockApp'].map(extract).join('\n'), ctx);
+  ctx.unlockApp();
+  assert.equal(shells, proven ? 1 : 0, `operator flag ${flag}: ${proven ? 'enters the till directly' : 'keeps the opening screen'}`);
+  assert.equal(element('operator-service-notice').hidden, proven, 'the support notice belongs to the opening screen');
+  assert.equal(opens + reads, 0, 'God Mode never opens, reads or resumes a service');
+  count++;
+}
 const resumeStart = source.indexOf('/* On load · if a recent shift was saved');
 const resumeEnd = source.indexOf('const saved = loadPersistedShift();', resumeStart);
 assert.match(source.slice(resumeStart, resumeEnd), /if \(operatorCaisseRequested\(\)\) return;/,
