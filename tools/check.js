@@ -2332,7 +2332,7 @@ section('Whole-project regressions');
     'lock-caisse-handoff-test.mjs',
     'till-role-parity-test.mjs',
     'operator-roster-route-test.mjs',
-    'ozon-express-test.mjs', 'ozon-exchange-test.mjs', 'ozon-exchange-browser-test.mjs',
+    'ozon-express-test.mjs', 'ozon-exchange-test.mjs', 'ozon-exchange-browser-test.mjs', 'label-picker-browser-test.mjs',
     'lock-greeting-truth-test.mjs',
     'check-guard-test.mjs',
     'check-verdict-test.mjs',

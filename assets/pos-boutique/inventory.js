@@ -1,10 +1,11 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=250';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=148';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=252';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=150';
 import { openMoves } from './inv-moves.js?v=5';
-import * as SZ from '../boutique-sizes.js?v=22';
+import * as SZ from '../boutique-sizes.js?v=23';
+import { openLabelPicker } from './label-picker.js?v=2';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=18';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=148';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=150';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -830,6 +831,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         primary: (v) => cat2.primaryBarcode(v),
         label: (id, v) => labelForVariant(id, v),
         print: (labels) => labelToast(window.KiwiBarcode.printLabels(labels, { copies: 1 }), `${labels.length} étiquette(s)`),
+        pick: (all) => printProductLabels(pid, all ? 'stock' : 'rec'),
         register: (vid) => openRegisterOnVariant(vid, pid),
         remove: admin ? (vid) => confirmDeleteVariant(vid, pid) : null,
         toast: (title, desc) => toast(title, 3200, 'success', desc),
@@ -1878,19 +1880,12 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     if (!label) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Générez d\'abord un EAN-13')); return; }
     labelToast(window.KiwiBarcode.printLabels([label], { copies: 1 }), 'Étiquette');
   }
-  /* Une réception pas encore imprimée : seulement ses pièces (SZ.lastReceipt),
-     sinon tout le stock. */
-  function printProductLabels(pid) {
-    const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
-    const rec = SZ.lastReceipt(pid); const fresh = rec && !rec.printed ? rec.got : null;
-    const labels = [];
-    SZ.labelCounts(d.variants, fresh).forEach(([v, stock]) => {
-      const label = stock > 0 && labelForVariant(pid, v);
-      for (let i = 0; label && i < stock; i++) labels.push(label);
-    });
-    if (fresh && labels.length) SZ.markReceiptPrinted(pid);
-    if (!labels.length) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucune unité en stock avec un code-barres à imprimer')); return; }
-    labelToast(window.KiwiBarcode.printLabels(labels, { copies: 1 }), `${labels.length} étiquette(s)`);
+  /* Le choix des étiquettes (pos-boutique/label-picker.js, Santos 2 nov.) :
+     chaque couleur × taille, préremplie avec la réception pas encore
+     imprimée (sinon le stock), et on imprime exactement ce qu'on a choisi. */
+  function printProductLabels(pid, start) {
+    openLabelPicker({ pid, cat: catDB(), label: labelForVariant, lang: szLang(), start: start || 'rec',
+      print: (labels) => labelToast(window.KiwiBarcode.printLabels(labels, { copies: 1 }), `${labels.length} étiquette(s)`) });
   }
   // Toast the true outcome of a print (thermal / browser / connect-a-printer),
   // never a blanket "sent" — printLabels resolves with { ok, browser?, reason? }.

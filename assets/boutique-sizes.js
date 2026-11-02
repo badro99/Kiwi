@@ -573,6 +573,9 @@ export function mount(host, o) {
     const sb = host.querySelector('[data-kbs-save]'); if (sb) sb.addEventListener('click', save);
     const printPlan = (all) => {
       if (dirty()) { say(t.printDirty, true); return; }
+      /* La caisse boutique choisit couleur × taille avant d'imprimer
+         (pos-boutique/label-picker.js) ; ailleurs, l'impression directe. */
+      if (o.pick) { o.pick(all); return; }
       const labels = [];
       labelPlan(all).forEach(([v, n]) => { const l = o.label(pid, v); if (l) for (let k = 0; k < n; k++) labels.push(l); });
       if (labels.length && o.print) { o.print(labels); if (!all) markReceiptPrinted(pid); }

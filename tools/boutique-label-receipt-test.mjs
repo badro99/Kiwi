@@ -42,11 +42,13 @@ ok('with a receipt, labels follow the pieces received, not the stock', () => {
 ok('without a receipt (or "whole stock"), each size prints its stock, never a negative or a fraction', () => {
   assert.equal(count(null), 'v1:80 v2:20 v3:0');
 });
-ok('the sheet and the inventory row count with that one rule', () => {
+/* Since 2 Nov 2026 the till's two print buttons open the label picker
+   (pos-boutique/label-picker.js); it presets its counters with this rule. */
+ok('the sheet and the label picker of the till count with that one rule', () => {
   const src = fs.readFileSync(path.join(root, 'assets/boutique-sizes.js'), 'utf8');
-  const inv = fs.readFileSync(path.join(root, 'assets/pos-boutique/inventory.js'), 'utf8');
+  const pick = fs.readFileSync(path.join(root, 'assets/pos-boutique/label-picker.js'), 'utf8');
   assert.match(src, /labelCounts\(d\.variants, rec && rec\.got\)/);
-  assert.match(inv, /SZ\.labelCounts\(d\.variants, fresh\)/);
+  assert.match(pick, /SZ\.labelCounts\(ok\.map\(\(r\) => r\.v\), got\)/);
 });
 ok('the count on the button is set apart, and a receipt says "new pieces"', () => {
   const t = Z.words('fr');
@@ -66,10 +68,10 @@ ok('no em dash in the new words', () => {
     assert.doesNotMatch(said, /—/, lang);
   }
 });
-ok('the inventory row prints an unprinted receipt only, then marks it printed', () => {
-  const inv = fs.readFileSync(path.join(root, 'assets/pos-boutique/inventory.js'), 'utf8');
-  assert.match(inv, /const fresh = rec && !rec\.printed \? rec\.got : null/);
-  assert.match(inv, /SZ\.markReceiptPrinted\(pid\)/);
+ok('the till starts from an unprinted receipt only, then marks it printed', () => {
+  const pick = fs.readFileSync(path.join(root, 'assets/pos-boutique/label-picker.js'), 'utf8');
+  assert.match(pick, /const fresh = rec && !rec\.printed \? rec\.got : null/);
+  assert.match(pick, /if \(fresh\) SZ\.markReceiptPrinted\(o\.pid\)/);
 });
 console.log(`\nboutique-label-receipt: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
