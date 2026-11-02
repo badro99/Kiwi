@@ -108,60 +108,61 @@ import * as r102 from './api/order/session.js';
 import * as r103 from './api/origin-move.js';
 import * as r104 from './api/ozon/account.js';
 import * as r105 from './api/ozon/cities.js';
-import * as r106 from './api/ozon/notes.js';
-import * as r107 from './api/ozon/parcels.js';
-import * as r108 from './api/pair/create.js';
-import * as r109 from './api/pair/devices.js';
-import * as r110 from './api/pair/recover.js';
-import * as r111 from './api/pair/redeem.js';
-import * as r112 from './api/pair/revoke.js';
-import * as r113 from './api/pair/state.js';
-import * as r114 from './api/pairs.js';
-import * as r115 from './api/pin/face.js';
-import * as r116 from './api/pin/verify.js';
-import * as r117 from './api/pressing/cancel.js';
-import * as r118 from './api/print/bridges.js';
-import * as r119 from './api/print/jobs.js';
-import * as r120 from './api/push/morning.js';
-import * as r121 from './api/push/register.js';
-import * as r122 from './api/quarantine.js';
-import * as r123 from './api/receivables.js';
-import * as r124 from './api/retail-balances.js';
-import * as r125 from './api/sale.js';
-import * as r126 from './api/sale/cancel.js';
-import * as r127 from './api/sale/refund.js';
-import * as r128 from './api/sales-summary.js';
-import * as r129 from './api/service/events.js';
-import * as r130 from './api/shop/catalog.js';
-import * as r131 from './api/shop/decide.js';
-import * as r132 from './api/shop/orders.js';
-import * as r133 from './api/shop/status.js';
-import * as r134 from './api/shopify/callback.js';
-import * as r135 from './api/shopify/connect.js';
-import * as r136 from './api/shopify/connect-direct.js';
-import * as r137 from './api/shopify/cron.js';
-import * as r138 from './api/shopify/status.js';
-import * as r139 from './api/stock/lookup.js';
-import * as r140 from './api/store.js';
-import * as r141 from './api/store-credits.js';
-import * as r142 from './api/support/articles.js';
-import * as r143 from './api/support/attachments.js';
-import * as r144 from './api/support/inbound.js';
-import * as r145 from './api/support/tickets.js';
-import * as r146 from './api/table-time.js';
-import * as r147 from './api/team/live.js';
-import * as r148 from './api/ticket-sequence.js';
-import * as r149 from './api/tickets/index.js';
-import * as r150 from './api/timezone.js';
-import * as r151 from './api/weather.js';
-import * as r152 from './api/z-reconciliation.js';
-import * as r153 from './auth/forgot.js';
-import * as r154 from './auth/login.js';
-import * as r155 from './auth/logout.js';
-import * as r156 from './auth/operator.js';
-import * as r157 from './auth/reset.js';
-import * as r158 from './auth/signup.js';
-import * as r159 from './order/basic.js';
+import * as r106 from './api/ozon/exchange.js';
+import * as r107 from './api/ozon/notes.js';
+import * as r108 from './api/ozon/parcels.js';
+import * as r109 from './api/pair/create.js';
+import * as r110 from './api/pair/devices.js';
+import * as r111 from './api/pair/recover.js';
+import * as r112 from './api/pair/redeem.js';
+import * as r113 from './api/pair/revoke.js';
+import * as r114 from './api/pair/state.js';
+import * as r115 from './api/pairs.js';
+import * as r116 from './api/pin/face.js';
+import * as r117 from './api/pin/verify.js';
+import * as r118 from './api/pressing/cancel.js';
+import * as r119 from './api/print/bridges.js';
+import * as r120 from './api/print/jobs.js';
+import * as r121 from './api/push/morning.js';
+import * as r122 from './api/push/register.js';
+import * as r123 from './api/quarantine.js';
+import * as r124 from './api/receivables.js';
+import * as r125 from './api/retail-balances.js';
+import * as r126 from './api/sale.js';
+import * as r127 from './api/sale/cancel.js';
+import * as r128 from './api/sale/refund.js';
+import * as r129 from './api/sales-summary.js';
+import * as r130 from './api/service/events.js';
+import * as r131 from './api/shop/catalog.js';
+import * as r132 from './api/shop/decide.js';
+import * as r133 from './api/shop/orders.js';
+import * as r134 from './api/shop/status.js';
+import * as r135 from './api/shopify/callback.js';
+import * as r136 from './api/shopify/connect.js';
+import * as r137 from './api/shopify/connect-direct.js';
+import * as r138 from './api/shopify/cron.js';
+import * as r139 from './api/shopify/status.js';
+import * as r140 from './api/stock/lookup.js';
+import * as r141 from './api/store.js';
+import * as r142 from './api/store-credits.js';
+import * as r143 from './api/support/articles.js';
+import * as r144 from './api/support/attachments.js';
+import * as r145 from './api/support/inbound.js';
+import * as r146 from './api/support/tickets.js';
+import * as r147 from './api/table-time.js';
+import * as r148 from './api/team/live.js';
+import * as r149 from './api/ticket-sequence.js';
+import * as r150 from './api/tickets/index.js';
+import * as r151 from './api/timezone.js';
+import * as r152 from './api/weather.js';
+import * as r153 from './api/z-reconciliation.js';
+import * as r154 from './auth/forgot.js';
+import * as r155 from './auth/login.js';
+import * as r156 from './auth/logout.js';
+import * as r157 from './auth/operator.js';
+import * as r158 from './auth/reset.js';
+import * as r159 from './auth/signup.js';
+import * as r160 from './order/basic.js';
 
 // Nested middlewares, outermost first, with the path each one covers.
 export const FAST_MIDDLEWARES = [
@@ -276,58 +277,59 @@ export const FAST_ROUTES = new Map(/** @type {Array<[string, Record<string, any>
   ["/api/origin-move", r103],
   ["/api/ozon/account", r104],
   ["/api/ozon/cities", r105],
-  ["/api/ozon/notes", r106],
-  ["/api/ozon/parcels", r107],
-  ["/api/pair/create", r108],
-  ["/api/pair/devices", r109],
-  ["/api/pair/recover", r110],
-  ["/api/pair/redeem", r111],
-  ["/api/pair/revoke", r112],
-  ["/api/pair/state", r113],
-  ["/api/pairs", r114],
-  ["/api/pin/face", r115],
-  ["/api/pin/verify", r116],
-  ["/api/pressing/cancel", r117],
-  ["/api/print/bridges", r118],
-  ["/api/print/jobs", r119],
-  ["/api/push/morning", r120],
-  ["/api/push/register", r121],
-  ["/api/quarantine", r122],
-  ["/api/receivables", r123],
-  ["/api/retail-balances", r124],
-  ["/api/sale", r125],
-  ["/api/sale/cancel", r126],
-  ["/api/sale/refund", r127],
-  ["/api/sales-summary", r128],
-  ["/api/service/events", r129],
-  ["/api/shop/catalog", r130],
-  ["/api/shop/decide", r131],
-  ["/api/shop/orders", r132],
-  ["/api/shop/status", r133],
-  ["/api/shopify/callback", r134],
-  ["/api/shopify/connect", r135],
-  ["/api/shopify/connect-direct", r136],
-  ["/api/shopify/cron", r137],
-  ["/api/shopify/status", r138],
-  ["/api/stock/lookup", r139],
-  ["/api/store", r140],
-  ["/api/store-credits", r141],
-  ["/api/support/articles", r142],
-  ["/api/support/attachments", r143],
-  ["/api/support/inbound", r144],
-  ["/api/support/tickets", r145],
-  ["/api/table-time", r146],
-  ["/api/team/live", r147],
-  ["/api/ticket-sequence", r148],
-  ["/api/tickets", r149],
-  ["/api/timezone", r150],
-  ["/api/weather", r151],
-  ["/api/z-reconciliation", r152],
-  ["/auth/forgot", r153],
-  ["/auth/login", r154],
-  ["/auth/logout", r155],
-  ["/auth/operator", r156],
-  ["/auth/reset", r157],
-  ["/auth/signup", r158],
-  ["/order/basic", r159],
+  ["/api/ozon/exchange", r106],
+  ["/api/ozon/notes", r107],
+  ["/api/ozon/parcels", r108],
+  ["/api/pair/create", r109],
+  ["/api/pair/devices", r110],
+  ["/api/pair/recover", r111],
+  ["/api/pair/redeem", r112],
+  ["/api/pair/revoke", r113],
+  ["/api/pair/state", r114],
+  ["/api/pairs", r115],
+  ["/api/pin/face", r116],
+  ["/api/pin/verify", r117],
+  ["/api/pressing/cancel", r118],
+  ["/api/print/bridges", r119],
+  ["/api/print/jobs", r120],
+  ["/api/push/morning", r121],
+  ["/api/push/register", r122],
+  ["/api/quarantine", r123],
+  ["/api/receivables", r124],
+  ["/api/retail-balances", r125],
+  ["/api/sale", r126],
+  ["/api/sale/cancel", r127],
+  ["/api/sale/refund", r128],
+  ["/api/sales-summary", r129],
+  ["/api/service/events", r130],
+  ["/api/shop/catalog", r131],
+  ["/api/shop/decide", r132],
+  ["/api/shop/orders", r133],
+  ["/api/shop/status", r134],
+  ["/api/shopify/callback", r135],
+  ["/api/shopify/connect", r136],
+  ["/api/shopify/connect-direct", r137],
+  ["/api/shopify/cron", r138],
+  ["/api/shopify/status", r139],
+  ["/api/stock/lookup", r140],
+  ["/api/store", r141],
+  ["/api/store-credits", r142],
+  ["/api/support/articles", r143],
+  ["/api/support/attachments", r144],
+  ["/api/support/inbound", r145],
+  ["/api/support/tickets", r146],
+  ["/api/table-time", r147],
+  ["/api/team/live", r148],
+  ["/api/ticket-sequence", r149],
+  ["/api/tickets", r150],
+  ["/api/timezone", r151],
+  ["/api/weather", r152],
+  ["/api/z-reconciliation", r153],
+  ["/auth/forgot", r154],
+  ["/auth/login", r155],
+  ["/auth/logout", r156],
+  ["/auth/operator", r157],
+  ["/auth/reset", r158],
+  ["/auth/signup", r159],
+  ["/order/basic", r160],
 ]));

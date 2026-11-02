@@ -19,6 +19,7 @@
  * que le serveur vient d'accepter pour la première fois (already === false) :
  * rejouer un retour ne recrédite jamais le stock deux fois. */
 import { ozonParcels, ozonLine, ozonNote, ozonOpenSend, ozonMakeNote, ozonLabel as translate, ozonBoard } from './ozon.js?v=9';
+import { exchButton, exchHtml, exchHistory, exchClick, exchInput, exchClose, exchOpenFor, exchCss } from './exchange.js?v=2';
 /* translate : les phrases Ozon (ozon.js), en français, anglais ou arabe. */
 const DAY = 86400000;
 const OZON_EVERY = 15 * 60 * 1000;   // la caisse reste ouverte : le suivi Ozon se relit tout seul
@@ -138,7 +139,7 @@ function watch(panel) {
   if (watched === panel || typeof MutationObserver !== 'function') return;
   watched = panel;
   new MutationObserver(() => {
-    if (!panel.classList.contains('is-on')) { st.unlocked = null; st.asked = false; st.openRow = ''; st.pick = {}; }
+    if (!panel.classList.contains('is-on')) { st.unlocked = null; st.asked = false; st.openRow = ''; st.pick = {}; exchClose(); }
   }).observe(panel, { attributes: true, attributeFilter: ['class'] });
   if (!st.ozonTimer && typeof setInterval === 'function') {
     st.ozonTimer = setInterval(() => { if (panel.classList.contains('is-on') && st.unlocked && watchedD) loadOzon(panel, watchedD, false); }, OZON_EVERY);
@@ -213,6 +214,7 @@ function css() {
 }
 
 function load(panel, d) {
+  exchCss();
   const slug = d.slug && d.slug();
   if (!slug || typeof fetch !== 'function') { st.error = tr('Boutique non identifiée sur cette caisse.'); paint(panel, d); return; }
   st.loading = true; st.error = '';
@@ -281,12 +283,12 @@ function rowOpen(x, d, esc) {
     ret += '<div class="bqd-addr">' + esc(cu.address) + (cu.note ? '<span>' + esc(cu.note) + '</span>' : '') + '</div>';
   }
   if (isOpen) {
-    const lines = (x.lines || []).filter((l) => l.qty - l.returnedQty > 0);
+    const lines = (x.lines || []).filter((l) => l.qty - l.returnedQty - (l.exchangedQty || 0) > 0);
     const pickedCents = lines.reduce((n, l) => n + (st.pick[l.i] ? Math.round(l.totalCents * st.pick[l.i] / (l.qty || 1)) : 0), 0);
     const any = Object.values(st.pick).some((q) => q > 0);
     ret += '<div class="bqd-ret">'
       + (lines.length ? lines.map((l) => {
-        const out = l.qty - l.returnedQty;
+        const out = l.qty - l.returnedQty - (l.exchangedQty || 0);
         const q = st.pick[l.i] || 0;
         return '<div class="bqd-line"><div>' + esc(l.name || tr('Article')) + '<small>' + esc(tr('{n} dehors').replace('{n}', String(out))) + ' · ' + esc(madC(Math.round(l.totalCents / (l.qty || 1)), d)) + ' ' + esc(tr('l’unité')) + '</small></div>'
           + '<div class="bqd-step"><button type="button" data-bqd-q="' + l.i + '" data-d="-1" aria-label="' + esc(tr('Moins')) + '">−</button><b>' + q + '</b><button type="button" data-bqd-q="' + l.i + '" data-d="1" data-max="' + out + '" aria-label="' + esc(tr('Plus')) + '">+</button></div>'
@@ -304,11 +306,13 @@ function rowOpen(x, d, esc) {
     + '<div class="bqd-amt">' + esc(madC(x.dueCents, d)) + '<small><br>' + esc(parcel ? ozonNote() : tr('confirmée dans {n} j').replace('{n}', String(left))) + '</small></div>'
     + '</div>'
     + (parcel ? ozonLine(parcel) : '<div class="bqd-bar"><i style="width:' + Math.min(100, Math.round(days / total * 100)) + '%"></i></div>')
+    + exchHistory(x, esc, (id) => ozonLine(ozonOf(id)))
     + (!parcel && x.ozonError ? '<p class="bqd-note bqd-refused">' + esc(tr('Ozon a refusé le colis. Vérifiez le téléphone et l’adresse, puis Envoyer avec Ozon.')) + (x.ozonError.message ? ' ' + esc(x.ozonError.message) : '') + '</p>' : '')
-    + (isOpen ? '' : '<div class="bqd-acts bqd-foot">'
+    + (isOpen || exchOpenFor(x.saleId) ? '' : '<div class="bqd-acts bqd-foot">'
       + (!parcel && st.ozon && st.ozon.connected ? '<button type="button" class="bqd-btn sm" data-bqd-ozon="' + esc(x.saleId) + '"><i data-icon="local_shipping"></i>' + esc(translate('Envoyer avec Ozon')) + '</button>' : '')
+      + exchButton(x, esc, canExch(d))
       + '<button type="button" class="bqd-btn sm" data-bqd-open="' + esc(x.saleId) + '"><i data-icon="undo"></i>' + esc(tr('Enregistrer un retour')) + '</button></div>')
-    + ret + '</div>';
+    + ret + exchHtml(x, exchTools(d), esc, who(x)) + '</div>';
 }
 
 function rowDone(x, d, esc, kind) {
@@ -319,8 +323,26 @@ function rowDone(x, d, esc, kind) {
   const amt = kind === 'returned' ? x.returnedCents : (x.collected && x.collected.amountCents);
   const sub = [tr('Vendue le') + ' ' + when(x.ts), (kind === 'returned' ? tr('revenue le') : tr('confirmée le')) + ' ' + when(at)];
   if (kind !== 'returned' && x.returnedCents > 0) sub.push(tr('revenu en partie') + ' ' + madC(x.returnedCents, d));
-  return '<div class="bqd-row"><div class="bqd-top"><div>' + title(x, esc) + '<small>' + esc(sub.join(' · ')) + '</small></div>'
-    + '<div class="bqd-amt">' + esc(madC(amt, d)) + '</div>' + tag + '</div>' + ozonLine(ozonOf(x.saleId)) + '</div>';
+  return '<div class="bqd-row" data-bqd-row="' + esc(x.saleId) + '"><div class="bqd-top"><div>' + title(x, esc) + '<small>' + esc(sub.join(' · ')) + '</small></div>'
+    + '<div class="bqd-amt">' + esc(madC(amt, d)) + '</div>' + tag + '</div>' + ozonLine(ozonOf(x.saleId))
+    + exchHistory(x, esc, (id) => ozonLine(ozonOf(id)))
+    /* La cliente a payé le livreur puis veut une autre taille : l'échange part
+       d'une commande confirmée (Santos, 2 novembre). */
+    + (kind === 'returned' || exchOpenFor(x.saleId) ? '' : (() => { const b = exchButton(x, esc, canExch(d)); return b ? '<div class="bqd-acts bqd-foot">' + b + '</div>' : ''; })())
+    + (kind === 'returned' ? '' : exchHtml(x, exchTools(d), esc, who(x))) + '</div>';
+}
+
+/* L'échange demande Ozon relié et le catalogue de la caisse boutique (la
+   caisse Maison ouvre la même page sans lui : pas d'échange là). */
+const canExch = (d) => !!(st.ozon && st.ozon.connected) && typeof d.products === 'function' && typeof d.variantStock === 'function';
+/* Ce dont l'échange a besoin : les outils de la caisse et le responsable. */
+function exchTools(d) {
+  return Object.assign({}, d, { manager: () => st.unlocked });
+}
+/* La commande dont l'échange est ouvert, où qu'elle soit (en cours ou confirmée). */
+function orderOf(saleId) {
+  const data = st.data || {};
+  return [...(data.open || []), ...(data.collected || [])].find((r) => r.saleId === saleId) || null;
 }
 
 function paint(panel, d) {
@@ -447,7 +469,7 @@ function send(panel, d, saleId, all) {
     .finally(() => { st.busy = false; if (panel.isConnected) paintResults(panel, d); });
 }
 
-/* d : { esc, icons, toast, fmtMAD, persistStock, slug, demo } : les outils de
+/* d : { esc, icons, toast, fmtMAD, persistStock, slug, demo, products, variantStock, colorLabel } : les outils de
    pos-boutique.js, rien de copié. */
 export function bqLivraisons(panel, d) {
   if (!panel) return;
@@ -460,6 +482,18 @@ export function bqLivraisons(panel, d) {
       const t = (sel) => e.target.closest(sel);
       let b;
       if (t('[data-bqd-unlock]')) { unlock(panel, d); return; }
+      const xb = t('[data-bqx-open]') || t('[data-bqx]');
+      if (xb) {
+        const saleId = xb.dataset.bqxOpen || (xb.closest('[data-bqd-row]') || {}).dataset?.bqdRow;
+        const x = orderOf(saleId);
+        if (x && t('[data-bqx-open]')) { st.openRow = ''; st.pick = {}; st.confirmAll = ''; }
+        /* La recherche garde son curseur : on ne repeint que la liste. */
+        const repaint = (keepFocus) => {
+          paintResults(panel, d);
+          if (keepFocus) { const inp = panel.querySelector('[data-bqx-q-in]'); if (inp) { inp.focus(); try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (_) {} } }
+        };
+        if (x && exchClick(e.target, x, exchTools(d), repaint, () => load(panel, d))) return;
+      }
       if (t('[data-bqd-reload]')) { load(panel, d); return; }
       if (t('[data-bqd-ozon-refresh]')) { loadOzon(panel, d, true); return; }
       if (t('[data-bqd-ozon-note]')) { ozonMakeNote(d.slug(), d.toast).then(() => loadOzon(panel, d, false)); return; }
@@ -483,7 +517,7 @@ export function bqLivraisons(panel, d) {
         paintResults(panel, d); return;
       }
       if ((b = t('[data-bqd-tab]'))) { st.tab = b.dataset.bqdTab; st.openRow = ''; st.pick = {}; paintResults(panel, d); return; }
-      if ((b = t('[data-bqd-open]'))) { st.openRow = b.dataset.bqdOpen; st.pick = {}; st.confirmAll = ''; paintResults(panel, d); return; }
+      if ((b = t('[data-bqd-open]'))) { exchClose(); st.openRow = b.dataset.bqdOpen; st.pick = {}; st.confirmAll = ''; paintResults(panel, d); return; }
       if (t('[data-bqd-cancel]')) { st.openRow = ''; st.pick = {}; st.confirmAll = ''; paintResults(panel, d); return; }
       if ((b = t('[data-bqd-q]'))) {
         const i = b.dataset.bqdQ, dir = Number(b.dataset.d), max = Number(b.dataset.max || Infinity);
@@ -500,6 +534,11 @@ export function bqLivraisons(panel, d) {
       if ((b = t('[data-bqd-send]'))) { send(panel, d, b.dataset.bqdSend, false); }
     });
     panel.addEventListener('input', (e) => {
+      if (exchInput(e.target, () => {
+        paintResults(panel, d);
+        const inp = panel.querySelector('[data-bqx-q-in]');
+        if (inp) { inp.focus(); try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (_) {} }
+      })) return;
       if (!e.target || !e.target.matches('[data-bqd-q-in]')) return;
       st.q = e.target.value; st.openRow = ''; st.pick = {}; st.confirmAll = '';
       const x = panel.querySelector('[data-bqd-clear]'); if (x) x.hidden = !st.q;

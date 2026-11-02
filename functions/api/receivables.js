@@ -122,6 +122,30 @@ async function readReturns(db, merchant, saleId) {
   return bySale;
 }
 
+/* Échanges (Santos, 2 nov. 2026 · functions/api/ozon/exchange.js) : la
+ * cliente garde la commande mais change une pièce de taille ou de couleur. La
+ * pièce reprise n'est ni rendue ni à rendre : elle sort des quantités qu'un
+ * retour peut encore nommer. */
+export async function readExchanges(db, merchant, saleId) {
+  const bySale = new Map();
+  try {
+    const rs = await db.prepare(`SELECT sale_id, note, impact, actor, ts FROM sale_audit
+      WHERE merchant = ? AND action = 'delivery-exchange' ${saleId ? 'AND sale_id = ?' : ''} ORDER BY ts ASC`)
+      .bind(...(saleId ? [merchant, saleId] : [merchant])).all();
+    (rs.results || []).forEach((r) => {
+      let imp = {};
+      try { imp = JSON.parse(r.impact || '{}') || {}; } catch (_) { imp = {}; }
+      const k = String(r.sale_id);
+      if (!bySale.has(k)) bySale.set(k, []);
+      bySale.get(k).push({ id: String(r.note || ''), ts: Number(r.ts) || 0, by: String(r.actor || ''),
+        lines: (imp.swaps || []).map((x) => ({ i: Number(x && x.i), q: Number(x && x.q) || 0 })),
+        swaps: (imp.swaps || []).map((x) => ({ i: Number(x && x.i), q: Number(x && x.q) || 0, from: String(x && x.from || ''), to: String(x && x.to || '') })),
+        diffCents: Number(imp.diffCents) || 0, creditCents: Number(imp.creditCents) || 0, codCents: Number(imp.codCents) || 0 });
+    });
+  } catch (_) { /* table absente : aucun échange */ }
+  return bySale;
+}
+
 function parseLines(row) {
   try { const l = JSON.parse(row && row.lines || '[]'); return Array.isArray(l) ? l : []; } catch (_) { return []; }
 }
@@ -135,13 +159,14 @@ function returnedQty(returns) {
   return by;
 }
 
-function view(row, collections, returns, card) {
+function view(row, collections, returns, card, exchanges) {
   const owed = row.delivery_written_off ? 0 : owedCents(row);
   const got = (collections || []).reduce((n, c) => n + c.amountCents, 0);
   const back = (returns || []).reduce((n, r) => n + r.amountCents, 0);
   const last = collections && collections[collections.length - 1];
   const lastBack = returns && returns[returns.length - 1];
   const rq = returnedQty(returns);
+  const xq = returnedQty(exchanges);
   return {
     saleId: String(row.id), ref: String(row.ref || ''), label: String(row.label || ''), ts: Number(row.ts) || 0,
     owedCents: owed, returnedCents: Math.min(back, owed), dueCents: Math.max(0, owed - back - got),
@@ -150,9 +175,10 @@ function view(row, collections, returns, card) {
     collected: last ? { method: last.method, amountCents: got, ts: last.ts, auto: /^dlv-auto-/.test(last.id || '') } : null,
     returned: lastBack ? { amountCents: back, ts: lastBack.ts } : null,
     customer: card || null,
+    exchanges: (exchanges || []).map((x) => ({ id: x.id, ts: x.ts, by: x.by, swaps: x.swaps, diffCents: x.diffCents, creditCents: x.creditCents, codCents: x.codCents })),
     lines: row.lines === undefined ? undefined : parseLines(row).map((l, i) => ({
       i, name: String(l && l.n || ''), qty: Number(l && l.q) || 0, totalCents: Math.round(Number(l && l.t || 0) * 100),
-      variant: String(l && l.v || ''), returnedQty: rq.get(i) || 0,
+      variant: String(l && l.v || ''), returnedQty: rq.get(i) || 0, exchangedQty: xq.get(i) || 0,
     })),
   };
 }
@@ -243,6 +269,7 @@ export async function onRequestGet({ request, env }) {
   const returnsBySale = await readReturns(env.DB, merchant);
   if (await autoConfirm(env, merchant, rows, bySale, returnsBySale, Date.now())) bySale = await readCollections(env.DB, merchant);
   const cards = await readDeliveryCards(env.DB, merchant);
+  const exchangesBySale = await readExchanges(env.DB, merchant);
   /* Le destinataire vient du colis Ozon quand il y en a un : c'est là qu'il se
      saisit, et c'est ce que le livreur a. Il passe devant une ancienne fiche. */
   const parcelSales = new Set();
@@ -256,7 +283,7 @@ export async function onRequestGet({ request, env }) {
         city: String(p.city_name || ''), address: String(p.address || ''), note: '', source: 'ozon' });
     });
   } catch (_) { /* pas de table Ozon : les fiches seules */ }
-  const all = rows.map((row) => view(row, bySale.get(String(row.id)), returnsBySale.get(String(row.id)), cards.get(String(row.id)))).filter((d) => d.owedCents > 0);
+  const all = rows.map((row) => view(row, bySale.get(String(row.id)), returnsBySale.get(String(row.id)), cards.get(String(row.id)), exchangesBySale.get(String(row.id)))).filter((d) => d.owedCents > 0);
   /* Le stock retenu d'une livraison réglée qui n'a pas pu sortir (catalogue en
      écriture au même instant) sort ici, à la lecture suivante. La caisse lit
      `stockHeld` pour ne pas remettre en stock un retour qui n'en était pas sorti. */
@@ -413,7 +440,10 @@ async function recordReturn(env, merchant, saleId, b) {
 
   const basket = parseLines(row);
   const rq = returnedQty(returns);
-  const left = (i) => Math.max(0, (Number(basket[i] && basket[i].q) || 0) - (rq.get(i) || 0));
+  /* Une pièce échangée est chez la cliente sous une autre taille : c'est
+     l'échange (sa propre vente) qui la rendrait, pas cette ligne. */
+  const xq = returnedQty((await readExchanges(env.DB, merchant, saleId)).get(saleId));
+  const left = (i) => Math.max(0, (Number(basket[i] && basket[i].q) || 0) - (rq.get(i) || 0) - (xq.get(i) || 0));
   const want = new Map();
   if (b.all === true) {
     basket.forEach((_, i) => { if (left(i) > 0) want.set(i, left(i)); });
@@ -432,7 +462,9 @@ async function recordReturn(env, merchant, saleId, b) {
     const q = Number(line.q) || 0;
     return n + (q > 0 ? Math.round(Math.round(Number(line.t || 0) * 100) * l.q / q) : 0);
   }, 0);
-  const nothingLeft = basket.every((_, i) => left(i) - (want.get(i) || 0) <= 0);
+  /* Une pièce échangée reste due (la cliente garde son remplaçant) : le reste
+     entier ne revient que si rien n'a été échangé. */
+  const nothingLeft = basket.every((_, i) => left(i) - (want.get(i) || 0) <= 0) && ![...xq.values()].some((q) => q > 0);
   if (nothingLeft) value = due;
   value = Math.min(value, due);
   if (!(value > 0)) return json({ error: 'bad-lines' }, 400);

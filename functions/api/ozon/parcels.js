@@ -13,7 +13,7 @@
 import { deliveryDue } from '../receivables.js';
 import { exactMerchant, json, readAccount, ozonCall, stepError, pick, cities, cents } from './_lib.js';
 import { listParcels, parcelView, refreshTracking } from './_track.js';
-const CUSTOMER_FEE_CENTS = 5000;   // ce que le client paie pour la livraison, partout
+export const CUSTOMER_FEE_CENTS = 5000;   // ce que le client paie pour la livraison, partout
 
 export async function onRequestGet({ request, env }) {
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
@@ -28,8 +28,8 @@ export async function onRequestGet({ request, env }) {
   return json({ connected: !!account, parcels: await listParcels(env, merchant), refreshed });
 }
 
-const PHONE_RE = /^(?:\+?212|0)?[5-7]\d{8}$/;
-const clean = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
+export const PHONE_RE = /^(?:\+?212|0)?[5-7]\d{8}$/;
+export const clean = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
 
 /* The till knows a sale by its own id (« sale-<uuid> »); the server stores it
  * as « sale-ref-<hash>-<last 32 characters> » (assets/live-link.js › stableId).
@@ -97,8 +97,18 @@ export async function createParcel(env, merchant, account, b) {
      2026) ; Ozon garde ses frais de ville sur ce qu'il encaisse. */
   const codCents = due.dueCents + (feeOnCustomer ? CUSTOMER_FEE_CENTS : 0);
 
-  /* La place de la vente est prise AVANT d'appeler Ozon : deux envois
-     simultanés ne créent jamais deux colis. */
+  return sendParcel(env, merchant, account, { saleId, receiver, phone, cityId, city, address, codCents,
+    nature: clean(b.nature, 120) || clean(due.label, 120) || 'Commande', note: clean(b.note, 240),
+    open: Number(b.open) === 2 ? 2 : 1, fragile: !!b.fragile, replace: !!b.replace });
+}
+
+/* Le colis lui-même, une fois son prix décidé : la vente (createParcel) ou un
+ * échange (exchange.js, colis « échange » qui reprend l'article chez la
+ * cliente). `codCents` peut valoir 0 : un échange au même prix, livraison
+ * offerte, ne fait rien encaisser au livreur. La place de `saleId` est prise
+ * AVANT d'appeler Ozon : deux envois simultanés ne créent jamais deux colis. */
+export async function sendParcel(env, merchant, account, o) {
+  const { saleId, receiver, phone, cityId, city, address, codCents } = o;
   const hold = 'pending:' + saleId;
   const now = Date.now();
   try {
@@ -117,12 +127,11 @@ export async function createParcel(env, merchant, account, b) {
   form.append('parcel-address', address);
   form.append('parcel-price', String(Math.round(codCents) / 100));
   form.append('parcel-stock', String(Number(account.pickup_mode) === 1 ? 1 : 0));
-  form.append('parcel-nature', clean(b.nature, 120) || clean(due.label, 120) || 'Commande');
-  const note = clean(b.note, 240);
-  if (note) form.append('parcel-note', note);
-  form.append('parcel-open', Number(b.open) === 2 ? '2' : '1');
-  form.append('parcel-fragile', b.fragile ? '1' : '0');
-  form.append('parcel-replace', b.replace ? '1' : '0');
+  form.append('parcel-nature', o.nature || 'Commande');
+  if (o.note) form.append('parcel-note', o.note);
+  form.append('parcel-open', Number(o.open) === 2 ? '2' : '1');
+  form.append('parcel-fragile', o.fragile ? '1' : '0');
+  form.append('parcel-replace', o.replace ? '1' : '0');
 
   const res = await ozonCall(env, account, 'add-parcel', form);
   const tracking = res.ok ? pick(res.data, ['TRACKING-NUMBER']) : undefined;
