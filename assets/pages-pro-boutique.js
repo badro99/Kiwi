@@ -1312,7 +1312,7 @@ const _arPieces = (n) => _bqxArCount(n, 'قطعة واحدة', 'قطعتان', '
 const _arVariants = (n) => _bqxArCount(n, 'متغيّر واحد', 'متغيّران', 'متغيّرات', 'متغيّراً', 'متغيّر');
 const _BQX_SH = {
   fr: {
-    close: 'Fermer', edit: 'Modifier le produit', delete: 'Supprimer', cancel: 'Annuler',
+    close: 'Fermer', fixStock: 'Corriger le stock', edit: 'Modifier le produit', delete: 'Supprimer', cancel: 'Annuler',
     notFound: 'Produit introuvable.', noCat: 'Divers', cur: 'MAD', inStock: '{n} en stock',
     tPrice: 'Prix de vente', costGap: 'Coût {cost} MAD · écart {gap} MAD', costOver: 'Coût {cost} MAD, au-dessus du prix',
     costNone: 'Coût d’achat non renseigné',
@@ -1388,7 +1388,7 @@ const _BQX_SH = {
     delProdCodes: 'Ses codes-barres sont libérés.', delProdOk: 'Supprimer définitivement', delProdDone: 'Produit supprimé',
   },
   en: {
-    close: 'Close', edit: 'Edit product', delete: 'Delete', cancel: 'Cancel',
+    close: 'Close', fixStock: 'Correct the stock', edit: 'Edit product', delete: 'Delete', cancel: 'Cancel',
     notFound: 'Product not found.', noCat: 'Other', cur: 'MAD', inStock: '{n} in stock',
     tPrice: 'Selling price', costGap: 'Cost {cost} MAD · gap {gap} MAD', costOver: 'Cost {cost} MAD, above the price',
     costNone: 'Purchase cost not entered',
@@ -1464,7 +1464,7 @@ const _BQX_SH = {
     delProdCodes: 'Its barcodes are released.', delProdOk: 'Delete for good', delProdDone: 'Product deleted',
   },
   ar: {
-    close: 'إغلاق', edit: 'تعديل المنتج', delete: 'حذف', cancel: 'إلغاء',
+    close: 'إغلاق', fixStock: 'تصحيح المخزون', edit: 'تعديل المنتج', delete: 'حذف', cancel: 'إلغاء',
     notFound: 'المنتج غير موجود.', noCat: 'متفرقات', cur: 'درهم', inStock: '{n} في المخزون',
     tPrice: 'سعر البيع', costGap: 'التكلفة {cost} درهم · الفرق {gap} درهم', costOver: 'التكلفة {cost} درهم، أعلى من السعر',
     costNone: 'تكلفة الشراء غير مُدخلة',
@@ -1781,6 +1781,7 @@ function _bqxProductBody(pid) {
       ${list}
       ${n ? `<div class="bqx-sh-foot">
         ${missing ? `<button type="button" class="bqx-vr-act" data-action="bqx-var-gen-all" data-arg="${_esc(pid)}">${_bqxIc('add')}<span>${_esc(t.genMissing(missing))}</span></button>` : ''}
+        <button data-activation=write type="button" class="bqx-vr-act" data-action="bqx-stock-fix" data-arg="${_esc(pid)}">${_bqxIc('tune')}<span>${_esc(t.fixStock)}</span></button>
         <button data-activation=write type="button" class="bqx-vr-act" data-action="bqx-prod-print" data-arg="${_esc(pid)}"${coded ? '' : ' disabled'}>${_bqxIc('print')}<span>${_esc(coded ? t.printAll(coded) : t.printNone)}</span></button>
       </div>` : ''}
     </div>
@@ -1800,7 +1801,7 @@ function _bqxOpenProduct(pid, target, drawerOnly) {
   if (!data) { toast(t.notFound, { type: 'warn' }); return; }
   _bqxCss();
   _bqxShCss();
-  const foot = `<button class="kb ghost" data-dismiss>${_esc(t.close)}</button><button class="kb ghost danger-text" data-action="bqx-prod-del" data-arg="${_esc(pid)}">${_bqxIc('trash-2')}${_esc(t.delete)}</button><button data-activation=write class="kb atlas" data-action="bqx-prod-edit" data-arg="${_esc(pid)}">${_bqxIc('edit')}${_esc(t.edit)}</button>`;
+  const foot = `<button class="kb ghost" data-dismiss>${_esc(t.close)}</button><button class="kb ghost danger-text" data-action="bqx-prod-del" data-arg="${_esc(pid)}">${_bqxIc('trash-2')}${_esc(t.delete)}</button><button data-activation=write class="kb ghost" data-action="bqx-stock-fix" data-arg="${_esc(pid)}">${_bqxIc('tune')}${_esc(t.fixStock)}</button><button data-activation=write class="kb atlas" data-action="bqx-prod-edit" data-arg="${_esc(pid)}">${_bqxIc('edit')}${_esc(t.edit)}</button>`;
   if (!drawerOnly && _bqxCopy().trade === 'boutique') {   // boutique : au centre, sur ses tailles (assets/boutique-sizes.js, comme à la caisse) ; les autres métiers gardent le tiroir
     _bqxSz().then((S) => { _bqxPfCss(); _bqxDrawerPid = pid; _bqxSzView = S.openDashboard({ modal, modalClass: 'bqx-pf-modal', foot, extraHtml: _bqxHistoryHtml(pid), heading: () => { const d = CAT().getProduct(pid); return d && [d.product.name, _bqxSheetSub(d)]; },
       onClose: (v) => { if (_bqxSzView === v) { _bqxSzView = null; _bqxDrawerPid = null; } if (_bqxOnInv()) _renderInventory(); },

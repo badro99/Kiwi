@@ -151,6 +151,10 @@
     "v": "21",
     "sha": "7d9aa128e060ffc4"
   },
+  "assets/boutique-stock-correct.js": {
+    "v": "3",
+    "sha": "1cbe32c45847775a"
+  },
   "assets/briefing-persistence.js": {
     "v": "2",
     "sha": "20eb6af5d93fd900"
@@ -1332,8 +1336,8 @@
     "sha": "2cfe4e7d2ca95ce5"
   },
   "assets/pages-pro-boutique.js": {
-    "v": "39",
-    "sha": "e5a65519058094e1"
+    "v": "41",
+    "sha": "5b8d8497ac2c4063"
   },
   "assets/pages-pro-office.js": {
     "v": "3",
@@ -1380,8 +1384,8 @@
     "sha": "4f0facbf1ccf4020"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "129",
-    "sha": "645d62671416e62e"
+    "v": "131",
+    "sha": "8ffd8c8dfc73349e"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
