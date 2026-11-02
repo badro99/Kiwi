@@ -1185,6 +1185,9 @@
       margin: -4px auto 6px;
     }
     .menu-photo { width: 64px; height: 64px; display: block; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
+    /* The merchant's own photo (a full plate shot, 3:2) cropped square into an
+       icon the size of the library cut-outs (owner, 2 November 2026). */
+    .menu-photo.is-own { object-fit: cover; border-radius: 12px; background: var(--paper); }
     /* Formule leads the category line instead of floating above the photo,
        where it had no style at all and sat as loose text (owner, 2026-10-25). */
     .menu-item-optflag { color: var(--forest); font-weight: 700; }

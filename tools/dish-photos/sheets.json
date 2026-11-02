@@ -1126,5 +1126,43 @@
    "cordon-bleu",
    "a breaded chicken cordon bleu cut open to show ham and melted cheese, with fries"
   ]
+ ],
+ "s31": [
+  [
+   "sauce-blanche",
+   "a small white ceramic ramekin filled with creamy white garlic sauce, smooth and glossy, a few chopped herbs on top"
+  ],
+  [
+   "sauce-champignon",
+   "a small white ceramic ramekin filled with creamy beige mushroom sauce with sliced mushrooms"
+  ],
+  [
+   "sauce-fromage",
+   "a small white ceramic ramekin filled with smooth golden melted cheese sauce"
+  ],
+  [
+   "mayonnaise",
+   "a small white ceramic ramekin filled with pale yellow mayonnaise, swirled"
+  ],
+  [
+   "sauce-algerienne",
+   "a small white ceramic ramekin filled with creamy orange-pink spicy algerian sauce"
+  ],
+  [
+   "sauce-barbecue",
+   "a small white ceramic ramekin filled with glossy dark brown barbecue sauce"
+  ],
+  [
+   "sauce-verte",
+   "a small white ceramic ramekin filled with bright green basil pesto sauce"
+  ],
+  [
+   "sauce-tomate",
+   "a small white ceramic ramekin filled with chunky red tomato sauce with a basil leaf"
+  ],
+  [
+   "sauce-piquante",
+   "a small white ceramic ramekin filled with deep red harissa chili paste with a little olive oil"
+  ]
  ]
 }

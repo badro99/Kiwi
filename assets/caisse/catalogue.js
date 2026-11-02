@@ -273,6 +273,9 @@
           /* Les groupes d'options que ce produit demande. Des identifiants : le
              libellé vit une seule fois, dans carteState.opts. */
           opts: Array.isArray(it.opts) ? it.opts.slice() : [], formula: it.formula || null,
+          /* La photo que le patron a mise sur sa carte : la tuile la montre
+             avant la photo de la bibliothèque (owner, 2 novembre 2026). */
+          photo: ownMenuPhoto(it.photo),
           avail: it.avail !== false, formulaOnly: it.formulaOnly === true, archived: it.archived === true };
       });
       const items = allItems.filter((it) => it.avail !== false && !it.formulaOnly && !it.archived);
@@ -459,6 +462,13 @@
       $('#vrap-cat-count').textContent = `${cats.length - 1} ${cats.length - 1 > 1 ? 'catégories' : 'catégorie'}`;
     }
 
+    /* Une photo publiée par le patron : seulement nos propres médias, et une
+       image (une vidéo ne tient pas dans une tuile). */
+    function ownMenuPhoto(src) {
+      const v = String(src || '');
+      return /^\/api\/media\/[A-Za-z0-9/_-]{1,200}\.(?:jpe?g|png|webp|avif|gif)$/i.test(v) ? v : '';
+    }
+
     const normalizeMenuArtName = (value) => String(value || '').replace(/œ/gi, 'oe').replace(/æ/gi, 'ae')
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, ' ').trim();
 
@@ -612,7 +622,7 @@
       'nems': 'nems|nem|spring roll|spring rolls|rouleaux de printemps|rouleau de printemps',
       'curry': 'curry|poulet curry|كاري',
       'pepperoni': 'pepperoni|pizza pepperoni|diavola|pizza diavola',
-      'pizza-4-fromages': '4 fromages|quatre fromages|pizza 4 fromages|quattro formaggi',
+      'pizza-4-fromages': '~4 fromages|~quatre fromages|pizza 4 fromages|pizza quatre fromages|pizza quattro formaggi|~quattro formaggi',
       'calzone': 'calzone|pizza calzone',
       'bolognaise': 'bolognaise|bolognese|spaghetti bolognaise|ragu',
       'carbonara': 'carbonara|pates carbonara',
@@ -679,7 +689,19 @@
       'the-noir': 'the noir|black tea|earl grey|the anglais|chai|masala chai|massala chai|chai latte|my lady|english breakfast|earl grey',
       'menu-enfant': 'menu enfant|menu kids|kids menu|menu junior|enfant',
       'combo': '~formule|~menu|combo|~formule midi|meal',
-      'sauce': '~sauce|~sauces|supplement sauce|mayonnaise|ketchup|harissa',
+      'sauce': '~sauce|~sauces|supplement sauce|ketchup',
+      /* Une sauce nommée par sa couleur ou son goût a sa propre coupelle :
+         « Sauce Blanche » n'est pas un ketchup (Pasta Corner, 2 novembre 2026).
+         Mots faibles : « Kefta sauce blanche » reste une kefta. */
+      'sauce-blanche': '~sauce blanche|~sauce ail|~sauce yaourt|~white sauce|~garlic sauce|~toum',
+      'sauce-champignon': '~sauce champignon|~sauce forestiere|~mushroom sauce',
+      'sauce-fromage': '~sauce fromage|~sauce fromagere|~sauce cheddar|~cheese sauce',
+      'mayonnaise': '~mayonnaise|~mayo|~aioli',
+      'sauce-algerienne': '~sauce algerienne|~algerienne|~samourai|~sauce biggy|~sauce andalouse',
+      'sauce-barbecue': '~sauce barbecue|~sauce bbq|~barbecue sauce|~bbq sauce',
+      'sauce-verte': '~sauce verte|~sauce pesto|~pesto sauce|~chimichurri',
+      'sauce-tomate': '~sauce tomate|~tomato sauce|~sauce napolitaine|~coulis tomate',
+      'sauce-piquante': '~sauce piquante|~harissa|~hot sauce|~chili sauce|~sauce pimentee',
       'olives': 'olive|olives|زيتون',
       'frites-fromage': 'frites fromage|cheese fries|frites cheddar|poutine',
       'brochettes-poulet': 'brochettes poulet|brochette poulet|brochettes de poulet|chich taouk|shish taouk|taouk',
@@ -772,6 +794,8 @@
        l'ordre : zéro et light d'abord, puis la marque, puis le parfum. */
     const SODA_CANS = [
       ['soda-zero', 'zero|max'], ['soda-light', 'light|diet'],
+      ['soda-citron', 'fanta citron|fanta lemon|fanta limon'], ['soda-pomme', 'fanta pomme|fanta apple'],
+      ['soda-tropical', 'fanta ananas|fanta exotic|fanta tropical|fanta mangue'],
       ['soda-orange', 'fanta|orangina|mirinda'], ['soda-citron', 'sprite|7up|seven up|schweppes citron'],
       ['soda-pomme', 'poms|pom s'], ['soda-bleu', 'pepsi'], ['soda-tonic', 'schweppes|tonic'],
       ['soda-tropical', 'hawai|hawaii|tropical|ananas|mangue|passion'],
@@ -810,8 +834,35 @@
     /* Bumped when a photo is redrawn (tools/caisse-product-art-test.mjs checks
        every key has its file): the photos sit outside the stamped shell. */
     const DISH_PHOTOS_V = 2;
-    const menuArt = (id, cat, name, sub) =>
-      `<img class="menu-photo" src="assets/dishes/${menuArtKey(id, cat, name, sub)}.webp?v=${DISH_PHOTOS_V}" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">`;
+    const libraryArt = (id, cat, name, sub) => `assets/dishes/${menuArtKey(id, cat, name, sub)}.webp?v=${DISH_PHOTOS_V}`;
+    /* Le patron qui a photographié ses plats les voit sur la caisse, recadrés
+       en icône : « Ravioli 4 Fromage » montre SES raviolis, pas une part de
+       pizza trouvée par un mot (Pasta Corner, 2 novembre 2026). Hors ligne,
+       ou si la photo ne charge pas, la tuile retombe sur la bibliothèque. */
+    /* Les photos du patron redessinées en icônes détourées, dans le style de
+       la bibliothèque (tools/dish-photos/gen-own.sh) : assets/dishes/own/
+       <commerce>/<fichier>.webp. Une photo est immuable (un nouvel envoi = un
+       nouveau nom), donc une photo changée reprend la photo recadrée jusqu'à
+       ce qu'elle ait son icône. */
+    const OWN_ICONS_V = 1;
+    const OWN_ICONS = new Set([
+      /* Pasta Corner, 2 novembre 2026 : ses 28 photos de carte. */
+      ...'mtj7sa5n-669991bd mtj7shja-ee2bf0bc mtlcofmg-7f17d0b6 mtlcp30w-c08ceec9 mtld61s1-0184723c mtqc8k1e-085e7416 mtqcuilb-7fb006bd mtqdq13k-e11e384f mtqdq92d-9b4192c5 mtqdqrvf-2d308134 mtqds7r4-0325555b mtqdsov7-9efa2ba4 mtqdtjq8-6c4edb87 mtqdxhc6-f1fc1b26 mtqe2avj-3cbde6a3 mtqeh9fj-f0d96864 mtqehh4m-5b61594b mtqejqvk-d2c1702b mtrcojw0-d1bea359 mtrcq4nt-049db438 mua8inm6-bd4e2799 mua9epk6-c8f63a3c mua9klme-b6a2da94 muemg9qr-7e52f7f2 muemphko-2377e587 muempzrt-859d1fb1 muemtldk-77324fe0 mvu9ly2b-32718ef1'.split(' ').map((f) => 'pasta-corner/' + f),
+    ]);
+    const ownIconKey = (photo) => { const m = /\/([a-z0-9][a-z0-9_-]{0,79})\/([A-Za-z0-9_-]+)\.[a-z]+$/i.exec(photo || ''); return m ? m[1] + '/' + m[2] : ''; };
+    const menuArt = (id, cat, name, sub, photo) => {
+      const lib = libraryArt(id, cat, name, sub);
+      const icon = photo && OWN_ICONS.has(ownIconKey(photo)) ? `assets/dishes/own/${ownIconKey(photo)}.webp?v=${OWN_ICONS_V}` : '';
+      return photo && !icon
+        ? `<img class="menu-photo is-own" src="${photo}" data-lib="${lib}" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">`
+        : `<img class="menu-photo" src="${icon || lib}" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">`;
+    };
+    if (typeof document !== 'undefined') document.addEventListener('error', (e) => {
+      const img = e.target;
+      if (!img || !img.classList || !img.classList.contains('is-own') || !img.dataset.lib) return;
+      img.classList.remove('is-own');
+      img.src = img.dataset.lib;
+    }, true);
 
     /* Une carte vide n'est pas une panne : c'est un patron qui n'a pas encore
        composé la sienne. On le dit, et on dit où la composer · même geste que
@@ -876,7 +927,7 @@
       const soldOutTiles = soldOutAll.filter(inView).map(m => `
           <div class="menu-item is-86" data-86="${escTeam(String(m.id))}" data-cat="${m.cat}" style="--cat:${catColor[m.cat] || 'var(--forest)'}" role="button" tabindex="-1" aria-disabled="true">
             <span class="menu-item-86">Épuisé</span>
-            <span class="menu-item-art">${menuArt(m.id, m.cat, m.name, m.subLabel)}</span>
+            <span class="menu-item-art">${menuArt(m.id, m.cat, m.name, m.subLabel, m.photo)}</span>
             <span class="menu-item-cat">${escTeam(subLabelL(m) || catLabelL(m.cat) || '')}</span>
             <span class="menu-item-name">${escTeam(menuName(m))}</span>
             <span class="menu-item-foot"><span class="menu-item-price mono">${fmtMAD(m.price)}</span></span>
@@ -899,7 +950,7 @@
         return `
           <div class="menu-item ${qty > 0 ? 'is-in-cart' : ''}" data-menu-id="${m.id}" data-cat="${m.cat}" style="--cat:${catColor[m.cat] || 'var(--forest)'}"${qty > 0 ? '' : ' role="button" tabindex="0"' /* en panier, ses − et + portent le clavier : pas de bouton dans un bouton */}>
             ${qty > 0 ? `<span class="menu-item-badge mono">${qty}</span>` : ''}
-            <span class="menu-item-art">${menuArt(m.id, m.cat, m.name, m.subLabel)}</span>
+            <span class="menu-item-art">${menuArt(m.id, m.cat, m.name, m.subLabel, m.photo)}</span>
             <span class="menu-item-cat">${m.formula ? '<span class="menu-item-optflag">Formule</span> · ' : ''}${escTeam(subLabelL(m) || catLabelL(m.cat) || '')}</span>
             <span class="menu-item-name">${escTeam(menuName(m))}</span>
             <span class="menu-item-foot">

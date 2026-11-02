@@ -29,7 +29,8 @@ ok(/apple-touch-icon[^>]*kiwi-employee-180\.png\?v=2/.test(caisse), 'the iPhone 
 ok(!/kiwi-employee-k-/.test(manifest), 'the caisse manifest cannot reuse a legacy letter-k icon');
 ok(/kiwi-employee-192\.png\?v=2/.test(manifest) && /kiwi-employee-512\.png\?v=2/.test(manifest), 'the manifest icons are the current mark');
 
-ok(/menuArt\(m\.id, m\.cat, m\.name, m\.subLabel\)/.test(catalogue), 'the renderer passes the real product name and subcategory to the picture resolver');
+ok(/menuArt\(m\.id, m\.cat, m\.name, m\.subLabel, m\.photo\)/.test(catalogue), 'the renderer passes the real product name, subcategory and the merchant photo to the picture resolver');
+ok(/photo: ownMenuPhoto\(it\.photo\)/.test(catalogue), 'the published menu keeps the photo the merchant put on each dish');
 ok(!/<svg class="menu-art/.test(catalogue) && !/const _bowl|const _tajine|MENU_LIVE_ART|MENU_LIBRARY_ART/.test(app + catalogue),
   'no hand-drawn dish path is left: the pictures are the photographs');
 
@@ -38,8 +39,8 @@ const tables = app.slice(app.indexOf('    const MENU_ART = {'), app.indexOf('/* 
 const resolver = catalogue.slice(catalogue.indexOf('    const normalizeMenuArtName'), catalogue.indexOf('    /* Une carte vide'));
 ok(tables.includes('CAT_GLYPH_RULES') && resolver.includes('menuArtKey') && resolver.includes('DISH_WORDS'), 'the picture tables and resolver are extractable');
 ok(!/MENU_ART_RULES/.test(app + catalogue), 'the old hand-ordered regex list is gone: the dictionary decides');
-const { key, html, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES, SODA_CANS } = new Function('catLabels',
-  `${tables}\n${resolver}\nreturn { key: menuArtKey, html: menuArt, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES, SODA_CANS };`)({
+const { key, html, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES, SODA_CANS, OWN_ICONS } = new Function('catLabels',
+  `${tables}\n${resolver}\nreturn { key: menuArtKey, html: menuArt, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES, SODA_CANS, OWN_ICONS };`)({
     pasta: 'Choisissez vos Pâtes', signatures: 'Signatures', desserts: 'Desserts',
     drinks: 'Boissons', soda: 'Soda+eau', tajines: 'Tajines'
   });
@@ -50,6 +51,36 @@ const liveCards = [
   ['Parmigiana Di Melanzane', 'signatures'], ['Tiramisù', 'desserts'], ['Bonet', 'desserts'],
   ['Eau', 'soda'], ['Coca-Cola', 'soda'], ["Jus D'orange", 'drinks'], ['Jus citron', 'drinks']
 ];
+// The merchant's own photo (Pasta Corner, 2 November 2026): when a dish has
+// one, the tile shows it, cropped into an icon, and keeps the library picture
+// to fall back on when it does not load (offline, deleted).
+const ownSrc = catalogue.slice(catalogue.indexOf('    function ownMenuPhoto'), catalogue.indexOf('    const normalizeMenuArtName'));
+const own = new Function(`${ownSrc}\nreturn ownMenuPhoto;`)();
+eq(own('/api/media/media/pasta-corner/mvu9ly2b-32718ef1.jpg'), '/api/media/media/pasta-corner/mvu9ly2b-32718ef1.jpg', 'an uploaded menu photo is kept');
+eq(own('/api/media/media/pasta-corner/clip.mp4'), '', 'a video does not go into a tile');
+eq(own('https://evil.example/x.jpg'), '', 'a photo from anywhere else is refused');
+eq(own('/api/media/a.jpg" onerror="x'), '', 'a photo path cannot break out of the attribute');
+eq(own(undefined), '', 'a dish without a photo has none');
+const ownTile = html('it_x', 'signatures', 'Ravioli 4 Fromage', '', '/api/media/media/pasta-corner/new-upload-1.jpg');
+ok(/class="menu-photo is-own" src="\/api\/media\/media\/pasta-corner\/new-upload-1\.jpg"/.test(ownTile), 'a photo without its icon yet shows cropped: ' + ownTile);
+ok(/data-lib="assets\/dishes\/ravioli\.webp\?v=\d+"/.test(ownTile), 'and keeps the library ravioli to fall back on');
+ok(!/is-own/.test(html('it_x', 'signatures', 'Ravioli 4 Fromage', '', '')), 'without a photo the library picture shows, as before');
+ok(/addEventListener\('error'[\s\S]{0,240}img\.src = img\.dataset\.lib/.test(catalogue), 'a merchant photo that fails to load falls back to the library picture');
+// Those photos redrawn as cut-out icons in the library's style (GPT, from the
+// merchant's own photos, tools/dish-photos/gen-own.sh): the icon wins.
+const iconTile = html('it_x', 'signatures', 'Ravioli 4 Fromage', '', '/api/media/media/pasta-corner/mvu9ly2b-32718ef1.jpg');
+ok(/^<img class="menu-photo" src="assets\/dishes\/own\/pasta-corner\/mvu9ly2b-32718ef1\.webp\?v=\d+"/.test(iconTile), 'a photo with its icon shows the icon: ' + iconTile);
+ok(OWN_ICONS.size >= 28, `Pasta Corner's photos have their icons (${OWN_ICONS.size})`);
+const ownDir = new URL('../assets/dishes/own/', import.meta.url);
+const ownFiles = new Set(fs.readdirSync(ownDir).flatMap((m) => fs.readdirSync(new URL(m + '/', ownDir)).filter((f) => f.endsWith('.webp')).map((f) => m + '/' + f.slice(0, -5))));
+eq([...OWN_ICONS].filter((k) => !ownFiles.has(k)).join(', '), '', 'every listed icon has its file');
+eq([...ownFiles].filter((k) => !OWN_ICONS.has(k)).join(', '), '', 'every icon file is listed');
+for (const k of ownFiles) {
+  const b = fs.readFileSync(new URL(k + '.webp', ownDir));
+  ok(b.slice(0, 4).toString() === 'RIFF' && b.slice(8, 12).toString() === 'WEBP' && b.length < 20000, `${k} is a small webp (${b.length} bytes)`);
+}
+ok(/\.menu-photo\.is-own \{[^}]*object-fit: cover/.test(read('assets/caisse-shell.css')), 'the merchant photo is cropped square like an icon, not squeezed');
+
 const live = liveCards.map(([name, cat]) => key(`it_${name.length}`, cat, name));
 eq(new Set(live).size, liveCards.length, 'published pasta, desserts and drinks keep a picture each: ' + live.join(', '));
 eq(key('it_x', 'pasta', 'Spécial maison'), 'pasta', 'the pasta category shows pasta for an unnamed dish');
@@ -76,7 +107,12 @@ const traps = [
   ['The Classic Burger', 'burger'], ['Thé', 'mint-tea'], ['Thé à la menthe', 'mint-tea'],
   ['Thé glacé', 'ice-tea'], ['Café crème', 'cafe-au-lait'], ['Café glacé', 'cafe-glace'],
   ['Pain au chocolat', 'pain-chocolat'], ['Chocolat chaud', 'chocolat-chaud'],
-  ['Mousse au chocolat', 'mousse-chocolat'], ['Pizza 4 fromages', 'pizza-4-fromages'],
+  ['Mousse au chocolat', 'mousse-chocolat'], ['Pizza 4 fromages', 'pizza-4-fromages'], ['4 fromages', 'pizza-4-fromages'],
+  // Pasta Corner, 2 November 2026: the cheese names the filling, not a pizza.
+  ['Ravioli 4 Fromage', 'ravioli'], ['Gnocchi quattro formaggi', 'gnocchi'], ['Pâtes 4 fromages', 'pasta'],
+  ['Sauce Blanche', 'sauce-blanche'], ['Sauce champignons', 'sauce-champignon'], ['Sauce algérienne', 'sauce-algerienne'],
+  ['Mayonnaise', 'mayonnaise'], ['Sauce BBQ', 'sauce-barbecue'], ['Harissa', 'sauce-piquante'], ['Ketchup', 'sauce'],
+  ['Kefta sauce blanche', 'kefta'], ['Burger BBQ', 'burger'],
   ['Plateau de fruits de mer', 'fruits-de-mer'], ['Salade de fruits', 'salade-fruits'],
   ['Tarte au citron', 'tarte-citron'], ['Gâteaux marocains', 'patisserie'],
   ['Menu enfant', 'menu-enfant'], ['Menu burger', 'burger'], ['Couscous aux sept légumes', 'couscous-legumes'],
@@ -145,7 +181,8 @@ ok(/^<img class="menu-photo" src="assets\/dishes\/lasagna\.webp\?v=\d+" alt=""[^
 // A can takes its brand's colour (owner, 25 October 2026), on the shelf and by name.
 for (const [name, want] of [['Coca-Cola', 'soda-cola'], ['Fanta Orange', 'soda-orange'], ['Sprite', 'soda-citron'],
   ['Pommes', 'soda-pomme'], ['Poms', 'soda-pomme'], ['Coca-Cola Zero', 'soda-zero'], ['Coca light', 'soda-light'],
-  ['Pepsi', 'soda-bleu'], ['Schweppes Tonic', 'soda-tonic'], ['Hawai tropical', 'soda-tropical'], ['Canette', 'soda']])
+  ['Pepsi', 'soda-bleu'], ['Schweppes Tonic', 'soda-tonic'], ['Hawai tropical', 'soda-tropical'], ['Canette', 'soda'],
+  ['Fanta Citron', 'soda-citron'], ['Fanta ananas', 'soda-tropical']])
   eq(key('it_x', 'soda', name, 'Soda+Eau'), want, `${name} on the Soda+Eau shelf shows ${want}`);
 eq(key('it_x', 'drinks', 'Fanta'), 'soda-orange', 'a brand name alone finds its can');
 ne(key('it_x', 'desserts', 'Tarte aux pommes'), 'soda-pomme', 'an apple tart is not an apple soda');

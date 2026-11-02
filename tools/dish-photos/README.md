@@ -11,6 +11,26 @@ menu rarely falls back to the cloche.
 On 30 October 2026 sheets `s28`…`s30` added 27 more (Lebanese, Greek and
 Turkish, Spanish, Asian and Indian dishes, latte, bubble tea, lemonade,
 karantika, medfouna, berkoukes): 267 in all.
+On 2 November 2026 sheet `s31` added nine sauces in a ramekin (white, mushroom,
+cheese, mayonnaise, algérienne, barbecue, green, tomato, harissa): 276 in all.
+
+## A merchant's own photos
+
+A dish with a photo on the published menu shows that photo on the till,
+cropped square. Better still, the photo becomes a cut-out icon in the
+library's style (Pasta Corner, 28 icons, 2 November 2026):
+
+1. Write a sheet file outside the repo: `{"pc1": [[key, description, ref, name], …]}`,
+   up to nine rows a sheet, where `key` is the photo's file name without its
+   extension and `ref` a local copy of the photo (640 px is enough).
+2. `DISH_WORK=… OWN_SHEETS=… tools/dish-photos/gen-own.sh pc1` attaches the
+   photos to Codex and asks for them as cut-outs, in order.
+3. Slice with `SHEETS=<the same file, first two columns only>` and despeck, as above.
+4. `cwebp … -o assets/dishes/own/<merchant>/<key>.webp`, then add the keys to
+   `OWN_ICONS` in `assets/caisse/catalogue.js`.
+
+A photo is immutable (a new upload gets a new name), so a merchant who
+changes a photo sees it cropped until its icon is made.
 
 Add or redo dishes:
 
