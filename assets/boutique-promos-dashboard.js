@@ -405,7 +405,7 @@
   function policyHtml(d) {
     var b = policyBlock(d); if (!b) return '';
     var list = b.list.map(function (v) { return pct(v); }).join(L(', ', ', ', '، '));
-    return '<div class="bpd-policy" role="alert"><i data-lucide="info"></i><span>' + esc(L('Vos réglages de caisse autorisent seulement ' + list + '.', 'Your till settings only allow ' + list + '.', 'إعدادات الصندوق تسمح فقط بـ ' + list + '.')) + '</span>' +
+    return '<div class="bpd-policy" role="alert"><i data-icon="info"></i><span>' + esc(L('Vos réglages de caisse autorisent seulement ' + list + '.', 'Your till settings only allow ' + list + '.', 'إعدادات الصندوق تسمح فقط بـ ' + list + '.')) + '</span>' +
       (b.canAdd ? '<button class="bpd-chip on" data-pr-allow>' + esc(L('Autoriser ' + pct(d.value), 'Allow ' + pct(d.value), 'السماح بـ ' + pct(d.value))) + '</button><small>' + esc(L('Ajouté aux remises autorisées, la caisse le propose aussi.', 'Added to the allowed discounts, the till offers it too.', 'يُضاف إلى الخصومات المسموح بها، ويقترحه الصندوق أيضًا.')) + '</small>' : '') + '</div>';
   }
   function valid(d) {

@@ -346,5 +346,17 @@ for (const [fr, en] of [
   }
   document.createElement = savedCreate;
 }
+/* 2 Nov 2026 (850b01b5) : la caisse Maison crée un article avec son code-barres
+   fournisseur et le dit dans un toast. Ces messages passent par tr(). */
+for (const [lang, kept, taken, unreadable] of [
+  ['en', 'Item created · supplier code kept', 'Item created · code already used by Caftan Fassi, not saved', 'Item created · unreadable barcode, not saved'],
+  ['ar', 'تم إنشاء المنتج · رمز المورّد محفوظ', 'تم إنشاء المنتج · الرمز مستعمل من قبل Caftan Fassi، لم يُحفظ', 'تم إنشاء المنتج · رمز شريطي غير مقروء، لم يُحفظ'],
+]) {
+  L.set(lang);
+  check(L.tr('Article créé · code fournisseur conservé') === kept, 'maison item created, supplier code kept ' + lang);
+  check(L.tr('Article créé · code déjà porté par Caftan Fassi, non enregistré') === taken, 'maison item created, code already used ' + lang);
+  check(L.tr('Article créé · code-barres illisible, non enregistré') === unreadable, 'maison item created, unreadable barcode ' + lang);
+}
+L.set('fr');
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);

@@ -43,9 +43,9 @@
   function css() {
     if (cssDone || typeof document === 'undefined') return;
     cssDone = true;
-    const st = document.createElement('style');
-    st.id = 'kiwi-boutique-categories-css';
-    st.textContent = `
+    const style = document.createElement('style');
+    style.id = 'kiwi-boutique-categories-css';
+    style.textContent = `
 .bqcv { display: grid; gap: 16px; margin-top: 4px; }
 .bqcv-bar { display: flex; gap: 10px; align-items: center; }
 .bqcv-search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 14px; border: 1px solid var(--n-200); border-radius: 13px; background: var(--surface); color: var(--n-500); transition: border-color .16s, box-shadow .16s; }
@@ -95,7 +95,7 @@
 .bqcv-note svg { width: 17px; height: 17px; flex: none; color: var(--atlas); margin-top: 1px; }
 @media (max-width: 620px) { .bqcv-grid { grid-template-columns: minmax(0, 1fr); } .bqcv-bar { flex-direction: column; align-items: stretch; } .bqcv-search { flex: none; } }
 `;
-    document.head.appendChild(st);
+    document.head.appendChild(style);
   }
 
   /* ctx: { cats: [{ id, name, color, count }], products, uncategorised,

@@ -884,13 +884,13 @@ function judgeCode(cat, raw) {
 }
 function sayCode(root, lang, j) {
   const w = bcWords(lang);
-  const msg = root.querySelector('[data-kbs-bc-msg]'), inp = root.querySelector('[data-kbs-bc-in]');
-  if (!msg || !inp) return;
+  const note = root.querySelector('[data-kbs-bc-msg]'), inp = root.querySelector('[data-kbs-bc-in]');
+  if (!note || !inp) return;
   const kind = (root.querySelector('input[name="bqx-pf-kind"]:checked') || {}).value || 'taille';
   const bad = j && j.bad;
-  msg.className = bad ? 'bqx-pf-err' : 'bqx-pf-hint';
-  msg.textContent = !j ? (hasGrid(kind) ? w.grid : w.hint) : bad ? (bad === 'taken' ? w.taken(j.who) : w[bad]) : w.ok;
-  msg.style.color = j && !bad ? 'var(--atlas, #0B6E4F)' : '';
+  note.className = bad ? 'bqx-pf-err' : 'bqx-pf-hint';
+  note.textContent = !j ? (hasGrid(kind) ? w.grid : w.hint) : bad ? (bad === 'taken' ? w.taken(j.who) : w[bad]) : w.ok;
+  note.style.color = j && !bad ? 'var(--atlas, #0B6E4F)' : '';
   inp.setAttribute('aria-invalid', bad ? 'true' : 'false');
 }
 /* `onOwn(on, input)` : la caisse y branche sa douchette quand le champ s'ouvre. */

@@ -17,7 +17,9 @@ const checks = [
   // (virement, chèque…); dashboard-activity-test runs it on real sales.
   ["['all', ...new Set(['cash', 'card', 'transfer', 'cheque', 'delivery', ...seenMethods, ...selectedMethods]", 'Tout, the three standing filters and every method seen that day are rendered'],
   ['current.length >= 2', 'choosing a third payment type resets the filter'],
-  ['selectedMethods.includes(salesMethodKey(s))', 'sale rows are filtered by payment type'],
+  // 716a3f15: a ticket paid two ways is listed under each method it was paid by.
+  ['daySales.filter((s) => salesMethodHit(s, selectedMethods))', 'sale rows are filtered by payment type'],
+  ['salesMethodKeys(s).some((k) => chosen.includes(k))', 'a split ticket matches every method of its parts'],
   ['financialWindow.reduce(', 'the cash summary uses the payment-filtered rows independently of activity type'],
   ['String(s.ref || s.label || \'\')', 'each sale resolves its caisse/order reference'],
   ["origin === 'employee'", 'employee-origin sales are labelled separately'],

@@ -62,6 +62,8 @@ export function scan(source, filename = 'fixture.js') {
       if (translated.test(name(n.expression)) || /^(?:KiwiStrings|KiwiCaisseLang|KiwiServeurLang)\./.test(n.expression.getText(tree))) return false;
       return n.arguments.some(a => raw(a, html, seen));
     }
+    // Only the chosen branch of « a ? b : c » is displayed, never its condition.
+    if (ts.isConditionalExpression(n)) return raw(n.whenTrue, html, seen) || raw(n.whenFalse, html, seen);
     if (ts.isPropertyAccessExpression(n) || ts.isElementAccessExpression(n) || ts.isFunctionLike(n)) return false;
     if (ts.isObjectLiteralExpression(n)) return n.properties.some(p => ts.isPropertyAssignment(p) && visibleKeys.test(name(p.name) || p.name.text) && raw(p.initializer, html, seen));
     let found = false;
@@ -88,7 +90,9 @@ export function scan(source, filename = 'fixture.js') {
   visit(tree); return hits;
 }
 // Cas de non-régression : attributs, gabarits, alias et mélange traduit/brut.
-for (const code of ["x.textContent='Bonjour'", "x.innerText = `Hello ${n}`", "x.innerHTML='<b>Bonjour</b>'", "x.insertAdjacentHTML('beforeend','<p>Hello</p>')", "x.setAttribute('aria-label','Fermer')", "toast('Erreur', {desc:'Réessayez'})", "modal({title:'Bonjour'})", "const message='Bonjour'; x.textContent=message", "x.textContent=t('clé')+' non traduit'", "x.innerHTML=`<b title=\"Bonjour ${n}\">${t('x')}</b>`", "x.innerHTML=`<i data-c=\"${c}\">Bonjour</i>`"]) assert.equal(scan(code).length, 1, code);
+for (const code of ["x.textContent = ok ? 'Bonjour' : t('b')", "x.textContent='Bonjour'", "x.innerText = `Hello ${n}`", "x.innerHTML='<b>Bonjour</b>'", "x.insertAdjacentHTML('beforeend','<p>Hello</p>')", "x.setAttribute('aria-label','Fermer')", "toast('Erreur', {desc:'Réessayez'})", "modal({title:'Bonjour'})", "const message='Bonjour'; x.textContent=message", "x.textContent=t('clé')+' non traduit'", "x.innerHTML=`<b title=\"Bonjour ${n}\">${t('x')}</b>`", "x.innerHTML=`<i data-c=\"${c}\">Bonjour</i>`"]) assert.equal(scan(code).length, 1, code);
+// The condition of « a ? b : c » is never displayed, only b or c (boutique-sizes.js, 2 Nov 2026).
+for (const code of ["const kind = 'taille'; x.textContent = grid(kind) ? w.grid : w.hint"]) assert.equal(scan(code).length, 0, code);
 for (const code of ["x.innerHTML='<div class=\"c\">'+icon('storefront')+'</div>'", "x.textContent=t('Bonjour')", "x.textContent=mt('copied')", "x.innerHTML='<div class=\"hello\"></div>'", "x.setAttribute('class','hello')", "toast(T.saved,{type:'success'})", "style.textContent='body { color: red }'", "// x.textContent='Bonjour'", "x.textContent='١٢٣'", "x.innerHTML=`<i style=\"--c:${c}\"></i>${t('x')}`", "x.innerHTML=`<input value=\"${v}\" placeholder=\"${t('p')}\">`"]) assert.equal(scan(code).length, 0, code);
 function walk(dir) {
   return fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap(e => {

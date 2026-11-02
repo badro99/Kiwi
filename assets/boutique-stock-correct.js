@@ -43,9 +43,9 @@ let cssDone = false;
 function css() {
   if (cssDone || typeof document === 'undefined') return;
   cssDone = true;
-  const st = document.createElement('style');
-  st.id = 'kiwi-stock-correct-css';
-  st.textContent = `
+  const style = document.createElement('style');
+  style.id = 'kiwi-stock-correct-css';
+  style.textContent = `
 .ksc { display: grid; gap: 8px; }
 .ksc-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 104px; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--n-200); border-radius: 12px; background: var(--paper, #F7F5F0); }
 .ksc-row b { font: 600 13.5px var(--sans); color: var(--ink); }
@@ -62,7 +62,7 @@ function css() {
 .ksc-link:hover { text-decoration: underline; }
 @media (max-width: 520px) { .ksc-row { grid-template-columns: minmax(0, 1fr) 92px; } .ksc-now { grid-column: 1; } }
 `;
-  document.head.appendChild(st);
+  document.head.appendChild(style);
 }
 
 /* o: { cat, pid, lang, modal, toast(title, desc), onDone() } */
