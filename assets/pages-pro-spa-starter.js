@@ -940,7 +940,23 @@
   function salesMethodKey(s) {
     const raw = String((s && s.method) || '').toLowerCase();
     return ({ 'espèces': 'cash', especes: 'cash', carte: 'card', livraison: 'delivery', virement: 'transfer', 'chèque': 'cheque' })[raw] || raw;
-  } const salesMethodOk = (m) => /^[a-z][a-z_-]{0,23}$/.test(String(m || '')) && m !== 'all';
+  } const salesMethodOk = (m) => /^[a-z][a-z_-]{0,23}$/.test(String(m || '')) && m !== 'all' && m !== 'split';
+  /* « Partagée » n'est pas un moyen de paiement : un ticket payé en deux fois
+     se range sous chacun des moyens qui l'ont réglé (espèces, carte…), et sous
+     un filtre il ne compte que la part réglée de cette façon. */
+  const salesParts = (s) => (s && s.kind !== 'refund' && Array.isArray(s.paymentParts) && s.paymentParts.length > 1) ? s.paymentParts.filter(Boolean) : null;
+  const partKey = (p) => salesMethodKey({ method: p.method || p.m });
+  const salesMethodKeys = (s) => {
+    const parts = salesParts(s);
+    const keys = parts ? [...new Set(parts.map(partKey).filter(salesMethodOk))] : [];
+    return keys.length ? keys : [salesMethodKey(s)];
+  };
+  const salesMethodHit = (s, chosen) => !chosen.length || salesMethodKeys(s).some((k) => chosen.includes(k));
+  const salesAmountFor = (s, chosen) => {
+    const parts = salesParts(s);
+    if (!parts || !chosen.length || !parts.every((p) => Number.isFinite(Number(p.amountCents)))) return Number(s.amount || 0);
+    return parts.filter((p) => chosen.includes(partKey(p))).reduce((a, p) => a + Math.round(Number(p.amountCents) || 0), 0) / 100;
+  };
   function auditMerchant() {
     try { return String(window.KiwiLive?.merchant?.() || ''); } catch (_) { return ''; }
   }
@@ -1097,7 +1113,7 @@
     const selectedDay = new Date(`${selectedKey}T12:00:00Z`);
     const daySales = sales.concat([...refundById.values()]).filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
     const financialWindow = selectedMethods.length
-      ? daySales.filter((s) => selectedMethods.includes(salesMethodKey(s)))
+      ? daySales.filter((s) => salesMethodHit(s, selectedMethods))
       : daySales;
     const selectedKind = salesKindByMerchant[auditMerchant()] || 'all';
     const inWindow = financialWindow.filter(s => selectedKind === 'all' ||
@@ -1115,25 +1131,25 @@
     const methodLabels = {
       all: T({ fr: 'Tout', en: 'All', ar: 'الكل' }),
       cash: L.cash, card: L.card, delivery: L.delivery,
-    }; const seenMethods = daySales.filter((s) => s.kind !== 'refund').map(salesMethodKey).filter(salesMethodOk);   /* Santos, 30/10 : 2 virements invisibles sous tous les filtres */
+    }; const seenMethods = daySales.filter((s) => s.kind !== 'refund').flatMap(salesMethodKeys).filter(salesMethodOk);   /* Santos, 30/10 : 2 virements invisibles sous tous les filtres */
     const methodButtons = ['all', ...new Set(['cash', 'card', 'transfer', 'cheque', 'delivery', ...seenMethods, ...selectedMethods].filter((m) => ['cash', 'card', 'delivery'].includes(m) || seenMethods.includes(m) || selectedMethods.includes(m)))].map((method) => {
       const active = method === 'all' ? selectedMethods.length === 0 : selectedMethods.includes(method);
       return `<button data-activation=write class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${method}" aria-pressed="${active}">${escS(methodLabels[method] || L[method] || method)}</button>`;
     }).join('');
-    const collected = financialWindow.reduce((a, s) => a + Math.max(0, Math.round(Number(s.amount || 0) * 100)), 0) / 100;
-    const returned = financialWindow.reduce((a, s) => a + Math.max(0, -Math.round(Number(s.amount || 0) * 100)), 0) / 100;
+    const collected = financialWindow.reduce((a, s) => a + Math.max(0, Math.round(salesAmountFor(s, selectedMethods) * 100)), 0) / 100;
+    const returned = financialWindow.reduce((a, s) => a + Math.max(0, -Math.round(salesAmountFor(s, selectedMethods) * 100)), 0) / 100;
     const total = Math.round((collected - returned) * 100) / 100;
     /* Un ticket réglé entièrement par avoir vaut 0 MAD encaissé, mais c'est une
        vente : la liste le montre, l'en-tête doit le compter. Un ticket offert à
        0 MAD (restaurant) reste hors du compte, comme avant. */
     const count = financialWindow.filter((s) => s.kind !== 'refund' && (Number(s.amount) > 0
-      || (Number(s.amount) === 0 && /^(credit|avoir|delivery|livraison)/i.test(String(s.method || ''))))).length; const receivable = financialWindow.reduce((a, s) => a + (s.kind === 'refund' ? 0 : (Array.isArray(s.paymentParts) ? s.paymentParts : []).reduce((b, p) => b + (p && /^(delivery|livraison)$/i.test(String(p.method || p.m || '')) ? Math.max(0, Math.round(Number(p.amountCents) || 0)) : 0), 0)), 0) / 100;   /* une livraison n'est pas encaissée : elle se lit à part, « à recevoir » */
+      || (Number(s.amount) === 0 && /^(credit|avoir|delivery|livraison)/i.test(String(s.method || ''))))).length; const receivable = financialWindow.reduce((a, s) => a + (s.kind === 'refund' ? 0 : (Array.isArray(s.paymentParts) ? s.paymentParts : []).reduce((b, p) => b + (p && /^(delivery|livraison)$/i.test(String(p.method || p.m || '')) && (!selectedMethods.length || selectedMethods.includes('delivery')) ? Math.max(0, Math.round(Number(p.amountCents) || 0)) : 0), 0)), 0) / 100;   /* une livraison n'est pas encaissée : elle se lit à part, « à recevoir » */
     const rows = inWindow.slice().sort((a, b) => (+b.ts || 0) - (+a.ts || 0)).map((s, i) => {
       const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
       const d = new Date(s.ts || Date.now());
       const hh = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(lang === 'ar' ? 'ar-MA-u-nu-latn' : lang, { timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
       const when = hh;
-      const m = isRefund ? T({ fr: 'Remboursement', en: 'Refund', ar: 'استرداد' }) : (L[salesMethodKey(s)] || L.unknown);
+      const m = isRefund ? T({ fr: 'Remboursement', en: 'Refund', ar: 'استرداد' }) : (salesParts(s) ? salesMethodKeys(s).map((k) => L[k] || k).join(' + ') : (L[salesMethodKey(s)] || L.unknown));
       const ref = String(s.ref || s.label || '').trim();
       const origin = String(s.origin || (ref ? 'caisse' : '')).toLowerCase();
       const source = origin === 'employee'
@@ -1182,7 +1198,7 @@
       const kindMatches = selectedKind === 'all'
         || (selectedKind === 'cancel' && v.kind !== 'takeout-handover')
         || (selectedKind === 'handover' && v.kind === 'takeout-handover');
-      return v.kind !== 'refund' && kindMatches && ts >= lo && ts < hi && (!selectedMethods.length || selectedMethods.includes(salesMethodKey(v)));
+      return v.kind !== 'refund' && kindMatches && ts >= lo && ts < hi && salesMethodHit(v, selectedMethods);
     });
     const renderActivityRows = (sourceRows) => sourceRows.map((v) => {
       const d = new Date(v.ts || Date.now());
