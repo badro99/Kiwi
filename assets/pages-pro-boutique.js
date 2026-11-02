@@ -1368,7 +1368,7 @@ const _BQX_SH = {
     sizeHint: 'Laissée vide, la variante est en taille unique (TU).', sizeTu: 'taille unique',
     stockAndCode: 'Stock et code-barres', stockInit: 'Stock initial', stockInitHint: 'Les pièces déjà en rayon pour cette variante.',
     bcTitle: 'Code-barres', bcGen: 'Générer un EAN-13', bcGenSub: 'Kiwi crée le code, vous imprimez l’étiquette.',
-    bcLater: 'Plus tard', bcLaterSub: 'Ou enregistrez le code déjà sur l’article, depuis la fiche.',
+    bcLater: 'Plus tard', bcLaterSub: 'Ou enregistrez le code déjà sur l’article, depuis la fiche.', bcOwn: 'Il a déjà un code', bcOwnSub: 'Étiquette du fournisseur, rien à réimprimer.', bcOwnPh: 'Scannez l’étiquette ou tapez le code', bcOwnEmpty: 'Scannez ou tapez le code de l’article.', bcOwnBad: 'Code illisible. Rescannez, ou tapez-le à la main.', bcOwnTaken: 'Ce code est déjà porté par {v}.', addKept: 'code fournisseur conservé',
     dup: '{v} existe déjà sur ce produit, avec {n}. Changez son stock dans la liste.',
     addOk: 'Ajouter la variante', addDone: 'Variante ajoutée', addCode: 'EAN-13 généré', addFail: 'Ajout impossible',
     colorTitle: 'Modifier la couleur', colorFor: 'Variante en taille {size}.', colorPick: 'Choisissez une couleur',
@@ -1444,7 +1444,7 @@ const _BQX_SH = {
     sizeHint: 'Left empty, the variant is one size (TU).', sizeTu: 'one size',
     stockAndCode: 'Stock and barcode', stockInit: 'Opening stock', stockInitHint: 'The pieces already on the shelf for this variant.',
     bcTitle: 'Barcode', bcGen: 'Generate an EAN-13', bcGenSub: 'Kiwi creates the code, you print the label.',
-    bcLater: 'Later', bcLaterSub: 'Or register the code already on the item, from the product sheet.',
+    bcLater: 'Later', bcLaterSub: 'Or register the code already on the item, from the product sheet.', bcOwn: 'It already has one', bcOwnSub: 'Supplier label, nothing to reprint.', bcOwnPh: 'Scan the label or type the code', bcOwnEmpty: 'Scan or type the item’s code.', bcOwnBad: 'Unreadable code. Scan again, or type it.', bcOwnTaken: 'This code already belongs to {v}.', addKept: 'supplier code kept',
     dup: '{v} already exists on this product, with {n}. Change its stock in the list.',
     addOk: 'Add the variant', addDone: 'Variant added', addCode: 'EAN-13 generated', addFail: 'The variant could not be added',
     colorTitle: 'Edit the colour', colorFor: 'Variant in size {size}.', colorPick: 'Choose a colour',
@@ -1520,7 +1520,7 @@ const _BQX_SH = {
     sizeHint: 'إن تُرك فارغاً، يكون المتغيّر بمقاس واحد (TU).', sizeTu: 'مقاس واحد',
     stockAndCode: 'المخزون والرمز الشريطي', stockInit: 'المخزون الأولي', stockInitHint: 'القطع الموجودة أصلاً على الرف لهذا المتغيّر.',
     bcTitle: 'الرمز الشريطي', bcGen: 'توليد EAN-13', bcGenSub: 'يُنشئ Kiwi الرمز، وتطبع أنت الملصق.',
-    bcLater: 'لاحقاً', bcLaterSub: 'أو سجّل الرمز الموجود على السلعة، من بطاقة المنتج.',
+    bcLater: 'لاحقاً', bcLaterSub: 'أو سجّل الرمز الموجود على السلعة، من بطاقة المنتج.', bcOwn: 'لديها رمز مسبقاً', bcOwnSub: 'ملصق المورّد، لا حاجة لإعادة الطباعة.', bcOwnPh: 'امسح الملصق أو اكتب الرمز', bcOwnEmpty: 'امسح رمز السلعة أو اكتبه.', bcOwnBad: 'رمز غير مقروء. أعد المسح أو اكتبه.', bcOwnTaken: 'هذا الرمز مستعمل لـ {v}.', addKept: 'تم الاحتفاظ برمز المورّد',
     dup: '{v} موجود أصلاً في هذا المنتج، ومخزونه {n}. غيّر مخزونه من القائمة.',
     addOk: 'إضافة المتغيّر', addDone: 'تمت إضافة المتغيّر', addCode: 'تم توليد EAN-13', addFail: 'تعذّرت إضافة المتغيّر',
     colorTitle: 'تعديل اللون', colorFor: 'متغيّر بالمقاس {size}.', colorPick: 'اختر لوناً',
@@ -1793,7 +1793,7 @@ function _bqxSheetSub(data) {
   return `${data.category ? data.category.name : t.noCat} · ${_bqxPrice(data.product.priceMAD)} ${t.cur} · ${_bqxPfFill(t.inStock, { n: data.stock })}`;
 }
 
-let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=20', document.baseURI).href).then((m) => (_bqxSzMod = m)));
+let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=21', document.baseURI).href).then((m) => (_bqxSzMod = m)));
 function _bqxOpenProduct(pid, target, drawerOnly) {
   const t = _bqxShT();
   const data = CAT().getProduct(pid);
@@ -2616,9 +2616,11 @@ handlers['bqx-var-add'] = (_el, arg) => {
           <span class="bqx-pf-l">${_esc(t.bcTitle)}</span>
           <div class="bqx-pf-choices">
             <label class="bqx-pf-choice"><input type="radio" name="bqx-vbc" value="gen" data-bqx-vbc checked /><b>${_esc(t.bcGen)}</b><small>${_esc(t.bcGenSub)}</small></label>
+            <label class="bqx-pf-choice"><input type="radio" name="bqx-vbc" value="own" data-bqx-vbc /><b>${_esc(t.bcOwn)}</b><small>${_esc(t.bcOwnSub)}</small></label>
             <label class="bqx-pf-choice"><input type="radio" name="bqx-vbc" value="none" data-bqx-vbc /><b>${_esc(t.bcLater)}</b><small>${_esc(t.bcLaterSub)}</small></label>
           </div>
         </div>
+        <div class="bqx-pf-f" data-bqx-va-own style="display:none"><input class="bqx-pf-in bqx-sh-mono" maxlength="64" data-bqx-vcode aria-label="${_esc(t.bcOwn)}" placeholder="${_esc(t.bcOwnPh)}" autocomplete="off" spellcheck="false" /><div class="bqx-pf-err" data-bqx-va-err="code" role="alert" hidden></div></div>
       </section>
       <div class="bqx-sh-preview" data-bqx-va-preview aria-live="polite"></div>
     </div></div>`,
@@ -2643,6 +2645,7 @@ function _bqxVaSay(b, k, msg) {
   const e = b.querySelector(`[data-bqx-va-err="${k}"]`);
   if (e) { e.textContent = msg || ''; e.hidden = !msg; }
   if (k === 'stock') { const i = b.querySelector('[data-bqx-vstock]'); if (i) i.setAttribute('aria-invalid', msg ? 'true' : 'false'); }
+  if (k === 'code') { const i = b.querySelector('[data-bqx-vcode]'); if (i) i.setAttribute('aria-invalid', msg ? 'true' : 'false'); }
   if (k === 'color') { const p = b.querySelector('[data-bqx-va-color]'); if (p) p.toggleAttribute('data-invalid', !!msg); }
 }
 function _bqxVaWire(b, pid) {
@@ -2675,8 +2678,13 @@ function _bqxVaWire(b, pid) {
   if (picker) picker.addEventListener('kc:change', () => { _bqxVaSay(b, 'color', ''); paint(); });
   if (sizeIn) sizeIn.addEventListener('input', paint);
   if (stockIn) stockIn.addEventListener('input', () => { _bqxVaSay(b, 'stock', ''); paint(); });
-  b.querySelectorAll('[data-bqx-vbc]').forEach((r) => r.addEventListener('change', paint));
+  /* « Il a déjà un code » : le champ s'ouvre, la douchette y écrit. */
+  const ownBox = b.querySelector('[data-bqx-va-own]'), codeIn = b.querySelector('[data-bqx-vcode]');
+  b.querySelectorAll('[data-bqx-vbc]').forEach((r) => r.addEventListener('change', () => { const own = _bqxVaRead(b, pid).bc === 'own'; if (ownBox) ownBox.style.display = own ? '' : 'none'; if (own && codeIn) setTimeout(() => codeIn.focus(), 20); paint(); }));
+  if (codeIn) codeIn.addEventListener('input', () => _bqxVaSay(b, 'code', ''));
   b.addEventListener('keydown', (e) => {
+    /* La douchette finit par « Entrée » : elle remplit le code, sans valider. */
+    if (e.key === 'Enter' && e.target === codeIn) { e.preventDefault(); return; }
     if (e.key === 'Enter' && e.target && e.target.matches && e.target.matches('input.bqx-pf-in')) {
       e.preventDefault();
       handlers['bqx-var-add-save'](null, pid);
@@ -2698,6 +2706,12 @@ handlers['bqx-var-add-save'] = (_el, arg) => {
     _bqxVaSay(b, 'stock', f.stock.empty ? t.stockEmpty : t.stockBad);
     first = first || b.querySelector('[data-bqx-vstock]');
   }
+  let own = '';   // « Il a déjà un code » : lisible, et libre dans ce magasin
+  if (f.bc === 'own') {
+    const raw = ((b.querySelector('[data-bqx-vcode]') || {}).value || '').trim(), val = raw && BC() && BC().validate ? BC().validate(raw) : { ok: !!raw, code: raw }, hit = val.ok ? CAT().findByBarcode(val.code || raw) : null;
+    const msg = !raw ? t.bcOwnEmpty : !val.ok ? t.bcOwnBad : hit ? _bqxPfFill(t.bcOwnTaken, { v: [hit.product && hit.product.name, _bqxVarName(hit.variant)].filter(Boolean).join(' · ') }) : '';
+    if (msg) { _bqxVaSay(b, 'code', msg); first = first || b.querySelector('[data-bqx-vcode]'); } else own = val.code || raw;
+  }
   if (first) { first.focus(); return; }
   if (f.dup) return;
   const res = CAT().ensureVariant({
@@ -2711,10 +2725,11 @@ handlers['bqx-var-add-save'] = (_el, arg) => {
     if (s) s.dispatchEvent(new Event('input'));
     return;
   }
-  const code = f.bc === 'gen' ? CAT().generateBarcode(res.variant.id) : null;
+  const kept = own ? !!(CAT().attachBarcode(res.variant.id, own) || {}).ok : false;
+  const code = (f.bc === 'gen' || (own && !kept)) ? CAT().generateBarcode(res.variant.id) : null;
   if (_bqxModal) _bqxModal.close();
   toast(t.addDone, {
-    desc: [_bqxVarName(res.variant), t.pieces(f.stock.n), code ? t.addCode : ''].filter(Boolean).join(' · '),
+    desc: [_bqxVarName(res.variant), t.pieces(f.stock.n), kept ? t.addKept : code ? t.addCode : ''].filter(Boolean).join(' · '),
     type: 'success', duration: 2400,
   });
 };
@@ -3250,7 +3265,7 @@ function _bqxPfBody(p, catSel) {
           <p class="bqx-pf-gap" data-bqx-pf-gap aria-live="polite"></p>
           ${p ? _bqxSkuField(p.sku) : ''}
         </section>
-        ${(!p && boutique && _bqxSzMod) ? _bqxSzMod.totalFieldHtml(_bqxPfLang(), kindSel) : ''}${p ? _bqxAbField(p) : _bqxAbField(null)}
+        ${(!p && boutique && _bqxSzMod) ? _bqxSzMod.totalFieldHtml(_bqxPfLang(), kindSel) + (_bqxSzMod.codeFieldHtml ? _bqxSzMod.codeFieldHtml(_bqxPfLang(), kindSel) : '') : ''}${p ? _bqxAbField(p) : _bqxAbField(null)}
       </div>
       <aside class="bqx-pf-side">
         <div class="bqx-pf-card" data-bqx-pf-card>
@@ -3393,7 +3408,7 @@ function _bqxPfWire(b, p) {
   photoInput.addEventListener('change', (e) => { upload(e.target.files && e.target.files[0], 'photo'); e.target.value = ''; });
   videoInput.addEventListener('change', (e) => { upload(e.target.files && e.target.files[0], 'video'); e.target.value = ''; });
 
-  if (_bqxSzMod) _bqxSzMod.wireTotal(b, _bqxPfLang()); _bqxWireAb(b); import(new URL('assets/retail-icon-picker.js?v=4', document.baseURI).href).then((m) => m.mountTillPhoto(b, p, { lang: _bqxPfLang(), trade: _bqxCopy().trade, media: () => !!(_bqxPhoto || _bqxVideo) })).catch(() => {});   // la photo de la caisse
+  if (_bqxSzMod) { _bqxSzMod.wireTotal(b, _bqxPfLang()); if (_bqxSzMod.wireCode) _bqxSzMod.wireCode(b, CAT(), _bqxPfLang()); } _bqxWireAb(b); import(new URL('assets/retail-icon-picker.js?v=4', document.baseURI).href).then((m) => m.mountTillPhoto(b, p, { lang: _bqxPfLang(), trade: _bqxCopy().trade, media: () => !!(_bqxPhoto || _bqxVideo) })).catch(() => {});   // la photo de la caisse
   paintMedia();
   paintGap();
 }
@@ -3448,6 +3463,8 @@ handlers['bqx-new-save'] = () => {
   if (_bqxAbOn() && !ab) { _bqxPfFail(b, 'ab'); return; }
   const S = b.querySelector('[data-kbs-total]') ? _bqxSzMod : null, total = S && S.readTotal(b); if (f && S && total == null) { _bqxPfFail(b); return; }   // boutique : la quantité du carton
   if (!f) { _bqxPfFail(b); return; }
+  const bc = (S && S.readCode) ? S.readCode(b, CAT(), _bqxPfLang()) : { code: '' };   // un code déjà collé sur l'article
+  if (!bc) { _bqxPfFail(b); return; }
   const data = {
     name: f.name, categoryId: f.categoryId, kind: f.kind || _bqxCopy().defaultKind, art: f.art, artPicked: f.artPicked,
     priceMAD: f.priceMAD,
@@ -3459,7 +3476,7 @@ handlers['bqx-new-save'] = () => {
     photo: _bqxPhoto,
     video: _bqxVideo,
   };
-  const made = S ? S.createProduct(CAT(), data, total) : { product: CAT().addProduct(data) }, p = made.product;
+  const made = S ? S.createProduct(CAT(), data, total, bc.code) : { product: CAT().addProduct(data) }, p = made.product;
   if (_bqxModal) _bqxModal.close();
   const t = _bqxPfT();
   toast(t.created, { desc: S ? (made.needsGrid ? t.createdBoutique : t.createdOne) : t.createdOther, type: 'success' });

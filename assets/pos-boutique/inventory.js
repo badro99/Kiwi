@@ -1,10 +1,10 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=246';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=144';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=247';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=145';
 import { openMoves } from './inv-moves.js?v=5';
-import * as SZ from '../boutique-sizes.js?v=20';
+import * as SZ from '../boutique-sizes.js?v=21';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=18';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=144';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=145';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -898,6 +898,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
             </div>
           </section>
           ${SZ.totalFieldHtml(lang, 'taille')}
+          ${SZ.codeFieldHtml(lang, 'taille')}
         </div>
         <aside class="bqx-pf-side">
           <div class="bqx-pf-card"><div class="bqx-pf-pn is-empty" data-bqi-pn>${esc(f.name)}</div><div class="bqx-pf-pm" data-bqi-pm>${esc(f.catNone)}</div><div class="bqx-pf-pp" data-bqi-pp hidden></div></div>
@@ -926,6 +927,9 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       priceIn.addEventListener('input', () => { mark('price', false); paint(); });
       catIn.addEventListener('change', paint);
       SZ.wireTotal(el, lang);
+      /* Un article déjà étiqueté : la douchette remplit le champ du code. */
+      const onScan = (c) => SZ.putCode(el, cat, lang, normScan(c));
+      SZ.wireCode(el, cat, lang, (on) => (on ? armScanCapture(onScan) : disarmScanCapture(onScan)));
       /* La photo de la caisse, choisie comme au tableau de bord. */
       import('../retail-icon-picker.js?v=4').then((m) => m.mountTillPhoto(el, null, { lang, trade: 'boutique', media: () => false })).catch(() => {});
 
@@ -935,7 +939,8 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         const total = SZ.readTotal(el);
         mark('name', !name);
         mark('price', !(price > 0));
-        if (!name || !(price > 0) || total == null) {
+        const bc = SZ.readCode(el, cat, lang);
+        if (!name || !(price > 0) || total == null || !bc) {
           const bad = el.querySelector('.kbs-form [aria-invalid="true"]');
           if (bad) bad.focus();
           return;
@@ -945,10 +950,10 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         const made = SZ.createProduct(cat, {
           name, categoryId: catIn.value || null, kind, art: ph.art || '', artPicked: !!ph.artPicked,
           priceMAD: price, cost: bqMoney(costIn.value),
-        }, total);
+        }, total, bc.code);
         if (!made.product) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Création impossible')); return; }
         disarmScanCapture();
-        toast(`${name} ajouté à l'inventaire`, 3200, 'success', made.needsGrid ? 'Répartissez maintenant les pièces par taille.' : `${total} pièce${total > 1 ? 's' : ''} · code-barres créé`);
+        toast(`${name} ajouté à l'inventaire`, 3200, 'success', made.needsGrid ? 'Répartissez maintenant les pièces par taille.' : `${total} pièce${total > 1 ? 's' : ''} · ${made.kept ? 'code fournisseur conservé' : 'code-barres créé'}`);
         openInvProduct(made.product.id, made.needsGrid ? total : 0);
       };
       $('#bqi-n-save', el).addEventListener('click', save);
