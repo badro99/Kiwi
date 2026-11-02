@@ -190,7 +190,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2099',
-  '/assets/pages/dashboard-startup.js?v=126',
+  '/assets/pages/dashboard-startup.js?v=127',
   '/assets/pages/dashboard-loader.js?v=35',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=3',
@@ -391,7 +391,7 @@ var SHELL = [
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
   '/assets/promo-rules.js?v=7',
   '/assets/promos.js?v=15',
-  '/assets/boutique-promos-dashboard.js?v=24',
+  '/assets/boutique-promos-dashboard.js?v=25',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js?v=91',
