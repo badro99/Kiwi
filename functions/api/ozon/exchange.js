@@ -58,6 +58,33 @@ async function usedQty(db, merchant, saleId) {
   return used;
 }
 
+/* The basket line this exchange claims beyond what is left, counting every
+   return and exchange written before it (by trace id); null when it fits. */
+async function overClaimed(db, merchant, saleId, id, basket) {
+  const rs = await db.prepare(`SELECT action, note, impact FROM sale_audit WHERE merchant = ? AND sale_id = ?
+    AND action IN ('delivery-return', 'delivery-exchange') ORDER BY id ASC`).bind(merchant, saleId).all();
+  const taken = new Map();
+  for (const r of rs.results || []) {
+    const imp = parse(r.impact || '{}', {});
+    const mine = r.action === 'delivery-exchange' && String(r.note) === id;
+    for (const l of (r.action === 'delivery-exchange' ? imp.swaps : imp.lines) || []) {
+      const i = Number(l && l.i), q = Number(l && l.q) || 0;
+      if (!Number.isSafeInteger(i) || q <= 0) continue;
+      taken.set(i, (taken.get(i) || 0) + q);
+      if (mine && taken.get(i) > (Number(basket[i] && basket[i].q) || 0)) return i;
+    }
+    if (mine) return null;
+  }
+  return null;
+}
+
+async function undo(env, merchant, saleId, id, ts) {
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM sales WHERE merchant = ? AND id = ? AND ts = ?`).bind(merchant, id, ts),
+    env.DB.prepare(`DELETE FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'delivery-exchange' AND note = ?`).bind(merchant, saleId, id),
+  ]);
+}
+
 function view(impact, id, saleId) {
   return { id, saleId, swaps: impact.swaps || [], backCents: impact.backCents || 0, outCents: impact.outCents || 0,
     diffCents: impact.diffCents || 0, creditCents: impact.creditCents || 0, codCents: impact.codCents || 0 };
@@ -188,6 +215,15 @@ export async function onRequestPost({ request, env }) {
   }
   const mine = await env.DB.prepare(`SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND ts = ?`).bind(merchant, id, now).first();
   if (!mine) return (await prior(env, merchant, saleId, id)) || json({ error: 'exchange-in-progress' }, 409);
+  /* Two tablets swapping (or returning) the same piece at the same instant both
+     passed the check above. Counted again now, in the order the traces were
+     written: the earliest keeps the piece, a later exchange removes itself
+     before Ozon is ever called. */
+  const lost = await overClaimed(env.DB, merchant, saleId, id, basket);
+  if (lost != null) {
+    await undo(env, merchant, saleId, id, now);
+    return json({ error: 'exceeds-line', i: lost }, 409);
+  }
 
   const names = swaps.map((s) => s.to).join(', ');
   const sent = await sendParcel(env, merchant, account, {
@@ -199,10 +235,7 @@ export async function onRequestPost({ request, env }) {
   const body = await sent.json();
   if (!body.ok) {
     /* Ozon said no: the exchange never happened. */
-    await env.DB.batch([
-      env.DB.prepare(`DELETE FROM sales WHERE merchant = ? AND id = ? AND ts = ?`).bind(merchant, id, now),
-      env.DB.prepare(`DELETE FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'delivery-exchange' AND note = ?`).bind(merchant, saleId, id),
-    ]);
+    await undo(env, merchant, saleId, id, now);
     return json({ error: body.error || 'ozon-refused', message: body.message || '' }, sent.status >= 400 ? sent.status : 502);
   }
   return json({ ok: true, already: false, exchange: view(impact, id, saleId), parcel: body.parcel || null });

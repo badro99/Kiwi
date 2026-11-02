@@ -14,7 +14,8 @@
  *     revenue once; a cheaper one collects nothing (the shop keeps it);
  *   · the parcel is an Ozon « échange » (parcel-replace = 1);
  *   · one exchange per id: a replay sends nothing; a swapped unit can be
- *     neither swapped again nor returned on the original line;
+ *     neither swapped again nor returned on the original line, even by two
+ *     tablets at the same instant (the earliest trace keeps it);
  *   · prices and values come from the server (catalogue, frozen basket),
  *     never the tablet; stock and unknown variants are refused before Ozon;
  *   · Ozon refusing leaves no sale and no trace;
@@ -240,6 +241,30 @@ await ok('Ozon refusing leaves no sale and no trace; the same exchange goes thro
   assert.equal(add['parcel-receiver'], 'Cliente Fiche', 'no Ozon parcel on that sale: the delivery card names the recipient');
   assert.equal(add['parcel-city'], '1790');
   assert.equal(add['parcel-price'], '0', 'same price, the shop offers the delivery: the courier collects nothing');
+});
+
+await ok('two tablets swap the same piece at the same instant: the first keeps it, the second sends nothing', async () => {
+  sale('dlv-race', [{ n: 'Robe S', q: 1, t: 450, v: 'p-robe:S:noir' }]);
+  sqlite.prepare(`INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id, amount, amount_cents, method, ref, sale_ts, impact, ts)
+    VALUES (?, 'dlv-race', 'delivery-card', '', '', '', '', 0, 0, 'delivery', '', 0, ?, ?)`).run(MERCHANT,
+    JSON.stringify({ name: 'Cliente Course', phone: '0612345678', city: 'Agadir', address: '3 rue Course', cityId: 37 }), now);
+  /* The other tablet's exchange lands between this one's check and its write. */
+  const batch = DB.batch;
+  DB.batch = (list) => {
+    DB.batch = batch;
+    sqlite.prepare(`INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id, amount, amount_cents, method, ref, sale_ts, impact, ts)
+      VALUES (?, 'dlv-race', 'delivery-exchange', 'customer-exchange', 'xch-other-tablet-01', '', '', 0, 45000, 'delivery', '', 0, ?, ?)`)
+      .run(MERCHANT, JSON.stringify({ swaps: [{ i: 0, q: 1 }] }), Date.now() - 1);
+    return batch(list);
+  };
+  const before = addCount();
+  const r = await swap({ saleId: 'dlv-race', id: 'xch-race000001', swaps: [{ i: 0, q: 1, pid: 'p-robe', size: 'M', color: 'noir' }] });
+  DB.batch = batch;
+  assert.equal(r.status, 409, JSON.stringify(r.body)); assert.equal(r.body.error, 'exceeds-line');
+  assert.equal(addCount(), before, 'Ozon never called for the loser');
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS n FROM sales WHERE id = 'xch-race000001'`).get().n, 0);
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS n FROM sale_audit WHERE note = 'xch-race000001'`).get().n, 0);
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS n FROM sale_audit WHERE note = 'xch-other-tablet-01'`).get().n, 1, 'the first one stays');
 });
 
 await ok('another shop\'s till cannot swap this shop\'s order', async () => {
