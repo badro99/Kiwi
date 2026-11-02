@@ -141,9 +141,9 @@ function _bqxCss() {
     .bqx-cat-info { flex: 1; min-width: 0; }
     .bqx-cat-info .n { font-weight: 600; font-size: 14px; }
     .bqx-cat-info .m { font-size: 12px; color: var(--n-500, #77807b); margin-top: 2px; }
-    .bqx-cat-sw { display: flex; gap: 5px; }
-    .bqx-cat-sw button { width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
-    .bqx-cat-sw button.on { border-color: var(--ink, #0A0F0D); }
+    .bqx-cat-sw { display: flex; gap: 10px; flex-wrap: wrap; }
+    .bqx-cat-sw button { width: 36px; height: 36px; border-radius: 11px; border: 0; cursor: pointer; padding: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,.18); transition: transform .31s var(--spring, cubic-bezier(.34,1.45,.5,1)); }
+    .bqx-cat-sw button:hover { transform: scale(1.08); } .bqx-cat-sw button.on { outline: 2px solid var(--ink, #0A0F0D); outline-offset: 3px; }
     .bqx-price-tag { font-family: var(--mono, monospace); }
     /* Catégorie A / B · la propriété de la marchandise, choisie à la création. */
     .bqx-ab { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -3554,47 +3554,23 @@ const _catL = (fr, en, ar) => { const l = _bqxPfLang(); return l === 'en' ? en :
 const _catTone = (t) => { const m = { mint: ['Mint', 'نعناعي'], warn: ['Saffron', 'زعفراني'], danger: ['Crimson', 'قرمزي'], info: ['Indigo', 'نيلي'] }[t.id]; return m ? _catL(t.name, m[0], m[1]) : t.name; };
 const _catPr = (n) => _catL(`${n} produit${n > 1 ? 's' : ''}`, `${n} product${n === 1 ? '' : 's'}`, n === 1 ? 'منتج واحد' : n === 2 ? 'منتجان' : `${n} ${n > 10 ? 'منتجًا' : 'منتجات'}`);
 function _renderCategories() {
-  const cat = CAT();
+  const cat = CAT(), _catView = window.Kiwi.categoriesView;
   cat.use(_bqxVenue());
   const cats = cat.listCategories();
   const st = cat.stats();
   window.Kiwi.appPage('categories', {
     title: _catL('Catégories', 'Categories', 'الفئات'),
     subtitle: _catL(`${_bqxN(cats.length, 'catégorie')} · ${_bqxN(st.products, 'produit')} référencé${st.products < 2 ? '' : 's'}`, `${cats.length} categor${cats.length === 1 ? 'y' : 'ies'} · ${st.products} product${st.products === 1 ? '' : 's'} listed`, `${cats.length} ${cats.length === 1 ? 'فئة' : 'فئات'} · ${st.products} ${st.products === 1 ? 'منتج مدرج' : 'منتجات مدرجة'}`) + _bqxShared(),
-    body: `
-      <div class="kx-kpi-strip cols-3">
+    body: _catView ? _catView.body({ kpis: `<div class="kx-kpi-strip cols-3">
         <div class="kx-kpi"><div class="l">${_catL('CATÉGORIES', 'CATEGORIES', 'الفئات')}</div><div class="v">${cats.length}</div><div class="d">${_catL('Créez / supprimez librement', 'Create or delete freely', 'أنشئ أو احذف بحرية')}</div></div>
         <div class="kx-kpi"><div class="l">${_catL('PRODUITS RÉFÉRENCÉS', 'PRODUCTS LISTED', 'المنتجات المدرجة')}</div><div class="v">${st.products}</div><div class="d">${cat.listProducts({ categoryId: 'all' }).filter((p) => !p.categoryId).length} ${_catL('sans catégorie', 'uncategorised', 'بدون فئة')}</div></div>
         <div class="kx-kpi"><div class="l">${_catL('VALEUR DE STOCK', 'STOCK VALUE', 'قيمة المخزون')}</div><div class="v">${_bqxStockKPI(st).shown}<span class="u">MAD</span></div><div class="d">${_catL('Toutes catégories', 'All categories', 'جميع الفئات')}${_bqxStockKPI(st).note}</div></div>
-      </div>
-
-      <div class="p-toolbar" style="margin-top:4px;">
-        <div class="p-search" style="flex:1;"><span style="display:inline-flex;align-items:center;">${_ICN.search}</span><span style="margin-left:6px;color:var(--n-500,#77807b);">${_catL('Organisez vos rayons, couleur, renommage, suppression', 'Organise your sections: colour, rename, delete', 'نظّم أقسامك: اللون وإعادة التسمية والحذف')}</span></div>
-        <button data-activation=write class="kb primary" data-action="bqx-cat-new">${_ICN.plus}${_catL('Ajouter une catégorie', 'Add a category', 'إضافة فئة')}</button>
-      </div>
-
-      <div style="margin-top:12px;">
-        ${cats.length ? cats.map((c) => {
-          const count = cat.categoryCount(c.id);
-          const hex = _TAGHEX[c.color] || '#0B6E4F';
-          return `<div class="bqx-cat-row">
-            <div class="bqx-cat-bar" style="background:${hex};"></div>
-            <div class="bqx-cat-info"><div class="n">${_esc(c.name)}</div><div class="m">${_catPr(count)}</div></div>
-            <div class="bqx-cat-sw">${_TAGS.map((t) => `<button class="${t.id === c.color ? 'on' : ''}" style="background:${t.hex};" title="${_catTone(t)}" data-action="bqx-cat-color" data-arg="${c.id}::${t.id}"></button>`).join('')}</div>
-            <div class="kx-tree-actions">
-              <button class="kb ghost xs" data-action="bqx-cat-rename" data-arg="${c.id}" aria-label="${_catL('Renommer', 'Rename', 'إعادة تسمية')} ${_esc(c.name)}" title="${_catL('Renommer', 'Rename', 'إعادة تسمية')}">${_ICN.edit}</button>
-              <button data-activation=write class="kb ghost xs danger-text" data-action="bqx-cat-del" data-arg="${c.id}" aria-label="${_catL('Supprimer', 'Delete', 'حذف')} ${_esc(c.name)}" title="${_catL('Supprimer', 'Delete', 'حذف')}">${_ICN.trash}</button>
-            </div>
-          </div>`;
-        }).join('') : `<div class="kx-foot-hint"><div class="lh">${_catL('Aucune catégorie', 'No categories', 'لا توجد فئات')}</div><div class="rh">${_catL('Ajoutez votre premier rayon.', 'Add your first section.', 'أضف أول قسم لك.')}</div></div>`}
-      </div>
-
-      <div class="kx-foot-hint">
-        <div class="lh">${_catL('Conseil', 'Tip', 'نصيحة')}</div>
-        <div class="rh">${_bqxTillReads() ? _catL('Vos catégories deviennent les rayons de la caisse', 'Your categories become the sections on the till', 'تصبح فئاتك أقسام الصندوق') + _bqxTillHint() + '. ' : ''}${_catL('Supprimer une catégorie déplace ses produits vers « Sans catégorie » ou une catégorie de votre choix.', 'Deleting a category moves its products to "Uncategorised" or to a category of your choice.', 'حذف فئة ينقل منتجاتها إلى «بدون فئة» أو إلى فئة تختارها.')}</div>
-      </div>
-    `,
+      </div>`,
+      cats: cats.map((c) => ({ id: c.id, name: c.name, color: c.color, count: cat.categoryCount(c.id) })), products: st.products, uncategorised: cat.listProducts({ categoryId: 'all' }).filter((p) => !p.categoryId).length, tags: _TAGS, tagName: _catTone,
+      hint: (_bqxTillReads() ? _catL('Vos catégories deviennent les rayons de la caisse', 'Your categories become the sections on the till', 'تصبح فئاتك أقسام الصندوق') + _bqxTillHint() + '. ' : '') + _catL('Supprimer une catégorie déplace ses produits vers « Sans catégorie » ou une catégorie de votre choix.', 'Deleting a category moves its products to "Uncategorised" or to a category of your choice.', 'حذف فئة ينقل منتجاتها إلى «بدون فئة» أو إلى فئة تختارها.') })
+      : cats.map((c) => `<div class="bqx-cat-row"><div class="bqx-cat-info"><div class="n">${_esc(c.name)}</div></div><button class="kb ghost xs" data-action="bqx-cat-rename" data-arg="${c.id}">${_ICN.edit}</button><button class="kb ghost xs danger-text" data-action="bqx-cat-del" data-arg="${c.id}">${_ICN.trash}</button></div>`).join(''),
   });
+  if (_catView) _catView.wire(document.querySelector('.dash-genpage'));
 }
 
 handlers['nav-categories'] = () => {
@@ -3608,7 +3584,7 @@ handlers['bqx-cat-new'] = () => {
     body: `
       <div class="kf-group"><label class="kf-label">${_catL('Nom de la catégorie', 'Category name', 'اسم الفئة')}</label><input class="kf-input" placeholder="${_esc(_bqxCopy().catPlaceholder)}" data-bqx-cname /></div>
       <div class="kf-group"><label class="kf-label">${_catL('Couleur', 'Colour', 'اللون')}</label>
-        <div class="bqx-cat-sw" data-bqx-cnewsw>${_TAGS.map((t, i) => `<button class="${i === 0 ? 'on' : ''}" style="background:${t.hex};width:24px;height:24px;" title="${_catTone(t)}" data-tone="${t.id}"></button>`).join('')}</div></div>`,
+        <div class="bqx-cat-sw" data-bqx-cnewsw>${_TAGS.map((t, i) => `<button class="${i === 0 ? 'on' : ''}" style="background:${t.hex};" title="${_catTone(t)}" aria-label="${_catTone(t)}" data-tone="${t.id}"></button>`).join('')}</div></div>`,
     foot: `<button class="kb ghost" data-dismiss>${_catL('Annuler', 'Cancel', 'إلغاء')}</button><button data-activation=write class="kb atlas" data-action="bqx-cat-new-save">${_catL('Créer la catégorie', 'Create category', 'إنشاء الفئة')}</button>`,
   });
   setTimeout(() => {

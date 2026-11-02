@@ -131,6 +131,10 @@
     "v": "28",
     "sha": "42bd74df49f8a10c"
   },
+  "assets/boutique-categories-view.js": {
+    "v": "2",
+    "sha": "0f5ec27dd6afff37"
+  },
   "assets/boutique-promos-dashboard.js": {
     "v": "25",
     "sha": "7177989a3c68848f"
@@ -1336,8 +1340,8 @@
     "sha": "2cfe4e7d2ca95ce5"
   },
   "assets/pages-pro-boutique.js": {
-    "v": "41",
-    "sha": "5b8d8497ac2c4063"
+    "v": "43",
+    "sha": "1c3e71284f658fb7"
   },
   "assets/pages-pro-office.js": {
     "v": "3",
@@ -1384,8 +1388,8 @@
     "sha": "4f0facbf1ccf4020"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "131",
-    "sha": "8ffd8c8dfc73349e"
+    "v": "133",
+    "sha": "e17519f60c4ea8b5"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
