@@ -187,9 +187,9 @@
   /* « atteint » et « Reste » étaient écrits en français quelle que soit la
    * langue : l'interface anglaise affichait « 53 % atteint · Reste 14 837 MAD ». */
   var GOAL_STR = {
-    fr: { reached: 'atteint', rest: 'Reste' },
-    en: { reached: 'reached', rest: 'Left' },
-    ar: { reached: 'تم تحقيقه', rest: 'المتبقي' }
+    fr: { reached: 'atteint', rest: 'Reste', suggested: 'Objectif suggéré d’après vos ventes des 4 dernières semaines', short: 'suggéré' },
+    en: { reached: 'reached', rest: 'Left', suggested: 'Goal suggested from your last 4 weeks of sales', short: 'suggested' },
+    ar: { reached: 'تم تحقيقه', rest: 'المتبقي', suggested: 'هدف مقترح حسب مبيعاتك في الأسابيع الأربعة الأخيرة', short: 'مقترح' }
   };
   var RANGE_STR = {
     fr: { aujourdhui: "Aujourd'hui", hier: 'Hier', septJours: '7 derniers jours', trenteJours: '30 derniers jours', moisDernier: 'Mois dernier', trimestre: 'Ce trimestre', annee: 'Cette année', personnalise: 'Période personnalisée' },
@@ -1006,6 +1006,12 @@
      * comme l'objectif lui-même (« 85,00 · Aucun objectif défini »). */
     setText(currentTarget, goalUnset ? '·' : amountText);
     setText(targetTarget, goalUnset ? '' : (targetText ? '/ ' + targetText : ''));
+    /* Objectif proposé par le tableau de bord (hero.js › suggestedGoal) : on le dit. */
+    var goalSuggested = !goalUnset && !!(goalLabel && goalLabel.dataset && goalLabel.dataset.goalSuggested);
+    if (targetTarget) {
+      if (goalSuggested) { setText(targetTarget, '/ ' + targetText + ' · ' + (GOAL_STR[lang()] || GOAL_STR.fr).short); targetTarget.title = (GOAL_STR[lang()] || GOAL_STR.fr).suggested; }
+      else targetTarget.removeAttribute('title');
+    }
     if (goalUnset) {
       if (pctTarget) delete pctTarget.dataset.numericPhrase;
       setText(pctTarget, (SERVICE_STR[lang()] || SERVICE_STR.fr).goalUnset);

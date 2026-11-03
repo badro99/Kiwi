@@ -47,8 +47,8 @@ export async function harness(f){
   })();s.inflight.add(work);work.then(()=>s.inflight.delete(work),()=>s.inflight.delete(work));return work;
  }
  function installStore(c){
-  const names=['salesTenant','SALES_KEY','deepFreeze','cachedLedger','salesList','salesWrite','salesEntry','salesAdd','salesAddMany','annotatedEntry','salesAnnotateMany','salesAnnotate','salesRemove','salesRetainCursors','REFUNDS_KEY','refundsList','refundsWrite','refundsAdd','refundsRemove','refundsRetainCursors'];
-  c.currentVenue='own';c.TRANSIENT_IDS=['own','scoped'];c.slugOf=()=>s.active;c.salesSubs=new Set();c.refundSubs=new Set();c.ledgerCache=new Map();c.mergeLiveRetention=()=>{};
+  const names=['salesTenant','SALES_KEY','deepFreeze','storageChars','ledgerWrite','cachedLedger','salesList','salesWrite','salesEntry','salesAdd','salesAddMany','annotatedEntry','salesAnnotateMany','salesAnnotate','salesRemove','salesRetainCursors','REFUNDS_KEY','refundsList','refundsWrite','refundsAdd','refundsRemove','refundsRetainCursors'];
+  c.currentVenue='own';c.TRANSIENT_IDS=['own','scoped'];c.slugOf=()=>s.active;c.salesSubs=new Set();c.refundSubs=new Set();c.ledgerCache=new Map();c.memLedger=new Map();c.refusedReported=false;c.mergeLiveRetention=()=>{};
   run(names.map(n=>named(read('assets/venues.js'),n)).join('\n')+'\nwindow.KiwiSales={list:salesList,add:salesAdd,addMany:salesAddMany,remove:salesRemove,annotate:salesAnnotate,annotateMany:salesAnnotateMany,retainCursors:salesRetainCursors};window.KiwiRefunds={list:refundsList,add:refundsAdd,remove:refundsRemove,retainCursors:refundsRetainCursors};',c);
  }
  async function boot(indexed=s.indexed){

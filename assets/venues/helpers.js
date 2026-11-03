@@ -639,7 +639,36 @@
     if (o && typeof o === 'object' && !Object.isFrozen(o)) { Object.freeze(o); for (const k of Object.keys(o)) deepFreeze(o[k]); }
     return o;
   }
+  /* Un registre que le navigateur refuse de ranger (stockage plein, refusé,
+   * navigation privée) reste en mémoire pour la page. Avant, l'écriture
+   * échouait en silence et le tableau de bord relisait un registre vide :
+   * des 0 partout chez le commerçant (Santos Store, 3 novembre 2026), alors
+   * que le serveur et God Mode avaient tout. La page suivante rejoue le flux
+   * depuis le début, comme toujours. */
+  const memLedger = new Map();
+  let refusedReported = false;
+  function storageChars() {
+    let n = 0;
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i) || ''; n += k.length + String(localStorage.getItem(k) || '').length; } } catch (_) {}
+    return n;
+  }
+  function ledgerWrite(key, rows) {
+    const text = JSON.stringify(rows);
+    try { localStorage.setItem(key, text); memLedger.delete(key); return true; } catch (err) {
+      /* L'ancienne copie, partielle, ne doit plus répondre aux lectures. */
+      try { localStorage.removeItem(key); } catch (_) {}
+      memLedger.set(key, deepFreeze(JSON.parse(text)));
+      if (!refusedReported) {
+        refusedReported = true;
+        /* Remonte à /api/error (err-reporter.js écoute les rejets) : on verra
+         * le prochain appareil plein au lieu de l'apprendre par le client. */
+        Promise.reject(new Error('kiwi-ledger-storage-refused: ' + String(key).split('@')[0] + ' ' + rows.length + ' rows ' + text.length + ' chars, storage ' + storageChars() + ' chars, ' + ((err && err.name) || 'error')));
+      }
+      return true;
+    }
+  }
   function cachedLedger(key) {
+    if (memLedger.has(key)) return memLedger.get(key);
     let raw = null;
     try { raw = localStorage.getItem(key); } catch (_) { return []; }
     const hit = ledgerCache.get(key);
@@ -650,7 +679,7 @@
     return rows;
   }
 /* <</split:cache>> */
-    return { ledgerCache, deepFreeze, cachedLedger };
+    return { ledgerCache, deepFreeze, cachedLedger, ledgerWrite };
   };
   (window.__kiwiVenueParts = window.__kiwiVenueParts || {}).reconcile = function (__deps) {
     const { refundSubs, refundsList, refundsWrite, salesEntry, salesList, salesSubs, salesWrite } = __deps;

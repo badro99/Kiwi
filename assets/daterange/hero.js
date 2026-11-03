@@ -1,6 +1,6 @@
 /* Owner: dashboard hero. Exports: renderHero, renderHeroAi, renderHeatmapAi, renderGoal, renderHeatmap, heroDataByVenue.
  * Sibling calls via live owner: none.
- * Reads live owner: COVERS_LABEL, GOAL_LABEL, GOAL_UNSET, HERO_LABEL, HH_SUB, ORDERS_LABEL, animateNumber, arrowSvg, buildHeatmap, buildRealHeatmapRec, buildRealHeroRec, curUnit, currentRange, deltaLabels, demoHeroSim, demoPreviousAt, effRange, fitHeroAmount, fmtHeroAmount, fmtPct, frInt, getLang, getSim, goalByVenue, guardOperatorFigures, heroDataByVenue, homeSet, intensityClass, isLiveDemo, kitCase, liveTickInProgress, operatorUnavailableText, ownData, parseAmountFromEl, parsePctFromEl, realDeltaPct, realSalesTotals, vData.
+ * Reads live owner: COVERS_LABEL, GOAL_LABEL, GOAL_UNSET, HERO_LABEL, HH_SUB, ORDERS_LABEL, RANGE_DAYS, animateNumber, arrowSvg, buildHeatmap, buildRealHeatmapRec, buildRealHeroRec, curUnit, currentRange, deltaLabels, demoHeroSim, demoPreviousAt, effRange, fitHeroAmount, fmtHeroAmount, fmtPct, frInt, getLang, getSim, goalByVenue, guardOperatorFigures, heroDataByVenue, homeSet, intensityClass, isLiveDemo, kitCase, liveTickInProgress, operatorUnavailableText, ownData, parseAmountFromEl, parsePctFromEl, rangeBounds, realDeltaPct, realSalesTotals, realWindowStats, vData.
  * Reads globalThis: none.
  * Reads window: KiwiSales, KiwiVenue, KiwiZReconciliation. No state is copied. */
 (function () {
@@ -254,6 +254,14 @@ function renderGoal() {
      * lit comme un échec au lieu d'une case vide. On dit ce qui est — aucun
      * objectif — et on ne calcule pas un pourcentage qui n'existe pas. Le
      * drapeau sur le libellé sert à la carte Vexel, qui recopie ce DOM. */
+    /* Rien de saisi : on propose un objectif tiré des ventes du commerce
+     * lui-même (voir suggestedGoal), marqué « suggéré ». Un commerce sans
+     * historique garde « à définir » : on n'invente pas un chiffre. */
+    let suggested = false;
+    if (!(data.goal > 0) && __state.ownData() && window.KiwiSales) {
+      const g = suggestedGoal(__state.currentRange);
+      if (g > 0) { data = { ...data, goal: g }; suggested = true; }
+    }
     const unset = !(data.goal > 0);
     const labelTxt = __state.kitCase(__state.GOAL_LABEL[lang]?.[__state.currentRange] || __state.GOAL_LABEL.fr[__state.currentRange]);
     const labelEl = document.querySelector('[data-goal-label]');
@@ -263,6 +271,8 @@ function renderGoal() {
         : `${labelTxt} · ${__state.frInt(data.goal)} ${__state.curUnit()}`;
       if (unset) labelEl.dataset.goalUnset = '1';
       else delete labelEl.dataset.goalUnset;
+      if (suggested) labelEl.dataset.goalSuggested = '1';
+      else delete labelEl.dataset.goalSuggested;
     }
 
     const ratio = unset ? 0 : data.current / data.goal;
@@ -280,7 +290,39 @@ function renderGoal() {
     }
     const fillEl = document.querySelector('[data-goal-fill]');
     if (fillEl) fillEl.style.width = `${widthPct.toFixed(1)}%`;
-    typeof __state.homeSet === 'function' && __state.homeSet('goal', { range: __state.currentRange, unset, label: labelEl ? labelEl.textContent : '', goal: unset ? 0 : data.goal, current: data.current, pct: unset ? null : pctRound, ratio });
+    typeof __state.homeSet === 'function' && __state.homeSet('goal', { range: __state.currentRange, unset, label: labelEl ? labelEl.textContent : '', goal: unset ? 0 : data.goal, suggested, current: data.current, pct: unset ? null : pctRound, ratio });
+    /* Un objectif réaliste pour un commerçant qui n'en a pas fixé.
+     * Jour : la médiane des 28 derniers jours ouvrés AVEC ventes (un jour fermé ne
+     * tire pas la cible vers zéro, un gros jour isolé ne la gonfle pas). Période
+     * plus longue : la moyenne par jour calendaire sur ces 28 jours, fois le nombre
+     * de jours de la période. Il faut au moins trois jours de ventes. Arrondi vers
+     * le haut à un pas lisible. Mémorisé pour la journée : le tableau de bord se
+     * redessine toutes les quelques secondes et le passé ne bouge pas. */
+    function suggestedGoal(range) {
+      const DAY = 86400000;
+      let today;
+      try { today = __state.rangeBounds('aujourdhui')[0]; } catch (_) { return 0; }
+      if (!(today > 0)) return 0;
+      const suggestMemo = renderGoal.suggestMemo || { key: '', daily: 0, perDay: 0 };
+      if (suggestMemo.key !== String(today) || !suggestMemo.daily) {
+        const days = [];
+        let total = 0;
+        for (let k = 1; k <= 28; k++) {
+          let rev = 0;
+          try { rev = +__state.realWindowStats(today - k * DAY, today - (k - 1) * DAY).revenue || 0; } catch (_) { rev = 0; }
+          if (rev > 0) { days.push(rev); total += rev; }
+        }
+        days.sort((a, b) => a - b);
+        const median = days.length ? (days.length % 2 ? days[(days.length - 1) / 2] : (days[days.length / 2 - 1] + days[days.length / 2]) / 2) : 0;
+        Object.assign(suggestMemo, days.length >= 3 ? { key: String(today), daily: median, perDay: total / 28 } : { key: String(today), daily: 0, perDay: 0 });
+        renderGoal.suggestMemo = suggestMemo;
+      }
+      if (!suggestMemo.daily) return 0;
+      const n = __state.RANGE_DAYS?.[range] || 1;
+      const raw = n <= 1 ? suggestMemo.daily : suggestMemo.perDay * n;
+      const step = raw < 500 ? 10 : raw < 2000 ? 50 : raw < 20000 ? 100 : raw < 200000 ? 1000 : 10000;
+      return Math.ceil(raw / step) * step;
+    }
   }
 function renderHeatmap() {
     const lang = __state.getLang();

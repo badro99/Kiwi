@@ -79,10 +79,16 @@ parses = 0; for (let i = 0; i < 20; i++) R.list('v1');
 ok(parses <= 1, 'refund reads are cached too');
 ok(R.add('v1', { amount: 20, cursor: 50, ts: 2 }) === false, 'a refund is still deduplicated by cursor');
 
-/* A write the browser refuses (quota) leaves the ledger as it was. */
+/* A write the browser refuses (quota) stays readable for the page. It used
+   to leave the stored copy, and a full device then read an empty ledger:
+   0 everywhere on Santos Store's dashboard (3 Nov 2026). */
+const reported = [];
+process.on('unhandledRejection', (e) => reported.push(String(e && e.message)));
 const before = S.list('v1').length;
 localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
 S.add('v1', { amount: 1, method: 'cash', cursor: 5000, ts: 3 });
-ok(S.list('v1').length === before, 'a refused write changes nothing that readers see');
+ok(S.list('v1').length === before + 1 && S.list('v1').some((e) => e.cursor === 5000), 'a refused write stays readable in memory');
+await new Promise((r) => setTimeout(r, 0));
+ok(reported.length === 1 && reported[0].startsWith('kiwi-ledger-storage-refused: kiwiSales:v1 ') && !reported[0].includes('shop'), 'the refusal is reported once, without the shop slug');
 
 console.log(`ledger-cache-test: ${checks} checks green`);

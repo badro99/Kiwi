@@ -374,6 +374,7 @@ function renderKpiBand() {
     }).join('');
     wrap.innerHTML = tiles;
     wrap.dataset.venue = currentVenue;
+    watchKpiFit(wrap);
 
     // Populate values + deltas (count-up animation only when same venue)
     spec.forEach(s => {
@@ -391,8 +392,13 @@ function renderKpiBand() {
           valEl.innerHTML = __state.fmtKpiVal(tileSpec, tileSpec.value);
         } else {
           const from = prevVals[s.key] ?? 0;
+          /* Taille fixée sur la valeur finale, la plus large : le compteur ne
+           * change pas de corps en montant. */
+          valEl.innerHTML = __state.fmtKpiVal(tileSpec, tileSpec.value);
+          fitKpiValue(valEl);
           __state.animateNumber(valEl, from, tileSpec.value, { duration: 700, format: v => __state.fmtKpiVal(tileSpec, v) });
         }
+        if (tileSpec.text != null || isVenueSwitch) fitKpiValue(valEl);
       }
       if (deltaEl) {
         const d = tileSpec.delta;
@@ -423,6 +429,53 @@ function renderKpiBand() {
         return { key: sp.key, label: T[sp.i18n] || sp.label, value: String(value).replace(/<[^>]*>/g, ''), unit, dash: tl.text != null && String(tl.text).replace(/s/g, '') === '·',
           delta: tl.delta == null ? null : tl.delta, deltaText: tl.delta == null ? '' : __state.fmtPct(tl.delta) };
       }) });
+    }
+    /* Un grand chiffre (« 3 916,50 MAD », « 125 400 MAD ») sortait de sa tuile et
+     * se lisait coupé (« MAI »). La taille de chaque skin reste la règle ; quand la
+     * valeur déborde, on réduit CETTE valeur seulement, juste assez, sans descendre
+     * sous 16 px. Réévalué quand la bande change de largeur. */
+    function kpiMeasure(valEl) {
+      /* La place : du début de la valeur au bord intérieur de la tuile. Le besoin :
+       * jusqu'au bout du texte rendu. La largeur propre de la valeur ne dit rien,
+       * elle grandit avec son contenu dans la plupart des skins. */
+      if (typeof valEl.closest !== 'function' || typeof document.createRange !== 'function') return null;
+      const card = valEl.closest('.kpi-m') || valEl.parentElement;
+      if (!card) return null;
+      const left = valEl.getBoundingClientRect().left;
+      const cr = card.getBoundingClientRect();
+      const limit = cr.right - (parseFloat(getComputedStyle(card).paddingRight) || 0);
+      const range = document.createRange();
+      range.selectNodeContents(valEl);
+      const right = range.getBoundingClientRect().right;
+      return { avail: limit - left, need: right - left };
+    }
+    function fitKpiValue(valEl, measure = kpiMeasure) {
+      if (!valEl || !valEl.style) return;
+      valEl.style.fontSize = '';
+      for (let i = 0; i < 3; i++) {
+        const m = measure(valEl);
+        if (!m || !(m.avail > 0) || m.need <= m.avail + 1) return;
+        const fs = parseFloat(getComputedStyle(valEl).fontSize) || 32;
+        const next = Math.max(16, Math.floor(fs * m.avail / m.need));
+        if (next >= fs) return;
+        valEl.style.fontSize = next + 'px';
+      }
+    }
+    function watchKpiFit(wrap) {
+      if (!wrap || typeof ResizeObserver !== 'function') return;
+      let kpiFitObserver = renderKpiBand.fitObserver;
+      if (!kpiFitObserver) {
+        let last = 0;
+        kpiFitObserver = new ResizeObserver((entries) => {
+          const w = Math.round(entries[0]?.contentRect?.width || 0);
+          if (w === last) return;
+          last = w;
+          entries[0].target.querySelectorAll('[data-kpi-val]').forEach((v) => fitKpiValue(v));
+        });
+        renderKpiBand.fitObserver = kpiFitObserver;
+      }
+      kpiFitObserver.disconnect();
+      kpiFitObserver.observe(wrap);
     }
   }
 function hotelPerfEntry(w) {

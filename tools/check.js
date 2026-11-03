@@ -2224,7 +2224,7 @@ section('Whole-project regressions');
        ouverte garde le titre de la page ; le retour à l'accueil rend le nœud à
        dash.breadcrumb. Vrai dashboard.html, vrais clics. */
     'dashboard-breadcrumb-language-test.mjs',
-    'dashboard-truth-test.mjs',
+    'dashboard-truth-test.mjs', 'dashboard-goal-suggestion-test.mjs',
     'team-truth-test.mjs',
     'team-member-editor-test.mjs',
     'team-editor-keyboard-browser-test.mjs',

@@ -428,8 +428,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "126",
-    "sha": "0c34c7c1dab111e7"
+    "v": "128",
+    "sha": "3f6f0de4d9ca48f7"
   },
   "assets/daterange/activity.js": {
     "v": "7",
@@ -444,12 +444,12 @@
     "sha": "56b7975f2e5e6c44"
   },
   "assets/daterange/hero.js": {
-    "v": "5",
-    "sha": "6c36fd1beb9b0595"
+    "v": "7",
+    "sha": "40794b45fcbbc8d4"
   },
   "assets/daterange/kpi.js": {
-    "v": "12",
-    "sha": "a291a4e4af5b0e31"
+    "v": "14",
+    "sha": "0777b7ba16dc2966"
   },
   "assets/daterange/ledger.js": {
     "v": "8",
@@ -460,8 +460,8 @@
     "sha": "f91815b2b1f3bce4"
   },
   "assets/daterange/renderers.js": {
-    "v": "24",
-    "sha": "d4c50e1e7ac325f9"
+    "v": "26",
+    "sha": "1a9d891311930de9"
   },
   "assets/daterange/revenue.js": {
     "v": "5",
@@ -508,8 +508,8 @@
     "sha": "4600d76604d8462a"
   },
   "assets/design-vexel-layout.js": {
-    "v": "2099",
-    "sha": "d803e494e0762215"
+    "v": "2100",
+    "sha": "96e14be9f8b09794"
   },
   "assets/design-vexel.css": {
     "v": "2130",
@@ -1388,8 +1388,8 @@
     "sha": "4f0facbf1ccf4020"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "135",
-    "sha": "c16bbd2e6444329e"
+    "v": "136",
+    "sha": "2ed0be8b1ba2050c"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -2140,16 +2140,16 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "70",
-    "sha": "8047865f346a9e63"
+    "v": "71",
+    "sha": "10f8c1e5ff374a52"
   },
   "assets/venues/data.js": {
     "v": "4",
     "sha": "c62dabb90b2af89a"
   },
   "assets/venues/helpers.js": {
-    "v": "2",
-    "sha": "ee3cd621db0915dd"
+    "v": "3",
+    "sha": "e77cd6f16fd580da"
   },
   "assets/vertical-state.js": {
     "v": "7",

@@ -1,6 +1,6 @@
 {
   "file": "assets/venues.js",
-  "sha256": "c52897fb287d45214335701ddb52a8c2a7df6cf1e6f555338332db0bbd30cc45",
+  "sha256": "f45799074cfb0a1d0e489a27804da689cdc08b24d04fd9069f36e2bcda522070",
   "parts": [
     "assets/venues/data.js",
     "assets/venues/helpers.js"
@@ -89,8 +89,8 @@
         "REAL_VENUES",
         "STAFF"
       ],
-      "start": 280273,
-      "end": 327737,
+      "start": 281754,
+      "end": 329218,
       "bridge": "\n  /* <<split:bridge:recipes>> */\n  const { INVENTORY, SUPPLIERS, PLACEHOLDER_COSTS, RECIPES, RECIPES_SESSION, STAFF_DISH_RESPONSIBILITY, recFindInventoryItem, recResolveIngredient, recPortionCost, recFindMenuItem, recGetRecipe, recSetRecipe, recListRecipes, recRecipeStats, recTheoreticalConsumption, recActualConsumption, recComputeVariance, recVarianceByRecipe, recVarianceByCategory, recVariancePerStaffMember } = window.__kiwiVenueParts.recipes.call(this, { EQ_MONTH_WEEKS, MENU, REAL_VENUES, STAFF });\n  /* <</split:bridge:recipes>> */"
     },
     {
@@ -162,8 +162,8 @@
         "annotatedEntry"
       ],
       "deps": [],
-      "start": 260760,
-      "end": 267526,
+      "start": 262308,
+      "end": 269074,
       "bridge": "\n  /* <<split:bridge:entries>> */\n  const { salesEntry, annotatedEntry } = window.__kiwiVenueParts.entries.call(this, {  });\n  /* <</split:bridge:entries>> */"
     },
     {
@@ -176,8 +176,8 @@
         "refundsList",
         "salesList"
       ],
-      "start": 275712,
-      "end": 276723,
+      "start": 277193,
+      "end": 278204,
       "bridge": "\n  /* <<split:bridge:totals>> */\n  const { salesTotals } = window.__kiwiVenueParts.totals.call(this, { refundsList, salesList });\n  /* <</split:bridge:totals>> */"
     },
     {
@@ -225,12 +225,16 @@
       "names": [
         "ledgerCache",
         "deepFreeze",
+        "memLedger",
+        "refusedReported",
+        "storageChars",
+        "ledgerWrite",
         "cachedLedger"
       ],
       "deps": [],
       "start": 257638,
-      "end": 258767,
-      "bridge": "\n  /* <<split:bridge:cache>> */\n  const { ledgerCache, deepFreeze, cachedLedger } = window.__kiwiVenueParts.cache.call(this, {  });\n  /* <</split:bridge:cache>> */"
+      "end": 260382,
+      "bridge": "\n  /* <<split:bridge:cache>> */\n  const { ledgerCache, deepFreeze, cachedLedger, ledgerWrite } = window.__kiwiVenueParts.cache.call(this, {  });\n  /* <</split:bridge:cache>> */"
     },
     {
       "part": "helpers",
@@ -247,8 +251,8 @@
         "salesSubs",
         "salesWrite"
       ],
-      "start": 274576,
-      "end": 275712,
+      "start": 276057,
+      "end": 277193,
       "bridge": "\n  /* <<split:bridge:reconcile>> */\n  const { salesReconcile } = window.__kiwiVenueParts.reconcile.call(this, { refundSubs, refundsList, refundsWrite, salesEntry, salesList, salesSubs, salesWrite });\n  /* <</split:bridge:reconcile>> */"
     },
     {

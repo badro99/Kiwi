@@ -22,8 +22,8 @@ function world(zone='UTC'){
  const report=vm.createContext({...common});vm.runInContext(read('assets/kit/haptics.js'),report);common.KiwiZoneLaw=report.KiwiZoneLaw;vm.runInContext(body('assets/day-report.js'),report);
  // Execute named entrypoints in the initialized scope, preserving their helpers.
  load(report,'assets/day-report.js',['businessDay','dayBounds','build']);window.KiwiDayReport.businessDay=report.businessDay;window.KiwiDayReport.dayBounds=report.dayBounds;window.KiwiDayReport.build=report.build;
- const store=vm.createContext({...common,currentVenue:'scoped',TRANSIENT_IDS:['own','scoped'],slugOf:()=> 'property-shop',ledgerCache:new Map(),salesSubs:new Set(),refundSubs:new Set()});
- load(store,'assets/venues.js',['salesTenant','SALES_KEY','deepFreeze','cachedLedger','salesList','salesWrite','salesEntry','salesAdd','salesAddMany','annotatedEntry','salesAnnotateMany','salesRemove','salesRetainCursors','REFUNDS_KEY','refundsList','refundsWrite','refundsAdd','refundsRetainCursors','refundsRemove']);
+ const store=vm.createContext({...common,currentVenue:'scoped',TRANSIENT_IDS:['own','scoped'],slugOf:()=> 'property-shop',ledgerCache:new Map(),memLedger:new Map(),refusedReported:false,Promise,salesSubs:new Set(),refundSubs:new Set()});
+ load(store,'assets/venues.js',['salesTenant','SALES_KEY','deepFreeze','storageChars','ledgerWrite','cachedLedger','salesList','salesWrite','salesEntry','salesAdd','salesAddMany','annotatedEntry','salesAnnotateMany','salesRemove','salesRetainCursors','REFUNDS_KEY','refundsList','refundsWrite','refundsAdd','refundsRetainCursors','refundsRemove']);
  window.KiwiSales={list:store.salesList,add:store.salesAdd,addMany:store.salesAddMany,remove:store.salesRemove,annotateMany:store.salesAnnotateMany,retainCursors:store.salesRetainCursors,scope:()=>state.scope};window.KiwiRefunds={list:store.refundsList,add:store.refundsAdd,remove:store.refundsRemove,retainCursors:store.refundsRetainCursors};
  const history=vm.createContext({...common,fetch:(...args)=>{requests.push(args);return common.fetch(...args);}});
  vm.runInContext(read('assets/sales-history.js'),history);
@@ -44,7 +44,7 @@ function world(zone='UTC'){
  const channelSource=read('assets/design-vexel-layout.js').replace(/^[\s\S]*?\(function[^\n]*\{/, '').replace(/\}\)\([^]*$/,'');
  vm.runInContext(declaration(channelSource,'channelAmounts'),channel);
  window.KiwiDateRange={bounds:()=>c.rangeBounds(c.currentRange)};
- function reset(){window.KiwiSalesSummary.invalidate('property-shop');window.KiwiSalesWindow.invalidate('property-shop');storage.clear();requests.length=0;bridge.feedComplete={};bridge.feedSales=[];bridge.feedSeen={};store.ledgerCache.clear();}
+ function reset(){window.KiwiSalesSummary.invalidate('property-shop');window.KiwiSalesWindow.invalidate('property-shop');storage.clear();requests.length=0;bridge.feedComplete={};bridge.feedSales=[];bridge.feedSeen={};store.ledgerCache.clear();store.memLedger.clear();}
  function ingest(rows){bridge.accumulateFeed(rows,'property-shop');bridge.bridgeToStore();bridge.applyVoids(rows.filter(r=>r.voided).map(r=>({c:r.cursor,i:r.id,ts:r.ts,vts:r.ts+1})),'property-shop');}
  return{c,window,report,store,bridge,history,state,storage,requests,reset,ingest,
    set(zone,now){state.zone=zone;state.now=now;window.KiwiConfig.timezone=zone;},

@@ -2034,7 +2034,7 @@
     return slug ? 'kiwiSales:' + vid + '@' + slug : '';
   }
   /* <<split:bridge:cache>> */
-  const { ledgerCache, deepFreeze, cachedLedger } = window.__kiwiVenueParts.cache.call(this, {  });
+  const { ledgerCache, deepFreeze, cachedLedger, ledgerWrite } = window.__kiwiVenueParts.cache.call(this, {  });
   /* <</split:bridge:cache>> */
   function salesList(id) {
     const key = SALES_KEY(id || currentVenue);
@@ -2047,7 +2047,7 @@
   function salesWrite(id, list) {
     const key = SALES_KEY(id || currentVenue);
     if (!key) return false;
-    try { localStorage.setItem(key, JSON.stringify(list)); return true; } catch (_) { return false; }
+    return ledgerWrite(key, list);
   }
 
   /* Legacy un-namespaced placeholder buckets written by older builds. They are
@@ -2177,7 +2177,7 @@
   }
   function refundsWrite(id, rows) {
     const key = REFUNDS_KEY(id || currentVenue); if (!key) return false;
-    try { localStorage.setItem(key, JSON.stringify(rows)); return true; } catch (_) { return false; }
+    return ledgerWrite(key, rows);
   }
   function refundsAdd(id, refund) {
     id = id || currentVenue;
