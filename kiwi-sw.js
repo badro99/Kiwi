@@ -18,6 +18,8 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/clients-store-vault.js?v=5',
+  '/assets/clients-outbox-vault.js?v=5',
   '/assets/caisse-strings.js?v=3',
   '/assets/pos-boutique/ozon.js?v=9',
   '/assets/lock-till.js?v=3',
@@ -360,7 +362,7 @@ var SHELL = [
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
-  '/assets/tenant-purge.js?v=6',
+  '/assets/tenant-purge.js?v=7',
   /* La porte du dashboard hors ligne : des lignes salées que le serveur a prouvées,
      jamais un code. Absent de la coquille, un patron hors ligne ne rentrerait plus. */
   '/assets/dashboard-pin-vault.js?v=4',
@@ -425,7 +427,7 @@ var SHELL = [
   '/assets/cost.js?v=11',
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=4',
-  '/assets/clients-store.js?v=39',
+  '/assets/clients-store.js?v=44',
   '/assets/clients-book.js?v=58',
   '/assets/clients-directory.js?v=30',
   '/assets/customer-retention.js?v=18',

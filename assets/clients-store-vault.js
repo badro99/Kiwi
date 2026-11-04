@@ -1,0 +1,1269 @@
+/* Durable fallback for refused client queue writes. No queue keys belong here. */
+(function () {
+  'use strict';
+  var mirror = Object.create(null), pending = Object.create(null), db = null, loading;
+  function copy(list) { return JSON.parse(JSON.stringify(list)); }
+  function union(first, second) {
+    var seen = new Set();
+    return first.concat(second).filter(function (item) {
+      var token = typeof item === 'string' ? 's:' + item : 'r:' + item.ref;
+      if (seen.has(token)) return false;
+      seen.add(token); return true;
+    });
+  }
+  function write(key, list) {
+    return new Promise(function (resolve) {
+      if (!db) { resolve(false); return; }
+      try {
+        var tx = db.transaction('queues', 'readwrite'), store = tx.objectStore('queues');
+        if (list === null) store.delete(key); else store.put(copy(list), key);
+        tx.oncomplete = function () { resolve(true); };
+        tx.onerror = tx.onabort = function () { resolve(false); };
+      } catch (_) { resolve(false); }
+    });
+  }
+  var vault = window.KiwiOutboxVault = {
+    loaded: false,
+    get: function (key) { return copy(mirror[key] || []); },
+    save: function (key, list) {
+      mirror[key] = copy(list);
+      if (!vault.loaded) { pending[key] = true; return vault.load().then(function () { return false; }); }
+      return write(key, mirror[key]);
+    },
+    drop: function (key) {
+      if (!vault.loaded) return Promise.resolve(false);
+      delete mirror[key]; return write(key, null);
+    },
+    load: function () {
+      if (loading) return loading;
+      loading = new Promise(function (resolve) {
+        var finished = false, timer;
+        function finish() {
+          if (finished) return;
+          finished = true;
+          if (timer && typeof clearTimeout === 'function') clearTimeout(timer);
+          vault.loaded = true;
+          Object.keys(pending).forEach(function (key) { write(key, mirror[key]); });
+          pending = Object.create(null);
+          resolve();
+        }
+        try {
+          if (typeof indexedDB === 'undefined') { finish(); return; }
+          var request = indexedDB.open('kiwi-clients-outbox-vault', 1);
+          request.onupgradeneeded = function () { request.result.createObjectStore('queues'); };
+          request.onerror = request.onblocked = finish;
+          request.onsuccess = function () {
+            if (finished) { request.result.close(); return; }
+            db = request.result;
+            db.onversionchange = function () { db.close(); db = null; };
+            try {
+              var tx = db.transaction('queues', 'readonly'), cursor = tx.objectStore('queues').openCursor();
+              cursor.onsuccess = function () {
+                var row = cursor.result;
+                if (!row || finished) return;
+                if (Array.isArray(row.value)) mirror[row.key] = union(mirror[row.key] || [], row.value);
+                row.continue();
+              };
+              tx.oncomplete = tx.onerror = tx.onabort = finish;
+            } catch (_) { finish(); }
+          };
+          if (typeof setTimeout === 'function') timer = setTimeout(finish, 3000);
+        } catch (_) { finish(); }
+      });
+      return loading;
+    },
+  };
+  function attach() { if (window.KiwiClients && typeof window.KiwiClients.attachOutboxVault === 'function') window.KiwiClients.attachOutboxVault(vault); }
+  if (window.addEventListener) window.addEventListener('load', function () { attach(); if (vault.loaded && window.KiwiClients) window.KiwiClients.sync(); });
+  vault.load().then(function () {
+    try { if (window.KiwiClients) { attach(); window.KiwiClients.sync(); } } catch (_) {}
+  });
+})();
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Kiwi · CLIENTS STORE — window.KiwiClients  (the Fidélité engine)
+ * ---------------------------------------------------------------------------
+ * ONE per-store client book, shared caisse ↔ dashboard through KiwiStore, the
+ * same "one brain" the boutique catalogue and the pairing code already prove.
+ * An employee adds a client from the caisse (assets/clients-book.js); the owner
+ * sees the full list, segmented, on the dashboard (assets/growth-crm.js) and
+ * runs marketing from there.
+ *
+ *   Records:  kiwi:clients:v1:<book>   → { list:[client…], seq }
+ *   Config:   kiwi:fidelity:v1:<book>  → { model, visit, amount, product }
+ *
+ * <book> — the tenant key. We use `kiwiLiveMerchant` (the merchant slug) because
+ * the pairing writes it on BOTH surfaces byte-for-byte (dashboard: caisse-link,
+ * caisse: caisse-pairing), so a write on the till and a read on the dashboard
+ * resolve to the SAME localStorage record with zero backend. Falls back to the
+ * paired venueId, then the dashboard's current venue.
+ *
+ * Cross-device sync (caisse on a tablet, dashboard on a laptop) rides /api/clients +
+ * D1 (functions/api/clients.js) — fail-soft like the pairing endpoints: same-browser
+ * via localStorage today, and the server carries the book across devices the moment
+ * that endpoint is deployed. Demo/seed books never sync (demo data stays local).
+ *
+ * Load order: AFTER venue-store.js (needs KiwiStore.define). Vanilla, self-contained.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  // Bound transport and JSON reads, even when a transport ignores abort.
+  function fetchDeadline(url, options, readBody) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer;
+    var request = new Promise(function (resolve, reject) {
+      try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); }
+      catch (error) { reject(error); }
+    }).then(function (response) {
+      if (readBody === false || !response || typeof response.json !== 'function') return response;
+      return response.json().then(function (data) {
+        response.json = function () { return Promise.resolve(data); }; return response;
+      }, function (error) {
+        response.json = function () { return Promise.reject(error); }; return response;
+      });
+    });
+    var deadline = new Promise(function (_, reject) {
+      timer = setTimeout(function () {
+        var error = new Error('request-timeout'); error.code = 'timeout';
+        reject(error);
+        if (controller) controller.abort();
+      }, 12000);
+    });
+    return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+  }
+
+
+  // Shared by the till book and dashboard directory. Arabic keeps this
+  // surface's Latin digits, including when the dashboard i18n is unavailable.
+  var numberFormats = {};
+  function clientNumber(value, language, quantity) {
+    var n = Number(value);
+    if (!isFinite(n)) n = 0;
+    var scale = quantity ? 1000 : 100;
+    n = Math.round(n * scale) / scale;
+    var lang = language || document.documentElement.lang || 'fr';
+    var locale = lang === 'en' ? 'en-GB' : lang === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-FR';
+    var digits = quantity ? 0 : (Number.isInteger(n) ? 0 : 2);
+    // The dashboard's shared formatter wins where it is loaded, so these
+    // figures read like every other amount on the page.
+    var shared = window.KiwiNumber && window.KiwiNumber.format;
+    if (shared) return shared(n, { minimumFractionDigits: digits, maximumFractionDigits: quantity ? 3 : digits }).replace(/[\u202f\u00a0]/g, '\u00a0');
+    var key = locale + ':' + quantity + ':' + digits;
+    var formatter = numberFormats[key] || (numberFormats[key] = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: digits, maximumFractionDigits: quantity ? 3 : digits
+    }));
+    return formatter.format(n).replace(/[\u202f\u00a0]/g, '\u00a0');
+  }
+  function clientQuantity(value) {
+    var n = Number(value);
+    return isFinite(n) ? Math.max(0, Math.round(n * 1000) / 1000) : 0;
+  }
+  window.KiwiClientNumbers = {
+    money: function (n, lang) { return clientNumber(n, lang, false); },
+    quantity: function (n, lang) { return clientNumber(n, lang, true); },
+    csv: function (n) { return String(Math.round((Number(n) || 0) * 100) / 100); }
+  };
+
+  if (!window.KiwiStore || !window.KiwiStore.define) {
+    console.warn('clients-store.js loaded before venue-store.js · KiwiClients disabled');
+    return;
+  }
+
+  var DAY = 86400000;
+  function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
+  function now() { return Date.now(); }
+  function daysSince(ts) { return ts ? Math.floor((now() - ts) / DAY) : Infinity; }
+
+  // the POS vertical currently unlocked on the caisse. Every vertical, pressing
+  // included, carries is-pos-<id>; the main café/resto caisse only is-unlocked.
+  // Order matters — is-pos-* also has is-unlocked.
+  function activePosId() {
+    try {
+      var cls = document.body.className || '';
+      var m = cls.match(/is-pos-([a-z0-9]+)/);
+      if (m) return m[1];
+      if (/\bis-unlocked\b/.test(cls)) return 'restaurant';
+      return '';
+    } catch (_) { return ''; }
+  }
+
+  /* ── the tenant key both surfaces agree on ─────────────────────────────── */
+  // slugMerchant() twin (functions/auth/_lib.js · caisse-link.js) — a store's name
+  // must produce the SAME book id on the dashboard as the slug its till was paired
+  // under, or the two ends keep separate client books.
+  function slugStore(s) {
+    return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+  /* One-time carry-over, for the same reason as the boutique catalogue: the book
+   * used to be named by whatever kiwiLiveMerchant held (an account-level slug),
+   * and is now named for the store. Identical in the one-store case; where they
+   * differ, adopt the existing book instead of showing an empty client list.
+   * Copy, never move. */
+  var adopted = {};
+  function hasClients(raw) {
+    try { var d = JSON.parse(raw || 'null'); return !!(d && d.list && d.list.length); } catch (_) { return false; }
+  }
+  /* Same one-store-only rule as the boutique catalogue: with two stores there is
+   * no way to tell which of them the account-keyed book belonged to. */
+  function soleStore() {
+    try {
+      var a = JSON.parse(localStorage.getItem('kiwiCustomVenues') || '[]');
+      return Array.isArray(a) && a.length === 1;
+    } catch (_) { return false; }
+  }
+  function adoptLegacyBook(slug) {
+    if (!slug || adopted[slug]) return;
+    adopted[slug] = 1;
+    if (!soleStore()) return;
+    try {
+      var pre = 'kiwi:clients:v1:';
+      // An EMPTY book does not count as "already has one" — otherwise merely
+      // opening the page once would permanently block the carry-over.
+      if (hasClients(localStorage.getItem(pre + slug))) return;
+      // Where the book could have been filed before: the pin as it stood before
+      // live-link.js repointed it (it preserves that for us — it loads first, so
+      // we cannot snapshot in time), and the account name it derived from.
+      var biz = '';
+      try { biz = (window.KiwiMe && window.KiwiMe.business) || ''; } catch (_) {}
+      var cands = [biz && slugStore(biz), ls('kiwiLiveMerchantPrev'), ls('kiwiLiveMerchant')];
+      for (var i = 0; i < cands.length; i++) {
+        var c = cands[i];
+        if (!c || c === slug) continue;
+        var old = localStorage.getItem(pre + c);
+        if (!hasClients(old)) continue;                    // nothing worth carrying
+        localStorage.setItem(pre + slug, old);
+        return;
+      }
+    } catch (_) {}
+  }
+  function pairedVenueData() {
+    try {
+      var pv = (window.KiwiCaissePairing && KiwiCaissePairing.pairedVenue && KiwiCaissePairing.pairedVenue())
+        || (window.KiwiPlatform && KiwiPlatform.pairedVenue && KiwiPlatform.pairedVenue());
+      if (!pv) {
+        var raw = ls('kiwiPairedVenue');
+        if (raw) pv = JSON.parse(raw);
+      }
+      return pv || null;
+    } catch (_) { return null; }
+  }
+  function bookId() {
+    // 1) DASHBOARD: the store currently being looked at. This outranks the pin
+    //    below because kiwiLiveMerchant is a single global — on an account with
+    //    two shops it holds whichever was last active, so leading with it served
+    //    the boutique's client book while the restaurant was on screen.
+    try {
+      var KV = window.KiwiVenue;
+      if (KV && KV.isCustom && KV.isCustom() && KV.getCurrentVenueData) {
+        var cvd = KV.getCurrentVenueData();
+        // Le slug gravé (venues.js › slugOf) plutôt que le nom re-slugifié :
+        // renommer son établissement ne doit pas ouvrir un carnet vide à côté
+        // de celui où sont tous les clients.
+        var cs = cvd && ((cvd.slug || '') || (cvd.name && slugStore(cvd.name)));
+        if (cs) { adoptLegacyBook(cs); return cs; }
+      }
+    } catch (_) {}
+    // 2) CAISSE: when running on a paired till (or in an active POS session), the
+    //    till's own pairing identity (kiwiPairedVenue) MUST outrank the browser-wide
+    //    kiwiLiveMerchant! Otherwise, an operator who previously inspected another
+    //    store (e.g. Amira Café) in the dashboard leaves kiwiLiveMerchant pointing
+    //    to that other store, which caused the boutique till to read the café's
+    //    clients instead of the boutique's clients (#0154).
+    try {
+      var isPaired = ls('kiwiPaired') === '1';
+      var pid = activePosId();
+      if (isPaired || pid) {
+        var pv = pairedVenueData();
+        if (pv && (pv.merchant || pv.venueId || pv.slug)) {
+          return pv.merchant || pv.venueId || pv.slug;
+        }
+      }
+    } catch (_) {}
+    // 3) the merchant slug, written on both sides at pairing — the reliable spine. Mais sur une CAISSE son magasin épinglé passe d'abord : kiwiLiveMerchant est un global que le tableau de bord déplace · assets/till-tenant.js › settleStore
+    if (!window.KiwiVenue) { try { var tsd = JSON.parse(ls('kiwiTillStore') || 'null'); if (tsd && tsd.slug) { adoptLegacyBook(tsd.slug); return tsd.slug; } if (tsd && tsd.pending) return null; } catch (_) {} } var m = ls('kiwiLiveMerchant'); if (m) return m;
+    // 4) caisse: paired venue fallback.
+    var pvFallback = pairedVenueData();
+    if (pvFallback && (pvFallback.merchant || pvFallback.venueId || pvFallback.slug)) {
+      return pvFallback.merchant || pvFallback.venueId || pvFallback.slug;
+    }
+    // 5) dashboard: the current venue id (pre-identity fallback).
+    try { var v = KiwiStore.currentVenue && KiwiStore.currentVenue(); if (v) return v; } catch (_) {}
+    // 6) demo verticals (unpaired PIN 0002-0015). A boutique/spa/resto demo maps to
+    //    the SAME dashboard venue id its catalogue already uses (maisonMansour…), so
+    //    the caisse and the dashboard share ONE client book per store — one brain,
+    //    exactly like the boutique inventory. Verticals with no dashboard twin get a
+    //    local demo-<id> book.
+    var pid2 = activePosId(); if (pid2) return DEMO_VENUE_BY_POS[pid2] || ('demo-' + pid2);
+    return null;
+  }
+  // caisse vertical → the dashboard demo venue id (venues.js REAL_VENUES).
+  var DEMO_VENUE_BY_POS = { boutique: 'maisonMansour', spa: 'spaBahia', restaurant: 'cafeAtlas', hotel: 'riadYasmina' };
+  // books we pre-seed so a demo looks alive. cafeAtlas is left empty on purpose so
+  // the flagship pitch demo keeps its rich hard-coded CRM until real clients arrive.
+  var SEED_VENUES = { maisonMansour: 1, spaBahia: 1, riadYasmina: 1 };
+  function isDemoBook(book) { return /^demo-/.test(String(book || '')); }
+  // Seed ONLY the local pitch demo. On any hosted domain or for a signed-in
+  // merchant (KiwiEnv.isReal), NOTHING is ever seeded — a real store's book is
+  // always empty until its own till fills it. Demo data can never reach the product.
+  function shouldSeed(book) {
+    try { if (window.KiwiEnv && KiwiEnv.isReal && KiwiEnv.isReal()) return false; } catch (_) {}
+    return isDemoBook(book) || !!SEED_VENUES[book];
+  }
+
+  /* ── the store's trade, for the default fidelity mechanic ──────────────── */
+  function venueMeta() {
+    var pv = pairedVenueData();
+    if (pv) return { type: pv.type || '', subtype: pv.subtype || '' };
+    try {
+      var d = window.KiwiVenue && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData();
+      if (d) return { type: d.type || d.kind || '', subtype: d.subtype || d.trade || '' };
+    } catch (_) {}
+    return { type: '', subtype: '' };
+  }
+
+  // model per trade — mirrors the three models in features.js › loyalty.
+  //   visit   → X visites = Y offert (café, salon, spa, gym)
+  //   product → stamp sur un item (restaurant, pizzeria, boulangerie, traiteur)
+  //   amount  → 1 pt / MAD (boutique, épicerie, pharmacie, hôtel — spend-based)
+  var MODEL_BY_TRADE = {
+    // visit
+    cafe: 'visit', coffee: 'visit', salon: 'visit', coiffure: 'visit', spa: 'visit',
+    beaute: 'visit', hammam: 'visit', gym: 'visit', sport: 'visit', fitness: 'visit',
+    // product
+    restaurant: 'product', resto: 'product', pizzeria: 'product', fastfood: 'product',
+    snack: 'product', foodtruck: 'product', boulangerie: 'product', bakery: 'product',
+    traiteur: 'product', patisserie: 'product',
+    // amount
+    boutique: 'amount', mode: 'amount', epicerie: 'amount', superette: 'amount',
+    pharmacie: 'amount', parapharmacie: 'amount', librairie: 'amount', fleuriste: 'amount',
+    hotel: 'amount', riad: 'amount', pressing: 'amount',
+  };
+  function defaultModel() {
+    var meta = venueMeta();
+    var sub = String(meta.subtype || '').toLowerCase();
+    var typ = String(meta.type || '').toLowerCase();
+    var pid = activePosId(); // demo verticals carry no pairedVenue → use the POS id
+    return MODEL_BY_TRADE[sub] || MODEL_BY_TRADE[typ] || MODEL_BY_TRADE[pid] || 'amount';
+  }
+
+  /* `auto: true` = personne n'a choisi ce programme, il est DÉDUIT du métier du
+   * magasin. La distinction compte depuis que le programme se synchronise : le
+   * défaut est matérialisé dès la première lecture — donc avant que la copie
+   * serveur n'ait eu le temps d'arriver — et sans ce drapeau il gagnait la
+   * fusion contre le vrai réglage. Le commerçant réglait « 10 visites = 1 café
+   * offert » sur le portable, et la caisse continuait d'annoncer « −10 % » en
+   * ayant écrasé son choix. Un défaut déduit ne quitte donc jamais l'appareil ;
+   * setConfig() retire le drapeau, parce que là quelqu'un a décidé. */
+  var DEFAULT_CFG = function () {
+    return {
+      auto: true,
+      model: defaultModel(),
+      visit:   { target: 10, reward: '1 offert' },
+      amount:  { perMad: 1, threshold: 100, reward: '−10 %' },
+      product: { item: 'Café', target: 10, reward: '1 offert' },
+    };
+  };
+
+  /* ── the two KiwiStore records ─────────────────────────────────────────── */
+  var clientsStore = KiwiStore.define('clients', { blank: function () { return { list: [], seq: 0 }; } });
+  /* The loyalty PROGRAMME (model, targets, rewards) rides the document mirror —
+   * it is one small object per store, edited from the dashboard configurator and
+   * read on every till. The client BOOK does not: it goes record by record
+   * through /api/clients below, because a book grows without a natural ceiling
+   * and two tills serving two different customers must never collide over one
+   * document. Same server, two shapes, for two different write patterns.
+   *
+   * Without this, a merchant who set "10 cafés = 1 offert" on the laptop saw the
+   * tablet's till keep the default programme, and the two counted different
+   * rewards for the same customer. */
+  var fidelityStore = KiwiStore.define('fidelity', {
+    blank: function () { return null; },
+    cloud: true,
+    // Un programme déduit ne compte pas comme un réglage : voir DEFAULT_CFG.
+    isEmpty: function (d) { return !d || !d.model || !!d.auto; },
+  });
+
+  /* Demo books only (kiwi-caisse PIN verticals): seed a small, segment-diverse
+   * roster on first open so the Carnet looks alive for a demo. A REAL/paired
+   * store's book is NEVER seeded — it starts empty and fills from the till. */
+  function maybeSeedDemo(book, d) {
+    if (!shouldSeed(book) || d.demoSeeded || (d.list && d.list.length)) return d;
+    var t = now();
+    var mk = function (o) { return Object.assign(blankClient(), o); };
+    d.list = [
+      mk({ id: 'd1', name: 'Lalla Khadija El Fassi', phone: '0661421830', email: 'k.elfassi@gmail.com',   city: 'Casablanca', birthday: '1985-04-12', consent: true, consentEmail: true, source: 'caisse', visits: 9, spend: 12400, points: 12400, stamps: 4, firstSeen: t - 120 * DAY, lastSeen: t - 3 * DAY }),
+      mk({ id: 'd2', name: 'Salma Bennani',          phone: '0662334455', email: 'salma.bennani@outlook.fr', city: 'Rabat',    birthday: '1992-09-30', consent: true, consentEmail: false, source: 'caisse', visits: 4, spend: 2200, points: 2200, stamps: 4, firstSeen: t - 60 * DAY,  lastSeen: t - 8 * DAY }),
+      mk({ id: 'd3', name: 'Imane Alaoui',           phone: '0655778899', email: '',                        city: 'Tanger',    birthday: '',            consent: true, consentEmail: false, source: 'caisse', visits: 1, spend: 850,  points: 850,  stamps: 1, firstSeen: t - 6 * DAY,   lastSeen: t - 6 * DAY }),
+      mk({ id: 'd4', name: 'Nawal Idrissi',          phone: '0670112233', email: 'nawal.idrissi@gmail.com', city: 'Marrakech', birthday: '1978-01-25', consent: true, consentEmail: true,  source: 'caisse', visits: 6, spend: 5400, points: 5400, stamps: 6, firstSeen: t - 200 * DAY, lastSeen: t - 45 * DAY }),
+    ];
+    d.seq = 4;
+    d.demoSeeded = true;
+    return d;
+  }
+
+  function readBook(book) {
+    book = book || bookId();
+    var d = clientsStore.get(book);
+    if (!d || !Array.isArray(d.list)) d = { list: [], seq: 0 };
+    if (book && shouldSeed(book) && !d.demoSeeded && !d.list.length) {
+      d = maybeSeedDemo(book, d);
+      clientsStore.set(d, book); // persist the seed once
+    }
+    return d;
+  }
+  function writeBook(d, book) { clientsStore.set(d, book || bookId()); }
+
+  function config(book) {
+    book = book || bookId();
+    var c = fidelityStore.get(book);
+    if (!c || !c.model) { c = DEFAULT_CFG(); fidelityStore.set(c, book); }
+    return c;
+  }
+  /* Le programme tourne quand quelqu'un l'a choisi. Le défaut déduit du métier
+   * (`auto`) sert à pré-remplir l'éditeur, pas à distribuer des récompenses. */
+  function loyaltyOn(book) {
+    book = book || bookId();
+    // La démo montre la fidélité en marche ; elle n'engage aucun commerçant.
+    if (isDemoBook(book) || SEED_VENUES[book]) return true;
+    var c = fidelityStore.get(book);
+    return KiwiLoyaltyRules.loyaltyOn(c);
+  }
+
+  function setConfig(patch, book) {
+    book = book || bookId();
+    var c = config(book);
+    var next = Object.assign({}, c, patch || {});
+    // Quelqu'un a décidé : ce n'est plus un défaut déduit, et ça a désormais le
+    // droit de voyager jusqu'aux autres appareils.
+    delete next.auto;
+    fidelityStore.set(next, book);
+    return next;
+  }
+
+  /* ── normalisation & dedup ─────────────────────────────────────────────── */
+  function normPhone(p) {
+    return window.KiwiPhone ? window.KiwiPhone.normalize(p) : String(p == null ? '' : p).replace(/[^\d+]/g, '');
+  }
+  function money(v) {
+    var n = Number(v);
+    return isFinite(n) ? Math.max(0, Math.min(1000000000, Math.round(n * 100) / 100)) : 0;
+  }
+  function samePhone(a, b) {
+    if (window.KiwiPhone) return window.KiwiPhone.same(a, b);
+    a = normPhone(a); b = normPhone(b);
+    if (!a || !b) return false;
+    return a === b;
+  }
+  function blankClient() {
+    return { id: '', name: '', phone: '', email: '', birthday: '', gender: '', city: '', address: '', notes: '', tags: [],
+      hospitality: {},
+      points: 0, stamps: 0, visits: 0, spend: 0, consent: false, consentEmail: false,
+      source: 'caisse', firstSeen: 0, lastSeen: 0, updated: 0, history: [] };
+  }
+
+  /* ── reads ─────────────────────────────────────────────────────────────── */
+  function list(book) { return readBook(book).list.slice(); }
+  function get(id, book) { return readBook(book).list.filter(function (c) { return c.id === id; })[0] || null; }
+  function findByPhone(phone, book) {
+    if (!normPhone(phone)) return null;
+    return readBook(book).list.filter(function (c) { return samePhone(c.phone, phone); })[0] || null;
+  }
+  function count(book) { return readBook(book).list.length; }
+
+  /* ── writes ────────────────────────────────────────────────────────────── */
+  function upsert(input, book) {
+    book = book || bookId();
+    var d = readBook(book);
+    var rec;
+    if (input.id) rec = d.list.filter(function (c) { return c.id === input.id; })[0];
+    if (!rec && input.phone) rec = d.list.filter(function (c) { return samePhone(c.phone, input.phone); })[0];
+    if (rec) {
+      if (!rec.profileBase) rec.profileBase = profileSnapshot(rec);
+      // merge editable fields onto the existing record.
+      ['name', 'email', 'birthday', 'gender', 'city', 'address', 'notes'].forEach(function (k) {
+        if (input[k] != null && input[k] !== '') rec[k] = input[k];
+      });
+      /* A note is cleared only by an edit of this very record (its card or
+         its form). A blank from a create that landed on the same phone
+         keeps the note the team already wrote. */
+      if (input.notes === '' && input.id && input.id === rec.id) rec.notes = '';
+      if (input.phone != null && normPhone(input.phone)) rec.phone = normPhone(input.phone);
+      if (typeof input.consent === 'boolean') rec.consent = input.consent;
+      if (typeof input.consentEmail === 'boolean') rec.consentEmail = input.consentEmail;
+      if (Array.isArray(input.tags)) rec.tags = input.tags.slice();
+      if (input.hospitality && typeof input.hospitality === 'object') {
+        rec.hospitality = Object.assign({}, rec.hospitality || {}, input.hospitality);
+      }
+    } else {
+      rec = Object.assign(blankClient(), {
+        id: 'c' + (++d.seq) + '_' + Math.abs(hash(book + (input.phone || input.name || d.seq))).toString(36),
+        name: input.name || '', phone: normPhone(input.phone), email: input.email || '',
+        birthday: input.birthday || '', gender: input.gender || '', city: input.city || '',
+        address: input.address || '', notes: input.notes || '',
+        hospitality: input.hospitality && typeof input.hospitality === 'object' ? Object.assign({}, input.hospitality) : {},
+        consent: !!input.consent, consentEmail: !!input.consentEmail,
+        tags: Array.isArray(input.tags) ? input.tags.slice() : [],
+        source: input.source || 'caisse', firstSeen: now(), lastSeen: now(),
+      });
+      d.list.push(rec);
+    }
+    rec.updated = now();
+    writeBook(d, book);
+    pushClient(rec, book);
+    return rec;
+  }
+
+  /* GENERATED SHARED KiwiLoyaltyRules BEGIN */
+  /* Copy of functions/api/_rules-loyalty.js made by tools/build-shared-rules.mjs. Edit the source, then run the tool. */
+  var KiwiLoyaltyRules = (function () {
+    // Loyalty earning, word matching, historical reversals and explicit reward policies.
+    const loyaltyOn = (cfg) => !!(cfg && cfg.model && !cfg.auto);
+    const pointsFor = (amount, cfg) => Math.max(0,
+      Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
+    const foldName = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    const qualifyingQty = (cfg, items) => { // linked products by id (renames keep earning), new ones by word
+      const want = foldName(cfg && cfg.product && cfg.product.item), ids = (Array.isArray(cfg && cfg.product && cfg.product.ids) ? cfg.product.ids : []).map(String);
+      if (!want && !ids.length) return 0;
+      return (Array.isArray(items) ? items : []).reduce((n, item) => {
+        const name = ' ' + foldName(item && item.name) + ' ', key = String(item && (item.id || item.itemId || item.pid) || '');
+        return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + want + ' ')) ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
+      }, 0);
+    }
+    const stampsFor = (cfg, items) => {
+      if (!loyaltyOn(cfg)) return 0;
+      if (cfg.model === 'visit') return 1;
+      if (cfg.model !== 'product') return 0;
+      return Array.isArray(items) && items.length ? qualifyingQty(cfg, items) : 1;
+    }
+    const refundFor = (sale, amount, cfg, items, client) => {
+      const paid = Number(sale && sale.paid || 0), earned = Number(sale && sale.earned || 0);
+      const refunded = Number(sale && sale.refunded || 0), clawed = Number(sale && sale.clawed || 0);
+      const take = Math.max(0, Math.min(amount, Math.round((paid - refunded) * 100) / 100));
+      const claw = paid > 0 && earned > 0
+        ? Math.max(0, Math.min(Math.round(earned * (refunded + take) / paid) - clawed, earned - clawed)) : 0;
+      const stampsLeft = Math.max(0, Number(sale && sale.stamped || 0) - Number(sale && sale.unstamped || 0));
+      const lines = Array.isArray(items) ? items : [];
+      const whole = paid > 0 && take >= Math.round((paid - refunded) * 100) / 100 - 0.004;
+      const unstamp = cfg.model === 'product' && lines.length
+        ? Math.min(stampsLeft, qualifyingQty(cfg, lines)) : (whole ? stampsLeft : 0);
+      return { take, claw, unstamp,
+        pointsTake: Math.min(claw, Math.max(0, Number(client.points) || 0)),
+        stampsTake: Math.min(unstamp, Math.max(0, Number(client.stamps) || 0)) };
+    }
+    const rewardDiscount = (reward, clientId, base, units) => {
+      if (!reward || reward.clientId !== clientId) return 0;
+      if (reward.kind !== 'percent') return reward.kind === 'free' && units.length ? Math.min.apply(null, units) : 0;
+      const amount = Math.max(0, +base || 0), percent = Math.min(100, Math.max(0, +reward.value || 0));
+      return Math.min(amount, Math.round(amount * percent + 1e-9) / 100); // wave Q: nearest centime, every trade
+    }
+    return { loyaltyOn, pointsFor, foldName, qualifyingQty, stampsFor, refundFor, rewardDiscount };
+  })();
+  /* GENERATED SHARED KiwiLoyaltyRules END */
+  // record a purchase / visit against a client and accrue fidelity.
+  //   opts.amount  → MAD spent (amount model)
+  //   opts.visit   → count a visit toward a stamp card (visit / product model)
+  // returns { client, rewardReady:bool } — rewardReady when a stamp card fills.
+  function recordPurchase(id, opts, book) {
+    book = book || bookId();
+    opts = opts || {};
+    var d = readBook(book);
+    var rec = d.list.filter(function (c) { return c.id === id; })[0];
+    if (!rec) return null;
+    var cfg = config(book);
+    var amount = money(opts.amount);
+    var saleRef = String(opts.saleRef || '');
+    var eventKey = String(opts.eventRef || opts.saleId || saleRef).replace(/[^A-Za-z0-9:._-]/g, '').slice(0, 96);
+    var ref = eventKey ? ('purchase:' + id + ':' + eventKey) : '';
+    /* A browser callback can be replayed after a slow payment close.  Refuse
+     * the duplicate before changing local totals; the API applies the same
+     * idempotency rule once the event reaches D1. */
+    if ((ref && purchaseRead(book).some(function (event) { return event.ref === ref; }))
+        || (saleRef && Array.isArray(rec.history) && rec.history.some(function (row) { return row && row.ref === saleRef; }))) {
+      return { client: rec, rewardReady: false, replayed: true };
+    }
+    rec.visits = (rec.visits || 0) + 1;
+    rec.lastSeen = now();
+    if (!rec.firstSeen) rec.firstSeen = now();
+    if (amount > 0) rec.spend = (rec.spend || 0) + amount;
+    if (!Array.isArray(rec.history)) rec.history = [];
+    const detail = {
+      ref: saleRef, ts: +opts.createdAt || now(), amount,
+      method: String(opts.method || '').slice(0, 32),
+      items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
+        var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); return row;
+      }),
+    };
+    rec.history = [detail].concat(rec.history.filter(function (row) {
+      return !(detail.ref && row && row.ref === detail.ref);
+    }));
+
+    var rewardReady = false;
+    var delta = { points: 0, stamps: 0, visits: 1, spend: amount };
+    if (!loyaltyOn(book)) {
+      // Pas de programme choisi : le passage compte, la fidélité non.
+    } else if (cfg.model === 'amount') {
+      delta.points = KiwiLoyaltyRules.pointsFor(amount, cfg);
+      rec.points = (rec.points || 0) + delta.points;
+      var thr = (cfg.amount && cfg.amount.threshold) || 100;
+      rewardReady = thr > 0 && rec.points >= thr;
+    } else {
+      // visit → one stamp per visit; product → one per qualifying item bought.
+      var target = (cfg.model === 'product' ? (cfg.product && cfg.product.target) : (cfg.visit && cfg.visit.target)) || 10;
+      delta.stamps = KiwiLoyaltyRules.stampsFor(cfg, opts.items);
+      rec.stamps = (rec.stamps || 0) + delta.stamps;
+      rewardReady = rec.stamps >= target;
+    }
+    rec.updated = now();
+    writeBook(d, book);
+    /* The sale already has a durable UUID.  Reuse it as the purchase-event key
+     * so a checkout callback replay, a page refresh, or an offline retry cannot
+     * add the same visit/spend twice.  Older callers without a sale key retain
+     * the historical random fallback. */
+    ref = ref || ('purchase:' + id + ':' + rec.updated + ':' + Math.abs(hash(String(Math.random()))).toString(36));
+    var event = { kind: 'purchase', ref: ref, clientId: id, amount: amount, points: delta.points,
+      stamps: delta.stamps, visits: delta.visits, spend: delta.spend, created: rec.updated,
+      method: detail.method, items: detail.items, saleRef: detail.ref };
+    purchaseAdd(book, event);
+    purchasePush(book, event);
+    return { client: rec, rewardReady: rewardReady };
+  }
+
+  /* Un retour contre avoir reprend la dépense et les points de CE ticket : sans
+   * cela, l'achat comptait, puis l'avoir dépensé comptait une seconde fois. Même
+   * registre que les achats (clé « refund: »), même file hors ligne : le serveur
+   * plafonne à ce que le ticket a réellement rapporté. La projection locale
+   * utilise ce même historique, complété des événements encore hors ligne. */
+  function recordRefund(id, opts, book) {
+    book = book || bookId();
+    opts = opts || {};
+    var d = readBook(book);
+    var rec = d.list.filter(function (c) { return c.id === id; })[0];
+    if (!rec) return null;
+    var amount = money(opts.amount);
+    var saleRef = String(opts.saleRef || '').slice(0, 80);
+    var key = String(opts.eventRef || '').replace(/[^A-Za-z0-9:._-]/g, '').slice(0, 96);
+    if (!(amount > 0) || !saleRef || !key) return null;
+    var ref = 'refund:' + id + ':' + key;
+    if (purchaseRead(book).some(function (event) { return event.ref === ref; })) return { client: rec, replayed: true };
+    var cfg = config(book);
+    var sale = Object.assign({ paid: 0, earned: 0, stamped: 0, refunded: 0, clawed: 0, unstamped: 0 },
+      rec.loyaltySales && Object.hasOwn(rec.loyaltySales, saleRef) ? rec.loyaltySales[saleRef] : null);
+    purchaseRead(book).forEach(function (event) {
+      if (event.clientId !== id || event.saleRef !== saleRef) return;
+      var refund = event.kind === 'refund';
+      sale[refund ? 'refunded' : 'paid'] += refund ? -event.amount : event.amount;
+      sale[refund ? 'clawed' : 'earned'] += refund ? -event.points : event.points;
+      sale[refund ? 'unstamped' : 'stamped'] += refund ? -event.stamps : event.stamps;
+    });
+    var fullReturn = sale.paid > 0 && Math.round(amount * 100) >= Math.round(sale.paid * 100) - Math.round(sale.refunded * 100);
+    var reversal = KiwiLoyaltyRules.refundFor(sale, amount, cfg, fullReturn ? [] : opts.items, rec);
+    var take = reversal.take, claw = reversal.pointsTake, unstamp = reversal.stampsTake;
+    rec.spend = Math.max(0, money((rec.spend || 0) - take));
+    rec.points = Math.max(0, Number(rec.points || 0) - claw);
+    rec.stamps = Math.max(0, Number(rec.stamps || 0) - unstamp);
+    rec.updated = now();
+    writeBook(d, book);
+    /* `amount` est ce que la caisse demande (le serveur plafonne) ; `spend` et
+       `points` ne sont que l'estimation locale, rejouée tant que le serveur n'a
+       pas répondu. Un retour estimé à 0 ici part quand même, sinon il ne serait
+       jamais acquitté. */
+    var event = { kind: 'refund', ref: ref, clientId: id, amount: -amount, points: -claw, stamps: -unstamp, visits: 0,
+      spend: -take, created: rec.updated, method: 'retour', saleRef: saleRef,
+      items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
+        var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); return row;
+      }) };
+    purchaseAdd(book, event);
+    purchasePush(book, event);
+    return { client: rec, spend: -take, points: -claw, stamps: -unstamp };
+  }
+
+  // burn a filled stamp card (staff hands over the reward).
+  function redeem(id, book, reservation) {
+    book = book || bookId();
+    var d = readBook(book);
+    var rec = d.list.filter(function (c) { return c.id === id; })[0];
+    if (!rec) return null;
+    if (!loyaltyOn(book)) return rec;       // aucun programme : rien à remettre
+    /* UNE VENTE, UNE RÉCOMPENSE · le récit est dans assets/pos-sale.js › rewardRead */
+    var ref = (reservation && reservation.ref) || redemptionRef(id), seen = rec.rewardRefs || [];
+    if (seen.indexOf(ref) !== -1 || redemptionRead(book).some(function (e) { return e.ref === ref; })) return rec;
+    var cfg = config(book);
+    var pointsDelta = 0, stampsDelta = 0;
+    if (cfg.model === 'amount') {
+      var thr = (cfg.amount && cfg.amount.threshold) || 100;
+      if ((rec.points || 0) < thr) return rec;
+      pointsDelta = thr;
+      rec.points -= pointsDelta;
+    } else {
+      var target = (cfg.model === 'product' ? (cfg.product && cfg.product.target) : (cfg.visit && cfg.visit.target)) || 10;
+      if ((rec.stamps || 0) < target) return rec;
+      stampsDelta = target;
+      rec.stamps -= stampsDelta;
+    }
+    rec.updated = now();
+    writeBook(d, book);
+    var event = { ref: ref, clientId: id, points: pointsDelta, stamps: stampsDelta, created: rec.updated };
+    if (!reservation || !reservation.accepted) {
+      redemptionAdd(book, event);
+      if (!reservation) redemptionPush(book, event);
+    }
+    return rec;
+  }
+
+  function remove(id, book) {
+    book = book || bookId();
+    var d = readBook(book);
+    d.list = d.list.filter(function (c) { return c.id !== id; });
+    writeBook(d, book);
+    deleteRemote(id, book);
+  }
+
+  /* ── segmentation — the 4 buckets the dashboard composer speaks ─────────── */
+  //   new  · acquired ≤30 j, ≤2 visits      vip · high value
+  //   win  · dormant >30 j (win-back)        reg · everyone else (regulars)
+  var VIP_SPEND = 3000, VIP_VISITS = 20, DORMANT_DAYS = 30, NEW_DAYS = 30;
+  function segment(c) {
+    if (!c) return 'reg';
+    if (daysSince(c.lastSeen) > DORMANT_DAYS) return 'win';
+    if ((c.spend || 0) >= VIP_SPEND || (c.visits || 0) >= VIP_VISITS) return 'vip';
+    if (daysSince(c.firstSeen) <= NEW_DAYS && (c.visits || 0) <= 2) return 'new';
+    return 'reg';
+  }
+  function segmentCounts(book) {
+    var out = { reg: 0, vip: 0, new: 0, win: 0, total: 0 };
+    list(book).forEach(function (c) { out[segment(c)]++; out.total++; });
+    return out;
+  }
+  // progress toward this client's next reward, 0..1, for the stamp/points bar.
+  function progress(c, cfg) {
+    if (!cfg && !loyaltyOn()) return 0;
+    cfg = cfg || config();
+    if (cfg.auto && !loyaltyOn()) return 0;
+    if (cfg.model === 'amount') {
+      var thr = (cfg.amount && cfg.amount.threshold) || 100;
+      return thr > 0 ? Math.min(1, (c.points || 0) / thr) : 0;
+    }
+    var target = (cfg.model === 'product' ? (cfg.product && cfg.product.target) : (cfg.visit && cfg.visit.target)) || 10;
+    return target > 0 ? Math.min(1, (c.stamps || 0) / target) : 0;
+  }
+
+  function hash(s) { var h = 0; s = String(s); for (var i = 0; i < s.length; i++) { h = (h << 5) - h + s.charCodeAt(i); h |= 0; } return h; }
+
+  /* ── real backend sync (fail-soft) — /api/clients + D1 (functions/api/clients.js)
+   * Same contract as live-link's /api/sale: gated on kiwiLive (or a real/hosted env),
+   * NEVER demo/seed books, and endpoint absence (404/503/offline) is a silent no-op.
+   * localStorage stays the source of truth same-browser; the server carries the book
+   * across devices (caisse tablet ⇄ dashboard laptop).
+   * Profile edits merge by changed field; server arrival resolves conflicts. ─────────────────── */
+  function realEnv() { try { return !!(window.KiwiEnv && KiwiEnv.isReal && KiwiEnv.isReal()); } catch (_) { return false; } }
+  function syncable(book) {
+    return (ls('kiwiLive') === '1' || ls('kiwiPaired') === '1' || realEnv()) && !!book && !isDemoBook(book) && !SEED_VENUES[book];
+  }
+  function curKey(book) { return 'kiwi:clients-cur:v1:' + book; }
+  function getCursor(book) { var n = Number(ls(curKey(book))); return n > 0 ? n : 0; }
+  function setCursor(book, c) { try { localStorage.setItem(curKey(book), String(c || 0)); } catch (_) {} }
+
+  /* ── LA FILE D'ATTENTE ────────────────────────────────────────────────────
+   * Ces deux appels étaient « fire-and-forget » : un POST qui échoue — hors
+   * ligne, table pas encore migrée, session expirée — n'était jamais rejoué. La
+   * fiche restait bien dans le navigateur, mais elle n'atteignait le serveur
+   * qu'au prochain passage du client en caisse, c'est-à-dire peut-être jamais.
+   * Un tunnel de réseau au comptoir suffisait à ce qu'une cliente inscrite le
+   * matin n'existe pas sur le portable du patron le soir.
+   *
+   * On garde donc les identifiants en souffrance. Ils sont rejoués au tour de
+   * synchronisation suivant, en relisant la fiche COURANTE depuis le carnet
+   * local — jamais un instantané figé, sinon on renverrait un solde de points
+   * périmé par-dessus un plus récent. Une suppression est mise en file sous
+   * '-<id>' : elle doit être rejouée elle aussi, ou le client supprimé revient
+   * depuis l'autre appareil. */
+  /* ── UN SEUL PROPRIÉTAIRE POUR LES QUATRE FILES ──────────────────────────
+   * Fiches, achats et retours, récompenses données, récompenses refusées :
+   * chaque file lisait et écrivait localStorage pour son compte et avalait une
+   * écriture refusée (stockage plein, navigation privée). Si la caisse était en
+   * plus hors ligne à ce moment-là, l'événement était perdu : les points
+   * n'arrivaient jamais au serveur (et disparaissaient au tirage suivant), une
+   * récompense donnée pouvait l'être encore sur une autre caisse, et un ticket
+   * rejoué comptait deux fois. Seules outboxRead et outboxWrite touchent
+   * désormais ces clés : une écriture refusée est gardée en mémoire, la file
+   * part quand même pendant cette session, et la copie gardée est écrite dès
+   * que le stockage l'accepte (outboxPersistHeld, au début de chaque tour).
+   * tools/clients-outbox-owner-test.mjs tient ces trois règles. */
+  var heldQueues = {};
+  function outboxRead(key) {
+    try { var a = heldQueues[key] ? heldQueues[key].slice() : JSON.parse(ls(key) || '[]'); a = Array.isArray(a) ? a : []; } catch (_) { a = []; }
+    try { var seen = new Set(); return a.concat(outboxRead.vault ? outboxRead.vault.get(key) : []).filter(function (e) { var token = typeof e === 'string' ? 's:' + e : 'r:' + (e && e.ref); if (seen.has(token)) return false; seen.add(token); return true; }); }
+    catch (_) { return a; }
+  }
+  function outboxWrite(key, list) {
+    try { localStorage.setItem(key, JSON.stringify(list)); delete heldQueues[key]; try { if (outboxRead.vault && outboxRead.vault.loaded) outboxRead.vault.drop(key); } catch (_) {} return true; }
+    catch (_) { heldQueues[key] = list.slice(); try { if (outboxRead.vault) outboxRead.vault.save(key, list); } catch (_) {} return false; }
+  }
+  function outboxPersistHeld() {
+    Object.keys(heldQueues).forEach(function (key) { outboxWrite(key, outboxRead(key)); });
+  }
+
+  function outKey(book) { return 'kiwi:clients-out:v1:' + book; }
+  function outRead(book) { return outboxRead(outKey(book)); }
+  function outWrite(book, a) {
+    // Pas de plafond. La file est déjà regroupée par fiche (un jeton par client,
+    // '-<id>' pour une suppression, outAdd ne double jamais) : dix modifications
+    // d'une même fiche y tiennent une place, et sa taille suit le nombre de
+    // clients en souffrance, pas le nombre d'éditions. Quelques octets par
+    // client, quand le carnet local en garde des centaines. L'ancien plafond à
+    // 500 sortait les plus anciens jetons en silence : une fiche modifiée hors
+    // ligne, ou une suppression, n'était plus jamais rejouée tant que le client
+    // ne repassait pas en caisse, et l'autre appareil ne l'apprenait pas.
+    outboxWrite(outKey(book), a);
+  }
+  function outAdd(book, token) {
+    if (!syncable(book) || !token) return;
+    var a = outRead(book);
+    if (a.indexOf(token) === -1) { a.push(token); outWrite(book, a); }
+  }
+  function outDrop(book, token) {
+    var a = outRead(book);
+    var i = a.indexOf(token);
+    if (i >= 0) { a.splice(i, 1); outWrite(book, a); }
+  }
+
+  function purchaseKey(book) { return 'kiwi:clients-purchases:v1:' + book; }
+  function purchaseRead(book) {
+    return outboxRead(purchaseKey(book)).filter(function (e) { return e && e.ref && e.clientId; });
+  }
+  function purchaseWrite(book, events) {
+    // Never evict unacknowledged purchases. The server event table is the
+    // durable acknowledgement boundary; trimming here would silently lose
+    // sales after a long offline period.
+    outboxWrite(purchaseKey(book), events);
+  }
+  function purchaseAdd(book, event) {
+    if (!syncable(book) || !event || !event.ref) return;
+    var events = purchaseRead(book);
+    if (!events.some(function (e) { return e.ref === event.ref; })) {
+      events.push(event); purchaseWrite(book, events);
+    }
+  }
+  function purchaseDrop(book, ref) {
+    purchaseWrite(book, purchaseRead(book).filter(function (e) { return e.ref !== ref; }));
+  }
+  function purchaseFailure(book, ref, reason) {
+    var events = purchaseRead(book);
+    events.forEach(function (e) { if (e.ref === ref) e.lastFailure = reason; });
+    purchaseWrite(book, events);
+  }
+  // Fresh detached values: callers cannot mutate the pending queue.
+  function purchaseSyncStatus(book) {
+    var events = purchaseRead(book || bookId());
+    return { count: events.length, failures: events.filter(function (e) { return e.lastFailure; }).map(function (e) {
+      return { ref: e.ref, reason: e.lastFailure };
+    }) };
+  }
+  function purchasePush(book, event, afterClientCreate) {
+    if (!syncable(book) || !event || !event.ref) return;
+    var isRefund = event.kind === 'refund';
+    /* Le retour attend que l'achat de son ticket soit au serveur : arrivé avant
+       lui, le serveur ne trouverait rien à reprendre et l'acquitterait sans effet. */
+    if (isRefund && purchaseRead(book).some(function (e) {
+      return e.kind !== 'refund' && e.clientId === event.clientId && e.saleRef && e.saleRef === event.saleRef;
+    })) return;
+    try {
+      fetchDeadline('/api/clients', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+        body: JSON.stringify(isRefund ? { merchant: book, refund: {
+          clientId: event.clientId, ref: event.ref, amount: -Number(event.amount || 0),
+          items: event.items || [], saleRef: event.saleRef || '',
+        } } : { merchant: book, purchase: {
+          clientId: event.clientId, ref: event.ref, amount: event.amount,
+          method: event.method || '', items: event.items || [], saleRef: event.saleRef || '',
+        } }),
+      }).then(async function (r) {
+        if (r && r.ok) {
+          var receipt = await r.json();
+          var ledgerBook = readBook(book);
+          var ledgerClient = ledgerBook.list.filter(function (c) { return c.id === event.clientId; })[0];
+          if (ledgerClient) {
+            var ledgers = ledgerClient.loyaltySales || (ledgerClient.loyaltySales = Object.create(null));
+            var ledger = Object.hasOwn(ledgers, event.saleRef) ? ledgers[event.saleRef]
+              : (ledgers[event.saleRef] = { paid: 0, earned: 0, stamped: 0, refunded: 0, clawed: 0, unstamped: 0 });
+            if (purchaseRead(book).some(function (e) { return e.ref === event.ref; })
+                && !(ledgerClient.purchaseRefs || []).includes(event.ref)) {
+              ledger[isRefund ? 'refunded' : 'paid'] += isRefund ? -Number(receipt.spend || 0) : Number(receipt.spend || 0);
+              ledger[isRefund ? 'clawed' : 'earned'] += isRefund ? -Number(receipt.points || 0) : Number(receipt.points || 0);
+              ledger[isRefund ? 'unstamped' : 'stamped'] += isRefund ? -Number(receipt.stamps || 0) : Number(receipt.stamps || 0);
+              ledgerClient.points = Math.max(0, Number(ledgerClient.points || 0) + Number(receipt.points || 0) - Number(event.points || 0));
+              ledgerClient.stamps = Math.max(0, Number(ledgerClient.stamps || 0) + Number(receipt.stamps || 0) - Number(event.stamps || 0));
+              ledgerClient.spend = money(Number(ledgerClient.spend || 0) + Number(receipt.spend || 0) - Number(event.spend || 0));
+              writeBook(ledgerBook, book);
+            }
+          }
+          purchaseDrop(book, event.ref);
+          if (!isRefund) purchaseRead(book).forEach(function (e) {
+            if (e.kind === 'refund' && e.clientId === event.clientId && e.saleRef === event.saleRef) purchasePush(book, e);
+          });
+          return;
+        }
+        purchaseFailure(book, event.ref, r ? 'http-' + r.status : 'offline');
+        /* A client created at checkout and its purchase used to be sent as two
+         * unrelated requests.  If the purchase won the race, D1 returned
+         * client-not-found and the history appeared only after a later poll.
+         * Create/refresh that exact profile first, then retry this same stable
+         * event once.  The server ledger keeps the retry idempotent. */
+        if (r && r.status === 404 && !afterClientCreate) {
+          var rec = get(event.clientId, book);
+          var created = pushClient(rec, book);
+          if (created && typeof created.then === 'function') {
+            created.then(function (ok) { if (ok) purchasePush(book, event, true); });
+          }
+        }
+      }).catch(function () { purchaseFailure(book, event.ref, 'offline'); });
+    } catch (_) { purchaseFailure(book, event.ref, 'offline'); }
+  }
+  function flushPurchases(book) {
+    var events = purchaseRead(book), batch = events.slice(0, 25);
+    // Rotate before sending: refusals and transient failures retain their full
+    // audit event without monopolising the next tick's bounded batch.
+    purchaseWrite(book, events.slice(batch.length).concat(batch));
+    batch.forEach(function (event) { purchasePush(book, event); });
+  }
+
+  function redemptionKey(book) { return 'kiwi:clients-redemptions:v1:' + book; }
+  function redemptionRead(book) {
+    return outboxRead(redemptionKey(book)).filter(function (e) { return e && e.ref && e.clientId; });
+  }
+  function redemptionWrite(book, events) {
+    outboxWrite(redemptionKey(book), events);
+  }
+  function redemptionAdd(book, event) {
+    if (!syncable(book) || !event || !event.ref) return;
+    var events = redemptionRead(book);
+    if (!events.some(function (e) { return e.ref === event.ref; })) {
+      events.push(event); redemptionWrite(book, events);
+    }
+  }
+  function redemptionDrop(book, ref) {
+    redemptionWrite(book, redemptionRead(book).filter(function (e) { return e.ref !== ref; }));
+  }
+  function refusedKey(book) { return 'kiwi:clients-refused-redemptions:v1:' + book; }
+  function refusedRedemptions(book) {
+    return outboxRead(refusedKey(book || bookId())).filter(function (e) { return e && e.ref && e.clientId && e.error; });
+  }
+  function redemptionRefuse(book, event, error) {
+    var refused = refusedRedemptions(book);
+    if (!refused.some(function (e) { return e.ref === event.ref; })) {
+      refused.push({ ref: event.ref, clientId: event.clientId, error: error, at: now() });
+    }
+    // Keep the pending event if the refusal could not be persisted.
+    if (!outboxWrite(refusedKey(book), refused)) return;
+    redemptionDrop(book, event.ref);
+    /* Le refus arrive sur la caisse qui a donné la remise : c'est là qu'il faut
+       le dire. La fiche du tableau de bord ne le lit que sur cet appareil. */
+    try {
+      if (typeof window.KiwiCaisseToast === 'function') {
+        window.KiwiCaisseToast('Récompense refusée par le serveur', 6000, 'warn',
+          'Peut-être déjà utilisée sur une autre caisse. Vérifiez la fiche du client.');
+      }
+    } catch (_) {}
+  }
+  function redemptionRef(id, saleKey) { var k = String(saleKey == null ? '' : saleKey).replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56); return (k ? 'redemption:' + id + ':s:' + k : 'redemption:' + id + ':' + now() + ':' + Math.abs(hash(String(Math.random()))).toString(36)).slice(0, 96); }
+  function reserveRedemption(id, book, event) {
+    book = book || bookId();
+    event = event || { ref: redemptionRef(id), clientId: id };
+    return redemptionPush(book, event, false, true).then(function (result) {
+      return { ref: event.ref, accepted: result === 'accepted', refused: result === 'refused' };
+    });
+  }
+  function redemptionPush(book, event, afterClientCreate, probe) {
+    if (!syncable(book) || !event || !event.ref || (typeof navigator !== 'undefined' && navigator.onLine === false)) return Promise.resolve('retry');
+    return Promise.resolve().then(function () {
+      return fetchDeadline('/api/clients', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+        body: JSON.stringify({ merchant: book, redemption: { clientId: event.clientId, ref: event.ref } }),
+      });
+    }).then(function (r) {
+      if (r && r.ok) { redemptionDrop(book, event.ref); return 'accepted'; }
+      if (!r || !(r.status >= 400 && r.status < 500) || [401, 403, 408, 429].indexOf(r.status) !== -1) return 'retry';
+      return r.json().then(function (data) {
+        var code = data && data.error;
+        if (code === 'client-not-found' && !afterClientCreate) {
+          return pushClient(get(event.clientId, book), book).then(function (ok) {
+            return ok ? redemptionPush(book, event, true, probe) : 'retry';
+          });
+        }
+        /* Les points qui rendent la récompense prête peuvent être dans un achat
+           encore en file : tant que les achats de ce client ne sont pas arrivés,
+           ce n'est pas un refus, ni pour la file ni pour la vérification d'avant
+           paiement (qui garde alors la récompense, comme hors ligne). */
+        if (code === 'reward-not-ready' && purchaseRead(book).some(function (e) {
+          return e && e.kind !== 'refund' && e.clientId === event.clientId;
+        })) return 'retry';
+        if (['reward-not-ready', 'loyalty-off', 'client-not-found', 'ref-conflict', 'client-and-ref-required'].indexOf(code) !== -1) {
+          if (!probe) redemptionRefuse(book, event, code);
+          return 'refused';
+        }
+        return 'retry';
+      });
+    }).catch(function () { return 'retry'; });
+  }
+  function flushRedemptions(book) {
+    var events = redemptionRead(book), batch = events.slice(0, 25);
+    // Rotate before sending: refusals and transient failures retain their full
+    // audit event without monopolising the next tick's bounded batch.
+    redemptionWrite(book, events.slice(batch.length).concat(batch));
+    batch.forEach(function (event) { redemptionPush(book, event); });
+  }
+
+  // Persist the last observed profile with the record, including while offline.
+  // Comparing against it distinguishes an edit from an unchanged stale field.
+  function profileSnapshot(rec) {
+    var out = {};
+    ['name', 'phone', 'email', 'birthday', 'gender', 'city', 'address', 'notes',
+      'hospitality', 'tags', 'consent', 'consentEmail', 'source', 'firstSeen', 'lastSeen'].forEach(function (k) {
+      if (rec[k] !== undefined) out[k] = rec[k];
+    });
+    return JSON.parse(JSON.stringify(out));
+  }
+
+  function pushClient(rec, book) {
+    if (!syncable(book) || !rec || !rec.id) return Promise.resolve(false);
+    var id = rec.id;
+    var sent = profileSnapshot(rec);
+    outAdd(book, id);
+    try {
+      return fetchDeadline('/api/clients', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+        body: JSON.stringify(Object.assign({ merchant: book }, rec)),
+      }).then(function (r) {
+        if (r && r.ok) {
+          var d = readBook(book), current = d.list.filter(function (c) { return c.id === id; })[0];
+          // An old acknowledgement must not clear a newer edit's outbox entry.
+          if (current && JSON.stringify(profileSnapshot(current)) === JSON.stringify(sent)) {
+            current.profileBase = sent;
+            clientsStore.set(d, book);
+            outDrop(book, id);
+          }
+          return true;
+        }
+        outAdd(book, id);                    // 401 / 503 / 500 → on retentera
+        return false;
+      }).catch(function () { outAdd(book, id); return false; });
+    } catch (_) { outAdd(book, id); return Promise.resolve(false); }
+  }
+  function deleteRemote(id, book) {
+    if (!syncable(book) || !id) return;
+    // Une suppression en attente annule un envoi en attente de la même fiche :
+    // rejouer le POST ressusciterait ce qu'on vient d'effacer.
+    outDrop(book, id);
+    try {
+      fetchDeadline('/api/clients?merchant=' + encodeURIComponent(book) + '&id=' + encodeURIComponent(id),
+        { method: 'DELETE', keepalive: true }, false)
+        .then(function (r) {
+          if (r && r.ok) { outDrop(book, '-' + id); return; }
+          outAdd(book, '-' + id);
+        }).catch(function () { outAdd(book, '-' + id); });
+    } catch (_) { outAdd(book, '-' + id); }
+  }
+
+  /* Rejoue ce qui n'est jamais parti. Silencieux : un échec remet simplement le
+   * jeton en file, et le carnet local n'a jamais cessé d'être utilisable. */
+  function flushOutbox(book) {
+    if (!syncable(book)) return;
+    var pending = outRead(book);
+    if (!pending.length) return;
+    var byId = {};
+    readBook(book).list.forEach(function (c) { byId[c.id] = c; });
+    pending.slice(0, 25).forEach(function (token) {
+      if (token.charAt(0) === '-') { deleteRemote(token.slice(1), book); return; }
+      var rec = byId[token];
+      // La fiche a quitté le carnet local sans passer par remove() : il n'y a
+      // plus rien à envoyer, on sort le jeton plutôt que de retenter sans fin.
+      if (!rec) { outDrop(book, token); return; }
+      pushClient(rec, book);
+    });
+  }
+
+  // map a D1 row (snake_case, 0/1) back onto a client record.
+  function fromServer(r) {
+    var hospitality = {};
+    try { hospitality = JSON.parse(r.hospitality || '{}') || {}; } catch (_) {}
+    var out = {
+      id: r.id, name: r.name || '', phone: r.phone || '', email: r.email || '', birthday: r.birthday || '',
+      gender: r.gender || '', city: r.city || '', address: r.address || '', notes: r.notes || '',
+      hospitality: hospitality && typeof hospitality === 'object' && !Array.isArray(hospitality) ? hospitality : {},
+      points: r.points || 0, stamps: r.stamps || 0, visits: r.visits || 0, spend: r.spend || 0,
+      consent: !!r.consent, consentEmail: !!r.consent_email, source: r.source || 'caisse',
+      firstSeen: r.first_seen || 0, lastSeen: r.last_seen || 0, updated: r.updated_ts || 0,
+      loyaltySales: r.loyalty_sales || {},
+      purchaseRefs: Array.isArray(r.purchase_refs) ? r.purchase_refs.slice() : [],
+      rewardRefs: Array.isArray(r.reward_refs) ? r.reward_refs.slice() : [],
+      history: (Array.isArray(r.purchase_history) ? r.purchase_history : []).map(function (row) {
+        return { ref: row.saleRef || row.ref || '', ts: +row.createdAt || 0, amount: money(row.amount), method: String(row.method || ''), items: Array.isArray(row.items) ? row.items : [] };
+      }),
+    };
+    /* Les étiquettes voyagent avec la fiche. Un serveur dont la colonne n'est
+     * pas encore migrée n'en envoie pas : on n'écrase alors pas celles du carnet
+     * local par une liste vide, comme le faisait l'ancien `tags: []`. */
+    if (Array.isArray(r.tags)) out.tags = r.tags.map(String);
+    return out;
+  }
+  function pendingPurchaseDelta(book, id) {
+    var out = { points: 0, stamps: 0, visits: 0, spend: 0 };
+    purchaseRead(book).forEach(function (event) {
+      if (event.clientId !== id) return;
+      out.points += Number(event.points || 0); out.stamps += Number(event.stamps || 0);
+      out.visits += Number(event.visits || 0); out.spend += Number(event.spend != null ? event.spend : (event.amount || 0));
+    });
+    return out;
+  }
+  function pendingRedemptionDelta(book, id) {
+    var out = { points: 0, stamps: 0 };
+    redemptionRead(book).forEach(function (event) {
+      if (event.clientId !== id) return;
+      out.points -= Number(event.points || 0); out.stamps -= Number(event.stamps || 0);
+    });
+    return out;
+  }
+  // Merge server rows while retaining unacknowledged profile field edits.
+  function mergeServer(book, rows) {
+    var d = readBook(book), changed = false, byId = {};
+    d.list.forEach(function (c) { byId[c.id] = c; });
+    var gone = {};
+    rows.forEach(function (r) {
+      /* Une pierre tombale : ce client a été supprimé sur un autre appareil.
+       * Sans ce cas, la ligne serait fusionnée comme une fiche ordinaire — vidée
+       * de son nom et de son téléphone par le serveur — et le carnet afficherait
+       * un client anonyme et immortel à la place d'une suppression. */
+      if (r && r.deleted) {
+        if (byId[r.id]) { gone[r.id] = 1; changed = true; }
+        // La suppression est acquise : plus rien à rejouer pour cette fiche.
+        outDrop(book, r.id); outDrop(book, '-' + r.id);
+        return;
+      }
+      var sc = fromServer(r), local = byId[sc.id];
+      sc.profileBase = profileSnapshot(sc);
+      // Pulls accept server order, while preserving fields still queued locally.
+      if (local && local.profileBase) {
+        Object.keys(profileSnapshot(local)).forEach(function (key) {
+          var base = local.profileBase[key];
+          // Une base relevée avant que les étiquettes ne voyagent n'en a pas : c'était [].
+          if (key === 'tags' && base === undefined) base = [];
+          if (JSON.stringify(local[key]) !== JSON.stringify(base)) sc[key] = local[key];
+        });
+      }
+      sc.purchaseRefs.forEach(function (ref) { purchaseDrop(book, ref); });
+      sc.rewardRefs.forEach(function (ref) { redemptionDrop(book, ref); });
+      var pending = pendingPurchaseDelta(book, sc.id);
+      var pendingReward = pendingRedemptionDelta(book, sc.id);
+      if (local && (pending.points || pending.stamps || pending.visits || pending.spend
+        || pendingReward.points || pendingReward.stamps)) {
+        sc.points = Number(sc.points || 0) + pending.points;
+        sc.stamps = Number(sc.stamps || 0) + pending.stamps;
+        sc.visits = Number(sc.visits || 0) + pending.visits;
+        sc.spend = Number(sc.spend || 0) + pending.spend;
+        sc.points = Math.max(0, sc.points + pendingReward.points);
+        sc.stamps = Math.max(0, sc.stamps + pendingReward.stamps);
+        sc.lastSeen = Math.max(Number(sc.lastSeen || 0), Number(local.lastSeen || 0));
+        sc.updated = Math.max(Number(sc.updated || 0), Number(local.updated || 0));
+      }
+      if (!local) {
+        if (!Array.isArray(sc.tags)) sc.tags = [];
+        d.list.push(sc); byId[sc.id] = sc; changed = true;
+        var mm = /^c(\d+)_/.exec(sc.id); if (mm) { var n = parseInt(mm[1], 10); if (n > (d.seq || 0)) d.seq = n; }
+      } else if (local.profileBase || (sc.updated || 0) >= (local.updated || 0)) {
+        if ((!sc.history || !sc.history.length) && Array.isArray(local.history)) sc.history = local.history;
+        Object.assign(local, sc); changed = true;
+      }
+    });
+    if (changed) {
+      d.list = d.list.filter(function (c) { return !gone[c.id]; });
+      clientsStore.set(d, book); // notifies subscribers; does NOT re-push
+    }
+    return changed;
+  }
+  /* Une page au plus par appel côté serveur (500 fiches). Un navigateur neuf qui
+   * adopte un carnet de 2 000 clients doit continuer à demander tant qu'il
+   * reste des pages, sinon il s'arrête à la première et croit avoir tout lu.
+   * Le garde-fou de profondeur évite qu'une réponse incohérente ne fasse
+   * tourner la boucle sans fin. */
+  var clientPulls = Object.create(null);
+  function pull(book, cb, depth) {
+    // Tolerate pull(cb): the till modals call KiwiClients.pull(callback).
+    // Without this the callback (a function) becomes the merchant key and the
+    // till fetches /api/clients?merchant=function… instead of its own book.
+    if (typeof book === 'function') { depth = cb; cb = book; book = null; }
+    book = book || bookId();
+    if (!syncable(book)) { if (cb) cb(false); return; }
+    if (!(depth > 0)) {
+      if (clientPulls[book]) { if (cb) clientPulls[book].push(cb); return; }
+      var callbacks = clientPulls[book] = cb ? [cb] : [];
+      cb = function (changed, error) {
+        delete clientPulls[book];
+        callbacks.forEach(function (fn) { try { fn(changed, error); } catch (_) {} });
+      };
+    }
+    var since = getCursor(book);
+    try {
+      fetchDeadline('/api/clients?merchant=' + encodeURIComponent(book) + '&since=' + since, { headers: { Accept: 'application/json' } })
+        .then(function (r) { return (r && r.ok) ? r.json() : null; })
+        .then(function (data) {
+          if (!data || !Array.isArray(data.clients)) { if (cb) cb(false); return; }
+          var changed = data.clients.length ? mergeServer(book, data.clients) : false;
+          // Le curseur n'avance que s'il avance vraiment : sur une réponse
+          // incohérente, mieux vaut relire deux fois que sauter des fiches.
+          if (data.cursor > since) setCursor(book, data.cursor);
+          if (data.more && data.cursor > since && (depth || 0) < 20) {
+            pull(book, function (more, error) { if (cb) cb(changed || more, error); }, (depth || 0) + 1);
+            return;
+          }
+          if (cb) cb(changed);
+        }).catch(function (error) { if (cb) cb(false, error); });
+    } catch (error) { if (cb) cb(false, error); }
+  }
+  var pollTimer = null;
+  function tick() {
+    var b = bookId();
+    if (!syncable(b)) return;
+    outboxPersistHeld();   // une file gardée en mémoire retourne sur le disque dès qu'il l'accepte
+    flushOutbox(b);   // d'abord ce qui n'est jamais parti d'ici…
+    flushPurchases(b);
+    flushRedemptions(b);
+    pull(b);          // …puis ce que les autres appareils ont fait
+  }
+  function startSync() {
+    tick();
+    if (!pollTimer) pollTimer = setInterval(tick, 15000);
+  }
+
+  /* ── live updates (same-tab + cross-tab, via KiwiStore) ─────────────────── */
+  function subscribe(fn) { return clientsStore.subscribe(function (vid) { try { fn(vid); } catch (_) {} }); }
+  // The fidelity PROGRAM (model / targets / rewards) is its own record — the
+  // dashboard configurator writes it and the caisse Carnet must re-read it live,
+  // so a merchant who changes "10 cafés = 1 offert" on the laptop sees the till's
+  // header update without a reload. Same-tab notify here; cross-tab via `storage`.
+  function subscribeConfig(fn) { return fidelityStore.subscribe(function (vid) { try { fn(vid); } catch (_) {} }); }
+
+  window.KiwiClients = {
+    bookId: bookId,
+    hasBook: function () { return !!bookId(); },
+    // reads
+    list: list, get: get, purchaseSyncStatus: purchaseSyncStatus, refusedRedemptions: refusedRedemptions, findByPhone: findByPhone, count: count,
+    // writes
+    upsert: upsert, recordPurchase: recordPurchase, recordRefund: recordRefund, redeem: redeem, redemptionRef: redemptionRef, reserveRedemption: reserveRedemption, remove: remove,
+    // fidelity config
+    config: config, setConfig: setConfig, defaultModel: defaultModel, loyaltyOn: loyaltyOn,
+    // analytics
+    segment: segment, segmentCounts: segmentCounts, progress: progress,
+    // helpers
+    normPhone: normPhone, samePhone: samePhone, daysSince: daysSince,
+    subscribe: subscribe, subscribeConfig: subscribeConfig,
+    // backend sync (fail-soft — no-op until /api/clients + D1 are deployed)
+    attachOutboxVault: function (vault) { outboxRead.vault = vault; }, pull: pull, sync: startSync, syncable: function (b) { return syncable(b || bookId()); },
+  };
+
+  // Kick the sync loop, and (re)start it the moment a device goes live / pairs.
+  window.addEventListener('storage', function (e) {
+    if (e && (e.key === 'kiwiLive' || e.key === 'kiwiLiveMerchant' || e.key === 'kiwiPaired' || e.key === 'kiwiPairedVenue')) startSync();
+  });
+  startSync();
+})();

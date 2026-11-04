@@ -349,7 +349,7 @@
   <!-- Ce qui appartient à un commerçant, et part quand cet appareil en change.
        AVANT caisse-pairing.js : c'est l'appairage qui déclenche la purge, et une
        serrure chargée après la porte ne ferme rien. -->
-  <script src="assets/tenant-purge.js?v=6" defer></script>
+  <script src="assets/tenant-purge.js?v=7" defer></script>
   <!-- Le geste partagé qui pose l'appairage et déclenche cette purge. Partagé
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=4" defer></script>
@@ -406,7 +406,7 @@
   <!-- Tenant-scoped operational outbox: receipt delivery and device health are
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=18" defer></script>
-  <script src="assets/clients-store.js?v=39" defer></script> <script src="assets/clients-book.js?v=58" defer></script>
+  <script src="assets/clients-store-vault.js?v=5" defer></script> <script src="assets/clients-book.js?v=58" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module

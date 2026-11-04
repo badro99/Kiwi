@@ -1884,7 +1884,7 @@ section('Whole-project regressions');
     'clients-properties-test.mjs',
     'queues-wave-n-test.mjs',
     'clients-display-properties-test.mjs',
-    'clients-outbox-owner-test.mjs', 'clients-push-deadline-test.mjs',
+    'clients-outbox-owner-test.mjs', 'clients-outbox-vault-test.mjs', 'clients-push-deadline-test.mjs',
     'books-money-properties-test.mjs',
     'serveur-money-properties-test.mjs',
     'pressing-money-properties-test.mjs',

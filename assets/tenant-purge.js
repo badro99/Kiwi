@@ -90,7 +90,7 @@
          refuse) part aussi. La suppression est asynchrone et la page se
          recharge juste après : chaque copie porte donc aussi son locataire, et
          une copie qui n'est pas celle du locataire courant n'est jamais lue. */
-      try { if (window.indexedDB) window.indexedDB.deleteDatabase('kiwi-catalog'); } catch (_) {}
+      try { if (window.indexedDB) { window.indexedDB.deleteDatabase('kiwi-catalog'); window.indexedDB.deleteDatabase('kiwi-clients-outbox-vault'); } } catch (_) {}
       return kill.length + TENANT_KEYS.length;
     } catch (_) { return 0; }
   }
