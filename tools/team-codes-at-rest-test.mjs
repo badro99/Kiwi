@@ -176,37 +176,13 @@ await okAsync('un code créé en session et pas encore accepté reste sur le dis
   assert.ok(!('pinCode' in F.diskMembers(memory, serverCodes)[3]));
 });
 
-/* ── 4 · les branchements dans team.js ────────────────────────────────── */
-console.log('4 · les branchements');
-const persistSrc = grab(TEAM, 'function persistTeams(');
-ok('persistTeams écrit diskMembers(…, serverCodes), jamais le roster brut', () => {
-  assert.match(persistSrc, /out\.byVenue\[k\] = diskMembers\(root\.byVenue\[k\], serverCodes\);/);
-  assert.doesNotMatch(persistSrc, /out\.byVenue\[k\] = root\.byVenue\[k\]/);
-});
-const pubSrc = grab(TEAM, 'function publishPins(');
-ok('publishPins ne publie rien tant qu\'un salarié attend son code', () => {
-  assert.match(pubSrc, /if \(rosterHasUnresolved\(roster\)\) return;/);
-  assert.ok(pubSrc.indexOf('rosterHasUnresolved(roster)') < pubSrc.indexOf('window.KiwiConfig.syncPins(pins)'));
-});
-ok('la remontée du document : canPush bloque, onPushed note ce que le serveur a accepté, read() ôte hasCode', () => {
-  assert.match(TEAM, /canPush: \(\) => \{[\s\S]*?rosterHasUnresolved\(window\.__kiwiTeamV2\.byVenue\[k\]\)[\s\S]*?heldPush = true/);
-  assert.match(TEAM, /onPushed: \(doc\) => \{[\s\S]*?serverCodes\[m\.id\] = c;[\s\S]*?persistTeams\(\)/);
-  assert.match(TEAM, /members: outboundMembers\(root\.byVenue\[k\] \|\| \[\]\)/);
-});
-ok('la fusion rend les codes (fillCodes) et l\'hydratation passe par une lecture directe, pas par pull', () => {
-  assert.match(TEAM, /members: fillCodes\(members, theirs && theirs\.members\),/);
-  assert.match(grab(TEAM, 'function hydrateCodes('), /fetchDeadline\('\/api\/store\?feature=team&merchant='/);
-  assert.match(grab(TEAM, 'function teamCloudBind('), /then\(\(\) => c\.bind\(\)\)\.then\(\(\) => hydrateCodes\(\)\)\.then\(\(ok\) => \{ if \(ok\) publishPins\(\); \}\)/);
-});
-ok('modifier un salarié dont le code n\'est pas revenu ne lui en invente pas un nouveau', () => {
-  assert.match(TEAM, /\(prev && prev\.hasCode \? '' : makeCode\(members\)\)/);
-  assert.match(TEAM, /\.\.\.\(\(!code && prev && prev\.hasCode && !memberCode\(prev\)\) \? \{ hasCode: true \} : \{\}\)/);
-});
-ok('aucun autre endroit de team.js n\'écrit le roster brut dans localStorage', () => {
-  const writes = TEAM.match(/localStorage\.setItem\(LS_TEAM[^)]*\)/g) || [];
-  assert.equal(writes.length, 1);
-  assert.match(persistSrc, /localStorage\.setItem\(LS_TEAM, JSON\.stringify\(out\)\)/);
-});
+/* ── 4 · les branchements ─────────────────────────────────────────────────
+   Ils se vérifiaient par motifs de texte dans team.js (persistTeams écrit
+   diskMembers, publishPins attend, canPush / onPushed, hydrateCodes). Ils
+   s'exécutent maintenant, de bout en bout (vrai member-state.js, vrai
+   cloud-doc.js, vraie route /api/store sur SQLite, réseau coupé avant, après
+   et pendant la lecture) dans tools/team-codes-publication-test.mjs. */
+console.log('4 · les branchements : exécutés dans tools/team-codes-publication-test.mjs');
 
 /* ── 5 · cloud-doc.js : le crochet canPush, tel que livré ──────────────── */
 console.log('5 · cloud-doc : un document retenu ne part pas');

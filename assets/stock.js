@@ -198,6 +198,11 @@
     return d;
   }
 
+  /* Quota plein ou stockage refusé : la saisie reste lisible en mémoire (relue par la copie serveur,
+     par la navigation et par stEnsureOverlay), jamais perdue en silence au prochain rechargement. */
+  let stOverlayMem = null;
+  const stOverlayStore = (text) => { try { localStorage.setItem(stOverlayKey(), text); stOverlayMem = null; } catch (_) { stOverlayMem = { key: stOverlayKey(), text }; } };
+  const stOverlayText = () => { try { return stOverlayMem && stOverlayMem.key === stOverlayKey() ? stOverlayMem.text : localStorage.getItem(stOverlayKey()); } catch (_) { return null; } };
   function stSaveOverlay() {
     if (!stShowReal()) return;
     try {
@@ -215,8 +220,8 @@
         delCats: [...stDeletedCategories],
         stockOv: stStockOverrides,
       });
-      localStorage.setItem(stOverlayKey(), JSON.stringify(doc));
-    } catch (_) { /* quota plein → on ne casse pas la saisie en cours */ }
+      stOverlayStore(JSON.stringify(doc));
+    } catch (_) { /* document illisible → on ne casse pas la saisie en cours */ }
     try { window.dispatchEvent(new CustomEvent('kiwi-stock-changed', { detail: { venue: stOverlayScope() } })); } catch (_) {}
     const c = stCloud();
     if (c) c.push();
@@ -240,7 +245,7 @@
 
   function stOverlayRaw() {
     try {
-      const raw = localStorage.getItem(stOverlayKey());
+      const raw = stOverlayText();
       const s = JSON.parse(raw || 'null');
       if (s && typeof s === 'object') {
         const hadV2 = (s.schemaVersion || 1) >= 2 && Array.isArray(s.subcategories);
@@ -329,7 +334,7 @@
       slug: () => window.KiwiCloudDoc.slugFor(currentVenueId()),
       read: stOverlayRaw,
       write: (d) => {
-        try { localStorage.setItem(stOverlayKey(), JSON.stringify(d)); } catch (_) {}
+        stOverlayStore(JSON.stringify(d));
         // Forcer la relecture : les variables vivantes portent encore l'ancienne
         // surcouche, et c'est elles que dessine render().
         stOverlayLoadedFor = null;
@@ -367,7 +372,7 @@
     Object.keys(stStockOverrides).forEach((k) => delete stStockOverrides[k]);
     if (!stShowReal()) return;                       // la démo repart de zéro, comme avant
     let s = null;
-    try { s = JSON.parse(localStorage.getItem(stOverlayKey()) || 'null'); } catch (_) { return; }
+    try { s = JSON.parse(stOverlayText() || 'null'); } catch (_) { return; }
     if (!s || typeof s !== 'object') return;
     s = migrateStockDocV2(s);
     if (Array.isArray(s.items)) stUserItems = s.items.map(normalizeStockItem);

@@ -67,6 +67,59 @@ if (OUT && ROOT) {
   };
   for (const n of ['readdirSync', 'readdir', 'opendirSync', 'opendir']) wrapDir(fs, n);
   if (fs.promises) for (const n of ['readdir', 'opendir']) wrapDir(fs.promises, n);
+  /* Inputs the file list cannot represent: a read outside the repo under the
+     user's home (another checkout, ~/Library, a dotfile) and a connection to a
+     host that is not this machine. They ride along as `#blind <what>` lines and
+     the pass cache (tools/check-pool.js) then refuses to replay that pass: the
+     key hashes repo files only, so it could not notice them change. The temp
+     dir, /dev and system paths are not user state and do not count. */
+  const os = require('os');
+  let HOME = '', TMP = '';
+  try { HOME = fs.realpathSync(os.homedir()) + path.sep; TMP = fs.realpathSync(os.tmpdir()) + path.sep; } catch (_) {}
+  const blind = new Set();
+  const outsideHome = (p) => {
+    try {
+      if (p == null || typeof p === 'number') return null;
+      let file = typeof p === 'object' ? (p instanceof URL ? fileURLToPath(p) : (Buffer.isBuffer(p) ? p.toString() : null)) : String(p);
+      if (!file) return null;
+      if (file.startsWith('file:')) file = fileURLToPath(file);
+      else if (/^[a-z][a-z0-9+.-]+:/i.test(file)) return null;
+      file = path.resolve(file);
+      const inRepo = (b) => b && file.startsWith(b);
+      if (inRepo(ROOT) || inRepo(REAL) || (TMP && file.startsWith(TMP)) || /^\/(private\/)?(tmp|var\/folders)\//.test(file)) return null;
+      if (!HOME || !(file.startsWith(HOME) || file.startsWith(os.homedir() + path.sep))) return null;
+      return file;
+    } catch (_) { return null; }
+  };
+  const wrapBlind = (obj, name) => {
+    const real = obj[name];
+    if (typeof real !== 'function' || real.kiwiBlind) return;
+    const traced = function (p) { const out = outsideHome(p); if (out) blind.add('file ' + out.replace(HOME, '~/')); return real.apply(this, arguments); };
+    traced.kiwiBlind = true;
+    traced.kiwiTraced = real.kiwiTraced;
+    obj[name] = traced;
+  };
+  for (const n of ['readFileSync', 'readFile', 'createReadStream', 'openSync', 'open', 'copyFileSync', 'copyFile', 'existsSync', 'statSync', 'lstatSync', 'accessSync', 'stat', 'lstat', 'access', 'readdirSync', 'readdir', 'opendirSync', 'opendir']) wrapBlind(fs, n);
+  if (fs.promises) for (const n of ['readFile', 'open', 'copyFile', 'stat', 'lstat', 'access', 'readdir', 'opendir']) wrapBlind(fs.promises, n);
+  try {
+    const net = require('net');
+    const realConnect = net.Socket.prototype.connect;
+    if (!realConnect.kiwiBlind) {
+      const LOCAL = /^(localhost|127\.\d+\.\d+\.\d+|::1|\[::1\]|0\.0\.0\.0|::)$/;
+      net.Socket.prototype.connect = function (...args) {
+        try {
+          let a = args[0];
+          if (Array.isArray(a)) a = a[0];
+          let host;
+          if (a && typeof a === 'object') host = a.path ? null : (a.host || 'localhost');
+          else if (typeof a === 'number' || (typeof a === 'string' && /^\d+$/.test(a))) host = typeof args[1] === 'string' ? args[1] : 'localhost';
+          if (host && !LOCAL.test(host)) blind.add('net ' + host);
+        } catch (_) {}
+        return realConnect.apply(this, args);
+      };
+      net.Socket.prototype.connect.kiwiBlind = true;
+    }
+  } catch (_) {}
   /* `import { readFileSync } from 'node:fs'` binds the original unless told. */
   try { require('module').syncBuiltinESMExports(); } catch (_) {}
 
@@ -89,6 +142,7 @@ if (OUT && ROOT) {
   process.on('exit', () => {
     let cpu = '';
     try { const u = process.cpuUsage(); cpu = '#cpu ' + Math.round((u.user + u.system) / 1000) + '\n'; } catch (_) {}
-    try { fs.appendFileSync(OUT, (seen.size ? [...seen].join('\n') + '\n' : '') + cpu); } catch (_) {}
+    const blindLines = blind.size ? [...blind].sort().map((b) => '#blind ' + b).join('\n') + '\n' : '';
+    try { fs.appendFileSync(OUT, (seen.size ? [...seen].join('\n') + '\n' : '') + blindLines + cpu); } catch (_) {}
   });
 }
