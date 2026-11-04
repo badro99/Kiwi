@@ -12,6 +12,12 @@ fs.writeFileSync(pricingChunk, rewrite(fs.readFileSync(pricingChunk, 'utf8'),
   'href:tier.signupPlan?"/dashboard.html?plan="+tier.signupPlan+"&period="+(annual?"annual":"monthly"):r.DEMO_HREF',
   'pricing CTA href'
 ));
+// Signup stays in the same tab (back returns to the plans); WhatsApp keeps its new tab.
+fs.writeFileSync(pricingChunk, rewrite(fs.readFileSync(pricingChunk, 'utf8'),
+  ':r.DEMO_HREF,target:"_blank",',
+  ':r.DEMO_HREF,target:tier.signupPlan?void 0:"_blank",',
+  'pricing CTA target'
+));
 
 const pricingCode = fs.readFileSync(pricingChunk);
 const pricingName = '2c2tj5hx4r2-w-' + createHash('sha256').update(pricingCode).digest('hex').slice(0, 8) + '.js';

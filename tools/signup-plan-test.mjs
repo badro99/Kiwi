@@ -62,5 +62,9 @@ for (const locale of ['fr','en','ar','de','it','nl','es']) {
 const chunk=fs.readFileSync('_next/static/chunks/' + fs.readdirSync('_next/static/chunks').find(name=>/^2c2tj5hx4r2-w-[0-9a-f]{8}\.js$/.test(name)),'utf8');
 const href=chunk.match(/href:(tier.signupPlan\?[^,]+),target/)[1];
 for(const annual of [false,true]) assert.equal(vm.runInNewContext(href,{tier:{signupPlan:'pro'},annual}),`/dashboard.html?plan=pro&period=${annual?'annual':'monthly'}`);
+const target=chunk.match(/r\.DEMO_HREF,target:([^,]+),rel/)[1];
+assert.equal(vm.runInNewContext(target,{tier:{signupPlan:'pro'}}),undefined,'signup opens in the same tab');
+assert.equal(vm.runInNewContext(target,{tier:{}}),'_blank','WhatsApp keeps its new tab');
+for(const locale of ['fr','en','ar','de','it','nl','es']) for(const a of fs.readFileSync(`${locale}/index.html`,'utf8').match(/<a [^>]*dashboard\.html\?plan=[^>]*>/g)||[]) assert.ok(!a.includes('_blank'),`${locale}: signup link opens a new tab`);
 assert.ok(middleware.includes("setMode('signup');\n  var MSG"));
 console.log('✓ signup requested offers: URL payload, persistence, allowlist, basic entitlement, operator display, seven locales and billing toggle');
