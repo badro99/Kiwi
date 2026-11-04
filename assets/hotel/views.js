@@ -1012,7 +1012,7 @@ function cuHasGroupRecovery() {
     return false;
   }
 
-async function cuMoveStayStatus(id, next, button, reopen, force = false) {
+async function cuMoveStayStatus(id, next, button, reopen, force = false, pin = '') {
     const slug = cuMerchantSlug();
     if (!slug || !id) return;
     const scope = cuStayScope(), cache = cuStayCache();
@@ -1033,7 +1033,7 @@ async function cuMoveStayStatus(id, next, button, reopen, force = false) {
     try {
       const res = await fetch('/api/hotel/stays', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'status', merchant: slug, id, status: next, force,
+        body: JSON.stringify({ action: 'status', merchant: slug, id, status: next, force, pin,
           /* Réouverture d'un dossier clos : un geste explicite, jamais un
              effet de bord d'un changement de statut ordinaire. */
           ...(reopen ? { reopen: true } : {}) }),
@@ -1041,7 +1041,8 @@ async function cuMoveStayStatus(id, next, button, reopen, force = false) {
       const body = await res.json().catch(() => ({}));
       if (scope !== cuStayScope() || cuMerchantSlug() !== slug) return;
       if (res.status === 409 && body.error === 'stay-unpaid' && !force) {
-        if (confirm(tx('Il reste {amount} MAD à régler. Confirmer le départ avec ce solde impayé ?', { amount: cuDraftMoney(body.owedCents) }))) return await cuMoveStayStatus(id, next, button, reopen, true);
+        const code = await (await import('./checkout-proof.mjs')).checkoutProof(K(), tx, cuDraftMoney(body.owedCents));
+        if (code !== null && scope === cuStayScope() && cuMerchantSlug() === slug) return await cuMoveStayStatus(id, next, button, reopen, true, code);
         return;
       }
       if (!res.ok || !body.booking) {
@@ -1053,7 +1054,7 @@ async function cuMoveStayStatus(id, next, button, reopen, force = false) {
               ? tx('Seul le propriétaire du compte peut rouvrir un dossier clos.')
             : body.error === 'room-occupied'
               ? tx('Cette chambre est déjà occupée par un autre séjour. Vérifiez le plan et attribuez une autre chambre.')
-              : (body.error || tx('Réessayez.')),
+              : (force ? tx('Code manager refusé ou vérification indisponible.') : body.error || tx('Réessayez.')),
         });
         return;
       }

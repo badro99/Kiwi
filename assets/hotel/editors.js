@@ -2,6 +2,48 @@
 (window.__kiwiHotelSections ||= {}).editors = (scope) => {
 'use strict';
 const { F, GUESTS, HK_QUEUE, HX_WEEKDAYS, K, MAD, R, RATES, RATE_DAYS, TYPES, counts, cuActiveFilterCount, cuAllCharacteristics, cuAllStays, cuAllViews, cuBillingBlocked, cuBillingBody, cuBillingLine, cuBirthDisplay, cuBirthIso, cuBoards, cuChannelMerchant, cuChannelState, cuCharLabel, cuCommercialError, cuConnectingAvail, cuDay, cuDirectQuote, cuDraftInput, cuDraftMoney, cuEconomatBody, cuEconomatState, cuEnsureFilterVenue, cuEvaluateStayExceptions, cuFilterChipsMarkup, cuFloorKey, cuFloorMatchesFilter, cuFloorRows, cuFloors, cuHasGroupRecovery, cuMerchantSlug, cuNationalitySelectorHtml, cuPendingBulk, cuPerfState, cuPerfWindows, cuPrintDraft, cuProductionState, cuRackFilter, cuRenderPhotoEditor, cuRoomLive, cuRoomMatchesFilter, cuRoomStatus, cuSejoursAvailabilityBody, cuSelectedNumbers, cuSelectedRooms, cuStarter, cuState, cuStayCache, cuStayLoads, cuStayQuoteSignature, cuStayScope, cuStaysChanged, cuStaysKnown, cuToday, cuTonight, cuTypeOptions, cuTypes, cuUploadTypePhotos, cuViewLabel, cuWarmStays, cuWireNationalitySelectors, cuWireStayCommercial, esc, fmt, folioTotal, hxLang, hxLocale, hxTo, isCustomHotel, ltr, openFolio, roomCountLabel, roomTypeOf, toast, totalRooms, trL, tx, txk, txn } = scope;
+const cuDeadlineFetch = async (url, options = {}, timeout = 15000) => {
+  const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+  let timer;
+  const request = Promise.resolve().then(() => fetch(url, { ...options, ...(ctl ? { signal: ctl.signal } : {}) })).then(async response => {
+    try { const data = await response.json(); response.json = () => Promise.resolve(data); }
+    catch (error) { response.json = () => Promise.reject(error); }
+    return response;
+  });
+  const deadline = new Promise((_, reject) => { timer = setTimeout(() => {
+    reject(Object.assign(new Error('request-timeout'), { code: 'request-timeout' }));
+    if (ctl) ctl.abort();
+  }, timeout); });
+  try { return await Promise.race([request, deadline]); }
+  finally { clearTimeout(timer); }
+};
+const cuUncertainWrites = new Set();
+const cuEditorRequest = async (url, options = {}) => {
+  const write = String(options.method || 'GET').toUpperCase() !== 'GET';
+  const command = write ? JSON.parse(options.body || '{}') : {};
+  const key = url + '|' + [command.merchant, command.id || command.dossierId || command.clientRef || command.commandId].join('|'), ownerScope = cuStayScope(), ownerCache = cuStayCache();
+  const reread = async () => {
+    const body = JSON.parse(options.body || '{}');
+    const response = await cuDeadlineFetch('/api/hotel/stays?' + new URLSearchParams({ merchant: body.merchant, ...(body.id || body.dossierId ? { [body.id ? 'id' : 'dossierId']: body.id || body.dossierId } : body.clientRef ? { clientRef: body.clientRef } : {}), includeCancelled: '1' }), { cache: 'no-store' });
+    if (!response.ok) throw new Error('stay-read-failed');
+    const data = await response.json();
+    if (!Array.isArray(data.stays)) throw new Error('stay-read-failed');
+    if (ownerScope === cuStayScope()) {
+      for (const stay of data.stays) ownerCache.set(stay.id, stay);
+      cuStaysChanged();
+    }
+    cuUncertainWrites.delete(key);
+  };
+  if (write && cuUncertainWrites.has(key)) { try { await reread(); } catch (_) { throw new Error(tx('Résultat incertain. Rouvrez le dossier pour vérifier avant de réessayer.')); } }
+  try { return await cuDeadlineFetch(url, options, write ? 20000 : 15000); }
+  catch (error) {
+    if (!write) throw error;
+    cuUncertainWrites.add(key);
+    try { await reread(); } catch (_) {}
+    throw new Error(tx('Résultat incertain. Rouvrez le dossier pour vérifier avant de réessayer.'));
+  }
+};
+
 function rerender() {
     // Les séjours ont pu bouger depuis la peinture précédente.
     scope.cuOccupancyMemo = null;
@@ -774,7 +816,7 @@ async function cuLoadPerformance(force) {
     st.loading = true;
     const w = cuPerfWindows();
     const read = async (win) => {
-      const res = await fetch('/api/hotel/performance?' + new URLSearchParams({ merchant: slug, from: win.from, to: win.to }), { cache: 'no-store' });
+      const res = await cuEditorRequest('/api/hotel/performance?' + new URLSearchParams({ merchant: slug, from: win.from, to: win.to }), { cache: 'no-store' });
       const b = await res.json().catch(() => ({}));
       if (!res.ok || !b.ok) throw new Error(b.error || 'unavailable');
       return b;
@@ -1120,7 +1162,7 @@ async function cuOpenDossier(booking) {
     const host=m.el.querySelector('[data-hx-dossier-body]');
     m.el.querySelector('[data-hx-linked-room]').onclick=()=>{m.close();if(scope===cuStayScope())cuStayEditor(null,booking);};
     try{
-      const res=await fetch('/api/hotel/billing-draft?'+new URLSearchParams({merchant,dossierId:id})),data=await res.json().catch(()=>({}));
+      const res=await cuEditorRequest('/api/hotel/billing-draft?'+new URLSearchParams({merchant,dossierId:id})),data=await res.json().catch(()=>({}));
       if(scope!==cuStayScope()||m.el.isConnected===false)return;
       if(!res.ok){
         const code=data?.error;
@@ -1133,7 +1175,7 @@ async function cuOpenDossier(booking) {
       const error=host.querySelector('[data-hx-billing-error],[data-hx-dossier-error]');
       host.querySelectorAll('[data-hx-open-stay]').forEach(button=>button.onclick=async()=>{
         if(scope!==cuStayScope()){m.close();return;}
-        const response=await fetch('/api/hotel/stays?'+new URLSearchParams({merchant,id:button.dataset.hxOpenStay,includeCancelled:'1'}));
+        const response=await cuEditorRequest('/api/hotel/stays?'+new URLSearchParams({merchant,id:button.dataset.hxOpenStay,includeCancelled:'1'}));
         const body=await response.json();if(scope!==cuStayScope())return;
         const stay=body.stays?.find(b=>b.id===button.dataset.hxOpenStay);
         if(!response.ok||!stay){if(error)error.textContent=tx('Séjour introuvable. Actualisez la réception.');return;}
@@ -1170,7 +1212,7 @@ async function cuOpenDossier(booking) {
           const input=cuDraftInput(form,extras);
           pending ||= {action:'save-draft',merchant,dossierId:id,rev:data.rev,sourceDigest:data.sourceDigest,directoryRev:data.directoryRev,commandId:'draft-'+crypto.randomUUID(),input};
           form.__saving=true;form.querySelector('fieldset').disabled=true;error.textContent=tx('Enregistrement serveur…');
-          const response=await fetch('/api/hotel/billing-draft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pending)}),body=await response.json();
+          const response=await cuEditorRequest('/api/hotel/billing-draft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pending)}),body=await response.json();
           if(scope!==cuStayScope())return;
           if(!response.ok)throw new Error(body.error==='draft-stale'?tx('Le dossier ou ses comptes ont changé. Rouvrez-le pour vérifier les prix avant enregistrement.'):(['billing-quote-mismatch','billing-bad-status','billing-bad-stay','billing-bad-dates','directory-unreadable'].includes(body.error)?cuBillingBlocked(body.error):tx('Enregistrement refusé. Vérifiez les montants et les payeurs.')));
           data.saved=body.saved;data.rev=body.rev;pending=null;dirty=false;form.querySelector('[data-hx-print-draft]').disabled=false;
@@ -1322,7 +1364,7 @@ async function cuSubmitStay(form, booking, modal) {
     form.__hxSubmitting = true; submit.disabled = true; error.textContent = '';
     const scope = cuStayScope(), cache = cuStayCache();
     try {
-      const res = await fetch('/api/hotel/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const res = await cuEditorRequest('/api/hotel/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.booking) {
         const messages = {
@@ -1371,7 +1413,7 @@ async function cuSubmitStay(form, booking, modal) {
       if (scope.openModal?.el === modal?.el) scope.openModal = null;
       toast(tx('Séjour enregistré · ch. {n}', { n: (cuState().rooms && Object.values(cuState().rooms).find((r) => r.id === body.booking.resourceId)?.n) || '' }), { type: 'success', desc: cuDay(body.booking.hotel.checkIn) + hxTo() + cuDay(body.booking.hotel.checkOut) + ' · ' + (body.booking.hotel.channel || 'direct') });
       rerender();
-    } catch (_) { error.textContent = tx('Réponse serveur non reçue. Vérifiez le dossier ou réessayez : la même référence sera conservée pour éviter un doublon.'); }
+    } catch (failure) { error.textContent = failure.message || tx('Réponse serveur non reçue. Vérifiez le dossier ou réessayez : la même référence sera conservée pour éviter un doublon.'); }
     finally {
       form.__hxSubmitting = false;
       submit.disabled = !!(form.__hxTariffSyncState && form.__hxTariffSyncState !== 'ready');
@@ -1384,7 +1426,7 @@ async function cuCancelStay(id, button, modal) {
     const scope = cuStayScope(), cache = cuStayCache();
     button.disabled = true;
     try {
-      const res = await fetch('/api/hotel/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', merchant: slug, id }) });
+      const res = await cuEditorRequest('/api/hotel/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', merchant: slug, id }) });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.booking) { toast(tx('Annulation impossible'), { type: 'warn', desc: body.error || tx('Réessayez.') }); return; }
       cache.set(body.booking.id, body.booking);
@@ -1400,7 +1442,7 @@ async function cuCancelStay(id, button, modal) {
       if (scope.openModal?.el === modal?.el) scope.openModal = null;
       toast(tx('Séjour annulé dans Kiwi'), { type: 'success', desc: tx('La disponibilité directe est mise à jour. Vérifiez séparément l’annulation sur l’OTA ou auprès de l’agence.') });
       rerender();
-    } catch (_) { toast(tx('Confirmation non reçue'), { type: 'warn', desc: tx('Actualisez le dossier pour vérifier si l’annulation a été enregistrée.') }); }
+    } catch (failure) { toast(tx('Confirmation non reçue'), { type: 'warn', desc: failure.message || tx('Actualisez le dossier pour vérifier si l’annulation a été enregistrée.') }); }
     finally { button.disabled = false; }
   }
 
@@ -1425,7 +1467,7 @@ async function cuLoadProduction() {
     st.loading = true; st.error = ''; st.report = null;
     if (scope.openDrawer?.page === 'production') rerender();
     try {
-      const res = await fetch('/api/hotel/production?' + new URLSearchParams({ merchant: cuChannelMerchant(), month }), { cache: 'no-store' });
+      const res = await cuEditorRequest('/api/hotel/production?' + new URLSearchParams({ merchant: cuChannelMerchant(), month }), { cache: 'no-store' });
       const b = await res.json();
       if (!res.ok || b.month !== month || !Array.isArray(b.groups) || !Array.isArray(b.totals)) throw new Error(b.error || 'unavailable');
       if (st.request === sequence) st.report = b;

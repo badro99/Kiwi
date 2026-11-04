@@ -79,6 +79,11 @@
   /* « Libellé : valeur » — French sets a space before the colon, English and Arabic do not. */
   const hxColon = () => (hxLang() === 'fr' ? ' : ' : ': ');
   const HX_T = {
+    "Départ avec solde impayé": { en: "Checkout with unpaid balance", ar: "مغادرة مع رصيد غير مدفوع" },
+    "Code manager (facultatif pour le propriétaire)": { en: "Manager code (optional for the owner)", ar: "رمز المدير (اختياري للمالك)" },
+    "Confirmer le départ": { en: "Confirm checkout", ar: "تأكيد المغادرة" },
+    "Code manager refusé ou vérification indisponible.": { en: "Manager code rejected or verification unavailable.", ar: "رمز المدير مرفوض أو التحقق غير متاح." },
+    "Résultat incertain. Rouvrez le dossier pour vérifier avant de réessayer.": { en: "Result uncertain. Reopen the stay to check before retrying.", ar: "النتيجة غير مؤكدة. أعد فتح ملف الإقامة للتحقق قبل المحاولة مجددا." },
     /* hx-i18n:begin */
     "Direct": { en: "Direct", ar: "مباشر" },
     "Chambre": { en: "Room", ar: "غرفة" },

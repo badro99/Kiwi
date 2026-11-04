@@ -549,7 +549,7 @@ for (const test of [
   /* Un avoir expiré qui reçoit un remboursement redevient utilisable ; l'historique d'un avoir ancien ne disparaît plus. */
   'store-credit-restore-expiry-test.mjs',
   'caisse-opening-gate-test.mjs',
-  'hotel-rooms-test.mjs', 'hotel-room-plan-test.mjs', 'hotel-room-bulk-api-test.mjs', 'hotel-cloud-save-test.mjs', 'hotel-room-plan-ui-test.mjs', 'hotel-stays-test.mjs', 'hotel-stays-group-test.mjs', 'hotel-stays-group-guards-test.mjs', 'hotel-direct-pricing-test.mjs', 'hotel-reservations-d1-test.mjs', 'hotel-channel-sync-test.mjs', 'hotel-sync-worker-test.mjs', 'hotel-caisse-catalog-test.mjs',
+  'hotel-rooms-test.mjs', 'hotel-room-plan-test.mjs', 'hotel-room-bulk-api-test.mjs', 'hotel-cloud-save-test.mjs', 'hotel-room-plan-ui-test.mjs', 'hotel-stays-test.mjs', 'hotel-deadline-test.mjs', 'hotel-forced-checkout-test.mjs', 'hotel-stays-group-test.mjs', 'hotel-stays-group-guards-test.mjs', 'hotel-direct-pricing-test.mjs', 'hotel-reservations-d1-test.mjs', 'hotel-channel-sync-test.mjs', 'hotel-sync-worker-test.mjs', 'hotel-caisse-catalog-test.mjs',
   'sw-immutable-revalidation-test.mjs', 'request-headers-test.mjs', 'request-pollers-test.mjs', 'quiet-mode-test.mjs', 'quiet-demo-browser-test.mjs', 'load-test-suite-test.mjs',
 ]) {
   const { spawnSync } = require('child_process');

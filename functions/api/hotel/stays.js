@@ -5,7 +5,7 @@ import { bookingEpoch } from '../_booking-clock.js';
 // Authenticated hotel stay writer. Manual, direct and OTA stays are committed
 // into the same revisioned reservations document used by /api/booking, so a
 // room accepted here disappears from public availability in the same write.
-import { json, entitledMerchant } from '../../auth/_lib.js';
+import { json, entitledMerchant, verifyStaffPin, operatorActor } from '../../auth/_lib.js';
 import { commercialSnapshot, readCommercial, quote, BOARDS, problem, directKey } from './_commercial.js';
 import { stayOptions } from './_stay-options.js';
 import { tenantFor } from '../_private.js';
@@ -16,6 +16,21 @@ import {
   hotelReservationsTableExists, hydrateReservation,
 } from './_stay-events.js';
 
+
+const checkoutApprover = async (request, env, merchant, actor, pin) => {
+  if ((await entitledMerchant(request, env, merchant)) === merchant) {
+    const op = await operatorActor(request, env);
+    const owner = actor.role === 'owner' ? await env.DB.prepare('SELECT name FROM accounts WHERE id = ? LIMIT 1').bind(actor.id).first() : null;
+    if (actor.role === 'owner' || op?.id) return { approvedBy: { id: String(op?.id || actor.id).slice(0, 96), name: String(op?.label || owner?.name || actor.id).slice(0, 120), role: op?.id ? 'operator' : 'owner' } };
+  }
+  if (!pin) return { response: json({ error: 'owner-required' }, 403) };
+  const verified = await verifyStaffPin(request, env, merchant, pin, { requireTill: true });
+  if (!verified.ok) return { response: verified.response || json({ error: verified.error }, verified.status) };
+  const staff = verified.staff;
+  const role = String(staff.role || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
+  if (!['manager', 'owner', 'proprietaire', 'direction', 'gerant', 'manager-owner', 'hotel-manager'].includes(role)) return { response: json({ error: 'manager-required' }, 403) };
+  return { approvedBy: { id: String(staff.id || '').slice(0, 96), name: String(staff.name || '').slice(0, 120), role: String(staff.role || '').slice(0, 80) } };
+};
 
 const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
 const CHANNELS = new Set(['direct', 'booking', 'airbnb', 'expedia', 'walkin', 'other']);
@@ -555,16 +570,16 @@ export async function onRequestPost({ request, env }) {
           }
         } catch (_) { return json({ error: 'service-unavailable' }, 503); }
       }
-      let checkout = null;
+      let checkout = null, approvedBy = null;
       if (next === 'completed') {
         try { checkout = await checkoutBalance(env, merchant, old, rows.rooms?.data, hasResTable); }
         catch (_) { return json({ error: 'stay-balance-unavailable' }, 503); }
         if (checkout.linked && checkout.owedCents > 0 && b.force !== true) return json({ error: 'stay-unpaid', confirm: 'force', ...checkout }, 409);
         // Leaving with an unpaid balance is the owner's call (or an operator's): an allow-list, so an unresolved actor fails closed.
-        if (checkout.linked && checkout.owedCents > 0 && !['owner', 'operator'].includes(actor.role)) return json({ error: 'owner-required', ...checkout }, 403);
+        if (checkout.linked && checkout.owedCents > 0) { const proof = await checkoutApprover(request, env, merchant, actor, b.pin); if (proof.response) return proof.response; approvedBy = proof.approvedBy; }
       }
       const previous = { ...old, hotel: { ...old.hotel } };
-      if (checkout) old.checkout = { ...checkout, forced: checkout.linked && checkout.owedCents > 0, actor, at: now, actualDepartureAt: now, actualDepartureDate: (() => { const d=dateParts(now,zone); return `${d.year}-${d.month}-${d.day}`; })(), billingPolicy: 'booked-nights-retained', cancellationFeeCents: 0 };
+      if (checkout) old.checkout = { ...checkout, ...(approvedBy ? { approvedBy } : {}), forced: checkout.linked && checkout.owedCents > 0, actor, at: now, actualDepartureAt: now, actualDepartureDate: (() => { const d=dateParts(now,zone); return `${d.year}-${d.month}-${d.day}`; })(), billingPolicy: 'booked-nights-retained', cancellationFeeCents: 0 };
       old.status = next; old.updatedAt = now;
       const indexInDoc = doc.bookings.findIndex((x) => x.id === old.id);
       if (indexInDoc >= 0) doc.bookings[indexInDoc] = old;
@@ -892,13 +907,13 @@ export async function onRequestPost({ request, env }) {
       },
       createdAt: old?.createdAt || now, updatedAt: now,
     };
-    let balance;
+    let balance, approvedBy = null;
     if (status === 'completed' && old?.status !== 'completed') {
       try { balance = await checkoutBalance(env, merchant, rec, rows.rooms?.data, hasResTable); }
       catch (_) { return json({ error: 'stay-balance-unavailable' }, 503); }
       if (balance.linked && balance.owedCents > 0 && b.force !== true) return json({ error: 'stay-unpaid', confirm: 'force', ...balance }, 409);
-      if (balance.linked && balance.owedCents > 0 && !['owner', 'operator'].includes(actor.role)) return json({ error: 'owner-required', ...balance }, 403);
-      rec.checkout = { ...balance, forced: balance.linked && balance.owedCents > 0, actor, at: now, actualDepartureAt: now, actualDepartureDate: (() => { const d=dateParts(now,zone); return `${d.year}-${d.month}-${d.day}`; })(), billingPolicy: 'booked-nights-retained', cancellationFeeCents: 0 };
+      if (balance.linked && balance.owedCents > 0) { const proof = await checkoutApprover(request, env, merchant, actor, b.pin); if (proof.response) return proof.response; approvedBy = proof.approvedBy; }
+      rec.checkout = { ...balance, ...(approvedBy ? { approvedBy } : {}), forced: balance.linked && balance.owedCents > 0, actor, at: now, actualDepartureAt: now, actualDepartureDate: (() => { const d=dateParts(now,zone); return `${d.year}-${d.month}-${d.day}`; })(), billingPolicy: 'booked-nights-retained', cancellationFeeCents: 0 };
     }
     rec.hotel.dossierId ||= rec.id;
     const index = old ? doc.bookings.findIndex((x) => x.id === old.id) : -1;
