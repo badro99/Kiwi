@@ -449,12 +449,18 @@
     try { if (window.KiwiPosSale && window.KiwiPosSale.deviceTag) return window.KiwiPosSale.deviceTag(); } catch (_) {}
     return '';
   }
+  var seqMemo = {};
   function nextRef(venueId, at) {
     var vid = venueKey(venueId) || 'store';
     var day = today6(at instanceof Date ? at : new Date());
     var k = SEQ_KEY + vid + ':' + day;
-    var n = 1;
-    try { n = Math.max(1, (parseInt(localStorage.getItem(k), 10) || 0) + 1); localStorage.setItem(k, String(n)); } catch (_) {}
+    /* The in-memory mirror keeps counting when storage refuses the write (full,
+       private mode): without it every ticket of the session got -0001. */
+    var stored = 0;
+    try { stored = parseInt(localStorage.getItem(k), 10) || 0; } catch (_) {}
+    var n = Math.max(stored, seqMemo[k] || 0) + 1;
+    seqMemo[k] = n;
+    try { localStorage.setItem(k, String(n)); } catch (_) {}
     try { pruneSeq(vid, day); } catch (_) {}
     var tag = deviceTag();
     return day + '-' + String(n).padStart(4, '0') + (tag ? '-' + tag : '');

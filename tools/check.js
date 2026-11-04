@@ -2383,7 +2383,7 @@ section('Whole-project regressions');
     'err-reporter-silence-test.mjs',
     'depenses-demo-gate-test.mjs',
     'invoice-receipt-test.mjs',
-    'receipt-logo-print-test.mjs',
+    'receipt-logo-print-test.mjs', 'receipt-ref-counter-test.mjs',
     'receipt-voucher-print-test.mjs',
     'formula-receipt-pricing-test.mjs',
     'sale-invoice-test.mjs',

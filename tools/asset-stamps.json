@@ -375,10 +375,6 @@
     "v": "30",
     "sha": "8c8415f533a7c370"
   },
-  "assets/clients-outbox-vault.js": {
-    "v": "5",
-    "sha": "42973f9962d9ccd2"
-  },
   "assets/clients-store-vault.js": {
     "v": "5",
     "sha": "4b5a22130a273b83"
@@ -1880,8 +1876,8 @@
     "sha": "32a784d29a003d95"
   },
   "assets/receipt.js": {
-    "v": "15",
-    "sha": "71bd9cfc10324fac"
+    "v": "16",
+    "sha": "3aa37b631074b279"
   },
   "assets/refund-split.js": {
     "v": "2",
