@@ -333,6 +333,26 @@ const load = (w, orders) => w.sb.KiwiPressingOps.replace(orders, { customer: (o)
 }
 
 console.log(`pressing truth: ${pass} checks`);
+
+{
+  /* pressing#1: every cancellation stays reachable from the orders page, twenty at a time. */
+  const w = world();
+  const many = [];
+  for (let i = 0; i < 45; i++) many.push(raw(String(7000 + i), { cancelledAt: '2026-10-11T10:00:00Z', cancelledBy: { id: 'account:acc-1', name: 'Salma Owner', role: 'owner' } }));
+  load(w, many);
+  const D = w.sb.KiwiPressingDashboard;
+  D.showPage('pressing-orders');
+  const count = (html) => (html.match(/class="pxd-order" data-pxd-order="70\d\d"/g) || []).length;
+  let html = w.pages[w.pages.length - 1].body;
+  ok(count(html) === 20 && /data-pxd-more-cancelled/.test(html), 'the first twenty cancellations show, with a way to see the rest');
+  const click = w.listeners.find((l) => l.type === 'click');
+  const more = { dataset: {} };
+  const target = { closest: (sel) => (sel.includes('data-pxd-more-cancelled') ? more : null) };
+  click.fn({ target, preventDefault() {}, stopImmediatePropagation() {} });
+  click.fn({ target, preventDefault() {}, stopImmediatePropagation() {} });
+  html = w.pages[w.pages.length - 1].body;
+  ok(count(html) === 45 && !/data-pxd-more-cancelled/.test(html), 'asking for more reveals the oldest cancellations too');
+}
 if (fails.length) {
   console.error('\nFAILED:\n - ' + fails.join('\n - '));
   process.exit(1);

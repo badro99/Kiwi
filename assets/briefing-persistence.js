@@ -6,7 +6,7 @@
   function createPersistence(deps) {
   var slug = deps.slug, localKey = deps.localKey, validSettings = deps.validSettings;
   var render = deps.render, compute = deps.compute, isReal = deps.isReal, localStorage = deps.localStorage;
-  var LIMITS = deps.limits, MAX_DAYS = 370, FEATURE = 'briefing';
+  var LIMITS = deps.limits, MAX_DAYS = 370, CLOCK_SKEW = 86400000, FEATURE = 'briefing';
   var doc = { days: [] }, docSlug = '', localKept = true, cloud = null;
   function stableJSON(value) {
     if (!value || typeof value !== 'object') return JSON.stringify(value);
@@ -32,12 +32,21 @@
     Object.keys(settings).forEach(function (key) {
       var at = value.settingsFieldsAt && value.settingsFieldsAt[key];
       var clock = typeof at === 'number' && Number.isFinite(at) ? at : Number(value.settingsAt) || 0;
-      clocks[key] = clock > Date.now() ? 0 : clock;
+      /* A field clock is Lamport: an edit lands at max(now, previous + 1), so two
+         edits in one millisecond legitimately sit just past Date.now(). Only a
+         clock far in the future (a broken device clock) is discarded. */
+      clocks[key] = clock > Date.now() + CLOCK_SKEW ? 0 : clock;
     });
-    return { settings: settings, settingsAt: Number(value.settingsAt) || 0, settingsFieldsAt: clocks, days: days.filter(function (row) {
+    /* One record per business day (the most recently edited wins), then the
+       retention keeps the most recent BUSINESS days, not the most recently
+       edited ones: reopening an old briefing must not displace a newer day. */
+    var perDay = days.filter(function (row) {
       if (seen[row.day]) return false;
       seen[row.day] = true; return true;
-    }).slice(0, MAX_DAYS) };
+    });
+    var keepDays = Object.create(null);
+    perDay.map(function (row) { return String(row.day); }).sort().reverse().slice(0, MAX_DAYS).forEach(function (d) { keepDays[d] = true; });
+    return { settings: settings, settingsAt: Number(value.settingsAt) || 0, settingsFieldsAt: clocks, days: perDay.filter(function (row) { return keepDays[String(row.day)]; }) };
   }
   function readLocal() {
     var venue = slug();

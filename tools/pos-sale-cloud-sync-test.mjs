@@ -77,4 +77,25 @@ const rejected = api.ingest('fastfood', [{ id: 'foreign', amount: 999, ts: now }
 assert.equal(rejected.added, 0, 'foreign-tenant rows are rejected');
 assert.equal(api.totals('fastfood').total, 45);
 
+/* till#0: an authoritative tip correction on a receipt already in the journal
+   reaches it, and a feed row without a tip never erases the local tip. */
+voided = [];
+serverSales = [{ cursor: 20, id: 'sale-tip', amount: 30, method: 'cash', label: 'Salon', ref: 'TIP-1', ts: now, tipCents: 200 }];
+await api.sync('fastfood');
+const tipRow = () => api.today('fastfood').find((x) => x.ref === 'TIP-1');
+assert.equal(tipRow().tipCents, 200, 'first ingest keeps the tip');
+serverSales = [{ cursor: 20, id: 'sale-tip', amount: 30, method: 'cash', label: 'Salon', ref: 'TIP-1', ts: now, tipCents: 350 }];
+result = await api.sync('fastfood');
+assert.equal(result.changed, 1, 'a tip-only correction counts as a change');
+assert.equal(tipRow().tipCents, 350, 'the corrected tip replaces the stale one');
+serverSales = [{ cursor: 20, id: 'sale-tip', amount: 30, method: 'cash', label: 'Salon', ref: 'TIP-1', ts: now }];
+await api.sync('fastfood');
+assert.equal(tipRow().tipCents, 350, 'a feed row without a tip keeps the recorded tip');
+
+/* till#1: the idDay of a receipt uses the merchant business day, not the device date. */
+const R = window.KiwiDayReport, keep = R.businessDay;
+R.businessDay = () => '2026-03-09';
+assert.equal(api.businessDayKey(new Date(2026, 2, 10, 12, 0)), '20260309', 'the merchant zone and cutoff decide the day key');
+R.businessDay = keep;
+
 console.log('✓ specialist POS cloud reconciliation (12 controls)');

@@ -41,7 +41,7 @@ export const lineDeal = (line, fullPrice, live) => {
     ? { ...line.promo, price: down(line.promo.price) } : null;
   let best = { price: down(+fullPrice || 0), promo: null };
   if (stamp && stamp.price < best.price) best = { price: stamp.price, promo: stamp };
-  if (live && live.price < best.price) best = { price: live.price,
+  if (!stamp && live && live.price < best.price) best = { price: live.price,
     promo: { price: live.price, badge: live.badge, name: live.promo.name, id: live.promo.id } };
   return best;
 }

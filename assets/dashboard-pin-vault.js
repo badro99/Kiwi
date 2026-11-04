@@ -18,7 +18,10 @@
  *     prouvée (id, nom, rôle). Jamais le code.
  *   · écrite SEULEMENT après que le serveur a dit oui (remember est appelé par
  *     la porte sur une réponse 200, nulle part ailleurs).
- *   · 7 jours depuis la dernière preuve en ligne, 12 lignes au plus.
+ *   · 7 jours depuis la dernière preuve en ligne au plus, 12 lignes au plus ;
+ *     et la règle d'identité hors ligne de la caisse (Wave Q) : 72 h pour un
+ *     membre de l'équipe, 24 h pour un responsable (provenAt, comme la caisse).
+ *     Le propriétaire du compte garde les 7 jours.
  *   · lue SEULEMENT quand le serveur n'a pas pu répondre. Un « non » du
  *     serveur est définitif et efface au passage la ligne de ce code.
  *   · rangée par compte (kiwiAccountKey, dans la clé ET dans le condensat), et
@@ -41,6 +44,8 @@
   var LEGACY_KEY = 'kiwiPins';
   var TTL = 7 * 24 * 60 * 60 * 1000;
   var MAX_ROWS = 12;
+  var STAFF_TTL = 72 * 60 * 60 * 1000;      /* équipe : 72 h depuis la preuve en ligne */
+  var MANAGER_TTL = 24 * 60 * 60 * 1000;    /* responsable : 24 h */
   var CODE = /^\d{4}$/;
   /* Hors ligne, rien ne compte les essais côté serveur : le pavé les compte ici.
      Cinq refus de suite et la ligne salée ne répond plus pendant cinq minutes
@@ -60,6 +65,16 @@
   function scope() { return String(ls('kiwiAccountKey') || '').trim().toLowerCase(); }
   function rowsKey(sc) { return KEY + encodeURIComponent(sc); }
 
+  /* Quand le serveur a prouvé cette ligne. Une ligne écrite avant provenAt en
+     déduit la date de son échéance (7 jours), comme la caisse. */
+  function provenOf(r) { return Number(r.provenAt) || (Number(r.expiresAt || 0) - TTL); }
+  /* Combien de temps une preuve en ligne vaut hors ligne, selon le rôle. */
+  function limitFor(role) {
+    role = String(role || '').toLowerCase();
+    if (role === 'owner') return TTL;
+    return /manager|admin|responsable|gerant|gérant/.test(role) ? MANAGER_TTL : STAFF_TTL;
+  }
+
   function readRows(sc) {
     if (!sc) return [];
     try {
@@ -67,7 +82,8 @@
       var now = Date.now();
       return Array.isArray(rows) ? rows.filter(function (r) {
         return r && typeof r.digest === 'string' && r.digest && typeof r.salt === 'string'
-          && Number(r.expiresAt || 0) > now && r.staff && typeof r.staff === 'object';
+          && Number(r.expiresAt || 0) > now && r.staff && typeof r.staff === 'object'
+          && now - provenOf(r) < limitFor(r.staff.role);
       }) : [];
     } catch (_) { return []; }
   }
@@ -152,7 +168,7 @@
   /* Le serveur vient de prouver ce code : la ligne est (ré)écrite. Une personne
      n'a qu'une ligne (un code changé remplace l'ancien) et un code n'a qu'une
      identité. Résout true si une ligne est bien écrite. */
-  function remember(code, staff, keepExpiry) {
+  function remember(code, staff, keepExpiry, keepProvenAt) {
     code = String(code || '');
     var sc = scope();
     if (!sc || !CODE.test(code) || !staff) return Promise.resolve(false);
@@ -172,7 +188,7 @@
           return !stale[r.digest] && !(id && String(r.staff.id || '') === id);
         });
         kept.push({
-          salt: salt, digest: digest, it: ITER, expiresAt: keepExpiry || Date.now() + TTL,
+          salt: salt, digest: digest, it: ITER, provenAt: keepProvenAt || Date.now(), expiresAt: keepExpiry || Date.now() + TTL,
           staff: {
             id: id.slice(0, 80), name: String(staff.name || '').slice(0, 80),
             role: String(staff.role || '').slice(0, 80),
@@ -197,7 +213,7 @@
         writeFails(sc, { n: 0, until: 0 });
         /* Une ancienne ligne se réécrit en v2, derrière, sans repousser son échéance :
            seul le serveur prolonge une preuve. */
-        if (!rows[i].it) remember(code, rows[i].staff, rows[i].expiresAt);
+        if (!rows[i].it) remember(code, rows[i].staff, rows[i].expiresAt, provenOf(rows[i]));
         return rows[i].staff;
       }
       noteMiss(sc);
@@ -235,7 +251,7 @@
 
   window.KiwiDashPinVault = {
     remember: remember, verify: verify, forget: forget, count: count, lockedFor: lockedFor,
-    dropLegacy: dropLegacy, TTL: TTL, MAX_ROWS: MAX_ROWS, MAX_MISSES: MAX_MISSES, LOCK_MS: LOCK_MS,
+    dropLegacy: dropLegacy, TTL: TTL, STAFF_TTL: STAFF_TTL, MANAGER_TTL: MANAGER_TTL, MAX_ROWS: MAX_ROWS, MAX_MISSES: MAX_MISSES, LOCK_MS: LOCK_MS,
     storageKey: function () { return rowsKey(scope()); },
   };
 })();

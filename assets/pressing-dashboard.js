@@ -169,8 +169,10 @@
   }
   /* Les annulations restent consultables, avec qui les a faites : une commande
      qui disparaît sans trace est un litige qu'on ne peut plus trancher. */
+  var cancelledShown = 20;
   function cancelledRows(rows) {
-    return '<div class="pxd-order-list">' + rows.slice(0, 20).map(function (o) {
+    var more = rows.length - cancelledShown;
+    return '<div class="pxd-order-list">' + rows.slice(0, cancelledShown).map(function (o) {
       var who = o.cancelledBy && (o.cancelledBy.name || o.cancelledBy.role);
       /* Une annulation sans auteur n'a jamais été enregistrée par le serveur : c'est
          celle de l'ancien bouton, qui n'écrivait que dans ce navigateur. La caisse
@@ -184,7 +186,8 @@
         '<div class="pxd-order-main"><b>' + esc((o.customer && o.customer.name) || L('Client de passage', 'Walk-in customer', 'زبون عابر')) + '</b><span>' + num(n) + ' ' + pieces(n) + (who ? ' · ' + L('annulée par ', 'cancelled by ', 'ألغاها ') + esc(who) : '') + (local ? ' · ' + L('annulation non enregistrée : la caisse la voit encore active', 'cancellation not saved: the till still sees it as active', 'الإلغاء غير مسجل: الصندوق لا يزال يراه نشطًا') : '') + (o.refundDue > 0 ? ' · ' + mad(o.refundDue) + ' ' + L('à rembourser, à traiter par le responsable', 'refund due, manager action required', 'مبلغ واجب الرد، يتطلب تدخل المسؤول') : '') + (o.paid > 0 ? ' · ' + mad(o.paid) + ' ' + L('encaissés', 'collected', 'محصّل') : '') + '</span></div>' +
         '<div class="pxd-order-right"><span class="pxd-status late">' + (local ? L('À confirmer', 'To confirm', 'للتأكيد') : L('Annulée', 'Cancelled', 'ملغاة')) + '</span>' +
         (local ? '<button class="pxd-cancel-btn" type="button" data-pxd-cancel="' + esc(o.id) + '">' + L('Réessayer', 'Retry', 'إعادة المحاولة') + '</button>' : '') + '</div></div>';
-    }).join('') + '</div>';
+    }).join('') + (more > 0 ? '<div class="pxd-page-action"><button class="pxd-btn" type="button" data-pxd-more-cancelled>' +
+      L('Afficher plus (', 'Show more (', 'عرض المزيد (') + num(more) + L(' restantes)', ' left)', ' متبقية)') + '</button></div>' : '') + '</div>';
   }
   function empty(ic, title, body, cta, view) {
     return '<div class="pxd-empty"><div><span class="pxd-empty-icon">' + icon(ic) + '</span><b>' + esc(title) + '</b><p>' + esc(body) + '</p>' +
@@ -386,6 +389,8 @@
   window.addEventListener('click', function (e) {
     var open = e.target.closest && e.target.closest('[data-pxd-open]');
     if (open) { e.preventDefault(); openTill(open.dataset.pxdOpen); return; }
+    var moreCancelled = e.target.closest && e.target.closest('[data-pxd-more-cancelled]');
+    if (moreCancelled) { e.preventDefault(); cancelledShown += 20; if (currentPage) showPage(currentPage); return; }
     var cancel = e.target.closest && e.target.closest('[data-pxd-cancel]');
     if (cancel) {
       e.preventDefault();

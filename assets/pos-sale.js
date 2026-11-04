@@ -427,7 +427,16 @@
   /* businessDayKey(date) → AAAAMMJJ du jour d'activité, la journée de la caisse
      coupant à 5 h et non à minuit : un ticket de 02:00 appartient à la veille. */
   function businessDayKey(d) {
-    var t = new Date((d instanceof Date ? d.getTime() : Date.now()) - 5 * 3600000);
+    var at = d instanceof Date ? d.getTime() : Date.now();
+    /* Même horloge que isToday : le fuseau et la bascule réglés pour le
+       commerce (KiwiDayReport), pas les dates locales de l'appareil. Sans lui
+       (module monté seul, test), l'ancienne coupe fixe à 5 h. */
+    try {
+      var R = window.KiwiDayReport;
+      var day = R && R.businessDay ? R.businessDay(at) : '';
+      if (/^\d{4}-\d{2}-\d{2}$/.test(day)) return day.replace(/-/g, '');
+    } catch (_) {}
+    var t = new Date(at - 5 * 3600000);
     return String(t.getFullYear() * 10000 + (t.getMonth() + 1) * 100 + t.getDate());
   }
 
@@ -815,12 +824,16 @@
       /* The server is authoritative for financial fields; preserve local-only
          split-payment metadata until the API carries it too. */
       var keep = rows[at];
-      var before = JSON.stringify([keep.ts, keep.total, keep.m, keep.method, keep.raw,
+      /* The tip is a financial field too: a later authoritative correction must
+         reach the journal. The server only sends it when positive, so a missing
+         tip never erases the one the till recorded (a missing field keeps the local value). */
+      if (!(Number(sale && sale.tipCents) > 0)) incoming.tipCents = keep.tipCents;
+      var before = JSON.stringify([keep.ts, keep.total, keep.tipCents, keep.m, keep.method, keep.raw,
         keep.label, keep.ref, keep.saleId, keep.cursor, keep.channel, keep.lines]);
-      ['ts','total','m','method','raw','label','ref','saleId','cursor','channel','lines'].forEach(function (k) {
+      ['ts','total','tipCents','m','method','raw','label','ref','saleId','cursor','channel','lines'].forEach(function (k) {
         if (incoming[k] !== undefined) keep[k] = incoming[k];
       });
-      var after = JSON.stringify([keep.ts, keep.total, keep.m, keep.method, keep.raw,
+      var after = JSON.stringify([keep.ts, keep.total, keep.tipCents, keep.m, keep.method, keep.raw,
         keep.label, keep.ref, keep.saleId, keep.cursor, keep.channel, keep.lines]);
       if (before !== after) changed++;
     });

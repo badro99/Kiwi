@@ -103,15 +103,18 @@ function renderKpiBand() {
       const creditStats = (f, to) => {
         let credited = NaN;
         try {
-          const d = JSON.parse(localStorage.getItem('kiwi:returnsLedger') || 'null');
-          if (d && d.v === __state.activeMerchantSlug()) creditStale = !!d.stale || Date.now() - Number(d.at) >= 60000;
+          /* Mémoire d'abord (une écriture localStorage refusée ne perd rien), et
+             le registre doit appartenir au commerce ET à la venue à l'écran. */
+          const d = renderKpiBand.returnsLedger ? renderKpiBand.returnsLedger.ledgerFor(__state.activeMerchantSlug()) : null;
+          const mine = !!d;
+          if (mine) creditStale = !!d.stale || Date.now() - Number(d.at) >= 60000;
           const covered = d && Object.hasOwn(d, 'window') && (d.window === null || (d.window[0] <= f && (d.window[1] == null ? Infinity : d.window[1]) >= to));
-          if (covered && d.v === __state.activeMerchantSlug() && Array.isArray(d.list)) { credited = 0; d.list.forEach((r) => { if (r.ts >= f && r.ts < to) credited += Math.round((Number(r.amount) || 0) * 100); }); credited /= 100; }
-          else import('../returns-ledger.js').then(m => m.warmCreditReturns([f, to])).then(changed => { if (changed) __state.renderKpiBand(); }, () => {});
+          if (covered && Array.isArray(d.list)) { credited = 0; d.list.forEach((r) => { if (r.ts >= f && r.ts < to) credited += Math.round((Number(r.amount) || 0) * 100); }); credited /= 100; }
+          else import('../returns-ledger.js').then(m => { const first = !renderKpiBand.returnsLedger; renderKpiBand.returnsLedger = m; return m.warmCreditReturns([f, to]).then(c => c || first); }).then(changed => { if (changed) __state.renderKpiBand(); }, () => {});
         } catch (_) {}
         return { ...__state.realWindowStats(f, to), credited };
       };
-      if (data.tauxRetour) import('../returns-ledger.js').then((m) => m.warmCreditReturns([wFrom, wTo])).then((changed) => { if (changed) __state.renderKpiBand(); }, () => {});
+      if (data.tauxRetour) import('../returns-ledger.js').then((m) => { const first = !renderKpiBand.returnsLedger; renderKpiBand.returnsLedger = m; return m.warmCreditReturns([wFrom, wTo]).then((c) => c || first); }).then((changed) => { if (changed) __state.renderKpiBand(); }, () => {});
       const returned = w.refunds + creditStats(wFrom, wTo).credited;
       data = {
         ...data,

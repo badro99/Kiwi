@@ -9,6 +9,7 @@
   function capture(root) {
     return [...root.querySelectorAll(rowSelectors)].map(row => ({ left:row.scrollLeft, active:row.querySelector('.on')?.textContent }));
   }
+  let railSeq = 0;
   function settle(root, previous = []) {
     if (!root) return;
     root.querySelectorAll(rowSelectors).forEach((row, i) => {
@@ -22,6 +23,21 @@
           button.setAttribute('aria-selected', String(button.classList.contains('on')));
         }
       });
+      /* WAI-ARIA tabs: one tab stop (the selected tab, else the first), the others
+         reached by the arrow keys below, and every tab tied to the panel it controls
+         (the element that follows the rail) and back through aria-labelledby. */
+      const tabsOf=buttons.filter(b=>b.dataset.lensItem!==undefined);
+      const selected=tabsOf.find(b=>b.classList.contains('on'))||tabsOf[0];
+      const next=row.nextElementSibling;
+      const panel=next && !next.matches(rowSelectors) ? next : null;
+      if(panel && !panel.id) panel.id='catalog-panel-'+(++railSeq);
+      if(panel && !panel.getAttribute('role')) panel.setAttribute('role','tabpanel');
+      tabsOf.forEach(b=>{
+        if(!b.id) b.id='catalog-tab-'+(++railSeq);
+        b.setAttribute('tabindex', b===selected?'0':'-1');
+        if(panel) b.setAttribute('aria-controls', panel.id); else b.removeAttribute('aria-controls');
+      });
+      if(panel && selected && panel.getAttribute('role')==='tabpanel') panel.setAttribute('aria-labelledby', selected.id);
       if(previous[i])row.scrollLeft=previous[i].left;
       const active=buttons.find(button=>button.classList.contains('on'));
       // Reveal a changed selection, not on every poll or ordinary scroll.
@@ -41,7 +57,9 @@
           const tabs=buttons.filter(b=>b.dataset.lensItem!==undefined);const at=tabs.indexOf(document.activeElement);if(at<0)return;
           const rtl=getComputedStyle(row).direction==='rtl';
           const n=e.key==='Home'?0:e.key==='End'?tabs.length-1:(at+(e.key==='ArrowRight'?(rtl?-1:1):(rtl?1:-1))+tabs.length)%tabs.length;
-          e.preventDefault();tabs[n].click();root.querySelectorAll(rowSelectors)[i]?.querySelectorAll('[data-lens-item]')[n]?.focus();
+          e.preventDefault();tabs[n].click();
+          const now=[...(root.querySelectorAll(rowSelectors)[i]?.querySelectorAll('[data-lens-item]')||[])];
+          now.forEach((b,k)=>b.setAttribute('tabindex',k===n?'0':'-1'));now[n]?.focus();
         });
       }
       requestAnimationFrame(edges);

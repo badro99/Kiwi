@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=269';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=166';
-import { offerRegister } from './inventory.js?v=166';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=271';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=168';
+import { offerRegister } from './inventory.js?v=168';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import { ticketRemise } from './ticket-remise.js?v=3';
 import { bqKitTicketFoot } from './kit-2027.js?v=20';
@@ -547,10 +547,10 @@ import { photoImg } from '../retail-photos.js?v=5';
       return false;
     }
     stockAdd(pid, cfg.size, -cfg.qty);
-    /* Le prix promo du moment est recopié sur la ligne. Il ne fige rien à lui
-       seul : lineDeal() le compare ensuite à la règle en vigueur et garde le
-       plus bas. Deux lignes identiques peuvent donc fusionner sans risque —
-       elles se résoudront au même prix, le meilleur pour la cliente. */
+    /* Le prix promo du moment est recopié sur la ligne et la fige : lineDeal()
+       garde ce prix, une promotion qui démarre plus tard ne retarife jamais une
+       ligne déjà prise. Une ligne sans offre au moment de l'ajout suit la règle
+       en vigueur. */
     const pr = promoFor(pid);
     const stamp = pr ? { price: pr.price, badge: pr.badge, name: pr.promo.name, id: pr.promo.id } : null;
     ticketOwner.addLine(state.ticket, { pid, size: cfg.size, color: cfg.color, qty: cfg.qty, remise: cfg.remise, promo: stamp });

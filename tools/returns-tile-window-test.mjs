@@ -20,7 +20,7 @@ assert.equal(ledger.coversWindow(d, [100,400]), false);
 const kpi = fs.readFileSync('assets/daterange/kpi.js', 'utf8');
 const credit = kpi.slice(kpi.indexOf('      const creditStats ='), kpi.indexOf('      if (data.tauxRetour)'));
 const ctx = vm.createContext({ localStorage, __state: { activeMerchantSlug: () => 'shop', realWindowStats: () => ({ refunds: 0 }), renderKpiBand() {} } });
-vm.runInContext(credit.replace("import('../returns-ledger.js')", 'Promise.resolve(ledger)') + '\nthis.stats = creditStats;', Object.assign(ctx, { ledger: { warmCreditReturns: p => { warms.push(p); return Promise.resolve(false); } } }));
+vm.runInContext('function renderKpiBand() {}\n' + credit.replace("import('../returns-ledger.js')", 'Promise.resolve(ledger)') + '\nthis.stats = creditStats;', Object.assign(ctx, { ledger: { warmCreditReturns: p => { warms.push(p); return Promise.resolve(false); }, ledgerFor: v => ledger.ledgerFor(v) } }));
 assert.ok(Number.isNaN(ctx.stats(100,400).credited), 'narrow cache is unknown, never a partial KPI');
 await new Promise(resolve => setTimeout(resolve, 0));
 assert.deepEqual(Array.from(warms[0]), [100,400], 'tile requests the whole summed window');
@@ -59,4 +59,42 @@ assert.equal(requests.at(-1).searchParams.has('until'), false);
 const readsBeforeTick = requests.length;
 await ledger.warmCreditReturns([200,301]);
 assert.equal(requests.length, readsBeforeTick, 'clock tick reuses the fresh live window');
+
+// home#0 / returns#0: a delayed read for the store we left never lands under the store on screen.
+{
+  let venue = 'shopA', slug = 'shopA';
+  window.KiwiVenue = { getVenue: () => venue };
+  window.KiwiCloudDoc = { currentSlug: () => slug };
+  delete window.KiwiDateRange;
+  cache.clear();
+  let release;
+  const gate = new Promise(r => { release = r; });
+  globalThis.fetch = async () => { await gate; return { ok: true, json: async () => ({ ok: true, list: [{ kind: 'avoir', ts: 10, amount: 99 }], next: null }) }; };
+  const late = ledger.readReturnsLedger('shopA');
+  venue = 'shopB'; slug = 'shopB';
+  release();
+  await late;
+  assert.equal(cache.get('kiwi:returnsLedger'), undefined, 'a late result of the previous store is not published');
+  assert.equal(ledger.ledgerFor('shopB'), null, 'the new store sees no foreign total');
+  // Reader side: a stored ledger whose merchant is not the one on screen is refused.
+  cache.set('kiwi:returnsLedger', JSON.stringify({ m: 'shopA', v: 'shopB', at: Date.now(), window: null, list: [{ ts: 10, amount: 99 }] }));
+  assert.equal(ledger.ledgerFor('shopB'), null, 'cache.m must match the store on screen');
+}
+
+// home#1 / returns#1: a refused localStorage write keeps the fresh result readable and says so.
+{
+  const failing = { getItem: k => cache.get(k), setItem() { throw new Error('QuotaExceededError'); } };
+  const saved = globalThis.localStorage;
+  globalThis.localStorage = failing;
+  cache.clear();
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ ok: true, list: [{ kind: 'avoir', ts: 10, amount: 12.5 }], next: null }) });
+  await ledger.readReturnsLedger('shopB');
+  assert.equal(ledger.ledgerPersisted(), false, 'persistence degradation is exposed');
+  const fresh = ledger.ledgerFor('shopB');
+  assert.ok(fresh && fresh.list[0].amount === 12.5, 'the fresh server result stays authoritative in memory');
+  const before = requests.length;
+  assert.equal(await ledger.warmCreditReturns(null), false, 'a fresh in-memory result is not refetched');
+  assert.equal(requests.length, before, 'no new request while the memory snapshot is fresh');
+  globalThis.localStorage = saved;
+}
 console.log('PASS returns tile window: narrow cache rejected, wider and comparison reads, centimes and standalone history');

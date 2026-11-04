@@ -25,7 +25,7 @@ cases.stock = () => {
 cases.returns = async () => {
   const cache = new Map([['kiwi:returnsLedger', JSON.stringify({ m:'shop', v:'shop', at:1, window:null, list:[{ts:100,amount:12.34}] })]]);
   const c = vm.createContext({ window:{ KiwiCloudDoc:{currentSlug:()=> 'shop'} }, localStorage:{getItem:k=>cache.get(k),setItem:(k,v)=>cache.set(k,v)}, Date, Promise, Object });
-  vm.runInContext("const KEY='kiwi:returnsLedger', MAX_AGE=60000; let warming=null,lastTry='',lastChanged=false; const selectedPeriod=()=>null; const readReturnsLedger=()=>Promise.reject(Error('offline'));" + fn('assets/returns-ledger.js',['coversWindow','warmCreditReturns']).replaceAll('export function','function') + ';this.warm=warmCreditReturns;',c);
+  vm.runInContext("const KEY='kiwi:returnsLedger', MAX_AGE=60000; let warming=null,lastTry='',lastChanged=false,snapshot=null,persisted=true; const selectedPeriod=()=>null; const readReturnsLedger=()=>Promise.reject(Error('offline'));" + fn('assets/returns-ledger.js',['coversWindow','warmCreditReturns']).replaceAll('export function','function') + fn('assets/returns-ledger.js',['cachedLedger','saveLedger']).replaceAll('export function','function') + ';this.warm=warmCreditReturns;',c);
   assert.equal(await c.warm(), true, 'failure triggers repaint');
   assert.equal(JSON.parse(cache.get('kiwi:returnsLedger')).stale, true);
   assert.equal(JSON.parse(cache.get('kiwi:returnsLedger')).list[0].amount,12.34);
