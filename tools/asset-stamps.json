@@ -371,9 +371,17 @@
     "v": "30",
     "sha": "8c8415f533a7c370"
   },
+  "assets/clients-outbox-vault.js": {
+    "v": "5",
+    "sha": "42973f9962d9ccd2"
+  },
+  "assets/clients-store-vault.js": {
+    "v": "5",
+    "sha": "4b5a22130a273b83"
+  },
   "assets/clients-store.js": {
-    "v": "39",
-    "sha": "4633ebbd68729a4a"
+    "v": "44",
+    "sha": "879142556b70999c"
   },
   "assets/cloud-doc.js": {
     "v": "13",

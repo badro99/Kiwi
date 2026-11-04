@@ -42,16 +42,16 @@
    * tools/clients-outbox-owner-test.mjs tient ces trois règles. */
   var heldQueues = {};
   function outboxRead(key) {
-    if (heldQueues[key]) return heldQueues[key].slice();
-    try { var a = JSON.parse(ls(key) || '[]'); return Array.isArray(a) ? a : []; }
-    catch (_) { return []; }
+    try { var a = heldQueues[key] ? heldQueues[key].slice() : JSON.parse(ls(key) || '[]'); a = Array.isArray(a) ? a : []; } catch (_) { a = []; }
+    try { var seen = new Set(); return a.concat(outboxRead.vault ? outboxRead.vault.get(key) : []).filter(function (e) { var token = typeof e === 'string' ? 's:' + e : 'r:' + (e && e.ref); if (seen.has(token)) return false; seen.add(token); return true; }); }
+    catch (_) { return a; }
   }
   function outboxWrite(key, list) {
-    try { localStorage.setItem(key, JSON.stringify(list)); delete heldQueues[key]; return true; }
-    catch (_) { heldQueues[key] = list.slice(); return false; }
+    try { localStorage.setItem(key, JSON.stringify(list)); delete heldQueues[key]; try { if (outboxRead.vault && outboxRead.vault.loaded) outboxRead.vault.drop(key); } catch (_) {} return true; }
+    catch (_) { heldQueues[key] = list.slice(); try { if (outboxRead.vault) outboxRead.vault.save(key, list); } catch (_) {} return false; }
   }
   function outboxPersistHeld() {
-    Object.keys(heldQueues).forEach(function (key) { outboxWrite(key, heldQueues[key]); });
+    Object.keys(heldQueues).forEach(function (key) { outboxWrite(key, outboxRead(key)); });
   }
 
   function outKey(book) { return 'kiwi:clients-out:v1:' + book; }

@@ -87,6 +87,9 @@ export function inventory(root = ROOT) {
   const pages = fs.readdirSync(root).filter((n) => n.endsWith('.html')).map((n) => path.join(root, n));
   const sources = new Map();
   const parts = concatParts(root);
+  // The till's slot-neutral transport contains these same two owners.
+  assert.equal(fs.readFileSync(path.join(root, 'assets/clients-store-vault.js'), 'utf8'), fs.readFileSync(path.join(root, 'assets/clients-outbox-vault.js'), 'utf8') + fs.readFileSync(path.join(root, 'assets/clients-store.js'), 'utf8'));
+  parts.add('assets/clients-store-vault.js');
   for (const f of files) if (!parts.has(rel(f))) sources.set(rel(f), fs.readFileSync(f, 'utf8'));
   for (const p of pages) sources.set(rel(p), inlineScripts(fs.readFileSync(p, 'utf8')));
   // The native shell also injects names from Swift/Kotlin; they count as defined.

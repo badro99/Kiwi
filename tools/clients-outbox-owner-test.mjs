@@ -118,10 +118,12 @@ const queued = (d, kind) => JSON.parse(d.storage.get('kiwi:clients-' + kind + ':
 
 /* 3 · Ownership: the four queue keys are written in one place only. */
 {
+  assert.equal(fs.readFileSync(path.join(ROOT, 'assets/clients-store-vault.js'), 'utf8'), fs.readFileSync(path.join(ROOT, 'assets/clients-outbox-vault.js'), 'utf8') + SOURCE, 'till bundle contains the same single queue owner');
   const writes = [...SOURCE.matchAll(/localStorage\.setItem\(([^,]+),/g)].map((m) => m[1].trim());
   const direct = writes.filter((w) => /outKey|purchaseKey|redemptionKey|refused|clients-(out|purchases|redemptions)/.test(w));
   const owner = SOURCE.slice(SOURCE.indexOf('function outboxWrite(key, list)'), SOURCE.indexOf('function outboxPersistHeld('));
   ok(direct.length === 0 && writes.filter((w) => w === 'key').length === 1 && /localStorage\.setItem\(key,/.test(owner), 'only outboxWrite writes a loyalty queue: ' + JSON.stringify(direct));
+  ok((SOURCE.match(/outboxRead\.vault\.save\(/g) || []).length === 1 && /outboxRead\.vault\.save\(key, list\)/.test(owner), 'only outboxWrite saves a loyalty queue to the vault');
   const reads = [...SOURCE.matchAll(/ls\((outKey|purchaseKey|redemptionKey)\(|ls\('kiwi:clients-refused/g)];
   ok(reads.length === 0, 'queue reads go through outboxRead');
   /* The store's concatenation parts are slices of SOURCE, checked above. */
@@ -130,7 +132,7 @@ const queued = (d, kind) => JSON.parse(d.storage.get('kiwi:clients-' + kind + ':
     const walk = (dir) => fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap((e) => {
       const rel = dir + '/' + e.name;
       if (e.isDirectory()) return e.name === 'vendor' ? [] : walk(rel);
-      return /\.js$/.test(e.name) && rel !== 'assets/clients-store.js' && !PARTS.has(rel) ? [rel] : [];
+      return /\.js$/.test(e.name) && !['assets/clients-store.js', 'assets/clients-store-vault.js'].includes(rel) && !PARTS.has(rel) ? [rel] : [];
     });
     let dirs = [];
     try { dirs = walk(other); } catch (_) {}
