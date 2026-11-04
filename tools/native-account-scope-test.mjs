@@ -60,4 +60,25 @@ ok('the iPad (min-width:601px) account group is still styled for the owner drawe
   assert.match(wide, /\.kno-account button\{/);
   assert.match(wide, /\.kno-account \.is-danger\{/);
 });
-console.log(`\n${n} checks`);
+// Owner ruling docs/decisions/2026-11-04-owner-delegated.md:17:
+// with the Kiwi host, sign-out must wait for the branded sheet's decision.
+for (const lang of ['fr', 'en', 'ar']) {
+  let click, requested, choice, actions = 0, confirms = 0;
+  const container = { querySelector:()=>null, appendChild(){} };
+  const ctx = { root:{lang}, container, scope:'owner',
+    document:{createElement:()=>({setAttribute(){},addEventListener:(_type,fn)=>{click=fn;}})},
+    window:{KiwiEnv:{isReal:()=>true},confirm:()=>{confirms++;return true;}},
+    hapticLight(){},closeNativeMenus(){},nativeWorkspaceAction(){actions++;},
+    nativeSheetAvailable:()=>true,
+    nativeSheet:spec=>{requested=spec;return new Promise(resolve=>{choice=resolve;});},
+  };
+  vm.runInNewContext(code + '\nmountNativeAccountGroup(container, null, scope);',ctx);
+  const event = {target:{closest:()=>({getAttribute:()=> 'sign-out'})}};
+  click(event);
+  assert.equal(actions,0); assert.equal(confirms,0);
+  assert.equal(requested.actions[0].id,'sign-out');
+  assert.equal(requested.actions[1].label,({fr:'Annuler',en:'Cancel',ar:'إلغاء'})[lang]);
+  choice('cancel'); await Promise.resolve(); assert.equal(actions,0);
+  click(event); choice('sign-out'); await Promise.resolve(); assert.equal(actions,1);
+}
+console.log(`\n${n} checks + FR/EN/AR native-sheet sign-out accept/cancel`);

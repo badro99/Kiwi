@@ -19,7 +19,7 @@
     return;
   }
   const scripts = [
-    'assets/pages-pro-office.js?v=3',
+    'assets/pages-pro-office.js?v=8',
     'assets/pages-pro.js?v=2209',
     'assets/pages-pro-boutique.js?v=45',
     'assets/boutique-stock-correct.js?v=4',
@@ -54,7 +54,7 @@
     'assets/team/catalog.js?v=2',
     'assets/team.js?v=346',
     'assets/team/profile-ui.js?v=16',
-    'assets/team-hours.js?v=22',
+    'assets/team-hours.js?v=23',
     'assets/cancellation-history.js?v=3',
     'assets/cash-sessions.js?v=8',
     'assets/weather.js?v=1',

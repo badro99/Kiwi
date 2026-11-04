@@ -189,7 +189,7 @@
             .then(function (choice) { if (choice === 'sign-out') nativeWorkspaceAction({ action:'sign-out' }); });
           return;
         }
-        // Android has no native sheet: the system dialog still asks first.
+        // Without the Kiwi host, the system dialog still asks first.
         if (!window.confirm(ask.title + '\n\n' + ask.message)) return;
       }
       nativeWorkspaceAction({ action:action });

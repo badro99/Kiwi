@@ -286,6 +286,7 @@
     document.addEventListener('touchcancel', function () { if (g && g.engaged) reset(g.target.panel, true); g = null; }, { passive: true, capture: true });
   }
 
+  var exitPending = false;
   function nativeExitCopy() {
     var lang = String(root.lang || 'fr').toLowerCase();
     if (lang.indexOf('ar') === 0) return 'هل تريد إغلاق Kiwi Pro؟';
@@ -314,7 +315,18 @@
       history.back();
       return true;
     }
-    if (/kiwi-caisse\.html$/i.test(location.pathname) && !window.confirm(nativeExitCopy())) return true;
+    if (/kiwi-caisse\.html$/i.test(location.pathname)) {
+      if (N.nativeSheetAvailable()) {
+        var lang = String(root.lang || 'fr').slice(0, 2);
+        var labels = { fr:['Fermer', 'Annuler'], en:['Close', 'Cancel'], ar:['إغلاق', 'إلغاء'] }[lang] || ['Fermer', 'Annuler'];
+        if (exitPending) return true;
+        exitPending = true;
+        N.nativeSheet({ title:nativeExitCopy(), actions:[{ id:'exit', label:labels[0], style:'destructive' }, { id:'cancel', label:labels[1] }] })
+          .then(function (choice) { exitPending = false; if (choice === 'exit') call(app, 'exitApp'); });
+        return true;
+      }
+      if (!window.confirm(nativeExitCopy())) return true;
+    }
     call(app, 'exitApp');
     return true;
   }

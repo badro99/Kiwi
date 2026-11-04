@@ -1396,8 +1396,8 @@
     "sha": "f070cd68b5821e05"
   },
   "assets/pages-pro-office.js": {
-    "v": "3",
-    "sha": "6093a89fe6c42e6c"
+    "v": "8",
+    "sha": "df99dee24d46e21a"
   },
   "assets/pages-pro-spa-starter.js": {
     "v": "7",
@@ -1440,8 +1440,8 @@
     "sha": "e9e1ff98390ece70"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "174",
-    "sha": "8c0a0a71983251d1"
+    "v": "179",
+    "sha": "9a7d35cc6fd60d68"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1495,9 +1495,13 @@
     "v": "5",
     "sha": "1fc06c1fb77ddb4b"
   },
+  "assets/planning/pay-statement.js": {
+    "v": "4",
+    "sha": "7e284559785b29db"
+  },
   "assets/planning/payroll-view.js": {
-    "v": "13",
-    "sha": "af60685f6a98a627"
+    "v": "14",
+    "sha": "4731950e958b08a6"
   },
   "assets/planning/shift-editor.js": {
     "v": "5",
@@ -1636,8 +1640,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "359",
-    "sha": "cb6c3f83d7cad804"
+    "v": "360",
+    "sha": "05a7d81d092273e8"
   },
   "assets/pos-epicerie.css": {
     "v": "39",
@@ -1800,11 +1804,11 @@
     "sha": "868b426ef7f5a32f"
   },
   "assets/pressing-caisse.css": {
-    "v": "86",
-    "sha": "493ee727572f7123"
+    "v": "87",
+    "sha": "256a228af6c86444"
   },
   "assets/pressing-caisse.js": {
-    "v": "86",
+    "v": "87",
     "sha": "8ef663c5f154a49c"
   },
   "assets/pressing-catalog.css": {
@@ -2100,8 +2104,8 @@
     "sha": "3cb977732d0c9fb3"
   },
   "assets/team-hours.js": {
-    "v": "22",
-    "sha": "b44ce4d3d311b077"
+    "v": "23",
+    "sha": "d57d8ca1565156c7"
   },
   "assets/team.js": {
     "v": "346",

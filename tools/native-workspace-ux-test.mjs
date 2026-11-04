@@ -71,6 +71,7 @@ const location = { pathname: '/dashboard.html', reload() {} };
 const history = { length: 2, back() { backs++; } };
 const window = {
   innerWidth: 390,
+  __kiwiHostCaps: { sheet: 1 }, // the iOS host announces its sheet (SceneDelegate.swift)
   webkit: { messageHandlers: { kiwiShell: { postMessage(value) { hostContexts.push(value); } } } },
   Capacitor: {
     isNativePlatform: () => true, getPlatform: () => 'android',
@@ -83,6 +84,7 @@ const window = {
   },
   location, history, localStorage, sessionStorage,
   addEventListener(type, handler) { (windowListeners[type] ||= []).push(handler); },
+  removeEventListener(type, handler) { const list = windowListeners[type] || []; const i = list.indexOf(handler); if (i >= 0) list.splice(i, 1); },
   matchMedia: () => appearance,
   confirm: () => confirms,
   setTimeout, clearTimeout
@@ -109,10 +111,31 @@ body.classList.add('nav-open'); back({ canGoBack: false });
 ok(!body.classList.contains('nav-open') && exits === 0, 'Back closes secondary navigation before exiting');
 location.pathname = '/dashboard.html'; back({ canGoBack: true });
 ok(backs === 1 && exits === 0, 'Back uses in-app browser history when it is available');
-location.pathname = '/kiwi-caisse.html'; history.length = 1; confirms = false; back({ canGoBack: false });
+// Owner ruling: docs/decisions/2026-11-04-owner-delegated.md:17.
+// A Kiwi host asks through its branded sheet; confirm is only the hostless fallback.
+location.pathname = '/kiwi-caisse.html'; history.length = 1;
+for (const lang of ['fr', 'en', 'ar']) {
+  document.documentElement.lang = lang;
+  const before = hostContexts.length;
+  back({ canGoBack: false }); back({ canGoBack: false });
+  const sheets = hostContexts.slice(before).filter(x => x.sheet);
+  ok(sheets.length === 1 && exits === 0, 'host Back opens one sheet and waits: ' + lang);
+  ok(sheets[0].sheet.title === ({fr:'Fermer Kiwi Pro ?', en:'Close Kiwi Pro?', ar:'هل تريد إغلاق Kiwi Pro؟'})[lang], 'exit sheet is translated: ' + lang);
+  window.KiwiNativeSheetResult({ id:sheets[0].sheet.id, action:'cancel' });
+  await Promise.resolve();
+  ok(exits === 0, 'cancelling the sheet keeps the till open');
+}
+back({ canGoBack: false });
+window.KiwiNativeSheetResult({ id:hostContexts.filter(x => x.sheet).at(-1).sheet.id, action:'exit' });
+await Promise.resolve();
+ok(exits === 1, 'only the explicit native-sheet exit action closes the till');
+exits = 0;
+const kiwiHost = window.webkit; delete window.webkit;
+confirms = false; back({ canGoBack: false });
 ok(exits === 0, 'Back requires confirmation before exiting the till');
 confirms = true; back({ canGoBack: false });
 ok(exits === 1, 'confirmed terminal Back exits only after every dismissible layer is exhausted');
+window.webkit = kiwiHost;
 
 const hapticsBeforeToast = hapticCalls.length;
 (windowListeners['kiwi:toast'] || []).forEach((handler) => handler({ detail: { type: 'danger' } }));
