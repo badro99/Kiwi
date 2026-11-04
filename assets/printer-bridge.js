@@ -187,7 +187,7 @@
   }
 
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
-  function set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+  function set(k, v) { try { localStorage.setItem(k, v); return true; } catch (_) { return false; } }
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
 
   /* ── Station-based printer routing (per-tenant) ────────────────────────────
@@ -332,9 +332,13 @@
     var d = { ip: '', port: 9100, osPrinter: '', model: 'escpos', paper: '80', label: { w: 50, h: 20 } };
     try { var o = JSON.parse(ls(CFG_KEY) || '{}') || {}; return Object.assign(d, o); } catch (_) { return d; }
   }
+  var CFG_LOST = 'Réglage imprimante non enregistré · la mémoire de cet appareil est pleine ou bloquée. Il sera perdu au rechargement.';
   function setConfig(cfg) {
-    set(CFG_KEY, JSON.stringify(Object.assign(getConfig(), cfg || {})));
+    var saved = set(CFG_KEY, JSON.stringify(Object.assign(getConfig(), cfg || {})));
     try { window.dispatchEvent(new CustomEvent('kiwi:printer-config')); } catch (_) {}
+    /* Le panneau dit « Imprimante enregistrée » juste après : l'avis passe ensuite pour le corriger. */
+    if (!saved) setTimeout(function () { fallbackNotice(say(CFG_LOST)); }, 400);
+    return saved;
   }
   function isConfigured() { var c = getConfig(); return !!(c.ip || c.osPrinter || hasStationBindings()); }
 
@@ -956,7 +960,7 @@
     if (langLoad) return langLoad;
     langLoad = new Promise(function (resolve) {
       var script = document.createElement('script');
-      script.src = '/assets/printer/pairing-lang.js?v=11';
+      script.src = '/assets/printer/pairing-lang.js?v=12';
       script.onload = function () { resolve(); };
       script.onerror = function () { langLoad = null; script.remove(); resolve(); };
       document.head.appendChild(script);

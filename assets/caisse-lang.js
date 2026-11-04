@@ -1941,7 +1941,7 @@
       'Adresse invalide': ['Invalid address', 'عنوان غير صالح'],
       'attendu : {n} (ou un nom comme EPSON.local)': ['expected: {n} (or a name like EPSON.local)', 'المتوقع: {n} (أو اسم مثل EPSON.local)'],
       'un nombre entre {n} et {n} ({n} en général)': ['a number between {n} and {n} (usually {n})', 'رقم بين {n} و{n} (عادة {n})'],
-      'Imprimante enregistrée': ['Printer saved', 'تم حفظ الطابعة'],
+      'Imprimante enregistrée': ['Printer saved', 'تم حفظ الطابعة'], 'Réglage imprimante non enregistré · la mémoire de cet appareil est pleine ou bloquée. Il sera perdu au rechargement.': ['Printer setting not saved · this device’s storage is full or blocked. It will be lost on reload.', 'لم يُحفظ إعداد الطابعة · ذاكرة هذا الجهاز ممتلئة أو محظورة. سيضيع عند إعادة التحميل.'],
       'Une impression est en cours. La recherche démarrera une fois la file au repos.': ['A print is in progress. The search will start once the queue is idle.', 'هناك طباعة جارية. سيبدأ البحث عندما تفرغ قائمة الانتظار.'],
       'Recherche en cours…': ['Searching…', 'جارٍ البحث…'],
       'Pont injoignable': ['Bridge unreachable', 'تعذّر الوصول إلى الجسر'],

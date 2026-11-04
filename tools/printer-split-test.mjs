@@ -124,4 +124,16 @@ const fallback = realm(core, 'fr', false);
 assert.equal(fallback.scripts.length, 0);
 fallback.timers.at(-1)();
 assert.equal(fallback.scripts.length, 1, 'timeout fallback warms UI');
+{ // A printer setting the device could not store is reported, never shown as saved.
+  const ok = realm(core, 'fr'), api = ok.context.KiwiPrinter;
+  assert.equal(api.setConfig({ ip: '192.168.1.50' }), true, 'a stored setting reports success');
+  // Run the queued notices, then read what the operator saw.
+  const shown = r => { r.timers.splice(0).forEach(fn => fn()); return r.notices; };
+  assert.deepEqual(shown(ok), [], 'no warning after a stored setting');
+  const full = realm(core, 'en');
+  full.context.localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
+  assert.equal(full.context.KiwiPrinter.setConfig({ ip: '192.168.1.50' }), false, 'a refused write reports failure');
+  assert.deepEqual(shown(full), ['en:Réglage imprimante non enregistré · la mémoire de cet appareil est pleine ou bloquée. Il sera perdu au rechargement.'],
+    'the operator is told, in the till language, that the printer setting will be lost');
+}
 console.log(`✓ printer-split: ${map.moved.length} unchanged functions, API, actual modal, lazy concurrency, idle, failure, retry and language routing`);
