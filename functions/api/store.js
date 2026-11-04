@@ -453,7 +453,7 @@ function shapeOk(feature, raw) {
 /**
  * The guard assertions describe documents with no member array; they do not
  * assert that any stored member is safe. Member-bearing documents must pass
- * through the destructuring projection below.
+ * through the allowlist projection below.
  * @param {import('../../types/tenant').StoredTeamDocument | null} doc
  * @returns {import('../../types/tenant').TillTeamDocument | null}
  */
@@ -463,12 +463,14 @@ function stripTeamCodes(doc) {
   if (!members) return /** @type {Omit<import('../../types/tenant').StoredTeamDocument, 'members'>} */ (doc);
   return { ...doc, members: members.map((m) => {
     if (!m || typeof m !== 'object') return m;
-    /* La paie et la fiche personnelle suivent les codes : une caisse appairée
-     * s'ouvre maintenant SANS la session du patron (functions/_middleware.js ›
-     * TILL_PATHS), et aucune surface autre que le tableau de bord ne lit ces
-     * champs. Qui ne les lit pas ne réécrit pas le document (REDACT). */
-    const { pinCode, password, baseSalary, hourlyRate, cin, iban, address, emergencyName, emergencyPhone, ...rest } = m;
-    return rest;
+    /* Till readers: till-inventory-access.js (identity, permission, scope),
+     * plus roster identity. New member fields remain private by default.
+     * REDACT still prevents writing this projection back over the secrets. */
+    const safe = {};
+    for (const key of ['id', 'name', 'firstName', 'lastName', 'role', 'function', 'department', 'tillInventory', 'deleted', 'venueSlug']) {
+      if (Object.hasOwn(m, key)) safe[key] = m[key];
+    }
+    return safe;
   }) };
 }
 

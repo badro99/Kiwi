@@ -732,6 +732,7 @@
         const waiting = pendingPublishes.get(c);
         if (waiting && waiting.base) {
           const merged = KiwiMenuMerge.mergeMenu(waiting.base, store.get(vid), c.base);
+          if (merged.conflicts.length && window.Kiwi?.toast) window.Kiwi.toast(tr({ fr: 'Carte fusionnée avec une version enregistrée ailleurs', en: 'Menu merged with a version saved elsewhere', ar: 'دُمجت القائمة مع نسخة محفوظة في مكان آخر' }), { type: 'info', force: true });
           adoptServerMenu(merged.value, vid); pendingPublish(c, vid, merged.value);
           return false;
         }

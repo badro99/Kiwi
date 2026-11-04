@@ -63,6 +63,8 @@ const TEAM = { members: [
   { id: 'm1', firstName: 'Samira', lastName: 'L.', email: 'samira@amira.ma', function: 'Caissier',      department: 'Salle',     pinCode: '2580', password: '2580' },
   { id: 'm2', firstName: 'Rachid', lastName: 'O.', email: 'rachid@amira.ma', function: 'Proprietaire',  department: 'Direction', pinCode: '1379', password: '1379' },
 ], hours: {}, shifts: {} };
+const allowed = { id: 'm1', name: 'Samira L.', firstName: 'Samira', lastName: 'L.', role: 'cashier', function: 'Caissier', department: 'Salle', tillInventory: true, deleted: false, venueSlug: SHOP };
+Object.assign(TEAM.members[0], allowed, { bankNote: 'future-private', baseSalary: 99, hourlyRate: 9, cin: 'private', iban: 'private', address: 'private', emergencyName: 'private', emergencyPhone: 'private' });
 const ACCESS = { members: TEAM.members.map((m) => ({ ...m, venueSlug: SHOP })) };
 db.prepare(`INSERT INTO store_docs VALUES (?,'team',?,1,?)`).run(SHOP, JSON.stringify(TEAM), now);
 db.prepare(`INSERT INTO store_docs VALUES (?,'employee-access',?,1,?)`).run(SHOP, JSON.stringify(ACCESS), now);
@@ -111,6 +113,9 @@ ok('le magasin du banc n’est pas un slug de démo (sinon tout passe)', !DEMO_M
   const body = await res.text();
   ok('une caisse appairée lit l’équipe SANS les codes', res.status === 200 && !CODES.test(body));
   const members = JSON.parse(body).data.members;
+  ok('allowlist retains every till field and excludes known and future secrets',
+    JSON.stringify(Object.keys(members[0]).sort()) === JSON.stringify(Object.keys(allowed).sort()) &&
+    Object.keys(allowed).every(k => members[0][k] === allowed[k]));
   ok('…et sans les champs qui les portaient',
     members.every((m) => !('pinCode' in m) && !('password' in m)), JSON.stringify(members[0]));
   ok('…mais garde ce dont elle se sert : le nom et le rôle',

@@ -6,7 +6,7 @@
   if (document.currentScript?.dataset.startup === 'menu') {
     if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');
     const menuScripts = [
-      'assets/menu-catalog/state.js?v=10',
+      'assets/menu-catalog/state.js?v=11',
       'assets/menu-catalog/modifiers.js?v=3',
       'assets/menu-catalog/item-list.js?v=3',
       'assets/menu-catalog/formulas.js?v=3',

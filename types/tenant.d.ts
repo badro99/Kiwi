@@ -20,10 +20,10 @@ export interface AmbiguousCredential { ambiguous: true; id?: never; merchant?: n
 export interface ActiveEmployee { session: EmployeeSession; member: Record<string, any>; merchant: MerchantSlug }
 export type PinResult = { ok: boolean; error?: string; status?: number; response?: Response; configured?: boolean; staff?: StaffIdentity; merchant?: MerchantSlug };
 export interface TillVerification { ok: boolean; unavailable?: boolean; revoked?: boolean; legacy?: boolean; deviceId?: DeviceId }
-/** All private fields removed by stripTeamCodes. */
+/** Known secrets; the till projection also excludes every unknown field. */
 export type TeamSecrets = 'password' | 'pinCode' | 'baseSalary' | 'hourlyRate' | 'cin' | 'iban' | 'address' | 'emergencyName' | 'emergencyPhone';
 export type StoredTeamMember = { id?: EmployeeId; [key: string]: unknown } & Partial<Record<TeamSecrets, string | number>>;
-export type TillTeamMember = { id?: EmployeeId; [key: string]: unknown } & Partial<Record<TeamSecrets, never>>;
+export type TillTeamMember = { id?: EmployeeId; name?: unknown; firstName?: unknown; lastName?: unknown; role?: unknown; function?: unknown; department?: unknown; tillInventory?: unknown; deleted?: unknown; venueSlug?: unknown } & Partial<Record<TeamSecrets, never>>;
 export interface StoredTeamDocument { members?: StoredTeamMember[]; [key: string]: unknown }
 export interface TillTeamDocument { members?: TillTeamMember[]; [key: string]: unknown }
 

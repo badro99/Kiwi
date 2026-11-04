@@ -8,10 +8,26 @@
 (function () {
   'use strict';
 
+  // Load presentation only when a write/conflict actually needs a notice.
+  var noticeQueue = [], noticeScript = null, noticesReady = false;
+  window.addEventListener('kiwi:persistence-notice', function (event) {
+    if (noticesReady || typeof document === 'undefined') return;
+    noticeQueue.push(event.detail);
+    if (noticeScript) return;
+    noticeScript = document.createElement('script');
+    noticeScript.src = 'assets/persistence-notices.js?v=2';
+    noticeScript.onload = function () {
+      noticesReady = true;
+      noticeQueue.splice(0).forEach(function (detail) { window.dispatchEvent(new CustomEvent('kiwi:persistence-notice', { detail: detail })); });
+    };
+    noticeScript.onerror = function () { noticeScript = null; };
+    document.head.appendChild(noticeScript);
+  });
+
   var PREFIX = 'kiwi:pressing-ops:v1:';
   var STORE_PREFIX = 'kiwi:pressing-store:v1:';
   var listeners = new Set();
-  var cloudHandle = null, archiveMemory = new Map(), archiveWarned = new Set();
+  var cloudHandle = null, archiveMemory = new Map(), archiveWarned = new Set(), orderMemory = new Map();
   var numbering;
   function configureNumbering(model) { if (!numbering) numbering = model; }
 
@@ -52,6 +68,7 @@
   function read(explicit) {
     var k = key(explicit);
     if (!k) return [];
+    if (orderMemory.has(k)) return orderMemory.get(k);
     try {
       var rows = JSON.parse(localStorage.getItem(k) || '[]');
       return Array.isArray(rows) ? rows : [];
@@ -161,13 +178,17 @@
       return sanitizeOrder(o, customer, total);
     }).filter(function (o) { return o.id; });
     var json = JSON.stringify(safe), previous = null;
-    try { previous = localStorage.getItem(k); localStorage.setItem(k, json); } catch (_) { console.warn("pressing-ops:order-persistence-unavailable"); return false; }
+    var saved = false;
+    if (orderMemory.has(k)) previous = JSON.stringify(orderMemory.get(k));
+    orderMemory.set(k, safe);
+    try { previous = previous || localStorage.getItem(k); localStorage.setItem(k, json); orderMemory.delete(k); saved = true; }
+    catch (_) { persistenceNotice('persist.orders'); }
     /* Une relecture périodique qui ne change rien ne doit pas reconstruire la
        page : on ne prévient les abonnés que si le contenu a bougé. */
-    if (previous === json) return true;
+    if (previous === json) return saved;
     listeners.forEach(function (fn) { try { fn(safe); } catch (_) {} });
     try { window.dispatchEvent(new CustomEvent('kiwi:pressing-ops', { detail: { scope: scope(explicit) } })); } catch (_) {}
-    return true;
+    return saved;
   }
 
   function summary(explicit) {
@@ -283,17 +304,18 @@
   }
 
 
+  function persistenceNotice(key) {
+    if (archiveWarned.has(key)) return;
+    archiveWarned.add(key);
+    try { window.dispatchEvent(new CustomEvent('kiwi:persistence-notice', { detail: { key: key } })); } catch (_) {}
+  }
+
   function writeFull(doc) {
     var k = storeKey();
     if (!k || !doc) return;
     archiveMemory.set(k, doc);
     try { localStorage.setItem(k, JSON.stringify(doc)); archiveMemory.delete(k); } catch (_) {
-      if (!archiveWarned.has(k)) {
-        archiveWarned.add(k);
-        var notice = document.createElement('p'); notice.className = 'px-note'; notice.setAttribute('role', 'status'); notice.setAttribute('style', 'position:fixed;bottom:16px;left:16px;right:16px;z-index:10020;padding:16px;background:var(--paper);color:var(--ink);border:1px solid var(--n-200);border-radius:12px');
-        var tr = function (s) { return ({ en: 'Archive not saved on this device. Keep this page open.', ar: 'لم يتم حفظ الأرشيف على هذا الجهاز. أبق هذه الصفحة مفتوحة.' })[document.documentElement.lang] || s; };
-        notice.textContent = tr('Archive non enregistrée sur cet appareil. Gardez cette page ouverte.'); notice.onclick = function () { notice.remove(); }; document.body.appendChild(notice);
-      }
+      persistenceNotice('persist.archive');
     }
     projectFull(doc);
   }

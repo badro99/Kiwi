@@ -1037,7 +1037,7 @@
 <script src="assets/err-reporter.js?v=2" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js?v=11" defer></script>
-<script src="assets/i18n.js?v=51" defer></script>
+<script src="assets/i18n.js?v=52" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
@@ -1092,7 +1092,7 @@
 <script src="assets/venues.js?v=73" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot
      and the garment product art (both in pressing-ops.js). -->
-<script src="assets/pressing-ops.js?v=28" defer></script>
+<script src="assets/pressing-ops.js?v=29" defer></script>
 <script src="assets/pressing-numbering.js?v=5" defer></script>
 <script src="assets/pressing-catalog.js?v=10" defer></script>
 <script src="assets/pressing-dashboard.js?v=26" defer></script>
@@ -1193,7 +1193,7 @@
 <!-- Promotions use the same per-boutique catalogue key. The owner edits them
      here; the caisse only consumes the resulting prices. -->
 <script src="assets/promo-rules.js?v=8" defer></script>
-<script src="assets/promos.js?v=16" defer fetchpriority="low"></script>
+<script src="assets/promos.js?v=18" defer fetchpriority="low"></script>
 <script src="assets/venue-store.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/discount-policy.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/phone.js?v=1" defer fetchpriority="low"></script>
@@ -1242,7 +1242,7 @@
 
 <script src="assets/clients-directory.js?v=30" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=18" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=159" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=160" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1269,7 +1269,7 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=159"></script>
+<script src="assets/pages/dashboard-startup.js?v=160"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=14">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
 <script src="assets/pages/dashboard-loader.js?v=48" defer fetchpriority="low"></script>

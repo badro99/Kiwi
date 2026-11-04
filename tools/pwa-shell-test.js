@@ -86,11 +86,15 @@ const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-c
   .map(read).join('\n');
 /* Files a shell script loads only when needed (the iPhone barcode decoder,
    fetched by retail-scan.js when the camera opens) keep their stamp there. */
-const onDemand = ['assets/retail-scan.js', 'assets/stock.js', 'assets/printer-bridge.js', 'assets/pages-pro.js', 'assets/pages/dashboard-loader.js', 'assets/pages/dashboard-startup.js', 'assets/daterange/renderers.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js', 'assets/orderpro-page.js', 'assets/pages-pro-boutique.js'].map(read).join('\n');
+const onDemand = ['assets/retail-scan.js', 'assets/pressing-ops.js', 'assets/stock.js', 'assets/printer-bridge.js', 'assets/pages-pro.js', 'assets/pages/dashboard-loader.js', 'assets/pages/dashboard-startup.js', 'assets/daterange/renderers.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js', 'assets/orderpro-page.js', 'assets/pages-pro-boutique.js'].map(read).join('\n');
 // Public booking modules share their import URL with the offline shell.
 for (const m of read('assets/booking.js').matchAll(/import\('(\/assets\/booking-[a-z]+\.js\?v=\d+)'\)/g)) {
   ok(m[1] + ' is pre-cached', shell.includes(m[1]));
   ok(m[1] + ' exists', onDisk(m[1].split('?')[0].slice(1)));
+}
+// A persistence notice must also open offline after a refused local write.
+for (const m of read('assets/pressing-ops.js').matchAll(/'(assets\/persistence-notices\.js\?v=\d+)'/g)) {
+  ok(m[1] + ' is pre-cached', shell.includes('/' + m[1]));
 }
 // Chaque partie du stock doit exister hors ligne avant la première ouverture.
 for (const m of read('assets/stock.js').matchAll(/'(assets\/stock\/[^']+\.js\?v=\d+)'/g)) {
