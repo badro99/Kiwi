@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 /* Focused behavioural regression for audit findings I01-I05.
  *
  * These checks call the production handlers/helpers over node:sqlite. The D1
@@ -397,7 +398,7 @@ for (const [label, doc] of [['no programme saved', null], ['auto default only', 
       }
       return { ok: false, json: async () => ({ clients: [], cursor: 0 }) };
     } };
-  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8'), context, { filename: 'assets/clients-store.js' });
+  vm.runInNewContext(deadlineVmSource(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8')), deadlineVmContext(context), { filename: 'assets/clients-store.js' });
   const { raw: vmRaw, DB: vmDB } = fullDb();
   const vmNow = Date.now();
   vmRaw.prepare('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?,?)')
@@ -410,6 +411,7 @@ for (const [label, doc] of [['no programme saved', null], ['auto default only', 
   context.window.KiwiClients.setConfig({ model: 'amount', amount: { perMad: 1, threshold: 5 } }, MERCHANT);
   const client = context.window.KiwiClients.upsert({ name: 'Client', phone: '0612345678' }, MERCHANT);
   context.window.KiwiClients.recordPurchase(client.id, { amount: 10.25 }, MERCHANT);
+  await new Promise(setImmediate);
   const purchaseRequest = requests.map((entry) => JSON.parse(entry.options.body || '{}')).find((payload) => payload.purchase);
   check(!!purchaseRequest && purchaseRequest.purchase.clientId === client.id && purchaseRequest.purchase.amount === 10.25,
     'I05 client purchase sync sends a stable additive centime-precise event');
@@ -621,10 +623,10 @@ for (const [label, doc] of [['no programme saved', null], ['auto default only', 
       inflight.push(p);
       return p;
     } };
-  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8'), context, { filename: 'assets/clients-store.js' });
+  vm.runInNewContext(deadlineVmSource(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8')), deadlineVmContext(context), { filename: 'assets/clients-store.js' });
   const KC = context.window.KiwiClients;
   KC.setConfig({ model: 'amount', amount: { perMad: 1, threshold: 1000 } }, MERCHANT);
-  const settle = async () => { for (let i = 0; i < 6; i++) { const all = inflight.splice(0); if (!all.length) break; await Promise.all(all); await new Promise((r) => setTimeout(r, 0)); } };
+  const settle = async () => { for (let i = 0; i < 6; i++) { await new Promise(setImmediate); const all = inflight.splice(0); if (!all.length) break; await Promise.all(all); await new Promise((r) => setTimeout(r, 0)); } };
   online = true;
   const c = KC.upsert({ name: 'Cliente', phone: '0612345679' }, MERCHANT);
   await settle();

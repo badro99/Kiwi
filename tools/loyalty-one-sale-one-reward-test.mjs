@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 /* UNE VENTE, UNE RÉCOMPENSE — et la récompense donnée par le comptoir, pas à la main.
  *
  * Le 28 octobre 2026, le carnet d'Amira Café a retiré 300 points à 12:25:11 et
@@ -69,8 +70,8 @@ function bench(cfg, clients, opts) {
     Intl, Date, Math, JSON,
   });
   context.globalThis = context;
-  vm.runInContext(src('assets/clients-store.js'), context);
-  vm.runInContext(src('assets/pos-sale.js'), context);
+  vm.runInContext(deadlineVmSource(src('assets/clients-store.js')), deadlineVmContext(context));
+  vm.runInContext(deadlineVmSource(src('assets/pos-sale.js')), deadlineVmContext(context));
   return {
     KC: window.KiwiClients, PS: window.KiwiPosSale, book, window,
     client: (id) => window.KiwiClients.get(id, book),

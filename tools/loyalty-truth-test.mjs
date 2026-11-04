@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 import maisonSource from './pos-maison-test-source.cjs';
 import { createRequire as __cr } from 'node:module';
 const KiwiMoney = __cr(import.meta.url)('../assets/money-cents.js');
@@ -213,7 +214,7 @@ console.log('\nCaisse : la même règle avant la réponse du serveur');
   const window = { localStorage, KiwiStore: { define, currentVenue: () => MERCHANT }, KiwiEnv: { isReal: () => true }, addEventListener: () => {} };
   const context = { window, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv, localStorage, console, Math, Date, JSON,
     setInterval: () => 1, clearInterval: () => {}, fetch: async () => ({ ok: false, json: async () => ({ clients: [], cursor: 0 }) }) };
-  vm.runInNewContext(maisonSource(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8')), context, { filename: 'assets/clients-store.js' });
+  vm.runInNewContext(deadlineVmSource(maisonSource(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8'))), deadlineVmContext(context), { filename: 'assets/clients-store.js' });
   const KC = context.window.KiwiClients;
   KC.setConfig({ model: 'product', product: { item: 'Café', target: 10, reward: '1 offert' } }, MERCHANT);
   const c = KC.upsert({ name: 'Client', phone: '0612345678' }, MERCHANT);
@@ -292,10 +293,10 @@ for (const accepted of [true, false]) {
     },
   });
   c.navigator.onLine=true;
-  vm.runInContext(fs.readFileSync('assets/clients-store.js','utf8'),c);
-  vm.runInContext(mergedPart('assets/retail-sale-hold.js','assets/loyalty-reserve.js'),c);
-  vm.runInContext(fs.readFileSync('assets/receipt.js','utf8'),c);
-  c.ticketOwner=vm.runInNewContext(fs.readFileSync('assets/pos-boutique/ticket-owner.js','utf8').replace('export { ticketOwner };','ticketOwner;'));
+  vm.runInContext(deadlineVmSource(fs.readFileSync('assets/clients-store.js','utf8')),deadlineVmContext(c));
+  vm.runInContext(deadlineVmSource(mergedPart('assets/retail-sale-hold.js','assets/loyalty-reserve.js')),deadlineVmContext(c));
+  vm.runInContext(deadlineVmSource(fs.readFileSync('assets/receipt.js','utf8')),deadlineVmContext(c));
+  c.ticketOwner=vm.runInNewContext(deadlineVmSource(fs.readFileSync('assets/pos-boutique/ticket-owner.js','utf8').replace('export { ticketOwner };','ticketOwner;')));
   const customer=c.KiwiClients.get('c1',MERCHANT);
   c.P={p:{name:'Article',price:24.95}};
   const ticket={num:'AR-1',syncId:'loyalty-full-sale',period:'2026',client:'c1',lines:[{pid:'p',qty:1,remise:0,promoPrice:24.95}],reward:{clientId:'c1',kind:'percent',value:10,label:'−10 %'}};

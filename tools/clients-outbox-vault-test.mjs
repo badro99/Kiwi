@@ -1,3 +1,4 @@
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 /* Shipped queue + durable vault, fresh VM reloads, no browser or network. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -79,10 +80,10 @@ function device(storage = new Map(), idb = fakeIDB(), full = false, persisted = 
     window, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv, localStorage, fetch,
     Event: class { constructor(type) { this.type = type; } }, setTimeout, clearTimeout, indexedDB: idb, navigator: { onLine: true }, console, setInterval: () => 1, clearInterval() {},
   });
-  vm.runInContext(VAULT, context, { filename: 'assets/clients-outbox-vault.js' });
+  vm.runInContext(deadlineVmSource(VAULT), deadlineVmContext(context), { filename: 'assets/clients-outbox-vault.js' });
   if (provider === 'absent') delete window.KiwiOutboxVault;
   if (provider === 'throwing') window.KiwiOutboxVault = { loaded: true, get(){throw Error();}, save(){throw Error();}, drop(){throw Error();} };
-  const boot = () => vm.runInContext(SOURCE.replace('  window.KiwiClients = {', '  window.probe = {read: outboxRead, write: outboxWrite}; window.KiwiClients = {'), context, { filename: 'assets/clients-store.js' });
+  const boot = () => vm.runInContext(deadlineVmSource(SOURCE.replace('  window.KiwiClients = {', '  window.probe = {read: outboxRead, write: outboxWrite}; window.KiwiClients = {')), deadlineVmContext(context), { filename: 'assets/clients-store.js' });
   if (!deferStore) { boot(); window.dispatchEvent({type: 'load'}); }
   return { boot() { boot(); window.dispatchEvent({type: 'load'}); this.api = window.KiwiClients; this.probe = window.probe; }, api: window.KiwiClients, vault: window.KiwiOutboxVault, probe: window.probe, net, disk, storage, persisted };
 }

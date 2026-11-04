@@ -1,3 +1,4 @@
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -15,7 +16,7 @@ if (!only || only === 'corruption') {
   const boot = (disk, opts) => {
     const window = { dispatchEvent() {} };
     const ctx = vm.createContext({ window, localStorage: storage(disk, opts), CustomEvent: class {}, navigator: { onLine: false } });
-    vm.runInContext(read('assets/live-link/queue-store.js'), ctx);
+    vm.runInContext(deadlineVmSource(read('assets/live-link/queue-store.js')), deadlineVmContext(ctx));
     const noop = () => {};
     return window.KiwiSaleQueueStore.create({ merchant: () => 'fixture', pingLocal: noop, flushQueue: noop, moneySignal: noop, scheduleRecovery: noop, on: noop, stableId: (x) => x && x.id });
   };
@@ -49,7 +50,7 @@ if (!only || only.startsWith('fairness')) {
     const context = { [kind + 'Read']: () => rows, [kind + 'Write']: (_book, value) => { rows = value; }, [kind + 'Push']: (_book, event) => sent.push(event.ref) };
     const name = kind === 'purchase' ? 'flushPurchases' : 'flushRedemptions';
     const code = declaration(src.slice(src.indexOf('  function ' + name)).trimStart(), name);
-    vm.runInNewContext(code + `; ${name}('fixture'); ${name}('fixture'); ${name}('fixture');`, context);
+    vm.runInNewContext(deadlineVmSource(code + `; ${name}('fixture'); ${name}('fixture'); ${name}('fixture');`), deadlineVmContext(context));
     assert.equal(new Set(sent).size, 60, kind + ': refused head cannot starve later events');
     assert.equal(rows.length, 60, 'audit events retained');
     assert.equal(rows.find(e => e.ref === 'event-0').lastFailure, 'http-422');
@@ -65,7 +66,7 @@ if (!only || only.startsWith('history')) {
     let block = src.slice(start, end);
     const context = { c: {history: Array.from({length: 121}, (_,i) => ({ref:'ticket-'+i,ts:i+1,amount:i}))}, lang: () => 'en', locale:'en', T:{}, esc:String, fmt:String, payment:String, localReturns:()=>[], tr:String, window:{KiwiClientNumbers:{quantity:String}} };
     vm.createContext(context);
-    vm.runInContext(block + '; globalThis.render = renderHistory;', context);
+    vm.runInContext(deadlineVmSource(block + '; globalThis.render = renderHistory;'), deadlineVmContext(context));
     const pages = [context.render(0), context.render(1), context.render(2)];
     assert.match(pages[0], /data-history-page="-1" disabled/, 'first page cannot go back');
     assert.match(pages[2], /data-history-page="3" disabled/, 'last page cannot go forward');

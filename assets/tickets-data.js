@@ -2,21 +2,35 @@
  * Reads injected: $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t. Browser APIs are declared in split.json.
  * Mutable shared fields belong to the data owner; other modules receive its view. */
 export function createData({ $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t }) {
+  async function request(url, options, timeout, fallback = 'update-failed') {
+    try {
+      const { deadlineFetch } = await import('./request-deadline.mjs');
+      const response = await deadlineFetch(url, options, timeout);
+      const result = await response.json().catch(error => {
+        if (error.code === 'request-timeout') throw error;
+        return {};
+      });
+      if (!response.ok) throw Object.assign(new Error(result.error || fallback), { code: result.error });
+      return result;
+    } catch (error) {
+      error.translatedMessage = friendlyError(error.code);
+      throw error;
+    }
+  }
+
   async function loadTickets(options) { const seq = loadTickets.seq = (loadTickets.seq || 0) + 1;
     if (!options || !options.quiet) renderLoading();
     try {
-      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function(u,o,ms) {
-            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
-            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
-              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
-            });
-            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
-              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
-            }, ms || 12000); });
-            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
-          } }; })).deadlineFetch(API, { headers: { Accept: 'application/json' }, cache: 'no-store' });
-      const data = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; }); if (seq !== loadTickets.seq) return;
-      if (!response.ok) throw Object.assign(new Error(data.error || 'read-failed'), { code: data.error });
+      const result = await request(API, { headers: { Accept: 'application/json' }, cache: 'no-store' }, undefined, 'read-failed');
+      const data = result; if (seq !== loadTickets.seq) return;
+      let cursor = data.nextCursor;
+      while (cursor) {
+        const page = await request(API + '?cursor=' + encodeURIComponent(cursor), { headers: { Accept: 'application/json' }, cache: 'no-store' }, undefined, 'read-failed');
+        if (seq !== loadTickets.seq) return;
+        data.tickets.push(...page.tickets);
+        cursor = page.nextCursor;
+      }
+      data.tickets?.sort((a, b) => Number(b.moneyAtRisk) - Number(a.moneyAtRisk) || b.id - a.id);
       if (!data.taxonomy || !Array.isArray(data.taxonomy.kinds) || !Array.isArray(data.taxonomy.areas)) {
         throw Object.assign(new Error('taxonomy-missing'), { code: 'taxonomy-missing' });
       }
@@ -41,7 +55,7 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
       if (options && options.quiet) return;
       Object.values(lists).forEach((list) => {
         const failed = make('div', 'error-state');
-        failed.append(make('strong', '', t('load.failed')), make('span', '', friendlyError(error.code)));
+        failed.append(make('strong', '', t('load.failed')), make('span', '', error.translatedMessage || friendlyError(error.code)));
         const retry = make('button', '', t('common.retry'));
         retry.type = 'button';
         retry.addEventListener('click', () => loadTickets());
@@ -90,18 +104,7 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
     data.append('idempotency_key', state.publishAttempt.key);
     await draft.save();
     try {
-      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function(u,o,ms) {
-            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
-            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
-              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
-            });
-            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
-              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
-            }, ms || 12000); });
-            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
-          } }; })).deadlineFetch(API, { method: 'POST', body: data }, 60000);
-      const result = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; });
-      if (!response.ok) throw Object.assign(new Error(result.error || 'publish-failed'), { code: result.error });
+      const result = await request(API, { method: 'POST', body: data }, 60000, 'publish-failed');
       if (sendingDraft) await sendingDraft.clear();
       composer.close();
       resetComposer();
@@ -110,7 +113,7 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
       await loadTickets({ quiet: true });
       activateTab('problem');
     } catch (error) {
-      $('formError').textContent = friendlyError(error.code);
+      $('formError').textContent = error.translatedMessage || friendlyError(error.code);
     } finally {
       state.saving = false;
       button.disabled = false;
@@ -144,29 +147,18 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
     data.append('note', note);
     state.followupFiles.forEach((file) => data.append('images', file, file.name));
     try {
-      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function(u,o,ms) {
-            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
-            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
-              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
-            });
-            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
-              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
-            }, ms || 12000); });
-            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
-          } }; })).deadlineFetch(`${API}/${ticket.id}`, {
+      const result = await request(`${API}/${ticket.id}`, {
         method: 'PATCH',
         headers: { Accept: 'application/json' },
         body: data,
       }, 60000);
-      const result = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; });
-      if (!response.ok) throw Object.assign(new Error(result.error || 'update-failed'), { code: result.error });
       followupComposer.close();
       resetFollowup();
       showToast(t('toast.sentBack', { number: ticket.number }));
       await loadTickets({ quiet: true });
       activateTab('problem');
     } catch (error) {
-      $('followupError').textContent = friendlyError(error.code);
+      $('followupError').textContent = error.translatedMessage || friendlyError(error.code);
       if (error.code === 'wrong-status' || error.code === 'changed-elsewhere' || error.code === 'not-found') {
         await loadTickets({ quiet: true });
       }
@@ -182,26 +174,15 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
     const original = button.innerHTML;
     button.textContent = t(action === 'fixed' ? 'busy.moving' : 'busy.deletingImages');
     try {
-      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function(u,o,ms) {
-            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
-            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
-              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
-            });
-            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
-              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
-            }, ms || 12000); });
-            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
-          } }; })).deadlineFetch(`${API}/${ticket.id}`, {
+      const result = await request(`${API}/${ticket.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ action }),
       });
-      const result = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; });
-      if (!response.ok) throw Object.assign(new Error(result.error || 'update-failed'), { code: result.error });
       showToast(t(action === 'fixed' ? 'toast.readyToTest' : 'toast.completed', { number: ticket.number }));
       await loadTickets({ quiet: true });
     } catch (error) {
-      showToast(friendlyError(error.code), true);
+      showToast(error.translatedMessage || friendlyError(error.code), true);
       await loadTickets({ quiet: true });
     } finally {
       if (button.isConnected) {
@@ -225,16 +206,7 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
     const oldLabel = button.textContent;
     button.textContent = t('busy.saving');
     try {
-      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function(u,o,ms) {
-            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
-            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
-              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
-            });
-            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
-              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
-            }, ms || 12000); });
-            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
-          } }; })).deadlineFetch(`${API}/${ticket.id}`, {
+      const result = await request(`${API}/${ticket.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
@@ -245,8 +217,6 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
           money_at_risk: data.get('money_at_risk') === 'on',
         }),
       });
-      const result = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; });
-      if (!response.ok) throw Object.assign(new Error(result.error || 'update-failed'), { code: result.error });
       if (result.classificationStored === false) {
         showToast(t('toast.classPending'), true);
       } else {
@@ -254,7 +224,7 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
       }
       await loadTickets({ quiet: true });
     } catch (error) {
-      showToast(friendlyError(error.code), true);
+      showToast(error.translatedMessage || friendlyError(error.code), true);
     } finally {
       state.savingClassification = false;
       if (button.isConnected) {

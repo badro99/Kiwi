@@ -2,28 +2,22 @@
  * Reads only the dependencies listed below and browser APIs declared in split.json.
  * View dependencies are resolved for each call; mutable screen state stays with the entry owner. */
 export function createTransport({TYPES, computeTotals, getSeller, iceProblem, lsGet, lsSet, merchantSlug, ownData, shift, today, venueId}) {
-function fetchDeadline(url, options, readBody) {
-    var controller = typeof AbortController === 'function' ? new AbortController() : null;
-    var timer;
-    var request = new Promise(function (resolve, reject) {
-      try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); }
-      catch (error) { reject(error); }
-    }).then(function (response) {
-      if (readBody === false || !response || typeof response.json !== 'function') return response;
-      return response.json().then(function (data) {
-        response.json = function () { return Promise.resolve(data); }; return response;
-      }, function (error) {
-        response.json = function () { return Promise.reject(error); }; return response;
-      });
-    });
-    var deadline = new Promise(function (_, reject) {
-      timer = setTimeout(function () {
-        var error = new Error('request-timeout'); error.code = 'timeout';
-        reject(error);
-        if (controller) controller.abort();
-      }, 12000);
-    });
-    return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+async function fetchDeadline(url, options, readBody) {
+    try {
+      const { deadlineFetch } = await import('../request-deadline.mjs');
+      const response = await deadlineFetch(url, options, 12000);
+      if (readBody !== false && response && typeof response.json === 'function') {
+        const data = await response.json().then(value => ({ value }), error => {
+          if (error.code === 'request-timeout') throw error;
+          return { error };
+        });
+        response.json = () => data.error ? Promise.reject(data.error) : Promise.resolve(data.value);
+      }
+      return response;
+    } catch (error) {
+      if (error.code === 'request-timeout') error.code = 'timeout';
+      throw error;
+    }
   }
 
 function apiError(code, message, status) { const e = new Error(message || code); e.code = code; e.status = status; return e; }

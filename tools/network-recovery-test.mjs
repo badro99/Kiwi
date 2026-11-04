@@ -1,4 +1,4 @@
-import { deadlineVmSource } from './deadline-vm-source.mjs';
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -17,8 +17,8 @@ for (const name of ['salle', 'menu']) await test(name + ' timeout, retry and can
     fetch: async (url, opts) => { signal = opts.signal; return response ? { ok: true, status: 200, json: async () => ({ ok: true, items: [{ name: 'Fixture' }], tables: [] }) } : new Promise(() => {}); }
   });
   // Expose the actual private entry point, retaining the whole shipped closure.
-  vm.runInContext(fs.readFileSync('assets/ai-image-import.js', 'utf8'), c);
-  vm.runInContext(fs.readFileSync('assets/' + name + '-scan.js', 'utf8').replace(/\}\)\(\);\s*$/, 'window.request = callApi; })();'), c);
+  vm.runInContext(deadlineVmSource(fs.readFileSync('assets/ai-image-import.js', 'utf8')), deadlineVmContext(c));
+  vm.runInContext(deadlineVmSource(fs.readFileSync('assets/' + name + '-scan.js', 'utf8').replace(/\}\)\(\);\s*$/, 'window.request = callApi; })();')), deadlineVmContext(c));
   let result = 'pending';
   const p = window.request(name === 'salle' ? 'image' : { kind: 'text', text: 'fixture' }).catch(e => { result = e.message; });
   await settle();
@@ -37,9 +37,9 @@ await test('visible floor polls within 15 seconds and wakes immediately', async 
   const document = { hidden: false, visibilityState: 'visible', addEventListener: (k,f) => listeners[k] = f };
   const window = { KiwiEnv: { isReal: () => true }, KiwiCloudDoc: { currentSlug: () => 'fixture' },
     addEventListener: (k,f) => listeners[k] = f };
-  vm.runInNewContext(deadlineVmSource(fs.readFileSync('assets/floorplan-live.js', 'utf8')), { window, document, AbortController,
+  vm.runInNewContext(deadlineVmSource(fs.readFileSync('assets/floorplan-live.js', 'utf8')), deadlineVmContext({ window, document, AbortController,
     setTimeout(fn, ms) { timers.set(++id, { fn, ms }); return id; }, clearTimeout(i) { timers.delete(i); },
-    fetch: async () => { calls++; return { ok: true, json: async () => ({ ok: true, tables: {} }) }; } });
+    fetch: async () => { calls++; return { ok: true, json: async () => ({ ok: true, tables: {} }) }; } }));
   window.KiwiFloorLive.watch(() => {}); await settle();
   for (let i = 0; i < 8; i++) {
     const [key,t] = [...timers][0]; assert.ok(t.ms <= 15000, 'visible delay ' + t.ms);
@@ -58,10 +58,10 @@ await test('purchase retains event and failure reason until acknowledged', async
   const define = (name, opts) => stores[name] = { data: {}, get(k) { return this.data[k] || opts.blank(); },
     set(v,k) { this.data[k] = JSON.parse(JSON.stringify(v)); }, subscribe() { return () => {}; } };
   const window = { KiwiStore: { define, currentVenue: () => 'fixture' }, KiwiEnv: { isReal: () => true }, addEventListener() {} };
-  vm.runInNewContext(fs.readFileSync('assets/clients-store.js', 'utf8'), { window, KiwiStore: window.KiwiStore,
+  vm.runInNewContext(deadlineVmSource(fs.readFileSync('assets/clients-store.js', 'utf8')), deadlineVmContext({ window, KiwiStore: window.KiwiStore,
     KiwiEnv: window.KiwiEnv, navigator: { onLine: true }, setInterval: () => 1, setTimeout, clearTimeout, AbortController,
     localStorage: { getItem: k => data.get(k) || null, setItem: (k,v) => data.set(k,v) },
-    fetch: async () => { if (!status) throw new Error('offline'); return { ok: status === 200, status, json: async () => ({}) }; } });
+    fetch: async () => { if (!status) throw new Error('offline'); return { ok: status === 200, status, json: async () => ({}) }; } }));
   const api = window.KiwiClients, client = api.upsert({ name: 'Fixture' }, 'fixture');
   api.recordPurchase(client.id, { amount: 20, saleId: 'fixture-sale' }, 'fixture'); await settle();
   assert.equal(JSON.parse(data.get('kiwi:clients-purchases:v1:fixture'))[0].lastFailure, status ? 'http-503' : 'offline');
@@ -97,10 +97,10 @@ for (const name of ['salle', 'menu']) await test(name + ' modal timeout message,
     fetch: async (_, opts) => { signal = opts.signal; return success ? { ok: true, status: 200,
       json: async () => ({ ok: true, items: [{ name: 'Fixture' }], tables: [{ shape: 'round', seats: 2, count: 1 }] }) } : new Promise(() => {}); }
   };
-  vm.runInNewContext(fs.readFileSync('assets/ai-image-import.js', 'utf8'), c);
+  vm.runInNewContext(deadlineVmSource(fs.readFileSync('assets/ai-image-import.js', 'utf8')), deadlineVmContext(c));
   // The menu scan reads PDFs and builds its CSV through menu-scan-reader.js, loaded before it (dashboard-loader).
-  if (name === 'menu') vm.runInNewContext(fs.readFileSync('assets/menu-scan-reader.js', 'utf8'), c);
-  vm.runInNewContext(fs.readFileSync('assets/' + name + '-scan.js', 'utf8'), c);
+  if (name === 'menu') vm.runInNewContext(deadlineVmSource(fs.readFileSync('assets/menu-scan-reader.js', 'utf8')), deadlineVmContext(c));
+  vm.runInNewContext(deadlineVmSource(fs.readFileSync('assets/' + name + '-scan.js', 'utf8')), deadlineVmContext(c));
   const api = window[name === 'salle' ? 'KiwiSalleScan' : 'KiwiMenuScan'];
   const click = selector => events.click({ target: { closest: q => q === selector ? {} : null } });
   const run = async () => {

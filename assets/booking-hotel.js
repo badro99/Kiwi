@@ -68,15 +68,7 @@ export function createBookingHotel(context) {
     state.hotelRooms=[];
     hotelRoomList();
     try {
-      var u='/api/booking?merchant='+encodeURIComponent(merchant)+'&checkIn='+encodeURIComponent(state.checkIn)+'&checkOut='+encodeURIComponent(state.checkOut)+'&guests='+encodeURIComponent(state.partySize),r=await (await import('./request-deadline.mjs').catch(function() {
-        return {
-          deadlineFetch: function(u,o) {
-            return fetch(u,o);
-          }
-        }
-          ;
-      }
-      )).deadlineFetch(u,{
+      var u='/api/booking?merchant='+encodeURIComponent(merchant)+'&checkIn='+encodeURIComponent(state.checkIn)+'&checkOut='+encodeURIComponent(state.checkOut)+'&guests='+encodeURIComponent(state.partySize),r=await (await import('./request-deadline.mjs')).deadlineFetch(u,{
         credentials: 'omit'
       }
       ),j=await r.json();

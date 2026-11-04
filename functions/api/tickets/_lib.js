@@ -90,7 +90,7 @@ let lastSweep = -Infinity;
 export function sweepOrphanMediaSometimes(env, now = Date.now()) {
   if (now - lastSweep < SWEEP_EVERY_MS) return null;
   lastSweep = now;
-  return sweepOrphanMedia(env, now).catch(() => { lastSweep = -Infinity; return 0; });
+  return purgeExpired(env, now).then(() => sweepOrphanMedia(env, now)).catch(() => { lastSweep = -Infinity; return 0; });
 }
 
 export function schemaError(error) {

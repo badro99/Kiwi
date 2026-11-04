@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -18,9 +19,9 @@ function sandbox(response, storage = new Map(), toasts = null) {
     } },
   };
   const localStorage = { getItem: k => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, String(v)) };
-  vm.runInNewContext(source, { window, KiwiStore: window.KiwiStore, localStorage, console, setInterval: () => 1, setTimeout, clearTimeout, AbortController,
+  vm.runInNewContext(deadlineVmSource(source), deadlineVmContext({ window, KiwiStore: window.KiwiStore, localStorage, console, setInterval: () => 1, setTimeout, clearTimeout, AbortController,
     fetch: async (url, opts) => opts?.body && JSON.parse(opts.body).redemption ? response() : { ok: false },
-  });
+  }));
   return { clients: window.KiwiClients, storage };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
@@ -90,14 +91,14 @@ assert.equal(new Set(clients.refusedRedemptions(book).map(e => e.ref)).size, 60,
   storage.set('kiwiLive', '1'); storage.set('kiwiLiveMerchant', book);
   let redemptions = 0, clientPosts = 0;
   const localStorage = { getItem: k => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, String(v)) };
-  vm.runInNewContext(source, { window, KiwiStore: window.KiwiStore, localStorage, console, setInterval: () => 1, setTimeout, clearTimeout, AbortController,
+  vm.runInNewContext(deadlineVmSource(source), deadlineVmContext({ window, KiwiStore: window.KiwiStore, localStorage, console, setInterval: () => 1, setTimeout, clearTimeout, AbortController,
     fetch: async (url, opts) => {
       const body = opts?.body ? JSON.parse(opts.body) : {};
       if (body.redemption) { redemptions++; return { ok: false, status: 404, json: async () => ({ error: 'client-not-found' }) }; }
       if (body.id === 'c1') { clientPosts++; return { ok: true, status: 200, json: async () => ({ ok: true }) }; }
       return { ok: false, status: 500, json: async () => ({}) };
     },
-  });
+  }));
   for (let i = 0; i < 4; i++) await settle();
   const c = window.KiwiClients;
   assert.ok(clientPosts >= 1 && redemptions >= 2, `the client is pushed and the redemption retried once (${clientPosts}, ${redemptions})`);

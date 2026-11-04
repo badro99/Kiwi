@@ -107,28 +107,22 @@
 (function () {
   'use strict';
   // Bound transport and JSON reads, even when a transport ignores abort.
-  function fetchDeadline(url, options, readBody) {
-    var controller = typeof AbortController === 'function' ? new AbortController() : null;
-    var timer;
-    var request = new Promise(function (resolve, reject) {
-      try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); }
-      catch (error) { reject(error); }
-    }).then(function (response) {
-      if (readBody === false || !response || typeof response.json !== 'function') return response;
-      return response.json().then(function (data) {
-        response.json = function () { return Promise.resolve(data); }; return response;
-      }, function (error) {
-        response.json = function () { return Promise.reject(error); }; return response;
-      });
-    });
-    var deadline = new Promise(function (_, reject) {
-      timer = setTimeout(function () {
-        var error = new Error('request-timeout'); error.code = 'timeout';
-        reject(error);
-        if (controller) controller.abort();
-      }, 12000);
-    });
-    return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+  async function fetchDeadline(url, options, readBody) {
+    try {
+      const { deadlineFetch } = await import('./request-deadline.mjs');
+      const response = await deadlineFetch(url, options, 12000);
+      if (readBody !== false && response && typeof response.json === 'function') {
+        const data = await response.json().then(value => ({ value }), error => {
+          if (error.code === 'request-timeout') throw error;
+          return { error };
+        });
+        response.json = () => data.error ? Promise.reject(data.error) : Promise.resolve(data.value);
+      }
+      return response;
+    } catch (error) {
+      if (error.code === 'request-timeout') error.code = 'timeout';
+      throw error;
+    }
   }
 
 
