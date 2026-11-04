@@ -311,5 +311,5 @@
   /* caisse-lang.js se charge après ce fichier : la question s'y accroche une fois la page lue
    * (ou tout de suite si ce fichier arrive après coup). */
   if (typeof document !== 'undefined' && document.readyState === 'loading' && document.addEventListener) document.addEventListener('DOMContentLoaded', attach);
-  else setTimeout(attach, 0);
+  else if (typeof setTimeout === 'function') setTimeout(attach, 0);
 })();

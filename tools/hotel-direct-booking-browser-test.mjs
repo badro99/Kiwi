@@ -1259,7 +1259,15 @@ await withCtx({}, async (ctx) => {
     if (!vis) document.querySelector('.sidebar nav a[data-nav="points-vente"]')?.click();
     return !!vis;
   }, { timeout: 20000 });
-  await page.waitForFunction(() => /Points de vente/.test(document.body.textContent || ''), { timeout: 15000 });
+  // A re-click issued while the page was still loading rebuilds the shell a
+  // moment later: wait until the same shell node has stood for 800 ms before
+  // reading or driving it.
+  await page.waitForFunction(() => {
+    const shell = document.querySelector('[data-hx-economat]');
+    if (!shell) { window.__hxShell = null; return false; }
+    if (window.__hxShell !== shell) { window.__hxShell = shell; window.__hxShellAt = Date.now(); return false; }
+    return Date.now() - window.__hxShellAt > 800;
+  }, { timeout: 15000, polling: 100 });
   ok(/Aucun point de vente/.test(await page.$eval('[data-hx-economat]', (el) => el.textContent || '')), 'empty registry states itself honestly');
   step('name a bar, type it, map its physical till');
   const uclick = (sel) => page.evaluate((s) => document.querySelector(s)?.click(), sel);
