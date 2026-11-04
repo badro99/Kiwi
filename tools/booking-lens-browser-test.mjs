@@ -34,7 +34,7 @@ if (!bin) { console.log('○ skip: Chromium unavailable — browser assertions n
    reconnaître sans ambiguïté la date que la liste affiche. */
 const slotFor = (date) => Date.parse(date + 'T10:00:00Z') + Number(date.slice(8)) * 60000;
 const slow = new Set();
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json' };
 const server = http.createServer((rq, rs) => {
   const u = new URL(rq.url, 'http://local');
   if (u.pathname === '/api/booking') {

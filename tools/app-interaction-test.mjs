@@ -95,7 +95,7 @@ try {
   console.log(`\napp-interaction-test : ${failures} échec(s)`);
   process.exit(1);
 }
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png', '.json': 'application/json' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png', '.json': 'application/json' };
 const server = http.createServer((req, res) => {
   try {
     const u = new URL(req.url, 'http://x');

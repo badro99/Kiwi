@@ -12,7 +12,7 @@ function within(dir, file) {
   const target = path.resolve(file);
   return target === base || target.startsWith(base + path.sep);
 }
-const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.json': 'application/json' };
+const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.json': 'application/json' };
 http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);
   // Directory → its index. Both production hosts (Cloudflare Pages, GitHub

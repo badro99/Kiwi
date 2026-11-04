@@ -67,7 +67,7 @@ const work = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-dyntype-'));
 const built = build({ out: path.join(work, 'www'), quiet: true });
 if (!built || (built.errors && built.errors.length)) { console.log('  ✗ bundle build failed'); process.exit(1); }
 const www = built.out;
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png', '.json': 'application/json' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png', '.json': 'application/json' };
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
   if (u.pathname.startsWith('/api/') || u.pathname.startsWith('/auth/')) { res.writeHead(404, { 'Content-Type': 'application/json' }); res.end('{}'); return; }

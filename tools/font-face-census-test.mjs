@@ -100,7 +100,7 @@ if (!bin) { console.log('○ skip: Chromium indisponible, assertions navigateur 
 
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-fontcensus-'));
 const built = build({ out: path.join(work, 'www'), quiet: true });
-const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
 
 /* Les sous-ensembles que Google sert, et les vrais fichiers qui font les octets de chaque. */
 const GOOGLE = {

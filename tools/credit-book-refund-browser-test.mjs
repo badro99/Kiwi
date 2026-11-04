@@ -73,7 +73,7 @@ document.addEventListener('click',e=>{
 });
 </script><script src="/assets/trade-workspaces.js"></script></head><body><main></main></body></html>`;
 
-const mime = { '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png' };
+const mime = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png' };
 let book=JSON.parse(JSON.stringify(CARNET));let writes=0, failSave=false, serverCap=false;
 const server = http.createServer((rq, res) => {
   if(rq.url==='/api/store'){

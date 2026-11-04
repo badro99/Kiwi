@@ -138,7 +138,7 @@ console.log('■ 4 · a database without the announcement table still serves tic
 console.log('■ 1 + 3 · kiwi-cuisine.html against the real queue');
 const { sql, env } = makeDb(true);
 const posts = [];
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp' };
 const server = http.createServer((req, res) => {
   const p = path.resolve(root, '.' + decodeURIComponent(new URL(req.url, 'http://local').pathname));
   if (!p.startsWith(root + path.sep)) { res.writeHead(403); res.end(); return; }

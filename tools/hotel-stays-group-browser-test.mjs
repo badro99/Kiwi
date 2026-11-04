@@ -175,7 +175,7 @@ function clientRoomsDoc() {
 }
 
 /* ── test HTTP origin: static repo + real API handlers ─────────────── */
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
 
 async function readJson(req) {
   const chunks = [];

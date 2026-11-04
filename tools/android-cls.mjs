@@ -49,7 +49,7 @@ let puppeteer;
 try { puppeteer = createRequire(path.join(root, 'app/package.json'))('puppeteer-core'); }
 catch { console.log('puppeteer-core unavailable: run from a checkout with app/node_modules'); process.exit(2); }
 
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.mov': 'video/quicktime' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.mov': 'video/quicktime' };
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://local');
   const p = path.resolve(root, '.' + decodeURIComponent(u.pathname));

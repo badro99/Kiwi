@@ -81,7 +81,7 @@ ${sheets.map((s) => `<link rel="stylesheet" href="/${s}">`).join('\n')}
 </script>
 <script src="/assets/trade-workspaces.js"></script></head><body><main></main></body></html>`;
 
-const mime = { '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png' };
+const mime = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png' };
 const server = http.createServer((rq, res) => {
   const pathname = decodeURIComponent(new URL(rq.url, 'http://local').pathname);
   if (pathname === '/real' || pathname === '/demo') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(page0(pathname === '/real')); return; }

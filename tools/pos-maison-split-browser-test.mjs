@@ -29,7 +29,7 @@ const server = http.createServer((req, res) => {
   try {
     const frozen = reference && ({ '/assets/pos-maison.js': 'original.js.gz', '/assets/pos-dispatch.js': 'dispatcher.js.gz' })[url.pathname];
     const data = frozen ? original(frozen) : fs.readFileSync(file);
-    res.writeHead(200, { 'Content-Type': ({ '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff2': 'font/woff2' })[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); res.end(data);
+    res.writeHead(200, { 'Content-Type': ({ '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff2': 'font/woff2' })[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); res.end(data);
   } catch { res.writeHead(404); res.end(); }
 });
 try { await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); }); }

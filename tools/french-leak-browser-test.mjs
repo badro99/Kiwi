@@ -41,7 +41,7 @@ if (!bin) { console.log('  · no Chromium, sweep skipped'); process.exit(0); }
 const LANGS = forLocales((process.env.KIWI_SWEEP_LANGS || 'en,ar').split(',').map((s) => s.trim()).filter(Boolean));
 if (!LANGS.length) { console.log('○ French leak sweep: en/ar not run by default (KIWI_LOCALES=fr,en,ar to include them)'); process.exit(0); }
 
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg' };
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://local');
   const p = path.resolve(root, '.' + decodeURIComponent(u.pathname));

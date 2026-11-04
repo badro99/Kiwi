@@ -8,7 +8,7 @@ const root = process.cwd();
 const require = createRequire(path.join(root, 'app/package.json'));
 const puppeteer = require('puppeteer-core');
 const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium'].find(fs.existsSync);
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
 const server = http.createServer((req, res) => {
   const file = path.resolve(root, '.' + new URL(req.url, 'http://local').pathname);
   if (!file.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }

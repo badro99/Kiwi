@@ -56,7 +56,7 @@ const harness = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><tit
   window.__ready = true;
 </script></body></html>`;
 
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
 const server = http.createServer((rq, rs) => {
   const u = new URL(rq.url, 'http://local');
   if (u.pathname === '/labels.html') { rs.writeHead(200, { 'Content-Type': 'text/html' }); rs.end(harness); return; }

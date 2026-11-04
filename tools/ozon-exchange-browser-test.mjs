@@ -64,7 +64,7 @@ const harness = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><tit
   bqLivraisons(document.querySelector('[data-bq-panel="livraisons"]'), d);
 </script></body></html>`;
 
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
 const server = http.createServer((rq, rs) => {
   const u = new URL(rq.url, 'http://local');
   const json = (status, body) => { rs.writeHead(status, { 'Content-Type': 'application/json' }); rs.end(JSON.stringify(body)); };

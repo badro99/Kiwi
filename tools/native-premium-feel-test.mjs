@@ -52,7 +52,7 @@ assert.ok(bin, 'Chromium required');
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-feel-'));
 const www = path.join(work, 'www');
 build({ out: www, quiet: true });
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png' };
 const server = http.createServer((req, res) => {
   const p = path.resolve(www, '.' + new URL(req.url, 'http://local').pathname);
   if (!p.startsWith(www + path.sep)) { res.writeHead(403); res.end(); return; }

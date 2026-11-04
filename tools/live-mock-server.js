@@ -22,7 +22,7 @@ function within(dir, file) {
   const target = path.resolve(file);
   return target === base || target.startsWith(base + path.sep);
 }
-const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
+const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
 const sales = []; // { rowid, id, merchant, amount, method, label, ref, ts }
 
 // ── in-memory operator-console state (mirrors the D1 tables) ─────────────────

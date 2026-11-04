@@ -31,7 +31,7 @@ catch { console.log('○ skip: puppeteer-core unavailable — browser assertions
 const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'].find(fs.existsSync);
 if (!bin) { console.log('○ skip: Chromium unavailable — browser assertions not executed'); process.exit(process.env.CI ? 1 : 0); }
 
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json' };
 const server = http.createServer((rq, rs) => {
   const u = new URL(rq.url, 'http://local');
   if (u.pathname.startsWith('/api/') || u.pathname.startsWith('/auth/')) { rs.writeHead(503, { 'Content-Type': 'application/json' }); rs.end('{"error":"offline"}'); return; }

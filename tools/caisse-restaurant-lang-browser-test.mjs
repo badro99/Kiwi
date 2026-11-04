@@ -72,7 +72,7 @@ sql.prepare('INSERT INTO menus (merchant, name, type, data, updated_ts) VALUES (
   .run(MERCHANT, 'Lang Browser Bistro', 'restaurant', JSON.stringify(MENU), now);
 const cookie = `${TILL_COOKIE}=${await tillToken(AUTH_SECRET, MERCHANT)}`;
 
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp' };
 const server = http.createServer((req, res) => {
   const p = path.resolve(root, '.' + decodeURIComponent(new URL(req.url, 'http://local').pathname));
   if (!p.startsWith(root + path.sep)) { res.writeHead(403); res.end(); return; }

@@ -10,7 +10,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const puppeteer = createRequire(new URL('../app/package.json', import.meta.url))('puppeteer-core');
 const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'].find(fs.existsSync);
 assert.ok(bin, 'Chromium requis');
-const mime = { '.js': 'text/javascript', '.html': 'text/html', '.css': 'text/css', '.svg': 'image/svg+xml' };
+const mime = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.css': 'text/css', '.svg': 'image/svg+xml' };
 const server = http.createServer((req, res) => {
   const file = path.resolve(root, '.' + new URL(req.url, 'http://local').pathname);
   if (!file.startsWith(root + path.sep)) { res.writeHead(403); res.end(); return; }

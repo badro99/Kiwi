@@ -183,7 +183,7 @@ ${padHtml}
   window.openLocal = () => requireTillOperator('Vider la commande', approve);
 </script></body></html>`;
 
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://local').pathname);
   if (pathname === '/harness') { res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(harness); return; }
