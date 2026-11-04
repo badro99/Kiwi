@@ -197,7 +197,7 @@ await strict('checkout balance gate conserves centimes, refuses atomically, forc
       const current=JSON.parse(rows()[0].raw_json);
       const viaSave=await call(stays,{...payload(),id:a.id,expectedUpdatedAt:current.updatedAt,status:'completed'});
       assert.equal(viaSave.status,409);assert.equal(viaSave.body.owedCents,owed);assert.equal(snapshot(),before);
-      assert.equal(r.status,409);assert.equal(r.body.error,'stay-unpaid');assert.equal(r.body.owedCents,owed);assert.equal(snapshot(),before);r=await call(stays,{action:'status',id:a.id,status:'completed',force:true});}
+      assert.equal(r.status,409);assert.equal(r.body.error,'stay-unpaid');assert.equal(r.body.owedCents,owed);assert.equal(snapshot(),before);const tillForce=await call(stays,{action:'status',id:a.id,status:'completed',force:true},'till');assert.equal(tillForce.status,403);assert.equal(tillForce.body.error,'owner-required');assert.equal(snapshot(),before);r=await call(stays,{action:'status',id:a.id,status:'completed',force:true});}
     ok(r);if(owed>0){assert.equal(r.body.booking.checkout.forced,true);assert.equal(r.body.booking.checkout.actor.id,'owner');}const closed=snapshot();ok(await call(stays,{action:'status',id:a.id,status:'completed'}));assert.equal(snapshot(),closed);
     const outsider=await call(stays,{merchant:other,action:'status',id:a.id,status:'completed',force:true},'stranger');assert.equal(outsider.status,404);assert.equal(snapshot(),closed);
   }),[[100,[],[]],[1,[40],[]],[1,[39],[]]]);
