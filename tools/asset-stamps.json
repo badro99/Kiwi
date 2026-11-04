@@ -1400,8 +1400,8 @@
     "sha": "ec06fc3ff5b71a54"
   },
   "assets/pages-pro-office.js": {
-    "v": "10",
-    "sha": "02aeae9a028c137b"
+    "v": "12",
+    "sha": "6ca0197203d301d7"
   },
   "assets/pages-pro-spa-starter.js": {
     "v": "7",
@@ -1444,8 +1444,8 @@
     "sha": "4e68527e59cc46eb"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "197",
-    "sha": "4a9d715f656c3155"
+    "v": "200",
+    "sha": "32ed1c3705b78cf5"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1499,9 +1499,13 @@
     "v": "5",
     "sha": "1fc06c1fb77ddb4b"
   },
+  "assets/planning/pay-statement-archive.js": {
+    "v": "1",
+    "sha": "8dbdbbb670b5c5f0"
+  },
   "assets/planning/pay-statement.js": {
-    "v": "6",
-    "sha": "e17020beb8fdf387"
+    "v": "8",
+    "sha": "7641d832de7ffc40"
   },
   "assets/planning/payroll-view.js": {
     "v": "15",
@@ -2116,7 +2120,7 @@
     "sha": "dd4d56ef6f1d15d2"
   },
   "assets/team.js": {
-    "v": "355",
+    "v": "357",
     "sha": "7827859e5a10dd0e"
   },
   "assets/team/access-rules.js": {
