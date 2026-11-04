@@ -126,7 +126,7 @@ try {
     const env = await fresh();
     // Remplit le quota par l'API publique du module plutôt qu'en devinant ses tables.
     const { quotaOk, DAILY_CAPS } = await import('../functions/api/ai/_quota.js');
-    for (let i = 0; i < DAILY_CAPS.supporttriage; i += 1) await quotaOk(env, MERCHANT, 'supporttriage', DAILY_CAPS.supporttriage);
+    for (let i = 0; i < DAILY_CAPS.supporttriage; i += 1) await quotaOk(env, MERCHANT, 'supporttriage', DAILY_CAPS.supporttriage, { models: [] }); // call cap only, no neuron spend
     const id = await post(env, 'paiement carte refusé');
     ok(/quota quotidien du commerçant est atteint/.test(thread(env, id).map((m) => m.body).join('\n')), 'quota atteint : trace dans le fil');
     const before = env.calls;

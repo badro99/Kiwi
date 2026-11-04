@@ -35,6 +35,8 @@ let calls = [], aiAnswer;
 const env = { DB, AUTH_SECRET: secret, AI: { async run(model, payload, opts) { calls.push({ model, payload, opts }); return aiAnswer(model, payload); } } };
 const items = (list) => ({ response: JSON.stringify({ currency: 'MAD', items: list }) });
 async function post(body, { auth = cookie, e = env, raw, as = merchant } = {}) {
+  // These independent response-shape cases exercise call caps; neuron limits have their own suite.
+  sqlite.exec("DELETE FROM ai_usage_kind WHERE kind='neurons'");
   if (body && body.merchant === undefined) body = { merchant: as, ...body };
   const headers = { 'Content-Type': 'application/json' };
   if (auth) headers.Cookie = auth;

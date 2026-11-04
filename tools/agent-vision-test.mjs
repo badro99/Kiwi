@@ -9,6 +9,7 @@ import vm from 'node:vm';
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const vision = mergedPart('assets/agent-voice.js', 'assets/agent-vision.js');
 const fn = read('functions/api/ai/vision-inspect.js');
+const routeModels = await import('../functions/api/ai/vision-inspect.js');
 const quota = read('functions/api/ai/_quota.js');
 const dashboard = read('dashboard.html');
 const sw = read('kiwi-sw.js');
@@ -19,7 +20,7 @@ const controls = [
   ['a missing AI binding is named, never a 500', fn.includes("json({ ok: false, error: 'unbound' }, 503)")],
   ['the daily quota uses visioninspect kind in _quota.js', fn.includes("quotaOk(env, who, 'visioninspect'") && /visioninspect:\s*\d+/.test(quota)],
   ['image input is size-bounded', fn.includes('MAX_IMAGE_DATAURL')],
-  ['primary model is @cf/zai-org/glm-5.3-flash with @cf/google/gemma-4-26b-a4b-it vision fallback', fn.includes("'@cf/zai-org/glm-5.3-flash'") && fn.includes("'@cf/google/gemma-4-26b-a4b-it'")],
+  ['primary model is @cf/zai-org/glm-5.3-flash with @cf/google/gemma-4-26b-a4b-it vision fallback', routeModels.MODEL === '@cf/zai-org/glm-5.3-flash' && routeModels.FALLBACK_MODEL === '@cf/google/gemma-4-26b-a4b-it'],
   ['the model call rides the shared AI gateway', fn.includes('runAiWithGateway')],
   ['output validator sanitizes docType, entities, and actions', fn.includes('validateVisionData') && fn.includes('safeDocType') && fn.includes('suggestedActions')],
   // ── le client : interface, interactions, ergonomie ───────────────────

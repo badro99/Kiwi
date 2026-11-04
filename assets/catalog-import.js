@@ -814,6 +814,7 @@
       }
       plan = p;
       renderPlan(p);
+      if (opts.scanNotices?.length) body.insertAdjacentHTML('afterbegin', '<p role="status" class="kci-hint">' + opts.scanNotices.map(esc).join('<br>') + '</p>');
     }
 
     function handleFile(file) {

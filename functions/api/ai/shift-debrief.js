@@ -1,3 +1,6 @@
+import { budgetRoute } from './_budget-route.js';
+import { GLM_FLASH as MODEL, QWEN as FALLBACK_MODEL } from './_models.js';
+export { MODEL, FALLBACK_MODEL };
 // /api/ai/shift-debrief — Structuration du débriefing vocal ou écrit de fin de service.
 //
 // Analyse les notes ou la transcription de clôture du responsable de service/gérant,
@@ -9,8 +12,6 @@ import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
-export const MODEL = '@cf/zai-org/glm-5.3-flash';
-export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 
 const MAX_TOKENS = 1200;
 const TEMPERATURE = 0.2;
@@ -63,7 +64,7 @@ export function validateDebriefData(raw) {
   };
 }
 
-export async function onRequestPost(context) {
+async function budgetHandler(context) {
   const { request, env } = context;
 
   let b;
@@ -72,7 +73,7 @@ export async function onRequestPost(context) {
   const who = await tenantFor(request, env, b?.merchant);
   if (!who) return json({ error: 'unauthorized' }, 401);
 
-  const allowed = await quotaOk(env, who, 'debrief', DAILY_CAP);
+  const allowed = await quotaOk(env, who, 'debrief', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) });
   if (!allowed) return json(quotaBody('debrief', 'daily-quota-exceeded'), 429);
 
   const text = typeof b?.text === 'string' ? b.text.trim().slice(0, 4000) : '';
@@ -105,3 +106,5 @@ export async function onRequestPost(context) {
 
   return json({ ok: true, data: clean }, 200, { 'x-kiwi-ai-model': runRes.model });
 }
+
+export const onRequestPost = budgetRoute(budgetHandler, 'debrief', 'daily-quota-exceeded');

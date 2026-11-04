@@ -9,12 +9,16 @@
 //     kind = 'all'), compté sur le jour UTC : l'allocation gratuite de Workers AI
 //     se remet à zéro à 00:00 UTC, pas à l'heure d'un commerçant. Réglable par la
 //     variable d'environnement AI_GLOBAL_DAILY_CALLS ; il compte des appels, pas
-//     des neurones (un appel vision coûte bien plus qu'un appel texte), d'où une
-//     valeur par défaut volontairement basse. Au plafond, tout refuse (429 quota).
+//     des neurones. Le budget estimé ci-dessous protège aussi les appels vision.
+//     Au plafond, tout refuse (429 quota).
 //  3. une part du plafond global par établissement, tous types confondus (kind = 'all'
 //     sous le nom de l'établissement), comptée elle aussi sur le jour UTC : un seul
 //     établissement ne peut pas épuiser le budget de tous, et changer de fuseau ne
 //     lui rend aucun appel. Variable AI_MERCHANT_DAILY_CALLS, par défaut un quart du global.
+//  4. réservations de neurones par établissement et global, même jour UTC,
+//     kind = 'neurons'. _neurons.js documente tarifs, marge et allocation gratuite.
+//     Les variables peuvent réduire ces budgets, jamais relever les 10 000 gratuits.
+import { estimateNeurons, reserveNeurons, budgets } from './_neurons.js';
 import { businessDate, validZone, DEFAULT_ZONE, DEFAULT_CUTOFF } from '../_business-day.js';
 
 export const GLOBAL_MERCHANT = '*global*';
@@ -126,7 +130,7 @@ export async function ensureAiUsageSchema(db) {
   } catch (_) {}
 }
 
-export async function quotaOk(env, merchant, kind, cap = 200) {
+export async function quotaOk(env, merchant, kind, cap = 200, estimate) {
   if (!env || !env.DB || !merchant || !kind || !Number.isSafeInteger(cap) || cap < 1) return false;
   try {
     await ensureAiUsageSchema(env.DB);
@@ -149,6 +153,14 @@ export async function quotaOk(env, merchant, kind, cap = 200) {
     if (!mine) { await undo(merchant, day, kind); return false; }
     const shared = await env.DB.prepare(bump).bind(GLOBAL_MERCHANT, today, GLOBAL_KIND, globalDailyCap(env)).first();
     if (!shared) { await undo(merchant, today, GLOBAL_KIND); await undo(merchant, day, kind); return false; }
+    const amount = estimateNeurons(kind === 'intake' ? { models: [] } : estimate);
+    if (!(await reserveNeurons(env, merchant, today, amount))) {
+      await undo(GLOBAL_MERCHANT, today, GLOBAL_KIND);
+      await undo(merchant, today, GLOBAL_KIND);
+      await undo(merchant, day, kind);
+      return false;
+    }
+    if (budgets.has(env)) Object.assign(budgets.get(env), { merchant, day: today, pending: amount });
     return true;
   } catch (_) {
     // Unavailable accounting must not authorize unbounded paid requests.

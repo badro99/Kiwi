@@ -49,9 +49,9 @@ const probes = {
     native = false; delete window.webkitSpeechRecognition; assert.equal(ctor(), null);
     // Run the shipped endpoint with local collaborators only, never an AI binding call.
     let who = null, quota = true; const calls = [];
-    const context = { json:(body,status)=>({body,status}), tenantFor:async()=>who, quotaOk:async()=>quota,
+    const context = { ...await import('../functions/api/ai/voice.js'), ...await import('../functions/api/ai/_budget-route.js'), json:(body,status)=>({body,status}), tenantFor:async()=>who, quotaOk:async()=>quota,
       DAILY_CAPS:{transcribe:1}, quotaBody:(kind,error='quota')=>({ok:false,error,kind}), atob, runWithPayloadFallback:async(_env,_model,payload)=>{calls.push(payload);return {result:{text:'  Bonjour  '}};} };
-    const source = read('functions/api/ai/voice.js').replace(/^import .*;$/gm,'').replace(/\bexport /g,'');
+    const source = read('functions/api/ai/voice.js').replace(/^import .*;$/gm,'').replace(/^export \{.*\};$/gm, '').replace(/\bexport /g,'');
     const post = vm.runInNewContext(source+'\nonRequestPost',context);
     let body = {audio:'YQ==',lang:'unsafe'}; const env = {};
     const request = {json:async()=>body};

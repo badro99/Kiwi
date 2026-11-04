@@ -28,14 +28,16 @@ function ok(cond, msg) {
 console.log('■ AI routes & gateway test (tools/ai-routes-test.mjs)');
 
 // ── 1. Static extraction from ask.js ─────────────────────────────────────────
+const askModels = await import('../functions/api/ai/ask.js');
+const invoiceModels = await import('../functions/api/ai/invoice.js');
 const askSrc = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/ai/ask.js'), 'utf8');
 
 const runSrc = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/ai/_run.js'), 'utf8');
 ok(/gateway:\s*\{\s*id:\s*'kiwi',\s*cacheTtl:\s*0\s*\}/.test(runSrc), '_run.js configures AI Gateway id "kiwi" with cacheTtl: 0');
 ok(/from '\.\/_run\.js'/.test(askSrc) && !/gateway:\s*\{/.test(askSrc), 'ask.js imports the shared gateway runner (no local copy)');
 
-ok(/export const MODEL = '@cf\/openai\/gpt-oss-120b'/.test(askSrc), 'ask.js primary model is @cf/openai/gpt-oss-120b');
-ok(/export const FALLBACK_MODEL = '@cf\/qwen\/qwen3-30b-a3b-fp8'/.test(askSrc), 'ask.js fallback model is @cf/qwen/qwen3-30b-a3b-fp8');
+ok(askModels.MODEL === '@cf/openai/gpt-oss-120b', 'ask.js primary model is @cf/openai/gpt-oss-120b');
+ok(askModels.FALLBACK_MODEL === '@cf/qwen/qwen3-30b-a3b-fp8', 'ask.js fallback model is @cf/qwen/qwen3-30b-a3b-fp8');
 /* gpt-oss without reasoning_effort spends max_tokens thinking and returns
  * content:null (observed 2026-08-19). The payload MUST carry it. */
 ok(/reasoning_effort:\s*REASONING_EFFORT/.test(askSrc) && /const REASONING_EFFORT = 'low'/.test(askSrc), 'ask.js payload carries reasoning_effort: low');
@@ -50,8 +52,8 @@ ok(!!askQuotaCall, 'ask.js calls quotaOk with kind "ask"');
 const invSrc = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/ai/invoice.js'), 'utf8');
 
 ok(/from '\.\/_run\.js'/.test(invSrc) && !/gateway:\s*\{/.test(invSrc), 'invoice.js imports the shared gateway runner (no local copy)');
-ok(/export const MODEL = '@cf\/qwen\/qwen3-30b-a3b-fp8'/.test(invSrc), 'invoice.js primary model stays @cf/qwen/qwen3-30b-a3b-fp8');
-ok(/export const FALLBACK_MODEL = '@cf\/zai-org\/glm-4.7-flash'/.test(invSrc), 'invoice.js fallback model is @cf/zai-org/glm-4.7-flash');
+ok(invoiceModels.MODEL === '@cf/qwen/qwen3-30b-a3b-fp8', 'invoice.js primary model stays @cf/qwen/qwen3-30b-a3b-fp8');
+ok(invoiceModels.FALLBACK_MODEL === '@cf/zai-org/glm-4.7-flash', 'invoice.js fallback model is @cf/zai-org/glm-4.7-flash');
 
 // ── 2b. Every model id in every AI route is Cloudflare-hosted ─────────────────
 /* A third-party id (openai/, anthropic/, google/, x-ai/…) through the same
@@ -87,7 +89,7 @@ ok(!!invQuotaCall, 'invoice.js calls quotaOk with kind "invoice"');
 
 const menuOperationsSrc = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/ai/menu-operations.js'), 'utf8');
 ok(/const DAILY_CAP = DAILY_CAPS\.menuoperations;/.test(menuOperationsSrc) && /menuoperations:\s*60,/.test(coreTestSource.readFileSync(path.join(ROOT, 'functions/api/ai/_quota.js'), 'utf8')), 'menu-operations.js caps each merchant at 60 calls per day (the shared table)');
-ok(/quotaOk\(\s*env,\s*merchant,\s*['"]menuoperations['"],\s*DAILY_CAP\s*\)/.test(menuOperationsSrc)
+ok(/quotaOk\(\s*env,\s*merchant,\s*['"]menuoperations['"],\s*DAILY_CAP\s*[,)]/.test(menuOperationsSrc)
   && !/quotaOk\(\s*env,\s*merchant,\s*['"]menuimport['"]/.test(menuOperationsSrc),
   'menu-operations.js uses its own menuoperations quota bucket');
 
@@ -287,7 +289,7 @@ const envelopeReaders = aiFiles.filter(f => /JSON\.stringify\(runRes\?\.result/.
 ok(envelopeReaders.length === 0, 'no AI route falls back to stringifying the whole model envelope' + (envelopeReaders.length ? ' — ' + envelopeReaders.join(', ') : ''));
 /* GLM without reasoning_effort spent all 1200 tokens thinking on 8/12 runs
  * and returned no content (2026-09-26); with 'low' it answered in ~5 s. */
-const glmNoEffort = aiFiles.filter(f => { const t = coreTestSource.readFileSync(path.join(aiDir, f), 'utf8'); return /MODEL = '@cf\/zai-org\/glm-5\.3-flash'/.test(t) && /max_tokens: MAX_TOKENS/.test(t) && t.split('max_tokens: MAX_TOKENS').length !== t.split("reasoning_effort: 'low'").length; });
+const glmNoEffort = aiFiles.filter(f => { const t = coreTestSource.readFileSync(path.join(aiDir, f), 'utf8'); return /GLM_FLASH as MODEL/.test(t) && /max_tokens: MAX_TOKENS/.test(t) && t.split('max_tokens: MAX_TOKENS').length !== t.split("reasoning_effort: 'low'").length; });
 ok(glmNoEffort.length === 0, "every GLM route payload carries reasoning_effort: 'low'" + (glmNoEffort.length ? ' — ' + glmNoEffort.join(', ') : ''));
 
 // ── 8. Live execution test of all AI route handlers ──────────────────────────

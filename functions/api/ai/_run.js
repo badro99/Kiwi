@@ -1,3 +1,4 @@
+import { meteredAttempt } from './_neurons.js';
 // functions/api/ai/_run.js — l'appel Workers AI partagé par toutes les routes AI.
 //
 // Passerelle Cloudflare AI Gateway « kiwi » (journal, coût par modèle, limites),
@@ -6,7 +7,7 @@
 export const GATEWAY_OPTS = { gateway: { id: 'kiwi', cacheTtl: 0 } };
 
 export async function runAiWithGateway(env, model, payload) {
-  return env.AI.run(model, payload, GATEWAY_OPTS);
+  return meteredAttempt(env, model, payload, () => env.AI.run(model, payload, GATEWAY_OPTS));
 }
 
 /* Texte d'une réponse Workers AI, quel que soit le modèle : `response` (Qwen,

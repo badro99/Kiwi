@@ -33,15 +33,20 @@
   }
 
   /* Deux pages d'une même carte répètent souvent l'en-tête ou un plat vedette :
-   * même nom + même catégorie = même article, on garde la première occurrence. */
+   * Même nom et catégorie : seuls les doublons identiques disparaissent.
+   * Prix ou description différents : les deux lignes restent à vérifier. */
   function dedupe(items) {
-    const seen = new Set();
-    return (items || []).filter((it) => {
-      const k = String(it.name || '').toLowerCase().trim() + ' ' + String(it.cat || '').toLowerCase().trim();
-      if (!it.name || seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    });
+    const groups = new Map(), out = [];
+    for (const it of items || []) {
+      if (!it.name) continue;
+      const k = String(it.name).toLowerCase().trim() + '\0' + String(it.cat || '').toLowerCase().trim();
+      const group = groups.get(k) || [];
+      if (group.some((old) => Number(old.price || 0) === Number(it.price || 0) && String(old.desc || '') === String(it.desc || '') && String(old.sub || '') === String(it.sub || ''))) continue;
+      const row = { ...it };
+      if (group.length) { row.needsReview = true; group.forEach((old) => { old.needsReview = true; }); }
+      group.push(row); groups.set(k, group); out.push(row);
+    }
+    return out;
   }
 
   /* ── pdf.js à la demande (même vendored build que le scan de factures) ── */
@@ -70,26 +75,29 @@
     return pdfjs.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false }).promise;
   }
 
-  async function pdfText(file) {
+  async function pdfText(file, metadata = false) {
     const pdf = await openPdf(file);
     let full = '';
     for (let i = 1; i <= Math.min(pdf.numPages, MAX_PDF_PAGES); i++) {
       const content = await (await pdf.getPage(i)).getTextContent();
       full += (content.items || []).map((it) => it.str).join(' ') + '\n';
     }
-    return full.trim();
+    const result = { text: full.trim(), pageCount: pdf.numPages, pagesRead: Math.min(pdf.numPages, MAX_PDF_PAGES), truncated: pdf.numPages > MAX_PDF_PAGES };
+    return metadata ? result : result.text;
   }
 
-  /* PDF scanné → image JPEG de la première page (le vision lit le reste). */
-  async function pdfFirstPageImage(file) {
-    const page = await (await openPdf(file)).getPage(1);
+  /* PDF scanné : seule la première page est envoyée au modèle vision. */
+  async function pdfFirstPageImage(file, metadata = false) {
+    const pdf = await openPdf(file);
+    const page = await pdf.getPage(1);
     const base = page.getViewport({ scale: 1 });
     const viewport = page.getViewport({ scale: Math.min(2, MAX_IMG_EDGE / Math.max(base.width, base.height)) });
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(viewport.width);
     canvas.height = Math.round(viewport.height);
     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-    return canvas.toDataURL('image/jpeg', 0.85);
+    const image = canvas.toDataURL('image/jpeg', 0.85);
+    return metadata ? { image, pageCount: pdf.numPages, pagesRead: 1, truncated: pdf.numPages > 1 } : image;
   }
 
   window.KiwiMenuScanReader = Object.freeze({ toCsvText, dedupe, pdfText, pdfFirstPageImage, MAX_PDF_PAGES, MAX_IMG_EDGE });

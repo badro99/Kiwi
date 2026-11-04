@@ -1,3 +1,6 @@
+import { budgetRoute } from './_budget-route.js';
+import { GLM_FLASH as VISION_MODEL, GEMMA_VISION as VISION_FALLBACK_MODEL, QWEN as TEXT_MODEL, GLM_LEGACY as TEXT_FALLBACK_MODEL } from './_models.js';
+export { VISION_MODEL, VISION_FALLBACK_MODEL, TEXT_MODEL, TEXT_FALLBACK_MODEL };
 // /api/ai/salle-import — lecture d'une photo de salle pour préparer le plan de salle.
 //
 // Le restaurateur photographie sa salle (ou un croquis dessiné à la main) et le
@@ -29,15 +32,11 @@ import { parseModelResponse } from './invoice.js';
  * n'est pas une erreur d'appel : le secours ne se déclenchait jamais, le
  * marchand voyait « lecture impossible ». Gemma lit juste quand il répond
  * (0,965 à 1,000) mais lentement (médiane 41 s) : il ne sert que si GLM tombe. */
-export const VISION_MODEL = '@cf/zai-org/glm-5.3-flash';
-export const VISION_FALLBACK_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 /* Le duo texte du repêchage : le modèle vision décrit parfois la salle en
  * prose française au lieu du JSON demandé (vérifié sur croquis réel : « 8
  * tables rondes de 4 places et 4 tables carrées de 2 places » — la bonne
  * réponse, dans le mauvais format). Le modèle texte structure alors cette
  * prose ; sa discipline JSON est prouvée par menu-import. */
-export const TEXT_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
-export const TEXT_FALLBACK_MODEL = '@cf/zai-org/glm-4.7-flash';
 
 /* Le JSON d'une salle est minuscule, mais GLM raisonne avant de répondre
  * (reasoning_effort 'low' le borne, pas à zéro) : 2 200 laissait peu de marge. */
@@ -138,7 +137,7 @@ export async function runVision(env, dataUrl) {
   return runVisionPair(env, VISION_MODEL, VISION_FALLBACK_MODEL, buildSallePayload(dataUrl));
 }
 
-export async function onRequestPost(context) {
+async function budgetHandler(context) {
   const { request, env } = context;
 
   let body = null;
@@ -156,7 +155,7 @@ export async function onRequestPost(context) {
   if (!/^data:image\/(jpeg|png|webp);base64,/.test(dataUrl)) return json({ ok: false, error: 'bad-image' }, 400);
   if (dataUrl.length > MAX_IMAGE_DATAURL) return json({ ok: false, error: 'image-too-big' }, 413);
 
-  if (!(await quotaOk(env, who, 'salleimport', DAILY_CAP))) return json(quotaBody('salleimport'), 429);
+  if (!(await quotaOk(env, who, 'salleimport', DAILY_CAP, { models: [VISION_MODEL, VISION_FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) }))) return json(quotaBody('salleimport'), 429);
 
   let aiRes;
   let usedModel = VISION_MODEL;
@@ -184,7 +183,7 @@ export async function onRequestPost(context) {
     if (prose && prose.length > 20) {
       /* Le repêchage est un deuxième appel de modèle : il se compte comme le
        * premier, et le plafond du jour le borne aussi. */
-      if (!(await quotaOk(env, who, 'salleimport', DAILY_CAP))) return json(quotaBody('salleimport'), 429);
+      if (!(await quotaOk(env, who, 'salleimport', DAILY_CAP, { models: [VISION_MODEL, VISION_FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) }))) return json(quotaBody('salleimport'), 429);
       try {
         const r2 = await runWithFallback(env, TEXT_MODEL, TEXT_FALLBACK_MODEL, {
           messages: [
@@ -223,3 +222,5 @@ export async function onRequestPost(context) {
     tableCount: validated.tableCount,
   }, 200, { 'x-kiwi-ai-model': usedModel });
 }
+
+export const onRequestPost = budgetRoute(budgetHandler, 'salleimport');

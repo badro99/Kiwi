@@ -197,7 +197,7 @@ var SHELL = [
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2100',
   '/assets/pages/dashboard-startup.js?v=137',
-  '/assets/pages/dashboard-loader.js?v=35',
+  '/assets/pages/dashboard-loader.js?v=38',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=3',
   '/assets/hotel/groups.js?v=1',
@@ -227,7 +227,7 @@ var SHELL = [
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=11',
-  '/assets/i18n.js?v=45',
+  '/assets/i18n.js?v=46',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -455,11 +455,11 @@ var SHELL = [
   '/assets/restaurant-menu-workspace.js?v=126',
   '/assets/menu-promos-dashboard.js?v=6',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
-  '/assets/catalog-import.js?v=16',
+  '/assets/catalog-import.js?v=17',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
   '/assets/ai-image-import.js?v=1',
-  '/assets/menu-scan-reader.js?v=1',
-  '/assets/menu-scan.js?v=8',
+  '/assets/menu-scan-reader.js?v=3',
+  '/assets/menu-scan.js?v=11',
   '/assets/salle-scan.js?v=7',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=10',

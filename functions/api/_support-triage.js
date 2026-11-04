@@ -23,7 +23,10 @@
 //    Sans SUPPORT_ALERT_EMAIL ou sans MAIL_WEBHOOK, on l'écrit tel quel.
 import { sendMail } from '../auth/_lib.js';
 import { runAiWithGateway } from './ai/_run.js';
-import { quotaOk, DAILY_CAPS } from './ai/_quota.js';
+import { budgets, reserveNeurons, estimateNeurons } from './ai/_neurons.js';
+import { CLEF as TRIAGE_MODEL } from './ai/_models.js';
+export { TRIAGE_MODEL };
+import { quotaOk, DAILY_CAPS, ensureAiUsageSchema } from './ai/_quota.js';
 import { classify, cleanText, parseJson } from './_support.js';
 
 /* Clef complet (27B), pas Clef-flash (9B) : sur les 31 demandes synthétiques de
@@ -31,7 +34,7 @@ import { classify, cleanText, parseJson } from './_support.js';
  * urgence 87,1 % contre 77,4 %, rappel d'alerte 11/11 contre 10/11. Il coûte
  * 0,24 $ le million de jetons d'entrée contre 0,038 $, soit environ 13 neurones
  * par demande : négligeable devant les 10 000 neurones gratuits par jour. */
-export const TRIAGE_MODEL = '@cf/cloudflare/clef';
+
 export const TRIAGE_VERSION = 1;
 
 /* Seuils. Clef rend des probabilités calibrées, donc 0,5 est le point où
@@ -249,18 +252,27 @@ export async function claimAlert(env, ticketId, now) {
  * opts.images : [{ content_type, base64 }] (capture jointe, une relance du tri)
  * Renvoie { status: 'triaged' | 'skipped' | 'failed', reason?, triage? }. */
 export async function triageSupportTicket(env, ticket, opts = {}) {
+  env = env && Object.create(env);
+  if (env) budgets.set(env, {});
   try {
     if (!env || !env.DB || !env.AI || typeof env.AI.run !== 'function') return { status: 'skipped', reason: 'no-ai' };
     if (!ticket || !ticket.id || !ticket.merchant || !ticket.summary) return { status: 'skipped', reason: 'no-ticket' };
     /* Une relance par un opérateur est un geste délibéré et rare : elle ne bute pas sur le quota du commerçant. */
-    if (!opts.operator && !(await quotaOk(env, ticket.merchant, 'supporttriage', DAILY_CAPS.supporttriage))) return { status: 'skipped', reason: 'quota' };
+    if (!opts.operator && !(await quotaOk(env, ticket.merchant, 'supporttriage', DAILY_CAPS.supporttriage, { models: [TRIAGE_MODEL] }))) return { status: 'skipped', reason: 'quota' };
 
     const images = Array.isArray(opts.images) ? opts.images : [];
     const request = buildTriageRequest({ summary: ticket.summary, storeType: ticket.storeType, images });
+    if (opts.operator) {
+      await ensureAiUsageSchema(env.DB);
+      const day = new Date().toISOString().slice(0, 10);
+      const amount = estimateNeurons({ models: [TRIAGE_MODEL], vision: images.length > 0 });
+      if (!(await reserveNeurons(env, ticket.merchant, day, amount))) return { status: 'skipped', reason: 'quota' };
+      Object.assign(budgets.get(env), { merchant: ticket.merchant, day, pending: amount });
+    }
     let response;
     try {
       response = await withTimeout(runAiWithGateway(env, TRIAGE_MODEL, request), AI_TIMEOUT_MS, 'ai-timeout');
-    } catch (_) { return { status: 'failed', reason: 'ai-error' }; }
+    } catch (_) { return budgets.get(env).denied ? { status: 'skipped', reason: 'quota' } : { status: 'failed', reason: 'ai-error' }; }
 
     const triage = readTriageAnswers(response);
     if (!triage) return { status: 'failed', reason: 'bad-response' };
@@ -291,7 +303,7 @@ export async function triageSupportTicket(env, ticket, opts = {}) {
     return { status: 'triaged', triage };
   } catch (_) {
     return { status: 'failed', reason: 'unexpected' };
-  }
+  } finally { if (env) budgets.delete(env); }
 }
 
 /* Ce que l'équipe doit savoir quand le tri n'a pas abouti, écrit dans le fil
@@ -370,7 +382,7 @@ export async function triageAfterImage(env, ticket, mime, buffer) {
     return await triageSupportTicket(env, ticket, { images: [{ content_type: mime, base64: toBase64(buffer) }] });
   } catch (_) {
     return { status: 'failed', reason: 'unexpected' };
-  }
+  } finally { if (env) budgets.delete(env); }
 }
 
 /* Ce que la console lit : le JSON du tri, avec l'état de l'alerte. */

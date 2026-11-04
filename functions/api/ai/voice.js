@@ -1,3 +1,6 @@
+import { budgetRoute } from './_budget-route.js';
+import { WHISPER_TURBO as MODEL, WHISPER as FALLBACK_MODEL } from './_models.js';
+export { MODEL, FALLBACK_MODEL };
 // /api/ai/voice — la dictée vocale de l'assistant : un enregistrement audio
 // entre, un texte transcrit sort. Whisper sur Workers AI, même binding, même
 // passerelle, même discipline que /api/ai/ask.
@@ -28,8 +31,6 @@ import { runWithPayloadFallback } from './_payload-fallback.js';
  * multilingue équivalente sur de la dictée courte. Le whisper historique en
  * secours — il prend l'audio en tableau d'octets, pas en base64, d'où le
  * second payload dans transcribe(). */
-export const MODEL = '@cf/openai/whisper-large-v3-turbo';
-export const FALLBACK_MODEL = '@cf/openai/whisper';
 
 /* Une dictée à l'assistant dure quelques secondes ; le client coupe à 60 s.
  * 2 Mo de base64 (~1,5 Mo d'audio, plusieurs minutes d'opus) est déjà large —
@@ -41,7 +42,7 @@ const B64_RX = /^[A-Za-z0-9+/=]+$/;
  * qu'on connaît, tout le reste est ignoré, jamais relayé au modèle. */
 const LANGS = new Set(['fr', 'ar', 'en', 'es']);
 
-export async function onRequestPost(context) {
+async function budgetHandler(context) {
   const { request, env } = context;
 
   let body = null;
@@ -58,7 +59,7 @@ export async function onRequestPost(context) {
     return json({ ok: false, error: 'audio' }, 400);
   }
 
-  if (!(await quotaOk(env, who, 'transcribe', DAILY_CAPS.transcribe))) {
+  if (!(await quotaOk(env, who, 'transcribe', DAILY_CAPS.transcribe, { models: [MODEL, FALLBACK_MODEL], maxTokens: 8192 }))) {
     return json(quotaBody('transcribe'), 429);
   }
 
@@ -88,3 +89,5 @@ async function transcribe(env, b64, language) {
   });
   return result.result && result.result.text;
 }
+
+export const onRequestPost = budgetRoute(budgetHandler, 'transcribe');
