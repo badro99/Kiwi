@@ -3,6 +3,7 @@
 import { json } from '../../auth/_lib.js';
 import { syncHotelChannels } from './_channels.js';
 import { cleanupHotelMediaAll } from './_media_cleanup.js';
+import { retryPendingAlerts } from '../_support-triage.js';
 
 function same(a,b){a=String(a||'');b=String(b||'');if(!a||a.length!==b.length)return false;let d=0;for(let i=0;i<a.length;i++)d|=a.charCodeAt(i)^b.charCodeAt(i);return d===0;}
 export async function onRequestPost({request,env}){
@@ -14,5 +15,8 @@ export async function onRequestPost({request,env}){
   if(body.action!=='maintenance')return json({error:'bad-action'},400);
   const sync=await syncHotelChannels(env,{limit:25});
   const cleanup=env.MEDIA?await cleanupHotelMediaAll(env):{ok:false,skipped:true,error:'no-media'};
-  return json({ok:true,sync,cleanup});
+  /* Same always-on schedule also re-sends urgent support alerts that failed, so
+     recovery never waits for an operator to relaunch triage. Never fails the run. */
+  let support;try{support=await retryPendingAlerts(env);}catch(_){support={error:'unexpected'};}
+  return json({ok:true,sync,cleanup,support});
 }

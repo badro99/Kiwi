@@ -266,6 +266,51 @@ ok('a passing failure stays failed, link active, for the retry', DB.state.outbox
 ok('and it does reach the connection error', DB.state.connection.last_error === 'Quantity too high');
 DB.state.outbox = []; DB.state.connection.last_error = '';
 
+// shopify#1: HTTP 200 without `data` and without `errors` is a malformed reply,
+// not an empty success. The target stays queued and the remote quantity does not move.
+async function flushRaw(body) {
+  globalThis.fetch = async () => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  try { return await flushShopifyOutbox(syncEnv, 'atlas', 5); } finally { globalThis.fetch = realFetch; }
+}
+link.status = 'active';
+await stockStep(4, 2);
+const remoteBefore = link.last_shopify_quantity;
+const malformed = await flushRaw({});
+ok('a 200 with no data is a failure, not a write', malformed.failed === 1 && malformed.processed === 0, JSON.stringify(malformed));
+ok('a malformed reply keeps the durable target', DB.state.outbox.length === 1, JSON.stringify(DB.state.outbox[0]));
+ok('a malformed reply does not advance the remote quantity', link.last_shopify_quantity === remoteBefore);
+DB.state.outbox = []; DB.state.connection.last_error = '';
+
+// shopify#0: a stalled provider is cut at the deadline, body read included.
+{
+  const stall = () => new Promise(() => {});
+  const sentinel = (ms) => new Promise((r) => setTimeout(() => r('hung'), ms));
+  globalThis.fetch = stall;
+  let outcome;
+  try {
+    outcome = await Promise.race([
+      exchangeClientCredentials({ SHOPIFY_CLIENT_ID: 'a', SHOPIFY_CLIENT_SECRET: 'b', SHOPIFY_DEADLINE_MS: 40 }, 'atlas-casa.myshopify.com').then(() => 'resolved', (e) => (e && e.code) || 'rejected'),
+      sentinel(1500),
+    ]);
+  } finally { globalThis.fetch = realFetch; }
+  ok('a stalled token request is cut at the deadline', outcome === 'request-timeout', String(outcome));
+  globalThis.fetch = async () => ({ ok: true, status: 200, json: () => new Promise(() => {}) });
+  try {
+    outcome = await Promise.race([
+      exchangeClientCredentials({ SHOPIFY_CLIENT_ID: 'a', SHOPIFY_CLIENT_SECRET: 'b', SHOPIFY_DEADLINE_MS: 40 }, 'atlas-casa.myshopify.com').then(() => 'resolved', (e) => (e && e.code) || 'rejected'),
+      sentinel(1500),
+    ]);
+  } finally { globalThis.fetch = realFetch; }
+  ok('a stalled token body is cut at the deadline too', outcome === 'request-timeout', String(outcome));
+  globalThis.fetch = stall;
+  const t0 = Date.now();
+  await stockStep(2, 5);
+  const stalled = await Promise.race([flushShopifyOutbox({ ...syncEnv, SHOPIFY_DEADLINE_MS: 40 }, 'atlas', 5), sentinel(1500)]);
+  globalThis.fetch = realFetch;
+  ok('a stalled GraphQL call ends the flush with a failure', stalled !== 'hung' && stalled.failed === 1, JSON.stringify(stalled));
+  DB.state.outbox = []; DB.state.connection.last_error = '';
+}
+
 const schema = read('schema.sql');
 for (const table of ['shopify_connections', 'shopify_oauth_states', 'shopify_variant_links', 'shopify_sync_outbox', 'shopify_webhook_events']) {
   ok(`schema defines ${table}`, schema.includes(`CREATE TABLE IF NOT EXISTS ${table}`));

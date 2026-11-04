@@ -10,7 +10,7 @@ try {
     const invoke = () => operation === 'getJson' ? api.getJson('/api/fixture') : api.post({action:'review',revision:3,idempotencyKey:'fixture-key'}, 'fixture');
     for (const status of [200, 400, 409, 503]) {
       calls.length = 0;
-      globalThis.fetch = async (url, options) => { calls.push({url,options}); return {ok:status===200,status,json:async()=>({error:'mapped',value:1})}; };
+      globalThis.fetch = async (url, options) => { calls.push({url,options}); return {ok:status===200,status,json:async()=>({error:'mapped',value:1,...(operation==='post'&&status===200?{ok:true}:{})})}; };
       if (status === 200) assert.equal((await invoke()).value,1);
       else await assert.rejects(invoke(), e => e.message==='mapped' && e.status===status && e.body.value===1);
       assert.equal(calls.length,1, 'no automatic retries');
@@ -24,6 +24,11 @@ try {
     await assert.rejects(invoke(),e=>e.message==='http-502' && e.status===502);
     globalThis.fetch = async () => ({ok:true,status:200,json:async()=>{throw Error('invalid-json');}});
     await assert.rejects(invoke(), e => e.code === 'invalid-response' && e.uncertain === true);
+    // economat#0: a 2xx with an unreadable acknowledgement is uncertain, never a confirmed command.
+    for (const shapeless of operation === 'post' ? [{}, null, [], 'ok', {ok:false}] : [null, [], 'ok']) {
+      globalThis.fetch = async () => ({ok:true,status:200,json:async()=>shapeless});
+      await assert.rejects(invoke(), e => e.code === 'invalid-response' && e.uncertain === true, operation + ' rejects ' + JSON.stringify(shapeless));
+    }
     globalThis.setTimeout = (fn, ms) => originalTimer(fn, Math.min(ms, 5));
     for (const bodyTimeout of [false,true]) {
       calls.length=0;

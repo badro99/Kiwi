@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import * as auth from '../functions/auth/_lib.js';
-import { TRIAGE_QUESTIONS, consoleRank, retriageTicket, triageOutcomeNote, STALE_ALERT_MS } from '../functions/api/_support-triage.js';
+import { TRIAGE_QUESTIONS, consoleRank, retriageTicket, triageOutcomeNote, STALE_ALERT_MS, retryPendingAlerts, triageAndRecord, ALERT_RETRY_MAX } from '../functions/api/_support-triage.js';
 import { onRequestPost as createTicket } from '../functions/api/support/tickets.js';
 import { onRequestPatch as adminPatch, onRequestGet as adminGet } from '../functions/api/admin/support.js';
 
@@ -163,6 +163,71 @@ try {
     env.DB.db.prepare('UPDATE support_tickets SET triage_alert = ? WHERE id = ?').run(JSON.stringify({ state: 'unconfirmed', ts: now - STALE_ALERT_MS - 1 }), id);
     await retriageTicket(env, row(env, id), now);
     eq(urgent().length, 1, 'une alerte restée non confirmée plus de deux minutes repart');
+  }
+
+  /* 5b. tickets#0 : une alerte urgente refusée repart toute seule (planificateur), avec un délai croissant. */
+  {
+    const env = await fresh({ SUPPORT_ALERT_EMAIL: 'equipe@kiwi.test', MAIL_WEBHOOK: 'https://mail.test/hook' });
+    mails.length = 0; mailStatus = 500;
+    const id = await post(env, 'caisse bloquée, impossible de vendre');
+    eq(JSON.parse(row(env, id).triage_alert).state, 'failed', 'départ : alerte refusée');
+    eq(urgent().length, 1, 'un premier envoi');
+    const t0 = Date.now();
+    eq((await retryPendingAlerts(env, { now: t0 + 60e3 })).checked, 0, 'trop tôt : pas de nouvel essai');
+    eq(urgent().length, 1, 'aucun courriel avant l\'échéance');
+    const second = await retryPendingAlerts(env, { now: t0 + 6 * 60e3 });
+    eq([second.checked, second.failed, second.sent], [1, 1, 0], 'après le délai : un essai automatique, encore refusé');
+    eq(JSON.parse(row(env, id).triage_alert).attempts, 1, 'le compteur d\'essais est durable');
+    eq((await retryPendingAlerts(env, { now: t0 + 7 * 60e3 })).checked, 0, 'le délai double : pas de nouvel essai tout de suite');
+    mailStatus = 200;
+    const third = await retryPendingAlerts(env, { now: t0 + 20 * 60e3 });
+    eq(third.sent, 1, 'le fournisseur revenu : l\'alerte part sans opérateur');
+    eq(JSON.parse(row(env, id).triage_alert).state, 'sent', 'et reste « sent »');
+    const after = urgent().length;
+    await retryPendingAlerts(env, { now: t0 + 3 * 3600e3 });
+    eq(urgent().length, after, 'une alerte envoyée ne repart jamais');
+    /* Alerte restée vide ou « non confirmée » périmée : reprise aussi ; sans canal configuré, rien n'est inventé. */
+    env.DB.db.prepare('UPDATE support_tickets SET triage_alert = NULL, created_ts = ? WHERE id = ?').run(t0 - 10 * 60e3, id);
+    eq((await retryPendingAlerts(env, { now: t0 })).sent, 1, 'une réservation jamais faite est reprise');
+    env.DB.db.prepare('UPDATE support_tickets SET triage_alert = ? WHERE id = ?').run(JSON.stringify({ state: 'unconfirmed', ts: t0 - STALE_ALERT_MS - 1 }), id);
+    eq((await retryPendingAlerts(env, { now: t0 })).sent, 1, 'un bail périmé est repris');
+    env.DB.db.prepare('UPDATE support_tickets SET triage_alert = ? WHERE id = ?').run(JSON.stringify({ state: 'failed', ts: 1, attempts: 0 }), id);
+    const bare = await retryPendingAlerts({ ...env, MAIL_WEBHOOK: '' }, { now: t0 });
+    eq([bare.checked, bare.skipped], [0, 'unconfigured'], 'sans canal configuré : rien n\'est tenté ni écrasé');
+    /* Abandon borné : une note dit que l'alerte n'est toujours pas partie. */
+    mailStatus = 500;
+    env.DB.db.prepare('UPDATE support_tickets SET triage_alert = ? WHERE id = ?').run(JSON.stringify({ state: 'failed', ts: 1, attempts: ALERT_RETRY_MAX - 1 }), id);
+    const gave = await retryPendingAlerts(env, { now: t0 });
+    eq(gave.gaveUp, 1, 'le dernier essai est signalé');
+    ok(thread(env, id).some((m) => /toujours pas parti après/.test(m.body)), 'une note interne le consigne');
+    const stop = urgent().length;
+    await retryPendingAlerts(env, { now: t0 + 30 * 3600e3 });
+    eq(urgent().length, stop, 'plus aucun essai après la limite');
+  }
+
+  /* 5c. tickets#1 : la trace d'un tri raté survit à un échec passager d'écriture, et un échec durable se dit. */
+  {
+    const env = await fresh();
+    env.reply = () => { throw new Error('model down'); };
+    const realPrepare = env.DB.prepare.bind(env.DB);
+    let refuse = 0;
+    env.DB.prepare = (sql) => { if (refuse > 0 && /INSERT INTO support_messages/.test(sql)) { refuse -= 1; throw new Error('d1 hiccup'); } return realPrepare(sql); };
+    const id = await post(env, 'rien ne marche');
+    env.DB.db.prepare("DELETE FROM support_messages WHERE ticket_id = ?").run(id);
+    const ticket = { id, reference: 'REF', merchant: MERCHANT, summary: 'rien ne marche' };
+    refuse = 1;
+    const flaky = await triageAndRecord(env, ticket);
+    eq(thread(env, id).length, 1, 'un échec passager d\'écriture n\'efface pas la trace');
+    ok(flaky.noteRecorded !== false, 'et le résultat ne signale rien d\'anormal');
+    env.DB.db.prepare("DELETE FROM support_messages WHERE ticket_id = ?").run(id);
+    refuse = 5;
+    const logged = []; const realError = console.error; console.error = (...a) => logged.push(a.join(' '));
+    let lost;
+    try { lost = await triageAndRecord(env, ticket); } finally { console.error = realError; }
+    eq(lost.noteRecorded, false, 'une trace perdue est dite à l\'appelant');
+    ok(logged.some((l) => l.includes('note-not-recorded') && l.includes(id)), 'et journalisée avec la référence de la demande');
+    eq(lost.status, 'failed', 'le résultat du tri reste celui du tri');
+    refuse = 0;
   }
 
   /* 6. Rien à dire quand tout va bien. */
