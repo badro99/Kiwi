@@ -718,6 +718,8 @@
     [/^Hors ligne · dernière mise à jour (\d{1,2}:\d{2})$/, 'Offline · last updated $1', 'غير متصل · آخر تحديث $1'],
     [/^Table (.+?) · paiement non confirmé, réessayez$/, 'Table $1 · payment not confirmed, try again', 'الطاولة $1 · لم يتأكد الدفع، أعد المحاولة'],
     [/^Table (.+?) · paiement non confirmé, ne repassez pas la carte, réessayez$/, 'Table $1 · payment not confirmed, do not run the card again, just retry', 'الطاولة $1 · لم يتأكد الدفع، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط'],
+    [/^Part (\d+) · (.+)$/, 'Share $1 · $2', 'الحصة $1 · $2'],
+    [/^Part (\d+)$/, 'Share $1', 'الحصة $1'],
     [/^Table (.+?) · hors ligne · commande NON envoyée, réessayez$/, 'Table $1 · offline · order NOT sent, try again', 'الطاولة $1 · غير متصل · لم يُرسَل الطلب، أعد المحاولة'],
     [/^Table (.+?) · pas de réponse du serveur · commande NON confirmée, réessayez$/, 'Table $1 · no answer from the server · order NOT confirmed, try again', 'الطاولة $1 · لا رد من الخادم · لم يتأكد الطلب، أعد المحاولة'],
     [/^Table (.*?) · part (\d+) non confirmée, réessayez$/, 'Table $1 · share $2 not confirmed, try again', 'الطاولة $1 · لم يتأكد الجزء $2، أعد المحاولة'],

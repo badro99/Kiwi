@@ -85,7 +85,7 @@ ok(staticCount > 60, `le balayage du balisage ne trouve que ${staticCount} texte
 
 /* 2. phrases composées à l'exécution */
 const RUNTIME = [
-  'Commande pour T4', '4 couverts · ajoutez des articles ci-dessous', '1 couvert · ajoutez des articles ci-dessous',
+  'Part 2 · T4', 'Part 3', 'Commande pour T4', '4 couverts · ajoutez des articles ci-dessous', '1 couvert · ajoutez des articles ci-dessous',
   'Fusionner avec T5', 'Déplacer vers T7', 'Fusionner', 'Déplacer', 'Tout', 'Nouvelle table',
   'Aucun article, appuyez sur', 'pour ouvrir le menu.', 'Fermer la table', 'Annuler toute la table', 'Changer table',
   'Voir la commande', 'Installer l’app', 'Détail de la table', 'Rafraîchir',
