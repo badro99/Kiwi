@@ -348,7 +348,8 @@ export async function onRequestPost({ request, env }) {
   /* Remboursements et avoirs déjà émis : voir alreadyReturned(). Le rejeu d'une
      réouverture déjà faite (sale.void_ts posé) n'est pas concerné. */
   if (!sale.void_ts) {
-    const returned = await alreadyReturned(env, merchant, id);
+    const returned = await alreadyReturned(env, merchant, id).catch(() => null);
+    if (!returned) return json({ error: 'store-credit-unavailable' }, 503);
     if (returned.totalCents > 0) return refundedResponse(returned);
   }
   /* That read only answers early. Another till can issue a store credit on

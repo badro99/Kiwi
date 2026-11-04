@@ -15,8 +15,8 @@ export async function ensureCreditEvents(env) {
   return true;
 }
 
-/* Somme des avoirs émis sur la vente (en centimes). 0 si la table n'existe pas :
- * sans table, aucun avoir n'a jamais été émis. */
+/* Somme des avoirs émis sur la vente (en centimes). Une lecture impossible
+ * reste une erreur, jamais un solde nul. */
 export async function creditsIssuedCents(env, merchant, saleId) {
   try {
     const row = await env.DB.prepare(
@@ -24,11 +24,11 @@ export async function creditsIssuedCents(env, merchant, saleId) {
         WHERE merchant = ? AND ref_id = ? AND action = 'issue'`
     ).bind(merchant, saleId).first();
     return Math.max(0, Math.round(Number(row && row.c) || 0));
-  } catch (_) { return 0; }
+  } catch (_) { throw new Error('store-credit-unavailable'); }
 }
 
-/* Somme des remboursements versés sur la vente (en centimes). Repli sans
- * `amount_cents` pour une base d'avant cette colonne. */
+/* Somme des remboursements versés sur la vente (en centimes).
+ * Le schéma minimum garantit amount_cents ; aucune erreur ne vaut zéro. */
 export async function refundsIssuedCents(env, merchant, saleId) {
   try {
     const row = await env.DB.prepare(
@@ -36,13 +36,5 @@ export async function refundsIssuedCents(env, merchant, saleId) {
         WHERE merchant = ? AND sale_id = ? AND action = 'refund'`
     ).bind(merchant, saleId).first();
     return Math.max(0, Math.round(Number(row && row.c) || 0));
-  } catch (_) {
-    try {
-      const row = await env.DB.prepare(
-        `SELECT COALESCE(SUM(amount * 100), 0) AS c FROM sale_audit
-          WHERE merchant = ? AND sale_id = ? AND action = 'refund'`
-      ).bind(merchant, saleId).first();
-      return Math.max(0, Math.round(Number(row && row.c) || 0));
-    } catch (__) { return 0; }
-  }
+  } catch (_) { throw new Error('store-credit-unavailable'); }
 }

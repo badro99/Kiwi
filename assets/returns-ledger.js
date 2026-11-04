@@ -106,14 +106,22 @@ export function periodLabel(rL) {
 }
 /* Les abonnés de dateRange sont réveillés à chaque vente : on ne rappelle
    que si la période (ou la langue) a vraiment changé. */
-let watched = null, lastSig = '';
+const watchers = new Set();
+let unwatch = null, lastSig = '';
 const periodSig = () => JSON.stringify(selectedPeriod()) + (document.documentElement.lang || '');
 export function watchPeriod(onChange) {
-  lastSig = periodSig();
-  watched = onChange;
-  if (watchPeriod.bound || !window.KiwiDateRange || !window.KiwiDateRange.subscribe) return;
-  watchPeriod.bound = true;
-  window.KiwiDateRange.subscribe(() => { const sig = periodSig(); if (sig !== lastSig) { lastSig = sig; if (watched) watched(); } });
+  watchers.add(onChange);
+  if (!unwatch && window.KiwiDateRange?.subscribe) {
+    lastSig = periodSig();
+    unwatch = window.KiwiDateRange.subscribe(() => {
+      const sig = periodSig();
+      if (sig !== lastSig) { lastSig = sig; for (const fn of watchers) fn(); }
+    });
+  }
+  return () => {
+    watchers.delete(onChange);
+    if (!watchers.size && unwatch) { unwatch(); unwatch = null; }
+  };
 }
 
 /* ── Les lignes de la page ─────────────────────────────────────────────

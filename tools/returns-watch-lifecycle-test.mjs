@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+let listener=null, starts=0, stops=0, start=1;
+globalThis.document={documentElement:{lang:'fr'}};
+globalThis.window={KiwiDateRange:{bounds:()=>[start,10],subscribe(fn){assert.equal(listener,null);listener=fn;starts++;return()=>{listener=null;stops++;};}}};
+const {watchPeriod}=await import('../assets/returns-ledger.js');
+let a=0,b=0;
+const offA=watchPeriod(()=>a++),offB=watchPeriod(()=>b++);
+assert.equal(typeof offA,'function','subscription returns an unsubscribe');
+assert.equal(starts,1,'subscribers share one upstream listener');
+start=2;listener();assert.deepEqual([a,b],[1,1],'all live subscribers notified');
+offA();start=3;listener();assert.deepEqual([a,b],[1,2]);
+offA();assert.equal(stops,0,'unsubscribe is idempotent');
+offB();assert.equal(listener,null);assert.equal(stops,1,'last subscriber releases upstream listener');
+const offC=watchPeriod(()=>a++);assert.equal(starts,2);offC();assert.equal(stops,2);
+console.log('✓ returns watcher multicasts, unsubscribes, releases and restarts its upstream listener');
