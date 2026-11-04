@@ -1663,6 +1663,11 @@ export async function activeServiceEmployee(request, env, asked) {
 const LIMIT_WINDOW_MS = 15 * 60 * 1000;   // fenêtre d'observation
 const LIMIT_BLOCK_MS  = 15 * 60 * 1000;   // durée du blocage
 const LIMIT_MAX_FAILS = 8;                // essais ratés tolérés par fenêtre
+/* Plafond de la BOUTIQUE entière pour les codes de caisse : trois fois le plafond
+ * d'un appareil. Les fautes de frappe d'une caissière ne comptent que sur son
+ * appareil (huit essais) ; ce plafond commun arrête seulement une devinette
+ * répartie sur plusieurs appareils ou adresses. */
+const LIMIT_STORE_MAX_FAILS = 24;
 
 /* Un compteur rattaché à la CIBLE, pas seulement à la source. Sans lui, un
  * attaquant change d'adresse IP et repart à zéro sur le même compte ; avec lui,
@@ -1704,7 +1709,7 @@ export async function limitCheck(request, env, scope, identity = '') {
 
 /* Un essai raté de plus. Fenêtre glissante par redémarrage : passé
    LIMIT_WINDOW_MS la ligne repart à 1, donc elle expire d'elle-même. */
-export async function limitFail(request, env, scope, identity = '') {
+export async function limitFail(request, env, scope, identity = '', maxFails = LIMIT_MAX_FAILS) {
   const k = limiterKey(request, scope, identity);
   if (!k) return true;
   if (!env || !env.DB) return false;
@@ -1722,7 +1727,7 @@ export async function limitFail(request, env, scope, identity = '') {
            WHEN pair_attempts.fails + 1 >= ? THEN ?
            ELSE pair_attempts.blocked_until END`
     ).bind(k, now, now, LIMIT_WINDOW_MS, now, LIMIT_WINDOW_MS, now,
-           now, LIMIT_WINDOW_MS, LIMIT_MAX_FAILS, now + LIMIT_BLOCK_MS).run();
+           now, LIMIT_WINDOW_MS, maxFails, now + LIMIT_BLOCK_MS).run();
     const changes = Number(result && result.meta && result.meta.changes);
     return Number.isFinite(changes) ? changes > 0 : true;
   } catch (_) { return false; }
@@ -1771,6 +1776,7 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   // Requester must prove they are a paired till for this merchant (isTillFor HMAC),
   // an authenticated session owner of this merchant (readSession signature), or a named operator.
   let identity = '';
+  let deviceIdentity = '';
   let authorized = false;
 
   const till = await tillVerification(request, env, merchant);
@@ -1780,6 +1786,9 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   if (till.ok) {
     authorized = true;
     identity = `till:${merchant}`;
+    /* Appareil appairé identifié : son propre seau. Un cookie ancien sans
+     * identifiant retombe sur l'adresse IP (limiterKey, identité vide). */
+    if (till.deviceId) deviceIdentity = `dev:${till.deviceId}`;
   } else {
     const sess = await activeAccountSession(request, env);
     if (sess && sess.aid) {
@@ -1811,6 +1820,14 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   // Attempt rate-limiting by scope: 'pin:<merchant>' keyed on proven identity (or IP if unauthenticated)
   const blocked = await limitCheck(request, env, `pin:${merchant}`, identity);
   if (blocked) return { ok: false, response: blocked };
+  /* Caisse appairée : second seau, plus serré, par appareil (ou IP). Les fautes
+   * d'un encaisseur ne verrouillent que son appareil, pas les autres caisses. */
+  const tillScoped = identity === `till:${merchant}`;
+  const deviceScope = `pin-dev:${merchant}`;
+  if (tillScoped) {
+    const deviceBlocked = await limitCheck(request, env, deviceScope, deviceIdentity);
+    if (deviceBlocked) return { ok: false, response: deviceBlocked };
+  }
 
   let staff;
   try {
@@ -1855,7 +1872,9 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   }
 
   if (!staff) {
-    if (!await limitFail(request, env, `pin:${merchant}`, identity)) {
+    const storeMax = tillScoped ? LIMIT_STORE_MAX_FAILS : LIMIT_MAX_FAILS;
+    if (!await limitFail(request, env, `pin:${merchant}`, identity, storeMax)
+        || (tillScoped && !await limitFail(request, env, deviceScope, deviceIdentity))) {
       return { ok: false, response: rateLimitUnavailable() };
     }
     return { ok: false, error: 'bad-pin', status: 401 };
