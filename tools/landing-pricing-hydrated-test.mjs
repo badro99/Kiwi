@@ -16,9 +16,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { landingRuntime, descendants, nodeText } from './landing-runtime.mjs';
 import { prices, formatPrice } from './landing-pricing.mjs';
 
+/* the shipped client component runs inside the runtime helper's vm (loaded lazily, like the claims suite) */
+const { landingRuntime, descendants, nodeText } = await import('./landing-runtime.mjs');
 const ROOT = path.resolve(import.meta.dirname, '..');
 const read = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8');
 const pages = { 'index.html': 'fr', 'fr/index.html': 'fr', 'en/index.html': 'en', 'ar/index.html': 'ar', 'de/index.html': 'de', 'it/index.html': 'it', 'nl/index.html': 'nl', 'es/index.html': 'es' };

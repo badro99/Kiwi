@@ -1,7 +1,7 @@
   /* ── export ──────────────────────────────────────────────────────────── */
   /* Une cellule qui commence par = + - @ serait une formule dans un tableur. */
   const cell = (v) => { let s = String(v == null ? '' : v); if (/^[=+\-@]/.test(s) || /^[\t\r]/.test(s)) s = "'" + s; return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  const n2 = (v) => (v == null || !Number.isFinite(+v) ? '' : (+v).toFixed(2).replace('.', ','));
+  const n2 = (v) => (v == null || !Number.isFinite(+v) ? '' : (+v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })); /* même arrondi que l'écran (money), jamais toFixed : 59333,225 se lit 59333,23 des deux côtés */
   function download(name, rows) {
     const text = '﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n');
     try {

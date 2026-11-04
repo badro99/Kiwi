@@ -79,6 +79,8 @@ const toSheet = (g) => ({ id: 'fc-1', name: 'Fiche', kind: 'sheet', version: 1, 
   data: { name: 'Fiche', sellingPrice: g.price, vatIncluded: true, vatRate: 10, portions: g.portions, targetPct: 30,
     lines: g.lines.map((l, i) => ({ id: 'l' + i, name: 'Ligne' + i, type: l.type, packPrice: l.packPrice, packQty: l.packQty, packUnit: l.pair[0], useQty: l.useQty, useUnit: l.pair[1], yieldPct: l.yieldPct, priceDate: '2026-10-01' })) } });
 
+/* found by the generator on 4 Nov: 328,11 per 21,3 ml, 1540,7 ml used at 40 % yield costs 59 333,225: the screen said ,23 and the CSV (toFixed) ,22 */
+const HALF_CENT = { lines: [{ type: 'food', packPrice: 328.11, packQty: 21.3, pair: ['ml', 'ml'], useQty: 1540.7, yieldPct: 40 }], portions: 1, price: null };
 let lastWhy = '';
 let failed = 0, ran = 0, unknownSeen = 0, knownSeen = 0;
 const bad = (why) => { throw new Error(why); };
@@ -128,7 +130,7 @@ async function oneSheet(g) {
 
 console.log('■ Coût simple · écran et CSV disent les mêmes chiffres');
 try {
-  await fc.assert(fc.asyncProperty(sheetArb, async (g) => { ran++; try { await oneSheet(g); } catch (e) { lastWhy = e.message; throw e; } return true; }), { numRuns: RUNS, verbose: 0 });
+  await fc.assert(fc.asyncProperty(sheetArb, async (g) => { ran++; try { await oneSheet(g); } catch (e) { lastWhy = e.message; throw e; } return true; }), { numRuns: RUNS, examples: [[HALF_CENT]], ...(process.env.KIWI_PROPERTY_SEED ? { seed: Number(process.env.KIWI_PROPERTY_SEED) } : {}) });
   if (!knownSeen || !unknownSeen) bad(`generator never reached both outcomes (known ${knownSeen}, unknown ${unknownSeen})`);
   console.log(`  ✓ ${ran} fiches tirées (${knownSeen} complètes, ${unknownSeen} avec un inconnu) : chaque ligne, le total et la portion de l'écran sont ceux du CSV`);
 } catch (e) { failed++; console.log('  ✗ parité écran / CSV (' + lastWhy + ')\n      ' + String((e && e.message) || e).split('\n').filter(Boolean).slice(0, 12).join(" | ")); }

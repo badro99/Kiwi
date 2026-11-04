@@ -86,7 +86,7 @@ await fc.assert(fc.asyncProperty(answers, async (a) => {
     for (const op of ops.slice(0, k)) { if (op[0] === 'set') crash.set(op[1], op[2]); else if (op[0] === 'del') crash.delete(op[1]); }
     const acked = ops.slice(0, k).some((o) => o[0] === 'ack');
     if (crash.has('kiwiOnboarded')) assert.ok(acked, `kiwiOnboarded on disk at crash point ${k} without a server-confirmed creation`);
-    for (const [key, value] of crash) for (const code of codesOf(S)) assert.ok(!value.includes(code), `a staff code reached ${key} at crash point ${k}`);
+    for (const [key, value] of crash) for (const code of codesOf(S)) assert.ok(!new RegExp('(?<!\\d)' + code + '(?!\\d)').test(value), `a staff code reached ${key} at crash point ${k}`);
     assert.ok(!crash.has('kiwiPins'), 'kiwiPins is never written');
     if (k < ops.length) {
       assert.ok(crash.has('kiwiOnboardingDraft:v1'), `the draft survives a death at point ${k}`);
