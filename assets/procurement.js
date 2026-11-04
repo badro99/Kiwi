@@ -141,7 +141,7 @@
       /* skipMovements : l'appelant est le seul propriétaire des mouvements
        * (guichet unique — le registre déduplique sur l'id du mouvement). */
       if (!input.skipMovements) {
-        window.KiwiInventory?.add?.({ id: `inv-${row.id}-${idx}`, itemId: line.itemId, variantId: line.variantId, locationId: economatReceiptLocation(), qty: line.qty, reason: 'receipt', unitCost: line.unitCost || null, refType: 'receipt', refId: row.id, occurredTs: row.receivedAt, note: row.externalRef || row.number });
+        window.KiwiInventory?.add?.({ id: `inv-${row.id}-${idx}`, itemId: line.itemId, variantId: line.variantId, locationId: economatReceiptLocation(), qty: line.qty, reason: 'receipt', unitCost: line.unitCost, refType: 'receipt', refId: row.id, occurredTs: row.receivedAt, note: row.externalRef || row.number });
       }
       /* skipCosts : l'appelant applique ses propres règles (cases à cocher). */
       if (!input.skipCosts && line.unitCost > 0 && (!gate || gate[line.itemId])) window.KiwiCost?.setItemCost?.(line.itemId, line.unitCost, row.supplierId);

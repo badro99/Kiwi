@@ -996,7 +996,7 @@
     var fillTarget = document.querySelector('[data-vexel-goal-fill]');
     var restTarget = document.querySelector('[data-vexel-goal-rest]');
     var amountText = amountSource ? amountSource.textContent.replace(/MAD/i, '').trim() : '·';
-    var targetText = goalLabel ? goalLabel.textContent.split('·').pop().trim() : '';
+    var targetText = goalLabel ? (goalLabel.dataset.goalAmount || goalLabel.textContent.split('·').pop().trim()) : '';
     var pctText = goalPct ? goalPct.textContent.trim() : '·';
     /* Aucun objectif saisi : la source pose le drapeau et écrit « à définir »
      * au lieu d'un montant. Sans ce test la carte recopiait « à définir » dans

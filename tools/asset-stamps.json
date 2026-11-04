@@ -440,8 +440,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "128",
-    "sha": "3f6f0de4d9ca48f7"
+    "v": "129",
+    "sha": "3f6dfdbe2dc0dd37"
   },
   "assets/daterange/activity.js": {
     "v": "7",
@@ -456,8 +456,8 @@
     "sha": "56b7975f2e5e6c44"
   },
   "assets/daterange/hero.js": {
-    "v": "7",
-    "sha": "40794b45fcbbc8d4"
+    "v": "8",
+    "sha": "828db62c5bd6bca8"
   },
   "assets/daterange/kpi.js": {
     "v": "14",
@@ -472,8 +472,8 @@
     "sha": "f91815b2b1f3bce4"
   },
   "assets/daterange/renderers.js": {
-    "v": "26",
-    "sha": "1a9d891311930de9"
+    "v": "27",
+    "sha": "79ecff54cefe0a20"
   },
   "assets/daterange/revenue.js": {
     "v": "5",
@@ -524,8 +524,8 @@
     "sha": "609f0c3f5bf3c3af"
   },
   "assets/design-vexel-layout.js": {
-    "v": "2100",
-    "sha": "96e14be9f8b09794"
+    "v": "2101",
+    "sha": "0e11ff9791231896"
   },
   "assets/design-vexel.css": {
     "v": "2130",
@@ -676,8 +676,8 @@
     "sha": "e0b4a153bdcc5f46"
   },
   "assets/hotel-economat.js": {
-    "v": "22",
-    "sha": "5bb022de0059172d"
+    "v": "23",
+    "sha": "c71398db55121f5b"
   },
   "assets/hotel-folio.js": {
     "v": "1",
@@ -1416,12 +1416,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "38",
-    "sha": "98bec78733f9c645"
+    "v": "39",
+    "sha": "b75f0b8498ea40a1"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "141",
-    "sha": "da85450f683a4137"
+    "v": "142",
+    "sha": "21055ca7b143a754"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1844,8 +1844,8 @@
     "sha": "fb5cc76075131316"
   },
   "assets/procurement.js": {
-    "v": "4",
-    "sha": "b64ceeca514afc2f"
+    "v": "5",
+    "sha": "f4b750474d9876d8"
   },
   "assets/production-action-guard.js": {
     "v": "6",
@@ -1916,8 +1916,8 @@
     "sha": "ecebc7f1f448bbba"
   },
   "assets/restaurant-menu/styles.js": {
-    "v": "2",
-    "sha": "022653544779b1d0"
+    "v": "3",
+    "sha": "9343a465f57acc3b"
   },
   "assets/restaurant-recipes.js": {
     "v": "14",

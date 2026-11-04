@@ -125,7 +125,7 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
           Math.round(movement.qty * 1000), movement.reason, Math.round(movement.unitCost * 100), movement.currency,
           movement.refType, movement.refId, movement.note, movement.actor, movement.occurredTs, movement.cursor,
           movement.reversalOf, JSON.stringify(movement.meta), now];
-      movementStatements.push(probedMovementInsert(env, columns, values, merchant, movement, id, idempotencyKey));
+      movementStatements.push(await probedMovementInsert(env, columns, values, merchant, movement, id, idempotencyKey));
     }
   }
   const updateRequest = env.DB.prepare(
@@ -217,7 +217,7 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
     return json({ error: 'stale' }, 409);
   }
   for (const movement of movements) {
-    const probe = movementProbe(merchant, movement);
+    const probe = await movementProbe(merchant, movement);
     const row = await env.DB.prepare(probe.sql).bind(...probe.args).first();
     movement.id = row.id;
   }
