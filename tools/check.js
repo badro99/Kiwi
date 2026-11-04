@@ -1641,7 +1641,7 @@ section('Whole-project regressions');
     'caisse-pairing-repair-test.mjs',
     'caisse-pairing-kdf-test.mjs',
     'caisse-pairing-split-test.mjs',
-    'caisse-kitchen-split-test.mjs',
+    'caisse-kitchen-split-test.mjs', 'till-restore-day-key-test.mjs',
     'caisse-floor-split-test.mjs',
     'caisse-accounting-split-test.mjs',
     'takeaway-history-timestamps-test.mjs',
