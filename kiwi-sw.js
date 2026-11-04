@@ -266,7 +266,7 @@ var SHELL = [
   '/assets/venues/helpers.js?v=10',
   '/assets/venues.js?v=75',
   '/assets/phone.js?v=1',
-  '/assets/trade-workspace-schema.js?v=12',
+  '/assets/trade-workspace-schema.js?v=13',
   '/assets/trade-workspaces.js?v=19',
   '/assets/delivery-receivables.js?v=2',
   '/assets/reservations.js?v=39',
@@ -416,7 +416,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=37',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=125',
+  '/assets/caisse-lang.js?v=126',
   '/assets/venue-store.js?v=6',
   '/assets/discount-policy.js?v=4',
   '/assets/merchant-policies.js?v=3',
@@ -493,7 +493,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=35',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=33',
-  '/assets/pos-dispatch.js?v=379',
+  '/assets/pos-dispatch.js?v=382',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -588,8 +588,9 @@ var SHELL = [
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
-  '/assets/pos-spa.css?v=13',
-  '/assets/pos-spa.js?v=13',
+  '/assets/pos-spa.css?v=16',
+  '/assets/pos-spa.js?v=16',
+  '/assets/pos-spa-cure-expiry.js?v=2',
   '/assets/pos-hotel.css?v=27',
   '/assets/pos-hotel.js?v=27',
   '/assets/pos-fastfood.css?v=15',

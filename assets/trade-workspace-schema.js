@@ -174,6 +174,22 @@
   function addDays(key, n) { return new Date(Date.UTC(+key.slice(0, 4), +key.slice(5, 7) - 1, +key.slice(8, 10) + n)).toISOString().slice(0, 10); }
   /* Date (AAAA-MM-JJ) du dernier jour de validité d'une cure vendue à `soldTs` pour `days` jours. */
   function cureExpiryOn(soldTs, days) { return addDays(businessDayKey(soldTs), Math.max(0, Math.round(+days) || 0)); }
+  /* Validité standard d'une cure vendue à la caisse du spa (jours), la même que celle de la vente. */
+  const STANDARD_CURE_DAYS = 180;
+  /* Les cures vendues avant que la date soit gardée n'en ont pas. On ne les fait JAMAIS expirer en silence ni
+     rétroactivement : à la première lecture après la mise à jour, chacune reçoit la validité standard comptée
+     depuis CE jour (journée commerciale), marquée expirySource 'legacy-grandfathered' avec la date de l'octroi.
+     Le personnel peut la modifier ; la cliente la voit sur sa carte. Idempotent : une cure qui a déjà sa date n'est pas touchée.
+     Rend le nombre de cures mises à jour. */
+  function grandfatherCures(cures, now, days) {
+    const today = businessDayKey(now), until = cureExpiryOn(now, days == null ? STANDARD_CURE_DAYS : days);
+    let changed = 0;
+    (Array.isArray(cures) ? cures : []).forEach((cu) => {
+      if (!cu || typeof cu !== 'object' || /^\d{4}-\d{2}-\d{2}$/.test(String(cu.expiresOn || ''))) return;
+      cu.expiresOn = until; cu.expirySource = 'legacy-grandfathered'; cu.expirySourceOn = today; changed++;
+    });
+    return changed;
+  }
   /* Jours restant (0 = dernier jour, < 0 = expirée) ; null si la cure n'a pas de date (ancienne vente). */
   function cureDaysLeft(expiresOn, now) { return /^\d{4}-\d{2}-\d{2}$/.test(String(expiresOn || '')) ? dayDiff(businessDayKey(now), String(expiresOn)) : null; }
 
@@ -298,5 +314,5 @@
     return ((allRecords && allRecords[field.relation]) || []).filter((r) => !r.deletedAt).map((r) => ({ value: r.id, label: normalize(get(schema.trade, field.relation) || schema, r).title || r.id }));
   }
 
-  window.KiwiTradeSchema = { L, defs, get, normalize, validate, derived, summary, relationOptions, catalog, catalogKey, productOptions, productName, dateKey, wallNow, dayDiff, venueZone, businessDayKey, cureExpiryOn, cureDaysLeft };
+  window.KiwiTradeSchema = { L, defs, get, normalize, validate, derived, summary, relationOptions, catalog, catalogKey, productOptions, productName, dateKey, wallNow, dayDiff, venueZone, businessDayKey, cureExpiryOn, cureDaysLeft, grandfatherCures, STANDARD_CURE_DAYS };
 })();

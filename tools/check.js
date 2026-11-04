@@ -1932,7 +1932,7 @@ section('Whole-project regressions');
     'overlay-stack-test.mjs',
     'entitlement-held-gesture-test.mjs',
     'entitlement-panel-language-test.mjs',
-    'discount-policy-test.mjs', 'return-window-till-test.mjs', 'return-window-server-test.mjs', 'policy-editors-test.mjs', 'pressing-b2b-rate-test.mjs',
+    'discount-policy-test.mjs', 'return-window-till-test.mjs', 'return-window-server-test.mjs', 'policy-editors-test.mjs', 'pressing-b2b-rate-test.mjs', 'spa-cure-grandfather-test.mjs',
     'discount-policy-api-test.mjs',
     'discount-policy-browser-test.mjs',
     'discount-policy-cloud-test.mjs',

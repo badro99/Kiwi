@@ -212,8 +212,8 @@
     "sha": "c978ff18c9a0add3"
   },
   "assets/caisse-lang.js": {
-    "v": "125",
-    "sha": "cd13e22aa69fb664"
+    "v": "126",
+    "sha": "0537478a0ec4571d"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1656,8 +1656,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "379",
-    "sha": "8d55f5ec72af904d"
+    "v": "382",
+    "sha": "e244584923e5176b"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1795,13 +1795,17 @@
     "v": "33",
     "sha": "73b6bbd27fb1fb81"
   },
+  "assets/pos-spa-cure-expiry.js": {
+    "v": "2",
+    "sha": "d0c42ddc5486d489"
+  },
   "assets/pos-spa.css": {
-    "v": "13",
+    "v": "16",
     "sha": "9d7374ff923841b1"
   },
   "assets/pos-spa.js": {
-    "v": "13",
-    "sha": "7b72de656c7450a7"
+    "v": "16",
+    "sha": "82b62fa57141c16c"
   },
   "assets/pos-traiteur.css": {
     "v": "13",
@@ -2220,8 +2224,8 @@
     "sha": "1b6492af602c690b"
   },
   "assets/trade-workspace-schema.js": {
-    "v": "12",
-    "sha": "1113a4aa734c9b7b"
+    "v": "13",
+    "sha": "07b6d6265a2921c0"
   },
   "assets/trade-workspaces.css": {
     "v": "6",
