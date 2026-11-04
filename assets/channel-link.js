@@ -149,7 +149,7 @@
       replayAsk: 'Commandes en ligne depuis la connexion : {o}. Kiwi retirera {p} pièce(s) de son stock ({l} ligne(s)). Déjà comptées à l’inventaire : {c}. Sans correspondance : {u}. Déficit enregistré au journal : {s} pièce(s). Le stock vendable reste à zéro. Faites un comptage physique pour résoudre l’écart. Appliquer ?',
       replayDone: '{p} pièce(s) retirée(s) du stock Kiwi. Réconciliez ensuite pour aligner Shopify.',
       reconcile: 'Réconcilier maintenant', retry: 'Réessayer', refresh: 'Actualiser les correspondances',
-      working: 'Connexion en cours…', error: 'Connexion Shopify impossible', invalid: 'Vérifiez le domaine et réessayez.',
+      working: 'Connexion en cours…', error: 'Connexion Shopify impossible', timeout: 'Shopify ne répond pas. Réessayez dans un instant.', invalid: 'Vérifiez le domaine et réessayez.',
       oauthFail: 'Shopify n’a pas terminé l’autorisation. Réessayez depuis Kiwi.', done: 'Shopify est connecté. Choisissez maintenant l’emplacement à synchroniser.',
     },
     en: {
@@ -182,7 +182,7 @@
       replayAsk: 'Online orders since connection: {o}. Kiwi will remove {p} piece(s) from its stock ({l} line(s)). Already counted in a stock count: {c}. Without a match: {u}. Deficit recorded in the ledger: {s} piece(s). Sellable stock stays at zero. Perform a physical count to resolve the difference. Apply?',
       replayDone: '{p} piece(s) removed from Kiwi stock. Reconcile next to align Shopify.',
       reconcile: 'Reconcile now', retry: 'Retry', refresh: 'Refresh matches',
-      working: 'Connecting…', error: 'Could not connect Shopify', invalid: 'Check the store domain and try again.',
+      working: 'Connecting…', error: 'Could not connect Shopify', timeout: 'Shopify is not responding. Try again in a moment.', invalid: 'Check the store domain and try again.',
       oauthFail: 'Shopify did not complete authorization. Try again from Kiwi.', done: 'Shopify is connected. Now choose the location to synchronize.',
     },
     ar: {
@@ -215,7 +215,7 @@
       replayAsk: 'الطلبات الإلكترونية منذ الربط: {o}. سيخصم Kiwi {p} قطعة من مخزونه ({l} سطر). محسوبة سابقًا في جرد: {c}. بلا مطابقة: {u}. العجز المسجل في السجل: {s} قطعة. يبقى المخزون القابل للبيع صفراً. قم بجرد فعلي لتسوية الفرق. هل تريد التطبيق؟',
       replayDone: 'تم خصم {p} قطعة من مخزون Kiwi. قم بالمطابقة بعد ذلك لمواءمة Shopify.',
       reconcile: 'مطابقة الآن', retry: 'إعادة المحاولة', refresh: 'تحديث المطابقات',
-      working: 'جارٍ الربط…', error: 'تعذر ربط Shopify', invalid: 'تحقق من عنوان المتجر وحاول مجددًا.',
+      working: 'جارٍ الربط…', error: 'تعذر ربط Shopify', timeout: 'Shopify لا يستجيب. حاول مجددًا بعد لحظة.', invalid: 'تحقق من عنوان المتجر وحاول مجددًا.',
       oauthFail: 'لم تكتمل موافقة Shopify. حاول مجددًا من Kiwi.', done: 'تم ربط Shopify. اختر الآن الموقع المراد مزامنته.',
     },
   };
@@ -228,13 +228,22 @@
     if (code === 'no-linked-variants') return s.noLinks;
     if (code === 'setup-required') return s.finishSetup;
     if (code === 'setup-price-invalid') return s.invalidPrice;
-    return code || s.invalid;
+    if (code === 'request-timeout') return s.timeout;
+    /* Un message déjà traduit passe ; un code inconnu ou un détail serveur
+       (souvent en français) ne s'affiche jamais brut. */
+    if (!code) return s.invalid;
+    return Object.keys(s).some(function (k) { return s[k] === code; }) ? code : s.error;
+  }
+  /* Chaque appel du panneau a un délai, en-têtes et corps : un réseau muet ne
+     fige plus le panneau. Pas de repli sur un fetch nu si le module manque. */
+  function chFetch(url, init) {
+    return import('./request-deadline.mjs').then(function (net) { return net.deadlineFetch(url, init || {}); });
   }
   function shopApi(action, extra) {
-    return fetch('/api/shopify/status', {
+    return chFetch('/api/shopify/status', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(Object.assign({ action: action }, extra || {})),
-    }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.detail || j.error || 'shopify'); return j; }); });
+    }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'shopify'); return j; }); });
   }
 
   /* Deux dons possibles, une seule saisie. Quand l'app Shopify et la boutique
@@ -250,7 +259,7 @@
      que si les DEUX chemins échouent, et c'est celle de la ronde, la plus
      parlante pour le marchand. */
   function authorizeShopify(shop) {
-    return fetch('/api/shopify/connect-direct', {
+    return chFetch('/api/shopify/connect-direct', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ shop: shop }),
     })
@@ -272,7 +281,7 @@
         if (code === 'merchant-already-connected' || code === 'shop-already-connected') {
           throw new Error(code);
         }
-        return fetch('/api/shopify/connect', {
+        return chFetch('/api/shopify/connect', {
           method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({ shop: shop }),
         })
@@ -549,7 +558,7 @@
 
   function loadShopify(root) {
     root.classList.add('is-loading');
-    return fetch('/api/shopify/status', { headers: { Accept: 'application/json' } })
+    return chFetch('/api/shopify/status', { headers: { Accept: 'application/json' } })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'shopify'); return j; }); })
       .then(function (j) { renderShopify(root, j); return j; })
       .finally(function () { root.classList.remove('is-loading'); });
@@ -561,7 +570,7 @@
     if (!slot) { if (m && m.close) m.close(); return Promise.resolve(false); }
     var root = document.createElement('div'); root.className = 'chl shp'; slot.appendChild(root);
     return loadShopify(root).then(function () { return true; }).catch(function (e) {
-      root.textContent = ''; var err = document.createElement('div'); err.className = 'chl-once'; err.textContent = String(e && e.message || s.error); root.appendChild(err); return false;
+      root.textContent = ''; var err = document.createElement('div'); err.className = 'chl-once'; err.textContent = shopError(e && e.message); root.appendChild(err); return false;
     });
   }
 
@@ -611,7 +620,7 @@
       var v = String(inp.value || '').trim();
       if (!v) { inp.focus(); return; }
       btn.disabled = true; btn.textContent = s.saving;
-      fetch('/api/channel/keys', {
+      chFetch('/api/channel/keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: linkId, config: { shopifySecret: v } }),
@@ -734,7 +743,7 @@
   function ozStr() { return OZ[LANG()] || OZ.fr; }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function ozJson(url, init) {
-    return fetch(url, Object.assign({ credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json' } }, init || {}))
+    return chFetch(url, Object.assign({ credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json' } }, init || {}))
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error(j.error || 'http-' + r.status); throw e; } return j; }); });
   }
   function ozStore(store, s) {
@@ -847,7 +856,7 @@
     channel = String(channel || 'generic');
     if (channel === 'shopify') return openShopify();
     if (channel === 'ozon') return openOzon();
-    return fetch('/api/channel/keys', {
+    return chFetch('/api/channel/keys', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ channel: channel, label: String(label || '') }),
@@ -886,7 +895,7 @@
   }
 
   function list() {
-    return fetch('/api/channel/keys', { headers: { Accept: 'application/json' } })
+    return chFetch('/api/channel/keys', { headers: { Accept: 'application/json' } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) { return (j && j.keys) || []; })
       .catch(function () { return []; });
