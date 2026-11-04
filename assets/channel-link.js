@@ -549,7 +549,7 @@
       }, true));
       root.appendChild(actions);
     }
-    import('./channel-health.js?v=9').then(({ paintIssues }) => paintIssues(root, status.orderIssues, connection));
+    import('./channel-health.js?v=10').then(({ paintIssues }) => paintIssues(root, status.orderIssues, connection));
     root.appendChild(previewSlot);
     shopSetup(previewSlot, status.setup || [], reload);
   }

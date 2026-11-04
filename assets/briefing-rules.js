@@ -16,11 +16,8 @@
     return out;
   }
   function num(value, L) {
-    var loc = L === 'en' ? 'en-GB' : 'fr-FR';
-    if (!NUM[loc]) NUM[loc] = new Intl.NumberFormat(loc, { maximumFractionDigits: 2 });
-    return NUM[loc].format(value);
+    return deps.number ? deps.number(value, L) : String(value);
   }
-  var NUM = {};
   var VOID_REASON = {
     'employee-cancel': { fr: 'annulation à la caisse', en: 'cancelled at the till', ar: 'إلغاء من الصندوق' },
     'dashboard-cancel': { fr: 'annulation depuis le tableau de bord', en: 'cancelled from the dashboard', ar: 'إلغاء من لوحة التحكم' },
@@ -303,12 +300,13 @@
     var gapCents = Number(worst.gap_cents == null ? worst.gapCents : worst.gap_cents);
     if (Math.abs(gapCents) < threshold) return null;
     var gapLabel = (gapCents / 100).toFixed(2), thresholdLabel = (threshold / 100).toFixed(2);
+    var cash = function (cents, L) { return deps.number ? deps.number(cents / 100, L, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (cents / 100).toFixed(2); };
     return {
       id: 'cash-gap:' + day, kind: 'cash-gap', tone: 'warn', roles: ['owner'],
       copy: {
-        fr: 'Écart de caisse de ' + gapLabel.replace('.', ',') + ' MAD, seuil visible ' + thresholdLabel.replace('.', ',') + ' MAD.',
-        en: 'Cash gap of ' + gapLabel + ' MAD, visible threshold ' + thresholdLabel + ' MAD.',
-        ar: 'فرق الصندوق ' + gapLabel.replace('.', ',') + ' MAD، والحد الظاهر ' + thresholdLabel.replace('.', ',') + ' MAD.'
+        fr: 'Écart de caisse de ' + cash(gapCents, 'fr') + ' MAD, seuil visible ' + cash(threshold, 'fr') + ' MAD.',
+        en: 'Cash gap of ' + cash(gapCents, 'en') + ' MAD, visible threshold ' + cash(threshold, 'en') + ' MAD.',
+        ar: 'فرق الصندوق ' + cash(gapCents, 'ar') + ' MAD، والحد الظاهر ' + cash(threshold, 'ar') + ' MAD.'
       },
       evidence: { count: reconciliations.length, window: day, source: 'cash_session_events · seuil ' + thresholdLabel + ' MAD',
         text: said(reconciliations.length, day, { fr: 'clôtures et passations de caisse', en: 'till closings and handovers', ar: 'إغلاقات الصندوق وعمليات التسليم' }) }

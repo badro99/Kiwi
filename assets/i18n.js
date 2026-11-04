@@ -1703,11 +1703,11 @@
 
   /* One merchant-facing number rule. EN uses 15,765.38; FR and AR use
    * 15 765,38 with Latin digits. Receipts keep their own fiscal formatter. */
-  const numberLocale = () => getLang() === 'en' ? 'en-GB' : 'fr-FR';
-  const formatNumber = (value, options = {}) => {
+  const numberLocale = (language = getLang()) => language === 'en' ? 'en-GB' : 'fr-FR';
+  const formatNumber = (value, options = {}, language = getLang()) => {
     const n = Number(value);
     if (!Number.isFinite(n)) return '·';
-    return new Intl.NumberFormat(numberLocale(), options).format(n);
+    return new Intl.NumberFormat(numberLocale(language), options).format(n);
   };
   const number = (value, digits = 0) => formatNumber(value, {
     minimumFractionDigits: digits, maximumFractionDigits: digits,

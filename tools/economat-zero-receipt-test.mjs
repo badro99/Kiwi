@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { html, elements } from './ui-runtime-harness.mjs';
 const read = f => fs.readFileSync(f, 'utf8');
 const moves = [], warnings = [], modals = [];
 let doc;
 const window = {
   KiwiStore: { define: (_name, options) => { doc = options.blank(); return { get: () => doc, update: fn => { doc = fn(doc); } }; } },
-  KiwiInventory: { add: m => moves.push(m), sync: async () => {}, snapshot: () => ({}), locationId: () => 'central' },
+  KiwiInventory: { add: m => moves.push(m), sync: async () => true, snapshot: () => ({}), locationId: () => 'central' },
   Kiwi: { handlers: {}, appPage() {}, modal: options => { modals.push(options); return { close() {} }; }, toast: (text, options) => { if (options.type === 'warning') warnings.push(text); } },
 };
 const fields = { 'eco-item': 'donated', 'eco-qty': '2', 'eco-cost': '0' };
@@ -15,7 +16,10 @@ const realm = { window, document, setTimeout() {} };
 vm.runInNewContext(read('assets/procurement.js'), realm);
 vm.runInNewContext(read('assets/hotel-economat.js'), realm);
 window.Kiwi.handlers['eco-receive']();
-assert.match(modals[0].body, /id="eco-cost"[^>]*min="0"/);
+// Text + decimal input mode preserves a French comma; the real handler below guards zero/negative costs.
+const costInput = elements(html(modals[0].body), 'input').find(el => el.getAttribute('id') === 'eco-cost');
+assert.equal(costInput.getAttribute('type'), 'text');
+assert.equal(costInput.getAttribute('inputmode'), 'decimal');
 await window.Kiwi.handlers['eco-receive-save']();
 assert.equal(moves.length, 1);
 assert.equal(moves[0].unitCost, 0, 'free stock has a known zero cost');

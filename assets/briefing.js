@@ -154,7 +154,9 @@
    * store. An operator hopping between two stores filed each one's days in
    * the other's document (maison-121 <-> la-maison-en-vogue, 2026-09-26). */
 
-  var rules = window.KiwiBriefingRules.createRules({ limit: limit, businessDay: businessDay, dayBoundsAt: dayBoundsAt, now: function () { return Date.now(); }, money: function (value) {
+  var rules = window.KiwiBriefingRules.createRules({ limit: limit, businessDay: businessDay, dayBoundsAt: dayBoundsAt, now: function () { return Date.now(); }, number: function (value, language, opts) {
+    return window.KiwiNumber?.format(value, opts || { maximumFractionDigits: 2 }, language) ?? Number(value).toLocaleString(language === 'en' ? 'en-GB' : 'fr-FR', opts || { maximumFractionDigits: 2 });
+  }, money: function (value) {
     var opts = { maximumFractionDigits: 2 };
     return window.KiwiNumber?.format(value, opts) ?? value.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', opts);
   } });

@@ -7,6 +7,7 @@
   /* stock-part:strings */
   const STR = {
     fr: {
+      supplierExample: 'Ex. Olives du Souss', cityExample: 'Casablanca', categoryExample: 'Ex. Surgelés', deliveryExample: 'hebdomadaire · mardi-vendredi…',
       priceSupplier: "Fournisseur", priceEvolution: "Évolution des tarifs fournisseurs", priceStableBody: "Tous les tarifs facturés lors des dernières réceptions sont stables. Kiwi analyse automatiquement l'historique des bons de livraison pour détecter les variations de prix.", priceImpact: "Impact sur les recettes :", pricePortion: "portion", priceVariation: "variation de tarif sur", priceUnavailable: "pourcentage indisponible", priceFrom: "De", priceTo: "à",
       moveTitle: "Mouvement",       moveCurrent: "Stock actuel",
       moveReason: "Motif",       moveReceipt: "Réception fournisseur",
@@ -374,6 +375,7 @@
       venueAll: 'Tous', venueAtlas: 'Café Atlas', venueMaison: 'Maison Mansour', venueSpa: 'Spa Bahia',
     },
     en: {
+      supplierExample: 'E.g. Souss Olives', cityExample: 'Casablanca', categoryExample: 'E.g. Frozen foods', deliveryExample: 'weekly · Tuesday-Friday…',
       priceSupplier: "Supplier", priceEvolution: "Supplier price changes", priceStableBody: "All prices from recent receipts are stable. Kiwi analyses delivery history to detect price changes.", priceImpact: "Recipe impact:", pricePortion: "portion", priceVariation: "price change for", priceUnavailable: "percentage unavailable", priceFrom: "From", priceTo: "to",
       moveTitle: "Movement",       moveCurrent: "Current stock",
       moveReason: "Reason",       moveReceipt: "Supplier receipt",
@@ -710,6 +712,7 @@
       venueAll: 'All', venueAtlas: 'Café Atlas', venueMaison: 'Maison Mansour', venueSpa: 'Spa Bahia',
     },
     ar: {
+      supplierExample: 'مثال: زيتون سوس', cityExample: 'الدار البيضاء', categoryExample: 'مثال: مجمدات', deliveryExample: 'أسبوعيًا · الثلاثاء إلى الجمعة…',
       priceSupplier: "المورد", priceEvolution: "تغيرات أسعار الموردين", priceStableBody: "جميع أسعار الاستلامات الأخيرة مستقرة. يحلل Kiwi سجل التسليم لاكتشاف تغيرات الأسعار.", priceImpact: "التأثير على الوصفات:", pricePortion: "حصة", priceVariation: "تغير السعر للمنتج", priceUnavailable: "النسبة غير متاحة", priceFrom: "من", priceTo: "إلى",
       moveTitle: "حركة",       moveCurrent: "المخزون الحالي",
       moveReason: "السبب",       moveReceipt: "استلام من المورد",

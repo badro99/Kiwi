@@ -332,13 +332,13 @@ function cuTypeEditor(id) {
       desc: tx('Décrivez ce que le client verra sur votre lien de réservation.'), width: 680,
       body: `<div class="hx-room-form hx-type-form">
         <label class="hx-room-form-wide"><span>${tx('Nom affiché')}</span><input data-hx-type-name maxlength="60" value="${esc(type?.name || '')}" placeholder="${tx('Ex. Suite Atlas')}"></label>
-        <label class="hx-room-form-wide"><span>${tx('Tarif par nuit')} <small>· MAD · ${tx('optionnel')}</small></span><input data-hx-type-rate type="number" inputmode="decimal" min="0" step="1" value="${type?.rate == null ? '' : type.rate}" placeholder="${tx('Utiliser le tarif général')}"></label>
+        <label class="hx-room-form-wide"><span>${tx('Tarif par nuit')} <small>· MAD · ${tx('optionnel')}</small></span><input data-hx-type-rate type="number" inputmode="decimal" min="0" step="0.01" value="${type?.rate == null ? '' : type.rate}" placeholder="${tx('Utiliser le tarif général')}"></label>
         <div class="hx-room-form-wide"><span style="font-size:12px;font-weight:600;">${tx('Suppléments repas')} <small style="font-weight:400;">· ${tx('MAD par personne et par nuit · optionnel · servent aux voyageurs sans compte commercial')}</small></span>
           <div class="hx-room-form hx-type-form" style="margin-top:6px;">
-            <label><span>${tx('Petit-déjeuner')}</span><input data-hx-type-board-bb type="number" inputmode="decimal" min="0" step="1" value="${type?.boardRates?.bb ?? ''}" placeholder="·"></label>
-            <label><span>${tx('Demi-pension · déjeuner')}</span><input data-hx-type-board-hb_lunch type="number" inputmode="decimal" min="0" step="1" value="${type?.boardRates?.hb_lunch ?? ''}" placeholder="·"></label>
-            <label><span>${tx('Demi-pension · dîner')}</span><input data-hx-type-board-hb_dinner type="number" inputmode="decimal" min="0" step="1" value="${type?.boardRates?.hb_dinner ?? ''}" placeholder="·"></label>
-            <label><span>${tx('Pension complète')}</span><input data-hx-type-board-full_board type="number" inputmode="decimal" min="0" step="1" value="${type?.boardRates?.full_board ?? ''}" placeholder="·"></label>
+            <label><span>${tx('Petit-déjeuner')}</span><input data-hx-type-board-bb type="number" inputmode="decimal" min="0" step="0.01" value="${type?.boardRates?.bb ?? ''}" placeholder="·"></label>
+            <label><span>${tx('Demi-pension · déjeuner')}</span><input data-hx-type-board-hb_lunch type="number" inputmode="decimal" min="0" step="0.01" value="${type?.boardRates?.hb_lunch ?? ''}" placeholder="·"></label>
+            <label><span>${tx('Demi-pension · dîner')}</span><input data-hx-type-board-hb_dinner type="number" inputmode="decimal" min="0" step="0.01" value="${type?.boardRates?.hb_dinner ?? ''}" placeholder="·"></label>
+            <label><span>${tx('Pension complète')}</span><input data-hx-type-board-full_board type="number" inputmode="decimal" min="0" step="0.01" value="${type?.boardRates?.full_board ?? ''}" placeholder="·"></label>
           </div>
         </div>
         <label class="hx-room-form-wide"><span>${tx('Description publique')}</span><textarea data-hx-type-description maxlength="300" rows="3" placeholder="${tx('Une chambre calme et lumineuse, idéale pour…')}">${esc(type?.description || '')}</textarea></label>
@@ -1534,7 +1534,7 @@ function cuIntelBody() {
     scope.cuStripUnknown = total > 0 && !tonight.known;
     const openBalance = folios.reduce((sum, folio) => sum + folioTotal(folio), 0);
     const configuredRates = cuTypes().map((type) => type.rate == null ? st.baseRate : type.rate).filter((rate) => rate != null && Number.isFinite(+rate));
-    const averageRate = configuredRates.length ? Math.round(configuredRates.reduce((sum, rate) => sum + +rate, 0) / configuredRates.length) : null;
+    const averageRate = configuredRates.length ? Math.round(configuredRates.reduce((sum, rate) => sum + Math.round(+rate * 100), 0) / configuredRates.length) / 100 : null;
     const activeChannels = cuChannelState.loaded ? cuChannelState.rows.filter((row) => row.status === 'active').length : null;
     const recommendations = [];
     if (!rooms.length) recommendations.push([tx('Configurer les chambres'), tx('Le plan, les séjours, le ménage et les prévisions ont besoin de chambres réelles.')]);
@@ -1549,7 +1549,7 @@ function cuIntelBody() {
         <div class="hx-kpi"><div class="l">${tx('Occupation ce soir')}</div><div class="v">${occupancy == null ? '·' : ltr(occupancy + ' %')}</div><div class="d">${total === 0 ? tx('aucune chambre déclarée') : (known ? tx(occupied === 1 ? '{n} vendue sur {t}' : '{n} vendues sur {t}', { n: occupied, t: total }) + (unavailable ? ' · ' + tx('{n} hors-service', { n: unavailable }) : '') : tx('lecture des séjours…'))}</div></div>
         <div class="hx-kpi"><div class="l">${tx('Arrivées du jour')}</div><div class="v">${tonight.known ? arrivals : '·'}</div><div class="d">${tx('selon les réservations')}</div></div>
         <div class="hx-kpi"><div class="l">${tx('Folios ouverts')}</div><div class="v">${folios.length}</div><div class="d">${tx('{amount} à suivre', { amount: MAD(openBalance) })}</div></div>
-        <div class="hx-kpi"><div class="l">${tx('Tarif moyen configuré')}</div><div class="v">${averageRate == null ? '·' : ltr(fmt(averageRate) + ' <small>MAD</small>')}</div><div class="d">${tx('moyenne des tarifs de vos types')}</div></div>
+        <div class="hx-kpi"><div class="l">${tx('Tarif moyen configuré')}</div><div class="v">${averageRate == null ? '·' : ltr(new Intl.NumberFormat(hxLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(averageRate) + ' <small>MAD</small>')}</div><div class="d">${tx('moyenne des tarifs de vos types')}</div></div>
       </div>
       <div class="hx-h"><span class="t">${tx('Décisions du jour')}</span><span class="s">${tx('calculées uniquement avec les données visibles de cet établissement')}</span></div>
       <div class="block" style="padding:8px 14px;">

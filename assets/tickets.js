@@ -401,21 +401,8 @@ import { draftFallback } from './tickets-recovery.js?v=2';
       'toast.classified': 'صُنفت {number}',
     },
   };
-  /* La taxonomie vient de l'API en français et en anglais. L'arabe vit ici,
-     par identifiant, pour ne rien changer à la réponse de /api/tickets ; un
-     label.ar envoyé un jour par le serveur passerait devant. */
-  const TAXONOMY_AR = {
-    bug: 'خلل', improvement: 'تحسين', feature: 'ميزة جديدة', question: 'سؤال', unsorted: 'غير مصنفة',
-    caisse: 'الصندوق', dashboard: 'لوحة التحكم', serveur: 'تطبيق النادل', cuisine: 'المطبخ',
-    printing: 'الطباعة', sync: 'المزامنة', 'reports-money': 'التقارير والمال', 'menu-stock': 'القائمة والمخزون',
-    verticals: 'المهن', 'accounts-access': 'الحسابات والصلاحيات', site: 'الموقع العام', tooling: 'أدوات داخلية',
-    'cross-product': 'مشترك بين الأقسام',
-    'wrong-figures': 'أرقام خاطئة', 'not-syncing': 'لا تتم المزامنة', 'crash-blank': 'توقف أو شاشة فارغة',
-    'wrong-behavior': 'سلوك غير صحيح', 'display-layout': 'العرض والتنسيق', 'printing-output': 'ناتج الطباعة',
-    performance: 'الأداء', 'security-access': 'الأمان والصلاحيات', 'ux-flow': 'مسار الاستخدام',
-    'copy-translation': 'النصوص والترجمة', 'visual-design': 'التصميم المرئي', 'adapt-to-vertical': 'تكييف حسب المهنة',
-    'new-module': 'وحدة جديدة', integration: 'تكامل', reporting: 'التقارير', hardware: 'الأجهزة',
-  };
+  // Arabic taxonomy labels now arrive from the server with FR/EN.
+  const TAXONOMY_AR = Object.freeze({});
   const LANGS = ['fr', 'en', 'ar'];
   function resolveLang() {
     const pick = (value) => {

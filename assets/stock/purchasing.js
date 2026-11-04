@@ -588,7 +588,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
         <div class="st-mb-row">
           <div class="st-mb-field">
             <label class="st-mb-label">${esc(t('supName'))}</label>
-            <input class="st-mb-input" type="text" placeholder="Ex. Olives du Souss" value="${esc(existing?.name || '')}" data-stock-sup-name />
+            <input class="st-mb-input" type="text" placeholder="${esc(t('supplierExample'))}" value="${esc(existing?.name || '')}" data-stock-sup-name />
           </div>
           <div class="st-mb-field">
             <label class="st-mb-label">${esc(t('supCat'))}</label>
@@ -602,7 +602,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
           </div>
           <div class="st-mb-field">
             <label class="st-mb-label">${esc(t('supLoc'))}</label>
-            <input class="st-mb-input" type="text" placeholder="Casablanca" value="${esc(existing?.location || '')}" data-stock-sup-loc />
+            <input class="st-mb-input" type="text" placeholder="${esc(t('cityExample'))}" value="${esc(existing?.location || '')}" data-stock-sup-loc />
           </div>
         </div>
         <div class="st-mb-row">
@@ -616,7 +616,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
           </div>
           <div class="st-mb-field">
             <label class="st-mb-label">${esc(t('supDeliv'))}</label>
-            <input class="st-mb-input" type="text" placeholder="hebdomadaire · mardi-vendredi…" value="${esc(existing?.deliverySchedule || '')}" data-stock-sup-deliv />
+            <input class="st-mb-input" type="text" placeholder="${esc(t('deliveryExample'))}" value="${esc(existing?.deliverySchedule || '')}" data-stock-sup-deliv />
           </div>
         </div>
         <div class="st-mb-row">

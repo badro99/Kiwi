@@ -1,5 +1,5 @@
 {
-  "sha256": "d8801ab491e7db48b72fc2c0ef20fe92ecf783f09edbfdba454a09176e92eec8",
+  "sha256": "9d4a1c8f94447e4891397fec2a31cee0b36132b56167332509aeca2f0bc1625a",
   "parts": [
     {
       "name": "data",
@@ -38,48 +38,48 @@
       "fragments": [
         {
           "name": "loadTickets",
-          "start": 41749,
-          "end": 44656,
+          "start": 40616,
+          "end": 43523,
           "offset": 741,
           "length": 2348,
           "replacement": "  function loadTickets(...args) { return dataPart.loadTickets(...args); }"
         },
         {
           "name": "newIdempotencyKey",
-          "start": 50618,
-          "end": 50832,
+          "start": 49485,
+          "end": 49699,
           "offset": 3091,
           "length": 213,
           "replacement": "  function newIdempotencyKey(...args) { return dataPart.newIdempotencyKey(...args); }"
         },
         {
           "name": "publish",
-          "start": 50834,
-          "end": 53220,
+          "start": 49701,
+          "end": 52087,
           "offset": 3306,
           "length": 2721,
           "replacement": "  function publish(...args) { return dataPart.publish(...args); }"
         },
         {
           "name": "publishFollowup",
-          "start": 53222,
-          "end": 54943,
+          "start": 52089,
+          "end": 53810,
           "offset": 6029,
           "length": 2073,
           "replacement": "  function publishFollowup(...args) { return dataPart.publishFollowup(...args); }"
         },
         {
           "name": "moveTicket",
-          "start": 57421,
-          "end": 58290,
+          "start": 56288,
+          "end": 57157,
           "offset": 8104,
           "length": 1221,
           "replacement": "  function moveTicket(...args) { return dataPart.moveTicket(...args); }"
         },
         {
           "name": "saveClassification",
-          "start": 58680,
-          "end": 60273,
+          "start": 57547,
+          "end": 59140,
           "offset": 9327,
           "length": 1945,
           "replacement": "  function saveClassification(...args) { return dataPart.saveClassification(...args); }"
@@ -158,192 +158,192 @@
       "fragments": [
         {
           "name": "saveFilters",
-          "start": 26677,
-          "end": 27000,
+          "start": 25544,
+          "end": 25867,
           "offset": 750,
           "length": 127,
           "replacement": "  function saveFilters(...args) { return boardPart.saveFilters(...args); }"
         },
         {
           "name": "labelOf",
-          "start": 27002,
-          "end": 27201,
+          "start": 25869,
+          "end": 26068,
           "offset": 879,
           "length": 198,
           "replacement": "  function labelOf(...args) { return boardPart.labelOf(...args); }"
         },
         {
           "name": "taxonomyItem",
-          "start": 27203,
-          "end": 27484,
+          "start": 26070,
+          "end": 26351,
           "offset": 1079,
           "length": 280,
           "replacement": "  function taxonomyItem(...args) { return boardPart.taxonomyItem(...args); }"
         },
         {
           "name": "replaceSelectOptions",
-          "start": 27486,
-          "end": 28009,
+          "start": 26353,
+          "end": 26876,
           "offset": 1361,
           "length": 522,
           "replacement": "  function replaceSelectOptions(...args) { return boardPart.replaceSelectOptions(...args); }"
         },
         {
           "name": "subkindsFor",
-          "start": 28011,
-          "end": 28157,
+          "start": 26878,
+          "end": 27024,
           "offset": 1885,
           "length": 145,
           "replacement": "  function subkindsFor(...args) { return boardPart.subkindsFor(...args); }"
         },
         {
           "name": "make",
-          "start": 28488,
-          "end": 28707,
+          "start": 27355,
+          "end": 27574,
           "offset": 2032,
           "length": 218,
           "replacement": "  function make(...args) { return boardPart.make(...args); }"
         },
         {
           "name": "formatTime",
-          "start": 28709,
-          "end": 29382,
+          "start": 27576,
+          "end": 28249,
           "offset": 2252,
           "length": 672,
           "replacement": "  function formatTime(...args) { return boardPart.formatTime(...args); }"
         },
         {
           "name": "daysRemaining",
-          "start": 29384,
-          "end": 29498,
+          "start": 28251,
+          "end": 28365,
           "offset": 2926,
           "length": 113,
           "replacement": "  function daysRemaining(...args) { return boardPart.daysRemaining(...args); }"
         },
         {
           "name": "actionButton",
-          "start": 29500,
-          "end": 30135,
+          "start": 28367,
+          "end": 29002,
           "offset": 3041,
           "length": 634,
           "replacement": "  function actionButton(...args) { return boardPart.actionButton(...args); }"
         },
         {
           "name": "actionArea",
-          "start": 30137,
-          "end": 30759,
+          "start": 29004,
+          "end": 29626,
           "offset": 3677,
           "length": 621,
           "replacement": "  function actionArea(...args) { return boardPart.actionArea(...args); }"
         },
         {
           "name": "copyButton",
-          "start": 30761,
-          "end": 31287,
+          "start": 29628,
+          "end": 30154,
           "offset": 4300,
           "length": 525,
           "replacement": "  function copyButton(...args) { return boardPart.copyButton(...args); }"
         },
         {
           "name": "imageGallery",
-          "start": 31289,
-          "end": 31939,
+          "start": 30156,
+          "end": 30806,
           "offset": 4827,
           "length": 649,
           "replacement": "  function imageGallery(...args) { return boardPart.imageGallery(...args); }"
         },
         {
           "name": "classificationSummary",
-          "start": 32690,
-          "end": 34083,
+          "start": 31557,
+          "end": 32950,
           "offset": 5478,
           "length": 1392,
           "replacement": "  function classificationSummary(...args) { return boardPart.classificationSummary(...args); }"
         },
         {
           "name": "classificationEditor",
-          "start": 34085,
-          "end": 35907,
+          "start": 32952,
+          "end": 34774,
           "offset": 6872,
           "length": 1821,
           "replacement": "  function classificationEditor(...args) { return boardPart.classificationEditor(...args); }"
         },
         {
           "name": "ticketCard",
-          "start": 35909,
-          "end": 37253,
+          "start": 34776,
+          "end": 36120,
           "offset": 8695,
           "length": 1343,
           "replacement": "  function ticketCard(...args) { return boardPart.ticketCard(...args); }"
         },
         {
           "name": "emptyState",
-          "start": 37255,
-          "end": 37557,
+          "start": 36122,
+          "end": 36424,
           "offset": 10040,
           "length": 301,
           "replacement": "  function emptyState(...args) { return boardPart.emptyState(...args); }"
         },
         {
           "name": "filterButton",
-          "start": 37559,
-          "end": 37929,
+          "start": 36426,
+          "end": 36796,
           "offset": 10343,
           "length": 369,
           "replacement": "  function filterButton(...args) { return boardPart.filterButton(...args); }"
         },
         {
           "name": "renderFilters",
-          "start": 37931,
-          "end": 39617,
+          "start": 36798,
+          "end": 38484,
           "offset": 10714,
           "length": 1685,
           "replacement": "  function renderFilters(...args) { return boardPart.renderFilters(...args); }"
         },
         {
           "name": "ticketMatchesFilters",
-          "start": 39619,
-          "end": 39908,
+          "start": 38486,
+          "end": 38775,
           "offset": 12401,
           "length": 288,
           "replacement": "  function ticketMatchesFilters(...args) { return boardPart.ticketMatchesFilters(...args); }"
         },
         {
           "name": "render",
-          "start": 39910,
-          "end": 40651,
+          "start": 38777,
+          "end": 39518,
           "offset": 12691,
           "length": 740,
           "replacement": "  function render(...args) { return boardPart.render(...args); }"
         },
         {
           "name": "renderLoading",
-          "start": 40653,
-          "end": 40896,
+          "start": 39520,
+          "end": 39763,
           "offset": 13433,
           "length": 242,
           "replacement": "  function renderLoading(...args) { return boardPart.renderLoading(...args); }"
         },
         {
           "name": "toggleClassification",
-          "start": 58292,
-          "end": 58678,
+          "start": 57159,
+          "end": 57545,
           "offset": 13677,
           "length": 385,
           "replacement": "  function toggleClassification(...args) { return boardPart.toggleClassification(...args); }"
         },
         {
           "name": "applyFilter",
-          "start": 60275,
-          "end": 60612,
+          "start": 59142,
+          "end": 59479,
           "offset": 14064,
           "length": 336,
           "replacement": "  function applyFilter(...args) { return boardPart.applyFilter(...args); }"
         },
         {
           "name": "activateTab",
-          "start": 60614,
-          "end": 60925,
+          "start": 59481,
+          "end": 59792,
           "offset": 14402,
           "length": 310,
           "replacement": "  function activateTab(...args) { return boardPart.activateTab(...args); }"
@@ -408,104 +408,104 @@
       "fragments": [
         {
           "name": "syncComposerSubkinds",
-          "start": 41212,
-          "end": 41496,
+          "start": 40079,
+          "end": 40363,
           "offset": 740,
           "length": 283,
           "replacement": "  function syncComposerSubkinds(...args) { return composerPart.syncComposerSubkinds(...args); }"
         },
         {
           "name": "configureComposerClassification",
-          "start": 41498,
-          "end": 41747,
+          "start": 40365,
+          "end": 40614,
           "offset": 1025,
           "length": 248,
           "replacement": "  function configureComposerClassification(...args) { return composerPart.configureComposerClassification(...args); }"
         },
         {
           "name": "openComposer",
-          "start": 45132,
-          "end": 45390,
+          "start": 43999,
+          "end": 44257,
           "offset": 1275,
           "length": 257,
           "replacement": "  function openComposer(...args) { return composerPart.openComposer(...args); }"
         },
         {
           "name": "resetComposer",
-          "start": 45392,
-          "end": 45816,
+          "start": 44259,
+          "end": 44683,
           "offset": 1534,
           "length": 423,
           "replacement": "  function resetComposer(...args) { return composerPart.resetComposer(...args); }"
         },
         {
           "name": "closeComposer",
-          "start": 45818,
-          "end": 45921,
+          "start": 44685,
+          "end": 44788,
           "offset": 1959,
           "length": 102,
           "replacement": "  function closeComposer(...args) { return composerPart.closeComposer(...args); }"
         },
         {
           "name": "fileKey",
-          "start": 46690,
-          "end": 46785,
+          "start": 45557,
+          "end": 45652,
           "offset": 2063,
           "length": 94,
           "replacement": "  function fileKey(...args) { return composerPart.fileKey(...args); }"
         },
         {
           "name": "renderSelectedImages",
-          "start": 46787,
-          "end": 47690,
+          "start": 45654,
+          "end": 46557,
           "offset": 2159,
           "length": 902,
           "replacement": "  function renderSelectedImages(...args) { return composerPart.renderSelectedImages(...args); }"
         },
         {
           "name": "addFiles",
-          "start": 47692,
-          "end": 48698,
+          "start": 46559,
+          "end": 47565,
           "offset": 3063,
           "length": 912,
           "replacement": "  function addFiles(...args) { return composerPart.addFiles(...args); }"
         },
         {
           "name": "fallbackCopyText",
-          "start": 54945,
-          "end": 55353,
+          "start": 53812,
+          "end": 54220,
           "offset": 3977,
           "length": 407,
           "replacement": "  function fallbackCopyText(...args) { return composerPart.fallbackCopyText(...args); }"
         },
         {
           "name": "copyText",
-          "start": 55355,
-          "end": 55729,
+          "start": 54222,
+          "end": 54596,
           "offset": 4386,
           "length": 373,
           "replacement": "  function copyText(...args) { return composerPart.copyText(...args); }"
         },
         {
           "name": "blobToPng",
-          "start": 55731,
-          "end": 56477,
+          "start": 54598,
+          "end": 55344,
           "offset": 4761,
           "length": 745,
           "replacement": "  function blobToPng(...args) { return composerPart.blobToPng(...args); }"
         },
         {
           "name": "showImageCopyFallback",
-          "start": 56479,
-          "end": 56601,
+          "start": 55346,
+          "end": 55468,
           "offset": 5508,
           "length": 121,
           "replacement": "  function showImageCopyFallback(...args) { return composerPart.showImageCopyFallback(...args); }"
         },
         {
           "name": "copyImage",
-          "start": 56603,
-          "end": 57419,
+          "start": 55470,
+          "end": 56286,
           "offset": 5631,
           "length": 815,
           "replacement": "  function copyImage(...args) { return composerPart.copyImage(...args); }"
@@ -562,48 +562,48 @@
       "fragments": [
         {
           "name": "followupHistory",
-          "start": 31941,
-          "end": 32688,
+          "start": 30808,
+          "end": 31555,
           "offset": 610,
           "length": 746,
           "replacement": "  function followupHistory(...args) { return threadPart.followupHistory(...args); }"
         },
         {
           "name": "openFollowup",
-          "start": 45923,
-          "end": 46195,
+          "start": 44790,
+          "end": 45062,
           "offset": 1358,
           "length": 271,
           "replacement": "  function openFollowup(...args) { return threadPart.openFollowup(...args); }"
         },
         {
           "name": "resetFollowup",
-          "start": 46197,
-          "end": 46564,
+          "start": 45064,
+          "end": 45431,
           "offset": 1631,
           "length": 366,
           "replacement": "  function resetFollowup(...args) { return threadPart.resetFollowup(...args); }"
         },
         {
           "name": "closeFollowup",
-          "start": 46566,
-          "end": 46688,
+          "start": 45433,
+          "end": 45555,
           "offset": 1999,
           "length": 121,
           "replacement": "  function closeFollowup(...args) { return threadPart.closeFollowup(...args); }"
         },
         {
           "name": "renderFollowupImages",
-          "start": 48700,
-          "end": 49667,
+          "start": 47567,
+          "end": 48534,
           "offset": 2122,
           "length": 966,
           "replacement": "  function renderFollowupImages(...args) { return threadPart.renderFollowupImages(...args); }"
         },
         {
           "name": "addFollowupFiles",
-          "start": 49669,
-          "end": 50616,
+          "start": 48536,
+          "end": 49483,
           "offset": 3090,
           "length": 946,
           "replacement": "  function addFollowupFiles(...args) { return threadPart.addFollowupFiles(...args); }"
@@ -625,268 +625,268 @@
   ],
   "edits": [
     {
-      "start": 39944,
-      "end": 42292,
+      "start": 38811,
+      "end": 41159,
       "replacement": "  function loadTickets(...args) { return dataPart.loadTickets(...args); }"
     },
     {
-      "start": 48269,
-      "end": 48482,
+      "start": 47136,
+      "end": 47349,
       "replacement": "  function newIdempotencyKey(...args) { return dataPart.newIdempotencyKey(...args); }"
     },
     {
-      "start": 48484,
-      "end": 51205,
+      "start": 47351,
+      "end": 50072,
       "replacement": "  function publish(...args) { return dataPart.publish(...args); }"
     },
     {
-      "start": 51207,
-      "end": 53280,
+      "start": 50074,
+      "end": 52147,
       "replacement": "  function publishFollowup(...args) { return dataPart.publishFollowup(...args); }"
     },
     {
-      "start": 55753,
-      "end": 56974,
+      "start": 54620,
+      "end": 55841,
       "replacement": "  function moveTicket(...args) { return dataPart.moveTicket(...args); }"
     },
     {
-      "start": 57363,
-      "end": 59308,
+      "start": 56230,
+      "end": 58175,
       "replacement": "  function saveClassification(...args) { return dataPart.saveClassification(...args); }"
     },
     {
-      "start": 25091,
-      "end": 25218,
+      "start": 23958,
+      "end": 24085,
       "replacement": "  function saveFilters(...args) { return boardPart.saveFilters(...args); }"
     },
     {
-      "start": 25220,
-      "end": 25418,
+      "start": 24087,
+      "end": 24285,
       "replacement": "  function labelOf(...args) { return boardPart.labelOf(...args); }"
     },
     {
-      "start": 25420,
-      "end": 25700,
+      "start": 24287,
+      "end": 24567,
       "replacement": "  function taxonomyItem(...args) { return boardPart.taxonomyItem(...args); }"
     },
     {
-      "start": 25702,
-      "end": 26224,
+      "start": 24569,
+      "end": 25091,
       "replacement": "  function replaceSelectOptions(...args) { return boardPart.replaceSelectOptions(...args); }"
     },
     {
-      "start": 26226,
-      "end": 26371,
+      "start": 25093,
+      "end": 25238,
       "replacement": "  function subkindsFor(...args) { return boardPart.subkindsFor(...args); }"
     },
     {
-      "start": 26702,
-      "end": 26920,
+      "start": 25569,
+      "end": 25787,
       "replacement": "  function make(...args) { return boardPart.make(...args); }"
     },
     {
-      "start": 26922,
-      "end": 27594,
+      "start": 25789,
+      "end": 26461,
       "replacement": "  function formatTime(...args) { return boardPart.formatTime(...args); }"
     },
     {
-      "start": 27596,
-      "end": 27709,
+      "start": 26463,
+      "end": 26576,
       "replacement": "  function daysRemaining(...args) { return boardPart.daysRemaining(...args); }"
     },
     {
-      "start": 27711,
-      "end": 28345,
+      "start": 26578,
+      "end": 27212,
       "replacement": "  function actionButton(...args) { return boardPart.actionButton(...args); }"
     },
     {
-      "start": 28347,
-      "end": 28968,
+      "start": 27214,
+      "end": 27835,
       "replacement": "  function actionArea(...args) { return boardPart.actionArea(...args); }"
     },
     {
-      "start": 28970,
-      "end": 29495,
+      "start": 27837,
+      "end": 28362,
       "replacement": "  function copyButton(...args) { return boardPart.copyButton(...args); }"
     },
     {
-      "start": 29497,
-      "end": 30146,
+      "start": 28364,
+      "end": 29013,
       "replacement": "  function imageGallery(...args) { return boardPart.imageGallery(...args); }"
     },
     {
-      "start": 30896,
-      "end": 32288,
+      "start": 29763,
+      "end": 31155,
       "replacement": "  function classificationSummary(...args) { return boardPart.classificationSummary(...args); }"
     },
     {
-      "start": 32290,
-      "end": 34111,
+      "start": 31157,
+      "end": 32978,
       "replacement": "  function classificationEditor(...args) { return boardPart.classificationEditor(...args); }"
     },
     {
-      "start": 34113,
-      "end": 35456,
+      "start": 32980,
+      "end": 34323,
       "replacement": "  function ticketCard(...args) { return boardPart.ticketCard(...args); }"
     },
     {
-      "start": 35458,
-      "end": 35759,
+      "start": 34325,
+      "end": 34626,
       "replacement": "  function emptyState(...args) { return boardPart.emptyState(...args); }"
     },
     {
-      "start": 35761,
-      "end": 36130,
+      "start": 34628,
+      "end": 34997,
       "replacement": "  function filterButton(...args) { return boardPart.filterButton(...args); }"
     },
     {
-      "start": 36132,
-      "end": 37817,
+      "start": 34999,
+      "end": 36684,
       "replacement": "  function renderFilters(...args) { return boardPart.renderFilters(...args); }"
     },
     {
-      "start": 37819,
-      "end": 38107,
+      "start": 36686,
+      "end": 36974,
       "replacement": "  function ticketMatchesFilters(...args) { return boardPart.ticketMatchesFilters(...args); }"
     },
     {
-      "start": 38109,
-      "end": 38849,
+      "start": 36976,
+      "end": 37716,
       "replacement": "  function render(...args) { return boardPart.render(...args); }"
     },
     {
-      "start": 38851,
-      "end": 39093,
+      "start": 37718,
+      "end": 37960,
       "replacement": "  function renderLoading(...args) { return boardPart.renderLoading(...args); }"
     },
     {
-      "start": 56976,
-      "end": 57361,
+      "start": 55843,
+      "end": 56228,
       "replacement": "  function toggleClassification(...args) { return boardPart.toggleClassification(...args); }"
     },
     {
-      "start": 59310,
-      "end": 59646,
+      "start": 58177,
+      "end": 58513,
       "replacement": "  function applyFilter(...args) { return boardPart.applyFilter(...args); }"
     },
     {
-      "start": 59648,
-      "end": 59958,
+      "start": 58515,
+      "end": 58825,
       "replacement": "  function activateTab(...args) { return boardPart.activateTab(...args); }"
     },
     {
-      "start": 39409,
-      "end": 39692,
+      "start": 38276,
+      "end": 38559,
       "replacement": "  function syncComposerSubkinds(...args) { return composerPart.syncComposerSubkinds(...args); }"
     },
     {
-      "start": 39694,
-      "end": 39942,
+      "start": 38561,
+      "end": 38809,
       "replacement": "  function configureComposerClassification(...args) { return composerPart.configureComposerClassification(...args); }"
     },
     {
-      "start": 42887,
-      "end": 43144,
+      "start": 41754,
+      "end": 42011,
       "replacement": "  function openComposer(...args) { return composerPart.openComposer(...args); }"
     },
     {
-      "start": 43146,
-      "end": 43569,
+      "start": 42013,
+      "end": 42436,
       "replacement": "  function resetComposer(...args) { return composerPart.resetComposer(...args); }"
     },
     {
-      "start": 43571,
-      "end": 43673,
+      "start": 42438,
+      "end": 42540,
       "replacement": "  function closeComposer(...args) { return composerPart.closeComposer(...args); }"
     },
     {
-      "start": 44439,
-      "end": 44533,
+      "start": 43306,
+      "end": 43400,
       "replacement": "  function fileKey(...args) { return composerPart.fileKey(...args); }"
     },
     {
-      "start": 44535,
-      "end": 45437,
+      "start": 43402,
+      "end": 44304,
       "replacement": "  function renderSelectedImages(...args) { return composerPart.renderSelectedImages(...args); }"
     },
     {
-      "start": 45439,
-      "end": 46351,
+      "start": 44306,
+      "end": 45218,
       "replacement": "  function addFiles(...args) { return composerPart.addFiles(...args); }"
     },
     {
-      "start": 53282,
-      "end": 53689,
+      "start": 52149,
+      "end": 52556,
       "replacement": "  function fallbackCopyText(...args) { return composerPart.fallbackCopyText(...args); }"
     },
     {
-      "start": 53691,
-      "end": 54064,
+      "start": 52558,
+      "end": 52931,
       "replacement": "  function copyText(...args) { return composerPart.copyText(...args); }"
     },
     {
-      "start": 54066,
-      "end": 54811,
+      "start": 52933,
+      "end": 53678,
       "replacement": "  function blobToPng(...args) { return composerPart.blobToPng(...args); }"
     },
     {
-      "start": 54813,
-      "end": 54934,
+      "start": 53680,
+      "end": 53801,
       "replacement": "  function showImageCopyFallback(...args) { return composerPart.showImageCopyFallback(...args); }"
     },
     {
-      "start": 54936,
-      "end": 55751,
+      "start": 53803,
+      "end": 54618,
       "replacement": "  function copyImage(...args) { return composerPart.copyImage(...args); }"
     },
     {
-      "start": 30148,
-      "end": 30894,
+      "start": 29015,
+      "end": 29761,
       "replacement": "  function followupHistory(...args) { return threadPart.followupHistory(...args); }"
     },
     {
-      "start": 43675,
-      "end": 43946,
+      "start": 42542,
+      "end": 42813,
       "replacement": "  function openFollowup(...args) { return threadPart.openFollowup(...args); }"
     },
     {
-      "start": 43948,
-      "end": 44314,
+      "start": 42815,
+      "end": 43181,
       "replacement": "  function resetFollowup(...args) { return threadPart.resetFollowup(...args); }"
     },
     {
-      "start": 44316,
-      "end": 44437,
+      "start": 43183,
+      "end": 43304,
       "replacement": "  function closeFollowup(...args) { return threadPart.closeFollowup(...args); }"
     },
     {
-      "start": 46353,
-      "end": 47319,
+      "start": 45220,
+      "end": 46186,
       "replacement": "  function renderFollowupImages(...args) { return threadPart.renderFollowupImages(...args); }"
     },
     {
-      "start": 47321,
-      "end": 48267,
+      "start": 46188,
+      "end": 47134,
       "replacement": "  function addFollowupFiles(...args) { return threadPart.addFollowupFiles(...args); }"
     },
     {
-      "start": 24089,
-      "end": 24338,
+      "start": 22956,
+      "end": 23205,
       "replacement": "  const ticketState = createTicketState({ readFilters });\n  const state = ticketState.view();"
     },
     {
-      "start": 24785,
-      "end": 24809,
+      "start": 23652,
+      "end": 23676,
       "replacement": ""
     },
     {
-      "start": 24809,
-      "end": 24841,
+      "start": 23676,
+      "end": 23708,
       "replacement": ""
     },
     {
-      "start": 59960,
-      "end": 59960,
+      "start": 58827,
+      "end": 58827,
       "replacement": "  const dataPart = createData({ $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t });\n  const boardPart = createBoard({ $, FILTER_KEY, LANG, LOCALE, TAXONOMY_AR, board, followupHistory, icons, lists, plural, state, t });\n  const composerPart = createComposer({ $, MAX_IMAGES, MAX_IMAGE_BYTES, composer, draft, draftController, fileInput, form, make, replaceSelectOptions, showToast, state, subkindsFor, t });\n  const threadPart = createThread({ $, MAX_IMAGES, MAX_IMAGE_BYTES, fileKey, followupComposer, followupFileInput, followupForm, formatTime, imageGallery, make, state, t });\n\n"
     }
   ],
