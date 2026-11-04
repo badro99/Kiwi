@@ -3,6 +3,8 @@ import briefingSource from './briefing-test-source.cjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const source = briefingSource();
 const callbacks = {};
@@ -64,4 +66,18 @@ assert.ok(line && /50 MAD/.test(line.copy.fr), 'the rule reads only the active v
 assert.equal(T.visibleLines([line], 'staff').length, 1, 'sales visibility follows the existing shop-floor sales permission');
 assert.ok(T.normalizeLine(line), 'an emitted sales line always passes the evidence gate');
 
-console.log('briefing-sales-drop-test: 12 controls passed');
+/* Le magasin dicte l'heure et la journée, pas l'appareil. */
+const storeClock = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Casablanca', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(now));
+assert.ok(line.copy.fr.includes(' à ' + storeClock + ','), 'the card time is the store clock (' + storeClock + '), never the device clock');
+const realBounds = window.KiwiDayReport.dayBounds;
+window.KiwiDayReport.dayBounds = undefined;
+const fallback = T.dayBoundsAt(now);
+assert.equal(fallback.from, Date.parse('2026-08-21T04:00:00Z'), 'without KiwiDayReport the day still starts at 05:00 in the store zone');
+assert.equal(fallback.to - fallback.from, 86400000);
+assert.equal(T.dayBoundsAt(Date.parse('2026-08-21T03:00:00Z')).from, Date.parse('2026-08-20T04:00:00Z'), 'before 05:00 store time the previous day applies');
+window.KiwiDayReport.dayBounds = realBounds;
+if (!process.env.KIWI_BRIEFING_TZ_CHILD) {
+  const child = spawnSync(process.execPath, [fileURLToPath(import.meta.url)], { env: { ...process.env, TZ: 'Pacific/Auckland', KIWI_BRIEFING_TZ_CHILD: '1' }, encoding: 'utf8' });
+  assert.equal(child.status, 0, 'the same checks hold on a device in another zone: ' + (child.stdout + child.stderr).slice(-400));
+}
+console.log('briefing-sales-drop-test: 17 controls passed');

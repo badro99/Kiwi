@@ -99,7 +99,7 @@
     var drop = Math.max(0, Math.round(Math.min(weekdayDrop, trailingDrop)));
     var day = businessDay(now);
     var end = new Date(currentBounds.from + elapsed);
-    var time = String(end.getHours()).padStart(2, '0') + ':' + String(end.getMinutes()).padStart(2, '0');
+    var time = deps.clock ? deps.clock(end.getTime()) : String(end.getHours()).padStart(2, '0') + ':' + String(end.getMinutes()).padStart(2, '0');
     var cur = money(current.revenue), wd = money(weekdayMedian), tr7 = money(trailingMedian);
     return {
       id: 'sales-drop:' + day, kind: 'sales-drop', tone: 'warn', roles: ['owner', 'manager', 'staff'],

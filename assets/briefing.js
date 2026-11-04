@@ -154,7 +154,7 @@
    * store. An operator hopping between two stores filed each one's days in
    * the other's document (maison-121 <-> la-maison-en-vogue, 2026-09-26). */
 
-  var rules = window.KiwiBriefingRules.createRules({ limit: limit, businessDay: businessDay, dayBoundsAt: dayBoundsAt, now: function () { return Date.now(); }, number: function (value, language, opts) {
+  var rules = window.KiwiBriefingRules.createRules({ limit: limit, businessDay: businessDay, dayBoundsAt: dayBoundsAt, clock: clockLabel, now: function () { return Date.now(); }, number: function (value, language, opts) {
     return window.KiwiNumber?.format(value, opts || { maximumFractionDigits: 2 }, language) ?? Number(value).toLocaleString(language === 'en' ? 'en-GB' : 'fr-FR', opts || { maximumFractionDigits: 2 });
   }, money: function (value) {
     var opts = { maximumFractionDigits: 2 };
@@ -327,9 +327,41 @@
     var cut = 5;
     try { cut = Number(window.KiwiDayReport && window.KiwiDayReport.cutoff ? window.KiwiDayReport.cutoff() : 5); } catch (_) { console.warn("[briefing] dayBoundsAt failed"); }
     if (!isFinite(cut)) cut = 5;
-    var d = new Date(ts - cut * 3600000); d.setHours(0, 0, 0, 0);
-    var from = d.getTime() + cut * 3600000;
-    return { from: from, to: from + 86400000 };
+    /* Sans KiwiDayReport, la journée reste celle du MAGASIN (heure civile de sa
+       zone, bascule à `cut`), jamais celle de l'appareil. */
+    var zone = storeZone(ts);
+    var p = civilAt(ts - cut * 3600000, zone);
+    var from = zonedInstant(Date.UTC(+p.year, +p.month - 1, +p.day) + cut * 3600000, zone);
+    return { from: from, to: zonedInstant(Date.UTC(+p.year, +p.month - 1, +p.day + 1) + cut * 3600000, zone) };
+  }
+  function storeZone(ts) {
+    var zone = '';
+    try { zone = String(window.KiwiDayReport && window.KiwiDayReport.timezone ? window.KiwiDayReport.timezone() : '') || ''; } catch (_) { console.warn("[briefing] storeZone failed"); }
+    zone = zone || 'Africa/Casablanca';
+    try { if (globalThis.KiwiZoneLaw && globalThis.KiwiZoneLaw.effectiveZone) zone = globalThis.KiwiZoneLaw.effectiveZone(zone, ts) || zone; } catch (_) { console.warn("[briefing] storeZone failed"); }
+    return zone;
+  }
+  function civilAt(ts, zone) {
+    var out = {};
+    new (globalThis.KiwiZoneLaw && globalThis.KiwiZoneLaw.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+      .formatToParts(new Date(ts)).forEach(function (part) { if (part.type !== 'literal') out[part.type] = part.value; });
+    return out;
+  }
+  /* L'instant où l'horloge murale de `zone` affiche `wall` (ms, lues comme UTC). */
+  function zonedInstant(wall, zone) {
+    var guess = wall;
+    for (var i = 0; i < 6; i++) {
+      var q = civilAt(guess, zone);
+      var seen = Date.UTC(+q.year, +q.month - 1, +q.day, +q.hour, +q.minute, +q.second);
+      if (seen === wall) return guess;
+      guess += wall - seen;
+    }
+    return guess;
+  }
+  /* L'heure d'un instant dans la zone du magasin, « HH:MM ». */
+  function clockLabel(ts) {
+    var q = civilAt(ts, storeZone(ts));
+    return q.hour + ':' + q.minute;
   }
 
   /* Qui a fait le geste, en mots. La caisse enregistre l'identifiant de la
