@@ -3,6 +3,7 @@
    page, so a merchant never gets the bare « Une erreur est survenue ». */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 const read = (f) => fs.readFileSync(f, 'utf8');
 const codes = new Set();
 for (const f of ['functions/auth/signup.js', 'functions/auth/login.js']) for (const m of read(f).matchAll(/error: '([a-z_-]+)'/g)) codes.add(m[1]);
@@ -11,9 +12,13 @@ for (const code of ['too_many_attempts', 'rate-limit-unavailable']) { assert.ok(
 const page = read('functions/_middleware.js');
 const lines = [...page.matchAll(/^\s*errors: \{(.*)\}\s*$/gm)].map((m) => m[1]);
 assert.equal(lines.length, 3, 'one error dictionary per language (fr, en, ar)');
+// Evaluate each dictionary as the page does, then look every code up in it.
 let checks = 0;
-for (const [i, line] of lines.entries()) for (const code of codes) {
-  const key = /^[a-z_]+$/.test(code) ? new RegExp(`(^|[ ,{])(${code}|'${code}'):`) : new RegExp(`'${code}':`);
-  assert.match(line, key, `${['fr', 'en', 'ar'][i]} has a message for ${code}`); checks++;
+for (const [i, line] of lines.entries()) {
+  const errors = vm.runInNewContext('({' + line + '})');
+  for (const code of codes) {
+    const text = errors[code];
+    assert.ok(typeof text === 'string' && text.trim().length > 8 && !text.includes('\u2014'), `${['fr', 'en', 'ar'][i]} has a message for ${code}`); checks++;
+  }
 }
 console.log(`✓ auth error copy: ${codes.size} codes × 3 languages (${checks} checks)`);

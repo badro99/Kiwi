@@ -20,10 +20,10 @@ function fixture(name, extra={}) {
 async function ended(p,f){let done=false;p.then(()=>done=true,()=>done=true);await f.expire();assert.ok(done,'hung action must settle at its deadline');}
 let failures=0;
 async function test(name,fn){try{await fn();console.log('✓ '+name);}catch(e){failures++;console.error('✗ '+name+': '+e.message);}}
-await test('invoices#0 · deadline reports offline, retry succeeds',async()=>{
+await test('invoices#0 · deadline reports an uncertain timeout (the write may have landed), retry succeeds',async()=>{
  const f=fixture('invoicing',{ownData:()=>true,merchantSlug:()=> 'shop',apiError:code=>Object.assign(new Error(code),{code})});
  vm.runInContext(between(f.source,'  async function api(', '\n  /* ── moteur'),f.c);
- const p=f.c.api('POST',{});const rejected=assert.rejects(p,{code:'offline'});await ended(p,f);await rejected;
+ const p=f.c.api('POST',{});const rejected=assert.rejects(p,{code:'timeout'});await ended(p,f);await rejected;
  assert.ok(f.requests[0].opts.signal.aborted);f.healthy();assert.equal((await f.c.api('GET',{})).ok,true);assert.equal(f.timers.size,0);
 });
 await test('team#0 · roster and live reads release failure state and retry',async()=>{
