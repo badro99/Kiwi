@@ -2477,7 +2477,7 @@ section('Whole-project regressions');
     'pos-mobile-test.mjs',
     'pressing-edge-test.mjs',
     'procurement-test.mjs',
-    'promotions-dashboard-test.mjs',
+    'promotions-dashboard-test.mjs', 'presentation-language-test.mjs',
     'promotions-dashboard-run-test.mjs',
     'promo-business-day-test.mjs', 'promo-percent-precision-test.mjs',
     'promo-window-browser-test.mjs',

@@ -137,6 +137,8 @@
   }
   function renderCorrections() {
     if (!document.createElement || !document.body) return;
+    var container = document.getElementById('main-content');
+    if (!container) return;
     var panel = document.getElementById('employee-punch-corrections');
     if (panel) panel.remove();
     var items = queueOwner ? records(queueOwner).filter(needsCorrection) : [];
@@ -146,7 +148,8 @@
     panel.id = 'employee-punch-corrections';
     panel.setAttribute('aria-label', words.title);
     panel.dir = lang === 'ar' ? 'rtl' : 'ltr';
-    panel.style.cssText = 'position:relative;z-index:10000;background:var(--paper);color:var(--ink);padding:16px;border:2px solid var(--atlas);font:inherit;font-style:normal';
+    panel.className = 'employee-punch-corrections';
+    panel.tabIndex = -1;
     var title = document.createElement('h2'); title.textContent = words.title; panel.appendChild(title);
     items.forEach(function (item) {
       var row = document.createElement('div'), label = document.createElement('p');
@@ -159,7 +162,7 @@
       });
       row.appendChild(button); panel.appendChild(row);
     });
-    document.body.prepend(panel);
+    container.prepend(panel);
   }
   function loadQueue(owner) {
     return idb(owner).then(function (items) { copies[owner] = merge(records(owner), items || []); });

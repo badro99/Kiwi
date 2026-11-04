@@ -89,3 +89,11 @@
   .hx-req-modal .kiwi-modal-foot .kb { flex:1 1 auto; justify-content:center; min-height:44px; }
 }
 [data-theme="dark"] .hx-req-line,[data-theme="dark"] .hx-req-method { border-color:color-mix(in srgb,var(--atlas) 22%,var(--n-200)); }
+
+@media(max-width:400px){
+  .hx-req-new,.hx-req-sheet,.hx-req-line,.hx-req-pick-row>*{min-inline-size:0;max-inline-size:100%;box-sizing:border-box}
+  .hx-req-pick-row,.hx-req-review,.hx-req-subst{grid-template-columns:minmax(0,1fr)}
+  .hx-req-pick-name{overflow-wrap:anywhere}
+  .hx-req-actions .hx-btn,.hx-req-trail summary,.hx-req-modal button{min-height:44px}
+  .hx-req-modal .kiwi-modal-foot{flex-direction:column;align-items:stretch}
+}

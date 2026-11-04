@@ -1,5 +1,5 @@
 {
-  "sha256": "f3e5adf776d75186d3b322305ecd9ac11e2be7accd41e4f9167811fd710760ff",
+  "sha256": "d89327de27780ff7f2bd0b962dbb00125821e7de7cdbf95bdb92659df19f40e1",
   "segments": [
     {
       "name": "strings",
@@ -19,7 +19,7 @@
       "name": "styles",
       "file": "assets/restaurant-menu/styles.js",
       "start": 251967,
-      "end": 314697,
+      "end": 315023,
       "relay": "  const {style, nutritionStyle, shellStyle, searchStyle, recipeStyle, itemStyle, performanceStyle, hoursStyle} = window.KiwiMenuWorkspaceParts.styles({$});\n"
     }
   ]

@@ -47,7 +47,7 @@ function world({ lang = 'fr', trade = 'boutique' } = {}) {
     Kiwi: { handlers, toast: (t, o) => toasts.push({ title: t, ...(o || {}) }),
       appPage: (name, o) => pages.push({ name, ...o }),
       modal: (o) => { const m = { opts: o, el: stubNode(), close() { m.closed = true; } }; modals.push(m); return m; } },
-    KiwiI18n: { getLang: () => lang }, KiwiBoutiqueCatalog: catalog, KiwiStoreTemplates: { currentTrade: () => trade },
+    KiwiI18n: { getLang: () => lang, T: { fr:{}, en:{}, ar:{} } }, KiwiBoutiqueCatalog: catalog, KiwiStoreTemplates: { currentTrade: () => trade },
     KiwiBarcode: { isValidEan13: () => true, printLabels: (labels, o) => printed.push({ labels, o }) },
     document, addEventListener() {},
   };
@@ -55,6 +55,7 @@ function world({ lang = 'fr', trade = 'boutique' } = {}) {
   const ctx = vm.createContext({ window, document, KiwiI18n: window.KiwiI18n, Intl, Date, JSON, Math, Promise, console,
     localStorage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) },
     setTimeout, clearTimeout, CustomEvent: function () {}, CSS: undefined });
+  vm.runInContext(read('assets/i18n.js').split('\n').filter(line => line.includes('Object.assign(T.') && line.includes('promos.copy')).join('\n'), vm.createContext({ T: window.KiwiI18n.T }));
   for (const f of ['assets/promo-rules.js', 'assets/promos.js', 'assets/boutique-promos-dashboard.js']) vm.runInContext(read(f), ctx, { filename: f });
   return { window, handlers, toasts, pages, modals, printed, store, K: window.Kiwi };
 }

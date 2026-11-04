@@ -111,7 +111,7 @@ export function createBookingService(context) {
   function contextChip() {
     var s=state.service;
     if(!s) return '';
-    return '<div class="bk-context"><strong>'+esc(s.name)+'</strong><i class="bk-dot"></i><span>'+esc(s.duration)+' min</span>'+(+s.price>0? '<i class="bk-dot"></i><span>'+esc(money(s.price))+'</span>':'')+'<button type="button" data-back>'+esc(t('change'))+'</button></div>'
+    return '<div class="bk-context"><strong>'+esc(s.name)+'</strong><i class="bk-dot"></i><span>'+esc(t('durationMinutes').replace('{n}',s.duration))+'</span>'+(+s.price>0? '<i class="bk-dot"></i><span>'+esc(money(s.price))+'</span>':'')+'<button type="button" data-back>'+esc(t('change'))+'</button></div>'
   }
 
   /* Vingt-sept créneaux en une grille se lisent mal ; groupés par moment de la journée ils se lisent d'un coup d'œil. */
@@ -139,7 +139,7 @@ export function createBookingService(context) {
     state.service=null;
     state.step=1;
     layout('<div class="bk-panel">'+head(t('choose'),t('chooseSub'))+partyControl()+'<div class="bk-grid">'+state.config.services.map(function(s) {
-      return '<button class="bk-choice" data-service="'+esc(s.id)+'"><div class="bk-choice-body"><strong>'+esc(s.name)+'</strong><p>'+esc(s.duration)+' min'+(capsDiffer()&&seatCap(s)>1? ' · '+esc(t('upTo')).replace('{n}',seatCap(s)):'')+'</p></div><div class="bk-choice-side"><div>'+priceTag(s)+(s.deposit? '<small>'+esc(t('deposit'))+' '+esc(money(s.deposit))+'</small>':'')+'</div><i class="bk-go" aria-hidden="true"></i></div></button>'
+      return '<button class="bk-choice" data-service="'+esc(s.id)+'"><div class="bk-choice-body"><strong>'+esc(s.name)+'</strong><p>'+esc(t('durationMinutes').replace('{n}',s.duration))+''+(capsDiffer()&&seatCap(s)>1? ' · '+esc(t('upTo')).replace('{n}',seatCap(s)):'')+'</p></div><div class="bk-choice-side"><div>'+priceTag(s)+(s.deposit? '<small>'+esc(t('deposit'))+' '+esc(money(s.deposit))+'</small>':'')+'</div><i class="bk-go" aria-hidden="true"></i></div></button>'
     }
     ).join('')+'</div></div>');
     wireParty();

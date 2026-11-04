@@ -134,6 +134,20 @@ async function requestFlow(t, cell, locale, viewport) {
   t.step('housekeeping asks for 6 towels and 2 sheets 160');
   await page.click('[data-action="eco-req-new"]');
   await page.waitForSelector('[data-pick="1"] [data-pick-qty]', { visible:true, timeout:20000 });
+  if (viewport === 'phone') {
+    t.step('375px request fields stack, fit and remain touch reachable');
+    await page.setViewport({ width:375, height:812, deviceScaleFactor:1 });
+    const layout = await page.$eval('.hx-req-new', el => {
+      const row = el.querySelector('.hx-req-pick-row');
+      const fields = [...el.querySelectorAll('input,select')];
+      return { columns:getComputedStyle(row).gridTemplateColumns.split(' ').length,
+        fits:document.documentElement.scrollWidth <= 375 && el.scrollWidth <= el.clientWidth + 1,
+        touch:fields.every(x => x.getBoundingClientRect().height >= 44) };
+    });
+    assert.equal(layout.columns, 1, 'phone fields stack in one column');
+    assert.ok(layout.fits, '375px request form has no horizontal scroll');
+    assert.ok(layout.touch, 'phone fields have 44px targets');
+  }
   await page.type('[data-pick="0"] [data-pick-qty]', '6');
   await page.type('[data-pick="1"] [data-pick-qty]', '2');
   await check(t, { page, region:'.kiwi-modal' }, 'request-new', locale, viewport);

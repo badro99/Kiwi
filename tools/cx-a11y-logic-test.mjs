@@ -16,6 +16,14 @@ function fn(file, name, globals = {}) {
 }
 let failed = 0;
 async function test(name, run) { try { await run(); console.log('PASS ' + name); } catch (e) { failed++; console.error('FAIL ' + name + ': ' + e.message); } }
+let promoDictCache;
+function promoDict() {
+  // The promo strings live in assets/i18n.js as Object.assign(T.<lang>, {...}) JSON blocks.
+  if (promoDictCache) return promoDictCache;
+  promoDictCache = {};
+  for (const m of read('assets/i18n.js').matchAll(/Object\.assign\(T\.(fr|en|ar), (\{"promos\.[^\n]*?\})\);/g)) Object.assign(promoDictCache[m[1]] ||= {}, JSON.parse(m[2]));
+  return promoDictCache;
+}
 await test('invalid purchase dates are undated, including normalized impossible dates', () => {
   const ctx = vm.createContext({ STALE_DAYS: 90 });
   vm.runInContext(read('assets/simple-food-cost/calc.js') + '\nthis.compute = compute;', ctx);
@@ -46,20 +54,22 @@ await test('all unresolved advance conflicts retained up to cap with explicit ov
 });
 await test('custom promo controls have translated accessible names', () => {
   for (const lang of [0, 1, 2]) {
-    const scopeControl = fn('assets/boutique-promos-dashboard.js', 'scopeControl', { L: (...v) => v[lang], toInput: () => '', esc: x => x });
+    const code = ['fr', 'en', 'ar'][lang], T = promoDict();
+    const tr = (key) => (T[code] && T[code][key]) || key;
+    const scopeControl = fn('assets/boutique-promos-dashboard.js', 'scopeControl', { L: (...v) => v[lang], tr, toInput: () => '', esc: x => x });
     for (const type of ['avant', 'stock']) {
       const html = scopeControl({}, { scope: { type } });
       // Parse the actual rendered element, rather than inspect the production source.
       const input = ts.createSourceFile('render.tsx', '<>' + html + '</>', ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
       let name;
       (function walk(n) { if (ts.isJsxSelfClosingElement(n) || ts.isJsxOpeningElement(n)) for (const a of n.attributes.properties) if (a.name?.text === 'aria-label') name = a.initializer?.text; ts.forEachChild(n, walk); })(input);
-      assert.ok(name && name.length > 2, type + ' locale ' + lang);
+      assert.ok(name && name.length > 2 && !/^promos\./.test(name), type + ' locale ' + lang + ': ' + name);
     }
   }
 });
 await test('correction timestamp uses refreshed merchant zone and Morocco law', () => {
   const nodes = [];
-  const document = { documentElement: { lang: 'en' }, getElementById: () => null, body: { prepend() {} }, createElement(tag) { const el = { tag, style: {}, setAttribute() {}, appendChild() {}, addEventListener() {} }; nodes.push(el); return el; } };
+  const document = { documentElement: { lang: 'en' }, getElementById: (id) => id === 'main-content' ? { prepend() {} } : null, body: { prepend() {} }, createElement(tag) { const el = { tag, style: {}, setAttribute() {}, appendChild() {}, addEventListener() {} }; nodes.push(el); return el; } };
   const ctx = vm.createContext({ Intl }); ctx.KiwiZoneLaw = KiwiZoneLaw;
   for (const zone of ['Africa/Casablanca', 'Pacific/Auckland']) {
     nodes.length = 0;
