@@ -42,7 +42,10 @@
   function isoDay(value) {
     if (value instanceof Date) return value.toISOString().slice(0, 10);
     const text = String(value || "").slice(0, 10);
-    return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return "";
+    // A real calendar day only: 2026-02-31 must not enter the planning.
+    const [y, m, d] = text.split("-").map(Number), probe = new Date(Date.UTC(y, m - 1, d));
+    return probe.getUTCFullYear() === y && probe.getUTCMonth() === m - 1 && probe.getUTCDate() === d ? text : "";
   }
 
   function dayNumber(iso) {

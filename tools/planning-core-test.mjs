@@ -158,4 +158,6 @@ const holidayWarning=P.validate({planning:P.blank(),members,days:['2026-08-14'],
 assert.equal(holidayWarning.some((issue)=>issue.code==='public-holiday'&&issue.severity==='warning'&&issue.holiday==='Récupération de Oued Eddahab'),true);
 assert.equal(P.openingIssue(days[0],{start:'09:00',end:'17:00'},[{from:'09:00',to:'17:00'}]),null);
 
-console.log("planning-core-test: 65 controls passed");
+for (const day of ["2026-02-31", "2026-13-01", "2026-04-31"]) assert.equal(P.createOpenShift(P.blank(), { day, start: "09:00", end: "17:00" }, "2026-01-01T00:00:00Z").error, "open-shift-invalid", day + " is not a calendar day");
+assert.equal(P.createOpenShift(P.blank(), { day: "2028-02-29", start: "09:00", end: "17:00" }, "2026-01-01T00:00:00Z").ok, true, "a real leap day stays valid");
+console.log("planning-core-test: 69 controls passed");

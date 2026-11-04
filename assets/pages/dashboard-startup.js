@@ -50,7 +50,7 @@
     'assets/stock/state.js?v=4',
     'assets/stock.js?v=101',
     'assets/catalog-workspace.js?v=5',
-    'assets/planning-core.js?v=13',
+    'assets/planning-core.js?v=14',
     'assets/team/catalog.js?v=2',
     'assets/team.js?v=344',
     'assets/team/profile-ui.js?v=15',
