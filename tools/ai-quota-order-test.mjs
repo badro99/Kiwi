@@ -10,6 +10,9 @@ import { fixture } from './server-money-fixture.mjs';
 import { onRequestPost as menuImport } from '../functions/api/ai/menu-import.js';
 import { onRequestPost as expenseOcr } from '../functions/api/ai/expense-ocr.js';
 import { onRequestPost as salleImport } from '../functions/api/ai/salle-import.js';
+import { onRequestPost as invoiceAi } from '../functions/api/ai/invoice.js';
+import { onRequestPost as productScan } from '../functions/api/ai/product-scan.js';
+import { onRequestPost as visionInspect } from '../functions/api/ai/vision-inspect.js';
 
 const root = new URL('..', import.meta.url).pathname;
 let checks = 0;
@@ -84,5 +87,28 @@ modelCalls = 0;
 scripted = [{ response: 'Je vois une salle avec huit tables rondes de quatre places, bien alignées devant.' }];
 const capped = await post(salleImport, { image: tiny });
 ok(capped.status === 429 && modelCalls === 1, 'salle-import: the rescue is refused once the daily cap is reached (no extra model call)');
+// r19 vision#A1: a suspended or pending store, or a slug the registry does not
+// know, spends no model call and no neurons on any vision/import route.
+{
+  const routes = { menuImport, expenseOcr, salleImport, invoiceAi, productScan, visionInspect };
+  const bodies = { menuImport: { kind: 'text', text: 'Thé 10 MAD' }, expenseOcr: { image: tiny }, salleImport: { image: tiny }, invoiceAi: { kind: 'text', text: 'Facture 100 MAD' }, productScan: { image: tiny }, visionInspect: { image: tiny } };
+  const neurons = () => f.sql.prepare("SELECT COALESCE(SUM(calls),0) AS n FROM ai_usage_kind WHERE merchant=? AND kind='neurons'").get(f.merchant).n;
+  const beforeNeurons = Number(neurons());
+  for (const status of ['suspended', 'pending']) {
+    f.sql.prepare('UPDATE merchant_config SET status=? WHERE merchant=?').run(status, f.merchant);
+    modelCalls = 0; scripted = [];
+    for (const [name, route] of Object.entries(routes)) {
+      const r = await post(route, bodies[name]);
+      ok(r.status === 401 && modelCalls === 0, `${name}: a ${status} store is refused before any model call`);
+    }
+    ok(Number(neurons()) === beforeNeurons, `${status} store: the shared neuron budget is untouched`);
+  }
+  f.sql.prepare("UPDATE merchant_config SET status='active' WHERE merchant=?").run(f.merchant);
+  modelCalls = 0;
+  for (const [name, route] of Object.entries(routes)) {
+    const r = await post(route, { ...bodies[name], merchant: 'unknown-shop-slug' });
+    ok(r.status === 401 && modelCalls === 0, `${name}: an unknown slug no longer falls back to the account's own store`);
+  }
+}
 f.close();
 console.log(`ai-quota-order: ${checks} checks passed`);

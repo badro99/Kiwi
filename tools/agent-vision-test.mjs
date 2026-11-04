@@ -16,7 +16,7 @@ const sw = read('kiwi-sw.js');
 
 const controls = [
   // ── l'endpoint : fermé, borné, fail-soft ──────────────────────────────
-  ['vision inspection requires a tenant session', fn.includes('tenantFor(request, env, b?.merchant)') && fn.includes("json({ ok: false, error: 'auth' }, 401)")],
+  ['vision inspection requires a tenant session', fn.includes('tenantFor(request, env, b?.merchant, { strict: true })') && fn.includes("json({ ok: false, error: 'auth' }, 401)")],
   ['a missing AI binding is named, never a 500', fn.includes("json({ ok: false, error: 'unbound' }, 503)")],
   ['the daily quota uses visioninspect kind in _quota.js', fn.includes("quotaOk(env, who, 'visioninspect'") && /visioninspect:\s*\d+/.test(quota)],
   ['image input is size-bounded', fn.includes('MAX_IMAGE_DATAURL')],

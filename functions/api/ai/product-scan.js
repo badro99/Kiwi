@@ -71,7 +71,7 @@ async function budgetHandler(context) {
   let b;
   try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
-  const who = await tenantFor(request, env, b?.merchant);
+  const who = await tenantFor(request, env, b?.merchant, { strict: true });
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'product', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL, VISION_MODEL, VISION_FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) });

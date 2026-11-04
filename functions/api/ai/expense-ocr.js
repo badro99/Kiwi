@@ -79,7 +79,7 @@ async function budgetHandler(context) {
   let b;
   try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
-  const who = await tenantFor(request, env, b?.merchant);
+  const who = await tenantFor(request, env, b?.merchant, { strict: true });
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const image = typeof b?.image === 'string' ? b.image.trim() : '';
