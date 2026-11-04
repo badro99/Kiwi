@@ -2468,7 +2468,7 @@ section('Whole-project regressions');
     'employee-shell-structure-test.js',
     /* L'app serveur en anglais et en arabe : chaque texte du balisage et les
        phrases composées au rendu se traduisent, attributs compris. */
-    'serveur-lang-coverage-test.mjs',
+    'serveur-lang-coverage-test.mjs', 'caisse-tr-coverage-test.mjs',
     'field-split-ui-test.mjs',
     'hospitality-plus-test.mjs', 'client-identity-redaction-test.mjs',
     'maison-return-ledger-test.mjs',
