@@ -328,13 +328,16 @@
      règlement s'écrivait dans une copie que plus personne ne lisait. Un montant
      au-dessus du solde du moment (un autre téléphone a encaissé entre-temps)
      est refusé : la feuille se rouvre sur le vrai solde. */
-  function commitRepayment(id, pay) {
+  function commitRepayment(id, pay, method) {
+    const m = method === 'carte' ? 'carte' : 'especes';  /* the tab can be settled by card too */
     const c = CRED[id];
     if (!c) return { error: 'changed' };
     const bal = balanceOf(c), payC = Math.round((+pay || 0) * 100), balC = Math.round(bal * 100);
     if (!(payC > 0) || payC > balC) return { error: 'changed', c };
     const amt = payC / 100;
-    const entry = histEntry('pay', payC >= balC ? 'Règlement (soldé)' : 'Règlement partiel', amt);
+    const entry = histEntry('pay', m === 'carte' ? (payC >= balC ? 'Règlement par carte (soldé)' : 'Règlement partiel par carte')
+      : (payC >= balC ? 'Règlement (soldé)' : 'Règlement partiel'), amt);
+    if (m === 'carte') entry.method = 'carte';
     if (payC === balC && ((typeof state !== 'undefined' && state.offline) || (typeof navigator !== 'undefined' && navigator.onLine === false))) {
       entry.offline = true;
       entry.settlementOf = Array.from(c.hist, h => h.id || [h.type, h.at, h.amt].join(':')).sort().join('|');
@@ -345,17 +348,17 @@
       const before = repayLog();
       const intent = { cid: c.id, name: c.name, stage: 'intent', entry: Object.assign({}, entry, { at: entry.at.toISOString() }) };
       if (!repayLogWrite(before.concat([intent]))) return { error: 'storage', c };
-      const rec = postDay(amt, 'especes', `Ardoise · ${c.name}`, entry.ref, lines);
+      const rec = postDay(amt, m, `Ardoise · ${c.name}`, entry.ref, lines);
       if (!rec && !journalHas(entry.ref)) { repayLogWrite(before); return { error: 'storage', c }; }
       intent.stage = 'paid';
       repayLogWrite(before.concat([intent]));
     } else {
-      postDay(amt, 'especes', `Ardoise · ${c.name}`, '', lines);
+      postDay(amt, m, `Ardoise · ${c.name}`, '', lines);
     }
     c.hist.push(entry);
     /* Un règlement d'ardoise, c'est de l'argent qui entre dans le tiroir : la
        recette du jour le compte (et la relit du journal au rechargement). */
-    day.especes = Math.round((+day.especes || 0) * 100 + payC) / 100;
+    day[m] = Math.round((+day[m] || 0) * 100 + payC) / 100;
     return { c, entry };
   }
   /* Au chargement, après lecture du carnet enregistré. → nombre de lignes reprises. */
@@ -1623,6 +1626,7 @@
           </div>
           <div class="cash-rendu" id="ep-settle-rendu-box"><span class="lbl">Rendu</span><span class="val mono" id="ep-settle-rendu">0 MAD</span></div>
           <button class="cash-confirm" id="ep-settle-ok">Encaisser le règlement</button>
+          <button class="ep-btn secondary" id="ep-settle-card"><i data-icon="credit_card"></i><span>Réglé par carte</span> · <span id="ep-settle-card-amt">${fmtMAD(pay)}</span></button>
         </div>`;
       icons();
       /* la feuille déjà ouverte change d'étape : le focus suit */
@@ -1634,6 +1638,8 @@
         box.classList.toggle('is-positive', rendu > 0.0001);
         box.classList.toggle('is-short', rendu < -0.0001);
         $('#ep-settle-ok', el).disabled = received < pay - 0.0001 || pay <= 0;
+        $('#ep-settle-card', el).disabled = pay <= 0;
+        $('#ep-settle-card-amt', el).textContent = fmtMAD(pay);
         const show = $('#ep-settle-show', el); if (show) show.textContent = fmtMAD(pay);
       };
       $$('[data-ep-close]', el).forEach((b) => { b.onclick = () => { closeVeil('#ep-pay-veil'); openArdoise(c.id); }; });
@@ -1653,12 +1659,12 @@
         b.onclick = () => { received += +b.dataset.add; $('#ep-settle-in', el).value = received; refresh(); };
       });
       refresh();
-      $('#ep-settle-ok', el).onclick = () => {
-        const rendu = Math.max(0, received - pay);
+      const settle = (method) => {
+        const rendu = method === 'carte' ? 0 : Math.max(0, received - pay);
         /* Le règlement au centime, comme la dette : arrondi, « tout régler »
            sur 12,50 notait 13 payés, et l'ardoise passait à −0,50. La ligne du
            carnet et la recette du jour s'écrivent ensemble (commitRepayment). */
-        const done = commitRepayment(c.id, pay);
+        const done = commitRepayment(c.id, pay, method);
         closeVeil('#ep-pay-veil');
         if (done.error === 'storage') {
           toast('Règlement non enregistré, rien n\'a été noté · réessayez');
@@ -1679,6 +1685,8 @@
         renderBadges();
         openArdoise(c.id);
       };
+      $('#ep-settle-ok', el).onclick = () => settle('especes');
+      $('#ep-settle-card', el).onclick = () => settle('carte');
     };
 
     step1();
