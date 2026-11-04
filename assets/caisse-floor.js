@@ -1581,8 +1581,9 @@
           transferData = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
-          toast(`Déplacement impossible : ${err.message === 'source-session-required' || err.message === 'stale-table-visit'
-            ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('visite à actualiser · synchronisez puis réessayez') : (err.message || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('erreur réseau'))}`);
+          const tr = (s) => (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(s);
+          toast(tr('Déplacement impossible') + ' : ' + tr(['source-session-required', 'stale-table-visit'].includes(err.message)
+            ? 'visite à actualiser · synchronisez puis réessayez' : err.message === 'target-table-occupied' ? 'La table de destination est occupée.' : err.message === 'table-operation-conflict' ? 'La table a changé. Actualisez puis réessayez.' : 'Vérifiez la connexion puis réessayez.'));
           return;
         }
       }
@@ -1707,8 +1708,9 @@
           mergeData = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
-          toast(`Fusion impossible : ${err.message === 'source-session-required' || err.message === 'stale-table-visit'
-            ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('visite à actualiser · synchronisez puis réessayez') : (err.message || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('erreur réseau'))}`);
+          const tr = (s) => (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(s);
+          toast(tr('Fusion impossible') + ' : ' + tr(['source-session-required', 'stale-table-visit'].includes(err.message)
+            ? 'visite à actualiser · synchronisez puis réessayez' : err.message === 'target-table-occupied' ? 'La table de destination est occupée.' : err.message === 'table-operation-conflict' ? 'La table a changé. Actualisez puis réessayez.' : 'Vérifiez la connexion puis réessayez.'));
           return;
         }
       }

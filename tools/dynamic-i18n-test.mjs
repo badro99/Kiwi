@@ -85,6 +85,16 @@ export function scan(source, filename = 'fixture.js') {
       else if (/^(?:toast|modal|drawer|alert|confirm|showToast|showModal|openModal)$/.test(method)) { args = [...n.arguments]; html = true; }
     }
     if (args.some(a => raw(a, html))) hits.push(tree.getLineAndCharacterOfPosition(n.getStart(tree)).line + 1);
+    // Server gate HTML has no DOM assignment. Inspect its literal skeleton as well.
+    // Kiwi is the brand; FR/EN/AR are language switches. Expressions are copy[lang]
+    // properties or protocol attributes; embedded scripts are scanned separately below.
+    if (filename === 'functions/_middleware.js' && ts.isTemplateExpression(n) && /<[^>]+>/.test(n.head.text)) {
+      const html = [n.head.text, ...n.templateSpans.map(s => s.literal.text)].join('\u0001')
+        .replace(/aria-label="Kiwi"/g, '').replace(/>(FR|EN|AR)</g, '><');
+      // retryPage's split <style> template contains CSS, not visible copy.
+      const visible = html.includes('<style>') && !html.includes('</style>') ? html.slice(0, html.indexOf('<style>')) : html;
+      if (words(visible, true)) hits.push(tree.getLineAndCharacterOfPosition(n.getStart(tree)).line + 1);
+    }
     ts.forEachChild(n, visit);
   }
   visit(tree); return hits;
@@ -101,7 +111,7 @@ function walk(dir) {
     return /\.js$/.test(rel) && !/(?:\.min\.js| 2\.)/.test(rel) ? [rel] : [];
   });
 }
-const files = [...walk('assets'), ...fs.readdirSync(ROOT).filter(f => /\.html$/.test(f) && !/ 2\./.test(f))].sort();
+const files = ['functions/_middleware.js', ...walk('assets'), ...fs.readdirSync(ROOT).filter(f => /\.html$/.test(f) && !/ 2\./.test(f))].sort();
 const counts = {}, locations = {};
 const home = require('./home-test-source.cjs');
 const homeParts = new Set(home.metadata().parts.map(p => p.file));
@@ -112,11 +122,14 @@ for (const file of files) {
   // Keep each split controller's existing pin while scanning every live body.
   if (ticketsFiles.slice(1).includes(file) || planningSourceHelper.planningFiles.includes(file) || orderProFiles.includes(file) || homeParts.has(file) || file.startsWith('assets/menu-catalog/')) continue;
   const src = file === 'assets/daterange/renderers.js' ? home.source() : file === 'assets/team-hours.js' ? planningSourceHelper.planningTestSource() : file === 'assets/orderpro-page.js' ? orderProSplit.orderProScriptSource() : file === 'assets/menu-catalog.js' ? menuCatalogSource() : file === 'assets/tickets.js' ? ticketsRuntimeSource() : fs.readFileSync(path.join(ROOT, file), 'utf8');
-  const scripts = file.endsWith('.html') ? [...src.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]) : [src];
+  // The gate embeds its browser code in the server template. Scan those sinks too.
+  // Its static HTML uses copy[lang]; only Kiwi and the FR/EN/AR language names are fixed.
+  const scripts = file.endsWith('.html') || file === 'functions/_middleware.js' ? [...src.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).concat(file === 'functions/_middleware.js' ? [src] : []) : [src];
   // Count every live split file against the original controller's existing pin.
   // No strings are exempted and the split identity suite guards module membership.
   const owner = file.startsWith('assets/pressing/') ? 'assets/pressing-caisse.js' : /^assets\/booking-(service|hotel|submission|manage|view)\.js$/.test(file) ? 'assets/booking.js' : file;
-  const hits = scripts.flatMap(s => scan(s, file));
+  // Gate template substitutions are server-localized copy, not browser literals.
+  const hits = scripts.flatMap(s => scan(file === 'functions/_middleware.js' ? s.replace(/'\$\{t\.([\w.]+)\}'/g, (_, key) => 't(' + JSON.stringify(key) + ')') : s, file));
   locations[owner] = (locations[owner] || []).concat(hits.map(line => file + ':' + line));
   counts[owner] = (counts[owner] || 0) + hits.length;
 }

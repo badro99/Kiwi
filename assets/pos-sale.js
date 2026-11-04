@@ -139,6 +139,7 @@
        must still never total a row explicitly owned by another merchant. */
     var who = tenant(), seen = [];
     try { seen = JSON.parse(localStorage.getItem(TENANTS_KEY) || '[]'); if (!Array.isArray(seen)) seen = []; } catch (_) { seen = []; }
+    raw.forEach(function (s) { if (Array.isArray(s?.lines)) s.lines = s.lines.map(foldedLine); });
     return raw.filter(function (s) {
       if (!(s && +s.total > 0 && isToday(s.ts))) return false;
       if (s.m) return !!who && s.m === who;
@@ -185,11 +186,23 @@
   function foldLines(lines) {
     if (!Array.isArray(lines) || lines.length <= 40) return lines;
     var rest = lines.slice(39);
-    return lines.slice(0, 39).concat([{
-      name: rest.length + ' autres articles',
+    return lines.slice(0, 39).concat([foldedLine({
+      name: rest.length + ' autres articles', foldedCount: rest.length,
       qty: rest.reduce(function (n, l) { return n + Math.max(0, Number(l && l.qty) || 0); }, 0),
       total: rest.reduce(function (n, l) { return n + Math.round((Number(l && l.total) || 0) * 100); }, 0) / 100,
-    }]);
+    })]);
+  }
+  function foldedLine(line) {
+    if (!line || typeof line !== 'object') return line;
+    var n = Number(line.foldedCount) || Number(/^(\d+) autres articles$/.exec(line.name || '')?.[1]);
+    if (!(Number.isInteger(n) && n > 0)) return line;
+    line.foldedCount = n;
+    Object.defineProperty(line, 'name', { enumerable: true, configurable: true, get: function () {
+      var lang = 'fr';
+      try { lang = localStorage.getItem('kiwiCaisseLang') || localStorage.getItem('kiwiLang') || 'fr'; } catch (_) {}
+      return n + (lang === 'en' ? ' other items' : lang === 'ar' ? ' أصناف أخرى' : ' autres articles');
+    } });
+    return line;
   }
   function cleanLine(l) {
     l = l || {};
@@ -223,7 +236,8 @@
       }).filter(Boolean);
       if (options.length) o.options = options;
     }
-    return o;
+    if (l.foldedCount) o.foldedCount = l.foldedCount;
+    return foldedLine(o);
   }
 
   /* A settled caisse sale prints its customer receipt at the payment boundary.

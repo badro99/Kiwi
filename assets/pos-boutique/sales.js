@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=256';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=154';
-import { offerRegister } from './inventory.js?v=154';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=259';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=156';
+import { offerRegister } from './inventory.js?v=156';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import { ticketRemise } from './ticket-remise.js?v=3';
 import { bqKitTicketFoot } from './kit-2027.js?v=20';
@@ -849,11 +849,11 @@ import { photoImg } from '../retail-photos.js?v=5';
       const namePrefill = isDigits ? '' : (q || '').trim();
       const phonePrefill = isDigits ? (q || '').trim() : '';
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
-        <h3 class="modal-title">Cliente</h3>
-        <p class="modal-subtle">Rechercher par nom ou par numéro de téléphone.</p>
+        <button class="bq-modal-x" data-bq-close aria-label="${esc(tr("Fermer"))}"><i data-lucide="x"></i></button>
+        <h3 class="modal-title">${esc(tr("Cliente"))}</h3>
+        <p class="modal-subtle">${esc(tr("Rechercher par nom ou par numéro de téléphone."))}</p>
         <div class="bq-phone-in"><i data-lucide="search"></i>
-          <input id="bq-cl-q" type="text" enterkeyhint="search" autocorrect="off" autocapitalize="words" placeholder="Nom ou 06…" value="${esc(q || '')}" autocomplete="off" />
+          <input id="bq-cl-q" type="text" enterkeyhint="search" autocorrect="off" autocapitalize="words" placeholder="${esc(tr("Nom ou 06…"))}" value="${esc(q || '')}" autocomplete="off" />
         </div>
         ${mode === 'search' ? `
           <div class="bq-cl-results">
@@ -863,22 +863,22 @@ import { photoImg } from '../retail-photos.js?v=5';
                 <span class="bq-cl-ava">${esc(initials(c.name))}</span>
                 <span class="bq-cl-mid">
                   <span class="bq-cl-name">${esc(c.name)} ${c.vip ? '<span class="bq-vip-chip">VIP</span>' : ''}</span>
-                  <span class="bq-cl-sub">${esc(c.phone) || '·'}${c.taille ? ' · taille ' + esc(c.taille) : ''}</span>
+                  <span class="bq-cl-sub">${esc(c.phone) || '·'}${c.taille ? ' · ' + esc(tr('taille')) + ' ' + esc(c.taille) : ''}</span>
                 </span>
-                <span class="bq-cl-right"><b>${c.points} pts</b>${c.achats} achat${c.achats > 1 ? 's' : ''}${av ? `<span class="av"><i data-lucide="ticket"></i>Avoir ${fmtMAD(av.balance)}</span>` : ''}</span>
+                <span class="bq-cl-right"><b>${c.points} ${esc(tr("pts"))}</b>${c.achats} ${esc(tr(c.achats > 1 ? 'achats' : 'achat'))}${av ? `<span class="av"><i data-lucide="ticket"></i>${esc(tr("Avoir"))} ${fmtMAD(av.balance)}</span>` : ''}</span>
               </button>`;
-            }).join('') || `<div class="bq-empty">${q.trim() ? `Aucune fiche pour « ${esc(q)} »` : 'Tapez un nom ou un numéro de téléphone'}</div>`}
+            }).join('') || `<div class="bq-empty">${q.trim() ? esc(tr('Aucune fiche pour « {q} »').replace('{q}', q)) : esc(tr('Tapez un nom ou un numéro de téléphone'))}</div>`}
           </div>
-          <button class="bq-cl-new" id="bq-cl-new"><i data-lucide="user-plus"></i>Nouvelle cliente${q && !hits.length ? ` · « ${esc(q)} »` : ''}</button>
+          <button class="bq-cl-new" id="bq-cl-new"><i data-lucide="user-plus"></i>${esc(tr("Nouvelle cliente"))}${q && !hits.length ? ` · « ${esc(q)} »` : ''}</button>
           <div class="bq-sheet-foot" style="margin-top:10px;">
-            <button class="bq-btn ghost" id="bq-cl-guest">Cliente de passage, sans fiche</button>
+            <button class="bq-btn ghost" id="bq-cl-guest">${esc(tr("Cliente de passage, sans fiche"))}</button>
           </div>` : `
           <div class="bq-cl-form">
-            <input class="bq-in" id="bq-cl-name" placeholder="Nom et prénom" value="${esc(namePrefill)}" />
-            <input class="bq-in" id="bq-cl-tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="06… / +212… (optionnel)" value="${esc(phonePrefill)}" />
+            <input class="bq-in" id="bq-cl-name" placeholder="${esc(tr("Nom et prénom"))}" value="${esc(namePrefill)}" />
+            <input class="bq-in" id="bq-cl-tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="${esc(tr("06… / +212… (optionnel)"))}" value="${esc(phonePrefill)}" />
             <div class="bq-sheet-foot" style="margin-top:4px;">
-              <button class="bq-btn secondary" id="bq-cl-back">Retour</button>
-              <button class="bq-btn primary" id="bq-cl-create"><i data-lucide="check"></i>Créer la fiche</button>
+              <button class="bq-btn secondary" id="bq-cl-back">${esc(tr("Retour"))}</button>
+              <button class="bq-btn primary" id="bq-cl-create"><i data-lucide="check"></i>${esc(tr("Créer la fiche"))}</button>
             </div>
           </div>`}`;
       $('#bq-cl-q', el).oninput = (e) => { render(e.target.value); icons(); const i = $('#bq-cl-q', el); i.focus(); moveCaretEnd(i); };
@@ -889,8 +889,8 @@ import { photoImg } from '../retail-photos.js?v=5';
           if (!c) return;
           ticketOwner.setCustomer(state.ticket, c.id);
           closeVeil('#bq-client-veil');
-          const tt = [c.taille ? 'taille ' + c.taille : '', c.points + ' pts'].filter(Boolean).join(', ');
-          toast(`${c.name}${tt ? ' · ' + tt : ''}${clAvoirOf(c) ? ', un avoir actif' : ''}`);
+          const tt = [c.taille ? tr('taille') + ' ' + c.taille : '', c.points + ' ' + tr('pts')].filter(Boolean).join(', ');
+          toast(`${c.name}${tt ? ' · ' + tt : ''}${clAvoirOf(c) ? ', ' + tr('un avoir actif') : ''}`);
           renderTicket(); icons();
         };
       });
@@ -921,7 +921,7 @@ import { photoImg } from '../retail-photos.js?v=5';
         ticketOwner.setCustomer(state.ticket, cid);
         closeVeil('#bq-client-veil');
         queueIfOffline('Fiche cliente');
-        toast(`Fiche créée, ${name}`);
+        toast(tr('Fiche créée, {name}').replace('{name}', name));
         renderTicket(); renderBadges(); icons();
       };
     };
@@ -1519,4 +1519,4 @@ import { photoImg } from '../retail-photos.js?v=5';
       lookupScan(code);
     }, 620);
   }
-export { $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, iconPickerHtml, icons, isDemoStore, lens, lookupScan, moveCaretEnd, openCamScan, pad2, wireSellSearch, rayonOf, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderTicket, shelf, useKiwiCl, variantColor, variantSource, wireIconPicker };
+export { tr, $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, iconPickerHtml, icons, isDemoStore, lens, lookupScan, moveCaretEnd, openCamScan, pad2, wireSellSearch, rayonOf, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderTicket, shelf, useKiwiCl, variantColor, variantSource, wireIconPicker };

@@ -94,11 +94,12 @@
   function isActive(p, now) { return rules.status(p, now, 'menu') === 'active'; }
   function status(p, now) { return rules.status(p, now, 'menu'); }
 
+  function tillLocale() { try { return localStorage.getItem('kiwiCaisseLang') || 'fr'; } catch (_) { return 'fr'; } }
   function badge(p) {
     if (!p) return '';
-    if (p.kind === 'percent') return '−' + p.value + ' %';
-    if (p.kind === 'amount') return '−' + String(p.value).replace('.', ',') + ' MAD';
-    return String(p.value).replace('.', ',') + ' MAD';
+    const locale = tillLocale(), n = locale === 'fr' ? String(p.value).replace('.', ',') : new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(p.value);
+    if (p.kind === 'percent') return '−' + (locale === 'fr' ? p.value : n) + ' %';
+    return (p.kind === 'amount' ? '−' : '') + n + (locale === 'ar' ? ' د.م.' : ' MAD');
   }
 
   /* GENERATED SHARED KiwiPromotionPricing BEGIN */
@@ -158,7 +159,7 @@
       if (line.itemId && p.items.indexOf(String(line.itemId)) >= 0) return true;
       return !!line.catId && p.cats.indexOf(String(line.catId)) >= 0;
     }
-    const resolveMenu = (promos, line, unit, moment) => {
+    const resolveMenu = (promos, line, unit, moment, locale = 'fr') => {
       const base = money(unit);
       if (!(base > 0) || !Array.isArray(promos) || !promos.length) return null;
       let best = null;
@@ -170,8 +171,8 @@
       }
       if (!best) return null;
       const p = best.promo;
-      const badge = p.kind === 'percent' ? '−' + p.value + ' %' : p.kind === 'amount'
-        ? '−' + String(p.value).replace('.', ',') + ' MAD' : String(p.value).replace('.', ',') + ' MAD';
+      const fr = String(locale).startsWith('fr'), n = fr ? String(p.value).replace('.', ',') : new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(p.value);
+      const badge = p.kind === 'percent' ? '−' + (fr ? p.value : n) + ' %' : (p.kind === 'amount' ? '−' : '') + n + (fr || !String(locale).startsWith('ar') ? ' MAD' : ' د.م.');
       return { price: best.price, promo: { id: p.id, name: p.name, badge, before: base } };
     }
     const stockOf = (item) => {
@@ -211,7 +212,7 @@
   })();
   /* GENERATED SHARED KiwiPromotionPricing END */
   function resolve(promos, line, unit, now) {
-    return KiwiPromotionPricing.resolveMenu(promos, line, unit, businessMoment(now));
+    return KiwiPromotionPricing.resolveMenu(promos, line, unit, businessMoment(now), tillLocale());
   }
 
   /* Same identity on both sides of a stack: two units at two different

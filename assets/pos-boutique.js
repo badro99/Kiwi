@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=154';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=72';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=154';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=154';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=156';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=74';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=156';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=156';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
@@ -1189,7 +1189,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       if (line.itemId && p.items.indexOf(String(line.itemId)) >= 0) return true;
       return !!line.catId && p.cats.indexOf(String(line.catId)) >= 0;
     }
-    const resolveMenu = (promos, line, unit, moment) => {
+    const resolveMenu = (promos, line, unit, moment, locale = 'fr') => {
       const base = money(unit);
       if (!(base > 0) || !Array.isArray(promos) || !promos.length) return null;
       let best = null;
@@ -1201,8 +1201,8 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       }
       if (!best) return null;
       const p = best.promo;
-      const badge = p.kind === 'percent' ? '−' + p.value + ' %' : p.kind === 'amount'
-        ? '−' + String(p.value).replace('.', ',') + ' MAD' : String(p.value).replace('.', ',') + ' MAD';
+      const fr = String(locale).startsWith('fr'), n = fr ? String(p.value).replace('.', ',') : new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(p.value);
+      const badge = p.kind === 'percent' ? '−' + (fr ? p.value : n) + ' %' : (p.kind === 'amount' ? '−' : '') + n + (fr || !String(locale).startsWith('ar') ? ' MAD' : ' د.م.');
       return { price: best.price, promo: { id: p.id, name: p.name, badge, before: base } };
     }
     const stockOf = (item) => {

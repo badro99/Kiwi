@@ -52,7 +52,7 @@ export const appliesMenu = (p, line) => {
   if (line.itemId && p.items.indexOf(String(line.itemId)) >= 0) return true;
   return !!line.catId && p.cats.indexOf(String(line.catId)) >= 0;
 }
-export const resolveMenu = (promos, line, unit, moment) => {
+export const resolveMenu = (promos, line, unit, moment, locale = 'fr') => {
   const base = money(unit);
   if (!(base > 0) || !Array.isArray(promos) || !promos.length) return null;
   let best = null;
@@ -64,8 +64,8 @@ export const resolveMenu = (promos, line, unit, moment) => {
   }
   if (!best) return null;
   const p = best.promo;
-  const badge = p.kind === 'percent' ? '−' + p.value + ' %' : p.kind === 'amount'
-    ? '−' + String(p.value).replace('.', ',') + ' MAD' : String(p.value).replace('.', ',') + ' MAD';
+  const fr = String(locale).startsWith('fr'), n = fr ? String(p.value).replace('.', ',') : new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(p.value);
+  const badge = p.kind === 'percent' ? '−' + (fr ? p.value : n) + ' %' : (p.kind === 'amount' ? '−' : '') + n + (fr || !String(locale).startsWith('ar') ? ' MAD' : ' د.م.');
   return { price: best.price, promo: { id: p.id, name: p.name, badge, before: base } };
 }
 export const stockOf = (item) => {
