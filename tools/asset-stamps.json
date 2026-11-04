@@ -440,8 +440,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "128",
-    "sha": "3f6f0de4d9ca48f7"
+    "v": "130",
+    "sha": "7658e8dbc4e975df"
   },
   "assets/daterange/activity.js": {
     "v": "7",
@@ -460,8 +460,8 @@
     "sha": "40794b45fcbbc8d4"
   },
   "assets/daterange/kpi.js": {
-    "v": "14",
-    "sha": "0777b7ba16dc2966"
+    "v": "16",
+    "sha": "0f815d2abcda22e4"
   },
   "assets/daterange/ledger.js": {
     "v": "8",
@@ -472,8 +472,8 @@
     "sha": "f91815b2b1f3bce4"
   },
   "assets/daterange/renderers.js": {
-    "v": "26",
-    "sha": "1a9d891311930de9"
+    "v": "28",
+    "sha": "5acdd25316f33865"
   },
   "assets/daterange/revenue.js": {
     "v": "5",
@@ -1384,12 +1384,12 @@
     "sha": "6034d25dcb90c82e"
   },
   "assets/pages-pro.js": {
-    "v": "2207",
-    "sha": "3e2b9efb386cc5e3"
+    "v": "2209",
+    "sha": "aa6330a274f9d40b"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
-    "v": "15",
-    "sha": "c84e97f8a6bfbc14"
+    "v": "17",
+    "sha": "0f28fc721efbf41d"
   },
   "assets/pages-pro/boutique-web-orders.js": {
     "v": "11",
@@ -1416,8 +1416,8 @@
     "sha": "98bec78733f9c645"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "138",
-    "sha": "9075152922967c91"
+    "v": "141",
+    "sha": "01bfffe66e0fbe56"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -2020,8 +2020,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "101",
-    "sha": "ca43e2661db13126"
+    "v": "103",
+    "sha": "266911e0c62698a9"
   },
   "assets/stock/alerts.js": {
     "v": "3",
@@ -2036,8 +2036,8 @@
     "sha": "ea65ec2ca9c8fc75"
   },
   "assets/stock/intake.js": {
-    "v": "13",
-    "sha": "1a526a65bc742459"
+    "v": "15",
+    "sha": "ab17fc8837a0d723"
   },
   "assets/stock/loss.js": {
     "v": "1",
@@ -2056,8 +2056,8 @@
     "sha": "84576ba18ce670d9"
   },
   "assets/stock/state.js": {
-    "v": "4",
-    "sha": "5d3e156921dc0e8d"
+    "v": "5",
+    "sha": "a81438db9c121c93"
   },
   "assets/stock/strings.js": {
     "v": "10",

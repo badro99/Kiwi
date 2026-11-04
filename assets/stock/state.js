@@ -250,7 +250,24 @@ window.KiwiStockState = (read) => {
   };
   }
 
-  return Object.freeze({ ledgerOpeningFor, moveStock, moveRetailStock, countStock,
+  async function stIntakeRequest(url, options) {
+    const slow = options && (options.method === 'PUT' || url === '/api/ai/invoice' || /"action":"prepare"/.test(options.body));
+    const controller = new AbortController(), expires = Date.now() + (slow ? 90000 : 15000);
+    async function bounded(work) {
+      let timer;
+      try {
+        return await Promise.race([Promise.resolve().then(work), new Promise((_, reject) => {
+          timer = setTimeout(() => { reject(new Error('request-timeout')); controller.abort(); }, Math.max(0, expires - Date.now()));
+        })]);
+      } finally { clearTimeout(timer); }
+    }
+    const res = await bounded(() => fetch(url, { ...options, signal: controller.signal }));
+    const json = res.json && res.json.bind(res);
+    if (json) res.json = () => bounded(json);
+    return res;
+  }
+
+  return Object.freeze({ stIntakeRequest, ledgerOpeningFor, moveStock, moveRetailStock, countStock,
     overrides: () => stStockOverrides,
     counts: () => stCountsCache, replaceCounts: value => { stCountsCache = value; },
     countsFetchedAt: () => stCountsLastFetched, markCountsFetched: value => { stCountsLastFetched = value; },

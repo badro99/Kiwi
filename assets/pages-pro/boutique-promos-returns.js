@@ -184,13 +184,16 @@
     liveReturnsCloud.bind();
     loadReturnsLedger(slug);
   }
-  let ledgerChanged = false;
+  let ledgerChanged = false, ledgerPeriod = '';
   const loadReturnsLedger = async (slug, again) => {
-    if (!slug || returnsLoading || (returnsState && !again)) return;
+    const period = rxView?.selectedPeriod() || null, periodKey = JSON.stringify(period);
+    if (!slug || returnsLoading || (returnsState && !again && ledgerPeriod === periodKey)) return;
+    ledgerPeriod = periodKey;
     returnsLoading = true;
     try {
       /* Même lecture que la tuile « Taux retour » de l'accueil (returns-ledger.js). */
-      const list = await (await import('../returns-ledger.js')).readReturnsLedger(slug);
+      const ledger = await import('../returns-ledger.js');
+      const list = await ledger.readReturnsLedger(slug, period);
       if (slug !== liveReturnsSlug) return;
       ledgerChanged = !returnsServer || JSON.stringify(list) !== JSON.stringify(liveReturns);
       liveReturns = list;
@@ -199,6 +202,7 @@
     } catch (_) { if (slug === liveReturnsSlug) { ledgerChanged = returnsState !== 'failed'; returnsState = 'failed'; } }
     finally {
       returnsLoading = false;
+      if (periodKey !== JSON.stringify(rxView?.selectedPeriod() || null)) { loadReturnsLedger(liveReturnsSlug, true); return; }
       /* Relu toutes les 30 s avec les avoirs : une relecture identique ne
          reconstruit pas la page sous le doigt du commerçant. */
       if (ledgerChanged && document.querySelector('[data-live-returns]')) handlers['nav-returns']();

@@ -18,51 +18,63 @@ let warming = null, lastChanged = false, lastTry = '';   // « ms@slug » : un �
 
 /* Toutes les pages du registre serveur. Lève une erreur si une page manque :
    un registre incomplet ne doit pas se lire comme un registre vide. */
-export async function readReturnsLedger(slug) {
-  const { deadlineFetch } = await import('./request-deadline.mjs').catch(() => ({ deadlineFetch: (url, options) => fetch(url, options) }));
+export async function readReturnsLedger(slug, period = null) {
+  const { deadlineFetch } = await import('./request-deadline.mjs');
+  const query = period ? '&since=' + period[0] + (Number.isFinite(period[1]) ? '&until=' + period[1] : '') : '';
   const list = [];
   let offset = 0;
   do {
-    const response = await deadlineFetch('/api/sale/refund?merchant=' + encodeURIComponent(slug) + '&offset=' + offset, { credentials: 'same-origin', cache: 'no-store' });
+    const response = await deadlineFetch('/api/sale/refund?merchant=' + encodeURIComponent(slug) + '&offset=' + offset + query, { credentials: 'same-origin', cache: 'no-store' });
     const data = await response.json();
     if (!response.ok || !data.ok || !Array.isArray(data.list)) throw new Error('returns-read');
     list.push(...data.list);
     if (data.next !== null && (!Number.isSafeInteger(data.next) || data.next <= offset)) throw new Error('returns-page');
     offset = data.next;
   } while (offset !== null);
-  lastChanged = remember(slug, list);
+  lastChanged = remember(slug, list, period);
   return list;
 }
 
 /* Les avoirs émis, gardés pour la tuile de l'accueil (lecture synchrone au
    rendu). Les remboursements n'y sont pas : le journal des ventes les a déjà. */
-function remember(slug, list) {
+function remember(slug, list, period) {
   const avoirs = list.filter((r) => r && r.kind === 'avoir').map((r) => ({ ts: Number(r.ts) || 0, amount: Math.abs(Number(r.amount) || 0) }));
   let prev = null;
   try { prev = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) {}
-  const changed = !prev || prev.m !== slug || JSON.stringify(prev.list) !== JSON.stringify(avoirs);
+  const changed = !prev || prev.m !== slug || JSON.stringify(prev.list) !== JSON.stringify(avoirs) || JSON.stringify(prev.window) !== JSON.stringify(period);
   /* `v` : l'identifiant de venue sous lequel l'accueil range ses chiffres ;
      la tuile ne lit le registre que s'il est celui du magasin à l'écran. */
   let v = '';
   try { v = String((window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || ''); } catch (_) {}
-  try { localStorage.setItem(KEY, JSON.stringify({ m: slug, v, at: Date.now(), list: avoirs })); } catch (_) {}
+  try { localStorage.setItem(KEY, JSON.stringify({ m: slug, v, at: Date.now(), window: period, list: avoirs })); } catch (_) {}
   return changed;
 }
 
 /* Relit le registre au plus une fois par minute. Résout `true` si les avoirs
    ont changé (l'appelant repeint), `false` sinon ou en cas d'échec. */
-export function warmCreditReturns() {
+export function coversWindow(cache, period) {
+  if (!cache || !Object.hasOwn(cache, 'window')) return false;
+  if (cache.window === null) return true;
+  return !!period && cache.window[0] <= period[0] && (cache.window[1] == null ? Infinity : cache.window[1]) >= period[1];
+}
+export function warmCreditReturns(period = selectedPeriod()) {
+  const selected = selectedPeriod();
+  if (period && selected && period[0] === selected[0] && selected[1] === Infinity) period = [period[0], Infinity];
   let slug = '';
   try { slug = String((window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug()) || ''); } catch (_) {}
-  if (!slug || warming) return warming || Promise.resolve(false);
+  if (!slug) return Promise.resolve(false);
+  if (warming) return warming.then(changed => warmCreditReturns(period).then(next => changed || next));
+  const signature = slug + ':' + JSON.stringify(period);
   const at = lastTry.indexOf('@');
-  if (lastTry.slice(at + 1) === slug && Date.now() - Number(lastTry.slice(0, at)) < MAX_AGE) return Promise.resolve(false);
-  lastTry = Date.now() + '@' + slug;
+  if (lastTry.slice(at + 1) === signature && Date.now() - Number(lastTry.slice(0, at)) < MAX_AGE) return Promise.resolve(false);
+  lastTry = Date.now() + '@' + signature;
   try {
     const prev = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (prev && prev.m === slug && Date.now() - (Number(prev.at) || 0) < MAX_AGE) return Promise.resolve(false);
+    if (prev && prev.m === slug && coversWindow(prev, period) && Date.now() - (Number(prev.at) || 0) < MAX_AGE) return Promise.resolve(false);
+    // Keep the previous read when widening, so current and comparison periods coexist.
+    if (period && prev && prev.m === slug && Date.now() - (Number(prev.at) || 0) < MAX_AGE && Array.isArray(prev.window)) period = [Math.min(period[0], prev.window[0]), Math.max(period[1], prev.window[1] == null ? Infinity : prev.window[1])];
   } catch (_) {}
-  warming = readReturnsLedger(slug).then(() => lastChanged, () => false).finally(() => { warming = null; });
+  warming = readReturnsLedger(slug, period).then(() => lastChanged, () => false).finally(() => { warming = null; });
   return warming;
 }
 

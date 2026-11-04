@@ -1,6 +1,6 @@
 {
   "file": "assets/daterange/renderers.js",
-  "sha256": "0c4748ab48c031d6bcd34fec6476870c777f44c69caca7cfdbb9510787f2b3d5",
+  "sha256": "78e1cfc78f693e7eb275cfedeb92368b9d6c7de1b8480e160413092673aca519",
   "parts": [
     {
       "name": "hero",
@@ -96,7 +96,7 @@
         },
         {
           "name": "heroDataByVenue",
-          "start": 229172,
+          "start": 229651,
           "length": 2609,
           "offset": 20229
         }
@@ -187,48 +187,48 @@
         {
           "name": "renderKpiBand",
           "start": 19492,
-          "length": 27741,
+          "length": 28220,
           "offset": 1391
         },
         {
           "name": "hotelPerfEntry",
-          "start": 171467,
+          "start": 171946,
           "length": 1346,
           "offset": 29132
         },
         {
           "name": "hotelTilesFrom",
-          "start": 172813,
+          "start": 173292,
           "length": 1364,
           "offset": 30478
         },
         {
           "name": "tableTimeEntry",
-          "start": 174177,
+          "start": 174656,
           "length": 1263,
           "offset": 31842
         },
         {
           "name": "openKpiCustomizer",
-          "start": 175440,
+          "start": 175919,
           "length": 5621,
           "offset": 33105
         },
         {
           "name": "dutyBand",
-          "start": 202084,
+          "start": 202563,
           "length": 2830,
           "offset": 38726
         },
         {
           "name": "retailBand",
-          "start": 204914,
+          "start": 205393,
           "length": 2025,
           "offset": 41556
         },
         {
           "name": "kpiByVenue",
-          "start": 231781,
+          "start": 232260,
           "length": 10257,
           "offset": 43581
         }
@@ -303,31 +303,31 @@
       "fragments": [
         {
           "name": "renderRevChart",
-          "start": 47233,
+          "start": 47712,
           "length": 38663,
           "offset": 1189
         },
         {
           "name": "hourlyCumul",
-          "start": 161717,
+          "start": 162196,
           "length": 503,
           "offset": 39852
         },
         {
           "name": "dailyTotals",
-          "start": 162220,
+          "start": 162699,
           "length": 520,
           "offset": 40355
         },
         {
           "name": "realRevSeries",
-          "start": 162740,
+          "start": 163219,
           "length": 4247,
           "offset": 40875
         },
         {
           "name": "revChartByVenue",
-          "start": 242038,
+          "start": 242517,
           "length": 9857,
           "offset": 45122
         }
@@ -384,25 +384,25 @@
       "fragments": [
         {
           "name": "renderFeed",
-          "start": 94571,
+          "start": 95050,
           "length": 10162,
           "offset": 817
         },
         {
           "name": "buildOrder",
-          "start": 182839,
+          "start": 183318,
           "length": 5590,
           "offset": 10979
         },
         {
           "name": "buildLiveFeed",
-          "start": 188429,
+          "start": 188908,
           "length": 1375,
           "offset": 16569
         },
         {
           "name": "buildCustomFeed",
-          "start": 189804,
+          "start": 190283,
           "length": 5648,
           "offset": 17944
         }
@@ -475,55 +475,55 @@
       "fragments": [
         {
           "name": "setDateRange",
-          "start": 141180,
+          "start": 141659,
           "length": 456,
           "offset": 1033
         },
         {
           "name": "commitCustomRange",
-          "start": 141636,
+          "start": 142115,
           "length": 380,
           "offset": 1489
         },
         {
           "name": "setShowComparison",
-          "start": 142016,
+          "start": 142495,
           "length": 418,
           "offset": 1869
         },
         {
           "name": "revealDayPill",
-          "start": 145494,
+          "start": 145973,
           "length": 500,
           "offset": 2287
         },
         {
           "name": "fmtHumanRange",
-          "start": 207772,
+          "start": 208251,
           "length": 708,
           "offset": 2787
         },
         {
           "name": "closeCustomPicker",
-          "start": 208480,
+          "start": 208959,
           "length": 1011,
           "offset": 3495
         },
         {
           "name": "openCustomPicker",
-          "start": 209491,
+          "start": 209970,
           "length": 14403,
           "offset": 4506
         },
         {
           "name": "mountDaySelector",
-          "start": 223894,
+          "start": 224373,
           "length": 2406,
           "offset": 18909
         },
         {
           "name": "registerHandler",
-          "start": 226300,
+          "start": 226779,
           "length": 1551,
           "offset": 21315
         }
@@ -675,109 +675,109 @@
       "fragments": [
         {
           "name": "renderMix",
-          "start": 85896,
+          "start": 86375,
           "length": 7041,
           "offset": 2177
         },
         {
           "name": "renderMixPlan",
-          "start": 92937,
+          "start": 93416,
           "length": 1634,
           "offset": 9218
         },
         {
           "name": "renderSettle",
-          "start": 104733,
+          "start": 105212,
           "length": 1030,
           "offset": 10852
         },
         {
           "name": "renderPairs",
-          "start": 105763,
+          "start": 106242,
           "length": 1198,
           "offset": 11882
         },
         {
           "name": "renderInteg",
-          "start": 106961,
+          "start": 107440,
           "length": 1529,
           "offset": 13080
         },
         {
           "name": "renderNotifBadge",
-          "start": 108490,
+          "start": 108969,
           "length": 169,
           "offset": 14609
         },
         {
           "name": "renderEvening",
-          "start": 108659,
+          "start": 109138,
           "length": 5873,
           "offset": 14778
         },
         {
           "name": "renderStock",
-          "start": 114532,
+          "start": 115011,
           "length": 3987,
           "offset": 20651
         },
         {
           "name": "renderTimeline",
-          "start": 118519,
+          "start": 118998,
           "length": 935,
           "offset": 24638
         },
         {
           "name": "renderHealth",
-          "start": 119454,
+          "start": 119933,
           "length": 1714,
           "offset": 25573
         },
         {
           "name": "renderBench",
-          "start": 121168,
+          "start": 121647,
           "length": 3558,
           "offset": 27287
         },
         {
           "name": "renderProducts",
-          "start": 124726,
+          "start": 125205,
           "length": 2917,
           "offset": 30845
         },
         {
           "name": "renderStaff",
-          "start": 127643,
+          "start": 128122,
           "length": 3126,
           "offset": 33762
         },
         {
           "name": "realMixRows",
-          "start": 181061,
+          "start": 181540,
           "length": 1778,
           "offset": 36888
         },
         {
           "name": "realLowStock",
-          "start": 195452,
+          "start": 195931,
           "length": 1849,
           "offset": 38666
         },
         {
           "name": "realTopProducts",
-          "start": 197301,
+          "start": 197780,
           "length": 1746,
           "offset": 40515
         },
         {
           "name": "realPairs",
-          "start": 199047,
+          "start": 199526,
           "length": 2391,
           "offset": 42261
         },
         {
           "name": "growBars",
-          "start": 201438,
+          "start": 201917,
           "length": 646,
           "offset": 44652
         }
@@ -876,151 +876,151 @@
       "fragments": [
         {
           "name": "aggFusion",
-          "start": 130769,
+          "start": 131248,
           "length": 1630,
           "offset": 1402
         },
         {
           "name": "zeroClone",
-          "start": 132399,
+          "start": 132878,
           "length": 312,
           "offset": 3032
         },
         {
           "name": "vData",
-          "start": 132711,
+          "start": 133190,
           "length": 1761,
           "offset": 3344
         },
         {
           "name": "priorLedgerRows",
-          "start": 134472,
+          "start": 134951,
           "length": 541,
           "offset": 5105
         },
         {
           "name": "demoLedgerProjection",
-          "start": 135013,
+          "start": 135492,
           "length": 4761,
           "offset": 5646
         },
         {
           "name": "demoPreviousAt",
-          "start": 139774,
+          "start": 140253,
           "length": 728,
           "offset": 10407
         },
         {
           "name": "demoRole",
-          "start": 140502,
+          "start": 140981,
           "length": 678,
           "offset": 11135
         },
         {
           "name": "merchantTimeZone",
-          "start": 145994,
+          "start": 146473,
           "length": 654,
           "offset": 11813
         },
         {
           "name": "merchantParts",
-          "start": 146648,
+          "start": 147127,
           "length": 448,
           "offset": 12467
         },
         {
           "name": "merchantBoundary",
-          "start": 147096,
+          "start": 147575,
           "length": 475,
           "offset": 12915
         },
         {
           "name": "merchantDayKey",
-          "start": 147571,
+          "start": 148050,
           "length": 342,
           "offset": 13390
         },
         {
           "name": "calendarStartKey",
-          "start": 147913,
+          "start": 148392,
           "length": 415,
           "offset": 13732
         },
         {
           "name": "calendarBounds",
-          "start": 148328,
+          "start": 148807,
           "length": 628,
           "offset": 14147
         },
         {
           "name": "rangeBounds",
-          "start": 148956,
+          "start": 149435,
           "length": 1292,
           "offset": 14775
         },
         {
           "name": "realInsightSummary",
-          "start": 150248,
+          "start": 150727,
           "length": 2273,
           "offset": 16067
         },
         {
           "name": "buildRealHeroRec",
-          "start": 152521,
+          "start": 153000,
           "length": 2026,
           "offset": 18340
         },
         {
           "name": "buildRealHeatmapRec",
-          "start": 154547,
+          "start": 155026,
           "length": 1000,
           "offset": 20366
         },
         {
           "name": "screenBook",
-          "start": 155547,
+          "start": 156026,
           "length": 471,
           "offset": 21366
         },
         {
           "name": "realClosedTips",
-          "start": 156018,
+          "start": 156497,
           "length": 2230,
           "offset": 21837
         },
         {
           "name": "realClientMix",
-          "start": 158248,
+          "start": 158727,
           "length": 1209,
           "offset": 24067
         },
         {
           "name": "openDays",
-          "start": 159457,
+          "start": 159936,
           "length": 345,
           "offset": 25276
         },
         {
           "name": "realDeltaPct",
-          "start": 159802,
+          "start": 160281,
           "length": 1479,
           "offset": 25621
         },
         {
           "name": "deltaTenths",
-          "start": 161281,
+          "start": 161760,
           "length": 436,
           "offset": 27100
         },
         {
           "name": "operatorLedgerPending",
-          "start": 166987,
+          "start": 167466,
           "length": 552,
           "offset": 27536
         },
         {
           "name": "buildHeatmap",
-          "start": 167539,
+          "start": 168018,
           "length": 3928,
           "offset": 28088
         }
@@ -1081,37 +1081,37 @@
       "fragments": [
         {
           "name": "homeSet",
-          "start": 142434,
+          "start": 142913,
           "length": 276,
           "offset": 957
         },
         {
           "name": "paintNumber",
-          "start": 142710,
+          "start": 143189,
           "length": 867,
           "offset": 1233
         },
         {
           "name": "animateNumber",
-          "start": 143577,
+          "start": 144056,
           "length": 897,
           "offset": 2100
         },
         {
           "name": "fitHeroAmount",
-          "start": 144474,
+          "start": 144953,
           "length": 1020,
           "offset": 2997
         },
         {
           "name": "hookI18n",
-          "start": 206939,
+          "start": 207418,
           "length": 833,
           "offset": 4017
         },
         {
           "name": "tickLiveRevenue",
-          "start": 227851,
+          "start": 228330,
           "length": 1321,
           "offset": 4850
         }

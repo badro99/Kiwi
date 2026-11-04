@@ -358,21 +358,30 @@ export async function onRequestGet({ request, env }) {
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
   const offset = Number(params.get('offset') || 0);
   if (!Number.isSafeInteger(offset) || offset < 0) return json({ error: 'bad-offset' }, 400);
+  const period = {};
+  for (const key of ['since', 'until']) if (params.has(key)) {
+    const raw = params.get(key), value = Number(raw);
+    if (!/^\d+$/.test(raw) || !Number.isSafeInteger(value) || value < 0 || value > 8640000000000000) return json({ error: 'bad-period' }, 400);
+    period[key] = value;
+  }
+  if (period.since != null && period.until != null && period.since >= period.until) return json({ error: 'bad-period' }, 400);
+  const filter = alias => (period.since == null ? '' : ` AND ${alias}.ts >= ?`) + (period.until == null ? '' : ` AND ${alias}.ts < ?`);
+  const bounds = ['since', 'until'].filter(key => period[key] != null).map(key => period[key]);
   try {
     const rows = (await env.DB.prepare(`
       SELECT * FROM (
         SELECT 'refund:' || a.note AS id, a.ts, COALESCE(a.amount_cents, a.amount * 100) / 100.0 AS amount,
                a.reason, COALESCE(NULLIF(s.ref, ''), a.sale_id) AS saleRef, a.actor, 'refund' AS kind
           FROM sale_audit a JOIN sales s ON s.merchant = a.merchant AND s.id = a.sale_id
-         WHERE a.merchant = ? AND a.action = 'refund' AND s.void_ts IS NULL
+         WHERE a.merchant = ? AND a.action = 'refund' AND s.void_ts IS NULL${filter('a')}
         UNION ALL
         SELECT 'credit:' || e.id, e.ts, e.amount_cents / 100.0, c.reason,
                COALESCE(NULLIF(s.ref, ''), e.ref_id), e.actor, 'avoir'
           FROM store_credit_events e JOIN sales s ON s.merchant = e.merchant AND s.id = e.ref_id
           JOIN store_credits c ON c.merchant = e.merchant AND c.id = e.credit_id
-         WHERE e.merchant = ? AND e.action = 'issue' AND s.void_ts IS NULL
+         WHERE e.merchant = ? AND e.action = 'issue' AND s.void_ts IS NULL${filter('e')}
       ) ORDER BY ts DESC, id DESC LIMIT 501 OFFSET ?
-    `).bind(merchant, merchant, offset).all()).results || [];
+    `).bind(merchant, ...bounds, merchant, ...bounds, offset).all()).results || [];
     return json({ ok: true, list: rows.slice(0, 500), next: rows.length > 500 ? offset + 500 : null });
   } catch (_) { return json({ error: 'returns-read-failed' }, 503); }
 }

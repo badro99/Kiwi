@@ -229,9 +229,9 @@ function makeShared() {
 }
 
 /* ── Un appareil = un contexte vm (vrai registre + vraie compta + vrai noyau) */
-const STOCK_FNS = ['stIntakeHash', 'stSha256Hex', 'stIntakePostingLines', 'stIntakePostingCanonical', 'stIntakePostingFingerprint', 'stIntakePrepare', 'stIntakePostingIds', 'stIntakeSupplierId', 'stIntakePostGuard', 'stIntakeMerchant', 'stIntakeServerStatus', 'stIntakeMarkOnce', 'stIntakePostedHas', 'stIntakePostedAdd', 'stIntakeOutboxRead', 'stIntakeOutboxWrite', 'stIntakePostAll'];
+const STOCK_FNS = ['stIntakeRequest', 'stIntakeHash', 'stSha256Hex', 'stIntakePostingLines', 'stIntakePostingCanonical', 'stIntakePostingFingerprint', 'stIntakePrepare', 'stIntakePostingIds', 'stIntakeSupplierId', 'stIntakePostGuard', 'stIntakeMerchant', 'stIntakeServerStatus', 'stIntakeMarkOnce', 'stIntakePostedHas', 'stIntakePostedAdd', 'stIntakeOutboxRead', 'stIntakeOutboxWrite', 'stIntakePostAll'];
 function extractStock(name) {
-  const m = stockSrc.match(new RegExp('  (?:async )?function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n  \\}'));
+  const m = (stockSrc.replaceAll('S.stockState.stIntakeRequest', 'stIntakeRequest') + fs.readFileSync('assets/stock/state.js', 'utf8')).match(new RegExp('  (?:async )?function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n  \\}'));
   assert.ok(m, 'stock helper extractable: ' + name);
   return m[0];
 }
@@ -259,7 +259,7 @@ function makeDevice(shared, merchant) {
   };
   win.window = win;
   win.crypto = globalThis.crypto;
-  const ctx = vm.createContext({
+  const ctx = vm.createContext({ AbortController, setTimeout, clearTimeout,
     window: win, localStorage, console,
     Date, Math, JSON, Object, Array, String, Number, Boolean, Map, Set, RegExp, Error, Promise, TextEncoder,
     setTimeout: () => 0, setInterval: () => 0,

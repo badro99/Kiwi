@@ -152,7 +152,7 @@ ok('les journées décalées ne soustraient plus 24 heures',
 });
 ok('« tauxRetour » = (remboursé + crédité en avoir) ÷ vendu sur la période, en valeur',
   /const returned = w\.refunds \+ creditStats\(wFrom, wTo\)\.credited;/.test(SRC)
-  && /tauxRetour: data\.tauxRetour \? \(w\.gross > 0\s*\?[^\n]*value: Math\.round\(\(returned \/ w\.gross\) \* 1000\) \/ 10, unit: '%'/.test(SRC));
+  && /tauxRetour: data\.tauxRetour \? \(!Number\.isFinite\(returned\) \? [^\n]+ : w\.gross > 0\s*\?[^\n]*value: Math\.round\(\(returned \/ w\.gross\) \* 1000\) \/ 10, unit: '%'/.test(SRC));
 ok('« tauxRetour » compare le même taux à la période précédente',
   /realDeltaPct\(rng, \(s\) => \(s\.gross \? \(\(s\.refunds \+ s\.credited\) \/ s\.gross\) \* 100 : 0\), undefined, creditStats\)/.test(SRC));
 {

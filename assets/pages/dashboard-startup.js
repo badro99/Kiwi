@@ -20,7 +20,7 @@
   }
   const scripts = [
     'assets/pages-pro-office.js?v=3',
-    'assets/pages-pro.js?v=2207',
+    'assets/pages-pro.js?v=2209',
     'assets/pages-pro-boutique.js?v=45',
     'assets/boutique-stock-correct.js?v=4',
     'assets/boutique-categories-view.js?v=3',
@@ -47,8 +47,8 @@
     'assets/day-report-conflicts.js?v=2',
     'assets/day-report-dash.js?v=46',
     'assets/stock/strings.js?v=10',
-    'assets/stock/state.js?v=4',
-    'assets/stock.js?v=101',
+    'assets/stock/state.js?v=5',
+    'assets/stock.js?v=103',
     'assets/catalog-workspace.js?v=5',
     'assets/planning-core.js?v=14',
     'assets/team/catalog.js?v=2',
