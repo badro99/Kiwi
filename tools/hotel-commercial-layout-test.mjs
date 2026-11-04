@@ -109,6 +109,7 @@ try {
         const draft=structuredClone(window.__billingFixture.preview);
         return {ok:true,json:async()=>({rev:1,saved:{draft,input:body.input,updatedAt:1}})};
       }
+      if(String(url).startsWith('/api/hotel/stays?'))return {ok:true,json:async()=>({stays:[]})}; // re-read after an uncertain write
       return {ok:true,json:async()=>structuredClone(window.__billingFixture)};
     };
     await a.cuOpenDossier(booking);

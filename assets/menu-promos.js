@@ -94,7 +94,7 @@
   function isActive(p, now) { return rules.status(p, now, 'menu') === 'active'; }
   function status(p, now) { return rules.status(p, now, 'menu'); }
 
-  function tillLocale() { try { return localStorage.getItem('kiwiCaisseLang') || 'fr'; } catch (_) { return 'fr'; } }
+  function tillLocale() { try { return root.localStorage.getItem('kiwiCaisseLang') || 'fr'; } catch (_) { return 'fr'; } }
   function badge(p) {
     if (!p) return '';
     const locale = tillLocale(), n = locale === 'fr' ? String(p.value).replace('.', ',') : new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(p.value);

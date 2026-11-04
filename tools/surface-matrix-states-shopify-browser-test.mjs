@@ -9,11 +9,11 @@ const h = await harness('surface-matrix-states-shopify');
 const wait = { visible: true, timeout: 10000 };
 const copy = {
   fr: { refresh: 'Actualiser les correspondances', retry: 'Réessayer', replay: 'Rattraper les commandes en ligne',
-    error: 'Synchronisation interrompue. Réessayez pour renvoyer le stock.', none: 'Aucune commande en ligne à rattraper.' },
+    error: 'Stock Shopify à synchroniser.', none: 'Aucune commande en ligne à rattraper.' },
   en: { refresh: 'Refresh matches', retry: 'Retry', replay: 'Catch up online orders',
-    error: 'Synchronization interrupted. Retry to send stock again.', none: 'No online order to catch up.' },
+    error: 'Shopify stock needs syncing.', none: 'No online order to catch up.' },
   ar: { refresh: 'تحديث المطابقات', retry: 'إعادة المحاولة', replay: 'استدراك الطلبات الإلكترونية',
-    error: 'توقفت المزامنة. أعد المحاولة لإرسال المخزون مجددًا.', none: 'لا توجد طلبات إلكترونية لاستدراكها.' },
+    error: 'مخزون Shopify يحتاج إلى مزامنة.', none: 'لا توجد طلبات إلكترونية لاستدراكها.' },
 };
 
 async function click(page, selector) {
@@ -71,7 +71,7 @@ const connector = {
       if (url.origin === h.base && url.pathname === '/api/shopify/status') {
         if (request.method() === 'GET') return answer({
           connection: { shop: 'matrix-synthetic.myshopify.com', status: 'active',
-            location: { id: 'matrix-location', name: 'Matrix stock' }, lastError: recovered ? null : s.error },
+            location: { id: 'matrix-location', name: 'Matrix stock' }, lastError: recovered ? null : 'stock-pending' },
           locations: [{ id: 'matrix-location', name: 'Matrix stock' }],
           mapping: { active: 1, drift: 0 }, queue: { pending: recovered ? 1 : 0, failed: recovered ? 0 : 1 },
         });

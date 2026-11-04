@@ -175,7 +175,7 @@ function clientRoomsDoc(withLunch) {
 }
 
 /* ── test origin: static repo + real API handlers ──────────────────── */
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
 
 async function readJson(req) {
   const chunks = [];
@@ -394,11 +394,13 @@ for (const locale of LOCALES.filter(l => l === 'fr')) for (const [device, width,
     await page.waitForSelector('[data-action="hx-daily-refresh"]:not([disabled])');
     await click('.hx-daily .kiwi-select-trigger');
     await click('.kiwi-select-option[data-option-index="2"]');
-    const dialog = new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Confirmation du solde impayé absente')), 10000);
-      page.once('dialog', async d => { clearTimeout(timeout); try { assert.match(d.message(), /105/); await d.dismiss(); resolve(); } catch (error) { reject(error); } });
-    });
-    await Promise.all([dialog, click(`[data-action="hx-stay-checkout"][data-arg="${stay.id}"]`)]);
+    // Le départ impayé s'ouvre dans une feuille Kiwi (code manager vérifié au serveur), plus une boîte native.
+    await click(`[data-action="hx-stay-checkout"][data-arg="${stay.id}"]`);
+    const sheet = await page.waitForFunction(() => [...document.querySelectorAll('.kiwi-backdrop.in')].find(m => m.querySelector('input[name="pin"]')), { timeout: 10000 })
+      .catch(() => { throw new Error('Confirmation du solde impayé absente'); });
+    assert.match(await sheet.evaluate(m => m.textContent), /105/);
+    await sheet.evaluate(m => m.querySelector('.kiwi-modal-close').click());
+    await page.waitForFunction(() => ![...document.querySelectorAll('.kiwi-backdrop.in')].some(m => m.querySelector('input[name="pin"]')));
     console.log('  · ' + device + ' · Refus confirmé');
     assert.equal(stays().find(b => b.id === stay.id).status, 'checked_in');
     step('Régler le solde puis clôturer et recharger');

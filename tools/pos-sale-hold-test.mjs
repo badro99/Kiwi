@@ -86,7 +86,7 @@ ok('held quota failure is explicit on the durable entry and emitted state', loca
     ok(type + ' has one listener in the till shell', (listeners[type] || []).length === 1);
     (listeners[type] || []).forEach((fn) => fn({ type }));
   }
-  ok('each refusal shows one translated warning to the cashier', toasts.length === 4 && toasts.every((t) => t.kind === 'warn' && t.ms === 10000 && t.msg.startsWith('EN:Vente')));
+  ok('each refusal shows one translated warning (a lost sale as danger)', toasts.length === 4 && toasts.every((t) => t.ms === 10000 && t.msg.startsWith('EN:Vente')) && toasts.map((t) => t.kind).join() === 'danger,warn,warn,warn');
 }
 /* A stock engine that throws no longer hides it: the line says so and the till is told. */
 {

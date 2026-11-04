@@ -180,8 +180,8 @@
     "sha": "eb74d5c1cd3bb099"
   },
   "assets/caisse-app.js": {
-    "v": "34",
-    "sha": "73ffd84088f98e14"
+    "v": "35",
+    "sha": "a443b0ce5d4f09e9"
   },
   "assets/caisse-dna.css": {
     "v": "10",
@@ -692,8 +692,8 @@
     "sha": "f3c949a80d343db2"
   },
   "assets/hotel-language.js": {
-    "v": "4",
-    "sha": "41f5ff788756c8ca"
+    "v": "6",
+    "sha": "75b42046e47343e5"
   },
   "assets/hotel-rates.js": {
     "v": "1",
@@ -1228,8 +1228,8 @@
     "sha": "8193f0089d257f1e"
   },
   "assets/menu-promos.js": {
-    "v": "10",
-    "sha": "1816ecb786ecb0df"
+    "v": "11",
+    "sha": "785ce0fdcfc457cb"
   },
   "assets/menu-scan-reader.js": {
     "v": "3",
@@ -1428,8 +1428,8 @@
     "sha": "187b3ac84386bbf8"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "148",
-    "sha": "184ea8e22dbb7241"
+    "v": "150",
+    "sha": "ab75532cd62db80b"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
