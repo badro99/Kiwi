@@ -10,7 +10,6 @@
       if (meta) meta.style.display = (v === 'builder') ? '' : 'none';
       if (v === 'board') renderVrapBoard();
     }
-
     function vrapElapsed(o) {
       const min = Math.max(0, Math.floor((Date.now() - o.sentAt.getTime()) / 60000));
       return min < 1 ? "à l'instant" : `il y a ${min} min`;
@@ -18,11 +17,9 @@
     function vrapItemsLine(o) {
       return o.items.map(i => `${i.q}× ${kdsEsc(i.n)}`).join(', ');
     }
-
     function vrapFinancialItems(o) {
       return o && Array.isArray(o.billItems) && o.billItems.length ? o.billItems : ((o && o.items) || []);
     }
-
     /* ── Vente au comptoir ou commande à distance ? ────────────────────────
      * Une commande OrderPro est passée par un client ABSENT : il faut pouvoir
      * lui dire « c'est prêt », puis constater qu'il est venu la chercher. Ces
@@ -42,7 +39,6 @@
       if (o.opChannel) return o.opChannel !== 'kiwi';
       return o.opNum == null;
     }
-
     function vrapOrderCard(o) {
       const ready = o.status === 'ready';
       const counterSale = vrapIsCounterSale(o);
@@ -108,13 +104,11 @@
         </div>
       </div>`;
     }
-
     function vrapHandoverTimestamp(value) {
       if (typeof value !== 'number' && typeof value !== 'string') return null;
       const ts = Number(value);
       return Number.isInteger(ts) && ts > 0 && ts <= 8640000000000000 ? ts : null;
     }
-
     function vrapHistoryDay(ts) {
       const DR = window.KiwiDayReport;
       if (DR && typeof DR.businessDay === 'function') return DR.businessDay(ts, opMerchant());
@@ -122,7 +116,6 @@
       const d = new Date(ts - 5 * 3600000);
       return [d.getFullYear(), d.getMonth() + 1, d.getDate()].join('-');
     }
-
     function vrapHandoverTime(ts) {
       return ts ? new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
     }
@@ -545,21 +538,27 @@
     }
 
     function archivedTakeawaySet() {
-      const merchant = currentMerchantSlug();
+      const merchant = currentMerchantSlug(), today = vrapHistoryDay(Date.now());
+      // Retain fourteen merchant business days; 10,000 is only a storage safety cap.
+      const cutoff = new Date(Date.parse(today + 'T12:00:00Z') - 14 * 86400000).toISOString().slice(0, 10);
       if (merchant !== archivedTakeawayScope) {
         archivedTakeawayScope = merchant;
-        try {
-          const saved = JSON.parse(localStorage.getItem('kiwi-archived-takeaways:' + merchant) || '[]');
-          archivedTakeawayIds = new Set(Array.isArray(saved) ? saved.filter(id => typeof id === 'string').slice(-1000) : []);
-        } catch (_) { archivedTakeawayIds = new Set(); }
+        let saved = []; try { saved = JSON.parse(localStorage.getItem('kiwi-archived-takeaways:' + merchant) || '[]'); } catch (_) {}
+        const rows = (Array.isArray(saved) ? saved : []).map(row => typeof row === 'string' ? { id: row, day: today } : row)
+          .filter(row => row && typeof row.id === 'string' && row.day >= cutoff).slice(-10000);
+        archivedTakeawayIds = new Set(rows.map(row => row.id));
+        archivedTakeawayIds.days = new Map(rows.map(row => [row.id, row.day]));
+        try { localStorage.setItem('kiwi-archived-takeaways:' + merchant, JSON.stringify(rows)); } catch (_) {}
       }
-      return archivedTakeawayIds;
+      const ids = archivedTakeawayIds;
+      for (const id of ids) if ((ids.days.get(id) || '') < cutoff) { ids.delete(id); ids.days.delete(id); }
+      return ids;
     }
 
     function rememberArchivedTakeaway(id) {
       if (!id || !currentMerchantSlug()) return;
       const ids = archivedTakeawaySet();
-      ids.add(String(id));
+      ids.add(String(id)); ids.days.set(String(id), vrapHistoryDay(Date.now()));
       try { localStorage.setItem('kiwi-archived-takeaways:' + archivedTakeawayScope,
-        JSON.stringify(Array.from(ids).slice(-1000))); } catch (_) { if (!ids.storageWarned) { ids.storageWarned = true; toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Archive non enregistrée sur cet appareil. Gardez cette page ouverte.')); } }
+        JSON.stringify(Array.from(ids).slice(-10000).map(id => ({ id, day: ids.days.get(id) })))); } catch (_) { if (!ids.storageWarned) { ids.storageWarned = true; toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Archive non enregistrée sur cet appareil. Gardez cette page ouverte.')); } }
     }

@@ -100,7 +100,7 @@
     if (dataLoad) return dataLoad;
     dataLoad = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = '/assets/onboarding-data.js?v=9';
+      script.src = '/assets/onboarding-data.js?v=11';
       const failed = () => { dataLoad = null; script.remove(); reject(new Error('onboarding-data')); };
       script.onload = () => window.KiwiOnboardingData ? resolve(window.KiwiOnboardingData) : failed();
       script.onerror = failed;

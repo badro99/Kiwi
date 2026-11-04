@@ -5,6 +5,18 @@ export function createBookingSubmission(context) {
   'use strict';
   const { owner, app, merchant, takesCovers, party, times, loadHotelRooms, hotelRoomList, hotelSummary, rememberManage, manageBlock, wireManageBlock, ssGet, ssSet, ssDel, t, ht, esc, money, fmt, layout, head } = context;
   const state = owner.getState();
+  const retryRefs = {};
+  function retryRef(key, prefix, form) {
+    const ref = retryRefs[key] || ssGet(key) || (prefix + crypto.randomUUID());
+    retryRefs[key] = ref;
+    let kept = false;
+    try { ssSet(key, ref); kept = ssGet(key) === ref; } catch (_) {}
+    if (!kept) form.querySelector('[data-error]').textContent = retryWarning();
+    return ref;
+  }
+  function retryWarning() {
+    return state.lang === 'ar' ? 'لم يُحفظ المرجع. احتفظ بهذه الصفحة مفتوحة. قد تؤدي إعادة المحاولة بعد إغلاقها إلى حجز مكرر.' : state.lang === 'en' ? 'Reference not saved. Keep this page open. Retrying after closing it may duplicate your booking.' : 'Référence non enregistrée. Gardez cette page ouverte. Réessayer après fermeture peut créer une réservation en double.';
+  }
 
   function phoneValue(v) {
     var s=String(v||'').trim();
@@ -51,8 +63,7 @@ export function createBookingSubmission(context) {
     }
     var btn=form.querySelector('[type=submit]');
     btn.disabled=true;
-    var ref=ssGet('kiwiBookingRef')||('web_'+crypto.randomUUID());
-    ssSet('kiwiBookingRef',ref);
+    var ref=retryRef('kiwiBookingRef','web_',form);
     try {
       var r=await (await import('./request-deadline.mjs').catch(function() {
         return {
@@ -83,12 +94,13 @@ export function createBookingSubmission(context) {
       }
       ),j=await r.json();
       if(!r.ok) throw new Error(j.error||'error');
-      ssDel('kiwiBookingRef');
+      delete retryRefs.kiwiBookingRef; ssDel('kiwiBookingRef');
       success(j)
     }
     catch(err) {
       btn.disabled=false;
       form.querySelector('[data-error]').textContent=err.message==='request-timeout'? t('timeout'):err.message==='slot-unavailable'? t('taken'):t('error');
+      if (ssGet('kiwiBookingRef') !== ref) form.querySelector('[data-error]').textContent += ' ' + retryWarning();
       if(err.message==='slot-unavailable') setTimeout(times,900)
     }
   }
@@ -125,8 +137,7 @@ export function createBookingSubmission(context) {
     }
     var btn=form.querySelector('[type=submit]');
     btn.disabled=true;
-    var ref=ssGet('kiwiHotelBookingRef')||('hotel_'+crypto.randomUUID());
-    ssSet('kiwiHotelBookingRef',ref);
+    var ref=retryRef('kiwiHotelBookingRef','hotel_',form);
     try {
       var r=await (await import('./request-deadline.mjs').catch(function() {
         return {
@@ -157,7 +168,7 @@ export function createBookingSubmission(context) {
       }
       ),j=await r.json();
       if(!r.ok) throw new Error(j.error||'error');
-      ssDel('kiwiHotelBookingRef');
+      delete retryRefs.kiwiHotelBookingRef; ssDel('kiwiHotelBookingRef');
       hotelSuccess(j)
     }
     catch(err) {
@@ -168,6 +179,7 @@ export function createBookingSubmission(context) {
         return
       }
       form.querySelector('[data-error]').textContent=err.message==='request-timeout'? t('timeout'):err.message==='room-unavailable'? ht('taken'):t('error');
+      if (ssGet('kiwiHotelBookingRef') !== ref) form.querySelector('[data-error]').textContent += ' ' + retryWarning();
       if(err.message==='room-unavailable') setTimeout(loadHotelRooms,900)
     }
   }

@@ -84,6 +84,7 @@ window.KiwiStockInternal.install('alerts', (S) => {
     const low = rows.filter(it => statusOf(it) === 'low');
     const tierLow = computeTier1LowAlerts(rows);
     const alerts = [
+      ...rows.filter(it => it.stockSyncFailed && !out.includes(it) && statusOf(it) !== 'low'),
       ...out,
       ...low.filter(it => !isAlertIgnored(it.name)).sort((a, b) => (daysOfStock(a) ?? Number.MAX_SAFE_INTEGER) - (daysOfStock(b) ?? Number.MAX_SAFE_INTEGER)),
       ...tierLow,
@@ -201,7 +202,8 @@ window.KiwiStockInternal.install('alerts', (S) => {
       : '';
     const deliveryDate = actualLastDelivery(it);
     const deliveryMeta = deliveryDate ? `${esc(t('lastDeliv'))} : ${esc(fmtDateShort(deliveryDate))}` : '';
-    const alertMeta = [deliveryMeta, supplierMeta].filter(Boolean).join('<span class="sep">·</span>');
+    const failure = it.stockSyncFailed ? ({ fr: 'Mouvement non synchronisé, stock non confirmé', en: 'Movement not synced, stock unconfirmed', ar: 'الحركة غير متزامنة، المخزون غير مؤكد' }[lang()] || 'Stock non confirmé') : '';
+    const alertMeta = [esc(failure), deliveryMeta, supplierMeta].filter(Boolean).join('<span class="sep">·</span>');
     const lowLabel = days == null ? t('statusLow') : `${t('statusLow')} · ${t('daysLeft', days)}`;
 
     return `

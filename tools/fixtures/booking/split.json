@@ -1,6 +1,6 @@
 {
-  "sha256": "a7c4ec8e8d86e6c53c4c855c147d218f13026401f93104ec383d2abea52198a9",
-  "formattedSha256": "5bcd1a17501f43811740dfdeff8f9f0ef78eb6d2c98d05220f2b29c21fd60c83",
+  "sha256": "57737b81f8a896a311d2c1b1a9b4fb097e94904c3c01cf0e87e48a886854c433",
+  "formattedSha256": "bdc98261f2e0264ebf689d1b878126f6bb03a06f01cc07013575db140d92f226",
   "counter": "  var slotSeq=0,hotelSeq=0;",
   "bootstrap": "  const owner = Object.freeze({ getState() { return state; } });\n  const parts = {};\n  await Promise.all([\n    import('/assets/booking-service.js').then(module => { parts.service = module.createBookingService({ owner, app, merchant, plusDays, details, t, esc, money, fmt, venueToday, venueHour, layout, head }); }),\n    import('/assets/booking-hotel.js').then(module => { parts.hotel = module.createBookingHotel({ owner, app, merchant, hotelDetails, t, ht, esc, money, ymd, fmt, venueToday, layout, head }); }),\n    import('/assets/booking-submission.js').then(module => { parts.submission = module.createBookingSubmission({ owner, app, merchant, takesCovers, party, times, loadHotelRooms, hotelRoomList, hotelSummary, rememberManage, manageBlock, wireManageBlock, ssGet, ssSet, ssDel, t, ht, esc, money, fmt, layout, head }); }),\n    import('/assets/booking-manage.js').then(module => { parts.manage = module.createBookingManage({ owner, app, merchant, manageToken, t, ht, esc, money, fmt, layout, closed }); }),\n    import('/assets/booking-view.js').then(module => { parts.view = module.createBookingView({ owner, app, services, times, hotelSearch, hotelRoomList, details, success, hotelDetails, renderManage }); })\n  ]);\n",
   "parts": [
@@ -325,70 +325,70 @@
           "start": 9381,
           "end": 9514,
           "offset": 614,
-          "length": 133,
+          "length": 899,
           "replacement": "\n  function phoneValue(...args) { return parts.submission.phoneValue(...args); }"
         },
         {
           "start": 9514,
           "end": 9949,
-          "offset": 748,
-          "length": 435,
+          "offset": 1749,
+          "length": 200,
           "replacement": "\n  function emailOk(...args) { return parts.submission.emailOk(...args); }"
         },
         {
           "start": 9949,
           "end": 10251,
-          "offset": 1184,
-          "length": 302,
+          "offset": 1953,
+          "length": 299,
           "replacement": "\n  function badEmailMsg(...args) { return parts.submission.badEmailMsg(...args); }"
         },
         {
           "start": 24686,
           "end": 25078,
-          "offset": 1487,
-          "length": 392,
+          "offset": 2329,
+          "length": 316,
           "replacement": "\n  function paymentNote(...args) { return parts.submission.paymentNote(...args); }"
         },
         {
           "start": 25078,
           "end": 26990,
-          "offset": 1880,
-          "length": 1912,
+          "offset": 2649,
+          "length": 1909,
           "replacement": "\n  function details(...args) { return parts.submission.details(...args); }"
         },
         {
           "start": 26990,
           "end": 29816,
-          "offset": 3793,
-          "length": 2826,
+          "offset": 4562,
+          "length": 2923,
           "replacement": "\n  function submit(...args) { return parts.submission.submit(...args); }"
         },
         {
           "start": 35715,
           "end": 36510,
-          "offset": 6620,
-          "length": 795,
+          "offset": 7490,
+          "length": 791,
           "replacement": "\n  function success(...args) { return parts.submission.success(...args); }"
         },
         {
           "start": 45113,
           "end": 46288,
-          "offset": 7416,
-          "length": 1175,
+          "offset": 8285,
+          "length": 1172,
           "replacement": "\n  function hotelDetails(...args) { return parts.submission.hotelDetails(...args); }"
         },
         {
           "start": 46288,
           "end": 49645,
-          "offset": 8592,
-          "length": 3357,
+          "offset": 9461,
+          "length": 3459,
           "replacement": "\n  function submitHotel(...args) { return parts.submission.submitHotel(...args); }"
         },
         {
           "start": 49645,
           "end": 50128,
-          "offset": 11950,
-          "length": 483,
+          "offset": 12924,
+          "length": 480,
           "replacement": "\n  function hotelSuccess(...args) { return parts.submission.hotelSuccess(...args); }"
         }
       ]

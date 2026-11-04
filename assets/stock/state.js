@@ -14,7 +14,9 @@ window.KiwiStockState = (read) => {
 
   function ledgerOpeningFor(it) {
     if (it?.retail) return +it.currentStock || 0;
-    const legacy = stStockOverrides[it.id] != null ? stStockOverrides[it.id] : it.currentStock;
+    const override = stStockOverrides[it.id];
+    if (override?.unsynced) it.stockSyncFailed = true;
+    const legacy = override && typeof override === 'object' ? it.currentStock : (override != null ? override : it.currentStock);
     try {
       const L = window.KiwiInventory;
       if (stShowReal() && L && L.isReal && L.isReal()) {
@@ -44,9 +46,17 @@ window.KiwiStockState = (read) => {
         };
         if (movementMeta.movementId) payload.id = movementMeta.movementId;
         delete movementMeta.movementId;
-        return L.add(payload);
+        const accepted = L.add(payload);
+        if (!accepted) throw new Error('stock-movement-rejected');
+        return accepted;
       }
-    } catch (_) {}
+      if (stShowReal()) throw new Error('stock-ledger-unavailable');
+    } catch (_) {
+      const previous = stStockOverrides[it.id];
+      stStockOverrides[it.id] = { quantity: (previous?.quantity ?? currentStockFor(it)) + qty, status: 'failed', unsynced: true };
+      it.stockSyncFailed = true;
+      return null;
+    }
     stStockOverrides[it.id] = currentStockFor(it) + qty;
     return null;
   }
