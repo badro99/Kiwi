@@ -220,7 +220,7 @@
   var stackKey = function (stamp) { return stamp && stamp.id ? stamp.id + '@' + stamp.before : ''; };
 
   var api = {
-    TZ: TZ, KINDS: KINDS.slice(),
+    TZ: TZ, KINDS: KINDS.slice(), clock: rules.clock,
     sanitize: sanitize, isActive: isActive, status: status, resolve: resolve,
     badge: badge, businessMoment: businessMoment, stackKey: stackKey,
   };

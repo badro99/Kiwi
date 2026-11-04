@@ -81,6 +81,7 @@ export function nativeLlamaPayload(payload) {
 export function payloadForModel(model, payload) {
   const family = visionFamily(model);
   if (family === 'glm') return payload;
+  if (family === 'llama-vision') return nativeLlamaPayload(payload);
   const out = { ...payload };
   delete out.reasoning_effort;
   return out;

@@ -150,6 +150,6 @@
   }
 
 
-  root.KiwiPromoRules = Object.freeze({ normalize: normalize, businessMoment: businessMoment,
+  root.KiwiPromoRules = Object.freeze({ normalize: normalize, businessMoment: businessMoment, clock: clock,
     inWindow: inWindow, status: status, price: price, money: money, down: down, toMin: toMin });
 })(/** @type {any} */ (globalThis).window || globalThis);

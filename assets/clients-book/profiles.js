@@ -272,7 +272,7 @@
     host.innerHTML = '<div class="kcb-cols"><span>Client</span><span class="kcb-c-seg">Profil</span><span class="r">Visites</span><span class="r">Dernière visite</span><span class="r">Dépensé</span><span class="r">Fidélité</span></div>' +
       rows.map(function (c) {
         var s = KC.segment(c);
-        var prog = KC.progress(c, cfg);
+        var prog = Math.max(0, Math.min(1, Number(KC.progress(c, cfg)) || 0));
         var ptsTxt = cfg.model === 'amount' ? (fmt(c.points) + '<small>pts</small>') : ((c.stamps || 0) + '<small>/ ' + target + '</small>');
         return '<div class="kcb-row" data-id="' + esc(c.id) + '" tabindex="0" role="button">' +
           '<div class="kcb-who"><div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
@@ -284,7 +284,7 @@
           '<div class="kcb-c-last r kcb-num kcb-muted">' + lastSeenTxt(c) + '</div>' +
           '<div class="kcb-c-spend r kcb-num">' + (document.documentElement.hasAttribute('data-k-till') ? fmt(c.spend, true) : fmt(c.spend) + '<small>MAD</small>') + '</div>' +
           '<div class="kcb-fid">' + (prog >= 1 ? '<span class="kcb-ready">Récompense prête</span>' : '<span class="kcb-num">' + ptsTxt + '</span>') +
-            '<span class="kcb-minibar"><i style="width:' + Math.round(Math.min(1, prog) * 100) + '%"></i></span></div></div>';
+            '<span class="kcb-minibar" role="progressbar" aria-label="' + esc(tr('Fidélité')) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(prog * 100) + '"><i style="width:' + Math.round(Math.min(1, prog) * 100) + '%"></i></span></div></div>';
       }).join('');
     Array.prototype.forEach.call(host.querySelectorAll('.kcb-row'), function (row) {
       row.onclick = function () { openDetail(row.getAttribute('data-id')); };
@@ -459,7 +459,7 @@
     var c = KC.get(id); if (!c) { renderList(); return; }
     var cfg = KC.config();
     var seg = KC.segment(c);
-    var prog = KC.progress(c, cfg);
+    var prog = Math.max(0, Math.min(1, Number(KC.progress(c, cfg)) || 0));
     var rewardReady = prog >= 1;
     var progTxt, recordBlock;
     if (cfg.model === 'amount') {
@@ -556,7 +556,7 @@
       attachBlock +
       noteBlock +
       '<div class="kcb-stat"><div class="kcb-progtxt">' + progTxt + '</div>' +
-        '<div class="kcb-progwrap"><div class="kcb-progbar" style="width:' + Math.round(prog * 100) + '%"></div></div></div>' +
+        '<div class="kcb-progwrap" role="progressbar" aria-label="' + esc(tr('Fidélité')) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(prog * 100) + '"><div class="kcb-progbar" style="width:' + Math.round(prog * 100) + '%"></div></div></div>' +
       '<div class="kcb-kpis">' +
         '<div class="kcb-kpi"><div class="v">' + (c.visits || 0) + '</div><div class="l">' + (hotel ? 'Séjours' : 'Visites') + '</div></div>' +
         '<div class="kcb-kpi"><div class="v">' + fmt(c.spend) + '</div><div class="l">Dépensé (MAD)</div></div>' +

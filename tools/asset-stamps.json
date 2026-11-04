@@ -168,8 +168,8 @@
     "sha": "75fc4494935af382"
   },
   "assets/briefing-persistence.js": {
-    "v": "3",
-    "sha": "934ab6b51fc27a39"
+    "v": "4",
+    "sha": "b9b89bc7a51dd5b7"
   },
   "assets/briefing-rules.js": {
     "v": "2",
@@ -380,20 +380,20 @@
     "sha": "210f037121107f37"
   },
   "assets/clients-book.js": {
-    "v": "58",
-    "sha": "edb938d8b3c9e189"
+    "v": "59",
+    "sha": "95d9a6da262a0559"
   },
   "assets/clients-directory.js": {
     "v": "30",
     "sha": "8c8415f533a7c370"
   },
   "assets/clients-store-vault.js": {
-    "v": "7",
-    "sha": "73faa850abdb609e"
+    "v": "8",
+    "sha": "d3f50969da08e54a"
   },
   "assets/clients-store.js": {
-    "v": "46",
-    "sha": "075bb276f638b4e1"
+    "v": "47",
+    "sha": "eabff650f2cafcb0"
   },
   "assets/cloud-doc.js": {
     "v": "14",
@@ -452,8 +452,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "134",
-    "sha": "ff2ea778b4f6906b"
+    "v": "135",
+    "sha": "352176cb34f85df3"
   },
   "assets/daterange/activity.js": {
     "v": "7",
@@ -472,8 +472,8 @@
     "sha": "828db62c5bd6bca8"
   },
   "assets/daterange/kpi.js": {
-    "v": "19",
-    "sha": "bb226e1d02e73d68"
+    "v": "20",
+    "sha": "3a7065c8ba614f7f"
   },
   "assets/daterange/ledger.js": {
     "v": "8",
@@ -484,8 +484,8 @@
     "sha": "f91815b2b1f3bce4"
   },
   "assets/daterange/renderers.js": {
-    "v": "32",
-    "sha": "89c556080a874243"
+    "v": "33",
+    "sha": "6dac47919ac10c4c"
   },
   "assets/daterange/revenue.js": {
     "v": "5",
@@ -532,8 +532,8 @@
     "sha": "4600d76604d8462a"
   },
   "assets/design-ios27.css": {
-    "v": "1",
-    "sha": "609f0c3f5bf3c3af"
+    "v": "2",
+    "sha": "98582fcbb429a66c"
   },
   "assets/design-vexel-layout.js": {
     "v": "2101",
@@ -560,8 +560,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "630",
-    "sha": "b4217b54425a3a07"
+    "v": "632",
+    "sha": "c2a0d479338d0d70"
   },
   "assets/employee-planning.js": {
     "v": "21",
@@ -592,7 +592,7 @@
     "sha": "43d0c87422fc61c2"
   },
   "assets/escpos.js": {
-    "v": "19",
+    "v": "20",
     "sha": "42c678756290613e"
   },
   "assets/features.js": {
@@ -1148,12 +1148,12 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "97",
-    "sha": "49391692650228e6"
+    "v": "98",
+    "sha": "ed32ca600a5e1cda"
   },
   "assets/live-link/queue-store.js": {
-    "v": "8",
-    "sha": "24deb10df9d41620"
+    "v": "9",
+    "sha": "1077e9bc96e2f067"
   },
   "assets/live-link/sale-identity.js": {
     "v": "1",
@@ -1232,12 +1232,12 @@
     "sha": "4bef6c0bce3d1800"
   },
   "assets/menu-promos-dashboard.js": {
-    "v": "6",
-    "sha": "8193f0089d257f1e"
+    "v": "7",
+    "sha": "fe8caa503b781d89"
   },
   "assets/menu-promos.js": {
-    "v": "11",
-    "sha": "785ce0fdcfc457cb"
+    "v": "12",
+    "sha": "aeb6eae2389183aa"
   },
   "assets/menu-scan-reader.js": {
     "v": "3",
@@ -1436,8 +1436,8 @@
     "sha": "d005cca4a3c529d7"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "162",
-    "sha": "3f1a59661ae25525"
+    "v": "163",
+    "sha": "95981f16ba76a99e"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1824,8 +1824,8 @@
     "sha": "b1f62426f09e631e"
   },
   "assets/pressing-ops.js": {
-    "v": "29",
-    "sha": "4b3c8fc89c9d16ab"
+    "v": "30",
+    "sha": "0ccb8ccd504e47fd"
   },
   "assets/pressing/custody.js": {
     "v": "11",
@@ -1852,7 +1852,7 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "63",
+    "v": "64",
     "sha": "fdd895418347423c"
   },
   "assets/printer/pairing-lang.js": {
@@ -1876,8 +1876,8 @@
     "sha": "7b6c4471f6ac27a6"
   },
   "assets/promo-rules.js": {
-    "v": "8",
-    "sha": "0cdd0a2f04c5d487"
+    "v": "9",
+    "sha": "6daf4369b3556fc9"
   },
   "assets/promos.js": {
     "v": "18",
