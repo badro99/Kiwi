@@ -722,7 +722,7 @@ async function cuGroupReservationModal(options = {}) {
         for (const room of selected) {
           const roomGuests = travelers.filter(t => t.roomId === room.id);
           const occupancy = Math.max(1, roomGuests.length);
-          const res = await fetch('/api/hotel/commercial', {
+          const res = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/hotel/commercial', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -735,7 +735,7 @@ async function cuGroupReservationModal(options = {}) {
               occupancy,
               board,
             }),
-          });
+          }, tx);
 
           if (initialScope !== cuStayScope() || initialMerchant !== cuMerchantSlug() || scope.openModal?.el !== m.el || !form.isConnected) {
             return;
@@ -1265,7 +1265,7 @@ async function cuGroupReservationModal(options = {}) {
           return;
         }
         try {
-          const revRes = await fetch('/api/hotel/commercial?merchant=' + encodeURIComponent(initialMerchant), { cache: 'no-store' });
+          const revRes = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/hotel/commercial?merchant=' + encodeURIComponent(initialMerchant), { cache: 'no-store' }, tx);
           const revBody = await revRes.json().catch(() => ({}));
           if (revRes.ok && Number.isSafeInteger(revBody.rev) && revBody.rev !== quoteRevision) {
             invalidateQuote();
@@ -1495,7 +1495,7 @@ async function cuGroupReservationModal(options = {}) {
           let existingBooking = null;
           let checkOk = false;
           try {
-            const checkRes = await fetch('/api/hotel/stays?merchant=' + encodeURIComponent(initialMerchant) + '&clientRef=' + encodeURIComponent(clientRef) + '&includeCancelled=1', { cache: 'no-store' });
+            const checkRes = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/hotel/stays?merchant=' + encodeURIComponent(initialMerchant) + '&clientRef=' + encodeURIComponent(clientRef) + '&includeCancelled=1', { cache: 'no-store' }, tx);
             if (checkRes.ok) {
               const checkData = await checkRes.json().catch(() => null);
               const stays = (checkData && Array.isArray(checkData.stays)) ? checkData.stays : null;
@@ -1566,11 +1566,11 @@ async function cuGroupReservationModal(options = {}) {
           // clientRef reconciliation adopt it on retry instead of guessing.
           let res;
           try {
-            res = await fetch('/api/hotel/stays', {
+            res = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/hotel/stays', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload),
-            });
+            }, tx);
           } catch (netErr) {
             const errMsg = tx('La réponse du serveur pour la chambre {n} a été perdue ({reason}). La réservation sera vérifiée à la reprise.', { n: room.n, reason: (netErr && netErr.message) || tx('réseau') });
             failedRooms[room.id] = errMsg;

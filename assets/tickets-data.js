@@ -7,9 +7,9 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
       const { deadlineFetch } = await import('./request-deadline.mjs');
       const response = await deadlineFetch(url, options, timeout);
       const result = await response.json().catch(error => {
-        if (error.code === 'request-timeout') throw error;
-        return {};
+        throw Object.assign(error, { code: options?.method ? 'uncertain-write' : error.code || 'read-failed', uncertain: !!options?.method });
       });
+      if (!result || typeof result !== 'object' || Array.isArray(result)) throw Object.assign(new Error('invalid-response'), { code: options?.method ? 'uncertain-write' : 'read-failed' });
       if (!response.ok) throw Object.assign(new Error(result.error || fallback), { code: result.error });
       return result;
     } catch (error) {
@@ -48,11 +48,11 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
       if (taxonomyChanged) configureComposerClassification();
       if (data.draftScope) await draft.restore(data.draftScope);
       if (seq !== loadTickets.seq) return;
-      state.loading = false;
+      state.loading = false; state.stale = false;
       render();
     } catch (error) {
       if (seq !== loadTickets.seq) return; state.loading = false;
-      if (options && options.quiet) return;
+      if (options && options.quiet) { state.stale = true; Object.values(lists).forEach(list => { list.querySelector('[data-tickets-stale]')?.remove(); const note = make('div', 'error-state', t('load.failed')); note.dataset.ticketsStale = ''; note.setAttribute('role', 'status'); list.prepend(note); }); showToast(t('load.failed') + ': ' + (error.translatedMessage || friendlyError(error.code)), true); return; }
       Object.values(lists).forEach((list) => {
         const failed = make('div', 'error-state');
         failed.append(make('strong', '', t('load.failed')), make('span', '', error.translatedMessage || friendlyError(error.code)));

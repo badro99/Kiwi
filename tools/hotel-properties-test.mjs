@@ -162,7 +162,9 @@ await strict('dashboard checkout displays cents and sends force only after confi
     fetch:async(url,init)=>{const p=JSON.parse(init.body);requests.push(p);return {status:p.force?200:409,ok:!!p.force,json:async()=>p.force?{booking:{id:'ui-stay'}}:{error:'stay-unpaid',owedCents:owed}};}
   });
   const src=hotelTestSource();
-  vm.runInContext(declaration(src.slice(src.indexOf('async function cuMoveStayStatus(')),'cuMoveStayStatus').replace("(await import('./checkout-proof.mjs'))",'({ checkoutProof })'),ui);
+  Object.assign(ui, { AbortController, setTimeout, clearTimeout, URLSearchParams });
+  vm.runInContext(fs.readFileSync('assets/request-deadline.mjs','utf8').replace('export ', '') + '\n' + fs.readFileSync('assets/hotel/request.mjs','utf8').replace(/^import .*;\n/gm,'').replace('export ', ''),ui);
+  vm.runInContext(declaration(src.slice(src.indexOf('async function cuMoveStayStatus(')),'cuMoveStayStatus').replace("(await import('./checkout-proof.mjs'))",'({ checkoutProof })').replace("import('./request.mjs')", 'Promise.resolve({ hotelRequest })'),ui);
   await ui.cuMoveStayStatus('ui-stay','completed',button);
   assert.equal(prompts.length,1);assert.ok(prompts[0].includes((owed/100).toFixed(2)));
   assert.equal(requests.length,approved?2:1);assert.equal(requests[0].force,false);

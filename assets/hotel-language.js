@@ -865,6 +865,7 @@
     "Séjour enregistré · ch. {n}": { en: "Stay saved · room {n}", ar: "حُفظت الإقامة · الغرفة {n}" },
     "Réponse serveur non reçue. Vérifiez le dossier ou réessayez : la même référence sera conservée pour éviter un doublon.": { en: "No server response. Check the booking or try again: the same reference is kept to avoid a duplicate.", ar: "لم يصل ردّ الخادم. تحقّق من الملف أو أعد المحاولة: سيُحتفظ بالمرجع نفسه لتجنّب التكرار." },
     "Annulation impossible": { en: "Cancellation failed", ar: "تعذّر الإلغاء" },
+    "Chargement impossible. Réessayez.": { en: "Could not load. Try again.", ar: "تعذر التحميل. أعد المحاولة." },
     "Réessayez.": { en: "Try again.", ar: "أعد المحاولة." },
     "Séjour annulé dans Kiwi": { en: "Stay cancelled in Kiwi", ar: "أُلغيت الإقامة في Kiwi" },
     "La disponibilité directe est mise à jour. Vérifiez séparément l’annulation sur l’OTA ou auprès de l’agence.": { en: "Direct availability is updated. Check the cancellation separately on the OTA or with the agency.", ar: "حُدّث التوفّر المباشر. تحقّق من الإلغاء بشكل منفصل لدى وكالة السفر الإلكترونية أو الوكالة." },

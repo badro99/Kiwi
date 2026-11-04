@@ -70,7 +70,7 @@
       $('#pc-client-label').textContent = client ? `${client.name} · ${Number(client.points) || 0} pts` : 'Client & fidélité';
     }
 
-    function renderServiceClients() { var fetchDeadline = function (url, options, readBody, controller) { controller = controller || (typeof AbortController === 'function' ? new AbortController() : null); var timer; var request = new Promise(function (resolve, reject) { try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); } catch (error) { reject(error); } }).then(function (response) { if (readBody === false || !response || typeof response.json !== 'function') return response; return response.json().then(function (data) { response.json = function () { return Promise.resolve(data); }; return response; }, function (error) { response.json = function () { return Promise.reject(error); }; return response; }); }); var deadline = new Promise(function (_, reject) { timer = setTimeout(function () { var error = new Error('request-timeout'); error.code = 'timeout'; reject(error); if (controller) controller.abort(); }, 12000); }); return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); }); }; if (renderServiceClients.controller) renderServiceClients.controller.abort(); const controller = renderServiceClients.controller = new AbortController();
+    function renderServiceClients() { var fetchDeadline = async (url, options, _readBody, controller) => (await import('../request-deadline.mjs')).deadlineFetch(url, options, 12000, controller); if (renderServiceClients.controller) renderServiceClients.controller.abort(); const controller = renderServiceClients.controller = new AbortController();
       const q = String($('#service-client-search').value || '').trim();
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
       serviceClientRows = [];
@@ -432,9 +432,9 @@ cashModal.addEventListener('click', (e) => {
       /* Délai réel (SV_PAY_TIMEOUT_MS). L'identifiant de paiement est stable :
          relancer après un délai rejoue la MÊME vente, jamais une seconde. */
       const payCtl = (typeof AbortController === 'function') ? new AbortController() : null;
-      const payTimer = payCtl ? setTimeout(() => payCtl.abort(), SV_PAY_TIMEOUT_MS) : null;
+      const payTimer = null;
       try {
-        const response = await fetch('/api/sale', {
+        const response = await (await import('../request-deadline.mjs')).deadlineFetch('/api/sale', {
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
           signal: payCtl ? payCtl.signal : undefined,
@@ -445,7 +445,7 @@ cashModal.addEventListener('click', (e) => {
             label: orderRef,
             ref: orderRef, lines: paidLines,
           }),
-        });
+        }, SV_PAY_TIMEOUT_MS);
         saved = await response.json().catch(() => null);
         if (!response.ok || !saved || !saved.ok) throw Object.assign(new Error((saved && saved.error) || ('http-' + response.status)), { refused: true });
       } catch (err) {
@@ -457,7 +457,7 @@ cashModal.addEventListener('click', (e) => {
            on ne dit pas « non enregistré »), ou réseau tombé avant l'envoi. */
         /* Une carte a peut-être déjà été débitée au terminal : la relance rejoue
            la même vente (identifiant stable), repasser la carte la débiterait deux fois. */
-        if (payCtl && payCtl.signal.aborted) {
+        if (err?.code === 'request-timeout' || (payCtl && payCtl.signal.aborted)) {
           if ((method || 'card') === 'card') toast(employeePick(`Table ${id} · paiement non confirmé, ne repassez pas la carte, réessayez`, `Table ${id} · payment not confirmed, do not run the card again, just retry`, `الطاولة ${id} · لم يتأكد الدفع، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط`), 6000);
           else toast(employeePick(`Table ${id} · paiement non confirmé, réessayez`, `Table ${id} · payment not confirmed, try again`, `الطاولة ${id} · لم يتأكد الدفع، أعد المحاولة`), 6000);
         } else if (err && !err.refused) toast(SV_PAY_OFFLINE_MSG, 6000);
@@ -1082,8 +1082,8 @@ cashModal.addEventListener('click', (e) => {
         if (!SV_DEMO) {
           /* Délai réel (15 s) : l'identifiant de la part est stable, une
              relance après délai rejoue la même vente, jamais une seconde. */
-          if (payCtl) payTimer = setTimeout(() => payCtl.abort(), 15000);
-          const response = await fetch('/api/sale', {
+
+          const response = await (await import('../request-deadline.mjs')).deadlineFetch('/api/sale', {
             ...(payCtl ? { signal: payCtl.signal } : {}),
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
@@ -1116,7 +1116,7 @@ cashModal.addEventListener('click', (e) => {
           }
         }
       } catch (err) {
-        if (payCtl && payCtl.signal.aborted) {
+        if (err?.code === 'request-timeout' || (payCtl && payCtl.signal.aborted)) {
           if (payMethod === 'card') toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, ne repassez pas la carte, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not confirmed, do not run the card again, just retry`, `الطاولة ${tableId || ''} · لم يتأكد الجزء ${partIdx + 1}، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط`), 6000);
           else toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not confirmed, try again`, `الطاولة ${tableId || ''} · لم يتأكد الجزء ${partIdx + 1}، أعد المحاولة`), 6000);
         } else if (err && !err.refused) toast(employeePick("Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.", 'No network. The payment is not recorded, try again when the network is back.', 'لا توجد شبكة. لم يُسجَّل الدفع، أعد المحاولة عند عودة الشبكة.'), 6000);

@@ -94,7 +94,10 @@ function boot({ venue = 'scoped', merchant = 'journal-alpha' } = {}) {
       return Promise.resolve(replies.shift());
     },
   };
-  vm.runInNewContext(instrumented, context, { filename: 'assets/hotel.js', timeout: 5000 });
+  // Load the real shared transport into the same VM fetch fixture.
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync('assets/request-deadline.mjs','utf8').replace('export ', '') + '\n' + fs.readFileSync('assets/hotel/request.mjs','utf8').replace(/^import .*;\n/gm,'').replace('export ', ''), context);
+  vm.runInContext(instrumented.replaceAll("import('./request.mjs')", 'Promise.resolve({ hotelRequest })'), context, { filename: 'assets/hotel.js', timeout: 5000 });
   return {
     api: window.__journalTest, window, handlers, requests, modals, forms, data,
     tick(ms = 1) { now += ms; return now; },

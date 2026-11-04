@@ -1,5 +1,5 @@
 {
-  "sha256": "350052d8c28929e13823f19b14260539a3a3a5f132d3a2cdaa75c0640c4db20d",
+  "sha256": "96997e5ccf43a0278d5285283aebc2caf85a6e39788e2937326a96c8ec08f02a",
   "dataSha256": "cfbf19476cf5702234ea6ea9b58b958e90c6f08ccff12e6211ef7b4c77fa9bab",
   "fragments": [
     {
@@ -39,14 +39,14 @@
       "offset": 12115
     },
     {
-      "start": 67512,
-      "end": 68004,
+      "start": 67582,
+      "end": 68074,
       "replacement": "  const kitCodeProblem = session.kitCodeProblem;",
       "offset": 13902
     },
     {
-      "start": 68005,
-      "end": 68396,
+      "start": 68075,
+      "end": 68466,
       "replacement": "  const kitProblem = session.kitProblem;",
       "offset": 14396
     },

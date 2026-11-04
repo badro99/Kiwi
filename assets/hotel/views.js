@@ -513,7 +513,7 @@ async function cuRegisterWalkin(n, guest, clientRef) {
     try {
       const ctl = typeof AbortController === 'function' ? new AbortController() : null;
       const timer = ctl ? setTimeout(() => ctl.abort(), 8000) : null;
-      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined });
+      const res = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined }, tx);
       if (timer) clearTimeout(timer);
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.booking) return null;
@@ -1031,13 +1031,13 @@ async function cuMoveStayStatus(id, next, button, reopen, force = false, pin = '
     const words = WORDING[next] || WORDING.completed;
     if (button) button.disabled = true;
     try {
-      const res = await fetch('/api/hotel/stays', {
+      const res = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/hotel/stays', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'status', merchant: slug, id, status: next, force, pin,
           /* Réouverture d'un dossier clos : un geste explicite, jamais un
              effet de bord d'un changement de statut ordinaire. */
           ...(reopen ? { reopen: true } : {}) }),
-      });
+      }, tx);
       const body = await res.json().catch(() => ({}));
       if (scope !== cuStayScope() || cuMerchantSlug() !== slug) return;
       if (res.status === 409 && body.error === 'stay-unpaid' && !force) {
@@ -1166,7 +1166,7 @@ async function cuCommercialEditor(kind, id) {
       else { row.occupancy = Number(fd.occupancy); row.amountCents = Math.round(Number(fd.amount) * 100); }
       form.__busy = true; const button = form.querySelector('[type="submit"]'); button.disabled = true;
       try {
-        const res = await fetch('/api/hotel/commercial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant, action: kind, rev: revision, item: row }) });
+        const res = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/hotel/commercial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant, action: kind, rev: revision, item: row }) }, tx);
         const b = await res.json(); if (!res.ok) { error.textContent = cuCommercialError(b.error); return; }
         Object.assign(st, { accounts: b.accounts, contracts: b.contracts, rev: b.rev });
         m.close(); if (scope === cuStayScope()) { rerender(); toast(tx('Fiche enregistrée'), { type: 'success' }); }
@@ -1249,7 +1249,7 @@ async function cuLoadEconomat(force) {
     if (!cuEconomatState.loaded) rerender();
     const qs = encodeURIComponent(merchant);
     try {
-      const docResponse = await fetch(`/api/store?feature=hotel-units&merchant=${qs}`, { credentials: 'same-origin' });
+      const docResponse = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest(`/api/store?feature=hotel-units&merchant=${qs}`, { credentials: 'same-origin' }, tx);
       const doc = await docResponse.json();
       if (!docResponse.ok) throw new Error(doc.error || txk('unités indisponibles'));
       cuEconomatState.rev = Number(doc.rev) || 0;
@@ -1259,8 +1259,8 @@ async function cuLoadEconomat(force) {
       if (cuEconomatState.registry.units.length) {
         const since = Date.now() - 30 * 86400000;
         const [inventoryResponse, shiftsResponse] = await Promise.all([
-          fetch(`/api/inventory/hotel-reports?merchant=${qs}`, { credentials: 'same-origin' }),
-          fetch(`/api/hotel/room-charges?merchant=${qs}&mode=shifts&since=${since}`, { credentials: 'same-origin' }),
+          (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest(`/api/inventory/hotel-reports?merchant=${qs}`, { credentials: 'same-origin' }, tx),
+          (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest(`/api/hotel/room-charges?merchant=${qs}&mode=shifts&since=${since}`, { credentials: 'same-origin' }, tx),
         ]);
         const inventoryBody = await inventoryResponse.json();
         const shiftsBody = await shiftsResponse.json();
@@ -1300,7 +1300,7 @@ async function cuSaveEconomat(el) {
     const data = { units: d.units.map((unit) => ({ id: unit.id, name: unit.name, kind: unit.kind, storeType: unit.storeType, locationId: unit.locationId, active: !!unit.active })), terminalUnits };
     cuEconomatState.saving = true; rerender();
     try {
-      const response = await fetch('/api/store', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ feature: 'hotel-units', merchant, baseRev: cuEconomatState.rev, data }) });
+      const response = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/store', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ feature: 'hotel-units', merchant, baseRev: cuEconomatState.rev, data }) }, tx);
       const body = await response.json();
       if (!response.ok) {
         if (response.status === 409 && body.data) { cuEconomatState.rev = body.rev; cuEconomatState.registry = body.data; cuEconomatState.draft = cuEconomatDraft(body.data); }

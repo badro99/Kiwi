@@ -44,11 +44,16 @@
        reach the native layer in the same tick. Only its answer is awaited. */
     var pending;
     try { pending = Promise.resolve(plugin[method](args || {})); } catch (error) { pending = Promise.reject(error); }
-    return pending.then(function (value) {
+    /* A call that waits on the person (Face ID, a picker, a share sheet) may
+       rightly take longer than 15 s, so only machine calls get the deadline. */
+    var timer;
+    var interactive = /authenticate|pick|share|scan|prompt/i.test(String(method));
+    var deadline = interactive ? pending : new Promise(function (_, reject) { timer = setTimeout(function () { reject({ code: 'timeout' }); }, 15000); });
+    return Promise.race([pending, deadline]).finally(function () { clearTimeout(timer); }).then(function (value) {
       return { ok: true, value: value };
     }, function (error) {
       var code = String(error && error.code || '');
-      return { ok: false, reason: /cancel/i.test(code) || error && error.name === 'AbortError' ? 'cancelled' : /unimplemented|unavailable|unsupported/i.test(code) ? 'unsupported' : 'failure' };
+      return { ok: false, reason: /cancel/i.test(code) || error && error.name === 'AbortError' ? 'cancelled' : /unimplemented|unavailable|unsupported/i.test(code) ? 'unsupported' : code === 'timeout' ? 'timeout' : 'failure' };
     });
   }
   function call(plugin, method, args) {
@@ -76,7 +81,11 @@
   function nativeSheet(spec) {
     return new Promise(function (resolve) {
       var id = 'sheet-' + (++sheetSeq);
-      sheetWaiters[id] = resolve;
+      var timer = setTimeout(function () { finish('dismiss'); }, 60000);
+      function finish(action) { clearTimeout(timer); delete sheetWaiters[id]; window.removeEventListener('pagehide', cancel); resolve(action); }
+      function cancel() { finish('dismiss'); }
+      sheetWaiters[id] = finish;
+      window.addEventListener('pagehide', cancel);
       var dark = root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark' || root.getAttribute('data-caisse-theme') === 'dark';
       try {
         window.webkit.messageHandlers.kiwiShell.postMessage({ sheet: {
@@ -84,7 +93,7 @@
           dark: dark, rtl: root.getAttribute('dir') === 'rtl',
           actions: (spec.actions || []).map(function (a) { return { id: String(a.id), label: String(a.label), style: String(a.style || 'plain') }; })
         } });
-      } catch (_) { delete sheetWaiters[id]; resolve('dismiss'); }
+      } catch (_) { finish('dismiss'); }
     });
   }
   /* Every haptic in the native runtime goes through KiwiHaptics (assets/kit/haptics.js,
