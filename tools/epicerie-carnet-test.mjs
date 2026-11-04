@@ -87,4 +87,17 @@ assert.throws(() => assert.equal(runtime('en',source.replace('const entryId = h 
 const timestampOnly=source.replace(/const uid = \(p\) => [^\n]+/,"const uid = (p) => p + Date.now();");
 assert.throws(() => assert.notEqual(runtime('en',timestampOnly).book.histEntry('debt','TEST KIWI',1).id,runtime('ar',timestampOnly).book.histEntry('debt','TEST KIWI',1).id));
 assert.throws(() => assert.equal(runtime('en',source.replace('const days = debtDays(d);','const days = Math.floor((Date.now() - d.getTime()) / DAY);')).book.sinceLabel(new Date('2026-11-04T04:59:59Z')),'hier'));
-console.log('✓ carnet: EN/AR cards and forms, locale amounts, immutable legacy keys, same-millisecond device IDs, centimes and 5 h debt age');
+function withHistoryImport(code) { return code.replace(/import\('\.\.\/credit-history-page\.js\?v=\d+'\)/,'window.__importHistory()'); }
+// A customer sheet first opened offline: the failed history import is not kept, the next open loads it once.
+{
+  const sheetTill=runtime('fr',withHistoryImport(source)); let calls=0;
+  sheetTill.window.__importHistory=()=>++calls===1?Promise.reject(new Error('offline')):Promise.resolve({bindHistoryPages(){}});
+  let firstError=null;
+  try { await sheetTill.book.openArdoise('nobody'); } catch (e) { firstError=e; }
+  assert.equal(firstError&&firstError.message,'offline','the offline open fails');
+  await sheetTill.book.openArdoise('nobody');
+  assert.equal(calls,2,'a failed history import is retried on the next open');
+  await sheetTill.book.openArdoise('nobody');
+  assert.equal(calls,2,'once loaded, the history module is never imported again');
+}
+console.log('✓ carnet: EN/AR cards and forms, locale amounts, immutable legacy keys, same-millisecond device IDs, centimes, 5 h debt age, history import retried after an offline failure');

@@ -405,7 +405,7 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
   let bindHistoryPages, historyPagesReady;
   function openArdoise(id) {
     if (!bindHistoryPages) {
-      historyPagesReady ||= import('../credit-history-page.js?v=3').then(module => { bindHistoryPages = module.bindHistoryPages; });
+      historyPagesReady ||= import('../credit-history-page.js?v=3').then(module => { bindHistoryPages = module.bindHistoryPages; }, e => { historyPagesReady = null; throw e; });
       return historyPagesReady.then(() => openArdoise(id));
     }
     const c = CRED[id];
