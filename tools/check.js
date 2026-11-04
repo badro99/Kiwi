@@ -2285,6 +2285,7 @@ section('Whole-project regressions');
     'pos-truth-a-test.mjs',
     'employee-truth-test.mjs',
     'team-codes-at-rest-test.mjs',
+    'team-codes-publication-test.mjs',
     /* Audit 2026-10-15 · fuites entre magasins et comptes, HTML venu des caisses */
     'sale-label-xss-test.mjs',
     'team-roster-purge-test.mjs',
