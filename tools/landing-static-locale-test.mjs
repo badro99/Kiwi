@@ -27,6 +27,8 @@ const text = (html, re) => (html.match(re) || [])[1] || '';
 const enTitle = text(en, /<title>([^<]*)<\/title>/);
 const enH1 = text(en, /<h1[^>]*>([\s\S]*?)<\/h1>/).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 const enNodes = new Set(copyNodes(en).map((n) => n.text));
+// Tightest whole-percent ceiling passed by each current served page.
+const ENGLISH_CEILING = { de: 0.27, it: 0.27, nl: 0.28 };
 const OG = { de: 'de_DE', it: 'it_IT', nl: 'nl_NL' };
 
 for (const locale of ['de', 'it', 'nl']) {
@@ -48,7 +50,8 @@ for (const locale of ['de', 'it', 'nl']) {
   // the brand names, figures and multilingual demos that stay as they are.
   const nodes = copyNodes(html);
   const same = nodes.filter((n) => enNodes.has(n.text) && n.text.length > 3);
-  ok(same.length / nodes.length < 0.32, `${locale}: ${same.length}/${nodes.length} nodes still identical to English (limit 32%)`);
+  ok(same.length / nodes.length < ENGLISH_CEILING[locale], `${locale}: ${same.length}/${nodes.length} nodes still identical to English (limit ${ENGLISH_CEILING[locale] * 100}%)`);
+  console.log(`${locale}: English matches ${same.length}/${nodes.length}. Review: ${[...new Set(same.filter(n => /[A-Za-z]{4}/.test(n.text)).map(n => n.text))].join(' | ')}`);
   // The locale's own client chunk exists, and the page loads it.
   const chunk = (html.match(new RegExp(`/${locale}/chunks/[^"\\\\]+\\.js`)) || [])[0];
   ok(chunk && fs.existsSync(path.join(ROOT, chunk.slice(1))), `${locale}: cloned client chunk is referenced and on disk`);

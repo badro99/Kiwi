@@ -363,7 +363,7 @@
       "contracts": [
         {
           "file": "tools/floorplan-sync-test.js",
-          "assertion": "floorplan-core.js expose mergePlans / bury / unbury"
+          "assertion": "eq('editor save mirrors the geometry to the paired till',"
         }
       ]
     },
@@ -500,7 +500,7 @@
       "contracts": [
         {
           "file": "tools/floorplan-sync-test.js",
-          "assertion": "floorplan-core.js expose mergePlans / bury / unbury"
+          "assertion": "eq('editor save mirrors the geometry to the paired till',"
         },
         {
           "file": "tools/serveur-kitchen-truth-test.mjs",
@@ -688,7 +688,7 @@
         },
         {
           "file": "tools/floorplan-sync-test.js",
-          "assertion": "floorplan-core.js expose mergePlans / bury / unbury"
+          "assertion": "eq('editor save mirrors the geometry to the paired till',"
         },
         {
           "file": "tools/kitchen-properties-test.mjs",
@@ -718,7 +718,7 @@
         },
         {
           "file": "tools/floorplan-sync-test.js",
-          "assertion": "floorplan-core.js expose mergePlans / bury / unbury"
+          "assertion": "eq('editor save mirrors the geometry to the paired till',"
         },
         {
           "file": "tools/kitchen-properties-test.mjs",

@@ -1,3 +1,4 @@
+import { checkPrinterPaper } from './print-paper-runtime.mjs';
 import invoicingSourceHelper from './invoicing-test-source.cjs';
 import printerTestSource from './printer-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
@@ -41,11 +42,8 @@ const controls = [
   ['both apps and offline shell load contract', caisse.includes('assets/print-paper.css?v=1') && dashboard.includes('assets/print-paper.css?v=1') && sw.includes("'/assets/print-paper.css?v=1'")],
   // Le pont préfère le nom d'imprimante OS à l'IP : chaque enregistrement doit
   // effacer l'autre cible, sinon l'une des deux reste morte en silence.
-  ['saving a network IP clears the saved OS printer', printer.includes("setConfig(Object.assign(f, { osPrinter: '' }))")],
-  ['choosing an OS printer clears the saved IP', printer.includes("setConfig({ osPrinter: sel.value, ip: '' })")],
   // Garde-fous du chemin réseau : validation avant écriture, test qui vise
   // vraiment l'IP saisie, et messages d'échec en français utile.
-  ['saving validates the IP and the port first', /validIp\(f\.ip\)/.test(printer) && /validPort\(f\.port\)/.test(printer)],
   ['the network test targets the typed IP explicitly', /var target = \{ ip: f\.ip, port: Number\(f\.port\) \|\| 9100 \}/.test(printer) && /bridgePrintBytes\(slip, target\)/.test(printer)],
   ['bridge failures are worded for humans', printer.includes('function frReason(') && printer.includes('Pont introuvable')],
   ['the active print target is spelled out in the panel', printer.includes("$('#kpr-target')") && printer.includes('Cible actuelle')],
@@ -61,6 +59,8 @@ const controls = [
   // fabriquer tout seul, sinon il est muet sur le comptoir.
   ['the fallback notice does not depend on window.Kiwi.toast', printer.includes('function fallbackNotice(') && /fallbackNotice\('Imprimante '/.test(printer) && !/Kiwi\.toast\('Imprimante /.test(printer)],
 ];
+
+await checkPrinterPaper();
 
 for (const [name, ok] of controls) assert.equal(ok, true, name);
 console.log(`print-paper-test: ${controls.length} controls passed`);

@@ -116,6 +116,21 @@ await ok('a rule the shop settings forbid is refused with its reason, the launch
   assert.equal(w.window.KiwiPromos.get(p.id).updatedAt, before, 'validation runs before the write');
   assert.equal(w.window.KiwiPromos.get(p.id).value, 15);
 });
+await ok('editing through real inputs updates the same saved promotion and its visible page', async () => {
+  const w = world();
+  const p = w.window.KiwiPromos.save({ name: 'Before', kind: 'percent', value: 10, scope: { type: 'tout' } });
+  w.handlers['bpd-edit'](null, p.id);
+  const shell = w.modals.at(-1).el.querySelector('[data-bpd-shell]');
+  const name = shell.querySelector('#bpd-name'); name.value = 'Edited'; name.oninput();
+  const value = shell.querySelector('#bpd-value'); value.value = '20'; value.onchange();
+  shell.querySelector('#bpd-save').onclick();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(w.window.KiwiPromos.list().length, 1, 'edit does not create a second rule');
+  assert.equal(w.window.KiwiPromos.get(p.id).name, 'Edited');
+  assert.equal(w.window.KiwiPromos.get(p.id).value, 20);
+  assert.ok(html(w).includes('Edited'));
+  assert.equal(w.modals.at(-1).closed, true);
+});
 await ok('pause and resume go through the engine and the page says so', async () => {
   const w = world();
   const p = w.window.KiwiPromos.save({ name: 'Soldes', kind: 'percent', value: 25, scope: { type: 'tout' } });

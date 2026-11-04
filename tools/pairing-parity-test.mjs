@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · LES DEUX PORTES D'APPAIRAGE LAISSENT LE MÊME ÉTAT
  * ---------------------------------------------------------------------------
@@ -21,6 +20,7 @@ import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import declarations from './js-declarations.cjs';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -72,11 +72,7 @@ for (const asset of ['pairing-commit', 'tenant-purge']) {
     `l’estampille ${asset}.js s’accorde entre la page et le SHELL (page=${page} sw=${shell})`);
 }
 
-/* La file du passe est la donnée d'un commerçant : elle doit partir à la purge. */
-ok(/kiwiCuisineCookingV2/.test(PURGE_SRC),
-  'tenant-purge.js emporte la file du passe (kiwiCuisineCookingV2)');
-ok(!/['"]kiwiCuisineMute['"]/.test(PURGE_SRC.split('PRESERVE')[0]),
-  'tenant-purge.js NE purge PAS le son coupé — préférence de l’appareil');
+// Purge and preference preservation execute below against actual stored data.
 
 /* ── 2 · l'environnement ─────────────────────────────────────────────────── */
 const FIXED_NOW = 1_755_000_000_000;
@@ -234,14 +230,6 @@ function residueOfA() {
  * la migration de l'ancienne clé kiwi-caisse-shift est assurée, et un décalage
  * d'établissement au rechargement ne détruit jamais le service stocké. */
 {
-  const CAISSE_HTML = caisseTestSource(read('kiwi-caisse.html'));
-
-  ok(/function\s+kcStoreKey\(/.test(CAISSE_HTML),
-    'kiwi-caisse.html définit kcStoreKey pour compartimenter le shift');
-  ok(/function\s+migrateLegacyShift\(/.test(CAISSE_HTML),
-    'kiwi-caisse.html définit migrateLegacyShift pour migrer l’ancien format');
-  ok(!/if\s*\(\s*here\s*&&\s*String\(\s*saved\.merchant\s*\|\|\s*''\s*\)\s*!==\s*here\s*\)\s*\{\s*localStorage\.removeItem\(KC_STORE\);/s.test(CAISSE_HTML),
-    'kiwi-caisse.html n’efface plus le shift lors d’un rechargement sur un autre commerçant');
 
   // Test du comportement : migration et compartimentage
   const mem = new Map();
@@ -253,30 +241,15 @@ function residueOfA() {
 
   let pairedSlug = 'restaurant-a';
   function currentMerchantSlug() { return pairedSlug; }
-  function kcStoreKey(slug) {
-    const s = slug != null ? slug : currentMerchantSlug();
-    return s ? ('kiwi-caisse-shift:' + s) : 'kiwi-caisse-shift';
-  }
-  const KC_STORE = {
-    toString() { return kcStoreKey(); },
-    valueOf() { return kcStoreKey(); },
-    [Symbol.toPrimitive]() { return kcStoreKey(); },
-  };
-  function migrateLegacyShift() {
-    try {
-      const legacyRaw = fakeLs.getItem('kiwi-caisse-shift');
-      if (!legacyRaw) return;
-      const legacy = JSON.parse(legacyRaw);
-      if (!legacy || legacy.v !== 1) return;
-      const targetSlug = legacy.merchant || currentMerchantSlug();
-      if (!targetSlug) return;
-      const targetKey = 'kiwi-caisse-shift:' + targetSlug;
-      if (!fakeLs.getItem(targetKey)) {
-        fakeLs.setItem(targetKey, legacyRaw);
-      }
-      fakeLs.removeItem('kiwi-caisse-shift');
-    } catch (_) {}
-  }
+  // The shipped declarations, including the coercible key, run unchanged.
+  const app = read('assets/caisse-app.js');
+  const keyStart = app.indexOf('const KC_STORE = {');
+  const keyEnd = app.indexOf('};', keyStart) + 2;
+  const context = vm.createContext({ localStorage: fakeLs, currentMerchantSlug });
+  vm.runInContext(['kcStoreKey', 'migrateLegacyShift'].map(name => declarations.declaration(read('assets/caisse/offline.js'), name)).join('\n') + '\n' + app.slice(keyStart, keyEnd)
+    + '\nthis.key = KC_STORE;', context);
+  const KC_STORE = context.key;
+  const migrateLegacyShift = context.migrateLegacyShift;
 
   // 1. Migration legacy
   const legacyData = JSON.stringify({ v: 1, openedAt: '2026-09-07T10:00:00.000Z', merchant: 'restaurant-a', journal: [{ id: 'sale-1', total: 100 }] });

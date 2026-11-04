@@ -770,7 +770,7 @@ for (const test of [
   'file-size-ratchet-rules-test.mjs',
   'source-assertion-ratchet-test.mjs',
   /* Per assertion, not per suite: a suite that runs one handler and greps 35 lines is mostly text. Pinned, only down. */
-  'assertion-mix-test.mjs',
+  'assertion-mix-test.mjs', 'coverage-runtime-mutation-test.mjs',
   /* Real code coverage (V8) of functions/ and assets/: the tool's cheap self-test; `npm run coverage` is the minutes-long measurement. */
   'coverage-report-test.mjs',
   'wave-o-infra-test.mjs',
@@ -1848,7 +1848,7 @@ section('Whole-project regressions');
     'caisse-app-split-test.mjs',
     'core-split-test.mjs',
     'home-split-test.mjs',
-    'home-boundary-test.mjs',
+    'home-boundary-test.mjs', 'home-composition-browser-test.mjs',
     'r13-a-test.mjs',
     'home-sparkline-a11y-test.mjs',
     'dashboard-first-use-test.mjs',

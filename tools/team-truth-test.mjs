@@ -28,12 +28,12 @@ import { fileURLToPath } from 'node:url';
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = teamTestSource();
 
-function grabBlock(start) {
-  const i = SRC.indexOf(start);
+function grabBlock(start, source = SRC) {
+  const i = source.indexOf(start);
   assert.ok(i >= 0, start + ' found');
   let d = 0;
-  for (let k = SRC.indexOf('{', i); k < SRC.length; k++) {
-    if (SRC[k] === '{') d++; else if (SRC[k] === '}' && --d === 0) return SRC.slice(i, k + 1);
+  for (let k = source.indexOf('{', i); k < source.length; k++) {
+    if (source[k] === '{') d++; else if (source[k] === '}' && --d === 0) return source.slice(i, k + 1);
   }
   throw new Error('unbalanced ' + start);
 }
@@ -88,27 +88,68 @@ ok('le formulaire est branché : nouveau membre cohérent, et changement de post
   assert.ok(/e\.target\.matches\('\[data-kt-function\]'\)[\s\S]{0,400}deptForFunction\(e\.target\.value, depts\)[\s\S]{0,600}sel\.dispatchEvent\(new Event\('change'/.test(SRC), 'listener notifies the custom select');
 });
 
-ok('un salaire non saisi s’affiche « · Non renseigné », pas « 0 MAD / 0 MAD/h »', () => {
-  assert.ok(/salaryUnset: 'Non renseigné'/.test(SRC));
-  assert.ok(/\(\+m\.baseSalary \|\| 0\) > 0 \|\| \(\+m\.hourlyRate \|\| 0\) > 0[\s\S]{0,700}T\.salaryUnset/.test(SRC));
-  assert.ok(!/<div class="eq-salary-v">\$\{fmtMad\(m\.baseSalary\)\}<\/div><div class="eq-salary-sub">\$\{\(window/.test(SRC), 'old cell gone');
-});
-ok('masse salariale : « · aucun salaire renseigné » quand personne n’a de salaire', () => {
-  assert.ok(/tile\(T\.statPayroll, salaried \? fmtMad\(monthlyPayroll\) : '·', payrollSub\)/.test(SRC));
-  assert.ok(/statPayrollNone: 'aucun salaire renseigné'/.test(SRC));
-});
-ok('« En service » ne se dit plus « estimation » : en direct, ou heures du jour', () => {
-  assert.ok(!/\(estimation\)|\(estimate\)|\(تقدير\)/.test(SRC));
-  assert.ok(/presentLive \? T\.statPresentSub : T\.statPresentHoursSub/.test(SRC));
+ok('real roster renders unset salaries and honest attendance provenance in FR/EN/AR', () => {
+  for (const locale of ['fr', 'en', 'ar']) {
+    let api, state;
+    const core = { handlers: {}, trLang: () => locale, onState: fn => { state = fn; }, install: value => { api = value; },
+      catalogFor: () => ({ departments: [] }), tradeKey: () => 'restaurant', CONTRACT_TYPES: [],
+      AVATAR_COLORS: { a: '' }, initials: () => 'AB', esc: value => String(value ?? ''),
+      memberFullName: m => m.firstName, getHours: () => ({ a: { '2026-10-06': 8 } }),
+      toISO: () => '2026-10-06', fmtMad: n => String(n) + ' MAD', fmtHours: String, svgIcon: () => '', IC: {},
+      activeFilters: {}, memberMatchesFilters: () => true, memberDutyStatus: () => 'off-duty',
+      isCustomVenue: () => true, teamSlug: () => 'shop', buildPeriod: () => ({ days: ['2026-10-06'] }) };
+    const window = { Kiwi: { __teamProfileCore: core, __teamMemberState: { current: () => ({}) } } };
+    vm.runInNewContext(readFileSync(path.join(ROOT, 'assets/team/profile-ui.js'), 'utf8'),
+      { window, document: { addEventListener() {}, documentElement: { lang: locale } } });
+    const T = api.t(), members = [{ id: 'a', firstName: 'Fixture', languages: [] }];
+    state(true, { merchant: '', members: [] });
+    let html = api.renderProfilesPane(T, { name: 'Shop' }, 'restaurant', members);
+    assert.ok(html.includes(T.salaryUnset), locale + ': missing salary has its translated explanation');
+    assert.ok(html.includes(T.statPayrollNone), locale + ': missing payroll is explained');
+    assert.ok(html.includes(T.statPresentHoursSub), locale + ': saved hours are not called live attendance');
+    assert.ok(!html.includes('0 MAD/h') && !html.includes('>0 MAD<'));
+    state(true, { merchant: 'shop', members: [{ id: 'a', status: 'on-duty' }] });
+    html = api.renderProfilesPane(T, { name: 'Shop' }, 'restaurant', members);
+    assert.ok(html.includes(T.statPresentSub), locale + ': actual live attendance is labelled live');
+    members[0].baseSalary = 3100;
+    html = api.renderProfilesPane(T, { name: 'Shop' }, 'restaurant', members);
+    assert.ok(html.includes('3100 MAD'));
+    assert.ok(!html.includes(T.salaryUnset) && !html.includes(T.statPayrollNone));
+  }
 });
 
-ok('le sondage de l’équipe en direct redessine quand quelque chose a changé', () => {
-  const i = SRC.indexOf('function pollLiveTeam(');
-  const body = SRC.slice(i, SRC.indexOf('\n  }\n', i));
-  assert.ok(/if \(signature === liveTeamSignature\) \{ liveTeamDelay = Math.min\(120000, liveTeamDelay \* 2\); return; \}\s*liveTeamDelay = LIVE_TEAM_FAST_MS;\s*liveTeamSignature = signature;/.test(body), 'early return on identical reply');
-  assert.ok(!/if \(signature !== liveTeamSignature\)/.test(body), 'dead comparison gone');
-  assert.ok(/\n\s*applyLiveTeam\(\);\s*\n\s*\}\)\.catch/.test(body), 'renders after a change');
-});
+// Actual poll completion, including persistence and publication, rather than
+// the former three source-pattern assertions about where applyLiveTeam sits.
+{
+  const hours = { hoursByVenue: {}, removedByVenue: {} };
+  let reply = { ok: true, merchant: 'shop', members: [{ id: 'a' }], pointedHours: { a: { '2026-10-06': 8 } } };
+  let renders = 0, writes = 0;
+  const c = vm.createContext({ document: { hidden: false }, liveTeamBusy: false,
+    isCustomVenue: () => true, teamSlug: () => 'shop', teamVenueKey: () => 'v',
+    liveTeamSignature: '', liveTeamDelay: 1000, LIVE_TEAM_FAST_MS: 1000,
+    fetchDeadline: async () => ({ ok: true, json: async () => reply }),
+    memberState: { resetReadFailure() {}, current: () => hours }, noteProfileState() {},
+    persistTeams: () => { writes++; }, applyLiveTeam: () => { renders++; }, teamReadTimedOut() {},
+  });
+  vm.runInContext(grabBlock('function pollLiveTeam(', readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8')), c);
+  await c.pollLiveTeam();
+  assert.equal(renders, 1, 'a changed roster publishes to the visible team');
+  assert.equal(writes, 1, 'new pointed hours persist once');
+  assert.equal(hours.hoursByVenue.v.a['2026-10-06'], 8);
+  await c.pollLiveTeam();
+  assert.equal(renders, 1, 'identical poll preserves current DOM');
+  assert.equal(writes, 1, 'identical hours do not rewrite storage');
+  assert.equal(c.liveTeamDelay, 2000);
+  reply = { ...reply, members: [{ id: 'a', present: true }] };
+  await c.pollLiveTeam();
+  assert.equal(renders, 2, 'later presence change publishes again');
+  assert.equal(c.liveTeamDelay, 1000);
+  reply = { ...reply, merchant: 'other' };
+  await c.pollLiveTeam();
+  assert.equal(renders, 2, 'foreign merchant response cannot publish');
+  assert.equal(c.liveTeamBusy, false, 'poll lock is released');
+  passed++; console.log('  ✓ live team poll executes persistence, deduplication and publication');
+}
 ok('« Salaire calculé » sans taux horaire : « · », pas « 0 MAD »', () => {
   assert.ok(/const rated = \(\+m\.hourlyRate \|\| 0\) > 0;/.test(SRC));
   assert.ok(/kt-h-pay mono">\$\{rated \?/.test(SRC));

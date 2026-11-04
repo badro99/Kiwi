@@ -165,5 +165,53 @@ for (const typed of ['av-07oug9e0r065x6', 'AV-070UG9E0R065X6', ' av 07OUG9EOR065
 }
 ok(foldedCode('av-1lI0o') === 'AV-11100', 'folding maps I and L to 1 and O to 0, case-insensitively');
 
+// Real return gesture -> credit route -> voucher panel -> receipt document ->
+// printer system fallback. The server response supplies the printed code/balance.
+{
+  const { world, load } = await import('./retail-money-harness.cjs');
+  const { printerWorld } = await import('./print-paper-runtime.mjs');
+  const { default: vm } = await import('node:vm');
+  const { deadlineVmSource } = await import('./deadline-vm-source.mjs');
+  const paper = printerWorld();
+  vm.runInContext(deadlineVmSource(fs.readFileSync('assets/receipt.js', 'utf8')), paper.c);
+  const w = world('boutique'), c = w.c;
+  sqlite.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, label, ref, ts, lines)
+    VALUES ('paper-origin', ?, 12.55, 1255, 'card', 'Paper journey', 'PAPER-1', ?, '[]')`).run(MERCHANT, Date.now());
+  const messages = [];
+  c.SALES = [{ id: 'PAPER-1', serverId: 'paper-origin', total: 12.55,
+    lines: [{ pid: 'p', name: 'Scarf', qty: 1, unit: 12.55 }] }];
+  Object.assign(c, { IS_DEMO: false, P: { p: { name: 'Scarf', price: 12.55 } },
+    state: { ret: { saleId: 'PAPER-1', picks: new Set([0]), motif: 'Retour' } },
+    crypto, merchantSlug: () => MERCHANT, AVOIR_KEY: 'kiwi:bqAvoirs',
+    ensureOriginalSale: async sale => sale.serverId,
+    avoirApproval: (amount, id, sale) => approve(id, sale, Math.round(amount * 100)),
+    fetch: async (_url, opts) => { const r = await post(JSON.parse(opts.body)); return { ok: r.status === 200, status: r.status, json: async () => r.body }; },
+    renderBadges() {}, refreshOps() {}, queueIfOffline() {}, stockAdd() {}, persistStock: () => true,
+    recordReturn() {}, useKiwiCl: () => false, barcode: () => '',
+    KiwiReceipt: paper.c.KiwiReceipt, toast: message => messages.push(message),
+  });
+  c.$ = selector => selector === '#bq-avoirmm' ? w.exchange : w.$(selector);
+  load(c, 'assets/pos-boutique.js', ['creditFromServer', 'creditRequest', 'stableCreditIssueId',
+    'creditErrorDetail', 'avoirKey', 'persistAvoirs', 'issueAvoir']);
+  load(c, 'assets/pos-boutique/checkout.js', ['restoreLines', 'bqPaired', 'bqReal', 'bqName', 'bqCity', 'voucherHTML', 'openVoucher']);
+  await c.doAvoir();
+  assert.equal(c.AVOIRS.length, 1, 'return issues one authoritative credit');
+  const credit = c.AVOIRS[0];
+  assert.equal(Math.round(credit.balance * 100), 1255);
+  assert.equal(c.SALES[0].lines[0].returnedQty, 1, 'stock/returned quantity advances after issue');
+  assert.ok(w.exchange.innerHTML.includes(credit.code), 'returned credit is visible in the real voucher panel');
+  w.click('#bq-av-print');
+  for (let n = 0; n < 8; n++) await new Promise(setImmediate);
+  const root = paper.nodes.get('kpr-print-root');
+  assert.ok(root, 'print gesture reaches the real printer document root');
+  assert.ok(root.innerHTML.includes(credit.code), 'printed code is the issued server code');
+  assert.ok(root.innerHTML.includes('12.55') || root.innerHTML.includes('12,55'), 'printed balance retains centimes');
+  assert.ok(root.innerHTML.includes('PAPER-1'), 'credit note points to the original sale');
+  assert.equal(JSON.parse(w.storage.get('kiwi:bqAvoirs@' + MERCHANT))[0].code, credit.code);
+  paper.timers.find(t => t.delay === 60).fn();
+  assert.equal(paper.printed(), 1);
+  ok(true, 'assembled return issues, persists, displays and prints the same 1255-centime credit note');
+}
+
 sqlite.close();
 console.log(`\n✓ ${controls} store-credit controls passed.`);

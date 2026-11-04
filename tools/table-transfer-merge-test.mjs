@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · BEHAVIOURAL TEST: Table Transfer & Merge Protocol with Audit Trail
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -109,11 +108,7 @@ async function postQueue(body, cookieHeader) {
 
 console.log('\n■ Table Transfer & Merge Behavioural Tests (tools/table-transfer-merge-test.mjs)');
 
-const caisseSource = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
-const tableToolMerchantPayloads = caisseSource.match(/merchant:\s*currentMerchantSlug\(\),\s*\n\s*(?:transferTable|mergeTables):/g) || [];
-check('caisse transfer and merge use the authoritative paired merchant', tableToolMerchantPayloads.length === 2);
-check('caisse table tools no longer depend on the retired KiwiSales merchant helper',
-  !/merchant:\s*\(window\.KiwiSales[\s\S]{0,180}(?:transferTable|mergeTables):/.test(caisseSource));
+// Client merchant payloads and visible counts execute in field-table-transfer-test.mjs.
 
 await setupFloorAndStaff();
 
@@ -287,11 +282,6 @@ check('concurrent loser leaves no second transfer side effect', Number(raceAudit
   && raceWinner && raceOrder.table_no === raceWinner.data.toTable && raceOrder.session_id === 'ses-race',
   JSON.stringify({ raceSession, raceAudit, raceOrder }));
 
-// G. The caisse announces real counts, never a blanket success.
-check('caisse transfer toast reports moved lines',
-  /ordersMoved/.test(caisseSource) && /paidLeftBehind/.test(caisseSource));
-check('caisse merge toast reports moved lines',
-  /ordersMerged/.test(caisseSource) && /paidLeftBehind/.test(caisseSource));
 
 console.log(failures ? `\n✗ ${failures} failure(s)\n` : `\n✓ All table transfer & merge behavioural checks green.\n`);
 process.exitCode = failures ? 1 : 0;
