@@ -1824,7 +1824,7 @@ section('Whole-project regressions');
     'surface-parity-test.mjs',
     'caisse-stock-sync-test.mjs',
     'phone-test.mjs',
-    'clients-sync-test.mjs',
+    'clients-sync-test.mjs', 'clients-route-events-test.mjs',
     'pwa-shell-test.js',
     'pwa-update-poll-test.mjs',
     /* stamp-drift couvre les assets deja estampilles. Celui-ci refuse qu'un
