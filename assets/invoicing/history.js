@@ -134,7 +134,7 @@ return paintAll.apply(self, args);
 export function renderList({ICON, T, esc, newLabel, overlay, ownData, paintAll, query, show, tabsHtml}, self, args) {
 function renderList() {
     const t = T();
-    overlay.querySelector('[data-inv-list]').innerHTML = `<div class="inv-toolbar"><div class="inv-toolbar-copy"><h3>${esc(t.overview)}</h3><p>${esc(t.overviewSub)}</p></div><div class="inv-toolbar-actions"><button data-activation=money class="inv-btn" type="button" data-inv-act="export">${ICON.export}${esc(t.export)}</button><button class="inv-btn primary" type="button" data-inv-act="new">${ICON.plus}<span data-new-label>${esc(newLabel())}</span></button></div></div>
+    overlay.querySelector('[data-inv-list]').innerHTML = `<div class="inv-toolbar"><div class="inv-toolbar-copy"><h3>${esc(t.overview)}</h3><p>${esc(t.overviewSub)}</p></div><div class="inv-toolbar-actions"><button data-activation=money class="inv-btn" type="button" data-inv-act="export">${ICON.export}${esc(t.export)}</button><button data-activation=money class="inv-btn" type="button" data-inv-act="export-all" aria-live="polite">${ICON.export}${esc(t.exportAll)}</button><button class="inv-btn primary" type="button" data-inv-act="new">${ICON.plus}<span data-new-label>${esc(newLabel())}</span></button></div></div>
       <div data-inv-notices></div>
       <div class="inv-stats" data-inv-stats></div>
       <section class="inv-register"><div class="inv-tabs" role="tablist" data-lens-demo>${tabsHtml()}</div><div class="inv-register-head"><div class="inv-filters" data-inv-filters></div><input class="inv-search" type="search" value="${esc(query)}" data-inv-search placeholder="${esc(t.search)}" aria-label="${esc(t.search)}"></div><div data-inv-table></div></section>
@@ -154,9 +154,44 @@ function csvCell(v, asText) {
   }
 return csvCell.apply(self, args);
 }
-export function exportCsv({NO_OF, T, csvCell, csvMoney, statusLabel, tab, toast, today, visibleRows}, self, args) {
-function exportCsv() {
-    const t = T(), rows = visibleRows();
+export function exportCsv({NO_OF, T, api, normRow, dayIn, filter, query, overlay, csvCell, csvMoney, statusLabel, tab, toast, today, visibleRows}, self, args) {
+function exportCsv(full = false, suppliedRows) {
+    const t = T();
+    if (full) return (async () => {
+      const button = overlay?.querySelector('[data-inv-act="export-all"]');
+      if (button?.disabled) return;
+      if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
+      const rows = [], seen = new Set(), cursors = new Set();
+      let cursor;
+      try {
+        do {
+          const page = await api('GET', {type: tab, ...(cursor ? {cursor} : {})});
+          const batch = tab === 'sales' ? page.invoices : page.docs;
+          if (!Array.isArray(batch)) throw new Error('invalid-export-page');
+          for (const raw of batch) {
+            const key = tab === 'sales' ? raw.saleId : raw.id;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            rows.push(tab === 'sales' ? raw : normRow(raw));
+          }
+          if (button) button.textContent = t.exportProgress.replace('{n}', rows.length);
+          cursor = page.nextCursor;
+          if (cursor && cursors.has(cursor)) throw new Error('repeated-export-cursor');
+          if (cursor) cursors.add(cursor);
+        } while (cursor);
+        const filtered = visibleRowsForExport(rows);
+        return exportCsv(false, filtered);
+      } catch (_) { toast(t.exportFailed); }
+      finally { if (button) { button.disabled = false; button.removeAttribute('aria-busy'); button.textContent = t.exportAll; } }
+    })();
+    function visibleRowsForExport(rows) {
+      if (tab === 'sales') return filterExportRows({filter, query, tab, getSaleInvoices: () => rows.map(r => {
+        const d = r.snapshot;
+        return {id: d.number || ('F-' + d.seq), customer: d.customer?.name || '', issueDate: d.issuedTs ? dayIn(d.issuedTs) : today(), dueDate: d.issuedTs ? dayIn(d.issuedTs) : today(), total: d.totals?.ttc || 0, rawDoc: d};
+      }), rowsFor: () => []}, null, []);
+      return filterExportRows({filter, query, tab, rowsFor: () => rows}, null, []);
+    }
+    const rows = suppliedRows || visibleRows();
     let head, body;
     if (tab === 'sales') {
       head = [t.colNo, t.colCustomer, t.colIssued, t.colDue, t.colStatus, t.colAmount];
@@ -181,3 +216,5 @@ function exportCsv() {
   }
 return exportCsv.apply(self, args);
 }
+
+const filterExportRows = visibleRows;

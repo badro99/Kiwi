@@ -61,7 +61,7 @@
 .briefing-line .hai-rec-title{font-size:14px;font-weight:600;line-height:1.35;letter-spacing:-.005em}
 .briefing-evidence{grid-column:1;font:500 10.5px/1.4 var(--mono);letter-spacing:.02em;color:var(--n-500)}
 .briefing-actions{grid-column:2;grid-row:1/span 2;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
-.briefing-actions button{border:1px solid var(--n-300);background:transparent;color:var(--n-600);border-radius:999px;padding:7px 12px;font:600 11.5px/1 var(--sans);letter-spacing:-.005em;cursor:pointer;transition:border-color .14s ease,color .14s ease,background .14s ease,transform .09s ease}
+.briefing-actions button{border:1px solid var(--n-300);background:transparent;color:var(--n-600);border-radius:999px;min-block-size:44px;min-inline-size:44px;padding:10px 12px;font:600 13px/1 var(--sans);letter-spacing:-.005em;cursor:pointer;transition:border-color .14s ease,color .14s ease,background .14s ease,transform .09s ease}
 .briefing-actions button:hover{border-color:var(--atlas);color:var(--atlas)}.briefing-actions button:active{transform:translateY(1px)}
 .briefing-actions button[data-briefing-propose]{background:var(--atlas);border-color:var(--atlas);color:var(--paper)}
 .briefing-actions button[data-briefing-propose]:hover{background:var(--riad);border-color:var(--riad);color:var(--paper)}
@@ -82,7 +82,7 @@
 .briefing-set-field input[aria-invalid="true"]{border-color:var(--atlas)}
 .briefing-set-help,.briefing-set-error{grid-column:1/-1;font:500 11.5px/1.4 var(--sans);color:var(--n-500)}
 .briefing-set-error:empty{display:none}
-.briefing-reset{margin-top:8px;border:1px solid var(--n-300);background:transparent;color:var(--n-600);border-radius:999px;padding:7px 12px;font:600 11.5px/1 var(--sans);cursor:pointer}
+.briefing-reset{margin-top:8px;border:1px solid var(--n-300);background:transparent;color:var(--n-600);border-radius:999px;min-block-size:44px;min-inline-size:44px;padding:10px 12px;font:600 13px/1 var(--sans);cursor:pointer}
 .briefing-reset:hover:not(:disabled){border-color:var(--atlas);color:var(--atlas)}.briefing-reset:disabled{opacity:.5;cursor:default}
 .briefing-unsaved{margin:0;font:500 12px/1.4 var(--sans);color:var(--n-600)}
 @keyframes briefing-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}

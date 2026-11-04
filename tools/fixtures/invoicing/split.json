@@ -1,5 +1,5 @@
 {
-  "sha256": "ee2ec9c699d717f72480e45e25d7be38fe320aa46ad53c423b0bc49ceedae96b",
+  "sha256": "81c2a9ba3beb4d4c69250940d0272923f9dc50dabf191e92298024d7c3ae5768",
   "parts": [
     {
       "file": "assets/invoicing/transport.js",
@@ -12,12 +12,12 @@
           "deps": [],
           "offset": 376,
           "replacement": "/* Private transport declaration: fetchDeadline. */",
-          "length": 1124
+          "length": 718
         },
         {
           "name": "apiError",
-          "start": 40542,
-          "end": 40668,
+          "start": 41122,
+          "end": 41248,
           "deps": [],
           "offset": 1502,
           "replacement": "/* Private transport declaration: apiError. */",
@@ -25,8 +25,8 @@
         },
         {
           "name": "api",
-          "start": 41568,
-          "end": 42750,
+          "start": 42148,
+          "end": 43390,
           "deps": [
             "apiError",
             "demo",
@@ -36,12 +36,12 @@
           ],
           "offset": 1630,
           "replacement": "function api(...args) { return transport.api(...args); }",
-          "length": 972
+          "length": 1242
         },
         {
           "name": "demo",
-          "start": 42835,
-          "end": 55824,
+          "start": 43475,
+          "end": 56685,
           "deps": [
             "apiError",
             "computeTotals",
@@ -55,21 +55,21 @@
           ],
           "offset": 2604,
           "replacement": "/* Private transport declaration: demo. */",
-          "length": 12373
+          "length": 13210
         },
         {
           "name": "cache",
-          "start": 55931,
-          "end": 55998,
+          "start": 56792,
+          "end": 56859,
           "deps": [],
           "offset": 14979,
           "replacement": "const cache = transport.rows();",
-          "length": 56
+          "length": 67
         },
         {
           "name": "nextCursor",
-          "start": 56206,
-          "end": 56273,
+          "start": 57067,
+          "end": 57134,
           "deps": [],
           "offset": 15037,
           "replacement": "const nextCursor = transport.cursors();",
@@ -77,8 +77,8 @@
         },
         {
           "name": "cacheKey",
-          "start": 57247,
-          "end": 57307,
+          "start": 58108,
+          "end": 58168,
           "deps": [
             "venueId"
           ],
@@ -88,8 +88,8 @@
         },
         {
           "name": "loadCache",
-          "start": 57310,
-          "end": 57538,
+          "start": 58171,
+          "end": 58399,
           "deps": [
             "TYPES",
             "cache",
@@ -103,8 +103,8 @@
         },
         {
           "name": "saveCache",
-          "start": 57541,
-          "end": 57646,
+          "start": 58402,
+          "end": 58507,
           "deps": [
             "cache",
             "cacheKey",
@@ -137,8 +137,8 @@
       "entries": [
         {
           "name": "clientBook",
-          "start": 57731,
-          "end": 58053,
+          "start": 58592,
+          "end": 58914,
           "deps": [],
           "offset": 420,
           "replacement": "function clientBook(...args) { return composerModule.clientBook({}, this, args); }",
@@ -146,8 +146,8 @@
         },
         {
           "name": "vatOptions",
-          "start": 80060,
-          "end": 80357,
+          "start": 81068,
+          "end": 81365,
           "deps": [
             "T",
             "VAT_RATES",
@@ -159,8 +159,8 @@
         },
         {
           "name": "lineRowHtml",
-          "start": 80360,
-          "end": 81422,
+          "start": 81368,
+          "end": 82430,
           "deps": [
             "ICON",
             "T",
@@ -174,8 +174,8 @@
         },
         {
           "name": "blankLine",
-          "start": 81425,
-          "end": 81517,
+          "start": 82433,
+          "end": 82525,
           "deps": [
             "DEFAULT_VAT"
           ],
@@ -185,8 +185,8 @@
         },
         {
           "name": "F",
-          "start": 81520,
-          "end": 81590,
+          "start": 82528,
+          "end": 82598,
           "deps": [
             "overlay"
           ],
@@ -196,8 +196,8 @@
         },
         {
           "name": "fv",
-          "start": 81593,
-          "end": 81650,
+          "start": 82601,
+          "end": 82658,
           "deps": [
             "F"
           ],
@@ -207,8 +207,8 @@
         },
         {
           "name": "readLines",
-          "start": 81653,
-          "end": 82028,
+          "start": 82661,
+          "end": 83036,
           "deps": [
             "overlay"
           ],
@@ -218,8 +218,8 @@
         },
         {
           "name": "apiLines",
-          "start": 82031,
-          "end": 82253,
+          "start": 83039,
+          "end": 83261,
           "deps": [
             "num",
             "toCents"
@@ -230,8 +230,8 @@
         },
         {
           "name": "paintLines",
-          "start": 82256,
-          "end": 82377,
+          "start": 83264,
+          "end": 83385,
           "deps": [
             "lineRowHtml",
             "overlay"
@@ -242,8 +242,8 @@
         },
         {
           "name": "termsOptions",
-          "start": 82380,
-          "end": 82681,
+          "start": 83388,
+          "end": 83689,
           "deps": [
             "T",
             "TERMS_CHOICES",
@@ -255,8 +255,8 @@
         },
         {
           "name": "formState",
-          "start": 82775,
-          "end": 83926,
+          "start": 83783,
+          "end": 84934,
           "deps": [
             "TERMS_CHOICES",
             "blankLine",
@@ -270,8 +270,8 @@
         },
         {
           "name": "draftKey",
-          "start": 83929,
-          "end": 84034,
+          "start": 84937,
+          "end": 85042,
           "deps": [
             "cmp",
             "venueId"
@@ -282,8 +282,8 @@
         },
         {
           "name": "composerPayload",
-          "start": 91002,
-          "end": 91711,
+          "start": 92010,
+          "end": 92719,
           "deps": [
             "apiLines",
             "cmp",
@@ -299,8 +299,8 @@
         },
         {
           "name": "formSnapshot",
-          "start": 91714,
-          "end": 92084,
+          "start": 92722,
+          "end": 93092,
           "deps": [
             "cmp",
             "fv",
@@ -312,8 +312,8 @@
         },
         {
           "name": "checkIce",
-          "start": 92538,
-          "end": 93048,
+          "start": 93546,
+          "end": 94056,
           "deps": [
             "F",
             "T",
@@ -327,8 +327,8 @@
         },
         {
           "name": "updateComposer",
-          "start": 93051,
-          "end": 94388,
+          "start": 94059,
+          "end": 95396,
           "deps": [
             "F",
             "T",
@@ -353,8 +353,8 @@
         },
         {
           "name": "validateComposer",
-          "start": 94392,
-          "end": 94888,
+          "start": 95400,
+          "end": 95896,
           "deps": [
             "F",
             "T",
@@ -369,8 +369,8 @@
         {
           "name": "renderComposerForm",
           "fragment": true,
-          "start": 85164,
-          "end": 90769,
+          "start": 86172,
+          "end": 91777,
           "deps": [
             "overlay",
             "cmp",
@@ -406,20 +406,20 @@
       "entries": [
         {
           "name": "getSaleInvoices",
-          "start": 58138,
-          "end": 58897,
+          "start": 58999,
+          "end": 59758,
           "deps": [
             "dayIn",
             "today"
           ],
           "offset": 400,
           "replacement": "function getSaleInvoices(...args) { return historyModule.getSaleInvoices({dayIn, today}, this, args); }",
-          "length": 731
+          "length": 759
         },
         {
           "name": "rowsFor",
-          "start": 68920,
-          "end": 68968,
+          "start": 69781,
+          "end": 69829,
           "deps": [
             "cache"
           ],
@@ -429,20 +429,20 @@
         },
         {
           "name": "stats",
-          "start": 68971,
-          "end": 69013,
+          "start": 69832,
+          "end": 69874,
           "deps": [
             "rowsFor",
             "today"
           ],
           "offset": 1362,
           "replacement": "function stats(...args) { return historyModule.stats({rowsFor, today}, this, args); }",
-          "length": 656
+          "length": 42
         },
         {
           "name": "paintStats",
-          "start": 69016,
-          "end": 70364,
+          "start": 69877,
+          "end": 71225,
           "deps": [
             "T",
             "TYPES",
@@ -455,12 +455,12 @@
           ],
           "offset": 2160,
           "replacement": "function paintStats(...args) { return historyModule.paintStats({T, TYPES, esc, getSaleInvoices, money, overlay, rowsFor, stats}, this, args); }",
-          "length": 1249
+          "length": 1348
         },
         {
           "name": "legacyDocs",
-          "start": 70367,
-          "end": 70639,
+          "start": 71228,
+          "end": 71500,
           "deps": [
             "lsGet",
             "ownData",
@@ -472,8 +472,8 @@
         },
         {
           "name": "paintNotices",
-          "start": 70642,
-          "end": 71492,
+          "start": 71503,
+          "end": 72353,
           "deps": [
             "T",
             "authBlocked",
@@ -489,8 +489,8 @@
         },
         {
           "name": "tabsHtml",
-          "start": 71495,
-          "end": 71860,
+          "start": 72356,
+          "end": 72721,
           "deps": [
             "T",
             "esc",
@@ -502,8 +502,8 @@
         },
         {
           "name": "newLabel",
-          "start": 71863,
-          "end": 71942,
+          "start": 72724,
+          "end": 72803,
           "deps": [
             "T",
             "tab"
@@ -514,8 +514,8 @@
         },
         {
           "name": "visibleRows",
-          "start": 71946,
-          "end": 72852,
+          "start": 72807,
+          "end": 73713,
           "deps": [
             "filter",
             "getSaleInvoices",
@@ -525,12 +525,12 @@
           ],
           "offset": 5535,
           "replacement": "function visibleRows(...args) { return historyModule.visibleRows({filter, getSaleInvoices, query, rowsFor, tab}, this, args); }",
-          "length": 819
+          "length": 906
         },
         {
           "name": "paintRegister",
-          "start": 72855,
-          "end": 76913,
+          "start": 73716,
+          "end": 77774,
           "deps": [
             "ICON",
             "NO_OF",
@@ -552,12 +552,12 @@
           ],
           "offset": 6587,
           "replacement": "function paintRegister(...args) { return historyModule.paintRegister({ICON, NO_OF, T, esc, filter, fmtDate, loadingList, loadingMore, money, newLabel, nextCursor, overlay, rowsFor, statusHtml, tab, tpl, visibleRows}, this, args); }",
-          "length": 4077
+          "length": 4058
         },
         {
           "name": "paintAll",
-          "start": 77743,
-          "end": 77861,
+          "start": 78604,
+          "end": 78722,
           "deps": [
             "currentView",
             "overlay",
@@ -571,8 +571,8 @@
         },
         {
           "name": "renderList",
-          "start": 77865,
-          "end": 78951,
+          "start": 78726,
+          "end": 79959,
           "deps": [
             "ICON",
             "T",
@@ -587,12 +587,12 @@
           ],
           "offset": 11085,
           "replacement": "function renderList(...args) { return historyModule.renderList({ICON, T, esc, newLabel, overlay, ownData, paintAll, query, show, tabsHtml}, this, args); }",
-          "length": 1086
+          "length": 1233
         },
         {
           "name": "csvCell",
-          "start": 124265,
-          "end": 124623,
+          "start": 125273,
+          "end": 125631,
           "deps": [],
           "offset": 12253,
           "replacement": "function csvCell(...args) { return historyModule.csvCell({}, this, args); }",
@@ -600,8 +600,8 @@
         },
         {
           "name": "exportCsv",
-          "start": 124626,
-          "end": 126482,
+          "start": 125634,
+          "end": 129455,
           "deps": [
             "NO_OF",
             "T",
@@ -615,7 +615,7 @@
           ],
           "offset": 12764,
           "replacement": "function exportCsv(...args) { return historyModule.exportCsv({NO_OF, T, csvCell, csvMoney, statusLabel, tab, toast, today, visibleRows}, this, args); }",
-          "length": 1856
+          "length": 3821
         }
       ],
       "windowReads": [
@@ -628,8 +628,8 @@
       "entries": [
         {
           "name": "termsText",
-          "start": 115029,
-          "end": 115498,
+          "start": 116037,
+          "end": 116506,
           "deps": [
             "T",
             "tpl"
@@ -640,8 +640,8 @@
         },
         {
           "name": "printable",
-          "start": 115501,
-          "end": 123046,
+          "start": 116509,
+          "end": 124054,
           "deps": [
             "T",
             "businessName",
@@ -662,8 +662,8 @@
         },
         {
           "name": "printDocument",
-          "start": 123067,
-          "end": 124017,
+          "start": 124075,
+          "end": 125025,
           "deps": [
             "T",
             "detail",

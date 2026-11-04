@@ -24,6 +24,7 @@
     }
     /* Render the tip selector for whichever modal is open (card and/or cash). */
     function renderPayTip() {
+      const tr = s => (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(s);
       const opts = [
         { label: 'Sans pourboire', val: '0'   },
         { label: '5 %',            val: '5'   },
@@ -39,7 +40,7 @@
         wrap.style.display = isSplit ? 'none' : '';
         if (isSplit) return;
         $('#' + which + '-tip-chips').innerHTML = opts.map(o =>
-          `<button class="pay-tip-chip ${o.val === payTipMode ? 'is-active' : ''}" data-pay-tip="${o.val}">${o.label}</button>`
+          `<button class="pay-tip-chip ${o.val === payTipMode ? 'is-active' : ''}" data-pay-tip="${o.val}">${tr(o.label)}</button>`
         ).join('');
         const customVisible = payTipMode === 'autre';
         $('#' + which + '-tip-custom').classList.toggle('is-visible', customVisible);
@@ -49,11 +50,11 @@
         if (tip > 0) {
           const base = currentTotal();
           bd.innerHTML =
-            `Addition <span class="mono">${fmtMAD(base)}</span>`
+            `${tr('Addition')} <span class="mono">${fmtMADcents(base)}</span>`
             + `<span class="pay-tip-sep">·</span>`
-            + `Pourboire <span class="mono">${fmtMAD(tip)}</span>`
+            + `${tr('Pourboire')} <span class="mono">${fmtMADcents(tip)}</span>`
             + `<span class="pay-tip-sep">·</span>`
-            + `Total <span class="mono">${fmtMAD(base + tip)}</span>`;
+            + `${tr('Total')} <span class="mono">${fmtMADcents(base + tip)}</span>`;
           bd.classList.add('is-visible');
         } else {
           bd.innerHTML = '';
@@ -282,7 +283,7 @@
         cashConfirm.disabled = false;
       } else {
         cashRendu.classList.add('is-short');
-        cashRenduVal.textContent = 'Insuffisant · manque ' + fmtMAD(total - got);
+        cashRenduVal.textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Insuffisant · manque') + ' ' + fmtMADcents(total - got);
         cashConfirm.disabled = true;
       }
       // Un billet trop petit pour couvrir le dû ne sert à rien : on le grise.
