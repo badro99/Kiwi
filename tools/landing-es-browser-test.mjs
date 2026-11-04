@@ -183,7 +183,7 @@ try {
   const yearly=await page.$eval('#pricing',e=>e.innerText);
   ok(yearly.includes('99')&&yearly.includes('1 188 MAD')&&yearly.includes('2 988 MAD')&&!yearly.includes('billed'),'yearly price and total stay Spanish');
   ok(JSON.stringify(await tierPrices())===JSON.stringify(['99 MAD/mes','249 MAD/mes','349 MAD/mes','1 499 MAD/mes','Presupuesto personalizado']),'yearly tiers: 99, 249, 349, Ultra unchanged at 1 499 MAD: '+JSON.stringify(await tierPrices()));
-  ok(yearly.includes('4 200 MAD')&&!/1[ ,.]?449|17 ?988/.test(yearly),'yearly shows the Pro total and no annual Ultra price');
+  ok(yearly.includes('4 188 MAD')&&!/1[ ,.]?449|17 ?988/.test(yearly),'yearly shows the Pro total and no annual Ultra price');
   const lens=await page.$eval('#pricing .kw-lens',e=>({width:e.getBoundingClientRect().width,opacity:getComputedStyle(e).opacity}));
   ok(lens.width>20&&+lens.opacity>0,'liquid-lens highlight follows pricing tab');
   await page.click('#pricing [role="radio"]:nth-of-type(1)');await delay(150);

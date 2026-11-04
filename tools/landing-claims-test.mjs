@@ -155,7 +155,7 @@ for (const chunk of pricingChunks) {
 }
 ok(JSON.stringify(prices.map(p => p.monthly)) === '[150,300,399,1499]', 'approved monthly prices');
 ok(JSON.stringify(prices.slice(0,3).map(p => p.annual)) === '[99,249,349]', 'approved monthly equivalents');
-ok(JSON.stringify(prices.slice(0,3).map(p => p.total)) === '[1188,2988,4200]', 'exact annual payments, Pro unchanged');
+ok(JSON.stringify(prices.slice(0,3).map(p => p.total)) === '[1188,2988,4188]', 'exact annual payments: twelve times the annual monthly price (owner, 4 Nov: Pro 4 188)');
 ok(prices[3].fixed && !prices[3].annual, 'Ultra remains monthly only');
 for (const [page, locale] of Object.entries(pages)) {
   const html = read(page);

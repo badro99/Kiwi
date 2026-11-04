@@ -5,7 +5,7 @@ export const pricingCopy = JSON.parse(fs.readFileSync('content/landing-pricing.j
 export const prices = [
   { monthly: 150, annual: 99, total: 1188 },
   { monthly: 300, annual: 249, total: 2988 },
-  { monthly: 399, annual: 349, total: 4200, glow: true },
+  { monthly: 399, annual: 349, total: 4188, glow: true },
   { monthly: 1499, fixed: true },
 ];
 const escape = text => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
