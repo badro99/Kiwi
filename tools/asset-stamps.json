@@ -444,8 +444,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "132",
-    "sha": "b3e5584782531e70"
+    "v": "133",
+    "sha": "9b01bab5081fdcca"
   },
   "assets/daterange/activity.js": {
     "v": "7",
@@ -464,8 +464,8 @@
     "sha": "828db62c5bd6bca8"
   },
   "assets/daterange/kpi.js": {
-    "v": "17",
-    "sha": "f873f2d4f73f5e18"
+    "v": "18",
+    "sha": "9460631e9c9eb2de"
   },
   "assets/daterange/ledger.js": {
     "v": "8",
@@ -476,8 +476,8 @@
     "sha": "f91815b2b1f3bce4"
   },
   "assets/daterange/renderers.js": {
-    "v": "30",
-    "sha": "4e1ea7e67c943749"
+    "v": "31",
+    "sha": "5370e7e12bb1546b"
   },
   "assets/daterange/revenue.js": {
     "v": "5",

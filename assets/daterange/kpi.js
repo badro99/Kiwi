@@ -487,7 +487,9 @@ function hotelPerfEntry(w) {
     if (!e) { e = { data: null, error: '', ts: 0, loading: false }; __state.hotelPerf.set(key, e); }
     if (merchant && !e.loading && Date.now() - e.ts > __state.HOTEL_PERF_TTL) {
       e.loading = true;
-      fetch('/api/hotel/performance?' + new URLSearchParams({ merchant, from: w.from, to: w.to }), { cache: 'no-store', credentials: 'same-origin' })
+      /* Délai de 15 s, en-têtes et corps : une réponse qui ne vient pas libère la tuile (« À actualiser »). */
+      const ctl = typeof AbortController === 'function' ? new AbortController() : null, stop = ctl && typeof setTimeout === 'function' ? setTimeout(() => ctl.abort(), 15000) : 0;
+      fetch('/api/hotel/performance?' + new URLSearchParams({ merchant, from: w.from, to: w.to }), { cache: 'no-store', credentials: 'same-origin', ...(ctl ? { signal: ctl.signal } : {}) })
         .then((r) => r.json().then((b) => ({ ok: r.ok, b })))
         .then(({ ok, b }) => {
           const next = ok && b && b.ok ? b : null;
@@ -497,6 +499,7 @@ function hotelPerfEntry(w) {
         })
         .catch(() => { e.data = null; e.error = 'unavailable'; e.changed = true; })
         .finally(() => {
+          if (stop) clearTimeout(stop);
           e.loading = false; e.ts = Date.now();
           /* Repeindre seulement si quelque chose a bougé : le rafraîchissement
            * périodique ne doit pas rejouer l'animation des tuiles pour rien. */
@@ -542,7 +545,9 @@ function tableTimeEntry(from, to) {
     if (!e) { e = { data: null, error: '', ts: 0, loading: false }; __state.tableTime.set(key, e); }
     if (merchant && !e.loading && Date.now() - e.ts > __state.TABLE_TIME_TTL) {
       e.loading = true;
-      fetch('/api/table-time?' + new URLSearchParams({ merchant, from: String(from), to: String(to) }), { cache: 'no-store', credentials: 'same-origin' })
+      /* Délai de 15 s, en-têtes et corps : une réponse qui ne vient pas libère la tuile (« À actualiser »). */
+      const ctl = typeof AbortController === 'function' ? new AbortController() : null, stop = ctl && typeof setTimeout === 'function' ? setTimeout(() => ctl.abort(), 15000) : 0;
+      fetch('/api/table-time?' + new URLSearchParams({ merchant, from: String(from), to: String(to) }), { cache: 'no-store', credentials: 'same-origin', ...(ctl ? { signal: ctl.signal } : {}) })
         .then((r) => r.json().then((b) => ({ ok: r.ok, b })))
         .then(({ ok, b }) => {
           const next = ok && b && b.ok ? { visits: +b.visits || 0, avgMin: b.avgMin == null ? null : +b.avgMin } : null;
@@ -552,6 +557,7 @@ function tableTimeEntry(from, to) {
         })
         .catch(() => { e.error = 'unavailable'; e.changed = true; })
         .finally(() => {
+          if (stop) clearTimeout(stop);
           e.loading = false; e.ts = Date.now();
           if (e.changed) { e.changed = false; try { __state.renderKpiBand(); } catch (_) {} }
         });
