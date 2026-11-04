@@ -1,6 +1,6 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=252';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=150';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=150';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=255';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=153';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=153';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import '../money-cents.js?v=4';
 import { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=9';
@@ -797,6 +797,21 @@ const M = globalThis.KiwiMoney;
     persistDay(); bqSaveProvisional(true); renderAll();
   }
   function openPay(opts) {
+    // Translation is optional: payment always has its French copy locally.
+    const tr = (key, fr, vars) => {
+      let text = fr;
+      try {
+        const layer = globalThis.window?.KiwiCaisseStrings;
+        const value = layer?.say(key, fr, vars);
+        if (typeof value === 'string' && value && value !== key) text = value;
+      } catch (_) {}
+      return text.replace(/\{(\w+)\}/g, (m, k) => vars?.[k] == null ? m : String(vars[k]));
+    };
+    const titleText = () => {
+      const key = { Encaissement: 'checkout.payment.title', 'Régler un acompte': 'checkout.balance.title', 'Différence échange': 'checkout.exchange.title' }[opts.title];
+      return key ? tr(key, opts.title) : opts.title;
+    };
+    const subtitleText = () => String(opts.subtitle || '').replace(/Cliente de passage$/, () => opts.customerId ? 'Cliente de passage' : tr('checkout.walk.in', 'Cliente de passage'));
     const el = $('#bq-paym', root);
     const ownAvoirs = () => opts.customerId
       ? activeAvoirs().filter((a) => a.holderId === opts.customerId) : [];
@@ -828,7 +843,7 @@ const M = globalThis.KiwiMoney;
            received (especially a card charge) while leaving the cart unpaid.
            Finish the remaining balance; the success screen can close normally. */
         if (!committed && (settled.length || avoirPart)) {
-          toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Paiement commencé'), `Il reste ${fmtMAD(due())} à régler avant de fermer.`);
+          toast(tr("checkout.paiement.commence", "Paiement commencé"), `${tr("checkout.il.reste", "Il reste")} ${fmtMAD(due())} ${tr("checkout.a.regler.avant.de.fermer", "à régler avant de fermer.")}`);
           return;
         }
         if (!committed && opts.onCancel) opts.onCancel();
@@ -836,12 +851,12 @@ const M = globalThis.KiwiMoney;
       };
     });
 
-    const mLabel = (m) => (m === 'espèces' ? 'Espèces' : m === 'carte' ? 'Carte' : m === 'virement' ? 'Virement / Versement' : m === 'chèque' ? 'Chèque' : m === 'livraison' ? 'Livraison' : m === 'avoir' ? 'Avoir' : m);
+    const mLabel = (m) => (m === 'espèces' ? tr("checkout.especes", "Espèces") : m === 'carte' ? tr("checkout.carte", "Carte") : m === 'virement' ? tr("checkout.virement.versement", "Virement / Versement") : m === 'chèque' ? tr("checkout.cheque", "Chèque") : m === 'livraison' ? tr("checkout.livraison", "Livraison") : m === 'avoir' ? tr("checkout.avoir", "Avoir") : m);
 
     const appliedBanner = () => {
       const rows = [];
-      if (avoirPart) rows.push(`<i data-lucide="ticket"></i> Avoir <b>${avoirPart.code}</b> appliqué, −${fmtMAD(avoirPart.amount)}`);
-      settled.forEach((p) => rows.push(`<i data-lucide="check"></i> ${mLabel(p.m)} <b>${fmtMAD(p.amount)}</b> réglé`));
+      if (avoirPart) rows.push(`<i data-lucide="ticket"></i> ${tr("checkout.avoir", "Avoir")} <b>${avoirPart.code}</b> ${tr("checkout.applique", "appliqué, −")}${fmtMAD(avoirPart.amount)}`);
+      settled.forEach((p) => rows.push(`<i data-lucide="check"></i> ${mLabel(p.m)} <b>${fmtMAD(p.amount)}</b> ${tr("checkout.regle", "réglé")}`));
       return rows.map((r) => `<div class="bq-pay-applied">${r}</div>`).join('');
     };
 
@@ -849,64 +864,64 @@ const M = globalThis.KiwiMoney;
        au comptoir, « la moitié » est le cas qui revient, et tout le reste se
        saisit au montant. */
     const splitBar = () => `
-      <div class="bq-split" role="group" aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Partager le paiement')}">
-        <span class="bq-split-l">Partager</span>
-        <button class="bq-split-c${share >= 1 && !custom ? ' is-on' : ''}" data-bq-share="1">Tout</button>
+      <div class="bq-split" role="group" aria-label="${tr("checkout.partager.le.paiement", "Partager le paiement")}">
+        <span class="bq-split-l">${tr("checkout.partager", "Partager")}</span>
+        <button class="bq-split-c${share >= 1 && !custom ? ' is-on' : ''}" data-bq-share="1">${tr("checkout.tout", "Tout")}</button>
         <button class="bq-split-c${share === 0.5 && !custom ? ' is-on' : ''}" data-bq-share="0.5">50 %</button>
         <button class="bq-split-c${share === 0.25 && !custom ? ' is-on' : ''}" data-bq-share="0.25">25 %</button>
-        <button class="bq-split-c${custom ? ' is-on' : ''}" data-bq-share="x">Montant…</button>
+        <button class="bq-split-c${custom ? ' is-on' : ''}" data-bq-share="x">${tr("checkout.montant", "Montant…")}</button>
         <input class="bq-split-in mono" id="bq-split-in" type="number" inputmode="decimal" min="0" step="1"
-               placeholder="MAD" value="${custom || ''}" ${custom ? '' : 'hidden'} aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Montant de cette part')}" />
+               placeholder="MAD" value="${custom || ''}" ${custom ? '' : 'hidden'} aria-label="${tr("checkout.montant.de.cette.part", "Montant de cette part")}" />
       </div>
-      <p class="bq-split-note"${portion() < due() ? '' : ' hidden'}>Cette part : ${fmtMAD(portion())} · restera ${fmtMAD(r2(due() - portion()))}</p>`;
+      <p class="bq-split-note"${portion() < due() ? '' : ' hidden'}>${tr("checkout.cette.part", "Cette part :")} ${fmtMAD(portion())} ${tr("checkout.restera", "· restera")} ${fmtMAD(r2(due() - portion()))}</p>`;
 
     const stepMethods = () => {
       const avs = ownAvoirs();
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
-        <h3 class="modal-title">${esc(opts.title)}</h3>
-        <p class="modal-subtle">${settled.length ? `Reste à régler sur ${fmtMAD(opts.amount)}` : opts.subtitle}</p>
+        <button class="bq-modal-x" data-bq-close aria-label="${tr("checkout.fermer", "Fermer")}"><i data-lucide="x"></i></button>
+        <h3 class="modal-title">${esc(titleText())}</h3>
+        <p class="modal-subtle">${settled.length ? `${tr("checkout.reste.a.regler.sur", "Reste à régler sur")} ${fmtMAD(opts.amount)}` : subtitleText()}</p>
         <div class="modal-amount size-md">${fmtMAD(due())}</div>
         ${appliedBanner()}
         ${due() > 0.01 ? splitBar() : ''}
         ${settled.length === 1 && due() > 0.009 && opts.customerId
           && ['espèces','carte','virement','chèque'].includes(settled[0].m)
-          ? `<button class="bq-btn secondary" id="bq-save-acompte">Acompte reçu · garder ${fmtMAD(due())} à régler</button>` : ''}
+          ? `<button class="bq-btn secondary" id="bq-save-acompte">${tr("checkout.acompte.recu.garder", "Acompte reçu · garder")} ${fmtMAD(due())} ${tr("checkout.a.regler", "à régler")}</button>` : ''}
         <div class="bq-pay-opts">
           <button class="bq-pay-opt" data-bq-m="especes">
             <span class="ic"><i data-lucide="banknote"></i></span>
-            <span class="l"><b>Espèces</b><span>Rendu calculé, flous comptés une fois</span></span>
+            <span class="l"><b>${tr("checkout.especes", "Espèces")}</b><span>${tr("checkout.rendu.calcule.flous.comptes.une.fois", "Rendu calculé, flous comptés une fois")}</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
           <button class="bq-pay-opt" data-bq-m="carte">
             <span class="ic"><i data-lucide="credit-card"></i></span>
-            <span class="l"><b>Carte</b><span>Terminal de la banque, montant à saisir dessus</span></span>
+            <span class="l"><b>${tr("checkout.carte", "Carte")}</b><span>${tr("checkout.terminal.de.la.banque.montant.a.saisir.dessus", "Terminal de la banque, montant à saisir dessus")}</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
           <button class="bq-pay-opt" data-bq-m="virement">
             <span class="ic"><img src="assets/icons/material/account_balance.svg" alt=""></span>
-            <span class="l"><b>Virement / Versement</b><span>Confirmer uniquement après réception en banque</span></span>
+            <span class="l"><b>${tr("checkout.virement.versement", "Virement / Versement")}</b><span>${tr("checkout.confirmer.uniquement.apres.reception.en.banque", "Confirmer uniquement après réception en banque")}</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
           <button class="bq-pay-opt" data-bq-m="cheque">
             <span class="ic"><img src="assets/icons/material/receipt_long.svg" alt=""></span>
-            <span class="l"><b>Chèque</b><span>Confirmer après réception du chèque</span></span>
+            <span class="l"><b>${tr("checkout.cheque", "Chèque")}</b><span>${tr("checkout.confirmer.apres.reception.du.cheque", "Confirmer après réception du chèque")}</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
           <button class="bq-pay-opt" data-bq-m="livraison">
             <span class="ic"><i data-lucide="truck"></i></span>
-            <span class="l"><b>Livraison</b><span>Vente enregistrée, paiement à recevoir du transporteur</span></span>
+            <span class="l"><b>${tr("checkout.livraison", "Livraison")}</b><span>${tr("checkout.vente.enregistree.paiement.a.recevoir.du.transporteur", "Vente enregistrée, paiement à recevoir du transporteur")}</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
           ${avoirPart ? '' : avs.length ? `
           <button class="bq-pay-opt" data-bq-m="avoir">
             <span class="ic"><i data-lucide="ticket"></i></span>
-            <span class="l"><b>Avoir</b><span>${avs.length === 1 ? `${avs[0].code} · ${fmtMAD(avs[0].balance)}, ${esc(avs[0].holderName)}` : `${avs.length} avoirs actifs, scanner ou choisir`}</span></span>
+            <span class="l"><b>${tr("checkout.avoir", "Avoir")}</b><span>${avs.length === 1 ? `${avs[0].code} · ${fmtMAD(avs[0].balance)}, ${esc(avs[0].holderName)}` : `${avs.length} ${tr("checkout.avoirs.actifs.scanner.ou.choisir", "avoirs actifs, scanner ou choisir")}`}</span></span>
             <span class="amt">−${fmtMAD(Math.min(avs[0].balance, portion()))}</span>
           </button>` : `
           <button class="bq-pay-opt" data-bq-m="avoir">
             <span class="ic"><i data-lucide="ticket"></i></span>
-            <span class="l"><b>Code d’avoir</b><span>Scanner ou saisir le code du bon</span></span>
+            <span class="l"><b>${tr("checkout.code.d.avoir", "Code d’avoir")}</b><span>${tr("checkout.scanner.ou.saisir.le.code.du.bon", "Scanner ou saisir le code du bon")}</span></span>
           </button>`}
         </div>`;
       icons(); closeBtns();
@@ -937,7 +952,7 @@ const M = globalThis.KiwiMoney;
           const note = $('.bq-split-note', el);
           if (note) {
             note.hidden = !(portion() < due());
-            note.textContent = `Cette part : ${fmtMAD(portion())} · restera ${fmtMAD(r2(due() - portion()))}`;
+            note.textContent = `${tr("checkout.cette.part", "Cette part :")} ${fmtMAD(portion())} ${tr("checkout.restera", "· restera")} ${fmtMAD(r2(due() - portion()))}`;
           }
           /* L'avoir se déduit du total, mais jamais plus que la part choisie :
              sa ligne suit donc la saisie comme les autres, en gardant son signe
@@ -978,7 +993,7 @@ const M = globalThis.KiwiMoney;
               done: (card) => settle({ m: 'livraison', amount, card }) });
           }
           else if (m === 'avoir') stepAvoir();
-          else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucun avoir actif, émettez-en un depuis Échanges & avoirs'));
+          else toast(tr("checkout.aucun.avoir.actif.emettez.en.un.depuis.echanges.avoirs", "Aucun avoir actif, émettez-en un depuis Échanges & avoirs"));
         };
       });
     };
@@ -990,30 +1005,30 @@ const M = globalThis.KiwiMoney;
       settled.push(part);
       share = 1; custom = 0;
       if (opts.balanceExisting) commit(due() > 0.009);
-      else if (due() > 0.009) { toast(`Reste ${fmtMAD(due())} à régler`); stepMethods(); }
+      else if (due() > 0.009) { toast(`${tr("checkout.remaining", "Reste")} ${fmtMAD(due())} ${tr("checkout.a.regler", "à régler")}`); stepMethods(); }
       else commit();
     };
 
     const stepAvoir = () => {
       const avs = ownAvoirs();
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
-        <h3 class="modal-title">Avoir en paiement</h3>
-        <p class="modal-subtle">Scannez le bon, ou choisissez-le, il se déduit du total</p>
+        <button class="bq-modal-x" data-bq-close aria-label="${tr("checkout.fermer", "Fermer")}"><i data-lucide="x"></i></button>
+        <h3 class="modal-title">${tr("checkout.avoir.en.paiement", "Avoir en paiement")}</h3>
+        <p class="modal-subtle">${tr("checkout.scannez.le.bon.ou.choisissez.le.il.se.deduit.du.total", "Scannez le bon, ou choisissez-le, il se déduit du total")}</p>
         <form id="bq-av-code-form" style="display:flex;gap:8px;margin:12px 0;">
-          <input class="bq-in mono" id="bq-av-code" autocomplete="off" autocapitalize="characters" placeholder="Scanner ou saisir AV-…" aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Code de l’avoir')}" style="flex:1;min-width:0;" />
-          <button class="bq-btn secondary" type="submit">Utiliser</button>
+          <input class="bq-in mono" id="bq-av-code" autocomplete="off" autocapitalize="characters" placeholder="${tr('checkout.credit.placeholder', 'Scanner ou saisir AV-…')}" aria-label="${tr("checkout.credit.code", "Code de l’avoir")}" style="flex:1;min-width:0;" />
+          <button class="bq-btn secondary" type="submit">${tr("checkout.utiliser", "Utiliser")}</button>
         </form>
         <p class="bq-av-err" id="bq-av-err" role="alert" hidden></p>
         <div class="bq-pay-opts">
           ${avs.map((a) => `
             <button class="bq-pay-opt" data-bq-av-use="${a.code}">
               <span class="ic"><i data-lucide="scan-line"></i></span>
-              <span class="l"><b>${a.code} · ${fmtMAD(a.balance)}</b><span>${esc(a.holderName)} · ${esc(a.motif)} · valable jusqu'au ${fmtValidUntil(a.until)}</span></span>
+              <span class="l"><b>${a.code} · ${fmtMAD(a.balance)}</b><span>${esc(a.holderName)} · ${esc(a.motif)} ${tr("checkout.valable.jusqu.au", "· valable jusqu'au")} ${fmtValidUntil(a.until)}</span></span>
               <span class="amt">−${fmtMAD(Math.min(a.balance, portion()))}</span>
             </button>`).join('')}
         </div>
-        <div class="bq-sheet-foot"><button class="bq-btn secondary" id="bq-av-back" style="flex:1;">Retour</button></div>`;
+        <div class="bq-sheet-foot"><button class="bq-btn secondary" id="bq-av-back" style="flex:1;">${tr("checkout.retour", "Retour")}</button></div>`;
       icons(); closeBtns();
       $('#bq-av-back', el).onclick = stepMethods;
       const applyCode = async (rawCode) => {
@@ -1044,10 +1059,10 @@ const M = globalThis.KiwiMoney;
         if (!av || avoirExpired(av) || !activeAvoirs().includes(av)) {
           /* Le toast passait en deux secondes et la caissière ne savait pas
              pourquoi : la raison reste écrite sous le champ, et la saisie aussi. */
-          const why = !av ? 'Aucun avoir avec ce code, vérifiez-le sur le bon.'
-            : avoirExpired(av) ? (av.until ? `Cet avoir a expiré le ${new Date(av.until).toLocaleDateString('fr-FR')}.` : 'Cet avoir a expiré.')
-            : 'Cet avoir est déjà entièrement utilisé.';
-          toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Bon indisponible'), why);
+          const why = !av ? tr("checkout.aucun.avoir.avec.ce.code.verifiez.le.sur.le.bon", "Aucun avoir avec ce code, vérifiez-le sur le bon.")
+            : avoirExpired(av) ? (av.until ? `${tr("checkout.cet.avoir.a.expire.le", "Cet avoir a expiré le")} ${new Date(av.until).toLocaleDateString('fr-FR')}.` : tr("checkout.cet.avoir.a.expire", "Cet avoir a expiré."))
+            : tr("checkout.cet.avoir.est.deja.entierement.utilise", "Cet avoir est déjà entièrement utilisé.");
+          toast(tr("checkout.bon.indisponible", "Bon indisponible"), why);
           if (errEl) { errEl.textContent = why; errEl.hidden = false; }
           const input = $('#bq-av-code', el); if (input) { input.focus(); input.select(); }
           return;
@@ -1056,7 +1071,7 @@ const M = globalThis.KiwiMoney;
         avoirPart = { m: 'avoir', amount: applied, code: av.code };
         share = 1; custom = 0;
         if (due() <= 0.009) void commit();
-        else { toast(`${av.code} appliqué, reste ${fmtMAD(due())} à payer`); stepMethods(); }
+        else { toast(`${av.code} ${tr("checkout.applique.reste", "appliqué, reste")} ${fmtMAD(due())} ${tr("checkout.a.payer", "à payer")}`); stepMethods(); }
       };
       $('#bq-av-code-form', el).onsubmit = (event) => {
         event.preventDefault();
@@ -1072,23 +1087,23 @@ const M = globalThis.KiwiMoney;
       const rest = r2(due() - amount);
       let received = amount;
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
-        <h3 class="modal-title">Espèces · ${fmtMAD(amount)}</h3>
-        <p class="modal-subtle">${rest > 0.009 ? `Part sur ${fmtMAD(due())} · restera ${fmtMAD(rest)}` : opts.subtitle}</p>
+        <button class="bq-modal-x" data-bq-close aria-label="${tr("checkout.fermer", "Fermer")}"><i data-lucide="x"></i></button>
+        <h3 class="modal-title">${tr("checkout.especes", "Espèces")} · ${fmtMAD(amount)}</h3>
+        <p class="modal-subtle">${rest > 0.009 ? `${tr("checkout.part.sur", "Part sur")} ${fmtMAD(due())} ${tr("checkout.restera", "· restera")} ${fmtMAD(rest)}` : subtitleText()}</p>
         ${appliedBanner()}
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="bq-cash-in">Espèces reçues</label>
+            <label class="cash-input-label" for="bq-cash-in">${tr("checkout.especes.recues", "Espèces reçues")}</label>
             <input class="cash-input mono" id="bq-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
-          <div class="cash-presets" aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ajout rapide')}">
+          <div class="cash-presets" aria-label="${tr("checkout.quick.cash", "Ajout rapide")}">
             <button class="cash-preset" data-add="20">+20</button>
             <button class="cash-preset" data-add="50">+50</button>
             <button class="cash-preset" data-add="100">+100</button>
             <button class="cash-preset" data-add="200">+200</button>
           </div>
-          <div class="cash-rendu"><span class="lbl">Rendu</span><span class="val mono" id="bq-cash-rendu">0 MAD</span></div>
-          <button class="cash-confirm" id="bq-cash-ok">Confirmer</button>
+          <div class="cash-rendu"><span class="lbl">${tr("checkout.rendu", "Rendu")}</span><span class="val mono" id="bq-cash-rendu">0 MAD</span></div>
+          <button class="cash-confirm" id="bq-cash-ok">${tr("checkout.confirm.cash", "Confirmer")}</button>
         </div>`;
       icons(); closeBtns();
       const refresh = () => {
@@ -1109,17 +1124,17 @@ const M = globalThis.KiwiMoney;
       amount = amount > 0 ? amount : due();
       const rest = r2(due() - amount);
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
-        <h3 class="modal-title">Carte · ${fmtMAD(amount)}</h3>
-        <p class="modal-subtle">${rest > 0.009 ? `Part sur ${fmtMAD(due())} · restera ${fmtMAD(rest)}` : opts.subtitle} · Kiwi affiche, le lecteur encaisse</p>
+        <button class="bq-modal-x" data-bq-close aria-label="${tr("checkout.fermer", "Fermer")}"><i data-lucide="x"></i></button>
+        <h3 class="modal-title">${tr("checkout.carte", "Carte")} · ${fmtMAD(amount)}</h3>
+        <p class="modal-subtle">${rest > 0.009 ? `${tr("checkout.part.sur", "Part sur")} ${fmtMAD(due())} ${tr("checkout.restera", "· restera")} ${fmtMAD(rest)}` : subtitleText()} ${tr("checkout.kiwi.affiche.le.lecteur.encaisse", "· Kiwi affiche, le lecteur encaisse")}</p>
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="bq-reader-disc"><i data-lucide="credit-card"></i></div>
-          <div class="reader-status" id="bq-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
-          <div class="reader-method">Terminal de la banque, montant à saisir dessus</div>
+          <div class="reader-status" id="bq-reader-status">${tr("checkout.montant.envoye.au.lecteur", "Montant envoyé au lecteur")}<span class="ellipsis"></span></div>
+          <div class="reader-method">${tr("checkout.terminal.de.la.banque.montant.a.saisir.dessus", "Terminal de la banque, montant à saisir dessus")}</div>
         </div>
         <div class="bq-card-confirm" id="bq-card-confirm" hidden>
-          <button class="cash-confirm" id="bq-card-ok"><i data-lucide="check"></i> Encaissement confirmé sur le lecteur</button>
-          <button class="bq-btn ghost" id="bq-card-cancel">Paiement refusé · annuler</button>
+          <button class="cash-confirm" id="bq-card-ok"><i data-lucide="check"></i> ${tr("checkout.encaissement.confirme.sur.le.lecteur", "Encaissement confirmé sur le lecteur")}</button>
+          <button class="bq-btn ghost" id="bq-card-cancel">${tr("checkout.paiement.refuse.annuler", "Paiement refusé · annuler")}</button>
         </div>`;
       icons(); closeBtns();
       /* On simule l'aller au lecteur, puis — contrairement à avant — on n'encaisse
@@ -1135,7 +1150,7 @@ const M = globalThis.KiwiMoney;
         disc.classList.remove('is-pulsing');
         disc.classList.add('is-success');
         disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#bq-reader-status', el).textContent = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Confirmez l\'encaissement sur le lecteur');
+        $('#bq-reader-status', el).textContent = tr("checkout.confirmez.l.encaissement.sur.le.lecteur", "Confirmez l'encaissement sur le lecteur");
         $('#bq-reader-status', el).classList.add('is-success');
         const cw = $('#bq-card-confirm', el);
         if (cw) cw.hidden = false;
@@ -1155,14 +1170,14 @@ const M = globalThis.KiwiMoney;
 
     const stepExternal = (method, amount) => {
       const cheque = method === 'cheque';
-      const label = cheque ? 'Chèque' : 'Virement / Versement';
+      const label = cheque ? tr("checkout.cheque", "Chèque") : tr("checkout.virement.versement", "Virement / Versement");
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}">×</button>
+        <button class="bq-modal-x" data-bq-close aria-label="${tr("checkout.fermer", "Fermer")}">×</button>
         <h3 class="modal-title">${label} · ${fmtMAD(amount)}</h3>
-        <p class="modal-subtle">${cheque ? 'Le chèque a-t-il été remis au comptoir ?' : 'Les fonds sont-ils visibles sur le compte bancaire ?'} Aucun montant ne sera attendu dans le tiroir.</p>
+        <p class="modal-subtle">${cheque ? tr("checkout.le.cheque.a.t.il.ete.remis.au.comptoir", "Le chèque a-t-il été remis au comptoir ?") : tr("checkout.les.fonds.sont.ils.visibles.sur.le.compte.bancaire", "Les fonds sont-ils visibles sur le compte bancaire ?")} ${tr("checkout.aucun.montant.ne.sera.attendu.dans.le.tiroir", "Aucun montant ne sera attendu dans le tiroir.")}</p>
         <div class="bq-sheet-foot">
-          <button class="bq-btn secondary" id="bq-external-back">Retour</button>
-          <button class="cash-confirm" id="bq-external-ok">${cheque ? 'Chèque reçu' : 'Versement reçu'} · confirmer</button>
+          <button class="bq-btn secondary" id="bq-external-back">${tr("checkout.retour", "Retour")}</button>
+          <button class="cash-confirm" id="bq-external-ok">${cheque ? tr("checkout.cheque.recu", "Chèque reçu") : tr("checkout.versement.recu", "Versement reçu")} ${tr("checkout.confirmer", "· confirmer")}</button>
         </div>`;
       closeBtns();
       $('#bq-external-back', el).onclick = stepMethods;
@@ -1173,7 +1188,7 @@ const M = globalThis.KiwiMoney;
       if (committed) return;
       if (partial && (!opts.customerId || settled.length !== 1 || avoirPart
           || !['espèces','carte','virement','chèque'].includes(settled[0].m))) {
-        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Acompte : une cliente et un seul règlement sont requis')); return;
+        toast(tr("checkout.acompte.une.cliente.et.un.seul.reglement.sont.requis", "Acompte : une cliente et un seul règlement sont requis")); return;
       }
       committed = true;
       if (opts.beforePaid && !await opts.beforePaid()) { committed = false; return; }
@@ -1184,7 +1199,7 @@ const M = globalThis.KiwiMoney;
         const av = AVOIRS.find((a) => a.code === avp.code);
         if (!av || avoirExpired(av) || !(av.balance >= avp.amount - 0.009)) {
           committed = false;
-          toast(`Avoir ${avp.code} inutilisable`, !av ? 'Bon introuvable en caisse.' : avoirExpired(av) ? 'Bon expiré entre-temps.' : 'Solde insuffisant, montants recalculés.');
+          toast(`${tr("checkout.avoir", "Avoir")} ${avp.code} ${tr("checkout.inutilisable", "inutilisable")}`, !av ? tr("checkout.bon.introuvable.en.caisse", "Bon introuvable en caisse.") : avoirExpired(av) ? tr("checkout.bon.expire.entre.temps", "Bon expiré entre-temps.") : tr("checkout.solde.insuffisant.montants.recalcules", "Solde insuffisant, montants recalculés."));
           stepMethods();
           return;
         }
@@ -1199,7 +1214,7 @@ const M = globalThis.KiwiMoney;
                  consommé le bon. */
               action: 'redeem-batch', id: creditCommitId,
               saleId: (opts.sale && opts.sale.id) || opts.ref || '',
-              detail: opts.title || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Vente boutique'),
+              detail: opts.title || tr("checkout.vente.boutique", "Vente boutique"),
               credits: [{ code: avp.code, amountCents: M.toCents(avp.amount) }],
             });
             const row = ((remote && remote.credits) || []).find((r) => r.code === avp.code);
@@ -1208,11 +1223,11 @@ const M = globalThis.KiwiMoney;
           av.balance = saved ? saved.balance : Math.max(0, av.balance - avp.amount);
           av.status = saved ? saved.status : (av.balance > 0 ? 'active' : 'consumed');
           persistAvoirs();                     // le solde entamé survit au rechargement
-          toast(av.balance > 0 ? `${av.code}, reste ${fmtMAD(av.balance)} dessus` : `${av.code} consommé en totalité`);
+          toast(av.balance > 0 ? `${av.code}${tr("checkout.reste", ", reste")} ${fmtMAD(av.balance)} ${tr("checkout.dessus", "dessus")}` : `${av.code} ${tr("checkout.consomme.en.totalite", "consommé en totalité")}`);
         } catch (_) {
           committed = false;
           await refreshRemoteAvoirs();
-          toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Avoir refusé par le registre'), 'Le solde a changé, le bon a expiré ou une autre caisse vient de l’utiliser. Aucun encaissement n’a été enregistré.');
+          toast(tr("checkout.avoir.refuse.par.le.registre", "Avoir refusé par le registre"), tr("checkout.le.solde.a.change.le.bon.a.expire.ou.une.autre.caisse.vient.de.l.utiliser.aucun.encaissement.n.a.ete.enregistre", "Le solde a changé, le bon a expiré ou une autre caisse vient de l’utiliser. Aucun encaissement n’a été enregistré."));
           stepMethods();
           return;
         }
@@ -1225,7 +1240,7 @@ const M = globalThis.KiwiMoney;
           paid: (opts.balancePaid || 0) + paidNow,
           remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow) };
         opts.amount = paidNow;
-        opts.title = partial ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Acompte') : (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Solde de l’acompte');
+        opts.title = partial ? tr("checkout.acompte", "Acompte") : tr("checkout.solde.de.l.acompte", "Solde de l’acompte");
       }
       if (res.delivery || parts.some((x) => x.m === 'livraison')) stepSuccess(parts, res);
       else {
@@ -1233,7 +1248,7 @@ const M = globalThis.KiwiMoney;
            reste à un geste ; le ticket se réimprime depuis l'historique. */
         const printed = printReceiptNow(opts, parts, { auto: true });
         closeVeil('#bq-pay-veil');
-        if (printed === false) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket non imprimé · aucune imprimante'), 4000);
+        if (printed === false) toast(tr("checkout.no.printer", "Ticket non imprimé · aucune imprimante"), 4000);
       }
     };
 
@@ -1241,51 +1256,51 @@ const M = globalThis.KiwiMoney;
       const cash = parts.find((x) => x.m === 'espèces');
       const delivery = parts.some((x) => x.m === 'livraison');
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
-        <h3 class="modal-title">${delivery ? 'Livraison enregistrée' : "C'est encaissé"}</h3>
-        <p class="modal-subtle">${res.line ? esc(res.line) : esc(opts.title)}</p>
+        <button class="bq-modal-x" data-bq-close aria-label="${tr("checkout.fermer", "Fermer")}"><i data-lucide="x"></i></button>
+        <h3 class="modal-title">${delivery ? tr("checkout.livraison.enregistree", "Livraison enregistrée") : tr("checkout.c.est.encaisse", "C'est encaissé")}</h3>
+        <p class="modal-subtle">${res.line ? esc(res.line) : esc(titleText())}</p>
         ${cash && cash.rendu > 0 ? `
           <div class="cash-success-rendu">${fmtMAD(cash.rendu)}</div>
-          <div class="cash-success-label">rendu à la cliente</div>` : `
+          <div class="cash-success-label">${tr("checkout.rendu.a.la.cliente", "rendu à la cliente")}</div>` : `
           <div class="modal-amount size-md">${fmtMAD(opts.amount)}</div>`}
         <div class="bq-pay-break">
-          ${parts.map((x) => `<div class="row"><span>${x.m === 'avoir' ? `Avoir ${x.code}` : x.m === 'carte' ? 'Carte, lecteur partenaire' : x.m === 'livraison' ? 'Livraison · à recevoir' : mLabel(x.m)}</span><b>${fmtMAD(x.amount)}</b></div>`).join('')}
+          ${parts.map((x) => `<div class="row"><span>${x.m === 'avoir' ? `${tr("checkout.avoir", "Avoir")} ${x.code}` : x.m === 'carte' ? tr("checkout.carte.lecteur.partenaire", "Carte, lecteur partenaire") : x.m === 'livraison' ? tr("checkout.livraison.a.recevoir", "Livraison · à recevoir") : mLabel(x.m)}</span><b>${fmtMAD(x.amount)}</b></div>`).join('')}
         </div>
         <div class="modal-actions is-visible">
-          <button class="ma-btn secondary" id="bq-pay-print"><i data-lucide="printer"></i>Reçu 80 mm</button>
-          <button class="ma-btn secondary" id="bq-pay-wa"><i data-lucide="message-circle"></i>Reçu WhatsApp</button>
+          <button class="ma-btn secondary" id="bq-pay-print"><i data-lucide="printer"></i>${tr("checkout.recu.80.mm", "Reçu 80 mm")}</button>
+          <button class="ma-btn secondary" id="bq-pay-wa"><i data-lucide="message-circle"></i>${tr("checkout.recu.whatsapp", "Reçu WhatsApp")}</button>
         </div>
         <div class="modal-actions is-visible" style="margin-top:10px;">
-          <button class="ma-btn primary" id="bq-pay-done"><i data-lucide="check"></i>${esc(opts.doneLabel || 'Nouvelle vente')}</button>
+          <button class="ma-btn primary" id="bq-pay-done"><i data-lucide="check"></i>${esc(opts.doneLabel || tr("checkout.nouvelle.vente", "Nouvelle vente"))}</button>
         </div>`;
       icons(); closeBtns();
       const card = (parts.find((x) => x.card) || {}).card || {};
-      if (delivery && card.cityId) toast(ozonLabel('Le colis part chez Ozon, suivi dans Livraisons'));
-      else if (delivery && res.sale && res.sale.syncId) ozonOffer(el, { slug: merchantSlug(), saleId: res.sale.syncId, title: opts.ref ? 'Ticket ' + opts.ref : '', receiver: card.name || '', phone: card.phone || '', address: card.address || '', cityHint: card.city || '', note: card.note || '', dueCents: M.sumCents(parts.map((x) => (x.m === 'livraison' ? +x.amount || 0 : 0))), toast });
+      if (delivery && card.cityId) toast(tr("checkout.ozon.sent", "Le colis part chez Ozon, suivi dans Livraisons"));
+      else if (delivery && res.sale && res.sale.syncId) ozonOffer(el, { slug: merchantSlug(), saleId: res.sale.syncId, title: opts.ref ? tr("checkout.ticket", "Ticket ") + opts.ref : '', receiver: card.name || '', phone: card.phone || '', address: card.address || '', cityHint: card.city || '', note: card.note || '', dueCents: M.sumCents(parts.map((x) => (x.m === 'livraison' ? +x.amount || 0 : 0))), toast });
       $('#bq-pay-print', el).onclick = () => printReceiptNow(opts, parts);
       /* Same problem as the 80 mm button: this claimed "Reçu envoyé sur WhatsApp"
          while sending nothing at all. WhatsApp cannot be sent silently from a web
          page, and it shouldn't be — the merchant should see what goes to their
          client. So we open a real pre-filled WhatsApp draft; they press send. */
       $('#bq-pay-wa', el).onclick = () => {
-        if (!opts.waPhone) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Cliente de passage, pas de numéro WhatsApp sur le ticket')); return; }
+        if (!opts.waPhone) { toast(tr("checkout.cliente.de.passage.pas.de.numero.whatsapp.sur.le.ticket", "Cliente de passage, pas de numéro WhatsApp sur le ticket")); return; }
         const pv = pvPaired();
         const body = [
           (pv && pv.name) || 'Kiwi',
-          opts.ref ? ('Reçu ' + opts.ref) : 'Reçu',
+          opts.ref ? (tr("checkout.recu", "Reçu") + ' ' + opts.ref) : tr("checkout.recu", "Reçu"),
           '',
           ...(opts.lines || []).map((l) => `${l.qty ? l.qty + '× ' : ''}${l.name} · ${fmtMAD(l.amount)}`),
           '',
-          `TOTAL ${fmtMAD(opts.amount)}`,
-          (parts || []).map((x) => x.m === 'avoir' ? 'Avoir' : x.m === 'livraison' ? 'Livraison · à recevoir' : mLabel(x.m)).join(' + '),
+          `${tr("checkout.total", "TOTAL")} ${fmtMAD(opts.amount)}`,
+          (parts || []).map((x) => x.m === 'avoir' ? tr("checkout.avoir", "Avoir") : x.m === 'livraison' ? tr("checkout.livraison.a.recevoir", "Livraison · à recevoir") : mLabel(x.m)).join(' + '),
           '',
-          'Merci !',
+          tr("checkout.merci", "Merci !"),
         ].filter((x) => x !== undefined).join('\n');
         const num = String(opts.waPhone).replace(/\D/g, '');
         try {
           window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
-          toast(`WhatsApp ouvert pour ${opts.waName || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('la cliente')}, appuyez sur envoyer`);
-        } catch (_) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impossible d\'ouvrir WhatsApp')); }
+          toast(`${tr("checkout.whatsapp.ouvert.pour", "WhatsApp ouvert pour")} ${opts.waName || tr("checkout.la.cliente", "la cliente")}${tr("checkout.appuyez.sur.envoyer", ", appuyez sur envoyer")}`);
+        } catch (_) { toast(tr("checkout.impossible.d.ouvrir.whatsapp", "Impossible d'ouvrir WhatsApp")); }
       };
       $('#bq-pay-done', el).onclick = () => closeVeil('#bq-pay-veil');
     };

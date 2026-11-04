@@ -255,6 +255,10 @@
     "v": "10",
     "sha": "d4ce3014e68334fc"
   },
+  "assets/caisse-strings.js": {
+    "v": "3",
+    "sha": "2da470cdcee6759e"
+  },
   "assets/caisse/catalogue.js": {
     "v": "12",
     "sha": "be94e34370457a28"
@@ -1388,8 +1392,8 @@
     "sha": "4f0facbf1ccf4020"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "136",
-    "sha": "2ed0be8b1ba2050c"
+    "v": "137",
+    "sha": "a2ff6408abf555db"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1484,24 +1488,24 @@
     "sha": "f9be46bf81c4b95d"
   },
   "assets/pos-boutique.css": {
-    "v": "252",
+    "v": "255",
     "sha": "adfff342860f8569"
   },
   "assets/pos-boutique.js": {
-    "v": "252",
-    "sha": "a4a7a77c032470c6"
+    "v": "255",
+    "sha": "affa205f44dd0151"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "150",
-    "sha": "03fbc31489538495"
+    "v": "153",
+    "sha": "090c8593463da889"
   },
   "assets/pos-boutique/delivery-card.js": {
     "v": "6",
     "sha": "a74f14231dcb7a1a"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "68",
-    "sha": "3d551c78d826c20f"
+    "v": "71",
+    "sha": "09e3eb368f6fa276"
   },
   "assets/pos-boutique/exchange.js": {
     "v": "2",
@@ -1516,8 +1520,8 @@
     "sha": "ae42ad06da0ddc4c"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "150",
-    "sha": "c4d8d08a5abf2a4d"
+    "v": "153",
+    "sha": "79cd24dcb642ab3c"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "20",
@@ -1540,8 +1544,8 @@
     "sha": "143f456d46538526"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "150",
-    "sha": "316576a9863c633b"
+    "v": "153",
+    "sha": "75f03c90892cecaa"
   },
   "assets/pos-boutique/search.js": {
     "v": "14",
@@ -1572,8 +1576,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "333",
-    "sha": "dedad6b4fe94ce3a"
+    "v": "336",
+    "sha": "ac1371a0d3db8c46"
   },
   "assets/pos-epicerie.css": {
     "v": "29",
@@ -1872,8 +1876,8 @@
     "sha": "a83af7c1066e3639"
   },
   "assets/restaurant-menu/strings.js": {
-    "v": "5",
-    "sha": "fc8b5682cd82ba77"
+    "v": "6",
+    "sha": "ecebc7f1f448bbba"
   },
   "assets/restaurant-menu/styles.js": {
     "v": "2",

@@ -15,6 +15,7 @@ for chunk in m['chunks']:
  oldpos=[0]+list(itertools.accumulate(map(len,oldlines)));newpos=[0]+list(itertools.accumulate(map(len,newlines)))
  ops=[(tag,oldpos[a],oldpos[b],newpos[c],newpos[d]) for tag,a,b,c,d in difflib.SequenceMatcher(None,oldlines,newlines,autojunk=False).get_opcodes()]
  def at(pos):
+  if pos==0:return 0  # Keep declarations inserted before the first archived fragment.
   if pos==len(prev):return len(body)
   for tag,a,b,c,d in ops:
    if a<=pos<b:return c+pos-a if tag=='equal' else c

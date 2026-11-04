@@ -60,7 +60,11 @@ async function modules(context) {
 }
 for (const real of [false,true]) {
   const a = realm(real), b = realm(real);
-  if (pristine) vm.runInContext(original, a.context);
+  if (pristine) {
+    // The monolith also runs with the shared inventory gate loaded.
+    vm.runInContext('(function () {' + read('assets/till-inventory-access.js').replace(/export /g, '') + '\n})();', a.context);
+    vm.runInContext(original, a.context);
+  }
   await modules(b.context);
   await new Promise(r => setImmediate(r));
   assert.equal(b.registered.length,1);

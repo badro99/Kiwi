@@ -1,1912 +1,1912 @@
 {
-  "sha256": "60416348091a08eafd99005127a29e3780e68a353f35f328c8ed32a775524453",
-  "prefix": "/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n * Kiwi \u00b7 BOUTIQUE MODE \u2014 Maison Mansour (PIN 0002), mode & artisanat.\n * ---------------------------------------------------------------------------\n * Loaded lazily by assets/pos-dispatch.js, which owns the PIN choreography\n * and provides the root <div class=\"vx-screen\" id=\"pos-boutique\">. This file\n * builds the whole app inside it and self-registers on window.KiwiPosDispatch.\n *\n * The boutique story: caftans, takchitas et babouches vendus au toucher \u2014\n * une grille visuelle par rayon, la taille avec le stock par taille sous le\n * doigt, la remise sous accord g\u00e9rante. Le diff\u00e9renciateur m\u00e9tier :\n * \u00c9CHANGES & AVOIRS \u2014 on retrouve la vente par n\u00b0 de ticket ou t\u00e9l\u00e9phone,\n * on \u00e9change la pi\u00e8ce ou on \u00e9met un avoir code-barres qui revient en caisse\n * comme moyen de paiement. V1 = couche op\u00e9rationnelle : la carte part au\n * lecteur partenaire, Kiwi n'encaisse pas.\n * \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */\n(function () {\n/* Propri\u00e9taire des mutations du ticket. Les contr\u00f4les de stock et les effets\n * restent chez les appelants ; les op\u00e9rations conservent les r\u00e8gles historiques. */\nconst ticketOwner = {\n  clear(state, ticket) { state.ticket = ticket; },\n  replaceLines(ticket, lines) { ticket.lines = lines; },\n  prune(ticket, products) { ticket.lines = ticket.lines.filter(line => products[line.pid]); },\n  addLine(ticket, line) {\n    const same = ticket.lines.find(l => l.pid === line.pid && l.size === line.size && l.color === line.color && l.remise === line.remise);\n    if (same) {\n      same.qty += line.qty;\n      if (line.promo && (!same.promo || line.promo.price < same.promo.price)) same.promo = line.promo;\n    } else ticket.lines.push(line);\n  },\n  changeQuantity(ticket, index, delta) {\n    const line = ticket.lines[index];\n    line.qty = +line.qty + delta;\n    if (line.qty <= 0) ticket.lines.splice(index, 1);\n  },\n  setCustomer(ticket, client) { ticket.client = client; },\n  applyDiscount(ticket, approval) { ticket.remiseAuth = approval; },\n  applyReward(ticket, reward) { ticket.reward = reward; },\n  reserveReward(ticket, ref) { return ticket.reward.reservation || (ticket.reward.reservation = { ref }); },\n  acceptReward(intent) { intent.accepted = true; },\n  removeReward(ticket) { delete ticket.reward; },\n  numbering(ticket) { ticket.numbering = true; ticket.numError = false; },\n  numbered(ticket, num, period) {\n    ticket.num = num; ticket.period = period;\n    ticket.numbering = false; ticket.numError = false;\n  },\n  numberFailed(ticket) { ticket.numbering = false; ticket.numError = true; },\n  renewPeriod(ticket, period) { ticket.num = ''; ticket.period = period; },\n  startReturn(state, exchange) { state.exchange = exchange; state.ret = null; },\n};\n\n\n",
+  "sha256": "e9e7bf527dd940d57c4d7f39cafcee2113fbb7c843ef594ec8290b24772cf402",
+  "prefix": "/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n * Kiwi \u00b7 BOUTIQUE MODE \u2014 Maison Mansour (PIN 0002), mode & artisanat.\n * ---------------------------------------------------------------------------\n * Loaded lazily by assets/pos-dispatch.js, which owns the PIN choreography\n * and provides the root <div class=\"vx-screen\" id=\"pos-boutique\">. This file\n * builds the whole app inside it and self-registers on window.KiwiPosDispatch.\n *\n * The boutique story: caftans, takchitas et babouches vendus au toucher \u2014\n * une grille visuelle par rayon, la taille avec le stock par taille sous le\n * doigt, la remise sous accord g\u00e9rante. Le diff\u00e9renciateur m\u00e9tier :\n * \u00c9CHANGES & AVOIRS \u2014 on retrouve la vente par n\u00b0 de ticket ou t\u00e9l\u00e9phone,\n * on \u00e9change la pi\u00e8ce ou on \u00e9met un avoir code-barres qui revient en caisse\n * comme moyen de paiement. V1 = couche op\u00e9rationnelle : la carte part au\n * lecteur partenaire, Kiwi n'encaisse pas.\n * \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */\n(function () {\n/* Propri\u00e9taire des mutations du ticket. Les contr\u00f4les de stock et les effets\n * restent chez les appelants ; les op\u00e9rations conservent les r\u00e8gles historiques. */\nconst ticketOwner = {\n  clear(state, ticket) { state.ticket = ticket; },\n  replaceLines(ticket, lines) { ticket.lines = lines; },\n  prune(ticket, products) { ticket.lines = ticket.lines.filter(line => products[line.pid]); },\n  addLine(ticket, line) {\n    const same = ticket.lines.find(l => l.pid === line.pid && l.size === line.size && l.color === line.color && l.remise === line.remise);\n    if (same) {\n      same.qty += line.qty;\n      if (line.promo && (!same.promo || line.promo.price < same.promo.price)) same.promo = line.promo;\n    } else ticket.lines.push(line);\n  },\n  changeQuantity(ticket, index, delta) {\n    const line = ticket.lines[index];\n    line.qty = +line.qty + delta;\n    if (line.qty <= 0) ticket.lines.splice(index, 1);\n  },\n  setCustomer(ticket, client) { ticket.client = client; },\n  applyDiscount(ticket, approval) { ticket.remiseAuth = approval; },\n  /* La remise de TICKET (peau 2027, bouton \u00ab Remise \u00bb du pied) descend sur\n     chaque ligne : le pourcentage vit d\u00e9j\u00e0 l\u00e0, et ticketTotals l'y additionne.\n     Rien de neuf dans le calcul, rien de neuf dans la vente envoy\u00e9e \u2014 c'est le\n     chemin de la remise par article, appliqu\u00e9 d'un geste. */\n  discountAllLines(ticket, pct) { ticket.lines.forEach((line) => { line.remise = pct; }); },\n  applyReward(ticket, reward) { ticket.reward = reward; },\n  reserveReward(ticket, ref) { return ticket.reward.reservation || (ticket.reward.reservation = { ref }); },\n  acceptReward(intent) { intent.accepted = true; },\n  removeReward(ticket) { delete ticket.reward; },\n  numbering(ticket) { ticket.numbering = true; ticket.numError = false; },\n  numbered(ticket, num, period) {\n    ticket.num = num; ticket.period = period;\n    ticket.numbering = false; ticket.numError = false;\n  },\n  numberReady(ticket) { ticket.numbering = false; ticket.numError = false; },\n  numberFailed(ticket) { ticket.numbering = false; ticket.numError = true; },\n  renewPeriod(ticket, period) { ticket.num = ''; ticket.period = period; },\n  startReturn(state, exchange) { state.exchange = exchange; state.ret = null; },\n};\n\n\n",
   "suffix": "})();\n",
   "chunks": [
     {
       "file": "assets/pos-boutique.js",
-      "lead": "import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=15';\nimport { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=15';\nimport { intake, renderInventaire } from './pos-boutique/inventory.js?v=15';\nimport { ticketOwner } from './pos-boutique/ticket-owner.js?v=1';\n",
-      "tail": "\nexport { AVOIRS, BY_EAN, CL, CLIENTES, IS_DEMO, P, RAYONS, RETAIN_DAYS, SALES, STAFF, _bqKey, activeAvoirs, assignTicketNumber, availableStock, avoirExpired, bqMoney, bqPaymentMethod, bqPaymentParts, bqPost, bqSaveProvisional, checkout, closeVeil, colorKey, creditErrorDetail, creditFromServer, creditIntent, creditRequest, findSale, firstFree, firstFreeFor, firstName, freshTicket, headSubVente, initials, issueAvoir, linePromo, lineUnit, merchantSlug, newSaleId, nextStandaloneTicketNumber, openVeil, payExistingBalance, persistAvoirs, persistDay, persistStock, promoFor, pruneTicket, pvPaired, pvReal, queueIfOffline, rebuildCatalog, recordReturn, refreshOps, refreshRemoteAvoirs, renderAll, renderBadges, retDayKey, retShiftDay, root, saleClient, salesToday, showStockIssue, sizeWord, sizesOf, stableCreditIssueId, state, stockAdd, stockOf, switchView, ticketClient, ticketCount, ticketTotals, toast, variantStock, whenLabel };\n",
+      "lead": "import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=153';\nimport { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=71';\nimport { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=153';\nimport { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=153';\nimport { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';\nimport { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';\nimport { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';\nimport { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=6'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=17';\n",
+      "tail": "\nexport { AVOIRS, BY_EAN, CL, CLIENTES, IS_DEMO, P, RAYONS, RETAIN_DAYS, SALES, STAFF, _bqKey, activeAvoirs, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, availableStock, avoirExpired, bqKitSkin, bqMoney, bqPaymentMethod, bqPaymentParts, bqPost, bqSaveProvisional, checkout, closeVeil, colorKey, creditErrorDetail, creditFromServer, creditIntent, creditRequest, findSale, firstFree, firstFreeFor, firstName, freshTicket, headSubVente, initials, issueAvoir, linePromo, lineUnit, merchantSlug, newSaleId, nextStandaloneTicketNumber, openVeil, payExistingBalance, persistAvoirs, persistDay, persistStock, promoFor, pruneTicket, pvPaired, pvReal, queueIfOffline, rebuildCatalog, recordReturn, refreshOps, refreshRemoteAvoirs, renderAll, renderBadges, retDayKey, retShiftDay, root, saleClient, salesToday, showStockIssue, sizeWord, sizesOf, stableCreditIssueId, state, stockAdd, stockOf, switchView, ticketClient, ticketCount, ticketTotals, toast, variantStock, whenLabel };\n",
       "fragments": [
         {
-          "start": 2820,
-          "end": 2836,
+          "start": 3289,
+          "end": 3305,
           "name": null
         },
         {
-          "start": 5790,
-          "end": 6288,
+          "start": 6070,
+          "end": 6568,
           "name": "pvPaired"
         },
         {
-          "start": 6288,
-          "end": 6932,
+          "start": 6568,
+          "end": 7343,
           "name": "bqMoney"
         },
         {
-          "start": 6932,
-          "end": 7096,
+          "start": 7343,
+          "end": 7507,
           "name": "pvReal"
         },
         {
-          "start": 7096,
-          "end": 7272,
+          "start": 7507,
+          "end": 7683,
           "name": null
         },
         {
-          "start": 7272,
-          "end": 8386,
+          "start": 7683,
+          "end": 8797,
           "name": "toast"
         },
         {
-          "start": 31535,
-          "end": 32133,
+          "start": 15281,
+          "end": 15879,
           "name": null
         },
         {
-          "start": 32133,
-          "end": 32352,
+          "start": 15879,
+          "end": 16098,
           "name": "rebuildCatalog"
         },
         {
-          "start": 32352,
-          "end": 32372,
+          "start": 16098,
+          "end": 16118,
           "name": null
         },
         {
-          "start": 32372,
-          "end": 32422,
+          "start": 16118,
+          "end": 16168,
           "name": null
         },
         {
-          "start": 32422,
-          "end": 32497,
+          "start": 16168,
+          "end": 16243,
           "name": null
         },
         {
-          "start": 32497,
-          "end": 32678,
+          "start": 16243,
+          "end": 16424,
           "name": null
         },
         {
-          "start": 32678,
-          "end": 32740,
+          "start": 16424,
+          "end": 16486,
           "name": null
         },
         {
-          "start": 32740,
-          "end": 33022,
+          "start": 16486,
+          "end": 16768,
           "name": "colorKey"
         },
         {
-          "start": 33022,
-          "end": 33582,
+          "start": 16768,
+          "end": 17328,
           "name": "variantStock"
         },
         {
-          "start": 33582,
-          "end": 33971,
+          "start": 17328,
+          "end": 17717,
           "name": "ticketHeld"
         },
         {
-          "start": 33971,
-          "end": 34140,
+          "start": 17717,
+          "end": 17886,
           "name": "availableStock"
         },
         {
-          "start": 34140,
-          "end": 34281,
+          "start": 17886,
+          "end": 18027,
           "name": "firstFreeFor"
         },
         {
-          "start": 34281,
-          "end": 34829,
+          "start": 18027,
+          "end": 18575,
           "name": "ticketStockIssue"
         },
         {
-          "start": 34829,
-          "end": 35154,
+          "start": 18575,
+          "end": 18914,
           "name": "showStockIssue"
         },
         {
-          "start": 35154,
-          "end": 37451,
+          "start": 18914,
+          "end": 21211,
           "name": "persistStock"
         },
         {
-          "start": 37451,
-          "end": 41698,
+          "start": 21211,
+          "end": 25565,
           "name": "reconcileVoids"
         },
         {
-          "start": 41698,
-          "end": 41809,
+          "start": 25565,
+          "end": 25676,
           "name": null
         },
         {
-          "start": 41809,
-          "end": 41884,
+          "start": 25676,
+          "end": 25751,
           "name": null
         },
         {
-          "start": 41884,
-          "end": 42579,
+          "start": 25751,
+          "end": 26446,
           "name": null
         },
         {
-          "start": 42579,
-          "end": 43263,
+          "start": 26446,
+          "end": 27130,
           "name": "syncTillStaff"
         },
         {
-          "start": 43263,
-          "end": 45403,
+          "start": 27130,
+          "end": 29270,
           "name": null
         },
         {
-          "start": 45403,
-          "end": 45468,
+          "start": 29270,
+          "end": 29335,
           "name": null
         },
         {
-          "start": 45468,
-          "end": 45584,
+          "start": 29335,
+          "end": 29451,
           "name": null
         },
         {
-          "start": 45584,
-          "end": 45670,
+          "start": 29451,
+          "end": 29537,
           "name": null
         },
         {
-          "start": 48496,
-          "end": 48529,
+          "start": 32363,
+          "end": 32396,
           "name": null
         },
         {
-          "start": 48529,
-          "end": 48709,
+          "start": 32396,
+          "end": 32576,
           "name": null
         },
         {
-          "start": 48709,
-          "end": 48939,
+          "start": 32576,
+          "end": 32806,
           "name": null
         },
         {
-          "start": 48939,
-          "end": 49934,
+          "start": 32806,
+          "end": 33801,
           "name": null
         },
         {
-          "start": 49934,
-          "end": 50022,
+          "start": 33801,
+          "end": 33889,
           "name": null
         },
         {
-          "start": 50022,
-          "end": 50289,
+          "start": 33889,
+          "end": 34156,
           "name": null
         },
         {
-          "start": 50289,
-          "end": 50827,
+          "start": 34156,
+          "end": 34694,
           "name": null
         },
         {
-          "start": 50827,
-          "end": 51182,
+          "start": 34694,
+          "end": 35049,
           "name": null
         },
         {
-          "start": 51182,
-          "end": 51202,
+          "start": 35049,
+          "end": 35069,
           "name": null
         },
         {
-          "start": 51202,
-          "end": 51294,
+          "start": 35069,
+          "end": 35161,
           "name": null
         },
         {
-          "start": 51294,
-          "end": 51435,
+          "start": 35161,
+          "end": 35302,
           "name": null
         },
         {
-          "start": 51435,
-          "end": 52079,
+          "start": 35302,
+          "end": 35946,
           "name": null
         },
         {
-          "start": 52079,
-          "end": 52743,
+          "start": 35946,
+          "end": 36610,
           "name": "avoirKey"
         },
         {
-          "start": 52743,
-          "end": 53002,
+          "start": 36610,
+          "end": 36869,
           "name": "persistAvoirs"
         },
         {
-          "start": 53002,
-          "end": 53753,
+          "start": 36869,
+          "end": 37620,
           "name": null
         },
         {
-          "start": 53753,
-          "end": 55219,
+          "start": 37620,
+          "end": 39086,
           "name": "creditFromServer"
         },
         {
-          "start": 55219,
-          "end": 56001,
+          "start": 39086,
+          "end": 39868,
           "name": "creditRequest"
         },
         {
-          "start": 56001,
-          "end": 56430,
+          "start": 39868,
+          "end": 40297,
           "name": "refreshRemoteAvoirs"
         },
         {
-          "start": 56430,
-          "end": 57812,
+          "start": 40297,
+          "end": 41679,
           "name": "avoirApproval"
         },
         {
-          "start": 57812,
-          "end": 58046,
+          "start": 41679,
+          "end": 41913,
           "name": "creditIntent"
         },
         {
-          "start": 58046,
-          "end": 58626,
+          "start": 41913,
+          "end": 42493,
           "name": "stableCreditIssueId"
         },
         {
-          "start": 58626,
-          "end": 59221,
+          "start": 42493,
+          "end": 43088,
           "name": "creditErrorDetail"
         },
         {
-          "start": 59221,
-          "end": 59392,
+          "start": 43088,
+          "end": 43259,
           "name": null
         },
         {
-          "start": 59392,
-          "end": 59783,
+          "start": 43259,
+          "end": 43708,
           "name": null
         },
         {
-          "start": 59783,
-          "end": 59860,
+          "start": 43708,
+          "end": 43785,
           "name": "bqReplayHeld"
         },
         {
-          "start": 59860,
-          "end": 60045,
+          "start": 43785,
+          "end": 43970,
           "name": "bqPost"
         },
         {
-          "start": 60045,
-          "end": 62631,
+          "start": 43970,
+          "end": 46556,
           "name": "originalSalePayload"
         },
         {
-          "start": 62631,
-          "end": 63596,
+          "start": 46556,
+          "end": 47521,
           "name": "ensureOriginalSale"
         },
         {
-          "start": 63596,
-          "end": 64138,
+          "start": 47521,
+          "end": 48063,
           "name": "ticketPrefix"
         },
         {
-          "start": 64138,
-          "end": 64167,
+          "start": 48063,
+          "end": 48092,
           "name": null
         },
         {
-          "start": 64167,
-          "end": 64446,
+          "start": 48092,
+          "end": 48371,
           "name": null
         },
         {
-          "start": 64446,
-          "end": 64494,
+          "start": 48371,
+          "end": 48419,
           "name": null
         },
         {
-          "start": 64494,
-          "end": 65309,
+          "start": 48419,
+          "end": 49234,
           "name": null
         },
         {
-          "start": 65309,
-          "end": 65803,
+          "start": 49234,
+          "end": 49728,
           "name": "businessDayKey"
         },
         {
-          "start": 65803,
-          "end": 66150,
+          "start": 49728,
+          "end": 50075,
           "name": "retDayKey"
         },
         {
-          "start": 66150,
-          "end": 66325,
+          "start": 50075,
+          "end": 50250,
           "name": "retShiftDay"
         },
         {
-          "start": 66325,
-          "end": 66455,
+          "start": 50250,
+          "end": 50380,
           "name": "isToday"
         },
         {
-          "start": 66455,
-          "end": 67991,
+          "start": 50380,
+          "end": 51916,
           "name": null
         },
         {
-          "start": 67991,
-          "end": 68255,
+          "start": 51916,
+          "end": 52180,
           "name": "withinRetention"
         },
         {
-          "start": 68255,
-          "end": 68487,
+          "start": 52180,
+          "end": 52412,
           "name": null
         },
         {
-          "start": 68487,
-          "end": 69067,
+          "start": 52412,
+          "end": 52992,
           "name": "whenLabel"
         },
         {
-          "start": 69067,
-          "end": 70723,
+          "start": 52992,
+          "end": 54648,
           "name": "merchantSlug"
         },
         {
-          "start": 70723,
-          "end": 71159,
+          "start": 54648,
+          "end": 55084,
           "name": null
         },
         {
-          "start": 71159,
-          "end": 71426,
+          "start": 55084,
+          "end": 55351,
           "name": "persistDay"
         },
         {
-          "start": 71426,
-          "end": 74151,
+          "start": 55351,
+          "end": 58076,
           "name": null
         },
         {
-          "start": 74151,
-          "end": 75075,
+          "start": 58076,
+          "end": 59000,
           "name": null
         },
         {
-          "start": 75075,
-          "end": 77098,
+          "start": 59000,
+          "end": 61023,
           "name": "remoteLine"
         },
         {
-          "start": 77098,
-          "end": 79718,
+          "start": 61023,
+          "end": 63694,
           "name": "syncReturnSales"
         },
         {
-          "start": 79718,
-          "end": 80571,
+          "start": 63694,
+          "end": 64547,
           "name": null
         },
         {
-          "start": 80571,
-          "end": 80806,
+          "start": 64547,
+          "end": 64782,
           "name": null
         },
         {
-          "start": 80806,
-          "end": 80829,
+          "start": 64782,
+          "end": 64805,
           "name": null
         },
         {
-          "start": 80829,
-          "end": 80861,
+          "start": 64805,
+          "end": 64837,
           "name": null
         },
         {
-          "start": 80861,
-          "end": 81146,
+          "start": 64837,
+          "end": 65122,
           "name": null
         },
         {
-          "start": 81146,
-          "end": 81327,
+          "start": 65122,
+          "end": 65303,
           "name": "persistReturnLog"
         },
         {
-          "start": 81327,
-          "end": 81869,
+          "start": 65303,
+          "end": 65845,
           "name": "ensureReturnCloud"
         },
         {
-          "start": 81869,
-          "end": 82928,
+          "start": 65845,
+          "end": 66910,
           "name": "recordReturn"
         },
         {
-          "start": 82928,
-          "end": 83543,
+          "start": 66910,
+          "end": 67287,
           "name": null
         },
         {
-          "start": 83543,
-          "end": 83737,
+          "start": 67287,
+          "end": 67434,
           "name": null
         },
         {
-          "start": 83737,
-          "end": 83763,
+          "start": 67434,
+          "end": 67460,
           "name": null
         },
         {
-          "start": 83763,
-          "end": 83796,
+          "start": 67460,
+          "end": 67493,
           "name": null
         },
         {
-          "start": 83796,
-          "end": 83860,
+          "start": 67493,
+          "end": 67557,
           "name": "ticketPeriod"
         },
         {
-          "start": 83860,
-          "end": 84044,
+          "start": 67557,
+          "end": 67741,
           "name": "syncTicketPeriod"
         },
         {
-          "start": 84044,
-          "end": 84489,
+          "start": 67741,
+          "end": 68186,
           "name": "newSaleId"
         },
         {
-          "start": 84489,
-          "end": 85045,
+          "start": 68186,
+          "end": 68742,
           "name": "readTicketLease"
         },
         {
-          "start": 85045,
-          "end": 85325,
+          "start": 68742,
+          "end": 69022,
           "name": "saveTicketLease"
         },
         {
-          "start": 85325,
-          "end": 86138,
+          "start": 69022,
+          "end": 69835,
           "name": "takeTicketNumber"
         },
         {
-          "start": 86138,
-          "end": 87535,
+          "start": 69835,
+          "end": 71232,
           "name": "ensureTicketLease"
         },
         {
-          "start": 87535,
-          "end": 88124,
+          "start": 71232,
+          "end": 71821,
           "name": "withTicketLock"
         },
         {
-          "start": 88124,
-          "end": 88651,
+          "start": 71821,
+          "end": 72348,
           "name": "claimTicketNumber"
         },
         {
-          "start": 88651,
-          "end": 89763,
+          "start": 72348,
+          "end": 73460,
           "name": "assignTicketNumber"
         },
         {
-          "start": 89763,
-          "end": 89902,
+          "start": 73460,
+          "end": 73599,
           "name": "nextStandaloneTicketNumber"
         },
         {
-          "start": 89902,
-          "end": 90529,
+          "start": 73599,
+          "end": 74783,
           "name": "freshTicket"
         },
         {
-          "start": 90529,
-          "end": 90662,
+          "start": 74783,
+          "end": 74916,
           "name": "ticketClient"
         },
         {
-          "start": 90662,
-          "end": 91638,
+          "start": 74916,
+          "end": 75892,
           "name": "promoFor"
         },
         {
-          "start": 91638,
-          "end": 93364,
+          "start": 75892,
+          "end": 83131,
           "name": "lineDeal"
         },
         {
-          "start": 93364,
-          "end": 93412,
+          "start": 83131,
+          "end": 83179,
           "name": null
         },
         {
-          "start": 93412,
-          "end": 93460,
+          "start": 83179,
+          "end": 83227,
           "name": null
         },
         {
-          "start": 93460,
-          "end": 93535,
+          "start": 83227,
+          "end": 83228,
           "name": null
         },
         {
-          "start": 93535,
-          "end": 93586,
+          "start": 83228,
+          "end": 83228,
           "name": null
         },
         {
-          "start": 93586,
-          "end": 94302,
+          "start": 83228,
+          "end": 87109,
           "name": "rewardDiscount"
         },
         {
-          "start": 94302,
-          "end": 95089,
+          "start": 87109,
+          "end": 88028,
           "name": "ticketTotals"
         },
         {
-          "start": 95089,
-          "end": 95545,
+          "start": 88028,
+          "end": 88484,
           "name": "promoLabelForTicket"
         },
         {
-          "start": 95545,
-          "end": 95616,
+          "start": 88484,
+          "end": 88555,
           "name": null
         },
         {
-          "start": 95616,
-          "end": 96367,
+          "start": 88555,
+          "end": 89306,
           "name": null
         },
         {
-          "start": 96367,
-          "end": 96368,
+          "start": 89306,
+          "end": 89307,
           "name": null
         },
         {
-          "start": 96368,
-          "end": 97263,
+          "start": 89307,
+          "end": 90202,
           "name": "queueIfOffline"
         },
         {
-          "start": 97263,
-          "end": 97345,
+          "start": 90202,
+          "end": 90284,
           "name": null
         },
         {
-          "start": 97345,
-          "end": 97920,
+          "start": 90284,
+          "end": 90859,
           "name": "fsIsOn"
         },
         {
-          "start": 97920,
-          "end": 98372,
+          "start": 90859,
+          "end": 91311,
           "name": "fsToggle"
         },
         {
-          "start": 98372,
-          "end": 99079,
+          "start": 91311,
+          "end": 92250,
           "name": "paintFs"
         },
         {
-          "start": 99079,
-          "end": 99440,
+          "start": 92250,
+          "end": 92611,
           "name": "setupFullscreenBtn"
         },
         {
-          "start": 99440,
-          "end": 115972,
+          "start": 92611,
+          "end": 109942,
           "name": "mount"
         },
         {
-          "start": 115972,
-          "end": 116617,
+          "start": 109942,
+          "end": 110582,
           "name": "seedDemoTicket"
         },
         {
-          "start": 116617,
-          "end": 116687,
+          "start": 110582,
+          "end": 110652,
           "name": "pruneTicket"
         },
         {
-          "start": 116687,
-          "end": 117428,
+          "start": 110652,
+          "end": 111393,
           "name": "refreshAfterCatalog"
         },
         {
-          "start": 117428,
-          "end": 117809,
+          "start": 111393,
+          "end": 111799,
           "name": "onShow"
         },
         {
-          "start": 117809,
-          "end": 117899,
+          "start": 111799,
+          "end": 111889,
           "name": "openVeil"
         },
         {
-          "start": 117899,
-          "end": 117997,
+          "start": 111889,
+          "end": 111987,
           "name": "closeVeil"
         },
         {
-          "start": 117997,
-          "end": 118352,
+          "start": 111987,
+          "end": 112435,
           "name": "switchView"
         },
         {
-          "start": 118352,
-          "end": 119106,
+          "start": 112435,
+          "end": 113396,
           "name": "renderView"
         },
         {
-          "start": 119106,
-          "end": 119873,
+          "start": 113396,
+          "end": 114214,
           "name": "renderBadges"
         },
         {
-          "start": 119873,
-          "end": 120167,
+          "start": 114214,
+          "end": 114508,
           "name": "headSubVente"
         },
         {
-          "start": 120167,
-          "end": 120379,
+          "start": 114508,
+          "end": 114720,
           "name": "renderAll"
         },
         {
-          "start": 120379,
-          "end": 120470,
+          "start": 114720,
+          "end": 114811,
           "name": "refreshOps"
         },
         {
-          "start": 206082,
-          "end": 207850,
+          "start": 205055,
+          "end": 206823,
           "name": "issueAvoir"
         },
         {
-          "start": 229713,
-          "end": 246778,
+          "start": 230884,
+          "end": 248503,
           "name": "checkout"
         },
         {
-          "start": 250866,
-          "end": 253583,
+          "start": 252630,
+          "end": 255521,
           "name": "payExistingBalance"
         },
         {
-          "start": 436861,
-          "end": 437618,
+          "start": 445765,
+          "end": 446522,
           "name": null
         },
         {
-          "start": 437618,
-          "end": 437640,
+          "start": 446522,
+          "end": 446544,
           "name": null
         },
         {
-          "start": 437640,
-          "end": 438208,
+          "start": 446544,
+          "end": 447112,
           "name": null
         },
         {
-          "start": 438208,
-          "end": 439268,
+          "start": 447112,
+          "end": 448172,
           "name": "bqSessionId"
         },
         {
-          "start": 439268,
-          "end": 439653,
+          "start": 448172,
+          "end": 448557,
           "name": "bqAnnounceOpen"
         },
         {
-          "start": 439653,
-          "end": 439855,
+          "start": 448557,
+          "end": 448759,
           "name": "bqActorId"
         },
         {
-          "start": 439855,
-          "end": 440322,
+          "start": 448759,
+          "end": 449226,
           "name": "bqCashEvent"
         },
         {
-          "start": 440322,
-          "end": 440376,
+          "start": 449226,
+          "end": 449280,
           "name": null
         },
         {
-          "start": 440376,
-          "end": 440570,
+          "start": 449280,
+          "end": 449474,
           "name": "bqShiftPersist"
         },
         {
-          "start": 440570,
-          "end": 441640,
+          "start": 449474,
+          "end": 450544,
           "name": "bqMoneyParts"
         },
         {
-          "start": 441640,
-          "end": 441792,
+          "start": 450544,
+          "end": 450696,
           "name": null
         },
         {
-          "start": 441792,
-          "end": 442026,
+          "start": 450696,
+          "end": 450930,
           "name": "bqPaymentParts"
         },
         {
-          "start": 442026,
-          "end": 442356,
+          "start": 450930,
+          "end": 451260,
           "name": "bqPaymentMethod"
         },
         {
-          "start": 442356,
-          "end": 445584,
+          "start": 451260,
+          "end": 454844,
           "name": "bqDayTotals"
         },
         {
-          "start": 445584,
-          "end": 447624,
+          "start": 454844,
+          "end": 457150,
           "name": "bqReportSales"
         },
         {
-          "start": 447624,
-          "end": 448412,
+          "start": 457150,
+          "end": 458032,
           "name": "bqReportSession"
         },
         {
-          "start": 448412,
-          "end": 449574,
+          "start": 458032,
+          "end": 459210,
           "name": "bqBuildReport"
         },
         {
-          "start": 449574,
-          "end": 449790,
+          "start": 459210,
+          "end": 459426,
           "name": null
         },
         {
-          "start": 449790,
-          "end": 451347,
+          "start": 459426,
+          "end": 460983,
           "name": "bqFoldBasket"
         },
         {
-          "start": 451347,
-          "end": 453275,
+          "start": 460983,
+          "end": 462911,
           "name": "bqLineTotals"
         },
         {
-          "start": 453275,
-          "end": 454270,
+          "start": 462911,
+          "end": 463906,
           "name": "bqZJournal"
         },
         {
-          "start": 454270,
-          "end": 455736,
+          "start": 463906,
+          "end": 465372,
           "name": "bqZQueue"
         },
         {
-          "start": 455736,
-          "end": 456181,
+          "start": 465372,
+          "end": 465817,
           "name": "bqSaveProvisional"
         },
         {
-          "start": 456181,
-          "end": 458090,
+          "start": 465817,
+          "end": 468099,
           "name": "bqPrintReport"
         },
         {
-          "start": 458090,
-          "end": 458668,
+          "start": 468099,
+          "end": 468574,
           "name": "bqFloatMemKey"
         },
         {
-          "start": 458668,
-          "end": 458687,
+          "start": 468574,
+          "end": 468593,
           "name": null
         },
         {
-          "start": 458687,
-          "end": 458784,
+          "start": 468593,
+          "end": 469204,
           "name": "bqMaybeOpenScreen"
         },
         {
-          "start": 458784,
-          "end": 465870,
+          "start": 469204,
+          "end": 476861,
           "name": "bqShowOpenScreen"
         },
         {
-          "start": 465870,
-          "end": 465962,
+          "start": 476861,
+          "end": 476888,
           "name": null
         },
         {
-          "start": 465962,
-          "end": 466087,
+          "start": 476888,
+          "end": 476888,
           "name": "bqFmtDur"
         },
         {
-          "start": 466087,
-          "end": 466698,
+          "start": 476888,
+          "end": 477585,
           "name": "bqUpdateEcart"
         },
         {
-          "start": 466698,
-          "end": 466728,
+          "start": 477585,
+          "end": 477615,
           "name": null
         },
         {
-          "start": 466728,
-          "end": 473471,
+          "start": 477615,
+          "end": 484818,
           "name": "bqOpenCloture"
         },
         {
-          "start": 473471,
-          "end": 475440,
+          "start": 484818,
+          "end": 486976,
           "name": "bqCloseRegister"
         },
         {
-          "start": 475440,
-          "end": 475653,
+          "start": 486976,
+          "end": 487247,
           "name": "bqFinishClose"
         },
         {
-          "start": 475653,
-          "end": 478081,
+          "start": 487247,
+          "end": 490142,
           "name": "bqShowPostClose"
         },
         {
-          "start": 478081,
-          "end": 480532,
+          "start": 490142,
+          "end": 492593,
           "name": null
         },
         {
-          "start": 480532,
-          "end": 480759,
+          "start": 492593,
+          "end": 492820,
           "name": null
         }
       ]
     },
     {
       "file": "assets/pos-boutique/sales.js",
-      "lead": "import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, assignTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=109';\nimport { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=15';\nimport { offerRegister } from './inventory.js?v=15';\nimport { ticketOwner } from './ticket-owner.js?v=1';\n",
-      "tail": "\nexport { $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, iconPickerHtml, icons, isDemoStore, lens, lookupScan, moveCaretEnd, openCamScan, pad2, rayonOf, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderTicket, shelf, useKiwiCl, variantColor, variantSource, wireIconPicker };\n",
+      "lead": "import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=255';\nimport { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=153';\nimport { offerRegister } from './inventory.js?v=153';\nimport { ticketOwner } from './ticket-owner.js?v=3';\nimport { ticketRemise } from './ticket-remise.js?v=3';\nimport { bqKitTicketFoot } from './kit-2027.js?v=20';\nimport { sellSearch } from './search.js?v=14';\nimport '../money-cents.js?v=4';\nimport { photoImg } from '../retail-photos.js?v=5';\n",
+      "tail": "\nexport { $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, iconPickerHtml, icons, isDemoStore, lens, lookupScan, moveCaretEnd, openCamScan, pad2, wireSellSearch, rayonOf, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderTicket, shelf, useKiwiCl, variantColor, variantSource, wireIconPicker };\n",
       "fragments": [
         {
-          "start": 2836,
-          "end": 2962,
+          "start": 3305,
+          "end": 3514,
           "name": null
         },
         {
-          "start": 2962,
-          "end": 3034,
+          "start": 3514,
+          "end": 3586,
           "name": null
         },
         {
-          "start": 3034,
-          "end": 3192,
+          "start": 3586,
+          "end": 3744,
           "name": null
         },
         {
-          "start": 3192,
-          "end": 3302,
+          "start": 3744,
+          "end": 3745,
           "name": null
         },
         {
-          "start": 3302,
-          "end": 3843,
+          "start": 3745,
+          "end": 3745,
           "name": null
         },
         {
-          "start": 3843,
-          "end": 3940,
+          "start": 3745,
+          "end": 4220,
           "name": null
         },
         {
-          "start": 3940,
-          "end": 4036,
+          "start": 4220,
+          "end": 4316,
           "name": null
         },
         {
-          "start": 4036,
-          "end": 4111,
+          "start": 4316,
+          "end": 4391,
           "name": null
         },
         {
-          "start": 4111,
-          "end": 4229,
+          "start": 4391,
+          "end": 4509,
           "name": null
         },
         {
-          "start": 4229,
-          "end": 4281,
+          "start": 4509,
+          "end": 4561,
           "name": null
         },
         {
-          "start": 4281,
-          "end": 4415,
+          "start": 4561,
+          "end": 4695,
           "name": null
         },
         {
-          "start": 4415,
-          "end": 4501,
+          "start": 4695,
+          "end": 4781,
           "name": null
         },
         {
-          "start": 4501,
-          "end": 4884,
+          "start": 4781,
+          "end": 5164,
           "name": null
         },
         {
-          "start": 4884,
-          "end": 5765,
+          "start": 5164,
+          "end": 6045,
           "name": null
         },
         {
-          "start": 5765,
-          "end": 5790,
+          "start": 6045,
+          "end": 6070,
           "name": null
         },
         {
-          "start": 8386,
-          "end": 8981,
+          "start": 8797,
+          "end": 9392,
           "name": "barcode"
         },
         {
-          "start": 8981,
-          "end": 9305,
+          "start": 9392,
+          "end": 9394,
           "name": null
         },
         {
-          "start": 9305,
-          "end": 26806,
+          "start": 9394,
+          "end": 9394,
           "name": null
         },
         {
-          "start": 26806,
-          "end": 27000,
+          "start": 9394,
+          "end": 9472,
           "name": null
         },
         {
-          "start": 27000,
-          "end": 27052,
+          "start": 9472,
+          "end": 9472,
           "name": null
         },
         {
-          "start": 27052,
-          "end": 28209,
+          "start": 9472,
+          "end": 11254,
           "name": null
         },
         {
-          "start": 28209,
-          "end": 29020,
+          "start": 11254,
+          "end": 12224,
           "name": null
         },
         {
-          "start": 29020,
-          "end": 29279,
+          "start": 12224,
+          "end": 12485,
           "name": "iconPickerHtml"
         },
         {
-          "start": 29279,
-          "end": 29589,
+          "start": 12485,
+          "end": 12795,
           "name": "wireIconPicker"
         },
         {
-          "start": 29589,
-          "end": 30258,
+          "start": 12795,
+          "end": 13464,
           "name": null
         },
         {
-          "start": 30258,
-          "end": 30323,
+          "start": 13464,
+          "end": 13529,
           "name": null
         },
         {
-          "start": 30323,
-          "end": 30438,
+          "start": 13529,
+          "end": 13644,
           "name": "colorOf"
         },
         {
-          "start": 30438,
-          "end": 30494,
+          "start": 13644,
+          "end": 13645,
           "name": "colorLabel"
         },
         {
-          "start": 30494,
-          "end": 30546,
+          "start": 13645,
+          "end": 14257,
           "name": "colorHex"
         },
         {
-          "start": 30546,
-          "end": 30922,
+          "start": 14257,
+          "end": 14677,
           "name": "colorDot"
         },
         {
-          "start": 30922,
-          "end": 31091,
+          "start": 14677,
+          "end": 14846,
           "name": "variantColor"
         },
         {
-          "start": 31091,
-          "end": 31334,
+          "start": 14846,
+          "end": 15089,
           "name": "variantSource"
         },
         {
-          "start": 31334,
-          "end": 31535,
+          "start": 15089,
+          "end": 15281,
           "name": "productVisual"
         },
         {
-          "start": 45670,
-          "end": 46163,
+          "start": 29537,
+          "end": 30030,
           "name": "isDemoStore"
         },
         {
-          "start": 46163,
-          "end": 46286,
+          "start": 30030,
+          "end": 30153,
           "name": "useKiwiCl"
         },
         {
-          "start": 46286,
-          "end": 46675,
+          "start": 30153,
+          "end": 30542,
           "name": "fromKiwi"
         },
         {
-          "start": 46675,
-          "end": 46978,
+          "start": 30542,
+          "end": 30845,
           "name": "clientList"
         },
         {
-          "start": 46978,
-          "end": 47197,
+          "start": 30845,
+          "end": 31064,
           "name": "clById"
         },
         {
-          "start": 47197,
-          "end": 48496,
+          "start": 31064,
+          "end": 32363,
           "name": "clReward"
         },
         {
-          "start": 120470,
-          "end": 122050,
+          "start": 114811,
+          "end": 116391,
           "name": "renderCats"
         },
         {
-          "start": 122050,
-          "end": 122345,
+          "start": 116391,
+          "end": 116686,
           "name": "cardFlag"
         },
         {
-          "start": 122345,
-          "end": 122699,
+          "start": 116686,
+          "end": 117040,
           "name": "promoedIds"
         },
         {
-          "start": 122699,
-          "end": 124357,
+          "start": 117040,
+          "end": 119499,
           "name": "renderGrid"
         },
         {
-          "start": 124357,
-          "end": 125211,
+          "start": 119499,
+          "end": 120411,
           "name": "renderExchNote"
         },
         {
-          "start": 125211,
-          "end": 126873,
+          "start": 120411,
+          "end": 122073,
           "name": "clientRow"
         },
         {
-          "start": 126873,
-          "end": 128090,
+          "start": 122073,
+          "end": 123290,
           "name": "rewardRow"
         },
         {
-          "start": 128090,
-          "end": 133740,
+          "start": 123290,
+          "end": 130293,
           "name": "renderTicket"
         },
         {
-          "start": 133740,
-          "end": 135183,
+          "start": 130293,
+          "end": 131743,
           "name": "lineRow"
         },
         {
-          "start": 135183,
-          "end": 135702,
+          "start": 131743,
+          "end": 132262,
           "name": "pairSellable"
         },
         {
-          "start": 135702,
-          "end": 136916,
+          "start": 132262,
+          "end": 133476,
           "name": "pairRow"
         },
         {
-          "start": 136916,
-          "end": 138092,
+          "start": 133476,
+          "end": 134671,
           "name": "addToTicket"
         },
         {
-          "start": 138092,
-          "end": 138255,
+          "start": 134671,
+          "end": 134834,
           "name": null
         },
         {
-          "start": 138255,
-          "end": 138497,
+          "start": 134834,
+          "end": 135076,
           "name": "defaultSize"
         },
         {
-          "start": 138497,
-          "end": 138911,
+          "start": 135076,
+          "end": 135490,
           "name": "openSheet"
         },
         {
-          "start": 138911,
-          "end": 146145,
+          "start": 135490,
+          "end": 142892,
           "name": "renderSheet"
         },
         {
-          "start": 146145,
-          "end": 146693,
+          "start": 142892,
+          "end": 143440,
           "name": "markRemiseAuth"
         },
         {
-          "start": 146693,
-          "end": 149342,
+          "start": 143440,
+          "end": 146117,
           "name": "openApprove"
         },
         {
-          "start": 149342,
-          "end": 149564,
+          "start": 146117,
+          "end": 147584,
           "name": "foldClientText"
         },
         {
-          "start": 149564,
-          "end": 150326,
+          "start": 147584,
+          "end": 148346,
           "name": "clienteHits"
         },
         {
-          "start": 150326,
-          "end": 150424,
+          "start": 148346,
+          "end": 148444,
           "name": "clAvoirOf"
         },
         {
-          "start": 150424,
-          "end": 156473,
+          "start": 148444,
+          "end": 154574,
           "name": "openClientModal"
         },
         {
-          "start": 156473,
-          "end": 156566,
+          "start": 154574,
+          "end": 154667,
           "name": "moveCaretEnd"
         },
         {
-          "start": 156566,
-          "end": 159395,
+          "start": 154667,
+          "end": 157494,
           "name": "renderClientes"
         },
         {
-          "start": 159395,
-          "end": 163288,
+          "start": 157494,
+          "end": 161387,
           "name": "openFiche"
         },
         {
-          "start": 163288,
-          "end": 163690,
+          "start": 161387,
+          "end": 161789,
           "name": "scanCycle"
         },
         {
-          "start": 163690,
-          "end": 163903,
+          "start": 161789,
+          "end": 162002,
           "name": "rayonOf"
         },
         {
-          "start": 163903,
-          "end": 166373,
+          "start": 162002,
+          "end": 164510,
           "name": "lookupCardHtml"
         },
         {
-          "start": 166373,
-          "end": 169801,
+          "start": 164510,
+          "end": 167938,
           "name": "crossCardHtml"
         },
         {
-          "start": 169801,
-          "end": 171048,
+          "start": 167938,
+          "end": 169185,
           "name": "askCross"
         },
         {
-          "start": 171048,
-          "end": 171788,
+          "start": 169185,
+          "end": 169925,
           "name": null
         },
         {
-          "start": 171788,
-          "end": 171964,
+          "start": 169925,
+          "end": 170101,
           "name": "camSupported"
         },
         {
-          "start": 171964,
-          "end": 172700,
+          "start": 170101,
+          "end": 170837,
           "name": "camBlip"
         },
         {
-          "start": 172700,
-          "end": 172724,
+          "start": 170837,
+          "end": 170861,
           "name": null
         },
         {
-          "start": 172724,
-          "end": 177121,
+          "start": 170861,
+          "end": 175548,
           "name": "openCamScan"
         },
         {
-          "start": 177121,
-          "end": 181509,
+          "start": 175548,
+          "end": 179955,
           "name": "renderScan"
         },
         {
-          "start": 181509,
-          "end": 183843,
+          "start": 179955,
+          "end": 182366,
           "name": "commitEan"
         },
         {
-          "start": 183843,
-          "end": 185761,
+          "start": 182366,
+          "end": 184318,
           "name": "lookupScan"
         },
         {
-          "start": 185761,
-          "end": 186292,
+          "start": 184318,
+          "end": 184849,
           "name": "mockScan"
         }
       ]
     },
     {
       "file": "assets/pos-boutique/checkout.js",
-      "lead": "import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN } from '../pos-boutique.js?v=109';\nimport { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=15';\nimport { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=15';\nimport { ticketOwner } from './ticket-owner.js?v=1';\n",
+      "lead": "import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=255';\nimport { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=153';\nimport { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=153';\nimport { ticketOwner } from './ticket-owner.js?v=3';\nimport '../money-cents.js?v=4';\nimport { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=9';\nimport { bqDeliveryCard } from './delivery-card.js?v=6';\nimport { receiptPrinterReady, receiptDocInput } from './receipt-doc.js?v=1';\n",
       "tail": "\nexport { armScanCapture, bqReal, catDB, disarmScanCapture, fmtNum, injectInvCss, installWedgeScanner, invScanHandle, lineAvailableQty, lineReturnedQty, normScan, openExchSummary, openPay, openScannerTest, openVoucher, renderAcomptes, renderEchanges, renderNet, syncNetworkState, toggleOffline };\n",
       "fragments": [
         {
-          "start": 186292,
-          "end": 186713,
+          "start": 184849,
+          "end": 185302,
           "name": "saleMatches"
         },
         {
-          "start": 186713,
-          "end": 193498,
+          "start": 185302,
+          "end": 192145,
           "name": "renderEchanges"
         },
         {
-          "start": 193498,
-          "end": 193571,
+          "start": 192145,
+          "end": 192218,
           "name": null
         },
         {
-          "start": 193571,
-          "end": 193995,
+          "start": 192218,
+          "end": 192642,
           "name": "lineReturnedQty"
         },
         {
-          "start": 193995,
-          "end": 194102,
+          "start": 192642,
+          "end": 192749,
           "name": "lineAvailableQty"
         },
         {
-          "start": 194102,
-          "end": 194289,
+          "start": 192749,
+          "end": 192936,
           "name": "pickedQty"
         },
         {
-          "start": 194289,
-          "end": 194535,
+          "start": 192936,
+          "end": 193182,
           "name": "markLineReturned"
         },
         {
-          "start": 194535,
-          "end": 195519,
+          "start": 193182,
+          "end": 194166,
           "name": "returnRatio"
         },
         {
-          "start": 195519,
-          "end": 195701,
+          "start": 194166,
+          "end": 194348,
           "name": "paidUnit"
         },
         {
-          "start": 195701,
-          "end": 200273,
+          "start": 194348,
+          "end": 199038,
           "name": "saleCard"
         },
         {
-          "start": 200273,
-          "end": 201283,
+          "start": 199038,
+          "end": 200048,
           "name": "togglePick"
         },
         {
-          "start": 201283,
-          "end": 202324,
+          "start": 200048,
+          "end": 201205,
           "name": "doExchange"
         },
         {
-          "start": 202324,
-          "end": 205200,
+          "start": 201205,
+          "end": 204115,
           "name": "doAvoir"
         },
         {
-          "start": 205200,
-          "end": 206082,
+          "start": 204115,
+          "end": 205055,
           "name": "restoreLines"
         },
         {
-          "start": 207850,
-          "end": 208333,
+          "start": 206823,
+          "end": 207306,
           "name": "bqPaired"
         },
         {
-          "start": 208333,
-          "end": 208536,
+          "start": 207306,
+          "end": 207509,
           "name": "bqReal"
         },
         {
-          "start": 208536,
-          "end": 208634,
+          "start": 207509,
+          "end": 207607,
           "name": "bqName"
         },
         {
-          "start": 208634,
-          "end": 208736,
+          "start": 207607,
+          "end": 207709,
           "name": "bqCity"
         },
         {
-          "start": 208736,
-          "end": 210330,
+          "start": 207709,
+          "end": 209303,
           "name": "voucherHTML"
         },
         {
-          "start": 210330,
-          "end": 212403,
+          "start": 209303,
+          "end": 211961,
           "name": "openVoucher"
         },
         {
-          "start": 212403,
-          "end": 223720,
+          "start": 211961,
+          "end": 224678,
           "name": "openExchSummary"
         },
         {
-          "start": 223720,
-          "end": 229713,
+          "start": 224678,
+          "end": 230884,
           "name": "printReceiptNow"
         },
         {
-          "start": 246778,
-          "end": 247980,
+          "start": 248503,
+          "end": 249763,
           "name": "renderAcomptes"
         },
         {
-          "start": 247980,
-          "end": 248306,
+          "start": 249763,
+          "end": 250089,
           "name": null
         },
         {
-          "start": 248306,
-          "end": 250049,
+          "start": 250089,
+          "end": 251813,
           "name": "mountDeliveries"
         },
         {
-          "start": 250049,
-          "end": 250866,
+          "start": 251813,
+          "end": 252630,
           "name": "recordDeliveryCash"
         },
         {
-          "start": 253583,
-          "end": 280679,
+          "start": 255521,
+          "end": 289698,
           "name": "openPay"
         },
         {
-          "start": 280679,
-          "end": 281317,
+          "start": 289698,
+          "end": 290336,
           "name": "syncNetworkState"
         },
         {
-          "start": 281317,
-          "end": 281941,
+          "start": 290336,
+          "end": 291250,
           "name": "toggleOffline"
         },
         {
-          "start": 281941,
-          "end": 283125,
+          "start": 291250,
+          "end": 292666,
           "name": "renderNet"
         },
         {
-          "start": 283125,
-          "end": 283719,
+          "start": 292666,
+          "end": 293260,
           "name": null
         },
         {
-          "start": 283719,
-          "end": 283802,
+          "start": 293260,
+          "end": 293343,
           "name": null
         },
         {
-          "start": 283802,
-          "end": 309508,
+          "start": 293343,
+          "end": 319097,
           "name": "injectInvCss"
         },
         {
-          "start": 309508,
-          "end": 311288,
+          "start": 319097,
+          "end": 320877,
           "name": null
         },
         {
-          "start": 311288,
-          "end": 311498,
+          "start": 320877,
+          "end": 321087,
           "name": "normScan"
         },
         {
-          "start": 311498,
-          "end": 311714,
+          "start": 321087,
+          "end": 321303,
           "name": "wedgeChar"
         },
         {
-          "start": 311714,
-          "end": 311972,
+          "start": 321303,
+          "end": 321561,
           "name": null
         },
         {
-          "start": 311972,
-          "end": 314681,
+          "start": 321561,
+          "end": 324270,
           "name": "installWedgeScanner"
         },
         {
-          "start": 314681,
-          "end": 315385,
+          "start": 324270,
+          "end": 324974,
           "name": null
         },
         {
-          "start": 315385,
-          "end": 315437,
+          "start": 324974,
+          "end": 325026,
           "name": "armScanCapture"
         },
         {
-          "start": 315437,
-          "end": 315525,
+          "start": 325026,
+          "end": 325114,
           "name": "disarmScanCapture"
         },
         {
-          "start": 315525,
-          "end": 316349,
+          "start": 325114,
+          "end": 325938,
           "name": "unleak"
         },
         {
-          "start": 316349,
-          "end": 316924,
+          "start": 325938,
+          "end": 326571,
           "name": "handleWedge"
         },
         {
-          "start": 316924,
-          "end": 324267,
+          "start": 326571,
+          "end": 334093,
           "name": "openScannerTest"
         },
         {
-          "start": 324267,
-          "end": 325010,
+          "start": 334093,
+          "end": 334836,
           "name": "invScanHandle"
         },
         {
-          "start": 325010,
-          "end": 325346,
+          "start": 334836,
+          "end": 335230,
           "name": "intakeStartWith"
         }
       ]
     },
     {
       "file": "assets/pos-boutique/inventory.js",
-      "lead": "import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor } from '../pos-boutique.js?v=109';\nimport { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=15';\nimport { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=15';\n",
-      "tail": "\nexport { intake, intakeReset, intakeTake, invSetModal, offerRegister, openInvProduct, renderInventaire };\n",
+      "lead": "import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=255';\nimport { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=153';\nimport { openMoves } from './inv-moves.js?v=5';\nimport * as SZ from '../boutique-sizes.js?v=23';\nimport { openLabelPicker } from './label-picker.js?v=2';\nimport { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';\nimport { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=18';\nimport { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=153';\n",
+      "tail": "\nexport { intake, intakeReset, intakeTake, invSetModal, invUnseen, offerRegister, openInvProduct, renderInventaire };\n",
       "fragments": [
         {
-          "start": 325346,
-          "end": 326133,
+          "start": 335230,
+          "end": 336017,
           "name": null
         },
         {
-          "start": 326133,
-          "end": 326176,
+          "start": 336017,
+          "end": 336060,
           "name": null
         },
         {
-          "start": 326176,
-          "end": 326207,
+          "start": 336060,
+          "end": 336091,
           "name": null
         },
         {
-          "start": 326207,
-          "end": 326307,
+          "start": 336091,
+          "end": 336191,
           "name": null
         },
         {
-          "start": 326307,
-          "end": 326412,
+          "start": 336191,
+          "end": 336296,
           "name": null
         },
         {
-          "start": 326412,
-          "end": 327450,
+          "start": 336296,
+          "end": 337334,
           "name": "promoScopeText"
         },
         {
-          "start": 327450,
-          "end": 327922,
+          "start": 337334,
+          "end": 337806,
           "name": null
         },
         {
-          "start": 327922,
-          "end": 328022,
+          "start": 337806,
+          "end": 337906,
           "name": null
         },
         {
-          "start": 328022,
-          "end": 328671,
+          "start": 337906,
+          "end": 338555,
           "name": "promoSlotText"
         },
         {
-          "start": 328671,
-          "end": 328842,
+          "start": 338555,
+          "end": 338726,
           "name": "promoWhenText"
         },
         {
-          "start": 328842,
-          "end": 329570,
+          "start": 338726,
+          "end": 339454,
           "name": "promoWhenBase"
         },
         {
-          "start": 329570,
-          "end": 329741,
+          "start": 339454,
+          "end": 339625,
           "name": null
         },
         {
-          "start": 329741,
-          "end": 329898,
+          "start": 339625,
+          "end": 339782,
           "name": "promoCount"
         },
         {
-          "start": 329898,
-          "end": 334298,
+          "start": 339782,
+          "end": 344182,
           "name": "renderPromos"
         },
         {
-          "start": 334298,
-          "end": 334691,
+          "start": 344182,
+          "end": 344575,
           "name": "promoArticleCount"
         },
         {
-          "start": 334691,
-          "end": 336496,
+          "start": 344575,
+          "end": 346380,
           "name": "promoCardHtml"
         },
         {
-          "start": 336496,
-          "end": 337469,
+          "start": 346380,
+          "end": 347353,
           "name": null
         },
         {
-          "start": 337469,
-          "end": 337871,
+          "start": 347353,
+          "end": 347755,
           "name": "promoStarter"
         },
         {
-          "start": 337871,
-          "end": 338707,
+          "start": 347755,
+          "end": 348591,
           "name": "promoEmptyHtml"
         },
         {
-          "start": 338707,
-          "end": 340452,
+          "start": 348591,
+          "end": 350336,
           "name": "promoLabelPlan"
         },
         {
-          "start": 340452,
-          "end": 342815,
+          "start": 350336,
+          "end": 352699,
           "name": "openPromoLabels"
         },
         {
-          "start": 342815,
-          "end": 343915,
+          "start": 352699,
+          "end": 353799,
           "name": "confirmPromoDelete"
         },
         {
-          "start": 343915,
-          "end": 344339,
+          "start": 353799,
+          "end": 354223,
           "name": null
         },
         {
-          "start": 344339,
-          "end": 344799,
+          "start": 354223,
+          "end": 354683,
           "name": "allowedPercents"
         },
         {
-          "start": 344799,
-          "end": 345070,
+          "start": 354683,
+          "end": 354954,
           "name": "fitPolicy"
         },
         {
-          "start": 345070,
-          "end": 345495,
+          "start": 354954,
+          "end": 355410,
           "name": "openPromoComposer"
         },
         {
-          "start": 345495,
-          "end": 345845,
+          "start": 355410,
+          "end": 355760,
           "name": null
         },
         {
-          "start": 345845,
-          "end": 346696,
+          "start": 355760,
+          "end": 356611,
           "name": "promoDraftValid"
         },
         {
-          "start": 346696,
-          "end": 346848,
+          "start": 356611,
+          "end": 356763,
           "name": null
         },
         {
-          "start": 346848,
-          "end": 353002,
+          "start": 356763,
+          "end": 363034,
           "name": "renderPromoComposer"
         },
         {
-          "start": 353002,
-          "end": 355518,
+          "start": 363034,
+          "end": 365550,
           "name": "promoScopeControl"
         },
         {
-          "start": 355518,
-          "end": 360376,
+          "start": 365550,
+          "end": 371138,
           "name": "wirePromoComposer"
         },
         {
-          "start": 360376,
-          "end": 360892,
+          "start": 371138,
+          "end": 371654,
           "name": "promoAutoName"
         },
         {
-          "start": 360892,
-          "end": 361089,
+          "start": 371654,
+          "end": 372125,
           "name": "catalogDashboardOnly"
         },
         {
-          "start": 361089,
-          "end": 361254,
+          "start": 372125,
+          "end": 372126,
           "name": "inventoryValueVisible"
         },
         {
-          "start": 361254,
-          "end": 365320,
+          "start": 372126,
+          "end": 377748,
           "name": "renderInventaire"
         },
         {
-          "start": 365320,
-          "end": 366196,
+          "start": 377748,
+          "end": 378641,
           "name": "invRow"
         },
         {
-          "start": 366196,
-          "end": 367045,
+          "start": 378641,
+          "end": 379597,
           "name": "invSetModal"
         },
         {
-          "start": 367045,
-          "end": 369647,
+          "start": 379597,
+          "end": 383053,
           "name": "openInvProduct"
         },
         {
-          "start": 369647,
-          "end": 371199,
+          "start": 383053,
+          "end": 383056,
           "name": "invVarRow"
         },
         {
-          "start": 371199,
-          "end": 371477,
+          "start": 383056,
+          "end": 383334,
           "name": "catSelectOptions"
         },
         {
-          "start": 371477,
-          "end": 371726,
+          "start": 383334,
+          "end": 383583,
           "name": "kindSelectOptions"
         },
         {
-          "start": 371726,
-          "end": 381364,
+          "start": 383583,
+          "end": 390734,
           "name": "openNewProduct"
         },
         {
-          "start": 381364,
-          "end": 383394,
+          "start": 390734,
+          "end": 392851,
           "name": "openEditProduct"
         },
         {
-          "start": 383394,
-          "end": 384417,
+          "start": 392851,
+          "end": 393961,
           "name": "confirmDeleteProduct"
         },
         {
-          "start": 384417,
-          "end": 386047,
+          "start": 393961,
+          "end": 395678,
           "name": "confirmDeleteVariant"
         },
         {
-          "start": 386047,
-          "end": 386503,
+          "start": 395678,
+          "end": 396134,
           "name": "colorPicker"
         },
         {
-          "start": 386503,
-          "end": 388202,
+          "start": 396134,
+          "end": 397920,
           "name": "openVariantColor"
         },
         {
-          "start": 388202,
-          "end": 390224,
+          "start": 397920,
+          "end": 397921,
           "name": "openAddVariant"
         },
         {
-          "start": 390224,
-          "end": 391968,
+          "start": 397921,
+          "end": 399837,
           "name": "openRegisterOnVariant"
         },
         {
-          "start": 391968,
-          "end": 394287,
+          "start": 399837,
+          "end": 402272,
           "name": "offerRegister"
         },
         {
-          "start": 394287,
-          "end": 396074,
+          "start": 402272,
+          "end": 404059,
           "name": null
         },
         {
-          "start": 396074,
-          "end": 396102,
+          "start": 404059,
+          "end": 404087,
           "name": null
         },
         {
-          "start": 396102,
-          "end": 396286,
+          "start": 404087,
+          "end": 404271,
           "name": "intakeReset"
         },
         {
-          "start": 396286,
-          "end": 396462,
+          "start": 404271,
+          "end": 404447,
           "name": "intakeNote"
         },
         {
-          "start": 396462,
-          "end": 397203,
+          "start": 404447,
+          "end": 405188,
           "name": "intakeJudge"
         },
         {
-          "start": 397203,
-          "end": 397689,
+          "start": 405188,
+          "end": 405674,
           "name": null
         },
         {
-          "start": 397689,
-          "end": 398153,
+          "start": 405674,
+          "end": 406138,
           "name": "symBadge"
         },
         {
-          "start": 398153,
-          "end": 398405,
+          "start": 406138,
+          "end": 406448,
           "name": "openIntake"
         },
         {
-          "start": 398405,
-          "end": 398893,
+          "start": 406448,
+          "end": 406936,
           "name": "intakeClose"
         },
         {
-          "start": 398893,
-          "end": 399440,
+          "start": 406936,
+          "end": 407483,
           "name": "intakeHeader"
         },
         {
-          "start": 399440,
-          "end": 400017,
+          "start": 407483,
+          "end": 408060,
           "name": "intakeLogHtml"
         },
         {
-          "start": 400017,
-          "end": 402168,
+          "start": 408060,
+          "end": 410211,
           "name": "paintIntake"
         },
         {
-          "start": 402168,
-          "end": 402474,
+          "start": 410211,
+          "end": 410517,
           "name": "intakeFocus"
         },
         {
-          "start": 402474,
-          "end": 402968,
+          "start": 410517,
+          "end": 411011,
           "name": "intakeHint"
         },
         {
-          "start": 402968,
-          "end": 403589,
+          "start": 411011,
+          "end": 411690,
           "name": "intakeTake"
         },
         {
-          "start": 403589,
-          "end": 410878,
+          "start": 411690,
+          "end": 419095,
           "name": "intakeNew"
         },
         {
-          "start": 410878,
-          "end": 415369,
+          "start": 419095,
+          "end": 423702,
           "name": "intakeVariant"
         },
         {
-          "start": 415369,
-          "end": 419191,
+          "start": 423702,
+          "end": 427578,
           "name": "intakeLink"
         },
         {
-          "start": 419191,
-          "end": 423969,
+          "start": 427578,
+          "end": 432468,
           "name": "intakeKnown"
         },
         {
-          "start": 423969,
-          "end": 429958,
+          "start": 432468,
+          "end": 438689,
           "name": "intakeAddVariantHere"
         },
         {
-          "start": 429958,
-          "end": 432886,
+          "start": 438689,
+          "end": 441733,
           "name": "intakeFix"
         },
         {
-          "start": 432886,
-          "end": 434147,
+          "start": 441733,
+          "end": 442994,
           "name": "intakeConfirmPrice"
         },
         {
-          "start": 434147,
-          "end": 435287,
+          "start": 442994,
+          "end": 444202,
           "name": "labelForVariant"
         },
         {
-          "start": 435287,
-          "end": 435773,
+          "start": 444202,
+          "end": 444746,
           "name": "printVariantLabel"
         },
         {
-          "start": 435773,
-          "end": 436348,
+          "start": 444746,
+          "end": 445252,
           "name": "printProductLabels"
         },
         {
-          "start": 436348,
-          "end": 436861,
+          "start": 445252,
+          "end": 445765,
           "name": "labelToast"
         }
       ]
@@ -1918,10 +1918,10 @@
     "payExistingBalance"
   ],
   "splitFiles": {
-    "assets/pos-boutique.js": "c3829acde29c6542a54d86324ad7f365971c69085b1a0e99091a259150a894af",
-    "assets/pos-boutique/sales.js": "b10ca93bfca0468359201bb08b6501ac4377d31552a580155081ddefbbe0e6a8",
-    "assets/pos-boutique/checkout.js": "621b07c7cb6fd419369902cdc7533a3ba2698656e5dadd8bde2ac37b82e23926",
-    "assets/pos-boutique/inventory.js": "4b2735633a9c7c19de566594a903b548d302faced6efbda1f74eb0ef7b05c332",
-    "assets/pos-boutique/ticket-owner.js": "76f09dcbcbba5c443e8ab2e7f09bd82755527abdc02e7051d59ec3b271706850"
+    "assets/pos-boutique.js": "affa205f44dd01516ec08e9bd5191ab7238a5b7845779d29cd5d4da500912bde",
+    "assets/pos-boutique/sales.js": "75f03c90892cecaa2b816aaa9ff0cec3c580ef78957087a40c0dd0206bff24e3",
+    "assets/pos-boutique/checkout.js": "090c8593463da889a3e9f20c199e584c8b0db03bae0698c4d8b5686950d6b95a",
+    "assets/pos-boutique/inventory.js": "79cd24dcb642ab3c47e806d19454fe75965016e3eb45a851a9bff890bed207a3",
+    "assets/pos-boutique/ticket-owner.js": "254a30f6c8c001a3aed6f191f88d009f1135d0ec834544a2250fb2c23a29984b"
   }
 }

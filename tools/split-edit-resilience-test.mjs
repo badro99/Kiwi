@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, '..');
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-split-proof-'));
 try {
-  const files = new Set(['kiwi-caisse.html','kiwi-sw.js','assets/pos-dispatch.js','tools/asset-stamps.json',
+  const files = new Set(['assets/caisse-strings.js','kiwi-caisse.html','kiwi-sw.js','assets/pos-dispatch.js','tools/asset-stamps.json',
     ...['pos-maison-split-test.mjs','pos-boutique-split-test.mjs','caisse-app-split-test.mjs','pos-retail-module-url-check.mjs','split-live-checks.mjs','pos-retail-test-source.cjs','caisse-test-source.cjs','js-declarations.cjs'].map(f=>'tools/'+f)]);
   for (const name of ['pos-maison','pos-boutique','caisse-app']) {
     const dir = 'tools/fixtures/'+name;

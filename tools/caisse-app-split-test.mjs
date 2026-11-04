@@ -66,7 +66,10 @@ const effectiveOrder = [...effectiveHTML.matchAll(/src="([^"?]+)/g)].map(m => m[
 // Inventory is lazy in browsers; for synchronous source tests load it with the
 // declarations and preserve the same expected file order.
 const lazyFiles = lazyURLs.map(url => url.split('?')[0]);
-assert.deepEqual(effectiveOrder.filter(f => !lazyFiles.includes(f)), LIVE.filter(f => !lazyFiles.includes(f)));
+assert.deepEqual(effectiveOrder.filter(f => !lazyFiles.includes(f)), ['assets/caisse-strings.js', ...LIVE.filter(f => !lazyFiles.includes(f))]);
+precached(new URL(registry[0], 'https://kiwi.test/'));
+const copyWindow = {}; vm.runInNewContext(read('assets/caisse-strings.js'), { window: copyWindow });
+assert.deepEqual(Object.keys(copyWindow), ['KiwiCaisseStrings'], 'copy registry installs only the optional table');
 const orderedHTML = LIVE.map(file => effectiveHTML.match(new RegExp('<script src="' + file.replace(/[./]/g, '\\$&') + '(?:\\?v=\\d+)?"></script>'))[0]).join('\n');
 const pair = orderedHTML.match(new RegExp(LIVE.map(f => '<script src="' + f.replace(/[./]/g, '\\$&') + '(?:\\?v=\\d+)?"></script>').join('\\s*')));
 assert.ok(pair, 'adjacent blocking classic scripts, declarations before initializers');
