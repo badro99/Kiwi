@@ -21,14 +21,18 @@ function cuReceptionBuckets(stays, day, today) {
     return buckets;
   }
 
-async function cuStayStatus(id, status, force = false) {
+async function cuStayStatus(id, status, force = false, pin = '') {
     const slug = cuMerchantSlug();
     if (!slug || !id) return false;
     try {
-      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', merchant: slug, id, status, force }) });
+      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', merchant: slug, id, status, force, pin }) });
       const data = await res.json().catch(() => ({}));
       if (cuMerchantSlug() !== slug) return false;
-      if (res.status === 409 && data.error === 'stay-unpaid' && !force && confirm(tx('Il reste {amount} MAD à régler. Confirmer le départ avec ce solde impayé ?', { amount: cuDraftMoney(data.owedCents) }))) return cuStayStatus(id, status, true);
+      if (res.status === 409 && data.error === 'stay-unpaid' && !force) {
+        const code = await (await import('./checkout-proof.mjs')).checkoutProof(scope.K(), tx, cuDraftMoney(data.owedCents));
+        if (code !== null && cuMerchantSlug() === slug) return cuStayStatus(id, status, true, code);
+      }
+      if (!res.ok && force) scope.toast(tx('Code manager refusé ou vérification indisponible.'), { type: 'warn' });
       if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }
     } catch (_) {}
     return false;

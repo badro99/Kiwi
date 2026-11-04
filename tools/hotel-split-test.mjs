@@ -144,7 +144,7 @@ for (const lang of ['fr', 'en', 'ar']) {
   // translations and language functions retain their exact values.
   const conversionKey = 'Conversion photo impossible. Essayez une autre image.';
   assert.ok(a.HX_T[conversionKey].en && a.HX_T[conversionKey].ar);
-  delete a.HX_T[conversionKey];
+  // The resealed archive now includes the conversion notice too.
   for (const [key, value] of Object.entries(a)) {
     assert.equal(typeof value === 'function' ? String(value) : JSON.stringify(value), typeof b[key] === 'function' ? String(b[key]) : JSON.stringify(b[key]), key + ': exact source/data');
   }

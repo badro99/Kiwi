@@ -2,6 +2,22 @@
 (window.__kiwiHotelSections ||= {}).model = (scope) => {
 'use strict';
 const { DEFAULT_VIEWS, cuAllStays, cuDefaultTypes, cuFloorId, cuInHouseSnapshots, cuRoomLive, cuSafePhoto, cuStamp, cuStayCache, cuStayLoads, cuStayScope, cuToday, cuTypeId, cuVenueId, isCustomHotel, tx, txk } = scope;
+const cuModelDeadlineFetch = async (url, options = {}, timeout = 15000) => {
+  const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+  let timer;
+  const request = Promise.resolve().then(() => fetch(url, { ...options, ...(ctl ? { signal: ctl.signal } : {}) })).then(async response => {
+    try { const data = await response.json(); response.json = () => Promise.resolve(data); }
+    catch (error) { response.json = () => Promise.reject(error); }
+    return response;
+  });
+  const deadline = new Promise((_, reject) => { timer = setTimeout(() => {
+    reject(Object.assign(new Error('request-timeout'), { code: 'request-timeout' }));
+    if (ctl) ctl.abort();
+  }, timeout); });
+  try { return await Promise.race([request, deadline]); }
+  finally { clearTimeout(timer); }
+};
+
 function cuActiveActor() {
     if (window.KiwiMe && typeof window.KiwiMe === 'object') {
       return {
@@ -41,7 +57,7 @@ async function cuFetchStaysForWindow(start, end) {
     const load = { loading: true, error: '' };
     cuStayLoads.set(scope, load);
     try {
-      const res = await (await import('../request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(`/api/hotel/stays?merchant=${encodeURIComponent(slug)}&from=${encodeURIComponent(start)}&to=${encodeURIComponent(end)}&includeCancelled=1`, { cache: 'no-store' });
+      const res = await (await import('../request-deadline.mjs').catch(function () { return { deadlineFetch: cuModelDeadlineFetch }; })).deadlineFetch(`/api/hotel/stays?merchant=${encodeURIComponent(slug)}&from=${encodeURIComponent(start)}&to=${encodeURIComponent(end)}&includeCancelled=1`, { cache: 'no-store' });
       if (!res.ok) throw new Error('unavailable');
       const data = await res.json();
       if (!Array.isArray(data.stays)) throw new Error('invalid-response');
@@ -385,7 +401,7 @@ async function cuFetchInHouseStays() {
     const scope = cuStayScope(), cache = cuStayCache();
     const startedAt = Date.now();
     try {
-      const res = await (await import('../request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch('/api/hotel/stays?merchant=' + encodeURIComponent(slug) + '&status=checked_in', { cache: 'no-store' });
+      const res = await (await import('../request-deadline.mjs').catch(function () { return { deadlineFetch: cuModelDeadlineFetch }; })).deadlineFetch('/api/hotel/stays?merchant=' + encodeURIComponent(slug) + '&status=checked_in', { cache: 'no-store' });
       if (!res.ok) throw new Error('unavailable');
       const data = await res.json();
       if (!Array.isArray(data.stays)) throw new Error('invalid-response');

@@ -57,6 +57,7 @@
       "__kiwiHotelSections"
     ],
     "scope": [
+      "K",
       "cuDraftMoney",
       "cuDraftMoney.apply",
       "cuMerchantSlug",
@@ -65,6 +66,7 @@
       "cuStayCache.apply",
       "cuStaysChanged",
       "cuStaysChanged.apply",
+      "toast",
       "tx",
       "tx.apply"
     ]

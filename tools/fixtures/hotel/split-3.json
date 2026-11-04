@@ -31,18 +31,18 @@
         {
           "name": "cuActiveActor",
           "start": 30708,
-          "end": 31738,
+          "end": 32542,
           "deps": [],
           "mutations": [],
           "async": false,
           "offset": 448,
-          "length": 1030,
+          "length": 1834,
           "replacement": "function cuActiveActor() { return hotelSection('model').cuActiveActor.apply(this, arguments); }"
         },
         {
           "name": "cuFetchStaysForWindow",
-          "start": 33600,
-          "end": 35078,
+          "start": 34404,
+          "end": 35863,
           "deps": [
             "cuVenueId",
             "cuStayLoads",
@@ -52,14 +52,14 @@
           ],
           "mutations": [],
           "async": true,
-          "offset": 1480,
-          "length": 1478,
+          "offset": 2284,
+          "length": 1459,
           "replacement": "async function cuFetchStaysForWindow() { return hotelSection('model').cuFetchStaysForWindow.apply(this, arguments); }"
         },
         {
           "name": "cuSeed",
-          "start": 37349,
-          "end": 38889,
+          "start": 38134,
+          "end": 39674,
           "deps": [
             "cuStamp",
             "cuDefaultTypes",
@@ -70,14 +70,14 @@
           ],
           "mutations": [],
           "async": false,
-          "offset": 2960,
+          "offset": 3745,
           "length": 1540,
           "replacement": "function cuSeed() { return hotelSection('model').cuSeed.apply(this, arguments); }"
         },
         {
           "name": "cuHydrate",
-          "start": 38892,
-          "end": 46008,
+          "start": 39677,
+          "end": 46793,
           "deps": [
             "cuTypeId",
             "cuStamp",
@@ -89,27 +89,27 @@
           ],
           "mutations": [],
           "async": false,
-          "offset": 4502,
+          "offset": 5287,
           "length": 7116,
           "replacement": "function cuHydrate() { return hotelSection('model').cuHydrate.apply(this, arguments); }"
         },
         {
           "name": "cuDocument",
-          "start": 46011,
-          "end": 47351,
+          "start": 46796,
+          "end": 48136,
           "deps": [
             "DEFAULT_VIEWS"
           ],
           "mutations": [],
           "async": false,
-          "offset": 11620,
+          "offset": 12405,
           "length": 1340,
           "replacement": "function cuDocument() { return hotelSection('model').cuDocument.apply(this, arguments); }"
         },
         {
           "name": "cuMerge",
-          "start": 47795,
-          "end": 54214,
+          "start": 48580,
+          "end": 54999,
           "deps": [
             "cuTypeId",
             "cuFloorId",
@@ -117,14 +117,14 @@
           ],
           "mutations": [],
           "async": false,
-          "offset": 12962,
+          "offset": 13747,
           "length": 6419,
           "replacement": "function cuMerge() { return hotelSection('model').cuMerge.apply(this, arguments); }"
         },
         {
           "name": "cuFetchInHouseStays",
-          "start": 106684,
-          "end": 107959,
+          "start": 109916,
+          "end": 111172,
           "deps": [
             "cuVenueId",
             "cuStayScope",
@@ -135,14 +135,14 @@
           ],
           "mutations": [],
           "async": true,
-          "offset": 19383,
-          "length": 1275,
+          "offset": 20168,
+          "length": 1256,
           "replacement": "async function cuFetchInHouseStays() { return hotelSection('model').cuFetchInHouseStays.apply(this, arguments); }"
         },
         {
           "name": "cuRoomOccupancy",
-          "start": 141340,
-          "end": 142824,
+          "start": 144645,
+          "end": 146129,
           "deps": [
             "cuAllStays",
             "cuStayScope",
@@ -176,14 +176,14 @@
             }
           ],
           "async": false,
-          "offset": 20660,
+          "offset": 21426,
           "length": 1508,
           "replacement": "function cuRoomOccupancy() { return hotelSection('model').cuRoomOccupancy.apply(this, arguments); }"
         },
         {
           "name": "cuRoomStatus",
-          "start": 143074,
-          "end": 144449,
+          "start": 146379,
+          "end": 147754,
           "deps": [
             "tx",
             "cuRoomLive",
@@ -199,7 +199,7 @@
             }
           ],
           "async": false,
-          "offset": 22170,
+          "offset": 22936,
           "length": 1381,
           "replacement": "function cuRoomStatus() { return hotelSection('model').cuRoomStatus.apply(this, arguments); }"
         }
@@ -293,8 +293,8 @@
       "fragments": [
         {
           "name": "counts",
-          "start": 62908,
-          "end": 63595,
+          "start": 66140,
+          "end": 66827,
           "deps": [
             "isCustomHotel",
             "R",
@@ -313,8 +313,8 @@
         },
         {
           "name": "receptionBody",
-          "start": 63598,
-          "end": 67678,
+          "start": 66830,
+          "end": 70910,
           "deps": [
             "counts",
             "ARRIVALS",
@@ -331,8 +331,8 @@
         },
         {
           "name": "rackBody",
-          "start": 67747,
-          "end": 69675,
+          "start": 70979,
+          "end": 72907,
           "deps": [
             "FLOORS",
             "ROOMS",
@@ -346,8 +346,8 @@
         },
         {
           "name": "cuConnectingAvail",
-          "start": 69678,
-          "end": 70808,
+          "start": 72910,
+          "end": 74040,
           "deps": [
             "cuRoomStatus",
             "tx"
@@ -360,8 +360,8 @@
         },
         {
           "name": "tapeBody",
-          "start": 75636,
-          "end": 77858,
+          "start": 78868,
+          "end": 81090,
           "deps": [
             "occupancyByDay",
             "TAPE_DAYS",
@@ -380,8 +380,8 @@
         },
         {
           "name": "hotesBody",
-          "start": 82271,
-          "end": 85037,
+          "start": 85503,
+          "end": 88269,
           "deps": [
             "GUESTS",
             "MAD",
@@ -396,8 +396,8 @@
         },
         {
           "name": "forecastSvg",
-          "start": 87640,
-          "end": 89702,
+          "start": 90872,
+          "end": 92934,
           "deps": [
             "FORECAST"
           ],
@@ -409,8 +409,8 @@
         },
         {
           "name": "intelBody",
-          "start": 89705,
-          "end": 93168,
+          "start": 92937,
+          "end": 96400,
           "deps": [
             "NOSHOW_RISK",
             "forecastSvg",
@@ -424,8 +424,8 @@
         },
         {
           "name": "cuEvaluateStayExceptions",
-          "start": 96384,
-          "end": 98704,
+          "start": 99616,
+          "end": 101936,
           "deps": [
             "tx"
           ],
@@ -437,8 +437,8 @@
         },
         {
           "name": "cuReceptionJournal",
-          "start": 99642,
-          "end": 106018,
+          "start": 102874,
+          "end": 109250,
           "deps": [
             "cuReceptionSelection",
             "cuReceptionBuckets",
@@ -461,8 +461,8 @@
         },
         {
           "name": "cuReceptionBody",
-          "start": 107962,
-          "end": 111373,
+          "start": 111175,
+          "end": 114586,
           "deps": [
             "cuAllStays",
             "cuEvaluateStayExceptions",
@@ -483,8 +483,8 @@
         },
         {
           "name": "cuParseRoomNumbers",
-          "start": 111729,
-          "end": 112328,
+          "start": 114942,
+          "end": 115541,
           "deps": [],
           "mutations": [],
           "async": false,
@@ -494,8 +494,8 @@
         },
         {
           "name": "cuUploadTypePhotos",
-          "start": 122436,
-          "end": 124449,
+          "start": 125649,
+          "end": 127754,
           "deps": [
             "tx",
             "cuShrinkHotelPhoto",
@@ -508,13 +508,13 @@
           "mutations": [],
           "async": true,
           "offset": 32233,
-          "length": 2013,
+          "length": 2105,
           "replacement": "async function cuUploadTypePhotos() { return hotelSection('views').cuUploadTypePhotos.apply(this, arguments); }"
         },
         {
           "name": "cuUpdateFloorsManagerModal",
-          "start": 135959,
-          "end": 137188,
+          "start": 139264,
+          "end": 140493,
           "deps": [
             "cuState",
             "cuFloorRows",
@@ -524,14 +524,14 @@
           ],
           "mutations": [],
           "async": false,
-          "offset": 34248,
+          "offset": 34340,
           "length": 1229,
           "replacement": "function cuUpdateFloorsManagerModal() { return hotelSection('views').cuUpdateFloorsManagerModal.apply(this, arguments); }"
         },
         {
           "name": "cuRegisterWalkin",
-          "start": 145743,
-          "end": 147068,
+          "start": 149048,
+          "end": 150373,
           "deps": [
             "cuMerchantSlug",
             "R",
@@ -541,40 +541,40 @@
           ],
           "mutations": [],
           "async": true,
-          "offset": 35479,
+          "offset": 35571,
           "length": 1325,
           "replacement": "async function cuRegisterWalkin() { return hotelSection('views').cuRegisterWalkin.apply(this, arguments); }"
         },
         {
           "name": "cuUnlinkConnectingRooms",
-          "start": 152351,
-          "end": 153070,
+          "start": 155850,
+          "end": 156569,
           "deps": [
             "cuStamp"
           ],
           "mutations": [],
           "async": false,
-          "offset": 36806,
+          "offset": 36898,
           "length": 719,
           "replacement": "function cuUnlinkConnectingRooms() { return hotelSection('views').cuUnlinkConnectingRooms.apply(this, arguments); }"
         },
         {
           "name": "cuSetConnectingRooms",
-          "start": 153073,
-          "end": 154854,
+          "start": 156572,
+          "end": 158353,
           "deps": [
             "cuStamp"
           ],
           "mutations": [],
           "async": false,
-          "offset": 37527,
+          "offset": 37619,
           "length": 1781,
           "replacement": "function cuSetConnectingRooms() { return hotelSection('views').cuSetConnectingRooms.apply(this, arguments); }"
         },
         {
           "name": "cuRoomMatchesFilter",
-          "start": 156179,
-          "end": 158105,
+          "start": 159678,
+          "end": 161604,
           "deps": [
             "cuRackFilter",
             "cuRoomStatus",
@@ -585,14 +585,14 @@
           ],
           "mutations": [],
           "async": false,
-          "offset": 39310,
+          "offset": 39402,
           "length": 1926,
           "replacement": "function cuRoomMatchesFilter() { return hotelSection('views').cuRoomMatchesFilter.apply(this, arguments); }"
         },
         {
           "name": "cuFilterChipsMarkup",
-          "start": 158108,
-          "end": 162008,
+          "start": 161607,
+          "end": 165507,
           "deps": [
             "cuHasActiveFilters",
             "cuState",
@@ -606,28 +606,28 @@
           ],
           "mutations": [],
           "async": false,
-          "offset": 41238,
+          "offset": 41330,
           "length": 3900,
           "replacement": "function cuFilterChipsMarkup() { return hotelSection('views').cuFilterChipsMarkup.apply(this, arguments); }"
         },
         {
           "name": "cuMatchNationality",
-          "start": 247469,
-          "end": 249115,
+          "start": 250978,
+          "end": 252624,
           "deps": [
             "cuNationalities",
             "cuNormalizeText"
           ],
           "mutations": [],
           "async": false,
-          "offset": 45140,
+          "offset": 45232,
           "length": 1646,
           "replacement": "function cuMatchNationality() { return hotelSection('views').cuMatchNationality.apply(this, arguments); }"
         },
         {
           "name": "cuNationalitySelectorHtml",
-          "start": 249448,
-          "end": 251247,
+          "start": 252957,
+          "end": 254756,
           "deps": [
             "cuMatchNationality",
             "cuNationalityLabel",
@@ -636,14 +636,14 @@
           ],
           "mutations": [],
           "async": false,
-          "offset": 46788,
+          "offset": 46880,
           "length": 1799,
           "replacement": "function cuNationalitySelectorHtml() { return hotelSection('views').cuNationalitySelectorHtml.apply(this, arguments); }"
         },
         {
           "name": "cuWireNationalitySelectors",
-          "start": 251251,
-          "end": 259386,
+          "start": 254760,
+          "end": 262895,
           "deps": [
             "tx",
             "cuLang",
@@ -655,38 +655,38 @@
           ],
           "mutations": [],
           "async": false,
-          "offset": 48589,
+          "offset": 48681,
           "length": 8135,
           "replacement": "function cuWireNationalitySelectors() { return hotelSection('views').cuWireNationalitySelectors.apply(this, arguments); }"
         },
         {
           "name": "cuParseDelimitedLine",
-          "start": 283080,
-          "end": 283965,
+          "start": 286619,
+          "end": 287504,
           "deps": [],
           "mutations": [],
           "async": false,
-          "offset": 56726,
+          "offset": 56818,
           "length": 885,
           "replacement": "function cuParseDelimitedLine() { return hotelSection('views').cuParseDelimitedLine.apply(this, arguments); }"
         },
         {
           "name": "cuHasGroupRecovery",
-          "start": 283969,
-          "end": 284628,
+          "start": 287508,
+          "end": 288167,
           "deps": [
             "cuMerchantSlug"
           ],
           "mutations": [],
           "async": false,
-          "offset": 57613,
+          "offset": 57705,
           "length": 659,
           "replacement": "function cuHasGroupRecovery() { return hotelSection('views').cuHasGroupRecovery.apply(this, arguments); }"
         },
         {
           "name": "cuMoveStayStatus",
-          "start": 394662,
-          "end": 398443,
+          "start": 398271,
+          "end": 402197,
           "deps": [
             "cuMerchantSlug",
             "cuStayScope",
@@ -700,39 +700,39 @@
           ],
           "mutations": [],
           "async": true,
-          "offset": 58274,
-          "length": 3781,
+          "offset": 58366,
+          "length": 3926,
           "replacement": "async function cuMoveStayStatus() { return hotelSection('views').cuMoveStayStatus.apply(this, arguments); }"
         },
         {
           "name": "cuBirthIso",
-          "start": 400102,
-          "end": 400899,
+          "start": 403856,
+          "end": 404653,
           "deps": [],
           "mutations": [],
           "async": false,
-          "offset": 62057,
+          "offset": 62294,
           "length": 797,
           "replacement": "function cuBirthIso() { return hotelSection('views').cuBirthIso.apply(this, arguments); }"
         },
         {
           "name": "cuCommercialError",
-          "start": 403604,
-          "end": 407231,
+          "start": 407358,
+          "end": 410985,
           "deps": [
             "tx",
             "txk"
           ],
           "mutations": [],
           "async": false,
-          "offset": 62856,
+          "offset": 63093,
           "length": 3627,
           "replacement": "function cuCommercialError() { return hotelSection('views').cuCommercialError.apply(this, arguments); }"
         },
         {
           "name": "cuCommercialBody",
-          "start": 408009,
-          "end": 412962,
+          "start": 411763,
+          "end": 416716,
           "deps": [
             "cuCommercialState",
             "tx",
@@ -745,14 +745,14 @@
           ],
           "mutations": [],
           "async": false,
-          "offset": 66485,
+          "offset": 66722,
           "length": 4953,
           "replacement": "function cuCommercialBody() { return hotelSection('views').cuCommercialBody.apply(this, arguments); }"
         },
         {
           "name": "cuCommercialEditor",
-          "start": 419723,
-          "end": 425505,
+          "start": 423487,
+          "end": 429269,
           "deps": [
             "cuStayScope",
             "cuLoadCommercial",
@@ -770,14 +770,14 @@
           ],
           "mutations": [],
           "async": true,
-          "offset": 71440,
+          "offset": 71677,
           "length": 5782,
           "replacement": "async function cuCommercialEditor() { return hotelSection('views').cuCommercialEditor.apply(this, arguments); }"
         },
         {
           "name": "cuEconomatBody",
-          "start": 433417,
-          "end": 437639,
+          "start": 437181,
+          "end": 441403,
           "deps": [
             "cuEconomatState",
             "tx",
@@ -791,14 +791,14 @@
           ],
           "mutations": [],
           "async": false,
-          "offset": 77224,
+          "offset": 77461,
           "length": 4222,
           "replacement": "function cuEconomatBody() { return hotelSection('views').cuEconomatBody.apply(this, arguments); }"
         },
         {
           "name": "cuUnitsEditorHtml",
-          "start": 438470,
-          "end": 442104,
+          "start": 442234,
+          "end": 445868,
           "deps": [
             "cuOutletsMapped",
             "esc",
@@ -808,14 +808,14 @@
           ],
           "mutations": [],
           "async": false,
-          "offset": 81448,
+          "offset": 81685,
           "length": 3634,
           "replacement": "function cuUnitsEditorHtml() { return hotelSection('views').cuUnitsEditorHtml.apply(this, arguments); }"
         },
         {
           "name": "cuPdvBody",
-          "start": 442495,
-          "end": 444851,
+          "start": 446259,
+          "end": 448615,
           "deps": [
             "cuEconomatState",
             "tx",
@@ -826,14 +826,14 @@
           ],
           "mutations": [],
           "async": false,
-          "offset": 85084,
+          "offset": 85321,
           "length": 2356,
           "replacement": "function cuPdvBody() { return hotelSection('views').cuPdvBody.apply(this, arguments); }"
         },
         {
           "name": "cuLoadEconomat",
-          "start": 444854,
-          "end": 447177,
+          "start": 448618,
+          "end": 450941,
           "deps": [
             "isCustomHotel",
             "cuEconomatState",
@@ -845,14 +845,14 @@
           ],
           "mutations": [],
           "async": true,
-          "offset": 87442,
+          "offset": 87679,
           "length": 2323,
           "replacement": "async function cuLoadEconomat() { return hotelSection('views').cuLoadEconomat.apply(this, arguments); }"
         },
         {
           "name": "cuSaveEconomat",
-          "start": 447859,
-          "end": 450609,
+          "start": 451623,
+          "end": 454373,
           "deps": [
             "cuEconomatState",
             "cuCaptureEconomatDraft",
@@ -865,7 +865,7 @@
           ],
           "mutations": [],
           "async": true,
-          "offset": 89767,
+          "offset": 90004,
           "length": 2750,
           "replacement": "async function cuSaveEconomat() { return hotelSection('views').cuSaveEconomat.apply(this, arguments); }"
         }
@@ -918,8 +918,8 @@
       "fragments": [
         {
           "name": "cuGroupReservationModal",
-          "start": 284632,
-          "end": 378576,
+          "start": 288171,
+          "end": 382115,
           "deps": [
             "cuStayScope",
             "cuMerchantSlug",
@@ -1133,8 +1133,8 @@
       "fragments": [
         {
           "name": "rerender",
-          "start": 59895,
-          "end": 60948,
+          "start": 60680,
+          "end": 64180,
           "deps": [
             "cuOccupancyMemo",
             "openDrawer",
@@ -1143,57 +1143,57 @@
           ],
           "mutations": [
             {
-              "start": 90,
-              "end": 105,
+              "start": 2537,
+              "end": 2552,
               "original": "cuOccupancyMemo",
               "replacement": "scope.cuOccupancyMemo"
             },
             {
-              "start": 123,
-              "end": 133,
+              "start": 2570,
+              "end": 2580,
               "original": "openDrawer",
               "replacement": "scope.openDrawer"
             },
             {
-              "start": 160,
-              "end": 170,
+              "start": 2607,
+              "end": 2617,
               "original": "openDrawer",
               "replacement": "scope.openDrawer"
             },
             {
-              "start": 208,
-              "end": 218,
+              "start": 2655,
+              "end": 2665,
               "original": "openDrawer",
               "replacement": "scope.openDrawer"
             },
             {
-              "start": 616,
-              "end": 626,
+              "start": 3063,
+              "end": 3073,
               "original": "openDrawer",
               "replacement": "scope.openDrawer"
             },
             {
-              "start": 863,
-              "end": 873,
+              "start": 3310,
+              "end": 3320,
               "original": "openDrawer",
               "replacement": "scope.openDrawer"
             },
             {
-              "start": 936,
-              "end": 946,
+              "start": 3383,
+              "end": 3393,
               "original": "openDrawer",
               "replacement": "scope.openDrawer"
             }
           ],
           "async": false,
           "offset": 1454,
-          "length": 1095,
+          "length": 3542,
           "replacement": "function rerender() { return hotelSection('editors').rerender.apply(this, arguments); }"
         },
         {
           "name": "roomModal",
-          "start": 70811,
-          "end": 75372,
+          "start": 74043,
+          "end": 78604,
           "deps": [
             "R",
             "F",
@@ -1223,14 +1223,14 @@
             }
           ],
           "async": false,
-          "offset": 2551,
+          "offset": 4998,
           "length": 4567,
           "replacement": "function roomModal() { return hotelSection('editors').roomModal.apply(this, arguments); }"
         },
         {
           "name": "tarifsBody",
-          "start": 78102,
-          "end": 81975,
+          "start": 81334,
+          "end": 85207,
           "deps": [
             "aiApplied",
             "RATE_DAYS",
@@ -1271,14 +1271,14 @@
             }
           ],
           "async": false,
-          "offset": 7120,
+          "offset": 9567,
           "length": 3903,
           "replacement": "function tarifsBody() { return hotelSection('editors').tarifsBody.apply(this, arguments); }"
         },
         {
           "name": "guestModal",
-          "start": 85040,
-          "end": 87235,
+          "start": 88272,
+          "end": 90467,
           "deps": [
             "GUESTS",
             "K",
@@ -1295,14 +1295,14 @@
             }
           ],
           "async": false,
-          "offset": 11025,
+          "offset": 13472,
           "length": 2201,
           "replacement": "function guestModal() { return hotelSection('editors').guestModal.apply(this, arguments); }"
         },
         {
           "name": "cuStrip",
-          "start": 94645,
-          "end": 96351,
+          "start": 97877,
+          "end": 99583,
           "deps": [
             "cuWarmStays",
             "counts",
@@ -1325,14 +1325,14 @@
             }
           ],
           "async": false,
-          "offset": 13228,
+          "offset": 15675,
           "length": 1712,
           "replacement": "function cuStrip() { return hotelSection('editors').cuStrip.apply(this, arguments); }"
         },
         {
           "name": "cuRoomBatchEditor",
-          "start": 112331,
-          "end": 114407,
+          "start": 115544,
+          "end": 117620,
           "deps": [
             "cuTypes",
             "cuFloorRows",
@@ -1351,14 +1351,14 @@
             }
           ],
           "async": false,
-          "offset": 14942,
+          "offset": 17389,
           "length": 2082,
           "replacement": "function cuRoomBatchEditor() { return hotelSection('editors').cuRoomBatchEditor.apply(this, arguments); }"
         },
         {
           "name": "cuRoomEditor",
-          "start": 114410,
-          "end": 118597,
+          "start": 117623,
+          "end": 121810,
           "deps": [
             "cuState",
             "cuRoomStatus",
@@ -1384,14 +1384,14 @@
             }
           ],
           "async": false,
-          "offset": 17026,
+          "offset": 19473,
           "length": 4193,
           "replacement": "function cuRoomEditor() { return hotelSection('editors').cuRoomEditor.apply(this, arguments); }"
         },
         {
           "name": "cuTypesManager",
-          "start": 118600,
-          "end": 120062,
+          "start": 121813,
+          "end": 123275,
           "deps": [
             "cuState",
             "cuTypes",
@@ -1411,14 +1411,14 @@
             }
           ],
           "async": false,
-          "offset": 21221,
+          "offset": 23668,
           "length": 1468,
           "replacement": "function cuTypesManager() { return hotelSection('editors').cuTypesManager.apply(this, arguments); }"
         },
         {
           "name": "cuTypeEditor",
-          "start": 124452,
-          "end": 129469,
+          "start": 127757,
+          "end": 132774,
           "deps": [
             "cuState",
             "K",
@@ -1437,14 +1437,14 @@
             }
           ],
           "async": false,
-          "offset": 22691,
+          "offset": 25138,
           "length": 5023,
           "replacement": "function cuTypeEditor() { return hotelSection('editors').cuTypeEditor.apply(this, arguments); }"
         },
         {
           "name": "cuFloorsManager",
-          "start": 129641,
-          "end": 131330,
+          "start": 132946,
+          "end": 134635,
           "deps": [
             "cuState",
             "cuFloorRows",
@@ -1464,14 +1464,14 @@
             }
           ],
           "async": false,
-          "offset": 27716,
+          "offset": 30163,
           "length": 1695,
           "replacement": "function cuFloorsManager() { return hotelSection('editors').cuFloorsManager.apply(this, arguments); }"
         },
         {
           "name": "cuViewsAndCharsManager",
-          "start": 131333,
-          "end": 135956,
+          "start": 134638,
+          "end": 139261,
           "deps": [
             "cuState",
             "cuAllViews",
@@ -1492,14 +1492,14 @@
             }
           ],
           "async": false,
-          "offset": 29413,
+          "offset": 31860,
           "length": 4629,
           "replacement": "function cuViewsAndCharsManager() { return hotelSection('editors').cuViewsAndCharsManager.apply(this, arguments); }"
         },
         {
           "name": "cuFloorEditor",
-          "start": 137920,
-          "end": 139785,
+          "start": 141225,
+          "end": 143090,
           "deps": [
             "cuState",
             "cuFloorRows",
@@ -1518,14 +1518,14 @@
             }
           ],
           "async": false,
-          "offset": 34044,
+          "offset": 36491,
           "length": 1871,
           "replacement": "function cuFloorEditor() { return hotelSection('editors').cuFloorEditor.apply(this, arguments); }"
         },
         {
           "name": "cuRackBody",
-          "start": 162011,
-          "end": 174491,
+          "start": 165510,
+          "end": 177990,
           "deps": [
             "cuEnsureFilterVenue",
             "cuPendingBulk",
@@ -1591,14 +1591,14 @@
             }
           ],
           "async": false,
-          "offset": 35917,
+          "offset": 38364,
           "length": 12516,
           "replacement": "function cuRackBody() { return hotelSection('editors').cuRackBody.apply(this, arguments); }"
         },
         {
           "name": "cuFiltersModal",
-          "start": 174494,
-          "end": 178061,
+          "start": 177993,
+          "end": 181560,
           "deps": [
             "cuState",
             "cuFloorRows",
@@ -1623,14 +1623,14 @@
             }
           ],
           "async": false,
-          "offset": 48435,
+          "offset": 50882,
           "length": 3573,
           "replacement": "function cuFiltersModal() { return hotelSection('editors').cuFiltersModal.apply(this, arguments); }"
         },
         {
           "name": "cuBulkEditModal",
-          "start": 178091,
-          "end": 181967,
+          "start": 181590,
+          "end": 185466,
           "deps": [
             "cuSelectedNumbers",
             "toast",
@@ -1664,14 +1664,14 @@
             }
           ],
           "async": false,
-          "offset": 52010,
+          "offset": 54457,
           "length": 3888,
           "replacement": "function cuBulkEditModal() { return hotelSection('editors').cuBulkEditModal.apply(this, arguments); }"
         },
         {
           "name": "cuBulkReviewModal",
-          "start": 181970,
-          "end": 185248,
+          "start": 185469,
+          "end": 188747,
           "deps": [
             "cuBulkPlan",
             "cuSelectedNumbers",
@@ -1706,14 +1706,14 @@
             }
           ],
           "async": false,
-          "offset": 55900,
+          "offset": 58347,
           "length": 3296,
           "replacement": "function cuBulkReviewModal() { return hotelSection('editors').cuBulkReviewModal.apply(this, arguments); }"
         },
         {
           "name": "cuLoadPerformance",
-          "start": 186393,
-          "end": 187266,
+          "start": 189892,
+          "end": 190775,
           "deps": [
             "cuMerchantSlug",
             "cuPerfState",
@@ -1723,21 +1723,21 @@
           ],
           "mutations": [
             {
-              "start": 821,
-              "end": 831,
+              "start": 831,
+              "end": 841,
               "original": "openDrawer",
               "replacement": "scope.openDrawer"
             }
           ],
           "async": true,
-          "offset": 59198,
-          "length": 879,
+          "offset": 61645,
+          "length": 889,
           "replacement": "async function cuLoadPerformance() { return hotelSection('editors').cuLoadPerformance.apply(this, arguments); }"
         },
         {
           "name": "cuFoliosBody",
-          "start": 187511,
-          "end": 191459,
+          "start": 191020,
+          "end": 194968,
           "deps": [
             "cuWarmStays",
             "F",
@@ -1763,14 +1763,14 @@
             }
           ],
           "async": false,
-          "offset": 60079,
+          "offset": 62536,
           "length": 3954,
           "replacement": "function cuFoliosBody() { return hotelSection('editors').cuFoliosBody.apply(this, arguments); }"
         },
         {
           "name": "cuSejoursBody",
-          "start": 191462,
-          "end": 197934,
+          "start": 194971,
+          "end": 201443,
           "deps": [
             "cuStayView",
             "cuSejoursAvailabilityBody",
@@ -1802,14 +1802,14 @@
             }
           ],
           "async": false,
-          "offset": 64035,
+          "offset": 66492,
           "length": 6484,
           "replacement": "function cuSejoursBody() { return hotelSection('editors').cuSejoursBody.apply(this, arguments); }"
         },
         {
           "name": "cuDispoBody",
-          "start": 200142,
-          "end": 205025,
+          "start": 203651,
+          "end": 208534,
           "deps": [
             "cuState",
             "roomTypeOf",
@@ -1844,14 +1844,14 @@
             }
           ],
           "async": false,
-          "offset": 70521,
+          "offset": 72978,
           "length": 4901,
           "replacement": "function cuDispoBody() { return hotelSection('editors').cuDispoBody.apply(this, arguments); }"
         },
         {
           "name": "cuStayEditor",
-          "start": 259390,
-          "end": 274687,
+          "start": 262899,
+          "end": 278196,
           "deps": [
             "cuState",
             "cuTypes",
@@ -1878,14 +1878,14 @@
             }
           ],
           "async": false,
-          "offset": 75424,
+          "offset": 77881,
           "length": 15303,
           "replacement": "function cuStayEditor() { return hotelSection('editors').cuStayEditor.apply(this, arguments); }"
         },
         {
           "name": "cuOpenDossier",
-          "start": 276225,
-          "end": 283076,
+          "start": 279734,
+          "end": 286615,
           "deps": [
             "cuStayScope",
             "cuChannelMerchant",
@@ -1918,14 +1918,14 @@
             }
           ],
           "async": true,
-          "offset": 90729,
-          "length": 6863,
+          "offset": 93186,
+          "length": 6893,
           "replacement": "async function cuOpenDossier() { return hotelSection('editors').cuOpenDossier.apply(this, arguments); }"
         },
         {
           "name": "cuSubmitStay",
-          "start": 378580,
-          "end": 392795,
+          "start": 382119,
+          "end": 396369,
           "deps": [
             "cuStayScope",
             "tx",
@@ -1948,27 +1948,27 @@
           ],
           "mutations": [
             {
-              "start": 13510,
-              "end": 13519,
+              "start": 13520,
+              "end": 13529,
               "original": "openModal",
               "replacement": "scope.openModal"
             },
             {
-              "start": 13539,
-              "end": 13548,
+              "start": 13549,
+              "end": 13558,
               "original": "openModal",
               "replacement": "scope.openModal"
             }
           ],
           "async": true,
-          "offset": 97594,
-          "length": 14227,
+          "offset": 100081,
+          "length": 14262,
           "replacement": "async function cuSubmitStay() { return hotelSection('editors').cuSubmitStay.apply(this, arguments); }"
         },
         {
           "name": "cuCancelStay",
-          "start": 392799,
-          "end": 394299,
+          "start": 396373,
+          "end": 397908,
           "deps": [
             "cuMerchantSlug",
             "cuStayScope",
@@ -1981,27 +1981,27 @@
           ],
           "mutations": [
             {
-              "start": 1046,
-              "end": 1055,
+              "start": 1056,
+              "end": 1065,
               "original": "openModal",
               "replacement": "scope.openModal"
             },
             {
-              "start": 1075,
-              "end": 1084,
+              "start": 1085,
+              "end": 1094,
               "original": "openModal",
               "replacement": "scope.openModal"
             }
           ],
           "async": true,
-          "offset": 111823,
-          "length": 1512,
+          "offset": 114345,
+          "length": 1547,
           "replacement": "async function cuCancelStay() { return hotelSection('editors').cuCancelStay.apply(this, arguments); }"
         },
         {
           "name": "cuAwaitTariffAck",
-          "start": 401868,
-          "end": 402664,
+          "start": 405622,
+          "end": 406418,
           "deps": [
             "hotelCloud"
           ],
@@ -2014,14 +2014,14 @@
             }
           ],
           "async": true,
-          "offset": 113337,
+          "offset": 115894,
           "length": 802,
           "replacement": "async function cuAwaitTariffAck() { return hotelSection('editors').cuAwaitTariffAck.apply(this, arguments); }"
         },
         {
           "name": "cuLoadProduction",
-          "start": 413452,
-          "end": 414562,
+          "start": 417206,
+          "end": 418326,
           "deps": [
             "cuStayScope",
             "cuProductionState",
@@ -2038,21 +2038,21 @@
               "replacement": "scope.openDrawer"
             },
             {
-              "start": 1054,
-              "end": 1064,
+              "start": 1064,
+              "end": 1074,
               "original": "openDrawer",
               "replacement": "scope.openDrawer"
             }
           ],
           "async": true,
-          "offset": 114141,
-          "length": 1122,
+          "offset": 116698,
+          "length": 1132,
           "replacement": "async function cuLoadProduction() { return hotelSection('editors').cuLoadProduction.apply(this, arguments); }"
         },
         {
           "name": "cuChannelGuide",
-          "start": 428558,
-          "end": 430012,
+          "start": 432322,
+          "end": 433776,
           "deps": [
             "tx",
             "K",
@@ -2068,14 +2068,14 @@
             }
           ],
           "async": false,
-          "offset": 115265,
+          "offset": 117832,
           "length": 1460,
           "replacement": "function cuChannelGuide() { return hotelSection('editors').cuChannelGuide.apply(this, arguments); }"
         },
         {
           "name": "cuCaptureEconomatDraft",
-          "start": 432389,
-          "end": 433414,
+          "start": 436153,
+          "end": 437178,
           "deps": [
             "openDrawer",
             "cuEconomatState"
@@ -2101,14 +2101,14 @@
             }
           ],
           "async": false,
-          "offset": 116727,
+          "offset": 119294,
           "length": 1043,
           "replacement": "function cuCaptureEconomatDraft() { return hotelSection('editors').cuCaptureEconomatDraft.apply(this, arguments); }"
         },
         {
           "name": "cuIntelBody",
-          "start": 450612,
-          "end": 456486,
+          "start": 454376,
+          "end": 460250,
           "deps": [
             "cuWarmStays",
             "cuState",
@@ -2137,7 +2137,7 @@
             }
           ],
           "async": false,
-          "offset": 117772,
+          "offset": 120339,
           "length": 5880,
           "replacement": "function cuIntelBody() { return hotelSection('editors').cuIntelBody.apply(this, arguments); }"
         }

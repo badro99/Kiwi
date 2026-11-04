@@ -422,6 +422,7 @@ test('editor-generated clientRef survives an ambiguous submit retry and blocks c
   assert.equal(form.submit.disabled, true);
   await f.api.cuSubmitStay(form, null, f.modals[0]);
   assert.equal(f.requests.length, 1);
+  f.reply({ ok: true, json: async () => ({ stays: [] }) });
   pending.reject(new Error('Synthetic lost response after possible server commit'));
   await first;
   assert.equal(form.submit.disabled, false);
@@ -429,7 +430,8 @@ test('editor-generated clientRef survives an ambiguous submit retry and blocks c
   const saved = stay('saved-on-retry');
   f.reply({ ok: true, json: async () => ({ booking: saved }) });
   await f.api.cuSubmitStay(form, null, f.modals[0]);
-  const payloads = f.requests.map((r) => JSON.parse(r.options.body));
+  assert.ok(String(f.requests[1].url).includes('clientRef='), 'uncertain create is reread by its stable reference before retry');
+  const payloads = f.requests.filter((r) => r.options.body).map((r) => JSON.parse(r.options.body));
   assert.equal(payloads.length, 2);
   assert.equal(payloads[0].clientRef, form.__hxClientRef);
   assert.deepEqual(payloads[1], payloads[0]);

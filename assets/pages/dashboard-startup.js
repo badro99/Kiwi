@@ -71,9 +71,9 @@
     'assets/design-2026.js?v=2',
     'assets/design-vexel-layout.js?v=2100',
     'assets/liquid-glass.js?v=1',
-    'assets/hotel-language.js?v=3',
+    'assets/hotel-language.js?v=4',
     'assets/hotel-housekeeping.js?v=1',
-    'assets/hotel/model.js?v=8',
+    'assets/hotel/model.js?v=9',
     'assets/hotel.js?v=91',
   ];
   if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');

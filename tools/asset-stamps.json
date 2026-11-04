@@ -688,8 +688,8 @@
     "sha": "f3c949a80d343db2"
   },
   "assets/hotel-language.js": {
-    "v": "3",
-    "sha": "41914e4ac2d03dc7"
+    "v": "4",
+    "sha": "41f5ff788756c8ca"
   },
   "assets/hotel-rates.js": {
     "v": "1",
@@ -704,12 +704,12 @@
     "sha": "93c2fd31b812b512"
   },
   "assets/hotel/arrivals.js": {
-    "v": "4",
-    "sha": "96425f80436b17ee"
+    "v": "5",
+    "sha": "6f4d5c5374635d91"
   },
   "assets/hotel/editors.js": {
-    "v": "2",
-    "sha": "8f9ecc8b20377f49"
+    "v": "7",
+    "sha": "b69ecfb97c42ecb3"
   },
   "assets/hotel/folio-actions.js": {
     "v": "4",
@@ -720,8 +720,8 @@
     "sha": "b7d8affeaf463695"
   },
   "assets/hotel/model.js": {
-    "v": "8",
-    "sha": "caac41392d421924"
+    "v": "9",
+    "sha": "2ac43abc2ab39893"
   },
   "assets/hotel/rate-actions.js": {
     "v": "6",
@@ -732,8 +732,8 @@
     "sha": "0cb4fcbbdb2035d8"
   },
   "assets/hotel/views.js": {
-    "v": "3",
-    "sha": "da69250a81376029"
+    "v": "4",
+    "sha": "5c580338c9bc787a"
   },
   "assets/hours-ui.js": {
     "v": "4",
@@ -1416,12 +1416,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "38",
-    "sha": "98bec78733f9c645"
+    "v": "43",
+    "sha": "e6b85564da9c138f"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "141",
-    "sha": "da85450f683a4137"
+    "v": "142",
+    "sha": "0e66dcf589b33a3d"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
