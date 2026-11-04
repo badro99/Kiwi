@@ -155,14 +155,21 @@ export async function onRequestGet(context) {
       // created before this filter existed; an expired replacement remains recoverable.
       // A copy that was itself copied again (a later attempt of the same source)
       // is superseded by that attempt and hidden too.
-      const exists = async (rowId) => !!await env.DB.prepare('SELECT id FROM print_jobs WHERE merchant = ? AND id = ?').bind(merchant, rowId).first();
-      const pending = await Promise.all((rows.results || []).map(async (job) => {
-        if (await exists('pj_' + await refDigest(merchant, 'reprint:' + job.id))) return null;
+      // One lookup per 90 ids for every candidate, not one or two queries per job.
+      const wanted = await Promise.all((rows.results || []).map(async (job) => {
         const lineage = safeJsonParse(job.target, {}) || {};
-        if (lineage._reprintOf && await exists(await reprintId(merchant, lineage._reprintOf, Number(lineage._attempt || 0) + 1))) return null;
-        return { id: job.id, kind: job.kind, status: job.status, created_ts: job.created_ts, expires_ts: job.expires_ts };
+        return { job, copy: 'pj_' + await refDigest(merchant, 'reprint:' + job.id),
+          next: lineage._reprintOf ? await reprintId(merchant, lineage._reprintOf, Number(lineage._attempt || 0) + 1) : '' };
       }));
-      return relayJson({ ok: true, jobs: pending.filter(Boolean) }, 200, request);
+      const ids = [...new Set(wanted.flatMap((w) => [w.copy, w.next]).filter(Boolean))], found = new Set();
+      for (let i = 0; i < ids.length; i += 90) {
+        const part = ids.slice(i, i + 90);
+        const hit = await env.DB.prepare(`SELECT id FROM print_jobs WHERE merchant = ? AND id IN (${part.map(() => '?').join(',')})`).bind(merchant, ...part).all();
+        for (const r of hit.results || []) found.add(r.id);
+      }
+      const pending = wanted.filter((w) => !found.has(w.copy) && !(w.next && found.has(w.next)))
+        .map(({ job }) => ({ id: job.id, kind: job.kind, status: job.status, created_ts: job.created_ts, expires_ts: job.expires_ts }));
+      return relayJson({ ok: true, jobs: pending }, 200, request);
     }
     const j = await env.DB.prepare(
       'SELECT id, status, error, bytes, done_ts, claimed_ts FROM print_jobs WHERE id = ? AND merchant = ?'

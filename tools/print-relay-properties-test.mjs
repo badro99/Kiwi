@@ -252,6 +252,14 @@ try {
     assert.ok(!(await listing()).body.jobs.some(j=>j.id===original));
   }));
 
+  await strict('the reprint list costs the same queries for one expired ticket or many', fc.asyncProperty(fc.integer({min:2,max:12}), async n => {
+    const queries = async () => { const prepare = env.DB.prepare; let q = 0; env.DB.prepare = function (...a) { if (/print_jobs/.test(a[0])) q++; return prepare.apply(this, a); }; // auth lookups are cached, not per ticket
+      try { const r = await jobs.onRequestGet({env, request:new Request('https://kiwi.test/api/print/jobs?merchant='+merchant,{headers:{Cookie:till}})}); assert.equal(r.status, 200); } finally { env.DB.prepare = prepare; } return q; };
+    reset(); await deposit(0); clock += 10 * 60000; const one = await queries();
+    reset(); for (let k = 0; k < n; k++) await deposit(k); clock += 10 * 60000; const many = await queries();
+    assert.equal(many, one, n + ' expired tickets listed with the queries of one');
+  }));
+
   /* Wave 11 · a ticket that ENDS failed or uncertain (a refused write, a lost
    * acknowledgement) is as unprinted as an expired one: the ruling lists it
    * for Reprint, with its state, instead of losing it silently. */
