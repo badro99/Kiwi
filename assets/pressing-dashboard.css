@@ -38,7 +38,7 @@
 
 .pxd-flow { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); padding: 18px; gap: 8px; }
 .pxd-stage { min-height: 124px; padding: 14px; border: 1px solid var(--n-200); border-radius: 15px; background: var(--paper-soft); position: relative; }
-.pxd-stage + .pxd-stage::before { content: ""; position: absolute; left: -9px; top: 33px; width: 9px; height: 1px; background: var(--n-300); }
+.pxd-stage + .pxd-stage::before { content: ""; position: absolute; inset-inline-start: -9px; top: 33px; width: 9px; height: 1px; background: var(--n-300); }
 .pxd-stage-num { color: var(--ink); font-size: 25px; line-height: 1; font-weight: 650; font-variant-numeric: tabular-nums; }
 .pxd-stage-name { margin-top: 8px; color: var(--ink); font-size: 12px; font-weight: 650; }
 .pxd-stage-sub { margin-top: 5px; color: var(--n-500); font-size: 11px; line-height: 1.35; }
@@ -54,10 +54,10 @@
 .pxd-order-main b { color: var(--ink); font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 .pxd-order-main span { color: var(--n-500); font-size: 11px; }
 .pxd-garments { display: flex; align-items: center; min-width: 72px; }
-.pxd-garment { width: 36px; height: 36px; display: grid; place-items: center; overflow: hidden; margin-left: -7px; border: 2px solid var(--surface); border-radius: 10px; background: var(--surface); color: var(--atlas); }
-.pxd-garment:first-child { margin-left: 0; }
+.pxd-garment { width: 36px; height: 36px; display: grid; place-items: center; overflow: hidden; margin-inline-start: -7px; border: 2px solid var(--surface); border-radius: 10px; background: var(--surface); color: var(--atlas); }
+.pxd-garment:first-child { margin-inline-start: 0; }
 .pxd-garment .px-product-photo { width: 100%; height: 100%; display: block; object-fit: contain; }
-.pxd-garment-more { min-width: 24px; height: 24px; display: grid; place-items: center; margin-left: -5px; border: 2px solid var(--surface); border-radius: 999px; background: var(--brand-deep); color: var(--inverse-ink); font-size: 11px; }
+.pxd-garment-more { min-width: 24px; height: 24px; display: grid; place-items: center; margin-inline-start: -5px; border: 2px solid var(--surface); border-radius: 999px; background: var(--brand-deep); color: var(--inverse-ink); font-size: 11px; }
 .pxd-status { padding: 5px 9px; border-radius: 999px; color: var(--atlas); background: color-mix(in srgb, var(--atlas) 9%, var(--surface)); font-size: 11px; font-weight: 700; white-space: nowrap; }
 .pxd-status.ready { color: var(--brand-deep); background: color-mix(in srgb, var(--mint) 24%, var(--surface)); }
 .pxd-status.late { background: color-mix(in srgb, var(--danger) 10%, var(--surface)); }
@@ -74,7 +74,7 @@
 .pxd-empty p { margin: 6px 0 14px; color: var(--n-500); font-size: 12px; line-height: 1.45; }
 
 .pxd-action-grid { padding: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
-.pxd-action { min-height: 92px; padding: 13px; text-align: left; border: 1px solid var(--n-200); border-radius: 14px; color: var(--ink); background: var(--paper-soft); transition: border-color 150ms var(--glide), transform 150ms var(--glide); }
+.pxd-action { min-height: 92px; padding: 13px; text-align: start; border: 1px solid var(--n-200); border-radius: 14px; color: var(--ink); background: var(--paper-soft); transition: border-color 150ms var(--glide), transform 150ms var(--glide); }
 .pxd-action:hover { border-color: var(--atlas); transform: translateY(-1px); }
 .pxd-action svg { width: 17px; height: 17px; color: var(--atlas); margin-bottom: 12px; }
 .pxd-action b { display: block; font-size: 12px; }
@@ -86,7 +86,7 @@
 .pxd-rack-row b { color: var(--ink); font-size: 12px; }
 .pxd-rack-row span { color: var(--n-500); font-size: 11px; }
 .pxd-rack-slot { min-width: 42px; padding: 5px 8px; border-radius: 8px; background: var(--brand-deep); color: var(--inverse-ink) !important; text-align: center; font-family: var(--mono); font-size: 11px !important; font-weight: 700; }
-.pxd-callout { margin: 0 18px 18px; padding: 13px 14px; border-radius: 14px; border-left: 3px solid var(--atlas); background: color-mix(in srgb, var(--atlas) 7%, var(--surface)); }
+.pxd-callout { margin: 0 18px 18px; padding: 13px 14px; border-radius: 14px; border-inline-start: 3px solid var(--atlas); background: color-mix(in srgb, var(--atlas) 7%, var(--surface)); }
 .pxd-callout b { display: block; color: var(--ink); font-size: 12px; }
 .pxd-callout span { display: block; margin-top: 3px; color: var(--n-500); font-size: 11px; line-height: 1.4; }
 
@@ -128,7 +128,7 @@
   .pxd-flow { grid-template-columns: 1fr; }
   .pxd-action-grid { grid-template-columns: 1fr; }
   .pxd-card-head { align-items: flex-start; }
-  .pxd-link { white-space: normal; text-align: right; }
+  .pxd-link { white-space: normal; text-align: end; }
 }
 
 html[data-theme="dark"] .pxd-kpi,
