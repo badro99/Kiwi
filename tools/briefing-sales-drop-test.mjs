@@ -63,7 +63,12 @@ ledgerByVenue['venue-b'] = [{ ts: Date.parse('2026-08-21T05:30:00Z'), amount: 90
 venue = 'venue-a';
 line = T.salesDropRule({ now });
 assert.ok(line && /50 MAD/.test(line.copy.fr), 'the rule reads only the active venue ledger');
-assert.equal(T.visibleLines([line], 'staff').length, 1, 'sales visibility follows the existing shop-floor sales permission');
+/* Decision 2026-11-04 (briefing#1): staff see the drop as a percentage only; dirham amounts stay with owner and manager. */
+const floorLine = T.salesDropFloorRule({ now });
+assert.deepEqual(T.visibleLines([line, floorLine], 'staff').map((l) => l.id), [floorLine.id], 'staff get the floor card, never the line with amounts');
+assert.deepEqual(T.visibleLines([line, floorLine], 'manager').map((l) => l.id), [line.id], 'the manager gets the full card once');
+assert.ok(T.normalizeLine(floorLine), 'the floor card passes the evidence gate');
+for (const lang of ['fr', 'en', 'ar']) assert.equal(/MAD|درهم/.test(floorLine.copy[lang]), false, 'the floor card names no amount (' + lang + ')');
 assert.ok(T.normalizeLine(line), 'an emitted sales line always passes the evidence gate');
 
 /* Le magasin dicte l'heure et la journée, pas l'appareil. */

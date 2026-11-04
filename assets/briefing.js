@@ -8,7 +8,7 @@
 
   var PREFIX = 'kiwi:briefing:v1:';
   // One year plus five days for month-end review. Financial books live in their own ledgers.
-  var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule, cashGapRule, lateOrdersRule, weatherRule];
+  var RULES = [salesDropRule, salesDropFloorRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule, cashGapRule, lateOrdersRule, weatherRule];
   /* briefing-limits:begin · copie générée de functions/api/_briefing-limits.js par tools/build-briefing-limits.mjs : ne pas modifier ici */
   /* clé : [réglage d'usine, minimum, maximum, nom fr, nom en, nom ar] */
   var LIMITS = {
@@ -390,6 +390,7 @@
     var rows = Array.isArray(input.rows) ? input.rows : salesRows();
     return rules.salesDropRule(Object.assign({}, input, { now: now, rows: rows }));
   }
+  function salesDropFloorRule(input) { return rules.salesDropFloor(salesDropRule(input)); }
   function stockItems() {
     try {
       var rows = window.KiwiStockBriefing && window.KiwiStockBriefing.items ? window.KiwiStockBriefing.items() : null;
@@ -781,7 +782,7 @@
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
     durable: function () { return persistence.durable(); },
-    _test: { save: save, retryCloud: retryCloud, unsavedNote: unsavedNote, copy: function () { return tr(); }, businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, actorName: actorName, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, weatherRule: weatherRule, weatherChip: weatherChip, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(own()); }, write: writeLocal, mergeDocs: mergeDocs }
+    _test: { save: save, retryCloud: retryCloud, unsavedNote: unsavedNote, copy: function () { return tr(); }, businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, salesDropFloorRule: salesDropFloorRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, actorName: actorName, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, weatherRule: weatherRule, weatherChip: weatherChip, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(own()); }, write: writeLocal, mergeDocs: mergeDocs }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());

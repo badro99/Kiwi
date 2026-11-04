@@ -102,7 +102,7 @@
     var time = deps.clock ? deps.clock(end.getTime()) : String(end.getHours()).padStart(2, '0') + ':' + String(end.getMinutes()).padStart(2, '0');
     var cur = money(current.revenue), wd = money(weekdayMedian), tr7 = money(trailingMedian);
     return {
-      id: 'sales-drop:' + day, kind: 'sales-drop', tone: 'warn', roles: ['owner', 'manager', 'staff'],
+      id: 'sales-drop:' + day, kind: 'sales-drop', tone: 'warn', roles: ['owner', 'manager'], floor: { day: day, drop: drop, time: time },
       copy: {
         fr: 'Ventes en baisse de ' + drop + ' % : ' + cur + ' MAD à ' + time + ', contre ' + wd + ' MAD les mêmes jours et ' + tr7 + ' MAD sur les 7 derniers jours. Seuil : -' + limit('salesDrop') + ' %.',
         en: 'Sales are down ' + drop + '%: ' + cur + ' MAD by ' + time + ', versus ' + wd + ' MAD on matching weekdays and ' + tr7 + ' MAD over the last 7 days. Threshold: -' + limit('salesDrop') + '%.',
@@ -379,7 +379,22 @@
       stage('service', 'Service après préparation', 'Service after ready', 'مدة التقديم بعد الجاهزية')
     ].filter(Boolean);
   }
-  return { salesDropRule: salesDropRule, marginErosionRule: marginErosionRule, lowStockRule: lowStockRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, cashGapRule: cashGapRule, weatherRule: weatherRule, lateOrdersRule: lateOrdersRule, actorName: actorName };
+  /* Décision du 4 novembre (briefing#1) : l'équipe en salle voit la baisse, en pourcentage
+   * seulement ; les montants en dirhams restent au patron et au responsable. */
+  function salesDropFloor(line) {
+    if (!line || !line.floor) return null;
+    var f = line.floor, lim = limit('salesDrop');
+    return {
+      id: 'sales-drop-floor:' + f.day, kind: 'sales-drop', tone: 'warn', roles: ['staff'],
+      copy: {
+        fr: 'Ventes en baisse de ' + f.drop + ' % à ' + f.time + ' par rapport aux jours comparables. Seuil : -' + lim + ' %.',
+        en: 'Sales are down ' + f.drop + '% by ' + f.time + ' compared with similar days. Threshold: -' + lim + '%.',
+        ar: 'انخفضت المبيعات بنسبة ' + f.drop + '٪ حتى ' + f.time + ' مقارنة بالأيام المماثلة. العتبة: -' + lim + '٪.'
+      },
+      evidence: line.evidence
+    };
+  }
+  return { salesDropRule: salesDropRule, salesDropFloor: salesDropFloor, marginErosionRule: marginErosionRule, lowStockRule: lowStockRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, cashGapRule: cashGapRule, weatherRule: weatherRule, lateOrdersRule: lateOrdersRule, actorName: actorName };
   }
   return { createRules: createRules };
 }));
