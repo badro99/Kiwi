@@ -47,7 +47,7 @@
      simplement de s'appliquer : la caisse retombe en français, elle ne casse
      pas. C'est la bonne défaillance pour une caisse. */
   var DICT = {
-    en: {
+    en: { "La table de destination est occupée.": "The destination table is occupied.", "La table a changé. Actualisez puis réessayez.": "The table has changed. Refresh and try again.", "Fiche créée, {name}": "Customer created, {name}", "un avoir actif": "active store credit", "Cliente": "Customer", "Rechercher par nom ou par numéro de téléphone.": "Search by name or phone number.", "Nom ou 06…": "Name or phone…", "taille": "size", "Aucune fiche pour « {q} »": "No customer for “{q}”", "Tapez un nom ou un numéro de téléphone": "Enter a name or phone number", "Nouvelle cliente": "New customer", "Cliente de passage, sans fiche": "Guest customer, no record", "Nom et prénom": "Full name", "06… / +212… (optionnel)": "Phone (optional)", "Créer la fiche": "Create customer", "Rien pour « {q} »": "No results for “{q}”", "Vérifiez le n° de ticket ou le téléphone.": "Check the receipt number or phone.", "Retrouver une vente": "Find a sale", "Scannez le ticket de la cliente, ou tapez son numéro de téléphone.": "Scan the customer’s receipt or enter their phone number.", "N° de ticket ou téléphone…": "Receipt number or phone…", "Déplacement impossible": "Unable to move table", "Fusion impossible": "Unable to merge tables", "Vérifiez la connexion puis réessayez.": "Check the connection and try again.",
       "Avoirs · solde": "Store credit · balance",
       "Aucun avoir": "No store credit",
       "Les crédits boutique émis à ce client apparaîtront ici.": "Store credits issued to this customer will appear here.",
@@ -711,7 +711,7 @@
       'Remboursement conservé · synchronisation impossible': 'Refund kept · unable to sync',
     },
 
-    ar: {
+    ar: { "La table de destination est occupée.": "طاولة الوجهة مشغولة.", "La table a changé. Actualisez puis réessayez.": "تغيرت الطاولة. حدّث ثم حاول مجدداً.", "Fiche créée, {name}": "تم إنشاء ملف الزبونة، {name}", "un avoir actif": "رصيد متجر نشط", "Cliente": "الزبونة", "Rechercher par nom ou par numéro de téléphone.": "ابحث بالاسم أو رقم الهاتف.", "Nom ou 06…": "الاسم أو الهاتف…", "taille": "المقاس", "Aucune fiche pour « {q} »": "لا توجد زبونة باسم «{q}»", "Tapez un nom ou un numéro de téléphone": "أدخل اسماً أو رقم هاتف", "Nouvelle cliente": "زبونة جديدة", "Cliente de passage, sans fiche": "زبونة عابرة دون ملف", "Nom et prénom": "الاسم الكامل", "06… / +212… (optionnel)": "الهاتف (اختياري)", "Créer la fiche": "إنشاء ملف الزبونة", "Rien pour « {q} »": "لا توجد نتائج لـ «{q}»", "Vérifiez le n° de ticket ou le téléphone.": "تحقق من رقم الوصل أو الهاتف.", "Retrouver une vente": "البحث عن عملية بيع", "Scannez le ticket de la cliente, ou tapez son numéro de téléphone.": "امسح وصل الزبونة أو أدخل رقم هاتفها.", "N° de ticket ou téléphone…": "رقم الوصل أو الهاتف…", "Déplacement impossible": "تعذر نقل الطاولة", "Fusion impossible": "تعذر دمج الطاولات", "Vérifiez la connexion puis réessayez.": "تحقق من الاتصال ثم حاول مجدداً.",
       "Avoirs · solde": "الرصيد الدائن · الرصيد",
       "Aucun avoir": "لا يوجد رصيد دائن",
       "Les crédits boutique émis à ce client apparaîtront ici.": "ستظهر هنا الأرصدة الدائنة الصادرة لهذا العميل.",

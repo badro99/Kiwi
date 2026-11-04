@@ -49,15 +49,15 @@ export async function flushInboundStock(env, apply, merchant = '', ref = '', lim
     // health panel; never erase an unrelated outbound/provider error.
     try {
       if (dead) await env.DB.prepare(`UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?`)
-        .bind('Stock Shopify abandonné après ' + attempts + ' essais : commande ' + row.order_ref + ', à traiter à la main', Date.now(), row.merchant).run();
+        .bind(JSON.stringify({ code: 'stock-dead', orderRef: row.order_ref, attempts }), Date.now(), row.merchant).run();
       else if (!done) await env.DB.prepare(`UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?`)
-        .bind('Stock Shopify à synchroniser : commande ' + row.order_ref, Date.now(), row.merchant).run();
+        .bind(JSON.stringify({ code: 'stock-pending', orderRef: row.order_ref }), Date.now(), row.merchant).run();
       else if (result.short) await env.DB.prepare(`UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?`)
-        .bind('Survente Shopify : commande ' + row.order_ref + ', stock Kiwi insuffisant (' + result.short + ' pièce' + (result.short > 1 ? 's' : '') + ' non décomptée' + (result.short > 1 ? 's' : '') + ')', Date.now(), row.merchant).run();
+        .bind(JSON.stringify({ code: 'stock-short', orderRef: row.order_ref, short: result.short }), Date.now(), row.merchant).run();
       else await env.DB.prepare(`UPDATE shopify_connections SET last_error = '', updated_ts = ?
-        WHERE merchant = ? AND last_error = ? AND NOT EXISTS
+        WHERE merchant = ? AND last_error IN (?, ?) AND NOT EXISTS
           (SELECT 1 FROM shopify_inbound_stock WHERE merchant = ? AND status = 'pending')`)
-        .bind(Date.now(), row.merchant, 'Stock Shopify à synchroniser : commande ' + row.order_ref, row.merchant).run();
+        .bind(Date.now(), row.merchant, JSON.stringify({ code: 'stock-pending', orderRef: row.order_ref }), 'Stock Shopify à synchroniser : commande ' + row.order_ref, row.merchant).run();
     } catch (_) { /* Retry ownership is durable even if the health projection fails. */ }
     if (done) completed++; else if (!dead) pending++;
   }

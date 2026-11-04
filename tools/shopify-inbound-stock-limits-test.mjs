@@ -53,7 +53,7 @@ const health = (db) => db.prepare("SELECT last_error FROM shopify_connections WH
   const row = db.prepare('SELECT status, attempts FROM shopify_inbound_stock').get();
   ok(row.status === 'dead', 'an order whose line never maps leaves the retry loop (status ' + row.status + ')');
   ok(row.attempts === INBOUND_MAX_ATTEMPTS, 'it stopped at the limit, not later (' + row.attempts + ')');
-  ok(/abandon|manuel/i.test(health(db)) && health(db).includes('7'), 'the connector health panel names the abandoned order');
+  ok(JSON.parse(health(db)).code === 'stock-dead' && JSON.parse(health(db)).orderRef === '7', 'the connector health panel names the abandoned order');
   db.exec('UPDATE shopify_inbound_stock SET next_ts=0');
   const again = await flushInboundStock(env, inbound.applyShopifyOrderStock);
   ok(again.completed === 0 && again.pending === 0, 'a dead order is not picked up again');
@@ -70,13 +70,14 @@ for (const [stock, qty, label] of [[0, 2, 'stock at zero'], [1, 3, 'stock lower 
   const data = JSON.parse(db.prepare('SELECT data FROM catalogs').get().data);
   ok(row.status === 'done', label + ': the order is closed (nothing more to apply)');
   ok(data.variants[0].stock >= 0, label + ': Kiwi stock never goes negative');
-  ok(/survente|oversell/i.test(health(db)) && health(db).includes('8'), label + ': the merchant is told about the oversell');
+  ok(JSON.parse(health(db)).code === 'stock-short' && JSON.parse(health(db)).orderRef === '8' && JSON.parse(health(db)).short === 2, label + ': the merchant is told about the oversell');
   db.close();
 }
 
-// 3. no false alarm
-{
+// 3. no false alarm, including a pending health message saved before error codes.
+for (const legacy of [false, true]) {
   const { db, env } = world(5);
+  if (legacy) db.prepare('UPDATE shopify_connections SET last_error=?').run('Stock Shopify à synchroniser : commande 9');
   const order = { id: 9, created_at: new Date().toISOString(), line_items: [{ id: 1, variant_id: 901, quantity: 2 }] };
   await enqueueInboundStock(env, 'm', order);
   await flushInboundStock(env, inbound.applyShopifyOrderStock);

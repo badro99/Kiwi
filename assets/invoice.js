@@ -304,7 +304,8 @@
   function toast(msg, type) {
     try {
       if (window.Kiwi && typeof window.Kiwi.toast === 'function') {
-        window.Kiwi.toast(msg, { type: type || 'info' });
+        const [toastTitle, ...detail] = String(msg).split('\n');
+        window.Kiwi.toast(toastTitle, { type: type || 'info', desc: detail.join('\n') });
         return;
       }
     } catch (_) {}
@@ -313,7 +314,9 @@
     if (!stack) return;
     const el = document.createElement('div');
     el.className = 'toast' + (type ? ' ' + type : '');
-    el.textContent = msg;
+    const [toastTitle, ...detail] = String(msg).split('\n');
+    el.textContent = toastTitle;
+    if (detail.length) { const line = document.createElement('div'); line.textContent = detail.join('\n'); el.appendChild(line); }
     stack.appendChild(el);
     setTimeout(() => el.classList.add('fade'), 3000);
     setTimeout(() => el.remove(), 3300);
@@ -853,7 +856,7 @@
         const err = data;
         if (err?.error === 'invalid-ice') {
           abandon();
-          toast(err.detail ? L('iceClient', 'ICE client') + ' · ' + err.detail : L('iceInvalid', 'ICE client invalide (15 chiffres requis).'), TOAST.error);
+          toast(L('iceInvalid', 'ICE client invalide (15 chiffres requis).') + (err.detail ? '\n' + L('technical', 'Détail technique') + ' : ' + err.detail : ''), TOAST.error);
           return null;
         }
         if (err?.error === 'unknown-sale' || res.status === 404) {
@@ -861,7 +864,10 @@
           toast(L('afterSync', 'Facture disponible après synchronisation de la vente'), TOAST.warning);
           return null;
         }
-        throw new Error(err?.detail || err?.error || 'server-refusal');
+        abandon();
+        const key = ['invalid-customer', 'missing-sale-id', 'bad-json'].includes(err?.error) ? 'invalidRequest' : err?.error === 'forbidden-merchant' ? 'forbidden' : 'serverRefusal';
+        toast(L(key, key === 'invalidRequest' ? 'Informations de facturation invalides.' : key === 'forbidden' ? 'Accès à cette facture refusé.' : 'Impossible de créer la facture. Réessayez.') + (err?.detail ? '\n' + L('technical', 'Détail technique') + ' : ' + err.detail : ''), TOAST.error);
+        return null;
       }
 
       if (cacheKey() !== INVOICE_CACHE_KEY + ':' + (m || 'local')) { abandon(); return null; }

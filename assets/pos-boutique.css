@@ -1537,3 +1537,8 @@ body.is-pos .clockin-screen.bq-clockin { display: flex !important; }
    l'écriture — l'ancien prix du côté où commence la lecture, le nouveau après.
    Épingler tout le bloc en latin, comme on le faisait, mettait l'ancien prix
    là où l'œil arabe finit sa ligne : la cliente lisait la remise à l'envers. */
+
+.bq-ret-empty { display:flex; flex-direction:column; align-items:center; padding:36px 16px; }
+.bq-ret-empty-icon { width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px; }
+.bq-ret-empty-title { font-weight:600; color:var(--ink); }
+.bq-ret-empty-hint { font-size:12.5px; color:var(--n-500); margin-top:4px; }

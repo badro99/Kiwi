@@ -16,13 +16,16 @@ const gidTail = (v) => clean(v, 160).split('/').pop().replace(/[^A-Za-z0-9_-]/g,
 
 function shapeConnection(row) {
   if (!row) return null;
+  let error = null;
+  try { error = JSON.parse(row.last_error); } catch (_) {}
   return {
     shop: row.shop_domain,
     status: row.status,
     location: row.location_id ? { id: row.location_id, name: row.location_name || '' } : null,
     connectedTs: n(row.connected_ts),
     lastSyncTs: n(row.last_sync_ts),
-    lastError: String(row.last_error || '').slice(0, 300),
+    lastError: String(error?.code || row.last_error || '').slice(0, 300),
+    lastErrorContext: error?.code ? { orderRef: clean(error.orderRef, 96), attempts: n(error.attempts), short: n(error.short) } : null,
   };
 }
 

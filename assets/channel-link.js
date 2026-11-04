@@ -541,7 +541,7 @@
       root.appendChild(actions);
     }
     if (connection.lastError) {
-      var err = document.createElement('div'); err.className = 'chl-once'; err.textContent = connection.lastError; root.appendChild(err);
+      var err = document.createElement('div'); err.className = 'chl-once'; import('./channel-health.js?v=6').then(({ paint }) => paint(err, connection.lastError, connection.lastErrorContext)); root.appendChild(err);
     }
     root.appendChild(previewSlot);
     shopSetup(previewSlot, status.setup || [], reload);

@@ -28,7 +28,7 @@ var SHELL = [
   '/assets/boutique-size-colors.js?v=6',
   '/assets/team/access-rules.js?v=7',
   '/assets/hotel-economat-transport.js?v=2',
-  '/assets/pos-boutique/drawer.js?v=72',
+  '/assets/pos-boutique/drawer.js?v=74',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=10',
@@ -100,7 +100,8 @@ var SHELL = [
   '/assets/ramadan.js?v=3',
   '/assets/growth-kit.js?v=2',
   '/assets/growth-crm.js?v=7',
-  '/assets/channel-link.js?v=202608272312',
+  '/assets/channel-health.js?v=6',
+  '/assets/channel-link.js?v=202608272317',
   '/assets/marketing-suite-tease.js?v=1',
   '/assets/pages-pro.js?v=2207',
   '/assets/pages-pro-spa-starter.js?v=7',
@@ -113,7 +114,7 @@ var SHELL = [
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
   '/assets/caisse-accounting.js?v=22',
-  '/assets/caisse-floor.js?v=13',
+  '/assets/caisse-floor.js?v=14',
   '/assets/caisse-kitchen.js?v=11',
   '/assets/caisse/receipts.js?v=2',
   '/assets/caisse/closing.js?v=2',
@@ -196,7 +197,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2101',
-  '/assets/pages/dashboard-startup.js?v=142',
+  '/assets/pages/dashboard-startup.js?v=144',
   '/assets/pages/dashboard-loader.js?v=39',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=3',
@@ -227,7 +228,7 @@ var SHELL = [
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=11',
-  '/assets/i18n.js?v=46',
+  '/assets/i18n.js?v=49',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -355,7 +356,7 @@ var SHELL = [
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js?v=16',
   '/assets/receipt-ui.js?v=2',
-  '/assets/invoice.js?v=24',
+  '/assets/invoice.js?v=26',
   '/assets/merchant-config.js?v=287',
   '/assets/entitlements.css?v=7',
   '/assets/entitlements-v2.js?v=5',
@@ -395,15 +396,15 @@ var SHELL = [
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
-  '/assets/promo-rules.js?v=7',
-  '/assets/promos.js?v=15',
+  '/assets/promo-rules.js?v=8',
+  '/assets/promos.js?v=16',
   '/assets/boutique-promos-dashboard.js?v=26',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=99',
+  '/assets/caisse-lang.js?v=100',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
-  '/assets/menu-promos.js?v=8',
+  '/assets/menu-promos.js?v=10',
   '/assets/retail-balances.js?v=4',
   '/assets/retail-sale-hold.js?v=6',
   '/assets/repeat-sale-guard.js?v=3',
@@ -475,8 +476,8 @@ var SHELL = [
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=26',
   '/assets/food-production-print.js?v=2',
-  '/assets/pos-sale.js?v=27',
-  '/assets/pos-dispatch.js?v=338',
+  '/assets/pos-sale.js?v=29',
+  '/assets/pos-dispatch.js?v=340',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -547,8 +548,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=256',
-  '/assets/pos-boutique/sales.js?v=154',
+  '/assets/pos-boutique.css?v=259',
+  '/assets/pos-boutique/sales.js?v=156',
   '/assets/retail-photos.js?v=5',
   '/assets/retail-icon-picker.js?v=4',
   '/assets/pos-boutique/ticket-owner.js?v=3',
@@ -565,9 +566,9 @@ var SHELL = [
   '/assets/pos-boutique/inv-moves.js?v=6',
   '/assets/pos-maison/inv-moves.js?v=2',
   '/assets/pos-boutique/kit-2027.js?v=20',
-  '/assets/pos-boutique/checkout.js?v=154',
-  '/assets/pos-boutique/inventory.js?v=154',
-  '/assets/pos-boutique.js?v=256',
+  '/assets/pos-boutique/checkout.js?v=156',
+  '/assets/pos-boutique/inventory.js?v=156',
+  '/assets/pos-boutique.js?v=259',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

@@ -58,7 +58,7 @@ moduleClosure('assets/tickets.js');
 moduleClosure('assets/hotel-economat-requests.js');
 moduleClosure('assets/invoicing.js');
 moduleClosure('assets/team-hours.js');
-moduleClosure('assets/team.js');
+moduleClosure('assets/team.js'); moduleClosure('assets/channel-link.js');
 
 const shell = [...sw.matchAll(/^\s*'(\/[^']+)'[,;]?/gm)].map((m) => m[1]);
 /* « Le fichier est là » ne veut pas dire « l'URL répond ». Pages sert une page
