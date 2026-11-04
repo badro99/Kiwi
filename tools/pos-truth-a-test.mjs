@@ -28,7 +28,7 @@ import retailSource from './pos-retail-test-source.cjs';
  *   node tools/pos-truth-a-test.mjs
  * ═══════════════════════════════════════════════════════════════════════════ */
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import fs, { readFileSync } from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
@@ -39,6 +39,11 @@ const VS = read('assets/vertical-state.js');
 const MOD = {};
 ['pharmacie', 'librairie', 'epicerie', 'boulangerie', 'foodtruck', 'fastfood', 'pizzeria', 'traiteur']
   .forEach((id) => { MOD[id] = read(`assets/pos-${id}.js`); });
+// A vertical split into assets/pos-<id>/ parts is read whole: entry first, then its parts.
+Object.keys(MOD).forEach((id) => {
+  const dir = path.join(ROOT, 'assets/pos-' + id);
+  if (fs.existsSync(dir)) fs.readdirSync(dir).filter((f) => f.endsWith('.js')).sort().forEach((f) => { MOD[id] += '\n' + read(`assets/pos-${id}/${f}`); });
+});
 
 function grab(src, start) {
   const i = src.indexOf(start);

@@ -63,7 +63,9 @@ for(const [id,file,name,extra,args] of [
 await test('pressing#0',()=>{
   const notices=[], projected=[], archiveMemory=new Map();
   const r=realm({archiveMemory,archiveWarned:new Set(),storeKey:()=> 'archive',projectFull:doc=>projected.push(doc),
-    localStorage:{setItem(){throw Error('private');}},document:{documentElement:{lang:'en'},createElement:()=>({setAttribute(){}}),body:{appendChild:el=>notices.push(el.textContent)}}});
+    localStorage:{setItem(){throw Error('private');}},CustomEvent:class{constructor(type,init){this.detail=init.detail;}},
+    window:{dispatchEvent:e=>notices.push(JSON.stringify(e.detail))}});
+  r.run('var persistenceNotice='+fn('assets/pressing-ops.js','persistenceNotice')+';');
   const write=r.run('('+fn('assets/pressing-ops.js','writeFull')+')'),doc={orders:[]};write(doc);write(doc);
   assert.equal(projected.length,2);assert.equal(archiveMemory.get('archive'),doc);assert.equal(notices.length,1);assert.ok(!notices[0].includes('private'));
 });
