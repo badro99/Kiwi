@@ -66,5 +66,16 @@ const target=chunk.match(/r\.DEMO_HREF,target:([^,]+),rel/)[1];
 assert.equal(vm.runInNewContext(target,{tier:{signupPlan:'pro'}}),undefined,'signup opens in the same tab');
 assert.equal(vm.runInNewContext(target,{tier:{}}),'_blank','WhatsApp keeps its new tab');
 for(const locale of ['fr','en','ar','de','it','nl','es']) for(const a of fs.readFileSync(`${locale}/index.html`,'utf8').match(/<a [^>]*dashboard\.html\?plan=[^>]*>/g)||[]) assert.ok(!a.includes('_blank'),`${locale}: signup link opens a new tab`);
+// A card that signs up must not promise a contact: the label of the quote-only strip is never on a signup link.
+{
+  const copy = JSON.parse(fs.readFileSync('content/landing-pricing.json', 'utf8'));
+  for (const locale of ['fr','en','ar','de','it','nl','es']) {
+    const html = fs.readFileSync(`${locale}/index.html`, 'utf8');
+    const contact = copy[locale].ultimate.cta;
+    const signups = (html.match(/<a [^>]*dashboard\.html\?plan=[^>]*>[\s\S]*?<\/a>/g) || []).map(a => a.replace(/<[^>]*>/g, '').trim());
+    assert.ok(signups.length >= 4, `${locale}: the four plan cards link to signup`);
+    assert.ok(!signups.includes(contact), `${locale}: no signup link is labelled "${contact}"`);
+  }
+}
 assert.ok(middleware.includes("setMode('signup');\n  var MSG"));
 console.log('✓ signup requested offers: URL payload, persistence, allowlist, basic entitlement, operator display, seven locales and billing toggle');
