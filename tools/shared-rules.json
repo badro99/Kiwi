@@ -20,14 +20,16 @@
       "source": "functions/api/_rules-day-report.js",
       "targets": [
         "assets/day-report.js",
-        "assets/caisse-accounting.js"
+        "assets/caisse-accounting.js",
+        "assets/caisse-accounting/journal.js"
       ]
     },
     {
       "name": "KiwiDrawerReportModel",
       "source": "functions/api/_rules-day-report.js",
       "targets": [
-        "assets/caisse-accounting.js"
+        "assets/caisse-accounting.js",
+        "assets/caisse-accounting/drawer.js"
       ]
     },
     {
