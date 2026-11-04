@@ -679,13 +679,14 @@ async function closeRemovedShifts(env, merchant, removed) {
 
 async function employeeAccessFromTeam(env, team, merchant) {
   const members = Array.isArray(team && team.members) ? team.members : [];
-  let previous = { members: [] };
+  let previous = { members: [] }, rawPrevious = previous;
   try {
     const row = await env.DB.prepare(
       "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'"
     ).bind(merchant).first();
     if (row && row.data) {
-      const parsed = await codeDocument(env, merchant, 'employee-access', JSON.parse(row.data));
+      rawPrevious = JSON.parse(row.data);
+      const parsed = await codeDocument(env, merchant, 'employee-access', rawPrevious);
       if (parsed && Array.isArray(parsed.members)) previous = parsed;
     }
   } catch (_) { return null; }
@@ -698,9 +699,26 @@ async function employeeAccessFromTeam(env, team, merchant) {
     const id = String(member.id || '').trim().slice(0, 96);
     const email = String(member.email || '').trim().toLocaleLowerCase('en').slice(0, 254);
     const pin = canonicalCode(member);
-    if (!id || !/^\S+@\S+\.\S+$/.test(email) || !/^\d{4}$/.test(pin)) continue;
-    if (seen.has(id)) continue;
+    if (!id || !/^\S+@\S+\.\S+$/.test(email) || seen.has(id)) continue;
     seen.add(id);
+    if (id && !/^\d{4}$/.test(pin) && (previousById.get(id)?.codeUnreadable || /^e1\$/.test(pin))) {
+      const raw = (Array.isArray(rawPrevious.members) ? rawPrevious.members : []).find((m) => String(m?.id || '') === id);
+      // Keep only the sealed credential and its auth version from the stored row; the
+      // owner's current identity edits (name, e-mail, function) still apply.
+      if (raw) access.push({
+        id,
+        firstName: String(member.firstName || '').trim().slice(0, 60),
+        lastName: String(member.lastName || '').trim().slice(0, 60),
+        email,
+        pinCode: raw.pinCode, password: raw.password,
+        authVersion: Math.max(0, Math.round(Number(raw.authVersion) || 0)),
+        function: String(member.function || '').trim().slice(0, 60),
+        department: String(member.department || '').trim().slice(0, 60),
+        venueSlug: merchant,
+      });
+      continue;
+    }
+    if (!/^\d{4}$/.test(pin)) continue;
     const prior = previousById.get(id);
     const priorPin = canonicalCode(prior);
     const priorVersion = Math.max(0, Math.round(Number(prior && prior.authVersion) || 0));
@@ -899,6 +917,7 @@ export async function onRequestPost(context) {
   const serverRev = (current && current.rev) || 0;
   let mine = null;
   try { mine = current ? JSON.parse(current.data) : null; } catch (_) { mine = null; }
+  const rawMine = mine;
   try { mine = await codeDocument(env, merchant, feature, mine); }
   catch (_) { return json({ error: 'staff-code-key-unavailable', detail: 'Restore the previous staff key before editing codes.' }, 409); }
   /* Le carnet de crédit a son propre document (functions/api/_credit-book-store.js).
@@ -1055,11 +1074,16 @@ export async function onRequestPost(context) {
     }
     const priorCodes = new Map((mine?.members || []).map((m) => [String(m.id), m]));
     for (const m of clean.value.members || []) {
-      if (m && typeof m.id === 'string' && m.id.trim() && priorCodes.has(m.id)) {
-        for (const field of ['pinCode', 'password']) if (m[field] === undefined) m[field] = priorCodes.get(m.id)[field];
+      if (m && String(m.id ?? '').trim() && priorCodes.has(String(m.id))) {
+        if (/^\d{4}$/.test(canonicalCode(m))) { Object.assign(m, normalizeMember(m)); continue; }
+        const prior = priorCodes.get(String(m.id)), raw = rawMine?.members?.find((p) => String(p.id) === String(m.id));
+        for (const field of ['pinCode', 'password']) {
+          if (prior.codeUnreadable) m[field] = raw?.[field];
+          else if (m[field] === undefined) m[field] = prior[field];
+        }
       }
     }
-    if (Array.isArray(clean.value.members)) clean.value.members = clean.value.members.map(normalizeMember);
+    if (Array.isArray(clean.value.members)) clean.value.members = clean.value.members.map((m) => /^e1\$/.test(m.pinCode) || /^e1\$/.test(m.password) ? m : normalizeMember(m));
     text = JSON.stringify(clean.value);
   }
 

@@ -8,7 +8,7 @@ import { onRequestPost as roster } from '../functions/api/admin/roster.js';
 import { onRequestPost as seal } from '../functions/api/admin/codes/seal.js';
 import { onRequestPost as save, onRequestGet as get } from '../functions/api/store.js';
 import { onRequestGet as employeeGet } from '../functions/api/employee.js';
-import { makeSession, sessionCookie, employeeToken, employeeCookie, operatorToken, operatorIdToken, findEmployeeCredential } from '../functions/auth/_lib.js';
+import { makeSession, sessionCookie, employeeToken, employeeCookie, operatorToken, operatorIdToken, findEmployeeCredential, activeEmployee, entitledMerchant, tillToken } from '../functions/auth/_lib.js';
 import { planEmployeeAuth } from '../functions/api/_employee-auth.js';
 const schema = fs.readFileSync('schema.sql', 'utf8'), merchant = 'round2-fixture';
 const code = String(1200 + 34), other = String(2300 + 45);
@@ -32,6 +32,107 @@ async function fixture() {
   return { db, env, old, owner, operator, request, call, putDoc, pin, members };
 }
 const cases = {
+  async endpointCorruption(f) {
+    f.putDoc('attendance', { entries: f.members.map(m => ({ memberId: m.id, inTs: Date.now() })) });
+    for (const feature of ['team', 'employee-access']) {
+      const doc = await codeDocument(f.env, merchant, feature, { members: f.members.map(m => ({ ...m, function: 'manager' })) }, true);
+      doc.members[0].password = 'e1$broken'; f.putDoc(feature, doc);
+    }
+    const till = 'kiwi_till=' + await tillToken(f.env.AUTH_SECRET, merchant);
+    const routes = [
+      ['clients', 'auditClient=missing'], ['store-credits', ''],
+    ];
+    for (const id of ['bad', 'good']) {
+      const cookie = employeeCookie(await employeeToken(f.env.AUTH_SECRET, { merchant, staffId: id }));
+      assert.equal(Boolean(await activeEmployee(f.request(cookie), f.env, merchant, { allowEmployee: true })), id === 'good');
+      assert.equal(Boolean(await entitledMerchant(f.request(cookie), f.env, merchant, { allowEmployee: true })), id === 'good');
+      assert.equal((await f.call(employeeGet, cookie)).status, id === 'good' ? 200 : 401);
+      const { mayMergeClients } = await import('../functions/api/_client-merge.js');
+      assert.equal(await mayMergeClients(f.request(cookie), f.env, merchant), id === 'good');
+      const { moveIdentity } = await import('../functions/_origin-move.js');
+      assert.equal(Boolean(await moveIdentity(f.request(cookie), f.env, 'employee')), id === 'good');
+      const { onRequestGet: operations } = await import('../functions/api/operations.js');
+      const op = await operations({ env: f.env, request: new Request('https://fixture.test/api/operations?merchant=' + merchant + '&view=whoami', { headers: { Cookie: cookie + '; ' + till } }) });
+      assert.equal((await op.json()).kind, id === 'good' ? 'employee' : 'till', 'operations refuses corrupted employee authority even on paired device');
+      const { onRequestPost: bulk } = await import('../functions/api/hotel/rooms-bulk.js');
+      const rooms = await bulk({ env: f.env, request: new Request('https://fixture.test/api/hotel/rooms-bulk', { method: 'POST', headers: { Cookie: cookie }, body: JSON.stringify({ merchant, operationId: 'fixture', targets: [{ id: 'missing' }], changes: {} }) }) });
+      assert.equal(rooms.status, id === 'good' ? 422 : 403, 'hotel checks employee before changes');
+      const { onRequestPost: clientsPost } = await import('../functions/api/clients.js');
+      const merge = await f.call(clientsPost, cookie, { merchant, merge: { from: 'same', to: 'same' } });
+      assert.equal(merge.status, id === 'good' ? 400 : 401, 'client merge requires readable member');
+      const { onRequestPost: creditPost } = await import('../functions/api/store-credits.js');
+      const credit = await f.call(creditPost, cookie, { merchant, action: 'cancel', id: 'missing' });
+      assert.equal(credit.status, id === 'good' ? 400 : 401, 'store-credit management requires readable member');
+      const { onRequestPost: move } = await import('../functions/api/origin-move.js');
+      const origin = await move({ env: f.env, request: new Request('https://kiwi-maroc.pages.dev/api/origin-move', { method: 'POST', headers: { Cookie: cookie, Origin: 'https://kiwi-maroc.pages.dev' }, body: JSON.stringify({ action: 'status', role: 'employee' }) }) });
+      assert.equal((await origin.json()).login, id !== 'good', 'origin handoff refuses unreadable member');
+      for (const [route, query] of routes) {
+        const { onRequestGet } = await import('../functions/api/' + route + '.js');
+        const response = await onRequestGet({ env: f.env, request: new Request('https://fixture.test/api/' + route + '?merchant=' + merchant + '&' + query, { headers: { Cookie: cookie } }) });
+        assert.equal(response.status, id === 'good' ? 200 : 401, route + ' enforces live credential state');
+      }
+    }
+  },
+  async preserveMissingKey(f) { await cases.preserveUnreadable(f, true); },
+  async preserveUnreadable(f, missingKey = false) {
+    for (const feature of ['team', 'employee-access']) {
+      const doc = await codeDocument(missingKey ? f.old : f.env, merchant, feature, { members: f.members }, true);
+      if (!missingKey) doc.members[0].pinCode = 'e1$broken'; f.putDoc(feature, doc);
+    }
+    const raw = feature => JSON.parse(f.db.prepare('SELECT data FROM store_docs WHERE merchant=? AND feature=?').get(merchant, feature).data);
+    if (missingKey) delete f.env.PIN_PEPPER_PREVIOUS;
+    const originals = Object.fromEntries(['team', 'employee-access'].map(feature => [feature, raw(feature).members[0]]));
+    const doc = (await (await f.call(get, f.owner)).json()).data;
+    doc.members[0].firstName = 'Updated'; doc.members[0].email = 'moved@fixture.test'; doc.members[0].function = 'Caissier';
+    assert.equal((await f.call(save, f.owner, { merchant, feature: 'team', data: doc, baseRev: 1 })).status, 200);
+    for (const feature of ['team', 'employee-access']) {
+      const member = raw(feature).members.find(m => m.id === 'bad');
+      for (const field of ['pinCode', 'password']) assert.equal(member[field], originals[feature][field], feature + ' preserves raw ciphertext');
+      assert.equal(Object.hasOwn(member, 'codeUnreadable'), false, 'read-time marker never stored');
+    }
+    const access = raw('employee-access').members.find(m => m.id === 'bad');
+    assert.deepEqual([access.firstName, access.email, access.function], ['Updated', 'moved@fixture.test', 'Caissier'], 'owner identity edits apply while the code is unreadable');
+    if (missingKey) {
+      f.env.PIN_PEPPER_PREVIOUS = f.old.PIN_PEPPER;
+      assert.ok(await findEmployeeCredential(f.env, 'moved@fixture.test', other), 'restored previous key recovers unchanged ciphertext under the new e-mail');
+      assert.ok(!(await findEmployeeCredential(f.env, 'bad@fixture.test', other)), 'the old e-mail no longer signs in');
+    }
+    const edited = (await (await f.call(get, f.owner)).json()).data;
+    edited.members[0].pinCode = ' ' + code + ' '; // a padded replacement still replaces
+    assert.equal((await f.call(save, f.owner, { merchant, feature: 'team', data: edited, baseRev: 2 })).status, 200);
+    assert.ok(await findEmployeeCredential(f.env, 'moved@fixture.test', code), 'replacement code usable');
+  },
+  async sealMarker(f) {
+    const sealed = await codeDocument(f.env, merchant, 'team', { members: [{ id: 'bad', pinCode: 'e1$broken', codeUnreadable: true }] }, true);
+    assert.equal(Object.hasOwn(sealed.members[0], 'codeUnreadable'), false);
+  },
+  async recoveryDeleted(f) { await cases.recoveryPagination(f, 'delete'); },
+  async recoveryReplaced(f) { await cases.recoveryPagination(f, 'replace'); },
+  async recoveryPagination(f, mutation = 'login') {
+    const second = merchant + '-second';
+    for (let i = 0; i < 53; i++) {
+      const tenant = i % 2 ? second : merchant, value = String(i === 0 ? 760 : i === 1 ? 12 : 20 + i).padStart(4, '0');
+      f.db.prepare('INSERT INTO staff_pins VALUES (?,?,?,?,?,1)').run('page-' + String(i).padStart(3, '0'), tenant, await hashStaffCode(f.old, tenant, value), 'Fixture', 'staff');
+    }
+    let response = await (await f.call(seal, f.operator, {})).json();
+    assert.equal(response.cursor.recovery, 250);
+    const storedValues = f.db.prepare('SELECT pin FROM staff_pins').all().map((r) => r.pin);
+    assert.ok(!storedValues.some((v) => JSON.stringify(response.cursor).includes(v)), 'the resume cursor never carries a stored code value');
+    // A normal login upgrades the pending row while the operator is between requests.
+    if (mutation === 'delete') f.db.prepare('DELETE FROM staff_pins WHERE id=?').run('page-000');
+    else if (mutation === 'replace') f.db.prepare('UPDATE staff_pins SET pin=? WHERE id=?').run(await hashStaffCode(f.old, merchant, String(10).padStart(4, '0')), 'page-000');
+    else await matchingStaffCodes(f.env, merchant, String(760).padStart(4, '0'));
+    let requests = 1;
+    while (!response.done && response.cursor && requests < 100) { response = await (await f.call(seal, f.operator, { cursor: response.cursor })).json(); requests++; }
+    assert.equal(response.done, true, 'pagination completes after pending row changes');
+    assert.ok(requests > 50, 'several recovery rows and full SQL pagination exercised');
+    for (let i = 0; i < 53; i++) {
+      if (i === 0 && mutation === 'delete') continue;
+      const row = f.db.prepare('SELECT merchant,pin FROM staff_pins WHERE id=?').get('page-' + String(i).padStart(3, '0'));
+      const value = String(i === 0 ? 760 : i === 1 ? 12 : 20 + i).padStart(4, '0');
+      assert.equal(row.pin === await hashStaffCode(f.env, row.merchant, i === 0 && mutation === 'replace' ? String(10).padStart(4, '0') : value), true, 'every tenant row recovered');
+    }
+  },
   async digest(f) {
     const { db, env, old, putDoc, members, call, operator } = f;
     for (const feature of ['team', 'employee-access']) putDoc(feature, await codeDocument(old, merchant, feature, { members }, true));
@@ -103,9 +204,10 @@ const cases = {
     assert.equal((await matchingStaffCodes(env, merchant, code)).length, 1, 'upgrade failure does not deny correct code');
   },
   async budget(f) { for (let i = 0; i < 25; i++) assert.equal((await f.call(seal, f.operator, {})).status, 200, 'successful backfills never consume failure limiter'); },
-  async numericId(f) {
-    f.putDoc('team', await codeDocument(f.env, merchant, 'team', { members: [{ ...f.members[1], id: 42 }] }, true));
-    const doc = { members: [{ id: '42', firstName: 'Good', email: 'good@fixture.test' }] };
+  async numericIncoming(f) { await cases.numericId(f, true); },
+  async numericId(f, incomingNumber = false) {
+    f.putDoc('team', await codeDocument(f.env, merchant, 'team', { members: [{ ...f.members[1], id: incomingNumber ? '42' : 42 }] }, true));
+    const doc = { members: [{ id: incomingNumber ? 42 : '42', firstName: 'Good', email: 'good@fixture.test' }] };
     assert.equal((await f.call(save, f.owner, { merchant, feature: 'team', data: doc, baseRev: 1 })).status, 200);
     assert.equal((await (await f.call(get, f.owner)).json()).data.members[0].pinCode, code, 'numeric prior identity preserves omitted credential');
   },
@@ -115,6 +217,10 @@ const cases = {
     subtle.decrypt = function (...args) { decryptions++; return original.apply(this, args); };
     try { const cookie = employeeCookie(await employeeToken(f.env.AUTH_SECRET, { merchant, staffId: 'good' })); assert.equal((await f.call(employeeGet, cookie)).status, 200); } finally { subtle.decrypt = original; }
     assert.equal(decryptions, 4, 'poll decrypts two fields in two documents for session member only');
+    decryptions = 0;
+    subtle.decrypt = function (...args) { decryptions++; return original.apply(this, args); };
+    try { const cookie = employeeCookie(await employeeToken(f.env.AUTH_SECRET, { merchant, staffId: 'good' })); assert.ok(await activeEmployee(f.request(cookie), f.env, merchant)); } finally { subtle.decrypt = original; }
+    assert.equal(decryptions, 4, 'shared endpoint guard decrypts only the session member');
   },
   async recovery(f) {
     const last = String(9999), row = { merchant, pin: await hashStaffCode(f.old, merchant, last) };

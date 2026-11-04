@@ -107,7 +107,7 @@ export async function codeDocument(env, merchant, feature, doc, seal = false, me
       }
       } catch (_) { unreadable = true; }
     }
-    if (unreadable) {
+    if (unreadable && !seal) {
       member.codeUnreadable = true;
       if (!seal) { member.pinCode = ''; member.password = ''; }
     } else delete member.codeUnreadable;

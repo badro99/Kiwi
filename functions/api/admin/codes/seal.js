@@ -3,6 +3,12 @@ import { planEmployeeAuth } from '../../_employee-auth.js';
 import { rotateStaffRow, needsStaffRecovery, codeDocument } from '../../../auth/_staff-codes.js';
 
 // Cursor batches keep one request bounded. CAS prevents overwriting concurrent edits.
+// The resume cursor goes back to the operator's browser: it names the pending row by a
+// short digest of its stored value, never by the stored code itself.
+async function rowTag(value) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(value || '')));
+  return Array.from(new Uint8Array(digest).slice(0, 12), (b) => b.toString(16).padStart(2, '0')).join('');
+}
 export async function onRequestPost({ request, env }) {
   const operator = await namedOperatorId(request, env);
   if (!operator) return json({ error: 'forbidden' }, 403);
@@ -19,21 +25,22 @@ export async function onRequestPost({ request, env }) {
   try {
     const pins = (await env.DB.prepare('SELECT id, merchant, pin FROM staff_pins WHERE id > ? ORDER BY id LIMIT 50').bind(pinAfter).all()).results || [];
     const statements = [];
-    let recovered = false, lastPin = pinAfter, recoveryNext = 0;
+    let recovered = false, lastPin = pinAfter, recoveryNext = 0, recoveryRow = null;
     for (const row of pins) {
       try {
         const recovery = await needsStaffRecovery(env, row.pin);
         if (recovery && recovered) break;
         recovered ||= recovery;
-        const start = recovery ? recoveryAfter : 0;
+        const tag = recovery ? await rowTag(row.pin) : '';
+        const start = recovery && cursor.recoveryRow?.id === row.id && cursor.recoveryRow?.tag === tag ? recoveryAfter : 0;
         const value = await rotateStaffRow(env, row, start);
-        if (value === null) { recoveryNext = start + 250; break; }
+        if (value === null) { recoveryNext = start + 250; recoveryRow = { id: row.id, tag }; break; }
         lastPin = row.id;
         if (value !== row.pin) statements.push(env.DB.prepare('UPDATE staff_pins SET pin = ? WHERE id = ? AND pin = ?').bind(value, row.id, row.pin));
       } catch (_) { lastPin = row.id; counts.skipped++; }
     }
     if (statements.length) counts.pins = (await env.DB.batch(statements)).reduce((n, r) => n + Number(r.meta?.changes || 0), 0);
-    const next = { pin: lastPin, recovery: recoveryNext };
+    const next = { pin: lastPin, recovery: recoveryNext, recoveryRow };
     let done = !recoveryNext && pins.length < 50 && lastPin === (pins.at(-1)?.id || pinAfter);
     for (const [table, field, count] of [['store_docs', 'doc', 'documents'], ['doc_history', 'history', 'history']]) {
       const after = field === 'doc' ? docAfter : historyAfter;
@@ -44,7 +51,8 @@ export async function onRequestPost({ request, env }) {
           const doc = JSON.parse(row.data);
           counts.legacyCodeIds += (Array.isArray(doc?.members) ? doc.members : []).filter((m) => /^employee-\d{4}$/.test(m?.id)).length;
           const sealed = await codeDocument(env, row.merchant, row.feature, doc, true);
-          counts.skipped += (sealed?.members || []).filter((m) => m?.codeUnreadable).length;
+          const clear = await codeDocument(env, row.merchant, row.feature, doc);
+          counts.skipped += (clear?.members || []).filter((m) => m?.codeUnreadable).length;
           const text = JSON.stringify(sealed);
           if (text !== row.data) batch.push(env.DB.prepare(`UPDATE ${table} SET data = ? WHERE rowid = ? AND data = ?`).bind(text, row.seal_id, row.data));
         } catch (_) { counts.skipped++; }

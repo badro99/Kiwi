@@ -1471,8 +1471,8 @@ export async function activeEmployee(request, env, asked) {
       env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'team'")
         .bind(session.merchant).first(),
     ]);
-    const accessDoc = JSON.parse((access && access.data) || '{}');
-    const teamDoc = JSON.parse((team && team.data) || '{}');
+    const accessDoc = await codeDocument(env, session.merchant, 'employee-access', JSON.parse((access && access.data) || '{}'), false, session.staffId);
+    const teamDoc = await codeDocument(env, session.merchant, 'team', JSON.parse((team && team.data) || '{}'), false, session.staffId);
     const find = (doc) => (Array.isArray(doc.members) ? doc.members : [])
       .find((m) => m && String(m.id || '') === String(session.staffId));
     /* Pierre tombale : retiré par le propriétaire, il ne sert plus, quoi que dise
@@ -1490,6 +1490,7 @@ export async function activeEmployee(request, env, asked) {
       ? { ...(teamMember || {}), ...accessMember }
       : (teamIsNewer ? teamMember : null);
     if (member) {
+      if (member.codeUnreadable) return null;
       const expected = Math.max(0, Math.round(Number(member.authVersion) || 0));
       const presented = Math.max(0, Math.round(Number(session.av) || 0));
       const revision = await employeeAuthRevision(env, session.merchant, session.staffId, expected);
