@@ -41,6 +41,7 @@ function qRead() {
     var raw;
     try { raw = localStorage.getItem(Q_KEY); } catch (_) { queueReadError = true; queueBlocked = true; return []; }
     if (queueReadError) { queueReadError = false; queueBlocked = false; }
+    queueRecoveryError = false; queueBlocked = false;
     if (raw === null) return [];
     try {
       var a = JSON.parse(raw);
@@ -58,14 +59,13 @@ function qRead() {
             copies.push(key); stamp = Math.max(stamp, Number(key.slice(prefix.length)) + 1);
           }
         }
+        // Owner ruling, 2026-11-04, line 19: evidence survives until acknowledged.
+        var bytes = copies.reduce(function (n, k) { return n + 2 * (k.length + (localStorage.getItem(k) || '').length); }, 0);
         key = prefix + stamp;
+        if (bytes + 2 * (key.length + raw.length) > 1048576) throw new Error('recovery-size-bound');
         localStorage.setItem(key, raw);
         localStorage.removeItem(Q_KEY);
         copies.push(key);
-        try {
-          copies.sort(function (a, b) { return Number(b.slice(prefix.length)) - Number(a.slice(prefix.length)); });
-          copies.slice(5).forEach(function (key) { localStorage.removeItem(key); });
-        } catch (_) { /* The copied bytes remain recoverable if pruning is refused. */ }
         queueRecoveryError = true;
         return [];
       } catch (_) {
@@ -80,6 +80,24 @@ function qRead() {
     try { for (var i = 0; i < localStorage.length; i++) { if (String(localStorage.key(i)).indexOf(Q_KEY + ':quarantine:') === 0) return true; } } catch (_) {}
     return false;
   }
+    function recoveryCopies(key, acknowledge) {
+      try {
+      var prefix = Q_KEY + ':quarantine:', rows = [];
+      if (key && (key === Q_KEY || key.indexOf(prefix) === 0 && /^\d+$/.test(key.slice(prefix.length)))) {
+        var raw = localStorage.getItem(key);
+        if (key === Q_KEY) { try { if (Array.isArray(JSON.parse(raw))) return null; } catch (_) {} }
+        if (acknowledge && raw !== null) { localStorage.removeItem(key); queueRecoveryError = false; queueBlocked = false; queueSignal(); }
+        return raw;
+      }
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = String(localStorage.key(i));
+        if (k.indexOf(prefix) === 0) rows.push({ key: k, bytes: 2 * (k.length + (localStorage.getItem(k) || '').length) });
+      }
+      var active = localStorage.getItem(Q_KEY);
+      if (active !== null) { try { if (!Array.isArray(JSON.parse(active))) throw new Error('queue-shape'); } catch (_) { rows.push({ key: Q_KEY, bytes: 2 * (Q_KEY.length + active.length) }); } }
+      return rows;
+      } catch (_) { queueReadError = true; queueBlocked = true; return key ? null : []; }
+    }
 /* <</queue:qRead>> */
 /* <<queue:queueSignal>> */
 function queueSignal() {
@@ -150,6 +168,7 @@ function queueStatus() {
       var oldest = Math.min(outboxStatus.oldestPendingAt || Infinity,
         localDebt.reduce(function (at, row) { return Math.min(at, Number(row.ts) || Infinity); }, Infinity));
       return {
+        recoveryBytes: recoveryCopies().reduce(function (n, r) { return n + r.bytes; }, 0),
         blockedEntries: (outboxStatus.blockedEntries || []).concat(blockedDetails(localDebt)),
         pending: (outboxStatus.pending || 0) + localDebt.filter(function (row) { return !row._blocked; }).length,
         held: (outboxStatus.held || 0) + localDebt.filter(function (row) { return row._blocked && row._serverHeld; }).length,
@@ -170,7 +189,8 @@ function queueStatus() {
     var active = ctx.merchant();
     var current = active ? q.filter(function (x) { return x && x.merchant === active; }) : q;
     return {
-      blockedEntries: blockedDetails(current),
+      recoveryBytes: recoveryCopies().reduce(function (n, r) { return n + r.bytes; }, 0),
+        blockedEntries: blockedDetails(current),
       pending: current.filter(function (r) { return !r._blocked; }).length,
       blocked: current.filter(function (x) { return x && x._blocked && !x._serverHeld; }).length,
       held: current.filter(function (x) { return x && x._blocked && x._serverHeld; }).length,
@@ -731,7 +751,7 @@ function postSale(entry) {
     function peek(tenant) {
       return tenant === undefined ? qRead() : peekDurable(tenant);
     }
-    return { peek: peek, migrateLegacy: initOutbox, enqueueCommand: enqueueMoneyBody, enqueue: postSale, status: queueStatus, refresh: refreshOutboxStatus, flush: flushQueueNow, quarantineRows: quarantineRows, quarantineUpdate: quarantineUpdate, retry: retrySale, retryBlocked: retryBlockedSales, ack: ack, count: function () { return queueStatus().total; } };
+    return { recoveryCopies: recoveryCopies, peek: peek, migrateLegacy: initOutbox, enqueueCommand: enqueueMoneyBody, enqueue: postSale, status: queueStatus, refresh: refreshOutboxStatus, flush: flushQueueNow, quarantineRows: quarantineRows, quarantineUpdate: quarantineUpdate, retry: retrySale, retryBlocked: retryBlockedSales, ack: ack, count: function () { return queueStatus().total; } };
   }
   function peekDurable(tenant) {
     return window.KiwiOffline.list('sale', tenant);

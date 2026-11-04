@@ -632,7 +632,7 @@
       return (C.listProducts() || []).map((p) => ({
         id: p.id, name: p.name, category: p.categoryId || '_uncat', unit: 'pièce',
         supplier: suppliers.get(String(p.supplierId || ''))?.name || '', supplierId: p.supplierId || '',
-        currentStock: C.productStock(p.id), parLevel: Math.max(0, +p.parLevel || 0),
+        stockGap: (C.listVariants?.(p.id) || []).reduce((n, v) => n + Math.min(0, +(v.ledgerStock ?? v.stock) || 0), 0), currentStock: C.productStock(p.id), parLevel: Math.max(0, +p.parLevel || 0),
         reorderLevel: Math.max(0, +p.reorderLevel || 0), costPerUnit: Math.max(0, +p.cost || 0),
         priceMAD: Math.max(0, +p.priceMAD || 0), usageThisWeek: 0, theoreticalUsage: 0,
         lastDelivery: null, deliveryFrequency: '·', retail: true,
@@ -1555,12 +1555,12 @@
 
   function renderDenseItem(it){
     const cur=currentStockFor(it),state=statusOf(it),label=state==='ok'?t('stOk'):state==='low'?t('stLow'):t('stOut');
-    return `<button class="st-dense-item" type="button" data-action="stock-item-detail" data-item-id="${esc(it.id)}"><span><strong>${esc(it.name)}</strong><small>${esc(catLabel(it.category))} · ${esc(fmtMad(it.costPerUnit))} / ${esc(it.unit)}</small></span><span class="st-dense-stock"><b>${esc(fmtUnit(cur,it.unit))}</b><span class="st-catalog-status ${state}">${esc(label)}</span></span></button>`;
+    return `<button class="st-dense-item" type="button" data-action="stock-item-detail" data-item-id="${esc(it.id)}"><span><strong>${esc(it.name)}</strong><small>${esc(catLabel(it.category))} · ${esc(fmtMad(it.costPerUnit))} / ${esc(it.unit)}</small></span><span class="st-dense-stock"><b>${esc(fmtUnit(Math.max(0,cur),it.unit))}</b><span class="st-catalog-status ${state}">${esc(label)}${(it.stockGap ?? cur) < 0 ? ` · ${esc(t('stockGap'))} −${Math.abs(it.stockGap ?? cur)}` : ''}</span></span></button>`;
   }
 
   function renderItemRow(it) {
     const cur = currentStockFor(it);
-    const parPct = it.parLevel > 0 ? Math.min(100, (cur / it.parLevel) * 100) : 0;
+    const parPct = it.parLevel > 0 ? Math.max(0, Math.min(100, (cur / it.parLevel) * 100)) : 0;
     const barCls = parPct >= 50 ? 'ok' : parPct >= 20 ? 'warn' : 'bad';
     const v = variance(it);
     const varAbs = Math.abs(v);
@@ -1582,7 +1582,7 @@
         </td>
         <td><span class="st-sup-cat">${esc(catLabel(it.category))}</span></td>
         <td>
-          <div class="st-cell-stock">${esc(fmtUnit(cur, it.unit))}</div>
+          <div class="st-cell-stock">${esc(fmtUnit(Math.max(0, cur), it.unit))}</div>
           <div class="st-cell-stock-bar"><div class="st-cell-stock-bar-fill ${barCls}" data-stock-bar="${parPct}"></div></div>
         </td>
         <td>
@@ -1600,7 +1600,7 @@
           <div class="st-cell-sup-sub">${esc(actualLastDelivery(it) ? fmtDateShort(actualLastDelivery(it)) : '·')}</div>
         </td>
         <td class="c"><span class="st-cell-days ${daysCls}">${esc(daysShown === '·' ? '·' : `${daysShown} j`)}</span></td>
-        <td><span class="st-cell-status ${st}"><span class="sd"></span>${esc(stLabel)}</span></td>
+        <td><span class="st-cell-status ${st}"><span class="sd"></span>${esc(stLabel)}${(it.stockGap ?? cur) < 0 ? ` · ${esc(t('stockGap'))} −${Math.abs(it.stockGap ?? cur)}` : ''}</span></td>
         <td class="r">
           <div class="st-actions">
             <button class="st-icon-btn" type="button" data-action="stock-item-detail" data-item-id="${esc(it.id)}" title="${esc(t('btnDetail'))}" aria-label="${esc(t('btnDetail'))}">${svg('eye', 14)}</button>
@@ -1620,7 +1620,7 @@
 
   function renderItemCard(it) {
     const cur = currentStockFor(it);
-    const parPct = it.parLevel > 0 ? Math.min(100, (cur / it.parLevel) * 100) : 0;
+    const parPct = it.parLevel > 0 ? Math.max(0, Math.min(100, (cur / it.parLevel) * 100)) : 0;
     const st = statusOf(it);
     const barCls = parPct >= 50 ? 'ok' : parPct >= 20 ? 'warn' : 'bad';
     return `
@@ -1629,8 +1629,8 @@
           <div class="st-card-name">${esc(it.name)}</div>
           <span class="st-card-cat">${esc(catLabel(it.category))}</span>
         </div>
-        <div class="st-card-level"><div class="st-card-stock">${esc(fmtNum(cur, Number.isInteger(cur) ? 0 : 1))}<span class="u">${esc(it.unit)}</span></div>
-        <span class="st-catalog-status ${st}">${esc(st==='ok'?t('stOk'):st==='low'?t('stLow'):t('stOut'))}</span></div>
+        <div class="st-card-level"><div class="st-card-stock">${esc(fmtNum(Math.max(0, cur), Number.isInteger(cur) ? 0 : 1))}<span class="u">${esc(it.unit)}</span></div>
+        <span class="st-catalog-status ${st}">${esc(st==='ok'?t('stOk'):st==='low'?t('stLow'):t('stOut'))}${(it.stockGap ?? cur) < 0 ? ` · ${esc(t('stockGap'))} −${Math.abs(it.stockGap ?? cur)}` : ''}</span></div>
         <div class="st-card-bar"><div class="st-card-bar-fill ${barCls}" data-stock-bar="${parPct}"></div></div>
         <div class="st-card-meta">
           <span>Par : <b>${esc(fmtUnit(it.parLevel, it.unit))}</b></span>

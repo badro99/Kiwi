@@ -70,7 +70,7 @@
     body.replaceChildren();
     var box = el('div'); box.setAttribute('data-quarantine-list', ''); box.style.cssText = 'min-width:0;color:var(--ink)';
     if (failed) { var alert = el('p', text('unavailable')); alert.setAttribute('role', 'status'); box.append(alert); }
-    if (!entries.length && !failed) { box.append(el('p', text('empty'))); body.append(box); return; }
+    if (!entries.length && !failed) { box.append(el('p', text('empty'))); body.append(box); window.dispatchEvent(new CustomEvent('kiwi:quarantine-review', { detail: box })); return; }
     box.append(button(text('refresh'), load));
     var list = el('ul'); list.style.cssText = 'list-style:none;padding:0;margin:12px 0;display:grid;gap:16px';
     var lang = document.documentElement.lang || 'fr';
@@ -91,7 +91,7 @@
       var decline = button(text('decline'), function () { decide(row, 'decline'); });
       decline.disabled = row.status === 'approving' && !row.lastError; actions.append(decline); item.append(actions); list.append(item);
     });
-    box.append(list); body.append(box);
+    box.append(list); body.append(box); window.dispatchEvent(new CustomEvent('kiwi:quarantine-review', { detail: box }));
   }
   function shown() { return !!(panel && panel.el.isConnected && panel.el.style.pointerEvents !== 'none'); }
   function open() {

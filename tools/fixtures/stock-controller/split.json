@@ -2,7 +2,7 @@
   "files": {
     "assets/stock.js": {
       "fixture": "tools/fixtures/stock-controller/stock.js.gz",
-      "sha256": "ce5079311cd63bc4fa474bdc92d4e706820032b99f0e8f5c2ef5cbc2198af260",
+      "sha256": "1812944987b3dbaf1a033599758308c783774248d5e8d4002f6d06e0d4b8fdde",
       "stamps": [
         "assets/stock/loss.js?v=1",
         "assets/stock/counts.js?v=3",

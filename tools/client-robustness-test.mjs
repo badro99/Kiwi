@@ -12,15 +12,16 @@ await test('merchant resolution fails closed even when URL parsing throws', () =
   const merchant = run('live-link.js', 'merchant', {URLSearchParams: function(){throw Error('blocked');}, location:{search:''}});
   assert.ok(!merchant());
 });
-await test('quarantine keeps newest five without deleting live or other keys', () => {
+await test('quarantine retains evidence until acknowledgement', () => {
   const data = new Map([['kiwiSaleQueue','broken'],['other','safe']]);
   for(let i=1;i<=8;i++) data.set('kiwiSaleQueue:quarantine:'+i, 'old');
   const localStorage = {getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k),key:i=>[...data.keys()][i],get length(){return data.size;}};
   const ctx={localStorage,Q_KEY:'kiwiSaleQueue',queueRecoveryError:false,queueReadError:false,queueBlocked:false,Date:{now:()=>9}};
   run('live-link/queue-store.js','qRead',ctx)();
-  assert.deepEqual([...data.keys()].filter(k=>k.includes(':quarantine:')).sort(),[5,6,7,8,9].map(i=>'kiwiSaleQueue:quarantine:'+i));
+  assert.deepEqual([...data.keys()].filter(k=>k.includes(':quarantine:')).sort(),// Owner ruling docs/decisions/2026-11-04-owner-delegated.md:19, retain all evidence.
+    [1,2,3,4,5,6,7,8,9].map(i=>'kiwiSaleQueue:quarantine:'+i));
   assert.equal(data.get('other'),'safe'); assert.equal(data.get('kiwiSaleQueue:quarantine:9'),'broken');
-  data.set('kiwiSaleQueue','second');run('live-link/queue-store.js','qRead',ctx)();assert.equal(data.get('kiwiSaleQueue:quarantine:9'),'broken');assert.equal(data.get('kiwiSaleQueue:quarantine:10'),'second');assert.equal([...data.keys()].filter(k=>k.includes(':quarantine:')).length,5);
+  data.set('kiwiSaleQueue','second');run('live-link/queue-store.js','qRead',ctx)();assert.equal(data.get('kiwiSaleQueue:quarantine:9'),'broken');assert.equal(data.get('kiwiSaleQueue:quarantine:10'),'second');assert.equal([...data.keys()].filter(k=>k.includes(':quarantine:')).length,10); // Owner ruling docs/decisions/2026-11-04-owner-delegated.md:19, no count-based pruning.
 });
 await test('table refresh marks cached data stale and clears on recovery', async () => {
   const entry={data:{avgMin:12},error:'',ts:0,loading:false}, __state={hotelMerchant:()=> 'fixture',tableTime:new Map([['fixture|1|2',entry]]),TABLE_TIME_TTL:0,renderKpiBand(){}};
