@@ -83,7 +83,8 @@ const agg = lib.aggregate([
 ]);
 ok(agg && agg.tables === 9 && agg.terrasse === true && agg.venue === 'cafe', 'aggregate : totaux sommés, terrasse détectée, premier venue retenu');
 { // Two groups the model puts on the same row and overlapping columns never share a cell (gap r14 #42).
-  const p = lib.aggregate([{ tables: [{ shape: 'round', seats: 4, count: 3, row: 0, column: 0 }, { shape: 'square', seats: 2, count: 2, row: 0, column: 1 }] }, { tables: [{ shape: 'round', seats: 4, count: 1, row: 0, column: 0 }] }]).placement;
+  const place = (...photos) => lib.aggregate(photos).placement;
+  const p = place({ tables: [{ shape: 'round', seats: 4, count: 3, row: 0, column: 0 }, { shape: 'square', seats: 2, count: 2, row: 0, column: 1 }] }, { tables: [{ shape: 'round', seats: 4, count: 1, row: 0, column: 0 }] });
   const cells = p.filter((x) => x.photo === 0).map((x) => x.row + ':' + x.column);
   ok(new Set(cells).size === cells.length && cells.join(',') === '0:0,0:1,0:2,0:3,0:4', 'aggregate : deux groupes sur la même rangée ne se superposent pas (' + cells.join(',') + ')');
   ok(p.find((x) => x.photo === 1).column === 0, 'aggregate : une autre photo garde ses propres colonnes');

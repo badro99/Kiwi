@@ -65,9 +65,9 @@ await test('bind failure reports once and holds publication; hydrate false never
   ctx.teamCloudInit=()=>({bind:()=>Promise.resolve()});await run('team/member-state.js','teamCloudBind',ctx)();assert.equal(published,0);
 });
 await test('takeaway archive stays in memory and warns once on refused storage',()=>{
-  const ids=new Set(), notices=[];
-  const fn=run('caisse-kitchen.js','rememberArchivedTakeaway',{currentMerchantSlug:()=> 'fixture',archivedTakeawaySet:()=>ids,archivedTakeawayScope:'fixture',localStorage:{setItem(){throw Error();}},toast:s=>notices.push(s),document:{documentElement:{lang:'en'}}});
-  fn('a');fn('b');assert.deepEqual([...ids],['a','b']);assert.equal(notices.length,1);
+  const ids=Object.assign(new Set(),{days:new Map()}), notices=[];
+  const fn=run('caisse-kitchen.js','rememberArchivedTakeaway',{currentMerchantSlug:()=> 'fixture',archivedTakeawaySet:()=>ids,vrapHistoryDay:()=> '2026-11-04',archivedTakeawayScope:'fixture',localStorage:{setItem(){throw Error();}},toast:s=>notices.push(s),document:{documentElement:{lang:'en'}}});
+  fn('a');fn('b');assert.deepEqual([...ids],['a','b']);assert.equal(ids.days.get('a'),'2026-11-04');assert.equal(notices.length,1);
 });
 await test('pressing archive retains full document, projects it and warns once',()=>{
   const memory=new Map(), notices=[], projected=[],ctx={storeKey:()=> 'fixture',archiveMemory:memory,archiveWarned:new Set(),localStorage:{setItem(){throw Error();},getItem:()=>null},window:{Kiwi:{toast:s=>notices.push(s)}},document:{documentElement:{lang:'en'},createElement:()=>({setAttribute(){}}),body:{appendChild:n=>notices.push(n.textContent)}},projectFull:d=>projected.push(d),console};
