@@ -262,6 +262,11 @@ function renderGoal() {
       const g = suggestedGoal(__state.currentRange);
       if (g > 0) { data = { ...data, goal: g }; suggested = true; }
     }
+    const suggestion = {
+      fr: ['suggéré', 'Objectif suggéré d’après vos ventes des 4 dernières semaines'],
+      en: ['suggested', 'Goal suggested from your last 4 weeks of sales'],
+      ar: ['مقترح', 'هدف مقترح حسب مبيعاتك في الأسابيع الأربعة الأخيرة']
+    }[lang] || ['suggéré', 'Objectif suggéré d’après vos ventes des 4 dernières semaines'];
     const unset = !(data.goal > 0);
     const labelTxt = __state.kitCase(__state.GOAL_LABEL[lang]?.[__state.currentRange] || __state.GOAL_LABEL.fr[__state.currentRange]);
     const labelEl = document.querySelector('[data-goal-label]');
@@ -269,6 +274,9 @@ function renderGoal() {
       labelEl.textContent = unset
         ? `${labelTxt} · ${__state.GOAL_UNSET[lang] || __state.GOAL_UNSET.fr}`
         : `${labelTxt} · ${__state.frInt(data.goal)} ${__state.curUnit()}`;
+      labelEl.dataset.goalAmount = unset ? '' : `${__state.frInt(data.goal)} ${__state.curUnit()}`;
+      if (suggested) { labelEl.textContent += ` · ${suggestion[0]}`; labelEl.title = suggestion[1]; }
+      else labelEl.removeAttribute('title');
       if (unset) labelEl.dataset.goalUnset = '1';
       else delete labelEl.dataset.goalUnset;
       if (suggested) labelEl.dataset.goalSuggested = '1';

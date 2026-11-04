@@ -37,11 +37,11 @@ const DAY = 86400000;
 const TODAY = Date.UTC(2026, 10, 3, 5);
 
 function el() {
-  return { textContent: '', dataset: {}, style: {}, title: '', removeAttribute() {} };
+  return { textContent: '', dataset: {}, style: {}, title: '', removeAttribute(name) { if (name === 'title') this.title = ''; } };
 }
 
 /* revenueByDaysAgo[k] = chiffre du jour J-k (k = 1..28). */
-function run({ revenueByDaysAgo = {}, merchantGoal = 0, range = 'aujourdhui', today = 0 }) {
+function run({ revenueByDaysAgo = {}, merchantGoal = 0, range = 'aujourdhui', today = 0, lang = 'fr' }) {
   const nodes = { '[data-goal-label]': el(), '[data-goal-pct]': el(), '[data-goal-fill]': el() };
   const homes = [];
   const window = {
@@ -51,7 +51,7 @@ function run({ revenueByDaysAgo = {}, merchantGoal = 0, range = 'aujourdhui', to
   const document = { querySelector: (s) => nodes[s] || null };
   const state = {
     currentRange: range,
-    getLang: () => 'fr',
+    getLang: () => lang,
     effRange: () => range,
     guardOperatorFigures: () => false,
     vData: () => ({ goal: 0, current: 0 }),
@@ -63,7 +63,7 @@ function run({ revenueByDaysAgo = {}, merchantGoal = 0, range = 'aujourdhui', to
     rangeBounds: (r) => (r === 'aujourdhui' ? [TODAY, TODAY + DAY] : [TODAY - 6 * DAY, TODAY + DAY]),
     realWindowStats: (from) => ({ revenue: revenueByDaysAgo[Math.round((TODAY - from) / DAY)] || 0 }),
     RANGE_DAYS: { aujourdhui: 1, hier: 1, septJours: 7, trenteJours: 30 },
-    GOAL_LABEL: { fr: { aujourdhui: 'OBJECTIF JOUR', septJours: 'OBJECTIF SEMAINE', trenteJours: 'OBJECTIF MOIS' } },
+    GOAL_LABEL: { fr: { aujourdhui: 'OBJECTIF JOUR', septJours: 'OBJECTIF SEMAINE', trenteJours: 'OBJECTIF MOIS' }, en: { aujourdhui: 'DAILY GOAL' }, ar: { aujourdhui: 'الهدف اليومي' } },
     GOAL_UNSET: { fr: 'à définir' },
     kitCase: (t) => t,
     frInt: (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '),
@@ -76,7 +76,7 @@ function run({ revenueByDaysAgo = {}, merchantGoal = 0, range = 'aujourdhui', to
   const api = window.__kiwiHomeRenderers.hero(state);
   api.renderGoal();
   const label = nodes['[data-goal-label]'];
-  return { label: label.textContent, suggested: label.dataset.goalSuggested === '1', unset: label.dataset.goalUnset === '1', home: homes.at(-1)?.[1] };
+  return { nodes, title: label.title, label: label.textContent, suggested: label.dataset.goalSuggested === '1', unset: label.dataset.goalUnset === '1', home: homes.at(-1)?.[1] };
 }
 
 let n = 0;
@@ -91,14 +91,14 @@ ok('sans objectif saisi, la carte propose la médiane des jours vendus, arrondie
   assert.equal(r.unset, false);
   assert.equal(r.suggested, true);
   /* Jours vendus : 24 valeurs de 4 000 à 6 500 ; médiane 5 250 ⇒ 5 300 au pas de 100. */
-  assert.equal(r.label, 'OBJECTIF JOUR · 5 300 MAD');
+  assert.equal(r.label, 'OBJECTIF JOUR · 5 300 MAD · suggéré');
   assert.equal(r.home.suggested, true);
   assert.equal(r.home.pct, Math.round(2100 / 5300 * 100));
 });
 
 ok('un jour fermé ne tire pas la cible vers le bas, un gros jour isolé ne la gonfle pas', () => {
   const spiky = { ...weeks, 3: 90000 };
-  assert.equal(run({ revenueByDaysAgo: spiky }).label, 'OBJECTIF JOUR · 5 300 MAD');
+  assert.equal(run({ revenueByDaysAgo: spiky }).label, 'OBJECTIF JOUR · 5 300 MAD · suggéré');
 });
 
 ok('semaine : moyenne par jour calendaire × 7', () => {
@@ -106,7 +106,7 @@ ok('semaine : moyenne par jour calendaire × 7', () => {
   const expected = Math.ceil(total / 28 * 7 / 1000) * 1000;
   const r = run({ revenueByDaysAgo: weeks, range: 'septJours' });
   assert.equal(r.suggested, true);
-  assert.equal(r.label, 'OBJECTIF SEMAINE · ' + String(expected).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' MAD');
+  assert.equal(r.label, 'OBJECTIF SEMAINE · ' + String(expected).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' MAD · suggéré');
 });
 
 ok('moins de trois jours de ventes : rien d’inventé, « à définir »', () => {
@@ -122,10 +122,24 @@ ok('l’objectif saisi par le commerçant passe devant la suggestion', () => {
   assert.equal(r.label, 'OBJECTIF JOUR · 3 000 MAD');
 });
 
-ok('la carte Vexel dit « suggéré » à côté de la cible', () => {
-  assert.match(VX, /goalLabel\.dataset\.goalSuggested/);
-  assert.match(VX, /short: 'suggéré'/);
-  assert.match(VX, /short: 'suggested'/);
+ok('base et Vexel rendent une seule suggestion visible en fr/en/ar, avec montant et titre', () => {
+  const strings = vm.runInNewContext(VX.match(/var GOAL_STR = (\{[\s\S]*?\n  \});/)[0] + ';GOAL_STR');
+  const start = VX.indexOf("    var amountSource = document.querySelector('[data-hero-amount]');", VX.indexOf('function refresh()'));
+  const end = VX.indexOf('    if (goalUnset) {', VX.indexOf('var goalSuggested', start));
+  const mirror = VX.slice(start, end);
+  for (const [lang, short] of [['fr', 'suggéré'], ['en', 'suggested'], ['ar', 'مقترح']]) {
+    for (const merchantGoal of [0, 3000]) {
+      const r = run({ revenueByDaysAgo: weeks, lang, merchantGoal });
+      const nodes = { ...r.nodes, '[data-vexel-goal-target]': el(), '[data-hero-amount]': { textContent: '2100 MAD' } };
+      vm.runInNewContext(mirror, { document: { querySelector: s => nodes[s] || null }, GOAL_STR: strings, lang: () => lang,
+        setText: (node, text) => { if (node) node.textContent = text; } });
+      const target = nodes['[data-vexel-goal-target]'];
+      assert.equal(r.label, ({fr:'OBJECTIF JOUR', en:'DAILY GOAL', ar:'الهدف اليومي'}[lang]) + ' · ' + (merchantGoal ? '3 000 MAD' : '5 300 MAD · ' + short));
+      assert.equal(target.textContent, '/ ' + (merchantGoal ? '3 000 MAD' : '5 300 MAD · ' + short));
+      if (!merchantGoal) { assert.equal(r.title, strings[lang].suggested); assert.equal(target.title, r.title); }
+      else { assert.equal(r.title, ''); assert.equal(target.title, ''); }
+    }
+  }
 });
 
 ok('une valeur KPI qui déborde de sa tuile est réduite, pas coupée', () => {
