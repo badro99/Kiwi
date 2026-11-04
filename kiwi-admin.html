@@ -1049,7 +1049,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
-  <script src="assets/admin-legacy.js?v=7"></script>
+  <script src="assets/admin-legacy.js?v=8"></script>
   <script src="assets/staff-roles.js?v=3"></script>
   <!-- The brand's one selection motion, for the établissement switcher. Self-
        contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
@@ -2261,6 +2261,13 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
         var n = Object.keys((r && r.removed) || {}).length;
         notify(window.KiwiAdminI18n.text('Établissement supprimé.') + ' « ' + c.merchant + ' » · ' + window.KiwiAdminI18n.text('Tables purgées : ' + n));
       } catch(e){
+        if (e && e.uncertainCommit) {
+          /* Réponse perdue : le serveur a peut-être déjà supprimé. Ni faux refus ni nouveau départ à l'aveugle : on relit la liste. */
+          go.textContent = window.KiwiAdminI18n.text('Résultat incertain');
+          msg.textContent = window.KiwiAdminI18n.text('La réponse du serveur n’est pas arrivée : la suppression a peut-être eu lieu. Vérifiez la liste des clients avant de réessayer.');
+          try { await renderClients(); } catch(_){}
+          return;
+        }
         go.disabled = false; go.textContent = 'Supprimer définitivement';
         msg.textContent = refused(e);
       }

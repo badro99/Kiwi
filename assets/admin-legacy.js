@@ -94,6 +94,8 @@
     "Enregistré · appliqué au prochain chargement": ["Saved · applied on next load", "تم الحفظ · يطبق عند التحميل التالي"],
     "Enregistrement refusé. Le réglage affiché n’a pas changé.": ["Save refused. The displayed setting is unchanged. Try again.", "تم رفض الحفظ. لم يتغير الإعداد المعروض. أعد المحاولة."],
     "Enregistrement refusé. Votre saisie est conservée. Vérifiez les données puis réessayez.": ["Save refused. Your input is preserved. Check the data and try again.", "تم رفض الحفظ. تم الاحتفاظ بإدخالك. تحقق من البيانات وأعد المحاولة."],
+    "Résultat incertain": ["Result uncertain", "النتيجة غير مؤكدة"],
+    "La réponse du serveur n’est pas arrivée : la suppression a peut-être eu lieu. Vérifiez la liste des clients avant de réessayer.": ["The server\u2019s answer never arrived: the deletion may have happened. Check the client list before trying again.", "لم يصل رد الخادم: ربما تمت عملية الحذف. تحقق من قائمة العملاء قبل إعادة المحاولة."],
     "Conflit serveur. Votre saisie est conservée. Vérifiez les données puis réessayez.": ["Server conflict. Your input is preserved. Check the data and try again.", "تعارض في الخادم. تم الاحتفاظ بإدخالك. تحقق من البيانات وأعد المحاولة."],
     "Compte & adresses e-mail": ["Account & email addresses", "الحساب وعناوين البريد"],
     "Connexion": ["Login", "تسجيل الدخول"],

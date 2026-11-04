@@ -1667,6 +1667,7 @@ section('Whole-project regressions');
     'pairs-serveur-browser-test.mjs',
     // Une table, deux appareils : la caisse et le téléphone du serveur sur la même addition (vague 15 K).
     'shared-table-two-devices-browser-test.mjs',
+    'table-split-real-server-browser-test.mjs',
     'pairs-boutique-browser-test.mjs',
     // Aucune salle sans porte : Clientes et le comptage physique se quittent (les deux peaux).
     'boutique-escape-browser-test.mjs',
@@ -1903,6 +1904,7 @@ section('Whole-project regressions');
     'tickets-workflow-browser-test.mjs',
     'operator-followups-browser-test.mjs',
     'console-dossier-keyboard-browser-test.mjs',
+    'admin-lost-response-browser-test.mjs',
     'auth-properties-test.mjs',
     'employee-properties-test.mjs',
     'employee-split-test.mjs',
@@ -2528,6 +2530,7 @@ section('Whole-project regressions');
     'spa-cure-expiry-test.mjs',
     'vertical-state-test.mjs',
     'credit-book-refund-browser-test.mjs',
+    'credit-book-two-tabs-browser-test.mjs',
     'credit-book-refund-ui-test.mjs', 'credit-book-test.mjs', 'credit-issue-zone-test.mjs', 'epicerie-carnet-test.mjs',
     'credit-book-dashboard-browser-test.mjs',
     'receivables-test.mjs', 'delivery-returns-test.mjs', 'delivery-stock-test.mjs', 'delivery-card-test.mjs', 'web-orders-test.mjs', 'z-two-tickets-test.mjs',
