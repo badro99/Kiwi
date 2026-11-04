@@ -329,18 +329,92 @@ export function triageOutcomeNote(result) {
   return null;
 }
 
+/* Écrit une note dans le fil interne. Une seule reprise : l'écriture de la trace
+ * est la dernière chose qui explique un tri raté, elle ne doit pas tomber sur un
+ * hoquet passager. Si elle échoue encore, on le journalise (référence seulement,
+ * jamais le texte du commerçant) et on le dit à l'appelant. */
+async function recordNote(env, ticketId, note) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      await env.DB.prepare('INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)')
+        .bind('msg-' + crypto.randomUUID(), ticketId, 'triage', 'internal', 'kiwi', note, '', Date.now()).run();
+      return true;
+    } catch (_) { /* nouvel essai, puis journal */ }
+  }
+  try { console.error('[support-triage] note-not-recorded', String(ticketId).slice(0, 60)); } catch (_) {}
+  return false;
+}
+
 /* Trie puis consigne l'issue dans le fil interne quand il y a quelque chose à faire. Ne lève jamais. */
 export async function triageAndRecord(env, ticket, opts = {}) {
   let result = null;
   try { result = await triageSupportTicket(env, ticket, opts); } catch (_) { result = null; }
   const note = triageOutcomeNote(result);
-  if (note && env && env.DB && ticket && ticket.id) {
+  let noteRecorded = true;
+  if (note && env && env.DB && ticket && ticket.id) noteRecorded = await recordNote(env, ticket.id, note);
+  const out = result || { status: 'failed', reason: 'unexpected' };
+  return noteRecorded ? out : { ...out, noteRecorded: false };
+}
+
+/* Reprise autonome des alertes urgentes qui ne sont pas parties. Le marqueur
+ * durable est la colonne triage_alert elle-même : « failed » (le fournisseur a
+ * refusé ou n'a pas répondu), « unconfirmed » périmé (le worker est mort entre
+ * la réservation et l'envoi) ou vide (le tri est écrit mais la réservation n'a
+ * jamais eu lieu). Appelée par le planificateur déjà en place (functions/api/
+ * hotel/cron.js, toutes les 15 minutes), sans qu'un opérateur relance quoi que
+ * ce soit. Délai croissant entre deux essais, borné par ALERT_RETRY_MAX : passé
+ * ce nombre, une note dans le fil interne le dit et la console garde la demande
+ * dans « non annoncées ». Une alerte « sent » ne repart jamais. Ne lève jamais. */
+export const ALERT_RETRY_MAX = 8;
+const ALERT_RETRY_BASE_MS = 5 * 60 * 1000;
+const ALERT_RETRY_CAP_MS = 2 * 60 * 60 * 1000;
+const ALERT_RETRY_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+export async function retryPendingAlerts(env, { now = Date.now(), limit = 5 } = {}) {
+  const out = { checked: 0, sent: 0, failed: 0, gaveUp: 0 };
+  if (!env || !env.DB) return { ...out, skipped: 'no-db' };
+  if (!alertRecipients(env).length || !env.MAIL_WEBHOOK) return { ...out, skipped: 'unconfigured' };
+  let rows;
+  try {
+    rows = ((await env.DB.prepare(`SELECT id, reference, merchant, summary, triage, triage_alert, created_ts FROM support_tickets
+        WHERE status = 'open' AND created_ts > ? AND json_extract(triage, '$.verdict') = 'urgent'
+          AND (triage_alert IS NULL OR json_extract(triage_alert, '$.state') IN ('failed', 'unconfigured', 'unconfirmed'))
+        ORDER BY created_ts ASC LIMIT 50`).bind(now - ALERT_RETRY_WINDOW_MS).all()) || {}).results || [];
+  } catch (_) { return { ...out, skipped: 'read-failed' }; }
+  for (const row of rows) {
+    if (out.checked >= limit) break;
+    const alert = parseJson(row.triage_alert, null);
+    const state = alert && typeof alert === 'object' ? String(alert.state || '') : '';
+    const attempts = Math.max(0, Number(alert && alert.attempts) || 0);
+    const at = Number(alert && alert.ts) || 0;
+    if (!alert) { if (now - (Number(row.created_ts) || 0) < ALERT_RETRY_BASE_MS) continue; }
+    else if (state === 'unconfirmed') { if (now - at < STALE_ALERT_MS) continue; }
+    else if (attempts >= ALERT_RETRY_MAX || now - at < Math.min(ALERT_RETRY_CAP_MS, ALERT_RETRY_BASE_MS * 2 ** attempts)) continue;
+    if (attempts >= ALERT_RETRY_MAX) continue;
+    const triage = parseJson(row.triage, null);
+    if (!triage || typeof triage !== 'object' || !triage.category || !triage.urgency) continue;
+    /* Réservation : un seul exécutant par alerte, comme pour le premier envoi. */
+    const claim = JSON.stringify({ state: 'unconfirmed', ts: now, attempts: attempts + 1 });
     try {
-      await env.DB.prepare('INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)')
-        .bind('msg-' + crypto.randomUUID(), ticket.id, 'triage', 'internal', 'kiwi', note, '', Date.now()).run();
-    } catch (_) { /* la console affiche déjà « non triée » sans tri enregistré */ }
+      const r = await env.DB.prepare('UPDATE support_tickets SET triage_alert = ? WHERE id = ? AND triage_alert IS ?')
+        .bind(claim, row.id, row.triage_alert == null ? null : row.triage_alert).run();
+      if (Number(r && r.meta && r.meta.changes) !== 1) continue;
+    } catch (_) { continue; }
+    out.checked += 1;
+    const result = await alertStaff(env, row, triage);
+    const final = { ...result, attempts: attempts + 1 };
+    try {
+      await env.DB.prepare('UPDATE support_tickets SET triage_alert = ? WHERE id = ? AND triage_alert = ?').bind(JSON.stringify(final), row.id, claim).run();
+    } catch (_) { /* reste « non confirmée » : repris après le bail */ }
+    if (final.state === 'sent') out.sent += 1;
+    else {
+      out.failed += 1;
+      if (final.attempts >= ALERT_RETRY_MAX) {
+        out.gaveUp += 1;
+        await recordNote(env, row.id, 'Demande jugée urgente : l’e-mail d’alerte n’est toujours pas parti après ' + ALERT_RETRY_MAX + ' essais automatiques. Prévenez l’équipe autrement, puis relancez le tri depuis cette demande.');
+      }
+    }
   }
-  return result || { status: 'failed', reason: 'unexpected' };
+  return out;
 }
 
 /* Relance demandée par un opérateur. Une alerte en échec, non configurée, ou

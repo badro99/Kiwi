@@ -65,10 +65,15 @@ window.__kiwiHotelInternal.define('channels', (scope) => {
     const merchant = cuChannelMerchant(); if (!merchant || cuChannelState.loading) return;
     cuChannelState.loading = true; cuChannelState.error = ''; rerender();
     try {
+      /* Bounded transport and body: a hung calendar request ends in the error
+         state below, so refresh is enabled again instead of staying disabled. */
+      const { deadlineFetch } = await import('./request-deadline.mjs');
       const res = sync
-        ? await fetch('/api/hotel/channels', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'sync', merchant }) })
-        : await fetch('/api/hotel/channels?merchant=' + encodeURIComponent(merchant), { headers:{Accept:'application/json'} });
-      const body = await res.json().catch(() => ({}));
+        ? await deadlineFetch('/api/hotel/channels', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'sync', merchant }) }, 20000)
+        : await deadlineFetch('/api/hotel/channels?merchant=' + encodeURIComponent(merchant), { headers:{Accept:'application/json'} }, 12000);
+      let body = {};
+      try { body = await res.json(); } catch (e) { if (e && e.code === 'request-timeout') throw e; if (res.ok) throw new Error('invalid-response'); }
+      if (res.ok && (!body || typeof body !== 'object' || Array.isArray(body))) throw new Error('invalid-response');
       if (!res.ok) throw new Error(body.error || 'unavailable');
       cuChannelState.rows = Array.isArray(body.channels) ? body.channels : [];
       cuChannelState.loaded = true;

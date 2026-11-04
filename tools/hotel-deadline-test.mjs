@@ -37,4 +37,37 @@ for(const mode of ['fetch','body']) {
   vm.runInContext(split.declaration(model,'cuModelDeadlineFetch'),c);
   for(const route of ['window','in-house'])await assert.rejects(vm.runInContext('cuModelDeadlineFetch("'+route+'")',c),/request-timeout/,'model fallback '+route+' '+mode);
 }
+// hotel#0: the OTA calendar read/sync ends in the visible error state when the request or its body hangs, and refresh is enabled again.
+{
+  const realFetch = globalThis.fetch, realTimer = globalThis.setTimeout;
+  const channelsSource = fs.readFileSync('assets/hotel-channels.js', 'utf8');
+  async function run(mode, sync) {
+    let factory; const state = { loading: false, error: '', rows: [], loaded: false }; const toasts = [];
+    const window = { __kiwiHotelInternal: { define(_n, fn) { factory = fn; } } };
+    new vm.Script(channelsSource, { filename: new URL('../assets/hotel-channels.js', import.meta.url).pathname, importModuleDynamically: vm.constants.USE_MAIN_CONTEXT_DEFAULT_LOADER }).runInNewContext({ window });
+    const scope = { CHANNELS: [], DIRECT_TREND: [], MAD: String, cuChannelState: state, cuMerchantSlug: () => 'riad', cuStarter: () => ({}), cuState: () => ({}), donutCss: () => '', esc: String, hxLocale: () => 'fr', rerender() {}, toast: (m) => toasts.push(m), tx: (s) => s, txk: (s) => s };
+    const api = factory(scope);
+    globalThis.setTimeout = (fn, ms) => realTimer(fn, Math.min(ms, 5));
+    globalThis.fetch = (url, options) => {
+      if (mode === 'fetch') return new Promise(() => {});
+      if (mode === 'body') return Promise.resolve({ ok: true, status: 200, json: () => new Promise(() => {}) });
+      if (mode === 'shapeless') return Promise.resolve({ ok: true, status: 200, json: async () => null });
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ channels: [{ id: 'c1' }], processed: 1 }) });
+    };
+    try {
+      const settled = await Promise.race([api.cuLoadChannels(sync).then(() => 'settled'), new Promise((r) => realTimer(() => r('hung'), 1500))]);
+      return { settled, state, toasts };
+    } finally { globalThis.fetch = realFetch; globalThis.setTimeout = realTimer; }
+  }
+  for (const sync of [false, true]) for (const mode of ['fetch', 'body', 'shapeless']) {
+    const out = await run(mode, sync);
+    assert.equal(out.settled, 'settled', 'channels ' + mode + ' sync=' + sync + ' settles');
+    assert.equal(out.state.loading, false, 'refresh is enabled again after ' + mode);
+    assert.ok(out.state.error, 'a visible error replaces the list state after ' + mode);
+    assert.equal(out.state.loaded, false);
+  }
+  const good = await run('good', false);
+  assert.equal(good.state.error, '');
+  assert.equal(good.state.rows.length, 1);
+}
 console.log('✓ hotel deadlines: all seven call classes and both import fallbacks settle hung transport/body; uncertain writes reread and block unsafe retries');

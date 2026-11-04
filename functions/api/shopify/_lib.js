@@ -1,12 +1,22 @@
 // Shopify inventory connector shared by Pages Functions and the retry worker.
 // No token is ever returned to the browser: D1 stores AES-GCM ciphertext only.
 
+import { deadlineFetch } from '../../../assets/request-deadline.mjs';
+
 export const SHOPIFY_API_VERSION = '2026-07';
 export const SHOPIFY_SCOPES = 'read_products,read_inventory,write_inventory,read_orders,read_locations';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 const clampQty = (v) => Math.max(0, Math.min(1000000000, Math.round(Number(v) || 0)));
+/* A body that stalls past the deadline is a timeout, not an empty object: the
+ * callers then refuse to treat it as a provider answer. */
+const readJson = (res) => res.json().catch((e) => {
+  if (e && e.code === 'request-timeout') throw e;
+  return {};
+});
+/* One bound for every provider call; the env override exists so a test need not wait it out. */
+const providerDeadline = (env) => (Number(env && env.SHOPIFY_DEADLINE_MS) > 0 ? Number(env.SHOPIFY_DEADLINE_MS) : 15000);
 const small = (v, n = 240) => String(v == null ? '' : v).slice(0, n);
 
 function bytesToB64(bytes) {
@@ -89,7 +99,7 @@ export async function decryptToken(value, secret) {
 }
 
 export async function exchangeAuthorizationCode(env, shop, code) {
-  const res = await fetch(`https://${shop}/admin/oauth/access_token`, {
+  const res = await deadlineFetch(`https://${shop}/admin/oauth/access_token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
     body: new URLSearchParams({
@@ -98,8 +108,8 @@ export async function exchangeAuthorizationCode(env, shop, code) {
       code: String(code || ''),
       expiring: '1',
     }),
-  });
-  const data = await res.json().catch(() => ({}));
+  }, providerDeadline(env));
+  const data = await readJson(res);
   if (!res.ok || !data.access_token || !data.refresh_token) throw new Error(`shopify-oauth-${res.status}`);
   return data;
 }
@@ -119,7 +129,7 @@ export async function exchangeAuthorizationCode(env, shop, code) {
  * base, et pourquoi aucune colonne nouvelle n'est nécessaire : voir
  * `isClientCredentials`. */
 export async function exchangeClientCredentials(env, shop) {
-  const res = await fetch(`https://${shop}/admin/oauth/access_token`, {
+  const res = await deadlineFetch(`https://${shop}/admin/oauth/access_token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
     body: new URLSearchParams({
@@ -127,8 +137,8 @@ export async function exchangeClientCredentials(env, shop) {
       client_id: env.SHOPIFY_CLIENT_ID || '',
       client_secret: env.SHOPIFY_CLIENT_SECRET || '',
     }),
-  });
-  const data = await res.json().catch(() => ({}));
+  }, providerDeadline(env));
+  const data = await readJson(res);
   /* Le corps d'erreur de Shopify peut contenir de quoi identifier l'app, et
    * `error_description` a déjà été vu répéter des valeurs envoyées. On ne
    * relaie donc QUE `error`, qui est une énumération OAuth fermée
@@ -167,7 +177,7 @@ async function refreshConnectionToken(env, row) {
   } else {
     const refresh = await decryptToken(row.refresh_token_enc, env.SHOPIFY_TOKEN_KEY);
     if (!refresh) throw new Error('shopify-refresh-missing');
-    const res = await fetch(`https://${row.shop_domain}/admin/oauth/access_token`, {
+    const res = await deadlineFetch(`https://${row.shop_domain}/admin/oauth/access_token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
       body: new URLSearchParams({
@@ -176,8 +186,8 @@ async function refreshConnectionToken(env, row) {
         client_secret: env.SHOPIFY_CLIENT_SECRET || '',
         refresh_token: refresh,
       }),
-    });
-    data = await res.json().catch(() => ({}));
+    }, providerDeadline(env));
+    data = await readJson(res);
     if (!res.ok || !data.access_token || !data.refresh_token) throw new Error(`shopify-refresh-${res.status}`);
   }
   const now = Date.now();
@@ -285,17 +295,21 @@ export async function accessTokenFor(env, merchant) {
 
 export async function shopifyGraphQL(env, merchant, query, variables) {
   const { row, token } = await accessTokenFor(env, merchant);
-  const res = await fetch(`https://${row.shop_domain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`, {
+  const res = await deadlineFetch(`https://${row.shop_domain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Shopify-Access-Token': token },
     body: JSON.stringify({ query, variables: variables || {} }),
-  });
-  const payload = await res.json().catch(() => ({}));
+  }, providerDeadline(env));
+  const payload = await readJson(res);
   if (!res.ok || (Array.isArray(payload.errors) && payload.errors.length)) {
     const message = (payload.errors || []).map((e) => e && e.message).filter(Boolean).join(' · ');
     throw new Error(small(message || `shopify-graphql-${res.status}`, 300));
   }
-  return { row, data: payload.data || {} };
+  /* HTTP 200 with no data and no errors is a malformed reply, not an empty shop. */
+  if (!payload || typeof payload.data !== 'object' || payload.data === null || Array.isArray(payload.data)) {
+    throw new Error('shopify-graphql-malformed');
+  }
+  return { row, data: payload.data };
 }
 
 /* Une boutique Shopify a deux noms en .myshopify.com : celui que le commerçant
