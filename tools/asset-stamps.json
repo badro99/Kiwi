@@ -1408,12 +1408,12 @@
     "sha": "00e80837548ee122"
   },
   "assets/pages-pro.css": {
-    "v": "4",
-    "sha": "6034d25dcb90c82e"
+    "v": "5",
+    "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2215",
-    "sha": "98e5d54a3dfb926a"
+    "v": "2216",
+    "sha": "b7f13b4e1e50967a"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "18",
@@ -1444,12 +1444,12 @@
     "sha": "b57fdb1859e1e4e0"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "190",
-    "sha": "3f3e418d6551137d"
+    "v": "191",
+    "sha": "1ff5f84f40cdc2d3"
   },
   "assets/pages/tables-data.js": {
-    "v": "1",
-    "sha": "6474f5c90dfe0062"
+    "v": "2",
+    "sha": "15a5c28733bc197b"
   },
   "assets/pages/tables-drawing.js": {
     "v": "3",
@@ -1644,8 +1644,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "371",
-    "sha": "baebef3cd3cc40f4"
+    "v": "372",
+    "sha": "52b01ab166b89064"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1808,11 +1808,11 @@
     "sha": "868b426ef7f5a32f"
   },
   "assets/pressing-caisse.css": {
-    "v": "92",
-    "sha": "256a228af6c86444"
+    "v": "93",
+    "sha": "c35d65b1df1877e8"
   },
   "assets/pressing-caisse.js": {
-    "v": "92",
+    "v": "93",
     "sha": "c211db601ae402f4"
   },
   "assets/pressing-catalog.css": {
@@ -2116,8 +2116,8 @@
     "sha": "dd4d56ef6f1d15d2"
   },
   "assets/team.js": {
-    "v": "353",
-    "sha": "0a0d973cce7e4a59"
+    "v": "354",
+    "sha": "1373384b04761cc0"
   },
   "assets/team/access-rules.js": {
     "v": "7",
@@ -2148,8 +2148,8 @@
     "sha": "f8d4f03e16d05978"
   },
   "assets/team/styles.js": {
-    "v": "2",
-    "sha": "8368040bae8d9853"
+    "v": "3",
+    "sha": "2663352f1dc71346"
   },
   "assets/team/venue-scope.js": {
     "v": "6",

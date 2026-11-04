@@ -1749,6 +1749,7 @@ section('Whole-project regressions');
     'caisse-stock-test.mjs',
     'boutique-variant-stock-test.mjs',
     'boutique-rtl-css-test.mjs',
+    'rtl-css-lint-test.mjs',
     'boutique-existing-barcode-test.mjs',
     'scan-wedge-browser-test.mjs',
     'boutique-custom-color-test.js',
