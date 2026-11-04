@@ -191,13 +191,14 @@ export async function getVerticalOps(request, env, merchant) {
       .bind(merchant, feature, BOOK_FEATURE).all();
     const dataOf = (name) => {
       const row = ((full && full.results) || []).find((r) => r.feature === name);
-      try { return row ? JSON.parse(row.data) : null; } catch (_) { return null; }
+      return row ? JSON.parse(row.data) : null;
     };
     let data = dataOf(feature);
     const stored = dataOf(BOOK_FEATURE);
+    if (bookRow && (!stored || !Array.isArray(stored.carnet))) throw new Error('invalid-credit-book');
     if (stored && Array.isArray(stored.carnet)) data = withBook(data, stored.carnet);
     return json({ feature, merchant, data, rev: Number(ops && ops.rev) || 0, updated_ts: facts.updated_ts }, 200, cacheHeaders);
   } catch (_) {
-    return json({ feature, merchant, data: null, rev: 0, unmigrated: true });
+    return json({ error: 'credit-book-unavailable', feature, merchant }, 503);
   }
 }

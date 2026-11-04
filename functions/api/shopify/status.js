@@ -53,7 +53,19 @@ async function health(env, merchant) {
     remaining: progress.remaining == null ? null : n(progress.remaining), more: !!progress.more,
     lastError: String(progress.lastError || ''), exceptions: progress.exceptions || [], updatedTs: n(progress.updatedTs),
   } : null;
-  return { connection: shapeConnection(connection), mapping, queue, legacyWebhookLinks: legacy, replay };
+  // Issues belong to orders, independently of the connection's latest ping.
+  const issues = await env.DB.prepare(`SELECT last_error AS data, updated_ts FROM shopify_inbound_stock
+    WHERE merchant = ? AND last_error LIKE '%"code":"stock-short"%'
+    UNION ALL SELECT data, updated_ts FROM store_docs
+    WHERE merchant = ? AND feature LIKE 'shopify-currency:%' ORDER BY updated_ts DESC LIMIT 100`)
+    .bind(merchant, merchant).all();
+  const orderIssues = (issues.results || []).map(row => JSON.parse(row.data));
+  const shaped = shapeConnection(connection);
+  if (shaped && orderIssues.length) {
+    shaped.lastError = orderIssues[0].code;
+    shaped.lastErrorContext = orderIssues[0];
+  }
+  return { connection: shaped, orderIssues, mapping, queue, legacyWebhookLinks: legacy, replay };
 }
 
 async function catalogue(env, merchant) {

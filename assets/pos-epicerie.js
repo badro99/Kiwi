@@ -270,10 +270,11 @@
     let running = balanceOf(c);
     if (running <= 0) return null;
     const debts = c.hist.filter((h) => h.type === 'debt').slice().sort((a, b) => a.at - b.at);
-    const paid = c.hist.filter((h) => h.type === 'pay').reduce((s, h) => s + h.amt, 0);
+    const paid = c.hist.filter((h) => h.type === 'pay').reduce((s, h) => s + Math.round((+h.amt || 0) * 100), 0);
     let coverage = paid;
     for (const d of debts) {
-      if (coverage >= d.amt) { coverage -= d.amt; continue; }
+      const cents = Math.round((+d.amt || 0) * 100);
+      if (coverage >= cents) { coverage -= cents; continue; }
       return d.at;
     }
     return debts.length ? debts[debts.length - 1].at : null;
@@ -1441,7 +1442,7 @@
   function ardoiseCard(c) {
     const bal = balanceOf(c);
     const oldest = oldestDebt(c);
-    const old = oldest && (Date.now() - oldest.getTime()) > 14 * DAY && bal > 0;
+    const old = oldest && Math.floor((Date.now() - oldest.getTime()) / DAY) > 14 && bal > 0;
     const sinceTxt = bal > 0 && oldest ? `depuis ${sinceLabel(oldest)}` : bal < 0 ? 'trop-perçu, à rendre ou à déduire' : 'à jour';
     return `<button class="ep-ardoise ${old ? 'is-old' : ''} ${bal <= 0 ? 'is-paid' : ''}" data-ep-ard="${c.id}">
       <div class="ep-ard-top">

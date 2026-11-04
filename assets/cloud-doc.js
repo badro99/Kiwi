@@ -584,7 +584,7 @@
       return readFetch('/api/store?feature=' + encodeURIComponent(feature)
                    + '&merchant=' + encodeURIComponent(slug),
                    { headers: { Accept: 'application/json' } })
-        .then(function (r) { return (r && r.ok) ? r.json() : null; })
+        .then(function (r) { if (feature === 'verticalops' && (!r || !r.ok)) throw new Error('credit-book-unavailable'); return (r && r.ok) ? r.json() : null; })
         .then(function (res) {
           // Le commerçant a changé de magasin pendant l'aller-retour : cette
           // réponse concerne un autre établissement, on la jette.
