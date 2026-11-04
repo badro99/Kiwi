@@ -28,10 +28,10 @@ function ok(label, fn) {
 const sale = read('assets/pos-sale.js');
 ok('every register folds the phone ticket sheet after a paid sale, demo included', () => {
   assert.match(sale, /function ticketDone\(total, method\)/);
-  assert.match(sale, /if \(!\(total > 0\)\) return null;\n    ticketDone\(total, sale\.method\);\n    if \(!isReal\(\)\) return null;/);
+  assert.match(sale, /if \(!\(total > 0\)\) return null;\n    if \(!isReal\(\)\) \{ ticketDone\(total, sale\.method\); return null; \}/);
 });
 ok('saleId and clientId reach the stored ledger row', () => {
-  assert.match(sale, /creditClient\(entry\);[\s\S]{0,400}if \(entry\.saleId \|\| entry\.clientId\) write\(vertical, rows\);/);
+  assert.match(sale, /creditClient\(entry\);[\s\S]{0,400}if \(entry\.saleId \|\| entry\.clientId \|\| entry\.syncState\) write\(vertical, rows\);/);
 });
 const mobile = read('assets/pos-mobile.js');
 ok('the phone register measures layout once the screen settles, not on every tap', () => {

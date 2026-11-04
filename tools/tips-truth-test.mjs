@@ -129,7 +129,7 @@ check('the till sends the tip beside the amount, the server keeps it, the feed r
   && /UPDATE sales SET tip_cents = \? WHERE merchant = \? AND id = \? AND tip_cents IS NULL/.test(SALE)
   && /SELECT id, tip_cents FROM sales/.test(FEED) && /tipCents: s\.tipCents/.test(LL)
   && /if \(Number\.isSafeInteger\(tipCents\) && tipCents > 0\) entry\.tipCents = tipCents;/.test(VEN));
-check('a tip that cannot be written never undoes the sale', /catch \(_\) \{ \/\* la vente reste ; le Z déclarera le pourboire \*\/ \}/.test(SALE));
+check('a tip failure is reported for retry after the durable sale', /error: 'tip-write-failed', tipRecorded: false[\s\S]{0,150}503/.test(SALE));
 
 const demo = run({ real: false, book, range: 'septJours', revenue: 10000 });
 check('the demo keeps its illustration (revenue × rate)', demo && demo.value === 720 && demo.delta === 3.2, JSON.stringify(demo));

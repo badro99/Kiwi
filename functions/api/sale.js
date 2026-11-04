@@ -551,6 +551,24 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     } catch (_) { return json({ error: 'settlement-key-unavailable' }, 503); }
   }
 
+  // A 503 keeps the same sale in the till outbox, including its tip.
+  async function persistTip(saleId) {
+    if (!tipCents) return null;
+    try {
+      await env.DB.prepare('UPDATE sales SET tip_cents = ? WHERE merchant = ? AND id = ? AND tip_cents IS NULL')
+        .bind(tipCents, merchant, saleId).run();
+      const saved = await env.DB.prepare('SELECT tip_cents FROM sales WHERE merchant = ? AND id = ?')
+        .bind(merchant, saleId).first();
+      if (!saved || saved.tip_cents == null) throw new Error('tip-not-persisted');
+      // An earlier, different tip already stands on this sale and wins (the UPDATE
+      // only fills an empty tip). Retrying can never change it, so do not 503.
+      if (Number(saved.tip_cents) !== tipCents) return null;
+    } catch (error) {
+      return json({ error: 'tip-write-failed', tipRecorded: false, detail: String(error && error.message || error), id: saleId }, 503);
+    }
+    return null;
+  }
+
   // ── IDEMPOTENCY VS CONFLICT CHECK ─────────────────────────────────────────
   // A replay of the exact same financial transaction is safe and idempotent.
   // But a retry claiming the same unique sale ID with conflicting money or
@@ -607,7 +625,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
       ).bind(merchant, ts, ref, amountCents, lines, id).first();
     } catch (_) { sameSettlement = null; }
     if (sameSettlement && sameSettlement.id) {
-      return json({ ok: true, id: sameSettlement.id, duplicateOf: sameSettlement.id, requestedId: id, stored: true });
+      return (await persistTip(sameSettlement.id)) || json({ ok: true, id: sameSettlement.id, duplicateOf: sameSettlement.id, requestedId: id, stored: true });
     }
   }
 
@@ -621,7 +639,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     ).bind(merchant, amountCents, method, ts - 10000, ts + 10000).all()).results || []; }
     catch (_) { /* old schema: exact-replay guard above still applies */ }
     const duplicate = candidates.find(row => row.id !== id && orderNumber(row.ref) === orderNumber(ref));
-    if (duplicate) return json({ ok: true, id: duplicate.id, duplicateOf: duplicate.id, requestedId: id, stored: true });
+    if (duplicate) return (await persistTip(duplicate.id)) || json({ ok: true, id: duplicate.id, duplicateOf: duplicate.id, requestedId: id, stored: true });
   }
 
   if (!stored && !split && !b.retailBalance && !ref && effectiveSessionId) {
@@ -630,7 +648,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
         `SELECT id FROM sales WHERE merchant = ? AND session_id = ? AND (ref IS NULL OR ref = '')
           AND amount_cents = ? AND method = ? AND ts BETWEEN ? AND ? AND void_ts IS NULL LIMIT 1`
       ).bind(merchant, effectiveSessionId, amountCents, method, ts - 10000, ts + 10000).first();
-      if (duplicate) return json({ ok: true, id: duplicate.id, duplicateOf: duplicate.id, requestedId: id, stored: true });
+      if (duplicate) return (await persistTip(duplicate.id)) || json({ ok: true, id: duplicate.id, duplicateOf: duplicate.id, requestedId: id, stored: true });
     } catch (_) { /* absent on older schemas */ }
   }
 
@@ -705,7 +723,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
           await recordSaleConflict(env, merchant, id, amountCents, method);
           return json({ error: 'sale-conflict', detail: 'same-bill-different-payment', id }, 409);
         }
-        return json({ ok: true, id: first.id, duplicateOf: first.id, requestedId: id, stored: true });
+        return (await persistTip(first.id)) || json({ ok: true, id: first.id, duplicateOf: first.id, requestedId: id, stored: true });
       }
     }
   }
@@ -753,54 +771,23 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
       ...(sellerId ? [sellerId] : []),
       ...(author ? [author] : [])]).run();
   } catch (e) {
-    const missing = String((e && e.message) || e);
-    if (missing.includes('channel')) {
+    // Optional legacy columns may be absent, but cents must never be dropped.
+    const columns = ['lines', 'channel', 'amount_cents', ...(hasVisitLink ? ['session_id', 'split_flow_id'] : []),
+      ...(sellerId ? ['seller_id'] : []), ...(author ? ['written_by'] : [])];
+    const values = [lines, channel || null, amountCents, ...(hasVisitLink ? [effectiveSessionId || null, splitFlowId || null] : []),
+      ...(sellerId ? [sellerId] : []), ...(author ? [author] : [])];
+    let error = e;
+    for (;;) {
+      const message = String(error && error.message || error);
+      const at = columns.findIndex(column => column !== 'amount_cents' && message.includes(column));
+      if (at < 0) return json({ error: 'db', detail: message }, 503);
+      columns.splice(at, 1); values.splice(at, 1);
       try {
-        await env.DB.prepare(
-          'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        ).bind(id, merchant, amount, method, label, ref, ts, lines).run();
-        linesMode = 'stored-channel-unmigrated';
-      } catch (legacyError) {
-        if (!String((legacyError && legacyError.message) || legacyError).includes('lines')) {
-          return json({ error: 'db', detail: String(legacyError && legacyError.message || legacyError) }, 500);
-        }
-      }
-    } else if (missing.includes('amount_cents')) {
-      try {
-        await env.DB.prepare(
-          'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        ).bind(id, merchant, amount, method, label, ref, ts, lines, channel || null).run();
-        linesMode = 'stored-no-cents';
-      } catch (channelError) {
-        if (String((channelError && channelError.message) || channelError).includes('channel')) {
-          try {
-            await env.DB.prepare(
-              'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-            ).bind(id, merchant, amount, method, label, ref, ts, lines).run();
-            linesMode = 'stored-channel-unmigrated';
-          } catch (legacyError) {
-            if (!String((legacyError && legacyError.message) || legacyError).includes('lines')) {
-              return json({ error: 'db', detail: String(legacyError && legacyError.message || legacyError) }, 500);
-            }
-          }
-        }
-      }
-    }
-    if (missing.includes('lines') || ((missing.includes('channel') || missing.includes('amount_cents')) && linesMode === 'stored')) {
-      try {
-        await env.DB.prepare(
-          'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        ).bind(id, merchant, amount, method, label, ref, ts).run();
-        linesMode = 'unmigrated';
-      } catch (_) { /* fall through to the real error */ }
-      if (linesMode === 'unmigrated') {
-        /* Continue into table settlement; an old optional `lines` column must
-           never leave money saved while the table remains occupied. */
-      } else {
-        return json({ error: 'db', detail: String(e && e.message || e) }, 500);
-      }
-    } else if (linesMode !== 'stored-channel-unmigrated' && linesMode !== 'stored-no-cents') {
-      return json({ error: 'db', detail: String(e && e.message || e) }, 500);
+        await env.DB.prepare(`INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, ${columns.join(', ')}) VALUES (${Array(7 + columns.length).fill('?').join(', ')})`)
+          .bind(id, merchant, amount, method, label, ref, ts, ...values).run();
+        linesMode = columns.includes('lines') ? 'stored-channel-unmigrated' : 'unmigrated';
+        break;
+      } catch (next) { error = next; }
     }
   }
 
@@ -888,16 +875,8 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     } catch (_) { /* the sale stands; the flag is best effort */ }
   }
 
-  /* Le pourboire saisi à l'encaissement. Le tableau de bord ne l'apprenait
-     qu'à la clôture (le Z) : une journée ouverte n'en montrait aucun. Même
-     guérison de schéma que payment_parts, mais au mieux : un pourboire qui
-     ne s'écrit pas ne défait jamais une vente encaissée. */
-  if (tipCents) {
-    try {
-      await env.DB.prepare('UPDATE sales SET tip_cents = ? WHERE merchant = ? AND id = ? AND tip_cents IS NULL')
-        .bind(tipCents, merchant, id).run();
-    } catch (_) { /* la vente reste ; le Z déclarera le pourboire */ }
-  }
+  const tipError = await persistTip(id);
+  if (tipError) return tipError;
 
   /* La fiche du destinataire d'une livraison (functions/api/_delivery-card.js),
      au mieux et une seule fois : jamais une cliente du carnet. */
