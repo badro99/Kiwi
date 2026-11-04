@@ -133,7 +133,22 @@
  *                 en arrière depuis ce plus haut point : un code gardé hors ligne
  *                 est alors refusé (échec fermé) jusqu'au prochain contact serveur ;
  *   anchor(ms)    l'heure du serveur : recale l'horloge et lève l'alerte ;
- *   observe(res)  lit l'en-tête Date d'une réponse du serveur et l'ancre.
+ *   observe(res)  lit l'en-tête Date d'une réponse du serveur et l'ancre ;
+ *   observe(res, sentAt)  la même lecture, chronométrée : un échantillon de plus
+ *                 (voir « Heure de la caisse » ci-dessous) ;
+ *   skewMs()      le décalage appris, serveur moins appareil (0 sans mesure) ;
+ *   date()        l'heure corrigée, en Date (sans la règle « jamais en arrière »).
+ *
+ * HEURE DE LA CAISSE (décision du 4 novembre 2026). Une vente porte l'heure corrigée
+ * (`ts`) ET celle de l'appareil (`deviceTs`) ; la journée commerciale et l'heure du
+ * ticket suivent la corrigée. Le décalage est la MÉDIANE des derniers échantillons
+ * (un seul faux ne le déplace pas) ; un échantillon dont l'aller-retour dépasse 2 s
+ * est écarté, la réponse ayant voyagé trop longtemps pour dire l'heure à la seconde.
+ * Chaque réponse réussie de /api/ du même site en fournit un (fetch enveloppé, sans
+ * rien changer pour l'appelant). Au-delà de 5 min d'écart, un avis discret ; sans
+ * serveur joint, l'heure de l'appareil reste inchangée et rien ne s'affiche. Le
+ * décalage est annoncé à la file des ventes par l'événement `kiwi:clock-skew`
+ * (KiwiLive.now() le lit) : la caisse n'a pas à connaître ce module.
  *
  * Limite connue : une tablette éteinte puis rallumée avec une horloge reculée ne se
  * voit qu'au prochain contact serveur, qui recale tout.
@@ -148,14 +163,43 @@
   var KEY = 'kiwi:caisse:clock:v1';
   var TOLERANCE = 5 * 60 * 1000;  /* une horloge corrigée de quelques minutes n'est pas une triche */
   var SAVE_EVERY = 60 * 1000;     /* le plus haut point s'écrit au plus une fois par minute */
-  var hw = 0, skew = 0, saved = 0;
+  var MAX_SAMPLES = 9, SLOW_RTT = 2000, NOTICE_TEXT = "Heure de l'appareil décalée";
+  var hw = 0, skew = 0, saved = 0, samples = [];
   try {
     var s = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (s && isFinite(s.hw) && isFinite(s.skew)) { hw = Math.max(0, +s.hw); skew = +s.skew; saved = hw; }
+    if (s && Array.isArray(s.samples)) samples = s.samples.filter(isFinite).slice(-MAX_SAMPLES);
   } catch (_) {}
   function save() {
     saved = hw;
-    try { localStorage.setItem(KEY, JSON.stringify({ hw: hw, skew: skew })); } catch (_) {}
+    try { localStorage.setItem(KEY, JSON.stringify({ hw: hw, skew: skew, samples: samples })); } catch (_) {}
+  }
+  function median(list) {
+    var a = list.slice().sort(function (x, y) { return x - y; }), mid = a.length >> 1;
+    return a.length % 2 ? a[mid] : Math.round((a[mid - 1] + a[mid]) / 2);
+  }
+  function changed() {
+    try { document.dispatchEvent(new CustomEvent('kiwi:clock-skew', { detail: { skewMs: skew } })); } catch (_) {}
+    try {
+      var el = document.getElementById('kiwi-clock-skew');
+      if (Math.abs(skew) <= TOLERANCE) { if (el && el.remove) el.remove(); return; }
+      if (!el && document.body && document.createElement) {
+        el = document.createElement('div'); el.id = 'kiwi-clock-skew'; el.setAttribute('role', 'status');
+        el.style.cssText = 'position:fixed;bottom:12px;left:12px;z-index:9000;padding:6px 12px;border-radius:999px;background:var(--riad,#053B2C);color:var(--paper,#F7F5F0);font:500 12px/1.2 "Inter Tight",sans-serif;opacity:.92;pointer-events:none';
+        document.body.appendChild(el);
+      }
+      if (el && !el.firstChild) el.appendChild(document.createTextNode(NOTICE_TEXT)); /* la langue du comptoir le traduit (assets/caisse-lang.js) */
+    } catch (_) {}
+  }
+  /* Un échantillon : l'en-tête Date (tronqué à la seconde, donc visé au milieu de
+   * la seconde) moins l'heure de l'appareil au milieu de l'aller-retour. */
+  function sample(dateHeader, sentAt, receivedAt) {
+    var server = Date.parse(String(dateHeader || '')), sent = +sentAt, got = +receivedAt, rtt = got - sent;
+    if (!isFinite(server) || !isFinite(sent) || !isFinite(got) || !(rtt >= 0) || rtt > SLOW_RTT) return false;
+    samples.push(Math.round(server + 500 - (sent + rtt / 2)));
+    if (samples.length > MAX_SAMPLES) samples = samples.slice(-MAX_SAMPLES);
+    skew = median(samples); hw = Date.now() + skew; save(); changed();
+    return true;
   }
   function raw() { return Date.now() + skew; }
   function now() {
@@ -167,17 +211,39 @@
   function anchor(ms) {
     ms = Number(ms);
     if (!isFinite(ms) || ms < Date.UTC(2020, 0, 1)) return;
-    skew = ms - Date.now(); hw = ms; save();
+    skew = ms - Date.now(); hw = ms; samples = []; save(); changed();
   }
-  function observe(res) {
+  function observe(res, sentAt) {
     try {
       var d = res && res.headers && res.headers.get && res.headers.get('Date');
-      if (d) anchor(Date.parse(d));
+      if (!d) return;
+      if (sentAt != null) sample(d, sentAt, Date.now()); else anchor(Date.parse(d));
     } catch (_) {}
   }
+  /* Les réponses réussies de /api/ du même site, vues au passage. */
+  function sameApi(input) {
+    var url = typeof input === 'string' ? input : (input && input.url) || '';
+    try {
+      if (/^[a-z][a-z0-9+.-]*:/i.test(url)) { var u = new URL(url); if (u.origin !== window.location.origin) return false; url = u.pathname; }
+    } catch (_) { return false; }
+    return url.indexOf('/api/') === 0;
+  }
+  try {
+    var plain = window.fetch;
+    if (typeof plain === 'function' && !plain.__kiwiClock) {
+      window.fetch = function (input) {
+        var sent = Date.now(), p = plain.apply(this, arguments);
+        if (p && p.then && sameApi(input)) p.then(function (res) { if (res && res.ok) observe(res, sent); }, function () {});
+        return p;
+      };
+      window.fetch.__kiwiClock = true;
+    }
+  } catch (_) {}
+  try { if (skew) changed(); } catch (_) {}
   /* Un battement par minute tant que la caisse est ouverte : le plus haut point suit
    * le temps réel, donc revenir en arrière après des heures d'activité se voit. */
   try { if (typeof setInterval === 'function') setInterval(now, SAVE_EVERY); } catch (_) {}
   try { window.addEventListener('pagehide', function () { now(); save(); }); } catch (_) {}
-  window.KiwiTrustedClock = { now: now, rolledBack: rolledBack, anchor: anchor, observe: observe };
+  window.KiwiTrustedClock = { now: now, rolledBack: rolledBack, anchor: anchor, observe: observe, skewMs: function () { return skew; },
+    date: function () { return new Date(Date.now() + skew); } };
 })();

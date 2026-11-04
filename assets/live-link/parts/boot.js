@@ -89,9 +89,9 @@
   }
   if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(startBoot);
   else startBoot();
-
+  document.addEventListener('kiwi:clock-skew', function (e) { var v = Number(e && e.detail && e.detail.skewMs); if (Number.isFinite(v) && window.KiwiLive) window.KiwiLive.skewMs = v; }); /* heure de confiance de la caisse (assets/pairing-commit.js) : KiwiLive.now() */
   window.KiwiLive = {
-    isOn: on, merchant: merchant, moneyStorageReady: moneyStorageReady, postSale: postSale, postRefund: postRefund,
+    now: function () { return Date.now() + (window.KiwiLive.skewMs || 0); }, isOn: on, merchant: merchant, moneyStorageReady: moneyStorageReady, postSale: postSale, postRefund: postRefund,
     snapshotStatus: function () { return operatorSnapshot ? Object.assign({}, operatorSnapshot) : null; },
     moneyId: function (entry) { var m = merchant(); return m && entry ? stableId(m, entry) : ''; }, watchFeed: watchFeed,
     flush: flushQueue, retrySale: retrySale, retryBlockedSales: retryBlockedSales,

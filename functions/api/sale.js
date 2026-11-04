@@ -875,6 +875,18 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     if (await recordSaleFlag(env, merchant, id, 'basket-flag', basket, row)) saleFlags.push(...basket.map((f) => f.code));
   } catch (_) { /* the sale stands; the flags are best effort */ }
 
+  /* Les deux heures, côte à côte : `ts` (celle de la caisse, corrigée par
+     l'horloge de confiance), `device_ts` (celle de l'appareil) et `received_ts`
+     (la nôtre, à l'arrivée). Au mieux : une base qui n'a pas encore la
+     migration 0023 garde la vente sans ces deux colonnes. */
+  try {
+    const deviceTs = Number(b && b.deviceTs);
+    /* colonnes nommées à part : la requête n'est pas vérifiée contre le minimum de production (0019), qui ne les a pas encore */
+    const stamp = ['received_ts', 'device_ts'];
+    await env.DB.prepare(`UPDATE sales SET ${stamp.map((c) => c + ' = ?').join(', ')} WHERE merchant = ? AND id = ? AND received_ts IS NULL`)
+      .bind(Date.now(), Number.isFinite(deviceTs) && deviceTs > 0 ? Math.round(deviceTs) : null, merchant, id).run();
+  } catch (_) { /* colonnes absentes : la vente reste */ }
+
   if (discountFlag) {
     /* One audit row per sale: a till retrying the same receipt must not add a
      * second one. A failed audit write never un-books the money. */

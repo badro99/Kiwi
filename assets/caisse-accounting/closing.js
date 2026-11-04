@@ -237,7 +237,7 @@
     function currentBusinessDay() {
       const DR = window.KiwiDayReport;
       if (!DR) return '';
-      return DR.businessDay(Date.now());
+      return DR.businessDay((window.KiwiLive?.now || Date.now)());
     }
     function buildDayReport(counted, closedAt) {
       const DR = window.KiwiDayReport;

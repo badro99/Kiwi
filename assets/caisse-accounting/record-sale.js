@@ -51,7 +51,7 @@
       const entry = {
         id: orderProSaleId || ('sale-' + (window.crypto && window.crypto.randomUUID
           ? window.crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2))),
-        time: new Date(),
+        time: new Date((window.KiwiLive?.now || Date.now)()), deviceTs: Date.now(),
         label: label || 'Vente',
         /* Le reçu client, la caisse et la cuisine parlent du MÊME numéro de
            commande. La clé comptable reste `entry.id`; `ref` est le repère
