@@ -1678,7 +1678,7 @@ section('Whole-project regressions');
     'shared-rules-test.mjs', 'order-words-parity-test.mjs',
     // Les limites d'un groupe d'options (« 2 sauces au plus ») survivent à la publication (vague 11).
     'menu-option-limits-test.mjs',
-    'day-report-model-parity-test.mjs',
+    'day-report-model-parity-test.mjs', 'dayreport-history-guard-test.mjs',
     'shared-pricing-parity-test.mjs',
     'order-pricing-properties-test.mjs',
     'menu-properties-test.mjs',

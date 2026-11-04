@@ -43,6 +43,7 @@ import { hideReservations, keepReservations } from './_reservations-view.js';
 import { cleanGuestDoc } from './order/_guest.js';
 import { cleanStorefront, STOREFRONT_FEATURE } from './shop/_settings.js';
 import { validateMonthReportPolicy } from './_month-report-policy.js';
+import { dayreportHistoryLost } from './_dayreport-history.js';
 import { json, entitledMerchant, activeAccountSession, isTillFor } from '../auth/_lib.js';
 import { storeEtag, storeTag } from './_store-etag.js';
 import { tenantFor, storeSubscriptionPending } from './_private.js';
@@ -959,6 +960,8 @@ export async function onRequestPost(context) {
     const latest = feature === 'verticalops' && bookSaved.exists ? withBook(mine, bookSaved.carnet) : mine;
     return json({ error: 'stale', feature, rev: serverRev, data: view(latest) }, 409);
   }
+  // A closed Z only gains history: a rebuild that lost a closure is answered as stale, and the till merges.
+  if (feature === 'dayreports' && mine && dayreportHistoryLost(mine, clean.value)) return json({ error: 'stale', feature, rev: serverRev, data: view(mine) }, 409);
 
   /* Le carnet est écrit dans son document : verticalops ne le garde plus.
    * Tant qu'aucune ligne creditbook n'existe (commerçant sans client à crédit),
