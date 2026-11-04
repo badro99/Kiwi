@@ -44,6 +44,9 @@ for (const name of ['submit', 'submitHotel']) {
   const h = setup({ state:{service:{id:'room'},lang:'fr'}, merchant:'demo', party:()=>1, phoneValue:x=>x, emailOk:()=>true,
     t:x=>x, ht:x=>x, ssGet:k=>refs.get(k), ssSet:(k,v)=>refs.set(k,v), crypto:{randomUUID:()=> 'attempt'},
     ssDel:()=>assert.fail('must retain retry identity'), success:()=>assert.fail(), hotelSuccess:()=>assert.fail() });
+  // The retry reference helper lives beside submit in assets/booking-submission.js; run the real one.
+  const live = fs.readFileSync('assets/booking-submission.js', 'utf8');
+  h.run(live.slice(live.indexOf('  const retryRefs = {};'), live.indexOf('  function retryWarning()')) + live.slice(live.indexOf('  function retryWarning()'), live.indexOf('\n  }\n', live.indexOf('  function retryWarning()')) + 4));
   const fn = h.run('(' + extract('booking.js', name) + ')');
   await h.expire(fn({...event,currentTarget:{querySelector:s=>s==='[type=submit]'?button:error}}));
   assert.equal(button.disabled,false); assert.equal(error.textContent,'timeout'); assert.equal(refs.size,1);
