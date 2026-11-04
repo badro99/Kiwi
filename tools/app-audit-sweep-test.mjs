@@ -31,7 +31,7 @@ ok('every register folds the phone ticket sheet after a paid sale, demo included
   assert.match(sale, /if \(!\(total > 0\)\) return null;\n    if \(!isReal\(\)\) \{ ticketDone\(total, sale\.method\); return null; \}/);
 });
 ok('saleId and clientId reach the stored ledger row', () => {
-  assert.match(sale, /creditClient\(entry\);[\s\S]{0,400}if \(entry\.saleId \|\| entry\.clientId \|\| entry\.syncState\) write\(vertical, rows\);/);
+  assert.match(sale, /creditClient\(entry\);[\s\S]{0,400}if \(entry\.saleId \|\| entry\.clientId \|\| entry\.syncState \|\| entry\.stockState\) write\(vertical, rows\);/);
 });
 const mobile = read('assets/pos-mobile.js');
 ok('the phone register measures layout once the screen settles, not on every tap', () => {

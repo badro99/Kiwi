@@ -399,7 +399,7 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
         setMode(btn.dataset.mode);
       });
     });
-    /* Les refus de KiwiPosSale.record() n'avaient aucun auditeur : la caisse se taisait sur une vente perdue. */ Object.entries({ 'kiwi:sale-refused': () => tr('Vente non enregistrée : le stockage de cet appareil est plein. Libérez de la place puis encaissez à nouveau.'), 'kiwi:sale-local-full': () => tr('Vente envoyée, mais pas gardée sur cet appareil (stockage plein). Gardez cette page ouverte.'), 'kiwi:sale-sync-refused': () => tr('Vente gardée sur cet appareil, pas encore envoyée (file pleine). Gardez cette page ouverte jusqu’à la synchronisation.') }).forEach(([type, say]) => window.addEventListener(type, () => toast(say(), 10000, 'warn')));
+    /* Les refus de KiwiPosSale.record() n'avaient aucun auditeur : la caisse se taisait sur une vente perdue. */ Object.entries({ 'kiwi:sale-refused': () => tr('Vente non enregistrée : le stockage de cet appareil est plein. Libérez de la place puis encaissez à nouveau.'), 'kiwi:sale-local-full': () => tr('Vente envoyée, mais pas gardée sur cet appareil (stockage plein). Gardez cette page ouverte.'), 'kiwi:sale-sync-refused': () => tr('Vente gardée sur cet appareil, pas encore envoyée (file pleine). Gardez cette page ouverte jusqu’à la synchronisation.'), 'kiwi:stock-not-recorded': () => tr('Vente encaissée, mais le stock n’a pas été mis à jour. Vérifiez l’inventaire de ces articles.') }).forEach(([type, say]) => window.addEventListener(type, () => toast(say(), 10000, 'warn')));
     window.KiwiCaisseToast = toast;
     /* ---------- Right panel state ---------- */
     let selectedId = null;

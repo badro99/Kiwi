@@ -548,13 +548,17 @@
     /* Stock truth is written from the same immutable sale-line payload. The
        movement IDs derive from the ticket reference, so a reload/replay can
        never consume the same item twice. Services are ignored by the engine. */
-    try { window.KiwiInventoryConsumption?.record?.(entry); } catch (_) {}
+    try { window.KiwiInventoryConsumption?.record?.(entry); } catch (_) {
+      /* Ventes encaissées, stock non décrémenté : on le garde sur la ligne et la caisse le dit. */
+      entry.stockState = 'not-recorded';
+      try { window.dispatchEvent(new CustomEvent('kiwi:stock-not-recorded', { detail: { ref: entry.ref || entry.id || '' } })); } catch (_e) {}
+    }
 
     creditClient(entry);
     /* saleId and clientId are only known after the first write; without this
        one the local row could never be matched to its server twin (reprint,
        dedupe) unless a receipt happened to print. */
-    if (entry.saleId || entry.clientId || entry.syncState) write(vertical, rows);
+    if (entry.saleId || entry.clientId || entry.syncState || entry.stockState) write(vertical, rows);
 
     printCustomerReceipt(vertical, entry, sale, rows);
 

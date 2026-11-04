@@ -52,7 +52,7 @@ function boot({ storageFails = false, merchant = 'amira-snack', answer = () => (
   vm.createContext(context);
   vm.runInContext(source, context, { filename: 'pos-sale.js' });
   const held = () => JSON.parse(rows.get('kiwi:posHeld') || '[]');
-  return { api: window.KiwiPosSale, events, posted, held, rows, live, timers, intervals, listeners };
+  return { api: window.KiwiPosSale, window, events, posted, held, rows, live, timers, intervals, listeners };
 }
 
 const full = boot({ storageFails: true, answer: () => ({ ok: true, queued: true }) });
@@ -82,11 +82,20 @@ ok('held quota failure is explicit on the durable entry and emitted state', loca
     window: { addEventListener: (type, fn) => { (listeners[type] = listeners[type] || []).push(fn); } },
     toast: (msg, ms, kind) => toasts.push({ msg, ms, kind }), tr: (m) => 'EN:' + m, Object,
   });
-  for (const type of ['kiwi:sale-refused', 'kiwi:sale-local-full', 'kiwi:sale-sync-refused']) {
+  for (const type of ['kiwi:sale-refused', 'kiwi:sale-local-full', 'kiwi:sale-sync-refused', 'kiwi:stock-not-recorded']) {
     ok(type + ' has one listener in the till shell', (listeners[type] || []).length === 1);
     (listeners[type] || []).forEach((fn) => fn({ type }));
   }
-  ok('each refusal shows one translated warning to the cashier', toasts.length === 3 && toasts.every((t) => t.kind === 'warn' && t.ms === 10000 && t.msg.startsWith('EN:Vente')));
+  ok('each refusal shows one translated warning to the cashier', toasts.length === 4 && toasts.every((t) => t.kind === 'warn' && t.ms === 10000 && t.msg.startsWith('EN:Vente')));
+}
+/* A stock engine that throws no longer hides it: the line says so and the till is told. */
+{
+  const t = boot();
+  t.window.KiwiInventoryConsumption = { record() { throw new Error('ledger-broken'); } };
+  const entry = t.api.record('epicerie', { total: 20, method: 'cash', ref: 'stock-fail', lines: [{ name: 'Huile', qty: 1, total: 20 }] });
+  ok('a failed stock write marks the sale line', entry && entry.stockState === 'not-recorded');
+  ok('… and emits the warning event', t.events.some((e) => e.type === 'kiwi:stock-not-recorded'));
+  ok('… and the sale itself still stands', t.events.some((e) => e.type === 'kiwi:sale-paid'));
 }
 /* 1 · une vente refusée (stockage plein) est gardée, avec son commerce. */
 let answers = [{ ok: false, reason: 'queue-storage-full' }];
