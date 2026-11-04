@@ -102,9 +102,25 @@ if (!CHROME_BIN || !puppeteer) {
 }
 
 /* ── D1 facade over a file-backed SQLite database ──────────────────── */
+/* Every case opens a fresh browser context, so the shell and its assets are
+ * fetched again each time: keep their bytes in memory instead of reopening,
+ * statting and re-encoding each file (a few seconds of CPU over the suite). */
+const STATIC = new Map();
+function staticBytes(file) {
+  if (!STATIC.has(file)) {
+    let bytes = null;
+    try { if (fs.statSync(file).isFile()) bytes = fs.readFileSync(file); } catch (_) {}
+    STATIC.set(file, bytes);
+  }
+  return STATIC.get(file);
+}
+
+/* The schema is built once and copied per case (it cost ~3.8 s of CPU rebuilt 23 times). */
+let schemaImage = null;
 function makeEnv(dbFile) {
+  if (!schemaImage) { const tpl = new DatabaseSync(':memory:'); tpl.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8')); schemaImage = tpl.serialize(); tpl.close(); }
+  fs.writeFileSync(dbFile, schemaImage);
   const sql = new DatabaseSync(dbFile);
-  sql.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   class Statement {
     constructor(text) { this.text = text; this.args = []; }
     bind(...args) { this.args = args.map((v) => (v === undefined ? null : v)); return this; }
@@ -621,12 +637,12 @@ async function startOrigin(env, hooks = {}) {
       const insideRoot = file.startsWith(ROOT + path.sep);
       const insidePublicAssets = file.startsWith(path.join(ROOT, 'assets') + path.sep);
       if (!insideRoot || (process.argv.includes('--serve-ui-qa') && u.pathname.startsWith('/assets/') && !insidePublicAssets) ||
-          !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+          !staticBytes(file)) {
         res.writeHead(404); res.end('nope');
         return;
       }
       res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
-      fs.createReadStream(file).pipe(res);
+      res.end(staticBytes(file));
     } catch (err) {
       try { res.writeHead(500); res.end('adapter fault'); } catch (_) {}
     }
