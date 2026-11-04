@@ -98,6 +98,7 @@ async function inspect(source, present) {
       createElement() { const node = makeNode(); nodes.push(node); return node; },
       body: { appendChild() {} }, querySelector() { return null; }
     },
+    clearTimeout() {}, AbortController,
     setTimeout(fn, delay) { timers.push({ fn, delay }); },
     requestAnimationFrame(fn) { fn(); },
     async fetch(url, opts) {

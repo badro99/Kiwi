@@ -26,7 +26,7 @@ function load(lang) {
   const store = {};
   const window = {};
   const ctx = {
-    window, console, JSON, Object, Array, String, Number, Date, Math, RegExp, encodeURIComponent, setTimeout, clearTimeout,
+    window, console, JSON, Object, Array, String, Number, Date, Math, RegExp, encodeURIComponent, setTimeout, clearTimeout, AbortController,
     requestAnimationFrame: (f) => f(),
     location: { pathname: '/' + lang + '/', search: '', hash: '' },
     localStorage: { getItem: () => null },
@@ -163,7 +163,7 @@ ok('the WhatsApp fallback carries every answer and the reference when there is o
 });
 ok('posts to /api/demo-request with a deadline; a server refusal falls back to WhatsApp', () => {
   assert.match(src, /var API = '\/api\/demo-request';/);
-  assert.match(src, /setTimeout\(function \(\) \{ if \(controller\) controller\.abort\(\); \}, 15000\)/);
+  assert.match(src, /return fetchDeadline\(API,/);
   assert.match(src, /if \(res\.status === 400 && res\.body && res\.body\.field\)/);
   assert.match(src, /phase = 'failed';/);
 });

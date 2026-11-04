@@ -69,7 +69,7 @@ const context = vm.createContext({
     throw new Error('unexpected fetch ' + url);
   },
   Response, Promise, Error, Date, Math, JSON, String, Number, Object, Array,
-  setTimeout, clearTimeout, console,
+  setTimeout, clearTimeout, AbortController, console,
 });
 
 vm.runInContext(commitSource, context);

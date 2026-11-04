@@ -139,7 +139,7 @@ var SHELL = [
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=8',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
-  '/assets/serveur/service.js?v=14',
+  '/assets/serveur/service.js?v=16',
   '/assets/serveur-app.js?v=27',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
@@ -604,7 +604,7 @@ var SHELL = [
   '/assets/refund-split.js?v=2',
   '/assets/pos-maison/inventory.js?v=71',
   '/assets/pos-maison.js?v=154',
-  '/assets/caisse-pairing.js?v=65',
+  '/assets/caisse-pairing.js?v=67',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

@@ -1,4 +1,4 @@
-  /* ── redeem: backend first, fail-soft to the same-browser map ──────────── */
+var fetchDeadline = function (url, options, readBody, controller) { controller = controller || (typeof AbortController === 'function' ? new AbortController() : null); var timer; var request = new Promise(function (resolve, reject) { try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); } catch (error) { reject(error); } }).then(function (response) { if (readBody === false || !response || typeof response.json !== 'function') return response; return response.json().then(function (data) { response.json = function () { return Promise.resolve(data); }; return response; }, function (error) { response.json = function () { return Promise.reject(error); }; return response; }); }); var deadline = new Promise(function (_, reject) { timer = setTimeout(function () { var error = new Error('request-timeout'); error.code = 'timeout'; reject(error); if (controller) controller.abort(); }, 12000); }); return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); }); };   /* ── redeem: backend first, fail-soft to the same-browser map ──────────── */
   function applyPairing(code, d) {
     /* Poser l'appairage est un geste PARTAGÉ : la caisse n'est pas le seul
      * appareil qui s'appaire (kiwi-cuisine.html le fait aussi, sur la même
@@ -49,7 +49,7 @@
   function redeem(code) {
     code = String(code || '').replace(/\D/g, '').slice(0, 6);
     if (code.length !== 6) return Promise.resolve({ ok: false, error: 'bad-code' });
-    return fetch('/api/pair/redeem', {
+    return fetchDeadline('/api/pair/redeem', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code, terminalId: terminalId() }),
     }).then(function (r) {
       if (r.status === 404 || r.status === 405) return localRedeem(code); // backend absent → same-browser
@@ -87,7 +87,7 @@
   function pairState(venue) {
     /* terminalId : le serveur renouvelle un ancien jeton en jeton à NOTRE nom,
        que le propriétaire pourra retirer sans toucher aux autres caisses. */
-    return fetch('/api/pair/state?merchant=' + encodeURIComponent(venue.merchant) + '&terminalId=' + encodeURIComponent(terminalId()), {
+    return fetchDeadline('/api/pair/state?merchant=' + encodeURIComponent(venue.merchant) + '&terminalId=' + encodeURIComponent(terminalId()), {
       credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
     }).then(function (r) {
       return jsonOrEmpty(r).then(function (j) {
@@ -104,7 +104,7 @@
   function recoverFromTerminal(venue) {
     venue = venue || pairedVenue();
     if (!venue || !venue.merchant) return Promise.reject(pairError('merchant-missing', 0));
-    return fetch('/api/pair/recover', {
+    return fetchDeadline('/api/pair/recover', {
       method: 'POST', credentials: 'same-origin', cache: 'no-store',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ merchant: venue.merchant, terminalId: terminalId() }),
@@ -134,7 +134,7 @@
     venue = venue || pairedVenue();
     if (!venue || !venue.merchant) return Promise.reject(pairError('merchant-missing', 0));
     if (repairPromise) return repairPromise;
-    repairPromise = fetch('/api/pair/create', {
+    repairPromise = fetchDeadline('/api/pair/create', {
       method: 'POST',
       credentials: 'same-origin',
       cache: 'no-store',
@@ -151,7 +151,7 @@
         return String(j.code);
       });
     }).then(function (code) {
-      return fetch('/api/pair/redeem', {
+      return fetchDeadline('/api/pair/redeem', {
         method: 'POST',
         credentials: 'same-origin',
         cache: 'no-store',
