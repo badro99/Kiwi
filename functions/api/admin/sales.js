@@ -55,6 +55,7 @@ import {
 import { roomChargeId, roomChargeReversalId } from '../hotel/_room-charge-data.js';
 import { voidSaleLoyalty, restoreSaleLoyalty, nextSrvTs } from '../clients.js';
 import { ensureEmployeeLoyaltyEvents } from '../employee-clients.js';
+import { SPEND_CENTS_SQL } from '../_spend-cents.js';
 
 /* Les motifs. Fermés côté serveur : un journal dont le motif est du texte libre
    se remplit de « test », « ok », « rien » et ne répond plus à la question qu'on
@@ -533,11 +534,13 @@ export async function onRequestPost(context) {
         const reversed = 'employee-void.' + r.id;
         stmts.push(env.DB.prepare(`UPDATE clients SET
           spend = MAX(0, ROUND((spend - (SELECT amount FROM employee_loyalty_events
-            WHERE merchant = ? AND ref = ?)) * 100) / 100.0), updated_ts = ?, srv_ts = ?
+            WHERE merchant = ? AND ref = ?)) * 100) / 100.0),
+          spend_cents = MAX(0, ${SPEND_CENTS_SQL} - CAST(ROUND((SELECT amount FROM employee_loyalty_events
+            WHERE merchant = ? AND ref = ?) * 100) AS INTEGER)), updated_ts = ?, srv_ts = ?
           WHERE merchant = ? AND id = (SELECT client_id FROM employee_loyalty_events
             WHERE merchant = ? AND ref = ?)
             AND NOT EXISTS (SELECT 1 FROM employee_loyalty_events WHERE merchant = ? AND ref = ?)`)
-          .bind(merchant, linked, ts, srv, merchant, merchant, linked, merchant, reversed));
+          .bind(merchant, linked, merchant, linked, ts, srv, merchant, merchant, linked, merchant, reversed));
         stmts.push(env.DB.prepare(`INSERT OR IGNORE INTO employee_loyalty_events
           (merchant, ref, client_id, amount, created_ts)
           SELECT merchant, ?, client_id, -amount, ? FROM employee_loyalty_events
@@ -564,10 +567,12 @@ export async function onRequestPost(context) {
         const reversed = 'employee-void.' + r.id;
         stmts.push(env.DB.prepare(`UPDATE clients SET
           spend = ROUND((spend - (SELECT amount FROM employee_loyalty_events
-            WHERE merchant = ? AND ref = ?)) * 100) / 100.0, updated_ts = ?, srv_ts = ?
+            WHERE merchant = ? AND ref = ?)) * 100) / 100.0,
+          spend_cents = ${SPEND_CENTS_SQL} - CAST(ROUND((SELECT amount FROM employee_loyalty_events
+            WHERE merchant = ? AND ref = ?) * 100) AS INTEGER), updated_ts = ?, srv_ts = ?
           WHERE merchant = ? AND id = (SELECT client_id FROM employee_loyalty_events
             WHERE merchant = ? AND ref = ?)`)
-          .bind(merchant, reversed, ts, srv, merchant, merchant, reversed));
+          .bind(merchant, reversed, merchant, reversed, ts, srv, merchant, merchant, reversed));
         stmts.push(env.DB.prepare(`DELETE FROM employee_loyalty_events WHERE merchant = ? AND ref = ?`)
           .bind(merchant, reversed));
       }

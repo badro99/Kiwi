@@ -46,6 +46,7 @@ import { clientAudit, mayRecordReward } from './_client-audit.js';
 import { phoneKey } from './_phone.js';
 import { readsIdentityDocuments, withoutDocumentNumber, keepStoredDocument } from './_client-identity.js';
 import { mayMergeClients, mergeClients } from './_client-merge.js';
+import { spendCentsOf, toCents } from './_spend-cents.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const int = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
@@ -204,9 +205,9 @@ export async function onRequestGet(context) {
 
   try {
     if (url.searchParams.has('auditClient')) return await clientAudit(request, env, merchant, await resolveClientId(env, merchant, str(url.searchParams.get('auditClient'), 64)));
-    const readPage = (tags) => env.DB.prepare(
+    const readPage = (tags, cents = true) => env.DB.prepare(
       `SELECT id, name, phone, email, birthday, gender, city, address, notes, hospitality,${tags ? ' tags,' : ''}
-              points, stamps, visits, spend, consent, consent_email, source,
+              points, stamps, visits, spend,${cents ? ' spend_cents,' : ''} consent, consent_email, source,
               first_seen, last_seen, updated_ts, srv_ts, deleted
          FROM clients
         WHERE merchant = ? AND srv_ts > ?
@@ -215,7 +216,13 @@ export async function onRequestGet(context) {
     ).bind(merchant, since, PAGE).all();
     let res;
     try { res = await readPage(true); }
-    catch (error) { if (!missingColumn(error)) throw error; res = await readPage(false); }
+    catch (error) {
+      if (!missingColumn(error)) throw error;
+      /* spend_cents arrives with migrations/0020; until it is applied the page
+         is read without it and the float column answers (spendCentsOf). */
+      try { res = await readPage(true, false); }
+      catch (again) { if (!missingColumn(again)) throw again; res = await readPage(false, false); }
+    }
 
     const rows = (res && res.results) || [];
     let cursor = since;
@@ -309,6 +316,8 @@ export async function onRequestGet(context) {
     return json({
       merchant,
       clients: rows.map((row) => ({ ...row,
+        // Spend is read in integer centimes only; `spend` keeps its name for devices.
+        spend: spendCentsOf(row) / 100, spend_cents: spendCentsOf(row),
         // ID numbers stay with hotels, the owner and operators (_client-identity.js).
         hospitality: seesDocuments ? row.hospitality : withoutDocumentNumber(row.hospitality),
         // Colonne pas encore migrée : pas de champ, l'appareil garde ses étiquettes.
@@ -562,12 +571,12 @@ export async function onRequestPost(context) {
     c.updated_ts = Math.min(int(body.updated || body.updated_ts, 1e15) || now, now);
   }
 
-  const upsert = (tags) => env.DB.prepare(
+  const upsert = (tags, cents = true) => env.DB.prepare(
     `INSERT INTO clients (merchant, id, name, phone, email, birthday, gender, city,
-                          address, notes, hospitality, points, stamps, visits, spend, consent,
+                          address, notes, hospitality, points, stamps, visits, spend${cents ? ', spend_cents' : ''}, consent,
                           consent_email, source, first_seen, last_seen, updated_ts,
                           srv_ts, deleted${tags ? ', tags' : ''})
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0${tags ? ', ?' : ''})
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${cents ? '?, ' : ''}0${tags ? ', ?' : ''})
      ON CONFLICT(merchant, id) DO UPDATE SET
        ${tags ? edits : edits.replace('tags = excluded.tags,', '')}
        updated_ts = excluded.updated_ts, srv_ts = excluded.srv_ts
@@ -575,12 +584,17 @@ export async function onRequestPost(context) {
      WHERE clients.deleted = 0 AND (? = 0 OR excluded.updated_ts >= clients.updated_ts)`
   ).bind(
     merchant, c.id, c.name, c.phone, c.email, c.birthday, c.gender, c.city,
-    c.address, c.notes, c.hospitality, initialPoints, initialStamps, initialVisits, initialSpend, c.consent,
+    c.address, c.notes, c.hospitality, initialPoints, initialStamps, initialVisits, initialSpend, ...(cents ? [toCents(initialSpend)] : []), c.consent,
     c.consent_email, c.source, c.first_seen, c.last_seen, c.updated_ts, srv, ...(tags ? [c.tags] : []), legacy
   ).run();
   try {
     try { await upsert(true); }
-    catch (error) { if (!missingColumn(error)) throw error; await upsert(false); }
+    catch (error) {
+      if (!missingColumn(error)) throw error;
+      // Neither 0009 (tags) nor 0020 (spend_cents) may block a profile sync.
+      try { await upsert(true, false); }
+      catch (again) { if (!missingColumn(again)) throw again; await upsert(false, false); }
+    }
   } catch (_) {
     // Table absente → 503. Le client garde la fiche dans sa file et retentera :
     // rien n'est perdu, la remontée est seulement remise à plus tard.

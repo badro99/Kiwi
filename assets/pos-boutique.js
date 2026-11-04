@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=175';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=93';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=175';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=175';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=176';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=94';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=176';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=176';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
@@ -516,6 +516,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       method, channel: delivery ? 'delivery' : 'counter', label: (lines[0] && lines[0].name) || 'Vente',
       ref: sale.id, ts: +new Date(sale.at || Date.now()), lines,
     };
+    if (sale.clientId) payload.clientId = sale.clientId;
     if (sale.tenderVersion === 2) payload.paymentParts = bqPaymentParts(parts);
     if (cashIn <= 0 && creditIn > 0 && lines.length) {
       payload.settlementKind = 'store-credit'; payload.creditAmountCents = Math.round(creditIn * 100);
@@ -815,7 +816,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
         const total = lines.reduce((sum, l) => sum + l.unit * l.qty, 0);
         SALES.push({
           id: ref, serverId: String(row.id || ''), at: new Date(Number(row.ts) || Date.now()),
-          clientId: null, by: 'Caisse', kind: 'vente', methods: srvMethod(row.method), lines,
+          clientId: row.clientId || null, by: 'Caisse', kind: 'vente', methods: srvMethod(row.method), lines,
           total, remote: true, ...remoteMoney(row, total),
         });
         added++;
@@ -2007,6 +2008,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
               time: sale.at,
               lines: basket,
             };
+            if (sale.clientId) payload.clientId = sale.clientId;
             if (isAcompte) payload.retailBalance = {
               id: balanceId, customerId: c.id, ticketRef: sale.id,
               totalCents: Math.round(total * 100), stage: 'open',

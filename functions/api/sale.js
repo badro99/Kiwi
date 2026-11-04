@@ -840,6 +840,20 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     }, 409);
   }
 
+  /* La cliente de la vente (migrations/0021_sale_client_id.sql) : l'id de sa fiche
+   * du carnet, envoyé par la caisse. Un rattachement, rien de plus : un avoir émis
+   * plus tard contre cette vente retrouve la bonne fiche, même relue d'une autre
+   * tablette. Posé après l'écriture de la vente, une seule fois (jamais écrasé, une
+   * relecture ne la change pas) : colonne absente tant que la migration n'est pas
+   * appliquée, la vente reste écrite sans elle, comme avant. */
+  const saleClientId = typeof b.clientId === 'string' ? b.clientId.trim().slice(0, 64) : '';
+  if (saleClientId) {
+    try {
+      await env.DB.prepare('UPDATE sales SET client_id = ? WHERE merchant = ? AND id = ? AND client_id IS NULL')
+        .bind(saleClientId, merchant, id).run();
+    } catch (_) { /* old schema without sales.client_id: the sale stands */ }
+  }
+
   /* Ce que le serveur sait et que la caisse affirme : l'heure de l'appareil et
    * le panier. Rien de tout cela ne refuse une vente encaissée ; chaque écart
    * est écrit une fois dans sale_audit pour la console opérateur
