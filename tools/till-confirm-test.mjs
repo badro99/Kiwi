@@ -30,10 +30,21 @@ function dom() {
   return { document, listeners, find: (cls) => body.all().filter((e) => e.className.split(' ').includes(cls)), body };
 }
 
+/* Shell order: caisse-hardware.js is parsed before caisse-lang.js; the question attaches once the page is read. */
+{
+  const d = dom(); d.document.readyState = 'loading';
+  const window = { __kiwiNativeRuntime: null, confirm: null };
+  vm.runInNewContext(source, { window, navigator: {}, localStorage: { getItem: () => null }, document: d.document, setTimeout: () => assert.fail('no timer while the page is loading') });
+  window.KiwiCaisseLang = { tr: (s) => s };
+  assert.equal(typeof d.listeners.DOMContentLoaded, 'function', 'a loading page attaches on DOMContentLoaded');
+  d.listeners.DOMContentLoaded();
+  assert.equal(typeof window.KiwiCaisseLang.ask, 'function', 'once caisse-lang.js has run, the question hangs on it');
+}
 function boot({ withDom = true, native = null, systemConfirm = null } = {}) {
   const d = dom();
   const window = { KiwiCaisseLang: { tr: (s) => s }, __kiwiNativeRuntime: native, confirm: systemConfirm };
-  const ctx = { window, navigator: {}, localStorage: { getItem: () => null } };
+  /* A page already parsed: the deferred attach runs on the next tick (here at once). */
+  const ctx = { window, navigator: {}, localStorage: { getItem: () => null }, setTimeout: (f) => f() };
   if (withDom) ctx.document = d.document;
   vm.runInNewContext(source, ctx);
   assert.equal(typeof window.KiwiCaisseLang.ask, 'function', 'the question hangs on the till language interface');

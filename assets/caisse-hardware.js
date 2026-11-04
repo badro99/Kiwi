@@ -308,7 +308,8 @@
   }
   /* Pas de nouveau global : la caisse lit déjà KiwiCaisseLang, la question s'y accroche. */
   function attach() { if (window.KiwiCaisseLang && !window.KiwiCaisseLang.ask) window.KiwiCaisseLang.ask = ask; }
-  attach();
-  /* caisse-lang.js se charge après ce fichier : à la fin du chargement, la question s'y accroche. */
-  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('DOMContentLoaded', attach);
+  /* caisse-lang.js se charge après ce fichier : la question s'y accroche une fois la page lue
+   * (ou tout de suite si ce fichier arrive après coup). */
+  if (typeof document !== 'undefined' && document.readyState === 'loading' && document.addEventListener) document.addEventListener('DOMContentLoaded', attach);
+  else setTimeout(attach, 0);
 })();

@@ -376,7 +376,12 @@ for (const locale of LOCALES.filter(l => l === 'fr')) for (const [device, width,
     await click('[data-action="nav-folios"]');
     await click('[data-action="hx-folio"][data-arg="101"]');
     await click('[data-action="hx-add-charge"]');
-    await click('[data-action="hx-post-charge"][data-arg="101|0"]');
+    /* r19 hotel#A0: a real hotel types its own charge (no Kiwi-invented price list). */
+    await page.waitForSelector('[data-hx-fc="label"]', { visible: true });
+    await page.type('[data-hx-fc="label"]', 'Petit-déjeuner');
+    await page.type('[data-hx-fc="amt"]', '80');
+    await page.select('[data-hx-fc="src"]', 'resto');
+    await click('[data-action="hx-post-free-charge"][data-arg="101"]');
     await wait(() => rooms().folios.find(f => f.room === 101)?.lines.some(l => l.src === 'resto'));
     const f = rooms().folios.find(f => f.room === 101);
     const cents = f.lines.reduce((n,l) => n + Math.round(l.amt * 100), 0);
