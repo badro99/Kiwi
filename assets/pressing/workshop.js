@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: KiwiApiBase, KiwiCaisseLang, KiwiCaissePairing, KiwiPressingOps, KiwiStaff, open.
  */
-import { ITEMS, root } from './custody.js?v=15';
+import { ITEMS, root } from './custody.js?v=16';
 export function create(owner) {
   'use strict';
   const { $, $$, COLOR, ORDERS, STATUS, afterStatusChange, catalogLabel, closeVeil, custOf, dataText, effectiveStatus, esc, findOrder, fmtDT, fmtDay, fmtMAD, garmentIcon, icons, isLate, isLiveOrder, moveCaretEnd, openPay, openScan, openTags, openVeil, orderStatus, orderTotals, pad2, pressingScope, publicOrderNo, publicPieceNo, pvName, queueIfOffline, refreshOps, releaseSlot, searchDigits, setSelectedReady, setWholeOrderStatus, state, svcCodes, switchView, syncOwnerOps, toast, whatsappPhone } = owner.workshopContext();
@@ -274,13 +274,22 @@ function openDetail(orderId) {
     };
     const cancelB = $('#px-dt-cancel', el);
     if (cancelB) cancelB.onclick = async () => {
-      const pin = prompt('Entrez le code manager pour annuler cette commande :');
+      const pin = await new Promise(resolve => {
+        const sheet = document.createElement('k-sheet');
+        const pad = document.createElement('k-pin-pad');
+        sheet.setAttribute('heading', notifyTr('Autorisation manager'));
+        pad.setAttribute('heading', notifyTr('Code manager'));
+        pad.setAttribute('sub', notifyTr('Entrez le code manager à 4 chiffres.'));
+        pad.setAttribute('size', 'ipad');
+        const done = value => { pad.onsubmit = null; sheet.removeAttribute('open'); sheet.remove(); cancelB.focus(); resolve(value); };
+        pad.onsubmit = code => done(code);
+        sheet.addEventListener('kiwi:action', e => { if (e.detail?.action === 'k.sheet.close') done(null); });
+        sheet.appendChild(pad); document.body.appendChild(sheet); sheet.setAttribute('open', '');
+        pad.shadowRoot?.querySelector('[data-key="1"]')?.focus();
+      });
       if (pin === null) return;
-      if (!/^\d{4}$/.test(pin)) {
-        toast('Code manager à 4 chiffres requis.');
-        return;
-      }
       let actor = null;
+      let uncertain = false;
       let cancellation = null;
       try {
         const merchant = pressingScope();
@@ -288,17 +297,18 @@ function openDetail(orderId) {
           method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({ merchant, orderId: String(o.id), pin }),
         }) : null;
+        uncertain = !!response?.ok;
         const result = response && response.ok ? await response.json() : null;
         cancellation = result && result.ok ? result : null;
         actor = cancellation && cancellation.actor;
       } catch (_) { actor = null; }
       if (!actor || !(actor.id || actor.name)) {
-        toast('Code manager refusé ou vérification indisponible.');
+        toast(notifyTr(uncertain ? 'Résultat de l’annulation incertain. Vérifiez la commande avant de réessayer.' : 'Code manager refusé ou vérification indisponible.'));
         return;
       }
       const cancelledAt = new Date(cancellation && cancellation.cancelledAt);
       if (!Number.isFinite(cancelledAt.getTime())) {
-        toast('Annulation confirmée sans horodatage serveur. Réessayez.');
+        toast(notifyTr('Annulation confirmée sans horodatage serveur. Réessayez.'));
         return;
       }
       const idx = ORDERS.findIndex((x) => x.id === o.id);
@@ -311,7 +321,7 @@ function openDetail(orderId) {
         queueIfOffline('Annulation commande');
         if (window.KiwiPressingOps && KiwiPressingOps.cancelOrder) KiwiPressingOps.cancelOrder(o.id, o.cancelledBy, cancelledAt.toISOString());
         closeVeil('#px-detail-veil');
-        toast(`Commande ${publicOrderNo(o)} annulée`);
+        toast(notifyTr('Commande annulée') + ' · ' + publicOrderNo(o));
         refreshOps();
       }
     };

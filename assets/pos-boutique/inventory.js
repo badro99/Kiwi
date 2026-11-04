@@ -1,11 +1,11 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=260';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=157';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=261';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=158';
 import { openMoves } from './inv-moves.js?v=6';
 import * as SZ from '../boutique-sizes.js?v=23';
 import { openLabelPicker } from './label-picker.js?v=2';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=18';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=157';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=158';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -975,14 +975,14 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh"><div><h3>Modifier le produit</h3><span>${esc(p.name)}</span></div></div>
       <div class="bqi-form">
-        <div class="bqi-fg"><label>Nom</label><input id="bqi-e-name" value="${esc(p.name)}" /></div>
+        <div class="bqi-fg"><label for="bqi-e-name">Nom</label><input id="bqi-e-name" value="${esc(p.name)}" /></div>
         <div class="bqi-frow">
-          <div class="bqi-fg"><label>Catégorie</label><select id="bqi-e-cat">${catSelectOptions(p.categoryId)}</select></div>
-          <div class="bqi-fg"><label>Type</label><select id="bqi-e-kind">${kindSelectOptions(p.kind)}</select></div>
+          <div class="bqi-fg"><label for="bqi-e-cat">Catégorie</label><select id="bqi-e-cat">${catSelectOptions(p.categoryId)}</select></div>
+          <div class="bqi-fg"><label for="bqi-e-kind">Type</label><select id="bqi-e-kind">${kindSelectOptions(p.kind)}</select></div>
         </div>
         <div class="bqi-frow">
-          <div class="bqi-fg"><label>Prix de vente (MAD)</label><input id="bqi-e-price" type="number" min="0" value="${p.priceMAD}" /></div>
-          <div class="bqi-fg"><label>Coût d'achat (MAD)</label><input id="bqi-e-cost" type="number" min="0" value="${p.cost || 0}" /></div>
+          <div class="bqi-fg"><label for="bqi-e-price">Prix de vente (MAD)</label><input id="bqi-e-price" type="number" min="0" value="${p.priceMAD}" /></div>
+          <div class="bqi-fg"><label for="bqi-e-cost">Coût d'achat (MAD)</label><input id="bqi-e-cost" type="number" min="0" value="${p.cost || 0}" /></div>
         </div>
         <div class="bqi-fg"><label>Icône du produit</label>${iconPickerHtml(p.art || 'tshirt')}</div>
       </div>
@@ -1059,7 +1059,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       <div class="bqi-modh"><div><h3>Couleur de la variante</h3><span>${esc(d.product.name)} · taille ${esc(v.size)}${v.colorSource ? ` · saisie à l'origine « ${esc(v.colorSource)} »` : ''}</span></div></div>
       <div class="bqi-form">
         <div class="bqi-fg"><label>Couleur</label>${colorPicker(variantColor(v))}</div>
-        <div class="bqi-fg"><label>Précision (facultatif)</label><input id="bqi-vc-note" maxlength="60" value="${esc(v.note || '')}" placeholder="Ex. rayé, délavé, motif · pour distinguer deux variantes de même couleur" /></div>
+        <div class="bqi-fg"><label for="bqi-vc-note">Précision (facultatif)</label><input id="bqi-vc-note" maxlength="60" value="${esc(v.note || '')}" placeholder="Ex. rayé, délavé, motif · pour distinguer deux variantes de même couleur" /></div>
       </div>
       <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn" id="bqi-vc-save">Enregistrer</button></div>`;
     invSetModal(html, (el) => {
@@ -1082,7 +1082,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh"><div><h3>Enregistrer un code existant</h3><span>Scannez ou tapez le code déjà présent sur l'article, conservé tel quel.</span></div></div>
       <div class="bqi-form">
-        <div class="bqi-fg"><label>Code-barres</label><input id="bqi-reg-code" placeholder="Scannez ou tapez le code…" autocomplete="off" /></div>
+        <div class="bqi-fg"><label for="bqi-reg-code">Code-barres</label><input id="bqi-reg-code" placeholder="Scannez ou tapez le code…" autocomplete="off" /></div>
         <div class="bqi-help">EAN-13, UPC ou tout code de l'ancien système. Aucune réimpression, le code est rattaché à cette variante.</div>
       </div>
       <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn" id="bqi-reg-save">Enregistrer le code</button></div>`;
@@ -1118,8 +1118,8 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh"><div><h3>Code existant à enregistrer</h3><span>Code scanné : <b>${esc(code)}</b>, rattachez-le à un article (sans réimprimer).</span></div></div>
       <div class="bqi-form">
-        <div class="bqi-fg"><label>Article</label><select id="bqi-or-prod">${products.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>
-        <div class="bqi-fg"><label>Variante (couleur · taille)</label><select id="bqi-or-var">${products.length ? varOptions(products[0].id) : ''}</select></div>
+        <div class="bqi-fg"><label for="bqi-or-prod">Article</label><select id="bqi-or-prod">${products.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>
+        <div class="bqi-fg"><label for="bqi-or-var">Variante (couleur · taille)</label><select id="bqi-or-var">${products.length ? varOptions(products[0].id) : ''}</select></div>
       </div>
       <div class="bqi-modfoot"><span class="bqi-dashboard-only">Créer l’article dans le tableau de bord</span><button class="bq-btn" id="bqi-or-save">Rattacher le code</button></div>`;
     invSetModal(html, (el) => {
@@ -1360,24 +1360,24 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         <button class="bq-btn" id="bqx-link">Chercher l'article</button>
       </div>` : ''}
       <div class="bqi-form bqx-form">
-        <div class="bqi-fg"><label>Nom du produit</label><input id="bqx-name" placeholder="Ex. Jean Noir" autocomplete="off" /></div>
+        <div class="bqi-fg"><label for="bqx-name">Nom du produit</label><input id="bqx-name" placeholder="Ex. Jean Noir" autocomplete="off" /></div>
         <div class="bqi-frow">
-          <div class="bqi-fg"><label>Catégorie</label><select id="bqx-cat">${catSelectOptions(state.invFilter && state.invFilter !== 'all' ? state.invFilter : (prev ? prev.product.categoryId : ''))}</select></div>
-          <div class="bqi-fg"><label>Type de taille</label><select id="bqx-kind">${kindSelectOptions(prev ? prev.product.kind : 'taille')}</select></div>
+          <div class="bqi-fg"><label for="bqx-cat">Catégorie</label><select id="bqx-cat">${catSelectOptions(state.invFilter && state.invFilter !== 'all' ? state.invFilter : (prev ? prev.product.categoryId : ''))}</select></div>
+          <div class="bqi-fg"><label for="bqx-kind">Type de taille</label><select id="bqx-kind">${kindSelectOptions(prev ? prev.product.kind : 'taille')}</select></div>
         </div>
-        <div class="bqi-fg"><label>Ou nouvelle catégorie</label><input id="bqx-newcat" placeholder="Laisser vide pour garder celle ci-dessus" autocomplete="off" /></div>
+        <div class="bqi-fg"><label for="bqx-newcat">Ou nouvelle catégorie</label><input id="bqx-newcat" placeholder="Laisser vide pour garder celle ci-dessus" autocomplete="off" /></div>
         <div class="bqi-frow">
-          <div class="bqi-fg"><label>Prix de vente (MAD)</label><input id="bqx-price" type="number" min="0" step="0.01" inputmode="decimal" placeholder="349" /></div>
-          <div class="bqi-fg"><label>Coût d'achat (MAD)</label><input id="bqx-cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="optionnel" /></div>
+          <div class="bqi-fg"><label for="bqx-price">Prix de vente (MAD)</label><input id="bqx-price" type="number" min="0" step="0.01" inputmode="decimal" placeholder="349" /></div>
+          <div class="bqi-fg"><label for="bqx-cost">Coût d'achat (MAD)</label><input id="bqx-cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="optionnel" /></div>
         </div>
         <div class="bqi-frow">
           <div class="bqi-fg"><label>Couleur</label><div id="bqx-sw">${colorPicker('noir')}</div></div>
         </div>
         <div class="bqi-frow">
-          <div class="bqi-fg"><label>Taille</label><input id="bqx-size" list="bqx-sizes" placeholder="M" autocomplete="off" /><datalist id="bqx-sizes"></datalist></div>
-          <div class="bqi-fg"><label>Quantité reçue</label><input id="bqx-qty" type="number" min="0" step="1" inputmode="numeric" value="1" /></div>
+          <div class="bqi-fg"><label for="bqx-size">Taille</label><input id="bqx-size" list="bqx-sizes" placeholder="M" autocomplete="off" /><datalist id="bqx-sizes"></datalist></div>
+          <div class="bqi-fg"><label for="bqx-qty">Quantité reçue</label><input id="bqx-qty" type="number" min="0" step="1" inputmode="numeric" value="1" /></div>
         </div>
-        <div class="bqi-fg"><label>Autre précision (optionnel)</label><input id="bqx-flag" placeholder="Ex. coupe droite, lot été" autocomplete="off" /></div>
+        <div class="bqi-fg"><label for="bqx-flag">Autre précision (optionnel)</label><input id="bqx-flag" placeholder="Ex. coupe droite, lot été" autocomplete="off" /></div>
       </div>
       <div class="bqi-modfoot bqx-foot">
         <button class="bq-btn secondary" id="bqx-skip">Ignorer ce code</button>
@@ -1468,8 +1468,8 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       <div class="bqi-form bqx-form">
         <div class="bqi-fg"><label>Couleur</label><div id="bqx-sw">${colorPicker('noir')}</div></div>
         <div class="bqi-frow">
-          <div class="bqi-fg"><label>Taille</label><input id="bqx-size" list="bqx-sizes2" value="" placeholder="${esc(presets[0] || 'TU')}" autocomplete="off" /><datalist id="bqx-sizes2">${presets.map((s) => `<option value="${esc(s)}">`).join('')}</datalist></div>
-          <div class="bqi-fg"><label>Quantité reçue</label><input id="bqx-qty" type="number" min="0" step="1" inputmode="numeric" value="1" /></div>
+          <div class="bqi-fg"><label for="bqx-size">Taille</label><input id="bqx-size" list="bqx-sizes2" value="" placeholder="${esc(presets[0] || 'TU')}" autocomplete="off" /><datalist id="bqx-sizes2">${presets.map((s) => `<option value="${esc(s)}">`).join('')}</datalist></div>
+          <div class="bqi-fg"><label for="bqx-qty">Quantité reçue</label><input id="bqx-qty" type="number" min="0" step="1" inputmode="numeric" value="1" /></div>
         </div>
       </div>
       <div class="bqx-existing">
@@ -1695,14 +1695,14 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         <div><b>Déclinaison manquante · ${esc(d.product.name)}</b><span>Scannez le code de CETTE taille/couleur, ou laissez vide pour l'ajouter sans code.</span></div>
       </div>
       <div class="bqi-form bqx-form">
-        <div class="bqi-fg"><label>Code-barres de la déclinaison</label>
+        <div class="bqi-fg"><label for="bqx-vcode">Code-barres de la déclinaison</label>
           <div class="bqx-scanbox slim"><i data-lucide="scan-line"></i><input id="bqx-vcode" placeholder="Scannez ou tapez…" autocomplete="off" spellcheck="false" /></div>
           <div class="bqi-help" id="bqx-vhint">Chaque déclinaison peut porter son propre code fournisseur.</div>
         </div>
         <div class="bqi-fg"><label>Couleur</label><div id="bqx-sw">${colorPicker('noir')}</div></div>
         <div class="bqi-frow">
-          <div class="bqi-fg"><label>Taille</label><input id="bqx-size" list="bqx-sizes3" placeholder="${esc(presets[0] || 'TU')}" autocomplete="off" /><datalist id="bqx-sizes3">${presets.map((s) => `<option value="${esc(s)}">`).join('')}</datalist></div>
-          <div class="bqi-fg"><label>Quantité reçue</label><input id="bqx-qty" type="number" min="0" step="1" inputmode="numeric" value="1" /></div>
+          <div class="bqi-fg"><label for="bqx-size">Taille</label><input id="bqx-size" list="bqx-sizes3" placeholder="${esc(presets[0] || 'TU')}" autocomplete="off" /><datalist id="bqx-sizes3">${presets.map((s) => `<option value="${esc(s)}">`).join('')}</datalist></div>
+          <div class="bqi-fg"><label for="bqx-qty">Quantité reçue</label><input id="bqx-qty" type="number" min="0" step="1" inputmode="numeric" value="1" /></div>
         </div>
       </div>
       <div class="bqx-existing">
@@ -1787,14 +1787,14 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         <div><b>Corriger « ${esc(p.name)} »</b><span>Le code-barres et le stock ne changent pas · seule la fiche est corrigée.</span></div>
       </div>
       <div class="bqi-form bqx-form">
-        <div class="bqi-fg"><label>Nom</label><input id="bqx-fname" value="${esc(p.name)}" /></div>
+        <div class="bqi-fg"><label for="bqx-fname">Nom</label><input id="bqx-fname" value="${esc(p.name)}" /></div>
         <div class="bqi-frow">
-          <div class="bqi-fg"><label>Catégorie</label><select id="bqx-fcat">${catSelectOptions(p.categoryId)}</select></div>
-          <div class="bqi-fg"><label>Type de taille</label><select id="bqx-fkind">${kindSelectOptions(p.kind)}</select></div>
+          <div class="bqi-fg"><label for="bqx-fcat">Catégorie</label><select id="bqx-fcat">${catSelectOptions(p.categoryId)}</select></div>
+          <div class="bqi-fg"><label for="bqx-fkind">Type de taille</label><select id="bqx-fkind">${kindSelectOptions(p.kind)}</select></div>
         </div>
         <div class="bqi-frow">
-          <div class="bqi-fg"><label>Prix de vente (MAD)</label><input id="bqx-fprice" type="number" min="0" step="0.01" value="${p.priceMAD}" /></div>
-          <div class="bqi-fg"><label>Coût d'achat (MAD)</label><input id="bqx-fcost" type="number" min="0" step="0.01" value="${p.cost || 0}" /></div>
+          <div class="bqi-fg"><label for="bqx-fprice">Prix de vente (MAD)</label><input id="bqx-fprice" type="number" min="0" step="0.01" value="${p.priceMAD}" /></div>
+          <div class="bqi-fg"><label for="bqx-fcost">Coût d'achat (MAD)</label><input id="bqx-fcost" type="number" min="0" step="0.01" value="${p.cost || 0}" /></div>
         </div>
       </div>
       <div class="bqi-modfoot bqx-foot">

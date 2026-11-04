@@ -992,7 +992,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
       body: `
         <div class="st-mb-field">
           <label class="st-mb-label">${esc(t('addCatName'))}</label>
-          <input class="st-mb-input" type="text" placeholder="Ex. Surgelés" data-stock-cat-name />
+          <input class="st-mb-input" type="text" placeholder="${esc(t('categoryExample'))}" data-stock-cat-name />
         </div>
       `,
       foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button data-activation=write class="st-btn primary" data-stock-cat-confirm>${esc(t('addCatBtn'))}</button>`,

@@ -1965,7 +1965,7 @@ section('Whole-project regressions');
   'economat-real-d1-transfer-test.mjs',
   'room-charge-test.mjs',
   'hotel-reports-test.mjs',
-  'hotel-economat-ui-test.mjs', 'economat-zero-receipt-test.mjs',
+  'hotel-economat-ui-test.mjs', 'economat-zero-receipt-test.mjs', 'ui-economat-receipt-test.mjs', 'ui-briefing-locale-test.mjs', 'ui-stock-placeholders-test.mjs', 'ui-hotel-price-test.mjs', 'ui-inventory-labels-test.mjs', 'ui-promos-picker-test.mjs', 'ui-pressing-code-test.mjs', 'ui-tickets-taxonomy-test.mjs', 'ui-readable-styles-test.mjs',
   'economat-pagination-test.mjs',
   'economat-transfer-provenance-test.mjs',
   'economat-procurement-location-test.mjs',

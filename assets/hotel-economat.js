@@ -9,6 +9,7 @@
   var modalRef = null;
   var unsubscribe = null;
   var busy = false;
+  var receiving = false;
   var STR = {
     fr: {
       title:'Économat', eyebrow:'STOCK CENTRAL · HÔTEL', intro:'Linge, boissons, produits d’accueil et consommables, avec les réceptions et mouvements en attente au même endroit.',
@@ -270,22 +271,25 @@
     receiveLimit = DISPLAY_LIMIT; receiveQuery = '';
     modalRef = Kiwi.modal({
       tag:T.receiptTag, title:T.receiptTitle, width:580,
-      body:'<div class="hx-eco-form"><label class="wide">' + esc(T.item) + '<input id="eco-item" list="eco-items" autocomplete="off"><datalist id="eco-items">' + itemOptions(rows, '') + '</datalist></label>' + itemMoreHtml(rows.length, T) + '<label>' + esc(T.qty) + '<input id="eco-qty" type="number" min="0.001" step="0.001" inputmode="decimal"></label><label>' + esc(T.cost) + '<input id="eco-cost" type="number" min="0" step="0.01" inputmode="decimal"></label><label>' + esc(T.supplier) + '<input id="eco-supplier" autocomplete="organization"></label><label>' + esc(T.reference) + '<input id="eco-ref" autocomplete="off"></label></div>',
+      body:'<div class="hx-eco-form"><label class="wide">' + esc(T.item) + '<input id="eco-item" list="eco-items" autocomplete="off"><datalist id="eco-items">' + itemOptions(rows, '') + '</datalist></label>' + itemMoreHtml(rows.length, T) + '<label>' + esc(T.qty) + '<input id="eco-qty" type="number" min="0.001" step="0.001" inputmode="decimal"></label><label>' + esc(T.cost) + '<input id="eco-cost" type="text" inputmode="decimal"></label><label>' + esc(T.supplier) + '<input id="eco-supplier" autocomplete="organization"></label><label>' + esc(T.reference) + '<input id="eco-ref" autocomplete="off"></label></div>',
       foot:'<button class="kb ghost" data-dismiss>' + esc(T.cancel) + '</button><button data-activation=write class="kb atlas" data-action="eco-receive-save">' + esc(T.confirm) + '</button>'
     });
     setTimeout(function () { document.getElementById('eco-item')?.focus(); }, 30);
   };
 
   handlers['eco-receive-save'] = async function () {
-    var T = text(), itemId = String(document.getElementById('eco-item')?.value || '').trim(), amount = qty(document.getElementById('eco-qty')?.value), costText = String(document.getElementById('eco-cost')?.value || '').trim(), cost = Number(costText);
-    if (!itemId || amount <= 0 || !costText || !Number.isFinite(cost) || cost < 0) { Kiwi.toast(T.invalid, { type:'warning' }); return; }
+    if (receiving) return;
+    var T = text(), itemId = String(document.getElementById('eco-item')?.value || '').trim(), amount = qty(document.getElementById('eco-qty')?.value), costText = String(document.getElementById('eco-cost')?.value || '').trim(), costParts = /^(\d+)(?:[.,](\d{1,2}))?$/.exec(costText), costCents = costParts ? Number(costParts[1]) * 100 + Number((costParts[2] || '').padEnd(2, '0')) : NaN, cost = costCents / 100;
+    if (!itemId || amount <= 0 || !costText || !Number.isSafeInteger(costCents) || cost < 0) { Kiwi.toast(T.invalid, { type:'warning' }); return; }
     var procurementEngine = window.KiwiProcurement;
     if (!procurementEngine || !procurementEngine.receiveDirect) { Kiwi.toast(T.unavailable, { type:'warning' }); return; }
     var result = procurementEngine.receiveDirect({ supplierId:String(document.getElementById('eco-supplier')?.value || '').trim(), externalRef:String(document.getElementById('eco-ref')?.value || '').trim(), receivedBy:'dashboard', lines:[{ itemId:itemId, name:itemId, qty:amount, unit:T.unit, unitCost:cost }] });
     if (result && result.error) { Kiwi.toast(result.error, { type:'warning' }); return; }
-    modalRef && modalRef.close && modalRef.close();
-    Kiwi.toast(T.saved, { type:'success' });
-    try { await window.KiwiInventory.sync(); } catch (_) {}
-    render();
+    receiving = true;
+    try {
+      if (await window.KiwiInventory.sync() !== true) throw new Error('sync-unconfirmed');
+      Kiwi.toast(T.saved + ' · ' + T.syncOk, { type:'success' });
+    } catch (_) { Kiwi.toast(T.saved + ' · ' + T.syncFail, { type:'warning' }); }
+    finally { modalRef && modalRef.close && modalRef.close(); receiving = false; render(); }
   };
 }());

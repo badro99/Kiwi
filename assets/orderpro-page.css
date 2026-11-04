@@ -383,7 +383,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .menu-cafe .ctx {
       font-family: var(--sans);
-      font-size: 11px;
+      font-size: 12px;
       letter-spacing: 0;
       text-transform: none;
       color: var(--ink-3);
@@ -542,7 +542,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .dish-price {
       font-family: var(--mono);
-      font-size: 11.5px;
+      font-size: 12px;
       font-weight: 500;
       color: var(--ink-3);
       letter-spacing: -0.005em;
@@ -575,7 +575,7 @@ em, i, cite, dfn, var { font-style: normal; }
       color: var(--forest);
       border-radius: 999px;
       font-family: var(--sans);
-      font-size: 9.5px;
+      font-size: 12px;
       font-weight: 600;
       letter-spacing: 0.04em;
       text-transform: uppercase;
@@ -592,7 +592,7 @@ em, i, cite, dfn, var { font-style: normal; }
       position: absolute; inset: auto 0 0 0;
       background: rgba(10,15,13,0.72);
       color: #fff;
-      font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
       text-transform: uppercase;
       text-align: center;
       padding: 5px 6px;
@@ -640,7 +640,7 @@ em, i, cite, dfn, var { font-style: normal; }
       line-height: 1.2;
     }
     .item-desc {
-      font-size: 11.5px;
+      font-size: 12px;
       color: var(--ink-3);
       line-height: 1.35;
       margin-top: 2px;
@@ -879,7 +879,7 @@ em, i, cite, dfn, var { font-style: normal; }
       color: var(--ink);
     }
     .cart-note {
-      font-size: 11.5px;
+      font-size: 12px;
       color: var(--ink-3);
       margin: 6px 0 0;
       text-align: center;
@@ -998,7 +998,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .success-recap .recap-title {
       font-family: var(--sans);
-      font-size: 11px;
+      font-size: 12px;
       letter-spacing: 0;
       text-transform: none;
       opacity: 0.7;
@@ -1251,7 +1251,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .cashier-recap-title {
       font-family: var(--sans);
-      font-size: 11px;
+      font-size: 12px;
       letter-spacing: 0;
       text-transform: none;
       color: var(--ink-3);
@@ -1303,7 +1303,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .cashier-confirm-btn:active { transform: scale(0.98); }
     .cashier-confirm-btn svg { width: 16px; height: 16px; }
     .cashier-hint {
-      font-size: 11.5px;
+      font-size: 12px;
       color: var(--ink-3);
       text-align: center;
       line-height: 1.5;
@@ -1640,7 +1640,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .custom-base {
       font-family: var(--mono);
-      font-size: 11px;
+      font-size: 12px;
       color: var(--ink-2);
       margin-top: 4px;
       letter-spacing: -0.005em;
@@ -1665,7 +1665,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .option-group.is-invalid .option-group-label { color: #B3261E; }
     .option-group-label {
       font-family: var(--sans);
-      font-size: 11px;
+      font-size: 12px;
       letter-spacing: 0;
       text-transform: none;
       color: var(--ink-3);
@@ -1679,7 +1679,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-family: var(--sans);
       text-transform: none;
       letter-spacing: -0.01em;
-      font-size: 11px;
+      font-size: 12px;
       color: var(--ink-4);
     }
     .option-chips {
@@ -1709,7 +1709,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .option-chip .delta {
       font-family: var(--mono);
-      font-size: 10.5px;
+      font-size: 12px;
       color: var(--ink-4);
       font-weight: 500;
       letter-spacing: -0.01em;
@@ -1818,7 +1818,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .custom-note-section { margin-top: 18px; }
     .custom-note-label {
       font-family: var(--sans);
-      font-size: 11px;
+      font-size: 12px;
       letter-spacing: 0;
       text-transform: none;
       color: var(--ink-3);
@@ -1832,7 +1832,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-family: var(--sans);
       text-transform: none;
       letter-spacing: -0.01em;
-      font-size: 11px;
+      font-size: 12px;
       color: var(--ink-4);
     }
     .custom-note-input {
@@ -1870,7 +1870,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .custom-price { display: flex; flex-direction: column; }
     .custom-price-label {
       font-family: var(--sans);
-      font-size: 11px;
+      font-size: 12px;
       letter-spacing: 0;
       text-transform: none;
       color: var(--ink-3);
@@ -1949,7 +1949,7 @@ em, i, cite, dfn, var { font-style: normal; }
        ========================================================= */
     .cart-row .info { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
     .cart-item-opts {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--ink-3);
       line-height: 1.35;
       font-weight: 400;
@@ -2041,7 +2041,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .bill-row-info { min-width: 0; }
     .bill-row-name { font-weight: 500; }
     .bill-row-opts {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--ink-3);
       margin-top: 1px;
       line-height: 1.35;
@@ -2365,7 +2365,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .split-mode-tab.is-active .title { color: var(--forest); }
     .split-mode-tab .desc {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--ink-4);
       line-height: 1.35;
       margin-top: 1px;
@@ -2373,7 +2373,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     .split-section-label {
       font-family: var(--sans);
-      font-size: 11px;
+      font-size: 12px;
       letter-spacing: 0;
       text-transform: none;
       color: var(--ink-3);
@@ -2507,7 +2507,7 @@ em, i, cite, dfn, var { font-style: normal; }
       transition: background 180ms ease, border-color 180ms ease;
     }
     .split-pool-item .info { display: flex; gap: 8px; min-width: 0; align-items: baseline; }
-    .split-pool-item .qty { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
+    .split-pool-item .qty { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
     .split-pool-item .name { font-weight: 500; letter-spacing: -0.005em; }
     .split-pool-item .price {
       font-family: var(--mono);
@@ -2528,7 +2528,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .split-pool-item.is-other::after {
       content: attr(data-owner);
       font-family: var(--sans);
-      font-size: 10px;
+      font-size: 12px;
       letter-spacing: 0;
       text-transform: none;
       color: var(--ink-4);
@@ -2587,14 +2587,14 @@ em, i, cite, dfn, var { font-style: normal; }
     .custom-nutrition-title { margin-bottom: 10px; color: var(--ink); font-size: 13px; font-weight: 600; }
     .custom-nutrition-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
     .custom-nutrition-cell { min-width: 0; padding: 9px; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--surface); }
-    .custom-nutrition-cell span { display: block; color: var(--ink-4); font-size: 9.5px; }
+    .custom-nutrition-cell span { display: block; color: var(--ink-4); font-size: 12px; }
     .custom-nutrition-cell bdi { display: block; margin-top: 3px; color: var(--ink); font: 600 11px var(--mono); unicode-bidi: isolate; }
     .custom-allergens { margin-top: 12px; }
-    .custom-allergens-label { margin-bottom: 7px; color: var(--ink-3); font-size: 10.5px; font-weight: 600; }
+    .custom-allergens-label { margin-bottom: 7px; color: var(--ink-3); font-size: 12px; font-weight: 600; }
     .custom-allergen-list { display: flex; flex-wrap: wrap; gap: 6px; }
-    .custom-allergen-chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 8px; border: 1px solid var(--line-soft); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: 10px; }
+    .custom-allergen-chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 8px; border: 1px solid var(--line-soft); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: 12px; }
     .custom-allergen-icon { width: 13px; height: 13px; flex: 0 0 auto; background: currentColor; -webkit-mask: url('icons/material/bakery_dining.svg') center/contain no-repeat; mask: url('icons/material/bakery_dining.svg') center/contain no-repeat; }
-    .custom-nutrition-note { margin: 10px 0 0; color: var(--ink-4); font-size: 10px; line-height: 1.4; }
+    .custom-nutrition-note { margin: 10px 0 0; color: var(--ink-4); font-size: 12px; line-height: 1.4; }
     @media (max-width: 360px) { .custom-nutrition-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     /* A store with more than the three languages: narrower keys, and the
        picker scrolls inside the screen rather than past it. */
@@ -2627,7 +2627,7 @@ em, i, cite, dfn, var { font-style: normal; }
       height: 40px;
       padding: 0 10px;
       border-radius: 999px;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
       letter-spacing: 0.02em;
       color: var(--ink-3);
@@ -2775,7 +2775,7 @@ em, i, cite, dfn, var { font-style: normal; }
       color: var(--ink);
     }
     .bq-sub {
-      font-size: 11.5px;
+      font-size: 12px;
       color: var(--ink-3);
       margin-top: 2px;
     }
@@ -2855,7 +2855,7 @@ em, i, cite, dfn, var { font-style: normal; }
       color: var(--ink);
       line-height: 1.2;
     }
-    .bq-meta { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; }
+    .bq-meta { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
     .bq-price {
       font-family: var(--mono);
       font-size: 13px;
@@ -2865,7 +2865,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .bq-pill {
       display: inline-block;
-      font-size: 10.5px;
+      font-size: 12px;
       font-weight: 600;
       padding: 2px 8px;
       border-radius: 999px;
@@ -2889,7 +2889,7 @@ em, i, cite, dfn, var { font-style: normal; }
       background: rgba(247,245,240,.94);
       backdrop-filter: blur(8px);
       border-top: 1px solid var(--line-soft);
-      font-size: 10.5px;
+      font-size: 12px;
       color: var(--ink-4);
       text-align: center;
       letter-spacing: 0.01em;
@@ -2955,7 +2955,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .bq-d-section {
       margin-top: 18px;
-      font-size: 10.5px;
+      font-size: 12px;
       font-weight: 600;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -2974,7 +2974,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-weight: 600;
       color: var(--ink);
     }
-    .bq-chip b { font-family: var(--mono); font-weight: 500; font-size: 11.5px; color: var(--ink-3); }
+    .bq-chip b { font-family: var(--mono); font-weight: 500; font-size: 12px; color: var(--ink-3); }
     .bq-chip.is-out { opacity: .45; }
     .bq-chip.is-low b { color: #8A5A22; }
     .bq-swatch {

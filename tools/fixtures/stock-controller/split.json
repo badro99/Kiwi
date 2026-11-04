@@ -18,7 +18,7 @@
     },
     "assets/stock/catalog.js": {
       "fixture": "tools/fixtures/stock-controller/catalog.js.gz",
-      "sha256": "43526c0e6dbfba966593c978b4fb5c1c805041f16554c399539b96e2f56369c2",
+      "sha256": "c0f2c07e5555f3947dbbe749267c60e1532c5ec99390a2e090c0fd2e30d0bec0",
       "stamps": []
     },
     "assets/stock/counts.js": {

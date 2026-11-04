@@ -25,10 +25,10 @@
       'assets/hotel-folio.js?v=1',
       'assets/hotel-channels.js?v=1',
       'assets/hotel/views.js?v=8',
-      'assets/hotel/editors.js?v=7',
+      'assets/hotel/editors.js?v=8',
     ] },
     groups: { dependencies: ['hotel'], scripts: ['assets/hotel/groups.js?v=5'] },
-    economat: { dependencies: ['hotel'], scripts: ['assets/hotel-economat.js?v=28'] },
+    economat: { dependencies: ['hotel'], scripts: ['assets/hotel-economat.js?v=29'] },
     /* « Ouvrir la caisse » on the PIN lock: the store picker and the opening ticket. */
     lock: { dependencies: [], scripts: ['assets/lock-till.js?v=3'] },
   });
