@@ -64,8 +64,9 @@ ok('une vente avec pourboire : 200, le pourboire écrit à part du montant', () 
   const row = sqlite.prepare('SELECT amount_cents, tip_cents FROM sales WHERE id = ?').get('tip-one');
   assert.equal(row.amount_cents, 12000); assert.equal(row.tip_cents, 1550);
 });
-await post('tip-one', 12000, 9999);
+const replayOtherTip = await post('tip-one', 12000, 9999);
 ok('rejouer la même vente avec un autre pourboire ne réécrit pas le premier', () => assert.equal(sqlite.prepare('SELECT tip_cents FROM sales WHERE id = ?').get('tip-one').tip_cents, 1550));
+ok('… et ne bloque pas la file de la caisse : un pourboire déjà différent ne répond jamais 503', () => assert.notEqual(replayOtherTip.status, 503, JSON.stringify(replayOtherTip.body)));
 /* §10.26 (étape 4) : un pourboire hors de 0 au montant de la vente est
    refusé, la vente avec ; il n'est plus avalé en silence. */
 const neg = await post('tip-neg', 3000, -500);

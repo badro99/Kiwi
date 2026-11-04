@@ -559,7 +559,10 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
         .bind(tipCents, merchant, saleId).run();
       const saved = await env.DB.prepare('SELECT tip_cents FROM sales WHERE merchant = ? AND id = ?')
         .bind(merchant, saleId).first();
-      if (!saved || Number(saved.tip_cents) !== tipCents) throw new Error('tip-not-persisted-or-conflicting');
+      if (!saved || saved.tip_cents == null) throw new Error('tip-not-persisted');
+      // An earlier, different tip already stands on this sale and wins (the UPDATE
+      // only fills an empty tip). Retrying can never change it, so do not 503.
+      if (Number(saved.tip_cents) !== tipCents) return null;
     } catch (error) {
       return json({ error: 'tip-write-failed', tipRecorded: false, detail: String(error && error.message || error), id: saleId }, 503);
     }
