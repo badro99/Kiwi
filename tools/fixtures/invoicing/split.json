@@ -129,7 +129,7 @@
         "today",
         "venueId"
       ],
-      "windowReads": []
+      "windowReads": ["navigator"]
     },
     {
       "file": "assets/invoicing/composer.js",
