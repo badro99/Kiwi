@@ -41,7 +41,7 @@ function remember(slug, list, period) {
   const avoirs = list.filter((r) => r && r.kind === 'avoir').map((r) => ({ ts: Number(r.ts) || 0, amount: Math.abs(Number(r.amount) || 0) }));
   let prev = null;
   try { prev = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) {}
-  const changed = !prev || prev.m !== slug || JSON.stringify(prev.list) !== JSON.stringify(avoirs) || JSON.stringify(prev.window) !== JSON.stringify(period);
+  const changed = !prev || prev.stale || prev.m !== slug || JSON.stringify(prev.list) !== JSON.stringify(avoirs) || JSON.stringify(prev.window) !== JSON.stringify(period);
   /* `v` : l'identifiant de venue sous lequel l'accueil range ses chiffres ;
      la tuile ne lit le registre que s'il est celui du magasin à l'écran. */
   let v = '';
@@ -74,7 +74,13 @@ export function warmCreditReturns(period = selectedPeriod()) {
     // Keep the previous read when widening, so current and comparison periods coexist.
     if (period && prev && prev.m === slug && Date.now() - (Number(prev.at) || 0) < MAX_AGE && Array.isArray(prev.window)) period = [Math.min(period[0], prev.window[0]), Math.max(period[1], prev.window[1] == null ? Infinity : prev.window[1])];
   } catch (_) {}
-  warming = readReturnsLedger(slug, period).then(() => lastChanged, () => false).finally(() => { warming = null; });
+  warming = readReturnsLedger(slug, period).then(() => lastChanged, () => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (cached && cached.m === slug) { const changed = !cached.stale; cached.stale = true; localStorage.setItem(KEY, JSON.stringify(cached)); return changed; }
+    } catch (_) {}
+    return false;
+  }).finally(() => { warming = null; });
   return warming;
 }
 

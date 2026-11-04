@@ -1,63 +1,63 @@
 {
   "sha256": "350052d8c28929e13823f19b14260539a3a3a5f132d3a2cdaa75c0640c4db20d",
-  "dataSha256": "649afb056cbbc2916b914a04fa5b045d07822ae940d417b3d44cb2ddcaa22399",
+  "dataSha256": "cfbf19476cf5702234ea6ea9b58b958e90c6f08ccff12e6211ef7b4c77fa9bab",
   "fragments": [
     {
       "start": 17132,
       "end": 17633,
       "replacement": "  const session = window.KiwiOnboardingData.createSession({ TYPES, tr });\n  const S = session.state;",
-      "offset": 9406
+      "offset": 10434
     },
     {
       "start": 16968,
       "end": 17051,
       "replacement": "  const RESERVED = session.reserved;",
-      "offset": 9909
+      "offset": 10937
     },
     {
       "start": 25447,
       "end": 25607,
       "replacement": "  const TYPE_HINT = session.typeHint;",
-      "offset": 9994
+      "offset": 11022
     },
     {
       "start": 33641,
       "end": 34205,
       "replacement": "  const fitPinsToTeam = session.fitPinsToTeam;",
-      "offset": 10156
+      "offset": 11184
     },
     {
       "start": 39827,
       "end": 40190,
       "replacement": "  const parsedDailyGoal = session.parsedDailyGoal;",
-      "offset": 10722
+      "offset": 11750
     },
     {
       "start": 40271,
       "end": 42056,
       "replacement": "  const validate = session.validate;",
-      "offset": 11087
+      "offset": 12115
     },
     {
       "start": 67512,
       "end": 68004,
       "replacement": "  const kitCodeProblem = session.kitCodeProblem;",
-      "offset": 12874
+      "offset": 13902
     },
     {
       "start": 68005,
       "end": 68396,
       "replacement": "  const kitProblem = session.kitProblem;",
-      "offset": 13368
+      "offset": 14396
     },
     {
       "start": 44437,
       "end": 44461,
       "replacement": "  // Submission activity belongs to the session owner.",
-      "offset": 13761
+      "offset": 14789
     }
   ],
-  "dataPrefixLength": 9048,
+  "dataPrefixLength": 10076,
   "sessionLength": 5582,
   "alignments": [
     {

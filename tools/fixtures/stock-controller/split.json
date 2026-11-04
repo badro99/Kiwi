@@ -2,7 +2,7 @@
   "files": {
     "assets/stock.js": {
       "fixture": "tools/fixtures/stock-controller/stock.js.gz",
-      "sha256": "366fae5fd005fa6b2349575581741a7d4eb5458d03a297b247c5aad2159f1515",
+      "sha256": "c32baaca9eee7c9f5bc8ce11205ca007dbe1f268aab590d86225d287ba29a7e9",
       "stamps": [
         "assets/stock/loss.js?v=1",
         "assets/stock/counts.js?v=3",
@@ -13,7 +13,7 @@
     },
     "assets/stock/intake.js": {
       "fixture": "tools/fixtures/stock-controller/intake.js.gz",
-      "sha256": "31023ac1b2f37749a731edaace143527f119d7561185b57deea3fcc2d6c38eee",
+      "sha256": "77856911fafffbd4d53c8feee14399bd9daea8ceba0b5eb26ba95f285aa8312b",
       "stamps": []
     },
     "assets/stock/catalog.js": {
@@ -23,7 +23,7 @@
     },
     "assets/stock/counts.js": {
       "fixture": "tools/fixtures/stock-controller/counts.js.gz",
-      "sha256": "284209adaa6b603158c37e340837fd1ddef4a1fccb1b2b1b3fe67b8360f1c795",
+      "sha256": "f4564ee10f7f656f2c330e2e64a622d252a413cca55e7f60c0e0e0da40f79af2",
       "stamps": []
     }
   },
@@ -152,48 +152,48 @@
         {
           "name": "stockAlertState",
           "offset": 1196,
-          "length": 468,
+          "length": 498,
           "replacement": "function stockAlertState(...args) { return stockParts.alerts.stockAlertState.apply(this, args); }"
         },
         {
           "name": "computeTier1LowAlerts",
-          "offset": 1668,
+          "offset": 1698,
           "length": 2430,
           "replacement": "function computeTier1LowAlerts(...args) { return stockParts.alerts.computeTier1LowAlerts.apply(this, args); }"
         },
         {
           "name": "overviewAlertRows",
-          "offset": 4102,
-          "length": 569,
+          "offset": 4132,
+          "length": 664,
           "replacement": "function overviewAlertRows(...args) { return stockParts.alerts.overviewAlertRows.apply(this, args); }"
         },
         {
           "name": "ignoredAlerts",
-          "offset": 4675,
+          "offset": 4800,
           "length": 287,
           "replacement": "function ignoredAlerts(...args) { return stockParts.alerts.ignoredAlerts.apply(this, args); }"
         },
         {
           "name": "ignoreAlert",
-          "offset": 4966,
+          "offset": 5091,
           "length": 207,
           "replacement": "function ignoreAlert(...args) { return stockParts.alerts.ignoreAlert.apply(this, args); }"
         },
         {
           "name": "openMark86",
-          "offset": 5177,
+          "offset": 5302,
           "length": 3735,
           "replacement": "function openMark86(...args) { return stockParts.alerts.openMark86.apply(this, args); }"
         },
         {
           "name": "renderAlertCard",
-          "offset": 8916,
-          "length": 4703,
+          "offset": 9041,
+          "length": 5070,
           "replacement": "function renderAlertCard(...args) { return stockParts.alerts.renderAlertCard.apply(this, args); }"
         },
         {
           "name": "dishesUsing",
-          "offset": 13623,
+          "offset": 14115,
           "length": 567,
           "replacement": "function dishesUsing(...args) { return stockParts.alerts.dishesUsing.apply(this, args); }"
         }
@@ -226,24 +226,24 @@
         {
           "name": "ledgerOpeningFor",
           "offset": 734,
-          "length": 524,
+          "length": 658,
           "replacement": "function ledgerOpeningFor(...args) { return stockState.ledgerOpeningFor.apply(this, args); }"
         },
         {
           "name": "moveStock",
-          "offset": 1262,
-          "length": 1223,
+          "offset": 1396,
+          "length": 1630,
           "replacement": "function moveStock(...args) { return stockState.moveStock.apply(this, args); }"
         },
         {
           "name": "moveRetailStock",
-          "offset": 2489,
-          "length": 310,
+          "offset": 3030,
+          "length": 297,
           "replacement": "function moveRetailStock(...args) { return stockState.moveRetailStock.apply(this, args); }"
         },
         {
           "name": "countStock",
-          "offset": 2803,
+          "offset": 3331,
           "length": 256,
           "replacement": "function countStock(...args) { return stockState.countStock.apply(this, args); }"
         }
@@ -252,21 +252,21 @@
         {
           "file": "assets/stock/intake.js",
           "name": "stIntakePostAll",
-          "offset": 3260,
+          "offset": 3788,
           "length": 4647,
           "replacement": "function stIntakePostAll(...args) { return S.stockState.stIntakePostAll(S, { stIntakePostingCanonical, stIntakePostingIds, stIntakePostingLines, stIntakePrepare, stIntakeSupplierId, stSha256Hex }).apply(this, args); }"
         },
         {
           "file": "assets/stock/counts.js",
           "name": "fetchServerCounts",
-          "offset": 7999,
+          "offset": 8527,
           "length": 426,
           "replacement": "function fetchServerCounts(...args) { return S.stockState.fetchServerCounts(S, {  }).apply(this, args); }"
         },
         {
           "file": "assets/stock/intake.js",
           "name": "stLegacyPostAll",
-          "offset": 8535,
+          "offset": 9063,
           "length": 2628,
           "replacement": "function stLegacyPostAll(...args) { return S.stockState.stLegacyPostAll(S, { stUpsertSupplierCard }).apply(this, args); }"
         }

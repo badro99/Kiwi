@@ -26,6 +26,8 @@
     return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
   }
 
+  var clockOffset = 0;
+  function serverNow() { return Date.now() + clockOffset; }
   var lastData = null;
   /* Employé dont le cookie de session porte les envois de la file. Vidé dès
      qu'une autre connexion commence : la file d'un employé ne part jamais
@@ -53,6 +55,8 @@
       headers: { Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     }).then(async function (r) {
+      var serverDate = r.headers && r.headers.get('Date');
+      if (serverDate && Number.isFinite(Date.parse(serverDate))) clockOffset = Date.parse(serverDate) - Date.now();
       let data = {};
       try { data = await r.json(); } catch (_) { console.warn("[employee-live] call failed"); }
       if (!r.ok) { var e = new Error(data.error || 'employee-request-failed'); e.code = data.error || ''; e.status = r.status; throw e; }
@@ -123,7 +127,7 @@
     try { history = JSON.parse((store() && store().getItem(QUEUE_PREFIX + owner + ':outcomes')) || '[]'); } catch (_) { console.warn("[employee-live] records failed"); }
     return merge(merge(local, history), copies[owner] || []);
   }
-  function needsCorrection(i) { return !i.done && Date.now() - Number(i.at) > 12 * 3600000; }
+  function needsCorrection(i) { return !i.done && serverNow() - Number(i.at) > 12 * 3600000; }
   function readQueue(owner) { return records(owner).filter(function (i) { return !i.done && !needsCorrection(i); }); }
   // Même couche de langue que le planning employé : document.documentElement.lang.
   function correctionWords(lang) {
@@ -165,7 +169,7 @@
     // Les accusés empêchent une ancienne copie de ressusciter un geste déjà envoyé.
     items = merge(items, records(owner).filter(function (i) { return i.done || needsCorrection(i); }));
     // Un accusé de plus de 24 h ne protège plus rien (le serveur refuse au-delà de 12 h).
-    var horizon = Date.now() - 86400000;
+    var horizon = serverNow() - 86400000;
     items = items.filter(function (i) { return !i.done || Number(i.at) > horizon || (i.outcome && i.outcome.result === 'correction-dismissed'); });
     var pending = items.filter(function (i) { return !i.done; });
     try {
@@ -191,7 +195,7 @@
       try { deviceId = store().getItem('kiwiAttendanceDevice') || newOpId(); store().setItem('kiwiAttendanceDevice', deviceId); } catch (_) { deviceId = 'legacy-device'; }
     }
     return { capturedAt: Number(item.at) || 0, deviceId: deviceId, action: item.kind, attendanceCode: item.code || '', opId: item.opId, progress: item.progress || null,
-      capturedAgoMs: Math.max(0, Date.now() - (Number(item.at) || Date.now())) };
+      capturedAgoMs: Math.max(0, serverNow() - (Number(item.at) || serverNow())) };
   }
   // Réseau absent, serveur indisponible : on garde et on retente.
   function transient(err) { return !err || !err.status || err.status >= 500; }
@@ -250,7 +254,7 @@
     return flushing;
   }
   function punch(kind, attendanceCode, progress, opId) {
-    var item = { kind: kind, opId: opId || newOpId(), at: Date.now(), code: String(attendanceCode || ''), progress: progress || null };
+    var item = { kind: kind, opId: opId || newOpId(), at: serverNow(), code: String(attendanceCode || ''), progress: progress || null };
     var owner = queueOwner;
     // Sans identité connue ni stockage durable : envoi direct, comme avant.
     if (!owner) return call('POST', bodyFor(item)).then(remember);

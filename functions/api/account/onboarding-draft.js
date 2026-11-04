@@ -25,7 +25,7 @@ export async function onRequest({ request, env }) {
     }
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return json({ error: 'format' }, 400);
     const clean = {};
-    for (const field of ['step', 'ownerName', 'bizName', 'typeId', 'venueCount', 'city', 'teamSize', 'teamGiven', 'dailyGoal', 'device']) {
+    for (const field of ['revision', 'step', 'ownerName', 'bizName', 'typeId', 'venueCount', 'city', 'teamSize', 'teamGiven', 'dailyGoal', 'device']) {
       if (['string', 'number', 'boolean'].includes(typeof raw[field])) clean[field] = typeof raw[field] === 'string' ? raw[field].slice(0, 100) : raw[field];
     }
     clean.goals = Array.isArray(raw.goals) ? raw.goals.filter(v => typeof v === 'string').slice(0, 20).map(v => v.slice(0, 40)) : [];

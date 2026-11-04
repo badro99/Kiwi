@@ -99,10 +99,12 @@ function renderKpiBand() {
        * jour de retours. Les avoirs émis viennent du registre que lit la page
        * « Retours & échanges » (/api/sale/refund, returns-ledger.js), relu au
        * plus une fois par minute ; la bande se repeint s'ils ont changé. */
+      let creditStale = false;
       const creditStats = (f, to) => {
         let credited = NaN;
         try {
           const d = JSON.parse(localStorage.getItem('kiwi:returnsLedger') || 'null');
+          if (d && d.v === __state.activeMerchantSlug()) creditStale = !!d.stale || Date.now() - Number(d.at) >= 60000;
           const covered = d && Object.hasOwn(d, 'window') && (d.window === null || (d.window[0] <= f && (d.window[1] == null ? Infinity : d.window[1]) >= to));
           if (covered && d.v === __state.activeMerchantSlug() && Array.isArray(d.list)) { credited = 0; d.list.forEach((r) => { if (r.ts >= f && r.ts < to) credited += Math.round((Number(r.amount) || 0) * 100); }); credited /= 100; }
           else import('../returns-ledger.js').then(m => m.warmCreditReturns([f, to])).then(changed => { if (changed) __state.renderKpiBand(); }, () => {});
@@ -171,7 +173,7 @@ function renderKpiBand() {
          * période : « · » (rien à rapporter) ; avec des ventes et aucun
          * remboursement : un vrai 0 %. Un remboursement d'une vente plus
          * ancienne compte le jour où il est fait, comme dans le CA. */
-        tauxRetour: data.tauxRetour ? (!Number.isFinite(returned) ? { ...data.tauxRetour, text: '·', unit: '', delta: null } : w.gross > 0
+        tauxRetour: data.tauxRetour ? (creditStale ? { ...data.tauxRetour, text: '·', unit: '', delta: null, note: ({ fr: 'Chiffre non actualisé', en: 'Figure not current', ar: 'الرقم غير محدّث' }[__state.getLang()] || 'Chiffre non actualisé') } : !Number.isFinite(returned) ? { ...data.tauxRetour, text: '·', unit: '', delta: null } : w.gross > 0
           ? { ...data.tauxRetour, text: undefined, value: Math.round((returned / w.gross) * 1000) / 10, unit: '%', fmt: 'pct1',
               delta: __state.realDeltaPct(rng, (s) => (s.gross ? ((s.refunds + s.credited) / s.gross) * 100 : 0), undefined, creditStats) }
           : { ...data.tauxRetour, text: '·', unit: '', delta: null }) : data.tauxRetour,

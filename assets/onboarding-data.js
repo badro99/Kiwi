@@ -12,11 +12,12 @@
     ar: 'لم تُحفظ المسودة على هذا الجهاز: تخزين المتصفح ممتلئ أو محظور. صدّر المسودة للاحتفاظ بها.',
   };
 
+  const SYNC_NOTE = { fr: 'Synchronisation serveur non confirmée. Vérifiez la copie locale ou exportez le brouillon.', en: 'Server sync unconfirmed. Check the local copy or export the draft.', ar: 'مزامنة الخادم غير مؤكدة. تحقق من النسخة المحلية أو صدّر المسودة.' };
   function createDraft(storage, types, goals) {
-    let draftKept = true, snapshot = null, exported = null, remote = null, queue = Promise.resolve(), cleared = false;
+    let draftKept = true, snapshot = null, exported = null, remote = null, queue = Promise.resolve(), cleared = false, syncFailed = false, revision = 0;
     return {
-      saved: () => draftKept || snapshot === exported || snapshot === remote,
-      warning: (lang) => (draftKept || snapshot === exported || snapshot === remote) ? '' : (DRAFT_NOTE[lang] || DRAFT_NOTE.fr),
+      saved() { return !syncFailed && (!this.transport || snapshot === remote) && (draftKept || snapshot === exported || snapshot === remote); },
+      warning(lang) { return (syncFailed || (this.transport && snapshot !== remote)) ? (SYNC_NOTE[lang] || SYNC_NOTE.fr) : (draftKept || snapshot === exported || snapshot === remote) ? '' : (DRAFT_NOTE[lang] || DRAFT_NOTE.fr); },
       clear() {
         cleared = true;
         storage.del(KEY);
@@ -42,16 +43,18 @@
         if (!this.transport) return;
         try {
           const d = await this.transport();
-          let local; try { local = storage.get(KEY); } catch (_) {}
+          let local; try { local = JSON.parse(storage.get(KEY) || 'null'); } catch (_) {}
+          revision = Math.max(revision, Number(local?.revision) || 0);
           // Preserve working local answers when a previous server copy is older.
-          if (d && !local) { this.load(S, d); this.save(S); remote = snapshot; }
-        } catch (_) {}
+          if (d && ((!local && !snapshot) || (Number(d.revision) || 0) > revision)) { this.load(S, d); this.save(S); remote = snapshot; }
+          syncFailed = false;
+        } catch (_) { syncFailed = true; }
       },
       async sync() {
         if (!this.transport || !snapshot || cleared || snapshot === remote) return;
         const sent = snapshot;
-        queue = queue.catch(() => {}).then(async () => { if (!cleared) { await this.transport(JSON.parse(sent)); remote = sent; } });
-        try { await queue; } catch (_) {}
+        queue = queue.catch(() => {}).then(async () => { if (!cleared) { await this.transport(JSON.parse(sent)); remote = sent; syncFailed = false; } });
+        try { await queue; return true; } catch (_) { syncFailed = true; return false; }
       },
       // Persist names and roles only. Access codes must be entered after reload.
       save(S) {
@@ -67,7 +70,9 @@
             name: String((p && p.name) || '').slice(0, 20), code: '',
           })),
         };
-        snapshot = JSON.stringify(safe);
+        const previous = snapshot && JSON.parse(snapshot);
+        if (!previous || JSON.stringify({ ...previous, revision: undefined }) !== JSON.stringify(safe)) revision = Math.max(Date.now(), revision + 1);
+        snapshot = JSON.stringify({ ...safe, revision });
         try { draftKept = storage.set(KEY, snapshot) === true; }
         catch (_) { draftKept = false; }
         return draftKept;
@@ -76,6 +81,7 @@
         let d = supplied || null;
         if (!supplied) try { d = JSON.parse(storage.get(KEY) || 'null'); } catch (_) {}
         if (!d || typeof d !== 'object') return;
+        revision = Math.max(revision, Number(d.revision) || 0);
         const knownType = types.includes(d.typeId);
         S.step = Math.max(0, Math.min(6, Number(d.step) || 0));
         S.ownerName = String(d.ownerName || '').slice(0, 40);
