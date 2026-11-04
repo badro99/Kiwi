@@ -136,7 +136,8 @@ async function requestFlow(t, cell, locale, viewport) {
   await page.waitForSelector('[data-pick="1"] [data-pick-qty]', { visible:true, timeout:20000 });
   if (viewport === 'phone') {
     t.step('375px request fields stack, fit and remain touch reachable');
-    await page.setViewport({ width:375, height:812, deviceScaleFactor:1 });
+    // Keep the phone flags: changing isMobile/hasTouch makes Puppeteer reload the page and drop the open form.
+    await page.setViewport({ width:375, height:812, deviceScaleFactor:1, isMobile:true, hasTouch:true });
     const layout = await page.$eval('.hx-req-new', el => {
       const row = el.querySelector('.hx-req-pick-row');
       const fields = [...el.querySelectorAll('input,select')];
@@ -147,6 +148,7 @@ async function requestFlow(t, cell, locale, viewport) {
     assert.equal(layout.columns, 1, 'phone fields stack in one column');
     assert.ok(layout.fits, '375px request form has no horizontal scroll');
     assert.ok(layout.touch, 'phone fields have 44px targets');
+    await page.setViewport({ width:390, height:844, deviceScaleFactor:1, isMobile:true, hasTouch:true });
   }
   await page.type('[data-pick="0"] [data-pick-qty]', '6');
   await page.type('[data-pick="1"] [data-pick-qty]', '2');

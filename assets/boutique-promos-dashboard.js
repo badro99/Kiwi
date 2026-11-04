@@ -148,8 +148,8 @@
 
   /* « Mar, Jeu · 12:00–14:00 » : le créneau tel qu'on l'afficherait en
      vitrine. Vide quand la promotion court toute la journée, tous les jours. */
-  var dayShort = function (i) { return tr("promos.copy18", { p0: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'], p1: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], p2: ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'] })[i]; };
-  var dayLong = function (i) { return tr("promos.copy19", { p0: ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'], p1: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], p2: ['يوم الأحد', 'يوم الإثنين', 'يوم الثلاثاء', 'يوم الأربعاء', 'يوم الخميس', 'يوم الجمعة', 'يوم السبت'] })[i]; };
+  var dayShort = function (i) { return ({ fr: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'], en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], ar: ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'] }[lang()] || ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'])[i]; };
+  var dayLong = function (i) { return ({ fr: ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'], en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], ar: ['يوم الأحد', 'يوم الإثنين', 'يوم الثلاثاء', 'يوم الأربعاء', 'يوم الخميس', 'يوم الجمعة', 'يوم السبت'] }[lang()] || ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'])[i]; };
   var WEEK = [1, 2, 3, 4, 5, 6, 0];
   function windowText(p) {
     var parts = [];
