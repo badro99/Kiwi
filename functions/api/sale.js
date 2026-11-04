@@ -7,6 +7,7 @@
 // Requires a D1 binding named DB (see wrangler.toml / docs/ops/LIVE_LINK.md). If the
 // binding is missing the endpoint fails soft (503) so the app never breaks.
 
+import { safeDetail } from './_safe-detail.js';
 import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, TILL_COOKIE, storeOwner, tillVerification, readEmployee } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
 import { settleServiceTable, serviceVisitGuard, tableKey, tableAliases, publishReceiptPrint } from './service/events.js';
@@ -413,7 +414,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     try { anchor = await env.DB.prepare(
       'SELECT amount, amount_cents, method, ref, ts FROM sales WHERE merchant = ? AND id = ? LIMIT 1'
     ).bind(merchant, requestedId).first(); }
-    catch (error) { return json({ error: 'db-verification-failed', detail: String(error) }, 503); }
+    catch (error) { return json({ error: 'db-verification-failed', detail: safeDetail('sale', error) }, 503); }
     const sameAnchor = anchor && (anchor.amount_cents != null ? Number(anchor.amount_cents) : Number(anchor.amount) * 100) === amountCents
       && String(anchor.method || '') === method && String(anchor.ref || '') === ref
       && (Number(anchor.ts) === ts || (!ref && (split && !splitFlowId || !Number.isFinite(rawTs))));
@@ -564,7 +565,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
       // only fills an empty tip). Retrying can never change it, so do not 503.
       if (Number(saved.tip_cents) !== tipCents) return null;
     } catch (error) {
-      return json({ error: 'tip-write-failed', tipRecorded: false, detail: String(error && error.message || error), id: saleId }, 503);
+      return json({ error: 'tip-write-failed', tipRecorded: false, detail: safeDetail('sale', error), id: saleId }, 503);
     }
     return null;
   }
@@ -585,7 +586,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
   if (preflightError) {
     return json({
       error: 'db-verification-failed',
-      detail: String((preflightError && preflightError.message) || preflightError),
+      detail: safeDetail('sale', preflightError),
       id,
     }, 503);
   }
@@ -759,7 +760,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     } catch (discountError) {
       const message = String((discountError && discountError.message) || discountError);
       if (!/gross_amount_cents|discount_amount_cents|discount_reason|discount_actor_id/.test(message)) {
-        return json({ error: 'db', detail: message }, 500);
+        return json({ error: 'db', detail: safeDetail('sale', message) }, 500);
       }
     }
   }
@@ -780,7 +781,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     for (;;) {
       const message = String(error && error.message || error);
       const at = columns.findIndex(column => column !== 'amount_cents' && message.includes(column));
-      if (at < 0) return json({ error: 'db', detail: message }, 503);
+      if (at < 0) return json({ error: 'db', detail: safeDetail('sale', message) }, 503);
       columns.splice(at, 1); values.splice(at, 1);
       try {
         await env.DB.prepare(`INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, ${columns.join(', ')}) VALUES (${Array(7 + columns.length).fill('?').join(', ')})`)
@@ -811,7 +812,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
   if (verifyError) {
     return json({
       error: 'db-verification-failed',
-      detail: String((verifyError && verifyError.message) || verifyError),
+      detail: safeDetail('sale', verifyError),
       id,
     }, 503);
   }
@@ -901,7 +902,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
         return json({ error: 'sale-conflict', detail: 'conflicting-payment-parts', id }, 409);
       }
     } catch (error) {
-      return json({ error: 'payment-parts-write-failed', detail: String(error && error.message || error), id }, 503);
+      return json({ error: 'payment-parts-write-failed', detail: safeDetail('sale', error), id }, 503);
     }
   }
 
@@ -926,7 +927,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
         ).bind(merchant, id, ticketAmountCents, consignedAmountCents, ts).run();
       }
     } catch (error) {
-      return json({ error: 'receipt-write-failed', detail: String(error && error.message || error), id }, 503);
+      return json({ error: 'receipt-write-failed', detail: safeDetail('sale', error), id }, 503);
     }
   }
 

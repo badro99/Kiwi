@@ -5,6 +5,7 @@
 // revenue surface drops it, while sale_audit keeps the complete trail.
 // GET  — the signed-in owner reads those cancellations for the Ventes page.
 
+import { safeDetail } from '../_safe-detail.js';
 import { entitledMerchant, isTillFor, json, operatorActor, readCookie, readSession, SESS_COOKIE, verifyStaffPin } from '../../auth/_lib.js';
 import { businessDate, merchantZone } from '../_business-day.js';
 import { reopenServiceTable, serviceTableExists, tableKey, tableAliases } from '../service/events.js';
@@ -189,7 +190,7 @@ async function voidAndReopen(env, body, merchant, id, sale, actor, actorId, acto
     const changed = Number(result?.[insertVisit ? 1 : 0]?.meta?.changes || 0);
     if (!changed) return json({ error: 'table-occupied', message: 'table occupée · rouvrir sur une autre table', table: target }, 409);
   } catch (error) {
-    return json({ error: 'reopen-failed', detail: String(error && error.message || error) }, 503);
+    return json({ error: 'reopen-failed', detail: safeDetail('cancel', error) }, 503);
   }
   await voidSaleLoyalty(env, merchant, { id, ref: sale.ref || '' });
   if (actorId) {
@@ -327,7 +328,7 @@ export async function onRequestPost({ request, env }) {
            FROM sales WHERE id = ? AND merchant = ? LIMIT 1`
       ).bind(id, merchant).first();
     } catch (e2) {
-      return json({ error: 'migration-needed', detail: String((e2 && e2.message) || e2) }, 503);
+      return json({ error: 'migration-needed', detail: safeDetail('cancel', e2) }, 503);
     }
   }
   if (!sale) return json({ error: 'sale-not-found' }, 404);
@@ -425,7 +426,7 @@ export async function onRequestPost({ request, env }) {
       return json({ error: 'already-cancelled' }, 409);
     }
   } catch (e) {
-    return json({ error: 'cancel-failed', detail: String((e && e.message) || e) }, 500);
+    return json({ error: 'cancel-failed', detail: safeDetail('cancel', e) }, 500);
   }
   await voidSaleLoyalty(env, merchant, { id, ref: sale.ref || '' });
 

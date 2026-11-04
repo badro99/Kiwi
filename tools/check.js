@@ -2423,7 +2423,7 @@ section('Whole-project regressions');
     'menu-import-preserve-test.mjs',
     'modal-desc-escape-test.mjs',
     'intake-slice1-test.mjs',
-    'client-state-truth-test.mjs', 'stock-intake-outbox-test.mjs', 'intake-deadline-test.mjs', 'refund-period-test.mjs', 'returns-tile-window-test.mjs',
+    'client-state-truth-test.mjs', 'stock-intake-outbox-test.mjs', 'intake-deadline-test.mjs', 'refund-period-test.mjs', 'sale-error-detail-test.mjs', 'returns-tile-window-test.mjs',
     'exchange-promo-rule-test.mjs',
     'intake-posting-test.mjs',
     'intake-conflict-test.mjs',
