@@ -62,7 +62,7 @@
       e.status = r.status; e.code = code || undefined; e.body = body || undefined;
       throw e;
     }
-    if (body === null) throw Object.assign(new Error('bad-response'), { status: 0, code: 'bad-response', body: undefined });
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw Object.assign(new Error('bad-response'), { status: 0, code: 'bad-response', body: undefined });
     if (method !== 'GET' && method !== 'HEAD') {
       writes.slice().forEach(function (fn) { try { fn({ path: url, method: method }); } catch (_) {} });
     }

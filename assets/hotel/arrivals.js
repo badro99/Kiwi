@@ -25,7 +25,7 @@ async function cuStayStatus(id, status, force = false, pin = '') {
     const slug = cuMerchantSlug();
     if (!slug || !id) return false;
     try {
-      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', merchant: slug, id, status, force, pin }) });
+      const res = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', merchant: slug, id, status, force, pin }) }, tx);
       const data = await res.json().catch(() => ({}));
       if (cuMerchantSlug() !== slug) return false;
       if (res.status === 409 && data.error === 'stay-unpaid' && !force) {
@@ -34,7 +34,7 @@ async function cuStayStatus(id, status, force = false, pin = '') {
       }
       if (!res.ok && force) scope.toast(tx('Code manager refusé ou vérification indisponible.'), { type: 'warn' });
       if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }
-    } catch (_) {}
+    } catch (error) { scope.toast(error.message, { type: 'warn' }); }
     return false;
   }
 
@@ -42,11 +42,13 @@ async function cuStayCancel(id) {
     const slug = cuMerchantSlug();
     if (!slug || !id) return false;
     await cuStayStatus(id, 'confirmed');
+    if (cuMerchantSlug() !== slug) return false;
     try {
-      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', merchant: slug, id }) });
+      const res = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', merchant: slug, id }) }, tx);
       const data = await res.json().catch(() => ({}));
+      if (cuMerchantSlug() !== slug) return false;
       if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }
-    } catch (_) {}
+    } catch (error) { scope.toast(error.message, { type: 'warn' }); }
     return false;
   }
 

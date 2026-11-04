@@ -625,7 +625,7 @@
         // first, then go straight to the gate: one tap instead of three. The
         // href stays a real link, so this still works if the fetch fails.
         e.preventDefault();
-        fetch('/auth/logout', { redirect: 'manual', credentials: 'same-origin' })
+        import('./request-deadline.mjs').then(({ deadlineFetch }) => deadlineFetch('/auth/logout', { redirect: 'manual', credentials: 'same-origin' }))
           .then(() => { location.href = '/dashboard'; })
           .catch(() => { location.href = signin.getAttribute('href'); });
         return;

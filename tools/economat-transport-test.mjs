@@ -23,7 +23,7 @@ try {
     globalThis.fetch = async () => ({ok:false,status:502,json:async()=>{throw Error('invalid-json');}});
     await assert.rejects(invoke(),e=>e.message==='http-502' && e.status===502);
     globalThis.fetch = async () => ({ok:true,status:200,json:async()=>{throw Error('invalid-json');}});
-    assert.equal(Object.keys(await invoke()).length,0);
+    await assert.rejects(invoke(), e => e.code === 'invalid-response' && e.uncertain === true);
     globalThis.setTimeout = (fn, ms) => originalTimer(fn, Math.min(ms, 5));
     for (const bodyTimeout of [false,true]) {
       calls.length=0;

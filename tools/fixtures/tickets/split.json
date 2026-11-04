@@ -1,10 +1,10 @@
 {
-  "sha256": "2b5885e88ab2ea92e7df41b332abc7b7a637c36fa37eeb8810ed176ceb46b368",
+  "sha256": "72086792c0bd2c4a9d912a2187674f7bdd62eaff171b2ad879455174ed166f44",
   "parts": [
     {
       "name": "data",
       "file": "assets/tickets-data.js",
-      "header": "/* Tickets data. Exports: loadTickets, newIdempotencyKey, publish, publishFollowup, moveTicket, saveClassification.\n * Reads injected: $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createData({ $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t }) {\n  async function request(url, options, timeout, fallback = 'update-failed') {\n    try {\n      const { deadlineFetch } = await import('./request-deadline.mjs');\n      const response = await deadlineFetch(url, options, timeout);\n      const result = await response.json().catch(error => {\n        if (error.code === 'request-timeout') throw error;\n        return {};\n      });\n      if (!response.ok) throw Object.assign(new Error(result.error || fallback), { code: result.error });\n      return result;\n    } catch (error) {\n      error.translatedMessage = friendlyError(error.code);\n      throw error;\n    }\n  }\n\n",
+      "header": "/* Tickets data. Exports: loadTickets, newIdempotencyKey, publish, publishFollowup, moveTicket, saveClassification.\n * Reads injected: $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createData({ $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t }) {\n  async function request(url, options, timeout, fallback = 'update-failed') {\n    try {\n      const { deadlineFetch } = await import('./request-deadline.mjs');\n      const response = await deadlineFetch(url, options, timeout);\n      const result = await response.json().catch(error => {\n        throw Object.assign(error, { code: options?.method ? 'uncertain-write' : error.code || 'read-failed', uncertain: !!options?.method });\n      });\n      if (!result || typeof result !== 'object' || Array.isArray(result)) throw Object.assign(new Error('invalid-response'), { code: options?.method ? 'uncertain-write' : 'read-failed' });\n      if (!response.ok) throw Object.assign(new Error(result.error || fallback), { code: result.error });\n      return result;\n    } catch (error) {\n      error.translatedMessage = friendlyError(error.code);\n      throw error;\n    }\n  }\n\n  ",
       "footer": "  return Object.freeze({ loadTickets, newIdempotencyKey, publish, publishFollowup, moveTicket, saveClassification });\n}\n",
       "deps": [
         "$",
@@ -38,48 +38,48 @@
       "fragments": [
         {
           "name": "loadTickets",
-          "start": 41061,
-          "end": 43579,
+          "start": 41591,
+          "end": 44495,
           "offset": 741,
           "length": 2348,
           "replacement": "  function loadTickets(...args) { return dataPart.loadTickets(...args); }"
         },
         {
           "name": "newIdempotencyKey",
-          "start": 49660,
-          "end": 49874,
+          "start": 50579,
+          "end": 50790,
           "offset": 3091,
           "length": 213,
           "replacement": "  function newIdempotencyKey(...args) { return dataPart.newIdempotencyKey(...args); }"
         },
         {
           "name": "publish",
-          "start": 49876,
-          "end": 52262,
+          "start": 50795,
+          "end": 53178,
           "offset": 3306,
           "length": 2721,
           "replacement": "  function publish(...args) { return dataPart.publish(...args); }"
         },
         {
           "name": "publishFollowup",
-          "start": 52264,
-          "end": 53985,
+          "start": 53183,
+          "end": 54901,
           "offset": 6029,
           "length": 2073,
           "replacement": "  function publishFollowup(...args) { return dataPart.publishFollowup(...args); }"
         },
         {
           "name": "moveTicket",
-          "start": 56463,
-          "end": 57332,
+          "start": 57382,
+          "end": 58248,
           "offset": 8104,
           "length": 1221,
           "replacement": "  function moveTicket(...args) { return dataPart.moveTicket(...args); }"
         },
         {
           "name": "saveClassification",
-          "start": 57722,
-          "end": 59315,
+          "start": 58641,
+          "end": 60231,
           "offset": 9327,
           "length": 1945,
           "replacement": "  function saveClassification(...args) { return dataPart.saveClassification(...args); }"
@@ -113,7 +113,7 @@
     {
       "name": "board",
       "file": "assets/tickets-board.js",
-      "header": "/* Tickets board. Exports: saveFilters, labelOf, taxonomyItem, replaceSelectOptions, subkindsFor, make, formatTime, daysRemaining, actionButton, actionArea, copyButton, imageGallery, classificationSummary, classificationEditor, ticketCard, emptyState, filterButton, renderFilters, ticketMatchesFilters, render, renderLoading, toggleClassification, applyFilter, activateTab.\n * Reads injected: $, FILTER_KEY, LANG, LOCALE, TAXONOMY_AR, board, followupHistory, icons, lists, plural, state, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createBoard({ $, FILTER_KEY, LANG, LOCALE, TAXONOMY_AR, board, followupHistory, icons, lists, plural, state, t }) {\n",
+      "header": "/* Tickets board. Exports: saveFilters, labelOf, taxonomyItem, replaceSelectOptions, subkindsFor, make, formatTime, daysRemaining, actionButton, actionArea, copyButton, imageGallery, classificationSummary, classificationEditor, ticketCard, emptyState, filterButton, renderFilters, ticketMatchesFilters, render, renderLoading, toggleClassification, applyFilter, activateTab.\n * Reads injected: $, FILTER_KEY, LANG, LOCALE, TAXONOMY_AR, board, followupHistory, icons, lists, plural, state, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createBoard({ $, FILTER_KEY, LANG, LOCALE, TAXONOMY_AR, board, followupHistory, icons, lists, plural, state, t }) {\n  ",
       "footer": "  return Object.freeze({ saveFilters, labelOf, taxonomyItem, replaceSelectOptions, subkindsFor, make, formatTime, daysRemaining, actionButton, actionArea, copyButton, imageGallery, classificationSummary, classificationEditor, ticketCard, emptyState, filterButton, renderFilters, ticketMatchesFilters, render, renderLoading, toggleClassification, applyFilter, activateTab });\n}\n",
       "deps": [
         "$",
@@ -158,192 +158,192 @@
       "fragments": [
         {
           "name": "saveFilters",
-          "start": 25989,
-          "end": 26312,
+          "start": 26519,
+          "end": 26839,
           "offset": 750,
           "length": 127,
           "replacement": "  function saveFilters(...args) { return boardPart.saveFilters(...args); }"
         },
         {
           "name": "labelOf",
-          "start": 26314,
-          "end": 26513,
+          "start": 26844,
+          "end": 27040,
           "offset": 879,
           "length": 198,
           "replacement": "  function labelOf(...args) { return boardPart.labelOf(...args); }"
         },
         {
           "name": "taxonomyItem",
-          "start": 26515,
-          "end": 26796,
+          "start": 27045,
+          "end": 27323,
           "offset": 1079,
           "length": 280,
           "replacement": "  function taxonomyItem(...args) { return boardPart.taxonomyItem(...args); }"
         },
         {
           "name": "replaceSelectOptions",
-          "start": 26798,
-          "end": 27321,
+          "start": 27328,
+          "end": 27848,
           "offset": 1361,
           "length": 522,
           "replacement": "  function replaceSelectOptions(...args) { return boardPart.replaceSelectOptions(...args); }"
         },
         {
           "name": "subkindsFor",
-          "start": 27323,
-          "end": 27469,
+          "start": 27853,
+          "end": 27996,
           "offset": 1885,
           "length": 145,
           "replacement": "  function subkindsFor(...args) { return boardPart.subkindsFor(...args); }"
         },
         {
           "name": "make",
-          "start": 27800,
-          "end": 28019,
+          "start": 28330,
+          "end": 28546,
           "offset": 2032,
           "length": 218,
           "replacement": "  function make(...args) { return boardPart.make(...args); }"
         },
         {
           "name": "formatTime",
-          "start": 28021,
-          "end": 28694,
+          "start": 28551,
+          "end": 29221,
           "offset": 2252,
           "length": 672,
           "replacement": "  function formatTime(...args) { return boardPart.formatTime(...args); }"
         },
         {
           "name": "daysRemaining",
-          "start": 28696,
-          "end": 28810,
+          "start": 29226,
+          "end": 29337,
           "offset": 2926,
           "length": 113,
           "replacement": "  function daysRemaining(...args) { return boardPart.daysRemaining(...args); }"
         },
         {
           "name": "actionButton",
-          "start": 28812,
-          "end": 29447,
+          "start": 29342,
+          "end": 29974,
           "offset": 3041,
           "length": 634,
           "replacement": "  function actionButton(...args) { return boardPart.actionButton(...args); }"
         },
         {
           "name": "actionArea",
-          "start": 29449,
-          "end": 30071,
+          "start": 29979,
+          "end": 30598,
           "offset": 3677,
           "length": 621,
           "replacement": "  function actionArea(...args) { return boardPart.actionArea(...args); }"
         },
         {
           "name": "copyButton",
-          "start": 30073,
-          "end": 30599,
+          "start": 30603,
+          "end": 31126,
           "offset": 4300,
           "length": 525,
           "replacement": "  function copyButton(...args) { return boardPart.copyButton(...args); }"
         },
         {
           "name": "imageGallery",
-          "start": 30601,
-          "end": 31251,
+          "start": 31131,
+          "end": 31778,
           "offset": 4827,
           "length": 649,
           "replacement": "  function imageGallery(...args) { return boardPart.imageGallery(...args); }"
         },
         {
           "name": "classificationSummary",
-          "start": 32002,
-          "end": 33395,
+          "start": 32532,
+          "end": 33922,
           "offset": 5478,
           "length": 1392,
           "replacement": "  function classificationSummary(...args) { return boardPart.classificationSummary(...args); }"
         },
         {
           "name": "classificationEditor",
-          "start": 33397,
-          "end": 35219,
+          "start": 33927,
+          "end": 35746,
           "offset": 6872,
           "length": 1821,
           "replacement": "  function classificationEditor(...args) { return boardPart.classificationEditor(...args); }"
         },
         {
           "name": "ticketCard",
-          "start": 35221,
-          "end": 36565,
+          "start": 35751,
+          "end": 37092,
           "offset": 8695,
           "length": 1343,
           "replacement": "  function ticketCard(...args) { return boardPart.ticketCard(...args); }"
         },
         {
           "name": "emptyState",
-          "start": 36567,
-          "end": 36869,
+          "start": 37097,
+          "end": 37396,
           "offset": 10040,
           "length": 301,
           "replacement": "  function emptyState(...args) { return boardPart.emptyState(...args); }"
         },
         {
           "name": "filterButton",
-          "start": 36871,
-          "end": 37241,
+          "start": 37401,
+          "end": 37768,
           "offset": 10343,
           "length": 369,
           "replacement": "  function filterButton(...args) { return boardPart.filterButton(...args); }"
         },
         {
           "name": "renderFilters",
-          "start": 37243,
-          "end": 38929,
+          "start": 37773,
+          "end": 39456,
           "offset": 10714,
           "length": 1685,
           "replacement": "  function renderFilters(...args) { return boardPart.renderFilters(...args); }"
         },
         {
           "name": "ticketMatchesFilters",
-          "start": 38931,
-          "end": 39220,
+          "start": 39461,
+          "end": 39747,
           "offset": 12401,
           "length": 288,
           "replacement": "  function ticketMatchesFilters(...args) { return boardPart.ticketMatchesFilters(...args); }"
         },
         {
           "name": "render",
-          "start": 39222,
-          "end": 39963,
+          "start": 39752,
+          "end": 40490,
           "offset": 12691,
           "length": 740,
           "replacement": "  function render(...args) { return boardPart.render(...args); }"
         },
         {
           "name": "renderLoading",
-          "start": 39965,
-          "end": 40208,
+          "start": 40495,
+          "end": 40735,
           "offset": 13433,
           "length": 242,
           "replacement": "  function renderLoading(...args) { return boardPart.renderLoading(...args); }"
         },
         {
           "name": "toggleClassification",
-          "start": 57334,
-          "end": 57720,
+          "start": 58253,
+          "end": 58636,
           "offset": 13677,
           "length": 385,
           "replacement": "  function toggleClassification(...args) { return boardPart.toggleClassification(...args); }"
         },
         {
           "name": "applyFilter",
-          "start": 59317,
-          "end": 59654,
+          "start": 60236,
+          "end": 60570,
           "offset": 14064,
           "length": 336,
           "replacement": "  function applyFilter(...args) { return boardPart.applyFilter(...args); }"
         },
         {
           "name": "activateTab",
-          "start": 59656,
-          "end": 59967,
+          "start": 60575,
+          "end": 60883,
           "offset": 14402,
           "length": 310,
           "replacement": "  function activateTab(...args) { return boardPart.activateTab(...args); }"
@@ -372,7 +372,7 @@
     {
       "name": "composer",
       "file": "assets/tickets-composer.js",
-      "header": "/* Tickets composer. Exports: syncComposerSubkinds, configureComposerClassification, openComposer, resetComposer, closeComposer, fileKey, renderSelectedImages, addFiles, fallbackCopyText, copyText, blobToPng, showImageCopyFallback, copyImage.\n * Reads injected: $, MAX_IMAGES, MAX_IMAGE_BYTES, composer, draft, draftController, fileInput, form, make, replaceSelectOptions, showToast, state, subkindsFor, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createComposer({ $, MAX_IMAGES, MAX_IMAGE_BYTES, composer, draft, draftController, fileInput, form, make, replaceSelectOptions, showToast, state, subkindsFor, t }) {\n  let previewUrls = [];\n",
+      "header": "/* Tickets composer. Exports: syncComposerSubkinds, configureComposerClassification, openComposer, resetComposer, closeComposer, fileKey, renderSelectedImages, addFiles, fallbackCopyText, copyText, blobToPng, showImageCopyFallback, copyImage.\n * Reads injected: $, MAX_IMAGES, MAX_IMAGE_BYTES, composer, draft, draftController, fileInput, form, make, replaceSelectOptions, showToast, state, subkindsFor, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createComposer({ $, MAX_IMAGES, MAX_IMAGE_BYTES, composer, draft, draftController, fileInput, form, make, replaceSelectOptions, showToast, state, subkindsFor, t }) {\n  let previewUrls = [];\n  ",
       "footer": "  return Object.freeze({ syncComposerSubkinds, configureComposerClassification, openComposer, resetComposer, closeComposer, fileKey, renderSelectedImages, addFiles, fallbackCopyText, copyText, blobToPng, showImageCopyFallback, copyImage });\n}\n",
       "deps": [
         "$",
@@ -408,104 +408,104 @@
       "fragments": [
         {
           "name": "syncComposerSubkinds",
-          "start": 40524,
-          "end": 40808,
+          "start": 41054,
+          "end": 41335,
           "offset": 740,
           "length": 283,
           "replacement": "  function syncComposerSubkinds(...args) { return composerPart.syncComposerSubkinds(...args); }"
         },
         {
           "name": "configureComposerClassification",
-          "start": 40810,
-          "end": 41059,
+          "start": 41340,
+          "end": 41586,
           "offset": 1025,
           "length": 248,
           "replacement": "  function configureComposerClassification(...args) { return composerPart.configureComposerClassification(...args); }"
         },
         {
           "name": "openComposer",
-          "start": 44174,
-          "end": 44432,
+          "start": 45093,
+          "end": 45348,
           "offset": 1275,
           "length": 257,
           "replacement": "  function openComposer(...args) { return composerPart.openComposer(...args); }"
         },
         {
           "name": "resetComposer",
-          "start": 44434,
-          "end": 44858,
+          "start": 45353,
+          "end": 45774,
           "offset": 1534,
           "length": 423,
           "replacement": "  function resetComposer(...args) { return composerPart.resetComposer(...args); }"
         },
         {
           "name": "closeComposer",
-          "start": 44860,
-          "end": 44963,
+          "start": 45779,
+          "end": 45879,
           "offset": 1959,
           "length": 102,
           "replacement": "  function closeComposer(...args) { return composerPart.closeComposer(...args); }"
         },
         {
           "name": "fileKey",
-          "start": 45732,
-          "end": 45827,
+          "start": 46651,
+          "end": 46743,
           "offset": 2063,
           "length": 94,
           "replacement": "  function fileKey(...args) { return composerPart.fileKey(...args); }"
         },
         {
           "name": "renderSelectedImages",
-          "start": 45829,
-          "end": 46732,
+          "start": 46748,
+          "end": 47648,
           "offset": 2159,
           "length": 902,
           "replacement": "  function renderSelectedImages(...args) { return composerPart.renderSelectedImages(...args); }"
         },
         {
           "name": "addFiles",
-          "start": 46734,
-          "end": 47740,
+          "start": 47653,
+          "end": 48656,
           "offset": 3063,
           "length": 912,
           "replacement": "  function addFiles(...args) { return composerPart.addFiles(...args); }"
         },
         {
           "name": "fallbackCopyText",
-          "start": 53987,
-          "end": 54395,
+          "start": 54906,
+          "end": 55311,
           "offset": 3977,
           "length": 407,
           "replacement": "  function fallbackCopyText(...args) { return composerPart.fallbackCopyText(...args); }"
         },
         {
           "name": "copyText",
-          "start": 54397,
-          "end": 54771,
+          "start": 55316,
+          "end": 55687,
           "offset": 4386,
           "length": 373,
           "replacement": "  function copyText(...args) { return composerPart.copyText(...args); }"
         },
         {
           "name": "blobToPng",
-          "start": 54773,
-          "end": 55519,
+          "start": 55692,
+          "end": 56435,
           "offset": 4761,
           "length": 745,
           "replacement": "  function blobToPng(...args) { return composerPart.blobToPng(...args); }"
         },
         {
           "name": "showImageCopyFallback",
-          "start": 55521,
-          "end": 55643,
+          "start": 56440,
+          "end": 56559,
           "offset": 5508,
           "length": 121,
           "replacement": "  function showImageCopyFallback(...args) { return composerPart.showImageCopyFallback(...args); }"
         },
         {
           "name": "copyImage",
-          "start": 55645,
-          "end": 56461,
+          "start": 56564,
+          "end": 57377,
           "offset": 5631,
           "length": 815,
           "replacement": "  function copyImage(...args) { return composerPart.copyImage(...args); }"
@@ -535,7 +535,7 @@
     {
       "name": "thread",
       "file": "assets/tickets-thread.js",
-      "header": "/* Tickets thread. Exports: followupHistory, openFollowup, resetFollowup, closeFollowup, renderFollowupImages, addFollowupFiles.\n * Reads injected: $, MAX_IMAGES, MAX_IMAGE_BYTES, fileKey, followupComposer, followupFileInput, followupForm, formatTime, imageGallery, make, state, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createThread({ $, MAX_IMAGES, MAX_IMAGE_BYTES, fileKey, followupComposer, followupFileInput, followupForm, formatTime, imageGallery, make, state, t }) {\n  let followupPreviewUrls = [];\n",
+      "header": "/* Tickets thread. Exports: followupHistory, openFollowup, resetFollowup, closeFollowup, renderFollowupImages, addFollowupFiles.\n * Reads injected: $, MAX_IMAGES, MAX_IMAGE_BYTES, fileKey, followupComposer, followupFileInput, followupForm, formatTime, imageGallery, make, state, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createThread({ $, MAX_IMAGES, MAX_IMAGE_BYTES, fileKey, followupComposer, followupFileInput, followupForm, formatTime, imageGallery, make, state, t }) {\n  let followupPreviewUrls = [];\n  ",
       "footer": "  return Object.freeze({ followupHistory, openFollowup, resetFollowup, closeFollowup, renderFollowupImages, addFollowupFiles });\n}\n",
       "deps": [
         "$",
@@ -562,48 +562,48 @@
       "fragments": [
         {
           "name": "followupHistory",
-          "start": 31253,
-          "end": 32000,
+          "start": 31783,
+          "end": 32527,
           "offset": 610,
           "length": 746,
           "replacement": "  function followupHistory(...args) { return threadPart.followupHistory(...args); }"
         },
         {
           "name": "openFollowup",
-          "start": 44965,
-          "end": 45237,
+          "start": 45884,
+          "end": 46153,
           "offset": 1358,
           "length": 271,
           "replacement": "  function openFollowup(...args) { return threadPart.openFollowup(...args); }"
         },
         {
           "name": "resetFollowup",
-          "start": 45239,
-          "end": 45606,
+          "start": 46158,
+          "end": 46522,
           "offset": 1631,
           "length": 366,
           "replacement": "  function resetFollowup(...args) { return threadPart.resetFollowup(...args); }"
         },
         {
           "name": "closeFollowup",
-          "start": 45608,
-          "end": 45730,
+          "start": 46527,
+          "end": 46646,
           "offset": 1999,
           "length": 121,
           "replacement": "  function closeFollowup(...args) { return threadPart.closeFollowup(...args); }"
         },
         {
           "name": "renderFollowupImages",
-          "start": 47742,
-          "end": 48709,
+          "start": 48661,
+          "end": 49625,
           "offset": 2122,
           "length": 966,
           "replacement": "  function renderFollowupImages(...args) { return threadPart.renderFollowupImages(...args); }"
         },
         {
           "name": "addFollowupFiles",
-          "start": 48711,
-          "end": 49658,
+          "start": 49630,
+          "end": 50574,
           "offset": 3090,
           "length": 946,
           "replacement": "  function addFollowupFiles(...args) { return threadPart.addFollowupFiles(...args); }"

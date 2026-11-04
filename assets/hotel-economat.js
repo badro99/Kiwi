@@ -39,8 +39,8 @@
   function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]; }); }
   function venue() { return window.KiwiVenue && window.KiwiVenue.getCurrentVenueData ? window.KiwiVenue.getCurrentVenueData() : null; }
   function isHotel() { var v = venue(); return !!v && (v.type === 'hotel' || v.subtype === 'hotel'); }
-  function qty(value) { var n = Number(value); return Number.isFinite(n) ? n : 0; }
-  function fmt(value) { return qty(value).toLocaleString(lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits:3 }); }
+  function qty(value) { var n = value == null || String(value).trim() === '' ? NaN : Number(value); return Number.isFinite(n) ? n : null; }
+  function fmt(value) { return qty(value) == null ? text().syncFail : qty(value).toLocaleString(lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits:3 }); }
 
   /* Seule la liste affichée est bornée ; les compteurs lisent toutes les lignes. */
   var DISPLAY_LIMIT = 120;
@@ -61,7 +61,7 @@
    * le seuil de l'article. Sans seuil renseigné, l'Économat n'en invente pas
    * (l'ancien « 5 ou moins » classait « bas » un linge qui se compte en
    * centaines) : la ligne le dit, et un compteur dit combien en manquent. */
-  function isLow(row) { return row.qty <= 0 || (row.threshold != null && row.qty < row.threshold); }
+  function isLow(row) { return row.qty != null && (row.qty <= 0 || (row.threshold != null && row.qty < row.threshold)); }
 
   /* Recherche locale : chaque ajout affiche DISPLAY_LIMIT lignes, et la
    * recherche parcourt toutes les lignes (nom, référence, emplacement), sans
@@ -119,6 +119,7 @@
   }
 
   function pill(row, T) {
+    if (row.qty == null) return '<span class="hx-pill pend hx-eco-state">' + esc(T.syncFail) + '</span>';
     if (row.qty <= 0) return '<span class="hx-pill late hx-eco-state">' + esc(T.out) + '</span>';
     if (row.low) return '<span class="hx-pill pend hx-eco-state">' + esc(T.lowState) + '</span>';
     return '<span class="hx-pill ok hx-eco-state">' + esc(T.healthy) + '</span>';
@@ -168,7 +169,7 @@
 
   /* Demandes des services : assets/hotel-economat-requests.js (+ .css),
    * chargé à la première visite de l'Économat plutôt que par la coquille. */
-  var REQUESTS_JS = 'assets/hotel-economat-requests.js?v=10';
+  var REQUESTS_JS = 'assets/hotel-economat-requests.js?v=12';
   var REQUESTS_CSS = 'assets/hotel-economat-requests.css?v=3';
   var requestsLoading = null;
   function loadRequests() {

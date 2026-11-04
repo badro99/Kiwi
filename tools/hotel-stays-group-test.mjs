@@ -278,7 +278,7 @@ console.log('\n■ 6. Source-confirmed group workflow invariants in hotel.js');
 {
   ok(hotelJs.includes('kiwi:hotel-group-staged:'), 'uses durable staged operation in localStorage');
   ok(hotelJs.includes('staff-grp-'), 'uses stable deterministic clientRef for each room');
-  ok(hotelJs.includes('clientRef') && hotelJs.includes('fetch(\'/api/hotel/stays?merchant='), 'reconciles uncertain responses via clientRef');
+  ok(hotelJs.includes('clientRef') && hotelJs.includes('hotelRequest(\'/api/hotel/stays?merchant='), 'reconciles uncertain responses via clientRef');
   ok(hotelJs.includes('hx-group-partial-alert'), 'displays partially completed groups with recovery alert');
   ok(hotelJs.includes('syncTravelersFromDom'), 'implements continuous input-sync model across DOM mutations');
   ok(hotelJs.includes('hx-badge-unassigned'), 'surfaces unassigned traveler badge');

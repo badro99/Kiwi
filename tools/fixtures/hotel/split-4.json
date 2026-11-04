@@ -1,5 +1,5 @@
 {
-  "sha256": "e859bd96de8b88c8a6c45a6ac0b4cde10c86de4d60d0e1f663e14fc46528aacc",
+  "sha256": "fc39159b64f220fc99f5b159167564705048121eb059917139931192bf1be860",
   "parts": [
     {
       "name": "arrivals",
@@ -24,16 +24,16 @@
         {
           "name": "cuStayStatus",
           "start": 65747,
-          "end": 66838,
+          "end": 67007,
           "offset": 1335,
-          "length": 1091
+          "length": 1260
         },
         {
           "name": "cuStayCancel",
-          "start": 67000,
-          "end": 67603,
-          "offset": 2428,
-          "length": 603
+          "start": 67169,
+          "end": 68041,
+          "offset": 2597,
+          "length": 872
         }
       ]
     },
@@ -80,8 +80,8 @@
         },
         {
           "name": "cuLinkConnectingRooms",
-          "start": 70424,
-          "end": 71218,
+          "start": 70862,
+          "end": 71656,
           "offset": 3963,
           "length": 794
         }
@@ -232,14 +232,14 @@
     },
     {
       "start": 65747,
-      "end": 66838,
-      "original": "async function cuStayStatus(id, status, force = false, pin = '') {\n    const slug = cuMerchantSlug();\n    if (!slug || !id) return false;\n    try {\n      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', merchant: slug, id, status, force, pin }) });\n      const data = await res.json().catch(() => ({}));\n      if (cuMerchantSlug() !== slug) return false;\n      if (res.status === 409 && data.error === 'stay-unpaid' && !force) {\n        const code = await (await import('./checkout-proof.mjs')).checkoutProof(scope.K(), tx, cuDraftMoney(data.owedCents));\n        if (code !== null && cuMerchantSlug() === slug) return cuStayStatus(id, status, true, code);\n      }\n      if (!res.ok && force) scope.toast(tx('Code manager refusé ou vérification indisponible.'), { type: 'warn' });\n      if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }\n    } catch (_) {}\n    return false;\n  }",
+      "end": 67007,
+      "original": "async function cuStayStatus(id, status, force = false, pin = '') {\n    const slug = cuMerchantSlug();\n    if (!slug || !id) return false;\n    try {\n      const res = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', merchant: slug, id, status, force, pin }) }, tx);\n      const data = await res.json().catch(() => ({}));\n      if (cuMerchantSlug() !== slug) return false;\n      if (res.status === 409 && data.error === 'stay-unpaid' && !force) {\n        const code = await (await import('./checkout-proof.mjs')).checkoutProof(scope.K(), tx, cuDraftMoney(data.owedCents));\n        if (code !== null && cuMerchantSlug() === slug) return cuStayStatus(id, status, true, code);\n      }\n      if (!res.ok && force) scope.toast(tx('Code manager refusé ou vérification indisponible.'), { type: 'warn' });\n      if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }\n    } catch (error) { scope.toast(error.message, { type: 'warn' }); }\n    return false;\n  }",
       "replacement": "async function cuStayStatus() { return hotelSection('arrivals').cuStayStatus.apply(this, arguments); }"
     },
     {
-      "start": 67000,
-      "end": 67603,
-      "original": "async function cuStayCancel(id) {\n    const slug = cuMerchantSlug();\n    if (!slug || !id) return false;\n    await cuStayStatus(id, 'confirmed');\n    try {\n      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', merchant: slug, id }) });\n      const data = await res.json().catch(() => ({}));\n      if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }\n    } catch (_) {}\n    return false;\n  }",
+      "start": 67169,
+      "end": 68041,
+      "original": "async function cuStayCancel(id) {\n    const slug = cuMerchantSlug();\n    if (!slug || !id) return false;\n    await cuStayStatus(id, 'confirmed');\n    if (cuMerchantSlug() !== slug) return false;\n    try {\n      const res = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', merchant: slug, id }) }, tx);\n      const data = await res.json().catch(() => ({}));\n      if (cuMerchantSlug() !== slug) return false;\n      if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }\n    } catch (error) { scope.toast(error.message, { type: 'warn' }); }\n    return false;\n  }",
       "replacement": "async function cuStayCancel() { return hotelSection('arrivals').cuStayCancel.apply(this, arguments); }"
     },
     {
@@ -267,8 +267,8 @@
       "replacement": "function cuRefreshFloorSelectors() { return hotelSection('roomBoard').cuRefreshFloorSelectors.apply(this, arguments); }"
     },
     {
-      "start": 70424,
-      "end": 71218,
+      "start": 70862,
+      "end": 71656,
       "original": "function cuLinkConnectingRooms(st, roomA, roomB) {\n    if (!roomA || !roomB || roomA.id === roomB.id) return;\n    const now = cuStamp();\n    if (!Array.isArray(roomA.connectingRoomIds)) roomA.connectingRoomIds = [];\n    if (!Array.isArray(roomB.connectingRoomIds)) roomB.connectingRoomIds = [];\n    if (!roomA.connectingRoomIds.includes(roomB.id)) roomA.connectingRoomIds.push(roomB.id);\n    if (!roomB.connectingRoomIds.includes(roomA.id)) roomB.connectingRoomIds.push(roomA.id);\n    roomA.connectingMeta = { ...(roomA.connectingMeta || {}) };\n    roomB.connectingMeta = { ...(roomB.connectingMeta || {}) };\n    roomA.connectingMeta[roomB.id] = { at: now, linked: true };\n    roomB.connectingMeta[roomA.id] = { at: now, linked: true };\n    roomA.updatedAt = now;\n    roomB.updatedAt = now;\n  }",
       "replacement": "function cuLinkConnectingRooms() { return hotelSection('roomBoard').cuLinkConnectingRooms.apply(this, arguments); }"
     },
@@ -405,8 +405,8 @@
       "replacement": "set hotelCloud(value) { hotelSection('receptionState').setCloud(value); }"
     },
     {
-      "start": 229011,
-      "end": 229045,
+      "start": 229449,
+      "end": 229483,
       "original": "CUSTOM_HX[stateId] = acknowledged;",
       "replacement": "hotelSection('receptionState').replaceState(stateId, acknowledged);"
     },
@@ -417,8 +417,8 @@
       "replacement": "hotelSection('receptionState').replaceState(id, cuHydrate(doc));"
     },
     {
-      "start": 258522,
-      "end": 258553,
+      "start": 258960,
+      "end": 258991,
       "original": "CUSTOM_HX[id] = cuHydrate(doc);",
       "replacement": "hotelSection('receptionState').replaceState(id, cuHydrate(doc));"
     },
@@ -429,14 +429,14 @@
       "replacement": "cuWriteLocal(hotelSection('receptionState').stateFor(id), id);"
     },
     {
-      "start": 258562,
-      "end": 258594,
+      "start": 259000,
+      "end": 259032,
       "original": "cuWriteLocal(CUSTOM_HX[id], id);",
       "replacement": "cuWriteLocal(hotelSection('receptionState').stateFor(id), id);"
     },
     {
-      "start": 258603,
-      "end": 258624,
+      "start": 259041,
+      "end": 259062,
       "original": "return CUSTOM_HX[id];",
       "replacement": "return hotelSection('receptionState').stateFor(id);"
     },
@@ -453,26 +453,26 @@
       "replacement": "    hotelSection('receptionState').setCloud(hotelCloud);\n"
     },
     {
-      "start": 228065,
-      "end": 228075,
+      "start": 228503,
+      "end": 228513,
       "original": "hotelCloud",
       "replacement": "hotelSection('receptionState').cloud()"
     },
     {
-      "start": 228099,
-      "end": 228109,
+      "start": 228537,
+      "end": 228547,
       "original": "hotelCloud",
       "replacement": "hotelSection('receptionState').cloud()"
     },
     {
-      "start": 229256,
-      "end": 229266,
+      "start": 229694,
+      "end": 229704,
       "original": "hotelCloud",
       "replacement": "hotelSection('receptionState').cloud()"
     },
     {
-      "start": 229274,
-      "end": 229284,
+      "start": 229712,
+      "end": 229722,
       "original": "hotelCloud",
       "replacement": "hotelSection('receptionState').cloud()"
     },
