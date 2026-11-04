@@ -77,6 +77,17 @@ body = await response.json();
 check(response.status === 200 && body.slots.length > 0, 'availability is calculated from real resources and hours');
 const slot = body.slots[Math.floor(body.slots.length / 2)];
 check(slot.resourceIds.length === 1 && slot.endAt > slot.startAt, 'slot contains assignable capacity and duration');
+
+{ // Four lost write races in a row: the slot is still free, so the guest is told to retry, not that it is taken.
+  const prepare = db.prepare.bind(db), rev0 = db.rev; let raced = 0;
+  db.prepare = (sql) => { const s = prepare(sql); if (sql.startsWith('UPDATE store_docs')) { const run = s.run.bind(s); s.run = async () => { raced++; db.rev++; return run(); }; } return s; };
+  try {
+    const raceRes = await callPost({ merchant:'test-shop', ref:'public-ref-race', serviceId:'svc-cut', startAt:slot.startAt, partySize:1, customer:{ name:'Nora', phone:'+49 179 5241112', email:'' } });
+    const raceBody = await raceRes.json();
+    check(raced === 4 && raceRes.status === 503 && raceBody.error === 'busy' && raceBody.retryable === true && db.doc.bookings.length === 0,
+      'losing every write race answers busy and retryable, never slot-unavailable for a free slot');
+  } finally { db.prepare = prepare; db.rev = rev0; }
+}
 const ownWeek = db.doc.resources[0].week;
 db.doc.resources[0].week = null; db.hours = { week, exceptions:[] };
 response = await callGet(`merchant=test-shop&service=svc-cut&date=${date}`); body = await response.json();

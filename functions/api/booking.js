@@ -519,5 +519,6 @@ export async function onRequestPost({ request, env }) {
         return json({ok:true,id:rec.id,code,status:rec.status,startAt,manageToken:token,manageUrl:manageUrl(request,merchant,token),confirmationSent:!!(mail&&mail.ok)});}
     }catch(_){return json({error:'write-failed'},503);}
   }
-  return json({error:'slot-unavailable'},409);
+  // Each attempt re-checked the slot, so it is still free: only the write lost its races. Same ref retries safely.
+  return json({error:'busy',retryable:true},503);
 }
