@@ -1,7 +1,9 @@
-/* DOM-free economat transport. Commands are never retried automatically. */
+/* DOM-free economat transport. Individual HTTP attempts; durable submissions live in the outbox. */
+import { cached } from './hotel-economat-outbox.js?v=4';
 import { deadlineFetch } from './request-deadline.mjs';
 
-export async function getJson(url) {
+export function getJson(url) { return cached(url, () => readJson(url)); }
+async function readJson(url) {
   var r = await deadlineFetch(url, { credentials:'same-origin', cache:'no-store' });
   var body = {}; try { body = await r.json(); } catch (_) { if (_.code === 'request-timeout') throw _; if (r.ok) throw Object.assign(new Error('invalid-response'), { code: 'invalid-response', uncertain: true }); }
   if (!r.ok) { var e = new Error(body.error || ('http-' + r.status)); e.status = r.status; e.body = body; throw e; }
@@ -14,3 +16,5 @@ export async function post(body, merchant) {
   return out;
 }
 
+
+export { discard, enqueueRequest, replay, snapshot, subscribe } from './hotel-economat-outbox.js?v=4';

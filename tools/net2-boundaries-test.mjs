@@ -11,8 +11,8 @@ let passed = 0;
 async function test(name, run) { try { let timer; try { await Promise.race([run(), new Promise((_, reject) => { timer = setTimeout(() => reject(Error('test deadline')), 500); })]); } finally { clearTimeout(timer); } passed++; console.log('✓ ' + name); } catch (e) { console.error('✗ ' + name, e); process.exitCode = 1; } }
 const deadlineSource = read('assets/request-deadline.mjs').replace('export ', '');
 function transport(file, fetch) {
-  const source = read(file).replace(/^import .*;\n/gm, '').replace(/^export /gm, '');
-  return vm.runInNewContext(deadlineSource + '\n' + source + ';({'+(file.includes('hotel/request')?'hotelRequest':'getJson,post')+'})', { fetch, AbortController, URLSearchParams, setTimeout:fast, clearTimeout });
+  const source = read(file).replace(/^import .*;\n/gm, '').replace(/^export \{.*\} from .*;$/gm, '').replace(/^export /gm, '');
+  return vm.runInNewContext(deadlineSource + '\n' + source + ';({'+(file.includes('hotel/request')?'hotelRequest':'getJson,post')+'})', { cached:(url, load)=>load(), fetch, AbortController, URLSearchParams, setTimeout:fast, clearTimeout });
 }
 await test('49 economat malformed acknowledgements reject reads and writes', async () => {
   const api = transport('assets/hotel-economat-transport.js', async () => ({ ok:true, json:async () => { throw new SyntaxError('broken'); } }));
