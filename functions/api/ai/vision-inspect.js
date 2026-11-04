@@ -1,3 +1,6 @@
+import { budgetRoute } from './_budget-route.js';
+import { GLM_FLASH as MODEL, GEMMA_VISION as FALLBACK_MODEL } from './_models.js';
+export { MODEL, FALLBACK_MODEL };
 // /api/ai/vision-inspect — Inspection visuelle et classification universelle de photos & documents.
 //
 // Reçoit une image (photo de facture, ticket de caisse, menu, plan de salle, ticket TPE,
@@ -11,8 +14,6 @@ import { GATEWAY_OPTS, aiText, runAiWithGateway } from './_run.js';
 import { runVisionPair } from './_vision.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
-export const MODEL = '@cf/zai-org/glm-5.3-flash';
-export const FALLBACK_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
 const MAX_TOKENS = 1800;
 const TEMPERATURE = 0.1;
@@ -223,7 +224,7 @@ export async function inspectImage(env, dataUrl, promptText, locale) {
   return { model, ...interpretVisionOutput(aiText(result)) };
 }
 
-export async function onRequestPost(context) {
+async function budgetHandler(context) {
   const { request, env } = context;
   if (!env.AI) return json({ ok: false, error: 'unbound' }, 503);
 
@@ -233,7 +234,7 @@ export async function onRequestPost(context) {
   const who = await tenantFor(request, env, b?.merchant);
   if (!who) return json({ ok: false, error: 'auth' }, 401);
 
-  if (!(await quotaOk(env, who, 'visioninspect', DAILY_CAP))) {
+  if (!(await quotaOk(env, who, 'visioninspect', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) }))) {
     return json(quotaBody('visioninspect'), 429);
   }
 
@@ -250,3 +251,5 @@ export async function onRequestPost(context) {
     return json({ ok: false, error: 'model-failed', message: err?.message || 'Inference error' }, 502);
   }
 }
+
+export const onRequestPost = budgetRoute(budgetHandler, 'visioninspect');

@@ -12,6 +12,7 @@ import { readFileSync } from 'node:fs';
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const voice = mergedPart('assets/agent-voice.js');
 const fn = read('functions/api/ai/voice.js');
+const routeModels = await import('../functions/api/ai/voice.js');
 const quota = read('functions/api/ai/_quota.js');
 const dashboard = read('dashboard.html');
 const sw = read('kiwi-sw.js');
@@ -20,9 +21,9 @@ const controls = [
   // ── l'endpoint : fermé, borné, fail-soft ──────────────────────────────
   ['transcription requires a tenant session', fn.includes('tenantFor(request, env, body.merchant)') && fn.includes("json({ ok: false, error: 'auth' }, 401)")],
   ['a missing AI binding is named, never a 500', fn.includes("json({ ok: false, error: 'unbound' }, 503)")],
-  ['the daily quota uses the reserved transcribe kind', fn.includes("quotaOk(env, who, 'transcribe', DAILY_CAPS.transcribe)") && /transcribe:\s*\d+/.test(quota)],
+  ['the daily quota uses the reserved transcribe kind', fn.includes("quotaOk(env, who, 'transcribe', DAILY_CAPS.transcribe") && /transcribe:\s*\d+/.test(quota)],
   ['audio input is size- and shape-bounded', fn.includes('MAX_B64') && fn.includes('B64_RX.test(audio)')],
-  ['whisper turbo first, legacy whisper as fallback', fn.includes("'@cf/openai/whisper-large-v3-turbo'") && fn.includes("'@cf/openai/whisper'")],
+  ['whisper turbo first, legacy whisper as fallback', routeModels.MODEL === '@cf/openai/whisper-large-v3-turbo' && routeModels.FALLBACK_MODEL === '@cf/openai/whisper'],
   ['a language hint is whitelisted, never relayed raw', fn.includes('LANGS.has(body.lang)')],
   ['the model call rides the shared AI gateway', fn.includes('runAiWithGateway')],
   ['the mic reaches both the hero box and the assistant drawer', voice.includes(".querySelectorAll('.fa-inputwrap')") && voice.includes(".querySelectorAll('.hai-input')")],

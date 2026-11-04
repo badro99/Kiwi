@@ -60,7 +60,8 @@
     "tables-page-split-test.mjs": "byte-exact concatenation of the floor-plan editor page parts and the names each part owns",
     "type-policy-test.js": "typography ban over shipped files",
     "vertical-feature-parity-test.mjs": "each vertical declares the same features",
-    "employee-shell-structure-test.js": "Employee shell identity, icons and offline metadata, separated from runtime language assertions"
+    "employee-shell-structure-test.js": "Employee shell identity, icons and offline metadata, separated from runtime language assertions",
+    "ai-single-model-test.mjs": "All Workers AI model literals belong to the shared constant module."
   },
   "style": {
     "admin-crm-layout-test.mjs": "layout, contrast or copy in CSS/markup",

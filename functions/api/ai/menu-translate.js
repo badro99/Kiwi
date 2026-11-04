@@ -1,3 +1,6 @@
+import { budgetRoute } from './_budget-route.js';
+import { QWEN as MODEL, GLM_LEGACY as FALLBACK_MODEL } from './_models.js';
+export { MODEL, FALLBACK_MODEL };
 // /api/ai/menu-translate — traduction et adaptation intelligente de la carte d'un restaurant.
 //
 // Permet au restaurateur de traduire automatiquement l'intégralité de sa carte
@@ -12,8 +15,6 @@ import { runWithFallback } from './_run.js';
 import { parseModelResponse } from './invoice.js';
 import { canonicalMenuLang, isMenuLang, NATIVE_NAMES, RTL } from '../_menu-langs.js';
 
-export const MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
-export const FALLBACK_MODEL = '@cf/zai-org/glm-4.7-flash';
 
 const MAX_TOKENS = 4000;
 const TEMPERATURE = 0.1;
@@ -202,7 +203,7 @@ export function validateTranslation(raw, original) {
   return { cats: outCats, items: outItems, opts: outOpts };
 }
 
-export async function onRequestPost(context) {
+async function budgetHandler(context) {
   const { request, env } = context;
 
   let body = null;
@@ -217,7 +218,7 @@ export async function onRequestPost(context) {
 
   if (!env.AI) return json({ ok: false, error: 'unbound' }, 503);
 
-  if (!(await quotaOk(env, who, 'menutranslate', DAILY_CAP))) {
+  if (!(await quotaOk(env, who, 'menutranslate', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) }))) {
     return json(quotaBody('menutranslate'), 429);
   }
 
@@ -261,3 +262,5 @@ export async function onRequestPost(context) {
     opts: validated.opts,
   }, 200, { 'x-kiwi-ai-model': usedModel });
 }
+
+export const onRequestPost = budgetRoute(budgetHandler, 'menutranslate');

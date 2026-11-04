@@ -1,3 +1,6 @@
+import { budgetRoute } from './_budget-route.js';
+import { QWEN as MODEL, GLM_LEGACY as FALLBACK_MODEL } from './_models.js';
+export { MODEL, FALLBACK_MODEL };
 // /api/ai/invoice — lecture et extraction structurée de factures fournisseur.
 //
 // Reçoit le texte extrait côté client par pdf.js (ou plus tard les images de scan),
@@ -19,10 +22,8 @@ export { GATEWAY_OPTS, runAiWithGateway };
 /* Qwen3-30b reste le lecteur de factures : vérifié sans faute sur une vraie
  * facture le 2026-08-19, 0,0006 $ l'appel. On ne change pas ce qui marche ;
  * le copilote (ask.js) a ses propres raisons de passer à gpt-oss. */
-export const MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 /* Secours : autre éditeur, même gamme de prix, appel de fonctions — une panne
  * Qwen ne couche pas les deux. */
-export const FALLBACK_MODEL = '@cf/zai-org/glm-4.7-flash';
 
 const MAX_TOKENS = 2500;
 const TEMPERATURE = 0.1;
@@ -131,7 +132,7 @@ export function parseModelResponse(aiRes) {
   try { return JSON.parse(str); } catch (_) { return null; }
 }
 
-export async function onRequestPost(context) {
+async function budgetHandler(context) {
   const { request, env } = context;
 
   let body = null;
@@ -151,7 +152,7 @@ export async function onRequestPost(context) {
   const text = String(body.text || '').trim();
   if (!text) return json({ ok: false, error: 'empty-text' }, 400);
 
-  if (!(await quotaOk(env, who, 'invoice', DAILY_CAP))) return json(quotaBody('invoice'), 429);
+  if (!(await quotaOk(env, who, 'invoice', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) }))) return json(quotaBody('invoice'), 429);
 
   const cleanText = text.slice(0, MAX_TEXT_CHARS);
 
@@ -215,3 +216,5 @@ Règles :
     ...validated,
   }, 200, { 'x-kiwi-ai-model': usedModel });
 }
+
+export const onRequestPost = budgetRoute(budgetHandler, 'invoice');

@@ -1,3 +1,5 @@
+import { GLM_FLASH as VISION_PRIMARY_MODEL, GEMMA_VISION as VISION_FALLBACK_MODEL, GLM_PREFIX, GEMMA_PREFIX, LLAMA_PREFIX } from './_models.js';
+export { VISION_PRIMARY_MODEL, VISION_FALLBACK_MODEL };
 // functions/api/ai/_vision.js — le duo vision partagé : qui lit l'image, et dans quelle forme.
 //
 // Avant : menu-import et salle-import lisaient les photos avec llama-3.2-11b-vision
@@ -19,14 +21,12 @@ import { runAiWithGateway } from './_run.js';
 /* Primaire : natif multimodal, 0,15 $ / 0,50 $ le million de tokens.
  * Secours : Gemma 4 26B (A4B), vision, 0,10 $ / 0,30 $ — un autre éditeur, donc
  * une panne ou un refus de GLM ne tombe pas sur le même modèle. */
-export const VISION_PRIMARY_MODEL = '@cf/zai-org/glm-5.3-flash';
-export const VISION_FALLBACK_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
 export function visionFamily(model) {
   const m = String(model || '');
-  if (m.startsWith('@cf/zai-org/glm-')) return 'glm';
-  if (m.startsWith('@cf/google/gemma-')) return 'gemma';
-  if (m.startsWith('@cf/meta/llama-3.2-') && /vision/.test(m)) return 'llama-vision';
+  if (m.startsWith(GLM_PREFIX)) return 'glm';
+  if (m.startsWith(GEMMA_PREFIX)) return 'gemma';
+  if (m.startsWith(LLAMA_PREFIX) && /vision/.test(m)) return 'llama-vision';
   return 'other';
 }
 

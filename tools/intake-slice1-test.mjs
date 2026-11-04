@@ -14,6 +14,7 @@ import stockTestSource from './stock-test-source.cjs';
  *   node tools/intake-slice1-test.mjs
  * ═══════════════════════════════════════════════════════════════════════════ */
 import assert from 'node:assert/strict';
+import { budgetRoute } from '../functions/api/ai/_budget-route.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,7 +42,7 @@ function loadRoute(src, names, prelude) {
     .filter((l) => !/^import\s/.test(l) && !/^export\s*\{[^}]*\};?\s*$/.test(l))
     .join('\n')
     .replace(/^export\s+/gm, '');
-  return new Function(bare + '\nreturn { ' + names.join(', ') + ' };')();
+  return new Function('budgetRoute', bare + '\nreturn { ' + names.join(', ') + ' };')(budgetRoute);
 }
 const intake = loadRoute(intakeSrc, ['containsIdentityHints', 'containsMrzZone', 'validateCommitBody', 'isPdfBytes', 'publicDoc', 'DOC_TYPES_V1', 'DOC_STATUSES_V1', 'MAX_PDF_BYTES'], 'const DAILY_CAPS = { intake: 100 };\nconst quotaBody = (kind, error) => ({ ok: false, error, kind });');
 const invoice = loadRoute(invoiceSrc, ['validateInvoiceData'], 'const DAILY_CAPS = { invoice: 200 };');

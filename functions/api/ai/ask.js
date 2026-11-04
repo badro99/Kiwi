@@ -1,3 +1,6 @@
+import { budgetRoute } from './_budget-route.js';
+import { QWEN as FALLBACK_MODEL, GPT_OSS as MODEL } from './_models.js';
+export { FALLBACK_MODEL, MODEL };
 // /api/ai/ask — le modèle de secours, côté serveur, pour les appareils qui ne
 // peuvent PAS faire tourner l'assistant local.
 //
@@ -43,7 +46,7 @@ export { GATEWAY_OPTS, runAiWithGateway };
  * 2026-08-19 : gpt-oss répond EN DARIJA, juste, en 1,3 s ; Qwen3-30b répond en
  * français, juste, en 7,5 s après deux mille caractères de raisonnement caché.
  * C'est le modèle ouvert d'OpenAI, mais il tourne CHEZ Cloudflare (binding
- * @cf/, données dans la région du compte) — pas un modèle tiers. 0,35 $/M en
+ * Workers AI, données dans la région du compte) — pas un modèle tiers. 0,35 $/M en
  * entrée, 0,75 $/M en sortie : sept fois Qwen à l'entrée, deux fois en sortie,
  * soit quelques dirhams par mois pour cent commerçants.
  *
@@ -55,11 +58,9 @@ export { GATEWAY_OPTS, runAiWithGateway };
  *   côté navigateur (assets/agent.js, llmChunkText) accepte les deux formes et
  *   ignore le raisonnement. Qwen ignore reasoning_effort (vérifié), ce qui en
  *   fait un secours enfichable sans second payload. */
-export const MODEL = '@cf/openai/gpt-oss-120b';
 
 /* Modèle de secours si gpt-oss est indisponible : le précédent titulaire, le
  * meilleur des modèles bon marché en arabe. */
-export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 
 /* Effort de raisonnement : voir ci-dessus. 'low' suffit à un copilote qui
  * rédige ; les chiffres viennent du moteur déterministe, pas de sa réflexion. */
@@ -173,7 +174,7 @@ export function allowedToolCalls(message, tools) {
   return cleanToolCalls(calls).filter((c) => names.has(c.function.name)).map((c) => ({ id: c.id, name: c.function.name, arguments: c.function.arguments }));
 }
 
-export async function onRequestPost(context) {
+async function budgetHandler(context) {
   const { request, env } = context;
 
   let body = null;
@@ -192,7 +193,7 @@ export async function onRequestPost(context) {
   const messages = cleanMessages(body.messages);
   if (!messages) return json({ ok: false, error: 'messages' }, 400);
 
-  if (!(await quotaOk(env, who, 'ask', DAILY_CAP))) return json(quotaBody('ask'), 429);
+  if (!(await quotaOk(env, who, 'ask', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) }))) return json(quotaBody('ask'), 429);
 
   const tools = cleanTools(body.tools);
   const round = body.round === 'tools' && tools ? 'tools' : 'answer';
@@ -253,3 +254,5 @@ export async function onRequestPost(context) {
     },
   });
 }
+
+export const onRequestPost = budgetRoute(budgetHandler, 'ask');

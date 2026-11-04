@@ -46,7 +46,7 @@ const extract = (src, re, what) => {
 };
 
 // ── 1. La route serveur — bornes exécutées, modèle Cloudflare ────────────────
-ok(/export const VISION_MODEL = '@cf\//.test(route), 'salle-import.js : le modèle vision est hébergé Cloudflare (@cf/)');
+ok((await import('../functions/api/ai/salle-import.js')).VISION_MODEL.startsWith('@cf/'), 'salle-import.js : le modèle vision est hébergé Cloudflare (@cf/)');
 ok(/quotaOk\(\s*env,\s*who,\s*'salleimport'/.test(route), 'salle-import.js compte son quota sous le kind "salleimport"');
 ok(/salleimport:\s*20/.test(quota), 'DAILY_CAPS.salleimport est déclaré (20/jour)');
 ok(/^data:image\\\/\(jpeg\|png\|webp\);base64,/m.test(route) || route.includes('data:image\\/(jpeg|png|webp);base64,'), 'la route ne prend QUE des photos (data:image jpeg/png/webp)');

@@ -13,7 +13,7 @@
 
   /* ─── TRANSLATIONS ─── */
   const T = {
-    fr: {
+    fr: { "menuScan.urlLabel": "Lien du menu", "menuScan.truncated": "Lecture partielle : {read} pages sur {total}. Ajoutez les pages manquantes avant de confirmer.", "menuScan.conflicts": "Des plats de même nom ont des prix ou descriptions différents. Vérifiez les deux lignes avant de confirmer.",
       "catalog.wholeUnits": 'La boutique utilise des unités entières. Pour les produits au poids, utilisez le module Épicerie ou Stock.',
       "print.notPrinted": "Non imprimé",
       "print.reprint": "Réimprimer",
@@ -64,7 +64,7 @@
   "quarantine.notice": "Un remboursement ou une vente refusés par le serveur attendent votre décision. Rien ne bloque la caisse.",
   "quarantine.view": "Examiner"
 },
-    en: {
+    en: { "menuScan.urlLabel": "Menu URL", "menuScan.truncated": "Partial scan: {read} of {total} pages read. Add missing pages before confirming.", "menuScan.conflicts": "Dishes with the same name have different prices or descriptions. Review both rows before confirming.",
       "catalog.wholeUnits": 'The boutique uses whole units. For weighted goods, use the Grocery or Stock module.',
       "print.notPrinted": "Not printed",
       "print.reprint": "Reprint",
@@ -830,7 +830,7 @@
       'lz.foot.tanger': "Designed &amp; assembled in Tangier",
     },
 
-    ar: {
+    ar: { "menuScan.urlLabel": "رابط قائمة الطعام", "menuScan.truncated": "قراءة جزئية: تمت قراءة {read} من {total} صفحات. أضف الصفحات المتبقية قبل التأكيد.", "menuScan.conflicts": "أصناف بالاسم نفسه لها أسعار أو أوصاف مختلفة. راجع السطرين قبل التأكيد.",
       "catalog.wholeUnits": 'تستخدم البوتيك وحدات كاملة. للمنتجات الموزونة، استخدم وحدة البقالة أو المخزون.',
       "print.notPrinted": "لم تتم الطباعة",
       "print.reprint": "إعادة الطباعة",

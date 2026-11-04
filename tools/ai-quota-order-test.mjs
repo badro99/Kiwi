@@ -47,6 +47,8 @@ scripted = [{ response: JSON.stringify({ currency: 'MAD', items: [{ name: 'Thé'
 const goodMenu = await post(menuImport, { kind: 'text', text: 'Thé 10 MAD' });
 ok(goodMenu.status === 200 && calls('menuimport') === 1, 'menu-import: a valid request spends exactly one slot');
 
+// Independent route scenarios start with a fresh neuron allocation.
+f.sql.exec("DELETE FROM ai_usage_kind WHERE kind='neurons'");
 // expense-ocr
 for (const [label, body, status] of [
   ['no image', {}, 400],
@@ -61,6 +63,7 @@ scripted = [{ response: JSON.stringify({ amount: 12, category: 'marche' }) }];
 const goodExpense = await post(expenseOcr, { image: tiny });
 ok(goodExpense.status === 200 && calls('expense') === 1, 'expense-ocr: a valid photo spends exactly one slot');
 
+f.sql.exec("DELETE FROM ai_usage_kind WHERE kind='neurons'");
 // salle-import
 for (const [label, body, status] of [['a non-image', { image: 'nope' }, 400], ['an oversized photo', { image: huge }, 413]]) {
   const r = await post(salleImport, body);

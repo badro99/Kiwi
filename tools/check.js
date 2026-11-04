@@ -2407,7 +2407,7 @@ section('Whole-project regressions');
     'menu-scan-test.mjs',
     'menu-scan-route-test.mjs',
     'menu-scan-i18n-test.mjs',
-    'menu-scan-reader-test.mjs',
+    'menu-scan-reader-test.mjs', 'ai-neuron-budget-test.mjs', 'ai-single-model-test.mjs', 'menu-scan-disclosure-test.mjs', 'menu-scan-accessible-name-test.mjs',
     'printer-i18n-test.mjs',
     'menu-import-preserve-test.mjs',
     'modal-desc-escape-test.mjs',

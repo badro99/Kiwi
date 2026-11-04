@@ -1,3 +1,6 @@
+import { budgetRoute } from './_budget-route.js';
+import { GLM_FLASH as MODEL, GLM_FLASH as VISION_MODEL, GEMMA_VISION as VISION_FALLBACK_MODEL, QWEN as FALLBACK_MODEL } from './_models.js';
+export { MODEL, VISION_MODEL, VISION_FALLBACK_MODEL, FALLBACK_MODEL };
 // /api/ai/product-scan — Ingestion d'articles sans code-barres depuis une photo.
 //
 // Analyse une photo d'article (vêtement, caftan, maroquinerie, poterie, artisanat),
@@ -10,10 +13,6 @@ import { runVisionPair } from './_vision.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
-export const MODEL = '@cf/zai-org/glm-5.3-flash';
-export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
-export const VISION_MODEL = '@cf/zai-org/glm-5.3-flash';
-export const VISION_FALLBACK_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
 const MAX_TOKENS = 1400;
 const TEMPERATURE = 0.2;
@@ -66,7 +65,7 @@ export function validateProductData(raw) {
   };
 }
 
-export async function onRequestPost(context) {
+async function budgetHandler(context) {
   const { request, env } = context;
 
   let b;
@@ -75,7 +74,7 @@ export async function onRequestPost(context) {
   const who = await tenantFor(request, env, b?.merchant);
   if (!who) return json({ error: 'unauthorized' }, 401);
 
-  const allowed = await quotaOk(env, who, 'product', DAILY_CAP);
+  const allowed = await quotaOk(env, who, 'product', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL, VISION_MODEL, VISION_FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) });
   if (!allowed) return json(quotaBody('product', 'daily-quota-exceeded'), 429);
 
   const image = typeof b?.image === 'string' ? b.image.trim() : '';
@@ -112,3 +111,5 @@ export async function onRequestPost(context) {
 
   return json({ ok: true, data: clean }, 200, { 'x-kiwi-ai-model': runRes.model });
 }
+
+export const onRequestPost = budgetRoute(budgetHandler, 'product', 'daily-quota-exceeded');

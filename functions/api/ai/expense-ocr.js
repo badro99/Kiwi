@@ -1,3 +1,6 @@
+import { budgetRoute } from './_budget-route.js';
+import { GLM_FLASH as MODEL, GLM_FLASH as VISION_MODEL, GEMMA_VISION as VISION_FALLBACK_MODEL, QWEN as FALLBACK_MODEL } from './_models.js';
+export { MODEL, VISION_MODEL, VISION_FALLBACK_MODEL, FALLBACK_MODEL };
 // /api/ai/expense-ocr — OCR et extraction de bons de caisse et reçus de dépenses.
 //
 // Reçoit une image de reçu manuscrit, ticket de caisse ou bon de dépenses (marché, taxi, réparation),
@@ -10,10 +13,6 @@ import { GATEWAY_OPTS, aiText, runAiWithGateway } from './_run.js';
 import { runVisionPair } from './_vision.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
-export const MODEL = '@cf/zai-org/glm-5.3-flash';
-export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
-export const VISION_MODEL = '@cf/zai-org/glm-5.3-flash';
-export const VISION_FALLBACK_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
 const MAX_TOKENS = 1200;
 const TEMPERATURE = 0.1;
@@ -74,7 +73,7 @@ export function validateExpenseData(raw) {
   };
 }
 
-export async function onRequestPost(context) {
+async function budgetHandler(context) {
   const { request, env } = context;
 
   let b;
@@ -88,7 +87,7 @@ export async function onRequestPost(context) {
   if (image.length > MAX_IMAGE_DATAURL) return json({ error: 'image-too-large' }, 413);
 
   /* Le quota après les contrôles locaux : une photo refusée ne brûle pas de place. */
-  const allowed = await quotaOk(env, who, 'expense', DAILY_CAP);
+  const allowed = await quotaOk(env, who, 'expense', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL, VISION_MODEL, VISION_FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) });
   if (!allowed) return json(quotaBody('expense', 'daily-quota-exceeded'), 429);
 
   let runRes;
@@ -112,3 +111,5 @@ export async function onRequestPost(context) {
 
   return json({ ok: true, data: clean }, 200, { 'x-kiwi-ai-model': runRes.model });
 }
+
+export const onRequestPost = budgetRoute(budgetHandler, 'expense', 'daily-quota-exceeded');

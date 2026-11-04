@@ -1,3 +1,6 @@
+import { budgetRoute } from './_budget-route.js';
+import { GLM_FLASH as MODEL, QWEN as FALLBACK_MODEL } from './_models.js';
+export { MODEL, FALLBACK_MODEL };
 // /api/ai/menu-rank — Optimisation dynamique et classement des cartes QR (OrderPro & Tables).
 //
 // Réordonne les plats du menu digital en fonction de l'heure (matin/midi/soir), de la température extérieure et de la marge brute,
@@ -9,8 +12,6 @@ import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
-export const MODEL = '@cf/zai-org/glm-5.3-flash';
-export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 
 const MAX_TOKENS = 1200;
 const TEMPERATURE = 0.2;
@@ -60,7 +61,7 @@ export function validateMenuRankData(raw) {
   };
 }
 
-export async function onRequestPost(context) {
+async function budgetHandler(context) {
   const { request, env } = context;
 
   let b;
@@ -69,7 +70,7 @@ export async function onRequestPost(context) {
   const who = await tenantFor(request, env, b?.merchant);
   if (!who) return json({ error: 'unauthorized' }, 401);
 
-  const allowed = await quotaOk(env, who, 'menurank', DAILY_CAP);
+  const allowed = await quotaOk(env, who, 'menurank', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) });
   if (!allowed) return json(quotaBody('menurank', 'daily-quota-exceeded'), 429);
 
   const items = Array.isArray(b?.items) ? b.items.slice(0, 30) : [];
@@ -105,3 +106,5 @@ export async function onRequestPost(context) {
 
   return json({ ok: true, data: clean }, 200, { 'x-kiwi-ai-model': runRes.model });
 }
+
+export const onRequestPost = budgetRoute(budgetHandler, 'menurank', 'daily-quota-exceeded');

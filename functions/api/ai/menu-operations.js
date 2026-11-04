@@ -1,11 +1,11 @@
+import { budgetRoute } from './_budget-route.js';
+import { GLM_FLASH as PRIMARY_MODEL, QWEN as FALLBACK_MODEL } from './_models.js';
 import { json, readSession, readCookie, SESS_COOKIE } from '../../auth/_lib.js';
 import { tenantFor, storeOwner } from '../_private.js';
 import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { runWithFallback } from './_run.js';
 import { parseModelResponse } from './invoice.js';
 
-const PRIMARY_MODEL = '@cf/zai-org/glm-5.3-flash';
-const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 const MAX_CATEGORIES = 80;
 const MAX_ITEMS = 400;
 /* Compteur propre : en partageant le kind 'menuimport', un gros import de
@@ -105,7 +105,7 @@ Only increases are supported. Resolve names only from the supplied catalogue and
 Use only supplied facts and IDs. Look for likely duplicate names, missing descriptions, unusual price inconsistencies inside comparable categories, weak categorisation, and visibly missing translation text. Never infer allergens, ingredients, legality, food safety, profitability, or demand. Do not propose writes. Use the user's language. Maximum 20 high-signal findings.`;
 }
 
-export async function onRequestPost({ request, env }) {
+async function budgetHandler({ request, env }) {
   if (!env.AI) return json({ ok: false, error: 'ai-unavailable' }, 503);
   let body;
   try { body = await request.json(); } catch (_) { return json({ ok: false, error: 'invalid-json' }, 400); }
@@ -113,7 +113,7 @@ export async function onRequestPost({ request, env }) {
   if (!kind) return json({ ok: false, error: 'invalid-kind' }, 400);
   const merchant = await accountMerchant(request, env, shortText(body?.merchant, 100));
   if (!merchant) return json({ ok: false, error: 'forbidden' }, 403);
-  const allowed = await quotaOk(env, merchant, 'menuoperations', DAILY_CAP);
+  const allowed = await quotaOk(env, merchant, 'menuoperations', DAILY_CAP, { models: [FALLBACK_MODEL, PRIMARY_MODEL], maxTokens: 8192 });
   if (!allowed) return json(quotaBody('menuoperations', 'daily-quota-exceeded'), 429);
   const catalogue = cleanCatalogue(body?.catalogue);
   if (!catalogue.items.length) return json({ ok: false, error: 'empty-menu' }, 400);
@@ -144,3 +144,5 @@ export async function onRequestPost({ request, env }) {
 }
 
 export { cleanCatalogue, validateBulkProposal, validateInspection };
+
+export const onRequestPost = budgetRoute(budgetHandler, 'menuoperations', 'daily-quota-exceeded');

@@ -1,3 +1,6 @@
+import { budgetRoute } from './_budget-route.js';
+import { GLM_FLASH as VISION_MODEL, GEMMA_VISION as VISION_FALLBACK_MODEL, QWEN as MODEL, GLM_LEGACY as FALLBACK_MODEL } from './_models.js';
+export { VISION_MODEL, VISION_FALLBACK_MODEL, MODEL, FALLBACK_MODEL };
 // /api/ai/menu-import · lecture et extraction structurée d'une carte de restaurant.
 //
 // Le commerçant apporte sa carte sous la forme qu'il a : photo, PDF, lien vers
@@ -25,8 +28,6 @@ import { parseModelResponse } from './invoice.js';
 
 /* Même duo que le lecteur de factures : vérifié sur documents réels,
  * ~0,0006 $ l'appel, secours chez un autre éditeur. */
-export const MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
-export const FALLBACK_MODEL = '@cf/zai-org/glm-4.7-flash';
 /* Les photos de menus passent par un duo vision Cloudflare : GLM 5.3 Flash
  * (natif multimodal) d'abord, Gemma 4 26B en secours. Avant : llama-3.2-11b-vision
  * (2024) seul, lu deux fois dans deux formes de requête. Les formes de requête
@@ -39,8 +40,6 @@ export const FALLBACK_MODEL = '@cf/zai-org/glm-4.7-flash';
  * n'est pas une erreur d'appel : le secours ne se déclenchait jamais, le
  * marchand voyait « lecture impossible ». Gemma lit juste quand il répond
  * (0,965 à 1,000) mais lentement (médiane 41 s) : il ne sert que si GLM tombe. */
-export const VISION_MODEL = '@cf/zai-org/glm-5.3-flash';
-export const VISION_FALLBACK_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
 const MAX_TOKENS = 4000;
 /* Une carte de 150 articles tient dans ~5 000 tokens de JSON, avant même le
@@ -276,7 +275,7 @@ export async function runVision(env, dataUrl, targetLang = 'fr') {
   return runVisionPair(env, VISION_MODEL, VISION_FALLBACK_MODEL, buildMenuVisionPayload(dataUrl, targetLang));
 }
 
-export async function onRequestPost(context) {
+async function budgetHandler(context) {
   const { request, env } = context;
 
   let body = null;
@@ -312,7 +311,7 @@ export async function onRequestPost(context) {
     if (!pastedText) return json({ ok: false, error: 'empty-text' }, 400);
   }
 
-  if (!(await quotaOk(env, who, 'menuimport', DAILY_CAP))) return json(quotaBody('menuimport'), 429);
+  if (!(await quotaOk(env, who, 'menuimport', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL, VISION_MODEL, VISION_FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS, MAX_VISION_TOKENS) }))) return json(quotaBody('menuimport'), 429);
 
   let aiRes;
   let usedModel = MODEL;
@@ -358,3 +357,5 @@ export async function onRequestPost(context) {
     items: validated.items,
   }, 200, { 'x-kiwi-ai-model': usedModel });
 }
+
+export const onRequestPost = budgetRoute(budgetHandler, 'menuimport');

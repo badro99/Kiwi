@@ -336,8 +336,8 @@
     "sha": "4cb11e74a39c8216"
   },
   "assets/catalog-import.js": {
-    "v": "16",
-    "sha": "c21d82d30d248838"
+    "v": "17",
+    "sha": "b1abbd3b1951ef45"
   },
   "assets/catalog-workspace.css": {
     "v": "26",
@@ -728,8 +728,8 @@
     "sha": "e41f82cc7143441b"
   },
   "assets/i18n.js": {
-    "v": "45",
-    "sha": "5f3c003c708cb1ae"
+    "v": "46",
+    "sha": "1fdb3ec381025445"
   },
   "assets/icons/material/sprite.access.svg": {
     "v": "1",
@@ -1204,12 +1204,12 @@
     "sha": "cca55badedec3e1f"
   },
   "assets/menu-scan-reader.js": {
-    "v": "1",
-    "sha": "f7c7bce19d69811a"
+    "v": "3",
+    "sha": "c7528ea4a39147d7"
   },
   "assets/menu-scan.js": {
-    "v": "8",
-    "sha": "c3b4d4e1a0c753d4"
+    "v": "11",
+    "sha": "3e076fe174113900"
   },
   "assets/merchant-config.js": {
     "v": "287",
@@ -1388,8 +1388,8 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "35",
-    "sha": "4f0facbf1ccf4020"
+    "v": "38",
+    "sha": "98bec78733f9c645"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "137",

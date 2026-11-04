@@ -69,7 +69,7 @@ const used = (db, merchant, kind) => db.prepare('SELECT calls FROM ai_usage_kind
   const r = await Promise.all(Array.from({ length: 20 }, (_, i) => quotaOk(env, 'm' + (i % 4), 'ask', 100)));
   ok(r.filter(Boolean).length === 5, 'exactement 5 appels passent');
   ok(used(db, GLOBAL_MERCHANT, GLOBAL_KIND) === 5, 'le compteur global vaut 5');
-  const perMerchant = db.prepare("SELECT SUM(calls) AS s FROM ai_usage_kind WHERE merchant != ? AND kind != ?").get(GLOBAL_MERCHANT, GLOBAL_KIND).s;
+  const perMerchant = db.prepare("SELECT SUM(calls) AS s FROM ai_usage_kind WHERE merchant != ? AND kind != ? AND kind != 'neurons'").get(GLOBAL_MERCHANT, GLOBAL_KIND).s;
   ok(perMerchant === 5, 'les compteurs établissement restent alignés sur le global (refus rendus)');
 }
 

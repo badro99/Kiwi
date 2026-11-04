@@ -1,3 +1,6 @@
+import { budgetRoute } from './_budget-route.js';
+import { GLM_FLASH as MODEL, QWEN as FALLBACK_MODEL } from './_models.js';
+export { MODEL, FALLBACK_MODEL };
 // /api/ai/loss-watchdog — Détection d'anomalies de caisse, fraudes et pertes d'exploitation.
 //
 // Analyse les journaux de caisse (annulations après encaissement, remises manuelles répétées, ouvertures tiroir sans vente),
@@ -9,8 +12,6 @@ import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
-export const MODEL = '@cf/zai-org/glm-5.3-flash';
-export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 
 const MAX_TOKENS = 1200;
 const TEMPERATURE = 0.1;
@@ -61,7 +62,7 @@ export function validateWatchdogData(raw) {
   };
 }
 
-export async function onRequestPost(context) {
+async function budgetHandler(context) {
   const { request, env } = context;
 
   let b;
@@ -70,7 +71,7 @@ export async function onRequestPost(context) {
   const who = await tenantFor(request, env, b?.merchant);
   if (!who) return json({ error: 'unauthorized' }, 401);
 
-  const allowed = await quotaOk(env, who, 'watchdog', DAILY_CAP);
+  const allowed = await quotaOk(env, who, 'watchdog', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) });
   if (!allowed) return json(quotaBody('watchdog', 'daily-quota-exceeded'), 429);
 
   const metrics = b?.metrics || {};
@@ -103,3 +104,5 @@ export async function onRequestPost(context) {
 
   return json({ ok: true, data: clean }, 200, { 'x-kiwi-ai-model': runRes.model });
 }
+
+export const onRequestPost = budgetRoute(budgetHandler, 'watchdog', 'daily-quota-exceeded');

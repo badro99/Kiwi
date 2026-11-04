@@ -15,7 +15,7 @@ for(const key of ['cafe/photo.jpg','cafe/hotel-room/room.webp','media/cafe/photo
 }
 const sqlite=new DatabaseSync(':memory:');
 const DB={prepare(sql){let params=[];return {bind(...v){params=v;return this;},async first(){return sqlite.prepare(sql).get(...params)||null;},async run(){return sqlite.prepare(sql).run(...params);}};}};
-const results=await Promise.all(Array.from({length:30},()=>quotaOk({DB},'audit','ask',5)));
+const results=await Promise.all(Array.from({length:30},()=>quotaOk({DB},'audit','ask',5, { models: ['@cf/zai-org/glm-5.3-flash'], maxTokens: 700 })));
 check(results.filter(Boolean).length===5,'concurrent AI calls respect exact cap');
 check(sqlite.prepare('SELECT calls FROM ai_usage_kind').get().calls===5,'quota counter does not exceed cap');
 check(await quotaOk({DB:{prepare(){throw new Error('DB unavailable');}}},'audit','ask',5)===false,'unavailable quota storage fails closed');

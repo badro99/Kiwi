@@ -162,6 +162,11 @@
     return COPY[language()][key].replace(/\{(\w+)\}/g, (_, k) => String(params[k]));
   }
 
+  function dashboardText(key, params = {}) {
+    const fallback = { urlLabel: 'Lien du menu', truncated: 'Lecture partielle : {read} pages sur {total}. Ajoutez les pages manquantes avant de confirmer.', conflicts: 'Des plats de même nom ont des prix ou descriptions différents. Vérifiez les deux lignes avant de confirmer.' };
+    return (window.KiwiI18n?.T?.[language()]?.['menuScan.' + key] || fallback[key]).replace(/\{(\w+)\}/g, (_, k) => String(params[k]));
+  }
+
   const MAX_FILES = 6;        // une carte fait rarement plus de 6 pages
 
   /* Une photo de carte en 4000×3000 n'apprend rien de plus au modèle qu'en
@@ -209,7 +214,7 @@
       '<input type="file" hidden multiple accept="application/pdf,image/*" data-kms-file />',
       '<input type="file" hidden accept="image/*" capture="environment" data-kms-camfile />',
       '<div class="kms-or">' + esc(ui('orLink')) + '</div>',
-      '<div class="kms-url"><input type="url" placeholder="' + esc(ui('urlPlaceholder')) + '" data-kms-url /><button class="st-btn" type="button" data-kms-go-url>' + esc(ui('readLink')) + '</button></div>',
+      '<div class="kms-url"><input type="url" data-i18n-attr="aria-label:menuScan.urlLabel" aria-label="' + esc(dashboardText('urlLabel')) + '" placeholder="' + esc(ui('urlPlaceholder')) + '" data-kms-url /><button class="st-btn" type="button" data-kms-go-url>' + esc(ui('readLink')) + '</button></div>',
       '<button class="kms-paste" type="button" data-kms-paste>' + esc(ui('paste')) + '</button>',
       '<div class="kms-note">' + esc(ui('disclosure')) + '</div>',
     ].join('');
@@ -254,10 +259,11 @@
 
     /* Le résultat AI part dans la revue d'import — et CE modal se ferme :
      * la revue devient la seule surface, pas une pile de fenêtres. */
-    function review(items) {
+    function review(items, notices = []) {
       if (!items.length) { failToast(new Error('unparsed')); render(); return; }
+      if (items.some((it) => it.needsReview)) notices.push(dashboardText('conflicts') + ' ' + items.filter((it) => it.needsReview).map((it) => [it.name, it.price, it.desc].filter((v) => v != null && v !== '').join(' · ')).join(' / '));
       m.close();
-      KiwiCatalogImport.openMenuWithCsv(reader.toCsvText(items), { onDone: opts.onDone });
+      KiwiCatalogImport.openMenuWithCsv(reader.toCsvText(items), { onDone: opts.onDone, scanNotices: notices });
     }
 
     async function runFiles(files) {
@@ -270,7 +276,7 @@
       busy = true;
       const signal = (operation = new AbortController()).signal;
       try {
-        const collected = [];
+        const collected = [], notices = [];
         for (let i = 0; i < list.length; i++) {
           const f = list[i];
           const isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '');
@@ -279,16 +285,23 @@
             ui('extract')
           );
           if (isPdf) {
-            const text = await reader.pdfText(f);
+            const reading = await reader.pdfText(f, true);
+            const text = reading.text;
             /* Un PDF scanné (image pure) n'a pas de couche texte : on le rend
              * en image et on passe par le modèle vision plutôt que d'échouer. */
-            if (text && text.length > 60) collected.push(...await callApi({ kind: 'text', text }, signal));
-            else collected.push(...await callApi({ kind: 'image', image: await reader.pdfFirstPageImage(f) }, signal));
+            if (text && text.length > 60) {
+              collected.push(...await callApi({ kind: 'text', text }, signal));
+              if (reading.truncated) notices.push((f.name || 'PDF') + ': ' + dashboardText('truncated', { read: reading.pagesRead, total: reading.pageCount }));
+            } else {
+              const scan = await reader.pdfFirstPageImage(f, true);
+              collected.push(...await callApi({ kind: 'image', image: scan.image }, signal));
+              if (scan.truncated) notices.push((f.name || 'PDF') + ': ' + dashboardText('truncated', { read: scan.pagesRead, total: scan.pageCount }));
+            }
           } else {
             collected.push(...await callApi({ kind: 'image', image: await downscaleImage(f) }, signal));
           }
         }
-        review(reader.dedupe(collected));
+        review(reader.dedupe(collected), notices);
       } catch (err) { if (!signal.aborted) { failToast(err); render(); } }
       busy = false;
     }
