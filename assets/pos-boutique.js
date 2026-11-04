@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=170';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=88';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=170';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=170';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=171';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=89';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=171';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=171';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
@@ -1260,13 +1260,19 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
     const foldName = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
       .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    const keepAccents = (v) => String(v || '').normalize('NFC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    const WEIGHED_UNIT = /^(weigh|kg|kilos?|kilograms?|g|gr|grams?|l|litres?|liters?|cl|ml)$/i;
+    const COUNT_UNIT = /^(unit|units|piece|pieces|pièce|pièces|pc|pcs|pce|u)$/i;
     const qualifyingQty = (cfg, items) => { // linked products by id (renames keep earning), new ones by word
       const want = foldName(cfg && cfg.product && cfg.product.item), ids = (Array.isArray(cfg && cfg.product && cfg.product.ids) ? cfg.product.ids : []).map(String);
       if (!want && !ids.length) return 0;
+      /* A short word typed WITH an accent ("Thé") is accent-sensitive: folded it
+         would stamp every "The Burger". Longer words and unaccented entries fold. */
+      const exact = keepAccents(cfg && cfg.product && cfg.product.item), accentSensitive = want.length < 4 && exact !== want;
       return (Array.isArray(items) ? items : []).reduce((n, item) => {
-        const name = ' ' + foldName(item && item.name) + ' ', key = String(item && (item.id || item.itemId || item.pid) || '');
-        const qty = Math.max(0, Number(item && item.qty) || 0), weighed = /^(weigh|kg|g|l|ml)$/i.test(String(item && item.unit || ''));
-        return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + want + ' ')) ? n + (weighed ? Number(qty > 0) : Math.floor(qty)) : n;
+        const name = ' ' + (accentSensitive ? keepAccents(item && item.name) : foldName(item && item.name)) + ' ', key = String(item && (item.id || item.itemId || item.pid) || '');
+        const qty = Math.max(0, Number(item && item.qty) || 0), weighed = WEIGHED_UNIT.test(String(item && item.unit || '')) || (qty % 1 !== 0 && !COUNT_UNIT.test(String(item && item.unit || ''))); // a fractional quantity is a weighed line unless the unit says pieces
+        return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + (accentSensitive ? exact : want) + ' ')) ? n + (weighed ? Number(qty > 0) : Math.floor(qty)) : n;
       }, 0);
     }
     const stampsFor = (cfg, items) => {

@@ -346,6 +346,9 @@
     book = book || bookId();
     var c = config(book);
     var next = Object.assign({}, c, patch || {});
+    /* Plafond de 2 000 produits liés (décision du 4 nov.) : refus, jamais de
+       troncature. Le serveur applique la même limite (functions/api/store.js). */
+    if (next.product && Array.isArray(next.product.ids) && next.product.ids.length > 2000) return null;
     // Quelqu'un a décidé : ce n'est plus un défaut déduit, et ça a désormais le
     // droit de voyager jusqu'aux autres appareils.
     delete next.auto;

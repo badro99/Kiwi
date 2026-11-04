@@ -1243,7 +1243,7 @@
         const next = readCfg();
         if (next.product.ids.length > 2000) { toast(C.linkLimit, { type: 'warning' }); return; }
         let saved = false;
-        try { if (window.KiwiClients && KiwiClients.hasBook && KiwiClients.hasBook()) { KiwiClients.setConfig(next); saved = true; } } catch (_) {}
+        try { if (window.KiwiClients && KiwiClients.hasBook && KiwiClients.hasBook()) { saved = KiwiClients.setConfig(next) !== null; } } catch (_) {}
         m.close();
         if (saved) toast(C.saved || T.toastTitle, { type: 'success', desc: C.savedDesc || T.toastDesc });
         else {
