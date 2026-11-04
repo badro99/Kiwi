@@ -751,12 +751,12 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
     try {
       accessDoc = pair.access ? await codeDocument(env, merchant, 'employee-access', JSON.parse(pair.access.data || '{}')) : null;
     } catch (_) {
-      return null; // An unreadable authoritative credential must not fall back to an older code.
+      continue; // An unreadable authoritative credential must not fall back to an older code.
     }
     try {
       teamDoc = pair.team ? await codeDocument(env, merchant, 'team', JSON.parse(pair.team.data || '{}')) : null;
     } catch (_) {
-      return null; // Tombstones must remain readable before authenticating an employee.
+      continue; // Tombstones must remain readable before authenticating an employee.
     }
     const accessMembers = Array.isArray(accessDoc && accessDoc.members) ? accessDoc.members : [];
     const teamMembers = Array.isArray(teamDoc && teamDoc.members) ? teamDoc.members : [];
@@ -1599,7 +1599,7 @@ export async function faceMarkState(request, env, access) {
   }
 
   for (const row of rows) {
-    if (!String(row.pin || '').startsWith('k1$')) row.pin = await hashStaffCode(env, row.merchant, row.pin);
+    if (/^\d{4}$/.test(row.pin || '')) row.pin = await hashStaffCode(env, row.merchant, row.pin);
   }
   const dash = rows.filter((r) => faceAccessTier(r.role));
   if (!dash.some((r) => faceAccessTier(r.role) === access)) return { status: 'no-such-access' };
@@ -1837,7 +1837,7 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
 
       if (accountId) {
         try {
-          const candidates = await accountStaffCodes(env, accountId, '', pin);
+          const candidates = await accountStaffCodes(env, accountId, '', pin, merchant);
           /* Owners and managers only: a cashier's or seller's code belongs to
            * the store that filed it. Accepting every till role here let a
            * cashier of one store unlock all sibling stores (council rating 14). */

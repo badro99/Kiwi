@@ -774,7 +774,10 @@ export async function onRequestGet(context) {
     }
     let data = null;
     try { data = JSON.parse(row.data); } catch (_) { data = null; }
-    if (editor) data = await codeDocument(env, merchant, feature, data);
+    if (editor) {
+      try { data = await codeDocument(env, merchant, feature, data); }
+      catch (_) { return json({ error: 'staff-code-key-unavailable', detail: 'Restore the previous staff key before editing codes.' }, 409); }
+    }
     if (feature === 'briefing') data = ownBriefingDays(data, merchant);
     const safe = (redact && !editor) ? redact(data) : data;
     return json({ feature, merchant, data: safe, rev: row.rev || 0, updated_ts: row.updated_ts || 0 }, 200, cacheHeaders);
@@ -897,7 +900,7 @@ export async function onRequestPost(context) {
   let mine = null;
   try { mine = current ? JSON.parse(current.data) : null; } catch (_) { mine = null; }
   try { mine = await codeDocument(env, merchant, feature, mine); }
-  catch (_) { return json({ error: 'staff-code-unavailable' }, 503); }
+  catch (_) { return json({ error: 'staff-code-key-unavailable', detail: 'Restore the previous staff key before editing codes.' }, 409); }
   /* Le carnet de crédit a son propre document (functions/api/_credit-book-store.js).
    * `book` est le carnet enregistré : la ligne creditbook, ou à défaut la copie
    * encore rangée dans verticalops. */
@@ -1052,8 +1055,8 @@ export async function onRequestPost(context) {
     }
     const priorCodes = new Map((mine?.members || []).map((m) => [m.id, m]));
     for (const m of clean.value.members || []) {
-      if (m && !m.pinCode && !m.password && priorCodes.has(m.id)) {
-        m.pinCode = priorCodes.get(m.id).pinCode; m.password = priorCodes.get(m.id).password;
+      if (m && typeof m.id === 'string' && m.id.trim() && priorCodes.has(m.id)) {
+        for (const field of ['pinCode', 'password']) if (m[field] === undefined) m[field] = priorCodes.get(m.id)[field];
       }
     }
     if (Array.isArray(clean.value.members)) clean.value.members = clean.value.members.map(normalizeMember);
@@ -1124,7 +1127,7 @@ export async function onRequestPost(context) {
   }
 
   try { text = JSON.stringify(await codeDocument(env, merchant, feature, clean.value, true)); }
-  catch (_) { return json({ error: 'staff-code-unavailable' }, 503); }
+  catch (_) { return json({ error: 'staff-code-key-unavailable', detail: 'Restore the previous staff key before editing codes.' }, 409); }
   if (current) await keepHistory(env, 'store', merchant, feature);
 
   const rev = serverRev + 1;

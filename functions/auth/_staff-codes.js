@@ -5,7 +5,7 @@ const b64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).repla
 const un64 = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
 const derivedKeys = new Map();
 async function key(env, info, algorithm, usages) {
-  const secret = env.PIN_PEPPER || env.AUTH_SECRET;
+  const secret = typeof env === 'string' ? env : staffKeys(env)[0];
   if (!secret) throw new Error('staff-code-key-unavailable');
   const cacheId = JSON.stringify([secret, info]);
   let pending = derivedKeys.get(cacheId);
@@ -22,35 +22,87 @@ async function key(env, info, algorithm, usages) {
       return crypto.subtle.importKey('raw', bits, algorithm, false, usages);
     })();
     derivedKeys.set(cacheId, pending);
-    if (derivedKeys.size > 4) derivedKeys.delete(derivedKeys.keys().next().value);
+    if (derivedKeys.size > 32) derivedKeys.delete(derivedKeys.keys().next().value);
     pending.catch(() => { if (derivedKeys.get(cacheId) === pending) derivedKeys.delete(cacheId); });
   }
   return pending;
 }
+export function staffKeys(env) {
+  return [...new Set([env.PIN_PEPPER || env.AUTH_SECRET, env.PIN_PEPPER_PREVIOUS,
+    env.AUTH_SECRET_PREVIOUS, env.PIN_PEPPER && env.AUTH_SECRET].filter(Boolean))];
+}
+const valid = (code) => typeof code === 'string' && /^\d{4}$/.test(code);
+export async function staffMac(secret, info, text) {
+  return b64(await crypto.subtle.sign('HMAC', await key(secret, info,
+    { name: 'HMAC', hash: 'SHA-256', length: 256 }, ['sign']), enc.encode(text)));
+}
+async function pinHashes(env, merchant, code) {
+  if (!valid(code)) throw new Error('invalid-staff-code');
+  const values = [];
+  for (const secret of staffKeys(env)) {
+    values.push(await currentHash(secret, merchant, code));
+    values.push('k1$' + await staffMac(secret, 'kiwi staff pin v1', merchant + ':' + code));
+    values.push('k1$' + b64(await crypto.subtle.sign('HMAC', await hmacKey(secret), enc.encode(merchant + ':' + code))));
+  }
+  return values;
+}
+async function keyTag(secret) { return (await staffMac(secret, 'kiwi staff key id v2', 'key')).slice(0, 12); }
+async function currentHash(secret, merchant, code) { return 'k2$' + await keyTag(secret) + '$' + await staffMac(secret, 'kiwi staff pin v2', merchant + ':' + code); }
 export async function hashStaffCode(env, merchant, code) {
-  const k = env.PIN_PEPPER
-    ? await hmacKey(env.PIN_PEPPER)
-    : await key(env, 'kiwi staff pin v1', { name: 'HMAC', hash: 'SHA-256', length: 256 }, ['sign']);
-  return 'k1$' + b64(await crypto.subtle.sign('HMAC', k, enc.encode(merchant + ':' + code)));
+  if (!valid(code)) throw new Error('invalid-staff-code');
+  return currentHash(staffKeys(env)[0], merchant, code);
+}
+export async function needsStaffRecovery(env, pin) {
+  return /^k[12]\$/.test(pin) && !pin.startsWith('k2$' + await keyTag(staffKeys(env)[0]) + '$');
+}
+// Exhaustive recovery belongs only to the bounded operator backfill, never login.
+export async function rotateStaffRow(env, row) {
+  if (valid(row.pin)) return hashStaffCode(env, row.merchant, row.pin);
+  if (!/^k[12]\$/.test(row.pin)) throw new Error('invalid-staff-code');
+  if (!await needsStaffRecovery(env, row.pin)) return row.pin;
+  const signers = [];
+  for (const secret of staffKeys(env)) {
+    if (row.pin.startsWith('k2$')) {
+      const prefix = 'k2$' + await keyTag(secret) + '$';
+      if (row.pin.startsWith(prefix)) signers.push([prefix, await key(secret, 'kiwi staff pin v2', { name: 'HMAC', hash: 'SHA-256' }, ['sign'])]);
+    } else {
+      signers.push(['k1$', await key(secret, 'kiwi staff pin v1', { name: 'HMAC', hash: 'SHA-256' }, ['sign'])], ['k1$', await hmacKey(secret)]);
+    }
+  }
+  for (let n = 0; n < 10000; n++) {
+    const code = String(n).padStart(4, '0');
+    for (const [prefix, signer] of signers) {
+      if (prefix + b64(await crypto.subtle.sign('HMAC', signer, enc.encode(row.merchant + ':' + code))) === row.pin) return hashStaffCode(env, row.merchant, code);
+    }
+  }
+  throw new Error('staff-code-key-unavailable');
 }
 export async function codeDocument(env, merchant, feature, doc, seal = false) {
   if (!doc || !['team', 'employee-access'].includes(feature)) return doc;
   const copy = structuredClone(doc);
-  const k = await key(env, 'kiwi staff code enc v1', { name: 'AES-GCM', length: 256 }, ['encrypt', 'decrypt']);
+  const keys = await Promise.all(staffKeys(env).map((secret) => key(secret, 'kiwi staff code enc v1', { name: 'AES-GCM', length: 256 }, ['encrypt', 'decrypt'])));
+  const k = keys[0];
   for (const member of Array.isArray(copy.members) ? copy.members : []) {
     if (!member || typeof member !== 'object') continue;
     for (const field of ['pinCode', 'password']) {
       const raw = member[field];
       if (raw == null || raw === '') continue;
       if (typeof raw !== 'string' && typeof raw !== 'number') throw new Error('invalid-staff-code');
-      const value = String(raw);
+      let value = String(raw);
       const aad = enc.encode(JSON.stringify([merchant, feature, String(member.id || ''), field]));
       if (value.startsWith('e1$')) {
         const parts = value.split('$');
         if (parts.length !== 3 || un64(parts[1]).length !== 12) throw new Error('invalid-staff-code');
-        const plain = dec.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: un64(parts[1]), additionalData: aad }, k, un64(parts[2])));
-        if (!seal) member[field] = plain;
-      } else if (seal) {
+        let plain, used;
+        for (const candidate of keys) {
+          try { plain = dec.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: un64(parts[1]), additionalData: aad }, candidate, un64(parts[2]))); used = candidate; break; } catch (_) {}
+        }
+        if (plain === undefined) throw new Error('staff-code-key-unavailable');
+        if (!seal) { member[field] = plain; continue; }
+        if (used === k) continue;
+        value = plain;
+      }
+      if (seal) {
         const iv = crypto.getRandomValues(new Uint8Array(12));
         member[field] = 'e1$' + b64(iv) + '$' + b64(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad }, k, enc.encode(value)));
       }
@@ -58,38 +110,41 @@ export async function codeDocument(env, merchant, feature, doc, seal = false) {
   }
   return copy;
 }
-export async function matchingStaffCodes(env, merchant, code) {
-  const hash = await hashStaffCode(env, merchant, code);
-  const r = await env.DB.prepare('SELECT id, name, role, merchant, pin, created_ts FROM staff_pins WHERE merchant = ? AND pin IN (?, ?) ORDER BY created_ts LIMIT 10').bind(merchant, hash, code).all();
-  for (const row of r.results || []) {
-    if (row.pin === code) await env.DB.prepare('UPDATE staff_pins SET pin = ? WHERE id = ? AND pin = ?').bind(hash, row.id, code).run();
+async function lookup(env, merchants, code) {
+  if (!valid(code) || !merchants.length) return [];
+  const candidates = [];
+  for (const merchant of merchants) for (const pin of [...await pinHashes(env, merchant, code), code]) candidates.push({ merchant, pin });
+  const rows = (await env.DB.prepare(`SELECT DISTINCT p.id, p.name, p.role, p.merchant, p.pin, p.created_ts FROM json_each(?) c
+    JOIN staff_pins p ON p.merchant = json_extract(c.value, '$.merchant')
+      AND p.pin = json_extract(c.value, '$.pin') ORDER BY p.created_ts LIMIT 10`).bind(JSON.stringify(candidates)).all()).results || [];
+  for (const row of rows) {
+    const current = await hashStaffCode(env, row.merchant, code);
+    if (row.pin !== current) await env.DB.prepare('UPDATE staff_pins SET pin = ? WHERE id = ? AND pin = ?').bind(current, row.id, row.pin).run();
     delete row.pin;
   }
-  return r.results || [];
+  return rows;
 }
-export async function accountStaffCodes(env, account, slug, code) {
-  let merchants;
-  try {
-    const r = await env.DB.prepare('SELECT merchant FROM merchant_config WHERE account_id = ?').bind(account).all();
-    merchants = (r.results || []).map((r) => r.merchant);
-  } catch (_) { merchants = []; }
-  if (slug) merchants.push(slug);
-  const rows = [];
-  for (const merchant of new Set(merchants)) rows.push(...await matchingStaffCodes(env, merchant, code));
-  return rows.sort((a, b) => a.created_ts - b.created_ts).slice(0, 10);
+export async function matchingStaffCodes(env, merchant, code) {
+  return lookup(env, [merchant], code);
+}
+export async function accountStaffCodes(env, account, slug, code, exclude = '') {
+  if (!valid(code)) return [];
+  const r = await env.DB.prepare('SELECT merchant FROM merchant_config WHERE account_id = ?').bind(account).all();
+  const merchants = [...new Set([...(r.results || []).map((r) => r.merchant), ...(slug ? [slug] : [])])];
+  return lookup(env, merchants.filter((m) => m !== exclude), code);
 }
 export async function sealMerchantStaff(env, merchant) {
   const rows = (await env.DB.prepare('SELECT id, pin FROM staff_pins WHERE merchant = ?').bind(merchant).all()).results || [];
   for (const row of rows) {
-    if (!String(row.pin).startsWith('k1$')) await env.DB.prepare('UPDATE staff_pins SET pin = ? WHERE id = ? AND pin = ?').bind(await hashStaffCode(env, merchant, row.pin), row.id, row.pin).run();
+    if (valid(row.pin)) await env.DB.prepare('UPDATE staff_pins SET pin = ? WHERE id = ? AND pin = ?').bind(await hashStaffCode(env, merchant, row.pin), row.id, row.pin).run();
   }
 }
 // Resolve a pre-canonical employee session by its signed staff row, without exposing a hash.
 export async function staffMemberId(env, merchant, team, row) {
   for (const member of team?.members || []) {
     const code = String(member?.pinCode || member?.password || '').trim();
-    if (!code) continue;
-    if (row.pin === code || row.pin === await hashStaffCode(env, merchant, code)) return String(member.id || '');
+    if (!valid(code)) continue;
+    if (row.pin === code || (await pinHashes(env, merchant, code)).includes(row.pin)) return String(member.id || '');
   }
   return '';
 }

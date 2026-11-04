@@ -1,10 +1,21 @@
 # Staff code sealing
 
-No schema migration or owner setup is required. PIN_PEPPER is the optional Worker
-secret; otherwise AUTH_SECRET derives separate keys for PIN HMAC and document
-AES-GCM. Preserve the chosen secret material: changing it without a planned key
-rotation makes sealed codes unreadable. Version prefixes reserve a future rotation
-protocol; this release does not implement key rotation.
+Use a dedicated PIN_PEPPER, independent of the AUTH_SECRET global session kill switch.
+Current key is PIN_PEPPER if set, otherwise AUTH_SECRET. Previous candidates are
+PIN_PEPPER_PREVIOUS, AUTH_SECRET_PREVIOUS, and AUTH_SECRET when PIN_PEPPER is set.
+For rotation, set the new secret, move the old value to the corresponding *_PREVIOUS,
+run the seal route from the beginning until done (resolve every skipped row), then
+remove previous secrets. Adding PIN_PEPPER later automatically retains AUTH_SECRET.
+Without the old key, sealed values cannot be recovered: till verification refuses
+cleanly and owner editing reports staff-code-key-unavailable (409).
+New k2 hashes carry a key tag; k1 compatibility includes both original derivations.
+PIN HMAC and document AES use separate HKDF labels. Successful verification upgrades
+old hashes using CAS; document writes re-encrypt previous-key fields under current.
+Only the bounded operator seal route recovers old PIN hashes by trying all 10,000
+candidates; ordinary login never performs that recovery.
+The route reports skipped corrupt/unrecoverable rows and legacyCodeIds across scanned
+documents and history. Legacy employee-<code> ids need coordinated re-identification;
+production currently has zero such documents. No identity migration is performed.
 
 Staff PINs upgrade on successful legacy verification. Team and employee-access
 credentials encrypt on write. Owner and named-operator Team reads still reveal
@@ -27,6 +38,7 @@ curl --fail-with-body -b "$KIWI_OPERATOR_COOKIE_JAR" \
 
 When `done` is false, post `{ "cursor": <returned cursor> }` until `done` is true.
 Each request scans at most 50 staff rows, 50 documents and 50 history snapshots;
+at most one old PIN hash is recovered per request (at most 10,000 candidates);
 it reports changed counts, never codes or hashes. Requests are rate limited using
 the normal operator limiter. Wait for Retry-After if throttled. Re-running from
 `{}` is safe and reports zero changes once all stored values are sealed. Updates
