@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { hashStaffCode } from '../functions/auth/_staff-codes.js';
 /* Focused A02-A09 regression coverage.
  *
  * This uses the real route/helper implementations over SQLite, including an
@@ -124,7 +125,7 @@ const raceStatuses = [raceA.status, raceB.status].sort((a, b) => a - b);
 check('claim race has one success and one ownership conflict', raceStatuses[0] === 200 && raceStatuses[1] === 409, raceStatuses.join(','));
 const raceOwner = db.prepare("SELECT account_id FROM merchant_config WHERE merchant = 'shared-race-store'").get();
 const racePins = db.prepare("SELECT pin FROM staff_pins WHERE merchant = 'shared-race-store'").all();
-check('loser cannot write a PIN into the winner tenant', racePins.length === 1 && racePins[0].pin === (raceOwner.account_id === 'acc-race-a' ? '1111' : '2222'));
+check('loser cannot write a PIN into the winner tenant', racePins.length === 1 && racePins[0].pin === await hashStaffCode(env, 'shared-race-store', raceOwner.account_id === 'acc-race-a' ? '1111' : '2222'));
 check('loser cannot write an employee-access document', db.prepare("SELECT COUNT(*) AS n FROM store_docs WHERE merchant = 'shared-race-store' AND feature = 'employee-access'").get().n === 1);
 
 /* A03/A04: infrastructure failures are not active/revocation epoch zero. */

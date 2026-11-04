@@ -1,4 +1,5 @@
 import { deadlineFetch } from '../../assets/request-deadline.mjs';
+import { codeDocument, matchingStaffCodes, accountStaffCodes, hashStaffCode } from './_staff-codes.js';
 import { canonicalCode } from '../api/_rules-staff-credential.js';
 import { hmacKey } from './_crypto.js';
 // Kiwi — shared auth helpers for the account gate (Cloudflare Pages Functions).
@@ -749,14 +750,14 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
   for (const [merchant, pair] of byMerchant) {
     let accessDoc = null, teamDoc = null;
     try {
-      accessDoc = pair.access ? JSON.parse(pair.access.data || '{}') : null;
+      accessDoc = pair.access ? await codeDocument(env, merchant, 'employee-access', JSON.parse(pair.access.data || '{}')) : null;
     } catch (_) {
-      console.error('[auth] Corrupted JSON in access document for merchant', merchant);
+      continue; // An unreadable authoritative credential must not fall back to an older code.
     }
     try {
-      teamDoc = pair.team ? JSON.parse(pair.team.data || '{}') : null;
+      teamDoc = pair.team ? await codeDocument(env, merchant, 'team', JSON.parse(pair.team.data || '{}')) : null;
     } catch (_) {
-      console.error('[auth] Corrupted JSON in team document for merchant', merchant);
+      continue; // Tombstones must remain readable before authenticating an employee.
     }
     const accessMembers = Array.isArray(accessDoc && accessDoc.members) ? accessDoc.members : [];
     const teamMembers = Array.isArray(teamDoc && teamDoc.members) ? teamDoc.members : [];
@@ -1473,8 +1474,8 @@ export async function activeEmployee(request, env, asked) {
       env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'team'")
         .bind(session.merchant).first(),
     ]);
-    const accessDoc = JSON.parse((access && access.data) || '{}');
-    const teamDoc = JSON.parse((team && team.data) || '{}');
+    const accessDoc = await codeDocument(env, session.merchant, 'employee-access', JSON.parse((access && access.data) || '{}'), false, session.staffId);
+    const teamDoc = await codeDocument(env, session.merchant, 'team', JSON.parse((team && team.data) || '{}'), false, session.staffId);
     const find = (doc) => (Array.isArray(doc.members) ? doc.members : [])
       .find((m) => m && String(m.id || '') === String(session.staffId));
     /* Pierre tombale : retiré par le propriétaire, il ne sert plus, quoi que dise
@@ -1492,6 +1493,7 @@ export async function activeEmployee(request, env, asked) {
       ? { ...(teamMember || {}), ...accessMember }
       : (teamIsNewer ? teamMember : null);
     if (member) {
+      if (member.codeUnreadable) return null;
       const expected = Math.max(0, Math.round(Number(member.authVersion) || 0));
       const presented = Math.max(0, Math.round(Number(session.av) || 0));
       const revision = await employeeAuthRevision(env, session.merchant, session.staffId, expected);
@@ -1600,6 +1602,9 @@ export async function faceMarkState(request, env, access) {
     } catch (__) { return { status: 'unavailable' }; }
   }
 
+  for (const row of rows) {
+    if (/^\d{4}$/.test(row.pin || '')) row.pin = await hashStaffCode(env, row.merchant, row.pin);
+  }
   const dash = rows.filter((r) => faceAccessTier(r.role));
   if (!dash.some((r) => faceAccessTier(r.role) === access)) return { status: 'no-such-access' };
   const list = dash.map((r) => [String(r.id || ''), normEmployeeRole(r.role), String(r.merchant || ''), String(r.pin || '')]);
@@ -1810,9 +1815,7 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   let staff;
   try {
     // 1. First look up directly in this merchant's staff_pins
-    staff = await env.DB.prepare(
-      'SELECT id, name, role FROM staff_pins WHERE merchant = ? AND pin = ? LIMIT 1'
-    ).bind(merchant, pin).first();
+    staff = (await matchingStaffCodes(env, merchant, pin))[0];
 
     // 2. If not found in this specific store, check if this PIN belongs to an OWNER or MANAGER across the merchant's account
     if (!staff) {
@@ -1838,16 +1841,7 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
 
       if (accountId) {
         try {
-          const r = await env.DB.prepare(
-            `SELECT p.id, p.name, p.role
-               FROM staff_pins p
-               JOIN merchant_config c ON c.merchant = p.merchant
-              WHERE c.account_id = ? AND p.pin = ?
-              ORDER BY p.created_ts
-              LIMIT 10`
-          ).bind(accountId, pin).all();
-
-          const candidates = r.results || [];
+          const candidates = await accountStaffCodes(env, accountId, '', pin, merchant);
           /* Owners and managers only: a cashier's or seller's code belongs to
            * the store that filed it. Accepting every till role here let a
            * cashier of one store unlock all sibling stores (council rating 14). */
@@ -1923,25 +1917,8 @@ export async function verifyAccountPin(request, env, pin) {
    * de n'importe quel employé déverrouillait la surface du patron. */
   let rows = [];
   try {
-    const r = await env.DB.prepare(
-      `SELECT p.id, p.name, p.role, p.merchant
-         FROM staff_pins p
-         LEFT JOIN merchant_config c ON c.merchant = p.merchant
-        WHERE p.pin = ? AND (c.account_id = ? OR p.merchant = ?)
-        ORDER BY p.created_ts
-        LIMIT 10`
-    ).bind(pin, sess.aid, accSlug).all();
-    rows = r.results || [];
-  } catch (_) {
-    /* Base pré-registre : on retombe sur la boutique d'origine du compte, ce qui
-     * préserve le comportement d'avant les multi-établissements. */
-    try {
-      const r = await env.DB.prepare(
-        'SELECT id, name, role, merchant FROM staff_pins WHERE merchant = ? AND pin = ? LIMIT 10'
-      ).bind(accSlug, pin).all();
-      rows = r.results || [];
-    } catch (__) { return { ok: false, error: 'staff-unavailable', status: 503 }; }
-  }
+    rows = await accountStaffCodes(env, sess.aid, accSlug, pin);
+  } catch (_) { return { ok: false, error: 'staff-unavailable', status: 503 }; }
   const staff = rows.find((row) => employeeRoleOpensDashboard(row.role)) || null;
 
   if (!staff) {

@@ -162,6 +162,43 @@ ok('le magasin du banc n’est pas un slug de démo (sinon tout passe)', !DEMO_M
     res.status === 200 && after.hoursCredited && after.hoursCredited['shift-paid'] > 0, String(res.status));
 }
 
+const savedAccess = db.prepare("SELECT * FROM store_docs WHERE merchant=? AND feature='employee-access'").get(SHOP);
+const savedAuth = db.prepare('SELECT * FROM employee_auth_versions WHERE merchant=?').all(SHOP);
+// Missing fields preserve secrets; explicit empty/null values clear them.
+for (const value of [undefined, '', null]) {
+  const cur = db.prepare("SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'team'").get(SHOP);
+  // Restore the synthetic source independently for each case.
+  db.prepare("UPDATE store_docs SET data=? WHERE merchant=? AND feature='team'").run(JSON.stringify(TEAM), SHOP);
+  const doc = structuredClone(TEAM);
+  for (const member of doc.members) {
+    if (value === undefined) { delete member.pinCode; delete member.password; }
+    else { member.pinCode = value; member.password = value; }
+  }
+  const res = await storePost({ request: new Request('https://k/api/store', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: owner },
+    body: JSON.stringify({ feature: 'team', merchant: SHOP, data: doc, baseRev: cur.rev }) }), env });
+  const body = await (await get(storeGet, `https://k/api/store?feature=team&merchant=${SHOP}`, owner)).json();
+  ok(value === undefined ? 'redacted owner copy preserves codes' : 'explicit clear removes codes',
+    res.status === 200 && body.data.members.every((m) => value === undefined ? !!m.pinCode : !m.pinCode && !m.password));
+}
+// Malformed identities must never borrow credentials from a previous malformed row.
+for (const id of ['', undefined]) {
+  const cur = db.prepare("SELECT rev FROM store_docs WHERE merchant=? AND feature='team'").get(SHOP);
+  const old = { members: [{ ...TEAM.members[0], id }] };
+  db.prepare("UPDATE store_docs SET data=? WHERE merchant=? AND feature='team'").run(JSON.stringify(old), SHOP);
+  const redacted = { members: [{ id, firstName: 'Fixture' }] };
+  const res = await storePost({ request: new Request('https://k/api/store', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: owner },
+    body: JSON.stringify({ feature: 'team', merchant: SHOP, data: redacted, baseRev: cur.rev }) }), env });
+  const body = await (await get(storeGet, `https://k/api/store?feature=team&merchant=${SHOP}`, owner)).json();
+  ok('empty or absent identity cannot restore a code', res.status === 200 && body.data.members.every((m) => !m.pinCode && !m.password));
+}
+db.prepare("UPDATE store_docs SET data=? WHERE merchant=? AND feature='team'").run(JSON.stringify(TEAM), SHOP);
+
+db.prepare("UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature='employee-access'").run(savedAccess.data, savedAccess.rev, savedAccess.updated_ts, SHOP);
+db.prepare('DELETE FROM employee_auth_versions WHERE merchant=?').run(SHOP);
+for (const row of savedAuth) db.prepare('INSERT INTO employee_auth_versions VALUES (?,?,?,?,?)').run(row.merchant, row.member_id, row.auth_version, row.pin_digest, row.updated_ts);
+
 /* ── 3. Les actions IA restent hors de la caisse appairée ────────────────── */
 {
   const res = await get(storeGet, `https://k/api/store?feature=agentactions&merchant=${SHOP}`, till);

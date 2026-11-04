@@ -170,8 +170,8 @@
 
   /* Demandes des services : assets/hotel-economat-requests.js (+ .css),
    * chargé à la première visite de l'Économat plutôt que par la coquille. */
-  var REQUESTS_JS = 'assets/hotel-economat-requests.js?v=13';
-  var REQUESTS_CSS = 'assets/hotel-economat-requests.css?v=3';
+  var REQUESTS_JS = 'assets/hotel-economat-requests.js?v=14';
+  var REQUESTS_CSS = 'assets/hotel-economat-requests.css?v=4';
   var requestsLoading = null;
   function loadRequests() {
     if (window.KiwiEconomatRequests) return Promise.resolve();

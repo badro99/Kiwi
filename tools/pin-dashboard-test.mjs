@@ -56,8 +56,9 @@ ok(opensDash('staff') === false && opensDash('serveur') === false && opensDash('
 // ── 2. verifyAccountPin filtre par rôle, sans jamais projeter le code ────────
 const vapSrc = extract(lib, /export async function verifyAccountPin\(request, env, pin\) \{[\s\S]*?\n\}/, 'verifyAccountPin');
 ok(/rows\.find\(\(row\) => employeeRoleOpensDashboard\(row\.role\)\)/.test(vapSrc), 'verifyAccountPin ne retient que le premier rôle habilité au dashboard');
-ok(/SELECT p\.id, p\.name, p\.role, p\.merchant/.test(vapSrc) && /SELECT id, name, role, merchant FROM staff_pins/.test(vapSrc), 'les deux requêtes projettent l\'identité, jamais la colonne pin');
-ok(/LIMIT 10/.test(vapSrc) && !/LIMIT 1`/.test(vapSrc), 'lecture des CANDIDATS (LIMIT 10) : un code partagé caissier/patron ne masque plus le patron');
+const sealedLookup = fs.readFileSync(path.join(ROOT, 'functions/auth/_staff-codes.js'), 'utf8');
+ok(/accountStaffCodes\(env, sess.aid, accSlug, pin\)/.test(vapSrc) && /delete row\.pin/.test(sealedLookup), 'le lookup scellé ne rend que l\'identité, jamais la colonne pin');
+ok(/LIMIT 10/.test(sealedLookup) && !/LIMIT 1`/.test(vapSrc), 'lecture des CANDIDATS (LIMIT 10) : un code partagé caissier/patron ne masque plus le patron');
 ok(/limitFail\(request, env, 'pin:account', identity\)/.test(vapSrc), 'le limiteur de force brute est toujours en place');
 
 // ── 3. POST /api/config pins — le roster d'équipe ne tue pas le patron ───────

@@ -1,3 +1,4 @@
+import { codeDocument } from '../auth/_staff-codes.js';
 // Read and compare-and-swap a `store_docs` document: the one copy of the loop
 // that /api/employee and /api/team/live each carried. `change(data)` returns
 // the next document, or a falsy value when there is nothing to write (the CAS is
@@ -22,7 +23,7 @@ export async function mutateDoc(env, merchant, feature, fallback, change) {
     const row = await readDoc(env, merchant, feature, fallback);
     const next = change(row.data);
     if (!next) return null;
-    const text = JSON.stringify(next), now = Date.now();
+    const text = JSON.stringify(await codeDocument(env, merchant, feature, next, true)), now = Date.now();
     try {
       if (row.rev) {
         const result = await env.DB.prepare(

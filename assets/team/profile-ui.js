@@ -164,6 +164,7 @@
       payStatBaseMonthly: (k, n) => `par mois · ${k} sur ${n} renseigné${k > 1 ? 's' : ''}`,
       payStatDueProrata: (a, b, d) => `base au prorata de ${d} j + heures, ${a} au ${b}`,
       payStatNone: 'aucun salaire ni taux horaire renseigné',
+      codeUnreadable: 'Code illisible, définissez un nouveau code',
       codeKeep: 'Inchangé · 4 chiffres pour le modifier',
       edReq: 'obligatoire',
       edEmailHint: "Son identifiant dans l'app employé",
@@ -361,6 +362,7 @@
       payStatBaseMonthly: (k, n) => `per month · ${k} of ${n} entered`,
       payStatDueProrata: (a, b, d) => `base pro rata for ${d} days + hours, ${a} to ${b}`,
       payStatNone: 'no salary or hourly rate entered',
+      codeUnreadable: 'Unreadable code, set a new code',
       codeKeep: 'Unchanged · enter 4 digits to change it',
       edReq: 'required',
       edEmailHint: 'Their sign-in for the employee app',
@@ -557,6 +559,7 @@
       payStatBaseMonthly: (k, n) => `شهرياً · ${k} من ${n} مسجلة`,
       payStatDueProrata: (a, b, d) => `الأساسي بالتناسب لـ ${d} يوماً + الساعات، من ${a} إلى ${b}`,
       payStatNone: 'لم يُسجَّل أي راتب أو أجر بالساعة',
+      codeUnreadable: 'تعذرت قراءة الرمز، عيّن رمزًا جديدًا',
       codeKeep: 'دون تغيير · أدخل 4 أرقام لتغييره',
       edReq: 'إلزامي',
       edEmailHint: 'معرّف الدخول إلى تطبيق الموظف',
@@ -1280,14 +1283,14 @@
                 <span class="kt-ed-l">${esc(T.edCodeT)}</span>
                 <input class="kt-ed-in kt-ed-pin" type="text" name="password" value="${esc(isCode(KiwiStaffCredential.canonicalCode(m)) ? KiwiStaffCredential.canonicalCode(m) : '')}" data-kt-pwd
                   inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off" spellcheck="false"
-                  placeholder="${esc(isCode(KiwiStaffCredential.canonicalCode(m)) ? '' : (editing ? T.codeKeep : '0000'))}" />
+                  placeholder="${esc(isCode(KiwiStaffCredential.canonicalCode(m)) ? '' : (m.codeUnreadable ? T.codeUnreadable : editing ? T.codeKeep : '0000'))}" />
                 <span class="kt-ed-err" data-err-for="password" hidden></span>
               </label>
               <div class="kt-ed-code-acts">
                 <button data-activation=write type="button" class="kt-ed-btn" data-action="kt-pwd-gen">${svgIcon(IC.refresh, 16)}<span>${esc(T.generate)}</span></button>
                 <button type="button" class="kt-ed-btn" data-action="kt-pwd-copy">${svgIcon(IC.copy, 16)}<span>${esc(T.copy)}</span></button>
               </div>
-              <p class="kt-ed-hint">${esc(T.edCodeHint)}</p>
+              <p class="kt-ed-hint">${esc(m.codeUnreadable ? T.codeUnreadable : T.edCodeHint)}</p>
             </div>
           </aside>
         </form>

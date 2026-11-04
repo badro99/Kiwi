@@ -2433,12 +2433,12 @@
   const stockUrls = [
     'assets/stock/movements.js?v=3',
     'assets/stock/overview.js?v=3',
-    'assets/stock/alerts.js?v=5',
+    'assets/stock/alerts.js?v=6',
     'assets/stock/loss.js?v=1',
     'assets/stock/counts.js?v=9',
-    'assets/stock/purchasing.js?v=5',
-    'assets/stock/intake.js?v=18',
-    'assets/stock/catalog.js?v=6',
+    'assets/stock/purchasing.js?v=6',
+    'assets/stock/intake.js?v=19',
+    'assets/stock/catalog.js?v=7',
   ];
   const stockLoads = new Map();
   function loadStockParts() {

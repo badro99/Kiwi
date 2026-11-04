@@ -1,3 +1,4 @@
+import { pinHashes, sealMerchantStaff } from '../../auth/_staff-codes.js';
 // /api/admin/roster — the Team page publishes its roster from operator view.
 //
 //   POST {merchant, pins:[{code, name, role, memberId, …}]} → same reply as
@@ -75,6 +76,12 @@ export async function onRequestPost(context) {
      back to JavaScript, only a count. */
   const codes = [...new Set(pins.map((p) => String(p.code || p.pin || '').trim()).filter((c) => VALID_PIN.test(c)))];
   if (codes.length) {
+    let storedCodes, candidates;
+    try {
+      await sealMerchantStaff(env, merchant);
+      candidates = await Promise.all(codes.map(async (code) => [...await pinHashes(env, merchant, code), code]));
+      storedCodes = [...new Set(candidates.flat())];
+    } catch (_) { return json({ error: 'pin-storage-unavailable' }, 503); }
     let ownerIds = [], staffIds = [];
     try {
       const rows = await env.DB.prepare('SELECT id, role FROM staff_pins WHERE merchant = ?').bind(merchant).all();
@@ -83,9 +90,11 @@ export async function onRequestPost(context) {
     let known = 0;
     if (staffIds.length) {
       try {
-        const hit = await env.DB.prepare('SELECT COUNT(DISTINCT pin) AS n FROM staff_pins WHERE merchant = ? AND id IN ('
-          + staffIds.map(() => '?').join(',') + ') AND pin IN (' + codes.map(() => '?').join(',') + ')')
-          .bind(merchant, ...staffIds, ...codes).first();
+        const hit = await env.DB.prepare(`SELECT COUNT(*) AS n FROM json_each(?) submitted
+          WHERE EXISTS (SELECT 1 FROM staff_pins p, json_each(submitted.value) candidate
+            WHERE p.merchant = ? AND p.id IN (${staffIds.map(() => '?').join(',')})
+              AND p.pin = candidate.value)`)
+          .bind(JSON.stringify(candidates), merchant, ...staffIds).first();
         known = Number(hit && hit.n) || 0;
       } catch (_) { return json({ error: 'pin-storage-unavailable' }, 503); }
     }
@@ -98,8 +107,8 @@ export async function onRequestPost(context) {
       let taken = 0;
       try {
         const hit = await env.DB.prepare('SELECT COUNT(*) AS n FROM staff_pins WHERE merchant = ? AND id IN ('
-          + ownerIds.map(() => '?').join(',') + ') AND pin IN (' + codes.map(() => '?').join(',') + ')')
-          .bind(merchant, ...ownerIds, ...codes).first();
+          + ownerIds.map(() => '?').join(',') + ') AND pin IN (' + storedCodes.map(() => '?').join(',') + ')')
+          .bind(merchant, ...ownerIds, ...storedCodes).first();
         taken = Number(hit && hit.n) || 0;
       } catch (_) { return json({ error: 'pin-storage-unavailable' }, 503); }
       if (taken) {

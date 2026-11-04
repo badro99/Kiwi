@@ -1,3 +1,4 @@
+import { codeDocument, hashStaffCode } from '../functions/auth/_staff-codes.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -38,11 +39,11 @@ try {
   assert.ok(!await findEmployeeCredential(env, member.email, legacy), 'divergent document rejects legacy value');
   const response = await onRequestPost({ env, request: new Request('https://kiwi.test/api/store', { method: 'POST', headers: { Cookie: SESS_COOKIE + '=' + await makeSession('money-owner', env.AUTH_SECRET), 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant, feature: 'team', baseRev: 1, data: { members: [member], hours: {}, shifts: {} } }) }) });
   assert.ok(response.status === 200, 'team publication succeeds');
-  const check = feature => { const doc = JSON.parse(sql.prepare('SELECT data FROM store_docs WHERE merchant=? AND feature=?').get(merchant, feature).data); assert.ok(doc.members.length === 1 && doc.members[0].pinCode === pin && doc.members[0].password === pin, 'publication stores equal canonical fields'); };
-  check('team'); check('employee-access');
+  const check = async feature => { const doc = await codeDocument(env, merchant, feature, JSON.parse(sql.prepare('SELECT data FROM store_docs WHERE merchant=? AND feature=?').get(merchant, feature).data)); assert.ok(doc.members.length === 1 && doc.members[0].pinCode === pin && doc.members[0].password === pin, 'publication stores equal canonical fields'); };
+  await check('team'); await check('employee-access');
   sql.prepare("UPDATE store_docs SET data=? WHERE merchant=? AND feature='employee-access'").run(JSON.stringify({ members: [member] }), merchant);
   const published = await publishStaffCredentials(env, merchant, { pins: [{ code: pin, memberId: member.id, email: member.email, role: 'cashier' }] });
-  assert.ok(!(published instanceof Response), 'staff publication succeeds'); check('employee-access');
-  assert.ok(sql.prepare('SELECT 1 FROM staff_pins WHERE merchant=? AND pin=?').get(merchant, pin) !== undefined, 'till publication matches canonical credential');
+  assert.ok(!(published instanceof Response), 'staff publication succeeds'); await check('employee-access');
+  assert.ok(sql.prepare('SELECT 1 FROM staff_pins WHERE merchant=? AND pin=?').get(merchant, await hashStaffCode(env, merchant, pin)) !== undefined, 'till publication matches canonical credential');
   console.log('✓ staff credential: verifier, editor, publications and browser/server parity');
 } finally { f.close(); }

@@ -30,6 +30,7 @@ function originalFile(file) {
   return source;
 }
 function stripImports(source) {
+  source = source.replace(/^import \{\} from '\.\/team\/styles\.js\?v=\d+';\n/m, '');
   source = source.replace(/^import \{\} from '\.\/team\/access-rules\.js\?v=\d+';\n/m, '');
   for (const file of map.imports) {
     const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -39,5 +40,5 @@ function stripImports(source) {
   }
   return source;
 }
-function runtimeSource(includeHours = true) { return [read('assets/team/access-rules.js'), ...map.parts.map(p => read(p.file))].concat(stripImports(read('assets/team.js')), read('assets/team/profile-ui.js'), includeHours ? require('./planning-test-source.cjs').planningRuntimeSource() : '').join('\n'); }
+function runtimeSource(includeHours = true) { return [read('assets/team/styles.js'), read('assets/team/access-rules.js'), ...map.parts.map(p => read(p.file))].concat(stripImports(read('assets/team.js')), read('assets/team/profile-ui.js'), includeHours ? require('./planning-test-source.cjs').planningRuntimeSource() : '').join('\n'); }
 module.exports = { runtimeSource, originalFile, files: [...map.parts.map(p => p.file), ...map.files], map };

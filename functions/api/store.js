@@ -1,3 +1,4 @@
+import { codeDocument } from '../auth/_staff-codes.js';
 import { canonicalCode, normalizeMember } from './_rules-staff-credential.js';
 import { cleanFloorplan } from './_rules-floorplan-clean.js';
 import { cleanBriefingSettings } from './_briefing-settings.js';
@@ -681,13 +682,14 @@ async function closeRemovedShifts(env, merchant, removed) {
 
 async function employeeAccessFromTeam(env, team, merchant) {
   const members = Array.isArray(team && team.members) ? team.members : [];
-  let previous = { members: [] };
+  let previous = { members: [] }, rawPrevious = previous;
   try {
     const row = await env.DB.prepare(
       "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'"
     ).bind(merchant).first();
     if (row && row.data) {
-      const parsed = JSON.parse(row.data);
+      rawPrevious = JSON.parse(row.data);
+      const parsed = await codeDocument(env, merchant, 'employee-access', rawPrevious);
       if (parsed && Array.isArray(parsed.members)) previous = parsed;
     }
   } catch (_) { return null; }
@@ -700,9 +702,26 @@ async function employeeAccessFromTeam(env, team, merchant) {
     const id = String(member.id || '').trim().slice(0, 96);
     const email = String(member.email || '').trim().toLocaleLowerCase('en').slice(0, 254);
     const pin = canonicalCode(member);
-    if (!id || !/^\S+@\S+\.\S+$/.test(email) || !/^\d{4}$/.test(pin)) continue;
-    if (seen.has(id)) continue;
+    if (!id || !/^\S+@\S+\.\S+$/.test(email) || seen.has(id)) continue;
     seen.add(id);
+    if (id && !/^\d{4}$/.test(pin) && (previousById.get(id)?.codeUnreadable || /^e1\$/.test(pin))) {
+      const raw = (Array.isArray(rawPrevious.members) ? rawPrevious.members : []).find((m) => String(m?.id || '') === id);
+      // Keep only the sealed credential and its auth version from the stored row; the
+      // owner's current identity edits (name, e-mail, function) still apply.
+      if (raw) access.push({
+        id,
+        firstName: String(member.firstName || '').trim().slice(0, 60),
+        lastName: String(member.lastName || '').trim().slice(0, 60),
+        email,
+        pinCode: raw.pinCode, password: raw.password,
+        authVersion: Math.max(0, Math.round(Number(raw.authVersion) || 0)),
+        function: String(member.function || '').trim().slice(0, 60),
+        department: String(member.department || '').trim().slice(0, 60),
+        venueSlug: merchant,
+      });
+      continue;
+    }
+    if (!/^\d{4}$/.test(pin)) continue;
     const prior = previousById.get(id);
     const priorPin = canonicalCode(prior);
     const priorVersion = Math.max(0, Math.round(Number(prior && prior.authVersion) || 0));
@@ -776,6 +795,10 @@ export async function onRequestGet(context) {
     }
     let data = null;
     try { data = JSON.parse(row.data); } catch (_) { data = null; }
+    if (editor) {
+      try { data = await codeDocument(env, merchant, feature, data); }
+      catch (_) { return json({ error: 'staff-code-key-unavailable', detail: 'Restore the previous staff key before editing codes.' }, 409); }
+    }
     if (feature === 'briefing') data = ownBriefingDays(data, merchant);
     const safe = (redact && !editor) ? redact(data) : data;
     return json({ feature, merchant, data: safe, rev: row.rev || 0, updated_ts: row.updated_ts || 0 }, 200, cacheHeaders);
@@ -897,6 +920,9 @@ export async function onRequestPost(context) {
   const serverRev = (current && current.rev) || 0;
   let mine = null;
   try { mine = current ? JSON.parse(current.data) : null; } catch (_) { mine = null; }
+  const rawMine = mine;
+  try { mine = await codeDocument(env, merchant, feature, mine); }
+  catch (_) { return json({ error: 'staff-code-key-unavailable', detail: 'Restore the previous staff key before editing codes.' }, 409); }
   /* Le carnet de crédit a son propre document (functions/api/_credit-book-store.js).
    * `book` est le carnet enregistré : la ligne creditbook, ou à défaut la copie
    * encore rangée dans verticalops. */
@@ -1051,7 +1077,18 @@ export async function onRequestPost(context) {
       const sent = clean.value.hoursCredited && typeof clean.value.hoursCredited === 'object' && !Array.isArray(clean.value.hoursCredited) ? clean.value.hoursCredited : {};
       clean.value.hoursCredited = { ...sent, ...serverMarks };
     }
-    if (Array.isArray(clean.value.members)) clean.value.members = clean.value.members.map(normalizeMember);
+    const priorCodes = new Map((mine?.members || []).map((m) => [String(m.id), m]));
+    for (const m of clean.value.members || []) {
+      if (m && String(m.id ?? '').trim() && priorCodes.has(String(m.id))) {
+        if (/^\d{4}$/.test(canonicalCode(m))) { Object.assign(m, normalizeMember(m)); continue; }
+        const prior = priorCodes.get(String(m.id)), raw = rawMine?.members?.find((p) => String(p.id) === String(m.id));
+        for (const field of ['pinCode', 'password']) {
+          if (prior.codeUnreadable) m[field] = raw?.[field];
+          else if (m[field] === undefined) m[field] = prior[field];
+        }
+      }
+    }
+    if (Array.isArray(clean.value.members)) clean.value.members = clean.value.members.map((m) => /^e1\$/.test(m.pinCode) || /^e1\$/.test(m.password) ? m : normalizeMember(m));
     text = JSON.stringify(clean.value);
   }
 
@@ -1118,6 +1155,8 @@ export async function onRequestPost(context) {
     }
   }
 
+  try { text = JSON.stringify(await codeDocument(env, merchant, feature, clean.value, true)); }
+  catch (_) { return json({ error: 'staff-code-key-unavailable', detail: 'Restore the previous staff key before editing codes.' }, 409); }
   if (current) await keepHistory(env, 'store', merchant, feature);
 
   const rev = serverRev + 1;
@@ -1156,7 +1195,7 @@ export async function onRequestPost(context) {
       let latest = null;
       try { latest = await env.DB.prepare('SELECT data, rev FROM store_docs WHERE merchant=? AND feature=?').bind(merchant, feature).first(); } catch (_) {}
       let latestData = mine;
-      try { latestData = latest && latest.data ? JSON.parse(latest.data) : latestData; } catch (_) {}
+      try { latestData = latest && latest.data ? await codeDocument(env, merchant, feature, JSON.parse(latest.data)) : latestData; } catch (_) {}
       return json({ error: 'stale', feature, rev: (latest && latest.rev) || serverRev, data: view(latestData) }, 409);
     };
     /* D1 rend toujours `meta.changes`. Une base de test qui ne le rend pas n'est un
@@ -1177,7 +1216,7 @@ export async function onRequestPost(context) {
         catch (_) { return json({ error: 'employee-access-unavailable' }, 503); }
         const built = await employeeAccessFromTeam(env, clean.value, merchant);
         if (!built) return json({ error: 'employee-access-unavailable' }, 503);
-        const accessText = JSON.stringify(built.doc);
+        const accessText = JSON.stringify(await codeDocument(env, merchant, 'employee-access', built.doc, true));
         /* Le miroir d'accès n'est écrit QUE si le document team vient d'être écrit
          * (révision, instant ET contenu sont les nôtres) : un lot D1 est atomique mais ne s'arrête pas
          * sur une ligne à zéro changement, et un team périmé aurait sinon réécrit

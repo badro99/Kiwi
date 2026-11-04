@@ -1,3 +1,4 @@
+import { hashStaffCode, pinHashes } from '../../auth/_staff-codes.js';
 // /api/admin/pins — staff PIN management per merchant. Operator-gated.
 //
 //   GET    ?merchant=slug            → { pins: [{id,name,role}] }
@@ -64,6 +65,8 @@ export async function onRequestPost(context) {
   if (!merchant) return json({ error: 'merchant-required' }, 400);
   if (!VALID_PIN.test(pin)) return json({ error: 'bad-pin' }, 400);
 
+  const storedPin = await hashStaffCode(context.env, merchant, pin);
+  const candidates = [...await pinHashes(context.env, merchant, pin), pin];
   const id = 'pin-' + crypto.randomUUID();
   const actor = await operatorActor(context.request, context.env), ts = Date.now();
   const limited = await limitCheck(context.request, context.env, DUPE_SCOPE, actor.id)
@@ -80,8 +83,8 @@ export async function onRequestPost(context) {
     const results = await context.env.DB.batch([
       context.env.DB.prepare(
         `INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts)
-         SELECT ?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM staff_pins WHERE merchant = ? AND pin = ?)`
-      ).bind(id, merchant, pin, name, role, ts, merchant, pin),
+         SELECT ?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM staff_pins WHERE merchant = ? AND pin IN (${candidates.map(() => '?').join(',')}))`
+      ).bind(id, merchant, storedPin, name, role, ts, merchant, ...candidates),
       context.env.DB.prepare(`${AUDIT_INSERT} SELECT '', ?, 'staff-pin-create', '', ?, '', ?, ?, ?, ?
         WHERE EXISTS (SELECT 1 FROM staff_pins WHERE id = ?)`)
         .bind(merchant, name, actor.label, actor.id, JSON.stringify({ id, role }), ts, id),

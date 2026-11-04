@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { hashStaffCode } from '../functions/auth/_staff-codes.js';
 /* Vague 11 · plafonds d'abus et rédactions sur les routes serveur.
  *
  * Les vraies routes sur le vrai schéma (schema.sql en SQLite mémoire, batchs
@@ -143,7 +144,7 @@ console.log('\nconsole#0 · codes d’équipe ajoutés depuis la console');
   const op = `kiwi_op=${await operatorToken(f.env.AUTH_SECRET)}; kiwi_op_id=${await operatorIdToken(f.env.AUTH_SECRET, 'money-operator')}`;
   const add = (pin, name = 'Salarié') => pinsPost({ request: req('/api/admin/pins', { cookie: op, body: { merchant: f.merchant, pin, name, role: 'caisse' } }), env: f.env });
   const [a, b] = await Promise.all([add('4821', 'A'), add('4821', 'B')]);
-  const rows = f.sql.prepare('SELECT COUNT(*) AS n FROM staff_pins WHERE merchant = ? AND pin = ?').get(f.merchant, '4821').n;
+  const rows = f.sql.prepare('SELECT COUNT(*) AS n FROM staff_pins WHERE merchant = ? AND pin = ?').get(f.merchant, await hashStaffCode(f.env, f.merchant, '4821')).n;
   ok('deux ajouts simultanés du même code n’en créent qu’un', rows === 1 && [a.status, b.status].sort().join() === '200,409', `${rows} lignes, ${a.status}/${b.status}`);
   const creates = f.sql.prepare("SELECT COUNT(*) AS n FROM account_audit WHERE action = 'staff-pin-create'").get().n;
   ok('une seule création au journal', creates === 1, String(creates));

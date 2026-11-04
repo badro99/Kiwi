@@ -452,6 +452,11 @@ false-pass.
 
 ## 6. Tenant and client-data safety
 
+Set a dedicated PIN_PEPPER before the first deploy so no codes seal under AUTH_SECRET.
+Rotate with old material in *_PREVIOUS; emergency AUTH_SECRET rotation must preserve
+the old value in AUTH_SECRET_PREVIOUS.
+Run the staff-code seal route to completion before removing previous keys (docs/ops/STAFF_CODES.md).
+
 Merchant books in this repo can contain **real hosted records**. Santos Store and
 other merchants are production data. **Amira Cafe** (the restaurant venue only)
 is owner-designated as a testing account as of 2026-09-27: use it for explicitly

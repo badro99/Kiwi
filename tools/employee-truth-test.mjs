@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { codeDocument } from '../functions/auth/_staff-codes.js';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -91,10 +92,10 @@ const env = { AUTH_SECRET, DB: {
 
 const owner = sessionCookie(await makeSession('acc-1', AUTH_SECRET));
 const member = (id, first, email, code) => ({ id, firstName: first, lastName: 'T.', email, function: 'Serveur', department: 'Salle', pinCode: code, password: code });
-const getDoc = (feature) => { const r = db.prepare(`SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = ?`).get(SHOP, feature); return r ? { data: JSON.parse(r.data), rev: r.rev } : null; };
+const getDoc = async (feature) => { const r = db.prepare(`SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = ?`).get(SHOP, feature); return r ? { data: await codeDocument(env, SHOP, feature, JSON.parse(r.data)), rev: r.rev } : null; };
 const put = (feature, data) => db.prepare(`INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,1,?) ON CONFLICT(merchant,feature) DO UPDATE SET data=excluded.data, rev=store_docs.rev+1, updated_ts=excluded.updated_ts`).run(SHOP, feature, JSON.stringify(data), Date.now());
 const ownerPostTeam = async (doc) => {
-  const cur = getDoc('team');
+  const cur = (await getDoc('team'));
   const res = await storePost({ request: new Request('https://k/api/store', { method: 'POST',
     headers: { 'Content-Type': 'application/json', Cookie: owner, 'CF-Connecting-IP': '10.9.9.9' },
     body: JSON.stringify({ feature: 'team', merchant: SHOP, data: doc, baseRev: cur ? cur.rev : 0 }) }), env });
@@ -118,14 +119,14 @@ const SARA = member('mem-sara', 'Sara', 'sara@amira.ma', '4821');
 {
   const first = await ownerPostTeam({ members: [SARA], hours: {}, shifts: {} });
   ok('le patron enregistre son équipe (un seul salarié)', first.status === 200, JSON.stringify(first));
-  const access = getDoc('employee-access');
+  const access = (await getDoc('employee-access'));
   ok('…et le miroir d’accès porte ce salarié', access && access.data.members.length === 1);
 }
 let saraCookie = '';
 {
   const login = await empLogin('sara@amira.ma', '4821');
   saraCookie = login.cookie;
-  ok('Sara se connecte à l’app employé', login.status === 200 && /kiwi_employee=/.test(saraCookie), JSON.stringify(login.body) + JSON.stringify(getDoc('employee-access')));
+  ok('Sara se connecte à l’app employé', login.status === 200 && /kiwi_employee=/.test(saraCookie), JSON.stringify(login.body) + JSON.stringify((await getDoc('employee-access'))));
   const res = await empGet(saraCookie);
   ok('…sa session lit son espace (200)', res.status === 200);
 }
@@ -138,7 +139,7 @@ let saraCookie = '';
 {
   const removal = await ownerPostTeam({ members: [], removed: [{ id: 'mem-sara', ts: Date.now() }], hours: {}, shifts: {} });
   ok('AVEC la pierre tombale, la suppression du dernier salarié est enregistrée (200)', removal.status === 200, JSON.stringify(removal));
-  const access = getDoc('employee-access');
+  const access = (await getDoc('employee-access'));
   ok('…le miroir d’accès n’a plus personne', access && access.data.members.length === 0, JSON.stringify(access && access.data));
   const res = await empGet(saraCookie);
   ok('…la session ouverte de Sara est refusée (401), pas figée', res.status === 401, String(res.status));
@@ -149,10 +150,10 @@ let saraCookie = '';
   // Un appareil resté sur l'ancien roster (ou une version d'assets qui ignore `removed`).
   const stale = await ownerPostTeam({ members: [SARA, member('mem-yass', 'Yass', 'yass@amira.ma', '7390')], hours: {}, shifts: {} });
   ok('un appareil périmé repousse l’ancien roster : accepté pour les autres salariés', stale.status === 200, JSON.stringify(stale));
-  const team = getDoc('team').data;
+  const team = (await getDoc('team')).data;
   ok('…mais le serveur retire Sara du roster entrant', !team.members.some((m) => m.id === 'mem-sara') && team.members.length === 1, JSON.stringify(team.members.map((m) => m.id)));
   ok('…et garde la pierre tombale', Array.isArray(team.removed) && team.removed.some((r) => r.id === 'mem-sara'));
-  const access = getDoc('employee-access').data.members.map((m) => m.id);
+  const access = (await getDoc('employee-access')).data.members.map((m) => m.id);
   ok('…donc Sara reste hors du miroir d’accès', !access.includes('mem-sara') && access.includes('mem-yass'), JSON.stringify(access));
   const again = await empLogin('sara@amira.ma', '4821', '10.1.1.3');
   ok('…et reste refusée à la connexion', again.status === 401);
@@ -171,7 +172,7 @@ let saraCookie = '';
 /* ── 2. Plafond d'essais sur le code de pointage ──────────────────────────── */
 {
   const room = member('mem-room', 'Room', 'room@amira.ma', '1357');
-  const cur = getDoc('team').data;
+  const cur = (await getDoc('team')).data;
   await ownerPostTeam({ ...cur, members: [...cur.members, room] });
   const login = await empLogin('room@amira.ma', '1357', '10.2.2.2');
   ok('un employé se connecte', login.status === 200, String(login.status));
@@ -187,7 +188,7 @@ let saraCookie = '';
 }
 {
   const fresh = member('mem-fresh', 'Fresh', 'fresh@amira.ma', '2468');
-  const cur = getDoc('team').data;
+  const cur = (await getDoc('team')).data;
   await ownerPostTeam({ ...cur, members: [...cur.members, fresh] });
   const login = await empLogin('fresh@amira.ma', '2468', '10.3.3.3');
   put('attendance-code', { code: '654321', createdTs: Date.now(), expiresTs: Date.now() + 5 * 60000 });

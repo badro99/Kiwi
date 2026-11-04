@@ -1,3 +1,4 @@
+import { codeDocument } from '../auth/_staff-codes.js';
 // Server-owned recovery ledger. No presence codes or credentials are retained.
 import { json, entitledMerchant, activeAccountSession, isOperator, operatorActor, readEmployee } from '../auth/_lib.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
@@ -99,7 +100,7 @@ export async function decideCorrection(request,env,merchant,body) {
         env.DB.prepare('UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = ? AND '+guard)
           .bind(JSON.stringify(a.data),a.rev+1,now,merchant,'attendance',merchant,FEATURE,next,text),
         env.DB.prepare('UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = ? AND '+guard)
-          .bind(JSON.stringify(t.data),t.rev+1,now,merchant,'team',merchant,FEATURE,next,text),
+          .bind(JSON.stringify(await codeDocument(env,merchant,'team',t.data,true)),t.rev+1,now,merchant,'team',merchant,FEATURE,next,text),
       ]);
       if(Number(result[0].meta?.changes)>0)return json({ok:true,correction:item});
     }

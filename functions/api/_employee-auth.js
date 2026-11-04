@@ -1,3 +1,4 @@
+import { staffKeys, staffMac } from '../auth/_staff-codes.js';
 /* Révision de connexion d'un employé, écrite DANS le même lot que le miroir
  * d'accès qui la porte.
  *
@@ -44,7 +45,10 @@ export function authSentinel(env, merchant, fingerprint) {
 /* La révision qu'aura ce membre une fois le lot passé : la même si son code n'a
  * pas changé, +1 s'il a changé, `fallback` s'il n'a encore aucune ligne. */
 export async function planEmployeeAuth(env, merchant, memberId, pin, fallback = 0) {
-  const digest = await pinDigest(merchant, memberId, pin);
+  const text = `${merchant}\u0000${memberId}\u0000${String(pin || '')}`;
+  const digests = await Promise.all(staffKeys(env).map(async (secret) => 'p2$' + await staffMac(secret, 'kiwi employee auth v2', text)));
+  const digest = digests[0];
+  digests.push(await pinDigest(merchant, memberId, pin));
   try {
     const row = await env.DB.prepare(
       'SELECT auth_version, pin_digest FROM employee_auth_versions WHERE merchant = ? AND member_id = ?'
@@ -52,7 +56,7 @@ export async function planEmployeeAuth(env, merchant, memberId, pin, fallback = 
     if (!row) return { ok: true, memberId, digest, version: Math.max(0, Math.round(Number(fallback) || 0)) };
     const current = Number(row.auth_version);
     if (!Number.isInteger(current) || current < 0) return { ok: false };
-    return { ok: true, memberId, digest, version: current + (row.pin_digest === digest ? 0 : 1) };
+    return { ok: true, memberId, digest, version: current + (digests.includes(row.pin_digest) ? 0 : 1) };
   } catch (_) { return { ok: false }; }
 }
 
