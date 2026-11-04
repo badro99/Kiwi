@@ -107,6 +107,7 @@ const RUNTIME = [
   'Carte approuvée', 'Approchez la carte ou le téléphone', 'Même chose pour tous', 'Aucun client trouvé.',
   'Pointage enregistré sur ce téléphone · envoi dès le retour du réseau', 'Pointage du téléphone envoyé',
   'Pointage du téléphone refusé · voyez avec votre responsable', 'Pointage refusé · voyez avec votre responsable',
+  'Commandes non envoyées en cuisine, laissées sur cette tablette · voyez avec le responsable',
 ];
 for (const s of RUNTIME) for (const lang of ['en', 'ar']) {
   const out = tr(s, lang);

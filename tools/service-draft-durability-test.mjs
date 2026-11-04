@@ -57,6 +57,7 @@ function draftSandbox(storageBehaviour = {}) {
     svSlug: () => 'santos',
     tableOrders: {},
     newLineUid: (() => { let n = 0; return () => 'ln' + (++n); })(),
+    toasts: [], toast(message) { sandbox.toasts.push(message); }, employeeTranslation: (v) => v,
   };
   vm.createContext(sandbox);
   // Les vraies fonctions, découpées du fichier expédié.
@@ -138,6 +139,23 @@ function draftSandbox(storageBehaviour = {}) {
   s.svSaveDrafts();
   ok(s.localStorage.getItem('kiwi:service-drafts-v1:santos:emp-7') === null,
     'quand tout est parti en cuisine, la clé est retirée au lieu de traîner');
+}
+
+/* ═══ Un lot laissé par un autre serveur, ou trop ancien, est annoncé ═════ */
+{
+  const s = draftSandbox();
+  const batch = (ref, createdAt) => JSON.stringify({ ref, createdAt, lines: [{ uid: 'l', id: 'm-1', qty: 1 }] });
+  s.localStorage.setItem('kiwi:service-pending-v1:santos:emp-7:4', batch('mine-fresh', Date.now() - 60000));
+  s.localStorage.setItem('kiwi:service-pending-v1:santos:emp-7:5', batch('mine-stale', Date.now() - 13 * 3600000));
+  s.localStorage.setItem('kiwi:service-pending-v1:santos:emp-3:9', batch('left-by-karim', Date.now() - 3600000));
+  s.localStorage.setItem('kiwi:service-pending-v1:autre:emp-3:2', batch('other-merchant', Date.now()));
+  const refs = s.svOrphanBatches().map((o) => o.ref).sort();
+  ok(JSON.stringify(refs) === JSON.stringify(['left-by-karim', 'mine-stale']),
+    'le lot d un autre serveur et le lot trop ancien sont repérés ; le lot récent de cet opérateur et celui d un autre commerce non');
+  ok(s.svAnnounceOrphans() === 2 && s.toasts.length === 1 && s.toasts[0].includes('9') && s.toasts[0].includes('5'),
+    'ils sont annoncés une fois, avec leurs tables');
+  ok(s.svAnnounceOrphans() === 0 && s.toasts.length === 1, 'sans répéter l annonce');
+  ok(s.localStorage.getItem('kiwi:service-pending-v1:santos:emp-3:9') !== null, 'et rien n est rejoué ni effacé');
 }
 
 /* ═══ Le lot enregistré est enfin vidé tout seul ══════════════════════════ */
