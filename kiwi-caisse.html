@@ -115,8 +115,8 @@
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=20" defer></script>
   <script src="assets/printer/transports.js?v=6" defer></script>
-  <script src="assets/printer-bridge.js?v=75" defer></script>
-  <script src="assets/caisse-hardware.js?v=11" defer></script>
+  <script src="assets/printer-bridge.js?v=77" defer></script>
+  <script src="assets/caisse-hardware.js?v=12" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
        change, au lieu d'attendre son prochain tour. Absent → sondage d'origine. -->
@@ -237,7 +237,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=375" defer></script>
+  <script src="assets/pos-dispatch.js?v=376" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=10" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>
@@ -397,7 +397,7 @@
        (receipt-ui.js) n'est PAS chargé ici : un réglage à deux endroits, ce sont
        deux vérités. Après venue-store.js, dont il tient sa fiche par
        établissement. -->
-  <script src="assets/receipt.js?v=23" defer></script>
+  <script src="assets/receipt.js?v=25" defer></script>
   <!-- Coûts privés + recettes : nécessaires pour transformer une vente de
        produit en sorties d'ingrédients sans exposer les prix d'achat. -->
   <script src="assets/cost.js?v=11" defer></script>
@@ -406,7 +406,7 @@
   <!-- Tenant-scoped operational outbox: receipt delivery and device health are
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=18" defer></script>
-  <script src="assets/clients-store-vault.js?v=16" defer></script> <script src="assets/clients-book.js?v=74" defer></script>
+  <script src="assets/clients-store-vault.js?v=17" defer></script> <script src="assets/clients-book.js?v=75" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
@@ -2006,7 +2006,7 @@
   <link rel="preload" as="script" href="assets/caisse-strings.js?v=3" data-caisse-script><link rel="preload" as="script" href="assets/caisse/table-settlement.js?v=2" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-accounting.js?v=23" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-floor.js?v=19" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse-kitchen.js?v=28" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse-kitchen.js?v=29" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/catalogue.js?v=12" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/till-frame.js?v=16" data-caisse-script>
   <link href="assets/caisse/orders.js?v=2" data-caisse-lazy="orders">
@@ -2014,16 +2014,16 @@
   <link rel="preload" as="script" href="assets/caisse/split-tender.js?v=10" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/shift.js?v=4" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/settings.js?v=2" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse/held-sales.js?v=4" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse/held-sales.js?v=5" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/discounts.js?v=4" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/returns.js?v=2" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/handover.js?v=2" data-caisse-script>
   <link href="assets/caisse-loyalty-reward.js?v=7" data-caisse-lazy="loyalty-reward">
-  <link href="assets/caisse/inventory.js?v=7" data-caisse-lazy="inventory">
+  <link href="assets/caisse/inventory.js?v=8" data-caisse-lazy="inventory">
   <link rel="preload" as="script" href="assets/caisse/offline.js?v=10" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/receipts.js?v=2" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/closing.js?v=2" data-caisse-script>
   <script src="assets/caisse/workflows-loader.js?v=3"></script>
-  <script src="assets/caisse-app.js?v=39"></script>
+  <script src="assets/caisse-app.js?v=40"></script>
 </body>
 </html>

@@ -2446,7 +2446,7 @@
     'assets/stock/counts.js?v=9',
     'assets/stock/purchasing.js?v=6',
     'assets/stock/intake.js?v=19',
-    'assets/stock/catalog.js?v=10',
+    'assets/stock/catalog.js?v=11',
   ];
   const stockLoads = new Map();
   function loadStockParts() {

@@ -23,9 +23,13 @@
   if (window.KiwiCaisseLang && window.KiwiCaisseLang.subscribe) window.KiwiCaisseLang.subscribe(paint);
   window.addEventListener('kiwi:kitchen-print-unprinted', function (event) { relayCount = Number(event.detail && event.detail.count) || 0; paint(); });
   window.addEventListener('kiwi:kitchen-print-recovery', function (event) { localCount = Number(event.detail && event.detail.recoverable) || 0; paint(); });
-  window.addEventListener('kiwi:toast', function (event) {
-    var title = String(event.detail && event.detail.title || '');
-    if (title.indexOf(tr('Impression échouée')) >= 0 || title.indexOf(tr('Imprimante injoignable')) >= 0) { receiptFailed = true; paint(); return; }
-    if (receiptFailed && ['Reçu imprimé', 'Duplicata imprimé', 'Ticket imprimé'].some(function (done) { return title.indexOf(tr(done)) === 0; })) { receiptFailed = false; paint(); }
+  /* Le résultat vient de receipt.js en donnée ({ ok }), pas du texte d'un toast : un changement de
+     libellé ou de langue ne casse plus l'entrée. */
+  window.addEventListener('kiwi:receipt-print', function (event) {
+    var ok = !!(event.detail && event.detail.ok);
+    if (!ok) receiptFailed = true;
+    else if (receiptFailed) receiptFailed = false;
+    else return;
+    paint();
   });
 })();

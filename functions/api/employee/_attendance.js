@@ -1,5 +1,6 @@
 import { json, targetKey, limitCheck, limitFail, limitClear, rateLimitUnavailable } from '../../auth/_lib.js';
 import { retainCorrection } from '../_attendance-corrections.js';
+import { capAttendance, punchRefusal } from '../_attendance-cap.js';
 import { servedDuring, verifiedProgress } from './_progress-truth.js';
 // Internal contract: actor is supplied only after liveEmployee authentication and
 // store operational checks. Access roles are distinct from free-form job titles.
@@ -8,7 +9,6 @@ const ATTENDANCE_FEATURE = 'attendance';
 const ATTENDANCE_CODE_FEATURE = 'attendance-code';
 const TEAM_FEATURE = 'team';
 const PROGRESS_FEATURE = 'employee-progress';
-const MAX_ATTENDANCE = 5000;
 // Automatic replay is limited to 12 h; older punches await an audited decision.
 const CAPTURE_MAX_AGE_MS = 12 * 3600000;
 // Combien de temps team.hoursCredited garde la marque d'un service crédité.
@@ -106,7 +106,7 @@ export async function handleAttendance({ actor, store, request, action, body }) 
    * gérant voit dans les heures et les derniers pointages. */
   const settings = (teamRow.data && teamRow.data.planning && teamRow.data.planning.settings) || {};
   const maxShiftMs = (settings.maxDailyHours == null ? DEFAULT_MAX_DAILY_HOURS : Math.max(0, Number(settings.maxDailyHours) || 0)) * 3600000;
-  let refusal = '';
+  let refusal = '', refusalStatus = 409;
   /** @type {{inTs: number, outTs: number, id?: string, hoursCredit?: string} | null} Populated by the awaited document mutation. */
   let changedEntry = null;
   let replay = false;
@@ -114,7 +114,7 @@ export async function handleAttendance({ actor, store, request, action, body }) 
     // Un essai CAS perdu ne doit pas créditer les heures du gagnant une seconde fois.
     changedEntry = null;
     replay = false;
-    refusal = '';
+    refusal = ''; refusalStatus = 409;
     const entries = Array.isArray(doc.entries) ? doc.entries.slice() : [];
     const mine = entries.filter((e) => e && e.staffId === auth.pin.id);
     const open = mine.slice().reverse().find((e) => !e.outTs);
@@ -125,9 +125,13 @@ export async function handleAttendance({ actor, store, request, action, body }) 
       replay = true;
       changedEntry = { ...replayed };
     } else if (action === 'clock-in') {
+      if (!open) {
+        const blocked = punchRefusal(entries, auth.pin.id, now);
+        if (blocked) { refusal = blocked.error; refusalStatus = blocked.status; return null; }
+      }
       if (deferred && !open && at < lastOut) { refusal = 'attendance-capture-overlaps'; return null; }
       const inTs = Math.min(now, Math.max(at, lastOut));
-      changedEntry = open || { id: crypto.randomUUID(), staffId: auth.pin.id, memberId, name: auth.pin.name || '', role: auth.pin.role || '', inTs, outTs: 0, clockInCodeTs: codeTs, ...(opId ? { clockInOpId: opId } : {}), ...(deferred ? { deferred: true, inDeferredMs: capturedAgo } : {}) };
+      changedEntry = open || { id: crypto.randomUUID(), staffId: auth.pin.id, memberId, name: auth.pin.name || '', role: auth.pin.role || '', inTs, outTs: 0, receivedTs: now, clockInCodeTs: codeTs, ...(opId ? { clockInOpId: opId } : {}), ...(deferred ? { deferred: true, inDeferredMs: capturedAgo } : {}) };
       if (!open) entries.push(changedEntry);
     } else if (action === 'clock-out' && open) {
       const floor = Math.max(Number(open.inTs) || 0, Number(open.pauseTs) || 0,
@@ -141,6 +145,7 @@ export async function handleAttendance({ actor, store, request, action, body }) 
         open.pauseTs = 0;
       }
       open.outTs = Math.max(outTs, Number(open.inTs) || outTs);
+      open.outReceivedTs = now;
       open.clockOutCodeTs = codeTs;
       if (opId) open.clockOutOpId = opId;
       if (deferred) { open.deferred = true; open.outDeferredMs = capturedAgo; }
@@ -148,9 +153,9 @@ export async function handleAttendance({ actor, store, request, action, body }) 
       open.hoursCredit = 'pending';
       changedEntry = { ...open };
     }
-    return { entries: entries.slice(-MAX_ATTENDANCE) };
+    return { entries: capAttendance(entries) };
   });
-  if (refusal) return json({ error: refusal }, 409);
+  if (refusal) return json({ error: refusal }, refusalStatus);
   if (!attendance) return json({ error: 'attendance-write-failed' }, 503);
   /* Deux documents, deux écritures : le service est fermé dans `attendance`,
    * ses heures sont créditées dans `team`. Le résultat de la seconde était

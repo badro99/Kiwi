@@ -1314,6 +1314,7 @@
         : code === 'subscription-required' ? 'Abonnement en attente de validation'
         : (code === 'not-configured' || code === 'rate-limit-unavailable') ? 'Service momentanément indisponible'
         : code === 'attendance-code-invalid' ? 'Code de pointage incorrect ou expiré'
+        : (code === 'attendance-full' || code === 'too-many-punches') ? 'Pointage refusé · voyez avec votre responsable'
         : code === 'too_many_attempts' ? 'Trop d\'essais · réessayez plus tard'
         : code === 'attendance-write-failed' ? 'Pointage non enregistré · réessayez'
         : (!code && !status) ? 'Connexion indisponible · vérifiez le réseau'
@@ -1399,6 +1400,7 @@
       const open = data.attendance && data.attendance.open;
       if (open) {
         shiftStart = new Date(Number(open.inTs) || Date.now());
+        if (!SV_DEMO) { try { svAnnounceOrphans(); } catch (_) {} }
         startServiceSync();
         applyRoleToMain();
         renderSchedule();
@@ -1921,7 +1923,8 @@
     const PUNCH_SAVED = 'Pointage enregistré sur ce téléphone · envoi dès le retour du réseau';
     document.addEventListener('kiwi-employee-punch-queue', (event) => {
       const d = (event && event.detail) || {};
-      if (d.rejected && d.rejected.length) toast('Pointage du téléphone refusé · voyez avec votre responsable', 4200);
+      if (d.rejected && d.rejected.some((r) => r && (r.error === 'attendance-full' || r.error === 'too-many-punches'))) toast(employeePick('Pointage refusé · voyez avec votre responsable', 'Clock entry refused · check with your manager', 'تم رفض التسجيل · راجع مسؤولك'), 4200);
+      else if (d.rejected && d.rejected.length) toast('Pointage du téléphone refusé · voyez avec votre responsable', 4200);
       else if (d.sent && !d.pending) toast('Pointage du téléphone envoyé', 2400);
     });
 

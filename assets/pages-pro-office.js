@@ -2862,8 +2862,8 @@ handlers['rotate-secret']   = () => {
 };
 // add-member / member-detail / edit-perms are now registered inside
 // nav-equipe's handler so they can close over the live team state.
-handlers['payslip-pdf'] = (el, id) => import('./planning/pay-statement.js?v=4').then(m => m.openPayStatement(window.Kiwi.__teamCore, id));
-handlers['generate-payslips'] = () => import('./planning/pay-statement.js?v=4').then(m => m.openPayStatement(window.Kiwi.__teamCore, '*'));
+handlers['payslip-pdf'] = (el, id) => import('./planning/pay-statement.js?v=6').then(m => m.openPayStatement(window.Kiwi.__teamCore, id));
+handlers['generate-payslips'] = () => import('./planning/pay-statement.js?v=6').then(m => m.openPayStatement(window.Kiwi.__teamCore, '*'));
 handlers['export-dgi']      = () => toast('Export DGI', { type: 'info', desc: 'Export au format attendu par la DGI : bientôt disponible.' });
 handlers['all-leaves']      = () => toast('Toutes les demandes de congé', { type: 'info', desc: 'Filtrez par employé, statut ou période.' });
 handlers['leave-approve']   = () => toast('Demande approuvée', { type: 'success', desc: 'Pensez à prévenir le salarié : la notification automatique arrive bientôt.' });

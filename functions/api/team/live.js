@@ -7,6 +7,7 @@ import { json, entitledMerchant } from '../../auth/_lib.js';
 import { storeOperationalState } from '../_private.js';
 import { DEFAULT_CUTOFF, businessDate, merchantCutoff, merchantZone } from '../_business-day.js';
 import { correctionList, decideCorrection } from '../_attendance-corrections.js';
+import { capAttendance } from '../_attendance-cap.js';
 import { hoursByDay } from '../_worked-hours.js';
 import { readDoc, mutateDoc } from '../_doc-cas.js';
 
@@ -15,7 +16,6 @@ const ACCESS = 'employee-access';
 const ATTENDANCE = 'attendance';
 const ATTENDANCE_CODE = 'attendance-code';
 const MESSAGES = 'team-messages';
-const MAX_ATTENDANCE = 5000;
 const MAX_MESSAGES = 200;
 
 function parse(raw, fallback) {
@@ -241,7 +241,7 @@ export async function onRequestPost({ request, env }) {
       entry.pauseTs = 0;
     }
     changed = { ...entry };
-    return { ...doc, entries: entries.slice(-MAX_ATTENDANCE) };
+    return { ...doc, entries: capAttendance(entries) };
   });
   if (!saved) return json({ error: 'attendance-write-failed' }, 503);
   if (!found) return json({ error: 'employee-not-clocked-in' }, 409);

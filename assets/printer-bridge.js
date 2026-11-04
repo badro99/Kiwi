@@ -960,7 +960,7 @@
     if (langLoad) return langLoad;
     langLoad = new Promise(function (resolve) {
       var script = document.createElement('script');
-      script.src = '/assets/printer/pairing-lang.js?v=19';
+      script.src = '/assets/printer/pairing-lang.js?v=20';
       script.onload = function () { resolve(); };
       script.onerror = function () { langLoad = null; script.remove(); resolve(); };
       document.head.appendChild(script);
@@ -1033,15 +1033,15 @@
 /* Recovery entry is loaded at the first failed job, without another shell slot. */
 (function () {
   var loading = null;
-  ['kiwi:kitchen-print-unprinted', 'kiwi:kitchen-print-recovery', 'kiwi:toast'].forEach(function (name) {
+  ['kiwi:kitchen-print-unprinted', 'kiwi:kitchen-print-recovery', 'kiwi:receipt-print'].forEach(function (name) {
     window.addEventListener(name, function (event) {
       if (!window.KiwiCaisseLang) return;
       if (document.getElementById('caisse-print-recovery-script')) return;
       if (!event.detail) return;
-      if (name === 'kiwi:toast') { var title = String(event.detail.title || ''); if (title.indexOf(window.KiwiCaisseLang.tr('Impression échouée')) < 0 && title.indexOf(window.KiwiCaisseLang.tr('Imprimante injoignable')) < 0) return; }
+      if (name === 'kiwi:receipt-print') { if (event.detail.ok !== false) return; }
       else if (!(event.detail.count || event.detail.recoverable)) return;
       if (!loading) loading = new Promise(function (resolve) {
-        var script = document.createElement('script'); script.src = '/assets/caisse-print-recovery.js?v=5';
+        var script = document.createElement('script'); script.src = '/assets/caisse-print-recovery.js?v=6';
         script.onload = function () { script.id = 'caisse-print-recovery-script'; resolve(); };
         script.onerror = function () { loading = null; script.remove(); };
         document.head.appendChild(script);
