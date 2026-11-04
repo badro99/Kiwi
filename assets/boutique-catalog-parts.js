@@ -560,7 +560,7 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
          compaction le déplace. On ne fait que normaliser une déclinaison d'avant
          ce modèle, pour qu'elle cesse d'être ambiguë. */
       if (s.v.base == null) { s.v.base = baseOf(s.v); s.v.baseAt = s.at; }
-      s.v.stock = Math.max(0, Math.round(s.n));
+      Object.defineProperty(s.v, 'ledgerStock', { value: Math.round(s.n), writable: true, configurable: true, enumerable: false }); s.v.stock = Math.max(0, s.v.ledgerStock);
     });
   }
 
@@ -654,7 +654,7 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
     observeDoc(mine); observeDoc(theirs);
     const result = KiwiCatalogRules.mergeDocs(mine, theirs, Date.now());
     ahead = result.ahead;
-    return result.doc;
+    materialize(result.doc); return result.doc;
   }
 
   /* Stamp an edit field by field (see KiwiCatalogRules.touchFields): `before`
@@ -866,7 +866,7 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
         }
 
         const adopt = first && mineEmpty;
-        core.db = adopt ? theirs : mergeDocs(core.db, theirs);
+        core.db = adopt ? theirs : mergeDocs(core.db, theirs); materialize(core.db);
         dropIndex();
         migrate();   // la copie serveur peut venir d'un build antérieur aux familles
         persist(); writeRev(slug, serverRev); healSeq(); notify();

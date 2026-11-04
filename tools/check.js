@@ -624,7 +624,7 @@ for (const test of [
   'booking-properties-test.mjs',
   'booking-read-order-test.mjs',
   'hotel-properties-test.mjs',
-  'stock-money-properties-test.mjs', 'cx-money-behavior-test.mjs',
+  'stockqueue-ruling-test.mjs', 'stock-money-properties-test.mjs', 'cx-money-behavior-test.mjs',
   'menu-analysis-properties-test.mjs',
   'economat-properties-test.mjs',
   'economat-split-test.mjs',

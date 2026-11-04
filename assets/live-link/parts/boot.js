@@ -99,7 +99,7 @@
     quarantineRows: quarantineRows,
     quarantineHeld: function (id, tenant) { return quarantineUpdate(id, tenant, false); },
     quarantineSettled: function (id, tenant) { return quarantineUpdate(id, tenant, true); },
-    queueStatus: queueStatus, refreshQueue: refreshOutboxStatus,
+    queueRecoveryCopies: function (key, ack) { return saleQueue.recoveryCopies(key, ack); }, queueStatus: queueStatus, refreshQueue: refreshOutboxStatus,
     /* Le serveur a confirmé la portée opérateur : le slug de l'adresse peut
        enfin s'épingler. Seul identity.js appelle ceci, après /api/me. */
     confirmScope: function (slug) {

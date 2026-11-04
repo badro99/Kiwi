@@ -960,7 +960,7 @@
     if (langLoad) return langLoad;
     langLoad = new Promise(function (resolve) {
       var script = document.createElement('script');
-      script.src = '/assets/printer/pairing-lang.js?v=16';
+      script.src = '/assets/printer/pairing-lang.js?v=17';
       script.onload = function () { resolve(); };
       script.onerror = function () { langLoad = null; script.remove(); resolve(); };
       document.head.appendChild(script);

@@ -1,4 +1,4 @@
-import {} from './live-link/queue-store.js?v=14';
+import {} from './live-link/queue-store.js?v=17';
 import {} from './live-link/sale-identity.js?v=1';
 /* Kiwi Live Link — le pont ventes ↔ serveur (Cloudflare Pages Functions + D1).
  *
@@ -28,7 +28,7 @@ import {} from './live-link/sale-identity.js?v=1';
  * left untouched, so the demo still works with the flag off.
  */
 (function () {
-  'use strict';
+  'use strict'; if (typeof document !== 'undefined' && document.createElement) import('./queue-recovery.js?v=2').catch(function () {});
 
   var LS = 'kiwiLive';
 
@@ -1484,7 +1484,7 @@ import {} from './live-link/sale-identity.js?v=1';
     quarantineRows: quarantineRows,
     quarantineHeld: function (id, tenant) { return quarantineUpdate(id, tenant, false); },
     quarantineSettled: function (id, tenant) { return quarantineUpdate(id, tenant, true); },
-    queueStatus: queueStatus, refreshQueue: refreshOutboxStatus,
+    queueRecoveryCopies: function (key, ack) { return saleQueue.recoveryCopies(key, ack); }, queueStatus: queueStatus, refreshQueue: refreshOutboxStatus,
     /* Le serveur a confirmé la portée opérateur : le slug de l'adresse peut
        enfin s'épingler. Seul identity.js appelle ceci, après /api/me. */
     confirmScope: function (slug) {

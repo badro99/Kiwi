@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=266';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=162';
-import { offerRegister } from './inventory.js?v=162';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=267';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=164';
+import { offerRegister } from './inventory.js?v=164';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import { ticketRemise } from './ticket-remise.js?v=3';
 import { bqKitTicketFoot } from './kit-2027.js?v=20';
@@ -236,6 +236,8 @@ import { photoImg } from '../retail-photos.js?v=5';
   }
 
   function cardFlag(p) {
+    const gap = (window.KiwiBoutiqueCatalog?.listVariants(p.id) || []).reduce((n, v) => n + Math.min(0, Number(v.ledgerStock ?? v.stock) || 0), 0);
+    if (gap < 0) return '<span class="bq-card-flag low">0 · ' + esc((window.KiwiCaisseLang?.tr('stock à vérifier · écart') || 'stock à vérifier · écart')) + ' −' + Math.abs(gap) + '</span>';
     const st = stockOf(p);
     if (st === 0) return '<span class="bq-card-flag out">épuisé</span>';
     if (st <= 2) return '<span class="bq-card-flag low">stock bas</span>';
