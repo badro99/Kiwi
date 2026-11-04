@@ -62,6 +62,18 @@
   var subs = new Set();
   var doc = null;             /* poignée cloud-doc */
   var batching = 0, dirty = false;
+  var localEdits = new Map();
+
+  function editsFor() {
+    if (!localEdits.has(KEY)) {
+      var saved; try { saved = JSON.parse(localStorage.getItem(KEY + ':edits') || '[]'); } catch (_) {}
+      try { localEdits.set(KEY, new Map(saved || [])); } catch (_) { localEdits.set(KEY, new Map()); }
+    }
+    return localEdits.get(KEY);
+  }
+  function keepEdits() {
+    try { localStorage.setItem(KEY + ':edits', JSON.stringify(Array.from(editsFor()))); } catch (_) {}
+  }
 
   function blank() { return { v: 1, promos: [], deleted: [] }; }
 
@@ -298,6 +310,7 @@
     /* Ressusciter une promotion supprimée ailleurs : on lève la pierre tombale,
        sinon la fusion suivante la re-supprimerait dans le dos du commerçant. */
     db.deleted = db.deleted.filter(function (d) { return d.id !== next.id; });
+    editsFor().set(next.id, canon(next)); keepEdits();
     commit();
     return next;
   }
@@ -324,6 +337,7 @@
     if (!p) return null;
     p.paused = !!val;
     p.updatedAt = stampAbove(p.updatedAt);
+    editsFor().set(p.id, canon(normalize(p))); keepEdits();
     commit();
     return normalize(p);
   }
@@ -543,6 +557,18 @@
       .filter(function (p) { return !(tomb[p.id] && tomb[p.id] >= p.updatedAt); })
       .sort(function (a, b) { return a.createdAt - b.createdAt; });
 
+    (mine.promos || []).forEach(function (raw) {
+      var p = normalize(raw), key = KEY + p.id;
+      if (editsFor().get(p.id) !== canon(p)) return;
+      var kept = promos.find(function (row) { return row.id === p.id; });
+      if (kept && canon(kept) === canon(p)) {
+        if ((theirs.promos || []).some(function (row) { return row.id === p.id && canon(normalize(row)) === canon(p); })) editsFor().delete(p.id);
+        return;
+      }
+      editsFor().delete(p.id); // A repeated pull must not repeat the notice.
+      try { window.dispatchEvent(new CustomEvent('kiwi:persistence-notice', { detail: { key: 'persist.promoConflict', edit: key + canon(p) } })); } catch (_) {}
+    });
+    keepEdits();
     return { v: 1, promos: promos, deleted: deleted };
   }
 

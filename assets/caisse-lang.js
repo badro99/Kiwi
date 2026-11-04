@@ -4227,7 +4227,7 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
-  DICT.en['Rappel non confirmé · réessayez'] = 'Recall not confirmed · try again'; DICT.ar['Rappel non confirmé · réessayez'] = 'لم يتم تأكيد الاسترجاع · أعد المحاولة'; window.KiwiCaisseLang = {
+  DICT.en["Une modification de promotion a été remplacée par la version enregistrée sur un autre appareil."] = "A promotion edit was replaced by the version saved on another device."; DICT.en["Commandes non enregistrées sur cet appareil. Gardez cette page ouverte."] = "Orders not saved on this device. Keep this page open."; DICT.en["Archive non enregistrée sur cet appareil. Gardez cette page ouverte."] = "Archive not saved on this device. Keep this page open."; DICT.ar["Une modification de promotion a été remplacée par la version enregistrée sur un autre appareil."] = "استُبدل تعديل العرض بالنسخة المحفوظة على جهاز آخر."; DICT.ar["Commandes non enregistrées sur cet appareil. Gardez cette page ouverte."] = "لم تُحفظ الطلبات على هذا الجهاز. أبق هذه الصفحة مفتوحة."; DICT.ar["Archive non enregistrée sur cet appareil. Gardez cette page ouverte."] = "لم يتم حفظ الأرشيف على هذا الجهاز. أبق هذه الصفحة مفتوحة."; DICT.en['Rappel non confirmé · réessayez'] = 'Recall not confirmed · try again'; DICT.ar['Rappel non confirmé · réessayez'] = 'لم يتم تأكيد الاسترجاع · أعد المحاولة'; window.KiwiCaisseLang = {
     get: function () { return cur; },
     set: set,
     t: t,
