@@ -603,19 +603,40 @@
     try { if (lastFocus && lastFocus.focus) lastFocus.focus(); } catch (_) {}
   }
 
+  var fetchDeadline = function (url, options, readBody, controller) {
+    controller = controller || (typeof AbortController === 'function' ? new AbortController() : null);
+    var timer;
+    var request = new Promise(function (resolve, reject) {
+      try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); }
+      catch (error) { reject(error); }
+    }).then(function (response) {
+      if (readBody === false || !response || typeof response.json !== 'function') return response;
+      return response.json().then(function (data) {
+        response.json = function () { return Promise.resolve(data); }; return response;
+      }, function (error) {
+        response.json = function () { return Promise.reject(error); }; return response;
+      });
+    });
+    var deadline = new Promise(function (_, reject) {
+      timer = setTimeout(function () {
+        var error = new Error('request-timeout'); error.code = 'timeout';
+        reject(error);
+        if (controller) controller.abort();
+      }, 12000);
+    });
+    return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+  };
+
   function send() {
     phase = 'sending';
     render();
-    var controller = typeof AbortController === 'function' ? new AbortController() : null;
-    var timer = setTimeout(function () { if (controller) controller.abort(); }, 15000);
-    return fetch(API, {
-      method: 'POST', credentials: 'same-origin', signal: controller ? controller.signal : undefined,
+    return fetchDeadline(API, {
+      method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(payload()),
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) { return { status: r.status, ok: r.ok, body: j }; });
     }).then(function (res) {
-      clearTimeout(timer);
       if (res.ok && res.body && res.body.ok) {
         reference = String(res.body.reference || '');
         phase = 'done';
@@ -633,7 +654,6 @@
       phase = 'failed';
       render('title');
     }, function () {
-      clearTimeout(timer);
       phase = 'failed';
       render('title');
     });

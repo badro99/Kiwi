@@ -129,7 +129,7 @@
   function bootForOperator(venue) {
     var merchant = String((venue && venue.merchant) || '');
     if (!wantsOperatorAccess() || !merchant) { bootWithPin(venue); return; }
-    fetch('/api/me?merchant=' + encodeURIComponent(merchant), { headers: { Accept: 'application/json' } })
+    fetchDeadline('/api/me?merchant=' + encodeURIComponent(merchant), { headers: { Accept: 'application/json' } })
       .then(function (r) { return r && r.ok ? r.json() : null; })
       .then(function (d) {
         if (!d || d.operator !== true || d.scoped !== true || String(d.slug || '') !== merchant) {

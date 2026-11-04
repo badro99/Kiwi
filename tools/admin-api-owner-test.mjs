@@ -43,7 +43,7 @@ for (const [page, users] of Object.entries(pages)) {
 // 3. Behaviour of the owner.
 const calls = [];
 let reply = { status: 200, body: { ok: true } };
-const ctx = { window: {}, fetch: async (url, opts) => { calls.push({ url, opts }); const r = reply;
+const ctx = { setTimeout, clearTimeout, AbortController, window: {}, fetch: async (url, opts) => { calls.push({ url, opts }); const r = reply;
   return { ok: r.status >= 200 && r.status < 300, status: r.status, json: async () => { if (r.body === undefined) throw new SyntaxError('x'); return r.body; } }; } };
 vm.createContext(ctx);
 vm.runInContext(read('assets/admin-api.js'), ctx);
@@ -74,9 +74,9 @@ await assert.rejects(api.request('/tasks', { method: 'PATCH', body: '{}' }), (e)
   && e.status === 409 && e.code === 'version-conflict' && e.body.error === 'version-conflict');
 assert.deepEqual(seen, ['POST /api/admin/tasks'], 'une écriture refusée n’est pas annoncée');
 reply = { status: 502, body: undefined };
-await assert.rejects(api.request('/overview'), (e) => e.message === 'http-502' && e.status === 502 && e.code === undefined);
+await assert.rejects(api.request('/overview'), (e) => e.message === 'bad-response' && e.status === 0 && e.code === 'bad-response');
 reply = { status: 200, body: undefined };
-await assert.rejects(api.request('/overview'), /bad-json/);
+await assert.rejects(api.request('/overview'), /bad-response/);
 stop();
 reply = { status: 200, body: {} };
 await api.request('/tasks', { method: 'DELETE' });

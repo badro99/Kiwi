@@ -88,6 +88,7 @@
             473
           ],
           "declares": [
+            "fetchDeadline",
             "applyPairing",
             "localRedeem",
             "redeem",

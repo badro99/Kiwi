@@ -70,23 +70,23 @@
       $('#pc-client-label').textContent = client ? `${client.name} · ${Number(client.points) || 0} pts` : 'Client & fidélité';
     }
 
-    function renderServiceClients() {
+    function renderServiceClients() { var fetchDeadline = function (url, options, readBody, controller) { controller = controller || (typeof AbortController === 'function' ? new AbortController() : null); var timer; var request = new Promise(function (resolve, reject) { try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); } catch (error) { reject(error); } }).then(function (response) { if (readBody === false || !response || typeof response.json !== 'function') return response; return response.json().then(function (data) { response.json = function () { return Promise.resolve(data); }; return response; }, function (error) { response.json = function () { return Promise.reject(error); }; return response; }); }); var deadline = new Promise(function (_, reject) { timer = setTimeout(function () { var error = new Error('request-timeout'); error.code = 'timeout'; reject(error); if (controller) controller.abort(); }, 12000); }); return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); }); }; if (renderServiceClients.controller) renderServiceClients.controller.abort(); const controller = renderServiceClients.controller = new AbortController();
       const q = String($('#service-client-search').value || '').trim();
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
       serviceClientRows = [];
       $('#service-client-list').textContent = employeeTranslation('Saisissez le numéro de téléphone complet.');
       if (q.replace(/\D/g, '').length < 10) return;
-      fetch('/api/employee-clients?merchant=' + encodeURIComponent(merchant) + '&q=' + encodeURIComponent(q), {
+      fetchDeadline('/api/employee-clients?merchant=' + encodeURIComponent(merchant) + '&q=' + encodeURIComponent(q), {
         credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
-      }).then((r) => { if (!r.ok) throw new Error('lookup'); return r.json(); }).then((data) => {
-        if ($('#service-client-search').value.trim() !== q) return;
+      }, true, controller).then((r) => { if (!r.ok) throw new Error('lookup'); return r.json(); }).then((data) => {
+        if (controller.signal.aborted || $('#service-client-search').value.trim() !== q) return;
         serviceClientRows = Array.isArray(data.clients) ? data.clients : [];
         $('#service-client-list').innerHTML = serviceClientRows.length ? serviceClientRows.map((c) => `
           <button class="td-btn ghost sm" type="button" data-service-client="${esc(c.id)}" style="text-align:left;justify-content:space-between;">
             <span><strong>${esc(c.name || 'Client')}</strong><br><small>${esc(c.phone || '')}</small></span>
             <span class="mono">${Number(c.points) || 0} pts</span>
           </button>`).join('') : '<p class="modal-subtle">' + employeeTranslation('Aucun client trouvé.') + '</p>';
-      }).catch(() => { $('#service-client-list').textContent = employeeTranslation('Carnet indisponible.'); });
+      }).catch(() => { if (controller.signal.aborted && renderServiceClients.controller !== controller) return; $('#service-client-list').textContent = employeeTranslation('Carnet indisponible.'); });
     }
 
     function openServiceClients() {

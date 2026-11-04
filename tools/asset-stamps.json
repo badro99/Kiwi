@@ -8,8 +8,8 @@
     "sha": "012a3be6cdfc9439"
   },
   "assets/admin-api.js": {
-    "v": "1",
-    "sha": "6d4f7ee0357ff989"
+    "v": "3",
+    "sha": "0540f2d107372511"
   },
   "assets/admin-demo-requests.js": {
     "v": "5",
@@ -228,8 +228,8 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "65",
-    "sha": "f5a3c0ffaf86792c"
+    "v": "67",
+    "sha": "d1462ce7ca19ff8e"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
@@ -1088,8 +1088,8 @@
     "sha": "581679a951f0093d"
   },
   "assets/landing-demo-funnel.js": {
-    "v": "5",
-    "sha": "815cffb8ef5be6a7"
+    "v": "7",
+    "sha": "95b6809859a05fa3"
   },
   "assets/landing-es.css": {
     "v": "7",
@@ -1956,8 +1956,8 @@
     "sha": "ca9f976c2786c1a3"
   },
   "assets/serveur/service.js": {
-    "v": "14",
-    "sha": "53620904f55920c6"
+    "v": "16",
+    "sha": "8dcbc46a81775ea8"
   },
   "assets/service-requests.js": {
     "v": "2",
