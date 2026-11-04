@@ -593,10 +593,15 @@ function renderStock(){
       if (!it) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Sélectionne un article')); return; }
       const qty = parseFloat($('#sk-w-qty').value) || 0;
       if (qty <= 0) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Indique une quantité valide')); return; }
-      if (qty > it.stock) {
-        if (!confirm((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(`La quantité saisie (${qty} ${it.unit}) est supérieure au stock disponible (${it.stock} ${it.unit}). Confirmer quand même ?`))) {
-          return;
-        }
+      if (qty > it.stock && !(commitWaste.overConfirmed === it.id + ':' + qty)) {
+        /* Feuille Kiwi, pas boîte du système : la confirmation posée, le même geste repart. */
+        const msg = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(`La quantité saisie (${qty} ${it.unit}) est supérieure au stock disponible (${it.stock} ${it.unit}). Confirmer quand même ?`);
+        (window.KiwiCaisseLang && window.KiwiCaisseLang.ask ? window.KiwiCaisseLang.ask : (m) => Promise.resolve(window.confirm((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(m))))(msg).then((yes) => {
+          if (!yes) return;
+          commitWaste.overConfirmed = it.id + ':' + qty;
+          try { commitWaste(); } finally { commitWaste.overConfirmed = ''; }
+        });
+        return;
       }
       const fineReason = $('#sk-w-reason').value || 'casse';
       const ledgerReasonMap = {

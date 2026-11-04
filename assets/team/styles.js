@@ -16,11 +16,11 @@
     .dash-equipe .kt-plan-table .kt-plan-col-tot { width: 10%; }
     .dash-equipe .kt-plan-table th, .dash-equipe .kt-plan-table td { overflow: hidden; }
     /* En largeur fixe, le min-width du profil ferait déborder la ligne. */
-    .dash-equipe .kt-plan-table .kt-h-member { min-width: 0; gap: 8px; padding-left: 12px; }
+    .dash-equipe .kt-plan-table .kt-h-member { min-width: 0; gap: 8px; padding-inline-start: 12px; }
     .dash-equipe .kt-plan-table .kt-h-member > div { min-width: 0; }
     .dash-equipe .kt-plan-table .kt-h-member .n,
     .dash-equipe .kt-plan-table .kt-h-member .r { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .dash-equipe .kt-plan-table .kt-h-total, .dash-equipe .kt-plan-table .kt-h-pay { min-width: 0; padding-right: 10px; }
+    .dash-equipe .kt-plan-table .kt-h-total, .dash-equipe .kt-plan-table .kt-h-pay { min-width: 0; padding-inline-end: 10px; }
     .dash-equipe .kt-plan-table .kt-day-cell { padding: 5px 3px; }
 
     /* Le pas à pas des semaines · visible seulement sur quinzaine / mois. */
@@ -70,7 +70,7 @@
     @media (max-width: 900px) {
       .dash-equipe .kt-plan-table .kt-plan-col-mem { width: 17%; }
       .dash-equipe .kt-plan-table .kt-plan-col-tot { width: 9%; }
-      .dash-equipe .kt-plan-table .kt-h-member { gap: 6px; padding-left: 8px; }
+      .dash-equipe .kt-plan-table .kt-h-member { gap: 6px; padding-inline-start: 8px; }
       .dash-equipe .kt-plan-table .kt-h-member .r { display: none; }
       .dash-equipe .kt-plan-table .kt-day-cell { padding: 4px 1px; }
       .dash-equipe .kt-sh { font-size: 11px; padding: 4px 1px; min-height: 38px; }
@@ -117,8 +117,8 @@
 
     /* Search bar */
     .dash-equipe .kt-searchbar { position: relative; }
-    .dash-equipe .kt-searchbar-ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--n-500); pointer-events: none; }
-    .dash-equipe .kt-searchbar input { width: 100%; padding: 11px 12px 11px 36px; border: 1px solid var(--n-200); border-radius: 10px; font-family: var(--sans); font-size: 13px; background: var(--surface); color: var(--ink); outline: none; box-sizing: border-box; transition: border-color 140ms, box-shadow 140ms; }
+    .dash-equipe .kt-searchbar-ic { position: absolute; inset-inline-start: 12px; top: 50%; transform: translateY(-50%); color: var(--n-500); pointer-events: none; }
+    .dash-equipe .kt-searchbar input { width: 100%; padding-block: 11px; padding-inline: 36px 12px; border: 1px solid var(--n-200); border-radius: 10px; font-family: var(--sans); font-size: 13px; background: var(--surface); color: var(--ink); outline: none; box-sizing: border-box; transition: border-color 140ms, box-shadow 140ms; }
     .dash-equipe .kt-searchbar input:focus { border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(11,110,79,0.10); }
 
     /* Tag chips (contract type) */
@@ -135,7 +135,7 @@
     .dash-equipe .kt-hbar-right { display: inline-flex; gap: 6px; flex-wrap: wrap; }
     .dash-equipe .kt-h-tablewrap { border: 1px solid var(--n-200); border-radius: 12px; overflow-x: auto; background: var(--surface); }
     .dash-equipe .kt-h-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-    .dash-equipe .kt-h-table thead th { background: var(--paper-soft); padding: 11px 9px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.10em; color: var(--n-500); font-weight: 500; text-align: left; text-transform: uppercase; border-bottom: 1px solid var(--n-200); position: sticky; top: 0; }
+    .dash-equipe .kt-h-table thead th { background: var(--paper-soft); padding: 11px 9px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.10em; color: var(--n-500); font-weight: 500; text-align: start; text-transform: uppercase; border-bottom: 1px solid var(--n-200); position: sticky; top: 0; }
     .dash-equipe .kt-h-table .kt-day-head { text-align: center; min-width: 54px; }
     .dash-equipe .kt-h-table .kt-day-head .d { display: block; font-size: 12.5px; color: var(--ink); font-weight: 600; }
     .dash-equipe .kt-h-table .kt-day-head .m { display: block; font-size: 11px; color: var(--n-500); text-transform: lowercase; letter-spacing: 0.04em; margin-top: 2px; }
@@ -155,13 +155,13 @@
     .dash-equipe .kt-h-table .kt-day-cell.is-closed { background-image: repeating-linear-gradient(135deg, transparent 0 7px, color-mix(in srgb, var(--n-200) 42%, transparent) 7px 8px); }
     .dash-equipe .kt-h-table .kt-day-cell.is-holiday .kt-sh { border-color: color-mix(in srgb, var(--atlas) 30%, var(--n-200)); }
     .dash-equipe .kt-h-table .kt-day-cell.locked input { background: var(--paper-soft); color: var(--n-500); cursor: not-allowed; }
-    .dash-equipe .kt-h-table .kt-h-total, .dash-equipe .kt-h-table .kt-h-pay { text-align: right; min-width: 82px; padding-right: 14px; }
+    .dash-equipe .kt-h-table .kt-h-total, .dash-equipe .kt-h-table .kt-h-pay { text-align: end; min-width: 82px; padding-inline-end: 14px; }
     .dash-equipe .kt-h-table .kt-h-total b, .dash-equipe .kt-h-table .kt-h-pay b { font-size: 13px; color: var(--ink); }
-    .dash-equipe .kt-h-table .kt-h-total span, .dash-equipe .kt-h-table .kt-h-pay span { color: var(--n-500); font-size: 11px; margin-left: 3px; font-weight: 400; }
+    .dash-equipe .kt-h-table .kt-h-total span, .dash-equipe .kt-h-table .kt-h-pay span { color: var(--n-500); font-size: 11px; margin-inline-start: 3px; font-weight: 400; }
     .dash-equipe .kt-h-table tfoot td { padding: 11px 9px; background: var(--paper-soft); border-top: 2px solid var(--ink); font-size: 12.5px; }
-    .dash-equipe .kt-h-table .kt-h-foot-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.10em; color: var(--n-700); text-transform: uppercase; padding-left: 16px; }
+    .dash-equipe .kt-h-table .kt-h-foot-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.10em; color: var(--n-700); text-transform: uppercase; padding-inline-start: 16px; }
     .dash-equipe .kt-h-table .kt-h-foot-tot b { font-size: 14px; color: var(--ink); }
-    .dash-equipe .kt-h-table .kt-h-foot-tot span { color: var(--n-500); font-size: 11px; margin-left: 3px; font-weight: 400; }
+    .dash-equipe .kt-h-table .kt-h-foot-tot span { color: var(--n-500); font-size: 11px; margin-inline-start: 3px; font-weight: 400; }
 
     /* Fusion-mode overrides for the bits we added */
     body.fusion-mode .dash-equipe .kt-searchbar input,

@@ -546,7 +546,7 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
         ${kind === 'partial' ? `
           <div class="cash-input-row" style="margin-bottom:6px;">
             <label class="cash-input-label" for="ep-settle-amt">Montant réglé aujourd'hui</label>
-            <input class="cash-input mono" id="ep-settle-amt" type="number" inputmode="numeric" min="1" max="${bal}" step="5" value="${pay}" />
+            <input class="cash-input mono" id="ep-settle-amt" type="number" inputmode="decimal" min="1" max="${bal}" step="0.01" value="${pay}" />
           </div>
           <div class="cash-presets" style="margin-bottom:12px;">
             <button class="cash-preset" data-sp="20">20</button>

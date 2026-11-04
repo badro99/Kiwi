@@ -1626,7 +1626,6 @@ const PDS_INLINE_CSS = `
   .pds-foot-meta .mono { font-family:var(--mono); }
   .pds-foot-actions { display:flex; gap:8px; }
 
-  html[dir="rtl"] .pds-zone-tabs, html[dir="rtl"] .pds-modes { flex-direction:row-reverse; }
 
   /* ═══ v2 · object-model floor plan ═══════════════════════════════════════
      Everything below supersedes the v1 table/element rules above. The v1

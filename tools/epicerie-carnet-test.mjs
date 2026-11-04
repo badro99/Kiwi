@@ -76,6 +76,9 @@ for (const lang of ['en','ar']) {
   r.$('#ep-settle-in').oninput({target:{value:'5'}});
   r.window.KiwiCaisseLang.set(lang==='en'?'ar':'en');
   assert.match(r.$('#ep-paym').innerHTML,/value="3.2"/,'language switch preserves partial repayment');
+  { const input = r.$('#ep-paym').innerHTML.match(/<input[^>]*id="ep-settle-amt"[^>]*>/)[0];
+    assert.match(input,/step="0\.01"/,'a partial repayment is typed to the centime, the way the debt is held');
+    assert.match(input,/inputmode="decimal"/,'and the keypad offers the decimal point'); }
   assert.match(r.$('#ep-paym').innerHTML,/value="5"/,'language switch preserves received cash');
   assert.doesNotMatch(r.$('#ep-paym').innerHTML.replace(/<[^>]*>/g,''),french);
   r.window.KiwiCaisseLang.set('fr');
