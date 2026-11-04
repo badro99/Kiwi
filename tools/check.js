@@ -1864,6 +1864,7 @@ section('Whole-project regressions');
     'venues-split-browser-test.mjs',
     'caisse-money-properties-test.mjs',
     'promo-price-freeze-test.mjs',
+    'simple-food-cost-parity-test.mjs',
     'retail-money-properties-test.mjs',
     'dashboard-money-properties-test.mjs',
     'dayreport-properties-test.mjs',
