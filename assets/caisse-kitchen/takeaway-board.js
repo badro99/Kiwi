@@ -517,7 +517,16 @@
       const o = kdsOrders.find(x => x.num === num);
       if (!o || !o.opId || !o.paid || o.pickedUp) return;
       const label = ticketNo(o);
-      if (!window.confirm((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(`Retirer ${label} du suivi à emporter ?\n\nLa vente et le paiement restent enregistrés. Cette action ne signifie PAS « remise au client ». Elle ne crée aucune transaction aujourd'hui.`))) return;
+      if (vrapArchivePaid.confirmed !== num) {
+        /* Feuille Kiwi, pas boîte du système : la confirmation posée, le même geste repart. */
+        const question = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(`Retirer ${label} du suivi à emporter ?\n\nLa vente et le paiement restent enregistrés. Cette action ne signifie PAS « remise au client ». Elle ne crée aucune transaction aujourd'hui.`);
+        (window.KiwiCaisseConfirm ? window.KiwiCaisseConfirm.ask : (m) => Promise.resolve(window.confirm(m)))(question, { danger: true }).then((yes) => {
+          if (!yes) return;
+          vrapArchivePaid.confirmed = num;
+          try { vrapArchivePaid(num); } finally { vrapArchivePaid.confirmed = null; }
+        });
+        return;
+      }
       window.KiwiAuthAct?.({ kind: 'untrack_order', key: 'act.untrack_order', args: { order: label } });
       requireTillOperator(`Retirer ${label} du suivi`, (who) => {
         Promise.resolve(opPush(o, 'archived', { actorProof: who && who.actorProof || '' })).then((result) => {

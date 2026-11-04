@@ -2893,15 +2893,18 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
           toast(tr('Split déjà encaissé en partie · termine les parts restantes'));
           return;
         }
-        if (!confirm(tr('Annuler le split en cours ?'))) return;
-        tableSplits.delete(selectedId);
-        const t = tables[selectedId];
-        if (t && t.status !== 'khlass') {
-          tableSettlement().project(t, { status: 'bgha-ykhlass' });  // split cancelled → mesa stays Addition
-          refreshTableNode(selectedId);
-        }
-        renderRightPanel(selectedId);
-        toast(tr('Split annulé'));
+        const splitTable = selectedId;
+        (window.KiwiCaisseConfirm ? window.KiwiCaisseConfirm.ask : (m) => Promise.resolve(window.confirm(m)))(tr('Annuler le split en cours ?'), { danger: true }).then((yes) => {
+          if (!yes || !tableSplits.has(splitTable)) return;
+          tableSplits.delete(splitTable);
+          const t = tables[splitTable];
+          if (t && t.status !== 'khlass') {
+            tableSettlement().project(t, { status: 'bgha-ykhlass' });  // split cancelled → mesa stays Addition
+            refreshTableNode(splitTable);
+          }
+          renderRightPanel(splitTable);
+          toast(tr('Split annulé'));
+        });
       }
     });
     /* ---------- Bootstrap menu (vente rapida) ---------- */
