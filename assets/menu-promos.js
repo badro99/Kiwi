@@ -61,12 +61,12 @@
       itemIds = new Set((menu.items || []).map(function (i) { return i && String(i.id); }).filter(Boolean));
     }
     var seen = new Set();
-    return (Array.isArray(list) ? list.slice(0, MAX_PROMOS) : []).map(function (p) {
+    return (Array.isArray(list) ? list : []).map(function (p) {
       if (!p || typeof p !== 'object') return null;
       var id = str(p.id, 40);
       var name = str(p.name, 60);
       if (!id || !name || seen.has(id)) return null;
-      seen.add(id);
+
       var common = rules.normalize(p, 'menu');
       var kind = common.kind, value = common.value;
       if (!(value > 0) && kind !== 'fixed') return null;
@@ -76,6 +76,7 @@
       var items = (Array.isArray(p.items) ? p.items.slice(0, 400) : []).map(function (x) { return str(x, 40); })
         .filter(function (x) { return x && (!itemIds || itemIds.has(x)); });
       if (!all && !cats.length && !items.length) return null;
+      seen.add(id);
       var days = common.days, start = common.start, end = common.end;
       return {
         id: id, name: name, kind: kind, value: value,
@@ -87,7 +88,7 @@
         paused: p.paused === true,
         createdAt: Math.max(0, Math.round(Number(p.createdAt) || 0)),
       };
-    }).filter(Boolean);
+    }).filter(Boolean).slice(0, MAX_PROMOS);
   }
 
   /* Is the promotion running at `now`? */

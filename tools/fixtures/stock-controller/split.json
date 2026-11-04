@@ -430,10 +430,10 @@
     "assets/stock/purchasing.js": {
       "globals": [
         "Kiwi",
-        "KiwiCost",
         "KiwiInventory",
         "KiwiProcurement",
         "KiwiRestaurantRecipes",
+        "KiwiRestaurantUnits",
         "KiwiStockInternal",
         "open"
       ],

@@ -628,8 +628,8 @@ import {} from './team/roster-list.js?v=6';
   const memberFullName = (m) => `${m.firstName || ''} ${m.lastName || ''}`.trim() || '·';
   function isCustomVenue() { const KV = window.KiwiVenue; return !!(KV && KV.isCustom && KV.isCustom()); }
 
-  function fmtMad(n) {
-    return (window.KiwiNumber?.number(Math.round(n || 0)) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }).format(Math.round(n || 0))) + ' MAD';
+  function fmtMad(n) { const digits = Number.isInteger(Number(n) || 0) ? 0 : 2;
+    return (window.KiwiNumber?.number(Number(n) || 0, digits) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(Number(n) || 0)) + ' MAD';
   }
 
   function memberMatchesFilters(...args) { return rosterList.memberMatchesFilters(...args); }

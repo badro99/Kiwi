@@ -37,7 +37,7 @@ async function api(method, payload) {
       throw apiError(error && error.code === 'timeout' ? 'timeout' : 'offline');
     }
     let data = null;
-    try { data = await res.json(); } catch (_) {}
+    try { data = await res.json(); } catch (_) { if (method !== 'GET' && res.ok) throw apiError('timeout'); }
     if (!res.ok || !data || data.ok === false || data.error) {
       throw apiError(data?.error || (res.status === 401 ? 'unauthorized' : res.status === 403 ? 'forbidden' : res.status === 404 ? 'not-found' : 'server'), data?.message, res.status);
     }
@@ -59,8 +59,10 @@ const demo = (() => {
     }
     function allocate(doc) {
       const prefix = PREFIX[doc.type], year = Number(String(doc.issueDate || today()).slice(0, 4));
-      S.seq[prefix] = (S.seq[prefix] || 0) + 1;
-      doc.seq = S.seq[prefix]; doc.number = number(prefix, doc.seq, year);
+      const key = prefix + ':' + year;
+      const existing = S.docs.filter(d => d.type === doc.type && String(d.issueDate).slice(0, 4) === String(year)).reduce((max, d) => Math.max(max, Number(d.seq) || 0), 0);
+      S.seq[key] = Math.max(S.seq[key] || 0, existing) + 1;
+      doc.seq = S.seq[key]; doc.number = number(prefix, doc.seq, year);
     }
     function creditedOf(doc) { return S.docs.filter(d => d.type === 'credit_note' && d.originalId === doc.id && d.status === 'issued').reduce((s, d) => s + d.totals.ttcCents, 0); }
     function paidOf(doc) { return S.payments.filter(p => p.docId === doc.id).reduce((s, p) => s + p.amountCents, 0); }
