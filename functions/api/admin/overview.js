@@ -32,6 +32,9 @@ import policy from '../../../assets/admin-policy.js';
  * établissement Ultimate sans montant saisi n'est pas compté 0, il est compté
  * comme non tarifé et la vue le réclame. */
 const TIER_PRICE = { basic: 150, plus: 300, pro: 399, ultra: 1499 };
+/* Le tarif annuel : un abonné annuel paie ce montant par mois d'engagement
+ * (une facture de 12 fois cela par an). Ultra n'a pas d'offre annuelle. */
+const ANNUAL_PRICE = { basic: 99, plus: 249, pro: 349 };
 const TIER_ORDER = ['basic', 'plus', 'pro', 'ultra', 'ultimate'];
 
 const DAY = 86400000;
@@ -75,7 +78,7 @@ export async function onRequestGet(context) {
     };
 
     const cfg = await tryAll(env, [
-      'SELECT merchant, plan, account_id, status, city, mrr, subscription_kind, subscription_start, subscription_end, trial_start, trial_end FROM merchant_config',
+      'SELECT merchant, plan, account_id, status, city, mrr, subscription_kind, billing_cycle, subscription_start, subscription_end, trial_start, trial_end FROM merchant_config',
       'SELECT merchant, plan, account_id, status, city, mrr FROM merchant_config',
       'SELECT merchant, plan, account_id, status FROM merchant_config',
     ]);
@@ -86,6 +89,7 @@ export async function onRequestGet(context) {
       s.accountId = c.account_id || '';
       s.status = c.status || 'active';
       s.subscription_kind = c.subscription_kind || 'paid';
+      s.billing_cycle = c.billing_cycle || 'monthly';
       s.subscription_start = c.subscription_start || '';
       s.subscription_end = c.subscription_end || '';
       s.trial_start = c.trial_start || '';
@@ -212,7 +216,9 @@ export async function onRequestGet(context) {
       const plan = TIER_PRICE[s.plan] ? s.plan : (s.plan === 'ultimate' ? 'ultimate' : (s.plan || ''));
       const agreed = Number.isFinite(s.mrr) && s.mrr > 0 ? s.mrr : null;
       const listed = TIER_PRICE[plan] || null;
-      const amount = agreed != null ? agreed : listed;
+      // L'abonné annuel est compté à son tarif annuel mensualisé, pas au tarif mensuel.
+      const priced = s.billing_cycle === 'annual' && ANNUAL_PRICE[plan] ? ANNUAL_PRICE[plan] : listed;
+      const amount = agreed != null ? agreed : priced;
 
       const key = plan || '·';
       let t = tiers.get(key);
@@ -280,7 +286,7 @@ export async function onRequestGet(context) {
         demoGmv30,
       },
       gmv, series,
-      mrr: { ...mrr, tiers: tierList, prices: TIER_PRICE },
+      mrr: { ...mrr, tiers: tierList, prices: TIER_PRICE, annualPrices: ANNUAL_PRICE },
       cities, untagged,
       top,
     });

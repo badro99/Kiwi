@@ -81,11 +81,11 @@ var SHELL = [
   '/assets/menu-catalog/item-list.js?v=3',
   '/assets/menu-catalog/modifiers.js?v=3',
   '/assets/menu-catalog/state.js?v=14',
-  '/assets/pressing/custody.js?v=23',
-  '/assets/pressing/rack.js?v=22',
-  '/assets/pressing/pickup.js?v=22',
-  '/assets/pressing/workshop.js?v=22',
-  '/assets/pressing/deposit.js?v=22',
+  '/assets/pressing/custody.js?v=24',
+  '/assets/pressing/rack.js?v=23',
+  '/assets/pressing/pickup.js?v=23',
+  '/assets/pressing/workshop.js?v=23',
+  '/assets/pressing/deposit.js?v=23',
   '/assets/hotel/rate-actions.js?v=6',
   '/assets/hotel/folio-actions.js?v=4',
   '/assets/hotel/room-board.js?v=6',
@@ -97,7 +97,7 @@ var SHELL = [
   '/assets/invoicing/print.js?v=8',
   '/assets/invoicing/history.js?v=11',
   '/assets/invoicing/composer.js?v=9',
-  '/assets/invoicing/transport.js?v=11',
+  '/assets/invoicing/transport.js?v=12',
   '/assets/booking-view.js?v=5',
   '/assets/booking-manage.js?v=6',
   '/assets/booking-submission.js?v=15',
@@ -253,7 +253,7 @@ var SHELL = [
   '/assets/loyalty-product-links.js?v=5',
   '/assets/features.js?v=23',
   '/assets/invoicing.css?v=17',
-  '/assets/invoicing.js?v=52',
+  '/assets/invoicing.js?v=53',
   '/assets/order-qr.js?v=6',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
@@ -489,7 +489,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=35',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=33',
-  '/assets/pos-dispatch.js?v=371',
+  '/assets/pos-dispatch.js?v=372',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -628,8 +628,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js?v=17',
-  '/assets/pressing-caisse.js?v=92',
-  '/assets/pressing-caisse.css?v=92',
+  '/assets/pressing-caisse.js?v=93',
+  '/assets/pressing-caisse.css?v=93',
   '/assets/material-icons.js?v=4',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers

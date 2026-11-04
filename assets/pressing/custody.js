@@ -3,10 +3,10 @@
  * rack allocation, numbering, persistence and existing centime calculations.
  * Browser reads: KiwiCaisseLang, KiwiCaissePairing, KiwiCaisseTheme, KiwiClients, KiwiCloudDoc, KiwiConfig, KiwiEnv, KiwiEscPos, KiwiHardware, KiwiPhone, KiwiPlatform, KiwiPosDispatch, KiwiPosSale, KiwiPressing, KiwiPressingCatalog, KiwiPressingGarmentIcons, KiwiPressingOps, KiwiPrinter, KiwiReceipt, KiwiVerticalState, KiwiZoneLaw, __kiwiPinReset, addEventListener, lucide.
  * UI imports below supply factories only; state never enters a window global. */
-import { create as createDeposit } from './deposit.js?v=22';
-import { create as createWorkshop } from './workshop.js?v=22';
-import { create as createPickup } from './pickup.js?v=22';
-import { create as createRack } from './rack.js?v=22';
+import { create as createDeposit } from './deposit.js?v=23';
+import { create as createWorkshop } from './workshop.js?v=23';
+import { create as createPickup } from './pickup.js?v=23';
+import { create as createRack } from './rack.js?v=23';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · PRESSING MODE — the laundry counter app inside kiwi-caisse.html
  * ---------------------------------------------------------------------------
@@ -608,6 +608,11 @@ import { create as createRack } from './rack.js?v=22';
   function lineTotal(ln) {
     return lineUnit(ln) * ln.qty;
   }
+  /* Cash received and what is still owed, in centimes: a running sum of dirhams
+     drifts (10.7 + 0.1 is 10.799999999999999) and then a ticket paid to the
+     centime still shows 0,00 MAD to collect and cannot be handed over. */
+  function addPaid(paid, amount) { return (Math.round((+paid || 0) * 100) + Math.round((+amount || 0) * 100)) / 100; }
+  function balanceDue(total, paid) { return Math.max(0, Math.round(total * 100) - Math.round((+paid || 0) * 100)) / 100; }
   function orderTotals(o) {
     const cents = o.lines.reduce((s, ln) => s + Math.round(lineTotal(ln) * 100), 0);
     // B2B discount stays rounded to the whole dirham (declared policy, see
@@ -1979,10 +1984,10 @@ import { create as createRack } from './rack.js?v=22';
       if (!(Number.isFinite(+amount) && +amount > 0)) { toast('Montant de paiement invalide'); return; }
       if (mode === 'acompte' && !validDeposit(amount, total)) { toast(`Acompte requis entre 10 et ${fmtMAD(total)}`); return; }
       if (settle) {
-        const remaining = Math.max(0, total - order.pay.paid);
+        const remaining = balanceDue(total, order.pay.paid);
         if (!(remaining > 0) || +amount > remaining + 0.009) { toast('Ce solde est déjà encaissé'); return; }
         if (!beginCommit()) return;
-        order.pay.paid += amount;
+        order.pay.paid = addPaid(order.pay.paid, amount);
         order.pay.method = method;
         pressingOps?.save?.('balance-paid');
         /* Le solde du « payer au retrait » est l'argent qui rentre vraiment :

@@ -222,6 +222,15 @@ check('trial and pending contribute no MRR',commercial.mrr.total===0&&commercial
 check('MRR exclusions explained',commercial.mrr.contributions.some(c=>c.status==='trial')&&commercial.mrr.contributions.some(c=>c.status==='pending'));
 db.exec("UPDATE merchant_config SET status='active',subscription_end='2000-01-01' WHERE merchant='shop-b'");
 check('expired paid contract excluded',(await call(overview,'GET')).mrr.total===0);
+/* Console#A0: an annual subscriber is counted at the annual monthly equivalent, not at list monthly price. */
+db.exec("UPDATE merchant_config SET status='active',subscription_kind='paid',subscription_end='',mrr=NULL,billing_cycle='annual' WHERE merchant='shop-a'; UPDATE merchant_config SET status='suspended' WHERE merchant='shop-b'");
+const annual=await call(overview,'GET');
+check('annual Pro subscriber counts 349, not 399',annual.mrr.total===349&&annual.mrr.annualPrices.pro===349);
+db.exec("UPDATE merchant_config SET billing_cycle='monthly' WHERE merchant='shop-a'");
+check('monthly Pro subscriber still counts 399',(await call(overview,'GET')).mrr.total===399);
+db.exec("UPDATE merchant_config SET billing_cycle='annual',mrr=280 WHERE merchant='shop-a'");
+check('an agreed amount still beats the annual price',(await call(overview,'GET')).mrr.total===280);
+db.exec("UPDATE merchant_config SET status='active',subscription_end='2000-01-01',mrr=NULL,billing_cycle='monthly' WHERE merchant IN ('shop-a','shop-b')");
 check('missing plan is not pending access',policy.access({plan:'',store_status:'active'})==='active');
 const signals=policy.signals([{merchant:'shop-a',plan:'',last_ts:now-9*86400000,city:''}],now);
 check('independent signals do not hide each other',['terms','activity','profile'].every(k=>signals.some(s=>s.signal_key===k)));

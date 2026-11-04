@@ -1411,6 +1411,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
      même à chaque rendu. Une courbe qui bouge à chaque clic se lit comme une
      donnée vivante alors qu'elle ne l'est pas. */
   var TIER_PRICE = { basic:150, plus:300, pro:399, ultra:1499 };
+  var ANNUAL_PRICE = { basic:99, plus:249, pro:349 };
   var TIER_ORDER = ['basic','plus','pro','ultra','ultimate'];
   function hash32(s){
     var h = 2166136261;
@@ -1446,7 +1447,8 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
       var plan = (c.plan || '').toLowerCase();
       var listed = TIER_PRICE[plan] || null;
       var agreed = (c.mrr != null && +c.mrr > 0) ? +c.mrr : null;
-      var amount = agreed != null ? agreed : listed;
+      var priced = c.billing_cycle === 'annual' && ANNUAL_PRICE[plan] ? ANNUAL_PRICE[plan] : listed;
+      var amount = agreed != null ? agreed : priced;
       var key = plan || '·';
       var t = tiers[key] || (tiers[key] = { plan:key, stores:0, amount:0, unit:listed, untariffed:0, suspended:0 });
       t.stores++;
@@ -1492,7 +1494,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
              activeToday: real.filter(function(c){ return (c.today_amount||0) > 0; }).length,
              silent7: 0 },
       series: series,
-      mrr: Object.assign(mrr, { tiers:tierList, prices:TIER_PRICE }),
+      mrr: Object.assign(mrr, { tiers:tierList, prices:TIER_PRICE, annualPrices:ANNUAL_PRICE }),
       cities: cities, untagged: untagged, top: top,
     };
   }
@@ -2880,7 +2882,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
     [kind,cycle,subStart,subEnd,trialDays,trialStart,trialEnd].forEach(function(el){el.disabled=noColumn||readOnly;});
 
     var plan = (selected.plan || '').toLowerCase();
-    var listed = TIER_PRICE[plan] || null;
+    var listed = (b.billingCycle === 'annual' && ANNUAL_PRICE[plan]) || TIER_PRICE[plan] || null;
     var vCount = selected.account_venues || 1;
     var vText = vCount > 1 ? (' · ' + window.KiwiAdminI18n.text(vCount + ' établissements')) : '';
     state.textContent = (b.city

@@ -52,7 +52,7 @@ for (const language of ['fr','en','ar']) {
 }
 const transport = modules.transport.createTransport(deps);
 assert.ok(Object.isFrozen(transport));
-assert.deepEqual(Object.keys(transport), ['api','loadCache','saveCache','rows','cursors']);
+assert.deepEqual(Object.keys(transport), ['api','intentKey','intentDone','loadCache','saveCache','rows','cursors']);
 const saved=await transport.api('POST',{action:'save',type:'invoice',customer:{name:'Fixture'},lines:[{description:'Fixture',qty:3,unitHT:12345,discountPct:7,vatRate:20}]});
 assert.equal(saved.doc.totals.ttcCents,deps.computeTotals(saved.doc.lines).ttcCents,'real transport demo keeps centime totals');
 const owner = transport.rows(); transport.loadCache(); assert.equal(transport.rows(),owner,'one stable cache owner');

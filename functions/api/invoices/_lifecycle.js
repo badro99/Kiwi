@@ -1,7 +1,7 @@
 import { json } from '../../auth/_lib.js';
 import { iceProblem, ICE_DETAIL } from '../_ice.js';
 import { PREFIXES, allocateNumber } from '../_invoice-series.js';
-import { fail, str, parseJson, validDay, addDays, changesOf, DOC_TYPES, QUOTE_VALID_DAYS } from './_shared.js';
+import { fail, str, parseJson, validDay, addDays, changesOf, clientKeyOf, keyedId, DOC_TYPES, QUOTE_VALID_DAYS } from './_shared.js';
 import { computeTotals, normCustomer, normLines, normDay, normTerms, normMethod } from './_tax.js';
 import { todayFor, getRow, sumsFor, balanceOf, displayStatus, presentFull, insertStatement, draftRow, CREDITED_SQL, remainingCredit, loadIssuedInvoice, sellerSnapshot } from './_documents.js';
 // Contrat interne : reçoit ctx authentifié et body déjà parsé ; valide et écrit les brouillons et émissions, retourne la Response existante ou lève Fail. Ne lit pas la requête et ne décide pas des droits.
@@ -84,12 +84,29 @@ async function save(ctx, body) {
 
   const now = Date.now();
   if (!existing) {
+    /* Création : une même intention renvoyée (réponse perdue) rend le brouillon
+     * déjà créé au lieu d'en ouvrir un second. */
+    const key = clientKeyOf(body);
+    const keyedDraft = key ? await keyedId('inv_', ctx.merchant, key) : null;
+    const replay = async () => {
+      const prior = await ctx.db.prepare('SELECT id, type FROM invoice_docs WHERE id = ? AND merchant = ?').bind(keyedDraft, ctx.merchant).first();
+      if (!prior) return null;
+      if (prior.type !== type) throw fail(409, 'key-reused', 'Cette clé sert déjà à un autre document.');
+      return json({ ok: true, doc: await presentFull(ctx, await getRow(ctx, prior.id)) });
+    };
+    if (key) { const again = await replay(); if (again) return again; }
     const d = draftRow(ctx, {
+      ...(keyedDraft ? { id: keyedDraft } : {}),
       type, issue_date: issue, due_date: dueDate, terms_days: termsDays, valid_until: valid,
       customer: JSON.stringify(customer), lines: JSON.stringify(lines), totals: JSON.stringify(totals), ttc_cents: totals.ttcCents,
       payment_method: paymentMethod, note, exemption_mention: exemption, internal_note: internalNote,
     });
-    await insertStatement(ctx, d).run();
+    try { await insertStatement(ctx, d).run(); }
+    catch (error) {
+      const again = key ? await replay() : null;
+      if (again) return again;
+      throw error;
+    }
     return json({ ok: true, doc: await presentFull(ctx, await getRow(ctx, d.id)) });
   }
 

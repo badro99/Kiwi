@@ -1,5 +1,5 @@
 import { json } from '../../auth/_lib.js';
-import { fail, str, newId, changesOf, addDays, MAX_DOC_CENTS, PAYMENT_METHODS } from './_shared.js';
+import { fail, str, newId, changesOf, addDays, MAX_DOC_CENTS, PAYMENT_METHODS, clientKeyOf, keyedId } from './_shared.js';
 import { normDay } from './_tax.js';
 import { getRow, todayFor, sumsFor, balanceOf, CREDITED_SQL, presentFull } from './_documents.js';
 // Contrat interne : reçoit ctx authentifié et body parsé ; retourne la Response des règlements avec les mêmes gardes SQL et bornes, ou lève Fail.
@@ -10,6 +10,17 @@ async function payment(ctx, body) {
   const row = await getRow(ctx, body.id);
   if (row.type !== 'invoice') throw fail(400, 'invalid-type', 'Seule une facture se règle.');
   if (row.status === 'draft') throw fail(409, 'not-issued', 'La facture n’est pas émise.');
+  /* Un renvoi de la même intention (réponse perdue) rend le règlement déjà
+   * enregistré, avant tout contrôle du solde : le solde a déjà bougé. */
+  const key = clientKeyOf(body);
+  const id = key ? await keyedId('pay_', ctx.merchant, key) : newId('pay_');
+  const replay = async () => {
+    const prior = await ctx.db.prepare('SELECT doc_id FROM invoice_payments WHERE id = ? AND merchant = ?').bind(id, ctx.merchant).first();
+    if (!prior) return null;
+    if (prior.doc_id !== row.id) throw fail(409, 'key-reused', 'Cette clé sert déjà à un autre règlement.');
+    return paymentResult(ctx, row.id, id);
+  };
+  if (key) { const again = await replay(); if (again) return again; }
   const amount = Number(body.amountCents);
   if (!Number.isInteger(amount) || amount <= 0 || amount > MAX_DOC_CENTS) throw fail(400, 'invalid-amountCents', 'Montant invalide.');
   const today = await todayFor(ctx);
@@ -30,14 +41,20 @@ async function payment(ctx, body) {
 
   // Le contrôle ci-dessus répond au client ; celui-ci tient face à deux
   // règlements simultanés : l'INSERT n'a lieu que si le total reste dans la facture.
-  const id = newId('pay_');
-  const res = await ctx.db.prepare(
+  let res;
+  try { res = await ctx.db.prepare(
     `INSERT INTO invoice_payments (id, merchant, doc_id, amount_cents, date, method, reference, created_ts, created_by)
      SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
       WHERE (SELECT COALESCE(SUM(amount_cents), 0) FROM invoice_payments WHERE merchant = ? AND doc_id = ?) + ? + ${CREDITED_SQL}
             <= (SELECT ttc_cents FROM invoice_docs WHERE id = ? AND merchant = ? AND type = 'invoice' AND status = 'issued')`
   ).bind(id, ctx.merchant, row.id, amount, date, method, str(body.reference, 80), Date.now(), ctx.actor,
-    ctx.merchant, row.id, amount, ctx.merchant, row.id, row.id, ctx.merchant).run();
+    ctx.merchant, row.id, amount, ctx.merchant, row.id, row.id, ctx.merchant).run(); }
+  catch (error) {
+    // Deux envois simultanés de la même clé : le second heurte la clé primaire.
+    const again = key ? await replay() : null;
+    if (again) return again;
+    throw error;
+  }
   if (!changesOf(res)) throw fail(409, 'amount-exceeds-balance', 'Le montant dépasse le solde.');
   return paymentResult(ctx, row.id, id);
 }

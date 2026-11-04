@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: BarcodeDetector, KiwiCaissePairing, KiwiPressingOps, KiwiStaff.
  */
-import { ITEMS, root } from './custody.js?v=23';
+import { ITEMS, root } from './custody.js?v=24';
 export function create(owner) {
   'use strict';
   const { $, $$, COLOR, ORDERS, boardBucket, catalogLabel, closeVeil, custOf, dataText, deliverOrder, esc, findOrder, findScannedOrder, fmtDT, fmtDay, fmtMAD, icons, isLiveOrder, matchesQuery, moveCaretEnd, notifyLine, openDetail, openPay, openVeil, openWa, orderStatus, orderTotals, publicOrderNo, publicPieceNo, queueIfOffline, refreshOps, renderBoard, state, svcCodes, toast } = owner.pickupContext();
@@ -67,7 +67,7 @@ function renderRetrait() {
 function rtCard(o) {
     const c = custOf(o);
     const { total } = orderTotals(o);
-    const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
+    const due = o.pay.mode === 'compte' ? 0 : Math.max(0, Math.round(total * 100) - Math.round((+o.pay.paid || 0) * 100)) / 100;
     const st = orderStatus(o);
     const early = st !== 'pret';
     return `<div class="px-rt-card">

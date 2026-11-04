@@ -832,8 +832,8 @@
     "sha": "a5f4d747cf82cd39"
   },
   "assets/invoicing.js": {
-    "v": "52",
-    "sha": "f8feffdc18dbf409"
+    "v": "53",
+    "sha": "f391bbcf2ee44d96"
   },
   "assets/invoicing/composer.js": {
     "v": "9",
@@ -848,8 +848,8 @@
     "sha": "701c83f0825ccdbe"
   },
   "assets/invoicing/transport.js": {
-    "v": "11",
-    "sha": "e125b6a7a9e429ff"
+    "v": "12",
+    "sha": "45e58f2003965abb"
   },
   "assets/kit/access-reset.js": {
     "v": "1",
@@ -1644,8 +1644,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "371",
-    "sha": "baebef3cd3cc40f4"
+    "v": "372",
+    "sha": "52b01ab166b89064"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1808,12 +1808,12 @@
     "sha": "868b426ef7f5a32f"
   },
   "assets/pressing-caisse.css": {
-    "v": "92",
+    "v": "93",
     "sha": "256a228af6c86444"
   },
   "assets/pressing-caisse.js": {
-    "v": "92",
-    "sha": "c211db601ae402f4"
+    "v": "93",
+    "sha": "bc85b0e5aa74decc"
   },
   "assets/pressing-catalog.css": {
     "v": "6",
@@ -1840,24 +1840,24 @@
     "sha": "0ccb8ccd504e47fd"
   },
   "assets/pressing/custody.js": {
-    "v": "23",
-    "sha": "00fa5e73b3ed8dac"
+    "v": "24",
+    "sha": "b104e51c2e30f184"
   },
   "assets/pressing/deposit.js": {
-    "v": "22",
-    "sha": "7957ae261e2dc84b"
+    "v": "23",
+    "sha": "dc884c4c8185b704"
   },
   "assets/pressing/pickup.js": {
-    "v": "22",
-    "sha": "a24165ef3909bd38"
+    "v": "23",
+    "sha": "fef342f424e28495"
   },
   "assets/pressing/rack.js": {
-    "v": "22",
-    "sha": "f4c4fa012f2fcd7f"
+    "v": "23",
+    "sha": "fe323d91fdc2d638"
   },
   "assets/pressing/workshop.js": {
-    "v": "22",
-    "sha": "e5bc15dd868fb84c"
+    "v": "23",
+    "sha": "51d1c84c87360569"
   },
   "assets/print-paper.css": {
     "v": "1",

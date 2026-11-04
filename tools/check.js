@@ -810,7 +810,7 @@ for (const test of [
   'service-interconnectivity-test.mjs',
   /* Un employé non pointé ne peut écrire ni commande ni paiement : refus serveur. */
   'team-offshift-server-test.mjs',
-  'pressing-split-test.mjs',
+  'pressing-split-test.mjs', 'pressing-balance-cents-test.mjs',
   'pressing-boundary-test.mjs',
   'pressing-numbering-test.mjs',
   'pressing-workspace-test.js', 'pay-statement-test.mjs',
@@ -2402,7 +2402,7 @@ section('Whole-project regressions');
     'invoice-series-year-test.mjs', 'money-server-paths-test.mjs', 'returns-watch-lifecycle-test.mjs',
     'sale-invoice-cache-key-test.mjs',
     /* Facturation v2 : le serveur (numéros, totaux, verrou, avoirs, accès). */
-    'invoices-v2-test.mjs',
+    'invoices-v2-test.mjs', 'invoice-idempotency-test.mjs',
     'net-wave-p-test.mjs',
     'fetch-deadline-test.mjs',
     'invoices-split-test.mjs',

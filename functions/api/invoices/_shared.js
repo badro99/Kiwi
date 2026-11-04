@@ -73,7 +73,25 @@ function newId(prefix) {
   return prefix + btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+/* Clé d'intention posée par le client : une même intention renvoyée après une
+ * réponse perdue retombe sur le même identifiant, donc sur la même ligne. La clé
+ * est liée au magasin (deux magasins ne se heurtent pas) ; l'identifiant sert
+ * lui-même de clé unique, sans colonne ni migration. */
+const CLIENT_KEY_RE = /^[A-Za-z0-9_-]{8,64}$/;
+function clientKeyOf(body) {
+  const raw = body && body.clientKey;
+  if (raw == null || raw === '') return null;
+  if (typeof raw !== 'string' || !CLIENT_KEY_RE.test(raw)) throw fail(400, 'invalid-clientKey', 'Clé d’idempotence invalide.');
+  return raw;
+}
+async function keyedId(prefix, merchant, key) {
+  const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(merchant + '\n' + key)));
+  let hex = '';
+  for (let i = 0; i < 12; i++) hex += bytes[i].toString(16).padStart(2, '0');
+  return prefix + hex;
+}
+
 const changesOf = (res) => Number(res && res.meta && res.meta.changes) || 0;
 
 
-export { MAX_LINES, MAX_LIST, MAX_IMPORT, MAX_BODY, MAX_DOC_CENTS, MAX_UNIT_CENTS, MAX_QTY, QUOTE_VALID_DAYS, CHUNK, DAY_RE, Fail, fail, failResponse, str, parseJson, validDay, addDays, todayIn, newId, changesOf };
+export { MAX_LINES, MAX_LIST, MAX_IMPORT, MAX_BODY, MAX_DOC_CENTS, MAX_UNIT_CENTS, MAX_QTY, QUOTE_VALID_DAYS, CHUNK, DAY_RE, Fail, fail, failResponse, str, parseJson, validDay, addDays, todayIn, newId, changesOf, clientKeyOf, keyedId };

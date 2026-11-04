@@ -9,6 +9,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const endpoint = await import(pathToFileURL(path.join(ROOT, 'functions/api/store.js')));
 const { onRequestGet: getStore, onRequestPost: postStore } = endpoint;
 const { tillToken, TILL_COOKIE, makeSession, sessionCookie, DEMO_MERCHANTS } = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')));
+const { badPromotion } = await import(pathToFileURL(path.join(ROOT, 'functions/api/_promotions-doc.js')));
 const SHOP = 'fixture-promotions-shop';
 const OTHER = 'fixture-promotions-other';
 const AUTH_SECRET = 'local-promotions-contract-fixture-only';
@@ -116,6 +117,18 @@ try {
   A.tick(); A.api.remove('fixture-promo');
   const removed = A.read();
   check('actual remove emits tombstone-only nonempty cloud document', removed.promos.length === 0 && removed.deleted.length === 1 && !A.doc.isEmpty(removed));
+  /* The server does not trust the client's normalisation (promos#A0). */
+  const good = { id: 'bad-probe', name: 'probe', kind: 'percent', value: 20, scope: { type: 'tout' }, from: 0, to: 0, days: [], start: '', end: '', paused: false, createdAt: 1, updatedAt: 1 };
+  for (const [label, patch] of [
+    ['a percent above 100', { kind: 'percent', value: 250 }], ['an unknown kind', { kind: 'free' }],
+    ['a negative value', { value: -5 }], ['a non-numeric value', { value: '20' }],
+    ['an unknown scope', { scope: { type: 'everything' } }], ['a window that ends before it starts', { from: 2000, to: 1000 }],
+    ['a non-numeric date', { from: 'soon' }],
+  ]) {
+    const refused = await request('POST', { v: 1, promos: [{ ...good, ...patch }], deleted: [] }, { cookie: owner, baseRev: 3 });
+    check('server refuses ' + label, refused.status === 400 && refused.body.error === 'bad-promotion' && refused.body.why === badPromotion({ promos: [{ ...good, ...patch }] }));
+  }
+  check('refused promotions left the stored revision untouched', (await request('GET')).body.rev === 3);
   response = await request('POST', removed, { cookie: owner, baseRev: 3 });
   check('tombstone-only deletion accepted, not refused-empty', response.status === 200 && response.body.rev === 4);
   response = await request('GET');

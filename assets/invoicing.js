@@ -17,7 +17,7 @@
   window.Kiwi.handlers['invoicing'] = openWhenReady;
   window.KiwiInvoicing = {open: openWhenReady, list: () => [], version: '2.0.0'};
   const ready = Promise.all([
-  import('./invoicing/transport.js?v=11'),
+  import('./invoicing/transport.js?v=12'),
   import('./invoicing/composer.js?v=9'),
   import('./invoicing/history.js?v=11'),
   import('./invoicing/print.js?v=8'),
@@ -755,7 +755,9 @@
       /* Un document émis ne se réécrit pas : seul un devis reste modifiable. */
       let doc, issuedRes = null;
       if (!(cmp.id && cmp.status !== 'draft' && cmp.type !== 'quote')) {
-        const res = await api('POST', Object.assign({action: 'save'}, p));
+        const scope = 'draft:' + cmp.type, fresh = !cmp.id;
+        const res = await api('POST', Object.assign({action: 'save'}, p, fresh ? {clientKey: transport.intentKey(scope, JSON.stringify(p))} : {}));
+        if (fresh) transport.intentDone(scope);
         doc = normDoc(docFrom(res)); cmp.id = doc.id; cmp.status = doc.status;
       }
       if (thenIssue) {
@@ -914,7 +916,10 @@
         const cents = toCents(v.amount);
         if (cents <= 0) throw textError(t.payInvalid);
         if (cents > detail.balanceCents) throw textError(t.errExceeds);
-        await post({action: 'payment', id: doc.id, amountCents: cents, date: v.date || today(), method: v.method, reference: v.reference.trim()});
+        const pay = {action: 'payment', id: doc.id, amountCents: cents, date: v.date || today(), method: v.method, reference: v.reference.trim()};
+        const scope = 'pay:' + doc.id;
+        await post(Object.assign({clientKey: transport.intentKey(scope, JSON.stringify(pay))}, pay));
+        transport.intentDone(scope);
         return true;
       },
     });

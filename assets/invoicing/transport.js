@@ -42,7 +42,10 @@ async function api(method, payload) {
       throw e;
     }
     let data = null;
-    try { data = await res.json(); } catch (_) { if (method !== 'GET' && res.ok) throw apiError('timeout'); }
+    try { data = await res.json(); } catch (_) {
+      // A 2xx whose body cannot be read: the write was probably committed, so the retry must be safe (owner ruling 2026-11-04).
+      if (method !== 'GET' && res.ok) { const e = apiError('timeout'); e.uncertainCommit = true; throw e; }
+    }
     if (!res.ok || !data || data.ok === false || data.error) {
       throw apiError(data?.error || (res.status === 401 ? 'unauthorized' : res.status === 403 ? 'forbidden' : res.status === 404 ? 'not-found' : 'server'), data?.message, res.status);
     }
@@ -221,5 +224,19 @@ function loadCache() {
 
 function saveCache() { if (ownData()) lsSet(cacheKey(), JSON.stringify({ts: Date.now(), docs: cache})); }
 
-return Object.freeze({api, loadCache, saveCache, rows: () => cache, cursors: () => nextCursor});
+/* One stable key per write intent: it survives retries of the same payload (so the
+ * server answers the row it already booked) and changes as soon as the payload does. */
+const intents = new Map();
+
+function intentKey(scope, signature) {
+    const held = intents.get(scope);
+    if (held && held.signature === signature) return held.key;
+    const key = 'k' + globalThis.crypto.randomUUID();
+    intents.set(scope, {signature, key});
+    return key;
+  }
+
+function intentDone(scope) { intents.delete(scope); }
+
+return Object.freeze({api, intentKey, intentDone, loadCache, saveCache, rows: () => cache, cursors: () => nextCursor});
 }

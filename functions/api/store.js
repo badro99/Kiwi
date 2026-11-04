@@ -40,7 +40,7 @@ import { hideReservations, keepReservations } from './_reservations-view.js';
 // Toujours « fail-soft » : pas de D1, pas de table (migration pas passée),
 // erreur base — 200 neutre en lecture, 503 en écriture. Le client garde sa copie
 // locale et retentera. Un serveur qui tousse ne doit jamais coûter une donnée.
-
+import { badPromotion } from './_promotions-doc.js';
 import { cleanGuestDoc } from './order/_guest.js';
 import { cleanStorefront, STOREFRONT_FEATURE } from './shop/_settings.js';
 import { validateMonthReportPolicy } from './_month-report-policy.js';
@@ -69,7 +69,6 @@ import { archiveFromSnapshot, isArchivable } from './_pressing-archive.js';
 import { preservePressingCancellations, validatePressingSnapshot } from './_pressing-snapshot.js';
 import { validateHubClaim } from './print/_hub-lease.js';
 import { validateRoomsDocument } from './hotel/_rooms.js';
-
 /* Les fonctionnalités qui ont le droit d'exister ici, et ce qu'on sait de leur
  * forme. La liste est FERMÉE : sans elle, n'importe quel client authentifié
  * pourrait semer autant de lignes qu'il veut sous des noms inventés. Ajouter une
@@ -878,6 +877,7 @@ export async function onRequestPost(context) {
   // silencieusement le vrai. Un document honnêtement vide (le commerçant a tout
   // supprimé) porte quand même ses clés, donc il passe.
   if (!shapeOk(feature, raw)) return json({ error: 'shape-mismatch', expected: feature }, 409);
+  if (feature === 'promotions' && badPromotion(raw)) return json({ error: 'bad-promotion', why: badPromotion(raw) }, 400);
   if (feature === 'discountpolicy') {
     const p = raw.percentages;
     if (!Array.isArray(p) || p.length < 1 || p.length > 8
