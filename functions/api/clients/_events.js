@@ -75,6 +75,7 @@ export function createClientEvents({ str, money, resolveClientId, clientCursorSt
     const method = str(purchase.method, 32);
     const saleRef = str(purchase.saleRef || purchase.sale_ref, 80);
     const items = JSON.stringify((Array.isArray(purchase.items) ? purchase.items : []).slice(0, 100).map((item) => ({
+      ...(item && item.unit ? { unit: str(item.unit, 24) } : {}),
       name: str(item && item.name, 120), qty: Math.max(0, Math.min(100000, Math.round((Number(item && item.qty) || 0) * 1000) / 1000)), total: money(item && item.total, 1e9),
       ...(item && (item.id || item.itemId || item.pid) ? { id: str(item.id || item.itemId || item.pid, 80) } : {}),
     })));
@@ -184,6 +185,7 @@ export function createClientEvents({ str, money, resolveClientId, clientCursorSt
     const amount = money(refund.amount, 1e9);
     const saleRef = str(refund.saleRef || refund.sale_ref, 80);
     const items = JSON.stringify((Array.isArray(refund.items) ? refund.items : []).slice(0, 100).map((item) => ({
+      ...(item && item.unit ? { unit: str(item.unit, 24) } : {}),
       name: str(item && item.name, 120), qty: Math.max(0, Math.min(100000, Math.round((Number(item && item.qty) || 0) * 1000) / 1000)), total: money(item && item.total, 1e9),
       ...(item && (item.id || item.itemId || item.pid) ? { id: str(item.id || item.itemId || item.pid, 80) } : {}),
     })));

@@ -254,7 +254,7 @@
     openKpiCustomizer: { get: () => openKpiCustomizer },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/daterange/renderers.js?v=37';
+  const partUrl = 'assets/daterange/renderers.js?v=38';
   function installPart() {
     if (!partFunctions && window.__kiwiDateRangeParts) partFunctions = window.__kiwiDateRangeParts(partState);
     return partFunctions;

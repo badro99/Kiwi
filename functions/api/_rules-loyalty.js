@@ -9,14 +9,15 @@ export const qualifyingQty = (cfg, items) => { // linked products by id (renames
   if (!want && !ids.length) return 0;
   return (Array.isArray(items) ? items : []).reduce((n, item) => {
     const name = ' ' + foldName(item && item.name) + ' ', key = String(item && (item.id || item.itemId || item.pid) || '');
-    return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + want + ' ')) ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
+    const qty = Math.max(0, Number(item && item.qty) || 0), weighed = /^(weigh|kg|g|l|ml)$/i.test(String(item && item.unit || ''));
+    return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + want + ' ')) ? n + (weighed ? Number(qty > 0) : Math.floor(qty)) : n;
   }, 0);
 }
 export const stampsFor = (cfg, items) => {
   if (!loyaltyOn(cfg)) return 0;
   if (cfg.model === 'visit') return 1;
   if (cfg.model !== 'product') return 0;
-  return Array.isArray(items) && items.length ? qualifyingQty(cfg, items) : 1;
+  return qualifyingQty(cfg, items);
 }
 export const refundFor = (sale, amount, cfg, items, client) => {
   const paid = Number(sale && sale.paid || 0), earned = Number(sale && sale.earned || 0);

@@ -93,14 +93,18 @@ console.log('\nCarte produit : un tampon par article choisi, pas par passage');
   await s.post({ purchase: { clientId: 'c1', ref: 'p:3', amount: 60, saleRef: 'T3', items: [{ name: 'Décaféiné', qty: 5, total: 60 }] } });
   check(Number(s.row().stamps) === 3, '« Décaféiné » is not « Café »: matching is by whole word');
   await s.post({ purchase: { clientId: 'c1', ref: 'p:4', amount: 0 } });
-  check(Number(s.row().stamps) === 4, 'a visit recorded by hand, with no lines, still earns one stamp');
+  // Owner ruling docs/decisions/2026-11-04-owner-delegated.md:14, product evidence required.
+  check(Number(s.row().stamps) === 3, 'a manual product purchase without lines earns no product stamp');
 
   let r = await s.post({ refund: { clientId: 'c1', ref: 'refund:c1:r1', amount: 12, saleRef: 'T2', items: [{ name: 'Café noir', qty: 1, total: 12 }] } });
-  check(r.status === 200 && Number(s.row().stamps) === 3, 'returning one « Café noir » takes back one stamp');
+  // Owner ruling docs/decisions/2026-11-04-owner-delegated.md:14, no extra manual stamp.
+  check(r.status === 200 && Number(s.row().stamps) === 2, 'returning one « Café noir » takes back one stamp');
   r = await s.post({ refund: { clientId: 'c1', ref: 'refund:c1:r2', amount: 24, saleRef: 'T2', items: [{ name: 'Café noir', qty: 5, total: 24 }] } });
-  check(Number(s.row().stamps) === 1, 'a return never takes back more stamps than that ticket earned (3 earned, 3 taken in all)');
+  // Owner ruling docs/decisions/2026-11-04-owner-delegated.md:14.
+  check(Number(s.row().stamps) === 0, 'a return never takes back more stamps than that ticket earned (3 earned, 3 taken in all)');
   r = await s.post({ refund: { clientId: 'c1', ref: 'refund:c1:r2', amount: 24, saleRef: 'T2', items: [{ name: 'Café noir', qty: 5, total: 24 }] } });
-  check(Number(s.row().stamps) === 1, 'a replayed return applies once');
+  // Owner ruling docs/decisions/2026-11-04-owner-delegated.md:14.
+  check(Number(s.row().stamps) === 0, 'a replayed return applies once');
 }
 
 {

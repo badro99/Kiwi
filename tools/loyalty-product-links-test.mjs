@@ -53,6 +53,8 @@ const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].s
 {
   const many = Array.from({ length: 260 }, (_, i) => ({ id: 'p' + i, name: 'Café ' + i }));
   const { L } = realm({ menu: many });
-  ok(L.linkedIds('café', null).length === L.MAX_IDS && L.MAX_IDS === 200, 'the list stops at 200 ids');
+  // Owner ruling docs/decisions/2026-11-04-owner-delegated.md:16, never truncate links.
+  ok(L.linkedIds('café', null).length === 260 && L.MAX_IDS === 2000, 'all 260 links survive below the new 2000 cap');
+  ok(L.linkedIds('café', null, Array.from({length: 2001}, (_, i) => ({id: String(i + 1), name: 'Café'}))).length === 2001, 'overflow stays visible to the save guard');
 }
 console.log(`\n✓ loyalty-product-links-test · ${checks} checks`);

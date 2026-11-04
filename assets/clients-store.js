@@ -440,14 +440,15 @@
       if (!want && !ids.length) return 0;
       return (Array.isArray(items) ? items : []).reduce((n, item) => {
         const name = ' ' + foldName(item && item.name) + ' ', key = String(item && (item.id || item.itemId || item.pid) || '');
-        return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + want + ' ')) ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
+        const qty = Math.max(0, Number(item && item.qty) || 0), weighed = /^(weigh|kg|g|l|ml)$/i.test(String(item && item.unit || ''));
+        return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + want + ' ')) ? n + (weighed ? Number(qty > 0) : Math.floor(qty)) : n;
       }, 0);
     }
     const stampsFor = (cfg, items) => {
       if (!loyaltyOn(cfg)) return 0;
       if (cfg.model === 'visit') return 1;
       if (cfg.model !== 'product') return 0;
-      return Array.isArray(items) && items.length ? qualifyingQty(cfg, items) : 1;
+      return qualifyingQty(cfg, items);
     }
     const refundFor = (sale, amount, cfg, items, client) => {
       const paid = Number(sale && sale.paid || 0), earned = Number(sale && sale.earned || 0);
@@ -504,7 +505,7 @@
       ref: saleRef, ts: +opts.createdAt || now(), amount,
       method: String(opts.method || '').slice(0, 32),
       items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
-        var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); return row;
+        var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); if (item && item.unit) row.unit = String(item.unit).slice(0, 24); return row;
       }),
     };
     rec.history = [detail].concat(rec.history.filter(function (row) {
@@ -584,7 +585,7 @@
     var event = { kind: 'refund', ref: ref, clientId: id, amount: -amount, points: -claw, stamps: -unstamp, visits: 0,
       spend: -take, created: rec.updated, method: 'retour', saleRef: saleRef,
       items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
-        var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); return row;
+        var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); if (item && item.unit) row.unit = String(item.unit).slice(0, 24); return row;
       }) };
     purchaseAdd(book, event);
     purchasePush(book, event);

@@ -895,9 +895,8 @@
 
   function openDetail(id) {
     var c = KC.get(id); if (!c) { renderList(); return; }
-    var cfg = KC.config();
-    var seg = KC.segment(c);
-    var prog = Math.max(0, Math.min(1, Number(KC.progress(c, cfg)) || 0));
+    var cfg = KC.config(); var products = cfg.model === 'product' ? (cfg.product.ids && cfg.product.ids.length ? cfg.product.ids : ['']).map(function (id) { return { id: id, name: cfg.product.item }; }) : [];
+    var seg = KC.segment(c); var prog = Math.max(0, Math.min(1, Number(KC.progress(c, cfg)) || 0));
     var rewardReady = prog >= 1;
     var progTxt, recordBlock;
     if (cfg.model === 'amount') {
@@ -911,7 +910,7 @@
       // L'unité dans son propre nœud : « visites » se traduit, « cafés » (mot du
       // commerçant) traverse — le balayage ne voit qu'un mot à la fois.
       progTxt = (c.stamps || 0) + ' / ' + target + ' <span>' + esc(unit) + (target > 1 ? 's' : '') + '</span>';
-      recordBlock = '<div class="kcb-record"><div class="rl">Ajouter un tampon</div><div class="kcb-recrow">' +
+      recordBlock = '<div class="kcb-record">' + (cfg.model === 'product' ? '<select id="kcb-product" aria-label="' + esc(tr('Article')) + '"><option value="">' + esc(tr('Sélectionne un article')) + '</option>' + products.map(function (p, i) { return '<option value="' + i + '">' + esc(p.name) + (p.id ? ' · ' + esc(p.id) : '') + '</option>'; }).join('') + '</select>' : '') + '<div class="rl">Ajouter un tampon</div><div class="kcb-recrow">' +
         '<button class="kcb-big" id="kcb-rec" style="flex:1;justify-content:center">' + ICON.plus + '+ 1 <span>' + esc(unit) + '</span></button></div></div>';
     }
     var infoRows = [];
@@ -1055,7 +1054,8 @@
         var inp = sh.querySelector('#kcb-amt'); amt = parseInt(String(inp.value).replace(/\D/g, ''), 10) || 0;
         if (amt <= 0) { toast('Saisissez un montant'); inp.focus(); return; }
       }
-      var res = KC.recordPurchase(c.id, { amount: amt, visit: 1 });
+      var pick = sh.querySelector('#kcb-product'), product = pick && pick.value !== '' ? products[Number(pick.value)] : null;
+      if (cfg.model === 'product' && !product) { toast(tr('Sélectionne un article')); return; } var res = KC.recordPurchase(c.id, { amount: amt, visit: 1, items: product ? [{ id: product.id, name: product.name, qty: 1, total: 0, unit: product.unit }] : [] });
       renderList(); ensureChip();
       openDetail(c.id); // re-render with new totals
       toast('Achat enregistré', res && res.rewardReady ? '🎁 Récompense atteinte !' : (amt ? fmt(amt) + ' MAD' : '+1 tampon'));
