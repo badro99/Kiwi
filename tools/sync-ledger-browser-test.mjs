@@ -351,6 +351,7 @@ async function setClock(page, atMs) {
     D.parse = Real.parse; D.UTC = Real.UTC;
     Object.setPrototypeOf(D, Real);
     window.Date = D;
+    if (typeof Headers === "undefined") return;
     const headerGet = Headers.prototype.get;
     Headers.prototype.get = function (name) {
       const value = headerGet.call(this, name);
