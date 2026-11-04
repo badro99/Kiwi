@@ -88,7 +88,13 @@ CREATE TABLE IF NOT EXISTS sales (
   -- remboursements et encaissements de livraison (autres routes). Le Z d'une
   -- caisse ne certifie que les reçus 'till:<son appareil>' : tout le reste reste
   -- une information (z-reconciliation.js), jamais une fausse alerte.
-  written_by  TEXT
+  written_by  TEXT,
+
+  -- La cliente de la vente : l'id de sa fiche du carnet (clients.id), envoyé par la
+  -- caisse. NULL pour toute vente écrite avant cette colonne : l'écran dit
+  -- « client non renseigné ». Un avoir émis contre une vente importée retrouve
+  -- ainsi la bonne fiche.
+  client_id   TEXT
 );
 
 -- Atomic invalidations for every sales mutation, including rowid reuse.
@@ -940,6 +946,7 @@ CREATE TABLE IF NOT EXISTS clients (
   srv_ts        INTEGER NOT NULL DEFAULT 0,  -- horloge SERVEUR → curseur
   deleted       INTEGER NOT NULL DEFAULT 0,
   tags          TEXT NOT NULL DEFAULT '[]', -- étiquettes du carnet (JSON, « vip », « grossiste »…)
+  spend_cents   INTEGER,                    -- dépense en centimes entiers ; lue seule, `spend` reste écrite pendant la transition (NULL = ancienne ligne, retombe sur spend)
   PRIMARY KEY (merchant, id)
 );
 -- Le seul parcours de lecture : « WHERE merchant = ? AND srv_ts > ? ORDER BY srv_ts ».

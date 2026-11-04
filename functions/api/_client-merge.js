@@ -2,6 +2,7 @@
 // legacy opening totals remain intact, only identified duplicate events subtract.
 import { json, activeAccountSession, activeEmployee } from '../auth/_lib.js';
 import { storeOwner } from './_private.js';
+import { spendCentsOf, toCents } from './_spend-cents.js';
 
 export async function mayMergeClients(request, env, merchant) {
   const session = await activeAccountSession(request, env);
@@ -61,6 +62,8 @@ export async function mergeClients(env, merchant, raw, helpers) {
     set.hospitality = JSON.stringify(hospitality);
     for (const key of ['points','stamps','visits','spend']) set[key] = Math.max(0, Number(target[key]) + Number(source[key]) - subtract[key === 'spend' ? 'amount' : key]);
     set.spend = Math.round(set.spend * 100) / 100;
+    // The integer column is merged in centimes, never re-derived from the float.
+    set.spend_cents = Math.max(0, spendCentsOf(target) + spendCentsOf(source) - toCents(subtract.amount));
     set.first_seen = Math.min(...[source.first_seen, target.first_seen].filter(n => n > 0)) || 0;
     if (!Number.isFinite(set.first_seen)) set.first_seen = 0;
     set.last_seen = Math.max(source.last_seen, target.last_seen);

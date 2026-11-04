@@ -1,6 +1,7 @@
 import { json, activeServiceEmployee } from '../auth/_lib.js';
 import { phoneKey } from './_phone.js';
 import { nextSrvTs, resolveClientId } from './clients.js';
+import { SPEND_CENTS_SQL, toCents, spendCentsOf } from './_spend-cents.js';
 
 /* Un encaissement de salle ne dépasse pas ces bornes. Elles ne remplacent pas le
  * lien avec une vente (voir plus bas), elles empêchent seulement qu'un appel
@@ -37,10 +38,13 @@ export async function onRequestGet({ request, env }) {
   const phone = phoneKey(rawQ);
   if (!phone || !/^(?:212[5-7]\d{8}|\d{10,15})$/.test(phone)) return json({ ok: true, clients: [] });
   try {
-    const rows = await env.DB.prepare(`SELECT id, name, phone, points, stamps, visits, spend
-      FROM clients WHERE merchant = ? AND deleted = 0 AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '.', ''), '-', ''), '(', ''), ')', '') LIKE ?
+    const rows = await env.DB.prepare(`SELECT * FROM clients WHERE merchant = ? AND deleted = 0 AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '.', ''), '-', ''), '(', ''), ')', '') LIKE ?
       ORDER BY last_seen DESC, id LIMIT 50`).bind(employee.merchant, '%' + phone.slice(-8)).all();
-    return json({ ok: true, clients: (rows.results || []).filter(row => phoneKey(row.phone) === phone).slice(0, 1) });
+    // Only cents are read; `spend` stays the same field name, derived from them.
+    const seen = (rows.results || []).filter(row => phoneKey(row.phone) === phone).slice(0, 1)
+      .map(row => ({ id: row.id, name: row.name, phone: row.phone, points: row.points, stamps: row.stamps,
+        visits: row.visits, spend: spendCentsOf(row) / 100, spend_cents: spendCentsOf(row) }));
+    return json({ ok: true, clients: seen });
   } catch (_) { return json({ ok: true, clients: [], unmigrated: true }); }
 }
 
@@ -109,11 +113,11 @@ export async function onRequestPost({ request, env }) {
     const now = Date.now();
     const srv = await nextSrvTs(env, employee.merchant);
     const statements = [env.DB.prepare(`UPDATE clients SET points = points + ?, stamps = stamps + ?,
-      visits = visits + 1, spend = spend + ?, last_seen = ?, updated_ts = ?, srv_ts = ?
+      visits = visits + 1, spend = spend + ?, spend_cents = ${SPEND_CENTS_SQL} + ?, last_seen = ?, updated_ts = ?, srv_ts = ?
       WHERE merchant = ? AND id = ? AND deleted = 0
         AND NOT EXISTS (SELECT 1 FROM employee_loyalty_events WHERE merchant = ? AND ref = ?)
         AND (? = '' OR EXISTS (SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND void_ts IS NULL))`)
-      .bind(points, stamps, spend, now, now, srv, employee.merchant, id, employee.merchant, ref, saleId, employee.merchant, saleId),
+      .bind(points, stamps, spend, toCents(spend), now, now, srv, employee.merchant, id, employee.merchant, ref, saleId, employee.merchant, saleId),
     env.DB.prepare(`INSERT OR IGNORE INTO employee_loyalty_events
       (merchant, ref, client_id, amount, created_ts)
       SELECT ?, ?, ?, ?, ?

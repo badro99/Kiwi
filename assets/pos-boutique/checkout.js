@@ -1,6 +1,6 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=278';
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=175';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=175';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=279';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=176';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=176';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import '../money-cents.js?v=4';
 import { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=9';
@@ -166,7 +166,7 @@ const M = globalThis.KiwiMoney;
         <span class="bq-pill ${s.kind === 'echange' ? 'warn' : 'ok'}">${s.kind === 'echange' ? 'échange' : esc(s.methods)}</span>
         ${hasRet ? '<span class="bq-pill warn">retour</span>' : ''}
         ${s.kind === 'acompte' ? '<span class="bq-pill warn">Acompte · retour suspendu, contacter le responsable</span>' : ''}
-        <span class="bq-sale-who"><i data-lucide="${c ? 'user' : 'users'}"></i>${c ? esc(c.name) : 'Cliente de passage'} · ${fmtMAD(s.total)}</span>
+        <span class="bq-sale-who"><i data-lucide="${c ? 'user' : 'users'}"></i>${c ? esc(c.name) : (s.remote && !s.clientId ? 'Client non renseigné' : 'Cliente de passage')} · ${fmtMAD(s.total)}</span>
       </div>
       <div class="bq-sale-lines">
         ${s.lines.map((l, i) => {
@@ -424,7 +424,7 @@ const M = globalThis.KiwiMoney;
     el.innerHTML = `
       <button class="bq-modal-x" data-bq-close aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Fermer')}"><i data-lucide="x"></i></button>
       <h3 class="modal-title">Échange, ${sale.id}</h3>
-      <p class="modal-subtle">${c ? esc(c.name) : 'Cliente de passage'} · la pièce rendue repart en stock</p>
+      <p class="modal-subtle">${c ? esc(c.name) : (sale.remote && !sale.clientId ? 'Client non renseigné' : 'Cliente de passage')} · la pièce rendue repart en stock</p>
       <div class="bq-exch-row is-ret">
         <span class="bq-line-art">${artOf(oldP)}</span>
         <span class="mid"><b>${esc(oldP.name)}</b><span>retour · ${esc(ln.size)} · ${colorDot(ln.color)} ${esc(colorLabel(ln.color))}${ln.remise ? ` · payé avec −${ln.remise} %` : ''}</span></span>

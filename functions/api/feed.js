@@ -481,6 +481,18 @@ export async function onRequestGet({ request, env }) {
       const byId = new Map((tips.results || []).map(row => [String(row.id), Math.round(Number(row.tip_cents))]));
       detailRows.forEach(row => { const t = byId.get(String(row.id)); if (Number.isSafeInteger(t) && t > 0) row.tipCents = t; });
     } catch (_) { /* Old schema without tip_cents. */ }
+    /* La cliente de la vente (sales.client_id, migrations/0021) : l'id de sa fiche,
+       pour qu'une vente relue d'une autre tablette garde son client. Colonne absente
+       ou ligne ancienne : pas de champ, l'écran dit « client non renseigné ». */
+    try {
+      const ids = detailRows.map(row => String(row.id || '')).filter(Boolean);
+      const marks = ids.map(() => '?').join(',');
+      const owners = await env.DB.prepare(
+        `SELECT id, client_id FROM sales WHERE merchant IN (?, ?) AND id IN (${marks}) AND client_id IS NOT NULL AND client_id <> ''`
+      ).bind(merchant, legacy || merchant, ...ids).all();
+      const byId = new Map((owners.results || []).map(row => [String(row.id), String(row.client_id)]));
+      detailRows.forEach(row => { const c = byId.get(String(row.id)); if (c) row.clientId = c; });
+    } catch (_) { /* Old schema without sales.client_id. */ }
   }
 
   /* Restaurant sales use the visit id as their durable payment identity. Join

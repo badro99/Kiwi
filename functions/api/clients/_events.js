@@ -3,6 +3,7 @@ import { json } from '../../auth/_lib.js';
 import { loyaltyOn, pointsFor, stampsFor, refundFor } from '../_rules-loyalty.js';
 import { refuseReward } from '../_client-audit.js';
 import { purchaseKey, purchaseKeySql } from '../_client-merge.js';
+import { SPEND_CENTS_SQL, toCents } from '../_spend-cents.js';
 
 export function createClientEvents({ str, money, resolveClientId, clientCursorStatements, clientCursorSql, missingEventTable }) {
   /* L'argent réellement reçu pour une vente, lu dans le livre des ventes et non
@@ -143,11 +144,11 @@ export function createClientEvents({ str, money, resolveClientId, clientCursorSt
     const results = await env.DB.batch([
       ...clientCursorStatements(env, merchant, now),
       env.DB.prepare(`UPDATE clients SET points = points + ?, stamps = stamps + ?,
-      visits = visits + ?, spend = spend + ?, first_seen = CASE WHEN first_seen > 0 THEN first_seen ELSE ? END,
+      visits = visits + ?, spend = spend + ?, spend_cents = ${SPEND_CENTS_SQL} + ?, first_seen = CASE WHEN first_seen > 0 THEN first_seen ELSE ? END,
       last_seen = ?, updated_ts = ?, srv_ts = ${cursor}
       WHERE merchant = ? AND id = ? AND deleted = 0 AND srv_ts = ?
         AND NOT EXISTS (SELECT 1 FROM client_purchase_events WHERE merchant = ? AND ref = ?)`)
-        .bind(points, stamps, visits, spend, now, now, now, merchant, merchant, clientId, client.srv_ts, merchant, ref),
+        .bind(points, stamps, visits, spend, toCents(spend), now, now, now, merchant, merchant, clientId, client.srv_ts, merchant, ref),
       env.DB.prepare(`INSERT OR IGNORE INTO client_purchase_events
       (merchant, ref, client_id, amount, points, stamps, visits, created_ts, srv_ts, method, items, sale_ref)
       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ${cursor}, ?, ?, ? WHERE changes() > 0`)
@@ -225,12 +226,12 @@ export function createClientEvents({ str, money, resolveClientId, clientCursorSt
     const results = await env.DB.batch([
       ...clientCursorStatements(env, merchant, now),
       env.DB.prepare(`UPDATE clients SET points = points - ?, stamps = stamps - ?,
-      spend = MAX(0, spend - ?), updated_ts = ?, srv_ts = ${cursor}
+      spend = MAX(0, spend - ?), spend_cents = MAX(0, ${SPEND_CENTS_SQL} - ?), updated_ts = ?, srv_ts = ${cursor}
       WHERE merchant = ? AND id = ? AND deleted = 0 AND points >= ? AND stamps >= ?
         AND NOT EXISTS (SELECT 1 FROM client_purchase_events WHERE merchant = ? AND ref = ?)
         AND ROUND(COALESCE((SELECT -SUM(amount) FROM client_purchase_events
           WHERE merchant = ? AND client_id = ? AND sale_ref = ? AND ref LIKE 'refund:%'), 0) * 100) = ?`)
-        .bind(pointsTake, stampsTake, take, now, merchant, merchant, clientId, pointsTake, stampsTake, merchant, ref,
+        .bind(pointsTake, stampsTake, take, toCents(take), now, merchant, merchant, clientId, pointsTake, stampsTake, merchant, ref,
           merchant, clientId, saleRef, Math.round(Number(sale && sale.refunded || 0) * 100)),
       env.DB.prepare(`INSERT OR IGNORE INTO client_purchase_events
       (merchant, ref, client_id, amount, points, stamps, visits, created_ts, srv_ts, method, items, sale_ref)
@@ -334,11 +335,11 @@ export function createClientEvents({ str, money, resolveClientId, clientCursorSt
         const now = Date.now();
         const results = await env.DB.batch([
           ...clientCursorStatements(env, merchant, now),
-          env.DB.prepare(`UPDATE clients SET points = points + ?, stamps = stamps + ?, spend = spend + ?,
+          env.DB.prepare(`UPDATE clients SET points = points + ?, stamps = stamps + ?, spend = spend + ?, spend_cents = ${SPEND_CENTS_SQL} + ?,
           updated_ts = ?, srv_ts = ${cursor}
           WHERE merchant = ? AND id = ? AND deleted = 0
             AND NOT EXISTS (SELECT 1 FROM client_purchase_events WHERE merchant = ? AND ref = ?)`)
-            .bind(points, stamps, amount, now, merchant, merchant, group.client_id, merchant, back),
+            .bind(points, stamps, amount, toCents(amount), now, merchant, merchant, group.client_id, merchant, back),
           env.DB.prepare(`INSERT OR IGNORE INTO client_purchase_events
           (merchant, ref, client_id, amount, points, stamps, visits, created_ts, srv_ts, method, items, sale_ref)
           SELECT ?, ?, ?, ?, ?, ?, 0, ?, ${cursor}, 'retour', '[]', ? WHERE changes() > 0`)
