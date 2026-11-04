@@ -96,8 +96,8 @@
     "sha": "f3982bbb86426dfe"
   },
   "assets/booking-hotel.js": {
-    "v": "2",
-    "sha": "b1e7ee6fc75adc43"
+    "v": "3",
+    "sha": "30c6e1e92bd5908f"
   },
   "assets/booking-manage.js": {
     "v": "4",
@@ -112,8 +112,8 @@
     "sha": "21f83d45179fc413"
   },
   "assets/booking-submission.js": {
-    "v": "7",
-    "sha": "d1b2d1f50c177bbb"
+    "v": "8",
+    "sha": "ddde3b5a64aba732"
   },
   "assets/booking-view.js": {
     "v": "4",
@@ -124,8 +124,8 @@
     "sha": "3c0d798c9926b854"
   },
   "assets/booking.js": {
-    "v": "49",
-    "sha": "cb90c1d831623a41"
+    "v": "50",
+    "sha": "365fa032b6c3d16b"
   },
   "assets/boutique-catalog-parts.js": {
     "v": "18",
@@ -384,12 +384,12 @@
     "sha": "8c8415f533a7c370"
   },
   "assets/clients-store-vault.js": {
-    "v": "5",
-    "sha": "4b5a22130a273b83"
+    "v": "6",
+    "sha": "73faa850abdb609e"
   },
   "assets/clients-store.js": {
-    "v": "44",
-    "sha": "879142556b70999c"
+    "v": "45",
+    "sha": "075bb276f638b4e1"
   },
   "assets/cloud-doc.js": {
     "v": "14",
@@ -556,8 +556,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "626",
-    "sha": "31b083667b5d03d5"
+    "v": "627",
+    "sha": "b4217b54425a3a07"
   },
   "assets/employee-planning.js": {
     "v": "21",
@@ -820,8 +820,8 @@
     "sha": "a5f4d747cf82cd39"
   },
   "assets/invoicing.js": {
-    "v": "37",
-    "sha": "a9f0b87deaef4c44"
+    "v": "38",
+    "sha": "b1a42d9663da1528"
   },
   "assets/invoicing/composer.js": {
     "v": "9",
@@ -836,8 +836,8 @@
     "sha": "701c83f0825ccdbe"
   },
   "assets/invoicing/transport.js": {
-    "v": "5",
-    "sha": "797fbbd64fb060c0"
+    "v": "6",
+    "sha": "a88d68260d677b25"
   },
   "assets/kit/access-reset.js": {
     "v": "1",
@@ -2140,8 +2140,8 @@
     "sha": "d2b7eab24e47865b"
   },
   "assets/tickets-data.js": {
-    "v": "4",
-    "sha": "76106748835ce763"
+    "v": "5",
+    "sha": "c020be3afb29f613"
   },
   "assets/tickets-thread.js": {
     "v": "3",
@@ -2152,8 +2152,8 @@
     "sha": "8eb51073cdac11c1"
   },
   "assets/tickets.js": {
-    "v": "20",
-    "sha": "75831906f1a9f8bb"
+    "v": "21",
+    "sha": "c2f871095f75a01d"
   },
   "assets/till-inventory-access.js": {
     "v": "1",

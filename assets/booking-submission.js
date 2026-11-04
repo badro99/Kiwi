@@ -18,6 +18,19 @@ export function createBookingSubmission(context) {
     return state.lang === 'ar' ? 'لم يُحفظ المرجع. احتفظ بهذه الصفحة مفتوحة. قد تؤدي إعادة المحاولة بعد إغلاقها إلى حجز مكرر.' : state.lang === 'en' ? 'Reference not saved. Keep this page open. Retrying after closing it may duplicate your booking.' : 'Référence non enregistrée. Gardez cette page ouverte. Réessayer après fermeture peut créer une réservation en double.';
   }
 
+  async function submitRequest(form, key, ref, payload, onSuccess) {
+    form.querySelector('[type=submit]').disabled=true;
+    const { deadlineFetch } = await import('./request-deadline.mjs');
+    const response = await deadlineFetch('/api/booking', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant, ref, lang: state.lang, ...payload })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'error');
+    delete retryRefs[key]; ssDel(key);
+    onSuccess(result);
+  }
+
   function phoneValue(v) {
     var s=String(v||'').trim();
     return !s? '':(window.KiwiPhone? window.KiwiPhone.normalize(s):s)
@@ -61,41 +74,15 @@ export function createBookingSubmission(context) {
       form.querySelector('[data-error]').textContent=rawPhone&&!phone? (state.lang==='ar'? 'أدخل رقم الهاتف مع رمز الدولة، مثل +33 أو +49.':state.lang==='en'? 'Include the country code for foreign numbers, such as +33 or +49.':'Pour un numéro étranger, ajoutez l’indicatif pays, par exemple +33 ou +49.'):t('invalid');
       return
     }
-    var btn=form.querySelector('[type=submit]');
-    btn.disabled=true;
-    var ref=retryRef('kiwiBookingRef','web_',form);
+    var btn=form.querySelector('[type=submit]'),ref;
     try {
-      var r=await (await import('./request-deadline.mjs').catch(function() {
-        return {
-          deadlineFetch: function(u,o,ms) {
-            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
-            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
-              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
-            });
-            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
-              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
-            }, ms || 12000); });
-            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
-          }
-        }
-          ;
-      }
-      )).deadlineFetch('/api/booking',{
-        method: 'POST',headers: {
-          'Content-Type': 'application/json'
-        }
-        ,body: JSON.stringify({
-          merchant: merchant,ref: ref,lang: state.lang,serviceId: state.service.id,startAt: state.slot,partySize: party(),customer: {
+      ref=retryRef('kiwiBookingRef','web_',form);
+      await submitRequest(form, 'kiwiBookingRef', ref, {
+          serviceId: state.service.id,startAt: state.slot,partySize: party(),customer: {
             name: name,phone: phone,email: email
           }
           ,note: fd.get('note')
-        }
-        )
-      }
-      ),j=await r.json();
-      if(!r.ok) throw new Error(j.error||'error');
-      delete retryRefs.kiwiBookingRef; ssDel('kiwiBookingRef');
-      success(j)
+      }, success);
     }
     catch(err) {
       btn.disabled=false;
@@ -135,41 +122,15 @@ export function createBookingSubmission(context) {
       form.querySelector('[data-error]').textContent=rawPhone&&!phone? (state.lang==='ar'? 'أدخل رقم الهاتف مع رمز الدولة، مثل +33 أو +49.':state.lang==='en'? 'Include the country code for foreign numbers, such as +33 or +49.':'Pour un numéro étranger, ajoutez l’indicatif pays, par exemple +33 ou +49.'):t('invalid');
       return
     }
-    var btn=form.querySelector('[type=submit]');
-    btn.disabled=true;
-    var ref=retryRef('kiwiHotelBookingRef','hotel_',form);
+    var btn=form.querySelector('[type=submit]'),ref;
     try {
-      var r=await (await import('./request-deadline.mjs').catch(function() {
-        return {
-          deadlineFetch: function(u,o,ms) {
-            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
-            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
-              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
-            });
-            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
-              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
-            }, ms || 12000); });
-            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
-          }
-        }
-          ;
-      }
-      )).deadlineFetch('/api/booking',{
-        method: 'POST',headers: {
-          'Content-Type': 'application/json'
-        }
-        ,body: JSON.stringify({
-          merchant: merchant,ref: ref,lang: state.lang,roomTypeId: state.service.id,checkIn: state.checkIn,checkOut: state.checkOut,partySize: state.partySize,expectedTotal: state.service.total,customer: {
+      ref=retryRef('kiwiHotelBookingRef','hotel_',form);
+      await submitRequest(form, 'kiwiHotelBookingRef', ref, {
+          roomTypeId: state.service.id,checkIn: state.checkIn,checkOut: state.checkOut,partySize: state.partySize,expectedTotal: state.service.total,customer: {
             name: name,phone: phone,email: email
           }
           ,note: fd.get('note')
-        }
-        )
-      }
-      ),j=await r.json();
-      if(!r.ok) throw new Error(j.error||'error');
-      delete retryRefs.kiwiHotelBookingRef; ssDel('kiwiHotelBookingRef');
-      hotelSuccess(j)
+      }, hotelSuccess);
     }
     catch(err) {
       btn.disabled=false;

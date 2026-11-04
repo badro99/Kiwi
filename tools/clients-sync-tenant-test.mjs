@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 import retailSource from './pos-retail-test-source.cjs';
 /* Ticket #0154 · Till and dashboard share ONE client book per venue.
  *
@@ -88,7 +89,7 @@ Object.assign(window, {
 const ctx = vm.createContext(window);
 // Load real cloud-doc, venue-store, clients-store
 for (const f of ['assets/cloud-doc.js', 'assets/venue-store.js', 'assets/clients-store.js']) {
-  vm.runInContext(read(f), ctx, { filename: f });
+  vm.runInContext(deadlineVmSource(read(f)), deadlineVmContext(ctx), { filename: f });
 }
 
 const Clients = window.KiwiClients;
@@ -142,6 +143,7 @@ ok('after re-pairing, bookId switches to new venue', () => {
  * the merchant key (regression: it fetched /api/clients?merchant=function…). */
 store.kiwiPairedVenue = JSON.stringify({ merchant: 'amira-boutique', name: "Amira's Boutique", type: 'boutique' });
 store.kiwiLive = '1';
+await new Promise(setImmediate);
 asked.length = 0;
 await new Promise((resolve) => Clients.pull((changed) => {
   ok('pull(cb) fetches the till book, not the callback source', () => {

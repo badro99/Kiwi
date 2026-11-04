@@ -1,7 +1,7 @@
 import { ticketActor, forbidden, ticketInsert } from './_access.js';
 import {
   IMAGE_EXTENSIONS, MAX_IMAGE_BYTES, MAX_IMAGES, MAX_TEXT, MAX_TOTAL_IMAGE_BYTES,
-  json, purgeExpired, schemaError, sweepOrphanMediaSometimes, ticketNumber,
+  json, schemaError, sweepOrphanMediaSometimes, ticketNumber,
 } from './_lib.js';
 import { TICKET_TAXONOMY, validateTicketClassification } from './_taxonomy.js';
 
@@ -13,12 +13,12 @@ function publicImage(row) {
   };
 }
 
-async function readTicketRows(env) {
+async function readTicketRows(env, limit, cursor) {
   return env.DB.prepare(
     `SELECT id, body, status, created_ts, updated_ts, completed_ts, expires_ts,
             kind, area, subkind, money_at_risk
-     FROM kiwi_tickets ORDER BY id DESC`
-  ).all();
+     FROM kiwi_tickets WHERE id < ? ORDER BY id DESC LIMIT ?`
+  ).bind(cursor, limit + 1).all();
 }
 
 export async function onRequestGet({ request, env, waitUntil }) {
@@ -26,24 +26,26 @@ export async function onRequestGet({ request, env, waitUntil }) {
   if (!actor) return forbidden();
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   try {
-    await purgeExpired(env);
+    const params = new URL(request.url).searchParams;
+    const limit = Math.min(500, Math.max(1, Math.floor(Number(params.get('limit')) || 500)));
+    const value = Number(params.get('cursor'));
+    const cursor = Number.isSafeInteger(value) && value > 0 ? value : Number.MAX_SAFE_INTEGER;
     // A failed sweep never blocks the board; it retries on a later visit.
     const sweep = sweepOrphanMediaSometimes(env);
     if (sweep) { if (typeof waitUntil === 'function') waitUntil(sweep); else await sweep; }
-    const [ticketRows, followupRows, imageRows] = await Promise.all([
-      readTicketRows(env),
-      env.DB.prepare(
-        `SELECT id, ticket_id, body, created_ts
-         FROM kiwi_ticket_followups
-         ORDER BY created_ts, id`
-      ).all(),
-      env.DB.prepare(
-        `SELECT i.id, i.ticket_id, i.followup_id, i.object_key, i.filename
-         FROM kiwi_ticket_images i
-         JOIN kiwi_tickets t ON t.id = i.ticket_id
-         WHERE t.status != 'done'
-         ORDER BY i.created_ts, i.id`
-      ).all(),
+    const ticketRows = await readTicketRows(env, limit, cursor);
+    const rows = ticketRows.results || [];
+    const nextCursor = rows.length > limit ? String(rows[limit - 1].id) : null;
+    ticketRows.results = rows.slice(0, limit);
+    // Reuse the bounded parent selection, avoiding D1's 100 bound parameter limit.
+    const selection = 'SELECT id FROM kiwi_tickets WHERE id < ? ORDER BY id DESC LIMIT ?';
+    const [followupRows, imageRows] = await Promise.all([
+      env.DB.prepare(`SELECT id, ticket_id, body, created_ts FROM kiwi_ticket_followups
+        WHERE ticket_id IN (${selection}) ORDER BY created_ts, id`).bind(cursor, limit).all(),
+      env.DB.prepare(`SELECT i.id, i.ticket_id, i.followup_id, i.object_key, i.filename
+        FROM kiwi_ticket_images i JOIN kiwi_tickets t ON t.id = i.ticket_id
+        WHERE t.status != 'done' AND i.ticket_id IN (${selection})
+        ORDER BY i.created_ts, i.id`).bind(cursor, limit).all(),
     ]);
 
     const imagesByTicket = new Map();
@@ -89,7 +91,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
       })),
     })).sort((a, b) => Number(b.moneyAtRisk) - Number(a.moneyAtRisk) || b.id - a.id);
     return json({
-      tickets,
+      tickets, nextCursor,
       draftScope: { tenant: 'kiwi-operations', operator: actor },
       taxonomy: TICKET_TAXONOMY,
       classificationSchemaReady: ticketRows.classificationSchemaReady !== false,

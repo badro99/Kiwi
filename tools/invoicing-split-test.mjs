@@ -30,7 +30,7 @@ for (const part of map.parts) {
     ts.forEachChild(n,visit);
   }
   visit(tree);
-  assert.ok(!/\bimport\s*(?:\(|.*from)/.test(source),part.file + ': no private sibling imports');
+  assert.ok(!/\bimport\s*(?:\(|.*from)/.test(source.replace("import('../request-deadline.mjs')", '')),part.file + ': only the shared deadline import is allowed');
   modules[part.group] = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
   assert.ok(read('kiwi-sw.js').includes('/'+part.file+'?v='),part.file+': offline shell');
   assert.ok(require('./stamps.js').scan().has(part.file),part.file+': stamp discovery');

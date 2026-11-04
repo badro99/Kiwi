@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
+import splitFunctions from './split-functions.cjs';
 import planningSourceHelper from './planning-test-source.cjs';
 import teamOwners from './team-owners-test-source.cjs';
 import caisseWorkflowSource from './caisse-test-source.cjs';
@@ -636,7 +638,7 @@ function exerciseColdSocketRecovery(source) {
     setInterval() { return ++timerId; },
     clearInterval() {},
   };
-  vm.runInNewContext(source, context);
+  vm.runInNewContext(deadlineVmSource(source), deadlineVmContext(context));
   window.KiwiLiveSocket.on('amira-cafe', 'caisse', () => {});
 
   const failCurrent = () => sockets[sockets.length - 1].onclose();
@@ -845,7 +847,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
       CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } },
       setTimeout(fn) { timers.set(++timerId, fn); return timerId; }, clearTimeout(id) { timers.delete(id); },
     };
-    vm.runInNewContext(liveSource, context);
+    vm.runInNewContext(deadlineVmSource(liveSource), deadlineVmContext(context));
     const app = window.KiwiEmployeeLive;
     return {
       live: app, events, toasts,
@@ -978,11 +980,11 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     const window = { addEventListener() {}, localStorage: {
       getItem: k => local.get(k), setItem: (k,v) => local.set(k,v), removeItem: k => local.delete(k),
     } };
-    vm.runInNewContext(source, { window, document, navigator: {}, location: { protocol: 'file:' },
+    vm.runInNewContext(deadlineVmSource(source), deadlineVmContext({ window, document, navigator: {}, location: { protocol: 'file:' },
       setTimeout: () => 1, clearTimeout() {}, fetch: async (_, opts) => {
         if (opts.method === 'POST') posts.push(JSON.parse(opts.body));
         return { ok: true, json: async () => ({ merchant: 'wave-s', employee: { id: 'employee' } }) };
-      } });
+      } }));
     return { live: window.KiwiEmployeeLive, body };
   }
   const text = node => node.textContent + node.children.map(text).join(' ');
@@ -1035,7 +1037,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
       setItem(key, value) { if (failLocal) throw Error('storage unavailable'); local.set(key, value); },
       removeItem(key) { if (failLocal) throw Error('storage unavailable'); local.delete(key); },
     }, addEventListener() {} };
-    vm.runInNewContext(source, {
+    vm.runInNewContext(deadlineVmSource(source), deadlineVmContext({
       window, navigator: {}, location: { protocol: 'file:' },
       document: { addEventListener() {}, dispatchEvent() {} },
       setTimeout: () => 1, clearTimeout() {},
@@ -1047,7 +1049,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
         }
         return { ok: true, json: async () => ({ merchant: 'test-store', employee: { id: 'test-employee' } }) };
       },
-    });
+    }));
     return window.KiwiEmployeeLive;
   }
   for (const mode of ['idb-only', 'both', 'stale-local', 'neither']) {
@@ -1098,7 +1100,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     const T = new Proxy({}, { get: () => Object.assign(() => '', { toString: () => '' }) });
     const window = { Kiwi: { __teamCore: core }, __kiwiTeamV2: { periodKind: 'week', deferredByVenue } };
     const document = { addEventListener() {}, removeEventListener() {}, documentElement: { lang }, querySelector: () => null, querySelectorAll: () => [] };
-    vm.runInNewContext(hoursSource, { window, document, setTimeout, clearTimeout, console });
+    vm.runInNewContext(deadlineVmSource(hoursSource), deadlineVmContext({ window, document, setTimeout, clearTimeout, console }));
     return core.hours.renderHoursPane(T, {}, 'scoped:amira-cafe', [{ id: 'mem-sara', firstName: 'Sara' }]);
   }
   const marks = { 'scoped:amira-cafe': { 'mem-sara': { '2026-10-21': [{ kind: 'in', delayMs: 130 * 60000 }] } } };
@@ -1131,9 +1133,9 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     const Kiwi={__teamProfileCore:{teamSlug:()=> 'synthetic-shop'}};
     const context={setTimeout,clearTimeout,handlers,Kiwi,window:{__kiwiTeamV2:root},trLang:()=>lang,esc:value=>String(value).replaceAll('<','&lt;'),dateLocale:()=> 'en-GB',toast:message=>notices.push(message),render(){},fetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});return {ok:true};}};
     vm.createContext(context);
-    vm.runInContext(src.slice(src.indexOf('  function fetchDeadline('),src.indexOf('\n  }',src.indexOf('  function fetchDeadline(')))+'\n  }',context);
-    vm.runInContext(block,context);
-    const html=vm.runInContext("correctionsHtml('synthetic')",context);
+    vm.runInContext(deadlineVmSource(splitFunctions.declaration(src, 'fetchDeadline')),deadlineVmContext(context));
+    vm.runInContext(deadlineVmSource(block),deadlineVmContext(context));
+    const html=vm.runInContext(deadlineVmSource("correctionsHtml('synthetic')"),deadlineVmContext(context));
     ok(html.includes('&lt;synthetic>') && html.includes('test-device') && html.includes('data-decision="approved"') && html.includes('data-decision="rejected"'), 'corrections '+lang+' : identité échappée, appareil et deux décisions visibles');
     await handlers['kt-attendance-decision']({dataset:{rid:'pending-one',decision:'approved'}});
     ok(requests[0]?.url==='/api/team/live' && requests[0].body.merchant==='synthetic-shop' && requests[0].body.action==='attendance-correction-decision' && root.correctionsByVenue.synthetic.length===0, 'corrections '+lang+' : décision envoyée au serveur et liste actualisée');

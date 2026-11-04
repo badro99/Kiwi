@@ -5,3 +5,8 @@ export function deadlineVmSource(source) {
   return 'var __deadlineNet = (() => {\n' + helper + '\nreturn {deadlineFetch}; })();\n' +
     source.replace(/import\('[^']*request-deadline.mjs'\)/g, 'Promise.resolve(__deadlineNet)');
 }
+// Supply native browser capabilities omitted by older synchronous-fetch mocks;
+// explicit test clocks and controllers always win.
+export function deadlineVmContext(context) {
+  return Object.assign(context, { AbortController, setTimeout, clearTimeout, ...context });
+}

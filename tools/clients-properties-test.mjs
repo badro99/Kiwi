@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 // Local Pages handlers + SQLite D1 and real browser book. No hosted data.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -26,12 +27,12 @@ async function request(handler,body={},role='till',method='POST'){
 }
 function doc(feature,data){f.sql.prepare('INSERT OR REPLACE INTO store_docs(merchant,feature,data,rev,updated_ts) VALUES(?,?,?,1,?)').run(f.merchant,feature,JSON.stringify(data),Date.now());}
 async function reset(){await f.reset({});f.sql.prepare("UPDATE clients SET phone='' WHERE id='client-fixture'").run();f.sql.exec("DELETE FROM clients WHERE id <> 'client-fixture'");if(f.sql.prepare("SELECT 1 FROM sqlite_master WHERE name='employee_loyalty_events'").get())f.sql.exec('DELETE FROM employee_loyalty_events');doc('team',{members:[{id:'service-fixture',function:'Serveur',password:'synthetic-password-marker',pinCode:'synthetic-code-marker'}]});doc('attendance',{entries:[{memberId:'service-fixture',inTs:Date.now()-1000,outTs:0}]});}
-const phoneContext=vm.createContext({window:{},document:{addEventListener(){}}});vm.runInContext(fs.readFileSync(path.join(ROOT,'assets/phone.js'),'utf8'),phoneContext);const phone=phoneContext.window.KiwiPhone;
+const phoneContext=vm.createContext({window:{},document:{addEventListener(){}}});vm.runInContext(deadlineVmSource(fs.readFileSync(path.join(ROOT,'assets/phone.js'),'utf8')),deadlineVmContext(phoneContext));const phone=phoneContext.window.KiwiPhone;
 // Exercise the complete browser upsert, with its normal shared-phone dependency.
 const stores={};const define=(name,opts)=>{const store={data:{},get(k){return store.data[k]||(opts.blank?opts.blank():null);},set(v,k){store.data[k]=v;},subscribe(){return()=>{};}};stores[name]=store;return store;};
 const device=vm.createContext({window:{KiwiStore:{define,currentVenue:()=>f.merchant},KiwiPhone:phone,addEventListener(){}},localStorage:{getItem(){return null;},setItem(){},removeItem(){}},setInterval:()=>1,clearInterval(){},console,fetch:async()=>({ok:false})});
 device.KiwiStore=device.window.KiwiStore;
-vm.runInContext(fs.readFileSync(path.join(ROOT,'assets/clients-store.js'),'utf8'),device);const book=device.window.KiwiClients;
+vm.runInContext(deadlineVmSource(fs.readFileSync(path.join(ROOT,'assets/clients-store.js'),'utf8')),deadlineVmContext(device));const book=device.window.KiwiClients;
 // Two independent VM devices execute the shipped store, with writes held in a
 // controllable network queue. No browser engine or replicated merge algorithm.
 function syncDevice(skew) {
@@ -43,9 +44,9 @@ function syncDevice(skew) {
   if(!opts||!opts.method)return f.request({},true);
   return new Promise(resolve=>queue.push(async()=>{const result=await f.request(JSON.parse(opts.body));resolve(result);await new Promise(done=>setImmediate(done));}));
  }});
- vm.runInContext(fs.readFileSync(path.join(ROOT,'assets/clients-store.js'),'utf8'),context);
+ vm.runInContext(deadlineVmSource(fs.readFileSync(path.join(ROOT,'assets/clients-store.js'),'utf8')),deadlineVmContext(context));
  const book=window.KiwiClients;
- return {book,queue,storage,pull:()=>new Promise(resolve=>book.pull(f.merchant,resolve)),flush:async()=>{while(queue.length)await queue.shift()();}};
+ return {book,queue,storage,pull:()=>new Promise(resolve=>book.pull(f.merchant,resolve)),flush:async()=>{await new Promise(setImmediate);while(queue.length)await queue.shift()();}};
 }
 const number=fc.integer({min:600000000,max:799999999}),cents=fc.integer({min:1,max:1999999});
 try{
@@ -202,7 +203,7 @@ await strict('CL-2 directory confirmation names the survivor in FR EN AR and sen
  const window={Kiwi:{handlers:{},modal(options){modals.push(options);return {el:{querySelector(selector){return selector==='select'?selected:button;}},close(){}};},toast(){}},KiwiClients:{bookId:()=>f.merchant,list:()=>[{id:'duplicate',name:'Duplicate',phone:''}],pull(cb){cb();}},KiwiI18n:{getLang:()=>language}};
  const context=vm.createContext({window,KiwiClients:window.KiwiClients,KiwiI18n:window.KiwiI18n,document:{createElement:()=>({}),head:{appendChild(){}}},fetch:async(url,options)=>{calls.push(JSON.parse(options.body));return {ok:true};},console});
  const source=fs.readFileSync(path.join(ROOT,'assets/clients-directory.js'),'utf8').replace(/\}\)\(\);\s*$/, 'window.testMerge = openMerge; window.testStrings = STR;})();');
- vm.runInContext(source,context);assert.equal(typeof window.testMerge,'function');
+ vm.runInContext(deadlineVmSource(source),deadlineVmContext(context));assert.equal(typeof window.testMerge,'function');
  window.testMerge({id:'client-fixture',name:'Survivor'},window.testStrings[language]);assert.equal(calls.length,0);assert.ok(modals[0].body.includes('Survivor'));await click();assert.equal(calls.length,0);await click();assert.equal(calls.length,1);assert.equal(calls[0].merge.to,'client-fixture');assert.equal(calls[0].merge.from,'duplicate');
 }));
 await strict('CL-3 tags persist on the server, reach a second device and survive pulls',fc.asyncProperty(fc.array(fc.constantFrom('vip','grossiste','famille','Riad 3'),{minLength:1,maxLength:3}),async tags=>{await reset();ok(await request(post,{id:'client-fixture',tags}));const want=[...new Set(tags)];assert.deepEqual(ok(await request(get,{},'till','GET')).clients[0].tags,want);

@@ -25,6 +25,9 @@ export function ticketsTestSource() {
       core = core.replace(e.replacement, () => body);
     }
   }
+  const dataHeader = ticketsMap.parts[0].header;
+  const helper = dataHeader.slice(dataHeader.indexOf('  async function request'));
+  core = core.replace("  'use strict';", () => "  'use strict';\n" + helper);
   // Preview URL arrays used to live alongside the composer bodies.
   return core.replace("  'use strict';", "  'use strict';\n  let previewUrls = [], followupPreviewUrls = [];");
 }

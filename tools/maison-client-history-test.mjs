@@ -1,3 +1,4 @@
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 import maisonSource from './pos-maison-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -37,7 +38,7 @@ const fetch = async (_url, options = {}) => {
     purchaseAttempts += 1;
     return { ok: purchaseAttempts > 1, status: purchaseAttempts > 1 ? 200 : 404, json: async () => ({ spend: payload.purchase.amount, points: 0, stamps: 0 }) };
   }
-  if (payload.id) { profileWrites += 1; return { ok: true, status: 200 }; }
+  if (payload.id) { profileWrites += 1; return { ok: true, status: 200, json: async () => ({}) }; }
   return { ok: true, status: 200, json: async () => ({ clients: [], cursor: 0 }) };
 };
 const window = {
@@ -48,7 +49,7 @@ const window = {
 };
 const context = { window, localStorage, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv,
   fetch, console, JSON, Math, Date, Promise, setInterval: () => 1, clearInterval: () => {}, setTimeout, clearTimeout, AbortController };
-vm.runInNewContext(maisonSource(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8')), context,
+vm.runInNewContext(deadlineVmSource(maisonSource(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8'))), deadlineVmContext(context),
   { filename: 'assets/clients-store.js' });
 
 const client = window.KiwiClients.upsert({ name: 'Amira Test', phone: '0611111111' }, merchant);

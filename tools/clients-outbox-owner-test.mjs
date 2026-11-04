@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 /* tools/clients-outbox-owner-test.mjs · the loyalty queues have one owner.
  *
  * assets/clients-store.js keeps four queues on the device: profile edits and
@@ -62,7 +63,7 @@ function device(storage = new Map()) {
     window, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv, localStorage, fetch,
     navigator: { onLine: true }, console, setInterval: () => 1, clearInterval() {},
   });
-  vm.runInContext(SOURCE, context, { filename: 'assets/clients-store.js' });
+  vm.runInContext(deadlineVmSource(SOURCE), deadlineVmContext(context), { filename: 'assets/clients-store.js' });
   return { api: window.KiwiClients, net, disk, storage };
 }
 const settle = async () => { for (let i = 0; i < 20; i++) await new Promise((r) => setImmediate(r)); };

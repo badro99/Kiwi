@@ -1,10 +1,10 @@
 {
-  "sha256": "2fa261732db667ae22467411bdad3c1e2758704cc3ce650773c56c01c2711b44",
+  "sha256": "2b5885e88ab2ea92e7df41b332abc7b7a637c36fa37eeb8810ed176ceb46b368",
   "parts": [
     {
       "name": "data",
       "file": "assets/tickets-data.js",
-      "header": "/* Tickets data. Exports: loadTickets, newIdempotencyKey, publish, publishFollowup, moveTicket, saveClassification.\n * Reads injected: $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createData({ $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t }) {\n",
+      "header": "/* Tickets data. Exports: loadTickets, newIdempotencyKey, publish, publishFollowup, moveTicket, saveClassification.\n * Reads injected: $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t. Browser APIs are declared in split.json.\n * Mutable shared fields belong to the data owner; other modules receive its view. */\nexport function createData({ $, API, activateTab, closeFollowup, composer, configureComposerClassification, draft, draftController, followupComposer, friendlyError, lists, make, render, renderLoading, resetComposer, resetFollowup, showToast, state, t }) {\n  async function request(url, options, timeout, fallback = 'update-failed') {\n    try {\n      const { deadlineFetch } = await import('./request-deadline.mjs');\n      const response = await deadlineFetch(url, options, timeout);\n      const result = await response.json().catch(error => {\n        if (error.code === 'request-timeout') throw error;\n        return {};\n      });\n      if (!response.ok) throw Object.assign(new Error(result.error || fallback), { code: result.error });\n      return result;\n    } catch (error) {\n      error.translatedMessage = friendlyError(error.code);\n      throw error;\n    }\n  }\n\n",
       "footer": "  return Object.freeze({ loadTickets, newIdempotencyKey, publish, publishFollowup, moveTicket, saveClassification });\n}\n",
       "deps": [
         "$",
@@ -38,48 +38,48 @@
       "fragments": [
         {
           "name": "loadTickets",
-          "start": 40447,
-          "end": 43661,
+          "start": 41061,
+          "end": 43579,
           "offset": 741,
           "length": 2348,
           "replacement": "  function loadTickets(...args) { return dataPart.loadTickets(...args); }"
         },
         {
           "name": "newIdempotencyKey",
-          "start": 49742,
-          "end": 49956,
+          "start": 49660,
+          "end": 49874,
           "offset": 3091,
           "length": 213,
           "replacement": "  function newIdempotencyKey(...args) { return dataPart.newIdempotencyKey(...args); }"
         },
         {
           "name": "publish",
-          "start": 49958,
-          "end": 53545,
+          "start": 49876,
+          "end": 52262,
           "offset": 3306,
           "length": 2721,
           "replacement": "  function publish(...args) { return dataPart.publish(...args); }"
         },
         {
           "name": "publishFollowup",
-          "start": 53547,
-          "end": 56486,
+          "start": 52264,
+          "end": 53985,
           "offset": 6029,
           "length": 2073,
           "replacement": "  function publishFollowup(...args) { return dataPart.publishFollowup(...args); }"
         },
         {
           "name": "moveTicket",
-          "start": 58964,
-          "end": 61051,
+          "start": 56463,
+          "end": 57332,
           "offset": 8104,
           "length": 1221,
           "replacement": "  function moveTicket(...args) { return dataPart.moveTicket(...args); }"
         },
         {
           "name": "saveClassification",
-          "start": 61441,
-          "end": 64252,
+          "start": 57722,
+          "end": 59315,
           "offset": 9327,
           "length": 1945,
           "replacement": "  function saveClassification(...args) { return dataPart.saveClassification(...args); }"
@@ -106,7 +106,8 @@
         "AbortController",
         "Promise",
         "setTimeout",
-        "clearTimeout"
+        "clearTimeout",
+        "encodeURIComponent"
       ]
     },
     {
@@ -157,192 +158,192 @@
       "fragments": [
         {
           "name": "saveFilters",
-          "start": 25375,
-          "end": 25698,
+          "start": 25989,
+          "end": 26312,
           "offset": 750,
           "length": 127,
           "replacement": "  function saveFilters(...args) { return boardPart.saveFilters(...args); }"
         },
         {
           "name": "labelOf",
-          "start": 25700,
-          "end": 25899,
+          "start": 26314,
+          "end": 26513,
           "offset": 879,
           "length": 198,
           "replacement": "  function labelOf(...args) { return boardPart.labelOf(...args); }"
         },
         {
           "name": "taxonomyItem",
-          "start": 25901,
-          "end": 26182,
+          "start": 26515,
+          "end": 26796,
           "offset": 1079,
           "length": 280,
           "replacement": "  function taxonomyItem(...args) { return boardPart.taxonomyItem(...args); }"
         },
         {
           "name": "replaceSelectOptions",
-          "start": 26184,
-          "end": 26707,
+          "start": 26798,
+          "end": 27321,
           "offset": 1361,
           "length": 522,
           "replacement": "  function replaceSelectOptions(...args) { return boardPart.replaceSelectOptions(...args); }"
         },
         {
           "name": "subkindsFor",
-          "start": 26709,
-          "end": 26855,
+          "start": 27323,
+          "end": 27469,
           "offset": 1885,
           "length": 145,
           "replacement": "  function subkindsFor(...args) { return boardPart.subkindsFor(...args); }"
         },
         {
           "name": "make",
-          "start": 27186,
-          "end": 27405,
+          "start": 27800,
+          "end": 28019,
           "offset": 2032,
           "length": 218,
           "replacement": "  function make(...args) { return boardPart.make(...args); }"
         },
         {
           "name": "formatTime",
-          "start": 27407,
-          "end": 28080,
+          "start": 28021,
+          "end": 28694,
           "offset": 2252,
           "length": 672,
           "replacement": "  function formatTime(...args) { return boardPart.formatTime(...args); }"
         },
         {
           "name": "daysRemaining",
-          "start": 28082,
-          "end": 28196,
+          "start": 28696,
+          "end": 28810,
           "offset": 2926,
           "length": 113,
           "replacement": "  function daysRemaining(...args) { return boardPart.daysRemaining(...args); }"
         },
         {
           "name": "actionButton",
-          "start": 28198,
-          "end": 28833,
+          "start": 28812,
+          "end": 29447,
           "offset": 3041,
           "length": 634,
           "replacement": "  function actionButton(...args) { return boardPart.actionButton(...args); }"
         },
         {
           "name": "actionArea",
-          "start": 28835,
-          "end": 29457,
+          "start": 29449,
+          "end": 30071,
           "offset": 3677,
           "length": 621,
           "replacement": "  function actionArea(...args) { return boardPart.actionArea(...args); }"
         },
         {
           "name": "copyButton",
-          "start": 29459,
-          "end": 29985,
+          "start": 30073,
+          "end": 30599,
           "offset": 4300,
           "length": 525,
           "replacement": "  function copyButton(...args) { return boardPart.copyButton(...args); }"
         },
         {
           "name": "imageGallery",
-          "start": 29987,
-          "end": 30637,
+          "start": 30601,
+          "end": 31251,
           "offset": 4827,
           "length": 649,
           "replacement": "  function imageGallery(...args) { return boardPart.imageGallery(...args); }"
         },
         {
           "name": "classificationSummary",
-          "start": 31388,
-          "end": 32781,
+          "start": 32002,
+          "end": 33395,
           "offset": 5478,
           "length": 1392,
           "replacement": "  function classificationSummary(...args) { return boardPart.classificationSummary(...args); }"
         },
         {
           "name": "classificationEditor",
-          "start": 32783,
-          "end": 34605,
+          "start": 33397,
+          "end": 35219,
           "offset": 6872,
           "length": 1821,
           "replacement": "  function classificationEditor(...args) { return boardPart.classificationEditor(...args); }"
         },
         {
           "name": "ticketCard",
-          "start": 34607,
-          "end": 35951,
+          "start": 35221,
+          "end": 36565,
           "offset": 8695,
           "length": 1343,
           "replacement": "  function ticketCard(...args) { return boardPart.ticketCard(...args); }"
         },
         {
           "name": "emptyState",
-          "start": 35953,
-          "end": 36255,
+          "start": 36567,
+          "end": 36869,
           "offset": 10040,
           "length": 301,
           "replacement": "  function emptyState(...args) { return boardPart.emptyState(...args); }"
         },
         {
           "name": "filterButton",
-          "start": 36257,
-          "end": 36627,
+          "start": 36871,
+          "end": 37241,
           "offset": 10343,
           "length": 369,
           "replacement": "  function filterButton(...args) { return boardPart.filterButton(...args); }"
         },
         {
           "name": "renderFilters",
-          "start": 36629,
-          "end": 38315,
+          "start": 37243,
+          "end": 38929,
           "offset": 10714,
           "length": 1685,
           "replacement": "  function renderFilters(...args) { return boardPart.renderFilters(...args); }"
         },
         {
           "name": "ticketMatchesFilters",
-          "start": 38317,
-          "end": 38606,
+          "start": 38931,
+          "end": 39220,
           "offset": 12401,
           "length": 288,
           "replacement": "  function ticketMatchesFilters(...args) { return boardPart.ticketMatchesFilters(...args); }"
         },
         {
           "name": "render",
-          "start": 38608,
-          "end": 39349,
+          "start": 39222,
+          "end": 39963,
           "offset": 12691,
           "length": 740,
           "replacement": "  function render(...args) { return boardPart.render(...args); }"
         },
         {
           "name": "renderLoading",
-          "start": 39351,
-          "end": 39594,
+          "start": 39965,
+          "end": 40208,
           "offset": 13433,
           "length": 242,
           "replacement": "  function renderLoading(...args) { return boardPart.renderLoading(...args); }"
         },
         {
           "name": "toggleClassification",
-          "start": 61053,
-          "end": 61439,
+          "start": 57334,
+          "end": 57720,
           "offset": 13677,
           "length": 385,
           "replacement": "  function toggleClassification(...args) { return boardPart.toggleClassification(...args); }"
         },
         {
           "name": "applyFilter",
-          "start": 64254,
-          "end": 64591,
+          "start": 59317,
+          "end": 59654,
           "offset": 14064,
           "length": 336,
           "replacement": "  function applyFilter(...args) { return boardPart.applyFilter(...args); }"
         },
         {
           "name": "activateTab",
-          "start": 64593,
-          "end": 64904,
+          "start": 59656,
+          "end": 59967,
           "offset": 14402,
           "length": 310,
           "replacement": "  function activateTab(...args) { return boardPart.activateTab(...args); }"
@@ -407,104 +408,104 @@
       "fragments": [
         {
           "name": "syncComposerSubkinds",
-          "start": 39910,
-          "end": 40194,
+          "start": 40524,
+          "end": 40808,
           "offset": 740,
           "length": 283,
           "replacement": "  function syncComposerSubkinds(...args) { return composerPart.syncComposerSubkinds(...args); }"
         },
         {
           "name": "configureComposerClassification",
-          "start": 40196,
-          "end": 40445,
+          "start": 40810,
+          "end": 41059,
           "offset": 1025,
           "length": 248,
           "replacement": "  function configureComposerClassification(...args) { return composerPart.configureComposerClassification(...args); }"
         },
         {
           "name": "openComposer",
-          "start": 44256,
-          "end": 44514,
+          "start": 44174,
+          "end": 44432,
           "offset": 1275,
           "length": 257,
           "replacement": "  function openComposer(...args) { return composerPart.openComposer(...args); }"
         },
         {
           "name": "resetComposer",
-          "start": 44516,
-          "end": 44940,
+          "start": 44434,
+          "end": 44858,
           "offset": 1534,
           "length": 423,
           "replacement": "  function resetComposer(...args) { return composerPart.resetComposer(...args); }"
         },
         {
           "name": "closeComposer",
-          "start": 44942,
-          "end": 45045,
+          "start": 44860,
+          "end": 44963,
           "offset": 1959,
           "length": 102,
           "replacement": "  function closeComposer(...args) { return composerPart.closeComposer(...args); }"
         },
         {
           "name": "fileKey",
-          "start": 45814,
-          "end": 45909,
+          "start": 45732,
+          "end": 45827,
           "offset": 2063,
           "length": 94,
           "replacement": "  function fileKey(...args) { return composerPart.fileKey(...args); }"
         },
         {
           "name": "renderSelectedImages",
-          "start": 45911,
-          "end": 46814,
+          "start": 45829,
+          "end": 46732,
           "offset": 2159,
           "length": 902,
           "replacement": "  function renderSelectedImages(...args) { return composerPart.renderSelectedImages(...args); }"
         },
         {
           "name": "addFiles",
-          "start": 46816,
-          "end": 47822,
+          "start": 46734,
+          "end": 47740,
           "offset": 3063,
           "length": 912,
           "replacement": "  function addFiles(...args) { return composerPart.addFiles(...args); }"
         },
         {
           "name": "fallbackCopyText",
-          "start": 56488,
-          "end": 56896,
+          "start": 53987,
+          "end": 54395,
           "offset": 3977,
           "length": 407,
           "replacement": "  function fallbackCopyText(...args) { return composerPart.fallbackCopyText(...args); }"
         },
         {
           "name": "copyText",
-          "start": 56898,
-          "end": 57272,
+          "start": 54397,
+          "end": 54771,
           "offset": 4386,
           "length": 373,
           "replacement": "  function copyText(...args) { return composerPart.copyText(...args); }"
         },
         {
           "name": "blobToPng",
-          "start": 57274,
-          "end": 58020,
+          "start": 54773,
+          "end": 55519,
           "offset": 4761,
           "length": 745,
           "replacement": "  function blobToPng(...args) { return composerPart.blobToPng(...args); }"
         },
         {
           "name": "showImageCopyFallback",
-          "start": 58022,
-          "end": 58144,
+          "start": 55521,
+          "end": 55643,
           "offset": 5508,
           "length": 121,
           "replacement": "  function showImageCopyFallback(...args) { return composerPart.showImageCopyFallback(...args); }"
         },
         {
           "name": "copyImage",
-          "start": 58146,
-          "end": 58962,
+          "start": 55645,
+          "end": 56461,
           "offset": 5631,
           "length": 815,
           "replacement": "  function copyImage(...args) { return composerPart.copyImage(...args); }"
@@ -561,48 +562,48 @@
       "fragments": [
         {
           "name": "followupHistory",
-          "start": 30639,
-          "end": 31386,
+          "start": 31253,
+          "end": 32000,
           "offset": 610,
           "length": 746,
           "replacement": "  function followupHistory(...args) { return threadPart.followupHistory(...args); }"
         },
         {
           "name": "openFollowup",
-          "start": 45047,
-          "end": 45319,
+          "start": 44965,
+          "end": 45237,
           "offset": 1358,
           "length": 271,
           "replacement": "  function openFollowup(...args) { return threadPart.openFollowup(...args); }"
         },
         {
           "name": "resetFollowup",
-          "start": 45321,
-          "end": 45688,
+          "start": 45239,
+          "end": 45606,
           "offset": 1631,
           "length": 366,
           "replacement": "  function resetFollowup(...args) { return threadPart.resetFollowup(...args); }"
         },
         {
           "name": "closeFollowup",
-          "start": 45690,
-          "end": 45812,
+          "start": 45608,
+          "end": 45730,
           "offset": 1999,
           "length": 121,
           "replacement": "  function closeFollowup(...args) { return threadPart.closeFollowup(...args); }"
         },
         {
           "name": "renderFollowupImages",
-          "start": 47824,
-          "end": 48791,
+          "start": 47742,
+          "end": 48709,
           "offset": 2122,
           "length": 966,
           "replacement": "  function renderFollowupImages(...args) { return threadPart.renderFollowupImages(...args); }"
         },
         {
           "name": "addFollowupFiles",
-          "start": 48793,
-          "end": 49740,
+          "start": 48711,
+          "end": 49658,
           "offset": 3090,
           "length": 946,
           "replacement": "  function addFollowupFiles(...args) { return threadPart.addFollowupFiles(...args); }"

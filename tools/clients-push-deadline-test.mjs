@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 /* tools/clients-push-deadline-test.mjs · a hung client push gives up and retries.
  *
  * Council rating 14 (clients G1, both raters): the till's client book sent
@@ -48,7 +49,7 @@ const context = vm.createContext({
   window, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv, localStorage, fetch, AbortController,
   navigator: { onLine: true }, console, setTimeout, clearTimeout, setInterval: () => 1, clearInterval() {},
 });
-vm.runInContext(SOURCE, context, { filename: 'assets/clients-store.js' });
+vm.runInContext(deadlineVmSource(SOURCE), deadlineVmContext(context), { filename: 'assets/clients-store.js' });
 const api = window.KiwiClients;
 const settle = async () => { for (let i = 0; i < 20; i++) await new Promise((r) => setImmediate(r)); };
 
