@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { deadlineVmSource } from './deadline-vm-source.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -79,7 +80,7 @@ function till(cfg, responder, savedBook) {
     data: name === 'clients' && savedBook ? savedBook : options.blank?.(), get() { return this.data; }, set(v) { this.data = v; }, subscribe() {} };
   const window = { localStorage, KiwiStore: { define, currentVenue: () => MERCHANT },
     KiwiEnv: { isReal: () => true }, addEventListener() {} };
-  vm.runInNewContext(source, { window, localStorage, KiwiStore: window.KiwiStore,
+  vm.runInNewContext(deadlineVmSource(source), { window, localStorage, KiwiStore: window.KiwiStore,
     console, setInterval() {}, setTimeout, clearTimeout, AbortController, fetch: responder || (async () => ({ ok: false })) });
   const api = window.KiwiClients;
   api.setConfig(cfg, MERCHANT);

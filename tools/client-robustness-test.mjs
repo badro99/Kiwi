@@ -37,7 +37,9 @@ await test('browser print failure reaches fallback notice', () => {
 });
 for(const file of ['booking.js','booking-service.js','booking-submission.js','tickets-data.js']) await test(file+' helper failure bounds headers and body',async()=>{
   const src=read(file), ast=ts.createSourceFile(file,src,ts.ScriptTarget.Latest,true), funcs=[];
-  function walk(n){if(ts.isPropertyAssignment(n)&&n.name.getText(ast)==='deadlineFetch')funcs.push(n.initializer.getText(ast));ts.forEachChild(n,walk);}walk(ast);assert.ok(funcs.length);
+  function walk(n){if(ts.isPropertyAssignment(n)&&n.name.getText(ast)==='deadlineFetch')funcs.push(n.initializer.getText(ast));ts.forEachChild(n,walk);}walk(ast);
+  // A file with no inline fallback must use the shared deadline module and never a raw fetch.
+  if(!funcs.length){assert.match(src,/request-deadline\.mjs/);assert.doesNotMatch(src,/(^|[^A-Za-z.])fetch\(/m);return;}
   for(const code of funcs) for(const body of [false,true]) {
     let fire, aborted=false;
     const fn=vm.runInNewContext('('+code+')',{fetch:()=>body?Promise.resolve({json:()=>new Promise(()=>{})}):new Promise(()=>{}),AbortController:class{signal={};abort(){aborted=true;}},setTimeout:fn=>{fire=fn;return 1;},clearTimeout(){}});
