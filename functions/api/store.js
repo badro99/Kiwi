@@ -113,8 +113,7 @@ const FEATURES = {
   recipes:      { keys: ['items'],                                max: 600000 },
   team:         { keys: ['members', 'hours', 'shifts'],            max: 600000 },
   attendance:   { keys: ['entries'],                               max: 600000 },
-  /* 2 000 produits liés (identifiants d'environ 40 octets) tiennent dans ~80 000. */
-  fidelity:     { keys: ['model', 'visit', 'amount', 'product'],   max: 120000 },
+    fidelity:     { keys: ['model', 'visit', 'amount', 'product'],   max: 120000 }, // 2 000 linked ids (~40 bytes each) fit
   discountpolicy: { keys: ['percentages'], max: 2000 },
   /* Les réglages de CAISSE des métiers de bouche autres que le restaurant
    * (pizzeria, traiteur, boulangerie) : frais de livraison par zone, supplément
@@ -895,11 +894,7 @@ export async function onRequestPost(context) {
   // Refus plutôt que troncature : voir la note de `bounded`. Le client garde sa
   // copie locale — il ne perd rien, il n'a simplement pas de copie serveur.
   if (!clean.ok) return json({ error: 'too-large', why: clean.why }, 413);
-  /* Fidélité : au plus 2 000 produits liés, refus net plutôt que troncature. */
-  if (feature === 'fidelity' && clean.value && clean.value.product && Array.isArray(clean.value.product.ids) && clean.value.product.ids.length > 2000) {
-    return json({ error: 'link-limit', max: 2000 }, 400);
-  }
-
+  if (feature === 'fidelity' && ((clean.value && clean.value.product && clean.value.product.ids) || []).length > 2000) return json({ error: 'link-limit', max: 2000 }, 400);
   let text = JSON.stringify(clean.value);
   let compacted = false; // pressing-orders : des bons viennent de passer en archive, le vivant peut en devenir vide
   /* pressing-orders : le contrôle exact vient APRÈS l'archivage des bons remis depuis plus de

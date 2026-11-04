@@ -4,19 +4,13 @@ export const pointsFor = (amount, cfg) => Math.max(0,
   Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
 export const foldName = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
   .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-const keepAccents = (v) => String(v || '').normalize('NFC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-const WEIGHED_UNIT = /^(weigh|kg|kilos?|kilograms?|g|gr|grams?|l|litres?|liters?|cl|ml)$/i;
-const COUNT_UNIT = /^(unit|units|piece|pieces|pièce|pièces|pc|pcs|pce|u)$/i;
 export const qualifyingQty = (cfg, items) => { // linked products by id (renames keep earning), new ones by word
-  const want = foldName(cfg && cfg.product && cfg.product.item), ids = (Array.isArray(cfg && cfg.product && cfg.product.ids) ? cfg.product.ids : []).map(String);
-  if (!want && !ids.length) return 0;
-  /* A short word typed WITH an accent ("Thé") is accent-sensitive: folded it
-     would stamp every "The Burger". Longer words and unaccented entries fold. */
-  const exact = keepAccents(cfg && cfg.product && cfg.product.item), accentSensitive = want.length < 4 && exact !== want;
+  const raw = cfg && cfg.product && cfg.product.item, want = foldName(raw), ids = (Array.isArray(cfg && cfg.product && cfg.product.ids) ? cfg.product.ids : []).map(String);
+  if (!want && !ids.length) return 0; const plain = (v) => String(v || '').normalize('NFC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(), exact = plain(raw), strict = want.length < 4 && exact !== want, norm = (v) => strict ? plain(v) : foldName(v); // a short word typed with an accent ("Thé") is accent-sensitive: folded it would stamp every "The Burger"
   return (Array.isArray(items) ? items : []).reduce((n, item) => {
-    const name = ' ' + (accentSensitive ? keepAccents(item && item.name) : foldName(item && item.name)) + ' ', key = String(item && (item.id || item.itemId || item.pid) || '');
-    const qty = Math.max(0, Number(item && item.qty) || 0), weighed = WEIGHED_UNIT.test(String(item && item.unit || '')) || (qty % 1 !== 0 && !COUNT_UNIT.test(String(item && item.unit || ''))); // a fractional quantity is a weighed line unless the unit says pieces
-    return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + (accentSensitive ? exact : want) + ' ')) ? n + (weighed ? Number(qty > 0) : Math.floor(qty)) : n;
+    const name = ' ' + norm(item && item.name) + ' ', key = String(item && (item.id || item.itemId || item.pid) || '');
+    const qty = Math.max(0, Number(item && item.qty) || 0), unit = String(item && item.unit || ''), weighed = /^(weigh|kg|kilos?|kilograms?|g|gr|grams?|l|litres?|liters?|cl|ml)$/i.test(unit) || (qty % 1 !== 0 && !/^(unit|units|piece|pieces|pièce|pièces|pc|pcs|pce|u)$/i.test(unit)); // a fractional quantity is a weighed line unless the unit says pieces
+    return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + (strict ? exact : want) + ' ')) ? n + (weighed ? Number(qty > 0) : Math.floor(qty)) : n;
   }, 0);
 }
 export const stampsFor = (cfg, items) => {
