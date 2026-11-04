@@ -49,6 +49,31 @@ try { execFileSync('git', ['--version'], { stdio: 'ignore' }); } catch (_) {}
 console.log('git ok');
 `);
 
+// Inputs the file list cannot see. A suite that declares one, a suite that reads
+// something under the user's home outside the repo, and one that dials a
+// non-local host are never replayed (gate#2: a pass whose key cannot notice the
+// input changing would stay green on a stale answer).
+write('tools/declared-test.mjs', `// kiwi-cache: never reads a machine setting nothing traces
+console.log('declared ok');
+`);
+write('tools/home-test.mjs', `import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+const seen = fs.existsSync(path.join(os.homedir(), '.kiwi-pass-cache-test-probe'));
+console.log('home probe ' + seen);
+`);
+write('tools/net-test.mjs', `import net from 'node:net';
+const s = net.connect({ host: '192.0.2.1', port: 9, timeout: 50 });
+s.on('error', () => {}); s.on('timeout', () => s.destroy());
+s.on('close', () => console.log('net done'));
+`);
+write('tools/local-test.mjs', `import net from 'node:net';
+const srv = net.createServer((c) => c.end()).listen(0, '127.0.0.1', () => {
+  const s = net.connect(srv.address().port, '127.0.0.1');
+  s.on('close', () => { srv.close(); console.log('local done'); });
+});
+`);
+
 let failures = 0;
 const ok = (cond, msg) => { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!cond) failures++; };
 
@@ -125,6 +150,18 @@ try {
   res = pool(['skip-test.mjs']);
   ok(!cached(res, 'skip-test.mjs') && /browser assertions ran/.test(res['skip-test.mjs'].stdout), 'an old cached skip is ignored and the suite runs');
   fs.rmSync(path.join(repo, 'flags', 'browser.up'));
+
+  pool(['declared-test.mjs']);
+  ok(!cached(pool(['declared-test.mjs']), 'declared-test.mjs'), 'a suite declaring "kiwi-cache: never" is never reused');
+  pool(['home-test.mjs']);
+  res = pool(['home-test.mjs']);
+  ok(!cached(res, 'home-test.mjs') && /home probe/.test(res['home-test.mjs'].stdout), 'a suite that probes a path under the home folder outside the repo is never reused');
+  pool(['net-test.mjs']);
+  res = pool(['net-test.mjs']);
+  ok(!cached(res, 'net-test.mjs') && /net done/.test(res['net-test.mjs'].stdout), 'a suite that dials a non-local host is never reused');
+  pool(['local-test.mjs']);
+  res = pool(['local-test.mjs']);
+  ok(cached(res, 'local-test.mjs') && /local done/.test(res['local-test.mjs'].stdout), 'loopback traffic and temp files stay cacheable');
 
   const cache = JSON.parse(fs.readFileSync(path.join(tmp, 'kiwi-pass-cache.json'), 'utf8'));
   ok(Object.keys(cache).length > 0 && Object.keys(cache).every((k) => k.startsWith('tools/')), 'cache entries are keyed repo-relative, never by absolute path');

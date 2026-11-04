@@ -167,6 +167,19 @@ const startsForeign = (r) => {
   foreignMemo.set(r, hit);
   return hit;
 };
+/* A suite can say so itself: a line `// kiwi-cache: never <why>` in its first
+   60 lines declares an input nothing traces (a clock, a device, a machine
+   setting, the network), and its pass is never replayed. Anything the tracer
+   saw outside the repo (`#blind` lines in dep-trace.cjs) counts the same. */
+const DECLARED = /^\s*(?:\/\/|\/\*|\*|#)\s*kiwi-cache:\s*never\b/m;
+const declaredMemo = new Map();
+const declaresUncacheable = (r) => {
+  if (declaredMemo.has(r)) return declaredMemo.get(r);
+  let hit = false;
+  try { hit = DECLARED.test(fs.readFileSync(path.join(ROOT, r), 'utf8').split('\n').slice(0, 60).join('\n')); } catch (_) {}
+  declaredMemo.set(r, hit);
+  return hit;
+};
 const callsGit = (rels) => rels.some((r, i) => /\.(m?js|cjs)$/.test(r) && (i === 0 || r.startsWith("tools/")) && startsForeign(r));
 function passKey(task, own, list) {
   return sha([SALT, JSON.stringify(task.args.map((a) => String(a).startsWith(ROOT) ? relOf(a) : String(a))),
@@ -187,10 +200,10 @@ if (cacheOn) {
     tasks.splice(i, 1); reused++;
   }
 }
-function remember(task, own, list, stdout, stderr, cells) {
+function remember(task, own, list, stdout, stderr, cells, blind) {
   if (!cacheOn) return;
   const all = [own, ...list];
-  if (callsGit(all) || stdout.length + stderr.length > 512 * 1024 || saysSkipped(stdout, stderr)) { delete passCache[own]; return; }
+  if (callsGit(all) || blind || declaresUncacheable(own) || stdout.length + stderr.length > 512 * 1024 || saysSkipped(stdout, stderr)) { delete passCache[own]; return; }
   passCache[own] = { key: passKey(task, own, list), deps: list, at: Date.now(), stdout, stderr, cells };
 }
 function savePassCache() {
@@ -228,7 +241,7 @@ function start(task) {
           const list = new Set(lines.filter((l) => !l.startsWith('#')));
           list.delete(own);
           deps[own] = [...list].sort();
-          remember(task, own, deps[own], stdout, stderr, cells);
+          remember(task, own, deps[own], stdout, stderr, cells, lines.some((l) => l.startsWith('#blind ')));
         }
       } catch (_) {}
     }
