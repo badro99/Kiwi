@@ -1866,6 +1866,7 @@ section('Whole-project regressions');
     'promo-price-freeze-test.mjs',
     'simple-food-cost-parity-test.mjs',
     'home-kpi-async-ownership-test.mjs',
+    'landing-pricing-hydrated-test.mjs',
     'retail-money-properties-test.mjs',
     'dashboard-money-properties-test.mjs',
     'dayreport-properties-test.mjs',
