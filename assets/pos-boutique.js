@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=170';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=88';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=170';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=170';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=171';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=89';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=171';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=171';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
@@ -619,10 +619,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
   function withinRetention(d) {
     const x = new Date(d);
     if (isNaN(x)) return false;
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - (RETAIN_DAYS - 1));       // aujourd'hui inclus
-    return x >= start;
+    return retDayKey(x) >= retShiftDay(retDayKey(Date.now()), -(RETAIN_DAYS - 1));   // jour d'activité (05:00), aujourd'hui inclus
   }
   /* Les ventes du JOUR — la seule base admise pour un chiffre d'affaires. Les
      ventes sorties des livres n'en sont plus (voir reconcileVoids). */
@@ -805,15 +802,14 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     if (IS_DEMO || typeof fetch !== 'function') return Promise.resolve(0);
     const merchant = merchantSlug();
     if (!merchant) return Promise.resolve(0);
-    const start = new Date(); start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - (RETAIN_DAYS - 1));
+    const oldest = retShiftDay(retDayKey(Date.now()), -(RETAIN_DAYS - 1)), start = new Date(oldest + 'T00:00:00');   // minuit local du plus ancien jour d'activité (avant son 05:00)
     return (window.KiwiPosSale?.feedDay || ((u, o) => fetch(u, o).then((r) => r.ok ? r.json() : null)))('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + start.getTime(), {
       credentials: 'same-origin', headers: { Accept: 'application/json' },
     }).then((data) => {
       let added = 0;
       ((data && data.sales) || []).forEach((row) => {
         const ref = String(row.ref || '');
-        if (!ref || SALES.some((s) => s && s.id === ref)) return;
+        if (!ref || SALES.some((s) => s && s.id === ref) || retDayKey(Number(row.ts) || Date.now()) < oldest) return;
         const lines = (Array.isArray(row.lines) ? row.lines : []).map(remoteLine).filter(Boolean);
         if (!lines.length) return; // sans article identifiable, aucun échange honnête à proposer
         const total = lines.reduce((sum, l) => sum + l.unit * l.qty, 0);

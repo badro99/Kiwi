@@ -624,7 +624,7 @@ for (const test of [
   'booking-properties-test.mjs',
   'booking-read-order-test.mjs',
   'hotel-properties-test.mjs',
-  'stockqueue-ruling-test.mjs', 'stock-money-properties-test.mjs', 'stock-overlay-quota-test.mjs', 'cx-money-behavior-test.mjs',
+  'stockqueue-ruling-test.mjs', 'stock-retail-move-test.mjs', 'held-split-lines-test.mjs', 'recipe-caps-test.mjs', 'menu-missing-price-test.mjs', 'boutique-retention-day-test.mjs', 'stock-money-properties-test.mjs', 'stock-overlay-quota-test.mjs', 'cx-money-behavior-test.mjs',
   'menu-analysis-properties-test.mjs',
   'economat-properties-test.mjs',
   'economat-controller-uncertain-test.mjs',

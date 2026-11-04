@@ -65,7 +65,7 @@ ok(validateMenuItems({ items: [{ price: 45 }] }) === null, 'un article sans nom 
 const v1 = validateMenuItems({ currency: 'MAD', items: [{ name: 'Tajine', price: '95.567', cat: 'Plats', sub: 'Four', desc: 'Bon' }] });
 ok(v1 && v1.items[0].price === 95.57, 'un prix en chaîne numérique est accepté et arrondi (les modèles en produisent)');
 const v2 = validateMenuItems({ items: [{ name: 'Thé', price: 24.456 }, { name: 'X', price: -5 }, { name: 'Y', price: 1e9 }] });
-ok(v2.items[0].price === 24.46 && v2.items[1].price === 0 && v2.items[2].price === 99999, 'prix arrondi au centime, borné [0, 99999]');
+ok(v2.items[0].price === 24.46 && v2.items[1].price === null && v2.items[2].price === 99999, 'prix arrondi au centime, borné à 99999, un prix négatif (illisible) reste vide au lieu de 0');
 const long = validateMenuItems({ items: [{ name: 'N'.repeat(300), cat: 'C'.repeat(300), sub: 'S'.repeat(300), desc: 'D'.repeat(900), price: 1 }] });
 ok(long.items[0].name.length === 120 && long.items[0].cat.length === 60 && long.items[0].sub.length === 60 && long.items[0].desc.length === 400, 'chaque champ est tronqué à sa borne');
 const many = validateMenuItems({ items: Array.from({ length: 450 }, (_, i) => ({ name: 'A' + i, price: 1 })) });

@@ -512,6 +512,13 @@
         issues.push({ line, level: 'skip', msg: tx('prix illisible (« ' + rawPrice + ' ») · article non créé', 'unreadable price ("' + rawPrice + '") · item not created', 'سعر غير مقروء ("' + rawPrice + '") · لم يُنشأ الصنف') });
         return;
       }
+      /* Une case de prix VIDE n'est pas non plus un prix de 0 (le scan de carte
+         laisse vide ce qu'il n'a pas su lire) : un nouvel article sans prix
+         n'est pas créé ; un 0 écrit explicitement reste valable. */
+      if (!rawPrice && !existingForPrice) {
+        issues.push({ line, level: 'skip', msg: tx('prix manquant · article non créé', 'missing price · item not created', 'السعر مفقود · لم يُنشأ الصنف') });
+        return;
+      }
       if (priceUnreadable) {
         issues.push({ line, level: 'warn', msg: tx('prix illisible (« ' + rawPrice + ' ») · prix actuel conservé', 'unreadable price ("' + rawPrice + '") · current price kept', 'سعر غير مقروء ("' + rawPrice + '") · أُبقي السعر الحالي') });
       }

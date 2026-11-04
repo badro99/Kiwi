@@ -2,7 +2,7 @@
   "files": {
     "assets/stock.js": {
       "fixture": "tools/fixtures/stock-controller/stock.js.gz",
-      "sha256": "52181100d91193c775f5bef81ebed4c566254520ba6eea83d4dcfd5f5039beb6",
+      "sha256": "f14a905056339889463343f5f1125a191d0a0183dba9f4cfaa0da51bc50da3f7",
       "stamps": [
         "assets/stock/loss.js?v=1",
         "assets/stock/counts.js?v=3",
@@ -18,7 +18,7 @@
     },
     "assets/stock/catalog.js": {
       "fixture": "tools/fixtures/stock-controller/catalog.js.gz",
-      "sha256": "c0f2c07e5555f3947dbbe749267c60e1532c5ec99390a2e090c0fd2e30d0bec0",
+      "sha256": "d0ffb2beceee13998f574ecca6a40ef5de83ae9f59d3c4839888255bb9fb1230",
       "stamps": []
     },
     "assets/stock/counts.js": {
@@ -237,13 +237,13 @@
         },
         {
           "name": "moveRetailStock",
-          "offset": 3030,
-          "length": 310,
+          "offset": 3482,
+          "length": 1530,
           "replacement": "function moveRetailStock(...args) { return stockState.moveRetailStock.apply(this, args); }"
         },
         {
           "name": "countStock",
-          "offset": 3344,
+          "offset": 5016,
           "length": 256,
           "replacement": "function countStock(...args) { return stockState.countStock.apply(this, args); }"
         }
@@ -252,21 +252,21 @@
         {
           "file": "assets/stock/intake.js",
           "name": "stIntakePostAll",
-          "offset": 3801,
+          "offset": 5473,
           "length": 4647,
           "replacement": "function stIntakePostAll(...args) { return S.stockState.stIntakePostAll(S, { stIntakePostingCanonical, stIntakePostingIds, stIntakePostingLines, stIntakePrepare, stIntakeSupplierId, stSha256Hex }).apply(this, args); }"
         },
         {
           "file": "assets/stock/counts.js",
           "name": "fetchServerCounts",
-          "offset": 8540,
+          "offset": 10212,
           "length": 426,
           "replacement": "function fetchServerCounts(...args) { return S.stockState.fetchServerCounts(S, {  }).apply(this, args); }"
         },
         {
           "file": "assets/stock/intake.js",
           "name": "stLegacyPostAll",
-          "offset": 9076,
+          "offset": 10748,
           "length": 2628,
           "replacement": "function stLegacyPostAll(...args) { return S.stockState.stLegacyPostAll(S, { stUpsertSupplierCard }).apply(this, args); }"
         }

@@ -266,12 +266,11 @@
     $('[data-cancel]',m.el).onclick=m.close;
     $('[data-save]',m.el).onclick=()=>{
       const draft=recipeDraft(m.el,x,api);
-      if(!draft.ingredients.some(line=>line.qty>0)){
-        toast(ui('rxToastQtyT'),ui('rxToastQty'),'warn');
-        return;
-      }
-      if(draft.ingredients.some(line=>!line.unit)){
-        toast(ui('rxToastUnitT'),ui('rxToastUnit'),'warn');
+      const refusal=!draft.ingredients.some(line=>line.qty>0)?['rxToastQtyT','rxToastQty']
+        :draft.ingredients.some(line=>!line.unit)?['rxToastUnitT','rxToastUnit']
+        :api.tooLong?.(draft)?['rxToastCapT','rxToastCap']:null;
+      if(refusal){
+        toast(ui(refusal[0]),ui(refusal[1]),'warn');
         return;
       }
       S().updateItem(x.id,{hideNutrition:hideDraft});

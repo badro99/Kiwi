@@ -26,6 +26,17 @@
       unit: units()?.normalize?.(v.unit, '') || clean(v.unit),
     };
   }
+  /* Plafonds d'une fiche. normalizeRecipe lit des données déjà stockées et
+   * garde ses bornes ; à l'enregistrement, dépasser est REFUSÉ (jamais coupé en
+   * silence : les lignes en trop disparaissaient sans un mot, comme pour la
+   * fidélité, décision du 4 nov.). */
+  const MAX_INGREDIENTS = 80;
+  const MAX_STEPS = 40;
+  function tooLong(value) {
+    const ing = (Array.isArray(value?.ingredients) ? value.ingredients : []).map(normalizeIngredient).filter((x) => x.name || x.stockId).length;
+    const steps = (Array.isArray(value?.steps) ? value.steps : []).map(clean).filter(Boolean).length;
+    return ing > MAX_INGREDIENTS || steps > MAX_STEPS;
+  }
   function normalizeRecipe(value, itemId) {
     if (!value) return null;
     return {
@@ -33,8 +44,8 @@
       itemName: clean(value.itemName),
       portions: Math.max(1, number(value.portions || value.yield) || 1),
       prepMinutes: number(value.prepMinutes),
-      ingredients: (Array.isArray(value.ingredients) ? value.ingredients : []).map(normalizeIngredient).filter((x) => x.name || x.stockId).slice(0, 80),
-      steps: (Array.isArray(value.steps) ? value.steps : []).map(clean).filter(Boolean).slice(0, 40),
+      ingredients: (Array.isArray(value.ingredients) ? value.ingredients : []).map(normalizeIngredient).filter((x) => x.name || x.stockId).slice(0, MAX_INGREDIENTS),
+      steps: (Array.isArray(value.steps) ? value.steps : []).map(clean).filter(Boolean).slice(0, MAX_STEPS),
       note: clean(value.note || value.notes).slice(0, 4000),
       updatedAt: number(value.updatedAt) || Date.now(),
     };
@@ -239,6 +250,7 @@
   }
   function save(itemId, value, id) {
     if (!itemId) return;
+    if (tooLong(value)) return false;   // refusé, rien n'est écrit ni coupé
     const normalized = normalizeRecipe({ ...value, itemId, updatedAt: Date.now() }, itemId);
     const next = window.KiwiStockIdentity?.bindRecipe?.(normalized, inventory(id)) || normalized;
     const result = store.update((d) => {
@@ -336,7 +348,7 @@
   }
 
   window.KiwiRestaurantRecipes = {
-    all, get, save, remove, inventory, stockFor, ingredientInfo, metrics, nutrition: nutritionResult,
+    all, get, save, tooLong, remove, inventory, stockFor, ingredientInfo, metrics, nutrition: nutritionResult,
     recompute, recomputeForStock, recomputeAll, theoreticalUsage, theoreticalUsageMap, heal,
     subscribe: (fn) => store.subscribe(fn), _store: store,
   };

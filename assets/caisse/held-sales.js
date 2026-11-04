@@ -59,7 +59,7 @@
         mode:      splitState.splitMode,
         total:     splitState.total,
         sourceLines: Array.isArray(splitState.sourceLines)
-          ? splitState.sourceLines.slice(0, 40).map(line => ({ ...line })) : [],
+          ? splitState.sourceLines.map(line => ({ ...line })) : [],
         parts:     splitState.flow.parts.map(p => ({
           ...p,
           lines: Array.isArray(p.lines) ? p.lines.map(l => ({ ...l })) : [],

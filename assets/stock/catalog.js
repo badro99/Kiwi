@@ -227,8 +227,9 @@ window.KiwiStockInternal.install('catalog', (S) => {
       if (why === 'count') countStock(it, value, ref);
       else {
         const dlc = why === 'receipt' ? (scope.querySelector('[data-stock-move-dlc]')?.value || '') : '';
-        moveStock(it, ['receipt', 'return'].includes(why) ? value : -value, why, 'manual', ref, note, null,
+        const moved = moveStock(it, ['receipt', 'return'].includes(why) ? value : -value, why, 'manual', ref, note, null,
           dlc ? { expiresAt: new Date(dlc + 'T23:59:59').getTime() } : null);
+        if (it.retail && retailCatalog() && !moved) return;   // refus déjà dit par le catalogue : le formulaire reste ouvert
       }
       closeTopModal(); window.Kiwi.toast('Mouvement de stock enregistré.', { type: 'success' });
       if (S.stPageActive) render();
@@ -865,6 +866,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
         if (isEdit) {
           const before = currentStockFor(existing);
           if (existing.retail && retailCatalog()) {
+            if (!Number.isInteger(currentStock)) { retailSetProductStock(existing.id, currentStock, 'comptage'); return; }
             retailCatalog().updateProduct(existing.id, {
               name, categoryId: category, cost: costPerUnit, supplierId: supplierRow?.id || '',
               parLevel, reorderLevel,
@@ -912,6 +914,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
         }
 
         if (retailCatalog()) {
+          if (!Number.isInteger(currentStock)) { retailSetProductStock('', currentStock, 'initial'); return; }
           const product = retailCatalog().addProduct({
             name, categoryId: category, cost: costPerUnit, priceMAD: 0,
             supplierId: supplierRow?.id || '', parLevel, reorderLevel,
