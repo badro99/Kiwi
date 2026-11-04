@@ -132,18 +132,18 @@
     var m = merchant();
     if (!m || m === 'unpaired') return Promise.resolve({ arbitrated: false });
     try { if (typeof fetch !== 'function') return Promise.resolve({ arbitrated: false }); } catch (_) { return Promise.resolve({ arbitrated: false }); }
-    remote.pending = fetch('/api/store' + hubQS(), { credentials: 'same-origin', cache: 'no-store' })
+    remote.pending = import('./request-deadline.mjs').then(function (net) { return net.deadlineFetch('/api/store' + hubQS(), { credentials: 'same-origin', cache: 'no-store' }); })
       .then(function (r) { return r.json().catch(function () { return null; }); })
       .then(function (read) {
         var rev = Number(read && read.rev) || 0;
         remote.rev = rev;
-        return fetch('/api/store', {
+        return import('./request-deadline.mjs').then(function (net) { return net.deadlineFetch('/api/store', {
           method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             feature: HUB_FEATURE, merchant: m, baseRev: rev,
             data: { hub: enabled ? { deviceId: deviceId(), name: deviceName() } : null },
           }),
-        }).then(function (r) {
+        }); }).then(function (r) {
           return r.json().catch(function () { return null; }).then(function (j) { return { status: r.status, j: j }; });
         });
       })

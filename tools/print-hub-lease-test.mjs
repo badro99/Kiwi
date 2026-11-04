@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource } from './deadline-vm-source.mjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Un seul comptoir imprime                    (ticket #0066, partie 3)
  *
@@ -155,7 +156,7 @@ function load(responder) {
   storage.setItem('kiwiPaired', '1');
   storage.setItem('kiwiLiveMerchant', 'santos');
   vm.createContext(sandbox);
-  vm.runInContext(QUEUE, sandbox, { filename: 'kitchen-print-queue.js' });
+  vm.runInContext(deadlineVmSource(QUEUE), sandbox, { filename: 'kitchen-print-queue.js' });
   return { api: sandbox.window.KiwiKitchenPrint, toasts, posted, storage };
 }
 

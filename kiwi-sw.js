@@ -44,8 +44,8 @@ var SHELL = [
   '/assets/planning/payroll-view.js?v=8',
   '/assets/planning/corrections.js?v=3',
   '/assets/orderpro/draft.js?v=3',
-  '/assets/orderpro/transport.js?v=3',
-  '/assets/orderpro-page.js?v=24',
+  '/assets/orderpro/transport.js?v=4',
+  '/assets/orderpro-page.js?v=25',
   '/assets/orderpro/money.js?v=4',
   '/assets/orderpro/payment.js?v=9',
   '/assets/orderpro/cart.js?v=6',
@@ -75,11 +75,11 @@ var SHELL = [
   '/assets/menu-catalog/item-list.js?v=3',
   '/assets/menu-catalog/modifiers.js?v=3',
   '/assets/menu-catalog/state.js?v=13',
-  '/assets/pressing/custody.js?v=11',
-  '/assets/pressing/rack.js?v=10',
-  '/assets/pressing/pickup.js?v=10',
-  '/assets/pressing/workshop.js?v=10',
-  '/assets/pressing/deposit.js?v=10',
+  '/assets/pressing/custody.js?v=12',
+  '/assets/pressing/rack.js?v=11',
+  '/assets/pressing/pickup.js?v=11',
+  '/assets/pressing/workshop.js?v=11',
+  '/assets/pressing/deposit.js?v=11',
   '/assets/hotel/rate-actions.js?v=6',
   '/assets/hotel/folio-actions.js?v=4',
   '/assets/hotel/room-board.js?v=6',
@@ -108,7 +108,7 @@ var SHELL = [
   '/assets/pages-pro.js?v=2209',
   '/assets/pages-pro-spa-starter.js?v=7',
   '/assets/cash-sessions.js?v=8',
-  '/assets/simple-food-cost.js?v=19',
+  '/assets/simple-food-cost.js?v=20',
   '/assets/finance.js?v=14',
   '/assets/conformite.js?v=8',
   '/dashboard.html',
@@ -200,7 +200,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2101',
-  '/assets/pages/dashboard-startup.js?v=162',
+  '/assets/pages/dashboard-startup.js?v=163',
   '/assets/pages/dashboard-loader.js?v=49',
   '/assets/hotel/model.js?v=9',
   '/assets/hotel/views.js?v=4',
@@ -317,7 +317,7 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2061',
   // The Plan de salle's live-room poller (fail-soft without network).
-  '/assets/floorplan-live.js?v=8',
+  '/assets/floorplan-live.js?v=9',
   '/assets/oppo-cards.js?v=9',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
@@ -394,7 +394,7 @@ var SHELL = [
   '/assets/barcode.js?v=4',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=7',
-  '/assets/boutique-catalog-parts.js?v=21',
+  '/assets/boutique-catalog-parts.js?v=23',
   '/assets/boutique-catalog.js?v=31',
   '/assets/store-templates.js?v=4',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
@@ -479,10 +479,10 @@ var SHELL = [
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=26',
+  '/assets/kitchen-print-queue.js?v=27',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=30',
-  '/assets/pos-dispatch.js?v=351',
+  '/assets/pos-dispatch.js?v=352',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -621,8 +621,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js?v=17',
-  '/assets/pressing-caisse.js?v=78',
-  '/assets/pressing-caisse.css?v=78',
+  '/assets/pressing-caisse.js?v=79',
+  '/assets/pressing-caisse.css?v=79',
   '/assets/material-icons.js?v=4',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers

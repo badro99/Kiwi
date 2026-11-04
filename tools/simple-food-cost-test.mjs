@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource } from './deadline-vm-source.mjs';
 /* Coût simple · le calcul et l'onglet (assets/simple-food-cost.js + finance.js).
  *
  *   1. Le calcul : lot, rendement, emballages, portions, TVA incluse ⇒ % sur le
@@ -82,9 +83,9 @@ const win = {
   Kiwi: { modal: fakeModal },
 };
 win.window = win;
-const ctx = vm.createContext({ window: win, document, navigator: nav, fetch, localStorage: makeStorage(), console, setTimeout: (fn) => fn(), clearTimeout() {}, Intl, URL: { createObjectURL: () => 'blob:x', revokeObjectURL() {} }, Blob: class { constructor(p) { this.p = p; } } });
+const ctx = vm.createContext({ window: win, document, navigator: nav, fetch, localStorage: makeStorage(), console, setTimeout: (fn, ms) => ms ? 0 : fn(), clearTimeout() {}, Intl, URL: { createObjectURL: () => 'blob:x', revokeObjectURL() {} }, Blob: class { constructor(p) { this.p = p; } } });
 vm.runInContext(R('assets/restaurant-units.js'), ctx, { filename: 'restaurant-units.js' });
-vm.runInContext(R('assets/simple-food-cost.js'), ctx, { filename: 'simple-food-cost.js' });
+vm.runInContext(deadlineVmSource(R('assets/simple-food-cost.js')), ctx, { filename: 'simple-food-cost.js' });
 const F = win.KiwiSimpleFoodCost;
 const conv = win.KiwiRestaurantUnits.convert;
 const flush = () => new Promise((r) => setImmediate(r));
@@ -236,9 +237,9 @@ async function reboot(account, answer) {
   delete w2.KiwiSimpleFoodCost; delete w2.KiwiRestaurantUnits;
   w2.window = w2;
   const f2 = async (url, opts) => { const body = opts && opts.body ? JSON.parse(opts.body) : null; out.calls.push({ url, body }); const r = answer(url, body); return { status: r.status, json: async () => r.body }; };
-  const c2 = vm.createContext({ window: w2, document: doc2, navigator: { onLine: true }, fetch: f2, localStorage: makeStorage(), console, setTimeout: (fn) => fn(), clearTimeout() {}, Intl, URL: ctx.URL, Blob: ctx.Blob });
+  const c2 = vm.createContext({ window: w2, document: doc2, navigator: { onLine: true }, fetch: f2, localStorage: makeStorage(), console, setTimeout: (fn, ms) => ms ? 0 : fn(), clearTimeout() {}, Intl, URL: ctx.URL, Blob: ctx.Blob });
   vm.runInContext(R('assets/restaurant-units.js'), c2, { filename: 'restaurant-units.js' });
-  vm.runInContext(R('assets/simple-food-cost.js'), c2, { filename: 'simple-food-cost.js' });
+  vm.runInContext(deadlineVmSource(R('assets/simple-food-cost.js')), c2, { filename: 'simple-food-cost.js' });
   w2.KiwiSimpleFoodCost.panel();
   await flush(); await flush(); await flush();
   return out;

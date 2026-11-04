@@ -31,22 +31,22 @@ KiwiOrderMenu.orderProParts.run('transport', function () {
 
       async function getJSON(url) {
         try {
-          const r = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+          const r = await (await import('../request-deadline.mjs')).deadlineFetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
           if (!r.ok) return null;
           return await r.json();
         } catch (_) { return null; }        // offline / no backend → caller decides
       }
       async function postJSON(url, body) {
         try {
-          const r = await fetch(url, {
+          const r = await (await import('../request-deadline.mjs')).deadlineFetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
           });
           const j = await r.json().catch(() => null);
           if (!r.ok) return Object.assign({ ok: false, status: r.status, error: (j && j.error) || 'http-' + r.status }, j || {});
-          return j || { ok: false, error: 'empty' };
-        } catch (_) { return { ok: false, error: 'network' }; }
+          return j || { ok: false, error: 'empty', uncertain: true };
+        } catch (_) { return { ok: false, error: 'network', uncertain: true }; }
       }
 
       /* ?s=demo is the pitch demo (assets/orderpro-demo.js): its menu and its

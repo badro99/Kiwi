@@ -128,8 +128,8 @@
     "sha": "49a5631799af3e20"
   },
   "assets/boutique-catalog-parts.js": {
-    "v": "21",
-    "sha": "6eb8cb76e0781ee9"
+    "v": "23",
+    "sha": "2ad70aface7c6b45"
   },
   "assets/boutique-catalog.js": {
     "v": "31",
@@ -612,8 +612,8 @@
     "sha": "73d2aab1aa7669a3"
   },
   "assets/floorplan-live.js": {
-    "v": "8",
-    "sha": "dd2ad20f83c2ac4c"
+    "v": "9",
+    "sha": "d9005d8530a733a6"
   },
   "assets/fonts/inter-tight-latin-ext.woff2": {
     "v": "1",
@@ -1064,8 +1064,8 @@
     "sha": "c9aa7ba3d485d350"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "26",
-    "sha": "894a429d511a3d60"
+    "v": "27",
+    "sha": "5468be36b732dff2"
   },
   "assets/kitchen-relay.js": {
     "v": "16",
@@ -1340,8 +1340,8 @@
     "sha": "565730a1fc3bccbe"
   },
   "assets/orderpro-page.js": {
-    "v": "24",
-    "sha": "edd0911079ae7ec5"
+    "v": "25",
+    "sha": "775d478dd3ed42dd"
   },
   "assets/orderpro-panel.js": {
     "v": "5",
@@ -1380,8 +1380,8 @@
     "sha": "46aa7947e27316df"
   },
   "assets/orderpro/transport.js": {
-    "v": "3",
-    "sha": "2cfe4e7d2ca95ce5"
+    "v": "4",
+    "sha": "130ae4ff4da87814"
   },
   "assets/origin-move.css": {
     "v": "1",
@@ -1436,8 +1436,8 @@
     "sha": "d005cca4a3c529d7"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "162",
-    "sha": "3f1a59661ae25525"
+    "v": "163",
+    "sha": "b81ab3e7162b7e17"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1632,8 +1632,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "351",
-    "sha": "3e8566044481cc59"
+    "v": "352",
+    "sha": "d46777c365c47d8b"
   },
   "assets/pos-epicerie.css": {
     "v": "36",
@@ -1796,12 +1796,12 @@
     "sha": "868b426ef7f5a32f"
   },
   "assets/pressing-caisse.css": {
-    "v": "78",
+    "v": "79",
     "sha": "493ee727572f7123"
   },
   "assets/pressing-caisse.js": {
-    "v": "78",
-    "sha": "96f15e785ee20f0e"
+    "v": "79",
+    "sha": "a2694f815e7715b4"
   },
   "assets/pressing-catalog.css": {
     "v": "5",
@@ -1828,24 +1828,24 @@
     "sha": "4b3c8fc89c9d16ab"
   },
   "assets/pressing/custody.js": {
-    "v": "11",
-    "sha": "2a7434e4d36ff6bb"
+    "v": "12",
+    "sha": "59b6f22a4c3d5811"
   },
   "assets/pressing/deposit.js": {
-    "v": "10",
-    "sha": "745c891f7f542096"
+    "v": "11",
+    "sha": "1bfe6132cc47b0c0"
   },
   "assets/pressing/pickup.js": {
-    "v": "10",
-    "sha": "006b62d110cc053d"
+    "v": "11",
+    "sha": "47409ab27383f61a"
   },
   "assets/pressing/rack.js": {
-    "v": "10",
-    "sha": "17fa5caa5dcd5327"
+    "v": "11",
+    "sha": "8245dbd746066ac8"
   },
   "assets/pressing/workshop.js": {
-    "v": "10",
-    "sha": "09b303f671a45418"
+    "v": "11",
+    "sha": "0b0cee9a592bec94"
   },
   "assets/print-paper.css": {
     "v": "1",
@@ -2020,8 +2020,8 @@
     "sha": "5837b2072494ce58"
   },
   "assets/simple-food-cost.js": {
-    "v": "19",
-    "sha": "f884ed362a2e94c3"
+    "v": "20",
+    "sha": "80c5adca7136aa5b"
   },
   "assets/simple.css": {
     "v": "1",

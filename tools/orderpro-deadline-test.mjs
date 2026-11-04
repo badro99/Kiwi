@@ -1,3 +1,5 @@
+// The named deadline gate also executes the main modular transport.
+import './net1-request-test.mjs';
 import assert from 'node:assert/strict';
 import harness from './orderpro-reliability-harness.cjs';
 for (const method of ['getJSON', 'postJSON']) for (const stage of ['transport', 'body']) {

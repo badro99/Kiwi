@@ -1,3 +1,4 @@
+import { deadlineVmSource } from './deadline-vm-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -55,7 +56,7 @@ function boot(split, lang) {
   let owner;
   if (!split) {
     const proof = `\nglobalThis.proof = { ${names.join(', ')}, ${fields.map(n => `get ${n}() { return ${n}; }, set ${n}(v) { ${n} = v; }`).join(', ')} };`;
-    vm.runInContext(original + proof, ctx);
+    vm.runInContext(deadlineVmSource(original + proof), ctx);
   } else {
     vm.runInContext(read('assets/orderpro-page.js'), ctx);
     assert.equal(effects.length, 8, 'only static dependency URLs emitted before initialization');
@@ -65,7 +66,7 @@ function boot(split, lang) {
     const create = ctx.KiwiOrderMenu.orderProParts.create;
     ctx.KiwiOrderMenu.orderProParts.create = function (name, scope) { return instances[name] = create(name, scope); };
     for (const url of urls) {
-      vm.runInContext(read(url.split('?')[0]), ctx);
+      vm.runInContext(deadlineVmSource(read(url.split('?')[0])), ctx);
       if (!owner && ctx.KiwiOrderMenu.orderProParts.owner) {
         const factory = ctx.KiwiOrderMenu.orderProParts.owner;
         ctx.KiwiOrderMenu.orderProParts.owner = () => owner = factory();

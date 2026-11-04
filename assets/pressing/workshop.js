@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: KiwiApiBase, KiwiCaisseLang, KiwiCaissePairing, KiwiPressingOps, KiwiStaff, open.
  */
-import { ITEMS, root } from './custody.js?v=11';
+import { ITEMS, root } from './custody.js?v=12';
 export function create(owner) {
   'use strict';
   const { $, $$, COLOR, ORDERS, STATUS, afterStatusChange, catalogLabel, closeVeil, custOf, dataText, effectiveStatus, esc, findOrder, fmtDT, fmtDay, fmtMAD, garmentIcon, icons, isLate, isLiveOrder, moveCaretEnd, openPay, openScan, openTags, openVeil, orderStatus, orderTotals, pad2, pressingScope, publicOrderNo, publicPieceNo, pvName, queueIfOffline, refreshOps, releaseSlot, searchDigits, setSelectedReady, setWholeOrderStatus, state, svcCodes, switchView, syncOwnerOps, toast, whatsappPhone } = owner.workshopContext();
@@ -284,7 +284,7 @@ function openDetail(orderId) {
       let cancellation = null;
       try {
         const merchant = pressingScope();
-        const response = merchant ? await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch('/api/pressing/cancel', {
+        const response = merchant ? await (await import('../request-deadline.mjs')).deadlineFetch('/api/pressing/cancel', {
           method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({ merchant, orderId: String(o.id), pin }),
         }) : null;

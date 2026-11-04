@@ -318,24 +318,24 @@
         },
         {
           "start": 150414,
-          "end": 161457,
+          "end": 161368,
           "offset": 10055,
-          "length": 11043,
+          "length": 10954,
           "replacement": "function openDetail(...args) { return ui.workshop.openDetail.apply(this, args); }",
           "name": "openDetail"
         },
         {
-          "start": 162741,
-          "end": 163360,
-          "offset": 21099,
+          "start": 162652,
+          "end": 163271,
+          "offset": 21010,
           "length": 619,
           "replacement": "function waMessage(...args) { return ui.workshop.waMessage.apply(this, args); }",
           "name": "waMessage"
         },
         {
-          "start": 163364,
-          "end": 167417,
-          "offset": 21719,
+          "start": 163275,
+          "end": 167328,
+          "offset": 21630,
           "length": 4053,
           "replacement": "function openWa(...args) { return ui.workshop.openWa.apply(this, args); }",
           "name": "openWa"
@@ -418,56 +418,56 @@
       "suffix": "  return Object.freeze({ renderRetrait, rtCard, stopScanner, acceptScan, startCameraScan, openScan });\n}\n",
       "fragments": [
         {
-          "start": 167485,
-          "end": 171961,
+          "start": 167396,
+          "end": 171872,
           "offset": 753,
           "length": 4476,
           "replacement": "function renderRetrait(...args) { return ui.pickup.renderRetrait.apply(this, args); }",
           "name": "renderRetrait"
         },
         {
-          "start": 171965,
-          "end": 174338,
+          "start": 171876,
+          "end": 174249,
           "offset": 5230,
           "length": 2373,
           "replacement": "function rtCard(...args) { return ui.pickup.rtCard.apply(this, args); }",
           "name": "rtCard"
         },
         {
-          "start": 174990,
-          "end": 175013,
+          "start": 174901,
+          "end": 174924,
           "offset": 7604,
           "length": 23,
           "replacement": "/* pressing-private:scannerStop */",
           "name": "scannerStop"
         },
         {
-          "start": 175016,
-          "end": 175157,
+          "start": 174927,
+          "end": 175068,
           "offset": 7628,
           "length": 141,
           "replacement": "function stopScanner(...args) { return ui.pickup.stopScanner.apply(this, args); }",
           "name": "stopScanner"
         },
         {
-          "start": 176118,
-          "end": 177080,
+          "start": 176029,
+          "end": 176991,
           "offset": 7770,
           "length": 962,
           "replacement": "function acceptScan(...args) { return ui.pickup.acceptScan.apply(this, args); }",
           "name": "acceptScan"
         },
         {
-          "start": 177083,
-          "end": 178828,
+          "start": 176994,
+          "end": 178739,
           "offset": 8733,
           "length": 1745,
           "replacement": "function startCameraScan(...args) { return ui.pickup.startCameraScan.apply(this, args); }",
           "name": "startCameraScan"
         },
         {
-          "start": 178831,
-          "end": 180715,
+          "start": 178742,
+          "end": 180626,
           "offset": 10479,
           "length": 1884,
           "replacement": "function openScan(...args) { return ui.pickup.openScan.apply(this, args); }",
@@ -537,8 +537,8 @@
       "suffix": "  return Object.freeze({ renderRack });\n}\n",
       "fragments": [
         {
-          "start": 181745,
-          "end": 184855,
+          "start": 181656,
+          "end": 184766,
           "offset": 506,
           "length": 3110,
           "replacement": "function renderRack(...args) { return ui.rack.renderRack.apply(this, args); }",
@@ -617,5 +617,6 @@
     "kiwi-caisse.html": 89,
     "kiwi-serveur.html": 27,
     "booking.html": 5
-  }
+  },
+  "sha256": "8b112e152f7f44a0e5f1bebf58301b66f2b20299c6706f86d37232e1ac0ba846"
 }

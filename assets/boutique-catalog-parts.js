@@ -828,14 +828,14 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
   function pull(first) {
     const slug = core.VENUE;
     if (!cloudOn()) return Promise.resolve(false);
-    return fetch('/api/catalog?merchant=' + encodeURIComponent(slug), {
+    return import('./request-deadline.mjs').then((net) => net.deadlineFetch('/api/catalog?merchant=' + encodeURIComponent(slug), {
       headers: { Accept: 'application/json' },
-    })
+    }))
       .then((r) => (r && r.ok ? r.json() : null))
       .then((res) => {
         // Le commerçant a changé de magasin pendant l'aller-retour : cette
         // réponse concerne l'inventaire d'une autre boutique, on la jette.
-        if (!res || slug !== core.VENUE) return false;
+        if (slug !== core.VENUE) return false; if (!res || !Number.isInteger(res.rev) || res.rev < 0 || !(res.data === null || (res.data && Array.isArray(res.data.products) && Array.isArray(res.data.variants) && Array.isArray(res.data.categories)))) throw new Error('catalog-read');
         /* Only a valid server document satisfies "read before write". A 500 used
            to become `null` but still set cloud.read, licensing the next local
            mutation to overwrite a server copy this browser had never seen. */
@@ -930,14 +930,14 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
     if (cloud.busy) { cloud.again = true; return; }
     const sentDirty = dirtyToken(slug);
     cloud.busy = true;
-    fetch('/api/catalog', {
+    import('./request-deadline.mjs').then((net) => net.deadlineFetch('/api/catalog', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ merchant: slug, baseRev: cloud.rev, data: core.db }),
       // L'onglet peut se fermer juste après une vente : keepalive laisse la
       // requête partir quand même.
       keepalive: !!(opts && opts.keepalive),
-    })
+    }))
       .then((r) => r.json().then((j) => ({ status: r.status, j })).catch(() => ({ status: r.status, j: null })))
       .then((res) => {
         if (slug !== core.VENUE) return;

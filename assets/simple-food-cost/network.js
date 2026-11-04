@@ -21,22 +21,24 @@
   /* ── réseau ──────────────────────────────────────────────────────────── */
   async function api(method, query, body) {
     const url = '/api/foodcost' + (query ? '?' + query : '');
-    const res = await fetch(url, method === 'GET' ? { headers: { Accept: 'application/json' }, credentials: 'same-origin' }
+    const res = await (await import('./request-deadline.mjs')).deadlineFetch(url, method === 'GET' ? { headers: { Accept: 'application/json' }, credentials: 'same-origin' }
       : { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) });
     let data = null;
-    try { data = await res.json(); } catch (_) { data = null; }
+    data = await res.json();
     return { status: res.status, data: data || {} };
   }
   async function load() {
     S.merchant = merchant();
     if (!S.merchant) { S.status = 'error'; paint(); return; }
+    const scope = S.merchant, draft = S.draft;
     S.status = 'loading'; paint();
     try {
-      const r = await api('GET', 'merchant=' + encodeURIComponent(S.merchant));
+      const r = await api('GET', 'merchant=' + encodeURIComponent(scope));
+      if (S.merchant !== scope || merchant() !== scope || S.draft !== draft) return;
       if (r.status === 403) { S.status = 'forbidden'; }
       else if (r.status !== 200) { S.status = 'error'; }
       else { S.status = 'ready'; S.enabled = r.data.enabled === true; S.canEdit = r.data.canEdit === true; S.sheets = Array.isArray(r.data.sheets) ? r.data.sheets : []; }
-    } catch (_) { S.status = online() ? 'error' : 'offline-empty'; }
+    } catch (_) { if (S.merchant !== scope || merchant() !== scope || S.draft !== draft) return; S.status = online() ? 'error' : 'offline-empty'; }
     const restored = S.status === 'ready' && restoreDraft();
     paint();
     changed();
@@ -91,9 +93,12 @@
     if (!online()) { S.pendingSave = true; S.message = tr('offline'); S.messageKind = 'warn'; paint(); return; }
     S.pendingSave = false;
     S.saving = true; S.message = ''; paint();
+    const scope = S.merchant, draft = S.draft, sheetId = S.openId, snapshot = JSON.stringify(draft);
+    const current = () => S.merchant === scope && merchant() === scope && S.draft === draft && S.openId === sheetId && JSON.stringify(draft) === snapshot;
     const base = force && S.conflict ? S.conflict.version : S.baseVersion;
     try {
       const r = await api('POST', '', { merchant: S.merchant, action: 'save', sheet: { ...S.draft, id: S.openId || '' }, baseVersion: base });
+      if (!current()) return;
       if (r.status === 200 || r.status === 201) {
         replaceSheet(r.data.sheet); S.openId = r.data.sheet.id; S.baseVersion = r.data.sheet.version; S.dirty = false; S.conflict = null;
         S.message = tr('saved', { v: r.data.sheet.version }); S.messageKind = 'ok';
@@ -103,8 +108,8 @@
       } else if (r.status === 403 && r.data.error === 'disabled') {
         S.enabled = false; S.canEdit = false; S.message = tr('disabledError'); S.messageKind = 'warn';
       } else { S.message = tr('saveError'); S.messageKind = 'warn'; }
-    } catch (_) { S.message = tr('saveError'); S.messageKind = 'warn'; }
-    S.saving = false; paint();
+    } catch (_) { if (current()) { S.message = tr('saveError'); S.messageKind = 'warn'; } }
+    finally { S.saving = false; paint(); }
   }
   async function action(body) {
     if (!online()) { S.message = tr('offline'); S.messageKind = 'warn'; paint(); return null; }
