@@ -165,7 +165,7 @@ var SHELL = [
   '/cuisine.webmanifest',
   '/serveur.webmanifest',
   '/assets/tokens.css?v=2053',
-  '/assets/caisse-shell.css?v=25',
+  '/assets/caisse-shell.css?v=26',
   '/assets/theme.css?v=2',
   '/assets/print-paper.css?v=1',
   '/assets/polish.css?v=1',
