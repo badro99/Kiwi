@@ -94,7 +94,7 @@ for (const stage of ['fetch','body']) {
   assert.ok(callback);
   let fetched=0;const messages=[];
   const h=realm(()=>{fetched++;return never();});
-  Object.assign(h.c,{prompt:()=> '1234',pressingScope:()=> 'a',o:{id:'one'},toast:s=>messages.push(s),rejectImport:()=>Promise.reject(Error('module unavailable'))});
+  Object.assign(h.c,{document:{createElement:()=>({setAttribute(){},removeAttribute(){},remove(){},addEventListener(){},appendChild(pad){queueMicrotask(()=>pad.onsubmit('1234'));}}),body:{appendChild(){}}},cancelB:{focus(){}},notifyTr:s=>s,pressingScope:()=> 'a',o:{id:'one'},toast:s=>messages.push(s),rejectImport:()=>Promise.reject(Error('module unavailable'))});
   const cancel=vm.runInContext('('+callback.replaceAll('import(', 'rejectImport(')+')',h.c);
   await cancel();assert.equal(fetched,0);assert.equal(messages.length,1);
 }

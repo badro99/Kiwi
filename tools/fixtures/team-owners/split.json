@@ -948,7 +948,7 @@
     "kiwi-serveur.html": 27,
     "booking.html": 5
   },
-  "sha256": "68fe80be1fd473542c0a94f5b54132801d41efc82d5de60c91101d0614a65a7c",
+  "sha256": "009bbcca68cbfd7c457f06074844b0af54630732e8c0cedc71014d269655f303",
   "imports": [
     "./team/member-state.js",
     "./team/venue-scope.js",

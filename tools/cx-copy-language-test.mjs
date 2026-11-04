@@ -116,7 +116,7 @@ for (const locale of ['fr', 'en', 'ar']) {
      let block; const visit = n => { if (ts.isIfStatement(n) && n.expression.getText(ast) === 'connection.lastError') block = n.getText(ast); ts.forEachChild(n, visit); }; visit(ast);
      paint = (err, error) => vm.runInNewContext(block, { connection: { lastError: error }, document: { createElement: () => err }, root: { appendChild() {} } });
    }
-   else { const ctx = vm.createContext({ window: { KiwiI18n: { T } }, localStorage: store }); vm.runInContext(read('assets/channel-health.js').replace('export ', ''), ctx); paint = ctx.paint; }
+   else { const ctx = vm.createContext({ window: { KiwiI18n: { T } }, localStorage: store }); vm.runInContext(read('assets/channel-health.js').replace(/^export /gm, ''), ctx); paint = ctx.paint; }
    for (const code of ['stock-pending', 'stock-dead', 'stock-short', 'unrecognized French error', 'Stock Shopify à synchroniser : commande fixture']) {
      const err = {}; paint(err, code);
      if (locale !== 'fr') assert.ok(err.textContent === T[locale]['shopify.health.' + (/^stock-/.test(code) ? code : code.startsWith('Stock Shopify') ? 'stock-pending' : 'error')]);

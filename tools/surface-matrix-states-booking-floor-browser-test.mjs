@@ -16,7 +16,15 @@ const copy = {
 };
 async function tap(page, selector) {
   await page.waitForSelector(selector, wait);
-  await page.$eval(selector, e => e.scrollIntoView({ block: 'center', inline: 'center' }));
+  await page.$eval(selector, e => e.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' }));
+  // A visible modal may still be translating. Touch only its settled, exposed button.
+  await page.waitForFunction(selector => {
+    const e = document.querySelector(selector), r = e?.getBoundingClientRect();
+    if (!r) return false;
+    const key = [r.x, r.y, r.width, r.height].join(','), previous = e.__matrixTouchBox;
+    e.__matrixTouchBox = key;
+    return previous === key && e.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+  }, { polling: 'raf', timeout: wait.timeout }, selector);
   const box = await page.$eval(selector, e => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
   await page.touchscreen.tap(box.x, box.y);
 }

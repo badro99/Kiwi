@@ -86,7 +86,7 @@ for (const operation of ['getJson','post']) {
 {
   const source=sources['pressing-caisse.js'];
   const body=source.slice(source.indexOf('cancelB.onclick = async () => {')+'cancelB.onclick = '.length,source.indexOf('\n    };',source.indexOf('cancelB.onclick = async () => {'))+6);
-  const h=setup({prompt:()=>String(10**3),toast:x=>h.messages.push(x),pressingScope:()=> 'demo',o:{id:'order'}});
+  const h=setup({document:{createElement:()=>({setAttribute(){},removeAttribute(){},remove(){},addEventListener(){},appendChild(pad){queueMicrotask(()=>pad.onsubmit('1234'));}}),body:{appendChild(){}}},cancelB:{focus(){}},notifyTr:s=>s,toast:x=>h.messages.push(x),pressingScope:()=> 'demo',o:{id:'order'}});
   await h.expire(h.run('('+body+')')()); assert.equal(h.messages.length,1); console.log('PASS pressing cancellation recovery');
 }
 for(const name of ['publish','publishFollowup','moveTicket','saveClassification']) {

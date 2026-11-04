@@ -42,7 +42,7 @@ function world({ lang = 'fr', trade = 'boutique' } = {}) {
       shirt: { id: 'shirt', name: 'Chemise', price: 200, cost: 80, rayon: 'r1', createdAt: Date.now() - 400 * 86400000, sizes: {} },
       scarf: { id: 'scarf', name: 'Foulard', price: 100, cost: 150, rayon: 'r1', createdAt: Date.now() - 400 * 86400000, sizes: {} } } }),
   };
-  const document = { addEventListener() {}, querySelector: () => null, getElementById: () => null, documentElement: { lang }, head: { appendChild() {} }, createElement: () => stubNode() };
+  const document = { querySelectorAll: () => [], addEventListener() {}, querySelector: () => null, getElementById: () => null, documentElement: { lang }, head: { appendChild() {} }, createElement: () => stubNode() };
   const window = {
     Kiwi: { handlers, toast: (t, o) => toasts.push({ title: t, ...(o || {}) }),
       appPage: (name, o) => pages.push({ name, ...o }),

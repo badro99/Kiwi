@@ -74,10 +74,10 @@ ok("the store's zone and cutoff come from the day report, not a constant", () =>
   assert.equal(iso(H.startOfDay('2026-10-20')), '2026-10-20T03:00:00.000Z');
   assert.equal(iso(H.endOfDay('2026-10-20')), '2026-10-21T02:59:59.999Z');
 });
-ok('without the day report the civil day of Casablanca still answers', () => {
+ok('without the day report Casablanca keeps the 05:00 business day', () => {
   const H = helpers({ report: false });
-  assert.equal(iso(H.startOfDay('2026-10-31')), '2026-10-31T00:00:00.000Z');
-  assert.equal(iso(H.endOfDay('2026-10-31')), '2026-10-31T23:59:59.999Z');
+  assert.equal(iso(H.startOfDay('2026-10-31')), '2026-10-31T05:00:00.000Z');
+  assert.equal(iso(H.endOfDay('2026-10-31')), '2026-11-01T04:59:59.999Z');
 });
 ok('the date inputs hand the chosen date to the helpers, not a noon instant', () => {
   assert.ok(/startOfDay\(from\.value\)/.test(SRC) && /endOfDay\(to\.value\)/.test(SRC) && /startOfDay\(before\.value\)/.test(SRC));

@@ -68,7 +68,7 @@ if (!process.env.KIWI_MISC_CASE || process.env.KIWI_MISC_CASE === 'employee') {
     let panel;
     const node=()=>({children:[],attrs:{},setAttribute(k,v){this.attrs[k]=v;},appendChild(child){this.children.push(child);}});
     const document={documentElement:{lang},body:{},createElement:node,getElementById:id=>id==='main-content'?{prepend(value){panel=value;}}:null};
-    fn('assets/employee-live.js','renderCorrections',{document,queueOwner:'staff',records:()=>[],needsCorrection:()=>false,recovery,correctionWords:fn('assets/employee-live.js','correctionWords')})();
+    fn('assets/employee-live.js','renderCorrections',{document,queueOwner:'staff',records:()=>[],needsCorrection:()=>false,persistence:{},recovery,correctionWords:fn('assets/employee-live.js','correctionWords')})();
     assert.ok(panel.children.some(child=>child.attrs.role==='alert'&&child.textContent.length>30),lang);
   }
 

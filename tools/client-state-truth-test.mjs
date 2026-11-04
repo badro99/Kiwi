@@ -100,7 +100,7 @@ cases.clock = async () => {
   vm.runInContext((read('assets/employee-live.js').includes('function serverNow(')?fn('assets/employee-live.js',['serverNow']):'')+fn('assets/employee-live.js',['needsCorrection'])+';this.test=needsCorrection;',c);
   assert.equal(c.test({at:Date.now()+7*86400000-13*3600000}),true,'wrong device clock cannot make an old punch fresh');
   c.clockOffset=-7*86400000;assert.equal(c.test({at:Date.now()-7*86400000-3600000}),false,'wrong clock cannot expire a fresh punch');
-  const stored=new Map();Object.assign(c,{QUEUE_PREFIX:'queue:',copies:{},recoveryBlocked:{},merge:a=>a,records:()=>[],store:()=>({setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)}),idb:async(_,items)=>items,console});
+  const stored=new Map();Object.assign(c,{QUEUE_PREFIX:'queue:',persistence:{},queueOwner:'',copies:{},recoveryBlocked:{},merge:a=>a,records:()=>[],store:()=>({setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)}),idb:async(_,items)=>items,console});
   vm.runInContext(fn('assets/employee-live.js',['writeQueue'])+';this.write=writeQueue;',c);
   await c.write('owner',[{opId:'recent',done:true,at:Date.now()-7*86400000-3600000}]);
   assert.match(stored.get('queue:owner:outcomes'),/recent/,'ack horizon retains recent server-clock acknowledgement');

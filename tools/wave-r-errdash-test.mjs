@@ -36,7 +36,7 @@ await test('analysis#1 invalid yield is incomplete and names yield',()=>{
   for(const y of [0,-1,101,'bad','']) { const c=ctx.calculate({lines:[{packPrice:10,packQty:1,useQty:1,packUnit:'kg',yieldPct:y}]});assert.equal(c.total,null);assert.equal(c.lines[0].reason,'yield'); }
 });
 await test('analysis#0 history and snapshot failures have retry and recover',async()=>{
-  let status=503, painting=0;const ctx={S:{openId:'sheet',merchant:'fixture'},api:async()=>({status,data:{history:[],snapshot:{version:2}}}),encodeURIComponent,paint:()=>painting++};
+  let status=503, painting=0;const ctx={merchant:()=> 'fixture',S:{openId:'sheet',merchant:'fixture'},api:async()=>({status,data:{history:[],snapshot:{version:2}}}),encodeURIComponent,paint:()=>painting++};
   vm.createContext(ctx);vm.runInContext(section(food,'  async function loadHistory()', '  /* ── export'),ctx);
   await ctx.loadHistory(); assert.equal(ctx.S.historyError,true);
   await ctx.loadSnapshot(2);assert.equal(ctx.S.snapshotError,2);

@@ -40,7 +40,7 @@ try {
  let h=await health();
  assert.equal(h.orderIssues[0].code,'unsupported-currency');assert.equal(h.connection.lastError,'unsupported-currency');
  const context={window:{},localStorage:{getItem:()=> 'fr'}};vm.createContext(context);
- vm.runInContext(fs.readFileSync('assets/channel-health.js','utf8').replace('export function','function'),context);
+ vm.runInContext(fs.readFileSync('assets/channel-health.js','utf8').replace(/^export /gm,''),context);
  const err={};context.paint(err,h.connection.lastError,h.connection.lastErrorContext);
  assert.match(err.textContent,/devise non prise en charge/);assert.match(err.textContent,/81/);
  console.log('✓ Non-MAD order acknowledged once, excluded from MAD ledger, durable issue visible in merchant health.');

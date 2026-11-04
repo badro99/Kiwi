@@ -51,7 +51,7 @@ test('planning#0 every applied assignment is visible in review', () => {
 function payroll(locale) {
   const win={__kiwiTeamV2:{}};
   const factory=loadFactory('assets/planning/payroll-view.js','createPayrollView',{window:win,document:{addEventListener(){}}});
-  const dep={handlers:{},AVATAR_COLORS:{},IC:{},esc:s=>String(s??'').replaceAll('"','&quot;'),buildPeriod:()=>({days:['2026-10-28']}),getHours:()=>({}),dateLocale:()=>locale,pad:n=>String(n).padStart(2,'0'),toISO:()=>'',deferredMark:()=>'',payCents:n=>n*100,fmtHours:String,memberFullName:m=>m.name,initials:()=>'',jobName:()=>'',periodPillsHtml:()=>'',correctionsHtml:()=>'',periodNavigatorHtml:()=>'',svgIcon:()=>''};
+  const dep={trLang:()=>locale.split('-')[0],handlers:{},AVATAR_COLORS:{},IC:{},esc:s=>String(s??'').replaceAll('"','&quot;'),buildPeriod:()=>({days:['2026-10-28']}),getHours:()=>({}),dateLocale:()=>locale,pad:n=>String(n).padStart(2,'0'),toISO:()=>'',deferredMark:()=>'',payCents:n=>n*100,fmtHours:String,memberFullName:m=>m.name,initials:()=>'',jobName:()=>'',periodPillsHtml:()=>'',correctionsHtml:()=>'',periodNavigatorHtml:()=>'',svgIcon:()=>''};
   return factory(dep).renderHoursPane({hPeriodLabel:()=>'',tabHours:'Heures'},null,'venue',[{id:'m',name:'Employé'}]);
 }
 test('planning#1 hour inputs identify employee and date in all host locales', () => {

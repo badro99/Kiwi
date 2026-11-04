@@ -178,11 +178,11 @@ try {
       const ui = vm.runInNewContext(helpers + '\n({money,fmtDay,fmtHM,toInput,startOfDay,endOfDay})', { loc: () => 'en-GB' });
       const date = new Date('2026-07-01T23:30:00Z');
       check(zone + ' keeps promotion centimes', ui.money(12.25) === '12.25 MAD');
-      check(zone + ' date input uses store date', ui.toInput(+date) === '2026-07-02');
-      check(zone + ' summary uses store day', ui.fmtDay(date) === '2 Jul 2026');
+      check(zone + ' date input uses store date', ui.toInput(+date) === '2026-07-01');
+      check(zone + ' summary uses store day', ui.fmtDay(date) === '1 Jul 2026');
       check(zone + ' summary uses store hour', ui.fmtHM(date) === '00:30');
-      check(zone + ' store midnight boundary', ui.startOfDay(date) === Date.parse('2026-07-01T23:00:00Z'));
-      check(zone + ' store end boundary', ui.endOfDay(date) === Date.parse('2026-07-02T22:59:59.999Z'));
+      check(zone + ' store 05:00 boundary', ui.startOfDay(date) === Date.parse('2026-07-01T04:00:00Z'));
+      check(zone + ' store end boundary', ui.endOfDay(date) === Date.parse('2026-07-02T03:59:59.999Z'));
     }
   } finally { if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous; }
   process.exitCode = failures ? 1 : 0;

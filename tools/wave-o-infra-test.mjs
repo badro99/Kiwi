@@ -55,7 +55,7 @@ await run('pairing', async () => {
  let src=fs.readFileSync('assets/caisse-pairing.js','utf8');
  const begin=src.indexOf('  function offlinePinKey('), end=src.indexOf('  function verifyOfflinePin(');
  const cache=new Map();const w={crypto:{subtle:{importKey:async()=>({}),deriveBits:async()=>new Uint8Array(32).buffer},getRandomValues:a=>a},TextEncoder};
- const ctx={window:w,TextEncoder,Uint8Array,Date,localStorage:{},OFFLINE_PIN_KEY:'fixture:',OFFLINE_PIN_TTL:60000,ls:k=>cache.get(k),set:(k,v)=>cache.set(k,v),activeVenue:()=>({merchant:'fixture'})};
+ const ctx={toast(){},window:w,TextEncoder,Uint8Array,Date,localStorage:{},OFFLINE_PIN_KEY:'fixture:',OFFLINE_PIN_TTL:60000,ls:k=>cache.get(k),set:(k,v)=>cache.set(k,v),activeVenue:()=>({merchant:'fixture'})};
  vm.createContext(ctx);vm.runInContext(fs.readFileSync('assets/caisse-pairing/offline-budget.js','utf8')+src.slice(begin,end)+';this.remember=rememberOfflinePin;this.rows=offlinePinRows;',ctx);
  for(let i=0;i<20;i++) await ctx.remember('fixture',String(i).padStart(4,'0'),{id:'staff-'+i,name:'Staff '+i,role:'cashier'});
  // The cache stays bounded (a stolen device holds at most 12 verifiers); the newest identities stay covered.

@@ -37,7 +37,7 @@ const rest = async (res) => ({ status: res.status, body: await res.json().catch(
 const realFetch = globalThis.fetch;
 let mails = [], mailAnswer = { ok: true, status: 200 };
 globalThis.fetch = async (url, init) => {
-  if (String(url).startsWith('https://mail.test/')) { mails.push(JSON.parse(init.body)); return mailAnswer; }
+  if (String(url).startsWith('https://mail.test/')) { mails.push(JSON.parse(init.body)); return new Response('', { status: mailAnswer.status }); }
   return realFetch(url, init);
 };
 

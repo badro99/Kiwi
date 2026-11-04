@@ -37,7 +37,7 @@ const cases = {
   },
   'employee#1': () => {
     const saved = new Map();
-    const globals = {records:()=>[], merge:a=>a, Date, serverNow:()=>Date.now(), copies:{}, recovery:{}, recoveryBlocked:{}, store:()=>({setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)}), QUEUE_PREFIX:'q:', idb:async()=>true};
+    const globals = {records:()=>[], merge:a=>a, Date, serverNow:()=>Date.now(), copies:{}, recovery:{}, persistence:{}, queueOwner:"", recoveryBlocked:{}, store:()=>({setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)}), QUEUE_PREFIX:'q:', idb:async()=>true};
     const write = fn('assets/employee-live.js','writeQueue','  function dropItem',globals);
     return Promise.resolve().then(async()=>{
       const record={opId:'synthetic-op',at:Date.now(),done:true,outcome:{result:'rejected',reason:'employee-request-failed'}};

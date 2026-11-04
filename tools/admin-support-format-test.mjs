@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { deadlineVmSource } from './deadline-vm-source.mjs';
 import { fileURLToPath } from 'node:url';
 
 // Keep literal spelling and interpolation tokens; discard only comments and whitespace.
@@ -83,7 +84,7 @@ export function tokenize(source, positions = []) {
 async function inspect(source, present) {
   const listeners = [], timers = [], requests = [], nodes = [];
   const makeNode = () => ({
-    dataset: {}, classList: { toggle() {}, add() {}, remove() {} },
+    setAttribute() {}, dataset: {}, classList: { toggle() {}, add() {}, remove() {} },
     innerHTML: '', textContent: '', hidden: false,
     querySelector() { return makeNode(); }, querySelectorAll() { return []; },
     addEventListener(name, fn) { listeners.push({ target: 'launch', name, fn }); }
@@ -107,7 +108,7 @@ async function inspect(source, present) {
     }
   });
   // The console's one client owner of /api/admin, loaded first as on kiwi-admin.html.
-  vm.runInContext(fs.readFileSync(new URL('../assets/admin-api.js', import.meta.url), 'utf8'), context);
+  vm.runInContext(deadlineVmSource(fs.readFileSync(new URL('../assets/admin-api.js', import.meta.url), 'utf8')), context);
   vm.runInContext(source, context);
   const startup = {
     globals: Object.keys(context).sort(), window: Object.keys(window).sort(),
