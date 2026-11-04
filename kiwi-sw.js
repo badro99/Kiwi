@@ -18,6 +18,8 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/caisse-print-recovery.js?v=2',
+  '/assets/dashboard-ledger-state.js?v=1',
   '/assets/loyalty-rules.js?v=2',
   '/assets/clients-store-vault.js?v=5',
   '/assets/caisse-strings.js?v=3',
@@ -36,7 +38,7 @@ var SHELL = [
   '/assets/money-cents.js?v=4',
   '/assets/pages-pro/boutique-promos-returns.js?v=17',
   '/assets/day-report-conflicts.js?v=2',
-  '/assets/printer/pairing-lang.js?v=13',
+  '/assets/printer/pairing-lang.js?v=14',
   '/assets/planning/shift-editor.js?v=5',
   '/assets/planning/csv-import.js?v=3',
   '/assets/planning/optimiser.js?v=5',
@@ -73,7 +75,7 @@ var SHELL = [
   '/assets/menu-catalog/formulas.js?v=3',
   '/assets/menu-catalog/item-list.js?v=3',
   '/assets/menu-catalog/modifiers.js?v=3',
-  '/assets/menu-catalog/state.js?v=6',
+  '/assets/menu-catalog/state.js?v=10',
   '/assets/pressing/custody.js?v=11',
   '/assets/pressing/rack.js?v=10',
   '/assets/pressing/pickup.js?v=10',
@@ -199,7 +201,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2101',
-  '/assets/pages/dashboard-startup.js?v=154',
+  '/assets/pages/dashboard-startup.js?v=158',
   '/assets/pages/dashboard-loader.js?v=46',
   '/assets/hotel/model.js?v=9',
   '/assets/hotel/views.js?v=4',
@@ -254,8 +256,8 @@ var SHELL = [
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
   '/assets/venues/data.js?v=4',
-  '/assets/venues/helpers.js?v=3',
-  '/assets/venues.js?v=71',
+  '/assets/venues/helpers.js?v=6',
+  '/assets/venues.js?v=73',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=12',
   '/assets/trade-workspaces.js?v=18',
@@ -356,7 +358,7 @@ var SHELL = [
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
-  '/assets/receipt.js?v=16',
+  '/assets/receipt.js?v=21',
   '/assets/receipt-ui.js?v=2',
   '/assets/invoice.js?v=26',
   '/assets/merchant-config.js?v=287',
@@ -386,9 +388,9 @@ var SHELL = [
   '/assets/caisse-hardware.js?v=9',
   '/assets/live-socket.js?v=5',
   '/assets/escpos.js?v=19',
-  '/assets/printer/transports.js?v=2',
-  '/assets/printer-bridge.js?v=57',
-  '/assets/printer/pairing-ui.js?v=13',
+  '/assets/printer/transports.js?v=4',
+  '/assets/printer-bridge.js?v=61',
+  '/assets/printer/pairing-ui.js?v=14',
   '/assets/barcode.js?v=4',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=7',
@@ -404,7 +406,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=30',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=105',
+  '/assets/caisse-lang.js?v=106',
   '/assets/venue-store.js?v=5',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=11',
@@ -440,7 +442,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=3',
   '/assets/restaurant-recipes.js?v=14',
   '/assets/restaurant-units.js?v=2',
-  '/assets/employee-live.js?v=626',
+  '/assets/employee-live.js?v=629',
   '/assets/employee-planning.js?v=21',
   '/assets/employee-trade-shell.css?v=3',
   '/assets/employee-trade-shell.js?v=9',

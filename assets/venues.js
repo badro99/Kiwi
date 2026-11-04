@@ -2034,7 +2034,7 @@
     return slug ? 'kiwiSales:' + vid + '@' + slug : '';
   }
   /* <<split:bridge:cache>> */
-  const { ledgerCache, deepFreeze, cachedLedger, ledgerWrite } = window.__kiwiVenueParts.cache.call(this, {  });
+  const { ledgerCache, deepFreeze, cachedLedger, ledgerWrite, ledgerFreshness, ledgerReady } = window.__kiwiVenueParts.cache.call(this, { salesSubs });
   /* <</split:bridge:cache>> */
   function salesList(id) {
     const key = SALES_KEY(id || currentVenue);
@@ -2231,6 +2231,8 @@
    * sales while the KPI band showed today. */
 
   window.KiwiSales = {
+    ready: ledgerReady,
+    freshness: id => [ledgerFreshness.get(SALES_KEY(id)), ledgerFreshness.get(REFUNDS_KEY(id))].find(s => s && !s.saved) || { saved: true, pending: false },
     scope: id => SALES_KEY(id).replace(/^kiwiSales:/, ''),
     reconcile: salesReconcile,
     trimWrite(id, sales, refunds, scope) {

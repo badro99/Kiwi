@@ -181,7 +181,7 @@
         (usbSupported() ? '<div class="kpr-bt">' +
           '<h3>' + tr('Imprimante USB') + '</h3>' +
           '<p>' + tr('Branchée en USB sur la caisse. Sans installation, sans adresse IP.') + '</p>' +
-          '<div class="kpr-status ' + (usbLive ? 'on' : 'off') + '" id="kpr-usb-status"><span class="kpr-d"></span><span id="kpr-usb-status-t">' + (usbLive ? esc(tr('Connectée · ' + usb.name)) : tr('Aucune imprimante USB connectée.')) + '</span></div>' +
+          '<div class="kpr-status ' + (usbLive ? 'on' : 'off') + '" id="kpr-usb-status"><span class="kpr-d"></span><span id="kpr-usb-status-t">' + (usbLive ? esc(tr('Connectée · ' + usb.name)) : tr(usb.failure ? 'Imprimante injoignable' : 'Aucune imprimante USB connectée.')) + '</span></div>' +
           '<button data-activation=write class="kpr-btc" type="button" id="kpr-usb-connect">' + tr(usbLive ? 'Changer d’imprimante' : 'Choisir l’imprimante USB') + '</button>' +
           '<div class="kpr-actions"><button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-usb-test"' + (usbLive ? '' : ' disabled') + '>' + tr('Imprimer un ticket test') + '</button></div>' +
         '</div>' : '') +

@@ -1988,7 +1988,7 @@
       'Accès au réseau local refusé. Ouvrez Réglages > Kiwi Pro > Réseau local': ['Local network access denied. Open Settings > Kiwi Pro > Local Network', 'تم رفض الوصول إلى الشبكة المحلية. افتح الإعدادات > Kiwi Pro > الشبكة المحلية'],
       'Connexion refusée. Vérifiez le port de l’imprimante': ['Connection refused. Check the printer port', 'تم رفض الاتصال. تحقق من منفذ الطابعة'],
       'Imprimante introuvable sur ce réseau': ['Printer not found on this network', 'الطابعة غير موجودة على هذه الشبكة'],
-      'Imprimante injoignable': ['Printer unreachable', 'تعذّر الوصول إلى الطابعة'],
+      'Imprimante injoignable': ['Printer unreachable', 'تعذّر الوصول إلى الطابعة'], 'Voir les tickets non imprimés': ['View unprinted tickets', 'عرض التذاكر غير المطبوعة'],
       'vérifiez l’adresse IP et qu’elle est allumée': ['check the IP address and that it is switched on', 'تحقق من عنوان IP ومن أنها مشغّلة'],
       'Connexion refusée à cette adresse': ['Connection refused at this address', 'تم رفض الاتصال بهذا العنوان'],
       'ce n’est pas le port d’une imprimante réseau': ['this is not a network printer port', 'هذا ليس منفذ طابعة شبكة'],

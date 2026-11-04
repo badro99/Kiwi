@@ -276,7 +276,7 @@
   function reconnectUsb() {
     if (!usbSupported() || !navigator.usb.getDevices) return Promise.resolve(null);
     if (usbConnected()) return Promise.resolve({ ok: true, name: usb.name });
-    return navigator.usb.getDevices().then(function (list) {
+    return Promise.resolve().then(function () { return navigator.usb.getDevices(); }).then(function (list) {
       var dev = (list || [])[0];
       if (!dev) return null;
       usb.device = dev;
@@ -289,9 +289,9 @@
           usb.iface = pick.iface; usb.ep = pick.ep;
           return dev.claimInterface(pick.iface);
         })
-        .then(function () { return { ok: true, name: usb.name }; })
-        .catch(function () { usb.device = null; usb.ep = 0; return null; });
-    }).catch(function () { return null; });
+        .then(function () { usb.failure = null; return { ok: true, name: usb.name }; })
+        .catch(function (err) { usb.failure = { reason: 'usb-reconnect-' + (err && (err.message === 'no-bulk-out' ? 'no-bulk-out' : err.name) || 'failed'), at: Date.now() }; usb.failures = (usb.failures || []).concat([usb.failure]).slice(-20); usb.device = null; usb.ep = 0; return null; });
+    }).catch(function (err) { usb.failure = { reason: 'usb-enumeration-' + (err && err.name || 'failed'), at: Date.now() }; usb.failures = (usb.failures || []).concat([usb.failure]).slice(-20); return null; });
   }
 
   function disconnectUsb() {

@@ -1088,8 +1088,8 @@
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
 <script src="assets/venues/data.js?v=4" defer></script>
-<script src="assets/venues/helpers.js?v=3" defer></script>
-<script src="assets/venues.js?v=71" defer></script>
+<script src="assets/venues/helpers.js?v=6" defer></script>
+<script src="assets/venues.js?v=73" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot
      and the garment product art (both in pressing-ops.js). -->
 <script src="assets/pressing-ops.js?v=28" defer></script>
@@ -1174,8 +1174,8 @@
 <!-- Real thermal printing (shared with the caisse): ESC/POS encoder + bridge
      client, so inventory can print barcode étiquettes to a thermal printer. -->
 <script src="assets/escpos.js?v=19" defer fetchpriority="low"></script>
-<script src="assets/printer/transports.js?v=2" defer></script>
-<script src="assets/printer-bridge.js?v=57" defer fetchpriority="low"></script>
+<script src="assets/printer/transports.js?v=4" defer></script>
+<script src="assets/printer-bridge.js?v=61" defer fetchpriority="low"></script>
 <!-- Le catalogue boutique tient en deux fichiers : le journal du stock et les
      échanges avec le serveur, AVANT le fichier principal qui les appelle. -->
 <script src="assets/boutique-catalog-parts.js?v=18" defer fetchpriority="low"></script>
@@ -1215,7 +1215,8 @@
      écran, pilote système). receipt-ui.js est l'éditeur, chargé ici seulement ·
      la caisse LIT le reçu, elle ne le règle pas. -->
 <script src="assets/hours-ui.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/receipt.js?v=16" defer fetchpriority="low"></script>
+<script src="assets/dashboard-ledger-state.js?v=1" defer></script>
+<script src="assets/receipt.js?v=21" defer fetchpriority="low"></script>
 
 <!-- Le coût de revient · LA source unique de « combien me coûte ce produit ».
      Le carnet des coûts vit dans son propre document par établissement, jamais
@@ -1242,7 +1243,7 @@
 
 <script src="assets/clients-directory.js?v=30" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=18" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=154" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=158" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1269,7 +1270,7 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=154"></script>
+<script src="assets/pages/dashboard-startup.js?v=158"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=14">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
 <script src="assets/pages/dashboard-loader.js?v=46" defer fetchpriority="low"></script>

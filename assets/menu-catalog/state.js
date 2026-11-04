@@ -710,6 +710,14 @@
     if (c.pulling) return Promise.resolve(false);
     if (isBoutiqueForRead(vd)) return Promise.resolve(false);  // le stock passe par orderpro-publish.js
     recoverLocalMenu(vid, slug);
+    if (!pendingPublishes.has(c)) {
+      let queued;
+      try { queued = JSON.parse(localStorage.getItem('kiwiMenuPending:' + slug) || 'null'); } catch (_) {}
+      if (queued && queued.vid === vid && queued.data && queued.base) {
+        c.base = queued.base; c.updatedTs = queued.updatedTs || 0; c.explicitEmpty = !!queued.explicitEmpty;
+        adoptServerMenu(queued.data, vid); pendingPublish(c, vid, queued.data);
+      }
+    }
     c.pulling = true;
     return fetch('/api/menu?mine=1' + (slug ? '&merchant=' + encodeURIComponent(slug) : ''),
                  { headers: { Accept: 'application/json' } })
@@ -721,6 +729,12 @@
         c.updatedTs = +j.updatedTs || 0;
         c.read = true;                                       // à partir d'ici, publier est sûr
         c.base = menuSnapshot(j.menu);
+        const waiting = pendingPublishes.get(c);
+        if (waiting && waiting.base) {
+          const merged = KiwiMenuMerge.mergeMenu(waiting.base, store.get(vid), c.base);
+          adoptServerMenu(merged.value, vid); pendingPublish(c, vid, merged.value);
+          return false;
+        }
         const theirs = j.menu;
         if (!theirs || !((theirs.items && theirs.items.length) || (theirs.cats && theirs.cats.length))) return false;
         /* A published carte is the canonical document. Do not union it with an
@@ -884,6 +898,33 @@
   })();
   /* GENERATED SHARED KiwiMenuMerge END */
   let syncTimer = null;
+  const pendingPublishes = new Map();
+  function paintPending() {
+    if (!document.body || !document.createElement) return;
+    let el = document.getElementById('menu-publish-pending');
+    if (!pendingPublishes.size) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement('small'); el.id = 'menu-publish-pending'; el.setAttribute('role', 'status'); Object.assign(el.style, { position: 'fixed', bottom: '16px', insetInlineEnd: '16px', zIndex: '9999', padding: '8px 12px', background: 'var(--paper)', color: 'var(--atlas)' }); document.body.appendChild(el); }
+    el.textContent = tr({ fr: 'Publication en attente', en: 'Publication pending', ar: 'النشر قيد الانتظار' });
+  }
+  function pendingPublish(c, vid, data) {
+    let p = pendingPublishes.get(c);
+    if (!p) { p = { delay: 1000, timer: null, vid, version: 0 }; pendingPublishes.set(c, p); }
+    p.version++;
+    p.base = c.base;
+    p.key = 'kiwiMenuPending:' + (c.merchant || storeSlug());
+    try { localStorage.setItem(p.key, JSON.stringify({ vid, data: menuSnapshot(data), base: p.base, updatedTs: c.updatedTs, explicitEmpty: !!c.explicitEmpty })); } catch (_) {}
+    if (!p.timer) p.timer = setTimeout(function retry() {
+      p.timer = null;
+      if (!pendingPublishes.has(c)) return;
+      p.delay = Math.min(300000, p.delay * 2);
+      p.timer = setTimeout(retry, p.delay);
+      publish(p.vid);
+    }, p.delay);
+    paintPending();
+    return p.version;
+  }
+  window.addEventListener('kiwi:langchange', paintPending);
+  window.addEventListener('online', function () { pendingPublishes.forEach(function (p) { publish(p.vid); }); });
   function publish(vid, merging) {
     if (!isRealSession()) return;                 // local demo → never touch the network
     const KV = window.KiwiVenue;
@@ -901,7 +942,7 @@
     // neuf publiait sa carte vide par-dessus la vraie, quinze cents millisecondes
     // après l'ouverture du tableau de bord.
     const c = cloudFor(storeSlug());
-    if (!c.read) { if (c.tried++ < 3) pull().then(() => { if (c.read) publish(vid); }); return; }
+    if (!c.read) { if (pendingPublishes.has(c) || c.tried++ < 3) pull().then(() => { if (c.read) publish(vid); }); return; }
     const data = store.get(targetVid);
     const slug = c.merchant || storeSlug();
     const empty = !((data.cats && data.cats.length) || (data.items && data.items.length));
@@ -922,6 +963,7 @@
         return Object.assign({}, data, { hours: { v: 1, week: h.week, exceptions: h.exceptions } });
       } catch (_) { return data; }
     })();
+    const version = pendingPublish(c, targetVid, data);
     try {
       fetch('/api/menu', {
         method: 'POST',
@@ -966,26 +1008,22 @@
               publish(vid, true);
               return null;
             }
-            if (r && r.status === 409 && err && (err.error === 'stale-menu' || err.error === 'foreign-document') && err.data) {
-              c.updatedTs = +err.updatedTs || c.updatedTs;
-              adoptServerMenu(err.data, targetVid);
-            }
+            /* Without a merge base, keep the local edit and its original CAS revision. */
             /* Le code du serveur n'est pas une phrase : « subscription-required »
              * s'affichait tel quel sous le titre. Un compte en attente (402) est
              * déjà expliqué par la garde d'activation, au geste qui a provoqué
              * l'écriture ; une synchronisation de fond n'affiche rien. */
             if (r && r.status === 402) return null;
-            const adopted = r && r.status === 409 && err && err.data;
             if (window.Kiwi?.toast) window.Kiwi.toast(syncSay('Échec de synchronisation de la carte', 'The menu could not be synced', 'تعذّرت مزامنة القائمة'), {
               type: 'warn', force: true,
-              desc: adopted
-                ? syncSay('Une version plus récente, enregistrée ailleurs, a été reprise.', 'A newer version, saved elsewhere, was taken instead.', 'تم اعتماد نسخة أحدث محفوظة في مكان آخر.')
-                : syncSay('La carte n’a pas été enregistrée sur le serveur. Elle reste sur cet appareil.', 'The menu was not saved on the server. It stays on this device.', 'لم تُحفظ القائمة على الخادم. تبقى على هذا الجهاز.'),
+              desc: syncSay('La carte n’a pas été enregistrée sur le serveur. Elle reste sur cet appareil.', 'The menu was not saved on the server. It stays on this device.', 'لم تُحفظ القائمة على الخادم. تبقى على هذا الجهاز.'),
             });
             return null;
           });
       }).then(function (j) {
         if (!j || !j.ok) return;
+        const pending = pendingPublishes.get(c);
+        if (pending && pending.version === version) { clearTimeout(pending.timer); try { localStorage.removeItem(pending.key); } catch (_) {} pendingPublishes.delete(c); paintPending(); }
         c.updatedTs = +j.updatedTs || c.updatedTs;
         c.base = sent;
         if (empty) c.explicitEmpty = false;
@@ -1003,6 +1041,9 @@
   }
   function schedulePublish(vid) {
     if (!isRealSession()) return;
+    const shown = window.KiwiVenue?.getCurrentVenueData?.();
+    const targetVid = vid || shown?.id, c = cloudFor(storeSlug());
+    if (c.read && shown?.id === targetVid && !isBoutiqueVenue(shown)) pendingPublish(c, targetVid, store.get(targetVid));
     if (syncTimer) { try { clearTimeout(syncTimer); } catch (_) {} }
     syncTimer = setTimeout(function () { syncTimer = null; publish(vid); }, 800);
   }
