@@ -121,8 +121,15 @@
     try {
       var r=await (await import('./request-deadline.mjs').catch(function() {
         return {
-          deadlineFetch: function(u,o) {
-            return fetch(u,o);
+          deadlineFetch: function(u,o,ms) {
+            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
+            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
+              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
+            });
+            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
+              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
+            }, ms || 12000); });
+            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
           }
         }
           ;
@@ -153,9 +160,9 @@
   const owner = Object.freeze({ getState() { return state; } });
   const parts = {};
   await Promise.all([
-    import('/assets/booking-service.js?v=2').then(module => { parts.service = module.createBookingService({ owner, app, merchant, plusDays, details, t, esc, money, fmt, venueToday, venueHour, layout, head }); }),
+    import('/assets/booking-service.js?v=3').then(module => { parts.service = module.createBookingService({ owner, app, merchant, plusDays, details, t, esc, money, fmt, venueToday, venueHour, layout, head }); }),
     import('/assets/booking-hotel.js?v=2').then(module => { parts.hotel = module.createBookingHotel({ owner, app, merchant, hotelDetails, t, ht, esc, money, ymd, fmt, venueToday, layout, head }); }),
-    import('/assets/booking-submission.js?v=5').then(module => { parts.submission = module.createBookingSubmission({ owner, app, merchant, takesCovers, party, times, loadHotelRooms, hotelRoomList, hotelSummary, rememberManage, manageBlock, wireManageBlock, ssGet, ssSet, ssDel, t, ht, esc, money, fmt, layout, head }); }),
+    import('/assets/booking-submission.js?v=6').then(module => { parts.submission = module.createBookingSubmission({ owner, app, merchant, takesCovers, party, times, loadHotelRooms, hotelRoomList, hotelSummary, rememberManage, manageBlock, wireManageBlock, ssGet, ssSet, ssDel, t, ht, esc, money, fmt, layout, head }); }),
     import('/assets/booking-manage.js?v=4').then(module => { parts.manage = module.createBookingManage({ owner, app, merchant, manageToken, t, ht, esc, money, fmt, layout, closed }); }),
     import('/assets/booking-view.js?v=2').then(module => { parts.view = module.createBookingView({ owner, app, services, times, hotelSearch, hotelRoomList, details, success, hotelDetails, renderManage }); })
   ]);

@@ -15,7 +15,7 @@ function requests() {
 }
 function booking() {
   const net=requests();
-  const c=vm.createContext({ ...net, merchant:'fixture', state:{config:{settings:{windowDays:1}},service:{id:'service'},date:'2026-10-26',partySize:2,hotelRooms:[]},
+  const c=vm.createContext({ ...net, clearTimeout, merchant:'fixture', state:{config:{settings:{windowDays:1}},service:{id:'service'},date:'2026-10-26',partySize:2,hotelRooms:[]},
     party:()=>2, renderTimes:()=>{}, hotelRoomList:()=>{}, t:x=>x, ht:x=>x,
     app:{querySelector:()=>null,querySelectorAll:()=>[]}, setTimeout, venueToday:()=> '2026-10-26', plusDays:()=> '2026-10-27', esc:String, fmt:()=>'', money:String });
   for (const name of ['service','hotel']) {
@@ -46,7 +46,7 @@ await test('booking#1 obsolete hotel success and failure cannot replace newer se
 await test('tickets#0 newest board read survives older success or failure',async()=>{
   for(const reject of [false,true]) {
     const src=ticketsTestSource(), net=requests();let renders=0;
-    const c=vm.createContext({...net,API:'/api/tickets',state:{filters:{}},renderLoading:()=>{},render:()=>renders++,configureComposerClassification:()=>{},lists:{}});
+    const c=vm.createContext({...net,setTimeout,clearTimeout,API:'/api/tickets',state:{filters:{}},renderLoading:()=>{},render:()=>renders++,configureComposerClassification:()=>{},lists:{}});
     vm.runInContext(src.slice(src.indexOf('  async function loadTickets'),src.indexOf('  const draftController')),c);
     const a=c.loadTickets({quiet:true}), b=c.loadTickets();
     (await net.at(1)).resolve({ok:true,json:async()=>({taxonomy:{version:2,kinds:[],areas:[]},tickets:[{id:'new',name:'New'}]})});await b;

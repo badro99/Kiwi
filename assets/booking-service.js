@@ -198,8 +198,15 @@ export function createBookingService(context) {
     try {
       var r=await (await import('./request-deadline.mjs').catch(function() {
         return {
-          deadlineFetch: function(u,o) {
-            return fetch(u,o);
+          deadlineFetch: function(u,o,ms) {
+            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
+            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
+              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
+            });
+            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
+              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
+            }, ms || 12000); });
+            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
           }
         }
           ;

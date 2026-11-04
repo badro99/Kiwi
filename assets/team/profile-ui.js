@@ -215,7 +215,7 @@
       tAddedDesc:(e) => `Se connecte à l'app employé avec ${e} et son code personnel, sur sa fiche`,
       tUpdated:  (n) => `${n} · profil mis à jour`,
       tDeleted:  (n) => `${n} a été retiré·e de l'équipe`,
-      tPwdCopied:'Code caisse copié',
+      tPwdCopied:'Code caisse copié', tPwdCopyFailed:'Copie impossible. Réessayez.',
       tPwdGen:   'Nouveau code caisse généré',
       // Hours pane
       hPeriodWeek: 'Semaine',
@@ -412,7 +412,7 @@
       tAddedDesc:(e) => `Signs in to the employee app with ${e} and the personal code on their profile`,
       tUpdated:  (n) => `${n} · profile updated`,
       tDeleted:  (n) => `${n} has been removed from the team`,
-      tPwdCopied:'Till code copied',
+      tPwdCopied:'Till code copied', tPwdCopyFailed:'Copy failed. Please retry.',
       tPwdGen:   'New till code generated',
       hPeriodWeek: 'Week',
       hPeriodFort: 'Fortnight',
@@ -608,7 +608,7 @@
       tAddedDesc:(e) => `يدخل إلى تطبيق الموظف بـ \u2068${e}\u2069 والرمز الشخصي المعروض في ملفه`,
       tUpdated:  (n) => `${n} · تم تحديث الملف`,
       tDeleted:  (n) => `تمت إزالة ${n} من الفريق`,
-      tPwdCopied:'تم نسخ رمز الصندوق',
+      tPwdCopied:'تم نسخ رمز الصندوق', tPwdCopyFailed:'تعذر النسخ. حاول مرة أخرى.',
       tPwdGen:   'تم إنشاء رمز صندوق جديد',
       hPeriodWeek: 'أسبوع',
       hPeriodFort: 'نصف شهر',
@@ -1344,9 +1344,9 @@
     if (!input) return;
     const v = input.value;
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(v).catch(() => {});
+      return Promise.resolve().then(() => navigator.clipboard.writeText(v)).then(() => Kiwi.toast(t().tPwdCopied, { type: 'success' }), () => Kiwi.toast(t().tPwdCopyFailed, { type: 'warning' }));
     } else {
-      try { input.select(); document.execCommand('copy'); } catch (_) {}
+      try { input.select(); if (!document.execCommand('copy')) throw new Error('copy-failed'); } catch (_) { Kiwi.toast(t().tPwdCopyFailed, { type: 'warning' }); return; }
     }
     Kiwi.toast(t().tPwdCopied, { type: 'success' });
   };

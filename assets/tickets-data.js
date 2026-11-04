@@ -5,7 +5,16 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
   async function loadTickets(options) { const seq = loadTickets.seq = (loadTickets.seq || 0) + 1;
     if (!options || !options.quiet) renderLoading();
     try {
-      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(API, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function(u,o,ms) {
+            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
+            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
+              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
+            });
+            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
+              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
+            }, ms || 12000); });
+            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+          } }; })).deadlineFetch(API, { headers: { Accept: 'application/json' }, cache: 'no-store' });
       const data = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; }); if (seq !== loadTickets.seq) return;
       if (!response.ok) throw Object.assign(new Error(data.error || 'read-failed'), { code: data.error });
       if (!data.taxonomy || !Array.isArray(data.taxonomy.kinds) || !Array.isArray(data.taxonomy.areas)) {
@@ -81,7 +90,16 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
     data.append('idempotency_key', state.publishAttempt.key);
     await draft.save();
     try {
-      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(API, { method: 'POST', body: data }, 60000);
+      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function(u,o,ms) {
+            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
+            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
+              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
+            });
+            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
+              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
+            }, ms || 12000); });
+            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+          } }; })).deadlineFetch(API, { method: 'POST', body: data }, 60000);
       const result = await response.json().catch((error) => { if (error.code === 'request-timeout') throw error; return {}; });
       if (!response.ok) throw Object.assign(new Error(result.error || 'publish-failed'), { code: result.error });
       if (sendingDraft) await sendingDraft.clear();
@@ -126,7 +144,16 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
     data.append('note', note);
     state.followupFiles.forEach((file) => data.append('images', file, file.name));
     try {
-      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(`${API}/${ticket.id}`, {
+      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function(u,o,ms) {
+            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
+            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
+              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
+            });
+            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
+              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
+            }, ms || 12000); });
+            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+          } }; })).deadlineFetch(`${API}/${ticket.id}`, {
         method: 'PATCH',
         headers: { Accept: 'application/json' },
         body: data,
@@ -155,7 +182,16 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
     const original = button.innerHTML;
     button.textContent = t(action === 'fixed' ? 'busy.moving' : 'busy.deletingImages');
     try {
-      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(`${API}/${ticket.id}`, {
+      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function(u,o,ms) {
+            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
+            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
+              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
+            });
+            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
+              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
+            }, ms || 12000); });
+            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+          } }; })).deadlineFetch(`${API}/${ticket.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ action }),
@@ -189,7 +225,16 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
     const oldLabel = button.textContent;
     button.textContent = t('busy.saving');
     try {
-      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function (u, o) { return fetch(u, o); } }; })).deadlineFetch(`${API}/${ticket.id}`, {
+      const response = await (await import('./request-deadline.mjs').catch(function () { return { deadlineFetch: function(u,o,ms) {
+            var controller = typeof AbortController === 'function' ? new AbortController() : null, timer;
+            var request = Promise.resolve().then(function () { return fetch(u, Object.assign({}, o, controller ? { signal: controller.signal } : {})); }).then(function (r) {
+              return r.json().then(function (data) { r.json = function () { return Promise.resolve(data); }; return r; }, function (error) { r.json = function () { return Promise.reject(error); }; return r; });
+            });
+            var deadline = new Promise(function (_, reject) { timer = setTimeout(function () {
+              var error = new Error('request-timeout'); error.code = 'request-timeout'; reject(error); if (controller) controller.abort();
+            }, ms || 12000); });
+            return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
+          } }; })).deadlineFetch(`${API}/${ticket.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({

@@ -817,7 +817,7 @@
     var batch = pendingPrint = { root: root, paper: String(paper || '') };
     setTimeout(function () {
       if (pendingPrint === batch) pendingPrint = null;
-      try { window.print(); } catch (_) {}
+      try { window.print(); } catch (_) { fallbackNotice(say('Échec d’impression')); }
       setTimeout(function () { var r = document.getElementById('kpr-print-root'); if (r) r.remove(); }, 600);
     }, 60);
     /* Dans l'app, window.print() rend un PDF à imprimer ou partager

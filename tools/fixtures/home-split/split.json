@@ -1,6 +1,6 @@
 {
   "file": "assets/daterange/renderers.js",
-  "sha256": "fb62e138aa7effad1ed4484af8f079a04bbff5f2487f495f10988c6effe9f3fa",
+  "sha256": "ecafbf11b58b660ac28af94442dafacceb44a529384659a00224f0c9b8d250d9",
   "parts": [
     {
       "name": "hero",
@@ -96,7 +96,7 @@
         },
         {
           "name": "heroDataByVenue",
-          "start": 229771,
+          "start": 229754,
           "length": 2609,
           "offset": 20229
         }
@@ -205,30 +205,30 @@
         {
           "name": "tableTimeEntry",
           "start": 174776,
-          "length": 1263,
+          "length": 1246,
           "offset": 31842
         },
         {
           "name": "openKpiCustomizer",
-          "start": 176039,
+          "start": 176022,
           "length": 5621,
           "offset": 33105
         },
         {
           "name": "dutyBand",
-          "start": 202683,
+          "start": 202666,
           "length": 2830,
           "offset": 38726
         },
         {
           "name": "retailBand",
-          "start": 205513,
+          "start": 205496,
           "length": 2025,
           "offset": 41556
         },
         {
           "name": "kpiByVenue",
-          "start": 232380,
+          "start": 232363,
           "length": 10257,
           "offset": 43581
         }
@@ -327,7 +327,7 @@
         },
         {
           "name": "revChartByVenue",
-          "start": 242637,
+          "start": 242620,
           "length": 9857,
           "offset": 45122
         }
@@ -390,19 +390,19 @@
         },
         {
           "name": "buildOrder",
-          "start": 183438,
+          "start": 183421,
           "length": 5590,
           "offset": 10979
         },
         {
           "name": "buildLiveFeed",
-          "start": 189028,
+          "start": 189011,
           "length": 1375,
           "offset": 16569
         },
         {
           "name": "buildCustomFeed",
-          "start": 190403,
+          "start": 190386,
           "length": 5648,
           "offset": 17944
         }
@@ -499,31 +499,31 @@
         },
         {
           "name": "fmtHumanRange",
-          "start": 208371,
+          "start": 208354,
           "length": 708,
           "offset": 2787
         },
         {
           "name": "closeCustomPicker",
-          "start": 209079,
+          "start": 209062,
           "length": 1011,
           "offset": 3495
         },
         {
           "name": "openCustomPicker",
-          "start": 210090,
+          "start": 210073,
           "length": 14403,
           "offset": 4506
         },
         {
           "name": "mountDaySelector",
-          "start": 224493,
+          "start": 224476,
           "length": 2406,
           "offset": 18909
         },
         {
           "name": "registerHandler",
-          "start": 226899,
+          "start": 226882,
           "length": 1551,
           "offset": 21315
         }
@@ -753,31 +753,31 @@
         },
         {
           "name": "realMixRows",
-          "start": 181660,
+          "start": 181643,
           "length": 1778,
           "offset": 36888
         },
         {
           "name": "realLowStock",
-          "start": 196051,
+          "start": 196034,
           "length": 1849,
           "offset": 38666
         },
         {
           "name": "realTopProducts",
-          "start": 197900,
+          "start": 197883,
           "length": 1746,
           "offset": 40515
         },
         {
           "name": "realPairs",
-          "start": 199646,
+          "start": 199629,
           "length": 2391,
           "offset": 42261
         },
         {
           "name": "growBars",
-          "start": 202037,
+          "start": 202020,
           "length": 646,
           "offset": 44652
         }
@@ -1105,13 +1105,13 @@
         },
         {
           "name": "hookI18n",
-          "start": 207538,
+          "start": 207521,
           "length": 833,
           "offset": 4017
         },
         {
           "name": "tickLiveRevenue",
-          "start": 228450,
+          "start": 228433,
           "length": 1321,
           "offset": 4850
         }

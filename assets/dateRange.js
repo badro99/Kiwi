@@ -254,7 +254,7 @@
     openKpiCustomizer: { get: () => openKpiCustomizer },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/daterange/renderers.js?v=27';
+  const partUrl = 'assets/daterange/renderers.js?v=28';
   function installPart() {
     if (!partFunctions && window.__kiwiDateRangeParts) partFunctions = window.__kiwiDateRangeParts(partState);
     return partFunctions;
@@ -2138,7 +2138,7 @@
   function tableTimeTileFrom(cur, prev) {
     if (!cur || (!cur.data && !cur.error)) return { text: '…', unit: '', delta: null };
     const d = cur.data;
-    if (!d || d.avgMin == null) return { text: '·', unit: '', delta: null };
+    if (cur.error || !d || d.avgMin == null) return { text: cur.error ? ({ fr: 'À actualiser', en: 'Out of date', ar: 'غير محدث' }[getLang()] || 'À actualiser') : '·', unit: '', delta: null, stale: !!cur.error };
     const p = prev && prev.data && prev.data.avgMin;
     /* text: null efface le « · » posé plus haut sur le clone remis à zéro. */
     return { text: null, value: d.avgMin, unit: 'min', fmt: 'int', delta: p > 0 ? Math.round(((d.avgMin - p) / p) * 1000) / 10 : null };

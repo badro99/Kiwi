@@ -257,6 +257,7 @@
     var failed = false;
     try { failed = persistence.cloudFailed(); } catch (_) { console.warn("[briefing] unsavedNote failed"); }
     var note = failed ? '<button type="button" class="briefing-unsaved" data-briefing-cloud-retry>' + esc(t.cloudFailed) + '</button>' : '';
+    if (persistence.own().error === 'local-read-unavailable') return '<p class="briefing-unsaved" role="status">' + esc(({ fr: 'Briefing illisible sur cet appareil. Réessayez.', en: 'Briefing could not be read on this device. Please retry.', ar: 'تعذرت قراءة الإحاطة على هذا الجهاز. حاول مرة أخرى.' })[lang()] || 'Briefing illisible sur cet appareil. Réessayez.') + '</p>';
     return note + (persistence.durable() ? '' : '<p class="briefing-unsaved" role="status">' + esc(t.unsaved) + '</p>');
   }
 

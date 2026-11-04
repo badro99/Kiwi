@@ -160,7 +160,7 @@
       var total = null;
       rows.forEach(function (row) { if (row.id === itemId) total = (total || 0) + Number(row.qty || 0); });
       return total;
-    } catch (_) { return null; }
+    } catch (_) { return { error: 'stock-unavailable' }; }
   }
   function find(id) { for (var i = 0; i < S.requests.length; i++) if (S.requests[i].request.id === id) return S.requests[i]; return null; }
   function upsert(stored) {
@@ -280,7 +280,7 @@
             [['approved', t.resApproved], ['reduced', t.resReduced], ['refused', t.resRefused], ['substituted', t.resSubstituted]].map(function (o) { return '<option value="' + o[0] + '"' + ((l.resolution === o[0] || (l.resolution === 'pending' && o[0] === 'approved')) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') +
           '</select></label>' +
           '<label>' + esc(t.qty) + '<input data-rv-qty type="number" min="0" step="any" inputmode="decimal" value="' + esc(l.resolution === 'pending' ? l.qtyRequested : l.qtyApproved) + '" aria-label="' + esc(t.qty + ' · ' + itemName(l.itemId)) + '"></label>' +
-          (stock != null ? '<p class="hx-req-stock">' + esc(t.available) + ' · ' + num(stock) + '</p>' : '') +
+          (stock && stock.error ? '<p class="hx-req-stock" role="status">' + esc(t.offline) + '</p><button type="button" class="hx-btn ghost" data-action="eco-req-refresh">' + esc(t.retry) + '</button>' : stock != null ? '<p class="hx-req-stock">' + esc(t.available) + ' · ' + num(stock) + '</p>' : '') +
           '<div class="hx-req-subst" data-rv-subst' + (l.resolution === 'substituted' ? '' : ' hidden') + '>' +
             '<label>' + esc(t.substitute) + '<select data-rv-item>' + others.map(function (it) { return '<option value="' + esc(it.itemId) + '"' + (it.itemId === l.substituteFor ? ' selected' : '') + '>' + esc(it.name) + '</option>'; }).join('') + '</select></label>' +
             '<label>' + esc(t.substituteUnit) + '<select data-rv-unit>' + subUnits.map(function (u) { return '<option value="' + esc(u) + '"' + (u === l.substituteUnit ? ' selected' : '') + '>' + esc(unitName(u)) + '</option>'; }).join('') + '</select></label>' +
@@ -465,6 +465,7 @@
   }
   function pickHtml() {
     var t = T();
+    if (draftCatalogue === null) return '<div class="hx-eco-empty" role="status"><b>' + esc(t.offline) + '</b><button type="button" class="hx-btn ghost" data-action="eco-req-catalogue-retry">' + esc(t.retry) + '</button></div>';
     if (!draftCatalogue.length) return '<div class="hx-eco-empty"><b>' + esc(t.noCatalogue) + '</b><p>' + esc(t.noCatalogueD) + '</p></div>';
     return draftCatalogue.map(function (entry, i) {
       var it = item(entry.itemId), units = unitsOf(it), def = entry.countingUnit && units.indexOf(entry.countingUnit) >= 0 ? entry.countingUnit : units[0];
@@ -481,9 +482,10 @@
       draftCatalogue = (body.data && Array.isArray(body.data.items) ? body.data.items : []).filter(function (e) {
         var it = item(e.itemId); return e && e.active !== false && e.visibility !== 'hidden' && it && it.active !== false;
       });
-    } catch (_) { draftCatalogue = []; }
+    } catch (_) { draftCatalogue = null; }
     if (box && box.isConnected) box.innerHTML = pickHtml();
   }
+  handlers['eco-req-catalogue-retry'] = function () { if (createRef) loadDepartment(createRef.el.querySelector('[data-req-unit]').value); };
   handlers['eco-req-new'] = function () {
     var t = T(), deps = departments();
     if (!deps.length) { Kiwi.toast(t.noUnits, { type:'warning' }); return; }

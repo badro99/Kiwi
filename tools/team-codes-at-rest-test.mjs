@@ -196,7 +196,7 @@ ok('la remontée du document : canPush bloque, onPushed note ce que le serveur a
 ok('la fusion rend les codes (fillCodes) et l\'hydratation passe par une lecture directe, pas par pull', () => {
   assert.match(TEAM, /members: fillCodes\(members, theirs && theirs\.members\),/);
   assert.match(grab(TEAM, 'function hydrateCodes('), /fetchDeadline\('\/api\/store\?feature=team&merchant='/);
-  assert.match(grab(TEAM, 'function teamCloudBind('), /c\.bind\(\)\)\.then\(\(\) => hydrateCodes\(\)\)\.then\(\(\) => publishPins\(\)\)/);
+  assert.match(grab(TEAM, 'function teamCloudBind('), /then\(\(\) => c\.bind\(\)\)\.then\(\(\) => hydrateCodes\(\)\)\.then\(\(ok\) => \{ if \(ok\) publishPins\(\); \}\)/);
 });
 ok('modifier un salarié dont le code n\'est pas revenu ne lui en invente pas un nouveau', () => {
   assert.match(TEAM, /\(prev && prev\.hasCode \? '' : makeCode\(members\)\)/);

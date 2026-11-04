@@ -277,40 +277,40 @@
         },
         {
           "start": 45165,
-          "end": 45336,
+          "end": 45428,
           "offset": 20724,
-          "length": 171,
+          "length": 263,
           "replacement": "  function teamCloudBind(...args) { return memberState.teamCloudBind(...args); }\n",
-          "sha256": "058f571d1da430c7159b02cd06d5a56a3455d0dbc89db29dbad14008997a2ac1"
+          "sha256": "e3ca33af2b0c2b0b286bbd5945b0f8d5e9823832b85d0f6aa24deb6135376121"
         },
         {
-          "start": 45336,
-          "end": 45421,
-          "offset": 20896,
+          "start": 45428,
+          "end": 45513,
+          "offset": 20988,
           "length": 85,
           "replacement": "  function teamCloudPush(...args) { return memberState.teamCloudPush(...args); }\n",
           "sha256": "b8c2572dc8193af718b5ee1c30c0037f95f82629a03d8f462962d22b8a4e8bfe"
         },
         {
-          "start": 45422,
-          "end": 47196,
-          "offset": 20982,
+          "start": 45514,
+          "end": 47288,
+          "offset": 21074,
           "length": 1774,
           "replacement": "  function ensureVenueData(...args) { return memberState.ensureVenueData(...args); }\n",
           "sha256": "0ca64d00b799180f01e9eb4794b789fe9584b45eceb067b75ff59ad1b064dc2f"
         },
         {
-          "start": 47196,
-          "end": 47286,
-          "offset": 22757,
+          "start": 47288,
+          "end": 47378,
+          "offset": 22849,
           "length": 90,
           "replacement": "  function getMembers(...args) { return memberState.getMembers(...args); }\n",
           "sha256": "8098ad1188994d9f908907b67df5a243c7264f892f55935fc7226c36d06bc0db"
         },
         {
-          "start": 47286,
-          "end": 47379,
-          "offset": 22848,
+          "start": 47378,
+          "end": 47471,
+          "offset": 22940,
           "length": 93,
           "replacement": "  function getHours(...args) { return memberState.getHours(...args); }\n",
           "sha256": "5e78e80966244c390c84c802a652689db07310f76683611eaab3e38331fa42e4"
@@ -318,7 +318,7 @@
         {
           "start": 21120,
           "end": 22701,
-          "offset": 22942,
+          "offset": 23034,
           "length": 1581,
           "replacement": "  const periodOffsets = memberState.periodOffsets;",
           "sha256": "c1c4f223211a22923ad2e0b1c10719424ec211500e65c94ebf5626789703c2f5"
@@ -508,16 +508,16 @@
           "sha256": "cddde440c7f6597afa345fa0bada1d59d8e26c3dcf86157b509203ee7762a4ab"
         },
         {
-          "start": 106586,
-          "end": 106782,
+          "start": 106678,
+          "end": 106874,
           "offset": 1506,
           "length": 196,
           "replacement": "  /* team-owner:invitations:ONB_ROLE_FN */\n",
           "sha256": "147b60f12d7623b29f458591c372fce11819d132219791e661ec06f983a03d4b"
         },
         {
-          "start": 106782,
-          "end": 108758,
+          "start": 106874,
+          "end": 108850,
           "offset": 1703,
           "length": 1976,
           "replacement": "  function importMembers(...args) { return invitations.importMembers(...args); }\n",
@@ -550,64 +550,64 @@
       "suffix": "  return Object.freeze({ memberMatchesFilters, rerenderProfilesGrid, renderHeader, roster, daySnapshot, planningDay, bookingCoverage, labour, setActiveTab(value) { activeTab = value; } });\n  } });\n})();\n",
       "fragments": [
         {
-          "start": 59123,
-          "end": 59677,
+          "start": 59215,
+          "end": 59769,
           "offset": 1173,
           "length": 554,
           "replacement": "  function memberMatchesFilters(...args) { return rosterList.memberMatchesFilters(...args); }\n",
           "sha256": "d72181b3ad3e6db9ae3c456e22ad8c4fcc9f286e8037086692335536ed24a676"
         },
         {
-          "start": 65055,
-          "end": 66015,
+          "start": 65147,
+          "end": 66107,
           "offset": 1728,
           "length": 960,
           "replacement": "  function rerenderProfilesGrid(...args) { return rosterList.rerenderProfilesGrid(...args); }\n",
           "sha256": "c59257951f423732d947f4b742687e701a0196110175a63a0b86d2df9bd8f970"
         },
         {
-          "start": 66063,
-          "end": 67137,
+          "start": 66155,
+          "end": 67229,
           "offset": 2689,
           "length": 1074,
           "replacement": "  function renderHeader(...args) { return rosterList.renderHeader(...args); }\n",
           "sha256": "93795f265b4c6908b37ae2c0de7344984469e9efcbebf24ae50fce11b84fa977"
         },
         {
-          "start": 109189,
-          "end": 110081,
+          "start": 109281,
+          "end": 110173,
           "offset": 3764,
           "length": 892,
           "replacement": "  function roster(...args) { return rosterList.roster(...args); }\n",
           "sha256": "3002fc2fd3b75eec03b3e6959820b9fc33597d2c0069612123e5583457869e2d"
         },
         {
-          "start": 110482,
-          "end": 111670,
+          "start": 110574,
+          "end": 111762,
           "offset": 4657,
           "length": 1188,
           "replacement": "  function daySnapshot(...args) { return rosterList.daySnapshot(...args); }\n",
           "sha256": "075576c0691e02bff94e07de818934512521758447fccb55306144b9062b93d7"
         },
         {
-          "start": 111982,
-          "end": 113306,
+          "start": 112074,
+          "end": 113398,
           "offset": 5846,
           "length": 1324,
           "replacement": "  function planningDay(...args) { return rosterList.planningDay(...args); }\n",
           "sha256": "303f5f571b4cdd91548146425a2fabe5d73456a704dec562064152b2ede24081"
         },
         {
-          "start": 113655,
-          "end": 115244,
+          "start": 113747,
+          "end": 115336,
           "offset": 7171,
           "length": 1589,
           "replacement": "  function bookingCoverage(...args) { return rosterList.bookingCoverage(...args); }\n",
           "sha256": "8b19f706b76bc08cd8a3280a05229b692ed5dac6f497e0cb000d5b1c49362b82"
         },
         {
-          "start": 115681,
-          "end": 116267,
+          "start": 115773,
+          "end": 116359,
           "offset": 8761,
           "length": 586,
           "replacement": "  function labour(...args) { return rosterList.labour(...args); }\n",
@@ -948,7 +948,7 @@
     "kiwi-serveur.html": 27,
     "booking.html": 5
   },
-  "sha256": "95a9651f4bb8f9cd1c92ce2ff4b7186a456a6964cbff6322f0920e02a765843c",
+  "sha256": "e14b5083cf84013101c8c7596091e3f76e22378d624fc95f840cef961133fb41",
   "imports": [
     "./team/member-state.js",
     "./team/venue-scope.js",
