@@ -72,8 +72,9 @@ await test('takeaway archive stays in memory and warns once on refused storage',
   fn('a');fn('b');assert.deepEqual([...ids],['a','b']);assert.equal(ids.days.get('a'),'2026-11-04');assert.equal(notices.length,1);
 });
 await test('pressing archive retains full document, projects it and warns once',()=>{
-  const memory=new Map(), notices=[], projected=[],ctx={storeKey:()=> 'fixture',archiveMemory:memory,archiveWarned:new Set(),localStorage:{setItem(){throw Error();},getItem:()=>null},window:{Kiwi:{toast:s=>notices.push(s)}},document:{documentElement:{lang:'en'},createElement:()=>({setAttribute(){}}),body:{appendChild:n=>notices.push(n.textContent)}},projectFull:d=>projected.push(d),console};
-  const write=run('pressing-ops.js','writeFull',ctx),doc={customers:[],orders:[{id:'a'}]};write(doc);write(doc);assert.equal(projected.length,2);assert.equal(notices.length,1);assert.equal(run('pressing-ops.js','readFull',ctx)(),doc);
+  const memory=new Map(), notices=[], projected=[],ctx={storeKey:()=> 'fixture',archiveMemory:memory,archiveWarned:new Set(),localStorage:{setItem(){throw Error();},getItem:()=>null},window:{dispatchEvent:e=>notices.push(e.detail.key)},CustomEvent:class{constructor(type,init){this.type=type;this.detail=init.detail;}},projectFull:d=>projected.push(d),console};
+  ctx.persistenceNotice=run('pressing-ops.js','persistenceNotice',ctx);
+  const write=run('pressing-ops.js','writeFull',ctx),doc={customers:[],orders:[{id:'a'}]};write(doc);write(doc);assert.equal(projected.length,2);assert.deepEqual(notices,['persist.archive'],'one notice for the refused archive');assert.equal(run('pressing-ops.js','readFull',ctx)(),doc);
 });
 await test('stock exception has a reason; failed department catalogue offers retry and can recover',async()=>{
   assert.equal(run('hotel-economat-requests.js','onHand',{window:{KiwiEconomatStock:{rows(){throw Error();}}}})('a').error,'stock-unavailable');
