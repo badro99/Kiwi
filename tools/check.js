@@ -2388,7 +2388,7 @@ section('Whole-project regressions');
     'formula-receipt-pricing-test.mjs',
     'sale-invoice-test.mjs',
     'invoice-server-truth-test.mjs',
-    'invoice-series-year-test.mjs',
+    'invoice-series-year-test.mjs', 'money-server-paths-test.mjs', 'returns-watch-lifecycle-test.mjs',
     'sale-invoice-cache-key-test.mjs',
     /* Facturation v2 : le serveur (numéros, totaux, verrou, avoirs, accès). */
     'invoices-v2-test.mjs',

@@ -130,7 +130,11 @@ async function merchantFor(request, env, asked) {
   return merchant && merchant === asked ? merchant : '';
 }
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet(ctx) {
+  try { return await readCredits(ctx); }
+  catch (_) { return json({ error: 'store-credit-unavailable' }, 503); }
+}
+async function readCredits({ request, env }) {
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
   const url = new URL(request.url);
   const asked = clean(url.searchParams.get('merchant'), 64);
