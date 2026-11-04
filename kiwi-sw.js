@@ -97,7 +97,7 @@ var SHELL = [
   '/assets/invoicing/print.js?v=8',
   '/assets/invoicing/history.js?v=11',
   '/assets/invoicing/composer.js?v=9',
-  '/assets/invoicing/transport.js?v=9',
+  '/assets/invoicing/transport.js?v=10',
   '/assets/booking-view.js?v=5',
   '/assets/booking-manage.js?v=5',
   '/assets/booking-submission.js?v=15',
@@ -253,7 +253,7 @@ var SHELL = [
   '/assets/loyalty-product-links.js?v=5',
   '/assets/features.js?v=23',
   '/assets/invoicing.css?v=17',
-  '/assets/invoicing.js?v=49',
+  '/assets/invoicing.js?v=50',
   '/assets/order-qr.js?v=6',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
@@ -413,7 +413,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=37',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=119',
+  '/assets/caisse-lang.js?v=121',
   '/assets/venue-store.js?v=6',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=17',
@@ -486,7 +486,7 @@ var SHELL = [
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=33',
+  '/assets/kitchen-print-queue.js?v=34',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=32',
   '/assets/pos-dispatch.js?v=368',

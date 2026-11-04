@@ -34,7 +34,12 @@ async function api(method, payload) {
       }
     } catch (error) {
       // A timed-out write may still have landed: never tell the merchant "nothing was saved" then.
-      throw apiError(error && error.code === 'timeout' ? 'timeout' : 'offline');
+      // A failed send is only "nothing saved" when the browser itself is offline; a connection
+      // that drops after the server committed throws the same error (owner ruling 2026-11-04).
+      const sure = method === 'GET' || globalThis.navigator?.onLine === false;
+      const e = apiError(error && error.code === 'timeout' ? 'timeout' : sure ? 'offline' : 'timeout');
+      if (method !== 'GET' && e.code === 'timeout') e.uncertainCommit = true;
+      throw e;
     }
     let data = null;
     try { data = await res.json(); } catch (_) { if (method !== 'GET' && res.ok) throw apiError('timeout'); }

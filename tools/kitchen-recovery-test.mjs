@@ -154,16 +154,20 @@ const PAYLOAD = { title: 'CUISSON', station: 'Cuisine', items: [{ name: 'Tajine 
   ok('le comptoir est prévenu quand la pile manque', toasts.length > 0 && /file/.test(toasts[0].title));
 }
 
-/* 4 · la borne propre de la liste : 185 purges d'un coup n'en gardent que 60 */
+/* 4 · la borne propre de la liste : 240 gardés, et ce qui en sort est annoncé, jamais muet.
+ * Décision du 4 novembre (docs/decisions/2026-11-04-owner-delegated.md, kitchen#1) : la borne
+ * passait de 60 à 240 et une perte au-delà prévient le comptoir et se journalise. */
 {
-  const { api, memory } = boot();
+  const { api, memory, toasts } = boot();
   const rows = [];
-  for (let i = 0; i < 185; i++) rows.push({ id: 'order:' + i, payload: { station: 'Cuisine' }, createdAt: Date.now() });
+  for (let i = 0; i < 365; i++) rows.push({ id: 'order:' + i, payload: { station: 'Cuisine' }, createdAt: Date.now() });
   memory.setItem('kiwiKitchenPrintQueueV1:amira-cafe', JSON.stringify(rows));
   api._readQueue();
   const got = api._readRecover();
-  ok('la liste garde les plus récentes, avec sa propre borne',
-    got.length === 60 && got[0].id === 'order:5' && got[59].id === 'order:64');
+  ok('la liste garde les 240 plus récents évincés',
+    got.length === 240 && got[0].id === 'order:5' && got[239].id === 'order:244');
+  ok('les 5 plus anciens perdus pour la reprise sont annoncés au comptoir',
+    toasts.some((t) => /trop anciens/.test(t.title) && / · 5$/.test(t.desc)));
 }
 
 /* 5 · un bon déjà inscrit ne se duplique pas · péremption et débordement ne se confondent pas */

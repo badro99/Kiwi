@@ -212,8 +212,8 @@
     "sha": "ed00a86dddc9068e"
   },
   "assets/caisse-lang.js": {
-    "v": "119",
-    "sha": "fd19e7f5d5b98d22"
+    "v": "121",
+    "sha": "2ed0f06ad5fac795"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -832,8 +832,8 @@
     "sha": "a5f4d747cf82cd39"
   },
   "assets/invoicing.js": {
-    "v": "49",
-    "sha": "dde42df01b76fd87"
+    "v": "50",
+    "sha": "7b7159f585d636e7"
   },
   "assets/invoicing/composer.js": {
     "v": "9",
@@ -848,8 +848,8 @@
     "sha": "701c83f0825ccdbe"
   },
   "assets/invoicing/transport.js": {
-    "v": "9",
-    "sha": "210ad58f2be27420"
+    "v": "10",
+    "sha": "e125b6a7a9e429ff"
   },
   "assets/kit/access-reset.js": {
     "v": "1",
@@ -1072,8 +1072,8 @@
     "sha": "c9aa7ba3d485d350"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "33",
-    "sha": "07d3d1c39b47c27e"
+    "v": "34",
+    "sha": "50e96eedd0724bc1"
   },
   "assets/kitchen-relay.js": {
     "v": "16",

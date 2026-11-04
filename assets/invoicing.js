@@ -17,7 +17,7 @@
   window.Kiwi.handlers['invoicing'] = openWhenReady;
   window.KiwiInvoicing = {open: openWhenReady, list: () => [], version: '2.0.0'};
   const ready = Promise.all([
-  import('./invoicing/transport.js?v=9'),
+  import('./invoicing/transport.js?v=10'),
   import('./invoicing/composer.js?v=9'),
   import('./invoicing/history.js?v=11'),
   import('./invoicing/print.js?v=8'),

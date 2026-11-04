@@ -25,7 +25,7 @@
   var SEEN_PREFIX = 'kiwiKitchenPrintUnprintedV1:';
   var MAX_JOBS = 120;
   var MAX_DONE = 500;
-  var MAX_RECOVER = 60;
+  var MAX_RECOVER = 240;   // two full queues of evicted tickets; past that, the loss is announced
   var MAX_AGE = 30 * 60 * 1000;
   var RETRY_MS = 1200;
   var RETRY_MAX_MS = 15000;
@@ -251,7 +251,7 @@
    * patron prévenu n'avait pourtant aucun moyen de le reprendre : la commande
    * n'était que dans le localStorage de CET appareil, le serveur n'en sait
    * rien. La liste de récupération garde donc le PAYLOAD ENTIER de chaque bon
-   * évincé, sous une clé à part, avec sa propre borne (60, indépendante des
+   * évincé, sous une clé à part, avec sa propre borne (240, indépendante des
    * 120 de la file : une purge peut évincer d'un coup les deux tiers d'une
    * file). Un geste « Réimprimer » renvoie le bon dans la FILE DURABLE, sous
    * une identité neuve : registre `done` intact, doublon impossible, et le
@@ -278,9 +278,15 @@
         reason: safeReason(drop.state)
       });
     });
+    var lost = r.length > MAX_RECOVER ? r.slice(0, r.length - MAX_RECOVER) : [];
     var body = JSON.stringify(r.slice(-MAX_RECOVER));
     var written = put(rkKey(), body);
     if (!written) { trimDone(50); written = put(rkKey(), body); }
+    // Never silently: an older ticket leaving the reprint list is logged and announced.
+    if (lost.length) {
+      lost.forEach(function (x) { record('dropped-from-recovery', { id: x.id, type: x.type }); });
+      try { if (window.KiwiCaisseToast) window.KiwiCaisseToast(tr('Bons trop anciens pour être réimprimés'), 12000, 'warn', tr('La liste de reprise est pleine. Ces bons restent dans l’historique des impressions.') + ' · ' + lost.length); } catch (_) {}
+    }
     return written;
   }
   function reprintDropped(id) {
