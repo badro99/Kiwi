@@ -53,7 +53,7 @@
     'assets/planning-core.js?v=13',
     'assets/team/catalog.js?v=2',
     'assets/team.js?v=344',
-    'assets/team/profile-ui.js?v=15',
+    'assets/team/profile-ui.js?v=16',
     'assets/team-hours.js?v=17',
     'assets/cancellation-history.js?v=3',
     'assets/cash-sessions.js?v=8',

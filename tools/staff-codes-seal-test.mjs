@@ -56,6 +56,7 @@ const referenceKey = await crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-25
 const referenceHash = 'k1$' + Buffer.from(await crypto.subtle.sign('HMAC', referenceKey, utf8.encode(shop + ':' + code))).toString('base64url');
 db.prepare('INSERT INTO staff_pins VALUES (?,?,?,?,?,?)').run('hkdf-old', shop, referenceHash, 'Fixture', 'staff', 1);
 assert.equal((await verifyStaffPin(req(till), env, shop, code)).ok, true);
+db.prepare("DELETE FROM staff_pins WHERE id='hkdf-old'").run();
 
 assert.notEqual(await hashStaffCode(env, shop, code), await hashStaffCode(env, sibling, code));
 assert.notEqual(await hashStaffCode(env, shop, code), await hashStaffCode({ ...env, PIN_PEPPER: 'fixture-pepper' }, shop, code));
@@ -90,8 +91,8 @@ sealedDocs();
 assert.ok(await findEmployeeCredential(env, 'member@fixture.test', code), 'sealed email and code lookup');
 assert.equal((await call(login, '', { action: 'login', email: 'member@fixture.test', pin: code })).status, 200);
 const encrypted = JSON.parse(db.prepare("SELECT data FROM store_docs WHERE feature='team'").get().data);
-await assert.rejects(codeDocument({ AUTH_SECRET: 'wrong-fixture-key' }, shop, 'team', encrypted));
-await assert.rejects(codeDocument(env, sibling, 'team', encrypted));
+assert.equal((await codeDocument({ AUTH_SECRET: 'wrong-fixture-key' }, shop, 'team', encrypted)).members[0].codeUnreadable, true);
+assert.equal((await codeDocument(env, sibling, 'team', encrypted)).members[0].codeUnreadable, true);
 const aesReference = await crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(), info: utf8.encode('kiwi staff code enc v1') }, material, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
 const [, ivPart, cipherPart] = encrypted.members[0].pinCode.split('$');
 const plainReference = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: Buffer.from(ivPart, 'base64url'), additionalData: utf8.encode(JSON.stringify([shop, 'team', 'm', 'pinCode'])) }, aesReference, Buffer.from(cipherPart, 'base64url'));
@@ -104,7 +105,7 @@ db.prepare("INSERT INTO doc_history (merchant,kind,feature,data,rev,updated_ts,s
 const first = await (await call(seal, operator, {})).json();
 assert.equal(first.ok, true); assert.equal(first.counts.pins, 1); assert.ok(first.counts.documents >= 1); assert.ok(first.counts.history >= 1); opaque(); sealedDocs();
 const second = await (await call(seal, operator, {})).json();
-assert.deepEqual(second.counts, { pins: 0, documents: 0, history: 0, skipped: 0, legacyCodeIds: 0 });
+assert.deepEqual(second.counts, { auth: 0, unresolved: 0, pins: 0, documents: 0, history: 0, skipped: 0, legacyCodeIds: 0 });
 assert.equal((await (await read(owner)).json()).data.members[0].pinCode, code);
 // Bounded cursor traversal reaches rows beyond the first batch.
 for (let i = 0; i < 51; i++) db.prepare('INSERT INTO staff_pins VALUES (?,?,?,?,?,?)').run('batch-' + String(i).padStart(3, '0'), sibling, legacy, 'Fixture', 'staff', i);
@@ -113,7 +114,7 @@ do { const result = await (await call(seal, operator, cursor ? { cursor } : {}))
 assert.equal(changed, 51); opaque();
 let throttled = false;
 for (let i = 0; i < 9; i++) { if ((await call(seal, operator, {})).status === 429) { throttled = true; break; } }
-assert.ok(throttled, 'operator backfill is rate limited');
+assert.equal(throttled, false, 'successful operator backfills do not consume failure budget');
 console.log('✓ staff codes: publication/add/seal persist hashes; legacy upgrade; role boundaries; encrypted docs, redaction, login; operator-only idempotent backfill');
 // Council regression cases use isolated merchants and synthetic credentials only.
 const { matchingStaffCodes, accountStaffCodes, sealMerchantStaff } = await import('../functions/auth/_staff-codes.js');
@@ -132,7 +133,7 @@ const sealedA = await codeDocument(keyA, rotationShop, 'team', team, true);
 assert.equal((await codeDocument(keyB, rotationShop, 'team', sealedA)).members[0].pinCode, code);
 const sealedB = await codeDocument(keyB, rotationShop, 'team', sealedA, true);
 assert.equal((await codeDocument({ ...keyB, PIN_PEPPER_PREVIOUS: undefined }, rotationShop, 'team', sealedB)).members[0].pinCode, code);
-await assert.rejects(codeDocument({ ...keyB, PIN_PEPPER_PREVIOUS: undefined }, rotationShop, 'team', sealedA));
+assert.equal((await codeDocument({ ...keyB, PIN_PEPPER_PREVIOUS: undefined }, rotationShop, 'team', sealedA)).members[0].codeUnreadable, true);
 const addedPepper = { ...env, PIN_PEPPER: 'fixture-added-later' };
 assert.equal((await matchingStaffCodes(addedPepper, shop, code)).length > 0, true, 'adding pepper retains AUTH_SECRET');
 assert.equal((await codeDocument(addedPepper, shop, 'team', encrypted)).members[0].pinCode, code);
@@ -143,7 +144,7 @@ const badEditor = await get({ env: { ...env, PIN_PEPPER: 'fixture-missing-key', 
 assert.equal(badEditor.status, 200);
 const missingDocEnv = { ...env, PIN_PEPPER: 'fixture-missing-key' };
 db.prepare("UPDATE store_docs SET data=? WHERE merchant=? AND feature='team'").run(JSON.stringify(sealedA), shop);
-assert.equal((await get({ env: missingDocEnv, request: new Request(`https://fixture.test/api/store?merchant=${shop}&feature=team`, { headers: { Cookie: owner } }) })).status, 409);
+assert.equal((await get({ env: missingDocEnv, request: new Request(`https://fixture.test/api/store?merchant=${shop}&feature=team`, { headers: { Cookie: owner } }) })).status, 200);
 db.prepare("UPDATE store_docs SET data=? WHERE merchant=? AND feature='team'").run(JSON.stringify(encrypted), shop);
 const legacyText = `${shop}\u0000m\u0000${code}`;
 const oldDigest = Buffer.from(await crypto.subtle.digest('SHA-256', utf8.encode(legacyText))).toString('hex');
@@ -197,12 +198,10 @@ assert.equal((await matchingStaffCodes(authRotated, 'auth-rotation-fixture', cod
 assert.equal(db.prepare("SELECT pin FROM staff_pins WHERE id='auth-rotation'").get().pin, await hashStaffCode(authRotated, 'auth-rotation-fixture', code));
 const migratedDoc = JSON.parse(db.prepare("SELECT data FROM store_docs WHERE merchant=? AND feature='team'").get(rotationShop).data);
 assert.equal((await codeDocument({ ...keyB, PIN_PEPPER_PREVIOUS: undefined }, rotationShop, 'team', migratedDoc)).members[0].pinCode, code, 'backfill reseals previous-key documents');
-// The first PIN_PEPPER implementation used raw HMAC: retain read-only compatibility.
-const rawKey = await crypto.subtle.importKey('raw', utf8.encode(keyA.PIN_PEPPER), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-const rawHash = 'k1$' + Buffer.from(await crypto.subtle.sign('HMAC', rawKey, utf8.encode(rotationShop + ':' + code))).toString('base64url');
+// Unsupported pre-production k1 values are deliberately not accepted.
+const rawHash = 'k1$fixture-unsupported';
 db.prepare('INSERT INTO staff_pins VALUES (?,?,?,?,?,?)').run('raw-legacy', rotationShop, rawHash, 'Fixture', 'staff', 1);
-assert.equal((await matchingStaffCodes(keyB, rotationShop, code)).length, 1);
-assert.equal(db.prepare("SELECT pin FROM staff_pins WHERE id='raw-legacy'").get().pin, await hashStaffCode(keyB, rotationShop, code));
+assert.equal((await matchingStaffCodes(keyB, rotationShop, code)).length, 0);
 let lookupCandidates;
 const excluding = { ...env, DB: { ...env.DB, prepare(sql) {
   const st = env.DB.prepare(sql);

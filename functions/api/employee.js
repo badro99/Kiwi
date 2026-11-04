@@ -101,12 +101,12 @@ async function liveEmployee(request, env) {
     // still enriches the employee view with schedule, hours and profile data.
     const accessRow = await env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'employee-access'")
       .bind(session.merchant).first();
-    const access = await codeDocument(env, session.merchant, 'employee-access', parse(accessRow && accessRow.data, { members: [] }));
+    const access = await codeDocument(env, session.merchant, 'employee-access', parse(accessRow && accessRow.data, { members: [] }), false, session.staffId);
     const accessMember = (Array.isArray(access.members) ? access.members : [])
       .find((m) => m && String(m.id || '') === String(session.staffId || ''));
     const teamRow = await env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'team'")
       .bind(session.merchant).first();
-    const team = await codeDocument(env, session.merchant, 'team', parse(teamRow && teamRow.data, { members: [] }));
+    const team = await codeDocument(env, session.merchant, 'team', parse(teamRow && teamRow.data, { members: [] }), false, session.staffId);
     const teamMember = (Array.isArray(team.members) ? team.members : [])
       .find((m) => m && String(m.id || '') === String(session.staffId || ''));
     const teamIsNewer = !accessRow
@@ -120,6 +120,7 @@ async function liveEmployee(request, env) {
       ? { ...(teamMember || {}), ...accessMember }
       : (teamIsNewer ? teamMember : null);
     if (member) {
+      if (member.codeUnreadable) return null;
       const expected = Math.max(0, Math.round(Number(member.authVersion) || 0));
       const presented = Math.max(0, Math.round(Number(session.av) || 0));
       const revision = await employeeAuthRevision(env, session.merchant, session.staffId, expected);
@@ -140,7 +141,7 @@ async function liveEmployee(request, env) {
       const revision = await employeeAuthRevision(env, session.merchant, session.staffId, expected);
       if (!revision.ok || Math.max(0, Math.round(Number(session.av) || 0)) !== revision.version) return null;
     }
-    if (pin) pin.memberId = await staffMemberId(env, session.merchant, team, pin);
+    if (pin) pin.memberId = await staffMemberId(env, session.merchant, await codeDocument(env, session.merchant, 'team', team), pin);
     return pin ? { session, pin } : null;
   } catch (_) { return null; }
 }
@@ -224,7 +225,7 @@ async function payloadFor(request, env) {
   const merchant = auth.session.merchant;
   const [zone, cutoff] = await Promise.all([merchantZone(env, merchant), merchantCutoff(env, merchant)]);
   const [teamRow, floorRow, attendanceRow, messagesRow, progressRow, cfg] = await Promise.all([
-    readDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} }),
+    readStoredDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} }),
     readDoc(env, merchant, FLOOR_FEATURE, { zones: [], tables: [], staff: [] }),
     readDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }),
     readDoc(env, merchant, MESSAGES_FEATURE, { messages: [] }),

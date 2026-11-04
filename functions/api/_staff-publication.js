@@ -1,4 +1,4 @@
-import { codeDocument, hashStaffCode, sealMerchantStaff } from '../auth/_staff-codes.js';
+import { codeDocument, hashStaffCode, pinHashes, sealMerchantStaff } from '../auth/_staff-codes.js';
 import { canonicalCode, normalizeMember } from './_rules-staff-credential.js';
 // Staff credential publication: the one place a staff code list becomes
 // till codes, the private employee-login roster and the auth revisions.
@@ -84,7 +84,10 @@ export async function publishStaffCredentials(env, merchant, body) {
   }
   // Atomic replace. created_ts is offset per index so the GET's ORDER BY
   // created_ts preserves the submitted order.
-  for (const p of clean) p.storedCode = await hashStaffCode(env, merchant, p.code);
+  for (const p of clean) {
+    p.storedCode = await hashStaffCode(env, merchant, p.code);
+    p.candidates = [...await pinHashes(env, merchant, p.code), p.code];
+  }
   const base = Date.now();
   let tillPins = clean.filter((p) => employeeRoleOpensTill(p.role));
   /* LE PATRON NE FIGURE PAS DANS LE ROSTER D'ÉQUIPE. La page Équipe
@@ -121,8 +124,9 @@ export async function publishStaffCredentials(env, merchant, body) {
       : env.DB.prepare('DELETE FROM staff_pins WHERE merchant = ?').bind(merchant)];
     tillPins.forEach((p, i) => {
       stmts.push(env.DB.prepare(
-        'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES (?,?,?,?,?,?)'
-      ).bind('pin-' + crypto.randomUUID(), merchant, p.storedCode, p.name, p.role, base + i));
+        'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) SELECT ?,?,?,?,?,? '
+        + 'WHERE NOT EXISTS (SELECT 1 FROM staff_pins WHERE merchant = ? AND pin IN (' + p.candidates.map(() => '?').join(',') + '))'
+      ).bind('pin-' + crypto.randomUUID(), merchant, p.storedCode, p.name, p.role, base + i, merchant, ...p.candidates));
     });
     /* Le code conservé du patron gagne : une ligne d'équipe qui porterait les
      * mêmes quatre chiffres créerait un doublon dont le rôle dépendrait de

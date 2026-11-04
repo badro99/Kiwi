@@ -1,4 +1,3 @@
-import { hmacKey } from './_crypto.js';
 // Versioned staff credentials. No schema change; legacy plaintext is read during transition.
 const enc = new TextEncoder(), dec = new TextDecoder();
 const b64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -36,13 +35,11 @@ export async function staffMac(secret, info, text) {
   return b64(await crypto.subtle.sign('HMAC', await key(secret, info,
     { name: 'HMAC', hash: 'SHA-256', length: 256 }, ['sign']), enc.encode(text)));
 }
-async function pinHashes(env, merchant, code) {
+export async function pinHashes(env, merchant, code) {
   if (!valid(code)) throw new Error('invalid-staff-code');
   const values = [];
   for (const secret of staffKeys(env)) {
     values.push(await currentHash(secret, merchant, code));
-    values.push('k1$' + await staffMac(secret, 'kiwi staff pin v1', merchant + ':' + code));
-    values.push('k1$' + b64(await crypto.subtle.sign('HMAC', await hmacKey(secret), enc.encode(merchant + ':' + code))));
   }
   return values;
 }
@@ -53,38 +50,40 @@ export async function hashStaffCode(env, merchant, code) {
   return currentHash(staffKeys(env)[0], merchant, code);
 }
 export async function needsStaffRecovery(env, pin) {
-  return /^k[12]\$/.test(pin) && !pin.startsWith('k2$' + await keyTag(staffKeys(env)[0]) + '$');
+  return /^k2\$/.test(pin) && !pin.startsWith('k2$' + await keyTag(staffKeys(env)[0]) + '$');
 }
 // Exhaustive recovery belongs only to the bounded operator backfill, never login.
-export async function rotateStaffRow(env, row) {
+export async function rotateStaffRow(env, row, start = 0, budget = 250) {
   if (valid(row.pin)) return hashStaffCode(env, row.merchant, row.pin);
-  if (!/^k[12]\$/.test(row.pin)) throw new Error('invalid-staff-code');
+  if (!/^k2\$/.test(row.pin)) throw new Error('invalid-staff-code');
   if (!await needsStaffRecovery(env, row.pin)) return row.pin;
   const signers = [];
   for (const secret of staffKeys(env)) {
     if (row.pin.startsWith('k2$')) {
       const prefix = 'k2$' + await keyTag(secret) + '$';
       if (row.pin.startsWith(prefix)) signers.push([prefix, await key(secret, 'kiwi staff pin v2', { name: 'HMAC', hash: 'SHA-256' }, ['sign'])]);
-    } else {
-      signers.push(['k1$', await key(secret, 'kiwi staff pin v1', { name: 'HMAC', hash: 'SHA-256' }, ['sign'])], ['k1$', await hmacKey(secret)]);
     }
   }
-  for (let n = 0; n < 10000; n++) {
+  for (let n = start; n < Math.min(10000, start + budget); n++) {
     const code = String(n).padStart(4, '0');
     for (const [prefix, signer] of signers) {
       if (prefix + b64(await crypto.subtle.sign('HMAC', signer, enc.encode(row.merchant + ':' + code))) === row.pin) return hashStaffCode(env, row.merchant, code);
     }
   }
+  if (start + budget < 10000 && signers.length) return null;
   throw new Error('staff-code-key-unavailable');
 }
-export async function codeDocument(env, merchant, feature, doc, seal = false) {
+export async function codeDocument(env, merchant, feature, doc, seal = false, memberId = null) {
   if (!doc || !['team', 'employee-access'].includes(feature)) return doc;
   const copy = structuredClone(doc);
   const keys = await Promise.all(staffKeys(env).map((secret) => key(secret, 'kiwi staff code enc v1', { name: 'AES-GCM', length: 256 }, ['encrypt', 'decrypt'])));
   const k = keys[0];
   for (const member of Array.isArray(copy.members) ? copy.members : []) {
     if (!member || typeof member !== 'object') continue;
+    if (memberId !== null && String(member.id || '') !== String(memberId)) continue;
+    let unreadable = false;
     for (const field of ['pinCode', 'password']) {
+      try {
       const raw = member[field];
       if (raw == null || raw === '') continue;
       if (typeof raw !== 'string' && typeof raw !== 'number') throw new Error('invalid-staff-code');
@@ -106,7 +105,12 @@ export async function codeDocument(env, merchant, feature, doc, seal = false) {
         const iv = crypto.getRandomValues(new Uint8Array(12));
         member[field] = 'e1$' + b64(iv) + '$' + b64(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad }, k, enc.encode(value)));
       }
+      } catch (_) { unreadable = true; }
     }
+    if (unreadable) {
+      member.codeUnreadable = true;
+      if (!seal) { member.pinCode = ''; member.password = ''; }
+    } else delete member.codeUnreadable;
   }
   return copy;
 }
@@ -119,7 +123,9 @@ async function lookup(env, merchants, code) {
       AND p.pin = json_extract(c.value, '$.pin') ORDER BY p.created_ts LIMIT 10`).bind(JSON.stringify(candidates)).all()).results || [];
   for (const row of rows) {
     const current = await hashStaffCode(env, row.merchant, code);
-    if (row.pin !== current) await env.DB.prepare('UPDATE staff_pins SET pin = ? WHERE id = ? AND pin = ?').bind(current, row.id, row.pin).run();
+    if (row.pin !== current) {
+      try { await env.DB.prepare('UPDATE staff_pins SET pin = ? WHERE id = ? AND pin = ?').bind(current, row.id, row.pin).run(); } catch (_) { /* Verification already succeeded; retry the upgrade later. */ }
+    }
     delete row.pin;
   }
   return rows;

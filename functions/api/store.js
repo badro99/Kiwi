@@ -1053,7 +1053,7 @@ export async function onRequestPost(context) {
       const sent = clean.value.hoursCredited && typeof clean.value.hoursCredited === 'object' && !Array.isArray(clean.value.hoursCredited) ? clean.value.hoursCredited : {};
       clean.value.hoursCredited = { ...sent, ...serverMarks };
     }
-    const priorCodes = new Map((mine?.members || []).map((m) => [m.id, m]));
+    const priorCodes = new Map((mine?.members || []).map((m) => [String(m.id), m]));
     for (const m of clean.value.members || []) {
       if (m && typeof m.id === 'string' && m.id.trim() && priorCodes.has(m.id)) {
         for (const field of ['pinCode', 'password']) if (m[field] === undefined) m[field] = priorCodes.get(m.id)[field];
