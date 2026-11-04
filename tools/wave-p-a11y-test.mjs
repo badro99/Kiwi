@@ -18,7 +18,7 @@ test('onboarding semantic handoff',()=>{
 });
 test('returns amount confirmation',()=>{assert.doesNotMatch(read('pages-pro/boutique-promos-returns.js'),/window.confirm/);assert.match(read('credit-cancel-dialog.js'),/credit.balanceCents/);});
 test('creditbook bounded history',()=>{
- assert.match(read('pos-epicerie.js'),/bindHistoryPages\(el, hist/);assert.doesNotMatch(read('pos-epicerie.js'),/hist.map/);
+ assert.match(read('pos-epicerie/carnet.js'),/bindHistoryPages\(el, hist/);assert.doesNotMatch(read('pos-epicerie/carnet.js'),/hist.map/);
  const s=read('credit-history-page.js');const fn=s.slice(s.indexOf('function historyPage'),s.indexOf('export function bind'));
  const context={};vm.runInNewContext(fn,context);const rows=Array.from({length:123},(_,i)=>i);
  assert.equal(context.historyPage(rows).length,50);assert.equal(context.historyPage(rows,2).length,23);assert.equal(context.historyPage(rows,1)[0],50);

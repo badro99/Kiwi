@@ -35,5 +35,5 @@ assert.ok(html.includes('data-ing-delete'));
 // Readability is a structure contract, complementary to execution assertions.
 assert.ok(Math.max(...recipes.split('\n').map(line => line.length)) < 650, 'recipe rendering statements must be reviewable');
 const stamps = createRequire(import.meta.url)('./stamps.js').scan();
-assert.ok(stamps.get('assets/credit-history-page.js')?.sites.some(site => site.kind === 'module' && site.file === 'assets/pos-epicerie.js'), 'credit history import participates in stamp propagation');
+assert.ok(stamps.get('assets/credit-history-page.js')?.sites.some(site => site.kind === 'module' && site.file === 'assets/pos-epicerie/carnet.js'), 'credit history import participates in stamp propagation');
 console.log('✓ lane E snapshot navigation and recipe rendering');

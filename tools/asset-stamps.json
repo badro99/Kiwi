@@ -212,8 +212,8 @@
     "sha": "5dfe4eaffa4b2059"
   },
   "assets/caisse-lang.js": {
-    "v": "105",
-    "sha": "2574c4794b84cff8"
+    "v": "109",
+    "sha": "b276398f3d5e2085"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1624,16 +1624,20 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "344",
-    "sha": "a039933bc496cd35"
+    "v": "350",
+    "sha": "9a8617566fd6e2bb"
   },
   "assets/pos-epicerie.css": {
-    "v": "32",
+    "v": "35",
     "sha": "d6fa42fcbe6f00d8"
   },
   "assets/pos-epicerie.js": {
-    "v": "32",
-    "sha": "73043f31c16dd04d"
+    "v": "35",
+    "sha": "b1af70cd2e34e8dd"
+  },
+  "assets/pos-epicerie/carnet.js": {
+    "v": "6",
+    "sha": "a0555949c4d89c96"
   },
   "assets/pos-fastfood.css": {
     "v": "15",
