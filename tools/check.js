@@ -811,7 +811,7 @@ for (const test of [
   'pressing-split-test.mjs',
   'pressing-boundary-test.mjs',
   'pressing-numbering-test.mjs',
-  'pressing-workspace-test.js',
+  'pressing-workspace-test.js', 'pay-statement-test.mjs',
   'pressing-auto-ready-test.mjs',
   /* Pressing et hôtel : un bouton d'espèces règle le montant reçu, il ne l'ajoute plus au dû. */
   'trade-cash-presets-test.mjs',

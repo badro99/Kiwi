@@ -1,0 +1,66 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import owners from './team-owners-test-source.cjs';
+import planning from './planning-test-source.cjs';
+import { statementRows, statementHtml, openPayStatement } from '../assets/planning/pay-statement.js';
+const suite = fs.readFileSync('tools/team-split-test.mjs', 'utf8');
+const harness = suite.slice(suite.indexOf('function realm('), suite.indexOf("\nfor (const lang of ['fr'"));
+const team = fs.readFileSync('assets/team/catalog.js', 'utf8') + '\n' + owners.runtimeSource(false);
+for (const lang of ['fr', 'en', 'ar']) {
+  const r = vm.runInNewContext('(' + harness + ')(source, lang)', { vm, console, source:team + '\n' + planning.planningRuntimeSource(), lang });
+  const core = r.context.Kiwi.__teamCore;
+  const member = { id:'statement-a', firstName:'<A>', lastName:'Test', hourlyRate:23.47, baseSalary:0 };
+  const salaried = { id:'statement-b', firstName:'B', baseSalary:3100, hourlyRate:25, contractHours:44 };
+  const vt = core.teamKey(r.venue);
+  const period = { days:['2026-10-05','2026-10-06','2026-10-07','2026-10-08','2026-10-09','2026-10-10','2026-10-11'] };
+  const hours = r.context.__kiwiTeamV2.hoursByVenue[vt] = {};
+  hours[member.id] = { '2026-10-05':7 + 10/60, '2026-09-01':100 };
+  hours[salaried.id] = { '2026-10-05':8 };
+  const rows = statementRows(core, r.venue, period, [member, salaried], { [member.id]:1234 });
+  assert.equal(rows[0].gross, 16820, 'real hourly calculator rounds only at the centime');
+  assert.equal(rows[0].net, 15586, 'integer centime advances are subtracted exactly');
+  assert.equal(rows[0].hours, 7 + 10/60, 'hours outside chosen period are excluded');
+  assert.equal(rows[1].gross, 70000, 'real monthly salary is prorated for selected seven days');
+  assert.equal(rows[1].base, 70000);
+  assert.equal(rows[1].net, 70000, 'no invented contribution or tax');
+  assert.throws(() => statementRows(core, r.venue, period, [member], { [member.id]:1.5 }), /invalid-advance/);
+  const html = statementHtml(core, r.venue, period, rows);
+  assert.ok(html.includes('&lt;A&gt;') && !html.includes('<A>'), 'employee content is escaped');
+  assert.ok(html.includes('2026-10-05') && html.includes('2026-10-11'));
+  assert.ok(html.includes(({fr:'ne remplace pas le bulletin de paie officiel', en:'does not replace the official payslip', ar:'لا تعوض بيان الأجر الرسمي'})[lang]));
+  assert.ok(html.includes('CNSS') && html.includes('AMO') && html.includes('IR'));
+  assert.equal((html.match(/<article>/g) || []).length, 2, 'batch includes every chosen employee');
+  assert.equal((statementHtml(core, r.venue, period, rows.slice(0,1)).match(/<article>/g) || []).length, 1, 'single document contains only chosen employee');
+  assert.ok(html.includes(`dir="${lang === 'ar' ? 'rtl' : 'ltr'}"`));
+  assert.equal(statementRows(core, r.venue, period, [{id:'unrated'}])[0].rated, 0);
+  const markup = core.hours.renderPayrollBody(core.t(), r.venue, vt, [member]);
+  assert.ok(markup.includes('data-action="payslip-pdf"') && markup.includes('data-action="generate-payslips"'), 'real payroll UI exposes both document flows');
+  let appended, printed = 0, form;
+  const controls = {
+    '[data-pay-close]':{}, '[data-pay-print]':{}, '[data-pay-member]':{value:member.id}, '.kiwi-modal-body':{appendChild:f=>{appended=f;}},
+  };
+  const inputs = [{value:'12.34', reportValidity:()=>true, getAttribute:()=>member.id}];
+  globalThis.window = { KiwiVenue:{ getCurrentVenueData:()=>r.venue }, __kiwiTeamV2:{periodKind:'week'} };
+  globalThis.document = { createElement:()=>({ style:{}, setAttribute(){}, contentDocument:{ fonts:{ ready:Promise.resolve() } }, contentWindow:{focus(){},print(){printed++;}} }) };
+  const uiCore = {...core, getMembers:()=>[member,salaried], buildPeriod:()=>period,
+    modal:options=>{ form=options; return {el:{ querySelector:s=>controls[s], querySelectorAll:()=>inputs, appendChild:f=>{appended=f;} },close(){}}; } };
+  openPayStatement(uiCore, member.id);
+  assert.ok(form.body.includes('value="statement-a" selected'), 'single flow preselects employee');
+  controls['[data-pay-print]'].onclick();
+  assert.equal((appended.srcdoc.match(/<article>/g)||[]).length, 1);
+  await appended.onload(); assert.equal(printed, 1, 'real print handler prints prepared frame');
+  controls['[data-pay-member]'].value = '*';
+  controls['[data-pay-print]'].onclick();
+  assert.equal((appended.srcdoc.match(/<article>/g)||[]).length, 2, 'real batch handler prints both employees');
+  openPayStatement(uiCore, '*');
+  assert.ok(!form.body.includes(' selected'), 'batch defaults to all employees');
+  delete globalThis.window; delete globalThis.document;
+  let modalCount = 0;
+  openPayStatement({ ...core, hours:{ payrollAccess:()=>'none' }, modal:()=>modalCount++ });
+  assert.equal(modalCount, 0, 'staff cannot open salary documents');
+}
+const office = fs.readFileSync('assets/pages-pro-office.js', 'utf8');
+assert.match(office, /handlers\['payslip-pdf'\].*openPayStatement/);
+assert.match(office, /handlers\['generate-payslips'\].*openPayStatement/);
+console.log('✓ pay statements: real payroll calculations, period, centimes, single/batch, FR/EN/AR disclosure, escaping, permissions and UI');

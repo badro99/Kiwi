@@ -2483,7 +2483,7 @@ handlers['nav-payroll'] = () => {
             </div>
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
-            <button data-activation=write class="kb ghost" data-action="generate-payslips" style="justify-content:center;">Générer 5 bulletins</button>
+            <button data-activation=write class="kb ghost" data-action="generate-payslips" style="justify-content:center;">Relevés de paie internes</button>
             <button data-activation=money class="kb atlas" data-action="export-dgi" style="justify-content:center;">Export DGI · CSV</button>
           </div>
         </div>
@@ -2862,8 +2862,8 @@ handlers['rotate-secret']   = () => {
 };
 // add-member / member-detail / edit-perms are now registered inside
 // nav-equipe's handler so they can close over the live team state.
-handlers['payslip-pdf']     = () => toast('Bulletin de paie', { type: 'info', desc: 'Génération du PDF et envoi au salarié : bientôt disponible.' });
-handlers['generate-payslips'] = () => toast('Bulletins de paie', { type: 'info', desc: 'Génération en lot et envoi à l’équipe : bientôt disponible.' });
+handlers['payslip-pdf'] = (el, id) => import('./planning/pay-statement.js?v=4').then(m => m.openPayStatement(window.Kiwi.__teamCore, id));
+handlers['generate-payslips'] = () => import('./planning/pay-statement.js?v=4').then(m => m.openPayStatement(window.Kiwi.__teamCore, '*'));
 handlers['export-dgi']      = () => toast('Export DGI', { type: 'info', desc: 'Export au format attendu par la DGI : bientôt disponible.' });
 handlers['all-leaves']      = () => toast('Toutes les demandes de congé', { type: 'info', desc: 'Filtrez par employé, statut ou période.' });
 handlers['leave-approve']   = () => toast('Demande approuvée', { type: 'success', desc: 'Pensez à prévenir le salarié : la notification automatique arrive bientôt.' });

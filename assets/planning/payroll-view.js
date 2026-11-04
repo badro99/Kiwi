@@ -289,6 +289,8 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
         </div>
         <div class="eq-filters">
           <div class="eq-pill-row">
+            <button class="btn-slim" type="button" data-action="payslip-pdf">${esc(({ fr:'Relevé de paie PDF', en:'Pay statement PDF', ar:'كشف الأجر PDF' })[trLang()])}</button>
+            <button class="btn-slim" type="button" data-action="generate-payslips">${esc(({ fr:'Relevés de toute l’équipe', en:'Statements for all employees', ar:'كشوف جميع الموظفين' })[trLang()])}</button>
             <button class="eq-pill${payTab === 'planning' ? ' on' : ''}" type="button" data-action="kt-paytab" data-arg="planning">${esc(T.tabPlanning)}</button>
             <button class="eq-pill${payTab === 'hours' ? ' on' : ''}" type="button" data-action="kt-paytab" data-arg="hours">${esc(T.tabRealised)}</button>
           </div>
