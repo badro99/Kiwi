@@ -184,12 +184,8 @@
     "sha": "eb74d5c1cd3bb099"
   },
   "assets/caisse-app.js": {
-    "v": "37",
-    "sha": "0706977002caf57b"
-  },
-  "assets/caisse-confirm.js": {
-    "v": "2",
-    "sha": "cfaf97a5b4e61c67"
+    "v": "38",
+    "sha": "6bd10325a1120e08"
   },
   "assets/caisse-dna.css": {
     "v": "10",
@@ -208,12 +204,12 @@
     "sha": "ad81372517f39890"
   },
   "assets/caisse-hardware.js": {
-    "v": "9",
-    "sha": "a67300dab4d2644a"
+    "v": "10",
+    "sha": "2d5c4e66dd3be985"
   },
   "assets/caisse-kitchen.js": {
-    "v": "24",
-    "sha": "5b2c10d66f3c6f96"
+    "v": "27",
+    "sha": "9a3aa2a19924d59b"
   },
   "assets/caisse-lang.js": {
     "v": "122",
@@ -296,8 +292,8 @@
     "sha": "cfc633029756952a"
   },
   "assets/caisse/inventory.js": {
-    "v": "5",
-    "sha": "77614397a8828189"
+    "v": "6",
+    "sha": "8bae4d1a2dad63a9"
   },
   "assets/caisse/offline.js": {
     "v": "10",
@@ -388,8 +384,8 @@
     "sha": "d515edc930e16fbd"
   },
   "assets/clients-book.js": {
-    "v": "70",
-    "sha": "fcae607c4917028c"
+    "v": "72",
+    "sha": "dc8131a3dd88eadd"
   },
   "assets/clients-directory.js": {
     "v": "40",
@@ -704,16 +700,16 @@
     "sha": "234b759382c50a26"
   },
   "assets/hotel-folio.js": {
-    "v": "3",
-    "sha": "46d31b114383f9ab"
+    "v": "4",
+    "sha": "00710704c55e7836"
   },
   "assets/hotel-housekeeping.js": {
     "v": "1",
     "sha": "f3c949a80d343db2"
   },
   "assets/hotel-language.js": {
-    "v": "12",
-    "sha": "d3773a0093072336"
+    "v": "13",
+    "sha": "8f08ce5ec5664ec4"
   },
   "assets/hotel-rates.js": {
     "v": "1",
@@ -1416,11 +1412,11 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2216",
-    "sha": "b7f13b4e1e50967a"
+    "v": "2217",
+    "sha": "7e2e836f01b54f35"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
-    "v": "18",
+    "v": "19",
     "sha": "0f28fc721efbf41d"
   },
   "assets/pages-pro/boutique-web-orders.js": {
@@ -1444,12 +1440,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "74",
-    "sha": "3b80f044139e3875"
+    "v": "75",
+    "sha": "a30008b5557bfd11"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "192",
-    "sha": "83f8cd0ce23ed89b"
+    "v": "194",
+    "sha": "691691a822a62c9b"
   },
   "assets/pages/tables-data.js": {
     "v": "2",

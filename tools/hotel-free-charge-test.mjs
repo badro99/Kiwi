@@ -41,8 +41,7 @@ post('Blanchisserie', '12,5', 'fee');
 assert.equal(real.folios[5].lines.length, 1);
 assert.equal(JSON.stringify([real.folios[5].lines[0].label, real.folios[5].lines[0].amt, real.folios[5].lines[0].src]), JSON.stringify(['Blanchisserie', 12.5, 'fee']), 'the hotel\'s own label and amount, to the centime');
 post('Dîner', '0', 'resto'); post('', '30', 'fee'); post('Spa', 'abc', 'spa'); post('Spa', '12.345', 'spa'); post('Spa', '-5', 'spa');
-assert.equal(real.folios[5].lines.length, 1, 'an empty label or an amount that is zero, negative, not a number or finer than the centime posts nothing');
-assert.equal(real.toasts.filter((t) => t.o?.type === 'warn').length, 5, 'and says why');
+assert.equal(real.folios[5].lines.length, 1, 'an empty label or an amount that is zero, negative, not a number or finer than the centime posts nothing (the browser form says why)');
 post('Soin', '300', 'tarot');
 assert.equal(real.folios[5].lines[1].src, 'fee', 'an unknown category falls back to fees');
 

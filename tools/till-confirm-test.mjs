@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /* till-confirm-test · les confirmations de la caisse ne passent plus par la boîte du système.
  *
- * assets/caisse-confirm.js (le vrai fichier, dans un vm) : dans l'app iPhone la feuille native,
+ * assets/caisse-hardware.js (le vrai fichier, dans un vm ; la question s'accroche à KiwiCaisseLang) : dans l'app iPhone la feuille native,
  * ailleurs une feuille Kiwi avec focus géré, et la boîte du système seulement sans document.
  * Dans tous les cas une promesse : true sur « Confirmer », false sur « Annuler », Échap, clic à côté. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../assets/caisse-confirm.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../assets/caisse-hardware.js', import.meta.url), 'utf8');
 
 function dom() {
   const listeners = {};
@@ -33,10 +33,11 @@ function dom() {
 function load({ withDom = true, native = null, systemConfirm = null } = {}) {
   const d = dom();
   const window = { KiwiCaisseLang: { tr: (s) => s }, __kiwiNativeRuntime: native, confirm: systemConfirm };
-  const ctx = { window };
+  const ctx = { window, navigator: {}, localStorage: { getItem: () => null } };
   if (withDom) ctx.document = d.document;
   vm.runInNewContext(source, ctx);
-  return { ask: window.KiwiCaisseConfirm.ask, d, window };
+  assert.equal(typeof window.KiwiCaisseLang.ask, 'function', 'the question hangs on the till language interface');
+  return { ask: window.KiwiCaisseLang.ask, d, window };
 }
 
 // The page sheet.

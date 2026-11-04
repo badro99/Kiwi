@@ -20,7 +20,7 @@
   }
   const scripts = [
     'assets/pages-pro-office.js?v=8',
-    'assets/pages-pro.js?v=2216',
+    'assets/pages-pro.js?v=2217',
     'assets/pages-pro-boutique.js?v=45',
     'assets/boutique-stock-correct.js?v=4',
     'assets/boutique-categories-view.js?v=3',
@@ -71,7 +71,7 @@
     'assets/design-2026.js?v=2',
     'assets/design-vexel-layout.js?v=2102',
     'assets/liquid-glass.js?v=1',
-    'assets/hotel-language.js?v=12',
+    'assets/hotel-language.js?v=13',
     'assets/hotel-housekeeping.js?v=1',
     'assets/hotel/model.js?v=10',
     'assets/hotel.js?v=94',

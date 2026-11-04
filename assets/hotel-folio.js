@@ -50,27 +50,28 @@ window.__kiwiHotelInternal.define('folio', (scope) => {
 
   function addChargeHtml(room) {
     const field = 'width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--n-200);border-radius:8px;font:inherit;background:var(--surface);color:var(--ink);';
-    const freeChargeForm = `<div style="display:grid;gap:10px;margin:4px 0 6px;">
+    const freeChargeForm = `<form data-hx-fc-form onsubmit="return false" style="display:grid;gap:10px;margin:4px 0 6px;">
         <label style="font-size:12px;color:var(--n-500);">${tx('Libellé de la charge')}
-          <input data-hx-fc="label" type="text" maxlength="80" autocomplete="off" style="${field}" /></label>
+          <input data-hx-fc="label" type="text" required pattern=".*\\S.*" maxlength="80" autocomplete="off" style="${field}" /></label>
         <label style="font-size:12px;color:var(--n-500);">${tx('Montant (MAD)')}
-          <input data-hx-fc="amt" type="number" inputmode="decimal" min="0.01" step="0.01" style="${field}" /></label>
+          <input data-hx-fc="amt" type="number" required inputmode="decimal" min="0.01" step="0.01" style="${field}" /></label>
         <label style="font-size:12px;color:var(--n-500);">${tx('Catégorie')}
           <select data-hx-fc="src" style="${field}"><option value="resto">${SRC_LBL.resto}</option><option value="spa">${SRC_LBL.spa}</option><option value="fee" selected>${SRC_LBL.fee}</option></select></label>
-        <button class="hx-btn atlas" data-action="hx-post-free-charge" data-arg="${room}">${tx('Poster sur la note')}</button>
-      </div>`;
+        <button type="button" class="hx-btn atlas" data-action="hx-post-free-charge" data-arg="${room}">${tx('Poster sur la note')}</button>
+      </form>`;
     const handlers = isCustomHotel() && K() && K().handlers;
     if (handlers && !handlers['hx-post-free-charge']) handlers['hx-post-free-charge'] = (el, arg) => {
       const roomNo = parseInt(arg, 10), body = el.closest('.kiwi-modal')?.querySelector('.kiwi-modal-body');
       if (!body || !F()[roomNo]) return;
+      const form = body.querySelector('[data-hx-fc-form]');
+      if (form && !form.reportValidity()) return;
       const label = String(body.querySelector('[data-hx-fc="label"]')?.value || '').trim().slice(0, 80);
       const raw = String(body.querySelector('[data-hx-fc="amt"]')?.value || '').trim().replace(',', '.');
       const cents = /^\d+(\.\d{1,2})?$/.test(raw) ? Math.round(Number(raw) * 100) : 0;
       const picked = String(body.querySelector('[data-hx-fc="src"]')?.value || 'fee');
       const src = ['resto', 'spa', 'fee'].includes(picked) ? picked : 'fee';
-      if (!label || cents < 1 || cents > 100000000) { K().toast(tx('Indiquez un libellé et un montant supérieur à 0.'), { type: 'warn' }); return; }
-      postCharge(roomNo, label, cents / 100, src, true);
-      K().toast(tx('{label} → folio Ch. {n}', { label, n: roomNo }), { type: 'success', desc: tx('{amount} postés sur la note de chambre.', { amount: MAD(cents / 100) }) });
+      if (!label || cents < 1 || cents > 100000000) return;
+      postCharge(roomNo, label, cents / 100, src);
       body.innerHTML = folioModalHtml(roomNo, true);
     };
     const intro = isCustomHotel()
@@ -101,7 +102,7 @@ window.__kiwiHotelInternal.define('folio', (scope) => {
     f.lines.push({ t: nowLabel(), serviceAt: Date.now(), label, qty: '', amt, src, isNew: true });
     f.updatedAt = cuStamp();
     if (isCustomHotel()) cuSave();
-    if (!silent) K().toast(tx('{label} → folio Ch. {n}', { label, n: room }), { type: 'success', desc: (src === 'resto' ? tx('Restaurant · POS') : tx('Hammam & spa')) + ' · ' + tx('{amount} postés sur la note de chambre.', { amount: MAD(amt) }) });
+    if (!silent) K().toast(tx('{label} → folio Ch. {n}', { label, n: room }), { type: 'success', desc: (SRC_LBL[src] || '') + ' · ' + tx('{amount} postés sur la note de chambre.', { amount: MAD(amt) }) });
   }
 
   function foliosBody() {

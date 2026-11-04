@@ -120,7 +120,6 @@
     "FRAIS": { en: "FEE", ar: "رسوم" },
     "Libellé de la charge": { en: "Charge description", ar: "وصف المصروف" },
     "Poster sur la note": { en: "Post to the bill", ar: "تسجيل على الفاتورة" },
-    "Indiquez un libellé et un montant supérieur à 0.": { en: "Enter a description and an amount above 0.", ar: "أدخل وصفًا ومبلغًا أكبر من 0." },
     "Montant (MAD)": { en: "Amount (MAD)", ar: "المبلغ (MAD)" },
     "Retour au folio": { en: "Back to folio", ar: "العودة إلى الفاتورة" },
     "{label} → folio Ch. {n}": { en: "{label} → room {n} folio", ar: "{label} ← فاتورة الغرفة {n}" },
