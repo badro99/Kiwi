@@ -100,7 +100,7 @@ if (first) {
     'assistant : changer la sélection bloque Continuer tant que le nouvel établissement n’est pas réellement relié');
   assert(nativeShell.includes("node.classList.toggle('skipped', skipped)") && nativeShell.includes("stageReady:'La configuration est enregistrée"),
     'assistant : les étapes non requises restent sautées et le rail de marque suit le contexte');
-  assert(nativeShell.includes("marker.textContent = muted ? '—' : '✓'"),
+  assert(nativeShell.includes("marker.textContent = muted ? '·' : '✓'"),
     'assistant : le récapitulatif distingue une étape sautée d’une étape réellement validée');
   assert(nativeShell.includes('p.probe({host:values.host') && nativeShell.includes('window.KiwiEscPos.testSlip') && nativeShell.includes('p.send({host:values.host') && nativeShell.includes("var PRINTER_KEY = 'kiwiPrinterCfg'"),
     'assistant : le test sonde, imprime un ticket ESC/POS et enregistre le format déjà lu par la caisse');
