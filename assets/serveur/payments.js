@@ -467,18 +467,8 @@ cashModal.addEventListener('click', (e) => {
         if (payTimer) clearTimeout(payTimer);
       }
       if (paidClient && !SV_DEMO) {
-        fetch('/api/employee-clients', {
-          method: 'POST', credentials: 'same-origin', cache: 'no-store',
-          headers: { 'Content-Type': 'application/json' },
-          /* La fidélité se tire de LA vente que le serveur vient d'enregistrer
-             (son montant vient de la base) : `saleId` lie les points à
-             l'encaissement, et deux envois pour la même vente créditent une fois. */
-          body: JSON.stringify({ merchant, clientId: paidClient.id, amount: paidAmount,
-            saleId: String((saved && saved.id) || paymentId),
-            ref: 'employee-payment:' + id + ':' + Date.now() }),
-        }).then((r) => r.ok ? r.json() : null).then((data) => {
-          if (data && data.ok && !data.replayed) toast(employeePick(`${paidClient.name} · fidélité mise à jour`, `${paidClient.name} · loyalty updated`, `${paidClient.name} · تم تحديث الوفاء`));
-        }).catch(() => {});
+        serveurPaymentSupport().enqueue({ merchant, clientId: paidClient.id, amount: paidAmount,
+          saleId: String((saved && saved.id) || paymentId) });
       }
       if (saved && saved.billOpen) {
         keepServiceBillOpen(id, saved);
@@ -827,7 +817,9 @@ cashModal.addEventListener('click', (e) => {
     function updateSplitSummary() {
       const tipPct = effectiveTipPct();
       const tipCents = Math.round(splitState.totalCents * tipPct / 100 + 1e-9);
-      const perPerson = Math.round((splitState.totalCents + tipCents) / splitState.numParts) / 100;
+      const shares = serveurPaymentSupport().equal(splitState.totalCents, splitState.numParts, tipPct);
+      const amounts = shares.map(p => fmtMADcents((p.amountCents + p.tipCents) / 100));
+      const perPerson = [...new Set(amounts)].join(' / ');
       $('#split-total-display').textContent = fmtMADcents(splitState.totalCents / 100);
       const tipRow = $('#split-tip-row');
       if (tipPct > 0) {
@@ -835,8 +827,8 @@ cashModal.addEventListener('click', (e) => {
         $('#split-tip-label').textContent = `+ pourboire ${tipPct}%`;
         $('#split-tip-display').textContent = `+ ${fmtMADcents(tipCents / 100)}`;
       } else tipRow.style.display = 'none';
-      $('#split-per-person').textContent = fmtMADcents(perPerson);
-      $('#split-egal-desc').textContent = `${splitState.numParts} parts · ${fmtMADcents(perPerson)} chacun`;
+      $('#split-per-person').textContent = perPerson;
+      $('#split-egal-desc').textContent = `${splitState.numParts} parts · ${perPerson} chacun`;
     }
 
     function renderConvivesChips() {
@@ -913,22 +905,13 @@ cashModal.addEventListener('click', (e) => {
         if (!Number.isFinite(pct) || pct < 0 || pct > 100) { toast(employeePick('Pourboire invalide (0 à 100 %)', 'Invalid tip (0 to 100 %)', 'بقشيش غير صالح (0 إلى 100 %)')); return; }
         const tips = Math.round(cents * pct / 100 + 1e-9);
         const items = Object.entries(splitState.itemTotals);
-        const allocate = (total, weights) => {
-          const sum = weights.reduce((a, b) => a + b, 0);
-          const values = weights.map(w => sum ? Math.floor(total * w / sum) : 0);
-          let left = total - values.reduce((a, b) => a + b, 0);
-          for (let j = 0; left > 0; j = (j + 1) % values.length) {
-            if (weights[j] > 0) { values[j]++; left--; }
-          }
-          return values;
-        };
+        const allocate = serveurPaymentSupport().allocate;
         const weights = items.map(([, info]) => Math.round(info.totalQty * info.unitPrice * 100));
         if (!weights.length || !weights.some(w => w > 0)) { toast(employeePick('Addition sans article', 'Bill without items', 'فاتورة بلا أصناف')); return; }
         let remaining = allocate(cents, weights);
-        const bases = Array.from({ length: n }, (_, i) => i === n - 1 ? cents - Math.floor(cents / n) * (n - 1) : Math.floor(cents / n));
-        const tipShares = allocate(tips, bases);
+        const equalParts = serveurPaymentSupport().equal(cents, n, pct);
         for (let i = 0; i < n; i++) {
-          const base = bases[i], tipCents = tipShares[i];
+          const { amountCents: base, tipCents } = equalParts[i];
           const shares = allocate(base, remaining);
           const lines = items.map(([name, info], j) => {
             remaining[j] -= shares[j];
@@ -1149,6 +1132,9 @@ cashModal.addEventListener('click', (e) => {
       if (partPaymentId) p.saleId = (saved && saved.id) || partPaymentId;
       flow.paidCount = flow.parts.filter(part => part.paid).length;
       const completesTable = Boolean(tableId && flow.parts.every(part => part.paid));
+      const loyaltyClient = completesTable && tableClients.get(tableId);
+      if (loyaltyClient && !SV_DEMO) serveurPaymentSupport().enqueue({ merchant,
+        clientId: loyaltyClient.id, amount: state.totalCents / 100, ref: 'employee-split:' + flow.id });
       try { servicePaymentTally(p.amountCents / 100, completesTable ? (t && t.elapsed) || 0 : 0); } catch (_) {}
       const visibleFlow = splitState.flow && splitState.flow.parts === flow.parts;
       if (visibleFlow) splitState.flow.paidCount = flow.paidCount;
@@ -1172,20 +1158,6 @@ cashModal.addEventListener('click', (e) => {
         if (visibleFlow) {
           $('#split-parts-list').style.opacity = '0.45';
           $('#split-all-done').hidden = false;
-        }
-
-        const paidClient = tableId && tableClients.get(tableId);
-        if (paidClient && !SV_DEMO) {
-          fetch('/api/employee-clients', {
-            method: 'POST', credentials: 'same-origin', cache: 'no-store',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              merchant, clientId: paidClient.id, amount: state.totalCents / 100,
-              ref: 'employee-payment:' + tableId + ':' + Date.now(),
-            }),
-          }).then((r) => r.ok ? r.json() : null).then((data) => {
-            if (data && data.ok && !data.replayed) toast(employeePick(`${paidClient.name} · fidélité mise à jour`, `${paidClient.name} · loyalty updated`, `${paidClient.name} · تم تحديث الوفاء`));
-          }).catch(() => {});
         }
 
         if (tableId) {

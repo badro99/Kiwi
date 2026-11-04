@@ -26,7 +26,7 @@ const RUNS=Number(process.env.KIWI_PROPERTY_RUNS)||100,SEED=Number(process.env.K
 let passed=0,failed=0,known=0;
 async function strict(label,property,examples=[]){if(process.env.KIWI_PROPERTY_ONLY&&!new RegExp(process.env.KIWI_PROPERTY_ONLY).test(label))return;const r=await fc.check(property,{numRuns:RUNS,seed:SEED,examples});if(r.failed){failed++;console.error('✗ '+label,fc.stringify(r.counterexample),r.errorInstance);}else{passed++;console.log('✓ '+label);}}
 async function knownIssue(id,label,property,examples=[]){if(process.env.KIWI_PROPERTY_ONLY)return;const r=await fc.check(property,{numRuns:RUNS,seed:SEED,examples});if(!r.failed){failed++;console.error('✗ '+id+' holds now; promote to strict');}else if(r.errorInstance?.message!=='Property failed by returning false'){failed++;console.error('✗ '+id+' unexpected exception',r.errorInstance);}else{known++;console.log(`◦ ${id} ${label}; witness ${fc.stringify(r.counterexample)}; seed=${r.seed}; path=${r.counterexamplePath}`);}}
-const text=serveurSource();
+const text=serveurSource(), paymentSupport=fs.readFileSync('assets/serveur/payment-support.js','utf8');
 function named(name){const m=new RegExp('(?:async\\s+)?function '+name+'\\s*\\(').exec(text);assert.ok(m,name);return declaration(text.slice(m.index),name);}
 const names=['launchSplitFlow','splitArticleAllocation','effectiveTipPct','getTableTotal','reconcileCanonicalServiceBill','empPayRefsRead','empPayRefsWrite','empPayRefKey','employeePaymentId','saveSplitFlow','loadSplitFlow','markSplitPartPaid','cardReaderArm','closeCardModal','kgSnapshot','kgRecordPayment','paySplitPart','confirmMergeTable','confirmTransferTable','currentPayAmount','keepServiceBillOpen','employeePaymentRefForget','splitItemTotals'];
 const functions=names.map(named).join('\n');
@@ -38,7 +38,7 @@ function phone(storage=new Map()){
  const tag=++device;let nonce=0;
  const nodes=new Map(),node=s=>{if(!nodes.has(s))nodes.set(s,{hidden:false,style:{},textContent:'',innerHTML:'',classList:{add(){},remove(){}}});return nodes.get(s);};
  const c=vm.createContext({console,Math,Number,Date,Map,Set,JSON,Object,Array,String,Promise,AbortController,
-  window:{crypto:{randomUUID:()=> 'test-flow-'+tag+'-'+(++nonce)}},navigator:{onLine:true},setTimeout:()=>1,clearTimeout(){},
+  window:{addEventListener(){},crypto:{randomUUID:()=> 'test-flow-'+tag+'-'+(++nonce)}},navigator:{onLine:true},setInterval(){},setTimeout:()=>1,clearTimeout(){},
   $:node,$$:()=>[],fmtMADcents:v=>String(v),lucide:{createIcons(){}},employeePick:(fr)=>fr,toast(){},renderSplitFlow(){},renderTables(){},renderNotifications(){},
   serviceCanonicalReady:true,serviceCanonicalOrders:new Map(),serviceVisitCredit:new Map(),tables:{'1':{}},tableOrders:{},buildInitialOrder:()=>[],
   serviceTableSessions:new Map([['1','visit']]),serviceTableOrderRef:()=> '1',svSlug:()=> 'shop',liveEmployeeState:{merchant:'shop'},
@@ -50,7 +50,7 @@ function phone(storage=new Map()){
   cardModal:node('modal'),payTableId:'1',renderTableDetail(){},splitPayCallback:null,markTablePaid:()=>{},triggerCardSuccess(){throw Error('Unapproved terminal');},
   kgTallySync(){},shiftStart:new Date(Date.now()-3600000),kgState:{lifetimeXP:0},kgShiftRevenue:0,kgShiftTurnMin:0,KG_RANKS:[],kgRankIdxFor:()=>-1,
   kgOrigMarkTablePaid:async()=>true,kgRenderProfil(){},kgUpdateRankChip(){},
- });vm.runInContext(functions+'\n'+wrapper+'\nthis.paymentWrapper=paymentWrapper; this.servicePaymentTally=kgRecordPayment;',c);return c;
+ });vm.runInContext(paymentSupport,c);vm.runInContext(functions+'\n'+wrapper+'\nthis.paymentWrapper=paymentWrapper; this.servicePaymentTally=kgRecordPayment;',c);return c;
 }
 const c=phone(),C=x=>Math.round(x*100),sum=xs=>xs.reduce((a,b)=>a+b,0),money=fc.integer({min:1,max:5_000_000});
 function split(total,n,tip=0){c.splitState={tableId:'1',totalCents:total,numParts:n,splitMode:'egal',tipMode:String(tip),itemTotals:{Plat:{unitPrice:total/100,totalQty:1}},flow:null};c.launchSplitFlow();return c.splitState.flow;}

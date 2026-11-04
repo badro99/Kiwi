@@ -1940,16 +1940,20 @@
     "sha": "744e87916aca72f2"
   },
   "assets/serveur-lang.js": {
-    "v": "10",
-    "sha": "10f8682f2c74d432"
+    "v": "12",
+    "sha": "012700d09199505e"
   },
   "assets/serveur-shell.css": {
     "v": "8",
     "sha": "ca9f976c2786c1a3"
   },
+  "assets/serveur/payment-support.js": {
+    "v": "5",
+    "sha": "35dab11d06129b1b"
+  },
   "assets/serveur/service.js": {
-    "v": "14",
-    "sha": "53620904f55920c6"
+    "v": "18",
+    "sha": "620928f69c875f53"
   },
   "assets/service-requests.js": {
     "v": "2",
