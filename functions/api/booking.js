@@ -9,6 +9,7 @@ import { bookingMail, mailLang } from './_booking-mail.js';
 import { json, limitCheck, limitFail, limitClear, sendMail } from '../auth/_lib.js';
 import { storeSubscriptionPending } from './_private.js';
 import { poke } from './_live.js';
+import { sourceIdentity } from './_booking-source.js';
 import { normalizePhone, phoneKey } from './_phone.js';
 import { currentRoomSegment, normalizeGuestSegments, readGuestSegments, readRoomSegments, writeReservationWithEvents, hotelReservationsTableExists, findStayByKey } from './hotel/_stay-events.js';
 import { pruneReservationsDoc } from './hotel/stays.js';
@@ -412,17 +413,6 @@ async function recoverBooking(request, env, b) {
 /* Réservations publiques créées : au plus 10 par adresse et par quart d'heure
    (la fenêtre du limiteur), au plus 60 par boutique et par heure. */
 const PUBLIC_CREATES_PER_WINDOW=10, PUBLIC_BOOKINGS_PER_HOUR=60;
-/* Une adresse IPv6 est un bloc entier : toute la /64 d'un client partage UN seau.
-   IPv4 : identité vide, le limiteur retombe sur l'adresse elle-même. */
-function sourceIdentity(request){
-  const ip=String(request.headers.get('CF-Connecting-IP')||request.headers.get('X-Forwarded-For')||'').split(',')[0].trim().toLowerCase();
-  if(!ip.includes(':'))return '';
-  let [head,tail]=ip.split('::');
-  const a=head?head.split(':'):[], b=tail===undefined?[]:(tail?tail.split(':'):[]);
-  const groups=tail===undefined?a:a.concat(Array(Math.max(0,8-a.length-b.length)).fill('0'),b);
-  return 'v6:'+groups.slice(0,4).map((g)=>g.replace(/^0+(?=.)/,'')).join(':');
-}
-
 export async function onRequestPost({ request, env }) {
   if (!env.DB) return json({ error:'not-configured' },503);
   const limited = await limitCheck(request,env,'booking'); if (limited) return limited;

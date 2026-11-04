@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { onRequestGet, onRequestPost } from '../functions/api/booking.js';
+import { sourceIdentity } from '../functions/api/_booking-source.js';
 
 class Statement {
   constructor(db, sql) { this.db = db; this.sql = sql; this.args = []; }
@@ -157,6 +158,13 @@ for (let i = 0; i < 4; i++) db.doc.bookings.push({ ...db.doc.bookings[0], id:`bk
 response = await callPost({ ...request, ref:'public-ref-0004', startAt:slot.startAt + 8 * 3600000 }); body = await response.json();
 check(response.status === 429 && body.error === 'booking-limit', 'one contact cannot flood a merchant diary');
 
+{
+  const key = (ip, extra = {}) => sourceIdentity(new Request('https://kiwi-os.com/', { headers: ip === null ? extra : { 'CF-Connecting-IP': ip, ...extra } }));
+  check(key('2001:db8:1:2::5') && key('2001:db8:1:2::5') === key('2001:db8:1:2:ffff::9'), 'two IPv6 addresses of one /64 share a source key');
+  check(key('2001:db8:1:3::5') !== key('2001:db8:1:2::5'), 'another /64 has another key');
+  for (const bad of ['::ffff:1.2.3.4', '1:2:3', '1::2::3', 'gggg::1', '1:2:3:4:5:6:7:8:9', '12345::1', '203.0.113.8', '']) check(key(bad) === '', `"${bad}" gives no /64 key (raw address fallback)`);
+  check(key(null, { 'X-Forwarded-For': '2001:db8:1:2::5' }) === '', 'X-Forwarded-For is never read');
+}
 /* r19 booking#A0: rotating phone numbers must not fill every slot. */
 {
   const savedBookings = db.doc.bookings, savedMax = db.doc.resources[0].capacity;
