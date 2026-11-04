@@ -27,9 +27,18 @@
       var line = document.createElement('p'); line.textContent = row.key + ' · ' + (row.raw.length * 2) + ' B ';
       var save = document.createElement('button'); save.type = 'button'; save.style.cssText = 'min-height:44px;margin:4px'; save.textContent = text(1);
       save.onclick = function () { var url = URL.createObjectURL(new Blob([row.raw], { type: 'application/octet-stream' })); var a = document.createElement('a'); a.href = url; a.download = row.key.replace(/:/g, '-') + '.txt'; a.click(); setTimeout(function () { URL.revokeObjectURL(url); }, 1000); };
-      var ack = document.createElement('button'); ack.type = 'button'; ack.style.cssText = 'min-height:44px;margin:4px'; ack.textContent = text(2);
-      ack.onclick = function () { if (!window.confirm(text(3))) return; try { if (api(row.key) !== row.raw) return paint(); api(row.key, true); paint(); } catch (_) {} };
-      line.append(save, ack); box.append(line);
+      line.append(save);
+      // Deleting evidence of unsent money needs a manager: the till's server-checked
+      // manager code, or the owner's own quarantine review on the dashboard.
+      // Elsewhere (waiter page, floating panel) a copy can only be exported.
+      var manager = typeof window.requireManager === 'function' ? window.requireManager : null;
+      if (manager || target) {
+        var ack = document.createElement('button'); ack.type = 'button'; ack.style.cssText = 'min-height:44px;margin:4px'; ack.textContent = text(2);
+        var drop = function () { try { if (api(row.key) !== row.raw) return paint(target); api(row.key, true); paint(target); } catch (_) {} };
+        ack.onclick = function () { if (manager) manager(text(2), drop); else if (window.confirm(text(3))) drop(); };
+        line.append(ack);
+      }
+      box.append(line);
     });
     if (target) { box.style.cssText = 'padding:12px;background:var(--paper);color:var(--ink);border:1px solid var(--atlas)'; box.open = true; }
     (target || document.body).append(box);

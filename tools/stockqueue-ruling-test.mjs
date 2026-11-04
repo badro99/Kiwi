@@ -39,6 +39,24 @@ for(const name of ['renderDenseItem','renderItemRow','renderItemCard']){
  assert.match(html,/stockGap.*−3/,name+' shows gap');
  assert.doesNotMatch(html,/class="st-(?:cell-stock|card-stock)">-3|<b>-3<\/b>/,name+' clamps shelf quantity');
 }
+{
+ let active='riad-a';
+ const store=new Map([['kiwiSaleQueue','{other']]);
+ const ls={getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k),key:i=>[...store.keys()][i],get length(){return store.size;}};
+ const w={dispatchEvent(){}};
+ vm.runInNewContext(read('assets/live-link/queue-store.js'),{window:w,localStorage:ls,CustomEvent:class{}});
+ const q=w.KiwiSaleQueueStore.create({merchant:()=>active});
+ q.peek();
+ const [own]=q.recoveryCopies();
+ assert.ok(own,'the copy is listed for the merchant that owned the queue');
+ active='boutique-b';
+ assert.equal(q.recoveryCopies().length,0,'a re-paired till never lists another merchant\'s copy');
+ assert.equal(q.recoveryCopies(own.key),null,'nor exports it');
+ assert.equal(q.recoveryCopies(own.key,true),null,'nor deletes it');
+ assert.ok(store.has(own.key),'the evidence stays on the device');
+ active='riad-a';
+ assert.equal(q.recoveryCopies(own.key),'{other','its own merchant still reaches it');
+}
 console.log('✓ stockqueue owner ruling: evidence retention, acknowledgement, byte bound, real stock renderers');
 // Execute the review surface, including export and explicit acknowledgement.
 class Node {
@@ -52,7 +70,8 @@ const downloads=[],blobs=[],body=new Node('body'),events={};
 const copies=new Map([['kiwiSaleQueue:quarantine:7','é'.repeat(420000)]]);
 const disk={...localStorage,getItem:k=>copies.get(k)??null,removeItem:k=>copies.delete(k),key:i=>[...copies.keys()][i],get length(){return copies.size;}};
 const I={T:{fr:{},en:{},ar:{}},getLang:()=> 'en'};
-vm.runInNewContext(read('assets/queue-recovery.js'),{window:{KiwiLive:{queueRecoveryCopies:(key,ack)=>{if(key){const raw=copies.get(key);if(ack)copies.delete(key);return raw;}return [...copies].map(([key,raw])=>({key,bytes:2*(key.length+raw.length)}));}},KiwiI18n:I,addEventListener:(k,f)=>events[k]=f,confirm:()=>true},document:{body,readyState:'complete',createElement:tag=>new Node(tag)},localStorage:disk,Blob:class{constructor(parts){blobs.push(parts);}},URL:{createObjectURL:()=> 'blob:test',revokeObjectURL(){}},setTimeout:f=>f()});
+const win={KiwiLive:{queueRecoveryCopies:(key,ack)=>{if(key){const raw=copies.get(key);if(ack)copies.delete(key);return raw;}return [...copies].map(([key,raw])=>({key,bytes:2*(key.length+raw.length)}));}},KiwiI18n:I,addEventListener:(k,f)=>events[k]=f,confirm:()=>true};
+vm.runInNewContext(read('assets/queue-recovery.js'),{window:win,document:{body,readyState:'complete',createElement:tag=>new Node(tag)},localStorage:disk,Blob:class{constructor(parts){blobs.push(parts);}},URL:{createObjectURL:()=> 'blob:test',revokeObjectURL(){}},setTimeout:f=>f()});
 const panel=body.children[0];
 assert.equal(panel.children[0].textContent,'Sale copies to review · 1');
 assert.match(panel.children[1].textContent,/nearly full/,'near byte bound warning translated');
@@ -60,7 +79,17 @@ const line=panel.children[2];line.children[0].onclick();
 assert.equal(blobs[0][0],copies.values().next().value,'export keeps exact raw bytes');
 assert.equal(copies.size,1,'export never removes evidence');
 assert.equal(downloads[0].download,'kiwiSaleQueue-quarantine-7.txt');
-line.children[1].onclick();assert.equal(copies.size,0,'explicit confirmation acknowledges only chosen copy');
+assert.equal(line.children.length,1,'outside the till and the owner review a copy can only be exported');
+// On the till, deleting goes through the server-checked manager code.
+const approvals=[];let approve=false;
+win.requireManager=(label,fn)=>{approvals.push(label);if(approve)fn();};
+events['kiwi:sale-queue']();
+const tillLine=body.children[0].children[2];
+tillLine.children[1].onclick();
+assert.equal(copies.size,1,'a refused or cancelled manager code deletes nothing');
+approve=true;tillLine.children[1].onclick();
+assert.deepEqual(approvals,['Acknowledge and delete','Acknowledge and delete']);
+assert.equal(copies.size,0,'a manager approval acknowledges only the chosen copy');
 assert.ok(events['kiwi:langchange']);
 console.log('✓ corrupt copy review: translated warning, lossless export, explicit acknowledgement');
 // Acknowledging an active valid queue can never erase new unsent receipts.

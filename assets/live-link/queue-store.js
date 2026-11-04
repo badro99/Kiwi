@@ -64,6 +64,8 @@ function qRead() {
         key = prefix + stamp;
         if (bytes + 2 * (key.length + raw.length) > 1048576) throw new Error('recovery-size-bound');
         localStorage.setItem(key, raw);
+        // Whose money it may be: a re-paired till never shows another merchant's copy.
+        try { var owner = ctx.merchant && ctx.merchant(); if (owner) localStorage.setItem(Q_KEY + ':quarantine-owner:' + stamp, String(owner)); } catch (_) {}
         localStorage.removeItem(Q_KEY);
         copies.push(key);
         queueRecoveryError = true;
@@ -76,22 +78,29 @@ function qRead() {
       }
     }
   }
+  function ownerKeyOf(key) { return Q_KEY + ':quarantine-owner:' + key.slice((Q_KEY + ':quarantine:').length); }
+  // A copy without an owner record predates the record; it stays visible.
+  function ownCopy(key) {
+    var owner = localStorage.getItem(ownerKeyOf(key)), active = ctx.merchant && ctx.merchant();
+    return !owner || !active || owner === String(active);
+  }
   function quarantined() {
-    try { for (var i = 0; i < localStorage.length; i++) { if (String(localStorage.key(i)).indexOf(Q_KEY + ':quarantine:') === 0) return true; } } catch (_) {}
+    try { for (var i = 0; i < localStorage.length; i++) { var k = String(localStorage.key(i)); if (k.indexOf(Q_KEY + ':quarantine:') === 0 && ownCopy(k)) return true; } } catch (_) {}
     return false;
   }
     function recoveryCopies(key, acknowledge) {
       try {
       var prefix = Q_KEY + ':quarantine:', rows = [];
       if (key && (key === Q_KEY || key.indexOf(prefix) === 0 && /^\d+$/.test(key.slice(prefix.length)))) {
+        if (key !== Q_KEY && !ownCopy(key)) return null;
         var raw = localStorage.getItem(key);
         if (key === Q_KEY) { try { if (Array.isArray(JSON.parse(raw))) return null; } catch (_) {} }
-        if (acknowledge && raw !== null) { localStorage.removeItem(key); queueRecoveryError = false; queueBlocked = false; queueSignal(); }
+        if (acknowledge && raw !== null) { localStorage.removeItem(key); if (key !== Q_KEY) localStorage.removeItem(ownerKeyOf(key)); queueRecoveryError = false; queueBlocked = false; queueSignal(); }
         return raw;
       }
       for (var i = 0; i < localStorage.length; i++) {
         var k = String(localStorage.key(i));
-        if (k.indexOf(prefix) === 0) rows.push({ key: k, bytes: 2 * (k.length + (localStorage.getItem(k) || '').length) });
+        if (k.indexOf(prefix) === 0 && ownCopy(k)) rows.push({ key: k, bytes: 2 * (k.length + (localStorage.getItem(k) || '').length) });
       }
       var active = localStorage.getItem(Q_KEY);
       if (active !== null) { try { if (!Array.isArray(JSON.parse(active))) throw new Error('queue-shape'); } catch (_) { rows.push({ key: Q_KEY, bytes: 2 * (Q_KEY.length + active.length) }); } }

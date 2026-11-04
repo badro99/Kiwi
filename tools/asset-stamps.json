@@ -1156,12 +1156,12 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "111",
-    "sha": "b6121120168cee02"
+    "v": "112",
+    "sha": "257e6538016c4045"
   },
   "assets/live-link/queue-store.js": {
-    "v": "19",
-    "sha": "7250d23a100bb475"
+    "v": "20",
+    "sha": "9173e2010edaacca"
   },
   "assets/live-link/sale-identity.js": {
     "v": "1",
@@ -1908,8 +1908,8 @@
     "sha": "bd10177ac673f7ac"
   },
   "assets/queue-recovery.js": {
-    "v": "2",
-    "sha": "b5857c5082d34b8c"
+    "v": "3",
+    "sha": "5e0d0278cd3da69d"
   },
   "assets/ramadan.js": {
     "v": "3",

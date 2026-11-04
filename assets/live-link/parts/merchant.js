@@ -1,4 +1,4 @@
-import {} from './live-link/queue-store.js?v=19';
+import {} from './live-link/queue-store.js?v=20';
 import {} from './live-link/sale-identity.js?v=1';
 /* Kiwi Live Link — le pont ventes ↔ serveur (Cloudflare Pages Functions + D1).
  *
@@ -28,7 +28,7 @@ import {} from './live-link/sale-identity.js?v=1';
  * left untouched, so the demo still works with the flag off.
  */
 (function () {
-  'use strict'; if (typeof document !== 'undefined' && document.createElement) import('./queue-recovery.js?v=2').catch(function () {});
+  'use strict'; if (typeof document !== 'undefined' && document.createElement) import('./queue-recovery.js?v=3').catch(function () {});
 
   var LS = 'kiwiLive';
 
