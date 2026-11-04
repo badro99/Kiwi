@@ -2,14 +2,15 @@
   const isNum = (v) => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v)) && Number(v) >= 0;
   function daysBetween(isoDay, today) {
     const a = Date.parse(isoDay + 'T00:00:00Z'), b = Date.parse(today + 'T00:00:00Z');
-    return Number.isFinite(a) && Number.isFinite(b) ? Math.round((b - a) / 864e5) : null;
+    return Number.isFinite(a) && new Date(a).toISOString().slice(0, 10) === isoDay && Number.isFinite(b) ? Math.round((b - a) / 864e5) : null;
   }
   function compute(sheet, opts) {
     const s = sheet || {}, o = opts || {};
     const convert = o.convert || ((q, a, b) => (a === b ? q : null));
     const currentDay = o.today || (typeof today === 'function' ? today() : (() => {
-      const d = new Date(); d.setHours(d.getHours() - 5);
-      return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
+      const p = {};
+      new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: o.timeZone || 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).forEach(v => { p[v.type] = v.value; });
+      return new Date(Date.UTC(+p.year, +p.month - 1, +p.day - (+p.hour < 5 ? 1 : 0))).toISOString().slice(0, 10);
     })());
     const lines = (Array.isArray(s.lines) ? s.lines : []).map((l) => {
       const r = { id: l.id, name: l.name || '', type: l.type === 'packaging' ? 'packaging' : 'food', cost: null, reason: '', stale: false, undated: false, age: null };
@@ -26,7 +27,7 @@
         }
       }
       if (l.priceDate) { r.age = daysBetween(l.priceDate, currentDay); r.stale = r.age != null && r.age > STALE_DAYS; }
-      else if (isNum(l.packPrice)) r.undated = true;
+      if (r.age == null && isNum(l.packPrice)) r.undated = true;
       return r;
     });
     let food = 0, pack = 0, known = 0;

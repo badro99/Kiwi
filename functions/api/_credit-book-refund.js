@@ -70,7 +70,9 @@ export function keepAdvanceConflicts(stored, merged, conflicts) {
       if (!alerts.some(a => a.id === 'debt-on-advance:' + d.key))
         alerts.push({ id: 'debt-on-advance:' + d.key, kind: 'debt-on-advance', entryKey: d.key, entryId: d.entryId, debtCents: d.debtCents, at: d.at });
     }
-    const kept = alerts.filter(a => a.kind !== 'debt-on-advance').concat(alerts.filter(a => a.kind === 'debt-on-advance').slice(-20));
+    const kept = alerts.slice(0, 1000);
+    const more = Math.max(0, alerts.length - kept.length) + Math.max(0, Number(c.creditAlertsMore) || 0);
+    if (more) c.creditAlertsMore = more; else delete c.creditAlertsMore;
     if (kept.length) c.creditAlerts = kept; else delete c.creditAlerts;
   }
   return merged;

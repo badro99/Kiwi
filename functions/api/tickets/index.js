@@ -14,20 +14,11 @@ function publicImage(row) {
 }
 
 async function readTicketRows(env) {
-  try {
-    return await env.DB.prepare(
-      `SELECT id, body, status, created_ts, updated_ts, completed_ts, expires_ts,
-              kind, area, subkind, money_at_risk
-       FROM kiwi_tickets ORDER BY id DESC`
-    ).all();
-  } catch (error) {
-    if (!schemaError(error)) throw error;
-    const legacy = await env.DB.prepare(
-      `SELECT id, body, status, created_ts, updated_ts, completed_ts, expires_ts
-       FROM kiwi_tickets ORDER BY id DESC`
-    ).all();
-    return { ...legacy, classificationSchemaReady: false };
-  }
+  return env.DB.prepare(
+    `SELECT id, body, status, created_ts, updated_ts, completed_ts, expires_ts,
+            kind, area, subkind, money_at_risk
+     FROM kiwi_tickets ORDER BY id DESC`
+  ).all();
 }
 
 export async function onRequestGet({ request, env, waitUntil }) {

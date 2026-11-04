@@ -4,6 +4,7 @@ import { ticketsTestSource } from './tickets-test-source.mjs';
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { MINIMUM_SCHEMA_VERSION } from '../functions/_schema-version.js';
 import { DatabaseSync } from 'node:sqlite';
 import { onRequestGet as rawGet, onRequestPost as rawPost } from '../functions/api/tickets/index.js';
 import { onRequestPatch as rawPatch } from '../functions/api/tickets/[id].js';
@@ -103,12 +104,17 @@ legacy.exec(`
   INSERT INTO kiwi_tickets (body,status,created_ts,updated_ts) VALUES ('Legacy ticket','problem',1,1);
 `);
 legacy.exec((await read('schema.sql')).match(/CREATE TABLE IF NOT EXISTS account_audit[\s\S]*?\n\);/)[0]);
+// Classification is present in baseline migration 0001, below the enforced minimum.
+const baseline = new DatabaseSync(':memory:');
+baseline.exec(await read('migrations/0001_baseline.sql'));
+check('minimum schema guarantees classification', MINIMUM_SCHEMA_VERSION >= 1
+  && ['kind', 'area', 'subkind', 'money_at_risk'].every(name => baseline.prepare('PRAGMA table_info(kiwi_tickets)').all().some(c => c.name === name)));
+baseline.close();
 const legacyDB = d1(legacy);
 response = await onRequestGet({ env: { DB: legacyDB } });
 const legacyList = await response.json();
-check('GET falls back on a database without classification columns', response.status === 200
-  && legacyList.classificationSchemaReady === false && legacyList.tickets[0].kind === 'unsorted'
-  && legacyList.tickets[0].moneyAtRisk === false && legacyList.taxonomy.version === TICKET_TAXONOMY.version);
+check('GET rejects missing guaranteed classification columns', response.status === 503
+  && legacyList.error === 'schema-not-ready');
 
 response = await onRequestPatch({
   env: { DB: legacyDB }, params: { id: '1' },

@@ -140,8 +140,8 @@
     "sha": "2d94a235fec8bc7c"
   },
   "assets/boutique-promos-dashboard.js": {
-    "v": "26",
-    "sha": "216bd3bb8cda5dee"
+    "v": "27",
+    "sha": "29b4e5d7b778e85c"
   },
   "assets/boutique-size-codes.js": {
     "v": "3",
@@ -172,8 +172,8 @@
     "sha": "0d2b0207bcc4b401"
   },
   "assets/briefing.js": {
-    "v": "38",
-    "sha": "0774da441509f3ba"
+    "v": "42",
+    "sha": "f9e22353693bcf0e"
   },
   "assets/caisse-accounting.js": {
     "v": "22",
@@ -196,8 +196,8 @@
     "sha": "20476101ff223f1f"
   },
   "assets/caisse-floor.js": {
-    "v": "13",
-    "sha": "54e32564a1f78d74"
+    "v": "15",
+    "sha": "4cc63f99c9b21ef7"
   },
   "assets/caisse-hardware.js": {
     "v": "9",
@@ -208,8 +208,8 @@
     "sha": "003a914f6bb7c0b0"
   },
   "assets/caisse-lang.js": {
-    "v": "99",
-    "sha": "dc7e360a657956d1"
+    "v": "101",
+    "sha": "5581eddc3185fb16"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -248,8 +248,8 @@
     "sha": "567fea581a1f1ecc"
   },
   "assets/caisse-shell.css": {
-    "v": "26",
-    "sha": "cad8e192b33dd648"
+    "v": "28",
+    "sha": "d59987b656d68406"
   },
   "assets/caisse-skin.css": {
     "v": "4",
@@ -548,8 +548,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "623",
-    "sha": "e3a7f47415cf51f2"
+    "v": "624",
+    "sha": "d3d4bd703f6921d9"
   },
   "assets/employee-planning.js": {
     "v": "21",
@@ -808,8 +808,8 @@
     "sha": "2b2357a3499708f1"
   },
   "assets/invoicing.css": {
-    "v": "14",
-    "sha": "0fc3fe84387e04a4"
+    "v": "16",
+    "sha": "a5f4d747cf82cd39"
   },
   "assets/invoicing.js": {
     "v": "37",
@@ -1159,6 +1159,10 @@
     "v": "1",
     "sha": "6f816661c3aafb8b"
   },
+  "assets/loyalty-rules.js": {
+    "v": "2",
+    "sha": "ef6654e81e464285"
+  },
   "assets/maison-stock-movements.js": {
     "v": "9",
     "sha": "b205a5631fb345b1"
@@ -1420,8 +1424,8 @@
     "sha": "b75f0b8498ea40a1"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "142",
-    "sha": "21055ca7b143a754"
+    "v": "146",
+    "sha": "5ae3d62b0846625d"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1456,8 +1460,8 @@
     "sha": "f34d094b4b65709b"
   },
   "assets/planning-ui.css": {
-    "v": "13",
-    "sha": "7de68eb7c76ab0f5"
+    "v": "14",
+    "sha": "fda62a051a548c1f"
   },
   "assets/planning/corrections.js": {
     "v": "3",
@@ -1612,8 +1616,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "338",
-    "sha": "990c1c614cf2cf39"
+    "v": "341",
+    "sha": "bef72a619f1c3e23"
   },
   "assets/pos-epicerie.css": {
     "v": "31",
@@ -1680,16 +1684,16 @@
     "sha": "0922f8cc674d813f"
   },
   "assets/pos-maison.css": {
-    "v": "155",
+    "v": "158",
     "sha": "ddaa2e289dfb5fc6"
   },
   "assets/pos-maison.js": {
-    "v": "155",
-    "sha": "fef12af6a2e303a2"
+    "v": "158",
+    "sha": "313b868d483b6fa0"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "72",
-    "sha": "715a36ab1e6c62a4"
+    "v": "75",
+    "sha": "82aa42b16a79b8f1"
   },
   "assets/pos-maison/delivery.js": {
     "v": "22",
@@ -1700,16 +1704,16 @@
     "sha": "feb0865a7163d8c9"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "72",
-    "sha": "dae87925893c65c3"
+    "v": "75",
+    "sha": "24bdb97274236c99"
   },
   "assets/pos-maison/kit-2027.js": {
     "v": "5",
     "sha": "9e575c6498d8a30c"
   },
   "assets/pos-maison/sales.js": {
-    "v": "72",
-    "sha": "5c0d7d7ee876caa8"
+    "v": "75",
+    "sha": "757fa092d5afb105"
   },
   "assets/pos-maison/ticket-remise.js": {
     "v": "3",
@@ -1996,8 +2000,8 @@
     "sha": "5837b2072494ce58"
   },
   "assets/simple-food-cost.js": {
-    "v": "18",
-    "sha": "e5b03efe0e1b9f47"
+    "v": "19",
+    "sha": "f884ed362a2e94c3"
   },
   "assets/simple.css": {
     "v": "1",
@@ -2164,8 +2168,8 @@
     "sha": "6ed04cbae9dd23e3"
   },
   "assets/trade-workspaces.js": {
-    "v": "17",
-    "sha": "084c78956d631eb9"
+    "v": "18",
+    "sha": "ac4c4adb10d76a34"
   },
   "assets/trades.js": {
     "v": "9",

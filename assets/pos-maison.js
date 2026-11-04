@@ -1,6 +1,7 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=72';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=72';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=72';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=75';
+import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=2';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=75';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=75';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=6'; import { mzLivraisons } from './pos-maison/delivery.js?v=22';
 import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=5';
 
@@ -1336,13 +1337,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
      Attachée au client via clientId : si on détache/change la cliente, elle cesse
      de s'appliquer d'elle-même, sans avoir à la retirer partout à la main. */
   function rewardDiscount(t, base) {
-    const r = t.reward;
-    if (!r || r.clientId !== t.client) return 0;
-    /* au centime le plus proche, la même règle que toutes les enseignes
-       (décision 2026-10-26, functions/api/_rules-loyalty.js rewardDiscount) */
-    if (r.kind === 'percent') return Math.min(base, Math.round(base * Math.min(100, Math.max(0, +r.value || 0)) + 1e-9) / 100);
-    if (r.kind === 'free' && t.lines.length) return Math.min.apply(null, t.lines.map(lineUnit));
-    return 0;
+    return loyaltyRewardDiscount(t.reward, t.client, base, t.lines.map(lineUnit));
   }
   /* Trois baisses, trois lignes séparées, jamais une seule « remise » fourre-tout :
      la promotion est une décision du magasin, la remise un geste de la gérante,

@@ -55,7 +55,8 @@
         "assets/clients-store.js",
         "assets/clients-store/loyalty.js",
         "assets/pos-boutique.js",
-        "assets/librairie-loyalty.js"
+        "assets/librairie-loyalty.js",
+        "assets/loyalty-rules.js"
       ]
     },
     {

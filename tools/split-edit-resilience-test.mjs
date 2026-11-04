@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, '..');
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-split-proof-'));
 try {
-  const files = new Set(['assets/caisse-strings.js','kiwi-caisse.html','kiwi-sw.js','assets/pos-dispatch.js','tools/asset-stamps.json',
+  const files = new Set(['tools/reseal-maison-split.mjs','tools/fixtures/pos-maison/current.js.gz','assets/caisse-strings.js','kiwi-caisse.html','kiwi-sw.js','assets/pos-dispatch.js','tools/asset-stamps.json',
     ...['pos-maison-split-test.mjs','pos-boutique-split-test.mjs','caisse-app-split-test.mjs','pos-retail-module-url-check.mjs','split-live-checks.mjs','pos-retail-test-source.cjs','caisse-test-source.cjs','js-declarations.cjs'].map(f=>'tools/'+f)]);
   for (const name of ['pos-maison','pos-boutique','caisse-app']) {
     const dir = 'tools/fixtures/'+name;
@@ -42,6 +42,8 @@ try {
     const start=candidates.reduce((a,b)=>Math.abs(a.index-source.length/2)<Math.abs(b.index-source.length/2)?a:b).index;
     fs.writeFileSync(target,source.slice(0,start)+'\n// Edited after the split.\n'+source.slice(start));
   }
+  const seal = spawnSync(process.execPath, ['tools/reseal-maison-split.mjs'], { cwd: temp, encoding: 'utf8' });
+  assert.equal(seal.status, 0, seal.stderr);
   for (const name of ['pos-maison','pos-boutique','caisse-app']) {
     const result=spawnSync(process.execPath,['tools/'+name+'-split-test.mjs'],{cwd:temp,encoding:'utf8',timeout:30000});
     assert.equal(result.status,0,result.stdout+result.stderr);
@@ -54,7 +56,8 @@ try {
       const map=require('./tools/fixtures/pos-'+name+'/split.json');
       const bodies=map.chunks.map(c=>fs.readFileSync(c.file,'utf8').replace(/^(?:import .*;\\n)+/,'').replace(/\\nexport \\{[^\\n]+\\};\\n$/,''));
       const actual=retail(fs.readFileSync('assets/pos-'+name+'.js','utf8'));
-      assert.equal(actual,map.prefix+bodies.join('\\n')+map.suffix);new vm.Script(actual);
+      const loyalty = name === 'maison' ? fs.readFileSync('assets/loyalty-rules.js','utf8').replace(/export const rewardDiscount[^\\n]+\\n/, 'const loyaltyRewardDiscount = KiwiLoyaltyRules.rewardDiscount;\\n') : '';
+      assert.equal(actual,map.prefix+loyalty+bodies.join('\\n')+map.suffix);new vm.Script(actual);
     }
     const caisse=require('./tools/caisse-test-source.cjs');
     const actual=caisse(fs.readFileSync('kiwi-caisse.html','utf8'));
