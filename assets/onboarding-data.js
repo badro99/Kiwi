@@ -267,7 +267,15 @@
   }
 
   // Saved answers only: no storage, DOM, clock or credentials in this projection.
-  function viewModel(S, types) {
+  /* The recap the wizard shows before "create", in the wizard's language. */
+  const RECAP = {
+    fr: { business: 'Établissement', plan: 'Offre', team: 'Équipe', menu: 'Menu', catalogue: 'Catalogue', devices: 'Appareil', none: 'Non renseigné', noneF: 'Non renseignée', person: 'personne', people: 'personnes', later: 'À configurer après la création', till: 'Caisse', kds: 'Écran cuisine', teamDevice: 'Appareil équipe', dashboard: 'Tableau de bord', kind: 'Activité', goals: 'Objectifs', code: 'Code personnel', device: 'Appareil', done: 'Terminé', todo: 'À compléter', next: 'Action suivante : ', finish: 'Créer mon espace' },
+    en: { business: 'Business', plan: 'Plan', team: 'Team', menu: 'Menu', catalogue: 'Catalogue', devices: 'Device', none: 'Not given', noneF: 'Not given', person: 'person', people: 'people', later: 'To set up after creation', till: 'Till', kds: 'Kitchen screen', teamDevice: 'Team device', dashboard: 'Dashboard', kind: 'Business type', goals: 'Goals', code: 'Personal code', device: 'Device', done: 'Done', todo: 'To complete', next: 'Next step: ', finish: 'Create my space' },
+    ar: { business: 'النشاط', plan: 'الباقة', team: 'الفريق', menu: 'القائمة', catalogue: 'الكتالوج', devices: 'الجهاز', none: 'غير محدد', noneF: 'غير محددة', person: 'شخص', people: 'أشخاص', later: 'يُضبط بعد الإنشاء', till: 'الصندوق', kds: 'شاشة المطبخ', teamDevice: 'جهاز الفريق', dashboard: 'لوحة القيادة', kind: 'نوع النشاط', goals: 'الأهداف', code: 'الرمز الشخصي', device: 'الجهاز', done: 'مكتمل', todo: 'للإكمال', next: 'الخطوة التالية: ', finish: 'إنشاء مساحتي' },
+  };
+  const recapText = (lang) => RECAP[lang] || RECAP.fr;
+  function viewModel(S, types, lang) {
+    const L = recapText(lang);
     const type = types.find((t) => t.id === S.typeId);
     const restaurant = !!type && type.base === 'restaurant';
     const steps = [
@@ -277,19 +285,20 @@
       { id: 'device', done: ['till', 'kds', 'team', 'dashboard'].includes(S.device) },
     ];
     const recap = [
-      { id: 'business', label: 'Établissement', value: S.bizName || 'Non renseigné' },
-      { id: 'plan', label: 'Offre', value: S.plan || 'Non renseignée' },
-      { id: 'team', label: 'Équipe', value: S.teamGiven ? String(S.teamSize) + (S.teamSize === 1 ? ' personne' : ' personnes') : 'Non renseignée' },
-      { id: restaurant ? 'menu' : 'catalogue', label: restaurant ? 'Menu' : 'Catalogue', value: 'À configurer après la création' },
-      { id: 'devices', label: 'Appareil', value: ({ till: 'Caisse', kds: 'Écran cuisine', team: 'Appareil équipe', dashboard: 'Tableau de bord' })[S.device] || 'Non renseigné' },
+      { id: 'business', label: L.business, value: S.bizName || L.none },
+      { id: 'plan', label: L.plan, value: S.plan || L.noneF },
+      { id: 'team', label: L.team, value: S.teamGiven ? String(S.teamSize) + ' ' + (S.teamSize === 1 ? L.person : L.people) : L.noneF },
+      { id: restaurant ? 'menu' : 'catalogue', label: restaurant ? L.menu : L.catalogue, value: L.later },
+      { id: 'devices', label: L.devices, value: ({ till: L.till, kds: L.kds, team: L.teamDevice, dashboard: L.dashboard })[S.device] || L.none },
     ];
-    return { steps, recap, nextAction: (steps.find((step) => !step.done) || { id: 'finish' }).id };
+    return { steps, recap, lang: RECAP[lang] ? lang : 'fr', nextAction: (steps.find((step) => !step.done) || { id: 'finish' }).id };
   }
-  function presentation(model, esc) {
-    const labels = { kind: 'Activité', goals: 'Objectifs', code: 'Code personnel', device: 'Appareil' };
+  function presentation(model, esc, lang) {
+    const L = recapText(lang || model.lang);
+    const labels = { kind: L.kind, goals: L.goals, code: L.code, device: L.device };
     return '<div data-onboarding-summary data-next="' + esc(model.nextAction) + '">' +
-      model.steps.map((step) => '<p data-setup-step="' + step.id + '" data-done="' + step.done + '">' + labels[step.id] + ' · ' + (step.done ? 'Terminé' : 'À compléter') + '</p>').join('') +
-      model.recap.map((line) => '<div class="r" data-recap="' + line.id + '"><span>' + line.label + '</span><b>' + esc(line.value) + '</b></div>').join('') + '<p>Action suivante : ' + (labels[model.nextAction] || 'Créer mon espace') + '</p></div>';
+      model.steps.map((step) => '<p data-setup-step="' + step.id + '" data-done="' + step.done + '">' + labels[step.id] + ' · ' + (step.done ? L.done : L.todo) + '</p>').join('') +
+      model.recap.map((line) => '<div class="r" data-recap="' + line.id + '"><span>' + esc(line.label) + '</span><b>' + esc(line.value) + '</b></div>').join('') + '<p>' + L.next + (labels[model.nextAction] || L.finish) + '</p></div>';
   }
   return { createSession, createDraft, mountRecovery, submit, DRAFT_NOTE, viewModel, presentation };
 });

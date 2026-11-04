@@ -26,7 +26,7 @@ for (const type of types) {
     const snapshot = JSON.stringify(S);
     const model = data.viewModel(S, types);
     assert.equal(JSON.stringify(S), snapshot);
-    const ctx = vm.createContext({ window: { KiwiOnboardingData: data }, S, TYPES: types, GOALS: [], esc, tr: o => o?.fr || '', unitFor: () => '', footNav: () => '' });
+    const ctx = vm.createContext({ window: { KiwiOnboardingData: data }, S, TYPES: types, GOALS: [], esc, lang: () => 'fr', tr: o => o?.fr || '', unitFor: () => '', footNav: () => '' });
     vm.runInContext(grab(legacy, 'setupPresentation') + '\n' + grab(legacy, 'stepFinish'), ctx);
     const a = ctx.stepFinish().body.match(/<div data-onboarding-summary[\s\S]*?Action suivante : [\s\S]*?<\/p><\/div>/)[0];
     for (const step of model.steps) assert.ok(a.includes(`data-setup-step="${step.id}" data-done="${step.done}"`));
@@ -36,5 +36,11 @@ for (const type of types) {
     assert.equal(model.recap[3].id, type.base === 'restaurant' ? 'menu' : 'catalogue');
   }), { numRuns: 50 });
   assert.equal(result.failed, false, 'Alignement du métier ' + type.id);
+}
+/* The recap the wizard shows before "create" speaks the wizard's language. */
+for (const lang of ['en', 'ar']) {
+  const S = { bizName: '', teamGiven: true, teamSize: 3, goals: [], device: 'till', pins: [{ role: 'owner', code: '' }], typeId: types[0].id };
+  const html = data.presentation(data.viewModel(S, types, lang), esc, lang);
+  for (const french of ['Établissement', 'Offre', 'Équipe', 'personnes', 'Non renseign', 'À configurer', 'Caisse', 'Terminé', 'À compléter', 'Action suivante', 'Code personnel']) assert.ok(!html.includes(french), `${lang} recap still says ${french}`);
 }
 console.log(`✓ rendu livré de l'assistant : ${types.length} métiers × 50 états`);

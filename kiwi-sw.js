@@ -95,7 +95,7 @@ var SHELL = [
   '/assets/booking-submission.js?v=5',
   '/assets/booking-hotel.js?v=2',
   '/assets/booking-service.js?v=2',
-  '/assets/onboarding-data.js?v=8',
+  '/assets/onboarding-data.js?v=9',
   // First-use dashboard owners must also open before the first offline visit.
   '/assets/ramadan.js?v=3',
   '/assets/growth-kit.js?v=2',
