@@ -2865,7 +2865,7 @@
       'Imprimer': ['Print', 'طباعة'],
       'Ticket imprimé': ['Receipt printed', 'تمت طباعة التذكرة'],
       'Boîte d’impression ouverte.': ['Print dialog opened.', 'تم فتح نافذة الطباعة.'],
-      'Impression impossible. La vente reste enregistrée.': ['Could not print. The sale stays recorded.', 'تعذّرت الطباعة. البيع ما زال مسجلًا.'],
+      'Archive non enregistrée sur cet appareil. Gardez cette page ouverte.': ['Archive not saved on this device. Keep this page open.', 'لم يتم حفظ الأرشيف على هذا الجهاز. أبق هذه الصفحة مفتوحة.'], 'Archive not saved on this device. Keep this page open.': ['Archive could not be saved on this device. Keep this page open.', 'لم يتم حفظ الأرشيف على هذا الجهاز. أبق هذه الصفحة مفتوحة.'], 'Impression impossible. La vente reste enregistrée.': ['Could not print. The sale stays recorded.', 'تعذّرت الطباعة. البيع ما زال مسجلًا.'],
       'Impression non confirmée. La vente reste enregistrée.': ['Printing not confirmed. The sale stays recorded.', 'لم تُؤكَّد الطباعة. البيع ما زال مسجلًا.'],
       'Imprimante Kiwi indisponible.': ['Kiwi printer unavailable.', 'طابعة Kiwi غير متاحة.'],
       'Merci pour votre visite': ['Thank you for your visit', 'شكرًا على زيارتكم'],

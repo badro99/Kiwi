@@ -117,7 +117,7 @@ if (failures) process.exit(1);
   const ctx = vm.createContext({
     window: {}, Map, JSON, Math, Number, String, Infinity, URLSearchParams,
     Date: class extends Date { static now() { return now; } },
-    hotelMerchant: () => M, activeMerchantSlug: () => M,
+    getLang: () => 'fr', hotelMerchant: () => M, activeMerchantSlug: () => M,
     rangeBounds: (r) => (r === 'aujourdhui' ? [T1, Infinity] : [T0, T1]),
     merchantDayKey: () => '2026-10-13', merchantDayBounds: () => ({ from: T1, to: T1 + 864e5 }),
     renderKpiBand: () => { renders++; },
@@ -147,7 +147,7 @@ if (failures) process.exit(1);
 
   const F = ctx.__from;
   check('fewer than five visits: « · »', F({ data: { visits: 3, avgMin: null } }, null).text === '·');
-  check('the server cannot tell: « · »', F({ data: null, error: 'unavailable' }, null).text === '·');
+  check('the server cannot tell: explicit stale state', F({ data: null, error: 'unavailable' }, null).text === 'À actualiser' && F({ data: null, error: 'unavailable' }, null).stale === true);
   check('a previous period at zero is no comparison', F({ data: { visits: 6, avgMin: 30 } }, { data: { visits: 0, avgMin: 0 } }).delta === null);
 }
 

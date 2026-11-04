@@ -108,7 +108,7 @@ const browserWindow = {
 };
 const vmContext = vm.createContext({ window: browserWindow, document: browserWindow.document,
   localStorage: browserWindow.localStorage, fetch: browserWindow.fetch, location: browserWindow.location,
-  navigator: { onLine: true }, console, Date, Math, Number, String, Array, JSON,
+  navigator: { onLine: true }, URLSearchParams, console, Date, Math, Number, String, Array, JSON,
   setTimeout: () => 1, setInterval: () => 1, clearTimeout() {}, clearInterval() {},
 });
 vm.runInContext(source, vmContext);

@@ -42,8 +42,8 @@
     var venue = slug();
     docSlug = venue;
     if (!venue) return { days: [] };
-    try { return safeDoc(JSON.parse(localStorage.getItem(localKey()) || 'null'), venue); }
-    catch (_) { return { days: [] }; }
+    try { var raw = localStorage.getItem(localKey()), parsed = raw === null ? { days: [] } : JSON.parse(raw); if (!parsed || !Array.isArray(parsed.days)) throw new Error('invalid-document'); localKept = true; return safeDoc(parsed, venue); }
+    catch (_) { localKept = false; return { days: [], error: 'local-read-unavailable' }; }
   }
   function own() {
     if (docSlug !== slug()) doc = readLocal();
@@ -81,7 +81,7 @@
     writeLocal(doc);
     var key = localKey() + ':cloud-save', handle = cloud, venue = slug();
     var id = String(Date.now()) + ':' + Math.random().toString(36).slice(2);
-    try { localStorage.setItem(key, id); } catch (_) { console.warn("[briefing] save failed"); }
+    try { localStorage.setItem(key, id); } catch (_) { localKept = false; render(); return Promise.resolve({ ok: false, id: id, error: 'local-save-unavailable' }); }
     render();
     return Promise.resolve().then(function () {
       if (!handle) throw new Error('cloud-unavailable');
@@ -104,7 +104,7 @@
       onPulled: function () { compute(); }
     });
   }
-  return { own: own, writeLocal: writeLocal, mergeDocs: mergeDocs, save: save, attachCloud: attachCloud, reload: function () { doc = readLocal(); }, bind: function () { return cloud && cloud.bind ? cloud.bind() : false; }, durable: function () { return localKept; }, cloudFailed: function () { return !!localStorage.getItem(localKey() + ':cloud-save'); } };
+  return { own: own, writeLocal: writeLocal, mergeDocs: mergeDocs, save: save, attachCloud: attachCloud, reload: function () { doc = readLocal(); }, bind: function () { return cloud && cloud.bind ? cloud.bind() : false; }, durable: function () { return localKept; }, cloudFailed: function () { try { return !localKept || !!localStorage.getItem(localKey() + ':cloud-save'); } catch (_) { localKept = false; return true; } } };
   }
   return { createPersistence: createPersistence };
 }));

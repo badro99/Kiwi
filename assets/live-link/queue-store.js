@@ -50,8 +50,21 @@ function qRead() {
          overwritten, and the till keeps queuing new sales. The quarantine key
          keeps « recovery required » visible until support has read it. */
       try {
-        localStorage.setItem(Q_KEY + ':quarantine:' + Date.now(), raw);
+        var prefix = Q_KEY + ':quarantine:', copies = [], stamp = Date.now();
+        for (var i = 0; i < localStorage.length; i++) {
+          var key = String(localStorage.key(i));
+          if (key.indexOf(prefix) === 0 && /^\d+$/.test(key.slice(prefix.length))) {
+            copies.push(key); stamp = Math.max(stamp, Number(key.slice(prefix.length)) + 1);
+          }
+        }
+        key = prefix + stamp;
+        localStorage.setItem(key, raw);
         localStorage.removeItem(Q_KEY);
+        copies.push(key);
+        try {
+          copies.sort(function (a, b) { return Number(b.slice(prefix.length)) - Number(a.slice(prefix.length)); });
+          copies.slice(5).forEach(function (key) { localStorage.removeItem(key); });
+        } catch (_) { /* The copied bytes remain recoverable if pruning is refused. */ }
         queueRecoveryError = true;
         return [];
       } catch (_) {

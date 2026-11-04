@@ -53,13 +53,19 @@ await test('booking#1',()=>{
 for(const [id,file,name,extra,args] of [
   ['employee#2','assets/employee-live.js','notify',{document:{dispatchEvent(){throw Error();}},CustomEvent:class{}},[{}]],
   ['serveur#1','assets/serveur/payments.js','empPayRefsWrite',{EMP_PAY_REFS_KEY:'refs'},[{}]],
-  ['pressing#0','assets/pressing-ops.js','writeFull',{storeKey:()=> 'archive',projectFull:()=>assert.fail('no projection')},[{}]],
   ['sync#1','assets/live-link.js','requestWake',{document:{dispatchEvent(){throw Error();}},CustomEvent:class{}},[]],
   ['briefing#2','assets/briefing-persistence.js','writeLocal',{slug:()=> 'fixture',safeDoc:x=>x,localKey:()=> 'briefing',render(){},localKept:true,deps:{canDispatch:()=>false}},[{}]],
 ])await test(id,()=>{
   const r=realm({localStorage:{setItem(){throw Error('private');}},...extra});
   r.run('('+fn(file,name)+')')(...args);assert.ok(r.warnings.length,'failure needs diagnostic');
   assert.ok(!JSON.stringify(r.warnings).includes('private'));
+});
+await test('pressing#0',()=>{
+  const notices=[], projected=[], archiveMemory=new Map();
+  const r=realm({archiveMemory,archiveWarned:new Set(),storeKey:()=> 'archive',projectFull:doc=>projected.push(doc),
+    localStorage:{setItem(){throw Error('private');}},document:{documentElement:{lang:'en'},createElement:()=>({setAttribute(){}}),body:{appendChild:el=>notices.push(el.textContent)}}});
+  const write=r.run('('+fn('assets/pressing-ops.js','writeFull')+')'),doc={orders:[]};write(doc);write(doc);
+  assert.equal(projected.length,2);assert.equal(archiveMemory.get('archive'),doc);assert.equal(notices.length,1);assert.ok(!notices[0].includes('private'));
 });
 await test('tickets#0',()=>{
   const el={},state={files:[]},r=realm({state,MAX_IMAGES:1,MAX_IMAGE_BYTES:10,t:k=>k,$:()=>el,fileInput:{},fileKey:f=>f.name,renderSelectedImages(){},draft:{save(){}}});

@@ -11,7 +11,7 @@
   var PREFIX = 'kiwi:pressing-ops:v1:';
   var STORE_PREFIX = 'kiwi:pressing-store:v1:';
   var listeners = new Set();
-  var cloudHandle = null;
+  var cloudHandle = null, archiveMemory = new Map(), archiveWarned = new Set();
   var numbering;
   function configureNumbering(model) { if (!numbering) numbering = model; }
 
@@ -253,6 +253,7 @@
   function readFull() {
     var k = storeKey();
     if (!k) return { customers: [], orders: [], cancellations: [], seq: 0, updatedAt: 0 };
+    if (archiveMemory.has(k)) return archiveMemory.get(k);
     try {
       var doc = JSON.parse(localStorage.getItem(k) || 'null');
       return doc && Array.isArray(doc.customers) && Array.isArray(doc.orders)
@@ -285,7 +286,15 @@
   function writeFull(doc) {
     var k = storeKey();
     if (!k || !doc) return;
-    try { localStorage.setItem(k, JSON.stringify(doc)); } catch (_) { console.warn("pressing-ops:archive-persistence-unavailable"); return; }
+    archiveMemory.set(k, doc);
+    try { localStorage.setItem(k, JSON.stringify(doc)); archiveMemory.delete(k); } catch (_) {
+      if (!archiveWarned.has(k)) {
+        archiveWarned.add(k);
+        var notice = document.createElement('p'); notice.className = 'px-note'; notice.setAttribute('role', 'status'); notice.setAttribute('style', 'position:fixed;bottom:16px;left:16px;right:16px;z-index:10020;padding:16px;background:var(--paper);color:var(--ink);border:1px solid var(--n-200);border-radius:12px');
+        var tr = function (s) { return ({ en: 'Archive not saved on this device. Keep this page open.', ar: 'لم يتم حفظ الأرشيف على هذا الجهاز. أبق هذه الصفحة مفتوحة.' })[document.documentElement.lang] || s; };
+        notice.textContent = tr('Archive non enregistrée sur cet appareil. Gardez cette page ouverte.'); notice.onclick = function () { notice.remove(); }; document.body.appendChild(notice);
+      }
+    }
     projectFull(doc);
   }
 

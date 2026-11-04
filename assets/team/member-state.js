@@ -434,7 +434,7 @@
 
   function teamCloudBind() {
     const c = teamCloudInit();
-    if (c) Promise.resolve(c.bind()).then(() => hydrateCodes()).then(() => publishPins()).catch(() => {});
+    if (c) return Promise.resolve().then(() => c.bind()).then(() => hydrateCodes()).then((ok) => { if (ok) publishPins(); }).catch(() => { heldPush = true; teamReadTimedOut({ code: 'timeout' }); });
   }
 
   function teamCloudPush() {

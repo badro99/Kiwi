@@ -2011,7 +2011,7 @@
       const ids = archivedTakeawaySet();
       ids.add(String(id));
       try { localStorage.setItem('kiwi-archived-takeaways:' + archivedTakeawayScope,
-        JSON.stringify(Array.from(ids).slice(-1000))); } catch (_) {}
+        JSON.stringify(Array.from(ids).slice(-1000))); } catch (_) { if (!ids.storageWarned) { ids.storageWarned = true; toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Archive non enregistrée sur cet appareil. Gardez cette page ouverte.')); } }
     }
 
     function opMerchant() {

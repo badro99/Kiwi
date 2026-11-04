@@ -550,7 +550,7 @@ function tableTimeEntry(from, to) {
           e.data = next; e.error = next ? '' : String((b && b.error) || 'unavailable');
           e.changed = before !== JSON.stringify([e.data, e.error]);
         })
-        .catch(() => { if (!e.data) { e.error = 'unavailable'; e.changed = true; } })
+        .catch(() => { e.error = 'unavailable'; e.changed = true; })
         .finally(() => {
           e.loading = false; e.ts = Date.now();
           if (e.changed) { e.changed = false; try { __state.renderKpiBand(); } catch (_) {} }

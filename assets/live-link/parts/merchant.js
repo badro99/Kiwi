@@ -1,4 +1,4 @@
-import {} from './live-link/queue-store.js?v=5';
+import {} from './live-link/queue-store.js?v=8';
 import {} from './live-link/sale-identity.js?v=1';
 /* Kiwi Live Link — le pont ventes ↔ serveur (Cloudflare Pages Functions + D1).
  *
@@ -202,5 +202,5 @@ import {} from './live-link/sale-identity.js?v=1';
       // brand-new store). Identity resolves a tick later and the poll self-heals.
       if (real) return '';
       return localStorage.getItem('kiwiLiveMerchant') || 'cafe-atlas';
-    } catch (_) { return 'cafe-atlas'; }
+    } catch (_) { return ''; }
   }
