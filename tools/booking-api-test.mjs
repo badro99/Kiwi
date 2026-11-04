@@ -1,16 +1,29 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { onRequestGet, onRequestPost } from '../functions/api/booking.js';
+import { sourceIdentity } from '../functions/api/_booking-source.js';
 
 class Statement {
   constructor(db, sql) { this.db = db; this.sql = sql; this.args = []; }
   bind(...args) { this.args = args; return this; }
   async first() {
     if (this.sql.includes("sqlite_master") && this.db.type === 'hotel') return { name:'hotel_stay_events' };
-    if (this.sql.includes('pair_attempts')) return null;
+    if (this.sql.includes('pair_attempts')) {
+      const row = this.db.attempts && this.db.attempts.get(this.args[0]);
+      return row ? { blocked_until: row.blocked_until } : null;
+    }
     return null;
   }
   async run() {
+    if (this.db.attempts && this.sql.startsWith('INSERT INTO pair_attempts')) {
+      /* same arithmetic as limitFail's single upsert, for the stateful limiter case */
+      const [k, now, , win, , , , , , max, until] = this.args;
+      const row = this.db.attempts.get(k);
+      if (!row || now - row.first_ts > win) this.db.attempts.set(k, { fails: 1, first_ts: now, blocked_until: null });
+      else { row.fails++; if (row.fails >= max) row.blocked_until = until; }
+      return { meta: { changes: 1 } };
+    }
+    if (this.db.attempts && this.sql.startsWith('DELETE FROM pair_attempts')) { this.db.attempts.delete(this.args[0]); return { meta: { changes: 1 } }; }
     if (this.sql.startsWith('UPDATE store_docs')) {
       const [data, rev, updated, merchant, expected] = this.args;
       if (merchant !== this.db.merchant || expected !== this.db.rev) return { meta: { changes: 0 } };
@@ -144,6 +157,56 @@ check(response.status === 400, 'public booking requires a contact method');
 for (let i = 0; i < 4; i++) db.doc.bookings.push({ ...db.doc.bookings[0], id:`bk-extra-${i}`, publicRef:`extra-${i}`, startAt:slot.startAt+(i+2)*3600000, endAt:slot.endAt+(i+2)*3600000, createdAt:Date.now(), updatedAt:Date.now() });
 response = await callPost({ ...request, ref:'public-ref-0004', startAt:slot.startAt + 8 * 3600000 }); body = await response.json();
 check(response.status === 429 && body.error === 'booking-limit', 'one contact cannot flood a merchant diary');
+
+{
+  const key = (ip, extra = {}) => sourceIdentity(new Request('https://kiwi-os.com/', { headers: ip === null ? extra : { 'CF-Connecting-IP': ip, ...extra } }));
+  check(key('2001:db8:1:2::5') && key('2001:db8:1:2::5') === key('2001:db8:1:2:ffff::9'), 'two IPv6 addresses of one /64 share a source key');
+  check(key('2001:db8:1:3::5') !== key('2001:db8:1:2::5'), 'another /64 has another key');
+  for (const bad of ['::ffff:1.2.3.4', '1:2:3', '1::2::3', 'gggg::1', '1:2:3:4:5:6:7:8:9', '12345::1', '203.0.113.8', '']) check(key(bad) === '', `"${bad}" gives no /64 key (raw address fallback)`);
+  check(key(null, { 'X-Forwarded-For': '2001:db8:1:2::5' }) === '', 'X-Forwarded-For is never read');
+}
+/* r19 booking#A0: rotating phone numbers must not fill every slot. */
+{
+  const savedBookings = db.doc.bookings, savedMax = db.doc.resources[0].capacity;
+  db.attempts = new Map();
+  db.doc.bookings = []; db.doc.resources[0].capacity = 1;
+  const squatSlots = [];
+  for (let d = 1; d <= 6; d++) {
+    const day = new Date(Date.now() + (3 + d) * 86400000).toISOString().slice(0, 10);
+    const r = await (await callGet(`merchant=test-shop&service=svc-cut&date=${day}`)).json();
+    for (const sl of r.slots.filter((_, k) => k % 2 === 0).slice(0, 3)) squatSlots.push(sl);
+  }
+  const outcomes = [];
+  for (let i = 0; i < 14; i++) {
+    const r = await callPost({ merchant: 'test-shop', ref: 'squat-ref-' + String(i).padStart(4, '0'), serviceId: 'svc-cut', startAt: squatSlots[i].startAt, partySize: 1,
+      customer: { name: 'Squat ' + i, phone: '+49 179 52' + String(41000 + i), email: '' } });
+    outcomes.push(r.status);
+  }
+  check(outcomes.slice(0, 10).every((x) => x === 200), 'ten bookings from one address in a quarter hour still go through');
+  check(outcomes.slice(10).every((x) => x === 429), 'from the eleventh, rotating phone numbers from one address is refused');
+  check(db.doc.bookings.length === 10, 'the refused attempts reserved no slot');
+  const other = await onRequestPost({ request: new Request('https://kiwi-os.com/api/booking', { method: 'POST', headers: { ...headers, 'CF-Connecting-IP': '198.51.100.9' }, body: JSON.stringify({ merchant: 'test-shop', ref: 'honest-ref-0001', serviceId: 'svc-cut', startAt: squatSlots[10].startAt, partySize: 1, customer: { name: 'Honest', phone: '+49 179 5277777', email: '' } }) }), env });
+  check(other.status === 200, 'a guest on another address is not affected by the squatter block');
+  /* the store-wide hourly cap holds even when every request comes from a new address */
+  db.attempts = new Map(); db.doc.bookings = [];
+  for (let i = 0; i < 60; i++) db.doc.bookings.push({ id: 'bk-h-' + i, source: 'public', status: 'confirmed', createdAt: Date.now() - 1000, startAt: Date.now() + (40 + i) * 86400000, endAt: Date.now() + (40 + i) * 86400000 + 1800000, customer: { name: 'x', phone: '+4917900' + String(10000 + i), email: '' }, serviceId: 'svc-cut', resourceId: 'res-a', publicRef: 'h' + i });
+  const wide = await onRequestPost({ request: new Request('https://kiwi-os.com/api/booking', { method: 'POST', headers: { ...headers, 'CF-Connecting-IP': '198.51.100.77' }, body: JSON.stringify({ merchant: 'test-shop', ref: 'wide-ref-000001', serviceId: 'svc-cut', startAt: squatSlots[11].startAt, partySize: 1, customer: { name: 'New', phone: '+49 179 5288888', email: '' } }) }), env });
+  check(wide.status === 200 && (await wide.json()).status === 'requested' && db.doc.bookings.at(-1).status === 'requested', 'past sixty live public bookings an hour, a new booking is stored as requested, not refused and not auto-confirmed');
+  for (const b of db.doc.bookings.slice(0, 60)) b.status = 'cancelled';
+  db.attempts = new Map();
+  const calm = await onRequestPost({ request: new Request('https://kiwi-os.com/api/booking', { method: 'POST', headers: { ...headers, 'CF-Connecting-IP': '198.51.100.78' }, body: JSON.stringify({ merchant: 'test-shop', ref: 'calm-ref-0000001', serviceId: 'svc-cut', startAt: squatSlots[12].startAt, partySize: 1, customer: { name: 'Calm', phone: '+49 179 5299999', email: '' } }) }), env });
+  check(calm.status === 200 && (await calm.json()).status === 'confirmed', 'cancelled bookings do not count: the venue setting (instant) applies again');
+  /* two IPv6 addresses of one /64 share one bucket */
+  db.attempts = new Map(); db.doc.bookings = [];
+  const six = [];
+  for (let i = 0; i < 12; i++) {
+    const ip = i % 2 ? '2001:db8:aa:bb::' + (i + 1) : '2001:db8:aa:bb:1234:5678:9abc:' + (i + 1);
+    const r = await onRequestPost({ request: new Request('https://kiwi-os.com/api/booking', { method: 'POST', headers: { ...headers, 'CF-Connecting-IP': ip }, body: JSON.stringify({ merchant: 'test-shop', ref: 'v6-ref-' + String(i).padStart(8, '0'), serviceId: 'svc-cut', startAt: squatSlots[i].startAt, partySize: 1, customer: { name: 'V6 ' + i, phone: '+49 179 53' + String(10000 + i), email: '' } }) }), env });
+    six.push(r.status);
+  }
+  check(six.slice(0, 10).every((x) => x === 200) && six.slice(10).every((x) => x === 429), 'addresses of one IPv6 /64 share the same creation bucket');
+  db.attempts = null; db.doc.bookings = savedBookings; db.doc.resources[0].capacity = savedMax;
+}
 
 db.doc.settings.published = false;
 response = await callGet('merchant=test-shop');

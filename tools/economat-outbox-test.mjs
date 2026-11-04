@@ -71,6 +71,19 @@ memory.set('kiwiAccountKey', 'reception@hotel.test');
 await api.replay(MERCHANT, true);
 assert.equal((await api.snapshot(MERCHANT)).find(row => row.body.id === 'other-account').state, 'sent', 'its own account sends it');
 memory.delete('kiwiAccountKey');
+// r19 economat#A0: 401 (session expired), 408 and 429 are transient, never a refusal.
+for (const status of [401, 408, 429]) {
+  navigator.onLine = true;
+  globalThis.fetch = async () => ({ ok:false, status, json:async()=>({error:'transient-' + status}) });
+  await api.enqueueRequest(body('transient-' + status), MERCHANT);
+  await api.replay(MERCHANT, true);
+  const row = (await api.snapshot(MERCHANT)).find(r => r.body.id === 'transient-' + status);
+  assert.equal(row.state, 'pending', status + ' keeps the request queued, not refused');
+  assert.ok(row.next > Date.now(), status + ' backs off');
+  globalThis.fetch = async (url, options) => h.post(JSON.parse(options.body));
+  await api.replay(MERCHANT, true);
+  assert.equal((await api.snapshot(MERCHANT)).find(r => r.body.id === 'transient-' + status).state, 'sent', status + ' goes out once the service answers, without retyping');
+}
 // Only the five latest sent rows stay; the server list carries the rest.
 for (const id of ['p1','p2','p3','p4','p5']) await api.enqueueRequest(body(id), MERCHANT);
 await api.replay(MERCHANT, true);

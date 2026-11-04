@@ -346,6 +346,7 @@
     book = book || bookId();
     var c = config(book);
     var next = Object.assign({}, c, patch || {});
+    if (next.product && Array.isArray(next.product.ids) && next.product.ids.length > 2000) return null; // 2 000 linked products max (same limit in functions/api/store.js): refused, never truncated
     // Quelqu'un a décidé : ce n'est plus un défaut déduit, et ça a désormais le
     // droit de voyager jusqu'aux autres appareils.
     delete next.auto;

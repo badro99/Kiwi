@@ -1,5 +1,5 @@
 /* Durable department submissions. A lost response replays the same command key. */
-import { post } from './hotel-economat-transport.js?v=15';
+import { post } from './hotel-economat-transport.js?v=16';
 const prefix = 'kiwi:economat:outbox:';
 const listeners = new Set(), running = new Map(), timers = new Map();
 let dbPromise, fallback = false;
@@ -101,7 +101,9 @@ export function replay(merchant, reconnect = false) {
         await save(merchant, rows);
       } catch (e) {
         row.error = String(e.message || 'offline');
-        if (e.status >= 400 && e.status < 500) row.state = 'refused';
+        /* 401 (session expirée), 408 et 429 sont transitoires : la demande reste
+           en file avec son attente, sans bloquer par un refus définitif. */
+        if (e.status >= 400 && e.status < 500 && ![401, 408, 429].includes(e.status)) row.state = 'refused';
         else { row.attempts++; row.next = Date.now() + Math.min(60000, 1000 * 2 ** Math.min(row.attempts - 1, 6)); }
         await save(merchant, rows);
         if (row.state === 'pending') schedule(merchant, row.next - Date.now());

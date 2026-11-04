@@ -346,6 +346,7 @@
     book = book || bookId();
     var c = config(book);
     var next = Object.assign({}, c, patch || {});
+    if (next.product && Array.isArray(next.product.ids) && next.product.ids.length > 2000) return null; // 2 000 linked products max (same limit in functions/api/store.js): refused, never truncated
     // Quelqu'un a décidé : ce n'est plus un défaut déduit, et ça a désormais le
     // droit de voyager jusqu'aux autres appareils.
     delete next.auto;
@@ -436,12 +437,12 @@
     const foldName = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
       .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
     const qualifyingQty = (cfg, items) => { // linked products by id (renames keep earning), new ones by word
-      const want = foldName(cfg && cfg.product && cfg.product.item), ids = (Array.isArray(cfg && cfg.product && cfg.product.ids) ? cfg.product.ids : []).map(String);
-      if (!want && !ids.length) return 0;
+      const raw = cfg && cfg.product && cfg.product.item, want = foldName(raw), ids = (Array.isArray(cfg && cfg.product && cfg.product.ids) ? cfg.product.ids : []).map(String);
+      if (!want && !ids.length) return 0; const plain = (v) => String(v || '').normalize('NFC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(), exact = plain(raw), strict = want.length < 4 && exact !== want, norm = (v) => strict ? plain(v) : foldName(v); // a short word typed with an accent ("Thé") is accent-sensitive: folded it would stamp every "The Burger"
       return (Array.isArray(items) ? items : []).reduce((n, item) => {
-        const name = ' ' + foldName(item && item.name) + ' ', key = String(item && (item.id || item.itemId || item.pid) || '');
-        const qty = Math.max(0, Number(item && item.qty) || 0), weighed = /^(weigh|kg|g|l|ml)$/i.test(String(item && item.unit || ''));
-        return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + want + ' ')) ? n + (weighed ? Number(qty > 0) : Math.floor(qty)) : n;
+        const name = ' ' + norm(item && item.name) + ' ', key = String(item && (item.id || item.itemId || item.pid) || '');
+        const qty = Math.max(0, Number(item && item.qty) || 0), unit = String(item && item.unit || ''), weighed = /^(weigh|kg|kilos?|kilograms?|g|gr|grams?|l|litres?|liters?|cl|ml)$/i.test(unit) || (qty % 1 !== 0 && !/^(unit|units|piece|pieces|pièce|pièces|pc|pcs|pce|u)$/i.test(unit)); // a fractional quantity is a weighed line unless the unit says pieces
+        return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + (strict ? exact : want) + ' ')) ? n + (weighed ? Number(qty > 0) : Math.floor(qty)) : n;
       }, 0);
     }
     const stampsFor = (cfg, items) => {

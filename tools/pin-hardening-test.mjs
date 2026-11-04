@@ -498,6 +498,51 @@ console.log('\n2 · Attempt Rate-Limiting on Verification');
   sqlite.prepare('DELETE FROM pair_attempts').run();
 }
 
+/* r19 pairing#A0 / team#A0: one cashier's typos lock that device only, while a
+ * guess spread over many devices still hits the shared store ceiling. */
+{
+  const { tillDeviceToken } = await import('../functions/auth/_lib.js');
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+  const post = async (device, pin, ip) => verifyPinPost({
+    request: new Request('https://kiwi.test/api/pin/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: `kiwi_till=${await tillDeviceToken(AUTH_SECRET, 'cafe-atlas', 0, device)}`, 'CF-Connecting-IP': ip },
+      body: JSON.stringify({ merchant: 'cafe-atlas', pin }),
+    }),
+    env,
+  });
+  for (let i = 0; i < 8; i++) await post('term_cashier_one_x', '0000', '10.1.0.1');
+  check('one device is blocked after 8 typos', (await post('term_cashier_one_x', '1234', '10.1.0.1')).status === 429);
+  const other = await post('term_cashier_two_x', '1234', '10.1.0.2');
+  check('another till of the same shop still verifies a valid code', other.status === 200);
+  const otherTypo = await post('term_cashier_two_x', '0000', '10.1.0.2');
+  check('and a wrong code there is a plain 401, not a lockout', otherTypo.status === 401);
+
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+  let first429 = 0;
+  for (let i = 1; i <= 40 && !first429; i++) {
+    const r = await post('term_spread_' + String(i).padStart(4, '0') + 'x', '0000', '10.2.0.' + i);
+    if (r.status === 429) first429 = i;
+  }
+  check('guessing spread over many devices is still stopped by the store ceiling (16)', first429 === 17);
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+  for (const [dev, n, ip] of [['term_three_a_xx', 6, '10.3.0.1'], ['term_three_b_xx', 6, '10.3.0.2'], ['term_three_c_xx', 4, '10.3.0.3']]) {
+    for (let i = 0; i < n; i++) await post(dev, '0000', ip);
+  }
+  check('failures spread over 3 devices (6+6+4) stop at 16 store-wide', (await post('term_three_d_xx', '1234', '10.3.0.4')).status === 429);
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+  const legacy = (ip, pin) => verifyPinPost({ request: new Request('https://kiwi.test/api/pin/verify', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: `kiwi_till=${tillCookieVal}`, 'CF-Connecting-IP': ip }, body: JSON.stringify({ merchant: 'cafe-atlas', pin }) }), env });
+  for (let i = 0; i < 8; i++) await legacy('10.4.0.' + i, '0000');
+  check('legacy cookies from 8 different IPs share one 8-try bucket', (await legacy('10.4.9.9', '1234')).status === 429);
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+  const sess = (pin) => verifyPinPost({ request: new Request('https://kiwi.test/api/pin/verify', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: sessionCookie(ownerSessToken), 'CF-Connecting-IP': '10.5.0.1' }, body: JSON.stringify({ merchant: 'cafe-atlas', pin }) }), env });
+  let last = 0; for (let i = 0; i < 8; i++) last = (await sess('0000')).status;
+  check('session path keeps the 8-try ceiling', last === 401 && (await sess('1234')).status === 429);
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+}
+
 console.log('\n3 · Shared Verifier on Sale Cancellation (/api/sale/cancel)');
 
 {

@@ -139,7 +139,7 @@ async function budgetHandler(context) {
   try { body = await request.json(); } catch (_) { body = null; }
   if (!body) return json({ ok: false, error: 'body' }, 400);
 
-  const who = await tenantFor(request, env, body.merchant);
+  const who = await tenantFor(request, env, body.merchant, { strict: true });
   if (!who) return json({ ok: false, error: 'auth' }, 401);
 
   if (!env.AI) return json({ ok: false, error: 'unbound' }, 503);

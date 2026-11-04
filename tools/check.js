@@ -1539,7 +1539,7 @@ section('Whole-project regressions');
     'audit-remediation-money-test.mjs',
     'wave-d-security-test.mjs',
     'audit-remediation-inventory-loyalty-test.mjs',
-    'loyalty-truth-test.mjs',
+    'loyalty-truth-test.mjs', 'loyalty-link-limit-test.mjs',
     'loyalty-product-links-test.mjs', 'loyalty-properties-test.mjs', 'r16-money-gaps-test.mjs',
     /* Fidélité : une seule règle d'arrondi pour la remise en pourcentage, tous métiers. */
     'loyalty-reward-rounding-test.mjs',
@@ -2423,7 +2423,7 @@ section('Whole-project regressions');
     'menu-import-preserve-test.mjs',
     'modal-desc-escape-test.mjs',
     'intake-slice1-test.mjs',
-    'client-state-truth-test.mjs', 'stock-intake-outbox-test.mjs', 'intake-deadline-test.mjs', 'refund-period-test.mjs', 'returns-tile-window-test.mjs',
+    'client-state-truth-test.mjs', 'stock-intake-outbox-test.mjs', 'intake-deadline-test.mjs', 'refund-period-test.mjs', 'sale-error-detail-test.mjs', 'returns-tile-window-test.mjs',
     'exchange-promo-rule-test.mjs',
     'intake-posting-test.mjs',
     'intake-conflict-test.mjs',

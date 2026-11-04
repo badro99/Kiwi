@@ -1,3 +1,4 @@
+import { safeDetail } from '../_safe-detail.js';
 import { ensureCollectionSchema } from '../receivables.js';
 // POST /api/sale/refund — append one manager-approved refund to the same
 // financial stream as sales. The stored amount is negative, so every reader
@@ -113,7 +114,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
          LIMIT 1`
     ).bind(merchant, originalSaleId).first();
   } catch (error) {
-    return json({ error: 'db-read-failed', detail: String(error && error.message || error) }, 500);
+    return json({ error: 'db-read-failed', detail: safeDetail('refund', error) }, 500);
   }
   /* The sale is queued immediately before its refund. A weak connection can
      make the refund reach this endpoint first; 404 remains retryable in the
@@ -309,7 +310,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
     }
     await env.DB.batch(statements);
   } catch (error) {
-    return json({ error: 'refund-write-failed', detail: String(error && error.message || error) }, 500);
+    return json({ error: 'refund-write-failed', detail: safeDetail('refund', error) }, 500);
   }
 
   let saved = null;
