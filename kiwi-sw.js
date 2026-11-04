@@ -247,7 +247,7 @@ var SHELL = [
   '/assets/loyalty-product-links.js?v=1',
   '/assets/features.js?v=18',
   '/assets/invoicing.css?v=16',
-  '/assets/invoicing.js?v=41',
+  '/assets/invoicing.js?v=42',
   '/assets/order-qr.js?v=6',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
@@ -406,7 +406,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=32',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=111',
+  '/assets/caisse-lang.js?v=112',
   '/assets/venue-store.js?v=5',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=14',
@@ -614,7 +614,7 @@ var SHELL = [
   '/assets/refund-split.js?v=2',
   '/assets/pos-maison/inventory.js?v=76',
   '/assets/pos-maison.js?v=159',
-  '/assets/caisse-pairing.js?v=67',
+  '/assets/caisse-pairing.js?v=68',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

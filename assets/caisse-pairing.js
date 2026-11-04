@@ -104,7 +104,7 @@
     offlineBudget.check(merchant, false, true);
     // In an insecure context subtle is absent: retain the existing behaviour
     // (no local verification or new cache entry), never a JS PBKDF2 fallback.
-    if (!hasSubtle()) return Promise.resolve(staff);
+    if (!hasSubtle()) { toast((window.KiwiCaisseLang || { tr: function (s) { return s; } }).tr("Accès hors ligne non enregistré. Une connexion sera nécessaire au prochain déverrouillage.")); return Promise.resolve(staff); }
     return Promise.resolve().then(function () {
       var shared = offlinePinRows(merchant).find(function (row) {
         return row.v === 2 && row.it === PIN_ITERATIONS && /^[a-f0-9]{32}$/.test(row.salt);
@@ -123,10 +123,11 @@
           provenAt: provenAt, expiresAt: expiresAt || provenAt + OFFLINE_PIN_TTL,
           staff: { id: String(staff.id || '').slice(0, 80), name: String(staff.name || '').slice(0, 80),
             role: String(staff.role || '').slice(0, 80) } });
+        if (rows.length > 12) toast((window.KiwiCaisseLang || { tr: function (s) { return s; } }).tr("Limite de 12 accès hors ligne atteinte. Le personnel le moins récemment enregistré devra se connecter pour déverrouiller."));
         set(offlinePinKey(merchant), JSON.stringify(rows.slice(-12))); // Bounded: each cached verifier is one more offline guess target.
         return staff;
       });
-    }).catch(function () { return staff; }); // Cache failure cannot reject a server-proven unlock.
+    }).catch(function () { toast((window.KiwiCaisseLang || { tr: function (s) { return s; } }).tr("Accès hors ligne non enregistré. Une connexion sera nécessaire au prochain déverrouillage.")); return staff; }); // Cache failure cannot reject a server-proven unlock.
   }
   function verifyOfflinePin(merchant, code, purge) { /* purge: a server-refused code's verifier lookup, never a keypad guess */
     var epoch = offlinePinEpoch;

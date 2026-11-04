@@ -48,7 +48,7 @@
     fr: {
       label: 'Facturation', title: 'Facturation', sub: 'Factures, devis et avoirs, numérotés sans trou',
       overview: 'Vue d’ensemble', overviewSub: 'Suivi clair de ce qui est facturé, encaissé et à relancer.',
-      newInvoice: 'Nouvelle facture', newQuote: 'Nouveau devis', export: 'Exporter', close: 'Fermer',
+      newInvoice: 'Nouvelle facture', newQuote: 'Nouveau devis', export: 'Exporter les lignes chargées et filtrées', close: 'Fermer',
       tabInvoices: 'Factures', tabQuotes: 'Devis', tabCredits: 'Avoirs', sales: 'Factures de vente',
       salesSub: 'Factures officielles émises depuis les ventes du comptoir.',
       outstanding: 'À encaisser', overdue: 'En retard', paidMonth: 'Payé ce mois', documents: 'Documents',
@@ -129,7 +129,7 @@
     en: {
       label: 'Invoicing', title: 'Invoicing', sub: 'Invoices, quotes and credit notes, numbered without gaps',
       overview: 'Overview', overviewSub: 'A clear view of billed, collected and overdue revenue.',
-      newInvoice: 'New invoice', newQuote: 'New quote', export: 'Export', close: 'Close',
+      newInvoice: 'New invoice', newQuote: 'New quote', export: 'Export loaded and filtered rows', close: 'Close',
       tabInvoices: 'Invoices', tabQuotes: 'Quotes', tabCredits: 'Credit notes', sales: 'Sales Invoices',
       salesSub: 'Official invoices issued from store sales.',
       outstanding: 'Outstanding', overdue: 'Overdue', paidMonth: 'Paid this month', documents: 'Documents',
@@ -206,7 +206,7 @@
     ar: {
       label: 'الفوترة', title: 'الفوترة', sub: 'فواتير وعروض أسعار وإشعارات دائنة بترقيم متسلسل',
       overview: 'نظرة عامة', overviewSub: 'متابعة واضحة للمبالغ المفوترة والمحصلة والمتأخرة.',
-      newInvoice: 'فاتورة جديدة', newQuote: 'عرض سعر جديد', export: 'تصدير', close: 'إغلاق',
+      newInvoice: 'فاتورة جديدة', newQuote: 'عرض سعر جديد', export: 'تصدير الصفوف المحملة والمصفاة', close: 'إغلاق',
       tabInvoices: 'الفواتير', tabQuotes: 'عروض الأسعار', tabCredits: 'الإشعارات الدائنة', sales: 'فواتير المبيعات',
       salesSub: 'فواتير رسمية صادرة عن مبيعات المحل.',
       outstanding: 'قيد التحصيل', overdue: 'متأخرة', paidMonth: 'مدفوع هذا الشهر', documents: 'المستندات',

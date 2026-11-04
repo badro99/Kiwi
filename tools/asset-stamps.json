@@ -212,8 +212,8 @@
     "sha": "5dfe4eaffa4b2059"
   },
   "assets/caisse-lang.js": {
-    "v": "111",
-    "sha": "b4a07af18d1eecfc"
+    "v": "112",
+    "sha": "02d9af1751c10a5d"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -236,8 +236,8 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "67",
-    "sha": "d1462ce7ca19ff8e"
+    "v": "68",
+    "sha": "5836d0022a8dbb05"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
@@ -824,8 +824,8 @@
     "sha": "a5f4d747cf82cd39"
   },
   "assets/invoicing.js": {
-    "v": "41",
-    "sha": "efdc60c7c012ab86"
+    "v": "42",
+    "sha": "a67110080bf77de3"
   },
   "assets/invoicing/composer.js": {
     "v": "9",
