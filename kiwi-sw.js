@@ -29,7 +29,7 @@ var SHELL = [
   '/assets/boutique-size-colors.js?v=6',
   '/assets/team/access-rules.js?v=7',
   '/assets/hotel-economat-transport.js?v=2',
-  '/assets/pos-boutique/drawer.js?v=74',
+  '/assets/pos-boutique/drawer.js?v=75',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=10',
@@ -407,7 +407,7 @@ var SHELL = [
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=10',
   '/assets/retail-balances.js?v=4',
-  '/assets/retail-sale-hold.js?v=6',
+  '/assets/retail-sale-hold.js?v=7',
   '/assets/repeat-sale-guard.js?v=3',
   '/assets/delivery-collect.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
@@ -478,7 +478,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=26',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=29',
-  '/assets/pos-dispatch.js?v=342',
+  '/assets/pos-dispatch.js?v=343',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -549,8 +549,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=259',
-  '/assets/pos-boutique/sales.js?v=156',
+  '/assets/pos-boutique.css?v=260',
+  '/assets/pos-boutique/sales.js?v=157',
   '/assets/retail-photos.js?v=5',
   '/assets/retail-icon-picker.js?v=4',
   '/assets/pos-boutique/ticket-owner.js?v=3',
@@ -567,9 +567,9 @@ var SHELL = [
   '/assets/pos-boutique/inv-moves.js?v=6',
   '/assets/pos-maison/inv-moves.js?v=2',
   '/assets/pos-boutique/kit-2027.js?v=20',
-  '/assets/pos-boutique/checkout.js?v=156',
-  '/assets/pos-boutique/inventory.js?v=156',
-  '/assets/pos-boutique.js?v=259',
+  '/assets/pos-boutique/checkout.js?v=157',
+  '/assets/pos-boutique/inventory.js?v=157',
+  '/assets/pos-boutique.js?v=260',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -601,14 +601,14 @@ var SHELL = [
   '/assets/pos-gym.js?v=9',
   '/assets/pos-autre.css?v=9',
   '/assets/pos-autre.js?v=9',
-  '/assets/pos-maison.css?v=158',
-  '/assets/pos-maison/sales.js?v=75',
+  '/assets/pos-maison.css?v=159',
+  '/assets/pos-maison/sales.js?v=76',
   '/assets/pos-maison/ticket-remise.js?v=3',
-  '/assets/pos-maison/checkout.js?v=75',
+  '/assets/pos-maison/checkout.js?v=76',
   '/assets/pos-maison/delivery.js?v=22',
   '/assets/refund-split.js?v=2',
-  '/assets/pos-maison/inventory.js?v=75',
-  '/assets/pos-maison.js?v=158',
+  '/assets/pos-maison/inventory.js?v=76',
+  '/assets/pos-maison.js?v=159',
   '/assets/caisse-pairing.js?v=67',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste

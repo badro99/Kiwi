@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=156';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=74';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=156';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=156';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=157';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=75';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=157';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=157';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
@@ -676,7 +676,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
   if (IS_DEMO) window.KiwiBoutiqueDemoDay = () => SALES.filter((s) => s && !s.voided)
     .map((s) => ({ ...s, lines: (s.lines || []).map((l) => (l.name || !P[l.pid] ? l : { ...l, name: P[l.pid].name })) }));
   function persistDay() {
-    if (IS_DEMO) return;
+    if (IS_DEMO) return true;
     try {
       localStorage.setItem(DAY_KEY, JSON.stringify({
         v: 1, m: merchantSlug(), s: SALES.filter((s) => s && withinRetention(s.at)),

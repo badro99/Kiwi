@@ -51,7 +51,7 @@ function sandbox({ merchant = 'santos', on = true, answer } = {}) {
   };
   vm.createContext(ctx);
   vm.runInContext(kit, ctx);
-  vm.runInContext(`const h = window.KiwiRetailSaleHold.create({ sales: () => SALES, persist: () => { persisted++; }, isDemo: IS_DEMO, slug: () => ${JSON.stringify(merchant)} });
+  vm.runInContext(`const h = window.KiwiRetailSaleHold.create({ sales: () => SALES, persist: () => { persisted++; return true; }, isDemo: IS_DEMO, slug: () => ${JSON.stringify(merchant)} });
     this.hold = h.hold; this.replay = h.replay; this.post = h.post;`, ctx);
   ctx.calls = calls;
   ctx.setAnswer = (a) => { answer = a; };
@@ -72,6 +72,17 @@ const payload = (id) => ({ id, amount: 120, method: 'cash', ref: 'BQ-' + id, tim
   ok(s.replay() === 1 && !sale.pendingPost, 'once the queue accepts it, the replay sends it and lets it go');
   ok(typeof s.calls[1].time.getTime === "function" && +s.calls[1].time === +at, 'the replay sends the original sale time, not the time of the retry');
   ok(s.calls[1].id === 'a1', 'with the same id, so the server counts it once');
+}
+{
+  // A journal that answers nothing has not proved the write: the till must say so.
+  const lost = [];
+  const ctx = { IS_DEMO: false, SALES: [], lost, window: { KiwiLive: { isOn: () => true, merchant: () => 'santos', postSale: () => ({ ok: false, reason: 'storage-full' }) } } };
+  vm.createContext(ctx); vm.runInContext(kit, ctx);
+  vm.runInContext(`const h = window.KiwiRetailSaleHold.create({ sales: () => SALES, persist: () => {}, slug: () => 'santos', onLost: (s) => lost.push(s.id) });
+    this.post = h.post;`, ctx);
+  const sale = { id: 'BQ-silent', at }; ctx.SALES.push(sale);
+  ctx.post(sale, payload('s1'));
+  ok(lost.length === 1 && lost[0] === 'BQ-silent', 'a silent persist (no true) is not taken as a saved sale: onLost fires');
 }
 {
   const s = sandbox({ merchant: '', answer: undefined });

@@ -30,9 +30,11 @@
     const enqueue = payload => window.KiwiSaleQueue
       ? window.KiwiSaleQueue.enqueue(payload) : live().postSale(payload);
     const sales = () => (ctx && typeof ctx.sales === 'function' ? ctx.sales() : []) || [];
-    /* Faux seulement si l'écriture du journal a ÉCHOUÉ (persist() renvoie
-       false ou lève) : un persist() sans valeur de retour reste un succès. */
-    const persist = () => { try { return !(ctx && ctx.persist && ctx.persist() === false); } catch (_) { return false; } };
+    /* Vrai seulement si le journal confirme l'écriture (persist() renvoie
+       true) : un persist() muet, qui lève ou renvoie false ne prouve rien,
+       la vente n'est pas présentée comme gardée. Sans persist (contexte
+       minimal), rien à écrire : succès. */
+    const persist = () => { try { return !(ctx && ctx.persist) || ctx.persist() === true; } catch (_) { return false; } };
     const slug = () => { try { return (ctx && ctx.slug && ctx.slug()) || ''; } catch (_) { return ''; } };
 
     function hold(sale, payload, res) {
