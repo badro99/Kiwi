@@ -92,21 +92,34 @@ try {
     assert.equal(after.spend_cents, expectedCents - 1999);
     ok('a refund lowers spend_cents by the refunded centimes');
   }
-  // Float legacy rows -> migration backfill -> reads: identical to the centime.
+  // Float legacy rows after the migration (no backfill): reads are identical to the centime.
   {
-    const t = await boot((sql) => {});
+    const t = await boot();
     const floats = [0.30000000000000004, 1234.5600000001, 19.990000000000002, 0.1 + 0.7, 45.5, 0];
     floats.forEach((spend, i) => t.sql.prepare(
       "INSERT INTO clients (merchant,id,name,spend,srv_ts,updated_ts) VALUES (?,?,?,?,?,?)").run(merchant, 'f' + i, 'F' + i, spend, i + 1, 1));
-    // The before: what a device read from the float column, rounded to the centime.
-    const before = new Map(floats.map((v, i) => ['f' + i, Math.round(v * 100) / 100]));
-    // The migration's own backfill (0020), executed as written.
     const migration = fs.readFileSync(new URL('../migrations/0020_client_spend_cents.sql', import.meta.url), 'utf8');
-    t.sql.exec(migration.split('\n').filter((l) => /^UPDATE/.test(l)).join('\n'));
+    assert.equal(/^\s*UPDATE/m.test(migration), false, 'the migration does not backfill');
+    assert.equal(t.sql.prepare('SELECT COUNT(*) n FROM clients WHERE spend_cents IS NOT NULL').get().n, 0);
     const read = (await t.clients()).body.clients;
-    for (const r of read) assert.equal(r.spend, before.get(r.id), r.id + ' unchanged to the centime');
+    for (const [i, r] of read.entries()) assert.equal(r.spend, Math.round(floats[i] * 100) / 100, r.id + ' unchanged to the centime');
     assert.deepEqual(read.map((r) => r.spend_cents), floats.map((v) => Math.round(v * 100)));
-    ok('backfilled float rows read identically to the centime before and after');
+    ok('untouched rows (spend_cents NULL) read identically to the centime');
+  }
+  // Old code after the migration writes spend only: still the right cents; new code writes both.
+  {
+    const t = await boot();
+    t.sql.prepare("INSERT INTO clients (merchant,id,name,spend,srv_ts,updated_ts) VALUES (?,?,?,0,1,1)").run(merchant, 'o', 'Old');
+    t.sql.prepare('UPDATE clients SET spend = spend + 0.1 WHERE id = ?').run('o');
+    t.sql.prepare('UPDATE clients SET spend = spend + 0.2 WHERE id = ?').run('o');
+    const oldRead = (await t.clients()).body.clients[0];
+    assert.equal(oldRead.spend_cents, 30, 'old path: spend only, cents read from spend');
+    assert.equal(t.sql.prepare('SELECT spend_cents FROM clients WHERE id = ?').get('o').spend_cents, null);
+    await t.clients({ purchase: { clientId: 'o', ref: 'purchase:o:1', saleRef: 'A', amount: 0.35, method: 'cash' } });
+    const row = t.sql.prepare('SELECT spend, spend_cents FROM clients WHERE id = ?').get('o');
+    assert.equal(row.spend_cents, 65);
+    assert.equal(Math.round(row.spend * 100), row.spend_cents, 'new path: both columns agree');
+    ok('old-path rows read right and new-path rows carry both columns in agreement');
   }
   // NULL rows (written by an older deploy after the column exists) keep working.
   {
