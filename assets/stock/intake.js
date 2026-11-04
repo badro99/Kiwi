@@ -252,7 +252,7 @@ window.KiwiStockInternal.install('intake', (S) => {
   }
 
   async function stIntakePrepare(docId, postingHash, lineCount) {
-    const res = await fetch('/api/ai/intake', {
+    const res = await S.stockState.stIntakeRequest('/api/ai/intake', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'prepare', docId, postingHash, lineCount }),
@@ -333,20 +333,34 @@ window.KiwiStockInternal.install('intake', (S) => {
   }
 
   async function stIntakeCommit(payload) {
-    const res = await fetch('/api/ai/intake', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'commit', ...payload }),
-    });
-    let data = null;
-    try { data = await res.json(); } catch (_) { data = null; }
-    return { status: res.status, data };
+    const docId = payload.sha256;
+    if (stIntakeOutboxRead().some(e => e.docId === docId && e.phase === 'commit')) {
+      const status = await stIntakeServerStatus(docId, 'missing');
+      if (!status) throw new Error('intake-commit-uncertain');
+      if (status === 'confirmed') { stIntakeOutboxWrite(stIntakeOutboxRead().filter(e => e.docId !== docId)); return { status: 200, data: { duplicate: true, doc: { status }, docId } }; }
+    }
+    try {
+      const res = await S.stockState.stIntakeRequest('/api/ai/intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'commit', ...payload }),
+      });
+      let data = null;
+      data = await res.json();
+      stIntakeOutboxWrite(stIntakeOutboxRead().filter(e => e.docId !== docId || e.phase !== 'commit'));
+      return { status: res.status, data };
+    } catch (error) {
+      const box = stIntakeOutboxRead();
+      if (!box.some(e => e.docId === docId)) box.push({ docId, phase: 'commit', ts: Date.now() });
+      stIntakeOutboxWrite(box);
+      throw error;
+    }
   }
 
   async function stIntakeUpload(docId, bytes) {
     // Booléen, jamais d'exception : l'appelant décide (archive ou repli).
     try {
-      const res = await fetch(`/api/ai/intake?merchant=${encodeURIComponent(stIntakeMerchant())}&docId=${encodeURIComponent(docId)}`, {
+      const res = await S.stockState.stIntakeRequest(`/api/ai/intake?merchant=${encodeURIComponent(stIntakeMerchant())}&docId=${encodeURIComponent(docId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/pdf' },
         body: bytes,
@@ -401,10 +415,11 @@ window.KiwiStockInternal.install('intake', (S) => {
     return 'ok';
   }
 
-  async function stIntakeServerStatus(docId) {
+  async function stIntakeServerStatus(docId, missing = '') {
     // Injoignable → '' : la garde reste ouverte, l'outbox garde la vérité.
     try {
-      const res = await fetch(`/api/ai/intake?merchant=${encodeURIComponent(stIntakeMerchant())}&docId=${encodeURIComponent(docId)}`);
+      const res = await S.stockState.stIntakeRequest(`/api/ai/intake?merchant=${encodeURIComponent(stIntakeMerchant())}&docId=${encodeURIComponent(docId)}`);
+      if (res.status === 404) return missing;
       if (!res.ok) return '';
       const data = await res.json().catch(() => null);
       return (data && data.doc && data.doc.status) || '';
@@ -413,17 +428,21 @@ window.KiwiStockInternal.install('intake', (S) => {
 
   async function stIntakeMarkOnce(docId) {
     const box = stIntakeOutboxRead();
-    if (!box.some((e) => e.docId === docId)) {
+    if (box.some((e) => e.docId === docId)) {
+      const status = await stIntakeServerStatus(docId);
+      if (!status) return false;
+      if (status === 'confirmed') { stIntakeOutboxWrite(box.filter((e) => e.docId !== docId)); return true; }
+    } else {
       box.push({ docId, ts: Date.now() });
       stIntakeOutboxWrite(box);
     }
     try {
-      const res = await fetch('/api/ai/intake', {
+      const res = await S.stockState.stIntakeRequest('/api/ai/intake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'mark', docId, status: 'confirmed' }),
       });
-      if (res.ok) {
+      if (res.ok && (await res.json()).ok === true) {
         stIntakeOutboxWrite(stIntakeOutboxRead().filter((e) => e.docId !== docId));
         return true;
       }
@@ -434,8 +453,11 @@ window.KiwiStockInternal.install('intake', (S) => {
   async function stIntakeFlushOutbox() {
     const pending = stIntakeOutboxRead();
     for (const e of pending) {
+      if (e.phase === 'commit') continue;
       try {
-        if (await stIntakeServerStatus(e.docId) === 'confirmed') {
+        const status = await stIntakeServerStatus(e.docId);
+        if (!status) continue;
+        if (status === 'confirmed') {
           stIntakeOutboxWrite(stIntakeOutboxRead().filter((x) => x.docId !== e.docId));
           continue;
         }
@@ -465,7 +487,7 @@ window.KiwiStockInternal.install('intake', (S) => {
 
   async function stIntakeFetchRecorded(docId) {
     const refId = 'grn-intake-' + String(docId || '').slice(0, 16);
-    const res = await fetch(`/api/inventory/movements?merchant=${encodeURIComponent(stIntakeMerchant())}&refId=${encodeURIComponent(refId)}&reason=receipt`);
+    const res = await S.stockState.stIntakeRequest(`/api/inventory/movements?merchant=${encodeURIComponent(stIntakeMerchant())}&refId=${encodeURIComponent(refId)}&reason=receipt`);
     if (!res.ok) throw new Error('intake-recorded-' + res.status);
     const data = await res.json().catch(() => null);
     const rows = data && Array.isArray(data.movements) ? data.movements : [];
@@ -745,7 +767,7 @@ window.KiwiStockInternal.install('intake', (S) => {
           }
 
           const venue = (window.Kiwi && window.Kiwi.venue && window.Kiwi.venue()) || '';
-          const res = await fetch('/api/ai/invoice', {
+          const res = await S.stockState.stIntakeRequest('/api/ai/invoice', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ merchant: venue, kind: 'text', text }),
@@ -810,7 +832,7 @@ window.KiwiStockInternal.install('intake', (S) => {
   }
 
   async function stIntakeArchiveList(cursor) {
-    const res = await fetch('/api/ai/intake-archive?merchant=' + encodeURIComponent(stIntakeMerchant()) +
+    const res = await S.stockState.stIntakeRequest('/api/ai/intake-archive?merchant=' + encodeURIComponent(stIntakeMerchant()) +
       '&limit=20' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
     if (!res.ok) throw new Error('archive-' + res.status);
     const data = await res.json().catch(() => null);

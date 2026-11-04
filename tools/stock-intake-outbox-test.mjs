@@ -8,7 +8,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 
 const root = path.resolve(import.meta.dirname, '..');
-const src = fs.readFileSync(path.join(root, 'assets/stock/intake.js'), 'utf8');
+const src = fs.readFileSync(path.join(root, 'assets/stock/intake.js'), 'utf8').replaceAll('S.stockState.stIntakeRequest', 'stIntakeRequest') + fs.readFileSync(path.join(root, 'assets/stock/state.js'), 'utf8');
 const strings = fs.readFileSync(path.join(root, 'assets/stock/strings.js'), 'utf8');
 let checks = 0;
 const check = async (name, fn) => { await fn(); checks += 1; console.log('  ok ' + checks + ' - ' + name); };
@@ -18,7 +18,7 @@ function fn(name) {
   assert.ok(m, 'function present: ' + name);
   return m[0];
 }
-const NAMES = ['stIntakeMerchant', 'stIntakeOutboxKey', 'stIntakeOutboxRead', 'stIntakeOutboxWrite', 'stIntakeMarkOnce'];
+const NAMES = ['stIntakeRequest', 'stIntakeMerchant', 'stIntakeServerStatus', 'stIntakeOutboxKey', 'stIntakeOutboxRead', 'stIntakeOutboxWrite', 'stIntakeMarkOnce'];
 
 /** @param {{ failWrites?: boolean, online?: boolean }} [o] */
 function scope(o = {}) {
@@ -30,7 +30,7 @@ function scope(o = {}) {
       setItem: (k, v) => { if (o.failWrites) throw new Error('QuotaExceededError'); map.set(k, String(v)); },
     },
   };
-  const fetchStub = async () => { if (!o.online) throw new Error('offline'); return { ok: true }; };
+  const fetchStub = async () => { if (!o.online) throw new Error('offline'); return { ok: true, json: async () => ({ ok: true, doc: { status: 'received' } }) }; };
   const api = new vm.Script('(function (window, fetch) {\n' + NAMES.map(fn).join('\n') + '\nreturn { ' + NAMES.join(', ') + ' };\n})')
     .runInThisContext()(win, fetchStub);
   return { api, map };

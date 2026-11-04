@@ -1,0 +1,62 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const cache = new Map(), requests = [], warms = [];
+globalThis.localStorage = { getItem: k => cache.get(k), setItem: (k,v) => cache.set(k,v) };
+globalThis.window = { KiwiVenue: { getVenue: () => 'shop' }, KiwiCloudDoc: { currentSlug: () => 'shop' }, KiwiDateRange: { bounds: () => [200,300] } };
+const ledger = await import('../assets/returns-ledger.js');
+globalThis.fetch = async url => {
+ requests.push(new URL(url, 'https://local'));
+ const since = Number(requests.at(-1).searchParams.get('since') || 0);
+ return { ok: true, json: async () => ({ ok: true, list: [{ kind: 'avoir', ts: 220, amount: 12.34 }, ...(since <= 150 ? [{ kind: 'avoir', ts: 150, amount: 5.67 }] : [])], next: null }) };
+};
+await ledger.readReturnsLedger('shop', ledger.selectedPeriod());
+let d = JSON.parse(cache.get('kiwi:returnsLedger'));
+assert.deepEqual(d.window, [200,300]);
+assert.equal(requests[0].searchParams.get('since'), '200');
+assert.equal(requests[0].searchParams.get('until'), '300');
+assert.equal(ledger.coversWindow(d, [100,400]), false);
+// Execute the live tile's creditStats closure, including its warming branch.
+const kpi = fs.readFileSync('assets/daterange/kpi.js', 'utf8');
+const credit = kpi.slice(kpi.indexOf('      const creditStats ='), kpi.indexOf('      if (data.tauxRetour)'));
+const ctx = vm.createContext({ localStorage, __state: { activeMerchantSlug: () => 'shop', realWindowStats: () => ({ refunds: 0 }), renderKpiBand() {} } });
+vm.runInContext(credit.replace("import('../returns-ledger.js')", 'Promise.resolve(ledger)') + '\nthis.stats = creditStats;', Object.assign(ctx, { ledger: { warmCreditReturns: p => { warms.push(p); return Promise.resolve(false); } } }));
+assert.ok(Number.isNaN(ctx.stats(100,400).credited), 'narrow cache is unknown, never a partial KPI');
+await new Promise(resolve => setTimeout(resolve, 0));
+assert.deepEqual(Array.from(warms[0]), [100,400], 'tile requests the whole summed window');
+await ledger.warmCreditReturns([100,400]);
+d = JSON.parse(cache.get('kiwi:returnsLedger'));
+assert.deepEqual(d.window, [100,400], 'fresh narrow cache cannot block wider read');
+assert.equal(ctx.stats(100,400).credited, 18.01, 'covered cache preserves centimes');
+await ledger.warmCreditReturns([0,100]);
+d = JSON.parse(cache.get('kiwi:returnsLedger'));
+assert.deepEqual(d.window, [0,400], 'comparison and current windows coexist');
+await ledger.readReturnsLedger('shop');
+assert.equal(JSON.parse(cache.get('kiwi:returnsLedger')).window, null, 'standalone full history');
+assert.equal(requests.at(-1).searchParams.has('since'), false);
+delete window.KiwiDateRange;
+assert.equal(ledger.selectedPeriod(), null);
+
+// A ready page must fetch again when the dashboard selector changes.
+const page = fs.readFileSync('assets/pages-pro/boutique-promos-returns.js', 'utf8');
+const load = page.slice(page.indexOf('  let ledgerChanged ='), page.indexOf('  function loadLiveCredits()'));
+let selected = [100,200];
+const pageReads = [];
+const pageCtx = vm.createContext({ rxView: { selectedPeriod: () => selected }, injectedLedger: { readReturnsLedger: async (slug, period) => { pageReads.push(period); return []; } }, document: { querySelector: () => null } });
+vm.runInContext("let returnsLoading = false, returnsState = '', returnsServer = false, liveReturns = [], liveReturnsSlug = 'shop'; const handlers = {};\n" + load.replace("import('../returns-ledger.js')", 'Promise.resolve(injectedLedger)') + '\nthis.load = loadReturnsLedger;', pageCtx);
+await pageCtx.load('shop');
+await pageCtx.load('shop');
+assert.equal(pageReads.length, 1, 'same period reuses ready page');
+selected = [0,200];
+await pageCtx.load('shop');
+assert.equal(pageReads.length, 2, 'selector change refreshes a ready page');
+assert.deepEqual(pageReads[1], [0,200]);
+// A live period stays open-ended, so a moving clock does not defeat the minute cache.
+window.KiwiDateRange = { bounds: () => [200, Infinity] };
+cache.delete('kiwi:returnsLedger');
+await ledger.warmCreditReturns([200,300]);
+assert.equal(requests.at(-1).searchParams.has('until'), false);
+const readsBeforeTick = requests.length;
+await ledger.warmCreditReturns([200,301]);
+assert.equal(requests.length, readsBeforeTick, 'clock tick reuses the fresh live window');
+console.log('PASS returns tile window: narrow cache rejected, wider and comparison reads, centimes and standalone history');

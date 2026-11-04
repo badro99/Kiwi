@@ -73,12 +73,12 @@ console.log(`  ✓ échanges & avoirs (${checks.length} contrôles : 7 jours, da
   /* La page et la tuile « Taux retour » lisent le registre par le même module :
      on y branche le vrai returns-ledger.js (fetch du test en global). */
   const view = await import(require('node:url').pathToFileURL(path.join(__dirname, '..', 'assets', 'returns-ledger.js')).href);
-  assert.ok(dash.includes("(await import('../returns-ledger.js')).readReturnsLedger(slug)"), 'the page reads the shared ledger module');
+  assert.ok(dash.includes('ledger.readReturnsLedger(slug, period)'), 'the page reads the shared ledger module');
   const reader = dash.slice(start, dash.indexOf('  function loadLiveCredits', start))
-    .replace("(await import('../returns-ledger.js'))", 'ledgerModule');
+    .replace("await import('../returns-ledger.js')", 'ledgerModule');
   async function run(fail) {
     const cache = [{ id: 'cached', items: [] }];
-    const context = vm.createContext({ liveReturns: cache, liveReturnsSlug: 'shop', returnsLoading: false,
+    const context = vm.createContext({ rxView: view, ledgerPeriod: '', ledgerChanged: false, liveReturns: cache, liveReturnsSlug: 'shop', returnsLoading: false,
       returnsState: '', returnsServer: false, encodeURIComponent, Number, Error,
       document: { querySelector: () => null }, calls: [], ledgerModule: view,
       fetch: async (url, options) => {

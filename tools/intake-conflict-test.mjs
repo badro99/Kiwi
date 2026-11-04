@@ -44,9 +44,9 @@ const stockPrelude = [
   grab(/  const lang = [^\n]+\n/, 'lang'),
   grab(/  const t = \(k, \.\.\.args\) => \{[\s\S]*?\n  \};/, 't'),
 ].join('\n');
-const CONFLICT_FNS = ['stIntakeMerchant', 'stIntakePrepare', 'stIntakeFetchRecorded', 'stIntakeCompareConflict', 'stRenderIntakeConflict', 'stShowIntakeConflict', 'stHandleIntakePostingConflict', 'stRestoreIntakeReview'];
+const CONFLICT_FNS = ['stIntakeRequest', 'stIntakeMerchant', 'stIntakePrepare', 'stIntakeFetchRecorded', 'stIntakeCompareConflict', 'stRenderIntakeConflict', 'stShowIntakeConflict', 'stHandleIntakePostingConflict', 'stRestoreIntakeReview'];
 function extractStock(name) {
-  const m = stockSrc.match(new RegExp('  (?:async )?function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n  \\}'));
+  const m = (stockSrc.replaceAll('S.stockState.stIntakeRequest', 'stIntakeRequest') + fs.readFileSync('assets/stock/state.js', 'utf8')).match(new RegExp('  (?:async )?function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n  \\}'));
   assert.ok(m, 'stock helper extractable: ' + name);
   return m[0];
 }
@@ -62,7 +62,7 @@ function makeCtx({ lang: lg = 'fr', fetchImpl = null, toastCalls = null, addCall
     KiwiInventory: { add: (m) => { if (addCalls) addCalls.push(m); throw new Error('must-not-add'); } },
   };
   win.window = win;
-  const ctx = vm.createContext({
+  const ctx = vm.createContext({ AbortController, setTimeout, clearTimeout,
     window: win, console,
     Date, Math, JSON, Object, Array, String, Number, Boolean, Map, Set, RegExp, Error, Promise,
     fetch: fetchImpl || (async () => { throw new Error('no-fetch-expected'); }),

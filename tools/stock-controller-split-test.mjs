@@ -18,7 +18,7 @@ for (const [file, fixture] of Object.entries(map.files)) {
   assert.equal(hash(original), fixture.sha256, file + ': frozen original hash');
   assert.equal(file === 'assets/stock/catalog.js' ? undoLabelEdits(source(file), 'assets/stock/catalog.js') : source(file), original, file + ': reconstructed byte for byte from live files');
 }
-const platform = new Set(['window', 'document', 'localStorage', 'console', 'Date', 'Math', 'Object', 'Array', 'String', 'Number', 'Set', 'Map', 'JSON', 'Promise', 'Error', 'Uint8Array', 'TextEncoder', 'fetch', 'encodeURIComponent', 'requestAnimationFrame', 'Boolean', 'CustomEvent']);
+const platform = new Set(['window', 'document', 'localStorage', 'console', 'Date', 'Math', 'Object', 'Array', 'String', 'Number', 'Set', 'Map', 'JSON', 'Promise', 'Error', 'Uint8Array', 'TextEncoder', 'fetch', 'AbortController', 'setTimeout', 'clearTimeout', 'encodeURIComponent', 'requestAnimationFrame', 'Boolean', 'CustomEvent']);
 for (const part of map.parts) {
   const text = read(part.file);
   assert.ok(text.startsWith(part.prefix) && text.endsWith(part.suffix), part.file + ': explicit wrapper');
