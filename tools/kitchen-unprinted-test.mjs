@@ -7,6 +7,7 @@
  * déposé, le dit une fois, et que la liste l'affiche dans la langue de l'écran. */
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,7 +38,7 @@ const context = {
   fetch: (url) => { all.push(url); return Promise.resolve({ json: () => Promise.resolve({ ok: true, jobs: serverJobs }) }); },
 };
 context.window = context;
-vm.runInNewContext(read('assets/kitchen-print-queue.js'), context, { filename: 'kitchen-print-queue.js' });
+vm.runInNewContext(deadlineVmSource(read('assets/kitchen-print-queue.js')), deadlineVmContext(context), { filename: 'kitchen-print-queue.js' });
 const K = context.KiwiKitchenPrint;
 
 /* Sans dépôt sur le relais, le poste ne sonde rien (pas de lecture inutile). */

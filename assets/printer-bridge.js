@@ -1041,7 +1041,7 @@
       if (name === 'kiwi:toast') { var title = String(event.detail.title || ''); if (title.indexOf(window.KiwiCaisseLang.tr('Impression échouée')) < 0 && title.indexOf(window.KiwiCaisseLang.tr('Imprimante injoignable')) < 0) return; }
       else if (!(event.detail.count || event.detail.recoverable)) return;
       if (!loading) loading = new Promise(function (resolve) {
-        var script = document.createElement('script'); script.src = '/assets/caisse-print-recovery.js?v=2';
+        var script = document.createElement('script'); script.src = '/assets/caisse-print-recovery.js?v=3';
         script.onload = function () { script.id = 'caisse-print-recovery-script'; resolve(); };
         script.onerror = function () { loading = null; script.remove(); };
         document.head.appendChild(script);

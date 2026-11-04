@@ -1136,12 +1136,11 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
     var venue = activeVenue();
     var merchant = (venue && venue.merchant) || '';
     if (!/^\d{4}$/.test(code) || !merchant) return Promise.resolve(null);
-    var controller = new AbortController();
-    var timer = setTimeout(function () { controller.abort(); }, 12000);
+    /* The shared hard deadline: it rejects even when the transport ignores abort,
+       so the offline fallback below is always reached. */
     lastVerify = { status: 0, wait: 0, offline: false };
-    return fetch('/api/pin/verify', {
+    return fetchDeadline('/api/pin/verify', {
       method: 'POST',
-      signal: controller.signal,
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ merchant: merchant, pin: code, ...(action ? { action: action } : {}) }),
     })
@@ -1172,8 +1171,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
       .catch(function () {
         if (opts && opts.needsServer) { lastVerify.offline = true; return null; }
         return verifyOfflinePin(merchant, code);
-      })
-      .finally(function () { clearTimeout(timer); });
+      });
   }
   /* The 2027 pad's request (assets/kit/pin-flow.js): the server's answer as
      it came, status and body, so every row of §10.2's response table can be

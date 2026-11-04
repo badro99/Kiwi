@@ -46,9 +46,12 @@
       try {
         const url = '/api/retail-balances?merchant=' + encodeURIComponent(merchant)
           + '&q=' + encodeURIComponent(String(query || '').slice(0, 64));
-        const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
+        /* Hard deadline on the request and its body: a connection that is up but
+           stalled must not hold back the local journal. */
+        const { deadlineFetch } = await import('./request-deadline.mjs');
+        const response = await deadlineFetch(url, { credentials: 'same-origin', cache: 'no-store' }, 6000);
         if (response.ok) remote = (await response.json()).balances || [];
-      } catch (_) { /* The local journal is still readable during an outage. */ }
+      } catch (_) { /* The local journal is still readable during an outage or a stall. */ }
     }
     const merged = new Map(local.map(row => [row.id, row]));
     remote.forEach(row => {

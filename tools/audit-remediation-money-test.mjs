@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { onRequestPost as refundPost } from '../functions/api/sale/refund.js';
@@ -25,6 +26,7 @@ const audit = (label, condition) => {
 
 /* ── F01/F02 · actual cash-session browser module ───────────────────────── */
 const cashSource = fs.readFileSync(path.join(ROOT, 'assets/cash-sessions.js'), 'utf8');
+const tick = () => new Promise((resolve) => setImmediate(resolve));
 function cashFixture() {
   const storage = new Map();
   const pending = [];
@@ -44,25 +46,27 @@ function cashFixture() {
     },
     document: { readyState: 'loading', addEventListener() {} },
     crypto, Date, Math, JSON, CustomEvent,
-    setTimeout(_fn, ms) { timers.push(ms); },
+    setTimeout(_fn, ms) { if (ms !== 12000) timers.push(ms); }, /* the 12 s request deadline is not a retry delay */
     setInterval() {},
     fetch(_url, options) {
       return new Promise((resolve) => pending.push({ resolve, event: JSON.parse(options.body) }));
     },
   };
-  vm.runInNewContext(cashSource, context, { filename: 'assets/cash-sessions.js' });
+  vm.runInNewContext(deadlineVmSource(cashSource), deadlineVmContext(context), { filename: 'assets/cash-sessions.js' });
   return { api: window.KiwiCashSessions, pending, timers };
 }
 
 for (const status of [403, 409]) {
   const f = cashFixture();
   f.api.emit({ id: `cash-${status}`, sessionId: 'shift-1', eventType: 'open', occurredAt: 1 });
+  await tick();
   assert.equal(f.pending.length, 1);
-  f.pending[0].resolve({ ok: false, status });
+  f.pending[0].resolve({ ok: false, status, json: async () => ({}) });
   await new Promise((resolve) => setImmediate(resolve));
   audit(`cash event survives HTTP ${status} for later recovery`, f.api._test.readOutbox().length === 1);
   f.api._test.flush();
-  f.pending[1]?.resolve({ ok: true, status: 201 });
+  await tick();
+  f.pending[1]?.resolve({ ok: true, status: 201, json: async () => ({}) });
   await new Promise((resolve) => setImmediate(resolve));
   audit(`cash event retries with the same ID after HTTP ${status}`, f.pending.at(-1)?.event.id === `cash-${status}`);
 }
@@ -72,11 +76,12 @@ for (const status of [403, 409]) {
   const notOpen = () => ({ ok: false, status: 409, json: () => Promise.resolve({ error: 'session-not-open' }) });
   f.api.emit({ id: 'cash-orphan', sessionId: 'shift-lost', eventType: 'movement', occurredAt: 5 });
   f.api.emit({ id: 'cash-next', sessionId: 'shift-2', eventType: 'open', occurredAt: 6 });
+  await tick();
   for (let i = 0; i < 3; i += 1) {
     f.pending.at(-1).resolve(notOpen());
     await new Promise((resolve) => setImmediate(resolve));
     await new Promise((resolve) => setImmediate(resolve));
-    if (i < 2) f.api._test.flush();
+    if (i < 2) { f.api._test.flush(); await tick(); }
   }
   audit('a refused cash event backs off instead of retrying every 1.5 s',
     f.timers.filter((ms) => ms >= 1500).slice(0, 2).join() === '1500,3000');
@@ -85,13 +90,15 @@ for (const status of [403, 409]) {
       && event.rejectionReason === 'session-not-open')
     && f.api._test.readOutbox().map((event) => event.id).join() === 'cash-next');
   f.api._test.flush();
+  await tick();
   audit('the parked event no longer blocks the next cash event', f.pending.at(-1).event.id === 'cash-next');
 }
 
 {
   const f = cashFixture();
   f.api.emit({ id: 'cash-422', sessionId: 'shift-1', eventType: 'close', occurredAt: 3 });
-  f.pending[0].resolve({ ok: false, status: 422 });
+  await tick();
+  f.pending[0].resolve({ ok: false, status: 422, json: async () => ({}) });
   await new Promise((resolve) => setImmediate(resolve));
   audit('HTTP 422 moves the cash event to a durable rejected queue',
     f.api._test.readOutbox().length === 0
@@ -111,13 +118,15 @@ for (const status of [403, 409]) {
   const f = cashFixture();
   f.api.emit({ id: 'cash-a', sessionId: 'shift-1', eventType: 'open', occurredAt: 1 });
   f.api.emit({ id: 'cash-b', sessionId: 'shift-1', eventType: 'movement', occurredAt: 2 });
+  await tick();
   assert.equal(f.pending.length, 1, 'the first send owns the flush lock');
-  f.pending[0].resolve({ ok: true, status: 201 });
+  f.pending[0].resolve({ ok: true, status: 201, json: async () => ({}) });
   await new Promise((resolve) => setImmediate(resolve));
   audit('acknowledging A does not erase newer unsent B', f.api._test.readOutbox().map((x) => x.id).join() === 'cash-b');
   f.api._test.flush();
+  await tick();
   audit('B is sent after A with its own durable ID', f.pending.length === 2 && f.pending[1].event.id === 'cash-b');
-  f.pending[1].resolve({ ok: true, status: 201 });
+  f.pending[1].resolve({ ok: true, status: 201, json: async () => ({}) });
   await new Promise((resolve) => setImmediate(resolve));
   audit('both cash-session events are eventually acknowledged', f.api._test.readOutbox().length === 0);
 }

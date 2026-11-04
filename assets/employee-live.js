@@ -51,8 +51,12 @@
     }).then(async function (r) {
       var serverDate = r.headers && r.headers.get('Date');
       if (serverDate && Number.isFinite(Date.parse(serverDate))) clockOffset = Date.parse(serverDate) - Date.now();
-      let data = {};
-      try { data = await r.json(); } catch (_) { console.warn("[employee-live] call failed"); }
+      let data = {}, unreadable = false;
+      try { data = await r.json(); } catch (_) { unreadable = true; console.warn("[employee-live] call failed"); }
+      /* Un 2xx dont le corps est illisible n'est ni un succès ni un refus : on
+         ne sait pas ce que le serveur a enregistré. Sans statut, la file
+         garde le geste et le rejoue sous le même opId. */
+      if (r.ok && unreadable) { var u = new Error('response-unreadable'); u.code = 'response-unreadable'; u.uncertain = true; throw u; }
       if (!r.ok) { var e = new Error(data.error || 'employee-request-failed'); e.code = data.error || ''; e.status = r.status; throw e; }
       return data;
     });
