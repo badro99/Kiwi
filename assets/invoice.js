@@ -32,6 +32,36 @@
     } catch (_) { return fr; }
   }
 
+  function invoiceErrorText(err) {
+    const codes = {
+      'invalid-type': ['invalid-type', 'Type de document invalide.'],
+      'locked': ['locked', 'Document émis non modifiable.'],
+      'credit-exceeds-invoice': ['credit-exceeds-invoice', 'L’avoir dépasse le solde de la facture.'],
+      'conflict': ['conflict', 'Émission impossible pour le moment, réessayez.'],
+      'invalid-lines': ['invalid-lines', 'Vérifiez les lignes et le total de la facture.'],
+      'exempt-mention-required': ['exempt-mention-required', 'Indiquez la base légale d’exonération.'],
+      'invalid-reason': ['invalid-reason', 'Le motif de l’avoir est obligatoire.'],
+      'not-issued': ['not-issued', 'Le document n’est pas émis.'],
+      'ice-digits': ['ice-digits', 'L’ICE ne contient que des chiffres.'],
+      'ice-length': ['ice-length', 'L’ICE doit comporter exactement 15 chiffres.'],
+      'ice-checksum': ['ice-checksum', 'Vérifiez chaque chiffre de l’ICE.'],
+
+      'invalid-ice': ['iceInvalid', 'ICE client invalide (15 chiffres requis).'],
+      'invalid-customer': ['invalidRequest', 'Informations de facturation invalides.'],
+      'missing-sale-id': ['invalidRequest', 'Informations de facturation invalides.'],
+      'bad-json': ['invalidRequest', 'Informations de facturation invalides.'],
+      'forbidden-merchant': ['forbidden', 'Accès à cette facture refusé.'],
+    };
+    const iceDetails = { digits: 'ice-digits', length: 'ice-length', checksum: 'ice-checksum' };
+    const detailKey = iceDetails[err?.reason] || ({
+      "L'ICE ne contient que des chiffres.": 'ice-digits',
+      "L'ICE doit comporter exactement 15 chiffres.": 'ice-length',
+      "Cet ICE ne passe pas le contrôle de ses deux derniers chiffres. Vérifiez chaque chiffre.": 'ice-checksum',
+    })[err?.detail];
+    const [key, fallback] = codes[detailKey || err?.error || err?.code] || ['serverRefusal', 'Impossible de créer la facture. Réessayez.'];
+    return L(key, fallback);
+  }
+
   function round2(n) {
     return Math.round((+n || 0) * 100) / 100;
   }
@@ -856,7 +886,7 @@
         const err = data;
         if (err?.error === 'invalid-ice') {
           abandon();
-          toast(L('iceInvalid', 'ICE client invalide (15 chiffres requis).') + (err.detail ? '\n' + L('technical', 'Détail technique') + ' : ' + err.detail : ''), TOAST.error);
+          toast(invoiceErrorText(err), TOAST.error);
           return null;
         }
         if (err?.error === 'unknown-sale' || res.status === 404) {
@@ -865,8 +895,7 @@
           return null;
         }
         abandon();
-        const key = ['invalid-customer', 'missing-sale-id', 'bad-json'].includes(err?.error) ? 'invalidRequest' : err?.error === 'forbidden-merchant' ? 'forbidden' : 'serverRefusal';
-        toast(L(key, key === 'invalidRequest' ? 'Informations de facturation invalides.' : key === 'forbidden' ? 'Accès à cette facture refusé.' : 'Impossible de créer la facture. Réessayez.') + (err?.detail ? '\n' + L('technical', 'Détail technique') + ' : ' + err.detail : ''), TOAST.error);
+        toast(invoiceErrorText(err), TOAST.error);
         return null;
       }
 
