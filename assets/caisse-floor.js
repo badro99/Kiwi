@@ -990,9 +990,9 @@
         const tag = d.kind === 'pct' ? `Remise ${d.value} %` : 'Remise';
         itemsHTML += `
         <div class="rp-item rp-item--discount">
-          <span class="rp-item-qty" style="cursor:pointer;" data-action="edit-discount" title="Modifier la remise"><i data-lucide="badge-percent"></i></span>
-          <span class="rp-item-name" style="cursor:pointer;" data-action="edit-discount" title="Modifier la remise">${tag}${d.reason ? ' · ' + d.reason : ''}</span>
-          <span class="rp-item-price mono" style="cursor:pointer;" data-action="edit-discount" title="Modifier la remise">−${fmtMAD(discAmt)}</span>
+          <button type="button" class="rp-item-qty"  data-action="edit-discount" title="Modifier la remise" aria-label="Modifier la remise"><i data-lucide="badge-percent"></i></button>
+          <button type="button" class="rp-item-name"  data-action="edit-discount" title="Modifier la remise" aria-label="Modifier la remise">${tag}${d.reason ? ' · ' + d.reason : ''}</button>
+          <button type="button" class="rp-item-price mono"  data-action="edit-discount" title="Modifier la remise" aria-label="Modifier la remise">−${fmtMAD(discAmt)}</button>
           <button type="button" class="rp-item-del-btn" data-action="remove-table-discount" title="Supprimer la remise" aria-label="Supprimer la remise">
             <i data-lucide="trash-2"></i>
           </button>

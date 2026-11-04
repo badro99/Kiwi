@@ -738,7 +738,7 @@ for (const test of [
      sans italique ni contrôle transparent, avec le style calculé revu. */
   'skin-matrix-browser-test.mjs',
   'wave-p-polish-test.mjs',
-  'employee-timezone-test.mjs',
+  'employee-timezone-test.mjs', 'cx-a11y-logic-test.mjs',
   'wave-n-caps-test.mjs',
   'employee-timezone-browser-test.mjs',
   'table-visit-reuse-test.mjs',

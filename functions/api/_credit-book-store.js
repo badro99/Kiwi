@@ -73,7 +73,7 @@ export function unionBook(stored, incoming) {
     const have = byId.get(String(c.id));
     if (!have) {
       const copy = clone(c);
-      delete copy.creditAlerts;
+      delete copy.creditAlerts; delete copy.creditAlertsMore;
       out.push(copy);
       byId.set(String(c.id), copy);
       continue;
@@ -87,7 +87,7 @@ export function unionBook(stored, incoming) {
     }
     const seenAll = [...known.keys()].every((key) => theirs.has(key));
     if (seenAll) {
-      for (const k of Object.keys(c)) if (k !== 'hist' && k !== 'creditAlerts' && k !== 'id') have[k] = clone(c[k]);
+      for (const k of Object.keys(c)) if (k !== 'hist' && k !== 'creditAlerts' && k !== 'creditAlertsMore' && k !== 'id') have[k] = clone(c[k]);
     }
     for (const h of c.hist || []) {
       const key = entryKey(c, h);

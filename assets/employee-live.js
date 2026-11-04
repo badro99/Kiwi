@@ -146,7 +146,7 @@
     var title = document.createElement('h2'); title.textContent = words.title; panel.appendChild(title);
     items.forEach(function (item) {
       var row = document.createElement('div'), label = document.createElement('p');
-      label.textContent = [item.kind === 'clock-in' ? words.in : words.out, new Date(Number(item.at)).toLocaleString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })].join(' · ');
+      label.textContent = [item.kind === 'clock-in' ? words.in : words.out, new Date(Number(item.at)).toLocaleString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { timeZone: (globalThis.KiwiZoneLaw?.effectiveZone(lastData && lastData.store && lastData.store.timezone || 'Africa/Casablanca', Number(item.at)) || (lastData && lastData.store && lastData.store.timezone || 'Africa/Casablanca')), year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })].join(' · ');
       row.appendChild(label);
       var button = document.createElement('button'); button.type = 'button'; button.textContent = words.dismiss;
       button.addEventListener('click', function () {

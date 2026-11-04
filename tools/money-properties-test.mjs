@@ -312,6 +312,7 @@ console.log('■ Prix d’une ligne de caisse Maison');
     return m[0];
   };
   const MAISON = [
+    sharedRules(MSRC),
     mStatement(/const shelf = [^\n]+\n/),
     mFn('function promoFor('),
     mFn('function pieceUnitPrice('),

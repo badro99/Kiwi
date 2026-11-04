@@ -1779,7 +1779,7 @@
     }
     .rp-item--discount .rp-item-qty svg { width: 13px; height: 13px; }
     .rp-item--discount .rp-item-name { color: var(--forest); font-weight: 500; }
-    .rp-item--discount .rp-item-price { color: var(--forest); }
+    .rp-item--discount .rp-item-price { color: var(--forest); }:where(.rp-item--discount button[data-action="edit-discount"]){all:unset;cursor:pointer}.rp-item--discount button[data-action="edit-discount"]:focus-visible{outline:2px solid var(--atlas);outline-offset:2px}
     .rp-item-del-btn {
       width: 24px; height: 24px;
       border-radius: 6px;

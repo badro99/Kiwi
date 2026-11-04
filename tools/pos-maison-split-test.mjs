@@ -13,6 +13,18 @@ if (!vm.SourceTextModule) {
 const read = file => fs.readFileSync(file, 'utf8');
 const original = gunzipSync(fs.readFileSync('tools/fixtures/pos-maison/original.js.gz')).toString();
 const map = JSON.parse(read('tools/fixtures/pos-maison/split.json'));
+// A fresh byte proof for the current module seams keeps the historical monolith
+// comparison intact, while edits after the split must be explicitly resealed.
+const current = gunzipSync(fs.readFileSync('tools/fixtures/pos-maison/current.js.gz')).toString();
+assert.equal(createHash('sha256').update(current).digest('hex'), map.current.sha256);
+const rebuilt = [];
+for (const part of map.current.parts) {
+  const body = read(part.file).slice(part.header.length, -part.footer.length);
+  assert.equal(read(part.file), part.header + current.slice(part.start, part.end) + part.footer, part.file + ': current sealed module seam');
+  rebuilt.push(body);
+}
+assert.equal(rebuilt.join(''), current, 'current module bodies reconstruct exactly');
+console.log('PASS Maison current split: exact byte reconstruction of all four live module bodies');
 const pristine = Object.entries(map.splitFiles).every(([file, hash]) => createHash('sha256').update(fs.readFileSync(file)).digest('hex') === hash);
 if (pristine) {
 assert.equal(createHash('sha256').update(original).digest('hex'), map.sha256);
@@ -60,7 +72,7 @@ async function modules(context) {
      assets/money-cents.js (les centimes, comme la caisse boutique). */
   /* Plus les livraisons partagées avec la boutique : la fiche destinataire
      (Maison et boutique), le Z en deux tickets et la page Livraisons. */
-  assert.equal(cache.size, 17, 'exactly one instance per stamped module, including cyclic imports (the shared product photos are the seventh, the till inventory access the eighth, then delivery.js, delivery-card.js, z-split.js, livraisons.js, the 2027 kit, pos-maison/kit-2027.js, Ozon Express, pos-boutique/ozon.js, the ticket discount, pos-maison/ticket-remise.js, the movements window, pos-maison/inv-moves.js, and the delivery exchange, pos-boutique/exchange.js)');
+  assert.equal(cache.size, 18, 'exactly one instance per stamped module, including shared loyalty and cyclic imports (the shared product photos are the seventh, the till inventory access the eighth, then delivery.js, delivery-card.js, z-split.js, livraisons.js, the 2027 kit, pos-maison/kit-2027.js, Ozon Express, pos-boutique/ozon.js, the ticket discount, pos-maison/ticket-remise.js, the movements window, pos-maison/inv-moves.js, and the delivery exchange, pos-boutique/exchange.js)');
 }
 for (const real of [false,true]) {
   const a = realm(real), b = realm(real);

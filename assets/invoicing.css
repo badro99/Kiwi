@@ -471,6 +471,8 @@ html[data-theme="dark"] .inv-overlay {
 
 @media (max-width: 620px) {
   .inv-tabs { padding-inline: 10px; }
+  .inv-overlay button, .inv-overlay .inv-btn.small, .inv-overlay input, .inv-overlay select, .inv-overlay .inv-line-row input, .inv-overlay .inv-line-row select { min-height: 44px; min-width: 44px; }
+  .inv-line-row { grid-template-columns: 56px minmax(0, 1fr) 62px 44px; }
   .inv-banner { flex-direction: column; align-items: stretch; }
   .inv-sheet-back { place-items: end center; padding: 0; }
   .inv-sheet { border-radius: 18px 18px 0 0; }

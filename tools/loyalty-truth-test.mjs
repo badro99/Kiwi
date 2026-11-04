@@ -259,11 +259,13 @@ console.log('\nMaison : la remise fidélité et le toast');
   const read = (f) => maisonSource(fs.readFileSync(path.join(ROOT, f), 'utf8'));
   for (const f of ['assets/pos-maison.js']) {
     const src = read(f);
-    const fn = src.slice(src.indexOf('function rewardDiscount('), src.indexOf('function rewardDiscount(') + 900);
     /* Décision 2026-10-26 : la remise en pourcentage au centime le plus proche, la même règle
        que functions/api/_rules-loyalty.js (au dirham, l'ancien arrondi vers le bas évitait
        0,50 de trop ; au centime, l'écart est d'au plus un centime). */
-    check(/Math\.round\(base \* Math\.min\(100, Math\.max\(0, \+r\.value \|\| 0\)\) \+ 1e-9\) \/ 100/.test(fn) && !/base - shelf\(/.test(fn),
+    const ctx = vm.createContext({ lineUnit: l => l.price });
+    load(ctx, f, ['rewardDiscount']);
+    check(ctx.rewardDiscount({ reward: { clientId: 'fixture', kind: 'percent', value: 15 }, client: 'fixture', lines: [] }, 12.55) === 1.88
+      && ctx.rewardDiscount({ reward: { clientId: 'fixture', kind: 'percent', value: 3 }, client: 'fixture', lines: [] }, 13.37) === 0.4,
       `${f}: a percent reward is rounded to the nearest centime, the rule every trade shares`);
     check(!/Math\.round\(receivedNow \* \(\(cfg\.amount/.test(src) && !/Math\.round\(receivedNow \/ 10\)/.test(src),
       `${f}: the points toast never rounds up nor assumes one point per 10 MAD`);

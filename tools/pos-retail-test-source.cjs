@@ -19,5 +19,6 @@ module.exports = function retailSource(source) {
     for (const f of chunk.fragments) { const length = f.end - f.start; parts.push({ start: f.start, text: body.slice(offset, offset + length) }); offset += length; }
     if (offset !== body.length) exact = false;
   }
-  return map.prefix + (exact ? parts.sort((a,b) => a.start - b.start).map(p => p.text).join('') : bodies.join('\n')) + map.suffix;
+  const loyalty = vertical === 'maison' ? fs.readFileSync(path.join(root, 'assets/loyalty-rules.js'), 'utf8').replace(/export const rewardDiscount[^\n]+\n/, 'const loyaltyRewardDiscount = KiwiLoyaltyRules.rewardDiscount;\n') : '';
+  return map.prefix + loyalty + (exact ? parts.sort((a,b) => a.start - b.start).map(p => p.text).join('') : bodies.join('\n')) + map.suffix;
 };

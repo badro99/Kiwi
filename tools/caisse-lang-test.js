@@ -63,6 +63,10 @@ check(L.langs.filter((x) => x.id === 'ar')[0].dir === 'rtl', 'l\'arabe est décl
 
 /* ── correspondance exacte ───────────────────────────────────────────────── */
 L.set('en');
+check(L.tr('Modifier la remise') === 'Edit discount', 'discount edit accessible name is translated in English');
+L.set('ar');
+check(L.tr('Modifier la remise') === 'تعديل التخفيض', 'discount edit accessible name is translated in Arabic');
+L.set('en');
 check(L.t('Encaisser') === 'Take payment', 'une phrase connue est traduite');
 check(L.t('Caftan Fassi') === 'Caftan Fassi', 'un nom d\'article du commerçant traverse intact');
 

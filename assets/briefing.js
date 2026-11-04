@@ -134,7 +134,15 @@
     var list = function (L) { return used.map(function (k) { return LIMITS[k][L === 'ar' ? 5 : L === 'en' ? 4 : 3] + ' ' + num(shown(k), L); }).join(', '); };
     line.evidence.source += ' · ' + ({fr:'Seuils',en:'Thresholds',ar:'العتبات'}[lang()]) + ': ' + list(lang());
     if (line.evidence.text) ['fr', 'en', 'ar'].forEach(function (L) {
-      if (line.evidence.text[L]) { var suffix = ' · ' + { fr: 'Seuils : ', en: 'Thresholds: ', ar: 'العتبات: ' }[L] + list(L); line.evidence.text[L] = line.evidence.text[L].slice(0, Math.max(0, 400 - suffix.length)) + suffix; }
+      if (!line.evidence.text[L]) return;
+      var suffix = ' · ' + { fr: 'Seuils : ', en: 'Thresholds: ', ar: 'العتبات: ' }[L] + list(L);
+      var text = line.evidence.text[L], room = Math.max(0, 400 - suffix.length);
+      if (text.length > room) {
+        var cut = text.slice(0, Math.max(0, room - 1)).search(/\s+\S*$/u);
+        // Spaces inside a grouped amount are not safe places to cut a number.
+        text = (cut < 0 ? '' : text.slice(0, cut).replace(/[\p{N}.,٬٫%٪+\-−\s]+$/u, '')) + '…';
+      }
+      line.evidence.text[L] = text + suffix;
     });
     return line;
   }
@@ -633,61 +641,6 @@
     if (!place(el)) return el.parentNode ? el : null;
     return el;
   }
-  function installStyle() {
-    if (document.querySelector('[data-briefing-style]')) return;
-    var s = document.createElement('style'); s.setAttribute('data-briefing-style', '');
-    s.textContent = [
-      /* Section « point du matin » dans la carte Kiwi Insights : filet, kicker mono, liste de signaux. */
-      '.briefing-inline{display:flex;flex-direction:column;gap:10px;margin:4px 0 2px;padding-top:16px;border-top:1px solid var(--n-200)}',
-      '.briefing-kicker{display:flex;align-items:center;gap:10px;font:600 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--atlas)}',
-      /* La prévision : texte courant (pas le kicker mono), poussée à droite, repliée sous le titre sur étroit. */
-      '.briefing-kicker{flex-wrap:wrap;row-gap:6px}',
-      '.briefing-weather{margin-inline-start:auto;display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 12px;font:500 12px/1.3 var(--sans);letter-spacing:0;text-transform:none;color:var(--n-700)}',
-      '.briefing-wx-day{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}',
-      '.briefing-wx-day svg,.briefing-wx-day i{width:15px;height:15px;color:var(--atlas);flex:0 0 15px}',
-      '.briefing-weather small{font:500 10px/1 var(--sans);color:var(--n-500)}',
-      '.briefing-kicker small{font:500 10.5px/1 var(--mono);letter-spacing:.06em;text-transform:none;color:var(--n-500)}',
-      /* Une ligne = un signal : marqueur, titre, preuve, actions. Grille 1fr/auto sur large, empilée sur étroit. */
-      '.briefing-line{display:grid;grid-template-columns:1fr auto;gap:6px 18px;align-items:center;padding:12px 14px 12px 16px;border:1px solid var(--n-200);border-radius:14px;background:color-mix(in srgb,var(--atlas) 5%,transparent);position:relative;animation:briefing-in .32s cubic-bezier(.2,.7,.2,1) both}',
-      '.briefing-line:nth-child(3){animation-delay:.05s}.briefing-line:nth-child(4){animation-delay:.1s}.briefing-line:nth-child(5){animation-delay:.15s}',
-      '.briefing-line::before{content:"";position:absolute;inset-inline-start:-1px;top:14px;bottom:14px;width:3px;border-radius:3px;background:var(--atlas)}',
-      '.briefing-line .hai-rec-title{font-size:14px;font-weight:600;line-height:1.35;letter-spacing:-.005em}',
-      '.briefing-evidence{grid-column:1;font:500 10.5px/1.4 var(--mono);letter-spacing:.02em;color:var(--n-500)}',
-      '.briefing-actions{grid-column:2;grid-row:1/span 2;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}',
-      '.briefing-actions button{border:1px solid var(--n-300);background:transparent;color:var(--n-600);border-radius:999px;padding:7px 12px;font:600 11.5px/1 var(--sans);letter-spacing:-.005em;cursor:pointer;transition:border-color .14s ease,color .14s ease,background .14s ease,transform .09s ease}',
-      '.briefing-actions button:hover{border-color:var(--atlas);color:var(--atlas)}.briefing-actions button:active{transform:translateY(1px)}',
-      '.briefing-actions button[data-briefing-propose]{background:var(--atlas);border-color:var(--atlas);color:var(--paper)}',
-      '.briefing-actions button[data-briefing-propose]:hover{background:var(--riad);border-color:var(--riad);color:var(--paper)}',
-      /* État calme : une seule rangée feutrée, sans bordure ni marqueur plein. */
-      '.briefing-empty{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;padding:2px 0 0}',
-      '.briefing-empty::before{content:"";width:8px;height:8px;border-radius:50%;border:1.5px solid var(--mint);align-self:center;flex:none}',
-      '.briefing-empty .hai-rec-title{font-size:14px;font-weight:600}.briefing-empty .hai-rec-obs{margin:0;font-size:13px;color:var(--n-500)}',
-      /* Badge d’état en tête de carte, aligné sur l’œil-de-bœuf KIWI INSIGHTS. */
-      '.briefing-status{position:absolute;top:0;inset-inline-end:0;display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:999px;border:1px solid var(--n-200);font:600 11px/1 var(--sans);letter-spacing:-.005em;color:var(--n-600);background:transparent;white-space:nowrap}',
-      '.briefing-status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 22%,transparent)}',
-      '.briefing-status.is-alert{color:var(--atlas);border-color:color-mix(in srgb,var(--atlas) 40%,transparent);background:color-mix(in srgb,var(--atlas) 7%,transparent)}',
-      '.briefing-status.is-alert::before{background:var(--atlas);box-shadow:0 0 0 3px color-mix(in srgb,var(--atlas) 18%,transparent)}',
-      /* Réglages : un pavé par règle, un champ = nom, saisie, une phrase d'aide. */
-      '.briefing-settings,.briefing-rule{font:500 12.5px/1.4 var(--sans);color:var(--n-700)}',
-      '.briefing-settings>summary,.briefing-rule>summary{cursor:pointer;font-weight:600;color:var(--n-600)}',
-      '.briefing-rule{margin-top:8px;padding:8px 12px;border:1px solid var(--n-200);border-radius:12px}',
-      '.briefing-set-intro{margin:8px 0 0;color:var(--n-500)}',
-      '.briefing-set-field{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;padding:8px 0;border-top:1px solid var(--n-200)}',
-      '.briefing-set-name{font-weight:600;color:var(--n-700)}',
-      '.briefing-set-field input{width:7.5em;padding:6px 8px;border:1px solid var(--n-300);border-radius:8px;background:transparent;color:inherit;font:inherit}',
-      '.briefing-set-field input[aria-invalid="true"]{border-color:var(--atlas)}',
-      '.briefing-set-help,.briefing-set-error{grid-column:1/-1;font:500 11.5px/1.4 var(--sans);color:var(--n-500)}',
-      '.briefing-set-error:empty{display:none}',
-      '.briefing-reset{margin-top:8px;border:1px solid var(--n-300);background:transparent;color:var(--n-600);border-radius:999px;padding:7px 12px;font:600 11.5px/1 var(--sans);cursor:pointer}',
-      '.briefing-reset:hover:not(:disabled){border-color:var(--atlas);color:var(--atlas)}.briefing-reset:disabled{opacity:.5;cursor:default}',
-      /* Rien n'a pris sur cet appareil : une ligne posée, pas une alerte rouge. */
-      '.briefing-unsaved{margin:0;font:500 12px/1.4 var(--sans);color:var(--n-600)}',
-      '@keyframes briefing-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}',
-      '@media (max-width:720px){.briefing-line{grid-template-columns:1fr}.briefing-actions{grid-column:1;grid-row:auto;justify-content:flex-start;margin-top:4px}.briefing-status{position:static;align-self:flex-start;margin-top:-6px}}',
-      '@media (prefers-reduced-motion:reduce){.briefing-line{animation:none}}'
-    ].join('');
-    document.head.appendChild(s);
-  }
   function statusBadge(el, t, n) {
     var host = el.closest && el.closest('.hero-right'); if (!host) return;
     var b = host.querySelector('[data-briefing-status]');
@@ -743,7 +696,6 @@
     if (event.target.closest && event.target.closest('[data-briefing-cloud-retry]')) retryCloud();
   });
   function boot() {
-    installStyle();
     if (!isReal()) return;
     persistence.reload(); attachCloud();
     Promise.resolve(persistence.bind()).catch(function () { console.warn("[briefing] boot failed"); }).then(function () { compute(); });

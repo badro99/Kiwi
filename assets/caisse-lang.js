@@ -1643,7 +1643,7 @@
       "Échange annulé, rien n'a bougé": ['Exchange cancelled, nothing changed', 'تم إلغاء الاستبدال، لم يتغير شيء'],
       'Numéro attribué': ['Number assigned', 'تم تعيين الرقم'],
       'Numéro de ticket toujours indisponible': ['Ticket number still unavailable', 'رقم التذكرة ما زال غير متاح'],
-      'Ticket vidé, articles remis en stock': ['Receipt cleared, items back in stock', 'تم إفراغ التذكرة وإرجاع المنتجات للمخزون'],
+      'Modifier la remise': ['Edit discount', 'تعديل التخفيض'], 'Ticket vidé, articles remis en stock': ['Receipt cleared, items back in stock', 'تم إفراغ التذكرة وإرجاع المنتجات للمخزون'],
       'Récompense retirée du ticket': ['Reward removed from the receipt', 'أُزيلت المكافأة من التذكرة'],
       'Pas encore de récompense pour cette cliente': ['No reward for this customer yet', 'لا توجد مكافأة لهذه الزبونة بعد'],
       'Le nom est requis pour la fiche': ['A name is required for the profile', 'الاسم مطلوب للملف'],
