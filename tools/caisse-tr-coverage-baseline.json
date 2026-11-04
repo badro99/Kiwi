@@ -1,10 +1,4 @@
 {
   "note": "Untranslated till phrases per file (caisse-tr-coverage-test.mjs). Pins only go down; KIWI_UPDATE_TR_BASELINE=1 after adding translations to assets/caisse-lang.js.",
-  "files": {
-    "assets/clients-book.js": 4,
-    "assets/clients-book/profiles.js": 2,
-    "assets/pos-boutique/kit-2027.js": 4,
-    "assets/pos-maison/sales.js": 4,
-    "assets/printer/pairing-ui.js": 1
-  }
+  "files": {}
 }

@@ -2130,7 +2130,7 @@
       'Reprenez le service pour transmettre': ['Resume the shift to send', 'استأنف الوردية للإرسال'],
       'opérations conservées': ['operations kept', 'العمليات محفوظة'],
       'Service requis': ['Shift required', 'الوردية مطلوبة'],
-      'Ouvrez la caisse avec un employé en service': ['Open the till with an employee on shift', 'افتح الصندوق بموظف في الخدمة'],
+      'Ouvrez la caisse avec un employé en service': ['Open the till with an employee on shift', 'افتح الصندوق بموظف في الخدمة'], "Page précédente": ["Previous page", "الصفحة السابقة"], "Page suivante": ["Next page", "الصفحة التالية"], "Utilisé": ["Redeemed", "تم استعماله"], "Annulé": ["Cancelled", "ملغى"], "Service": ["Shift", "الوردية"], "Cet appareil": ["This device", "هذا الجهاز"], "Aucun article": ["No items", "لا توجد أصناف"], "Aucun article trouvé": ["No items found", "لم يتم العثور على أي صنف"], "Changer d'article": ["Change item", "تغيير الصنف"], "Touchez l’article cassé dans la liste ci-dessus.": ["Tap the broken item in the list above.", "المس الصنف المكسور في القائمة أعلاه."], "Aucun article ne correspond.": ["No items match.", "لا يوجد صنف مطابق."], "Choisissez d’abord l’article cassé": ["Choose the broken item first", "اختر الصنف المكسور أولاً"], "Bluetooth": ["Bluetooth", "بلوتوث"],
     };
     Object.keys(Q).forEach(function (k) {
       if (!DICT.en[k]) DICT.en[k] = Q[k][0];

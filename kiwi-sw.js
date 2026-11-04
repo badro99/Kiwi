@@ -35,7 +35,7 @@ var SHELL = [
   '/assets/money-cents.js?v=4',
   '/assets/pages-pro/boutique-promos-returns.js?v=15',
   '/assets/day-report-conflicts.js?v=2',
-  '/assets/printer/pairing-lang.js?v=12',
+  '/assets/printer/pairing-lang.js?v=13',
   '/assets/planning/shift-editor.js?v=5',
   '/assets/planning/csv-import.js?v=3',
   '/assets/planning/optimiser.js?v=5',
@@ -384,7 +384,7 @@ var SHELL = [
   '/assets/live-socket.js?v=5',
   '/assets/escpos.js?v=19',
   '/assets/printer/transports.js?v=2',
-  '/assets/printer-bridge.js?v=55',
+  '/assets/printer-bridge.js?v=56',
   '/assets/printer/pairing-ui.js?v=13',
   '/assets/barcode.js?v=4',
   '/assets/scan-wedge.js?v=1',
@@ -400,7 +400,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=26',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=98',
+  '/assets/caisse-lang.js?v=99',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=8',

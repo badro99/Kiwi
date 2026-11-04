@@ -208,8 +208,8 @@
     "sha": "003a914f6bb7c0b0"
   },
   "assets/caisse-lang.js": {
-    "v": "98",
-    "sha": "25118c3431e3a440"
+    "v": "99",
+    "sha": "dc7e360a657956d1"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1828,12 +1828,12 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "55",
-    "sha": "8b18eacd3b1f096a"
+    "v": "56",
+    "sha": "6240030c49a0dfba"
   },
   "assets/printer/pairing-lang.js": {
-    "v": "12",
-    "sha": "d044efb25fb4a0e6"
+    "v": "13",
+    "sha": "fa9902aaff2d3d07"
   },
   "assets/printer/pairing-ui.js": {
     "v": "13",
