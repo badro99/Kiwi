@@ -20,12 +20,19 @@ export const budgets = new WeakMap();
 const RATES = new Map([[GLM_FLASH, [.15, .5]], [GEMMA_VISION, [.1, .3]],
   [CLEF, [.24, 0]], [QWEN, [.051, .335]], [GLM_LEGACY, [.35, .75]], [GPT_OSS, [.35, .75]],
   [WHISPER, [.35, .75]], [WHISPER_TURBO, [.35, .75]]]);
-export function estimateNeurons({ models = [GLM_FLASH], maxTokens = 8192, vision = false } = {}) {
+// Whisper bills by audio duration (~41.14 neurons/minute). Without a size, reserve
+// one minute; with one, assume a conservative 16 kbit/s so a long clip reserves more.
+const WHISPER_PER_MINUTE = 41.14;
+function whisperNeurons(audioBytes) {
+  const minutes = Number.isFinite(audioBytes) && audioBytes > 0 ? (audioBytes * 8) / 16000 / 60 : 1;
+  return Math.ceil(Math.max(1, minutes) * WHISPER_PER_MINUTE);
+}
+export function estimateNeurons({ models = [GLM_FLASH], maxTokens = 8192, vision = false, audioBytes } = {}) {
   if (!models.length) return 0; // Intake commit stores a document, without model inference.
   if (!Number.isSafeInteger(maxTokens) || maxTokens < 1) return Infinity;
   const costs = models.map((model) => {
     const rate = RATES.get(model);
-    if (model === WHISPER || model === WHISPER_TURBO) return 60;
+    if (model === WHISPER || model === WHISPER_TURBO) return whisperNeurons(audioBytes);
     return rate ? ((vision ? 8192 : INPUT_TOKEN_ALLOWANCE) * rate[0] + maxTokens * rate[1]) / 11 : Infinity;
   });
   return Math.ceil(Math.max(...costs));
@@ -65,7 +72,9 @@ export async function meteredAttempt(env, model, payload, run) {
   try {
     if (budget.denied) throw new Error('neuron quota');
     const vision = !!payload.image || payload.messages?.some(m => Array.isArray(m.content) && m.content.some(p => p.type === 'image_url'));
-    const amount = estimateNeurons({ models: [model], maxTokens: payload.max_tokens || 8192, vision });
+    const audio = payload.audio;
+    const audioBytes = typeof audio === 'string' ? Math.floor(audio.length * 3 / 4) : (audio && audio.length) || undefined;
+    const amount = estimateNeurons({ models: [model], maxTokens: payload.max_tokens || 8192, vision, audioBytes });
     if (budget.pending != null) {
       const pending = budget.pending;
       budget.pending = null;
@@ -78,6 +87,10 @@ export async function meteredAttempt(env, model, payload, run) {
     const input = usage?.prompt_tokens ?? usage?.input_tokens;
     const output = usage?.completion_tokens ?? usage?.output_tokens;
     const rate = RATES.get(model);
+    const seconds = result?.transcription_info?.duration ?? result?.result?.transcription_info?.duration;
+    if ((model === WHISPER || model === WHISPER_TURBO) && Number.isFinite(seconds) && seconds >= 0) {
+      await adjustNeurons(env, budget.merchant, budget.day, Math.ceil((seconds / 60) * WHISPER_PER_MINUTE) - amount);
+    }
     if (rate && model !== WHISPER && model !== WHISPER_TURBO &&
         Number.isSafeInteger(input) && input >= 0 && Number.isSafeInteger(output) && output >= 0) {
       const actual = Math.ceil((input * rate[0] + output * rate[1]) / 11);

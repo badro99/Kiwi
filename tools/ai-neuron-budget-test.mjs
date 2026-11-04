@@ -64,7 +64,7 @@ const denied = await route({ env });
 assert.equal(denied.status, 429);
 assert.equal((await denied.json()).error, 'quota');
 assert.equal(attempts, 1, 'budget exhausted fallback never reaches AI');
-assert.equal(estimateNeurons({ models: ['@cf/openai/whisper'] }), 60);
+assert.equal(estimateNeurons({ models: ['@cf/openai/whisper'] }), Math.ceil(41.14), 'whisper without a size reserves one minute');
 reset();
 env.AI = { async run() { return { usage: { prompt_tokens: 1000, completion_tokens: 300 } }; } };
 for (const [kind, count, maxTokens, actualModel] of [['menutranslate', 15, 4000, translateModel], ['ask', 40, 700, textModel]]) {
@@ -88,6 +88,16 @@ broken.DB = { prepare() { throw new Error('accounting offline'); } };
 budgets.set(broken, { merchant: 'a', day: new Date().toISOString().slice(0, 10) });
 await assert.rejects(runAiWithGateway(broken, model, { max_tokens: 700 }), error => error.status === 429);
 assert.equal(invokedWithoutAccounting, 0, 'unavailable retry accounting fails closed');
+{ // Whisper bills by duration: a long clip reserves more, and the reported duration settles it.
+  const whisper = (await import(new URL(root + '/functions/api/ai/_models.js', import.meta.url))).WHISPER_TURBO;
+  const big = estimateNeurons({ models: [whisper], audioBytes: 1572864 }), small = estimateNeurons({ models: [whisper], audioBytes: 102400 });
+  assert.ok(big > 8 * small, 'a 1.5 MB clip reserves far more than a short one');
+  reset(); budgets.set(env, {}); assert.equal(await quotaOk(env, 'a', 'voice', 200, { models: [whisper] }), true);
+  env.AI = { async run() { return { text: 'ok', transcription_info: { duration: 30 } }; } };
+  await runAiWithGateway(env, whisper, { audio: 'A'.repeat(2 * 1024 * 1024) });
+  assert.equal(used(), Math.ceil(0.5 * 41.14), 'whisper settles to the reported 30 s');
+  reset();
+}
 console.log('✓ realistic daily capacity, bounded vision, settlement, overruns, no usage, separate retries and clean 429');
 
 // The real scan route returns its existing error, without invoking the binding.
