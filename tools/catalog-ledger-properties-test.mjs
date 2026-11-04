@@ -38,6 +38,9 @@ async function call(route, method, body = {}, raw = false) {
   assert.equal(response.status, 200, route + ': ' + JSON.stringify(data));
   return data;
 }
+// Compile shipped scripts once; each property still gets two isolated VM worlds.
+const browserScripts = ['color-palette', 'boutique-catalog-parts', 'boutique-catalog', 'inventory-ledger'].map(file =>
+  new vm.Script(deadlineVmSource(fs.readFileSync(ROOT + 'assets/' + file + '.js', 'utf8')), { filename: file + '.js' }));
 function browser() {
   const memory = new Map(), timers = new Map(), requests = new Set();
   let timer = 0;
@@ -69,9 +72,7 @@ function browser() {
   w.__sent = [];
   w.window = w; w.self = w;
   vm.createContext(deadlineVmContext(w));
-  for (const file of ['color-palette', 'boutique-catalog-parts', 'boutique-catalog', 'inventory-ledger']) {
-    vm.runInContext(deadlineVmSource(fs.readFileSync(ROOT + 'assets/' + file + '.js', 'utf8')), w, { filename: file + '.js' });
-  }
+  for (const script of browserScripts) script.runInContext(w);
   // Exécuter les tâches planifiées, y compris les promesses des handlers réels.
   async function drain() {
     for (let i = 0; i < 50; i++) {
@@ -88,6 +89,20 @@ function browser() {
   }
   w.KiwiBoutiqueCatalog.use(f.merchant);
   return { C: w.KiwiBoutiqueCatalog, I: w.KiwiInventory, w, drain };
+}
+// The real reservation path must settle even if a 2xx body ignores abort.
+{
+  const b = browser();
+  let bodyStarted = false;
+  b.w.fetch = async () => ({ ok: true, status: 200, json: () => { bodyStarted = true; return new Promise(() => {}); } });
+  const reservation = b.C.reserveSale('hung-body', []);
+  for (let i = 0; i < 15; i++) await Promise.resolve();
+  assert.equal(bodyStarted, true, 'reservation reached the response body');
+  await b.drain();
+  const answer = await reservation;
+  assert.equal(answer.ok, false); assert.equal(answer.uncertain, true); assert.equal(answer.fatal, true);
+  assert.ok(!answer.offline, 'ambiguous server hold must not permit local checkout');
+  console.log('PASS hung reservation body settles as uncertain without local debit');
 }
 const kinds = ['sale', 'return', 'manual', 'count', 'receipt', 'delete-restore', 'replay'];
 const operation = fc.record({ kind: fc.constantFrom(...kinds), surface: fc.constantFrom('catalog', 'ledger'), product: fc.integer({ min: 0, max: 1 }), qty: fc.integer({ min: 1, max: 4 }) });

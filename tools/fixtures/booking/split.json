@@ -1,6 +1,6 @@
 {
-  "sha256": "549523a0667a6a2867ee02184a47cc30dbb04b96a370c1c4679f2e4d662db2f5",
-  "formattedSha256": "5b8cdd1a7ebcd44f84a4be15700bd99e1d98a3e401901d6d5fbee49b784dde02",
+  "sha256": "094c119d6b75180c25a116b5e966dcb843697672131fc24c3d562e38e0488b96",
+  "formattedSha256": "7f9b45075a76c06654bb16d23c9dea1ecad4d45a54e87c43d5d584c2241c83ab",
   "counter": "  var slotSeq=0,hotelSeq=0;",
   "bootstrap": "  const owner = Object.freeze({ getState() { return state; } });\n  const parts = {};\n  await Promise.all([\n    import('/assets/booking-service.js').then(module => { parts.service = module.createBookingService({ owner, app, merchant, plusDays, details, t, esc, money, fmt, venueToday, venueHour, layout, head }); }),\n    import('/assets/booking-hotel.js').then(module => { parts.hotel = module.createBookingHotel({ owner, app, merchant, hotelDetails, t, ht, esc, money, ymd, fmt, venueToday, layout, head }); }),\n    import('/assets/booking-submission.js').then(module => { parts.submission = module.createBookingSubmission({ owner, app, merchant, takesCovers, party, times, loadHotelRooms, hotelRoomList, hotelSummary, rememberManage, manageBlock, wireManageBlock, ssGet, ssSet, ssDel, t, ht, esc, money, fmt, layout, head }); }),\n    import('/assets/booking-manage.js').then(module => { parts.manage = module.createBookingManage({ owner, app, merchant, manageToken, t, ht, esc, money, fmt, layout, closed }); }),\n    import('/assets/booking-view.js').then(module => { parts.view = module.createBookingView({ owner, app, services, times, hotelSearch, hotelRoomList, details, success, hotelDetails, renderManage }); })\n  ]);\n",
   "parts": [
@@ -44,134 +44,134 @@
       ],
       "fragments": [
         {
-          "start": 13871,
-          "end": 14257,
+          "start": 14366,
+          "end": 14752,
           "offset": 608,
           "length": 386,
           "replacement": "\n  function seatCap(...args) { return parts.service.seatCap(...args); }"
         },
         {
-          "start": 14257,
-          "end": 14436,
+          "start": 14752,
+          "end": 14931,
           "offset": 995,
           "length": 179,
           "replacement": "\n  function venueCap(...args) { return parts.service.venueCap(...args); }"
         },
         {
-          "start": 14436,
-          "end": 14524,
+          "start": 14931,
+          "end": 15019,
           "offset": 1175,
           "length": 88,
           "replacement": "\n  function partyCap(...args) { return parts.service.partyCap(...args); }"
         },
         {
-          "start": 14524,
-          "end": 14909,
+          "start": 15019,
+          "end": 15404,
           "offset": 1264,
           "length": 385,
           "replacement": "\n  function capsDiffer(...args) { return parts.service.capsDiffer(...args); }"
         },
         {
-          "start": 14909,
-          "end": 14964,
+          "start": 15404,
+          "end": 15459,
           "offset": 1650,
           "length": 55,
           "replacement": "\n  function takesCovers(...args) { return parts.service.takesCovers(...args); }"
         },
         {
-          "start": 14964,
-          "end": 15066,
+          "start": 15459,
+          "end": 15561,
           "offset": 1706,
           "length": 102,
           "replacement": "\n  function party(...args) { return parts.service.party(...args); }"
         },
         {
-          "start": 15066,
-          "end": 15458,
+          "start": 15561,
+          "end": 15953,
           "offset": 1809,
           "length": 392,
           "replacement": "\n  function partyControl(...args) { return parts.service.partyControl(...args); }"
         },
         {
-          "start": 15458,
-          "end": 16096,
+          "start": 15953,
+          "end": 16591,
           "offset": 2202,
           "length": 638,
           "replacement": "\n  function syncParty(...args) { return parts.service.syncParty(...args); }"
         },
         {
-          "start": 16096,
-          "end": 16535,
+          "start": 16591,
+          "end": 17030,
           "offset": 2841,
           "length": 439,
           "replacement": "\n  function wireParty(...args) { return parts.service.wireParty(...args); }"
         },
         {
-          "start": 16535,
-          "end": 16796,
+          "start": 17030,
+          "end": 17291,
           "offset": 3281,
           "length": 261,
           "replacement": "\n  /* booking service declaration 9 */"
         },
         {
-          "start": 16796,
-          "end": 17168,
+          "start": 17291,
+          "end": 17663,
           "offset": 3543,
           "length": 372,
           "replacement": "\n  function queueSlots(...args) { return parts.service.queueSlots(...args); }"
         },
         {
-          "start": 17168,
-          "end": 17427,
+          "start": 17663,
+          "end": 17922,
           "offset": 3916,
           "length": 259,
           "replacement": "\n  function priceTag(...args) { return parts.service.priceTag(...args); }"
         },
         {
-          "start": 17427,
-          "end": 17892,
+          "start": 17922,
+          "end": 18387,
           "offset": 4176,
           "length": 465,
           "replacement": "\n  function contextChip(...args) { return parts.service.contextChip(...args); }"
         },
         {
-          "start": 17892,
-          "end": 18756,
+          "start": 18387,
+          "end": 19251,
           "offset": 4642,
           "length": 864,
           "replacement": "\n  function slotGroups(...args) { return parts.service.slotGroups(...args); }"
         },
         {
-          "start": 18756,
-          "end": 19860,
+          "start": 19251,
+          "end": 20355,
           "offset": 5507,
           "length": 1104,
           "replacement": "\n  function services(...args) { return parts.service.services(...args); }"
         },
         {
-          "start": 19860,
-          "end": 20434,
+          "start": 20355,
+          "end": 20929,
           "offset": 6612,
           "length": 574,
           "replacement": "\n  function dateButtons(...args) { return parts.service.dateButtons(...args); }"
         },
         {
-          "start": 20839,
-          "end": 23285,
+          "start": 21334,
+          "end": 23780,
           "offset": 7187,
           "length": 2446,
           "replacement": "\n  function loadSlots(...args) { return parts.service.loadSlots(...args); }"
         },
         {
-          "start": 23285,
-          "end": 23344,
+          "start": 23780,
+          "end": 23839,
           "offset": 9634,
           "length": 59,
           "replacement": "\n  function times(...args) { return parts.service.times(...args); }"
         },
         {
-          "start": 23344,
-          "end": 24833,
+          "start": 23839,
+          "end": 25328,
           "offset": 9694,
           "length": 1489,
           "replacement": "\n  function renderTimes(...args) { return parts.service.renderTimes(...args); }"
@@ -210,71 +210,71 @@
       ],
       "fragments": [
         {
-          "start": 36657,
-          "end": 36779,
+          "start": 37205,
+          "end": 37327,
           "offset": 536,
           "length": 119,
           "replacement": "\n  function plusDays(...args) { return parts.hotel.plusDays(...args); }"
         },
         {
-          "start": 36779,
-          "end": 36935,
+          "start": 37327,
+          "end": 37483,
           "offset": 659,
           "length": 153,
           "replacement": "\n  function hotelNights(...args) { return parts.hotel.hotelNights(...args); }"
         },
         {
-          "start": 36935,
-          "end": 37177,
+          "start": 37483,
+          "end": 37725,
           "offset": 816,
           "length": 239,
           "replacement": "\n  function hotelDates(...args) { return parts.hotel.hotelDates(...args); }"
         },
         {
-          "start": 37177,
-          "end": 39037,
+          "start": 37725,
+          "end": 39585,
           "offset": 1059,
           "length": 1857,
           "replacement": "\n  function hotelSearch(...args) { return parts.hotel.hotelSearch(...args); }"
         },
         {
-          "start": 39037,
-          "end": 40163,
+          "start": 39585,
+          "end": 40711,
           "offset": 2920,
           "length": 965,
           "replacement": "\n  function loadHotelRooms(...args) { return parts.hotel.loadHotelRooms(...args); }"
         },
         {
-          "start": 40163,
-          "end": 40521,
+          "start": 40711,
+          "end": 41069,
           "offset": 3889,
           "length": 355,
           "replacement": "\n  function hotelFacts(...args) { return parts.hotel.hotelFacts(...args); }"
         },
         {
-          "start": 40521,
-          "end": 40719,
+          "start": 41069,
+          "end": 41267,
           "offset": 4248,
           "length": 195,
           "replacement": "\n  function hotelPhotoUrl(...args) { return parts.hotel.hotelPhotoUrl(...args); }"
         },
         {
-          "start": 40719,
-          "end": 41803,
+          "start": 41267,
+          "end": 42351,
           "offset": 4447,
           "length": 1081,
           "replacement": "\n  function hotelVisual(...args) { return parts.hotel.hotelVisual(...args); }"
         },
         {
-          "start": 41803,
-          "end": 44713,
+          "start": 42351,
+          "end": 45261,
           "offset": 5532,
           "length": 2907,
           "replacement": "\n  function hotelRoomList(...args) { return parts.hotel.hotelRoomList(...args); }"
         },
         {
-          "start": 44713,
-          "end": 45260,
+          "start": 45261,
+          "end": 45808,
           "offset": 8443,
           "length": 544,
           "replacement": "\n  function hotelSummary(...args) { return parts.hotel.hotelSummary(...args); }"
@@ -325,69 +325,69 @@
           "start": 9464,
           "end": 9597,
           "offset": 614,
-          "length": 2101,
+          "length": 2596,
           "replacement": "\n  function phoneValue(...args) { return parts.submission.phoneValue(...args); }"
         },
         {
           "start": 9597,
           "end": 10032,
-          "offset": 2719,
+          "offset": 3214,
           "length": 432,
           "replacement": "\n  function emailOk(...args) { return parts.submission.emailOk(...args); }"
         },
         {
           "start": 10032,
           "end": 10334,
-          "offset": 3155,
+          "offset": 3650,
           "length": 299,
           "replacement": "\n  function badEmailMsg(...args) { return parts.submission.badEmailMsg(...args); }"
         },
         {
-          "start": 24833,
-          "end": 25225,
-          "offset": 3458,
+          "start": 25328,
+          "end": 25720,
+          "offset": 3953,
           "length": 389,
           "replacement": "\n  function paymentNote(...args) { return parts.submission.paymentNote(...args); }"
         },
         {
-          "start": 25225,
-          "end": 27137,
-          "offset": 3851,
+          "start": 25720,
+          "end": 27632,
+          "offset": 4346,
           "length": 1909,
           "replacement": "\n  function details(...args) { return parts.submission.details(...args); }"
         },
         {
-          "start": 27137,
-          "end": 29963,
-          "offset": 5764,
-          "length": 1532,
+          "start": 27632,
+          "end": 30458,
+          "offset": 6259,
+          "length": 1585,
           "replacement": "\n  function submit(...args) { return parts.submission.submit(...args); }"
         },
         {
-          "start": 35862,
-          "end": 36657,
-          "offset": 7301,
+          "start": 36410,
+          "end": 37205,
+          "offset": 7849,
           "length": 791,
           "replacement": "\n  function success(...args) { return parts.submission.success(...args); }"
         },
         {
-          "start": 45260,
-          "end": 46435,
-          "offset": 8096,
+          "start": 45808,
+          "end": 46983,
+          "offset": 8644,
           "length": 1172,
           "replacement": "\n  function hotelDetails(...args) { return parts.submission.hotelDetails(...args); }"
         },
         {
-          "start": 46435,
-          "end": 49792,
-          "offset": 9272,
-          "length": 2063,
+          "start": 46983,
+          "end": 50393,
+          "offset": 9820,
+          "length": 2116,
           "replacement": "\n  function submitHotel(...args) { return parts.submission.submitHotel(...args); }"
         },
         {
-          "start": 49792,
-          "end": 50275,
-          "offset": 11339,
+          "start": 50393,
+          "end": 50876,
+          "offset": 11940,
           "length": 480,
           "replacement": "\n  function hotelSuccess(...args) { return parts.submission.hotelSuccess(...args); }"
         }
@@ -423,78 +423,78 @@
       ],
       "fragments": [
         {
-          "start": 29963,
-          "end": 31230,
+          "start": 30458,
+          "end": 31778,
           "offset": 496,
           "length": 1267,
           "replacement": "\n  function rememberManage(...args) { return parts.manage.rememberManage(...args); }"
         },
         {
-          "start": 31230,
-          "end": 31446,
+          "start": 31778,
+          "end": 31994,
           "offset": 1764,
           "length": 216,
           "replacement": "\n  function manageHref(...args) { return parts.manage.manageHref(...args); }"
         },
         {
-          "start": 31446,
-          "end": 31871,
+          "start": 31994,
+          "end": 32419,
           "offset": 1981,
           "length": 425,
           "replacement": "\n  function manageBlock(...args) { return parts.manage.manageBlock(...args); }"
         },
         {
-          "start": 31871,
-          "end": 33184,
+          "start": 32419,
+          "end": 33732,
           "offset": 2407,
           "length": 1313,
           "replacement": "\n  function wireManageBlock(...args) { return parts.manage.wireManageBlock(...args); }"
         },
         {
-          "start": 33184,
-          "end": 35800,
+          "start": 33732,
+          "end": 36348,
           "offset": 3721,
           "length": 2616,
           "replacement": "\n  /* booking manage declaration 4 */"
         },
         {
-          "start": 35800,
-          "end": 35862,
+          "start": 36348,
+          "end": 36410,
           "offset": 6338,
           "length": 62,
           "replacement": "\n  function mt(...args) { return parts.manage.mt(...args); }"
         },
         {
-          "start": 50275,
-          "end": 50778,
+          "start": 50876,
+          "end": 51379,
           "offset": 6401,
           "length": 503,
           "replacement": "\n  function statusLabel(...args) { return parts.manage.statusLabel(...args); }"
         },
         {
-          "start": 50778,
-          "end": 51622,
+          "start": 51379,
+          "end": 52223,
           "offset": 6905,
           "length": 844,
           "replacement": "\n  function manageRows(...args) { return parts.manage.manageRows(...args); }"
         },
         {
-          "start": 51622,
-          "end": 53455,
+          "start": 52223,
+          "end": 54056,
           "offset": 7750,
           "length": 1833,
           "replacement": "\n  function renderManage(...args) { return parts.manage.renderManage(...args); }"
         },
         {
-          "start": 53455,
-          "end": 54124,
+          "start": 54056,
+          "end": 54725,
           "offset": 9584,
           "length": 669,
           "replacement": "\n  function cancelBooking(...args) { return parts.manage.cancelBooking(...args); }"
         },
         {
-          "start": 54124,
-          "end": 54648,
+          "start": 54725,
+          "end": 55249,
           "offset": 10254,
           "length": 524,
           "replacement": "\n  function openManage(...args) { return parts.manage.openManage(...args); }"
@@ -643,43 +643,43 @@
           "replacement": "\n  function venueToday(...args) { return parts.view.venueToday(...args); }"
         },
         {
-          "start": 11556,
-          "end": 11845,
+          "start": 12051,
+          "end": 12340,
           "offset": 10090,
           "length": 289,
           "replacement": "\n  function venueHour(...args) { return parts.view.venueHour(...args); }"
         },
         {
-          "start": 11845,
-          "end": 11929,
+          "start": 12340,
+          "end": 12424,
           "offset": 10380,
           "length": 84,
           "replacement": "\n  function isHotel(...args) { return parts.view.isHotel(...args); }"
         },
         {
-          "start": 11929,
-          "end": 13716,
+          "start": 12424,
+          "end": 14211,
           "offset": 10465,
           "length": 1787,
           "replacement": "\n  function layout(...args) { return parts.view.layout(...args); }"
         },
         {
-          "start": 13716,
-          "end": 13871,
+          "start": 14211,
+          "end": 14366,
           "offset": 12253,
           "length": 155,
           "replacement": "\n  function head(...args) { return parts.view.head(...args); }"
         },
         {
-          "start": 55302,
-          "end": 56369,
+          "start": 55903,
+          "end": 56970,
           "offset": 12409,
           "length": 1067,
           "replacement": "\n  function wireGlobal(...args) { return parts.view.wireGlobal(...args); }"
         },
         {
-          "start": 56369,
-          "end": 57873,
+          "start": 56970,
+          "end": 58474,
           "offset": 13477,
           "length": 1504,
           "replacement": "\n  function closed(...args) { return parts.view.closed(...args); }"

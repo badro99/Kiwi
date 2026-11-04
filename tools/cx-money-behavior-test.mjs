@@ -126,7 +126,8 @@ await test('unreadable successful booking write remains uncertain with its retry
   const create=vm.runInNewContext(source+';createBookingSubmission',ctx);
   const api=create({owner:{getState:()=>state},merchant:'merchant',party:()=>1,t:k=>k,ssGet:k=>storage.get(k),ssSet:(k,v)=>storage.set(k,v),ssDel:k=>storage.delete(k)});
   await api.submit({preventDefault(){},currentTarget:form});
-  assert.equal(error.textContent,'timeout');assert.equal(button.disabled,false);
+  // A malformed reply is uncertain, distinct from an actual deadline expiry (#20).
+  assert.equal(error.textContent,'Booking confirmation could not be read. Your booking may have been saved. Retry from this page with the same reference.');assert.equal(button.disabled,false);
   await api.submit({preventDefault(){},currentTarget:form});assert.equal(sent[0].ref,sent[1].ref);
 });
 await test('unreadable successful invoice write is reported as uncertain',async()=>{

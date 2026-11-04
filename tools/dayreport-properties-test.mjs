@@ -20,6 +20,17 @@ function build(values,extra={}){return D.build({day,store,sales:values.map((n,i)
 await strict('revenue and net payment methods conserve integer centimes including refunds and repeated decimals',fc.property(ints,fc.integer({min:0,max:500000}),(a,r)=>{const report=build(a,{sales:[...a.map((n,i)=>({id:'s'+i,ts:TS+i,amount:n/100,method:i%2?'card':'cash',tip:0.1,ref:'t'+i})),{id:'refund',ts:TS+1000,amount:-r/100,kind:'refund',method:'cash'}],session:{discounts:23}});assert.equal(C(report.gross),sum(a));assert.equal(C(report.net),sum(a)-r);assert.equal(sum(Object.values(report.methods).map(C)),C(report.net));assert.equal(C(report.refunds.amount),r);}),[[Array(3000).fill(10).concat(Array(3000).fill(20)),1]]);
 await strict('cash expected includes net cash sales, cash tips, movements and signed handover gap; printed Z agrees',fc.property(ints,fc.integer({min:0,max:500000}),(a,n)=>{const r=build(a,{session:{openingFloat:n/100,cashMovements:[{ts:TS,type:'in',amount:0.2},{ts:TS,type:'out',amount:0.1}],handovers:[{ecart:0.01}]}});assert.equal(C(r.cash.expected),n+sum(a.filter((_,i)=>i%2===0))+11);const bytes=w.E.dayReport({report:r,fmt:n=>n.toFixed(2),paper:'80'});assert.ok(Buffer.from(bytes).toString('latin1').includes(r.cash.expected.toFixed(2)));}));
 await strict('05:00 boundary agrees with server zone law including September transition',fc.property(fc.constantFrom('2026-09-19','2026-09-20','2026-09-21','2026-10-22'),d=>{const b=businessBoundary(d,5,'Africa/Casablanca');assert.equal(D.businessDay(b),d);assert.equal(D.businessDay(b-60000),new Date(Date.parse(d)-86400000).toISOString().slice(0,10));assert.equal(D.dayBounds(d).from,b);}));
+// Presentation uses the same merchant-zone owner as the 05:00 grouping law.
+await strict('dashboard opening closing drawer and CSV clock stays in merchant zone abroad',fc.property(fc.constantFrom('Europe/Berlin','America/New_York'),deviceZone=>{
+  const prior=process.env.TZ; process.env.TZ=deviceZone;
+  try {
+    const split=createRequire(import.meta.url)('./split-functions.cjs');
+    const source=fs.readFileSync(path.join(ROOT,'assets/day-report-dash.js'),'utf8');
+    const hm=vm.runInNewContext(split.declaration(source,'hm')+';hm',{Date,Intl,timeFormatters:{},pad2:n=>String(n).padStart(2,'0'),DR:()=>D});
+    for(const [instant,expected] of [['2026-11-04T04:01:00Z','05:01'],['2026-11-04T23:30:00Z','00:30'],['2026-02-25T12:34:00Z','12:34']]) assert.equal(hm(Date.parse(instant)),expected);
+    assert.equal(hm(0),'');
+  } finally { if(prior===undefined) delete process.env.TZ; else process.env.TZ=prior; }
+}));
 function snap(n,at=10){return{day,store,gross:n,net:n,builtAt:at,closedAt:20,openedAt:1,sessionId:'s',terminalId:'t',closedBy:'A',cash:{expected:n,counted:n},revisions:[{at:20,closedAt:20,sessionId:'s',terminalId:'t',by:'A'}]};}
 await strict('merge repeated identical books is idempotent and preserves latest closure',fc.property(fc.integer({min:1,max:50000}),n=>{const a=snap(n),b={...a,builtAt:1,closedAt:0,revisions:[],cash:undefined};const merge=w.cloud.merge;const once=merge({days:{[day]:a}},{days:{[day]:b}});assert.equal(once.days[day].net,n);assert.deepEqual(plain(merge(once,once)),plain(once));assert.deepEqual(plain(merge({days:{[day]:b}},{days:{[day]:a}})),plain(once));}));
 await strict('equal-clock snapshots select the same money in either order',fc.property(fc.integer({min:1,max:50000}),n=>{const a=snap(n),b=snap(n+1);assert.deepEqual(plain(D.mergeDaySnapshots(a,b)),plain(D.mergeDaySnapshots(b,a)));}),[[1]]);

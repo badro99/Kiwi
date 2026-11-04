@@ -112,8 +112,8 @@
     "sha": "21f83d45179fc413"
   },
   "assets/booking-submission.js": {
-    "v": "11",
-    "sha": "946516ab5eb879ce"
+    "v": "12",
+    "sha": "800ca5320a21de5a"
   },
   "assets/booking-view.js": {
     "v": "4",
@@ -124,12 +124,12 @@
     "sha": "3c0d798c9926b854"
   },
   "assets/booking.js": {
-    "v": "54",
-    "sha": "ee77b71d3ea91c7e"
+    "v": "55",
+    "sha": "64b0cd3d58685927"
   },
   "assets/boutique-catalog-parts.js": {
-    "v": "26",
-    "sha": "2ad70aface7c6b45"
+    "v": "27",
+    "sha": "f3819a0085f36e6b"
   },
   "assets/boutique-catalog.js": {
     "v": "31",
@@ -500,8 +500,8 @@
     "sha": "c280918a4865ae88"
   },
   "assets/day-report-dash.js": {
-    "v": "46",
-    "sha": "3b8939a67c4785ae"
+    "v": "47",
+    "sha": "b567f822fe1873c5"
   },
   "assets/day-report-export.js": {
     "v": "21",
@@ -1344,8 +1344,8 @@
     "sha": "471a19e54fd02c7f"
   },
   "assets/orderpro-page.js": {
-    "v": "28",
-    "sha": "d525a66986ecb1c6"
+    "v": "29",
+    "sha": "a19479cdfa664ac3"
   },
   "assets/orderpro-panel.js": {
     "v": "5",
@@ -1384,8 +1384,8 @@
     "sha": "46aa7947e27316df"
   },
   "assets/orderpro/transport.js": {
-    "v": "7",
-    "sha": "130ae4ff4da87814"
+    "v": "8",
+    "sha": "3a7c0dabcdaa5dd1"
   },
   "assets/origin-move.css": {
     "v": "1",
@@ -1440,8 +1440,8 @@
     "sha": "9fb027f9aefbaac1"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "170",
-    "sha": "f5dfe6d718f5d1b6"
+    "v": "171",
+    "sha": "9e15c536370152f2"
   },
   "assets/pages/tables-data.js": {
     "v": "1",

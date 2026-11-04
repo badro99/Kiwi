@@ -30,10 +30,14 @@ export function createBookingSubmission(context) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ merchant, ref, lang: state.lang, ...payload })
     });
-    const result = await response.json().catch(() => { throw new Error('request-timeout'); });
+    const result = await response.json().catch((error) => { if (error.message === 'request-timeout') throw error; throw new Error('response-uncertain'); });
     if (!response.ok) throw new Error(result.error || 'error');
     delete retryRefs[key]; ssDel(key); ssDel(key + 'Intent');
     onSuccess(result);
+  }
+
+  function uncertainReply() {
+    return state.lang === 'ar' ? 'تعذّر قراءة تأكيد الحجز. قد يكون الحجز قد سُجّل. أعد المحاولة من هذه الصفحة بنفس المرجع.' : state.lang === 'en' ? 'Booking confirmation could not be read. Your booking may have been saved. Retry from this page with the same reference.' : 'Confirmation illisible. Votre réservation a peut-être été enregistrée. Réessayez depuis cette page avec la même référence.';
   }
 
   function phoneValue(v) {
@@ -91,7 +95,7 @@ export function createBookingSubmission(context) {
     }
     catch(err) {
       btn.disabled=false;
-      form.querySelector('[data-error]').textContent=err.message==='request-timeout'? t('timeout'):err.message==='slot-unavailable'? t('taken'):t('error');
+      form.querySelector('[data-error]').textContent=err.message==='response-uncertain'? uncertainReply():err.message==='request-timeout'? t('timeout'):err.message==='slot-unavailable'? t('taken'):t('error');
       if (ssGet('kiwiBookingRef') !== ref) form.querySelector('[data-error]').textContent += ' ' + retryWarning();
       if(err.message==='slot-unavailable') setTimeout(times,900)
     }
@@ -144,7 +148,7 @@ export function createBookingSubmission(context) {
         app.querySelector('[data-back]').onclick=loadHotelRooms;
         return
       }
-      form.querySelector('[data-error]').textContent=err.message==='request-timeout'? t('timeout'):err.message==='room-unavailable'? ht('taken'):t('error');
+      form.querySelector('[data-error]').textContent=err.message==='response-uncertain'? uncertainReply():err.message==='request-timeout'? t('timeout'):err.message==='room-unavailable'? ht('taken'):t('error');
       if (ssGet('kiwiHotelBookingRef') !== ref) form.querySelector('[data-error]').textContent += ' ' + retryWarning();
       if(err.message==='room-unavailable') setTimeout(loadHotelRooms,900)
     }

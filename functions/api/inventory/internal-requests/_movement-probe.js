@@ -6,7 +6,7 @@ export async function movementProbe(merchant, movement) {
   const identity = JSON.stringify([merchant, movement.refId, movement.meta.requestId,
     movement.meta.line, movement.itemId, movement.reason, movement.meta.transferPiece]);
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(identity));
-  candidates.push('inv-transfer-s-' + Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join(''));
+  candidates.unshift('inv-transfer-s-' + Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join(''));
   const sql = `WITH candidates(id, n) AS (VALUES ${candidates.map((_, i) => `(?, ${i})`).join(',')})
     SELECT c.id FROM candidates c LEFT JOIN inventory_movements m ON m.id = c.id
      WHERE m.id IS NULL OR (

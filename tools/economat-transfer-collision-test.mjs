@@ -50,7 +50,8 @@ for (const slots of [0, 1, 8, 9, 10, -1]) {
       assert.equal(response.status, 200);
       const result = await response.json();
       assert(result.movements.every(m => m.id.length <= 80), 'ids survive client ledger normalization');
-      const expected = slots === 9 ? fallback : slots ? `${base}-c${Math.max(1, slots)}` : base;
+      // New movements prefer the wide digest; short ids remain replay candidates.
+      let expected = slots === 9 ? fallback : 'inv-transfer-s-' + createHash('sha256').update(JSON.stringify([MERCHANT, `request:${id}:${key}`, id, 0, 'cola', 'transfer-out', 0])).digest('hex');
       assert(result.movements.some(m => m.id === expected));
       assert.equal(h.one('SELECT qty_milli FROM inventory_movements WHERE id = ?', expected).qty_milli, slots === 9 ? 2000 : -2000);
       assert.equal(h.balance('cola', 'u-economat'), 22);
@@ -59,6 +60,11 @@ for (const slots of [0, 1, 8, 9, 10, -1]) {
         assert.equal(h.one('SELECT SUM(qty_milli * unit_cost_cents) / 1000 AS cents FROM inventory_movements WHERE merchant = ? AND item_id = ? AND location_id = ?', MERCHANT, 'cola', location).cents, cents);
       }
       if (slots === 1 || slots === 9) {
+        if (slots === 1) {
+          const legacy = `${base}-c1`;
+          h.raw.prepare('UPDATE inventory_movements SET id = ? WHERE id = ?').run(legacy, expected);
+          expected = legacy;
+        }
         // Replay a pre-deploy identity without the new piece metadata or event shortcut.
         h.raw.exec("UPDATE inventory_movements SET meta = json_remove(meta, '$.transferPiece') WHERE ref_type = 'transfer'");
         h.raw.prepare("DELETE FROM hotel_internal_request_events WHERE event = 'confirm'").run();

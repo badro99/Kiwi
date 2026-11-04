@@ -984,14 +984,11 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
   function saleStockAction(action, ref, lines) {
     load();
     if (!cloudOn() || typeof fetch !== 'function') return Promise.resolve({ ok: false, offline: true });
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timeout = controller ? setTimeout(() => controller.abort(), 4500) : null;
-    return fetch('/api/catalog', {
+    return import('./request-deadline.mjs').then(({ deadlineFetch }) => deadlineFetch('/api/catalog', {
       method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ merchant: core.VENUE, stockAction: action, ref: String(ref || '').slice(0, 64), lines: lines || [] }),
-      signal: controller ? controller.signal : undefined,
-    }).then((r) => r.json().then((j) => ({ status: r.status, j })).catch(() => ({ status: r.status, j: null })))
+    }, 4500)).then((r) => r.json().then((j) => ({ status: r.status, j })).catch(() => ({ status: r.status, j: null })))
       .then((res) => {
         if (res.status === 200 && res.j && res.j.ok && res.j.data) {
           core.db = mergeDocs(core.db, res.j.data);
@@ -1036,8 +1033,7 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
            may have committed the hold before the connection broke. Never fall
            back to a second local debit. Retrying the same ref is idempotent. */
         return { ok: false, fatal: true, uncertain: true, reason: reason || ('http-' + res.status) };
-      }).catch(() => ({ ok: false, fatal: true, uncertain: true, reason: 'network-uncertain' }))
-      .finally(() => { if (timeout) clearTimeout(timeout); });
+      }).catch(() => ({ ok: false, fatal: true, uncertain: true, reason: 'network-uncertain' }));
   }
 
   function reserveSale(ref, lines) { return saleStockAction('reserve', ref, lines); }

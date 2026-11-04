@@ -79,10 +79,10 @@
   function raw2(n) { return String(Math.round((+n || 0) * 100) / 100); }
   function qty(n) { return String(+n || 0); }
   function pad2(n) { return String(n).padStart(2, '0'); }
-  function hm(ms) {
+  var timeFormatters = {}; function hm(ms) {
     if (!ms) return '';
-    var d = new Date(ms);
-    return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    var zone = DR().timezone(), fmt = timeFormatters[zone] || (timeFormatters[zone] = new Intl.DateTimeFormat('en-GB', { timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }));
+    return fmt.format(new Date(ms));
   }
   function hourLabel(h) { return LANG() === 'fr' ? pad2(h) + 'h' : pad2(h) + ':00'; }
 

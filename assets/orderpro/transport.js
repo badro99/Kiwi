@@ -29,12 +29,15 @@ KiwiOrderMenu.orderProParts.run('transport', function () {
       const table = clean(qs.get('t') || qs.get('table') || '', 4).replace(/\D/g, '');
       const modeParam = clean(qs.get('m') || qs.get('mode') || '', 12).toLowerCase();
 
+      let readError = null;
       async function getJSON(url) {
+        readError = null;
         try {
           const r = await (await import('../request-deadline.mjs')).deadlineFetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
-          if (!r.ok) return null;
-          return await r.json();
-        } catch (_) { return null; }        // offline / no backend → caller decides
+          if (!r.ok) { readError = { kind: 'http', status: r.status, error: 'http-' + r.status }; return null; }
+          try { return await r.json(); }
+          catch (error) { readError = { kind: error.message === 'request-timeout' ? 'timeout' : 'response', status: r.status, error: error.message === 'request-timeout' ? 'request-timeout' : 'invalid-json' }; return null; }
+        } catch (error) { readError = { kind: error.message === 'request-timeout' ? 'timeout' : 'network', status: 0, error: error.message === 'request-timeout' ? 'request-timeout' : 'network' }; return null; }        // offline / no backend → caller decides
       }
       async function postJSON(url, body) {
         try {
@@ -55,6 +58,7 @@ KiwiOrderMenu.orderProParts.run('transport', function () {
 
       return {
         slug, table,
+        get readError() { return readError; },
         demo: slug === 'demo',
         mode: modeParam === 'takeout' || modeParam === 'emporter' ? 'takeout'
             : modeParam === 'table' || modeParam === 'sur-place' ? 'table' : '',
