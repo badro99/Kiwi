@@ -1630,7 +1630,7 @@ section('Whole-project regressions');
     'support-system-test.mjs',
     'admin-support-format-test.mjs',
     'operator-snapshot-test.mjs',
-    'ledger-cache-test.mjs',
+    'ledger-cache-test.mjs', 'ledger-durability-test.mjs', 'menu-publish-resilience-test.mjs', 'printer-reconnect-resilience-test.mjs', 'caisse-print-recovery-test.mjs',
     'caisse-support-entry-test.mjs',
     'caisse-payment-upload-test.mjs',
     // A paid sale when storage is full: one entry, held, no success haptic, sent once (critique-6 B1).

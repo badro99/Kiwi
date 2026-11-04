@@ -625,7 +625,7 @@
     return { MATERIAL_VENUE_FALLBACK, typeIconOf };
   };
   (window.__kiwiVenueParts = window.__kiwiVenueParts || {}).cache = function (__deps) {
-    const {  } = __deps;
+    const { salesSubs } = __deps;
 /* <<split:cache>> */
   /* One parse per change of the stored text, not per read. A dashboard
    * redraw reads the ledger about fifty times; with 2 848 sales (1.2 MB) each
@@ -639,33 +639,53 @@
     if (o && typeof o === 'object' && !Object.isFrozen(o)) { Object.freeze(o); for (const k of Object.keys(o)) deepFreeze(o[k]); }
     return o;
   }
-  /* Un registre que le navigateur refuse de ranger (stockage plein, refusé,
-   * navigation privée) reste en mémoire pour la page. Avant, l'écriture
-   * échouait en silence et le tableau de bord relisait un registre vide :
-   * des 0 partout chez le commerçant (Santos Store, 3 novembre 2026), alors
-   * que le serveur et God Mode avaient tout. La page suivante rejoue le flux
-   * depuis le début, comme toujours. */
-  const memLedger = new Map();
+  const memLedger = new Map(), ledgerFreshness = new Map();
   let refusedReported = false;
-  function storageChars() {
-    let n = 0;
-    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i) || ''; n += k.length + String(localStorage.getItem(k) || '').length; } } catch (_) {}
-    return n;
+  function ledgerNotify() { salesSubs.forEach(fn => { try { fn(); } catch (_) {} }); }
+  function ledgerIdb(key, text) {
+    return new Promise(resolve => {
+      let request;
+      try { request = window.indexedDB.open('kiwiSalesLedger', 1); } catch (_) { resolve(false); return; }
+      request.onerror = request.onblocked = () => resolve(false);
+      request.onupgradeneeded = () => request.result.createObjectStore('ledgers');
+      request.onsuccess = () => {
+        const db = request.result;
+        try {
+          const tx = db.transaction('ledgers', key ? 'readwrite' : 'readonly'), bucket = tx.objectStore('ledgers');
+          let keys, values;
+          if (key) bucket.put(text, key);
+          else { keys = bucket.getAllKeys(); values = bucket.getAll(); }
+          tx.oncomplete = () => {
+            db.close();
+            if (!key) keys.result.forEach((k, i) => {
+              if (memLedger.has(k)) return;
+              let local; try { local = localStorage.getItem(k); } catch (_) {}
+              if (!local) { try { memLedger.set(k, deepFreeze(JSON.parse(values.result[i]))); } catch (_) {} }
+            });
+            resolve(true);
+          };
+          tx.onerror = tx.onabort = () => { db.close(); resolve(false); };
+        } catch (_) { db.close(); resolve(false); }
+      };
+    });
   }
+  const ledgerReady = ledgerIdb().then(() => { if (memLedger.size) ledgerNotify(); });
   function ledgerWrite(key, rows) {
     const text = JSON.stringify(rows);
-    try { localStorage.setItem(key, text); memLedger.delete(key); return true; } catch (err) {
-      /* L'ancienne copie, partielle, ne doit plus répondre aux lectures. */
+    let local = false;
+    try { localStorage.setItem(key, text); local = true; memLedger.delete(key); }
+    catch (_) {
       try { localStorage.removeItem(key); } catch (_) {}
       memLedger.set(key, deepFreeze(JSON.parse(text)));
-      if (!refusedReported) {
-        refusedReported = true;
-        /* Remonte à /api/error (err-reporter.js écoute les rejets) : on verra
-         * le prochain appareil plein au lieu de l'apprendre par le client. */
-        Promise.reject(new Error('kiwi-ledger-storage-refused: ' + String(key).split('@')[0] + ' ' + rows.length + ' rows ' + text.length + ' chars, storage ' + storageChars() + ' chars, ' + ((err && err.name) || 'error')));
-      }
-      return true;
+      if (!refusedReported) { refusedReported = true; Promise.reject(new Error('kiwi-ledger-storage-refused: ' + String(key).split('@')[0] + ' ' + rows.length + ' rows')); }
     }
+    const state = { saved: local, pending: !local };
+    ledgerFreshness.set(key, state);
+    ledgerIdb(key, text).then(saved => {
+      if (ledgerFreshness.get(key) !== state) return;
+      state.saved = local || saved; state.pending = false; if (!local) ledgerNotify();
+    });
+    return true;
   }
   function cachedLedger(key) {
     if (memLedger.has(key)) return memLedger.get(key);
@@ -679,7 +699,7 @@
     return rows;
   }
 /* <</split:cache>> */
-    return { ledgerCache, deepFreeze, cachedLedger, ledgerWrite };
+    return { ledgerCache, deepFreeze, cachedLedger, ledgerWrite, ledgerFreshness, ledgerReady };
   };
   (window.__kiwiVenueParts = window.__kiwiVenueParts || {}).reconcile = function (__deps) {
     const { refundSubs, refundsList, refundsWrite, salesEntry, salesList, salesSubs, salesWrite } = __deps;
