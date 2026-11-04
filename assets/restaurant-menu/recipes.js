@@ -69,9 +69,9 @@
         `</i>${esc(ui('nutritionComplete'))}</span>${toggle}</div>` +
         `<div class="rmw-nutrition-values">` +
         `<bdi dir="ltr">${n.nutrition.kcal} kcal</bdi>` +
-        `<bdi dir="ltr">P ${n.nutrition.protein} g</bdi>` +
-        `<bdi dir="ltr">G ${n.nutrition.carbs} g</bdi>` +
-        `<bdi dir="ltr">L ${n.nutrition.fat} g</bdi>` +
+        `<bdi dir="ltr">${esc(ui('nutritionProtein'))} ${n.nutrition.protein} g</bdi>` +
+        `<bdi dir="ltr">${esc(ui('nutritionCarbs'))} ${n.nutrition.carbs} g</bdi>` +
+        `<bdi dir="ltr">${esc(ui('nutritionFat'))} ${n.nutrition.fat} g</bdi>` +
         `</div>` +
         `<div class="rmw-nutrition-allergens">` +
         `<b>${esc(ui('nutritionAllergens'))}</b>` +

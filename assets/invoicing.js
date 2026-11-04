@@ -19,7 +19,7 @@
   const ready = Promise.all([
   import('./invoicing/transport.js?v=8'),
   import('./invoicing/composer.js?v=9'),
-  import('./invoicing/history.js?v=9'),
+  import('./invoicing/history.js?v=10'),
   import('./invoicing/print.js?v=8'),
 ]).then(([transportModule, composerModule, historyModule, printModule]) => {
   // invoicing:entry-body
@@ -119,7 +119,7 @@
       /* retours */
       savedDraft: 'Brouillon enregistré', saved: 'Enregistré', issuedOk: 'Émis : {n}', paymentOk: 'Paiement enregistré', paymentDeleted: 'Paiement supprimé', creditCreated: 'Brouillon d’avoir créé',
       converted: 'Brouillon de facture créé depuis le devis', duplicated: 'Copie créée en brouillon', deleted: 'Brouillon supprimé', sentMarked: 'Marquée envoyée', quoteUpdated: 'Devis mis à jour',
-      exported: 'Export CSV téléchargé', noteSaved: 'Note enregistrée', printBlocked: 'Autorisez les fenêtres contextuelles pour imprimer.', noContact: 'Ajoutez un e-mail ou un téléphone au client.',
+      exportAll: 'Exporter tout le registre filtré', exportProgress: 'Export · {n} documents', exportFailed: 'Export complet impossible. L’export des lignes chargées reste disponible.', exported: 'Export CSV téléchargé', noteSaved: 'Note enregistrée', printBlocked: 'Autorisez les fenêtres contextuelles pour imprimer.', noContact: 'Ajoutez un e-mail ou un téléphone au client.',
       validation: 'Ajoutez un client et au moins une ligne valide.', errGeneric: 'Action impossible pour le moment. Rien n’a été enregistré.',
       errLoad: 'Factures indisponibles. Vérifiez la connexion puis rouvrez le registre.', errOffline: 'Hors ligne : rien n’a été enregistré. Réessayez avec une connexion.', errTimeout: 'Pas de réponse à temps : le document a peut-être été enregistré. Rouvrez le registre pour vérifier avant de recommencer.', errLocked: 'Ce document est émis : il ne peut plus être modifié.',
       errExempt: 'Indiquez la mention d’exonération avant d’émettre.', errExceeds: 'Le montant dépasse le reste à payer.', errCredit: 'L’avoir dépasse le montant restant à créditer sur la facture.',
@@ -196,7 +196,7 @@
       accept: 'Accept', reject: 'Reject', convert: 'Convert to invoice', openOriginal: 'View original invoice', view: 'View', lockedNote: 'Issued document: it can no longer be modified. A correction goes through a credit note.',
       savedDraft: 'Draft saved', saved: 'Saved', issuedOk: 'Issued: {n}', paymentOk: 'Payment recorded', paymentDeleted: 'Payment deleted', creditCreated: 'Draft credit note created',
       converted: 'Draft invoice created from the quote', duplicated: 'Copy created as a draft', deleted: 'Draft deleted', sentMarked: 'Marked as sent', quoteUpdated: 'Quote updated',
-      exported: 'CSV export downloaded', noteSaved: 'Note saved', printBlocked: 'Allow pop-ups to print.', noContact: 'Add an email or phone for this customer.',
+      exportAll: 'Export full filtered register', exportProgress: 'Export · {n} documents', exportFailed: 'Full export failed. Export of loaded rows remains available.', exported: 'CSV export downloaded', noteSaved: 'Note saved', printBlocked: 'Allow pop-ups to print.', noContact: 'Add an email or phone for this customer.',
       validation: 'Add a customer and at least one valid line.', errGeneric: 'Not possible right now. Nothing was saved.',
       errLoad: 'Invoices unavailable. Check your connection and reopen the register.', errOffline: 'Offline: nothing was saved. Try again with a connection.', errTimeout: 'No answer in time: the document may have been saved. Reopen the register to check before trying again.', errLocked: 'This document is issued: it can no longer be modified.',
       errExempt: 'State the exemption mention before issuing.', errExceeds: 'The amount exceeds the balance due.', errCredit: 'The credit note exceeds the amount still creditable on the invoice.',
@@ -273,7 +273,7 @@
       accept: 'قبول', reject: 'رفض', convert: 'تحويل إلى فاتورة', openOriginal: 'عرض الفاتورة الأصلية', view: 'عرض', lockedNote: 'مستند صادر: لا يمكن تعديله. يتم التصحيح عبر إشعار دائن.',
       savedDraft: 'تم حفظ المسودة', saved: 'تم الحفظ', issuedOk: 'تم الإصدار: {n}', paymentOk: 'تم تسجيل الدفعة', paymentDeleted: 'تم حذف الدفعة', creditCreated: 'تم إنشاء مسودة إشعار دائن',
       converted: 'تم إنشاء مسودة فاتورة من عرض السعر', duplicated: 'تم إنشاء نسخة كمسودة', deleted: 'تم حذف المسودة', sentMarked: 'حددت كمرسلة', quoteUpdated: 'تم تحديث عرض السعر',
-      exported: 'تم تنزيل ملف CSV', noteSaved: 'تم حفظ الملاحظة', printBlocked: 'اسمح بالنوافذ المنبثقة للطباعة.', noContact: 'أضف بريداً أو هاتفاً للعميل.',
+      exportAll: 'تصدير السجل المصفى بالكامل', exportProgress: 'تصدير · {n} مستندات', exportFailed: 'تعذر التصدير الكامل. لا يزال تصدير الصفوف المحملة متاحاً.', exported: 'تم تنزيل ملف CSV', noteSaved: 'تم حفظ الملاحظة', printBlocked: 'اسمح بالنوافذ المنبثقة للطباعة.', noContact: 'أضف بريداً أو هاتفاً للعميل.',
       validation: 'أضف عميلاً وبنداً صالحاً واحداً على الأقل.', errGeneric: 'تعذر تنفيذ العملية حالياً. لم يُحفظ شيء.',
       errLoad: 'الفواتير غير متاحة. تحقق من الاتصال ثم أعد فتح السجل.', errOffline: 'دون اتصال: لم يُحفظ شيء. أعد المحاولة عند توفر الاتصال.', errTimeout: 'لم يصل الرد في الوقت: ربما حُفظ المستند. أعد فتح السجل للتحقق قبل إعادة المحاولة.', errLocked: 'هذا المستند صادر: لا يمكن تعديله.',
       errExempt: 'اذكر بيان الإعفاء قبل الإصدار.', errExceeds: 'المبلغ يتجاوز المتبقي للأداء.', errCredit: 'يتجاوز الإشعار الدائن المبلغ المتبقي قابلاً للتصحيح في الفاتورة.',
@@ -994,7 +994,7 @@
   /* ICE et numéros restent du texte : un tableur transforme 001561191000066 en
      1,56119E+14. ="…" force le texte, mais seulement sur des chiffres vérifiés. */
   function csvCell(...args) { return historyModule.csvCell({}, this, args); }
-  function exportCsv(...args) { return historyModule.exportCsv({NO_OF, T, csvCell, csvMoney, statusLabel, tab, toast, today, visibleRows}, this, args); }
+  function exportCsv(...args) { return historyModule.exportCsv({NO_OF, T, api, normRow, dayIn, filter, query, overlay, csvCell, csvMoney, statusLabel, tab, toast, today, visibleRows}, this, args); }
 
   /* ── événements ───────────────────────────────────────────────────────── */
   function setTab(next) {
@@ -1014,6 +1014,7 @@
       case 'new': return renderComposer(null, tab === 'quote' ? 'quote' : 'invoice');
       case 'back': if (currentView === 'compose' && cmp?.id) { return openDetail(cmp.id); } renderList(); return refreshAll();
       case 'export': return exportCsv();
+      case 'export-all': return exportCsv(true);
       case 'tab': return setTab(v);
       case 'filter': filter = v; overlay.querySelectorAll('.inv-filter').forEach(b => b.classList.toggle('on', b.dataset.v === v)); return paintRegister();
       case 'more': return loadMore();

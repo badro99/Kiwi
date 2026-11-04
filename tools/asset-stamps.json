@@ -212,8 +212,8 @@
     "sha": "5dfe4eaffa4b2059"
   },
   "assets/caisse-lang.js": {
-    "v": "114",
-    "sha": "f7571c7adde3ab90"
+    "v": "115",
+    "sha": "8e26539171d83915"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -304,8 +304,8 @@
     "sha": "fc17e1de643f9b22"
   },
   "assets/caisse/payment.js": {
-    "v": "6",
-    "sha": "be7d195518d8b8bd"
+    "v": "7",
+    "sha": "08412bbb1de021fd"
   },
   "assets/caisse/receipts.js": {
     "v": "2",
@@ -828,16 +828,16 @@
     "sha": "a5f4d747cf82cd39"
   },
   "assets/invoicing.js": {
-    "v": "42",
-    "sha": "a67110080bf77de3"
+    "v": "43",
+    "sha": "57bceec4c37964fe"
   },
   "assets/invoicing/composer.js": {
     "v": "9",
     "sha": "ed4c954e2ebba564"
   },
   "assets/invoicing/history.js": {
-    "v": "9",
-    "sha": "efaebe5bc1332054"
+    "v": "10",
+    "sha": "80c7e2ed7f290679"
   },
   "assets/invoicing/print.js": {
     "v": "8",
@@ -1440,8 +1440,8 @@
     "sha": "9fb027f9aefbaac1"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "170",
-    "sha": "f5dfe6d718f5d1b6"
+    "v": "172",
+    "sha": "b1ac8cd2257c878f"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1480,8 +1480,8 @@
     "sha": "f34d094b4b65709b"
   },
   "assets/planning-ui.css": {
-    "v": "14",
-    "sha": "fda62a051a548c1f"
+    "v": "15",
+    "sha": "2223dfe783714f63"
   },
   "assets/planning/corrections.js": {
     "v": "3",
@@ -1932,16 +1932,16 @@
     "sha": "a6f14f4f121dae07"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "126",
-    "sha": "25dbd6bb2dffbd61"
+    "v": "127",
+    "sha": "b2c8174ff22bf858"
   },
   "assets/restaurant-menu/recipes.js": {
-    "v": "3",
-    "sha": "a83af7c1066e3639"
+    "v": "4",
+    "sha": "1077d13ad89f98a7"
   },
   "assets/restaurant-menu/strings.js": {
-    "v": "6",
-    "sha": "ecebc7f1f448bbba"
+    "v": "8",
+    "sha": "4ac10f676de1a9b6"
   },
   "assets/restaurant-menu/styles.js": {
     "v": "4",

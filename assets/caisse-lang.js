@@ -2675,7 +2675,7 @@
       'Déclarer en perte': ['Record as a loss', 'تسجيل كخسارة'],
       'Avarié / Abîmé': ['Spoiled / Damaged', 'تالف / متضرر'],
       'Périmé': ['Expired', 'منتهي الصلاحية'],
-      'Autre perte': ['Other loss', 'خسارة أخرى'],
+      'Autre perte': ['Other loss', 'خسارة أخرى'], 'Insuffisant · manque': ['Insufficient · missing', 'غير كافٍ · المتبقي'],
       '{n} {x} en stock': ['{n} {x} in stock', '{n} {x} في المخزون'],
       'niveau par {x}': ['par level {x}', 'المستوى المرجعي {x}'],
       'Niveau par ({x})': ['Par level ({x})', 'المستوى المرجعي ({x})'],

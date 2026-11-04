@@ -1,11 +1,11 @@
 export const TICKET_TAXONOMY = Object.freeze({
   version: 1,
   kinds: Object.freeze([
-    { id: 'bug', label: { fr: 'Anomalie', en: 'Bug', ar: "خلل" }, description: { fr: 'Quelque chose ne fonctionne pas correctement.', en: 'Something does not work correctly.' } },
-    { id: 'improvement', label: { fr: 'Amélioration', en: 'Improvement', ar: "تحسين" }, description: { fr: 'Une fonction existe mais devrait être meilleure.', en: 'An existing capability should work better.' } },
-    { id: 'feature', label: { fr: 'Nouvelle fonction', en: 'Feature', ar: "ميزة جديدة" }, description: { fr: 'Une nouvelle capacité à construire.', en: 'A new capability to build.' } },
-    { id: 'question', label: { fr: 'Question', en: 'Question', ar: "سؤال" }, description: { fr: 'Aide ou vérification demandée.', en: 'Support or a requested check.' } },
-    { id: 'unsorted', label: { fr: 'À classer', en: 'Unsorted', ar: "غير مصنفة" }, description: { fr: 'Pas encore classé.', en: 'Not classified yet.' } },
+    { id: 'bug', label: { fr: 'Anomalie', en: 'Bug', ar: "خلل" }, description: { fr: 'Quelque chose ne fonctionne pas correctement.', en: 'Something does not work correctly.', ar: 'شيء ما لا يعمل بشكل صحيح.' } },
+    { id: 'improvement', label: { fr: 'Amélioration', en: 'Improvement', ar: "تحسين" }, description: { fr: 'Une fonction existe mais devrait être meilleure.', en: 'An existing capability should work better.', ar: 'وظيفة موجودة تحتاج إلى تحسين.' } },
+    { id: 'feature', label: { fr: 'Nouvelle fonction', en: 'Feature', ar: "ميزة جديدة" }, description: { fr: 'Une nouvelle capacité à construire.', en: 'A new capability to build.', ar: 'قدرة جديدة مطلوب تطويرها.' } },
+    { id: 'question', label: { fr: 'Question', en: 'Question', ar: "سؤال" }, description: { fr: 'Aide ou vérification demandée.', en: 'Support or a requested check.', ar: 'مساعدة أو تحقق مطلوب.' } },
+    { id: 'unsorted', label: { fr: 'À classer', en: 'Unsorted', ar: "غير مصنفة" }, description: { fr: 'Pas encore classé.', en: 'Not classified yet.', ar: 'لم يتم التصنيف بعد.' } },
   ]),
   areas: Object.freeze([
     { id: 'caisse', label: { fr: 'Caisse', en: 'Register', ar: "الصندوق" } },
