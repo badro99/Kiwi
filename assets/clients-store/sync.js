@@ -119,7 +119,7 @@
       return e.kind !== 'refund' && e.clientId === event.clientId && e.saleRef && e.saleRef === event.saleRef;
     })) return;
     try {
-      fetch('/api/clients', {
+      fetchDeadline('/api/clients', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
         body: JSON.stringify(isRefund ? { merchant: book, refund: {
           clientId: event.clientId, ref: event.ref, amount: -Number(event.amount || 0),
@@ -227,7 +227,7 @@
   function redemptionPush(book, event, afterClientCreate, probe) {
     if (!syncable(book) || !event || !event.ref || (typeof navigator !== 'undefined' && navigator.onLine === false)) return Promise.resolve('retry');
     return Promise.resolve().then(function () {
-      return fetch('/api/clients', {
+      return fetchDeadline('/api/clients', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
         body: JSON.stringify({ merchant: book, redemption: { clientId: event.clientId, ref: event.ref } }),
       });
@@ -281,7 +281,7 @@
     var sent = profileSnapshot(rec);
     outAdd(book, id);
     try {
-      return fetch('/api/clients', {
+      return fetchDeadline('/api/clients', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
         body: JSON.stringify(Object.assign({ merchant: book }, rec)),
       }).then(function (r) {
@@ -306,8 +306,8 @@
     // rejouer le POST ressusciterait ce qu'on vient d'effacer.
     outDrop(book, id);
     try {
-      fetch('/api/clients?merchant=' + encodeURIComponent(book) + '&id=' + encodeURIComponent(id),
-        { method: 'DELETE', keepalive: true })
+      fetchDeadline('/api/clients?merchant=' + encodeURIComponent(book) + '&id=' + encodeURIComponent(id),
+        { method: 'DELETE', keepalive: true }, false)
         .then(function (r) {
           if (r && r.ok) { outDrop(book, '-' + id); return; }
           outAdd(book, '-' + id);

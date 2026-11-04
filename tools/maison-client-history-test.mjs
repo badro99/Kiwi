@@ -47,7 +47,7 @@ const window = {
   addEventListener: () => {},
 };
 const context = { window, localStorage, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv,
-  fetch, console, JSON, Math, Date, Promise, setInterval: () => 1, clearInterval: () => {} };
+  fetch, console, JSON, Math, Date, Promise, setInterval: () => 1, clearInterval: () => {}, setTimeout, clearTimeout, AbortController };
 vm.runInNewContext(maisonSource(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8')), context,
   { filename: 'assets/clients-store.js' });
 

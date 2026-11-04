@@ -80,7 +80,7 @@ function till(cfg, responder, savedBook) {
   const window = { localStorage, KiwiStore: { define, currentVenue: () => MERCHANT },
     KiwiEnv: { isReal: () => true }, addEventListener() {} };
   vm.runInNewContext(source, { window, localStorage, KiwiStore: window.KiwiStore,
-    console, setInterval() {}, fetch: responder || (async () => ({ ok: false })) });
+    console, setInterval() {}, setTimeout, clearTimeout, AbortController, fetch: responder || (async () => ({ ok: false })) });
   const api = window.KiwiClients;
   api.setConfig(cfg, MERCHANT);
   if (!api.get('c1',MERCHANT)) api.upsert({ name: 'Client' }, MERCHANT).id = 'c1';

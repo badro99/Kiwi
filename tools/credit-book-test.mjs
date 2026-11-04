@@ -373,18 +373,16 @@ ok('règlement par carte (notation 14) : le journal et la recette du jour le com
   const methods = [];
   const record = t.ctx.window.KiwiPosSale.record;
   t.ctx.window.KiwiPosSale.record = (v, sale) => { methods.push(sale.method); return record(v, sale); };
-  const r = t.commitRepayment('k1', 40, 'carte');
-  assert.ok(!r.error, r.error);
+  const drawer = () => ({ especes: Number(t.ctx.day.especes || 0), carte: Number(t.ctx.day.carte || 0) });
+  const paid = t.commitRepayment('k1', 40, 'carte');
+  assert.deepEqual([paid.error, paid.entry.method, /carte/.test(paid.entry.label)], [undefined, 'carte', true]);
   assert.deepEqual(methods, ['carte']);
-  assert.equal(t.ctx.day.carte, 40);
-  assert.equal(t.ctx.day.especes, 0);
-  assert.equal(r.entry.method, 'carte');
-  assert.match(r.entry.label, /carte/);
+  assert.deepEqual(drawer(), { especes: 0, carte: 40 });
   assert.equal(t.balanceOf(t.CRED.k1), 40.5);
   const cash = t.commitRepayment('k1', 10);
   assert.ok(!cash.error);
   assert.deepEqual(methods, ['carte', 'especes'], 'sans méthode, un règlement reste en espèces');
-  assert.equal(t.ctx.day.especes, 10);
+  assert.deepEqual(drawer(), { especes: 10, carte: 40 });
 });
 ok('fiche reçue d\'une autre caisse pendant la saisie : le règlement va au carnet lu, pas à la copie périmée', () => {
   const disk = new Map(); const t = till(disk);
