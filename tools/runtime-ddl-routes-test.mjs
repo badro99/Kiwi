@@ -9,7 +9,6 @@ const helpers = {
   'api/_demo-requests.js': ['ensureDemoRequests'],
   'api/_invoice-series.js': ['ensureInvoicingSchema'],
   'api/_store-credit-ledger.js': ['ensureCreditEvents'],
-  'api/clients.js': ['ensurePurchaseEvents', 'ensureRewardEvents', 'ensureClientSyncSequence'],
   'api/employee-clients.js': ['ensureEmployeeLoyaltyEvents'],
   'api/foodcost.js': ['ensureSchema'],
   'api/invoice.js': ['ensureInvoiceSchema'],
