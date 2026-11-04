@@ -76,7 +76,7 @@
   var retryTimer = null;
   var retryDelay = 0;
   function store() { try { return window.localStorage || null; } catch (_) { return null; } }
-  var copies = {}, recovery = {}, recoveryBlocked = {};
+  var copies = {}, recovery = {}, recoveryBlocked = {}, persistence = {};
   var saving = Promise.resolve();
   function saveTask(fn) {
     var task = saving.then(fn, fn);
@@ -144,9 +144,9 @@
   function readQueue(owner) { return records(owner).filter(function (i) { return !i.done && !needsCorrection(i); }); }
   // Même couche de langue que le planning employé : document.documentElement.lang.
   function correctionWords(lang) {
-    if (lang === 'ar') return { title: 'تسجيل حضور يحتاج إلى تصحيح من المسؤول', in: 'حضور', out: 'انصراف', dismiss: 'إخفاء هذا التسجيل من الهاتف', unreadable: 'تعذر قراءة سجل الحضور. احتُفظ بالبيانات للاستعادة، تواصل مع المسؤول.' };
-    if (lang === 'en') return { title: 'Punch to be corrected by a manager', in: 'Clock in', out: 'Clock out', dismiss: 'Dismiss this punch from this phone', unreadable: 'Attendance storage could not be read. Data is retained for recovery, contact your manager.' };
-    return { title: 'Pointage à corriger par un responsable', in: 'Arrivée', out: 'Départ', dismiss: 'Masquer ce pointage sur ce téléphone', unreadable: 'Le stockage des pointages est illisible. Les données sont conservées pour récupération, contactez votre responsable.' };
+    if (lang === 'ar') return { title: 'تسجيل حضور يحتاج إلى تصحيح من المسؤول', in: 'حضور', out: 'انصراف', dismiss: 'إخفاء هذا التسجيل من الهاتف', persistence: 'تعذر حفظ الحضور على هذا الجهاز: ', unreadable: 'تعذر قراءة سجل الحضور. احتُفظ بالبيانات للاستعادة، تواصل مع المسؤول.' };
+    if (lang === 'en') return { title: 'Punch to be corrected by a manager', in: 'Clock in', out: 'Clock out', dismiss: 'Dismiss this punch from this phone', persistence: 'Attendance could not be saved on this device: ', unreadable: 'Attendance storage could not be read. Data is retained for recovery, contact your manager.' };
+    return { title: 'Pointage à corriger par un responsable', in: 'Arrivée', out: 'Départ', dismiss: 'Masquer ce pointage sur ce téléphone', persistence: 'Pointage non sauvegardé sur cet appareil : ', unreadable: 'Le stockage des pointages est illisible. Les données sont conservées pour récupération, contactez votre responsable.' };
   }
   function renderCorrections() {
     if (!document.createElement || !document.body) return;
@@ -155,7 +155,7 @@
     var panel = document.getElementById('employee-punch-corrections');
     if (panel) panel.remove();
     var items = queueOwner ? records(queueOwner).filter(needsCorrection) : [];
-    if (!items.length && !recovery[queueOwner]) return;
+    if (!items.length && !recovery[queueOwner] && !persistence[queueOwner]) return;
     var lang = document.documentElement.lang, words = correctionWords(lang);
     panel = document.createElement('section');
     panel.id = 'employee-punch-corrections';
@@ -168,6 +168,11 @@
       var notice = document.createElement('p'); notice.setAttribute('role', 'alert');
       notice.textContent = words.unreadable;
       panel.appendChild(notice);
+    }
+    if (persistence[queueOwner]) {
+      var failure = document.createElement('p'); failure.setAttribute('role', 'alert');
+      failure.textContent = words.persistence + persistence[queueOwner];
+      panel.appendChild(failure);
     }
     items.forEach(function (item) {
       var row = document.createElement('div'), label = document.createElement('p');
@@ -201,8 +206,10 @@
       if (pending.length) store().setItem(QUEUE_PREFIX + owner, JSON.stringify(pending));
       else store().removeItem(QUEUE_PREFIX + owner);
       saved = true;
-    } catch (_) { console.warn("[employee-live] writeQueue failed"); }
+    } catch (_) { persistence[owner] = 'localStorage'; if (owner === queueOwner) renderCorrections(); }
     return idb(owner, items).then(function (stored) {
+      persistence[owner] = [saved ? '' : 'localStorage', stored ? '' : 'IndexedDB'].filter(Boolean).join(', ');
+      if (owner === queueOwner) renderCorrections();
       if (saved || stored) copies[owner] = items;
       return saved || !!stored;
     });

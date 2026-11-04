@@ -296,6 +296,10 @@
       }));
       Object.keys(CRED).forEach((id) => delete CRED[id]);
       CARNET.forEach((customer) => { CRED[customer.id] = customer; });
+      if (root && $('#ep-ard-veil', root)?.classList.contains('is-open')) {
+        const id = $('#ep-ardm', root)?.dataset.creditId;
+        if (CRED[id]) openArdoise(id); else closeVeil('#ep-ard-veil');
+      }
       if (saved.day && typeof saved.day === 'object') {
         Object.keys(day).forEach((key) => delete day[key]);
         Object.assign(day, saved.day);

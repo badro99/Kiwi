@@ -2,6 +2,7 @@ import { createData, createTicketState } from './tickets-data.js?v=10';
 import { createBoard } from './tickets-board.js?v=7';
 import { createComposer } from './tickets-composer.js?v=5';
 import { createThread } from './tickets-thread.js?v=3';
+import { draftFallback } from './tickets-recovery.js?v=2';
 (function () {
   'use strict';
 
@@ -17,6 +18,7 @@ import { createThread } from './tickets-thread.js?v=3';
   const COPY = {
     fr: {
       'filter.saveFailed': 'Filtres non enregistrés sur cet appareil. Ils seront perdus au rechargement.',
+      'draft.export': 'Exporter le brouillon avec les images',
       'draft.failed': 'Brouillon non sauvegardé sur cet appareil. Gardez cette page ouverte.',
       'draft.policy': 'Brouillon local : texte et 6 images maximum, 10 Mo chacune, conservés sur cet appareil jusqu’à l’envoi.',
       'doc.title': 'Kiwi Tickets',
@@ -143,6 +145,7 @@ import { createThread } from './tickets-thread.js?v=3';
     },
     en: {
       'filter.saveFailed': 'Filters not saved on this device. They will be lost on reload.',
+      'draft.export': 'Export draft with images',
       'draft.failed': 'Draft not saved on this device. Keep this page open.',
       'draft.policy': 'Local draft: text and up to 6 images, 10 MB each, kept on this device until sent.',
       'doc.title': 'Kiwi Tickets',
@@ -269,6 +272,7 @@ import { createThread } from './tickets-thread.js?v=3';
     },
     ar: {
       'filter.saveFailed': 'لم تُحفظ المرشحات على هذا الجهاز. ستُفقد عند إعادة التحميل.',
+      'draft.export': 'تصدير المسودة مع الصور',
       'draft.failed': 'لم يتم حفظ المسودة على هذا الجهاز. أبقِ هذه الصفحة مفتوحة.',
       'draft.policy': 'مسودة محلية: النص وحتى 6 صور، 10 ميغابايت لكل صورة، محفوظة على هذا الجهاز حتى الإرسال.',
       'doc.title': 'Kiwi · التذاكر',
@@ -553,9 +557,10 @@ import { createThread } from './tickets-thread.js?v=3';
 
   function loadTickets(...args) { return dataPart.loadTickets(...args); }
 
+
   const draftController = import('./tickets-draft.mjs').then(({composerDraft}) => composerDraft({
     $, state, composer, syncComposerSubkinds, renderSelectedImages, resetComposer, t,
-  })).catch(() => ({ store: null, saveDraft() { $('formError').textContent = t('draft.failed'); }, restoreDraft() { $('formError').textContent = t('draft.failed'); } }));
+  })).catch(() => draftFallback({ $, state, t }));
   /* The draft logic lives in tickets-draft.mjs; these are its two entry points here. */
   const draft = { save: () => draftController.then((c) => c.saveDraft()), restore: (scope) => draftController.then((c) => c.restoreDraft(scope)) };
 

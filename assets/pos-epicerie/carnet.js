@@ -412,6 +412,7 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
     if (!c) return;
     rememberView('#ep-ard-veil', () => openArdoise(id));
     const el = $('#ep-ardm', ctx.root);
+    el.dataset.creditId = id;
     const bal = balanceOf(c);
     const oldest = oldestDebt(c);
     const hist = c.hist.slice().sort((a, b) => b.at - a.at);

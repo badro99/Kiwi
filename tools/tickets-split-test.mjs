@@ -25,7 +25,7 @@ for (const p of ticketsMap.parts) {
 }
 const entry = read('assets/tickets.js');
 const imports = [...entry.matchAll(/^import .* from '([^']+)';/gm)].map(m => m[1].replace('./','assets/').replace(/\?v=\d+$/,''));
-assert.deepEqual(imports,ticketsMap.parts.map(p=>p.file));
+assert.deepEqual(imports,[...ticketsMap.parts.map(p=>p.file), ...(ticketsMap.externalImports || [])]);
 assert.match(read('tickets.html'), /<script type="module" src="assets\/tickets.js\?v=\d+" defer><\/script>/);
 assert.equal((read('tickets.html').match(/<script\b[^>]*src=/g)||[]).length,4,'no additional script tags');
 const stamps = (await import('./stamps.js')).default.scan();

@@ -437,31 +437,40 @@
     finally { S.saving = false; paint(); }
   }
   async function action(body) {
+    const scope = S.merchant, sheetId = S.openId, draft = S.draft, snapshot = JSON.stringify(draft);
+    const current = () => S.merchant === scope && merchant() === scope && S.openId === sheetId && S.draft === draft && JSON.stringify(draft) === snapshot;
     if (!online()) { S.message = tr('offline'); S.messageKind = 'warn'; paint(); return null; }
     try {
       const r = await api('POST', '', { merchant: S.merchant, ...body });
+      if (!current()) return null;
       if (r.status === 200 || r.status === 201) { replaceSheet(r.data.sheet); return r.data.sheet; }
       if (r.status === 409 && r.data.sheet) { S.conflict = r.data.sheet; replaceSheet(r.data.sheet); paint(); return null; }
       S.message = r.data.error === 'disabled' ? tr('disabledError') : tr('saveError'); S.messageKind = 'warn'; paint(); return null;
-    } catch (_) { S.message = tr('saveError'); S.messageKind = 'warn'; paint(); return null; }
+    } catch (_) { if (!current()) return null; S.message = tr('saveError'); S.messageKind = 'warn'; paint(); return null; }
   }
   async function loadHistory() {
+    const scope = S.merchant, sheetId = S.openId, draft = S.draft, snapshot = JSON.stringify(draft);
+    const current = () => S.merchant === scope && merchant() === scope && S.openId === sheetId && S.draft === draft && JSON.stringify(draft) === snapshot;
     if (!S.openId) return;
     S.historyError = false; S.snapshotError = null;
     try {
       const r = await api('GET', 'merchant=' + encodeURIComponent(S.merchant) + '&id=' + encodeURIComponent(S.openId));
+      if (!current()) return;
       if (r.status !== 200 || !Array.isArray(r.data.history)) throw new Error('history-read');
       S.history = r.data.history;
-    } catch (_) { S.history = []; S.historyError = true; }
+    } catch (_) { if (!current()) return; S.history = []; S.historyError = true; }
     paint();
   }
   async function loadSnapshot(v) {
+    const scope = S.merchant, sheetId = S.openId, draft = S.draft, snapshot = JSON.stringify(draft);
+    const current = () => S.merchant === scope && merchant() === scope && S.openId === sheetId && S.draft === draft && JSON.stringify(draft) === snapshot;
     S.snapshot = null; S.snapshotError = null;
     try {
       const r = await api('GET', 'merchant=' + encodeURIComponent(S.merchant) + '&id=' + encodeURIComponent(S.openId) + '&version=' + v);
+      if (!current()) return;
       if (r.status !== 200 || !r.data.snapshot) throw new Error('snapshot-read');
       S.snapshot = r.data.snapshot;
-    } catch (_) { S.snapshotError = v; }
+    } catch (_) { if (!current()) return; S.snapshotError = v; }
     paint();
   }
 

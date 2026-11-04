@@ -13,29 +13,6 @@
  * tools/admin-api-owner-test.mjs fails if a console file calls fetch itself. */
 (function () {
   'use strict';
-  var fetchDeadline = function (url, options, readBody, controller) {
-    controller = controller || (typeof AbortController === 'function' ? new AbortController() : null);
-    var timer;
-    var request = new Promise(function (resolve, reject) {
-      try { resolve(fetch(url, Object.assign({}, options, controller ? {signal: controller.signal} : {}))); }
-      catch (error) { reject(error); }
-    }).then(function (response) {
-      if (readBody === false || !response || typeof response.json !== 'function') return response;
-      return response.json().then(function (data) {
-        response.json = function () { return Promise.resolve(data); }; return response;
-      }, function (error) {
-        response.json = function () { return Promise.reject(error); }; return response;
-      });
-    });
-    var deadline = new Promise(function (_, reject) {
-      timer = setTimeout(function () {
-        var error = new Error('request-timeout'); error.code = 'timeout';
-        reject(error);
-        if (controller) controller.abort();
-      }, 12000);
-    });
-    return Promise.race([request, deadline]).finally(function () { clearTimeout(timer); });
-  };
   var writes = [];
   function route(path) {
     var p = String(path || '');
@@ -50,11 +27,11 @@
     var method = String(o.method || 'GET').toUpperCase();
     var r, body;
     try {
-      r = await fetchDeadline(url, o);
-      try { body = await r.json(); } catch (_) { throw Object.assign(new Error('bad-response'), { code: 'bad-response' }); }
+      r = await (await import('./request-deadline.mjs')).deadlineFetch(url, o, 12000);
+      try { body = await r.json(); } catch (_) { if (_.code === 'request-timeout') throw _; throw Object.assign(new Error('bad-response'), { code: 'bad-response' }); }
     } catch (failure) {
-      var kind = failure && failure.code === 'timeout' ? 'timeout' : failure && failure.code === 'bad-response' ? 'bad-response' : 'offline';
-      throw Object.assign(new Error(kind), { status: 0, code: kind, body: undefined });
+      var kind = failure && (failure.code === 'timeout' || failure.code === 'request-timeout') ? 'timeout' : failure && failure.code === 'bad-response' ? 'bad-response' : 'offline';
+      throw Object.assign(new Error(kind), { status: 0, code: kind, body: undefined, uncertainCommit: method !== 'GET' && method !== 'HEAD' });
     }
     if (!r.ok) {
       var code = body && typeof body.error === 'string' ? body.error : '';
@@ -62,7 +39,7 @@
       e.status = r.status; e.code = code || undefined; e.body = body || undefined;
       throw e;
     }
-    if (!body || typeof body !== 'object' || Array.isArray(body)) throw Object.assign(new Error('bad-response'), { status: 0, code: 'bad-response', body: undefined });
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw Object.assign(new Error('bad-response'), { status: 0, code: 'bad-response', body: undefined, uncertainCommit: method !== 'GET' && method !== 'HEAD' });
     if (method !== 'GET' && method !== 'HEAD') {
       writes.slice().forEach(function (fn) { try { fn({ path: url, method: method }); } catch (_) {} });
     }

@@ -6,7 +6,7 @@ const read = file => fs.readFileSync(new URL('../' + file, import.meta.url), 'ut
 export const ticketsMap = JSON.parse(read('tools/fixtures/tickets/split.json'));
 export const ticketsFiles = ['assets/tickets.js', ...ticketsMap.parts.map(p => p.file)];
 export function ticketsRuntimeSource() {
-  return ticketsMap.parts.map(p => read(p.file).replace(/^export /gm, '')).join('\n') + '\n' +
+  return (ticketsMap.externalImports || []).map(file => read(file).replace(/^export /gm, '')).join('\n') + '\n' + ticketsMap.parts.map(p => read(p.file).replace(/^export /gm, '')).join('\n') + '\n' +
     read('assets/tickets.js').replace(/^import .*;\n/gm, '');
 }
 export function ticketsTestSource() {

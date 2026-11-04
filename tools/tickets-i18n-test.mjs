@@ -58,6 +58,7 @@ class Node_ {
     };
     void self;
   }
+  appendChild(child) { this.append(child); return child; }
   get className() { return [...this.classList.set].join(' '); }
   set className(value) { this.classList.set = new Set(String(value).split(/\s+/).filter(Boolean)); }
   get textContent() { return this.tagName === '#TEXT' ? this._text : this._text + this.children.map((c) => c.textContent).join(''); }

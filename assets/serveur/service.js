@@ -38,7 +38,7 @@
          employé que l'historique, 500 au plus, plus récentes d'abord. Le
          centre de notifications les relit avec « Voir plus ». */
       if (serviceNotifications.length > 100) {
-        const overflow = serviceNotifications.splice(100);
+        const overflow = serviceNotifications.slice(100);
         try {
           const archiveKey = serviceHistoryKey + ':archive';
           const saved = JSON.parse(localStorage.getItem(archiveKey) || '[]');
@@ -46,8 +46,8 @@
           const seen = new Set(kept.map((item) => item.id));
           const moved = overflow.filter((item) => item && item.id && !seen.has(item.id))
             .map((item) => ({ ...item, unread: false }));
-          localStorage.setItem(archiveKey, JSON.stringify(moved.concat(kept).slice(0, 500)));
-        } catch (_) {}
+          localStorage.setItem(archiveKey, JSON.stringify(moved.concat(kept).slice(0, 500))); serviceNotifications.splice(100);
+        } catch (_) { toast(employeePick('Notifications non sauvegardées sur cet appareil. Gardez cette page ouverte.', 'Notifications could not be saved on this device. Keep this page open.', 'تعذر حفظ الإشعارات على هذا الجهاز. أبقِ الصفحة مفتوحة.')); }
       }
       try { localStorage.setItem(serviceHistoryKey, JSON.stringify(serviceNotifications.slice(0, 100))); } catch (_) {}
     }

@@ -61,7 +61,7 @@
     'assets/briefing-rules.js?v=2',
     'assets/briefing-persistence.js?v=6',
     'assets/briefing.js?v=43',
-    'assets/simple-food-cost.js?v=23',
+    'assets/simple-food-cost.js?v=24',
     'assets/finance.js?v=14',
     'assets/conformite.js?v=8',
     'assets/production-action-guard.js?v=6',
