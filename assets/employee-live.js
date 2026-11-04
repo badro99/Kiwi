@@ -35,7 +35,7 @@
         // Une session (re)trouvée envoie la file ; un sondage ne devance pas la relance prévue.
         var changed = owner !== queueOwner;
         queueOwner = owner;
-        if (changed || (!retryTimer && readQueue(owner).length)) schedule(0);
+        if (changed || (!retryTimer && (readQueue(owner).length || unreported(owner).length))) schedule(0);
       }
       try { document.dispatchEvent(new CustomEvent('kiwi-employee-data', { detail: data })); } catch (_) { console.warn("[employee-live] remember failed"); }
     }
@@ -150,11 +150,19 @@
   }
   function needsCorrection(i) { return !i.done && serverNow() - Number(i.at) > 12 * 3600000; }
   function readQueue(owner) { return records(owner).filter(function (i) { return !i.done && !needsCorrection(i); }); }
+  /* Un geste de plus de 12 h n'est jamais rejoué comme pointage : il part au
+     serveur comme DEMANDE de correction (aucun effet sur les heures) que le
+     responsable accepte ou refuse. Il reste affiché sur le téléphone. */
+  function unreported(owner) { return records(owner).filter(function (i) { return needsCorrection(i) && !i.reported; }); }
+  function markReported(owner, opId, state) {
+    var items = records(owner).map(function (i) { return i.opId === opId ? Object.assign({}, i, { reported: state }) : i; });
+    return writeQueue(owner, items).then(function () { copies[owner] = items; });
+  }
   // Même couche de langue que le planning employé : document.documentElement.lang.
   function correctionWords(lang) {
-    if (lang === 'ar') return { title: 'تسجيل حضور يحتاج إلى تصحيح من المسؤول', in: 'حضور', out: 'انصراف', dismiss: 'إخفاء هذا التسجيل من الهاتف', persistence: 'تعذر حفظ الحضور على هذا الجهاز: ', unreadable: 'تعذر قراءة سجل الحضور. احتُفظ بالبيانات للاستعادة، تواصل مع المسؤول.' };
-    if (lang === 'en') return { title: 'Punch to be corrected by a manager', in: 'Clock in', out: 'Clock out', dismiss: 'Dismiss this punch from this phone', persistence: 'Attendance could not be saved on this device: ', unreadable: 'Attendance storage could not be read. Data is retained for recovery, contact your manager.' };
-    return { title: 'Pointage à corriger par un responsable', in: 'Arrivée', out: 'Départ', dismiss: 'Masquer ce pointage sur ce téléphone', persistence: 'Pointage non sauvegardé sur cet appareil : ', unreadable: 'Le stockage des pointages est illisible. Les données sont conservées pour récupération, contactez votre responsable.' };
+    if (lang === 'ar') return { title: 'تسجيل حضور يحتاج إلى تصحيح من المسؤول', in: 'حضور', out: 'انصراف', dismiss: 'إخفاء هذا التسجيل من الهاتف', sent: 'أُرسل إلى المسؤول للقرار', unsent: 'لم يُرسل بعد إلى المسؤول', persistence: 'تعذر حفظ الحضور على هذا الجهاز: ', unreadable: 'تعذر قراءة سجل الحضور. احتُفظ بالبيانات للاستعادة، تواصل مع المسؤول.' };
+    if (lang === 'en') return { title: 'Punch to be corrected by a manager', in: 'Clock in', out: 'Clock out', dismiss: 'Dismiss this punch from this phone', sent: 'Sent to your manager for a decision', unsent: 'Not yet sent to your manager', persistence: 'Attendance could not be saved on this device: ', unreadable: 'Attendance storage could not be read. Data is retained for recovery, contact your manager.' };
+    return { title: 'Pointage à corriger par un responsable', in: 'Arrivée', out: 'Départ', dismiss: 'Masquer ce pointage sur ce téléphone', sent: 'Transmis au responsable pour décision', unsent: 'Pas encore transmis au responsable', persistence: 'Pointage non sauvegardé sur cet appareil : ', unreadable: 'Le stockage des pointages est illisible. Les données sont conservées pour récupération, contactez votre responsable.' };
   }
   function renderCorrections() {
     if (!document.createElement || !document.body) return;
@@ -191,7 +199,9 @@
         var owner = queueOwner;
         saveTask(function () { return dropItem(owner, item.opId, { result: 'correction-dismissed' }); }).then(renderCorrections);
       });
-      row.appendChild(button); panel.appendChild(row);
+      row.appendChild(button);
+      var state = document.createElement('p'); state.textContent = item.reported === true ? words.sent : words.unsent; row.appendChild(state);
+      panel.appendChild(row);
     });
     container.prepend(panel);
   }
@@ -251,8 +261,18 @@
     var sent = 0, approvals = 0, rejected = [];
     function step() {
       if (queueOwner !== owner) return Promise.resolve();
-      var item = readQueue(owner)[0];
+      var item = readQueue(owner)[0], stale = false;
+      if (!item) { item = unreported(owner)[0]; stale = !!item; }
       if (!item) { lastBlock = null; return Promise.resolve(); }
+      if (stale) {
+        var report = bodyFor(item); report.attendanceCode = ''; report.progress = null;
+        return call('POST', report).then(function () {
+          return markReported(owner, item.opId, true).then(step);
+        }, function (err) {
+          if (keeps(err)) { lastBlock = err; return; }
+          return markReported(owner, item.opId, 'refused').then(step);
+        });
+      }
       return call('POST', bodyFor(item)).then(function (data) {
         return dropItem(owner, item.opId, { result: data.pendingApproval ? 'approval' : 'sent' }).then(function () {
           outcomes[item.opId] = { data: data };
@@ -273,11 +293,11 @@
     return loadQueue(owner).then(step).then(function () {
       // The correction panel is display only: it must never stop a retry.
       try { renderCorrections(); } catch (_) { console.warn("[employee-live] step failed"); }
-      var pending = readQueue(owner).length;
-      if (pending && lastBlock && lastBlock.status !== 401) {
+      var pending = readQueue(owner).length, retry = pending + unreported(owner).length;
+      if (retry && lastBlock && lastBlock.status !== 401) {
         retryDelay = Math.min(300000, retryDelay ? retryDelay * 2 : 15000);
         schedule(retryDelay);
-      } else if (!pending) retryDelay = 0;
+      } else if (!retry) retryDelay = 0;
       if (approvals && typeof window.toast === 'function') {
         var lang = document.documentElement.lang;
         window.toast(lang === 'ar' ? 'تم حفظ تسجيل الحضور لموافقة المسؤول' : lang === 'en' ? 'Punch kept for manager approval' : 'Pointage conservé pour validation du responsable', 4200);

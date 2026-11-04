@@ -938,9 +938,16 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
   if (two[1]) { two[1].at = Date.now() - 25 * 3600000; storage.set(QKEY, JSON.stringify(two)); }
   net.offline = false;
   await flushAll(B.live);
+  const staleRow = sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='attendance-corrections'").get();
+  const staleItems = staleRow ? JSON.parse(staleRow.data).items : [];
   ok(two.length === 2 && queued().length === 1 && queued()[0].opId === two[1].opId
-    && !net.posts.some(p => p.opId === two[1].opId) && JSON.stringify(attendanceDoc()) === before,
-    'le pointage périmé reste local sans envoi automatique');
+    && JSON.stringify(attendanceDoc()) === before
+    && net.posts.filter(p => p.opId === two[1].opId).length === 1
+    && staleItems.filter(i => i.opId === two[1].opId && i.status === 'pending').length === 1,
+    'le pointage périmé ne devient jamais un pointage : il part comme demande de correction (aucun effet sur les heures), le responsable le voit, il reste sur le téléphone');
+  await flushAll(B.live);
+  ok(net.posts.filter(p => p.opId === two[1].opId).length === 1 && queued().length === 1,
+    'la demande de correction déjà transmise ne repart pas à chaque ouverture');
 
   // 6. Hors ligne avec un départ en attente, la déconnexion garde la session qui l'enverra.
   net.offline = true;
@@ -953,6 +960,22 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
   await B.tick();
   ok(queued().length === 1 && attendanceDoc().entries.filter((e) => e.staffId === 'mem-sara' && !e.outTs).length === 0,
     'au retour du réseau, le départ en attente part et ferme le service');
+
+  // 7. Document plein : un pointage récent n'est jamais rogné ; seul un service clos de plus de 400 jours part.
+  {
+    const full = attendanceDoc(), t0 = Date.now();
+    const filler = Array.from({ length: 4998 }, (_, k) => ({ id: 'f' + k, staffId: 'filler', inTs: t0 - 30 * 24 * 3600000 + k * 1000, outTs: t0 - 30 * 24 * 3600000 + k * 1000 + 500 }));
+    full.entries = [{ id: 'ancient-filler', staffId: 'filler', inTs: t0 - 500 * 24 * 3600000, outTs: t0 - 500 * 24 * 3600000 + 3600000 },
+      { id: 'recent-filler', staffId: 'filler', inTs: t0 - 3 * 24 * 3600000, outTs: t0 - 3 * 24 * 3600000 + 3600000 }, ...filler, ...full.entries];
+    put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance'", JSON.stringify(full));
+    const fresh = await (await teamLivePost({ action: 'generate-attendance-code' })).json();
+    const before7 = attendanceDoc().entries.length;
+    await B.live.clockIn(fresh.code).catch(() => {});
+    const after7 = attendanceDoc().entries;
+    ok(before7 > 5000 && after7.some((e) => e.id === 'recent-filler') && !after7.some((e) => e.id === 'ancient-filler')
+      && after7.some((e) => e.staffId === 'mem-sara' && !e.outTs),
+    'document de présence plein : le pointage récent est conservé, seul le service clos de plus de 400 jours est retiré, la nouvelle arrivée est enregistrée');
+  }
 }
 
 /* Wave S : vrai client, DOM minimal, stockage conservé entre ouvertures. */
@@ -995,8 +1018,10 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
       { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     ok(panel && text(panel).includes(title) && text(panel).includes(date),
       'Wave S ' + lang + ' : après réouverture, pointage de 13 h listé avec jour et heure');
-    ok(posts.filter(p => p.opId === 'expired').length === 0 && posts.filter(p => p.opId === 'recent').length === 1,
-      'Wave S : aucun envoi du geste de 13 h, un envoi du geste de 2 h');
+    ok(posts.filter(p => p.opId === 'expired').length === 1 && posts.filter(p => p.opId === 'expired')[0].attendanceCode === '' && posts.filter(p => p.opId === 'recent').length === 1,
+      'Wave S : le geste de 13 h part une seule fois comme demande de correction (capturedAgoMs au-delà de 12 h), le geste de 2 h une fois comme pointage');
+    ok(posts.filter(p => p.opId === 'expired')[0].capturedAgoMs > 12 * 3600000 && JSON.parse(local.get(key)).some(i => i.opId === 'expired' && i.reported === true),
+      'Wave S : la demande transmise reste sur le téléphone, marquée transmise');
     if (lang === 'ar' && panel) {
       panel.children[1].children[1].click();
       await new Promise(resolve => setImmediate(resolve));

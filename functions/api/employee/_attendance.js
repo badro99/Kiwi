@@ -1,5 +1,6 @@
 import { json, targetKey, limitCheck, limitFail, limitClear, rateLimitUnavailable } from '../../auth/_lib.js';
 import { retainCorrection } from '../_attendance-corrections.js';
+import { capAttendance } from '../_attendance-cap.js';
 import { servedDuring, verifiedProgress } from './_progress-truth.js';
 // Internal contract: actor is supplied only after liveEmployee authentication and
 // store operational checks. Access roles are distinct from free-form job titles.
@@ -8,7 +9,6 @@ const ATTENDANCE_FEATURE = 'attendance';
 const ATTENDANCE_CODE_FEATURE = 'attendance-code';
 const TEAM_FEATURE = 'team';
 const PROGRESS_FEATURE = 'employee-progress';
-const MAX_ATTENDANCE = 5000;
 // Automatic replay is limited to 12 h; older punches await an audited decision.
 const CAPTURE_MAX_AGE_MS = 12 * 3600000;
 // Combien de temps team.hoursCredited garde la marque d'un service crédité.
@@ -148,7 +148,7 @@ export async function handleAttendance({ actor, store, request, action, body }) 
       open.hoursCredit = 'pending';
       changedEntry = { ...open };
     }
-    return { entries: entries.slice(-MAX_ATTENDANCE) };
+    return { entries: capAttendance(entries) };
   });
   if (refusal) return json({ error: refusal }, 409);
   if (!attendance) return json({ error: 'attendance-write-failed' }, 503);
