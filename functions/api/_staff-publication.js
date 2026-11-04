@@ -80,6 +80,8 @@ export async function publishStaffCredentials(env, merchant, body) {
       email: /^\S+@\S+\.\S+$/.test(email) ? email : '',
       department: String(p.department || '').trim().slice(0, 40),
       venueSlug: String(p.venueSlug || '').trim().slice(0, 96),
+      storedCode: '', // sealed below, never the code itself
+      candidates: /** @type {string[]} */ ([]),
     });
   }
   // Atomic replace. created_ts is offset per index so the GET's ORDER BY
