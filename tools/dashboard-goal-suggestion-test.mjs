@@ -177,9 +177,12 @@ ok('stockage refusé : le registre des ventes reste lisible, l’incident remont
   };
   const rejected = [];
   const window = {};
-  const ctx = { window, localStorage, Promise: { reject: (e) => { rejected.push(e.message); return { catch() {} }; } }, JSON, Map, Object, String, Array };
+  // A real Promise (the IndexedDB copy needs one) whose reject records the report instead of raising it.
+  const P = class extends Promise {};
+  P.reject = (e) => { rejected.push(e.message); return { catch() {} }; };
+  const ctx = { window, localStorage, Promise: P, JSON, Map, Object, String, Array };
   vm.runInNewContext(HELPERS, ctx);
-  const { cachedLedger, ledgerWrite } = window.__kiwiVenueParts.cache.call({}, {});
+  const { cachedLedger, ledgerWrite } = window.__kiwiVenueParts.cache.call({}, { salesSubs: new Set() });
   const key = 'kiwiSales:own@santos-store';
   const rows = Array.from({ length: 3171 }, (_, i) => ({ ts: i, amount: 100, cursor: i + 1 }));
   assert.equal(ledgerWrite(key, rows), true);

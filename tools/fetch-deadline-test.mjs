@@ -4,6 +4,7 @@ import invoicingSourceHelper from './invoicing-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { deadlineVmSource } from './deadline-vm-source.mjs';
 const read = name => name === 'team-hours' ? planningSourceHelper.planningTestSource() : name === 'team' ? teamOwners.originalFile('assets/team.js') : name === 'invoicing' ? invoicingSourceHelper.invoicingTestSource() : fs.readFileSync(new URL('../assets/' + name + '.js', import.meta.url), 'utf8');
 const between = (s, a, b) => s.slice(s.indexOf(a), s.indexOf(b, s.indexOf(a)));
 const drain = async () => { for (let i=0;i<40;i++) await Promise.resolve(); };
@@ -14,8 +15,9 @@ function fixture(name, extra={}) {
     setTimeout(fn,ms){timers.set(++id,{fn,ms});return id;},clearTimeout(key){timers.delete(key);},
     fetch(url,opts){requests.push({url,opts});return healthy?Promise.resolve({ok:true,status:200,json:async()=>({ok:true,clients:[],merchant:'shop'})}):new Promise(()=>{});},...extra};
   vm.createContext(c);
-  if(source.includes('  function fetchDeadline(')) vm.runInContext(between(source,'  function fetchDeadline(', '\n  }')+'\n  }',c);
-  return {source,c,requests,timers,healthy(){healthy=true;},async expire(){await drain();for(const [key,t] of [...timers])if(t.ms===12000){timers.delete(key);t.fn();}await drain();}};
+  const at=source.search(/^[ \t]*(async )?function fetchDeadline\(/m);
+  if(at>=0){let text='';for(const line of source.slice(at).split('\n')){text+=line+'\n';try{new vm.Script('('+text+')');break;}catch{}}vm.runInContext(deadlineVmSource(text),c);}
+  return {source,c,requests,timers,healthy(){healthy=true;},async expire(){await drain();for(const [key,t] of [...timers])if(t.ms>11000&&t.ms<=12000){timers.delete(key);t.fn();}await drain();}};
 }
 async function ended(p,f){let done=false;p.then(()=>done=true,()=>done=true);await f.expire();assert.ok(done,'hung action must settle at its deadline');}
 let failures=0;

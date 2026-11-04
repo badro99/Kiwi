@@ -47,6 +47,8 @@ for (const name of ['submit', 'submitHotel']) {
   // The retry reference helper lives beside submit in assets/booking-submission.js; run the real one.
   const live = fs.readFileSync('assets/booking-submission.js', 'utf8');
   h.run(live.slice(live.indexOf('  const retryRefs = {};'), live.indexOf('  function retryWarning()')) + live.slice(live.indexOf('  function retryWarning()'), live.indexOf('\n  }\n', live.indexOf('  function retryWarning()')) + 4));
+  const shared = live.indexOf('  async function submitRequest(');
+  h.run(live.slice(shared, live.indexOf('\n  }\n', shared) + 4));
   const fn = h.run('(' + extract('booking.js', name) + ')');
   await h.expire(fn({...event,currentTarget:{querySelector:s=>s==='[type=submit]'?button:error}}));
   assert.equal(button.disabled,false); assert.equal(error.textContent,'timeout'); assert.equal(refs.size,1);
@@ -91,6 +93,7 @@ for(const name of ['publish','publishFollowup','moveTicket','saveClassification'
   const nodes=new Map(); const node=k=>{if(!nodes.has(k))nodes.set(k,{value:'text',textContent:'Send',innerHTML:'Send',isConnected:true,hidden:true});return nodes.get(k);};
   const ticket={id:1};
   const h=setup({state:{files:[],followupFiles:[],tickets:[ticket],followupTicketId:1},API:'/api/tickets',draftController:Promise.resolve({store:null}),saveDraft:async()=>{},draft:{save:async()=>{},restore:async()=>{}},$:node,t:x=>x,newIdempotencyKey:()=> 'attempt',friendlyError:()=> 'retry',showToast:x=>h.messages.push(x),loadTickets:async()=>{}});
+  h.run(extract('tickets.js','request'));
   const fn=h.run('('+extract('tickets.js',name)+')');
   const editor={dataset:{classificationForm:'1'},querySelector:()=>node('classification')};
   const p=name==='moveTicket'?fn(ticket,'fixed',node('move')):fn({...event,target:{closest:()=>editor}});

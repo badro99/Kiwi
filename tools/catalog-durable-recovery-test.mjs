@@ -109,7 +109,7 @@ assert.equal(switched.K._doc().variants[0].barcodes[0].code, first.v.barcodes[0]
   pw.window = pw; vm.createContext(pw);
   vm.runInContext(fs.readFileSync(new URL('../assets/tenant-purge.js', import.meta.url), 'utf8'), pw);
   pw.KiwiTenantPurge.purge();
-  assert.deepEqual(deleted, ['kiwi-catalog', 'kiwi-clients-outbox-vault'], 'the tenant purge deletes the catalogue fallback and the client outbox vault');
+  assert.deepEqual(deleted, ['kiwi-catalog', 'kiwi-clients-outbox-vault', 'kiwiSalesLedger'], 'the tenant purge deletes the catalogue fallback, the client outbox vault and the sales ledger copy');
 }
 let fc; try { fc = require('fast-check'); } catch {}
 if (fc) await fc.assert(fc.asyncProperty(fc.array(fc.record({ kind: fc.constantFrom('create', 'sell', 'receive'), refuse: fc.boolean() }), { minLength: 1, maxLength: 25 }), async ops => {

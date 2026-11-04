@@ -1220,8 +1220,8 @@
     "sha": "82bbd0be73fcc087"
   },
   "assets/menu-catalog/state.js": {
-    "v": "10",
-    "sha": "2d8a97af4e45bbf2"
+    "v": "11",
+    "sha": "792ba9a706a25972"
   },
   "assets/menu-i18n.js": {
     "v": "6",
@@ -1436,8 +1436,8 @@
     "sha": "d005cca4a3c529d7"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "159",
-    "sha": "64fce896e9d0aea1"
+    "v": "160",
+    "sha": "595dbfcc21dcd603"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -2216,8 +2216,8 @@
     "sha": "c62dabb90b2af89a"
   },
   "assets/venues/helpers.js": {
-    "v": "6",
-    "sha": "149e66aeb26a939b"
+    "v": "7",
+    "sha": "56eae432ba68e7a9"
   },
   "assets/vertical-state.js": {
     "v": "9",

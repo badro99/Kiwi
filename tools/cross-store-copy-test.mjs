@@ -243,7 +243,8 @@ const publish = async (acc, merchant, data) => {
 /* ── 11. The browsers drop a refused copy instead of retrying it ───────── */
 {
   const menuSrc = menuCatalogSource();
-  ok('the carte editor adopts the server carte on foreign-document', /err\.error === 'stale-menu' \|\| err\.error === 'foreign-document'\) && err\.data\)/.test(menuSrc));
+  // Behaviour: tools/menu-publish-resilience-test.mjs replays the refusal and checks the pending copy is dropped.
+  ok('the carte editor adopts the server carte on foreign-document', /err\.error === 'foreign-document' && err\.data;[\s\S]{0,500}adoptServerMenu\(err\.data, targetVid\)/.test(menuSrc));
   const docSrc = fs.readFileSync(path.join(ROOT, 'assets/cloud-doc.js'), 'utf8');
   ok('store documents adopt the server copy on foreign-document', /error === 'foreign-document'[\s\S]{0,200}opts\.write\(/.test(docSrc));
   const storeSrc = fs.readFileSync(path.join(ROOT, 'functions/api/store.js'), 'utf8');

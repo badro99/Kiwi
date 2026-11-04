@@ -74,7 +74,7 @@ var SHELL = [
   '/assets/menu-catalog/formulas.js?v=3',
   '/assets/menu-catalog/item-list.js?v=3',
   '/assets/menu-catalog/modifiers.js?v=3',
-  '/assets/menu-catalog/state.js?v=10',
+  '/assets/menu-catalog/state.js?v=11',
   '/assets/pressing/custody.js?v=11',
   '/assets/pressing/rack.js?v=10',
   '/assets/pressing/pickup.js?v=10',
@@ -200,7 +200,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2101',
-  '/assets/pages/dashboard-startup.js?v=159',
+  '/assets/pages/dashboard-startup.js?v=160',
   '/assets/pages/dashboard-loader.js?v=48',
   '/assets/hotel/model.js?v=9',
   '/assets/hotel/views.js?v=4',
@@ -255,7 +255,7 @@ var SHELL = [
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
   '/assets/venues/data.js?v=4',
-  '/assets/venues/helpers.js?v=6',
+  '/assets/venues/helpers.js?v=7',
   '/assets/venues.js?v=73',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=12',

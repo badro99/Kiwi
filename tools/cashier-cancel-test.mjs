@@ -145,9 +145,15 @@ const shopTill = await till(SHOP);
 /* 4 · L'annulation et sa trace sont une seule écriture */
 {
   const w = world();
-  w.sql.exec('ALTER TABLE sale_audit RENAME TO sale_audit_gone');
+  // Reads of past refunds still work; only writing the audit row fails, inside the void's batch.
+  w.sql.exec("CREATE TRIGGER audit_down BEFORE INSERT ON sale_audit BEGIN SELECT RAISE(ABORT, 'audit down'); END");
   const res = await cancel(w, { merchant: SHOP, id: 'sale-42', pin: CODES.manager }, shopTill);
   check(res.status === 500 && !w.row('sale-42').void_ts, 'when the audit row cannot be written, the void is rolled back: no sale is cancelled without its trace');
+
+  const blind = world();
+  blind.sql.exec('ALTER TABLE sale_audit RENAME TO sale_audit_gone');
+  const unread = await cancel(blind, { merchant: SHOP, id: 'sale-42', pin: CODES.manager }, shopTill);
+  check(unread.status === 503 && (await unread.json()).error === 'store-credit-unavailable' && !blind.row('sale-42').void_ts, 'when past refunds cannot be read, the void is refused before anything is written');
 
   const plain = world({ batch: false });
   const refused = await cancel(plain, { merchant: SHOP, id: 'sale-42', pin: CODES.manager }, shopTill);

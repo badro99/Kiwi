@@ -5,7 +5,6 @@
  * Il imprimait « 2026-11-20 19:00 UTC » (l'instant ISO, pas l'heure du lieu) et
  * restait en français quelle que soit la langue choisie sur la page. */
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import { onRequestGet, onRequestPost } from '../functions/api/booking.js';
 import { bookingMail, mailLang, slotLabel } from '../functions/api/_booking-mail.js';
 
@@ -59,9 +58,7 @@ assert.match(bookingMail({ lang: 'fr', ...base, rec: { ...stay, hotel: { ...stay
 assert.match(bookingMail({ lang: 'ar', ...base, rec: { ...stay, hotel: { ...stay.hotel, nights: 2 } } }).text, /\(ليلتان\)/);
 assert.match(bookingMail({ lang: 'ar', ...base, rec: { ...stay, hotel: { ...stay.hotel, nights: 12 } } }).text, /\(12 ليلة\)/);
 
-// 3 bis. La page envoie sa langue avec la demande, pour le service comme pour l'hôtel.
-const submission = fs.readFileSync(new URL('../assets/booking-submission.js', import.meta.url), 'utf8');
-assert.equal((submission.match(/ref: ref,lang: state\.lang,/g) || []).length, 2, 'les deux envois (service, hôtel) portent la langue de la page');
+// 3 bis. La langue de la page part avec la demande (service et hôtel) : tools/booking-shared-submit-test.mjs l'exécute.
 
 // 4. Par la vraie route : la page envoie sa langue, le lieu a son fuseau, la file part au webhook.
 class Statement {

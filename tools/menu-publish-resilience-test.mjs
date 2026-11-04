@@ -39,9 +39,10 @@ assert.equal(disk.size, 0, 'only server acknowledgement removes durable pending 
 console.log('PASS pending menu retained, online retry and capped exponential backoff');
 
 conflict = true; window.publish('shop'); await settle();
-assert.equal(cloud.updatedTs, 2, 'unmergeable conflict never advances CAS to overwrite unseen server changes');
-assert.equal(data.items[0].id, 'pending-edit', 'unmergeable conflict retains local edit');
-assert.ok(nodes.has('menu-publish-pending'));
+assert.deepEqual(data, { cats: [], items: [] }, 'a carte refused as another establishment\'s is replaced by the server carte');
+assert.equal(cloud.updatedTs, 99, 'the adopted server carte carries its own revision');
+assert.ok(!nodes.has('menu-publish-pending') && !disk.has('kiwiMenuPending:shop'), 'the refused copy is not kept for retry');
+data = { cats: [{ id: 'cat' }], items: [{ id: 'pending-edit' }] }; cloud.updatedTs = 2;
 
 conflict = false; window.publish('shop'); data.items[0].name = 'edited-before-ack'; window.schedulePublish('shop'); await settle();
 assert.ok(nodes.has('menu-publish-pending'), 'an older acknowledgement cannot clear a newer edit');

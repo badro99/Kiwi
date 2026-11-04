@@ -1008,7 +1008,18 @@
               publish(vid, true);
               return null;
             }
-            /* Without a merge base, keep the local edit and its original CAS revision. */
+            /* Sans base de fusion (stale-menu), la modification locale reste en
+             * attente avec sa révision d'origine. Une carte d'un autre établissement
+             * (foreign-document, functions/api/_tenant-guard.js) ne sera jamais
+             * acceptée : on reprend la carte du serveur et on retire la publication
+             * en attente, qui sinon serait relancée sans fin. */
+            const adopted = r && r.status === 409 && err && err.error === 'foreign-document' && err.data;
+            if (adopted) {
+              c.updatedTs = +err.updatedTs || c.updatedTs;
+              const pending = pendingPublishes.get(c);
+              if (pending) { clearTimeout(pending.timer); try { localStorage.removeItem(pending.key); } catch (_) {} pendingPublishes.delete(c); paintPending(); }
+              adoptServerMenu(err.data, targetVid);
+            }
             /* Le code du serveur n'est pas une phrase : « subscription-required »
              * s'affichait tel quel sous le titre. Un compte en attente (402) est
              * déjà expliqué par la garde d'activation, au geste qui a provoqué
@@ -1016,7 +1027,9 @@
             if (r && r.status === 402) return null;
             if (window.Kiwi?.toast) window.Kiwi.toast(syncSay('Échec de synchronisation de la carte', 'The menu could not be synced', 'تعذّرت مزامنة القائمة'), {
               type: 'warn', force: true,
-              desc: syncSay('La carte n’a pas été enregistrée sur le serveur. Elle reste sur cet appareil.', 'The menu was not saved on the server. It stays on this device.', 'لم تُحفظ القائمة على الخادم. تبقى على هذا الجهاز.'),
+              desc: adopted
+                ? syncSay('Une version plus récente, enregistrée ailleurs, a été reprise.', 'A newer version, saved elsewhere, was taken instead.', 'تم اعتماد نسخة أحدث محفوظة في مكان آخر.')
+                : syncSay('La carte n’a pas été enregistrée sur le serveur. Elle reste sur cet appareil.', 'The menu was not saved on the server. It stays on this device.', 'لم تُحفظ القائمة على الخادم. تبقى على هذا الجهاز.'),
             });
             return null;
           });

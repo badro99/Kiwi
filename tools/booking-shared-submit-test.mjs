@@ -22,6 +22,8 @@ for(const name of ['submit','submitHotel']){
  assert.equal(sent.at(-1).customer.email,'test@example.com');
 }
 assert.equal(sent[2].expectedTotal,123,'hotel total passes through unchanged');
+assert.deepEqual(sent.map(b=>b.lang),['fr','fr','fr','fr'],'service and hotel requests both carry the page language');
+state.lang='ar';await api.submitHotel({preventDefault(){},currentTarget:form});assert.equal(sent.at(-1).lang,'ar','a language switch reaches the next request');state.lang='fr';
 mode='import-failure';state.config={};
 const hotel=vm.runInNewContext(read('hotel')+';createBookingHotel',sandbox)({...context,layout(){},head:()=>'',esc:String,fmt:()=>'',app:{querySelectorAll:()=>[]}});
 await hotel.loadHotelRooms();assert.equal(state.error,'error');assert.equal(state.loading,false);assert.equal(fetches,0);

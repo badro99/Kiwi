@@ -641,6 +641,11 @@
   }
   const memLedger = new Map(), ledgerFreshness = new Map();
   let refusedReported = false;
+  function storageChars() {
+    let n = 0;
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i) || ''; n += k.length + String(localStorage.getItem(k) || '').length; } } catch (_) {}
+    return n;
+  }
   function ledgerNotify() { salesSubs.forEach(fn => { try { fn(); } catch (_) {} }); }
   function ledgerIdb(key, text) {
     return new Promise(resolve => {
@@ -674,10 +679,12 @@
     const text = JSON.stringify(rows);
     let local = false;
     try { localStorage.setItem(key, text); local = true; memLedger.delete(key); }
-    catch (_) {
+    catch (err) {
+      /* L'ancienne copie, partielle, ne doit plus répondre aux lectures. */
       try { localStorage.removeItem(key); } catch (_) {}
       memLedger.set(key, deepFreeze(JSON.parse(text)));
-      if (!refusedReported) { refusedReported = true; Promise.reject(new Error('kiwi-ledger-storage-refused: ' + String(key).split('@')[0] + ' ' + rows.length + ' rows')); }
+      /* Remonte à /api/error (err-reporter.js écoute les rejets), une fois par page. */
+      if (!refusedReported) { refusedReported = true; Promise.reject(new Error('kiwi-ledger-storage-refused: ' + String(key).split('@')[0] + ' ' + rows.length + ' rows ' + text.length + ' chars, storage ' + storageChars() + ' chars, ' + ((err && err.name) || 'error'))); }
     }
     const state = { saved: local, pending: !local };
     ledgerFreshness.set(key, state);
