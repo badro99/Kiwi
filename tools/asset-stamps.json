@@ -688,16 +688,16 @@
     "sha": "db6d66f8c079e758"
   },
   "assets/hotel-economat-requests.js": {
-    "v": "24",
-    "sha": "3a4cb35089ced275"
+    "v": "25",
+    "sha": "5960a7b0850bc918"
   },
   "assets/hotel-economat-transport.js": {
     "v": "15",
     "sha": "4d1a55389ce2e45e"
   },
   "assets/hotel-economat.js": {
-    "v": "42",
-    "sha": "58a8de32870ea503"
+    "v": "43",
+    "sha": "234b759382c50a26"
   },
   "assets/hotel-folio.js": {
     "v": "1",
@@ -1440,8 +1440,8 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "71",
-    "sha": "464600d4572d7a08"
+    "v": "72",
+    "sha": "b57fdb1859e1e4e0"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "190",

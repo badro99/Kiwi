@@ -18,7 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
-  '/assets/hotel-economat-requests.js?v=24',
+  '/assets/hotel-economat-requests.js?v=25',
   '/assets/hotel-economat-outbox.js?v=9',
   '/assets/tickets-recovery.js?v=5',
   '/assets/clients-audit.js?v=2',
@@ -207,13 +207,13 @@ var SHELL = [
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
   '/assets/pages/dashboard-startup.js?v=190',
-  '/assets/pages/dashboard-loader.js?v=71',
+  '/assets/pages/dashboard-loader.js?v=72',
   '/assets/hotel/model.js?v=10',
   '/assets/hotel/views.js?v=9',
   '/assets/hotel/groups.js?v=6',
   '/assets/hotel/editors.js?v=10',
   '/assets/hotel.js?v=94',
-  '/assets/hotel-economat.js?v=42',
+  '/assets/hotel-economat.js?v=43',
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=13',
   '/assets/sold-insights.js?v=20',

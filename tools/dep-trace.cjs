@@ -87,6 +87,9 @@ if (OUT && ROOT) {
       file = path.resolve(file);
       const inRepo = (b) => b && file.startsWith(b);
       if (inRepo(ROOT) || inRepo(REAL) || (TMP && file.startsWith(TMP)) || /^\/(private\/)?(tmp|var\/folders)\//.test(file)) return null;
+      // Packages: the pass key already hashes app/package-lock.json, and a worktree reaches the
+      // main checkout's app/node_modules through a symlink that resolves outside its own root.
+      if (file.split(path.sep).includes('node_modules')) return null;
       if (!HOME || !(file.startsWith(HOME) || file.startsWith(os.homedir() + path.sep))) return null;
       return file;
     } catch (_) { return null; }

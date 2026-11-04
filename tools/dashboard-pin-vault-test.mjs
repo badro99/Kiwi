@@ -173,9 +173,9 @@ const allStored = () => [...store.entries()].map(([k, v]) => `${k}=${v}`).join('
     const v = load({ kiwiAccountKey: 'wq-' + role + '@x.com' });
     await v.remember('2580', { id: 'p-' + role, name: 'P', role });
     const row = JSON.parse(store.get(scopeKey(v)))[0];
-    ok(row.provenAt === now, role + ' : la ligne porte provenAt');
+    const provenAt = now;
     now += limit * H - 1000;
-    ok(await v.verify('2580') !== null, role + ' : une seconde avant ' + limit + ' h la ligne vaut encore');
+    ok(row.provenAt === provenAt && await v.verify('2580') !== null, role + ' : la ligne porte provenAt et vaut encore une seconde avant ' + limit + ' h');
     now += 2000;
     ok(await v.verify('2580') === null && v.count() === 0, role + ' : passé ' + limit + ' h hors ligne, la ligne ne vaut plus et ne compte plus');
     now -= limit * H + 1000;

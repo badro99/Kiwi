@@ -543,9 +543,18 @@ try {
     await waitDetail(page);
     fake.st.offline = true;
     const before = fake.st.docs.length;
+    /* Decision 2026-11-04 (invoices#0): a write that fails while the browser
+       says it is online may have reached the server, so it is reported as
+       uncertain; only a browser that knows it is offline says nothing was saved. */
+    await click(page, '[data-inv-act="duplicate"]');
+    await sleep(300);
+    check(/peut-être été enregistré/.test(await toastText(page)) && fake.st.docs.length === before, 'serveur injoignable, navigateur en ligne : l’écriture est dite incertaine et rien n’est créé en local');
+    await page.evaluate(() => document.querySelector('.inv-toast')?.remove());
+    await page.setOfflineMode(true);
     await click(page, '[data-inv-act="duplicate"]');
     await sleep(300);
     check(/Hors ligne/.test(await toastText(page)) && fake.st.docs.length === before, 'hors ligne : une écriture dit son échec et rien n’est créé en local');
+    await page.setOfflineMode(false);
     check(await page.evaluate(() => !Object.keys(localStorage).some((k) => /^kiwi:invoicing:demo/.test(k))), 'aucun repli local pour un compte réel');
     fake.st.offline = false;
   });

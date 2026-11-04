@@ -628,6 +628,7 @@ for (const test of [
   'menu-analysis-properties-test.mjs',
   'economat-properties-test.mjs',
   'economat-controller-uncertain-test.mjs',
+  'economat-send-feedback-test.mjs',
   'economat-split-test.mjs',
   'shopify-sync-properties-test.mjs',
   'shopify-inbound-stock-limits-test.mjs', 'server-credit-truth-test.mjs', 'server-shopify-truth-test.mjs',

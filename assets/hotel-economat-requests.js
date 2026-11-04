@@ -26,7 +26,7 @@
       title:'Demandes des services', sub:'De la demande à la remise, avec la garde enregistrée à chaque étape', create:'Nouvelle demande', refresh:'Actualiser',
       empty:'Aucune demande en cours', emptyD:'Les services demandent ici le linge, les produits et les consommables à l’économat.', loading:'Chargement des demandes…', offline:'Demandes indisponibles pour le moment', retry:'Réessayer',
       noUnits:'Aucun service configuré', noUnitsD:'Déclarez les services de l’hôtel dans Points de vente pour qu’ils puissent demander à l’économat.',
-      department:'Service', items:'Articles', note:'Note', notePh:'Étage, urgence, précision…', qty:'Quantité', unit:'Unité', send:'Envoyer à l’économat', cancel:'Fermer', noCatalogue:'Aucun article autorisé pour ce service.', noCatalogueD:'Le catalogue du service est vide : l’économat doit lui ouvrir des articles.', pickOne:'Indiquez au moins une quantité.', sent:'Demande envoyée à l’économat', draftSaved:'Demande enregistrée en brouillon, envoi à reprendre',
+      department:'Service', items:'Articles', note:'Note', notePh:'Étage, urgence, précision…', qty:'Quantité', unit:'Unité', send:'Envoyer à l’économat', cancel:'Fermer', noCatalogue:'Aucun article autorisé pour ce service.', noCatalogueD:'Le catalogue du service est vide : l’économat doit lui ouvrir des articles.', pickOne:'Indiquez au moins une quantité.', sent:'Demande envoyée à l’économat', queued:'Hors connexion : la demande est gardée et partira au retour du réseau', draftSaved:'Demande enregistrée en brouillon, envoi à reprendre',
       stepRequest:'Demande', stepReview:'Validation', stepPrepare:'Préparation', stepHandover:'Remise', stepReceipt:'Réception',
       sideService:'Côté service', sideEconomat:'Côté économat',
       requested:'Demandé', approved:'Accordé', prepared:'Préparé', received:'Reçu', available:'En stock',
@@ -45,7 +45,7 @@
       title:'Department requests', sub:'From request to handover, with custody recorded at every step', create:'New request', refresh:'Refresh',
       empty:'No request in progress', emptyD:'Departments request linen, products and consumables from the storeroom here.', loading:'Loading requests…', offline:'Requests unavailable right now', retry:'Try again',
       noUnits:'No department set up', noUnitsD:'Declare the hotel departments under Outlets so they can request from the storeroom.',
-      department:'Department', items:'Items', note:'Note', notePh:'Floor, urgency, details…', qty:'Quantity', unit:'Unit', send:'Send to the storeroom', cancel:'Close', noCatalogue:'No item approved for this department.', noCatalogueD:'This department’s catalogue is empty: the storeroom must open items to it.', pickOne:'Enter at least one quantity.', sent:'Request sent to the storeroom', draftSaved:'Request saved as a draft, send it again',
+      department:'Department', items:'Items', note:'Note', notePh:'Floor, urgency, details…', qty:'Quantity', unit:'Unit', send:'Send to the storeroom', cancel:'Close', noCatalogue:'No item approved for this department.', noCatalogueD:'This department’s catalogue is empty: the storeroom must open items to it.', pickOne:'Enter at least one quantity.', sent:'Request sent to the storeroom', queued:'Offline: the request is kept and will be sent when the connection returns', draftSaved:'Request saved as a draft, send it again',
       stepRequest:'Request', stepReview:'Review', stepPrepare:'Preparation', stepHandover:'Handover', stepReceipt:'Receipt',
       sideService:'Department side', sideEconomat:'Storeroom side',
       requested:'Requested', approved:'Approved', prepared:'Prepared', received:'Received', available:'In stock',
@@ -64,7 +64,7 @@
       title:'طلبات الأقسام', sub:'من الطلب إلى التسليم، مع تسجيل العهدة في كل مرحلة', create:'طلب جديد', refresh:'تحديث',
       empty:'لا يوجد طلب قيد المعالجة', emptyD:'تطلب الأقسام هنا البياضات والمنتجات والمواد الاستهلاكية من المخزن.', loading:'جارٍ تحميل الطلبات…', offline:'الطلبات غير متاحة حاليًا', retry:'إعادة المحاولة',
       noUnits:'لا يوجد قسم مُعدّ', noUnitsD:'صرّح بأقسام الفندق في نقاط البيع حتى تتمكن من الطلب من المخزن.',
-      department:'القسم', items:'المواد', note:'ملاحظة', notePh:'الطابق، الاستعجال، تفاصيل…', qty:'الكمية', unit:'الوحدة', send:'إرسال إلى المخزن', cancel:'إغلاق', noCatalogue:'لا توجد مادة مسموحة لهذا القسم.', noCatalogueD:'كتالوج هذا القسم فارغ: على المخزن أن يفتح له مواد.', pickOne:'أدخل كمية واحدة على الأقل.', sent:'تم إرسال الطلب إلى المخزن', draftSaved:'حُفظ الطلب كمسودة، أعد الإرسال',
+      department:'القسم', items:'المواد', note:'ملاحظة', notePh:'الطابق، الاستعجال، تفاصيل…', qty:'الكمية', unit:'الوحدة', send:'إرسال إلى المخزن', cancel:'إغلاق', noCatalogue:'لا توجد مادة مسموحة لهذا القسم.', noCatalogueD:'كتالوج هذا القسم فارغ: على المخزن أن يفتح له مواد.', pickOne:'أدخل كمية واحدة على الأقل.', sent:'تم إرسال الطلب إلى المخزن', queued:'لا يوجد اتصال: الطلب محفوظ وسيُرسل عند عودة الشبكة', draftSaved:'حُفظ الطلب كمسودة، أعد الإرسال',
       stepRequest:'الطلب', stepReview:'المصادقة', stepPrepare:'التحضير', stepHandover:'التسليم', stepReceipt:'الاستلام',
       sideService:'جهة القسم', sideEconomat:'جهة المخزن',
       requested:'المطلوب', approved:'المقبول', prepared:'المُحضَّر', received:'المستلم', available:'في المخزون',
@@ -522,10 +522,16 @@
     var btn = el.querySelector('[data-action="eco-req-send"]'); if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }
     pending = true;
     try {
-      await (await transport()).enqueueRequest({ action:'create', id:id, unitId:unitId, idempotencyKey:'ui:' + id + ':create', lines:lines }, merchant());
+      var api = await transport(), m = merchant();
+      await api.enqueueRequest({ action:'create', id:id, unitId:unitId, idempotencyKey:'ui:' + id + ':create', lines:lines }, m);
       createRef.close(); createRef = null;
       pending = false;
+      // Online, the hand-off finishes here: same toast, list and sheet as before the outbox. Offline, the row waits.
+      if (api.replay) await api.replay(m).catch(function () {});
       await syncOutbox();
+      var row = outbox.filter(function (r) { return r.body && r.body.id === id; })[0];
+      if (!api.snapshot || (row && row.state === 'sent')) { Kiwi.toast(t.sent, { type:'success' }); await load(); openSheet(id); }
+      else Kiwi.toast(row && row.state === 'refused' ? errorText({ message:row.error }) : t.queued, { type:'warning' });
     } catch (e) {
       pending = false;
       Kiwi.toast(errorText(e), { type:'warning' });

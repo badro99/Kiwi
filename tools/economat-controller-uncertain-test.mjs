@@ -76,8 +76,8 @@ function boot() {
   const window = { Kiwi, KiwiInventory: { merchant: () => MERCHANT, sync: async () => {} }, KiwiI18n: { getLang: () => 'fr' } };
   window.window = window;
   let src = fs.readFileSync(new URL('../assets/hotel-economat-requests.js', import.meta.url), 'utf8');
-  const tail = "}(function () { return import('./hotel-economat-transport.js?v=13'); }));";
-  assert.ok(src.includes(tail), 'transport import hook found');
+  const tail = /\}\(function \(\) \{ return import\('\.\/hotel-economat-transport\.js\?v=\d+'\); \}\)\);/;
+  assert.ok(tail.test(src), 'transport import hook found');
   src = src.replace(tail, '}(function () { return Promise.resolve(__economatTransport); }));');
   vm.runInNewContext(src, { __economatTransport: transport, window, document, Kiwi, console, Intl, Promise, setTimeout, clearTimeout, Math, Date, Number, String, Object, Array, JSON, Error });
   const api = window.KiwiEconomatRequests;
