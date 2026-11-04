@@ -181,11 +181,14 @@
     pendingPairingCount = 0;
     var acknowledgedId = activeRows[0].id;
     flushing = true;
-    fetch('/api/cash-sessions', {
+    /* Hard deadline (request and body): a request that never settles must not
+       keep `flushing` set and freeze every later open, movement and close. The
+       event stays in the outbox and replays under the same id. */
+    import('./request-deadline.mjs').then(function (net) { return net.deadlineFetch('/api/cash-sessions', {
       method: 'POST', credentials: 'same-origin', cache: 'no-store',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(activeRows[0])
-    }).then(function (response) {
+    }, 12000); }).then(function (response) {
       /* 403 means the till/session proof needs recovery and 409 means the
          session open is not visible yet. Both events remain retryable. Only
          the route's explicit schema rejection (422) is permanently invalid;
@@ -271,9 +274,9 @@
     var slug = merchant();
     if (!real() || !slug) return Promise.resolve([]);
     var from = Date.now() - 45 * 86400000;
-    return fetch('/api/cash-sessions?merchant=' + encodeURIComponent(slug) + '&from=' + from, {
+    return import('./request-deadline.mjs').then(function (net) { return net.deadlineFetch('/api/cash-sessions?merchant=' + encodeURIComponent(slug) + '&from=' + from, {
       credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
-    }).then(function (response) { return response.json(); }).then(function (data) {
+    }, 12000); }).then(function (response) { return response.json(); }).then(function (data) {
       ready = !!(data && data.ready && !data.redacted);
       events = ready && Array.isArray(data.events) ? data.events : [];
       window.dispatchEvent(new CustomEvent('kiwi:cash-sessions', { detail: { merchant: slug, ready: ready } }));

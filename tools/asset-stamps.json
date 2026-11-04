@@ -236,16 +236,16 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "69",
-    "sha": "5836d0022a8dbb05"
+    "v": "70",
+    "sha": "150abcb52e1f3ff2"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-print-recovery.js": {
-    "v": "2",
-    "sha": "06172bd308874451"
+    "v": "3",
+    "sha": "bef11573bf81fe27"
   },
   "assets/caisse-pwa.js": {
     "v": "631",
@@ -344,8 +344,8 @@
     "sha": "58d02bfb3a59c462"
   },
   "assets/cash-sessions.js": {
-    "v": "8",
-    "sha": "4cb11e74a39c8216"
+    "v": "9",
+    "sha": "dbea82267b618bef"
   },
   "assets/catalog-import.js": {
     "v": "18",
@@ -564,8 +564,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "641",
-    "sha": "3e4f93a4213e2a6e"
+    "v": "642",
+    "sha": "2bc0f1cc1be79525"
   },
   "assets/employee-planning.js": {
     "v": "21",
@@ -1072,8 +1072,8 @@
     "sha": "c9aa7ba3d485d350"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "31",
-    "sha": "5468be36b732dff2"
+    "v": "32",
+    "sha": "07d3d1c39b47c27e"
   },
   "assets/kitchen-relay.js": {
     "v": "16",
@@ -1444,8 +1444,8 @@
     "sha": "eee7c436c6e8a1e1"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "183",
-    "sha": "28b91e41b4edbe26"
+    "v": "184",
+    "sha": "f99bbadf43b1a816"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1864,8 +1864,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "71",
-    "sha": "b41d36a6de595545"
+    "v": "72",
+    "sha": "a609310727cc103f"
   },
   "assets/printer/pairing-lang.js": {
     "v": "19",
@@ -1972,8 +1972,8 @@
     "sha": "d6484d48ef1884bf"
   },
   "assets/retail-balances.js": {
-    "v": "4",
-    "sha": "21e7a85d7c96be09"
+    "v": "5",
+    "sha": "fa1e03616a113d7e"
   },
   "assets/retail-icon-picker.js": {
     "v": "4",

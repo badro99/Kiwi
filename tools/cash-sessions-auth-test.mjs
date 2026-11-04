@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 import { DatabaseSync } from 'node:sqlite';
 
 import { onRequestPost as postCashSession } from '../functions/api/cash-sessions.js';
@@ -88,8 +89,8 @@ async function clientRun(isPaired, outbox, pending = [], options = {}) {
       return { ok: true, status: 200, json: async () => ({ ready: true, events: [] }) };
     },
   };
-  vm.createContext(context);
-  vm.runInContext(source, context, { filename: 'assets/cash-sessions.js' });
+  vm.createContext(deadlineVmContext(context));
+  vm.runInContext(deadlineVmSource(source), context, { filename: 'assets/cash-sessions.js' });
   await new Promise((resolve) => setTimeout(resolve, 5));
   return { calls, storage, writes, api: window.KiwiCashSessions, pending,
     setPaired(value) { pairing = !!value; },
@@ -157,7 +158,7 @@ refused.tickIntervals();
 await new Promise((resolve) => setTimeout(resolve, 5));
 assert.equal(refused.calls.filter((call) => call.options?.method === 'POST').length, 1,
   'write-refused does not hammer the server every retry tick');
-refused.setPostResponse({ ok: true, status: 200 });
+refused.setPostResponse({ ok: true, status: 200, json: async () => ({}) });
 refused.firePaired();
 await new Promise((resolve) => setTimeout(resolve, 5));
 assert.equal(refused.calls.filter((call) => call.options?.method === 'POST').length, 2,

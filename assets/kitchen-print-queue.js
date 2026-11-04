@@ -890,7 +890,9 @@
     var who = merchant();
     if (!who || typeof fetch !== 'function' || !Object.keys(json(lKey(), {})).length) return Promise.resolve([]);
     try { if (document.hidden) return Promise.resolve([]); } catch (_) {}
-    return fetch('/api/print/jobs?merchant=' + encodeURIComponent(who), { credentials: 'same-origin', cache: 'no-store' })
+    /* Hard deadline on the request and its body: a poll that never settles must
+       not leave expired or failed cloud jobs undiscovered (the next tick asks again). */
+    return import('./request-deadline.mjs').then(function (net) { return net.deadlineFetch('/api/print/jobs?merchant=' + encodeURIComponent(who), { credentials: 'same-origin', cache: 'no-store' }, 10000); })
       .then(function (r) { return r.json(); })
       .then(function (j) { return j && j.ok ? announceUnprinted(j.jobs) : []; })
       .catch(function () { return []; });
