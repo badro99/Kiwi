@@ -301,7 +301,7 @@ const isFmlDraftSatisfiedMatch = serveurSource.match(/function isFmlDraftSatisfi
 const computeFmlUnitExtraMatch = serveurSource.match(/function computeFmlUnitExtra\([\s\S]*?\n    \}/);
 const openFormulaSheetMatch = serveurSource.match(/function openFormulaSheet\([\s\S]*?\n    \}/);
 const confirmFormulaMatch = serveurSource.match(/function confirmFormula\([\s\S]*?\n    \}/);
-const childHelpersMatch = serveurSource.match(/function fmlChildGroups\([\s\S]*?\n    function fmlChildOptsHTML/);
+const childHelpersMatch = serveurSource.match(/function fmlChildGroups\([\s\S]*?\n\s*function fmlChildOptsHTML/);
 const isReqMatch = serveurSource.match(/const isReq = def => [^\n]*/);
 const optsSigMatch = serveurSource.match(/const optsSig = opts => [^\n]*/);
 
@@ -333,7 +333,7 @@ if (
       let itemOptions = {};
       ${isReqMatch[0]}
       ${optsSigMatch[0]}
-      ${childHelpersMatch[0].replace(/\n    function fmlChildOptsHTML$/, '')}
+      ${childHelpersMatch[0].replace(/\n\s*function fmlChildOptsHTML$/, '')}
 
       ${itemHasFormulaMatch[0]}
       ${isFmlSlotSatisfiedMatch[0]}

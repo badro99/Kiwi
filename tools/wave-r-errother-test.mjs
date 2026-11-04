@@ -37,14 +37,14 @@ const cases = {
   },
   'employee#1': () => {
     const saved = new Map();
-    const globals = {records:()=>[], merge:a=>a, Date, serverNow:()=>Date.now(), copies:{}, store:()=>({setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)}), QUEUE_PREFIX:'q:', idb:async()=>true};
+    const globals = {records:()=>[], merge:a=>a, Date, serverNow:()=>Date.now(), copies:{}, recovery:{}, recoveryBlocked:{}, store:()=>({setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)}), QUEUE_PREFIX:'q:', idb:async()=>true};
     const write = fn('assets/employee-live.js','writeQueue','  function dropItem',globals);
     return Promise.resolve().then(async()=>{
       const record={opId:'synthetic-op',at:Date.now(),done:true,outcome:{result:'rejected',reason:'employee-request-failed'}};
       await write('synthetic',[record]);
       assert.deepEqual(JSON.parse(saved.get('q:synthetic:outcomes')), [record]);
       const restored = fn('assets/employee-live.js', 'records', '  function readQueue', {
-        store:()=>({getItem:k=>saved.get(k)}), QUEUE_PREFIX:'q:', copies:{}, merge:(a,b)=>a.concat(b)
+        store:()=>({getItem:k=>saved.get(k)}), QUEUE_PREFIX:'q:', copies:{}, recovery:{}, recoveryBlocked:{}, merge:(a,b)=>a.concat(b)
       });
       assert.equal(restored('synthetic')[0].outcome.result, 'rejected');
       assert.equal(restored('other-owner').length, 0);
@@ -68,7 +68,7 @@ const cases = {
   },
   'app#1': async () => {
     const source=read('app/src/native-runtime.js'); assert.match(source,/N.callResult = callResult/);
-    const call=fn('app/src/native-runtime.js','callResult','  function call(');
+    const call=fn('app/src/native-runtime.js','callResult','  function call(', {setTimeout,clearTimeout});
     assert.equal((await call(null,'run')).reason,'unsupported');
     for(const [error,reason] of [[{code:'USER_CANCELLED'},'cancelled'],[{code:'UNIMPLEMENTED'},'unsupported'],[Error('synthetic'),'failure']]) {
       assert.equal((await call({run:()=>{throw error;}},'run')).reason,reason);

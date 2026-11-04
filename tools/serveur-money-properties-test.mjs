@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 import caisseWorkflowSource from './caisse-test-source.cjs';
 // Real phone declarations and Pages handlers, local SQLite only.
 import assert from 'node:assert/strict';
@@ -37,7 +38,7 @@ let device=0;
 function phone(storage=new Map()){
  const tag=++device;let nonce=0;
  const nodes=new Map(),node=s=>{if(!nodes.has(s))nodes.set(s,{hidden:false,style:{},textContent:'',innerHTML:'',classList:{add(){},remove(){}}});return nodes.get(s);};
- const c=vm.createContext({console,Math,Number,Date,Map,Set,JSON,Object,Array,String,Promise,AbortController,
+ const c=vm.createContext(deadlineVmContext({console,Math,Number,Date,Map,Set,JSON,Object,Array,String,Promise,AbortController,
   window:{addEventListener(){},crypto:{randomUUID:()=> 'test-flow-'+tag+'-'+(++nonce)}},navigator:{onLine:true},setInterval(){},setTimeout:()=>1,clearTimeout(){},
   $:node,$$:()=>[],fmtMADcents:v=>String(v),lucide:{createIcons(){}},employeePick:(fr)=>fr,toast(){},renderSplitFlow(){},renderTables(){},renderNotifications(){},
   serviceCanonicalReady:true,serviceCanonicalOrders:new Map(),serviceVisitCredit:new Map(),tables:{'1':{}},tableOrders:{},buildInitialOrder:()=>[],
@@ -50,7 +51,7 @@ function phone(storage=new Map()){
   cardModal:node('modal'),payTableId:'1',renderTableDetail(){},splitPayCallback:null,markTablePaid:()=>{},triggerCardSuccess(){throw Error('Unapproved terminal');},
   kgTallySync(){},shiftStart:new Date(Date.now()-3600000),kgState:{lifetimeXP:0},kgShiftRevenue:0,kgShiftTurnMin:0,KG_RANKS:[],kgRankIdxFor:()=>-1,
   kgOrigMarkTablePaid:async()=>true,kgRenderProfil(){},kgUpdateRankChip(){},
- });vm.runInContext(paymentSupport,c);vm.runInContext(functions+'\n'+wrapper+'\nthis.paymentWrapper=paymentWrapper; this.servicePaymentTally=kgRecordPayment;',c);return c;
+ }));vm.runInContext(paymentSupport,c);vm.runInContext(deadlineVmSource(functions+'\n'+wrapper)+'\nthis.paymentWrapper=paymentWrapper; this.servicePaymentTally=kgRecordPayment;',c);return c;
 }
 const c=phone(),C=x=>Math.round(x*100),sum=xs=>xs.reduce((a,b)=>a+b,0),money=fc.integer({min:1,max:5_000_000});
 function split(total,n,tip=0){c.splitState={tableId:'1',totalCents:total,numParts:n,splitMode:'egal',tipMode:String(tip),itemTotals:{Plat:{unitPrice:total/100,totalQty:1}},flow:null};c.launchSplitFlow();return c.splitState.flow;}

@@ -84,14 +84,14 @@ if (!job || job === 'briefing') {
     assert.equal(B.setSettings({ samples: 4 }), true);
     const c = T.cancellationRateRule({ current: { total: 100, cancellations: 30, reasons: {}, actors: {} }, baselineRates: [2, 2, 2, 2] });
     assert.ok(c, 'the highest accepted sample count still lets the rule speak');
-    // A device whose clock runs ahead wrote last week; a later edit must still win.
+    // A future device clock is untrusted; a later legitimate edit must still win.
     const ahead = Date.now() + 30 * 86400000;
     T.write({ days: [], settings: { share: 9 }, settingsAt: ahead, settingsFieldsAt: { share: ahead } });
     assert.equal(B.setSettings({ share: 6 }), true);
     const mine = T.read();
-    assert.ok(mine.settingsFieldsAt.share > ahead, 'the new edit is stamped after the one it replaces');
+    assert.ok(mine.settingsFieldsAt.share > 0 && mine.settingsFieldsAt.share <= Date.now(), 'the new edit uses a valid clock instead of propagating a future timestamp');
     assert.equal(T.mergeDocs(mine, { days: [], settings: { share: 9 }, settingsAt: ahead, settingsFieldsAt: { share: ahead } }).settings.share, 6);
-    ok('briefing#1 sample bound matches the four comparable weeks; later edits win over a fast clock');
+    ok('briefing#1 sample bound matches the four comparable weeks; valid later edits win over an untrusted future clock');
   }
   { // briefing#2 · the evidence footer speaks plainly in each language
     for (const lang of ['fr', 'en', 'ar']) {

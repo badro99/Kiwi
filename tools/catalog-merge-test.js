@@ -28,6 +28,7 @@ const retailSource = require('./pos-retail-test-source.cjs');
  * ═════════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
+(async () => {
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
@@ -74,11 +75,12 @@ function makeWindow(opts) {
 }
 
 function load(win, file) {
-  const src = retailSource(fs.readFileSync(path.join(ROOT, file), 'utf8'));
+  const helper = fs.readFileSync(path.join(ROOT, 'assets/request-deadline.mjs'), 'utf8').replace('export ', '');
+  const src = helper + '\n' + retailSource(fs.readFileSync(path.join(ROOT, file), 'utf8')).replaceAll("import('./request-deadline.mjs')", 'Promise.resolve({deadlineFetch})');
   const fn = new Function('window', 'document', 'localStorage', 'setTimeout', 'clearTimeout',
-    'fetch', 'CustomEvent', 'navigator', 'self', 'console', src);
+    'fetch', 'CustomEvent', 'navigator', 'self', 'console', 'AbortController', src);
   fn(win, win.document, win.localStorage, win.setTimeout, win.clearTimeout,
-    win.fetch, win.CustomEvent, win.navigator, win, console);
+    win.fetch, win.CustomEvent, win.navigator, win, console, AbortController);
 }
 
 const win = makeWindow();
@@ -106,6 +108,7 @@ if (!C || !C._merge) {
   load(paired, 'assets/boutique-catalog-parts.js');
   load(paired, 'assets/boutique-catalog.js');
   paired.KiwiBoutiqueCatalog.use('santos-store');
+  await new Promise(resolve => setImmediate(resolve));
   ok(calls.some((u) => String(u).includes('/api/catalog?merchant=santos-store')),
     'une caisse appairée relit le catalogue serveur même sans session propriétaire');
 
@@ -127,7 +130,7 @@ if (!C || !C._merge) {
   // La copie serveur vit dans assets/boutique-catalog-parts.js ; batch() reste dans le principal.
   const source = ['assets/boutique-catalog-parts.js', 'assets/boutique-catalog.js']
     .map((f) => retailSource(fs.readFileSync(path.join(ROOT, f), 'utf8'))).join('\n');
-  const valid = source.indexOf('if (!res || slug !== core.VENUE) return false;');
+  const valid = source.indexOf("if (!res || !Number.isInteger(res.rev)");
   const mark = source.indexOf('cloud.read[slug] = 1;', valid);
   ok(valid >= 0 && mark > valid, 'un GET serveur en erreur ne valide jamais la lecture avant écriture');
   ok(source.includes("window.addEventListener('online'") && source.includes('if (cloud.dirty) schedulePush(0)'),
@@ -544,3 +547,5 @@ if (fail) {
 }
 console.log(`  ✓ fusion du catalogue boutique (${pass} contrôles : la vente remonte, la suppression tient, ce que l'autre ajoute arrive)`);
 });
+
+})().catch(error => { console.error(error); process.exitCode = 1; });

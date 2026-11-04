@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 import menuWorkspaceSource from './menu-workspace-test-source.cjs';
 /* « Analyse du menu » · phase 4 : contribution, estimations, « À faire ».
  *
@@ -94,13 +95,13 @@ async function boot({ features = { simple_food_cost: true }, sheets = null, stat
   win.localStorage = localStorage;
   const fetch = async (url) => { fetches.push(url); return { status, json: async () => (status === 200 ? { enabled: true, canEdit: true, sheets: sheets || [] } : { error: 'forbidden' }) }; };
   class CustomEvent { constructor(type) { this.type = type; } }
-  const ctx = vm.createContext({ window: win, Kiwi: win.Kiwi, document, navigator: { onLine: true }, fetch, CustomEvent, console, setTimeout, clearTimeout, localStorage, Intl, requestAnimationFrame: (fn) => fn(), innerWidth: 1400, innerHeight: 900 });
+  const ctx = vm.createContext(deadlineVmContext({ window: win, Kiwi: win.Kiwi, document, navigator: { onLine: true }, fetch, CustomEvent, console, setTimeout, clearTimeout, localStorage, Intl, requestAnimationFrame: (fn) => fn(), innerWidth: 1400, innerHeight: 900 }));
   vm.runInContext(R('assets/day-report.js'), ctx, { filename: 'day-report.js' });
   const DR = win.KiwiDayReport;
   win.KiwiDateRange = { bounds: () => [DR.dayBounds(DR.today()).from, Infinity] };
   loadCost(ctx, { vat: { mode: 'rate', rate: 10, included: true }, costs: { items: { the: { cost: 3 } }, recipes: {}, ingredients: [], charges: [], targets: {} } });
   vm.runInContext(R('assets/restaurant-units.js'), ctx, { filename: 'restaurant-units.js' });
-  vm.runInContext(R('assets/simple-food-cost.js'), ctx, { filename: 'simple-food-cost.js' });
+  vm.runInContext(deadlineVmSource(R('assets/simple-food-cost.js')), ctx, { filename: 'simple-food-cost.js' });
   vm.runInContext(menuWorkspaceSource(), ctx, { filename: 'restaurant-menu-workspace.js' });
   vm.runInContext(R('assets/finance.js'), ctx, { filename: 'finance.js' });
 

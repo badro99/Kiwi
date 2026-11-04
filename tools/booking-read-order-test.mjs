@@ -59,7 +59,7 @@ await test('tickets#0 newest board read survives older success or failure',async
 function floor() {
   let slug='a';const net=requests(),seen=[];
   const window={KiwiEnv:{isReal:()=>true},KiwiCloudDoc:{currentSlug:()=>slug},addEventListener(){}};
-  vm.runInNewContext(read('assets/floorplan-live.js'),deadlineVmContext({window,document:{addEventListener(){},visibilityState:'visible'},fetch:net.fetch,setTimeout:()=>1,clearTimeout(){}}));
+  vm.runInNewContext(deadlineVmSource(read('assets/floorplan-live.js')),deadlineVmContext({window,document:{addEventListener(){},visibilityState:'visible'},fetch:net.fetch,setTimeout:()=>1,clearTimeout(){}}));
   const api=window.KiwiFloorLive;api.watch(x=>seen.push(x));
   return {api,net,seen,switchTo:s=>{slug=s;}};
 }

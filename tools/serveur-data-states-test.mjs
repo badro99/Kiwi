@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { deadlineVmSource } from './deadline-vm-source.mjs';
+import splitFunctions from './split-functions.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 /* L'app serveur (kiwi-serveur.html) : ce qu'elle affirme doit être vrai, même
  * quand le réseau ment.
@@ -32,16 +34,16 @@ const ok = (label, cond) => { assert.ok(cond, label); passed++; console.log(`  �
 const flush = () => new Promise((r) => setImmediate(r));
 const settle = async (n = 8) => { for (let i = 0; i < n; i++) await flush(); };
 const slice = (start, end) => {
-  const a = html.indexOf(start);
+  const a = html.indexOf(start.trimStart());
   assert.notEqual(a, -1, `repère absent : ${start}`);
-  const b = html.indexOf(end, a);
+  const b = html.indexOf(end.trimStart(), a);
   assert.notEqual(b, -1, `repère absent : ${end}`);
   return html.slice(a, b);
 };
 const fn = (start) => {
-  const a = html.indexOf(start);
+  const a = html.indexOf(start.trimStart());
   assert.notEqual(a, -1, `repère absent : ${start}`);
-  return html.slice(a, html.indexOf('\n    }\n', a) + 7);
+  return splitFunctions.declaration(html.slice(a), start.trim().match(/function (\w+)/)[1]);
 };
 const OFFLINE_PAY = "Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.";
 const OFFLINE_BILL = "Pas de réseau. L'addition n'est pas transmise, réessayez au retour du réseau.";
@@ -53,7 +55,7 @@ function fakeTimers() {
     timers,
     setTimeout: (f, ms) => { const id = ++seq; timers.set(id, { f, ms }); return id; },
     clearTimeout: (id) => { timers.delete(id); },
-    fire(ms) { for (const [id, t] of [...timers]) if (t.ms === ms) { timers.delete(id); t.f(); } },
+    fire(ms) { for (const [id, t] of [...timers]) if (t.ms <= ms) { timers.delete(id); t.f(); } },
   };
 }
 const hanging = (log) => (url, opts) => new Promise((resolve, reject) => {
@@ -298,6 +300,8 @@ ok('un délai d’envoi a son message', /'timeout':\s*'pas de réponse du serveu
 
 /* ══ 6 · Encaisser ou demander l'addition hors ligne ═════════════════════ */
 function payer({ fetch, offline = false }) {
+  const now = Date.now();
+  class PaymentDate extends Date { static now() { return now; } }
   const timers = fakeTimers();
   const toasts = [];
   const t = { status: 'ka-tkhdam', covers: 2 };
@@ -311,9 +315,9 @@ function payer({ fetch, offline = false }) {
     svBrowseMode: () => false, svBrowseGuard: () => false, toast: (m) => toasts.push(m), svKnownOffline: () => offline, employeePick: (fr) => fr, 
     SV_PAY_OFFLINE_MSG: OFFLINE_PAY, SV_PAY_TIMEOUT_MS: 15000, SV_DEMO: false,
     AbortController, setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout,
-    fetch, JSON, Math, Number, Date, String, Array, Object, Error, Promise,
+    fetch, JSON, Math, Number, Date: PaymentDate, String, Array, Object, Error, Promise,
   });
-  vm.runInContext(fn('    async function markTablePaid('), ctx);
+  vm.runInContext(deadlineVmSource(fn('    async function markTablePaid(')), ctx);
   return { ctx, t, toasts, timers };
 }
 {

@@ -22,6 +22,7 @@ const instrumented = source.replace(/\}\)\(\);\s*$/, `
     cuRoomStatus, cuRoomOccupancy
   };
 })();`);
+const transportSource = fs.readFileSync('assets/request-deadline.mjs','utf8').replace('export ', '') + '\n' + fs.readFileSync('assets/hotel/request.mjs','utf8').replace(/^import .*;\n/gm,'').replace('export ', '');
 const TODAY = '2026-09-08';
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const ids = (rows) => Array.from(rows, (row) => row.id).sort();
@@ -96,7 +97,7 @@ function boot({ venue = 'scoped', merchant = 'journal-alpha' } = {}) {
   };
   // Load the real shared transport into the same VM fetch fixture.
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync('assets/request-deadline.mjs','utf8').replace('export ', '') + '\n' + fs.readFileSync('assets/hotel/request.mjs','utf8').replace(/^import .*;\n/gm,'').replace('export ', ''), context);
+  vm.runInContext(transportSource, context);
   vm.runInContext(instrumented.replaceAll("import('./request.mjs')", 'Promise.resolve({ hotelRequest })'), context, { filename: 'assets/hotel.js', timeout: 5000 });
   return {
     api: window.__journalTest, window, handlers, requests, modals, forms, data,

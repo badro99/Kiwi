@@ -16,7 +16,7 @@ await test('quarantine keeps newest five without deleting live or other keys', (
   const data = new Map([['kiwiSaleQueue','broken'],['other','safe']]);
   for(let i=1;i<=8;i++) data.set('kiwiSaleQueue:quarantine:'+i, 'old');
   const localStorage = {getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k),key:i=>[...data.keys()][i],get length(){return data.size;}};
-  const ctx={localStorage,Q_KEY:'kiwiSaleQueue',queueRecoveryError:false,queueBlocked:false,Date:{now:()=>9}};
+  const ctx={localStorage,Q_KEY:'kiwiSaleQueue',queueRecoveryError:false,queueReadError:false,queueBlocked:false,Date:{now:()=>9}};
   run('live-link/queue-store.js','qRead',ctx)();
   assert.deepEqual([...data.keys()].filter(k=>k.includes(':quarantine:')).sort(),[5,6,7,8,9].map(i=>'kiwiSaleQueue:quarantine:'+i));
   assert.equal(data.get('other'),'safe'); assert.equal(data.get('kiwiSaleQueue:quarantine:9'),'broken');
@@ -50,7 +50,7 @@ await test('briefing corrupt read and identity refusal are distinguishable',asyn
   const {createPersistence}=require('../assets/briefing-persistence.js');
   const p=createPersistence({slug:()=> 'fixture',localKey:()=> 'fixture',validSettings:()=>({}),render(){},compute(){},isReal:()=>false,localStorage:{getItem:()=>'{',setItem(){throw Error();}},limits:{},canDispatch:()=>false});
   p.reload();assert.equal(p.durable(),false);assert.equal(p.own().error,'local-read-unavailable');
-  const saved=await p.save();assert.equal(saved.ok,false);assert.equal(saved.error,'local-save-unavailable');assert.equal(p.cloudFailed(),true);
+  const saved=await p.save();assert.equal(saved.ok,false);assert.equal(saved.error,'cloud-unconfirmed');assert.equal(p.durable(),false);assert.equal(p.cloudFailed(),true);
 });
 
 await test('clipboard announces only settled success and reports rejected or refused copy', async()=>{

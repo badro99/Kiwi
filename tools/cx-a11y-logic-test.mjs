@@ -74,7 +74,7 @@ await test('correction timestamp uses refreshed merchant zone and Morocco law', 
   for (const zone of ['Africa/Casablanca', 'Pacific/Auckland']) {
     nodes.length = 0;
     const at = Date.parse('2026-11-04T12:00:00Z');
-    const render = fn('assets/employee-live.js', 'renderCorrections', { document, Date, lastData: { store: { timezone: zone } }, KiwiZoneLaw: ctx.KiwiZoneLaw, queueOwner: 'fixture', records: () => [{ at, kind: 'clock-in' }], needsCorrection: () => true, correctionWords: () => ({ title: 'Correction', in: 'In', dismiss: 'Dismiss' }) });
+    const render = fn('assets/employee-live.js', 'renderCorrections', { document, Date, lastData: { store: { timezone: zone } }, KiwiZoneLaw: ctx.KiwiZoneLaw, queueOwner: 'fixture', recovery: {}, records: () => [{ at, kind: 'clock-in' }], needsCorrection: () => true, correctionWords: () => ({ title: 'Correction', in: 'In', dismiss: 'Dismiss' }) });
     render();
     const label = nodes.find(n => n.tag === 'p').textContent;
     const expected = new ctx.KiwiZoneLaw.DateTimeFormat('en-GB', { timeZone: zone, year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(at);

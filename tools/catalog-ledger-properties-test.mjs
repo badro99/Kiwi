@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 // Propriété inter-surfaces : vrais handlers D1/SQLite et scripts navigateur livrés.
 // Les deux livres sont distincts par conception : la boutique et la maison
 // tiennent leur stock dans le catalogue (produit × déclinaison), les autres
@@ -67,9 +68,9 @@ function browser() {
   };
   w.__sent = [];
   w.window = w; w.self = w;
-  vm.createContext(w);
+  vm.createContext(deadlineVmContext(w));
   for (const file of ['color-palette', 'boutique-catalog-parts', 'boutique-catalog', 'inventory-ledger']) {
-    vm.runInContext(fs.readFileSync(ROOT + 'assets/' + file + '.js', 'utf8'), w, { filename: file + '.js' });
+    vm.runInContext(deadlineVmSource(fs.readFileSync(ROOT + 'assets/' + file + '.js', 'utf8')), w, { filename: file + '.js' });
   }
   // Exécuter les tâches planifiées, y compris les promesses des handlers réels.
   async function drain() {

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -207,7 +208,7 @@ function paymentHarness(source = paymentSource, overrides = {}) {
     tableId: '3', splitMode: 'egal', total: 90,
     flow: { parts: [{ amount: 35, paid: false }, { amount: 55, paid: false }], paidCount: 0 },
   };
-  const ctx = vm.createContext({
+  const ctx = vm.createContext(deadlineVmContext({
     splitState: state, tables: { '3': { status: 'ka-tkhdam', covers: 2 } },
     employeePaymentsInFlight: new Set(), liveEmployeeState: { merchant: 'test-restaurant' },
     svSlug: () => '', serviceCanonicalOrders: new Map(), serviceTableSessions: new Map([['3', 'visit-test']]),
@@ -225,18 +226,20 @@ function paymentHarness(source = paymentSource, overrides = {}) {
       url, body: JSON.parse(options.body), resolve, reject,
     })),
     ...overrides,
-  });
-  vm.runInContext(saveSource + source, ctx);
+  }));
+  vm.runInContext(deadlineVmSource(saveSource + source), ctx);
   function answer(i, success = true) {
     pending[i].resolve({ ok: success, status: success ? 200 : 409,
       json: async () => ({ ok: success, id: 'receipt-' + i }) });
   }
   return { ctx, state, pending, messages, answer };
 }
+const transportTick = () => new Promise(resolve => setImmediate(resolve));
 async function concurrency(source = paymentSource) {
   const h = paymentHarness(source);
   const first = h.ctx.markSplitPartPaid(0, 'cash');
   const second = h.ctx.markSplitPartPaid(1, 'carte');
+  await transportTick();
   assert.equal(h.pending.length, 2);
   assert.equal(await h.ctx.markSplitPartPaid(0, 'cash'), false, 'duplicate tap blocked');
   h.answer(1);
@@ -270,11 +273,13 @@ ok('missing merchant or session never becomes a local payment', true);
 for (const networkError of [false, true]) {
   const h = paymentHarness();
   const result = h.ctx.markSplitPartPaid(0, 'cash');
+  await transportTick();
   if (networkError) h.pending[0].reject(new Error('offline')); else h.answer(0, false);
   assert.equal(await result, false);
   assert.equal(h.state.flow.parts[0].paid, false);
   assert.equal(h.ctx.employeePaymentsInFlight.size, 0);
   const retry = h.ctx.markSplitPartPaid(0, 'cash');
+  await transportTick();
   assert.equal(h.pending[0].body.id, h.pending[1].body.id);
   h.answer(1);
   assert.equal(await retry, true);
@@ -283,6 +288,7 @@ ok('rejected and offline payments retain unpaid state and allow a stable retry',
 {
   const h = paymentHarness();
   const result = h.ctx.markSplitPartPaid(0, 'cash');
+  await transportTick();
   const other = { tableId: '4', flow: { parts: [{ paid: false }], paidCount: 0 } };
   h.ctx.splitState = other;
   h.answer(0);

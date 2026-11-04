@@ -33,11 +33,10 @@ for (const locale of ['fr', 'en', 'ar']) {
        cacheKey: () => 'cache:local', INVOICE_CACHE_KEY: 'cache', build: () => ({}), TOAST: { error: 'error' }, toast: text => messages.push(text),
        L: (key, fr) => T[locale]?.['invoice.' + key] || fr,
        requestInvoice: async () => ({ res: { ok: false, status: 400 }, data: { error: code, detail: 'Détail serveur synthétique' } }) });
-     vm.runInContext(fn('assets/invoice.js', 'generate'), ctx);
+     vm.runInContext(fn('assets/invoice.js', 'invoiceErrorText') + fn('assets/invoice.js', 'generate'), ctx);
      await ctx.generate({ id: 'fixture-sale', customer: {} });
      const message = messages.at(-1);
-     assert.ok(message.includes('\n'), 'technical detail must be secondary');
-     assert.ok(message.endsWith('Détail serveur synthétique'));
+     assert.ok(!message.includes('Détail serveur synthétique'), 'unknown server detail is never user-facing');
      const key = code === 'invalid-ice' ? 'iceInvalid' : code === 'invalid-customer' ? 'invalidRequest' : code === 'forbidden-merchant' ? 'forbidden' : 'serverRefusal';
      if (locale !== 'fr') assert.ok(message.startsWith(T[locale]['invoice.' + key]));
    }

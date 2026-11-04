@@ -688,7 +688,7 @@ ok(/function doOpenService\(\)[\s\S]*?shiftOpenedAt = [\s\S]*?startEmployeeSaleJ
   && caisseSource.includes('if (shiftOpenedAt) startEmployeeSaleJournalSync();')
   && caisseSource.includes('feed only contains SETTLED sales')
   && serviceSource.includes('if (hasUnsent || dirtyOrders.has(id))')
-  && serviceSource.includes("await fetch('/api/sale'")
+  && serviceSource.includes(".deadlineFetch('/api/sale'")
   && serviceSource.includes('if (!response.ok || !saved || !saved.ok) throw'),
   "le miroir financier démarre après ouverture/reprise et n'importe que les commandes définitivement payées");
 ok(caisseSource.includes("label: String(sale.orderRef || sale.label || 'Vente')")
@@ -785,7 +785,7 @@ ok(serviceSource.includes("state.source === 'employee' && currentShiftStart")
 ok(serviceSource.includes("+ '-emp'")
   && serviceSource.includes('id: paymentId')
   && serviceSource.includes('lines: paidLines')
-  && serviceSource.includes("await fetch('/api/sale'")
+  && serviceSource.includes(".deadlineFetch('/api/sale'")
   && serviceSource.includes('Never free a table locally before that acknowledgement')
   && !/function markTablePaid[\s\S]*?KiwiLive\.postSale/.test(serviceSource),
   "chaque addition employé est confirmée par le serveur avant de libérer la table");
@@ -803,7 +803,7 @@ ok(liveLinkSource.includes("localStorage.getItem('kiwiEmployeeMerchant')")
   "le paiement employé route vers son magasin avant la validation serveur du pointage");
 
 ok(!/markTablePaid\([^)]*['"]split['"]\)/.test(serviceSource)
-  && /async\s+function\s+markSplitPartPaid\s*\(\s*partIdx\s*,\s*method\s*\)[\s\S]*?fetch\(\s*['"]\/api\/sale['"]/.test(serviceSource)
+  && /async\s+function\s+markSplitPartPaid\s*\(\s*partIdx\s*,\s*method\s*\)[\s\S]*?deadlineFetch\(\s*['"]\/api\/sale['"]/.test(serviceSource)
   && /employeePaymentId\([^)]*?:split:/.test(serviceSource)
   && /split:\s*\{\s*index:\s*partIdx,\s*count:\s*flow\.parts\.length,\s*flowId:\s*flow\.id\s*\}/.test(serviceSource)
   && /flow\.parts\.every\(part\s*=>\s*part\.paid\)/.test(serviceSource),

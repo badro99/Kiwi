@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 /* tools/print-hub-resume-test.mjs · a print hub that slept is still the hub.
  *
  * Browse, 2026-10-05: the counter till was the restaurant's print hub at
@@ -58,8 +59,8 @@ function load(responder) {
   };
   storage.setItem('kiwiPaired', '1');
   storage.setItem('kiwiLiveMerchant', 'browse-fixture');
-  vm.createContext(sandbox);
-  vm.runInContext(QUEUE, sandbox, { filename: 'kitchen-print-queue.js' });
+  vm.createContext(deadlineVmContext(sandbox));
+  vm.runInContext(deadlineVmSource(QUEUE), sandbox, { filename: 'kitchen-print-queue.js' });
   const api = sandbox.KiwiKitchenPrint;
   /* Run the short timers (retries, the 120 ms follow-up flush) but not the
      resume cap, unless asked. */

@@ -42,7 +42,7 @@ const touched = new Set();
 
 /* Remplace l'estampille d'un asset dans un fichier donné, quel que soit le
    nombre d'occurrences. Renvoie le nombre de remplacements effectués. */
-function replaceIn(rel, asset, next) {
+function replaceIn(rel, asset, next, origin = rel) {
   const before = S.read(rel);
   const esc = asset.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   let hits = 0;
@@ -64,12 +64,19 @@ function replaceIn(rel, asset, next) {
     return `${ref}?v=${next}${quote}`;
   });
   after = after.replace(/((?:(?:from|import)\s+|import\s*\(\s*)')([.][.]?\/[^']+\.js)\?v=[0-9]+(')/g, (all, prefix, written, quote) => {
-    if (path.posix.normalize(path.posix.join(path.posix.dirname(rel), written)) !== asset) return all;
+    if (path.posix.normalize(path.posix.join(path.posix.dirname(origin), written)) !== asset) return all;
     hits++; return prefix + written + '?v=' + next + quote;
   });
   if (after === before) return 0;
   write(rel, after);
   touched.add(rel);
+  // Concatenated parts resolve imports from the delivered bundle's directory.
+  if (rel === 'assets/live-link.js') {
+    const mapFile = path.join(S.ROOT, 'tools/fixtures/live-link/split.json');
+    if (fs.existsSync(mapFile)) for (const part of JSON.parse(fs.readFileSync(mapFile, 'utf8')).bundles[0].parts) {
+      hits += replaceIn(part.file, asset, next, rel);
+    }
+  }
   return hits;
 }
 
