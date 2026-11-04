@@ -14,7 +14,7 @@ assert.equal(response.status,503,'database failure must never return an empty bo
 assert.equal((await response.json()).error,'credit-book-unavailable');
 f.sql.prepare("INSERT INTO store_docs VALUES(?,'creditbook','broken json',1,1)").run(f.merchant);
 assert.equal((await getVerticalOps(req,f.env,f.merchant)).status,503,'corrupt book is unavailable');
-const source=fs.readFileSync('assets/pos-epicerie.js','utf8');
+const source=fs.readFileSync('assets/pos-epicerie/carnet.js','utf8');
 const context={};vm.createContext(context);
 vm.runInContext(source.slice(source.indexOf('  function balanceOf('),source.indexOf('  /* Deux caisses hors ligne')),context);
 const old=new Date('2026-01-01'),later=new Date('2026-01-02');
@@ -22,7 +22,7 @@ const hist=[{type:'debt',amt:.10,at:old},{type:'debt',amt:.20,at:old},{type:'pay
 assert.equal(context.oldestDebt({hist}),later,'settled decimal debt must not retain its older date');
 const oldExpression=source.slice(source.indexOf('  function ardoiseCard(')).match(/const old = (.*);/)[1];
 for (const [days,expected] of [[14.5,false],[15,true]]) {
-  const value=vm.runInNewContext(oldExpression,{oldest:new Date(Date.now()-days*86400000),Date,DAY:86400000,bal:1});
+  const value=vm.runInNewContext(oldExpression,{oldest:new Date(Date.now()-days*86400000),Date,DAY:86400000,bal:1,debtDays:d=>Math.floor((Date.now()-d.getTime())/86400000)});
   assert.equal(value,expected,'aging thresholds count completed days');
 }
 // Exercise the real read transport and the configured UI error callback.

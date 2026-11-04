@@ -33,7 +33,6 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
-
   var KEY = 'kiwiCaisseLang';
   var LANGS = [
     { id: 'fr', code: 'FR', label: 'Français', dir: 'ltr' },
@@ -4208,6 +4207,7 @@
     document.head.appendChild(st);
   }
 
+  (function () { var carnet = {"Ardoise": ["Tab", "دين"], "Brouillon WhatsApp ouvert": ["WhatsApp draft opened", "تم فتح مسودة واتساب"], "Courses ({n} articles)": ["Groceries ({n} items)", "مشتريات ({n} أصناف)"], "solde {x}": ["balance {x}", "الرصيد {x}"], "Touchez un voisin pour l’y mettre.": ["Tap a neighbour to add it.", "المس جارًا لإضافتها."], "Avance {n} MAD": ["Advance {n} MAD", "تسبيق {n} MAD"], "solde Avance {n} MAD": ["balance: advance {n} MAD", "الرصيد: تسبيق {n} MAD"], "trop-perçu, à rendre ou à déduire": ["overpaid, to return or deduct", "مبلغ زائد، يُرد أو يُخصم"], "payé en trop, à rendre ou à déduire de la prochaine dette": ["overpaid, to return or deduct from the next debt", "مبلغ زائد، يُرد أو يُخصم من الدين القادم"], "dû": ["owed", "مستحق"], "Panier en attente,": ["Basket waiting,", "سلة في الانتظار،"], ". Touchez un voisin pour l’y mettre.": [". Tap a neighbour to add it.", ". المس جارًا لإضافتها."], ". Touchez un voisin pour l'y mettre.": [". Tap a neighbour to add it.", ". المس جارًا لإضافتها."], "Bonjour {x}, j'espère que vous allez bien.": ["Hello {x}, I hope you are well.", "مرحبًا {x}، أتمنى أن تكون بخير."], "Petit rappel de {x} : il reste {x} sur le carnet, quand ça vous arrange, aucune urgence.": ["A gentle reminder from {x}: {x} remains on your tab. Whenever convenient, there is no rush.", "تذكير لطيف من {x}: بقي {x} في حسابك. عندما يناسبك، لا استعجال."], "Baraka Allah o fik, et bonne journée.": ["Thank you, and have a lovely day.", "بارك الله فيك، ونتمنى لك يومًا سعيدًا."], "votre épicerie": ["your grocery shop", "متجرك"], "Achat à crédit": ["Purchase on credit", "شراء بالدين"], "nouvelle ardoise": ["new tab", "حساب جديد"], "Règlement espèces": ["Cash repayment", "أداء نقدي"], "Remboursement avance": ["Advance refund", "رد التسبيق"]}; Object.keys(carnet).forEach(function (k) { DICT.en[k] = carnet[k][0]; DICT.ar[k] = carnet[k][1]; }); })();
   /* ───────────────────────── démarrage ─────────────────────────
      Le rail d'un métier n'existe qu'une fois la caisse déverrouillée, et il est
      reconstruit à chaque montage : on regreffe donc à chaque mutation, comme

@@ -17,7 +17,7 @@ let merge;
 const window={KiwiStore:{define(name,opts){if(name==='verticalops')merge=opts.merge;return{};},currentVenue:()=> 'fixture'},addEventListener(){}};
 vm.runInNewContext(read('assets/vertical-state.js'),{window,localStorage:{getItem:()=>null,setItem(){}},document:{addEventListener(){}},setInterval:()=>0,setTimeout:()=>0,console});
 assert.equal(typeof merge,'function');
-const ep=declarations('assets/pos-epicerie.js',['r2','balanceOf','totalCredit','advanceTxt','balTxt'],{CARNET:[],fmtMAD:n=>n.toFixed(2)+' MAD'});
+const ep=declarations('assets/pos-epicerie.js',['r2','balanceOf','totalCredit','advanceTxt','balTxt'],{CARNET:[],tr:s=>s,fmtMAD:n=>n.toFixed(2)+' MAD'});
 vm.runInContext('this.balTxt = balTxt;',ep);
 const f=await fixture(ROOT),other='server-other-shop';
 // Un véritable autre propriétaire : les deux magasins de la fixture initiale appartiennent au même compte.

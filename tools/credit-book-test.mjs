@@ -10,13 +10,14 @@
  *   4. tableau de bord (assets/trade-workspaces.js) : la page « Carnet de crédit »
  *      lit les ardoises ouvertes de la caisse, en lecture seule. */
 import fs from 'node:fs';
+import { webcrypto } from 'node:crypto';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const VENUE_STORE = read('assets/venue-store.js');
 const VS = read('assets/vertical-state.js');
-const EP = read('assets/pos-epicerie.js');
+const EP = read('assets/pos-epicerie.js') + '\n' + read('assets/pos-epicerie/carnet.js').replace(/ctx\./g, '');
 const TW = read('assets/trade-workspaces.js');
 const EPCSS = read('assets/pos-epicerie.css');
 
@@ -48,7 +49,7 @@ function runtime() {
   const local = storage([['kiwiPairedVenue', JSON.stringify({ merchant: 'epicerie-test', venueId: 'dev' })]]);
   const noop = () => {};
   const document = { readyState: 'complete', visibilityState: 'visible', addEventListener: noop };
-  const window = { addEventListener: noop };
+  const window = { crypto: webcrypto, addEventListener: noop };
   const context = { console, Map, Set, setTimeout: () => 1, setInterval: () => 1, clearInterval: noop, localStorage: local.api, document, window };
   Object.assign(window, { window, localStorage: local.api, document });
   vm.createContext(context);
@@ -165,7 +166,7 @@ ok('chaque ligne d\'ardoise naît avec un identifiant', () => {
 });
 ok('une nouvelle ardoise ne partage jamais son identifiant avec celle d\'une autre caisse', () => {
   assert.match(EP, /const c = \{ id: uid\('kx'\), name, phone: tel/);
-  assert.match(EP, /const uid = \(p\) => p \+ Date\.now\(\)\.toString\(36\) \+ Math\.random\(\)\.toString\(36\)\.slice\(2, 7\);/);
+  assert.match(EP, /const uid = .*crypto.*randomUUID/);
 });
 ok('attacher un panier depuis l\'écran du carnet enregistre tout de suite', () => {
   const i = EP.indexOf("c.hist.push(histEntry('debt', state.attachFrom.label");
@@ -277,10 +278,10 @@ ok('« la moitié » ne dépasse jamais ce qui est dû', () => {
    zéro. Partout où la caisse affiche ce solde, c'est une « Avance ». */
 console.log('\ncarnet · trop-perçu après fusion');
 function labelRuntime() {
-  const c = vm.createContext({ Intl, Math });
+  const c = vm.createContext({ Intl, Math, window: {} });
   vm.runInContext([
     grab(EP, 'const fmtMAD2 = (n) =>') + ';', 'const fmtMAD = (n) => fmtMAD2(n);',
-    grab(EP, 'function balanceOf('), EP.match(/const advanceTxt = .*;/)[0], EP.match(/const balTxt = .*;/)[0],
+    grab(EP, 'function balanceOf('), 'const tr = s => s;', EP.match(/const advanceTxt = .*;/)[0], EP.match(/const balTxt = .*;/)[0],
     'this.balTxt = balTxt; this.bal = balanceOf;',
   ].join('\n'), c);
   return c;
@@ -312,7 +313,7 @@ ok('le solde se compte en centimes entiers', () => {
    règlement au journal du jour a sa ligne au carnet, et réciproquement. */
 console.log('\ncarnet · règlement atomique');
 const REPAY_SRC = [
-  grab(EP, 'function balanceOf('), EP.match(/const uid = .*;/)[0], grab(EP, 'function histEntry('),
+  grab(EP, 'function balanceOf('), EP.match(/const uid = .*;/)[0], 'const entryId = h => h.id || JSON.stringify([h.type,h.amt,h.at,h.label]);', grab(EP, 'function histEntry('),
   EP.match(/const REPAY_PREFIX = .*;/)[0], grab(EP, 'function repayKey()'), grab(EP, 'function repayLog()'),
   grab(EP, 'function repayLogWrite('), grab(EP, 'function journalHas('), grab(EP, 'function postDay('),
   grab(EP, 'function commitRepayment('), grab(EP, 'function recoverRepayments()'),
@@ -344,7 +345,7 @@ function till(disk, { failKey = '', crashAfter = Infinity, recordMode = 'ok', re
   CARNET.forEach((c) => c.hist.forEach((h) => { h.at = new Date(h.at); }));
   const CRED = Object.fromEntries(CARNET.map((c) => [c.id, c]));
   const ops = { venue: () => 'epicerie-test', save: () => { try { ls.setItem(CKEY, JSON.stringify(CARNET)); } catch (_) {} return true; } };
-  const ctx = vm.createContext({ Math, JSON, Date, Object, Array, String, CARNET, CRED, day: { especes: 0 }, pvReal: () => real, epicerieOps: ops, localStorage: ls, window: { KiwiPosSale: Pos } });
+  const ctx = vm.createContext({ Math, JSON, Date, Object, Array, String, CARNET, CRED, day: { especes: 0 }, pvReal: () => real, epicerieOps: ops, localStorage: ls, window: { crypto: webcrypto, KiwiPosSale: Pos } });
   vm.runInContext(REPAY_SRC, ctx);
   if (!disk.has(CKEY) && crashAfter === Infinity && !failKey) ops.save();
   return { ...ctx.api, CARNET, CRED, ctx, ops, journal: today };

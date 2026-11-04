@@ -97,7 +97,7 @@ const eq = (a, b, m) => { assert.deepEqual(plain(a), b, m); checks++; };
 
 // Exercise the actual épicerie entry points in a VM: no DOM fixture is needed.
 {
-  const source = fs.readFileSync(path.join(ROOT, 'assets/pos-epicerie.js'), 'utf8');
+  const source = fs.readFileSync(path.join(ROOT, 'assets/pos-epicerie.js'), 'utf8') + '\n' + fs.readFileSync(path.join(ROOT, 'assets/pos-epicerie/carnet.js'), 'utf8').replace(/ctx\./g, '').replace('nextTicket();', 'ticketSeq++;');
   const functionSource = name => {
     const start = source.indexOf('  function ' + name + '(');
     const end = source.indexOf('\n  function ', start + 1);
@@ -122,7 +122,7 @@ const eq = (a, b, m) => { assert.deepEqual(plain(a), b, m); checks++; };
   Object.assign(context, {CRED:{}, day:{creditAdded:0,tickets:0}, r2:n=>n,
     ticketCount:()=>1, histEntry:(...args)=>args, decrementStock:()=>{},
     ticketSeq:1, freshTicket:()=>{},renderTicket:()=>{},renderGrid:()=>{},renderBadges:()=>{},
-    icons:()=>{},queueIfOffline:()=>{},toast:()=>{},fmtMAD2:String,fmtMAD:String,balTxt:String,balanceOf:()=>7.5,focusScan:()=>{}});
+    phrase:(key,value)=>key.replace('{x}',value),icons:()=>{},queueIfOffline:()=>{},toast:()=>{},fmtMAD2:String,fmtMAD:String,balTxt:String,balanceOf:()=>7.5,focusScan:()=>{}});
   context.ITEMS.olives.label = 'Olives';
   context.window.KiwiRepeatSale.epicerieRemember = (...args)=>committed.push(args);
   vm.runInContext(functionSource('attachBasket') + '\nattachBasket({name:"Fixture",hist:[]});', context);
