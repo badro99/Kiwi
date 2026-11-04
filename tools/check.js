@@ -2705,6 +2705,25 @@ section('Text contrast (tools/text-contrast-test.js)');
   }
 }
 
+/* The Kiwi 2027 sections below run lists of [file, label] suites the same way:
+ * a skip is a warning, a pass prints its last ✓ line, a red prints its ✗ lines. */
+function runKitGates(gates, pass = /^✓/) {
+  const { spawnSync } = require('child_process');
+  for (const [file, label] of gates) {
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
+    const out = (r.stdout || '') + (r.stderr || '');
+    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
+    else if (r.status === 0) {
+      const line = (out.split('\n').filter((l) => pass.test(l)).pop() || 'vert').replace(/^✓\s*/, '').trim();
+      ok(line.startsWith(label) ? line : label + ' · ' + line);
+    } else {
+      const lines = out.split('\n').filter((l) => /✗/.test(l)).slice(0, 12);
+      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*✗\s*/, '').trim()));
+      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
+    }
+  }
+}
+
 /* ── 14b · Kiwi 2027, étape 1 : les jetons ──────────────────────────────────
  * assets/kit/tokens-2027.css (docs/specs/kiwi-design-2027.md §5 à §7, §14, §20.7).
  * Rien ne le charge encore : ces gardes sont les seules à le tenir.
@@ -2755,7 +2774,6 @@ section('Kiwi 2027 · jetons (token-contrast-test, type-steps-lint, kit-lint, ca
  *                             sous iOS 15.8 reste à mesurer par le banc de capture) */
 section('Kiwi 2027 · kit (taille, galerie, hôte, haptique, mouvement, polarité, bidi, budget)');
 {
-  const { spawnSync } = require('child_process');
   const gates = [
     ['kit-size-test.js', 'kit-size-test'],
     ['kit-gallery-browser-test.mjs', 'kit-gallery-browser-test'],
@@ -2766,20 +2784,7 @@ section('Kiwi 2027 · kit (taille, galerie, hôte, haptique, mouvement, polarit�
     ['kit-bidi-browser-test.mjs', 'kit-bidi-browser-test'],
     ['kit-budget-browser-test.mjs', 'kit-budget-browser-test'],
   ];
-  for (const [file, label] of gates) {
-    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
-    const out = (r.stdout || '') + (r.stderr || '');
-    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
-    else if (r.status === 0) {
-      const line = (out.split('\n').filter((l) => l.startsWith('✓')).pop() || 'vert').replace(/^✓\s*/, '').trim();
-      ok(line.startsWith(label) ? line : label + ' · ' + line);
-    }
-    else {
-      const lines = out.split('\n').filter((l) => /✗/.test(l)).slice(0, 12);
-      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*✗\s*/, '').trim()));
-      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
-    }
-  }
+  runKitGates(gates);
 }
 
 /* ── 14d · Kiwi 2027, étape 3a : le pavé de code et ce qui suit un code ─────
@@ -2808,7 +2813,6 @@ section('Kiwi 2027 · kit (taille, galerie, hôte, haptique, mouvement, polarit�
  *                                       chiffres ; drapeau éteint, aucun fichier du kit */
 section('Kiwi 2027 · pavé de code (réponses, annonces, focus, pointage, appairage, caisse, équipe)');
 {
-  const { spawnSync } = require('child_process');
   const gates = [
     ['pin-flow-test.mjs', 'pin-flow-test'],
     ['pin-announce-browser-test.mjs', 'pin-announce-browser-test'],
@@ -2818,20 +2822,7 @@ section('Kiwi 2027 · pavé de code (réponses, annonces, focus, pointage, appai
     ['till-pin-browser-test.mjs', 'till-pin-browser-test'],
     ['team-pin-browser-test.mjs', 'team-pin-browser-test'],
   ];
-  for (const [file, label] of gates) {
-    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
-    const out = (r.stdout || '') + (r.stderr || '');
-    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
-    else if (r.status === 0) {
-      const line = (out.split('\n').filter((l) => /^(✓|pin-flow-test ·)/.test(l)).pop() || 'vert').replace(/^✓\s*/, '').trim();
-      ok(line.startsWith(label) ? line : label + ' · ' + line);
-    }
-    else {
-      const lines = out.split('\n').filter((l) => /✗/.test(l)).slice(0, 12);
-      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*✗\s*/, '').trim()));
-      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
-    }
-  }
+  runKitGates(gates, /^(✓|pin-flow-test ·)/);
 }
 
 /* ── 14e · Kiwi 2027, étape 3b : la cuisine sur les couloirs du kit ─────────
@@ -2848,24 +2839,10 @@ section('Kiwi 2027 · pavé de code (réponses, annonces, focus, pointage, appai
  *                                       feuille ; l'arabe */
 section('Kiwi 2027 · cuisine sur les couloirs du kit');
 {
-  const { spawnSync } = require('child_process');
   const gates = [
     ['kds-board-browser-test.mjs', 'kds-board-browser-test'],
   ];
-  for (const [file, label] of gates) {
-    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
-    const out = (r.stdout || '') + (r.stderr || '');
-    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
-    else if (r.status === 0) {
-      const line = (out.split('\n').filter((l) => /^✓/.test(l)).pop() || 'vert').replace(/^✓\s*/, '').trim();
-      ok(line.startsWith(label) ? line : label + ' · ' + line);
-    }
-    else {
-      const lines = out.split('\n').filter((l) => /✗/.test(l)).slice(0, 12);
-      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*✗\s*/, '').trim()));
-      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
-    }
-  }
+  runKitGates(gates);
 }
 
 /* ── 14f · Kiwi 2027, étape 3c : une seule app de commande client ──────────
@@ -2894,27 +2871,13 @@ section('Kiwi 2027 · cuisine sur les couloirs du kit');
  *                                       d'options, écran de table, numéro à emporter */
 section('Kiwi 2027 · une seule app de commande client');
 {
-  const { spawnSync } = require('child_process');
   const gates = [
     ['orderpro-parity-browser-test.mjs', 'orderpro-parity-browser-test'],
     ['guest-redirect-test.mjs', 'guest-redirect-test'],
     ['order-basic-test.mjs', 'order-basic-test'],
     ['orderpro-2027-polish-browser-test.mjs', 'orderpro-2027-polish-browser-test'],
   ];
-  for (const [file, label] of gates) {
-    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
-    const out = (r.stdout || '') + (r.stderr || '');
-    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
-    else if (r.status === 0) {
-      const line = (out.split('\n').filter((l) => /^✓/.test(l)).pop() || 'vert').replace(/^✓\s*/, '').trim();
-      ok(line.startsWith(label) ? line : label + ' · ' + line);
-    }
-    else {
-      const lines = out.split('\n').filter((l) => /✗/.test(l)).slice(0, 12);
-      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*✗\s*/, '').trim()));
-      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
-    }
-  }
+  runKitGates(gates);
 }
 
 /* ── 14g · Kiwi 2027, étape 4 : le cœur de la caisse ──────────────────────
@@ -2985,7 +2948,6 @@ section('Kiwi 2027 · une seule app de commande client');
  *                                       1180 rien ne change */
 section('Kiwi 2027 · le cœur de la caisse sur le kit');
 {
-  const { spawnSync } = require('child_process');
   const gates = [
     ['till-frame-browser-test.mjs', 'till-frame-browser-test'],
     ['pay-height-test.mjs', 'pay-height-test'],
@@ -3001,20 +2963,7 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
     ['till-autre-frame-test.mjs', 'till-autre-frame-test'],
     ['till-phone-tabs-browser-test.mjs', 'till-phone-tabs-browser-test'],
   ];
-  for (const [file, label] of gates) {
-    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
-    const out = (r.stdout || '') + (r.stderr || '');
-    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
-    else if (r.status === 0) {
-      const line = (out.split('\n').filter((l) => /^✓/.test(l)).pop() || 'vert').replace(/^✓\s*/, '').trim();
-      ok(line.startsWith(label) ? line : label + ' · ' + line);
-    }
-    else {
-      const lines = out.split('\n').filter((l) => /✗/.test(l)).slice(0, 12);
-      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*✗\s*/, '').trim()));
-      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
-    }
-  }
+  runKitGates(gates);
 }
 
 /* ── 14g bis · Parité 2027 : la peau change le regard, jamais les gestes ──
@@ -3070,7 +3019,6 @@ section('Kiwi 2027 · parité de la caisse (peau contre gestes)');
  *                                       ouvrent, à la même largeur (FR, AR) */
 section('Le tableau de bord livré, au téléphone');
 {
-  const { spawnSync } = require('child_process');
   const gates = [
     ['chart-legend-test.mjs', 'chart-legend-test'],
     /* Chaque page du tableau de bord et ses sous-onglets, à 390 de large : rien ne dépasse l'écran (FR, AR). */
@@ -3086,20 +3034,7 @@ section('Le tableau de bord livré, au téléphone');
     /* L'écran cuisine livré, de 1920 à 390 de large : chaque bon garde son bouton entier (≥ 52 px), même dans une colonne courte. */
     ['kds-cards-browser-test.mjs', 'kds-cards-browser-test'],
   ];
-  for (const [file, label] of gates) {
-    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
-    const out = (r.stdout || '') + (r.stderr || '');
-    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
-    else if (r.status === 0) {
-      const line = (out.split('\n').filter((l) => /^✓/.test(l)).pop() || 'vert').replace(/^✓\s*/, '').trim();
-      ok(line.startsWith(label) ? line : label + ' · ' + line);
-    }
-    else {
-      const lines = out.split('\n').filter((l) => /✗/.test(l)).slice(0, 12);
-      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*✗\s*/, '').trim()));
-      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
-    }
-  }
+  runKitGates(gates);
 }
 
 /* ── 14i · Kiwi 2027, étape 6 : l'accès, l'équipe, l'accueil des nouveaux ──
@@ -3128,7 +3063,6 @@ section('Le tableau de bord livré, au téléphone');
 
 section('Kiwi 2027 · l\'accès et le reste sur le kit');
 {
-  const { spawnSync } = require('child_process');
   const gates = [
     ['reset-states-test.mjs', 'reset-states-test'],
     ['access-gate-browser-test.mjs', 'access-gate-browser-test'],
@@ -3138,20 +3072,7 @@ section('Kiwi 2027 · l\'accès et le reste sur le kit');
     ['team-polish-browser-test.mjs', 'team-polish-browser-test'],
     ['onboarding-recovery-browser-test.mjs', 'onboarding-recovery-browser-test'],
   ];
-  for (const [file, label] of gates) {
-    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
-    const out = (r.stdout || '') + (r.stderr || '');
-    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
-    else if (r.status === 0) {
-      const line = (out.split('\n').filter((l) => /^✓/.test(l)).pop() || 'vert').replace(/^✓\s*/, '').trim();
-      ok(line.startsWith(label) ? line : label + ' · ' + line);
-    }
-    else {
-      const lines = out.split('\n').filter((l) => /✗/.test(l)).slice(0, 12);
-      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*✗\s*/, '').trim()));
-      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
-    }
-  }
+  runKitGates(gates);
 }
 
 /* ── summary ────────────────────────────────────────────────────────────── */
