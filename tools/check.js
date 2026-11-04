@@ -1852,7 +1852,7 @@ section('Whole-project regressions');
     'r13-a-test.mjs',
     'home-sparkline-a11y-test.mjs',
     'dashboard-first-use-test.mjs',
-    'serveur-split-test.mjs',
+    'serveur-split-test.mjs', 'serveur-split-cents-test.mjs', 'serveur-loyalty-retry-test.mjs',
     'serveur-notice-archive-test.mjs',
     'serveur-identity-test.mjs',
     'stock-split-test.mjs',

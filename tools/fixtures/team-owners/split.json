@@ -945,7 +945,7 @@
   "scriptsBefore": {
     "dashboard.html": 124,
     "kiwi-caisse.html": 89,
-    "kiwi-serveur.html": 26,
+    "kiwi-serveur.html": 27,
     "booking.html": 5
   },
   "sha256": "95a9651f4bb8f9cd1c92ce2ff4b7186a456a6964cbff6322f0920e02a765843c",

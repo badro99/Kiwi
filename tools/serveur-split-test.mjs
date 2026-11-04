@@ -69,5 +69,5 @@ assert.equal(read(map.bundle), map.parts.map(read).join(''), 'bundle livré iden
 assert.equal(tags[at - 1].match(/src="([^"]+)"/)[1], map.bundle + '?v=' + JSON.parse(read('tools/asset-stamps.json'))[map.bundle].v);
 for (const tag of tags.slice(at - 1, at + 1)) assert.ok(!/\b(?:async|defer|type)\s*(?:=|>)/.test(tag), 'scripts classiques synchrones');
 // 27, moins menu-promos.js chargé avec promo-rules.js par un module (vague I).
-assert.equal(tags.length, 26, 'nombre de scripts de la page serveur');
+assert.equal(tags.length, 27, 'nombre de scripts de la page serveur');
 console.log(`✓ serveur-split-test : ${map.moved.length} fragments reconstruits, reconstruction, noms et ordre classiques conservés`);

@@ -289,7 +289,7 @@
       ,"Approchez la carte ou le téléphone":"Hold the card or phone close"
       ,"Choisissez un mode de partage.":"Choose how to split."
       ,"Parts égales":"Equal shares"
-      ,"Part égale":"Equal share"
+      ,"Part égale":"Equal share", "Part égale · pourboire inclus":"Equal share · tip included", "Approchez la carte":"Hold the card close", "Retirer":"Remove", "Pour qui?":"Who is this for?"
       ,"Part équilibrée":"Balanced share"
       ,"Assignez à un convive":"Assign to a guest"
       ,"Par article":"By item"
@@ -611,7 +611,7 @@
       ,"Approchez la carte ou le téléphone":"قرّب البطاقة أو الهاتف"
       ,"Choisissez un mode de partage.":"اختر طريقة التقسيم."
       ,"Parts égales":"حصص متساوية"
-      ,"Part égale":"حصة متساوية"
+      ,"Part égale":"حصة متساوية", "Part égale · pourboire inclus":"حصة متساوية · البقشيش مشمول", "Approchez la carte":"قرّب البطاقة", "Retirer":"إزالة", "Pour qui?":"لمن؟"
       ,"Part équilibrée":"حصة متوازنة"
       ,"Assignez à un convive":"خصّص لضيف"
       ,"Par article":"حسب الصنف"
@@ -728,6 +728,12 @@
     [/^(\d+) couverts · ajoutez des articles ci-dessous$/, "$1 guests · add items below", "$1 ضيوف · أضف الأصناف أدناه"],
     [/^Fusionner avec (.+)$/, "Merge with $1", "دمج مع $1"],
     [/^Déplacer vers (.+)$/, "Move to $1", "نقل إلى $1"],
+    [/^Conv\.? (\d+)$/, "Guest $1", "الضيف $1"],
+    [/^Convive (\d+)$/, "Guest $1", "الضيف $1"],
+    [/^Articles de Convive (\d+)$/, "Items for guest $1", "أصناف الضيف $1"],
+    [/^Convive (\d+) n'a encore rien · tapez un article ci-dessus$/, "Guest $1 has no items yet · tap an item above", "الضيف $1 ليس لديه أصناف بعد · اضغط على صنف أعلاه"],
+    [/^\+ pourboire (.+)%$/, "+ $1% tip", "+ بقشيش $1%"],
+    [/^Part (\d+) · (.+)$/, "Share $1 · $2", "الحصة $1 · $2"],
     [/^(\d+) parts · (.+) chacun$/, "$1 shares · $2 each", "$1 حصص · $2 لكل واحد"],
     [/^Split en cours · (\d+)\/(\d+) réglées$/, "Split in progress · $1/$2 paid", "التقسيم جارٍ · $1/$2 مدفوعة"],
     [/^(\d+) \/ (\d+) réglées$/, "$1 / $2 paid", "$1 / $2 مدفوعة"],

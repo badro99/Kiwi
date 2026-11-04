@@ -1976,16 +1976,20 @@
     "sha": "744e87916aca72f2"
   },
   "assets/serveur-lang.js": {
-    "v": "10",
-    "sha": "10f8682f2c74d432"
+    "v": "13",
+    "sha": "012700d09199505e"
   },
   "assets/serveur-shell.css": {
     "v": "8",
     "sha": "ca9f976c2786c1a3"
   },
+  "assets/serveur/payment-support.js": {
+    "v": "6",
+    "sha": "35dab11d06129b1b"
+  },
   "assets/serveur/service.js": {
-    "v": "16",
-    "sha": "8dcbc46a81775ea8"
+    "v": "19",
+    "sha": "7491faa0389d81d5"
   },
   "assets/service-requests.js": {
     "v": "2",
