@@ -23,8 +23,6 @@
   "api/print/_relay.js : repli de schéma": 1,
   "api/push/morning.js : repli de schéma": 1,
   "api/push/register.js : repli de schéma": 4,
-  "api/sale.js : no such column: client_id": 1,
   "api/tickets/_lib.js : repli de schéma": 1,
-  "api/timezone.js : repli de schéma": 2,
   "auth/_lib.js : repli de schéma": 4
 }
