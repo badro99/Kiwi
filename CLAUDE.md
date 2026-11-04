@@ -525,7 +525,7 @@ quote-only Ultimate strip under them (owner, 2026-10-16):
   explicit plan and the operator console bills it at 300 MAD
   (`tools/plan-catalog-test.mjs` holds both). Signup does not take a plan from
   the landing, so a new account starts on `basic` until an operator sets it.
-- **Kiwi Pro · 399 MAD/month, 349 on the annual plan** (billed 4 200 MAD a
+- **Kiwi Pro · 399 MAD/month, 349 on the annual plan** (billed 4 188 MAD a
   year) — everything in Plus + restaurant operations: interactive floor plan,
   waiter ordering, kitchen display, OrderPro Restaurant, multilingual menu,
   booking link, recipes and food cost, employee access with permissions,
