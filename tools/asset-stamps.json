@@ -812,8 +812,8 @@
     "sha": "0fc3fe84387e04a4"
   },
   "assets/invoicing.js": {
-    "v": "36",
-    "sha": "9806f77a6e56e384"
+    "v": "37",
+    "sha": "a9f0b87deaef4c44"
   },
   "assets/invoicing/composer.js": {
     "v": "9",
@@ -828,8 +828,8 @@
     "sha": "701c83f0825ccdbe"
   },
   "assets/invoicing/transport.js": {
-    "v": "4",
-    "sha": "56ea0700d1632c57"
+    "v": "5",
+    "sha": "797fbbd64fb060c0"
   },
   "assets/kit/access-reset.js": {
     "v": "1",

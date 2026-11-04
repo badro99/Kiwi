@@ -38,7 +38,10 @@ async function api(method, payload) {
       } else {
         res = await fetchDeadline('/api/invoices', {method: 'POST', credentials: 'same-origin', headers: {'content-type': 'application/json'}, body: JSON.stringify(Object.assign({merchant}, payload || {}))});
       }
-    } catch (_) { throw apiError('offline'); }
+    } catch (error) {
+      // A timed-out write may still have landed: never tell the merchant "nothing was saved" then.
+      throw apiError(error && error.code === 'timeout' ? 'timeout' : 'offline');
+    }
     let data = null;
     try { data = await res.json(); } catch (_) {}
     if (!res.ok || !data || data.ok === false || data.error) {

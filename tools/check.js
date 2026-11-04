@@ -2395,7 +2395,7 @@ section('Whole-project regressions');
     'net-wave-p-test.mjs',
     'fetch-deadline-test.mjs',
     'invoices-split-test.mjs',
-    'invoicing-split-test.mjs',
+    'invoicing-split-test.mjs', 'invoicing-timeout-test.mjs',
     'order-queue-split-test.mjs',
     /* L'ICE se vérifie (15 chiffres, multiple de 97) au champ du formulaire
        Établissement, au vrai clic, et côté serveur pour les factures. */

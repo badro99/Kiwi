@@ -17,7 +17,7 @@
   window.Kiwi.handlers['invoicing'] = openWhenReady;
   window.KiwiInvoicing = {open: openWhenReady, list: () => [], version: '2.0.0'};
   const ready = Promise.all([
-  import('./invoicing/transport.js?v=4'),
+  import('./invoicing/transport.js?v=5'),
   import('./invoicing/composer.js?v=9'),
   import('./invoicing/history.js?v=9'),
   import('./invoicing/print.js?v=8'),
@@ -121,7 +121,7 @@
       converted: 'Brouillon de facture créé depuis le devis', duplicated: 'Copie créée en brouillon', deleted: 'Brouillon supprimé', sentMarked: 'Marquée envoyée', quoteUpdated: 'Devis mis à jour',
       exported: 'Export CSV téléchargé', noteSaved: 'Note enregistrée', printBlocked: 'Autorisez les fenêtres contextuelles pour imprimer.', noContact: 'Ajoutez un e-mail ou un téléphone au client.',
       validation: 'Ajoutez un client et au moins une ligne valide.', errGeneric: 'Action impossible pour le moment. Rien n’a été enregistré.',
-      errLoad: 'Factures indisponibles. Vérifiez la connexion puis rouvrez le registre.', errOffline: 'Hors ligne : rien n’a été enregistré. Réessayez avec une connexion.', errLocked: 'Ce document est émis : il ne peut plus être modifié.',
+      errLoad: 'Factures indisponibles. Vérifiez la connexion puis rouvrez le registre.', errOffline: 'Hors ligne : rien n’a été enregistré. Réessayez avec une connexion.', errTimeout: 'Pas de réponse à temps : le document a peut-être été enregistré. Rouvrez le registre pour vérifier avant de recommencer.', errLocked: 'Ce document est émis : il ne peut plus être modifié.',
       errExempt: 'Indiquez la mention d’exonération avant d’émettre.', errExceeds: 'Le montant dépasse le reste à payer.', errCredit: 'L’avoir dépasse le montant restant à créditer sur la facture.',
       errAuth: 'Session expirée ou accès réservé au propriétaire du compte.', errIce: 'ICE invalide : corrigez-le avant d’enregistrer.', errNotIssued: 'Cette facture n’est pas encore émise.', errNotFound: 'Document introuvable.',
       errCustomer: 'Indiquez le nom du client.', errLines: 'Ajoutez au moins une ligne avec une quantité.',
@@ -198,7 +198,7 @@
       converted: 'Draft invoice created from the quote', duplicated: 'Copy created as a draft', deleted: 'Draft deleted', sentMarked: 'Marked as sent', quoteUpdated: 'Quote updated',
       exported: 'CSV export downloaded', noteSaved: 'Note saved', printBlocked: 'Allow pop-ups to print.', noContact: 'Add an email or phone for this customer.',
       validation: 'Add a customer and at least one valid line.', errGeneric: 'Not possible right now. Nothing was saved.',
-      errLoad: 'Invoices unavailable. Check your connection and reopen the register.', errOffline: 'Offline: nothing was saved. Try again with a connection.', errLocked: 'This document is issued: it can no longer be modified.',
+      errLoad: 'Invoices unavailable. Check your connection and reopen the register.', errOffline: 'Offline: nothing was saved. Try again with a connection.', errTimeout: 'No answer in time: the document may have been saved. Reopen the register to check before trying again.', errLocked: 'This document is issued: it can no longer be modified.',
       errExempt: 'State the exemption mention before issuing.', errExceeds: 'The amount exceeds the balance due.', errCredit: 'The credit note exceeds the amount still creditable on the invoice.',
       errAuth: 'Session expired, or access reserved to the account owner.', errIce: 'Invalid ICE: fix it before saving.', errNotIssued: 'This invoice is not issued yet.', errNotFound: 'Document not found.',
       errCustomer: 'Enter the customer name.', errLines: 'Add at least one line with a quantity.',
@@ -275,7 +275,7 @@
       converted: 'تم إنشاء مسودة فاتورة من عرض السعر', duplicated: 'تم إنشاء نسخة كمسودة', deleted: 'تم حذف المسودة', sentMarked: 'حددت كمرسلة', quoteUpdated: 'تم تحديث عرض السعر',
       exported: 'تم تنزيل ملف CSV', noteSaved: 'تم حفظ الملاحظة', printBlocked: 'اسمح بالنوافذ المنبثقة للطباعة.', noContact: 'أضف بريداً أو هاتفاً للعميل.',
       validation: 'أضف عميلاً وبنداً صالحاً واحداً على الأقل.', errGeneric: 'تعذر تنفيذ العملية حالياً. لم يُحفظ شيء.',
-      errLoad: 'الفواتير غير متاحة. تحقق من الاتصال ثم أعد فتح السجل.', errOffline: 'دون اتصال: لم يُحفظ شيء. أعد المحاولة عند توفر الاتصال.', errLocked: 'هذا المستند صادر: لا يمكن تعديله.',
+      errLoad: 'الفواتير غير متاحة. تحقق من الاتصال ثم أعد فتح السجل.', errOffline: 'دون اتصال: لم يُحفظ شيء. أعد المحاولة عند توفر الاتصال.', errTimeout: 'لم يصل الرد في الوقت: ربما حُفظ المستند. أعد فتح السجل للتحقق قبل إعادة المحاولة.', errLocked: 'هذا المستند صادر: لا يمكن تعديله.',
       errExempt: 'اذكر بيان الإعفاء قبل الإصدار.', errExceeds: 'المبلغ يتجاوز المتبقي للأداء.', errCredit: 'يتجاوز الإشعار الدائن المبلغ المتبقي قابلاً للتصحيح في الفاتورة.',
       errAuth: 'انتهت الجلسة أو أن الدخول محجوز لمالك الحساب.', errIce: 'ICE غير صحيح: صححه قبل الحفظ.', errNotIssued: 'هذه الفاتورة لم تصدر بعد.', errNotFound: 'المستند غير موجود.',
       errCustomer: 'أدخل اسم العميل.', errLines: 'أضف بنداً واحداً على الأقل بكمية.',
@@ -420,6 +420,7 @@
   function errText(err) {
     const t = T(), code = String(err?.code || '');
     if (code === 'offline') return t.errOffline;
+    if (code === 'timeout') return t.errTimeout;
     if (code === 'unauthorized' || code === 'forbidden') return t.errAuth;
     if (code === 'locked') return t.errLocked;
     if (code === 'exempt-mention-required') return t.errExempt;
