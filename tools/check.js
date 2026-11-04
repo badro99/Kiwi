@@ -2470,7 +2470,7 @@ section('Whole-project regressions');
        phrases composées au rendu se traduisent, attributs compris. */
     'serveur-lang-coverage-test.mjs',
     'field-split-ui-test.mjs',
-    'hospitality-plus-test.mjs',
+    'hospitality-plus-test.mjs', 'client-identity-redaction-test.mjs',
     'maison-return-ledger-test.mjs',
     'menu-ordering-surfaces-test.js',
     'morocco-holidays-test.mjs',

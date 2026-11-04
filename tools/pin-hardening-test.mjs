@@ -281,6 +281,27 @@ console.log('\n1 · Server-Side PIN Verification (/api/pin/verify)');
   check('owner PIN from another account store opens the caisse', res.status === 200 && data.ok === true && data.staff && data.staff.name === 'Rachid O.');
 }
 
+{
+  /* Council rating 14: the account-wide fallback accepted any role that opens
+   * a till, so a cashier of one store unlocked every sibling store's till.
+   * Only owner and manager codes travel between stores. */
+  sqlite.prepare("INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES ('pin-x-cash', 'atlas-medina', '8642', 'Nadia K.', 'Caissière', ?), ('pin-x-mgr', 'atlas-medina', '9753', 'Omar G.', 'Gérante', ?)").run(now, now);
+  const tryPin = async (pin) => {
+    const req = new Request('https://kiwi.test/api/pin/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: `kiwi_till=${tillCookieVal}`, 'CF-Connecting-IP': '10.0.0.6' },
+      body: JSON.stringify({ merchant: 'cafe-atlas', pin }),
+    });
+    const res = await verifyPinPost({ request: req, env });
+    return { status: res.status, data: await res.json() };
+  };
+  const cashier = await tryPin('8642');
+  check('a sibling store cashier PIN does NOT open this store’s caisse', cashier.status === 401 && cashier.data.ok !== true && !cashier.data.staff);
+  const manager = await tryPin('9753');
+  check('a sibling store manager PIN still opens it', manager.status === 200 && manager.data.staff && manager.data.staff.name === 'Omar G.');
+  sqlite.prepare("DELETE FROM staff_pins WHERE id IN ('pin-x-cash', 'pin-x-mgr')").run();
+}
+
 console.log('\n1b · Account-wide verification (the dashboard lock)');
 
 /* Le tableau de bord embrasse tous les établissements du compte, alors que les
