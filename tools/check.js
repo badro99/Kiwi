@@ -2420,7 +2420,7 @@ section('Whole-project regressions');
     'intake-storage-fault-test.mjs',
     'media-owner-test.mjs',
     'admin-delete-r2-test.mjs',
-    'admin-api-owner-test.mjs', 'request-deadlines-test.mjs',
+    'admin-api-owner-test.mjs', 'admin-merchant-exists-test.mjs', 'request-deadlines-test.mjs',
     'legacy-scan-test.mjs',
     'menu-translate-test.mjs',
     /* La carte dans la langue de chacun : traductions portées par les

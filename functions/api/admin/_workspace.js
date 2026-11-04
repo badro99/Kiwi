@@ -12,7 +12,13 @@ export const clean = (s, max = 300) => String(s == null ? '' : s).replace(/[\u00
 export const merchantKey = s => /^[a-z0-9][a-z0-9_-]{0,63}$/.test(String(s || '')) ? String(s) : '';
 export async function merchantExists(env, merchant) {
   if (await env.DB.prepare('SELECT merchant FROM merchant_config WHERE merchant=?').bind(merchant).first()) return true;
-  const accounts = await env.DB.prepare('SELECT business,email FROM accounts').all();
+  // Accounts since migration 0007 carry their reserved slug (indexed); only older
+  // accounts, whose slug was never stored, still need their name slugged here.
+  let legacy = 'SELECT business,email FROM accounts WHERE business_slug IS NULL';
+  try {
+    if (await env.DB.prepare('SELECT 1 FROM accounts WHERE business_slug=? LIMIT 1').bind(merchant).first()) return true;
+  } catch (_) { legacy = 'SELECT business,email FROM accounts'; }
+  const accounts = await env.DB.prepare(legacy).all();
   return (accounts.results || []).some(a => slugMerchant(a.business || a.email) === merchant);
 }
 function readFailure(name, error) {
