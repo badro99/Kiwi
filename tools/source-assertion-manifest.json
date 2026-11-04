@@ -94,7 +94,8 @@
     "vexel-insights-card-dna-test.mjs": "layout, contrast or copy in CSS/markup",
     "vexel-startup-test.mjs": "layout, contrast or copy in CSS/markup",
     "wave-l-style-test.mjs": "CSS-only booking pseudo-element hit area and pressing logical margin; rule declarations checked without Chromium",
-    "presentation-style-test.mjs": "booking, menu plot, promotions, employee corrections and economat phone layout: logical CSS properties, design tokens, Material icon, stylesheet links (behaviour half: presentation-language-test.mjs)"
+    "presentation-style-test.mjs": "booking, menu plot, promotions, employee corrections and economat phone layout: logical CSS properties, design tokens, Material icon, stylesheet links (behaviour half: presentation-language-test.mjs)",
+    "sweep2-kds-material-test.mjs": "brand rule: every KDS icon path is a vendored Material Symbols path"
   },
   "twin": {
     "discount-policy-test.mjs": "discount-policy-api-test.mjs"

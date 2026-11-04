@@ -231,7 +231,7 @@ var SHELL = [
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=11',
-  '/assets/i18n.js?v=52',
+  '/assets/i18n.js?v=53',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -360,7 +360,7 @@ var SHELL = [
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js?v=21',
   '/assets/receipt-ui.js?v=2',
-  '/assets/invoice.js?v=26',
+  '/assets/invoice.js?v=27',
   '/assets/merchant-config.js?v=287',
   '/assets/entitlements.css?v=7',
   '/assets/entitlements-v2.js?v=5',

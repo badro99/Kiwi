@@ -2326,7 +2326,7 @@ section('Whole-project regressions');
     'menu-insights-test.mjs',
     'restaurant-recipe-layout-test.mjs',
     'restaurant-item-editor-test.mjs',
-    'stock-alert-truth-test.mjs',
+    'stock-alert-truth-test.mjs', 'sweep2-invoice-language-test.mjs', 'sweep2-kds-material-test.mjs',
     'caisse-frozen-cost-test.mjs',
     'lock-caisse-link-test.mjs',
     'lock-caisse-handoff-test.mjs',
