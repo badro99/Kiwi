@@ -3,10 +3,7 @@
   "files": {
     "assets/clients-book.js": 4,
     "assets/clients-book/profiles.js": 2,
-    "assets/pos-boutique/inv-moves.js": 22,
     "assets/pos-boutique/kit-2027.js": 4,
-    "assets/pos-maison/inv-moves.js": 23,
-    "assets/pos-maison/kit-2027.js": 4,
     "assets/pos-maison/sales.js": 4,
     "assets/printer/pairing-ui.js": 1
   }

@@ -7,7 +7,21 @@
  * d'ouverture garde les identifiants bqci-* hérités de la boutique.
  * Drapeau éteint ou kit absent, rien ici ne s'exécute. */
 let mzFloatSheet = null;
-const tr = (s) => (window.KiwiCaisseLang && typeof window.KiwiCaisseLang.tr === 'function' ? window.KiwiCaisseLang.tr(s) : s);
+/* Ce que caisse-lang ne traduit pas encore (même forme que livraisons.js). */
+const PHRASES = {
+  "Service": ["Service","الخدمة"],
+  "Cet appareil": ["This device","هذا الجهاز"],
+  "Aucun article": ["No items","لا توجد أصناف"],
+  "Aucun article trouvé": ["No items found","لم يتم العثور على أي صنف"],
+};
+const tr = (s) => {
+  const C = window.KiwiCaisseLang;
+  let lang = 'fr';
+  try { lang = (C && C.get && C.get()) || 'fr'; } catch (_) { lang = 'fr'; }
+  const own = PHRASES[s];
+  if (own && (lang === 'en' || lang === 'ar')) return own[lang === 'en' ? 0 : 1];
+  return C && typeof C.tr === 'function' ? C.tr(s) : s;
+};
 /* La feuille de comptage du fond d'ouverture, une fois le drapeau vérifié par
    pos-boutique.js (mzKitFloat). Rend true ; onCounted reçoit le montant COMPTÉ. */
 function mzKitOpenSheet(screen, cc, onCounted, memKey) {

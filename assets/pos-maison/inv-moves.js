@@ -11,7 +11,40 @@
  * dans la boutique, au lieu de remplacer la page. Rien ici n'écrit. */
 const MODULE = 'maison';
 const MAX_ROWS = 300;
-const tr = (s) => (window.KiwiCaisseLang && typeof window.KiwiCaisseLang.tr === 'function' ? window.KiwiCaisseLang.tr(s) : s);
+/* Ce que caisse-lang ne traduit pas encore (même forme que livraisons.js). */
+const PHRASES = {
+  "Tableau de bord": ["Dashboard","لوحة القيادة"],
+  "Import": ["Import","استيراد"],
+  "Aucun mouvement trouvé": ["No movements found","لم يتم العثور على أي حركة"],
+  "Changez la période ou les filtres.": ["Change the period or the filters.","غيّر الفترة أو عوامل التصفية."],
+  "En attente de synchro": ["Waiting to sync","في انتظار المزامنة"],
+  "Les {n} plus récents sont affichés. Réduisez la période pour voir les autres.": ["The {n} most recent are shown. Narrow the period to see the others.","تُعرض أحدث {n} حركة. قلّص الفترة لرؤية الباقي."],
+  "{n} derniers jours": ["Last {n} days","آخر {n} يوم"],
+  "Tout l’historique": ["All history","كل السجل"],
+  "Entrées": ["In","الوارد"],
+  "Pièces ajoutées": ["Units added","القطع المضافة"],
+  "Sorties": ["Out","الصادر"],
+  "Pièces sorties": ["Units removed","القطع الخارجة"],
+  "Solde": ["Balance","الرصيد"],
+  "Variation nette": ["Net change","صافي التغيّر"],
+  "Registre des mouvements indisponible. Rechargez la caisse.": ["Movement register unavailable. Reload the till.","سجل الحركات غير متاح. أعد تحميل الصندوق."],
+  "Chaque entrée et chaque sortie, avec le stock avant et après": ["Every movement in and out, with stock before and after","كل حركة دخول وخروج، مع المخزون قبلها وبعدها"],
+  "Produit, type, référence…": ["Product, type, reference…","المنتج، النوع، المرجع…"],
+  "Période": ["Period","الفترة"],
+  "Type de mouvement": ["Movement type","نوع الحركة"],
+  "Tous les types": ["All types","كل الأنواع"],
+  "Toutes catégories": ["All categories","كل الفئات"],
+  "Nouveau mouvement": ["New movement","حركة جديدة"],
+  "Les ventes et retours s’écrivent ici automatiquement. Un mouvement manuel demande le code d’un responsable.": ["Sales and returns are written here automatically. A manual movement needs a manager’s code.","تُسجَّل المبيعات والمرتجعات هنا تلقائياً. الحركة اليدوية تتطلب رمز مسؤول."],
+};
+const tr = (s) => {
+  const C = window.KiwiCaisseLang;
+  let lang = 'fr';
+  try { lang = (C && C.get && C.get()) || 'fr'; } catch (_) { lang = 'fr'; }
+  const own = PHRASES[s];
+  if (own && (lang === 'en' || lang === 'ar')) return own[lang === 'en' ? 0 : 1];
+  return C && typeof C.tr === 'function' ? C.tr(s) : s;
+};
 const f = { q: '', days: 0, type: '', cat: '' };
 const IO = { in: 'in', out: 'out', flat: '' };   // classes de couleur des tuiles   // le dernier filtre, le temps de la session
 
