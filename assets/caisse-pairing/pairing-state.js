@@ -1,7 +1,5 @@
-
   function isPaired() { return ls('kiwiPaired') === '1'; }
   function pairedVenue() { try { return JSON.parse(ls('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-
   /* Tenant data leaves with the pairing; hardware identity stays with the
      physical till. Implemented once in assets/pairing-commit.js — the kitchen
      screen pairs through the same door and must purge the same way. */
@@ -9,7 +7,6 @@
     var commit = window.KiwiPairingCommit;
     if (commit && commit.purgeTenantData) commit.purgeTenantData();
   }
-
   // Same-device hand-off: the dashboard opens kiwi-caisse.html?pair=1 in this
   // browser, having named the store in kiwiPairHandoff (caisse-link.js handOff).
   function wantsPair() { try { return /[?&]pair=1\b/.test(location.search || ''); } catch (_) { return false; } }
@@ -55,7 +52,6 @@
     for (var c in m) { var e = m[c]; if (e && e.status === 'pending' && (!e.exp || e.exp > now)) { var t = e.createdAt || 0; if (t >= bestT) { bestT = t; best = c; } } }
     return best;
   }
-
   /* ── type/subtype → caisse vertical ─────────────────────────────────────
    * The onboarding trade id (subtype) maps 1:1 to a dispatcher vertical for
    * most trades; a couple are aliased. Operator and server hand-offs carry the
@@ -83,7 +79,6 @@
     if (t === 'hotel' && ids.hotel) return { kind: 'vertical', id: 'hotel' };
     return { kind: 'app' };
   }
-
   function bootVertical(v) {
     var gate = document.getElementById('till-boot-gate');
     if (gate) gate.remove();

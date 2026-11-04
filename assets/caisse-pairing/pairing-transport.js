@@ -1,4 +1,3 @@
-
   /* ── redeem: backend first, fail-soft to the same-browser map ──────────── */
   function applyPairing(code, d) {
     /* Poser l'appairage est un geste PARTAGÉ : la caisse n'est pas le seul
@@ -64,7 +63,6 @@
       });
     }).catch(function () { return localRedeem(code); });                 // network → same-browser
   }
-
   /* ── repair a local-only/stale pairing without touching the outbox ─────────
    * A same-browser dashboard hand-off used to write only localStorage. The till
    * therefore looked connected, but never received the httpOnly `kiwi_till`
@@ -136,7 +134,6 @@
     venue = venue || pairedVenue();
     if (!venue || !venue.merchant) return Promise.reject(pairError('merchant-missing', 0));
     if (repairPromise) return repairPromise;
-
     repairPromise = fetch('/api/pair/create', {
       method: 'POST',
       credentials: 'same-origin',
@@ -174,7 +171,6 @@
     }).finally(function () { repairPromise = null; });
     return repairPromise;
   }
-
   function quarantineService(venue) {
     try {
       if (venue && venue.merchant && window.KiwiTillTenant) window.KiwiTillTenant.quarantine(venue.merchant, venue.name);
@@ -182,7 +178,6 @@
       if (window.KiwiReportError) window.KiwiReportError(err, 'tenant:quarantine_failed');
     }
   }
-
   function unpair() {
     /* Unpairing used to delete only four binding keys. Pairing a different
        merchant afterwards then saw no `was` venue and skipped the cross-tenant

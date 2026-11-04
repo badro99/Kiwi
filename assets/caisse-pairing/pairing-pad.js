@@ -1,4 +1,3 @@
-
   /* ── the 6-digit pairing pad (reuses .pin-screen / .pin-pad CSS) ────────── */
   var buf = '';
   var pairSubmitting = false;
@@ -10,7 +9,6 @@
   }
   function renderDots() { var d = document.getElementById('cp-dots'); if (d) d.innerHTML = dotsHtml(); }
   function key(n) { return '<button class="pin-key" data-cp="' + n + '">' + n + '</button>'; }
-
   function injectCss() {
     if (document.getElementById('cp-style')) return;
     var s = document.createElement('style'); s.id = 'cp-style';
@@ -41,7 +39,6 @@
       '@keyframes pin-fade-in{from{opacity:0;transform:scale(1.02);filter:blur(4px)}to{opacity:1;transform:scale(1);filter:blur(0)}}';
     document.head.appendChild(s);
   }
-
   /* ── LE PAVÉ D'APPAIRAGE, QUE PLUS RIEN NE DESSINAIT ─────────────────────
    * `feed`, `submit`, `dotsHtml`, `injectCss` et les deux gestionnaires
    * délégués (#cp-pad [data-cp]) attendaient tous un écran `#cp-screen` que
@@ -102,7 +99,6 @@
       '</div>';
     renderDots();
   }
-
   /* Réappairer n'est PAS dépairer. La tablette est toujours celle de ce
    * magasin ; c'est sa preuve qui a disparu, pas son affectation. unpair()
    * aurait purgé le locataire — service en cours, additions, journal — pour
@@ -124,7 +120,6 @@
         : 'G\u00e9n\u00e9rez un code depuis Tableau de bord \u203a Caisse'),
     });
   }
-
   /* Les deux chemins, dans l'ordre où ils coûtent au commerçant. Silencieux
    * d'abord : si ce navigateur porte encore la session du tableau de bord,
    * personne n'a rien à faire. Sinon — le cas d'un vrai comptoir — on ne rend
@@ -141,7 +136,6 @@
         return { ok: true, pad: true };
       });
   }
-
   function showPad(force) {
     hidePad();
     var pv = isPaired() ? pairedVenue() : null;
@@ -153,7 +147,6 @@
   }
   function hidePad() { var s = document.getElementById('cp-screen'); if (s) s.style.display = 'none'; }
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
-
   function feed(d) {
     if (pairSubmitting) return;
     if (d === 'clear') { buf = ''; }

@@ -28,7 +28,6 @@
   /* Tells the head's paired-till gate that the lock owner is here: from now on only
      the staff lock (bootVertical) may release it, never a timer. */
   try { document.documentElement.setAttribute('data-pairing-loaded', ''); } catch (_) {}
-
   var TERMINAL_KEY = 'kiwi:caisse:terminal-id:v1';
   var OFFLINE_PIN_KEY = 'kiwi:caisse:offline-pins:v1:';
   var OFFLINE_PIN_TTL = 72 * 60 * 60 * 1000;
@@ -41,14 +40,12 @@
     set(TERMINAL_KEY, current);
     return current;
   }
-
   function env() { return window.KiwiEnv || { demosAllowed: true }; }
   function hosted() { return env().demosAllowed === false; }
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); return true; } catch (_) { console.warn("[pairing] offline identity storage unavailable"); toast((window.KiwiCaisseLang || { tr: function (s) { return s; } }).tr("Accès hors ligne non enregistré. Une connexion sera nécessaire au prochain déverrouillage.")); return false; } }
   function del(k) { try { localStorage.removeItem(k); } catch (_) {} }
   function readMap() { try { return JSON.parse(ls('kiwiPairings') || '{}') || {}; } catch (_) { return {}; } }
-
   /* A real till must keep authorizations usable during a network outage, but
    * never bank the four-digit code itself. After the server proves a code, keep
    * a tenant-scoped PBKDF2-SHA-256 verifier plus the proven identity for 72
@@ -104,6 +101,7 @@
   function rememberOfflinePin(merchant, code, staff, expiresAt) {
     var epoch = offlinePinEpoch, provenAt = (window.KiwiTrustedClock || Date).now();
     if (!staff || !/^\d{4}$/.test(String(code || ''))) return Promise.resolve(staff);
+    offlineBudget.check(merchant, false, true);
     // In an insecure context subtle is absent: retain the existing behaviour
     // (no local verification or new cache entry), never a JS PBKDF2 fallback.
     if (!hasSubtle()) return Promise.resolve(staff);
@@ -132,6 +130,7 @@
   }
   function verifyOfflinePin(merchant, code) {
     var epoch = offlinePinEpoch;
+    var locked = offlineBudget.check(merchant); if (locked) { offlineBudget.notice(locked); return Promise.resolve(null); } /* refused, not counted: retrying never lengthens a lockout */
     if (!hasSubtle()) return Promise.resolve(null);
     if (window.KiwiTrustedClock && window.KiwiTrustedClock.rolledBack()) return Promise.resolve(null); /* clock moved back: wait for the server */
     var rows = offlinePinRows(merchant);
@@ -151,12 +150,32 @@
         var who = Object.assign({}, row.staff, { provenAt: Number(row.provenAt || (Number(row.expiresAt) - 7 * 86400000)), offline: true });
         return who;
       }).catch(function () { return null; });
-    })).then(function (matches) { return matches.find(Boolean) || null; });
+    })).then(function (matches) { var who = matches.find(Boolean) || null; var wait = offlineBudget.check(merchant, !who, !!who); if (wait) offlineBudget.notice(wait); return who; });
   }
-
+  /* Keypad budget only: a copied verifier cache remains guessable. Persist a
+     clock high-water mark so rolling time back never consumes the delay. */
+  var offlineBudgets = {};
+  var offlineBudget = { check: function (merchant, fail, reset) {
+    var key = 'kiwi:caisse:offline-pin-budget:v1:' + encodeURIComponent(String(merchant || ''));
+    var b = offlineBudgets[key];
+    try { b = JSON.parse(ls(key) || 'null') || b; } catch (_) {}
+    b = b || { failures: 0, until: 0, at: 0 };
+    var now = Math.max(Number(b.at) || 0, (window.KiwiTrustedClock || Date).now());
+    if (reset) b = { failures: 0, until: 0, at: now };
+    if (fail) {
+      b.failures = Math.min(10, (Number(b.failures) || 0) + 1);
+      if (b.failures >= 5) b.until = Math.max(Number(b.until) || 0, now + Math.min(900000, 30000 * Math.pow(2, b.failures - 5)));
+    }
+    b.at = now; offlineBudgets[key] = b;
+    set(key, JSON.stringify(b));
+    return Math.max(0, Math.ceil(((Number(b.until) || 0) - now) / 1000));
+  }
+  , notice: function (seconds) {
+    var text = "Trop d'essais hors ligne · réessayez dans " + seconds + ' s';
+    toast((window.KiwiCaisseLang || { tr: function (s) { return s; } }).tr(text));
+  } };
   function isPaired() { return ls('kiwiPaired') === '1'; }
   function pairedVenue() { try { return JSON.parse(ls('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-
   /* Tenant data leaves with the pairing; hardware identity stays with the
      physical till. Implemented once in assets/pairing-commit.js — the kitchen
      screen pairs through the same door and must purge the same way. */
@@ -164,7 +183,6 @@
     var commit = window.KiwiPairingCommit;
     if (commit && commit.purgeTenantData) commit.purgeTenantData();
   }
-
   // Same-device hand-off: the dashboard opens kiwi-caisse.html?pair=1 in this
   // browser, having named the store in kiwiPairHandoff (caisse-link.js handOff).
   function wantsPair() { try { return /[?&]pair=1\b/.test(location.search || ''); } catch (_) { return false; } }
@@ -210,7 +228,6 @@
     for (var c in m) { var e = m[c]; if (e && e.status === 'pending' && (!e.exp || e.exp > now)) { var t = e.createdAt || 0; if (t >= bestT) { bestT = t; best = c; } } }
     return best;
   }
-
   /* ── type/subtype → caisse vertical ─────────────────────────────────────
    * The onboarding trade id (subtype) maps 1:1 to a dispatcher vertical for
    * most trades; a couple are aliased. Operator and server hand-offs carry the
@@ -238,7 +255,6 @@
     if (t === 'hotel' && ids.hotel) return { kind: 'vertical', id: 'hotel' };
     return { kind: 'app' };
   }
-
   function bootVertical(v) {
     var gate = document.getElementById('till-boot-gate');
     if (gate) gate.remove();
@@ -257,7 +273,6 @@
       window.__kiwiUnlockApp();
     }
   }
-
   /* ── redeem: backend first, fail-soft to the same-browser map ──────────── */
   function applyPairing(code, d) {
     /* Poser l'appairage est un geste PARTAGÉ : la caisse n'est pas le seul
@@ -323,7 +338,6 @@
       });
     }).catch(function () { return localRedeem(code); });                 // network → same-browser
   }
-
   /* ── repair a local-only/stale pairing without touching the outbox ─────────
    * A same-browser dashboard hand-off used to write only localStorage. The till
    * therefore looked connected, but never received the httpOnly `kiwi_till`
@@ -395,7 +409,6 @@
     venue = venue || pairedVenue();
     if (!venue || !venue.merchant) return Promise.reject(pairError('merchant-missing', 0));
     if (repairPromise) return repairPromise;
-
     repairPromise = fetch('/api/pair/create', {
       method: 'POST',
       credentials: 'same-origin',
@@ -433,7 +446,6 @@
     }).finally(function () { repairPromise = null; });
     return repairPromise;
   }
-
   function quarantineService(venue) {
     try {
       if (venue && venue.merchant && window.KiwiTillTenant) window.KiwiTillTenant.quarantine(venue.merchant, venue.name);
@@ -441,7 +453,6 @@
       if (window.KiwiReportError) window.KiwiReportError(err, 'tenant:quarantine_failed');
     }
   }
-
   function unpair() {
     /* Unpairing used to delete only four binding keys. Pairing a different
        merchant afterwards then saw no `was` venue and skipped the cross-tenant
@@ -460,7 +471,6 @@
     }
     showPad();
   }
-
   /* ── the 6-digit pairing pad (reuses .pin-screen / .pin-pad CSS) ────────── */
   var buf = '';
   var pairSubmitting = false;
@@ -472,7 +482,6 @@
   }
   function renderDots() { var d = document.getElementById('cp-dots'); if (d) d.innerHTML = dotsHtml(); }
   function key(n) { return '<button class="pin-key" data-cp="' + n + '">' + n + '</button>'; }
-
   function injectCss() {
     if (document.getElementById('cp-style')) return;
     var s = document.createElement('style'); s.id = 'cp-style';
@@ -503,7 +512,6 @@
       '@keyframes pin-fade-in{from{opacity:0;transform:scale(1.02);filter:blur(4px)}to{opacity:1;transform:scale(1);filter:blur(0)}}';
     document.head.appendChild(s);
   }
-
   /* ── LE PAVÉ D'APPAIRAGE, QUE PLUS RIEN NE DESSINAIT ─────────────────────
    * `feed`, `submit`, `dotsHtml`, `injectCss` et les deux gestionnaires
    * délégués (#cp-pad [data-cp]) attendaient tous un écran `#cp-screen` que
@@ -564,7 +572,6 @@
       '</div>';
     renderDots();
   }
-
   /* Réappairer n'est PAS dépairer. La tablette est toujours celle de ce
    * magasin ; c'est sa preuve qui a disparu, pas son affectation. unpair()
    * aurait purgé le locataire — service en cours, additions, journal — pour
@@ -586,7 +593,6 @@
         : 'G\u00e9n\u00e9rez un code depuis Tableau de bord \u203a Caisse'),
     });
   }
-
   /* Les deux chemins, dans l'ordre où ils coûtent au commerçant. Silencieux
    * d'abord : si ce navigateur porte encore la session du tableau de bord,
    * personne n'a rien à faire. Sinon — le cas d'un vrai comptoir — on ne rend
@@ -603,7 +609,6 @@
         return { ok: true, pad: true };
       });
   }
-
   function showPad(force) {
     hidePad();
     var pv = isPaired() ? pairedVenue() : null;
@@ -615,7 +620,6 @@
   }
   function hidePad() { var s = document.getElementById('cp-screen'); if (s) s.style.display = 'none'; }
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
-
   function feed(d) {
     if (pairSubmitting) return;
     if (d === 'clear') { buf = ''; }
@@ -703,7 +707,6 @@
       }
     } catch (_) {}
   }
-
   /* ── staff PIN gate (F8) ─────────────────────────────────────────────────
    * Pairing binds the DEVICE to a store; it must not also authenticate the
    * PERSON. Before the register becomes usable, require one of the store's staff
@@ -730,7 +733,6 @@
     return pinVenue && pinVenue.merchant === paired.merchant ? pinVenue : paired;
   }
   function resetPinState() { pinVenue = null; pinList = null; pinBuf = ''; }
-
   /* ── who is at the till right now ─────────────────────────────────────────
    * A staff code is a PERSON, not just a door code: /api/pin/verify answers with
    * the {id, name, role} the code proved, so unlocking says exactly who opened
@@ -829,7 +831,6 @@
   function bootWithPin(venue) {
     try { sessionStorage.removeItem('kiwi:tillOperator:v1'); } catch (_) {} askStaff(venue, function () { bootVertical(venue); });   // un vrai poste : plus de vue opérateur · none configured → fail-soft
   }
-
   /* God mode may inspect a selected store's till without borrowing an employee
    * PIN. Never trust ?op=1 or the hand-off by themselves: /api/me validates the
    * httpOnly named-operator session and confirms that it is scoped to THIS slug.
@@ -848,7 +849,6 @@
       })
       .catch(function () { bootWithPin(venue); });
   }
-
   /* A locked terminal must re-ask WHO is taking over, not just "a code".
    * KiwiPosDispatch.lock() calls __kiwiPinReset(), which restores the NATIVE pad
    * — the one that accepts any four digits and identifies nobody — so a shift
@@ -984,12 +984,12 @@
         refuse(mins ? 'Trop d’essais. Réessayez dans ' + mins + ' min.' : 'Trop d’essais. Réessayez dans quelques minutes.');
         return;
       }
+      if (offlineBudget.check(merchant)) { pinBuf = ''; renderPinDots(); return; }
       refuse(navigator.onLine === false
         ? 'Code non disponible hors ligne. Connectez-vous une fois avec ce code.'
         : 'Code incorrect ou impossible à vérifier.');
     }).finally(function () { pinSubmitting = false; });
   }
-
   // Delegated pad handling (survives re-renders of #cp-screen / #cp-pin-screen).
   document.addEventListener('click', function (e) {
     if (e.target && e.target.id === 'cp-pin-retry') { askStaff(activeVenue(), null); return; }
@@ -1174,7 +1174,6 @@
       })
       .finally(function () { clearTimeout(timer); });
   }
-
   /* The 2027 pad's request (assets/kit/pin-flow.js): the server's answer as
      it came, status and body, so every row of §10.2's response table can be
      told apart. A proven code refreshes its salted row, as verifyCode does.
