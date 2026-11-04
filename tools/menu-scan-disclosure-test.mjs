@@ -10,13 +10,13 @@ const pdf = { numPages: 15, async getPage(i) { return {
 }; } };
 const window = { pdfjsLib: { getDocument: () => ({ promise: Promise.resolve(pdf) }) } };
 const document = { createElement: () => ({ getContext: () => ({}), toDataURL: () => 'data:image/jpeg;base64,AA' }) };
-vm.runInNewContext(read('assets/menu-scan-reader.js'), { window, document });
+vm.runInNewContext(read('assets/menu-scan-reader.js'), { window, document, setTimeout, clearTimeout });
 const R = window.KiwiMenuScanReader, file = { arrayBuffer: async () => new ArrayBuffer(0) };
 const text = await R.pdfText(file, true);
 assert.equal(text.pageCount, 15); assert.equal(text.pagesRead, 12); assert.equal(text.truncated, true);
 assert.ok(!text.text.includes('Page 13'));
 const scan = await R.pdfFirstPageImage(file, true);
-assert.equal(scan.pageCount, 15); assert.equal(scan.pagesRead, 1); assert.equal(scan.truncated, true);
+assert.equal(scan.pageCount, 15); assert.equal(scan.pagesRead, 12); assert.equal(scan.truncated, true);
 pdf.numPages = 1;
 assert.equal((await R.pdfText(file, true)).truncated, false);
 assert.equal((await R.pdfFirstPageImage(file, true)).truncated, false);

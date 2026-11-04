@@ -2,7 +2,7 @@
  * Kiwi · MENU SCAN READER — window.KiwiMenuScanReader
  * ---------------------------------------------------------------------------
  * What « Scanner un menu » reads, without its screen: the PDF it is handed
- * (text layer, or the first page as an image when the PDF is a scan) and the
+ * (text layer, or bounded page images when the PDF is a scan) and the
  * conversion of the extracted articles into the menu import's CSV.
  *
  * Moved out of menu-scan.js on 28 October 2026 (thirteenth blind rating,
@@ -66,38 +66,76 @@
       script.onerror = () => { pdfjsPromise = null; reject(new Error('pdfjs')); };
       (document.head || document.documentElement).appendChild(script);
     });
+    let timer;
+    const loading = pdfjsPromise;
+    pdfjsPromise = Promise.race([loading, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('pdf-timeout')), 15000); })]).catch(error => { pdfjsPromise = null; throw error; }).finally(() => clearTimeout(timer));
     return pdfjsPromise;
   }
 
-  async function openPdf(file) {
-    const pdfjs = await loadPdfJs();
-    if (!pdfjs) throw new Error('pdfjs');
-    return pdfjs.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false }).promise;
-  }
-
-  async function pdfText(file, metadata = false) {
-    const pdf = await openPdf(file);
-    let full = '';
-    for (let i = 1; i <= Math.min(pdf.numPages, MAX_PDF_PAGES); i++) {
-      const content = await (await pdf.getPage(i)).getTextContent();
-      full += (content.items || []).map((it) => it.str).join(' ') + '\n';
+  // One deadline covers preparation, including file reads, loader and worker.
+  async function prepare(file, signal, read) {
+    let timer, task, pdf, renderTask, abort, ended = false;
+    const stopped = new Promise((_, reject) => {
+      abort = () => { reject(new Error('pdf-cancelled')); cleanup(); };
+      timer = setTimeout(() => { reject(new Error('pdf-timeout')); cleanup(); }, 15000);
+      if (signal) signal.addEventListener('abort', abort, { once: true });
+    });
+    function cleanup() {
+      ended = true;
+      try { renderTask?.cancel(); } catch (_) {}
+      try { const result = task?.destroy(); result?.catch(() => {}); } catch (_) {}
     }
-    const result = { text: full.trim(), pageCount: pdf.numPages, pagesRead: Math.min(pdf.numPages, MAX_PDF_PAGES), truncated: pdf.numPages > MAX_PDF_PAGES };
-    return metadata ? result : result.text;
+    try {
+      if (ended || signal?.aborted) throw new Error('pdf-cancelled');
+      return await Promise.race([stopped, (async () => {
+        const pdfjs = await loadPdfJs();
+        if (!pdfjs) throw new Error('pdfjs');
+        if (ended || signal?.aborted) throw new Error('pdf-cancelled');
+        const data = await file.arrayBuffer();
+        if (ended || signal?.aborted) throw new Error('pdf-cancelled');
+        task = pdfjs.getDocument({ data, isEvalSupported: false });
+        pdf = await task.promise;
+        if (ended) throw new Error('pdf-cancelled');
+        return read(pdf, task => { renderTask = task; }, () => { if (ended) throw new Error('pdf-cancelled'); });
+      })()]);
+    } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); cleanup(); }
   }
 
-  /* PDF scanné : seule la première page est envoyée au modèle vision. */
-  async function pdfFirstPageImage(file, metadata = false) {
-    const pdf = await openPdf(file);
-    const page = await pdf.getPage(1);
-    const base = page.getViewport({ scale: 1 });
-    const viewport = page.getViewport({ scale: Math.min(2, MAX_IMG_EDGE / Math.max(base.width, base.height)) });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(viewport.width);
-    canvas.height = Math.round(viewport.height);
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-    const image = canvas.toDataURL('image/jpeg', 0.85);
-    return metadata ? { image, pageCount: pdf.numPages, pagesRead: 1, truncated: pdf.numPages > 1 } : image;
+  async function pdfText(file, metadata = false, signal) {
+    return prepare(file, signal, async (pdf, _, check) => {
+      let full = '';
+      for (let i = 1; i <= Math.min(pdf.numPages, MAX_PDF_PAGES); i++) {
+        check();
+        const page = await pdf.getPage(i);
+        check();
+        const content = await page.getTextContent();
+        check();
+        full += (content.items || []).map(it => it.str).join(' ') + '\n';
+      }
+      const result = { text: full.trim(), pageCount: pdf.numPages, pagesRead: Math.min(pdf.numPages, MAX_PDF_PAGES), truncated: pdf.numPages > MAX_PDF_PAGES };
+      return metadata ? result : result.text;
+    });
+  }
+
+  /* Image-only PDFs: all pages up to the same disclosed 12-page bound. */
+  async function pdfFirstPageImage(file, metadata = false, signal) {
+    return prepare(file, signal, async (pdf, rendering, check) => {
+      const images = [];
+      for (let i = 1; i <= Math.min(pdf.numPages, MAX_PDF_PAGES); i++) {
+        check();
+        const page = await pdf.getPage(i);
+        check();
+        const base = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: Math.min(2, MAX_IMG_EDGE / Math.max(base.width, base.height)) });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(viewport.width); canvas.height = Math.round(viewport.height);
+        const task = page.render({ canvasContext: canvas.getContext('2d'), viewport });
+        rendering(task); await task.promise; check();
+        images.push(canvas.toDataURL('image/jpeg', 0.85));
+        canvas.width = canvas.height = 0;
+      }
+      return metadata ? { image: images[0], images, pageCount: pdf.numPages, pagesRead: images.length, truncated: pdf.numPages > MAX_PDF_PAGES } : images[0];
+    });
   }
 
   window.KiwiMenuScanReader = Object.freeze({ toCsvText, dedupe, pdfText, pdfFirstPageImage, MAX_PDF_PAGES, MAX_IMG_EDGE });

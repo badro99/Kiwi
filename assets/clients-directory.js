@@ -287,6 +287,7 @@
         if (state.seg !== 'all' && c.seg !== state.seg) return false;
         if (!q) return true;
         return (c.name || '').toLowerCase().indexOf(q) >= 0 ||
+          (window.KiwiPhone && window.KiwiPhone.same(c.phone, q)) ||
           String(c.phone || '').replace(/\s/g, '').indexOf(q.replace(/\s/g, '')) >= 0 ||
           (c.email || '').toLowerCase().indexOf(q) >= 0 ||
           (c.city || '').toLowerCase().indexOf(q) >= 0 ||

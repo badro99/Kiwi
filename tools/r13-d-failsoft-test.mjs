@@ -52,7 +52,7 @@ await test('booking#1',()=>{
 });
 for(const [id,file,name,extra,args] of [
   ['employee#2','assets/employee-live.js','notify',{document:{dispatchEvent(){throw Error();}},CustomEvent:class{}},[{}]],
-  ['serveur#1','assets/serveur/payments.js','empPayRefsWrite',{EMP_PAY_REFS_KEY:'refs'},[{}]],
+  ['serveur#1','assets/serveur/payments.js','empPayRefsWrite',{EMP_PAY_REFS_KEY:'refs',employeePick:fr=>fr,toast(){}},[{}]],
   ['sync#1','assets/live-link.js','requestWake',{document:{dispatchEvent(){throw Error();}},CustomEvent:class{}},[]],
   ['briefing#2','assets/briefing-persistence.js','writeLocal',{slug:()=> 'fixture',safeDoc:x=>x,localKey:()=> 'briefing',render(){},localKept:true,deps:{canDispatch:()=>false}},[{}]],
 ])await test(id,()=>{

@@ -1,58 +1,58 @@
 {
-  "sha256": "96997e5ccf43a0278d5285283aebc2caf85a6e39788e2937326a96c8ec08f02a",
+  "sha256": "19cd0ebd64645a0bd86cc0d1a3a4c3d3db5d8156a862924a732dd558e928ddf9",
   "dataSha256": "cfbf19476cf5702234ea6ea9b58b958e90c6f08ccff12e6211ef7b4c77fa9bab",
   "fragments": [
     {
-      "start": 17132,
-      "end": 17633,
+      "start": 17679,
+      "end": 18180,
       "replacement": "  const session = window.KiwiOnboardingData.createSession({ TYPES, tr });\n  const S = session.state;",
       "offset": 10434
     },
     {
-      "start": 16968,
-      "end": 17051,
+      "start": 16983,
+      "end": 17066,
       "replacement": "  const RESERVED = session.reserved;",
       "offset": 10937
     },
     {
-      "start": 25447,
-      "end": 25607,
+      "start": 26059,
+      "end": 26219,
       "replacement": "  const TYPE_HINT = session.typeHint;",
       "offset": 11022
     },
     {
-      "start": 33641,
-      "end": 34205,
+      "start": 34253,
+      "end": 34817,
       "replacement": "  const fitPinsToTeam = session.fitPinsToTeam;",
       "offset": 11184
     },
     {
-      "start": 39827,
-      "end": 40190,
+      "start": 40439,
+      "end": 40802,
       "replacement": "  const parsedDailyGoal = session.parsedDailyGoal;",
       "offset": 11750
     },
     {
-      "start": 40271,
-      "end": 42056,
+      "start": 40883,
+      "end": 42668,
       "replacement": "  const validate = session.validate;",
       "offset": 12115
     },
     {
-      "start": 67582,
-      "end": 68074,
+      "start": 68056,
+      "end": 68548,
       "replacement": "  const kitCodeProblem = session.kitCodeProblem;",
       "offset": 13902
     },
     {
-      "start": 68075,
-      "end": 68466,
+      "start": 68549,
+      "end": 68940,
       "replacement": "  const kitProblem = session.kitProblem;",
       "offset": 14396
     },
     {
-      "start": 44437,
-      "end": 44461,
+      "start": 45049,
+      "end": 45073,
       "replacement": "  // Submission activity belongs to the session owner.",
       "offset": 14789
     }

@@ -25,7 +25,7 @@
  *  All interpolated user values pass through esc() — same trusted-HTML
  *  contract as interactive.js modal/drawer bodies. Vanilla, self-contained.
  * ═══════════════════════════════════════════════════════════════════════ */
-(function () {
+(function startOnboarding() {
   'use strict';
 
   /* ── i18n · captured from the app's language choice ──────────────────── */
@@ -91,18 +91,34 @@
 
 
   /* ── Session state ───────────────────────────────────────────────────── */
+  let dataLoad = null, draft = null;
+  if (!window.KiwiOnboardingData) {
+    let initialized = false;
+    const retry = async (opts, launch = true) => {
+      try {
+        await loadData();
+        if (!initialized) { initialized = true; startOnboarding(); }
+        if (launch) return window.KiwiOnboarding.open(opts);
+      } catch (_) { dataFailure(); }
+    };
+    window.KiwiOnboarding = { open: retry };
+    if (window.Kiwi?.handlers) window.Kiwi.handlers.onboard = () => retry();
+    retry(undefined, false);
+    return;
+  }
   const session = window.KiwiOnboardingData.createSession({ TYPES, tr });
   const S = session.state;
   const RESERVED = session.reserved;
-  let dataLoad = null, draft = null;
+
   function loadData() {
     if (window.KiwiOnboardingData) return Promise.resolve(window.KiwiOnboardingData);
     if (dataLoad) return dataLoad;
     dataLoad = new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = '/assets/onboarding-data.js?v=11';
-      const failed = () => { dataLoad = null; script.remove(); reject(new Error('onboarding-data')); };
-      script.onload = () => window.KiwiOnboardingData ? resolve(window.KiwiOnboardingData) : failed();
+      const timer = setTimeout(() => failed(), 4000);
+      const failed = () => { clearTimeout(timer); dataLoad = null; script.remove(); reject(new Error('onboarding-data')); };
+      script.onload = () => { clearTimeout(timer); window.KiwiOnboardingData ? resolve(window.KiwiOnboardingData) : failed(); };
       script.onerror = failed;
       document.head.appendChild(script);
     });
@@ -713,14 +729,11 @@
           let draftAccount = null;
           draft.transport = async function (value) {
             if (value !== undefined && !draftAccount) throw Error('draft-account');
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 4000);
-            let response;
-            try { response = await fetch('/api/account/onboarding-draft', {
-              signal: controller.signal,
+            const { deadlineFetch } = await import('./request-deadline.mjs');
+            const response = await deadlineFetch('/api/account/onboarding-draft', {
               credentials: 'same-origin', cache: 'no-store',
               ...(value === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Kiwi-Draft-Account': draftAccount }, body: JSON.stringify(value) }),
-            }); } finally { clearTimeout(timeout); }
+            }, 4000);
             if (!response.ok) throw Error('draft-server');
             const result = await response.json();
             if (value === undefined) draftAccount = result.account;

@@ -2,7 +2,7 @@ import { createData, createTicketState } from './tickets-data.js?v=10';
 import { createBoard } from './tickets-board.js?v=7';
 import { createComposer } from './tickets-composer.js?v=5';
 import { createThread } from './tickets-thread.js?v=3';
-import { draftFallback } from './tickets-recovery.js?v=2';
+import { draftFallback } from './tickets-recovery.js?v=4';
 (function () {
   'use strict';
 

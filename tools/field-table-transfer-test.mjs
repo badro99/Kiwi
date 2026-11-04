@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 import caisseTestSource from './caisse-test-source.cjs';
 // Working-source regressions: real queue handler + scoped production caisse VM.
 // All assertions require healthy outcomes. No network or disk database.
@@ -67,6 +68,7 @@ function context() {
   };
   c.window = c;
   c.KiwiOrderInbox = { orders: () => c.remoteOrders || {} };
+  deadlineVmContext(c);
   vm.createContext(c);
   const names = ['tableKey', 'caisseTableId', 'phoneSessionOf', 'locallySettledVisit',
     'locallySettledOrder', 'paidReceiptForCurrentTable', 'tableSaleLabel', 'releasePhoneTable',
@@ -77,7 +79,7 @@ function context() {
     'staleQueuedServerTicket', 'kdsEsc', 'kdsPaint', 'openVrapOrder', 'vrapFinancialItems',
     'savedTakeawaySplitFor', 'vrapSplitKey', 'currentVrapSplit', 'liveTableSplit', 'splitPaidCount', 'splitRemainingTotal', 'loadSplitFlow', 'openSplitModal',
     'vrapHandoverTimestamp', 'vrapHandoverTime', 'ticketNo', 'orderServerInitials'];
-  vm.runInContext(caisseTestSource.withSettlement(names.map(n => fn(n)).join('\n') + '\n' + bridgeSource), c);
+  vm.runInContext(deadlineVmSource(caisseTestSource.withSettlement(names.map(n => fn(n)).join('\n') + '\n' + bridgeSource)), c);
   const moneySource = source.match(/^    const money = .*;$/m);
   const splitResume = source.match(/^    const _origOpenSplit = openSplitModal;\n    openSplitModal = function\(tableId\) \{[^]*?^    };/m);
   assert.ok(moneySource && splitResume, 'production money helper and saved-split reopening wrapper exist');

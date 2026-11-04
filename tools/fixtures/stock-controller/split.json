@@ -13,7 +13,7 @@
     },
     "assets/stock/intake.js": {
       "fixture": "tools/fixtures/stock-controller/intake.js.gz",
-      "sha256": "31023ac1b2f37749a731edaace143527f119d7561185b57deea3fcc2d6c38eee",
+      "sha256": "a79d75a1dcf3b6d450160fb2e6eb5b26ec9b604376a614fb3900b735bdb69410",
       "stamps": []
     },
     "assets/stock/catalog.js": {

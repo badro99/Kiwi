@@ -285,7 +285,7 @@
             ui('extract')
           );
           if (isPdf) {
-            const reading = await reader.pdfText(f, true);
+            const reading = await reader.pdfText(f, true, signal);
             const text = reading.text;
             /* Un PDF scanné (image pure) n'a pas de couche texte : on le rend
              * en image et on passe par le modèle vision plutôt que d'échouer. */
@@ -293,8 +293,8 @@
               collected.push(...await callApi({ kind: 'text', text }, signal));
               if (reading.truncated) notices.push((f.name || 'PDF') + ': ' + dashboardText('truncated', { read: reading.pagesRead, total: reading.pageCount }));
             } else {
-              const scan = await reader.pdfFirstPageImage(f, true);
-              collected.push(...await callApi({ kind: 'image', image: scan.image }, signal));
+              const scan = await reader.pdfFirstPageImage(f, true, signal);
+              for (const image of scan.images) collected.push(...await callApi({ kind: 'image', image }, signal));
               if (scan.truncated) notices.push((f.name || 'PDF') + ': ' + dashboardText('truncated', { read: scan.pagesRead, total: scan.pageCount }));
             }
           } else {

@@ -37,7 +37,7 @@ function realm({ loads = true } = {}) {
       return {};
     },
   };
-  const ctx = vm.createContext({ window, document, queueMicrotask, Promise });
+  const ctx = vm.createContext({ window, document, queueMicrotask, Promise, setTimeout, clearTimeout });
   vm.runInContext(source, ctx);
   return { R: window.KiwiMenuScanReader, window, scripts, canvases, setLoads: (v) => { loads = v; } };
 }
