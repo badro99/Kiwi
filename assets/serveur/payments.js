@@ -1,5 +1,5 @@
     function empPayRefsWrite(map) {
-      try { localStorage.setItem(EMP_PAY_REFS_KEY, JSON.stringify(map)); } catch (_) { console.warn("[serveur] auxiliary payment-reference storage unavailable"); }
+      try { localStorage.setItem(EMP_PAY_REFS_KEY, JSON.stringify(map)); } catch (_) { console.warn("[serveur] auxiliary payment-reference storage unavailable"); toast(employeePick('Référence de paiement non conservée. Gardez cette page ouverte.', 'Payment reference not saved. Keep this page open.', 'لم يُحفظ مرجع الدفع. أبقِ هذه الصفحة مفتوحة.'), 6500); return false; }
     }
 
     function empPayRefKey(tableId) {

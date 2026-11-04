@@ -50,7 +50,7 @@ for(const lang of ['fr','en','ar']) {
 }
 // Fallback exports text, classification, retry identity and original image bytes.
 {
- const module=await import('data:text/javascript,'+encodeURIComponent(read('assets/tickets-recovery.js')));
+ const module=await import('../assets/tickets-recovery.js');
  let button,blob,clicked=false;
  const fields={formError:{appendChild:b=>button=b},ticketBody:{value:'help'},ticketKind:{value:'bug'},ticketArea:{value:'till'},ticketSubkind:{value:'x'},ticketMoneyRisk:{checked:true}};
  const previous={document:globalThis.document,URL:globalThis.URL,setTimeout:globalThis.setTimeout};
@@ -64,7 +64,7 @@ for(const lang of ['fr','en','ar']) {
  // The VM's unsupported dynamic import rejects, exercising the entry's actual import-failure catch.
  vm.runInContext(text.slice(declaration.getStart(ast),declaration.end)+';globalThis.result=draftController;',c);
  const controller=await c.result;
- controller.saveDraft();await button.onclick();const snapshot=JSON.parse(await blob.text());assert.equal(snapshot.body,'help');assert.equal(snapshot.attempt,'attempt');assert.deepEqual(snapshot.files[0].data,[105,109,97,103,101]);assert.ok(clicked);
+ controller.saveDraft();await button.onclick();const bytes=new Uint8Array(await blob.arrayBuffer());const decoder=new TextDecoder();const size=parseInt(decoder.decode(bytes.slice(124,136)),8);const snapshot=JSON.parse(decoder.decode(bytes.slice(512,512+size)));assert.equal(snapshot.body,'help');assert.equal(snapshot.attempt,'attempt');assert.equal(snapshot.files[0].path,'attachments/0');const next=512+Math.ceil(size/512)*512;assert.equal(decoder.decode(bytes.slice(next+512,next+517)),'image');assert.ok(clicked);
  }finally{Object.assign(globalThis,previous);}
 }
 console.log('✓ admin uncertainty and deadlines; persistence tier warnings; notification recovery; synced credit history; fallback draft export');

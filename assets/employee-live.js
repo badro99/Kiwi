@@ -97,20 +97,24 @@
   // Une transaction terminée, pas seulement une requête réussie, confirme la copie.
   function idb(owner, items) {
     return new Promise(function (resolve) {
-      var request;
-      try { request = window.indexedDB.open('kiwiEmployeePunchQueue', 1); } catch (_) { resolve(null); return; }
-      request.onerror = request.onblocked = function () { resolve(null); };
+      var request, db, tx, settled = false;
+      var timer = setTimeout(function () { finish(null); try { tx && tx.abort(); } catch (_) {} }, 4000);
+      function finish(value) { if (settled) return; settled = true; clearTimeout(timer); if (db) db.close(); resolve(value); }
+      try { request = window.indexedDB.open('kiwiEmployeePunchQueue', 1); } catch (_) { finish(null); return; }
+      request.onerror = request.onblocked = function () { finish(null); };
       request.onupgradeneeded = function () { request.result.createObjectStore('queues'); };
       request.onsuccess = function () {
-        var db = request.result, tx, read;
+        db = request.result;
+        if (settled) { db.close(); return; }
+        var read;
         try {
           tx = db.transaction('queues', items ? 'readwrite' : 'readonly');
           var bucket = tx.objectStore('queues');
           if (items) bucket.put(items, QUEUE_PREFIX + owner);
           else read = bucket.get(QUEUE_PREFIX + owner);
-          tx.oncomplete = function () { db.close(); resolve(items ? true : valid(read.result)); };
-          tx.onerror = tx.onabort = function () { db.close(); resolve(null); };
-        } catch (_) { db.close(); resolve(null); }
+          tx.oncomplete = function () { finish(items ? true : valid(read.result)); };
+          tx.onerror = tx.onabort = function () { finish(null); };
+        } catch (_) { finish(null); }
       };
     });
   }

@@ -120,7 +120,8 @@
       if (!IS_DEMO) {
         try {
           transferIntent = caisseMobilityIntent(confirmCaisseTransfer, from, to);
-          const res = await fetch('/api/order/queue', {
+          const { deadlineFetch } = await import('/assets/request-deadline.mjs');
+          const res = await deadlineFetch('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -162,7 +163,7 @@
 
       delete orders[from];
 
-      try { persistShift(); publishServiceFloor(); } catch (_) {}
+      try { persistShift(); publishServiceFloor(); } catch (_) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Modification non enregistrée · vérifiez la connexion')); }
 
       refreshTableNode(from);
       refreshTableNode(to);
@@ -247,7 +248,8 @@
       if (!IS_DEMO) {
         try {
           mergeIntent = caisseMobilityIntent(confirmCaisseMerge, source, target);
-          const res = await fetch('/api/order/queue', {
+          const { deadlineFetch } = await import('/assets/request-deadline.mjs');
+          const res = await deadlineFetch('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -303,7 +305,7 @@
 
       delete orders[source];
 
-      try { persistShift(); publishServiceFloor(); } catch (_) {}
+      try { persistShift(); publishServiceFloor(); } catch (_) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Modification non enregistrée · vérifiez la connexion')); }
 
       refreshTableNode(source);
       refreshTableNode(target);

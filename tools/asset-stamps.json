@@ -112,7 +112,7 @@
     "sha": "21f83d45179fc413"
   },
   "assets/booking-submission.js": {
-    "v": "12",
+    "v": "13",
     "sha": "800ca5320a21de5a"
   },
   "assets/booking-view.js": {
@@ -124,11 +124,11 @@
     "sha": "3c0d798c9926b854"
   },
   "assets/booking.js": {
-    "v": "55",
-    "sha": "64b0cd3d58685927"
+    "v": "56",
+    "sha": "76b943a80341bce8"
   },
   "assets/boutique-catalog-parts.js": {
-    "v": "27",
+    "v": "28",
     "sha": "f3819a0085f36e6b"
   },
   "assets/boutique-catalog.js": {
@@ -200,16 +200,16 @@
     "sha": "20476101ff223f1f"
   },
   "assets/caisse-floor.js": {
-    "v": "16",
-    "sha": "0844d97ef4093a0d"
+    "v": "17",
+    "sha": "ad81372517f39890"
   },
   "assets/caisse-hardware.js": {
     "v": "9",
     "sha": "a67300dab4d2644a"
   },
   "assets/caisse-kitchen.js": {
-    "v": "14",
-    "sha": "5dfe4eaffa4b2059"
+    "v": "16",
+    "sha": "12b41e0f4d6b51a4"
   },
   "assets/caisse-lang.js": {
     "v": "114",
@@ -388,8 +388,8 @@
     "sha": "95d9a6da262a0559"
   },
   "assets/clients-directory.js": {
-    "v": "37",
-    "sha": "8921816b1d77e905"
+    "v": "38",
+    "sha": "4f0914867cec24b5"
   },
   "assets/clients-store-vault.js": {
     "v": "10",
@@ -500,7 +500,7 @@
     "sha": "c280918a4865ae88"
   },
   "assets/day-report-dash.js": {
-    "v": "47",
+    "v": "48",
     "sha": "b567f822fe1873c5"
   },
   "assets/day-report-export.js": {
@@ -564,8 +564,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "638",
-    "sha": "a77f64a7bb3f941c"
+    "v": "639",
+    "sha": "3e4f93a4213e2a6e"
   },
   "assets/employee-planning.js": {
     "v": "21",
@@ -1244,12 +1244,12 @@
     "sha": "67fbfd5623fadee6"
   },
   "assets/menu-scan-reader.js": {
-    "v": "3",
-    "sha": "c7528ea4a39147d7"
+    "v": "5",
+    "sha": "e6f9b4dfba786395"
   },
   "assets/menu-scan.js": {
-    "v": "11",
-    "sha": "3e076fe174113900"
+    "v": "12",
+    "sha": "faf0a74f5d6eacac"
   },
   "assets/merchant-config.js": {
     "v": "287",
@@ -1292,8 +1292,8 @@
     "sha": "3bbfdb73103b33bf"
   },
   "assets/onboarding.js": {
-    "v": "2119",
-    "sha": "93d5bd04eeed16ae"
+    "v": "2120",
+    "sha": "1dab3a480d4c2d70"
   },
   "assets/operations-ui.js": {
     "v": "30",
@@ -1344,8 +1344,8 @@
     "sha": "471a19e54fd02c7f"
   },
   "assets/orderpro-page.js": {
-    "v": "29",
-    "sha": "a19479cdfa664ac3"
+    "v": "30",
+    "sha": "a31acffe6d65feb4"
   },
   "assets/orderpro-panel.js": {
     "v": "5",
@@ -1384,7 +1384,7 @@
     "sha": "46aa7947e27316df"
   },
   "assets/orderpro/transport.js": {
-    "v": "8",
+    "v": "9",
     "sha": "3a7c0dabcdaa5dd1"
   },
   "assets/origin-move.css": {
@@ -1436,12 +1436,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "56",
-    "sha": "9fb027f9aefbaac1"
+    "v": "58",
+    "sha": "742e678436ffdba7"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "171",
-    "sha": "9e15c536370152f2"
+    "v": "173",
+    "sha": "201f54f931a24791"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -2016,8 +2016,8 @@
     "sha": "35dab11d06129b1b"
   },
   "assets/serveur/service.js": {
-    "v": "28",
-    "sha": "9d2ecb0d880563b6"
+    "v": "30",
+    "sha": "03ccc91112f3d873"
   },
   "assets/service-requests.js": {
     "v": "2",
@@ -2052,8 +2052,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "108",
-    "sha": "f28eea7179d56637"
+    "v": "110",
+    "sha": "900e1addad980f6a"
   },
   "assets/stock/alerts.js": {
     "v": "5",
@@ -2068,8 +2068,8 @@
     "sha": "ea65ec2ca9c8fc75"
   },
   "assets/stock/intake.js": {
-    "v": "15",
-    "sha": "ab17fc8837a0d723"
+    "v": "17",
+    "sha": "c8d9f5b6d349dd3f"
   },
   "assets/stock/loss.js": {
     "v": "1",
@@ -2160,8 +2160,8 @@
     "sha": "1114cd5b24b722d2"
   },
   "assets/tickets-recovery.js": {
-    "v": "2",
-    "sha": "f154d4a5743ffe06"
+    "v": "4",
+    "sha": "a4b0aa69bc16babe"
   },
   "assets/tickets-thread.js": {
     "v": "3",
@@ -2172,8 +2172,8 @@
     "sha": "8eb51073cdac11c1"
   },
   "assets/tickets.js": {
-    "v": "32",
-    "sha": "3dd8fc26d1085eb1"
+    "v": "34",
+    "sha": "1b3a6fe551a04ef9"
   },
   "assets/till-inventory-access.js": {
     "v": "1",

@@ -1386,7 +1386,7 @@
          same order became permanent #86 moments later. */
       order.canonicalNumberPromise = relayToKitchen(order);
       order.canonicalNumberPromise.then(() => printKitchenTickets(order, items));
-      try { persistShift(); } catch (_) {}
+      try { persistShift(); } catch (_) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Journal caisse non enregistré · stockage local à vérifier, gardez cette page ouverte'), 6500); }
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
       return order;
@@ -1431,7 +1431,7 @@
           }
           const items = kitchenItemsFromLines(cart);
           printKitchenTickets(o, items);
-          try { persistShift(); } catch (_) {}
+          try { persistShift(); } catch (_) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Journal caisse non enregistré · stockage local à vérifier, gardez cette page ouverte'), 6500); }
           updateKdsCount();
           if (kdsEl.classList.contains('is-open')) kdsPaint();
           clearCart();

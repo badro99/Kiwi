@@ -8,7 +8,8 @@ window.KiwiStockInternal.install('intake', (S) => {
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\p{Script=Latin}/gu, (c) => /[a-z]/.test(c) ? c : ' ')
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -94,7 +95,7 @@ window.KiwiStockInternal.install('intake', (S) => {
     if (supplierName) {
       card = cards.find((c) => String(c.supplierName || '').trim().toLowerCase() === String(supplierName).trim().toLowerCase());
     }
-    if (!card) card = cards[0] || null;
+    if (!supplierName) card = cards[0] || null;
 
     const factor = (card && Number.isFinite(+card.factor) && +card.factor > 0) ? +card.factor : 1;
     const current = (card && card.defaultPrice != null && Number.isFinite(+card.defaultPrice))
