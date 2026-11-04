@@ -134,5 +134,13 @@
   "web_orders": [
     {"id": "wo-synth-1", "merchant": "upgrade-synth-1", "number": "W-FIX1", "client_ref": "fixture-ref-1", "link_id": "chl-fixture-1", "status": "pending", "customer": "{\"name\": \"fixture-name-1\", \"city\": \"fixture-city-1\"}", "lines": "[{\"variantId\": \"var_1\", \"quantity\": 1}]", "subtotal_cents": 10001, "discount_cents": 1, "delivery_cents": 1901, "total_cents": 11900, "created_ts": 151, "decided_ts": 161, "decided_by": "fixture-actor-1", "reason": "fixture-reason-1", "sale_id": "web-wo-synth-1"},
     {"id": "wo-synth-2", "merchant": "upgrade-synth-2", "number": "W-FIX2", "client_ref": "fixture-ref-2", "link_id": "chl-fixture-2", "status": "confirmed", "customer": "{\"name\": \"fixture-name-2\", \"city\": \"fixture-city-2\"}", "lines": "[{\"variantId\": \"var_2\", \"quantity\": 2}]", "subtotal_cents": 20002, "discount_cents": 2, "delivery_cents": 1902, "total_cents": 21900, "created_ts": 152, "decided_ts": 162, "decided_by": "fixture-actor-2", "reason": "fixture-reason-2", "sale_id": "web-wo-synth-2"}
+  ],
+  "pay_advances": [
+    {"merchant": "upgrade-synth-1", "period_start": "2026-10-05", "period_end": "2026-10-11", "member_id": "fixture-member-1", "advance_cents": 1000, "updated_ts": 137, "updated_by": "fixture-by-1"},
+    {"merchant": "upgrade-synth-2", "period_start": "2026-10-05", "period_end": "2026-10-11", "member_id": "fixture-member-2", "advance_cents": 2000, "updated_ts": 274, "updated_by": "fixture-by-2"}
+  ],
+  "pay_statements": [
+    {"id": "ps-synth-1", "merchant": "upgrade-synth-1", "year": 2026, "seq": 1, "number": "RP-2026-0001", "member_id": "fixture-member-1", "member_name": "fixture-name-1", "period_start": "2026-10-05", "period_end": "2026-10-11", "gross_cents": 50000, "advance_cents": 1000, "net_cents": 49000, "rated": 1, "snapshot": "{}", "replaces_id": null, "issued_ts": 137, "issued_by": "fixture-by-1"},
+    {"id": "ps-synth-2", "merchant": "upgrade-synth-2", "year": 2026, "seq": 2, "number": "RP-2026-0002", "member_id": "fixture-member-2", "member_name": "fixture-name-2", "period_start": "2026-10-05", "period_end": "2026-10-11", "gross_cents": 100000, "advance_cents": 2000, "net_cents": 98000, "rated": 1, "snapshot": "{}", "replaces_id": null, "issued_ts": 274, "issued_by": "fixture-by-2"}
   ]
 }

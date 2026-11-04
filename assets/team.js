@@ -1111,7 +1111,7 @@ import {} from './team/roster-list.js?v=6';
     normShift, shiftMinutes, shiftHours, shiftIsNextDay, fmtDur, fmtHours, fromISO, addDays, getShifts,
     periodPillsHtml, teamKey, saveCustomTeams, getMembers, getHours, pad, fmtFr, toISO, buildPeriod,
     periodNavigatorHtml, lockBucket, setPeriodLock, restorePeriodLock, applyLiveTeam, render,
-    esc, memberFullName, isCustomVenue, fmtMad, svgIcon, IC, dateLocale, MODAL_CSS,
+    esc, memberFullName, isCustomVenue, fmtMad, svgIcon, IC, dateLocale, MODAL_CSS, teamSlug,
     contractWeekHours, hourlyPayFor, payrollFigures, payCents, fmtPay,
   };
 
