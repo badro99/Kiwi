@@ -551,4 +551,4 @@
     reload: load,
     state: function () { return S; },
   };
-}(function () { return import('./hotel-economat-transport.js?v=18'); }));
+}(function () { return import('./hotel-economat-transport.js?v=19'); }));
