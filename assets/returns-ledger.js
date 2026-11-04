@@ -188,7 +188,8 @@ export function returnRows(returns, rL) {
     return items.map((item, i) => ({
       id: String(ret.id || 'RET') + (items.length > 1 ? '-' + (i + 1) : ''),
       ticket: ret.saleRef ? rL('Ticket', 'Receipt', 'إيصال') + ' ' + ret.saleRef : '',
-      d: new Date(Number(ret.ts) || Date.now()).toLocaleDateString(rL('fr-FR', 'en-GB', 'ar-MA-u-nu-latn'), { timeZone, day: '2-digit', month: '2-digit', year: 'numeric' }),
+      // Loi des fuseaux du Maroc : un navigateur à tzdata ancien date un remboursement du soir au lendemain.
+      d: new (owner.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(rL('fr-FR', 'en-GB', 'ar-MA-u-nu-latn'), { timeZone, day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(Number(ret.ts) || Date.now())),
       ts: Number(ret.ts) || 0,
       qty: Number(item.qty) || 1,
       name: (Number(item.qty) || 1) + ' × ' + (item.name || rL('Article', 'Item', 'منتج')) + (item.size ? ' · ' + item.size : ''),
