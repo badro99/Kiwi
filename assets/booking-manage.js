@@ -20,16 +20,40 @@ export function createBookingManage(context) {
       }
         ;
       all[merchant+':'+j.code]={
-        merchant: merchant,code: j.code,token: j.manageToken,at: Date.now()
+        merchant: merchant,code: j.code,token: j.manageToken,at: Date.now(),sent: !!j.confirmationSent
       }
         ;
-      var keys=Object.keys(all).sort(function(a,b) {
+      /* Retention is per venue first: bookings at another venue must never push
+         out the only recoverable link of this one. A browser-wide cap stays as a
+         guard, and when it bites, links already e-mailed to the guest go first. */
+      var byAge=Object.keys(all).filter(function(k) {
+        return all[k]&&all[k].token
+      }
+      ).sort(function(a,b) {
         return (all[b].at||0)-(all[a].at||0)
       }
-      ).slice(0,20),kept={
+      ),perVenue={
       }
+        ,pool=byAge.filter(function(k) {
+          var v=String(all[k].merchant||k.split(':')[0]);
+          perVenue[v]=(perVenue[v]||0)+1;
+          return perVenue[v]<=20
+        }
+        ),kept={
+        }
         ;
-      keys.forEach(function(k) {
+      var over=pool.length-120;
+      if(over>0) {
+        pool.slice().reverse().filter(function(k) {
+          return all[k].sent
+        }
+        ).slice(0,over).forEach(function(k) {
+          pool.splice(pool.indexOf(k),1)
+        }
+        );
+        if(pool.length>120) pool=pool.slice(0,120);
+      }
+      pool.forEach(function(k) {
         kept[k]=all[k]
       }
       );

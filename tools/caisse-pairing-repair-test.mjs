@@ -113,4 +113,26 @@ assert.match(pwaSource, /result && result\.waitingForPairCode[\s\S]{0,160}status
 assert.match(pairingSource, /bootWithPin\(handed\);[\s\S]{0,180}pairFromAccount\(handed\)/,
   'same-device dashboard hand-off also mints the secure till proof');
 
+
+/* skins#2: the code pad that renders without the 2027 kit draws its backspace key from the vendored
+   Material Symbols file and paints with brand tokens only (no neon accents, no pure white). */
+{
+  const made = new Map(), styles = [];
+  const el = (tag) => ({ tag, id: '', style: {}, attrs: {}, classList: { add() {}, remove() {} }, appendChild(c) { if (c.tag === 'style') styles.push(c); }, setAttribute(k, v) { this.attrs[k] = v; }, remove() {} });
+  document.createElement = (tag) => el(tag);
+  document.head = el('head'); document.body = { appendChild(node) { made.set(node.id, node); } };
+  document.getElementById = (id) => (id === 'cp-style' ? styles.find((x) => x.id === 'cp-style') || null : made.get(id) || null);
+  window.KiwiCaissePairing.repairWithCode();
+  const screen = made.get('cp-screen'), css = styles.map((x) => x.textContent).join('\n');
+  assert.ok(screen && screen.innerHTML.includes('data-cp="back"'), 'the pairing pad is drawn');
+  const material = fs.readFileSync(new URL('../assets/icons/material/backspace.svg', import.meta.url), 'utf8').match(/ d="([^"]+)"/)[1];
+  const drawn = [...screen.innerHTML.matchAll(/<path[^>]* d="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(drawn, [material], 'the only path on the pad is the vendored Material backspace');
+  assert.ok(/viewBox="0 -960 960 960"/.test(screen.innerHTML) && /fill="currentColor"/.test(screen.innerHTML), 'drawn the Material way: filled, currentColor');
+  assert.ok(!/<line/.test(screen.innerHTML) && !/stroke-width/.test(screen.innerHTML), 'no hand-drawn stroked shapes');
+  assert.ok(css.length > 500, 'the pad styles are injected');
+  assert.ok(!/#00FFAE|rgba\(0,\s*255,\s*174/i.test(css + screen.innerHTML), 'no neon accent: the accent is the brand mint');
+  assert.ok(/var\(--mint/.test(css) && !/#fff\b|#ffffff/i.test(css), 'brand tokens, never pure white');
+}
+
 console.log('Caisse pairing repair: secure create/redeem flow preserves queued sales.');

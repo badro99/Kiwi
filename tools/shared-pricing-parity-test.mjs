@@ -198,4 +198,16 @@ for (const file of targets) {
     }
   }), {numRuns:300,seed:20261026});
 }
+// promos#0: a frozen stamp keeps its price; a later promotion never reprices the order, on the server copy and every generated copy.
+for (const file of ['functions/api/_rules-promotion-pricing.js', ...targets]) {
+  let deal;
+  if (file.startsWith('functions')) deal = pricing.lineDeal;
+  else { const ctx = vm.createContext({}); vm.runInContext(sharedRules(fs.readFileSync(file,'utf8')), ctx); deal = ctx.KiwiPromotionPricing && ctx.KiwiPromotionPricing.lineDeal; if (!deal) continue; }
+  const later = { price: 5, badge: 'Soldes', promo: { name: 'Soldes', id: 'late' } };
+  const frozen = deal({ promo: { price: 8, badge: 'Promo', name: 'Promo', id: 'early' } }, 10, later);
+  assert.equal(frozen.price, 8, file + ': the frozen price survives a cheaper promotion started later');
+  assert.equal(frozen.promo.id, 'early', file + ': the stamp stays the line promotion');
+  assert.equal(deal({ promo: null }, 10, later).price, 5, file + ': a line ordered without offer still follows the live rule');
+  assert.equal(deal({ promo: { price: 12 } }, 10, null).price, 10, file + ': a stamp above the shelf price never charges more than the shelf');
+}
 console.log('✓ A2 parity: historical refunds, matching/earning, snapshot ledger, reward policies and promotion eligibility/rounding/stacking');

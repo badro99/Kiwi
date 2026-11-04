@@ -14,12 +14,49 @@
 
 const KEY = 'kiwi:returnsLedger';     // { m: slug, v: venue, at, list: [{ ts, amount }] } · avoirs seulement
 const MAX_AGE = 60000;
-let warming = null, lastChanged = false, lastTry = '';   // « ms@slug » : un échec ne relance pas à chaque rendu
+let warming = null, lastChanged = false, lastTry = '';
+/* La copie en mémoire fait foi : si localStorage refuse l'écriture (quota,
+   navigation privée), le résultat serveur tout frais ne se perd pas et les
+   lecteurs synchrones (tuile « Taux retour ») le lisent ici. */
+let snapshot = null, persisted = true;
+function cachedLedger() {
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) {}
+  if (snapshot && (!stored || Number(snapshot.at) >= Number(stored.at || 0))) return snapshot;
+  return stored;
+}
+function saveLedger(rec) {
+  snapshot = rec;
+  try { localStorage.setItem(KEY, JSON.stringify(rec)); persisted = true; } catch (_) { persisted = false; }
+  return persisted;
+}
+/* Lecture synchrone du registre mémorisé (mémoire d'abord), et état de la persistance. */
+export function ledgerSnapshot() { return cachedLedger(); }
+/* Le registre, seulement s'il appartient à la venue demandée ET au commerce
+   actuellement à l'écran : un total en retard d'un autre magasin n'entre jamais
+   dans la tuile. */
+export function ledgerFor(venue) {
+  const d = cachedLedger();
+  if (!d || d.v !== venue) return null;
+  const now = currentIdentity();
+  return now.slug && d.m !== now.slug ? null : d;
+}
+export function ledgerPersisted() { return persisted; }
+/* Qui est à l'écran : commerce du document et venue de l'accueil. */
+function currentIdentity() {
+  let slug = '', venue = '';
+  try { slug = String((window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug()) || ''); } catch (_) {}
+  try { venue = String((window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || ''); } catch (_) {}
+  return { slug, venue };
+}   // « ms@slug » : un échec ne relance pas à chaque rendu
 
 /* Toutes les pages du registre serveur. Lève une erreur si une page manque :
    un registre incomplet ne doit pas se lire comme un registre vide. */
 export async function readReturnsLedger(slug, period = null) {
   const { deadlineFetch } = await import('./request-deadline.mjs');
+  /* L'identité est prise AVANT la requête : un retour tardif d'un commerce
+     quitté ne doit pas se ranger sous le commerce affiché à son arrivée. */
+  const asked = currentIdentity();
   const query = period ? '&since=' + period[0] + (Number.isFinite(period[1]) ? '&until=' + period[1] : '') : '';
   const list = [];
   let offset = 0;
@@ -31,22 +68,21 @@ export async function readReturnsLedger(slug, period = null) {
     if (data.next !== null && (!Number.isSafeInteger(data.next) || data.next <= offset)) throw new Error('returns-page');
     offset = data.next;
   } while (offset !== null);
-  lastChanged = remember(slug, list, period);
+  const now = currentIdentity();
+  const sameStore = (!asked.slug || !now.slug || now.slug === slug) && now.venue === asked.venue;
+  lastChanged = sameStore ? remember(slug, list, period, asked.venue) : false;
   return list;
 }
 
 /* Les avoirs émis, gardés pour la tuile de l'accueil (lecture synchrone au
    rendu). Les remboursements n'y sont pas : le journal des ventes les a déjà. */
-function remember(slug, list, period) {
+function remember(slug, list, period, venue) {
   const avoirs = list.filter((r) => r && r.kind === 'avoir').map((r) => ({ ts: Number(r.ts) || 0, amount: Math.abs(Number(r.amount) || 0) }));
-  let prev = null;
-  try { prev = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) {}
+  const prev = cachedLedger();
   const changed = !prev || prev.stale || prev.m !== slug || JSON.stringify(prev.list) !== JSON.stringify(avoirs) || JSON.stringify(prev.window) !== JSON.stringify(period);
   /* `v` : l'identifiant de venue sous lequel l'accueil range ses chiffres ;
      la tuile ne lit le registre que s'il est celui du magasin à l'écran. */
-  let v = '';
-  try { v = String((window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || ''); } catch (_) {}
-  try { localStorage.setItem(KEY, JSON.stringify({ m: slug, v, at: Date.now(), window: period, list: avoirs })); } catch (_) {}
+  saveLedger({ m: slug, v: venue, at: Date.now(), window: period, list: avoirs });
   return changed;
 }
 
@@ -69,15 +105,15 @@ export function warmCreditReturns(period = selectedPeriod()) {
   if (lastTry.slice(at + 1) === signature && Date.now() - Number(lastTry.slice(0, at)) < MAX_AGE) return Promise.resolve(false);
   lastTry = Date.now() + '@' + signature;
   try {
-    const prev = JSON.parse(localStorage.getItem(KEY) || 'null');
+    const prev = cachedLedger();
     if (prev && prev.m === slug && coversWindow(prev, period) && Date.now() - (Number(prev.at) || 0) < MAX_AGE) return Promise.resolve(false);
     // Keep the previous read when widening, so current and comparison periods coexist.
     if (period && prev && prev.m === slug && Date.now() - (Number(prev.at) || 0) < MAX_AGE && Array.isArray(prev.window)) period = [Math.min(period[0], prev.window[0]), Math.max(period[1], prev.window[1] == null ? Infinity : prev.window[1])];
   } catch (_) {}
   warming = readReturnsLedger(slug, period).then(() => lastChanged, () => {
     try {
-      const cached = JSON.parse(localStorage.getItem(KEY) || 'null');
-      if (cached && cached.m === slug) { const changed = !cached.stale; cached.stale = true; localStorage.setItem(KEY, JSON.stringify(cached)); return changed; }
+      const cached = cachedLedger();
+      if (cached && cached.m === slug) { const changed = !cached.stale; cached.stale = true; saveLedger(cached); return changed; }
     } catch (_) {}
     return false;
   }).finally(() => { warming = null; });

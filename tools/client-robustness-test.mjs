@@ -54,6 +54,45 @@ await test('briefing corrupt read and identity refusal are distinguishable',asyn
   const saved=await p.save();assert.equal(saved.ok,false);assert.equal(saved.error,'cloud-unconfirmed');assert.equal(p.durable(),false);assert.equal(p.cloudFailed(),true);
 });
 
+await test('briefing keeps Lamport clocks of same-millisecond edits and retains the newest business days',()=>{
+  const {createPersistence}=require('../assets/briefing-persistence.js');
+  const mem=new Map();
+  const p=createPersistence({slug:()=> 'fixture',localKey:()=> 'fixture',validSettings:x=>x||{},render(){},compute(){},isReal:()=>false,localStorage:{getItem:k=>mem.get(k)??null,setItem:(k,v)=>mem.set(k,v)},limits:{a:1},canDispatch:()=>false});
+  // briefing#0: two edits inside one millisecond put the second clock at now+1; it must survive a reload.
+  const realNow=Date.now, now=realNow.call(Date);
+  Date.now=()=>now;   // frozen: the second edit lands exactly one tick ahead
+  try{
+  p.writeLocal({settings:{a:2},settingsAt:now+1,settingsFieldsAt:{a:now+1},days:[]});
+  assert.equal(p.own().settingsFieldsAt.a,now+1,'a clock one tick ahead is kept');
+  const merged=p.mergeDocs({settings:{a:1},settingsAt:now,settingsFieldsAt:{a:now}},p.own());
+  assert.equal(merged.settings.a,2,'the later edit wins the merge');
+  p.writeLocal({settings:{a:1},settingsAt:now+9e12,settingsFieldsAt:{a:now+9e12},days:[]});
+  assert.equal(p.own().settingsFieldsAt.a,0,'a clock decades ahead is still discarded');
+  }finally{Date.now=realNow;}
+  // briefing#1: reopening an old day must not push a newer business day out of the 370 kept.
+  const days=[];
+  for(let i=0;i<371;i++){const d=new Date(Date.UTC(2025,0,1+i)).toISOString().slice(0,10);days.push({id:'id'+d,day:d,venue:'fixture',updatedAt:1000+i});}
+  days.find(x=>x.day==='2025-01-01').updatedAt=9e9;   // the OLDEST day was just edited
+  p.writeLocal({days});
+  const kept=p.own().days.map(x=>x.day);
+  assert.equal(kept.length,370);
+  assert.ok(kept.includes(days[370].day),'the newest business day is retained');
+  assert.ok(!kept.includes('2025-01-01'),'the oldest business day is the one dropped, whatever its last edit');
+});
+
+await test('booking recovery links of one venue survive bookings at other venues',()=>{
+  const mem=new Map();
+  const ctx=vm.createContext({localStorage:{getItem:k=>mem.get(k)??null,setItem:(k,v)=>mem.set(k,v)},console,location:{},Date,JSON,Object,String});
+  vm.runInContext(read('booking-manage.js').replace('export ',''),ctx);
+  const make=merchant=>vm.runInContext('createBookingManage',ctx)({owner:{getState:()=>({lang:'en'})},merchant,esc:x=>x});
+  const a=make('venue-a'), noise=make('venue-b');
+  a.rememberManage({manageToken:'tok-a',code:'A1',confirmationSent:false});
+  for(let i=0;i<30;i++)noise.rememberManage({manageToken:'tok-b'+i,code:'B'+i,confirmationSent:true});
+  const kept=JSON.parse(mem.get('kiwiBookingManage'));
+  assert.ok(kept['venue-a:A1'],'the only recoverable link of venue A survives later bookings elsewhere');
+  assert.equal(Object.keys(kept).filter(k=>k.startsWith('venue-b:')).length,20,'a venue still keeps its twenty most recent');
+});
+
 await test('clipboard announces only settled success and reports rejected or refused copy', async()=>{
   const source=read('team/profile-ui.js'), ast=ts.createSourceFile('profile.js',source,ts.ScriptTarget.Latest,true);let code;
   function walk(n){if(ts.isBinaryExpression(n)&&n.left.getText(ast)==="handlers['kt-pwd-copy']")code=n.right.getText(ast);ts.forEachChild(n,walk);}walk(ast);assert.ok(code);

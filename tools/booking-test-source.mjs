@@ -23,7 +23,13 @@ export function bookingTestSource() {
   let source = bookingReadableSource();
   const part = bookingSplit.parts.find(p => p.file.endsWith('booking-manage.js'));
   const live = read(part.file);
-  const changed = part.fragments.map(f => ({ ...f, size: splitFunctions.fragment(live, f).length }));
+  /* The format edits are positioned in the assembled source, not in the shipped file: place each
+     fragment where the assembly put it (start/end here are in the assembled basis, and the span an
+     unchanged fragment had is its recorded length). */
+  const changed = part.fragments.map(f => {
+    const text = splitFunctions.fragment(live, f), at = source.indexOf(text);
+    return { ...f, size: text.length, start: at, end: at + f.length };
+  });
   const edits = JSON.parse(read('tools/fixtures/booking/format.json'));
   for (const edit of [...edits].reverse()) {
     const inside = changed.find(f => edit.start >= f.start && edit.start < f.end);

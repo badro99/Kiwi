@@ -166,6 +166,22 @@ const allStored = () => [...store.entries()].map(([k, v]) => `${k}=${v}`).join('
   ok(await v.verify(CODE) !== null, 'une nouvelle preuve en ligne repousse l\'échéance');
 }
 {
+  /* pairing#0: the same offline identity limits as the till (Wave Q): 72 h for the team,
+     24 h for a manager, measured from the online proof (provenAt); the account owner keeps seven days. */
+  const H = 3600 * 1000;
+  for (const [role, limit] of [['manager', 24], ['cashier', 72], ['owner', 168]]) {
+    const v = load({ kiwiAccountKey: 'wq-' + role + '@x.com' });
+    await v.remember('2580', { id: 'p-' + role, name: 'P', role });
+    const row = JSON.parse(store.get(scopeKey(v)))[0];
+    ok(row.provenAt === now, role + ' : la ligne porte provenAt');
+    now += limit * H - 1000;
+    ok(await v.verify('2580') !== null, role + ' : une seconde avant ' + limit + ' h la ligne vaut encore');
+    now += 2000;
+    ok(await v.verify('2580') === null && v.count() === 0, role + ' : passé ' + limit + ' h hors ligne, la ligne ne vaut plus et ne compte plus');
+    now -= limit * H + 1000;
+  }
+}
+{
   /* Douze lignes, une par personne, un code une identité. */
   const v = load({ kiwiAccountKey: 'a@x.com' });
   for (let i = 0; i < 15; i++) await v.remember(String(1000 + i), { id: 'p' + i, name: 'P' + i, role: 'manager' });
@@ -250,7 +266,7 @@ const allStored = () => [...store.entries()].map(([k, v]) => `${k}=${v}`).join('
   const salt = Buffer.from(webcrypto.getRandomValues(new Uint8Array(16))).toString('hex');
   const old = Buffer.from(await webcrypto.subtle.digest('SHA-256', new TextEncoder().encode('dashboard:kdf@x.com:' + salt + ':4444'))).toString('hex');
   const exp = now + 3 * 24 * 3600 * 1000;
-  store.set(scopeKey(v), JSON.stringify([{ salt, digest: old, expiresAt: exp, staff: { id: 'd', name: 'd', role: 'manager' } }]));
+  store.set(scopeKey(v), JSON.stringify([{ salt, digest: old, expiresAt: exp, staff: { id: 'd', name: 'd', role: 'owner' } }]));
   ok(await v.verify('4445') === null && JSON.parse(store.get(scopeKey(v)))[0].digest === old, 'un mauvais code ne migre rien');
   ok((await v.verify('4444')).id === 'd', 'une ancienne ligne SHA-256 ouvre encore');
   for (let i = 0; i < 100 && !JSON.parse(store.get(scopeKey(v)))[0].it; i++) await new Promise((r) => setTimeout(r, 25));
