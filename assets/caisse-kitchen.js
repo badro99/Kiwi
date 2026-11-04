@@ -1563,8 +1563,8 @@
       const DR = window.KiwiDayReport;
       if (DR && typeof DR.businessDay === 'function') return DR.businessDay(ts, opMerchant());
       // Same default as day-report.js when that optional module is unavailable.
-      const d = new Date(ts - 5 * 3600000);
-      return [d.getFullYear(), d.getMonth() + 1, d.getDate()].join('-');
+      const d = new Date(ts - 5 * 3600000), two = (n) => String(n).padStart(2, '0'); // padded like day-report.js
+      return d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate());
     }
     function vrapHandoverTime(ts) {
       return ts ? new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
@@ -1990,7 +1990,8 @@
     function archivedTakeawaySet() {
       const merchant = currentMerchantSlug(), today = vrapHistoryDay(Date.now());
       // Retain fourteen merchant business days; 10,000 is only a storage safety cap.
-      const cutoff = new Date(Date.parse(today + 'T12:00:00Z') - 14 * 86400000).toISOString().slice(0, 10);
+      const noon = Date.parse(today + 'T12:00:00Z'); // an unreadable day keeps every row, never throws
+      const cutoff = Number.isFinite(noon) ? new Date(noon - 14 * 86400000).toISOString().slice(0, 10) : '';
       if (merchant !== archivedTakeawayScope) {
         archivedTakeawayScope = merchant;
         let saved = []; try { saved = JSON.parse(localStorage.getItem('kiwi-archived-takeaways:' + merchant) || '[]'); } catch (_) {}
