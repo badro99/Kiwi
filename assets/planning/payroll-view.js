@@ -163,9 +163,13 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
     // accepted the number, the totals never moved, and nothing survived a reload —
     // on this page and on Équipe → Heures travaillées alike.
     const vt = teamKey(venue || { type: 'restaurant' });
+    const text = String(t2.value).trim().replace(',', '.');
+    const valid = /^(?:\d+(?:\.\d+)?|\.\d+)$/.test(text) && Number(text) <= 24;
+    t2.setCustomValidity(valid ? '' : ({ fr: 'Saisissez un nombre entre 0 et 24.', en: 'Enter a number between 0 and 24.', ar: 'أدخل عددا بين 0 و24.' })[trLang()] || 'Saisissez un nombre entre 0 et 24.');
+    if (!valid) { t2.reportValidity(); return; }
     const hours = window.__kiwiTeamV2.hoursByVenue[vt] || (window.__kiwiTeamV2.hoursByVenue[vt] = {});
     if (!hours[mid]) hours[mid] = {};
-    const val = Math.max(0, Math.min(24, parseFloat(String(t2.value).replace(',', '.')) || 0));
+    const val = Number(text);
     t2.dataset.hoursValue = String(val);
     hours[mid][day] = val;
     updateHourTotals();

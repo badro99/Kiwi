@@ -15,7 +15,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
       
       const bySup = new Map();
       hist.forEach(m => {
-        const supName = (m.meta && m.meta.supplierName) || (m.meta && m.meta.supplierId) || 'Fournisseur';
+        const supName = (m.meta && m.meta.supplierName) || (m.meta && m.meta.supplierId) || t('priceSupplier');
         if (!bySup.has(supName)) bySup.set(supName, []);
         bySup.get(supName).push(m);
       });
@@ -29,20 +29,21 @@ window.KiwiStockInternal.install('purchasing', (S) => {
         const pPrev = prev.unitCost;
         if (pLast != null && pPrev != null && pLast !== pPrev) {
           const delta = Math.round((pLast - pPrev) * 100) / 100;
-          const pct = Math.round(((delta) / pPrev) * 1000) / 10;
+          const pct = pPrev > 0 ? Math.round((delta / pPrev) * 1000) / 10 : null;
           
           const impactedRecipes = [];
           try {
-            const costDoc = window.KiwiCost && window.KiwiCost.doc ? window.KiwiCost.doc() : (window.KiwiCost && window.KiwiCost.store ? window.KiwiCost.store.get(stOverlayScope()) : null);
-            const recipes = (costDoc && costDoc.recipes) || (window.KiwiRestaurantRecipes && window.KiwiRestaurantRecipes.getAll ? window.KiwiRestaurantRecipes.getAll() : {});
+            const recipes = window.KiwiRestaurantRecipes?.all?.(stOverlayScope()) || {};
             Object.entries(recipes).forEach(([rId, rec]) => {
               if (!rec || !Array.isArray(rec.ingredients)) return;
-              const line = rec.ingredients.find(ing => ing.stockId === sub.id || ing.name === sub.name);
-              if (line) {
-                const portionQty = +line.qty || 0;
-                const dishCostDelta = Math.round(portionQty * delta * 100) / 100;
+              const lines = rec.ingredients.filter(ing => ing.stockId ? String(ing.stockId) === String(sub.id) : ing.name === sub.name);
+              if (lines.length) {
+                const quantities = lines.map(line => window.KiwiRestaurantUnits?.convert ? window.KiwiRestaurantUnits.convert(+line.qty || 0, line.unit || sub.unit, sub.unit) : (line.unit || sub.unit) === sub.unit ? +line.qty || 0 : null);
+                if (quantities.some(q => q == null)) return;
+                const portionQty = quantities.reduce((sum, q) => sum + q, 0) / Math.max(1, +rec.portions || +rec.yield || 1);
+                const dishCostDelta = Math.round(portionQty * Math.round(delta * 100)) / 100;
                 impactedRecipes.push({
-                  id: rId,
+                  id: rec.itemId || rId,
                   name: rec.itemName || rec.name || rId,
                   dishCostDelta: dishCostDelta,
                 });
@@ -74,24 +75,24 @@ window.KiwiStockInternal.install('purchasing', (S) => {
     if (!changes.length) {
       return `
         <div class="st-ai" style="margin-top:16px;">
-          <div class="st-ai-t">Évolution des tarifs fournisseurs</div>
-          <div class="st-ai-b">Tous les tarifs facturés lors des dernières réceptions sont stables. Kiwi analyse automatiquement l'historique des bons de livraison pour détecter les variations de prix.</div>
+          <div class="st-ai-t">${esc(t('priceEvolution'))}</div>
+          <div class="st-ai-b">${esc(t('priceStableBody'))}</div>
         </div>
       `;
     }
     return changes.map(ch => {
       const isUp = ch.delta > 0;
       const recipesText = ch.impactedRecipes.length > 0
-        ? ` · Impact sur ${ch.impactedRecipes.length} recette${ch.impactedRecipes.length > 1 ? 's' : ''} (ex: ${esc(ch.impactedRecipes[0].name)} ${isUp ? '+' : ''}${fmtMad(ch.impactedRecipes[0].dishCostDelta)}/portion)`
+        ? ` · ${esc(t('priceImpact'))} ${ch.impactedRecipes.length} (${esc(ch.impactedRecipes[0].name)} ${isUp ? '+' : ''}${esc(fmtMad(ch.impactedRecipes[0].dishCostDelta))}/${esc(t('pricePortion'))})`
         : '';
       return `
         <div class="st-ai ${isUp ? 'warn' : 'ok'}" style="margin-top:14px;">
           <div class="st-ai-t" style="display:flex; align-items:center; gap:6px;">
             ${svg(isUp ? 'trendingUp' : 'trendingDown', 14)}
-            <span>${esc(ch.supplierName)} : variation de tarif sur ${esc(ch.subName)} (${isUp ? '+' : ''}${fmtPct(ch.pct, 1)})</span>
+            <span>${esc(ch.supplierName)} : ${esc(t('priceVariation'))} ${esc(ch.subName)} (${ch.pct == null ? esc(t('priceUnavailable')) : (isUp ? '+' : '') + fmtPct(ch.pct, 1)})</span>
           </div>
           <div class="st-ai-b">
-            Passage de <b>${esc(fmtMad(ch.pPrev))}</b> à <b>${esc(fmtMad(ch.pLast))}</b> / ${esc(ch.unit)}${recipesText}.
+            ${esc(t('priceFrom'))} <b>${esc(fmtMad(ch.pPrev))}</b> ${esc(t('priceTo'))} <b>${esc(fmtMad(ch.pLast))}</b> / ${esc(ch.unit)}${recipesText}.
           </div>
         </div>
       `;

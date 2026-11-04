@@ -1706,7 +1706,7 @@
 
   }
   }
-  const scripts = ["assets/orderpro/money.js?v=4","assets/orderpro/draft.js?v=3","assets/orderpro/transport.js?v=6","assets/orderpro/session.js?v=5","assets/orderpro/table.js?v=4","assets/orderpro/menu.js?v=6","assets/orderpro/cart.js?v=6","assets/orderpro/payment.js?v=9"];
+  const scripts = ["assets/orderpro/money.js?v=4","assets/orderpro/draft.js?v=3","assets/orderpro/transport.js?v=7","assets/orderpro/session.js?v=5","assets/orderpro/table.js?v=4","assets/orderpro/menu.js?v=6","assets/orderpro/cart.js?v=6","assets/orderpro/payment.js?v=9"];
   for (const src of scripts) {
     const script = document.createElement('script');
     script.async = false;

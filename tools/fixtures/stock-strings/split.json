@@ -1,12 +1,12 @@
 {
-  "sha256": "a8e1a18265de48c05db9b8e465954eda2e5ab8d461838d5aaadaeeea8a2473c5",
+  "sha256": "afd0bf7e7fdc6a2bd2bd7eb213d95c63a18698fe832d3915bae1bb0762e0d60d",
   "segments": [
     {
       "name": "strings",
       "file": "assets/stock/strings.js",
       "start": 1525,
-      "end": 69538,
-      "sha256": "953c1e5c9230b35cbfa8ece03f14ced6fab1e42b3465c2138e028d3df1298ef3",
+      "end": 70711,
+      "sha256": "c2699a314029e1abc566a5cae17947d451042e75f8549f5b9818611759ac4bcd",
       "relay": "  /* stock-part:strings */\n  const STR = window.KiwiStockStrings;\n  /* /stock-part:strings */\n"
     }
   ]

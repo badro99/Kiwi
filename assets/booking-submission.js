@@ -7,10 +7,15 @@ export function createBookingSubmission(context) {
   const state = owner.getState();
   const retryRefs = {};
   function retryRef(key, prefix, form) {
-    const ref = retryRefs[key] || ssGet(key) || (prefix + crypto.randomUUID());
-    retryRefs[key] = ref;
+    /* The ref follows what is booked (merchant, service, slot, stay, party, price).
+       Contact and note edits keep it: a guest who fixes a phone typo after a lost
+       answer must reach the same booking, not create a second one. */
+    const intent = JSON.stringify([merchant, state.service?.id, state.slot, state.checkIn, state.checkOut, party(), state.partySize, state.service?.total]);
+    const saved = ssGet(key + 'Intent');
+    const ref = (retryRefs[key]?.intent === intent ? retryRefs[key].ref : saved === intent ? ssGet(key) : '') || (prefix + crypto.randomUUID());
+    retryRefs[key] = { intent, ref };
     let kept = false;
-    try { ssSet(key, ref); kept = ssGet(key) === ref; } catch (_) {}
+    try { ssSet(key + 'Intent', intent); ssSet(key, ref); kept = ssGet(key) === ref; } catch (_) {}
     if (!kept) form.querySelector('[data-error]').textContent = retryWarning();
     return ref;
   }
@@ -25,9 +30,9 @@ export function createBookingSubmission(context) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ merchant, ref, lang: state.lang, ...payload })
     });
-    const result = await response.json();
+    const result = await response.json().catch(() => { throw new Error('request-timeout'); });
     if (!response.ok) throw new Error(result.error || 'error');
-    delete retryRefs[key]; ssDel(key);
+    delete retryRefs[key]; ssDel(key); ssDel(key + 'Intent');
     onSuccess(result);
   }
 

@@ -2436,7 +2436,7 @@
     'assets/stock/alerts.js?v=5',
     'assets/stock/loss.js?v=1',
     'assets/stock/counts.js?v=9',
-    'assets/stock/purchasing.js?v=2',
+    'assets/stock/purchasing.js?v=3',
     'assets/stock/intake.js?v=15',
     'assets/stock/catalog.js?v=4',
   ];

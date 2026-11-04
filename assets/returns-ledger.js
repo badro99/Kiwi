@@ -137,17 +137,26 @@ export function returnRows(returns, rL) {
     const items = Array.isArray(ret.items) && ret.items.length ? ret.items : [{ name: rL('Retour', 'Return', 'مرتجع'), qty: 1, amount: ret.amount }];
     const lineSum = items.reduce((t, it) => t + (Number(it && it.amount) || 0), 0);
     const credited = Number(ret.amount);
-    const share = (item) => !(credited > 0) ? Number(item.amount) || 0
-      : items.length === 1 ? credited
-      : lineSum > 0 ? Math.round(credited * (Number(item.amount) || 0) / lineSum * 100) / 100 : credited / items.length;
+    const cents = Number.isFinite(credited) && credited >= 0 ? Math.round(credited * 100) : Math.round(lineSum * 100);
+    let allocated = 0, weight = 0;
+    const shares = items.map((item, i) => {
+      weight += lineSum > 0 ? (Number(item.amount) || 0) / lineSum : 1 / items.length;
+      const cumulative = i === items.length - 1 ? cents : Math.round(cents * weight);
+      const share = cumulative - allocated; allocated = cumulative;
+      return share / 100;
+    });
+    const owner = typeof window === 'undefined' ? {} : window;
+    const slug = owner.KiwiCloudDoc?.currentSlug?.();
+    const venue = owner.KiwiVenue?.getCurrentVenueData?.();
+    const timeZone = owner.KiwiDayReport?.timezone?.(slug) || venue?.timezone || venue?.timeZone || venue?.tz || owner.KiwiConfig?.timezone || owner.KiwiConfig?.timeZone || 'Africa/Casablanca';
     return items.map((item, i) => ({
       id: String(ret.id || 'RET') + (items.length > 1 ? '-' + (i + 1) : ''),
       ticket: ret.saleRef ? rL('Ticket', 'Receipt', 'إيصال') + ' ' + ret.saleRef : '',
-      d: new Date(Number(ret.ts) || Date.now()).toLocaleDateString(rL('fr-FR', 'en-GB', 'ar-MA-u-nu-latn'), { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      d: new Date(Number(ret.ts) || Date.now()).toLocaleDateString(rL('fr-FR', 'en-GB', 'ar-MA-u-nu-latn'), { timeZone, day: '2-digit', month: '2-digit', year: 'numeric' }),
       ts: Number(ret.ts) || 0,
       qty: Number(item.qty) || 1,
       name: (Number(item.qty) || 1) + ' × ' + (item.name || rL('Article', 'Item', 'منتج')) + (item.size ? ' · ' + item.size : ''),
-      amt: share(item),
+      amt: shares[i],
       reason: ret.reason || (ret.kind === 'refund' ? rL('Motif non renseigné', 'Reason not recorded', 'السبب غير مسجل') : ret.kind === 'echange' ? rL('Échange', 'Exchange', 'استبدال') : rL('Avoir', 'Store credit', 'رصيد المتجر')),
       /* Le type de retour est une donnée, pas une chaîne d'affichage. */
       kind: ret.kind || 'avoir',

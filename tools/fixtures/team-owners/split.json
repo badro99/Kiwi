@@ -508,16 +508,16 @@
           "sha256": "cddde440c7f6597afa345fa0bada1d59d8e26c3dcf86157b509203ee7762a4ab"
         },
         {
-          "start": 106678,
-          "end": 106874,
+          "start": 106771,
+          "end": 106967,
           "offset": 1506,
           "length": 196,
           "replacement": "  /* team-owner:invitations:ONB_ROLE_FN */\n",
           "sha256": "147b60f12d7623b29f458591c372fce11819d132219791e661ec06f983a03d4b"
         },
         {
-          "start": 106874,
-          "end": 108850,
+          "start": 106967,
+          "end": 108943,
           "offset": 1703,
           "length": 1976,
           "replacement": "  function importMembers(...args) { return invitations.importMembers(...args); }\n",
@@ -550,64 +550,64 @@
       "suffix": "  return Object.freeze({ memberMatchesFilters, rerenderProfilesGrid, renderHeader, roster, daySnapshot, planningDay, bookingCoverage, labour, setActiveTab(value) { activeTab = value; } });\n  } });\n})();\n",
       "fragments": [
         {
-          "start": 59215,
-          "end": 59769,
+          "start": 59308,
+          "end": 59862,
           "offset": 1173,
           "length": 554,
           "replacement": "  function memberMatchesFilters(...args) { return rosterList.memberMatchesFilters(...args); }\n",
           "sha256": "d72181b3ad3e6db9ae3c456e22ad8c4fcc9f286e8037086692335536ed24a676"
         },
         {
-          "start": 65147,
-          "end": 66107,
+          "start": 65240,
+          "end": 66200,
           "offset": 1728,
           "length": 960,
           "replacement": "  function rerenderProfilesGrid(...args) { return rosterList.rerenderProfilesGrid(...args); }\n",
           "sha256": "c59257951f423732d947f4b742687e701a0196110175a63a0b86d2df9bd8f970"
         },
         {
-          "start": 66155,
-          "end": 67229,
+          "start": 66248,
+          "end": 67322,
           "offset": 2689,
           "length": 1074,
           "replacement": "  function renderHeader(...args) { return rosterList.renderHeader(...args); }\n",
           "sha256": "93795f265b4c6908b37ae2c0de7344984469e9efcbebf24ae50fce11b84fa977"
         },
         {
-          "start": 109281,
-          "end": 110173,
+          "start": 109374,
+          "end": 110266,
           "offset": 3764,
           "length": 892,
           "replacement": "  function roster(...args) { return rosterList.roster(...args); }\n",
           "sha256": "3002fc2fd3b75eec03b3e6959820b9fc33597d2c0069612123e5583457869e2d"
         },
         {
-          "start": 110574,
-          "end": 111762,
+          "start": 110667,
+          "end": 111855,
           "offset": 4657,
           "length": 1188,
           "replacement": "  function daySnapshot(...args) { return rosterList.daySnapshot(...args); }\n",
           "sha256": "075576c0691e02bff94e07de818934512521758447fccb55306144b9062b93d7"
         },
         {
-          "start": 112074,
-          "end": 113398,
+          "start": 112167,
+          "end": 113491,
           "offset": 5846,
           "length": 1324,
           "replacement": "  function planningDay(...args) { return rosterList.planningDay(...args); }\n",
           "sha256": "303f5f571b4cdd91548146425a2fabe5d73456a704dec562064152b2ede24081"
         },
         {
-          "start": 113747,
-          "end": 115336,
+          "start": 113840,
+          "end": 115429,
           "offset": 7171,
           "length": 1589,
           "replacement": "  function bookingCoverage(...args) { return rosterList.bookingCoverage(...args); }\n",
           "sha256": "8b19f706b76bc08cd8a3280a05229b692ed5dac6f497e0cb000d5b1c49362b82"
         },
         {
-          "start": 115773,
-          "end": 116359,
+          "start": 115866,
+          "end": 116452,
           "offset": 8761,
           "length": 586,
           "replacement": "  function labour(...args) { return rosterList.labour(...args); }\n",
@@ -948,7 +948,7 @@
     "kiwi-serveur.html": 27,
     "booking.html": 5
   },
-  "sha256": "e14b5083cf84013101c8c7596091e3f76e22378d624fc95f840cef961133fb41",
+  "sha256": "68fe80be1fd473542c0a94f5b54132801d41efc82d5de60c91101d0614a65a7c",
   "imports": [
     "./team/member-state.js",
     "./team/venue-scope.js",
