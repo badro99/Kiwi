@@ -2319,7 +2319,7 @@ section('Whole-project regressions');
     'specialty-retail-truth-test.mjs',
     'menu-sales-test.mjs',
     'foodcost-api-test.mjs',
-    'simple-food-cost-test.mjs',
+    'simple-food-cost-test.mjs', 'net-scope-test.mjs', 'net-recovery-test.mjs',
     'simple-food-cost-split-test.mjs',
     'simple-food-cost-browser-test.mjs',
     'wave-r-errdash-test.mjs',

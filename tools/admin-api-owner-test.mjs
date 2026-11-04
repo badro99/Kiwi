@@ -8,6 +8,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { deadlineVmSource } from './deadline-vm-source.mjs';
 
 const read = (file) => fs.readFileSync(file, 'utf8');
 const inline = (html) => [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]).join('\n');
@@ -46,7 +47,7 @@ let reply = { status: 200, body: { ok: true } };
 const ctx = { setTimeout, clearTimeout, AbortController, window: {}, fetch: async (url, opts) => { calls.push({ url, opts }); const r = reply;
   return { ok: r.status >= 200 && r.status < 300, status: r.status, json: async () => { if (r.body === undefined) throw new SyntaxError('x'); return r.body; } }; } };
 vm.createContext(ctx);
-vm.runInContext(read('assets/admin-api.js'), ctx);
+vm.runInContext(deadlineVmSource(read('assets/admin-api.js')), ctx);
 const api = ctx.window.KiwiAdminApi;
 assert.ok(Object.isFrozen(api), 'le propriétaire ne se remplace pas');
 assert.equal(api.route('/clients'), '/api/admin/clients');

@@ -8,8 +8,8 @@
     "sha": "012a3be6cdfc9439"
   },
   "assets/admin-api.js": {
-    "v": "5",
-    "sha": "7f293175e3997783"
+    "v": "7",
+    "sha": "76456f2dc142f894"
   },
   "assets/admin-demo-requests.js": {
     "v": "5",
@@ -104,7 +104,7 @@
     "sha": "83a4567065245d47"
   },
   "assets/booking-recover.js": {
-    "v": "3",
+    "v": "4",
     "sha": "2a159d1d8de17f00"
   },
   "assets/booking-service.js": {
@@ -144,7 +144,7 @@
     "sha": "ec6401e79e6ed64a"
   },
   "assets/boutique-promos-dashboard.js": {
-    "v": "33",
+    "v": "34",
     "sha": "4e2048a97e4e2780"
   },
   "assets/boutique-size-codes.js": {
@@ -324,7 +324,7 @@
     "sha": "7e68dad10a95524f"
   },
   "assets/caisse/split-tender.js": {
-    "v": "6",
+    "v": "7",
     "sha": "239c9eacd278055a"
   },
   "assets/caisse/table-settlement.js": {
@@ -360,12 +360,12 @@
     "sha": "3a02da300a0d7b4e"
   },
   "assets/channel-health.js": {
-    "v": "8",
+    "v": "9",
     "sha": "6fcf4571ad052d70"
   },
   "assets/channel-link.js": {
-    "v": "202608272321",
-    "sha": "9801adfaf2ca2fe6"
+    "v": "202608272322",
+    "sha": "f56b05f0b10231df"
   },
   "assets/channel-sales.js": {
     "v": "8",
@@ -379,13 +379,17 @@
     "v": "4",
     "sha": "210f037121107f37"
   },
+  "assets/clients-audit.js": {
+    "v": "2",
+    "sha": "d515edc930e16fbd"
+  },
   "assets/clients-book.js": {
     "v": "61",
     "sha": "95d9a6da262a0559"
   },
   "assets/clients-directory.js": {
-    "v": "30",
-    "sha": "8c8415f533a7c370"
+    "v": "35",
+    "sha": "8921816b1d77e905"
   },
   "assets/clients-store-vault.js": {
     "v": "10",
@@ -560,8 +564,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "634",
-    "sha": "c2a0d479338d0d70"
+    "v": "636",
+    "sha": "a77f64a7bb3f941c"
   },
   "assets/employee-planning.js": {
     "v": "21",
@@ -1436,8 +1440,8 @@
     "sha": "5ff1ce5e01b32977"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "167",
-    "sha": "534a1971c09ab3e0"
+    "v": "168",
+    "sha": "302b7d3fb9bba7f5"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1492,7 +1496,7 @@
     "sha": "1fc06c1fb77ddb4b"
   },
   "assets/planning/payroll-view.js": {
-    "v": "10",
+    "v": "11",
     "sha": "af60685f6a98a627"
   },
   "assets/planning/shift-editor.js": {
@@ -1632,20 +1636,20 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "355",
-    "sha": "f424c31450943455"
+    "v": "356",
+    "sha": "de306bb8033f4b4c"
   },
   "assets/pos-epicerie.css": {
-    "v": "36",
+    "v": "37",
     "sha": "d6fa42fcbe6f00d8"
   },
   "assets/pos-epicerie.js": {
-    "v": "36",
-    "sha": "b1af70cd2e34e8dd"
+    "v": "37",
+    "sha": "2726f858d71edecf"
   },
   "assets/pos-epicerie/carnet.js": {
-    "v": "6",
-    "sha": "a0555949c4d89c96"
+    "v": "7",
+    "sha": "bfe6960194ad1500"
   },
   "assets/pos-fastfood.css": {
     "v": "15",
@@ -2012,16 +2016,16 @@
     "sha": "35dab11d06129b1b"
   },
   "assets/serveur/service.js": {
-    "v": "24",
-    "sha": "00f2c6803c7a8e83"
+    "v": "26",
+    "sha": "9d2ecb0d880563b6"
   },
   "assets/service-requests.js": {
     "v": "2",
     "sha": "5837b2072494ce58"
   },
   "assets/simple-food-cost.js": {
-    "v": "23",
-    "sha": "80c5adca7136aa5b"
+    "v": "24",
+    "sha": "eba596ed67267e37"
   },
   "assets/simple.css": {
     "v": "1",
@@ -2096,8 +2100,8 @@
     "sha": "3cb977732d0c9fb3"
   },
   "assets/team-hours.js": {
-    "v": "19",
-    "sha": "9a5fc4102d610e0f"
+    "v": "20",
+    "sha": "674688a813ed8abc"
   },
   "assets/team.js": {
     "v": "346",
@@ -2155,6 +2159,10 @@
     "v": "10",
     "sha": "1114cd5b24b722d2"
   },
+  "assets/tickets-recovery.js": {
+    "v": "2",
+    "sha": "f154d4a5743ffe06"
+  },
   "assets/tickets-thread.js": {
     "v": "3",
     "sha": "2f6270cc444c06bd"
@@ -2164,8 +2172,8 @@
     "sha": "8eb51073cdac11c1"
   },
   "assets/tickets.js": {
-    "v": "27",
-    "sha": "16ece4e8899b9958"
+    "v": "30",
+    "sha": "ec2a7f5b99dc35e0"
   },
   "assets/till-inventory-access.js": {
     "v": "1",

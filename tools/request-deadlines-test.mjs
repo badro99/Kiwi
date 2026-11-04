@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { deadlineVmSource } from './deadline-vm-source.mjs';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { declaration } = require('./split-functions.cjs');
@@ -64,7 +65,7 @@ for (const mode of ['fetch', 'body']) {
     await h.tick(); assert.equal(nodes['#service-client-list'].textContent, 'Carnet indisponible.');
   }
   {
-    const h = harness(mode); h.c.window = {}; h.run(read('assets/admin-api.js')); let error, writes = 0;
+    const h = harness(mode); h.c.window = {}; h.run(deadlineVmSource(read('assets/admin-api.js'))); let error, writes = 0;
     h.c.window.KiwiAdminApi.onWrite(() => { writes++; });
     h.c.window.KiwiAdminApi.request('/test', { method: 'POST' }).catch(e => { error = e; });
     await h.tick(); assert.equal(error?.status, 0); assert.equal(error?.code, 'timeout'); assert.equal(writes, 0);
@@ -77,7 +78,7 @@ for (const mode of ['fetch', 'body']) {
   }
 }
 for (const [code, fetch] of [['offline', () => Promise.reject(new Error('network'))], ['bad-response', async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('json'); } })]]) {
-  const h = harness('fetch'); Object.assign(h.c, { window: {}, fetch }); h.run(read('assets/admin-api.js'));
+  const h = harness('fetch'); Object.assign(h.c, { window: {}, fetch }); h.run(deadlineVmSource(read('assets/admin-api.js')));
   await assert.rejects(h.c.window.KiwiAdminApi.request('/test'), e => e.status === 0 && e.code === code && e.message === code && 'body' in e);
 }
 console.log('✓ request-deadlines: pairing, identity, search, admin and demo settle hung fetch/body; cancellation and typed failures');

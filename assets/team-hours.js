@@ -1,5 +1,5 @@
 import { createCorrections } from './planning/corrections.js?v=3';
-import { createPayrollView } from './planning/payroll-view.js?v=10';
+import { createPayrollView } from './planning/payroll-view.js?v=11';
 import { createOptimiser } from './planning/optimiser.js?v=5';
 import { createCsvImport } from './planning/csv-import.js?v=3';
 import { createShiftEditor } from './planning/shift-editor.js?v=5';

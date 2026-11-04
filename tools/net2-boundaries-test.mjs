@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { deadlineVmSource } from './deadline-vm-source.mjs';
 import { execFileSync } from 'node:child_process';
 import split from './split-functions.cjs';
 const read = f => process.env.NET2_BASE ? execFileSync('git', ['show', 'HEAD:' + f], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) : fs.readFileSync(f, 'utf8');
@@ -65,7 +66,7 @@ await test('53/54 quiet reload exposes failure; malformed writes retain draft an
 });
 await test('68 console accepts only object acknowledgements and never announces invalid writes',async()=>{
   let body;const window={};let writes=0;
-  vm.runInNewContext(read('assets/admin-api.js'),{window,fetch:async()=>({ok:true,json:async()=>body}),AbortController,setTimeout,clearTimeout});
+  vm.runInNewContext(deadlineVmSource(read('assets/admin-api.js')),{window,fetch:async()=>({ok:true,json:async()=>body}),AbortController,setTimeout,clearTimeout});
   window.KiwiAdminApi.onWrite(()=>writes++);
   for(body of [null,[],1,'yes',true]) await assert.rejects(window.KiwiAdminApi.request('/fixture',{method:'POST'}),/bad-response/);
   assert.equal(writes,0);body={ok:true};await window.KiwiAdminApi.request('/fixture',{method:'POST'});assert.equal(writes,1);
