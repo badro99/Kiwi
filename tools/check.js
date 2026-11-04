@@ -2258,6 +2258,7 @@ section('Whole-project regressions');
     'onboarding-split-test.mjs',
     'onboarding-session-test.mjs',
     'onboarding-alignment-properties-test.mjs',
+    'onboarding-sequence-properties-test.mjs',
     'onboarding-team-recap-test.mjs',
     'onboarding-team-import-test.mjs',
     'onboarding-business-type-test.mjs',
