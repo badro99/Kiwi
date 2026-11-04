@@ -83,6 +83,16 @@ export async function sweepOrphanMedia(env, now = Date.now()) {
   return orphans.length;
 }
 
+// The board used to list the whole bucket on every load. Sweep at most every
+// six hours per isolate; the explicit cleanup route still sweeps on demand.
+export const SWEEP_EVERY_MS = 6 * 3600 * 1000;
+let lastSweep = -Infinity;
+export function sweepOrphanMediaSometimes(env, now = Date.now()) {
+  if (now - lastSweep < SWEEP_EVERY_MS) return null;
+  lastSweep = now;
+  return sweepOrphanMedia(env, now).catch(() => { lastSweep = -Infinity; return 0; });
+}
+
 export function schemaError(error) {
   const message = String((error && error.message) || error || '');
   return /no such table|no such column|has no column named/i.test(message);

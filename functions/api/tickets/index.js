@@ -1,7 +1,7 @@
 import { ticketActor, forbidden, ticketInsert } from './_access.js';
 import {
   IMAGE_EXTENSIONS, MAX_IMAGE_BYTES, MAX_IMAGES, MAX_TEXT, MAX_TOTAL_IMAGE_BYTES,
-  json, purgeExpired, schemaError, sweepOrphanMedia, ticketNumber,
+  json, purgeExpired, schemaError, sweepOrphanMediaSometimes, ticketNumber,
 } from './_lib.js';
 import { TICKET_TAXONOMY, validateTicketClassification } from './_taxonomy.js';
 
@@ -30,13 +30,15 @@ async function readTicketRows(env) {
   }
 }
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet({ request, env, waitUntil }) {
   const actor = await ticketActor(request, env);
   if (!actor) return forbidden();
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   try {
     await purgeExpired(env);
-    try { await sweepOrphanMedia(env); } catch (_) { /* the board still loads; the next visit retries */ }
+    // A failed sweep never blocks the board; it retries on a later visit.
+    const sweep = sweepOrphanMediaSometimes(env);
+    if (sweep) { if (typeof waitUntil === 'function') waitUntil(sweep); else await sweep; }
     const [ticketRows, followupRows, imageRows] = await Promise.all([
       readTicketRows(env),
       env.DB.prepare(

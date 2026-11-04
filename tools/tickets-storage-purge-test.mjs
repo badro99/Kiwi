@@ -75,6 +75,12 @@ check('an open ticket keeps its screenshot', w.bucket.has('kiwi-tickets/2/c.png'
 const swept = await lib.sweepOrphanMedia(w.env, now);
 check('a file with no row, older than an hour, is swept', swept === 1 && !w.bucket.has('kiwi-tickets/9/orphan-old.png'));
 check('a file still being uploaded is left alone', w.bucket.has('kiwi-tickets/9/in-flight.png'));
+{ // The board load sweeps the bucket at most every six hours, not on every visit.
+  let lists = 0; const counted = { ...w.env, MEDIA: { ...w.env.MEDIA, list: async (o) => { lists++; return w.env.MEDIA.list(o); } } };
+  await lib.sweepOrphanMediaSometimes(counted, now); await lib.sweepOrphanMediaSometimes(counted, now + hour);
+  const first = lists; await lib.sweepOrphanMediaSometimes(counted, now + lib.SWEEP_EVERY_MS);
+  check('board loads sweep the bucket once per six hours, not per visit', first === 1 && lists === 2);
+}
 
 /* « Tested » stamps expires_ts from the handler's own clock, which runs after
    `now` was frozen above. Counting 20 days from `now` left a 1 s margin, and a
