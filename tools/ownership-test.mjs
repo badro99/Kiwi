@@ -108,6 +108,10 @@ fixtures();
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 assert.deepEqual(Object.keys(manifest.files).sort(), [...tracked].sort(), 'all required files need ownership entries');
 const inv = inventory(root);
+// The till's slot-neutral transport is byte-for-byte the vault then the store: same owners, not a duplicate.
+const transport = 'assets/clients-store-vault.js';
+assert.equal(inv.sources.get(transport), fs.readFileSync(path.join(root, 'assets/clients-outbox-vault.js'), 'utf8') + fs.readFileSync(path.join(root, 'assets/clients-store.js'), 'utf8'), transport + ' must stay the exact concatenation');
+inv.sources.delete(transport);
 const result = inspect(inv.sources, inv.shells, manifest);
 if (result.failures.length) {
   for (const f of result.failures) console.error(`✗ ${f}`);

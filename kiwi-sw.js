@@ -19,7 +19,6 @@
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
   '/assets/clients-store-vault.js?v=5',
-  '/assets/clients-outbox-vault.js?v=5',
   '/assets/caisse-strings.js?v=3',
   '/assets/pos-boutique/ozon.js?v=9',
   '/assets/lock-till.js?v=3',
