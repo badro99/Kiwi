@@ -180,8 +180,8 @@
     "sha": "fa5e893a7db972db"
   },
   "assets/caisse-accounting.js": {
-    "v": "23",
-    "sha": "eb74d5c1cd3bb099"
+    "v": "25",
+    "sha": "91ea2cde7a3fcfab"
   },
   "assets/caisse-app.js": {
     "v": "40",
@@ -212,8 +212,8 @@
     "sha": "c978ff18c9a0add3"
   },
   "assets/caisse-lang.js": {
-    "v": "122",
-    "sha": "2ed0f06ad5fac795"
+    "v": "124",
+    "sha": "9cc84f10cf80db36"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1156,12 +1156,12 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "112",
-    "sha": "257e6538016c4045"
+    "v": "114",
+    "sha": "e53eb66fdc1a1dd7"
   },
   "assets/live-link/queue-store.js": {
-    "v": "20",
-    "sha": "9173e2010edaacca"
+    "v": "22",
+    "sha": "a47dec16e56ca884"
   },
   "assets/live-link/sale-identity.js": {
     "v": "1",
@@ -1464,8 +1464,8 @@
     "sha": "58807c0272c55d44"
   },
   "assets/pairing-commit.js": {
-    "v": "4",
-    "sha": "a3191a546388eafa"
+    "v": "7",
+    "sha": "b77a110d1785ea27"
   },
   "assets/persistence-notices.js": {
     "v": "2",
@@ -1556,24 +1556,24 @@
     "sha": "f9be46bf81c4b95d"
   },
   "assets/pos-boutique.css": {
-    "v": "278",
+    "v": "281",
     "sha": "1ccd3e7bb7e4ee86"
   },
   "assets/pos-boutique.js": {
-    "v": "278",
-    "sha": "434b58ce6dbfa804"
+    "v": "281",
+    "sha": "47694a750abf09f4"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "175",
-    "sha": "14d5f1200a36f5bb"
+    "v": "178",
+    "sha": "668b475ff2bacc9a"
   },
   "assets/pos-boutique/delivery-card.js": {
     "v": "6",
     "sha": "a74f14231dcb7a1a"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "93",
-    "sha": "49405fc7bee6942b"
+    "v": "96",
+    "sha": "5a43488b35580969"
   },
   "assets/pos-boutique/exchange.js": {
     "v": "2",
@@ -1588,8 +1588,8 @@
     "sha": "ae42ad06da0ddc4c"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "175",
-    "sha": "86f1fb5803b1acdb"
+    "v": "178",
+    "sha": "d0c32f838d3d483b"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "20",
@@ -1612,8 +1612,8 @@
     "sha": "143f456d46538526"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "175",
-    "sha": "1b6d40b76148d3f6"
+    "v": "178",
+    "sha": "369ddf24007554ef"
   },
   "assets/pos-boutique/search.js": {
     "v": "14",
@@ -1644,8 +1644,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "376",
-    "sha": "c11092cf62388eed"
+    "v": "378",
+    "sha": "37fb459b5dcc5872"
   },
   "assets/pos-epicerie.css": {
     "v": "40",

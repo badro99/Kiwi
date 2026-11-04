@@ -66,6 +66,13 @@ L.set('en');
 check(L.tr('Modifier la remise') === 'Edit discount', 'discount edit accessible name is translated in English');
 L.set('ar');
 check(L.tr('Modifier la remise') === 'تعديل التخفيض', 'discount edit accessible name is translated in Arabic');
+/* L'avis d'horloge de la caisse (assets/pairing-commit.js) : FR/EN/AR. */
+L.set('en');
+check(L.tr("Heure de l'appareil décalée") === 'Device clock is off', 'avis d\'horloge en anglais');
+L.set('ar');
+check(L.tr("Heure de l'appareil décalée") === 'ساعة الجهاز غير مضبوطة', 'avis d\'horloge en arabe');
+L.set('fr');
+check(L.tr("Heure de l'appareil décalée") === "Heure de l'appareil décalée", 'avis d\'horloge en français');
 L.set('en');
 check(L.t('Encaisser') === 'Take payment', 'une phrase connue est traduite');
 check(L.t('Caftan Fassi') === 'Caftan Fassi', 'un nom d\'article du commerçant traverse intact');

@@ -1937,6 +1937,7 @@ section('Whole-project regressions');
     'discount-policy-browser-test.mjs',
     'discount-policy-cloud-test.mjs',
     'sale-server-truth-test.mjs',
+    'trusted-clock-test.mjs',
     'discount-policy-live-browser-test.mjs',
     'caisse-viewport-guard-test.mjs',
     'boutique-printer-settings-test.mjs',

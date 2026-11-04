@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS sales (
   -- Le motif est obligatoire côté serveur (functions/api/admin/sales.js) et
   -- l'auteur est celui du code opérateur, pas une IP — voir sale_audit.
   void_ts     INTEGER,          -- epoch ms de l'annulation ; NULL = vente vivante
+  received_ts INTEGER,          -- epoch ms à l'arrivée au serveur ; NULL = avant la migration 0023
+  device_ts   INTEGER,          -- heure de l'appareil à l'encaissement (ts est l'heure corrigée) ; NULL = non envoyée
   void_reason TEXT,             -- onboarding|imprimante|formation|doublon|installation|autre
   void_note   TEXT,             -- l'explication écrite, obligatoire quand reason='autre'
   void_actor  TEXT,             -- libellé du code opérateur, ou 'equipe'

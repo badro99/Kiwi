@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=175';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=93';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=175';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=175';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=178';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=96';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=178';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=178';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
@@ -589,7 +589,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
   function retShiftDay(key, delta) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key); return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + delta)).toISOString().slice(0, 10); }
   function isToday(d) {
     const t = +new Date(d);
-    return !isNaN(t) && businessDayKey(t) === businessDayKey(Date.now());
+    return !isNaN(t) && businessDayKey(t) === businessDayKey((window.KiwiLive?.now || Date.now)());
   }
 
   /* ── « Retour sous 7 jours » — encore faut-il retrouver la vente ────────────
@@ -1909,7 +1909,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
         // cliente) — on la débite des points APRÈS avoir enregistré l'achat.
         const rewardUsed = !!(frozen.reward && c && c.id && frozen.reward.clientId === c.id);
         const sale = {
-          id: frozen.num, syncId: frozen.syncId, tenderVersion: 2, at: new Date(), clientId: frozen.clientId, by: STAFF.caissiere.name, kind: isAcompte ? 'acompte' : 'vente',
+          id: frozen.num, syncId: frozen.syncId, tenderVersion: 2, at: new Date((window.KiwiLive?.now || Date.now)()), deviceTs: Date.now(), clientId: frozen.clientId, by: STAFF.caissiere.name, kind: isAcompte ? 'acompte' : 'vente',
           methods: parts.map((x) => x.m).join(' + '),
           /* Les parts de règlement, figées : c'est elles qui rendent le tiroir
              de la clôture exact quand un ticket est réglé moitié carte moitié
@@ -2004,7 +2004,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
               channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter', deliveryCard: ((parts || []).find((x) => x && x.m === 'livraison' && x.card) || {}).card, stockHeld: sale.stockHeld === true,
               label: isAcompte ? 'Acompte · ' + label : label,
               ref: sale.id,
-              time: sale.at,
+              time: sale.at, deviceTs: sale.deviceTs,
               lines: basket,
             };
             if (isAcompte) payload.retailBalance = {

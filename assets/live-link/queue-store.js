@@ -698,6 +698,7 @@ function postSale(entry) {
       })(),
       lines: lines,                                           // null ⇒ unknown, never "empty basket"
     };
+    if (Number(entry.deviceTs) > 0) body.deviceTs = Math.round(Number(entry.deviceTs)); // l'heure de l'appareil, à côté du ts corrigé
     if (complimentary) body.settlementKind = 'complimentary';
     if (storeCredit) {
       body.settlementKind = 'store-credit';
