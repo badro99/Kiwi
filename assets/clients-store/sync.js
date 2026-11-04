@@ -12,7 +12,7 @@
   }
   function curKey(book) { return 'kiwi:clients-cur:v1:' + book; }
   function getCursor(book) { var n = Number(ls(curKey(book))); return n > 0 ? n : 0; }
-  function setCursor(book, c) { try { localStorage.setItem(curKey(book), String(c || 0)); } catch (_) {} }
+  function setCursor(book, c) { try { localStorage.setItem(curKey(book), String(c || 0)); return true; } catch (_) { return false; } }
 
   /* ── LA FILE D'ATTENTE ────────────────────────────────────────────────────
    * Ces deux appels étaient « fire-and-forget » : un POST qui échoue — hors
@@ -461,7 +461,11 @@
           var changed = data.clients.length ? mergeServer(book, data.clients) : false;
           // Le curseur n'avance que s'il avance vraiment : sur une réponse
           // incohérente, mieux vaut relire deux fois que sauter des fiches.
-          if (data.cursor > since) setCursor(book, data.cursor);
+          if (data.cursor > since && !setCursor(book, data.cursor)) {
+            var error = new Error('cursor-storage-unavailable');
+            try { window.dispatchEvent(new CustomEvent('kiwi:clients-sync', { detail: { merchant: book, error: error.message } })); } catch (_) {}
+            if (cb) cb(changed, error); return;
+          }
           if (data.more && data.cursor > since && (depth || 0) < 20) {
             pull(book, function (more, error) { if (cb) cb(changed || more, error); }, (depth || 0) + 1);
             return;

@@ -90,7 +90,7 @@ function renderKpiBand() {
       const pressingStats = (() => {
         const ops = window.KiwiPressingOps;
         if (!ops?.dropoffStats || (activeVenue?.subtype || activeVenue?.trade) !== 'pressing') return null;
-        try { if (!ops.read().length) return null; } catch (_) { return null; }
+        try { if (ops.loaded ? !ops.loaded() : !ops.read().length) return null; } catch (_) { return null; }
         return (from, to) => ops.dropoffStats(from, to);
       })();
       const txNow = pressingStats ? pressingStats(wFrom, wTo) : null;

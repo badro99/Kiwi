@@ -75,6 +75,15 @@
     } catch (_) { return []; }
   }
 
+  function loaded() {
+    try {
+      if (orderMemory.has(key()) || archiveMemory.has(storeKey())) return true;
+      var raw = localStorage.getItem(key());
+      if (raw !== null && Array.isArray(JSON.parse(raw))) return true;
+      var full = JSON.parse(localStorage.getItem(storeKey()) || 'null');
+      return !!(full && Array.isArray(full.orders));
+    } catch (_) { return false; }
+  }
   function number(n) { return Math.max(0, Number(n) || 0); }
   function text(s, max) { return String(s == null ? '' : s).trim().slice(0, max || 100); }
   function iso(d) {
@@ -322,7 +331,7 @@
 
   function bindCloud() {
     if (cloudHandle) {
-      projectFull(readFull());
+      if (loaded()) projectFull(readFull());
       cloudHandle.bind();
       startLive();
       return cloudHandle;
@@ -334,7 +343,7 @@
       isEmpty: function (doc) { return !doc || (!(doc.orders || []).length && !(doc.customers || []).length && !(doc.cancellations || []).length); },
       onPulled: projectFull
     });
-    projectFull(readFull());
+    if (loaded()) projectFull(readFull());
     cloudHandle.bind();
     startLive();
     return cloudHandle;
@@ -399,7 +408,7 @@
   /* `orderStatus` is exported so the owner dashboard derives readiness the same
      way `summary()` does. The snapshot's stored `status` is frozen at sync time;
      anything reading it after an order crosses `readyAt` gets a stale answer. */
-  window.KiwiPressingOps = { configureNumbering: configureNumbering, openNotification: openNotification, notification: notification, notificationLine: notificationLine, markNotified: markNotified, read: read, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud, cancelOrder: cancelOrder, orderStatus: orderStatus, dropoffStats: dropoffStats, mergeDocuments: mergeDocuments };
+  window.KiwiPressingOps = { configureNumbering: configureNumbering, openNotification: openNotification, notification: notification, notificationLine: notificationLine, markNotified: markNotified, read: read, loaded: loaded, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud, cancelOrder: cancelOrder, orderStatus: orderStatus, dropoffStats: dropoffStats, mergeDocuments: mergeDocuments };
 })();
 
 /* ── Garment product art (formerly assets/pressing-garment-icons.js) ──────────

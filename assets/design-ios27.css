@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
  * KIWI · DESIGN iOS-27 TIER — the WWDC-2026 Liquid Glass refinements,
- * translated into the Kiwi palette. EXPERIMENTAL · gated behind PIN 1111.
+ * translated into the Kiwi palette. Enabled by default alongside the 2026 skin.
  *
  * Grounded in Apple's June 8, 2026 announcements (macrumors.com/2026/06/08/
  * apple-announces-liquid-glass-improvements/):
@@ -12,7 +12,7 @@
  *
  * LAYERING: every rule needs BOTH `body.design-2026.design-ios27` — this file
  * refines the stable 2026 skin, it never replaces it. With the class absent
- * (any PIN except 1111) the file is inert. Revert: KiwiDesignIOS27.disable()
+ * the file is inert. Revert: KiwiDesignIOS27.disable()
  * in the console, or delete this <link> + <script> in dashboard.html.
  * ─────────────────────────────────────────────────────────────────────────── */
 

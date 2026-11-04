@@ -76,7 +76,7 @@
   var retryTimer = null;
   var retryDelay = 0;
   function store() { try { return window.localStorage || null; } catch (_) { return null; } }
-  var copies = {};
+  var copies = {}, recovery = {}, recoveryBlocked = {};
   var saving = Promise.resolve();
   function saveTask(fn) {
     var task = saving.then(fn, fn);
@@ -115,19 +115,38 @@
     });
   }
   function records(owner) {
-    var local = [];
-    try { local = JSON.parse((store() && store().getItem(QUEUE_PREFIX + owner)) || '[]'); } catch (_) { console.warn("[employee-live] records failed"); }
-    var history = [];
-    try { history = JSON.parse((store() && store().getItem(QUEUE_PREFIX + owner + ':outcomes')) || '[]'); } catch (_) { console.warn("[employee-live] records failed"); }
+    function read(key) {
+      var raw;
+      try {
+        raw = store().getItem(key);
+        var rows = JSON.parse(raw || '[]');
+        if (!Array.isArray(rows)) throw new Error('queue-shape');
+        return rows;
+      } catch (_) {
+        recovery[owner] = true;
+        if (raw != null) {
+          try {
+            var stamp = Date.now(), backup = key + ':quarantine:' + stamp;
+            while (store().getItem(backup) !== null) backup = key + ':quarantine:' + (++stamp);
+            store().setItem(backup, raw);
+            store().setItem(QUEUE_PREFIX + owner + ':recovery', '1');
+            store().removeItem(key);
+          } catch (_) { recoveryBlocked[owner] = true; }
+        } else recoveryBlocked[owner] = true;
+        return [];
+      }
+    }
+    var local = read(QUEUE_PREFIX + owner), history = read(QUEUE_PREFIX + owner + ':outcomes');
+    try { if (store().getItem(QUEUE_PREFIX + owner + ':recovery')) recovery[owner] = true; } catch (_) {}
     return merge(merge(local, history), copies[owner] || []);
   }
   function needsCorrection(i) { return !i.done && serverNow() - Number(i.at) > 12 * 3600000; }
   function readQueue(owner) { return records(owner).filter(function (i) { return !i.done && !needsCorrection(i); }); }
   // Même couche de langue que le planning employé : document.documentElement.lang.
   function correctionWords(lang) {
-    if (lang === 'ar') return { title: 'تسجيل حضور يحتاج إلى تصحيح من المسؤول', in: 'حضور', out: 'انصراف', dismiss: 'إخفاء هذا التسجيل من الهاتف' };
-    if (lang === 'en') return { title: 'Punch to be corrected by a manager', in: 'Clock in', out: 'Clock out', dismiss: 'Dismiss this punch from this phone' };
-    return { title: 'Pointage à corriger par un responsable', in: 'Arrivée', out: 'Départ', dismiss: 'Masquer ce pointage sur ce téléphone' };
+    if (lang === 'ar') return { title: 'تسجيل حضور يحتاج إلى تصحيح من المسؤول', in: 'حضور', out: 'انصراف', dismiss: 'إخفاء هذا التسجيل من الهاتف', unreadable: 'تعذر قراءة سجل الحضور. احتُفظ بالبيانات للاستعادة، تواصل مع المسؤول.' };
+    if (lang === 'en') return { title: 'Punch to be corrected by a manager', in: 'Clock in', out: 'Clock out', dismiss: 'Dismiss this punch from this phone', unreadable: 'Attendance storage could not be read. Data is retained for recovery, contact your manager.' };
+    return { title: 'Pointage à corriger par un responsable', in: 'Arrivée', out: 'Départ', dismiss: 'Masquer ce pointage sur ce téléphone', unreadable: 'Le stockage des pointages est illisible. Les données sont conservées pour récupération, contactez votre responsable.' };
   }
   function renderCorrections() {
     if (!document.createElement || !document.body) return;
@@ -136,7 +155,7 @@
     var panel = document.getElementById('employee-punch-corrections');
     if (panel) panel.remove();
     var items = queueOwner ? records(queueOwner).filter(needsCorrection) : [];
-    if (!items.length) return;
+    if (!items.length && !recovery[queueOwner]) return;
     var lang = document.documentElement.lang, words = correctionWords(lang);
     panel = document.createElement('section');
     panel.id = 'employee-punch-corrections';
@@ -145,6 +164,11 @@
     panel.className = 'employee-punch-corrections';
     panel.tabIndex = -1;
     var title = document.createElement('h2'); title.textContent = words.title; panel.appendChild(title);
+    if (recovery[queueOwner]) {
+      var notice = document.createElement('p'); notice.setAttribute('role', 'alert');
+      notice.textContent = words.unreadable;
+      panel.appendChild(notice);
+    }
     items.forEach(function (item) {
       var row = document.createElement('div'), label = document.createElement('p');
       label.textContent = [item.kind === 'clock-in' ? words.in : words.out, new Date(Number(item.at)).toLocaleString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { timeZone: (globalThis.KiwiZoneLaw?.effectiveZone(lastData && lastData.store && lastData.store.timezone || 'Africa/Casablanca', Number(item.at)) || (lastData && lastData.store && lastData.store.timezone || 'Africa/Casablanca')), year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })].join(' · ');
@@ -170,6 +194,7 @@
     items = items.filter(function (i) { return !i.done || Number(i.at) > horizon || (i.outcome && i.outcome.result === 'correction-dismissed'); });
     var pending = items.filter(function (i) { return !i.done; });
     try {
+      if (recoveryBlocked[owner]) throw new Error('queue-recovery-required');
       var history = items.filter(function (i) { return i.done; });
       if (history.length) store().setItem(QUEUE_PREFIX + owner + ':outcomes', JSON.stringify(history));
       else store().removeItem(QUEUE_PREFIX + owner + ':outcomes');

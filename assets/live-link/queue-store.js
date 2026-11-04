@@ -22,7 +22,7 @@
   var outboxInitPromise = null, outboxSubscribed = false;
 /* <</queue:state:4>> */
 /* <<queue:state:5>> */
-  var flushing = false, queueStorageError = false, queueRecoveryError = false, queueBlocked = false;
+  var flushing = false, queueStorageError = false, queueRecoveryError = false, queueBlocked = false, queueReadError = false;
 /* <</queue:state:5>> */
 /* <<queue:state:6>> */
   var flushStartedAt = 0;
@@ -39,7 +39,8 @@
 /* <<queue:qRead>> */
 function qRead() {
     var raw;
-    try { raw = localStorage.getItem(Q_KEY); } catch (_) { return []; }   // unreadable storage: writes report it
+    try { raw = localStorage.getItem(Q_KEY); } catch (_) { queueReadError = true; queueBlocked = true; return []; }
+    if (queueReadError) { queueReadError = false; queueBlocked = false; }
     if (raw === null) return [];
     try {
       var a = JSON.parse(raw);
@@ -156,10 +157,10 @@ function queueStatus() {
         sending: outboxStatus.sending,
         foreign: fallback.length - localDebt.length,
         total: (outboxStatus.total || 0) + localDebt.length,
-        storageError: !!(outboxStatus.storageError || queueStorageError || queueRecoveryError || quarantined()),
+        storageError: !!(outboxStatus.storageError || queueReadError || queueStorageError || queueRecoveryError || quarantined()),
         engine: 'indexeddb',
         lastStatus: outboxStatus.lastStatus || lastSyncStatus || 0,
-        lastError: (queueRecoveryError || quarantined()) ? 'queue-recovery-required' : queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || ''),
+        lastError: queueReadError ? 'queue-read-unavailable' : (queueRecoveryError || quarantined()) ? 'queue-recovery-required' : queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || ''),
         lastAttemptAt: outboxStatus.lastAttemptAt || 0,
         oldestPendingAt: oldest === Infinity ? 0 : oldest,
         lastAcknowledgedAt: ackAt,
@@ -175,10 +176,10 @@ function queueStatus() {
       held: current.filter(function (x) { return x && x._blocked && x._serverHeld; }).length,
       foreign: q.length - current.length,
       total: current.length,
-      storageError: !!(queueStorageError || queueRecoveryError || quarantined()),
+      storageError: !!(queueReadError || queueStorageError || queueRecoveryError || quarantined()),
       engine: 'localstorage',
       lastStatus: lastSyncStatus || 0,
-      lastError: (queueRecoveryError || quarantined()) ? 'queue-recovery-required' : (lastSyncError || ''),
+      lastError: queueReadError ? 'queue-read-unavailable' : (queueRecoveryError || quarantined()) ? 'queue-recovery-required' : (lastSyncError || ''),
       lastAttemptAt: current.reduce(function (latest, row) { return Math.max(latest, +(row && row._lastAttemptAt) || 0); }, 0),
       oldestPendingAt: (function () {
         var oldest = current.reduce(function (at, row) { return Math.min(at, Number(row && row.ts) || Infinity); }, Infinity);

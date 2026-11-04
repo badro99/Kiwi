@@ -21,10 +21,6 @@ export async function onRequestPost({ request, env }) {
   let till = false;
   try { till = await isTillFor(request, env, merchant); } catch (_) { till = false; }
   if (!till) return json({ error: 'till-required' }, 403);
-  try { await env.DB.prepare('ALTER TABLE merchant_config ADD COLUMN timezone TEXT').run(); }
-  catch (error) { if (!/duplicate column/i.test(String(error && error.message || error))) return json({ error: 'unavailable' }, 503); }
-  try { await env.DB.prepare('ALTER TABLE merchant_config ADD COLUMN business_cutoff INTEGER').run(); }
-  catch (error) { if (!/duplicate column/i.test(String(error && error.message || error))) return json({ error: 'unavailable' }, 503); }
   try {
     await env.DB.prepare('UPDATE merchant_config SET timezone = ? WHERE merchant = ? AND (timezone IS NULL OR timezone <> ?)')
       .bind(zone, merchant, zone).run();

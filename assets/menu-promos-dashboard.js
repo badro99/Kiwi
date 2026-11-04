@@ -9,7 +9,7 @@
  * The form edits the name, the discount, the scope (whole menu or
  * categories) and when it runs: weekdays, daily hours (overnight allowed) and
  * optional first and last days. The rule in menu-promos.js reads the same
- * fields on the till, in the waiter app and on the server, in Morocco time on
+ * fields on the till, in the waiter app and on the server, in the configured store zone on
  * the 05:00 business day. */
 (function () {
   'use strict';
@@ -47,7 +47,7 @@
       formulaNote: 'Les formules gardent leur propre prix et ne sont jamais réduites.',
       when: 'Quand', daysLbl: 'Jours', daysHint: 'aucun jour choisi = tous les jours',
       hours: 'Heures', hoursHint: 'vides = toute la journée',
-      hoursNote: 'En heure du Maroc. Une fin avant le début passe minuit : 22:00 → 01:00 compte pour le jour où elle a commencé.',
+      hoursNote: 'Fuseau du magasin : {zone}. Une fin avant le début passe minuit : 22:00 → 01:00 compte pour le jour où elle a commencé.',
       startAria: 'Heure de début', endAria: 'Heure de fin',
       dates: 'Dates', datesHint: 'facultatif', fromAria: 'Premier jour', toAria: 'Dernier jour',
       preview: 'Active', clearWhen: 'Toujours active',
@@ -77,7 +77,7 @@
       formulaNote: 'Set menus keep their own price and are never discounted.',
       when: 'When', daysLbl: 'Days', daysHint: 'no day picked = every day',
       hours: 'Hours', hoursHint: 'empty = all day',
-      hoursNote: 'Morocco time. An end before the start runs past midnight: 22:00 → 01:00 counts for the day it started.',
+      hoursNote: 'Store time zone: {zone}. An end before the start runs past midnight: 22:00 → 01:00 counts for the day it started.',
       startAria: 'Start time', endAria: 'End time',
       dates: 'Dates', datesHint: 'optional', fromAria: 'First day', toAria: 'Last day',
       preview: 'Active', clearWhen: 'Always on',
@@ -107,7 +107,7 @@
       formulaNote: 'الوجبات المركّبة تحتفظ بسعرها ولا تُخفَّض أبداً.',
       when: 'متى', daysLbl: 'الأيام', daysHint: 'بدون اختيار = كل يوم',
       hours: 'الساعات', hoursHint: 'فارغة = طوال اليوم',
-      hoursNote: 'بتوقيت المغرب. نهاية قبل البداية تتجاوز منتصف الليل: 22:00 ← 01:00 تُحسب لليوم الذي بدأت فيه.',
+      hoursNote: 'المنطقة الزمنية للمتجر: {zone}. نهاية قبل البداية تتجاوز منتصف الليل: 22:00 ← 01:00 تُحسب لليوم الذي بدأت فيه.',
       startAria: 'ساعة البداية', endAria: 'ساعة النهاية',
       dates: 'التواريخ', datesHint: 'اختياري', fromAria: 'اليوم الأول', toAria: 'اليوم الأخير',
       preview: 'نشط', clearWhen: 'نشط دائماً',
@@ -206,7 +206,7 @@
           <input class="kf-input" type="time" step="900" data-mp-field="start" aria-label="${esc(tr('startAria'))}" value="${esc(draft.start || '')}"/>
           <input class="kf-input" type="time" step="900" data-mp-field="end" aria-label="${esc(tr('endAria'))}" value="${esc(draft.end || '')}"/>
         </div>
-        <p class="mp-note">${esc(tr('hoursNote'))}</p>
+        <p class="mp-note">${esc(tr('hoursNote').replace('{zone}', P().clock().zone))}</p>
         <div class="kf-label">${esc(tr('dates'))} <span class="mp-hint">· ${esc(tr('datesHint'))}</span></div>
         <div class="mp-row">
           <input class="kf-input" type="date" data-mp-field="from" aria-label="${esc(tr('fromAria'))}" value="${esc(draft.from || '')}"/>

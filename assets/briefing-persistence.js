@@ -31,7 +31,8 @@
     var settings = validSettings(value.settings), clocks = {};
     Object.keys(settings).forEach(function (key) {
       var at = value.settingsFieldsAt && value.settingsFieldsAt[key];
-      clocks[key] = typeof at === 'number' && Number.isFinite(at) ? at : Number(value.settingsAt) || 0;
+      var clock = typeof at === 'number' && Number.isFinite(at) ? at : Number(value.settingsAt) || 0;
+      clocks[key] = clock > Date.now() ? 0 : clock;
     });
     return { settings: settings, settingsAt: Number(value.settingsAt) || 0, settingsFieldsAt: clocks, days: days.filter(function (row) {
       if (seen[row.day]) return false;
@@ -81,7 +82,7 @@
     writeLocal(doc);
     var key = localKey() + ':cloud-save', handle = cloud, venue = slug();
     var id = String(Date.now()) + ':' + Math.random().toString(36).slice(2);
-    try { localStorage.setItem(key, id); } catch (_) { localKept = false; render(); return Promise.resolve({ ok: false, id: id, error: 'local-save-unavailable' }); }
+    try { localStorage.setItem(key, id); } catch (_) { localKept = false; render(); }
     render();
     return Promise.resolve().then(function () {
       if (!handle) throw new Error('cloud-unavailable');
