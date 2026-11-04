@@ -2087,7 +2087,7 @@ section('Whole-project regressions');
     'password-policy-test.mjs',
     'plan-tier-test.mjs',
     'plan-catalog-test.mjs',
-    'signup-plan-test.mjs',
+    'signup-plan-test.mjs', 'auth-error-copy-test.mjs',
     'signup-slug-scan-test.mjs',
     'signup-renamed-slug-test.mjs',
     'starter-copy-test.mjs',
