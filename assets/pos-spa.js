@@ -1569,7 +1569,7 @@
           ${full
             ? `<button class="sp-btn primary" data-sp-renew="${cu.id}"><i data-lucide="sparkles"></i>Renouveler${ffSaving(f, cu.size) > 0 ? `, économie ${fmtMAD(ffSaving(f, cu.size))}` : ''}</button>`
             : `<button class="sp-btn secondary" data-sp-fiche-cl="${c.id}">Fiche</button>
-               <button class="sp-btn secondary" data-sp-exp="${cu.id}"><i data-lucide="calendar-clock"></i>Modifier la validité</button>
+               <button class="sp-btn secondary" data-sp-exp="${cu.id}"><i data-icon="calendar_month"></i>Modifier la validité</button>
                <button class="sp-btn primary" data-sp-punch="${cu.id}"><i data-lucide="check"></i>Décompter une séance</button>`}
         </div>
       </div>
@@ -1629,7 +1629,7 @@
       const exp = e.target.closest('[data-sp-exp]');
       if (exp) {
         const cu = CURES.find((x) => x.id === exp.dataset.spExp);
-        if (cu) import('./pos-spa-cure-expiry.js?v=2').then((m) => m.openExpiryEditor({ cure: cu, label: `${cureName(cu)} · ${CL[cu.clientId].name}`, el: $('#sp-punchm', root), openVeil, closeVeil, icons, toast, esc,
+        if (cu) import('./pos-spa-cure-expiry.js?v=3').then((m) => m.openExpiryEditor({ cure: cu, label: `${cureName(cu)} · ${CL[cu.clientId].name}`, el: $('#sp-punchm', root), openVeil, closeVeil, icons, toast, esc,
           onSaved: () => { queueIfOffline('Validité cure'); if (state.view === 'cures') { renderCures(); icons(); } } }));
         return;
       }

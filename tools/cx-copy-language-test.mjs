@@ -66,7 +66,7 @@ for (const locale of ['fr', 'en', 'ar']) {
  await test('return lookup empty/search results ' + locale, () => {
    for (const q of ['', 'fixture']) {
      const panel = { innerHTML: '' }, nodes = new Map(), state = { retQuery: q, retDate: '2026-11-04' };
-     const ctx = vm.createContext({ root: {}, state, SALES: [], RETAIN_DAYS: 7, Date, tr, esc: String, retDayKey: () => '2026-11-04', retShiftDay: () => '2026-11-03', activeAvoirs: () => [], icons() {},
+     const ctx = vm.createContext({ root: {}, state, SALES: [], RETAIN_DAYS: 7, retainDays: () => 7, windowSentence: () => '', outsideWindow: () => false, Date, tr, esc: String, retDayKey: () => '2026-11-04', retShiftDay: () => '2026-11-03', activeAvoirs: () => [], icons() {},
        $: id => id.startsWith('[data-bq-panel') ? panel : (nodes.has(id) ? nodes.get(id) : (nodes.set(id, {}), nodes.get(id))) });
      vm.runInContext(fn('assets/pos-boutique/checkout.js', 'renderEchanges'), ctx); ctx.renderEchanges();
      assert.ok(panel.innerHTML.includes(tr(q ? 'Vérifiez le n° de ticket ou le téléphone.' : 'Retrouver une vente')));

@@ -46,7 +46,7 @@ function world(vertical) {
     // The recipient form of a delivery part is a browser edge: it submits a
     // filled card at once, and the real done() → settle() books the money.
     bqDeliveryCard:(el,o)=>o.done({...DELIVERY_CARD}),mzDeliveryCard:(el,o)=>o.done({...DELIVERY_CARD},{}),
-    ozonConnected:()=>false,ozonCities:()=>[],clById:id=>({id,name:'Test'}),
+    retainDays:()=>7,windowDays:()=>7,outsideWindow:()=>false,ozonConnected:()=>false,ozonCities:()=>[],clById:id=>({id,name:'Test'}),
   });c.window=c;c.KiwiLive={saleIdFor:({id})=>id};
   const core=`assets/pos-${vertical}.js`, checkout=`assets/pos-${vertical}/checkout.js`;
   load(c,`assets/pos-${vertical}/sales.js`,['shelf']);

@@ -3570,7 +3570,7 @@
       "par personne": ["per person", "للشخص"],
       "par trajet": ["per trip", "للرحلة"],
       "ETA": ["ETA", "وقت الوصول المتوقع"],
-      "Remise B2B –{n} %": ["B2B discount –{n} %", "تخفيض المهنيين –{n} %"],
+      "Remise B2B –{x} %": ["B2B discount –{x} %", "تخفيض المهنيين –{x} %"],
       "{x}, compte B2B, remise –{n} % appliquée": ["{x}, B2B account, –{n} % discount applied", "{x}، حساب مهني، تم تطبيق تخفيض –{n} %"],
       "{x} enregistrée, prête {x}": ["{x} saved, ready {x}", "تم تسجيل {x}، جاهز {x}"],
       "Acompte {n} MAD encaissé, solde {n} MAD au retrait": ["Deposit {n} MAD collected, balance {n} MAD at pickup", "تم استخلاص تسبيق {n} MAD، الباقي {n} MAD عند الاستلام"],

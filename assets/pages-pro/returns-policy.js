@@ -6,6 +6,7 @@
  * commerçant (assets/merchant-policies.js, 0 à 90 jours, 7 par défaut) que la
  * caisse applique et que le serveur relit au remboursement. 0 = aucun retour
  * sans l'accord d'un responsable. */
+import '../merchant-policies.js?v=3';
 const L = (fr, en, ar) => { const l = window.KiwiI18n?.getLang?.(); return l === 'en' ? en : l === 'ar' ? ar : fr; };
 const policies = () => window.KiwiPolicies;
 const field = () => document.querySelector('#retPolicy input[type="number"]');

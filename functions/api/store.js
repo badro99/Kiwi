@@ -577,7 +577,7 @@ const PENDING_SETUP_FEATURES = new Set([
   'team', 'floorplan', 'services', 'rooms', HOTEL_UNITS_FEATURE, 'kds',
   'foodtrade', 'discountpolicy', 'fidelity', 'recipes', 'costs', 'promotions', 'suppliers',
 ]);
-const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'policies', 'monthreport', 'foodtrade', 'guestpage', STOREFRONT_FEATURE]);
+const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'monthreport', 'policies', 'foodtrade', 'guestpage', STOREFRONT_FEATURE]);
 
 /* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
  * `entitledMerchant` SANS `allowTill` répond exactement à ça : la session du

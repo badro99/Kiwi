@@ -4,6 +4,7 @@
  * lu par la caisse du pressing au prochain dépôt d'un client B2B. Une commande
  * déjà ouverte garde son taux. La fiche d'un client B2B peut porter son propre
  * taux. Le document vit dans `policies` (assets/merchant-policies.js). */
+import './merchant-policies.js?v=3';
 const L = (fr, en, ar) => { const l = window.KiwiI18n?.getLang?.(); return l === 'en' ? en : l === 'ar' ? ar : fr; };
 const policies = () => window.KiwiPolicies;
 

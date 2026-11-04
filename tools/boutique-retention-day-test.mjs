@@ -8,7 +8,7 @@ const src = fs.readFileSync('assets/pos-boutique.js', 'utf8');
 const pick = (...n) => n.map((x) => split.declaration(src, x)).join('\n');
 // Jour d'activité = date UTC de (t - 5 h) : la boutique de test vit en UTC.
 const businessDay = (t) => new Date(t - 5 * 3600000).toISOString().slice(0, 10);
-const base = { window: { KiwiDayReport: { businessDay } }, Date, Number, Math, isNaN, RegExp, String, RETAIN_DAYS: 7 };
+const base = { window: { KiwiDayReport: { businessDay } }, Date, Number, Math, isNaN, RegExp, String, RETAIN_DAYS: 7, retainDays: () => 7 };
 const ctx = vm.createContext(base);
 vm.runInContext(pick('retDayKey', 'retShiftDay', 'withinRetention').replace('function withinRetention', 'const RETAIN_DAYS = 7;\nfunction withinRetention') + ';this.within=withinRetention;this.key=retDayKey;this.shift=retShiftDay;', ctx);
 const oldest = ctx.shift(ctx.key(Date.now()), -6);
@@ -24,7 +24,7 @@ const feed = { sales: [
   { ref: 'old', ts: oldestStart - 3600000, lines: [{ x: 1 }], method: 'cash' },
   { ref: 'edge', ts: oldestStart + 3600000, lines: [{ x: 1 }], method: 'cash' } ] };
 const sctx = vm.createContext({ window: { KiwiDayReport: { businessDay }, KiwiPosSale: { feedDay: (u) => { urls.push(u); return Promise.resolve(feed); } } },
-  Date, Number, Math, isNaN, RegExp, String, Array, encodeURIComponent, fetch() {}, IS_DEMO: false, merchantSlug: () => 'm', SALES, RETAIN_DAYS: 7,
+  Date, Number, Math, isNaN, RegExp, String, Array, encodeURIComponent, fetch() {}, IS_DEMO: false, merchantSlug: () => 'm', SALES, RETAIN_DAYS: 7, retainDays: () => 7,
   remoteLine: (l) => l, srvMethod: (m) => [m], remoteMoney: () => ({}), persistDay() {}, root: null, state: {}, renderEchanges() {}, renderBadges() {}, icons() {} });
 vm.runInContext(pick('retDayKey', 'retShiftDay', 'syncReturnSales').replace('function syncReturnSales', 'function syncReturnSales') + ';this.sync=syncReturnSales;', sctx);
 await sctx.sync();
