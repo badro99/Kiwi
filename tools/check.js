@@ -1531,7 +1531,7 @@ section('Whole-project regressions');
     'caisse-pairing-recovery-test.mjs',
     'caisse-handoff-demo-reload-test.mjs',
     'caisse-terminal-recovery-test.mjs',
-    'caisse-offline-pin-test.mjs',
+    'caisse-offline-pin-test.mjs', 'offline-pin-budget-test.mjs',
     'offline-clock-rollback-test.mjs',
     'caisse-repair-pin-venue-test.mjs',
     'audit-remediation-money-test.mjs',

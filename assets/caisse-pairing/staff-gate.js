@@ -1,4 +1,3 @@
-
   /* ── staff PIN gate (F8) ─────────────────────────────────────────────────
    * Pairing binds the DEVICE to a store; it must not also authenticate the
    * PERSON. Before the register becomes usable, require one of the store's staff
@@ -25,7 +24,6 @@
     return pinVenue && pinVenue.merchant === paired.merchant ? pinVenue : paired;
   }
   function resetPinState() { pinVenue = null; pinList = null; pinBuf = ''; }
-
   /* ── who is at the till right now ─────────────────────────────────────────
    * A staff code is a PERSON, not just a door code: /api/pin/verify answers with
    * the {id, name, role} the code proved, so unlocking says exactly who opened
@@ -124,7 +122,6 @@
   function bootWithPin(venue) {
     try { sessionStorage.removeItem('kiwi:tillOperator:v1'); } catch (_) {} askStaff(venue, function () { bootVertical(venue); });   // un vrai poste : plus de vue opérateur · none configured → fail-soft
   }
-
   /* God mode may inspect a selected store's till without borrowing an employee
    * PIN. Never trust ?op=1 or the hand-off by themselves: /api/me validates the
    * httpOnly named-operator session and confirms that it is scoped to THIS slug.
@@ -143,7 +140,6 @@
       })
       .catch(function () { bootWithPin(venue); });
   }
-
   /* A locked terminal must re-ask WHO is taking over, not just "a code".
    * KiwiPosDispatch.lock() calls __kiwiPinReset(), which restores the NATIVE pad
    * — the one that accepts any four digits and identifies nobody — so a shift
@@ -279,12 +275,12 @@
         refuse(mins ? 'Trop d’essais. Réessayez dans ' + mins + ' min.' : 'Trop d’essais. Réessayez dans quelques minutes.');
         return;
       }
+      if (offlineBudget.check(merchant)) { pinBuf = ''; renderPinDots(); return; }
       refuse(navigator.onLine === false
         ? 'Code non disponible hors ligne. Connectez-vous une fois avec ce code.'
         : 'Code incorrect ou impossible à vérifier.');
     }).finally(function () { pinSubmitting = false; });
   }
-
   // Delegated pad handling (survives re-renders of #cp-screen / #cp-pin-screen).
   document.addEventListener('click', function (e) {
     if (e.target && e.target.id === 'cp-pin-retry') { askStaff(activeVenue(), null); return; }

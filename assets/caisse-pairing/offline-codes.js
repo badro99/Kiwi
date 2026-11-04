@@ -1,4 +1,3 @@
-
   var TERMINAL_KEY = 'kiwi:caisse:terminal-id:v1';
   var OFFLINE_PIN_KEY = 'kiwi:caisse:offline-pins:v1:';
   var OFFLINE_PIN_TTL = 72 * 60 * 60 * 1000;
@@ -11,14 +10,12 @@
     set(TERMINAL_KEY, current);
     return current;
   }
-
   function env() { return window.KiwiEnv || { demosAllowed: true }; }
   function hosted() { return env().demosAllowed === false; }
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); return true; } catch (_) { console.warn("[pairing] offline identity storage unavailable"); toast((window.KiwiCaisseLang || { tr: function (s) { return s; } }).tr("Accès hors ligne non enregistré. Une connexion sera nécessaire au prochain déverrouillage.")); return false; } }
   function del(k) { try { localStorage.removeItem(k); } catch (_) {} }
   function readMap() { try { return JSON.parse(ls('kiwiPairings') || '{}') || {}; } catch (_) { return {}; } }
-
   /* A real till must keep authorizations usable during a network outage, but
    * never bank the four-digit code itself. After the server proves a code, keep
    * a tenant-scoped PBKDF2-SHA-256 verifier plus the proven identity for 72
@@ -74,6 +71,7 @@
   function rememberOfflinePin(merchant, code, staff, expiresAt) {
     var epoch = offlinePinEpoch, provenAt = (window.KiwiTrustedClock || Date).now();
     if (!staff || !/^\d{4}$/.test(String(code || ''))) return Promise.resolve(staff);
+    offlineBudget.check(merchant, false, true);
     // In an insecure context subtle is absent: retain the existing behaviour
     // (no local verification or new cache entry), never a JS PBKDF2 fallback.
     if (!hasSubtle()) return Promise.resolve(staff);
@@ -102,6 +100,7 @@
   }
   function verifyOfflinePin(merchant, code) {
     var epoch = offlinePinEpoch;
+    var locked = offlineBudget.check(merchant); if (locked) { offlineBudget.notice(locked); return Promise.resolve(null); } /* refused, not counted: retrying never lengthens a lockout */
     if (!hasSubtle()) return Promise.resolve(null);
     if (window.KiwiTrustedClock && window.KiwiTrustedClock.rolledBack()) return Promise.resolve(null); /* clock moved back: wait for the server */
     var rows = offlinePinRows(merchant);
@@ -121,5 +120,5 @@
         var who = Object.assign({}, row.staff, { provenAt: Number(row.provenAt || (Number(row.expiresAt) - 7 * 86400000)), offline: true });
         return who;
       }).catch(function () { return null; });
-    })).then(function (matches) { return matches.find(Boolean) || null; });
+    })).then(function (matches) { var who = matches.find(Boolean) || null; var wait = offlineBudget.check(merchant, !who, !!who); if (wait) offlineBudget.notice(wait); return who; });
   }

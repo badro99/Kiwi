@@ -48,7 +48,6 @@
       })
       .finally(function () { clearTimeout(timer); });
   }
-
   /* The 2027 pad's request (assets/kit/pin-flow.js): the server's answer as
      it came, status and body, so every row of §10.2's response table can be
      told apart. A proven code refreshes its salted row, as verifyCode does.

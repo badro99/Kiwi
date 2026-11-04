@@ -3,14 +3,14 @@
   "bundles": [
     {
       "file": "assets/caisse-pairing.js",
-      "sha256AtSplit": "3473c9ea78c615895c897c0fab70ca78fb50937a97f7b4919dce2d03181c0268",
+      "sha256AtSplit": "e17a395d6e0b2df000741c5ac76f9f0bd21b8247c655c3ba99357c2f178eda8b",
       "parts": [
         {
           "file": "assets/caisse-pairing/head.js",
           "concern": "header and the theme set before first paint",
           "lines": [
             1,
-            32
+            30
           ],
           "declares": []
         },
@@ -18,8 +18,8 @@
           "file": "assets/caisse-pairing/offline-codes.js",
           "concern": "terminal id, local storage helpers and the offline staff-code cache (key derivation, digest comparison)",
           "lines": [
-            33,
-            156
+            31,
+            154
           ],
           "declares": [
             "TERMINAL_KEY",
@@ -45,11 +45,23 @@
           ]
         },
         {
+          "file": "assets/caisse-pairing/offline-budget.js",
+          "concern": "persisted offline keypad budget",
+          "lines": [
+            155,
+            176
+          ],
+          "declares": [
+            "offlineBudgets",
+            "offlineBudget"
+          ]
+        },
+        {
           "file": "assets/caisse-pairing/pairing-state.js",
           "concern": "is the till paired, to which venue, the dashboard hand-off and the routing to the right vertical",
           "lines": [
-            157,
-            260
+            177,
+            275
           ],
           "declares": [
             "isPaired",
@@ -72,8 +84,8 @@
           "file": "assets/caisse-pairing/pairing-transport.js",
           "concern": "applying, redeeming, repairing, recovering and removing a pairing with the server",
           "lines": [
-            261,
-            463
+            276,
+            473
           ],
           "declares": [
             "applyPairing",
@@ -94,8 +106,8 @@
           "file": "assets/caisse-pairing/pairing-pad.js",
           "concern": "the pairing code pad: dots, keys, styles, submit and its replies",
           "lines": [
-            464,
-            706
+            474,
+            709
           ],
           "declares": [
             "buf",
@@ -125,8 +137,8 @@
           "file": "assets/caisse-pairing/staff-gate.js",
           "concern": "who is at the till: staff session, the code pad, boot with a code or as an operator",
           "lines": [
-            707,
-            1017
+            710,
+            1016
           ],
           "declares": [
             "pinBuf",
@@ -158,8 +170,8 @@
           "file": "assets/caisse-pairing/boot.js",
           "concern": "the till proof check and the boot sequence",
           "lines": [
-            1018,
-            1127
+            1017,
+            1126
           ],
           "declares": [
             "tillProofChecked",
@@ -171,8 +183,8 @@
           "file": "assets/caisse-pairing/verify.js",
           "concern": "server verification of a staff or manager code and approvals",
           "lines": [
-            1128,
-            1214
+            1127,
+            1213
           ],
           "declares": [
             "lastVerify",
@@ -186,8 +198,8 @@
           "file": "assets/caisse-pairing/api.js",
           "concern": "window.KiwiCaissePairing and the start",
           "lines": [
-            1215,
-            1285
+            1214,
+            1283
           ],
           "declares": [
             "window.KiwiCaissePairing"

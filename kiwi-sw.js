@@ -396,7 +396,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=26',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=93',
+  '/assets/caisse-lang.js?v=95',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=8',
@@ -603,7 +603,7 @@ var SHELL = [
   '/assets/refund-split.js?v=2',
   '/assets/pos-maison/inventory.js?v=71',
   '/assets/pos-maison.js?v=154',
-  '/assets/caisse-pairing.js?v=58',
+  '/assets/caisse-pairing.js?v=63',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
