@@ -319,6 +319,7 @@
     if (nav === 'pressing-services') requestAnimationFrame(function () {
       var editor = document.querySelector('[data-pce-host]');
       if (editor && window.KiwiPressingCatalog) KiwiPressingCatalog.mountEditor(editor);
+      if (editor) import('./pressing-b2b-card.js?v=3').then(function (m) { return m.mount(editor); }).catch(function () {});   // remise B2B du commerçant
     });
   }
   /* Une relecture périodique ne doit pas reconstruire l'éditeur de tarifs sous

@@ -8,7 +8,7 @@ const map = JSON.parse(read('tools/fixtures/pressing/split.json'));
 export function violations(source, contract) {
   const errors = [], ast = ts.createSourceFile('part.js', source, ts.ScriptTarget.Latest, true);
   function walk(n) {
-    if (ts.isImportDeclaration(n) && !(contract.name === 'custody' ? /^\.\/(deposit|workshop|pickup|rack)\.js\?v=\d+$/ : /^\.\/custody\.js\?v=\d+$/).test(n.moduleSpecifier.text)) errors.push('sibling import');
+    if (ts.isImportDeclaration(n) && !(contract.name === 'custody' ? /^(\.\/(deposit|workshop|pickup|rack)|\.\.\/merchant-policies)\.js\?v=\d+$/ : /^\.\/custody\.js\?v=\d+$/).test(n.moduleSpecifier.text)) errors.push('sibling import');
     if (ts.isPropertyAccessExpression(n) && n.expression.getText(ast) === 'window' && !contract.globals.includes(n.name.text)) errors.push('undeclared window.' + n.name.text);
     if (ts.isIdentifier(n) && n.text === 'window' && !(ts.isPropertyAccessExpression(n.parent) && n.parent.expression === n)) errors.push('aliased window access');
     if (ts.isIdentifier(n) && /^Kiwi[A-Z]/.test(n.text) && !(ts.isPropertyAccessExpression(n.parent) && n.parent.name === n) && !contract.globals.includes(n.text)) errors.push('undeclared ambient ' + n.text);

@@ -11,6 +11,7 @@ import {
 } from '../auth/_lib.js';
 import { storeSubscriptionPending, storeSuspended } from './_private.js';
 import { poke } from './_live.js';
+import { returnWindowError } from './_return-window.js';
 import { addBusinessDays, businessBoundary, businessDate, merchantCutoff, merchantZone } from './_business-day.js';
 
 const MAX_CENTS = 20000000;
@@ -75,8 +76,9 @@ async function issueAuthority(request, env, merchant, { approval, requestId, ori
     && Number(proof.amountCents) === cents
     && proof.refundMethod === 'avoir'
     && proof.staffId && proof.staffName && employeeRoleOpensDashboard(proof.staffRole));
-  if (signed) return { ok: true, approver: clean(proof.staffName, 100) };
-  return { ok: await mayCancelCredit(request, env, merchant), approver: '' };
+  if (signed) return { ok: true, approver: clean(proof.staffName, 100), proof };
+  /* Une session de responsable ou de propriétaire est elle-même l'accord : elle peut lever la fenêtre de retour. */
+  return { ok: await mayCancelCredit(request, env, merchant), approver: '', proof: { windowOverride: true } };
 }
 
 const HISTORY_KEEP = 100;
@@ -216,6 +218,10 @@ export async function onRequestPost({ request, env }) {
       approval: body && body.approval, requestId, originalSaleId, cents });
     if (!authority.ok) return json({ error: 'manager-required' }, 403);
     const issuer = authority.approver || actor;
+    /* Fenêtre de retour du commerçant (assets/merchant-policies.js), relue ici. */
+    const soldAt = await env.DB.prepare('SELECT ts FROM sales WHERE merchant = ? AND id = ?').bind(merchant, originalSaleId).first();
+    const closed = await returnWindowError(env, merchant, soldAt && soldAt.ts, authority.proof, at);
+    if (closed) return json({ error: closed }, 403);
     const customerId = cleanId(body && body.customerId, 96);
     const customerName = clean(body && body.customerName, 120) || 'Porteur du bon';
     const reason = clean(body && body.reason, 160) || 'Retour';

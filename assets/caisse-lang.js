@@ -597,7 +597,7 @@
       'Début': 'Start', 'Fin': 'End', 'Nom': 'Name',
       'Ce que ça touche': 'What it covers', 'Valeur au prix plein': 'Value at full price',
       'Au prix promo': 'At the promo price', 'Vous offrez': 'You give away',
-      'Lancer la promotion': 'Launch the promotion', 'Enregistrer': 'Save',
+      'Lancer la promotion': 'Launch the promotion', 'Enregistrer': 'Save', 'Validité de la cure': 'Package validity', 'Dernier jour de validité': 'Last day of validity', 'Cette date s’affiche sur la fiche et la carte de la cliente.': 'This date shows on the customer card.', 'Choisissez une date valide': 'Choose a valid date', 'Validité de la cure mise à jour': 'Package validity updated',
       'Chaque article du magasin, sans exception.': 'Every item in the shop, no exception.',
       'Baissez vos prix une fois, la caisse s’en souvient': 'Set your prices once, the till remembers',
       'Déstocker l’ancienne saison': 'Clear last season',
@@ -659,8 +659,8 @@
 
       /* ── échanges & inventaire ── */
       'Avoirs actifs': 'Active credit', 'Avoir': 'Credit note',
-      'Retour sous 7 jours avec ticket, échange ou avoir, jamais de remboursement espèces':
-        'Returns within 7 days with receipt, exchange or credit, no cash refunds',
+      'Retour sous {n} jours avec ticket, échange ou avoir, jamais de remboursement espèces': 'Returns within {n} days with receipt, exchange or credit, no cash refunds', 'Retour le jour de l’achat avec ticket, échange ou avoir, jamais de remboursement espèces': 'Returns on the day of purchase with receipt, exchange or credit, no cash refunds', 'Retour sur accord d’un responsable seulement, échange ou avoir, jamais de remboursement espèces': 'Returns only with a manager’s approval, exchange or credit, no cash refunds',
+      'Hors fenêtre de retour · accord d’un responsable': 'Outside the return window · manager approval', 'hors fenêtre de retour': 'outside the return window',
       'Reprendre le stock': 'Enter stock', 'produits': 'products', 'variantes': 'variants',
       'Déclarer une perte': 'Declare waste',
       'Perte de stock': 'Stock waste',
@@ -1244,7 +1244,7 @@
       'Début': 'البداية', 'Fin': 'النهاية', 'Nom': 'الاسم',
       'Ce que ça touche': 'ما يشمله', 'Valeur au prix plein': 'القيمة بالثمن الكامل',
       'Au prix promo': 'بثمن العرض', 'Vous offrez': 'تمنح',
-      'Lancer la promotion': 'إطلاق العرض', 'Enregistrer': 'حفظ',
+      'Lancer la promotion': 'إطلاق العرض', 'Enregistrer': 'حفظ', 'Validité de la cure': 'صلاحية الباقة', 'Dernier jour de validité': 'آخر يوم صلاحية', 'Cette date s’affiche sur la fiche et la carte de la cliente.': 'يظهر هذا التاريخ على بطاقة العميلة.', 'Choisissez une date valide': 'اختاري تاريخًا صالحًا', 'Validité de la cure mise à jour': 'تم تحديث صلاحية الباقة',
       'Chaque article du magasin, sans exception.': 'كل منتج في المحل، بدون استثناء.',
       'Baissez vos prix une fois, la caisse s’en souvient': 'خفّض أثمانك مرة واحدة، والصندوق يتذكّر',
       'Déstocker l’ancienne saison': 'تصفية الموسم الماضي',
@@ -1301,8 +1301,8 @@
 
       /* ── échanges & inventaire ── */
       'Avoirs actifs': 'الأرصدة النشطة', 'Avoir': 'رصيد',
-      'Retour sous 7 jours avec ticket, échange ou avoir, jamais de remboursement espèces':
-        'الإرجاع خلال 7 أيام بالتذكرة، تبديل أو رصيد، بدون إرجاع نقدي',
+      'Retour sous {n} jours avec ticket, échange ou avoir, jamais de remboursement espèces': 'الإرجاع خلال {n} أيام بالتذكرة، تبديل أو رصيد، بدون إرجاع نقدي', 'Retour le jour de l’achat avec ticket, échange ou avoir, jamais de remboursement espèces': 'الإرجاع يوم الشراء بالتذكرة، تبديل أو رصيد، بدون إرجاع نقدي', 'Retour sur accord d’un responsable seulement, échange ou avoir, jamais de remboursement espèces': 'الإرجاع بموافقة مسؤول فقط، تبديل أو رصيد، بدون إرجاع نقدي',
+      'Hors fenêtre de retour · accord d’un responsable': 'خارج مهلة الإرجاع · موافقة مسؤول', 'hors fenêtre de retour': 'خارج مهلة الإرجاع',
       'Reprendre le stock': 'إدخال المخزون', 'produits': 'منتجات', 'variantes': 'تشكيلات',
       'Déclarer une perte': 'تسجيل تالف',
       'Perte de stock': 'خسائر المخزون',
@@ -3570,8 +3570,8 @@
       "par personne": ["per person", "للشخص"],
       "par trajet": ["per trip", "للرحلة"],
       "ETA": ["ETA", "وقت الوصول المتوقع"],
-      "Remise B2B –15 %": ["B2B discount –15 %", "تخفيض المهنيين –15 %"],
-      "{x}, compte B2B, remise –15 % appliquée": ["{x}, B2B account, –15 % discount applied", "{x}، حساب مهني، تم تطبيق تخفيض –15 %"],
+      "Remise B2B –{x} %": ["B2B discount –{x} %", "تخفيض المهنيين –{x} %"],
+      "{x}, compte B2B, remise –{n} % appliquée": ["{x}, B2B account, –{n} % discount applied", "{x}، حساب مهني، تم تطبيق تخفيض –{n} %"],
       "{x} enregistrée, prête {x}": ["{x} saved, ready {x}", "تم تسجيل {x}، جاهز {x}"],
       "Acompte {n} MAD encaissé, solde {n} MAD au retrait": ["Deposit {n} MAD collected, balance {n} MAD at pickup", "تم استخلاص تسبيق {n} MAD، الباقي {n} MAD عند الاستلام"],
       "Retrait dès maintenant.": ["Ready for pickup now.", "جاهز للاستلام الآن."],

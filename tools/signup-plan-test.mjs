@@ -57,7 +57,10 @@ for (const [plan, period] of [['pro','annual'], ['unknown','monthly'], ['ultimat
 for (const locale of ['fr','en','ar','de','it','nl','es']) {
   const html=fs.readFileSync(`${locale}/index.html`,'utf8');
   const copy=JSON.parse(fs.readFileSync('content/landing-pricing.json','utf8'))[locale];
-  for(const tier of copy.tiers) assert.ok(html.includes(`/dashboard.html?plan=${tier.signupPlan}&amp;period=monthly`));
+  for(const tier of copy.tiers) {
+    if(tier.signupPlan) assert.ok(html.includes(`/dashboard.html?plan=${tier.signupPlan}&amp;period=monthly`));
+    else { assert.equal(tier.name,'Ultra'); assert.ok(html.includes('href="https://wa.me/212624495159?text='+encodeURIComponent(tier.contactMessage)+'"'),locale+': Ultra card links to the advisor chat'); assert.ok(!html.includes('plan=ultra'),locale+': no self-signup link for Ultra'); }
+  }
 }
 const chunk=fs.readFileSync('_next/static/chunks/' + fs.readdirSync('_next/static/chunks').find(name=>/^2c2tj5hx4r2-w-[0-9a-f]{8}\.js$/.test(name)),'utf8');
 const href=chunk.match(/href:(tier.signupPlan\?[^,]+),target/)[1];
@@ -73,7 +76,7 @@ for(const locale of ['fr','en','ar','de','it','nl','es']) for(const a of fs.read
     const html = fs.readFileSync(`${locale}/index.html`, 'utf8');
     const contact = copy[locale].ultimate.cta;
     const signups = (html.match(/<a [^>]*dashboard\.html\?plan=[^>]*>[\s\S]*?<\/a>/g) || []).map(a => a.replace(/<[^>]*>/g, '').trim());
-    assert.ok(signups.length >= 4, `${locale}: the four plan cards link to signup`);
+    assert.ok(signups.length >= 3, `${locale}: the three self-serve plan cards link to signup`);
     assert.ok(!signups.includes(contact), `${locale}: no signup link is labelled "${contact}"`);
   }
 }

@@ -72,7 +72,7 @@ async function modules(context) {
      assets/money-cents.js (les centimes, comme la caisse boutique). */
   /* Plus les livraisons partagées avec la boutique : la fiche destinataire
      (Maison et boutique), le Z en deux tickets et la page Livraisons. */
-  assert.equal(cache.size, 18, 'exactly one instance per stamped module, including shared loyalty and cyclic imports (the shared product photos are the seventh, the till inventory access the eighth, then delivery.js, delivery-card.js, z-split.js, livraisons.js, the 2027 kit, pos-maison/kit-2027.js, Ozon Express, pos-boutique/ozon.js, the ticket discount, pos-maison/ticket-remise.js, the movements window, pos-maison/inv-moves.js, and the delivery exchange, pos-boutique/exchange.js)');
+  assert.equal(cache.size, 20, 'exactly one instance per stamped module, including shared loyalty and cyclic imports (the shared product photos are the seventh, the till inventory access the eighth, then delivery.js, delivery-card.js, z-split.js, livraisons.js, the 2027 kit, pos-maison/kit-2027.js, Ozon Express, pos-boutique/ozon.js, the ticket discount, pos-maison/ticket-remise.js, the movements window, pos-maison/inv-moves.js, and the delivery exchange, pos-boutique/exchange.js, then the return window shared with the boutique till, pos-boutique/return-window.js, and the merchant policies it loads, merchant-policies.js)');
 }
 for (const real of [false,true]) {
   const a = realm(real), b = realm(real);

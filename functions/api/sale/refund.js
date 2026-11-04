@@ -12,6 +12,7 @@ import { quarantineGuard } from '../_quarantine-guard.js';
 import { poke } from '../_live.js';
 import { clockFlags, recordSaleFlag } from '../_sale-truth.js';
 import { ensureCreditEvents } from '../_store-credit-ledger.js';
+import { returnWindowError } from '../_return-window.js';
 import { addBusinessDays, businessBoundary, businessDate, merchantCutoff, merchantZone } from '../_business-day.js';
 /* La règle du partage argent / avoirs vit dans un seul fichier, que la caisse
    Maison lit aussi pour annoncer le remboursement avant l'accord du responsable. */
@@ -195,6 +196,15 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
   const tsRaw = Number(body && body.ts);
   const now = Date.now();
   const ts = Number.isFinite(tsRaw) && tsRaw > 0 && tsRaw <= now + 86400000 ? tsRaw : now;
+  /* La fenêtre de retour du commerçant, relue ici : un remboursement hors
+     fenêtre exige un accord de responsable qui l'a su (windowOverride). Un
+     rejeu d'un remboursement déjà écrit passe, et l'heure de référence est
+     celle de la caisse : un retour fait dans la fenêtre puis synchronisé
+     après ne devient pas un refus. */
+  if (!replay) {
+    const closed = await returnWindowError(env, merchant, original.ts, proof, ts);
+    if (closed) return json({ error: closed }, 403);
+  }
   const label = ('Remboursement · ' + String(original.label || original.ref || 'Vente')).slice(0, 80);
   const impact = JSON.stringify({
     refundId, refundRef, originalSaleId, originalRef: String(original.ref || '').slice(0, 40),

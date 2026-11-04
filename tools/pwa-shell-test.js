@@ -57,7 +57,7 @@ moduleClosure('assets/live-link.js');
 moduleClosure('assets/tickets.js'); moduleClosure('assets/clients-directory.js');
 moduleClosure('assets/hotel-economat-requests.js');
 moduleClosure('assets/invoicing.js'); moduleClosure('assets/pages-pro-office.js');
-moduleClosure('assets/team-hours.js');
+moduleClosure('assets/team-hours.js'); moduleClosure('assets/pages-pro/boutique-promos-returns.js'); moduleClosure('assets/pressing-dashboard.js');
 moduleClosure('assets/team.js'); moduleClosure('assets/channel-link.js');
 
 const shell = [...sw.matchAll(/^\s*'(\/[^']+)'[,;]?/gm)].map((m) => m[1]);

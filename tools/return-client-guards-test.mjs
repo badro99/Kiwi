@@ -106,7 +106,7 @@ for (const [label, file] of [['boutique', 'assets/pos-boutique.js'], ['maison', 
   const approvalSrc = slice(src, '  function avoirApproval(', '  function creditIntent');
   const asked = [];
   const win = { requireManager: (label, onApprove, context, opts) => { asked.push({ label, onApprove, context, opts }); } };
-  const sb2 = { window: win, fmtMAD: (n) => `${n} MAD`, Promise, Error, Math };
+  const sb2 = { window: win, fmtMAD: (n) => `${n} MAD`, Promise, Error, Math, findSale: () => null, outsideWindow: () => false, retDayKey: () => '', businessDateKey: () => '' };
   vm.createContext(sb2);
   vm.runInContext(`${approvalSrc}\n;this.api = { avoirApproval };`, sb2);
   const pending = sb2.api.avoirApproval(60, 'credit-issue:T-1:0-1:6000', 'sale-T-1');
@@ -157,7 +157,7 @@ const caCtx = vm.createContext({ salesToday: () => [
 ] });
 vm.runInContext(slice(boutique, 'const notCashedOf =', 'function queueIfOffline') + ';globalThis.out = caToday();', caCtx);
 ok(caCtx.out === 640, 'boutique : la recette du jour compte l\'argent encaissé, pas la part réglée en avoir');
-ok(/requireManager\(`Avoir \$\{fmtMAD\(amount\)\} · ticket \$\{ticketRef \|\| originalSaleId\}`/.test(boutique)
+ok(/requireManager\(`Avoir \$\{fmtMAD\(amount\)\} · ticket \$\{ticketRef \|\| originalSaleId\}/.test(boutique)
   && /avoirApproval\(amount, requestId, fromSaleId, context && context\.originalRef\)/.test(boutique),
   'boutique : l\'accord du responsable nomme le numéro du ticket');
 ok(/saleId: \(opts\.sale && opts\.sale\.id\) \|\| opts\.ref \|\| ''/.test(boutique),

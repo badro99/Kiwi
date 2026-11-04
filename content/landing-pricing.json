@@ -71,7 +71,7 @@
       },
       {
         "name": "Ultra",
-        "cta": "Obtenir mon Kiwi",
+        "cta": "Parler à un conseiller",
         "features": [
           "Tout Pro",
           "Établissements illimités",
@@ -80,7 +80,7 @@
           "API entreprise",
           "Account manager dédié"
         ],
-        "signupPlan": "ultra"
+        "contactMessage": "Bonjour, je souhaite en savoir plus sur Kiwi Ultra."
       }
     ],
     "ultimate": {
@@ -169,7 +169,7 @@
       },
       {
         "name": "Ultra",
-        "cta": "Get Kiwi",
+        "cta": "Talk to an advisor",
         "features": [
           "Everything in Pro",
           "Unlimited locations",
@@ -178,7 +178,7 @@
           "Enterprise API",
           "Dedicated account manager"
         ],
-        "signupPlan": "ultra"
+        "contactMessage": "Hello, I would like to know more about Kiwi Ultra."
       }
     ],
     "ultimate": {
@@ -267,7 +267,7 @@
       },
       {
         "name": "Ultra",
-        "cta": "احصل على Kiwi",
+        "cta": "تحدث مع مستشار",
         "features": [
           "كل مزايا Pro",
           "عدد غير محدود من المنشآت",
@@ -276,7 +276,7 @@
           "واجهة API للمؤسسات",
           "مدير حساب مخصص"
         ],
-        "signupPlan": "ultra"
+        "contactMessage": "مرحبا، أود معرفة المزيد عن Kiwi Ultra."
       }
     ],
     "ultimate": {
@@ -365,7 +365,7 @@
       },
       {
         "name": "Ultra",
-        "cta": "Kiwi starten",
+        "cta": "Mit einem Berater sprechen",
         "features": [
           "Alles aus Pro",
           "Unbegrenzte Standorte",
@@ -374,7 +374,7 @@
           "Unternehmens-API",
           "Persönlicher Account Manager"
         ],
-        "signupPlan": "ultra"
+        "contactMessage": "Hallo, ich möchte mehr über Kiwi Ultra erfahren."
       }
     ],
     "ultimate": {
@@ -463,7 +463,7 @@
       },
       {
         "name": "Ultra",
-        "cta": "Obtener Kiwi",
+        "cta": "Hablar con un asesor",
         "features": [
           "Todo lo incluido en Pro",
           "Establecimientos ilimitados",
@@ -472,7 +472,7 @@
           "API empresarial",
           "Gestor de cuenta exclusivo"
         ],
-        "signupPlan": "ultra"
+        "contactMessage": "Hola, me gustaría saber más sobre Kiwi Ultra."
       }
     ],
     "ultimate": {
@@ -561,7 +561,7 @@
       },
       {
         "name": "Ultra",
-        "cta": "Inizia con Kiwi",
+        "cta": "Parla con un consulente",
         "features": [
           "Tutto di Pro",
           "Sedi illimitate",
@@ -570,7 +570,7 @@
           "API aziendale",
           "Account manager dedicato"
         ],
-        "signupPlan": "ultra"
+        "contactMessage": "Ciao, vorrei saperne di più su Kiwi Ultra."
       }
     ],
     "ultimate": {
@@ -659,7 +659,7 @@
       },
       {
         "name": "Ultra",
-        "cta": "Start met Kiwi",
+        "cta": "Praat met een adviseur",
         "features": [
           "Alles van Pro",
           "Onbeperkt aantal vestigingen",
@@ -668,7 +668,7 @@
           "Bedrijfs-API",
           "Vaste accountmanager"
         ],
-        "signupPlan": "ultra"
+        "contactMessage": "Hallo, ik wil graag meer weten over Kiwi Ultra."
       }
     ],
     "ultimate": {

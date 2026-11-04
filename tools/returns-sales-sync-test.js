@@ -11,7 +11,7 @@ const rxView = fs.readFileSync(path.join(__dirname, '..', 'assets', 'returns-led
 const feed = fs.readFileSync(path.join(__dirname, '..', 'functions', 'api', 'feed.js'), 'utf8');
 
 const checks = [
-  ['Échanges relit les sept jours réels du magasin', /retShiftDay\(retDayKey\(Date\.now\(\)\), -\(RETAIN_DAYS - 1\)\)[\s\S]*KiwiPosSale\?\.feedDay[\s\S]*'\/api\/feed\?merchant='/.test(src)],
+  ['Échanges relit les sept jours réels du magasin', /retShiftDay\(retDayKey\(Date\.now\(\)\), -\(retainDays\(\) - 1\)\)[\s\S]*KiwiPosSale\?\.feedDay[\s\S]*'\/api\/feed\?merchant='/.test(src)],
   ['la requête garde le cookie de la caisse appairée', /syncReturnSales[\s\S]*credentials: 'same-origin'/.test(src)],
   ['une référence déjà locale gagne sur la copie serveur', /SALES\.some\(\(s\) => s && s\.id === ref\)/.test(src)],
   ['les tickets serveur sont fusionnés dans le journal des échanges', /serverId:[\s\S]*remote: true/.test(src)],
@@ -120,7 +120,8 @@ console.log(`  ✓ échanges & avoirs (${checks.length} contrôles : 7 jours, da
     const source = dash.replace('let liveReturns = [];', 'let liveReturns = ' + JSON.stringify(rows) + ';')
       .replace("let liveReturnsSlug = '';", "let liveReturnsSlug = 'shop';")
       .replace("let returnsState = ''", 'let returnsState = ' + JSON.stringify(state))
-      .replace('let rxView = null;', 'let rxView = __rxView;');
+      .replace('let rxView = null;', 'let rxView = __rxView;')
+      .replace(/import\('\.\/returns-policy\.js\?v=\d+'\)/g, 'Promise.resolve({ mount() {}, save() {} })');
     vm.runInNewContext(source, { window: { Kiwi: { handlers, appPage: (_, options) => { body = options.body; return { el: node() }; } },
       KiwiEnv: { isReal: () => true }, KiwiI18n: { getLang: () => lang },
       KiwiCloudDoc: { currentSlug: () => 'shop', attach: () => ({ bind() {} }) } },

@@ -495,6 +495,8 @@
       if (typeof d.dayKey === 'string') DAY_KEY = d.dayKey;
       CLIENTES.splice(0, CLIENTES.length, ...(d.clients || [])); Object.keys(CL).forEach(k => delete CL[k]); CLIENTES.forEach(c => { if (c?.id) CL[c.id] = c; });
       CURES.splice(0, CURES.length, ...(d.cures || [])); APPTS.splice(0, APPTS.length, ...(d.appointments || []));
+      /* Les cures d'avant la date de validité reçoivent la validité standard depuis aujourd'hui (jamais d'expiration rétroactive). */
+      if (window.KiwiTradeSchema?.grandfatherCures?.(CURES, Date.now())) Promise.resolve().then(() => spaOps?.save?.('Validité des anciennes cures'));
       cureSeq = Math.max(cureSeq, +d.cureSeq || 0); apptSeq = Math.max(apptSeq, +d.apptSeq || 0); ticketSeq = Math.max(ticketSeq, +d.ticketSeq || 0); state.ticket = d.ticket || null;
     },
   });
@@ -1560,13 +1562,14 @@
         </div>
         ${punchRow(cu, opts)}
         <div class="sp-cure-foot">
-          <span class="sp-cure-exp">${cu.used < cu.size && cureExpired(cu) ? `<b>Cure expirée</b>, valable jusqu'au ${esc(fmtDay(new Date(cu.expiresOn + 'T12:00:00')))}` : full ? '<b>Cure terminée</b>, proposez le renouvellement' : `Valable jusqu'au <b>${esc(cu.expiresOn ? fmtDay(new Date(cu.expiresOn + 'T12:00:00')) : inDays(cu.expiresDays))}</b>`}</span>
+          <span class="sp-cure-exp">${cu.used < cu.size && cureExpired(cu) ? `<b>Cure expirée</b>, valable jusqu'au ${esc(fmtDay(new Date(cu.expiresOn + 'T12:00:00')))}` : full ? '<b>Cure terminée</b>, proposez le renouvellement' : `Valable jusqu'au <b>${esc(cu.expiresOn ? fmtDay(new Date(cu.expiresOn + 'T12:00:00')) : inDays(cu.expiresDays))}</b>${cu.expirySource === 'legacy-grandfathered' ? ` <span class="sp-cure-legacy">· date accordée à la mise à jour du ${esc(fmtDay(new Date(cu.expirySourceOn + 'T12:00:00')))}</span>` : ''}`}</span>
           <span class="sp-cure-bc">${barcode(cu.id, 20)}</span>
         </div>
         <div class="sp-cure-actions">
           ${full
             ? `<button class="sp-btn primary" data-sp-renew="${cu.id}"><i data-lucide="sparkles"></i>Renouveler${ffSaving(f, cu.size) > 0 ? `, économie ${fmtMAD(ffSaving(f, cu.size))}` : ''}</button>`
             : `<button class="sp-btn secondary" data-sp-fiche-cl="${c.id}">Fiche</button>
+               <button class="sp-btn secondary" data-sp-exp="${cu.id}"><i data-icon="calendar_month"></i>Modifier la validité</button>
                <button class="sp-btn primary" data-sp-punch="${cu.id}"><i data-lucide="check"></i>Décompter une séance</button>`}
         </div>
       </div>
@@ -1623,6 +1626,13 @@
       if (punch) { openPunch(punch.dataset.spPunch); return; }
       const renew = e.target.closest('[data-sp-renew]');
       if (renew) { startRenew(renew.dataset.spRenew); return; }
+      const exp = e.target.closest('[data-sp-exp]');
+      if (exp) {
+        const cu = CURES.find((x) => x.id === exp.dataset.spExp);
+        if (cu) import('./pos-spa-cure-expiry.js?v=3').then((m) => m.openExpiryEditor({ cure: cu, label: `${cureName(cu)} · ${CL[cu.clientId].name}`, el: $('#sp-punchm', root), openVeil, closeVeil, icons, toast, esc,
+          onSaved: () => { queueIfOffline('Validité cure'); if (state.view === 'cures') { renderCures(); icons(); } } }));
+        return;
+      }
       const fiche = e.target.closest('[data-sp-fiche-cl]');
       if (fiche) { openFiche(fiche.dataset.spFicheCl); return; }
       const sell = e.target.closest('[data-sp-sell]');
