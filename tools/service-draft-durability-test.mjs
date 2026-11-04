@@ -57,13 +57,14 @@ function draftSandbox(storageBehaviour = {}) {
     svSlug: () => 'santos',
     tableOrders: {},
     newLineUid: (() => { let n = 0; return () => 'ln' + (++n); })(),
-    toasts: [], toast(message) { sandbox.toasts.push(message); }, employeeTranslation: (v) => v,
+    toasts: [], toast(message) { sandbox.toasts.push(message); }, employeePick: (fr) => fr,
   };
   vm.createContext(sandbox);
   // Les vraies fonctions, découpées du fichier expédié.
   const start = SERVEUR.indexOf('    const SV_DRAFT_TTL =');
   const end = SERVEUR.indexOf('    function svForgetPending(id) {');
   vm.runInContext(SERVEUR.slice(start, end), sandbox, { filename: 'serveur-drafts.js' });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/serveur/payment-support.js'), 'utf8').split('/* Lots « Lancer » non confirmés laissés')[1].replace(/^/, '/*'), sandbox, { filename: 'payment-support.js' });
   return sandbox;
 }
 

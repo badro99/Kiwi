@@ -869,41 +869,6 @@
       return restored;
     }
 
-    /* Lots « Lancer » non confirmés laissés sur cette tablette par un AUTRE serveur
-       (déconnecté, téléphone changé), ou par celui-ci mais trop anciens pour être
-       rejoués : le balayage ne les envoie jamais, donc personne ne les voyait.
-       On les annonce une fois, avec les tables concernées, sans rien rejouer. */
-    function svOrphanBatches() {
-      const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug() || 'store';
-      const me = (liveEmployeeState && (liveEmployeeState.staffId || liveEmployeeState.employeeId)) || currentUser || 'employee';
-      const prefix = 'kiwi:service-pending-v1:' + merchant + ':';
-      const found = [];
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (!key || key.indexOf(prefix) !== 0) continue;
-          const rest = key.slice(prefix.length), cut = rest.indexOf(':');
-          if (cut < 1) continue;
-          let pending = null;
-          try { pending = JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) { continue; }
-          if (!pending || !pending.ref || !Array.isArray(pending.lines) || !pending.lines.length) continue;
-          const stale = Date.now() - Number(pending.createdAt || 0) > SV_DRAFT_TTL;
-          const operator = rest.slice(0, cut);
-          if (operator !== String(me) || stale) found.push({ operator, table: rest.slice(cut + 1), stale, ref: pending.ref });
-        }
-      } catch (_) {}
-      return found;
-    }
-    const svOrphanAnnounced = new Set();
-    function svAnnounceOrphans() {
-      const fresh = svOrphanBatches().filter((o) => !svOrphanAnnounced.has(o.ref));
-      if (!fresh.length) return 0;
-      fresh.forEach((o) => svOrphanAnnounced.add(o.ref));
-      const tables = Array.from(new Set(fresh.map((o) => o.table))).join(', ');
-      toast(employeeTranslation('Commandes non envoyées en cuisine, laissées sur cette tablette · voyez avec le responsable') + ' (' + tables + ')', 9000);
-      return fresh.length;
-    }
-
     function svForgetPending(id) {
       svPendingBatches.delete(id);
       svPendingRef.delete(id);
@@ -1958,7 +1923,7 @@
     const PUNCH_SAVED = 'Pointage enregistré sur ce téléphone · envoi dès le retour du réseau';
     document.addEventListener('kiwi-employee-punch-queue', (event) => {
       const d = (event && event.detail) || {};
-      if (d.rejected && d.rejected.some((r) => r && (r.error === 'attendance-full' || r.error === 'too-many-punches'))) toast('Pointage refusé · voyez avec votre responsable', 4200);
+      if (d.rejected && d.rejected.some((r) => r && (r.error === 'attendance-full' || r.error === 'too-many-punches'))) toast(employeePick('Pointage refusé · voyez avec votre responsable', 'Clock entry refused · check with your manager', 'تم رفض التسجيل · راجع مسؤولك'), 4200);
       else if (d.rejected && d.rejected.length) toast('Pointage du téléphone refusé · voyez avec votre responsable', 4200);
       else if (d.sent && !d.pending) toast('Pointage du téléphone envoyé', 2400);
     });

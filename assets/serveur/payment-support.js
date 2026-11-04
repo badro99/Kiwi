@@ -1,4 +1,5 @@
-/* Pure centime allocation and durable, merchant-scoped loyalty delivery. */
+/* Pure centime allocation and durable, merchant-scoped loyalty delivery.
+   Plus, tout en bas : les lots « Lancer » laissés sur la tablette (svOrphanBatches), annoncés et jamais rejoués. */
 function serveurPaymentSupport() {
   if (serveurPaymentSupport.instance) return serveurPaymentSupport.instance;
   function allocate(total, weights) {
@@ -72,3 +73,38 @@ function serveurPaymentSupport() {
   return serveurPaymentSupport.instance;
 }
 serveurPaymentSupport();
+
+/* Lots « Lancer » non confirmés laissés sur cette tablette par un AUTRE serveur
+   (déconnecté, téléphone changé), ou par celui-ci mais trop anciens pour être
+   rejoués : le balayage ne les envoie jamais, donc personne ne les voyait.
+   On les annonce une fois, avec les tables concernées, sans rien rejouer. */
+function svOrphanBatches() {
+  const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug() || 'store';
+  const me = (liveEmployeeState && (liveEmployeeState.staffId || liveEmployeeState.employeeId)) || currentUser || 'employee';
+  const prefix = 'kiwi:service-pending-v1:' + merchant + ':';
+  const found = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || key.indexOf(prefix) !== 0) continue;
+      const rest = key.slice(prefix.length), cut = rest.indexOf(':');
+      if (cut < 1) continue;
+      let pending = null;
+      try { pending = JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) { continue; }
+      if (!pending || !pending.ref || !Array.isArray(pending.lines) || !pending.lines.length) continue;
+      const stale = Date.now() - Number(pending.createdAt || 0) > SV_DRAFT_TTL;
+      const operator = rest.slice(0, cut);
+      if (operator !== String(me) || stale) found.push({ operator, table: rest.slice(cut + 1), stale, ref: pending.ref });
+    }
+  } catch (_) {}
+  return found;
+}
+const svOrphanAnnounced = new Set();
+function svAnnounceOrphans() {
+  const fresh = svOrphanBatches().filter((o) => !svOrphanAnnounced.has(o.ref));
+  if (!fresh.length) return 0;
+  fresh.forEach((o) => svOrphanAnnounced.add(o.ref));
+  const tables = Array.from(new Set(fresh.map((o) => o.table))).join(', ');
+  toast(employeePick('Commandes non envoyées en cuisine, laissées sur cette tablette · voyez avec le responsable', 'Orders not sent to the kitchen were left on this tablet · check with your manager', 'طلبات لم تُرسل إلى المطبخ بقيت على هذا الجهاز · راجع المسؤول') + ' (' + tables + ')', 9000);
+  return fresh.length;
+}

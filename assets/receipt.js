@@ -1358,14 +1358,12 @@
   }
 
   /* Le résultat d'une impression de reçu, en donnée : l'entrée « tickets non imprimés »
-     de la caisse le lit ici, sans jamais deviner un échec d'après le texte d'un toast. */
-  function announcePrint(ok) {
-    try { window.dispatchEvent(new CustomEvent('kiwi:receipt-print', { detail: { ok: !!ok } })); } catch (_) { console.warn('[receipt] announce failed'); }
-  }
+     de la caisse le lit (kiwi:receipt-print), sans jamais deviner un échec d'après le texte d'un toast. */
   function print(doc, o) {
-    return printReceipt(doc, o).then(function (r) { announcePrint(r && r.ok); return r; }, function (e) { announcePrint(false); throw e; });
-  }
-  function printReceipt(doc, o) {
+    var announce = function (ok) {
+      try { window.dispatchEvent(new CustomEvent('kiwi:receipt-print', { detail: { ok: !!ok } })); } catch (_) { console.warn('[receipt] announce failed'); }
+    };
+    return (function () {
     o = o || {};
     var KP = window.KiwiPrinter;
     /* HTML receipts have always shown the logo. Direct ESC/POS receipts did
@@ -1391,6 +1389,7 @@
       }
       return browser(doc, o);
     });
+    })().then(function (r) { announce(r && r.ok); return r; }, function (e) { announce(false); throw e; });
   }
   /* Le repli a bien produit quelque chose, mais pas ce qui était demandé. */
   function degraded(result, reason) {

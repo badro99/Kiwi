@@ -100,11 +100,11 @@ await test('print#1 · un reçu imprimé efface l\'entrée « tickets non imprim
     createElement: () => ({ style: {}, addEventListener(name, fn) { this[name] = fn; }, remove() { nodes.delete(this.id); } }) };
   const window = { addEventListener: (name, fn) => { listeners[name] = fn; }, KiwiCaisseLang: { tr: (s) => 'tr:' + s }, KiwiPrinter: { openSetup() {} } };
   vm.runInNewContext(read('assets/caisse-print-recovery.js'), { window, document });
-  listeners['kiwi:toast']({ detail: { title: 'tr:Impression échouée' } });
+  listeners['kiwi:receipt-print']({ detail: { ok: false } });
   assert.equal(nodes.get('caisse-print-recovery').textContent, 'tr:Voir les tickets non imprimés (1)');
   listeners['kiwi:kitchen-print-unprinted']({ detail: { count: 2 } });
   assert.equal(nodes.get('caisse-print-recovery').textContent, 'tr:Voir les tickets non imprimés (3)', 'le reçu et les bons du relais se comptent chacun');
-  listeners['kiwi:toast']({ detail: { title: 'tr:Reçu imprimé' } });
+  listeners['kiwi:receipt-print']({ detail: { ok: true } });
   assert.equal(nodes.get('caisse-print-recovery').textContent, 'tr:Voir les tickets non imprimés (2)', 'le reçu réimprimé sort du compte, pas les bons du relais');
   listeners['kiwi:kitchen-print-unprinted']({ detail: { count: 0 } });
   assert.equal(nodes.has('caisse-print-recovery'), false, 'plus rien à reprendre, plus d\'entrée');

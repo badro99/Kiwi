@@ -1400,8 +1400,8 @@
     "sha": "f070cd68b5821e05"
   },
   "assets/pages-pro-office.js": {
-    "v": "9",
-    "sha": "d1fed19f7e0ce4b3"
+    "v": "10",
+    "sha": "02aeae9a028c137b"
   },
   "assets/pages-pro-spa-starter.js": {
     "v": "7",
@@ -1444,8 +1444,8 @@
     "sha": "b57fdb1859e1e4e0"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "192",
-    "sha": "c0be66f96c6aa5d4"
+    "v": "193",
+    "sha": "4936a961d0675c6f"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1500,8 +1500,8 @@
     "sha": "1fc06c1fb77ddb4b"
   },
   "assets/planning/pay-statement.js": {
-    "v": "5",
-    "sha": "1aa8b92cbc037118"
+    "v": "6",
+    "sha": "e17020beb8fdf387"
   },
   "assets/planning/payroll-view.js": {
     "v": "15",
@@ -1869,7 +1869,7 @@
   },
   "assets/printer/pairing-lang.js": {
     "v": "19",
-    "sha": "c6b28aa237fe67a7"
+    "sha": "75839dca3ae2ca4d"
   },
   "assets/printer/pairing-ui.js": {
     "v": "16",
@@ -1920,8 +1920,8 @@
     "sha": "32a784d29a003d95"
   },
   "assets/receipt.js": {
-    "v": "24",
-    "sha": "e21de0f85d09f8e7"
+    "v": "25",
+    "sha": "ed6ca49ce9b09949"
   },
   "assets/refund-split.js": {
     "v": "2",
@@ -2012,8 +2012,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "29",
-    "sha": "1ef65714965d1fdd"
+    "v": "30",
+    "sha": "dcc57bd39943dfd4"
   },
   "assets/serveur-lang.js": {
     "v": "17",
@@ -2024,8 +2024,8 @@
     "sha": "ca9f976c2786c1a3"
   },
   "assets/serveur/payment-support.js": {
-    "v": "6",
-    "sha": "35dab11d06129b1b"
+    "v": "7",
+    "sha": "c9f36aaa8038a40f"
   },
   "assets/serveur/service.js": {
     "v": "32",

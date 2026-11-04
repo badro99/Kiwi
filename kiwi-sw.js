@@ -47,7 +47,7 @@ var SHELL = [
   '/assets/planning/csv-import.js?v=5',
   '/assets/planning/optimiser.js?v=5',
   '/assets/planning/payroll-view.js?v=15',
-  '/assets/planning/pay-statement.js?v=5',
+  '/assets/planning/pay-statement.js?v=6',
   '/assets/planning/corrections.js?v=3',
   '/assets/orderpro/draft.js?v=3',
   '/assets/orderpro/transport.js?v=11',
@@ -150,9 +150,9 @@ var SHELL = [
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=8',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
-  '/assets/serveur/payment-support.js?v=6',
+  '/assets/serveur/payment-support.js?v=7',
   '/assets/serveur/service.js?v=32',
-  '/assets/serveur-app.js?v=29',
+  '/assets/serveur-app.js?v=30',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -196,7 +196,7 @@ var SHELL = [
   '/assets/hotel-housekeeping.js?v=1',
   '/assets/hotel-folio.js?v=1',
   '/assets/hotel-channels.js?v=4',
-  '/assets/pages-pro-office.js?v=9',
+  '/assets/pages-pro-office.js?v=10',
   '/assets/pages-pro-boutique.js?v=45',
   '/assets/boutique-stock-correct.js?v=4',
   '/assets/boutique-categories-view.js?v=3',
@@ -206,7 +206,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
-  '/assets/pages/dashboard-startup.js?v=192',
+  '/assets/pages/dashboard-startup.js?v=193',
   '/assets/pages/dashboard-loader.js?v=72',
   '/assets/hotel/model.js?v=10',
   '/assets/hotel/views.js?v=9',
@@ -365,7 +365,7 @@ var SHELL = [
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
-  '/assets/receipt.js?v=24',
+  '/assets/receipt.js?v=25',
   '/assets/receipt-ui.js?v=2',
   '/assets/invoice.js?v=28',
   '/assets/merchant-config.js?v=287',
