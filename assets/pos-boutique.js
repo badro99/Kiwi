@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=159';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=77';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=159';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=159';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=160';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=78';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=160';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=160';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
@@ -1265,14 +1265,15 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       if (!want && !ids.length) return 0;
       return (Array.isArray(items) ? items : []).reduce((n, item) => {
         const name = ' ' + foldName(item && item.name) + ' ', key = String(item && (item.id || item.itemId || item.pid) || '');
-        return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + want + ' ')) ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
+        const qty = Math.max(0, Number(item && item.qty) || 0), weighed = /^(weigh|kg|g|l|ml)$/i.test(String(item && item.unit || ''));
+        return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + want + ' ')) ? n + (weighed ? Number(qty > 0) : Math.floor(qty)) : n;
       }, 0);
     }
     const stampsFor = (cfg, items) => {
       if (!loyaltyOn(cfg)) return 0;
       if (cfg.model === 'visit') return 1;
       if (cfg.model !== 'product') return 0;
-      return Array.isArray(items) && items.length ? qualifyingQty(cfg, items) : 1;
+      return qualifyingQty(cfg, items);
     }
     const refundFor = (sale, amount, cfg, items, client) => {
       const paid = Number(sale && sale.paid || 0), earned = Number(sale && sale.earned || 0);

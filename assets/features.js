@@ -1063,7 +1063,7 @@
         perMad: 'Points par MAD', threshold: 'Palier (points)',
         item: 'Produit concerné', productTarget: 'Quantité',
         itemHelp: 'Chaque article dont le nom contient ce mot donne un tampon par unité. « Café » compte « Café noir » et « Café crème ».',
-        save: 'Enregistrer le programme', saved: 'Programme mis à jour',
+        linkLimit: 'Maximum 2 000 produits liés. Réduisez la sélection avant de sauvegarder.', save: 'Enregistrer le programme', saved: 'Programme mis à jour',
         savedDesc: 'La caisse et le carnet clients l’appliquent aussitôt.',
       }
     },
@@ -1090,7 +1090,7 @@
         perMad: 'Points per MAD', threshold: 'Threshold (points)',
         item: 'Qualifying product', productTarget: 'Quantity',
         itemHelp: 'Each item whose name contains this word earns one stamp per unit. “Café” counts “Café noir” and “Café crème”.',
-        save: 'Save program', saved: 'Program updated',
+        linkLimit: 'Maximum 2,000 linked products. Reduce the selection before saving.', save: 'Save program', saved: 'Program updated',
         savedDesc: 'The till and the client book apply it right away.',
       }
     },
@@ -1117,7 +1117,7 @@
         perMad: 'نقاط لكل درهم', threshold: 'العتبة (نقاط)',
         item: 'المنتج المؤهل', productTarget: 'الكمية',
         itemHelp: 'كل منتج يحتوي اسمه على هذه الكلمة يمنح طابعًا عن كل وحدة. « Café » يشمل « Café noir » و« Café crème ».',
-        save: 'حفظ البرنامج', saved: 'تم تحديث البرنامج',
+        linkLimit: 'الحد الأقصى 2000 منتج مرتبط. قلّل الاختيار قبل الحفظ.', save: 'حفظ البرنامج', saved: 'تم تحديث البرنامج',
         savedDesc: 'يطبّقه الصندوق ودفتر العملاء فورًا.',
       }
     }
@@ -1240,8 +1240,10 @@
         // use it live. No-op without a real book (unpaired demo).
         /* The success toast (« la caisse et le carnet clients l'appliquent
            aussitôt ») used to fire even when nothing was saved. */
+        const next = readCfg();
+        if (next.product.ids.length > 2000) { toast(C.linkLimit, { type: 'warning' }); return; }
         let saved = false;
-        try { if (window.KiwiClients && KiwiClients.hasBook && KiwiClients.hasBook()) { KiwiClients.setConfig(readCfg()); saved = true; } } catch (_) {}
+        try { if (window.KiwiClients && KiwiClients.hasBook && KiwiClients.hasBook()) { KiwiClients.setConfig(next); saved = true; } } catch (_) {}
         m.close();
         if (saved) toast(C.saved || T.toastTitle, { type: 'success', desc: C.savedDesc || T.toastDesc });
         else {

@@ -15,7 +15,7 @@
 (function () {
   'use strict';
 
-  var MAX_IDS = 200;
+  var MAX_IDS = 2000;
 
   function fold(v) {
     return String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
@@ -46,7 +46,7 @@
     if (want) (items || venueItems()).forEach(function (it) {
       if (it && it.id && (' ' + fold(it.name) + ' ').indexOf(' ' + want + ' ') >= 0) ids.add(String(it.id));
     });
-    return Array.from(ids).slice(0, MAX_IDS);
+    return Array.from(ids);
   }
 
   window.KiwiLoyaltyLinks = Object.freeze({ linkedIds: linkedIds, MAX_IDS: MAX_IDS });
