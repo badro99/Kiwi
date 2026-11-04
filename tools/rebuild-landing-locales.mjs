@@ -18,6 +18,12 @@ fs.writeFileSync(pricingChunk, rewrite(fs.readFileSync(pricingChunk, 'utf8'),
   ':r.DEMO_HREF,target:tier.signupPlan?void 0:"_blank",',
   'pricing CTA target'
 ));
+// Ultra talks to an advisor first (owner ruling, 4 Nov): its card carries a prefilled WhatsApp message instead of a signup plan.
+fs.writeFileSync(pricingChunk, rewrite(fs.readFileSync(pricingChunk, 'utf8'),
+  '"&period="+(annual?"annual":"monthly"):r.DEMO_HREF,',
+  '"&period="+(annual?"annual":"monthly"):tier.contactMessage?"https://wa.me/212624495159?text="+encodeURIComponent(tier.contactMessage):r.DEMO_HREF,',
+  'pricing CTA advisor message'
+));
 
 const pricingCode = fs.readFileSync(pricingChunk);
 const pricingName = '2c2tj5hx4r2-w-' + createHash('sha256').update(pricingCode).digest('hex').slice(0, 8) + '.js';

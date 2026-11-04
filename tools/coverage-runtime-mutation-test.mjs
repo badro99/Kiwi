@@ -19,7 +19,7 @@ const cases = [
   ['credit centimes', 'store-credits-test.mjs', 'assets/receipt.js',
     'var doc = build({ ts: v.at || Date.now(),\n      total: Math.abs(num(v.balance != null ? v.balance : v.amount)),\n      subtotal: Math.abs(num(v.amount != null ? v.amount : v.balance)) }, opts);',
     'var doc = build({ ts: v.at || Date.now() }, opts);'],
-  ['landing billing click', 'landing-claims-test.mjs', '_next/static/chunks/2c2tj5hx4r2-w-5141d7a4.js',
+  ['landing billing click', 'landing-claims-test.mjs', '_next/static/chunks/2c2tj5hx4r2-w-e55e3888.js',
     'onClick:()=>a(e.value)', 'onClick:()=>{}'],
   ['pairing tenant key', 'pairing-parity-test.mjs', 'assets/caisse/offline.js',
     "('kiwi-caisse-shift:' + s)", "'kiwi-caisse-shift'"],

@@ -59,6 +59,10 @@ for (const [page, locale] of Object.entries(pages)) {
         assert.ok(text.includes(billed), `${page} ${copy.tiers[i].name}: billed line "${billed}" (${why})`);
         if (annual) assert.ok(digits(text).includes(String(total)), `${page} ${copy.tiers[i].name}: annual total ${total} is on the card`);
         assert.equal(nodes.find((n) => n.type === 'a').props.href, `/dashboard.html?plan=${copy.tiers[i].signupPlan}&period=${annual ? 'annual' : 'monthly'}`, `${page} ${copy.tiers[i].name}: signup link period (${why})`);
+      } else {
+        const a = nodes.find((n) => n.type === 'a');
+        assert.equal(a.props.href, 'https://wa.me/212624495159?text=' + encodeURIComponent(copy.tiers[i].contactMessage), `${page}: ultra card opens WhatsApp with the prefilled message (${why})`);
+        assert.equal(a.props.target, '_blank', `${page}: the advisor chat opens in its own tab`);
       }
     });
     const radios = descendants(tree).filter((n) => n.props.role === 'radio');
