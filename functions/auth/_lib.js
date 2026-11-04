@@ -1663,11 +1663,11 @@ export async function activeServiceEmployee(request, env, asked) {
 const LIMIT_WINDOW_MS = 15 * 60 * 1000;   // fenêtre d'observation
 const LIMIT_BLOCK_MS  = 15 * 60 * 1000;   // durée du blocage
 const LIMIT_MAX_FAILS = 8;                // essais ratés tolérés par fenêtre
-/* Plafond de la BOUTIQUE entière pour les codes de caisse : trois fois le plafond
+/* Plafond de la BOUTIQUE entière pour les codes de caisse : le double du plafond
  * d'un appareil. Les fautes de frappe d'une caissière ne comptent que sur son
  * appareil (huit essais) ; ce plafond commun arrête seulement une devinette
  * répartie sur plusieurs appareils ou adresses. */
-const LIMIT_STORE_MAX_FAILS = 24;
+const LIMIT_STORE_MAX_FAILS = 16;
 
 /* Un compteur rattaché à la CIBLE, pas seulement à la source. Sans lui, un
  * attaquant change d'adresse IP et repart à zéro sur le même compte ; avec lui,
@@ -1786,9 +1786,10 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   if (till.ok) {
     authorized = true;
     identity = `till:${merchant}`;
-    /* Appareil appairé identifié : son propre seau. Un cookie ancien sans
-     * identifiant retombe sur l'adresse IP (limiterKey, identité vide). */
-    if (till.deviceId) deviceIdentity = `dev:${till.deviceId}`;
+    /* Appareil appairé identifié : son propre seau. Les cookies anciens sans
+     * identifiant partagent UN seul seau (jamais l'IP : changer d'adresse
+     * multiplierait le budget). */
+    deviceIdentity = till.deviceId ? `dev:${till.deviceId}` : `dev:legacy:${merchant}`;
   } else {
     const sess = await activeAccountSession(request, env);
     if (sess && sess.aid) {
@@ -1820,7 +1821,7 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   // Attempt rate-limiting by scope: 'pin:<merchant>' keyed on proven identity (or IP if unauthenticated)
   const blocked = await limitCheck(request, env, `pin:${merchant}`, identity);
   if (blocked) return { ok: false, response: blocked };
-  /* Caisse appairée : second seau, plus serré, par appareil (ou IP). Les fautes
+  /* Caisse appairée : second seau, plus serré, par appareil. Les fautes
    * d'un encaisseur ne verrouillent que son appareil, pas les autres caisses. */
   const tillScoped = identity === `till:${merchant}`;
   const deviceScope = `pin-dev:${merchant}`;

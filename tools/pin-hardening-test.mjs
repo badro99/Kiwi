@@ -524,7 +524,22 @@ console.log('\n2 · Attempt Rate-Limiting on Verification');
     const r = await post('term_spread_' + String(i).padStart(4, '0') + 'x', '0000', '10.2.0.' + i);
     if (r.status === 429) first429 = i;
   }
-  check('guessing spread over many devices is still stopped by the store ceiling', first429 > 8 && first429 <= 25);
+  check('guessing spread over many devices is still stopped by the store ceiling (16)', first429 === 17);
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+  for (const [dev, n, ip] of [['term_three_a_xx', 6, '10.3.0.1'], ['term_three_b_xx', 6, '10.3.0.2'], ['term_three_c_xx', 4, '10.3.0.3']]) {
+    for (let i = 0; i < n; i++) await post(dev, '0000', ip);
+  }
+  check('failures spread over 3 devices (6+6+4) stop at 16 store-wide', (await post('term_three_d_xx', '1234', '10.3.0.4')).status === 429);
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+  const legacy = (ip, pin) => verifyPinPost({ request: new Request('https://kiwi.test/api/pin/verify', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: `kiwi_till=${tillCookieVal}`, 'CF-Connecting-IP': ip }, body: JSON.stringify({ merchant: 'cafe-atlas', pin }) }), env });
+  for (let i = 0; i < 8; i++) await legacy('10.4.0.' + i, '0000');
+  check('legacy cookies from 8 different IPs share one 8-try bucket', (await legacy('10.4.9.9', '1234')).status === 429);
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+  const sess = (pin) => verifyPinPost({ request: new Request('https://kiwi.test/api/pin/verify', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: sessionCookie(ownerSessToken), 'CF-Connecting-IP': '10.5.0.1' }, body: JSON.stringify({ merchant: 'cafe-atlas', pin }) }), env });
+  let last = 0; for (let i = 0; i < 8; i++) last = (await sess('0000')).status;
+  check('session path keeps the 8-try ceiling', last === 401 && (await sess('1234')).status === 429);
   sqlite.prepare('DELETE FROM pair_attempts').run();
 }
 
