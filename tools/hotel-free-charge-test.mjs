@@ -18,7 +18,7 @@ function folio(custom) {
   vm.runInNewContext(source, { window });
   const scope = new Proxy({
     F: () => folios, K: () => ({ handlers, toast: (t, o) => toasts.push({ t, o }) }), MAD: (n) => n + ' MAD',
-    SRC: { direct: { fee: 0, label: 'Direct' } }, ROOMS: { 5: { guest: 'x' } }, fmt: (n) => String(n), esc: (s) => s, QUICK_ITEMS: [{ label: 'Petit-déjeuner', amt: 80, src: 'resto' }], SRC_DOT: { resto: 'r', spa: 's', fee: 'f' },
+    SRC: { direct: { fee: 0, label: 'Direct' } }, ROOMS: { 5: { guest: 'x' } }, fmt: (n) => String(n), esc: (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'), QUICK_ITEMS: [{ label: 'Petit-déjeuner', amt: 80, src: 'resto' }], SRC_DOT: { resto: 'r', spa: 's', fee: 'f' },
     SRC_LBL: { resto: 'Restaurant', spa: 'Spa', fee: 'Frais' }, isCustomHotel: () => custom, tx: (s, v) => String(s).replace(/\{(\w+)\}/g, (_, k) => v?.[k] ?? ''),
     cuSave() {}, cuStamp: () => 1, folioTotal: () => 0, folioPaid: () => 0, hxLang: () => 'fr',
   }, { get: (t, k) => (k in t ? t[k] : (() => '')) });
@@ -45,6 +45,13 @@ assert.equal(real.folios[5].lines.length, 1, 'an empty label or an amount that i
 assert.equal(real.toasts.filter((t) => t.o?.type === 'warn').length, 5, 'and says why');
 post('Soin', '300', 'tarot');
 assert.equal(real.folios[5].lines[1].src, 'fee', 'an unknown category falls back to fees');
+
+// The label is data: it reaches the folio as text, never as markup.
+post('<img src=x onerror=alert(1)>', '10', 'fee');
+assert.ok(!/<img/i.test(real.body.innerHTML), 'no element is created from a typed label');
+assert.ok(real.body.innerHTML.includes('&lt;img src=x onerror=alert(1)&gt;'), 'the typed text is shown literally');
+assert.ok(real.body.innerHTML.includes('Blanchisserie'), 'a normal label renders unchanged');
+real.folios[5].lines.pop();
 
 // The demo property keeps its showcase shortcuts.
 const demo = folio(false);

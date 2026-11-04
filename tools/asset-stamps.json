@@ -700,8 +700,8 @@
     "sha": "234b759382c50a26"
   },
   "assets/hotel-folio.js": {
-    "v": "2",
-    "sha": "15dadfec90e11aff"
+    "v": "3",
+    "sha": "46d31b114383f9ab"
   },
   "assets/hotel-housekeeping.js": {
     "v": "1",
@@ -1440,8 +1440,8 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "73",
-    "sha": "cb455b0a96b79e7e"
+    "v": "74",
+    "sha": "3b80f044139e3875"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "192",

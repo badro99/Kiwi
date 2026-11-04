@@ -14,7 +14,7 @@ window.__kiwiHotelInternal.define('folio', (scope) => {
       return `<div class="hx-fol-grp">
         <div class="gh"><span class="hx-srcdot ${SRC_DOT[g]}"></span>${SRC_LBL[g]}<span style="margin-left:auto;font-weight:600;color:var(--ink);">${MAD(folioBySrc(f, g))}</span></div>
         ${lines.map((l) => `<div class="hx-fol-line${l.isNew && highlightNew ? ' new' : ''}">
-          <span><span class="tm">${l.t}</span>${l.label}${l.paid ? ` <span class="hx-pill ok" style="margin-inline-start:6px;">${tx('RÉGLÉ')}</span>` : ''}</span>
+          <span><span class="tm">${esc(l.t)}</span>${esc(l.label)}${l.paid ? ` <span class="hx-pill ok" style="margin-inline-start:6px;">${tx('RÉGLÉ')}</span>` : ''}</span>
           <span class="qt">${l.qty || ''}</span>
           <span class="am">${MAD(l.amt)}</span>
         </div>`).join('')}
@@ -80,7 +80,7 @@ window.__kiwiHotelInternal.define('folio', (scope) => {
       <div style="font-size:12px;color:var(--n-500);margin-bottom:10px;">${intro}</div>
       ${isCustomHotel() ? freeChargeForm : ''}
       ${quickItems().map((q, i) => `<div class="hx-fol-line" style="cursor:pointer;" data-action="hx-post-charge" data-arg="${room}|${i}">
-        <span><span class="hx-srcdot ${SRC_DOT[q.src]}" style="margin-right:7px;"></span>${q.label}</span>
+        <span><span class="hx-srcdot ${SRC_DOT[q.src]}" style="margin-right:7px;"></span>${esc(q.label)}</span>
         <span class="qt">${q.src === 'resto' ? 'POS' : q.src === 'spa' ? 'SPA' : tx('FRAIS')}</span>
         <span class="am">${MAD(q.amt)}</span>
       </div>`).join('')}
