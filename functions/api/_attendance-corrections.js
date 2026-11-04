@@ -30,16 +30,15 @@ export async function retainCorrection(env, merchant, staff, body) {
       const row = await read(env, merchant, FEATURE, { items: [] });
       const existing = row.data.items.find((item) => item.staffId === staff.id && item.opId === opId && item.action === body.action);
       if (existing) return json({ ok: true, pendingApproval: existing.status === 'pending', correction: existing });
-      // Bounded: one person cannot fill the manager's queue, and decided items
-      // older than DECIDED_KEEP_MS leave the document (their effect is in attendance).
+      // Bounded. Decided items older than DECIDED_KEEP_MS leave first (their effect is in
+      // attendance); then only PENDING items count against the ceilings, so expired history
+      // never blocks a request. One person at their own pending bound cannot block others.
+      row.data.items = row.data.items.filter((item) => item.status === 'pending' || !(Number(item.decidedAt) > 0) || receivedTs - Number(item.decidedAt) < DECIDED_KEEP_MS);
+      if (row.data.items.filter((item) => item.status === 'pending').length >= HARD_MAX_CORRECTIONS) return json({ error: 'attendance-full' }, 409);
       const pendingForStaff = row.data.items.filter((item) => item.staffId === staff.id && item.status === 'pending');
       if (pendingForStaff.length >= MAX_PENDING_PER_STAFF) return json({ error: 'attendance-corrections-full' }, 429);
-      // Own small bounds: a few requests per person per day, and a ceiling on the whole document
-      // (refuse the new request, never drop a stored one).
       const lastDay = row.data.items.filter((item) => item.staffId === staff.id && receivedTs - Number(item.receivedTs) < 24 * HOUR_MS);
       if (lastDay.length >= MAX_CORRECTIONS_PER_DAY) return json({ error: 'too-many-punches' }, 429);
-      if (row.data.items.length >= HARD_MAX_CORRECTIONS) return json({ error: 'attendance-full' }, 409);
-      row.data.items = row.data.items.filter((item) => item.status === 'pending' || !(Number(item.decidedAt) > 0) || receivedTs - Number(item.decidedAt) < DECIDED_KEEP_MS);
       const capturedAt = Number.isSafeInteger(body.capturedAt) && body.capturedAt > 0 ? body.capturedAt : receivedTs - delay;
       const item = {
         id: crypto.randomUUID(), opId, staffId: staff.id, memberId: staff.memberId || staff.id, name: staff.name || '',

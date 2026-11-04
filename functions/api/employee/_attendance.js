@@ -1,7 +1,6 @@
 import { json, targetKey, limitCheck, limitFail, limitClear, rateLimitUnavailable } from '../../auth/_lib.js';
 import { retainCorrection } from '../_attendance-corrections.js';
 import { capAttendance, punchRefusal } from '../_attendance-cap.js';
-import { businessDate } from '../_business-day.js';
 import { servedDuring, verifiedProgress } from './_progress-truth.js';
 // Internal contract: actor is supplied only after liveEmployee authentication and
 // store operational checks. Access roles are distinct from free-form job titles.
@@ -127,12 +126,12 @@ export async function handleAttendance({ actor, store, request, action, body }) 
       changedEntry = { ...replayed };
     } else if (action === 'clock-in') {
       if (!open) {
-        const blocked = punchRefusal(entries, auth.pin.id, now, (ts) => businessDate(ts, cutoff, zone));
+        const blocked = punchRefusal(entries, auth.pin.id, now);
         if (blocked) { refusal = blocked.error; refusalStatus = blocked.status; return null; }
       }
       if (deferred && !open && at < lastOut) { refusal = 'attendance-capture-overlaps'; return null; }
       const inTs = Math.min(now, Math.max(at, lastOut));
-      changedEntry = open || { id: crypto.randomUUID(), staffId: auth.pin.id, memberId, name: auth.pin.name || '', role: auth.pin.role || '', inTs, outTs: 0, clockInCodeTs: codeTs, ...(opId ? { clockInOpId: opId } : {}), ...(deferred ? { deferred: true, inDeferredMs: capturedAgo } : {}) };
+      changedEntry = open || { id: crypto.randomUUID(), staffId: auth.pin.id, memberId, name: auth.pin.name || '', role: auth.pin.role || '', inTs, outTs: 0, receivedTs: now, clockInCodeTs: codeTs, ...(opId ? { clockInOpId: opId } : {}), ...(deferred ? { deferred: true, inDeferredMs: capturedAgo } : {}) };
       if (!open) entries.push(changedEntry);
     } else if (action === 'clock-out' && open) {
       const floor = Math.max(Number(open.inTs) || 0, Number(open.pauseTs) || 0,
@@ -146,6 +145,7 @@ export async function handleAttendance({ actor, store, request, action, body }) 
         open.pauseTs = 0;
       }
       open.outTs = Math.max(outTs, Number(open.inTs) || outTs);
+      open.outReceivedTs = now;
       open.clockOutCodeTs = codeTs;
       if (opId) open.clockOutOpId = opId;
       if (deferred) { open.deferred = true; open.outDeferredMs = capturedAgo; }

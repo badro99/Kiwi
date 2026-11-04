@@ -977,6 +977,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     'document de présence plein : le pointage récent est conservé, seul le service clos de plus de 400 jours est retiré, la nouvelle arrivée est enregistrée');
   }
 
+  const savedDocs = ['attendance', 'attendance-corrections'].map((f) => [f, sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature=?").get(f)?.data]);
   // 8. Plafond dur : au plafond, le NOUVEAU pointage est refusé (409) et rien de stocké ne disparaît.
   {
     const fresh = await (await teamLivePost({ action: 'generate-attendance-code' })).json();
@@ -1026,6 +1027,50 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     ok(room > 0 && results.slice(0, room).every((x) => x === 200) && results.slice(room).every((x) => x === 429) && rows.filter((i) => i.staffId === 'mem-sara').length === 20,
       'les demandes de correction sont bornées par personne et par jour (20), la suivante est refusée et rien de plus n est stocké');
   }
+
+  // 11. Des pointages antidatés ne contournent pas la borne : elle compte les écritures reçues par le serveur.
+  {
+    const t0 = Date.now(), day = 24 * 3600000;
+    const mineBackdated = Array.from({ length: 12 }, (_, k) => ({ id: 'bd' + k, staffId: 'mem-sara', inTs: t0 - 3 * day + k * 7200000, outTs: t0 - 3 * day + k * 7200000 + 3600000, receivedTs: t0 - 3600000, outReceivedTs: t0 - 3600000 }));
+    put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance'", JSON.stringify({ entries: mineBackdated }));
+    const fresh = await (await teamLivePost({ action: 'generate-attendance-code' })).json();
+    const r = await post({ action: 'clock-in', attendanceCode: fresh.code, opId: crypto.randomUUID() }, net.jar);
+    const body = await r.json().catch(() => ({}));
+    ok(r.status === 429 && body.error === 'too-many-punches' && attendanceDoc().entries.length === 12,
+      'des pointages datés de trois jours mais reçus à l instant comptent dans la borne quotidienne : refusé, rien de stocké');
+    const old = mineBackdated.map((e) => ({ ...e, receivedTs: undefined, outReceivedTs: undefined }));
+    put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance'", JSON.stringify({ entries: old }));
+    const fine = await post({ action: 'clock-in', attendanceCode: fresh.code, opId: crypto.randomUUID() }, net.jar);
+    ok(fine.status === 200, 'les anciennes entrées sans heure de réception ne comptent pas comme récentes');
+  }
+
+  // 12. Une seule personne ne remplit pas le document de tous : seul son nouveau pointage est refusé.
+  {
+    const t0 = Date.now(), day = 24 * 3600000;
+    const hog = Array.from({ length: 500 }, (_, k) => ({ id: 'hog' + k, staffId: 'mem-sara', inTs: t0 - 60 * day + k * 10000, outTs: t0 - 60 * day + k * 10000 + 5000, receivedTs: t0 - 5 * day, outReceivedTs: t0 - 5 * day }));
+    put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance'", JSON.stringify({ entries: hog }));
+    const fresh = await (await teamLivePost({ action: 'generate-attendance-code' })).json();
+    const sara = await post({ action: 'clock-in', attendanceCode: fresh.code, opId: crypto.randomUUID() }, net.jar);
+    const sBody = await sara.json().catch(() => ({}));
+    const nora = await post({ action: 'clock-in', attendanceCode: fresh.code, opId: crypto.randomUUID() }, noraCookie);
+    ok(sara.status === 409 && sBody.error === 'attendance-full' && nora.status === 200 && attendanceDoc().entries.length === 501,
+      'une personne qui détient sa part du document est refusée (409) pendant que son collègue pointe normalement');
+  }
+
+  // 13. Corrections : l historique décidé expiré ne bloque personne, le plafond de l un ne bloque pas l autre.
+  {
+    const t0 = Date.now(), day = 24 * 3600000;
+    const expired = Array.from({ length: 1500 }, (_, k) => ({ id: 'x' + k, opId: 'x' + k, staffId: 'someone', memberId: 'someone', action: 'clock-in', claimedTs: 1, capturedTs: 1, receivedTs: t0 - 200 * day, status: 'approved', decidedAt: t0 - 100 * day }));
+    put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance-corrections'", JSON.stringify({ items: expired }));
+    const a = await post({ action: 'clock-in', attendanceCode: '', opId: 'after-expired', capturedAgoMs: 13 * 3600000 }, noraCookie);
+    ok(a.status === 200, 'un document de corrections plein de décisions expirées accepte une nouvelle demande');
+    const pending = Array.from({ length: 20 }, (_, k) => ({ id: 'p' + k, opId: 'p' + k, staffId: 'mem-sara', memberId: 'mem-sara', action: 'clock-in', claimedTs: 1, capturedTs: 1, receivedTs: t0 - 3 * day, status: 'pending' }));
+    put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance-corrections'", JSON.stringify({ items: pending }));
+    const s1 = await post({ action: 'clock-in', attendanceCode: '', opId: 'sara-over', capturedAgoMs: 13 * 3600000 }, net.jar);
+    const n1 = await post({ action: 'clock-in', attendanceCode: '', opId: 'nora-fine', capturedAgoMs: 13 * 3600000 }, noraCookie);
+    ok(s1.status === 429 && n1.status === 200, 'une personne au plafond de demandes en attente est refusée, une autre est acceptée');
+  }
+  for (const [feature, data] of savedDocs) if (data) put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature=?", data, feature);
 }
 
 /* Wave S : vrai client, DOM minimal, stockage conservé entre ouvertures. */
