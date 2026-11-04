@@ -25,11 +25,12 @@ c.ledgerWrite(key, [{ cursor: 2, amount: 4.56 }]); await settle();
 assert.equal(c.ledgerFreshness.get(key).saved, false, 'neither store accepted this write');
 assert.equal(c.cachedLedger(key)[0].amount, 4.56, 'unsaved rows remain available this session');
 console.log('PASS ledger IDB fallback, reload, tenant isolation and freshness');
-const uiSource = fs.readFileSync('assets/dashboard-ledger-state.js', 'utf8');
+const extra = fs.readFileSync('assets/sales-history.js', 'utf8');
+const uiSource = extra.slice(extra.indexOf('/* ledger-state:begin'), extra.indexOf('/* ledger-state:end */'));
 for (const [lang, label] of [['fr', 'Données locales non enregistrées'], ['en', 'Local data not saved'], ['ar', 'البيانات المحلية غير محفوظة']]) {
   let state = { saved: false, pending: false }, paint, node;
   const window = { KiwiSales: { freshness: () => state, subscribe(fn) { paint = fn; } }, KiwiVenue: { getVenue: () => 'synthetic', subscribe() {} }, addEventListener() {} };
-  const document = { documentElement: { lang }, querySelector: () => ({ appendChild(el) { node = el; } }), getElementById: () => node, createElement: () => ({ setAttribute() {}, remove() { node = null; } }) };
+  const document = { readyState: 'complete', documentElement: { lang }, querySelector: () => ({ appendChild(el) { node = el; } }), getElementById: () => node, createElement: () => ({ setAttribute() {}, remove() { node = null; } }) };
   vm.runInNewContext(uiSource, { window, document });
   assert.equal(node.textContent, label, 'home KPI notice uses the surface language');
   state = { saved: true, pending: false }; paint(); assert.equal(node, null);

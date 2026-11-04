@@ -19,7 +19,6 @@
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
   '/assets/caisse-print-recovery.js?v=2',
-  '/assets/dashboard-ledger-state.js?v=1',
   '/assets/loyalty-rules.js?v=2',
   '/assets/clients-store-vault.js?v=7',
   '/assets/caisse-strings.js?v=3',
@@ -296,7 +295,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=5',
-  '/assets/sales-history.js?v=7',
+  '/assets/sales-history.js?v=10',
   '/assets/dateRange.js?v=134',
   '/assets/daterange/renderers.js?v=32',
   '/assets/agent/ui.js?v=3',
@@ -368,7 +367,7 @@ var SHELL = [
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
-  '/assets/tenant-purge.js?v=7',
+  '/assets/tenant-purge.js?v=8',
   /* La porte du dashboard hors ligne : des lignes salées que le serveur a prouvées,
      jamais un code. Absent de la coquille, un patron hors ligne ne rentrerait plus. */
   '/assets/dashboard-pin-vault.js?v=4',

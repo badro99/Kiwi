@@ -424,12 +424,8 @@
     "sha": "0c45c96d5cbb7cb2"
   },
   "assets/dashboard-extra.js": {
-    "v": "20",
+    "v": "22",
     "sha": "120e6738818d0bc4"
-  },
-  "assets/dashboard-ledger-state.js": {
-    "v": "1",
-    "sha": "26b92d3c1f2a54ab"
   },
   "assets/dashboard-native.css": {
     "v": "1",
@@ -1980,8 +1976,8 @@
     "sha": "8abf8684b022329c"
   },
   "assets/sales-history.js": {
-    "v": "7",
-    "sha": "9f843786854ceadd"
+    "v": "10",
+    "sha": "60af9edc3a054840"
   },
   "assets/salle-scan.js": {
     "v": "9",
@@ -2132,8 +2128,8 @@
     "sha": "6e987f641cf76d80"
   },
   "assets/tenant-purge.js": {
-    "v": "7",
-    "sha": "bbc95a4027d47201"
+    "v": "8",
+    "sha": "ef794cbe12e03779"
   },
   "assets/theme.css": {
     "v": "2",

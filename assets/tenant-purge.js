@@ -54,7 +54,9 @@
     /* Point de reprise du flux de changements et état de l'allègement du
        registre : propres au magasin, comme sa couverture. L'interrupteur
        kiwiSalesTrim, lui, est un réglage du navigateur et reste. */
-    'kiwiSalesChangeCheckpoint:', 'kiwiSalesTrimAt:', 'kiwiSalesTrimPending:'];
+    'kiwiSalesChangeCheckpoint:', 'kiwiSalesTrimAt:', 'kiwiSalesTrimPending:',
+    /* Carte en attente de publication (assets/menu-catalog/state.js) : celle d'un commerce. */
+    'kiwiMenuPending:'];
   // Chrome de l'appareil / préférences d'affichage : ce n'est PAS la donnée d'un
   // commerçant, et ça doit survivre au changement.
   var PRESERVE = {
@@ -90,7 +92,7 @@
          refuse) part aussi. La suppression est asynchrone et la page se
          recharge juste après : chaque copie porte donc aussi son locataire, et
          une copie qui n'est pas celle du locataire courant n'est jamais lue. */
-      try { if (window.indexedDB) { window.indexedDB.deleteDatabase('kiwi-catalog'); window.indexedDB.deleteDatabase('kiwi-clients-outbox-vault'); } } catch (_) {}
+      try { if (window.indexedDB) { window.indexedDB.deleteDatabase('kiwi-catalog'); window.indexedDB.deleteDatabase('kiwi-clients-outbox-vault'); window.indexedDB.deleteDatabase('kiwiSalesLedger'); } } catch (_) {}
       return kill.length + TENANT_KEYS.length;
     } catch (_) { return 0; }
   }
