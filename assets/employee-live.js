@@ -247,7 +247,7 @@
   // Réseau absent, serveur indisponible : on garde et on retente.
   function transient(err) { return !err || !err.status || err.status >= 500; }
   // Session absente ou trop d'essais : on garde aussi, sans perdre le geste.
-  function keeps(err) { return transient(err) || err.status === 401 || err.status === 429; }
+  function keeps(err) { return transient(err) || err.status === 401 || (err.status === 429 && err.code !== 'too-many-punches'); }
   function notify(detail) {
     try { document.dispatchEvent(new CustomEvent('kiwi-employee-punch-queue', { detail: detail })); } catch (_) { console.warn("[employee-live] notify failed"); }
   }
@@ -283,7 +283,7 @@
       }, function (err) {
         if (keeps(err)) { lastBlock = err; return; }
         // Refus définitif du serveur : retiré et signalé.
-        return dropItem(owner, item.opId, { result: 'rejected', status: err.status, reason: ['attendance-code-invalid', 'attendance-capture-overlaps', 'attendance-shift-too-long'].indexOf(err.code) >= 0 ? err.code : 'employee-request-failed' }).then(function () {
+        return dropItem(owner, item.opId, { result: 'rejected', status: err.status, reason: ['attendance-code-invalid', 'attendance-capture-overlaps', 'attendance-shift-too-long', 'attendance-full', 'too-many-punches'].indexOf(err.code) >= 0 ? err.code : 'employee-request-failed' }).then(function () {
           outcomes[item.opId] = { error: err };
           rejected.push({ action: item.kind, error: err.code || 'employee-request-failed', at: item.at });
           return step();

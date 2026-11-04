@@ -976,6 +976,56 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
       && after7.some((e) => e.staffId === 'mem-sara' && !e.outTs),
     'document de présence plein : le pointage récent est conservé, seul le service clos de plus de 400 jours est retiré, la nouvelle arrivée est enregistrée');
   }
+
+  // 8. Plafond dur : au plafond, le NOUVEAU pointage est refusé (409) et rien de stocké ne disparaît.
+  {
+    const fresh = await (await teamLivePost({ action: 'generate-attendance-code' })).json();
+    const out = await post({ action: 'clock-out', attendanceCode: fresh.code, opId: crypto.randomUUID() }, net.jar);
+    const doc = attendanceDoc(), t0 = Date.now();
+    const fillers = Array.from({ length: 10000 }, (_, k) => ({ id: 'cap' + k, staffId: 'filler', inTs: t0 - 3600000 - k, outTs: t0 - 1800000 - k }));
+    doc.entries = [...fillers, ...doc.entries.filter((e) => e.staffId === 'mem-sara')];
+    const ids = doc.entries.map((e) => e.id);
+    put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance'", JSON.stringify(doc));
+    const refused = await post({ action: 'clock-in', attendanceCode: fresh.code, opId: crypto.randomUUID() }, net.jar);
+    const body = await refused.json().catch(() => ({}));
+    const kept = attendanceDoc().entries;
+    ok(out.status === 200 && refused.status === 409 && body.error === 'attendance-full' && kept.length === ids.length && ids.every((id, k) => kept[k] && kept[k].id === id),
+      'au plafond dur du document de présence, le nouveau pointage est refusé (409 attendance-full) et chaque entrée déjà stockée survit');
+    doc.entries = doc.entries.filter((e) => e.staffId === 'mem-sara');
+    put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance'", JSON.stringify(doc));
+  }
+
+  // 9. Limite par personne et par jour : un pointage en rafale est refusé (429) et ne stocke rien.
+  {
+    const fresh = await (await teamLivePost({ action: 'generate-attendance-code' })).json();
+    let refusedCall = null, cycles = 0;
+    for (; cycles < 40 && !refusedCall; cycles++) {
+      const inn = await post({ action: 'clock-in', attendanceCode: fresh.code, opId: crypto.randomUUID() }, net.jar);
+      if (inn.status !== 200) { refusedCall = { status: inn.status, body: await inn.json().catch(() => ({})) }; break; }
+      await post({ action: 'clock-out', attendanceCode: fresh.code, opId: crypto.randomUUID() }, net.jar);
+    }
+    const mineNow = attendanceDoc().entries.filter((e) => e.staffId === 'mem-sara');
+    const punches = mineNow.filter((e) => e.inTs > Date.now() - 3600000).length * 2;
+    const countBefore = mineNow.length;
+    const again = await post({ action: 'clock-in', attendanceCode: fresh.code, opId: crypto.randomUUID() }, net.jar);
+    ok(refusedCall && refusedCall.status === 429 && refusedCall.body.error === 'too-many-punches' && cycles <= 13 && again.status === 429
+      && attendanceDoc().entries.filter((e) => e.staffId === 'mem-sara').length === countBefore && punches <= 26,
+    'plus de 24 pointages par personne et par jour : refusé (429 too-many-punches), rien de stocké');
+  }
+
+  // 10. Les demandes de correction (geste de plus de 12 h) ont leur propre borne quotidienne.
+  {
+    const results = [];
+    const already = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='attendance-corrections'").get().data).items.filter((i) => i.staffId === 'mem-sara').length;
+    for (let k = 0; k < 24; k++) {
+      const r = await post({ action: 'clock-in', attendanceCode: '', opId: 'stale-bound-' + k, capturedAgoMs: 13 * 3600000 + k * 1000 }, net.jar);
+      results.push(r.status);
+    }
+    const rows = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='attendance-corrections'").get().data).items;
+    const room = 20 - already;
+    ok(room > 0 && results.slice(0, room).every((x) => x === 200) && results.slice(room).every((x) => x === 429) && rows.filter((i) => i.staffId === 'mem-sara').length === 20,
+      'les demandes de correction sont bornées par personne et par jour (20), la suivante est refusée et rien de plus n est stocké');
+  }
 }
 
 /* Wave S : vrai client, DOM minimal, stockage conservé entre ouvertures. */

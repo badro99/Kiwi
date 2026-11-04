@@ -564,8 +564,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "645",
-    "sha": "2067be3647d15721"
+    "v": "646",
+    "sha": "0824cb62fe38c2a7"
   },
   "assets/employee-planning.js": {
     "v": "21",
@@ -2012,12 +2012,12 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "27",
-    "sha": "744e87916aca72f2"
+    "v": "28",
+    "sha": "45bdd5cdaa0093df"
   },
   "assets/serveur-lang.js": {
-    "v": "15",
-    "sha": "9e989858ea1248af"
+    "v": "16",
+    "sha": "6295637dbea62ae5"
   },
   "assets/serveur-shell.css": {
     "v": "8",

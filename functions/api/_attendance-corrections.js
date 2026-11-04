@@ -3,6 +3,7 @@ import { codeDocument } from '../auth/_staff-codes.js';
 import { json, entitledMerchant, activeAccountSession, isOperator, operatorActor, readEmployee } from '../auth/_lib.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { hoursByDay } from './_worked-hours.js';
+import { MAX_CORRECTIONS_PER_DAY, HARD_MAX_CORRECTIONS } from './_attendance-cap.js';
 const FEATURE = 'attendance-corrections';
 const MAX_PENDING_PER_STAFF = 20;
 const DECIDED_KEEP_MS = 90 * 24 * 3600000;
@@ -33,6 +34,11 @@ export async function retainCorrection(env, merchant, staff, body) {
       // older than DECIDED_KEEP_MS leave the document (their effect is in attendance).
       const pendingForStaff = row.data.items.filter((item) => item.staffId === staff.id && item.status === 'pending');
       if (pendingForStaff.length >= MAX_PENDING_PER_STAFF) return json({ error: 'attendance-corrections-full' }, 429);
+      // Own small bounds: a few requests per person per day, and a ceiling on the whole document
+      // (refuse the new request, never drop a stored one).
+      const lastDay = row.data.items.filter((item) => item.staffId === staff.id && receivedTs - Number(item.receivedTs) < 24 * HOUR_MS);
+      if (lastDay.length >= MAX_CORRECTIONS_PER_DAY) return json({ error: 'too-many-punches' }, 429);
+      if (row.data.items.length >= HARD_MAX_CORRECTIONS) return json({ error: 'attendance-full' }, 409);
       row.data.items = row.data.items.filter((item) => item.status === 'pending' || !(Number(item.decidedAt) > 0) || receivedTs - Number(item.decidedAt) < DECIDED_KEEP_MS);
       const capturedAt = Number.isSafeInteger(body.capturedAt) && body.capturedAt > 0 ? body.capturedAt : receivedTs - delay;
       const item = {

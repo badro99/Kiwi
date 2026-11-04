@@ -1,6 +1,7 @@
 import { json, targetKey, limitCheck, limitFail, limitClear, rateLimitUnavailable } from '../../auth/_lib.js';
 import { retainCorrection } from '../_attendance-corrections.js';
-import { capAttendance } from '../_attendance-cap.js';
+import { capAttendance, punchRefusal } from '../_attendance-cap.js';
+import { businessDate } from '../_business-day.js';
 import { servedDuring, verifiedProgress } from './_progress-truth.js';
 // Internal contract: actor is supplied only after liveEmployee authentication and
 // store operational checks. Access roles are distinct from free-form job titles.
@@ -106,7 +107,7 @@ export async function handleAttendance({ actor, store, request, action, body }) 
    * gérant voit dans les heures et les derniers pointages. */
   const settings = (teamRow.data && teamRow.data.planning && teamRow.data.planning.settings) || {};
   const maxShiftMs = (settings.maxDailyHours == null ? DEFAULT_MAX_DAILY_HOURS : Math.max(0, Number(settings.maxDailyHours) || 0)) * 3600000;
-  let refusal = '';
+  let refusal = '', refusalStatus = 409;
   /** @type {{inTs: number, outTs: number, id?: string, hoursCredit?: string} | null} Populated by the awaited document mutation. */
   let changedEntry = null;
   let replay = false;
@@ -114,7 +115,7 @@ export async function handleAttendance({ actor, store, request, action, body }) 
     // Un essai CAS perdu ne doit pas créditer les heures du gagnant une seconde fois.
     changedEntry = null;
     replay = false;
-    refusal = '';
+    refusal = ''; refusalStatus = 409;
     const entries = Array.isArray(doc.entries) ? doc.entries.slice() : [];
     const mine = entries.filter((e) => e && e.staffId === auth.pin.id);
     const open = mine.slice().reverse().find((e) => !e.outTs);
@@ -125,6 +126,10 @@ export async function handleAttendance({ actor, store, request, action, body }) 
       replay = true;
       changedEntry = { ...replayed };
     } else if (action === 'clock-in') {
+      if (!open) {
+        const blocked = punchRefusal(entries, auth.pin.id, now, (ts) => businessDate(ts, cutoff, zone));
+        if (blocked) { refusal = blocked.error; refusalStatus = blocked.status; return null; }
+      }
       if (deferred && !open && at < lastOut) { refusal = 'attendance-capture-overlaps'; return null; }
       const inTs = Math.min(now, Math.max(at, lastOut));
       changedEntry = open || { id: crypto.randomUUID(), staffId: auth.pin.id, memberId, name: auth.pin.name || '', role: auth.pin.role || '', inTs, outTs: 0, clockInCodeTs: codeTs, ...(opId ? { clockInOpId: opId } : {}), ...(deferred ? { deferred: true, inDeferredMs: capturedAgo } : {}) };
@@ -150,7 +155,7 @@ export async function handleAttendance({ actor, store, request, action, body }) 
     }
     return { entries: capAttendance(entries) };
   });
-  if (refusal) return json({ error: refusal }, 409);
+  if (refusal) return json({ error: refusal }, refusalStatus);
   if (!attendance) return json({ error: 'attendance-write-failed' }, 503);
   /* Deux documents, deux écritures : le service est fermé dans `attendance`,
    * ses heures sont créditées dans `team`. Le résultat de la seconde était
