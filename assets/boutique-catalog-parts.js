@@ -1307,9 +1307,9 @@ window.__kiwiBoutiqueCatalogParts.wholeQuantity = function (value) {
   // The till translates the French itself; the dashboard reads its key, French last.
   const text = window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(fr)
     : layer && (layer.T[layer.getLang()]?.['catalog.wholeUnits'] || layer.T.fr['catalog.wholeUnits']);
-  if (!text) return false;
-  if (window.Kiwi?.toast) window.Kiwi.toast(text, { type: 'error' });
-  else if (window.toast) window.toast(text);
-  else if (window.alert) window.alert(text);
+  const translate = () => text || fr; // no language layer yet: French, the base language, never silence
+  if (window.Kiwi?.toast) window.Kiwi.toast(translate(), { type: 'error' });
+  else if (window.toast) window.toast(translate());
+  else if (window.alert) window.alert(translate());
   return false;
 };

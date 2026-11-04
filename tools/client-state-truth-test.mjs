@@ -91,6 +91,9 @@ cases.catalog = () => {
   vm.runInContext(s.slice(start,s.indexOf('\n  });',start)+6),c);
   listener({key:'dirty',newValue:null});assert.equal(c.cloud.dirty,true,'another tab cannot clear our dirty status');
   listener({key:'catalog',newValue:JSON.stringify({products:[]})});assert.equal(c.db.products[0].id,'local');assert.match(alerts[0],/local edits are kept/);
+  // A tab whose own write was kept shares the catalogue: it adopts the other tab's sale, and a cleared mark clears.
+  c.localKept=true;listener({key:'catalog',newValue:JSON.stringify({products:[{id:'other-tab'}]})});assert.equal(c.db.products[0].id,'other-tab','a kept tab adopts the shared catalogue even while unsynced');
+  listener({key:'dirty',newValue:null});assert.equal(c.cloud.dirty,false,'the shared dirty mark follows the other tab once nothing is held only here');assert.equal(alerts.length,1);
 };
 cases.clock = async () => {
   const c=vm.createContext({Date,clockOffset:7*86400000});

@@ -369,10 +369,12 @@
 
   // Cross-tab: another tab wrote the catalog → reload + notify our listeners.
   window.addEventListener('storage', (e) => {
-    if (e.key === DIRTY_KEY(VENUE)) { cloud.dirty = cloud.dirty || !!e.newValue; return; }
+    // The dirty mark and the catalogue are shared by every tab; only a refused local
+    // write leaves edits here that no other tab holds, and those must not be dropped.
+    if (e.key === DIRTY_KEY(VENUE)) { cloud.dirty = !!e.newValue || !localKept; return; }
     if (e.key !== KEY) return;
-    if (cloud.dirty || !localKept) {
-      const lang = document.documentElement.lang;
+    if (!localKept) {
+      const lang = (document.documentElement || {}).lang;
       const message = { fr: 'Catalogue modifié dans un autre onglet. Vos modifications locales sont conservées. Synchronisez avant de recharger.', en: 'Catalog changed in another tab. Your local edits are kept. Sync before reloading.', ar: 'تغيّر الكتالوج في علامة تبويب أخرى. تم الاحتفاظ بتعديلاتك المحلية. زامن قبل إعادة التحميل.' };
       window.alert(message[lang] || message.fr);
       return;
