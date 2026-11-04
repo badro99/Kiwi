@@ -200,8 +200,8 @@
     "sha": "a67300dab4d2644a"
   },
   "assets/caisse-kitchen.js": {
-    "v": "10",
-    "sha": "bb1d16a5c1416333"
+    "v": "11",
+    "sha": "003a914f6bb7c0b0"
   },
   "assets/caisse-lang.js": {
     "v": "96",
@@ -228,8 +228,8 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "63",
-    "sha": "159caf1e7f96ff3e"
+    "v": "65",
+    "sha": "f5a3c0ffaf86792c"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
@@ -1304,8 +1304,8 @@
     "sha": "565730a1fc3bccbe"
   },
   "assets/orderpro-page.js": {
-    "v": "19",
-    "sha": "c2006cdccce24865"
+    "v": "20",
+    "sha": "a2d282763392b77c"
   },
   "assets/orderpro-panel.js": {
     "v": "5",
@@ -1940,8 +1940,8 @@
     "sha": "744e87916aca72f2"
   },
   "assets/serveur-lang.js": {
-    "v": "9",
-    "sha": "020ac4309450610a"
+    "v": "10",
+    "sha": "10f8682f2c74d432"
   },
   "assets/serveur-shell.css": {
     "v": "8",

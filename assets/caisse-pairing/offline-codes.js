@@ -98,9 +98,9 @@
       });
     }).catch(function () { return staff; }); // Cache failure cannot reject a server-proven unlock.
   }
-  function verifyOfflinePin(merchant, code) {
+  function verifyOfflinePin(merchant, code, purge) { /* purge: a server-refused code's verifier lookup, never a keypad guess */
     var epoch = offlinePinEpoch;
-    var locked = offlineBudget.check(merchant); if (locked) { offlineBudget.notice(locked); return Promise.resolve(null); } /* refused, not counted: retrying never lengthens a lockout */
+    var locked = purge ? 0 : offlineBudget.check(merchant); if (locked) { offlineBudget.notice(locked); return Promise.resolve(null); } if (!purge && offlineBudget.busy[merchant]) return Promise.resolve(null); /* locked or busy: refused, not counted */
     if (!hasSubtle()) return Promise.resolve(null);
     if (window.KiwiTrustedClock && window.KiwiTrustedClock.rolledBack()) return Promise.resolve(null); /* clock moved back: wait for the server */
     var rows = offlinePinRows(merchant);
@@ -111,7 +111,7 @@
       if (!derived[k]) derived[k] = pinDigest(merchant, row.salt, code, row.it);
       return derived[k];
     }
-    return Promise.all(rows.map(function (row) {
+    if (!purge) offlineBudget.busy[merchant] = true; return Promise.all(rows.map(function (row) { /* one offline attempt at a time */
       if (row.v !== 2 || row.kdf !== 'pbkdf2-sha256' || !Number.isSafeInteger(row.it) || row.it < PIN_ITERATIONS ||
           row.it > 2000000 || !/^[a-f0-9]{32}$/.test(row.salt)) return null;
       return derive(row).then(function (digest) {
@@ -120,5 +120,5 @@
         var who = Object.assign({}, row.staff, { provenAt: Number(row.provenAt || (Number(row.expiresAt) - 7 * 86400000)), offline: true });
         return who;
       }).catch(function () { return null; });
-    })).then(function (matches) { var who = matches.find(Boolean) || null; var wait = offlineBudget.check(merchant, !who, !!who); if (wait) offlineBudget.notice(wait); return who; });
+    })).then(function (matches) { var who = matches.find(Boolean) || null; if (purge) return who; delete offlineBudget.busy[merchant]; var wait = offlineBudget.check(merchant, !who, false); if (wait) offlineBudget.notice(wait); return who; }); /* only a server-proven code clears the streak */
   }

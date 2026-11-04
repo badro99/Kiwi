@@ -29,7 +29,7 @@
         }
         /* A code the server has just refused is revoked or changed: its offline
            verifier goes now. A mistyped code matches no verifier, drops nothing. */
-        if (r && (r.status === 401 || r.status === 403)) return verifyOfflinePin(merchant, code).then(function (gone) {
+        if (r && (r.status === 401 || r.status === 403)) return verifyOfflinePin(merchant, code, true).then(function (gone) {
           if (gone) offlinePinRows(merchant, function (row) { return String(row.staff && row.staff.id || '') !== String(gone.id || ''); });
           return null;
         }, function () { return null; });
@@ -69,7 +69,7 @@
         var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {});
         return rememberOfflinePin(merchant, code, staff).then(function () { return reply; }, function () { return reply; });
       }
-      if (reply.kind === 'answer' && (reply.status === 401 || reply.status === 403)) return verifyOfflinePin(merchant, code).then(function (gone) {
+      if (reply.kind === 'answer' && (reply.status === 401 || reply.status === 403)) return verifyOfflinePin(merchant, code, true).then(function (gone) {
         if (gone) offlinePinRows(merchant, function (row) { return String(row.staff && row.staff.id || '') !== String(gone.id || ''); });
         return reply;
       }, function () { return reply; });

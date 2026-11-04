@@ -128,9 +128,9 @@
       });
     }).catch(function () { return staff; }); // Cache failure cannot reject a server-proven unlock.
   }
-  function verifyOfflinePin(merchant, code) {
+  function verifyOfflinePin(merchant, code, purge) { /* purge: a server-refused code's verifier lookup, never a keypad guess */
     var epoch = offlinePinEpoch;
-    var locked = offlineBudget.check(merchant); if (locked) { offlineBudget.notice(locked); return Promise.resolve(null); } /* refused, not counted: retrying never lengthens a lockout */
+    var locked = purge ? 0 : offlineBudget.check(merchant); if (locked) { offlineBudget.notice(locked); return Promise.resolve(null); } if (!purge && offlineBudget.busy[merchant]) return Promise.resolve(null); /* locked or busy: refused, not counted */
     if (!hasSubtle()) return Promise.resolve(null);
     if (window.KiwiTrustedClock && window.KiwiTrustedClock.rolledBack()) return Promise.resolve(null); /* clock moved back: wait for the server */
     var rows = offlinePinRows(merchant);
@@ -141,7 +141,7 @@
       if (!derived[k]) derived[k] = pinDigest(merchant, row.salt, code, row.it);
       return derived[k];
     }
-    return Promise.all(rows.map(function (row) {
+    if (!purge) offlineBudget.busy[merchant] = true; return Promise.all(rows.map(function (row) { /* one offline attempt at a time */
       if (row.v !== 2 || row.kdf !== 'pbkdf2-sha256' || !Number.isSafeInteger(row.it) || row.it < PIN_ITERATIONS ||
           row.it > 2000000 || !/^[a-f0-9]{32}$/.test(row.salt)) return null;
       return derive(row).then(function (digest) {
@@ -150,25 +150,25 @@
         var who = Object.assign({}, row.staff, { provenAt: Number(row.provenAt || (Number(row.expiresAt) - 7 * 86400000)), offline: true });
         return who;
       }).catch(function () { return null; });
-    })).then(function (matches) { var who = matches.find(Boolean) || null; var wait = offlineBudget.check(merchant, !who, !!who); if (wait) offlineBudget.notice(wait); return who; });
+    })).then(function (matches) { var who = matches.find(Boolean) || null; if (purge) return who; delete offlineBudget.busy[merchant]; var wait = offlineBudget.check(merchant, !who, false); if (wait) offlineBudget.notice(wait); return who; }); /* only a server-proven code clears the streak */
   }
   /* Keypad budget only: a copied verifier cache remains guessable. Persist a
      clock high-water mark so rolling time back never consumes the delay. */
   var offlineBudgets = {};
-  var offlineBudget = { check: function (merchant, fail, reset) {
+  var offlineBudget = { busy: {}, check: function (merchant, fail, reset) {
     var key = 'kiwi:caisse:offline-pin-budget:v1:' + encodeURIComponent(String(merchant || ''));
     var b = offlineBudgets[key];
     try { b = JSON.parse(ls(key) || 'null') || b; } catch (_) {}
     b = b || { failures: 0, until: 0, at: 0 };
-    var now = Math.max(Number(b.at) || 0, (window.KiwiTrustedClock || Date).now());
-    if (reset) b = { failures: 0, until: 0, at: now };
+    var clock = (window.KiwiTrustedClock || Date).now(), at = Number(b.at) || 0, now = at - clock > 900000 ? clock : Math.max(at, clock); b.until = Math.min(Number(b.until) || 0, now + 900000); /* a mark past the longest lock is drift */
+    if (reset) b = { failures: 0, until: 0, at: now }; else if (!(Number(b.until) > now) && now - (Number(b.last) || 0) > 900000) b.failures = 0; /* failures expire after 15 min, as on the server */
     if (fail) {
-      b.failures = Math.min(10, (Number(b.failures) || 0) + 1);
+      b.failures = Math.min(10, (Number(b.failures) || 0) + 1); b.last = now;
       if (b.failures >= 5) b.until = Math.max(Number(b.until) || 0, now + Math.min(900000, 30000 * Math.pow(2, b.failures - 5)));
     }
     b.at = now; offlineBudgets[key] = b;
     set(key, JSON.stringify(b));
-    return Math.max(0, Math.ceil(((Number(b.until) || 0) - now) / 1000));
+    return Math.max(0, Math.min(900, Math.ceil(((Number(b.until) || 0) - now) / 1000)));
   }
   , notice: function (seconds) {
     var text = "Trop d'essais hors ligne · réessayez dans " + seconds + ' s';
@@ -1155,7 +1155,7 @@
         }
         /* A code the server has just refused is revoked or changed: its offline
            verifier goes now. A mistyped code matches no verifier, drops nothing. */
-        if (r && (r.status === 401 || r.status === 403)) return verifyOfflinePin(merchant, code).then(function (gone) {
+        if (r && (r.status === 401 || r.status === 403)) return verifyOfflinePin(merchant, code, true).then(function (gone) {
           if (gone) offlinePinRows(merchant, function (row) { return String(row.staff && row.staff.id || '') !== String(gone.id || ''); });
           return null;
         }, function () { return null; });
@@ -1195,7 +1195,7 @@
         var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {});
         return rememberOfflinePin(merchant, code, staff).then(function () { return reply; }, function () { return reply; });
       }
-      if (reply.kind === 'answer' && (reply.status === 401 || reply.status === 403)) return verifyOfflinePin(merchant, code).then(function (gone) {
+      if (reply.kind === 'answer' && (reply.status === 401 || reply.status === 403)) return verifyOfflinePin(merchant, code, true).then(function (gone) {
         if (gone) offlinePinRows(merchant, function (row) { return String(row.staff && row.staff.id || '') !== String(gone.id || ''); });
         return reply;
       }, function () { return reply; });

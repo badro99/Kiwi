@@ -146,6 +146,9 @@ const typo = String((Number(code) + 1) % 10000).padStart(4, '0') === code2 ? Str
 refused = new Set([code, typo]); online = true;
 await api.authorizeTill(typo); await api.authorizeTill(code);
 refused = new Set(); online = false;
+// This suite tests verifier lifecycle, not the keypad budget (offline-pin-budget-test): let the
+// expected refusals above expire (15 min, as on the server) before the last checks.
+clock += 16 * 60000;
 assert.equal(await api.offlineRow(code), null, 'a refused code loses its offline verifier');
 assert.equal((await api.offlineRow(code2))?.name, 'Staff ' + code2, 'other cashiers keep theirs');
 roster = [];

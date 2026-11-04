@@ -24,7 +24,7 @@ export const words = {
 };
 // Preserve the waiter sheet's shipped labels; guest spelling remains the default.
 export const waiterWords = { fr: { opt_required: 'Obligatoire', custom_note_optional: 'Optionnel' },
-  en: { opt_required: 'Required', custom_note_optional: 'Optional' }, ar: { opt_required: 'إجباري', btn_add: 'إضافة' } };
+  en: { opt_required: 'Required', custom_note_optional: 'Optional' }, ar: { opt_required: 'إجباري', custom_note_optional: 'اختياري', btn_add: 'إضافة' } };
 export const word = (lang, key, surface) => {
   const locale = words[lang] ? lang : 'en';
   return (surface === 'waiter' ? waiterWords[locale][key] : undefined) ?? words[locale][key] ?? words.fr[key];
