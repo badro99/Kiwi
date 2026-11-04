@@ -1,3 +1,4 @@
+import { movementProbe, probedMovementInsert } from './_movement-probe.js';
 export const reservationContract = Object.freeze({
   insert: Object.freeze(["merchant", "request_id", "line_no", "item_id", "location_id", "qty_milli", "review_revision", "created_ts"]),
   update: Object.freeze(["qty_milli", "review_revision", "created_ts"]),
@@ -96,6 +97,7 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
         occurredTs: now, cursor: cursor++, reversalOf: '',
         meta: {
           requestId: id,
+          transferPiece: piece,
           line: transfer.index,
           reviewRevision: current.request.reviewRevision,
           allocationBreakdown: slice.allocations,
@@ -123,14 +125,7 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
           Math.round(movement.qty * 1000), movement.reason, Math.round(movement.unitCost * 100), movement.currency,
           movement.refType, movement.refId, movement.note, movement.actor, movement.occurredTs, movement.cursor,
           movement.reversalOf, JSON.stringify(movement.meta), now];
-      movementStatements.push(env.DB.prepare(
-        `INSERT OR IGNORE INTO inventory_movements ${columns}
-         SELECT ${values.map(() => '?').join(', ')}
-          WHERE EXISTS (
-            SELECT 1 FROM ${REQUEST_TABLE}
-             WHERE merchant = ? AND id = ? AND last_command_key = ?
-          )`
-      ).bind(...values, merchant, id, idempotencyKey));
+      movementStatements.push(probedMovementInsert(env, columns, values, merchant, movement, id, idempotencyKey));
     }
   }
   const updateRequest = env.DB.prepare(
@@ -220,6 +215,11 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
       return json({ error: 'reservation-required', action: 'review', revision: expectedRevision }, 409);
     }
     return json({ error: 'stale' }, 409);
+  }
+  for (const movement of movements) {
+    const probe = movementProbe(merchant, movement);
+    const row = await env.DB.prepare(probe.sql).bind(...probe.args).first();
+    movement.id = row.id;
   }
   const stored = await loadRequest(env, merchant, id);
   return json({ ok: true, transferRef, movements, ...stored });
