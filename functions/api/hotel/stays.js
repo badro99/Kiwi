@@ -560,8 +560,8 @@ export async function onRequestPost({ request, env }) {
         try { checkout = await checkoutBalance(env, merchant, old, rows.rooms?.data, hasResTable); }
         catch (_) { return json({ error: 'stay-balance-unavailable' }, 503); }
         if (checkout.linked && checkout.owedCents > 0 && b.force !== true) return json({ error: 'stay-unpaid', confirm: 'force', ...checkout }, 409);
-        // Leaving with an unpaid balance is the owner's call (or an operator's), never a paired till's.
-        if (checkout.linked && checkout.owedCents > 0 && actor.role === 'till') return json({ error: 'owner-required', ...checkout }, 403);
+        // Leaving with an unpaid balance is the owner's call (or an operator's): an allow-list, so an unresolved actor fails closed.
+        if (checkout.linked && checkout.owedCents > 0 && !['owner', 'operator'].includes(actor.role)) return json({ error: 'owner-required', ...checkout }, 403);
       }
       const previous = { ...old, hotel: { ...old.hotel } };
       if (checkout) old.checkout = { ...checkout, forced: checkout.linked && checkout.owedCents > 0, actor, at: now, actualDepartureAt: now, actualDepartureDate: (() => { const d=dateParts(now,zone); return `${d.year}-${d.month}-${d.day}`; })(), billingPolicy: 'booked-nights-retained', cancellationFeeCents: 0 };
@@ -897,7 +897,7 @@ export async function onRequestPost({ request, env }) {
       try { balance = await checkoutBalance(env, merchant, rec, rows.rooms?.data, hasResTable); }
       catch (_) { return json({ error: 'stay-balance-unavailable' }, 503); }
       if (balance.linked && balance.owedCents > 0 && b.force !== true) return json({ error: 'stay-unpaid', confirm: 'force', ...balance }, 409);
-      if (balance.linked && balance.owedCents > 0 && actor.role === 'till') return json({ error: 'owner-required', ...balance }, 403);
+      if (balance.linked && balance.owedCents > 0 && !['owner', 'operator'].includes(actor.role)) return json({ error: 'owner-required', ...balance }, 403);
       rec.checkout = { ...balance, forced: balance.linked && balance.owedCents > 0, actor, at: now, actualDepartureAt: now, actualDepartureDate: (() => { const d=dateParts(now,zone); return `${d.year}-${d.month}-${d.day}`; })(), billingPolicy: 'booked-nights-retained', cancellationFeeCents: 0 };
     }
     rec.hotel.dossierId ||= rec.id;
