@@ -71,6 +71,23 @@ const heldFull = boot({ storageFails: k => k === 'kiwi:posHeld', answer: () => (
 const localOnly = heldFull.api.record('epicerie', { total: 12.34, method: 'cash', ref: 'held-quota' });
 ok('held quota failure is explicit on the durable entry and emitted state', localOnly?.syncState === 'not-saved' && heldFull.events.some(e => e.type === 'kiwi:sale-sync-refused'));
 
+/* Each refusal reaches the cashier: before, nobody listened to these events.
+   The till shell (caisse-app.js) owns the toast; run its wiring line alone. */
+{
+  const app = fs.readFileSync(new URL('../assets/caisse-app.js', import.meta.url), 'utf8');
+  const line = app.split('\n').find((l) => l.includes("'kiwi:sale-refused'")) || '';
+  const wiring = line.slice(line.indexOf('Object.entries('));
+  const listeners = {}, toasts = [];
+  vm.runInNewContext(wiring, {
+    window: { addEventListener: (type, fn) => { (listeners[type] = listeners[type] || []).push(fn); } },
+    toast: (msg, ms, kind) => toasts.push({ msg, ms, kind }), tr: (m) => 'EN:' + m, Object,
+  });
+  for (const type of ['kiwi:sale-refused', 'kiwi:sale-local-full', 'kiwi:sale-sync-refused']) {
+    ok(type + ' has one listener in the till shell', (listeners[type] || []).length === 1);
+    (listeners[type] || []).forEach((fn) => fn({ type }));
+  }
+  ok('each refusal shows one translated warning to the cashier', toasts.length === 3 && toasts.every((t) => t.kind === 'warn' && t.ms === 10000 && t.msg.startsWith('EN:Vente')));
+}
 /* 1 · une vente refusée (stockage plein) est gardée, avec son commerce. */
 let answers = [{ ok: false, reason: 'queue-storage-full' }];
 let t = boot({ answer: () => answers.shift() || { ok: true, queued: true } });

@@ -133,7 +133,7 @@ var SHELL = [
   '/assets/caisse/handover.js?v=2',
   '/assets/caisse/inventory.js?v=4',
   '/assets/caisse/offline.js?v=10',
-  '/assets/caisse-app.js?v=32',
+  '/assets/caisse-app.js?v=33',
   '/assets/caisse-loyalty-reward.js?v=7',
   '/assets/caisse-refresh.js?v=9',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
@@ -402,7 +402,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=27',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=103',
+  '/assets/caisse-lang.js?v=104',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=10',
