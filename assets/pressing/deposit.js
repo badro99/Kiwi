@@ -2,10 +2,10 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: KiwiImageProof, KiwiLens.
  */
-import { CATALOG, ITEMS, root } from './custody.js?v=28';
+import { CATALOG, ITEMS, root } from './custody.js?v=30';
 export function create(owner) {
   'use strict';
-  const { $, $$, COLOR, COLORS, CUST, CUSTOMERS, MAX_QTY, NOTES, ORDERS, STATUS, availServices, catalogLabel, clampQty, closeVeil, dataText, esc, fmtDT, fmtMAD, freshTicket, garmentIcon, icons, isLiveOrder, lineTotal, minPrice, mirrorClient, normalizePhone, openVeil, orderStatus, orderTotals, pad2, persistPressing, phoneDigits, pressingOps, priceTable, publicOrderNo, readyOptions, state, storeInstant, storeWall, svcCodes, svcShorts, toast, validReady, validateTicket } = owner.depositContext();
+  const { $, $$, COLOR, COLORS, CUST, CUSTOMERS, MAX_QTY, NOTES, ORDERS, STATUS, availServices, b2bPercentFor, b2bPercentLabel, catalogLabel, clampQty, closeVeil, dataText, esc, fmtDT, fmtMAD, freshTicket, garmentIcon, icons, isLiveOrder, lineTotal, minPrice, mirrorClient, normalizePhone, openVeil, orderStatus, orderTotals, pad2, persistPressing, phoneDigits, pressingOps, priceTable, publicOrderNo, readyOptions, state, storeInstant, storeWall, svcCodes, svcShorts, toast, validReady, validateTicket } = owner.depositContext();
 function counterCatalog() {
     return CATALOG.map((c) => ({ ...c, items: c.items.filter((it) => {
       if (it.active === false) return false;
@@ -70,7 +70,8 @@ function ticketCount(t) {
   }
 function ticketTotals(t) {
     const b2b = t.customer && t.customer.type === 'known' && CUST[t.customer.id] && CUST[t.customer.id].b2b;
-    return { ...orderTotals({ lines: t.lines, b2b }), b2b };
+    const b2bPercent = b2b ? b2bPercentFor(CUST[t.customer.id]) : null;
+    return { ...orderTotals({ lines: t.lines, b2b, b2bPercent }), b2b, b2bPercent };
   }
 function customerRow(t) {
     if (!t.customer) {
@@ -92,7 +93,7 @@ function customerRow(t) {
   }
 function renderTicket() {
     const t = state.ticket;
-    const { remise, total, b2b } = ticketTotals(t);
+    const { remise, total, b2b, b2bPercent } = ticketTotals(t);
     const count = ticketCount(t);
     const el = $('#px-ticket', root);
     el.innerHTML = `
@@ -116,7 +117,7 @@ function renderTicket() {
       <div class="px-tk-foot">
         <div class="px-tk-tot">
           <span class="pcs"><i data-icon="sell"></i> ${count} pièce${count > 1 ? 's' : ''} · ${count} étiquette${count > 1 ? 's' : ''}</span>
-          ${remise ? `<span>Remise B2B –15 % · −${fmtMAD(remise).replace(' MAD', '')} MAD</span>` : ''}
+          ${remise ? `<span>Remise B2B –${b2bPercentLabel(b2bPercent)} % · −${fmtMAD(remise).replace(' MAD', '')} MAD</span>` : ''}
         </div>
         <div class="px-tk-total"><span class="lbl">Total${b2b ? ' (remisé)' : ''}</span><span class="val">${fmtMAD(total)}</span></div>
         <button class="px-validate" id="px-validate" ${t.lines.length ? '' : 'disabled'}>
@@ -411,7 +412,7 @@ function openClient(options = {}) {
         b.onclick = () => {
           state.ticket.customer = { type: 'known', id: b.dataset.pxCl };
           const c = CUST[b.dataset.pxCl];
-          toast(c.b2b ? `${c.name}, compte B2B, remise –15 % appliquée` : `${c.name}, ${c.orders} ${c.orders < 2 ? 'commande' : 'commandes'}, bienvenue`);
+          toast(c.b2b ? `${c.name}, compte B2B, remise –${b2bPercentLabel(b2bPercentFor(c))} % appliquée` : `${c.name}, ${c.orders} ${c.orders < 2 ? 'commande' : 'commandes'}, bienvenue`);
           completeSelection();
         };
       });

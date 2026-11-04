@@ -3,10 +3,11 @@
  * rack allocation, numbering, persistence and existing centime calculations.
  * Browser reads: KiwiCaisseLang, KiwiCaissePairing, KiwiCaisseTheme, KiwiClients, KiwiCloudDoc, KiwiConfig, KiwiEnv, KiwiEscPos, KiwiHardware, KiwiPhone, KiwiPlatform, KiwiPosDispatch, KiwiPosSale, KiwiPressing, KiwiPressingCatalog, KiwiPressingGarmentIcons, KiwiPressingOps, KiwiPrinter, KiwiReceipt, KiwiVerticalState, KiwiZoneLaw, __kiwiPinReset, addEventListener, lucide.
  * UI imports below supply factories only; state never enters a window global. */
-import { create as createDeposit } from './deposit.js?v=27';
-import { create as createWorkshop } from './workshop.js?v=27';
-import { create as createPickup } from './pickup.js?v=27';
-import { create as createRack } from './rack.js?v=27';
+import { create as createDeposit } from './deposit.js?v=29';
+import { create as createWorkshop } from './workshop.js?v=29';
+import { create as createPickup } from './pickup.js?v=29';
+import { create as createRack } from './rack.js?v=29';
+import '../merchant-policies.js?v=3';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · PRESSING MODE — the laundry counter app inside kiwi-caisse.html
  * ---------------------------------------------------------------------------
@@ -553,7 +554,26 @@ import { create as createRack } from './rack.js?v=27';
     { id: 'c6', name: 'Omar Sefrioui',        phone: '0677 65 43 21', orders: 31, prefs: ['10 chemises chaque lundi'] },
   ];
   const CUST = Object.fromEntries(CUSTOMERS.map((c) => [c.id, c]));
-  const B2B_REMISE = 0.15;
+  /* Remise B2B. Le taux est un réglage du commerçant (0 à 50 %, 15 % par défaut,
+     posé au tableau de bord, assets/merchant-policies.js) que la fiche d'un
+     client B2B peut surcharger (`b2bPercent`). Il est FIGÉ sur la commande à son
+     ouverture (`order.b2bPercent`) : changer le réglage demain ne réécrit pas le
+     total d'un ticket imprimé. Une commande B2B sans ce champ garde le 15 % qu'elle
+     a toujours eu. Centimes entiers ; la remise est arrondie au dirham entier,
+     une fois sur le total (TM-P1). */
+  const B2B_LEGACY_PERCENT = 15;
+  function b2bClean(p) {
+    const n = Number(String(p).replace(',', '.'));
+    return Number.isFinite(n) ? Math.max(0, Math.min(50, Math.round(n * 100) / 100)) : B2B_LEGACY_PERCENT;
+  }
+  function b2bPercentFor(customer) {
+    if (customer && customer.b2bPercent != null && customer.b2bPercent !== '') return b2bClean(customer.b2bPercent);
+    const setting = window.KiwiPressingOps && window.KiwiPressingOps.b2b;
+    return setting ? b2bClean(setting.percent()) : B2B_LEGACY_PERCENT;
+  }
+  const b2bPercentOf = (o) => (o && o.b2bPercent != null ? b2bClean(o.b2bPercent) : B2B_LEGACY_PERCENT);
+  const b2bPercentLabel = (p) => String(b2bClean(p)).replace('.', ',');
+  const b2bDiscountCents = (cents, percent) => Math.floor((cents * Math.round(b2bClean(percent) * 100) + 500000) / 1000000) * 100;
 
   /* ───────────────────────── orders (seed) ─────────────────────────
      Statuses: recu → trait → pret → livre. Status lives on each PIECE —
@@ -617,7 +637,7 @@ import { create as createRack } from './rack.js?v=27';
     const cents = o.lines.reduce((s, ln) => s + Math.round(lineTotal(ln) * 100), 0);
     // B2B discount stays rounded to the whole dirham (declared policy, see
     // docs/specs/trades-money-properties.md TM-P1); lines add up in centimes.
-    const discount = o.b2b ? Math.round((cents / 100) * B2B_REMISE) * 100 : 0;
+    const discount = o.b2b ? b2bDiscountCents(cents, b2bPercentOf(o)) : 0;
     return { sub: cents / 100, remise: discount / 100, total: (cents - discount) / 100 };
   }
   /* Snapshot the operational truth that already exists on the pressing ticket.
@@ -631,7 +651,7 @@ import { create as createRack } from './rack.js?v=27';
     let allocated = 0;
     return o.lines.map((ln, idx) => {
       const item = ITEMS[ln.itemId] || { label: 'Article', cat: '' };
-      const raw = lineTotal(ln) * (o.b2b ? (1 - B2B_REMISE) : 1) * factor;
+      const raw = lineTotal(ln) * (o.b2b ? (1 - b2bPercentOf(o) / 100) : 1) * factor;
       let total = idx === o.lines.length - 1
         ? Math.max(0, Math.round(((+received || 0) - allocated) * 100) / 100)
         : Math.max(0, Math.round(raw * 100) / 100);
@@ -686,6 +706,7 @@ import { create as createRack } from './rack.js?v=27';
       custId: cfg.custId || null,
       guest: cfg.guest || null,
       b2b: !!(cfg.custId && CUST[cfg.custId] && CUST[cfg.custId].b2b),
+      b2bPercent: cfg.custId && CUST[cfg.custId] && CUST[cfg.custId].b2b ? b2bPercentFor(CUST[cfg.custId]) : null,
       lines: cfg.lines.map((l) => ({ itemId: l[0], services: Array.isArray(l[1]) ? l[1] : [l[1]], qty: clampQty(l[2]), color: l[3], notes: l[4] || [], freeNote: l[5] || '', photos: l[6] || 0, variantId: l[7] || null })),
       droppedAt: new Date(NOW - cfg.droppedH * H),
       readyAt:   new Date(NOW + cfg.readyH * H),
@@ -869,6 +890,7 @@ import { create as createRack } from './rack.js?v=27';
       custId: o.custId || null,
       guest: o.guest ? { name: String(o.guest.name || 'Client de passage').slice(0, 100), phone: String(o.guest.phone || '').slice(0, 40) } : null,
       b2b: !!o.b2b,
+      ...(o.b2b && o.b2bPercent != null ? { b2bPercent: b2bPercentOf(o) } : {}),
       lines: (o.lines || []).map((l) => ({
         itemId: l.itemId, label: String(l.label || (ITEMS[l.itemId] && ITEMS[l.itemId].label) || 'Article').slice(0, 100),
         unitPrice: Math.max(0, Math.min(100000, +l.unitPrice || 0)), services: (l.services || []).slice(0, 8), qty: Math.max(1, Math.min(500, +l.qty || 1)),
@@ -956,7 +978,7 @@ import { create as createRack } from './rack.js?v=27';
         renumberedFrom: raw.renumberedFrom ? normalizeTicketNo(raw.renumberedFrom) : null,
         custId: raw.custId && CUST[raw.custId] ? raw.custId : null,
         guest: raw.guest && { name: String(raw.guest.name || 'Client de passage').slice(0, 100), phone: String(raw.guest.phone || '').slice(0, 40) },
-        b2b: !!raw.b2b, lines, droppedAt: new Date(raw.droppedAt), readyAt: new Date(raw.readyAt),
+        b2b: !!raw.b2b, b2bPercent: raw.b2b && raw.b2bPercent != null ? b2bPercentOf(raw) : null, lines, droppedAt: new Date(raw.droppedAt), readyAt: new Date(raw.readyAt),
         pay: raw.pay && { mode: raw.pay.mode, method: raw.pay.method || null, paid: Math.max(0, +raw.pay.paid || 0) },
         rack: raw.rack ? String(raw.rack).slice(0, 20) : null, notified: !!raw.notified, notification: window.KiwiPressingOps.notification(raw),
         collectedAt: raw.collectedAt ? new Date(raw.collectedAt) : null,
@@ -1537,6 +1559,7 @@ import { create as createRack } from './rack.js?v=27';
       custId: t.customer.type === 'known' ? t.customer.id : null,
       guest: t.customer.type === 'guest' ? { name: 'Client de passage', phone: '' } : null,
       b2b: ticketTotals(t).b2b,
+      b2bPercent: ticketTotals(t).b2b ? ticketTotals(t).b2bPercent : null,
       lines: t.lines.map((l) => ({ ...l, label: ITEMS[l.itemId].label, unitPrice: lineUnit(l), notes: l.notes.slice() })),
       droppedAt: new Date(), readyAt: t.ready,
       pay: { mode: null, method: null, paid: 0 },
@@ -1594,7 +1617,7 @@ import { create as createRack } from './rack.js?v=27';
       }).join('')}
       <hr>
       <div class="row"><span>Sous-total</span><span>${fmtMAD(sub)}</span></div>
-      ${remise ? `<div class="row"><span>Remise B2B –15 %</span><span>−${fmtMAD(remise)}</span></div>` : ''}
+      ${remise ? `<div class="row"><span>Remise B2B –${b2bPercentLabel(b2bPercentOf(o))} %</span><span>−${fmtMAD(remise)}</span></div>` : ''}
       <div class="row tot"><span>TOTAL</span><span>${fmtMAD(total)}</span></div>
       ${o.pay.mode === 'compte' ? `<div class="row"><span>Règlement</span><span>SUR COMPTE</span></div>` :
         `<div class="row"><span>Payé</span><span>${fmtMAD(o.pay.paid)}</span></div>
@@ -2236,7 +2259,7 @@ import { create as createRack } from './rack.js?v=27';
 
   // One custody owner supplies named UI interfaces; shared state stays in this closure.
   const custody = Object.freeze({
-    depositContext() { return Object.freeze({ $, $$, COLOR, COLORS, CUST, CUSTOMERS, MAX_QTY, NOTES, ORDERS, STATUS, availServices, catalogLabel, clampQty, closeVeil, dataText, esc, fmtDT, fmtMAD, freshTicket, garmentIcon, icons, isLiveOrder, lineTotal, minPrice, mirrorClient, normalizePhone, openVeil, orderStatus, orderTotals, pad2, persistPressing, phoneDigits, pressingOps, priceTable, publicOrderNo, readyOptions, state, storeInstant, storeWall, svcCodes, svcShorts, toast, validReady, validateTicket }); },
+    depositContext() { return Object.freeze({ $, $$, COLOR, COLORS, CUST, CUSTOMERS, MAX_QTY, NOTES, ORDERS, STATUS, availServices, b2bPercentFor, b2bPercentLabel, catalogLabel, clampQty, closeVeil, dataText, esc, fmtDT, fmtMAD, freshTicket, garmentIcon, icons, isLiveOrder, lineTotal, minPrice, mirrorClient, normalizePhone, openVeil, orderStatus, orderTotals, pad2, persistPressing, phoneDigits, pressingOps, priceTable, publicOrderNo, readyOptions, state, storeInstant, storeWall, svcCodes, svcShorts, toast, validReady, validateTicket }); },
     workshopContext() { return Object.freeze({ $, $$, COLOR, ORDERS, STATUS, afterStatusChange, catalogLabel, closeVeil, custOf, dataText, effectiveStatus, esc, findOrder, fmtDT, fmtDay, fmtMAD, garmentIcon, icons, isLate, isLiveOrder, moveCaretEnd, openPay, openScan, openTags, openVeil, orderStatus, orderTotals, pad2, pressingScope, publicOrderNo, publicPieceNo, pvName, queueIfOffline, refreshOps, releaseSlot, searchDigits, setSelectedReady, setWholeOrderStatus, state, svcCodes, switchView, syncOwnerOps, toast, whatsappPhone }); },
     pickupContext() { return Object.freeze({ $, $$, COLOR, ORDERS, boardBucket, catalogLabel, closeVeil, custOf, dataText, deliverOrder, esc, findOrder, findScannedOrder, fmtDT, fmtDay, fmtMAD, icons, isLiveOrder, matchesQuery, moveCaretEnd, notifyLine, openDetail, openPay, openVeil, openWa, orderStatus, orderTotals, publicOrderNo, publicPieceNo, queueIfOffline, refreshOps, renderBoard, state, svcCodes, toast }); },
     rackContext() { return Object.freeze({ $, ORDERS, RAILS, RAIL_SIZE, assignSlot, custOf, dataText, esc, findOrder, icons, notifyLine, openDetail, orderStatus, pad2, publicOrderNo, queueIfOffline, rackSlots, renderBadges, state, toast }); },

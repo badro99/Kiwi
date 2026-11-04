@@ -112,7 +112,7 @@ await strict('TM-P2 · service tips stay outside revenue',fc.property(fc.integer
 
 const truck=load('assets/pos-foodtruck.js',['nameOf','unitOf','ticketTotal','orderLines'],{ITEM:{a:{label:'Article',price:0}},state:{ticket:{lines:[]}}});
 await strict('foodtruck screen and wire-ready lines agree for instant prices and quantities',fc.property(lines,amounts=>{truck.state.ticket.lines=amounts.map(n=>({id:'a',price:n/100,qty:2}));assert.equal(C(truck.ticketTotal()),sum(amounts)*2);assert.equal(sum(truck.orderLines(truck.state.ticket.lines).map(l=>C(l.total))),sum(amounts)*2);}));
-const pressing=load('assets/pressing-caisse.js',['B2B_REMISE','lineUnit','lineTotal','orderTotals','saleLines'],{ITEMS:{},priceTable:()=>({}),nameOf:()=> 'Article'});
+const pressing=load('assets/pressing-caisse.js',['B2B_LEGACY_PERCENT','b2bClean','b2bPercentOf','b2bDiscountCents','lineUnit','lineTotal','orderTotals','saleLines'],{ITEMS:{},priceTable:()=>({}),nameOf:()=> 'Article'});
 await strict('pressing declared discount policy subtracts once from garment quantities',fc.property(money,fc.integer({min:1,max:60}),(price,q)=>{const o={lines:[{unitPrice:price/100,qty:q}],b2b:true},sub=price*q;assert.equal(C(pressing.orderTotals(o).total),sub-Math.round(sub*15/10000+1e-9)*100);}));
 const hotel=load('assets/pos-hotel.js',['stayTotals'],{stayRate:s=>s.rate,chargeAmt:c=>c.amount,TPT:2});
 await strict('hotel nights taxes extras payments and remaining debt reconcile',fc.property(money,fc.integer({min:1,max:60}),money,(rate,n,paid)=>{const st={rate:rate/100,nights:n,adults:2,charges:[{amount:1.25}],payments:[{amount:paid/100}]},total=rate*n+400*n+125,s=hotel.stayTotals(st);assert.equal(C(s.total),total);assert.equal(C(s.due),Math.max(0,total-paid));}));

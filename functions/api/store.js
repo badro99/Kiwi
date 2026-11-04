@@ -113,7 +113,7 @@ const FEATURES = {
   team:         { keys: ['members', 'hours', 'shifts'],            max: 600000 },
   attendance:   { keys: ['entries'],                               max: 600000 },
     fidelity:     { keys: ['model', 'visit', 'amount', 'product'],   max: 120000 }, // 2 000 linked ids (~40 bytes each) fit
-  discountpolicy: { keys: ['percentages'], max: 2000 },
+  discountpolicy: { keys: ['percentages'], max: 2000 }, policies: { keys: ['returnWindowDays', 'pressingB2bPercent'], max: 2000 }, // policies : fenêtre de retour + remise B2B pressing, le propriétaire écrit
   /* Les réglages de CAISSE des métiers de bouche autres que le restaurant
    * (pizzeria, traiteur, boulangerie) : frais de livraison par zone, supplément
    * moitié-moitié, tarif des extras d'un devis, échéancier par défaut, prix des
@@ -577,7 +577,7 @@ const PENDING_SETUP_FEATURES = new Set([
   'team', 'floorplan', 'services', 'rooms', HOTEL_UNITS_FEATURE, 'kds',
   'foodtrade', 'discountpolicy', 'fidelity', 'recipes', 'costs', 'promotions', 'suppliers',
 ]);
-const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'monthreport', 'foodtrade', 'guestpage', STOREFRONT_FEATURE]);
+const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'policies', 'monthreport', 'foodtrade', 'guestpage', STOREFRONT_FEATURE]);
 
 /* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
  * `entitledMerchant` SANS `allowTill` répond exactement à ça : la session du

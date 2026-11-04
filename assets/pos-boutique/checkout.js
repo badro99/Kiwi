@@ -1,6 +1,7 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=278';
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=175';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=175';
+import { saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=280';
+import { retainDays, outsideWindow, windowSentence } from './return-window.js?v=3';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=177';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=177';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import '../money-cents.js?v=4';
 import { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=9';
@@ -27,14 +28,14 @@ const M = globalThis.KiwiMoney;
        marchandise est déjà revenue en stock, et l'échanger créerait un avoir
        adossé à un encaissement que le serveur ne connaît plus. */
     const dateKey = retDayKey; /* journée commerciale (5 h), comme le Z : minuit rangeait 0 h 30 au lendemain */
-    const todayKey = retDayKey(Date.now()), yesterdayKey = retShiftDay(todayKey, -1), oldestKey = retShiftDay(todayKey, -(RETAIN_DAYS - 1));
+    const todayKey = retDayKey(Date.now()), yesterdayKey = retShiftDay(todayKey, -1), oldestKey = retShiftDay(todayKey, -(retainDays() - 1));
     if (state.retDate < oldestKey || state.retDate > todayKey) state.retDate = todayKey;
     const hits = SALES.filter((s) => !s.voided && dateKey(s.at) === state.retDate && saleMatches(s, q));
     const ret = state.ret;
     panel.innerHTML = `
       <div class="bq-ret">
         <header class="bq-head">
-          <div><h1>Échanges &amp; avoirs</h1><div class="bq-head-sub">Retour sous 7 jours avec ticket, échange ou avoir, jamais de remboursement espèces</div></div>
+          <div><h1>Échanges &amp; avoirs</h1><div class="bq-head-sub">${esc(tr(windowSentence()))}</div></div>
           <div class="bq-search"><i data-lucide="search"></i>
             <input id="bq-ret-q" placeholder="${esc(tr("N° de ticket ou téléphone…"))}" value="${esc(q)}" /></div>
         </header>
@@ -164,7 +165,7 @@ const M = globalThis.KiwiMoney;
              tout court ne dit pas si la vente est de ce matin ou de mardi. -->
         <span class="bq-sale-when">${whenLabel(s.at)} · par ${esc(s.by)}</span>
         <span class="bq-pill ${s.kind === 'echange' ? 'warn' : 'ok'}">${s.kind === 'echange' ? 'échange' : esc(s.methods)}</span>
-        ${hasRet ? '<span class="bq-pill warn">retour</span>' : ''}
+        ${hasRet ? '<span class="bq-pill warn">retour</span>' : ''}${outsideWindow(s.at, retDayKey) ? `<span class="bq-pill warn">${esc(tr('Hors fenêtre de retour · accord d’un responsable'))}</span>` : ''}
         ${s.kind === 'acompte' ? '<span class="bq-pill warn">Acompte · retour suspendu, contacter le responsable</span>' : ''}
         <span class="bq-sale-who"><i data-lucide="${c ? 'user' : 'users'}"></i>${c ? esc(c.name) : 'Cliente de passage'} · ${fmtMAD(s.total)}</span>
       </div>

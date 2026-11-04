@@ -1,11 +1,11 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=175';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=93';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=175';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=175';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=177';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=95';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=177';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=177';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
-import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=6'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=17';
+import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=6'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=17'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=3';
 
   'use strict';
 
@@ -445,9 +445,9 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       try { if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'refund', key: 'act.refund', args: { amount: fmtMAD(amount) } }); } catch (_) {}
       /* Le responsable lit le numéro imprimé sur le ticket (1000), pas
          l'identifiant interne de la vente (sale-ref-9c08…) qui lie l'accord. */
-      window.requireManager(`Avoir ${fmtMAD(amount)} · ticket ${ticketRef || originalSaleId}`,
+      window.requireManager(`Avoir ${fmtMAD(amount)} · ticket ${ticketRef || originalSaleId}${outsideWindow((findSale(originalSaleId) || {}).at, retDayKey) ? ' · ' + (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('hors fenêtre de retour') : ''}`,
         (manager) => resolve((manager && manager.approval) || ''),
-        { kind: 'refund', refundId: requestId, originalSaleId, amountCents: Math.round(amount * 100), refundMethod: 'avoir' },
+        { kind: 'refund', refundId: requestId, originalSaleId, amountCents: Math.round(amount * 100), refundMethod: 'avoir', windowOverride: outsideWindow((findSale(originalSaleId) || {}).at, retDayKey) },
         { onCancel: () => refuse('manager-cancelled') });
     });
   }
@@ -619,7 +619,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
   function withinRetention(d) {
     const x = new Date(d);
     if (isNaN(x)) return false;
-    return retDayKey(x) >= retShiftDay(retDayKey(Date.now()), -(RETAIN_DAYS - 1));   // jour d'activité (05:00), aujourd'hui inclus
+    return retDayKey(x) >= retShiftDay(retDayKey(Date.now()), -(retainDays() - 1));   // jour d'activité (05:00), aujourd'hui inclus
   }
   /* Les ventes du JOUR — la seule base admise pour un chiffre d'affaires. Les
      ventes sorties des livres n'en sont plus (voir reconcileVoids). */
@@ -802,7 +802,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     if (IS_DEMO || typeof fetch !== 'function') return Promise.resolve(0);
     const merchant = merchantSlug();
     if (!merchant) return Promise.resolve(0);
-    const oldest = retShiftDay(retDayKey(Date.now()), -(RETAIN_DAYS - 1)), start = new Date(oldest + 'T00:00:00');   // minuit local du plus ancien jour d'activité (avant son 05:00)
+    const oldest = retShiftDay(retDayKey(Date.now()), -(retainDays() - 1)), start = new Date(oldest + 'T00:00:00');   // minuit local du plus ancien jour d'activité (avant son 05:00)
     return (window.KiwiPosSale?.feedDay || ((u, o) => fetch(u, o).then((r) => r.ok ? r.json() : null)))('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + start.getTime(), {
       credentials: 'same-origin', headers: { Accept: 'application/json' },
     }).then((data) => {

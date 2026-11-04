@@ -28,9 +28,9 @@ export interface StoredTeamDocument { members?: StoredTeamMember[]; [key: string
 export interface TillTeamDocument { members?: TillTeamMember[]; [key: string]: unknown }
 
 export interface StaffClaims { merchant?: MerchantInput; staffId?: EmployeeInput; staffName?: string; staffRole?: string }
-export interface RefundClaims extends StaffClaims { refundId?: string; originalSaleId?: string; amountCents?: number; refundMethod?: string }
+export interface RefundClaims extends StaffClaims { refundId?: string; originalSaleId?: string; amountCents?: number; refundMethod?: string; windowOverride?: boolean }
 export interface StockClaims extends StaffClaims { movementIds?: string[] }
 export interface ManagerProof { v: number; merchant: MerchantSlug; staffId: EmployeeId; staffName: string; staffRole: string; exp: number }
-export interface RefundProof extends ManagerProof { refundId: string; originalSaleId: string; amountCents: number; refundMethod: string }
+export interface RefundProof extends ManagerProof { refundId: string; originalSaleId: string; amountCents: number; refundMethod: string; windowOverride?: boolean }
 export interface StockProof extends ManagerProof { scope: string }
 export interface TillActor extends StaffIdentity { merchant: MerchantSlug; exp: number }
