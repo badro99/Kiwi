@@ -472,7 +472,7 @@ var SHELL = [
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=26',
   '/assets/food-production-print.js?v=2',
-  '/assets/pos-sale.js?v=22',
+  '/assets/pos-sale.js?v=27',
   '/assets/pos-dispatch.js?v=337',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',

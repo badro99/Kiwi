@@ -16,7 +16,7 @@ import { tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 import { onRequestPost } from '../functions/api/sale.js';
 import { onRequestGet } from '../functions/api/feed.js';
 
-const sqlite = new DatabaseSync(':memory:');
+let sqlite = new DatabaseSync(':memory:');
 sqlite.exec(fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
 const DB = { prepare(sql) { let args = []; return {
   bind(...values) { args = values.map(value => value === undefined ? null : value); return this; },
@@ -33,9 +33,10 @@ const secret = 'synthetic-sale-tip-only';
 const env = { DB, AUTH_SECRET: secret };
 sqlite.prepare("INSERT INTO merchant_config(merchant, features, status, updated_ts) VALUES (?, ?, 'active', ?)").run(merchant, '{}', Date.now());
 const cookie = `${TILL_COOKIE}=${await tillToken(secret, merchant)}`;
-async function post(id, amountCents, tipCents) {
+async function post(id, amountCents, tipCents, extra = {}) {
   const body = { merchant, id, method: 'cash', amountCents, amount: amountCents / 100, label: 'TEST KIWI', ref: id, ts: Date.now(),
     lines: [{ name: 'TEST KIWI', qty: 1, total: amountCents / 100 }] };
+  Object.assign(body, extra);
   if (tipCents !== undefined) body.tipCents = tipCents;
   const response = await onRequestPost({ request: new Request('https://kiwi.test/api/sale', { method: 'POST',
     headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), env, waitUntil() {} });
@@ -85,6 +86,55 @@ ok('0 est « pas de pourboire » ; un pourboire égal à la vente est accepté',
   assert.equal(zero.status, 200); assert.equal(whole.status, 200);
   assert.equal(sqlite.prepare('SELECT tip_cents FROM sales WHERE id = ?').get('tip-zero').tip_cents, null);
   assert.equal(sqlite.prepare('SELECT tip_cents FROM sales WHERE id = ?').get('tip-whole').tip_cents, 3000);
+});
+// Every supported migration prefix starts at 0001, whose sales row has cents.
+// The upgrade fixture is supplemental table data, not an older sales schema.
+assert.equal(Object.hasOwn(JSON.parse(fs.readFileSync(new URL('./d1-upgrade-fixtures.json', import.meta.url))), 'sales'), false);
+const current = sqlite;
+const migrated = new DatabaseSync(':memory:');
+sqlite = migrated;
+for (const name of fs.readdirSync(new URL('../migrations/', import.meta.url)).filter(n => /^\d+.*\.sql$/.test(n)).sort()) {
+  migrated.exec(fs.readFileSync(new URL('../migrations/' + name, import.meta.url), 'utf8'));
+  assert.ok(migrated.prepare('PRAGMA table_info(sales)').all().some(c => c.name === 'amount_cents'), name);
+  migrated.prepare("INSERT OR IGNORE INTO merchant_config(merchant, features, status, updated_ts) VALUES (?, '{}', 'active', ?)").run(merchant, Date.now());
+  const result = await post('prefix-' + name, 1234);
+  assert.equal(result.status, 200, name + ': ' + JSON.stringify(result));
+  assert.equal(migrated.prepare('SELECT amount_cents FROM sales WHERE id = ?').get('prefix-' + name).amount_cents, 1234, name);
+}
+sqlite = current;
+migrated.close();
+for (const absent of [['channel'], ['lines'], ['lines', 'channel'], ['written_by']]) {
+  sqlite.exec('SAVEPOINT legacy');
+  for (const column of absent) sqlite.exec('ALTER TABLE sales DROP COLUMN ' + column);
+  const id = 'legacy-' + absent.join('-');
+  const result = await post(id, 1234);
+  ok('optional columns absent: ' + absent.join(', ') + ' preserves 1234 cents', () => {
+    assert.equal(result.status, 200, JSON.stringify(result));
+    assert.equal(sqlite.prepare('SELECT amount_cents FROM sales WHERE id = ?').get(id).amount_cents, 1234);
+  });
+  sqlite.exec('ROLLBACK TO legacy; RELEASE legacy');
+}
+sqlite.exec("CREATE TRIGGER refuse_tip BEFORE UPDATE OF tip_cents ON sales BEGIN SELECT RAISE(ABORT, 'synthetic tip failure'); END");
+const failedTip = await post('tip-retry', 1234, 57);
+ok('failed tip returns retryable failure with explicit tipRecorded false', () => {
+  assert.equal(failedTip.status, 503); assert.equal(failedTip.body.tipRecorded, false);
+  assert.equal(failedTip.body.error, 'tip-write-failed');
+  assert.equal(sqlite.prepare('SELECT amount_cents FROM sales WHERE id = ?').get('tip-retry').amount_cents, 1234);
+});
+const aliasTip = await post('tip-alias', 1234, 57, {
+  ref: 'tip-retry', ts: sqlite.prepare("SELECT ts FROM sales WHERE id = 'tip-retry'").get().ts,
+});
+ok('different-id duplicate cannot bypass a failed tip write', () => {
+  assert.equal(aliasTip.status, 503); assert.equal(aliasTip.body.tipRecorded, false);
+  assert.equal(aliasTip.body.id, 'tip-retry');
+  assert.equal(sqlite.prepare("SELECT id FROM sales WHERE id = 'tip-alias'").get(), undefined);
+});
+sqlite.exec('DROP TRIGGER refuse_tip');
+const retryTip = await post('tip-retry', 1234, 57);
+ok('same-id retry repairs tip without duplicating money', () => {
+  assert.equal(retryTip.status, 200);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM sales WHERE id = 'tip-retry'").get().n, 1);
+  assert.equal(sqlite.prepare("SELECT tip_cents FROM sales WHERE id = 'tip-retry'").get().tip_cents, 57);
 });
 const feed = await onRequestGet({ request: new Request(`https://kiwi.test/api/feed?merchant=${merchant}`, { headers: { Cookie: cookie } }), env });
 const ledger = await feed.json();

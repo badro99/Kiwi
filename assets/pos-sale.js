@@ -148,7 +148,7 @@
     });
   }
   function write(vertical, rows) {
-    try { localStorage.setItem(key(vertical), JSON.stringify(rows.slice(-MAX_ROWS))); } catch (_) {}
+    try { localStorage.setItem(key(vertical), JSON.stringify(rows.slice(-MAX_ROWS))); return true; } catch (_) { return false; }
   }
 
   /* Les métiers parlent français ('especes', 'carte', 'virement'…), le serveur
@@ -417,17 +417,15 @@
     return String(t.getFullYear() * 10000 + (t.getMonth() + 1) * 100 + t.getDate());
   }
 
-  /* record(vertical, sale) → l'entrée journalisée, ou null si rien n'a été pris.
-     Ne jette jamais : un encaissement réussi ne doit pas échouer parce que le
-     stockage est plein ou que le miroir tombe. */
+  /* record(vertical, sale) → durable entry, or null on refusal.
+     A full local journal refuses before payment completion and side effects. */
   function record(vertical, sale) {
     if (!sale) return null;
     var total = Math.round((+sale.total || 0) * 100) / 100;
     /* Montant nul ou négatif ⇒ ce n'est pas une recette. Les différés
        ('payer plus tard') et les avoirs passent par là et sont ignorés. */
     if (!(total > 0)) return null;
-    ticketDone(total, sale.method);
-    if (!isReal()) return null;                 /* la démo reste en mémoire */
+    if (!isReal()) { ticketDone(total, sale.method); return null; }                 /* la démo reste en mémoire */
 
     var at = sale.at instanceof Date ? sale.at : new Date();
     var who = tenant();
@@ -470,7 +468,10 @@
 
     var rows = read(vertical);
     rows.push(entry);
-    write(vertical, rows);
+    /* A full journal must not lose a paid sale: the server mirror below still
+       runs. Only when neither the journal nor the mirror took it is the sale
+       refused, and then the payment is never announced. */
+    var savedLocally = write(vertical, rows), mirrored = false;
 
     /* Miroir serveur — c'est LUI qui alimente le tableau de bord. Enveloppé :
        une panne du miroir ne doit jamais casser la vente au comptoir. */
@@ -506,7 +507,12 @@
           payload.ticketAmountCents = wireSum;
         }
         var queued = window.KiwiLive.postSale(payload);
-        holdSale(payload, queued, who);
+        var held = holdSale(payload, queued, who);
+        mirrored = held || !!(queued && queued.ok === true && queued.queued === true);
+        if (!held && !(queued && queued.ok === true && queued.queued === true)) {
+          entry.syncState = 'not-saved';
+          try { window.dispatchEvent(new CustomEvent('kiwi:sale-sync-refused', { detail: { reason: 'held-storage-full', saved: true, queued: false } })); } catch (_) {}
+        }
         /* Linked ledgers (hotel folios today, other append-only journals
            tomorrow) need the exact idempotency key that /api/sale receives.
            Returning it here avoids rebuilding live-link's stableId recipe in
@@ -514,6 +520,16 @@
         if (queued && queued.id) entry.saleId = String(queued.id);
       }
     } catch (_) {}
+
+    if (!savedLocally) {
+      if (!mirrored) {
+        try { window.dispatchEvent(new CustomEvent('kiwi:sale-refused', { detail: { reason: 'local-storage-full', saved: false } })); } catch (_) {}
+        return null;
+      }
+      entry.localState = 'not-saved';
+      try { window.dispatchEvent(new CustomEvent('kiwi:sale-local-full', { detail: { reason: 'local-storage-full', saved: false, mirrored: true } })); } catch (_) {}
+    }
+    ticketDone(total, sale.method);
 
     /* Stock truth is written from the same immutable sale-line payload. The
        movement IDs derive from the ticket reference, so a reload/replay can
@@ -524,7 +540,7 @@
     /* saleId and clientId are only known after the first write; without this
        one the local row could never be matched to its server twin (reprint,
        dedupe) unless a receipt happened to print. */
-    if (entry.saleId || entry.clientId) write(vertical, rows);
+    if (entry.saleId || entry.clientId || entry.syncState) write(vertical, rows);
 
     printCustomerReceipt(vertical, entry, sale, rows);
 
@@ -550,7 +566,8 @@
     try {
       if (a.length) localStorage.setItem(HELD_KEY, JSON.stringify(a));
       else localStorage.removeItem(HELD_KEY);
-    } catch (_) {}
+      return true;
+    } catch (_) { return false; }
   }
   function holdSale(payload, res, who) {
     if (!payload || (res && res.ok === true && res.queued === true)) return false;
@@ -562,8 +579,7 @@
       merchant: payload.merchant || who || undefined,
       time: +new Date(payload.time || Date.now()),
     }));
-    heldWrite(held);
-    return true;
+    return heldWrite(held);
   }
   function replayHeld() {
     if (!isReal()) return 0;

@@ -21,23 +21,24 @@ console.log('■ métiers · une vente refusée par la file repart (tools/pos-sa
 
 const source = fs.readFileSync(new URL('../assets/pos-sale.js', import.meta.url), 'utf8');
 
-function boot({ merchant = 'amira-snack', answer = () => ({ ok: true, queued: true, id: 's' }) } = {}) {
+function boot({ storageFails = false, merchant = 'amira-snack', answer = () => ({ ok: true, queued: true, id: 's' }) } = {}) {
   const rows = new Map([['kiwiPairedVenue', JSON.stringify({ merchant: 'amira-snack' })], ['kiwi:posDevice', 'A7']]);
   const localStorage = {
-    getItem: (k) => rows.has(k) ? rows.get(k) : null, setItem: (k, v) => rows.set(k, String(v)),
+    getItem: (k) => rows.has(k) ? rows.get(k) : null, setItem: (k, v) => { if (typeof storageFails === 'function' ? storageFails(k) : storageFails) throw new Error('quota'); rows.set(k, String(v)); },
     removeItem: (k) => rows.delete(k), key: (i) => [...rows.keys()][i] || null, get length() { return rows.size; },
   };
   const posted = [], timers = [], intervals = [], listeners = {};
   const live = { merchant, on: true };
+  const events = [];
   const window = {
-    localStorage, document: { hidden: false, addEventListener() {}, dispatchEvent() { return true; }, querySelectorAll: () => [] },
+    localStorage, document: { hidden: false, addEventListener() {}, dispatchEvent() { return true; }, querySelectorAll: () => [{ dispatchEvent(e) { events.push({ type: e.type, durable: [...rows.keys()].some(k => k.startsWith('kiwi:posDay:')) }); } }] },
     KiwiEnv: { isReal: () => true },
     KiwiLive: {
       isOn: () => live.on, merchant: () => live.merchant,
       postSale: (p) => { posted.push(p); return answer(p, posted.length); },
     },
     addEventListener: (type, fn) => { (listeners[type] = listeners[type] || []).push(fn); },
-    dispatchEvent() { return true; },
+    dispatchEvent(e) { events.push({ type: e.type, durable: [...rows.keys()].some(k => k.startsWith('kiwi:posDay:')) }); return true; },
   };
   window.window = window;
   const context = {
@@ -51,8 +52,24 @@ function boot({ merchant = 'amira-snack', answer = () => ({ ok: true, queued: tr
   vm.createContext(context);
   vm.runInContext(source, context, { filename: 'pos-sale.js' });
   const held = () => JSON.parse(rows.get('kiwi:posHeld') || '[]');
-  return { api: window.KiwiPosSale, posted, held, rows, live, timers, intervals, listeners };
+  return { api: window.KiwiPosSale, events, posted, held, rows, live, timers, intervals, listeners };
 }
+
+const full = boot({ storageFails: true, answer: () => ({ ok: true, queued: true }) });
+const mirroredOnly = full.api.record('epicerie', { total: 12.34, method: 'cash', ref: 'quota' });
+ok('a full journal still sends the paid sale to the server, once', mirroredOnly?.localState === 'not-saved' && full.posted.length === 1);
+ok('… and says the local copy is missing, then announces the payment', full.events.some(e => e.type === 'kiwi:sale-local-full') && full.events.some(e => e.type === 'kiwi:sale-paid') && !full.events.some(e => e.type === 'kiwi:sale-refused'));
+const nowhere = boot({ storageFails: true, answer: () => ({ ok: false, reason: 'queue-storage-full' }) });
+const refused = nowhere.api.record('epicerie', { total: 12.34, method: 'cash', ref: 'quota' });
+ok('neither journal nor mirror: refused, payment never announced', refused === null && !nowhere.events.some(e => e.type === 'kiwi:sale-paid' || e.type === 'vx-ticket-done'));
+ok('… with an explicit refusal event', nowhere.events.some(e => e.type === 'kiwi:sale-refused'));
+const durable = boot();
+durable.api.record('epicerie', { total: 12.34, method: 'cash', ref: 'durable' });
+ok('paid event follows durable journal write', durable.events.filter(e => e.type === 'kiwi:sale-paid' || e.type === 'vx-ticket-done').length === 2 && durable.events.every(e => e.durable));
+
+const heldFull = boot({ storageFails: k => k === 'kiwi:posHeld', answer: () => ({ ok: false, reason: 'queue-storage-full' }) });
+const localOnly = heldFull.api.record('epicerie', { total: 12.34, method: 'cash', ref: 'held-quota' });
+ok('held quota failure is explicit on the durable entry and emitted state', localOnly?.syncState === 'not-saved' && heldFull.events.some(e => e.type === 'kiwi:sale-sync-refused'));
 
 /* 1 · une vente refusée (stockage plein) est gardée, avec son commerce. */
 let answers = [{ ok: false, reason: 'queue-storage-full' }];
