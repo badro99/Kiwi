@@ -375,6 +375,8 @@
     "Sélectionner les résultats filtrés": { en: "Select filtered results", ar: "تحديد النتائج المرشحة" },
     "Tout désélectionner": { en: "Deselect all", ar: "إلغاء تحديد الكل" },
     "Annuler": { en: "Cancel", ar: "إلغاء" },
+    "Confirmation Direction / Gérant": { en: "Management / manager confirmation", ar: "تأكيد الإدارة / المسيّر" },
+    "Confirmer": { en: "Confirm", ar: "تأكيد" },
     "Espaces hôtel": { en: "Hotel areas", ar: "أقسام الفندق" },
     "Plan": { en: "Rack", ar: "المخطط" },
     "{n} à nettoyer": { en: "{n} to clean", ar: "{n} للتنظيف" },

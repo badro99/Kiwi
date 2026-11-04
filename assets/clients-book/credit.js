@@ -69,7 +69,7 @@
                 + ' · ' + fmt(Number(event.amountCents || 0) / 100) + ' MAD · ' + esc(event.actor || 'Caisse')
                 + ' · ' + esc(tr('solde')) + ' ' + fmt(Number(event.balanceAfterCents || 0) / 100) + ' MAD</small>';
             }).join('');
-            var issuedAt = credit.createdAt ? new Date(credit.createdAt).toLocaleString(dateLocale, { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : tr('Date inconnue');
+            var issuedAt = credit.createdAt ? new Intl.DateTimeFormat(dateLocale, { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone: creditZone() }).format(new Date(credit.createdAt)) : tr('Date inconnue'); // merchant zone, like the expiry day
             var expiry = credit.expiresAt ? creditLastDay(credit.expiresAt).toLocaleDateString(dateLocale) : tr('sans échéance');
             var used = credit.status === 'active' ? '' : ' · ' + (credit.status === 'cancelled' ? tr('annulé') : tr('utilisé'));
             return '<div class="kcb-inforow"><span class="k">' + esc(credit.code) + '<small style="display:block;margin-top:3px">' + esc(issuedAt) + ' · ' + esc(tr('expire')) + ' ' + esc(expiry) + '</small></span>'

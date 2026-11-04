@@ -310,5 +310,26 @@ assert(ws.includes('nutritionCardPill(x)') && ws.includes('catalog-item-meta') &
   assert(ws.includes('rmw-i18n-approve') && ws.includes("i18nStatusUnreviewed:"), 'éditeur : statut à vérifier et action approuver');
 }
 
+/* ── r18 i18n#2 / menu#0 : deux entités de même libellé ne s'héritent pas ─── */
+{
+  const M = loadResolver();
+  const withI18n = (e, lang, name) => { e.i18n = Object.assign(e.i18n || {}, { [lang]: { name, h: M.hash(e.name, e.desc || '') } }); return e; };
+  const dish = withI18n({ id: 'it-jus', name: 'Jus', desc: '' }, 'en', 'Juice');
+  const opt = withI18n({ id: 'ch-jus', name: 'Jus', desc: '' }, 'en', 'Fruit juice (side)');
+  const bare = { id: 'ch-bare', name: 'Jus', desc: '' };
+  const d = { cats: [], items: [dish], opts: [{ id: 'g1', name: 'Boisson', choices: [opt, bare] }] };
+  M.index(d);
+  const run = (fn) => fn();
+  const got = run(() => [M.t('Jus', 'en'), M.t('Jus', 'en', 'it-jus'), M.t('Jus', 'en', 'ch-jus'), M.t('Jus', 'en', 'ch-bare'), M.name(bare, 'en'), M.name(opt, 'en')]);
+  assert(got[0] === 'Jus', 't(str) : trois entités « Jus » sans traduction commune, le canonique est rendu, pas la première');
+  assert(got[1] === 'Juice' && got[2] === 'Fruit juice (side)', 't(str, lang, id) : chaque entité garde sa traduction');
+  assert(got[3] === 'Jus', 'une entité sans traduction fraîche n\'emprunte pas celle d\'une autre (jusqu\'ici : « Juice »)');
+  assert(got[4] === 'Jus' && got[5] === 'Fruit juice (side)', 'name() : résolution par entité');
+  const twin = withI18n({ id: 'a', name: 'Thé', desc: '' }, 'ar', 'شاي');
+  const twin2 = withI18n({ id: 'b', name: 'Thé', desc: '' }, 'ar', 'شاي');
+  M.index({ cats: [], items: [twin, twin2] });
+  assert(run(() => M.t('Thé', 'ar')) === 'شاي', 'même libellé et même traduction : pas d\'ambiguïté, la traduction est utilisée');
+}
+
 console.log(failures ? `\nmenu-i18n-test : ${failures} échec(s)` : '\nmenu-i18n-test : tout passe');
 process.exit(failures ? 1 : 0);

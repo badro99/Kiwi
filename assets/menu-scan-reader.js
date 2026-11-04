@@ -23,11 +23,19 @@
     const s = String(v == null ? '' : v).replace(/\r?\n/g, ' ').trim();
     return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
+  /* A price the scan could not read stays EMPTY: the import then flags the row
+   * « prix manquant » and refuses to create it, where a 0 would silently put a
+   * free dish on the menu. */
+  function csvPrice(v) {
+    if (v == null || (typeof v === 'string' && !v.trim()) || typeof v === 'boolean') return '';
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? String(n) : '';
+  }
   function toCsvText(items) {
     const head = 'article;categorie;sous_categorie;prix_mad;description;disponible';
     const lines = (items || []).map((it) => [
       csvField(it.name), csvField(it.cat), csvField(it.sub),
-      String(Number.isFinite(+it.price) ? +it.price : 0), csvField(it.desc), 'oui',
+      csvPrice(it.price), csvField(it.desc), 'oui',
     ].join(';'));
     return head + '\n' + lines.join('\n');
   }

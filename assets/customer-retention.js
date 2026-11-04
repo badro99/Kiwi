@@ -78,7 +78,7 @@
       offerText: { none: 'Simple message, sans remise', percent: function (v) { return '−' + v + ' % sur la prochaine visite'; }, fixed: function (v) { return '−' + v + ' MAD sur la prochaine visite'; }, item: function (n) { return n + ' offert à la prochaine visite'; }, reward: 'Récompense fidélité débloquée' },
       minSpend: function (v) { return 'dès ' + v + ' MAD'; }, until: function (d) { return 'jusqu’au ' + d; },
       suggestion: 'Kiwi suggère', suggestOffer: function (v) { return '−' + v + ' %, dans la limite de votre marge'; }, useSuggestion: 'Utiliser cette offre pour le groupe',
-      draftAi: 'Réécrire avec Kiwi AI', drafting: 'Rédaction…', draftFail: 'Kiwi AI indisponible · le modèle reste en place', draftQuota: 'Limite du jour atteinte pour Kiwi AI · le modèle reste en place, réessayez demain',
+      openFail: 'WhatsApp ne s’est pas ouvert · rien n’est enregistré, autorisez les fenêtres puis réessayez', draftAi: 'Réécrire avec Kiwi AI', drafting: 'Rédaction…', draftFail: 'Kiwi AI indisponible · le modèle reste en place', draftQuota: 'Limite du jour atteinte pour Kiwi AI · le modèle reste en place, réessayez demain',
       approve: 'Approuver et ouvrir WhatsApp', noConsent: 'Pas de consentement WhatsApp/SMS', noPhone: 'Pas de numéro',
       alreadySent: 'Déjà préparé pour cette offre', budgetOut: 'Budget de l’offre atteint', expired: 'Offre hors de ses dates', sent: 'Message préparé dans WhatsApp',
       template: function (name, offerLine, shop) { return 'Bonjour ' + name + ', ça fait un moment ! Toute l’équipe de ' + shop + ' serait ravie de vous revoir. ' + offerLine + '. À très vite.'; },
@@ -118,7 +118,7 @@
       offerText: { none: 'Message only, no discount', percent: function (v) { return v + '% off the next visit'; }, fixed: function (v) { return v + ' MAD off the next visit'; }, item: function (n) { return 'Free ' + n + ' on the next visit'; }, reward: 'Loyalty reward unlocked' },
       minSpend: function (v) { return 'from ' + v + ' MAD'; }, until: function (d) { return 'until ' + d; },
       suggestion: 'Kiwi suggests', suggestOffer: function (v) { return v + '% off, within your margin'; }, useSuggestion: 'Use this offer for the group',
-      draftAi: 'Rewrite with Kiwi AI', drafting: 'Writing…', draftFail: 'Kiwi AI unavailable · the template stays', draftQuota: 'Daily Kiwi AI limit reached · the template stays, try again tomorrow',
+      openFail: 'WhatsApp did not open · nothing was recorded, allow pop-ups and try again', draftAi: 'Rewrite with Kiwi AI', drafting: 'Writing…', draftFail: 'Kiwi AI unavailable · the template stays', draftQuota: 'Daily Kiwi AI limit reached · the template stays, try again tomorrow',
       approve: 'Approve and open WhatsApp', noConsent: 'No WhatsApp/SMS consent', noPhone: 'No phone number',
       alreadySent: 'Already prepared for this offer', budgetOut: 'Offer budget reached', expired: 'Offer outside its dates', sent: 'Message ready in WhatsApp',
       template: function (name, offerLine, shop) { return 'Hello ' + name + ', it has been a while! The whole team at ' + shop + ' would love to see you again. ' + offerLine + '. See you soon.'; },
@@ -158,7 +158,7 @@
       offerText: { none: 'رسالة فقط، بدون خصم', percent: function (v) { return 'خصم ' + v + ' % على الزيارة القادمة'; }, fixed: function (v) { return 'خصم ' + v + ' درهم على الزيارة القادمة'; }, item: function (n) { return n + ' مجاناً في الزيارة القادمة'; }, reward: 'تم فتح مكافأة الوفاء' },
       minSpend: function (v) { return 'ابتداءً من ' + v + ' درهم'; }, until: function (d) { return 'حتى ' + d; },
       suggestion: 'Kiwi يقترح', suggestOffer: function (v) { return 'خصم ' + v + ' % في حدود هامشك'; }, useSuggestion: 'استعمال هذا العرض للفئة',
-      draftAi: 'إعادة الصياغة مع Kiwi AI', drafting: 'جارٍ الكتابة…', draftFail: 'Kiwi AI غير متاح · يبقى النموذج', draftQuota: 'تم بلوغ الحد اليومي لـ Kiwi AI · يبقى النموذج، حاول غدًا',
+      openFail: 'لم يُفتح واتساب · لم يُسجَّل شيء، اسمح بالنوافذ المنبثقة ثم أعد المحاولة', draftAi: 'إعادة الصياغة مع Kiwi AI', drafting: 'جارٍ الكتابة…', draftFail: 'Kiwi AI غير متاح · يبقى النموذج', draftQuota: 'تم بلوغ الحد اليومي لـ Kiwi AI · يبقى النموذج، حاول غدًا',
       approve: 'الموافقة وفتح واتساب', noConsent: 'لا توجد موافقة واتساب/SMS', noPhone: 'لا يوجد رقم',
       alreadySent: 'تم تحضيره مسبقاً لهذا العرض', budgetOut: 'تم بلوغ ميزانية العرض', expired: 'العرض خارج تواريخه', sent: 'الرسالة جاهزة في واتساب',
       template: function (name, offerLine, shop) { return 'مرحباً ' + name + '، اشتقنا إليك! فريق ' + shop + ' سيسعد برؤيتك من جديد. ' + offerLine + '. إلى اللقاء قريباً.'; },
@@ -338,6 +338,29 @@
     return true;
   }
   function offerKey(group, offer) { return [group, offer.type, offer.value, offer.item, offer.from, offer.to].join('|'); }
+  /* Opening WhatsApp is not sending the message: the person still has to press
+     send there, and a blocked popup opens nothing at all. The log therefore
+     gets an entry ONLY when WhatsApp actually opened, and says so
+     (status « opened »); a blocked popup records nothing, so the customer's
+     cooldown and the offer's budget never claim a contact that did not happen.
+     `open` is injected so the test runs this real function. The window is
+     opened WITHOUT the noopener feature (it makes window.open return null in
+     every case, hiding a blocked popup) and detached by hand instead. */
+  function openWhatsAppAndLog(doc, x, label, phone, text, open) {
+    var win = null;
+    try { win = open('https://wa.me/' + encodeURIComponent(phone) + '?text=' + encodeURIComponent(text), '_blank'); } catch (_) { win = null; }
+    if (!win) return { opened: false, doc: doc };
+    try { win.opener = null; } catch (_) {}
+    return {
+      opened: true,
+      doc: Object.assign({}, doc, { sends: doc.sends.concat([{
+        id: 'rt-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        clientId: String(x.c.id), name: String(x.c.name || x.c.phone || '').slice(0, 80), group: x.c.group,
+        offerKey: x.key, offerLabel: String(label || '').slice(0, 120), cost: Math.round(x.cost * 100) / 100,
+        channel: 'whatsapp', status: 'opened', sentAt: Date.now(),
+      }]) }),
+    };
+  }
   function sendsFor(sends, clientId, key) { return sends.filter(function (s) { return s.clientId === clientId && s.offerKey === key; }).length; }
   function spentBudget(sends, key) { return sends.filter(function (s) { return s.offerKey === key; }).reduce(function (sum, s) { return sum + (+s.cost || 0); }, 0); }
   function outcome(send, c) {
@@ -727,6 +750,7 @@
       kitPublish();
     }
     function toast(msg, type) { try { Kiwi.toast && Kiwi.toast(msg, { type: type || 'success' }); } catch (_) {} }
+    function warn(msg) { toast(msg, 'warning'); }
     async function persist(next, okMsg) {
       var res = await writeDoc(next);
       doc = readDoc();
@@ -823,9 +847,9 @@
           .then(function (j) {
             var text = j && j.ok && j.data && (lang() === 'ar' ? (j.data.darijaMessage || j.data.frenchMessage) : (j.data.frenchMessage || j.data.darijaMessage));
             if (text) msg.value = String(text).replace(/\{prenom\}/g, firstName(x.c.name));
-            else toast(j && j.quota ? T.draftQuota : T.draftFail, 'warning');
+            else warn(j && j.quota ? T.draftQuota : T.draftFail);
           })
-          .catch(function () { toast(T.draftFail, 'warning'); })
+          .catch(function () { warn(T.draftFail); })
           .then(function () { aiBtn.disabled = false; aiBtn.textContent = label; });
         return;
       }
@@ -835,16 +859,10 @@
         var text = String(msg.value || '').trim().slice(0, 1000);
         if (!text) return;
         /* Open WhatsApp first, inside the click: a popup opened after an await
-           is blocked on iOS. The log follows. */
-        try { window.open('https://wa.me/' + encodeURIComponent(phone) + '?text=' + encodeURIComponent(text), '_blank', 'noopener'); } catch (_) {}
-        var next = readDoc();
-        next.sends = next.sends.concat([{
-          id: 'rt-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-          clientId: String(x.c.id), name: String(x.c.name || x.c.phone || '').slice(0, 80), group: x.c.group,
-          offerKey: x.key, offerLabel: offerLine(x.offer).slice(0, 120), cost: Math.round(x.cost * 100) / 100,
-          channel: 'whatsapp', sentAt: Date.now(),
-        }]);
-        persist(next, T.sent);
+           is blocked on iOS. The log follows, and only if it opened. */
+        var sent = openWhatsAppAndLog(readDoc(), x, offerLine(x.offer), phone, text, function (url, target) { return window.open(url, target); });
+        if (!sent.opened) { warn(T.openFail); return; }
+        persist(sent.doc, T.sent);
       }
     });
     kitPublish();
@@ -854,7 +872,7 @@
   window.KiwiRetention = {
     groupOf: groupOf, rhythmDays: rhythmDays, daysSinceLast: daysSinceLast, offerCost: offerCost,
     suggestPercent: suggestPercent, offerActive: offerActive, offerKey: offerKey, outcome: outcome,
-    cleanSettings: cleanSettings, cleanOffer: cleanOffer, waPhone: waPhone,
+    cleanSettings: cleanSettings, cleanOffer: cleanOffer, waPhone: waPhone, openWhatsAppAndLog: openWhatsAppAndLog,
     defaultSettings: defaultSettings, tradeRhythm: tradeRhythm, storeTrade: storeTrade,
   };
 })();

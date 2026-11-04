@@ -384,8 +384,8 @@
     "sha": "d515edc930e16fbd"
   },
   "assets/clients-book.js": {
-    "v": "65",
-    "sha": "632a4606d1b861f7"
+    "v": "68",
+    "sha": "70163383a6e4ba6f"
   },
   "assets/clients-directory.js": {
     "v": "40",
@@ -420,8 +420,8 @@
     "sha": "2d7b6732612470e0"
   },
   "assets/customer-retention.js": {
-    "v": "18",
-    "sha": "9fd40a7ac5b18c68"
+    "v": "20",
+    "sha": "c4ffcebad4250a1a"
   },
   "assets/dark-fixes.js": {
     "v": "5",
@@ -504,8 +504,8 @@
     "sha": "b567f822fe1873c5"
   },
   "assets/day-report-export.js": {
-    "v": "22",
-    "sha": "36c6c2ff367e22fd"
+    "v": "23",
+    "sha": "2cc1f5bba1f9a9aa"
   },
   "assets/day-report.js": {
     "v": "43",
@@ -708,8 +708,8 @@
     "sha": "f3c949a80d343db2"
   },
   "assets/hotel-language.js": {
-    "v": "9",
-    "sha": "4e8e6a0f70ecc8a9"
+    "v": "10",
+    "sha": "d1bbc62d5d4a4acc"
   },
   "assets/hotel-rates.js": {
     "v": "1",
@@ -720,8 +720,8 @@
     "sha": "894b034541608ffa"
   },
   "assets/hotel.js": {
-    "v": "91",
-    "sha": "93c2fd31b812b512"
+    "v": "93",
+    "sha": "019c0b2b8da623dc"
   },
   "assets/hotel/arrivals.js": {
     "v": "11",
@@ -1232,8 +1232,8 @@
     "sha": "3f0111c7f2e52686"
   },
   "assets/menu-i18n.js": {
-    "v": "6",
-    "sha": "a213d6ff245df87d"
+    "v": "7",
+    "sha": "4226612808ca5527"
   },
   "assets/menu-nutrition.js": {
     "v": "4",
@@ -1248,8 +1248,8 @@
     "sha": "67fbfd5623fadee6"
   },
   "assets/menu-scan-reader.js": {
-    "v": "7",
-    "sha": "e6f9b4dfba786395"
+    "v": "8",
+    "sha": "f994e650eaba8d66"
   },
   "assets/menu-scan.js": {
     "v": "14",
@@ -1440,12 +1440,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "67",
-    "sha": "4789e04c6939be00"
+    "v": "68",
+    "sha": "e54ccc387772161a"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "183",
-    "sha": "28b91e41b4edbe26"
+    "v": "185",
+    "sha": "f1fb016b4cc68c7a"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1492,8 +1492,8 @@
     "sha": "9d81ab72c04ee32d"
   },
   "assets/planning/csv-import.js": {
-    "v": "3",
-    "sha": "206a24baae242814"
+    "v": "4",
+    "sha": "a3a82b7cb89074a1"
   },
   "assets/planning/optimiser.js": {
     "v": "5",
@@ -2112,8 +2112,8 @@
     "sha": "3cb977732d0c9fb3"
   },
   "assets/team-hours.js": {
-    "v": "28",
-    "sha": "4087ffe4e6e249ac"
+    "v": "29",
+    "sha": "ea46bf141b701833"
   },
   "assets/team.js": {
     "v": "353",

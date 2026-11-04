@@ -40,6 +40,7 @@
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
     return m ? new Date(+m[1], +m[2] - 1, +m[3], 12) : new Date(t - 5 * 3600000 - 1);
   }
+  var creditZone = function () { try { return String(window.KiwiDayReport.timezone(creditMerchant()) || '') || undefined; } catch (_) { return undefined; } };
   function paired() { try { return !!(window.KiwiCaissePairing && KiwiCaissePairing.isPaired && KiwiCaissePairing.isPaired()); } catch (_) { return false; } }
   function hospitalityMode() {
     try {
@@ -70,7 +71,6 @@
   /* La caisse 2027 porte le carnet sur son rail (caisse-app.js, tillKitRail). */
   function kitRail() { return document.documentElement.hasAttribute('data-k-till'); }
   function shouldShow() { return !tillLocked() && !integrationHost() && !kitRail() && !!KC.bookId() && (paired() || KC.count() > 0); }
-
   function toast(msg, desc) {
     if (window.KiwiCaisseLang) { msg = window.KiwiCaisseLang.tr(msg); if (desc) desc = window.KiwiCaisseLang.tr(desc); }
     try {

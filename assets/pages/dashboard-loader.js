@@ -12,7 +12,7 @@
       'assets/ramadan.js?v=3',
       'assets/catalog-import.js?v=18',
       'assets/ai-image-import.js?v=1',
-      'assets/menu-scan-reader.js?v=7',
+      'assets/menu-scan-reader.js?v=8',
       'assets/menu-scan.js?v=14',
       'assets/salle-scan.js?v=10',
     ] },

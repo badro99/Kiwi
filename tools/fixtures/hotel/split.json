@@ -1,7 +1,7 @@
 {
-  "sha256": "c8ac4c3d9877476ade3d2d04b1bf4a53661e9c5a6ef698eeddf2a5185bbdf6e5",
+  "sha256": "3267289883ee808969ef529fe8c030c0da1e6c96029b6b2a38ce31d274957593",
   "start": 2304,
-  "end": 169010,
+  "end": 169174,
   "prefix": "/* Hotel · localisation isolée, sans initialisation avant le cœur.\n * Contrat privé : une seule propriété globale, forme figée. La fabrique\n * conserve les dictionnaires et fonctions dans leur propre fermeture. */\n(() => {\n  'use strict';\n  const factories = Object.seal({ rates: null, housekeeping: null, folio: null, channels: null });\n  let shared = null;\n  let instances = Object.create(null);\n  const define = (name, factory) => {\n    if (!Object.prototype.hasOwnProperty.call(factories, name)) throw new Error('Unknown hotel part: ' + name);\n    factories[name] = factory;\n  };\n  const bind = (scope) => { shared = scope; instances = Object.create(null); };\n  const part = (name) => {\n    if (!instances[name]) instances[name] = factories[name](shared);\n    return instances[name];\n  };\n  window.__kiwiHotelInternal = Object.freeze({\n    define, bind, part,\n    language: function () {\n",
   "suffix": "      return { hxLang, hxLocale, tx, txk, HX_N, txn, ltr, hxTo, hxColon, HX_T };\n    },\n  });\n})();\n",
   "replacement": "  const { hxLang, hxLocale, tx, txk, HX_N, txn, ltr, hxTo, hxColon, HX_T } = window.__kiwiHotelInternal.language();\n\n"

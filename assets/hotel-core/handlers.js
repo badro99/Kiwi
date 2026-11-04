@@ -197,8 +197,14 @@
       return `<div class="hx-close-exc-list" role="alert">${rows}</div>`;
     }
 
-    async function postReview(action, extra, btn) {
-      const pin = prompt(tx('Code PIN Direction / Gérant (si non connecté avec le compte propriétaire) :')) || '';
+    /* The manager code (and, for a corrective revision, its reason) is asked in
+       the product's own modal (assets/hotel/review-proof.mjs), never
+       window.prompt; dismissing the sheet sends nothing. `ask` is injected. */
+    async function postReview(action, btn, ask) {
+      const proof = await ask({ withReason: action === 'rectify' });
+      if (!proof) return;
+      const pin = proof.pin;
+      const extra = action === 'rectify' ? { rectificationReason: proof.reason } : null;
       const intent = [action, activeMonth, String(extra?.rectificationReason || '')].join('|');
       let idempotencyKey = pendingReviewKeys.get(intent);
       if (!idempotencyKey) {
@@ -361,14 +367,11 @@
         monthInput?.addEventListener('change', (e) => load(e.target.value));
 
         const finalizeBtn = container.querySelector('.hx-close-finalize');
-        finalizeBtn?.addEventListener('click', () => postReview('finalize', null, finalizeBtn));
+        const askReview = (opts) => import('./hotel/review-proof.mjs').then((mod) => mod.reviewProof(K(), tx, opts));
+        finalizeBtn?.addEventListener('click', () => postReview('finalize', finalizeBtn, askReview));
 
         const rectifyBtn = container.querySelector('.hx-close-rectify');
-        rectifyBtn?.addEventListener('click', () => {
-          const reason = prompt(tx('Motif de la révision corrective (au moins 10 caractères) :'));
-          if (!reason || reason.trim().length < 10) { toast(tx('Un motif d’au moins 10 caractères est obligatoire.'), { type: 'warn' }); return; }
-          postReview('rectify', { rectificationReason: reason.trim() }, rectifyBtn);
-        });
+        rectifyBtn?.addEventListener('click', () => postReview('rectify', rectifyBtn, askReview));
 
       } catch (err) {
         container.innerHTML = `<div class="hx-close-err">${tx('Erreur : {reason}', { reason: esc(err.message) })}</div>`;
