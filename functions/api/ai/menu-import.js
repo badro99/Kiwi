@@ -186,9 +186,12 @@ export function validateMenuItems(raw) {
     if (!it || typeof it !== 'object') continue;
     const name = String(it.name || it.label || '').slice(0, 120).trim();
     if (!name) continue;
-    let price = Number(it.price);
-    if (!Number.isFinite(price) || price < 0) price = 0;
-    price = Math.min(99999, Math.round(price * 100) / 100);
+    /* Prix absent ou illisible : null, jamais 0. Le client laisse la case vide
+     * et l'import refuse de créer l'article, au lieu d'ajouter un plat à
+     * 0 MAD. Un 0 explicite du modèle reste un 0. */
+    const rawPrice = it.price == null || (typeof it.price === 'string' && !it.price.trim()) || typeof it.price === 'boolean' ? NaN : Number(it.price);
+    let price = null;
+    if (Number.isFinite(rawPrice) && rawPrice >= 0) price = Math.min(99999, Math.round(rawPrice * 100) / 100);
     const entry = {
       name,
       price,
@@ -228,7 +231,7 @@ Structure JSON stricte à retourner :
 }
 Règles :
 - Réponds UNIQUEMENT avec un objet JSON valide, sans texte d'introduction ni commentaire.
-- "price" est un nombre (pas une chaîne). Si le prix est absent ou illisible, mets 0.
+- "price" est un nombre (pas une chaîne). Si le prix est absent ou illisible, mets null (jamais 0).
 - Les sections "cat", sous-sections "sub", noms "name" et descriptions "desc" sont recopiés dans la langue où ils sont écrits sur la carte · même si la carte mélange deux langues. La traduction est faite ensuite, ailleurs.
 - "sub" seulement si le menu a des sous-sections (ex. "Matcha", "Classics", "All Day Brunch"), sinon chaîne vide.
 - "desc" uniquement si une description est écrite sur la carte · sans rien inventer.

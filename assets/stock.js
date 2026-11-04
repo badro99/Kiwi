@@ -567,7 +567,10 @@
   }
   function retailSetProductStock(productId, wanted, reason) {
     const C = retailCatalog(); if (!C) return false;
-    wanted = Math.max(0, Math.round(+wanted || 0));
+    wanted = Math.max(0, +wanted || 0);
+    /* Boutique = pièces entières (décision wave Q) : une quantité fractionnaire
+     * est refusée à voix haute par le catalogue, jamais arrondie en silence. */
+    if (!Number.isInteger(wanted)) { C.adjustStock('', wanted, reason || 'ajust'); return false; }
     let variants = C.listVariants(productId) || [];
     if (!variants.length) {
       const created = C.addVariant({ productId, colorId: 'sans-couleur', colorLabel: 'Sans couleur', colorHex: '#A0A0A0', size: 'TU', stock: wanted });
@@ -575,7 +578,7 @@
     }
     let delta = wanted - variants.reduce((sum, v) => sum + (+v.stock || 0), 0);
     if (!delta) return true;
-    if (delta > 0) { C.adjustStock(variants[0].id, delta, reason || 'ajust'); return true; }
+    if (delta > 0) return C.adjustStock(variants[0].id, delta, reason || 'ajust') != null;
     let remove = -delta;
     variants.slice().sort((a, b) => (+b.stock || 0) - (+a.stock || 0)).forEach((v) => {
       if (!remove) return;
@@ -2443,7 +2446,7 @@
     'assets/stock/counts.js?v=9',
     'assets/stock/purchasing.js?v=6',
     'assets/stock/intake.js?v=19',
-    'assets/stock/catalog.js?v=7',
+    'assets/stock/catalog.js?v=8',
   ];
   const stockLoads = new Map();
   function loadStockParts() {

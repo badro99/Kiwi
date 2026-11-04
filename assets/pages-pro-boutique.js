@@ -552,6 +552,7 @@ const _BQX_INV = {
     missing: (n) => `${n} manquant${n > 1 ? 's' : ''}`,
     left: (n) => `${n} restant${n > 1 ? 's' : ''}`,
     inStock: (n) => `${n} en stock`,
+    gap: (n) => `stock à vérifier · écart −${n}`,
     kSomeCost: (a, b) => ` · ${a} produit${a < 2 ? '' : 's'} sur ${b} au coût d’achat`,
     unsaved: 'Non enregistré sur cet appareil',
     unsavedDesc: 'Le stockage du navigateur est plein ou bloqué. La modification part au serveur dès que la connexion le permet. Libérez du stockage avant de recharger la page.',
@@ -604,6 +605,7 @@ const _BQX_INV = {
     missing: (n) => `${n} missing`,
     left: (n) => `${n} left`,
     inStock: (n) => `${n} in stock`,
+    gap: (n) => `check stock · discrepancy −${n}`,
     kSomeCost: (a, b) => ` · ${a} of ${b} products at cost`,
     unsaved: 'Not saved on this device',
     unsavedDesc: 'Browser storage is full or blocked. The change is sent to the server as soon as the connection allows. Free up storage before reloading the page.',
@@ -656,6 +658,7 @@ const _BQX_INV = {
     missing: (n) => `بدون رمز: ${n}`,
     left: (n) => `المتبقي: ${n}`,
     inStock: (n) => `في المخزون: ${n}`,
+    gap: (n) => `تحقق من المخزون · فرق −${n}`,
     kSomeCost: (a, b) => ` · ${a} من ${b} بالتكلفة`,
     unsaved: 'لم يُحفظ على هذا الجهاز',
     unsavedDesc: 'تخزين المتصفح ممتلئ أو محظور. يُرسل التعديل إلى الخادم فور توفر الاتصال. حرّر مساحة التخزين قبل إعادة تحميل الصفحة.',
@@ -756,8 +759,14 @@ let _bqxTill; function _bqxThumb(p) {   // sans photo à soi, la photo que la ca
   if (_bqxTill === undefined) { _bqxTill = null; import(new URL('assets/retail-photos.js?v=5', document.baseURI).href).then((m) => { _bqxTill = m; const g = document.getElementById('bqx-grid'); if (g) g.innerHTML = _bqxGridHtml(); }).catch(() => {}); }
   const words = String(p.name || '').trim().split(/\s+/).filter(Boolean), ini = ((words[0] || '·').charAt(0) + (words[1] ? words[1].charAt(0) : '')).toUpperCase(); return `<span class="bqx-ini" aria-hidden="true">${_esc(ini)}</span>`;
 }
-function _bqxStockTag(stock) {
+/* Le registre garde le vrai négatif (une vente hors ligne peut survendre) ; la
+   * fiche montre 0 et l'écart à recompter, comme la caisse (décision du 4 nov.). */
+function _bqxLedgerGap(productId) {
+  return (CAT().listVariants(productId) || []).reduce((n, v) => n + Math.min(0, Number(v.ledgerStock ?? v.stock) || 0), 0);
+}
+function _bqxStockTag(stock, gap) {
   const t = _bqxInvT();
+  if (gap < 0) return `<span class="bqx-stag low">0 · ${_esc(t.gap(Math.abs(gap)))}</span>`;
   if (stock <= 0) return `<span class="bqx-stag out">${_esc(t.out)}</span>`;
   if (stock <= 5) return `<span class="bqx-stag low">${_esc(t.left(stock))}</span>`;
   return `<span class="bqx-stag">${_esc(t.inStock(stock))}</span>`;
@@ -794,7 +803,7 @@ function _bqxCardHtml(p) {
           ? `<span class="bqx-ab-b" title="${_esc(t.catB)}">B</span>` : ''}</div></div>
         <div class="bqx-cmeta"><span class="bqx-dot"></span><span>${p.archived ? _esc(t.archived) : cat ? _esc(cat.name) : _esc(t.noCat)}</span><span aria-hidden="true">·</span><span>${_esc(_bqxShT().variants(data.variants.length))}</span></div>
         <div class="bqx-card-cols">${_bqxSwatches(data.colors, 8)}</div>
-        <div class="bqx-cfoot"><span class="bqx-price">${_bqxPrice(p.priceMAD)}<small>${_esc(t.cur)}</small></span>${_bqxStockTag(data.stock)}</div>
+        <div class="bqx-cfoot"><span class="bqx-price">${_bqxPrice(p.priceMAD)}<small>${_esc(t.cur)}</small></span>${_bqxStockTag(data.stock, _bqxLedgerGap(p.id))}</div>
       </div>
     </div>`;
 }
@@ -814,7 +823,7 @@ function _bqxRowHtml(p) {
       <span class="bqx-rnum">${nVar}</span>
       <span class="bqx-rbc${miss > 0 ? ' miss' : ''}">${!nVar ? '<i class="nil">·</i>' : _esc(miss > 0 ? t.missing(miss) : t.complete)}</span>
       <span class="bqx-rnum bqx-rprice">${_bqxPrice(p.priceMAD)} ${_esc(t.cur)}</span>
-      <span class="bqx-rstock">${_bqxStockTag(data.stock)}</span>
+      <span class="bqx-rstock">${_bqxStockTag(data.stock, _bqxLedgerGap(p.id))}</span>
     </div>`;
 }
 

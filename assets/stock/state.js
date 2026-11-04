@@ -61,10 +61,40 @@ window.KiwiStockState = (read) => {
     return null;
   }
 
+  /* Un mouvement boutique s'applique comme DELTA sur le registre du catalogue :
+   * jamais « lire le stock, calculer une cible, la réécrire » (une vente de la
+   * caisse entre les deux était écrasée, et une perte sur un produit à 0 ne
+   * s'écrivait pas). Le registre garde le vrai négatif (décision du 4 nov.) ;
+   * la fiche l'affiche 0 avec l'écart. Refus (fractionnaire, catalogue absent,
+   * écriture refusée) : null, et rien n'est écrit. */
   function moveRetailStock(it, qty, reason, refType, refId) {
-    const next = Math.max(0, currentStockFor(it) + (+qty || 0));
-    retailSetProductStock(it.id, next, reason || 'ajust');
-    return { itemId: it.id, qty: +qty || 0, reason: reason || 'ajust', refType: refType || 'manual', refId: refId || '' };
+    const delta = +qty || 0;
+    const C = retailCatalog();
+    if (!C || !delta) return null;
+    const why = reason || 'ajust';
+    if (!Number.isInteger(delta)) { C.adjustStock('', delta, why); return null; }
+    const extra = refId ? { ref: String(refId) } : undefined;
+    let ok = true;
+    C.batch(() => {
+      let variants = C.listVariants(it.id) || [];
+      if (!variants.length) {
+        const made = C.addVariant({ productId: it.id, colorId: 'sans-couleur', colorLabel: 'Sans couleur', colorHex: '#A0A0A0', size: 'TU', stock: 0 });
+        variants = made ? (C.listVariants(it.id) || []) : [];
+        if (!variants.length) { ok = false; return; }
+      }
+      const byStock = variants.slice().sort((a, b) => (+b.stock || 0) - (+a.stock || 0));
+      if (delta > 0) { ok = C.adjustStock(byStock[0].id, delta, why, extra) != null; return; }
+      let remove = -delta;
+      byStock.forEach((v) => {
+        const take = Math.min(remove, Math.max(0, +v.stock || 0));
+        if (take) { ok = (C.adjustStock(v.id, -take, why, extra) != null) && ok; remove -= take; }
+      });
+      /* Ce qui dépasse le stock affiché est une vraie perte : elle s'inscrit
+       * au registre (négatif) sur la déclinaison la mieux fournie. */
+      if (remove) ok = (C.adjustStock(byStock[0].id, -remove, why, extra) != null) && ok;
+    });
+    if (!ok) return null;
+    return { itemId: it.id, qty: delta, reason: why, refType: refType || 'manual', refId: refId || '' };
   }
 
   function countStock(it, counted, refId) {
