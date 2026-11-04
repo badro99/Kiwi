@@ -200,8 +200,8 @@
     "sha": "a67300dab4d2644a"
   },
   "assets/caisse-kitchen.js": {
-    "v": "7",
-    "sha": "a0ce4acd47827dc6"
+    "v": "10",
+    "sha": "bb1d16a5c1416333"
   },
   "assets/caisse-lang.js": {
     "v": "93",
@@ -1304,8 +1304,8 @@
     "sha": "565730a1fc3bccbe"
   },
   "assets/orderpro-page.js": {
-    "v": "15",
-    "sha": "bf01efdca39ac652"
+    "v": "19",
+    "sha": "c2006cdccce24865"
   },
   "assets/orderpro-panel.js": {
     "v": "5",
@@ -1940,16 +1940,16 @@
     "sha": "744e87916aca72f2"
   },
   "assets/serveur-lang.js": {
-    "v": "6",
-    "sha": "874c34e6680bc60e"
+    "v": "9",
+    "sha": "020ac4309450610a"
   },
   "assets/serveur-shell.css": {
     "v": "8",
     "sha": "ca9f976c2786c1a3"
   },
   "assets/serveur/service.js": {
-    "v": "12",
-    "sha": "142cbff9c882a288"
+    "v": "14",
+    "sha": "53620904f55920c6"
   },
   "assets/service-requests.js": {
     "v": "2",

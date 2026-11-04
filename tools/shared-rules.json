@@ -93,6 +93,16 @@
       "targets": [
         "assets/z-reconciliation.js"
       ]
+    },
+    {
+      "name": "KiwiOrderWords",
+      "source": "functions/api/_rules-order-words.js",
+      "targets": [
+        "assets/orderpro-page.js",
+        "assets/serveur-lang.js",
+        "assets/caisse-kitchen.js",
+        "assets/caisse-kitchen/kds-board.js"
+      ]
     }
   ]
 }

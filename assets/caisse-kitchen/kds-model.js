@@ -132,7 +132,7 @@
          est acceptée, pour qu'elle reste vraie même si la table change de main
          ensuite. */
       const sv = o.server ? ` <span class="kit-server">· ${kdsEsc(o.server)}</span>` : '';
-      return `<span class="kit-type dineIn">Table ${kdsEsc(o.table)}${o.course === 'suite' ? ' · Suite' : ''}${sv}</span>`;
+      return `<span class="kit-type dineIn">Table ${kdsEsc(o.table)}${o.course === 'suite' ? ' · ' + kkt('order.suite') : ''}${sv}</span>`;
     }
 
     function kdsOrderInner(o, withEye) {
@@ -170,7 +170,7 @@
         </div>
         <div class="kit-order-meta">
           ${kdsTypeChip(o)}
-          <span class="kit-status">${isReady ? (o.pickedUp ? 'Servie' : 'Prête') : isNew ? 'Nouvelle' : 'En préparation'}</span>
+          <span class="kit-status">${isReady ? kkt(o.pickedUp ? 'order.served' : 'order.ready') : kkt(isNew ? 'order.new' : 'order.preparing')}</span>
         </div>
         <ul class="kit-items">${items}</ul>
         ${Array.isArray(o.following) && o.following.length && !isReady ? `<div class="kit-following">À suivre · ${o.following.map(i => `${i.q}× ${kdsEsc(i.n)}`).join(', ')}</div>` : ''}

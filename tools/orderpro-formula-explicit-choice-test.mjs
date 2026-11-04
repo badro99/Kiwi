@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { word } from '../functions/api/_rules-order-words.js';
 import orderProTestSource from './orderpro-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -43,11 +44,11 @@ assert.match(source, /group\.classList\.add\('is-invalid'\)/,
   'the unanswered stage is visibly highlighted');
 assert.match(source, /group\.classList\.remove\('is-invalid'\)/,
   'an explicit choice clears the validation state');
-assert.match(source, /opt_required_missing: "Choisissez une option/,
+assert.match(word('fr', 'opt_required_missing'), /^Choisissez une option/,
   'French explains the missing choice');
-assert.match(source, /opt_required_missing: "Choose an option/,
+assert.match(word('en', 'opt_required_missing'), /^Choose an option/,
   'English explains the missing choice');
-assert.match(source, /opt_required_missing: "اختار واحد الاختيار/,
+assert.match(word('ar', 'opt_required_missing'), /^اختار واحد الاختيار/,
   'Darija explains the missing choice');
 assert.doesNotMatch(source,
   /if \(opt\.type === 'single'\) customizerSelections\[opt\.key\] = opt\.default \|\| opt\.choices\[0\]\.id/,

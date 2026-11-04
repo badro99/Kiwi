@@ -1675,7 +1675,7 @@ section('Whole-project regressions');
     'print-relay-idempotency-test.mjs',
     'print-relay-properties-test.mjs',
     'print-pairing-recovery-test.mjs',
-    'shared-rules-test.mjs',
+    'shared-rules-test.mjs', 'order-words-parity-test.mjs',
     // Les limites d'un groupe d'options (« 2 sauces au plus ») survivent à la publication (vague 11).
     'menu-option-limits-test.mjs',
     'day-report-model-parity-test.mjs',

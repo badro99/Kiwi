@@ -724,7 +724,7 @@
          est acceptée, pour qu'elle reste vraie même si la table change de main
          ensuite. */
       const sv = o.server ? ` <span class="kit-server">· ${kdsEsc(o.server)}</span>` : '';
-      return `<span class="kit-type dineIn">Table ${kdsEsc(o.table)}${o.course === 'suite' ? ' · Suite' : ''}${sv}</span>`;
+      return `<span class="kit-type dineIn">Table ${kdsEsc(o.table)}${o.course === 'suite' ? ' · ' + kkt('order.suite') : ''}${sv}</span>`;
     }
 
     function kdsOrderInner(o, withEye) {
@@ -762,7 +762,7 @@
         </div>
         <div class="kit-order-meta">
           ${kdsTypeChip(o)}
-          <span class="kit-status">${isReady ? (o.pickedUp ? 'Servie' : 'Prête') : isNew ? 'Nouvelle' : 'En préparation'}</span>
+          <span class="kit-status">${isReady ? kkt(o.pickedUp ? 'order.served' : 'order.ready') : kkt(isNew ? 'order.new' : 'order.preparing')}</span>
         </div>
         <ul class="kit-items">${items}</ul>
         ${Array.isArray(o.following) && o.following.length && !isReady ? `<div class="kit-following">À suivre · ${o.following.map(i => `${i.q}× ${kdsEsc(i.n)}`).join(', ')}</div>` : ''}
@@ -873,7 +873,48 @@
         + `<div class="kit-history-rows">${readyList.length ? readyList.map(kdsHistoryRow).join('') : kdsEmpty('Aucune commande prête pour l\'instant')}</div>`;
       updateKdsCount();
     }
-    function kkt(k, a) { return String(window.KiwiKit.t(k, a)).replace(/[\u2066-\u2069]/g, ''); }
+    function kkt(k, a) {
+      /* GENERATED SHARED KiwiOrderWords BEGIN */
+      /* Copy of functions/api/_rules-order-words.js made by tools/build-shared-rules.mjs. Edit the source, then run the tool. */
+      var KiwiOrderWords = (function () {
+        // Fixed order wording only. Merchant course and modifier names stay in the catalogue.
+        const words = {
+          fr: {
+            "opt_choose_one": "choisir 1", "opt_choose_many": "plusieurs possibles", "opt_required": "obligatoire",
+            "opt_required_missing": "Choisissez une option pour « {name} ».", "opt_unavailable": "Option indisponible", "opt_retirer_prefix": "Sans ",
+            "custom_note_optional": "facultatif", "btn_add": "Ajouter", "bill_order_label": "Commande",
+            "preparing": "En préparation", "ready": "Prête", "served": "Servie",
+            "new": "Nouvelle", "suite": "Suite", "quantity": "×"
+          },
+          en: {
+            "opt_choose_one": "pick 1", "opt_choose_many": "pick any", "opt_required": "required",
+            "opt_required_missing": "Choose an option for “{name}”.", "opt_unavailable": "Option unavailable", "opt_retirer_prefix": "No ",
+            "custom_note_optional": "optional", "btn_add": "Add", "bill_order_label": "Order",
+            "preparing": "Preparing", "ready": "Ready", "served": "Served",
+            "new": "New", "suite": "Next course", "quantity": "×"
+          },
+          ar: {
+            "opt_choose_one": "اختار 1", "opt_choose_many": "اختار اللي بغيتي", "opt_required": "ضروري",
+            "opt_required_missing": "اختار واحد الاختيار فـ «{name}».", "opt_unavailable": "خيار غير متوفر", "opt_retirer_prefix": "بلا ",
+            "custom_note_optional": "اختياري", "btn_add": "زيد", "bill_order_label": "الطلب",
+            "preparing": "قيد التحضير", "ready": "جاهزة", "served": "تم تقديمها",
+            "new": "جديدة", "suite": "التالي", "quantity": "×"
+          },
+        };
+        // Preserve the waiter sheet's shipped labels; guest spelling remains the default.
+        const waiterWords = { fr: { opt_required: 'Obligatoire', custom_note_optional: 'Optionnel' },
+          en: { opt_required: 'Required', custom_note_optional: 'Optional' }, ar: { opt_required: 'إجباري', btn_add: 'إضافة' } };
+        const word = (lang, key, surface) => {
+          const locale = words[lang] ? lang : 'en';
+          return (surface === 'waiter' ? waiterWords[locale][key] : undefined) ?? words[locale][key] ?? words.fr[key];
+        };
+        return { words, waiterWords, word };
+      })();
+      /* GENERATED SHARED KiwiOrderWords END */
+      // Keep French DOM anchors for the caisse's existing translation observer.
+      if (k.startsWith('order.')) return KiwiOrderWords.word('fr', k.slice(6));
+      return String(window.KiwiKit.t(k, a)).replace(/[\u2066-\u2069]/g, '');
+    }
     function kdsKitOn() {
       if (kdsKit) return true;
       if (!window.KiwiKdsBoard || !window.KiwiKit) return false;

@@ -382,6 +382,7 @@ console.log('\n--- Section 1: Pasta Corner Menu Resolution & Configurator I18N -
   vm.createContext(ctx);
 
   vm.runInContext(`
+    ${orderProHtml.match(/\/\* GENERATED SHARED KiwiOrderWords BEGIN \*\/[\s\S]*?\/\* GENERATED SHARED KiwiOrderWords END \*\//)[0]}
     ${i18nSrc}
     ${helpersSrc}
     ${bootRestaurantSrc}

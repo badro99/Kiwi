@@ -94,6 +94,43 @@
     Object.defineProperty(bindings, 'openScanner', { get: () => registry.extension('boutique', 'openScanner') });
     Object.defineProperty(bindings, 'closeScanner', { get: () => registry.extension('boutique', 'closeScanner') });
     Object.defineProperty(bindings, 'resolveScan', { get: () => registry.extension('boutique', 'resolveScan') });
+    /* GENERATED SHARED KiwiOrderWords BEGIN */
+    /* Copy of functions/api/_rules-order-words.js made by tools/build-shared-rules.mjs. Edit the source, then run the tool. */
+    var KiwiOrderWords = (function () {
+      // Fixed order wording only. Merchant course and modifier names stay in the catalogue.
+      const words = {
+        fr: {
+          "opt_choose_one": "choisir 1", "opt_choose_many": "plusieurs possibles", "opt_required": "obligatoire",
+          "opt_required_missing": "Choisissez une option pour « {name} ».", "opt_unavailable": "Option indisponible", "opt_retirer_prefix": "Sans ",
+          "custom_note_optional": "facultatif", "btn_add": "Ajouter", "bill_order_label": "Commande",
+          "preparing": "En préparation", "ready": "Prête", "served": "Servie",
+          "new": "Nouvelle", "suite": "Suite", "quantity": "×"
+        },
+        en: {
+          "opt_choose_one": "pick 1", "opt_choose_many": "pick any", "opt_required": "required",
+          "opt_required_missing": "Choose an option for “{name}”.", "opt_unavailable": "Option unavailable", "opt_retirer_prefix": "No ",
+          "custom_note_optional": "optional", "btn_add": "Add", "bill_order_label": "Order",
+          "preparing": "Preparing", "ready": "Ready", "served": "Served",
+          "new": "New", "suite": "Next course", "quantity": "×"
+        },
+        ar: {
+          "opt_choose_one": "اختار 1", "opt_choose_many": "اختار اللي بغيتي", "opt_required": "ضروري",
+          "opt_required_missing": "اختار واحد الاختيار فـ «{name}».", "opt_unavailable": "خيار غير متوفر", "opt_retirer_prefix": "بلا ",
+          "custom_note_optional": "اختياري", "btn_add": "زيد", "bill_order_label": "الطلب",
+          "preparing": "قيد التحضير", "ready": "جاهزة", "served": "تم تقديمها",
+          "new": "جديدة", "suite": "التالي", "quantity": "×"
+        },
+      };
+      // Preserve the waiter sheet's shipped labels; guest spelling remains the default.
+      const waiterWords = { fr: { opt_required: 'Obligatoire', custom_note_optional: 'Optionnel' },
+        en: { opt_required: 'Required', custom_note_optional: 'Optional' }, ar: { opt_required: 'إجباري', btn_add: 'إضافة' } };
+      const word = (lang, key, surface) => {
+        const locale = words[lang] ? lang : 'en';
+        return (surface === 'waiter' ? waiterWords[locale][key] : undefined) ?? words[locale][key] ?? words.fr[key];
+      };
+      return { words, waiterWords, word };
+    })();
+    /* GENERATED SHARED KiwiOrderWords END */
     /* ============ helpers ============ */
     const $  = (s, c = document) => c.querySelector(s);
     const $$ = (s, c = document) => [...c.querySelectorAll(s)];
@@ -139,18 +176,10 @@
         cart_pill: "Voir ma commande",
         custom_from: "À partir de",
         custom_note_label: "Demande spéciale",
-        custom_note_optional: "facultatif",
         custom_note_placeholder: "Ex : peu de glaçons, sans sel, allergie aux noix…",
         custom_price: "Prix",
-        btn_add: "Ajouter",
-        opt_choose_one: "choisir 1",
-        opt_choose_many: "plusieurs possibles",
-        opt_required: "obligatoire",
-        opt_required_missing: "Choisissez une option pour « {name} ».",
-        opt_unavailable: "Option indisponible",
         // Per-option translations go here, keyed opt_label_<key> and opt_<key>_<choiceId>.
         // Missing keys fall back to the OPT definition's own label. Add per client menu.
-        opt_retirer_prefix: "Sans ",
         cart_title: "Votre commande",
         cart_empty: "Panier vide, choisissez quelque chose au menu.",
         cart_total: "Total",
@@ -272,7 +301,6 @@
         prep_ready: "Prête · elle arrive",
         order_refused_n: "Commande {n} refusée par le comptoir · retirée de votre addition",
         order_busy: "Beaucoup de commandes en attente · appelez l’équipe",
-        bill_order_label: "Commande",
         bill_order_refused: "Refusée · non comptée",
         // ── boutique vertical ──
         bq_title: "Nos produits",
@@ -332,18 +360,10 @@
         cart_pill: "View my order",
         custom_from: "From",
         custom_note_label: "Special request",
-        custom_note_optional: "optional",
         custom_note_placeholder: "Ex: less ice, no salt, nut allergy…",
         custom_price: "Price",
-        btn_add: "Add",
-        opt_choose_one: "pick 1",
-        opt_choose_many: "pick any",
-        opt_required: "required",
-        opt_required_missing: "Choose an option for “{name}”.",
-        opt_unavailable: "Option unavailable",
         // Per-option translations go here, keyed opt_label_<key> and opt_<key>_<choiceId>.
         // Missing keys fall back to the OPT definition's own label. Add per client menu.
-        opt_retirer_prefix: "No ",
         cart_title: "Your order",
         cart_empty: "Cart is empty, pick something from the menu.",
         cart_total: "Total",
@@ -463,7 +483,6 @@
         prep_ready: "Ready · on its way",
         order_refused_n: "Order {n} refused by the counter · removed from your bill",
         order_busy: "Lots of orders waiting · please call the team",
-        bill_order_label: "Order",
         bill_order_refused: "Refused · not counted",
         bq_title: "Our products",
         bq_scan: "Scan a product",
@@ -522,18 +541,10 @@
         cart_pill: "شوف الطلب ديالي",
         custom_from: "إبتدا من",
         custom_note_label: "طلب خاص",
-        custom_note_optional: "اختياري",
         custom_note_placeholder: "مثلاً: شوية ديال الجليد، بلا ملح، حساسية…",
         custom_price: "الثمن",
-        btn_add: "زيد",
-        opt_choose_one: "اختار 1",
-        opt_choose_many: "اختار اللي بغيتي",
-        opt_required: "ضروري",
-        opt_required_missing: "اختار واحد الاختيار فـ «{name}».",
-        opt_unavailable: "خيار غير متوفر",
         // Per-option translations go here, keyed opt_label_<key> and opt_<key>_<choiceId>.
         // Missing keys fall back to the OPT definition's own label. Add per client menu.
-        opt_retirer_prefix: "بلا ",
         cart_title: "الطلب ديالك",
         cart_empty: "الطلب خاوي، اختار شي حاجة من المنيو.",
         cart_total: "المجموع",
@@ -653,7 +664,6 @@
         prep_ready: "واجد · جاي ليك",
         order_refused_n: "الطلب {n} ماتقبلش من الكونطوار · تحيّد من الحساب ديالك",
         order_busy: "بزاف ديال الطلبات كتسنى · عيّط للفريق",
-        bill_order_label: "الطلب",
         bill_order_refused: "ماتقبلش · ماتحسبش",
         bq_title: "المنتوجات ديالنا",
         bq_scan: "سكاني منتوج",
@@ -717,6 +727,8 @@
     })();
     owner.initialize('currentLang', savedOrderLang || 'fr');
     function t(key) {
+      const shared = KiwiOrderWords.word(currentLang, key);
+      if (shared !== undefined && (KiwiOrderWords.words[currentLang] || !I18N[currentLang]?.[key])) return shared;
       /* A language beyond the three reads English where it has no line of its
          own (the QR page did the same); Arabic keeps French, as shipped. */
       const extra = currentLang !== 'fr' && currentLang !== 'ar' && currentLang !== 'en';

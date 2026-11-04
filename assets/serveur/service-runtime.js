@@ -2325,7 +2325,7 @@
           <div class="opt-group ${unmet ? 'missing' : ''}">
             <div class="opt-group-head">
               <span class="opt-group-name">${esc(grpLabel)}</span>
-              <span class="opt-group-tag ${required ? 'req' : 'opt'}">${required ? (employeeLanguage === 'ar' ? 'إجباري' : (employeeLanguage === 'en' ? 'Required' : 'Obligatoire')) : (employeeLanguage === 'ar' ? 'اختياري' : (employeeLanguage === 'en' ? 'Optional' : 'Optionnel'))}</span>
+              <span class="opt-group-tag ${required ? 'req' : 'opt'}">${EMPLOYEE_TRANSLATIONS.word(employeeLanguage, required ? 'opt_required' : 'custom_note_optional')}</span>
             </div>
             <div class="opt-vals">${pills}</div>
           </div>`;
@@ -2339,7 +2339,7 @@
         ${groupsHTML}
         <div class="opt-foot">
           <button class="td-btn ghost" id="opt-cancel">${employeeLanguage === 'ar' ? 'إلغاء' : (employeeLanguage === 'en' ? 'Cancel' : 'Annuler')}</button>
-          <button class="td-btn primary" id="opt-confirm">${employeeLanguage === 'ar' ? 'إضافة' : (employeeLanguage === 'en' ? 'Add' : 'Ajouter')} · ${fmtMAD(total)}</button>
+          <button class="td-btn primary" id="opt-confirm">${EMPLOYEE_TRANSLATIONS.word(employeeLanguage, 'btn_add')} · ${fmtMAD(total)}</button>
         </div>`;
     }
 

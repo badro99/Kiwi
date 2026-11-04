@@ -159,7 +159,7 @@
     },
     {
       "file": "assets/caisse-kitchen.js",
-      "start": "\n    function kkt(k, a) { return String(window.KiwiKit.t(k, ",
+      "start": "\n    function kkt(k, a) {\n      /* GENERATED SHARED KiwiOrderWords",
       "before": "\n\n    $('#open-kds').addEventListener('click', openKds);\n   ",
       "functions": 14
     },

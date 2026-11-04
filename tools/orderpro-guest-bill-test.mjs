@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { word } from '../functions/api/_rules-order-words.js';
 import orderProTestSource from './orderpro-test-source.cjs';
 // OrderPro · ce que le client voit de SES commandes (audit 2026-10-14).
 //
@@ -135,6 +136,10 @@ ok('une file pleine ne dit pas « réessayez »', () => {
 });
 ok('les nouveaux libellés existent en FR, EN et AR', () => {
   for (const key of ['prep_ready', 'order_refused_n', 'order_busy', 'bill_order_label', 'bill_order_refused', 'success_title_em_kitchen']) {
+    if (key === 'bill_order_label') {
+      for (const lang of ['fr', 'en', 'ar']) assert.ok(word(lang, key));
+      continue;
+    }
     assert.equal((src.match(new RegExp('\\n\\s+' + key + ': "')) || []).length >= 1, true, key);
     assert.equal(src.split('\n').filter((l) => new RegExp('^\\s+' + key + ': "').test(l)).length, 3, key + ' in 3 languages');
   }
