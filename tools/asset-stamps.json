@@ -1308,8 +1308,8 @@
     "sha": "beddcced4eb5cec9"
   },
   "assets/orderpro-guest.js": {
-    "v": "6",
-    "sha": "c530d878cb65d0de"
+    "v": "9",
+    "sha": "3cd3b01271f8b903"
   },
   "assets/orderpro-inbox.js": {
     "v": "39",
@@ -1324,8 +1324,8 @@
     "sha": "565730a1fc3bccbe"
   },
   "assets/orderpro-page.js": {
-    "v": "20",
-    "sha": "a2d282763392b77c"
+    "v": "24",
+    "sha": "edd0911079ae7ec5"
   },
   "assets/orderpro-panel.js": {
     "v": "5",
@@ -1347,17 +1347,21 @@
     "v": "6",
     "sha": "ad71d8b92c33e1d1"
   },
+  "assets/orderpro/money.js": {
+    "v": "4",
+    "sha": "7c7d440282cde43e"
+  },
   "assets/orderpro/payment.js": {
-    "v": "5",
-    "sha": "5897949b2f2ab48f"
+    "v": "9",
+    "sha": "5dcd2fa837cd3340"
   },
   "assets/orderpro/session.js": {
     "v": "5",
     "sha": "7763ced5e1751eb6"
   },
   "assets/orderpro/table.js": {
-    "v": "3",
-    "sha": "bb858943c8b85f8d"
+    "v": "4",
+    "sha": "46aa7947e27316df"
   },
   "assets/orderpro/transport.js": {
     "v": "3",

@@ -74,7 +74,7 @@ KiwiOrderMenu.orderProParts.define('table', ["$","SESSION","gotoScreen","guestRe
         serviceBar.hidden = false;
       } else {
         badge.innerHTML = `<i data-lucide="utensils"></i><span id="menu-badge-text">${t('badge_table')} ${tableNumber}</span>`;
-        subtitle.textContent = t('cart_subtitle_table').replace('{n}', tableNumber || '—');
+        subtitle.textContent = t('cart_subtitle_table').replace('{n}', tableNumber || '·');
         note.textContent = t('cart_note_table');
         sendLabel.textContent = t('send_table');
         serviceBar.classList.remove('is-takeout');
