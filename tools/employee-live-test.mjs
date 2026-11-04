@@ -974,7 +974,7 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     }
     const body = new Element();
     const document = { body, documentElement: { lang }, createElement: () => new Element(),
-      getElementById: id => body.children.find(c => c.id === id), addEventListener() {}, dispatchEvent() {} };
+      getElementById: id => id === 'main-content' ? body : body.children.find(c => c.id === id), addEventListener() {}, dispatchEvent() {} };
     const window = { addEventListener() {}, localStorage: {
       getItem: k => local.get(k), setItem: (k,v) => local.set(k,v), removeItem: k => local.delete(k),
     } };

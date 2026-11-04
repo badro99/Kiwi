@@ -93,3 +93,7 @@ body.employee-trade-mode .bottom-tabs .bt-capsule { grid-template-columns: repea
   .ets-actions { grid-template-columns: 1fr; }
   .ets-actions button { min-height: 58px; flex-direction: row; align-items: center; justify-content: flex-start; }
 }
+
+.employee-punch-corrections{padding:16px;margin-block-end:16px;border:1px solid var(--atlas);border-radius:14px;background:var(--paper);color:var(--ink)}
+.employee-punch-corrections h2{margin:0;font-size:18px}.employee-punch-corrections>div{padding-block:10px;border-block-end:1px solid var(--n-200)}
+.employee-punch-corrections button{min-height:44px;padding:10px 14px;border:1px solid var(--n-200);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}.employee-punch-corrections button:focus-visible{outline:2px solid var(--atlas);outline-offset:2px}

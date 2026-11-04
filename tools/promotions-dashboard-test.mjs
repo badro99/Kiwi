@@ -9,15 +9,17 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(ROOT, 'assets/boutique-promos-dashboard.js'), 'utf8');
+const styles = fs.readFileSync(path.join(ROOT, 'assets/boutique-promos-dashboard.css'), 'utf8');
+const translations = fs.readFileSync(path.join(ROOT, 'assets/i18n.js'), 'utf8');
 let passed = 0;
 const failed = [];
 const ok = (label, condition) => condition ? passed++ : failed.push(label);
 
-ok('guided steps resist global section padding', source.includes('.bpd-step{flex:none;overflow:hidden;padding:0!important'));
-ok('composer scrolls internally on desktop', source.includes('.bpd-form{min-height:0;gap:10px;overflow-y:auto'));
-ok('mobile layout returns to document scrolling', source.includes('@media(max-width:900px)') && source.includes('.bpd-form{overflow:visible'));
-ok('keyboard focus remains visible', source.includes(':focus-visible'));
-ok('reduced-motion preference is respected', source.includes('prefers-reduced-motion:reduce'));
+ok('guided steps resist global section padding', styles.includes('.bpd-step{flex:none;overflow:hidden;padding:0!important'));
+ok('composer scrolls internally on desktop', styles.includes('.bpd-form{min-height:0;gap:10px;overflow-y:auto'));
+ok('mobile layout returns to document scrolling', styles.includes('@media(max-width:900px)') && styles.includes('.bpd-form{overflow:visible'));
+ok('keyboard focus remains visible', styles.includes(':focus-visible'));
+ok('reduced-motion preference is respected', styles.includes('prefers-reduced-motion:reduce'));
 
 /* Le toast d'une promotion attend la réponse du serveur, et ne dit « la caisse
  * est à jour » que si elle est vraie. saveVerdict() est la vraie fonction. */
@@ -36,7 +38,7 @@ ok('reduced-motion preference is respected', source.includes('prefers-reduced-mo
     ok('storage full, server accepted → sent', saveVerdict(false, { ok: true, status: 200 }) === 'sent');
     ok('storage full and offline → lost', saveVerdict(false, { ok: false, status: 0 }) === 'lost' && saveVerdict(false, null) === 'lost');
   }
-  ok('unsaved warning is translated in FR / EN / AR', source.includes("L('Non enregistrée sur cet appareil', 'Not saved on this device', 'لم يُحفظ على هذا الجهاز')"));
+  ok('unsaved warning is translated in FR / EN / AR', ['Non enregistrée sur cet appareil', 'Not saved on this device', 'لم يُحفظ على هذا الجهاز'].every(text => translations.includes(text)));
 }
 
 if (failed.length) {
