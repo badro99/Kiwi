@@ -44,6 +44,7 @@ import { json, activeEmployee } from '../auth/_lib.js';
 import { tenantFor, storeOperationalState } from './_private.js';
 import { clientAudit, refuseReward, mayRecordReward } from './_client-audit.js';
 import { phoneKey } from './_phone.js';
+import { readsIdentityDocuments, withoutDocumentNumber, keepStoredDocument } from './_client-identity.js';
 import { mayMergeClients, mergeClients, purchaseKey, purchaseKeySql } from './_client-merge.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
@@ -307,6 +308,7 @@ export async function onRequestGet(context) {
     }
 
     const rewardRefs = await pageEventRefs('client_reward_events');
+    const seesDocuments = rows.length ? await readsIdentityDocuments(request, env, merchant) : true;
     const rewardRefsByClient = new Map();
     rewardRefs.forEach((row) => {
       const list = rewardRefsByClient.get(row.client_id) || [];
@@ -316,6 +318,8 @@ export async function onRequestGet(context) {
     return json({
       merchant,
       clients: rows.map((row) => ({ ...row,
+        // ID numbers stay with hotels, the owner and operators (_client-identity.js).
+        hospitality: seesDocuments ? row.hospitality : withoutDocumentNumber(row.hospitality),
         // Colonne pas encore migrée : pas de champ, l'appareil garde ses étiquettes.
         tags: Object.hasOwn(row, 'tags') ? tagsList(row.tags) : undefined,
         purchase_refs: refsByClient.get(row.id) || [],
@@ -958,6 +962,11 @@ export async function onRequestPost(context) {
   };
   const base = body.profileBase && typeof body.profileBase === 'object'
     && !Array.isArray(body.profileBase) ? sanitize(body.profileBase) : null;
+  // A caller that only ever saw a blanked ID number cannot erase the real one.
+  if (Object.hasOwn(body, 'hospitality') && (!base || c.hospitality !== base.hospitality)
+      && !await readsIdentityDocuments(request, env, merchant)) {
+    c.hospitality = await keepStoredDocument(env, merchant, c.id, c.hospitality);
+  }
   // Column names come solely from this allowlist. No read/modify/write race:
   // an untouched field is absent from the SQL assignment altogether.
   const edits = Object.entries(profileColumns)

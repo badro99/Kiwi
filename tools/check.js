@@ -1884,7 +1884,7 @@ section('Whole-project regressions');
     'clients-properties-test.mjs',
     'queues-wave-n-test.mjs',
     'clients-display-properties-test.mjs',
-    'clients-outbox-owner-test.mjs',
+    'clients-outbox-owner-test.mjs', 'clients-push-deadline-test.mjs',
     'books-money-properties-test.mjs',
     'serveur-money-properties-test.mjs',
     'pressing-money-properties-test.mjs',
@@ -2470,7 +2470,7 @@ section('Whole-project regressions');
        phrases composées au rendu se traduisent, attributs compris. */
     'serveur-lang-coverage-test.mjs',
     'field-split-ui-test.mjs',
-    'hospitality-plus-test.mjs',
+    'hospitality-plus-test.mjs', 'client-identity-redaction-test.mjs',
     'maison-return-ledger-test.mjs',
     'menu-ordering-surfaces-test.js',
     'morocco-holidays-test.mjs',

@@ -59,7 +59,7 @@ await test('purchase retains event and failure reason until acknowledged', async
     set(v,k) { this.data[k] = JSON.parse(JSON.stringify(v)); }, subscribe() { return () => {}; } };
   const window = { KiwiStore: { define, currentVenue: () => 'fixture' }, KiwiEnv: { isReal: () => true }, addEventListener() {} };
   vm.runInNewContext(fs.readFileSync('assets/clients-store.js', 'utf8'), { window, KiwiStore: window.KiwiStore,
-    KiwiEnv: window.KiwiEnv, navigator: { onLine: true }, setInterval: () => 1,
+    KiwiEnv: window.KiwiEnv, navigator: { onLine: true }, setInterval: () => 1, setTimeout, clearTimeout, AbortController,
     localStorage: { getItem: k => data.get(k) || null, setItem: (k,v) => data.set(k,v) },
     fetch: async () => { if (!status) throw new Error('offline'); return { ok: status === 200, status, json: async () => ({}) }; } });
   const api = window.KiwiClients, client = api.upsert({ name: 'Fixture' }, 'fixture');

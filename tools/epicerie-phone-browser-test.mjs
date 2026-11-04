@@ -114,6 +114,12 @@ try {
       await page.click('#ep-qd-ok'); await sleep(300);
       check(await page.$eval('#ep-ardm .ep-dt-bal .amt',e=>/12[,.]50/.test(e.textContent)), `${lang} ${width}: dette de 12,50 MAD réellement ajoutée`);
       check(await page.$eval('#ep-ardm .ep-dt-hist',e=>e.textContent.includes('Achat à crédit')), `${lang} ${width}: nouvelle ligne dans l’historique`);
+      /* Notation 14 : un voisin peut régler son ardoise par carte (la démo ne tient pas de journal ; credit-book-test vérifie la méthode). */
+      await page.click('#ep-ard-settle'); await sleep(300);
+      await page.click('[data-ep-settle="partial"]'); await sleep(300);
+      await page.click('#ep-settle-amt', { clickCount: 3 }); await page.keyboard.type('10');
+      await page.click('#ep-settle-card'); await sleep(400);
+      check(await page.$eval('#ep-ardm .ep-dt-hist', (e) => /Règlement partiel par carte|Partial card repayment|أداء جزئي بالبطاقة/.test(e.textContent)), `${lang} ${width}: règlement par carte noté au carnet, traduit`);
       await close();
       let head = null;
       for (const v of ['carnet', 'stock', 'journee']) {

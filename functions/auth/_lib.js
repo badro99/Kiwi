@@ -1845,7 +1845,10 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
           ).bind(accountId, pin).all();
 
           const candidates = r.results || [];
-          const leader = candidates.find((c) => employeeRoleOpensDashboard(c.role) || employeeRoleOpensTill(c.role));
+          /* Owners and managers only: a cashier's or seller's code belongs to
+           * the store that filed it. Accepting every till role here let a
+           * cashier of one store unlock all sibling stores (council rating 14). */
+          const leader = candidates.find((c) => employeeRoleOpensDashboard(c.role));
           if (leader) staff = leader;
         } catch (_) {}
       }
