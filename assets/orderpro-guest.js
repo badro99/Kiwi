@@ -33,6 +33,8 @@ KiwiOrderMenu.orderProParts.run('guest', function (scope) {
   /* ── Textes · français, anglais, arabe ─────────────────────────────────── */
   const STRINGS = {
     fr: {
+      gx_uncertain: 'Résultat incertain, vérifiez auprès de l’équipe avant de réessayer.',
+      gx_storage_unsaved: 'Cette session ne sera pas conservée après un rechargement.',
       gx_menu: 'Voir la carte', gx_menu_sub: 'Commandez depuis votre table',
       gx_wifi: 'Wi-Fi', gx_wifi_sub: 'Le mot de passe en un geste',
       gx_review: 'Laisser un avis', gx_review_sub: 'Dites-nous comment c’était',
@@ -76,6 +78,8 @@ KiwiOrderMenu.orderProParts.run('guest', function (scope) {
       gx_min: '{m} min', gx_hmin: '{h} h {m}',
     },
     en: {
+      gx_uncertain: 'Result uncertain. Check with the team before retrying.',
+      gx_storage_unsaved: 'This session will not survive a reload.',
       gx_menu: 'View the menu', gx_menu_sub: 'Order from your table',
       gx_wifi: 'Wi-Fi', gx_wifi_sub: 'The password in one tap',
       gx_review: 'Leave a review', gx_review_sub: 'Tell us how it went',
@@ -119,6 +123,8 @@ KiwiOrderMenu.orderProParts.run('guest', function (scope) {
       gx_min: '{m} min', gx_hmin: '{h} h {m} min',
     },
     ar: {
+      gx_uncertain: 'النتيجة غير مؤكدة. تحقق مع الفريق قبل المحاولة مجددًا.',
+      gx_storage_unsaved: 'لن تُحفظ هذه الجلسة بعد إعادة تحميل الصفحة.',
       gx_menu: 'عرض القائمة', gx_menu_sub: 'اطلب من طاولتك',
       gx_wifi: 'الواي فاي', gx_wifi_sub: 'كلمة المرور بلمسة واحدة',
       gx_review: 'اترك تقييمًا', gx_review_sub: 'أخبرنا كيف كانت تجربتك',
@@ -166,9 +172,10 @@ KiwiOrderMenu.orderProParts.run('guest', function (scope) {
 
   const esc = (v) => escapeHtml(v == null ? '' : String(v));
   const fill = (s, map) => String(s).replace(/\{(\w+)\}/g, (_, k) => (map && map[k] != null ? map[k] : ''));
+  let storageWarned = false;
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
-    set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (_) { if (!storageWarned) { storageWarned = true; showToast(t('gx_storage_unsaved')); } } },
   };
   const icons = () => { try { if (window.lucide) window.lucide.createIcons(); } catch (_) {} };
 
@@ -184,17 +191,19 @@ KiwiOrderMenu.orderProParts.run('guest', function (scope) {
   /* ── Réseau ─────────────────────────────────────────────────────────────── */
   async function getJSON(url) {
     try {
-      const r = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
-      const j = await r.json().catch(() => null);
+      const { deadlineFetch } = await import('./request-deadline.mjs');
+      const r = await deadlineFetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' }, 12000);
+      const j = await r.json();
       return r.ok ? j : Object.assign({ ok: false, status: r.status }, j || {});
-    } catch (_) { return null; }
+    } catch (e) { return e.code === 'request-timeout' ? { ok: false, error: e.code } : null; }
   }
   async function postJSON(url, body) {
     try {
-      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const j = await r.json().catch(() => null);
+      const { deadlineFetch } = await import('./request-deadline.mjs');
+      const r = await deadlineFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 12000);
+      const j = await r.json();
       return r.ok ? j : Object.assign({ ok: false, status: r.status }, j || {});
-    } catch (_) { return { ok: false, error: 'network' }; }
+    } catch (e) { return { ok: false, error: e.code || 'network', uncertain: true }; }
   }
   const slugQ = () => 'merchant=' + encodeURIComponent(NET.slug);
 
@@ -845,7 +854,7 @@ KiwiOrderMenu.orderProParts.run('guest', function (scope) {
     const res = await postJSON('/api/order/game', { merchant: NET.slug, session: SESSION.id || '', quiz: Q.quiz.id, answers: Q.answers, nick, round: Q.round || '' });
     if (!res || !res.ok) {
       const e = res && res.error;
-      showToast(e === 'session-closed' || e === 'session-required' ? t('gx_closed') : e === 'too-many-players' ? t('gx_full') : e === 'bad-nick' ? t('gx_bad_nick') : t('gx_failed'));
+      showToast(res && res.uncertain ? t('gx_uncertain') : e === 'session-closed' || e === 'session-required' ? t('gx_closed') : e === 'too-many-players' ? t('gx_full') : e === 'bad-nick' ? t('gx_bad_nick') : t('gx_failed'));
       if (e === 'session-closed') SESSION.markClosed('settle');
       else openGames();
       return;

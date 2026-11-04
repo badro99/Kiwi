@@ -7,7 +7,7 @@ function expandExtractions(source, file, root = ROOT) {
   const read = file => fs.readFileSync(path.join(root, file), 'utf8');
   const moves = JSON.parse(read('tools/fixtures/orderpro/extractions.json'));
   for (const move of moves.filter(move => move.file === file)) {
-    const moduleFile = ['NET', 'NETcomment', 'retry'].includes(move.name) ? 'assets/orderpro/transport.js' : 'assets/orderpro/draft.js';
+    const moduleFile = move.name === 'splitMoney' ? 'assets/orderpro/money.js' : ['NET', 'NETcomment', 'retry'].includes(move.name) ? 'assets/orderpro/transport.js' : 'assets/orderpro/draft.js';
     const module = read(moduleFile);
     let body = module.split('// extract:' + move.name + ':start\n')[1].split('// extract:' + move.name + ':end')[0];
     if (move.name === 'NETcomment') body += move.replacement;

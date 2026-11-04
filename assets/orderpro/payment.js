@@ -3,6 +3,7 @@
  * Classic lexical adapter intentionally preserves original function bodies, including assignments. */
 KiwiOrderMenu.orderProParts.define('payment', ["$","$$","MENU","NET","ORDER_DONE","ORDER_STATE_KEY","PREP_STAGE","SESSION","TIP_LEVELS","activeMenuFilter","cart","closeCart","cur","currentOrderId","describeOptionChoices","describeOptionVisuals","describeOptions","escapeHtml","fmtAmount","gotoScreen","groupLabel","itemOf","lastStatus","lineKey","money","nameOf","openCustomizer","orderMode","orderNumber","pendingRef","rebuildSent","refreshCartUI","reloadMenu","renderMenu","renderMenuSubtabs","saveSent","sentLines","sentOrders","serviceRequestPending","sessionTotal","showToast","splitState","t","tableNumber","tipPercent","toCents","totals"], function (scope) {
   const draft = { create: KiwiOrderMenu.orderProParts.extension('draft', 'create') };
+  const splitMoney = KiwiOrderMenu.orderProParts.extension('money', 'compute');
   with (scope) {
     async function sendServiceRequest(action) {
       if (serviceRequestPending || !SESSION.id || SESSION.closed) return false;
@@ -87,8 +88,8 @@ KiwiOrderMenu.orderProParts.define('payment', ["$","$$","MENU","NET","ORDER_DONE
 
     function setTipPercent(pct) {
       tipPercent = pct;
-      const tipAmt = Math.round(sessionTotal * pct / 100);
-      const total = sessionTotal + tipAmt;
+      const amounts = splitMoney(toCents(sessionTotal), pct, 1);
+      const tipAmt = amounts.tip / 100, total = amounts.total / 100;
 
       const tipAmtEl = $('#tip-amount');
       tipAmtEl.textContent = `+${money(pct === 0 ? 0 : tipAmt)}`;
@@ -189,22 +190,20 @@ KiwiOrderMenu.orderProParts.define('payment', ["$","$$","MENU","NET","ORDER_DONE
     }
 
     function refreshSplitUI() {
-      const subtotal = sessionTotal;
-      const tipAmt = Math.round(sessionTotal * tipPercent / 100);
-      const grand = subtotal + tipAmt;
+      const amounts = splitMoney(toCents(sessionTotal), tipPercent, splitState.egalCount);
+      const subtotal = amounts.subtotal / 100, tipAmt = amounts.tip / 100, grand = amounts.total / 100;
       // Subtitle
       const subtitleEl = $('#split-subtitle');
       if (subtitleEl) {
         subtitleEl.textContent = t('split_subtitle_tpl')
-          .replace('{n}', tableNumber || '—')
+          .replace('{n}', tableNumber || '·')
           .replace('{total}', fmtAmount(grand))
           .replace('{cur}', cur());
       }
       if (splitState.mode === 'egal') {
         $('#split-egal-subtotal').textContent = `${money(subtotal)}`;
         $('#split-egal-tip').textContent = `${money(tipAmt)}`;
-        const per = Math.ceil(toCents(grand) / splitState.egalCount) / 100;
-        $('#split-egal-per').textContent = `${money(per)}`;
+        $('#split-egal-per').textContent = amounts.parts.map(c => money(c / 100)).join(' · ');
       } else {
         renderSplitArticle();
       }
@@ -214,10 +213,10 @@ KiwiOrderMenu.orderProParts.define('payment', ["$","$$","MENU","NET","ORDER_DONE
       let sum = 0;
       sentLines.forEach((line, idx) => {
         if (splitState.assignments[idx] === personIdx) {
-          sum += line.qty * line.unitPrice;
+          sum += line.qty * toCents(line.unitPrice);
         }
       });
-      return sum;
+      return sum / 100;
     }
 
     function renderSplitArticle() {
@@ -226,8 +225,10 @@ KiwiOrderMenu.orderProParts.define('payment', ["$","$$","MENU","NET","ORDER_DONE
       if (!tabsEl || !poolEl) return;
 
       const people = Array.from({ length: splitState.articleCount }, (_, i) => i);
+      const weights = people.map(i => toCents(personSubtotal(i)));
+      const amounts = splitMoney(toCents(sessionTotal), tipPercent, people.length, weights);
       tabsEl.innerHTML = people.map(i => {
-        const total = personSubtotal(i);
+        const total = amounts.parts[i] / 100;
         const isActive = splitState.selectedPerson === i;
         return `
           <button class="split-person-tab ${isActive ? 'is-active' : ''}" type="button" data-split-person="${i}">
@@ -256,22 +257,15 @@ KiwiOrderMenu.orderProParts.define('payment', ["$","$$","MENU","NET","ORDER_DONE
     }
 
     function confirmSplit() {
-      const subtotal = sessionTotal;
-      const tipAmt = Math.round(sessionTotal * tipPercent / 100);
-      const grand = subtotal + tipAmt;
+      const amounts = splitMoney(toCents(sessionTotal), tipPercent, splitState.egalCount);
       let msg;
       if (splitState.mode === 'egal') {
-        const per = Math.ceil(toCents(grand) / splitState.egalCount) / 100;
-        msg = `${t('toast_split_egal')} ${splitState.egalCount} × ${money(per)}`;
+        msg = `${t('toast_split_egal')} ${amounts.parts.map(c => money(c / 100)).join(' · ')}`;
       } else {
-        const totals = [];
-        for (let i = 0; i < splitState.articleCount; i++) {
-          const sub = personSubtotal(i);
-          // Distribute tip proportionally per person
-          const tipShare = subtotal > 0 ? Math.round(tipAmt * (sub / subtotal)) : 0;
-          totals.push(sub + tipShare);
-        }
-        msg = `${t('toast_split_egal')} ${totals.map(x => fmtAmount(x)).join(' · ')} ${cur()}`;
+        const weights = Array.from({ length: splitState.articleCount }, (_, i) => toCents(personSubtotal(i)));
+        if (weights.reduce((sum, n) => sum + n, 0) !== toCents(sessionTotal)) { showToast(t('split_tap_items')); return; }
+        const parts = splitMoney(toCents(sessionTotal), tipPercent, weights.length, weights).parts;
+        msg = `${t('toast_split_egal')} ${parts.map(c => money(c / 100)).join(' · ')}`;
       }
       closeSplit();
       closeBill();

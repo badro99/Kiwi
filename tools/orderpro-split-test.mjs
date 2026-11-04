@@ -58,10 +58,10 @@ function boot(split, lang) {
     vm.runInContext(original + proof, ctx);
   } else {
     vm.runInContext(read('assets/orderpro-page.js'), ctx);
-    assert.equal(effects.length, 7, 'only static dependency URLs emitted before initialization');
+    assert.equal(effects.length, 8, 'only static dependency URLs emitted before initialization');
     assert.ok(effects.every(e => e[1].async === false), 'classic dependencies execute in order');
     const urls = effects.map(e => e[1].src);
-    assert.deepEqual(urls.map(url => url.split('?')[0]), ['assets/orderpro/draft.js', 'assets/orderpro/transport.js', ...map.parts.map(p => p.file)], 'ordered lazy dependencies');
+    assert.deepEqual(urls.map(url => url.split('?')[0]), ['assets/orderpro/money.js', 'assets/orderpro/draft.js', 'assets/orderpro/transport.js', ...map.parts.map(p => p.file)], 'ordered lazy dependencies');
     const create = ctx.KiwiOrderMenu.orderProParts.create;
     ctx.KiwiOrderMenu.orderProParts.create = function (name, scope) { return instances[name] = create(name, scope); };
     for (const url of urls) {

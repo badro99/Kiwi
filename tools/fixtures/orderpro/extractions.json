@@ -58,5 +58,10 @@
     "file": "assets/orderpro/cart.js",
     "name": "incDraftLine",
     "replacement": "      if (!cart.has(key)) return;\n      draft.incDraftLine(key);\n"
+  },
+  {
+    "file": "assets/orderpro-page.js",
+    "name": "splitMoney",
+    "replacement": "    const splitMoney = registry.extension('money', 'compute');\n"
   }
 ]
