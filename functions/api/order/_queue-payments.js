@@ -151,7 +151,7 @@ export async function closeVisit(ctx) {
      * caisse le dise. Sans ticket encore arrivé (la fermeture a doublé le
      * paiement), ou avec un écart qui ne tombe sur aucune commande, rien ne
      * change : tout est soldé comme avant. */
-    let owed = null;
+    let owed = null, settleFailed = false;
     try {
       if (closeSession && why === 'settle') {
         owed = await settleCoveredOrders(env, merchant, closeSession, now);
@@ -162,7 +162,11 @@ export async function closeVisit(ctx) {
           ).bind(now, now, merchant, closeSession).run();
         }
       }
-    } catch (_) {}
+    } catch (error) {
+      // The table is already closed: say the orders were not marked paid instead of hiding it.
+      settleFailed = true;
+      console.error('[order] settle after close failed', merchant, String(error && error.message || error).slice(0, 120));
+    }
     deferCourse(context, closeOrderCourses(env, {
       merchant, sessionId: closeSession, table: closeTable, closedAt: now,
     }));
@@ -170,7 +174,7 @@ export async function closeVisit(ctx) {
       revision: targetSession ? Number(targetSession.seen_ts) || 0 : undefined,
       unpaid: unpaid || undefined,
       owedCents: owed ? owed.remainingCents : undefined,
-      owedOrders: owed ? owed.owedOrders : undefined });
+      owedOrders: owed ? owed.owedOrders : undefined, settleFailed: settleFailed || undefined });
   }
   return null;
 }
