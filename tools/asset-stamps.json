@@ -184,8 +184,8 @@
     "sha": "eb74d5c1cd3bb099"
   },
   "assets/caisse-app.js": {
-    "v": "38",
-    "sha": "6bd10325a1120e08"
+    "v": "39",
+    "sha": "629ae76ad20c11be"
   },
   "assets/caisse-dna.css": {
     "v": "10",
@@ -204,12 +204,12 @@
     "sha": "ad81372517f39890"
   },
   "assets/caisse-hardware.js": {
-    "v": "10",
-    "sha": "2d5c4e66dd3be985"
+    "v": "11",
+    "sha": "c5ae8cf806533461"
   },
   "assets/caisse-kitchen.js": {
-    "v": "27",
-    "sha": "9a3aa2a19924d59b"
+    "v": "28",
+    "sha": "c978ff18c9a0add3"
   },
   "assets/caisse-lang.js": {
     "v": "122",
@@ -292,8 +292,8 @@
     "sha": "cfc633029756952a"
   },
   "assets/caisse/inventory.js": {
-    "v": "6",
-    "sha": "8bae4d1a2dad63a9"
+    "v": "7",
+    "sha": "2fb5e800c4a690b1"
   },
   "assets/caisse/offline.js": {
     "v": "10",
@@ -384,8 +384,8 @@
     "sha": "d515edc930e16fbd"
   },
   "assets/clients-book.js": {
-    "v": "72",
-    "sha": "dc8131a3dd88eadd"
+    "v": "73",
+    "sha": "dfadf7ef9a53d573"
   },
   "assets/clients-directory.js": {
     "v": "40",

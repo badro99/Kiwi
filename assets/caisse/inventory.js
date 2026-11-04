@@ -596,7 +596,7 @@ function renderStock(){
       if (qty > it.stock && !(commitWaste.overConfirmed === it.id + ':' + qty)) {
         /* Feuille Kiwi, pas boîte du système : la confirmation posée, le même geste repart. */
         const msg = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(`La quantité saisie (${qty} ${it.unit}) est supérieure au stock disponible (${it.stock} ${it.unit}). Confirmer quand même ?`);
-        (window.KiwiCaisseLang && window.KiwiCaisseLang.ask ? window.KiwiCaisseLang.ask : (m) => Promise.resolve(window.confirm(m)))(msg).then((yes) => {
+        (window.KiwiCaisseLang && window.KiwiCaisseLang.ask ? window.KiwiCaisseLang.ask : (m) => Promise.resolve(window.confirm((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(m))))(msg).then((yes) => {
           if (!yes) return;
           commitWaste.overConfirmed = it.id + ':' + qty;
           try { commitWaste(); } finally { commitWaste.overConfirmed = ''; }

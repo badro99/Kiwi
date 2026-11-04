@@ -860,7 +860,7 @@
     var sh = document.getElementById('kcb-sheet');
     sh.querySelector('#kcb-f-cancel').onclick = closeSheet;
     if (editing) sh.querySelector('#kcb-f-del').onclick = function () {
-      (window.KiwiCaisseLang && window.KiwiCaisseLang.ask ? window.KiwiCaisseLang.ask : function (m) { return Promise.resolve(window.confirm(m)); })((window.KiwiCaisseLang ? window.KiwiCaisseLang.tr : function (s) { return s; })(c.name ? 'Supprimer ' + c.name + ' ?' : 'Supprimer ce client ?'), { danger: true, confirm: 'Supprimer' }).then(function (yes) { if (yes) { KC.remove(c.id); closeSheet(); renderList(); ensureChip(); toast('Client supprimé'); } });
+      (window.KiwiCaisseLang && window.KiwiCaisseLang.ask ? window.KiwiCaisseLang.ask : function (m) { return Promise.resolve(window.confirm((window.KiwiCaisseLang ? window.KiwiCaisseLang.tr : function (s) { return s; })(m))); })((window.KiwiCaisseLang ? window.KiwiCaisseLang.tr : function (s) { return s; })(c.name ? 'Supprimer ' + c.name + ' ?' : 'Supprimer ce client ?'), { danger: true, confirm: 'Supprimer' }).then(function (yes) { if (yes) { KC.remove(c.id); closeSheet(); renderList(); ensureChip(); toast('Client supprimé'); } });
     };
     var val = function (sel) { var e = sh.querySelector(sel); return e ? e.value.trim() : ''; };
     sh.querySelector('#kcb-f-save').onclick = function () {

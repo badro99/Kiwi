@@ -304,7 +304,7 @@
     try { viaApp = nativeAsk(parts, go, back, danger); } catch (_) { viaApp = null; }
     if (viaApp) return viaApp;
     if (typeof document !== 'undefined' && document.body && document.createElement) return pageAsk(parts, go, back, danger);
-    try { return Promise.resolve(typeof window.confirm === 'function' && window.confirm(String(message)) === true); } catch (_) { return Promise.resolve(false); }
+    try { return Promise.resolve(typeof window.confirm === 'function' && window.confirm(tr(String(message))) === true); } catch (_) { return Promise.resolve(false); }
   }
   /* Pas de nouveau global : la caisse lit déjà KiwiCaisseLang, la question s'y accroche. */
   function attach() { if (window.KiwiCaisseLang && !window.KiwiCaisseLang.ask) window.KiwiCaisseLang.ask = ask; }

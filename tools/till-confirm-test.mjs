@@ -30,7 +30,7 @@ function dom() {
   return { document, listeners, find: (cls) => body.all().filter((e) => e.className.split(' ').includes(cls)), body };
 }
 
-function load({ withDom = true, native = null, systemConfirm = null } = {}) {
+function boot({ withDom = true, native = null, systemConfirm = null } = {}) {
   const d = dom();
   const window = { KiwiCaisseLang: { tr: (s) => s }, __kiwiNativeRuntime: native, confirm: systemConfirm };
   const ctx = { window, navigator: {}, localStorage: { getItem: () => null } };
@@ -42,7 +42,7 @@ function load({ withDom = true, native = null, systemConfirm = null } = {}) {
 
 // The page sheet.
 {
-  const { ask, d } = load();
+  const { ask, d } = boot();
   const opener = d.document.createElement('button'); opener.focus();
   let result; ask('Retirer T12 du suivi ?\n\nLa vente reste enregistrée.', { danger: true, confirm: 'Retirer' }).then((v) => { result = v; });
   const sheet = d.find('kiwi-ask-card')[0];
@@ -59,7 +59,7 @@ function load({ withDom = true, native = null, systemConfirm = null } = {}) {
   assert.equal(d.document.activeElement, opener, 'the focus returns to the opener');
 }
 for (const [how, act] of [['Annuler', (d) => d.find('kiwi-ask-btn')[0].onclick()], ['Échap', (d) => d.listeners.keydown({ key: 'Escape', preventDefault() {}, stopPropagation() {} })], ['a click beside the card', (d) => d.find('kiwi-ask')[0].listeners.click({ target: d.find('kiwi-ask')[0] })]]) {
-  const { ask, d } = load(); let result; ask('Annuler le split en cours ?').then((v) => { result = v; });
+  const { ask, d } = boot(); let result; ask('Annuler le split en cours ?').then((v) => { result = v; });
   act(d); await Promise.resolve();
   assert.equal(result, false, how + ' answers false'); assert.equal(d.find('kiwi-ask').length, 0);
 }
@@ -67,7 +67,7 @@ for (const [how, act] of [['Annuler', (d) => d.find('kiwi-ask-btn')[0].onclick()
 // The iPhone app: the native sheet, never the web one nor the system box.
 {
   let spec; const native = { nativeSheetAvailable: () => true, nativeSheet: (s) => { spec = s; return Promise.resolve('go'); } };
-  const { ask, d } = load({ native, systemConfirm: () => { throw new Error('system dialog'); } });
+  const { ask, d } = boot({ native, systemConfirm: () => { throw new Error('system dialog'); } });
   assert.equal(await ask('Supprimer Amina ?', { danger: true }), true, 'the native sheet answers');
   assert.equal(spec.title, 'Supprimer Amina ?'); assert.equal(spec.actions[0].style, 'destructive'); assert.equal(d.find('kiwi-ask').length, 0, 'no web sheet on top of the native one');
   native.nativeSheet = () => Promise.resolve('dismiss');
@@ -76,7 +76,7 @@ for (const [how, act] of [['Annuler', (d) => d.find('kiwi-ask-btn')[0].onclick()
 
 // No document at all: the system box is the last resort.
 {
-  const { ask } = load({ withDom: false, systemConfirm: () => true });
+  const { ask } = boot({ withDom: false, systemConfirm: () => true });
   assert.equal(await ask('Supprimer ?'), true, 'the system box only without a page');
 }
 console.log('✓ till confirmations: native sheet in the app, Kiwi sheet with focus and Escape in the page, system box only without a document');

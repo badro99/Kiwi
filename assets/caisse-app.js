@@ -2894,7 +2894,7 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
           return;
         }
         const splitTable = selectedId;
-        (window.KiwiCaisseLang && window.KiwiCaisseLang.ask ? window.KiwiCaisseLang.ask : (m) => Promise.resolve(window.confirm(m)))(tr('Annuler le split en cours ?'), { danger: true }).then((yes) => {
+        (window.KiwiCaisseLang && window.KiwiCaisseLang.ask ? window.KiwiCaisseLang.ask : (m) => Promise.resolve(window.confirm(tr(m))))(tr('Annuler le split en cours ?'), { danger: true }).then((yes) => {
           if (!yes || !tableSplits.has(splitTable)) return;
           tableSplits.delete(splitTable);
           const t = tables[splitTable];
