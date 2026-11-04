@@ -183,7 +183,20 @@ check(response.status === 429 && body.error === 'booking-limit', 'one contact ca
   db.attempts = new Map(); db.doc.bookings = [];
   for (let i = 0; i < 60; i++) db.doc.bookings.push({ id: 'bk-h-' + i, source: 'public', status: 'confirmed', createdAt: Date.now() - 1000, startAt: Date.now() + (40 + i) * 86400000, endAt: Date.now() + (40 + i) * 86400000 + 1800000, customer: { name: 'x', phone: '+4917900' + String(10000 + i), email: '' }, serviceId: 'svc-cut', resourceId: 'res-a', publicRef: 'h' + i });
   const wide = await onRequestPost({ request: new Request('https://kiwi-os.com/api/booking', { method: 'POST', headers: { ...headers, 'CF-Connecting-IP': '198.51.100.77' }, body: JSON.stringify({ merchant: 'test-shop', ref: 'wide-ref-000001', serviceId: 'svc-cut', startAt: squatSlots[11].startAt, partySize: 1, customer: { name: 'New', phone: '+49 179 5288888', email: '' } }) }), env });
-  check(wide.status === 429, 'sixty public bookings in an hour close the diary to a new address too');
+  check(wide.status === 200 && (await wide.json()).status === 'requested' && db.doc.bookings.at(-1).status === 'requested', 'past sixty live public bookings an hour, a new booking is stored as requested, not refused and not auto-confirmed');
+  for (const b of db.doc.bookings.slice(0, 60)) b.status = 'cancelled';
+  db.attempts = new Map();
+  const calm = await onRequestPost({ request: new Request('https://kiwi-os.com/api/booking', { method: 'POST', headers: { ...headers, 'CF-Connecting-IP': '198.51.100.78' }, body: JSON.stringify({ merchant: 'test-shop', ref: 'calm-ref-0000001', serviceId: 'svc-cut', startAt: squatSlots[12].startAt, partySize: 1, customer: { name: 'Calm', phone: '+49 179 5299999', email: '' } }) }), env });
+  check(calm.status === 200 && (await calm.json()).status === 'confirmed', 'cancelled bookings do not count: the venue setting (instant) applies again');
+  /* two IPv6 addresses of one /64 share one bucket */
+  db.attempts = new Map(); db.doc.bookings = [];
+  const six = [];
+  for (let i = 0; i < 12; i++) {
+    const ip = i % 2 ? '2001:db8:aa:bb::' + (i + 1) : '2001:db8:aa:bb:1234:5678:9abc:' + (i + 1);
+    const r = await onRequestPost({ request: new Request('https://kiwi-os.com/api/booking', { method: 'POST', headers: { ...headers, 'CF-Connecting-IP': ip }, body: JSON.stringify({ merchant: 'test-shop', ref: 'v6-ref-' + String(i).padStart(8, '0'), serviceId: 'svc-cut', startAt: squatSlots[i].startAt, partySize: 1, customer: { name: 'V6 ' + i, phone: '+49 179 53' + String(10000 + i), email: '' } }) }), env });
+    six.push(r.status);
+  }
+  check(six.slice(0, 10).every((x) => x === 200) && six.slice(10).every((x) => x === 429), 'addresses of one IPv6 /64 share the same creation bucket');
   db.attempts = null; db.doc.bookings = savedBookings; db.doc.resources[0].capacity = savedMax;
 }
 

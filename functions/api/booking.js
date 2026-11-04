@@ -412,6 +412,16 @@ async function recoverBooking(request, env, b) {
 /* Réservations publiques créées : au plus 10 par adresse et par quart d'heure
    (la fenêtre du limiteur), au plus 60 par boutique et par heure. */
 const PUBLIC_CREATES_PER_WINDOW=10, PUBLIC_BOOKINGS_PER_HOUR=60;
+/* Une adresse IPv6 est un bloc entier : toute la /64 d'un client partage UN seau.
+   IPv4 : identité vide, le limiteur retombe sur l'adresse elle-même. */
+function sourceIdentity(request){
+  const ip=String(request.headers.get('CF-Connecting-IP')||request.headers.get('X-Forwarded-For')||'').split(',')[0].trim().toLowerCase();
+  if(!ip.includes(':'))return '';
+  let [head,tail]=ip.split('::');
+  const a=head?head.split(':'):[], b=tail===undefined?[]:(tail?tail.split(':'):[]);
+  const groups=tail===undefined?a:a.concat(Array(Math.max(0,8-a.length-b.length)).fill('0'),b);
+  return 'v6:'+groups.slice(0,4).map((g)=>g.replace(/^0+(?=.)/,'')).join(':');
+}
 
 export async function onRequestPost({ request, env }) {
   if (!env.DB) return json({ error:'not-configured' },503);
@@ -461,9 +471,15 @@ export async function onRequestPost({ request, env }) {
        chaque réservation réussie remet à zéro le seau d'échecs de l'adresse.
        Deux plafonds sur les créations réussies : par adresse (seau propre,
        jamais remis à zéro) et par boutique sur la dernière heure. */
-    const lastHourPublic=doc.bookings.filter((x)=>x.source==='public'&&x.createdAt>now-3600000).length;
-    if(lastHourPublic>=PUBLIC_BOOKINGS_PER_HOUR)return json({error:'booking-limit'},429);
-    const createBlocked=await limitCheck(request,env,'booking-new');if(createBlocked)return createBlocked;
+    /* Seuil boutique : on ne refuse JAMAIS un vrai client (un acteur qui remplit
+       puis annule bloquerait tout le monde). Au-delà du seuil de réservations
+       publiques VIVANTES de la dernière heure, la demande est acceptée comme
+       « requested » : le lieu la confirme lui-même, aucun créneau ne se
+       confirme tout seul pendant une rafale. */
+    const lastHourPublic=doc.bookings.filter((x)=>x.source==='public'&&ACTIVE.has(x.status)&&x.createdAt>now-3600000).length;
+    const burst=lastHourPublic>=PUBLIC_BOOKINGS_PER_HOUR;
+    const createId=sourceIdentity(request);
+    const createBlocked=await limitCheck(request,env,'booking-new',createId);if(createBlocked)return createBlocked;
     if(hotelTrade(rows.merchant)){
       const stay=stayRange(str(b?.checkIn,10),str(b?.checkOut,10),doc.settings,rows.zone);if(!stay)return json({error:'invalid-dates'},400);
       let d1BusyRooms = null;
@@ -487,14 +503,14 @@ export async function onRequestPost({ request, env }) {
       if(b?.expectedTotal!==undefined&&(!Number.isFinite(+b.expectedTotal)||+b.expectedTotal!==category.total))
         return json({error:'rate-changed',total:category.total},409);
       const room=category.rooms[0],code='H-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(),token=crypto.randomUUID().replace(/-/g,'');
-      const rec={id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:category.id,resourceId:room.id,startAt:stay.startAt,endAt:stay.endAt,partySize,status:doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,hotel:{roomTypeName:category.name,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,rate:category.rate,total:category.total,channel:'direct',externalRef:'',guestSegments:normalizeGuestSegments([],[],partySize,stay.checkIn,stay.checkOut),roomSegments:currentRoomSegment(room.id,stay.checkIn,stay.checkOut)},createdAt:now,updatedAt:now};
+      const rec={id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:category.id,resourceId:room.id,startAt:stay.startAt,endAt:stay.endAt,partySize,status:burst||doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,hotel:{roomTypeName:category.name,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,rate:category.rate,total:category.total,channel:'direct',externalRef:'',guestSegments:normalizeGuestSegments([],[],partySize,stay.checkIn,stay.checkOut),roomSegments:currentRoomSegment(room.id,stay.checkIn,stay.checkOut)},createdAt:now,updatedAt:now};
       doc.bookings.push(rec);
       /* Le bornage ne s'applique QUE si hotel_reservations existe. Sans la table,
          le document est l'unique copie : l'élaguer détruirait pour de bon toute
          réservation confirmée au-delà de la fenêtre, et la chambre repartirait
          à la vente. La disponibilité retombe déjà sur le document dans ce cas. */
       if (d1BusyRooms !== null) pruneReservationsDoc(doc, now);
-      try{const next=await writeReservationWithEvents(env,{merchant,doc,rev,now,actor:{id:'public-booking',role:'public'},events:[{previous:null,current:rec,action:'create'}]});if(next){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');await limitFail(request,env,'booking-new','',PUBLIC_CREATES_PER_WINDOW);
+      try{const next=await writeReservationWithEvents(env,{merchant,doc,rev,now,actor:{id:'public-booking',role:'public'},events:[{previous:null,current:rec,action:'create'}]});if(next){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');await limitFail(request,env,'booking-new',createId,PUBLIC_CREATES_PER_WINDOW);
         /* L'envoi ne conditionne JAMAIS la réservation : elle est écrite, elle
            existe. On dit seulement si la confirmation est partie, pour que la
            page n'annonce pas un e-mail qui n'a jamais quitté le serveur. */
@@ -513,7 +529,7 @@ export async function onRequestPost({ request, env }) {
     if(!validSlot)return json({error:'slot-unavailable'},409);
     const rid=asked&&validSlot.resourceIds.includes(asked)?asked:validSlot.resourceIds[0];
     const code='R-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(), token=crypto.randomUUID().replace(/-/g,'');
-    const rec={depositExpectation:{amountCents:Math.round(svc.deposit*100),status:'not-collected',policy:'arrange-with-venue'},id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:sid,resourceId:rid,startAt,endAt,partySize,status:doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,createdAt:now,updatedAt:now};
+    const rec={depositExpectation:{amountCents:Math.round(svc.deposit*100),status:'not-collected',policy:'arrange-with-venue'},id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:sid,resourceId:rid,startAt,endAt,partySize,status:burst||doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,createdAt:now,updatedAt:now};
     doc.bookings.push(rec);
     /* Plafond du document : les plus anciennes réservations PASSÉES partent d'abord ;
        s'il ne reste que des réservations à venir, la demande est refusée, jamais perdue. */
@@ -525,7 +541,7 @@ export async function onRequestPost({ request, env }) {
       let result;
       if(rev){result=await env.DB.prepare("UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'reservations' AND rev = ?").bind(text,next,now,merchant,rev).run();}
       else{result=await env.DB.prepare("INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'reservations', ?, 1, ?)").bind(merchant,text,now).run();}
-      if((result?.meta?.changes||0)>0){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');await limitFail(request,env,'booking-new','',PUBLIC_CREATES_PER_WINDOW);
+      if((result?.meta?.changes||0)>0){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');await limitFail(request,env,'booking-new',createId,PUBLIC_CREATES_PER_WINDOW);
         const mail=await confirmationMail(env,request,merchant,rows.merchant,rec,guestLang,rows.zone);
         return json({ok:true,id:rec.id,code,status:rec.status,startAt,manageToken:token,manageUrl:manageUrl(request,merchant,token),confirmationSent:!!(mail&&mail.ok)});}
     }catch(_){return json({error:'write-failed'},503);}
