@@ -41,25 +41,44 @@ window.__kiwiHotelInternal.define('folio', (scope) => {
       </div>`;
   }
 
+  /* Un vrai hôtel ne reçoit aucun prix inventé par Kiwi : ses tarifs sont les siens,
+     la charge se saisit librement (libellé, montant). Seule la démo garde ses raccourcis. */
   function quickItems() {
     if (!isCustomHotel()) return QUICK_ITEMS;
-    const p = ((window.KiwiVenue.getCurrentVenueData() || {}).profileInfo) || {};
-    const items = [];
-    if (p.resto || p.resto === undefined) items.push(
-      { label: tx('Petit-déjeuner'), amt: 80, src: 'resto' },
-      { label: tx('Dîner · couvert'), amt: 240, src: 'resto' },
-    );
-    if (p.spa) items.push({ label: tx('Soin spa / hammam'), amt: 300, src: 'spa' });
-    items.push({ label: tx('Minibar'), amt: 45, src: 'resto' }, { label: tx('Late check-out'), amt: 150, src: 'fee' });
-    return items;
+    return [];
   }
 
   function addChargeHtml(room) {
+    const field = 'width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--n-200);border-radius:8px;font:inherit;background:var(--surface);color:var(--ink);';
+    const freeChargeForm = `<div style="display:grid;gap:10px;margin:4px 0 6px;">
+        <label style="font-size:12px;color:var(--n-500);">${tx('Libellé de la charge')}
+          <input data-hx-fc="label" type="text" maxlength="80" autocomplete="off" style="${field}" /></label>
+        <label style="font-size:12px;color:var(--n-500);">${tx('Montant (MAD)')}
+          <input data-hx-fc="amt" type="number" inputmode="decimal" min="0.01" step="0.01" style="${field}" /></label>
+        <label style="font-size:12px;color:var(--n-500);">${tx('Catégorie')}
+          <select data-hx-fc="src" style="${field}"><option value="resto">${SRC_LBL.resto}</option><option value="spa">${SRC_LBL.spa}</option><option value="fee" selected>${SRC_LBL.fee}</option></select></label>
+        <button class="hx-btn atlas" data-action="hx-post-free-charge" data-arg="${room}">${tx('Poster sur la note')}</button>
+      </div>`;
+    const handlers = isCustomHotel() && K() && K().handlers;
+    if (handlers && !handlers['hx-post-free-charge']) handlers['hx-post-free-charge'] = (el, arg) => {
+      const roomNo = parseInt(arg, 10), body = el.closest('.kiwi-modal')?.querySelector('.kiwi-modal-body');
+      if (!body || !F()[roomNo]) return;
+      const label = String(body.querySelector('[data-hx-fc="label"]')?.value || '').trim().slice(0, 80);
+      const raw = String(body.querySelector('[data-hx-fc="amt"]')?.value || '').trim().replace(',', '.');
+      const cents = /^\d+(\.\d{1,2})?$/.test(raw) ? Math.round(Number(raw) * 100) : 0;
+      const picked = String(body.querySelector('[data-hx-fc="src"]')?.value || 'fee');
+      const src = ['resto', 'spa', 'fee'].includes(picked) ? picked : 'fee';
+      if (!label || cents < 1 || cents > 100000000) { K().toast(tx('Indiquez un libellé et un montant supérieur à 0.'), { type: 'warn' }); return; }
+      postCharge(roomNo, label, cents / 100, src, true);
+      K().toast(tx('{label} → folio Ch. {n}', { label, n: roomNo }), { type: 'success', desc: tx('{amount} postés sur la note de chambre.', { amount: MAD(cents / 100) }) });
+      body.innerHTML = folioModalHtml(roomNo, true);
+    };
     const intro = isCustomHotel()
       ? tx('Votre caisse, la charge se poste directement sur la note de la chambre {n}.', { n: room })
       : `Caisse restaurant et hammam du riad, la charge se poste directement sur la note de la chambre ${room}.`;
     return `
       <div style="font-size:12px;color:var(--n-500);margin-bottom:10px;">${intro}</div>
+      ${isCustomHotel() ? freeChargeForm : ''}
       ${quickItems().map((q, i) => `<div class="hx-fol-line" style="cursor:pointer;" data-action="hx-post-charge" data-arg="${room}|${i}">
         <span><span class="hx-srcdot ${SRC_DOT[q.src]}" style="margin-right:7px;"></span>${q.label}</span>
         <span class="qt">${q.src === 'resto' ? 'POS' : q.src === 'spa' ? 'SPA' : tx('FRAIS')}</span>

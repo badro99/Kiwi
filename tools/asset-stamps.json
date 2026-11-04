@@ -700,16 +700,16 @@
     "sha": "234b759382c50a26"
   },
   "assets/hotel-folio.js": {
-    "v": "1",
-    "sha": "de63191d48017ea9"
+    "v": "2",
+    "sha": "15dadfec90e11aff"
   },
   "assets/hotel-housekeeping.js": {
     "v": "1",
     "sha": "f3c949a80d343db2"
   },
   "assets/hotel-language.js": {
-    "v": "11",
-    "sha": "d1bbc62d5d4a4acc"
+    "v": "12",
+    "sha": "d3773a0093072336"
   },
   "assets/hotel-rates.js": {
     "v": "1",
@@ -1440,12 +1440,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "72",
-    "sha": "b57fdb1859e1e4e0"
+    "v": "73",
+    "sha": "cb455b0a96b79e7e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "191",
-    "sha": "1ff5f84f40cdc2d3"
+    "v": "192",
+    "sha": "83f8cd0ce23ed89b"
   },
   "assets/pages/tables-data.js": {
     "v": "2",
@@ -1644,8 +1644,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "372",
-    "sha": "52b01ab166b89064"
+    "v": "373",
+    "sha": "895a41c3a98dab41"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1656,8 +1656,8 @@
     "sha": "2726f858d71edecf"
   },
   "assets/pos-epicerie/carnet.js": {
-    "v": "10",
-    "sha": "bae960bb0cd1c3cd"
+    "v": "11",
+    "sha": "d8095a0ffcc694eb"
   },
   "assets/pos-fastfood.css": {
     "v": "15",

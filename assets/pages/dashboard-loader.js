@@ -22,7 +22,7 @@
       'assets/hotel/folio-actions.js?v=4',
       'assets/hotel/rate-actions.js?v=6',
       'assets/hotel-rates.js?v=1',
-      'assets/hotel-folio.js?v=1',
+      'assets/hotel-folio.js?v=2',
       'assets/hotel-channels.js?v=4',
       'assets/hotel/views.js?v=9',
       'assets/hotel/editors.js?v=10',

@@ -71,7 +71,7 @@
     'assets/design-2026.js?v=2',
     'assets/design-vexel-layout.js?v=2102',
     'assets/liquid-glass.js?v=1',
-    'assets/hotel-language.js?v=11',
+    'assets/hotel-language.js?v=12',
     'assets/hotel-housekeeping.js?v=1',
     'assets/hotel/model.js?v=10',
     'assets/hotel.js?v=94',
