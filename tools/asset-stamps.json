@@ -176,8 +176,8 @@
     "sha": "0774da441509f3ba"
   },
   "assets/caisse-accounting.js": {
-    "v": "19",
-    "sha": "6fe9140adb6d5d13"
+    "v": "22",
+    "sha": "eb74d5c1cd3bb099"
   },
   "assets/caisse-app.js": {
     "v": "32",
@@ -492,8 +492,8 @@
     "sha": "29354316e257d248"
   },
   "assets/day-report.js": {
-    "v": "39",
-    "sha": "c7d5ddd67f4b8dea"
+    "v": "42",
+    "sha": "4cad843814d50b78"
   },
   "assets/delivery-collect.js": {
     "v": "3",
@@ -1416,8 +1416,8 @@
     "sha": "98bec78733f9c645"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "138",
-    "sha": "9075152922967c91"
+    "v": "141",
+    "sha": "da85450f683a4137"
   },
   "assets/pages/tables-data.js": {
     "v": "1",

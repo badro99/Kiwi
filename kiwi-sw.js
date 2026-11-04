@@ -111,7 +111,7 @@ var SHELL = [
   '/assets/dashboard-shell.css?v=7',
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
-  '/assets/caisse-accounting.js?v=19',
+  '/assets/caisse-accounting.js?v=22',
   '/assets/caisse-floor.js?v=13',
   '/assets/caisse-kitchen.js?v=11',
   '/assets/caisse/receipts.js?v=2',
@@ -195,7 +195,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2100',
-  '/assets/pages/dashboard-startup.js?v=138',
+  '/assets/pages/dashboard-startup.js?v=141',
   '/assets/pages/dashboard-loader.js?v=38',
   '/assets/hotel/model.js?v=8',
   '/assets/hotel/views.js?v=3',
@@ -337,7 +337,7 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=39',
+  '/assets/day-report.js?v=42',
   '/assets/report.js?v=10',
   '/assets/day-report-dash.js?v=46',
   '/assets/day-report-export.js?v=19',

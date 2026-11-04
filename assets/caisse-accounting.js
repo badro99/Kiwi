@@ -64,7 +64,7 @@
       var KiwiDayReportModel = (function () {
         /* Day-report figures. Callers supply normalized rows and the business-day bounds.
          * The ledger profile preserves the till's historic non-cash bucket and rounding;
-         * the report profile preserves detailed tenders and split-tip allocation. */
+         * the report profile preserves detailed tenders and split-tip allocation; both sum in centimes. */
         const num = function (n) { var x = +n; return isFinite(x) ? x : 0; }
         const round2 = function (n) { return Math.round(num(n) * 100) / 100; }
         const minor = function (n) { return Math.round(((Number(n) || 0) + Number.EPSILON) * 100); }
@@ -119,27 +119,27 @@
               };
         }
         const reportFigures = function (rows) {
-          var gross = 0, refundAmt = 0, refundN = 0, txns = 0;
-          var methods = Object.create(null), tips = 0, cashTips = 0;
+          var grossC = 0, refundC = 0, refundN = 0, txns = 0;
+          var methodsC = Object.create(null), tipsC = 0, cashTipsC = 0;
           rows.forEach(function (s) {
               var isRefund = s.kind === 'refund' || s.amount < 0;
-              var mag = Math.abs(s.amount);
-              if (isRefund) { refundAmt += mag; refundN++; }
-              else { gross += s.amount; txns++; }
+              var magC = minor(Math.abs(s.amount)), tipC = minor(s.tip);
+              if (isRefund) { refundC += magC; refundN++; }
+              else { grossC += minor(s.amount); txns++; }
               var m = s.method || 'cash';
               var tenderParts = !isRefund && s.parts && s.parts.length ? s.parts : null;
               if (tenderParts) tenderParts.forEach(function (p) {
                 var method = p.method === 'avoir' ? 'credit' : p.method;
-                methods[method] = round2(num(methods[method]) + p.amountCents / 100);
+                methodsC[method] = num(methodsC[method]) + p.amountCents;
               });
-              else methods[m] = round2(num(methods[m]) + (isRefund ? -mag : s.amount));
-              tips += s.tip;
-              cashTips += s.tipMethod ? (s.tipMethod === 'cash' ? s.tip : 0) : tenderParts ? Math.sign(s.tip) * Math.round(Math.abs(s.tip) * 100 * tenderParts.reduce(function (n, p) { return n + (p.method === 'cash' ? p.amountCents : 0); }, 0) / tenderParts.reduce(function (n, p) { return n + p.amountCents; }, 0) + 1e-9) / 100 : m === 'cash' ? s.tip : 0;
-
+              else methodsC[m] = num(methodsC[m]) + (isRefund ? -magC : minor(s.amount));
+              tipsC += tipC;
+              cashTipsC += s.tipMethod ? (s.tipMethod === 'cash' ? tipC : 0) : tenderParts ? Math.sign(tipC) * Math.round(Math.abs(tipC) * tenderParts.reduce(function (n, p) { return n + (p.method === 'cash' ? p.amountCents : 0); }, 0) / tenderParts.reduce(function (n, p) { return n + p.amountCents; }, 0) + 1e-9) : m === 'cash' ? tipC : 0;
           });
-          return { gross: gross, net: round2(gross - refundAmt), txns: txns,
-            refunds: { count: refundN, amount: refundAmt }, methods: methods,
-            tips: tips, cashTips: cashTips };
+          var methods = Object.create(null); for (var k in methodsC) methods[k] = major(methodsC[k]);
+          return { gross: major(grossC), net: major(grossC - refundC), txns: txns,
+            refunds: { count: refundN, amount: major(refundC) }, methods: methods,
+            tips: major(tipsC), cashTips: major(cashTipsC) };
         }
         const expectedCash = function (opening, cash, tips, movesIn, movesOut, gap) {
           return round2(expectedCashCents(opening, cash, tips, movesIn, movesOut, gap));
@@ -2860,7 +2860,7 @@
       var KiwiDrawerReportModel = (function () {
         /* Day-report figures. Callers supply normalized rows and the business-day bounds.
          * The ledger profile preserves the till's historic non-cash bucket and rounding;
-         * the report profile preserves detailed tenders and split-tip allocation. */
+         * the report profile preserves detailed tenders and split-tip allocation; both sum in centimes. */
         const num = function (n) { var x = +n; return isFinite(x) ? x : 0; }
         const round2 = function (n) { return Math.round(num(n) * 100) / 100; }
         const minor = function (n) { return Math.round(((Number(n) || 0) + Number.EPSILON) * 100); }
@@ -2915,27 +2915,27 @@
               };
         }
         const reportFigures = function (rows) {
-          var gross = 0, refundAmt = 0, refundN = 0, txns = 0;
-          var methods = Object.create(null), tips = 0, cashTips = 0;
+          var grossC = 0, refundC = 0, refundN = 0, txns = 0;
+          var methodsC = Object.create(null), tipsC = 0, cashTipsC = 0;
           rows.forEach(function (s) {
               var isRefund = s.kind === 'refund' || s.amount < 0;
-              var mag = Math.abs(s.amount);
-              if (isRefund) { refundAmt += mag; refundN++; }
-              else { gross += s.amount; txns++; }
+              var magC = minor(Math.abs(s.amount)), tipC = minor(s.tip);
+              if (isRefund) { refundC += magC; refundN++; }
+              else { grossC += minor(s.amount); txns++; }
               var m = s.method || 'cash';
               var tenderParts = !isRefund && s.parts && s.parts.length ? s.parts : null;
               if (tenderParts) tenderParts.forEach(function (p) {
                 var method = p.method === 'avoir' ? 'credit' : p.method;
-                methods[method] = round2(num(methods[method]) + p.amountCents / 100);
+                methodsC[method] = num(methodsC[method]) + p.amountCents;
               });
-              else methods[m] = round2(num(methods[m]) + (isRefund ? -mag : s.amount));
-              tips += s.tip;
-              cashTips += s.tipMethod ? (s.tipMethod === 'cash' ? s.tip : 0) : tenderParts ? Math.sign(s.tip) * Math.round(Math.abs(s.tip) * 100 * tenderParts.reduce(function (n, p) { return n + (p.method === 'cash' ? p.amountCents : 0); }, 0) / tenderParts.reduce(function (n, p) { return n + p.amountCents; }, 0) + 1e-9) / 100 : m === 'cash' ? s.tip : 0;
-
+              else methodsC[m] = num(methodsC[m]) + (isRefund ? -magC : minor(s.amount));
+              tipsC += tipC;
+              cashTipsC += s.tipMethod ? (s.tipMethod === 'cash' ? tipC : 0) : tenderParts ? Math.sign(tipC) * Math.round(Math.abs(tipC) * tenderParts.reduce(function (n, p) { return n + (p.method === 'cash' ? p.amountCents : 0); }, 0) / tenderParts.reduce(function (n, p) { return n + p.amountCents; }, 0) + 1e-9) : m === 'cash' ? tipC : 0;
           });
-          return { gross: gross, net: round2(gross - refundAmt), txns: txns,
-            refunds: { count: refundN, amount: refundAmt }, methods: methods,
-            tips: tips, cashTips: cashTips };
+          var methods = Object.create(null); for (var k in methodsC) methods[k] = major(methodsC[k]);
+          return { gross: major(grossC), net: major(grossC - refundC), txns: txns,
+            refunds: { count: refundN, amount: major(refundC) }, methods: methods,
+            tips: major(tipsC), cashTips: major(cashTipsC) };
         }
         const expectedCash = function (opening, cash, tips, movesIn, movesOut, gap) {
           return round2(expectedCashCents(opening, cash, tips, movesIn, movesOut, gap));

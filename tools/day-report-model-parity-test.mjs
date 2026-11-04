@@ -70,4 +70,12 @@ assert.equal(report.net, figures.net);
 assert.equal(report.tips,figures.tips);
 assert.deepEqual(plain(report.methods),plain(figures.methods));
 assert.equal(report.cash.expected,157);
+// The Z report sums in centimes like the ledger: no float drift in gross, net, refunds or tips.
+fc.assert(fc.property(fc.array(fc.record({cents: fc.integer({min:-50000,max:50000}), tip: fc.integer({min:0,max:999}), method: fc.constantFrom('cash','card')}), {maxLength: 60}), (list) => {
+  const rows = list.map((x) => ({ amount: x.cents / 100, tip: x.tip / 100, method: x.method, kind: x.cents < 0 ? 'refund' : 'sale' }));
+  const z = server.reportFigures(rows), sale = list.filter((x) => x.cents >= 0), back = list.filter((x) => x.cents < 0);
+  const gross = sale.reduce((n, x) => n + x.cents, 0), refunds = back.reduce((n, x) => n - x.cents, 0);
+  assert.equal(z.gross, gross / 100); assert.equal(z.net, (gross - refunds) / 100);
+  assert.equal(z.refunds.amount, refunds / 100); assert.equal(z.tips, list.reduce((n, x) => n + x.tip, 0) / 100);
+}), {numRuns: 300, seed: 20261104});
 console.log('actual report and dashboard paths: boundary, duplicate, split tenders, refund, tips and expected cash match server');
