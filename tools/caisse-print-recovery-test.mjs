@@ -33,7 +33,36 @@ console.log('PASS caisse failure entry is translated, counted and opens existing
   const context = vm.createContext({ window, document, Promise, CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } } });
   vm.runInContext(bridge.slice(marker), context);
   window.dispatchEvent({ type: 'kiwi:toast', detail: { title: 'translated:Impression échouée' } });
+  assert.equal(scripts.length, 0, 'a toast title alone no longer loads the entry: the outcome is data, not copy');
+  window.dispatchEvent({ type: 'kiwi:receipt-print', detail: { ok: false } });
   assert.equal(scripts.length, 1, 'first failed receipt lazily loads the entry');
   vm.runInContext(source, context); scripts[0].onload(); await Promise.resolve();
   assert.ok(elements.has('caisse-print-recovery'), 'first failure is replayed after loading');
+}
+
+// Le texte d'un toast ne décide plus : seul le résultat structuré de receipt.js compte.
+{
+  const lis = {}, nodes2 = new Map();
+  const st = { appendChild(el) { nodes2.set(el.id, el); } };
+  const doc = { body: st, getElementById: id => id === 'toast-stack' ? st : nodes2.get(id), createElement: () => ({ style: {}, addEventListener() {}, remove() { nodes2.delete(this.id); } }) };
+  const win = { addEventListener: (n, fn) => { lis[n] = fn; }, KiwiCaisseLang: { tr: s => s }, KiwiPrinter: { openSetup() {} } };
+  vm.runInNewContext(source, { window: win, document: doc });
+  assert.equal(lis['kiwi:toast'], undefined, 'no toast-title listener left');
+  lis['kiwi:receipt-print']({ detail: { ok: false } });
+  assert.match(nodes2.get('caisse-print-recovery').textContent, /\(1\)$/, 'a failed receipt adds one entry');
+  lis['kiwi:receipt-print']({ detail: { ok: false } });
+  assert.match(nodes2.get('caisse-print-recovery').textContent, /\(1\)$/, 'a second failure is still one entry');
+  lis['kiwi:receipt-print']({ detail: { ok: true } });
+  assert.ok(!nodes2.has('caisse-print-recovery'), 'a printed receipt clears it');
+  // receipt.js annonce le résultat, réussi ou non.
+  const receiptSrc = fs.readFileSync('assets/receipt.js', 'utf8');
+  const events = [];
+  const rctx = vm.createContext({ window: { dispatchEvent: e => events.push(e.detail.ok), KiwiPrinter: null }, document: { getElementById: () => null, createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }), body: { appendChild() {} }, head: { appendChild() {} } }, CustomEvent: class { constructor(t, o) { this.detail = o.detail; } }, console, Promise, setTimeout, clearTimeout, Math, Date, Number, String, Object, Array, JSON, RegExp, isFinite, parseFloat, parseInt, Intl, Error });
+  try { vm.runInContext(receiptSrc, rctx); } catch (_) {}
+  const K = rctx.window.KiwiReceipt;
+  assert.ok(K && K.print, 'receipt.js loads in the sandbox');
+  {
+    await K.print({ shop: {}, lines: [], paper: '80' }).catch(() => {});
+    assert.ok(events.length === 1, 'receipt.js announces every print outcome once');
+  }
 }

@@ -1357,7 +1357,15 @@
     });
   }
 
+  /* Le résultat d'une impression de reçu, en donnée : l'entrée « tickets non imprimés »
+     de la caisse le lit ici, sans jamais deviner un échec d'après le texte d'un toast. */
+  function announcePrint(ok) {
+    try { window.dispatchEvent(new CustomEvent('kiwi:receipt-print', { detail: { ok: !!ok } })); } catch (_) { console.warn('[receipt] announce failed'); }
+  }
   function print(doc, o) {
+    return printReceipt(doc, o).then(function (r) { announcePrint(r && r.ok); return r; }, function (e) { announcePrint(false); throw e; });
+  }
+  function printReceipt(doc, o) {
     o = o || {};
     var KP = window.KiwiPrinter;
     /* HTML receipts have always shown the logo. Direct ESC/POS receipts did

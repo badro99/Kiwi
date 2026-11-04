@@ -22,7 +22,7 @@ var SHELL = [
   '/assets/hotel-economat-outbox.js?v=9',
   '/assets/tickets-recovery.js?v=5',
   '/assets/clients-audit.js?v=2',
-  '/assets/caisse-print-recovery.js?v=5',
+  '/assets/caisse-print-recovery.js?v=6',
   '/assets/loyalty-rules.js?v=6',
   '/assets/clients-store-vault.js?v=14',
   '/assets/caisse-strings.js?v=3',
@@ -365,7 +365,7 @@ var SHELL = [
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
-  '/assets/receipt.js?v=23',
+  '/assets/receipt.js?v=24',
   '/assets/receipt-ui.js?v=2',
   '/assets/invoice.js?v=28',
   '/assets/merchant-config.js?v=287',
@@ -396,7 +396,7 @@ var SHELL = [
   '/assets/live-socket.js?v=5',
   '/assets/escpos.js?v=20',
   '/assets/printer/transports.js?v=6',
-  '/assets/printer-bridge.js?v=75',
+  '/assets/printer-bridge.js?v=76',
   '/assets/printer/pairing-ui.js?v=16',
   '/assets/barcode.js?v=4',
   '/assets/scan-wedge.js?v=1',
