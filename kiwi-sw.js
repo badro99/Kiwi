@@ -200,7 +200,7 @@ var SHELL = [
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2101',
   '/assets/pages/dashboard-startup.js?v=154',
-  '/assets/pages/dashboard-loader.js?v=46',
+  '/assets/pages/dashboard-loader.js?v=47',
   '/assets/hotel/model.js?v=9',
   '/assets/hotel/views.js?v=4',
   '/assets/hotel/groups.js?v=1',
@@ -464,7 +464,7 @@ var SHELL = [
   '/assets/ai-image-import.js?v=1',
   '/assets/menu-scan-reader.js?v=3',
   '/assets/menu-scan.js?v=11',
-  '/assets/salle-scan.js?v=7',
+  '/assets/salle-scan.js?v=8',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=10',
   '/assets/orderpro-panel.js?v=5',

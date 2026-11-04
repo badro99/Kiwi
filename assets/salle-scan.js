@@ -75,8 +75,10 @@
 
   /* Réponses serveur (une par photo) → faits agrégés pour le questionnaire. */
   function aggregate(results) {
-    const hist = {}, placement = [];
+    const hist = {}, placement = [], taken = new Set();
     let total = 0, outdoor = false, counter = false, venue = '';
+    // Two groups on the same photo and row never share a cell: the later one moves right.
+    const free = (photo, row, col) => { while (taken.has(photo + '|' + row + '|' + col)) col++; taken.add(photo + '|' + row + '|' + col); return col; };
     results.forEach((r, photo) => {
       if (!r) return;
       if (r.outdoor) outdoor = true;
@@ -85,7 +87,7 @@
       (r.tables || []).forEach((t) => {
         const type = typeFor(t.shape, t.seats);
         hist[type] = (hist[type] || 0) + t.count;
-        for (let i = 0; i < t.count; i++) placement.push({ type, photo, row: t.row, column: t.column == null ? undefined : t.column + i, zone: t.zone });
+        for (let i = 0; i < t.count; i++) placement.push({ type, photo, row: t.row, column: t.column == null ? undefined : free(photo, t.row, t.column + i), zone: t.zone });
         total += t.count;
       });
     });

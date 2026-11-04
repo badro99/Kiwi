@@ -14,7 +14,7 @@
       'assets/ai-image-import.js?v=1',
       'assets/menu-scan-reader.js?v=3',
       'assets/menu-scan.js?v=11',
-      'assets/salle-scan.js?v=7',
+      'assets/salle-scan.js?v=8',
     ] },
     hotel: { dependencies: [], scripts: [
       'assets/hotel/arrivals.js?v=5',
