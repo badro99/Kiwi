@@ -1691,7 +1691,7 @@ section('Whole-project regressions');
     'print-slow-bridge-test.mjs',
     'print-hub-lease-test.mjs',
     'print-hub-resume-test.mjs',
-    'service-draft-durability-test.mjs',
+    'service-draft-durability-test.mjs', 'serveur-orphan-batches-test.mjs',
     'hotel-group-draft-escape-test.mjs',
     'payment-kitchen-dispatch-test.mjs',
     'food-production-print-test.mjs',
