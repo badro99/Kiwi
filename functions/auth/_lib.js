@@ -1,3 +1,4 @@
+import { deadlineFetch } from '../../assets/request-deadline.mjs';
 import { canonicalCode } from '../api/_rules-staff-credential.js';
 import { hmacKey } from './_crypto.js';
 // Kiwi — shared auth helpers for the account gate (Cloudflare Pages Functions).
@@ -995,13 +996,15 @@ export function maskEmail(e) {
  * `ok:false` ne doit jamais faire échouer l'action appelante : le changement
  * d'adresse a bien eu lieu même si la notification n'est pas partie. L'état
  * d'envoi est inscrit au journal, et c'est là qu'on va le chercher. */
-export async function sendMail(env, msg) {
+/* timeout: every caller gets a bound; the booking confirmation passes a short one
+   because the guest is waiting on an answer for a booking that is already saved. */
+export async function sendMail(env, msg, timeout = 10000) {
   const url = env && env.MAIL_WEBHOOK;
   if (!url) return { ok: false, reason: 'unconfigured' };
   const to = normEmail(msg && msg.to);
   if (!to) return { ok: false, reason: 'no-recipient' };
   try {
-    const r = await fetch(url, {
+    const r = await deadlineFetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1010,7 +1013,7 @@ export async function sendMail(env, msg) {
         subject: String((msg && msg.subject) || 'Kiwi'),
         text: String((msg && msg.text) || ''),
       }),
-    });
+    }, timeout);
     return r && r.ok ? { ok: true } : { ok: false, reason: 'http-' + ((r && r.status) || 0) };
   } catch (e) {
     return { ok: false, reason: 'network' };

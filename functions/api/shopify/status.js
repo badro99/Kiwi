@@ -1,3 +1,5 @@
+import { retryDeadInboundStock, flushInboundStock } from './_inbound-stock.js';
+import { __test as inboundStock } from '../channel/shopify/[link].js';
 // Merchant-facing control plane for the invisible Shopify connector.
 // It exposes health and mapping metadata only; encrypted tokens stay server-side.
 
@@ -54,14 +56,14 @@ async function health(env, merchant) {
     lastError: String(progress.lastError || ''), exceptions: progress.exceptions || [], updatedTs: n(progress.updatedTs),
   } : null;
   // Issues belong to orders, independently of the connection's latest ping.
-  const issues = await env.DB.prepare(`SELECT last_error AS data, updated_ts FROM shopify_inbound_stock
-    WHERE merchant = ? AND last_error LIKE '%"code":"stock-short"%'
+  const issues = await env.DB.prepare(`SELECT CASE WHEN status IN ('pending','dead') THEN json_object('code', CASE WHEN status = 'dead' THEN 'stock-dead' ELSE 'stock-pending' END, 'orderRef', order_ref, 'attempts', attempts, 'short', CASE WHEN json_valid(last_error) THEN json_extract(last_error, '$.short') ELSE 0 END) ELSE last_error END AS data, updated_ts FROM shopify_inbound_stock
+    WHERE merchant = ? AND (status IN ('pending','dead') OR last_error LIKE '%"code":"stock-short"%')
     UNION ALL SELECT data, updated_ts FROM store_docs
-    WHERE merchant = ? AND feature LIKE 'shopify-currency:%' ORDER BY updated_ts DESC LIMIT 100`)
+    WHERE merchant = ? AND feature LIKE 'shopify-currency:%' ORDER BY updated_ts DESC`)
     .bind(merchant, merchant).all();
   const orderIssues = (issues.results || []).map(row => JSON.parse(row.data));
   const shaped = shapeConnection(connection);
-  if (shaped && orderIssues.length) {
+  if (shaped && !shaped.lastError && orderIssues.length) {
     shaped.lastError = orderIssues[0].code;
     shaped.lastErrorContext = orderIssues[0];
   }
@@ -418,6 +420,8 @@ export async function onRequestPost({ request, env, waitUntil }) {
     }
 
     if (action === 'retry') {
+      await retryDeadInboundStock(env, merchant);
+      await flushInboundStock(env, inboundStock.applyShopifyOrderStock, merchant);
       await env.DB.prepare(
         `UPDATE shopify_sync_outbox SET status = 'pending', next_attempt_ts = 0, last_error = '', updated_ts = ?
           WHERE merchant = ? AND status = 'failed'`

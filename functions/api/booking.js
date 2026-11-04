@@ -237,7 +237,7 @@ function manageExpired(rec, now = Date.now()) {
 async function confirmationMail(env, request, merchant, meta, rec, lang, zone) {
   if (!rec.customer.email) return { ok: false, reason: 'no-recipient' };
   const mail = bookingMail({ lang, venue: str(meta?.name, 100), rec, zone, manageUrl: manageUrl(request, merchant, rec.manageToken) });
-  return sendMail(env, { to: rec.customer.email, subject: mail.subject, text: mail.text });
+  return sendMail(env, { to: rec.customer.email, subject: mail.subject, text: mail.text }, 1500);
 }
 
 async function readRows(env, merchant) {

@@ -30,7 +30,7 @@
   var money = function (n) { return new Intl.NumberFormat(loc(), { maximumFractionDigits: 2 }).format(+n || 0) + ' MAD'; };
   /* Les bornes d'une promotion suivent la JOURNÉE COMMERCIALE du magasin (bascule 05:00 dans son
    * fuseau), comme les promotions du menu : « jusqu'au 31 » finit le 1er à 05:00, pas à 23:59:59.
-   * Le fuseau et la bascule viennent du rapport du jour ; sans lui, Casablanca et le jour civil. */
+   * Le fuseau et la bascule viennent du rapport du jour ; sans lui, Casablanca et la bascule 05:00. */
   var FALLBACK_ZONE = 'Africa/Casablanca';
   var wallFormats = {};
   function dayReport() { try { var R = window.KiwiDayReport; return R && R.businessDay && R.dayBounds ? R : null; } catch (_) { return null; } }
@@ -42,7 +42,7 @@
     return p;
   }
   /* La journée commerciale (YYYY-MM-DD) d'un instant. */
-  function dayKey(d) { var R = dayReport(); if (R) { try { return R.businessDay(+d); } catch (_) {} } var p = wall(d); return p.year + '-' + p.month + '-' + p.day; }
+  function dayKey(d) { var R = dayReport(); if (R) { try { return R.businessDay(+d); } catch (_) {} } var p = wall(d), date = new Date(Date.UTC(+p.year, +p.month - 1, +p.day - (+p.hour < 5 ? 1 : 0))); return date.toISOString().slice(0, 10); }
   var fmtDay = function (d) { return new Intl.DateTimeFormat(loc(), { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(dayKey(d) + 'T12:00:00Z')); };
   /* L'heure à laquelle la promotion s'arrête : `d` est sa dernière milliseconde, donc +1. */
   var fmtHM = function (d) { var p = wall(+d + 1); return p.hour + ':' + p.minute; };
@@ -52,9 +52,9 @@
     var key = typeof d === 'string' ? d : dayKey(d), R = dayReport();
     if (R) { try { var b = R.dayBounds(key); if (isFinite(b.from) && isFinite(b.to)) return end ? b.to - 1 : b.from; } catch (_) {} }
     var y = +key.slice(0, 4), m = +key.slice(5, 7) - 1, dd = +key.slice(8, 10);
-    var target = Date.UTC(y, m, dd, end ? 23 : 0, end ? 59 : 0, end ? 59 : 0), at = target;
+    var target = Date.UTC(y, m, dd + (end ? 1 : 0), 5), at = target;
     for (var i = 0; i < 4; i++) { var w = wall(at); at += target - Date.UTC(+w.year, +w.month - 1, +w.day, +w.hour, +w.minute, +w.second); }
-    return at + (end ? 999 : 0);
+    return at - (end ? 1 : 0);
   }
   var startOfDay = function (d) { return boundary(d, false); };
   var endOfDay = function (d) { return boundary(d, true); };

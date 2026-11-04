@@ -14,9 +14,9 @@
 import { deadlineFetch } from './request-deadline.mjs';
 
 const S = {
-  fr: { title: 'Retrouver ma réservation', code: 'Code de réservation', contact: 'Téléphone ou e-mail de la réservation', go: 'Retrouver', busy: 'Recherche…', miss: 'Aucune réservation ne correspond. Vérifiez le code et le contact.', slow: 'Délai de réponse dépassé. Réessayez.', busyServer: 'Trop d’essais. Réessayez dans quelques minutes.' },
-  en: { title: 'Find my booking', code: 'Booking code', contact: 'Phone or email used for the booking', go: 'Find it', busy: 'Searching…', miss: 'No booking matches. Check the code and the contact.', slow: 'The request timed out. Please try again.', busyServer: 'Too many attempts. Try again in a few minutes.' },
-  ar: { title: 'استرجاع حجزي', code: 'رمز الحجز', contact: 'الهاتف أو البريد الإلكتروني المستعمل في الحجز', go: 'استرجاع', busy: 'جارٍ البحث…', miss: 'لا يوجد حجز مطابق. تحقق من الرمز ووسيلة الاتصال.', slow: 'انتهت مهلة الطلب. أعد المحاولة.', busyServer: 'محاولات كثيرة. أعد المحاولة بعد بضع دقائق.' },
+  fr: { title: 'Retrouver ma réservation', code: 'Code de réservation', contact: 'Téléphone ou e-mail de la réservation', go: 'Retrouver', busy: 'Recherche…', miss: 'Aucune réservation ne correspond. Vérifiez le code et le contact.', slow: 'Délai de réponse dépassé. Réessayez.', unavailable: 'Service indisponible. Réessayez plus tard.', busyServer: 'Trop d’essais. Réessayez dans quelques minutes.' },
+  en: { title: 'Find my booking', code: 'Booking code', contact: 'Phone or email used for the booking', go: 'Find it', busy: 'Searching…', miss: 'No booking matches. Check the code and the contact.', slow: 'The request timed out. Please try again.', unavailable: 'Service unavailable. Please try again later.', busyServer: 'Too many attempts. Try again in a few minutes.' },
+  ar: { title: 'استرجاع حجزي', code: 'رمز الحجز', contact: 'الهاتف أو البريد الإلكتروني المستعمل في الحجز', go: 'استرجاع', busy: 'جارٍ البحث…', miss: 'لا يوجد حجز مطابق. تحقق من الرمز ووسيلة الاتصال.', slow: 'انتهت مهلة الطلب. أعد المحاولة.', unavailable: 'الخدمة غير متاحة. أعد المحاولة لاحقاً.', busyServer: 'محاولات كثيرة. أعد المحاولة بعد بضع دقائق.' },
 };
 
 const params = new URLSearchParams(location.search);
@@ -58,11 +58,11 @@ async function submit(e) {
       body: JSON.stringify({ action: 'recover', merchant, code, contact }),
     });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.manageToken) throw new Error(r.status === 429 ? 'rate-limited' : (j.error || 'not-found'));
+    if (!r.ok || !j.manageToken) throw new Error(r.status === 429 ? 'rate-limited' : r.status === 404 ? 'not-found' : 'unavailable');
     location.assign('booking.html?merchant=' + encodeURIComponent(merchant) + '&manage=' + encodeURIComponent(j.manageToken));
   } catch (err) {
     btn.disabled = false;
-    msg.textContent = t(err.message === 'request-timeout' ? 'slow' : err.message === 'rate-limited' ? 'busyServer' : 'miss');
+    msg.textContent = t(err.message === 'request-timeout' ? 'slow' : err.message === 'rate-limited' ? 'busyServer' : err.message === 'not-found' ? 'miss' : 'unavailable');
   }
 }
 

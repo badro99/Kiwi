@@ -515,7 +515,7 @@
       live.appendChild(liveStats); root.appendChild(live);
       var actions = document.createElement('div'); actions.className = 'shp-actions';
       if (linkedCount) actions.appendChild(shopButton(s.reconcile, function () { if (!window.confirm(s.reconcileConfirm)) return; return shopApi('reconcile').then(reload); }));
-      if (status.queue.failed) actions.appendChild(shopButton(s.retry, function () { return shopApi('retry').then(reload); }, true));
+      if (status.queue.failed || (status.orderIssues || []).some(function (i) { return i.code === 'stock-dead'; })) actions.appendChild(shopButton(s.retry, function () { return shopApi('retry').then(reload); }, true));
       /* Des commandes en ligne que Kiwi n'a jamais reçues (webhooks refusés) :
          on les relit chez Shopify, on montre ce qui serait retiré, puis on le
          retire une seule fois. Voir functions/api/shopify/_replay-orders.js. */
@@ -549,9 +549,7 @@
       }, true));
       root.appendChild(actions);
     }
-    if (connection.lastError) {
-      var err = document.createElement('div'); err.className = 'chl-once'; import('./channel-health.js?v=7').then(({ paint }) => paint(err, connection.lastError, connection.lastErrorContext)); root.appendChild(err);
-    }
+    import('./channel-health.js?v=8').then(({ paintIssues }) => paintIssues(root, status.orderIssues, connection));
     root.appendChild(previewSlot);
     shopSetup(previewSlot, status.setup || [], reload);
   }

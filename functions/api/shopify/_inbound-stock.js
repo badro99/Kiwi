@@ -64,3 +64,24 @@ export async function flushInboundStock(env, apply, merchant = '', ref = '', lim
   }
   return { completed, pending };
 }
+
+// A manual retry reopens only orders whose entire mapping exists again.
+export async function retryDeadInboundStock(env, merchant) {
+  const rows = await env.DB.prepare("SELECT order_ref, payload FROM shopify_inbound_stock WHERE merchant = ? AND status = 'dead'").bind(merchant).all();
+  const links = await env.DB.prepare("SELECT shopify_variant_id, kiwi_variant_id FROM shopify_variant_links WHERE merchant = ? AND status IN ('active','drift')").bind(merchant).all();
+  const catalog = await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first();
+  const data = JSON.parse(catalog?.data || '{}');
+  const variants = new Set((data.variants || []).map(v => String(v.id)));
+  const mapped = new Map((links.results || []).map(l => [String(l.shopify_variant_id), String(l.kiwi_variant_id)]));
+  for (const row of rows.results || []) {
+    let order; try { order = JSON.parse(row.payload); } catch (_) { continue; }
+    const lines = order.line_items;
+    if (!Array.isArray(lines) || !lines.length || !lines.every(l => {
+      const raw = String(l.variant_id || '');
+      const gid = raw.startsWith('gid://') ? raw : 'gid://shopify/ProductVariant/' + raw;
+      return variants.has(mapped.get(gid)) && Number(l.quantity) > 0;
+    })) continue;
+    await env.DB.prepare("UPDATE shopify_inbound_stock SET status = 'pending', attempts = 0, next_ts = 0, updated_ts = ? WHERE merchant = ? AND order_ref = ? AND status = 'dead'")
+      .bind(Date.now(), merchant, row.order_ref).run();
+  }
+}

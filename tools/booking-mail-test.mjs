@@ -101,7 +101,7 @@ const freshDoc = () => ({
 });
 const sent = [];
 const realFetch = globalThis.fetch;
-globalThis.fetch = async (url, init) => { sent.push(JSON.parse(init.body)); return { ok: true, status: 200 }; };
+globalThis.fetch = async (url, init) => { sent.push(JSON.parse(init.body)); return new Response(null, { status: 200 }); };
 let ip = 1;
 async function book(zone, lang, acceptLanguage) {
   const db = new MockDB(freshDoc(), zone), env = { DB: db, MAIL_WEBHOOK: 'https://mail.test/hook' };

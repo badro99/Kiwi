@@ -60,11 +60,15 @@
        84 (Pasta Corner, 1er octobre). Un autre prix garde sa propre carte, et
        son nom de base pour que le classement des produits les compte ensemble. */
     function splitItemTotals(lines) {
-      const itemTotals = {};
+      const itemTotals = Object.create(null), groups = new Map();
       (lines || []).forEach(l => {
         const unitPrice = l.qty > 0 ? (l.total / l.qty) : l.total;
         let key = l.name;
         if (itemTotals[key] && minor(itemTotals[key].unitPrice) !== minor(unitPrice)) key = `${l.name} · ${fmtMADcents(unitPrice)}`;
+        const itemId = l.itemId || l.id || '';
+        const identity = JSON.stringify([l.name, minor(unitPrice), itemId]);
+        if (groups.has(identity)) key = groups.get(identity);
+        else { while (itemTotals[key]) key += ' ·'; groups.set(identity, key); }
         if (!itemTotals[key]) {
           itemTotals[key] = { totalQty: 0, unitPrice, itemId: l.itemId || l.id || '', baseName: l.baseName || (key !== l.name ? l.name : '') };
         }

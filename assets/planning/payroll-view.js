@@ -62,6 +62,8 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
       `;
     }).join('');
 
+    const excluded = members.filter(m => !(+m.hourlyRate > 0)).map(memberFullName);
+    const partial = ({ fr: 'Total partiel, taux manquant : ', en: 'Partial total, missing rate: ', ar: 'مجموع جزئي، أجر الساعة غير محدد: ' })[trLang()] || 'Total partiel, taux manquant : ';
     const periodPills = periodPillsHtml(T);
 
     return `
@@ -102,7 +104,7 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
                 <td class="kt-h-foot-label">${esc(T.hFooterLabel)}</td>
                 <td colspan="${period.days.length}"></td>
                 <td class="kt-h-foot-tot mono"><b>${fmtHours(grandHours)}</b></td>
-                <td class="kt-h-foot-tot mono">${anyRated ? `<b>${fmtPay(grandCents / 100)}</b><span>MAD</span>` : `<b title="${esc(T.noRate)}">·</b>`}</td>
+                <td class="kt-h-foot-tot mono">${anyRated ? `<b>${fmtPay(grandCents / 100)}</b><span>MAD</span>${excluded.length ? `<span>${esc(partial + excluded.join(', '))}</span>` : ''}` : `<b title="${esc(T.noRate)}">·</b>`}</td>
               </tr>
             </tfoot>
           </table>

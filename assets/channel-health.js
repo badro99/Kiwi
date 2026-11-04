@@ -9,3 +9,17 @@ export function paint(err, lastError, context) {
   err.textContent = tr(code, fr[code]);
   if (context?.orderRef) err.textContent += ' · ' + tr('order', 'Commande {r}').replace('{r}', context.orderRef);
 }
+
+export function paintIssues(root, issues, connection) {
+  const all = (issues || []).concat(connection?.lastError ? [{ code: connection.lastError, ...connection.lastErrorContext }] : []);
+  const seen = new Set();
+  for (const issue of all) {
+    const key = JSON.stringify([issue.code, issue.orderRef]);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const err = document.createElement('div');
+    err.className = 'chl-once';
+    paint(err, issue.code, issue);
+    root.appendChild(err);
+  }
+}

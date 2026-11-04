@@ -104,8 +104,8 @@
     "sha": "83a4567065245d47"
   },
   "assets/booking-recover.js": {
-    "v": "2",
-    "sha": "22356413287b46e3"
+    "v": "3",
+    "sha": "2a159d1d8de17f00"
   },
   "assets/booking-service.js": {
     "v": "4",
@@ -144,8 +144,8 @@
     "sha": "ec6401e79e6ed64a"
   },
   "assets/boutique-promos-dashboard.js": {
-    "v": "32",
-    "sha": "3e57813776faed10"
+    "v": "33",
+    "sha": "4e2048a97e4e2780"
   },
   "assets/boutique-size-codes.js": {
     "v": "3",
@@ -324,8 +324,8 @@
     "sha": "7e68dad10a95524f"
   },
   "assets/caisse/split-tender.js": {
-    "v": "5",
-    "sha": "7a19eaeb9327b4e6"
+    "v": "6",
+    "sha": "239c9eacd278055a"
   },
   "assets/caisse/table-settlement.js": {
     "v": "2",
@@ -360,12 +360,12 @@
     "sha": "3a02da300a0d7b4e"
   },
   "assets/channel-health.js": {
-    "v": "7",
-    "sha": "10f0fe01f90b8201"
+    "v": "8",
+    "sha": "6fcf4571ad052d70"
   },
   "assets/channel-link.js": {
-    "v": "202608272319",
-    "sha": "01d58d9b57fab8a6"
+    "v": "202608272321",
+    "sha": "9801adfaf2ca2fe6"
   },
   "assets/channel-sales.js": {
     "v": "8",
@@ -1436,8 +1436,8 @@
     "sha": "5ff1ce5e01b32977"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "166",
-    "sha": "d3f50f56cd3b4f00"
+    "v": "167",
+    "sha": "534a1971c09ab3e0"
   },
   "assets/pages/tables-data.js": {
     "v": "1",
@@ -1492,8 +1492,8 @@
     "sha": "1fc06c1fb77ddb4b"
   },
   "assets/planning/payroll-view.js": {
-    "v": "9",
-    "sha": "cbcb6e97664de0bc"
+    "v": "10",
+    "sha": "af60685f6a98a627"
   },
   "assets/planning/shift-editor.js": {
     "v": "5",
@@ -2096,8 +2096,8 @@
     "sha": "3cb977732d0c9fb3"
   },
   "assets/team-hours.js": {
-    "v": "18",
-    "sha": "195873fbf0ad4fda"
+    "v": "19",
+    "sha": "9a5fc4102d610e0f"
   },
   "assets/team.js": {
     "v": "346",
