@@ -27,6 +27,7 @@ function whisperNeurons(audioBytes) {
   const minutes = Number.isFinite(audioBytes) && audioBytes > 0 ? (audioBytes * 8) / 16000 / 60 : 1;
   return Math.ceil(Math.max(1, minutes) * WHISPER_PER_MINUTE);
 }
+/** @param {{ models?: string[], maxTokens?: number, vision?: boolean, audioBytes?: number }} [options] */
 export function estimateNeurons({ models = [GLM_FLASH], maxTokens = 8192, vision = false, audioBytes } = {}) {
   if (!models.length) return 0; // Intake commit stores a document, without model inference.
   if (!Number.isSafeInteger(maxTokens) || maxTokens < 1) return Infinity;
