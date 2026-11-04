@@ -1,3 +1,4 @@
+import { codeDocument } from '../auth/_staff-codes.js';
 import { canonicalCode, normalizeMember } from './_rules-staff-credential.js';
 import { cleanFloorplan } from './_rules-floorplan-clean.js';
 import { cleanBriefingSettings } from './_briefing-settings.js';
@@ -684,7 +685,7 @@ async function employeeAccessFromTeam(env, team, merchant) {
       "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'"
     ).bind(merchant).first();
     if (row && row.data) {
-      const parsed = JSON.parse(row.data);
+      const parsed = await codeDocument(env, merchant, 'employee-access', JSON.parse(row.data));
       if (parsed && Array.isArray(parsed.members)) previous = parsed;
     }
   } catch (_) { return null; }
@@ -773,6 +774,7 @@ export async function onRequestGet(context) {
     }
     let data = null;
     try { data = JSON.parse(row.data); } catch (_) { data = null; }
+    if (editor) data = await codeDocument(env, merchant, feature, data);
     if (feature === 'briefing') data = ownBriefingDays(data, merchant);
     const safe = (redact && !editor) ? redact(data) : data;
     return json({ feature, merchant, data: safe, rev: row.rev || 0, updated_ts: row.updated_ts || 0 }, 200, cacheHeaders);
@@ -894,6 +896,8 @@ export async function onRequestPost(context) {
   const serverRev = (current && current.rev) || 0;
   let mine = null;
   try { mine = current ? JSON.parse(current.data) : null; } catch (_) { mine = null; }
+  try { mine = await codeDocument(env, merchant, feature, mine); }
+  catch (_) { return json({ error: 'staff-code-unavailable' }, 503); }
   /* Le carnet de crédit a son propre document (functions/api/_credit-book-store.js).
    * `book` est le carnet enregistré : la ligne creditbook, ou à défaut la copie
    * encore rangée dans verticalops. */
@@ -1046,6 +1050,12 @@ export async function onRequestPost(context) {
       const sent = clean.value.hoursCredited && typeof clean.value.hoursCredited === 'object' && !Array.isArray(clean.value.hoursCredited) ? clean.value.hoursCredited : {};
       clean.value.hoursCredited = { ...sent, ...serverMarks };
     }
+    const priorCodes = new Map((mine?.members || []).map((m) => [m.id, m]));
+    for (const m of clean.value.members || []) {
+      if (m && !m.pinCode && !m.password && priorCodes.has(m.id)) {
+        m.pinCode = priorCodes.get(m.id).pinCode; m.password = priorCodes.get(m.id).password;
+      }
+    }
     if (Array.isArray(clean.value.members)) clean.value.members = clean.value.members.map(normalizeMember);
     text = JSON.stringify(clean.value);
   }
@@ -1113,6 +1123,8 @@ export async function onRequestPost(context) {
     }
   }
 
+  try { text = JSON.stringify(await codeDocument(env, merchant, feature, clean.value, true)); }
+  catch (_) { return json({ error: 'staff-code-unavailable' }, 503); }
   if (current) await keepHistory(env, 'store', merchant, feature);
 
   const rev = serverRev + 1;
@@ -1151,7 +1163,7 @@ export async function onRequestPost(context) {
       let latest = null;
       try { latest = await env.DB.prepare('SELECT data, rev FROM store_docs WHERE merchant=? AND feature=?').bind(merchant, feature).first(); } catch (_) {}
       let latestData = mine;
-      try { latestData = latest && latest.data ? JSON.parse(latest.data) : latestData; } catch (_) {}
+      try { latestData = latest && latest.data ? await codeDocument(env, merchant, feature, JSON.parse(latest.data)) : latestData; } catch (_) {}
       return json({ error: 'stale', feature, rev: (latest && latest.rev) || serverRev, data: view(latestData) }, 409);
     };
     /* D1 rend toujours `meta.changes`. Une base de test qui ne le rend pas n'est un
@@ -1172,7 +1184,7 @@ export async function onRequestPost(context) {
         catch (_) { return json({ error: 'employee-access-unavailable' }, 503); }
         const built = await employeeAccessFromTeam(env, clean.value, merchant);
         if (!built) return json({ error: 'employee-access-unavailable' }, 503);
-        const accessText = JSON.stringify(built.doc);
+        const accessText = JSON.stringify(await codeDocument(env, merchant, 'employee-access', built.doc, true));
         /* Le miroir d'accès n'est écrit QUE si le document team vient d'être écrit
          * (révision, instant ET contenu sont les nôtres) : un lot D1 est atomique mais ne s'arrête pas
          * sur une ligne à zéro changement, et un team périmé aurait sinon réécrit

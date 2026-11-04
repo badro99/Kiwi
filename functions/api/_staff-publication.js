@@ -1,3 +1,4 @@
+import { codeDocument, hashStaffCode, sealMerchantStaff } from '../auth/_staff-codes.js';
 import { canonicalCode, normalizeMember } from './_rules-staff-credential.js';
 // Staff credential publication: the one place a staff code list becomes
 // till codes, the private employee-login roster and the auth revisions.
@@ -83,6 +84,7 @@ export async function publishStaffCredentials(env, merchant, body) {
   }
   // Atomic replace. created_ts is offset per index so the GET's ORDER BY
   // created_ts preserves the submitted order.
+  for (const p of clean) p.storedCode = await hashStaffCode(env, merchant, p.code);
   const base = Date.now();
   let tillPins = clean.filter((p) => employeeRoleOpensTill(p.role));
   /* LE PATRON NE FIGURE PAS DANS LE ROSTER D'ÉQUIPE. La page Équipe
@@ -100,10 +102,11 @@ export async function publishStaffCredentials(env, merchant, body) {
       const existing = await env.DB.prepare(
         'SELECT id, role FROM staff_pins WHERE merchant = ?'
       ).bind(merchant).all();
-      (existing.results || []).forEach((row) => {
+      await sealMerchantStaff(env, merchant);
+      for (const row of existing.results || []) {
         if (accountOwnerRole(row.role)) keepIds.push(String(row.id));
-      });
-    } catch (_) {}
+      }
+    } catch (_) { return json({ error: 'staff-unavailable' }, 503); }
   }
   /* Les révisions de connexion s'écrivent dans le lot (_employee-auth.js) ;
    * si une autre sauvegarde les a bougées entre notre lecture et notre lot,
@@ -119,7 +122,7 @@ export async function publishStaffCredentials(env, merchant, body) {
     tillPins.forEach((p, i) => {
       stmts.push(env.DB.prepare(
         'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES (?,?,?,?,?,?)'
-      ).bind('pin-' + crypto.randomUUID(), merchant, p.code, p.name, p.role, base + i));
+      ).bind('pin-' + crypto.randomUUID(), merchant, p.storedCode, p.name, p.role, base + i));
     });
     /* Le code conservé du patron gagne : une ligne d'équipe qui porterait les
      * mêmes quatre chiffres créerait un doublon dont le rôle dépendrait de
@@ -144,7 +147,7 @@ export async function publishStaffCredentials(env, merchant, body) {
         "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'"
       ).bind(merchant).first();
       if (previousRow && previousRow.data) {
-        const parsed = JSON.parse(previousRow.data);
+        const parsed = await codeDocument(env, merchant, 'employee-access', JSON.parse(previousRow.data));
         if (parsed && Array.isArray(parsed.members)) previousAccess = parsed;
       }
     } catch (_) {
@@ -166,7 +169,7 @@ export async function publishStaffCredentials(env, merchant, body) {
     const accessMembers = [];
     const planned = new Map();
     for (const p of clean.filter((item) => item.email)) {
-      const id = p.memberId || `employee-${p.code}`;
+      const id = p.memberId || previousAccess.members.find((m) => m.email === p.email)?.id || 'employee-' + crypto.randomUUID();
       if (removedIds.has(String(id))) continue;
       const previous = previousById.get(id);
       const previousPin = canonicalCode(previous);
@@ -189,7 +192,7 @@ export async function publishStaffCredentials(env, merchant, body) {
       }));
     }
     const access = { members: accessMembers };
-    const accessText = JSON.stringify(access);
+    const accessText = JSON.stringify(await codeDocument(env, merchant, 'employee-access', access, true));
     stmts.push(env.DB.prepare(
       `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
        VALUES (?, 'employee-access', ?, 1, ?)

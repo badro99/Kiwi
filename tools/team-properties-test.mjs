@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { codeDocument } from '../functions/auth/_staff-codes.js';
 /* team-properties-test · staff codes and employee logins, as the server keeps them.
  *
  * The Team page publishes its roster through two routes: POST /api/config
@@ -98,7 +99,7 @@ async function refusedUnchanged(list) {
 
 /* Every mirror entry must open the employee app with its own code. */
 async function everyLoginWorks() {
-  for (const m of access()) {
+  for (const m of (await codeDocument(env, merchant, 'employee-access', { members: access() })).members) {
     const c = await auth.findEmployeeCredential(env, m.email, m.pinCode);
     if (!c || c.id !== m.id) return false;
   }

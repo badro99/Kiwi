@@ -1,3 +1,4 @@
+import { codeDocument } from '../auth/_staff-codes.js';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · TENANT GUARD — no store may publish another store's records
  * ---------------------------------------------------------------------------
@@ -182,9 +183,17 @@ export async function keepHistory(env, kind, merchant, feature) {
       'SELECT 1 FROM doc_history WHERE merchant = ? AND kind = ? AND feature = ? AND saved_ts > ? LIMIT 1'
     ).bind(merchant, kind, key, now - HISTORY_EVERY_MS).first();
     if (recent) return;
-    const args = kind === 'menu' ? [now, merchant] : [now, merchant, feature];
+    let historySource = source;
+    let args = kind === 'menu' ? [now, merchant] : [now, merchant, feature];
+    if (kind === 'store' && ['team', 'employee-access'].includes(feature)) {
+      const row = await env.DB.prepare('SELECT data, rev, updated_ts FROM store_docs WHERE merchant = ? AND feature = ?').bind(merchant, feature).first();
+      if (!row) return;
+      const sealed = await codeDocument(env, merchant, feature, JSON.parse(row.data), true);
+      historySource = 'VALUES (?,?,?,?,?,?,?)';
+      args = [merchant, kind, feature, JSON.stringify(sealed), row.rev, row.updated_ts, now];
+    }
     await env.DB.batch([
-      env.DB.prepare(`INSERT INTO doc_history (merchant, kind, feature, data, rev, updated_ts, saved_ts) ${source}`).bind(...args),
+      env.DB.prepare(`INSERT INTO doc_history (merchant, kind, feature, data, rev, updated_ts, saved_ts) ${historySource}`).bind(...args),
       env.DB.prepare(
         `DELETE FROM doc_history WHERE merchant = ? AND kind = ? AND feature = ? AND saved_ts NOT IN
            (SELECT saved_ts FROM doc_history WHERE merchant = ? AND kind = ? AND feature = ? ORDER BY saved_ts DESC LIMIT ${HISTORY_KEEP})`

@@ -1,3 +1,4 @@
+import { codeDocument, staffMemberId } from '../auth/_staff-codes.js';
 // /api/employee — private mobile employee/service app bridge.
 //
 // POST { action:'login', email, pin } validates the employee credentials saved
@@ -18,7 +19,11 @@ import { handleAttendance, ACTION_ROLES as ATTENDANCE_ACTION_ROLES } from './emp
 import { handleLeave, ACTION_ROLES as LEAVE_ACTION_ROLES } from './employee/_leave.js';
 import { handleNoticesPage } from './employee/_planning.js';
 import { hoursByDay } from './_worked-hours.js';
-import { readDoc, mutateDoc } from './_doc-cas.js';
+import { readDoc as readStoredDoc, mutateDoc } from './_doc-cas.js';
+async function readDoc(env, merchant, feature, fallback) {
+  const row = await readStoredDoc(env, merchant, feature, fallback);
+  return { ...row, data: await codeDocument(env, merchant, feature, row.data) };
+}
 
 const ATTENDANCE_FEATURE = 'attendance';
 const TEAM_FEATURE = 'team';
@@ -50,7 +55,7 @@ function safeMember(m, pinRow) {
 function memberFor(team, pinRow) {
   const members = Array.isArray(team && team.members) ? team.members : [];
   // Signed staff identity takes priority over legacy PIN/name matching.
-  const byId = members.find((m) => m && String(m.id || '') === String(pinRow.id || ''));
+  const byId = members.find((m) => m && String(m.id || '') === String(pinRow.memberId || pinRow.id || ''));
   if (byId) return byId;
   const pin = String(pinRow.pin || '');
   const byPin = members.find((m) => memberPin(m) === pin);
@@ -96,12 +101,12 @@ async function liveEmployee(request, env) {
     // still enriches the employee view with schedule, hours and profile data.
     const accessRow = await env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'employee-access'")
       .bind(session.merchant).first();
-    const access = parse(accessRow && accessRow.data, { members: [] });
+    const access = await codeDocument(env, session.merchant, 'employee-access', parse(accessRow && accessRow.data, { members: [] }));
     const accessMember = (Array.isArray(access.members) ? access.members : [])
       .find((m) => m && String(m.id || '') === String(session.staffId || ''));
     const teamRow = await env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'team'")
       .bind(session.merchant).first();
-    const team = parse(teamRow && teamRow.data, { members: [] });
+    const team = await codeDocument(env, session.merchant, 'team', parse(teamRow && teamRow.data, { members: [] }));
     const teamMember = (Array.isArray(team.members) ? team.members : [])
       .find((m) => m && String(m.id || '') === String(session.staffId || ''));
     const teamIsNewer = !accessRow
@@ -135,6 +140,7 @@ async function liveEmployee(request, env) {
       const revision = await employeeAuthRevision(env, session.merchant, session.staffId, expected);
       if (!revision.ok || Math.max(0, Math.round(Number(session.av) || 0)) !== revision.version) return null;
     }
+    if (pin) pin.memberId = await staffMemberId(env, session.merchant, team, pin);
     return pin ? { session, pin } : null;
   } catch (_) { return null; }
 }
