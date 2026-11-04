@@ -89,7 +89,19 @@
   var S = { loaded:false, loading:false, error:'', requests:[], units:[], catalogue:[], side:'recipient', actor:null, host:null };
   var sheet = null;      // { ref, id, mode }
   var createRef = null;
-  var pending = false;
+  var pending = false, outbox = [], outboxReady = false, outboxMerchant = '';
+  async function syncOutbox() {
+    var api = await transport(), m = merchant();
+    if (!api.snapshot) return;
+    if (!outboxReady) { api.subscribe(function (owner, rows) { if (owner === merchant()) { outbox = rows; outboxMerchant = owner; paint(); } }); outboxReady = true; }
+    try { outbox = await api.snapshot(m); outboxMerchant = m; } catch (_) { outbox = []; } paint();
+    api.replay(m).catch(function () {});
+  }
+  function outboxHtml() {
+    if (outboxMerchant !== merchant()) return '';
+    var text = { fr:{ pending:'En attente de connexion', sent:'Envoyée', refused:'Refusée', discard:'Retirer' }, en:{ pending:'Pending connection', sent:'Sent', refused:'Refused', discard:'Remove' }, ar:{ pending:'في انتظار الاتصال', sent:'مُرسل', refused:'مرفوض', discard:'إزالة' } }[lang()];
+    return '<div role="status">' + outbox.map(function (row) { return '<p>' + esc(shortRef(row.body.id)) + ' · ' + esc(text[row.state]) + (row.state === 'refused' ? ' · ' + esc(errorText({ message:row.error })) + ' <button type="button" class="hx-btn ghost" data-action="eco-req-discard" data-key="' + esc(row.body.idempotencyKey) + '">' + esc(text.discard) + '</button>' : '') + '</p>'; }).join('') + '</div>';
+  }
 
   function lang() { var l = window.KiwiI18n && window.KiwiI18n.getLang ? window.KiwiI18n.getLang() : 'fr'; return STR[l] ? l : 'fr'; }
   function T() { return STR[lang()]; }
@@ -173,6 +185,7 @@
   async function load() {
     var m = merchant();
     if (!m) { S.loaded = true; S.error = 'no-merchant'; paint(); return; }
+    await syncOutbox();
     S.loading = true; paint();
     var qs = encodeURIComponent(m);
     try {
@@ -218,12 +231,12 @@
   }
 
   function sectionHtml() {
-    var t = T(), canCreate = departments().length > 0 && !S.error;
+    var t = T(), canCreate = departments().length > 0;
     return '<section class="hx-eco-card hx-req" data-eco-requests aria-labelledby="hx-req-title">' +
       '<div class="hx-eco-card-head"><div><b id="hx-req-title">' + esc(t.title) + '</b><span>' + esc(t.sub) + '</span></div>' +
       '<div class="hx-req-actions"><button class="hx-btn ghost" type="button" data-action="eco-req-refresh"' + (S.loading ? ' disabled aria-busy="true"' : '') + '>' + esc(t.refresh) + '</button>' +
       '<button data-activation=write class="hx-btn atlas" type="button" data-action="eco-req-new"' + (canCreate ? '' : ' disabled') + '>' + esc(t.create) + '</button></div></div>' +
-      '<div data-eco-req-list>' + listHtml() + '</div></section>';
+      '<div data-eco-req-list>' + outboxHtml() + listHtml() + '</div></section>';
   }
 
   function paint() {
@@ -425,6 +438,7 @@
   }
 
   handlers['eco-req-refresh'] = function () { load(); };
+  handlers['eco-req-discard'] = async function (el) { await (await transport()).discard(merchant(), el.getAttribute('data-key')); await syncOutbox(); };
   handlers['eco-req-open'] = function (el) {
     var id = el && el.getAttribute ? el.getAttribute('data-req') : '';
     if (id) openSheet(id);
@@ -508,17 +522,10 @@
     var btn = el.querySelector('[data-action="eco-req-send"]'); if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }
     pending = true;
     try {
-      var created = await post({ action:'create', id:id, unitId:unitId, idempotencyKey:'ui:' + id + ':create', lines:lines });
-      upsert(created);
-      try {
-        var sent = await post({ action:'submit', id:id, revision:created.request.revision, idempotencyKey:'ui:' + id + ':submit:r' + created.request.revision });
-        upsert(sent);
-        Kiwi.toast(t.sent, { type:'success' });
-      } catch (_) { Kiwi.toast(t.draftSaved, { type:'warning' }); }
+      await (await transport()).enqueueRequest({ action:'create', id:id, unitId:unitId, idempotencyKey:'ui:' + id + ':create', lines:lines }, merchant());
       createRef.close(); createRef = null;
       pending = false;
-      await load();
-      openSheet(id);
+      await syncOutbox();
     } catch (e) {
       pending = false;
       Kiwi.toast(errorText(e), { type:'warning' });
@@ -538,4 +545,4 @@
     reload: load,
     state: function () { return S; },
   };
-}(function () { return import('./hotel-economat-transport.js?v=6'); }));
+}(function () { return import('./hotel-economat-transport.js?v=9'); }));

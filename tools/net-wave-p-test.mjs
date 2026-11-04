@@ -156,7 +156,7 @@ await test('returns#0 stalled list releases loading and mutation rejects',async(
 await test('economat#1 missing configuration and service failure differ',async()=>{
  for(const feature of ['hotel-units','economat-catalogue'])for(const unavailable of [true,false]){
   const S={requests:[],units:[],catalogue:[]};
-  const ctx=vm.createContext({S,merchant:()=> 'fixture',sheet:null,paint(){},encodeURIComponent,
+  const ctx=vm.createContext({S,syncOutbox:async()=>{},merchant:()=> 'fixture',sheet:null,paint(){},encodeURIComponent,
    getJson:async url=>{if(unavailable&&url.includes('feature='+feature))throw new Error('configuration-offline');return url.includes('internal-requests')?{requests:[]}:{data:null};}});
   vm.runInContext(extract(read('assets/hotel-economat-requests.js'),'load'),ctx);await ctx.load();
   assert.equal(S.error,unavailable?'configuration-offline':'');assert.equal(S.loading,false);

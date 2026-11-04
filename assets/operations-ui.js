@@ -2272,6 +2272,6 @@
    here so the dashboard keeps its script count: assets/quarantine-ui.js. */
 (function () {
   var s = document.createElement('script');
-  s.src = 'assets/quarantine-ui.js?v=5'; s.defer = true;
+  s.src = 'assets/quarantine-ui.js?v=6'; s.defer = true;
   document.head.appendChild(s);
 })();
