@@ -67,7 +67,9 @@ const file = (pages) => ({ arrayBuffer: async () => ({ pages }) });
 {
   const { R } = realm();
   const csv = R.toCsvText([{ name: 'Tajine; citron', cat: 'Plats', price: '95', desc: 'avec "olives"\nvertes' }, { name: 'Thé', price: 'x' }]);
-  ok(csv === 'article;categorie;sous_categorie;prix_mad;description;disponible\n"Tajine; citron";Plats;;95;"avec ""olives"" vertes";oui\nThé;;;0;;oui', 'the CSV keeps the import columns, escapes « ; » and quotes, zero for an unreadable price');
+  ok(csv === 'article;categorie;sous_categorie;prix_mad;description;disponible\n"Tajine; citron";Plats;;95;"avec ""olives"" vertes";oui\nThé;;;;;oui', 'the CSV keeps the import columns, escapes « ; » and quotes, and leaves an unreadable price EMPTY (r18 vision#0: it used to write 0, which the import accepted as a free dish)');
+  const absent = R.toCsvText([{ name: 'A' }, { name: 'B', price: null }, { name: 'C', price: '' }, { name: 'D', price: NaN }, { name: 'E', price: 0 }, { name: 'F', price: '12,5' }]).split('\n').slice(1);
+  ok(absent.map((l) => l.split(';')[3]).join('|') === '||||0|', 'missing, null, blank and NaN prices stay empty; an explicit 0 stays 0; an unparseable string stays empty');
   ok(JSON.stringify(R.dedupe([{ name: 'Thé', cat: 'B' }, { name: 'thé ', cat: 'b' }, { name: '', cat: 'B' }, { name: 'Thé', cat: 'C' }]).map((x) => x.cat)) === '["B","C"]', 'duplicates by name and category are dropped, nameless rows too');
 }
 console.log(`\n✓ menu-scan-reader-test · ${checks} checks`);

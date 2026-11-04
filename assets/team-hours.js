@@ -1,7 +1,7 @@
 import { createCorrections } from './planning/corrections.js?v=3';
 import { createPayrollView } from './planning/payroll-view.js?v=15';
 import { createOptimiser } from './planning/optimiser.js?v=5';
-import { createCsvImport } from './planning/csv-import.js?v=3';
+import { createCsvImport } from './planning/csv-import.js?v=4';
 import { createShiftEditor } from './planning/shift-editor.js?v=5';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · ÉQUIPE · heures, planning et paie (team-hours.js)
@@ -401,8 +401,23 @@ import { createShiftEditor } from './planning/shift-editor.js?v=5';
     Kiwi.toast(T.tHourSaved(memberFullName(m || {}), hVal, date), { type: 'success' });
   };
 
+  /* The payroll export speaks the dashboard language (headings, the contract
+     total, the audit warning); the file stays re-importable because the import
+     reads the same headings in all three languages. */
+  const PAYROLL_CSV = {
+    fr: { head: ['Période début', 'Période fin', 'ID membre', 'Employé', 'Fonction', 'Date', 'Heures', 'Taux horaire MAD', 'Coût heures MAD', 'Salaire de base MAD'],
+      total: (n) => `Total période (contrat ${n} h / semaine)`, auditTitle: 'Journal d’audit non mis à jour',
+      auditDesc: 'Le fichier est bien téléchargé, mais l’export n’a pas pu être inscrit au journal d’audit de la paie.' },
+    en: { head: ['Period start', 'Period end', 'Member ID', 'Employee', 'Role', 'Date', 'Hours', 'Hourly rate MAD', 'Hourly cost MAD', 'Base salary MAD'],
+      total: (n) => `Period total (contract ${n} h / week)`, auditTitle: 'Audit log not updated',
+      auditDesc: 'The file was downloaded, but the export could not be recorded in the payroll audit log.' },
+    ar: { head: ['بداية الفترة', 'نهاية الفترة', 'رقم العضو', 'الموظف', 'الوظيفة', 'التاريخ', 'الساعات', 'سعر الساعة MAD', 'تكلفة الساعات MAD', 'الراتب الأساسي MAD'],
+      total: (n) => `إجمالي الفترة (عقد ${n} ساعة / أسبوع)`, auditTitle: 'لم يتم تحديث سجل التدقيق',
+      auditDesc: 'تم تنزيل الملف، لكن تعذّر تسجيل التصدير في سجل تدقيق الرواتب.' },
+  };
   handlers['kt-export-csv'] = () => {
     const T = t();
+    const L = PAYROLL_CSV[trLang()] || PAYROLL_CSV.fr;
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' };
     const key = teamKey(venue), members = getMembers(key), hours = getHours(key);
     const period = buildPeriod(memberState.current().periodKind || 'week');
@@ -414,10 +429,7 @@ import { createShiftEditor } from './planning/shift-editor.js?v=5';
       if (/^[=+\-@]/.test(safe)) safe = "'" + safe;
       return `"${safe.replace(/"/g, '""')}"`;
     };
-    const rows = [[
-      'Période début', 'Période fin', 'ID membre', 'Employé', 'Fonction',
-      'Date', 'Heures', 'Taux horaire MAD', 'Coût heures MAD', 'Salaire de base MAD',
-    ]];
+    const rows = [L.head];
     let totalHours = 0;
     members.forEach((member) => {
       /* Un salarié avec un taux : ses heures du contrat sont dans le salaire,
@@ -438,7 +450,7 @@ import { createShiftEditor } from './planning/shift-editor.js?v=5';
       if (split) {
         rows.push([
           period.start, period.end, member.id, memberFullName(member), member.function || '',
-          `Total période (contrat ${contractWeekHours(member)} h / semaine)`,
+          L.total(contractWeekHours(member)),
           own.toFixed(2), (+member.hourlyRate || 0).toFixed(2),
           hourlyPayFor(member, own, period.days).toFixed(2), (+member.baseSalary || 0).toFixed(2),
         ]);
@@ -455,10 +467,11 @@ import { createShiftEditor } from './planning/shift-editor.js?v=5';
     Kiwi.toast(T.tExport, { type: 'success', desc: T.tExportDesc });
     /* The file is created locally first. The command is only the durable audit
        hand-off; a provider failure can never eat the merchant's export. */
-    window.KiwiOperations?.create?.('payroll', 'export-payroll', {
+    Promise.resolve().then(() => window.KiwiOperations?.create?.('payroll', 'export-payroll', {
       format: 'csv', filename, periodStart: period.start, periodEnd: period.end,
       teamCount: members.length, rowCount: rows.length - 1, totalHours,
-    }).catch(() => {});
+    })).then((result) => { if (result && result.ok === false) throw new Error('audit-not-recorded'); })
+      .catch(() => Kiwi.toast(L.auditTitle, { type: 'warning', desc: L.auditDesc }));
   };
   /* ── CSV import: the export, read back ─────────────────────────────────────
    * The button used to answer « Glissez votre fichier · vérification

@@ -345,12 +345,19 @@
     return x.m ? 'manual' : 'ok';
   }
 
-  /* Index libellé canonique → entité, pour t(str). */
+  /* Index libellé canonique → entités, pour t(str). Plusieurs entités peuvent
+     porter le même libellé (un plat et une option « Jus », deux catégories) avec
+     des traductions différentes : l'index les garde TOUTES. t(str) ne choisit
+     jamais la première ; si les candidats ne s'accordent pas, il rend le
+     canonique, et un appelant qui connaît l'identifiant l'ajoute (t(str, lang, id)). */
   let INDEX = new Map();
   function register(e) {
     if (!e || !e.name) return;
     const k = norm(e.name);
-    if (k && !INDEX.has(k)) INDEX.set(k, e);
+    if (!k) return;
+    const list = INDEX.get(k);
+    if (!list) INDEX.set(k, [e]);
+    else if (!list.includes(e)) list.push(e);
   }
   function index(d) {
     INDEX = new Map();
@@ -365,12 +372,33 @@
     return INDEX;
   }
 
-  function translate(str, lang) {
+  /* L'entité d'un libellé : par identifiant quand on le connaît, sinon la seule
+     réponse sans ambiguïté. `null` = aucune entité ; `false` = plusieurs entités
+     de même libellé qui ne donnent pas la même traduction (on ne devine pas). */
+  function resolveEntity(clean, target, id) {
+    const list = INDEX.get(norm(clean));
+    if (!list || !list.length) return null;
+    if (id != null && id !== '') {
+      const byId = list.filter((e) => String(e.id) === String(id));
+      if (byId.length === 1) return byId[0];
+      if (byId.length > 1) return resolveAmong(byId, target);
+      // An id unknown to the index narrows nothing: same rule as a bare label.
+    }
+    return resolveAmong(list, target);
+  }
+  function resolveAmong(list, target) {
+    if (list.length === 1) return list[0];
+    const shown = list.map((e) => (fresh(e, target) ? e.i18n[target].name : null));
+    return shown.every((v) => v === shown[0]) ? list[0] : false;
+  }
+
+  function translate(str, lang, id) {
     if (!str || typeof str !== 'string') return str;
     const target = asLang(lang) || activeLang();
     const clean = str.trim();
     if (!clean) return str;
-    const e = INDEX.get(norm(clean));
+    const e = resolveEntity(clean, target, id);
+    if (e === false) return clean;
     if (e && fresh(e, target)) return e.i18n[target].name;
     const k = norm(clean);
     const dict = DICTIONARY[k] || DICTIONARY[k.replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim()];
@@ -381,7 +409,7 @@
     if (!e) return '';
     const target = asLang(lang) || activeLang();
     if (fresh(e, target)) return e.i18n[target].name;
-    return translate(String(e.name || ''), target);
+    return translate(String(e.name || ''), target, e.id);
   }
   function desc(e, lang) {
     if (!e) return '';

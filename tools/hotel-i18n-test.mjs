@@ -30,7 +30,8 @@ const require = createRequire(path.join(ROOT, 'app', 'package.json'));
 const ts = require('typescript');
 const puppeteer = require('puppeteer-core');
 // The unpaid-checkout sheet is a lazy module (assets/hotel/checkout-proof.mjs): its tx() calls count too.
-const SRC = hotelTestSource() + '\n' + fs.readFileSync(path.join(ROOT, 'assets/hotel/checkout-proof.mjs'), 'utf8').replace(/^export /m, '');
+const SRC = hotelTestSource() + '\n' + fs.readFileSync(path.join(ROOT, 'assets/hotel/checkout-proof.mjs'), 'utf8').replace(/^export /m, '')
+  + '\n' + fs.readFileSync(path.join(ROOT, 'assets/hotel/review-proof.mjs'), 'utf8').replace(/^export /m, ''); // the manager-code sheet of the monthly review
 
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };

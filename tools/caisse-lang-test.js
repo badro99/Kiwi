@@ -361,6 +361,29 @@ for (const [lang, kept, taken, unreadable] of [
   check(L.tr('Article créé · code déjà porté par Caftan Fassi, non enregistré') === taken, 'maison item created, code already used ' + lang);
   check(L.tr('Article créé · code-barres illisible, non enregistré') === unreadable, 'maison item created, unreadable barcode ' + lang);
 }
+/* r18 i18n#0 / boutiquetill#1 : l'écran Acomptes (assets/retail-balances.js) passe par le
+   dictionnaire. Le texte vient du vrai module, rendu dans un DOM minimal, puis traduit. */
+{
+  const rb = fs.readFileSync(path.join(__dirname, '..', 'assets', 'retail-balances.js'), 'utf8');
+  const frLines = new Set();
+  const node = () => ({ className: '', type: '', set textContent(v) { frLines.add(String(v)); }, appendChild() {}, append() {}, addEventListener() {}, replaceChildren() {}, querySelector: () => input });
+  const input = { value: '', addEventListener() {}, set innerHTML(v) {} };
+  const panel = { isConnected: true, set innerHTML(html) { (String(html).match(/>([^<>]+)</g) || []).forEach(t => frLines.add(t.slice(1, -1).trim())); (String(html).match(/(?:aria-label|placeholder)="([^"]+)"/g) || []).forEach(t => frLines.add(t.replace(/^[^"]+"|"$/g, ''))); }, querySelector: (sel) => (sel === 'input' ? input : { replaceChildren() {}, appendChild(n) {} }) };
+  const sandbox = { window: {}, localStorage: { getItem: () => '[]', setItem() {} }, navigator: { onLine: false }, document: { createElement: node }, console, JSON, Math, Number, String, Array, Map, encodeURIComponent, fetch: undefined };
+  sandbox.window = sandbox;
+  vm.runInNewContext(rb, sandbox);
+  sandbox.KiwiRetailBalances.render(panel, { merchant: 'm', prefix: 'bq', onSelect() {} });
+  const screen = [...frLines].filter(Boolean);
+  check(screen.length >= 6, 'the Acomptes screen exposes its strings (' + screen.length + ')');
+  for (const lang of ['en', 'ar']) {
+    L.set(lang);
+    const left = screen.filter(fr => L.tr(fr) === fr);
+    check(left.length === 0, 'Acomptes screen has no French left in ' + lang + (left.length ? ' · ' + left.join(' | ') : ''));
+  }
+  L.set('en');
+  check(L.tr('Reste 12.00 MAD') === '12.00 MAD left to pay', 'the remaining amount keeps its figure and is translated');
+  check(L.tr('Synchronisation en attente') === 'Sync pending', 'pending-sync status is translated');
+}
 L.set('fr');
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);

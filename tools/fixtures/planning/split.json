@@ -1,5 +1,5 @@
 {
-  "sha256": "79a109a336a480447fa5d14a5251aa6c180b7313fcdf75051191f1c1da9eee10",
+  "sha256": "59728ccff13d19795f3fef170eec01622d8053d74c3b61b9ccd61ffcd4951239",
   "imports": "import { createCorrections } from './planning/corrections.js';\nimport { createPayrollView } from './planning/payroll-view.js';\nimport { createOptimiser } from './planning/optimiser.js';\nimport { createCsvImport } from './planning/csv-import.js';\nimport { createShiftEditor } from './planning/shift-editor.js';\n",
   "bindings": "  const corrections = createCorrections({ Kiwi: Kiwi, dateLocale: dateLocale, esc: esc, fetchDeadline: fetchDeadline, handlers: handlers, pad: pad, render: render, toast: toast, trLang: trLang });\n  const payrollView = createPayrollView({ AVATAR_COLORS: AVATAR_COLORS, IC: IC, Kiwi: Kiwi, buildPeriod: buildPeriod, correctionsHtml: (...args) => corrections.correctionsHtml(...args), deferredMark: (...args) => corrections.deferredMark(...args), esc: esc, dateLocale: dateLocale, fmtHours: fmtHours, fmtMad: fmtMad, fmtPay: fmtPay, getHours: getHours, getMembers: getMembers, handlers: handlers, hourlyPayFor: hourlyPayFor, initials: initials, jobName: jobName, live: live, memberFullName: memberFullName, pad: pad, payCents: payCents, payrollFigures: payrollFigures, periodNavigatorHtml: periodNavigatorHtml, periodPillsHtml: periodPillsHtml, render: render, renderPlanningPane: renderPlanningPane, saveCustomTeams: saveCustomTeams, shiftHours: shiftHours, svgIcon: svgIcon, t: t, teamKey: teamKey, toISO: toISO, trLang: trLang });\n  const optimiser = createOptimiser({ esc: esc, handlers: handlers, memberFullName: memberFullName, modal: modal, planningContext: planningContext, planningCopy: planningCopy, planningHolidaysByDay: planningHolidaysByDay, planningHoursKey: planningHoursKey, render: render, saveCustomTeams: saveCustomTeams, t: t, toast: toast, trLang: trLang });\n  const csvImport = createCsvImport({ Kiwi: Kiwi, esc: esc, getMembers: getMembers, handlers: handlers, live: live, lockBucket: lockBucket, memberFullName: memberFullName, modal: modal, pad: pad, render: render, saveCustomTeams: saveCustomTeams, teamKey: teamKey, trLang: trLang });\n  const shiftEditor = createShiftEditor({ AVATAR_COLORS: AVATAR_COLORS, HHMM_RE: HHMM_RE, addDays: addDays, applyLiveTeam: applyLiveTeam, buildPeriod: buildPeriod, compactPeriods: compactPeriods, dateLocale: dateLocale, esc: esc, fmtDur: fmtDur, fmtHours: fmtHours, fmtPay: fmtPay, fromISO: fromISO, getMembers: getMembers, getShifts: getShifts, handlers: handlers, hourlyPayFor: hourlyPayFor, initials: initials, jobName: jobName, live: live, memberFullName: memberFullName, normShift: normShift, payCents: payCents, saveCustomTeams: saveCustomTeams, shiftHours: shiftHours, shiftIsNextDay: shiftIsNextDay, shiftMinutes: shiftMinutes, t: t, teamKey: teamKey, toISO: toISO, toast: toast, trLang: trLang, visibleDays: visibleDays });\n  function deferredMark(...args) { return corrections.deferredMark(...args); }\n  function correctionsHtml(...args) { return corrections.correctionsHtml(...args); }\n  function renderHoursPane(...args) { return payrollView.renderHoursPane(...args); }\n  function updateHourTotals(...args) { return payrollView.updateHourTotals(...args); }\n  function payTiles(...args) { return payrollView.payTiles(...args); }\n  function payrollAccess(...args) { return payrollView.payrollAccess(...args); }\n  function renderPayrollBody(...args) { return payrollView.renderPayrollBody(...args); }\n  function fairScheduleCopy(...args) { return optimiser.fairScheduleCopy(...args); }\n  function optimizationCopy(...args) { return optimiser.optimizationCopy(...args); }\n  function closeShiftPop(...args) { return shiftEditor.closeShiftPop(...args); }\n  function planCellHtml(...args) { return shiftEditor.planCellHtml(...args); }\n  function planDaysHtml(...args) { return shiftEditor.planDaysHtml(...args); }\n  function shiftCellInner(...args) { return shiftEditor.shiftCellInner(...args); }\n  function shiftCellTitle(...args) { return shiftEditor.shiftCellTitle(...args); }\n\n",
   "anchor": "  /* Paie & planning ouvre sur le PLANNING",
@@ -117,15 +117,15 @@
           "length": 4635
         },
         {
-          "start": 81484,
-          "end": 82208,
+          "start": 83046,
+          "end": 83770,
           "marker": "  /* planning-part:payroll-view:3 */\n",
           "offset": 12779,
           "length": 724
         },
         {
-          "start": 114697,
-          "end": 118173,
+          "start": 116259,
+          "end": 119735,
           "marker": "  /* planning-part:payroll-view:4 */\n",
           "offset": 13504,
           "length": 3476
@@ -175,8 +175,8 @@
           "length": 12670
         },
         {
-          "start": 95252,
-          "end": 96799,
+          "start": 96814,
+          "end": 98361,
           "marker": "  /* planning-part:optimiser:1 */\n",
           "offset": 13287,
           "length": 1547
@@ -211,11 +211,11 @@
       "suffix": "\n  return Object.freeze({  });\n}\n",
       "fragments": [
         {
-          "start": 70768,
-          "end": 79582,
+          "start": 72182,
+          "end": 81144,
           "marker": "  /* planning-part:csv-import:0 */\n",
           "offset": 452,
-          "length": 8814
+          "length": 8962
         }
       ]
     },
@@ -291,8 +291,8 @@
           "length": 12188
         },
         {
-          "start": 82927,
-          "end": 89262,
+          "start": 84489,
+          "end": 90824,
           "marker": "  /* planning-part:shift-editor:2 */\n",
           "offset": 13434,
           "length": 6335

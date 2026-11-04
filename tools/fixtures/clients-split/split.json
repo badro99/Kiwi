@@ -171,6 +171,7 @@
             "tr",
             "fmt",
             "creditLastDay",
+            "creditZone",
             "paired",
             "hospitalityMode",
             "integrationHost",

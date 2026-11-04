@@ -61,7 +61,8 @@ export function createCsvImport({ Kiwi, esc, getMembers, handlers, live, lockBuc
     /* The export prefixes formula-looking cells with ' : read them back literal. */
     return rows.map((r) => r.map((v) => v.trim().replace(/^'(?=[=+\-@])/, '')));
   }
-  const normHead = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '');
+  /* Arabic letters are kept: the export writes its headings in the dashboard language. */
+  const normHead = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z\u0621-\u064a]/g, '');
   function dayIsLocked(root, day) {
     const bucket = lockBucket(root);
     return Object.keys(bucket).some((key) => {
@@ -75,8 +76,8 @@ export function createCsvImport({ Kiwi, esc, getMembers, handlers, live, lockBuc
     if (rows.length < 2) return null;
     const head = rows[0].map(normHead);
     const col = (...names) => head.findIndex((h) => names.includes(h));
-    const iId = col('idmembre', 'memberid', 'id'), iName = col('employe', 'employee', 'nom', 'name');
-    const iDate = col('date', 'jour', 'day'), iHours = col('heures', 'hours');
+    const iId = col('idmembre', 'memberid', 'id', 'رقمالعضو'), iName = col('employe', 'employee', 'nom', 'name', 'الموظف');
+    const iDate = col('date', 'jour', 'day', 'التاريخ'), iHours = col('heures', 'hours', 'الساعات');
     if (iDate < 0 || iHours < 0 || (iId < 0 && iName < 0)) return null;
     const byId = new Map(members.map((m) => [String(m.id), m]));
     const byName = new Map(members.map((m) => [memberFullName(m).toLowerCase().replace(/\s+/g, ' ').trim(), m]));

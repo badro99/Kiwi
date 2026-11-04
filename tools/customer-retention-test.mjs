@@ -238,5 +238,32 @@ ok('l’écran ne propose plus qu’un champ, et dit ce qu’il veut dire', () =
   assert.doesNotMatch(src, /\[data-cr-rhythm\][\s\S]{0,400}?persist\(/);
 });
 
+/* r18 loyalty#2 : ouvrir WhatsApp n'est pas envoyer. Le journal n'inscrit un
+   contact que si la fenêtre s'est vraiment ouverte, et le dit (« opened »). */
+ok('a blocked WhatsApp popup records no contact: no cooldown, no budget spent', () => {
+  const doc = { settings: S, offers: {}, sends: [] };
+  const x = { c: { id: 'c1', name: 'Salma', phone: '0612345678', group: 'regular' }, key: 'regular', cost: 12.5, offer: {} };
+  const blocked = R.openWhatsAppAndLog(doc, x, 'Offre test', '212612345678', 'Bonjour', () => null);
+  assert.equal(blocked.opened, false);
+  assert.equal(blocked.doc.sends.length, 0);
+  const thrown = R.openWhatsAppAndLog(doc, x, 'Offre test', '212612345678', 'Bonjour', () => { throw new Error('popup'); });
+  assert.equal(thrown.opened, false);
+  assert.equal(thrown.doc.sends.length, 0);
+});
+ok('an opened WhatsApp window is logged as « opened », detached from the page, with the message in the link', () => {
+  const doc = { settings: S, offers: {}, sends: [] };
+  const x = { c: { id: 'c1', name: 'Salma', phone: '0612345678', group: 'regular' }, key: 'regular', cost: 12.5, offer: {} };
+  const calls = [];
+  const win = { opener: 'page' };
+  const res = R.openWhatsAppAndLog(doc, x, 'Offre test', '212612345678', 'Bonjour Salma', (url, target) => { calls.push([url, target]); return win; });
+  assert.equal(res.opened, true);
+  assert.equal(win.opener, null);
+  assert.equal(calls[0][0], 'https://wa.me/212612345678?text=Bonjour%20Salma');
+  assert.equal(res.doc.sends.length, 1);
+  assert.equal(res.doc.sends[0].status, 'opened');
+  assert.equal(res.doc.sends[0].clientId, 'c1');
+  assert.equal(doc.sends.length, 0, 'the previous document is not mutated');
+});
+
 console.log(`\ncustomer-retention: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

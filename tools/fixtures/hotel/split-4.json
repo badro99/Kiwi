@@ -1,5 +1,5 @@
 {
-  "sha256": "fc39159b64f220fc99f5b159167564705048121eb059917139931192bf1be860",
+  "sha256": "ea4a88b2bb151d22fe87f2705985b034312b2a27511cd7fad0ae325eea9c7599",
   "parts": [
     {
       "name": "arrivals",
@@ -405,8 +405,8 @@
       "replacement": "set hotelCloud(value) { hotelSection('receptionState').setCloud(value); }"
     },
     {
-      "start": 229449,
-      "end": 229483,
+      "start": 229601,
+      "end": 229635,
       "original": "CUSTOM_HX[stateId] = acknowledged;",
       "replacement": "hotelSection('receptionState').replaceState(stateId, acknowledged);"
     },
@@ -417,8 +417,8 @@
       "replacement": "hotelSection('receptionState').replaceState(id, cuHydrate(doc));"
     },
     {
-      "start": 258960,
-      "end": 258991,
+      "start": 259112,
+      "end": 259143,
       "original": "CUSTOM_HX[id] = cuHydrate(doc);",
       "replacement": "hotelSection('receptionState').replaceState(id, cuHydrate(doc));"
     },
@@ -429,14 +429,14 @@
       "replacement": "cuWriteLocal(hotelSection('receptionState').stateFor(id), id);"
     },
     {
-      "start": 259000,
-      "end": 259032,
+      "start": 259152,
+      "end": 259184,
       "original": "cuWriteLocal(CUSTOM_HX[id], id);",
       "replacement": "cuWriteLocal(hotelSection('receptionState').stateFor(id), id);"
     },
     {
-      "start": 259041,
-      "end": 259062,
+      "start": 259193,
+      "end": 259214,
       "original": "return CUSTOM_HX[id];",
       "replacement": "return hotelSection('receptionState').stateFor(id);"
     },
@@ -453,26 +453,26 @@
       "replacement": "    hotelSection('receptionState').setCloud(hotelCloud);\n"
     },
     {
-      "start": 228503,
-      "end": 228513,
+      "start": 228655,
+      "end": 228665,
       "original": "hotelCloud",
       "replacement": "hotelSection('receptionState').cloud()"
     },
     {
-      "start": 228537,
-      "end": 228547,
+      "start": 228689,
+      "end": 228699,
       "original": "hotelCloud",
       "replacement": "hotelSection('receptionState').cloud()"
     },
     {
-      "start": 229694,
-      "end": 229704,
+      "start": 229846,
+      "end": 229856,
       "original": "hotelCloud",
       "replacement": "hotelSection('receptionState').cloud()"
     },
     {
-      "start": 229712,
-      "end": 229722,
+      "start": 229864,
+      "end": 229874,
       "original": "hotelCloud",
       "replacement": "hotelSection('receptionState').cloud()"
     },

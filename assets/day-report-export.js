@@ -41,8 +41,9 @@
   ];
 
 
-  /* L'interface de l'export suit la langue du tableau de bord ; le document
-   * produit (PDF, CSV) reste rédigé en français, langue comptable du Maroc. */
+  /* L'interface de l'export suit la langue du tableau de bord, et le CSV aussi
+   * (CSV_T, plus bas) ; le rapport PDF imprimable reste rédigé en français,
+   * langue comptable du Maroc. */
   var UI = {
     fr: {
       title: 'Composer le rapport détaillé', desc: 'Choisissez le format et exactement ce que le rapport doit contenir.',
@@ -60,7 +61,7 @@
       pdfT: 'Professional report · PDF', pdfD: 'Kiwi layout, readable, paginated and ready to print or send.',
       csvT: 'Raw data · CSV', csvD: 'For Excel, Numbers, accounting or your own analysis.',
       pSales: 'Sales only', pProfit: 'Sales + margins', pOps: 'Full operations', pAll: 'Select all',
-      note: 'Kiwi only exports the facts available for this day. Missing costs, materials, hours or movements are flagged as not configured or not tracked, never replaced by zero. The document itself is written in French, the accounting language in Morocco.',
+      note: 'Kiwi only exports the facts available for this day. Missing costs, materials, hours or movements are flagged as not configured or not tracked, never replaced by zero. The CSV follows your language; the printable PDF report is written in French, the accounting language in Morocco.',
       cancel: 'Cancel', goPdf: 'Create the PDF report', goCsv: 'Download the CSV data',
       count: function (n) { return n + ' section' + (n === 1 ? '' : 's') + ' selected'; },
       okCsv: 'CSV data downloaded', okPdf: 'Report ready to print or save as PDF',
@@ -71,7 +72,7 @@
       pdfT: 'تقرير احترافي · PDF', pdfD: 'تنسيق كيوي، واضح ومرقّم وجاهز للطباعة أو الإرسال.',
       csvT: 'بيانات خام · CSV', csvD: 'لبرنامج Excel أو Numbers أو المحاسبة أو تحليل خاص بك.',
       pSales: 'المبيعات فقط', pProfit: 'المبيعات + الهوامش', pOps: 'العمليات كاملة', pAll: 'تحديد الكل',
-      note: 'يصدّر كيوي الوقائع المتوفرة لهذا اليوم فقط. التكاليف أو المواد أو الساعات أو الحركات الناقصة تُعلَّم على أنها غير مضبوطة أو غير مُتتبَّعة ولا تُستبدل بالصفر. المستند نفسه محرّر بالفرنسية، لغة المحاسبة في المغرب.',
+      note: 'يصدّر كيوي الوقائع المتوفرة لهذا اليوم فقط. التكاليف أو المواد أو الساعات أو الحركات الناقصة تُعلَّم على أنها غير مضبوطة أو غير مُتتبَّعة ولا تُستبدل بالصفر. ملف CSV يتبع لغتك، أما تقرير PDF القابل للطباعة فمحرّر بالفرنسية، لغة المحاسبة في المغرب.',
       cancel: 'إلغاء', goPdf: 'إنشاء تقرير PDF', goCsv: 'تنزيل بيانات CSV',
       count: function (n) { return n + ' ' + (n === 1 ? 'قسم محدد' : 'أقسام محددة'); },
       okCsv: 'تم تنزيل بيانات CSV', okPdf: 'التقرير جاهز للطباعة أو الحفظ بصيغة PDF',
@@ -107,6 +108,104 @@
   function uiLang() { try { return (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } }
   function U() { return UI[uiLang()] || UI.fr; }
   function kindText(x) { var t = (KIND_TEXT[uiLang()] || {})[x.id]; return t ? { title: t[0], desc: t[1] } : { title: x.title, desc: x.desc }; }
+
+  /* The CSV follows the language of the person who exports it: headings,
+   * statuses and "not available" explanations are written in their language.
+   * Keys are the French wording (the repo's reference language); a missing key
+   * stays French rather than breaking the file. Merchant data (item, customer
+   * and staff names, payment method ids) never goes through this table. The
+   * printable PDF report below is still written in French. */
+  var CSV_T = {
+    en: {
+      'KIWI · RAPPORT JOURNALIER DÉTAILLÉ': 'KIWI · DETAILED DAILY REPORT', 'Établissement': 'Establishment', 'Journée': 'Day', 'Statut': 'Status',
+      'Clôturée': 'Closed', 'Provisoire': 'Provisional', 'Généré le': 'Generated on', 'Source clôture': 'Closing source', 'caisse': 'till',
+      'SYNTHÈSE': 'SUMMARY', 'Indicateur': 'Indicator', 'Valeur': 'Value', 'Unité': 'Unit', 'Ouverture': 'Opening', 'Fermeture': 'Closing',
+      'Ouvert par': 'Opened by', 'Fermé par': 'Closed by', 'Non renseigné': 'Not provided', 'Net après remboursements': 'Net after refunds',
+      'Ventes avant remboursements': 'Sales before refunds', 'Créances': 'Receivables', 'Transactions': 'Transactions', 'Ticket moyen': 'Average ticket',
+      'Couverture du détail produit': 'Product detail coverage',
+      'VENTES DÉTAILLÉES': 'DETAILED SALES', 'Heure': 'Time', 'Référence': 'Reference', 'Montant (MAD)': 'Amount (MAD)', 'Paiement': 'Payment',
+      'Canal': 'Channel', 'Encaisseur': 'Cashier', 'Libellé': 'Description', 'Article': 'Item', 'Qté': 'Qty', 'Total ligne (MAD)': 'Line total (MAD)',
+      'Détail des tickets indisponible dans le grand livre pour cette journée. Les agrégats de clôture restent disponibles.': 'Ticket detail is not available in the ledger for this day. Closing totals remain available.',
+      'CONTRÔLE': 'CHECK', 'Grand livre': 'Ledger', 'Clôture': 'Closing', 'Écart': 'Variance', 'Rapproché': 'Reconciled', 'À vérifier': 'To verify',
+      'PAIEMENTS & TIROIR': 'PAYMENTS & CASH DRAWER', 'Valeur (MAD)': 'Value (MAD)', 'Détail': 'Detail', 'Service': 'Service',
+      'Fond d’ouverture': 'Opening float', 'Espèces encaissées': 'Cash collected', 'Attendu': 'Expected', 'Compté': 'Counted', 'Mouvement': 'Movement',
+      'ARTICLES VENDUS': 'ITEMS SOLD', 'Catégorie': 'Category', 'CA brut (MAD)': 'Gross revenue (MAD)', 'Aucun détail produit disponible.': 'No product detail available.',
+      'Non classé': 'Uncategorised',
+      'MATIÈRES UTILISÉES': 'MATERIALS USED', 'Matière': 'Material', 'Identifiant stock': 'Stock ID', 'Quantité': 'Quantity', 'Coût mesuré (MAD)': 'Measured cost (MAD)',
+      'Produits concernés': 'Products concerned', 'Couverture des lignes avec fiche technique': 'Coverage of lines with a recipe card', 'Non mesurable': 'Not measurable',
+      'Aucune matière dérivable : aucune fiche technique complète reliée aux ventes détaillées.': 'No material can be derived: no complete recipe card is linked to the detailed sales.',
+      'Coût non configuré': 'Cost not configured',
+      'MARGES PAR ARTICLE': 'MARGINS BY ITEM', 'CA net HT (MAD)': 'Net revenue excl. VAT (MAD)', 'Coût (MAD)': 'Cost (MAD)', 'Marge (MAD)': 'Margin (MAD)', 'Marge (%)': 'Margin (%)',
+      'Source coût': 'Cost source', 'Non chiffré': 'Not costed', 'Non configuré': 'Not configured', 'Couverture du chiffrage': 'Costing coverage',
+      'ÉQUIPE & HEURES': 'TEAM & HOURS', 'Collaborateur': 'Team member', 'Fonction': 'Role', 'Début planifié': 'Planned start', 'Fin planifiée': 'Planned end',
+      'Heures planifiées': 'Planned hours', 'Heures réalisées': 'Hours worked', 'CA encaissé (MAD)': 'Takings (MAD)',
+      'Aucune présence, heure réalisée ou responsabilité tracée pour cette journée.': 'No attendance, hours worked or responsibility recorded for this day.',
+      'Passation': 'Handover', 'Encaissement': 'Payment collection',
+      'MOUVEMENTS DE STOCK': 'STOCK MOVEMENTS', 'Déclinaison': 'Variant', 'Motif': 'Reason', 'Coût unitaire (MAD)': 'Unit cost (MAD)', 'Acteur': 'Actor', 'Note': 'Note',
+      'Aucun mouvement de stock enregistré pour cette journée.': 'No stock movement recorded for this day.',
+      'Solde initial': 'Opening balance', 'Réception': 'Receipt', 'Vente': 'Sale', 'Annulation de vente': 'Sale reversal', 'Casse / perte': 'Breakage / loss', 'Périmé': 'Expired', 'Saisie manuelle': 'Manual entry',
+      'solde initial': 'opening balance', 'réception': 'receipt', 'vente': 'sale', 'annulation cuisine': 'kitchen void', 'casse': 'breakage', 'confirmé par l’assistant': 'confirmed by the assistant', 'saisie manuelle': 'manual entry',
+      'RÉSERVATIONS': 'RESERVATIONS', 'Client': 'Customer', 'Couverts': 'Covers', 'Ressource': 'Resource', 'Source': 'Source',
+      'Aucune réservation enregistrée pour cette journée.': 'No reservation recorded for this day.',
+      'AJUSTEMENTS & TRAÇABILITÉ': 'ADJUSTMENTS & AUDIT TRAIL', 'Événement': 'Event', 'Montant / valeur': 'Amount / value', 'Responsable': 'Responsible',
+      'Remboursements': 'Refunds', 'Remises': 'Discounts', 'Annulations': 'Voids', 'Clôture / réouverture': 'Closing / reopening'
+    },
+    ar: {
+      'KIWI · RAPPORT JOURNALIER DÉTAILLÉ': 'KIWI · التقرير اليومي المفصّل', 'Établissement': 'المؤسسة', 'Journée': 'اليوم', 'Statut': 'الحالة',
+      'Clôturée': 'مغلقة', 'Provisoire': 'مؤقتة', 'Généré le': 'تاريخ الإنشاء', 'Source clôture': 'مصدر الإقفال', 'caisse': 'الصندوق',
+      'SYNTHÈSE': 'الملخص', 'Indicateur': 'المؤشر', 'Valeur': 'القيمة', 'Unité': 'الوحدة', 'Ouverture': 'الافتتاح', 'Fermeture': 'الإغلاق',
+      'Ouvert par': 'فُتح بواسطة', 'Fermé par': 'أُغلق بواسطة', 'Non renseigné': 'غير مُدخل', 'Net après remboursements': 'الصافي بعد المبالغ المستردة',
+      'Ventes avant remboursements': 'المبيعات قبل المبالغ المستردة', 'Créances': 'المستحقات', 'Transactions': 'المعاملات', 'Ticket moyen': 'متوسط التذكرة',
+      'Couverture du détail produit': 'تغطية تفاصيل المنتجات',
+      'VENTES DÉTAILLÉES': 'المبيعات بالتفصيل', 'Heure': 'الوقت', 'Référence': 'المرجع', 'Montant (MAD)': 'المبلغ (MAD)', 'Paiement': 'الدفع',
+      'Canal': 'القناة', 'Encaisseur': 'أمين الصندوق', 'Libellé': 'البيان', 'Article': 'المنتج', 'Qté': 'الكمية', 'Total ligne (MAD)': 'مجموع السطر (MAD)',
+      'Détail des tickets indisponible dans le grand livre pour cette journée. Les agrégats de clôture restent disponibles.': 'تفاصيل التذاكر غير متاحة في دفتر الأستاذ لهذا اليوم. تبقى مجاميع الإقفال متاحة.',
+      'CONTRÔLE': 'مراقبة', 'Grand livre': 'دفتر الأستاذ', 'Clôture': 'الإقفال', 'Écart': 'الفارق', 'Rapproché': 'مطابق', 'À vérifier': 'للتحقق',
+      'PAIEMENTS & TIROIR': 'المدفوعات والصندوق', 'Valeur (MAD)': 'القيمة (MAD)', 'Détail': 'التفاصيل', 'Service': 'الخدمة',
+      'Fond d’ouverture': 'رصيد الافتتاح', 'Espèces encaissées': 'النقد المقبوض', 'Attendu': 'المتوقع', 'Compté': 'المعدود', 'Mouvement': 'حركة',
+      'ARTICLES VENDUS': 'المنتجات المباعة', 'Catégorie': 'الفئة', 'CA brut (MAD)': 'رقم المعاملات الإجمالي (MAD)', 'Aucun détail produit disponible.': 'لا تتوفر تفاصيل المنتجات.',
+      'Non classé': 'غير مصنف',
+      'MATIÈRES UTILISÉES': 'المواد المستعملة', 'Matière': 'المادة', 'Identifiant stock': 'معرّف المخزون', 'Quantité': 'الكمية', 'Coût mesuré (MAD)': 'التكلفة المقيسة (MAD)',
+      'Produits concernés': 'المنتجات المعنية', 'Couverture des lignes avec fiche technique': 'تغطية السطور ذات بطاقة الوصفة', 'Non mesurable': 'غير قابل للقياس',
+      'Aucune matière dérivable : aucune fiche technique complète reliée aux ventes détaillées.': 'لا يمكن استخلاص أي مادة: لا توجد بطاقة وصفة مكتملة مرتبطة بالمبيعات المفصّلة.',
+      'Coût non configuré': 'التكلفة غير مضبوطة',
+      'MARGES PAR ARTICLE': 'الهوامش حسب المنتج', 'CA net HT (MAD)': 'صافي رقم المعاملات دون ضريبة (MAD)', 'Coût (MAD)': 'التكلفة (MAD)', 'Marge (MAD)': 'الهامش (MAD)', 'Marge (%)': 'الهامش (%)',
+      'Source coût': 'مصدر التكلفة', 'Non chiffré': 'غير محتسب', 'Non configuré': 'غير مضبوط', 'Couverture du chiffrage': 'تغطية احتساب التكلفة',
+      'ÉQUIPE & HEURES': 'الفريق والساعات', 'Collaborateur': 'الموظف', 'Fonction': 'الوظيفة', 'Début planifié': 'البداية المخططة', 'Fin planifiée': 'النهاية المخططة',
+      'Heures planifiées': 'الساعات المخططة', 'Heures réalisées': 'الساعات المنجزة', 'CA encaissé (MAD)': 'المبالغ المقبوضة (MAD)',
+      'Aucune présence, heure réalisée ou responsabilité tracée pour cette journée.': 'لا حضور ولا ساعات منجزة ولا مسؤولية مسجلة لهذا اليوم.',
+      'Passation': 'تسليم', 'Encaissement': 'التحصيل',
+      'MOUVEMENTS DE STOCK': 'حركات المخزون', 'Déclinaison': 'النسخة', 'Motif': 'السبب', 'Coût unitaire (MAD)': 'تكلفة الوحدة (MAD)', 'Acteur': 'المنفّذ', 'Note': 'ملاحظة',
+      'Aucun mouvement de stock enregistré pour cette journée.': 'لا توجد حركة مخزون مسجلة لهذا اليوم.',
+      'Solde initial': 'الرصيد الافتتاحي', 'Réception': 'استلام', 'Vente': 'بيع', 'Annulation de vente': 'إلغاء بيع', 'Casse / perte': 'كسر / فقدان', 'Périmé': 'منتهي الصلاحية', 'Saisie manuelle': 'إدخال يدوي',
+      'solde initial': 'رصيد افتتاحي', 'réception': 'استلام', 'vente': 'بيع', 'annulation cuisine': 'إلغاء المطبخ', 'casse': 'كسر', 'confirmé par l’assistant': 'أكّده المساعد', 'saisie manuelle': 'إدخال يدوي',
+      'RÉSERVATIONS': 'الحجوزات', 'Client': 'العميل', 'Couverts': 'عدد الأشخاص', 'Ressource': 'المورد', 'Source': 'المصدر',
+      'Aucune réservation enregistrée pour cette journée.': 'لا توجد حجوزات مسجلة لهذا اليوم.',
+      'AJUSTEMENTS & TRAÇABILITÉ': 'التعديلات وسجل التتبع', 'Événement': 'الحدث', 'Montant / valeur': 'المبلغ / القيمة', 'Responsable': 'المسؤول',
+      'Remboursements': 'المبالغ المستردة', 'Remises': 'الخصومات', 'Annulations': 'الإلغاءات', 'Clôture / réouverture': 'الإقفال / إعادة الفتح'
+    }
+  };
+  /* Reservation statuses and sources are machine values in the booking store; the
+   * words are the ones the reservations screen already shows in each language. */
+  var BOOKING_T = {
+    status: {
+      requested: ['À confirmer', 'To confirm', 'بانتظار التأكيد'], confirmed: ['Confirmée', 'Confirmed', 'مؤكد'],
+      checked_in: ['Client arrivé', 'Checked in', 'وصل العميل'], completed: ['Terminée', 'Completed', 'منتهٍ'],
+      cancelled: ['Annulée', 'Cancelled', 'ملغى'], no_show: ['Absent', 'No-show', 'لم يحضر']
+    },
+    source: { public: ['En ligne', 'Online', 'عبر الإنترنت'], staff: ['Équipe', 'Team', 'الفريق'], import: ['Importée', 'Imported', 'مستوردة'] }
+  };
+  /* c(fr): the wording in the export language; French (and any missing key) stays as written. */
+  function c(fr) { var d = CSV_T[uiLang()]; return (d && d[fr]) || fr; }
+  var PLACEHOLDERS = { 'Non classé': 1, 'Article': 1 }, ROLE_TOKENS = { 'Ouverture': 1, 'Clôture': 1, 'Passation': 1, 'Encaissement': 1 };
+  function cDefault(v) { return PLACEHOLDERS[v] === 1 ? c(v) : v; }
+  function cRole(v) { return ROLE_TOKENS[v] === 1 ? c(v) : v; }
+  function cMotif(k) { return MOTIF[k] ? c(MOTIF[k]) : (k || ''); }
+  function cRefType(k) { return REF_TYPE[k] ? c(REF_TYPE[k]) : (k || ''); }
+  function cBooking(kind, v) {
+    var row = (BOOKING_T[kind] || {})[v];
+    return row ? row[{ en: 1, ar: 2 }[uiLang()] || 0] : (v || '');
+  }
 
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); }
   function num(v) { v = +v; return Number.isFinite(v) ? v : 0; }
@@ -297,20 +396,20 @@
     if (!bounds(report)) return null;
     report=Object.assign({},report,{closedBy:report.closedAt?report.closedBy:'',revisions:reportClosures(report)});
     chosen=chosen||{}; var out=[], ctx=context(report), store=(report.store&&report.store.name)||'', closed=!!(report.closed||report.closedAt);
-    out.push(q(['KIWI · RAPPORT JOURNALIER DÉTAILLÉ']));
-    out.push(q(['Établissement',store])); out.push(q(['Journée',report.day])); out.push(q(['Statut',closed?'Clôturée':'Provisoire'])); out.push(q(['Généré le',new Date().toISOString()]));
-    out.push(q(['Source clôture',report.source||'caisse']));
-    if(chosen.summary){section(out,'SYNTHÈSE',['Indicateur','Valeur','Unité']);[['Ouverture',hm(report.openedAt||report.firstSaleAt, report),''],['Fermeture',hm(report.closedAt, report),''],['Ouvert par',report.openedBy||'Non renseigné',''],['Fermé par',report.closedBy||'Non renseigné',''],['Net après remboursements',raw(report.net),'MAD'],['Ventes avant remboursements',raw(report.gross),'MAD'],['Créances',raw(report.receivable),'MAD'],['Transactions',report.txns,''],['Ticket moyen',raw(report.basket),'MAD'],['Couverture du détail produit',num(report.coverage),'%']].forEach(function(x){out.push(q(x));});}
+    out.push(q([c('KIWI · RAPPORT JOURNALIER DÉTAILLÉ')]));
+    out.push(q([c('Établissement'),store])); out.push(q([c('Journée'),report.day])); out.push(q([c('Statut'),closed?c('Clôturée'):c('Provisoire')])); out.push(q([c('Généré le'),new Date().toISOString()]));
+    out.push(q([c('Source clôture'),c(report.source||'caisse')]));
+    if(chosen.summary){section(out,c('SYNTHÈSE'),[c('Indicateur'),c('Valeur'),c('Unité')]);[[c('Ouverture'),hm(report.openedAt||report.firstSaleAt, report),''],[c('Fermeture'),hm(report.closedAt, report),''],[c('Ouvert par'),report.openedBy||c('Non renseigné'),''],[c('Fermé par'),report.closedBy||c('Non renseigné'),''],[c('Net après remboursements'),raw(report.net),'MAD'],[c('Ventes avant remboursements'),raw(report.gross),'MAD'],[c('Créances'),raw(report.receivable),'MAD'],[c('Transactions'),report.txns,''],[c('Ticket moyen'),raw(report.basket),'MAD'],[c('Couverture du détail produit'),num(report.coverage),'%']].forEach(function(x){out.push(q(x));});}
     if(chosen.summary&&window.KiwiDayReportVat){out.push('');window.KiwiDayReportVat.csvRows(report.vat,uiLang()).forEach(function(x,i){out.push(q(i===0?['## '+x[0]].concat(x.slice(1)):x));});}
-    if(chosen.sales){section(out,'VENTES DÉTAILLÉES',['Heure','Référence','Montant (MAD)','Paiement','Canal','Encaisseur','Libellé','Article','Qté','Total ligne (MAD)']);if(!ctx.sales.length)out.push(q(['Détail des tickets indisponible dans le grand livre pour cette journée. Les agrégats de clôture restent disponibles.']));ctx.sales.forEach(function(s){if(!s.lines.length)out.push(q([hm(s.ts, report),s.ref,raw(s.amount),s.method,s.channel,s.cashier,s.label,'','','']));else s.lines.forEach(function(l,i){out.push(q([i?'':hm(s.ts, report),i?'':s.ref,i?'':raw(s.amount),i?'':s.method,i?'':s.channel,i?'':s.cashier,i?'':s.label,lineName(l),raw(lineQty(l)),raw(lineTotal(l))]));});});var ledgerTotal=r2(ctx.sales.reduce(function(sum,s){return sum+num(s.amount);},0)),gap=r2(ledgerTotal-num(report.gross));out.push(q(['CONTRÔLE','Grand livre',raw(ledgerTotal),'Clôture',raw(report.gross),'Écart',raw(gap),gap===0?'Rapproché':'À vérifier','','']));}
-    if(chosen.payments){section(out,'PAIEMENTS & TIROIR',['Indicateur','Valeur (MAD)','Détail']);Object.keys(report.methods||{}).forEach(function(k){out.push(q(['Paiement · '+k,raw(report.methods[k]),'']));});reportDrawers(report).forEach(function(drawer){var c=drawer.cash||{},scope='Service '+hm(drawer.openedAt, report)+(drawer.closedAt?' · '+hm(drawer.closedAt, report):'');[['Fond d’ouverture',c.opening],['Espèces encaissées',c.sales],['Attendu',c.expected],['Compté',c.counted],['Écart',c.ecart]].forEach(function(x){out.push(q([x[0],x[1]==null?'Non renseigné':raw(x[1]),scope]));});(c.movements||[]).forEach(function(m){out.push(q(['Mouvement · '+(m.reason||m.type),raw((m.type==='out'?-1:1)*num(m.amount)),scope+(m.note?' · '+m.note:'')]));});});}
-    if(chosen.products){section(out,'ARTICLES VENDUS',['Catégorie','Article','Qté','CA brut (MAD)']);if(!ctx.products.length)out.push(q(['Aucun détail produit disponible.']));ctx.products.forEach(function(p){out.push(q([p.cat,p.name,raw(p.qty),raw(p.revenue)]));});}
-    if(chosen.materials){section(out,'MATIÈRES UTILISÉES',['Matière','Identifiant stock','Quantité','Unité','Coût mesuré (MAD)','Produits concernés']);out.push(q(['Couverture des lignes avec fiche technique',ctx.materials.eligible?Math.round(ctx.materials.covered/ctx.materials.eligible*100)+' %':'Non mesurable']));if(!ctx.materials.rows.length)out.push(q(['Aucune matière dérivable : aucune fiche technique complète reliée aux ventes détaillées.']));ctx.materials.rows.forEach(function(m){out.push(q([m.name,m.id,raw(m.qty),m.unit,m.costKnown?raw(m.cost):'Coût non configuré',Object.keys(m.recipes).join(' · ')]));});}
-    if(chosen.margins){section(out,'MARGES PAR ARTICLE',['Article','Qté','CA brut (MAD)','CA net HT (MAD)','Coût (MAD)','Marge (MAD)','Marge (%)','Source coût']);var knownRevenue=0,totalRevenue=0;ctx.products.forEach(function(p){totalRevenue+=p.revenue;var net=p.revenue;try{if(window.KiwiCost&&window.KiwiCost.netOf)net=window.KiwiCost.netOf(p.revenue,window.KiwiCost.basis&&window.KiwiCost.basis());}catch(_){}var profit=p.costKnown?r2(net-p.cost):null,pct=p.costKnown&&net>0?r2(profit/net*100):null;if(p.costKnown)knownRevenue+=p.revenue;out.push(q([p.name,raw(p.qty),raw(p.revenue),raw(net),p.costKnown?raw(p.cost):'Non chiffré',profit==null?'Non chiffré':raw(profit),pct==null?'Non chiffré':raw(pct),p.costSrc||'Non configuré']));});out.push(q(['Couverture du chiffrage','','',totalRevenue?Math.round(knownRevenue/totalRevenue*100)+' %':'Non mesurable']));}
-    if(chosen.team){section(out,'ÉQUIPE & HEURES',['Collaborateur','Fonction','Début planifié','Fin planifiée','Heures planifiées','Heures réalisées','CA encaissé (MAD)','Transactions']);if(ctx.team.unavailable)out.push(q([unavailableSection()]));else if(!ctx.team.length)out.push(q(['Aucune présence, heure réalisée ou responsabilité tracée pour cette journée.']));ctx.team.forEach(function(p){out.push(q([p.name,p.role,p.plannedStart||'',p.plannedEnd||'',raw(p.plannedHours),raw(p.workedHours),raw(p.sales),p.txns||0]));});}
-    if(chosen.stock){section(out,'MOUVEMENTS DE STOCK',['Heure','Article','Déclinaison','Quantité','Motif','Coût unitaire (MAD)','Référence','Acteur','Note']);if(ctx.stock.unavailable)out.push(q([unavailableSection()]));else if(!ctx.stock.length)out.push(q(['Aucun mouvement de stock enregistré pour cette journée.']));ctx.stock.forEach(function(m){out.push(q([hm(m.occurredTs, report),m.itemId,m.variantId||'',raw(m.qty),motif(m.reason),m.unitCost==null?'Non renseigné':raw(m.unitCost),[refType(m.refType),m.refId].filter(Boolean).join(' · '),m.actor||'',m.note||'']));});}
-    if(chosen.reservations){section(out,'RÉSERVATIONS',['Heure','Client','Couverts','Service','Ressource','Statut','Source']);if(ctx.reservations.unavailable)out.push(q([unavailableSection()]));else if(!ctx.reservations.length)out.push(q(['Aucune réservation enregistrée pour cette journée.']));ctx.reservations.forEach(function(x){out.push(q([x.time,x.customer,x.party,x.service,x.resource,x.status,x.source]));});}
-    if(chosen.adjustments){section(out,'AJUSTEMENTS & TRAÇABILITÉ',['Événement','Montant / valeur','Responsable','Heure']);out.push(q(['Remboursements',raw(report.refunds&&report.refunds.amount),report.refunds&&report.refunds.count||0,'']));out.push(q(['Remises',raw(report.discounts&&report.discounts.amount),report.discounts&&report.discounts.count||0,'']));out.push(q(['Annulations',report.cancels&&report.cancels.count||report.cancels||0,'','']));(report.handovers||[]).forEach(function(h){out.push(q(['Passation',raw(h.ecart),[h.from,h.to].filter(Boolean).join(' → '),hm(h.ts, report)]));});(report.revisions||[]).forEach(function(v){out.push(q(['Clôture / réouverture',raw(v.gross),v.by||'',hm(v.at, report)]));});}
+    if(chosen.sales){section(out,c('VENTES DÉTAILLÉES'),[c('Heure'),c('Référence'),c('Montant (MAD)'),c('Paiement'),c('Canal'),c('Encaisseur'),c('Libellé'),c('Article'),c('Qté'),c('Total ligne (MAD)')]);if(!ctx.sales.length)out.push(q([c('Détail des tickets indisponible dans le grand livre pour cette journée. Les agrégats de clôture restent disponibles.')]));ctx.sales.forEach(function(s){if(!s.lines.length)out.push(q([hm(s.ts, report),s.ref,raw(s.amount),s.method,s.channel,s.cashier,s.label,'','','']));else s.lines.forEach(function(l,i){out.push(q([i?'':hm(s.ts, report),i?'':s.ref,i?'':raw(s.amount),i?'':s.method,i?'':s.channel,i?'':s.cashier,i?'':s.label,cDefault(lineName(l)),raw(lineQty(l)),raw(lineTotal(l))]));});});var ledgerTotal=r2(ctx.sales.reduce(function(sum,s){return sum+num(s.amount);},0)),gap=r2(ledgerTotal-num(report.gross));out.push(q([c('CONTRÔLE'),c('Grand livre'),raw(ledgerTotal),c('Clôture'),raw(report.gross),c('Écart'),raw(gap),gap===0?c('Rapproché'):c('À vérifier'),'','']));}
+    if(chosen.payments){section(out,c('PAIEMENTS & TIROIR'),[c('Indicateur'),c('Valeur (MAD)'),c('Détail')]);Object.keys(report.methods||{}).forEach(function(k){out.push(q([c('Paiement')+' · '+k,raw(report.methods[k]),'']));});reportDrawers(report).forEach(function(drawer){var cash=drawer.cash||{},scope=c('Service')+' '+hm(drawer.openedAt, report)+(drawer.closedAt?' · '+hm(drawer.closedAt, report):'');[['Fond d’ouverture',cash.opening],['Espèces encaissées',cash.sales],['Attendu',cash.expected],['Compté',cash.counted],['Écart',cash.ecart]].forEach(function(x){out.push(q([c(x[0]),x[1]==null?c('Non renseigné'):raw(x[1]),scope]));});(cash.movements||[]).forEach(function(m){out.push(q([c('Mouvement')+' · '+(m.reason||m.type),raw((m.type==='out'?-1:1)*num(m.amount)),scope+(m.note?' · '+m.note:'')]));});});}
+    if(chosen.products){section(out,c('ARTICLES VENDUS'),[c('Catégorie'),c('Article'),c('Qté'),c('CA brut (MAD)')]);if(!ctx.products.length)out.push(q([c('Aucun détail produit disponible.')]));ctx.products.forEach(function(p){out.push(q([cDefault(p.cat),cDefault(p.name),raw(p.qty),raw(p.revenue)]));});}
+    if(chosen.materials){section(out,c('MATIÈRES UTILISÉES'),[c('Matière'),c('Identifiant stock'),c('Quantité'),c('Unité'),c('Coût mesuré (MAD)'),c('Produits concernés')]);out.push(q([c('Couverture des lignes avec fiche technique'),ctx.materials.eligible?Math.round(ctx.materials.covered/ctx.materials.eligible*100)+' %':c('Non mesurable')]));if(!ctx.materials.rows.length)out.push(q([c('Aucune matière dérivable : aucune fiche technique complète reliée aux ventes détaillées.')]));ctx.materials.rows.forEach(function(m){out.push(q([m.name,m.id,raw(m.qty),m.unit,m.costKnown?raw(m.cost):c('Coût non configuré'),Object.keys(m.recipes).join(' · ')]));});}
+    if(chosen.margins){section(out,c('MARGES PAR ARTICLE'),[c('Article'),c('Qté'),c('CA brut (MAD)'),c('CA net HT (MAD)'),c('Coût (MAD)'),c('Marge (MAD)'),c('Marge (%)'),c('Source coût')]);var knownRevenue=0,totalRevenue=0;ctx.products.forEach(function(p){totalRevenue+=p.revenue;var net=p.revenue;try{if(window.KiwiCost&&window.KiwiCost.netOf)net=window.KiwiCost.netOf(p.revenue,window.KiwiCost.basis&&window.KiwiCost.basis());}catch(_){}var profit=p.costKnown?r2(net-p.cost):null,pct=p.costKnown&&net>0?r2(profit/net*100):null;if(p.costKnown)knownRevenue+=p.revenue;out.push(q([cDefault(p.name),raw(p.qty),raw(p.revenue),raw(net),p.costKnown?raw(p.cost):c('Non chiffré'),profit==null?c('Non chiffré'):raw(profit),pct==null?c('Non chiffré'):raw(pct),p.costSrc?c(p.costSrc):c('Non configuré')]));});out.push(q([c('Couverture du chiffrage'),'','',totalRevenue?Math.round(knownRevenue/totalRevenue*100)+' %':c('Non mesurable')]));}
+    if(chosen.team){section(out,c('ÉQUIPE & HEURES'),[c('Collaborateur'),c('Fonction'),c('Début planifié'),c('Fin planifiée'),c('Heures planifiées'),c('Heures réalisées'),c('CA encaissé (MAD)'),c('Transactions')]);if(ctx.team.unavailable)out.push(q([unavailableSection()]));else if(!ctx.team.length)out.push(q([c('Aucune présence, heure réalisée ou responsabilité tracée pour cette journée.')]));ctx.team.forEach(function(p){out.push(q([p.name,cRole(p.role),p.plannedStart||'',p.plannedEnd||'',raw(p.plannedHours),raw(p.workedHours),raw(p.sales),p.txns||0]));});}
+    if(chosen.stock){section(out,c('MOUVEMENTS DE STOCK'),[c('Heure'),c('Article'),c('Déclinaison'),c('Quantité'),c('Motif'),c('Coût unitaire (MAD)'),c('Référence'),c('Acteur'),c('Note')]);if(ctx.stock.unavailable)out.push(q([unavailableSection()]));else if(!ctx.stock.length)out.push(q([c('Aucun mouvement de stock enregistré pour cette journée.')]));ctx.stock.forEach(function(m){out.push(q([hm(m.occurredTs, report),m.itemId,m.variantId||'',raw(m.qty),cMotif(m.reason),m.unitCost==null?c('Non renseigné'):raw(m.unitCost),[cRefType(m.refType),m.refId].filter(Boolean).join(' · '),m.actor||'',m.note||'']));});}
+    if(chosen.reservations){section(out,c('RÉSERVATIONS'),[c('Heure'),c('Client'),c('Couverts'),c('Service'),c('Ressource'),c('Statut'),c('Source')]);if(ctx.reservations.unavailable)out.push(q([unavailableSection()]));else if(!ctx.reservations.length)out.push(q([c('Aucune réservation enregistrée pour cette journée.')]));ctx.reservations.forEach(function(x){out.push(q([x.time,x.customer,x.party,x.service,x.resource,cBooking('status',x.status),cBooking('source',x.source)]));});}
+    if(chosen.adjustments){section(out,c('AJUSTEMENTS & TRAÇABILITÉ'),[c('Événement'),c('Montant / valeur'),c('Responsable'),c('Heure')]);out.push(q([c('Remboursements'),raw(report.refunds&&report.refunds.amount),report.refunds&&report.refunds.count||0,'']));out.push(q([c('Remises'),raw(report.discounts&&report.discounts.amount),report.discounts&&report.discounts.count||0,'']));out.push(q([c('Annulations'),report.cancels&&report.cancels.count||report.cancels||0,'','']));(report.handovers||[]).forEach(function(h){out.push(q([c('Passation'),raw(h.ecart),[h.from,h.to].filter(Boolean).join(' → '),hm(h.ts, report)]));});(report.revisions||[]).forEach(function(v){out.push(q([c('Clôture / réouverture'),raw(v.gross),v.by||'',hm(v.at, report)]));});}
     return out.join('\r\n');
   }
   function downloadCsv(report, chosen) {
@@ -400,5 +499,5 @@
       if(trigger){trigger.disabled=wasDisabled;trigger.removeAttribute('aria-busy');}
     }
   }
-  window.KiwiDayReportExport={open:open,openCurrent:openCurrent,resolveCurrent:resolveCurrent,build:build,reportHtml:reportHtml,context:context,kinds:KINDS.slice()};
+  window.KiwiDayReportExport={open:open,openCurrent:openCurrent,resolveCurrent:resolveCurrent,build:build,reportHtml:reportHtml,context:context,kinds:KINDS.slice(),csvDictionary:CSV_T};
 }());
