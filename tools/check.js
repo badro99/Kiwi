@@ -1865,6 +1865,7 @@ section('Whole-project regressions');
     'caisse-money-properties-test.mjs',
     'promo-price-freeze-test.mjs',
     'simple-food-cost-parity-test.mjs',
+    'home-kpi-async-ownership-test.mjs',
     'retail-money-properties-test.mjs',
     'dashboard-money-properties-test.mjs',
     'dayreport-properties-test.mjs',
