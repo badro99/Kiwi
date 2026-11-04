@@ -19,6 +19,10 @@
     "v": "7",
     "sha": "a8817b92dc6fec2b"
   },
+  "assets/admin-origin-devices.js": {
+    "v": "1",
+    "sha": "acd920e9a9999435"
+  },
   "assets/admin-policy.js": {
     "v": "5",
     "sha": "7cdc3556fabde39a"
@@ -511,6 +515,10 @@
     "v": "2",
     "sha": "4600d76604d8462a"
   },
+  "assets/design-ios27.css": {
+    "v": "1",
+    "sha": "609f0c3f5bf3c3af"
+  },
   "assets/design-vexel-layout.js": {
     "v": "2100",
     "sha": "96e14be9f8b09794"
@@ -522,6 +530,10 @@
   "assets/design-vexel.js": {
     "v": "2078",
     "sha": "74b872eee6e9256a"
+  },
+  "assets/design-vitrine.css": {
+    "v": "1",
+    "sha": "a3353ecbccd5da99"
   },
   "assets/design-vitrine.js": {
     "v": "1",
@@ -1107,6 +1119,10 @@
     "v": "10",
     "sha": "03bf0f4696f3294d"
   },
+  "assets/liquid-glass.css": {
+    "v": "1",
+    "sha": "bf8ffe7c2c0e4e6c"
+  },
   "assets/liquid-glass.js": {
     "v": "1",
     "sha": "e6199b1d6a79b435"
@@ -1343,6 +1359,10 @@
     "v": "3",
     "sha": "2cfe4e7d2ca95ce5"
   },
+  "assets/origin-move.css": {
+    "v": "1",
+    "sha": "d8150ae77563aa16"
+  },
   "assets/pages-pro-boutique.js": {
     "v": "45",
     "sha": "f070cd68b5821e05"
@@ -1462,6 +1482,14 @@
   "assets/platform-ops.js": {
     "v": "5",
     "sha": "c079860f2f3bf82e"
+  },
+  "assets/polish-dashboard.css": {
+    "v": "1",
+    "sha": "5e4a7e6509590ce0"
+  },
+  "assets/polish.css": {
+    "v": "1",
+    "sha": "385c991ec20eecec"
   },
   "assets/polish.js": {
     "v": "4",
@@ -1959,6 +1987,10 @@
     "v": "18",
     "sha": "e5b03efe0e1b9f47"
   },
+  "assets/simple.css": {
+    "v": "1",
+    "sha": "885da8f03a972e7f"
+  },
   "assets/simple.js": {
     "v": "12",
     "sha": "b08da8689e842159"
@@ -2126,6 +2158,10 @@
   "assets/trades.js": {
     "v": "9",
     "sha": "0c4a16236723bff2"
+  },
+  "assets/ux.css": {
+    "v": "1",
+    "sha": "15cfc4e0e51ee3b2"
   },
   "assets/ux.js": {
     "v": "1",

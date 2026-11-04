@@ -54,9 +54,10 @@ function replaceIn(rel, asset, next) {
      liste SHELL du service worker devient ?v=1. On ne cree aucune nouvelle
      appartenance au precache ; on versionne seulement les references qui
      existent deja. */
-  after = after.replace(new RegExp(`((?:src|href)=["'][./]*${esc})(["'])`, 'g'), (_, ref, quote) => {
+  after = after.replace(new RegExp(`((?:src|href)=["'][./]*${esc})(\\?[^"'#]*)?(["'])`, 'g'), (_, ref, query, quote) => {
+    if (query && /[?&]v=/.test(query)) return ref + query + quote;
     hits++;
-    return `${ref}?v=${next}${quote}`;
+    return `${ref}?v=${next}${query ? '&' + query.slice(1) : ''}${quote}`;
   });
   after = after.replace(new RegExp(`(["']\\/${esc})(["'])`, 'g'), (_, ref, quote) => {
     hits++;

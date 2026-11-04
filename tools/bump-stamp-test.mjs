@@ -43,7 +43,7 @@ function fixture(dir) {
   w('assets/pos-dispatch.js', "const REGISTRY = { '0002': { id: 'boutique', file: 'pos-boutique', rev: '3' } };\n");
   w('assets/pos-boutique.js', '// boutique\n');
   w('dashboard.html', '<script src="assets/venues.js?v=7"></script><script src="assets/dashboard-pwa.js?v=2"></script><script src="assets/procurement.js"></script>\n');
-  w('kiwi-caisse.html', '<script src="assets/caisse-pwa.js?v=5"></script><script src="assets/employee-live.js?v=9"></script><script src="assets/procurement.js"></script>\n');
+  w('kiwi-caisse.html', '<script src="assets/caisse-pwa.js?v=5"></script><script src="assets/employee-live.js?v=9"></script><script src="assets/procurement.js?r=3"></script>\n');
   w('kiwi-sw.js', "var CACHE = 'kiwi-app-v40';\nvar SHELL = ['/assets/venues.js?v=7','/assets/dashboard-pwa.js?v=2','/assets/caisse-pwa.js?v=5','/assets/employee-live.js?v=9','/assets/procurement.js'];\n");
 }
 const env = (dir) => ({ ...process.env, KIWI_STAMPS_ROOT: dir });
@@ -57,6 +57,7 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   ok(run(dir, ['--sync']).status === 0, 'fixture : manifeste scellé (--sync)');
   const introduced = run(dir, ['assets/procurement.js']);
   ok(introduced.status === 0, 'un asset sans estampille recoit sa premiere estampille');
+  ok(rd(dir, 'kiwi-caisse.html').includes('assets/procurement.js?v=1&r=3'), 'premiere estampille conserve la query existante');
   ok(/procurement\.js\?v=1/.test(rd(dir, 'dashboard.html')) && /procurement\.js\?v=1/.test(rd(dir, 'kiwi-caisse.html')), 'premiere estampille dans les deux shells');
   ok(/procurement\.js\?v=1/.test(rd(dir, 'kiwi-sw.js')), 'premiere estampille dans SHELL quand la reference y existait deja');
   ok(JSON.parse(rd(dir, 'tools/asset-stamps.json'))['assets/procurement.js']?.v === '1', 'premiere estampille scellee dans le manifeste');

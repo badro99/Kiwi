@@ -12,6 +12,18 @@ let passed = 0;
 const failed = [];
 const ok = (label, condition) => condition ? passed++ : failed.push(label);
 
+// Every local stylesheet and script must change URL when its content changes.
+for (const file of ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-admin.html']) {
+  for (const [tag] of read(file).replace(/<!--[\s\S]*?-->/g, '').matchAll(/<(?:link|script)\b[^>]*>/gi)) {
+    const attrs = Object.fromEntries([...tag.matchAll(/\b([\w-]+)\s*=\s*(["'])(.*?)\2/g)].map(m => [m[1].toLowerCase(), m[3]]));
+    const script = /^<script\b/i.test(tag);
+    if (!script && !attrs.rel?.toLowerCase().split(/\s+/).includes('stylesheet')) continue;
+    const url = attrs[script ? 'src' : 'href'];
+    if (!url || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(url)) continue;
+    ok(`${file}: ${url} has a numeric version stamp`, /[?&]v=\d+(?:&|#|$)/.test(url));
+  }
+}
+
 const entries = [...dispatch.matchAll(/file:\s*'([^']+)'(?:,\s*rev:\s*'([^']+)')?/g)]
   .map((m) => ({ base: m[1], rev: m[2] || '' }));
 const files = entries.map((e) => e.base);
