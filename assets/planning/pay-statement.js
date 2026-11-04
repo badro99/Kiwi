@@ -61,7 +61,7 @@ export function openPayStatement(core, selected, archiveOverride) {
   const period = core.buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
   if (!members.length || !period.days.length) return core.toast(c.unavailable, { type:'warning' });
   const esc = core.esc;
-  const archive = archiveOverride || createArchive(core.teamSlug?.());
+  const archive = archiveOverride || createArchive(core.teamSlug?.() || window.Kiwi?.__teamProfileCore?.teamSlug?.());
   const cached = savedAdvances(core, venue, period);
   const mdl = core.modal({ title:c.title, width:760,
     body:`<p>${esc(c.notice)}</p><p>${esc(c.period)} : ${esc(period.days[0])} · ${esc(period.days.at(-1))}</p><label>${esc(c.title)}<select data-pay-member><option value="*">${esc(c.all)}</option>${members.map(m => `<option value="${esc(m.id)}"${selected === m.id ? ' selected' : ''}>${esc(core.memberFullName(m))}</option>`).join('')}</select></label><p>${esc(c.input)}</p>${members.map(m => `<label>${esc(core.memberFullName(m))}<input data-pay-advance="${esc(m.id)}" type="number" min="0" step="0.01" value="${cached[m.id] ? (cached[m.id] / 100).toFixed(2) : '0'}" inputmode="decimal"></label>`).join('')}<p>${esc(c.accountant)}</p><div data-pay-issued></div>`,
