@@ -18,7 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
-  '/assets/pos-boutique/return-window.js?v=3',
+  '/assets/pos-boutique/return-window.js?v=4',
   '/assets/hotel-economat-requests.js?v=29',
   '/assets/hotel-economat-outbox.js?v=13',
   '/assets/tickets-recovery.js?v=5',
@@ -36,13 +36,13 @@ var SHELL = [
   '/assets/team/styles.js?v=4',
   '/assets/team/access-rules.js?v=7',
   '/assets/hotel-economat-transport.js?v=19',
-  '/assets/pos-boutique/drawer.js?v=97',
+  '/assets/pos-boutique/drawer.js?v=98',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=18',
   '/assets/money-cents.js?v=4',
-  '/assets/pages-pro/boutique-promos-returns.js?v=22',
-  '/assets/pages-pro/returns-policy.js?v=3',
+  '/assets/pages-pro/boutique-promos-returns.js?v=23',
+  '/assets/pages-pro/returns-policy.js?v=4',
   '/assets/day-report-conflicts.js?v=2',
   '/assets/printer/pairing-lang.js?v=20',
   '/assets/planning/shift-editor.js?v=5',
@@ -84,11 +84,11 @@ var SHELL = [
   '/assets/menu-catalog/item-list.js?v=3',
   '/assets/menu-catalog/modifiers.js?v=3',
   '/assets/menu-catalog/state.js?v=14',
-  '/assets/pressing/custody.js?v=31',
-  '/assets/pressing/rack.js?v=30',
-  '/assets/pressing/pickup.js?v=30',
-  '/assets/pressing/workshop.js?v=30',
-  '/assets/pressing/deposit.js?v=30',
+  '/assets/pressing/custody.js?v=32',
+  '/assets/pressing/rack.js?v=31',
+  '/assets/pressing/pickup.js?v=31',
+  '/assets/pressing/workshop.js?v=31',
+  '/assets/pressing/deposit.js?v=31',
   '/assets/hotel/rate-actions.js?v=6',
   '/assets/hotel/folio-actions.js?v=4',
   '/assets/hotel/room-board.js?v=6',
@@ -114,7 +114,7 @@ var SHELL = [
   '/assets/channel-health.js?v=11',
   '/assets/channel-link.js?v=202608272325',
   '/assets/marketing-suite-tease.js?v=1',
-  '/assets/pages-pro.js?v=2221',
+  '/assets/pages-pro.js?v=2222',
   '/assets/pages-pro-spa-starter.js?v=7',
   '/assets/cash-sessions.js?v=11',
   '/assets/simple-food-cost.js?v=28',
@@ -209,7 +209,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
-  '/assets/pages/dashboard-startup.js?v=202',
+  '/assets/pages/dashboard-startup.js?v=203',
   '/assets/pages/dashboard-loader.js?v=78',
   '/assets/hotel/model.js?v=10',
   '/assets/hotel/views.js?v=9',
@@ -274,9 +274,9 @@ var SHELL = [
   '/assets/pressing-numbering.js?v=5',
   '/assets/persistence-notices.js?v=2',
   '/assets/pressing-ops.js?v=33',
-  '/assets/pressing-b2b-card.js?v=3',
+  '/assets/pressing-b2b-card.js?v=4',
   '/assets/pressing-catalog.js?v=10',
-  '/assets/pressing-dashboard.js?v=32',
+  '/assets/pressing-dashboard.js?v=33',
   '/assets/pressing-products/chemise.png',
   '/assets/pressing-products/tshirt.png',
   '/assets/pressing-products/pull.png',
@@ -386,10 +386,10 @@ var SHELL = [
   /* Le geste qui pose un appairage · et qui déclenche la purge ci-dessus. La
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */
-  '/assets/pairing-commit.js?v=7',
+  '/assets/pairing-commit.js?v=8',
   /* Le verrou d'une caisse dépairée ou réappairée en plein service. Sans lui
      hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
-  '/assets/till-tenant.js?v=6',
+  '/assets/till-tenant.js?v=7',
   '/assets/identity.js?v=12',
   '/assets/caisse-link.js?v=23',
   '/assets/operator-access.js?v=1',
@@ -420,7 +420,7 @@ var SHELL = [
   '/assets/caisse-lang.js?v=129',
   '/assets/venue-store.js?v=6',
   '/assets/discount-policy.js?v=4',
-  '/assets/merchant-policies.js?v=3',
+  '/assets/merchant-policies.js?v=4',
   '/assets/menu-promos.js?v=18',
   '/assets/retail-balances.js?v=7',
   '/assets/retail-sale-hold.js?v=8',
@@ -494,7 +494,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=35',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=33',
-  '/assets/pos-dispatch.js?v=386',
+  '/assets/pos-dispatch.js?v=387',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -565,8 +565,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=282',
-  '/assets/pos-boutique/sales.js?v=179',
+  '/assets/pos-boutique.css?v=283',
+  '/assets/pos-boutique/sales.js?v=180',
   '/assets/retail-photos.js?v=5',
   '/assets/retail-icon-picker.js?v=4',
   '/assets/pos-boutique/ticket-owner.js?v=3',
@@ -583,9 +583,9 @@ var SHELL = [
   '/assets/pos-boutique/inv-moves.js?v=7',
   '/assets/pos-maison/inv-moves.js?v=3',
   '/assets/pos-boutique/kit-2027.js?v=20',
-  '/assets/pos-boutique/checkout.js?v=179',
-  '/assets/pos-boutique/inventory.js?v=179',
-  '/assets/pos-boutique.js?v=282',
+  '/assets/pos-boutique/checkout.js?v=180',
+  '/assets/pos-boutique/inventory.js?v=180',
+  '/assets/pos-boutique.js?v=283',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -619,14 +619,14 @@ var SHELL = [
   '/assets/pos-gym.js?v=9',
   '/assets/pos-autre.css?v=9',
   '/assets/pos-autre.js?v=9',
-  '/assets/pos-maison.css?v=171',
-  '/assets/pos-maison/sales.js?v=88',
+  '/assets/pos-maison.css?v=172',
+  '/assets/pos-maison/sales.js?v=89',
   '/assets/pos-maison/ticket-remise.js?v=3',
-  '/assets/pos-maison/checkout.js?v=88',
+  '/assets/pos-maison/checkout.js?v=89',
   '/assets/pos-maison/delivery.js?v=22',
   '/assets/refund-split.js?v=2',
-  '/assets/pos-maison/inventory.js?v=88',
-  '/assets/pos-maison.js?v=171',
+  '/assets/pos-maison/inventory.js?v=89',
+  '/assets/pos-maison.js?v=172',
   '/assets/caisse-pairing.js?v=72',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
@@ -634,8 +634,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js?v=17',
-  '/assets/pressing-caisse.js?v=101',
-  '/assets/pressing-caisse.css?v=101',
+  '/assets/pressing-caisse.js?v=102',
+  '/assets/pressing-caisse.css?v=102',
   '/assets/material-icons.js?v=4',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers

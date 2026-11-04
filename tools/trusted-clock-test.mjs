@@ -18,6 +18,9 @@ import { harness, ROOT } from './live-link-queue-harness.mjs';
 import { businessDate } from '../functions/api/_business-day.js';
 
 const source = fs.readFileSync(path.join(ROOT, 'assets/pairing-commit.js'), 'utf8');
+/* The till's network guard (assets/till-tenant.js) is the one fetch wrapper that
+ * announces each /api/ reply; the clock listens to it, as on kiwi-caisse.html. */
+const tenantSource = fs.readFileSync(path.join(ROOT, 'assets/till-tenant.js'), 'utf8');
 const HOUR = 3600000;
 
 /* L'horloge vit dans assets/pairing-commit.js (KiwiTrustedClock). Un navigateur factice : l'heure de l'appareil se règle, le serveur répond avec son en-tête Date. */
@@ -25,9 +28,12 @@ function browser({ deviceAheadMs = 0, serverNow = Date.UTC(2026, 10, 4, 4, 0, 0)
   const t = { server: serverNow };
   const body = { children: [], appendChild(el) { this.children.push(el); el.parent = this; } };
   const elements = new Map();
-  const events = [];
+  const events = [];          // the clock's own announcements (kiwi:clock-skew)
+  const listeners = new Map();
   const document = {
-    body, addEventListener() {}, dispatchEvent: e => { events.push(e); return true; },
+    body,
+    addEventListener(type, fn) { (listeners.get(type) || listeners.set(type, []).get(type)).push(fn); },
+    dispatchEvent: e => { if (e.type === 'kiwi:clock-skew') events.push(e); (listeners.get(e.type) || []).forEach(fn => fn(e)); return true; },
     getElementById: id => elements.get(id) || null,
     createTextNode: text => ({ text }),
     createElement: () => ({ style: {}, firstChild: null, setAttribute() {}, remove() { elements.delete(this.id); },
@@ -36,7 +42,8 @@ function browser({ deviceAheadMs = 0, serverNow = Date.UTC(2026, 10, 4, 4, 0, 0)
   const origAppend = body.appendChild.bind(body);
   body.appendChild = el => { origAppend(el); elements.set(el.id, el); };
   const store = new Map(stored ? [['kiwi:caisse:clock:v1', stored]] : []);
-  const localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)) };
+  const localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k),
+    get length() { return store.size; }, key: i => [...store.keys()][i] ?? null };
   const ctx = { console, setInterval: () => 0, CustomEvent: class { constructor(type, init = {}) { this.type = type; this.detail = init.detail; } } };
   class FakeDate extends Date {
     constructor(...a) { super(...(a.length ? a : [FakeDate.now()])); }
@@ -55,9 +62,11 @@ function browser({ deviceAheadMs = 0, serverNow = Date.UTC(2026, 10, 4, 4, 0, 0)
       return res;
     },
   };
-  Object.assign(ctx, { window, document, localStorage, Date: FakeDate, URL, Number, Math, JSON, Array, Object, String, isFinite });
+  Object.assign(ctx, { window, document, localStorage, location: window.location, navigator: {}, Date: FakeDate, URL, Number, Math, JSON, Array, Object, String, isFinite, TypeError, Promise });
   window.window = window;
+  window.location.href = window.location.origin + '/kiwi-caisse.html';
   vm.createContext(ctx);
+  vm.runInContext(tenantSource, ctx, { filename: 'assets/till-tenant.js' });
   vm.runInContext(source, ctx, { filename: 'assets/pairing-commit.js' });
   return { clock: window.KiwiTrustedClock, window, t, store, events, notice: () => elements.get('kiwi-clock-skew') || null, calls };
 }

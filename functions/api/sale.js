@@ -18,6 +18,7 @@ import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { validateRetailTenders, retailTenderMethod } from './_retail-tenders.js';
 import { claimRetailBalance, confirmRetailBalance } from './_retail-balances.js';
 import { fitBasket, basketMismatch, clockFlags, recordSaleFlag } from './_sale-truth.js';
+import { stampSale } from './_sale-stamp.js';
 import { saveDeliveryCard, cleanDeliveryCard } from './_delivery-card.js';
 import { markStockHeld } from './_delivery-stock.js';
 import { autoParcel } from './ozon/parcels.js';
@@ -840,19 +841,8 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     }, 409);
   }
 
-  /* La cliente de la vente (migrations/0021_sale_client_id.sql) : l'id de sa fiche
-   * du carnet, envoyé par la caisse. Un rattachement, rien de plus : un avoir émis
-   * plus tard contre cette vente retrouve la bonne fiche, même relue d'une autre
-   * tablette. Posé après l'écriture de la vente, une seule fois (jamais écrasé, une
-   * relecture ne la change pas) : colonne absente tant que la migration n'est pas
-   * appliquée, la vente reste écrite sans elle, comme avant. */
-  const saleClientId = typeof b.clientId === 'string' ? b.clientId.trim().slice(0, 64) : '';
-  if (saleClientId) {
-    try {
-      await env.DB.prepare('UPDATE sales SET client_id = ? WHERE merchant = ? AND id = ? AND client_id IS NULL')
-        .bind(saleClientId, merchant, id).run();
-    } catch (_) { /* old schema without sales.client_id: the sale stands */ }
-  }
+  /* The sale's customer record and its two clocks (migrations 0021, 0023). */
+  await stampSale(env, merchant, id, b);
 
   /* Ce que le serveur sait et que la caisse affirme : l'heure de l'appareil et
    * le panier. Rien de tout cela ne refuse une vente encaissée ; chaque écart
@@ -874,18 +864,6 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     if (basketFolded) basket.push({ code: 'basket-folded', detail: { limit: 24000 } });
     if (await recordSaleFlag(env, merchant, id, 'basket-flag', basket, row)) saleFlags.push(...basket.map((f) => f.code));
   } catch (_) { /* the sale stands; the flags are best effort */ }
-
-  /* Les deux heures, côte à côte : `ts` (celle de la caisse, corrigée par
-     l'horloge de confiance), `device_ts` (celle de l'appareil) et `received_ts`
-     (la nôtre, à l'arrivée). Au mieux : une base qui n'a pas encore la
-     migration 0023 garde la vente sans ces deux colonnes. */
-  try {
-    const deviceTs = Number(b && b.deviceTs);
-    /* colonnes nommées à part : la requête n'est pas vérifiée contre le minimum de production (0019), qui ne les a pas encore */
-    const stamp = ['received_ts', 'device_ts'];
-    await env.DB.prepare(`UPDATE sales SET ${stamp.map((c) => c + ' = ?').join(', ')} WHERE merchant = ? AND id = ? AND received_ts IS NULL`)
-      .bind(Date.now(), Number.isFinite(deviceTs) && deviceTs > 0 ? Math.round(deviceTs) : null, merchant, id).run();
-  } catch (_) { /* colonnes absentes : la vente reste */ }
 
   if (discountFlag) {
     /* One audit row per sale: a till retrying the same receipt must not add a

@@ -5,7 +5,7 @@ import vm from 'node:vm';
 const mode = process.argv[2];
 const run = (name, fn) => !mode || mode === name ? fn() : undefined;
 await run('schema', async () => {
- const {schemaCompatibility} = await import('../functions/_schema-version.js');
+ const {schemaCompatibility, MINIMUM_SCHEMA_VERSION: MIN} = await import('../functions/_schema-version.js');
  assert.equal(typeof schemaCompatibility, 'function');
  let reads=0, release, version=15;
  const db={prepare(sql){assert.match(sql,/d1_migrations/);reads++;return {all:async()=>{if(release) await release;return {results:[{name:String(version).padStart(4,'0')+'_fixture.sql'}]};}};}};
@@ -16,11 +16,11 @@ await run('schema', async () => {
  let reached=0;
  assert.equal((await onRequest({env:{DB:db},next:()=>{reached++;}})).status,503);
  assert.equal(reached,0);
- const good={prepare:()=>({all:async()=>({results:[{name:'0019_current.sql'}]})})};
+ const good={prepare:()=>({all:async()=>({results:[{name:String(MIN).padStart(4,'0')+'_current.sql'}]})})};
  assert.equal(await schemaCompatibility(good),null);
  assert.equal(await onRequest({env:{DB:good},next:()=> 'route reached'}),'route reached');
  const originalNow=Date.now;
- try { version=19; Date.now=()=>originalNow()+61000; assert.equal(await schemaCompatibility(db),null); assert.equal(reads,2); } finally {Date.now=originalNow;}
+ try { version=MIN; Date.now=()=>originalNow()+61000; assert.equal(await schemaCompatibility(db),null); assert.equal(reads,2); } finally {Date.now=originalNow;}
  /* A failed read is not proof of an old schema: a D1 blip lets sales through and is read again soon. */
  let brokenReads=0; const broken={prepare(){brokenReads++; throw Error('unavailable');}};
  assert.equal(await schemaCompatibility(broken),null,'a failed read does not refuse requests');

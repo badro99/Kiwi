@@ -11,7 +11,7 @@
  *    responsable : la caisse l'annonce et signe `windowOverride` dans
  *    l'accord (/api/pin/verify), que le serveur exige au remboursement et à
  *    l'émission d'un avoir (functions/api/_return-window.js). */
-import '../merchant-policies.js?v=3';
+import '../merchant-policies.js?v=4';
 
 const MIN_KEPT = 7, MAX_KEPT = 30;
 const policies = () => globalThis.KiwiPolicies || null;

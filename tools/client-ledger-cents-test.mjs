@@ -187,7 +187,7 @@ try {
     ] };
     const book = { 'client-7': { id: 'client-7', name: 'Salma' } };
     const ctx = vm.createContext({ window: { KiwiDayReport: { businessDay }, KiwiPosSale: { feedDay: () => Promise.resolve(feed) } },
-      Date, Number, Math, isNaN, RegExp, String, Array, encodeURIComponent, fetch() {}, IS_DEMO: false, merchantSlug: () => 'm', SALES, RETAIN_DAYS: 7,
+      Date, Number, Math, isNaN, RegExp, String, Array, encodeURIComponent, fetch() {}, IS_DEMO: false, merchantSlug: () => 'm', SALES, RETAIN_DAYS: 7, retainDays: () => 7,
       remoteLine: (l) => l, srvMethod: (m) => [m], remoteMoney: () => ({}), persistDay() {}, root: null, state: {}, renderEchanges() {}, renderBadges() {}, icons() {},
       clById: (id) => book[id] || null });
     vm.runInContext(pick('retDayKey', 'retShiftDay', 'syncReturnSales', 'saleClient') + ';this.sync=syncReturnSales;this.saleClient=saleClient;', ctx);

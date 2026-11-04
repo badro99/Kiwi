@@ -16,11 +16,11 @@
  * Argent en centimes entiers. Le pourcentage B2B est tenu en centièmes de
  * pour cent (points de base, entier) : 15 % = 1500, 12,5 % = 1250.
  * ═══════════════════════════════════════════════════════════════════════════ */
-(function (root, factory) {
+(function (/** @type {any} */ root, factory) {
   var api = factory(root);
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.KiwiPolicies = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (/** @type {any} */ root) {
   'use strict';
 
   var DEFAULT_RETURN_DAYS = 7, MAX_RETURN_DAYS = 90;
@@ -93,7 +93,9 @@
   };
 
   /* ── Navigateur : le document `policies`, lu par la caisse et le tableau de bord ── */
-  var win = root && root.KiwiStore ? root : (typeof window !== 'undefined' ? window : null);
+  /* `root` is the browser's window (globalThis) on every page that has KiwiStore. */
+  var win = root && root.KiwiStore ? root : null;
+  var page = win && win.document;
   if (!win || !win.KiwiStore || typeof win.KiwiStore.define !== 'function') return pure;
   var store = win.KiwiStore.define('policies', {
     blank: function () { return {}; }, cloud: true,
@@ -137,8 +139,8 @@
     last = Date.now();
     return cloud.pull(false).catch(function () { return false; });
   }
-  if (typeof setInterval === 'function' && typeof document !== 'undefined') {
-    setInterval(function () { if (document.visibilityState === 'visible') refresh(); }, 60000);
+  if (typeof setInterval === 'function' && page) {
+    setInterval(function () { if (page.visibilityState === 'visible') refresh(); }, 60000);
   }
   /* Le pressing lit son taux par KiwiPressingOps (déjà chargé avant ce fichier
      sur la caisse et le tableau de bord) : la caisse du pressing n'a ainsi pas
@@ -148,7 +150,7 @@
     if (ops && !ops.b2b) ops.b2b = { percent: function () { return pressingB2bPercent(); } };
   }
   publishToPressing();
-  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('DOMContentLoaded', publishToPressing);
+  if (page && page.addEventListener) page.addEventListener('DOMContentLoaded', publishToPressing);
   return Object.assign({}, pure, {
     returnWindowDays: returnWindowDays, pressingB2bPercent: pressingB2bPercent,
     save: save, refresh: refresh, subscribe: store.subscribe,

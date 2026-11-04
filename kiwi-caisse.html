@@ -83,7 +83,7 @@
        ligne : une caisse dépairée ou réappairée en plein service se verrouille,
        et aucun appel /api/* ne part ailleurs avec les données du service
        d'origine (assets/till-tenant.js). -->
-  <script src="assets/till-tenant.js?v=6"></script>
+  <script src="assets/till-tenant.js?v=7"></script>
   <!-- Durable tenant-scoped command outbox. Dexie is vendored: the caisse can
        boot and bank transactions with no CDN and no build step. -->
   <script src="assets/vendor/dexie.min.js?v=1" defer></script>
@@ -237,7 +237,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=386" defer></script>
+  <script src="assets/pos-dispatch.js?v=387" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=10" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>
@@ -352,7 +352,7 @@
   <script src="assets/tenant-purge.js?v=11" defer></script>
   <!-- Le geste partagé qui pose l'appairage et déclenche cette purge. Partagé
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
-  <script src="assets/pairing-commit.js?v=7" defer></script>
+  <script src="assets/pairing-commit.js?v=8" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
   <script src="assets/caisse-pairing.js?v=72" defer></script>
   <script src="assets/kiwi-select.js?v=4" defer></script>

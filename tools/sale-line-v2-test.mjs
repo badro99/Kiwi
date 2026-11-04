@@ -35,6 +35,7 @@ const businessDate = () => '2026-01-01';
 const merchantCutoff = async () => 5;
 const merchantZone = async () => 'Africa/Casablanca';
 ${read('functions/api/_sale-truth.js').replace(/^import .*;$/gm, '').replace(/^export /gm, '')}
+${read('functions/api/_sale-stamp.js').replace(/^export /gm, '')}
 
 const MAX_AMOUNT_CENTS`);
 const mod = await import('data:text/javascript;base64,' + Buffer.from(api).toString('base64'));
@@ -103,6 +104,9 @@ ok('sale channel is written beside the immutable basket', rich._channel === 'cou
         args: [],
         bind(...args) { this.args = args; return this; },
         async run() {
+          // Only the sale INSERT counts: the customer and clock stamp that
+          // follows it (functions/api/_sale-stamp.js) is a separate UPDATE.
+          if (!/INSERT (OR IGNORE )?INTO sales\b/.test(sql)) return { success: true };
           attempts++;
           if (/lines, channel/.test(sql)) throw new Error('no such column: channel');
           fallbackBound = this.args;

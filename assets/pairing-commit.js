@@ -144,8 +144,8 @@
  * ticket suivent la corrigée. Le décalage est la MÉDIANE des derniers échantillons
  * (un seul faux ne le déplace pas) ; un échantillon dont l'aller-retour dépasse 2 s
  * est écarté, la réponse ayant voyagé trop longtemps pour dire l'heure à la seconde.
- * Chaque réponse réussie de /api/ du même site en fournit un (fetch enveloppé, sans
- * rien changer pour l'appelant). Au-delà de 5 min d'écart, un avis discret ; sans
+ * Chaque réponse réussie de /api/ du même site en fournit un (annoncée par
+ * assets/till-tenant.js, événement `kiwi:api-response`). Au-delà de 5 min d'écart, un avis discret ; sans
  * serveur joint, l'heure de l'appareil reste inchangée et rien ne s'affiche. Le
  * décalage est annoncé à la file des ventes par l'événement `kiwi:clock-skew`
  * (KiwiLive.now() le lit) : la caisse n'a pas à connaître ce module.
@@ -220,24 +220,13 @@
       if (sentAt != null) sample(d, sentAt, Date.now()); else anchor(Date.parse(d));
     } catch (_) {}
   }
-  /* Les réponses réussies de /api/ du même site, vues au passage. */
-  function sameApi(input) {
-    var url = typeof input === 'string' ? input : (input && input.url) || '';
-    try {
-      if (/^[a-z][a-z0-9+.-]*:/i.test(url)) { var u = new URL(url); if (u.origin !== window.location.origin) return false; url = u.pathname; }
-    } catch (_) { return false; }
-    return url.indexOf('/api/') === 0;
-  }
+  /* Les réponses réussies de /api/ du même site, annoncées par le filet réseau de
+   * la caisse (assets/till-tenant.js, seul à envelopper fetch ici). */
   try {
-    var plain = window.fetch;
-    if (typeof plain === 'function' && !plain.__kiwiClock) {
-      window.fetch = function (input) {
-        var sent = Date.now(), p = plain.apply(this, arguments);
-        if (p && p.then && sameApi(input)) p.then(function (res) { if (res && res.ok) observe(res, sent); }, function () {});
-        return p;
-      };
-      window.fetch.__kiwiClock = true;
-    }
+    document.addEventListener('kiwi:api-response', function (e) {
+      var d = e && e.detail;
+      if (d && d.res) observe(d.res, d.sentAt);
+    });
   } catch (_) {}
   try { if (skew) changed(); } catch (_) {}
   /* Un battement par minute tant que la caisse est ouverte : le plus haut point suit

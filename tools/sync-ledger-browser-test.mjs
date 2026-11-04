@@ -331,7 +331,9 @@ async function until(page, fn, arg, timeout = 20000) {
  * to ring a sale at 04:57 and another at 05:02 is to move the browser's Date,
  * for the till AND the dashboard that reads it. The server keeps its clock:
  * /api/sale accepts a past device time as the sale time, as it does for an
- * offline till that replays its queue. */
+ * offline till that replays its queue. The page reads the server's Date header
+ * in the same moved time, or the till's trusted clock (assets/pairing-commit.js)
+ * would learn the real hour and correct every sale back to it. */
 async function setClock(page, atMs) {
   const offset = atMs == null ? 0 : atMs - Date.now();
   if (page.__slClock) { try { await page.removeScriptToEvaluateOnNewDocument(page.__slClock); } catch (_) {} }
@@ -349,6 +351,12 @@ async function setClock(page, atMs) {
     D.parse = Real.parse; D.UTC = Real.UTC;
     Object.setPrototypeOf(D, Real);
     window.Date = D;
+    const headerGet = Headers.prototype.get;
+    Headers.prototype.get = function (name) {
+      const value = headerGet.call(this, name);
+      if (!value || String(name).toLowerCase() !== 'date' || !window.__slOffset) return value;
+      return new Real(Real.parse(value) + window.__slOffset).toUTCString();
+    };
   };
   page.__slClock = (await page.evaluateOnNewDocument(patch, offset)).identifier;
   try { await page.evaluate(patch, offset); } catch (_) {}

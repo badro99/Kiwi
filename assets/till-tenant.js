@@ -105,12 +105,15 @@
 
   /* ── Le filet réseau ────────────────────────────────────────────────────── */
   var blocked = [];
-  function blockedUrl(input) {
+  function apiPath(input) {
     var u;
-    try { u = new URL(String(input && input.url ? input.url : input), location.href); } catch (_) { return false; }
-    if (u.origin !== location.origin) return false;
-    if (u.pathname.indexOf('/api/') !== 0) return false;
-    return u.pathname.indexOf('/api/pair/') !== 0;
+    try { u = new URL(String(input && input.url ? input.url : input), location.href); } catch (_) { return ''; }
+    return u.origin === location.origin && u.pathname.indexOf('/api/') === 0 ? u.pathname : '';
+  }
+  function sameApi(input) { return !!apiPath(input); }
+  function blockedUrl(input) {
+    var path = apiPath(input);
+    return !!path && path.indexOf('/api/pair/') !== 0;
   }
   function note(input) {
     try {
@@ -126,7 +129,16 @@
         note(input);
         return Promise.reject(new TypeError('tenant-mismatch'));
       }
-      return nativeFetch.apply(this, arguments);
+      var sentAt = Date.now(), p = nativeFetch.apply(this, arguments);
+      /* Chaque réponse réussie de /api/ du même site est annoncée avec son heure
+         d'envoi : l'horloge de confiance (assets/pairing-commit.js) en tire un
+         échantillon sans envelopper fetch une deuxième fois. */
+      if (p && p.then && sameApi(input)) {
+        p.then(function (res) {
+          if (res && res.ok) try { document.dispatchEvent(new CustomEvent('kiwi:api-response', { detail: { res: res, sentAt: sentAt } })); } catch (_) {}
+        }, function () {});
+      }
+      return p;
     };
   }
   if (window.XMLHttpRequest && XMLHttpRequest.prototype) {

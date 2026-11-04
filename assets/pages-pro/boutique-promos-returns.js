@@ -534,7 +534,7 @@
 `}
       </div>`,
     });
-    if (real) import('./returns-policy.js?v=3').then((m) => m.mount());   // le réglage de fenêtre est réel sur un compte réel
+    if (real) import('./returns-policy.js?v=4').then((m) => m.mount());   // le réglage de fenêtre est réel sur un compte réel
     setTimeout(() => {
       const rs = document.querySelector('#ret-search');
       if (rs) rs.addEventListener('input', () => {
@@ -743,7 +743,7 @@
   };
 
   handlers['ret-policy-save'] = () => {
-    if (realReturnsStore()) { import('./returns-policy.js?v=3').then((m) => m.save()); return; }
+    if (realReturnsStore()) { import('./returns-policy.js?v=4').then((m) => m.save()); return; }
     const root = document.getElementById('retPolicy');
     const inputs = root ? root.querySelectorAll('input[type="number"]') : [];
     const win = inputs[0]?.value || '14';
