@@ -352,12 +352,12 @@
     "sha": "3a02da300a0d7b4e"
   },
   "assets/channel-health.js": {
-    "v": "6",
-    "sha": "55172b72987c7272"
+    "v": "7",
+    "sha": "10f0fe01f90b8201"
   },
   "assets/channel-link.js": {
-    "v": "202608272317",
-    "sha": "9600bb7cb2898c6a"
+    "v": "202608272318",
+    "sha": "93a56c5f358ce445"
   },
   "assets/channel-sales.js": {
     "v": "8",
@@ -388,8 +388,8 @@
     "sha": "879142556b70999c"
   },
   "assets/cloud-doc.js": {
-    "v": "13",
-    "sha": "d46a972b4f7bbcb7"
+    "v": "14",
+    "sha": "4ae63846c035074d"
   },
   "assets/color-palette.js": {
     "v": "7",
@@ -1620,16 +1620,16 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "343",
-    "sha": "43d072cbbb5ec94c"
+    "v": "344",
+    "sha": "a039933bc496cd35"
   },
   "assets/pos-epicerie.css": {
-    "v": "31",
+    "v": "32",
     "sha": "d6fa42fcbe6f00d8"
   },
   "assets/pos-epicerie.js": {
-    "v": "31",
-    "sha": "4aee3a9cd5a23c56"
+    "v": "32",
+    "sha": "73043f31c16dd04d"
   },
   "assets/pos-fastfood.css": {
     "v": "15",
@@ -2196,8 +2196,8 @@
     "sha": "066bc34edfcdd4a3"
   },
   "assets/venue-store.js": {
-    "v": "4",
-    "sha": "210e095896fcc506"
+    "v": "5",
+    "sha": "d6306e52e72f7a69"
   },
   "assets/venues.js": {
     "v": "71",
@@ -2212,8 +2212,8 @@
     "sha": "e77cd6f16fd580da"
   },
   "assets/vertical-state.js": {
-    "v": "7",
-    "sha": "30045b587b3564db"
+    "v": "9",
+    "sha": "2bb2e71e69695aaa"
   },
   "assets/vexel-neon.js": {
     "v": "2049",

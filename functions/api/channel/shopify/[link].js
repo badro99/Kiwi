@@ -158,18 +158,12 @@ function translate(o) {
 
 async function webhookSeen(env, shop, id) {
   if (!id) return false;
-  try {
-    return !!(await env.DB.prepare('SELECT 1 AS seen FROM shopify_webhook_events WHERE shop_domain = ? AND webhook_id = ?').bind(shop, id).first());
-  } catch (_) { return false; }
+  return !!(await env.DB.prepare('SELECT 1 AS seen FROM shopify_webhook_events WHERE shop_domain = ? AND webhook_id = ?').bind(shop, id).first());
 }
-
 async function rememberWebhook(env, shop, id, topic) {
   if (!id) return;
-  try {
-    await env.DB.prepare(
-      `INSERT OR IGNORE INTO shopify_webhook_events (shop_domain, webhook_id, topic, received_ts) VALUES (?, ?, ?, ?)`
-    ).bind(shop, id, topic, Date.now()).run();
-  } catch (_) {}
+  await env.DB.prepare(`INSERT OR IGNORE INTO shopify_webhook_events (shop_domain, webhook_id, topic, received_ts) VALUES (?, ?, ?, ?)`)
+    .bind(shop, id, topic, Date.now()).run();
 }
 
 /* Le domaine tapé à la connexion n'est pas forcément celui que Shopify met
@@ -280,7 +274,11 @@ async function applyShopifyOrderStock(env, merchant, order) {
       if (!kiwiVariantId || !qty) { unmatched++; continue; }
       const lineId = String(line && (line.id || line.variant_id) || '');
       const moveId = saleMoveId(ref, lineId);
-      if (existing.has(moveId)) continue;
+      if (existing.has(moveId)) {
+        const move = data.moves.find(m => String(m.id) === moveId);
+        short += Math.max(0, qty - Math.abs(Number(move.d) || 0));
+        continue;
+      }
       const variant = (data.variants || []).find((v) => v.id === kiwiVariantId);
       if (!variant) { unmatched++; continue; }
       // A later physical count already includes this historical order, just
@@ -290,10 +288,9 @@ async function applyShopifyOrderStock(env, merchant, order) {
       // Kiwi had fewer pieces than Shopify sold: no negative move is journalled,
       // but the shortfall is reported so the merchant can reconcile the count.
       short += qty - take;
-      if (!take) continue;
       left.set(kiwiVariantId, left.get(kiwiVariantId) - take);
       at = Number.isFinite(orderedAt) ? orderedAt : Math.max(at + 1, Number(variant.baseAt || variant.stockAt || 0) + 1);
-      data.moves.push({ id: moveId, vid: kiwiVariantId, d: -take, at, why: 'vente', ref: `shopify:${ref}`.slice(0, 64) });
+      data.moves.push({ id: moveId, vid: kiwiVariantId, d: -take, at, why: take ? 'vente' : 'solde-shopify', ref: `shopify:${ref}`.slice(0, 64) });
       existing.add(moveId); applied++;
     }
     if (!applied) return { applied: 0, unmatched, short };
@@ -315,6 +312,10 @@ async function persistStockWork(env, merchant, order) {
 }
 
 export async function onRequestPost(context) {
+  try { return await receiveWebhook(context); }
+  catch (_) { return json({ error: 'webhook-storage-unavailable' }, 503); }
+}
+async function receiveWebhook(context) {
   const { request, env, params } = context;
   if (!env.DB) return json({ error: 'not-configured' }, 503);
 
@@ -394,9 +395,7 @@ export async function onRequestPost(context) {
   }
 
   const deliveryId = str(request.headers.get('X-Shopify-Webhook-Id'), 120);
-  if ((topic === 'app/uninstalled' || topic === 'inventory_levels/update'
-       || topic === 'orders/cancelled' || topic === 'refunds/create')
-      && await webhookSeen(env, shop || known, deliveryId)) {
+  if (await webhookSeen(env, shop || known, deliveryId)) {
     return json({ ok: true, duplicate: true });
   }
 
@@ -443,7 +442,12 @@ export async function onRequestPost(context) {
   const cur = str(o && (o.currency || o.presentment_currency), 8).toUpperCase();
   if (cur && cur !== 'MAD') {
     await mark(env, link.id, false, 'devise ' + cur + ' · seul le dirham est géré');
-    return json({ error: 'bad-currency', currency: cur }, 422);
+    await env.DB.prepare(`INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
+      VALUES (?, ?, ?, 1, ?) ON CONFLICT(merchant, feature) DO NOTHING`)
+      .bind(String(link.merchant || '').toLowerCase(), 'shopify-currency:' + str(o.id || o.name || deliveryId, 96),
+        JSON.stringify({ code: 'unsupported-currency', currency: cur, orderRef: str(o.id || o.name, 96) }), Date.now()).run();
+    await rememberWebhook(env, shop || known, deliveryId, topic);
+    return json({ ok: true, issue: 'unsupported-currency', currency: cur });
   }
 
   const t = translate(o);

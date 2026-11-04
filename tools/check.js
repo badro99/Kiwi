@@ -629,7 +629,7 @@ for (const test of [
   'economat-properties-test.mjs',
   'economat-split-test.mjs',
   'shopify-sync-properties-test.mjs',
-  'shopify-inbound-stock-limits-test.mjs',
+  'shopify-inbound-stock-limits-test.mjs', 'server-credit-truth-test.mjs', 'server-shopify-truth-test.mjs',
   'kitchen-properties-test.mjs',
   'booking-manage-test.mjs',
   'locale-booking-wave-n-test.mjs',

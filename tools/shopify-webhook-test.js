@@ -48,7 +48,7 @@ function makeDB() {
   const db = {
     _t: T,
     prepare(sql) {
-      if (sql.includes('shopify_inbound_stock')) {
+      if (sql.includes('shopify_inbound_stock') || sql.includes('INSERT INTO store_docs')) {
         let values = [];
         return {
           bind(...args) { values = args; return this; },
@@ -326,8 +326,8 @@ const ORDER = (over) => JSON.stringify(Object.assign({
   /* ── 8 · la devise ──────────────────────────────────────────────────────── */
   const eur = ORDER({ id: 999, currency: 'EUR', total_price: '240.00' });
   r = await signed(linkId, eur);
-  ok('une commande en euros est refusée, pas imprimée en dirhams',
-    r.status === 422 && r.body.error === 'bad-currency', JSON.stringify(r.body));
+  ok('une commande en euros est signalée et acquittée, sans ticket en dirhams',
+    r.status === 200 && r.body.issue === 'unsupported-currency', JSON.stringify(r.body));
   ok('…aucun ticket n\'a été créé pour elle', DB._t.orders.length === 3);
   ok('…et la raison est lisible par le commerçant',
     /devise EUR/.test(DB._t.channel_links.find((l) => l.id === linkId).last_err || ''));

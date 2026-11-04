@@ -465,6 +465,10 @@
       out.commands = out.commands.slice(-300);
       return out;
     },
+    onPullError: function () {
+      var L = function (fr, en, ar) { var l = (document.documentElement.lang || 'fr').slice(0, 2); return l === 'en' ? en : l === 'ar' ? ar : fr; };
+      window.Kiwi?.toast?.(L('Carnet de crédit indisponible', 'Credit book unavailable', 'دفتر الديون غير متاح'), { type: 'error', force: true, desc: L('La lecture du serveur a échoué. Réessayez.', 'The server read failed. Try again.', 'تعذرت القراءة من الخادم. أعد المحاولة.') });
+    },
     onRefused: function (reason) {
       try {
         window.Kiwi?.toast?.('Synchronisation métier refusée', {

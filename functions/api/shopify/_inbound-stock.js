@@ -36,6 +36,7 @@ export async function flushInboundStock(env, apply, merchant = '', ref = '', lim
     try { result = await apply(env, row.merchant, JSON.parse(row.payload)); }
     catch (_) { error = 'inventory-write-failed'; }
     const done = !!result && !result.unmatched;
+    if (result && result.short) error = JSON.stringify({ code: 'stock-short', orderRef: row.order_ref, short: result.short });
     if (!done && !error) error = 'inventory-mapping-or-write-pending';
     const attempts = Number(row.attempts || 0) + 1;
     const dead = !done && attempts >= INBOUND_MAX_ATTEMPTS;
