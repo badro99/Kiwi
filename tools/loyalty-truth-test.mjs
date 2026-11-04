@@ -273,6 +273,19 @@ console.log('\nMaison : la remise fidélité et le toast');
   }
 }
 
+// Drive a cash gesture and return only the resulting runtime state. These
+// assertions inspect completed checkout output, never the source passed to vm.
+async function payActualTicket(w, amount) {
+  w.c.checkout();
+  w.$$('[data-bq-m]').find(n=>n.dataset.bqM==='especes').onclick();
+  w.$('#bq-cash-in').value=String(amount);
+  w.$('#bq-cash-in').oninput({target:w.$('#bq-cash-in')});
+  w.click('#bq-cash-ok');
+  for(let i=0;i<30;i++) await new Promise(setImmediate);
+  return { sales: JSON.parse(JSON.stringify(w.c.SALES)), busy: w.c.state.checkoutBusy,
+    reward: w.c.state.ticket.reward };
+}
+
 // Full boutique reward confirmation -> checkout commit -> immutable receipt.
 for (const accepted of [true, false]) {
   const w = world('boutique'), c = w.c;
@@ -309,18 +322,20 @@ for (const accepted of [true, false]) {
   load(c,'assets/pos-boutique/receipt-doc.js',['receiptPrinterReady','receiptDocInput']);
   load(c,'assets/pos-boutique/checkout.js',['printReceiptNow']);
   c.$=(selector,...args)=>selector==='#bq-today'?{textContent:''}:w.$(selector,...args);
-  c.checkout();
-  w.$$('[data-bq-m]').find(n=>n.dataset.bqM==='especes').onclick();
-  w.$('#bq-cash-in').value='22.45';w.$('#bq-cash-in').oninput({target:w.$('#bq-cash-in')});
-  w.click('#bq-cash-ok');
-  for(let i=0;i<30;i++) await new Promise(setImmediate);
+  await payActualTicket(w, 22.45).then(async outcome => {
   if(accepted){
-    check(c.SALES.length===1 && c.SALES[0].total===22.45 && c.SALES[0].discount===2.5,'accepted reward commits the actual discounted checkout once');
-    check(c.SALES[0].rc?.totals.total===22.45 && c.SALES[0].rc.totals.discount===2.5 && c.SALES[0].rc.totals.subtotal===24.95 && c.SALES[0].rc.pay[0].amount===22.45,'actual receipt freezes subtotal, reward, paid total and tender');
+    check(outcome.sales.length===1 && outcome.sales[0].total===22.45 && outcome.sales[0].discount===2.5,'accepted reward commits the actual discounted checkout once');
+    check(outcome.sales[0].rc?.totals.total===22.45 && outcome.sales[0].rc.totals.discount===2.5 && outcome.sales[0].rc.totals.subtotal===24.95 && outcome.sales[0].rc.pay[0].amount===22.45,'actual receipt freezes subtotal, reward, paid total and tender');
     check(Number(server.row().points)<100,'actual reservation spends server points');
   } else {
-    check(c.SALES.length===0 && ticket.reward===undefined,'refused reservation stops the actual checkout before sale and receipt');
+    check(outcome.sales.length===0 && ticket.reward===undefined,'refused reservation stops the actual checkout before sale and receipt');
+    check(outcome.busy===false, 'refused reward releases the editor for recovery');
+    await payActualTicket(w, 24.95).then(recovered => {
+    check(recovered.sales.length===1 && recovered.sales[0].total===24.95, 'after refusal the same ticket can be paid at its undiscounted price');
+    check(recovered.sales[0].rc?.totals.total===24.95 && recovered.sales[0].rc.pay[0].amount===24.95, 'recovered checkout prints the actual full-price tender');
+    });
   }
+  });
   server.raw.close();
 }
 

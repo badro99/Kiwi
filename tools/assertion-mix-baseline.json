@@ -10,7 +10,7 @@
       "total": 9
     },
     "ai-routes-test.mjs": {
-      "text": 30,
+      "text": 26,
       "total": 64
     },
     "amira-integration-test.mjs": {
@@ -103,7 +103,7 @@
     },
     "caisse-app-split-test.mjs": {
       "text": 12,
-      "total": 59
+      "total": 60
     },
     "caisse-chip-gate-test.mjs": {
       "text": 13,
@@ -133,10 +133,6 @@
       "text": 15,
       "total": 41
     },
-    "caisse-payment-guards-test.mjs": {
-      "text": 10,
-      "total": 40
-    },
     "caisse-product-art-test.mjs": {
       "text": 16,
       "total": 58
@@ -159,7 +155,7 @@
     },
     "cashier-cancel-test.mjs": {
       "text": 11,
-      "total": 21
+      "total": 22
     },
     "catalog-merge-properties-test.mjs": {
       "text": 19,
@@ -223,7 +219,7 @@
     },
     "credit-book-test.mjs": {
       "text": 65,
-      "total": 166
+      "total": 175
     },
     "critical-flow-test.mjs": {
       "text": 17,
@@ -302,8 +298,8 @@
       "total": 69
     },
     "floorplan-sync-test.js": {
-      "text": 41,
-      "total": 98
+      "text": 34,
+      "total": 94
     },
     "font-coverage-test.mjs": {
       "text": 11,
@@ -371,7 +367,7 @@
     },
     "hotel-properties-test.mjs": {
       "text": 28,
-      "total": 142
+      "total": 145
     },
     "hotel-split-test.mjs": {
       "text": 15,
@@ -426,8 +422,8 @@
       "total": 26
     },
     "kds-data-states-test.mjs": {
-      "text": 45,
-      "total": 82
+      "text": 43,
+      "total": 96
     },
     "kds-recall-test.mjs": {
       "text": 13,
@@ -462,8 +458,8 @@
       "total": 49
     },
     "landing-claims-test.mjs": {
-      "text": 35,
-      "total": 49
+      "text": 33,
+      "total": 46
     },
     "landing-demo-funnel-test.mjs": {
       "text": 63,
@@ -484,10 +480,6 @@
     "lock-greeting-truth-test.mjs": {
       "text": 77,
       "total": 114
-    },
-    "loyalty-truth-test.mjs": {
-      "text": 12,
-      "total": 44
     },
     "maison-client-history-test.mjs": {
       "text": 7,
@@ -661,17 +653,13 @@
       "text": 6,
       "total": 11
     },
-    "orderpro-formula-explicit-choice-test.mjs": {
-      "text": 10,
-      "total": 15
-    },
     "orderpro-guest-api-test.mjs": {
       "text": 11,
       "total": 42
     },
     "orderpro-guest-bill-test.mjs": {
       "text": 16,
-      "total": 47
+      "total": 48
     },
     "orderpro-guest-hub-test.mjs": {
       "text": 23,
@@ -692,10 +680,6 @@
     "orderpro-session-reorder-test.mjs": {
       "text": 27,
       "total": 30
-    },
-    "pairing-parity-test.mjs": {
-      "text": 13,
-      "total": 38
     },
     "pairing-resolver-test.mjs": {
       "text": 15,
@@ -791,7 +775,7 @@
     },
     "printer-split-test.mjs": {
       "text": 17,
-      "total": 31
+      "total": 35
     },
     "production-split-void-menu-test.mjs": {
       "text": 19,
@@ -870,8 +854,8 @@
       "total": 65
     },
     "salle-scan-test.mjs": {
-      "text": 27,
-      "total": 40
+      "text": 26,
+      "total": 42
     },
     "scan-view-test.mjs": {
       "text": 6,
@@ -1006,8 +990,8 @@
       "total": 31
     },
     "table-transfer-merge-test.mjs": {
-      "text": 23,
-      "total": 25
+      "text": 19,
+      "total": 21
     },
     "takeout-confirmation-test.js": {
       "text": 13,
@@ -1038,8 +1022,8 @@
       "total": 24
     },
     "team-truth-test.mjs": {
-      "text": 30,
-      "total": 88
+      "text": 20,
+      "total": 93
     },
     "tickets-i18n-test.mjs": {
       "text": 15,

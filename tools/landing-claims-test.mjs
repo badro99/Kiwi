@@ -10,6 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { checkPricingRuntime, checkAudienceRuntime } from './landing-runtime.mjs';
 import { pricingCopy, prices, formatPrice } from './landing-pricing.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -143,15 +144,17 @@ const pricingChunks = [...chunkRefs].filter(chunk => chunk.includes('2c2tj5hx4r2
 ok(pricingChunks.length === 2, 'one shared pricing chunk and one Spanish copy: ' + pricingChunks);
 for (const chunk of pricingChunks) {
   const code = read(chunk);
+  for (const locale of ['fr', 'en', 'ar']) checkPricingRuntime(path.join(ROOT, chunk), pricingCopy[locale], locale);
   const rows = code.match(/let x=(\[.*?\]);/)?.[1];
   ok(JSON.stringify(JSON.parse(rows || 'null')) === JSON.stringify(prices), `${chunk} explicit monthly, annual equivalent and annual total rows`);
-  ok(code.includes('annual=m&&!price?.fixed'), `${chunk} gives Ultra no annual price`);
-  ok(code.includes('l.billedYearly.replace("{total}",f(price.total))'), `${chunk} uses exact annual payments, preserving Pro 4,200`);
-  ok(code.includes('tier.signupPlan?"/dashboard.html?plan="+tier.signupPlan+"&period="+(annual?"annual":"monthly")'), `${chunk} plan CTA carries the requested offer and displayed billing period to signup`);
   const name = path.basename(chunk, '.js');
   const sha = crypto.createHash('sha256').update(code).digest('hex');
   const hashed = chunk.startsWith('es/') ? name.split('-').pop() === sha.slice(0, 16) : name.split('-').pop() === sha.slice(0, 8);
   ok(hashed, `${chunk} name matches its content hash`);
+}
+for (const [page, locale] of Object.entries(pages)) {
+  const chunk = pricingChunks.find(file => file.startsWith(locale === 'es' ? 'es/' : '_next/'));
+  checkAudienceRuntime(path.join(ROOT, chunk), read(page));
 }
 ok(JSON.stringify(prices.map(p => p.monthly)) === '[150,300,399,1499]', 'approved monthly prices');
 ok(JSON.stringify(prices.slice(0,3).map(p => p.annual)) === '[99,249,349]', 'approved monthly equivalents');

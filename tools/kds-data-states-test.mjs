@@ -145,8 +145,6 @@ const hangingFetch = (seen) => (url, opts) => new Promise((resolve, reject) => {
 }
 
 /* ══ 2 · Les gestes : abandonnés à l'âge, jamais au compte ═══════════════ */
-ok('BUMP_TRIES a disparu du passe', !/BUMP_TRIES/.test(cuisine));
-ok('la file des gestes est bornée par STALE_MS', /Date\.now\(\) - \(Number\(job\.at\) \|\| 0\) >= STALE_MS/.test(cuisine));
 
 const bumpsSrc = slice('  function bumpsKey() {', '  /* ── La file');
 function bumpHarness({ seed = {}, bump, S: extra = {} } = {}) {
@@ -375,7 +373,7 @@ function painter() {
     Date, JSON, Object, Array, Math, String, Number,
   });
   vm.runInContext(paintSrc, ctx);
-  return { ctx, S, writes, listeners, timers };
+  return { ctx, S, writes, els, listeners, timers };
 }
 {
   const p = painter();
@@ -401,6 +399,44 @@ function painter() {
   p.S.orders.d = order('d');
   p.ctx.paint();
   ok('un relâché perdu ne gèle pas l’écran (8 s)', p.writes['s-new'] === 4);
+}
+
+// Assembled board: real grouping, card markup, empty states and paint run
+// together. Only time, DOM storage and the station tab bar are test edges.
+{
+  const p = painter();
+  Object.assign(p.ctx, { T: k => k, esc: value => String(value ?? ''), SVG: {},
+    elapsed: () => 60, urgency: () => 'ok', mmss: () => '1:00', hm: () => '12:00' });
+  p.ctx.window = p.ctx;
+  vm.runInContext(slice('  function matches(o) {', '  function stationBar() {'), p.ctx);
+  p.S.orders = {}; p.S.loaded = false; p.S.live = null;
+  p.ctx.paint();
+  assert.ok(p.els['s-new'].innerHTML.includes('board.wait'));
+  assert.equal(p.els['n-new'].textContent, '…');
+  p.S.live = false; p.ctx.paint();
+  assert.ok(p.els['s-new'].innerHTML.includes('board.down'));
+  p.S.loaded = true; p.S.live = true; p.ctx.paint();
+  assert.ok(p.els['s-new'].innerHTML.includes('empty.new'));
+  assert.equal(p.els['n-new'].textContent, 0);
+  p.S.orders.a = order('a', { lines: [{ name: 'Soup', qty: 2, station: 'hot' }] });
+  p.ctx.paint();
+  assert.ok(p.els['s-new'].innerHTML.includes('Soup') && p.els['s-new'].innerHTML.includes('data-take="a"'));
+  p.S.orders.a.lines[0].stationAccepted = true; p.ctx.paint();
+  assert.equal(p.els['n-new'].textContent, 0);
+  assert.equal(p.els['n-cook'].textContent, 1);
+  assert.ok(p.els['s-cook'].innerHTML.includes('data-ready="a"'));
+  p.S.pendingBumps = { ready: { id: 'a', failed: true } };
+  p.ctx.unsyncedIds = () => ['a']; p.ctx.paint();
+  assert.ok(p.els['s-cook'].innerHTML.includes('sync.pending'));
+  p.S.orders.a.status = 'ready'; delete p.S.pendingBumps.ready;
+  p.ctx.unsyncedIds = () => []; p.ctx.paint();
+  assert.equal(p.els['n-cook'].textContent, 0);
+  assert.equal(p.els['n-pass'].textContent, 1);
+  assert.ok(p.els['s-pass'].innerHTML.includes('data-served="a"'));
+  delete p.S.orders.a; p.ctx.paint();
+  assert.equal(p.els['n-pass'].textContent, 0);
+  assert.ok(!p.els['s-pass'].innerHTML.includes('Soup'));
+  passed++; console.log('  ✓ real board transitions loading/offline/empty/new/cooking/unsynced/ready/removed');
 }
 
 /* ══ 5 · Le rythme : espacement, écran caché, configuration ══════════════ */

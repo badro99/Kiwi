@@ -819,7 +819,9 @@
    *   v = { code, amount, balance, holderName, motif, from, at, until } */
   function voucher(v, opts) {
     v = v || {};
-    var doc = build({ ts: v.at || Date.now() }, opts);
+    var doc = build({ ts: v.at || Date.now(),
+      total: Math.abs(num(v.balance != null ? v.balance : v.amount)),
+      subtotal: Math.abs(num(v.amount != null ? v.amount : v.balance)) }, opts);
     var V = VOUCHER[doc.lang] || VOUCHER.fr;
     // `until` is the instant the credit expires, at the business-day boundary:
     // the last valid day is the business day just before it (like the till's

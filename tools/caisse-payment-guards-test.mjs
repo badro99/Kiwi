@@ -69,9 +69,6 @@ function fn(name, src = caisse) {
   ctx.vrapEditingNum = null;
   ok(ctx.currentVrapSplit() === null, 'a new cart does not inherit an order\'s split');
   ok(ctx.savedTakeawaySplitFor({ num: 8 }) === eight && ctx.savedTakeawaySplitFor({ num: 9 }) === null, 'the takeaway board matches a split by order number');
-  ok(!/let vrapSplit\b/.test(caisse), 'the single global vrapSplit slot is gone');
-  ok(/vrapSplits: Array\.from\(vrapSplits\.entries\(\)\)/.test(caisse), 'every takeaway split survives a reload');
-  ok(/vrapSplits\.set\(vrapSplitKey\(d\.vrapSplit\.orderNum\), d\.vrapSplit\)/.test(caisse), 'a shift saved with the old single slot still restores');
 }
 
 /* ── « Encaisser » de la commande ne rouvre pas l'addition entière ──────── */
@@ -96,12 +93,8 @@ function fn(name, src = caisse) {
 
 /* ── fusionner deux tables n'efface pas ce qui est déjà payé ─────────────── */
 {
-  const merge = fn('confirmCaisseMerge');
-  const guard = merge.indexOf('liveTableSplit(id)');
-  const clear = merge.indexOf('tableSplits.delete(source)');
-  ok(guard > 0 && clear > guard, 'the merge refuses before it clears the splits');
-  ok(/splitPaidCount\(sp\) > 0/.test(merge) && /Un split déjà encaissé est en cours/.test(merge), 'a split with a paid part blocks the merge, with a message');
-  ok(guard < merge.indexOf('await '), 'the guard runs before the server merge is awaited');
+  // Executed with real persistence/reload in field-table-transfer-test.mjs.
+
 }
 
 /* ── maison : pas de scan pendant qu'une fenêtre (paiement) est ouverte ──── */

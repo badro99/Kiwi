@@ -391,6 +391,7 @@ assert.equal(merge.tables['1'].orderStartedAt, now - 120000);
 assert.equal(merge.tables['1'].timerSession, 'ses-field-target');
 assert.equal(merge.phonePending.get('1'), 2);
 assert.equal(merge.phoneSessionOf('2'), '');
+assert.ok(merge.messages.some(m => m.includes('ligne')), 'merge reports canonical moved count');
 evidence('actual merge keeps both bills and pending markers under target visit and preserves oldest timer anchor');
 
 const revision = db.prepare("SELECT seen_ts FROM table_sessions WHERE id = 'ses-field-target'").get().seen_ts;
@@ -398,6 +399,7 @@ merge.phoneSeats.get('1').revision = revision;
 merge.ctrfFromId = '1'; merge.ctrfSelectedToId = '2';
 const payloads = [];
 merge.fetch = async (_url, init) => {
+  assert.equal(JSON.parse(init.body).merchant, merchant, 'client sends the paired merchant');
   payloads.push(JSON.parse(init.body).transferTable);
   const response = await queue.onRequestPost({ env, request: new Request('https://fixture.invalid/api/order/queue', {
     ...init, headers: { 'Content-Type': 'application/json', Cookie: cookie },
@@ -455,6 +457,48 @@ assert.equal(absent.tables['4'].status, 'ka-yaklo');
 assert.equal(absent.tables['1'].status, 'khawya');
 assert.ok(absent.messages.some(m => m.includes('actualiser')));
 evidence('missing visit retains existing API refusal and local state; no session or financial lines are fabricated');
+
+// Reload a partly paid split before trying either side of a merge. The real
+// persistence, restore, split lookup and merge handler must agree, before I/O.
+for (const paidTable of ['1', '2']) {
+  const original = context(); snapshotContext(original);
+  original.tables = { '1': occupied(), '2': occupied() };
+  original.tableOrders = { '1': [localLine()], '2': [localLine()] };
+  const split = { id: 'paid-split', total: 40, parts: [
+    { amount: 20, base: 20, paid: true, saleId: 'durable-cash', payMethod: 'cash' },
+    { amount: 20, base: 20, paid: false },
+  ] };
+  original.tableSplits.set(paidTable, split);
+  original.vrapSplits.set('n7', { orderNum: 7, parts: [{ paid: true, amount: 10 }] });
+  original.vrapSplits.set('n8', { orderNum: 8, parts: [{ paid: true, amount: 15 }] });
+  let snapshot;
+  original.localStorage = { setItem: (_key, value) => { snapshot = JSON.parse(value); } };
+  vm.runInContext(caisseTestSource.withSettlement(fn('persistShift')), original);
+  assert.equal(original.persistShift(), true);
+  const restored = context(); snapshotContext(restored);
+  restored.tables = { '1': occupied(), '2': occupied() };
+  vm.runInContext(caisseTestSource.withSettlement(fn('reviveJournalEntry') + '\n' + fn('restoreShift')), restored);
+  restored.restoreShift(snapshot);
+  assert.equal(restored.savedTakeawaySplitFor({ num: 7 }).parts[0].amount, 10);
+  assert.equal(restored.savedTakeawaySplitFor({ num: 8 }).parts[0].amount, 15);
+  assert.equal(restored.savedTakeawaySplitFor({ num: 9 }), null);
+  const legacy = context(); snapshotContext(legacy);
+  vm.runInContext(caisseTestSource.withSettlement(fn('reviveJournalEntry') + '\n' + fn('restoreShift')), legacy);
+  legacy.restoreShift({ ...snapshot, vrapSplits: undefined, vrapSplit: snapshot.vrapSplits[0][1] });
+  assert.equal(legacy.savedTakeawaySplitFor({ num: 7 }).parts[0].amount, 10, 'old single split migrates under its order number');
+  const before = JSON.stringify([restored.tableOrders, [...restored.tableSplits]]);
+  let requests = 0, writes = 0;
+  restored.fetch = async () => { requests++; throw Error('merge must refuse before network'); };
+  restored.persistShift = () => { writes++; };
+  await restored.confirmCaisseMerge();
+  assert.equal(requests, 0, 'a restored paid split blocks merge before any request');
+  assert.equal(writes, 0, 'refusal does not persist destructive changes');
+  assert.equal(JSON.stringify([restored.tableOrders, [...restored.tableSplits]]), before);
+  assert.equal(restored.tableSplits.get(paidTable).parts[0].saleId, 'durable-cash');
+  assert.equal(restored.nodes.get('#cmrg-confirm').disabled, false);
+  assert.ok(restored.messages.some(m => m.includes('split')));
+}
+evidence('persisted paid splits on either merge side refuse before I/O and retain the payment receipt');
 
 db.close();
 console.log(`\n${checks} working-source regression scenarios passed.`);

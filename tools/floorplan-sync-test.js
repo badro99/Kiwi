@@ -495,15 +495,12 @@ function run(opts) {
    * disparaît des deux ; l'époque continue de gagner en bloc ; une tombale
    * expirée est compactée sans résurrection ; les deux surfaces passent par elle. */
   const CORE = coreTestSource.readFileSync(path.join(ROOT, 'assets', 'floorplan-core.js'), 'utf8');
-  const Core = new Function(
-    'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n'
-    + CORE.match(/let PDS_HLC = [^;]+;/)[0] + '\n' + CORE.match(/const PDS_CLOCK_AHEAD = [^;]+;/)[0] + '\n'
-    + extractFn(CORE, 'pdsSane') + '\n' + extractFn(CORE, 'pdsSeenMax') + '\n' + extractFn(CORE, 'pdsTick') + '\n'
-    + CORE.match(/const PDS_STAMP_SKIP = [^;]+;/)[0] + '\n' + extractFn(CORE, 'pdsCanon') + '\n'
-    + extractFn(CORE, 'pdsBury') + '\n' + extractFn(CORE, 'pdsUnbury') + '\n'
-    + extractFn(CORE, 'pdsGoneOf') + '\n' + extractFn(CORE, 'pdsMergePlans')
-    + '\nreturn { pdsBury, pdsUnbury, pdsGoneOf, pdsMergePlans };'
-  )();
+  const drawingContext = { window: {}, console };
+  vm.createContext(drawingContext);
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/floorplan-core.js'), 'utf8'), drawingContext);
+  const shared = drawingContext.window.KiwiFloorCore;
+  const Core = { pdsBury: shared.bury, pdsUnbury: shared.unbury,
+    pdsGoneOf: drawingContext.pdsGoneOf, pdsMergePlans: shared.mergePlans };
   const mk = (ids, extra) => Object.assign({ zones: [{ id: 'z1' }], tables: ids.map(id => ({ id })), elements: [], staff: [] }, extra || {});
 
   // Cet appareil a supprimé t2 : l'union ne la ressuscite plus depuis le serveur.
@@ -558,10 +555,32 @@ function run(opts) {
   const m5 = Core.pdsMergePlans(mk(['t1', 'tX']), mk(['t1'], { epoch: 1 }), mergeDefault);
   eq('époque supérieure : adoption en bloc (fusion partagée)', m5.tables.length + '@' + m5.epoch, '1@1');
 
-  // Les deux surfaces passent par la fusion partagée.
-  ok('pages-pro.js › pdsMerge délègue à pdsMergePlans', /function pdsMerge\(mine, theirs\) \{[\s\S]{0,900}pdsMergePlans\(mine, theirs, M\)/.test(PAGES));
-  ok('kiwi-caisse.html › l’attache floorplan passe par KiwiFloorCore.mergePlans', /feature: 'floorplan',[\s\S]{0,2500}mergePlans\(mine, theirs, M\)/.test(CAISSE));
-  ok('floorplan-core.js expose mergePlans / bury / unbury', /mergePlans: pdsMergePlans, bury: pdsBury, unbury: pdsUnbury/.test(CORE));
+  // Both shipped entry points execute the shared merge, then the drawing
+  // consumes the restored per-instance geometry, rather than its type default.
+  drawingContext.window.KiwiCloudDoc = { mergeDefault };
+  vm.runInContext(extractFn(PAGES, 'pdsMerge'), drawingContext);
+  const dashboardMerge = drawingContext.pdsMerge(local, mk(['t1', 't2']));
+  eq('dashboard merge delegates tombstone removal', dashboardMerge.tables.map(t => t.id).join(','), 't1');
+  const till = run({ cloudAt: 0, enabledAt: 0 });
+  till.win.KiwiFloorCore = shared;
+  const received = till.cfg.merge(local, mk(['t1', 't2']), mergeDefault);
+  eq('attached till merge delegates tombstone removal', received.tables.map(t => t.id).join(','), 't1');
+  const disk = new Map();
+  drawingContext.localStorage = { getItem: k => disk.get(k) || null, setItem: (k,v) => disk.set(k,v) };
+  drawingContext.pdsKey = () => 'plan:fixture';
+  drawingContext.PDS_LS_KEY = 'kiwiPlanDeSalle';
+  drawingContext.PDS_TRANSIENT_IDS = [];
+  drawingContext.window.KiwiVenue = { getCurrentVenueData: () => ({ custom: true, name: 'Fixture', slug: 'amira-cafe' }), getVenue: () => 'fixture' };
+  const liveDrawing = fs.readFileSync(path.join(ROOT, 'assets/pages/tables-drawing.js'), 'utf8');
+  vm.runInContext(extractFn(liveDrawing, 'pdsSerialize') + '\n' + extractFn(liveDrawing, 'pdsWriteLocal'), drawingContext);
+  const edited = mk(['t1']); Object.assign(edited.tables[0], { type: 'rect4', x: 240, y: 180, w: 150, h: 90, rot: 30, seats: 6 });
+  drawingContext.pdsWriteLocal(edited);
+  const restored = JSON.parse(disk.get('kiwiPlanDeSalle:slug:amira-cafe'));
+  till.cfg.write(restored);
+  const table = till.cfg.read().tables[0], geometry = shared.geom(table);
+  eq('editor save mirrors the geometry to the paired till', [table.x, table.y, geometry.w, geometry.h, table.rot, geometry.seats].join(','), '240,180,150,90,30,6');
+  const output = shared.tableBody(geometry, '#EFE7D6', { s: '#0B6E4F', w: 1 });
+  ok('actual table drawing uses restored width and height', output.includes('width="150"') && output.includes('height="90"'));
   // Chaque chemin de suppression enterre ce qu'il retire.
   ok('suppression unitaire : pdsBury', /state\.tables\.splice\(state\.tables\.findIndex\(o => o\.id === id\), 1\);\s*if \(typeof pdsBury === 'function'\) pdsBury\(state, id\);/.test(PAGES));
   ok('suppression d’élément : pdsBury', /state\.elements\.splice\(state\.elements\.findIndex\(o => o\.id === id\), 1\);\s*if \(typeof pdsBury === 'function'\) pdsBury\(state, id\);/.test(PAGES));
