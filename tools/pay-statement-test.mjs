@@ -139,6 +139,42 @@ for (const lang of ['fr', 'en', 'ar']) {
   await controls['[data-pay-print]'].onclick();
   assert.equal(toasts.length, 1, 'une réponse illisible sur une écriture est incertaine, pas un succès');
   assert.equal(appended.srcdoc, shown, 'rien n est imprimé sur une réponse illisible');
+  /* r20 planning#A1/B0: the same totals with another name is another document. */
+  openPayStatement(uiCore, member.id, archive);
+  inputs[0].value = '20.00';
+  await new Promise(r => setTimeout(r, 20));
+  const beforeRename = count();
+  await controls['[data-pay-print]'].onclick();
+  assert.equal(count(), beforeRename, 'mêmes montants, même nom, mêmes heures : aucun nouveau numéro');
+  const liveRow = sqlite.prepare('SELECT * FROM pay_statements WHERE merchant = ? AND replaces_id IS NULL AND member_id = ? ORDER BY seq DESC').get(slug, member.id);
+  member.firstName = 'Renamed';
+  await controls['[data-pay-print]'].onclick();
+  assert.equal(count(), beforeRename + 1, 'un nom changé avec les mêmes totaux émet une correction');
+  const renamed = sqlite.prepare('SELECT * FROM pay_statements WHERE merchant = ? ORDER BY seq DESC').get(slug);
+  assert.equal(renamed.gross_cents, 16820); assert.ok(renamed.member_name.includes('Renamed'), 'le nom corrigé est celui du relevé');
+  assert.ok(renamed.replaces_id, 'la correction nomme le relevé remplacé');
+  hours[member.id]['2026-10-05'] = 7 + 10/60 + 0.00005;   // 0.18 s more: same gross at the centime, other hours
+  openPayStatement(uiCore, member.id, archive);
+  await new Promise(r => setTimeout(r, 20));
+  inputs[0].value = '20.00';
+  const beforeHours = count();
+  await controls['[data-pay-print]'].onclick();
+  assert.equal(statementRows(core, r.venue, period, [member], { [member.id]:2000 })[0].gross, 16820, 'fixture: mêmes totaux');
+  assert.equal(count(), beforeHours + 1, 'des heures changées avec les mêmes totaux émettent une correction');
+  /* r20 planning#B1: an advance reset to zero leaves the device copy too. */
+  saveAdvances(core, r.venue, period, { [member.id]:5000 });
+  openPayStatement(uiCore, member.id, archive);
+  inputs[0].value = '0';
+  await controls['[data-pay-save]'].onclick();
+  assert.deepEqual(savedAdvances(core, r.venue, period), {}, 'enregistrer zéro vide la copie locale');
+  saveAdvances(core, r.venue, period, { [member.id]:5000 });
+  openPayStatement(uiCore, member.id, archive);
+  await new Promise(r => setTimeout(r, 30));
+  assert.deepEqual(savedAdvances(core, r.venue, period), {}, 'un zéro venu du serveur remplace le montant gardé sur l appareil');
+  saveAdvances(core, r.venue, period, { [member.id]:5000 });
+  inputs[0].value = '0';
+  await controls['[data-pay-print]'].onclick();
+  assert.deepEqual(savedAdvances(core, r.venue, period), {}, 'imprimer avec une avance à zéro remplace le montant gardé');
   openPayStatement(uiCore, '*', archive);
   assert.ok(!form.body.includes(' selected'), 'batch defaults to all employees');
   delete globalThis.window; delete globalThis.document; delete globalThis.localStorage; delete globalThis.__store;

@@ -1404,8 +1404,8 @@
     "sha": "ec06fc3ff5b71a54"
   },
   "assets/pages-pro-office.js": {
-    "v": "14",
-    "sha": "37ccb836f96844f9"
+    "v": "15",
+    "sha": "00a1a32ea5a5d547"
   },
   "assets/pages-pro-spa-starter.js": {
     "v": "7",
@@ -1452,8 +1452,8 @@
     "sha": "4e68527e59cc46eb"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "203",
-    "sha": "24adcb13bf075eb1"
+    "v": "204",
+    "sha": "5bbdcbc1c876f47b"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1508,12 +1508,12 @@
     "sha": "1fc06c1fb77ddb4b"
   },
   "assets/planning/pay-statement-archive.js": {
-    "v": "1",
-    "sha": "8dbdbbb670b5c5f0"
+    "v": "2",
+    "sha": "ca745707121a81e2"
   },
   "assets/planning/pay-statement.js": {
-    "v": "10",
-    "sha": "7641d832de7ffc40"
+    "v": "11",
+    "sha": "33e43ef74fc53527"
   },
   "assets/planning/payroll-view.js": {
     "v": "15",

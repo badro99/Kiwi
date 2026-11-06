@@ -28,6 +28,14 @@ export function saveAdvances(core, venue, period, advances, storage = globalThis
   try { storage.setItem(advanceKey(core, venue, period), JSON.stringify(advances)); return true; } catch (_) { return false; }
 }
 
+/* The server value wins, zero included: an advance reset to nothing must leave
+ * the device copy too, or the old amount comes back during a later outage. */
+export function mergeAdvances(cache, fresh) {
+  const out = { ...cache };
+  for (const [id, cents] of Object.entries(fresh || {})) { if (cents > 0) out[id] = cents; else delete out[id]; }
+  return out;
+}
+
 export function statementRows(core, venue, period, members, advances = {}) {
   const key = core.teamKey(venue);
   return members.map(member => {
@@ -83,7 +91,7 @@ export function openPayStatement(core, selected, archiveOverride) {
       const id = input.getAttribute('data-pay-advance');
       if (Number.isSafeInteger(data.advances?.[id])) { stored[id] = data.advances[id]; if (input.value === typed.get(input)) input.value = data.advances[id] ? (data.advances[id] / 100).toFixed(2) : '0'; }
     }
-    saveAdvances(core, venue, period, { ...cached, ...Object.fromEntries(Object.entries(stored).filter(([, cents]) => cents > 0)) });
+    saveAdvances(core, venue, period, mergeAdvances(cached, stored));
     renderIssued();
   }).catch(() => { if (Object.keys(cached).length) core.toast(c.cached, { type:'info' }); });
 
@@ -107,7 +115,15 @@ export function openPayStatement(core, selected, archiveOverride) {
     return advances;
   };
   const payload = r => ({ memberId:r.id, memberName:r.name, hours:r.hours, rateCents:r.rate, baseCents:r.base, grossCents:r.gross, advanceCents:r.advance, netCents:r.net, rated:r.rated ? 1 : 0 });
-  const sameAmounts = (s, r) => s.grossCents === r.gross && s.advanceCents === r.advance && s.netCents === r.net && !!s.rated === !!r.rated;
+  /* Same document only when everything printed on it is the same: hours, rate,
+   * base and name as well as the totals (a corrected breakdown can land on the
+   * same gross). */
+  const sameAmounts = (s, r) => {
+    const x = s.snapshot || {};
+    return s.grossCents === r.gross && s.advanceCents === r.advance && s.netCents === r.net && !!s.rated === !!r.rated
+      && Number(x.hours) === Number(r.hours) && (x.rateCents == null ? null : x.rateCents) === (r.rate == null ? null : r.rate)
+      && Number(x.baseCents) === r.base && String(s.memberName || '') === String(r.name || '').slice(0, 120);
+  };
   /* One numbered statement per person. Unchanged amounts reuse the stored
    * statement (same number); changed amounts issue a correction naming it. */
   async function issueAll(rows) {
@@ -142,7 +158,7 @@ export function openPayStatement(core, selected, archiveOverride) {
     if (!archive) return core.toast(c.noServer, { type:'warning' });
     try { await archive.saveAdvances(period, advances); }
     catch (error) { return failure(error); }
-    saveAdvances(core, venue, period, Object.fromEntries(Object.entries(advances).filter(([, cents]) => cents > 0)));
+    saveAdvances(core, venue, period, mergeAdvances({}, advances));
     core.toast(c.saved, { type:'success' });
   };
   q('[data-pay-print]').onclick = async () => {
@@ -159,7 +175,7 @@ export function openPayStatement(core, selected, archiveOverride) {
     let numbered;
     try { numbered = await issueAll(rows); }
     catch (error) { return failure(error); }
-    saveAdvances(core, venue, period, { ...savedAdvances(core, venue, period), ...Object.fromEntries(Object.entries(advances).filter(([key]) => id === '*' || key === id)) });
+    saveAdvances(core, venue, period, mergeAdvances(savedAdvances(core, venue, period), Object.fromEntries(Object.entries(advances).filter(([key]) => id === '*' || key === id))));
     show(numbered, venue);
   };
   mdl.el.addEventListener?.('click', async event => {

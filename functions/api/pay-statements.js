@@ -1,8 +1,9 @@
 // /api/pay-statements — payroll advances and the archive of numbered pay statements.
 //
 //   GET  ?merchant=slug&id=<statementId>                    → { statement }   (reprint)
-//   GET  ?merchant=slug&periodStart=D&periodEnd=D           → { advances, statements }
-//   GET  ?merchant=slug                                     → { statements }  (latest 100)
+//   GET  ?merchant=slug&periodStart=D&periodEnd=D[&after=C] → { advances, statements, nextCursor }  (pages of 500, oldest first)
+//   GET  ?merchant=slug[&before=C]                          → { statements, nextCursor }  (pages of 100, newest first)
+//   A cursor is `issued_ts.year.seq`; nextCursor is null on the last page.
 //   POST { merchant, action:'advances', periodStart, periodEnd, advances:{ memberId: cents } }
 //   POST { merchant, action:'issue', periodStart, periodEnd, requestId, rows:[…], replacesId? }
 //
@@ -28,6 +29,9 @@ const ID = /^[A-Za-z0-9:_.-]{1,64}$/;
 const REQUEST_ID = /^[A-Za-z0-9_-]{8,64}$/;
 const MAX_ROWS = 200;
 const MAX_ATTEMPTS = 8;
+// ps- + requestId (64) + - + memberId (64): the longest id a valid request can build.
+const ID_MAX = 140;
+const PAGE = 500;
 const MAX_CENTS = 100000000000;
 
 const yearFormats = new Map();
@@ -47,6 +51,8 @@ const validDay = (d) => {
   return Number.isFinite(t) && new Date(t).toISOString().slice(0, 10) === d;
 };
 const cents = (n) => Number.isSafeInteger(n) && n >= 0 && n <= MAX_CENTS;
+const CURSOR = /^(\d{1,15})\.(\d{4})\.(\d{1,9})$/;
+const cursorOf = (row) => `${row.issued_ts}.${row.year}.${row.seq}`;
 const text = (v, max) => String(v == null ? '' : v).slice(0, max);
 
 async function ownerMerchant(request, env, asked) {
@@ -93,7 +99,7 @@ export async function onRequestGet({ request, env }) {
   try {
     const id = url.searchParams.get('id');
     if (id) {
-      const row = await env.DB.prepare(`SELECT ${COLUMNS} FROM pay_statements WHERE merchant = ? AND id = ?`).bind(merchant, text(id, 80)).first();
+      const row = await env.DB.prepare(`SELECT ${COLUMNS} FROM pay_statements WHERE merchant = ? AND id = ?`).bind(merchant, text(id, ID_MAX)).first();
       if (!row) return json({ error: 'not-found' }, 404);
       return json({ statement: (await withReplacements(env.DB, merchant, [row]))[0] });
     }
@@ -102,12 +108,19 @@ export async function onRequestGet({ request, env }) {
       if (!validDay(start) || !validDay(end)) return json({ error: 'bad-period' }, 400);
       const adv = (await env.DB.prepare('SELECT member_id, advance_cents FROM pay_advances WHERE merchant = ? AND period_start = ? AND period_end = ?')
         .bind(merchant, start, end).all()).results || [];
-      const rows = (await env.DB.prepare(`SELECT ${COLUMNS} FROM pay_statements WHERE merchant = ? AND period_start = ? AND period_end = ? ORDER BY issued_ts, seq LIMIT 500`)
-        .bind(merchant, start, end).all()).results || [];
-      return json({ advances: Object.fromEntries(adv.map((r) => [r.member_id, Number(r.advance_cents)])), statements: await withReplacements(env.DB, merchant, rows) });
+      const cur = url.searchParams.get('after') ? CURSOR.exec(url.searchParams.get('after')) : null;
+      if (url.searchParams.get('after') && !cur) return json({ error: 'bad-cursor' }, 400);
+      const page = (await env.DB.prepare(`SELECT ${COLUMNS} FROM pay_statements WHERE merchant = ? AND period_start = ? AND period_end = ?${cur ? ' AND (issued_ts, year, seq) > (?, ?, ?)' : ''} ORDER BY issued_ts, year, seq LIMIT ${PAGE + 1}`)
+        .bind(merchant, start, end, ...(cur ? [Number(cur[1]), Number(cur[2]), Number(cur[3])] : [])).all()).results || [];
+      const rows = page.slice(0, PAGE);
+      return json({ advances: Object.fromEntries(adv.map((r) => [r.member_id, Number(r.advance_cents)])), statements: await withReplacements(env.DB, merchant, rows), nextCursor: page.length > PAGE ? cursorOf(rows[rows.length - 1]) : null });
     }
-    const rows = (await env.DB.prepare(`SELECT ${COLUMNS} FROM pay_statements WHERE merchant = ? ORDER BY issued_ts DESC, seq DESC LIMIT 100`).bind(merchant).all()).results || [];
-    return json({ statements: await withReplacements(env.DB, merchant, rows) });
+    const before = url.searchParams.get('before') ? CURSOR.exec(url.searchParams.get('before')) : null;
+    if (url.searchParams.get('before') && !before) return json({ error: 'bad-cursor' }, 400);
+    const page = (await env.DB.prepare(`SELECT ${COLUMNS} FROM pay_statements WHERE merchant = ?${before ? ' AND (issued_ts, year, seq) < (?, ?, ?)' : ''} ORDER BY issued_ts DESC, year DESC, seq DESC LIMIT 101`)
+      .bind(merchant, ...(before ? [Number(before[1]), Number(before[2]), Number(before[3])] : [])).all()).results || [];
+    const rows = page.slice(0, 100);
+    return json({ statements: await withReplacements(env.DB, merchant, rows), nextCursor: page.length > 100 ? cursorOf(rows[rows.length - 1]) : null });
   } catch (_) { return json({ error: 'db-read-failed' }, 503); }
 }
 
@@ -145,7 +158,7 @@ function cleanRows(rows) {
  * tests pin them, the route passes the Worker clock and the merchant's zone. */
 export async function issueStatements(env, merchant, input, ctx) {
   const { start, end, rows, replacesId, requestId, now, year, by, venueName, ice } = ctx;
-  const ids = rows.map((r) => (requestId ? `ps-${requestId}-${r.memberId}`.slice(0, 120) : `ps-${crypto.randomUUID()}`));
+  const ids = rows.map((r) => (requestId ? `ps-${requestId}-${r.memberId}` : `ps-${crypto.randomUUID()}`));
   const stmts = [];
   rows.forEach((r, i) => {
     const snapshot = JSON.stringify({ venueName, ice, hours: r.hours, rateCents: r.rate, baseCents: r.base, grossCents: r.gross, advanceCents: r.advance, netCents: r.net, rated: r.rated });
@@ -204,7 +217,7 @@ export async function onRequestPost({ request, env }) {
   if (!rows) return json({ error: 'bad-rows' }, 400);
   const requestId = b.requestId == null ? '' : String(b.requestId);
   if (requestId && !REQUEST_ID.test(requestId)) return json({ error: 'bad-request-id' }, 400);
-  const replacesId = b.replacesId == null ? '' : text(b.replacesId, 120);
+  const replacesId = b.replacesId == null ? '' : text(b.replacesId, ID_MAX);
   try {
     if (replacesId) {
       if (rows.length !== 1) return json({ error: 'correction-is-one-statement' }, 400);

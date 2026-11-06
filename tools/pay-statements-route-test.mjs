@@ -192,5 +192,55 @@ await ok('bad input is refused and consumes no number', async () => {
   assert.equal((await issue(ownerA, [row('x2', 1000, 0)])).body.statements[0].seq, sqlite.prepare('SELECT MAX(seq) m FROM pay_statements WHERE merchant = ?').get(A).m, 'next number follows the last one with no hole');
 });
 
+await ok('r20 planning#A0: the longest valid id (request 64 + member 64) is stored whole and read back by id', async () => {
+  const requestId = 'r'.repeat(64), memberId = 'm'.repeat(64);
+  const made = await issue(ownerA, [row(memberId, 5000, 0)], { requestId });
+  assert.equal(made.status, 200);
+  const id = made.body.statements[0].id;
+  assert.equal(id, `ps-${requestId}-${memberId}`, 'id kept whole, no truncation');
+  assert.ok(id.length > 120);
+  const back = await get(ownerA, `merchant=${A}&id=${encodeURIComponent(id)}`);
+  assert.equal(back.status, 200, 'the reprint API finds it');
+  assert.equal(back.body.statement.number, made.body.statements[0].number);
+  const twin = await issue(ownerA, [row('m'.repeat(63) + 'n', 5000, 0)], { requestId });
+  assert.notEqual(twin.body.statements[0].id, id, 'two long members of one request never share an id');
+  const fix = await issue(ownerA, [row(memberId, 5100, 0)], { requestId: 'c'.repeat(64), replacesId: id });
+  assert.equal(fix.status, 200); assert.equal(fix.body.statements[0].replacesId, id, 'a long replaced id is accepted whole');
+});
+
+await ok('r20 planning#A2/B2: a period with more than 500 statements pages by cursor, nothing dropped; the client follows it', async () => {
+  const PP = { periodStart: '2026-11-02', periodEnd: '2026-11-08' };
+  const insert = sqlite.prepare(`INSERT INTO pay_statements (id, merchant, year, seq, number, member_id, member_name, period_start, period_end, gross_cents, advance_cents, net_cents, rated, snapshot, issued_ts, issued_by) VALUES (?, ?, 2090, ?, ?, 'cap', 'Cap', ?, ?, 100, 0, 100, 1, '{}', ?, 'owner')`);
+  sqlite.exec('BEGIN');
+  for (let i = 1; i <= 620; i++) insert.run('cap-' + i, A, i, 'RP-2090-' + String(i).padStart(4, '0'), PP.periodStart, PP.periodEnd, 1000 + Math.floor(i / 3));
+  sqlite.exec('COMMIT');
+  const q = `merchant=${A}&periodStart=${PP.periodStart}&periodEnd=${PP.periodEnd}`;
+  const first = await get(ownerA, q);
+  assert.equal(first.body.statements.length, 500); assert.ok(first.body.nextCursor, 'a cursor says there is more');
+  const second = await get(ownerA, q + '&after=' + first.body.nextCursor);
+  assert.equal(second.body.statements.length, 120); assert.equal(second.body.nextCursor, null);
+  const seen = new Set([...first.body.statements, ...second.body.statements].map((s) => s.id));
+  assert.equal(seen.size, 620, 'no statement lost or repeated across pages');
+  assert.equal((await get(ownerA, q + '&after=nope')).status, 400);
+  const { createArchive } = await import('../assets/planning/pay-statement-archive.js');
+  const archive = createArchive(A, async (url, options = {}) => route.onRequestGet({ request: new Request(new URL(url, 'https://kiwi.test'), { headers: { ...options.headers, Cookie: ownerA } }), env }));
+  const days = ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08'];
+  assert.equal((await archive.forPeriod({ days })).statements.length, 620, 'the client reads every page');
+  const hist = await get(ownerA, `merchant=${A}`);
+  assert.equal(hist.body.statements.length, 100); assert.ok(hist.body.nextCursor, 'the merchant-wide history pages too');
+  const older = await get(ownerA, `merchant=${A}&before=${hist.body.nextCursor}`);
+  assert.equal(older.body.statements.length, 100);
+  assert.ok(!older.body.statements.some((s) => hist.body.statements.some((t) => t.id === s.id)), 'next page starts after the last row');
+});
+
+await ok('r20 planning#A1: the request id changes when hours, rate, base or name change with the same totals', async () => {
+  const { requestIdFor } = await import('../assets/planning/pay-statement-archive.js');
+  const period = { days: ['2026-10-05', '2026-10-11'] };
+  const base = { memberId: 'a', memberName: 'A', hours: 7, rateCents: 2347, baseCents: 16820, grossCents: 16820, advanceCents: 0, netCents: 16820, rated: 1 };
+  const id = requestIdFor(period, [base]);
+  assert.equal(requestIdFor(period, [{ ...base }]), id, 'same snapshot, same id (retry replays)');
+  for (const change of [{ hours: 7.5 }, { rateCents: 2400 }, { baseCents: 16000 }, { memberName: 'B' }]) assert.notEqual(requestIdFor(period, [{ ...base, ...change }]), id, JSON.stringify(change));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
