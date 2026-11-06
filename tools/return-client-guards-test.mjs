@@ -37,8 +37,8 @@ for (const [label, file] of [['boutique', 'assets/pos-boutique.js'], ['maison', 
   /* 1 · prix rendu */
   const sb = {};
   vm.createContext(sb);
-  const shared = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique/paid-share.js'), 'utf8').replace(/^export /gm, '');
-  vm.runInContext(`${shared}\n${slice(src, '  function lineReturnedQty(', '  function lineAvailableQty(')}\n${slice(src, '  function paidAmount(', '  function saleCard(')}\n;this.api = { paidAmount, paidUnit };`, sb);
+  sb.paidCents = (await import('../assets/pos-boutique/paid-share.js?guards=1')).paidCents;
+  vm.runInContext(`${slice(src, '  function lineReturnedQty(', '  function saleCard(')}\n;this.api = { paidAmount, paidUnit };`, sb);
   const { paidAmount, paidUnit } = sb.api;
   const line = (unit, qty) => ({ unit, qty });
   const noReward = { lines: [line(100, 2)], total: 180 };
