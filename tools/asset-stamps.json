@@ -212,8 +212,8 @@
     "sha": "c978ff18c9a0add3"
   },
   "assets/caisse-lang.js": {
-    "v": "129",
-    "sha": "e66306c5b2aff99c"
+    "v": "130",
+    "sha": "1013dbdb83651b38"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1660,8 +1660,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "387",
-    "sha": "dc6a097721dfedae"
+    "v": "390",
+    "sha": "376803760f3d023f"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1832,12 +1832,12 @@
     "sha": "48d827135e45880c"
   },
   "assets/pressing-caisse.css": {
-    "v": "102",
-    "sha": "c35d65b1df1877e8"
+    "v": "106",
+    "sha": "a12cde8a37dd2fcc"
   },
   "assets/pressing-caisse.js": {
-    "v": "102",
-    "sha": "b27a2532097e2d1b"
+    "v": "106",
+    "sha": "6ffa9c36e27c74b7"
   },
   "assets/pressing-catalog.css": {
     "v": "6",
@@ -1864,24 +1864,24 @@
     "sha": "0ccb8ccd504e47fd"
   },
   "assets/pressing/custody.js": {
-    "v": "32",
-    "sha": "6ddc2ae79999428c"
+    "v": "35",
+    "sha": "b24025455d933c26"
   },
   "assets/pressing/deposit.js": {
-    "v": "31",
-    "sha": "86b89dff0843ac94"
+    "v": "34",
+    "sha": "de02b9ccb9761eca"
   },
   "assets/pressing/pickup.js": {
-    "v": "31",
-    "sha": "d41515c43e57a5c4"
+    "v": "34",
+    "sha": "ee1b407646f26328"
   },
   "assets/pressing/rack.js": {
-    "v": "31",
-    "sha": "81ffdbf1310b945a"
+    "v": "34",
+    "sha": "4e8f33fab0c9738d"
   },
   "assets/pressing/workshop.js": {
-    "v": "31",
-    "sha": "cca122f375a1cf67"
+    "v": "34",
+    "sha": "c49ee314cce41e44"
   },
   "assets/print-paper.css": {
     "v": "1",

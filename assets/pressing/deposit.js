@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: KiwiImageProof, KiwiLens.
  */
-import { CATALOG, ITEMS, root } from './custody.js?v=32';
+import { CATALOG, ITEMS, root } from './custody.js?v=35';
 export function create(owner) {
   'use strict';
   const { $, $$, COLOR, COLORS, CUST, CUSTOMERS, MAX_QTY, NOTES, ORDERS, STATUS, availServices, b2bPercentFor, b2bPercentLabel, catalogLabel, clampQty, closeVeil, dataText, esc, fmtDT, fmtMAD, freshTicket, garmentIcon, icons, isLiveOrder, lineTotal, minPrice, mirrorClient, normalizePhone, openVeil, orderStatus, orderTotals, pad2, persistPressing, phoneDigits, pressingOps, priceTable, publicOrderNo, readyOptions, state, storeInstant, storeWall, svcCodes, svcShorts, toast, validReady, validateTicket } = owner.depositContext();
@@ -367,7 +367,25 @@ function openClient(options = {}) {
       renderTicket(); icons();
       if (onSelected) setTimeout(onSelected, 0);
     };
-    let mode = 'search';
+    let mode = 'search', editId = null;
+    /* Compte entreprise : la case et la remise négociée (vide = taux du commerce). */
+    const b2bFields = (c) => `
+            <label class="px-cl-b2b"><input type="checkbox" id="px-cl-b2b"${c && c.b2b ? ' checked' : ''} /> <span>Compte entreprise</span></label>
+            <input class="px-in" id="px-cl-b2b-rate" inputmode="decimal" placeholder="Remise négociée en %, vide = taux du commerce" value="${c && c.b2bPercent != null && c.b2bPercent !== '' ? esc(b2bPercentLabel(c.b2bPercent)) : ''}" />
+            <span class="px-cl-sub">Taux du commerce : ${esc(b2bPercentLabel(b2bPercentFor({})))} %</span>`;
+    /* Lit la case et le taux ; null si le taux est hors de 0 à 50 %. */
+    const readB2b = () => {
+      const b2b = !!($('#px-cl-b2b', el) || {}).checked;
+      const raw = String(($('#px-cl-b2b-rate', el) || {}).value || '').trim().replace(',', '.');
+      if (!b2b || raw === '') return { b2b, b2bPercent: null };
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 0 || n > 50) { toast('Remise entre 0 et 50 %'); return null; }
+      return { b2b, b2bPercent: Math.round(n * 100) / 100 };
+    };
+    const applyB2b = (c, v) => {
+      if (v.b2b) c.b2b = true; else delete c.b2b;
+      if (v.b2bPercent != null) c.b2bPercent = v.b2bPercent; else delete c.b2bPercent;
+    };
     const render = (q) => {
       const digits = phoneDigits(q);
       const ql = (q || '').toLowerCase();
@@ -393,20 +411,36 @@ function openClient(options = {}) {
                 <span class="px-cl-right"><b>${c.orders} cmd</b>${dueOf(c) ? `<span class="due">solde ${fmtMAD(dueOf(c))}</span>` : ''}</span>
               </button>`).join('') || `<div class="px-bempty">Aucun client pour « ${esc(q)} »</div>`}
           </div>
-          ${hits.length === 1 ? recoPanel(hits[0]) : ''}
+          ${hits.length === 1 ? recoPanel(hits[0]) + `<button class="px-btn ghost" id="px-cl-b2b-edit" data-id="${esc(hits[0].id)}"><i data-icon="apartment"></i>Compte entreprise</button>` : ''}
           <button class="px-cl-new" id="px-cl-new"><i data-icon="person_add"></i>Nouveau client${q && !hits.length ? ` · « ${esc(q)} »` : ''}</button>
           <div class="px-sheet-foot" style="margin-top:10px;">
             <button class="px-btn ghost" id="px-cl-guest">Client de passage, sans fiche</button>
+          </div>` : mode === 'b2b' && CUST[editId] ? `
+          <div class="px-cl-form">
+            <span class="px-cl-name" data-nolang>${dataText(CUST[editId].name)}</span>
+            ${b2bFields(CUST[editId])}
+            <div class="px-sheet-foot" style="margin-top:4px;">
+              <button class="px-btn secondary" id="px-cl-back">Retour</button>
+              <button class="px-btn primary" id="px-cl-b2b-save"><i data-icon="check"></i>Enregistrer le compte</button>
+            </div>
           </div>` : `
           <div class="px-cl-form">
             <input class="px-in" id="px-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
             <input class="px-in" id="px-cl-tel" inputmode="tel" autocomplete="tel" placeholder="Téléphone · 06…, +212…, +33…, +49…" value="${esc(/^[\d\s().+-]+$/.test(q || '') ? q : '')}" />
+            ${b2bFields(null)}
             <div class="px-sheet-foot" style="margin-top:4px;">
               <button class="px-btn secondary" id="px-cl-back">Retour</button>
               <button class="px-btn primary" id="px-cl-create"><i data-icon="check"></i>Créer la fiche</button>
             </div>
           </div>`}`;
-      $('#px-cl-q', el).oninput = (e) => { render(e.target.value); icons(); $('#px-cl-q', el).focus(); moveCaretEnd($('#px-cl-q', el)); };
+      $('#px-cl-q', el).oninput = (e) => {
+        /* Leaving a phone field rewrites the number (assets/phone.js, 0612345678 to
+           06 12 34 56 78) and fires input. Same characters, same results: no rebuild,
+           or the tap that took the focus away would land on a removed button. */
+        const bare = (v) => String(v || '').replace(/[\s.()-]/g, '');
+        if (bare(e.target.value) === bare(q)) return;
+        render(e.target.value); icons(); $('#px-cl-q', el).focus(); moveCaretEnd($('#px-cl-q', el));
+      };
       $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-client-veil'); });
       $$('[data-px-cl]', el).forEach((b) => {
         b.onclick = () => {
@@ -418,6 +452,18 @@ function openClient(options = {}) {
       });
       const newBtn = $('#px-cl-new', el);
       if (newBtn) newBtn.onclick = () => { mode = 'create'; render(q); icons(); };
+      const b2bEdit = $('#px-cl-b2b-edit', el);
+      if (b2bEdit) b2bEdit.onclick = () => { mode = 'b2b'; editId = b2bEdit.dataset.id; render(q); icons(); };
+      const b2bSave = $('#px-cl-b2b-save', el);
+      if (b2bSave) b2bSave.onclick = () => {
+        const c = CUST[editId], v = readB2b();
+        if (!c || !v) return;
+        applyB2b(c, v);
+        persistPressing();
+        pressingOps?.save?.('customer-updated');
+        toast(c.b2b ? `Compte entreprise enregistré pour ${c.name}` : `Compte entreprise retiré pour ${c.name}`);
+        mode = 'search'; render(q); icons();
+      };
       const guest = $('#px-cl-guest', el);
       if (guest) guest.onclick = () => {
         state.ticket.customer = { type: 'guest' };
@@ -433,8 +479,11 @@ function openClient(options = {}) {
         if (!tel) { toast('Numéro valide requis · pour l’étranger, ajoutez + et l’indicatif pays'); return; }
         const existing = CUSTOMERS.find((c) => phoneDigits(c.phone) === phoneDigits(tel));
         if (existing) { toast(`Ce numéro appartient déjà à ${existing.name}`); return; }
+        const v = readB2b();
+        if (!v) return;
         const id = 'cx' + Date.now().toString(36);
         const c = { id, name, phone: tel, orders: 0, prefs: [] };
+        applyB2b(c, v);
         CUSTOMERS.unshift(c); CUST[id] = c;
         mirrorClient(c);
         persistPressing();

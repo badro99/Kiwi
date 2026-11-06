@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: BarcodeDetector, KiwiCaissePairing, KiwiPressingOps, KiwiStaff.
  */
-import { ITEMS, root } from './custody.js?v=32';
+import { ITEMS, root } from './custody.js?v=35';
 export function create(owner) {
   'use strict';
   const { $, $$, COLOR, ORDERS, boardBucket, catalogLabel, closeVeil, custOf, dataText, deliverOrder, esc, findOrder, findScannedOrder, fmtDT, fmtDay, fmtMAD, icons, isLiveOrder, matchesQuery, moveCaretEnd, notifyLine, openDetail, openPay, openVeil, openWa, orderStatus, orderTotals, publicOrderNo, publicPieceNo, queueIfOffline, refreshOps, renderBoard, state, svcCodes, toast } = owner.pickupContext();
@@ -15,7 +15,7 @@ function renderRetrait() {
     const hits = q ? active.filter((o) => matchesQuery(o, q)) : active.filter((o) => orderStatus(o) === 'pret');
     const prets = hits.filter((o) => orderStatus(o) === 'pret');
     const others = q ? hits.filter((o) => orderStatus(o) !== 'pret') : [];
-    panel.innerHTML = `
+    const html = `
       <div class="px-retrait">
         <div class="px-rt-inner">
           <header class="px-head" style="padding:22px 0 0;">
@@ -23,7 +23,7 @@ function renderRetrait() {
           </header>
           <div class="px-rt-search">
             <div class="px-phone-in"><i data-icon="call"></i>
-              <input id="px-rt-q" inputmode="tel" placeholder="Téléphone, nom ou n° de ticket" value="${esc(q)}" autocomplete="off" /></div>
+              <input id="px-rt-q" inputmode="search" enterkeyhint="search" placeholder="Téléphone, nom ou n° de ticket" value="${esc(q)}" autocomplete="off" /></div>
           </div>
           <div class="px-rt-or">ou</div>
           <button class="px-rt-scan" id="px-rt-scan"><i data-icon="document_scanner"></i>Scanner ticket ou étiquette</button>
@@ -35,12 +35,18 @@ function renderRetrait() {
           </div>
         </div>
       </div>`;
-    $('#px-rt-q', panel).oninput = (e) => {
-      state.rtQuery = e.target.value;
-      renderRetrait(); icons();
-      const i = $('#px-rt-q', panel); i.focus(); moveCaretEnd(i);
-    };
-    $('#px-rt-scan', panel).onclick = () => openScan('pickup');
+    /* While the clerk types, only the results move: the field keeps its node, its
+       caret and an Arabic composition in progress. Any other refresh redraws all. */
+    const typing = $('#px-rt-q', panel);
+    if (typing && document.activeElement === typing) {
+      const next = document.createElement('div'); next.innerHTML = html;
+      $('.px-rt-results', panel).replaceWith($('.px-rt-results', next));
+      $('.px-head-sub', panel).textContent = $('.px-head-sub', next).textContent;
+    } else {
+      panel.innerHTML = html;
+      $('#px-rt-q', panel).oninput = (e) => { state.rtQuery = e.target.value; renderRetrait(); };
+      $('#px-rt-scan', panel).onclick = () => openScan('pickup');
+    }
     $$('[data-px-rt-pay]', panel).forEach((b) => {
       b.onclick = () => {
         const o = findOrder(b.dataset.pxRtPay);
@@ -131,15 +137,17 @@ async function startCameraScan(el) {
       const formats = ['code_39', 'code_128', 'qr_code'].filter((f) => supported.includes(f));
       if (!formats.length) throw new Error('format');
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-      if (!$('#px-scan-veil', root).classList.contains('is-open')) { stream.getTracks().forEach((t) => t.stop()); return; }
+      /* The camera is ours from here: any later failure (play refused, detector
+         missing) must release it through stopScanner in the catch below. */
+      let live = true;
+      scannerStop = () => { live = false; stream.getTracks().forEach((t) => t.stop()); };
+      if (!$('#px-scan-veil', root).classList.contains('is-open')) { stopScanner(); return; }
       const stage = $('#px-scan-stage', el);
       stage.innerHTML = '<video id="px-scan-video" playsinline muted style="width:100%;height:100%;object-fit:cover"></video><div class="px-scan-laser"></div>';
       const video = $('#px-scan-video', el);
       video.srcObject = stream;
       await video.play();
       const detector = new window.BarcodeDetector({ formats });
-      let live = true;
-      scannerStop = () => { live = false; stream.getTracks().forEach((t) => t.stop()); };
       const frame = async () => {
         if (!live) return;
         try {
