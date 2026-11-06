@@ -74,6 +74,9 @@
       failLead: 'Le serveur ne répond pas pour l’instant. Envoyez-la par WhatsApp : tout est déjà écrit, il suffit d’appuyer sur Envoyer.',
       failWa: 'Envoyer par WhatsApp',
       failRetry: 'Réessayer',
+      failKept: 'Votre demande est gardée sur cet appareil : vous pourrez la retrouver à votre retour.',
+      failCopy: 'Copier la demande',
+      failCopied: 'Demande copiée',
       slotAny: 'dès que possible',
       required: 'Ce champ est obligatoire.',
       phoneBad: 'Vérifiez ce numéro.',
@@ -118,6 +121,9 @@
       failLead: 'Our server is not answering right now. Send it on WhatsApp instead: everything is already written, just press Send.',
       failWa: 'Send on WhatsApp',
       failRetry: 'Try again',
+      failKept: 'Your request is kept on this device, so it is still here when you come back.',
+      failCopy: 'Copy the request',
+      failCopied: 'Request copied',
       slotAny: 'as soon as possible',
       required: 'This field is required.',
       phoneBad: 'Please check this number.',
@@ -162,6 +168,9 @@
       failLead: 'الخادم لا يجيب حاليا. أرسله عبر WhatsApp: كل شيء مكتوب، يكفي الضغط على إرسال.',
       failWa: 'إرسال عبر WhatsApp',
       failRetry: 'إعادة المحاولة',
+      failKept: 'طلبك محفوظ على هذا الجهاز وستجده عند عودتك.',
+      failCopy: 'نسخ الطلب',
+      failCopied: 'تم نسخ الطلب',
       slotAny: 'في أقرب وقت',
       required: 'هذا الحقل إلزامي.',
       phoneBad: 'تحقق من هذا الرقم.',
@@ -211,6 +220,9 @@
       failLead: 'Unser Server antwortet gerade nicht. Senden Sie die Anfrage über WhatsApp: Alles ist schon geschrieben, Sie müssen nur auf Senden tippen.',
       failWa: 'Über WhatsApp senden',
       failRetry: 'Erneut versuchen',
+      failKept: 'Ihre Anfrage bleibt auf diesem Gerät gespeichert und ist bei Ihrer Rückkehr noch da.',
+      failCopy: 'Anfrage kopieren',
+      failCopied: 'Anfrage kopiert',
       slotAny: 'so bald wie möglich',
       required: 'Dieses Feld ist erforderlich.',
       phoneBad: 'Bitte prüfen Sie diese Nummer.',
@@ -255,6 +267,9 @@
       failLead: 'Nuestro servidor no responde en este momento. Envíela por WhatsApp: ya está todo escrito, solo tiene que pulsar Enviar.',
       failWa: 'Enviar por WhatsApp',
       failRetry: 'Reintentar',
+      failKept: 'Su solicitud queda guardada en este dispositivo y seguirá aquí cuando vuelva.',
+      failCopy: 'Copiar la solicitud',
+      failCopied: 'Solicitud copiada',
       slotAny: 'lo antes posible',
       required: 'Este campo es obligatorio.',
       phoneBad: 'Revise este número.',
@@ -299,6 +314,9 @@
       failLead: 'Il server non risponde in questo momento. Inviala su WhatsApp: è già tutto scritto, basta premere Invia.',
       failWa: 'Invia su WhatsApp',
       failRetry: 'Riprova',
+      failKept: 'La richiesta resta salvata su questo dispositivo e la ritroverai al ritorno.',
+      failCopy: 'Copia la richiesta',
+      failCopied: 'Richiesta copiata',
       slotAny: 'il prima possibile',
       required: 'Questo campo è obbligatorio.',
       phoneBad: 'Controlla questo numero.',
@@ -343,6 +361,9 @@
       failLead: 'Onze server reageert nu niet. Stuur de aanvraag via WhatsApp: alles staat er al, u hoeft alleen op Versturen te tikken.',
       failWa: 'Versturen via WhatsApp',
       failRetry: 'Opnieuw proberen',
+      failKept: 'Uw aanvraag blijft op dit toestel bewaard en staat er nog als u terugkomt.',
+      failCopy: 'Aanvraag kopiëren',
+      failCopied: 'Aanvraag gekopieerd',
       slotAny: 'zo snel mogelijk',
       required: 'Dit veld is verplicht.',
       phoneBad: 'Controleer dit nummer.',
@@ -390,8 +411,16 @@
   var errors = {};
   var reference = '';
   try { var saved = JSON.parse(sessionStorage.getItem(STORE) || 'null'); if (saved && typeof saved === 'object') state = Object.assign(blank(), saved, { website: '' }); } catch (_) {}
+  /* A request the server could not take is also kept on this device (not only for the
+     tab): closing the page before the WhatsApp message is sent must not lose it. */
+  var PENDING = 'kiwiDemoFunnelPending';
+  try {
+    var held = JSON.parse(localStorage.getItem(PENDING) || 'null');
+    if (held && held.state && typeof held.state === 'object' && Date.now() - (+held.at || 0) < 14 * 86400000 && !(saved && typeof saved === 'object')) state = Object.assign(blank(), held.state, { website: '' });
+  } catch (_) {}
+  function keepPending() { try { var s = Object.assign({}, state); delete s.website; localStorage.setItem(PENDING, JSON.stringify({ at: Date.now(), state: s })); } catch (_) {} }
   function save() { try { var s = Object.assign({}, state); delete s.website; sessionStorage.setItem(STORE, JSON.stringify(s)); } catch (_) {} }
-  function forget() { try { sessionStorage.removeItem(STORE); } catch (_) {} }
+  function forget() { try { sessionStorage.removeItem(STORE); } catch (_) {} try { localStorage.removeItem(PENDING); } catch (_) {} }
 
   /* ───────────── rules (mirror functions/api/_demo-requests.js) ───────────── */
   function phoneOk(v) {
@@ -529,8 +558,9 @@
   function failHtml() {
     return '<div class="kdf-state" data-state="failed">' + icon('chat')
       + '<h2 tabindex="-1" data-title id="kdf-title">' + esc(t('failTitle')) + '</h2>'
-      + '<p class="kdf-lead">' + esc(t('failLead')) + '</p>'
+      + '<p class="kdf-lead">' + esc(t('failLead')) + '</p><p class="kdf-lead" data-kept>' + esc(t('failKept')) + '</p>'
       + '<div class="kdf-actions"><a class="kdf-primary" data-wa-fail href="' + esc(waUrl(waText(''))) + '" target="_blank" rel="noopener">' + icon('chat') + '<span>' + esc(t('failWa')) + '</span></a>'
+      + '<button type="button" class="kdf-secondary" data-copy-request>' + esc(t('failCopy')) + '</button>'
       + '<button type="button" class="kdf-secondary" data-retry>' + esc(t('failRetry')) + '</button></div></div>';
   }
   function bodyHtml() {
@@ -652,9 +682,11 @@
         return;
       }
       phase = 'failed';
+      keepPending();
       render('title');
     }, function () {
       phase = 'failed';
+      keepPending();
       render('title');
     });
   }
@@ -672,6 +704,11 @@
     if (!b || !el.contains(b)) return;
     if (b.hasAttribute('data-close')) { close(); return; }
     if (b.hasAttribute('data-retry')) { phase = 'form'; render('title'); return; }
+    if (b.hasAttribute('data-copy-request')) {
+      var text = waText(''), mark = function () { b.textContent = t('failCopied'); };
+      try { navigator.clipboard.writeText(text).then(mark, function () {}); } catch (_) {}
+      return;
+    }
     if (b.dataset.trade) {
       /* Toggled in place, like the time slots: no rebuild, no jump. */
       var picking = state.trade !== b.dataset.trade;
@@ -772,6 +809,6 @@
   window.KiwiDemoFunnel = {
     open: open, close: close, STR: STR,
     _state: function () { return state; }, _phase: function () { return phase; },
-    _waText: waText, _payload: payload, _validate: validate, _tradeChips: tradeChips,
+    _waText: waText, _keepPending: keepPending, _send: send, _payload: payload, _validate: validate, _tradeChips: tradeChips,
   };
 })();

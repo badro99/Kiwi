@@ -301,6 +301,10 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
             presentNativeSheet(sheet)
             return
         }
+        if let body = message.body as? [String: Any], let id = body["sheetDismiss"] as? String {
+            dismissNativeSheet(id)
+            return
+        }
         model.accept(message.body)
     }
 
@@ -363,6 +367,7 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
     }
 
     private var sheetDelegate: KiwiSheetDelegate?
+    private var presentedSheetId: String?
 
     /// A system sheet for a short choice (Face ID offer, account menu): real
     /// detent, grabber, dimming and swipe to dismiss, Liquid Glass on iOS 26.
@@ -375,6 +380,7 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
         DispatchQueue.main.async {
             guard let presenter = self.model.bridge else { return }
             guard presenter.presentedViewController == nil else { self.answerSheet(spec.id, "dismiss"); return }
+            self.presentedSheetId = spec.id
             var host: UIHostingController<KiwiSheetView>?
             let view = KiwiSheetView(spec: spec) { [weak self] action in
                 guard let self else { return }
@@ -410,7 +416,21 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
         }
     }
 
+    /// The page's wait on a sheet expired while the sheet is still up: close it
+    /// and answer "dismiss", so a late tap can never land on a waiter that is gone.
+    private func dismissNativeSheet(_ id: String) {
+        DispatchQueue.main.async {
+            guard self.presentedSheetId == id, let presenter = self.model.bridge,
+                  presenter.presentedViewController != nil else { return }
+            self.sheetDelegate?.answered = true
+            self.presentedSheetId = nil
+            presenter.dismiss(animated: true)
+            self.answerSheet(id, "dismiss")
+        }
+    }
+
     private func answerSheet(_ id: String, _ action: String) {
+        if presentedSheetId == id { presentedSheetId = nil }
         guard let data = try? JSONSerialization.data(withJSONObject: ["id": id, "action": action]),
               let json = String(data: data, encoding: .utf8) else { return }
         bridgeEvaluate("window.KiwiNativeSheetResult&&window.KiwiNativeSheetResult(\(json))")

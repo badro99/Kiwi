@@ -5,7 +5,12 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
   async function request(url, options, timeout, fallback = 'update-failed') {
     try {
       const { deadlineFetch } = await import('./request-deadline.mjs');
-      const response = await deadlineFetch(url, options, timeout);
+      /* Once a write has left the page, a lost connection or a deadline says nothing
+         about what the server did: it is an uncertain write, like an unreadable body. */
+      const response = await deadlineFetch(url, options, timeout).catch(error => {
+        if (options?.method) throw Object.assign(error, { code: 'uncertain-write', uncertain: true });
+        throw error;
+      });
       const result = await response.json().catch(error => {
         throw Object.assign(error, { code: options?.method ? 'uncertain-write' : error.code || 'read-failed', uncertain: !!options?.method });
       });
@@ -71,6 +76,14 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
   }
 
   async function publish(event) {
+    /* Identity of an image is its bytes: a different picture with the same name and
+       size must not inherit the idempotency key of an earlier, uncertain attempt. */
+    async function fileDigest(file) {
+      try {
+        const digest = await globalThis.crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+        return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+      } catch (_) { return file.name + ':' + file.size + ':' + (file.lastModified || 0); }
+    }
     event.preventDefault();
     if (state.saving) return;
     const text = $('ticketBody').value.trim();
@@ -96,8 +109,9 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
     /* Une clé par envoi : le même contenu renvoyé après une réponse perdue
        retrouve le premier ticket au lieu d'en créer un second. Un contenu
        modifié reçoit une clé neuve. */
+    const digests = await Promise.all(state.files.map(fileDigest));
     const fingerprint = [text, $('ticketKind').value, $('ticketArea').value, $('ticketSubkind').value,
-      $('ticketMoneyRisk').checked, ...state.files.map((file) => file.name + ':' + file.size)].join('\u0001');
+      $('ticketMoneyRisk').checked, ...state.files.map((file, index) => file.name + ':' + file.size + ':' + digests[index])].join('\u0001');
     if (!state.publishAttempt || state.publishAttempt.fingerprint !== fingerprint) {
       state.publishAttempt = { fingerprint, key: newIdempotencyKey() };
     }

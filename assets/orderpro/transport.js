@@ -49,7 +49,11 @@ KiwiOrderMenu.orderProParts.run('transport', function () {
           const j = await r.json().catch(() => null);
           if (!r.ok) return Object.assign({ ok: false, status: r.status, error: (j && j.error) || 'http-' + r.status }, j || {});
           return j || { ok: false, error: 'empty', uncertain: true };
-        } catch (_) { return { ok: false, error: 'network', uncertain: true }; }
+        } catch (error) {
+          /* The request left the phone: a deadline and a dropped connection both leave
+             the outcome unknown (uncertain), but they are not the same advice. */
+          return { ok: false, error: error && error.message === 'request-timeout' ? 'request-timeout' : 'network', uncertain: true };
+        }
       }
 
       /* ?s=demo is the pitch demo (assets/orderpro-demo.js): its menu and its

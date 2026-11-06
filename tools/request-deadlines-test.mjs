@@ -72,7 +72,7 @@ for (const mode of ['fetch', 'body']) {
   }
   {
     const h = harness(mode), s = read('assets/landing-demo-funnel.js');
-    Object.assign(h.c, { phase: 'form', API: '/api/demo-request', render() {}, payload: () => ({}) });
+    Object.assign(h.c, { phase: 'form', API: '/api/demo-request', render() {}, payload: () => ({}), keepPending() {} });
     h.run(helper(s) + '\n' + declaration(s, 'send'));
     const p = h.run('send()'); await h.tick(); assert.equal(h.c.phase, 'failed', `demo hung ${mode} offers fallback`); await p;
   }

@@ -30,6 +30,21 @@ export function bookingTestSource() {
     const text = splitFunctions.fragment(live, f), at = source.indexOf(text);
     return { ...f, size: text.length, start: at, end: at + f.length };
   });
+  /* A fragment sliced by offset whose body a reviewed fix lengthened records its
+     historical span in `was`: the format edits stay in the historical basis. */
+  for (const other of bookingSplit.parts) {
+    if (other === part) continue;
+    const text = read(other.file);
+    for (const f of other.fragments) if (f.was !== undefined) {
+      const body = text.slice(f.offset, f.offset + f.length), at = source.indexOf(body);
+      changed.push({ ...f, size: body.length, length: f.was, start: at, end: at + f.was });
+    }
+  }
+  /* Put every span in the historical basis the edits were recorded in: a live
+     position includes what the changed fragments before it added or removed. */
+  changed.sort((x, y) => x.start - y.start);
+  let shifted = 0;
+  for (const f of changed) { f.start -= shifted; f.end = f.start + f.length; shifted += f.size - f.length; }
   const edits = JSON.parse(read('tools/fixtures/booking/format.json'));
   for (const edit of [...edits].reverse()) {
     const inside = changed.find(f => edit.start >= f.start && edit.start < f.end);

@@ -13,25 +13,47 @@
   };
 
   const SYNC_NOTE = { fr: 'Synchronisation serveur non confirmée. Vérifiez la copie locale ou exportez le brouillon.', en: 'Server sync unconfirmed. Check the local copy or export the draft.', ar: 'مزامنة الخادم غير مؤكدة. تحقق من النسخة المحلية أو صدّر المسودة.' };
+  /* A server draft that could not be deleted is remembered on this device, so the
+     deletion is retried and a later session does not bring the old answers back
+     without saying so. */
+  const CLEAR_KEY = 'kiwiOnboardingDraft:clear';
+  const CLEAR_NOTE = { fr: 'L’ancien brouillon n’a pas pu être supprimé du serveur et peut réapparaître. Nouvelle tentative à la prochaine synchronisation.', en: 'The old draft could not be deleted from the server and may come back. It will be retried at the next sync.', ar: 'تعذّر حذف المسودة القديمة من الخادم وقد تعود. ستُعاد المحاولة عند المزامنة التالية.' };
+  const EXPORT_NOTE = { fr: 'Téléchargement impossible. Copiez ce texte et gardez-le dans un fichier.', en: 'Download unavailable. Copy this text and keep it in a file.', ar: 'التنزيل غير متاح. انسخ هذا النص واحتفظ به في ملف.' };
   function createDraft(storage, types, goals) {
-    let draftKept = true, snapshot = null, exported = null, remote = null, queue = Promise.resolve(), cleared = false, syncFailed = false, revision = 0;
+    let draftKept = true, snapshot = null, exported = null, remote = null, queue = Promise.resolve(), cleared = false, syncFailed = false, clearFailed = false, revision = 0;
     return {
       saved() { return !syncFailed && (!this.transport || snapshot === remote) && (draftKept || snapshot === exported || snapshot === remote); },
-      warning(lang) { return (syncFailed || (this.transport && snapshot !== remote)) ? (SYNC_NOTE[lang] || SYNC_NOTE.fr) : (draftKept || snapshot === exported || snapshot === remote) ? '' : (DRAFT_NOTE[lang] || DRAFT_NOTE.fr); },
+      clearPending() { return clearFailed; },
+      warning(lang) { return clearFailed ? (CLEAR_NOTE[lang] || CLEAR_NOTE.fr) : (syncFailed || (this.transport && snapshot !== remote)) ? (SYNC_NOTE[lang] || SYNC_NOTE.fr) : (draftKept || snapshot === exported || snapshot === remote) ? '' : (DRAFT_NOTE[lang] || DRAFT_NOTE.fr); },
       clear() {
         cleared = true;
         storage.del(KEY);
-        if (this.transport) queue = queue.catch(() => {}).then(() => this.transport(null)).catch(() => {});
+        if (!this.transport) return Promise.resolve(true);
+        try { storage.set(CLEAR_KEY, '1'); } catch (_) {}
+        return this.retryClear();
+      },
+      /* Resolves true once the server confirmed the deletion. */
+      retryClear() {
+        const run = queue.catch(() => {}).then(async () => { await this.transport(null); clearFailed = false; try { storage.del(CLEAR_KEY); } catch (_) {} return true; });
+        queue = run.catch(() => {});
+        return run.catch(() => { clearFailed = true; syncFailed = true; return false; });
       },
       exportFile(S, browser) {
         this.save(S);
-        const url = browser.URL.createObjectURL(new browser.Blob([snapshot], { type: 'application/json' }));
-        const link = browser.document.createElement('a');
-        link.href = url; link.download = 'kiwi-onboarding.json';
-        browser.document.body.appendChild(link); link.click(); link.remove();
-        browser.setTimeout(() => browser.URL.revokeObjectURL(url), 1000);
+        /* The draft counts as exported only when the browser accepted the download;
+           a blocked or failing one leaves the warning and returns false so the
+           caller can show the text to copy. */
+        try {
+          const url = browser.URL.createObjectURL(new browser.Blob([snapshot], { type: 'application/json' }));
+          const link = browser.document.createElement('a');
+          link.href = url; link.download = 'kiwi-onboarding.json';
+          browser.document.body.appendChild(link); link.click(); link.remove();
+          browser.setTimeout(() => browser.URL.revokeObjectURL(url), 1000);
+        } catch (_) { return false; }
         exported = snapshot;
+        return true;
       },
+      exportText() { return snapshot || ''; },
       importFile(text, S) {
         if (text.length > 16384) throw Error('draft-size');
         const d = JSON.parse(text);
@@ -41,6 +63,14 @@
       },
       async restore(S) {
         if (!this.transport) return;
+        let owed = false; try { owed = storage.get(CLEAR_KEY) === '1'; } catch (_) {}
+        if (owed) {
+          cleared = true;
+          /* The first read hands the transport its account; the deletion follows. */
+          try { await this.transport(); } catch (_) { clearFailed = true; syncFailed = true; return; }
+          if (!(await this.retryClear())) return;
+          cleared = false; syncFailed = false; return;
+        }
         try {
           const d = await this.transport();
           let local; try { local = JSON.parse(storage.get(KEY) || 'null'); } catch (_) {}
@@ -51,6 +81,7 @@
         } catch (_) { syncFailed = true; }
       },
       async sync() {
+        if (this.transport && cleared && clearFailed) return this.retryClear();
         if (!this.transport || !snapshot || cleared || snapshot === remote) return;
         const sent = snapshot;
         queue = queue.catch(() => {}).then(async () => { if (!cleared) { await this.transport(JSON.parse(sent)); remote = sent; syncFailed = false; } });
@@ -106,16 +137,25 @@
     };
   }
   const FILE_COPY = {
-    fr: ['Exporter le brouillon', 'Importer un brouillon', 'Fichier de brouillon invalide.'],
-    en: ['Export draft', 'Import draft', 'Invalid draft file.'],
-    ar: ['تصدير المسودة', 'استيراد مسودة', 'ملف المسودة غير صالح.'],
+    fr: ['Exporter le brouillon', 'Importer un brouillon', 'Fichier de brouillon invalide.', EXPORT_NOTE.fr],
+    en: ['Export draft', 'Import draft', 'Invalid draft file.', EXPORT_NOTE.en],
+    ar: ['تصدير المسودة', 'استيراد مسودة', 'ملف المسودة غير صالح.', EXPORT_NOTE.ar],
   };
   function mountRecovery(container, draft, S, lang, browser, refresh, first) {
     const copy = FILE_COPY[lang] || FILE_COPY.fr;
     if (!draft.saved()) {
       const button = browser.document.createElement('button');
       button.type = 'button'; button.textContent = copy[0];
-      button.onclick = () => { draft.exportFile(S, browser); refresh(); };
+      button.onclick = () => {
+        if (draft.exportFile(S, browser) === false) {
+          const box = browser.document.createElement('textarea');
+          box.readOnly = true; box.value = draft.exportText(); box.setAttribute('aria-label', copy[3]);
+          container.appendChild(box);
+          const note = browser.document.createElement('p'); note.setAttribute('role', 'alert'); note.textContent = copy[3]; container.appendChild(note);
+          return;
+        }
+        refresh();
+      };
       container.appendChild(button);
     }
     if (first) {

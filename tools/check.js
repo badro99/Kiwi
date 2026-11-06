@@ -2442,7 +2442,7 @@ section('Whole-project regressions');
     'intake-storage-fault-test.mjs',
     'media-owner-test.mjs',
     'admin-delete-r2-test.mjs',
-    'admin-api-owner-test.mjs', 'admin-merchant-exists-test.mjs', 'request-deadlines-test.mjs', 'shared-transport-test.mjs', 'tickets-request-helper-test.mjs', 'tickets-pagination-test.mjs', 'booking-shared-submit-test.mjs',
+    'admin-api-owner-test.mjs', 'admin-merchant-exists-test.mjs', 'request-deadlines-test.mjs', 'shared-transport-test.mjs', 'tickets-request-helper-test.mjs', 'tickets-pagination-test.mjs', 'booking-shared-submit-test.mjs', 'r20-flows-test.mjs',
     'legacy-scan-test.mjs',
     'menu-translate-test.mjs',
     /* La carte dans la langue de chacun : traductions portées par les
@@ -3093,6 +3093,7 @@ section('Kiwi 2027 · l\'accès et le reste sur le kit');
     ['reset-states-test.mjs', 'reset-states-test'],
     ['access-gate-browser-test.mjs', 'access-gate-browser-test'],
     ['password-reveal-browser-test.mjs', 'password-reveal-browser-test'],
+    ['signup-plan-handoff-browser-test.mjs', 'signup-plan-handoff-browser-test'],
     ['lock-till-browser-test.mjs', 'lock-till-browser-test'],
     ['team-split-browser-test.mjs', 'team-split-browser-test'],
     ['team-polish-browser-test.mjs', 'team-polish-browser-test'],

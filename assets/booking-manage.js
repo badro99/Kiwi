@@ -32,27 +32,53 @@ export function createBookingManage(context) {
       ).sort(function(a,b) {
         return (all[b].at||0)-(all[a].at||0)
       }
-      ),perVenue={
+      ),dropped=0,kept={
       }
-        ,pool=byAge.filter(function(k) {
-          var v=String(all[k].merchant||k.split(':')[0]);
-          perVenue[v]=(perVenue[v]||0)+1;
-          return perVenue[v]<=20
-        }
-        ),kept={
-        }
         ;
-      var over=pool.length-120;
-      if(over>0) {
-        pool.slice().reverse().filter(function(k) {
-          return all[k].sent
+      /* Over a cap, links already e-mailed to the guest go first (oldest first);
+         an unemailed link, the guest's only way back in, is dropped last, never
+         the one just stored, and the drop is counted so the page can say so. */
+      var trim=function(keys,limit) {
+        var over=keys.length-limit;
+        if(over<=0) return keys;
+        var drop={
         }
-        ).slice(0,over).forEach(function(k) {
-          pool.splice(pool.indexOf(k),1)
+          ;
+        var mine=merchant+':'+j.code;
+        keys.slice().reverse().filter(function(k) {
+          return all[k].sent&&k!==mine
+        }
+        ).concat(keys.slice().reverse().filter(function(k) {
+          return !all[k].sent&&k!==mine
+        }
+        )).slice(0,over).forEach(function(k) {
+          drop[k]=1;
+          if(!all[k].sent) dropped++
         }
         );
-        if(pool.length>120) pool=pool.slice(0,120);
+        return keys.filter(function(k) {
+          return !drop[k]
+        }
+        )
       }
+        ,groups={
+        }
+        ;
+      byAge.forEach(function(k) {
+        var v=String(all[k].merchant||k.split(':')[0]);
+        (groups[v]=groups[v]||[]).push(k)
+      }
+      );
+      var pool=[];
+      Object.keys(groups).forEach(function(v) {
+        pool=pool.concat(trim(groups[v],20))
+      }
+      );
+      pool=trim(pool.sort(function(a,b) {
+        return (all[b].at||0)-(all[a].at||0)
+      }
+      ),120);
+      rememberManage.evictedUnsent=dropped;
       pool.forEach(function(k) {
         kept[k]=all[k]
       }
@@ -73,7 +99,7 @@ export function createBookingManage(context) {
     var href=manageHref(j);
     if(!href) return '';
     var sent=!!j.confirmationSent;
-    return '<div class="bk-manage-link"><p>'+esc(mt('keep'))+(rememberManage.storageFailed? ' '+esc(mt('notStored')):'')+(sent? ' '+esc(mt('sent')):'')+'</p><a href="'+esc(href)+'">'+esc(mt('open'))+'</a><button type="button" data-copy-manage data-href="'+esc(href)+'">'+esc(mt('copy'))+'</button></div>'
+    return '<div class="bk-manage-link"><p>'+esc(mt('keep'))+(rememberManage.storageFailed? ' '+esc(mt('notStored')):'')+(rememberManage.evictedUnsent? ' '+esc(mt('evicted')):'')+(sent? ' '+esc(mt('sent')):'')+'</p><a href="'+esc(href)+'">'+esc(mt('open'))+'</a><button type="button" data-copy-manage data-href="'+esc(href)+'">'+esc(mt('copy'))+'</button></div>'
   }
 
   function wireManageBlock() {
@@ -127,13 +153,13 @@ export function createBookingManage(context) {
 
   var M={
     fr: {
-      notStored: 'Lien non enregistré sur ce navigateur. Copiez-le avant de fermer cette page.',keep: 'Conservez ce lien pour retrouver ou annuler votre réservation.',sent: 'Il vous a aussi été envoyé par e-mail.',open: 'Ouvrir ma réservation',copy: 'Copier le lien',copied: 'Lien copié',copyFailed: 'Copie impossible. Sélectionnez et copiez ce lien.',title: 'Votre réservation',cancel: 'Annuler ma réservation',cancelSure: 'Confirmer l’annulation',keepIt: 'Garder ma réservation',cancelled: 'Réservation annulée',cancelledSub: 'L’établissement en a été informé.',notFound: 'Ce lien de réservation n’est plus valide.',closedWindow: 'Le délai d’annulation en ligne est passé. Appelez l’établissement.',until: 'Annulable en ligne jusqu’au {d}',statusRequested: 'En attente de confirmation',statusConfirmed: 'Confirmée',statusCancelled: 'Annulée',statusOther: 'Traitée par l’établissement',failed: 'L’annulation n’a pas pu être enregistrée. Réessayez.'
+      notStored: 'Lien non enregistré sur ce navigateur. Copiez-le avant de fermer cette page.',evicted: 'Un ancien lien de réservation non envoyé par e-mail a été retiré de ce navigateur pour faire de la place.',keep: 'Conservez ce lien pour retrouver ou annuler votre réservation.',sent: 'Il vous a aussi été envoyé par e-mail.',open: 'Ouvrir ma réservation',copy: 'Copier le lien',copied: 'Lien copié',copyFailed: 'Copie impossible. Sélectionnez et copiez ce lien.',title: 'Votre réservation',cancel: 'Annuler ma réservation',cancelSure: 'Confirmer l’annulation',keepIt: 'Garder ma réservation',cancelled: 'Réservation annulée',cancelledSub: 'L’établissement en a été informé.',notFound: 'Ce lien de réservation n’est plus valide.',closedWindow: 'Le délai d’annulation en ligne est passé. Appelez l’établissement.',until: 'Annulable en ligne jusqu’au {d}',statusRequested: 'En attente de confirmation',statusConfirmed: 'Confirmée',statusCancelled: 'Annulée',statusOther: 'Traitée par l’établissement',failed: 'L’annulation n’a pas pu être enregistrée. Réessayez.'
     }
     ,en: {
-      notStored: 'Link not saved in this browser. Copy it before closing this page.',keep: 'Keep this link to view or cancel your booking.',sent: 'It was also emailed to you.',open: 'Open my booking',copy: 'Copy link',copied: 'Link copied',copyFailed: 'Unable to copy. Select and copy this link.',title: 'Your booking',cancel: 'Cancel my booking',cancelSure: 'Confirm cancellation',keepIt: 'Keep my booking',cancelled: 'Booking cancelled',cancelledSub: 'The venue has been notified.',notFound: 'This booking link is no longer valid.',closedWindow: 'The online cancellation window has closed. Please call the venue.',until: 'Cancellable online until {d}',statusRequested: 'Awaiting confirmation',statusConfirmed: 'Confirmed',statusCancelled: 'Cancelled',statusOther: 'Handled by the venue',failed: 'The cancellation could not be saved. Please try again.'
+      notStored: 'Link not saved in this browser. Copy it before closing this page.',evicted: 'An older booking link that was not e-mailed to you was removed from this browser to make room.',keep: 'Keep this link to view or cancel your booking.',sent: 'It was also emailed to you.',open: 'Open my booking',copy: 'Copy link',copied: 'Link copied',copyFailed: 'Unable to copy. Select and copy this link.',title: 'Your booking',cancel: 'Cancel my booking',cancelSure: 'Confirm cancellation',keepIt: 'Keep my booking',cancelled: 'Booking cancelled',cancelledSub: 'The venue has been notified.',notFound: 'This booking link is no longer valid.',closedWindow: 'The online cancellation window has closed. Please call the venue.',until: 'Cancellable online until {d}',statusRequested: 'Awaiting confirmation',statusConfirmed: 'Confirmed',statusCancelled: 'Cancelled',statusOther: 'Handled by the venue',failed: 'The cancellation could not be saved. Please try again.'
     }
     ,ar: {
-      notStored: 'لم يُحفظ الرابط في هذا المتصفح. انسخه قبل إغلاق هذه الصفحة.',keep: 'احتفظ بهذا الرابط لعرض حجزك أو إلغائه.',sent: 'وقد أُرسل إليك أيضاً بالبريد الإلكتروني.',open: 'فتح حجزي',copy: 'نسخ الرابط',copied: 'تم نسخ الرابط',copyFailed: 'تعذر النسخ. حدد هذا الرابط وانسخه.',title: 'حجزك',cancel: 'إلغاء الحجز',cancelSure: 'تأكيد الإلغاء',keepIt: 'الاحتفاظ بالحجز',cancelled: 'تم إلغاء الحجز',cancelledSub: 'تم إخبار المؤسسة.',notFound: 'هذا الرابط لم يعد صالحاً.',closedWindow: 'انتهت مهلة الإلغاء عبر الإنترنت. اتصل بالمؤسسة.',until: 'يمكن الإلغاء عبر الإنترنت حتى {d}',statusRequested: 'في انتظار التأكيد',statusConfirmed: 'مؤكّد',statusCancelled: 'ملغى',statusOther: 'بعهدة المؤسسة',failed: 'تعذّر تسجيل الإلغاء. حاول مرة أخرى.'
+      notStored: 'لم يُحفظ الرابط في هذا المتصفح. انسخه قبل إغلاق هذه الصفحة.',evicted: 'أُزيل من هذا المتصفح رابط حجز قديم لم يُرسل إليك بالبريد لإفساح المجال.',keep: 'احتفظ بهذا الرابط لعرض حجزك أو إلغائه.',sent: 'وقد أُرسل إليك أيضاً بالبريد الإلكتروني.',open: 'فتح حجزي',copy: 'نسخ الرابط',copied: 'تم نسخ الرابط',copyFailed: 'تعذر النسخ. حدد هذا الرابط وانسخه.',title: 'حجزك',cancel: 'إلغاء الحجز',cancelSure: 'تأكيد الإلغاء',keepIt: 'الاحتفاظ بالحجز',cancelled: 'تم إلغاء الحجز',cancelledSub: 'تم إخبار المؤسسة.',notFound: 'هذا الرابط لم يعد صالحاً.',closedWindow: 'انتهت مهلة الإلغاء عبر الإنترنت. اتصل بالمؤسسة.',until: 'يمكن الإلغاء عبر الإنترنت حتى {d}',statusRequested: 'في انتظار التأكيد',statusConfirmed: 'مؤكّد',statusCancelled: 'ملغى',statusOther: 'بعهدة المؤسسة',failed: 'تعذّر تسجيل الإلغاء. حاول مرة أخرى.'
     }
   }
     ;

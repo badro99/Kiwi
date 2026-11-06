@@ -20,13 +20,16 @@ KiwiOrderMenu.orderProParts.run('draft', function () {
 
 // extract:lineKey:end
 // extract:totals:start
+    /* Guest preview in integer centimes, like the server's pricing: each line is
+       rounded once, then summed, and only the result goes back to dirhams. */
     function totals() {
-      let count = 0, total = 0;
+      const toCentimes = v => Math.round((Number(v) || 0) * 100);
+      let count = 0, cents = 0;
       cart.forEach(line => {
         count += line.qty;
-        total += line.qty * line.unitPrice;
+        cents += line.qty * toCentimes(line.unitPrice);
       });
-      return { count, total };
+      return { count, total: cents / 100 };
     }
 
 // extract:totals:end
@@ -91,20 +94,21 @@ KiwiOrderMenu.orderProParts.run('draft', function () {
 // extract:price:start
     function customizerUnitPrice() {
       if (!customizerItem) return 0;
-      let p = customizerItem.price;
+      const toCentimes = v => Math.round((Number(v) || 0) * 100);
+      let p = toCentimes(customizerItem.price);
       for (const opt of customizerItem.options || []) {
         const sel = customizerSelections[opt.key];
         if (opt.type === 'single' && sel) {
           const c = opt.choices.find(c => c.id === sel);
-          if (c) p += (c.delta || 0);
+          if (c) p += toCentimes(c.delta);
         } else if (opt.type === 'multi' && Array.isArray(sel)) {
           for (const id of sel) {
             const c = opt.choices.find(c => c.id === id);
-            if (c) p += (c.delta || 0);
+            if (c) p += toCentimes(c.delta);
           }
         }
       }
-      return p;
+      return p / 100;
     }
 
 // extract:price:end
