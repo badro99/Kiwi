@@ -1283,11 +1283,13 @@
     const dec = Number.isInteger(v) ? 0 : Math.min(3, (String(v).split('.')[1] || '').length);
     return fmtNum(v, dec);
   }
-  /* Date et heure : la locale des nombres (chiffres latins sous FR et AR). */
+  /* Date et heure du magasin (fuseau et loi de zone de KiwiDayReport, comme l'export CSV),
+     dans la locale des nombres (chiffres latins sous FR et AR). Sans rapport du jour : l'appareil. */
   function ctWhen(ts) {
-    const d = new Date(ts || Date.now());
+    let d = new Date(ts || Date.now()), zone;
+    try { const R = window.KiwiDayReport, p = R.civilParts(d.getTime(), R.timezone()); d = new Date(Date.UTC(+p.year, p.month - 1, +p.day, +p.hour % 24, +p.minute)); zone = 'UTC'; } catch (_) {}
     const loc = window.KiwiNumber?.locale?.() || (lang() === 'en' ? 'en-GB' : 'fr-FR');
-    return { date: d.toLocaleDateString(loc), time: d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' }) };
+    return { date: d.toLocaleDateString(loc, { timeZone: zone }), time: d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', timeZone: zone }) };
   }
   /* Noms par défaut posés par Kiwi (jamais un vrai prénom) → langue de l'écran. */
   function ctWho(name) {

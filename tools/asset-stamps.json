@@ -1452,8 +1452,8 @@
     "sha": "19663b68aa9a8f62"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "214",
-    "sha": "04d99224bc6faf7a"
+    "v": "215",
+    "sha": "30b5b20de6359532"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2108,8 +2108,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "127",
-    "sha": "773b1a02c1d1fe13"
+    "v": "128",
+    "sha": "3a4c334d1794c984"
   },
   "assets/stock/alerts.js": {
     "v": "6",

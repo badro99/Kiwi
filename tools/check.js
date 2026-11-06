@@ -2258,7 +2258,7 @@ section('Whole-project regressions');
     'color-palette-language-test.mjs',
     /* Historique des inventaires, revue propriétaire, journal des pertes et
        leurs CSV : lus en FR, EN et AR ; les valeurs stockées restent FR. */
-    'stock-count-history-language-test.mjs', 'stock-export-civil-time-test.mjs',
+    'stock-count-history-language-test.mjs', 'stock-export-civil-time-test.mjs', 'stock-screen-civil-time-test.mjs',
     'caisse-color-picker-language-test.mjs',
     'booking-truth-test.mjs',
     'booking-mail-test.mjs',
