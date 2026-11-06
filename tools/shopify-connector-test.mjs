@@ -12,7 +12,7 @@ import {
   SHOPIFY_SCOPES, verifyOAuthHmac, verifyWebhookHmac,
 } from '../functions/api/shopify/_lib.js';
 import { __test as statusTest } from '../functions/api/shopify/status.js';
-import { __test as cronTest } from '../functions/api/shopify/cron.js';
+import { __test as cronTest, onRequestPost as cronPost } from '../functions/api/shopify/cron.js';
 import retryWorker, { __test as retryTest } from './shopify-sync-worker/src/index.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -531,6 +531,30 @@ ok('a missing row is not a grant', isClientCredentials(null) === false);
   ok('an exclusivity conflict does not retry the other grant',
     ui.includes("if (code === 'merchant-already-connected' || code === 'shop-already-connected')"));
   ok('the browser never sends a client secret', !ui.includes('client_secret') && !ui.includes('SHOPIFY_CLIENT_SECRET'));
+}
+
+// r20 shopify#A0/A1: a failed queue read and a failed failure-write are visible to the caller.
+{
+  DB.state.outbox = []; link.status = 'active'; DB.state.connection.last_error = '';
+  await stockStep(1, 4);
+  let failRead = true, failBatch = false;
+  const flaky = { state: DB.state,
+    prepare(sql) {
+      if (failRead && /FROM shopify_sync_outbox o/.test(sql)) return { bind() { return this; }, async all() { throw new Error('D1 down'); } };
+      return DB.prepare(sql);
+    },
+    batch(list) { if (failBatch) return Promise.reject(new Error('D1 down')); return DB.batch(list); } };
+  const flakyEnv = { ...syncEnv, DB: flaky };
+  const unread = await flushShopifyOutbox(flakyEnv, 'atlas', 5);
+  ok('a failed queue read is not reported as an empty pass', unread.error === 'outbox-read-failed' && unread.processed === 0 && unread.failed === 0, JSON.stringify(unread));
+  const cronRes = await cronPost({ request: new Request('https://kiwi.test/api/shopify/cron', { method: 'POST', headers: { Authorization: `Bearer ${cronSecret}` } }), env: { ...flakyEnv, SHOPIFY_CRON_SECRET: cronSecret } });
+  ok('the minute endpoint answers 503 for an unreadable queue', cronRes && cronRes.status === 503 && (await cronRes.json()).ok === false);
+  failRead = false; failBatch = true;
+  globalThis.fetch = async () => { throw new Error('network down'); };
+  let lost;
+  try { lost = await flushShopifyOutbox(flakyEnv, 'atlas', 5); } finally { globalThis.fetch = realFetch; }
+  ok('a failure that could not be written is counted, not swallowed', lost.failed === 1 && lost.unrecorded === 1, JSON.stringify(lost));
+  failBatch = false; DB.state.outbox = [];
 }
 
 console.log(`\nShopify connector · ${pass} checks`);

@@ -28,7 +28,10 @@ export async function onRequestPost({ request, env }) {
   if (!authorized(request, env)) return json({ error: 'unauthorized' }, 401);
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   const result = await flushShopifyOutbox(env, '', 50);
-  return json({ ok: true, processed: result.processed || 0, failed: result.failed || 0 });
+  /* A queue that could not be read is not a quiet minute: answer 503 so the
+     scheduler's own log shows the outage. */
+  if (result.error) return json({ ok: false, error: result.error, processed: 0, failed: 0 }, 503);
+  return json({ ok: true, processed: result.processed || 0, failed: result.failed || 0, ...(result.unrecorded ? { unrecorded: result.unrecorded } : {}) });
 }
 
 export const __test = { authorized, constantTimeEqual };
