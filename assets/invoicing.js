@@ -20,7 +20,7 @@
   import('./invoicing/transport.js?v=16'),
   import('./invoicing/composer.js?v=9'),
   import('./invoicing/history.js?v=11'),
-  import('./invoicing/print.js?v=8'),
+  import('./invoicing/print.js?v=9'),
 ]).then(([transportModule, composerModule, historyModule, printModule]) => {
   // invoicing:entry-body
 

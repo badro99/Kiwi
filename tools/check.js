@@ -2111,6 +2111,7 @@ section('Whole-project regressions');
     'supplier-actions-test.mjs',
     'print-paper-test.mjs',
     'invoicing-print-test.mjs',
+    'invoicing-print-locale-test.mjs',
     'amount-words-test.mjs',
     'invoicing-pdf-pages-browser-test.mjs',
     'invoicing-v2-browser-test.mjs',
@@ -2401,6 +2402,7 @@ section('Whole-project regressions');
     'formula-receipt-pricing-test.mjs',
     'sale-invoice-test.mjs',
     'invoice-server-truth-test.mjs',
+    'invoice-long-basket-test.mjs',
     'invoice-series-year-test.mjs', 'money-server-paths-test.mjs', 'returns-watch-lifecycle-test.mjs',
     'sale-invoice-cache-key-test.mjs',
     /* Facturation v2 : le serveur (numéros, totaux, verrou, avoirs, accès). */

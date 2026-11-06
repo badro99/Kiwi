@@ -97,7 +97,7 @@ var SHELL = [
   '/assets/tickets-board.js?v=7',
   '/assets/tickets-composer.js?v=5',
   '/assets/tickets-thread.js?v=3',
-  '/assets/invoicing/print.js?v=8',
+  '/assets/invoicing/print.js?v=9',
   '/assets/invoicing/history.js?v=11',
   '/assets/invoicing/composer.js?v=9',
   '/assets/invoicing/transport.js?v=16',
@@ -256,7 +256,7 @@ var SHELL = [
   '/assets/loyalty-product-links.js?v=5',
   '/assets/features.js?v=26',
   '/assets/invoicing.css?v=17',
-  '/assets/invoicing.js?v=57',
+  '/assets/invoicing.js?v=58',
   '/assets/order-qr.js?v=6',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une

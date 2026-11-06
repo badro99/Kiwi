@@ -1,5 +1,5 @@
 {
-  "sha256": "81c2a9ba3beb4d4c69250940d0272923f9dc50dabf191e92298024d7c3ae5768",
+  "sha256": "f606b245635727d78c053441aaa57d02fbf13f641813015fd5e1467ec3c1e874",
   "parts": [
     {
       "file": "assets/invoicing/transport.js",
@@ -591,8 +591,8 @@
         },
         {
           "name": "csvCell",
-          "start": 125273,
-          "end": 125631,
+          "start": 126787,
+          "end": 127145,
           "deps": [],
           "offset": 12253,
           "replacement": "function csvCell(...args) { return historyModule.csvCell({}, this, args); }",
@@ -600,8 +600,8 @@
         },
         {
           "name": "exportCsv",
-          "start": 125634,
-          "end": 129455,
+          "start": 127148,
+          "end": 130969,
           "deps": [
             "NO_OF",
             "T",
@@ -641,7 +641,7 @@
         {
           "name": "printable",
           "start": 116509,
-          "end": 124054,
+          "end": 125568,
           "deps": [
             "T",
             "businessName",
@@ -658,12 +658,12 @@
           ],
           "offset": 922,
           "replacement": "function printable(...args) { return printModule.printable({T, businessName, computeTotals, dmy, esc, getSeller, lang, lineHT, money, renderSellerLogo, termsText, tpl}, this, args); }",
-          "length": 7545
+          "length": 9059
         },
         {
           "name": "printDocument",
-          "start": 124075,
-          "end": 125025,
+          "start": 125589,
+          "end": 126539,
           "deps": [
             "T",
             "detail",
