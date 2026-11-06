@@ -1452,8 +1452,8 @@
     "sha": "4e68527e59cc46eb"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "209",
-    "sha": "81f147ac300d4a0d"
+    "v": "210",
+    "sha": "c07b405bace42b3d"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2088,8 +2088,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "124",
-    "sha": "cb1f5c2095d41ab3"
+    "v": "125",
+    "sha": "c139d73e3ca9c126"
   },
   "assets/stock/alerts.js": {
     "v": "6",
@@ -2100,16 +2100,16 @@
     "sha": "055f2e81e1d72f20"
   },
   "assets/stock/counts.js": {
-    "v": "9",
-    "sha": "ea65ec2ca9c8fc75"
+    "v": "10",
+    "sha": "46c0339ea61c80ca"
   },
   "assets/stock/intake.js": {
     "v": "19",
     "sha": "c8d9f5b6d349dd3f"
   },
   "assets/stock/loss.js": {
-    "v": "1",
-    "sha": "da7bb80f48cd2f4f"
+    "v": "2",
+    "sha": "525bc402304e10c3"
   },
   "assets/stock/movements.js": {
     "v": "3",

@@ -48,7 +48,7 @@
     'assets/day-report-dash.js?v=50',
     'assets/stock/strings.js?v=18',
     'assets/stock/state.js?v=13',
-    'assets/stock.js?v=124',
+    'assets/stock.js?v=125',
     'assets/catalog-workspace.js?v=7',
     'assets/planning-core.js?v=15',
     'assets/team/catalog.js?v=2',
