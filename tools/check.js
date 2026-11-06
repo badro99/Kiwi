@@ -810,7 +810,7 @@ for (const test of [
   'service-interconnectivity-test.mjs',
   /* Un employé non pointé ne peut écrire ni commande ni paiement : refus serveur. */
   'team-offshift-server-test.mjs',
-  'pressing-split-test.mjs', 'pressing-balance-cents-test.mjs',
+  'pressing-split-test.mjs', 'code39-scan-test.mjs', 'pressing-balance-cents-test.mjs',
   'pressing-boundary-test.mjs',
   'pressing-numbering-test.mjs',
   'pressing-workspace-test.js', 'pay-statement-test.mjs', 'pay-statements-route-test.mjs',

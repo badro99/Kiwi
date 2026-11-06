@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: BarcodeDetector, KiwiCaissePairing, KiwiPressingOps, KiwiStaff.
  */
-import { ITEMS, root } from './custody.js?v=37';
+import { ITEMS, root } from './custody.js?v=38';
 export function create(owner) {
   'use strict';
   const { $, $$, COLOR, ORDERS, boardBucket, catalogLabel, closeVeil, custOf, dataText, deliverOrder, esc, findOrder, findScannedOrder, fmtDT, fmtDay, fmtMAD, icons, isLiveOrder, matchesQuery, moveCaretEnd, notifyLine, openDetail, openPay, openVeil, openWa, orderStatus, orderTotals, publicOrderNo, publicPieceNo, queueIfOffline, refreshOps, renderBoard, state, svcCodes, toast } = owner.pickupContext();
@@ -126,16 +126,21 @@ function acceptScan(raw) {
     return true;
   }
 async function startCameraScan(el) {
-    if (!navigator.mediaDevices?.getUserMedia || !window.BarcodeDetector) {
+    if (!navigator.mediaDevices?.getUserMedia) {
       toast('Caméra-scanner indisponible · utilisez la douchette ou saisissez le code');
       return;
     }
     stopScanner();
     try {
-      const supported = window.BarcodeDetector.getSupportedFormats
-        ? await window.BarcodeDetector.getSupportedFormats() : ['code_39', 'code_128', 'qr_code'];
+      /* The browser's own reader when it has one; Kiwi's Code 39 reader (the
+         format of our tags) when it has none or cannot read Code 39. */
+      let supported = [];
+      try {
+        if (window.BarcodeDetector) supported = window.BarcodeDetector.getSupportedFormats
+          ? await window.BarcodeDetector.getSupportedFormats() : ['code_39', 'code_128', 'qr_code'];
+      } catch (_) { supported = []; }
       const formats = ['code_39', 'code_128', 'qr_code'].filter((f) => supported.includes(f));
-      if (!formats.length) throw new Error('format');
+      const soft = formats.includes('code_39') ? null : await import('./code39-scan.js?v=1');
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
       /* The camera is ours from here: any later failure (play refused, detector
          missing) must release it through stopScanner in the catch below. */
@@ -147,12 +152,20 @@ async function startCameraScan(el) {
       const video = $('#px-scan-video', el);
       video.srcObject = stream;
       await video.play();
-      const detector = new window.BarcodeDetector({ formats });
-      const frame = async () => {
+      const detector = formats.length ? new window.BarcodeDetector({ formats }) : null;
+      const reader = soft ? soft.videoReader(video) : null;
+      let last = 0;
+      const frame = async (now) => {
         if (!live) return;
         try {
-          const hits = await detector.detect(video);
+          const hits = detector ? await detector.detect(video) : null;
           if (hits && hits[0] && acceptScan(hits[0].rawValue)) return;
+          /* About eight software reads a second: enough for a held tag, light on a phone. */
+          if (reader && live && !(now - last < 120)) {
+            last = now;
+            const text = reader.read();
+            if (text && acceptScan(text)) return;
+          }
         } catch (_) {}
         if (live) requestAnimationFrame(frame);
       };

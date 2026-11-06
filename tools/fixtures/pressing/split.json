@@ -461,16 +461,16 @@
         },
         {
           "start": 184864,
-          "end": 186737,
+          "end": 187403,
           "offset": 9258,
-          "length": 1873,
+          "length": 2539,
           "replacement": "function startCameraScan(...args) { return ui.pickup.startCameraScan.apply(this, args); }",
           "name": "startCameraScan"
         },
         {
-          "start": 186740,
-          "end": 188624,
-          "offset": 11132,
+          "start": 187406,
+          "end": 189290,
+          "offset": 11798,
           "length": 1884,
           "replacement": "function openScan(...args) { return ui.pickup.openScan.apply(this, args); }",
           "name": "openScan"
@@ -539,8 +539,8 @@
       "suffix": "  return Object.freeze({ renderRack });\n}\n",
       "fragments": [
         {
-          "start": 189654,
-          "end": 192764,
+          "start": 190320,
+          "end": 193430,
           "offset": 506,
           "length": 3110,
           "replacement": "function renderRack(...args) { return ui.rack.renderRack.apply(this, args); }",
@@ -620,5 +620,5 @@
     "kiwi-serveur.html": 27,
     "booking.html": 5
   },
-  "sha256": "41b031b5afe6c1730b5e054f065617f5814e92c23a589edd59676ce295456769"
+  "sha256": "44ff27dd0399bebeb090546ee0d612ee0fdbd7c0660fc4e7e069761f7280ce4c"
 }
