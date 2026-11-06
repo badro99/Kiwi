@@ -1063,7 +1063,7 @@
         perMad: 'Points par MAD', threshold: 'Palier (points)',
         item: 'Produit concerné', productTarget: 'Quantité',
         itemHelp: 'Chaque article dont le nom contient ce mot donne un tampon par unité. « Café » compte « Café noir » et « Café crème ».',
-        linkLimit: 'Maximum 2 000 produits liés. Réduisez la sélection avant de sauvegarder.', save: 'Enregistrer le programme', saved: 'Programme mis à jour',
+        linkLimit: 'Maximum 2 000 produits liés. Réduisez la sélection avant de sauvegarder.', catalogDown: 'Catalogue indisponible, programme non enregistré', save: 'Enregistrer le programme', saved: 'Programme mis à jour',
         savedDesc: 'La caisse et le carnet clients l’appliquent aussitôt.',
       }
     },
@@ -1090,7 +1090,7 @@
         perMad: 'Points per MAD', threshold: 'Threshold (points)',
         item: 'Qualifying product', productTarget: 'Quantity',
         itemHelp: 'Each item whose name contains this word earns one stamp per unit. “Café” counts “Café noir” and “Café crème”.',
-        linkLimit: 'Maximum 2,000 linked products. Reduce the selection before saving.', save: 'Save program', saved: 'Program updated',
+        linkLimit: 'Maximum 2,000 linked products. Reduce the selection before saving.', catalogDown: 'Catalogue unavailable, programme not saved', save: 'Save program', saved: 'Program updated',
         savedDesc: 'The till and the client book apply it right away.',
       }
     },
@@ -1117,7 +1117,7 @@
         perMad: 'نقاط لكل درهم', threshold: 'العتبة (نقاط)',
         item: 'المنتج المؤهل', productTarget: 'الكمية',
         itemHelp: 'كل منتج يحتوي اسمه على هذه الكلمة يمنح طابعًا عن كل وحدة. « Café » يشمل « Café noir » و« Café crème ».',
-        linkLimit: 'الحد الأقصى 2000 منتج مرتبط. قلّل الاختيار قبل الحفظ.', save: 'حفظ البرنامج', saved: 'تم تحديث البرنامج',
+        linkLimit: 'الحد الأقصى 2000 منتج مرتبط. قلّل الاختيار قبل الحفظ.', catalogDown: 'الكتالوج غير متاح، لم يُحفظ البرنامج', save: 'حفظ البرنامج', saved: 'تم تحديث البرنامج',
         savedDesc: 'يطبّقه الصندوق ودفتر العملاء فورًا.',
       }
     }
@@ -1243,7 +1243,7 @@
         const next = readCfg();
         if (next.product.ids.length > 2000) { toast(C.linkLimit, { type: 'warning' }); return; }
         const missing = next.model === 'product' && window.KiwiLoyaltyLinks ? window.KiwiLoyaltyLinks.unavailable() : [];
-        if (missing.length) { toast(({ fr: 'Catalogue indisponible, programme non enregistré', en: 'Catalogue unavailable, programme not saved', ar: 'الكتالوج غير متاح، لم يُحفظ البرنامج' })[trLang()] || 'Catalogue indisponible, programme non enregistré', { type: 'warning', desc: missing.join(' · ') }); return; }
+        if (missing.length) { toast(C.catalogDown, { type: 'warning', desc: missing.join(' · ') }); return; }
         let saved = false;
         try { if (window.KiwiClients && KiwiClients.hasBook && KiwiClients.hasBook()) { saved = KiwiClients.setConfig(next) !== null; } } catch (_) {}
         m.close();

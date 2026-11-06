@@ -142,7 +142,7 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
        et la caissière est prévenue (une seule fois). Un règlement payé dont la ligne manque se retrouve alors. */
     let sum = 0; for (let i = 0; i < raw.length; i++) sum = (sum * 31 + raw.charCodeAt(i)) | 0;
     try { localStorage.setItem(repayKey() + ':corrupt:' + raw.length + ':' + (sum >>> 0), raw); } catch (_) {}
-    if (!repayLog.warned && typeof toast === 'function') { repayLog.warned = true; try { toast('Journal des règlements illisible : copie gardée, vérifiez les règlements récents'); } catch (_) {} }
+    if (!repayLog.warned && typeof toast === 'function') { repayLog.warned = true; try { toast(tr('Journal des règlements illisible : copie gardée, vérifiez les règlements récents')); } catch (_) {} }
     return [];
   }
   function repayLogWrite(rows) {

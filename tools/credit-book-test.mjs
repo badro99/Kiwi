@@ -347,7 +347,7 @@ function till(disk, { failKey = '', crashAfter = Infinity, recordMode = 'ok', re
   CARNET.forEach((c) => c.hist.forEach((h) => { h.at = new Date(h.at); }));
   const CRED = Object.fromEntries(CARNET.map((c) => [c.id, c]));
   const ops = { venue: () => 'epicerie-test', save: () => { try { ls.setItem(CKEY, JSON.stringify(CARNET)); } catch (_) {} return true; } };
-  const ctx = vm.createContext({ Math, JSON, Date, Object, Array, String, CARNET, CRED, day: { especes: 0 }, pvReal: () => real, epicerieOps: ops, localStorage: ls, window: { crypto: webcrypto, KiwiPosSale: Pos }, toast: (m) => toasts.push(m) });
+  const ctx = vm.createContext({ Math, JSON, Date, Object, Array, String, CARNET, CRED, day: { especes: 0 }, pvReal: () => real, epicerieOps: ops, localStorage: ls, window: { crypto: webcrypto, KiwiPosSale: Pos }, toast: (m) => toasts.push(m), tr: (s) => s });
   vm.runInContext(REPAY_SRC, ctx);
   if (!disk.has(CKEY) && crashAfter === Infinity && !failKey) ops.save();
   return { ...ctx.api, CARNET, CRED, ctx, ops, journal: today, toasts };
