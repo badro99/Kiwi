@@ -1540,7 +1540,7 @@ section('Whole-project regressions');
     'wave-d-security-test.mjs',
     'audit-remediation-inventory-loyalty-test.mjs',
     'loyalty-truth-test.mjs', 'loyalty-link-limit-test.mjs',
-    'loyalty-product-links-test.mjs', 'loyalty-properties-test.mjs', 'r16-money-gaps-test.mjs',
+    'loyalty-product-links-test.mjs', 'loyalty-properties-test.mjs', 'r16-money-gaps-test.mjs', 'channel-health-actions-test.mjs',
     /* Fidélité : une seule règle d'arrondi pour la remise en pourcentage, tous métiers. */
     'loyalty-reward-rounding-test.mjs',
     'loyalty-refused-redemption-test.mjs',

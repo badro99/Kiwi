@@ -497,13 +497,14 @@
     root.appendChild(select);
     var previewSlot = document.createElement('div'); previewSlot.className = 'shp-preview';
     var reload = function () { return loadShopify(root); };
-    root.appendChild(shopButton(connection.location ? s.refresh : s.inspect, function () {
+    var mapButton = shopButton(connection.location ? s.refresh : s.inspect, function () {
       if (!select.value) { select.focus(); throw new Error(s.location); }
       var sameLocation = connection.location && connection.location.id === select.value;
       var action = sameLocation ? 'refresh-mapping' : 'select-location';
       var payload = sameLocation ? null : { locationId: select.value };
       return shopApi(action, payload).then(function (out) { shopPreview(previewSlot, out, reload); });
-    }));
+    });
+    root.appendChild(mapButton);
 
     if (connection.status === 'active') {
       var live = document.createElement('div'); live.className = 'shp-live';
@@ -549,7 +550,11 @@
       }, true));
       root.appendChild(actions);
     }
-    import('./channel-health.js?v=11').then(({ paintIssues }) => paintIssues(root, status.orderIssues, connection));
+    var retryIssue = { label: s.retry, run: function () { return shopApi('retry').then(reload); } };
+    var openMapping = { label: s.refresh, run: function () { if (previewSlot.scrollIntoView) previewSlot.scrollIntoView({ block: 'nearest' }); mapButton.click(); return Promise.resolve(); } };
+    import('./channel-health.js?v=12').then(({ paintIssues }) => paintIssues(root, status.orderIssues, connection, {
+      button: shopButton, actions: { 'stock-pending': retryIssue, 'stock-dead': retryIssue, 'stock-short': openMapping },
+    }));
     root.appendChild(previewSlot);
     shopSetup(previewSlot, status.setup || [], reload);
   }
@@ -903,6 +908,8 @@
   .chl { display:flex; flex-direction:column; gap:14px; }\
   .chl-hdr { margin:0; font-size:13px; line-height:1.55; color:var(--n-600); }\
   .chl-once { padding:10px 12px; border-radius:10px; background:rgba(217,154,43,.12); color:#8A6210; font-size:12.5px; font-weight:600; }\
+  .chl-once:has(.shp-btn) { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }\
+  .chl-once .shp-btn { min-height:44px; margin-inline-start:auto; }\
   .chl-f-l { font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--n-500); margin-bottom:6px; }\
   .chl-f-r { display:flex; align-items:stretch; gap:8px; }\
   .chl-f-v { flex:1; min-width:0; padding:9px 11px; border:1px solid var(--n-200); border-radius:9px; background:var(--paper-soft);\
