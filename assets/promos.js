@@ -71,8 +71,15 @@
     }
     return localEdits.get(KEY);
   }
+  /* The provenance map (what this device edited, for the overwritten-edit
+     warning) is persisted with the promotion, and the two answer as one:
+     writeLocal() reports a failure of either, so a promotion that survives a
+     reload without its provenance is never announced as fully kept. */
+  var editsKept = true;
   function keepEdits() {
-    try { localStorage.setItem(KEY + ':edits', JSON.stringify(Array.from(editsFor()))); } catch (_) {}
+    try { localStorage.setItem(KEY + ':edits', JSON.stringify(Array.from(editsFor()))); editsKept = true; }
+    catch (_) { editsKept = false; }
+    return editsKept;
   }
 
   function blank() { return { v: 1, promos: [], deleted: [] }; }
@@ -103,6 +110,8 @@
   function writeLocal() {
     var ok = false;
     try { localStorage.setItem(KEY, JSON.stringify(db)); ok = true; } catch (_) {}
+    if (!editsKept) keepEdits();          /* one retry with the document: a failed provenance write is not forgotten */
+    ok = ok && editsKept;
     var was = localKept;
     localKept = ok;
     if (!(ok && was)) {

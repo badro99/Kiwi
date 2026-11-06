@@ -132,17 +132,12 @@
     var used = rule >= 0 ? GROUPS[rule] : [];
     if (!used.length) return line;
     var list = function (L) { return used.map(function (k) { return LIMITS[k][L === 'ar' ? 5 : L === 'en' ? 4 : 3] + ' ' + num(shown(k), L); }).join(', '); };
-    line.evidence.source += ' · ' + ({fr:'Seuils',en:'Thresholds',ar:'العتبات'}[lang()]) + ': ' + list(lang());
-    if (line.evidence.text) ['fr', 'en', 'ar'].forEach(function (L) {
-      if (!line.evidence.text[L]) return;
-      var suffix = ' · ' + { fr: 'Seuils : ', en: 'Thresholds: ', ar: 'العتبات: ' }[L] + list(L);
-      var text = line.evidence.text[L], room = Math.max(0, 400 - suffix.length);
-      if (text.length > room) {
-        var cut = text.slice(0, Math.max(0, room - 1)).search(/\s+\S*$/u);
-        // Spaces inside a grouped amount are not safe places to cut a number.
-        text = (cut < 0 ? '' : text.slice(0, cut).replace(/[\p{N}.,٬٫%٪+\-−\s]+$/u, '')) + '…';
-      }
-      line.evidence.text[L] = text + suffix;
+    /* The thresholds travel beside the evidence, not inside it: the measured
+       explanation stays whole (no ellipsis) and the thresholds are appended at
+       display time, in the reader's language. */
+    line.evidence.thresholds = {};
+    ['fr', 'en', 'ar'].forEach(function (L) {
+      line.evidence.thresholds[L] = { fr: 'Seuils : ', en: 'Thresholds: ', ar: 'العتبات: ' }[L] + list(L);
     });
     return line;
   }
@@ -278,6 +273,11 @@
     var source = String(value.source || '').trim().slice(0, 120);
     if (!(Number.isFinite(count) && count >= 0 && windowLabel && source)) return null;
     var out = { count: count, window: windowLabel, source: source };
+    if (value.thresholds && typeof value.thresholds === 'object') {
+      var thresholds = {};
+      ['fr', 'en', 'ar'].forEach(function (L) { var v = String(value.thresholds[L] || '').trim().slice(0, 300); if (v) thresholds[L] = v; });
+      if (Object.keys(thresholds).length) out.thresholds = thresholds;
+    }
     if (value.text && typeof value.text === 'object') {
       var text = {};
       ['fr', 'en', 'ar'].forEach(function (L) { var v = String(value.text[L] || '').trim().slice(0, 400); if (v) text[L] = v; });
@@ -294,8 +294,9 @@
     return out;
   }
   function evidenceText(line, wanted) {
-    var e = line && line.evidence || {};
-    return (e.text && e.text[lang(wanted)]) || (e.count + ' · ' + e.window + ' · ' + e.source);
+    var e = line && line.evidence || {}, L = lang(wanted);
+    var base = (e.text && e.text[L]) || (e.count + ' · ' + e.window + ' · ' + e.source);
+    return e.thresholds && e.thresholds[L] ? base + ' · ' + e.thresholds[L] : base;
   }
   function normalizeLine(value) {
     if (!value || typeof value !== 'object') return null;

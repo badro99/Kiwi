@@ -1,6 +1,6 @@
 /* Owner: dashboard hero. Exports: renderHero, renderHeroAi, renderHeatmapAi, renderGoal, renderHeatmap, heroDataByVenue.
  * Sibling calls via live owner: none.
- * Reads live owner: COVERS_LABEL, GOAL_LABEL, GOAL_UNSET, HERO_LABEL, HH_SUB, ORDERS_LABEL, RANGE_DAYS, animateNumber, arrowSvg, buildHeatmap, buildRealHeatmapRec, buildRealHeroRec, curUnit, currentRange, deltaLabels, demoHeroSim, demoPreviousAt, effRange, fitHeroAmount, fmtHeroAmount, fmtPct, frInt, getLang, getSim, goalByVenue, guardOperatorFigures, heroDataByVenue, homeSet, intensityClass, isLiveDemo, kitCase, liveTickInProgress, operatorUnavailableText, ownData, parseAmountFromEl, parsePctFromEl, rangeBounds, realDeltaPct, realSalesTotals, realWindowStats, vData.
+ * Reads live owner: COVERS_LABEL, GOAL_LABEL, GOAL_UNSET, HERO_LABEL, HH_SUB, ORDERS_LABEL, RANGE_DAYS, activeMerchantSlug, animateNumber, arrowSvg, buildHeatmap, buildRealHeatmapRec, buildRealHeroRec, curUnit, currentRange, deltaLabels, demoHeroSim, demoPreviousAt, effRange, fitHeroAmount, fmtHeroAmount, fmtPct, frInt, getLang, getSim, goalByVenue, guardOperatorFigures, heroDataByVenue, homeSet, intensityClass, isLiveDemo, kitCase, liveTickInProgress, merchantDayBounds, merchantDayKey, operatorUnavailableText, ownData, parseAmountFromEl, parsePctFromEl, rangeBounds, realDeltaPct, realSalesTotals, realWindowStats, vData.
  * Reads globalThis: none.
  * Reads window: KiwiSales, KiwiVenue, KiwiZReconciliation. No state is copied. */
 (function () {
@@ -311,18 +311,42 @@ function renderGoal() {
       let today;
       try { today = __state.rangeBounds('aujourdhui')[0]; } catch (_) { return 0; }
       if (!(today > 0)) return 0;
+      /* Le souvenir appartient à UN commerce et à UN état de son registre :
+         passer d'un commerce à l'autre, ou recevoir une vente tardive d'un jour
+         passé, doit recalculer, pas resservir l'objectif du précédent. */
+      let slug = '';
+      try { slug = String(__state.activeMerchantSlug ? __state.activeMerchantSlug() : ''); } catch (_) { slug = ''; }
+      let revision = '';
+      try {
+        const rows = window.KiwiSales?.list?.(slug) || [];
+        let sum = 0;
+        for (let i = 0; i < rows.length; i++) sum += Math.round((+rows[i]?.amount || 0) * 100) + (rows[i]?.voided ? 7 : 0);
+        revision = rows.length + ':' + sum;
+      } catch (_) { revision = ''; }
+      const memoKey = slug + '|' + today + '|' + revision;
       const suggestMemo = renderGoal.suggestMemo || { key: '', daily: 0, perDay: 0 };
-      if (suggestMemo.key !== String(today) || !suggestMemo.daily) {
+      if (suggestMemo.key !== memoKey || !suggestMemo.daily) {
         const days = [];
         let total = 0;
+        /* Les 28 journées précédentes sont des journées COMMERCIALES du commerce
+           (23 h ou 25 h lors d'un changement d'heure), pas 28 tranches de 24 h. */
+        let end = today;
         for (let k = 1; k <= 28; k++) {
+          let start = end - DAY;
+          try {
+            if (__state.merchantDayKey && __state.merchantDayBounds) {
+              const bounds = __state.merchantDayBounds(__state.merchantDayKey(end - 1, slug), slug);
+              if (bounds && bounds.from > 0 && bounds.from < end) start = bounds.from;
+            }
+          } catch (_) { start = end - DAY; }
           let rev = 0;
-          try { rev = +__state.realWindowStats(today - k * DAY, today - (k - 1) * DAY).revenue || 0; } catch (_) { rev = 0; }
+          try { rev = +__state.realWindowStats(start, end).revenue || 0; } catch (_) { rev = 0; }
           if (rev > 0) { days.push(rev); total += rev; }
+          end = start;
         }
         days.sort((a, b) => a - b);
         const median = days.length ? (days.length % 2 ? days[(days.length - 1) / 2] : (days[days.length / 2 - 1] + days[days.length / 2]) / 2) : 0;
-        Object.assign(suggestMemo, days.length >= 3 ? { key: String(today), daily: median, perDay: total / 28 } : { key: String(today), daily: 0, perDay: 0 });
+        Object.assign(suggestMemo, days.length >= 3 ? { key: memoKey, daily: median, perDay: total / 28 } : { key: memoKey, daily: 0, perDay: 0 });
         renderGoal.suggestMemo = suggestMemo;
       }
       if (!suggestMemo.daily) return 0;

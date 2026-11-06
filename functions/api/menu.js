@@ -166,6 +166,14 @@ export function availUntilOf(it, now) {
   return until;
 }
 
+/* A carte whose promotions exceed what the published menu can hold is refused
+ * with the names of the rules that would be dropped; the sanitizer stays a
+ * reader's tool and keeps cutting for old rows already stored. */
+export function promoOverflow(raw) {
+  const report = MenuPromos().audit(raw && raw.promos);
+  return report.ok ? null : { error: 'promos-too-large', omitted: report.omitted };
+}
+
 export function sanitizeMenu(raw, now = Date.now()) {
   const out = { langs: CORE.slice(), cats: [], items: [], stations: [], kitchenId: '', opts: [], formulaTemplates: [] };
   if (!raw || typeof raw !== 'object') return out;
@@ -590,6 +598,10 @@ export async function onRequestPost(context) {
   if (shop && !looksShop && looksMenu) return json({ error: 'shape-mismatch', expected: 'shop' }, 409);
   if (!shop && !looksMenu && looksShop) return json({ error: 'shape-mismatch', expected: 'menu' }, 409);
 
+  if (!shop) {
+    const overflow = promoOverflow(raw);
+    if (overflow) return json(overflow, 422);
+  }
   const data = shop ? sanitizeShop(raw) : sanitizeMenu(raw);
 
   /* Restaurant menus use optimistic concurrency. A dashboard must publish the

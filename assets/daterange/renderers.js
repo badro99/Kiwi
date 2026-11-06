@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   const scripts = [
-    'assets/daterange/hero.js?v=9',
+    'assets/daterange/hero.js?v=10',
     'assets/daterange/kpi.js?v=25',
     'assets/daterange/revenue.js?v=5',
     'assets/daterange/activity.js?v=7',

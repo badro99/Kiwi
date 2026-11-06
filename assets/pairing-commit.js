@@ -32,6 +32,16 @@
 
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+  /* Une écriture n'est tenue que si on la relit : un stockage plein ou
+     refusant ne lève pas toujours, et `set` seul l'avale. */
+  function put(k, v) {
+    v = String(v);
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try { localStorage.setItem(k, v); if (localStorage.getItem(k) === v) return true; } catch (_) {}
+    }
+    return false;
+  }
+  function restore(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (_) {} }
   function readMap() { try { return JSON.parse(ls('kiwiPairings') || '{}') || {}; } catch (_) { return {}; } }
   function pairedVenue() { try { return JSON.parse(ls('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
 
@@ -41,10 +51,29 @@
      autour de cette purge partagée. */
   function purgeTenantData() {
     var deviceTag = ls('kiwi:posDevice');
+    var purger = window.KiwiTenantPurge, clean = false;
     try {
-      if (window.KiwiTenantPurge && window.KiwiTenantPurge.purge) window.KiwiTenantPurge.purge();
-    } catch (_) {}
+      if (purger && purger.purge) { purger.purge(); clean = residue(purger) === 0; }
+    } catch (_) { clean = false; }
     if (deviceTag) set('kiwi:posDevice', deviceTag);
+    return clean;
+  }
+  /* Ce qui reste d'un commerçant après la purge : zéro, ou la purge n'a pas eu
+     lieu (clé qui refuse de partir) et l'appareil ne doit pas être appairé
+     au suivant par-dessus. */
+  function residue(purger) {
+    var left = 0;
+    try {
+      (purger.keys || []).forEach(function (k) { if (ls(k) != null) left++; });
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!k || k === 'kiwi:posDevice' || (purger.preserve && purger.preserve[k])) continue;
+        for (var p = 0; p < (purger.prefixes || []).length; p++) {
+          if (k.indexOf(purger.prefixes[p]) === 0) { left++; break; }
+        }
+      }
+    } catch (_) { left++; }
+    return left;
   }
 
   /* Pose l'appairage. `code` peut être vide (hand-off sans code) ; `d` est la
@@ -60,15 +89,19 @@
       subtype: d.subtype || '', name: d.name || '', location: d.location || '',
     };
 
-    /* Ré-appairage vers un AUTRE commerce : ce qui appartenait au précédent n'a
-       rien à faire ici. Effacé MAINTENANT, et pas seulement contrôlé au
-       rechargement — l'appareil garde son état en mémoire, et le prochain
-       autosave le réécrirait estampillé du nouveau commerçant : un blob qui dit
-       B en contenant A passe alors tous les contrôles.
+    /* UNE transition, tout ou rien. L'appairage est d'abord MIS EN SCÈNE
+       (écrit et relu sous une clé à part) : si le stockage refuse, on s'arrête
+       avant d'avoir effacé quoi que ce soit, l'ancien contexte reste intact.
+       Puis la purge de l'ancien commerçant, vérifiée : si elle n'a pas tout
+       emporté on n'appaire PAS (le nouveau commerçant ne doit jamais hériter
+       d'un reste de l'ancien). Puis les clés, écrites et relues, `kiwiPaired`
+       en dernier comme marque de validité ; un échec en cours de route remet
+       les clés comme elles étaient. Jamais d'appareil « appairé » à moitié, et
+       `kiwi-paired` ne part que sur un succès. */
+    var STAGE = 'kiwiPairingStage';
+    var staged = JSON.stringify({ venue: venue, at: Date.now() });
+    if (!put(STAGE, staged)) return { ok: false, error: 'storage-unavailable', venue: venue, switched: false };
 
-       Purge AVANT d'écrire kiwiLiveMerchant : la règle balaye tout ce qui
-       commence par « kiwi: » et toute la liste TENANT_KEYS — l'ordre inverse
-       effacerait l'appairage qu'on vient de poser. */
     var was = pairedVenue();
     var switched = !!(was && was.merchant && was.merchant !== venue.merchant);
     if (switched) {
@@ -82,17 +115,32 @@
          d'espèces, c'est-à-dire l'argent d'un commerce. */
       try { localStorage.removeItem('kiwi-caisse-shift'); } catch (_) {}
       try { localStorage.removeItem('kiwi-caisse-shift:' + (was.merchant || was.slug)); } catch (_) {}
+      var clean = false;
       try {
-        purgeTenantData();
+        clean = purgeTenantData();
       } catch (err) {
         if (window.KiwiReportError) window.KiwiReportError(err, 'tenant:caisse_tenant_switch_purge_failed');
       }
+      if (!clean) {
+        if (window.KiwiReportError) window.KiwiReportError(new Error('purge-incomplete'), 'tenant:caisse_tenant_switch_purge_failed');
+        try { localStorage.removeItem(STAGE); } catch (_) {}
+        return { ok: false, error: 'purge-failed', venue: venue, switched: true };
+      }
     }
 
-    set('kiwiLiveMerchant', venue.merchant);
-    set('kiwiLive', '1');
-    set('kiwiPaired', '1');
-    set('kiwiPairedVenue', JSON.stringify(venue));
+    /* Purge AVANT d'écrire kiwiLiveMerchant : la règle balaye tout ce qui
+       commence par « kiwi: » et toute la liste TENANT_KEYS — l'ordre inverse
+       effacerait l'appairage qu'on vient de poser. */
+    var keys = ['kiwiLiveMerchant', 'kiwiLive', 'kiwiPairedVenue', 'kiwiPaired'];
+    var before = keys.map(ls);
+    var persisted = put('kiwiLiveMerchant', venue.merchant) && put('kiwiLive', '1')
+      && put('kiwiPairedVenue', JSON.stringify(venue)) && put('kiwiPaired', '1');
+    if (!persisted) {
+      keys.forEach(function (k, i) { restore(k, before[i]); });
+      try { localStorage.removeItem(STAGE); } catch (_) {}
+      return { ok: false, error: 'persist-failed', venue: venue, switched: switched };
+    }
+    try { localStorage.removeItem(STAGE); } catch (_) {}
 
     /* Les surfaces peignent le nom du magasin au DOMContentLoaded, soit AVANT
      * que redeem() ait répondu — sur un ré-appairage elles gardaient donc le nom

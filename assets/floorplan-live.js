@@ -84,12 +84,12 @@
         if (!d || !d.ok) throw new Error('bad-body');
         /* The plan may have switched store while the request was in flight. */
         if (s !== slug()) return;
-        var next = JSON.stringify([s, d.tables || {}, d.stats || {}, d.partial || {}, d.dayStart]);
+        var next = JSON.stringify([s, d.tables || {}, d.stats || {}, d.partial || {}, d.dayStart, d.dayEnd]);
         idleDelay = next === signature ? Math.min(60000, idleDelay * 2) : POLL_MS;
         signature = next;
         lastSlug = s;
         last = { ok: true, live: true, stale: false, tables: d.tables || {}, stats: d.stats || {},
-                 dayStart: Number(d.dayStart) || 0, partial: d.partial || {},
+                 dayStart: Number(d.dayStart) || 0, dayEnd: Number(d.dayEnd) || 0, partial: d.partial || {},
                  /* Last authenticated poll from a paired till (server clock).
                     `live` only says the server answered; this says a till
                     is actually switched on. 0 = never seen. */
@@ -143,21 +143,41 @@
    * is an unplaced booking, offered for a table that fits its party. */
   var ACTIVE = { requested: 1, confirmed: 1, checked_in: 1 };
   function resourceTableId(id) { return 'tpl-floor-' + String(id || '').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 40); }
-  function bookings(doc, tables, now, dayStart) {
+  /* The day a booking belongs to is the merchant's business day, not 24 h from
+   * a device-zone start: a 23 h or 25 h day (clock change) would otherwise take
+   * in the next day's first booking or drop the last hour. The live feed carries
+   * the server's own bounds; they win while `now` is inside them. Without a feed
+   * the caller's bounds stand, and 24 h is only the last resort. */
+  function dayBounds(now, dayStart, dayEnd) {
+    var room = currentRoom();
+    if (room && room.live && room.dayStart && room.dayEnd && now >= room.dayStart && now < room.dayEnd) {
+      return { from: room.dayStart, to: room.dayEnd };
+    }
+    var from = dayStart || (now - 6 * 3600000);
+    return { from: from, to: dayEnd > from ? dayEnd : from + 24 * 3600000 };
+  }
+  function bookings(doc, tables, now, dayStart, dayEnd) {
     var out = { byTable: {}, unplaced: [] };
     if (!doc || !Array.isArray(doc.bookings) || !Array.isArray(tables)) return out;
     now = now || Date.now();
-    var from = dayStart || (now - 6 * 3600000);
-    var to = from + 24 * 3600000;
+    var bounds = dayBounds(now, dayStart, dayEnd), from = bounds.from, to = bounds.to;
     var resById = {};
     (doc.resources || []).forEach(function (r) { if (r && r.id) resById[r.id] = r; });
     var byRes = {}, byNum = {};
-    tables.forEach(function (t) { byRes[resourceTableId(t.id)] = t; byNum[tableKey(t.num)] = t; });
+    /* Two plan tables whose ids collapse to one resource key (the key keeps 40
+       sanitised characters, as Réservations does) make a booking ambiguous:
+       it is left unplaced rather than seated at whichever table came last. */
+    var clash = {};
+    tables.forEach(function (t) {
+      var key = resourceTableId(t.id);
+      if (byRes[key] && byRes[key] !== t) clash[key] = true;
+      byRes[key] = t; byNum[tableKey(t.num)] = t;
+    });
     doc.bookings.forEach(function (b) {
       if (!b || !ACTIVE[b.status] || !(b.startAt >= from && b.startAt < to)) return;
       if (b.endAt && b.endAt < now) return;
       var r = resById[b.resourceId];
-      var t = byRes[b.resourceId] || (r && r.kind === 'table' ? byNum[tableKey(r.name)] : null);
+      var t = clash[b.resourceId] ? null : (byRes[b.resourceId] || (r && r.kind === 'table' ? byNum[tableKey(r.name)] : null));
       var item = { id: b.id, name: (b.customer && b.customer.name) || '', startAt: b.startAt, endAt: b.endAt,
                    partySize: +b.partySize || 0, status: b.status, tableId: t ? t.id : null };
       if (t) (out.byTable[t.id] = out.byTable[t.id] || []).push(item);

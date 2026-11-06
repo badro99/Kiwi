@@ -171,7 +171,7 @@
       const liveLines = tableOrders[tableId];
       if (Array.isArray(liveLines) && liveLines.length) {
         return liveLines.map(l => ({ id: l.id, uid: l.uid, qty: l.qty, name: lineLabel(l), baseName: l.baseName || l.name,
-          price: l.price, total: l.price * l.qty, note: l.note || '', sent: !!l.sent,
+          price: l.price, total: l.price * l.qty, note: l.note || '', opts: l.opts, optSig: l.optSig, sent: !!l.sent,
           held: lineHeld(l, liveLines),
           orderProPending: !!l.orderProPending, voidPending: !!l.voidPending,
           kind: l.kind, formulaUid: l.formulaUid,
