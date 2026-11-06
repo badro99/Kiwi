@@ -5,7 +5,7 @@
     {
       "name": "hero",
       "file": "assets/daterange/hero.js",
-      "prefix": "/* Owner: dashboard hero. Exports: renderHero, renderHeroAi, renderHeatmapAi, renderGoal, renderHeatmap, heroDataByVenue.\n * Sibling calls via live owner: none.\n * Reads live owner: COVERS_LABEL, GOAL_LABEL, GOAL_UNSET, HERO_LABEL, HH_SUB, ORDERS_LABEL, RANGE_DAYS, animateNumber, arrowSvg, buildHeatmap, buildRealHeatmapRec, buildRealHeroRec, curUnit, currentRange, deltaLabels, demoHeroSim, demoPreviousAt, effRange, fitHeroAmount, fmtHeroAmount, fmtPct, frInt, getLang, getSim, goalByVenue, guardOperatorFigures, heroDataByVenue, homeSet, intensityClass, isLiveDemo, kitCase, liveTickInProgress, operatorUnavailableText, ownData, parseAmountFromEl, parsePctFromEl, rangeBounds, realDeltaPct, realSalesTotals, realWindowStats, vData.\n * Reads globalThis: none.\n * Reads window: KiwiSales, KiwiVenue, KiwiZReconciliation. No state is copied. */\n(function () {\n  'use strict';\n  const registry = window.__kiwiHomeRenderers || (window.__kiwiHomeRenderers = Object.create(null));\n  registry['hero'] = function (__state) {\n",
+      "prefix": "/* Owner: dashboard hero. Exports: renderHero, renderHeroAi, renderHeatmapAi, renderGoal, renderHeatmap, heroDataByVenue.\n * Sibling calls via live owner: none.\n * Reads live owner: COVERS_LABEL, GOAL_LABEL, GOAL_UNSET, HERO_LABEL, HH_SUB, ORDERS_LABEL, RANGE_DAYS, activeMerchantSlug, animateNumber, arrowSvg, buildHeatmap, buildRealHeatmapRec, buildRealHeroRec, curUnit, currentRange, deltaLabels, demoHeroSim, demoPreviousAt, effRange, fitHeroAmount, fmtHeroAmount, fmtPct, frInt, getLang, getSim, goalByVenue, guardOperatorFigures, heroDataByVenue, homeSet, intensityClass, isLiveDemo, kitCase, liveTickInProgress, merchantDayBounds, merchantDayKey, operatorUnavailableText, ownData, parseAmountFromEl, parsePctFromEl, rangeBounds, realDeltaPct, realSalesTotals, realWindowStats, vData.\n * Reads globalThis: none.\n * Reads window: KiwiSales, KiwiVenue, KiwiZReconciliation. No state is copied. */\n(function () {\n  'use strict';\n  const registry = window.__kiwiHomeRenderers || (window.__kiwiHomeRenderers = Object.create(null));\n  registry['hero'] = function (__state) {\n",
       "suffix": "    return Object.freeze({ renderHero, renderHeroAi, renderHeatmapAi, renderGoal, renderHeatmap, heroDataByVenue });\n  };\n})();\n",
       "exports": [
         "renderHero",
@@ -23,6 +23,7 @@
         "HH_SUB",
         "ORDERS_LABEL",
         "RANGE_DAYS",
+        "activeMerchantSlug",
         "animateNumber",
         "arrowSvg",
         "buildHeatmap",
@@ -48,6 +49,8 @@
         "isLiveDemo",
         "kitCase",
         "liveTickInProgress",
+        "merchantDayBounds",
+        "merchantDayKey",
         "operatorUnavailableText",
         "ownData",
         "parseAmountFromEl",
