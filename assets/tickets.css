@@ -237,6 +237,13 @@ html[lang="ar"] :is(.brand, .workspace-head h1, .filter-heading h2, .filter-labe
   .publish-button { flex: 1.4; min-width: 0; }
 }
 
+/* Doigt sur un téléphone ou un écran tactile : chaque commande de ticket mesure au moins 44 px. */
+@media (max-width: 600px), (pointer: coarse) {
+  .filter-pill, .filter-reset, .classify-button, .copy-button, .classification-save, .error-state button { min-height: 44px; }
+  .classify-button { padding-inline: 13px; }
+  .classification-editor select, .classification-grid select { height: 44px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
