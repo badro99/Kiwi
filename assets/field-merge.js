@@ -53,7 +53,24 @@
     const fields = doc && doc.fieldEdits && doc.fieldEdits.fields;
     return Array.isArray(fields) ? Object.fromEntries(fields.map(([k,at,id,seen,deleted]) => [k,{at,id,seen,deleted}])) : fields || {};
   }
-  const pack = fields => Object.keys(fields).sort().map(k => { const v = fields[k]; return [k,v.at,v.id,v.seen || [],!!v.deleted]; });
+  /* Bounded metadata: a plan edited every day for years must still fit its
+   * store document. Each register remembers its 4 latest superseded versions
+   * (an older stale copy then shows as a conflict, never as a silent loss); a
+   * deletion marker is dropped once the document has moved on 90 days past it;
+   * the conflict journal keeps its 50 latest entries. Pruning reads only the
+   * document itself, so every device prunes the same way. */
+  const SEEN_MAX = 4, CONFLICTS_MAX = 50, TOMBSTONE_MS = 90 * 864e5;
+  const idTime = id => { const n = parseFloat(String(id)); return Number.isFinite(n) ? n : 0; };
+  const byTime = (x, y) => idTime(y) - idTime(x) || (x < y ? -1 : x > y ? 1 : 0);
+  const trimSeen = seen => [...new Set(seen || [])].sort(byTime).slice(0, SEEN_MAX).sort();
+  const trimConflicts = list => list.slice().sort((x, y) => byTime(x.kept, y.kept)).slice(0, CONFLICTS_MAX)
+    .sort((x, y) => { const a = stable(x), b = stable(y); return a < b ? -1 : a > b ? 1 : 0; });
+  const pack = fields => {
+    const newest = Object.values(fields).reduce((m, v) => Math.max(m, +v.at || 0), 0);
+    return Object.keys(fields).sort()
+      .filter(k => !(fields[k].deleted && newest - (+fields[k].at || 0) > TOMBSTONE_MS))
+      .map(k => { const v = fields[k]; return [k,v.at,v.id,trimSeen(v.seen),!!v.deleted]; });
+  };
   function register(doc, fields, k, known) {
     const v = (known || versions(doc))[k];
     const f = fields[k];
@@ -72,7 +89,7 @@
       const old = register(prev, b, k, previousVersions);
       fields[k] = { at, id:identity(k, at, [!!a[k], a[k] && a[k].value]), seen:[...new Set([...(old.seen || []), old.id])].sort(), deleted:!a[k] };
     }
-    out.fieldEdits = { fields:pack(fields), conflicts:copy((out.fieldEdits || prev.fieldEdits || {}).conflicts || []) };
+    out.fieldEdits = { fields:pack(fields), conflicts:trimConflicts(copy((out.fieldEdits || prev.fieldEdits || {}).conflicts || [])) };
     return out;
   }
   function merge(a, b) {
@@ -97,7 +114,7 @@
       }
     }
     values.sort((a,b) => a.path.length - b.path.length).forEach(v => assign(out, v.path, v.value));
-    out.fieldEdits = { fields:pack(fields), conflicts:[...conflicts.entries()].sort(([x], [y]) => x < y ? -1 : x > y ? 1 : 0).map(([, c]) => c) };
+    out.fieldEdits = { fields:pack(fields), conflicts:trimConflicts([...conflicts.values()]) };
     return out;
   }
   function message() {

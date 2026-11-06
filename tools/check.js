@@ -2302,7 +2302,7 @@ section('Whole-project regressions');
        sous le café du même compte. */
     'till-store-identity-test.mjs',
     'account-scope-test.mjs',
-    'floorplan-lww-test.mjs',
+    'floorplan-lww-test.mjs', 'floorplan-long-run-test.mjs',
     'floorplan-clean-test.mjs',
     'tables-page-split-test.mjs',
     'tables-operations-split-test.mjs',
