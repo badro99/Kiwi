@@ -46,7 +46,9 @@ function cashFixture() {
     },
     document: { readyState: 'loading', addEventListener() {} },
     crypto, Date, Math, JSON, CustomEvent,
-    setTimeout(_fn, ms) { if (ms !== 12000) timers.push(ms); }, /* the 12 s request deadline is not a retry delay */
+    /* The 12 s request deadline is not a retry delay. It is armed with what is left of it
+       (11 999 ms once a millisecond has passed), so skip every deadline-sized timer. */
+    setTimeout(_fn, ms) { if (!(ms > 11000 && ms <= 12000)) timers.push(ms); },
     setInterval() {},
     fetch(_url, options) {
       return new Promise((resolve) => pending.push({ resolve, event: JSON.parse(options.body) }));
