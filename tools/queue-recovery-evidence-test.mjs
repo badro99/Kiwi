@@ -23,7 +23,7 @@ function boot() {
     confirm() { throw new Error('system dialog used'); },
     KiwiLive: { queueRecoveryCopies(key, ack) { const keys = Object.keys(raw).filter((k) => k.startsWith('kiwiSale')); if (key === undefined) return keys.map((k) => ({ key: k, bytes: 40 })); if (!(key in raw)) return null; const v = raw[key]; if (ack) { delete raw[key]; calls.push('ack:' + key); } return v; } },
     KiwiKitchenPrint: { recoveryCopies(key, ack) { const keys = Object.keys(raw).filter((k) => k.startsWith('kiwi:kitchen')); if (key === undefined) return keys.map((k) => ({ key: k, bytes: 40 })); if (!(key in raw)) return null; const v = raw[key]; if (ack) { delete raw[key]; calls.push('ack:' + key); } return v; } },
-    KiwiClients: { outboxQuarantine: () => [], outboxStatus: () => ({ memoryOnly: [], vaulted: [] }) } };
+    KiwiOutboxVault: { recoveryCopies: () => [], status: () => ({ memoryOnly: [], vaulted: [] }) } };
   context.window = Object.assign(context, { addEventListener(name, fn) { (listeners[name] ||= []).push(fn); } });
   vm.runInNewContext(source, context);
   return { doc, calls, context, fire: (name, detail) => (listeners[name] || []).forEach((fn) => fn({ detail })), raw };
@@ -46,7 +46,7 @@ function boot() {
   assert.equal(t.calls.length, 1, 'confirmed deletion acknowledges exactly one copy');
 }
 {
-  const t = boot(); t.context.KiwiClients.outboxStatus = () => ({ memoryOnly: ['kiwi:clients-purchases:v1:x'], vaulted: [] });
+  const t = boot(); t.context.KiwiOutboxVault.status = () => ({ memoryOnly: ['kiwi:clients-purchases:v1:x'], vaulted: [] });
   const host = node('div', t.doc); t.fire('kiwi:quarantine-review', host);
   assert.ok(find(host, (n) => n.attrs.role === 'alert' && /mémoire seulement/.test(n.textContent)), 'memory-only client events raise an alert');
 }

@@ -62,5 +62,5 @@
     try { window.dispatchEvent(new CustomEvent('kiwi:sale-aliases-unsaved', { detail: { merchant: merchant } })); } catch (_) {}
     return false;
   }
-  window.KiwiSaleAliases = Object.freeze({ get: get, set: set, MAX: MAX });
+  window.KiwiSaleIdentity.aliases = Object.freeze({ get: get, set: set, MAX: MAX });
 })();

@@ -51,6 +51,18 @@
     {
       "before": "",
       "after": "      moveTitle: \"حركة\",       moveCurrent: \"المخزون الحالي\",\n      moveReason: \"السبب\",       moveReceipt: \"استلام من المورد\",\n      moveReturn: \"إرجاع الزبون\",       moveLoss: \"فقدان / كسر\",\n      moveExpired: \"منتهي الصلاحية\",       moveGift: \"هدية\",\n      moveStaff: \"استهلاك الفريق\",       moveCount: \"جرد فعلي\",\n      moveManual: \"تصحيح يدوي\",       moveQty: \"الكمية\",\n      moveNote: \"مرجع / ملاحظة\",       movePlaceholder: \"السبب أو الوثيقة أو المسؤول\",\n      moveExpiry: \"الصلاحية (اختياري)\",       moveIntro: \"الإدخال يزيد المخزون ويحفظ السجل العملية.\",\n      moveCountQty: \"الكمية المحسوبة فعليًا\",       moveCountHelp: \"يسجل كيوي الفرق فقط بين المخزون النظري والجرد.\",\n      moveInHelp: \"هذا الإدخال يزيد المخزون ويبقى قابلًا للتتبع.\",       moveOutHelp: \"هذا الإخراج ينقص المخزون ويبقى قابلًا للتتبع.\",\n\n"
+    },
+    {
+      "before": "",
+      "after": "      mCountLocalWarn: (durable, cut) => (durable ? '' : 'Inventaire non enregistré sur cet appareil (stockage plein) · ') + (cut ? 'historique local tronqué, détail complet côté serveur' : 'à vérifier'), stockLocalOnly: 'Stockage plein : vos saisies de stock ne sont gardées que jusqu’au rechargement. Libérez de la place ou restez connecté.',\n"
+    },
+    {
+      "before": "",
+      "after": "      mCountLocalWarn: (durable, cut) => (durable ? '' : 'Count not saved on this device (storage full) · ') + (cut ? 'local history truncated, full detail on the server' : 'to review'), stockLocalOnly: 'Storage full: your stock entries are only kept until reload. Free some space or stay online.',\n"
+    },
+    {
+      "before": "",
+      "after": "      mCountLocalWarn: (durable, cut) => (durable ? '' : 'لم يُحفظ الجرد على هذا الجهاز (التخزين ممتلئ) · ') + (cut ? 'السجل المحلي مقتطع، التفاصيل الكاملة على الخادم' : 'للمراجعة'), stockLocalOnly: 'التخزين ممتلئ: تُحفظ مدخلات المخزون حتى إعادة التحميل فقط. حرّر مساحة أو ابقَ متصلاً.',\n"
     }
   ]
 }

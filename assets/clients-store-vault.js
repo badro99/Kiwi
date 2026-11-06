@@ -1,7 +1,13 @@
-/* Durable fallback for refused client queue writes. No queue keys belong here. */
+/* Durable fallback for refused client queue writes. No queue keys belong here.
+ * Also the evidence desk of the client book: it says whether refused writes are held in memory only or confirmed in
+ * IndexedDB (status), sets aside the raw bytes of an unreadable queue before a write can replace them (quarantine /
+ * recoveryCopies, listed by queue-recovery.js), and caps a purchase event's lines without losing the stamp-bearing ones. */
 (function () {
   'use strict';
   var mirror = Object.create(null), pending = Object.create(null), db = null, loading;
+  var state = Object.create(null), kept = Object.create(null), QPREFIX = 'kiwi:clients-quarantine:v1:';
+  function notify(name) { try { if (window.dispatchEvent && typeof Event === 'function') window.dispatchEvent(new Event(name)); } catch (_) {} }
+  function mark(key, saved) { if (saved && state[key]) state[key] = 'vault'; notify('kiwi:clients-outbox'); return saved; }
   function copy(list) { return JSON.parse(JSON.stringify(list)); }
   function union(first, second) {
     var seen = new Set();
@@ -26,13 +32,46 @@
     loaded: false,
     get: function (key) { return copy(mirror[key] || []); },
     save: function (key, list) {
-      mirror[key] = copy(list);
+      mirror[key] = copy(list); state[key] = 'memory'; notify('kiwi:clients-outbox');
       if (!vault.loaded) { pending[key] = true; return vault.load().then(function () { return false; }); }
-      return write(key, mirror[key]);
+      return write(key, mirror[key]).then(function (saved) { return mark(key, saved); });
     },
     drop: function (key) {
       if (!vault.loaded) return Promise.resolve(false);
-      delete mirror[key]; return write(key, null);
+      delete mirror[key]; delete state[key]; return write(key, null);
+    },
+    /* memoryOnly: queues whose last write was refused by localStorage and not (yet) confirmed in IndexedDB. */
+    status: function () {
+      var memoryOnly = [], vaulted = [];
+      Object.keys(state).forEach(function (k) { (state[k] === 'vault' ? vaulted : memoryOnly).push(k); });
+      return { memoryOnly: memoryOnly, vaulted: vaulted, quarantined: Object.keys(kept).length };
+    },
+    quarantine: function (key, raw) {
+      if (!raw) return;
+      var sum = 0; for (var i = 0; i < raw.length; i++) sum = (sum * 31 + raw.charCodeAt(i)) | 0;
+      var id = QPREFIX + (sum >>> 0) + ':' + key;
+      if (kept[id] !== undefined) return;
+      kept[id] = raw;
+      try { localStorage.setItem(id, raw); } catch (_) {}
+      notify('kiwi:clients-quarantine');
+    },
+    /* recoveryCopies() lists, (key) reads, (key, true) acknowledges and removes. Same shape as the sale queue's. */
+    recoveryCopies: function (key, acknowledge) {
+      var keys = Object.keys(kept);
+      try { for (var i = 0; i < localStorage.length; i++) { var k = String(localStorage.key(i)); if (k.indexOf(QPREFIX) === 0 && keys.indexOf(k) < 0) keys.push(k); } } catch (_) {}
+      if (key === undefined) return keys.map(function (k) { var raw = kept[k] !== undefined ? kept[k] : (localStorage.getItem(k) || ''); return { key: k, bytes: 2 * (k.length + raw.length) }; });
+      if (keys.indexOf(key) < 0) return null;
+      var value = kept[key] !== undefined ? kept[key] : localStorage.getItem(key);
+      if (acknowledge) { delete kept[key]; try { localStorage.removeItem(key); } catch (_) {} notify('kiwi:clients-quarantine'); }
+      return value;
+    },
+    /* Lines of one purchase/refund event: at most 100; the ones for which hit(line) is true are kept first. */
+    capLines: function (items, hit) {
+      var list = Array.isArray(items) ? items : [];
+      if (list.length <= 100) return { rows: list, dropped: 0 };
+      var first = [], rest = [];
+      list.forEach(function (it) { var yes = false; try { yes = !!hit(it); } catch (_) {} (yes ? first : rest).push(it); });
+      return { rows: first.concat(rest).slice(0, 100), dropped: list.length - 100 };
     },
     load: function () {
       if (loading) return loading;
@@ -43,7 +82,7 @@
           finished = true;
           if (timer && typeof clearTimeout === 'function') clearTimeout(timer);
           vault.loaded = true;
-          Object.keys(pending).forEach(function (key) { write(key, mirror[key]); });
+          Object.keys(pending).forEach(function (key) { write(key, mirror[key]).then(function (saved) { mark(key, saved); }); });
           pending = Object.create(null);
           resolve();
         }
@@ -73,6 +112,7 @@
       return loading;
     },
   };
+  window.addEventListener('kiwi:clients-queue-corrupt', function (event) { var d = event && event.detail; if (d) vault.quarantine(d.key, d.raw); });
   function attach() { if (window.KiwiClients && typeof window.KiwiClients.attachOutboxVault === 'function') window.KiwiClients.attachOutboxVault(vault); }
   if (window.addEventListener) window.addEventListener('load', function () { attach(); if (vault.loaded && window.KiwiClients) window.KiwiClients.sync(); });
   vault.load().then(function () {
@@ -560,17 +600,7 @@
   //   opts.amount  → MAD spent (amount model)
   //   opts.visit   → count a visit toward a stamp card (visit / product model)
   // returns { client, rewardReady:bool } — rewardReady when a stamp card fills.
-  /* Plafond de 100 lignes par événement (le serveur borne pareil). Jusqu'ici on gardait
-   * les 100 premières sans le dire : la preuve des tampons au-delà était perdue. On
-   * garde d'abord les lignes qui comptent pour le programme « par produit », puis
-   * les autres dans l'ordre, et on marque combien de lignes sont restées dehors. */
-  function capLines(items, book) {
-    var list = Array.isArray(items) ? items : [], cfg = config(book);
-    if (list.length <= 100) return { rows: list, dropped: 0 };
-    var hit = function (it) { try { return cfg && cfg.model === 'product' && KiwiLoyaltyRules.qualifyingQty(cfg, [it]) > 0; } catch (_) { return false; } };
-    var first = list.filter(hit), rest = list.filter(function (it) { return !hit(it); });
-    return { rows: first.concat(rest).slice(0, 100), dropped: list.length - 100 };
-  }
+  var capLines = function (items, book) { var V = outboxRead.vault, cfg = config(book); return V && V.capLines ? V.capLines(items, function (it) { return cfg && cfg.model === 'product' && KiwiLoyaltyRules.qualifyingQty(cfg, [it]) > 0; }) : { rows: (Array.isArray(items) ? items : []).slice(0, 100), dropped: 0 }; };
   function recordPurchase(id, opts, book) {
     book = book || bookId();
     opts = opts || {};
@@ -592,20 +622,18 @@
     rec.visits = (rec.visits || 0) + 1;
     rec.lastSeen = now();
     if (!rec.firstSeen) rec.firstSeen = now();
-    if (amount > 0) rec.spend = (Math.round((rec.spend || 0) * 100) + Math.round(amount * 100)) / 100; // integer centimes, never a float sum
+    if (amount > 0) rec.spend = (Math.round((rec.spend || 0) * 100) + Math.round(amount * 100)) / 100; // integer centimes
     if (!Array.isArray(rec.history)) rec.history = [];
-    var capped = capLines(opts.items, book);
     const detail = {
       ref: saleRef, ts: +opts.createdAt || now(), amount,
       method: String(opts.method || '').slice(0, 32),
-      items: capped.rows.map(function (item) {
+      items: capLines(opts.items, book).rows.map(function (item) {
         var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); if (item && item.unit) row.unit = String(item.unit).slice(0, 24); return row;
       }),
     };
     rec.history = [detail].concat(rec.history.filter(function (row) {
       return !(detail.ref && row && row.ref === detail.ref);
     }));
-
     var rewardReady = false;
     var delta = { points: 0, stamps: 0, visits: 1, spend: amount };
     if (!loyaltyOn(book)) {
@@ -631,8 +659,7 @@
     ref = ref || ('purchase:' + id + ':' + rec.updated + ':' + Math.abs(hash(String(Math.random()))).toString(36));
     var event = { kind: 'purchase', ref: ref, clientId: id, amount: amount, points: delta.points,
       stamps: delta.stamps, visits: delta.visits, spend: delta.spend, created: rec.updated,
-      method: detail.method, items: detail.items, saleRef: detail.ref };
-    if (capped.dropped) event.itemsDropped = capped.dropped; // lines left out of the 100-line event, never silent
+      method: detail.method, items: detail.items, saleRef: detail.ref, itemsDropped: capLines(opts.items, book).dropped };
     purchaseAdd(book, event);
     purchasePush(book, event);
     return { client: rec, rewardReady: rewardReady };
@@ -677,13 +704,11 @@
        `points` ne sont que l'estimation locale, rejouée tant que le serveur n'a
        pas répondu. Un retour estimé à 0 ici part quand même, sinon il ne serait
        jamais acquitté. */
-    var capped = capLines(opts.items, book);
     var event = { kind: 'refund', ref: ref, clientId: id, amount: -amount, points: -claw, stamps: -unstamp, visits: 0,
       spend: -take, created: rec.updated, method: 'retour', saleRef: saleRef,
-      items: capped.rows.map(function (item) {
+      items: capLines(opts.items, book).rows.map(function (item) {
         var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); if (item && item.unit) row.unit = String(item.unit).slice(0, 24); return row;
-      }) };
-    if (capped.dropped) event.itemsDropped = capped.dropped;
+      }), itemsDropped: capLines(opts.items, book).dropped };
     purchaseAdd(book, event);
     purchasePush(book, event);
     return { client: rec, spend: -take, points: -claw, stamps: -unstamp };
@@ -802,56 +827,14 @@
    * que le stockage l'accepte (outboxPersistHeld, au début de chaque tour).
    * tools/clients-outbox-owner-test.mjs tient ces trois règles. */
   var heldQueues = {};
-  /* Une file illisible n'est plus jetée : ses octets bruts sont mis de côté
-   * (kiwi:clients-quarantine:v1:…, ou en mémoire si le stockage refuse), annoncés
-   * par kiwi:clients-quarantine et listés par outboxQuarantine(), AVANT que la
-   * prochaine écriture ne remplace la clé. Rien n'est supprimé sans accusé. */
-  var quarantinedQueues = {}, outboxDurability = {};
-  function outboxQuarantine(key, drop) {
-    if (key === undefined) {
-      var rows = Object.keys(quarantinedQueues).map(function (k) { return { key: k, raw: quarantinedQueues[k].raw, stored: quarantinedQueues[k].stored }; });
-      return rows;
-    }
-    var row = quarantinedQueues[key];
-    if (!row) return null;
-    if (drop === true) { try { if (row.stored) localStorage.removeItem(row.stored); } catch (_) {} delete quarantinedQueues[key]; return true; }
-    return row.raw;
-  }
-  function quarantineQueue(key, raw) {
-    if (!raw) return;
-    var held = quarantinedQueues[key + '|' + hash(raw)];
-    if (held) return;
-    var id = key + '|' + hash(raw), stored = '';
-    try { stored = 'kiwi:clients-quarantine:v1:' + hash(raw) + ':' + key; localStorage.setItem(stored, raw); } catch (_) { stored = ''; }
-    quarantinedQueues[id] = { raw: raw, stored: stored };
-    try { if (window.dispatchEvent && typeof Event === 'function') window.dispatchEvent(new Event('kiwi:clients-quarantine')); } catch (_) {}
-  }
-  function outboxStatus() {
-    var memoryOnly = [], vaulted = [];
-    Object.keys(outboxDurability).forEach(function (k) { (outboxDurability[k] === 'vault' ? vaulted : memoryOnly).push(k); });
-    return { memoryOnly: memoryOnly, vaulted: vaulted, quarantined: Object.keys(quarantinedQueues).length };
-  }
   function outboxRead(key) {
-    var a, raw = '';
-    try { raw = heldQueues[key] ? '' : (ls(key) || ''); a = heldQueues[key] ? heldQueues[key].slice() : JSON.parse(raw || '[]'); if (!Array.isArray(a)) { if (a !== null) quarantineQueue(key, raw); a = []; } } catch (_) { quarantineQueue(key, raw); a = []; }
+    var raw = '', a, bad = function () { try { window.dispatchEvent(new CustomEvent('kiwi:clients-queue-corrupt', { detail: { key: key, raw: raw } })); } catch (_) {} }; try { raw = heldQueues[key] ? '' : (ls(key) || ''); a = heldQueues[key] ? heldQueues[key].slice() : JSON.parse(raw || '[]'); if (!Array.isArray(a)) { if (a !== null) bad(); a = []; } } catch (_) { bad(); a = []; }
     try { var seen = new Set(); return a.concat(outboxRead.vault ? outboxRead.vault.get(key) : []).filter(function (e) { var token = typeof e === 'string' ? 's:' + e : 'r:' + (e && e.ref); if (seen.has(token)) return false; seen.add(token); return true; }); }
     catch (_) { return a; }
   }
   function outboxWrite(key, list) {
-    try { localStorage.setItem(key, JSON.stringify(list)); delete heldQueues[key]; delete outboxDurability[key]; try { if (outboxRead.vault && outboxRead.vault.loaded) outboxRead.vault.drop(key); } catch (_) {} return true; }
-    catch (_) {
-      heldQueues[key] = list.slice();
-      /* Mémoire seule tant que le coffre IndexedDB n'a pas confirmé : l'écran peut le dire. */
-      outboxDurability[key] = 'memory';
-      try {
-        if (outboxRead.vault) Promise.resolve(outboxRead.vault.save(key, list)).then(function (saved) {
-          if (saved && outboxDurability[key]) outboxDurability[key] = 'vault';
-          try { if (window.dispatchEvent && typeof Event === 'function') window.dispatchEvent(new Event('kiwi:clients-outbox')); } catch (_) {}
-        }, function () {});
-      } catch (_) {}
-      try { if (window.dispatchEvent && typeof Event === 'function') window.dispatchEvent(new Event('kiwi:clients-outbox')); } catch (_) {}
-      return false;
-    }
+    try { localStorage.setItem(key, JSON.stringify(list)); delete heldQueues[key]; try { if (outboxRead.vault && outboxRead.vault.loaded) outboxRead.vault.drop(key); } catch (_) {} return true; }
+    catch (_) { heldQueues[key] = list.slice(); try { if (outboxRead.vault) outboxRead.vault.save(key, list); } catch (_) {} return false; }
   }
   function outboxPersistHeld() {
     Object.keys(heldQueues).forEach(function (key) { outboxWrite(key, outboxRead(key)); });
@@ -1161,13 +1144,12 @@
     return out;
   }
   function pendingPurchaseDelta(book, id) {
-    var out = { points: 0, stamps: 0, visits: 0, spend: 0, spendCents: 0 };
+    var out = { points: 0, stamps: 0, visits: 0, spend: 0 };
     purchaseRead(book).forEach(function (event) {
       if (event.clientId !== id) return;
       out.points += Number(event.points || 0); out.stamps += Number(event.stamps || 0);
-      out.visits += Number(event.visits || 0); out.spendCents += Math.round(Number(event.spend != null ? event.spend : (event.amount || 0)) * 100);
+      out.visits += Number(event.visits || 0); out.spend = (Math.round(out.spend * 100) + Math.round(Number(event.spend != null ? event.spend : (event.amount || 0)) * 100)) / 100;
     });
-    out.spend = out.spendCents / 100; // one integer total of centimes, converted once
     return out;
   }
   function pendingRedemptionDelta(book, id) {
@@ -1214,7 +1196,7 @@
         sc.points = Number(sc.points || 0) + pending.points;
         sc.stamps = Number(sc.stamps || 0) + pending.stamps;
         sc.visits = Number(sc.visits || 0) + pending.visits;
-        sc.spend = (Math.round(Number(sc.spend || 0) * 100) + pending.spendCents) / 100;
+        sc.spend = (Math.round(Number(sc.spend || 0) * 100) + Math.round(pending.spend * 100)) / 100;
         sc.points = Math.max(0, sc.points + pendingReward.points);
         sc.stamps = Math.max(0, sc.stamps + pendingReward.stamps);
         sc.lastSeen = Math.max(Number(sc.lastSeen || 0), Number(local.lastSeen || 0));
@@ -1316,7 +1298,7 @@
     normPhone: normPhone, samePhone: samePhone, daysSince: daysSince,
     subscribe: subscribe, subscribeConfig: subscribeConfig,
     // backend sync (fail-soft — no-op until /api/clients + D1 are deployed)
-    outboxQuarantine: outboxQuarantine, outboxStatus: outboxStatus, attachOutboxVault: function (vault) { outboxRead.vault = vault; }, pull: pull, sync: startSync, syncable: function (b) { return syncable(b || bookId()); },
+    attachOutboxVault: function (vault) { outboxRead.vault = vault; }, pull: pull, sync: startSync, syncable: function (b) { return syncable(b || bookId()); },
   };
 
   // Kick the sync loop, and (re)start it the moment a device goes live / pairs.

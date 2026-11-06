@@ -78,7 +78,7 @@ function device(storage = new Map(), idb = fakeIDB(), full = false, persisted = 
   };
   const context = vm.createContext({
     window, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv, localStorage, fetch,
-    Event: class { constructor(type) { this.type = type; } }, setTimeout, clearTimeout, indexedDB: idb, navigator: { onLine: true }, console, setInterval: () => 1, clearInterval() {},
+    Event: class { constructor(type) { this.type = type; } }, CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } }, setTimeout, clearTimeout, indexedDB: idb, navigator: { onLine: true }, console, setInterval: () => 1, clearInterval() {},
   });
   vm.runInContext(deadlineVmSource(VAULT), deadlineVmContext(context), { filename: 'assets/clients-outbox-vault.js' });
   if (provider === 'absent') delete window.KiwiOutboxVault;
@@ -95,30 +95,30 @@ const queued = (d, kind) => JSON.parse(d.storage.get('kiwi:clients-' + kind + ':
 const key = 'kiwi:clients-purchases:v1:' + BOOK;
 // A0: a corrupt queue is quarantined with its raw bytes before the next write can replace it.
 {
-  const storage = new Map([[key, '[{"ref":"purchase:c:1","clientId":"c","amount":12,']]);
+  const corrupt = '[{"ref":"purchase:c:1","clientId":"c","amount":12,';
+  const storage = new Map([[key, corrupt]]);
   const d = device(storage, fakeIDB()); await settle();
   ok(d.api.purchaseSyncStatus(BOOK).count === 0, 'corrupt queue reads as empty');
-  const q = d.api.outboxQuarantine();
-  ok(q.length === 1 && q[0].raw.startsWith('[{"ref":"purchase:c:1"'), 'raw corrupt bytes are kept and listed');
-  d.probe = d.probe || undefined;
+  const q = d.vault.recoveryCopies();
+  ok(q.length === 1 && d.vault.recoveryCopies(q[0].key) === corrupt, 'raw corrupt bytes are kept, listed and exportable verbatim');
   d.api.recordPurchase((d.api.upsert({ name: 'Q', phone: '0612345678' }, BOOK)).id, { amount: 10, saleId: 's1' }, BOOK); await settle();
-  ok(d.api.outboxQuarantine().some(r => r.raw.includes('"purchase:c:1"')), 'the next write does not erase the corrupt evidence');
+  ok(d.vault.recoveryCopies(q[0].key) === corrupt, 'the next write does not erase the corrupt evidence');
   ok([...storage.keys()].some(k => k.startsWith('kiwi:clients-quarantine:v1:')), 'raw bytes are also written to a durable quarantine key');
-  ok(d.api.outboxStatus().quarantined === 1, 'status exposes the count');
-  ok(d.api.outboxQuarantine(q[0].key, true) === true && d.api.outboxQuarantine().length === 0, 'explicit acknowledgement removes it');
+  ok(d.vault.status().quarantined === 1, 'status exposes the count');
+  ok(d.vault.recoveryCopies(q[0].key, true) === corrupt && d.vault.recoveryCopies().length === 0, 'explicit acknowledgement removes it');
 }
 // A1: after localStorage refusal the status says memory-only until the vault confirms.
 {
   const d = device(new Map(), fakeIDB(), false); await settle();
   const c = d.api.upsert({ name: 'Mem', phone: '0612345679' }, BOOK); await settle(); d.disk.full = true;
   d.api.recordPurchase(c.id, { amount: 5, saleId: 'm1' }, BOOK);
-  ok(d.api.outboxStatus().memoryOnly.length > 0, 'refused write is memory-only right away');
+  ok(d.vault.status().memoryOnly.length > 0, 'refused write is memory-only right away');
   await settle();
-  ok(d.api.outboxStatus().vaulted.length > 0 && d.api.outboxStatus().memoryOnly.length === 0, 'IndexedDB confirmation upgrades it to vault');
+  ok(d.vault.status().vaulted.length > 0 && d.vault.status().memoryOnly.length === 0, 'IndexedDB confirmation upgrades it to vault');
   const bad = device(new Map(), fakeIDB(new Map(), 'error'), false); await settle();
   const c2 = bad.api.upsert({ name: 'Mem2', phone: '0612345670' }, BOOK); await settle(); bad.disk.full = true;
   bad.api.recordPurchase(c2.id, { amount: 5, saleId: 'm2' }, BOOK); await settle();
-  ok(bad.api.outboxStatus().memoryOnly.length > 0 && !bad.api.outboxStatus().vaulted.length, 'a failed IndexedDB write stays reported as memory-only');
+  ok(bad.vault.status().memoryOnly.length > 0 && !bad.vault.status().vaulted.length, 'a failed IndexedDB write stays reported as memory-only');
 }
 // B0: spend is a whole number of centimes offline, before and after reconciliation.
 {

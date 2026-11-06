@@ -2,7 +2,7 @@
   "files": {
     "assets/stock.js": {
       "fixture": "tools/fixtures/stock-controller/stock.js.gz",
-      "sha256": "f14a905056339889463343f5f1125a191d0a0183dba9f4cfaa0da51bc50da3f7",
+      "sha256": "db8fd6ecbbaab10b9a630bd0fe1f1dd1b2e06eb7bbbc40fc66aff757c49c3349",
       "stamps": [
         "assets/stock/loss.js?v=1",
         "assets/stock/counts.js?v=3",
@@ -23,7 +23,7 @@
     },
     "assets/stock/counts.js": {
       "fixture": "tools/fixtures/stock-controller/counts.js.gz",
-      "sha256": "284209adaa6b603158c37e340837fd1ddef4a1fccb1b2b1b3fe67b8360f1c795",
+      "sha256": "ff2c9f0449c202b3e2efe963775b0f00a22605a26e0593434f55a8ae08dc6771",
       "stamps": []
     }
   },

@@ -60,6 +60,7 @@
             "refreshOutboxStatus",
             "initOutbox",
             "uid",
+            "saleAliases",
             "stableId",
             "serverSession",
             "recoveryTimer",

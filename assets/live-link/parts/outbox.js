@@ -42,6 +42,7 @@
     } catch (_) { console.warn("[live-link] uid failed"); }
     return 'sale-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
   }
+  var saleAliases = window.KiwiSaleIdentity.aliases;
   function stableId(merchantId, entry) {
     var source = String((entry && (entry.id || entry.ref)) || '');
     if (!source) return uid();

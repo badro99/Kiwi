@@ -36,10 +36,10 @@
     return text(5) + ' · ' + when;
   }
   function sources() {
-    var L = window.KiwiLive, K = window.KiwiKitchenPrint, C = window.KiwiClients, out = [];
+    var L = window.KiwiLive, K = window.KiwiKitchenPrint, C = window.KiwiOutboxVault, out = [];
     if (L && L.queueRecoveryCopies) out.push({ id: 'sales', api: L.queueRecoveryCopies });
     if (K && K.recoveryCopies) out.push({ id: 'kitchen', api: K.recoveryCopies });
-    if (C && C.outboxQuarantine) out.push({ id: 'clients', api: C.outboxQuarantine });
+    if (C && C.recoveryCopies) out.push({ id: 'clients', api: C.recoveryCopies });
     return out;
   }
   function el(tag, css, content) { var n = document.createElement(tag); if (css) n.style.cssText = css; if (content !== undefined) n.textContent = content; return n; }
@@ -55,7 +55,7 @@
         });
       } catch (_) {}
     });
-    try { var st = window.KiwiClients && window.KiwiClients.outboxStatus && window.KiwiClients.outboxStatus(); held = !!(st && st.memoryOnly && st.memoryOnly.length); } catch (_) {}
+    try { var st = window.KiwiOutboxVault && window.KiwiOutboxVault.status && window.KiwiOutboxVault.status(); held = !!(st && st.memoryOnly && st.memoryOnly.length); } catch (_) {}
     if (box) box.remove();
     if (!rows.length && !held) return;
     box = el('details', 'position:fixed;inset-inline:12px;bottom:12px;max-height:50vh;overflow:auto;padding:12px;background:var(--paper);color:var(--ink);border:1px solid var(--atlas);z-index:10001');

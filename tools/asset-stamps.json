@@ -392,12 +392,12 @@
     "sha": "4f0914867cec24b5"
   },
   "assets/clients-store-vault.js": {
-    "v": "18",
-    "sha": "cd25d7c76cd1f318"
+    "v": "20",
+    "sha": "e2008c54d878f322"
   },
   "assets/clients-store.js": {
-    "v": "58",
-    "sha": "f4c5b3db9488c3ca"
+    "v": "60",
+    "sha": "87dc6f676b149a0e"
   },
   "assets/cloud-doc.js": {
     "v": "15",
@@ -1156,16 +1156,16 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "116",
-    "sha": "00a13cc67b7d4bc6"
+    "v": "117",
+    "sha": "7864e02eb5c0854e"
   },
   "assets/live-link/queue-store.js": {
     "v": "23",
     "sha": "913aa99956583b15"
   },
   "assets/live-link/sale-identity.js": {
-    "v": "2",
-    "sha": "5dfdde5a88f1a9ec"
+    "v": "3",
+    "sha": "7bf93e8c87e3b057"
   },
   "assets/live-socket.js": {
     "v": "5",
@@ -1932,8 +1932,8 @@
     "sha": "bd10177ac673f7ac"
   },
   "assets/queue-recovery.js": {
-    "v": "4",
-    "sha": "5de438dae73e73b7"
+    "v": "5",
+    "sha": "ed81de2f2ae84077"
   },
   "assets/ramadan.js": {
     "v": "3",

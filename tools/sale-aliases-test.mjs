@@ -9,7 +9,7 @@ function boot(initial = {}) {
   const localStorage = { getItem: (k) => disk.has(k) ? disk.get(k) : null, setItem(k, v) { if (state.full) throw new Error('QuotaExceededError'); disk.set(k, String(v)); } };
   const window = { dispatchEvent: (e) => events.push(e.type) };
   vm.runInNewContext(source, { window, localStorage, console: { warn() {} }, CustomEvent: class { constructor(type) { this.type = type; } } });
-  return { A: window.KiwiSaleAliases, disk, events, state };
+  return { A: window.KiwiSaleIdentity.aliases, disk, events, state };
 }
 const KEY = 'kiwi:sale-aliases:shop';
 { // grows without bound today: now capped at the newest MAX
