@@ -201,7 +201,7 @@
   /* Quota plein ou stockage refusé : la saisie reste lisible en mémoire (relue par la copie serveur,
      par la navigation et par stEnsureOverlay), jamais perdue en silence au prochain rechargement. */
   let stOverlayMem = null;
-  const stOverlayStore = (text) => { try { localStorage.setItem(stOverlayKey(), text); stOverlayMem = null; } catch (_) { stOverlayMem = { key: stOverlayKey(), text }; } };
+  const stOverlayStore = (text) => { try { localStorage.setItem(stOverlayKey(), text); stOverlayMem = null; } catch (_) { stOverlayMem = { key: stOverlayKey(), text }; try { window.dispatchEvent(new CustomEvent('kiwi:stock-unsaved', { detail: { venue: stOverlayScope() } })); if (!stOverlayStore.warned) { stOverlayStore.warned = true; window.Kiwi?.toast?.(t('stockLocalOnly'), { type: 'warning', duration: 8000 }); } } catch (_) {} } };
   const stOverlayText = () => { try { return stOverlayMem && stOverlayMem.key === stOverlayKey() ? stOverlayMem.text : localStorage.getItem(stOverlayKey()); } catch (_) { return null; } };
   function stSaveOverlay() {
     if (!stShowReal()) return;
@@ -2443,7 +2443,7 @@
     'assets/stock/overview.js?v=3',
     'assets/stock/alerts.js?v=6',
     'assets/stock/loss.js?v=1',
-    'assets/stock/counts.js?v=9',
+    'assets/stock/counts.js?v=10',
     'assets/stock/purchasing.js?v=6',
     'assets/stock/intake.js?v=19',
     'assets/stock/catalog.js?v=11',

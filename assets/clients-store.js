@@ -479,6 +479,17 @@
   //   opts.amount  → MAD spent (amount model)
   //   opts.visit   → count a visit toward a stamp card (visit / product model)
   // returns { client, rewardReady:bool } — rewardReady when a stamp card fills.
+  /* Plafond de 100 lignes par événement (le serveur borne pareil). Jusqu'ici on gardait
+   * les 100 premières sans le dire : la preuve des tampons au-delà était perdue. On
+   * garde d'abord les lignes qui comptent pour le programme « par produit », puis
+   * les autres dans l'ordre, et on marque combien de lignes sont restées dehors. */
+  function capLines(items, book) {
+    var list = Array.isArray(items) ? items : [], cfg = config(book);
+    if (list.length <= 100) return { rows: list, dropped: 0 };
+    var hit = function (it) { try { return cfg && cfg.model === 'product' && KiwiLoyaltyRules.qualifyingQty(cfg, [it]) > 0; } catch (_) { return false; } };
+    var first = list.filter(hit), rest = list.filter(function (it) { return !hit(it); });
+    return { rows: first.concat(rest).slice(0, 100), dropped: list.length - 100 };
+  }
   function recordPurchase(id, opts, book) {
     book = book || bookId();
     opts = opts || {};
@@ -500,12 +511,13 @@
     rec.visits = (rec.visits || 0) + 1;
     rec.lastSeen = now();
     if (!rec.firstSeen) rec.firstSeen = now();
-    if (amount > 0) rec.spend = (rec.spend || 0) + amount;
+    if (amount > 0) rec.spend = (Math.round((rec.spend || 0) * 100) + Math.round(amount * 100)) / 100; // integer centimes, never a float sum
     if (!Array.isArray(rec.history)) rec.history = [];
+    var capped = capLines(opts.items, book);
     const detail = {
       ref: saleRef, ts: +opts.createdAt || now(), amount,
       method: String(opts.method || '').slice(0, 32),
-      items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
+      items: capped.rows.map(function (item) {
         var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); if (item && item.unit) row.unit = String(item.unit).slice(0, 24); return row;
       }),
     };
@@ -539,6 +551,7 @@
     var event = { kind: 'purchase', ref: ref, clientId: id, amount: amount, points: delta.points,
       stamps: delta.stamps, visits: delta.visits, spend: delta.spend, created: rec.updated,
       method: detail.method, items: detail.items, saleRef: detail.ref };
+    if (capped.dropped) event.itemsDropped = capped.dropped; // lines left out of the 100-line event, never silent
     purchaseAdd(book, event);
     purchasePush(book, event);
     return { client: rec, rewardReady: rewardReady };
@@ -583,11 +596,13 @@
        `points` ne sont que l'estimation locale, rejouée tant que le serveur n'a
        pas répondu. Un retour estimé à 0 ici part quand même, sinon il ne serait
        jamais acquitté. */
+    var capped = capLines(opts.items, book);
     var event = { kind: 'refund', ref: ref, clientId: id, amount: -amount, points: -claw, stamps: -unstamp, visits: 0,
       spend: -take, created: rec.updated, method: 'retour', saleRef: saleRef,
-      items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
+      items: capped.rows.map(function (item) {
         var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); if (item && item.unit) row.unit = String(item.unit).slice(0, 24); return row;
       }) };
+    if (capped.dropped) event.itemsDropped = capped.dropped;
     purchaseAdd(book, event);
     purchasePush(book, event);
     return { client: rec, spend: -take, points: -claw, stamps: -unstamp };
@@ -706,14 +721,56 @@
    * que le stockage l'accepte (outboxPersistHeld, au début de chaque tour).
    * tools/clients-outbox-owner-test.mjs tient ces trois règles. */
   var heldQueues = {};
+  /* Une file illisible n'est plus jetée : ses octets bruts sont mis de côté
+   * (kiwi:clients-quarantine:v1:…, ou en mémoire si le stockage refuse), annoncés
+   * par kiwi:clients-quarantine et listés par outboxQuarantine(), AVANT que la
+   * prochaine écriture ne remplace la clé. Rien n'est supprimé sans accusé. */
+  var quarantinedQueues = {}, outboxDurability = {};
+  function outboxQuarantine(key, drop) {
+    if (key === undefined) {
+      var rows = Object.keys(quarantinedQueues).map(function (k) { return { key: k, raw: quarantinedQueues[k].raw, stored: quarantinedQueues[k].stored }; });
+      return rows;
+    }
+    var row = quarantinedQueues[key];
+    if (!row) return null;
+    if (drop === true) { try { if (row.stored) localStorage.removeItem(row.stored); } catch (_) {} delete quarantinedQueues[key]; return true; }
+    return row.raw;
+  }
+  function quarantineQueue(key, raw) {
+    if (!raw) return;
+    var held = quarantinedQueues[key + '|' + hash(raw)];
+    if (held) return;
+    var id = key + '|' + hash(raw), stored = '';
+    try { stored = 'kiwi:clients-quarantine:v1:' + hash(raw) + ':' + key; localStorage.setItem(stored, raw); } catch (_) { stored = ''; }
+    quarantinedQueues[id] = { raw: raw, stored: stored };
+    try { if (window.dispatchEvent && typeof Event === 'function') window.dispatchEvent(new Event('kiwi:clients-quarantine')); } catch (_) {}
+  }
+  function outboxStatus() {
+    var memoryOnly = [], vaulted = [];
+    Object.keys(outboxDurability).forEach(function (k) { (outboxDurability[k] === 'vault' ? vaulted : memoryOnly).push(k); });
+    return { memoryOnly: memoryOnly, vaulted: vaulted, quarantined: Object.keys(quarantinedQueues).length };
+  }
   function outboxRead(key) {
-    try { var a = heldQueues[key] ? heldQueues[key].slice() : JSON.parse(ls(key) || '[]'); a = Array.isArray(a) ? a : []; } catch (_) { a = []; }
+    var a, raw = '';
+    try { raw = heldQueues[key] ? '' : (ls(key) || ''); a = heldQueues[key] ? heldQueues[key].slice() : JSON.parse(raw || '[]'); if (!Array.isArray(a)) { if (a !== null) quarantineQueue(key, raw); a = []; } } catch (_) { quarantineQueue(key, raw); a = []; }
     try { var seen = new Set(); return a.concat(outboxRead.vault ? outboxRead.vault.get(key) : []).filter(function (e) { var token = typeof e === 'string' ? 's:' + e : 'r:' + (e && e.ref); if (seen.has(token)) return false; seen.add(token); return true; }); }
     catch (_) { return a; }
   }
   function outboxWrite(key, list) {
-    try { localStorage.setItem(key, JSON.stringify(list)); delete heldQueues[key]; try { if (outboxRead.vault && outboxRead.vault.loaded) outboxRead.vault.drop(key); } catch (_) {} return true; }
-    catch (_) { heldQueues[key] = list.slice(); try { if (outboxRead.vault) outboxRead.vault.save(key, list); } catch (_) {} return false; }
+    try { localStorage.setItem(key, JSON.stringify(list)); delete heldQueues[key]; delete outboxDurability[key]; try { if (outboxRead.vault && outboxRead.vault.loaded) outboxRead.vault.drop(key); } catch (_) {} return true; }
+    catch (_) {
+      heldQueues[key] = list.slice();
+      /* Mémoire seule tant que le coffre IndexedDB n'a pas confirmé : l'écran peut le dire. */
+      outboxDurability[key] = 'memory';
+      try {
+        if (outboxRead.vault) Promise.resolve(outboxRead.vault.save(key, list)).then(function (saved) {
+          if (saved && outboxDurability[key]) outboxDurability[key] = 'vault';
+          try { if (window.dispatchEvent && typeof Event === 'function') window.dispatchEvent(new Event('kiwi:clients-outbox')); } catch (_) {}
+        }, function () {});
+      } catch (_) {}
+      try { if (window.dispatchEvent && typeof Event === 'function') window.dispatchEvent(new Event('kiwi:clients-outbox')); } catch (_) {}
+      return false;
+    }
   }
   function outboxPersistHeld() {
     Object.keys(heldQueues).forEach(function (key) { outboxWrite(key, outboxRead(key)); });
@@ -1006,7 +1063,7 @@
       id: r.id, name: r.name || '', phone: r.phone || '', email: r.email || '', birthday: r.birthday || '',
       gender: r.gender || '', city: r.city || '', address: r.address || '', notes: r.notes || '',
       hospitality: hospitality && typeof hospitality === 'object' && !Array.isArray(hospitality) ? hospitality : {},
-      points: r.points || 0, stamps: r.stamps || 0, visits: r.visits || 0, spend: r.spend || 0,
+      points: r.points || 0, stamps: r.stamps || 0, visits: r.visits || 0, spend: r.spend_cents != null ? Math.round(Number(r.spend_cents)) / 100 : (r.spend || 0),
       consent: !!r.consent, consentEmail: !!r.consent_email, source: r.source || 'caisse',
       firstSeen: r.first_seen || 0, lastSeen: r.last_seen || 0, updated: r.updated_ts || 0,
       loyaltySales: r.loyalty_sales || {},
@@ -1023,12 +1080,13 @@
     return out;
   }
   function pendingPurchaseDelta(book, id) {
-    var out = { points: 0, stamps: 0, visits: 0, spend: 0 };
+    var out = { points: 0, stamps: 0, visits: 0, spend: 0, spendCents: 0 };
     purchaseRead(book).forEach(function (event) {
       if (event.clientId !== id) return;
       out.points += Number(event.points || 0); out.stamps += Number(event.stamps || 0);
-      out.visits += Number(event.visits || 0); out.spend += Number(event.spend != null ? event.spend : (event.amount || 0));
+      out.visits += Number(event.visits || 0); out.spendCents += Math.round(Number(event.spend != null ? event.spend : (event.amount || 0)) * 100);
     });
+    out.spend = out.spendCents / 100; // one integer total of centimes, converted once
     return out;
   }
   function pendingRedemptionDelta(book, id) {
@@ -1075,7 +1133,7 @@
         sc.points = Number(sc.points || 0) + pending.points;
         sc.stamps = Number(sc.stamps || 0) + pending.stamps;
         sc.visits = Number(sc.visits || 0) + pending.visits;
-        sc.spend = Number(sc.spend || 0) + pending.spend;
+        sc.spend = (Math.round(Number(sc.spend || 0) * 100) + pending.spendCents) / 100;
         sc.points = Math.max(0, sc.points + pendingReward.points);
         sc.stamps = Math.max(0, sc.stamps + pendingReward.stamps);
         sc.lastSeen = Math.max(Number(sc.lastSeen || 0), Number(local.lastSeen || 0));
@@ -1177,7 +1235,7 @@
     normPhone: normPhone, samePhone: samePhone, daysSince: daysSince,
     subscribe: subscribe, subscribeConfig: subscribeConfig,
     // backend sync (fail-soft — no-op until /api/clients + D1 are deployed)
-    attachOutboxVault: function (vault) { outboxRead.vault = vault; }, pull: pull, sync: startSync, syncable: function (b) { return syncable(b || bookId()); },
+    outboxQuarantine: outboxQuarantine, outboxStatus: outboxStatus, attachOutboxVault: function (vault) { outboxRead.vault = vault; }, pull: pull, sync: startSync, syncable: function (b) { return syncable(b || bookId()); },
   };
 
   // Kick the sync loop, and (re)start it the moment a device goes live / pairs.

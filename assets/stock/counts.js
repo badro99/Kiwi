@@ -663,8 +663,16 @@ window.KiwiStockInternal.install('counts', (S) => {
         theo: l.theo, counted: l.counted, diff: l.diff,
         mad: Math.round(+l.costDiff || 0), reason: l.reasonKey || '',
       })),
+      gapsTotal: gaps.length,
     };
-    try { localStorage.setItem(stCountHistKey(), JSON.stringify([entry, ...stCountHistory()].slice(0, 24))); } catch (_) {}
+    /* Local history keeps the newest 24 counts. A refused write drops the OLDEST entries first and retries, so the
+       count just made survives as long as anything can; if nothing fits it says so (durable:false), never silently. */
+    const all = [entry, ...stCountHistory()].slice(0, 24);
+    let durable = false;
+    for (let keep = all.length; keep >= 1 && !durable; keep = keep > 1 ? Math.floor(keep / 2) : 0) {
+      try { localStorage.setItem(stCountHistKey(), JSON.stringify(all.slice(0, keep))); durable = true; } catch (_) {}
+    }
+    entry.durable = durable; entry.truncated = gaps.length > entry.gaps.length;
     return entry;
   }
 
@@ -812,10 +820,11 @@ window.KiwiStockInternal.install('counts', (S) => {
       scope?.querySelector('[data-stock-rev-apply]')?.addEventListener('click', () => {
         lines.forEach((l) => countStock(l.it, l.counted, countRef));
         stSaveOverlay();
-        stSaveCountHistory(countRef, lines);
+        const saved = stSaveCountHistory(countRef, lines);
         closeTopModal();
         try { countBack?.querySelector('.kiwi-modal-close')?.click(); } catch (_) {}
         window.Kiwi.toast(t('mCountToast', fmtMad(totalVar)), { type: 'success', duration: 4200 });
+        if (!saved.durable || saved.truncated) window.Kiwi.toast(t('mCountLocalWarn', saved.durable, saved.truncated), { type: 'warning', duration: 8000 });
         if (S.stPageActive) render();
       }, { once: true });
     });

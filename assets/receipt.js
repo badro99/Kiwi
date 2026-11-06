@@ -1361,7 +1361,7 @@
      de la caisse le lit (kiwi:receipt-print), sans jamais deviner un échec d'après le texte d'un toast. */
   function print(doc, o) {
     var announce = function (ok) {
-      try { window.dispatchEvent(new CustomEvent('kiwi:receipt-print', { detail: { ok: !!ok } })); } catch (_) { console.warn('[receipt] announce failed'); }
+      try { window.dispatchEvent(new CustomEvent('kiwi:receipt-print', { detail: { ok: !!ok, id: String(doc && doc.meta && doc.meta.ref || '') } })); } catch (_) { console.warn('[receipt] announce failed'); }
     };
     return (function () {
     o = o || {};

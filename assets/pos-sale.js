@@ -123,7 +123,7 @@
     } catch (_) {}
   }
 
-  function read(vertical) {
+  function read(vertical, anyDay) {
     /* La démo ne LIT pas le journal, pas seulement elle n'y écrit pas. Un
        terminal qui a servi à un vrai commerce puis revient en démo (démo de
        vente, appairage retiré, session fermée) retrouvait sinon la recette
@@ -141,7 +141,7 @@
     try { seen = JSON.parse(localStorage.getItem(TENANTS_KEY) || '[]'); if (!Array.isArray(seen)) seen = []; } catch (_) { seen = []; }
     raw.forEach(function (s) { if (Array.isArray(s?.lines)) s.lines = s.lines.map(foldedLine); });
     return raw.filter(function (s) {
-      if (!(s && +s.total > 0 && isToday(s.ts))) return false;
+      if (!(s && +s.total > 0 && (anyDay || isToday(s.ts)))) return false;
       if (s.m) return !!who && s.m === who;
       /* Pre-tenant rows are safe only while this browser has known at most this
          one tenant. Once it has seen two, guessing would be a data leak. */
@@ -968,6 +968,7 @@
   window.KiwiPosSale = {
     feedDay: feedDay, foldLines: foldLines,
     record: record, businessDayKey: businessDayKey, today: today, totals: totals, nextSeq: nextSeq,
+    hasRef: function (vertical, ref) { try { return !!ref && read(vertical, true).some(function (s) { return s && s.ref === ref; }); } catch (_) { return false; } },
     isReal: isReal, deviceTag: deviceTag, stamp: stamp, dropRefs: dropRefs,
     refMatcher: matcher, cleanLine: cleanLine,
     attachClient: attachClient, attachedClient: attachedClient,

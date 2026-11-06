@@ -50,6 +50,17 @@
   //   opts.amount  → MAD spent (amount model)
   //   opts.visit   → count a visit toward a stamp card (visit / product model)
   // returns { client, rewardReady:bool } — rewardReady when a stamp card fills.
+  /* Plafond de 100 lignes par événement (le serveur borne pareil). Jusqu'ici on gardait
+   * les 100 premières sans le dire : la preuve des tampons au-delà était perdue. On
+   * garde d'abord les lignes qui comptent pour le programme « par produit », puis
+   * les autres dans l'ordre, et on marque combien de lignes sont restées dehors. */
+  function capLines(items, book) {
+    var list = Array.isArray(items) ? items : [], cfg = config(book);
+    if (list.length <= 100) return { rows: list, dropped: 0 };
+    var hit = function (it) { try { return cfg && cfg.model === 'product' && KiwiLoyaltyRules.qualifyingQty(cfg, [it]) > 0; } catch (_) { return false; } };
+    var first = list.filter(hit), rest = list.filter(function (it) { return !hit(it); });
+    return { rows: first.concat(rest).slice(0, 100), dropped: list.length - 100 };
+  }
   function recordPurchase(id, opts, book) {
     book = book || bookId();
     opts = opts || {};
@@ -71,12 +82,13 @@
     rec.visits = (rec.visits || 0) + 1;
     rec.lastSeen = now();
     if (!rec.firstSeen) rec.firstSeen = now();
-    if (amount > 0) rec.spend = (rec.spend || 0) + amount;
+    if (amount > 0) rec.spend = (Math.round((rec.spend || 0) * 100) + Math.round(amount * 100)) / 100; // integer centimes, never a float sum
     if (!Array.isArray(rec.history)) rec.history = [];
+    var capped = capLines(opts.items, book);
     const detail = {
       ref: saleRef, ts: +opts.createdAt || now(), amount,
       method: String(opts.method || '').slice(0, 32),
-      items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
+      items: capped.rows.map(function (item) {
         var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); if (item && item.unit) row.unit = String(item.unit).slice(0, 24); return row;
       }),
     };
@@ -110,6 +122,7 @@
     var event = { kind: 'purchase', ref: ref, clientId: id, amount: amount, points: delta.points,
       stamps: delta.stamps, visits: delta.visits, spend: delta.spend, created: rec.updated,
       method: detail.method, items: detail.items, saleRef: detail.ref };
+    if (capped.dropped) event.itemsDropped = capped.dropped; // lines left out of the 100-line event, never silent
     purchaseAdd(book, event);
     purchasePush(book, event);
     return { client: rec, rewardReady: rewardReady };
@@ -154,11 +167,13 @@
        `points` ne sont que l'estimation locale, rejouée tant que le serveur n'a
        pas répondu. Un retour estimé à 0 ici part quand même, sinon il ne serait
        jamais acquitté. */
+    var capped = capLines(opts.items, book);
     var event = { kind: 'refund', ref: ref, clientId: id, amount: -amount, points: -claw, stamps: -unstamp, visits: 0,
       spend: -take, created: rec.updated, method: 'retour', saleRef: saleRef,
-      items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
+      items: capped.rows.map(function (item) {
         var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); if (item && item.unit) row.unit = String(item.unit).slice(0, 24); return row;
       }) };
+    if (capped.dropped) event.itemsDropped = capped.dropped;
     purchaseAdd(book, event);
     purchasePush(book, event);
     return { client: rec, spend: -take, points: -claw, stamps: -unstamp };

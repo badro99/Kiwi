@@ -21,7 +21,7 @@
     normPhone: normPhone, samePhone: samePhone, daysSince: daysSince,
     subscribe: subscribe, subscribeConfig: subscribeConfig,
     // backend sync (fail-soft — no-op until /api/clients + D1 are deployed)
-    attachOutboxVault: function (vault) { outboxRead.vault = vault; }, pull: pull, sync: startSync, syncable: function (b) { return syncable(b || bookId()); },
+    outboxQuarantine: outboxQuarantine, outboxStatus: outboxStatus, attachOutboxVault: function (vault) { outboxRead.vault = vault; }, pull: pull, sync: startSync, syncable: function (b) { return syncable(b || bookId()); },
   };
 
   // Kick the sync loop, and (re)start it the moment a device goes live / pairs.

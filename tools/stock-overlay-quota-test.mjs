@@ -52,7 +52,8 @@ const fetchImpl = async (url, opts = {}) => {
 };
 const listeners = {};
 const document = { visibilityState: 'visible', addEventListener(t, f) { (listeners[t] ||= []).push(f); } };
-const window = { document, localStorage, addEventListener(t, f) { (listeners[t] ||= []).push(f); }, dispatchEvent() {},
+const fired = [], toasts = [];
+const window = { document, localStorage, addEventListener(t, f) { (listeners[t] ||= []).push(f); }, dispatchEvent(e) { fired.push(e.type); }, Kiwi: { toast: (m) => toasts.push(m) },
   KiwiEnv: { isReal: () => true }, KiwiVenue: { getVenue: () => 'v-shop', isCustom: () => true } };
 window.window = window;
 new Function('window', 'document', 'localStorage', 'fetch', 'setTimeout', 'clearTimeout', read('assets/cloud-doc.js'))(window, document, localStorage, fetchImpl, setTimeout, clearTimeout);
@@ -65,7 +66,7 @@ vm.runInContext([
   'let stUserItems = [], stUserSuppliers = [], stUserCategories = [], stOverlayLoadedFor = null, stPageActive = false, stDoc = null;',
   'const stItemOverrides = Object.create(null), stSupOverrides = Object.create(null), stCategoryOverrides = Object.create(null), stStockOverrides = Object.create(null);',
   'const stDeletedItems = new Set(), stDeletedSups = new Set(), stDeletedCategories = new Set();',
-  'let stOverlayMem = null;',
+  'let stOverlayMem = null; const t = (k) => k;',
   grabFn('function migrateStockDocV2('),
   (SRC.match(/^  const stOverlayStore = .*$/m) || [''])[0], (SRC.match(/^  const stOverlayText = .*$/m) || [''])[0],
   grabFn('function stSaveOverlay('), grabFn('function stOverlayRaw('), grabFn('function stCloud('), grabFn('function stEnsureOverlay('),
@@ -88,6 +89,10 @@ refuse = true;                                              /* storage now refus
 A.addItem({ id: 'it-2', name: 'Semoule', unit: 'kg', currentStock: 5 });
 A.stSaveOverlay();
 assert.equal(disk.get('kiwi:stockOverlay:v-shop').includes('Semoule'), false, 'the disk indeed could not take the edit');
+assert.ok(fired.includes('kiwi:stock-unsaved'), 'a refused write announces that the edit is held in memory only (lost on reload)');
+assert.deepEqual(toasts, ['stockLocalOnly'], 'the merchant is told once, in plain words');
+A.stSaveOverlay();
+assert.equal(toasts.length, 1, 'the warning is not repeated on every save');
 const sent = await flush();
 assert.ok(server.posts.length > postsBefore, 'a push was sent');
 assert.ok(JSON.stringify(server.data).includes('Semoule'), 'the push carries the edit the disk refused (it used to send the old document)');

@@ -320,16 +320,18 @@ const REPAY_SRC = [
   'this.api = { commitRepayment, recoverRepayments, balanceOf };',
 ].join('\n');
 const JKEY = 'kiwi:posDay:epicerie', CKEY = 'carnet', MKEY = 'serveur', WKEY = 'kiwi:epicerieRepay:epicerie-test';
-function till(disk, { failKey = '', crashAfter = Infinity, recordMode = 'ok', real = true } = {}) {
+function till(disk, { failKey = '', crashAfter = Infinity, recordMode = 'ok', real = true, nextDay = false } = {}) {
+  const toasts = [];
   let writes = 0;
   const ls = {
     getItem: (k) => (disk.has(k) ? disk.get(k) : null),
     setItem: (k, v) => { if (failKey === '*' || failKey === k) throw new Error('QuotaExceededError'); if (writes++ < crashAfter) disk.set(k, String(v)); },
     removeItem: (k) => { if (writes++ < crashAfter) disk.delete(k); },
   };
-  const today = () => JSON.parse(ls.getItem(JKEY) || '[]');
+  const all = () => JSON.parse(ls.getItem(JKEY) || '[]');
+  const today = () => (nextDay ? [] : all());   /* le lendemain, « aujourd'hui » est vide mais le journal garde la recette */
   const Pos = {
-    stamp: (r) => (/-A7$/.test(r) ? r : r + '-A7'), today,
+    stamp: (r) => (/-A7$/.test(r) ? r : r + '-A7'), today, hasRef: (v, ref) => all().some((s) => s.ref === ref),
     record(v, sale) {
       if (recordMode === 'null' || !real) return null;      /* la démo ne journalise rien (pos-sale.js) */
       if (recordMode === 'throw') throw new Error('panne');
@@ -345,10 +347,10 @@ function till(disk, { failKey = '', crashAfter = Infinity, recordMode = 'ok', re
   CARNET.forEach((c) => c.hist.forEach((h) => { h.at = new Date(h.at); }));
   const CRED = Object.fromEntries(CARNET.map((c) => [c.id, c]));
   const ops = { venue: () => 'epicerie-test', save: () => { try { ls.setItem(CKEY, JSON.stringify(CARNET)); } catch (_) {} return true; } };
-  const ctx = vm.createContext({ Math, JSON, Date, Object, Array, String, CARNET, CRED, day: { especes: 0 }, pvReal: () => real, epicerieOps: ops, localStorage: ls, window: { crypto: webcrypto, KiwiPosSale: Pos } });
+  const ctx = vm.createContext({ Math, JSON, Date, Object, Array, String, CARNET, CRED, day: { especes: 0 }, pvReal: () => real, epicerieOps: ops, localStorage: ls, window: { crypto: webcrypto, KiwiPosSale: Pos }, toast: (m) => toasts.push(m) });
   vm.runInContext(REPAY_SRC, ctx);
   if (!disk.has(CKEY) && crashAfter === Infinity && !failKey) ops.save();
-  return { ...ctx.api, CARNET, CRED, ctx, ops, journal: today };
+  return { ...ctx.api, CARNET, CRED, ctx, ops, journal: today, toasts };
 }
 const cents = (n) => Math.round(n * 100);
 function consistent(disk) {
@@ -452,6 +454,27 @@ ok('journal local plein mais vente partie au serveur : la ligne entre quand mêm
   assert.ok(!t.commitRepayment('k1', 7.25).error);
   t.ops.save();
   assert.equal(consistent(disk), 1);
+});
+
+ok('arrêt après la recette, avant « payée », réouverture le lendemain : la ligne revient et la dette baisse', () => {
+  const disk = new Map(); const t0 = till(disk);
+  const entry = { id: 'e1', type: 'pay', label: 'Règlement partiel', amt: 20, at: new Date().toISOString(), ref: 'ARD-e1-A7' };
+  disk.set(WKEY, JSON.stringify([{ cid: 'k1', name: 'TEST KIWI Rkia', stage: 'intent', entry }]));
+  disk.set(JKEY, JSON.stringify([{ ref: 'ARD-e1-A7', total: 20, label: 'Ardoise' }]));
+  const next = till(disk, { nextDay: true });
+  assert.equal(next.recoverRepayments(), 1, 'la recette est retrouvée par sa référence malgré le changement de jour');
+  assert.equal(next.balanceOf(next.CRED.k1), 60.5);
+});
+ok('journal des règlements illisible : octets gardés, caissière prévenue, jamais écrasé en silence', () => {
+  const disk = new Map(); till(disk);
+  const raw = '[{"cid":"k1","stage":"paid","entry":{"id":"e9",';
+  disk.set(WKEY, raw);
+  const t = till(disk);
+  assert.ok(!t.commitRepayment('k1', 5).error);
+  const kept = [...disk.entries()].filter(([k]) => k.startsWith(WKEY + ':corrupt:'));
+  assert.equal(kept.length, 1, 'une copie des octets bruts existe');
+  assert.equal(kept[0][1], raw);
+  assert.ok(t.toasts.length === 1, 'un message visible');
 });
 
 console.log(`\ncredit-book-test · ${passed} passed, ${failed} failed`);

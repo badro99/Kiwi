@@ -115,7 +115,7 @@
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=20" defer></script>
   <script src="assets/printer/transports.js?v=6" defer></script>
-  <script src="assets/printer-bridge.js?v=77" defer></script>
+  <script src="assets/printer-bridge.js?v=78" defer></script>
   <script src="assets/caisse-hardware.js?v=16" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -124,7 +124,7 @@
   <!-- Journal de vente partagé · DOIT précéder les modules métier (pressing +
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
-  <script src="assets/pos-sale.js?v=33" defer></script>
+  <script src="assets/pos-sale.js?v=34" defer></script>
   <!-- Garment workflow snapshot and garment product art, shared with the
        pressing owner dashboard (both in pressing-ops.js). -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=6" />
@@ -237,7 +237,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=387" defer></script>
+  <script src="assets/pos-dispatch.js?v=388" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=10" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>
@@ -338,7 +338,7 @@
   <script src="assets/pwa-update.js?v=368" defer></script>
   <script src="assets/caisse-pwa.js?v=631" defer></script>
   <link rel="modulepreload" href="assets/live-link/queue-store.js?v=23">
-  <script type="module" src="assets/live-link.js?v=115" defer></script>
+  <script type="module" src="assets/live-link.js?v=116" defer></script>
   <script src="assets/retail-balances.js?v=7" defer></script>
   <script src="assets/retail-sale-hold.js?v=8" defer></script>
   <script src="assets/repeat-sale-guard.js?v=3" defer></script>
@@ -397,7 +397,7 @@
        (receipt-ui.js) n'est PAS chargé ici : un réglage à deux endroits, ce sont
        deux vérités. Après venue-store.js, dont il tient sa fiche par
        établissement. -->
-  <script src="assets/receipt.js?v=25" defer></script>
+  <script src="assets/receipt.js?v=26" defer></script>
   <!-- Coûts privés + recettes : nécessaires pour transformer une vente de
        produit en sorties d'ingrédients sans exposer les prix d'achat. -->
   <script src="assets/cost.js?v=11" defer></script>
@@ -406,14 +406,14 @@
   <!-- Tenant-scoped operational outbox: receipt delivery and device health are
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=18" defer></script>
-  <script src="assets/clients-store-vault.js?v=17" defer></script> <script src="assets/clients-book.js?v=75" defer></script>
+  <script src="assets/clients-store-vault.js?v=18" defer></script> <script src="assets/clients-book.js?v=75" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
        pose le bon sur le serveur (file de secours hors ligne comprise) pour que
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
-  <script src="assets/kitchen-relay.js?v=16" defer></script> <script src="assets/kitchen-print-queue.js?v=35" defer></script>
+  <script src="assets/kitchen-relay.js?v=16" defer></script> <script src="assets/kitchen-print-queue.js?v=36" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->

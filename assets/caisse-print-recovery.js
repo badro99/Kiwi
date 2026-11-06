@@ -3,11 +3,12 @@
   'use strict';
   function tr(text) { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(text) : text; }
   var localCount = 0, relayCount = 0;
-  /* A failed receipt is its own entry, not part of the relay count: a later
-     printed receipt must be able to clear it without hiding real relay jobs. */
-  var receiptFailed = false;
+  /* A failed receipt is its own entry, not part of the relay count. Failures are tracked by receipt identity
+     (meta.ref; '' when unknown): printing the next customer's receipt must not hide this customer's unprinted one,
+     and reprinting THIS receipt clears only its own entry. */
+  var receiptFailed = new Set();
   function paint() {
-    var count = localCount + relayCount + (receiptFailed ? 1 : 0);
+    var count = localCount + relayCount + receiptFailed.size;
     var entry = document.getElementById('caisse-print-recovery');
     if (!count) { if (entry) entry.remove(); return; }
     if (!entry) {
@@ -26,9 +27,9 @@
   /* Le résultat vient de receipt.js en donnée ({ ok }), pas du texte d'un toast : un changement de
      libellé ou de langue ne casse plus l'entrée. */
   window.addEventListener('kiwi:receipt-print', function (event) {
-    var ok = !!(event.detail && event.detail.ok);
-    if (!ok) receiptFailed = true;
-    else if (receiptFailed) receiptFailed = false;
+    var ok = !!(event.detail && event.detail.ok), id = String(event.detail && event.detail.id || '');
+    if (!ok) receiptFailed.add(id);
+    else if (receiptFailed.has(id)) receiptFailed.delete(id);
     else return;
     paint();
   });

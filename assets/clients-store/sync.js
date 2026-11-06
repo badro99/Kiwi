@@ -41,14 +41,56 @@
    * que le stockage l'accepte (outboxPersistHeld, au début de chaque tour).
    * tools/clients-outbox-owner-test.mjs tient ces trois règles. */
   var heldQueues = {};
+  /* Une file illisible n'est plus jetée : ses octets bruts sont mis de côté
+   * (kiwi:clients-quarantine:v1:…, ou en mémoire si le stockage refuse), annoncés
+   * par kiwi:clients-quarantine et listés par outboxQuarantine(), AVANT que la
+   * prochaine écriture ne remplace la clé. Rien n'est supprimé sans accusé. */
+  var quarantinedQueues = {}, outboxDurability = {};
+  function outboxQuarantine(key, drop) {
+    if (key === undefined) {
+      var rows = Object.keys(quarantinedQueues).map(function (k) { return { key: k, raw: quarantinedQueues[k].raw, stored: quarantinedQueues[k].stored }; });
+      return rows;
+    }
+    var row = quarantinedQueues[key];
+    if (!row) return null;
+    if (drop === true) { try { if (row.stored) localStorage.removeItem(row.stored); } catch (_) {} delete quarantinedQueues[key]; return true; }
+    return row.raw;
+  }
+  function quarantineQueue(key, raw) {
+    if (!raw) return;
+    var held = quarantinedQueues[key + '|' + hash(raw)];
+    if (held) return;
+    var id = key + '|' + hash(raw), stored = '';
+    try { stored = 'kiwi:clients-quarantine:v1:' + hash(raw) + ':' + key; localStorage.setItem(stored, raw); } catch (_) { stored = ''; }
+    quarantinedQueues[id] = { raw: raw, stored: stored };
+    try { if (window.dispatchEvent && typeof Event === 'function') window.dispatchEvent(new Event('kiwi:clients-quarantine')); } catch (_) {}
+  }
+  function outboxStatus() {
+    var memoryOnly = [], vaulted = [];
+    Object.keys(outboxDurability).forEach(function (k) { (outboxDurability[k] === 'vault' ? vaulted : memoryOnly).push(k); });
+    return { memoryOnly: memoryOnly, vaulted: vaulted, quarantined: Object.keys(quarantinedQueues).length };
+  }
   function outboxRead(key) {
-    try { var a = heldQueues[key] ? heldQueues[key].slice() : JSON.parse(ls(key) || '[]'); a = Array.isArray(a) ? a : []; } catch (_) { a = []; }
+    var a, raw = '';
+    try { raw = heldQueues[key] ? '' : (ls(key) || ''); a = heldQueues[key] ? heldQueues[key].slice() : JSON.parse(raw || '[]'); if (!Array.isArray(a)) { if (a !== null) quarantineQueue(key, raw); a = []; } } catch (_) { quarantineQueue(key, raw); a = []; }
     try { var seen = new Set(); return a.concat(outboxRead.vault ? outboxRead.vault.get(key) : []).filter(function (e) { var token = typeof e === 'string' ? 's:' + e : 'r:' + (e && e.ref); if (seen.has(token)) return false; seen.add(token); return true; }); }
     catch (_) { return a; }
   }
   function outboxWrite(key, list) {
-    try { localStorage.setItem(key, JSON.stringify(list)); delete heldQueues[key]; try { if (outboxRead.vault && outboxRead.vault.loaded) outboxRead.vault.drop(key); } catch (_) {} return true; }
-    catch (_) { heldQueues[key] = list.slice(); try { if (outboxRead.vault) outboxRead.vault.save(key, list); } catch (_) {} return false; }
+    try { localStorage.setItem(key, JSON.stringify(list)); delete heldQueues[key]; delete outboxDurability[key]; try { if (outboxRead.vault && outboxRead.vault.loaded) outboxRead.vault.drop(key); } catch (_) {} return true; }
+    catch (_) {
+      heldQueues[key] = list.slice();
+      /* Mémoire seule tant que le coffre IndexedDB n'a pas confirmé : l'écran peut le dire. */
+      outboxDurability[key] = 'memory';
+      try {
+        if (outboxRead.vault) Promise.resolve(outboxRead.vault.save(key, list)).then(function (saved) {
+          if (saved && outboxDurability[key]) outboxDurability[key] = 'vault';
+          try { if (window.dispatchEvent && typeof Event === 'function') window.dispatchEvent(new Event('kiwi:clients-outbox')); } catch (_) {}
+        }, function () {});
+      } catch (_) {}
+      try { if (window.dispatchEvent && typeof Event === 'function') window.dispatchEvent(new Event('kiwi:clients-outbox')); } catch (_) {}
+      return false;
+    }
   }
   function outboxPersistHeld() {
     Object.keys(heldQueues).forEach(function (key) { outboxWrite(key, outboxRead(key)); });
@@ -341,7 +383,7 @@
       id: r.id, name: r.name || '', phone: r.phone || '', email: r.email || '', birthday: r.birthday || '',
       gender: r.gender || '', city: r.city || '', address: r.address || '', notes: r.notes || '',
       hospitality: hospitality && typeof hospitality === 'object' && !Array.isArray(hospitality) ? hospitality : {},
-      points: r.points || 0, stamps: r.stamps || 0, visits: r.visits || 0, spend: r.spend || 0,
+      points: r.points || 0, stamps: r.stamps || 0, visits: r.visits || 0, spend: r.spend_cents != null ? Math.round(Number(r.spend_cents)) / 100 : (r.spend || 0),
       consent: !!r.consent, consentEmail: !!r.consent_email, source: r.source || 'caisse',
       firstSeen: r.first_seen || 0, lastSeen: r.last_seen || 0, updated: r.updated_ts || 0,
       loyaltySales: r.loyalty_sales || {},
@@ -358,12 +400,13 @@
     return out;
   }
   function pendingPurchaseDelta(book, id) {
-    var out = { points: 0, stamps: 0, visits: 0, spend: 0 };
+    var out = { points: 0, stamps: 0, visits: 0, spend: 0, spendCents: 0 };
     purchaseRead(book).forEach(function (event) {
       if (event.clientId !== id) return;
       out.points += Number(event.points || 0); out.stamps += Number(event.stamps || 0);
-      out.visits += Number(event.visits || 0); out.spend += Number(event.spend != null ? event.spend : (event.amount || 0));
+      out.visits += Number(event.visits || 0); out.spendCents += Math.round(Number(event.spend != null ? event.spend : (event.amount || 0)) * 100);
     });
+    out.spend = out.spendCents / 100; // one integer total of centimes, converted once
     return out;
   }
   function pendingRedemptionDelta(book, id) {
@@ -410,7 +453,7 @@
         sc.points = Number(sc.points || 0) + pending.points;
         sc.stamps = Number(sc.stamps || 0) + pending.stamps;
         sc.visits = Number(sc.visits || 0) + pending.visits;
-        sc.spend = Number(sc.spend || 0) + pending.spend;
+        sc.spend = (Math.round(Number(sc.spend || 0) * 100) + pending.spendCents) / 100;
         sc.points = Math.max(0, sc.points + pendingReward.points);
         sc.stamps = Math.max(0, sc.stamps + pendingReward.stamps);
         sc.lastSeen = Math.max(Number(sc.lastSeen || 0), Number(local.lastSeen || 0));

@@ -17,6 +17,16 @@ function serveurPaymentSupport() {
     const tips = allocate(Math.round(cents * pct / 100 + 1e-9), bases);
     return bases.map((amountCents, i) => ({ amountCents, tipCents: tips[i] }));
   }
+  const authNeeded = new Set();
+  function announce(kind, merchant) {
+    try {
+      if (typeof toast !== 'function' || typeof employeePick !== 'function') return;
+      toast(kind === 'auth'
+        ? employeePick('Points fidélité en attente · reconnectez-vous pour les envoyer', 'Loyalty points pending · sign in again to send them', 'نقاط الولاء قيد الانتظار · سجّل الدخول من جديد لإرسالها')
+        : employeePick('Points fidélité refusés par le serveur pour un achat', 'Loyalty points refused by the server for a purchase', 'رفض الخادم نقاط الولاء لعملية شراء'), 7000);
+    } catch (_) {}
+  }
+  function status(merchant) { return { pending: Object.keys(read(merchant)).length, authNeeded: authNeeded.has(merchant) }; }
   const memory = new Map(), busy = new Set(), prefix = 'kiwi:serveur:loyalty:';
   function report() { console.warn('[serveur] loyalty storage unavailable; retry kept in memory'); }
   function read(merchant) {
@@ -38,18 +48,24 @@ function serveurPaymentSupport() {
       for (const [ref, body] of Object.entries(entries)) {
         try {
           const ctl = typeof AbortController === 'function' ? new AbortController() : null;
-          const timer = setTimeout(() => { if (ctl) ctl.abort(); }, 12000);
-          let response, data;
+          let timer, response, data;
+          // Promise-race deadline: a transport or body that ignores abort cannot keep this merchant busy forever.
+          const deadline = new Promise((_, reject) => { timer = setTimeout(() => { if (ctl) ctl.abort(); reject(new Error('request-timeout')); }, 12000); });
           try {
-            response = await fetch('/api/employee-clients', {
-              method: 'POST', credentials: 'same-origin', cache: 'no-store', signal: ctl ? ctl.signal : undefined,
-              headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-            });
-            data = response.ok && await response.json();
+            await Promise.race([deadline, (async () => {
+              response = await fetch('/api/employee-clients', {
+                method: 'POST', credentials: 'same-origin', cache: 'no-store', signal: ctl ? ctl.signal : undefined,
+                headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+              });
+              data = response.ok && await response.json();
+            })()]);
           } finally { clearTimeout(timer); }
-          // A definitive refusal (4xx other than 408/429) will never succeed: drop it instead of retrying forever.
+          // An expired session (401) is not a refusal of the purchase: keep it under the same key until the employee signs in again.
+          if (response.status === 401) { authNeeded.add(merchant); announce('auth', merchant); break; }
+          // A definitive refusal (4xx other than 401/408/429) will never succeed: drop it instead of retrying forever, and say so.
           const refused = !response.ok && response.status >= 400 && response.status < 500 && response.status !== 408 && response.status !== 429;
-          if ((data && data.ok) || refused) { delete entries[ref]; persist(merchant, entries); }
+          if (data && data.ok) { authNeeded.delete(merchant); delete entries[ref]; persist(merchant, entries); }
+          else if (refused) { delete entries[ref]; persist(merchant, entries); announce('refused', merchant); }
         } catch (_) { break; }
       }
     } finally { busy.delete(merchant); }
@@ -66,7 +82,7 @@ function serveurPaymentSupport() {
       || (typeof svSlug === 'function' ? svSlug() : '');
     if (merchant) void flush(merchant);
   }
-  serveurPaymentSupport.instance = { allocate, equal, enqueue, flush };
+  serveurPaymentSupport.instance = { allocate, equal, enqueue, flush, status };
   window.addEventListener('online', retry);
   setInterval(retry, 30000);
   setTimeout(retry, 0);

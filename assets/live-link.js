@@ -1,5 +1,5 @@
 import {} from './live-link/queue-store.js?v=23';
-import {} from './live-link/sale-identity.js?v=1';
+import {} from './live-link/sale-identity.js?v=2';
 /* Kiwi Live Link — le pont ventes ↔ serveur (Cloudflare Pages Functions + D1).
  *
  * ALLUMÉ dès qu'il s'agit d'un vrai commerçant (KiwiEnv.isReal()), comme le
@@ -28,7 +28,7 @@ import {} from './live-link/sale-identity.js?v=1';
  * left untouched, so the demo still works with the flag off.
  */
 (function () {
-  'use strict'; if (typeof document !== 'undefined' && document.createElement) import('./queue-recovery.js?v=3').catch(function () {});
+  'use strict'; if (typeof document !== 'undefined' && document.createElement) import('./queue-recovery.js?v=4').catch(function () {});
 
   var LS = 'kiwiLive';
 
@@ -256,7 +256,7 @@ import {} from './live-link/sale-identity.js?v=1';
     try { if (chan) chan.postMessage('sale'); } catch (_) { console.warn("[live-link] pingLocal failed"); }
   }
   function canonicalSaleId(merchantId, requested) {
-    try { return JSON.parse(localStorage.getItem('kiwi:sale-aliases:' + merchantId) || '{}')[requested] || requested; }
+    try { return window.KiwiSaleAliases ? window.KiwiSaleAliases.get(merchantId, requested) : requested; }
     catch (_) { return requested; }
   }
   function moneySignal(body, state, status, serverId) {
@@ -265,12 +265,7 @@ import {} from './live-link/sale-identity.js?v=1';
       try { localStorage.setItem('kiwi:sale-ack:' + body.merchant, String(Date.now())); } catch (_) { console.warn("[live-link] moneySignal failed"); }
     }
     if (state === 'accepted' && body.kind !== 'refund' && serverId && serverId !== body.id) {
-      try {
-        var key = 'kiwi:sale-aliases:' + body.merchant;
-        var aliases = JSON.parse(localStorage.getItem(key) || '{}');
-        aliases[body.id] = String(serverId).slice(0, 64);
-        localStorage.setItem(key, JSON.stringify(aliases));
-      } catch (_) { console.warn("[live-link] moneySignal failed"); }
+      try { window.KiwiSaleAliases.set(body.merchant, body.id, serverId); } catch (_) { console.warn("[live-link] moneySignal failed"); }
     }
     try {
       window.dispatchEvent(new CustomEvent('kiwi:money-sync', { detail: {

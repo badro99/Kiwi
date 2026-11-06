@@ -1242,6 +1242,8 @@
            aussitôt ») used to fire even when nothing was saved. */
         const next = readCfg();
         if (next.product.ids.length > 2000) { toast(C.linkLimit, { type: 'warning' }); return; }
+        const missing = next.model === 'product' && window.KiwiLoyaltyLinks ? window.KiwiLoyaltyLinks.unavailable() : [];
+        if (missing.length) { toast(({ fr: 'Catalogue indisponible, programme non enregistré', en: 'Catalogue unavailable, programme not saved', ar: 'الكتالوج غير متاح، لم يُحفظ البرنامج' })[trLang()] || 'Catalogue indisponible, programme non enregistré', { type: 'warning', desc: missing.join(' · ') }); return; }
         let saved = false;
         try { if (window.KiwiClients && KiwiClients.hasBook && KiwiClients.hasBook()) { saved = KiwiClients.setConfig(next) !== null; } } catch (_) {}
         m.close();
