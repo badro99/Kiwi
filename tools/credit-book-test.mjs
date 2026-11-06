@@ -353,6 +353,7 @@ function till(disk, { failKey = '', crashAfter = Infinity, recordMode = 'ok', re
   return { ...ctx.api, CARNET, CRED, ctx, ops, journal: today, toasts };
 }
 const cents = (n) => Math.round(n * 100);
+const corruptCopies = (disk) => Array.from(disk).filter((row) => row[0] !== WKEY && row[0].includes(':corrupt:')).map((row) => row[1]);
 function consistent(disk) {
   /* l'argent enregistré = journal du jour ∪ miroir serveur, une fois par référence */
   const money = new Map(JSON.parse(disk.get(JKEY) || '[]').concat(JSON.parse(disk.get(MKEY) || '[]')).filter((s) => /^ARD-/.test(s.ref)).map((s) => [s.ref, s]));
@@ -471,9 +472,9 @@ ok('journal des règlements illisible : octets gardés, caissière prévenue, ja
   disk.set(WKEY, raw);
   const t = till(disk);
   assert.ok(!t.commitRepayment('k1', 5).error);
-  const kept = [...disk.entries()].filter(([k]) => k.startsWith(WKEY + ':corrupt:'));
-  assert.equal(kept.length, 1, 'une copie des octets bruts existe');
-  assert.equal(kept[0][1], raw);
+  const copies = corruptCopies(disk);
+  assert.equal(copies.length, 1, 'une copie des octets bruts existe');
+  assert.deepEqual(copies, [raw]);
   assert.ok(t.toasts.length === 1, 'un message visible');
 });
 
