@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: KiwiImageProof, KiwiLens.
  */
-import { CATALOG, ITEMS, root } from './custody.js?v=35';
+import { CATALOG, ITEMS, root } from './custody.js?v=37';
 export function create(owner) {
   'use strict';
   const { $, $$, COLOR, COLORS, CUST, CUSTOMERS, MAX_QTY, NOTES, ORDERS, STATUS, availServices, b2bPercentFor, b2bPercentLabel, catalogLabel, clampQty, closeVeil, dataText, esc, fmtDT, fmtMAD, freshTicket, garmentIcon, icons, isLiveOrder, lineTotal, minPrice, mirrorClient, normalizePhone, openVeil, orderStatus, orderTotals, pad2, persistPressing, phoneDigits, pressingOps, priceTable, publicOrderNo, readyOptions, state, storeInstant, storeWall, svcCodes, svcShorts, toast, validReady, validateTicket } = owner.depositContext();
@@ -382,9 +382,18 @@ function openClient(options = {}) {
       if (!Number.isFinite(n) || n < 0 || n > 50) { toast('Remise entre 0 et 50 %'); return null; }
       return { b2b, b2bPercent: Math.round(n * 100) / 100 };
     };
-    const applyB2b = (c, v) => {
+    const applyB2b = (c, v, actor) => {
       if (v.b2b) c.b2b = true; else delete c.b2b;
       if (v.b2bPercent != null) c.b2bPercent = v.b2bPercent; else delete c.b2bPercent;
+      if (actor) c.b2bBy = { ...actor, at: Date.now() };
+    };
+    /* Granting or changing a discount needs a manager; removing one does not. */
+    const grantsDiscount = (c, v) => !!v.b2b && (!c || !c.b2b || b2bPercentFor(c) !== b2bPercentFor({ b2bPercent: v.b2bPercent }));
+    const approveDiscount = async (focus) => {
+      const m = await import('./manager-approval.js?v=1');
+      const r = await m.approveAtTill({ focus, sub: 'Une remise entreprise demande le code d’un responsable.' });
+      if (!r.ok) toast(m.APPROVAL_MESSAGES[r.reason] || m.APPROVAL_MESSAGES.refused);
+      return r.ok ? r.actor : null;
     };
     const render = (q) => {
       const digits = phoneDigits(q);
@@ -455,10 +464,12 @@ function openClient(options = {}) {
       const b2bEdit = $('#px-cl-b2b-edit', el);
       if (b2bEdit) b2bEdit.onclick = () => { mode = 'b2b'; editId = b2bEdit.dataset.id; render(q); icons(); };
       const b2bSave = $('#px-cl-b2b-save', el);
-      if (b2bSave) b2bSave.onclick = () => {
+      if (b2bSave) b2bSave.onclick = async () => {
         const c = CUST[editId], v = readB2b();
         if (!c || !v) return;
-        applyB2b(c, v);
+        const actor = grantsDiscount(c, v) ? await approveDiscount(b2bSave) : null;
+        if (grantsDiscount(c, v) && !actor) return;
+        applyB2b(c, v, actor);
         persistPressing();
         pressingOps?.save?.('customer-updated');
         toast(c.b2b ? `Compte entreprise enregistré pour ${c.name}` : `Compte entreprise retiré pour ${c.name}`);
@@ -472,7 +483,7 @@ function openClient(options = {}) {
       const back = $('#px-cl-back', el);
       if (back) back.onclick = () => { mode = 'search'; render(q); icons(); };
       const create = $('#px-cl-create', el);
-      if (create) create.onclick = () => {
+      if (create) create.onclick = async () => {
         const name = $('#px-cl-name', el).value.trim();
         const tel = normalizePhone($('#px-cl-tel', el).value);
         if (!name) { toast('Le nom est requis pour la fiche'); return; }
@@ -481,9 +492,12 @@ function openClient(options = {}) {
         if (existing) { toast(`Ce numéro appartient déjà à ${existing.name}`); return; }
         const v = readB2b();
         if (!v) return;
+        const actor = grantsDiscount(null, v) ? await approveDiscount(create) : null;
+        if (grantsDiscount(null, v) && !actor) return;
+        if (CUSTOMERS.some((x) => phoneDigits(x.phone) === phoneDigits(tel))) return;
         const id = 'cx' + Date.now().toString(36);
         const c = { id, name, phone: tel, orders: 0, prefs: [] };
-        applyB2b(c, v);
+        applyB2b(c, v, actor);
         CUSTOMERS.unshift(c); CUST[id] = c;
         mirrorClient(c);
         persistPressing();

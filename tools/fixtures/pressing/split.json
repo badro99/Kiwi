@@ -128,56 +128,56 @@
         },
         {
           "start": 104318,
-          "end": 112593,
+          "end": 113609,
           "offset": 19077,
-          "length": 8275,
+          "length": 9291,
           "replacement": "function openClient(...args) { return ui.deposit.openClient.apply(this, args); }",
           "name": "openClient"
         },
         {
-          "start": 112596,
-          "end": 112723,
-          "offset": 27353,
+          "start": 113612,
+          "end": 113739,
+          "offset": 28369,
           "length": 127,
           "replacement": "function initials(...args) { return ui.deposit.initials.apply(this, args); }",
           "name": "initials"
         },
         {
-          "start": 112726,
-          "end": 112925,
-          "offset": 27481,
+          "start": 113742,
+          "end": 113941,
+          "offset": 28497,
           "length": 199,
           "replacement": "function dueOf(...args) { return ui.deposit.dueOf.apply(this, args); }",
           "name": "dueOf"
         },
         {
-          "start": 112928,
-          "end": 113647,
-          "offset": 27681,
+          "start": 113944,
+          "end": 114663,
+          "offset": 28697,
           "length": 719,
           "replacement": "function recoPanel(...args) { return ui.deposit.recoPanel.apply(this, args); }",
           "name": "recoPanel"
         },
         {
-          "start": 113650,
-          "end": 113746,
-          "offset": 28401,
+          "start": 114666,
+          "end": 114762,
+          "offset": 29417,
           "length": 96,
           "replacement": "function moveCaretEnd(...args) { return ui.deposit.moveCaretEnd.apply(this, args); }",
           "name": "moveCaretEnd"
         },
         {
-          "start": 113817,
-          "end": 116596,
-          "offset": 28498,
+          "start": 114833,
+          "end": 117612,
+          "offset": 29514,
           "length": 2779,
           "replacement": "function openDate(...args) { return ui.deposit.openDate.apply(this, args); }",
           "name": "openDate"
         },
         {
-          "start": 116599,
-          "end": 116793,
-          "offset": 31278,
+          "start": 117615,
+          "end": 117809,
+          "offset": 32294,
           "length": 194,
           "replacement": "function localDT(...args) { return ui.deposit.localDT.apply(this, args); }",
           "name": "localDT"
@@ -271,72 +271,72 @@
       "suffix": "  return Object.freeze({ payPill, matchesQuery, boardBucket, boardPriority, orderCard, renderBoard, openDetail, waMessage, openWa });\n}\n",
       "fragments": [
         {
-          "start": 145677,
-          "end": 146114,
+          "start": 146693,
+          "end": 147130,
           "offset": 892,
           "length": 437,
           "replacement": "function payPill(...args) { return ui.workshop.payPill.apply(this, args); }",
           "name": "payPill"
         },
         {
-          "start": 146118,
-          "end": 146843,
+          "start": 147134,
+          "end": 147859,
           "offset": 1330,
           "length": 725,
           "replacement": "function matchesQuery(...args) { return ui.workshop.matchesQuery.apply(this, args); }",
           "name": "matchesQuery"
         },
         {
-          "start": 146847,
-          "end": 147026,
+          "start": 147863,
+          "end": 148042,
           "offset": 2056,
           "length": 179,
           "replacement": "function boardBucket(...args) { return ui.workshop.boardBucket.apply(this, args); }",
           "name": "boardBucket"
         },
         {
-          "start": 147030,
-          "end": 147395,
+          "start": 148046,
+          "end": 148411,
           "offset": 2236,
           "length": 365,
           "replacement": "function boardPriority(...args) { return ui.workshop.boardPriority.apply(this, args); }",
           "name": "boardPriority"
         },
         {
-          "start": 148327,
-          "end": 151026,
+          "start": 149343,
+          "end": 152042,
           "offset": 2602,
           "length": 2699,
           "replacement": "function orderCard(...args) { return ui.workshop.orderCard.apply(this, args); }",
           "name": "orderCard"
         },
         {
-          "start": 151030,
-          "end": 155782,
+          "start": 152046,
+          "end": 156798,
           "offset": 5302,
           "length": 4752,
           "replacement": "function renderBoard(...args) { return ui.workshop.renderBoard.apply(this, args); }",
           "name": "renderBoard"
         },
         {
-          "start": 155852,
-          "end": 167697,
+          "start": 156868,
+          "end": 168713,
           "offset": 10055,
           "length": 11845,
           "replacement": "function openDetail(...args) { return ui.workshop.openDetail.apply(this, args); }",
           "name": "openDetail"
         },
         {
-          "start": 168981,
-          "end": 169600,
+          "start": 169997,
+          "end": 170616,
           "offset": 21901,
           "length": 619,
           "replacement": "function waMessage(...args) { return ui.workshop.waMessage.apply(this, args); }",
           "name": "waMessage"
         },
         {
-          "start": 169604,
-          "end": 173657,
+          "start": 170620,
+          "end": 174673,
           "offset": 22521,
           "length": 4053,
           "replacement": "function openWa(...args) { return ui.workshop.openWa.apply(this, args); }",
@@ -420,56 +420,56 @@
       "suffix": "  return Object.freeze({ renderRetrait, rtCard, stopScanner, acceptScan, startCameraScan, openScan });\n}\n",
       "fragments": [
         {
-          "start": 173725,
-          "end": 178676,
+          "start": 174741,
+          "end": 179692,
           "offset": 753,
           "length": 4951,
           "replacement": "function renderRetrait(...args) { return ui.pickup.renderRetrait.apply(this, args); }",
           "name": "renderRetrait"
         },
         {
-          "start": 178680,
-          "end": 181103,
+          "start": 179696,
+          "end": 182119,
           "offset": 5705,
           "length": 2423,
           "replacement": "function rtCard(...args) { return ui.pickup.rtCard.apply(this, args); }",
           "name": "rtCard"
         },
         {
-          "start": 181755,
-          "end": 181778,
+          "start": 182771,
+          "end": 182794,
           "offset": 8129,
           "length": 23,
           "replacement": "/* pressing-private:scannerStop */",
           "name": "scannerStop"
         },
         {
-          "start": 181781,
-          "end": 181922,
+          "start": 182797,
+          "end": 182938,
           "offset": 8153,
           "length": 141,
           "replacement": "function stopScanner(...args) { return ui.pickup.stopScanner.apply(this, args); }",
           "name": "stopScanner"
         },
         {
-          "start": 182883,
-          "end": 183845,
+          "start": 183899,
+          "end": 184861,
           "offset": 8295,
           "length": 962,
           "replacement": "function acceptScan(...args) { return ui.pickup.acceptScan.apply(this, args); }",
           "name": "acceptScan"
         },
         {
-          "start": 183848,
-          "end": 185721,
+          "start": 184864,
+          "end": 186737,
           "offset": 9258,
           "length": 1873,
           "replacement": "function startCameraScan(...args) { return ui.pickup.startCameraScan.apply(this, args); }",
           "name": "startCameraScan"
         },
         {
-          "start": 185724,
-          "end": 187608,
+          "start": 186740,
+          "end": 188624,
           "offset": 11132,
           "length": 1884,
           "replacement": "function openScan(...args) { return ui.pickup.openScan.apply(this, args); }",
@@ -539,8 +539,8 @@
       "suffix": "  return Object.freeze({ renderRack });\n}\n",
       "fragments": [
         {
-          "start": 188638,
-          "end": 191748,
+          "start": 189654,
+          "end": 192764,
           "offset": 506,
           "length": 3110,
           "replacement": "function renderRack(...args) { return ui.rack.renderRack.apply(this, args); }",
@@ -620,5 +620,5 @@
     "kiwi-serveur.html": 27,
     "booking.html": 5
   },
-  "sha256": "9e22323014a19f10b99b2ab86590bb6b68e38bc496714f67ccd15c86e994c37b"
+  "sha256": "41b031b5afe6c1730b5e054f065617f5814e92c23a589edd59676ce295456769"
 }

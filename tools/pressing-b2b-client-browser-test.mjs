@@ -70,6 +70,51 @@ try {
     await click(page, '#px-cl-b2b-save');
     await page.waitForSelector('[data-px-cl]', wait);
     assert.equal(await page.$('[data-px-cl] .px-b2b-chip'), null, 'the business chip is gone');
+
+    t.step('on a real till, a clerk code cannot grant a discount; a manager code can; removing asks nothing');
+    await page.evaluate(() => {
+      window.KiwiEnv.isReal = () => true;
+      window.KiwiPressingOps.scope = () => 'essai-pressing';
+      window.__verify = { role: 'caissier', calls: 0 };
+      const real = window.fetch;
+      window.fetch = (url, opts) => {
+        if (String(url).includes('/api/pin/verify')) {
+          window.__verify.calls += 1;
+          const staff = { id: 'st-' + window.__verify.calls, name: 'Essai', role: window.__verify.role };
+          return Promise.resolve(new Response(JSON.stringify({ ok: true, staff }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        }
+        return real(url, opts);
+      };
+    });
+    const grant = async () => {
+      await click(page, '#px-cl-b2b-edit');
+      await page.waitForSelector('#px-cl-b2b-save', wait);
+      await click(page, '#px-cl-b2b');
+      await fill(page, '#px-cl-b2b-rate', '10');
+      await click(page, '#px-cl-b2b-save');
+      await page.waitForSelector('k-sheet[data-px-approval] k-pin-pad', { timeout: 8000 });
+      // The server is mocked: whatever is typed, the identity below decides.
+      await page.evaluate(() => document.querySelector('k-sheet[data-px-approval] k-pin-pad').onsubmit(String(Math.floor(Math.random() * 1e4)).padStart(4, '0')));
+      await page.waitForFunction(() => !document.querySelector('k-sheet[data-px-approval]'), { timeout: 8000 });
+    };
+    await grant();
+    await sleep(300);
+    assert.ok(await page.$('#px-cl-b2b-save'), 'a clerk identity leaves the editor open, nothing saved');
+    await click(page, '#px-cl-back');
+    await page.waitForSelector('[data-px-cl]', wait);
+    assert.equal(await page.$('[data-px-cl] .px-b2b-chip'), null, 'no business chip after a clerk code');
+    await page.evaluate(() => { window.__verify.role = 'Gérant'; });
+    await grant();
+    await page.waitForSelector('[data-px-cl] .px-b2b-chip', wait);
+    assert.equal(await page.evaluate(() => window.__verify.calls), 2, 'each grant was checked by the server');
+    await click(page, '#px-cl-b2b-edit');
+    await page.waitForSelector('#px-cl-b2b-save', wait);
+    await click(page, '#px-cl-b2b');
+    await click(page, '#px-cl-b2b-save');
+    await page.waitForSelector('[data-px-cl]', wait);
+    assert.equal(await page.$('k-sheet[data-px-approval]'), null, 'removing the discount asks for no code');
+    assert.equal(await page.evaluate(() => window.__verify.calls), 2);
+    assert.equal(await page.$('[data-px-cl] .px-b2b-chip'), null);
   });
 } finally {
   await h.close();
