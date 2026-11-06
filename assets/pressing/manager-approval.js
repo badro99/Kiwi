@@ -65,10 +65,14 @@ export async function approveByManager({ merchant, isReal, tr = (s) => s, focus,
   };
 }
 
+/* A till phrase in the screen's language (assets/caisse-lang.js, keyed by French). */
+export function tr(s) {
+  try { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s; } catch (_) { return s; }
+}
+
 /* The till's own context: real once signed in or paired (fail closed), the
  * store from the pressing scope, phrases through the till's language layer. */
 export function approveAtTill({ focus, sub } = {}) {
-  const tr = (s) => (window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s);
   let isReal = true;
   try { isReal = !!(window.KiwiEnv?.isReal?.()) || !!window.KiwiPlatform?.isPaired?.() || !!localStorage.getItem('kiwiPairedVenue'); } catch (_) {}
   let merchant = '';

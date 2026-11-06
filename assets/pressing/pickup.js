@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: BarcodeDetector, KiwiCaissePairing, KiwiPressingOps, KiwiStaff.
  */
-import { ITEMS, root } from './custody.js?v=38';
+import { ITEMS, root } from './custody.js?v=40';
 export function create(owner) {
   'use strict';
   const { $, $$, COLOR, ORDERS, boardBucket, catalogLabel, closeVeil, custOf, dataText, deliverOrder, esc, findOrder, findScannedOrder, fmtDT, fmtDay, fmtMAD, icons, isLiveOrder, matchesQuery, moveCaretEnd, notifyLine, openDetail, openPay, openVeil, openWa, orderStatus, orderTotals, publicOrderNo, publicPieceNo, queueIfOffline, refreshOps, renderBoard, state, svcCodes, toast } = owner.pickupContext();
@@ -37,13 +37,13 @@ function renderRetrait() {
       </div>`;
     /* While the clerk types, only the results move: the field keeps its node, its
        caret and an Arabic composition in progress. Any other refresh redraws all. */
-    const typing = $('#px-rt-q', panel);
-    if (typing && document.activeElement === typing) {
-      const next = document.createElement('div'); next.innerHTML = html;
-      $('.px-rt-results', panel).replaceWith($('.px-rt-results', next));
-      $('.px-head-sub', panel).textContent = $('.px-head-sub', next).textContent;
+    const typing = $('#px-rt-q', panel), keep = !!typing && document.activeElement === typing;
+    const host = keep ? document.createElement('div') : panel;
+    host.innerHTML = html;
+    if (keep) {
+      $('.px-rt-results', panel).replaceWith($('.px-rt-results', host));
+      $('.px-head-sub', panel).textContent = $('.px-head-sub', host).textContent;
     } else {
-      panel.innerHTML = html;
       $('#px-rt-q', panel).oninput = (e) => { state.rtQuery = e.target.value; renderRetrait(); };
       $('#px-rt-scan', panel).onclick = () => openScan('pickup');
     }

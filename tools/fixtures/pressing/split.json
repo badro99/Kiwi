@@ -128,56 +128,56 @@
         },
         {
           "start": 104318,
-          "end": 113609,
+          "end": 113892,
           "offset": 19077,
-          "length": 9291,
+          "length": 9574,
           "replacement": "function openClient(...args) { return ui.deposit.openClient.apply(this, args); }",
           "name": "openClient"
         },
         {
-          "start": 113612,
-          "end": 113739,
-          "offset": 28369,
+          "start": 113895,
+          "end": 114022,
+          "offset": 28652,
           "length": 127,
           "replacement": "function initials(...args) { return ui.deposit.initials.apply(this, args); }",
           "name": "initials"
         },
         {
-          "start": 113742,
-          "end": 113941,
-          "offset": 28497,
+          "start": 114025,
+          "end": 114224,
+          "offset": 28780,
           "length": 199,
           "replacement": "function dueOf(...args) { return ui.deposit.dueOf.apply(this, args); }",
           "name": "dueOf"
         },
         {
-          "start": 113944,
-          "end": 114663,
-          "offset": 28697,
+          "start": 114227,
+          "end": 114946,
+          "offset": 28980,
           "length": 719,
           "replacement": "function recoPanel(...args) { return ui.deposit.recoPanel.apply(this, args); }",
           "name": "recoPanel"
         },
         {
-          "start": 114666,
-          "end": 114762,
-          "offset": 29417,
+          "start": 114949,
+          "end": 115045,
+          "offset": 29700,
           "length": 96,
           "replacement": "function moveCaretEnd(...args) { return ui.deposit.moveCaretEnd.apply(this, args); }",
           "name": "moveCaretEnd"
         },
         {
-          "start": 114833,
-          "end": 117612,
-          "offset": 29514,
+          "start": 115116,
+          "end": 117895,
+          "offset": 29797,
           "length": 2779,
           "replacement": "function openDate(...args) { return ui.deposit.openDate.apply(this, args); }",
           "name": "openDate"
         },
         {
-          "start": 117615,
-          "end": 117809,
-          "offset": 32294,
+          "start": 117898,
+          "end": 118092,
+          "offset": 32577,
           "length": 194,
           "replacement": "function localDT(...args) { return ui.deposit.localDT.apply(this, args); }",
           "name": "localDT"
@@ -271,72 +271,72 @@
       "suffix": "  return Object.freeze({ payPill, matchesQuery, boardBucket, boardPriority, orderCard, renderBoard, openDetail, waMessage, openWa });\n}\n",
       "fragments": [
         {
-          "start": 146693,
-          "end": 147130,
+          "start": 146976,
+          "end": 147413,
           "offset": 892,
           "length": 437,
           "replacement": "function payPill(...args) { return ui.workshop.payPill.apply(this, args); }",
           "name": "payPill"
         },
         {
-          "start": 147134,
-          "end": 147859,
+          "start": 147417,
+          "end": 148142,
           "offset": 1330,
           "length": 725,
           "replacement": "function matchesQuery(...args) { return ui.workshop.matchesQuery.apply(this, args); }",
           "name": "matchesQuery"
         },
         {
-          "start": 147863,
-          "end": 148042,
+          "start": 148146,
+          "end": 148325,
           "offset": 2056,
           "length": 179,
           "replacement": "function boardBucket(...args) { return ui.workshop.boardBucket.apply(this, args); }",
           "name": "boardBucket"
         },
         {
-          "start": 148046,
-          "end": 148411,
+          "start": 148329,
+          "end": 148694,
           "offset": 2236,
           "length": 365,
           "replacement": "function boardPriority(...args) { return ui.workshop.boardPriority.apply(this, args); }",
           "name": "boardPriority"
         },
         {
-          "start": 149343,
-          "end": 152042,
+          "start": 149626,
+          "end": 152325,
           "offset": 2602,
           "length": 2699,
           "replacement": "function orderCard(...args) { return ui.workshop.orderCard.apply(this, args); }",
           "name": "orderCard"
         },
         {
-          "start": 152046,
-          "end": 156798,
+          "start": 152329,
+          "end": 157081,
           "offset": 5302,
           "length": 4752,
           "replacement": "function renderBoard(...args) { return ui.workshop.renderBoard.apply(this, args); }",
           "name": "renderBoard"
         },
         {
-          "start": 156868,
-          "end": 168713,
+          "start": 157151,
+          "end": 168996,
           "offset": 10055,
           "length": 11845,
           "replacement": "function openDetail(...args) { return ui.workshop.openDetail.apply(this, args); }",
           "name": "openDetail"
         },
         {
-          "start": 169997,
-          "end": 170616,
+          "start": 170280,
+          "end": 170899,
           "offset": 21901,
           "length": 619,
           "replacement": "function waMessage(...args) { return ui.workshop.waMessage.apply(this, args); }",
           "name": "waMessage"
         },
         {
-          "start": 170620,
-          "end": 174673,
+          "start": 170903,
+          "end": 174956,
           "offset": 22521,
           "length": 4053,
           "replacement": "function openWa(...args) { return ui.workshop.openWa.apply(this, args); }",
@@ -420,57 +420,57 @@
       "suffix": "  return Object.freeze({ renderRetrait, rtCard, stopScanner, acceptScan, startCameraScan, openScan });\n}\n",
       "fragments": [
         {
-          "start": 174741,
-          "end": 179692,
+          "start": 175024,
+          "end": 179977,
           "offset": 753,
-          "length": 4951,
+          "length": 4953,
           "replacement": "function renderRetrait(...args) { return ui.pickup.renderRetrait.apply(this, args); }",
           "name": "renderRetrait"
         },
         {
-          "start": 179696,
-          "end": 182119,
-          "offset": 5705,
+          "start": 179981,
+          "end": 182404,
+          "offset": 5707,
           "length": 2423,
           "replacement": "function rtCard(...args) { return ui.pickup.rtCard.apply(this, args); }",
           "name": "rtCard"
         },
         {
-          "start": 182771,
-          "end": 182794,
-          "offset": 8129,
+          "start": 183056,
+          "end": 183079,
+          "offset": 8131,
           "length": 23,
           "replacement": "/* pressing-private:scannerStop */",
           "name": "scannerStop"
         },
         {
-          "start": 182797,
-          "end": 182938,
-          "offset": 8153,
+          "start": 183082,
+          "end": 183223,
+          "offset": 8155,
           "length": 141,
           "replacement": "function stopScanner(...args) { return ui.pickup.stopScanner.apply(this, args); }",
           "name": "stopScanner"
         },
         {
-          "start": 183899,
-          "end": 184861,
-          "offset": 8295,
+          "start": 184184,
+          "end": 185146,
+          "offset": 8297,
           "length": 962,
           "replacement": "function acceptScan(...args) { return ui.pickup.acceptScan.apply(this, args); }",
           "name": "acceptScan"
         },
         {
-          "start": 184864,
-          "end": 187403,
-          "offset": 9258,
+          "start": 185149,
+          "end": 187688,
+          "offset": 9260,
           "length": 2539,
           "replacement": "function startCameraScan(...args) { return ui.pickup.startCameraScan.apply(this, args); }",
           "name": "startCameraScan"
         },
         {
-          "start": 187406,
-          "end": 189290,
-          "offset": 11798,
+          "start": 187691,
+          "end": 189575,
+          "offset": 11800,
           "length": 1884,
           "replacement": "function openScan(...args) { return ui.pickup.openScan.apply(this, args); }",
           "name": "openScan"
@@ -539,8 +539,8 @@
       "suffix": "  return Object.freeze({ renderRack });\n}\n",
       "fragments": [
         {
-          "start": 190320,
-          "end": 193430,
+          "start": 190605,
+          "end": 193715,
           "offset": 506,
           "length": 3110,
           "replacement": "function renderRack(...args) { return ui.rack.renderRack.apply(this, args); }",
@@ -620,5 +620,5 @@
     "kiwi-serveur.html": 27,
     "booking.html": 5
   },
-  "sha256": "44ff27dd0399bebeb090546ee0d612ee0fdbd7c0660fc4e7e069761f7280ce4c"
+  "sha256": "c05482503abc584b8cb9abe1eab95083ab86c244df1371e586b0d6cfa58eea7f"
 }

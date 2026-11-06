@@ -1617,7 +1617,7 @@ section('Whole-project regressions');
     'retail-photos-wiring-test.mjs',
     'retail-icon-picker-test.mjs',
     'check-godmode.mjs',
-    'operator-workspace-test.mjs',
+    'operator-workspace-test.mjs', 'operator-workspace-paging-test.mjs',
     'admin-report-test.mjs',
     'scoped-tab-isolation-test.mjs',
     'cross-store-copy-test.mjs',
