@@ -30,7 +30,6 @@ const ticketText = (page) => page.$eval('#px-ticket', (el) => el.textContent.rep
 
 try {
   await h.S.run('a business customer with a negotiated rate · fr · tablet', async (t) => {
-    // coverage: surface=caisse-pressing locale=fr viewport=tablet
     const { page } = await openTill(h, t, 'caisse-pressing', 'fr', 'tablet');
     t.watch(page);
 

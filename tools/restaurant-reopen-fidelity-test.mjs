@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 /* Une note rouverte revient avec TOUTES ses lignes d'origine, identité, options
  * et note comprises : ni plafond de quarante lignes, ni « reopen-N » générique.
- * Exécute le vrai snapshotLine() de recordSale() puis le vrai pont de réouverture. */
+ * Exécute le vrai snapshotLine() (pos-sale.js, appelé par recordSale()) puis le vrai pont de réouverture. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import caisseTestSource from './caisse-test-source.cjs';
 
 const read = f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+// recordSale() snapshots each line through KiwiPosSale.snapshotLine (assets/pos-sale.js).
 const rec = read('assets/caisse-accounting/record-sale.js');
-const fn = (rec.match(/\n      function snapshotLine\(line\) \{[\s\S]*?\n      \}\n/) || [])[0];
-assert.ok(fn, 'snapshotLine() existe dans recordSale()');
+assert.match(rec, /source\.map\(line => \(window\.KiwiPosSale\?\.snapshotLine/, 'recordSale() snapshots through KiwiPosSale.snapshotLine');
+const fn = (read('assets/pos-sale.js').match(/\n  function snapshotLine\(line, money\) \{[\s\S]*?\n  \}\n/) || [])[0];
+assert.ok(fn, 'snapshotLine() existe dans pos-sale.js');
 const money = v => Math.round(v * 100) / 100;
-const snapshotLine = vm.runInNewContext(`(function(){${fn}; return snapshotLine;})()`, { money, Number, String, Array, JSON, Math });
+const lifted = vm.runInNewContext(`(function(){${fn}; return snapshotLine;})()`, { Number, String, Array, JSON, Math });
+const snapshotLine = line => lifted(line, money);
 
 /* Une table bâtie sur plusieurs envois cuisine : 57 lignes distinctes. */
 const live = Array.from({ length: 57 }, (_, i) => ({

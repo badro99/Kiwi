@@ -96,8 +96,9 @@ async function publicBooking(t, locale, viewport) {
   await page.waitForSelector('[data-slot]', wait);
   rejectSlot = false;
   await tap(page, '[data-slot]');
-  await page.type('[name=name]', 'Matrix Guest');
-  await page.type('[name=email]', 'guest@example.test');
+  // The guest's details survive the slot refusal: nothing to type again.
+  assert.equal(await page.$eval('[name=name]', e => e.value), 'Matrix Guest');
+  assert.equal(await page.$eval('[name=email]', e => e.value), 'guest@example.test');
   await tap(page, '[data-form] [type=submit]');
   await state(t, page, '.bk-success', locale, 'booking: confirmed reservation');
   assert.equal(await page.$eval('.bk-success h2', e => e.textContent), copy[locale].success);

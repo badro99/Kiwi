@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=187';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=105';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=187';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=187';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=188';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=106';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=188';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=188';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
@@ -1619,7 +1619,6 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       window.addEventListener('kiwi:catalog-conflict', (e) => { if (e.detail && e.detail.store === 'catalog') { e.preventDefault(); toast(e.detail.message, 9000, e.detail.kind); e.detail.sync(); } });
     }
     installWedgeScanner();
-
     /* Les ventes sorties des livres par la console opérateur. On écoute la
        liste, et on la redemande au montage : la caisse peut avoir été rouverte
        longtemps après le retrait, auquel cas l'annonce est passée sans nous mais

@@ -98,14 +98,14 @@ await test('Maison delegates reward arithmetic to the shared rule with centime i
   const discount = fn('assets/pos-maison.js', 'rewardDiscount', { loyaltyRewardDiscount: (...args) => { calls++; assert.equal(args[0], reward); assert.equal(args[1], 'fixture'); assert.equal(args[2], 12.55); assert.deepEqual(Array.from(args[3]), [12.55]); return 1.88; }, lineUnit: l => l.price });
   assert.equal(discount({ reward, client: 'fixture', lines: [{ price: 12.55 }] }, 12.55), 1.88); assert.equal(calls, 1);
 });
-await test('briefing evidence cuts on whitespace and preserves the complete thresholds', () => {
+await test('briefing evidence keeps the measured text whole and carries the complete thresholds beside it', () => {
   const thresholdEvidence = fn('assets/briefing.js', 'thresholdEvidence', { GROUPS: { 0: ['test'] }, LIMITS: { test: [0, 0, 0, 'Test', 'Test', 'اختبار'] }, lang: () => 'fr', num: () => '5', shown: () => 5 });
   const text = 'Short evidence ' + 'x'.repeat(500);
   const result = thresholdEvidence({ kind: 'sales-drop', evidence: { source: 'fixture', text: { fr: text, en: text, ar: text } } });
-  for (const value of Object.values(result.evidence.text)) { assert.ok(value.length <= 400); assert.ok(value.startsWith('Short evidence… · ')); assert.ok(value.endsWith('5')); }
+  assert.deepEqual({ ...result.evidence.text }, { fr: text, en: text, ar: text }, 'the measured explanation is never cut');
+  assert.deepEqual({ ...result.evidence.thresholds }, { fr: 'Seuils : Test 5', en: 'Thresholds: Test 5', ar: 'العتبات: اختبار 5' });
   const grouped = 'Purchase ' + Array.from({ length: 200 }, () => '123').join(' ');
-  const number = thresholdEvidence({ kind: 'sales-drop', evidence: { source: 'fixture', text: { en: grouped } } }).evidence.text.en;
-  assert.equal(number.split('…')[0], 'Purchase', 'a grouped amount is never cut between its digit groups');
+  assert.equal(thresholdEvidence({ kind: 'sales-drop', evidence: { source: 'fixture', text: { en: grouped } } }).evidence.text.en, grouped, 'a grouped amount is never cut between its digit groups');
 });
 await test('KDS clock, check and serve icons use intact vendored Material paths', () => {
   const src = read('kiwi-cuisine.html');

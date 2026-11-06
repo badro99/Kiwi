@@ -25,7 +25,6 @@ async function view(page, name) {
 
 try {
   await h.S.run('pickup search and camera · fr · tablet', async (t) => {
-    // coverage: surface=caisse-pressing locale=fr viewport=tablet
     const { page } = await openTill(h, t, 'caisse-pressing', 'fr', 'tablet');
     t.watch(page);
 
@@ -63,7 +62,6 @@ try {
   });
 
   await h.S.run('camera scan without a native barcode reader · fr · phone', async (t) => {
-    // coverage: surface=caisse-pressing locale=fr viewport=phone
     const { page } = await openTill(h, t, 'caisse-pressing', 'fr', 'phone');
     t.watch(page);
 

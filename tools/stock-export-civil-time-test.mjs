@@ -13,6 +13,12 @@ import vm from 'node:vm';
 
 const SOURCES = Object.fromEntries(['stock/loss.js', 'stock/counts.js'].map((f) => [f, fs.readFileSync(new URL(`../assets/${f}`, import.meta.url), 'utf8')]));
 const zoneLaw = (() => { const root = {}; new Function('globalThis', fs.readFileSync(new URL('../assets/kit/haptics.js', import.meta.url), 'utf8').split('/* KiwiHaptics')[0])(root); return root.KiwiZoneLaw; })();
+// The real civil-time reader the exports call (assets/day-report.js), with the zone law loaded.
+const civilParts = (() => {
+  const src = fs.readFileSync(new URL('../assets/day-report.js', import.meta.url), 'utf8');
+  const from = src.indexOf('  var FORMATTERS = Object.create(null);'), to = src.indexOf('\n  }\n', src.indexOf('  function civilParts(')) + 4;
+  return new Function('globalThis', 'DEFAULT_TIMEZONE', src.slice(from, to) + '\nreturn civilParts;')({ KiwiZoneLaw: zoneLaw }, 'Africa/Casablanca');
+})();
 
 function boot(file, zone, rows, now = Date.now()) {
   const FixedDate = class extends Date { constructor(...a) { super(...(a.length ? a : [now])); } static now() { return now; } };
@@ -24,7 +30,7 @@ function boot(file, zone, rows, now = Date.now()) {
   { get: (t, k) => (k in t ? t[k] : () => undefined) });
   const win = {
     KiwiStockInternal: { install: (name, factory) => { part.api = factory(S); } },
-    KiwiDayReport: { timezone: () => zone, dayBounds: () => ({ from: 0 }), businessDay: () => 'd' },
+    KiwiDayReport: { timezone: () => zone, civilParts, dayBounds: () => ({ from: 0 }), businessDay: () => 'd' },
     KiwiInventory: { history: () => rows.waste || [] },
     KiwiZoneLaw: zoneLaw, KiwiVenue: {}, Kiwi: {}, KiwiBoutiqueCatalog: {},
   };

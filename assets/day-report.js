@@ -1472,7 +1472,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     businessDay: businessDay, dayBounds: dayBounds, today: today, now: nowMs, hourOf: hourOf,
     lastClosedDay: lastClosedDay, shiftDay: shiftDay,
     cutoff: cutoff, setCutoff: setCutoff,
-    timezone: merchantTimezone,
+    timezone: merchantTimezone, civilParts: civilParts,
     /* langue du métier */
     vocab: vocab, businessType: businessType,
     /* calcul · model is the single browser copy of the shared figures */

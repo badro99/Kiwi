@@ -183,6 +183,23 @@
    * stores the equivalent short-key wire form.  Legacy callers that only know
    * name/qty/total continue to produce the exact same useful subset. */
   /* Au-delà de 40 lignes, conserver chaque centime dans une ligne de solde. */
+  /* A table bill line as it was, for a reopened note (caisse-accounting
+     record-sale): article identity, options, note, formula and promotion, so the
+     note reopens as the original order, editable, not as a flat receipt. */
+  function snapshotLine(line, money) {
+    money = typeof money === 'function' ? money : function (x) { return Math.round(x * 100) / 100; };
+    var qty = Math.max(1, Number(line.qty) || 1);
+    var saved = {
+      name: String(line.name || ''), qty: qty,
+      total: money(Number(line.total) || 0),
+      price: money(Number(line.price != null ? line.price : line.unit) || ((Number(line.total) || 0) / qty)),
+    };
+    if (line.id != null && line.id !== '') saved.id = String(line.id);
+    ['uid', 'baseName', 'note', 'optSig', 'kind', 'formulaUid', 'formulaName', 'slotLabel'].forEach(function (key) { if (line[key]) saved[key] = String(line[key]); });
+    if (Array.isArray(line.opts) && line.opts.length) saved.opts = JSON.parse(JSON.stringify(line.opts));
+    if (line.promo && typeof line.promo === 'object') saved.promo = JSON.parse(JSON.stringify(line.promo));
+    return saved;
+  }
   function foldLines(lines) {
     if (!Array.isArray(lines) || lines.length <= 40) return lines;
     var rest = lines.slice(39);
@@ -966,7 +983,7 @@
   }
 
   window.KiwiPosSale = {
-    feedDay: feedDay, foldLines: foldLines,
+    feedDay: feedDay, foldLines: foldLines, snapshotLine: snapshotLine,
     record: record, businessDayKey: businessDayKey, today: today, totals: totals, nextSeq: nextSeq,
     hasRef: function (vertical, ref) { try { return !!ref && read(vertical, true).some(function (s) { return s && s.ref === ref; }); } catch (_) { return false; } },
     isReal: isReal, deviceTag: deviceTag, stamp: stamp, dropRefs: dropRefs,

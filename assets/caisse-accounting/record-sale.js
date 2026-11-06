@@ -15,26 +15,6 @@
           return Number.isFinite(c) && c > 0 ? Math.round(c * 100) / 100 : null;
         } catch (_) { return null; }
       }
-      /* Une ligne de l'addition telle qu'elle était : identité de l'article,
-         options, note, formule et promotion, pour que la note rouverte soit
-         l'ordre d'origine, modifiable, et non un reçu à plat. */
-      function snapshotLine(line) {
-        const qty = Math.max(1, Number(line.qty) || 1);
-        const saved = {
-          name: String(line.name || ''), qty,
-          total: money(Number(line.total) || 0),
-          price: money(Number(line.price ?? line.unit) || ((Number(line.total) || 0) / qty)),
-        };
-        if (line.id != null && line.id !== '') saved.id = String(line.id);
-        if (line.uid) saved.uid = String(line.uid);
-        if (line.baseName) saved.baseName = String(line.baseName);
-        if (line.note) saved.note = String(line.note);
-        if (Array.isArray(line.opts) && line.opts.length) saved.opts = JSON.parse(JSON.stringify(line.opts));
-        if (line.optSig) saved.optSig = String(line.optSig);
-        ['kind', 'formulaUid', 'formulaName', 'slotLabel'].forEach(key => { if (line[key]) saved[key] = String(line[key]); });
-        if (line.promo && typeof line.promo === 'object') saved.promo = JSON.parse(JSON.stringify(line.promo));
-        return saved;
-      }
       amount = money(amount);
       /* A cashier ticket can temporarily have no server visit (offline relay).
          Its immutable order number is still enough to recognize a second tap
@@ -152,7 +132,7 @@
           table: String(settlementTable), covers: Math.max(1, Number(table.covers) || 1),
           orderNo: String(table.orderNo || settledOrderRef(settlementTable) || ''),
           ref: String(entry.ref || ''),
-          lines: source.map(snapshotLine),
+          lines: source.map(line => (window.KiwiPosSale?.snapshotLine || (l => ({ ...l })))(line, money)),
           split: split && splitState.flow ? {
             id: String(splitState.flow.id || split.flowId || ''),
             parts: splitState.flow.parts.slice(0, 50).map(part => ({

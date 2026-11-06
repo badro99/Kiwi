@@ -23,7 +23,7 @@ if (!part || part === 'briefing') {
   assert.equal(stored.settings.stockFactor,2,'settings share existing briefing document');
   assert.equal(T.mergeDocs({days:[]},stored).settings.stockFactor,2,'cloud merge retains settings');
   const row = T.compute([()=>T.lowStockRule({items})]);
-  assert.match(row.lines[0].evidence.source,/Stock threshold multiplier 2/);
+  assert.match(row.lines[0].evidence.thresholds.en,/Stock threshold multiplier 2/);
   window.KiwiWeather = { isRain:()=>true, rainEffect:()=>({change:.1,rainDays:5,dryDays:10}) };
   const weather = {ok:true,days:[{day:'2099-01-01',precip:3}],log:{}};
   assert.ok(T.weatherRule({weather,today:'2026-10-26'}));

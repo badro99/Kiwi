@@ -88,7 +88,7 @@ await test('briefing#0',()=>{
   const r=realm({GROUPS:[['salesDrop']],LIMITS:{salesDrop:[0,0,0,'Baisse','Drop','انخفاض']},num:String,shown:()=>20,lang:()=> 'en'});
   const line={kind:'sales-drop',evidence:{source:'fixture',text:{fr:'x'.repeat(400),en:'x'.repeat(400),ar:'x'.repeat(400)}}};
   r.run('('+fn('assets/briefing.js','thresholdEvidence')+')')(line);
-  for(const [lang,label]of Object.entries({fr:'Baisse 20',en:'Drop 20',ar:'انخفاض 20'})){assert.ok(line.evidence.text[lang].endsWith(label));assert.ok(line.evidence.text[lang].length<=400);}
+  for(const [lang,label]of Object.entries({fr:'Baisse 20',en:'Drop 20',ar:'انخفاض 20'})){assert.ok(line.evidence.thresholds[lang].endsWith(label));assert.equal(line.evidence.text[lang],'x'.repeat(400));}
 });
 await test('hotel#1',async()=>{
   const r=realm({createImageBitmap:()=>Promise.reject(Error('decode'))});

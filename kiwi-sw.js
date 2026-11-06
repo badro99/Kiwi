@@ -36,7 +36,7 @@ var SHELL = [
   '/assets/team/styles.js?v=4',
   '/assets/team/access-rules.js?v=7',
   '/assets/hotel-economat-transport.js?v=22',
-  '/assets/pos-boutique/drawer.js?v=105',
+  '/assets/pos-boutique/drawer.js?v=106',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=18',
@@ -126,7 +126,7 @@ var SHELL = [
   '/assets/dashboard-shell.css?v=7',
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
-  '/assets/caisse-accounting.js?v=30',
+  '/assets/caisse-accounting.js?v=31',
   '/assets/caisse-floor.js?v=19',
   '/assets/caisse-kitchen.js?v=29',
   '/assets/caisse/receipts.js?v=2',
@@ -211,7 +211,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
-  '/assets/pages/dashboard-startup.js?v=213',
+  '/assets/pages/dashboard-startup.js?v=214',
   '/assets/pages/dashboard-loader.js?v=82',
   '/assets/hotel/model.js?v=10',
   '/assets/hotel/views.js?v=9',
@@ -356,7 +356,7 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=50',
+  '/assets/day-report.js?v=51',
   '/assets/report.js?v=10',
   '/assets/day-report-dash.js?v=50',
   '/assets/day-report-export.js?v=30',
@@ -419,7 +419,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=37',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=137',
+  '/assets/caisse-lang.js?v=139',
   '/assets/venue-store.js?v=6',
   '/assets/discount-policy.js?v=4',
   '/assets/merchant-policies.js?v=4',
@@ -435,9 +435,9 @@ var SHELL = [
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=20',
   '/assets/stock/strings.js?v=20',
-  '/assets/stock.js?v=126',
-  '/assets/stock/loss.js?v=2',
-  '/assets/stock/counts.js?v=11',
+  '/assets/stock.js?v=127',
+  '/assets/stock/loss.js?v=3',
+  '/assets/stock/counts.js?v=12',
   '/assets/stock/purchasing.js?v=6',
   '/assets/stock/intake.js?v=19',
   '/assets/stock/catalog.js?v=11',
@@ -495,8 +495,8 @@ var SHELL = [
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=37',
   '/assets/food-production-print.js?v=2',
-  '/assets/pos-sale.js?v=35',
-  '/assets/pos-dispatch.js?v=401',
+  '/assets/pos-sale.js?v=36',
+  '/assets/pos-dispatch.js?v=402',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -567,8 +567,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=290',
-  '/assets/pos-boutique/sales.js?v=187',
+  '/assets/pos-boutique.css?v=291',
+  '/assets/pos-boutique/sales.js?v=188',
   '/assets/retail-photos.js?v=5',
   '/assets/retail-icon-picker.js?v=4',
   '/assets/pos-boutique/ticket-owner.js?v=3',
@@ -588,9 +588,9 @@ var SHELL = [
   '/assets/pos-boutique/inv-moves.js?v=7',
   '/assets/pos-maison/inv-moves.js?v=3',
   '/assets/pos-boutique/kit-2027.js?v=20',
-  '/assets/pos-boutique/checkout.js?v=187',
-  '/assets/pos-boutique/inventory.js?v=187',
-  '/assets/pos-boutique.js?v=290',
+  '/assets/pos-boutique/checkout.js?v=188',
+  '/assets/pos-boutique/inventory.js?v=188',
+  '/assets/pos-boutique.js?v=291',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

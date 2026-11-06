@@ -23,7 +23,7 @@
     },
     "assets/stock/counts.js": {
       "fixture": "tools/fixtures/stock-controller/counts.js.gz",
-      "sha256": "3e25142924131bce2bc5f4ef96505ab2314e9773d23fa9189ed835976f7c179b",
+      "sha256": "2f3d76358407f8584f40ee6d7412cf8009ab6b628a4d63597f0f698c74349277",
       "stamps": []
     }
   },
@@ -398,8 +398,7 @@
         "KiwiDayReport",
         "KiwiInventory",
         "KiwiStockInternal",
-        "KiwiVenue",
-        "KiwiZoneLaw"
+        "KiwiVenue"
       ],
       "state": [
         "stCountDateFilter",
@@ -419,8 +418,7 @@
         "Kiwi",
         "KiwiDayReport",
         "KiwiInventory",
-        "KiwiStockInternal",
-        "KiwiZoneLaw"
+        "KiwiStockInternal"
       ],
       "state": [
         "stPageActive",

@@ -143,12 +143,14 @@ try {
         await check(t, cell, 'mapping', locale, viewport);
 
         t.step('read the synthetic failed sync and its recovery instruction');
-        await page.waitForFunction((text) => [...document.querySelectorAll('.shp .chl-once')]
-          .some((el) => el.textContent === text), {}, s.error);
+        // The warning reads the message, then offers its own recovery button beside it.
+        await page.waitForFunction((text, retry) => [...document.querySelectorAll('.shp .chl-once')]
+          .some((el) => [...el.childNodes].filter((n) => n.nodeName !== 'BUTTON').map((n) => n.textContent).join('').trim() === text
+            && el.querySelector('button')?.textContent.trim() === retry), {}, s.error, s.retry);
         await page.$eval('.shp .chl-once', (el) => el.scrollIntoView({ block: 'center' }));
         await check(t, cell, 'sync-error', locale, viewport);
         t.step('retry failed stock delivery and verify the failure clears');
-        await button(page, s.retry);
+        await (await page.$('.shp .chl-once button')).click();
         await page.waitForFunction(() => !document.querySelector('.shp .chl-once') && !document.querySelector('.shp.is-loading'));
         assert.equal(calls.filter((c) => c.action === 'retry').length, 1);
         await check(t, cell, 'retry-recovered', locale, viewport);

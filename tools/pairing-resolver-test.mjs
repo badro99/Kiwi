@@ -864,9 +864,13 @@ function auditPairingKeyUsage() {
       // 2. Canonical owner: assets/pairing-commit.js
       if (rel === 'assets/pairing-commit.js') {
         const prefix = content.slice(0, idx);
-        if (/(?:\.|\b)set\s*\(\s*$/.test(prefix)) {
+        // The commit writes through `put` (a write it reads back) and snapshots
+        // the four pairing keys first, so a refused write restores them all.
+        if (/(?:\.|\b)(?:set|put)\s*\(\s*$/.test(prefix)) {
           canonicalWriterCount++;
           canonicalWriterLine = line;
+        } else if (/\bvar keys = \[[^\]\n]*$/.test(prefix)) {
+          // rollback snapshot list, read before the writes
         } else if (!READ_ALLOW_LIST.test(prefix)) {
           violations.push({ file: rel, line, snippet, reason: 'unrecognized call pattern in pairing-commit.js' });
         }

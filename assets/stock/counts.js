@@ -583,9 +583,9 @@ window.KiwiStockInternal.install('counts', (S) => {
 
   /* Heure civile du magasin, ni UTC ni l'horloge de l'appareil : un gérant à l'étranger lit dans l'export l'heure de ses écrans. */
   const civilStamp = (ts, dateOnly) => {
-    const zone = (window.KiwiDayReport && window.KiwiDayReport.timezone && window.KiwiDayReport.timezone()) || 'Africa/Casablanca', p = {};
-    new (window.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
-      .formatToParts(new Date(ts)).forEach((x) => { p[x.type] = x.value; });
+    const R = window.KiwiDayReport;
+    let p;
+    try { p = R.civilParts(ts, R.timezone()); } catch (_) { const iso = new Date(ts).toISOString(); p = { year: iso.slice(0, 4), month: iso.slice(5, 7), day: iso.slice(8, 10), hour: iso.slice(11, 13), minute: iso.slice(14, 16), second: iso.slice(17, 19) }; }
     return p.year + '-' + p.month + '-' + p.day + (dateOnly ? '' : ' ' + p.hour + ':' + p.minute + ':' + p.second);
   };
 

@@ -31,9 +31,11 @@ test('dayreport preserves three decimal quantities', () => {
 });
 test('tables reopening preserves quantity and total', () => {
   const src = read('caisse-app.js');
-  const start = src.indexOf('snap.lines.slice(0, 40).map(');
-  const end = src.indexOf('}));', start);
-  const map = vm.runInNewContext('(snap) => ' + src.slice(start, end + 2));
+  // The whole bill comes back (no 40-line cap since the reopened-note fix).
+  const start = src.indexOf('snap.lines.map((line, index) =>');
+  const close = '\n        })', end = src.indexOf(close, start);
+  assert.ok(start > 0 && end > start, 'reopen line mapper found');
+  const map = vm.runInNewContext('(snap) => ' + src.slice(start, end + close.length), { JSON, Number, String, Array });
   for (const qty of [0.001, 0.333, 0.334, 1.125, 2]) {
     const line = map({lines:[{name:'Dish', qty, total:10.25}]})[0];
     assert.equal(line.qty, qty); assert.equal(line.price * qty, 10.25);
