@@ -649,7 +649,7 @@ for (const test of [
   'd1-migrations-test.mjs',
   'runtime-ddl-test.mjs',
   'runtime-ddl-routes-test.mjs',
-  'schema-minimum-test.mjs',
+  'schema-minimum-test.mjs', 'schema-ledger-test.mjs',
   'worker-cpu-test.mjs',
   /* Routes statiques appelées directement par le middleware racine (sans le routeur Pages) : table à jour, appel identique, repli. */
   'fast-routes-test.mjs',
