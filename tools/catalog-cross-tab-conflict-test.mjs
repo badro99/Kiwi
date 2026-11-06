@@ -11,8 +11,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const handlerSource = (file) => {
-  const src = fs.readFileSync(new URL(`../assets/${file}`, import.meta.url), 'utf8');
+const FILES = Object.fromEntries(['pages-pro-boutique.js', 'pos-boutique.js', 'pos-maison.js', 'color-palette.js', 'boutique-catalog-parts.js', 'boutique-catalog.js'].map((f) => [f, fs.readFileSync(new URL(`../assets/${f}`, import.meta.url), 'utf8')]));
+const listenerText = (file) => {
+  const src = FILES[file];
   const i = src.indexOf("window.addEventListener('kiwi:catalog-conflict'");
   assert.ok(i > 0, file + ' listens to the conflict event');
   const block = src.indexOf('\n});\n', i), line = src.indexOf('\n', i);
@@ -33,13 +34,13 @@ function setup({ surface, cancel } = {}) {
     setTimeout: (fn, ms) => { log.timers.push(ms); return log.timers.length; }, clearTimeout() {}, fetch: () => Promise.reject(Error('offline')) };
   w.window = w; w.self = w;
   vm.createContext(w);
-  for (const f of ['color-palette', 'boutique-catalog-parts', 'boutique-catalog']) vm.runInContext(fs.readFileSync(new URL(`../assets/${f}.js`, import.meta.url), 'utf8'), w);
+  for (const f of ['color-palette', 'boutique-catalog-parts', 'boutique-catalog']) vm.runInContext(FILES[f + '.js'], w);
   const K = w.KiwiBoutiqueCatalog; K.use('conflict-a');
   const p = K.addProduct({ name: 'Article local', priceMAD: 100 });
   assert.equal(K.durable(), false, 'precondition: the local write was refused');
-  if (surface === 'dashboard') { w.toast = (msg, o) => log.toasts.push({ msg, o }); vm.runInContext(handlerSource('pages-pro-boutique.js'), w); }
-  if (surface === 'till') { w.toast = (...a) => log.till.push(a); vm.runInContext(handlerSource('pos-boutique.js'), w); }
-  if (surface === 'maison') { w.toast = (...a) => log.till.push(a); vm.runInContext(handlerSource('pos-maison.js'), w); }
+  if (surface === 'dashboard') { w.toast = (msg, o) => log.toasts.push({ msg, o }); vm.runInContext(listenerText('pages-pro-boutique.js'), w); }
+  if (surface === 'till') { w.toast = (...a) => log.till.push(a); vm.runInContext(listenerText('pos-boutique.js'), w); }
+  if (surface === 'maison') { w.toast = (...a) => log.till.push(a); vm.runInContext(listenerText('pos-maison.js'), w); }
   if (cancel) w.addEventListener('kiwi:catalog-conflict', (e) => e.preventDefault());
   log.timers.length = 0; log.events.length = 0;
   return { K, p, log, fire: () => listeners.storage[0]({ key: K._key, newValue: JSON.stringify({ products: [], variants: [], categories: [] }) }) };

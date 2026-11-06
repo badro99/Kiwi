@@ -11,10 +11,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const read = (f) => fs.readFileSync(new URL(`../assets/${f}`, import.meta.url), 'utf8');
+const SOURCES = Object.fromEntries(['stock/loss.js', 'stock/counts.js'].map((f) => [f, fs.readFileSync(new URL(`../assets/${f}`, import.meta.url), 'utf8')]));
 const zoneLaw = (() => { const root = {}; new Function('globalThis', fs.readFileSync(new URL('../assets/kit/haptics.js', import.meta.url), 'utf8').split('/* KiwiHaptics')[0])(root); return root.KiwiZoneLaw; })();
 
-function load(file, zone, rows, now = Date.now()) {
+function boot(file, zone, rows, now = Date.now()) {
   const FixedDate = class extends Date { constructor(...a) { super(...(a.length ? a : [now])); } static now() { return now; } };
   const out = { csv: '', name: '' };
   const part = {};
@@ -32,7 +32,7 @@ function load(file, zone, rows, now = Date.now()) {
   const ctx = vm.createContext({ window: win, Intl, Date: FixedDate, Math, Number, String, JSON, Array, Object, Set, Map, isFinite, console,
     document: { createElement: () => { const a = { click() { out.name = a.download; } }; return a; }, body: { appendChild() {}, removeChild() {} }, getElementById: () => null, querySelector: () => null },
     Blob: class { constructor(p) { out.csv = p.join(''); } }, URL: { createObjectURL: () => 'blob:x', revokeObjectURL() {} }, setTimeout: () => 0 });
-  vm.runInContext(read(file), ctx);
+  vm.runInContext(SOURCES[file], ctx);
   return { api: part.api, out };
 }
 
@@ -40,15 +40,15 @@ const TS = Date.UTC(2026, 9, 12, 23, 30); /* 12 oct 23:30 UTC */
 const waste = [{ id: '9001', itemId: '501', qty: -2, reason: 'waste', refType: 'waste', occurredTs: TS, unitCost: 3, note: '', actor: 'Moi', meta: { wasteReason: 'perime' } }];
 const counts = [{ id: 'c1', status: 'applied', storeName: 'Principal', employeeName: 'A', employeeRole: 'Admin', submittedAt: TS, totalLines: 1, totalVarianceCostMAD: 1, absVarianceCostMAD: 1, reviewerName: '', reviewDecision: '', reviewNote: '', lines: [] }];
 
-for (const [file, fn, field] of [['stock/loss.js', 'exportWasteCsv', 'waste'], ['stock/counts.js', 'exportCountsCsv', 'counts']]) {
+for (const [file, fn] of [['stock/loss.js', 'exportWasteCsv'], ['stock/counts.js', 'exportCountsCsv']]) {
   /* Tokyo : 23:30 UTC est déjà le 13 au matin, 08:30:00 sur les écrans du magasin. */
-  let { api, out } = load(file, 'Asia/Tokyo', { waste, counts }, TS);
+  let { api, out } = boot(file, 'Asia/Tokyo', { waste, counts }, TS);
   api[fn]();
   assert.match(out.csv, /2026-10-13 08:30:00/, `${file}: Tokyo store sees 08:30 on the 13th, not the UTC stamp`);
   assert.ok(!/2026-10-12 23:30:00/.test(out.csv), `${file}: the UTC stamp is gone`);
   assert.match(out.name, /-2026-10-13\.csv$/, `${file}: file name carries the store day (13th in Tokyo)`);
   /* Maroc : UTC+0 depuis le 20 septembre 2026, même avec une base de fuseaux périmée (+1) : jamais 00:30. */
-  ({ api, out } = load(file, 'Africa/Casablanca', { waste, counts }, TS));
+  ({ api, out } = boot(file, 'Africa/Casablanca', { waste, counts }, TS));
   api[fn]();
   assert.match(out.csv, /2026-10-12 23:30:00/, `${file}: Casablanca keeps UTC+0 under the zone law`);
   assert.match(out.name, /-2026-10-12\.csv$/, `${file}: and the 12th for the file name`);
