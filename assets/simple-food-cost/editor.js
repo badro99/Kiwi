@@ -4,6 +4,7 @@
   function banner() {
     const out = [];
     if (!online()) out.push(`<p class="sfc-note warn" data-sfc-state="offline">${esc(tr('offline'))}</p>`);
+    if (S.exportError) out.push(`<p class="sfc-note warn" role="alert" data-sfc-state="export-error">${esc(tr('exportError'))}</p>`);
     if (S.status === 'ready' && !S.enabled) out.push(`<p class="sfc-note warn" data-sfc-state="readonly">${esc(tr('readOnly'))}</p>`);
     return out.join('');
   }
@@ -261,16 +262,24 @@
 .sfc-hrow{border-top:1px solid var(--n-200);font-size:13px}
 .sfc-snapshot{margin-top:12px}
 @media (max-width:900px){.sfc-summary{grid-template-columns:1fr 1fr}.sfc-form{grid-template-columns:1fr 1fr}}
-@media (max-width:720px){.sfc-form{grid-template-columns:1fr}
-.sfc-lines thead,.sfc-table thead{display:none}
-.sfc-lines,.sfc-lines tbody,.sfc-table,.sfc-table tbody{display:block}
-.sfc-lines tr,.sfc-table tr{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;padding:12px 0;border-bottom:1px solid var(--n-200)}
-.sfc-lines td,.sfc-table td{display:block;padding:0}
-.sfc-lines td:first-child,.sfc-table td:first-child{grid-column:1/-1}
+/* Tablette (721 à 900 px) : la saisie des lignes passe en fiches de trois colonnes au lieu d'un tableau de 1 120 px à faire défiler. */
+@media (max-width:900px){
+.sfc-lines thead{display:none}
+.sfc-lines,.sfc-lines tbody{display:block}
+.sfc-lines tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px;padding:12px 0;border-bottom:1px solid var(--n-200)}
+.sfc-lines td{display:block;padding:0}
+.sfc-lines td:first-child{grid-column:1/-1}
 .sfc-lines td:nth-child(2)::before{content:var(--l2)}.sfc-lines td:nth-child(3)::before{content:var(--l3)}.sfc-lines td:nth-child(4)::before{content:var(--l4)}.sfc-lines td:nth-child(5)::before{content:var(--l5)}.sfc-lines td:nth-child(6)::before{content:var(--l6)}.sfc-lines td:nth-child(7)::before{content:var(--l7)}.sfc-lines td:nth-child(8)::before{content:var(--l8)}.sfc-lines td:nth-child(9)::before{content:var(--l9)}.sfc-lines td:nth-child(10)::before{content:var(--l10)}
 .sfc-lines td::before{display:block;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);margin-bottom:3px}
 .sfc-lines td:nth-child(n+4):nth-child(-n+9) input{max-width:none}
-.sfc-lines{min-width:0}.sfc-lines td{min-width:0!important}
+.sfc-lines{min-width:0}.sfc-lines td{min-width:0!important}}
+@media (max-width:720px){.sfc-form{grid-template-columns:1fr}
+.sfc-lines tr{grid-template-columns:1fr 1fr}
+.sfc-table thead{display:none}
+.sfc-table,.sfc-table tbody{display:block}
+.sfc-table tr{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;padding:12px 0;border-bottom:1px solid var(--n-200)}
+.sfc-table td{display:block;padding:0}
+.sfc-table td:first-child{grid-column:1/-1}
 .sfc-table td:last-child{text-align:start}}
 `;
     document.head.appendChild(s);

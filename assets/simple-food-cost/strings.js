@@ -64,7 +64,7 @@
       historyTitle: 'Versions enregistrées', version: 'Version {v}', view: 'Voir', close: 'Fermer', snapshotOf: 'Version {v} · {when} · {who}', frozen: 'Version figée, lecture seule.',
       toRecipe: 'Créer un brouillon de recette', toRecipeConfirm: 'Créer un brouillon de recette pour « {item} » à partir de cette fiche ?\n\n· {n} ingrédient(s) repris, en quantité brute (le rendement est appliqué).\n· {pack} ligne(s) d’emballage non reprises.\n· Rien n’est enregistré : l’éditeur de recette s’ouvre, vous vérifiez, puis vous enregistrez.\n· Une fois enregistrée, la recette pilote le stock et le coût théorique. Cette fiche ne change pas.', toRecipeExisting: '\n· Ce plat a déjà une recette : elle reste en place tant que vous n’enregistrez pas le brouillon.', toRecipeEmpty: 'Aucune ligne alimentaire nommée à reprendre.',
       copyName: '{name} (copie)', templateName: 'Modèle · {name}', newName: 'Nouvelle fiche',
-      csvSheet: 'Fiche', csvTotal: 'Total du lot', csvPortion: 'Par portion',
+      csvSheet: 'Fiche', csvTotal: 'Total du lot', csvPortion: 'Par portion', exportError: 'Le fichier n’a pas pu être créé : le navigateur a refusé le téléchargement. Autorisez les téléchargements puis réessayez.',
       lineN: 'Ligne {n}',
     },
     en: {
@@ -105,7 +105,7 @@
       historyTitle: 'Saved versions', version: 'Version {v}', view: 'View', close: 'Close', snapshotOf: 'Version {v} · {when} · {who}', frozen: 'Frozen version, read only.',
       toRecipe: 'Create a draft recipe', toRecipeConfirm: 'Create a draft recipe for "{item}" from this sheet?\n\n· {n} ingredient(s) carried over, as gross quantities (yield applied).\n· {pack} packaging line(s) left out.\n· Nothing is saved: the recipe editor opens, you check, then you save.\n· Once saved, the recipe drives stock and theoretical cost. This sheet does not change.', toRecipeExisting: '\n· This dish already has a recipe: it stays in place until you save the draft.', toRecipeEmpty: 'No named food line to carry over.',
       copyName: '{name} (copy)', templateName: 'Template · {name}', newName: 'New sheet',
-      csvSheet: 'Sheet', csvTotal: 'Batch total', csvPortion: 'Per portion',
+      csvSheet: 'Sheet', csvTotal: 'Batch total', csvPortion: 'Per portion', exportError: 'The file could not be created: the browser refused the download. Allow downloads, then try again.',
       lineN: 'Line {n}',
     },
     ar: {
@@ -146,7 +146,7 @@
       historyTitle: 'النسخ المحفوظة', version: 'النسخة {v}', view: 'عرض', close: 'إغلاق', snapshotOf: 'النسخة {v} · {when} · {who}', frozen: 'نسخة مثبتة، للقراءة فقط.',
       toRecipe: 'إنشاء مسودة وصفة', toRecipeConfirm: 'إنشاء مسودة وصفة لـ «{item}» انطلاقاً من هذه البطاقة؟\n\n· {n} مكوّن منقول، بالكمية الإجمالية (مع تطبيق المردود).\n· {pack} سطر تغليف غير منقول.\n· لا يُحفظ شيء: يُفتح محرر الوصفة، تتحقق ثم تحفظ.\n· بعد الحفظ، تتحكم الوصفة في المخزون والتكلفة النظرية. هذه البطاقة لا تتغير.', toRecipeExisting: '\n· لهذا الطبق وصفة: تبقى كما هي حتى تحفظ المسودة.', toRecipeEmpty: 'لا يوجد سطر غذائي مسمّى لنقله.',
       copyName: '{name} (نسخة)', templateName: 'نموذج · {name}', newName: 'بطاقة جديدة',
-      csvSheet: 'البطاقة', csvTotal: 'مجموع الدفعة', csvPortion: 'لكل حصة',
+      csvSheet: 'البطاقة', csvTotal: 'مجموع الدفعة', csvPortion: 'لكل حصة', exportError: 'تعذر إنشاء الملف: رفض المتصفح التنزيل. اسمح بالتنزيلات ثم أعد المحاولة.',
       lineN: 'السطر {n}',
     },
   };

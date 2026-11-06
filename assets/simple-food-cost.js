@@ -64,7 +64,7 @@
       historyTitle: 'Versions enregistrées', version: 'Version {v}', view: 'Voir', close: 'Fermer', snapshotOf: 'Version {v} · {when} · {who}', frozen: 'Version figée, lecture seule.',
       toRecipe: 'Créer un brouillon de recette', toRecipeConfirm: 'Créer un brouillon de recette pour « {item} » à partir de cette fiche ?\n\n· {n} ingrédient(s) repris, en quantité brute (le rendement est appliqué).\n· {pack} ligne(s) d’emballage non reprises.\n· Rien n’est enregistré : l’éditeur de recette s’ouvre, vous vérifiez, puis vous enregistrez.\n· Une fois enregistrée, la recette pilote le stock et le coût théorique. Cette fiche ne change pas.', toRecipeExisting: '\n· Ce plat a déjà une recette : elle reste en place tant que vous n’enregistrez pas le brouillon.', toRecipeEmpty: 'Aucune ligne alimentaire nommée à reprendre.',
       copyName: '{name} (copie)', templateName: 'Modèle · {name}', newName: 'Nouvelle fiche',
-      csvSheet: 'Fiche', csvTotal: 'Total du lot', csvPortion: 'Par portion',
+      csvSheet: 'Fiche', csvTotal: 'Total du lot', csvPortion: 'Par portion', exportError: 'Le fichier n’a pas pu être créé : le navigateur a refusé le téléchargement. Autorisez les téléchargements puis réessayez.',
       lineN: 'Ligne {n}',
     },
     en: {
@@ -105,7 +105,7 @@
       historyTitle: 'Saved versions', version: 'Version {v}', view: 'View', close: 'Close', snapshotOf: 'Version {v} · {when} · {who}', frozen: 'Frozen version, read only.',
       toRecipe: 'Create a draft recipe', toRecipeConfirm: 'Create a draft recipe for "{item}" from this sheet?\n\n· {n} ingredient(s) carried over, as gross quantities (yield applied).\n· {pack} packaging line(s) left out.\n· Nothing is saved: the recipe editor opens, you check, then you save.\n· Once saved, the recipe drives stock and theoretical cost. This sheet does not change.', toRecipeExisting: '\n· This dish already has a recipe: it stays in place until you save the draft.', toRecipeEmpty: 'No named food line to carry over.',
       copyName: '{name} (copy)', templateName: 'Template · {name}', newName: 'New sheet',
-      csvSheet: 'Sheet', csvTotal: 'Batch total', csvPortion: 'Per portion',
+      csvSheet: 'Sheet', csvTotal: 'Batch total', csvPortion: 'Per portion', exportError: 'The file could not be created: the browser refused the download. Allow downloads, then try again.',
       lineN: 'Line {n}',
     },
     ar: {
@@ -146,7 +146,7 @@
       historyTitle: 'النسخ المحفوظة', version: 'النسخة {v}', view: 'عرض', close: 'إغلاق', snapshotOf: 'النسخة {v} · {when} · {who}', frozen: 'نسخة مثبتة، للقراءة فقط.',
       toRecipe: 'إنشاء مسودة وصفة', toRecipeConfirm: 'إنشاء مسودة وصفة لـ «{item}» انطلاقاً من هذه البطاقة؟\n\n· {n} مكوّن منقول، بالكمية الإجمالية (مع تطبيق المردود).\n· {pack} سطر تغليف غير منقول.\n· لا يُحفظ شيء: يُفتح محرر الوصفة، تتحقق ثم تحفظ.\n· بعد الحفظ، تتحكم الوصفة في المخزون والتكلفة النظرية. هذه البطاقة لا تتغير.', toRecipeExisting: '\n· لهذا الطبق وصفة: تبقى كما هي حتى تحفظ المسودة.', toRecipeEmpty: 'لا يوجد سطر غذائي مسمّى لنقله.',
       copyName: '{name} (نسخة)', templateName: 'نموذج · {name}', newName: 'بطاقة جديدة',
-      csvSheet: 'البطاقة', csvTotal: 'مجموع الدفعة', csvPortion: 'لكل حصة',
+      csvSheet: 'البطاقة', csvTotal: 'مجموع الدفعة', csvPortion: 'لكل حصة', exportError: 'تعذر إنشاء الملف: رفض المتصفح التنزيل. اسمح بالتنزيلات ثم أعد المحاولة.',
       lineN: 'السطر {n}',
     },
   };
@@ -477,14 +477,15 @@
   /* ── export ──────────────────────────────────────────────────────────── */
   /* Une cellule qui commence par = + - @ serait une formule dans un tableur. */
   const cell = (v) => { let s = String(v == null ? '' : v); if (/^[=+\-@]/.test(s) || /^[\t\r]/.test(s)) s = "'" + s; return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  const n2 = (v) => (v == null || !Number.isFinite(+v) ? '' : (+v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })); /* même arrondi que l'écran (money), jamais toFixed : 59333,225 se lit 59333,23 des deux côtés */
+  const n2 = (v) => (v == null || !Number.isFinite(+v) ? '' : (+v).toLocaleString(lang() === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })); /* même arrondi que l'écran (money), jamais toFixed : 59333,225 se lit 59333,23 des deux côtés ; la décimale suit la langue (en : 59333.23, fr et ar : 59333,23) */
   function download(name, rows) {
     const text = '﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n');
     try {
       const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
       const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (_) {}
+      if (S.exportError) { S.exportError = false; paint(); }
+    } catch (_) { S.exportError = true; paint(); }
     return text;
   }
   function sheetRows(data) {
@@ -508,6 +509,7 @@
   function banner() {
     const out = [];
     if (!online()) out.push(`<p class="sfc-note warn" data-sfc-state="offline">${esc(tr('offline'))}</p>`);
+    if (S.exportError) out.push(`<p class="sfc-note warn" role="alert" data-sfc-state="export-error">${esc(tr('exportError'))}</p>`);
     if (S.status === 'ready' && !S.enabled) out.push(`<p class="sfc-note warn" data-sfc-state="readonly">${esc(tr('readOnly'))}</p>`);
     return out.join('');
   }
@@ -765,16 +767,24 @@
 .sfc-hrow{border-top:1px solid var(--n-200);font-size:13px}
 .sfc-snapshot{margin-top:12px}
 @media (max-width:900px){.sfc-summary{grid-template-columns:1fr 1fr}.sfc-form{grid-template-columns:1fr 1fr}}
-@media (max-width:720px){.sfc-form{grid-template-columns:1fr}
-.sfc-lines thead,.sfc-table thead{display:none}
-.sfc-lines,.sfc-lines tbody,.sfc-table,.sfc-table tbody{display:block}
-.sfc-lines tr,.sfc-table tr{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;padding:12px 0;border-bottom:1px solid var(--n-200)}
-.sfc-lines td,.sfc-table td{display:block;padding:0}
-.sfc-lines td:first-child,.sfc-table td:first-child{grid-column:1/-1}
+/* Tablette (721 à 900 px) : la saisie des lignes passe en fiches de trois colonnes au lieu d'un tableau de 1 120 px à faire défiler. */
+@media (max-width:900px){
+.sfc-lines thead{display:none}
+.sfc-lines,.sfc-lines tbody{display:block}
+.sfc-lines tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px;padding:12px 0;border-bottom:1px solid var(--n-200)}
+.sfc-lines td{display:block;padding:0}
+.sfc-lines td:first-child{grid-column:1/-1}
 .sfc-lines td:nth-child(2)::before{content:var(--l2)}.sfc-lines td:nth-child(3)::before{content:var(--l3)}.sfc-lines td:nth-child(4)::before{content:var(--l4)}.sfc-lines td:nth-child(5)::before{content:var(--l5)}.sfc-lines td:nth-child(6)::before{content:var(--l6)}.sfc-lines td:nth-child(7)::before{content:var(--l7)}.sfc-lines td:nth-child(8)::before{content:var(--l8)}.sfc-lines td:nth-child(9)::before{content:var(--l9)}.sfc-lines td:nth-child(10)::before{content:var(--l10)}
 .sfc-lines td::before{display:block;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);margin-bottom:3px}
 .sfc-lines td:nth-child(n+4):nth-child(-n+9) input{max-width:none}
-.sfc-lines{min-width:0}.sfc-lines td{min-width:0!important}
+.sfc-lines{min-width:0}.sfc-lines td{min-width:0!important}}
+@media (max-width:720px){.sfc-form{grid-template-columns:1fr}
+.sfc-lines tr{grid-template-columns:1fr 1fr}
+.sfc-table thead{display:none}
+.sfc-table,.sfc-table tbody{display:block}
+.sfc-table tr{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;padding:12px 0;border-bottom:1px solid var(--n-200)}
+.sfc-table td{display:block;padding:0}
+.sfc-table td:first-child{grid-column:1/-1}
 .sfc-table td:last-child{text-align:start}}
 `;
     document.head.appendChild(s);
