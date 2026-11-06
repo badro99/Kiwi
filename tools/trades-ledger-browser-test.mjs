@@ -226,6 +226,24 @@ async function clickSel(page, sel, opts = {}) {
     }
   }
 }
+/* One wizard step forward, proven by the step title changing. Under load the next
+ * click used to fire before the page had handled the previous one, and the
+ * wizard stopped a step short (three copies at once failed every time). */
+async function nextStep(page) {
+  const title = () => page.$eval('.kob-h', (h) => h.textContent).catch(() => '');
+  const before = await title();
+  for (let i = 0; i < 2; i++) {
+    const probe = await page.evaluate(() => {
+      const b = document.querySelector('.kob-btn.primary[data-go="next"]'); if (!b) return 'no button';
+      const r = b.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return { box: [r.x, r.y, r.width, r.height].map(Math.round), hit: hit ? hit.outerHTML.slice(0, 120) : null, disabled: b.disabled };
+    });
+    await clickSel(page, '.kob-btn.primary[data-go="next"]');
+    try { await page.waitForFunction((t) => (document.querySelector('.kob-h') || {}).textContent !== t, { timeout: 8000 }, before); return; }
+    catch (_) { console.error('wizard click had no effect on « ' + before + ' » ' + JSON.stringify(probe) + ' now ' + JSON.stringify(await page.evaluate(() => { const b = document.querySelector('.kob-btn.primary[data-go="next"]'); const r = b && b.getBoundingClientRect(); return { box: r && [r.x, r.y, r.width, r.height].map(Math.round), err: (document.querySelector('[data-acc-err]') || {}).textContent || null }; }))); }
+  }
+  throw new Error('the wizard did not leave « ' + before + ' »');
+}
 async function typeDigits(page, keySel, value) {
   for (const d of value) { await clickSel(page, keySel.replace('%', d)); await sleep(90); }
 }
@@ -278,11 +296,10 @@ async function createMerchant(t, ctx, m) {
   const shown = await page.$eval(`[data-type="${m.type}"]`, (e) => !!e.offsetWidth).catch(() => false);
   if (!shown) await clickSel(page, '[data-more]');
   await clickSel(page, `[data-type="${m.type}"]`);
-  await clickSel(page, '.kob-btn.primary[data-go="next"]');                 // business
-  await clickSel(page, '.kob-btn.primary[data-go="next"]'); // how many stores
-  await clickSel(page, '.kob-btn.primary[data-go="next"]'); // team size
-  await clickSel(page, '.kob-btn.primary[data-go="next"]'); // priorities
-  await sleep(250);
+  await nextStep(page);   // business -> stores
+  await nextStep(page);   // stores -> team size
+  await nextStep(page);   // team size -> priorities
+  await nextStep(page);   // priorities -> access codes
   const pin = await page.waitForSelector('[data-pin-code="0"]', { visible: true });
   await pin.click(); await pin.type(m._pin);
   await clickSel(page, '.kob-btn.primary[data-go="next"]');                 // Presque fini
