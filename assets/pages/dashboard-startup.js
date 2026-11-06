@@ -60,7 +60,7 @@
     'assets/weather.js?v=1',
     'assets/briefing-rules.js?v=7',
     'assets/briefing-persistence.js?v=14',
-    'assets/briefing.js?v=53',
+    'assets/briefing.js?v=54',
     'assets/simple-food-cost.js?v=29',
     'assets/finance.js?v=14',
     'assets/conformite.js?v=8',

@@ -724,8 +724,8 @@
     var lines = activeLines((opts && opts.role) || tier());
     var failed = current() && current().unavailable || [];
     if (failed.length) return { text: t.analysisFailed + ' · ' + failed.map(function (name) { var index = RULES.findIndex(function (rule) { return rule.name === name; }); return t.ruleNames[index] || t.analysisFailed; }).join(', ') };
-    if (!lines.length) return { text: '<b>' + t.empty + '</b> ' + t.emptyNote };
-    return { text: '<b>' + t.title + '</b>', stats: lines.map(function (line) { return { l: line.kind || t.title, v: lineText(line, opts && opts.lang), h: evidenceText(line, opts && opts.lang) }; }) };
+    if (!lines.length) return { text: '<b>' + esc(t.empty) + '</b> ' + esc(t.emptyNote) };
+    return { text: '<b>' + esc(t.title) + '</b>', stats: lines.map(function (line) { return { l: esc(line.kind || t.title), v: esc(lineText(line, opts && opts.lang)), h: esc(evidenceText(line, opts && opts.lang)) }; }) };
   }
 
   function retryCloud() { return save(); }
