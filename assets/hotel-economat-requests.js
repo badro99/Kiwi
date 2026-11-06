@@ -24,7 +24,7 @@
   var STR = {
     fr: {
       title:'Demandes des services', sub:'De la demande à la remise, avec la garde enregistrée à chaque étape', create:'Nouvelle demande', refresh:'Actualiser',
-      empty:'Aucune demande en cours', emptyD:'Les services demandent ici le linge, les produits et les consommables à l’économat.', loading:'Chargement des demandes…', offline:'Demandes indisponibles pour le moment', retry:'Réessayer',
+      empty:'Aucune demande en cours', emptyD:'Les services demandent ici le linge, les produits et les consommables à l’économat.', loading:'Chargement des demandes…', offline:'Demandes indisponibles pour le moment', retry:'Réessayer', cached:'Connexion indisponible : données enregistrées le {t}, peut-être dépassées.',
       noUnits:'Aucun service configuré', noUnitsD:'Déclarez les services de l’hôtel dans Points de vente pour qu’ils puissent demander à l’économat.',
       department:'Service', items:'Articles', note:'Note', notePh:'Étage, urgence, précision…', qty:'Quantité', unit:'Unité', send:'Envoyer à l’économat', cancel:'Fermer', noCatalogue:'Aucun article autorisé pour ce service.', noCatalogueD:'Le catalogue du service est vide : l’économat doit lui ouvrir des articles.', pickOne:'Indiquez au moins une quantité.', sent:'Demande envoyée à l’économat', queued:'Hors connexion : la demande est gardée et partira au retour du réseau', draftSaved:'Demande enregistrée en brouillon, envoi à reprendre',
       stepRequest:'Demande', stepReview:'Validation', stepPrepare:'Préparation', stepHandover:'Remise', stepReceipt:'Réception',
@@ -43,7 +43,7 @@
     },
     en: {
       title:'Department requests', sub:'From request to handover, with custody recorded at every step', create:'New request', refresh:'Refresh',
-      empty:'No request in progress', emptyD:'Departments request linen, products and consumables from the storeroom here.', loading:'Loading requests…', offline:'Requests unavailable right now', retry:'Try again',
+      empty:'No request in progress', emptyD:'Departments request linen, products and consumables from the storeroom here.', loading:'Loading requests…', offline:'Requests unavailable right now', retry:'Try again', cached:'Connection unavailable: data saved on {t}, it may be out of date.',
       noUnits:'No department set up', noUnitsD:'Declare the hotel departments under Outlets so they can request from the storeroom.',
       department:'Department', items:'Items', note:'Note', notePh:'Floor, urgency, details…', qty:'Quantity', unit:'Unit', send:'Send to the storeroom', cancel:'Close', noCatalogue:'No item approved for this department.', noCatalogueD:'This department’s catalogue is empty: the storeroom must open items to it.', pickOne:'Enter at least one quantity.', sent:'Request sent to the storeroom', queued:'Offline: the request is kept and will be sent when the connection returns', draftSaved:'Request saved as a draft, send it again',
       stepRequest:'Request', stepReview:'Review', stepPrepare:'Preparation', stepHandover:'Handover', stepReceipt:'Receipt',
@@ -62,7 +62,7 @@
     },
     ar: {
       title:'طلبات الأقسام', sub:'من الطلب إلى التسليم، مع تسجيل العهدة في كل مرحلة', create:'طلب جديد', refresh:'تحديث',
-      empty:'لا يوجد طلب قيد المعالجة', emptyD:'تطلب الأقسام هنا البياضات والمنتجات والمواد الاستهلاكية من المخزن.', loading:'جارٍ تحميل الطلبات…', offline:'الطلبات غير متاحة حاليًا', retry:'إعادة المحاولة',
+      empty:'لا يوجد طلب قيد المعالجة', emptyD:'تطلب الأقسام هنا البياضات والمنتجات والمواد الاستهلاكية من المخزن.', loading:'جارٍ تحميل الطلبات…', offline:'الطلبات غير متاحة حاليًا', retry:'إعادة المحاولة', cached:'الاتصال غير متاح: بيانات محفوظة في {t}، وقد تكون قديمة.',
       noUnits:'لا يوجد قسم مُعدّ', noUnitsD:'صرّح بأقسام الفندق في نقاط البيع حتى تتمكن من الطلب من المخزن.',
       department:'القسم', items:'المواد', note:'ملاحظة', notePh:'الطابق، الاستعجال، تفاصيل…', qty:'الكمية', unit:'الوحدة', send:'إرسال إلى المخزن', cancel:'إغلاق', noCatalogue:'لا توجد مادة مسموحة لهذا القسم.', noCatalogueD:'كتالوج هذا القسم فارغ: على المخزن أن يفتح له مواد.', pickOne:'أدخل كمية واحدة على الأقل.', sent:'تم إرسال الطلب إلى المخزن', queued:'لا يوجد اتصال: الطلب محفوظ وسيُرسل عند عودة الشبكة', draftSaved:'حُفظ الطلب كمسودة، أعد الإرسال',
       stepRequest:'الطلب', stepReview:'المصادقة', stepPrepare:'التحضير', stepHandover:'التسليم', stepReceipt:'الاستلام',
@@ -86,7 +86,7 @@
     ar:{ unite:'وحدة', bouteille:'قنينة', carton:'كرتونة', caisse:'صندوق', paquet:'رزمة', lot:'دفعة', rouleau:'لفافة', kg:'كغ', g:'غ', L:'ل', ml:'مل', cl:'سل', sachet:'كيس', boite:'علبة', bidon:'بيدون', douzaine:'دزينة' }
   };
 
-  var S = { loaded:false, loading:false, error:'', requests:[], units:[], catalogue:[], side:'recipient', actor:null, host:null };
+  var S = { stale:null, loaded:false, loading:false, error:'', requests:[], units:[], catalogue:[], side:'recipient', actor:null, host:null };
   var sheet = null;      // { ref, id, mode }
   var createRef = null;
   var pending = false, outbox = [], outboxReady = false, outboxMerchant = '';
@@ -199,6 +199,7 @@
       S.actor = all[0].actor || null;
       S.units = all[1] && all[1].data && Array.isArray(all[1].data.units) ? all[1].data.units : [];
       S.catalogue = all[2] && all[2].data && Array.isArray(all[2].data.items) ? all[2].data.items : [];
+      S.stale = all.reduce(function (at, r) { return r && r._stale ? (at == null ? r._stale.at : Math.min(at, r._stale.at)) : at; }, null);
       S.error = '';
     } catch (e) { S.error = String(e && e.message || 'offline'); }
     S.loading = false; S.loaded = true;
@@ -211,6 +212,16 @@
   /* ─── Liste ─── */
   var PILL = { draft:'neutral', submitted:'pend', 'under-review':'pend', 'changes-proposed':'pend', approved:'ok', preparing:'pend', ready:'ok', 'out-for-delivery':'pend', 'partially-received':'pend', received:'dark', rejected:'late', cancelled:'neutral', disputed:'late' };
   function pill(label) { var t = T(); return '<span class="hx-pill ' + (PILL[label] || 'neutral') + '">' + esc(t.label[label] || label) + '</span>'; }
+
+  /* Une lecture servie par le cache hors ligne dit son âge : jamais présentée comme à jour. */
+  function staleNote(at) {
+    return at == null ? '' : '<p class="hx-req-stock" role="status" data-stale>' + esc(T().cached.replace('{t}', at ? when(at) : '-')) + '</p>';
+  }
+  function staleOf(list) {
+    var at = null;
+    list.forEach(function (r) { if (r && r._stale) at = at == null ? r._stale.at : Math.min(at, r._stale.at); });
+    return at;
+  }
 
   function listHtml() {
     var t = T();
@@ -236,7 +247,7 @@
       '<div class="hx-eco-card-head"><div><b id="hx-req-title">' + esc(t.title) + '</b><span>' + esc(t.sub) + '</span></div>' +
       '<div class="hx-req-actions"><button class="hx-btn ghost" type="button" data-action="eco-req-refresh"' + (S.loading ? ' disabled aria-busy="true"' : '') + '>' + esc(t.refresh) + '</button>' +
       '<button data-activation=write class="hx-btn atlas" type="button" data-action="eco-req-new"' + (canCreate ? '' : ' disabled') + '>' + esc(t.create) + '</button></div></div>' +
-      '<div data-eco-req-list>' + outboxHtml() + listHtml() + '</div></section>';
+      '<div data-eco-req-list>' + outboxHtml() + staleNote(S.stale) + listHtml() + '</div></section>';
   }
 
   function paint() {
@@ -468,7 +479,7 @@
   };
 
   /* ─── Nouvelle demande (côté service) ─── */
-  var draftCatalogue = [];
+  var draftCatalogue = [], draftStale = null;
   function createBody(unitId) {
     var t = T(), deps = departments();
     return '<div class="hx-req-new">' +
@@ -481,7 +492,7 @@
     var t = T();
     if (draftCatalogue === null) return '<div class="hx-eco-empty" role="status"><b>' + esc(t.offline) + '</b><button type="button" class="hx-btn ghost" data-action="eco-req-catalogue-retry">' + esc(t.retry) + '</button></div>';
     if (!draftCatalogue.length) return '<div class="hx-eco-empty"><b>' + esc(t.noCatalogue) + '</b><p>' + esc(t.noCatalogueD) + '</p></div>';
-    return draftCatalogue.map(function (entry, i) {
+    return staleNote(draftStale) + draftCatalogue.map(function (entry, i) {
       var it = item(entry.itemId), units = unitsOf(it), def = entry.countingUnit && units.indexOf(entry.countingUnit) >= 0 ? entry.countingUnit : units[0];
       return '<div class="hx-req-pick-row" data-pick="' + i + '"><span class="hx-req-pick-name"><b>' + esc(it ? it.name : entry.itemId) + '</b><small>' + esc(entry.itemId) + '</small></span>' +
         '<input data-pick-qty type="number" min="0" step="any" inputmode="decimal" placeholder="0" aria-label="' + esc(t.qty + ' · ' + (it ? it.name : entry.itemId)) + '">' +
@@ -490,9 +501,10 @@
   }
   async function loadDepartment(unitId) {
     var box = createRef && createRef.el.querySelector('[data-req-items]');
-    draftCatalogue = [];
+    draftCatalogue = []; draftStale = null;
     try {
       var body = await getJson('/api/inventory/department-catalogue?merchant=' + encodeURIComponent(merchant()) + '&unitId=' + encodeURIComponent(unitId));
+      draftStale = body && body._stale ? body._stale.at : null;
       draftCatalogue = (body.data && Array.isArray(body.data.items) ? body.data.items : []).filter(function (e) {
         var it = item(e.itemId); return e && e.active !== false && e.visibility !== 'hidden' && it && it.active !== false;
       });
@@ -551,4 +563,4 @@
     reload: load,
     state: function () { return S; },
   };
-}(function () { return import('./hotel-economat-transport.js?v=19'); }));
+}(function () { return import('./hotel-economat-transport.js?v=20'); }));

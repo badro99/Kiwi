@@ -5,7 +5,10 @@
   async function fetchDeadline(url, options, readBody) {
     try {
       const { deadlineFetch } = await import('./request-deadline.mjs');
+      const sentAt = Date.now();
       const response = await deadlineFetch(url, options, 12000);
+      /* L'instant de réception se prend ici, à l'arrivée des en-têtes, avant d'attendre le corps. */
+      if (response && typeof response === 'object') { response.sentAt = sentAt; response.receivedAt = Date.now(); }
       if (readBody !== false && response && typeof response.json === 'function') {
         const data = await response.json().then(value => ({ value }), error => {
           if (error.code === 'request-timeout') throw error;
@@ -20,7 +23,20 @@
     }
   }
 
-  var clockOffset = 0;
+  /* Horloge du serveur : médiane des derniers échantillons, chacun pris au milieu de
+     l'aller-retour (l'en-tête Date est tronquée à la seconde, donc visée à +500 ms) ;
+     un aller-retour lent n'est pas retenu. Même règle que l'horloge de confiance de
+     la caisse (assets/pairing-commit.js). */
+  var clockOffset = 0, clockSamples = [], CLOCK_SLOW_RTT = 2000, CLOCK_MAX_SAMPLES = 9;
+  function learnClock(dateHeader, sentAt, receivedAt) {
+    var server = Date.parse(String(dateHeader || '')), rtt = receivedAt - sentAt;
+    if (!isFinite(server) || !isFinite(sentAt) || !isFinite(receivedAt) || !(rtt >= 0) || rtt > CLOCK_SLOW_RTT) return false;
+    clockSamples.push(Math.round(server + 500 - (sentAt + rtt / 2)));
+    if (clockSamples.length > CLOCK_MAX_SAMPLES) clockSamples = clockSamples.slice(-CLOCK_MAX_SAMPLES);
+    var sorted = clockSamples.slice().sort(function (a, b) { return a - b; }), mid = sorted.length >> 1;
+    clockOffset = sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+    return true;
+  }
   function serverNow() { return Date.now() + clockOffset; }
   var lastData = null;
   /* Employé dont le cookie de session porte les envois de la file. Vidé dès
@@ -50,7 +66,7 @@
       body: body ? JSON.stringify(body) : undefined,
     }).then(async function (r) {
       var serverDate = r.headers && r.headers.get('Date');
-      if (serverDate && Number.isFinite(Date.parse(serverDate))) clockOffset = Date.parse(serverDate) - Date.now();
+      if (serverDate) learnClock(serverDate, r.sentAt, r.receivedAt);
       let data = {}, unreadable = false;
       try { data = await r.json(); } catch (_) { unreadable = true; console.warn("[employee-live] call failed"); }
       /* Un 2xx dont le corps est illisible n'est ni un succès ni un refus : on
@@ -245,7 +261,8 @@
       capturedAgoMs: Math.max(0, serverNow() - (Number(item.at) || serverNow())) };
   }
   // Réseau absent, serveur indisponible : on garde et on retente.
-  function transient(err) { return !err || !err.status || err.status >= 500; }
+  /* 408 : le délai d'une requête n'est pas un refus du serveur. */
+  function transient(err) { return !err || !err.status || err.status >= 500 || err.status === 408; }
   // Session absente ou trop d'essais : on garde aussi, sans perdre le geste.
   function keeps(err) { return transient(err) || err.status === 401 || (err.status === 429 && err.code !== 'too-many-punches'); }
   function notify(detail) {

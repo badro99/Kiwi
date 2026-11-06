@@ -105,8 +105,8 @@ cases.clock = async () => {
   await c.write('owner',[{opId:'recent',done:true,at:Date.now()-7*86400000-3600000}]);
   assert.match(stored.get('queue:owner:outcomes'),/recent/,'ack horizon retains recent server-clock acknowledgement');
   const server=Date.now()+3*86400000;
-  Object.assign(c,{fetchDeadline:async()=>({ok:true,headers:{get:()=>new Date(server).toUTCString()},json:async()=>({})})});
-  vm.runInContext(fn('assets/employee-live.js',['call'])+';this.call=call;',c);
+  Object.assign(c,{clockSamples:[],CLOCK_SLOW_RTT:2000,CLOCK_MAX_SAMPLES:9,fetchDeadline:async()=>({ok:true,sentAt:Date.now(),receivedAt:Date.now(),headers:{get:()=>new Date(server).toUTCString()},json:async()=>({})})});
+  vm.runInContext(fn('assets/employee-live.js',['learnClock','call'])+';this.call=call;',c);
   await c.call('GET');assert.ok(Math.abs(c.clockOffset-3*86400000)<1500,'response Date header teaches the server clock offset');
 };
 cases.archive = () => {

@@ -3,6 +3,31 @@
   const api = () => window.KiwiEmployeeLive;
   let lastData = null;
   let busy = false;
+  /* Ce que l'employé doit savoir quand une action ou une relecture échoue :
+     jamais un bouton qui se réactive en silence. */
+  let status = '';
+  const STATUS = {
+    fr: { failed: 'Action refusée ou impossible. Réessayez.', uncertain: 'La réponse du serveur est perdue : l’action a peut-être été enregistrée. Vérifiez le planning avant de réessayer.', stale: 'Planning non actualisé : les données affichées peuvent être dépassées.', retry: 'Réessayer' },
+    en: { failed: 'Action refused or not possible. Try again.', uncertain: 'The server reply was lost: the action may have been saved. Check the schedule before trying again.', stale: 'Schedule not refreshed: what you see may be out of date.', retry: 'Retry' },
+    ar: { failed: 'تم رفض الإجراء أو تعذر تنفيذه. حاول مجدداً.', uncertain: 'ضاع رد الخادم: ربما حُفظ الإجراء. تحقق من الجدول قبل إعادة المحاولة.', stale: 'لم يُحدَّث الجدول: قد تكون البيانات المعروضة قديمة.', retry: 'إعادة المحاولة' },
+  };
+  function statusHtml() {
+    if (!status) return '';
+    const lang = document.documentElement.lang, T = STATUS[lang] || STATUS.fr;
+    return `<p class="kep-status" role="alert" data-kep-status="${esc(status)}">${esc(T[status])}${status === 'stale' ? ` <button class="kep-btn" type="button" data-kep-retry>${esc(T.retry)}</button>` : ''}</p>`;
+  }
+  /* Un envoi sans statut HTTP (délai, réseau coupé) ou à réponse illisible a pu aboutir côté serveur. */
+  async function act(button, run) {
+    busy = true; button.disabled = true; status = '';
+    try { await run(); await refresh(); }
+    catch (error) {
+      button.disabled = false;
+      const uncertain = !error || !error.status || error.uncertain === true;
+      status = uncertain ? 'uncertain' : 'failed';
+      if (uncertain) await refresh(true);
+      render();
+    } finally { busy = false; }
+  }
   let renderedDay = '';
   /* Archive des notices antérieures au fil du planning (les notices cotées
    * "read page by page" côté serveur). items/next survivent aux re-rendus. */
@@ -140,7 +165,7 @@
     };
     const pending=requests.filter((item)=>item.status==='pending').length + open.filter((item)=>item.mine&&item.status==='claimed').length + swaps.filter((item)=>item.mine&&['open','claimed'].includes(item.status)).length;
     const statusLabel=(value)=>({pending:C.pending,approved:'✓',rejected:'×',cancelled:'×',open:C.open,claimed:C.pending,assigned:'✓'}[value] || value);
-    card.innerHTML = `<div class="kep-head"><div><div class="kg-eyebrow">${esc(C.eyebrow)}</div><div class="kep-title">${esc(C.title)}</div><div class="kep-sub">${esc(C.sub)}</div></div></div>
+    card.innerHTML = statusHtml() + `<div class="kep-head"><div><div class="kg-eyebrow">${esc(C.eyebrow)}</div><div class="kep-title">${esc(C.title)}</div><div class="kep-sub">${esc(C.sub)}</div></div></div>
       <div class="kep-metrics"><div class="kep-metric"><b>${shifts.length}</b><span>${esc(C.scheduled)}</span></div><div class="kep-metric"><b>${open.filter((item)=>item.status==='open').length+swaps.filter((item)=>item.status==='open'&&!item.mine).length}</b><span>${esc(C.opportunities)}</span></div><div class="kep-metric"><b>${pending}</b><span>${esc(C.pending)}</span></div></div>
       <div class="kep-actions"><button class="kep-btn" type="button" data-kep="availability">${esc(C.availability)}</button><button class="kep-btn primary" type="button" data-kep="leave">${esc(C.leave)}</button></div>
       ${notices.length?`<section class="kep-section"><div class="kep-section-head"><b>${esc(C.notices)}</b><span class="kep-count">${notices.length}</span></div><div class="kep-list">${notices.map((notice)=>`<div class="kep-notice">${esc(notice.type==='schedule-published' ? `${C.scheduled} · ${notice.periodKey||''}` : notice.type==='swap-approved' ? `${C.exchange} · ${prettyDay(notice.day)} ↔ ${prettyDay(notice.otherDay)}` : `${C.claim} · ${prettyDay(notice.day)}`)}</div>`).join('')}</div>${allNotices.length>3?`<details><summary>${esc(C.history)} (${allNotices.length-3})</summary><div class="kep-list">${allNotices.slice(0,-3).map(n=>`<div class="kep-notice">${noticeText(n)}</div>`).join('')}</div>${olderBlock()}</details>`:''}</section>`:''}
@@ -235,11 +260,12 @@
     const olderBtn=event.target.closest('[data-kep-older]');
     if(olderBtn){void loadOlderNotices(olderBtn);return;}
     const cancel=event.target.closest('[data-kep-cancel]');
-    if (cancel && !busy) { busy=true; cancel.disabled=true; try { await api().cancelPlanningRequest(cancel.dataset.kepCancel); await refresh(); } catch (_) { cancel.disabled=false; } finally { busy=false; } return; }
+    if (cancel && !busy) { await act(cancel, () => api().cancelPlanningRequest(cancel.dataset.kepCancel)); return; }
     const cancelOpportunity=event.target.closest('[data-kep-op-cancel]');
-    if(cancelOpportunity&&!busy){busy=true;cancelOpportunity.disabled=true;try{await api().cancelPlanningOpportunity(cancelOpportunity.dataset.kepOpCancel);await refresh();}catch(_){cancelOpportunity.disabled=false;}finally{busy=false;}return;}
+    if(cancelOpportunity&&!busy){await act(cancelOpportunity,()=>api().cancelPlanningOpportunity(cancelOpportunity.dataset.kepOpCancel));return;}
     const swap=event.target.closest('[data-kep-swap]');
-    if(swap&&!busy){busy=true;swap.disabled=true;try{await api().requestShiftSwap(swap.dataset.kepSwap);await refresh();}catch(_){swap.disabled=false;}finally{busy=false;}return;}
+    if(swap&&!busy){await act(swap,()=>api().requestShiftSwap(swap.dataset.kepSwap));return;}
+    if(event.target.closest('[data-kep-retry]')){await refresh();return;}
     const open=event.target.closest('[data-kep-open]'); if(open){opportunitySheet('open',open.dataset.kepOpen);return;}
     const swapClaim=event.target.closest('[data-kep-swap-claim]'); if(swapClaim){opportunitySheet('swap',swapClaim.dataset.kepSwapClaim);return;}
     const action=event.target.closest('[data-kep]')?.dataset.kep; if (action) sheet(action);
@@ -256,16 +282,18 @@
     catch (failure) { const C=copy(); error.hidden=false; error.textContent=failure.code === 'planning-date-invalid' ? C.errorDate : failure.code === 'planning-availability-invalid' ? C.errorAvailability : C.errorGeneric; }
     finally { busy=false; if (form.isConnected) form.querySelector('[type="submit"]').disabled=false; }
   }
-  async function refresh() {
-    if (!api()) return;
-    try { lastData=await api().refresh(); mount(); render(); } catch (_) {}
+  /* Une relecture qui échoue le dit : l'écran garde les dernières données, signalées comme possiblement dépassées. */
+  async function refresh(keepStatus) {
+    if (!api()) return false;
+    try { lastData=await api().refresh(); if (status === 'stale' || (status && !keepStatus)) status = ''; mount(); render(); return true; }
+    catch (_) { if (status !== 'uncertain') status = 'stale'; render(); return false; }
   }
   document.addEventListener('kiwi-demo-schedule', (event) => {
     if (window.KiwiEnv?.isReal?.() || window.KiwiMe || window.KiwiVenue?.isCustom?.()) return;
     lastData = {schedule:event.detail.schedule, planning:{}}; mount(); render();
   });
   if (typeof MutationObserver === 'function') new MutationObserver(() => render()).observe(document.documentElement, {attributes:true, attributeFilter:['lang']});
-  document.addEventListener('kiwi-employee-authenticated', refresh);
+  document.addEventListener('kiwi-employee-authenticated', () => refresh());
   /* La carte ne se rafraîchissait que sur ses propres actions et au changement
    * de jour. Le sondage du service (et chaque pointage) relit pourtant /api/employee
    * toutes les quelques secondes : la décision du patron (congé approuvé, planning
@@ -274,7 +302,7 @@
    * sur la lecture qui a déjà eu lieu au lieu d'en refaire une. */
   document.addEventListener('kiwi-employee-data', (event) => {
     if (!event.detail || !event.detail.employee) return;
-    lastData = event.detail; mount(); render();
+    lastData = event.detail; if (status === 'stale') status = ''; mount(); render();
   });
   /* Hors service (« Consulter sans pointer ») rien ne sonde : au retour dans
    * l'app, on relit, au plus une fois toutes les 30 s. */

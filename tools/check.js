@@ -826,7 +826,7 @@ for (const test of [
   'hotel-stay-editing-test.mjs',
   'hotel-commercial-test.mjs',
   'hotel-commercial-layout-test.mjs',
-  'hotel-pos-billing-safety-test.mjs',
+  'hotel-pos-billing-safety-test.mjs', 'hotel-room-charge-outbox-test.mjs',
   'hotel-declarations-closing-test.mjs',
 ]) {
   const { spawnSync } = require('child_process');
@@ -1865,7 +1865,7 @@ section('Whole-project regressions');
     'stock-split-test.mjs',
     'stock-controller-split-test.mjs',
     'stock-strings-split-test.mjs',
-    'returns-demo-handlers-test.mjs', 'till-confirm-test.mjs', 'hotel-free-charge-test.mjs', 'hotel-split-test.mjs', 'hotel-core-split-test.mjs', 'hotel-reception-split-test.mjs',
+    'returns-demo-handlers-test.mjs', 'till-confirm-test.mjs', 'hotel-free-charge-test.mjs', 'hotel-split-test.mjs', 'hotel-core-split-test.mjs', 'hotel-outlet-menu-test.mjs', 'hotel-reception-split-test.mjs',
     'interactive-split-test.mjs',
     'venues-split-test.mjs',
     'venues-split-browser-test.mjs',
@@ -1972,7 +1972,7 @@ section('Whole-project regressions');
   'economat-v1-resolution-test.mjs',
   'economat-request-fields-test.mjs',
   'economat-review-test.mjs',
-  'economat-transport-test.mjs', 'economat-outbox-test.mjs',
+  'economat-transport-test.mjs', 'economat-outbox-test.mjs', 'economat-outbox-resilience-test.mjs',
   'economat-handover-test.mjs', 'economat-transfer-collision-test.mjs', 'server-review-regressions-test.mjs',
   'economat-request-list-test.mjs',
   'hotel-transfer-test.mjs',
@@ -2291,7 +2291,7 @@ section('Whole-project regressions');
     'order-hours-server-test.mjs',
     'guest-options-test.mjs',
     'pos-truth-a-test.mjs',
-    'employee-truth-test.mjs',
+    'employee-truth-test.mjs', 'employee-r20-test.mjs',
     'team-codes-at-rest-test.mjs',
     'team-codes-publication-test.mjs',
     /* Audit 2026-10-15 · fuites entre magasins et comptes, HTML venu des caisses */
