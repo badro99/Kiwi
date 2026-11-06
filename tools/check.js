@@ -1703,7 +1703,7 @@ section('Whole-project regressions');
     'resto-carte-test.js',
     'restaurant-menu-route-test.js',
     'menu-workspace-split-test.mjs',
-    'menu-catalog-split-test.mjs',
+    'menu-catalog-locale-icons-test.mjs', 'menu-catalog-split-test.mjs',
     'menu-merge-properties-test.mjs',
     'menu-catalog-boundary-test.mjs',
     'menu-pull-route-test.js',

@@ -7,13 +7,13 @@
     if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');
     const menuScripts = [
       'assets/menu-catalog/state.js?v=14',
-      'assets/menu-catalog/modifiers.js?v=3',
+      'assets/menu-catalog/modifiers.js?v=5',
       'assets/menu-catalog/item-list.js?v=3',
       'assets/menu-catalog/formulas.js?v=3',
       'assets/menu-catalog/item-editor.js?v=7',
       'assets/menu-catalog/media.js?v=3',
       'assets/menu-catalog/availability.js?v=3',
-      'assets/menu-catalog.js?v=42',
+      'assets/menu-catalog.js?v=44',
     ];
     document.write(menuScripts.map(url => '<script src="' + url + '" defer fetchpriority="low"><\/script>').join('\n'));
     return;

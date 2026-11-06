@@ -1200,8 +1200,8 @@
     "sha": "6ec1737005782cd0"
   },
   "assets/menu-catalog.js": {
-    "v": "42",
-    "sha": "d657d3ca39798067"
+    "v": "44",
+    "sha": "aaf2838a2fa65b40"
   },
   "assets/menu-catalog/availability.js": {
     "v": "3",
@@ -1224,8 +1224,8 @@
     "sha": "d736f082c2b50fe3"
   },
   "assets/menu-catalog/modifiers.js": {
-    "v": "3",
-    "sha": "82bbd0be73fcc087"
+    "v": "5",
+    "sha": "8861554a5809b819"
   },
   "assets/menu-catalog/state.js": {
     "v": "14",
@@ -1452,8 +1452,8 @@
     "sha": "4e68527e59cc46eb"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "203",
-    "sha": "24adcb13bf075eb1"
+    "v": "206",
+    "sha": "f1e2965f332928e6"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
