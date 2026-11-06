@@ -34,6 +34,15 @@ f.env.__cookie = `${SESS_COOKIE}=${await makeSession('money-owner', f.env.AUTH_S
 const tiny = 'data:image/png;base64,iVBORw0KGgo=';
 const huge = 'data:image/jpeg;base64,' + 'A'.repeat(3_000_000);
 
+// vision-inspect (r20 vision#B1): missing or oversized input spends no allowance.
+{
+  const before = calls('visioninspect'), modelBefore = modelCalls;
+  const missing = await post(visionInspect, {});
+  const big = await post(visionInspect, { image: 'data:image/jpeg;base64,' + 'A'.repeat(20_000_000) });
+  ok(missing.status === 400 && big.status === 413, 'visionInspect: a missing or oversized image is refused 400/413');
+  ok(calls('visioninspect') === before && modelCalls === modelBefore, 'visionInspect: a refused input spends no allowance and calls no model');
+}
+
 // menu-import
 for (const [label, body, status] of [
   ['an oversized photo', { kind: 'image', image: huge }, 413],
