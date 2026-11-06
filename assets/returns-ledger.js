@@ -14,7 +14,7 @@
 
 const KEY = 'kiwi:returnsLedger';     // { m: slug, v: venue, at, list: [{ ts, amount }] } · avoirs seulement
 const MAX_AGE = 60000;
-let warming = null, lastChanged = false, lastTry = '';
+let warming = null, lastChanged = false, lastTry = '', generation = 0;
 /* La copie en mémoire fait foi : si localStorage refuse l'écriture (quota,
    navigation privée), le résultat serveur tout frais ne se perd pas et les
    lecteurs synchrones (tuile « Taux retour ») le lisent ici. */
@@ -56,7 +56,7 @@ export async function readReturnsLedger(slug, period = null) {
   const { deadlineFetch } = await import('./request-deadline.mjs');
   /* L'identité est prise AVANT la requête : un retour tardif d'un commerce
      quitté ne doit pas se ranger sous le commerce affiché à son arrivée. */
-  const asked = currentIdentity();
+  const asked = currentIdentity(), started = generation;
   const query = period ? '&since=' + period[0] + (Number.isFinite(period[1]) ? '&until=' + period[1] : '') : '';
   const list = [];
   let offset = 0;
@@ -71,6 +71,7 @@ export async function readReturnsLedger(slug, period = null) {
   const now = currentIdentity();
   const sameStore = (!asked.slug || !now.slug || now.slug === slug) && now.venue === asked.venue;
   lastChanged = sameStore ? remember(slug, list, period, asked.venue) : false;
+  if (started !== generation) { const fresh = cachedLedger(); if (fresh) saveLedger({ ...fresh, at: 0 }); }   // un retour est arrivé pendant la lecture : elle est déjà périmée
   return list;
 }
 
@@ -85,6 +86,16 @@ function remember(slug, list, period, venue) {
   saveLedger({ m: slug, v: venue, at: Date.now(), window: period, list: avoirs });
   return changed;
 }
+
+/* Un retour vient d'être confirmé par le serveur : la lecture mémorisée ne vaut plus rien. Le prochain
+   `warmCreditReturns` relit tout de suite, sans attendre la minute de repos (même appareil : la caisse
+   l'annonce par `kiwi:returns-changed` ; un autre appareil le verra à sa propre relecture). */
+export function invalidateReturnsLedger() {
+  lastTry = ''; generation++;
+  const prev = cachedLedger();
+  if (prev) saveLedger({ ...prev, at: 0 });
+}
+try { document.addEventListener('kiwi:returns-changed', invalidateReturnsLedger); } catch (_) {}
 
 /* Relit le registre au plus une fois par minute. Résout `true` si les avoirs
    ont changé (l'appelant repeint), `false` sinon ou en cas d'échec. */

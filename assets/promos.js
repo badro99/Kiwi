@@ -223,7 +223,7 @@
      Jamais stocké : un état rangé en base est un état qui ment dès le
      lendemain matin. On le recalcule à chaque lecture, à partir des dates. */
   function status(p, now) {
-    return rules.status(p, now || Date.now(), 'boutique');
+    return rules.status(p, now || rules.now(), 'boutique');
   }
 
   /* Le prochain créneau d'une promotion en attente, dit comme on le dirait au
@@ -231,7 +231,7 @@
      null quand elle n'a pas de fenêtre ou qu'elle ne reprendra pas. */
   function nextWindow(p, now) {
     p = normalize(p);
-    now = now || Date.now();
+    now = now || rules.now();
     if (!hasWindow(p) || p.paused) return null;
     var b = businessMoment(now);
     /* En minutes depuis 05:00 : à 02:00, la journée a commencé hier matin et
@@ -472,7 +472,7 @@
   function priceFor(item, opts) {
     opts = opts || {};
     if (!item) return null;
-    var now = opts.now || Date.now();
+    var now = opts.now || rules.now();
     var stock = opts.stock;
     var was = down(num(item.price, 0));
     var best = null;
@@ -599,7 +599,7 @@
 
   function stats(now) {
     var all = list();
-    var n = now || Date.now();
+    var n = now || rules.now();
     return {
       total: all.length,
       active: all.filter(function (p) { return status(p, n) === 'active'; }).length,

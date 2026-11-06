@@ -1,8 +1,10 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=180';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=180';
-import { saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=283';
-import { retainDays, outsideWindow, windowSentence } from './return-window.js?v=4';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=182';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=182';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=285';
+import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=6';
 import { ticketOwner } from './ticket-owner.js?v=3';
+import { paidCents } from './paid-share.js?v=2';
+import { tillNow, tillDate } from './till-clock.js?v=2';
 import '../money-cents.js?v=4';
 import { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=9';
 import { bqDeliveryCard } from './delivery-card.js?v=6';
@@ -21,6 +23,7 @@ const M = globalThis.KiwiMoney;
       (c && digits.length >= 2 && c.phone.replace(/\D/g, '').includes(digits));
   }
 
+  const askedDays = new Set();
   function renderEchanges() {
     const panel = $('[data-bq-panel="echanges"]', root);
     const q = state.retQuery;
@@ -28,8 +31,9 @@ const M = globalThis.KiwiMoney;
        marchandise est déjà revenue en stock, et l'échanger créerait un avoir
        adossé à un encaissement que le serveur ne connaît plus. */
     const dateKey = retDayKey; /* journée commerciale (5 h), comme le Z : minuit rangeait 0 h 30 au lendemain */
-    const todayKey = retDayKey(Date.now()), yesterdayKey = retShiftDay(todayKey, -1), oldestKey = retShiftDay(todayKey, -(retainDays() - 1));
+    const todayKey = retDayKey(tillNow()), yesterdayKey = retShiftDay(todayKey, -1), oldestKey = retShiftDay(todayKey, -(Math.max(retainDays(), windowDays()) - 1)), localKey = retShiftDay(todayKey, -(retainDays() - 1));
     if (state.retDate < oldestKey || state.retDate > todayKey) state.retDate = todayKey;
+    if (state.retDate < localKey && !askedDays.has(state.retDate)) { askedDays.add(state.retDate); syncReturnSales(state.retDate); }   // au-delà du journal local : la journée se lit sur le serveur
     const hits = SALES.filter((s) => !s.voided && dateKey(s.at) === state.retDate && saleMatches(s, q));
     const ret = state.ret;
     panel.innerHTML = `
@@ -76,7 +80,7 @@ const M = globalThis.KiwiMoney;
       if (document.activeElement !== typed) { typed.focus(); moveCaretEnd(typed); }
     };
     $('#bq-ret-date', panel).onchange = (e) => {
-      state.retDate = String(e.target.value || todayKey);
+      state.retDate = String(e.target.value || todayKey); askedDays.delete(state.retDate);
       state.ret = null;
       renderEchanges(); icons();
     };
@@ -132,31 +136,17 @@ const M = globalThis.KiwiMoney;
     ln.note = note;
   }
 
-  /* ── Ce qui se REND, c'est ce que la cliente a PAYÉ ──
-     La récompense fidélité baisse le TICKET (rewardDiscount), pas les lignes :
-     `unit` reste le prix de la ligne avant cette baisse. Rembourser `unit`
-     rendait donc plus que ce que la cliente avait déboursé, d'autant plus que le
-     retour est partiel. Le prix rendu est `unit` ramené au ratio payé / somme des
-     lignes, arrondi vers le bas au centime : la somme des retours d'un ticket ne
-     dépasse jamais ce qu'il a encaissé, au dirham près que le serveur plafonne.
-     Un ticket sans récompense garde ratio 1, donc `unit` à l'identique. */
-  function returnRatio(sale) {
-    if (!sale || !sale.reward) return 1;
-    const gross = (sale.lines || []).reduce((sum, l) => sum + (+l.unit || 0) * (+l.qty || 0), 0);
-    const paid = sale.balanceTotal != null ? +sale.balanceTotal : +sale.total;
-    if (!(gross > 0) || !Number.isFinite(paid) || paid < 0 || paid >= gross) return 1;
-    return paid / gross;
+  /* ── Ce qui se REND, c'est ce que la cliente a PAYÉ, au centime (paid-share.js : plus fort reste, rendu en cumul) ── */
+  function paidAmount(sale, ln, qty) {
+    const i = ((sale && sale.lines) || []).indexOf(ln);
+    return i < 0 ? (+(ln && ln.unit) || 0) * qty : paidCents(sale, i, lineReturnedQty(ln), qty) / 100;
   }
-  function paidUnit(sale, ln) {
-    const unit = +(ln && ln.unit) || 0;
-    const ratio = returnRatio(sale);
-    return ratio >= 1 ? unit : Math.floor(unit * ratio * 100) / 100;
-  }
+  function paidUnit(sale, ln) { return paidAmount(sale, ln, 1); }
 
   function saleCard(s, ret) {
     const c = saleClient(s);
     const sel = ret && ret.saleId === s.id ? ret.picks : new Set();
-    const selVal = s.lines.reduce((t, l, i) => t + (sel.has(i) ? paidUnit(s, l) * pickedQty(ret, i, l) : 0), 0);
+    const selVal = s.lines.reduce((t, l, i) => t + (sel.has(i) ? paidAmount(s, l, pickedQty(ret, i, l)) : 0), 0);
     const hasRet = s.lines.some((l) => lineReturnedQty(l) > 0);
     return `<div class="bq-sale">
       <div class="bq-sale-top">
@@ -199,14 +189,14 @@ const M = globalThis.KiwiMoney;
                 ${colorDot(l.color)}
                 <span class="sz">${esc(l.size)}</span> ${availableQty > 1 ? `× ${availableQty} disponibles` : ''} ${returnedQty ? `· ${returnedQty} déjà retournée${returnedQty > 1 ? 's' : ''}` : ''} ${l.remise ? `· remise −${l.remise} %` : ''}
               </span></span>
-            <span class="amt">${fmtMAD(paidUnit(s, l) * availableQty)}</span>
+            <span class="amt">${fmtMAD(paidAmount(s, l, availableQty))}</span>
           </button>${sel.has(i) && availableQty > 1 ? `
             <div class="bq-ret-qty" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:7px 12px 10px;">
               <span style="font-size:12px;color:var(--ink-3);">Quantité à retourner</span>
               <button class="bq-chip" type="button" data-bq-ret-qty="${s.id}:${i}:-1" aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Retirer une pièce')}">−</button>
               <b>${chosenQty}</b>
               <button class="bq-chip" type="button" data-bq-ret-qty="${s.id}:${i}:1" aria-label="${(globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ajouter une pièce')}">+</button>
-              <strong>${fmtMAD(paidUnit(s, l) * chosenQty)}</strong>
+              <strong>${fmtMAD(paidAmount(s, l, chosenQty))}</strong>
             </div>` : ''}`;
         }).join('')}
       </div>
@@ -270,7 +260,7 @@ const M = globalThis.KiwiMoney;
     if (!sale) return;
     const idxs = Array.from(ret.picks);
     const quantities = new Map(idxs.map((i) => [i, pickedQty(ret, i, sale.lines[i])]));
-    const amount = idxs.reduce((t, i) => t + paidUnit(sale, sale.lines[i]) * quantities.get(i), 0);
+    const amount = idxs.reduce((t, i) => t + paidAmount(sale, sale.lines[i], quantities.get(i)), 0);
     if (!amount) return;
     /* `ret.motif` vaut null tant qu'aucune puce n'a été choisie : on l'écrit tel
        quel plutôt que d'inventer un motif que personne n'a donné. */
@@ -286,7 +276,7 @@ const M = globalThis.KiwiMoney;
         lines: idxs.map((i) => ({
           itemId: sale.lines[i].pid, variantId: [sale.lines[i].pid || '', sale.lines[i].size || '', sale.lines[i].color || ''].join(':'),
           name: (P[sale.lines[i].pid] && P[sale.lines[i].pid].name) || sale.lines[i].name || 'Article',
-          size: sale.lines[i].size || '', qty: quantities.get(i), unitCents: M.toCents(paidUnit(sale, sale.lines[i])),
+          size: sale.lines[i].size || '', qty: quantities.get(i), unitCents: M.toCents(paidUnit(sale, sale.lines[i])), amountCents: M.toCents(paidAmount(sale, sale.lines[i], quantities.get(i))),
         })),
       });
     } catch (error) {
@@ -530,7 +520,7 @@ const M = globalThis.KiwiMoney;
             onPaid: (parts) => {
               if (!apply(reserved)) return { line: 'Échange non enregistré · stock insuffisant' };
               const rec = {
-                id: exchangeNumber, syncId: newSaleId(), tenderVersion: 2, at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
+                id: exchangeNumber, syncId: newSaleId(), tenderVersion: 2, at: tillDate(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
                 methods: parts.map((x) => x.m).join(' + '),
                 parts: parts.map((x) => ({ m: x.m, amount: M.toMad(M.toCents(+x.amount || 0)) })),
                 lines: [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, returned: false, note: `différence échange ${sale.id}` }],
@@ -689,7 +679,7 @@ const M = globalThis.KiwiMoney;
     const doc = {
       shop: (pv && pv.name) || 'Kiwi',
       ref: opts.ref || '',
-      date: fmtDT(new Date((window.KiwiLive?.now || Date.now)())),
+      date: fmtDT(tillDate()),
       lines: lines.length ? lines : [{ name: opts.title || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Vente'), price: fmtMAD(opts.amount) }],
       total: fmtMAD(opts.amount),
       method: (parts || []).map((x) => label[x.m] || x.m).join(' + '),
@@ -778,7 +768,7 @@ const M = globalThis.KiwiMoney;
         }),
         collect: (d, cents, id) => {
           demoDelivery[d.saleId] = (demoDelivery[d.saleId] || 0) + cents;
-          return { ok: true, sale: { id, amountCents: cents, ts: Date.now() }, dueCents: Math.max(0, d.dueCents - cents) };
+          return { ok: true, sale: { id, amountCents: cents, ts: tillNow() }, dueCents: Math.max(0, d.dueCents - cents) };
         },
       } : null,
     });
@@ -786,7 +776,7 @@ const M = globalThis.KiwiMoney;
   function recordDeliveryCash(paid, d) {
     if (SALES.some((x) => x && x.serverId === paid.id)) return;      /* un essai rejoué ne compte qu'une fois */
     const amount = paid.amountCents / 100;
-    const at = new Date(paid.ts || Date.now());
+    const at = new Date(paid.ts || tillNow());
     SALES.unshift({
       /* La référence vient du serveur : un id de vente s'affiche partout, on n'y
          laisse que des caractères de référence. */

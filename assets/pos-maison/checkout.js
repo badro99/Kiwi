@@ -1,7 +1,8 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=172';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=89';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=89';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=174';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=91';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=91';
 import '../refund-split.js?v=2';
+import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=4';
 import { mzDeliveryCard } from './delivery.js?v=22';
 
@@ -123,31 +124,17 @@ import { mzDeliveryCard } from './delivery.js?v=22';
     ln.note = note;
   }
 
-  /* ── Ce qui se REND, c'est ce que la cliente a PAYÉ ──
-     La récompense fidélité baisse le TICKET (rewardDiscount), pas les lignes :
-     `unit` reste le prix de la ligne avant cette baisse. Rembourser `unit`
-     rendait donc plus que ce que la cliente avait déboursé, d'autant plus que le
-     retour est partiel. Le prix rendu est `unit` ramené au ratio payé / somme des
-     lignes, arrondi vers le bas au centime : la somme des retours d'un ticket ne
-     dépasse jamais ce qu'il a encaissé, au dirham près que le serveur plafonne.
-     Un ticket sans récompense garde ratio 1, donc `unit` à l'identique. */
-  function returnRatio(sale) {
-    if (!sale || !sale.reward) return 1;
-    const gross = (sale.lines || []).reduce((sum, l) => sum + (+l.unit || 0) * (+l.qty || 0), 0);
-    const paid = sale.balanceTotal != null ? +sale.balanceTotal : +sale.total;
-    if (!(gross > 0) || !Number.isFinite(paid) || paid < 0 || paid >= gross) return 1;
-    return paid / gross;
+  /* ── Ce qui se REND, c'est ce que la cliente a PAYÉ, au centime (paid-share.js : plus fort reste, rendu en cumul) ── */
+  function paidAmount(sale, ln, qty) {
+    const i = ((sale && sale.lines) || []).indexOf(ln);
+    return i < 0 ? (+(ln && ln.unit) || 0) * qty : paidCents(sale, i, lineReturnedQty(ln), qty) / 100;
   }
-  function paidUnit(sale, ln) {
-    const unit = +(ln && ln.unit) || 0;
-    const ratio = returnRatio(sale);
-    return ratio >= 1 ? unit : Math.floor(unit * ratio * 100) / 100;
-  }
+  function paidUnit(sale, ln) { return paidAmount(sale, ln, 1); }
 
   function saleCard(s, ret) {
     const c = saleClient(s);
     const sel = ret && ret.saleId === s.id ? ret.picks : new Set();
-    const selVal = s.lines.reduce((t, l, i) => t + (sel.has(i) ? paidUnit(s, l) * pickedQty(ret, i, l) : 0), 0);
+    const selVal = s.lines.reduce((t, l, i) => t + (sel.has(i) ? paidAmount(s, l, pickedQty(ret, i, l)) : 0), 0);
     const hasRet = s.lines.some((l) => lineReturnedQty(l) > 0);
     return `<div class="mz-sale">
       <div class="mz-sale-top">
@@ -190,14 +177,14 @@ import { mzDeliveryCard } from './delivery.js?v=22';
                 ${colorDot(l.color)}
                 <span class="sz">${esc(l.size)}</span> ${availableQty > 1 ? `× ${availableQty} disponibles` : ''} ${returnedQty ? `· ${returnedQty} déjà retournée${returnedQty > 1 ? 's' : ''}` : ''} ${l.remise ? `· remise −${l.remise} %` : ''}
               </span></span>
-            <span class="amt">${fmtMAD(paidUnit(s, l) * availableQty)}</span>
+            <span class="amt">${fmtMAD(paidAmount(s, l, availableQty))}</span>
           </button>${sel.has(i) && availableQty > 1 ? `
             <div class="mz-ret-qty" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:7px 12px 10px;">
               <span style="font-size:12px;color:var(--ink-3);">Quantité à retourner</span>
               <button class="mz-chip" type="button" data-mz-ret-qty="${s.id}:${i}:-1" aria-label="Retirer une pièce">−</button>
               <b>${chosenQty}</b>
               <button class="mz-chip" type="button" data-mz-ret-qty="${s.id}:${i}:1" aria-label="Ajouter une pièce">+</button>
-              <strong>${fmtMAD(paidUnit(s, l) * chosenQty)}</strong>
+              <strong>${fmtMAD(paidAmount(s, l, chosenQty))}</strong>
             </div>` : ''}`;
         }).join('')}
       </div>
@@ -277,7 +264,7 @@ import { mzDeliveryCard } from './delivery.js?v=22';
     if (sale.kind === 'acompte') { toast('Retour suspendu sur un acompte'); return; }
     const idxs = Array.from(ret.picks);
     const quantities = new Map(idxs.map((i) => [i, pickedQty(ret, i, sale.lines[i])]));
-    const amount = idxs.reduce((sum, i) => sum + paidUnit(sale, sale.lines[i]) * quantities.get(i), 0);
+    const amount = idxs.reduce((sum, i) => sum + paidAmount(sale, sale.lines[i], quantities.get(i)), 0);
     if (!amount) return;
     const consignedSelected = idxs.some((i) => sale.lines[i] && sale.lines[i].consigned);
     if (consignedSelected) {
@@ -336,7 +323,7 @@ import { mzDeliveryCard } from './delivery.js?v=22';
         state.ret = null; refreshOps();
         printReceiptNow({
           ref: `REM-${sale.id}`, title: 'Remboursement', amount,
-          lines: idxs.map((i) => ({ qty: quantities.get(i), name: sale.lines[i].name || (P[sale.lines[i].pid] && P[sale.lines[i].pid].name) || 'Article', amount: paidUnit(sale, sale.lines[i]) * quantities.get(i), ref: sale.lines[i].pid })),
+          lines: idxs.map((i) => ({ qty: quantities.get(i), name: sale.lines[i].name || (P[sale.lines[i].pid] && P[sale.lines[i].pid].name) || 'Article', amount: paidAmount(sale, sale.lines[i], quantities.get(i)), ref: sale.lines[i].pid })),
           customer: saleClient(sale) ? { name: saleClient(sale).name, phone: saleClient(sale).phone } : null,
         }, done);
         toast('Remboursement enregistré', 4200, 'success', `${fmtMAD(amount)} · accord ${manager && manager.name ? manager.name : 'responsable'}`);
@@ -398,7 +385,7 @@ import { mzDeliveryCard } from './delivery.js?v=22';
     if (!sale) return;
     const idxs = Array.from(ret.picks);
     const quantities = new Map(idxs.map((i) => [i, pickedQty(ret, i, sale.lines[i])]));
-    const amount = idxs.reduce((t, i) => t + paidUnit(sale, sale.lines[i]) * quantities.get(i), 0);
+    const amount = idxs.reduce((t, i) => t + paidAmount(sale, sale.lines[i], quantities.get(i)), 0);
     if (!amount) return;
     /* `ret.motif` vaut null tant qu'aucune puce n'a été choisie : on l'écrit tel
        quel plutôt que d'inventer un motif que personne n'a donné. */
@@ -418,7 +405,7 @@ import { mzDeliveryCard } from './delivery.js?v=22';
         lines: idxs.map((i) => ({
           itemId: sale.lines[i].pid, variantId: sale.lines[i].variantId || '',
           name: (P[sale.lines[i].pid] && P[sale.lines[i].pid].name) || sale.lines[i].name || 'Article',
-          size: sale.lines[i].size || '', qty: quantities.get(i), unitCents: Math.round(paidUnit(sale, sale.lines[i]) * 100),
+          size: sale.lines[i].size || '', qty: quantities.get(i), unitCents: Math.round(paidUnit(sale, sale.lines[i]) * 100), amountCents: Math.round(paidAmount(sale, sale.lines[i], quantities.get(i)) * 100),
         })),
       });
       if (resellable) restoreLines(sale, idxs, quantities, `avoir (${motif.toLowerCase()})`);

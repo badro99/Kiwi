@@ -1,11 +1,13 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=180';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=98';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=180';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=180';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=182';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=100';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=182';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=182';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
+import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
+import { readDayRows } from './pos-boutique/old-sales.js?v=2';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
-import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=6'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=17'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=4';
+import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=6'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=17'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=6';
 
   'use strict';
 
@@ -590,7 +592,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
   function retShiftDay(key, delta) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key); return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + delta)).toISOString().slice(0, 10); }
   function isToday(d) {
     const t = +new Date(d);
-    return !isNaN(t) && businessDayKey(t) === businessDayKey((window.KiwiLive?.now || Date.now)());
+    return !isNaN(t) && businessDayKey(t) === businessDayKey(tillNow());
   }
 
   /* ── « Retour sous 7 jours » — encore faut-il retrouver la vente ────────────
@@ -620,7 +622,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
   function withinRetention(d) {
     const x = new Date(d);
     if (isNaN(x)) return false;
-    return retDayKey(x) >= retShiftDay(retDayKey(Date.now()), -(retainDays() - 1));   // jour d'activité (05:00), aujourd'hui inclus
+    return retDayKey(x) >= retShiftDay(retDayKey(tillNow()), -(retainDays() - 1));   // jour d'activité (05:00), aujourd'hui inclus
   }
   /* Les ventes du JOUR — la seule base admise pour un chiffre d'affaires. Les
      ventes sorties des livres n'en sont plus (voir reconcileVoids). */
@@ -632,7 +634,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
   function whenLabel(d) {
     const x = new Date(d);
     if (isToday(x)) return `auj. ${fmtHM(x)}`;
-    const y = new Date(); y.setDate(y.getDate() - 1);
+    const y = tillDate(); y.setDate(y.getDate() - 1);
     if (x.getFullYear() === y.getFullYear() && x.getMonth() === y.getMonth() && x.getDate() === y.getDate()) {
       return `hier ${fmtHM(x)}`;
     }
@@ -799,18 +801,18 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     const received = Math.max(0, Math.min(Math.round(total * 100), cents)) / 100;
     return parts.length ? { parts, received } : { received };
   }
-  function syncReturnSales() {
+  function syncReturnSales(day) {   // `day` : lire CETTE journée sur le serveur, au-delà du journal local (retour jusqu'à 90 jours)
     if (IS_DEMO || typeof fetch !== 'function') return Promise.resolve(0);
-    const merchant = merchantSlug();
-    if (!merchant) return Promise.resolve(0);
-    const oldest = retShiftDay(retDayKey(Date.now()), -(retainDays() - 1)), start = new Date(oldest + 'T00:00:00');   // minuit local du plus ancien jour d'activité (avant son 05:00)
-    return (window.KiwiPosSale?.feedDay || ((u, o) => fetch(u, o).then((r) => r.ok ? r.json() : null)))('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + start.getTime(), {
-      credentials: 'same-origin', headers: { Accept: 'application/json' },
-    }).then((data) => {
+    const merchant = merchantSlug(); if (!merchant) return Promise.resolve(0);
+    const oldest = day || retShiftDay(retDayKey(tillNow()), -(retainDays() - 1)), start = new Date(oldest + 'T00:00:00');   // minuit local du plus ancien jour d'activité (avant son 05:00)
+    const get = window.KiwiPosSale?.feedDay || ((u, o) => fetch(u, o).then((r) => r.ok ? r.json() : null));
+    const bounds = day && window.KiwiDayReport?.dayBounds ? window.KiwiDayReport.dayBounds(day) : null;
+    return (day ? (bounds ? readDayRows(merchant, bounds.from, bounds.to, get).then((rows) => rows && { sales: rows }) : Promise.resolve(null))
+      : get('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + start.getTime(), { credentials: 'same-origin', headers: { Accept: 'application/json' } })).then((data) => {
       let added = 0;
       ((data && data.sales) || []).forEach((row) => {
         const ref = String(row.ref || '');
-        if (!ref || SALES.some((s) => s && s.id === ref) || retDayKey(Number(row.ts) || Date.now()) < oldest) return;
+        if (!ref || SALES.some((s) => s && s.id === ref) || (day ? retDayKey(Number(row.ts) || tillNow()) !== day : retDayKey(Number(row.ts) || tillNow()) < oldest)) return;
         const lines = (Array.isArray(row.lines) ? row.lines : []).map(remoteLine).filter(Boolean);
         if (!lines.length) return; // sans article identifiable, aucun échange honnête à proposer
         const total = lines.reduce((sum, l) => sum + l.unit * l.qty, 0);
@@ -836,7 +838,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     exchange: null,              /* { saleId, idx, qty:1 } pendant le choix du remplacement */
     ret: null,                   /* { saleId, picks:Set, quantities:Map, motif } */
     retQuery: '',
-    retDate: retDayKey(Date.now()),
+    retDate: retDayKey(tillNow()),
     clQuery: '',
     scanLog: [],                 /* journal des articles VÉRIFIÉS (onglet Scan) */
     lookup: null,                /* { pid, size, color, ean, at } — dernière vérif affichée */
@@ -893,7 +895,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
         qty, amount: bqMoney((Number(ln.unit) || 0) * qty, true),
       };
     }).filter(Boolean);
-    const now = Date.now();
+    const now = tillNow();
     const client = saleClient(sale);
     RETURN_LOG.unshift({
       id: `RET-${sale.id}-${now}`, ts: now, saleRef: sale.id, kind: kind || 'avoir',
@@ -901,8 +903,8 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       actor: (STAFF.caissiere && STAFF.caissiere.name) || 'Caisse',
       client: (client && client.name) || 'Cliente de passage', items,
     });
-    RETURN_LOG = RETURN_LOG.slice(0, 500);
-    persistReturnLog();
+    RETURN_LOG = RETURN_LOG.slice(0, 500); persistReturnLog();
+    try { document.dispatchEvent(new CustomEvent('kiwi:returns-changed')); } catch (_) {}   // le registre des retours du tableau de bord se relit sans attendre
     const cloud = ensureReturnCloud();
     if (cloud) cloud.push();
   }
@@ -2218,9 +2220,9 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
   }
   const BQ_SRV_METHOD = { 'espèces': 'cash', 'carte': 'card', 'virement': 'transfer', 'chèque': 'cheque', 'avoir': 'credit', 'livraison': 'delivery' };
   function bqPaymentParts(parts) {
-    return (parts || []).filter((part) => part && +part.amount > 0).map((part) => ({
-      method: BQ_SRV_METHOD[part.m] || 'wallet', amountCents: Math.round((+part.amount || 0) * 100),
-    }));
+    const by = new Map();   // le serveur refuse plus de huit lignes (_retail-tenders.js) : les parts d'un même mode s'additionnent
+    (parts || []).filter((part) => part && +part.amount > 0).forEach((part) => { const m = BQ_SRV_METHOD[part.m] || 'wallet'; by.set(m, (by.get(m) || 0) + Math.round((+part.amount || 0) * 100)); });
+    return Array.from(by, ([method, amountCents]) => ({ method, amountCents })).filter((part) => part.amountCents > 0);
   }
   function bqPaymentMethod(parts) {
     const methods = bqPaymentParts(parts);
@@ -2358,7 +2360,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
        réécrite à 0 et le jour qui vendait n'avait pas de rapport (Santos Store,
        ouvert le 17 octobre, 318 ventes en 30 jours pour 2 rapports). */
     return DR.build({
-      day: DR.businessDay(Date.now()),
+      day: DR.businessDay(tillNow()),
       sales: bqReportSales(only),
       session: sess,
       store: { slug: DR.storeSlug(), name: pv.name || '', location: pv.location || '', type: pv.type || 'boutique' },
@@ -2450,7 +2452,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       const slug = DR.storeSlug();
       const journal = bqZJournal(slug);
       if (!slug || !journal) return Promise.resolve({ ok: false, reason: 'unavailable' });
-      const day = DR.businessDay(Date.now());
+      const day = DR.businessDay(tillNow());
       /* Mêmes bornes que celles du module : une vente comptée ici et écartée
          là ressortirait en « vente sans envoi », une fausse alerte. */
       const bounds = DR.dayBounds(day, slug);
@@ -2495,7 +2497,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       dateLabel: p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : report.day,
       copy: copyLabel || '',
       openedLabel: hm(report.openedAt),
-      closedLabel: hm(report.closedAt || Date.now()),
+      closedLabel: hm(report.closedAt || tillNow()),
       detailTitle: 'DÉTAIL PAR ' + String(V.cat || 'rayon').toUpperCase(),
       drawerTitle: 'TIROIR-CAISSE',
       unitWord: V.items || 'articles',
@@ -2810,7 +2812,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     if (v) v.classList.remove('is-open');
     let report = null, reportSaved = false;
     try {
-      report = bqBuildReport(counted, Date.now());
+      report = bqBuildReport(counted, tillNow());
       if (report && window.KiwiDayReport) {
         report.closed = true;
         const saved = window.KiwiDayReport.save(report, { by: (STAFF.caissiere && STAFF.caissiere.name) || '' });
@@ -2950,4 +2952,4 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     onShow,
   });
 
-export { AVOIRS, BY_EAN, CL, CLIENTES, IS_DEMO, P, RAYONS, RETAIN_DAYS, SALES, STAFF, _bqKey, activeAvoirs, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, availableStock, avoirExpired, bqKitSkin, bqMoney, bqPaymentMethod, bqPaymentParts, bqPost, bqSaveProvisional, checkout, closeVeil, colorKey, creditErrorDetail, creditFromServer, creditIntent, creditRequest, findSale, firstFree, firstFreeFor, firstName, freshTicket, headSubVente, initials, issueAvoir, linePromo, lineUnit, merchantSlug, newSaleId, nextStandaloneTicketNumber, openVeil, payExistingBalance, persistAvoirs, persistDay, persistStock, promoFor, pruneTicket, pvPaired, pvReal, queueIfOffline, rebuildCatalog, recordReturn, refreshOps, refreshRemoteAvoirs, renderAll, renderBadges, retDayKey, retShiftDay, root, saleClient, salesToday, showStockIssue, sizeWord, sizesOf, stableCreditIssueId, state, stockAdd, stockOf, switchView, ticketClient, ticketCount, ticketTotals, toast, variantStock, whenLabel };
+export { AVOIRS, BY_EAN, CL, CLIENTES, IS_DEMO, P, RAYONS, RETAIN_DAYS, SALES, STAFF, _bqKey, activeAvoirs, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, availableStock, avoirExpired, bqKitSkin, bqMoney, bqPaymentMethod, bqPaymentParts, bqPost, bqSaveProvisional, checkout, closeVeil, colorKey, creditErrorDetail, creditFromServer, creditIntent, creditRequest, findSale, firstFree, firstFreeFor, firstName, freshTicket, headSubVente, initials, issueAvoir, linePromo, lineUnit, merchantSlug, newSaleId, nextStandaloneTicketNumber, openVeil, payExistingBalance, persistAvoirs, persistDay, persistStock, promoFor, pruneTicket, pvPaired, pvReal, queueIfOffline, rebuildCatalog, recordReturn, refreshOps, refreshRemoteAvoirs, renderAll, renderBadges, retDayKey, retShiftDay, root, saleClient, salesToday, syncReturnSales, showStockIssue, sizeWord, sizesOf, stableCreditIssueId, state, stockAdd, stockOf, switchView, ticketClient, ticketCount, ticketTotals, toast, variantStock, whenLabel };

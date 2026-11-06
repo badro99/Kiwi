@@ -1,9 +1,10 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=89';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=91';
 import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=10';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=89';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=89';
+import { tillNow } from './pos-boutique/till-clock.js?v=2';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=91';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=91';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=6'; import { mzLivraisons } from './pos-maison/delivery.js?v=22';
-import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=6'; import { outsideWindow } from './pos-boutique/return-window.js?v=4';
+import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=6'; import { outsideWindow } from './pos-boutique/return-window.js?v=6';
 
   'use strict';
 
@@ -601,7 +602,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
   }
   function isToday(d) {
     const t = +new Date(d);
-    return !isNaN(t) && businessDayKey(t) === businessDayKey(Date.now());
+    return !isNaN(t) && businessDayKey(t) === businessDayKey(tillNow());
   }
   /* La même journée, écrite 'YYYY-MM-DD' pour un <input type="date"> : la page
      des retours la compare aux ventes. Elle découpait à minuit, si bien qu'à
@@ -861,7 +862,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
     exchange: null,              /* { saleId, idx, qty:1 } pendant le choix du remplacement */
     ret: null,                   /* { saleId, picks:Set, quantities:Map, motif } */
     retQuery: '',
-    retDate: businessDateKey(Date.now()),
+    retDate: businessDateKey(tillNow()),
     clQuery: '',
     registriesQuery: '',
     activeRegistry: null,
@@ -925,7 +926,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
         qty, amount: Math.sign((Number(ln.unit) || 0) * qty) * Math.round(Number(Math.abs((Number(ln.unit) || 0) * qty).toExponential().replace(/e(.+)$/, (_, e) => 'e' + (+e + 2)))) / 100,
       };
     }).filter(Boolean);
-    const now = Date.now();
+    const now = tillNow();
     const client = saleClient(sale);
     RETURN_LOG.unshift({
       id: `RET-${sale.id}-${now}`, ts: now, saleRef: sale.id, kind: kind || 'avoir',
@@ -933,8 +934,8 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
       actor: (STAFF.caissiere && STAFF.caissiere.name) || 'Caisse',
       client: (client && client.name) || 'Cliente de passage', items,
     });
-    RETURN_LOG = RETURN_LOG.slice(0, 500);
-    persistReturnLog();
+    RETURN_LOG = RETURN_LOG.slice(0, 500); persistReturnLog();
+    try { document.dispatchEvent(new CustomEvent('kiwi:returns-changed')); } catch (_) {}   // le registre des retours du tableau de bord se relit sans attendre
     const cloud = ensureReturnCloud();
     if (cloud) cloud.push();
   }
@@ -2282,9 +2283,9 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
   }
   const BQ_SRV_METHOD = { 'espèces': 'cash', 'carte': 'card', 'virement': 'transfer', 'chèque': 'cheque', 'avoir': 'credit', 'livraison': 'delivery' };
   function bqPaymentParts(parts) {
-    return (parts || []).filter((part) => part && +part.amount > 0).map((part) => ({
-      method: BQ_SRV_METHOD[part.m] || 'wallet', amountCents: Math.round((+part.amount || 0) * 100),
-    }));
+    const by = new Map();   // le serveur refuse plus de huit lignes (_retail-tenders.js) : les parts d'un même mode s'additionnent
+    (parts || []).filter((part) => part && +part.amount > 0).forEach((part) => { const m = BQ_SRV_METHOD[part.m] || 'wallet'; by.set(m, (by.get(m) || 0) + Math.round((+part.amount || 0) * 100)); });
+    return Array.from(by, ([method, amountCents]) => ({ method, amountCents })).filter((part) => part.amountCents > 0);
   }
   function bqPaymentMethod(parts) {
     const methods = bqPaymentParts(parts);
@@ -2419,7 +2420,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
     if (closedAt) sess.closedAt = closedAt;
     const pv = pvPaired() || {};
     return DR.build({
-      day: DR.businessDay(Date.now()),
+      day: DR.businessDay(tillNow()),
       sales: bqReportSales(only),
       session: sess,
       store: { slug: DR.storeSlug(), name: pv.name || '', location: pv.location || '', type: pv.type || 'boutique' },
@@ -2512,7 +2513,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
       const slug = DR.storeSlug();
       const journal = bqZJournal(slug);
       if (!slug || !journal) return Promise.resolve({ ok: false, reason: 'unavailable' });
-      const day = DR.businessDay(Date.now());
+      const day = DR.businessDay(tillNow());
       /* Mêmes bornes que celles du module : une vente comptée ici et écartée
          là ressortirait en « vente sans envoi », une fausse alerte. */
       const bounds = DR.dayBounds(day, slug);
@@ -2557,7 +2558,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
       dateLabel: p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : report.day,
       copy: copyLabel || '',
       openedLabel: hm(report.openedAt),
-      closedLabel: hm(report.closedAt || Date.now()),
+      closedLabel: hm(report.closedAt || tillNow()),
       detailTitle: 'DÉTAIL PAR ' + String(V.cat || 'rayon').toUpperCase(),
       drawerTitle: 'TIROIR-CAISSE',
       unitWord: V.items || 'articles',
@@ -2882,7 +2883,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
     if (v) v.classList.remove('is-open');
     let report = null, reportSaved = false;
     try {
-      report = bqBuildReport(counted, Date.now());
+      report = bqBuildReport(counted, tillNow());
       if (report && window.KiwiDayReport) {
         report.closed = true;
         const saved = window.KiwiDayReport.save(report, { by: (STAFF.caissiere && STAFF.caissiere.name) || '' });

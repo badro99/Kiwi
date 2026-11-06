@@ -40,7 +40,7 @@ async function scenario(f,at,{prepare=true,offset=0,part='boutique',closed=false
   const id='clock-sale-'+i,parts=i===2?[{m:'carte',amount:169},{m:'espèces',amount:170}]:i===5?[{m:'avoir',amount:149},{m:'espèces',amount:70}]:[{m:'espèces',amount:amountCents/100}],method=i===2||i===5?'split':'cash';
   const r=await f.call('sale',{id,ref:id,ts,amountCents,method,ticketAmountCents:parts.reduce((s,p)=>s+Math.round(p.amount*100),0),paymentParts:parts.map(p=>({method:p.m==='avoir'?'credit':p.m==='carte'?'card':'cash',amountCents:Math.round(p.amount*100)}))});check(r.status===200,'real sale handler accepts receipt');check(f.row(id).ts===ts,'server preserves original sale epoch');ctx.SALES.push({syncId:id,serverId:id,at:new ctx.Date(ts),parts});
  }
- const bq=read('assets/pos-boutique.js');new vm.Script(['BQ_SRV_METHOD','businessDayKey','isToday','bqPaymentParts','bqPaymentMethod','bqZJournal','bqZQueue'].map(n=>named(bq,n)).join('\n')).runInContext(ctx);
+ const bq=read('assets/pos-boutique.js');ctx.tillNow=()=>ctx.Date.now();new vm.Script(['BQ_SRV_METHOD','businessDayKey','isToday','bqPaymentParts','bqPaymentMethod','bqZJournal','bqZQueue'].map(n=>named(bq,n)).join('\n')).runInContext(ctx);
  const queued=await ctx.bqZQueue(closed);assert.ok(queued.ok,JSON.stringify(queued));await settled;
  const {body,result}=requests[0];check(result.status===200,'real Z POST responds successfully');check(body.count===6&&body.totalCents===108500,'real boutique + Z outbox send 6 / 108500 cents');check(body.cutoff===5,'Z explicitly carries 5, never legacy fallback or 6');
  const ledgerDay=ctx.KiwiLedger._businessDate(ts,5,zone);check(ledgerDay===body.day,'kit ledger and till name the same day');

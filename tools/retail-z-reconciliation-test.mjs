@@ -79,7 +79,7 @@ function run(src, sales, { demo = false } = {}) {
   const ctx = vm.createContext({ window, KiwiLive: Live, navigator: { onLine: false },
     localStorage: { getItem: (k) => storage.get(k) || null, setItem: (k, v) => storage.set(k, v) },
     document: { readyState: 'complete', getElementById: () => null, querySelector: () => null, addEventListener() {} },
-    location: { pathname: '/kiwi-caisse.html' }, setInterval() {}, Promise, Date, Set, Math, console });
+    location: { pathname: '/kiwi-caisse.html' }, setInterval() {}, Promise, Date, Set, Math, console, tillNow: () => Date.now() });
   vm.runInContext(zSource, ctx);
   const till = [
     'var IS_DEMO = ' + JSON.stringify(demo) + ';',

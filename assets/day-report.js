@@ -214,12 +214,10 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
      (merchant-config.js → /api/timezone); every other surface reads that stored
      store zone. Only when nothing is known yet does a device fall back to its
      own zone, and Morocco remains the last resort. */
-  /* Relu au plus une fois par minute : le lire construisait un formateur à
-     chaque appel. Une tablette dont on change le fuseau le voit en une minute. */
+  /* Relu au plus une fois par minute (le lire construisait un formateur à chaque appel) : un changement de fuseau se voit en une minute. */
   var deviceZone = '', deviceZoneAt = -Infinity;
   function deviceTimezone() {
-    var now = Date.now();
-    if (now - deviceZoneAt < 60000 && now >= deviceZoneAt) return deviceZone;
+    var now = Date.now(); if (now - deviceZoneAt < 60000 && now >= deviceZoneAt) return deviceZone;
     try { deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (_) { deviceZone = ''; }
     deviceZoneAt = now;
     return deviceZone;
@@ -401,7 +399,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
      la date de la VEILLE : 00h30 − 5h = 19h30 hier. C'est exactement ce qu'un
      patron entend par « la recette d'hier soir ». */
   function businessDay(ts, slug) {
-    var t = (ts instanceof Date) ? ts.getTime() : num(ts || Date.now());
+    var t = (ts instanceof Date) ? ts.getTime() : num(ts || nowMs());
     var zone = merchantTimezone(slug);
     var p = civilParts(t, zone);
     var day = p.year + '-' + p.month + '-' + p.day;
@@ -413,7 +411,9 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     var h = cutoff(slug);
     return { from: zonedBoundary(day, h, zone), to: zonedBoundary(addCivilDays(day, 1), h, zone) };
   }
-  function today(slug) { return businessDay(Date.now(), slug); }
+  var nowMs = function () { try { var t = Number(window.KiwiLive.now()); if (t > 0) return t; } catch (_) {} return Date.now(); };   // l'heure des ventes du comptoir (recalée sur le serveur), sinon l'appareil
+  var mergeParts = function (l) { var by = {}; l.forEach(function (p) { by[p.method] = (by[p.method] || 0) + p.amountCents; }); return Object.keys(by).map(function (m) { return { method: m, amountCents: by[m] }; }); };   // tous les règlements comptent ; ceux d'un même mode s'additionnent
+  function today(slug) { return businessDay(nowMs(), slug); }
   /* L'heure (0-23) à laquelle une vente a eu lieu, lue dans le fuseau du
      commerce et non dans celui de l'appareil : « heure de pointe » et plage
      d'ouverture se calculent avec ça, pas avec Date#getHours(). */
@@ -616,10 +616,10 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       ts: ts,
       amount: amount,
       method: String(s.method || 'cash').toLowerCase(),
-      parts: paymentSource ? paymentSource.slice(0, 8).map(function (p) {
+      parts: paymentSource ? mergeParts(paymentSource.map(function (p) {
         return { method: String((p && (p.method || p.m)) || '').toLowerCase(),
           amountCents: p && p.amountCents != null ? Math.round(Number(p.amountCents)) : Math.round(num(p && p.amount) * 100) };
-      }).filter(function (p) { return p.method && p.amountCents > 0; }) : null,
+      }).filter(function (p) { return p.method && p.amountCents > 0; })) : null,
       label: String(s.label || ''),
       ref: String(s.ref || ''),
       kind: String(s.kind || ''),
@@ -948,7 +948,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       }),
       closedCount: 0,
       revisions: [],
-      builtAt: Date.now(),
+      builtAt: nowMs(),
       source: String(opts.source || 'caisse'),
       vat: window.KiwiDayReportVat ? window.KiwiDayReportVat.compute(rows) : null,
       duplicates: dupN ? { count: dupN, amount: round2(dupAmt) } : null,
@@ -1469,7 +1469,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
 
   window.KiwiDayReport = {
     /* journée commerciale */
-    businessDay: businessDay, dayBounds: dayBounds, today: today, hourOf: hourOf,
+    businessDay: businessDay, dayBounds: dayBounds, today: today, now: nowMs, hourOf: hourOf,
     lastClosedDay: lastClosedDay, shiftDay: shiftDay,
     cutoff: cutoff, setCutoff: setCutoff,
     timezone: merchantTimezone,

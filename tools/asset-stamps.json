@@ -504,12 +504,12 @@
     "sha": "b567f822fe1873c5"
   },
   "assets/day-report-export.js": {
-    "v": "24",
-    "sha": "2cc1f5bba1f9a9aa"
+    "v": "25",
+    "sha": "b7583e0c2afbb7a9"
   },
   "assets/day-report.js": {
-    "v": "43",
-    "sha": "4cad843814d50b78"
+    "v": "45",
+    "sha": "93aeec86908b2c60"
   },
   "assets/delivery-collect.js": {
     "v": "3",
@@ -1452,8 +1452,8 @@
     "sha": "4e68527e59cc46eb"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "203",
-    "sha": "24adcb13bf075eb1"
+    "v": "205",
+    "sha": "7ad748bb7f0e8ce2"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1568,24 +1568,24 @@
     "sha": "f9be46bf81c4b95d"
   },
   "assets/pos-boutique.css": {
-    "v": "283",
+    "v": "285",
     "sha": "1ccd3e7bb7e4ee86"
   },
   "assets/pos-boutique.js": {
-    "v": "283",
-    "sha": "e8de497d608043bd"
+    "v": "285",
+    "sha": "2567d284e57f726e"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "180",
-    "sha": "f15675d6669d77ea"
+    "v": "182",
+    "sha": "84bab464dfa9bf0f"
   },
   "assets/pos-boutique/delivery-card.js": {
     "v": "6",
     "sha": "a74f14231dcb7a1a"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "98",
-    "sha": "344fabcd1a847773"
+    "v": "100",
+    "sha": "dab23378169b9b7a"
   },
   "assets/pos-boutique/exchange.js": {
     "v": "2",
@@ -1600,8 +1600,8 @@
     "sha": "ae42ad06da0ddc4c"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "180",
-    "sha": "1ba6a4e939e3951c"
+    "v": "182",
+    "sha": "40b4a120787daa57"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "20",
@@ -1615,21 +1615,29 @@
     "v": "17",
     "sha": "987f029e0a75244b"
   },
+  "assets/pos-boutique/old-sales.js": {
+    "v": "2",
+    "sha": "ba7fcb3c7aa34a16"
+  },
   "assets/pos-boutique/ozon.js": {
     "v": "9",
     "sha": "ead9b6d4e3bebbaf"
+  },
+  "assets/pos-boutique/paid-share.js": {
+    "v": "2",
+    "sha": "30ec6df3ff7d4a9a"
   },
   "assets/pos-boutique/receipt-doc.js": {
     "v": "1",
     "sha": "143f456d46538526"
   },
   "assets/pos-boutique/return-window.js": {
-    "v": "4",
-    "sha": "dcd1923a4d2747b8"
+    "v": "6",
+    "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "180",
-    "sha": "adb914bef5012880"
+    "v": "182",
+    "sha": "02bcff30a976993d"
   },
   "assets/pos-boutique/search.js": {
     "v": "14",
@@ -1647,6 +1655,10 @@
     "v": "3",
     "sha": "e6162143ee1205ff"
   },
+  "assets/pos-boutique/till-clock.js": {
+    "v": "2",
+    "sha": "49703036f82b6427"
+  },
   "assets/pos-boutique/z-split.js": {
     "v": "6",
     "sha": "0a183370302e9746"
@@ -1660,8 +1672,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "387",
-    "sha": "dc6a097721dfedae"
+    "v": "389",
+    "sha": "c126beca46683415"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1732,16 +1744,16 @@
     "sha": "0922f8cc674d813f"
   },
   "assets/pos-maison.css": {
-    "v": "172",
+    "v": "174",
     "sha": "ddaa2e289dfb5fc6"
   },
   "assets/pos-maison.js": {
-    "v": "172",
-    "sha": "7688fabd49dd34d2"
+    "v": "174",
+    "sha": "c41cf635cec7fd6b"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "89",
-    "sha": "0c1682155a2f41e1"
+    "v": "91",
+    "sha": "9ffa7d35fbfb4235"
   },
   "assets/pos-maison/delivery.js": {
     "v": "22",
@@ -1752,16 +1764,16 @@
     "sha": "feb0865a7163d8c9"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "89",
-    "sha": "835e44c8e7e4c24b"
+    "v": "91",
+    "sha": "5a39c2e8ff3cba4c"
   },
   "assets/pos-maison/kit-2027.js": {
     "v": "6",
     "sha": "9e575c6498d8a30c"
   },
   "assets/pos-maison/sales.js": {
-    "v": "89",
-    "sha": "a9094f6d5c0d4dbd"
+    "v": "91",
+    "sha": "18cef7498bde7b2d"
   },
   "assets/pos-maison/ticket-remise.js": {
     "v": "3",
@@ -1912,12 +1924,12 @@
     "sha": "7b6c4471f6ac27a6"
   },
   "assets/promo-rules.js": {
-    "v": "15",
-    "sha": "1b4892e5caf1382e"
+    "v": "16",
+    "sha": "881a5af894215140"
   },
   "assets/promos.js": {
-    "v": "22",
-    "sha": "94ee5096dcb0d66e"
+    "v": "23",
+    "sha": "dbbcaa247d8287c2"
   },
   "assets/pwa-update.js": {
     "v": "368",
