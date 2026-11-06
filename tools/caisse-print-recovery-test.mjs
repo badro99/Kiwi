@@ -54,6 +54,16 @@ console.log('PASS caisse failure entry is translated, counted and opens existing
   assert.match(nodes2.get('caisse-print-recovery').textContent, /\(1\)$/, 'a second failure is still one entry');
   lis['kiwi:receipt-print']({ detail: { ok: true } });
   assert.ok(!nodes2.has('caisse-print-recovery'), 'a printed receipt clears it');
+  // Par identité : le reçu suivant ne cache pas le précédent, seule sa réimpression l'efface.
+  lis['kiwi:receipt-print']({ detail: { ok: false, id: 'T-1' } });
+  lis['kiwi:receipt-print']({ detail: { ok: false, id: 'T-2' } });
+  assert.match(nodes2.get('caisse-print-recovery').textContent, /\(2\)$/, 'two customers, two entries');
+  lis['kiwi:receipt-print']({ detail: { ok: true, id: 'T-3' } });
+  assert.match(nodes2.get('caisse-print-recovery').textContent, /\(2\)$/, 'another customer printing fine hides neither');
+  lis['kiwi:receipt-print']({ detail: { ok: true, id: 'T-1' } });
+  assert.match(nodes2.get('caisse-print-recovery').textContent, /\(1\)$/, 'reprinting T-1 clears only T-1');
+  lis['kiwi:receipt-print']({ detail: { ok: true, id: 'T-2' } });
+  assert.ok(!nodes2.has('caisse-print-recovery'));
   // receipt.js annonce le résultat, réussi ou non.
   const receiptSrc = fs.readFileSync('assets/receipt.js', 'utf8');
   const events = [];

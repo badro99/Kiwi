@@ -136,7 +136,14 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
   const REPAY_PREFIX = 'kiwi:epicerieRepay:';
   function repayKey() { return REPAY_PREFIX + ((ctx.epicerieOps && ctx.epicerieOps.venue && ctx.epicerieOps.venue()) || ''); }
   function repayLog() {
-    try { const a = JSON.parse(localStorage.getItem(repayKey()) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; }
+    let raw = '';
+    try { raw = localStorage.getItem(repayKey()) || ''; const a = JSON.parse(raw || '[]'); if (Array.isArray(a)) return a; if (a === null) return []; } catch (_) {}
+    /* Journal d'intentions illisible : ses octets sont mis de côté AVANT que la prochaine écriture ne le remplace,
+       et la caissière est prévenue (une seule fois). Un règlement payé dont la ligne manque se retrouve alors. */
+    let sum = 0; for (let i = 0; i < raw.length; i++) sum = (sum * 31 + raw.charCodeAt(i)) | 0;
+    try { localStorage.setItem(repayKey() + ':corrupt:' + raw.length + ':' + (sum >>> 0), raw); } catch (_) {}
+    if (!repayLog.warned && typeof toast === 'function') { repayLog.warned = true; try { toast(tr('Journal des règlements illisible : copie gardée, vérifiez les règlements récents')); } catch (_) {} }
+    return [];
   }
   function repayLogWrite(rows) {
     const key = repayKey(), text = rows.length ? JSON.stringify(rows) : null;
@@ -146,7 +153,14 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
     } catch (_) { return false; }
   }
   function journalHas(ref) {
-    try { return !!ref && !!window.KiwiPosSale && window.KiwiPosSale.today('epicerie').some((s) => s && s.ref === ref); } catch (_) { return false; }
+    /* Par référence, tous jours confondus : un arrêt avant « payée » suivi d'une réouverture le lendemain
+       ne doit pas faire oublier une recette déjà entrée (la dette resterait entière). */
+    try {
+      const P = window.KiwiPosSale;
+      if (!ref || !P) return false;
+      if (typeof P.hasRef === 'function' && P.hasRef('epicerie', ref)) return true;
+      return P.today('epicerie').some((s) => s && s.ref === ref);
+    } catch (_) { return false; }
   }
   /* commitRepayment(id, pay) → { c, entry } ou { error: 'changed' | 'storage' }.
      Le client et son solde sont relus ICI : une fiche reçue d'une autre caisse

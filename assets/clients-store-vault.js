@@ -1,7 +1,13 @@
-/* Durable fallback for refused client queue writes. No queue keys belong here. */
+/* Durable fallback for refused client queue writes. No queue keys belong here.
+ * Also the evidence desk of the client book: it says whether refused writes are held in memory only or confirmed in
+ * IndexedDB (status), sets aside the raw bytes of an unreadable queue before a write can replace them (quarantine /
+ * recoveryCopies, listed by queue-recovery.js), and caps a purchase event's lines without losing the stamp-bearing ones. */
 (function () {
   'use strict';
   var mirror = Object.create(null), pending = Object.create(null), db = null, loading;
+  var state = Object.create(null), kept = Object.create(null), QPREFIX = 'kiwi:clients-quarantine:v1:';
+  function notify(name) { try { if (window.dispatchEvent && typeof Event === 'function') window.dispatchEvent(new Event(name)); } catch (_) {} }
+  function mark(key, saved) { if (saved && state[key]) state[key] = 'vault'; notify('kiwi:clients-outbox'); return saved; }
   function copy(list) { return JSON.parse(JSON.stringify(list)); }
   function union(first, second) {
     var seen = new Set();
@@ -26,13 +32,46 @@
     loaded: false,
     get: function (key) { return copy(mirror[key] || []); },
     save: function (key, list) {
-      mirror[key] = copy(list);
+      mirror[key] = copy(list); state[key] = 'memory'; notify('kiwi:clients-outbox');
       if (!vault.loaded) { pending[key] = true; return vault.load().then(function () { return false; }); }
-      return write(key, mirror[key]);
+      return write(key, mirror[key]).then(function (saved) { return mark(key, saved); });
     },
     drop: function (key) {
       if (!vault.loaded) return Promise.resolve(false);
-      delete mirror[key]; return write(key, null);
+      delete mirror[key]; delete state[key]; return write(key, null);
+    },
+    /* memoryOnly: queues whose last write was refused by localStorage and not (yet) confirmed in IndexedDB. */
+    status: function () {
+      var memoryOnly = [], vaulted = [];
+      Object.keys(state).forEach(function (k) { (state[k] === 'vault' ? vaulted : memoryOnly).push(k); });
+      return { memoryOnly: memoryOnly, vaulted: vaulted, quarantined: Object.keys(kept).length };
+    },
+    quarantine: function (key, raw) {
+      if (!raw) return;
+      var sum = 0; for (var i = 0; i < raw.length; i++) sum = (sum * 31 + raw.charCodeAt(i)) | 0;
+      var id = QPREFIX + (sum >>> 0) + ':' + key;
+      if (kept[id] !== undefined) return;
+      kept[id] = raw;
+      try { localStorage.setItem(id, raw); } catch (_) {}
+      notify('kiwi:clients-quarantine');
+    },
+    /* recoveryCopies() lists, (key) reads, (key, true) acknowledges and removes. Same shape as the sale queue's. */
+    recoveryCopies: function (key, acknowledge) {
+      var keys = Object.keys(kept);
+      try { for (var i = 0; i < localStorage.length; i++) { var k = String(localStorage.key(i)); if (k.indexOf(QPREFIX) === 0 && keys.indexOf(k) < 0) keys.push(k); } } catch (_) {}
+      if (key === undefined) return keys.map(function (k) { var raw = kept[k] !== undefined ? kept[k] : (localStorage.getItem(k) || ''); return { key: k, bytes: 2 * (k.length + raw.length) }; });
+      if (keys.indexOf(key) < 0) return null;
+      var value = kept[key] !== undefined ? kept[key] : localStorage.getItem(key);
+      if (acknowledge) { delete kept[key]; try { localStorage.removeItem(key); } catch (_) {} notify('kiwi:clients-quarantine'); }
+      return value;
+    },
+    /* Lines of one purchase/refund event: at most 100; the ones for which hit(line) is true are kept first. */
+    capLines: function (items, hit) {
+      var list = Array.isArray(items) ? items : [];
+      if (list.length <= 100) return { rows: list, dropped: 0 };
+      var first = [], rest = [];
+      list.forEach(function (it) { var yes = false; try { yes = !!hit(it); } catch (_) {} (yes ? first : rest).push(it); });
+      return { rows: first.concat(rest).slice(0, 100), dropped: list.length - 100 };
     },
     load: function () {
       if (loading) return loading;
@@ -43,7 +82,7 @@
           finished = true;
           if (timer && typeof clearTimeout === 'function') clearTimeout(timer);
           vault.loaded = true;
-          Object.keys(pending).forEach(function (key) { write(key, mirror[key]); });
+          Object.keys(pending).forEach(function (key) { write(key, mirror[key]).then(function (saved) { mark(key, saved); }); });
           pending = Object.create(null);
           resolve();
         }
@@ -73,6 +112,7 @@
       return loading;
     },
   };
+  window.addEventListener('kiwi:clients-queue-corrupt', function (event) { var d = event && event.detail; if (d) vault.quarantine(d.key, d.raw); });
   function attach() { if (window.KiwiClients && typeof window.KiwiClients.attachOutboxVault === 'function') window.KiwiClients.attachOutboxVault(vault); }
   if (window.addEventListener) window.addEventListener('load', function () { attach(); if (vault.loaded && window.KiwiClients) window.KiwiClients.sync(); });
   vault.load().then(function () {
@@ -560,6 +600,7 @@
   //   opts.amount  → MAD spent (amount model)
   //   opts.visit   → count a visit toward a stamp card (visit / product model)
   // returns { client, rewardReady:bool } — rewardReady when a stamp card fills.
+  var capLines = function (items, book) { var V = outboxRead.vault, cfg = config(book); return V && V.capLines ? V.capLines(items, function (it) { return cfg && cfg.model === 'product' && KiwiLoyaltyRules.qualifyingQty(cfg, [it]) > 0; }) : { rows: (Array.isArray(items) ? items : []).slice(0, 100), dropped: 0 }; };
   function recordPurchase(id, opts, book) {
     book = book || bookId();
     opts = opts || {};
@@ -581,19 +622,18 @@
     rec.visits = (rec.visits || 0) + 1;
     rec.lastSeen = now();
     if (!rec.firstSeen) rec.firstSeen = now();
-    if (amount > 0) rec.spend = (rec.spend || 0) + amount;
+    if (amount > 0) rec.spend = (Math.round((rec.spend || 0) * 100) + Math.round(amount * 100)) / 100; // integer centimes
     if (!Array.isArray(rec.history)) rec.history = [];
     const detail = {
       ref: saleRef, ts: +opts.createdAt || now(), amount,
       method: String(opts.method || '').slice(0, 32),
-      items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
+      items: capLines(opts.items, book).rows.map(function (item) {
         var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); if (item && item.unit) row.unit = String(item.unit).slice(0, 24); return row;
       }),
     };
     rec.history = [detail].concat(rec.history.filter(function (row) {
       return !(detail.ref && row && row.ref === detail.ref);
     }));
-
     var rewardReady = false;
     var delta = { points: 0, stamps: 0, visits: 1, spend: amount };
     if (!loyaltyOn(book)) {
@@ -619,7 +659,7 @@
     ref = ref || ('purchase:' + id + ':' + rec.updated + ':' + Math.abs(hash(String(Math.random()))).toString(36));
     var event = { kind: 'purchase', ref: ref, clientId: id, amount: amount, points: delta.points,
       stamps: delta.stamps, visits: delta.visits, spend: delta.spend, created: rec.updated,
-      method: detail.method, items: detail.items, saleRef: detail.ref };
+      method: detail.method, items: detail.items, saleRef: detail.ref, itemsDropped: capLines(opts.items, book).dropped };
     purchaseAdd(book, event);
     purchasePush(book, event);
     return { client: rec, rewardReady: rewardReady };
@@ -666,9 +706,9 @@
        jamais acquitté. */
     var event = { kind: 'refund', ref: ref, clientId: id, amount: -amount, points: -claw, stamps: -unstamp, visits: 0,
       spend: -take, created: rec.updated, method: 'retour', saleRef: saleRef,
-      items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
+      items: capLines(opts.items, book).rows.map(function (item) {
         var key = String(item && (item.id || item.itemId || item.pid) || ''); var row = { name: String(item && item.name || '').slice(0, 120), qty: clientQuantity(item && item.qty), total: money(item && item.total) }; if (key) row.id = key.slice(0, 80); if (item && item.unit) row.unit = String(item.unit).slice(0, 24); return row;
-      }) };
+      }), itemsDropped: capLines(opts.items, book).dropped };
     purchaseAdd(book, event);
     purchasePush(book, event);
     return { client: rec, spend: -take, points: -claw, stamps: -unstamp };
@@ -788,7 +828,7 @@
    * tools/clients-outbox-owner-test.mjs tient ces trois règles. */
   var heldQueues = {};
   function outboxRead(key) {
-    try { var a = heldQueues[key] ? heldQueues[key].slice() : JSON.parse(ls(key) || '[]'); a = Array.isArray(a) ? a : []; } catch (_) { a = []; }
+    var raw = '', a, bad = function () { try { window.dispatchEvent(new CustomEvent('kiwi:clients-queue-corrupt', { detail: { key: key, raw: raw } })); } catch (_) {} }; try { raw = heldQueues[key] ? '' : (ls(key) || ''); a = heldQueues[key] ? heldQueues[key].slice() : JSON.parse(raw || '[]'); if (!Array.isArray(a)) { if (a !== null) bad(); a = []; } } catch (_) { bad(); a = []; }
     try { var seen = new Set(); return a.concat(outboxRead.vault ? outboxRead.vault.get(key) : []).filter(function (e) { var token = typeof e === 'string' ? 's:' + e : 'r:' + (e && e.ref); if (seen.has(token)) return false; seen.add(token); return true; }); }
     catch (_) { return a; }
   }
@@ -1087,7 +1127,7 @@
       id: r.id, name: r.name || '', phone: r.phone || '', email: r.email || '', birthday: r.birthday || '',
       gender: r.gender || '', city: r.city || '', address: r.address || '', notes: r.notes || '',
       hospitality: hospitality && typeof hospitality === 'object' && !Array.isArray(hospitality) ? hospitality : {},
-      points: r.points || 0, stamps: r.stamps || 0, visits: r.visits || 0, spend: r.spend || 0,
+      points: r.points || 0, stamps: r.stamps || 0, visits: r.visits || 0, spend: r.spend_cents != null ? Math.round(Number(r.spend_cents)) / 100 : (r.spend || 0),
       consent: !!r.consent, consentEmail: !!r.consent_email, source: r.source || 'caisse',
       firstSeen: r.first_seen || 0, lastSeen: r.last_seen || 0, updated: r.updated_ts || 0,
       loyaltySales: r.loyalty_sales || {},
@@ -1108,7 +1148,7 @@
     purchaseRead(book).forEach(function (event) {
       if (event.clientId !== id) return;
       out.points += Number(event.points || 0); out.stamps += Number(event.stamps || 0);
-      out.visits += Number(event.visits || 0); out.spend += Number(event.spend != null ? event.spend : (event.amount || 0));
+      out.visits += Number(event.visits || 0); out.spend = (Math.round(out.spend * 100) + Math.round(Number(event.spend != null ? event.spend : (event.amount || 0)) * 100)) / 100;
     });
     return out;
   }
@@ -1156,7 +1196,7 @@
         sc.points = Number(sc.points || 0) + pending.points;
         sc.stamps = Number(sc.stamps || 0) + pending.stamps;
         sc.visits = Number(sc.visits || 0) + pending.visits;
-        sc.spend = Number(sc.spend || 0) + pending.spend;
+        sc.spend = (Math.round(Number(sc.spend || 0) * 100) + Math.round(pending.spend * 100)) / 100;
         sc.points = Math.max(0, sc.points + pendingReward.points);
         sc.stamps = Math.max(0, sc.stamps + pendingReward.stamps);
         sc.lastSeen = Math.max(Number(sc.lastSeen || 0), Number(local.lastSeen || 0));

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 const src = fs.readFileSync('assets/trade-workspaces.js', 'utf8');
 let calls = [], pulls = 0;
 const client = { id: 'advance-client', hist: [{type:'pay',amt:20},{type:'debt',amt:7.5}] };
@@ -13,7 +14,7 @@ const window = {
 };
 const context = vm.createContext({window,document:{addEventListener(){}},console,Date,Math,JSON,Set,Map,URLSearchParams,
   fetch:async(url,options)=>{calls.push(JSON.parse(options.body));return {ok:true,json:async()=>({ok:true})};}});
-vm.runInContext(src,context);
+vm.runInContext(deadlineVmSource(src),deadlineVmContext(context));
 const api=window.KiwiTradeWorkspaces;
 assert.equal(typeof api.refundAdvance,'function','owner refund action exists');
 assert.equal(api.refundAvailable(client),1250,'remaining refundable cents account for consumed advance');
@@ -36,4 +37,16 @@ window.KiwiCloudDoc.pullAll=async()=>{pulls++;};
 context.fetch=async()=>({ok:false,json:async()=>({error:'refund-exceeds-advance',availableCents:250})});
 await assert.rejects(api.refundAdvance(client.id,500,'refund-race'),e=>e.message==='refund-exceeds-advance'&&e.availableCents===250);
 assert.equal(pulls,3,'server refusal also refreshes the current advance');
+// Bounded transport: a hanging response is an uncertain commit (same id kept), a hanging refresh is not an error.
+{
+  const real = context.setTimeout; context.setTimeout = (fn, ms) => real(fn, Math.min(ms, 5));
+  context.fetch = () => new Promise(() => {});
+  await assert.rejects(api.refundAdvance(client.id,1250,'refund-hang'),e=>e.message==='refund-uncertain'&&e.uncertain===true,'a hanging request ends as uncertain');
+  context.fetch = async () => ({ok:true,json:()=>new Promise(()=>{})});
+  await assert.rejects(api.refundAdvance(client.id,1250,'refund-body'),e=>e.uncertain===true,'a 2xx whose body hangs is uncertain');
+  context.fetch = async () => ({ok:true,json:async()=>({ok:true})});
+  window.KiwiCloudDoc.pullAll = () => new Promise(() => {});
+  const out = await api.refundAdvance(client.id,1250,'refund-slow-refresh');
+  assert.equal(out.ok,true); assert.equal(out.refreshed,false,'a hanging refresh reports stale data without failing the committed refund');
+}
 console.log('credit-book-refund-ui · owner, cap, request, refresh and concurrent cap: PASS');

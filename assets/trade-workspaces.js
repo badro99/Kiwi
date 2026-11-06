@@ -263,6 +263,8 @@
     amount:L('Montant à rembourser par virement (MAD)','Amount to refund by bank transfer (MAD)','المبلغ المسترد بتحويل بنكي (درهم)'),
     cap:L('Le montant dépasse l’avance restante.','The amount exceeds the remaining advance.','المبلغ يتجاوز التسبيق المتبقي.'),
     error:L('Remboursement impossible. Vérifiez votre accès propriétaire et la connexion, puis réessayez.','Refund unavailable. Check owner access and connection, then retry.','تعذر الاسترداد. تحقق من صلاحية المالك والاتصال ثم أعد المحاولة.'),
+    uncertain:L('Résultat incertain : le virement a peut-être été enregistré. Actualisez le carnet avant de réessayer ; la même opération ne paie pas deux fois.','Uncertain result: the transfer may have been recorded. Refresh the book before retrying; the same operation will not pay twice.','نتيجة غير مؤكدة: ربما سُجّل التحويل. حدّث السجل قبل إعادة المحاولة؛ العملية نفسها لا تُدفع مرتين.'),
+    stale:L('Remboursement enregistré, mais le carnet n’a pas pu être actualisé. Rechargez la page.','Refund recorded, but the book could not be refreshed. Reload the page.','سُجّل الاسترداد لكن تعذر تحديث السجل. أعد تحميل الصفحة.'),
     done:L('Remboursement enregistré par virement.','Bank transfer refund recorded.','تم تسجيل الاسترداد بتحويل بنكي.'),
     hint:L('Journal de caisse, remboursements enregistrés par virement.','Till ledger, refunds recorded by bank transfer.','سجل الصندوق، المبالغ المستردة مسجلة بتحويل بنكي.'),
     history:L('Remboursements enregistrés','Recorded refunds','المبالغ المستردة المسجلة'),
@@ -278,11 +280,19 @@
     const merchant=window.KiwiCloudDoc.currentSlug();
     const c=(tillDoc('epicerie')?.carnet || []).find((c)=>c.id===clientId);
     if (!c || !Number.isSafeInteger(amountCents) || amountCents<1 || amountCents>refundAvailable(c)) throw new Error('refund-exceeds-advance');
-    const response=await fetch('/api/store',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({merchant,feature:'verticalops',action:'credit-book-refund',clientId,id,amountCents,method:'transfer'})});
-    const result=await response.json();
-    try { await window.KiwiCloudDoc.pullAll(); } catch (_) { /* Refresh cannot change the committed money result. */ }
+    /* Bounded transport. A timeout, a dropped connection or a 2xx whose body cannot be read leaves the commit UNCERTAIN:
+       the same operation id is kept, so retrying cannot pay twice. A refresh failure afterwards is a different, harmless case. */
+    let response, result;
+    try {
+      response=await (await import('./request-deadline.mjs')).deadlineFetch('/api/store',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({merchant,feature:'verticalops',action:'credit-book-refund',clientId,id,amountCents,method:'transfer'})},12000);
+      result=await response.json();
+    } catch (_) {
+      if (response && !response.ok) result={}; else throw Object.assign(new Error('refund-uncertain'),{uncertain:true});
+    }
+    let refreshed=true;
+    try { await Promise.race([window.KiwiCloudDoc.pullAll(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('refresh-timeout')),8000))]); } catch (_) { refreshed=false; /* Refresh cannot change the committed money result. */ }
     if (!response.ok) throw Object.assign(new Error(result.error || 'refund-failed'),{availableCents:result.availableCents});
-    return result;
+    return Object.assign({},result,refreshed?{}:{refreshed:false});
   }
   function refundModal(clientId) {
     if (!refundAllowed() || !window.Kiwi?.modal) return;
@@ -300,10 +310,10 @@
       const raw=Number(input.value)*100, amount=Math.round(raw);
       if(!Number.isSafeInteger(amount)||amount<1||Math.abs(raw-amount)>1e-6||amount>available){error.textContent=pick(REFUND.cap);return;}
       pending=true;button.disabled=true;input.disabled=true;error.textContent='';
-      try {await refundAdvance(clientId,amount,id);m.close();render('credit');window.Kiwi.toast?.(pick(REFUND.done),{type:'success'});}
+      try {const out=await refundAdvance(clientId,amount,id);m.close();render('credit');window.Kiwi.toast?.(pick(out.refreshed===false?REFUND.stale:REFUND.done),{type:out.refreshed===false?'warning':'success'});}
       catch(err){
         if(Number.isSafeInteger(err.availableCents)){available=err.availableCents;input.max=available/100;form.querySelector('[data-refund-available]').textContent=pick(REFUND.available)+' : '+mad(available/100);}
-        error.textContent=pick(err.message==='refund-exceeds-advance'?REFUND.cap:REFUND.error);
+        error.textContent=pick(err.message==='refund-exceeds-advance'?REFUND.cap:err.uncertain?REFUND.uncertain:REFUND.error);
       } finally {pending=false;button.disabled=false;input.disabled=false;}
     };
   }

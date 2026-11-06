@@ -50,7 +50,7 @@
     try { if (chan) chan.postMessage('sale'); } catch (_) { console.warn("[live-link] pingLocal failed"); }
   }
   function canonicalSaleId(merchantId, requested) {
-    try { return JSON.parse(localStorage.getItem('kiwi:sale-aliases:' + merchantId) || '{}')[requested] || requested; }
+    try { return saleAliases.get(merchantId, requested); }
     catch (_) { return requested; }
   }
   function moneySignal(body, state, status, serverId) {
@@ -59,12 +59,7 @@
       try { localStorage.setItem('kiwi:sale-ack:' + body.merchant, String(Date.now())); } catch (_) { console.warn("[live-link] moneySignal failed"); }
     }
     if (state === 'accepted' && body.kind !== 'refund' && serverId && serverId !== body.id) {
-      try {
-        var key = 'kiwi:sale-aliases:' + body.merchant;
-        var aliases = JSON.parse(localStorage.getItem(key) || '{}');
-        aliases[body.id] = String(serverId).slice(0, 64);
-        localStorage.setItem(key, JSON.stringify(aliases));
-      } catch (_) { console.warn("[live-link] moneySignal failed"); }
+      try { saleAliases.set(body.merchant, body.id, serverId); } catch (_) { console.warn("[live-link] moneySignal failed"); }
     }
     try {
       window.dispatchEvent(new CustomEvent('kiwi:money-sync', { detail: {

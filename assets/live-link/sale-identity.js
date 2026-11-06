@@ -31,3 +31,36 @@
     return digest(JSON.stringify([String(merchant || ''), String(entry.ref || ''), String(entry.idDay || '')]));
   };
 })();
+
+/* Local id -> server id map of accepted sales (kiwi:sale-aliases:<merchant>), read by every later action on a sale
+ * (void, refund, invoice, Z). Bounded to the newest MAX entries so it cannot fill the storage over years; a refused
+ * write keeps the mapping in memory for the session and says so, instead of being swallowed. A corrupt map is set
+ * aside, never replaced silently. */
+(function () {
+  var MAX = 400, memory = Object.create(null);
+  function key(merchant) { return 'kiwi:sale-aliases:' + merchant; }
+  function read(merchant) {
+    var raw = null, stored = {};
+    try { raw = localStorage.getItem(key(merchant)); stored = JSON.parse(raw || '{}'); if (!stored || typeof stored !== 'object' || Array.isArray(stored)) throw new Error('shape'); }
+    catch (_) {
+      stored = {};
+      if (raw) { try { localStorage.setItem(key(merchant) + ':corrupt:' + raw.length, raw); } catch (_) {} try { console.warn('[live-link] sale aliases unreadable; raw copy kept'); } catch (_) {} }
+    }
+    return Object.assign(stored, memory[merchant] || {});
+  }
+  function get(merchant, requested) { return (memory[merchant] && memory[merchant][requested]) || read(merchant)[requested] || requested; }
+  function compact(map, keep) { var ids = Object.keys(map); return ids.slice(Math.max(0, ids.length - keep)).reduce(function (out, id) { out[id] = map[id]; return out; }, {}); }
+  function set(merchant, id, serverId) {
+    var map = read(merchant);
+    delete map[id]; map[id] = String(serverId).slice(0, 64);
+    map = compact(map, MAX);
+    memory[merchant] = map;
+    for (var keep = MAX; keep >= 25; keep = Math.floor(keep / 2)) {
+      try { localStorage.setItem(key(merchant), JSON.stringify(compact(map, keep))); delete memory[merchant]; return true; } catch (_) {}
+    }
+    try { console.warn('[live-link] sale aliases kept in memory only: storage refused the write'); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('kiwi:sale-aliases-unsaved', { detail: { merchant: merchant } })); } catch (_) {}
+    return false;
+  }
+  window.KiwiSaleIdentity.aliases = Object.freeze({ get: get, set: set, MAX: MAX });
+})();

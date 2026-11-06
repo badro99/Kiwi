@@ -48,9 +48,31 @@
 
   function get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function put(k, v) { try { localStorage.setItem(k, v); return true; } catch (_) { return false; } }
+  /* Une file illisible n'est plus remplacée par le repli sans trace : ses octets bruts sont mis de côté
+     (kiwi:kitchen-print-corrupt:…) avant la prochaine écriture, annoncés, et exportables comme la file des ventes. */
+  var CORRUPT_PREFIX = 'kiwi:kitchen-print-corrupt:', corruptMemory = {};
+  function quarantine(k, raw) {
+    if (!raw) return;
+    var sum = 0; for (var i = 0; i < raw.length; i++) sum = (sum * 31 + raw.charCodeAt(i)) | 0;
+    var id = CORRUPT_PREFIX + (sum >>> 0) + ':' + k;
+    if (corruptMemory[id] !== undefined) return;
+    corruptMemory[id] = raw; put(id, raw);
+    try { window.dispatchEvent(new CustomEvent('kiwi:kitchen-print-corrupt', { detail: { key: id } })); } catch (_) {}
+  }
   function json(k, fallback) {
-    try { var value = JSON.parse(get(k) || 'null'); return value == null ? fallback : value; }
-    catch (_) { return fallback; }
+    var raw = get(k) || '';
+    try { var value = JSON.parse(raw || 'null'); return value == null ? fallback : value; }
+    catch (_) { quarantine(k, raw); return fallback; }
+  }
+  /* recoveryCopies() liste, recoveryCopies(key) lit, recoveryCopies(key, true) accuse réception et supprime. */
+  function recoveryCopies(key, acknowledge) {
+    var keys = Object.keys(corruptMemory);
+    try { for (var i = 0; i < localStorage.length; i++) { var k = String(localStorage.key(i)); if (k.indexOf(CORRUPT_PREFIX) === 0 && keys.indexOf(k) < 0) keys.push(k); } } catch (_) {}
+    if (key === undefined) return keys.map(function (k) { var raw = corruptMemory[k] !== undefined ? corruptMemory[k] : (get(k) || ''); return { key: k, bytes: 2 * (k.length + raw.length) }; });
+    if (keys.indexOf(key) < 0) return null;
+    var raw = corruptMemory[key] !== undefined ? corruptMemory[key] : get(key);
+    if (acknowledge) { delete corruptMemory[key]; try { localStorage.removeItem(key); } catch (_) {} }
+    return raw;
   }
   function safeReason(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9:_-]/g, '-').slice(0, 80); }
   function record(state, job, detail) {
@@ -918,7 +940,7 @@
 
   window.KiwiKitchenPrint = {
     enqueue: enqueue, flush: flush, retryNow: retryNow, status: status,
-    enqueueReceipt: enqueueReceipt, exportDiagnostics: exportDiagnostics,
+    enqueueReceipt: enqueueReceipt, exportDiagnostics: exportDiagnostics, recoveryCopies: recoveryCopies,
     isHub: isHub, setHub: setHub, pending: function () { return readQueue().length; },
     reprintDropped: reprintDropped,
     relayLabel: relayLabel, pollUnprinted: pollUnprinted,

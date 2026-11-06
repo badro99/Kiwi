@@ -66,6 +66,7 @@
           ],
           "declares": [
             "KiwiLoyaltyRules",
+            "capLines",
             "recordPurchase",
             "recordRefund",
             "redeem",

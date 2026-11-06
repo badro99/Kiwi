@@ -48,7 +48,16 @@ const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].s
 {
   const { L } = realm({ menuThrows: true, boutique: [{ id: 'b2', name: 'Café moulu' }] });
   ok(same(L.linkedIds('café', null), ['b2']), 'a menu that throws costs its products, not the save');
+  ok(L.unavailable().join() === 'menu', 'the unavailable catalogue is reported so the save can refuse');
+  L.linkedIds('café', null, []); // items given: no read, previous report stays
   ok(same(L.linkedIds('', { item: '', ids: ['x'] }), ['x']) && same(L.linkedIds('   ', null), []), 'an empty word matches nothing new');
+}
+{
+  const { L } = realm({ menu: [{ id: 't1', name: 'Thé' }, { id: 't2', name: 'The Burger' }, { id: 't3', name: 'Thé à la menthe' }, { id: 'c1', name: 'Café' }, { id: 'c2', name: 'Cafe latte' }] });
+  ok(same(L.linkedIds('Thé', null), ['t1', 't3']), 'a short accented word is accent-sensitive, like the earning rule: « The Burger » is not linked');
+  ok(same(L.linkedIds('The', null), ['t1', 't2', 't3']), 'the same short word typed without the accent still folds');
+  ok(same(L.linkedIds('Café', null), ['c1', 'c2']), 'a word of 4+ letters keeps folding accents');
+  const ok2 = realm({ menu: [] }); ok(ok2.L.unavailable().length === 0, 'no failure reported when both catalogues answer');
 }
 {
   const many = Array.from({ length: 260 }, (_, i) => ({ id: 'p' + i, name: 'Café ' + i }));
