@@ -332,6 +332,8 @@ try {
     const calls = env.__calls.length;
     await upload('image/png', png);
     ok(env.__calls.length === calls, 'deuxième image : pas de nouvel appel');
+    const notes = env.DB.db.prepare("SELECT body FROM support_messages WHERE ticket_id = ? AND kind = 'triage'").all(body.ticket.id);
+    ok(notes.length === 1 && /première image/.test(notes[0].body), 'deuxième image : une note interne dit qu\'elle n\'est pas analysée');
     env.__reply = () => clef({ urgency: [0.02, 0.08, 0.9], blocked: 0.95 });
     await triageSupportTicket(env, { id: body.ticket.id, reference: 'K', merchant: MERCHANT, summary: 'encore' }, { images: [{ content_type: 'image/png', base64: 'AAAA' }] });
     ok(urgentMails().length === 1, 'une seule alerte par demande, même si le tri est refait');

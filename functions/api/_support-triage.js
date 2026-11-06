@@ -452,7 +452,13 @@ export async function triageAfterImage(env, ticket, mime, buffer) {
     if (!env || !env.AI || !IMAGE_TYPES.has(mime) || !buffer || buffer.byteLength > MAX_IMAGE_BYTES) return { status: 'skipped', reason: 'not-eligible' };
     const row = await env.DB.prepare('SELECT triage FROM support_tickets WHERE id = ?').bind(ticket.id).first();
     const prev = parseJson(row && row.triage, null);
-    if (prev && prev.images) return { status: 'skipped', reason: 'already-with-image' };
+    if (prev && prev.images) {
+      /* The triage reads the first capture only: say so on the ticket, so the
+         operator opens the other images instead of trusting a verdict that never saw them. */
+      await env.DB.prepare('INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)')
+        .bind('msg-' + crypto.randomUUID(), ticket.id, 'triage', 'internal', 'kiwi', 'Capture conservée, mais non analysée : le tri automatique n\'étudie que la première image de la demande. Examiner cette pièce jointe manuellement.', '', Date.now()).run();
+      return { status: 'skipped', reason: 'already-with-image' };
+    }
     return await triageSupportTicket(env, ticket, { images: [{ content_type: mime, base64: toBase64(buffer) }] });
   } catch (_) {
     return { status: 'failed', reason: 'unexpected' };
