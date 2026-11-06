@@ -1,5 +1,5 @@
 /* Durable department submissions. A lost response replays the same command key. */
-import { post } from './hotel-economat-transport.js?v=21';
+import { post } from './hotel-economat-transport.js?v=22';
 const prefix = 'kiwi:economat:outbox:';
 const listeners = new Set(), running = new Map(), timers = new Map();
 let dbPromise, fallback = false;

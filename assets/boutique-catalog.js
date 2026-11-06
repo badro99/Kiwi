@@ -375,8 +375,14 @@
     if (e.key !== KEY) return;
     if (!localKept) {
       const lang = (document.documentElement || {}).lang;
-      const message = { fr: 'Catalogue modifié dans un autre onglet. Vos modifications locales sont conservées. Synchronisez avant de recharger.', en: 'Catalog changed in another tab. Your local edits are kept. Sync before reloading.', ar: 'تغيّر الكتالوج في علامة تبويب أخرى. تم الاحتفاظ بتعديلاتك المحلية. زامن قبل إعادة التحميل.' };
-      window.alert(message[lang] || message.fr);
+      const message = { fr: 'Catalogue modifié dans un autre onglet. Vos modifications locales sont conservées et peuvent être synchronisées sans recharger.', en: 'Catalog changed in another tab. Your local edits are kept and can be synced without reloading.', ar: 'تغيّر الكتالوج في علامة تبويب أخرى. تم الاحتفاظ بتعديلاتك المحلية ويمكن مزامنتها دون إعادة التحميل.' };
+      const label = { fr: 'Synchroniser', en: 'Sync now', ar: 'مزامنة الآن' }[lang] || 'Synchroniser';
+      const detail = { store: 'catalog', key: KEY, kind: 'warn', message: message[lang] || message.fr, label, sync: () => schedulePush(0) };
+      let handled = false;
+      try { handled = window.dispatchEvent(new CustomEvent('kiwi:catalog-conflict', { detail, cancelable: true })) === false; } catch (err) {}
+      /* Jamais de boîte système au comptoir : la surface qui a son écran annule l'événement
+         (assets/catalog-conflict-notice.js) ; sinon la synchronisation part d'elle-même. */
+      if (!handled) detail.sync();
       return;
     }
     try { db = e.newValue ? JSON.parse(e.newValue) : blank(); } catch (err) { return; }

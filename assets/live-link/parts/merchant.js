@@ -1,5 +1,5 @@
 import {} from './live-link/queue-store.js?v=23';
-import {} from './live-link/sale-identity.js?v=3';
+import {} from './live-link/sale-identity.js?v=4';
 /* Kiwi Live Link — le pont ventes ↔ serveur (Cloudflare Pages Functions + D1).
  *
  * ALLUMÉ dès qu'il s'agit d'un vrai commerçant (KiwiEnv.isReal()), comme le
@@ -28,7 +28,7 @@ import {} from './live-link/sale-identity.js?v=3';
  * left untouched, so the demo still works with the flag off.
  */
 (function () {
-  'use strict'; if (typeof document !== 'undefined' && document.createElement) import('./queue-recovery.js?v=5').catch(function () {});
+  'use strict'; if (typeof document !== 'undefined' && document.createElement) import('./queue-recovery.js?v=6').catch(function () {});
 
   var LS = 'kiwiLive';
 

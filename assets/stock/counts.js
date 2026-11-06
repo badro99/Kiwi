@@ -581,6 +581,14 @@ window.KiwiStockInternal.install('counts', (S) => {
     }
   }
 
+  /* Heure civile du magasin, ni UTC ni l'horloge de l'appareil : un gérant à l'étranger lit dans l'export l'heure de ses écrans. */
+  const civilStamp = (ts, dateOnly) => {
+    const zone = (window.KiwiDayReport && window.KiwiDayReport.timezone && window.KiwiDayReport.timezone()) || 'Africa/Casablanca', p = {};
+    new (window.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+      .formatToParts(new Date(ts)).forEach((x) => { p[x.type] = x.value; });
+    return p.year + '-' + p.month + '-' + p.day + (dateOnly ? '' : ' ' + p.hour + ':' + p.minute + ':' + p.second);
+  };
+
   function exportCountsCsv() {
     const counts = filterCounts(getAllCounts());
     function csvSafe(v) {
@@ -591,7 +599,7 @@ window.KiwiStockInternal.install('counts', (S) => {
     const header = ct('csvCounts');
     const lines = [header.join(';')];
     counts.forEach(c => {
-      const d = new Date(c.submittedAt || Date.now()).toISOString().slice(0, 19).replace('T', ' ');
+      const d = civilStamp(c.submittedAt || Date.now());
       lines.push([
         csvSafe(c.id),
         d,
@@ -611,7 +619,7 @@ window.KiwiStockInternal.install('counts', (S) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${ct('csvCountsFile')}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `${ct('csvCountsFile')}-${civilStamp(Date.now(), true)}.csv`;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);

@@ -1041,7 +1041,7 @@
       if (name === 'kiwi:receipt-print') { if (event.detail.ok !== false) return; }
       else if (!(event.detail.count || event.detail.recoverable)) return;
       if (!loading) loading = new Promise(function (resolve) {
-        var script = document.createElement('script'); script.src = '/assets/caisse-print-recovery.js?v=7';
+        var script = document.createElement('script'); script.src = '/assets/caisse-print-recovery.js?v=8';
         script.onload = function () { script.id = 'caisse-print-recovery-script'; resolve(); };
         script.onerror = function () { loading = null; script.remove(); };
         document.head.appendChild(script);

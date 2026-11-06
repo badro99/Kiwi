@@ -10,7 +10,10 @@ export function paint(err, lastError, context) {
   if (context?.orderRef) err.textContent += ' · ' + tr('order', 'Commande {r}').replace('{r}', context.orderRef);
 }
 
-export function paintIssues(root, issues, connection) {
+/* `recovery` (optionnel) : { button(label, fn), actions: { <code>: { label, run } } }. Chaque avertissement qui a une
+ * reprise la propose à côté du texte (réessayer la synchronisation, ouvrir les correspondances de l'article
+ * concerné) au lieu d'obliger le marchand à la chercher plus bas. `run` reçoit l'incident (code, orderRef). */
+export function paintIssues(root, issues, connection, recovery) {
   const all = (issues || []).concat(connection?.lastError ? [{ code: connection.lastError, ...connection.lastErrorContext }] : []);
   const seen = new Set();
   for (const issue of all) {
@@ -20,6 +23,8 @@ export function paintIssues(root, issues, connection) {
     const err = document.createElement('div');
     err.className = 'chl-once';
     paint(err, issue.code, issue);
+    const action = recovery && recovery.actions && recovery.actions[issue.code];
+    if (action && typeof recovery.button === 'function') err.appendChild(recovery.button(action.label, () => action.run(issue), true));
     root.appendChild(err);
   }
 }

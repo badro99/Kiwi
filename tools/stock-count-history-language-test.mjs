@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import stockTestSource from './stock-test-source.cjs';
+import fs from 'node:fs';
 /* Historique des inventaires, revue propriétaire et journal des pertes ·
  * ce que le commerçant lit suit la langue de l'écran.
  *
@@ -60,6 +61,7 @@ try {
     line('  const localeFor = () =>'),
     block('  const fmtNum = (n, dec = 0) => {'),
     block('  const fmtMad = (n) => {'),
+    block('  const civilStamp = (ts, dateOnly) => {'),
     block('  const COUNT_STR = {'),
     ...['ct', 'ctMad', 'ctNum', 'ctWhen', 'ctWho', 'ctRole', 'ctStore', 'ctReviewNote', 'ctReason', 'ctWasteNote', 'ctUnit'].map(fn),
     ...['getWasteMovements', 'renderWasteJournal', 'exportWasteCsv', 'cancelWasteMovement', 'openDeclareWasteModal'].map(fn),
@@ -99,6 +101,9 @@ const WASTE = () => [
     note: 'Annulation perte 9001', actor: 'Propriétaire', meta: {} },
 ];
 
+/* La loi de zone du tableau de bord (assets/kit/haptics.js), pas la base de fuseaux locale, que Node peut avoir périmée. */
+const ZONE_LAW = (() => { const root = {}; new Function('globalThis', fs.readFileSync(new URL('../assets/kit/haptics.js', import.meta.url), 'utf8').split('/* KiwiHaptics')[0])(root); return root.KiwiZoneLaw; })();
+
 function world(lang, over = {}) {
   const spies = { toasts: [], modals: [], modalHandles: [], openModal: [], adds: [], blobs: [], downloads: [], confirms: [], fetches: [], reverses: [] };
   const formEls = {
@@ -132,6 +137,7 @@ function world(lang, over = {}) {
       reverse: (m, reason, note) => { spies.reverses.push({ id: m.id, note }); return over.reverseFails ? null : { id: 'r1' }; },
     },
     KiwiBoutiqueCatalog: { sync: () => {} },
+    KiwiZoneLaw: ZONE_LAW,
   };
   win.window = win;
   const doc = {

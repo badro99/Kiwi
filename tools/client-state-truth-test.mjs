@@ -86,14 +86,14 @@ cases.booking = async () => {
   assert.equal(refs.length,2);assert.equal(refs[0],refs[1],'same-tab retry keeps reference despite failed storage');
 };
 cases.catalog = () => {
-  let listener,alerts=[];const c=vm.createContext({window:{addEventListener:(_,f)=>listener=f,alert:s=>alerts.push(s)},document:{documentElement:{lang:'en'}},cloud:{dirty:true},localKept:false,KEY:'catalog',VENUE:'shop',DIRTY_KEY:()=> 'dirty',db:{products:[{id:'local'}]},dropIndex(){},migrate(){},notify(){}});
+  let listener,alerts=[],events=[],pushed=0;const c=vm.createContext({window:{addEventListener:(_,f)=>listener=f,alert:s=>alerts.push(s),dispatchEvent:e=>(events.push(e),true)},CustomEvent:class{constructor(t,o){this.type=t;this.detail=o.detail}},schedulePush:()=>{pushed++},document:{documentElement:{lang:'en'}},cloud:{dirty:true},localKept:false,KEY:'catalog',VENUE:'shop',DIRTY_KEY:()=> 'dirty',db:{products:[{id:'local'}]},dropIndex(){},migrate(){},notify(){}});
   const s=read('assets/boutique-catalog.js');const start=s.indexOf("  window.addEventListener('storage'");
   vm.runInContext(s.slice(start,s.indexOf('\n  });',start)+6),c);
   listener({key:'dirty',newValue:null});assert.equal(c.cloud.dirty,true,'another tab cannot clear our dirty status');
-  listener({key:'catalog',newValue:JSON.stringify({products:[]})});assert.equal(c.db.products[0].id,'local');assert.match(alerts[0],/local edits are kept/);
+  listener({key:'catalog',newValue:JSON.stringify({products:[]})});assert.equal(c.db.products[0].id,'local');assert.equal(alerts.length,0,'no system dialog (r20)');assert.match(events[0].detail.message,/local edits are kept/);assert.equal(pushed,1,'with no surface owning the event the store syncs itself');
   // A tab whose own write was kept shares the catalogue: it adopts the other tab's sale, and a cleared mark clears.
   c.localKept=true;listener({key:'catalog',newValue:JSON.stringify({products:[{id:'other-tab'}]})});assert.equal(c.db.products[0].id,'other-tab','a kept tab adopts the shared catalogue even while unsynced');
-  listener({key:'dirty',newValue:null});assert.equal(c.cloud.dirty,false,'the shared dirty mark follows the other tab once nothing is held only here');assert.equal(alerts.length,1);
+  listener({key:'dirty',newValue:null});assert.equal(c.cloud.dirty,false,'the shared dirty mark follows the other tab once nothing is held only here');assert.equal(events.length,1);
 };
 cases.clock = async () => {
   const c=vm.createContext({Date,clockOffset:7*86400000});

@@ -35,7 +35,7 @@
             </div>
             <input type="text" value="${esc(c.name)}" data-oc-name="${esc(g.id)}::${esc(c.id)}" aria-label="${esc(tr(T.optChNm))}" />
             <div class="pr">
-              <input type="number" min="0" step="1" value="${c.price ? esc(c.price) : ''}" placeholder="0"
+              <input type="number" inputmode="decimal" min="0" step="0.01" value="${c.price ? esc(c.price) : ''}" placeholder="0"
                      data-oc-price="${esc(g.id)}::${esc(c.id)}" aria-label="${esc(tr(T.optChPr))}" />
               <span>MAD</span>
             </div>
@@ -51,8 +51,8 @@
           </div>
           <div class="mx-og-rules">
             <div class="mx-og-kind">
-              <button type="button" class="${g.kind !== 'many' ? 'on' : ''}" data-og-kind="${esc(g.id)}::one">${esc(tr(T.optOne))}</button>
-              <button type="button" class="${g.kind === 'many' ? 'on' : ''}" data-og-kind="${esc(g.id)}::many">${esc(tr(T.optMany))}</button>
+              <button type="button" class="${g.kind !== 'many' ? 'on' : ''}" aria-pressed="${g.kind !== 'many'}" data-og-kind="${esc(g.id)}::one">${esc(tr(T.optOne))}</button>
+              <button type="button" class="${g.kind === 'many' ? 'on' : ''}" aria-pressed="${g.kind === 'many'}" data-og-kind="${esc(g.id)}::many">${esc(tr(T.optMany))}</button>
             </div>
             <label class="mx-og-req" title="${esc(tr(T.optReqHi))}">
               <input type="checkbox" data-og-req="${esc(g.id)}" ${g.required ? 'checked' : ''} />

@@ -3,6 +3,14 @@ window.KiwiStockInternal.install('loss', (S) => {
   'use strict';
   const { ct, ctMad, ctNum, ctReason, ctUnit, ctWasteNote, ctWhen, ctWho, esc, getInv, render, stShowReal, stockLocationId, svg } = S;
 
+  /* Heure civile du magasin, ni UTC ni l'horloge de l'appareil : un gérant à l'étranger lit dans l'export l'heure de ses écrans. */
+  const civilStamp = (ts, dateOnly) => {
+    const zone = (window.KiwiDayReport && window.KiwiDayReport.timezone && window.KiwiDayReport.timezone()) || 'Africa/Casablanca', p = {};
+    new (window.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+      .formatToParts(new Date(ts)).forEach((x) => { p[x.type] = x.value; });
+    return p.year + '-' + p.month + '-' + p.day + (dateOnly ? '' : ' ' + p.hour + ':' + p.minute + ':' + p.second);
+  };
+
   function getWasteMovements() {
     const I = window.KiwiInventory;
     if (!I || !I.history) return [];
@@ -168,7 +176,7 @@ window.KiwiStockInternal.install('loss', (S) => {
       const it = inv.find(x => x.id === r.itemId) || { name: r.itemId, unit: 'unité', costPerUnit: r.unitCost || 0 };
       const cost = r.unitCost != null ? r.unitCost : (it.costPerUnit || 0);
       const valMAD = Math.abs(+r.qty || 0) * cost;
-      const d = new Date(r.occurredTs).toISOString().slice(0, 19).replace('T', ' ');
+      const d = civilStamp(r.occurredTs);
       lines.push([
         d,
         csvSafe(it.name),
@@ -185,7 +193,7 @@ window.KiwiStockInternal.install('loss', (S) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${ct('csvWasteFile')}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `${ct('csvWasteFile')}-${civilStamp(Date.now(), true)}.csv`;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);

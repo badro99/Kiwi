@@ -1,14 +1,15 @@
   /* ── export ──────────────────────────────────────────────────────────── */
   /* Une cellule qui commence par = + - @ serait une formule dans un tableur. */
   const cell = (v) => { let s = String(v == null ? '' : v); if (/^[=+\-@]/.test(s) || /^[\t\r]/.test(s)) s = "'" + s; return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  const n2 = (v) => (v == null || !Number.isFinite(+v) ? '' : (+v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })); /* même arrondi que l'écran (money), jamais toFixed : 59333,225 se lit 59333,23 des deux côtés */
+  const n2 = (v) => (v == null || !Number.isFinite(+v) ? '' : (+v).toLocaleString(lang() === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })); /* même arrondi que l'écran (money), jamais toFixed : 59333,225 se lit 59333,23 des deux côtés ; la décimale suit la langue (en : 59333.23, fr et ar : 59333,23) */
   function download(name, rows) {
     const text = '﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n');
     try {
       const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
       const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (_) {}
+      if (S.exportError) { S.exportError = false; paint(); }
+    } catch (_) { S.exportError = true; paint(); }
     return text;
   }
   function sheetRows(data) {

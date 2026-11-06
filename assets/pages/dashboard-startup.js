@@ -7,21 +7,21 @@
     if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');
     const menuScripts = [
       'assets/menu-catalog/state.js?v=14',
-      'assets/menu-catalog/modifiers.js?v=3',
+      'assets/menu-catalog/modifiers.js?v=5',
       'assets/menu-catalog/item-list.js?v=3',
       'assets/menu-catalog/formulas.js?v=3',
       'assets/menu-catalog/item-editor.js?v=7',
       'assets/menu-catalog/media.js?v=3',
       'assets/menu-catalog/availability.js?v=3',
-      'assets/menu-catalog.js?v=42',
+      'assets/menu-catalog.js?v=44',
     ];
     document.write(menuScripts.map(url => '<script src="' + url + '" defer fetchpriority="low"><\/script>').join('\n'));
     return;
   }
   const scripts = [
-    'assets/pages-pro-office.js?v=19',
+    'assets/pages-pro-office.js?v=21',
     'assets/pages-pro.js?v=2222',
-    'assets/pages-pro-boutique.js?v=49',
+    'assets/pages-pro-boutique.js?v=51',
     'assets/boutique-stock-correct.js?v=4',
     'assets/boutique-categories-view.js?v=3',
     'assets/pages-pro-spa-starter.js?v=7',
@@ -32,7 +32,7 @@
     'assets/menu-i18n.js?v=8',
     'assets/kiwi-select.js?v=4',
     'assets/food-trade-settings.js?v=2',
-    'assets/menu-promos.js?v=22',
+    'assets/menu-promos.js?v=23',
     'assets/menu-promos-dashboard.js?v=10',
     'assets/restaurant-menu/strings.js?v=13',
     'assets/restaurant-menu/recipes.js?v=10',
@@ -40,15 +40,15 @@
     'assets/restaurant-menu-workspace.js?v=128',
     'assets/sold-insights.js?v=20',
     'assets/boutique-promos-dashboard.js?v=37',
-    'assets/day-report.js?v=49',
+    'assets/day-report.js?v=50',
     'assets/z-reconciliation.js?v=29',
     'assets/month-report.js?v=16',
-    'assets/day-report-export.js?v=29',
+    'assets/day-report-export.js?v=30',
     'assets/day-report-conflicts.js?v=2',
     'assets/day-report-dash.js?v=50',
-    'assets/stock/strings.js?v=19',
+    'assets/stock/strings.js?v=20',
     'assets/stock/state.js?v=13',
-    'assets/stock.js?v=125',
+    'assets/stock.js?v=126',
     'assets/catalog-workspace.js?v=7',
     'assets/planning-core.js?v=15',
     'assets/team/catalog.js?v=2',
@@ -59,9 +59,9 @@
     'assets/cash-sessions.js?v=11',
     'assets/weather.js?v=1',
     'assets/briefing-rules.js?v=7',
-    'assets/briefing-persistence.js?v=13',
-    'assets/briefing.js?v=52',
-    'assets/simple-food-cost.js?v=28',
+    'assets/briefing-persistence.js?v=14',
+    'assets/briefing.js?v=53',
+    'assets/simple-food-cost.js?v=29',
     'assets/finance.js?v=14',
     'assets/conformite.js?v=8',
     'assets/production-action-guard.js?v=6',
@@ -74,7 +74,7 @@
     'assets/hotel-language.js?v=14',
     'assets/hotel-housekeeping.js?v=1',
     'assets/hotel/model.js?v=10',
-    'assets/hotel.js?v=97',
+    'assets/hotel.js?v=98',
   ];
   if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');
   const normalPriority = new Set(['assets/kiwi-select.js', 'assets/catalog-workspace.js', 'assets/staff-roles.js', 'assets/design-vexel-layout.js']);

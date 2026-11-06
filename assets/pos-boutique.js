@@ -1,13 +1,13 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=186';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=104';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=186';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=186';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=187';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=105';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=187';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=187';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
-import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=6'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=17'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=10';
+import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=6'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=17'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11';
 
   'use strict';
 
@@ -1616,6 +1616,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
         toast('Stock non enregistré sur cette caisse', 9000, 'warn',
           (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('La vente continue et le stock part au serveur dès que le réseau le permet. Libérez du stockage avant de recharger la page.'));
       });
+      window.addEventListener('kiwi:catalog-conflict', (e) => { if (e.detail && e.detail.store === 'catalog') { e.preventDefault(); toast(e.detail.message, 9000, e.detail.kind); e.detail.sync(); } });
     }
     installWedgeScanner();
 
