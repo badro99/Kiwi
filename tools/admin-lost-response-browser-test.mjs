@@ -55,22 +55,27 @@ let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-let dropNextDelete = true;
+let dropNextDelete = true, dropNextPatch = true;
+const patches = [];
 const deletes = [];   // [{ status }] : ce que la vraie route a répondu à chaque DELETE
 function wire(page) {
   page.on('request', async (r) => {
     const u = r.url();
     if (!u.startsWith(base + '/api/')) return void (u.startsWith(base) || u.startsWith('data:') ? r.continue() : r.abort());
     const url = new URL(u);
-    const handler = ({ '/api/admin/clients': { GET: clientsApi.onRequestGet, DELETE: clientsApi.onRequestDelete }, '/api/admin/operators': { GET: operatorsApi.onRequestGet } })[url.pathname]?.[r.method()];
+    const handler = ({ '/api/admin/clients': { GET: clientsApi.onRequestGet, DELETE: clientsApi.onRequestDelete, PATCH: clientsApi.onRequestPatch }, '/api/admin/operators': { GET: operatorsApi.onRequestGet } })[url.pathname]?.[r.method()];
     if (!handler) return void r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
-    const request = new Request(url.toString().replace(base, 'https://kiwi-os.com'), { method: r.method(), headers: { Cookie: cookie, Origin: 'https://kiwi-os.com', 'Content-Type': 'application/json' } });
+    const request = new Request(url.toString().replace(base, 'https://kiwi-os.com'), { method: r.method(), headers: { Cookie: cookie, Origin: 'https://kiwi-os.com', 'Content-Type': 'application/json' }, ...(r.method() === 'PATCH' ? { body: r.postData() } : {}) });
     try {
       const res = await handler({ request, env, waitUntil() {} });
       const body = await res.text();
       if (r.method() === 'DELETE') {
         deletes.push({ status: res.status });
         if (dropNextDelete) { dropNextDelete = false; return void r.abort('connectionreset'); }   // le serveur a appliqué, le navigateur ne le saura pas
+      }
+      if (r.method() === 'PATCH') {
+        patches.push({ status: res.status });
+        if (dropNextPatch) { dropNextPatch = false; return void r.abort('connectionreset'); }
       }
       r.respond({ status: res.status, contentType: 'application/json', body }).catch(() => {});
     } catch (e) { r.respond({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: String(e && e.message) }) }).catch(() => {}); }
@@ -137,6 +142,22 @@ try {
     check(audits() === 1 && deletes.length === 1, 'toujours une seule suppression et une seule trace au journal');
     const errors = page.errors;
     check(errors.length === 0, 'aucune autre erreur de script' + (errors.length ? ' : ' + JSON.stringify(errors) : ''));
+  });
+  await S.run('r20 console#B0 · suspension : réponse perdue après application, statut relu et dit incertain', async (t) => {
+    const context = await browser.createBrowserContext(); t.defer(() => context.close());
+    const page = await openConsole(t, context);
+    const status = () => sql.prepare("SELECT status FROM accounts WHERE email='money@example.test'").get().status;
+    check(status() === 'active', 'le compte est actif avant la suspension');
+    await page.evaluate(() => { const nav = [...document.querySelectorAll('a,button')].find((x) => x.textContent.trim() === 'Clients' && x.offsetParent); if (nav) nav.click(); });
+    await page.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Suspendre le compte' && b.offsetParent), { timeout: 20000 });
+    await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Suspendre le compte' && b.offsetParent).click());
+    await sleep(1500);
+    check(patches.length === 1 && patches[0].status === 200 && status() === 'suspended', 'la vraie route a suspendu (réponse coupée côté navigateur)');
+    const view = await page.evaluate(() => ({ toast: (document.getElementById('op-toast') || {}).textContent || '',
+      buttons: [...document.querySelectorAll('button')].filter((b) => b.offsetParent).map((b) => b.textContent.trim()) }));
+    check(!/Échec/.test(view.toast), `aucun faux « Échec » : ${view.toast.slice(0, 120)}`);
+    check(/peut-être/.test(view.toast), 'la console dit que le changement a peut-être eu lieu');
+    check(view.buttons.includes('Réactiver le compte') && !view.buttons.includes('Suspendre le compte'), 'le statut est relu : la console propose de réactiver, pas de suspendre une seconde fois');
   });
 } finally {
   console.log(`\nadmin-lost-response-browser-test: ${checks} checks passed`);

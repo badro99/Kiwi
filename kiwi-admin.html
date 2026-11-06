@@ -1049,7 +1049,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
-  <script src="assets/admin-legacy.js?v=8"></script>
+  <script src="assets/admin-legacy.js?v=9"></script>
   <script src="assets/staff-roles.js?v=3"></script>
   <!-- The brand's one selection motion, for the établissement switcher. Self-
        contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
@@ -1560,9 +1560,10 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
 
   /* Toute route privilégiée passe par le propriétaire unique (assets/admin-api.js). */
   async function api(path, opts){
-    var data = await window.KiwiAdminApi.request(path, opts);
-    if (opts && opts.method && opts.method !== 'GET') ROSTER_LOADED = false;
-    return data;
+    /* Un geste qui écrit invalide la liste même quand sa réponse se perd : le serveur
+       a peut-être appliqué, et la relecture doit alors aller au serveur, pas au cache. */
+    try { return await window.KiwiAdminApi.request(path, opts); }
+    finally { if (opts && opts.method && opts.method !== 'GET') ROSTER_LOADED = false; }
   }
 
   var ROSTER_LOADED = false, ROSTER_AT = 0, OVERVIEW_DATA = null, REFRESH_BUSY = false, METRICS_BUSY = false;
@@ -2289,6 +2290,13 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
         ? 'Compte suspendu, accès coupé à la prochaine requête.'
         : 'Compte réactivé, accès rétabli.');
     } catch(e){
+      if (e && e.uncertainCommit) {
+        /* Réponse perdue : le serveur a peut-être déjà appliqué le changement. Pas de faux « échec »,
+           pas d'ancien statut gardé en mémoire : on relit la liste avant de proposer un autre geste. */
+        try { await renderClients(); } catch(_){}
+        notify('La réponse du serveur n’est pas arrivée : le changement de statut a peut-être eu lieu. Vérifiez la liste des clients avant de réessayer.');
+        return;
+      }
       notify('Échec : ' + ((e && e.body && e.body.error) || (e && e.message) || 'erreur'));
     }
   }
