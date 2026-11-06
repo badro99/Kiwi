@@ -59,6 +59,14 @@ const reply = (status, body) => ({ ok:status < 300, status, json:async () => bod
   assert.equal(left[1].blocked, undefined);
 }
 
+// A sale the server has not received yet (404 sale-not-found) keeps its charge queued, unmarked.
+{
+  const h = boot({ fetchImpl: async () => reply(404, { error:'sale-not-found' }) });
+  h.audit.enqueueRoomCharge(charge(5));
+  await h.audit.flushRoomCharges();
+  assert.deepEqual(rows(h).map(r => [r.saleId, r.blocked]), [['sale-0005', undefined]]);
+}
+
 // B2: a request that never answers ends at its deadline; the flush flag is released and the charge stays queued.
 {
   const h = boot({ fetchImpl: () => new Promise(() => {}) });

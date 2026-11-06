@@ -199,7 +199,7 @@
       S.actor = all[0].actor || null;
       S.units = all[1] && all[1].data && Array.isArray(all[1].data.units) ? all[1].data.units : [];
       S.catalogue = all[2] && all[2].data && Array.isArray(all[2].data.items) ? all[2].data.items : [];
-      S.stale = staleOf(all);
+      S.stale = all.reduce(function (at, r) { return r && r._stale ? (at == null ? r._stale.at : Math.min(at, r._stale.at)) : at; }, null);
       S.error = '';
     } catch (e) { S.error = String(e && e.message || 'offline'); }
     S.loading = false; S.loaded = true;
@@ -504,7 +504,7 @@
     draftCatalogue = []; draftStale = null;
     try {
       var body = await getJson('/api/inventory/department-catalogue?merchant=' + encodeURIComponent(merchant()) + '&unitId=' + encodeURIComponent(unitId));
-      draftStale = staleOf([body]);
+      draftStale = body && body._stale ? body._stale.at : null;
       draftCatalogue = (body.data && Array.isArray(body.data.items) ? body.data.items : []).filter(function (e) {
         var it = item(e.itemId); return e && e.active !== false && e.visibility !== 'hidden' && it && it.active !== false;
       });

@@ -38,7 +38,7 @@ await check('the client asks for the name before revealing the stored guest', as
 });
 await check('room charge transport is durable and retries after the sale queue', async () => {
   assert.match(pos, /kiwi:hotelRoomChargeOutbox:v1/);
-  assert.match(pos, /sale-not-found[\s\S]*pending\.push/);
+  assert.match(pos, /sale-not-found[\s\S]*outcome = \{\}/); // r20: same rule (the row stays queued) after the per-row settle rewrite; behaviour held by hotel-room-charge-outbox-test
 });
 await check('the room-charge payload links the room but excludes guest identity', async () => {
   const enqueue = pos.match(/enqueueRoomCharge\(\{([^}]+)\}\)/)?.[1] || '';
