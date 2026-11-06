@@ -122,8 +122,8 @@ const db = {
   transaction(name, mode) {
     assert.equal(name,'merchants');
     const tx = {objectStore:()=>({
-      get(key) { const r = {result:structuredClone(buckets.get(key))}; queueMicrotask(()=>tx.oncomplete()); return r; },
-      put(value,key) { assert.equal(mode,'readwrite'); writes++; buckets.set(key,structuredClone(value)); queueMicrotask(()=>tx.oncomplete()); return {}; },
+      get(key) { const r = {result:structuredClone(buckets.get(key))}; tx.read = true; queueMicrotask(()=>{ r.onsuccess?.(); queueMicrotask(()=>tx.oncomplete()); }); return r; },
+      put(value,key) { assert.equal(mode,'readwrite'); writes++; buckets.set(key,structuredClone(value)); if (!tx.read) queueMicrotask(()=>tx.oncomplete()); return {}; },
     })};
     return tx;
   },

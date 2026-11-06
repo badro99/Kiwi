@@ -1925,6 +1925,15 @@
     /* Per-outlet menu: what this outlet's tills actually sell, read-only.
      * Prices come from the merchant catalogue — the same document every
      * till sells from — so there is nothing outlet-specific to drift. */
+    /* The catalogue shows 100 articles at a time and keeps going until the
+     * last one: a long menu is paged, never cut at a boundary. */
+    const paintOutletMenu = (host, add) => {
+      const all = host.__hxProducts || [];
+      host.__hxShown = Math.min(all.length, (host.__hxShown || 0) + add);
+      const more = all.length - host.__hxShown;
+      host.innerHTML = `<div class="hx-outlet-menu">${all.slice(0, host.__hxShown).map((p) => `<div><span>${esc(p.name)}</span><b>${MAD(Number(p.priceMAD) || 0)}</b></div>`).join('')}</div><small>${tx('{c} au catalogue de l’établissement.', { c: txn(all.length, 'article') })}</small>`
+        + (more > 0 ? `<button type="button" class="hx-btn ghost" data-hx-outlet-more>${({ fr: 'Afficher plus', en: 'Show more', ar: 'عرض المزيد' })[hxLang()] || 'Afficher plus'} · ${more}</button>` : '') + (host.__hxFoot || '');
+    };
     handlers['hx-outlet-menu'] = async (el, arg) => {
       if (!isCustomHotel()) return;
       const unit = (cuEconomatState.draft?.units || cuEconomatState.registry.units || []).find((u) => u && u.id === String(arg));
@@ -1934,6 +1943,7 @@
       m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
       m.el.__hxClose = m.close;
       const host = m.el.querySelector('[data-hx-outlet-menu]');
+      if (host) host.addEventListener('click', (e) => { if (e.target.closest?.('[data-hx-outlet-more]')) paintOutletMenu(host, 100); });
       // One catalogue for the whole hotel: editing a price here changes what
       // every till sells. Linked, never duplicated.
       const foot = `<p class="hx-outlet-shared">${tx('Prix partagés par tout l’hôtel : le catalogue est commun à tous les points de vente. Modifier un prix change ce que toutes les caisses vendent.')}</p><button data-activation=write type="button" class="hx-btn ghost" data-action="hx-outlet-edit-menu">${tx('Modifier dans le catalogue')}</button>`;
@@ -1943,9 +1953,8 @@
         const products = res.ok && body && body.data && Array.isArray(body.data.products)
           ? body.data.products.filter((p) => p && p.id && p.name && !p.archived) : null;
         if (!res.ok || !products) { if (host) host.innerHTML = `<p class="hx-econ-empty">${tx('Catalogue indisponible pour le moment.')}</p>` + foot; return; }
-        if (host) host.innerHTML = products.length
-          ? `<div class="hx-outlet-menu">${products.slice(0, 200).map((p) => `<div><span>${esc(p.name)}</span><b>${MAD(Number(p.priceMAD) || 0)}</b></div>`).join('')}</div><small>${tx('{c} au catalogue de l’établissement.', { c: txn(products.length, 'article') })}</small>` + foot
-          : `<p class="hx-econ-empty">${tx('Aucun article au catalogue pour le moment.')}</p>` + foot;
+        if (host && products.length) { host.__hxProducts = products; host.__hxShown = 0; host.__hxFoot = foot; paintOutletMenu(host, 100); }
+        else if (host) host.innerHTML = `<p class="hx-econ-empty">${tx('Aucun article au catalogue pour le moment.')}</p>` + foot;
       } catch (_) { if (host) host.innerHTML = `<p class="hx-econ-empty">${tx('Catalogue indisponible pour le moment.')}</p>` + foot; }
     };
     /* From an outlet's menu into the existing authorized catalogue editor.

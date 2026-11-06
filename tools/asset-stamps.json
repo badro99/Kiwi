@@ -564,12 +564,12 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "646",
-    "sha": "0824cb62fe38c2a7"
+    "v": "647",
+    "sha": "cd90e64babe7c19f"
   },
   "assets/employee-planning.js": {
-    "v": "21",
-    "sha": "87b00754414d0fa4"
+    "v": "22",
+    "sha": "07c22b6d5f4d0050"
   },
   "assets/employee-pwa.js": {
     "v": "2",
@@ -680,24 +680,24 @@
     "sha": "7a25a26319e794aa"
   },
   "assets/hotel-economat-outbox.js": {
-    "v": "13",
-    "sha": "3d8cfb50e079fbe8"
+    "v": "14",
+    "sha": "0eb5251809eeb5b4"
   },
   "assets/hotel-economat-requests.css": {
     "v": "4",
     "sha": "db6d66f8c079e758"
   },
   "assets/hotel-economat-requests.js": {
-    "v": "29",
-    "sha": "eeed55fe6f8817de"
+    "v": "30",
+    "sha": "34f27f2f848a4bac"
   },
   "assets/hotel-economat-transport.js": {
-    "v": "19",
-    "sha": "c18f88b1295bdc0b"
+    "v": "20",
+    "sha": "ae7b6e511f88c95e"
   },
   "assets/hotel-economat.js": {
-    "v": "47",
-    "sha": "48582b948f726057"
+    "v": "48",
+    "sha": "c3a4e80cd97b4692"
   },
   "assets/hotel-folio.js": {
     "v": "5",
@@ -720,8 +720,8 @@
     "sha": "894b034541608ffa"
   },
   "assets/hotel.js": {
-    "v": "94",
-    "sha": "019c0b2b8da623dc"
+    "v": "96",
+    "sha": "e0c5653c83fd1125"
   },
   "assets/hotel/arrivals.js": {
     "v": "11",
@@ -1448,12 +1448,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "78",
-    "sha": "4e68527e59cc46eb"
+    "v": "79",
+    "sha": "34e475bca6fa8c61"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "203",
-    "sha": "24adcb13bf075eb1"
+    "v": "205",
+    "sha": "66e48f4572bf4767"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1660,8 +1660,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "387",
-    "sha": "dc6a097721dfedae"
+    "v": "389",
+    "sha": "da18a84e297320d0"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1708,12 +1708,12 @@
     "sha": "fa3a0f191f4fda55"
   },
   "assets/pos-hotel.css": {
-    "v": "27",
+    "v": "29",
     "sha": "8495613e7555777a"
   },
   "assets/pos-hotel.js": {
-    "v": "27",
-    "sha": "ead78da9f846f79d"
+    "v": "29",
+    "sha": "61c8a0e97b8138cf"
   },
   "assets/pos-inventory-count.js": {
     "v": "20",

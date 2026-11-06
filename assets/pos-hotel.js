@@ -365,36 +365,74 @@
       return Array.isArray(rows) ? rows.filter((row) => row && row.saleId) : [];
     } catch (_) { return []; }
   }
+  /* Never trimmed: a queued room charge is unacknowledged money (its POS sale may already exist).
+     When the browser store is full the write fails and the caller says so. */
   function writeRoomChargeRows(rows) {
-    try { localStorage.setItem(ROOM_CHARGE_QUEUE, JSON.stringify(rows.slice(-300))); return true; }
+    try { localStorage.setItem(ROOM_CHARGE_QUEUE, JSON.stringify(rows)); return true; }
     catch (_) { return false; }
   }
   function roomChargeContext() {
     try { return window.KiwiCaisseContext?.current?.() || {}; }
     catch (_) { return {}; }
   }
+  const ROOM_CHARGE_DEADLINE = 20000;
+  /* One request and its body, bounded. request-deadline.mjs when it loads, the same
+     bound locally when it does not (offline shell, older WebKit). */
+  const roomChargeRequest = async (row) => {
+    const options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row) };
+    let net = null;
+    try { net = await import('/assets/request-deadline.mjs'); } catch (_) { /* local bound below */ }
+    if (net && net.deadlineFetch) {
+      const response = await net.deadlineFetch('/api/hotel/room-charges', options, ROOM_CHARGE_DEADLINE);
+      let body = {};
+      try { body = await response.json(); } catch (error) { if (error && error.code === 'request-timeout') throw error; }
+      return { ok: response.ok, status: response.status, body };
+    }
+    let timer;
+    const limit = new Promise((_, reject) => { timer = setTimeout(() => reject(Error('request-timeout')), ROOM_CHARGE_DEADLINE); });
+    try {
+      return await Promise.race([(async () => {
+        const response = await fetch('/api/hotel/room-charges', options);
+        return { ok: response.ok, status: response.status, body: response.ok ? {} : await response.json().catch(() => ({})) };
+      })(), limit]);
+    } finally { clearTimeout(timer); }
+  };
+  /* Settles one row against the queue as it is NOW: a charge queued while the
+     flush was awaiting is never overwritten, and nothing but an acknowledged
+     sale leaves the queue. */
+  const settleRoomCharge = (saleId, outcome) => {
+    const latest = roomChargeRows();
+    const kept = [];
+    for (const row of latest) {
+      if (row.saleId !== saleId) kept.push(row);
+      else if (outcome.blocked) kept.push({ ...row, blocked: outcome.blocked });
+      else if (!outcome.acknowledged) kept.push(row);
+    }
+    writeRoomChargeRows(kept);
+    return kept;
+  };
   async function flushRoomCharges() {
     if (roomChargeFlushing || state.offline || navigator.onLine === false) return;
     const rows = roomChargeRows();
     if (!rows.length) { state.queued = 0; renderNet(); return; }
     roomChargeFlushing = true;
-    const pending = [];
-    for (const row of rows) {
-      try {
-        const response = await fetch('/api/hotel/room-charges', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(row),
-        });
-        if (response.ok) continue;
-        const body = await response.json().catch(() => ({}));
-        if (response.status === 404 && body.error === 'sale-not-found') pending.push(row);
-        else if (response.status >= 500) pending.push(row);
-        else pending.push({ ...row, blocked: String(body.error || 'refused').slice(0, 80) });
-      } catch (_) { pending.push(row); }
+    try {
+      for (const row of rows) {
+        let outcome = {};
+        try {
+          const response = await roomChargeRequest(row);
+          if (response.ok) outcome = { acknowledged: true };
+          else if (response.status === 404 && response.body.error === 'sale-not-found') outcome = {};
+          else if (response.status >= 500) outcome = {};
+          else outcome = { blocked: String(response.body.error || 'refused').slice(0, 80) };
+        } catch (_) { outcome = {}; }
+        settleRoomCharge(row.saleId, outcome);
+      }
+    } finally {
+      roomChargeFlushing = false;
     }
-    writeRoomChargeRows(pending);
+    const pending = roomChargeRows();
     state.queued = pending.length;
-    roomChargeFlushing = false;
     renderNet();
     if (pending.length && navigator.onLine !== false) setTimeout(flushRoomCharges, 3500);
   }
