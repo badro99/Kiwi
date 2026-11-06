@@ -142,7 +142,24 @@ async function signIn(page, m) {
   if (r.status !== 200) throw new Error(`sign-in ${m.label}: ${r.status} ${JSON.stringify(r.body)}`);
 }
 /* A till re-renders under its pollers: a button found a moment ago can be
- * replaced before the tap lands. Find it again, as a finger would. */
+ * replaced before the tap lands. Find it again, as a finger would.
+ * And tap where the button has settled: the wizard card and the order panels
+ * resize after each step, and under load a click measured mid-move landed on
+ * the label beside the button (a step silently not taken). So centre it, wait
+ * until its box holds still for three readings, then click with the mouse. */
+async function settle(el) {
+  await el.evaluate((n) => new Promise((done) => {
+    n.scrollIntoView({ block: 'center', inline: 'center' });
+    let last = '', same = 0, tries = 0;
+    const read = () => {
+      const r = n.getBoundingClientRect(), k = [r.left, r.top, r.width, r.height].map(Math.round).join();
+      same = k === last ? same + 1 : 0; last = k;
+      if (same >= 2 || ++tries > 60) return done();
+      setTimeout(read, 20);
+    };
+    read();
+  })).catch(() => {});
+}
 async function clickSel(page, sel) {
   for (let i = 0; ; i++) {
     await page.waitForFunction((selector) => {
@@ -150,6 +167,7 @@ async function clickSel(page, sel) {
       return el && !el.disabled && el.getBoundingClientRect().width > 0;
     }, {}, sel);
     const el = await page.waitForSelector(sel, { visible: true });
+    await settle(el);
     try { await el.click(); return; } catch (e) {
       if (i >= 4 || !/detached|not clickable|not an Element|no longer|Node is either/i.test(e.message)) throw e;
       await sleep(300);
