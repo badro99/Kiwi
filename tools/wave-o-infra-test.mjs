@@ -7,8 +7,9 @@ const run = (name, fn) => !mode || mode === name ? fn() : undefined;
 await run('schema', async () => {
  const {schemaCompatibility, MINIMUM_SCHEMA_VERSION: MIN} = await import('../functions/_schema-version.js');
  assert.equal(typeof schemaCompatibility, 'function');
+ const ledger=n=>Array.from({length:n},(_,i)=>({name:String(i+1).padStart(4,'0')+'_fixture.sql'}));
  let reads=0, release, version=15;
- const db={prepare(sql){assert.match(sql,/d1_migrations/);reads++;return {all:async()=>{if(release) await release;return {results:[{name:String(version).padStart(4,'0')+'_fixture.sql'}]};}};}};
+ const db={prepare(sql){assert.match(sql,/d1_migrations/);reads++;return {all:async()=>{if(release) await release;return {results:ledger(version)};}};}};
  const results=await Promise.all(Array.from({length:20},()=>schemaCompatibility(db)));
  assert.equal(reads,1); assert.equal(results[0].status,503);
  assert.equal((await results[0].json()).code,'incompatible_schema');
@@ -16,7 +17,7 @@ await run('schema', async () => {
  let reached=0;
  assert.equal((await onRequest({env:{DB:db},next:()=>{reached++;}})).status,503);
  assert.equal(reached,0);
- const good={prepare:()=>({all:async()=>({results:[{name:String(MIN).padStart(4,'0')+'_current.sql'}]})})};
+ const good={prepare:()=>({all:async()=>({results:ledger(MIN)})})};
  assert.equal(await schemaCompatibility(good),null);
  assert.equal(await onRequest({env:{DB:good},next:()=> 'route reached'}),'route reached');
  const originalNow=Date.now;

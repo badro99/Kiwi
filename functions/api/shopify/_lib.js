@@ -498,8 +498,11 @@ export async function flushShopifyOutbox(env, merchant, limit = 10) {
           AND l.status = 'active' AND (? = '' OR o.merchant = ?)
         ORDER BY o.updated_ts LIMIT ?`
     ).bind(now, now - 5 * 60 * 1000, merchant || '', merchant || '', Math.max(1, Math.min(50, Number(limit) || 10))).all();
-  } catch (_) { return { processed: 0, failed: 0 }; }
-  let processed = 0, failed = 0;
+  } catch (_) {
+    /* A read that fails is not an empty queue: the caller must be able to tell. */
+    return { processed: 0, failed: 0, error: 'outbox-read-failed' };
+  }
+  let processed = 0, failed = 0, unrecorded = 0;
   for (const row of rs.results || []) {
     const claimed = await env.DB.prepare(
       `UPDATE shopify_sync_outbox SET status = 'processing', updated_ts = ?
@@ -562,14 +565,17 @@ export async function flushShopifyOutbox(env, merchant, limit = 10) {
       processed++;
     } catch (e) {
       const message = small(e && e.message || e, 300);
-      await env.DB.batch([
+      const recorded = await env.DB.batch([
         env.DB.prepare(`UPDATE shopify_sync_outbox SET status = 'failed', attempts = attempts + 1, next_attempt_ts = ?, last_error = ?, updated_ts = ? WHERE id = ?`)
           .bind(Date.now() + retryDelay(Number(row.attempts) + 1), message, Date.now(), row.id),
         env.DB.prepare(`UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?`)
           .bind(message, Date.now(), row.merchant),
-      ]).catch(() => {});
+      ]).then(() => true, () => false);
+      /* The failure itself could not be written: the row stays 'processing' until
+         the five-minute recovery picks it up. Say so instead of hiding it. */
+      if (!recorded) unrecorded++;
       failed++;
     }
   }
-  return { processed, failed };
+  return unrecorded ? { processed, failed, unrecorded } : { processed, failed };
 }

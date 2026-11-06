@@ -234,13 +234,14 @@ async function budgetHandler(context) {
   const who = await tenantFor(request, env, b?.merchant, { strict: true });
   if (!who) return json({ ok: false, error: 'auth' }, 401);
 
-  if (!(await quotaOk(env, who, 'visioninspect', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) }))) {
-    return json(quotaBody('visioninspect'), 429);
-  }
-
+  // The input is checked first: a request that cannot be inspected spends no allowance.
   const image = b?.image;
   if (!image || typeof image !== 'string') return json({ ok: false, error: 'missing-image' }, 400);
   if (image.length > MAX_IMAGE_DATAURL) return json({ ok: false, error: 'image-too-large' }, 413);
+
+  if (!(await quotaOk(env, who, 'visioninspect', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) }))) {
+    return json(quotaBody('visioninspect'), 429);
+  }
 
   try {
     const { data, model, status } = await inspectImage(env, image, b?.prompt, String(b?.locale || 'fr').slice(0, 2));

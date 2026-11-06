@@ -113,7 +113,7 @@ const list = (dir, ext) => fs.readdirSync(dir)
   .map((f) => path.join(dir, f));
 const read = (f) => fs.readFileSync(f, 'utf8');
 
-const JS_FILES = list(path.join(ROOT, 'assets'), '.js').concat(...['assets/interactive', 'assets/daterange', 'assets/agent', 'assets/pos-maison', 'assets/pos-boutique', 'assets/team', 'assets/planning', 'assets/printer', 'assets/serveur', 'assets/stock', 'assets/pages-pro', 'assets/menu-catalog', 'assets/pressing'].map(dir => list(path.join(ROOT, dir), '.js')));
+const JS_FILES = require('./js-files').jsFiles(path.join(ROOT, 'assets'));
 const CSS_FILES = list(path.join(ROOT, 'assets'), '.css');
 const HTML_FILES = list(ROOT, '.html');
 
@@ -649,7 +649,7 @@ for (const test of [
   'd1-migrations-test.mjs',
   'runtime-ddl-test.mjs',
   'runtime-ddl-routes-test.mjs',
-  'schema-minimum-test.mjs',
+  'schema-minimum-test.mjs', 'schema-ledger-test.mjs', 'js-files-test.mjs',
   'worker-cpu-test.mjs',
   /* Routes statiques appelées directement par le middleware racine (sans le routeur Pages) : table à jour, appel identique, repli. */
   'fast-routes-test.mjs',

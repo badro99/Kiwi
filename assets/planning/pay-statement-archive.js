@@ -35,7 +35,19 @@ export function createArchive(merchant, transport = deadlineFetch) {
   const period = (p) => '&periodStart=' + encodeURIComponent(p.days[0]) + '&periodEnd=' + encodeURIComponent(p.days[p.days.length - 1]);
   const bounds = (p) => ({ periodStart: p.days[0], periodEnd: p.days[p.days.length - 1] });
   return {
-    forPeriod: (p) => read(period(p)),
+    /* Follows the server's cursor until the whole period is read: a long chain of
+     * corrections must never push the current statement out of the list. */
+    forPeriod: async (p) => {
+      let data = await read(period(p)), statements = data.statements || [];
+      for (let pages = 1; data.nextCursor && pages < 100; pages++) {
+        const next = await read(period(p) + '&after=' + encodeURIComponent(data.nextCursor));
+        statements = statements.concat(next.statements || []);
+        data = { ...next, advances: data.advances };
+      }
+      return { ...data, statements, nextCursor: null };
+    },
+    /* The merchant-wide history, newest first, one page at a time. */
+    list: (before) => read(before ? '&before=' + encodeURIComponent(before) : ''),
     get: async (id) => (await read('&id=' + encodeURIComponent(id))).statement,
     saveAdvances: (p, advances) => write({ action: 'advances', ...bounds(p), advances }),
     issue: (p, rows, opts = {}) => write({ action: 'issue', ...bounds(p), rows, ...opts }),
@@ -45,7 +57,7 @@ export function createArchive(merchant, transport = deadlineFetch) {
 /* The same request must carry the same id on a retry (so the server replays it)
  * and a different one when the amounts or the statement replaced change. */
 export function requestIdFor(period, rows, replacesId = '') {
-  const text = [period.days[0], period.days[period.days.length - 1], replacesId, ...rows.map((r) => [r.memberId, r.grossCents, r.advanceCents, r.netCents].join(':'))].join('|');
+  const text = [period.days[0], period.days[period.days.length - 1], replacesId, ...rows.map((r) => [r.memberId, r.memberName, r.hours, r.rateCents, r.baseCents, r.grossCents, r.advanceCents, r.netCents, r.rated ? 1 : 0].join(':'))].join('|');
   let h1 = 0x811c9dc5, h2 = 0x01000193;
   for (let i = 0; i < text.length; i++) {
     h1 = Math.imul(h1 ^ text.charCodeAt(i), 16777619) >>> 0;
