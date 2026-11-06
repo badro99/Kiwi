@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=180';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=98';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=180';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=180';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=182';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=100';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=182';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=182';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
@@ -1614,6 +1614,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
         toast('Stock non enregistré sur cette caisse', 9000, 'warn',
           (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('La vente continue et le stock part au serveur dès que le réseau le permet. Libérez du stockage avant de recharger la page.'));
       });
+      window.addEventListener('kiwi:catalog-conflict', (e) => { if (e.detail && e.detail.store === 'catalog') { e.preventDefault(); toast(e.detail.message, 9000, e.detail.kind); e.detail.sync(); } });
     }
     installWedgeScanner();
 

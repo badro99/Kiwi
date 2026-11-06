@@ -683,6 +683,14 @@ window.addEventListener('kiwi:local-save', (e) => {
   _bqxUnsavedAt = now;
   toast(t.unsaved, { desc: t.unsavedDesc, type: 'warn', duration: 9000 });
 });
+/* Le catalogue a changé dans un autre onglet pendant que celui-ci n'écrit plus en local : un toast de marque
+   avec « Synchroniser », jamais une boîte système (voir assets/boutique-catalog.js). */
+window.addEventListener('kiwi:catalog-conflict', (e) => {
+  const d = (e && e.detail) || {};
+  if (d.store !== 'catalog') return;
+  e.preventDefault();
+  toast(d.message, { type: d.kind, duration: 9000, force: true, action: { label: d.label, onClick: d.sync } });
+});
 function _bqxInvT() { return _BQX_INV[_bqxPfLang()]; }
 /* Ce que la grille montre en ce moment : filtre de rayon (ou « Archivés »),
    recherche et couleur. « Tout sélectionner » s'appuie dessus, pour ne jamais

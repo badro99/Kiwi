@@ -1762,6 +1762,8 @@ section('Whole-project regressions');
     'catalog-field-merge-test.mjs',
     'catalog-ledger-properties-test.mjs',
     'catalog-durable-recovery-test.mjs',
+    'catalog-cross-tab-conflict-test.mjs',
+    'catalog-cross-tab-browser-test.mjs',
     'inventory-ledger-test.mjs',
     'inventory-consumption-batch-test.mjs',
     'inventory-queue-unblock-test.mjs',
