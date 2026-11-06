@@ -18,7 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
-  '/assets/pos-boutique/return-window.js?v=4',
+  '/assets/pos-boutique/return-window.js?v=6',
   '/assets/hotel-economat-requests.js?v=29',
   '/assets/hotel-economat-outbox.js?v=13',
   '/assets/tickets-recovery.js?v=5',
@@ -36,7 +36,7 @@ var SHELL = [
   '/assets/team/styles.js?v=4',
   '/assets/team/access-rules.js?v=7',
   '/assets/hotel-economat-transport.js?v=19',
-  '/assets/pos-boutique/drawer.js?v=98',
+  '/assets/pos-boutique/drawer.js?v=100',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=18',
@@ -84,11 +84,11 @@ var SHELL = [
   '/assets/menu-catalog/item-list.js?v=3',
   '/assets/menu-catalog/modifiers.js?v=3',
   '/assets/menu-catalog/state.js?v=14',
-  '/assets/pressing/custody.js?v=40',
-  '/assets/pressing/rack.js?v=39',
-  '/assets/pressing/pickup.js?v=39',
-  '/assets/pressing/workshop.js?v=39',
-  '/assets/pressing/deposit.js?v=39',
+  '/assets/pressing/custody.js?v=41',
+  '/assets/pressing/rack.js?v=40',
+  '/assets/pressing/pickup.js?v=40',
+  '/assets/pressing/workshop.js?v=40',
+  '/assets/pressing/deposit.js?v=40',
   '/assets/pressing/manager-approval.js?v=2',
   '/assets/pressing/code39-scan.js?v=1',
   '/assets/hotel/rate-actions.js?v=6',
@@ -211,7 +211,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
-  '/assets/pages/dashboard-startup.js?v=203',
+  '/assets/pages/dashboard-startup.js?v=205',
   '/assets/pages/dashboard-loader.js?v=78',
   '/assets/hotel/model.js?v=10',
   '/assets/hotel/views.js?v=9',
@@ -356,10 +356,10 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=43',
+  '/assets/day-report.js?v=45',
   '/assets/report.js?v=10',
   '/assets/day-report-dash.js?v=50',
-  '/assets/day-report-export.js?v=24',
+  '/assets/day-report-export.js?v=25',
   '/assets/month-report.js?v=16',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
@@ -413,13 +413,13 @@ var SHELL = [
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
-  '/assets/promo-rules.js?v=15',
-  '/assets/promos.js?v=22',
+  '/assets/promo-rules.js?v=16',
+  '/assets/promos.js?v=23',
   '/assets/boutique-promos-dashboard.css?v=5',
   '/assets/boutique-promos-dashboard.js?v=37',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=131',
+  '/assets/caisse-lang.js?v=132',
   '/assets/venue-store.js?v=6',
   '/assets/discount-policy.js?v=4',
   '/assets/merchant-policies.js?v=4',
@@ -464,7 +464,7 @@ var SHELL = [
   '/assets/planning-ui.css?v=16',
   '/assets/team/catalog.js?v=2',
   '/assets/team/merge.js?v=2',
-  '/assets/field-merge.js?v=2',
+  '/assets/field-merge.js?v=3',
   '/assets/team.js?v=357',
   '/assets/team/profile-ui.js?v=22',
   '/assets/team-hours.js?v=30',
@@ -496,7 +496,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=35',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=33',
-  '/assets/pos-dispatch.js?v=395',
+  '/assets/pos-dispatch.js?v=396',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -567,11 +567,14 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=283',
-  '/assets/pos-boutique/sales.js?v=180',
+  '/assets/pos-boutique.css?v=285',
+  '/assets/pos-boutique/sales.js?v=182',
   '/assets/retail-photos.js?v=5',
   '/assets/retail-icon-picker.js?v=4',
   '/assets/pos-boutique/ticket-owner.js?v=3',
+  '/assets/pos-boutique/till-clock.js?v=2',
+  '/assets/pos-boutique/old-sales.js?v=2',
+  '/assets/pos-boutique/paid-share.js?v=2',
   '/assets/pos-boutique/ticket-number.js?v=1',
   '/assets/pos-boutique/receipt-doc.js?v=1',
   '/assets/pos-boutique/z-split.js?v=6',
@@ -585,9 +588,9 @@ var SHELL = [
   '/assets/pos-boutique/inv-moves.js?v=7',
   '/assets/pos-maison/inv-moves.js?v=3',
   '/assets/pos-boutique/kit-2027.js?v=20',
-  '/assets/pos-boutique/checkout.js?v=180',
-  '/assets/pos-boutique/inventory.js?v=180',
-  '/assets/pos-boutique.js?v=283',
+  '/assets/pos-boutique/checkout.js?v=182',
+  '/assets/pos-boutique/inventory.js?v=182',
+  '/assets/pos-boutique.js?v=285',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -621,14 +624,14 @@ var SHELL = [
   '/assets/pos-gym.js?v=9',
   '/assets/pos-autre.css?v=9',
   '/assets/pos-autre.js?v=9',
-  '/assets/pos-maison.css?v=172',
-  '/assets/pos-maison/sales.js?v=89',
+  '/assets/pos-maison.css?v=174',
+  '/assets/pos-maison/sales.js?v=91',
   '/assets/pos-maison/ticket-remise.js?v=3',
-  '/assets/pos-maison/checkout.js?v=89',
+  '/assets/pos-maison/checkout.js?v=91',
   '/assets/pos-maison/delivery.js?v=22',
   '/assets/refund-split.js?v=2',
-  '/assets/pos-maison/inventory.js?v=89',
-  '/assets/pos-maison.js?v=172',
+  '/assets/pos-maison/inventory.js?v=91',
+  '/assets/pos-maison.js?v=174',
   '/assets/caisse-pairing.js?v=72',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
@@ -636,8 +639,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js?v=17',
-  '/assets/pressing-caisse.js?v=111',
-  '/assets/pressing-caisse.css?v=111',
+  '/assets/pressing-caisse.js?v=113',
+  '/assets/pressing-caisse.css?v=113',
   '/assets/material-icons.js?v=4',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers

@@ -11,7 +11,7 @@ const rxView = fs.readFileSync(path.join(__dirname, '..', 'assets', 'returns-led
 const feed = fs.readFileSync(path.join(__dirname, '..', 'functions', 'api', 'feed.js'), 'utf8');
 
 const checks = [
-  ['Échanges relit les sept jours réels du magasin', /retShiftDay\(retDayKey\(Date\.now\(\)\), -\(retainDays\(\) - 1\)\)[\s\S]*KiwiPosSale\?\.feedDay[\s\S]*'\/api\/feed\?merchant='/.test(src)],
+  ['Échanges relit les sept jours réels du magasin', /retShiftDay\(retDayKey\(tillNow\(\)\), -\(retainDays\(\) - 1\)\)[\s\S]*KiwiPosSale\?\.feedDay[\s\S]*'\/api\/feed\?merchant='/.test(src)],
   ['la requête garde le cookie de la caisse appairée', /syncReturnSales[\s\S]*credentials: 'same-origin'/.test(src)],
   ['une référence déjà locale gagne sur la copie serveur', /SALES\.some\(\(s\) => s && s\.id === ref\)/.test(src)],
   ['les tickets serveur sont fusionnés dans le journal des échanges', /serverId:[\s\S]*remote: true/.test(src)],
@@ -27,7 +27,7 @@ const checks = [
   ['la quantité retournée est choisissable sans dépasser le solde vendu', /data-bq-ret-qty=[\s\S]*Math\.min\(lineAvailableQty/.test(src)],
   ['un échange autorise une seule pièce issue d’une ligne multiple', /const qty = pickedQty\(ret, idx, ln\)[\s\S]*(?:state\.exchange = |ticketOwner\.startReturn\(state, )\{ saleId: ret\.saleId, idx, qty: 1[,}]/.test(src)],
   ['le motif choisi suit l’échange jusqu’au registre', /(?:state\.exchange = |ticketOwner\.startReturn\(state, )\{[^}]*motif: ret\.motif/.test(src) && /recordReturn\(sale, \[ex\.idx\], paidUnit\(sale, ln\), ex\.motif \|\| 'Non précisé', 'echange'/.test(src)],
-  ['l’avoir utilise la quantité choisie et non toute la ligne', /const quantities = new Map\(idxs\.map[\s\S]*paidUnit\(sale, sale\.lines\[i\]\) \* quantities\.get\(i\)/.test(src)],
+  ['l’avoir utilise la quantité choisie et non toute la ligne', /const quantities = new Map\(idxs\.map[\s\S]*paidAmount\(sale, sale\.lines\[i\], quantities\.get\(i\)/.test(src)],
   ['seules les pièces réellement rendues reviennent au stock', /const restored = persistStock\(ln\.pid, ln\.size, ln\.color, qty,[\s\S]*markLineReturned\(ln, qty, restored/.test(src)],
   ['le journal propriétaire reçoit la quantité partielle exacte', /const motif = ret\.motif \|\| 'Non précisé'[\s\S]*recordReturn\(sale, idxs, amount, motif, 'avoir', av\.code, quantities\)/.test(src)],
   ['aucun motif n’est inventé quand la vendeuse n’en choisit pas', /state\.ret = \{ saleId, picks: new Set\(\), quantities: new Map\(\), motif: null \}/.test(src)],
@@ -45,17 +45,23 @@ const checks = [
   const { declaration } = require('./js-declarations.cjs');
   const live = fs.readFileSync(path.join(__dirname, '../assets/pos-boutique/checkout.js'), 'utf8');
   const ctx = vm.createContext({});
-  vm.runInContext(['lineReturnedQty', 'lineAvailableQty', 'markLineReturned', 'returnRatio', 'paidUnit']
+  const shared = fs.readFileSync(path.join(__dirname, '../assets/pos-boutique/paid-share.js'), 'utf8').replace(/^export /gm, '');
+  vm.runInContext(shared + '\nObject.assign(globalThis, { paidCents });', ctx);
+  vm.runInContext(['lineReturnedQty', 'lineAvailableQty', 'markLineReturned', 'paidAmount', 'paidUnit']
     .map(name => declaration(live.slice(live.indexOf('  function ' + name + '(')), name)).join('\n'), ctx);
   const line = { qty: 3, unit: 10 };
   const sale = { lines: [line], reward: true, balanceTotal: 20 };
   strict.equal(Math.round(ctx.paidUnit(sale, line) * 100), 666, 'run: partial refund rounds down to paid centimes');
   ctx.markLineReturned(line, 1, 'partial');
   strict.equal(ctx.lineAvailableQty(line), 2); strict.equal(line.returned, false);
+  /* r20: the remaining two pieces return the rest of the 20.00 paid, to the centime (6.66 + 6.67 + 6.67). */
+  strict.equal(Math.round(ctx.paidAmount(sale, line, 2) * 100), 1334, 'run: what is left to refund is the paid balance, not two floored pieces');
   ctx.markLineReturned(line, 99, 'rest');
   strict.equal(ctx.lineAvailableQty(line), 0); strict.equal(line.returnedQty, 3);
   strict.equal(ctx.lineReturnedQty({ qty: 2, returned: true }), 2, 'run: legacy returned tickets stay exhausted');
-  strict.equal(ctx.paidUnit({ lines: [line], total: 30 }, line), 10);
+  strict.equal(ctx.paidUnit({ lines: [line], total: 30 }, line), 0, 'run: nothing left to refund once every piece is back');
+  const fresh = { qty: 3, unit: 10 };
+  strict.equal(ctx.paidUnit({ lines: [fresh], total: 30 }, fresh), 10);
 }
 
 const failed = checks.filter(([, ok]) => !ok);

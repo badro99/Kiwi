@@ -48,13 +48,18 @@ function world(vertical) {
     bqDeliveryCard:(el,o)=>o.done({...DELIVERY_CARD}),mzDeliveryCard:(el,o)=>o.done({...DELIVERY_CARD},{}),
     retainDays:()=>7,windowDays:()=>7,outsideWindow:()=>false,ozonConnected:()=>false,ozonCities:()=>[],clById:id=>({id,name:'Test'}),
   });c.window=c;c.KiwiLive={saleIdFor:({id})=>id};
+  // The real shared modules of the till (exports stripped), not stubs: the paid-share allocation and the till clock.
+  const moduleSource=f=>fs.readFileSync(path.join(ROOT,f),'utf8').replace(/^export /gm,'');
+  vm.runInContext(moduleSource('assets/pos-boutique/paid-share.js')+'\nObject.assign(globalThis,{paidCents,lineBudgets});',c);
+  vm.runInContext(moduleSource('assets/pos-boutique/till-clock.js')+'\nObject.assign(globalThis,{tillNow,tillDate});',c);
+  c.readDayRows=async()=>null;
   const core=`assets/pos-${vertical}.js`, checkout=`assets/pos-${vertical}/checkout.js`;
   load(c,`assets/pos-${vertical}/sales.js`,['shelf']);
   if(vertical==='boutique'||vertical==='maison')load(c,'assets/pos-boutique/z-split.js',['zIsDelivery','zSplitParts','zSalesFor','zSentParts','zHoldsStock']);
   load(c,core,['lineBase','lineUnit','lineTotal','rewardDiscount',...(vertical==='maison'?['isConsigned','consignedOf']:[]),'ticketTotals',
     'RETAIN_DAYS','srvMethod','remoteLine',...(vertical==='boutique'?['retDayKey','retShiftDay','remoteMoney']:[]),'syncReturnSales','bqLineTotals','bqFoldBasket','BQ_SRV_METHOD','bqPaymentParts','bqPaymentMethod','originalSalePayload',
     'businessDayKey','isToday','salesToday','notCashedOf',...(vertical==='maison'?['cashedOf']:[]),'caToday','bqMoneyParts','bqDayTotals','bqZJournal']);
-  load(c,checkout,['lineReturnedQty','lineAvailableQty','pickedQty','markLineReturned','returnRatio','paidUnit','doAvoir','openExchSummary','openPay',...(vertical==='boutique'?['recordDeliveryCash']:[])]);
+  load(c,checkout,['lineReturnedQty','lineAvailableQty','pickedQty','markLineReturned','paidAmount','paidUnit','doAvoir','openExchSummary','openPay',...(vertical==='boutique'?['recordDeliveryCash']:[])]);
   const api={c,prefix,nodes,storage,timers,events,panel,exchange,$,$$};
   api.start=(amount,extra={})=>{api.receipts=[];timers.length=0;c.openPay({title:'Test',subtitle:'Test',amount,customerId:'customer',sale:{id:'sale'},
     onPaid:(parts,meta)=>{api.receipts.push({parts:JSON.parse(JSON.stringify(parts)),meta});return {};},...extra});};

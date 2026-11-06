@@ -5,13 +5,14 @@
  * lit et l'applique sur la journée d'activité (05:00), comme le Z :
  *  · le journal garde assez de jours pour retrouver les ventes de la fenêtre
  *    (au moins 7 jours, au plus 30 : au-delà le journal local dépasserait le
- *    quota du navigateur ; une vente plus ancienne n'est simplement pas
- *    retrouvée) ;
+ *    quota du navigateur ; une vente plus ancienne se lit sur le serveur, une
+ *    journée à la fois, quand la caissière choisit cette date : old-sales.js) ;
  *  · une vente hors fenêtre se retourne seulement avec l'accord d'un
  *    responsable : la caisse l'annonce et signe `windowOverride` dans
  *    l'accord (/api/pin/verify), que le serveur exige au remboursement et à
  *    l'émission d'un avoir (functions/api/_return-window.js). */
 import '../merchant-policies.js?v=4';
+import { tillNow } from './till-clock.js?v=2';
 
 const MIN_KEPT = 7, MAX_KEPT = 30;
 const policies = () => globalThis.KiwiPolicies || null;
@@ -24,7 +25,7 @@ export const retainDays = () => Math.max(MIN_KEPT, Math.min(MAX_KEPT, windowDays
 export function outsideWindow(at, dayKeyOf) {
   const P = policies();
   if (!P || !at) return false;
-  return !P.inReturnWindow(dayKeyOf(at), dayKeyOf(Date.now()), windowDays());
+  return !P.inReturnWindow(dayKeyOf(at), dayKeyOf(tillNow()), windowDays());
 }
 /* Le sous-titre de la page Échanges, avec la vraie fenêtre. */
 export function windowSentence() {

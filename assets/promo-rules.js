@@ -133,9 +133,11 @@
   /* The business day a moment belongs to: before 05:00 it is still the day
      before. Returns its date (YYYY-MM-DD), weekday (0 = Sunday) and the wall
      minutes of the moment. */
+  /* L'instant d'une promotion = celui de la vente : l'heure du comptoir (KiwiLive.now(), recalée sur le serveur), sinon l'appareil. */
+  function nowMs() { try { var t = Number(root.KiwiLive.now()); if (t > 0) return t; } catch (_) {} return Date.now(); }
   function businessMoment(now) {
     var config = clock();
-    var w = wall(now == null ? Date.now() : now, config.zone);
+    var w = wall(now == null ? nowMs() : now, config.zone);
     var date = new Date(Date.UTC(w.y, w.mo - 1, w.d));
     if (w.min < config.cutoff) date = new Date(date.getTime() - 86400000);
     return { date: date.toISOString().slice(0, 10), weekday: date.getUTCDay(), min: w.min };
@@ -143,6 +145,7 @@
 
 
   function status(p, now, surface) {
+    if (now == null) now = nowMs();
     var b = surface === 'menu' ? businessMoment(now) : null;
     // Preserve date-only boutique eligibility; compute the clock only for a timed window.
     var moment = b || (p && (p.days?.length || (p.start && p.end)) ? businessMoment(now) : null);
@@ -150,6 +153,6 @@
   }
 
 
-  root.KiwiPromoRules = Object.freeze({ normalize: normalize, businessMoment: businessMoment, clock: clock,
+  root.KiwiPromoRules = Object.freeze({ normalize: normalize, businessMoment: businessMoment, now: nowMs, clock: clock,
     inWindow: inWindow, status: status, price: price, money: money, down: down, toMin: toMin });
 })(/** @type {any} */ (globalThis).window || globalThis);

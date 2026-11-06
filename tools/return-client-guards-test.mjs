@@ -37,29 +37,30 @@ for (const [label, file] of [['boutique', 'assets/pos-boutique.js'], ['maison', 
   /* 1 · prix rendu */
   const sb = {};
   vm.createContext(sb);
-  vm.runInContext(`${slice(src, '  function returnRatio(sale) {', '  function saleCard(')}\n;this.api = { returnRatio, paidUnit };`, sb);
-  const { returnRatio, paidUnit } = sb.api;
+  sb.paidCents = (await import('../assets/pos-boutique/paid-share.js?guards=1')).paidCents;
+  vm.runInContext(`${slice(src, '  function lineReturnedQty(', '  function saleCard(')}\n;this.api = { paidAmount, paidUnit };`, sb);
+  const { paidAmount, paidUnit } = sb.api;
   const line = (unit, qty) => ({ unit, qty });
   const noReward = { lines: [line(100, 2)], total: 180 };
   ok(paidUnit(noReward, noReward.lines[0]) === 100, 'sans récompense, le prix rendu est le prix de la ligne, à l\'identique');
   const rewarded = { reward: '−10 %', lines: [line(100, 2)], total: 180 };
-  ok(paidUnit(rewarded, rewarded.lines[0]) === 90 && returnRatio(rewarded) === 0.9,
+  ok(paidUnit(rewarded, rewarded.lines[0]) === 90 && paidAmount(rewarded, rewarded.lines[0], 2) === 180,
     'une récompense de 10 % se retrouve dans le prix rendu (90 au lieu de 100)');
   const deposit = { reward: 'Café offert', kind: 'acompte', lines: [line(100, 2)], total: 50, balanceTotal: 180 };
   ok(paidUnit(deposit, deposit.lines[0]) === 90, 'le ratio se lit sur le prix total du ticket, pas sur l\'acompte versé');
   const odd = { reward: 'x', lines: [line(100, 3)], total: 299 };
   const each = paidUnit(odd, odd.lines[0]);
-  ok(each === 99.66 && each * 3 <= 299 + 1e-9, 'l\'arrondi est vers le bas : la somme des retours ne dépasse jamais l\'encaissé');
+  ok(each === 99.66 && paidAmount(odd, odd.lines[0], 3) === 299, 'r20 : rendre toutes les pièces rend exactement l\'encaissé (299,00), le centime restant va aux dernières pièces');
   const free = { reward: 'x', lines: [line(100, 1)], total: 120 };
   ok(paidUnit(free, free.lines[0]) === 100, 'jamais plus que le prix de la ligne (ticket plus cher, livraison par exemple)');
   const zero = { reward: 'x', lines: [line(100, 1)], total: 0 };
   ok(paidUnit(zero, zero.lines[0]) === 0, 'un ticket entièrement offert ne rend rien');
 
   /* les montants des retours passent tous par ce prix */
-  ok(/paidUnit\(s, l\) \* pickedQty\(ret, i, l\)/.test(src) && /fmtMAD\(paidUnit\(s, l\) \* availableQty\)/.test(src),
+  ok(/paidAmount\(s, l, pickedQty\(ret, i, l\)\)/.test(src) && /fmtMAD\(paidAmount\(s, l, availableQty\)\)/.test(src),
     'la fiche de retour affiche le prix payé');
   const avoirFn = slice(src, 'async function doAvoir()', 'function restoreLines(');
-  ok(/paidUnit\(sale, sale\.lines\[i\]\) \* quantities\.get\(i\)/.test(avoirFn) && !/\.unit \* quantities/.test(avoirFn),
+  ok(/paidAmount\(sale, sale\.lines\[i\], quantities\.get\(i\)\)/.test(avoirFn) && !/\.unit \* quantities/.test(avoirFn),
     'l\'avoir est calculé sur le prix payé');
   ok(/const diff = (?:Math\.round\(\(.*paidUnit\(sale, ln\)\) \* 100\) \/ 100|M\.toMad\(M\.toCents\(.*\) - M\.toCents\(paidUnit\(sale, ln\)\)\));/.test(src), 'l\'échange compare le remplacement au prix payé');
   ok(!/recordReturn\(sale, \[ex\.idx\], ln\.unit/.test(src), 'le registre des retours ne reprend plus le prix de ligne');

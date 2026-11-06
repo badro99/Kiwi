@@ -5,6 +5,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { createRequire } from 'node:module';
 import { world, load, source, TS } from './retail-money-harness.cjs';
+import { validateRetailTenders } from '../functions/api/_retail-tenders.js';
 const ROOT=process.env.KIWI_ROOT||path.resolve(import.meta.dirname,'..');
 let fc;try{fc=createRequire(path.join(ROOT,'app/package.json'))('fast-check');}
 catch{console.log('○ skip fast-check unavailable (npm --prefix app ci), retail money properties not executed');process.exit(0);}
@@ -24,7 +25,7 @@ const basket=fc.array(fc.record({price:fc.integer({min:1,max:16666}),promo:fc.in
 function ticket(w,rows,reward){w.c.P={};const lines=rows.map((r,i)=>{w.c.P['p'+i]={price:r.price/100};return{pid:'p'+i,qty:r.qty,remise:r.remise,promoPrice:Math.floor(r.price*(100-r.promo)/100)/100};});return{client:'customer',reward:{clientId:'customer',kind:'percent',value:reward},lines};}
 // The shared conversion is exercised through the production return journal writer.
 {
- const c=vm.createContext({IS_DEMO:false,P:{p:{name:'Article'}},STAFF:{},RETURN_LOG:[],saleClient:()=>null,persistReturnLog(){},ensureReturnCloud:()=>null});
+ const c=vm.createContext({IS_DEMO:false,tillNow:()=>Date.now(),P:{p:{name:'Article'}},STAFF:{},RETURN_LOG:[],saleClient:()=>null,persistReturnLog(){},ensureReturnCloud:()=>null});
  load(c,'assets/pos-boutique.js',['bqMoney','recordReturn']);
  for(const amount of [1.005,-1.005,2.675,0,19.995]) {
    c.recordReturn({id:'sale',lines:[{pid:'p',unit:amount}]},[0],amount,'','avoir','');
@@ -40,6 +41,9 @@ for(const vertical of ['boutique','maison']){
    for(const part of parts)w.part(part.cents/100,part.method);
    assert.equal(w.receipts.length,1);const receipt=w.receipts[0];assert.equal(C(receipt.meta.paidNow),total);
    assert.equal(sum(receipt.parts.map(x=>C(x.amount))),total);assert.equal(sum(Array.from(c.bqPaymentParts(receipt.parts),x=>x.amountCents)),total);
+   // Composed with the REAL server rule (r20): whatever the till finishes locally, the route accepts (no more than eight lines).
+   const sent=Array.from(c.bqPaymentParts(receipt.parts),x=>({method:x.method,amountCents:x.amountCents})),received=sum(sent.filter(x=>x.method!=='credit'&&x.method!=='delivery').map(x=>x.amountCents));
+   assert.ok(sent.length<=8,'at most eight tender lines reach the server');assert.ok(validateRetailTenders(sent,received,total,0),'the real retail tender validator accepts the completed checkout');
    const button=w.$(`#${p}-${parts.at(-1).method==='cash'?'cash':parts.at(-1).method==='card'?'card':'external'}-ok`);button?.onclick();assert.equal(w.receipts.length,1);
  }));
  await strict(vertical+' 25/50 percent sharing and final remainder conserve the ticket to a centime',fc.property(positive,fc.array(fc.constantFrom('0.25','0.5'),{maxLength:11}),(total,shares)=>{
@@ -67,7 +71,11 @@ for(const vertical of ['boutique','maison']){
  await strict(vertical+' positive loyalty returns over all quantities never exceed paid ticket; returned quantities stay capped',fc.property(basket,fc.integer({min:0,max:99}),(rows,reward)=>{
    const t=ticket(w,rows,reward),tot=c.ticketTotals(t);if(!tot.total)return;
    const sale={total:tot.total,reward:t.reward,lines:t.lines.map(l=>({...l,unit:c.lineUnit(l)}))};
-   const credit=sum(sale.lines.map(l=>C(c.paidUnit(sale,l))*l.qty));assert.ok(credit<=C(sale.total));
+   // r20: returning every piece, ONE AT A TIME, refunds exactly what was paid (or the lines' value when the ticket paid more): no centime lost to per-piece rounding.
+   const gross=sum(sale.lines.map(l=>C(l.unit)*l.qty));let refunded=0;
+   for(const l of sale.lines)for(let k=0;k<l.qty;k++){const cents=C(c.paidAmount(sale,l,1));assert.ok(cents>=0);refunded+=cents;c.markLineReturned(l,1,'piece');}
+   assert.equal(refunded,Math.min(C(sale.total),gross),'a full return, piece by piece, conserves the paid centimes');
+   for(const l of sale.lines)l.returnedQty=0,l.returned=false;
    for(const l of sale.lines){c.markLineReturned(l,l.qty,'return');c.markLineReturned(l,l.qty,'retry');assert.equal(c.lineAvailableQty(l),0);assert.equal(c.lineReturnedQty(l),l.qty);}
  }));
  await strict(vertical+' actual return-for-credit issues only the picked paid quantities and blocks a simultaneous retry',fc.asyncProperty(fc.integer({min:100,max:100000}),fc.integer({min:1,max:10}),fc.integer({min:0,max:99}),fc.nat(),async(unit,qty,discount,pick)=>{
