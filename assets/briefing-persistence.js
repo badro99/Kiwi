@@ -40,9 +40,29 @@
     /* One record per business day (the most recently edited wins), then the
        retention keeps the most recent BUSINESS days, not the most recently
        edited ones: reopening an old briefing must not displace a newer day. */
+    /* The day's record is chosen whole, but what the cashier did to a card is
+       not: two devices that each handled a different card of the same day keep
+       both acknowledgements (per card, the latest time), whichever record wins. */
+    var states = Object.create(null);
+    days.forEach(function (row) {
+      var bucket = states[row.day] || (states[row.day] = { handled: {}, dismissed: {} });
+      ['handled', 'dismissed'].forEach(function (field) {
+        var map = row[field];
+        if (!map || typeof map !== 'object' || Array.isArray(map)) return;
+        Object.keys(map).forEach(function (id) {
+          var at = +map[id] || 0;
+          if (!(id in bucket[field]) || at > bucket[field][id]) bucket[field][id] = at;
+        });
+      });
+    });
     var perDay = days.filter(function (row) {
       if (seen[row.day]) return false;
       seen[row.day] = true; return true;
+    }).map(function (row) {
+      var bucket = states[row.day], next = Object.assign({}, row);
+      if (Object.keys(bucket.handled).length || row.handled) next.handled = bucket.handled;
+      if (Object.keys(bucket.dismissed).length || row.dismissed) next.dismissed = bucket.dismissed;
+      return next;
     });
     var keepDays = Object.create(null);
     perDay.map(function (row) { return String(row.day); }).sort().reverse().slice(0, MAX_DAYS).forEach(function (d) { keepDays[d] = true; });

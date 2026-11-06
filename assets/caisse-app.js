@@ -2556,10 +2556,21 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
         tableSettlement().project(table, { reopenedBill: saleId });
         delete tableClosedAt[tableKey(target)];
         delete orders[target];
-        currentOrder().replaceTable(target, snap.lines.slice(0, 40).map((line, index) => {
+        currentOrder().replaceTable(target, snap.lines.map((line, index) => {
           const qty = Number.isFinite(Number(line.qty)) && Number(line.qty) > 0 ? Number(line.qty) : 1;
-          return { id: 'reopen-' + index, name: String(line.name || 'Article'), qty,
+          /* Une note enregistrée avant ce correctif n'a que nom, quantité et prix :
+             elle revient telle quelle. Sinon l'identité, les options et la note
+             d'origine reviennent avec la ligne. */
+          const restored = { id: line.id != null && line.id !== '' ? line.id : 'reopen-' + index,
+            name: String(line.baseName || line.name || 'Article'), qty,
             price: Number(line.total || 0) / qty, sent: true, reopenedBill: true };
+          if (line.uid) restored.uid = line.uid;
+          if (line.note) restored.note = line.note;
+          if (Array.isArray(line.opts) && line.opts.length) restored.opts = JSON.parse(JSON.stringify(line.opts));
+          if (line.optSig) restored.optSig = line.optSig;
+          ['kind', 'formulaUid', 'formulaName', 'slotLabel'].forEach(key => { if (line[key]) restored[key] = line[key]; });
+          if (line.promo && typeof line.promo === 'object') restored.promo = JSON.parse(JSON.stringify(line.promo));
+          return restored;
         }));
         if (snap.split && Array.isArray(snap.split.parts)) {
           const flowId = String(snap.split.id || result.splitFlowId || '');

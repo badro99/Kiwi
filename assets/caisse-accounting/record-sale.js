@@ -15,6 +15,26 @@
           return Number.isFinite(c) && c > 0 ? Math.round(c * 100) / 100 : null;
         } catch (_) { return null; }
       }
+      /* Une ligne de l'addition telle qu'elle était : identité de l'article,
+         options, note, formule et promotion, pour que la note rouverte soit
+         l'ordre d'origine, modifiable, et non un reçu à plat. */
+      function snapshotLine(line) {
+        const qty = Math.max(1, Number(line.qty) || 1);
+        const saved = {
+          name: String(line.name || ''), qty,
+          total: money(Number(line.total) || 0),
+          price: money(Number(line.price ?? line.unit) || ((Number(line.total) || 0) / qty)),
+        };
+        if (line.id != null && line.id !== '') saved.id = String(line.id);
+        if (line.uid) saved.uid = String(line.uid);
+        if (line.baseName) saved.baseName = String(line.baseName);
+        if (line.note) saved.note = String(line.note);
+        if (Array.isArray(line.opts) && line.opts.length) saved.opts = JSON.parse(JSON.stringify(line.opts));
+        if (line.optSig) saved.optSig = String(line.optSig);
+        ['kind', 'formulaUid', 'formulaName', 'slotLabel'].forEach(key => { if (line[key]) saved[key] = String(line[key]); });
+        if (line.promo && typeof line.promo === 'object') saved.promo = JSON.parse(JSON.stringify(line.promo));
+        return saved;
+      }
       amount = money(amount);
       /* A cashier ticket can temporarily have no server visit (offline relay).
          Its immutable order number is still enough to recognize a second tap
@@ -121,7 +141,8 @@
       }
       if (settlementTable && tables[settlementTable]) {
         /* markPaid() clears the table immediately after the final tender. Keep
-         * a bounded bill snapshot on the immutable local receipt so an audited
+         * the whole bill snapshot (no line cap: a table built over many kitchen
+         * batches restores every original line) on the immutable local receipt so an audited
          * void can restore the same note after a reload, not manufacture a new
          * kitchen order or silently charge the whole split again. */
         const table = tables[settlementTable];
@@ -131,15 +152,11 @@
           table: String(settlementTable), covers: Math.max(1, Number(table.covers) || 1),
           orderNo: String(table.orderNo || settledOrderRef(settlementTable) || ''),
           ref: String(entry.ref || ''),
-          lines: source.slice(0, 40).map(line => ({
-            name: String(line.name || ''), qty: Math.max(1, Number(line.qty) || 1),
-            total: money(Number(line.total) || 0),
-            price: money(Number(line.price ?? line.unit) || ((Number(line.total) || 0) / (Number(line.qty) || 1))),
-          })),
+          lines: source.map(snapshotLine),
           split: split && splitState.flow ? {
             id: String(splitState.flow.id || split.flowId || ''),
             parts: splitState.flow.parts.slice(0, 50).map(part => ({
-              ...part, lines: Array.isArray(part.lines) ? part.lines.slice(0, 40).map(line => ({ ...line })) : [],
+              ...part, lines: Array.isArray(part.lines) ? part.lines.map(line => ({ ...line })) : [],
             })),
             total: splitState.total, mode: splitState.splitMode,
           } : null,

@@ -19,7 +19,7 @@
 // names a missing column must degrade one field, never blank the room.
 
 import { json, entitledMerchant } from '../../auth/_lib.js';
-import { businessDayStart, merchantZone, merchantCutoff } from '../_business-day.js';
+import { addBusinessDays, businessBoundary, businessDate, businessDayStart, merchantZone, merchantCutoff } from '../_business-day.js';
 
 const STATUSES = new Set(['khawya', 'a-commander', 'ka-yaklo', 'bgha-ykhlass', 'ka-tkhdam', 'khlass']);
 const OPEN_ORDER = "('pending','accepted','ready','served')";
@@ -132,6 +132,8 @@ export async function onRequestGet({ request, env }) {
   const now = Date.now();
   const [zone, cutoff] = await Promise.all([merchantZone(env, merchant), merchantCutoff(env, merchant)]);
   const dayStart = businessDayStart(now, cutoff, zone);
+  /* The next boundary, not dayStart + 24 h: a clock-change day lasts 23 or 25 hours. */
+  const dayEnd = businessBoundary(addBusinessDays(businessDate(now, cutoff, zone), 1), cutoff, zone);
 
   const errors = [];
   let doc = {};
@@ -196,7 +198,7 @@ export async function onRequestGet({ request, env }) {
     requests: Array.isArray(doc.requests) ? doc.requests : [],
     sessions, bills: bills || [], turns: turns || [], sales: sales || [], now,
   });
-  return json({ ok: true, merchant, dayStart, tillSeen, ...body,
+  return json({ ok: true, merchant, dayStart, dayEnd, tillSeen, ...body,
     errors,
     partial: { bills: sessions.length > 0 && !bills, stats: !turns, revenue: !sales, sessions: sessionsFailed } });
 }

@@ -68,7 +68,7 @@ var SHELL = [
   '/assets/daterange/activity.js?v=7',
   '/assets/daterange/revenue.js?v=5',
   '/assets/daterange/kpi.js?v=25',
-  '/assets/daterange/hero.js?v=9',
+  '/assets/daterange/hero.js?v=10',
   '/assets/team/roster-list.js?v=6',
   '/assets/team/invitations.js?v=9',
   '/assets/team/venue-scope.js?v=6',
@@ -124,13 +124,13 @@ var SHELL = [
   '/assets/dashboard-shell.css?v=7',
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
-  '/assets/caisse-accounting.js?v=25',
+  '/assets/caisse-accounting.js?v=26',
   '/assets/caisse-floor.js?v=19',
   '/assets/caisse-kitchen.js?v=29',
   '/assets/caisse/receipts.js?v=2',
   '/assets/caisse/closing.js?v=2',
   '/assets/caisse/workflows-loader.js?v=3',
-  '/assets/caisse/catalogue.js?v=12',
+  '/assets/caisse/catalogue.js?v=13',
   '/assets/caisse/till-frame.js?v=16',
   '/assets/caisse/orders.js?v=2',
   '/assets/caisse/payment.js?v=8',
@@ -143,7 +143,7 @@ var SHELL = [
   '/assets/caisse/handover.js?v=2',
   '/assets/caisse/inventory.js?v=8',
   '/assets/caisse/offline.js?v=10',
-  '/assets/caisse-app.js?v=40',
+  '/assets/caisse-app.js?v=41',
   '/assets/caisse-loyalty-reward.js?v=7',
   '/assets/caisse-refresh.js?v=9',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
@@ -209,7 +209,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
-  '/assets/pages/dashboard-startup.js?v=203',
+  '/assets/pages/dashboard-startup.js?v=204',
   '/assets/pages/dashboard-loader.js?v=78',
   '/assets/hotel/model.js?v=10',
   '/assets/hotel/views.js?v=9',
@@ -233,8 +233,8 @@ var SHELL = [
   '/assets/cancellation-history.js?v=3',
   '/assets/weather.js?v=1',
   '/assets/briefing-rules.js?v=7',
-  '/assets/briefing-persistence.js?v=9',
-  '/assets/briefing.js?v=48',
+  '/assets/briefing-persistence.js?v=10',
+  '/assets/briefing.js?v=49',
   '/assets/ai-telemetry.js?v=1',
   '/assets/agent-data.js?v=7',
   '/assets/agent-features.js?v=5',
@@ -307,8 +307,8 @@ var SHELL = [
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=5',
   '/assets/sales-history.js?v=12',
-  '/assets/dateRange.js?v=146',
-  '/assets/daterange/renderers.js?v=44',
+  '/assets/dateRange.js?v=147',
+  '/assets/daterange/renderers.js?v=45',
   '/assets/agent/ui.js?v=3',
   '/assets/mobile-nav.js?v=9',
   '/assets/kit/motion.js?v=1',
@@ -327,7 +327,7 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2061',
   // The Plan de salle's live-room poller (fail-soft without network).
-  '/assets/floorplan-live.js?v=13',
+  '/assets/floorplan-live.js?v=14',
   '/assets/oppo-cards.js?v=9',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
@@ -386,7 +386,7 @@ var SHELL = [
   /* Le geste qui pose un appairage · et qui déclenche la purge ci-dessus. La
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */
-  '/assets/pairing-commit.js?v=8',
+  '/assets/pairing-commit.js?v=9',
   /* Le verrou d'une caisse dépairée ou réappairée en plein service. Sans lui
      hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
   '/assets/till-tenant.js?v=7',
@@ -412,7 +412,7 @@ var SHELL = [
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
   '/assets/promo-rules.js?v=15',
-  '/assets/promos.js?v=22',
+  '/assets/promos.js?v=23',
   '/assets/boutique-promos-dashboard.css?v=5',
   '/assets/boutique-promos-dashboard.js?v=37',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
@@ -421,7 +421,7 @@ var SHELL = [
   '/assets/venue-store.js?v=6',
   '/assets/discount-policy.js?v=4',
   '/assets/merchant-policies.js?v=4',
-  '/assets/menu-promos.js?v=18',
+  '/assets/menu-promos.js?v=19',
   '/assets/retail-balances.js?v=7',
   '/assets/retail-sale-hold.js?v=8',
   '/assets/repeat-sale-guard.js?v=3',

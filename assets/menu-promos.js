@@ -45,7 +45,7 @@
   var TZ = 'Africa/Casablanca';
   var BUSINESS_DAY_START_MIN = 5 * 60;      /* the till's 05:00 boundary */
   var KINDS = ['percent', 'amount', 'fixed'];
-  var MAX_PROMOS = 40;
+  var MAX_PROMOS = 40, MAX_CATS = 60, MAX_ITEMS = 400;
 
   var str = function (v, max) { return String(v == null ? '' : v).trim().slice(0, max); };
   var money = rules.money;
@@ -71,9 +71,9 @@
       var kind = common.kind, value = common.value;
       if (!(value > 0) && kind !== 'fixed') return null;
       var all = p.all === true;
-      var cats = (Array.isArray(p.cats) ? p.cats.slice(0, 60) : []).map(function (x) { return str(x, 40); })
+      var cats = (Array.isArray(p.cats) ? p.cats.slice(0, MAX_CATS) : []).map(function (x) { return str(x, 40); })
         .filter(function (x) { return x && (!catIds || catIds.has(x)); });
-      var items = (Array.isArray(p.items) ? p.items.slice(0, 400) : []).map(function (x) { return str(x, 40); })
+      var items = (Array.isArray(p.items) ? p.items.slice(0, MAX_ITEMS) : []).map(function (x) { return str(x, 40); })
         .filter(function (x) { return x && (!itemIds || itemIds.has(x)); });
       if (!all && !cats.length && !items.length) return null;
       seen.add(id);
@@ -89,6 +89,22 @@
         createdAt: Math.max(0, Math.round(Number(p.createdAt) || 0)),
       };
     }).filter(Boolean).slice(0, MAX_PROMOS);
+  }
+
+  /* What sanitize() would silently reduce for size alone: promotions beyond the
+     limit and target lists cut short. A writer (the menu POST, an import) asks
+     here first and refuses with these names, so a merchant learns which
+     advertised rule would be omitted instead of finding it gone later. */
+  function audit(list) {
+    var omitted = [], rows = Array.isArray(list) ? list : [];
+    rows.forEach(function (p, index) {
+      if (!p || typeof p !== 'object') return;
+      var ref = { id: str(p.id, 40), name: str(p.name, 60) };
+      if (index >= MAX_PROMOS) { omitted.push({ id: ref.id, name: ref.name, reason: 'promo-limit', limit: MAX_PROMOS }); return; }
+      if (Array.isArray(p.cats) && p.cats.length > MAX_CATS) omitted.push({ id: ref.id, name: ref.name, reason: 'cats-limit', limit: MAX_CATS });
+      if (Array.isArray(p.items) && p.items.length > MAX_ITEMS) omitted.push({ id: ref.id, name: ref.name, reason: 'items-limit', limit: MAX_ITEMS });
+    });
+    return { ok: !omitted.length, omitted: omitted };
   }
 
   /* Is the promotion running at `now`? */
@@ -222,7 +238,7 @@
 
   var api = {
     TZ: TZ, KINDS: KINDS.slice(), clock: rules.clock,
-    sanitize: sanitize, isActive: isActive, status: status, resolve: resolve,
+    sanitize: sanitize, audit: audit, isActive: isActive, status: status, resolve: resolve,
     badge: badge, businessMoment: businessMoment, stackKey: stackKey,
   };
   root.KiwiMenuPromos = api;

@@ -696,6 +696,7 @@ for (const test of [
   'current-order-properties-test.mjs',
   'table-settlement-properties-test.mjs',
   'restaurant-reopen-test.mjs',
+  'restaurant-reopen-fidelity-test.mjs',
   'restaurant-reopen-ui-test.mjs',
   'restaurant-reopen-browser-test.mjs',
   'restaurant-reopen-resume-test.mjs',
@@ -1591,6 +1592,7 @@ section('Whole-project regressions');
     /* Promotions boutique : la meilleure seule s'applique, jamais au-dessus du
        rayon, sur la journée d'exploitation ; deux appareils convergent. */
     'promos-properties-test.mjs',
+    'promos-persistence-and-limits-test.mjs',
     'cents-precision-test.mjs',
     'sale-return-race-properties-test.mjs',
     'operating-day-sync-status-test.mjs',
@@ -1794,6 +1796,7 @@ section('Whole-project regressions');
        caisse et écrivait les quatre clés à la main — sans la purge du commerce
        précédent. */
     'pairing-parity-test.mjs',
+    'pairing-commit-atomic-test.mjs',
     'split-bill-tender-test.mjs',
     'business-day-timezone-test.mjs',
     'zone-law-test.mjs',
@@ -2235,7 +2238,7 @@ section('Whole-project regressions');
        ouverte garde le titre de la page ; le retour à l'accueil rend le nœud à
        dash.breadcrumb. Vrai dashboard.html, vrais clics. */
     'dashboard-breadcrumb-language-test.mjs',
-    'dashboard-truth-test.mjs', 'dashboard-goal-suggestion-test.mjs',
+    'dashboard-truth-test.mjs', 'dashboard-goal-suggestion-test.mjs', 'hero-suggested-goal-memo-test.mjs',
     'team-truth-test.mjs',
     'team-member-editor-test.mjs',
     'team-editor-keyboard-browser-test.mjs',
@@ -2451,6 +2454,7 @@ section('Whole-project regressions');
     /* Le plan de salle du patron lit la salle que la caisse publie : statut,
        couverts, addition ouverte, demandes, tours du jour. Lecture seule. */
     'floor-live-test.mjs',
+    'floor-booking-day-test.mjs',
     'pin-dashboard-test.mjs',
     /* La porte du dashboard ne garde aucun code en clair (kiwiPins retiré) et n'en
        compare aucun : le serveur juge d'abord, une ligne salée prouvée en ligne

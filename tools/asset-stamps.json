@@ -168,24 +168,24 @@
     "sha": "75fc4494935af382"
   },
   "assets/briefing-persistence.js": {
-    "v": "9",
-    "sha": "86af4fe8e7a18a66"
+    "v": "10",
+    "sha": "c1eaceb4e22da326"
   },
   "assets/briefing-rules.js": {
     "v": "7",
     "sha": "4aa92c824792fc5e"
   },
   "assets/briefing.js": {
-    "v": "48",
-    "sha": "fa5e893a7db972db"
+    "v": "49",
+    "sha": "c5c2aa7df08b2e21"
   },
   "assets/caisse-accounting.js": {
-    "v": "25",
-    "sha": "91ea2cde7a3fcfab"
+    "v": "26",
+    "sha": "a4ceb50a3c638c28"
   },
   "assets/caisse-app.js": {
-    "v": "40",
-    "sha": "629ae76ad20c11be"
+    "v": "41",
+    "sha": "70e10133bdc657b4"
   },
   "assets/caisse-dna.css": {
     "v": "10",
@@ -272,8 +272,8 @@
     "sha": "2da470cdcee6759e"
   },
   "assets/caisse/catalogue.js": {
-    "v": "12",
-    "sha": "be94e34370457a28"
+    "v": "13",
+    "sha": "2d7b199a071d7b75"
   },
   "assets/caisse/closing.js": {
     "v": "2",
@@ -456,8 +456,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "146",
-    "sha": "a4640cd88f5f6292"
+    "v": "147",
+    "sha": "a2f1b80a7cbf6628"
   },
   "assets/daterange/activity.js": {
     "v": "7",
@@ -472,8 +472,8 @@
     "sha": "56b7975f2e5e6c44"
   },
   "assets/daterange/hero.js": {
-    "v": "9",
-    "sha": "828db62c5bd6bca8"
+    "v": "10",
+    "sha": "c2c3ffa8fefb8328"
   },
   "assets/daterange/kpi.js": {
     "v": "25",
@@ -488,8 +488,8 @@
     "sha": "f91815b2b1f3bce4"
   },
   "assets/daterange/renderers.js": {
-    "v": "44",
-    "sha": "b80fea76ec6a3400"
+    "v": "45",
+    "sha": "e19720da2e93b3dc"
   },
   "assets/daterange/revenue.js": {
     "v": "5",
@@ -616,8 +616,8 @@
     "sha": "73d2aab1aa7669a3"
   },
   "assets/floorplan-live.js": {
-    "v": "13",
-    "sha": "d9005d8530a733a6"
+    "v": "14",
+    "sha": "d73f88b02b88b09a"
   },
   "assets/fonts/inter-tight-latin-ext.woff2": {
     "v": "1",
@@ -1244,8 +1244,8 @@
     "sha": "fe8caa503b781d89"
   },
   "assets/menu-promos.js": {
-    "v": "18",
-    "sha": "4cb4ff6643cab622"
+    "v": "19",
+    "sha": "bdb589cc9cc6b284"
   },
   "assets/menu-scan-reader.js": {
     "v": "9",
@@ -1452,8 +1452,8 @@
     "sha": "4e68527e59cc46eb"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "203",
-    "sha": "24adcb13bf075eb1"
+    "v": "204",
+    "sha": "a9d89ecb0ec975c4"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1472,8 +1472,8 @@
     "sha": "58807c0272c55d44"
   },
   "assets/pairing-commit.js": {
-    "v": "8",
-    "sha": "9b44df4842abca49"
+    "v": "9",
+    "sha": "8020f203ba9ba4ce"
   },
   "assets/persistence-notices.js": {
     "v": "2",
@@ -1916,8 +1916,8 @@
     "sha": "1b4892e5caf1382e"
   },
   "assets/promos.js": {
-    "v": "22",
-    "sha": "94ee5096dcb0d66e"
+    "v": "23",
+    "sha": "83f7dba1116b4e8f"
   },
   "assets/pwa-update.js": {
     "v": "368",
