@@ -1,4 +1,4 @@
-import { createData, createTicketState } from './tickets-data.js?v=11';
+import { createData, createTicketState } from './tickets-data.js?v=12';
 import { createBoard } from './tickets-board.js?v=7';
 import { createComposer } from './tickets-composer.js?v=5';
 import { createThread } from './tickets-thread.js?v=3';
@@ -101,7 +101,7 @@ import { draftFallback } from './tickets-recovery.js?v=5';
       'empty.done.title': 'Rien de terminé pour l’instant',
       'empty.done.body': 'Les tickets testés restent ici 20 jours.',
       'load.failed': 'Impossible de charger les tickets',
-      'error.uncertain-write': 'Résultat incertain. Vérifiez les tickets avant de réessayer.',
+      'error.uncertain-write': 'Résultat incertain : l’envoi a peut-être abouti. Vérifiez la liste des tickets. Un rapport renvoyé tel quel ne crée pas de doublon.',
       'error.schema-not-ready': 'La base des tickets est en préparation. Réessayez dans un instant.',
       'error.no-media': 'Le stockage des images est indisponible pour le moment.',
       'error.text-required': 'Écrivez une courte description avant de publier.',
@@ -228,7 +228,7 @@ import { draftFallback } from './tickets-recovery.js?v=5';
       'empty.done.title': 'Nothing completed yet',
       'empty.done.body': 'Tested tickets stay here for 20 days.',
       'load.failed': 'Could not load tickets',
-      'error.uncertain-write': 'Result uncertain. Check the tickets before retrying.',
+      'error.uncertain-write': 'Result uncertain: the send may have gone through. Check the ticket list. A report sent again unchanged does not create a duplicate.',
       'error.schema-not-ready': 'The ticket database is being prepared. Try again shortly.',
       'error.no-media': 'Image storage is not available right now.',
       'error.text-required': 'Write a short description before publishing.',
@@ -358,7 +358,7 @@ import { draftFallback } from './tickets-recovery.js?v=5';
       'empty.done.title': 'لا شيء منجز بعد',
       'empty.done.body': 'تبقى التذاكر المختبرة هنا لمدة 20 يومًا.',
       'load.failed': 'تعذر تحميل التذاكر',
-      'error.uncertain-write': 'النتيجة غير مؤكدة. تحقق من التذاكر قبل المحاولة مجددا.',
+      'error.uncertain-write': 'النتيجة غير مؤكدة: ربما نجح الإرسال. تحقق من قائمة التذاكر. إعادة إرسال التقرير كما هو لا تنشئ نسخة مكررة.',
       'error.schema-not-ready': 'قاعدة بيانات التذاكر قيد التجهيز. أعد المحاولة بعد قليل.',
       'error.no-media': 'تخزين الصور غير متاح حاليًا.',
       'error.text-required': 'اكتب وصفًا قصيرًا قبل النشر.',

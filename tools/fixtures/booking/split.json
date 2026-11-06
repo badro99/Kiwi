@@ -325,69 +325,74 @@
           "start": 9464,
           "end": 9597,
           "offset": 614,
-          "length": 2596,
-          "replacement": "\n  function phoneValue(...args) { return parts.submission.phoneValue(...args); }"
+          "length": 4152,
+          "replacement": "\n  function phoneValue(...args) { return parts.submission.phoneValue(...args); }",
+          "was": 2596
         },
         {
           "start": 9597,
           "end": 10032,
-          "offset": 3214,
+          "offset": 4770,
           "length": 432,
           "replacement": "\n  function emailOk(...args) { return parts.submission.emailOk(...args); }"
         },
         {
           "start": 10032,
           "end": 10334,
-          "offset": 3650,
+          "offset": 5206,
           "length": 299,
           "replacement": "\n  function badEmailMsg(...args) { return parts.submission.badEmailMsg(...args); }"
         },
         {
           "start": 25328,
           "end": 25720,
-          "offset": 3953,
+          "offset": 5509,
           "length": 389,
           "replacement": "\n  function paymentNote(...args) { return parts.submission.paymentNote(...args); }"
         },
         {
           "start": 25720,
           "end": 27632,
-          "offset": 4346,
-          "length": 1909,
-          "replacement": "\n  function details(...args) { return parts.submission.details(...args); }"
+          "offset": 5902,
+          "length": 2000,
+          "replacement": "\n  function details(...args) { return parts.submission.details(...args); }",
+          "was": 1909
         },
         {
           "start": 27632,
           "end": 30458,
-          "offset": 6259,
-          "length": 1585,
-          "replacement": "\n  function submit(...args) { return parts.submission.submit(...args); }"
+          "offset": 7906,
+          "length": 1642,
+          "replacement": "\n  function submit(...args) { return parts.submission.submit(...args); }",
+          "was": 1585
         },
         {
           "start": 36410,
           "end": 37205,
-          "offset": 7849,
+          "offset": 9553,
           "length": 791,
           "replacement": "\n  function success(...args) { return parts.submission.success(...args); }"
         },
         {
           "start": 45808,
           "end": 46983,
-          "offset": 8644,
-          "length": 1172,
-          "replacement": "\n  function hotelDetails(...args) { return parts.submission.hotelDetails(...args); }"
+          "offset": 10348,
+          "length": 1263,
+          "replacement": "\n  function hotelDetails(...args) { return parts.submission.hotelDetails(...args); }",
+          "was": 1172
         },
         {
           "start": 46983,
           "end": 50393,
-          "offset": 9820,
-          "length": 2116,
-          "replacement": "\n  function submitHotel(...args) { return parts.submission.submitHotel(...args); }"
+          "offset": 11615,
+          "length": 2173,
+          "replacement": "\n  function submitHotel(...args) { return parts.submission.submitHotel(...args); }",
+          "was": 2116
         },
         {
           "start": 50393,
           "end": 50876,
-          "offset": 11940,
+          "offset": 13792,
           "length": 480,
           "replacement": "\n  function hotelSuccess(...args) { return parts.submission.hotelSuccess(...args); }"
         }

@@ -115,7 +115,7 @@
     if (dataLoad) return dataLoad;
     dataLoad = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = '/assets/onboarding-data.js?v=12';
+      script.src = '/assets/onboarding-data.js?v=13';
       const timer = setTimeout(() => failed(), 4000);
       const failed = () => { clearTimeout(timer); dataLoad = null; script.remove(); reject(new Error('onboarding-data')); };
       script.onload = () => { clearTimeout(timer); window.KiwiOnboardingData ? resolve(window.KiwiOnboardingData) : failed(); };

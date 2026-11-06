@@ -81,8 +81,16 @@
   function nativeSheet(spec) {
     return new Promise(function (resolve) {
       var id = 'sheet-' + (++sheetSeq);
-      var timer = setTimeout(function () { finish('dismiss'); }, 60000);
-      function finish(action) { clearTimeout(timer); delete sheetWaiters[id]; window.removeEventListener('pagehide', cancel); resolve(action); }
+      var timer = setTimeout(expire, 60000), grace;
+      function finish(action) { clearTimeout(timer); clearTimeout(grace); delete sheetWaiters[id]; window.removeEventListener('pagehide', cancel); resolve(action); }
+      /* A sheet still on screen is not abandoned silently: the host is asked to
+         close it (and answers "dismiss", or the action the person just tapped),
+         and the waiter is released by that answer. If the host never answers
+         (older shell, lost callback) the grace period releases it anyway. */
+      function expire() {
+        try { window.webkit.messageHandlers.kiwiShell.postMessage({ sheetDismiss: id }); } catch (_) {}
+        grace = setTimeout(function () { finish('dismiss'); }, 3000);
+      }
       function cancel() { finish('dismiss'); }
       sheetWaiters[id] = finish;
       window.addEventListener('pagehide', cancel);

@@ -26,18 +26,41 @@ export function createBookingSubmission(context) {
   async function submitRequest(form, key, ref, payload, onSuccess) {
     form.querySelector('[type=submit]').disabled=true;
     const { deadlineFetch } = await import('./request-deadline.mjs');
-    const response = await deadlineFetch('/api/booking', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ merchant, ref, lang: state.lang, ...payload })
-    });
+    /* Once the request left this page, a dropped connection says nothing about
+       what the server did: it is uncertain, never a plain "unable to load". The
+       deadline keeps its own message (retry with the same details, same ref). A
+       server answer carrying an error code is neither. */
+    let response;
+    try {
+      response = await deadlineFetch('/api/booking', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchant, ref, lang: state.lang, ...payload })
+      });
+    } catch (error) { throw error.message === 'request-timeout' ? error : Object.assign(new Error('transport-uncertain'), { cause: error }); }
     const result = await response.json().catch((error) => { if (error.message === 'request-timeout') throw error; throw new Error('response-uncertain'); });
     if (!response.ok) throw new Error(result.error || 'error');
-    delete retryRefs[key]; ssDel(key); ssDel(key + 'Intent');
+    delete retryRefs[key]; ssDel(key); ssDel(key + 'Intent'); state.guest = null;
     onSuccess(result);
   }
 
   function uncertainReply() {
     return state.lang === 'ar' ? 'تعذّر قراءة تأكيد الحجز. قد يكون الحجز قد سُجّل. أعد المحاولة من هذه الصفحة بنفس المرجع.' : state.lang === 'en' ? 'Booking confirmation could not be read. Your booking may have been saved. Retry from this page with the same reference.' : 'Confirmation illisible. Votre réservation a peut-être été enregistrée. Réessayez depuis cette page avec la même référence.';
+  }
+
+  function transportUncertain() {
+    return state.lang === 'ar' ? 'انقطع الاتصال أثناء الإرسال. قد يكون الحجز قد سُجّل. أعد المحاولة من هذه الصفحة بنفس المرجع.' : state.lang === 'en' ? 'The connection dropped while sending. Your booking may have been saved. Retry from this page with the same reference.' : 'Connexion interrompue pendant l’envoi. Votre réservation a peut-être été enregistrée. Réessayez depuis cette page avec la même référence.';
+  }
+
+  /* What the guest typed survives a trip back to the slot list (the automatic
+     return after a taken slot included). */
+  function keepGuest(form) {
+    const read = () => { state.guest = {}; ['name', 'phone', 'email', 'note'].forEach((k) => { const el = form.elements && form.elements[k]; if (el) state.guest[k] = el.value; }); };
+    form.addEventListener('input', read);
+    return read;
+  }
+  function restoreGuest(form) {
+    const g = state.guest || {};
+    ['name', 'phone', 'email', 'note'].forEach((k) => { const el = form.elements && form.elements[k]; if (el && g[k]) el.value = g[k]; });
   }
 
   function phoneValue(v) {
@@ -68,7 +91,9 @@ export function createBookingSubmission(context) {
     }
     ))+'</strong></div><div><span>'+esc(t('price'))+'</span><strong>'+(+state.service.price>0? esc(money(state.service.price)):esc(t('free')))+'</strong></div>'+(+state.service.deposit>0? '<div data-deposit><span>'+esc(t('deposit'))+'</span><strong>'+esc(money(state.service.deposit))+'</strong></div>':'')+'<p data-payment-note>'+esc(paymentNote())+'</p></aside><div class="bk-error full" data-error role="alert" aria-live="assertive"></div><div class="bk-actions full"><button type="button" class="bk-btn" data-back>'+esc(t('back'))+'</button><button class="bk-btn primary" type="submit">'+esc(t('confirm'))+'</button></div></form></div>');
     var form=app.querySelector('[data-form]');
-    app.querySelector('[data-back]').onclick=times;
+    restoreGuest(form);
+    const saveGuest=keepGuest(form);
+    app.querySelector('[data-back]').onclick=function() { saveGuest(); times() };
     form.onsubmit=submit
   }
 
@@ -87,7 +112,7 @@ export function createBookingSubmission(context) {
     try {
       ref=retryRef('kiwiBookingRef','web_',form);
       await submitRequest(form, 'kiwiBookingRef', ref, {
-          serviceId: state.service.id,startAt: state.slot,partySize: party(),customer: {
+          serviceId: state.service.id,startAt: state.slot,partySize:party(),customer: {
             name: name,phone: phone,email: email
           }
           ,note: fd.get('note')
@@ -95,7 +120,7 @@ export function createBookingSubmission(context) {
     }
     catch(err) {
       btn.disabled=false;
-      form.querySelector('[data-error]').textContent=err.message==='response-uncertain'? uncertainReply():err.message==='request-timeout'? t('timeout'):err.message==='slot-unavailable'? t('taken'):t('error');
+      form.querySelector('[data-error]').textContent=err.message==='response-uncertain'? uncertainReply():err.message==='transport-uncertain'? transportUncertain():err.message==='request-timeout'? t('timeout'):err.message==='slot-unavailable'? t('taken'):t('error');
       if (ssGet('kiwiBookingRef') !== ref) form.querySelector('[data-error]').textContent += ' ' + retryWarning();
       if(err.message==='slot-unavailable') setTimeout(times,900)
     }
@@ -116,7 +141,9 @@ export function createBookingSubmission(context) {
     state.step=3;
     layout('<div class="bk-panel">'+head(ht('details'),ht('detailsSub'))+'<form class="bk-form" data-hotel-form><div class="bk-fields"><label class="bk-field"><span>'+esc(t('name'))+'</span><input name="name" maxlength="100" autocomplete="name" required></label><label class="bk-field"><span>'+esc(t('phone'))+'</span><input name="phone" maxlength="32" inputmode="tel" autocomplete="tel" placeholder="06… / +33…"></label><label class="bk-field full"><span>'+esc(t('email'))+'</span><input name="email" maxlength="160" type="email" autocomplete="email"></label><label class="bk-field full"><span>'+esc(t('note'))+'</span><textarea name="note" maxlength="600"></textarea></label></div>'+hotelSummary()+'<div class="bk-error full" data-error role="alert" aria-live="assertive"></div><div class="bk-actions full"><button type="button" class="bk-btn" data-back>'+esc(t('back'))+'</button><button class="bk-btn primary" type="submit">'+esc(ht('confirm'))+'</button></div></form></div>');
     var form=app.querySelector('[data-hotel-form]');
-    app.querySelector('[data-back]').onclick=hotelRoomList;
+    restoreGuest(form);
+    const saveGuest=keepGuest(form);
+    app.querySelector('[data-back]').onclick=function() { saveGuest(); hotelRoomList() };
     form.onsubmit=submitHotel
   }
 
@@ -135,7 +162,7 @@ export function createBookingSubmission(context) {
     try {
       ref=retryRef('kiwiHotelBookingRef','hotel_',form);
       await submitRequest(form, 'kiwiHotelBookingRef', ref, {
-          roomTypeId: state.service.id,checkIn: state.checkIn,checkOut: state.checkOut,partySize: state.partySize,expectedTotal: state.service.total,customer: {
+          roomTypeId:state.service.id,checkIn: state.checkIn,checkOut: state.checkOut,partySize: state.partySize,expectedTotal: state.service.total,customer: {
             name: name,phone: phone,email: email
           }
           ,note: fd.get('note')
@@ -148,7 +175,7 @@ export function createBookingSubmission(context) {
         app.querySelector('[data-back]').onclick=loadHotelRooms;
         return
       }
-      form.querySelector('[data-error]').textContent=err.message==='response-uncertain'? uncertainReply():err.message==='request-timeout'? t('timeout'):err.message==='room-unavailable'? ht('taken'):t('error');
+      form.querySelector('[data-error]').textContent=err.message==='response-uncertain'? uncertainReply():err.message==='transport-uncertain'? transportUncertain():err.message==='request-timeout'? t('timeout'):err.message==='room-unavailable'? ht('taken'):t('error');
       if (ssGet('kiwiHotelBookingRef') !== ref) form.querySelector('[data-error]').textContent += ' ' + retryWarning();
       if(err.message==='room-unavailable') setTimeout(loadHotelRooms,900)
     }

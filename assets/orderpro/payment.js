@@ -417,8 +417,10 @@ KiwiOrderMenu.orderProParts.define('payment', ["$","$$","MENU","NET","ORDER_DONE
           reloadMenu();
           return;
         }
-        showToast(err === 'network' && !attempt.durable ? t('order_retry_local')
-          : err === 'network' ? t('order_unconfirmed') : t('order_failed'));
+        const lost = err === 'network' || err === 'request-timeout';
+        showToast(err === 'request-timeout' ? t('order_timeout')
+          : lost && !attempt.durable ? t('order_retry_local')
+          : lost ? t('order_unconfirmed') : t('order_failed'));
         return;                                // cart intact — they can retry
       }
 

@@ -27,13 +27,16 @@ function fragment(source, f) {
 }
 // A split remains token-identical outside the explicitly reviewed behaviours.
 // Those behaviours execute in r13-d-failsoft-test.mjs, rather than a frozen copy.
-const translated = new Set(['notStored','filter.saveFailed','Conversion photo impossible. Essayez une autre image.']);
+const translated = new Set(['evicted','error.uncertain-write','notStored','filter.saveFailed','Conversion photo impossible. Essayez une autre image.']);
 const removedProperty = n => n && ts.isPropertyAssignment(n) && translated.has(n.name.text);
-const evolved = new Set(['rememberManage','manageBlock','cancelBooking','openManage','empPayRefsWrite','saveFilters','addFiles','cuShrinkHotelPhoto','cuUploadTypePhotos']);
+const evolved = new Set(['rememberManage','manageBlock','cancelBooking','openManage','empPayRefsWrite','saveFilters','addFiles','cuShrinkHotelPhoto','cuUploadTypePhotos','request','publish','submitRequest','details','hotelDetails','submit','submitHotel']);
+// New helpers a reviewed fix added next to the split bodies (r20): the archive never had them.
+const added = new Set(['transportUncertain','keepGuest','restoreGuest']);
 function tokens(source) {
   const ast = parse(source), out = [], removedEnds = new Set();
   function walk(n) {
     if (ts.isVariableStatement(n) && n.declarationList.declarations.every(d => ['previewUrls','followupPreviewUrls'].includes(d.name.getText(ast)))) return;
+    if (ts.isFunctionDeclaration(n) && added.has(n.name?.text)) return;
     if (ts.isFunctionDeclaration(n) && evolved.has(n.name?.text)) { out.push(['function',n.name.text]); return; }
     if (removedProperty(n)) { removedEnds.add(n.end); return; }
     if (n.kind === ts.SyntaxKind.CommaToken && removedEnds.has(n.pos)) return;

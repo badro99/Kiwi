@@ -280,6 +280,7 @@
         order_failed: "Commande non envoyée · réessayez",
         order_offline: "Pas de connexion · commande non envoyée",
         order_unconfirmed: "Envoi non confirmé · réessayez, sans créer une nouvelle commande",
+        order_timeout: "Délai dépassé · la commande est peut-être partie · réessayez ici, sans créer une nouvelle commande",
         order_retry_local: "Envoi non confirmé · gardez cette page ouverte et réessayez ici",
         boot_closed_title: "Service fermé",
         boot_closed_body: "L'établissement ne prend pas de commandes en ce moment. Repassez pendant le service.",
@@ -462,6 +463,7 @@
         order_failed: "Order not sent · try again",
         order_offline: "No connection · order not sent",
         order_unconfirmed: "Send unconfirmed · retry without creating a new order",
+        order_timeout: "Timed out · the order may have been sent · retry here, without creating a new order",
         order_retry_local: "Send unconfirmed · keep this page open and retry here",
         boot_closed_title: "Closed",
         boot_closed_body: "This venue isn't taking orders right now. Come back during service.",
@@ -643,6 +645,7 @@
         order_failed: "الطلب ماتصيفطش · عاود جرّب",
         order_offline: "ماكاينش كونيكسيون · الطلب ماتصيفطش",
         order_unconfirmed: "الإرسال ما تأكدش · عاود جرّب بلا ما تنشئ طلب جديد",
+        order_timeout: "فات الوقت · ممكن الطلب تصيفط · عاود جرّب هنا بلا ما تنشئ طلب جديد",
         order_retry_local: "الإرسال ما تأكدش · خلي هاد الصفحة محلولة وعاود جرّب هنا",
         boot_closed_title: "الخدمة محلولة ماشي دابا",
         boot_closed_body: "هاد المحل ماكيديش الطلبات دابا. رجع فوقت الخدمة.",
@@ -1706,7 +1709,7 @@
 
   }
   }
-  const scripts = ["assets/orderpro/money.js?v=4","assets/orderpro/draft.js?v=3","assets/orderpro/transport.js?v=11","assets/orderpro/session.js?v=5","assets/orderpro/table.js?v=5","assets/orderpro/menu.js?v=6","assets/orderpro/cart.js?v=6","assets/orderpro/payment.js?v=10"];
+  const scripts = ["assets/orderpro/money.js?v=4","assets/orderpro/draft.js?v=5","assets/orderpro/transport.js?v=12","assets/orderpro/session.js?v=5","assets/orderpro/table.js?v=5","assets/orderpro/menu.js?v=6","assets/orderpro/cart.js?v=6","assets/orderpro/payment.js?v=11"];
   for (const src of scripts) {
     const script = document.createElement('script');
     script.async = false;
