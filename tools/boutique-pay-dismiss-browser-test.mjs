@@ -137,5 +137,41 @@ await S.run('une fenêtre fermée par un autre chemin ne laisse pas Encaisser mu
   assert(await encaisser(page), 'Encaisser opens the payment window again, without reloading');
 });
 
+/* Un paiement en cours d'écriture (contrôle fidélité, avoir au registre) ne se
+   ferme pas, et le filet ne relance pas un deuxième encaissement du même ticket
+   pendant ce temps : ce serait deux ventes pour un seul paiement. */
+await S.run('un paiement en cours d’écriture ne s’encaisse pas deux fois', async (t) => {
+  const page = await till(t);
+  await addArticle(page);
+  assert(await encaisser(page), 'Encaisser opens the payment window');
+  t.step('the commit waits on its loyalty check');
+  await page.evaluate(() => {
+    window.KiwiLoyaltyReserve.create = () => ({ confirm: () => new Promise((r) => { window.__releasePay = () => r(true); }) });
+    const b = [...document.querySelectorAll('#bq-paym button')].find((x) => /^Espèces/.test(x.innerText.trim()));
+    b.setAttribute('data-t-cash', '1');
+  });
+  await click(page, '[data-t-cash]');
+  await click(page, '#bq-cash-ok');
+  await sleep(300);
+  assert(await page.evaluate(() => typeof window.__releasePay === 'function'), 'the payment is being committed');
+  t.step('Escape and × while it commits');
+  await page.keyboard.press('Escape');
+  await sleep(300);
+  assert(await payOpen(page), 'Escape does not close a payment being committed');
+  if (await page.$('#bq-paym [data-bq-close]')) { await click(page, '#bq-paym [data-bq-close]'); await sleep(300); }
+  assert(await payOpen(page), 'its × does not close it either');
+  t.step('something else hides it, then Encaisser');
+  await page.evaluate(() => document.querySelector('#bq-pay-veil').classList.remove('is-open'));
+  await click(page, '#bq-validate').catch(() => {});
+  await sleep(400);
+  assert(!(await payOpen(page)), 'Encaisser does not start a second payment of the same ticket while the first commits');
+  t.step('the commit finishes');
+  await page.evaluate(() => window.__releasePay());
+  await sleep(800);
+  await page.evaluate(() => document.querySelector('#bq-pay-veil').classList.remove('is-open'));
+  await addArticle(page, 1);
+  assert(await encaisser(page), 'afterwards Encaisser works normally');
+});
+
 await S.finish();
 server.close();

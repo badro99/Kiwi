@@ -75,7 +75,7 @@ for (const name of ['boutique','maison']) {
   const beforePaid = gate && vm.runInNewContext(deadlineVmSource(gate[1]), deadlineVmContext({ window: { KiwiLoyaltyReserve: { create: () => ({ confirm: async () => false }) } }, IS_DEMO: false, ticketOwner, t: {}, c: {}, renderTicket() {}, state: {}, closeVeil() {} }));
   const paymentProceeds = beforePaid ? await beforePaid() : true;
   assert.equal(paymentProceeds, false, `${name}: final refusal must prevent sale commitment`);
-  assert.match(source, /opts.beforePaid && !await opts.beforePaid\(\)/);
+  assert.match(source, /opts.beforePaid && !await (?:holding\()?opts.beforePaid\(\)/);
   /* La réservation acquittée garde sa référence ; sans réservation c'est LA VENTE
      qui nomme la remise, pour qu'un rejeu ne retire pas les points deux fois. */
   assert.match(source, /redeem\(c\.id, null, \(t\.reward && t\.reward\.reservation\) \|\| \{ ref: window\.KiwiClients\.redemptionRef\(c\.id, sale\.syncId \|\| sale\.id\) \}\)/);

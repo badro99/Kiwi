@@ -1,6 +1,6 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=189';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=189';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=292';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=190';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=190';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=293';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import { paidCents } from './paid-share.js?v=2';
@@ -830,6 +830,7 @@ const M = globalThis.KiwiMoney;
     };
     const closeBtns = () => $$('[data-bq-close]', el).forEach((b) => {
       b.onclick = () => {
+        if (state.payCommitting) return;
         /* Once one payment part is confirmed, closing would forget money already
            received (especially a card charge) while leaving the cart unpaid.
            Finish the remaining balance; the success screen can close normally. */
@@ -1175,6 +1176,9 @@ const M = globalThis.KiwiMoney;
       $('#bq-external-ok', el).onclick = () => settle({ m: cheque ? 'chèque' : 'virement', amount });
     };
 
+    /* Pendant une attente de l'écriture (contrôle fidélité, avoir au registre) la
+       fenêtre ne se ferme pas et checkout() ne relance rien : state.payCommitting. */
+    const holding = async (p) => { state.payCommitting = true; try { return await p; } finally { state.payCommitting = false; } };
     const commit = async (partial) => {
       if (committed) return;
       if (partial && (!opts.customerId || settled.length !== 1 || avoirPart
@@ -1182,7 +1186,7 @@ const M = globalThis.KiwiMoney;
         toast(tr("checkout.acompte.une.cliente.et.un.seul.reglement.sont.requis", "Acompte : une cliente et un seul règlement sont requis")); return;
       }
       committed = true;
-      if (opts.beforePaid && !await opts.beforePaid()) { committed = false; return; }
+      if (opts.beforePaid && !await holding(opts.beforePaid())) { committed = false; return; }
       const parts = (avoirPart ? [avoirPart] : []).concat(settled);
       const paidNow = M.toMad(M.sumCents(parts.map((part) => +part.amount || 0)));
       const avp = parts.find((x) => x.m === 'avoir');
@@ -1199,7 +1203,7 @@ const M = globalThis.KiwiMoney;
           if (!IS_DEMO) {
             /* Une seule écriture au registre : si une autre caisse vient
                d'entamer ce bon, rien n'est consommé et rien n'est encaissé. */
-            const remote = await creditRequest({
+            const remote = await holding(creditRequest({
               /* La vente n'existe qu'après cette écriture : sans le numéro du
                  ticket à venir, le registre ne savait plus quel ticket avait
                  consommé le bon. */
@@ -1207,7 +1211,7 @@ const M = globalThis.KiwiMoney;
               saleId: (opts.sale && opts.sale.id) || opts.ref || '',
               detail: opts.title || tr("checkout.vente.boutique", "Vente boutique"),
               credits: [{ code: avp.code, amountCents: M.toCents(avp.amount) }],
-            });
+            }));
             const row = ((remote && remote.credits) || []).find((r) => r.code === avp.code);
             saved = row ? creditFromServer(row) : null;
           }
