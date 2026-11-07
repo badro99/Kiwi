@@ -337,7 +337,9 @@
       if (id === 'sk-modal') { closeSkModal(); return; }
       if (id === 'team-drawer') { closeTeamDrawer(); return; }
       if (id === 'journal-drawer') { closeJournal(); return; }
-      const closeBtn = veil.querySelector('[data-modal-action="close"], #cl-cancel, #nt-cancel, #wl-cancel, #ctrf-cancel, #cmrg-cancel, #split-done-close, #attendance-code-close, #receipt-close, .modal-close, .drawer-close');
+      /* [data-rs-no] et [data-bq-close] : Échap passe par la fermeture de la boutique
+         (question « même panier », puis encaissement), qui annule proprement. */
+      const closeBtn = veil.querySelector('[data-rs-no], [data-bq-close], [data-modal-action="close"], #cl-cancel, #nt-cancel, #wl-cancel, #ctrf-cancel, #cmrg-cancel, #split-done-close, #attendance-code-close, #receipt-close, .modal-close, .drawer-close');
       if (closeBtn) {
         closeBtn.click();
       } else {

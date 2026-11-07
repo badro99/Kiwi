@@ -1409,6 +1409,10 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
     });/* Dismiss modal on backdrop tap (click outside the modal window) */
     document.addEventListener('click', (e) => {
       if (!e.target || !e.target.classList) return;
+      /* Une fenêtre dont le métier gère lui-même la fermeture (data-veil-owner) n'est
+         pas fermée ici : la boutique refuse de fermer l'encaissement d'un toucher à
+         côté, et une fermeture qu'elle ne voit pas laissait « Encaisser » muet. */
+      if (e.target.dataset && e.target.dataset.veilOwner) return;
       if (e.target.classList.contains('modal-veil') && e.target.classList.contains('is-open')) {
         dismissModalVeil(e.target);
       } else if (e.target.classList.contains('cloture-veil') && e.target.classList.contains('is-open')) {

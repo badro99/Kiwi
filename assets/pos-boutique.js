@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=188';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=106';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=188';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=188';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=189';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=107';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=189';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=189';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
@@ -1462,14 +1462,14 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
         <section class="bq-view" data-bq-panel="clientes"></section>
         <section class="bq-view" data-bq-panel="acomptes"></section><section class="bq-view" data-bq-panel="livraisons"></section>
       </main>
-      <div class="modal-veil" id="bq-sheet-veil"><div class="modal bq-sheet bq-rel" id="bq-sheetm"></div></div>
-      <div class="modal-veil" id="bq-approve-veil"><div class="modal bq-approve bq-rel" id="bq-approvem"></div></div>
-      <div class="modal-veil" id="bq-client-veil"><div class="modal bq-client bq-rel" id="bq-clientm"></div></div>
-      <div class="modal-veil" id="bq-fiche-veil"><div class="modal bq-fiche bq-rel" id="bq-fichem"></div></div>
-      <div class="modal-veil" id="bq-exch-veil"><div class="modal bq-exch bq-rel" id="bq-exchm"></div></div>
-      <div class="modal-veil" id="bq-pay-veil"><div class="modal bq-pay bq-rel" id="bq-paym"></div></div>
-      <div class="modal-veil" id="bq-inv-veil"><div class="modal bq-invm bq-rel" id="bq-invmm"></div></div>
-      <div class="modal-veil" id="bq-avoir-veil"><div class="modal bq-avoirm bq-rel" id="bq-avoirmm"></div></div>`;
+      <div class="modal-veil" data-veil-owner="boutique" id="bq-sheet-veil"><div class="modal bq-sheet bq-rel" id="bq-sheetm"></div></div>
+      <div class="modal-veil" data-veil-owner="boutique" id="bq-approve-veil"><div class="modal bq-approve bq-rel" id="bq-approvem"></div></div>
+      <div class="modal-veil" data-veil-owner="boutique" id="bq-client-veil"><div class="modal bq-client bq-rel" id="bq-clientm"></div></div>
+      <div class="modal-veil" data-veil-owner="boutique" id="bq-fiche-veil"><div class="modal bq-fiche bq-rel" id="bq-fichem"></div></div>
+      <div class="modal-veil" data-veil-owner="boutique" id="bq-exch-veil"><div class="modal bq-exch bq-rel" id="bq-exchm"></div></div>
+      <div class="modal-veil" data-veil-owner="boutique" id="bq-pay-veil"><div class="modal bq-pay bq-rel" id="bq-paym"></div></div>
+      <div class="modal-veil" data-veil-owner="boutique" id="bq-inv-veil"><div class="modal bq-invm bq-rel" id="bq-invmm"></div></div>
+      <div class="modal-veil" data-veil-owner="boutique" id="bq-avoir-veil"><div class="modal bq-avoirm bq-rel" id="bq-avoirmm"></div></div>`;
 
     $('#bq-nav', root).addEventListener('click', (e) => {
       const b = e.target.closest('[data-bq-view]');
@@ -1816,8 +1816,8 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
   }
 
   function checkout() {
-    const t = state.ticket;
-    if (!t.lines.length || state.checkoutBusy) return;
+    if (state.checkoutBusy && !$('#bq-pay-veil', root)?.classList.contains('is-open')) state.checkoutBusy = false; // fenêtre fermée hors de ses boutons : Encaisser reste actif
+    const t = state.ticket; if (!t.lines.length || state.checkoutBusy) return;
     if (state.syncStorageError || state.ticketStorageError) {
       toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Vente suspendue'), 'La tablette ne peut plus sécuriser la file hors-ligne. Contactez le support avant de continuer.');
       return;
