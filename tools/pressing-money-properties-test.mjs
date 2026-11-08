@@ -92,29 +92,6 @@ await strict('two offline tills both creating ticket 42 keep both orders and eve
   // Le tableau de bord fusionne pareil : mêmes numéros, aucun bon perdu.
   const dash=ops.mergeDocuments({...B.doc,orders:[B.made]},server);assert.equal(ids(dash),ids(server));
 }),[[true,1,2,5],[false,2,1,-5]]);
-// r21 pressing#A2 : deux caisses de l'ancienne génération (sans lettre) qui gardent chacune leur copie locale périmée pendant plusieurs tours, créent des bons sous les mêmes numéros, ne se resynchronisent que par moments : à la fin le serveur et les deux caisses portent les mêmes bons, chaque étiquette de vêtement est unique et se scanne vers son bon.
-await strict('long-running tills with stale local copies keep every ticket and garment tag unique and scannable after recovery',fc.asyncProperty(fc.array(fc.record({a:fc.integer({min:0,max:2}),b:fc.integer({min:0,max:2}),syncA:fc.boolean(),syncB:fc.boolean(),qty:fc.integer({min:1,max:3})}),{minLength:2,maxLength:5}),async(rounds)=>{
-  sql.prepare("DELETE FROM store_docs WHERE merchant=? AND feature='pressing-orders'").run(merchant);
-  const push=(data,baseRev)=>request(storePost,{merchant,feature:'pressing-orders',baseRev,data},'till');
-  const pull=async()=>(await request(storeGet,{merchant,feature:'pressing-orders'},'till',true)).body;
-  const sync=async(dev)=>{for(let i=0;i<8;i++){const r=await push(dev.doc,dev.rev);if(r.status===200){dev.rev=r.body.rev;return true;}assert.equal(r.status,409,JSON.stringify(r.body));if(r.body.data){dev.doc=c.mergePressingDocuments(dev.doc,r.body.data);dev.rev=r.body.rev;}}return false;};
-  const s0=await pull();const A={doc:{customers:[],orders:[],cancellations:[],seq:41},rev:s0?.rev||0},B={doc:{customers:[],orders:[],cancellations:[],seq:41},rev:s0?.rev||0};
-  let clock=Date.UTC(2026,9,22,8),garments=0;
-  for(const r of rounds){
-    for(const [dev,count] of [[A,r.a],[B,r.b]])for(let i=0;i<count;i++){clock+=60000;const num=c.nextAvailableOrderNo(dev.doc.seq,dev.doc.orders,'');const o=buildOrder(num,clock,r.qty);garments+=o.pieces.length;dev.doc={...dev.doc,orders:[o,...dev.doc.orders],seq:Math.max(+dev.doc.seq||0,c.seqAfterOrderNo(dev.doc.seq,num))};}
-    if(r.syncA)assert.ok(await sync(A));
-    if(r.syncB)assert.ok(await sync(B));
-  }
-  for(let pass=0;pass<2;pass++)for(const dev of [A,B]){const s=await pull();if(s&&s.data)dev.doc=c.mergePressingDocuments(dev.doc,s.data);assert.ok(await sync(dev));}
-  const server=(await pull()).data;
-  for(const dev of [A,B]){const s=await pull();dev.doc=c.mergePressingDocuments(dev.doc,s.data);}
-  const ids=d=>d.orders.map(o=>o.id+'@'+o.droppedAt).sort().join();
-  assert.equal(ids(A.doc),ids(server));assert.equal(ids(B.doc),ids(server));
-  assert.equal(pieceCount(server),garments);
-  const pids=server.orders.flatMap(o=>o.pieces.map(p=>p.pid));assert.equal(new Set(pids).size,pids.length,'every garment tag is unique');
-  c.ORDERS=server.orders;
-  for(const o of server.orders)for(const p of o.pieces){const found=c.findScannedOrder(p.pid);assert.ok(found&&found.id===o.id,'tag '+p.pid+' scans to its own ticket');}
-}));
 await strict('ready-date zone policy: slots follow the configured store zone, not the device civil time',fc.property(fc.integer({min:0,max:59}),minute=>{const prior=process.env.TZ;try{process.env.TZ='Europe/Berlin';const now=new Date(Date.UTC(2026,9,22,4,minute)),d=c.suggestReady(now);return d.getUTCHours()===18&&c.readyOptions(now).find(o=>o.recommended).time==='18:00';}finally{if(prior===undefined)delete process.env.TZ;else process.env.TZ=prior;}}),[[0]]);
 f.close();
 console.log(`pressing properties: ${passed} strict, ${failed} failed, ${known} known; runs=${RUNS}; seed=${SEED}`);if(failed)process.exitCode=1;

@@ -54,8 +54,8 @@
      * et Object.entries() garde l'ordre d'insertion. Le pressing est donc un
      * vertical ordinaire, en tête de liste, et non plus une branche codée en
      * dur dans kiwi-caisse.html. */
-    '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '124', module: true, deps: [{ file: 'pressing-numbering', rev: '6' }], label: 'Pressing · Pressing Marshan' },
-    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '294', module: true, label: 'Boutique · Maison Mansour' },
+    '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '125', module: true, deps: [{ file: 'pressing-numbering', rev: '6' }], label: 'Pressing · Pressing Marshan' },
+    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '295', module: true, label: 'Boutique · Maison Mansour' },
     '0003': { id: 'spa',         file: 'pos-spa',         rev: '19', label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '31', label: 'Hôtel / Riad' },
     '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '15', label: 'Fast-food · Snack Chamal' },
@@ -65,12 +65,12 @@
     '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '9', label: 'Food truck · Karavan' },
     '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '40', deps: [{ file: 'pos-epicerie/carnet', rev: '15' }], label: 'Épicerie · Si Brahim' },
     '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '9', label: 'Pharmacie · Ibn Batouta' },
-    '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '18', deps: [{ file: 'money-cents', rev: '4' }, { file: 'librairie-loyalty', rev: '19' }], label: 'Librairie · Al Boughaz' },
+    '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '18', deps: [{ file: 'money-cents', rev: '4' }, { file: 'librairie-loyalty', rev: '20' }], label: 'Librairie · Al Boughaz' },
     '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '15', label: 'Fleuriste · Fleurs du Détroit' },
     '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '10', label: 'Coiffure · Salon Yasmine' },
     '0015': { id: 'gym',         file: 'pos-gym',         rev: '9', label: 'Salle de sport · Atlas Fitness' },
     '0016': { id: 'autre',       file: 'pos-autre',       rev: '9', label: 'Autre activité · caisse polyvalente' },
-    '0017': { id: 'maison',      file: 'pos-maison',      rev: '180', module: true, label: 'Maison · Vogue Home' },
+    '0017': { id: 'maison',      file: 'pos-maison',      rev: '181', module: true, label: 'Maison · Vogue Home' },
   };
 
   const apps = {};       /* id → registered spec */

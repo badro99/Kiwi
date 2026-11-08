@@ -167,6 +167,7 @@ tillContext.KiwiCloudDoc = tillWindow.KiwiCloudDoc;   /* dans un navigateur, win
 tillWindow.window = tillWindow; tillWindow.localStorage = tillContext.localStorage; tillWindow.navigator = tillContext.navigator; tillWindow.document = context.document;
 vm.createContext(tillContext);
 vm.runInContext(pressingSource.readFileSync(new URL('../assets/pressing-ops.js', import.meta.url), 'utf8'), tillContext, { filename: 'pressing-ops.js' });
+vm.runInContext(pressingSource.readFileSync(new URL('../assets/pressing-numbering.js', import.meta.url), 'utf8'), tillContext, { filename: 'pressing-numbering.js' });
 vm.runInContext(phoneSource, tillContext, { filename: 'phone.js' });
 vm.runInContext(source, tillContext, { filename: 'pressing-caisse.js' });
 const till = tillWindow.KiwiPressing.rules;

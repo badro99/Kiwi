@@ -1903,7 +1903,7 @@ section('Whole-project regressions');
     'clients-outbox-owner-test.mjs', 'clients-outbox-vault-test.mjs', 'clients-push-deadline-test.mjs',
     'books-money-properties-test.mjs',
     'serveur-money-properties-test.mjs',
-    'pressing-money-properties-test.mjs',
+    'pressing-money-properties-test.mjs', 'pressing-long-run-test.mjs',
     'operator-properties-test.mjs',
     'tickets-split-test.mjs',
     'tickets-boundary-test.mjs',
