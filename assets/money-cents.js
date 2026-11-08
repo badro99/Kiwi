@@ -10,7 +10,8 @@
  *   KiwiMoney.parseCents('1 250,5') → 125050     (null si ce n'est pas un montant)
  *   KiwiMoney.toMad(1290)          → 12.9
  *   KiwiMoney.sumCents([a, b, …])  → centimes de la somme de montants en dirhams
- *   KiwiMoney.format(12.9)         → « 12,90 » (« 12 » quand il n'y a pas de centimes)
+ *   KiwiMoney.format(12.9)         → « 12,90 » (« 12 » quand il n'y a pas de centimes) ;
+ *   deuxième argument 'fr'|'en'|'ar', sinon la langue de la caisse
  *
  * Script classique et module à la fois : les fichiers ES de la boutique
  * l'importent pour son effet, la librairie le charge par le répartiteur. */
@@ -61,15 +62,23 @@
   const toMad = (cents) => (Math.round(Number(cents) || 0)) / 100;
   const sumCents = (list) => (Array.isArray(list) ? list : []).reduce((sum, v) => sum + toCents(v), 0);
 
-  let whole = null, withCents = null;
-  function format(mad) {
-    if (!whole) {
+  /* La langue de la caisse (KiwiCaisseLang) donne la ponctuation : « 1 250,50 » en
+     français, « 1,250.50 » en anglais, « 1.250,50 » en arabe (chiffres latins, comme
+     partout ailleurs). Sans caisse chargée (tableau de bord), le français. */
+  const LOCALE = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA-u-nu-latn' };
+  const formats = {};
+  function activeLang() {
+    try { const l = root.KiwiCaisseLang && root.KiwiCaisseLang.get && root.KiwiCaisseLang.get(); return LOCALE[l] ? l : 'fr'; } catch (_) { return 'fr'; }
+  }
+  function format(mad, lang) {
+    const key = LOCALE[lang] ? lang : activeLang();
+    if (!formats[key]) {
       const base = { useGrouping: true, maximumFractionDigits: 2 };
-      whole = new Intl.NumberFormat('fr-FR', { ...base, minimumFractionDigits: 0 });
-      withCents = new Intl.NumberFormat('fr-FR', { ...base, minimumFractionDigits: 2 });
+      formats[key] = [new Intl.NumberFormat(LOCALE[key], { ...base, minimumFractionDigits: 0 }),
+        new Intl.NumberFormat(LOCALE[key], { ...base, minimumFractionDigits: 2 })];
     }
     const n = Number(mad);
-    return (Number.isFinite(n) && toCents(n) % 100 ? withCents : whole).format(n);
+    return formats[key][Number.isFinite(n) && toCents(n) % 100 ? 1 : 0].format(n);
   }
 
   const api = Object.freeze({ toCents, parseCents, toMad, sumCents, format });

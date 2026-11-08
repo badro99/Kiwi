@@ -1,0 +1,22 @@
+/* r21 i18n#B0 / boutiquetill#B2 : KiwiMoney.format suit la langue de la caisse (le vrai module). */
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+let lang = 'fr';
+globalThis.KiwiCaisseLang = { get: () => lang };
+const money = require('../assets/money-cents.js');
+const nb = (s) => s.replace(/[  ]/g, ' ');
+assert.equal(nb(money.format(1250.5)), '1 250,50', 'français inchangé');
+assert.equal(nb(money.format(1250)), '1 250');
+lang = 'en';
+assert.equal(money.format(1250.5), '1,250.50', 'anglais : virgule de milliers, point décimal');
+assert.equal(money.format(1250), '1,250');
+lang = 'ar';
+assert.equal(money.format(1250.5), '1.250,50', 'arabe : chiffres latins, convention marocaine');
+assert.match(money.format(12345), /^[0-9.,]+$/, 'aucun chiffre arabo-indien');
+lang = 'xx';
+assert.equal(nb(money.format(1250.5)), '1 250,50', 'langue inconnue : français');
+assert.equal(money.format(1250.5, 'en'), '1,250.50', 'langue explicite prioritaire');
+delete globalThis.KiwiCaisseLang;
+assert.equal(nb(money.format(1250.5)), '1 250,50', 'sans caisse (tableau de bord) : français');
+console.log('PASS money format follows the till language');

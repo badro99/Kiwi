@@ -1,0 +1,21 @@
+/* r21 returns#A1 / boutiquetill#A1 : la liste des ventes de « Échanges & avoirs » est bornée (vrai ret-window.js). */
+import assert from 'node:assert/strict';
+import { RET_PAGE, windowHits, showMoreHits, moreHitsButton } from '../assets/pos-boutique/ret-window.js';
+const sales = Array.from({ length: 400 }, (_, i) => ({ id: 'S' + i }));
+let w = windowHits(sales, '2026-11-08', '', null);
+assert.equal(w.list.length, RET_PAGE, 'une journée de 400 ventes n’affiche que la première page');
+assert.equal(w.rest, 400 - RET_PAGE);
+w = windowHits(sales, '2026-11-08', '', 'S300');
+assert.equal(w.list.length, RET_PAGE + 1, 'la vente en cours de retour reste affichée');
+assert.ok(w.list.some((s) => s.id === 'S300'));
+assert.equal(w.rest, 400 - RET_PAGE, 'le reste ne compte pas la vente épinglée deux fois');
+showMoreHits('2026-11-08', '');
+assert.equal(windowHits(sales, '2026-11-08', '', null).list.length, 2 * RET_PAGE, 'Afficher plus ajoute une page');
+assert.equal(windowHits(sales, '2026-11-07', '', null).list.length, RET_PAGE, 'autre journée : retour à la première page');
+assert.equal(windowHits(sales, '2026-11-08', 'ab', null).list.length, RET_PAGE, 'autre recherche : retour à la première page');
+for (let i = 0; i < 20; i++) showMoreHits('2026-11-08', '');
+const all = windowHits(sales, '2026-11-08', '', null);
+assert.equal(all.list.length, 400); assert.equal(all.rest, 0);
+assert.equal(moreHitsButton(0, (s) => s, (s) => s), '', 'plus de bouton quand tout est affiché');
+assert.match(moreHitsButton(375, (s) => s, (s) => s), /data-bq-ret-more[^>]*>Afficher plus de ventes <small>375/);
+console.log('PASS ret-window: bounded exchange list, pinned selected sale, per day/query paging');
