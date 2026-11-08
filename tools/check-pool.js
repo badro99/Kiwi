@@ -180,10 +180,51 @@ const declaresUncacheable = (r) => {
   declaredMemo.set(r, hit);
   return hit;
 };
+/* A suite that starts a program the tracer cannot follow (git, sqlite3, a shell) may
+   instead DECLARE what it depends on: a line `// kiwi-cache: inputs <item> ...` in its
+   first 60 lines, where an item is a repo file (`data/x.db`), a folder listing
+   (`dir:data`) or an environment variable (`env:NAME`). The declared items go into
+   the pass key (file content, listing, variable value), so changing one runs the
+   suite again. The declaration is validated every time: an item must stay inside
+   the repo, and a file or folder must exist; an invalid declaration refuses reuse
+   and says so, it never falls back to trusting the trace. `never` outranks
+   `inputs`, and a read outside the repo that the tracer saw (blind) is not
+   something a list can cover: that pass is still never replayed. */
+const INPUTS = /^\s*(?:\/\/|\/\*|\*|#)\s*kiwi-cache:\s*inputs\b([^\n]*)/m;
+const inputsMemo = new Map();
+function declaredInputs(rel) {
+  if (inputsMemo.has(rel)) return inputsMemo.get(rel);
+  let out = null;
+  try {
+    const m = INPUTS.exec(fs.readFileSync(path.join(ROOT, rel), 'utf8').split('\n').slice(0, 60).join('\n'));
+    if (m) {
+      const items = m[1].replace(/\*\/\s*$/, '').trim().split(/\s+/).filter(Boolean);
+      const bad = [];
+      for (const item of items) {
+        if (item.startsWith('env:')) { if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(item.slice(4))) bad.push(item); continue; }
+        const target = item.startsWith('dir:') ? item.slice(4) : item;
+        const abs = path.resolve(ROOT, target);
+        if (!target || path.isAbsolute(target) || abs === ROOT || !abs.startsWith(ROOT + path.sep)) { bad.push(item); continue; }
+        let st = null;
+        try { st = fs.statSync(abs); } catch (_) { st = null; }
+        if (!st || (item.startsWith('dir:') ? !st.isDirectory() : !st.isFile())) bad.push(item);
+      }
+      out = { items, bad };
+      if (!items.length || bad.length) console.error(`kiwi-cache: ${rel} declares ${items.length ? 'invalid inputs (' + bad.join(', ') + ')' : 'no inputs'}; its pass will not be reused`);
+    }
+  } catch (_) { out = null; }
+  inputsMemo.set(rel, out);
+  return out;
+}
+const declaredOk = (rel) => { const d = declaredInputs(rel); return !!(d && d.items.length && !d.bad.length); };
+const inputsKey = (rel) => {
+  const d = declaredInputs(rel);
+  return d && declaredOk(rel) ? d.items.map((i) => i + '=' + (i.startsWith('env:') ? String(process.env[i.slice(4)] ?? '∅') : contentHash(i))).join('\n') : '';
+};
 const callsGit = (rels) => rels.some((r, i) => /\.(m?js|cjs)$/.test(r) && (i === 0 || r.startsWith("tools/")) && startsForeign(r));
 function passKey(task, own, list) {
   return sha([SALT, JSON.stringify(task.args.map((a) => String(a).startsWith(ROOT) ? relOf(a) : String(a))),
-    own + ':' + contentHash(own), ...list.map((r) => r + ':' + contentHash(r))].join('\n'));
+    own + ':' + contentHash(own), inputsKey(own), ...list.map((r) => r + ':' + contentHash(r))].join('\n'));
 }
 /* Same words check.js warns on (`○ skip`, `○ … not run`), plus the French
    "sauté" some suites print; any of them on a line starting with ○. */
@@ -203,7 +244,7 @@ if (cacheOn) {
 function remember(task, own, list, stdout, stderr, cells, blind) {
   if (!cacheOn) return;
   const all = [own, ...list];
-  if (callsGit(all) || blind || declaresUncacheable(own) || stdout.length + stderr.length > 512 * 1024 || saysSkipped(stdout, stderr)) { delete passCache[own]; return; }
+  if ((callsGit(all) && !declaredOk(own)) || (declaredInputs(own) && !declaredOk(own)) || blind || declaresUncacheable(own) || stdout.length + stderr.length > 512 * 1024 || saysSkipped(stdout, stderr)) { delete passCache[own]; return; }
   passCache[own] = { key: passKey(task, own, list), deps: list, at: Date.now(), stdout, stderr, cells };
 }
 function savePassCache() {
