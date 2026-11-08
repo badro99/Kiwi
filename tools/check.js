@@ -1725,6 +1725,7 @@ section('Whole-project regressions');
        dans functions/_middleware.js, donc une suite d'assets ne la verrait
        pas : celle-ci appelle le middleware lui-même. */
     'guides-redirect-test.mjs',
+    'public-404-test.mjs',
     /* Les articles juridiques portent une date de revue explicite. Le check
        local valide le registre ; le workflow hebdomadaire applique la limite
        stricte de 90 jours afin de ne pas transformer chaque build en minuteur. */
