@@ -18,8 +18,21 @@
   function safeDoc(value, venue) {
     value = value && typeof value === 'object' ? value : {};
     venue = venue == null ? slug() : String(venue);
+    /* A day record must look like one: a string id, a YYYY-MM-DD business day,
+       a lines array when it has lines, and an edit clock that is a finite number.
+       A clock past the trusted one (plus the skew the settings clocks allow) is a
+       broken device clock: it is pulled back to now, so it cannot sort above every
+       honest record and win the day for good. */
+    var nowMs = Date.now();
     var days = Array.isArray(value.days) ? value.days.filter(function (x) {
-      return x && x.id && x.day && venue && x.venue === venue;
+      return x && typeof x === 'object' && (typeof x.id === 'string' || typeof x.id === 'number') && String(x.id)
+        && typeof x.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.day)
+        && (x.lines == null || Array.isArray(x.lines)) && venue && x.venue === venue;
+    }).map(function (x) {
+      var at = Number(x.updatedAt);
+      if (!Number.isFinite(at) || at < 0) at = 0;
+      else if (at > nowMs + CLOCK_SKEW) at = nowMs;
+      return at === x.updatedAt ? x : Object.assign({}, x, { updatedAt: at });
     }) : [];
     days.sort(function (a, b) {
       var clock = (+b.updatedAt || 0) - (+a.updatedAt || 0);

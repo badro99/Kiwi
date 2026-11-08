@@ -64,11 +64,17 @@
     catch (_) { return ''; }
   }
 
-  function emit() { subs.slice().forEach(function (fn) { try { fn(last); } catch (_) {} }); }
+  var waiters = [], seq = 0, again = false;
+  function emit() {
+    seq++;
+    subs.slice().forEach(function (fn) { try { fn(last); } catch (_) {} });
+    waiters.slice().forEach(function (w) { if (seq >= w.need) { waiters.splice(waiters.indexOf(w), 1); try { w.fn(last); } catch (_) {} } });
+  }
+  var getRoomOverride = null;   // tests only (KiwiFloorLive._setFetcher)
 
-  function poll() {
-    if (inflight || !subs.length) return;
-    if (document.visibilityState === 'hidden') return;
+  function poll(force) {
+    if (inflight || (!subs.length && force !== true)) return;
+    if (document.visibilityState === 'hidden' && force !== true) return;
     var s = slug();
     if (!s || !isReal()) {
       lastSlug = s;
@@ -78,7 +84,7 @@
       return;
     }
     inflight = true;
-    import('./request-deadline.mjs').then(function (net) { return net.deadlineFetch('/api/floor/live?merchant=' + encodeURIComponent(s), { credentials: 'same-origin', cache: 'no-store' }); })
+    (typeof getRoomOverride === 'function' ? getRoomOverride(s) : import('./request-deadline.mjs').then(function (net) { return net.deadlineFetch('/api/floor/live?merchant=' + encodeURIComponent(s), { credentials: 'same-origin', cache: 'no-store' }); }))
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('http-' + r.status)); })
       .then(function (d) {
         if (!d || !d.ok) throw new Error('bad-body');
@@ -112,6 +118,7 @@
 
   function schedule() {
     stop();
+    if (again) { again = false; poll(true); return; }   // an ensureFresh() asked for a read newer than the one that just ended
     if (subs.length && !document.hidden) timer = setTimeout(poll, Math.min(15000, window.KiwiPoll?.delay(idleDelay) ?? idleDelay));
   }
   function start() { if (!timer && !inflight) poll(); }
@@ -264,7 +271,34 @@
     return { minutes: min, label: label, check: ms >= CHECK_AFTER };
   }
 
+  /* How old the room the owner is looking at is, in ms (Infinity: never seen). */
+  function age(now) {
+    var room = currentRoom();
+    return room && room.at ? Math.max(0, (now || Date.now()) - room.at) : Infinity;
+  }
+  /* Before a consequential table action (closing, moving a seated table,
+   * putting it out of service): resolve with a room no older than `maxAgeMs`,
+   * fetching it NOW if the last answer is older or was stale. Falls back to the
+   * last known room (flagged by `stale`/`age`) when the till cannot be reached
+   * within `waitMs`, so an offline owner is never blocked. */
+  function ensureFresh(maxAgeMs, waitMs) {
+    var room = currentRoom();
+    if (room && room.live && !room.stale && age() <= (maxAgeMs == null ? 3000 : maxAgeMs)) return Promise.resolve(room);
+    return new Promise(function (resolve) {
+      var done = false, w = null;
+      var finish = function (r) { if (done) return; done = true; clearTimeout(t); resolve(r || currentRoom()); };
+      var t = setTimeout(function () { var i = waiters.indexOf(w); if (i >= 0) waiters.splice(i, 1); finish(currentRoom()); }, waitMs || 4000);
+      /* A request already in flight began before this call: it may predate the
+         action, so wait for the NEXT answer, fetched after now. */
+      w = { need: seq + (inflight ? 2 : 1), fn: finish };
+      waiters.push(w);
+      if (inflight) again = true; else poll(true);
+    });
+  }
+
   window.KiwiFloorLive = {
+    age: age, ensureFresh: ensureFresh,
+    _setFetcher: function (fn) { getRoomOverride = fn; },
     watch: watch, last: currentRoom, refresh: poll,
     resolve: resolve, since: since, bookings: bookings, suggestTable: suggestTable,
     tableKey: tableKey, normalizeStatus: normalizeStatus, resourceTableId: resourceTableId,
