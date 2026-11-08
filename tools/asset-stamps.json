@@ -1168,8 +1168,8 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "124",
-    "sha": "31b1a38747de8053"
+    "v": "125",
+    "sha": "6e1b3c250ab8529b"
   },
   "assets/live-link/queue-store.js": {
     "v": "23",
@@ -1968,8 +1968,8 @@
     "sha": "bd10177ac673f7ac"
   },
   "assets/queue-recovery.js": {
-    "v": "12",
-    "sha": "c428ff7352a10909"
+    "v": "13",
+    "sha": "8730918e66f5dbe4"
   },
   "assets/ramadan.js": {
     "v": "3",

@@ -4,18 +4,9 @@
   'use strict';
   var box;
   var words = {
-    fr: ['Copies de ventes à vérifier', 'Exporter', 'Accuser réception et supprimer', 'Confirmer la suppression de cette copie ? Vérifiez sa récupération avant de continuer.', 'Stockage des copies presque plein. Exportez et vérifiez les copies avant de les supprimer.',
-      'Copie de ventes', 'Bons de cuisine', 'Fiches et achats clients', 'Annuler', 'Confirmer la suppression', 'Ventes clients gardées en mémoire seulement : le stockage est plein. Ne fermez pas l’application avant la synchronisation.', 'File de ventes active illisible', 'Bons de cuisine non envoyés, expirés après 6 h', 'File de bons de cuisine illisible'],
-    en: ['Sale copies to review', 'Export', 'Acknowledge and delete', 'Confirm deletion of this copy? Verify its recovery before continuing.', 'Copy storage nearly full. Export and verify copies before deleting them.',
-      'Sales copy', 'Kitchen tickets', 'Customer records and purchases', 'Cancel', 'Confirm deletion', 'Customer sales are held in memory only: storage is full. Do not close the app before they sync.', 'Active sales queue unreadable', 'Kitchen tickets never sent, expired after 6 h', 'Kitchen ticket queue unreadable'],
-    ar: ['نسخ المبيعات للمراجعة', 'تصدير', 'إقرار وحذف', 'تأكيد حذف هذه النسخة؟ تحقق من استعادتها قبل المتابعة.', 'مساحة النسخ ممتلئة تقريباً. صدّر النسخ وتحقق منها قبل حذفها.',
-      'نسخة مبيعات', 'تذاكر المطبخ', 'بطاقات العملاء ومشترياتهم', 'إلغاء', 'تأكيد الحذف', 'مبيعات العملاء محفوظة في الذاكرة فقط: التخزين ممتلئ. لا تغلق التطبيق قبل المزامنة.', 'طابور المبيعات النشط غير قابل للقراءة', 'تذاكر مطبخ لم تُرسل وانتهت صلاحيتها بعد 6 ساعات', 'طابور تذاكر المطبخ غير قابل للقراءة']
-      'Copie de ventes', 'Bons de cuisine', 'Fiches et achats clients', 'Annuler', 'Confirmer la suppression', 'Ventes clients gardées en mémoire seulement : le stockage est plein. Ne fermez pas l’application avant la synchronisation.', 'File de ventes active illisible', 'Pointages à vérifier', 'Copies à vérifier'],
-      'Sales copy', 'Kitchen tickets', 'Customer records and purchases', 'Cancel', 'Confirm deletion', 'Customer sales are held in memory only: storage is full. Do not close the app before they sync.', 'Active sales queue unreadable', 'Punches to review', 'Copies to review'],
-      'نسخة مبيعات', 'تذاكر المطبخ', 'بطاقات العملاء ومشترياتهم', 'إلغاء', 'تأكيد الحذف', 'مبيعات العملاء محفوظة في الذاكرة فقط: التخزين ممتلئ. لا تغلق التطبيق قبل المزامنة.', 'طابور المبيعات النشط غير قابل للقراءة', 'تسجيلات حضور للمراجعة', 'نسخ للمراجعة']
-      'Copie de ventes', 'Bons de cuisine', 'Fiches et achats clients', 'Annuler', 'Confirmer la suppression', 'Ventes clients gardées en mémoire seulement : le stockage est plein. Ne fermez pas l’application avant la synchronisation.', 'File de ventes active illisible', 'Événements de caisse (ouverture, remise, clôture)', 'Export impossible sur cet appareil. Le texte de la copie est affiché ci-dessous : copiez-le et conservez-le avant toute suppression.', 'Copié dans le presse-papiers.'],
-      'Sales copy', 'Kitchen tickets', 'Customer records and purchases', 'Cancel', 'Confirm deletion', 'Customer sales are held in memory only: storage is full. Do not close the app before they sync.', 'Active sales queue unreadable', 'Cash session events (opening, handover, close)', 'Export is not possible on this device. The copy text is shown below: copy and keep it before deleting anything.', 'Copied to the clipboard.'],
-      'نسخة مبيعات', 'تذاكر المطبخ', 'بطاقات العملاء ومشترياتهم', 'إلغاء', 'تأكيد الحذف', 'مبيعات العملاء محفوظة في الذاكرة فقط: التخزين ممتلئ. لا تغلق التطبيق قبل المزامنة.', 'طابور المبيعات النشط غير قابل للقراءة', 'أحداث الصندوق (فتح، تسليم، إغلاق)', 'التصدير غير ممكن على هذا الجهاز. نص النسخة معروض أدناه: انسخه واحتفظ به قبل أي حذف.', 'تم النسخ إلى الحافظة.']
+    fr: ['Copies de ventes à vérifier', 'Exporter', 'Accuser réception et supprimer', 'Confirmer la suppression de cette copie ? Vérifiez sa récupération avant de continuer.', 'Stockage des copies presque plein. Exportez et vérifiez les copies avant de les supprimer.', 'Copie de ventes', 'Bons de cuisine', 'Fiches et achats clients', 'Annuler', 'Confirmer la suppression', 'Ventes clients gardées en mémoire seulement : le stockage est plein. Ne fermez pas l’application avant la synchronisation.', 'File de ventes active illisible', 'Bons de cuisine non envoyés, expirés après 6 h', 'File de bons de cuisine illisible', 'Pointages à vérifier', 'Copies à vérifier', 'Événements de caisse (ouverture, remise, clôture)', 'Export impossible sur cet appareil. Le texte de la copie est affiché ci-dessous : copiez-le et conservez-le avant toute suppression.', 'Copié dans le presse-papiers.'],
+    en: ['Sale copies to review', 'Export', 'Acknowledge and delete', 'Confirm deletion of this copy? Verify its recovery before continuing.', 'Copy storage nearly full. Export and verify copies before deleting them.', 'Sales copy', 'Kitchen tickets', 'Customer records and purchases', 'Cancel', 'Confirm deletion', 'Customer sales are held in memory only: storage is full. Do not close the app before they sync.', 'Active sales queue unreadable', 'Kitchen tickets never sent, expired after 6 h', 'Kitchen ticket queue unreadable', 'Punches to review', 'Copies to review', 'Cash session events (opening, handover, close)', 'Export is not possible on this device. The copy text is shown below: copy and keep it before deleting anything.', 'Copied to the clipboard.'],
+    ar: ['نسخ المبيعات للمراجعة', 'تصدير', 'إقرار وحذف', 'تأكيد حذف هذه النسخة؟ تحقق من استعادتها قبل المتابعة.', 'مساحة النسخ ممتلئة تقريباً. صدّر النسخ وتحقق منها قبل حذفها.', 'نسخة مبيعات', 'تذاكر المطبخ', 'بطاقات العملاء ومشترياتهم', 'إلغاء', 'تأكيد الحذف', 'مبيعات العملاء محفوظة في الذاكرة فقط: التخزين ممتلئ. لا تغلق التطبيق قبل المزامنة.', 'طابور المبيعات النشط غير قابل للقراءة', 'تذاكر مطبخ لم تُرسل وانتهت صلاحيتها بعد 6 ساعات', 'طابور تذاكر المطبخ غير قابل للقراءة', 'تسجيلات حضور للمراجعة', 'نسخ للمراجعة', 'أحداث الصندوق (فتح، تسليم، إغلاق)', 'التصدير غير ممكن على هذا الجهاز. نص النسخة معروض أدناه: انسخه واحتفظ به قبل أي حذف.', 'تم النسخ إلى الحافظة.']
   };
   function text(i) {
     var C = window.KiwiCaisseLang, I = window.KiwiI18n;
@@ -35,17 +26,16 @@
     if (source === 'relay') return text(/relay-expired/.test(key) ? 12 : 13);
     if (source === 'kitchen') return text(6);
     if (source === 'clients') return text(7);
-    if (source === 'cash') return text(12);
+    if (source === 'cash') return text(16);
     var m = /:quarantine:(\d+)$/.exec(key);
-    if (!m) return source === 'punches' ? text(12) : text(11);
+    if (!m) return source === 'punches' ? text(14) : text(11);
     var d = new Date(Number(m[1]));
     if (isNaN(d.getTime())) return text(5);
     var when = ''; try { when = d.toLocaleString(lang() === 'ar' ? 'ar' : lang() === 'en' ? 'en-GB' : 'fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (_) { when = d.toISOString().slice(0, 16); }
-    return (source === 'punches' ? text(12) : text(5)) + ' · ' + when;
+    return (source === 'punches' ? text(14) : text(5)) + ' · ' + when;
   }
   function sources() {
-    var L = window.KiwiLive, K = window.KiwiKitchenPrint, C = window.KiwiOutboxVault, R = window.KiwiKitchenRelay, out = [];
-    var L = window.KiwiLive, K = window.KiwiKitchenPrint, C = window.KiwiOutboxVault, S = window.KiwiCashSessions, out = [];
+    var L = window.KiwiLive, K = window.KiwiKitchenPrint, C = window.KiwiOutboxVault, R = window.KiwiKitchenRelay, S = window.KiwiCashSessions, out = [];
     if (L && L.queueRecoveryCopies) out.push({ id: 'sales', api: L.queueRecoveryCopies });
     if (K && K.recoveryCopies) out.push({ id: 'kitchen', api: K.recoveryCopies });
     if (R && R.recoveryCopies) out.push({ id: 'relay', api: R.recoveryCopies });
@@ -72,7 +62,7 @@
     if (box) box.remove();
     if (!rows.length && !held) return;
     box = el('details', 'position:fixed;inset-inline:12px;bottom:12px;max-height:50vh;overflow:auto;padding:12px;background:var(--paper);color:var(--ink);border:1px solid var(--atlas);z-index:10001');
-    var summary = el('summary', '', (rows.length && rows.every(function (r) { return r.source === 'punches'; }) ? text(13) : text(0)) + ' · ' + rows.length); box.append(summary);
+    var summary = el('summary', '', (rows.length && rows.every(function (r) { return r.source === 'punches'; }) ? text(15) : text(0)) + ' · ' + rows.length); box.append(summary);
     if (held) { var memo = el('p', '', text(10)); memo.setAttribute('role', 'alert'); box.append(memo); }
     if (bytes >= 838860) { var warning = el('p', '', text(4)); warning.setAttribute('role', 'alert'); box.append(warning); }
     rows.forEach(function (row) {
@@ -88,11 +78,11 @@
           setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 1000);
         } catch (_) {
           try { if (url) URL.revokeObjectURL(url); } catch (__) {}
-          var fallback = el('span', 'display:block;padding:4px'), note = el('span', '', text(13)); note.setAttribute('role', 'alert');
+          var fallback = el('span', 'display:block;padding:4px'), note = el('span', '', text(17)); note.setAttribute('role', 'alert');
           var area = el('textarea', 'display:block;width:100%;min-height:96px'); area.readOnly = true; area.value = row.raw; area.setAttribute('aria-label', label(row.source, row.key));
           fallback.append(note, area); line.append(fallback);
           try { area.focus(); area.select && area.select(); } catch (__) {}
-          try { var copied = navigator.clipboard && navigator.clipboard.writeText && navigator.clipboard.writeText(row.raw); if (copied && copied.then) copied.then(function () { note.textContent = text(14); }, function () {}); } catch (__) {}
+          try { var copied = navigator.clipboard && navigator.clipboard.writeText && navigator.clipboard.writeText(row.raw); if (copied && copied.then) copied.then(function () { note.textContent = text(18); }, function () {}); } catch (__) {}
         }
       };
       line.append(save);
@@ -121,8 +111,6 @@
     (target || document.body).append(box);
   }
   window.addEventListener('kiwi:quarantine-review', function (event) { paint(event.detail); });
-  ['kiwi:sale-queue', 'storage', 'kiwi:langchange', 'kiwi:clients-quarantine', 'kiwi:clients-outbox', 'kiwi:kitchen-print-corrupt', 'kiwi:kitchen-relay-evidence'].forEach(function (name) { window.addEventListener(name, function () { paint(); }); });
-  ['kiwi:sale-queue', 'storage', 'kiwi:langchange', 'kiwi:clients-quarantine', 'kiwi:clients-outbox', 'kiwi:kitchen-print-corrupt', 'kiwi:punch-quarantine'].forEach(function (name) { window.addEventListener(name, function () { paint(); }); });
-  ['kiwi:sale-queue', 'storage', 'kiwi:langchange', 'kiwi:clients-quarantine', 'kiwi:clients-outbox', 'kiwi:kitchen-print-corrupt', 'kiwi:cash-sessions-corrupt'].forEach(function (name) { window.addEventListener(name, function () { paint(); }); });
+  ['kiwi:sale-queue', 'storage', 'kiwi:langchange', 'kiwi:clients-quarantine', 'kiwi:clients-outbox', 'kiwi:kitchen-print-corrupt', 'kiwi:kitchen-relay-evidence', 'kiwi:punch-quarantine', 'kiwi:cash-sessions-corrupt'].forEach(function (name) { window.addEventListener(name, function () { paint(); }); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paint); else paint();
 })();
