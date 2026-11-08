@@ -67,7 +67,7 @@ export const TOPICS = Object.freeze([
         },
       ),
       en: article(
-        'Restaurant POS software in Morocco: 7 tests before you sign · Kiwi',
+        'Restaurant POS software in Morocco: 7 tests · Kiwi',
         'Seven practical tests for restaurant POS software in Morocco: service speed, offline continuity, hardware, data ownership, support and total cost.',
         'Restaurant POS software in Morocco: 7 tests before you sign',
         'A sixty-minute trial protocol for choosing a POS that survives a real restaurant service.',
@@ -114,7 +114,7 @@ export const TOPICS = Object.freeze([
         },
       ),
       en: article(
-        'Restaurant food cost: formula, MAD example and calculator · Kiwi',
+        'Restaurant food cost: formula and MAD example · Kiwi',
         'Calculate restaurant food cost per dish and period with a detailed MAD example, yield conversions, inventory consumption and theoretical-versus-actual variance.',
         'Restaurant food cost: formula, MAD example and actual cost',
         'Move from supplier price to inventory variance and calculate a food margin you can actually manage.',
@@ -161,7 +161,7 @@ export const TOPICS = Object.freeze([
         },
       ),
       en: article(
-        'Restaurant inventory management: method and MAD example · Kiwi',
+        'Restaurant inventory management: MAD example · Kiwi',
         'A practical restaurant inventory method for units, recipes, receiving, counts, waste, MAD variance analysis and supplier-aware reorder points.',
         'Restaurant inventory management: the method that explains variance',
         'Trace every movement from delivery to count, then translate inventory variance into quantity and MAD.',
@@ -191,7 +191,7 @@ export const TOPICS = Object.freeze([
     },
     pages: {
       fr: article(
-        'Menu engineering restaurant : matrice et exemple en MAD · Kiwi',
+        'Menu engineering restaurant : matrice en MAD · Kiwi',
         'Faites un menu engineering restaurant fiable : marge de contribution, popularité, matrice Stars, Plowhorses, Puzzles, Dogs et exemple en MAD.',
         'Menu engineering restaurant : la matrice expliquée avec un exemple en MAD',
         'Classez chaque plat par popularité et marge de contribution, puis décidez quoi protéger, corriger, promouvoir ou retirer.',
@@ -228,7 +228,7 @@ export const TOPICS = Object.freeze([
     },
     pages: {
       fr: article(
-        'Seuil de rentabilité restaurant : formule et calcul en MAD · Kiwi',
+        'Seuil de rentabilité restaurant : formule en MAD · Kiwi',
         'Calculez le seuil de rentabilité d’un restaurant : coûts fixes, taux de marge sur coûts variables, exemple en MAD, couverts par jour et calculateur.',
         'Seuil de rentabilité restaurant : formule, exemple en MAD et objectif par jour',
         'Transformez vos charges fixes et variables en chiffre d’affaires mensuel, couverts par jour et marge de sécurité.',
@@ -238,7 +238,7 @@ export const TOPICS = Object.freeze([
         { dateModified: '2026-10-07T20:30:00+02:00' },
       ),
       en: article(
-        'Restaurant break-even point: formula and MAD calculator · Kiwi',
+        'Restaurant break-even point: formula in MAD · Kiwi',
         'Calculate a restaurant break-even point from fixed costs and contribution margin, then convert it into monthly sales and daily covers with a MAD calculator.',
         'Restaurant break-even point: formula, MAD example and daily cover target',
         'Turn fixed and variable costs into a monthly sales threshold, daily cover target and margin of safety.',
@@ -269,7 +269,7 @@ export const TOPICS = Object.freeze([
     },
     pages: {
       fr: article(
-        'Ouvrir un restaurant au Maroc : 9 vérifications avant le bail · Kiwi',
+        'Ouvrir un restaurant au Maroc : 9 vérifications · Kiwi',
         'Ouvrir un restaurant au Maroc : local, autorisations, création, hygiène, budget et plan d’ouverture. Checklist vérifiable et exemple en MAD.',
         'Ouvrir un restaurant au Maroc : 9 vérifications avant de signer le bail',
         'Validez le projet, le local et les démarches applicables avant d’engager les travaux, puis testez le service complet.',
@@ -279,7 +279,7 @@ export const TOPICS = Object.freeze([
         { legalReviewDate: '2026-08-24' },
       ),
       en: article(
-        'How to open a restaurant in Morocco: a pre-lease checklist · Kiwi',
+        'Open a restaurant in Morocco: pre-lease checklist · Kiwi',
         'How to open a restaurant in Morocco: validate the premises, permits, company, food safety, budget and opening plan with a practical checklist.',
         'How to open a restaurant in Morocco: 9 checks before you sign a lease',
         'Validate the project, premises and applicable procedures before fit-out, then rehearse the complete service flow.',
@@ -304,8 +304,8 @@ export const TOPICS = Object.freeze([
     id: 'loyalty',
     routes: {"fr": "/fr/guides/fidelisation-client-remises-restaurant/", "en": "/en/guides/restaurant-customer-loyalty-discounts/", "ar": "/ar/guides/ولاء-عملاء-المطعم-والخصومات/"},
     pages: {
-      fr: article("Fidélisation restaurant : tous les clients n’ont pas besoin de la même remise · Kiwi", "Fidélisez les clients de votre restaurant : adaptez vos offres aux visites, calculez le coût des remises en MAD et mesurez les retours.", "Fidélisation restaurant : tous les clients n’ont pas besoin de la même remise", "Adaptez vos offres aux visites enregistrées, calculez leur coût en MAD et mesurez les retours pour construire une relation qui dure.", "assets/articles/fidelisation-client-remises-restaurant-fr.png", "Trois situations client et trois réponses : reconnaître, comprendre et inviter à revenir.", "Fidélisation restaurant", "2026-10-07T20:30:00+02:00"),
-      en: article("Restaurant loyalty: not every customer needs the same discount · Kiwi", "Build restaurant customer loyalty: match offers to recorded visits, calculate discount costs in MAD and measure returns with a practical checklist.", "Restaurant loyalty: not every customer needs the same discount", "Match offers to recorded visits, calculate their cost in MAD and measure returns to build a lasting customer relationship.", "assets/articles/restaurant-customer-loyalty-discounts-en.png", "Three customer situations and responses: recognise, understand and invite back.", "Restaurant customer loyalty", "2026-10-07T20:30:00+02:00"),
+      fr: article("Fidélisation restaurant : quelle remise, pour qui ? · Kiwi", "Fidélisez les clients de votre restaurant : adaptez vos offres aux visites, calculez le coût des remises en MAD et mesurez les retours.", "Fidélisation restaurant : tous les clients n’ont pas besoin de la même remise", "Adaptez vos offres aux visites enregistrées, calculez leur coût en MAD et mesurez les retours pour construire une relation qui dure.", "assets/articles/fidelisation-client-remises-restaurant-fr.png", "Trois situations client et trois réponses : reconnaître, comprendre et inviter à revenir.", "Fidélisation restaurant", "2026-10-07T20:30:00+02:00"),
+      en: article("Restaurant loyalty: which discount for whom? · Kiwi", "Build restaurant customer loyalty: match offers to recorded visits, calculate discount costs in MAD and measure returns with a practical checklist.", "Restaurant loyalty: not every customer needs the same discount", "Match offers to recorded visits, calculate their cost in MAD and measure returns to build a lasting customer relationship.", "assets/articles/restaurant-customer-loyalty-discounts-en.png", "Three customer situations and responses: recognise, understand and invite back.", "Restaurant customer loyalty", "2026-10-07T20:30:00+02:00"),
       ar: article("ولاء عملاء المطعم: ليس كل زبون بحاجة إلى الخصم نفسه · Kiwi", "عزز ولاء عملاء مطعمك: اربط العروض بالزيارات المسجلة، واحسب تكلفة الخصومات بالدرهم، وقس العودة والهامش بخطوات عملية تناسب نشاطك.", "ولاء عملاء المطعم: ليس كل زبون بحاجة إلى الخصم نفسه", "اربط العرض بالزيارات المسجلة واحسب تكلفته بالدرهم وقس العودة لبناء علاقة مستمرة مع زبائن مطعمك.", "assets/articles/restaurant-customer-loyalty-discounts-ar.png", "ثلاث حالات للعملاء وثلاث استجابات: التقدير والفهم والدعوة إلى العودة.", "ولاء عملاء المطعم", "2026-10-07T20:30:00+02:00"),
     },
   },
