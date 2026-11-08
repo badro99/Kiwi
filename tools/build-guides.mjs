@@ -133,8 +133,8 @@ const LIB = Object.freeze({
     read: 'اقرأ الدليل',
     category: 'التصنيف',
     minutes: (n) => `<bdi dir="ltr">${n}</bdi> دقيقة قراءة`,
-    updated: (d) => `حُدّث في <bdi dir="ltr">${d}</bdi>`,
-    published: (d) => `نُشر في <bdi dir="ltr">${d}</bdi>`,
+    updated: (d) => `حُدّث في ${d}`,
+    published: (d) => `نُشر في ${d}`,
     total: (n) => `<bdi dir="ltr">${n}</bdi> أدلة منشورة`,
     filteredOne: (total) => `<bdi dir="ltr">{n}</bdi> من <bdi dir="ltr">${total}</bdi> دليل معروض`,
     filteredMany: (total) => `<bdi dir="ltr">{n}</bdi> من <bdi dir="ltr">${total}</bdi> أدلة معروضة`,
@@ -577,7 +577,7 @@ function heroFacts(locale) {
   const rows = [
     [lib.factGuides, number(TOPICS.length)],
     [lib.factLanguages, '<bdi dir="ltr">FR · EN · AR</bdi>'],
-    [lib.factUpdated, `<time datetime="${esc(newest.slice(0, 10))}">${number(formatDate(newest, locale))}</time>`],
+    [lib.factUpdated, `<time datetime="${esc(newest.slice(0, 10))}">${formatDate(newest, locale)}</time>`],
   ];
   return `<dl class="hero-facts">${rows
     .map(([term, value]) => `<div><dt>${esc(term)}</dt><dd>${value}</dd></div>`)
@@ -601,6 +601,29 @@ const organization = (locale) => ({
  * remplace le dernier <span> de la signature, qui porte la durée dans les
  * vingt-et-un fragments ; si ce motif disparaît un jour, la construction
  * échoue au lieu de publier une signature muette. */
+/* Les cartes « à lire ensuite » en bas de chaque article portaient des
+ * durées et un nombre de guides saisis à la main ; ils dérivaient (« 5
+ * méthodes » pour sept guides publiés, 14 min pour un guide qui en compte 12).
+ * La durée vient maintenant du même calcul que la bibliothèque et la
+ * signature, et le compte de la longueur du manifeste. */
+const MINUTE_WORD = {
+  fr: () => 'min', en: () => 'min',
+  ar: (n) => (n >= 3 && n <= 10 ? 'دقائق' : 'دقيقة'),
+};
+const LIBRARY_COUNT = /<strong>\d+ (méthodes|guides FR|methods|guides EN|طرق|أدلة AR)<\/strong>/g;
+function syncRelatedCards(fragment, locale) {
+  const byRoute = new Map(TOPICS.map((topic) => [topic.routes[locale], topic]));
+  return fragment
+    .replace(/<a class="related-card" href="([^"]+)">[\s\S]*?<\/a>/g, (card, href) => {
+      const topic = byRoute.get(href);
+      if (!topic) return card;
+      const minutes = readingMinutes(readFragment(topic, locale), locale);
+      return card.replace(/<span>([^<]*?) · \d+ (?:min|دقيقة|دقائق)<\/span>/,
+        (_, label) => `<span>${label} · ${minutes} ${MINUTE_WORD[locale](minutes)}</span>`);
+    })
+    .replace(LIBRARY_COUNT, (_, word) => `<strong>${TOPICS.length} ${word}</strong>`);
+}
+
 function enrichArticle(cluster, locale, fragment) {
   const lib = LIB[locale];
   const minutes = readingMinutes(fragment, locale);
@@ -613,7 +636,7 @@ function enrichArticle(cluster, locale, fragment) {
       + '<span class="byline-separator" aria-hidden="true"></span>'
       + `<span>${lib.minutes(minutes)}</span>$1</div>`);
   if (rebuilt === byline[0]) throw new Error(`${cluster.id}/${locale}: la durée de lecture est introuvable dans la signature`);
-  return readableTables(fragment
+  return readableTables(syncRelatedCards(fragment, locale)
     .replace(byline[0], rebuilt)
     .replace(/<\/main>$/, articleSequence(cluster, locale) + '</main>'));
 }
