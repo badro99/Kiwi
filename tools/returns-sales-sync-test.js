@@ -111,7 +111,7 @@ console.log(`  ✓ échanges & avoirs (${checks.length} contrôles : 7 jours, da
   const binding = dash.slice(dash.indexOf('  function bindLiveReturns()'), dash.indexOf('  const loadReturnsLedger ='));
   const cachedContext = vm.createContext({ window: { KiwiCloudDoc: { currentSlug: () => 'shop', attach: () => ({ bind() {} }) } },
     realReturnsStore: () => true, liveReturnsSlug: '', liveReturns: [], liveReturnsCloud: null,
-    returnsState: '', returnsServer: false, liveReturnsCache: [], loadReturnsLedger() {},
+    returnsState: '', returnsServer: false, liveReturnsCache: [], loadReturnsLedger() {}, rxView: null,
     localStorage: { getItem: () => JSON.stringify({ m: 'shop', list: [{ id: 'disk-cache' }] }) } });
   vm.runInContext(binding + ';bindLiveReturns();', cachedContext);
   assert.equal(cachedContext.liveReturns[0].id, 'disk-cache', 'failure fallback loads the till cache');
