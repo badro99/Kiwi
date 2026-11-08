@@ -105,31 +105,18 @@ export async function sha256Hex(buffer) {
   return Array.from(new Uint8Array(digest)).map((x) => x.toString(16).padStart(2, '0')).join('');
 }
 
-let ensured = false;
+/* La table intake_docs appartient aux migrations (0002, schema.sql). Plus de
+ * CREATE TABLE à l'exécution : un second cycle de vie du schéma à côté du
+ * registre versionné. On vérifie seulement que la table est lisible, une fois
+ * par liaison D1 (WeakMap, jamais un booléen global qui confondrait deux bases).
+ * Une table absente ou une panne D1 lève : les routes répondent 503 'db', on
+ * ne l'avale plus et on ne mémorise pas l'échec (la lecture suivante réessaie). */
+const intakeReady = new WeakMap();
 export async function ensureIntakeSchema(db) {
   if (!db || typeof db.prepare !== 'function') return;
-  if (ensured) return;
-  try {
-    await db.prepare(
-      'CREATE TABLE IF NOT EXISTS intake_docs (' +
-      'merchant TEXT NOT NULL, ' +
-      'doc_id TEXT NOT NULL, ' +
-      'mime TEXT NOT NULL DEFAULT \'\', ' +
-      'size INTEGER NOT NULL DEFAULT 0, ' +
-      'r2_key TEXT NOT NULL DEFAULT \'\', ' +
-      'has_object INTEGER NOT NULL DEFAULT 0, ' +
-      'status TEXT NOT NULL DEFAULT \'received\', ' +
-      'doc_type TEXT NOT NULL DEFAULT \'\', ' +
-      'source TEXT NOT NULL DEFAULT \'\', ' +
-      'posting_hash TEXT NOT NULL DEFAULT \'\', ' +
-      'posting_count INTEGER NOT NULL DEFAULT 0, ' +
-      'created_ts INTEGER NOT NULL DEFAULT 0, ' +
-      'updated_ts INTEGER NOT NULL DEFAULT 0, ' +
-      'PRIMARY KEY (merchant, doc_id)' +
-      ')'
-    ).run();
-    ensured = true;
-  } catch (_) {}
+  if (intakeReady.get(db)) return;
+  await db.prepare('SELECT doc_id FROM intake_docs LIMIT 0').all();
+  intakeReady.set(db, true);
 }
 
 /* Projection publique d'une ligne : jamais de contenu documentaire (nous

@@ -2441,7 +2441,7 @@ section('Whole-project regressions');
     'intake-posting-test.mjs',
     'intake-conflict-test.mjs',
     'intake-archive-test.mjs',
-    'intake-storage-fault-test.mjs',
+    'intake-storage-fault-test.mjs', 'intake-schema-lifecycle-test.mjs',
     'media-owner-test.mjs',
     'admin-delete-r2-test.mjs',
     'admin-api-owner-test.mjs', 'admin-merchant-exists-test.mjs', 'request-deadlines-test.mjs', 'shared-transport-test.mjs', 'tickets-request-helper-test.mjs', 'tickets-pagination-test.mjs', 'booking-shared-submit-test.mjs', 'r20-flows-test.mjs',

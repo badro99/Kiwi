@@ -88,7 +88,7 @@ function makeShared() {
       const stmt = (...args) => {
         const expectedBinds = (s.match(/\?/g) || []).length;
         if (args.length !== expectedBinds) throw new Error('D1_BIND_MISMATCH: expected ' + expectedBinds + ', got ' + args.length);
-        if (/CREATE TABLE IF NOT EXISTS intake_docs/.test(s)) return {};
+        if (/SELECT doc_id FROM intake_docs LIMIT 0/.test(s)) return {};
         if (/INSERT OR IGNORE INTO intake_docs/.test(s)) {
           const [merchant, docId, mime, size, r2key, docType, source, cts, uts] = args;
           const k = merchant + '|' + docId;
