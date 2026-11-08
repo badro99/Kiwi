@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=190';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=108';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=190';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=190';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=191';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=109';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=191';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=191';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
@@ -1259,13 +1259,23 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
     const foldName = (v) => String(v || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
       .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    const plainName = (v) => String(v || '').normalize('NFC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    // The one word-matching rule (r21 loyalty#A0/B1): the earning side below and the programme sheet's
+    // product links (assets/loyalty-product-links.js) both ask it. A short word typed with an accent
+    // ("Thé") is accent-sensitive: folded it would stamp every "The Burger".
+    const wordMatcher = (raw) => {
+      const want = foldName(raw), exact = plainName(raw), strict = want.length < 4 && exact !== want;
+      return { want, exact, strict, matches: (name) => !!want && (' ' + (strict ? plainName(name) : foldName(name)) + ' ').includes(' ' + (strict ? exact : want) + ' ') };
+    };
+    // Two spellings of a product word that match the same names (links made for one stay valid for the other).
+    const sameWord = (a, b) => { const x = wordMatcher(a), y = wordMatcher(b); return x.want === y.want && x.strict === y.strict && (!x.strict || x.exact === y.exact); };
     const qualifyingQty = (cfg, items) => { // linked products by id (renames keep earning), new ones by word
-      const raw = cfg && cfg.product && cfg.product.item, want = foldName(raw), ids = (Array.isArray(cfg && cfg.product && cfg.product.ids) ? cfg.product.ids : []).map(String);
-      if (!want && !ids.length) return 0; const plain = (v) => String(v || '').normalize('NFC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(), exact = plain(raw), strict = want.length < 4 && exact !== want, norm = (v) => strict ? plain(v) : foldName(v); // a short word typed with an accent ("Thé") is accent-sensitive: folded it would stamp every "The Burger"
+      const raw = cfg && cfg.product && cfg.product.item, word = wordMatcher(raw), want = word.want, ids = (Array.isArray(cfg && cfg.product && cfg.product.ids) ? cfg.product.ids : []).map(String);
+      if (!want && !ids.length) return 0;
       return (Array.isArray(items) ? items : []).reduce((n, item) => {
-        const name = ' ' + norm(item && item.name) + ' ', key = String(item && (item.id || item.itemId || item.pid) || '');
+        const key = String(item && (item.id || item.itemId || item.pid) || '');
         const qty = Math.max(0, Number(item && item.qty) || 0), unit = String(item && item.unit || ''), weighed = /^(weigh|kg|kilos?|kilograms?|g|gr|grams?|l|litres?|liters?|cl|ml)$/i.test(unit) || (qty % 1 !== 0 && !/^(unit|units|piece|pieces|pièce|pièces|pc|pcs|pce|u)$/i.test(unit)); // a fractional quantity is a weighed line unless the unit says pieces
-        return (key && ids.indexOf(key) >= 0) || (want && name.includes(' ' + (strict ? exact : want) + ' ')) ? n + (weighed ? Number(qty > 0) : Math.floor(qty)) : n;
+        return (key && ids.indexOf(key) >= 0) || word.matches(item && item.name) ? n + (weighed ? Number(qty > 0) : Math.floor(qty)) : n;
       }, 0);
     }
     const stampsFor = (cfg, items) => {
@@ -1295,7 +1305,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       const amount = Math.max(0, +base || 0), percent = Math.min(100, Math.max(0, +reward.value || 0));
       return Math.min(amount, Math.round(amount * percent + 1e-9) / 100); // wave Q: nearest centime, every trade
     }
-    return { loyaltyOn, pointsFor, foldName, qualifyingQty, stampsFor, refundFor, rewardDiscount };
+    return { loyaltyOn, pointsFor, foldName, plainName, wordMatcher, sameWord, qualifyingQty, stampsFor, refundFor, rewardDiscount };
   })();
   /* GENERATED SHARED KiwiLoyaltyRules END */
   function rewardDiscount(t, base) {
