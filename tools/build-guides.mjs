@@ -439,7 +439,7 @@ ${icon('search', 'search-icon')}
 <p class="visually-hidden" id="guides-search-help">${esc(lib.searchHelp)}</p>
 <nav class="goal-rail" aria-labelledby="goals-title">
 <h2 class="rail-title" id="goals-title">${esc(lib.goalsTitle)}</h2>
-<ul class="goal-list" role="group" aria-label="${esc(lib.goalsLabel)}">${goalPills}</ul>
+<div role="group" aria-label="${esc(lib.goalsLabel)}"><ul class="goal-list">${goalPills}</ul></div>
 </nav>
 </div>`;
 }
@@ -546,7 +546,7 @@ function header(locale, routes) {
         <span class="nav-rule" aria-hidden="true"></span>
         ${demo('')}
         <details class="language-menu">
-          <summary aria-label="${esc(ui.languagePicker)}"><span>${locale.toUpperCase()}</span>${icon('expand_more')}</summary>
+          <summary aria-label="${locale.toUpperCase()}, ${esc(ui.languagePicker)}"><span>${locale.toUpperCase()}</span>${icon('expand_more')}</summary>
           <div class="menu-pop" role="group" aria-label="${esc(ui.languagePicker)}">${languageLinks}</div>
         </details>
         <details class="nav-menu">
