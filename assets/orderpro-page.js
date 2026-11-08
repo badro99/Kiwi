@@ -1,6 +1,9 @@
 /* Private lazy registry. Classic dependencies execute in their declared order.
  * Only static assets are loaded; the original guest bootstrap waits for readiness. */
 (() => {
+  /* Explicit manifest: startup waits for exactly these modules, by name, so a module added or removed
+     elsewhere (or defined in another order) can neither start the page early nor strand it. */
+  const MODULES = ['session', 'table', 'menu', 'cart', 'payment'];
   const definitions = new Map();
   let started = false;
   const scopes = Object.create(null), extensions = Object.create(null);
@@ -12,7 +15,7 @@
     define(name, reads, factory) {
       if (definitions.has(name)) throw new Error('Duplicate OrderPro module: ' + name);
       definitions.set(name, { reads, factory });
-      if (definitions.size === 5) registry.start();
+      if (MODULES.every((module) => definitions.has(module))) registry.start();
     },
     create(name, scope) {
       const definition = definitions.get(name);
