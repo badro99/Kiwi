@@ -626,6 +626,7 @@ for (const test of [
   'hotel-properties-test.mjs',
   'hotel-reconnect-journey-test.mjs',
   'stockqueue-ruling-test.mjs', 'stock-retail-move-test.mjs', 'held-split-lines-test.mjs', 'recipe-caps-test.mjs', 'menu-missing-price-test.mjs', 'boutique-retention-day-test.mjs', 'stock-money-properties-test.mjs', 'stock-overlay-quota-test.mjs', 'serveur-loyalty-evidence-test.mjs', 'clients-evidence-test.mjs', 'kitchen-queue-evidence-test.mjs', 'queue-recovery-evidence-test.mjs', 'sale-aliases-test.mjs', 'stock-count-history-evidence-test.mjs', 'cx-money-behavior-test.mjs',
+  'stockqueue-ruling-test.mjs', 'stock-retail-move-test.mjs', 'held-split-lines-test.mjs', 'recipe-caps-test.mjs', 'menu-missing-price-test.mjs', 'boutique-retention-day-test.mjs', 'stock-money-properties-test.mjs', 'stock-overlay-quota-test.mjs', 'serveur-loyalty-evidence-test.mjs', 'clients-evidence-test.mjs', 'kitchen-queue-evidence-test.mjs', 'queue-recovery-evidence-test.mjs', 'cash-outbox-quarantine-test.mjs', 'day-report-refused-test.mjs', 'credit-book-413-pending-test.mjs', 'sale-aliases-test.mjs', 'stock-count-history-evidence-test.mjs', 'cx-money-behavior-test.mjs',
   'menu-analysis-properties-test.mjs',
   'economat-properties-test.mjs',
   'economat-controller-uncertain-test.mjs',
@@ -1999,7 +2000,7 @@ section('Whole-project regressions');
     'formula-kitchen-paper-test.mjs',
     'orderpro-split-test.mjs',
     'orderpro-draft-transport-test.mjs',
-    'orderpro-boundary-test.mjs', 'orderpro-money-properties-test.mjs', 'orderpro-deadline-test.mjs', 'net1-request-test.mjs', 'orderpro-storage-failure-test.mjs',
+    'orderpro-boundary-test.mjs', 'orderpro-module-manifest-test.mjs', 'orderpro-reload-uncertain-submit-test.mjs', 'orderpro-money-properties-test.mjs', 'orderpro-deadline-test.mjs', 'net1-request-test.mjs', 'orderpro-storage-failure-test.mjs',
     'orderpro-formula-explicit-choice-test.mjs',
     'orderpro-formula-choice-images-test.mjs',
     'orderpro-invalid-options-test.mjs',
@@ -2519,7 +2520,7 @@ section('Whole-project regressions');
     /* 2026-10-19 · la caisse boutique démo au téléphone : fiche, inventaire,
        Vendus après une vente encaissée au toucher. */
     'boutique-phone-browser-test.mjs',
-    'boutique-pay-dismiss-browser-test.mjs',
+    'boutique-pay-dismiss-browser-test.mjs', 'boutique-pay-reload-browser-test.mjs', 'offline-db-reload-browser-test.mjs',
     /* 2026-10-19 · chaque caisse sur un iPad tactile : − / + du ticket à
        32 px dans les treize métiers, champ code-barres de l'épicerie lisible. */
     'ipad-touch-browser-test.mjs',

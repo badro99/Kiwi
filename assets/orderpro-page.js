@@ -1,6 +1,9 @@
 /* Private lazy registry. Classic dependencies execute in their declared order.
  * Only static assets are loaded; the original guest bootstrap waits for readiness. */
 (() => {
+  /* Explicit manifest: startup waits for exactly these modules, by name, so a module added or removed
+     elsewhere (or defined in another order) can neither start the page early nor strand it. */
+  const MODULES = ['session', 'table', 'menu', 'cart', 'payment'];
   const definitions = new Map();
   let started = false;
   const scopes = Object.create(null), extensions = Object.create(null);
@@ -12,7 +15,7 @@
     define(name, reads, factory) {
       if (definitions.has(name)) throw new Error('Duplicate OrderPro module: ' + name);
       definitions.set(name, { reads, factory });
-      if (definitions.size === 5) registry.start();
+      if (MODULES.every((module) => definitions.has(module))) registry.start();
     },
     create(name, scope) {
       const definition = definitions.get(name);
@@ -1709,7 +1712,7 @@
 
   }
   }
-  const scripts = ["assets/orderpro/money.js?v=4","assets/orderpro/draft.js?v=5","assets/orderpro/transport.js?v=12","assets/orderpro/session.js?v=5","assets/orderpro/table.js?v=5","assets/orderpro/menu.js?v=6","assets/orderpro/cart.js?v=6","assets/orderpro/payment.js?v=11"];
+  const scripts = ["assets/orderpro/money.js?v=4","assets/orderpro/draft.js?v=5","assets/orderpro/transport.js?v=13","assets/orderpro/session.js?v=5","assets/orderpro/table.js?v=5","assets/orderpro/menu.js?v=6","assets/orderpro/cart.js?v=6","assets/orderpro/payment.js?v=11"];
   for (const src of scripts) {
     const script = document.createElement('script');
     script.async = false;

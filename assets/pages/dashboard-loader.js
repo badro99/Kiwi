@@ -11,10 +11,10 @@
       'assets/growth-crm.js?v=7',
       'assets/ramadan.js?v=3',
       'assets/catalog-import.js?v=22',
-      'assets/ai-image-import.js?v=3',
+      'assets/ai-image-import.js?v=4',
       'assets/menu-scan-reader.js?v=9',
-      'assets/menu-scan.js?v=16',
-      'assets/salle-scan.js?v=12',
+      'assets/menu-scan.js?v=17',
+      'assets/salle-scan.js?v=13',
     ] },
     hotel: { dependencies: [], scripts: [
       'assets/hotel/arrivals.js?v=11',
@@ -28,7 +28,7 @@
       'assets/hotel/editors.js?v=10',
     ] },
     groups: { dependencies: ['hotel'], scripts: ['assets/hotel/groups.js?v=6'] },
-    economat: { dependencies: ['hotel'], scripts: ['assets/hotel-economat.js?v=57'] },
+    economat: { dependencies: ['hotel'], scripts: ['assets/hotel-economat.js?v=59'] },
     /* « Ouvrir la caisse » on the PIN lock: the store picker and the opening ticket. */
     lock: { dependencies: [], scripts: ['assets/lock-till.js?v=3'] },
   });

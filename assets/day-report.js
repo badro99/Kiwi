@@ -1419,7 +1419,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
   function cloud() {
     if (docHandle || !window.KiwiCloudDoc) return docHandle;
     docHandle = window.KiwiCloudDoc.attach({
-      feature: 'dayreports',
+      feature: 'dayreports', onRefused: function (why) { try { window.dispatchEvent(new CustomEvent('kiwi-day-report-refused', { detail: { why: String(why || 'too-large') } })); } catch (_) {} },
       slug: function () { return storeSlug(); },
       read: function () { return readAll(); },
       write: function (d) {
