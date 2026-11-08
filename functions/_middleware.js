@@ -29,7 +29,7 @@ import {
 } from './auth/_lib.js';
 import { metadataResponse, protectedResourceMetadata, authorizationServerMetadata } from './api/agent/_oauth.js';
 import { withFastNext } from './_fast-next.js';
-
+import { isPublicUtilityPath, notFoundFor } from './_public-pages.js';
 import { visitorRedirect, recordOldOrigin } from './_origin-move.js';
 
 const GATE_COOKIE = 'kiwi_gate';
@@ -551,12 +551,7 @@ async function routeRequest(context) {
     || path === '/terms.html' || path === '/terms'
     || path === '/mentions-legales.html' || path === '/mentions-legales'
     || path === '/cookies.html' || path === '/cookies'
-    || path === '/support.html' || path === '/support'
-    /* La page de statut est faite pour être consultée PENDANT une panne, par
-     * quelqu'un qui n'arrive justement pas à se connecter ; et la page 404 est
-     * ce qu'on montre à un visiteur perdu. Ni l'une ni l'autre derrière le gate. */
-    || path === '/status.html' || path === '/status'
-    || path === '/404.html' || path === '/404' || path === '/404/')) return next();
+    || path === '/support.html' || path === '/support' || isPublicUtilityPath(path))) return next();
   if (isRead && (
     /* La page de base (design 2027 §4.1) : la carte en liste, pour un
      * navigateur sous le minimum client. functions/order/basic.js. */
@@ -825,24 +820,7 @@ async function routeRequest(context) {
       headers: { ...lockHeaders, 'Content-Type': 'text/html; charset=utf-8', 'Retry-After': '5' },
     });
   }
-  /* Un lien mort (faute de frappe, ancienne URL, lien partagé tronqué) ne doit
-   * pas répondre par l'écran de connexion marchand : le visiteur croit que le
-   * site lui demande un compte, et un robot d'indexation enregistre un 401 au
-   * lieu d'un 404. On demande à la couche statique si le chemin existe. Pages
-   * répond 404 avec notre 404.html quand il n'existe pas ; une page de
-   * l'application qui EXISTE répond 200 et reste derrière le gate ci-dessous.
-   * Rien n'est révélé : les deux dépôts sont publics. */
-  if (isRead && !isApi && !path.startsWith('/api/') && env.ASSETS && typeof env.ASSETS.fetch === 'function') {
-    let probe = null;
-    try { probe = await env.ASSETS.fetch(new Request(request.url, { method: 'GET' })); } catch (_) { probe = null; }
-    if (probe && probe.status === 404) {
-      return new Response(request.method === 'HEAD' ? null : probe.body, {
-        status: 404,
-        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
-      });
-    }
-  }
-  return new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: sessionRevoked && !liveTill, lang: requestedLanguage(request) }), {
+  return (isRead && !isApi && await notFoundFor(request, env, path)) || new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: sessionRevoked && !liveTill, lang: requestedLanguage(request) }), {
     status: 401,
     headers: { ...lockHeaders, 'Content-Type': 'text/html; charset=utf-8' },
   });
