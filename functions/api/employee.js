@@ -15,6 +15,7 @@ import {
 } from '../auth/_lib.js';
 import { storeOperationalState } from './_private.js';
 import { DEFAULT_CUTOFF, businessDate, merchantCutoff, merchantZone } from './_business-day.js';
+import { ownCorrections } from './_attendance-corrections.js';
 import { handleAttendance, ACTION_ROLES as ATTENDANCE_ACTION_ROLES } from './employee/_attendance.js';
 import { handleLeave, ACTION_ROLES as LEAVE_ACTION_ROLES } from './employee/_leave.js';
 import { handleNoticesPage } from './employee/_planning.js';
@@ -271,6 +272,7 @@ async function payloadFor(request, env) {
     pointedHours: pointedHours(attendanceRow.data, me.id, auth.pin.id, zone, cutoff),
     progress: safeProgress(progressRow.data.members && progressRow.data.members[me.id]),
     attendance: attendanceView(attendanceRow.data, auth.pin.id),
+    corrections: await ownCorrections(env, merchant, auth.pin.id),
     colleagues,
     messages: (Array.isArray(messagesRow.data.messages) ? messagesRow.data.messages : [])
       .filter((message) => message && (message.target === 'ALL' || String(message.target || '') === me.id)

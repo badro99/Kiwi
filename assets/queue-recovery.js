@@ -5,11 +5,11 @@
   var box;
   var words = {
     fr: ['Copies de ventes à vérifier', 'Exporter', 'Accuser réception et supprimer', 'Confirmer la suppression de cette copie ? Vérifiez sa récupération avant de continuer.', 'Stockage des copies presque plein. Exportez et vérifiez les copies avant de les supprimer.',
-      'Copie de ventes', 'Bons de cuisine', 'Fiches et achats clients', 'Annuler', 'Confirmer la suppression', 'Ventes clients gardées en mémoire seulement : le stockage est plein. Ne fermez pas l’application avant la synchronisation.', 'File de ventes active illisible'],
+      'Copie de ventes', 'Bons de cuisine', 'Fiches et achats clients', 'Annuler', 'Confirmer la suppression', 'Ventes clients gardées en mémoire seulement : le stockage est plein. Ne fermez pas l’application avant la synchronisation.', 'File de ventes active illisible', 'Pointages à vérifier', 'Copies à vérifier'],
     en: ['Sale copies to review', 'Export', 'Acknowledge and delete', 'Confirm deletion of this copy? Verify its recovery before continuing.', 'Copy storage nearly full. Export and verify copies before deleting them.',
-      'Sales copy', 'Kitchen tickets', 'Customer records and purchases', 'Cancel', 'Confirm deletion', 'Customer sales are held in memory only: storage is full. Do not close the app before they sync.', 'Active sales queue unreadable'],
+      'Sales copy', 'Kitchen tickets', 'Customer records and purchases', 'Cancel', 'Confirm deletion', 'Customer sales are held in memory only: storage is full. Do not close the app before they sync.', 'Active sales queue unreadable', 'Punches to review', 'Copies to review'],
     ar: ['نسخ المبيعات للمراجعة', 'تصدير', 'إقرار وحذف', 'تأكيد حذف هذه النسخة؟ تحقق من استعادتها قبل المتابعة.', 'مساحة النسخ ممتلئة تقريباً. صدّر النسخ وتحقق منها قبل حذفها.',
-      'نسخة مبيعات', 'تذاكر المطبخ', 'بطاقات العملاء ومشترياتهم', 'إلغاء', 'تأكيد الحذف', 'مبيعات العملاء محفوظة في الذاكرة فقط: التخزين ممتلئ. لا تغلق التطبيق قبل المزامنة.', 'طابور المبيعات النشط غير قابل للقراءة']
+      'نسخة مبيعات', 'تذاكر المطبخ', 'بطاقات العملاء ومشترياتهم', 'إلغاء', 'تأكيد الحذف', 'مبيعات العملاء محفوظة في الذاكرة فقط: التخزين ممتلئ. لا تغلق التطبيق قبل المزامنة.', 'طابور المبيعات النشط غير قابل للقراءة', 'تسجيلات حضور للمراجعة', 'نسخ للمراجعة']
   };
   function text(i) {
     var C = window.KiwiCaisseLang, I = window.KiwiI18n;
@@ -29,17 +29,19 @@
     if (source === 'kitchen') return text(6);
     if (source === 'clients') return text(7);
     var m = /:quarantine:(\d+)$/.exec(key);
-    if (!m) return text(11);
+    if (!m) return source === 'punches' ? text(12) : text(11);
     var d = new Date(Number(m[1]));
     if (isNaN(d.getTime())) return text(5);
     var when = ''; try { when = d.toLocaleString(lang() === 'ar' ? 'ar' : lang() === 'en' ? 'en-GB' : 'fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (_) { when = d.toISOString().slice(0, 16); }
-    return text(5) + ' · ' + when;
+    return (source === 'punches' ? text(12) : text(5)) + ' · ' + when;
   }
   function sources() {
     var L = window.KiwiLive, K = window.KiwiKitchenPrint, C = window.KiwiOutboxVault, out = [];
     if (L && L.queueRecoveryCopies) out.push({ id: 'sales', api: L.queueRecoveryCopies });
     if (K && K.recoveryCopies) out.push({ id: 'kitchen', api: K.recoveryCopies });
     if (C && C.recoveryCopies) out.push({ id: 'clients', api: C.recoveryCopies });
+    var P = window.KiwiEmployeePunchQueue;
+    if (P && P.recoveryCopies) out.push({ id: 'punches', api: P.recoveryCopies });
     return out;
   }
   function el(tag, css, content) { var n = document.createElement(tag); if (css) n.style.cssText = css; if (content !== undefined) n.textContent = content; return n; }
@@ -59,7 +61,7 @@
     if (box) box.remove();
     if (!rows.length && !held) return;
     box = el('details', 'position:fixed;inset-inline:12px;bottom:12px;max-height:50vh;overflow:auto;padding:12px;background:var(--paper);color:var(--ink);border:1px solid var(--atlas);z-index:10001');
-    var summary = el('summary', '', text(0) + ' · ' + rows.length); box.append(summary);
+    var summary = el('summary', '', (rows.length && rows.every(function (r) { return r.source === 'punches'; }) ? text(13) : text(0)) + ' · ' + rows.length); box.append(summary);
     if (held) { var memo = el('p', '', text(10)); memo.setAttribute('role', 'alert'); box.append(memo); }
     if (bytes >= 838860) { var warning = el('p', '', text(4)); warning.setAttribute('role', 'alert'); box.append(warning); }
     rows.forEach(function (row) {
@@ -92,6 +94,6 @@
     (target || document.body).append(box);
   }
   window.addEventListener('kiwi:quarantine-review', function (event) { paint(event.detail); });
-  ['kiwi:sale-queue', 'storage', 'kiwi:langchange', 'kiwi:clients-quarantine', 'kiwi:clients-outbox', 'kiwi:kitchen-print-corrupt'].forEach(function (name) { window.addEventListener(name, function () { paint(); }); });
+  ['kiwi:sale-queue', 'storage', 'kiwi:langchange', 'kiwi:clients-quarantine', 'kiwi:clients-outbox', 'kiwi:kitchen-print-corrupt', 'kiwi:punch-quarantine'].forEach(function (name) { window.addEventListener(name, function () { paint(); }); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paint); else paint();
 })();

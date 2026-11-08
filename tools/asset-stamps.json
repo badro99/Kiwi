@@ -564,12 +564,12 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "649",
-    "sha": "cd90e64babe7c19f"
+    "v": "650",
+    "sha": "f4505210da7596f2"
   },
   "assets/employee-planning.js": {
-    "v": "24",
-    "sha": "07c22b6d5f4d0050"
+    "v": "25",
+    "sha": "2654ce3c6c5ece96"
   },
   "assets/employee-pwa.js": {
     "v": "2",
@@ -1164,8 +1164,8 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "118",
-    "sha": "ded6ed350841d7b4"
+    "v": "119",
+    "sha": "51c8f36e018bc49f"
   },
   "assets/live-link/queue-store.js": {
     "v": "23",
@@ -1960,8 +1960,8 @@
     "sha": "bd10177ac673f7ac"
   },
   "assets/queue-recovery.js": {
-    "v": "6",
-    "sha": "ed81de2f2ae84077"
+    "v": "7",
+    "sha": "a6c5dc567dd57024"
   },
   "assets/ramadan.js": {
     "v": "3",

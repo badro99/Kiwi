@@ -351,8 +351,8 @@ var SHELL = [
   '/assets/operations-ui.js?v=33',
   '/assets/live-link/queue-store.js?v=23',
   '/assets/live-link/sale-identity.js?v=4',
-  '/assets/live-link.js?v=118',
-  '/assets/queue-recovery.js?v=6',
+  '/assets/live-link.js?v=119',
+  '/assets/queue-recovery.js?v=7',
   '/assets/channel-sales.js?v=8',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -458,8 +458,8 @@ var SHELL = [
   '/assets/stock-identity.js?v=3',
   '/assets/restaurant-recipes.js?v=18',
   '/assets/restaurant-units.js?v=2',
-  '/assets/employee-live.js?v=649',
-  '/assets/employee-planning.js?v=24',
+  '/assets/employee-live.js?v=650',
+  '/assets/employee-planning.js?v=25',
   '/assets/employee-trade-shell.css?v=4',
   '/assets/employee-trade-shell.js?v=9',
   '/assets/planning-core.js?v=15',
