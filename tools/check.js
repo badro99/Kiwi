@@ -1657,6 +1657,7 @@ section('Whole-project regressions');
     'kitchen-relay-retry-test.mjs',
     'kitchen-relay-evidence-test.mjs',
     'printer-transport-deadline-test.mjs',
+    'bridge-process-fault-test.mjs',
     'takeout-kds-ready-test.mjs',
     'caisse-godmode-toggles-test.mjs',
     'kitchen-print-queue-test.mjs',

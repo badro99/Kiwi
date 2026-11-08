@@ -252,6 +252,50 @@ try {
     assert.ok(!(await listing()).body.jobs.some(j=>j.id===original));
   }));
 
+  /* r21 print#A2 · the generated sequences stop at 40 actions; this is the whole recovery life of three
+   * tickets across two outages, bridge restarts and several explicit reprints, in one fixed order. */
+  await strict('A long outage: expiry, explicit reprints and bridge restarts keep one ticket one print, and every ticket stays recoverable until its retention ends', fc.asyncProperty(fc.constant(0), async () => {
+    reset();
+    const listing = async () => { const r = await jobs.onRequestGet({ env, request: new Request('https://kiwi.test/api/print/jobs?merchant=' + merchant, { headers: { Cookie: till } }) }); return (await r.json()).jobs.map((j) => j.id); };
+    const reprint = async (id) => { const r = await jobs.onRequestPost({ env, request: new Request('https://kiwi.test/api/print/jobs?merchant=' + merchant, { method: 'POST', headers: { Cookie: till, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reprint-expired', id }) }) }); return { status: r.status, ...(await r.json()) }; };
+    const origins = []; for (let k = 0; k < 3; k++) origins.push((await deposit(k)).body.id);
+    const paper = new Map();
+    const printOn = async (b, expectId) => { const got = (await poll(b)).jobs; assert.equal(got.length, 1, 'one ticket handed out'); assert.equal(got[0].id, expectId); paper.set(expectId, (paper.get(expectId) || 0) + 1); await ack(b, expectId, 'printed'); };
+
+    // Outage 1: nobody collects for the whole life of the tickets.
+    clock += 10 * 60000 + 1;
+    assert.equal((await poll(BRIDGES[0])).jobs.length, 0, 'nothing expired is handed out');
+    assert.deepEqual((await listing()).sort(), origins.slice().sort(), 'all three are offered for reprint, not lost');
+
+    // Reprint #0; the bridge restarts mid-print (claimed, no acknowledgement).
+    const c0 = await reprint(origins[0]); assert.equal(c0.status, 200);
+    assert.equal((await poll(BRIDGES[0])).jobs.length, 1, 'the copy is claimed');
+    clock += 31000;                                   // the bridge restarted; its lease ran out
+    assert.equal((await poll(BRIDGES[0])).jobs.length, 0, 'a restart never reprints on its own');
+    assert.equal(rows().find((r) => r.id === c0.id).status, 'uncertain');
+    assert.ok((await requeue(c0.id)).requeued, 'the till can send the uncertain copy once');
+    await printOn(BRIDGES[0], c0.id);
+
+    // Outage 2: the printer is down for a whole ticket life; each attempt fails, then expires.
+    const c1 = await reprint(origins[1]); assert.equal(c1.status, 200);
+    const got = (await poll(BRIDGES[0])).jobs; assert.equal(got.length, 1);
+    await ack(BRIDGES[0], c1.id, 'failed', 'EHOSTUNREACH');
+    clock += 10 * 60000 + 1;
+    assert.equal((await poll(BRIDGES[0])).jobs.length, 0, 'an expired copy is not retried forever');
+    assert.ok(['expired', 'failed'].includes(rows().find((r) => r.id === c1.id).status));
+    const c1b = await reprint(origins[1]); assert.equal(c1b.status, 200); assert.notEqual(c1b.id, c1.id, 'the next reprint opens the next attempt');
+    await printOn(BRIDGES[0], c1b.id);
+
+    // Whole lifecycle: one print per explicit send that reached the printer; the third never printed and is still offered.
+    assert.deepEqual([...paper.values()], [1, 1]);
+    assert.ok([c0.id, c1b.id].every((id) => rows().find((r) => r.id === id).status === 'done'));
+    assert.ok((await listing()).includes(origins[2]), 'the untouched ticket is still offered');
+    assert.ok(!(await listing()).includes(origins[0]) && !(await listing()).includes(origins[1]), 'printed recoveries are no longer offered');
+    assert.equal(rows().length, 3 + 1 + 2, 'no ticket multiplied itself');
+    clock += 24 * 3600000 + 10 * 60000;
+    assert.ok(!(await listing()).includes(origins[2]), 'after its retention the ticket leaves the list');
+  }));
+
   await strict('the reprint list costs the same queries for one expired ticket or many', fc.asyncProperty(fc.integer({min:2,max:12}), async n => {
     const queries = async () => { const prepare = env.DB.prepare; let q = 0; env.DB.prepare = function (...a) { if (/print_jobs/.test(a[0])) q++; return prepare.apply(this, a); }; // auth lookups are cached, not per ticket
       try { const r = await jobs.onRequestGet({env, request:new Request('https://kiwi.test/api/print/jobs?merchant='+merchant,{headers:{Cookie:till}})}); assert.equal(r.status, 200); } finally { env.DB.prepare = prepare; } return q; };

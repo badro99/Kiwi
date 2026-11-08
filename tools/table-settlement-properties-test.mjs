@@ -86,6 +86,33 @@ api.transfer('a', 'b', { id: 'move' });
 api = context.createTableSettlement(plain(t), l, null, context.createCurrentOrder({ tables: l }));
 api.transfer('a', 'b', { id: 'move' });
 assert.equal(l.b.length, 1); assert.equal(l.a, undefined); assert.equal(api.balance('b'), 12);
+// r21 tables#A2 · rechargement COMPLET (tables ET lignes repassent par leur sérialisation de stockage, comme
+// localStorage) après un paiement partiel, entre le transfert et son accusé perdu : solde affiché et propriétaire
+// de la commande doivent rester ceux de la table d'arrivée, et rejouer le transfert ne déplace rien de plus.
+{
+  const store = (obj) => JSON.stringify(obj), restore = (raw) => JSON.parse(raw);
+  const T0 = { a: { status: 'ka-yaklo' }, b: { status: 'khawya' } }, L0 = { a: [{ uid: 'tajine', qty: 2 }, { uid: 'the', qty: 1 }] };
+  let api0 = context.createTableSettlement(T0, L0, null, context.createCurrentOrder({ tables: L0 }));
+  api0.open('a', { id: 'open-r21', totalCents: 21000, session: 's-r21', lines: L0.a });
+  api0.addPayment('a', { id: 'pay-r21', amountCents: 8000 });
+  assert.equal(api0.balance('a'), 13000);
+  api0.transfer('a', 'b', { id: 'move-r21' });                    // la réponse se perd ici : l'appareil recharge
+  let T1 = restore(store(T0)), L1 = restore(store(L0));
+  let api1 = context.createTableSettlement(T1, L1, null, context.createCurrentOrder({ tables: L1 }));
+  assert.equal(api1.balance('b'), 13000, 'solde affiché de la table d\'arrivée après rechargement');
+  assert.equal(api1.balance('a'), 0, 'la table de départ ne garde aucun solde');
+  assert.deepEqual(plain(L1.b).map((x) => x.uid), ['tajine', 'the'], 'la commande appartient à la table d\'arrivée');
+  assert.equal(L1.a, undefined, 'plus aucune ligne sur la table de départ');
+  api1.transfer('a', 'b', { id: 'move-r21' });                    // le serveur rejoue : aucune mutation
+  assert.equal(store(T1), store(restore(store(T1))));
+  assert.equal(L1.b.length, 2, 'rejouer le transfert ne duplique aucune ligne'); assert.equal(api1.balance('b'), 13000);
+  const T2 = restore(store(T1)), L2 = restore(store(L1));        // second rechargement, puis paiement du reste
+  const api2 = context.createTableSettlement(T2, L2, null, context.createCurrentOrder({ tables: L2 }));
+  api2.addPayment('b', { id: 'pay-rest-r21', amountCents: 13000 });
+  assert.equal(api2.balance('b'), 0); api2.settle('b');
+  const trail = (a) => a ? (a.entries || []).concat((a.history || []).flatMap(trail)) : [];
+  assert.deepEqual(plain(trail(api2.snapshot('b').settlement).map((e) => e.amountCents).sort((x, y) => x - y)), [8000, 13000], 'les deux paiements, une fois chacun');
+}
 // Reprise sur une autre table après réutilisation de la table d'origine.
 api.addPayment('b', { id: 'pay-rest', amountCents: 12 }); api.settle('b');
 api.open('b', { id: 'next-visit', totalCents: 99, lines: [{ uid: 'new-party' }] });
