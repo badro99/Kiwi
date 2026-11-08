@@ -204,6 +204,16 @@ await S.run('guides · bibliothèque et article', async (t) => {
   }
   compare('guides', union(...found));
 });
+/* Support, état du service et pages légales : le pied de page de l'accueil y
+ * mène, elles doivent tenir le même niveau (repère <main>, contrastes, noms). */
+await S.run('support, état et pages légales', async (t) => {
+  const found = [];
+  for (const url of ['/support.html', '/status.html', '/terms.html', '/privacy.html', '/cookies.html', '/mentions-legales.html']) {
+    found.push(await audit(t, await open(t, url, { kiwiLang: 'fr' }, { pin: false })));
+  }
+  found.push(await audit(t, await open(t, '/support.html', { kiwiLang: 'fr' }, { width: 390, height: 844, mobile: true, pin: false })));
+  compare('legal', union(...found));
+});
 if (LOCALES.includes('ar')) await S.run('page d’accueil, arabe', async (t) => {
   // coverage: surface=landing locale=ar viewport=desktop
   const page = await open(t, '/ar/index.html', { kiwiLang: 'ar' });
