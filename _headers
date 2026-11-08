@@ -14,15 +14,23 @@
 #    Kept as three explicit paths rather than a wildcard: `/*/opengraph-image`
 #    would also match any future locale, which is the intent, but Pages matches
 #    a bare `*` greedily across slashes and the explicit form is unambiguous.
+#
+#    One day of cache: each scraper hit used to revalidate the file
+#    (max-age=0). A day also bounds how long an old card survives after the
+#    image is replaced (the ?hash in og:image is fixed at build time).
 
 /fr/opengraph-image
   Content-Type: image/png
+  Cache-Control: public, max-age=86400
 /en/opengraph-image
   Content-Type: image/png
+  Cache-Control: public, max-age=86400
 /ar/opengraph-image
   Content-Type: image/png
+  Cache-Control: public, max-age=86400
 /es/opengraph-image
   Content-Type: image/png
+  Cache-Control: public, max-age=86400
 
 # 2. Next's fingerprinted bundles.
 #
