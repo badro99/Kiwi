@@ -253,10 +253,13 @@ export function cleanText(value, max = 4000) {
   return String(value == null ? '' : value).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max);
 }
 export function parseJson(value, fallback) { try { return JSON.parse(value); } catch (_) { return fallback; } }
+// Les mots qui font d'un message une urgence : le plancher de sécurité de classify(),
+// et ce que le tri sémantique garde d'un long message quand il doit le raccourcir.
+export const URGENT_SIGNAL = /fig[ée]|refus[ée]|crash|can(?:not|'t)\s+(?:sell|take|charge|process)|suspended|ma bghatch|mrtayn|tjmed|9adrinch|لا يعمل|لا يمكننا|مرتين|bloqu|impossible|perdu|double|débité|debite|paiement|sécur|secur|vol|urgent|down|panne/;
 export function classify(summary) {
   const s = cleanText(summary, 4000).toLowerCase();
   // Conservative safety floor: model output cannot demote an urgent report.
-  const urgent = /fig[ée]|refus[ée]|crash|can(?:not|'t)\s+(?:sell|take|charge|process)|suspended|ma bghatch|mrtayn|tjmed|9adrinch|لا يعمل|لا يمكننا|مرتين|bloqu|impossible|perdu|double|débité|debite|paiement|sécur|secur|vol|urgent|down|panne/.test(s);
+  const urgent = URGENT_SIGNAL.test(s);
   const category = /imprim|ticket|bluetooth|usb/.test(s) ? 'materiel'
     : /stock|invent|produit|article/.test(s) ? 'stock'
     : /equipe|employ|planning|salaire|pin|accès/.test(s) ? 'equipe'
