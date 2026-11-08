@@ -118,11 +118,37 @@ KiwiOrderMenu.orderProParts.run('transport', function () {
                 && capabilities.localStorage.getItem(key + ':retired:' + saved.ref) !== '1') ref = saved.ref;
           } catch (_) {}
         }
+        /* An earlier course whose answer never came back stays retryable after another course went through. */
+        const held = [];
+        if (fingerprint) {
+          try {
+            for (let i = 0; i < capabilities.localStorage.length; i++) {
+              const name = String(capabilities.localStorage.key(i));
+              if (name.indexOf(key + ':held:') !== 0) continue;
+              const saved = JSON.parse(capabilities.localStorage.getItem(name) || 'null');
+              if (saved && saved.v === 1 && saved.scope === scope && /^r[A-Za-z0-9_-]{6,40}$/.test(saved.ref || '')
+                  && !this.retiredSendRefs.has(key + ':' + saved.ref) && capabilities.localStorage.getItem(key + ':retired:' + saved.ref) !== '1') {
+                held.push({ name, saved });
+                if (!ref && saved.fingerprint === fingerprint) ref = saved.ref;
+              }
+            }
+          } catch (_) {}
+        }
         if (!ref) ref = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14);
         const attempt = { key, scope, payload, ref, durable: false };
         if (fingerprint) {
           try {
             const record = JSON.stringify({ v: 1, scope, fingerprint, ref });
+            const current = JSON.parse(capabilities.localStorage.getItem(key) || 'null');
+            if (current && current.v === 1 && current.scope === scope && current.fingerprint !== fingerprint && current.ref !== ref
+                && /^r[A-Za-z0-9_-]{6,40}$/.test(current.ref || '') && !this.retiredSendRefs.has(key + ':' + current.ref)
+                && capabilities.localStorage.getItem(key + ':retired:' + current.ref) !== '1') {
+              capabilities.localStorage.setItem(key + ':held:' + current.ref, JSON.stringify(Object.assign({ at: Date.now() }, current)));
+              held.push({ name: key + ':held:' + current.ref, saved: Object.assign({ at: Date.now() }, current) });
+            }
+            held.filter(h => h.saved.ref === ref).forEach(h => capabilities.localStorage.removeItem(h.name));
+            held.filter(h => h.saved.ref !== ref).sort((x, y) => (y.saved.at || 0) - (x.saved.at || 0)).slice(6)
+              .forEach(h => capabilities.localStorage.removeItem(h.name));
             capabilities.localStorage.setItem(key, record);
             attempt.durable = capabilities.localStorage.getItem(key) === record;
           } catch (_) {}
@@ -134,6 +160,7 @@ KiwiOrderMenu.orderProParts.run('transport', function () {
         const key = attempt ? attempt.key : this.sendKey();
         let retireDurably = !!attempt;
         if (attempt) this.retiredSendRefs.add(key + ':' + attempt.ref);
+        if (attempt) { try { capabilities.localStorage.removeItem(key + ':held:' + attempt.ref); } catch (_) {} }
         try {
           const saved = JSON.parse(capabilities.localStorage.getItem(key) || 'null');
           if (saved && (attempt ? saved.ref === attempt.ref && saved.scope === attempt.scope

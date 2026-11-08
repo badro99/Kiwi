@@ -1994,7 +1994,7 @@ section('Whole-project regressions');
     'formula-kitchen-paper-test.mjs',
     'orderpro-split-test.mjs',
     'orderpro-draft-transport-test.mjs',
-    'orderpro-boundary-test.mjs', 'orderpro-module-manifest-test.mjs', 'orderpro-money-properties-test.mjs', 'orderpro-deadline-test.mjs', 'net1-request-test.mjs', 'orderpro-storage-failure-test.mjs',
+    'orderpro-boundary-test.mjs', 'orderpro-module-manifest-test.mjs', 'orderpro-reload-uncertain-submit-test.mjs', 'orderpro-money-properties-test.mjs', 'orderpro-deadline-test.mjs', 'net1-request-test.mjs', 'orderpro-storage-failure-test.mjs',
     'orderpro-formula-explicit-choice-test.mjs',
     'orderpro-formula-choice-images-test.mjs',
     'orderpro-invalid-options-test.mjs',
