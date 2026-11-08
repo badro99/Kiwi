@@ -45,6 +45,19 @@ const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].s
   ok(same(L.linkedIds('Café', prev), ['m1', 'b1', 'm9']), 'saving the same word keeps the earlier links and adds the new matches');
   ok(same(L.linkedIds('Croissant', prev), []), 'a new word drops the links of the old one');
 }
+/* r21 loyalty#B0/B2 · editing a saved word between its accented and plain forms,
+   with ids already linked: the old ids stay only while the new spelling matches
+   the same names as the old one (the earning side's own rule). */
+{
+  const { L } = realm({ menu: [{ id: 't1', name: 'Thé vert' }, { id: 't2', name: 'The Burger' }] });
+  ok(same(L.linkedIds('The', null), ['t1', 't2']), 'the plain « The » links both the tea and the burger');
+  ok(same(L.linkedIds('Thé', { item: 'The', ids: ['t1', 't2'] }), ['t1']), 'changing The to Thé drops the burger linked earlier: « Thé » is accent-sensitive');
+  ok(same(L.linkedIds('Thé', { item: 'Thé', ids: ['t1', 'old'] }), ['t1', 'old']), 'saving Thé again keeps its earlier links');
+  ok(same(L.linkedIds('THÉ', { item: 'Thé', ids: ['t1', 'old'] }), ['t1', 'old']), 'a change of case alone keeps the links');
+  ok(same(L.linkedIds('The', { item: 'Thé', ids: ['t1'] }), ['t1', 't2']), 'going back to the plain The matches both again');
+  const cafe = realm({ menu: [{ id: 'c1', name: 'Café' }] }).L;
+  ok(same(cafe.linkedIds('Cafe', { item: 'Café', ids: ['gone'] }), ['gone', 'c1']), 'a long word keeps folding accents: Café to Cafe keeps the earlier ids');
+}
 {
   const { L } = realm({ menuThrows: true, boutique: [{ id: 'b2', name: 'Café moulu' }] });
   ok(same(L.linkedIds('café', null), ['b2']), 'a menu that throws costs its products, not the save');

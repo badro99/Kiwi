@@ -3,10 +3,10 @@
  * rack allocation, numbering, persistence and existing centime calculations.
  * Browser reads: KiwiCaisseLang, KiwiCaissePairing, KiwiCaisseTheme, KiwiClients, KiwiCloudDoc, KiwiConfig, KiwiEnv, KiwiEscPos, KiwiHardware, KiwiPhone, KiwiPlatform, KiwiPosDispatch, KiwiPosSale, KiwiPressing, KiwiPressingCatalog, KiwiPressingGarmentIcons, KiwiPressingOps, KiwiPrinter, KiwiReceipt, KiwiVerticalState, KiwiZoneLaw, __kiwiPinReset, addEventListener, lucide.
  * UI imports below supply factories only; state never enters a window global. */
-import { create as createDeposit } from './deposit.js?v=45';
-import { create as createWorkshop } from './workshop.js?v=45';
-import { create as createPickup } from './pickup.js?v=45';
-import { create as createRack } from './rack.js?v=45';
+import { create as createDeposit } from './deposit.js?v=47';
+import { create as createWorkshop } from './workshop.js?v=47';
+import { create as createPickup } from './pickup.js?v=47';
+import { create as createRack } from './rack.js?v=47';
 import '../merchant-policies.js?v=4';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · PRESSING MODE — the laundry counter app inside kiwi-caisse.html
@@ -267,22 +267,11 @@ import '../merchant-policies.js?v=4';
     const j = i - TILL_LETTERS.length;
     return TILL_LETTERS[Math.floor(j / TILL_LETTERS.length) % TILL_LETTERS.length] + TILL_LETTERS[j % TILL_LETTERS.length];
   }
-  function mergeTills(mine, theirs) {
-    const out = {};
-    const owner = Object.create(null);
-    const rows = (m) => Object.keys(m && typeof m === 'object' ? m : {})
-      .map((k) => [k, m[k]]).filter(([k, r]) => /^d[a-z0-9]{6,24}$/.test(k) && r && /^[A-Z]{1,2}$/.test(String(r.letter || '')))
-      .sort((x, y) => (+x[1].at || 0) - (+y[1].at || 0) || (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0));
-    /* La copie serveur d'abord : une lettre déjà attribuée ne change jamais de
-       caisse ; une revendication locale ne passe que sur une lettre libre. */
-    rows(theirs).concat(rows(mine)).forEach(([k, r]) => {
-      const letter = String(r.letter);
-      if (out[k] || owner[letter]) return;
-      out[k] = { letter, at: +r.at || 0 };
-      owner[letter] = k;
-    });
-    return out;
-  }
+  /* Les règles de numérotation (empreinte, identité d'un bon, renumérotation,
+     fusion des bons et des lettres) n'existent qu'une fois :
+     assets/pressing-numbering.js, que le tableau de bord lit aussi. */
+  function numberingRules() { return window.KiwiPressingOps.numbering(); }
+  function mergeTills(mine, theirs) { return numberingRules().mergeTills(mine, theirs); }
   function freeTillLetter(tills) {
     const taken = new Set(Object.keys(tills || {}).map((k) => tills[k].letter));
     for (let i = 0; i < 600; i++) if (!taken.has(tillLetterAt(i))) return tillLetterAt(i);
@@ -293,38 +282,16 @@ import '../merchant-policies.js?v=4';
     if (key && !out[key]) out[key] = { letter: freeTillLetter(out), at: +at || Date.now() };
     return out;
   }
-  function tillHash(text) {
-    let a = 2166136261, b = 5381;
-    for (const ch of String(text || '')) {
-      const c = ch.charCodeAt(0);
-      a = Math.imul(a ^ c, 16777619) >>> 0;
-      b = (Math.imul(b, 33) + c) >>> 0;
-    }
-    return a.toString(36) + b.toString(36);
-  }
+  function tillHash(text) { return numberingRules().tillHash(text); }
 
   /* Deux bons distincts sous le même numéro (une ancienne caisse, un cas
      limite) : aucun n'est fusionné dans l'autre. L'identité d'un bon est son
-     heure de dépôt, fixée à la création ; celui que le serveur porte déjà garde
-     son numéro, l'autre est renuméroté de façon visible et déterministe
-     (« 0042-RK »), ses étiquettes avec lui, et garde la trace de l'ancien. */
-  function orderIdentity(o) {
-    const t = o && o.droppedAt != null ? new Date(o.droppedAt).getTime() : NaN;
-    return Number.isFinite(t) ? t : null;
-  }
-  function renumberedOrder(o) {
-    const A = 'abcdefghjklmnpqrstuvwxyz23456789'.toUpperCase();
-    const h = tillHash(String(orderIdentity(o)) + ':' + String(o.id));
-    const base = normalizeOrderNo(o.id) || '0000';
-    let id = `${base}-R${A[parseInt(h.slice(0, 6), 36) % 32]}`;
-    if (id === String(o.id)) id = `${base}-R${A[parseInt(h.slice(-6), 36) % 32]}${A[parseInt(h.slice(0, 6), 36) % 32]}`;
-    const old = String(o.id);
-    return {
-      ...o, id, displayNo: id, renumberedFrom: o.renumberedFrom || publicOrderNo(o),
-      pieces: Array.isArray(o.pieces) ? o.pieces.map((p) => (p && typeof p.pid === 'string' && p.pid.indexOf(old + '-') === 0
-        ? { ...p, pid: id + p.pid.slice(old.length) } : p)) : o.pieces,
-    };
-  }
+     heure de dépôt, fixée à la création ; le bon que le serveur porte déjà garde
+     son numéro, sinon le bon déposé le premier, l'autre est renuméroté de
+     façon visible et déterministe (« 0042-RK »), ses étiquettes avec lui, et
+     garde la trace de l'ancien. */
+  function orderIdentity(o) { return numberingRules().orderIdentity(o); }
+  function renumberedOrder(o) { return numberingRules().renumberedOrder(o); }
 
   function ensurePublicOrderNumbers(orders) {
     if (!Array.isArray(orders)) return;
@@ -1039,32 +1006,10 @@ import '../merchant-policies.js?v=4';
       return win;
     };
     /* Même numéro = même bon SEULEMENT si l'heure de dépôt concorde (ou manque,
-       données anciennes). Deux bons distincts sous un numéro restent deux bons :
-       celui que porte déjà la copie serveur (`theirs`, lue en premier) garde le
-       numéro, l'autre est renuméroté (renumberedOrder, qui ne dépend que du bon
-       lui-même : toute caisse qui le renumérote lui donne le même numéro). */
-    const mergeOrders = (a, b, depth) => {
-      const groups = Object.create(null);
-      (b || []).concat(a || []).forEach((row) => {
-        if (!row || !row.id) return;
-        const g = groups[row.id] || (groups[row.id] = []);
-        const t = orderIdentity(row);
-        const slot = g.find((x) => x.t === null || t === null || x.t === t);
-        if (!slot) { g.push({ t, row }); return; }
-        if (slot.t === null) slot.t = t;
-        slot.row = reconcile(slot.row, row);
-      });
-      let renamed = false;
-      const out = [];
-      Object.keys(groups).forEach((id) => {
-        const g = groups[id];
-        out.push(g[0].row);
-        g.slice(1).forEach((x) => { renamed = true; out.push(renumberedOrder(x.row)); });
-      });
-      /* Un bon renuméroté peut retrouver sa propre copie déjà renumérotée par
-         l'autre appareil : une passe de plus les réunit. */
-      return renamed && (depth || 0) < 4 ? mergeOrders(out, [], (depth || 0) + 1) : out;
-    };
+       données anciennes) : la règle est celle du module partagé, qui range les
+       copies avant de les réunir. Ici seule change la copie gagnante d'un même
+       bon (`reconcile`, avec ses remises et annulations). */
+    const mergeOrders = (a, b) => numberingRules().mergeOrders(a, b, { reconcile, anchored: true });
     const orders = mergeOrders(mine && mine.orders, theirs && theirs.orders).map((o) => {
       const tombstone = cancellations.find((c) => c.id === o.id);
       return tombstone ? { ...o, cancelledAt: tombstone.cancelledAt, cancelledBy: tombstone.cancelledBy || null, rack: null, updatedAt: Math.max(+o.updatedAt || 0, Date.parse(tombstone.cancelledAt || '') || 0) } : o;

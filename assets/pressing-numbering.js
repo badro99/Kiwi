@@ -3,20 +3,20 @@
  *
  * Moved out of assets/pressing-ops.js on 29 October 2026 (note 13 pressing#1):
  * the snapshot owner no longer carries the numbering rules in its own body.
- * The functions below are the former ones, unchanged, and still the exact twin
- * of the till's (assets/pressing/custody.js). pressing-ops.js receives them
- * once, through configureNumbering, and calls them when it merges documents.
+ * r21 pressing#B1: this is now the ONLY copy of the rules. The till
+ * (assets/pressing/custody.js) no longer carries a twin: it reads them from
+ * KiwiPressingOps.numbering(). pressing-ops.js receives them once, through
+ * configureNumbering, and calls them when it merges documents.
  * Loaded right after pressing-ops.js (dashboard.html) and as a dependency of
  * the pressing till (assets/pos-dispatch.js).
  */
 (function () {
   'use strict';
 
-  /* Jumeau exact des règles de la caisse (assets/pressing-caisse.js :
-     orderIdentity, renumberedOrder, mergeTills). Le tableau de bord remonte
-     lui aussi ce document : s'il fusionnait autrement, deux bons distincts
+  /* Règles uniques, lues par la caisse (assets/pressing/custody.js) comme par
+     le tableau de bord : si l'un fusionnait autrement, deux bons distincts
      sous le même numéro redeviendraient un seul, ou le même bon prendrait deux
-     numéros. tools/pressing-money-properties-test.mjs compare les deux. */
+     numéros. */
   function tillHash(textValue) {
     var a = 2166136261, b = 5381, str = String(textValue || '');
     for (var i = 0; i < str.length; i++) {
@@ -57,16 +57,43 @@
       }) : o.pieces
     });
   }
-  function mergeOrders(mine, theirs, depth) {
+  /* Qui garde le numéro d'origine ne dépend pas de l'ordre dans lequel deux
+     copies se rencontrent (r21 pressing#B0) : toutes les lignes sont d'abord
+     rangées par heure de dépôt (sans heure en premier), puis par leur contenu.
+     Le bon déposé le premier garde donc « 0042 ».
+     Une exception voulue, `options.anchored` : face à la copie du SERVEUR
+     (`theirs`), un numéro que le serveur a déjà accepté ne change plus (c'est
+     aussi ce que fait store.js : un numéro porté par un autre bon y répond 409).
+     Les bons du serveur passent alors avant ceux de la caisse, chaque côté
+     restant rangé de la même façon. Sans cette règle, la caisse renuméroterait
+     le bon du serveur et se ferait refuser sans fin. Les appelants qui
+     fusionnent avec le serveur (caisse, tableau de bord) l'ont tous.
+     `options.reconcile(old, row)` choisit la copie gagnante d'un même bon ; le
+     tableau de bord garde la plus récente, la caisse y ajoute les remises et
+     annulations (assets/pressing/custody.js). */
+  function newerRow(old, row) { return (+row.updatedAt || 0) >= (+old.updatedAt || 0) ? row : old; }
+  function stableKey(row) { try { return JSON.stringify(row); } catch (_) { return String(row.id); } }
+  function mergeOrders(mine, theirs, options, depth) {
+    var reconcile = options && typeof options.reconcile === 'function' ? options.reconcile : newerRow;
+    var anchored = !!(options && options.anchored);
+    function item(side) {
+      return function (row) { return { row: row, side: anchored ? side : 0, t: orderIdentity(row), key: stableKey(row) }; };
+    }
+    var rows = (theirs || []).filter(function (row) { return row && row.id; }).map(item(0))
+      .concat((mine || []).filter(function (row) { return row && row.id; }).map(item(1)))
+      .sort(function (x, y) {
+        if (x.side !== y.side) return x.side - y.side;
+        var tx = x.t === null ? -Infinity : x.t, ty = y.t === null ? -Infinity : y.t;
+        return tx < ty ? -1 : tx > ty ? 1 : (x.key < y.key ? -1 : x.key > y.key ? 1 : 0);
+      });
     var groups = Object.create(null);
-    (theirs || []).concat(mine || []).forEach(function (row) {
-      if (!row || !row.id) return;
+    rows.forEach(function (entry) {
+      var row = entry.row, t = entry.t;
       var g = groups[row.id] || (groups[row.id] = []);
-      var t = orderIdentity(row);
       var slot = g.filter(function (x) { return x.t === null || t === null || x.t === t; })[0];
       if (!slot) { g.push({ t: t, row: row }); return; }
       if (slot.t === null) slot.t = t;
-      if ((+row.updatedAt || 0) >= (+slot.row.updatedAt || 0)) slot.row = row;
+      slot.row = reconcile(slot.row, row);
     });
     var renamed = false, out = [];
     Object.keys(groups).forEach(function (id) {
@@ -74,7 +101,7 @@
       out.push(g[0].row);
       g.slice(1).forEach(function (x) { renamed = true; out.push(renumberedOrder(x.row)); });
     });
-    return renamed && (depth || 0) < 4 ? mergeOrders(out, [], (depth || 0) + 1) : out;
+    return renamed && (depth || 0) < 4 ? mergeOrders(out, [], options, (depth || 0) + 1) : out;
   }
   function mergeTills(mine, theirs) {
     var out = {}, owner = Object.create(null);
@@ -93,5 +120,5 @@
     return out;
   }
 
-  window.KiwiPressingOps.configureNumbering(Object.freeze({ renumberedOrder: renumberedOrder, mergeOrders: mergeOrders, mergeTills: mergeTills }));
+  window.KiwiPressingOps.configureNumbering(Object.freeze({ tillHash: tillHash, orderIdentity: orderIdentity, renumberedOrder: renumberedOrder, mergeOrders: mergeOrders, mergeTills: mergeTills }));
 })();
