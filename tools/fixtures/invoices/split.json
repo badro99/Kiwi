@@ -1,5 +1,5 @@
 {
-  "sha256": "8e5284645734ce02111d445b6c4aef62090222f800d248ecdf3e656b293c41a7",
+  "sha256": "f78a2381ee36e27312f3800af2c6d7ad8155875339e1c134bf82b45590340269",
   "prefix": "import { ensureInvoicingSchema } from './_invoice-series.js';\nimport { fail, failResponse, str, parseJson, validDay, DOC_TYPES, MAX_LIST, MAX_BODY, DAY_RE } from './invoices/_shared.js';\nimport { getRow, todayFor, presentFull, displayStatus, balanceOf } from './invoices/_documents.js';\nimport { save, issue, markSent } from './invoices/_lifecycle.js';\nimport { payment, deletePayment } from './invoices/_payments.js';\nimport { creditNote, quoteStatus, convertQuote, duplicate, deleteDraft } from './invoices/_adjustments.js';\nimport { importLegacy } from './invoices/_legacy.js';\nexport { VAT_RATES, PAYMENT_METHODS, DOC_TYPES } from './invoices/_shared.js';\nexport { computeTotals } from './invoices/_tax.js';\n",
   "removed": [
     "import { DateTimeFormat } from './_zone-law.js';\n",
@@ -59,7 +59,7 @@
     {
       "file": "functions/api/invoices/_legacy.js",
       "start": 51089,
-      "end": 55243,
+      "end": 55720,
       "header": "import { json } from '../../auth/_lib.js';\nimport { fail, str, validDay, addDays, changesOf, VAT_RATES, MAX_LINES, MAX_UNIT_CENTS, MAX_QTY, MAX_IMPORT, CHUNK } from './_shared.js';\nimport { computeTotals } from './_tax.js';\nimport { todayFor, draftRow, insertStatement } from './_documents.js';\n// Contrat interne : reçoit ctx authentifié et body parsé ; normalise les documents historiques et retourne la Response du bilan importé/ignoré. Aucun changement de numérotation ni de transaction.\n\n",
       "footer": "\nexport { importLegacy };\n",
       "marker": "/* Extraction privée : legacy */\n\n"
