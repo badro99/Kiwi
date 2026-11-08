@@ -227,7 +227,7 @@ for (const locale of PUBLISHED_LOCALES) {
   ok(stronglyConnected, `${locale.toUpperCase()} article graph is strongly connected`);
 }
 ok(publishedImages.size === published.length, 'every published locale page has its own social image path');
-ok(publishedVersions.size === 1 && publishedVersions.has('12:5'), 'all published guides use the current shared asset versions');
+ok(publishedVersions.size === 1 && publishedVersions.has('13:5'), 'all published guides use the current shared asset versions');
 
 /* ── La bibliothèque · une page de centre de ressources, pas une liste ─────
  * Ces contrôles tiennent la promesse du redesign : la page des guides offre

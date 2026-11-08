@@ -809,8 +809,6 @@ ${alternateLinks(cluster.routes)}
   <meta name="twitter:image" content="${esc(absolute('/' + page.image))}">
   <meta name="twitter:image:alt" content="${esc(page.twitterImageAlt || page.imageAlt)}">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="/assets/fonts/legacy-faces.css?v=${LEGACY_FACES_V}" />
   <link rel="stylesheet" href="/assets/articles/article.css?v=${ASSET_VERSIONS.css}">
   <script type="application/ld+json">${json(structuredData(cluster, locale))}</script>

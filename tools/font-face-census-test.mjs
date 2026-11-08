@@ -75,10 +75,34 @@ const noLegacy = needing.filter((p) => !p.legacy);
 check(!noLegacy.length, `chaque page de classe 1, 2 ou 4 lie ${LEGACY}${noLegacy.length ? ' ; manque sur ' + noLegacy.map((p) => p.page).join(', ') : ''}`);
 const badOrder = needing.filter((p) => p.legacy && p.order !== 'ok');
 check(!badOrder.length, `le lien est à sa place : avant le lien Google, avant article.css, après la feuille Next, n'importe où ailleurs${badOrder.length ? ' ; faux sur ' + badOrder.map((p) => `${p.page} (${p.order})`).join(', ') : ''}`);
-const chunkPages = needing.filter((p) => p.cls === 2 && !/article\.css$/.test(p.link || ''));
-const articlePages = needing.filter((p) => p.cls === 2 && /article\.css$/.test(p.link || ''));
-check(chunkPages.length > 0 && chunkPages.every((p) => /^_next\/static\/chunks\/.+\.css$/.test(p.via)), `les pages de la feuille Next (${chunkPages.length}) gardent leur @import et reçoivent le lien APRÈS elle`);
-check(articlePages.length > 0, `${articlePages.length} pages passent par article.css`);
+/* Les 11 pages de la landing et les pages des guides ne tirent plus rien de Google : sans @import
+   ni lien, elles tombent en classe 4 (elles nomment la famille, legacy-faces.css la déclare). */
+const PUBLIC = /^(?:index\.html|(?:fr|en|ar|de|it|nl|es)\/index\.html|(?:fr|en|ar)\/robot\/index\.html|(?:fr|en|ar)\/guides\/(?:.+\/)?index\.html)$/;
+const publicPages = c.pages.filter((p) => PUBLIC.test(p.page));
+const landingPages = publicPages.filter((p) => !/\/guides\//.test(p.page));
+const guidePages = publicPages.filter((p) => /\/guides\//.test(p.page));
+check(landingPages.length === 11, `la landing compte 11 pages (${landingPages.length})`);
+check(guidePages.length > 0, `${guidePages.length} pages de guides`);
+check(publicPages.every((p) => p.cls === 4), `accueil et guides sont de classe 4, ni lien ni @import Google${publicPages.filter((p) => p.cls !== 4).length ? ' ; autres : ' + publicPages.filter((p) => p.cls !== 4).map((p) => `${p.page} (${p.cls})`).join(', ') : ''}`);
+{
+  /* aucune page publique, aucune feuille qu'elle lie, aucun fichier de flux .txt ne nomme un hôte Google Fonts */
+  const HOST = /fonts\.googleapis\.com|fonts\.gstatic\.com/i;
+  const dirty = [];
+  const seenCss = new Set();
+  for (const p of publicPages) {
+    const html = fs.readFileSync(path.join(ROOT, p.page), 'utf8');
+    if (HOST.test(html)) dirty.push(p.page);
+    for (const m of html.matchAll(/href="([^"]+\.css)(?:\?[^"]*)?"/g)) {
+      const rel = m[1].startsWith('/') ? m[1].slice(1) : path.posix.join(path.posix.dirname(p.page), m[1]);
+      if (seenCss.has(rel) || !fs.existsSync(path.join(ROOT, rel))) continue;
+      seenCss.add(rel);
+      if (HOST.test(fs.readFileSync(path.join(ROOT, rel), 'utf8'))) dirty.push(rel);
+    }
+    const flight = p.page.replace(/index\.html$/, 'index.txt');
+    if (flight !== p.page && fs.existsSync(path.join(ROOT, flight)) && HOST.test(fs.readFileSync(path.join(ROOT, flight), 'utf8'))) dirty.push(flight);
+  }
+  check(seenCss.size > 0 && !dirty.length, `aucune page d'accueil ni de guide, aucune de leurs feuilles (${seenCss.size}) ne nomme fonts.googleapis.com ou fonts.gstatic.com${dirty.length ? ' : ' + dirty.join(', ') : ''}`);
+}
 const badWeights = c.named.map((p) => ({ p, w: weightProblems(p) })).filter((x) => x.w.length);
 check(!badWeights.length, `chaque graisse demandée est déclarée (${DECLARED_WEIGHTS.join(', ')}), encore servie par Google, ou remplacée (${Object.entries(MAPPED_WEIGHTS).map(([a, b]) => `${a}→${b}`).join(', ')})${badWeights.length ? ' ; sinon : ' + badWeights.map((x) => `${x.p.page} ${x.w}`).join(', ') : ''}`);
 {
@@ -255,16 +279,16 @@ for (const p of pages) {
     if (p.cls === 4) {
       for (const w of [400, 500, 600]) check(origin_of(w) === 'assets/fonts', `${p.page} (sans Plex) · l'arabe à ${w} vient de assets/fonts/ (${seen[w].join() || 'rien'})`);
       check(origin_of(700) === 'assets/fonts' && /plex-arabic-600/.test(seen[700][0] || '') || seen[700].length === 0, `${p.page} · l'arabe à 700 prend la face 600 (graisse la plus proche, jamais de gras synthétique)`);
-    } else if (p.cls === 2 && !/article\.css$/.test(p.link || '')) {
-      for (const w of [400, 500, 600]) check(origin_of(w) === 'assets/fonts', `${p.page} (feuille Next) · l'arabe à ${w} vient de assets/fonts/ et non de Google (${seen[w].join() || 'rien'})`);
-      for (const w of [200, 300]) check(origin_of(w) === 'gstatic', `${p.page} (feuille Next) · l'arabe à ${w} vient encore de fonts.gstatic.com tant que l'@import reste (${(seen[w] || []).join() || 'rien'})`);
-      const latin = await probe(page, log, PLEX, 400, 'A');
-      check(latin.length === 0 || latin.every((u) => where(u) === 'gstatic'), `${p.page} (feuille Next) · le latin de Plex reste sur Google : legacy-faces.css ne couvre que l'arabe`);
     } else {
       /* classe 1 et pages des guides : Google, plus tardif, doit gagner ; le fichier local ne part pas */
       for (const w of weights) if (seen[w].length) check(where(seen[w][0]) === 'gstatic', `${p.page} · l'arabe à ${w} vient de Google (la règle la plus tardive gagne) : ${seen[w][0]}`);
       const local = log.fonts.filter((u) => u.startsWith('/assets/fonts/plex-arabic'));
       check(local.length === 0, `${p.page} · aucun fichier local de Plex n'est demandé tant que Google déclare la graisse${local.length ? ' (demandé : ' + local.join() + ')' : ''}`);
+    }
+    if (PUBLIC.test(p.page)) {
+      const g = log.fonts.filter((u) => u.includes('fonts.g'));
+      const inter = log.fonts.filter((u) => /inter-tight/.test(u));
+      check(!g.length && inter.every((u) => u.startsWith('/assets/fonts/')), `${p.page} · aucune fonte ne vient de Google, Inter Tight vient de assets/fonts/ (${inter[0] || 'rien'})`);
     }
     check(!log.refused.length, `${p.page} · aucune requête sortante hors Google${log.refused.length ? ' : ' + [...new Set(log.refused)].slice(0, 3).join(' ') : ''}`);
   });

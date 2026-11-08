@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { applyPricing, pricingCopy, pricingFlight } from './landing-pricing.mjs';
 import { rewrite } from './landing-rewrite.mjs';
+import { selfHostFonts } from './landing-fonts.mjs';
 
 // Keep the hydrated CTA in sync with the generated HTML and selected period.
 const oldPricingChunk = fs.readdirSync('_next/static/chunks').find(name => /^2c2tj5hx4r2-w-[0-9a-f]{8}\.js$/.test(name));
@@ -362,3 +363,8 @@ const runtime = `(() => {
 `;
 fs.writeFileSync('assets/landing-runtime-translations.js', runtime);
 console.log('Rebuild complete for de, it, nl, es.');
+
+// Last step: the compiled stylesheet no longer @imports Google Fonts; Inter
+// Tight is declared from assets/fonts (tools/landing-fonts.mjs). It renames the
+// changed sheet with a content hash and updates every page that names it.
+selfHostFonts('.');
