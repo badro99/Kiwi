@@ -39,6 +39,8 @@ const MAX_CALLS = 30;            // appels GraphQL Shopify par passage
 const MAX_LINE_PAGES = 50;       // 5 000 lignes : exception explicite, aucun retrait partiel
 const CURSOR_DOC = 'shopify-replay';   // store_docs, côté serveur seulement (absent de FEATURES)
 const UNRESOLVED_DOC = 'shopify-replay-unresolved';
+const CATALOG_JOURNAL_FOLD = 11000;  // = MOVE_MAX du catalogue : au-delà, on replie
+const CATALOG_JOURNAL_HARD = 12000;  // limite de sanitize() et du POST catalogue
 const tail = (gid) => String(gid || '').split('/').pop();
 
 const ORDERS_QUERY = `query KiwiMissedOrders($q: String!, $after: String) {
@@ -232,9 +234,16 @@ async function replayBatch(env, merchant, { sinceTs, dryRun } = {}) {
     const row = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first();
     if (!row || !row.data) throw new Error('catalog-missing');
     const raw = JSON.parse(row.data);
-    if (Array.isArray(raw.moves) && raw.moves.length > 11000) throw new Error('catalog-journal-too-long');
+    const journal = Array.isArray(raw.moves) ? raw.moves.length : 0;
+    /* Au-delà de 12 000 mouvements sanitize() couperait le journal sans le dire : on
+       refuse, avec le nombre et la marche à suivre (le statut les expose). Entre
+       11 000 et 12 000 le journal est entier mais plus long que la limite de repli :
+       le rattrapage le replie lui-même, avec la fonction même du catalogue
+       (compactForWrite), au lieu de se bloquer jusqu'à ce que quelqu'un le fasse. */
+    if (journal > CATALOG_JOURNAL_HARD) throw Object.assign(new Error('catalog-journal-too-long'), { moves: journal, max: CATALOG_JOURNAL_HARD });
     const data = catalogFns.sanitize(raw);
     catalogFns.materialize(data);
+    if (journal > CATALOG_JOURNAL_FOLD) catalogFns.compactForWrite(data);
     const plan = planReplay(data, links, orders);
     const summary = {
       since: Number(sinceTs) || 0, orders: plan.orders, skippedOrders: plan.skippedOrders,

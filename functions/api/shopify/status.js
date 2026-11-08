@@ -431,6 +431,13 @@ export async function onRequestPost({ request, env, waitUntil }) {
     }
   } catch (e) {
     const message = String(e && e.message || e).slice(0, 300);
+    /* Journal du catalogue trop long pour être replié ici : une réponse actionnable,
+       pas une panne Shopify (rien n'est écrit sur la connexion). */
+    if (message === 'catalog-journal-too-long') {
+      return json({ error: 'shopify-action-failed', detail: message,
+        recovery: { code: 'compact-catalog', moves: Number(e.moves) || null, max: Number(e.max) || 12000,
+          fr: 'Le journal du catalogue dépasse 12 000 mouvements : il doit être replié (enregistrement du catalogue depuis la caisse, ou demande à l\'équipe Kiwi) avant de relancer le rattrapage.' } }, 409);
+    }
     const clientError = /^(import-|setup-|no-linked-variants|location-required)/.test(message);
     if (!clientError) {
       await env.DB.prepare('UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?')
