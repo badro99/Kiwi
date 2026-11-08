@@ -67,6 +67,7 @@ export function checkPricingRuntime(file, copy, locale) {
       assert.equal(href, '/dashboard.html?plan=' + copy.tiers[i].signupPlan + '&period=' + (annual ? 'annual' : 'monthly'));
       assert.ok(nodeText(card).includes(annual ? copy.billedYearly.replace('{total}', formatPrice([1188, 2988, 4188][i], locale)) : copy.billedMonthly));
     }
+    if (i === 3) assert.equal(nodeText(card).includes(copy.ultraNoAnnual), annual, locale + ': Ultra says it has no annual plan once "annual" is selected');
     assert.ok(copy.tiers[i].features.every(feature => nodeText(card).includes(feature)), 'features stay with their plan');
   });
   assertPeriod(false);

@@ -4,27 +4,27 @@ import { execFileSync } from 'node:child_process';
 import { applyPricing, pricingCopy, pricingFlight } from './landing-pricing.mjs';
 import { rewrite } from './landing-rewrite.mjs';
 import { selfHostFonts } from './landing-fonts.mjs';
+import { homeContent, ctaHtml, ctaFlight, textsHtml, textsFlight, arabicFixes, applyJsonLd, headerLocale, patchMainChunk, patchHeaderChunk, mapFlight } from './landing-home.mjs';
 
 // Keep the hydrated CTA in sync with the generated HTML and selected period.
 const oldPricingChunk = fs.readdirSync('_next/static/chunks').find(name => /^2c2tj5hx4r2-w-[0-9a-f]{8}\.js$/.test(name));
 let pricingChunk = '_next/static/chunks/' + oldPricingChunk;
+// Signup stays in the same tab (back returns to the plans); WhatsApp keeps its new tab.
+// Ultra talks to an advisor first (owner ruling, 4 Nov): its card carries a prefilled
+// WhatsApp message instead of a signup plan. One rewrite per card href, so the step
+// recognises its own output when the generator runs again.
 fs.writeFileSync(pricingChunk, rewrite(fs.readFileSync(pricingChunk, 'utf8'),
   'href:r.DEMO_HREF+(tier.name==="Plus"?"?text=plus":"")',
-  'href:tier.signupPlan?"/dashboard.html?plan="+tier.signupPlan+"&period="+(annual?"annual":"monthly"):r.DEMO_HREF',
+  'href:tier.signupPlan?"/dashboard.html?plan="+tier.signupPlan+"&period="+(annual?"annual":"monthly"):tier.contactMessage?"https://wa.me/212624495159?text="+encodeURIComponent(tier.contactMessage):r.DEMO_HREF',
   'pricing CTA href'
 ));
-// Signup stays in the same tab (back returns to the plans); WhatsApp keeps its new tab.
 fs.writeFileSync(pricingChunk, rewrite(fs.readFileSync(pricingChunk, 'utf8'),
   ':r.DEMO_HREF,target:"_blank",',
   ':r.DEMO_HREF,target:tier.signupPlan?void 0:"_blank",',
   'pricing CTA target'
 ));
-// Ultra talks to an advisor first (owner ruling, 4 Nov): its card carries a prefilled WhatsApp message instead of a signup plan.
-fs.writeFileSync(pricingChunk, rewrite(fs.readFileSync(pricingChunk, 'utf8'),
-  '"&period="+(annual?"annual":"monthly"):r.DEMO_HREF,',
-  '"&period="+(annual?"annual":"monthly"):tier.contactMessage?"https://wa.me/212624495159?text="+encodeURIComponent(tier.contactMessage):r.DEMO_HREF,',
-  'pricing CTA advisor message'
-));
+
+fs.writeFileSync(pricingChunk, patchMainChunk(fs.readFileSync(pricingChunk, 'utf8')));
 
 const pricingCode = fs.readFileSync(pricingChunk);
 const pricingName = '2c2tj5hx4r2-w-' + createHash('sha256').update(pricingCode).digest('hex').slice(0, 8) + '.js';
@@ -36,6 +36,48 @@ if (pricingName !== oldPricingChunk) {
       const file = locale + '/' + name;
       fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replaceAll(oldPricingChunk, pricingName));
     }
+  }
+}
+
+// The header chunk: demo links carry a message in the page language, the phone
+// menu lists all seven languages. Content-hashed like the pricing chunk.
+const oldHeaderChunk = fs.readdirSync('_next/static/chunks').find(name => /^216g4fzfwrgwn(?:-[0-9a-f]{8})?\.js$/.test(name));
+let headerChunk = '_next/static/chunks/' + oldHeaderChunk;
+fs.writeFileSync(headerChunk, patchHeaderChunk(fs.readFileSync(headerChunk, 'utf8')));
+const headerName = '216g4fzfwrgwn-' + createHash('sha256').update(fs.readFileSync(headerChunk)).digest('hex').slice(0, 8) + '.js';
+if (headerName !== oldHeaderChunk) {
+  fs.renameSync(headerChunk, '_next/static/chunks/' + headerName);
+  headerChunk = '_next/static/chunks/' + headerName;
+  for (const locale of ['en', 'fr', 'ar']) {
+    for (const name of fs.readdirSync(locale).filter(name => /\.(html|txt)$/.test(name))) {
+      const file = locale + '/' + name;
+      fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replaceAll(oldHeaderChunk, headerName));
+    }
+  }
+}
+
+// Copy, CTA and structured-data pass over one built locale (see landing-home.mjs).
+// First over the compiled fr / en / ar sources, again over all seven at the end.
+function polishLocale(locale, { texts = false } = {}) {
+  const page = `${locale}/index.html`;
+  let html = fs.readFileSync(page, 'utf8');
+  if (texts) {
+    html = textsHtml(html, locale);
+    if (locale === 'ar') html = arabicFixes(html, true);
+    html = mapFlight(html, flight => textsFlight(flight, locale));
+  }
+  html = headerLocale(ctaHtml(html, locale), locale);
+  html = mapFlight(html, flight => ctaFlight(flight, locale));
+  html = applyJsonLd(html, locale);
+  html = rewrite(html.replace(/<link rel="stylesheet" href="\/assets\/landing-home\.css[^"]*"\/>/g, ''), '</head>', `<link rel="stylesheet" href="${assetUrl('assets/landing-home.css')}"/></head>`, 'head end (landing-home.css)');
+  fs.writeFileSync(page, html);
+  if (!texts) return;
+  for (const name of fs.existsSync(locale) ? fs.readdirSync(locale).filter(name => name.endsWith('.txt')) : []) {
+    const path = `${locale}/${name}`;
+    let flight = fs.readFileSync(path, 'utf8');
+    flight = textsFlight(flight, locale);
+    if (locale === 'ar') flight = arabicFixes(flight, false);
+    fs.writeFileSync(path, ctaFlight(flight, locale, false));
   }
 }
 
@@ -51,6 +93,10 @@ fs.writeFileSync('index.html', fs.readFileSync('fr/index.html'));
 
 const stampManifest = JSON.parse(fs.readFileSync('tools/asset-stamps.json', 'utf8'));
 const assetUrl = file => '/' + file + (stampManifest[file] ? '?v=' + stampManifest[file].v : '');
+// The compiled fr / en / ar pages get the copy, CTA and structured-data pass first:
+// de, it, nl and es are built from the English one below.
+for (const locale of ['fr', 'en', 'ar']) polishLocale(locale, { texts: true });
+fs.writeFileSync('index.html', fs.readFileSync('fr/index.html'));
 const sourcePath = 'en/index.html';
 const localePaths = ['de/index.html', 'it/index.html', 'nl/index.html'];
 const source = fs.readFileSync(sourcePath, 'utf8');
@@ -124,6 +170,27 @@ const corrections = {
     '15 days free, then {total} MAD, billed once a year.': '15 dagen gratis, daarna {total} MAD, eenmaal per jaar gefactureerd.',
   },
 };
+// Words the machine alignment got wrong, and English left in graphics, live in
+// content/landing-home.json. A key is the English text as the polished en page
+// has it; "~prefix" names a long sentence by its unique beginning.
+const allNodes = [...source.matchAll(/>([^<>]+)</g)].map(match => match[1].trim()).filter(Boolean);
+const rawText = value => value.replace(/&/g, '&amp;');
+const resolveHomeKey = key => {
+  if (!key.startsWith('~')) return key;
+  const hits = [...new Set(allNodes.filter(node => node.startsWith(rawText(key.slice(1)))))];
+  if (hits.length !== 1) throw new Error(`landing-home: "${key}" matches ${hits.length} sentences of the English page`);
+  return hits[0];
+};
+const homeKey = entry => resolveHomeKey(entry.to.en || entry.en);
+for (const locale of ['de', 'it', 'nl']) {
+  for (const entry of homeContent.texts) if (entry.to[locale]) corrections[locale][rawText(homeKey(entry))] = rawText(entry.to[locale]);
+}
+// Article before the brand and car-dashboard words the aligner produced.
+const tidyValue = (locale, value) => ({
+  it: v => v.replace(/\b(?:sul|nel|dal|al|del|il|col) Kiwi\b/g, m => ({ sul: 'su', nel: 'in', dal: 'da', al: 'a', del: 'di', il: '', col: 'con' })[m.split(' ')[0]] + ' Kiwi').replace(/ {2}/g, ' ').replace(/^ Kiwi/, 'Kiwi').replace(/\bcruscotto\b/gi, 'dashboard'),
+  de: v => v.replace(/Armaturenbrett/g, 'Dashboard'),
+  nl: v => v,
+})[locale](value);
 for (const localePath of localePaths) {
   const locale = localePath.split('/')[0];
   // The first localization commit contains the original locale copy. Read
@@ -151,11 +218,11 @@ for (const localePath of localePaths) {
   // "stock" as a share, "Mar" and "May" as a verb. Corrections win over the
   // alignment; null keeps the source text as it is written.
   for (const [english, localized] of Object.entries(corrections[locale])) {
-    if (!english.includes('{total}') && !(english in keep) && !sourceText.includes(english)) throw new Error(`${localePath}: correction for missing text "${english}"`);
+    if (!english.includes('{total}') && !(english in keep) && !allNodes.includes(english) && !source.includes(english)) throw new Error(`${localePath}: correction for missing text "${english}"`);
     if (localized === null) replacements.delete(english);
     else replacements.set(english, localized);
   }
-  dictionaries[locale] = Object.fromEntries(replacements);
+  dictionaries[locale] = Object.fromEntries([...replacements].map(([key, value]) => [key, tidyValue(locale, value)]));
 
   // React re-renders <html> from the Flight payload after a hydration
   // mismatch; an English lang there undid the static one (23 Oct 2026).
@@ -179,6 +246,7 @@ function pricingStrings(source, translated, dictionary) {
 for (const locale of Object.keys(dictionaries)) pricingStrings(pricingCopy.en, pricingCopy[locale], dictionaries[locale]);
 const decode = value => value.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&nbsp;/g, '\u00a0').replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n));
 const normalizeKey = value => decode(value).replace(/\u00a0/g, ' ').trim();
+for (const entry of homeContent.texts) if (entry.to.es) esDictionary[normalizeKey(homeKey(entry))] = entry.to.es;
 const escape = value => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 // The German, Italian and Dutch dictionaries are keyed by the raw text nodes
@@ -205,7 +273,7 @@ const staticDictionary = locale => {
 // Content-addressed URLs keep these locale-specific exports cache-safe.
 async function buildStaticLocale(locale, dict, { cloneUnchanged = false, nutrition = false, stylesheet = '' } = {}) {
   const lookup = value => dict[normalizeKey(value)];
-  const clientPaths = ['/_next/static/chunks/216g4fzfwrgwn.js', '/' + pricingChunk];
+  const clientPaths = ['/' + headerChunk, '/' + pricingChunk];
   const scriptPaths = new Map();
   fs.mkdirSync(`${locale}/chunks`, { recursive: true });
   for (const clientPath of clientPaths) {
@@ -226,7 +294,7 @@ async function buildStaticLocale(locale, dict, { cloneUnchanged = false, nutriti
   }
 
   for (const name of fs.readdirSync(`${locale}/chunks`)) {
-    if (/^(?:216g4fzfwrgwn|2c2tj5hx4r2-w(?:-[0-9a-f]{8})?)-[0-9a-f]{16}\.js$/.test(name) && ![...scriptPaths.values()].includes(`/${locale}/chunks/${name}`)) fs.unlinkSync(`${locale}/chunks/${name}`);
+    if (/^(?:216g4fzfwrgwn|2c2tj5hx4r2-w)(?:-[0-9a-f]{8})?-[0-9a-f]{16}\.js$/.test(name) && ![...scriptPaths.values()].includes(`/${locale}/chunks/${name}`)) fs.unlinkSync(`${locale}/chunks/${name}`);
   }
 
   // Translate text, descriptive attributes and metadata, including French source
@@ -368,3 +436,5 @@ console.log('Rebuild complete for de, it, nl, es.');
 // Tight is declared from assets/fonts (tools/landing-fonts.mjs). It renames the
 // changed sheet with a content hash and updates every page that names it.
 selfHostFonts('.');
+for (const locale of ['fr', 'en', 'ar', 'es', 'de', 'it', 'nl']) polishLocale(locale);
+fs.writeFileSync('index.html', fs.readFileSync('fr/index.html'));

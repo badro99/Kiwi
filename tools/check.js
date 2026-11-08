@@ -1746,6 +1746,9 @@ section('Whole-project regressions');
     /* DE/IT/NL servies dans leur langue (titre, H1, maquette), hreflang complet. */
     'landing-static-locale-test.mjs',
     'landing-rewrite-test.mjs',
+    /* Accueil : boutons d'inscription et messages WhatsApp, JSON-LD aligné sur le tarif, textes corrigés. */
+    'landing-home-test.mjs',
+    'landing-home-browser-test.mjs',
     'landing-es-browser-test.mjs',
     /* Aucune page de la landing ne promet un chiffrement de bout en bout, et
        les tarifs montrent les quatre paliers de CLAUDE.md §7. */

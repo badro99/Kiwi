@@ -1,0 +1,697 @@
+{
+  "texts": [
+    {
+      "en": "New this season",
+      "to": {
+        "fr": "Nouveautés",
+        "en": "What’s new",
+        "ar": "الجديد",
+        "es": "Novedades",
+        "de": "Neuheiten",
+        "it": "Novità",
+        "nl": "Nieuw"
+      },
+      "from": {
+        "fr": "Nouveau cette saison",
+        "ar": "جديد هذا الموسم"
+      }
+    },
+    {
+      "en": "What landed on Kiwi since the summer.",
+      "to": {
+        "fr": "Les dernières nouveautés de Kiwi.",
+        "en": "The latest additions to Kiwi.",
+        "ar": "آخر ما أضفناه إلى Kiwi.",
+        "es": "Lo último que se ha añadido a Kiwi.",
+        "de": "Die neuesten Funktionen von Kiwi.",
+        "it": "Le ultime novità di Kiwi.",
+        "nl": "De nieuwste functies van Kiwi."
+      },
+      "from": {
+        "fr": "Ce qui est arrivé sur Kiwi depuis l’été.",
+        "ar": "ما وصل إلى Kiwi منذ الصيف."
+      }
+    },
+    {
+      "en": "Six more, live",
+      "to": {
+        "fr": "Voir six autres fonctions",
+        "en": "See six more features",
+        "ar": "عرض ست ميزات أخرى",
+        "es": "Ver seis funciones más",
+        "de": "Sechs weitere Funktionen ansehen",
+        "it": "Vedi altre sei funzioni",
+        "nl": "Bekijk nog zes functies"
+      },
+      "from": {
+        "fr": "Six de plus, en direct",
+        "ar": "ست أخرى، مباشرة"
+      }
+    },
+    {
+      "en": "TPE",
+      "to": {
+        "en": "POS",
+        "ar": "POS",
+        "es": "TPV",
+        "de": "POS",
+        "it": "POS",
+        "nl": "POS"
+      },
+      "from": {
+        "ar": "TPE"
+      }
+    },
+    {
+      "en": "Guides",
+      "to": {
+        "es": "Guías (EN)",
+        "de": "Ratgeber (EN)",
+        "it": "Guide (EN)",
+        "nl": "Gidsen (EN)"
+      }
+    },
+    {
+      "en": "Free",
+      "to": {
+        "de": "Frei",
+        "it": "Libero",
+        "nl": "Vrij"
+      }
+    },
+    {
+      "en": "Waiting",
+      "to": {
+        "de": "Wartet",
+        "it": "In attesa",
+        "nl": "Wacht"
+      }
+    },
+    {
+      "en": "Eating",
+      "to": {
+        "de": "Isst",
+        "it": "Mangia",
+        "nl": "Eet"
+      }
+    },
+    {
+      "en": "Floor",
+      "to": {
+        "de": "Saal",
+        "it": "Sala",
+        "nl": "Zaal"
+      }
+    },
+    {
+      "en": "order taken",
+      "to": {
+        "de": "Bestellung aufgenommen",
+        "it": "ordine preso",
+        "nl": "bestelling opgenomen"
+      }
+    },
+    {
+      "en": "Kitchen",
+      "to": {
+        "de": "Küche",
+        "it": "Cucina",
+        "nl": "Keuken"
+      }
+    },
+    {
+      "en": "sent to the screen",
+      "to": {
+        "de": "auf den Bildschirm gesendet",
+        "it": "inviato allo schermo",
+        "nl": "naar het scherm gestuurd"
+      }
+    },
+    {
+      "en": "Till",
+      "to": {
+        "de": "Kasse",
+        "it": "Cassa",
+        "nl": "Kassa"
+      }
+    },
+    {
+      "en": "payment taken",
+      "to": {
+        "de": "Zahlung kassiert",
+        "it": "pagamento incassato",
+        "nl": "betaling ontvangen"
+      }
+    },
+    {
+      "en": "Dashboard",
+      "to": {
+        "de": "Dashboard",
+        "it": "Dashboard",
+        "nl": "Dashboard"
+      }
+    },
+    {
+      "en": "filed automatically",
+      "to": {
+        "de": "automatisch abgelegt",
+        "it": "archiviato in automatico",
+        "nl": "automatisch opgeslagen"
+      }
+    },
+    {
+      "en": "AT THE COUNTER",
+      "to": {
+        "de": "AN DER THEKE",
+        "it": "AL BANCONE",
+        "nl": "AAN DE TOONBANK"
+      }
+    },
+    {
+      "en": "IN TRANSIT",
+      "to": {
+        "de": "UNTERWEGS",
+        "it": "IN TRANSITO",
+        "nl": "ONDERWEG"
+      }
+    },
+    {
+      "en": "AT REST",
+      "to": {
+        "de": "GESPEICHERT",
+        "it": "A RIPOSO",
+        "nl": "IN OPSLAG"
+      }
+    },
+    {
+      "en": "OFFLINE, WAITING",
+      "to": {
+        "de": "OFFLINE, WARTET",
+        "it": "OFFLINE, IN ATTESA",
+        "nl": "OFFLINE, WACHTEND"
+      }
+    },
+    {
+      "en": "Thermal printer",
+      "to": {
+        "de": "Thermodrucker",
+        "it": "Stampante termica",
+        "nl": "Thermische printer"
+      }
+    },
+    {
+      "en": "Payment terminal",
+      "to": {
+        "de": "Zahlungsterminal",
+        "it": "Terminale di pagamento",
+        "nl": "Betaalterminal"
+      }
+    },
+    {
+      "en": "Barcode scanner",
+      "to": {
+        "de": "Barcodescanner",
+        "it": "Lettore di codici a barre",
+        "nl": "Barcodescanner"
+      }
+    },
+    {
+      "en": "Floor tablet",
+      "to": {
+        "de": "Tablet im Saal",
+        "it": "Tablet di sala",
+        "nl": "Tablet in de zaal"
+      }
+    },
+    {
+      "en": "Cash drawer",
+      "to": {
+        "de": "Kassenschublade",
+        "it": "Cassetto portadenaro",
+        "nl": "Kassalade"
+      }
+    },
+    {
+      "en": "Sold",
+      "to": {
+        "de": "Verkauft",
+        "it": "Venduti",
+        "nl": "Verkocht"
+      }
+    },
+    {
+      "en": "Rented",
+      "to": {
+        "de": "Vermietet",
+        "it": "Affittati",
+        "nl": "Verhuurd"
+      }
+    },
+    {
+      "en": "Shared",
+      "to": {
+        "de": "Weitergegeben",
+        "it": "Condivisi",
+        "nl": "Gedeeld"
+      }
+    },
+    {
+      "en": "YOUR DATA",
+      "to": {
+        "de": "IHRE DATEN",
+        "it": "I TUOI DATI",
+        "nl": "UW GEGEVENS"
+      }
+    },
+    {
+      "en": "You",
+      "to": {
+        "de": "Ihr Geschäft",
+        "it": "La tua attività",
+        "nl": "Uw zaak"
+      }
+    },
+    {
+      "en": "Built here",
+      "to": {
+        "de": "Hier gebaut",
+        "it": "Costruito qui",
+        "nl": "Hier gebouwd"
+      }
+    },
+    {
+      "en": "Made for here",
+      "to": {
+        "de": "Für hier gemacht",
+        "it": "Fatto per qui",
+        "nl": "Voor hier gemaakt"
+      }
+    },
+    {
+      "en": "Lait",
+      "to": {
+        "de": "Milch",
+        "it": "Latte",
+        "nl": "Melk"
+      }
+    },
+    {
+      "en": "FACTURE",
+      "to": {
+        "de": "RECHNUNG",
+        "it": "FATTURA",
+        "nl": "FACTUUR"
+      }
+    },
+    {
+      "en": "TOTAL",
+      "to": {
+        "de": "GESAMT",
+        "it": "TOTALE",
+        "nl": "TOTAAL"
+      }
+    },
+    {
+      "en": "Management",
+      "to": {
+        "de": "Verwaltung",
+        "it": "Gestione",
+        "nl": "Beheer"
+      }
+    },
+    {
+      "en": "Compliance",
+      "to": {
+        "de": "Compliance",
+        "it": "Conformità",
+        "nl": "Compliance"
+      }
+    },
+    {
+      "en": "Gluten · Milk",
+      "to": {
+        "de": "Gluten · Milch",
+        "it": "Glutine · Latte",
+        "nl": "Gluten · Melk"
+      }
+    },
+    {
+      "en": "Dining room",
+      "to": {
+        "de": "Gastraum",
+        "it": "Sala",
+        "nl": "Zaal"
+      }
+    },
+    {
+      "en": "Cash",
+      "to": {
+        "de": "Bargeld",
+        "it": "Contanti",
+        "nl": "Contant"
+      }
+    },
+    {
+      "en": "Owner · admin",
+      "to": {
+        "de": "Inhaber · Administrator",
+        "it": "Proprietario · amministratore",
+        "nl": "Eigenaar · beheerder"
+      }
+    },
+    {
+      "en": "See a demo",
+      "to": {
+        "de": "Demo ansehen",
+        "it": "Guarda una demo",
+        "nl": "Bekijk een demo"
+      }
+    },
+    {
+      "en": "Try Kiwi IQ",
+      "to": {
+        "de": "Kiwi IQ ausprobieren",
+        "it": "Prova Kiwi IQ",
+        "nl": "Probeer Kiwi IQ"
+      }
+    },
+    {
+      "en": "Start my 15 days",
+      "to": {
+        "de": "15 Tage kostenlos testen",
+        "it": "Prova gratis per 15 giorni",
+        "nl": "15 dagen gratis proberen"
+      }
+    },
+    {
+      "en": "One thread, from table to receipt",
+      "to": {
+        "de": "Alles in einem Fluss, vom Tisch bis zum Beleg",
+        "it": "Un unico flusso, dal tavolo allo scontrino",
+        "nl": "Alles in één lijn, van tafel tot kassabon"
+      }
+    },
+    {
+      "en": "Dry cleaner",
+      "to": {
+        "de": "Reinigung",
+        "it": "Lavanderia",
+        "nl": "Stomerij"
+      }
+    },
+    {
+      "en": "Caterer",
+      "to": {
+        "de": "Catering",
+        "it": "Catering",
+        "nl": "Catering"
+      }
+    },
+    {
+      "en": "Bakery",
+      "to": {
+        "de": "Bäckerei",
+        "it": "Panetteria",
+        "nl": "Bakkerij"
+      }
+    },
+    {
+      "en": "Food truck",
+      "to": {
+        "de": "Foodtruck",
+        "it": "Food truck",
+        "nl": "Foodtruck"
+      }
+    },
+    {
+      "en": "Boutique",
+      "to": {
+        "de": "Boutique",
+        "it": "Boutique",
+        "nl": "Boutique"
+      }
+    },
+    {
+      "en": "Café & tea room",
+      "to": {
+        "de": "Café & Teestube",
+        "it": "Caffetteria & tea room",
+        "nl": "Café & tearoom"
+      }
+    },
+    {
+      "en": "Home & decor",
+      "to": {
+        "de": "Wohnen & Deko",
+        "it": "Casa & decor",
+        "nl": "Wonen & decor"
+      }
+    },
+    {
+      "en": "Message us on WhatsApp",
+      "to": {
+        "de": "Schreiben Sie uns auf WhatsApp",
+        "it": "Scrivici su WhatsApp",
+        "nl": "Stuur ons een bericht via WhatsApp"
+      }
+    },
+    {
+      "en": "Legal notice",
+      "to": {
+        "de": "Impressum",
+        "it": "Note legali",
+        "nl": "Wettelijke vermeldingen"
+      }
+    },
+    {
+      "en": "Privacy",
+      "to": {
+        "de": "Datenschutz",
+        "it": "Privacy",
+        "nl": "Privacy"
+      }
+    },
+    {
+      "en": "Legal",
+      "to": {
+        "de": "Rechtliches",
+        "it": "Informazioni legali",
+        "nl": "Juridisch"
+      }
+    },
+    {
+      "en": "Powered by",
+      "to": {
+        "de": "Betrieben mit",
+        "it": "Realizzato con",
+        "nl": "Mogelijk gemaakt door"
+      }
+    },
+    {
+      "en": "Hospitality and retail. Two trades, one till.",
+      "to": {
+        "de": "Gastronomie und Einzelhandel. Zwei Branchen, eine Kasse.",
+        "it": "Ristorazione e commercio al dettaglio. Due mestieri, una sola cassa.",
+        "nl": "Horeca en detailhandel. Twee branches, één kassa."
+      }
+    },
+    {
+      "en": "The till on an iPad, tickets at the counter",
+      "to": {
+        "de": "Die Kasse auf dem iPad, Bons an der Theke",
+        "it": "La cassa su iPad, scontrini al bancone",
+        "nl": "De kassa op een iPad, bonnen aan de toonbank"
+      }
+    },
+    {
+      "en": "The till, live",
+      "to": {
+        "de": "Die Kasse, live",
+        "it": "La cassa, dal vivo",
+        "nl": "De kassa, live"
+      }
+    },
+    {
+      "en": "Payroll",
+      "to": {
+        "de": "Gehaltsabrechnung",
+        "it": "Buste paga",
+        "nl": "Salarisadministratie"
+      }
+    },
+    {
+      "en": "Pay & scheduling",
+      "to": {
+        "de": "Lohn & Dienstplanung",
+        "it": "Paghe & turni",
+        "nl": "Salaris & planning"
+      }
+    },
+    {
+      "en": "The team, from clock-in to payroll",
+      "to": {
+        "de": "Das Team, vom Einstempeln bis zur Gehaltsabrechnung",
+        "it": "La squadra, dalle timbrature alle buste paga",
+        "nl": "Het team, van inklokken tot salarisadministratie"
+      }
+    },
+    {
+      "en": "~Open, merge, or move tables",
+      "to": {
+        "de": "Öffnen, verbinden oder verschieben Sie Tische mit einer einzigen Geste. Das Personal sieht, wer wartet, isst oder zahlen möchte, ohne durch den Raum laufen zu müssen.",
+        "it": "Apri, unisci o sposta i tavoli con un solo gesto. Il personale vede chi aspetta, chi sta mangiando o chi vuole il conto, senza attraversare la sala.",
+        "nl": "Tafels openen, samenvoegen of verplaatsen in één beweging. Het personeel ziet wie er wacht, eet of de rekening wil, zonder door de zaal te hoeven lopen."
+      }
+    },
+    {
+      "en": "~An order is taken at the table",
+      "to": {
+        "de": "Eine Bestellung wird am Tisch aufgenommen, in die Küche geschickt, an der Kasse bezahlt und im Dashboard abgelegt. Niemand tippt sie zweimal ein, und zwischen den Notizbüchern geht nichts verloren.",
+        "it": "L’ordine viene preso al tavolo, inviato in cucina, pagato in cassa e archiviato nella dashboard. Nessuno lo inserisce due volte e niente si perde tra un quaderno e l’altro.",
+        "nl": "Een bestelling wordt aan tafel opgenomen, naar de keuken gestuurd, aan de kassa betaald en in het dashboard opgeslagen. Niemand voert haar twee keer in en er gaat niets verloren tussen schriftjes."
+      }
+    },
+    {
+      "en": "~The grocer’s credit book",
+      "to": {
+        "de": "Das Kreditbuch des Lebensmittelhändlers, die Gutschriften des Ladens, die Direktabrechnung der Apotheke mit den Krankenkassen sowie Saal und Küche des Restaurants.",
+        "it": "Il libretto del credito dell’alimentare, le note di credito del negozio, il terzo pagante della farmacia, la sala e la cucina del ristorante.",
+        "nl": "Het kredietboek van de kruidenier, de creditnota’s van de winkel, de betalingen via de ziektekostenverzekeraar bij de apotheek, en de zaal en keuken van het restaurant."
+      }
+    },
+    {
+      "en": "~Every business has one decisive gesture",
+      "to": {
+        "de": "Jedes Unternehmen hat eine entscheidende Handbewegung. Kiwi stellt sie in die Mitte des Bildschirms, statt Sie durch das Menü eines anderen zu schicken.",
+        "it": "Ogni attività ha un gesto decisivo. Kiwi lo mette al centro dello schermo invece di farti passare dal menu di qualcun altro.",
+        "nl": "Elk bedrijf heeft één beslissend gebaar. Kiwi zet het midden op het scherm, in plaats van u door het menu van iemand anders te sturen."
+      }
+    },
+    {
+      "en": "~Your menu stays in your words",
+      "to": {
+        "de": "Ihr Menü bleibt in Ihren Worten. Kiwi übersetzt es einmal ins Französische, Arabische und Englische, Sie korrigieren, was Sie möchten, und der Gast liest es in seiner Sprache auf dem eigenen Telefon.",
+        "it": "Il tuo menu resta nelle tue parole. Kiwi lo traduce una volta in francese, arabo e inglese, tu correggi quello che vuoi e l’ospite lo legge nella sua lingua sul proprio telefono.",
+        "nl": "Uw menu blijft in uw eigen woorden. Kiwi vertaalt het één keer naar het Frans, Arabisch en Engels, u corrigeert wat u wilt en de gast leest het in zijn eigen taal op zijn telefoon."
+      }
+    },
+    {
+      "en": "~Each employee clocks in with their code",
+      "to": {
+        "de": "Jeder Mitarbeiter stempelt sich mit seinem Code ein, der Dienstplan füllt sich von selbst, die Stunden fließen in die Gehaltsabrechnung. Und eine App, in der man seine Schichten sieht, ohne anzurufen.",
+        "it": "Ogni dipendente timbra con il proprio codice, il calendario si riempie da solo, le ore confluiscono nelle buste paga. E un’app per vedere i propri turni senza telefonare.",
+        "nl": "Elke medewerker klokt in met zijn code, het rooster vult zichzelf, de uren stromen naar de salarisadministratie. En een app om de diensten te zien zonder te bellen."
+      }
+    },
+    {
+      "en": "~The till runs on the iPad or tablet",
+      "to": {
+        "de": "Die Kasse läuft auf dem iPad oder Tablet, das Sie bereits besitzen, und der Bon kommt aus dem Drucker an der Theke. Das Dashboard zeigt jeden Verkauf live, egal wo der Inhaber gerade ist.",
+        "it": "La cassa funziona sull’iPad o sul tablet che già possiedi e lo scontrino esce dalla stampante al bancone. La dashboard vede ogni vendita in tempo reale, ovunque si trovi il titolare.",
+        "nl": "De kassa draait op de iPad of tablet die u al heeft en de bon komt uit de printer aan de toonbank. Het dashboard ziet elke verkoop live, waar de eigenaar ook is."
+      }
+    },
+    {
+      "en": "~Printers, terminals, cash drawers",
+      "to": {
+        "de": "Drucker, Terminals, Kassenschubladen, Scanner, Tablets und Küchendisplays: Kiwi funktioniert mit dem, was schon an Ihrer Theke steht.",
+        "it": "Stampanti, terminali, cassetti portadenaro, scanner, tablet e display da cucina: Kiwi funziona con ciò che hai già al bancone.",
+        "nl": "Printers, betaalterminals, kassalades, scanners, tablets en keukenschermen: Kiwi werkt met wat al op uw toonbank staat."
+      }
+    },
+    {
+      "en": "~Kiwi is developed in Germany",
+      "to": {
+        "de": "Kiwi wird in Deutschland entwickelt und für Marokko gemacht: die Sprache, der Dirham und das Tempo einer marokkanischen Theke. Es ist keine ausländische Software, die in Eile übersetzt wurde.",
+        "it": "Kiwi è sviluppato in Germania e progettato per il Marocco: la lingua, il dirham e il ritmo di un bancone marocchino. Non è un software straniero tradotto in fretta.",
+        "nl": "Kiwi is ontwikkeld in Duitsland en gemaakt voor Marokko: de taal, de dirham en het tempo van een Marokkaanse toonbank. Het is geen buitenlandse software die haastig is vertaald."
+      }
+    },
+    {
+      "en": "~French, English, Arabic and twenty more",
+      "to": {
+        "de": "Französisch, Englisch, Arabisch und zwanzig weitere, aus demselben Konto übersetzt. Der Kunde liest die Speisekarte in seiner Sprache, das Team behält seinen Bildschirm.",
+        "it": "Francese, inglese, arabo e altre venti lingue, tradotte dallo stesso account. Il cliente legge il menu nella sua lingua, il team mantiene il suo schermo.",
+        "nl": "Frans, Engels, Arabisch en nog twintig andere talen, vertaald vanuit hetzelfde account. De klant leest het menu in zijn eigen taal, het team behoudt zijn scherm."
+      }
+    },
+    {
+      "en": "~Bluetooth, USB, the Kiwi bridge",
+      "to": {
+        "de": "Bluetooth, USB, die Kiwi-Bridge an der Theke oder direkt vom iPad: Die Bons kommen aus dem Thermodrucker, den Sie bereits besitzen.",
+        "it": "Bluetooth, USB, il bridge Kiwi al bancone o direttamente dall’iPad: gli scontrini escono dalla stampante termica che già possiedi.",
+        "nl": "Bluetooth, USB, de Kiwi-bridge aan de toonbank of rechtstreeks vanaf de iPad: de bonnen komen uit de thermische printer die u al heeft."
+      }
+    },
+    {
+      "en": "~A six-digit code pairs the counter",
+      "to": {
+        "de": "Ein sechsstelliger Code verbindet die Kasse an der Theke mit dem Dashboard und dem Drucker. Auf dem Tablet muss kein Konto angelegt werden.",
+        "it": "Un codice di sei cifre collega il bancone alla dashboard e alla stampante. Nessun account da creare sul tablet.",
+        "nl": "Een zescijferige code koppelt de toonbank aan het dashboard en de printer. Er hoeft geen account op de tablet te worden aangemaakt."
+      }
+    },
+    {
+      "en": "~Every sale decrements",
+      "to": {
+        "de": "Jeder Verkauf bucht den Bestand ab, jede Lieferung schreibt ihn gut. Die Warnung kommt vor dem Engpass, nicht danach.",
+        "it": "Ogni vendita scarica il magazzino, ogni consegna lo ricarica. L’avviso scatta prima della carenza, non dopo.",
+        "nl": "Elke verkoop boekt voorraad af, elke levering boekt bij. De waarschuwing komt vóór het tekort, niet erna."
+      }
+    },
+    {
+      "en": "~All of Kiwi, on your own hardware",
+      "to": {
+        "de": "Ganz Kiwi, auf Ihrer eigenen Hardware, ohne Bindung. Hören Sie auf, wann immer Sie möchten.",
+        "it": "Tutto Kiwi, sul tuo hardware, senza impegno. Fermati quando vuoi.",
+        "nl": "Heel Kiwi, op uw eigen apparatuur, zonder verplichtingen. U stopt wanneer u wilt."
+      }
+    },
+    {
+      "en": "~Calories, protein, carbs",
+      "to": {
+        "de": "Kalorien, Eiweiß, Kohlenhydrate, Fett und die 14 Allergene, berechnet aus dem Rezept, das Sie bereits für den Wareneinsatz eingeben. Im QR-Menü angezeigt, pro Gericht mit einem Klick ausblendbar.",
+        "it": "Calorie, proteine, carboidrati, grassi e i 14 allergeni, calcolati dalla ricetta già inserita per il food cost. Mostrato nel menu QR, nascosto per piatto con un clic.",
+        "nl": "Calorieën, eiwitten, koolhydraten, vetten en de 14 allergenen, berekend op basis van het recept dat u al invoert voor de voedselkosten. Getoond in het QR-menu, per gerecht met één klik te verbergen."
+      }
+    }
+  ],
+  "arFixes": [
+    [
+      "وتطبيق ليرى مواعيد عمله من دون اتصال",
+      "وتطبيق ليرى مواعيد عمله من دون أن يتصل بك"
+    ],
+    [
+      "عند المنضدة أو الكرسي أو الطاولة",
+      "عند الصندوق أو على الطاولة"
+    ],
+    [
+      "نظام الطرف الثالث في الصيدلية",
+      "التغطية الصحية CNOPS/CNSS في الصيدلية"
+    ],
+    [
+      "قسائم الاسترجاع",
+      "إشعارات الرصيد"
+    ],
+    [
+      "منضدة",
+      "كونطوار"
+    ],
+    [
+      "اكتشف ما يقدمه",
+      "شاهد كيف يعمل"
+    ],
+    [
+      "ابدأ أيامي الخمسة عشر",
+      "ابدأ تجربتك المجانية 15 يوما"
+    ],
+    [
+      "رياض في المدينة العتيقة",
+      "دار ضيافة (رياض) في المدينة العتيقة"
+    ],
+    [
+      "يوماً مجاناً",
+      "يوما مجانا"
+    ]
+  ]
+}

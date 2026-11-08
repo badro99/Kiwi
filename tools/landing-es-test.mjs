@@ -117,7 +117,7 @@ const keySpanishPhrases = [
   'El plano de sala, en un solo movimiento',
   'Haga la pregunta, obtenga la respuesta.',
   'Un solo hilo, de la mesa al ticket',
-  'Novedades de esta temporada',
+  'Novedades',
   'Una carta QR que se traduce sola',
   'Un inventario fiable y exacto',
   'El equipo, del fichaje a la nómina',

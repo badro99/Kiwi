@@ -777,6 +777,31 @@
           "assertion": "ultra card opens WhatsApp with the prefilled message"
         }
       ]
+    },
+    "ultimate.contactMessage": {
+      "fr": "Bonjour, je voudrais un devis pour Kiwi Ultimate.",
+      "kind": "copy-only",
+      "reason": "Message prérempli ou note de présentation, sans comportement logiciel autonome."
+    },
+    "ultraNoAnnual": {
+      "fr": "Sans formule annuelle.",
+      "kind": "copy-only",
+      "reason": "Message prérempli ou note de présentation, sans comportement logiciel autonome."
+    },
+    "demoMessages.demo": {
+      "fr": "Bonjour, je voudrais une démo de Kiwi pour mon commerce.",
+      "kind": "copy-only",
+      "reason": "Message prérempli ou note de présentation, sans comportement logiciel autonome."
+    },
+    "demoMessages.iq": {
+      "fr": "Bonjour, je voudrais essayer Kiwi IQ.",
+      "kind": "copy-only",
+      "reason": "Message prérempli ou note de présentation, sans comportement logiciel autonome."
+    },
+    "demoMessages.write": {
+      "fr": "Bonjour, j’ai une question sur Kiwi.",
+      "kind": "copy-only",
+      "reason": "Message prérempli ou note de présentation, sans comportement logiciel autonome."
     }
   }
 }

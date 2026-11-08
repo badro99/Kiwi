@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 const ROOT = path.resolve(import.meta.dirname, '..');
+// The landing chunk is renamed with a content hash whenever its code changes.
+const landingChunk = '_next/static/chunks/' + fs.readdirSync(path.join(ROOT, '_next/static/chunks')).find(name => /^2c2tj5hx4r2-w-[0-9a-f]{8}\.js$/.test(name));
 const cases = [
   ['split persistence', 'field-table-transfer-test.mjs', 'assets/caisse/offline.js',
     'tableSplits: Array.from(tableSplits.entries()),', 'tableSplits: [],'],
@@ -19,7 +21,7 @@ const cases = [
   ['credit centimes', 'store-credits-test.mjs', 'assets/receipt.js',
     'var doc = build({ ts: v.at || Date.now(),\n      total: Math.abs(num(v.balance != null ? v.balance : v.amount)),\n      subtotal: Math.abs(num(v.amount != null ? v.amount : v.balance)) }, opts);',
     'var doc = build({ ts: v.at || Date.now() }, opts);'],
-  ['landing billing click', 'landing-claims-test.mjs', '_next/static/chunks/2c2tj5hx4r2-w-e55e3888.js',
+  ['landing billing click', 'landing-claims-test.mjs', landingChunk,
     'onClick:()=>a(e.value)', 'onClick:()=>{}'],
   ['pairing tenant key', 'pairing-parity-test.mjs', 'assets/caisse/offline.js',
     "('kiwi-caisse-shift:' + s)", "'kiwi-caisse-shift'"],
