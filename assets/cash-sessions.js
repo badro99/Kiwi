@@ -50,12 +50,42 @@
     var recent = rows.slice(-200);
     return recent.length === rows.length ? recent : rows.slice(0, -200).concat(recent);
   }
-  function readOutbox() {
-    try {
-      var x = JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]');
-      return Array.isArray(x) ? stableRows(x) : [];
-    } catch (_) { return []; }
+  /* Unreadable persisted cash-session evidence (opening, handover, close) is never read as an empty queue
+     and then overwritten: its raw bytes are set aside under kiwi:cash-session-corrupt:… before the next
+     write, announced, and exportable from assets/queue-recovery.js like the sales queue. */
+  var CORRUPT_PREFIX = 'kiwi:cash-session-corrupt:', corruptMemory = {};
+  function quarantine(key, raw) {
+    if (!raw) return;
+    var sum = 0; for (var i = 0; i < raw.length; i++) sum = (sum * 31 + raw.charCodeAt(i)) | 0;
+    var id = CORRUPT_PREFIX + (sum >>> 0) + ':' + key;
+    if (corruptMemory[id] !== undefined) return;
+    corruptMemory[id] = raw;
+    try { localStorage.setItem(id, raw); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('kiwi:cash-sessions-corrupt', { detail: { key: id } })); } catch (_) {}
   }
+  function readArray(key) {
+    var raw = null;
+    try { raw = localStorage.getItem(key); } catch (_) { return []; }
+    if (!raw) return [];
+    try {
+      var x = JSON.parse(raw);
+      if (Array.isArray(x)) return x;
+    } catch (_) {}
+    quarantine(key, raw);
+    return [];
+  }
+  /* recoveryCopies() lists, recoveryCopies(key) reads, recoveryCopies(key, true) acknowledges and deletes. */
+  function recoveryCopies(key, acknowledge) {
+    var keys = Object.keys(corruptMemory);
+    try { for (var i = 0; i < localStorage.length; i++) { var k = String(localStorage.key(i)); if (k.indexOf(CORRUPT_PREFIX) === 0 && keys.indexOf(k) < 0) keys.push(k); } } catch (_) {}
+    function body(k) { if (corruptMemory[k] !== undefined) return corruptMemory[k]; try { return localStorage.getItem(k) || ''; } catch (_) { return ''; } }
+    if (key === undefined) return keys.map(function (k) { return { key: k, bytes: 2 * (k.length + body(k).length) }; });
+    if (keys.indexOf(key) < 0) return null;
+    var raw = body(key);
+    if (acknowledge) { delete corruptMemory[key]; try { localStorage.removeItem(key); } catch (_) {} }
+    return raw;
+  }
+  function readOutbox() { return stableRows(readArray(OUTBOX_KEY)); }
   function activeOutboxRows() {
     var slug = merchant();
     return readOutbox().filter(function (event) { return event && event.merchant === slug; });
@@ -90,12 +120,7 @@
       return true;
     } catch (_) { storageError = true; return false; }
   }
-  function readRejected() {
-    try {
-      var x = JSON.parse(localStorage.getItem(REJECTED_KEY) || '[]');
-      return Array.isArray(x) ? x : [];
-    } catch (_) { return []; }
-  }
+  function readRejected() { return readArray(REJECTED_KEY); }
   function recordRejected(row, status, reason) {
     try {
       var rows = readRejected();
@@ -307,7 +332,7 @@
     if (paired() && !repairRequired && activePendingCount()) drainPending();
   }, 10000);
   window.KiwiCashSessions = {
-    emit: emit, refresh: refresh, list: function () { return events.slice(); },
+    emit: emit, refresh: refresh, recoveryCopies: recoveryCopies, list: function () { return events.slice(); },
     retry: function () { repairRequired = false; return drainPending(); },
     ready: function () { return ready; }, terminalId: terminalId,
     status: function () {

@@ -5,11 +5,11 @@
   var box;
   var words = {
     fr: ['Copies de ventes à vérifier', 'Exporter', 'Accuser réception et supprimer', 'Confirmer la suppression de cette copie ? Vérifiez sa récupération avant de continuer.', 'Stockage des copies presque plein. Exportez et vérifiez les copies avant de les supprimer.',
-      'Copie de ventes', 'Bons de cuisine', 'Fiches et achats clients', 'Annuler', 'Confirmer la suppression', 'Ventes clients gardées en mémoire seulement : le stockage est plein. Ne fermez pas l’application avant la synchronisation.', 'File de ventes active illisible'],
+      'Copie de ventes', 'Bons de cuisine', 'Fiches et achats clients', 'Annuler', 'Confirmer la suppression', 'Ventes clients gardées en mémoire seulement : le stockage est plein. Ne fermez pas l’application avant la synchronisation.', 'File de ventes active illisible', 'Événements de caisse (ouverture, remise, clôture)', 'Export impossible sur cet appareil. Le texte de la copie est affiché ci-dessous : copiez-le et conservez-le avant toute suppression.', 'Copié dans le presse-papiers.'],
     en: ['Sale copies to review', 'Export', 'Acknowledge and delete', 'Confirm deletion of this copy? Verify its recovery before continuing.', 'Copy storage nearly full. Export and verify copies before deleting them.',
-      'Sales copy', 'Kitchen tickets', 'Customer records and purchases', 'Cancel', 'Confirm deletion', 'Customer sales are held in memory only: storage is full. Do not close the app before they sync.', 'Active sales queue unreadable'],
+      'Sales copy', 'Kitchen tickets', 'Customer records and purchases', 'Cancel', 'Confirm deletion', 'Customer sales are held in memory only: storage is full. Do not close the app before they sync.', 'Active sales queue unreadable', 'Cash session events (opening, handover, close)', 'Export is not possible on this device. The copy text is shown below: copy and keep it before deleting anything.', 'Copied to the clipboard.'],
     ar: ['نسخ المبيعات للمراجعة', 'تصدير', 'إقرار وحذف', 'تأكيد حذف هذه النسخة؟ تحقق من استعادتها قبل المتابعة.', 'مساحة النسخ ممتلئة تقريباً. صدّر النسخ وتحقق منها قبل حذفها.',
-      'نسخة مبيعات', 'تذاكر المطبخ', 'بطاقات العملاء ومشترياتهم', 'إلغاء', 'تأكيد الحذف', 'مبيعات العملاء محفوظة في الذاكرة فقط: التخزين ممتلئ. لا تغلق التطبيق قبل المزامنة.', 'طابور المبيعات النشط غير قابل للقراءة']
+      'نسخة مبيعات', 'تذاكر المطبخ', 'بطاقات العملاء ومشترياتهم', 'إلغاء', 'تأكيد الحذف', 'مبيعات العملاء محفوظة في الذاكرة فقط: التخزين ممتلئ. لا تغلق التطبيق قبل المزامنة.', 'طابور المبيعات النشط غير قابل للقراءة', 'أحداث الصندوق (فتح، تسليم، إغلاق)', 'التصدير غير ممكن على هذا الجهاز. نص النسخة معروض أدناه: انسخه واحتفظ به قبل أي حذف.', 'تم النسخ إلى الحافظة.']
   };
   function text(i) {
     var C = window.KiwiCaisseLang, I = window.KiwiI18n;
@@ -28,6 +28,7 @@
   function label(source, key) {
     if (source === 'kitchen') return text(6);
     if (source === 'clients') return text(7);
+    if (source === 'cash') return text(12);
     var m = /:quarantine:(\d+)$/.exec(key);
     if (!m) return text(11);
     var d = new Date(Number(m[1]));
@@ -36,10 +37,11 @@
     return text(5) + ' · ' + when;
   }
   function sources() {
-    var L = window.KiwiLive, K = window.KiwiKitchenPrint, C = window.KiwiOutboxVault, out = [];
+    var L = window.KiwiLive, K = window.KiwiKitchenPrint, C = window.KiwiOutboxVault, S = window.KiwiCashSessions, out = [];
     if (L && L.queueRecoveryCopies) out.push({ id: 'sales', api: L.queueRecoveryCopies });
     if (K && K.recoveryCopies) out.push({ id: 'kitchen', api: K.recoveryCopies });
     if (C && C.recoveryCopies) out.push({ id: 'clients', api: C.recoveryCopies });
+    if (S && S.recoveryCopies) out.push({ id: 'cash', api: S.recoveryCopies });
     return out;
   }
   function el(tag, css, content) { var n = document.createElement(tag); if (css) n.style.cssText = css; if (content !== undefined) n.textContent = content; return n; }
@@ -65,7 +67,23 @@
     rows.forEach(function (row) {
       var line = el('p', '', label(row.source, row.key) + ' · ' + (row.raw.length * 2) + ' B ');
       var save = el('button', 'min-height:44px;margin:4px', text(1)); save.type = 'button';
-      save.onclick = function () { var url = URL.createObjectURL(new Blob([row.raw], { type: 'application/octet-stream' })); var a = document.createElement('a'); a.href = url; a.download = row.key.replace(/[^A-Za-z0-9._-]/g, '-') + '.txt'; a.click(); setTimeout(function () { URL.revokeObjectURL(url); }, 1000); };
+      save.onclick = function () {
+        /* The exported copy is the only one left once the merchant acknowledges: if the file download fails for any
+           reason, show the raw text and try the clipboard instead of failing silently. */
+        var url = '';
+        try {
+          url = URL.createObjectURL(new Blob([row.raw], { type: 'application/octet-stream' }));
+          var a = document.createElement('a'); a.href = url; a.download = row.key.replace(/[^A-Za-z0-9._-]/g, '-') + '.txt'; a.click();
+          setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 1000);
+        } catch (_) {
+          try { if (url) URL.revokeObjectURL(url); } catch (__) {}
+          var fallback = el('span', 'display:block;padding:4px'), note = el('span', '', text(13)); note.setAttribute('role', 'alert');
+          var area = el('textarea', 'display:block;width:100%;min-height:96px'); area.readOnly = true; area.value = row.raw; area.setAttribute('aria-label', label(row.source, row.key));
+          fallback.append(note, area); line.append(fallback);
+          try { area.focus(); area.select && area.select(); } catch (__) {}
+          try { var copied = navigator.clipboard && navigator.clipboard.writeText && navigator.clipboard.writeText(row.raw); if (copied && copied.then) copied.then(function () { note.textContent = text(14); }, function () {}); } catch (__) {}
+        }
+      };
       line.append(save);
       // Deleting evidence of unsent money needs a manager: the till's server-checked
       // manager code, or the owner's own quarantine review on the dashboard.
@@ -92,6 +110,6 @@
     (target || document.body).append(box);
   }
   window.addEventListener('kiwi:quarantine-review', function (event) { paint(event.detail); });
-  ['kiwi:sale-queue', 'storage', 'kiwi:langchange', 'kiwi:clients-quarantine', 'kiwi:clients-outbox', 'kiwi:kitchen-print-corrupt'].forEach(function (name) { window.addEventListener(name, function () { paint(); }); });
+  ['kiwi:sale-queue', 'storage', 'kiwi:langchange', 'kiwi:clients-quarantine', 'kiwi:clients-outbox', 'kiwi:kitchen-print-corrupt', 'kiwi:cash-sessions-corrupt'].forEach(function (name) { window.addEventListener(name, function () { paint(); }); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paint); else paint();
 })();
