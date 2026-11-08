@@ -153,7 +153,7 @@ for(const vertical of ['boutique','maison']){
 // Shared balance journal, hold/replay and repeat guard use their live declarations.
 const shared=vm.createContext({console,Date,Math,Number,JSON,Map,Set,navigator:{onLine:false}});shared.window=shared;
 let store=new Map();shared.localStorage={getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,String(v))};
-load(shared,'assets/retail-balances.js',['key','read','write','cents','due','record','list']);
+load(shared,'assets/retail-balances.js',['key','read','write','cents','due','record','listWithStatus','list']);
 await strict('retail balances conserve total = paid + due; repeated receipt counts once; tenants stay isolated',fc.property(positive,fc.array(positive,{maxLength:12}),(total,asks)=>{
  store=new Map();const input={id:'balance',customerId:'customer',ticketRef:'ticket',totalCents:total,basePaidCents:0};let paid=0;shared.record('shop-a',input);
  for(const[i,ask]of asks.entries()){const fits=ask<=total-paid;const next={...input,receipt:{id:'receipt'+i,amountCents:ask,method:'cash'}};const row=shared.record('shop-a',next);assert.equal(!!row,fits);if(fits){paid+=ask;shared.record('shop-a',next);}const saved=shared.read('shop-a')[0];assert.equal(saved.paidCents,paid);assert.equal(shared.due(saved),total-paid);assert.ok(saved.paidCents<=total);}
