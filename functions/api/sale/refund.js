@@ -369,6 +369,15 @@ export async function onRequestGet({ request, env }) {
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
   const offset = Number(params.get('offset') || 0);
   if (!Number.isSafeInteger(offset) || offset < 0) return json({ error: 'bad-offset' }, 400);
+  /* Curseur « ts:id » (la dernière ligne déjà lue) : une page ne dépend plus du
+     nombre de lignes qui la précèdent, donc un retour arrivé entre deux pages ne
+     décale rien (avec OFFSET il répétait une ligne). */
+  let cursor = null;
+  if (params.has('after')) {
+    const m = /^(\d{1,16}):(.+)$/s.exec(params.get('after'));
+    if (!m || !Number.isSafeInteger(Number(m[1]))) return json({ error: 'bad-cursor' }, 400);
+    cursor = { ts: Number(m[1]), id: m[2] };
+  }
   const period = {};
   for (const key of ['since', 'until']) if (params.has(key)) {
     const raw = params.get(key), value = Number(raw);
@@ -391,8 +400,10 @@ export async function onRequestGet({ request, env }) {
           FROM store_credit_events e JOIN sales s ON s.merchant = e.merchant AND s.id = e.ref_id
           JOIN store_credits c ON c.merchant = e.merchant AND c.id = e.credit_id
          WHERE e.merchant = ? AND e.action = 'issue' AND s.void_ts IS NULL${filter('e')}
-      ) ORDER BY ts DESC, id DESC LIMIT 501 OFFSET ?
-    `).bind(merchant, ...bounds, merchant, ...bounds, offset).all()).results || [];
-    return json({ ok: true, list: rows.slice(0, 500), next: rows.length > 500 ? offset + 500 : null });
+      )${cursor ? ' WHERE (ts < ? OR (ts = ? AND id < ?))' : ''} ORDER BY ts DESC, id DESC LIMIT 501 OFFSET ?
+    `).bind(merchant, ...bounds, merchant, ...bounds, ...(cursor ? [cursor.ts, cursor.ts, cursor.id] : []), cursor ? 0 : offset).all()).results || [];
+    const page = rows.slice(0, 500), last = page[page.length - 1];
+    return json({ ok: true, list: page, next: rows.length > 500 ? offset + 500 : null,
+      after: rows.length > 500 && last ? last.ts + ':' + last.id : null });
   } catch (_) { return json({ error: 'returns-read-failed' }, 503); }
 }

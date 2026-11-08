@@ -47,9 +47,12 @@ const nowArb = fc.integer({ min: T_MIN, max: T_MAX });
 const RAYONS = ['robes', 'caftans', 'accessoires'];
 const hhmm = fc.integer({ min: 0, max: 23 * 60 + 59 }).map((m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'));
 
+/* r21 promos#A2 : centimes comme entiers. Un montant ou une valeur peut valoir 12,50 ; générer
+   que des dirhams entiers laissait l'arrondi au centime hors de portée de la propriété. */
+const valueArb = (min, max) => fc.oneof(fc.integer({ min, max }), fc.integer({ min: min * 100, max: max * 100 }).map((c) => c / 100));
 const promoArb = (i) => fc.record({
   kind: fc.constantFrom('percent', 'amount', 'fixed'),
-  value: fc.integer({ min: 0, max: 3000 }),
+  value: valueArb(0, 3000),
   scope: fc.oneof(
     fc.constant({ type: 'tout' }),
     fc.record({ type: fc.constant('rayon'), ids: fc.subarray(RAYONS) }),
@@ -105,7 +108,7 @@ function hits(p, item) {
   return stock > 0 && stock <= s.max;
 }
 function priced(p, was) {
-  const v = Math.round(p.value * 100) / 100, pct = Math.min(100, Math.round(v));
+  const v = Math.round(p.value * 100) / 100, pct = Math.min(100, v);   // r21: le pourcentage reste au centime (12,5 % reste 12,5 %), comme le code
   const out = p.kind === 'percent' ? Math.round(Math.round(was * 100) * (100 - pct) / 100 + 1e-9) / 100 : p.kind === 'amount' ? was - v : v;
   return Math.max(0, Math.min(was, Math.round(out * 100) / 100));
 }
@@ -187,7 +190,7 @@ strict('normalising a rule twice changes nothing, and a percentage never passes 
 }));
 
 /* ── two devices, one set of rules ─────────────────────────────────────── */
-const editArb = fc.array(fc.record({ dev: fc.nat(1), op: fc.constantFrom('edit', 'delete', 'resave'), id: fc.constantFrom('pr0', 'pr1', 'pr2'), value: fc.integer({ min: 1, max: 90 }) }), { maxLength: 12 });
+const editArb = fc.array(fc.record({ dev: fc.nat(1), op: fc.constantFrom('edit', 'delete', 'resave'), id: fc.constantFrom('pr0', 'pr1', 'pr2'), value: valueArb(1, 90) }), { maxLength: 12 });
 function devicesFrom(edits) {
   const base = ['pr0', 'pr1', 'pr2'].map((id, k) => PR.normalize({ id, kind: 'percent', value: 10 + k, scope: { type: 'tout' }, createdAt: 1 + k, updatedAt: 1 + k }));
   const devs = [{ v: 1, promos: base.map((x) => ({ ...x })), deleted: [] }, { v: 1, promos: base.map((x) => ({ ...x })), deleted: [] }];
@@ -254,7 +257,7 @@ function device(clock, offset) {
   const P = win.KiwiPromos; P.cloud();
   return { P, pull: (other) => hooks.write(hooks.merge(JSON.parse(JSON.stringify(hooks.read())), JSON.parse(JSON.stringify(other.hooks().read())))), hooks: () => hooks };
 }
-const skewOpArb = fc.record({ dev: fc.nat(1), op: fc.constantFrom('edit', 'pause', 'resume', 'delete', 'resave'), id: fc.constantFrom('pr0', 'pr1'), value: fc.integer({ min: 1, max: 90 }), wait: fc.integer({ min: 1, max: 5 * MIN }) });
+const skewOpArb = fc.record({ dev: fc.nat(1), op: fc.constantFrom('edit', 'pause', 'resume', 'delete', 'resave'), id: fc.constantFrom('pr0', 'pr1'), value: valueArb(1, 90), wait: fc.integer({ min: 1, max: 5 * MIN }) });
 strict('a device whose clock is hours behind still wins with a gesture made after seeing the other device: edit, pause, deletion or rule saved again', fc.property(fc.integer({ min: 1, max: 12 }), fc.boolean(), fc.array(skewOpArb, { minLength: 1, maxLength: 10 }), (hours, slowFirst, ops) => {
   const clock = { t: Date.UTC(2026, 9, 22, 10) };
   const devs = slowFirst ? [device(clock, -hours * 3600e3), device(clock, 0)] : [device(clock, 0), device(clock, -hours * 3600e3)];
@@ -285,7 +288,7 @@ strict('a device whose clock is hours behind still wins with a gesture made afte
  * real time, and still wins over the older honest edit of the other device. */
 strict('a peer record stamped years ahead or non-finite is merged, and an honest device still stamps its next edit within 24 h and wins', fc.property(
   fc.oneof(fc.integer({ min: 1, max: 80 }).map((y) => ({ years: y })), fc.constantFrom('1e400', '-1e400', 'NaN', 'demain')),
-  fc.nat(1), fc.tuple(fc.integer({ min: 1, max: 90 }), fc.integer({ min: 1, max: 90 })).filter(([b, a]) => a !== b),
+  fc.nat(1), fc.tuple(valueArb(1, 90), valueArb(1, 90)).filter(([b, a]) => a !== b),
   (rogue, via, [vb, va]) => {
     const clock = { t: Date.UTC(2026, 9, 22, 10) };
     const devs = [device(clock, 0), device(clock, 0)];

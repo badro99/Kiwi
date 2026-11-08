@@ -39,10 +39,15 @@
     if (!write(merchant, rows)) return null;
     return row;
   }
-  async function list(merchant, query) {
+  /* `status` dit d'où viennent les notes : 'ok' (serveur lu), 'offline' (appareil hors ligne)
+     ou 'read-failed' (le serveur n'a pas répondu à temps ou a refusé). Hors 'ok', la liste n'est
+     que le journal de CET appareil : une note ouverte sur une autre caisse peut manquer. */
+  async function listWithStatus(merchant, query) {
     const local = read(merchant);
-    let remote = [];
-    if (merchant && navigator.onLine !== false) {
+    let remote = [], status = 'ok';
+    if (!merchant) status = 'ok';
+    else if (navigator.onLine === false) status = 'offline';
+    else {
       try {
         const url = '/api/retail-balances?merchant=' + encodeURIComponent(merchant)
           + '&q=' + encodeURIComponent(String(query || '').slice(0, 64));
@@ -50,8 +55,12 @@
            stalled must not hold back the local journal. */
         const { deadlineFetch } = await import('./request-deadline.mjs');
         const response = await deadlineFetch(url, { credentials: 'same-origin', cache: 'no-store' }, 6000);
-        if (response.ok) remote = (await response.json()).balances || [];
-      } catch (_) { /* The local journal is still readable during an outage or a stall. */ }
+        if (!response.ok) status = 'read-failed';
+        else {
+          const body = await response.json();
+          if (!body || !Array.isArray(body.balances)) status = 'read-failed'; else remote = body.balances;
+        }
+      } catch (_) { status = 'read-failed'; /* The local journal is still readable during an outage or a stall. */ }
     }
     const merged = new Map(local.map(row => [row.id, row]));
     remote.forEach(row => {
@@ -68,10 +77,12 @@
       } else merged.set(row.id, row);
     });
     const needle = String(query || '').toLowerCase();
-    return [...merged.values()].filter(row => due(row) > 0
+    const rows = [...merged.values()].filter(row => due(row) > 0
       && (!needle || String(row.ticketRef).toLowerCase().includes(needle)
         || String(row.customerId).toLowerCase().includes(needle)));
+    return { rows, status };
   }
+  async function list(merchant, query) { return (await listWithStatus(merchant, query)).rows; }
   async function render(panel, opts) {
     if (!panel) return;
     const prefix = opts.prefix === 'mz' ? 'mz' : 'bq';
@@ -85,17 +96,20 @@
     const input = panel.querySelector('input');
     const target = panel.querySelector('[data-retail-balance-list]');
     let generation = 0;
+    function note(className, text) { const p = document.createElement('p'); p.className = className; p.role = 'status'; p.textContent = text; return p; }
     async function refresh() {
       const current = ++generation;
       const query = input.value.trim();
       let customerId = '';
       if (query && opts.customerIdForName) customerId = opts.customerIdForName(query) || '';
-      const rows = await list(opts.merchant, customerId || query);
+      const { rows, status } = await listWithStatus(opts.merchant, customerId || query);
       if (current !== generation || !panel.isConnected) return;
       target.replaceChildren();
+      if (status !== 'ok') {
+        target.appendChild(note('krb-empty krb-stale', 'Notes du serveur indisponibles : seules les notes de cet appareil sont affichées.'));
+      }
       if (!rows.length) {
-        const empty = document.createElement('p'); empty.className = 'krb-empty';
-        empty.textContent = 'Aucune note ouverte pour cette recherche.'; target.appendChild(empty);
+        target.appendChild(note('krb-empty', 'Aucune note ouverte pour cette recherche.'));
       }
       for (const row of rows) {
         const button = document.createElement('button');
@@ -119,5 +133,5 @@
     input.addEventListener('input', () => { void refresh(); });
     await refresh();
   }
-  window.KiwiRetailBalances = Object.freeze({ read, record, list, due, render });
+  window.KiwiRetailBalances = Object.freeze({ read, record, list, listWithStatus, due, render });
 })();

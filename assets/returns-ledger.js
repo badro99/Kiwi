@@ -42,6 +42,33 @@ export function ledgerFor(venue) {
   return now.slug && d.m !== now.slug ? null : d;
 }
 export function ledgerPersisted() { return persisted; }
+/* Âge de la lecture mémorisée, en millisecondes (null : jamais lue). Un retour fait sur une AUTRE caisse
+   n'invalide rien ici : l'écran montre cet âge et propose de relire (`refreshReturnsLedger`). */
+export function ledgerAge(now = Date.now()) {
+  const d = cachedLedger();
+  return d && Number(d.at) > 0 ? Math.max(0, now - Number(d.at)) : null;
+}
+/* « Lu il y a 3 min » : l'âge de ce que montre le registre, pour qu'on sache qu'un retour fait sur une autre caisse peut ne pas y être encore. */
+export function ledgerAgeLabel(rL, now = Date.now()) {
+  const age = ledgerAge(now);
+  if (age == null) return rL('Pas encore lu', 'Not read yet', 'لم تتم القراءة بعد');
+  const min = Math.floor(age / 60000);
+  if (min < 1) return rL('Lu à l’instant', 'Read just now', 'قُرئ للتو');
+  return rL('Lu il y a ' + min + ' min', 'Read ' + min + ' min ago', 'قُرئ قبل ' + min + ' د');
+}
+/* « Actualiser » : le bouton (data-action returns-refresh) invalide la lecture, pose un drapeau que la page
+   consomme (takeRefresh) pour relire même si la période n'a pas changé, puis repasse par la page elle-même. */
+let refreshAsked = false;
+export function takeRefresh() { const asked = refreshAsked; refreshAsked = false; return asked; }
+try {
+  const handlers = window.Kiwi && window.Kiwi.handlers;
+  if (handlers) handlers['returns-refresh'] = () => { refreshAsked = true; invalidateReturnsLedger(); if (handlers['nav-returns']) handlers['nav-returns'](); };
+} catch (_) {}
+/* Relecture demandée par la personne : saute la minute de repos. */
+export function refreshReturnsLedger(period) {
+  invalidateReturnsLedger();
+  return warmCreditReturns(period);
+}
 /* Qui est à l'écran : commerce du document et venue de l'accueil. */
 function currentIdentity() {
   let slug = '', venue = '';
@@ -58,15 +85,22 @@ export async function readReturnsLedger(slug, period = null) {
      quitté ne doit pas se ranger sous le commerce affiché à son arrivée. */
   const asked = currentIdentity(), started = generation;
   const query = period ? '&since=' + period[0] + (Number.isFinite(period[1]) ? '&until=' + period[1] : '') : '';
-  const list = [];
-  let offset = 0;
+  const list = [], seen = new Set();
+  let offset = 0, after = null;
   do {
-    const response = await deadlineFetch('/api/sale/refund?merchant=' + encodeURIComponent(slug) + '&offset=' + offset + query, { credentials: 'same-origin', cache: 'no-store' });
+    const page = after ? '&after=' + encodeURIComponent(after) : '&offset=' + offset;
+    const response = await deadlineFetch('/api/sale/refund?merchant=' + encodeURIComponent(slug) + page + query, { credentials: 'same-origin', cache: 'no-store' });
     const data = await response.json();
     if (!response.ok || !data.ok || !Array.isArray(data.list)) throw new Error('returns-read');
-    list.push(...data.list);
-    if (data.next !== null && (!Number.isSafeInteger(data.next) || data.next <= offset)) throw new Error('returns-page');
-    offset = data.next;
+    /* Une ligne vue deux fois (serveur ancien à OFFSET, retour arrivé entre deux pages) ne compte qu'une fois. */
+    for (const row of data.list) { const id = row && row.id; if (id == null || !seen.has(id)) { if (id != null) seen.add(id); list.push(row); } }
+    if (typeof data.after === 'string' && data.after) {
+      if (data.after === after) throw new Error('returns-page');
+      after = data.after; offset = data.next;
+    } else {
+      if (data.next !== null && (!Number.isSafeInteger(data.next) || data.next <= offset)) throw new Error('returns-page');
+      after = null; offset = data.next;
+    }
   } while (offset !== null);
   const now = currentIdentity();
   const sameStore = (!asked.slug || !now.slug || now.slug === slug) && now.venue === asked.venue;

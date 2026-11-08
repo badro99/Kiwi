@@ -1053,12 +1053,12 @@
 <script src="assets/interactive/handlers.js?v=2" defer></script>
 <script src="assets/interactive.js?v=73" defer></script>
 <script src="assets/view-link.js?v=2" defer></script>
-<script src="assets/loyalty-product-links.js?v=12" defer></script>
+<script src="assets/loyalty-product-links.js?v=13" defer></script>
 <script src="assets/features.js?v=29" defer></script>
 
 
 <script src="assets/invoice.js?v=28" defer></script>
-<script src="assets/invoicing.js?v=62" defer></script>
+<script src="assets/invoicing.js?v=63" defer></script>
 <script src="assets/depenses.js?v=5" defer></script>
 <script src="assets/oppo-cards.js?v=9" defer></script>
 <script src="assets/merchant-health.js?v=5" defer></script>
@@ -1092,8 +1092,8 @@
 <script src="assets/venues.js?v=75" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot
      and the garment product art (both in pressing-ops.js). -->
-<script src="assets/pressing-ops.js?v=37" defer></script>
-<script src="assets/pressing-numbering.js?v=9" defer></script>
+<script src="assets/pressing-ops.js?v=38" defer></script>
+<script src="assets/pressing-numbering.js?v=10" defer></script>
 <script src="assets/pressing-catalog.js?v=10" defer></script>
 <script src="assets/pressing-dashboard.js?v=33" defer></script>
 <script src="assets/demoClock.js?v=5" defer></script>
@@ -1113,11 +1113,11 @@
 <!-- Establish the signed account/operator identity before any tenant-scoped
      data module starts. God Mode must never infer authority from ?op=1, and
      its one-shot snapshot must not miss the identity promise at boot. -->
-<script defer src="assets/tenant-purge.js?v=15"></script>
+<script defer src="assets/tenant-purge.js?v=16"></script>
 <script defer src="assets/dashboard-pin-vault.js?v=6"></script>
 <script defer src="assets/identity.js?v=12"></script>
 <link rel="modulepreload" href="assets/live-link/queue-store.js?v=23">
-<script type="module" defer src="assets/live-link.js?v=123"></script>
+<script type="module" defer src="assets/live-link.js?v=124"></script>
 <script defer src="assets/channel-sales.js?v=8"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
@@ -1174,8 +1174,8 @@
 <!-- Real thermal printing (shared with the caisse): ESC/POS encoder + bridge
      client, so inventory can print barcode étiquettes to a thermal printer. -->
 <script src="assets/escpos.js?v=20" defer fetchpriority="low"></script>
-<script src="assets/printer/transports.js?v=11" defer></script>
-<script src="assets/printer-bridge.js?v=84" defer fetchpriority="low"></script>
+<script src="assets/printer/transports.js?v=12" defer></script>
+<script src="assets/printer-bridge.js?v=85" defer fetchpriority="low"></script>
 <!-- Le catalogue boutique tient en deux fichiers : le journal du stock et les
      échanges avec le serveur, AVANT le fichier principal qui les appelle. -->
 <script src="assets/boutique-catalog-parts.js?v=34" defer fetchpriority="low"></script>
@@ -1227,7 +1227,7 @@
      de l'établissement) ; AVANT menu-catalog.js, qui saisit les coûts, et lu au
      rendu par dateRange.js pour les tuiles Marge brute / Bénéfice / Coût matière. -->
 <script src="assets/receipt-ui.js?v=2" defer fetchpriority="low"></script>
-<script src="assets/cost.js?v=16" defer fetchpriority="low"></script>
+<script src="assets/cost.js?v=17" defer fetchpriority="low"></script>
 <!-- Charges fixes, commissions et résultat net (assets/charges.js) : le calcul
      pur d'abord, puis le document `charges` et son éditeur. APRÈS cost.js, dont
      ils lisent le registre ; AVANT finance.js, qui affiche le résultat. -->
@@ -1236,13 +1236,13 @@
 <script src="assets/inventory-consumption.js?v=18" defer fetchpriority="low"></script>
 <script src="assets/procurement.js?v=6" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
-<script src="assets/clients-store.js?v=66" defer fetchpriority="low"></script>
+<script src="assets/clients-store.js?v=67" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
 
 
-<script src="assets/clients-directory.js?v=43" defer fetchpriority="low"></script>
+<script src="assets/clients-directory.js?v=44" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=21" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=220" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=221" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1262,17 +1262,17 @@
 <script src="assets/floorplan-core.js?v=2061" defer fetchpriority="low"></script>
 <!-- The till's live room for the Plan de salle (KiwiFloorLive). Read-only
      poller of /api/floor/live; pages-pro.js reads it at open time. -->
-<script src="assets/floorplan-live.js?v=24" defer fetchpriority="low"></script>
+<script src="assets/floorplan-live.js?v=25" defer fetchpriority="low"></script>
 <script src="assets/starter-copy.js?v=1" defer fetchpriority="low"></script>
 
 
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=220"></script>
+<script src="assets/pages/dashboard-startup.js?v=221"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=17">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
-<script src="assets/pages/dashboard-loader.js?v=90" defer fetchpriority="low"></script>
+<script src="assets/pages/dashboard-loader.js?v=92" defer fetchpriority="low"></script>
 <script src="assets/trade-workspace-schema.js?v=14" defer fetchpriority="low"></script>
 <script src="assets/trade-workspaces.js?v=21" defer fetchpriority="low"></script>
 <script src="assets/delivery-receivables.js?v=2" defer fetchpriority="low"></script>

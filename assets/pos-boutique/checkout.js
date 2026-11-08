@@ -1,11 +1,12 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=195';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=195';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=298';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=196';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=196';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=299';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=3';
+import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
 import { paidCents } from './paid-share.js?v=2';
 import { tillNow, tillDate } from './till-clock.js?v=2';
-import '../money-cents.js?v=4';
+import '../money-cents.js?v=5';
 import { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=9';
 import { bqDeliveryCard } from './delivery-card.js?v=6';
 import { receiptPrinterReady, receiptDocInput } from './receipt-doc.js?v=1';
@@ -36,6 +37,7 @@ const M = globalThis.KiwiMoney;
     if (state.retDate < localKey && !askedDays.has(state.retDate)) { askedDays.add(state.retDate); syncReturnSales(state.retDate); }   // au-delà du journal local : la journée se lit sur le serveur
     const hits = SALES.filter((s) => !s.voided && dateKey(s.at) === state.retDate && saleMatches(s, q));
     const ret = state.ret;
+    const shownHits = windowHits(hits, state.retDate, q, ret && ret.saleId);
     panel.innerHTML = `
       <div class="bq-ret">
         <header class="bq-head">
@@ -59,7 +61,7 @@ const M = globalThis.KiwiMoney;
                   <i data-lucide="ticket"></i><b>${a.code}</b> · ${fmtMAD(a.balance)}, ${esc(a.holderName)}<span class="see">Voir</span>
                 </button>`).join('')}
             </div>` : ''}
-          ${hits.map((s) => saleCard(s, ret)).join('') || (String(q).trim()
+          ${shownHits.list.map((s) => saleCard(s, ret)).join('') + moreHitsButton(shownHits.rest, tr, esc) || (String(q).trim()
             ? `<div class="bq-empty bq-ret-empty"><div class="bq-ret-empty-icon"><svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div class="bq-ret-empty-title">${esc(tr('Rien pour « {q} »').replace('{q}', q))}</div><div class="bq-ret-empty-hint">${esc(tr("Vérifiez le n° de ticket ou le téléphone."))}</div></div>`
             /* Rien tapé encore : une boutique sans vente du jour ouvrait cette page
                sur « Rien pour «  » », un échec de recherche que personne n'a lancée. */
@@ -87,6 +89,7 @@ const M = globalThis.KiwiMoney;
     panel.onclick = (e) => {
       const dayB = e.target.closest('[data-bq-ret-day]');
       if (dayB) { state.retDate = dayB.dataset.bqRetDay; state.ret = null; renderEchanges(); icons(); return; }
+      if (e.target.closest('[data-bq-ret-more]')) { showMoreHits(state.retDate, state.retQuery); renderEchanges(); icons(); return; }
       const avB = e.target.closest('[data-bq-av]');
       if (avB) { openVoucher(AVOIRS.find((a) => a.code === avB.dataset.bqAv), { mode: 'view' }); return; }
       const qtyB = e.target.closest('[data-bq-ret-qty]');
