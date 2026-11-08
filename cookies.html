@@ -7,15 +7,19 @@
 <meta name="description" content="Politique cookies de Kiwi. Strict minimum, aucun tracker tiers." />
 <meta name="theme-color" content="#0B6E4F" />
 <meta name="robots" content="index, follow" />
-<link rel="canonical" href="https://kiwi-os.com/cookies.html" />
+<link rel="canonical" href="https://kiwi-os.com/cookies" />
 
 <link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="assets/landing/kiwi-mark-app-icon.png" />
 
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="assets/fonts/legacy-faces.css?v=1" />
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* Polices auto-hébergées : aucune requête vers Google (voir privacy.html). */
+  @font-face { font-family: "Inter Tight"; src: url("/assets/fonts/inter-tight-latin-ext.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap;
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Inter Tight"; src: url("/assets/fonts/inter-tight-latin.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+</style>
 
 <link rel="stylesheet" href="assets/landing/tokens.css" />
 <link rel="stylesheet" href="assets/landing/base.css" />
@@ -67,12 +71,13 @@
     color: var(--n-600); font-weight: var(--w-medium);
   }
   .legal td .mono { font-family: var(--font-mono); font-size: 13px; color: var(--ink); }
+  .legal p.note { color: var(--n-600); font-size: 0.94em; border-left: 2px solid var(--n-200); padding-left: 12px; }
   .legal a { color: var(--atlas); border-bottom: 1px solid currentColor; }
   .legal-back {
-    display: inline-flex; align-items: center; gap: 8px;
+    display: flex; width: fit-content; align-items: center; gap: 8px;
     font-family: var(--font-mono); font-size: 12px;
     color: var(--n-500); letter-spacing: 0.04em;
-    margin-bottom: var(--s-8);
+    margin-bottom: var(--s-6);
     transition: color var(--d-quick) var(--ease-glide);
   }
   .legal-back:hover { color: var(--atlas); }
@@ -135,72 +140,111 @@
 
     <h1 style="margin-top: var(--s-4);">Politique cookies</h1>
     <p class="lede">
-      Kiwi pose le minimum strict de cookies nécessaires au fonctionnement du site
+      Kiwi ne pose que les cookies strictement nécessaires au fonctionnement du site
       et de l'application. <b>Aucun tracker publicitaire tiers.</b> Aucune donnée
       cédée ou vendue à des tiers commerciaux.
     </p>
 
-    <h2>1. Cookies utilisés sur kiwi-os.com</h2>
+    <h2>1. Cookies posés par Kiwi</h2>
+    <p>
+      Tous ces cookies sont <b>strictement nécessaires</b> au fonctionnement du
+      service (connexion, appairage de la caisse, langue). Aucun ne sert à la
+      publicité, au suivi ou à la mesure d'audience. Un visiteur qui parcourt
+      seulement le site public ne reçoit au plus que la langue ; les autres n'apparaissent
+      qu'après une connexion ou un appairage.
+    </p>
     <table>
       <thead>
         <tr><th>Nom</th><th>Type</th><th>Durée</th><th>Finalité</th></tr>
       </thead>
       <tbody>
         <tr>
-          <td><span class="mono">kiwi_session</span></td>
-          <td>Technique</td>
-          <td>Session</td>
-          <td>Maintien de la session utilisateur après connexion.</td>
-        </tr>
-        <tr>
           <td><span class="mono">kiwi_lang</span></td>
           <td>Préférence</td>
+          <td>30 jours</td>
+          <td>Mémorise la langue choisie (français, arabe, anglais). Lisible par la page.</td>
+        </tr>
+        <tr>
+          <td><span class="mono">kiwi_sess</span></td>
+          <td>Technique</td>
+          <td>30 jours</td>
+          <td>Maintient la connexion au compte commerçant. HttpOnly, Secure : illisible par un script de la page.</td>
+        </tr>
+        <tr>
+          <td><span class="mono">kiwi_employee</span></td>
+          <td>Technique</td>
+          <td>30 jours</td>
+          <td>Maintient la session de l'application employé pendant le service. HttpOnly, Secure.</td>
+        </tr>
+        <tr>
+          <td><span class="mono">kiwi_till</span></td>
+          <td>Technique</td>
           <td>12 mois</td>
-          <td>Mémorisation de la langue choisie (FR / AR / EN).</td>
+          <td>Prouve qu'une caisse a été appairée à un commerçant, jusqu'à ce qu'il la dissocie. HttpOnly, Secure.</td>
         </tr>
         <tr>
-          <td><span class="mono">kiwi_csrf</span></td>
-          <td>Sécurité</td>
-          <td>Session</td>
-          <td>Protection contre les attaques CSRF sur les formulaires.</td>
+          <td><span class="mono">kiwi_till_store</span></td>
+          <td>Technique</td>
+          <td>12 mois</td>
+          <td>Indique à la caisse quel établissement vérifier. Ne prouve rien à lui seul. HttpOnly, Secure.</td>
         </tr>
         <tr>
-          <td><span class="mono">kiwi_consent</span></td>
-          <td>Consentement</td>
-          <td>13 mois</td>
-          <td>Mémorisation de votre choix sur la présente politique.</td>
+          <td><span class="mono">kiwi_terminal</span></td>
+          <td>Technique</td>
+          <td>12 mois</td>
+          <td>Identifie le terminal de la caisse pour les sessions de caisse. HttpOnly, Secure.</td>
+        </tr>
+        <tr>
+          <td><span class="mono">kiwi_acct</span></td>
+          <td>Technique</td>
+          <td>90 jours au plus</td>
+          <td>Accès en lecture seule d'un comptable, via le lien que le commerçant lui a remis ; révocable à tout moment par le commerçant. HttpOnly, Secure.</td>
+        </tr>
+        <tr>
+          <td><span class="mono">kiwi_op, kiwi_op_id</span></td>
+          <td>Technique</td>
+          <td>30 jours</td>
+          <td>Réservés à l'équipe Kiwi pour la console d'administration. Jamais posés à un visiteur du site. HttpOnly, Secure.</td>
         </tr>
       </tbody>
     </table>
 
-    <h2>2. Cookies tiers</h2>
+    <h2>2. Cookies tiers et analytique</h2>
     <p>
-      <b>Aucun cookie tiers</b> n'est posé par kiwi-os.com. Les polices de caractères
-      sont chargées depuis Google Fonts via une connexion préchargée mais sans
-      cookie. Aucun pixel publicitaire (Meta, Google Ads, LinkedIn, TikTok) n'est
-      embarqué.
+      <b>Aucun cookie tiers</b> n'est posé par kiwi-os.com, et aucun outil de mesure
+      d'audience ni pixel publicitaire (Meta, Google Ads, LinkedIn, TikTok) n'est
+      chargé sur les pages publiques. Les polices de caractères sont hébergées par
+      Kiwi : leur chargement n'envoie aucune donnée à un tiers.
     </p>
 
-    <h2>3. Outils analytiques</h2>
+    <h2>3. Données conservées sur votre appareil</h2>
     <p>
-      Pour comprendre l'usage du site et améliorer le produit, Kiwi utilise un
-      outil d'analyse auto-hébergé sans cookie persistant ni empreinte navigateur.
-      Les statistiques sont strictement agrégées et anonymisées.
+      En plus des cookies, l'application et le site enregistrent des préférences
+      dans le stockage local de votre navigateur (localStorage) : langue, thème,
+      mode d'affichage, réglages de l'imprimante et file d'attente hors ligne des
+      ventes. Ces préférences ne quittent pas l'appareil. Seule exception : les
+      ventes en attente sont envoyées au compte du commerçant dès le retour du
+      réseau, comme décrit dans la <a href="privacy.html">politique de confidentialité</a>.
     </p>
 
-    <h2>4. Gestion de votre consentement</h2>
+    <h2>4. Consentement</h2>
     <p>
-      Vous pouvez à tout moment effacer vos cookies depuis les paramètres de
-      votre navigateur, ou nous contacter à <a href="mailto:dpo@kiwi-os.com">dpo@kiwi-os.com</a>
-      pour toute demande spécifique.
+      Kiwi ne pose aucun cookie non essentiel : il n'y a donc pas de bannière de
+      consentement à accepter ou refuser. Vous pouvez à tout moment effacer les
+      cookies et les données du site depuis les réglages de votre navigateur (vous
+      serez alors déconnecté et une caisse appairée devra l'être de nouveau), ou
+      écrire à <a href="mailto:dpo@kiwi-os.com">dpo@kiwi-os.com</a> pour toute
+      demande.
     </p>
 
-    <h2>5. Application Kiwi (mobile et tableau de bord)</h2>
+    <h2>5. Application Kiwi Pro (iPad, iPhone, Android)</h2>
     <p>
-      L'application utilise un token de session persistant (équivalent fonctionnel
-      d'un cookie) pour maintenir l'authentification. Ce token est révocable
-      depuis les paramètres de sécurité de votre compte.
+      L'application, gratuite et utilisable avec toutes les formules, ouvre le même
+      compte et utilise les mêmes cookies de session ou, dans l'app native, un jeton
+      de session équivalent. Ce jeton est révocable depuis les paramètres de
+      sécurité du compte.
     </p>
+    <p class="note">Dernière mise à jour : 9 novembre 2026.</p>
   </div>
 </section>
 

@@ -7,15 +7,19 @@
 <meta name="description" content="Statut opérationnel des services Kiwi en temps réel : encaissement, versement T+1, dashboard, API." />
 <meta name="theme-color" content="#0B6E4F" />
 <meta name="robots" content="index, follow" />
-<link rel="canonical" href="https://kiwi-os.com/status.html" />
+<link rel="canonical" href="https://kiwi-os.com/status" />
 
 <link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="assets/landing/kiwi-mark-app-icon.png" />
 
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="assets/fonts/legacy-faces.css?v=1" />
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* Polices auto-hébergées : aucune requête vers Google (voir privacy.html). */
+  @font-face { font-family: "Inter Tight"; src: url("/assets/fonts/inter-tight-latin-ext.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap;
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Inter Tight"; src: url("/assets/fonts/inter-tight-latin.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+</style>
 
 <link rel="stylesheet" href="assets/landing/tokens.css" />
 <link rel="stylesheet" href="assets/landing/base.css" />
@@ -145,10 +149,10 @@
   }
 
   .legal-back {
-    display: inline-flex; align-items: center; gap: 8px;
+    display: flex; width: fit-content; align-items: center; gap: 8px;
     font-family: var(--font-mono); font-size: 12px;
     color: var(--n-500); letter-spacing: 0.04em;
-    margin-bottom: var(--s-8);
+    margin-bottom: var(--s-6);
     transition: color var(--d-quick) var(--ease-glide);
   }
   .legal-back:hover { color: var(--atlas); }
@@ -168,16 +172,16 @@
 
 <nav class="nav" aria-label="Navigation principale">
   <div class="nav-inner">
-    <a href="index.html" class="nav-logo"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi" /></a>
+    <a href="/" class="nav-logo"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi" /></a>
     <div class="nav-actions">
-      <a class="btn btn-ghost btn-sm" href="index.html">Retour au site</a>
+      <a class="btn btn-ghost btn-sm" href="/">Retour au site</a>
     </div>
   </div>
 </nav>
 
 <section class="slab-paper status-page">
   <div class="wrap-narrow">
-    <a href="index.html" class="legal-back">← Retour à kiwi-os.com</a>
+    <a href="/" class="legal-back">← Retour à kiwi-os.com</a>
     <span class="pill pill-paper pill-dot">kiwi-os.com/status</span>
 
     <h1 style="margin-top: var(--s-4);">Statut opérationnel.</h1>
@@ -186,7 +190,7 @@
     <div class="status-hero">
       <span class="status-hero-dot" aria-hidden="true"></span>
       <span class="status-hero-text">Tous les services opérationnels.</span>
-      <span class="status-hero-meta">Page mise à jour manuellement par l&rsquo;équipe Kiwi</span>
+      <span class="status-hero-meta">Dernière mise à jour : 9 novembre 2026, 23 h 45 · page tenue à jour manuellement par l&rsquo;équipe Kiwi</span>
     </div>
 
     <!-- Service-by-service breakdown -->
@@ -235,7 +239,7 @@
         <span class="status-dot" aria-hidden="true"></span>
         <div class="status-name">
           Support
-          <span class="desc">WhatsApp · FR, darija, arabe, anglais</span>
+          <span class="desc">WhatsApp · français, arabe (darija ou arabe classique), anglais</span>
         </div>
         <span class="status-tag">Opérationnel</span>
       </div>
@@ -249,7 +253,7 @@
           Aucun incident à signaler. Cette page est tenue à jour manuellement&nbsp;:
           Kiwi ne publie pas encore de mesure de disponibilité automatisée, et nous
           préférons ne rien afficher plutôt qu&rsquo;un chiffre que nous ne mesurons pas.
-          Si un service vous semble indisponible, écrivez-nous sur WhatsApp&nbsp;·nous
+          Si un service vous semble indisponible, écrivez-nous sur WhatsApp&nbsp;: nous
           répondons pendant les heures de support.
         </div>
       </div>

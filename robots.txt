@@ -3,6 +3,18 @@ Allow: /
 Disallow: /fr/robot
 Disallow: /en/robot
 Disallow: /ar/robot
+Disallow: /wallet
+Disallow: /demoBanking
+Disallow: /demoBankingBlue
+Disallow: /brand
+Disallow: /Kiwi-Brand-Identity
+Disallow: /kit
+Disallow: /liquid
+Disallow: /cafe-atlas-qr
+Disallow: /booking
+Disallow: /OrderPro
+Disallow: /printer
+Disallow: /comptable
 
 Host: https://kiwi-os.com
 Sitemap: https://kiwi-os.com/sitemap.xml
