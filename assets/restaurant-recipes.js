@@ -11,9 +11,39 @@
   /* Two decimals is money. A pinch of salt against a 25 kg sack is not. */
   const fine = (n) => Math.round((Number(n) || 0) * 1e6) / 1e6;
   const venue = (id) => id || window.KiwiVenue?.getCurrentVenueData?.()?.id || window.KiwiVenue?.getVenue?.() || null;
+  /* Fusion de deux appareils : une fiche effacée (pierre tombale `removed[id]`
+   * sur l'horloge `updatedAt`) ne revient pas quand un appareil en retard la
+   * renvoie ; à égalité d'horloge l'effacement gagne, et entre deux fiches du
+   * même instant le contenu départage, donc l'ordre de fusion ne change rien. */
+  const stable = (v) => {
+    if (!v || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
+    if (Array.isArray(v)) return '[' + v.map(stable).join(',') + ']';
+    return '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
+  };
+  function mergeRecipeDocs(mine, theirs) {
+    const a = (mine && mine.items) || {}, b = (theirs && theirs.items) || {};
+    const gone = {};
+    [mine && mine.removed, theirs && theirs.removed].forEach((m) => {
+      Object.keys(m || {}).forEach((id) => { const t = +m[id]; if (Number.isFinite(t) && t > 0 && !(gone[id] >= t)) gone[id] = t; });
+    });
+    const horizon = Date.now() - 400 * 864e5;
+    Object.keys(gone).forEach((id) => { if (gone[id] < horizon) delete gone[id]; });
+    const items = {};
+    new Set([...Object.keys(b), ...Object.keys(a)]).forEach((id) => {
+      const x = a[id], y = b[id];
+      let w = x || y;
+      if (x && y) {
+        const ax = +x.updatedAt || 0, ay = +y.updatedAt || 0;
+        w = ax !== ay ? (ax > ay ? x : y) : (stable(x) >= stable(y) ? x : y);
+      }
+      if (gone[id] != null && gone[id] >= (+w.updatedAt || 0)) return;
+      items[id] = w;
+    });
+    return Object.assign({}, theirs || {}, mine || {}, { items, removed: gone });
+  }
   const store = window.KiwiStore.define('recipes', {
-    blank: () => ({ items: {} }), cloud: true,
-    isEmpty: (d) => !d || !d.items || !Object.keys(d.items).length,
+    blank: () => ({ items: {}, removed: {} }), cloud: true, merge: mergeRecipeDocs,
+    isEmpty: (d) => !d || !d.items || (!Object.keys(d.items).length && !Object.keys(d.removed || {}).length),
   });
 
   function normalizeIngredient(value) {
@@ -197,7 +227,9 @@
       /* Le nom du plat voyage avec la recette : une part d'addition partagée
          arrive à la caisse sans identifiant, et c'est le seul crochet qui reste
          pour retrouver quoi décompter du stock. */
-      d.recipes[itemId] = { status: complete ? 'complete' : 'incomplete', name: r.itemName, yield: r.portions, lines, notes: r.note, at: Date.now() };
+      const gone = d.removed && d.removed.recipes && +d.removed.recipes[itemId];
+      d.recipes[itemId] = { status: complete ? 'complete' : 'incomplete', name: r.itemName, yield: r.portions, lines, notes: r.note, at: Math.max(Date.now(), gone ? gone + 1 : 0) };
+      if (gone) delete d.removed.recipes[itemId];
       return d;
     }, vid);
   }
@@ -251,7 +283,8 @@
   function save(itemId, value, id) {
     if (!itemId) return;
     if (tooLong(value)) return false;   // refusé, rien n'est écrit ni coupé
-    const normalized = normalizeRecipe({ ...value, itemId, updatedAt: Date.now() }, itemId);
+    const tomb = +(store.get(venue(id)).removed || {})[itemId] || 0;
+    const normalized = normalizeRecipe({ ...value, itemId, updatedAt: Math.max(Date.now(), tomb + 1) }, itemId);
     const next = window.KiwiStockIdentity?.bindRecipe?.(normalized, inventory(id)) || normalized;
     const result = store.update((d) => {
       d.items = d.items || {};
@@ -264,9 +297,16 @@
   }
   function remove(itemId, id) {
     const vid = venue(id);
-    const result = store.update((d) => { d.items = d.items || {}; delete d.items[itemId]; return d; }, vid);
-    const costStore = window.KiwiCost?.store;
-    costStore?.update?.((d) => { d.recipes = d.recipes || {}; delete d.recipes[itemId]; return d; }, vid);
+    const result = store.update((d) => {
+      d.items = d.items || {};
+      const prev = d.items[itemId];
+      delete d.items[itemId];
+      d.removed = d.removed || {};
+      d.removed[itemId] = Math.max(Date.now(), (+prev?.updatedAt || 0) + 1, (+d.removed[itemId] || 0) + 1);
+      return d;
+    }, vid);
+    if (window.KiwiCost?.removeRecipe) window.KiwiCost.removeRecipe(itemId, vid);
+    else window.KiwiCost?.store?.update?.((d) => { d.recipes = d.recipes || {}; delete d.recipes[itemId]; return d; }, vid);
     window.KiwiMenuStore?.updateItem?.(itemId, { nutrition: null, allergens: [], nutritionComplete: false });
     return result;
   }

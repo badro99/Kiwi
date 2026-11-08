@@ -81,7 +81,53 @@
    * de farine saisi il y a onze mois n'est plus un prix d'achat, c'est un
    * souvenir. C'est ce qui permettra de dire « ce coût date » au lieu de le
    * présenter comme frais. */
-  const blank = () => ({ items: {}, ingredients: [], recipes: {}, charges: [], targets: {}, seq: 0 });
+  const blank = () => ({ items: {}, ingredients: [], recipes: {}, charges: [], targets: {}, seq: 0, removed: { items: {}, recipes: {} } });
+
+  /* ── SUPPRESSIONS ET ÉGALITÉS ───────────────────────────────────────────
+   * `removed.items[id]` / `removed.recipes[id]` : l'instant où le patron a
+   * effacé ce coût ou cette fiche, sur la même horloge (`at`) que la saisie.
+   * Sans cette pierre tombale, l'union de la fusion rendait le coût effacé dès
+   * qu'un appareil resté en retard le renvoyait : la marge du plat repartait
+   * sur un chiffre que le patron avait retiré exprès. Ordre : le plus récent
+   * gagne ; à égalité exacte, l'effacement gagne sur la saisie (un coût retiré
+   * ne revient jamais par hasard d'horloge), et entre deux saisies de même
+   * instant on départage sur leur contenu, pour que l'ordre de fusion ne
+   * change jamais le résultat. */
+  const stable = (v) => {
+    if (!v || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
+    if (Array.isArray(v)) return '[' + v.map(stable).join(',') + ']';
+    return '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
+  };
+  const stampOf = (x) => (x && Number.isFinite(+x.at) ? +x.at : 0);
+  const newer = (x, y) => {
+    if (!y) return x;
+    if (!x) return y;
+    const ax = stampOf(x), ay = stampOf(y);
+    if (ax !== ay) return ax > ay ? x : y;
+    return stable(x) >= stable(y) ? x : y;
+  };
+  const REMOVED_KEEP_MS = 400 * 864e5;
+  function mergeRemoved(a, b) {
+    const out = {};
+    [a, b].forEach((m) => {
+      Object.keys(m || {}).forEach((id) => {
+        const t = +m[id];
+        if (Number.isFinite(t) && t > 0 && !(out[id] >= t)) out[id] = t;
+      });
+    });
+    return out;
+  }
+  function mergeMap(mine, theirs, gone) {
+    const out = {};
+    const a = mine || {}, b = theirs || {};
+    new Set([...Object.keys(b), ...Object.keys(a)]).forEach((id) => {
+      const w = newer(a[id], b[id]);
+      if (w == null) return;
+      if (gone[id] != null && gone[id] >= stampOf(w)) return;   // effacé après (ou en même temps que) la saisie
+      out[id] = w;
+    });
+    return out;
+  }
 
   const store = window.KiwiStore.define('costs', {
     /* Private cross-device mirror.  The public menu never receives costs; the
@@ -89,6 +135,8 @@
     cloud: 'costs',
     blank,
     isEmpty: (d) => !d || (!Object.keys(d.items || {}).length
+                        && !Object.keys((d.removed && d.removed.items) || {}).length
+                        && !Object.keys((d.removed && d.removed.recipes) || {}).length
                         && !(d.charges || []).length
                         && !Object.keys(d.recipes || {}).length),
     /* Deux appareils qui chiffrent la même carte en même temps : on garde les
@@ -98,22 +146,15 @@
      * chiffrait sur le portable. */
     merge: (mine, theirs) => {
       const out = Object.assign({}, theirs || {}, mine || {});
-      const a = (mine && mine.items) || {};
-      const b = (theirs && theirs.items) || {};
-      const items = Object.assign({}, b);
-      Object.keys(a).forEach((id) => {
-        const x = a[id]; const y = b[id];
-        items[id] = (!y || (+x.at || 0) >= (+y.at || 0)) ? x : y;
-      });
-      out.items = items;
-      const ra = (mine && mine.recipes) || {};
-      const rb = (theirs && theirs.recipes) || {};
-      const recipes = Object.assign({}, rb);
-      Object.keys(ra).forEach((id) => {
-        const x = ra[id]; const y = rb[id];
-        recipes[id] = (!y || (+x.at || 0) >= (+y.at || 0)) ? x : y;
-      });
-      out.recipes = recipes;
+      const rm = {
+        items: mergeRemoved(mine && mine.removed && mine.removed.items, theirs && theirs.removed && theirs.removed.items),
+        recipes: mergeRemoved(mine && mine.removed && mine.removed.recipes, theirs && theirs.removed && theirs.removed.recipes),
+      };
+      const horizon = Date.now() - REMOVED_KEEP_MS;
+      [rm.items, rm.recipes].forEach((m) => Object.keys(m).forEach((id) => { if (m[id] < horizon) delete m[id]; }));
+      out.removed = rm;
+      out.items = mergeMap(mine && mine.items, theirs && theirs.items, rm.items);
+      out.recipes = mergeMap(mine && mine.recipes, theirs && theirs.recipes, rm.recipes);
       /* `ingredients` — le prix d'achat de chaque matière — était le seul bloc
        * que ce fusionneur ne protégeait pas : l'Object.assign du début le
        * remplaçait en bloc par celui de CE navigateur. Or la caisse ne charge
@@ -131,7 +172,7 @@
       ga.forEach((x) => {
         if (!x || !x.id) return;
         const y = ing.get(String(x.id));
-        if (!y || (+x.at || 0) >= (+y.at || 0)) ing.set(String(x.id), x);
+        if (!y || newer(x, y) === x) ing.set(String(x.id), x);
       });
       out.ingredients = Array.from(ing.values());
       return out;
@@ -596,12 +637,36 @@
     return store.update((d) => {
       d.items = d.items || {};
       const c = num(mad);
-      if (c == null || c <= 0) delete d.items[id];
+      if (c == null || c <= 0) {
+        /* Pierre tombale : sans elle un appareil en retard rend le coût effacé. */
+        const prev = d.items[id];
+        delete d.items[id];
+        d.removed = d.removed || { items: {}, recipes: {} };
+        d.removed.items = d.removed.items || {};
+        d.removed.items[id] = Math.max(Date.now(), stampOf(prev) + 1, +d.removed.items[id] + 1 || 0);
+      }
       /* Un coût unitaire est un taux : le centime détruit les ingrédients
        * suivis au gramme (0,0045 MAD/g). Les montants restent arrondis en aval. */
-      else d.items[id] = { cost: r4(c), at: Date.now(), by: String(who || '') };
+      else {
+        const gone = d.removed && d.removed.items && +d.removed.items[id];
+        d.items[id] = { cost: r4(c), at: Math.max(Date.now(), gone ? gone + 1 : 0), by: String(who || '') };
+        if (gone) delete d.removed.items[id];
+      }
       return d;
     });
+  }
+  /* Efface la fiche miroir d'une recette, avec sa pierre tombale. */
+  function removeRecipe(recipeId, vid) {
+    const id = String(recipeId || ''); if (!id) return null;
+    return store.update((d) => {
+      const prev = d.recipes && d.recipes[id];
+      d.recipes = d.recipes || {};
+      delete d.recipes[id];
+      d.removed = d.removed || { items: {}, recipes: {} };
+      d.removed.recipes = d.removed.recipes || {};
+      d.removed.recipes[id] = Math.max(Date.now(), stampOf(prev) + 1, +d.removed.recipes[id] + 1 || 0);
+      return d;
+    }, vid);
   }
   function itemCost(itemId) {
     const e = store.get().items[String(itemId || '')];
@@ -627,7 +692,7 @@
 
   window.KiwiCost = {
     of, coverage, ledger, summarize, marginOf, basis, netOf,
-    setItemCost, itemCost, listMissing,
+    setItemCost, removeRecipe, itemCost, listMissing,
     doc: () => store.get(),
     store,
     subscribe: (fn) => { subs.add(fn); return () => subs.delete(fn); },

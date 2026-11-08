@@ -211,7 +211,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
-  '/assets/pages/dashboard-startup.js?v=215',
+  '/assets/pages/dashboard-startup.js?v=216',
   '/assets/pages/dashboard-loader.js?v=82',
   '/assets/hotel/model.js?v=10',
   '/assets/hotel/views.js?v=9',
@@ -235,7 +235,7 @@ var SHELL = [
   '/assets/cancellation-history.js?v=3',
   '/assets/weather.js?v=1',
   '/assets/briefing-rules.js?v=7',
-  '/assets/briefing-persistence.js?v=14',
+  '/assets/briefing-persistence.js?v=15',
   '/assets/briefing.js?v=54',
   '/assets/ai-telemetry.js?v=1',
   '/assets/agent-data.js?v=7',
@@ -329,7 +329,7 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2061',
   // The Plan de salle's live-room poller (fail-soft without network).
-  '/assets/floorplan-live.js?v=18',
+  '/assets/floorplan-live.js?v=20',
   '/assets/oppo-cards.js?v=9',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
@@ -445,7 +445,7 @@ var SHELL = [
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
-  '/assets/cost.js?v=11',
+  '/assets/cost.js?v=12',
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=4',
   '/assets/clients-store.js?v=61',
@@ -454,7 +454,7 @@ var SHELL = [
   '/assets/customer-retention.js?v=21',
   '/assets/menu-catalog.js?v=44',
   '/assets/stock-identity.js?v=3',
-  '/assets/restaurant-recipes.js?v=18',
+  '/assets/restaurant-recipes.js?v=19',
   '/assets/restaurant-units.js?v=2',
   '/assets/employee-live.js?v=649',
   '/assets/employee-planning.js?v=24',
