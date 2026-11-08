@@ -126,8 +126,10 @@ function running(p, t) {
   if (p.from && b.date < p.from) return false;
   if (p.to && b.date > p.to) return false;
   const days = [...new Set(p.days)];
-  if (days.length && days.length < 7 && !days.includes(b.weekday)) return false;
   const s = toMin(p.start), e = toMin(p.end);
+  /* r21 promos#B0: the after-midnight leg of an overnight window belongs to the CALENDAR day before. */
+  const owner = s != null && e != null && s > e && b.min < e ? (new Date(t).getUTCDay() + 6) % 7 : b.weekday;
+  if (days.length && days.length < 7 && !days.includes(owner)) return false;
   if (s == null || e == null || s === e) return true;
   return s < e ? b.min >= s && b.min < e : b.min >= s || b.min < e;           /* a window past midnight */
 }

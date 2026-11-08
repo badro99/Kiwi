@@ -115,7 +115,7 @@
   function badge(p) {
     if (!p) return '';
     const locale = tillLocale(), n = locale === 'fr' ? String(p.value).replace('.', ',') : new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(p.value);
-    if (p.kind === 'percent') return '−' + (locale === 'fr' ? p.value : n) + ' %';
+    if (p.kind === 'percent') return '−' + n + ' %';
     return (p.kind === 'amount' ? '−' : '') + n + (locale === 'ar' ? ' د.م.' : ' MAD');
   }
 
@@ -139,9 +139,17 @@
         return { kind: kind, value: value, days: days.length === 7 ? [] : days, start: start, end: end };
       }
     const inWindow = (p, b) => {
-        if (p.days && p.days.length && p.days.indexOf(b.weekday) < 0) return false;
         var s = toMin(p.start), e = toMin(p.end);
-        if (s == null || e == null) return true;
+        var timed = s != null && e != null;
+        /* A window belongs to the weekday it STARTED on. For an overnight window
+           (22:00 to 01:00) the part after midnight is read on the next calendar day:
+           its owner is the calendar day before. The business weekday is not that day
+           when the cutoff is midnight (it already rolled over), so the moment carries
+           the calendar weekday (calWeekday) and the days list is tested against it. */
+        var after = timed && s >= e && b.min < e;
+        var owner = after && Number.isInteger(b.calWeekday) ? (b.calWeekday + 6) % 7 : b.weekday;
+        if (p.days && p.days.length && p.days.indexOf(owner) < 0) return false;
+        if (!timed) return true;
         return s < e ? b.min >= s && b.min < e : b.min >= s || b.min < e;
       }
     const price = (p, unit, surface) => {
@@ -189,7 +197,7 @@
       if (!best) return null;
       const p = best.promo;
       const fr = String(locale).startsWith('fr'), n = fr ? String(p.value).replace('.', ',') : new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(p.value);
-      const badge = p.kind === 'percent' ? '−' + (fr ? p.value : n) + ' %' : (p.kind === 'amount' ? '−' : '') + n + (fr || !String(locale).startsWith('ar') ? ' MAD' : ' د.م.');
+      const badge = p.kind === 'percent' ? '−' + n + ' %' : (p.kind === 'amount' ? '−' : '') + n + (fr || !String(locale).startsWith('ar') ? ' MAD' : ' د.م.');
       return { price: best.price, promo: { id: p.id, name: p.name, badge, before: base } };
     }
     const stockOf = (item) => {

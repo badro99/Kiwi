@@ -84,15 +84,17 @@ const MOROCCO = [
 ];
 const CHANGES = MOROCCO.slice(1).map(([t]) => t);
 const offsetH = (t) => { let o = 1; for (const [at, h] of MOROCCO) if (t >= at) o = h; return o; };
-function business(now) { const d = new Date(now + offsetH(now) * 3600000); let min = d.getUTCHours() * 60 + d.getUTCMinutes(), wd = d.getUTCDay(); if (min < 300) wd = (wd + 6) % 7; return { wd, min }; }
+function business(now) { const d = new Date(now + offsetH(now) * 3600000); let min = d.getUTCHours() * 60 + d.getUTCMinutes(), wd = d.getUTCDay(); const cal = wd; if (min < 300) wd = (wd + 6) % 7; return { wd, min, cal }; }
 function running(p, now) {
   if (p.paused) return false;
   if (p.to && now > p.to) return false;
   if (p.from && now < p.from) return false;
   const days = p.days.length === 7 ? [] : p.days;
   const b = business(now);
-  if (days.length && !days.includes(b.wd)) return false;
   const a = toMin(p.start), z = toMin(p.end);
+  /* r21 promos#B0: the after-midnight leg of an overnight window belongs to the CALENDAR day before. */
+  const owner = a != null && z != null && a > z && b.min < z ? (b.cal + 6) % 7 : b.wd;
+  if (days.length && !days.includes(owner)) return false;
   if (a == null || z == null || a === z) return true;
   return a < z ? b.min >= a && b.min < z : b.min >= a || b.min < z;
 }

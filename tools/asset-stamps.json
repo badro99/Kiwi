@@ -1244,8 +1244,8 @@
     "sha": "fe8caa503b781d89"
   },
   "assets/menu-promos.js": {
-    "v": "23",
-    "sha": "bdb589cc9cc6b284"
+    "v": "24",
+    "sha": "211e1173a83dd9a6"
   },
   "assets/menu-scan-reader.js": {
     "v": "9",
@@ -1452,8 +1452,8 @@
     "sha": "19663b68aa9a8f62"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "215",
-    "sha": "30b5b20de6359532"
+    "v": "216",
+    "sha": "45411d6feaad251b"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1568,24 +1568,24 @@
     "sha": "f9be46bf81c4b95d"
   },
   "assets/pos-boutique.css": {
-    "v": "293",
+    "v": "294",
     "sha": "1ccd3e7bb7e4ee86"
   },
   "assets/pos-boutique.js": {
-    "v": "293",
-    "sha": "f1cd55120ed5b3d8"
+    "v": "294",
+    "sha": "36ad106ac39cc335"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "190",
-    "sha": "152a7fe2910c5067"
+    "v": "191",
+    "sha": "49566f7eda745472"
   },
   "assets/pos-boutique/delivery-card.js": {
     "v": "6",
     "sha": "a74f14231dcb7a1a"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "108",
-    "sha": "dc97222cb839ab5a"
+    "v": "109",
+    "sha": "46678b81832f68b7"
   },
   "assets/pos-boutique/exchange.js": {
     "v": "2",
@@ -1600,8 +1600,8 @@
     "sha": "ae42ad06da0ddc4c"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "190",
-    "sha": "560c0b2acaf5a83e"
+    "v": "191",
+    "sha": "0209fb8b408910e6"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "20",
@@ -1636,8 +1636,8 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "190",
-    "sha": "8b950cb41a41aa50"
+    "v": "191",
+    "sha": "5a5d010c71b6fe94"
   },
   "assets/pos-boutique/search.js": {
     "v": "14",
@@ -1672,8 +1672,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "404",
-    "sha": "60ead43a7d6c3e03"
+    "v": "405",
+    "sha": "a72830c9c008cb1e"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1932,12 +1932,12 @@
     "sha": "7b6c4471f6ac27a6"
   },
   "assets/promo-rules.js": {
-    "v": "21",
-    "sha": "881a5af894215140"
+    "v": "22",
+    "sha": "0c07527cce43e0df"
   },
   "assets/promos.js": {
-    "v": "28",
-    "sha": "c7ee5d09cf059506"
+    "v": "29",
+    "sha": "1adca920b8ebc29b"
   },
   "assets/pwa-update.js": {
     "v": "368",

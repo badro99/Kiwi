@@ -40,6 +40,11 @@ fc.assert(fc.property(promo, time, fc.integer({ min: 0, max: 1000000 }), (p, now
     if (surface === 'menu') assert.deepEqual(plain(b), plain(a));
     else assert.equal(b[0].value, b[0].kind === 'percent' ? Math.min(100, Math.round(shared.KiwiPromoRules.money(p.value))) : shared.KiwiPromoRules.money(p.value));
     if (!a.length) continue;
+    /* r21 promos#B0: the frozen engines tested the BUSINESS weekday on the after-midnight leg of an
+       overnight window; the rule now tests the weekday the window STARTED on. They differ only for a
+       timed overnight window restricted to some days, which the dated oracle below covers by hand. */
+    const t = (v) => { const m = /^(\d\d):(\d\d)$/.exec(v || ''); return m ? +m[1] * 60 + +m[2] : null; };
+    if (b[0].days && b[0].days.length && t(b[0].start) != null && t(b[0].end) != null && t(b[0].start) >= t(b[0].end)) continue;
     if (surface === 'boutique') {
       assert.equal(shared.KiwiPromos.status(b[0], now), old.KiwiPromos.status(a[0], now));
       assert.equal(shared.KiwiPromos.applyTo(b[0], cents / 100), shared.KiwiPromoRules.price(b[0], cents / 100, surface));
@@ -76,4 +81,10 @@ for (const [iso,want] of [
   ['2026-10-27T05:00:00Z','ended']
 ]) assert.equal(shared.KiwiPromoRules.status(calendar,Date.parse(iso),'menu'),want,`calendar oracle ${iso}`);
 assert.equal(shared.KiwiPromoRules.price({kind:'percent',value:15},1.45,'boutique'),1.23,'boutique percentage rounds to centimes');
+/* r21 promos#B0: a window belongs to the weekday it started on, whatever the cutoff. Monday 22:00 to 06:00
+   (the end is AFTER the 05:00 cutoff, so the business weekday has already rolled to Tuesday at 05:30). */
+const longNight = {days:[1],start:'22:00',end:'06:00',from:'2026-10-26',to:'2026-10-27'};
+for (const [iso,want] of [
+  ['2026-10-26T23:00:00Z','active'], ['2026-10-27T05:30:00Z','active'], ['2026-10-27T06:00:00Z','waiting'], ['2026-10-27T23:00:00Z','waiting'],
+]) assert.equal(shared.KiwiPromoRules.status(longNight,Date.parse(iso),'menu'),want,`overnight oracle ${iso}`);
 console.log('✓ independent centime and business-cutoff oracles');

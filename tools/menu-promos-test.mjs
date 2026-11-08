@@ -100,10 +100,10 @@ ok('no promotions, or a free item: nothing to resolve', () => {
 
 console.log('■ menu promotions · when (Casablanca, 05:00 business day)');
 ok('the business moment reads Casablanca wall time, not the machine\'s', () => {
-  assert.deepEqual(P.businessMoment(FRI_18), { date: '2026-10-16', weekday: 5, min: 18 * 60 });
+  assert.deepEqual(P.businessMoment(FRI_18), { date: '2026-10-16', weekday: 5, min: 18 * 60, calWeekday: 5 });
 });
 ok('before 05:00 it is still the day before', () => {
-  assert.deepEqual(P.businessMoment(at(2026, 10, 17, 4, 59)), { date: '2026-10-16', weekday: 5, min: 4 * 60 + 59 });
+  assert.deepEqual(P.businessMoment(at(2026, 10, 17, 4, 59)), { date: '2026-10-16', weekday: 5, min: 4 * 60 + 59, calWeekday: 6 });
   assert.equal(P.businessMoment(at(2026, 10, 17, 5, 0)).date, '2026-10-17');
 });
 ok('17:00 to 19:00: on at 17:00 and 18:59, off at 16:59 and 19:00', () => {
@@ -116,6 +116,30 @@ ok('22:00 to 01:00 on Fridays still runs at 00:30 Saturday, and not on Saturday 
   assert.equal(P.isActive(p, at(2026, 10, 17, 0, 30)), true);
   assert.equal(P.isActive(p, at(2026, 10, 17, 1, 0)), false);
   assert.equal(P.isActive(p, at(2026, 10, 17, 23, 0)), false);
+});
+ok('r21 promos#B0: with a midnight cutoff, an overnight window still belongs to the weekday it started on', () => {
+  const was = globalThis.KiwiDayReport;
+  globalThis.KiwiDayReport = { timezone: () => 'Africa/Casablanca', cutoff: () => 0 };
+  try {
+    const p = happy({ days: [5], start: '22:00', end: '01:00' });
+    assert.equal(P.isActive(p, at(2026, 10, 16, 23, 0)), true, 'Friday 23:00');
+    assert.equal(P.isActive(p, at(2026, 10, 17, 0, 30)), true, 'Saturday 00:30 belongs to Friday');
+    assert.equal(P.isActive(p, at(2026, 10, 17, 1, 0)), false, 'ends at 01:00');
+    assert.equal(P.isActive(p, at(2026, 10, 17, 23, 0)), false, 'Saturday night is not a Friday window');
+    assert.equal(P.isActive(p, at(2026, 10, 18, 0, 30)), false, 'Sunday 00:30 belongs to Saturday, which is not selected');
+    const q = happy({ days: [1], start: '22:00', end: '01:00' });
+    assert.equal(P.isActive(q, at(2026, 10, 20, 0, 30)), true, 'Monday 22:00-01:00 at Tuesday 00:30');
+  } finally { globalThis.KiwiDayReport = was; }
+});
+const { resolveMenu } = await import(pathToFileURL(path.join(root, 'functions/api/_rules-promotion-pricing.js')).href);
+ok('r21 promos#B1: a 12.5 % promotion reads 12,5 in French and 12.5 in English, on the server rule and the till badge', () => {
+  const p = [happy({ value: 12.5 })], moment = P.businessMoment(FRI_18);
+  assert.equal(resolveMenu(p, drink, 40, moment, 'fr').promo.badge, '−12,5 %');
+  assert.equal(resolveMenu(p, drink, 40, moment, 'en').promo.badge, '−12.5 %');
+  const ls = new Map();
+  globalThis.localStorage = { getItem: (k) => ls.get(k) || null };
+  try { assert.equal(P.badge(p[0]), '−12,5 %'); ls.set('kiwiCaisseLang', 'en'); assert.equal(P.badge(p[0]), '−12.5 %'); }
+  finally { delete globalThis.localStorage; }
 });
 ok('weekdays follow the business day', () => {
   const p = happy({ days: [1, 2, 3, 4] });
