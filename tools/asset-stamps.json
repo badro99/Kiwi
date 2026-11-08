@@ -1123,6 +1123,10 @@
     "v": "7",
     "sha": "1cb11ec873d59dd5"
   },
+  "assets/landing-home.css": {
+    "v": "2",
+    "sha": "19744053e66eb720"
+  },
   "assets/landing-locale-menu.css": {
     "v": "1",
     "sha": "b34580061e2d7bd6"
@@ -1132,8 +1136,8 @@
     "sha": "bea76e906f0af60b"
   },
   "assets/landing-runtime-translations.js": {
-    "v": "15",
-    "sha": "c9784dba9a5a97a4"
+    "v": "16",
+    "sha": "746d7b4769b85860"
   },
   "assets/landing/components.css": {
     "v": "3",
