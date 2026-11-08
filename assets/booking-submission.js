@@ -38,7 +38,10 @@ export function createBookingSubmission(context) {
       });
     } catch (error) { throw error.message === 'request-timeout' ? error : Object.assign(new Error('transport-uncertain'), { cause: error }); }
     const result = await response.json().catch((error) => { if (error.message === 'request-timeout') throw error; throw new Error('response-uncertain'); });
-    if (!response.ok) throw new Error(result.error || 'error');
+    if (!response.ok) throw new Error((result && result.error) || 'error');
+    /* A 2xx without a booking code is not a confirmation: keep the retry identity
+       and say the outcome is uncertain, never render a false success. */
+    if (!result || typeof result !== 'object' || typeof result.code !== 'string' || !result.code.trim()) throw new Error('response-uncertain');
     delete retryRefs[key]; ssDel(key); ssDel(key + 'Intent'); state.guest = null;
     onSuccess(result);
   }

@@ -11,10 +11,10 @@
       'assets/growth-crm.js?v=7',
       'assets/ramadan.js?v=3',
       'assets/catalog-import.js?v=22',
-      'assets/ai-image-import.js?v=1',
+      'assets/ai-image-import.js?v=2',
       'assets/menu-scan-reader.js?v=9',
-      'assets/menu-scan.js?v=14',
-      'assets/salle-scan.js?v=10',
+      'assets/menu-scan.js?v=15',
+      'assets/salle-scan.js?v=11',
     ] },
     hotel: { dependencies: [], scripts: [
       'assets/hotel/arrivals.js?v=11',

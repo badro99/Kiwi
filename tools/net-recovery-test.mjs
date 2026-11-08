@@ -78,8 +78,10 @@ console.log('✓ admin uncertainty and deadlines; persistence tier warnings; not
    globalThis.fetch=async()=>({ok:true,json:async()=>({events:[{id:++count}],next:count<3?String(count):null})});
    const p=exportAudit({book:'a',clientId:'one',controller,current:()=>current,limit:mode==='limit'?1:10,
     progress:n=>{progress.push(n);if(mode==='cancel')controller.abort();if(mode==='scope')current=false;},download(){downloaded++;}});
-   if(mode==='limit')await assert.rejects(p,/audit-limit/);else await p;
-   assert.equal(downloaded,mode==='normal'?1:0);assert.ok(progress.length);assert.ok(count<=3);
+   /* r21 (clients#B0): past the limit the export is delivered in parts, not refused. */
+   const result=await p;
+   if(mode==='limit'){assert.equal(result.partial,true);assert.equal(result.count,1);}
+   assert.equal(downloaded,mode==='normal'||mode==='limit'?1:0);assert.ok(progress.length);assert.ok(count<=3);
   }
  }finally{globalThis.fetch=original;}
 }
@@ -112,8 +114,8 @@ console.log('✓ audit progress, bound, cancellation and scope; merge deadlines,
  globalThis.fetch=fetch;
  try{
    const source=fn('assets/clients-directory.js','downloadAudit').replace(/import\('\.\/clients-audit.js\?v=\d+'\)/g,'Promise.resolve(auditModule)');
-   vm.runInContext(source,c);await c.downloadAudit({id:'one'},{audit:'audit',auditError:'error',auditLimit:'limit',auditCancel:'cancel',auditProgress:'progress'});
-   assert.equal(downloaded,0,'oversized audit never allocates a complete download');assert.equal(notices.at(-1),'limit');assert.equal(progress,100);assert.equal(count,101);
+   vm.runInContext(source,c);await c.downloadAudit({id:'one'},{audit:'audit',auditError:'error',auditLimit:'limit',auditPartial:'partial {n}',auditCancel:'cancel',auditProgress:'progress'});
+   assert.equal(downloaded,1,'oversized audit is exported in a bounded first part');assert.match(String(notices.at(-1)),/partial/);assert.equal(progress,100);assert.equal(count,101);
  }finally{globalThis.fetch=original;}
 }
-console.log('✓ real audit UI refuses oversized exports after bounded progress');
+console.log('✓ real audit UI exports oversized histories in a bounded part after bounded progress');

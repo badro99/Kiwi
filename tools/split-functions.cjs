@@ -27,9 +27,9 @@ function fragment(source, f) {
 }
 // A split remains token-identical outside the explicitly reviewed behaviours.
 // Those behaviours execute in r13-d-failsoft-test.mjs, rather than a frozen copy.
-const translated = new Set(['evicted','error.uncertain-write','notStored','filter.saveFailed','Conversion photo impossible. Essayez une autre image.']);
+const translated = new Set(['evicted','error.uncertain-write','notStored','filter.saveFailed','Conversion photo impossible. Essayez une autre image.','error.partial-load','uncertain','auditPartial']);
 const removedProperty = n => n && ts.isPropertyAssignment(n) && translated.has(n.name.text);
-const evolved = new Set(['rememberManage','manageBlock','cancelBooking','openManage','empPayRefsWrite','saveFilters','addFiles','cuShrinkHotelPhoto','cuUploadTypePhotos','request','publish','submitRequest','details','hotelDetails','submit','submitHotel']);
+const evolved = new Set(['rememberManage','manageBlock','cancelBooking','openManage','empPayRefsWrite','saveFilters','addFiles','cuShrinkHotelPhoto','cuUploadTypePhotos','request','publish','submitRequest','details','hotelDetails','submit','submitHotel','loadTickets','ssGet','ssSet','ssDel','money']);
 // New helpers a reviewed fix added next to the split bodies (r20): the archive never had them.
 const added = new Set(['transportUncertain','keepGuest','restoreGuest']);
 function tokens(source) {

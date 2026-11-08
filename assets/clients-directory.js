@@ -26,7 +26,7 @@
   var campaignsEnabled = function () { return window.KiwiConfig?.features?.ultraCampaigns === true; };
 
   var STR = {
-    fr: { auditCancel: 'Annuler', auditProgress: 'Événements chargés', auditLimit: 'Journal trop volumineux. Contactez votre responsable pour un export complet.', mergeUncertain: 'Résultat de fusion non confirmé. Actualisez les fiches avant de réessayer.', merge: 'Fusionner', mergePick: 'Fiche à fusionner dans celle-ci', mergeConfirm: 'Confirmer la fusion', mergeExplain: 'Les visites et dépenses seront additionnées, sans compter deux fois un achat identifié. Points et tampons seront réunis, notes concaténées, étiquettes réunies. Cette fiche conserve ses coordonnées, sauf les champs vides. Les avoirs seront rattachés à cette fiche sans modifier leurs soldes ni leurs échéances. L’ancien identifiant continuera de fonctionner. Cette opération ne peut pas être annulée.', mergeError: 'Fusion impossible. Vérifiez vos droits propriétaire ou responsable et réessayez.', mergeDone: 'Fiches fusionnées', title: 'Clients', sub: 'Le carnet complet · coordonnées, fidélité et consentement.',
+    fr: { auditCancel: 'Annuler', auditProgress: 'Événements chargés', auditLimit: 'Journal trop volumineux. Contactez votre responsable pour un export complet.', auditPartial: 'Export partiel enregistré ({n} événements). Relancez l’export pour obtenir la suite.', mergeUncertain: 'Résultat de fusion non confirmé. Actualisez les fiches avant de réessayer.', merge: 'Fusionner', mergePick: 'Fiche à fusionner dans celle-ci', mergeConfirm: 'Confirmer la fusion', mergeExplain: 'Les visites et dépenses seront additionnées, sans compter deux fois un achat identifié. Points et tampons seront réunis, notes concaténées, étiquettes réunies. Cette fiche conserve ses coordonnées, sauf les champs vides. Les avoirs seront rattachés à cette fiche sans modifier leurs soldes ni leurs échéances. L’ancien identifiant continuera de fonctionner. Cette opération ne peut pas être annulée.', mergeError: 'Fusion impossible. Vérifiez vos droits propriétaire ou responsable et réessayez.', mergeDone: 'Fiches fusionnées', title: 'Clients', sub: 'Le carnet complet · coordonnées, fidélité et consentement.',
       search: 'Rechercher un nom, téléphone ou email…', export: 'Exporter (CSV)', campaign: 'Campagne', program: 'Programme de fidélité', retention: 'Fidélisation', newClient: '+ Nouveau client',
       total: 'clients', withEmail: 'avec email', withPhone: 'avec téléphone', consented: 'contactables',
       seg: { all: 'Tous', reg: 'Réguliers', vip: 'VIP', new: 'Nouveaux', win: 'Dormants' },
@@ -39,7 +39,7 @@
       form: { title: 'Nouveau client', sub: 'La fiche rejoint le carnet partagé, avec ou sans caisse.', save: 'Ajouter', cancel: 'Annuler',
         needNameOrPhone: 'Renseignez au moins un nom ou un numéro.', badPhone: 'Numéro invalide · pour l’étranger, ajoutez + et l’indicatif pays.',
         consentHint: 'Facultatif · cochez uniquement les canaux acceptés par le client pour les communications marketing.', alreadyExists: 'Client déjà enregistré', added: 'Client ajouté' } },
-    en: { auditCancel: 'Cancel', auditProgress: 'Events loaded', auditLimit: 'History too large. Contact your manager for a complete export.', mergeUncertain: 'Merge result unconfirmed. Refresh the profiles before retrying.', merge: 'Merge', mergePick: 'Profile to merge into this one', mergeConfirm: 'Confirm merge', mergeExplain: 'Visits and spend will be added, counting each identified purchase once. Points and stamps will be combined, notes concatenated and tags united. This profile keeps its contact details unless empty. Credit instruments will move to this profile with their balances and expiry dates preserved. The old ID will keep working. This operation cannot be undone.', mergeError: 'Merge unavailable. Check your owner or manager access and retry.', mergeDone: 'Profiles merged', title: 'Customers', sub: 'The full book · contacts, loyalty and consent.',
+    en: { auditCancel: 'Cancel', auditProgress: 'Events loaded', auditLimit: 'History too large. Contact your manager for a complete export.', auditPartial: 'Partial export saved ({n} events). Export again to get the rest.', mergeUncertain: 'Merge result unconfirmed. Refresh the profiles before retrying.', merge: 'Merge', mergePick: 'Profile to merge into this one', mergeConfirm: 'Confirm merge', mergeExplain: 'Visits and spend will be added, counting each identified purchase once. Points and stamps will be combined, notes concatenated and tags united. This profile keeps its contact details unless empty. Credit instruments will move to this profile with their balances and expiry dates preserved. The old ID will keep working. This operation cannot be undone.', mergeError: 'Merge unavailable. Check your owner or manager access and retry.', mergeDone: 'Profiles merged', title: 'Customers', sub: 'The full book · contacts, loyalty and consent.',
       search: 'Search name, phone or email…', export: 'Export (CSV)', campaign: 'Campaign', program: 'Loyalty program', retention: 'Retention', newClient: '+ New customer', total: 'customers', withEmail: 'with email', withPhone: 'with phone', consented: 'contactable',
       seg: { all: 'All', reg: 'Regulars', vip: 'VIP', new: 'New', win: 'Dormant' },
       th: { name: 'Customer', phone: 'Phone', email: 'Email', city: 'City', visits: 'Visits', spend: 'Spent', points: 'Points', seg: 'Segment', last: 'Last visit' },
@@ -51,7 +51,7 @@
       form: { title: 'New customer', sub: 'The record joins the shared book, with or without a till.', save: 'Add', cancel: 'Cancel',
         needNameOrPhone: 'Enter at least a name or a phone number.', badPhone: 'Invalid number · abroad, add + and the country code.',
         consentHint: 'Optional · select only the channels the customer has agreed to for marketing messages.', alreadyExists: 'Customer already on file', added: 'Customer added' } },
-    ar: { auditCancel: 'إلغاء', auditProgress: 'الأحداث المحملة', auditLimit: 'السجل كبير جداً. اتصل بالمسؤول للحصول على تصدير كامل.', mergeUncertain: 'نتيجة الدمج غير مؤكدة. حدّث الملفات قبل إعادة المحاولة.', merge: 'دمج', mergePick: 'الملف المراد دمجه في هذا الملف', mergeConfirm: 'تأكيد الدمج', mergeExplain: 'ستجمع الزيارات والمبالغ مع احتساب كل عملية شراء محددة مرة واحدة. ستجمع النقاط والأختام والملاحظات والوسوم. يحتفظ هذا الملف ببيانات الاتصال إلا إذا كانت فارغة. ستنقل قسائم الرصيد إلى هذا الملف مع الاحتفاظ بأرصدتها وتواريخ صلاحيتها. سيستمر المعرف القديم في العمل. لا يمكن التراجع عن هذه العملية.', mergeError: 'تعذر الدمج. تحقق من صلاحيات المالك أو المدير وأعد المحاولة.', mergeDone: 'تم دمج الملفين', title: 'العملاء', sub: 'الدفتر الكامل · جهات الاتصال والوفاء والموافقة.',
+    ar: { auditCancel: 'إلغاء', auditProgress: 'الأحداث المحملة', auditLimit: 'السجل كبير جداً. اتصل بالمسؤول للحصول على تصدير كامل.', auditPartial: 'تم حفظ تصدير جزئي ({n} حدثاً). أعد التصدير للحصول على الباقي.', mergeUncertain: 'نتيجة الدمج غير مؤكدة. حدّث الملفات قبل إعادة المحاولة.', merge: 'دمج', mergePick: 'الملف المراد دمجه في هذا الملف', mergeConfirm: 'تأكيد الدمج', mergeExplain: 'ستجمع الزيارات والمبالغ مع احتساب كل عملية شراء محددة مرة واحدة. ستجمع النقاط والأختام والملاحظات والوسوم. يحتفظ هذا الملف ببيانات الاتصال إلا إذا كانت فارغة. ستنقل قسائم الرصيد إلى هذا الملف مع الاحتفاظ بأرصدتها وتواريخ صلاحيتها. سيستمر المعرف القديم في العمل. لا يمكن التراجع عن هذه العملية.', mergeError: 'تعذر الدمج. تحقق من صلاحيات المالك أو المدير وأعد المحاولة.', mergeDone: 'تم دمج الملفين', title: 'العملاء', sub: 'الدفتر الكامل · جهات الاتصال والوفاء والموافقة.',
       search: 'ابحث بالاسم أو الهاتف أو البريد…', export: 'تصدير (CSV)', campaign: 'حملة', program: 'برنامج الوفاء', retention: 'الاحتفاظ', newClient: '+ عميل جديد', total: 'عميل', withEmail: 'ببريد', withPhone: 'بهاتف', consented: 'قابلون للتواصل',
       seg: { all: 'الكل', reg: 'دائمون', vip: 'كبار', new: 'جدد', win: 'خاملون' },
       th: { name: 'العميل', phone: 'الهاتف', email: 'البريد', city: 'المدينة', visits: 'الزيارات', spend: 'الإنفاق', points: 'النقاط', seg: 'الفئة', last: 'آخر زيارة' },
@@ -552,19 +552,23 @@
   }
 
   async function downloadAudit(c, T) {
+    const auditParts = downloadAudit.parts || (downloadAudit.parts = new Map());
+    const partKey = KiwiClients.bookId() + ':' + c.id, part = auditParts.get(partKey) || { n: 1, from: null };
     const copy = [T.auditCancel, T.auditProgress, T.auditLimit];
     const controller = new AbortController(), book = KiwiClients.bookId();
     const modal = Kiwi.modal({ title: T.audit, body: '<p role="status"></p><button type="button" class="kb">' + esc(copy[0]) + '</button>' });
     modal.el.querySelector('button').onclick = () => { controller.abort(); modal.close(); };
     try {
-      await (await import('./clients-audit.js?v=2')).exportAudit({ book, clientId: c.id, controller,
+      const result = await (await import('./clients-audit.js?v=3')).exportAudit({ book, clientId: c.id, controller, from: part.from,
         current: () => KiwiClients.bookId() === book && modal.el.isConnected,
         progress: count => { modal.el.querySelector('[role=status]').textContent = copy[1] + ': ' + count; },
         download: blob => {
           const href = URL.createObjectURL(blob), a = document.createElement('a');
-          a.href = href; a.download = 'client-audit-' + c.id + '.json'; a.click();
+          a.href = href; a.download = 'client-audit-' + c.id + (part.n > 1 || part.from ? '-part' + part.n : '') + '.json'; a.click();
           setTimeout(() => URL.revokeObjectURL(href), 1500);
         } });
+      if (result && result.partial) { auditParts.set(partKey, { n: part.n + 1, from: result.continuation }); Kiwi.toast?.(T.auditPartial.replace('{n}', result.count)); }
+      else if (result) auditParts.delete(partKey);
     } catch (error) { if (!controller.signal.aborted && KiwiClients.bookId() === book && modal.el.isConnected) Kiwi.toast?.(error.message === 'audit-limit' ? copy[2] : T.auditError, { type: 'error' }); }
     finally { modal.close(); }
   }

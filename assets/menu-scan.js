@@ -171,7 +171,7 @@
 
   /* Une photo de carte en 4000×3000 n'apprend rien de plus au modèle qu'en
    * 1600 px de grand côté — mais coûte dix fois plus à envoyer. */
-  function downscaleImage(file) { return window.KiwiAiImageImport.downscaleImage(file); }
+  function downscaleImage(file, signal) { return window.KiwiAiImageImport.downscaleImage(file, signal); }
 
   async function callApi(payload, signal) {
     const data = await window.KiwiAiImageImport.callApi('/api/ai/menu-import',
@@ -298,7 +298,7 @@
               if (scan.truncated) notices.push((f.name || 'PDF') + ': ' + dashboardText('truncated', { read: scan.pagesRead, total: scan.pageCount }));
             }
           } else {
-            collected.push(...await callApi({ kind: 'image', image: await downscaleImage(f) }, signal));
+            collected.push(...await callApi({ kind: 'image', image: await downscaleImage(f, signal) }, signal));
           }
         }
         review(reader.dedupe(collected), notices);

@@ -97,7 +97,7 @@
 
   /* Une photo de salle en 4000×3000 n'apprend rien de plus au modèle qu'en
    * 1600 px de grand côté — mais coûte dix fois plus à envoyer. */
-  function downscaleImage(file) { return window.KiwiAiImageImport.downscaleImage(file); }
+  function downscaleImage(file, signal) { return window.KiwiAiImageImport.downscaleImage(file, signal); }
 
   function callApi(image, signal) {
     return window.KiwiAiImageImport.callApi('/api/ai/salle-import', { image }, signal);
@@ -191,7 +191,7 @@
             list.length > 1 ? L('readingN', 'Lecture {i} / {total}', { i: i + 1, total: list.length }) : L('reading1', 'Lecture de la photo…'),
             L('readingSub', 'Kiwi AI compte les tables et les places.')
           );
-          results.push(await callApi(await downscaleImage(list[i]), signal));
+          results.push(await callApi(await downscaleImage(list[i], signal), signal));
         }
         const facts = aggregate(results);
         if (!facts) { failToast(new Error('unparsed')); render(); busy = false; return; }
