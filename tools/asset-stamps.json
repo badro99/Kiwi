@@ -507,9 +507,13 @@
     "v": "30",
     "sha": "b7583e0c2afbb7a9"
   },
+  "assets/day-report-refused.js": {
+    "v": "2",
+    "sha": "8e57c57850d5aadf"
+  },
   "assets/day-report.js": {
-    "v": "51",
-    "sha": "2429f47c8132e25c"
+    "v": "52",
+    "sha": "d12b5947818be563"
   },
   "assets/delivery-collect.js": {
     "v": "3",
@@ -1452,8 +1456,8 @@
     "sha": "19663b68aa9a8f62"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "216",
-    "sha": "416af563d1613c90"
+    "v": "218",
+    "sha": "3d3f348a22b033b5"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

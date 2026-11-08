@@ -18,6 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/day-report-refused.js?v=2',
   '/assets/pos-boutique/return-window.js?v=11',
   '/assets/hotel-economat-requests.js?v=33',
   '/assets/hotel-economat-outbox.js?v=16',
@@ -211,7 +212,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
-  '/assets/pages/dashboard-startup.js?v=216',
+  '/assets/pages/dashboard-startup.js?v=218',
   '/assets/pages/dashboard-loader.js?v=82',
   '/assets/hotel/model.js?v=10',
   '/assets/hotel/views.js?v=9',
@@ -356,7 +357,7 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=51',
+  '/assets/day-report.js?v=52',
   '/assets/report.js?v=10',
   '/assets/day-report-dash.js?v=50',
   '/assets/day-report-export.js?v=30',
