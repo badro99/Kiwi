@@ -2269,6 +2269,8 @@ section('Whole-project regressions');
     'booking-mail-test.mjs',
     'booking-lens-browser-test.mjs',
     'booking-recover-browser-test.mjs', 'economat-storage-upgrade-browser-test.mjs', 'pay-statement-pdf-browser-test.mjs',
+    'booking-lens-browser-test.mjs', 'booking-touch-browser-test.mjs',
+    'booking-recover-browser-test.mjs',
     'onboarding-truth-test.mjs',
     'lane-c-labels-test.mjs',
     'onboarding-data-test.mjs',
@@ -2447,7 +2449,7 @@ section('Whole-project regressions');
     'intake-storage-fault-test.mjs',
     'media-owner-test.mjs',
     'admin-delete-r2-test.mjs',
-    'admin-api-owner-test.mjs', 'admin-merchant-exists-test.mjs', 'request-deadlines-test.mjs', 'shared-transport-test.mjs', 'tickets-request-helper-test.mjs', 'tickets-pagination-test.mjs', 'booking-shared-submit-test.mjs', 'r20-flows-test.mjs',
+    'admin-api-owner-test.mjs', 'admin-merchant-exists-test.mjs', 'request-deadlines-test.mjs', 'shared-transport-test.mjs', 'tickets-request-helper-test.mjs', 'tickets-pagination-test.mjs', 'booking-shared-submit-test.mjs', 'r20-flows-test.mjs', 'r21-flows-test.mjs',
     'legacy-scan-test.mjs',
     'menu-translate-test.mjs',
     /* La carte dans la langue de chacun : traductions portées par les

@@ -29,7 +29,15 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
       const result = await request(API, { headers: { Accept: 'application/json' }, cache: 'no-store' }, undefined, 'read-failed');
       const data = result; if (seq !== loadTickets.seq) return;
       let cursor = data.nextCursor;
+      /* A repeating or endless cursor must not keep the board loading forever: a seen
+         cursor, a page budget and an overall deadline end the walk as a visible
+         partial-load failure (the pages already read are not shown as complete). */
+      const seenCursors = Object.create(null), startedAt = Date.now(); let pages = 0;
       while (cursor) {
+        if (seenCursors[String(cursor)] || ++pages > 200 || Date.now() - startedAt > 60000) {
+          throw Object.assign(new Error('partial-load'), { code: 'partial-load' });
+        }
+        seenCursors[String(cursor)] = true;
         const page = await request(API + '?cursor=' + encodeURIComponent(cursor), { headers: { Accept: 'application/json' }, cache: 'no-store' }, undefined, 'read-failed');
         if (seq !== loadTickets.seq) return;
         data.tickets.push(...page.tickets);
@@ -82,7 +90,7 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
       try {
         const digest = await globalThis.crypto.subtle.digest('SHA-256', await file.arrayBuffer());
         return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
-      } catch (_) { return file.name + ':' + file.size + ':' + (file.lastModified || 0); }
+      } catch (_) { return null; }
     }
     event.preventDefault();
     if (state.saving) return;
@@ -110,9 +118,12 @@ export function createData({ $, API, activateTab, closeFollowup, composer, confi
        retrouve le premier ticket au lieu d'en créer un second. Un contenu
        modifié reçoit une clé neuve. */
     const digests = await Promise.all(state.files.map(fileDigest));
-    const fingerprint = [text, $('ticketKind').value, $('ticketArea').value, $('ticketSubkind').value,
+    /* Bytes that cannot be read have no identity: metadata alone (name, size, date)
+       never matches an earlier attempt, so such a send always gets a fresh key. */
+    const unreadable = digests.some((digest) => digest === null);
+    const fingerprint = unreadable ? null : [text, $('ticketKind').value, $('ticketArea').value, $('ticketSubkind').value,
       $('ticketMoneyRisk').checked, ...state.files.map((file, index) => file.name + ':' + file.size + ':' + digests[index])].join('\u0001');
-    if (!state.publishAttempt || state.publishAttempt.fingerprint !== fingerprint) {
+    if (!state.publishAttempt || fingerprint === null || state.publishAttempt.fingerprint !== fingerprint) {
       state.publishAttempt = { fingerprint, key: newIdempotencyKey() };
     }
     data.append('idempotency_key', state.publishAttempt.key);

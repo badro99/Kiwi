@@ -19,7 +19,7 @@
     return;
   }
   const scripts = [
-    'assets/pages-pro-office.js?v=22',
+    'assets/pages-pro-office.js?v=23',
     'assets/pages-pro.js?v=2222',
     'assets/pages-pro-boutique.js?v=51',
     'assets/boutique-stock-correct.js?v=4',
@@ -28,7 +28,7 @@
     'assets/restaurant-units.js?v=2',
     'assets/stock-identity.js?v=3',
     'assets/menu-nutrition.js?v=4',
-    'assets/restaurant-recipes.js?v=20',
+    'assets/restaurant-recipes.js?v=21',
     'assets/menu-i18n.js?v=8',
     'assets/kiwi-select.js?v=4',
     'assets/food-trade-settings.js?v=2',
@@ -59,7 +59,7 @@
     'assets/cash-sessions.js?v=11',
     'assets/weather.js?v=1',
     'assets/briefing-rules.js?v=7',
-    'assets/briefing-persistence.js?v=16',
+    'assets/briefing-persistence.js?v=17',
     'assets/briefing.js?v=54',
     'assets/simple-food-cost.js?v=29',
     'assets/finance.js?v=14',

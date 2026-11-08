@@ -153,13 +153,13 @@ export function createBookingManage(context) {
 
   var M={
     fr: {
-      notStored: 'Lien non enregistré sur ce navigateur. Copiez-le avant de fermer cette page.',evicted: 'Un ancien lien de réservation non envoyé par e-mail a été retiré de ce navigateur pour faire de la place.',keep: 'Conservez ce lien pour retrouver ou annuler votre réservation.',sent: 'Il vous a aussi été envoyé par e-mail.',open: 'Ouvrir ma réservation',copy: 'Copier le lien',copied: 'Lien copié',copyFailed: 'Copie impossible. Sélectionnez et copiez ce lien.',title: 'Votre réservation',cancel: 'Annuler ma réservation',cancelSure: 'Confirmer l’annulation',keepIt: 'Garder ma réservation',cancelled: 'Réservation annulée',cancelledSub: 'L’établissement en a été informé.',notFound: 'Ce lien de réservation n’est plus valide.',closedWindow: 'Le délai d’annulation en ligne est passé. Appelez l’établissement.',until: 'Annulable en ligne jusqu’au {d}',statusRequested: 'En attente de confirmation',statusConfirmed: 'Confirmée',statusCancelled: 'Annulée',statusOther: 'Traitée par l’établissement',failed: 'L’annulation n’a pas pu être enregistrée. Réessayez.'
+      uncertain: 'Connexion interrompue. Votre annulation a peut-être été enregistrée. Rouvrez ce lien pour vérifier, ou réessayez : une annulation répétée est sans effet.',notStored: 'Lien non enregistré sur ce navigateur. Copiez-le avant de fermer cette page.',evicted: 'Un ancien lien de réservation non envoyé par e-mail a été retiré de ce navigateur pour faire de la place.',keep: 'Conservez ce lien pour retrouver ou annuler votre réservation.',sent: 'Il vous a aussi été envoyé par e-mail.',open: 'Ouvrir ma réservation',copy: 'Copier le lien',copied: 'Lien copié',copyFailed: 'Copie impossible. Sélectionnez et copiez ce lien.',title: 'Votre réservation',cancel: 'Annuler ma réservation',cancelSure: 'Confirmer l’annulation',keepIt: 'Garder ma réservation',cancelled: 'Réservation annulée',cancelledSub: 'L’établissement en a été informé.',notFound: 'Ce lien de réservation n’est plus valide.',closedWindow: 'Le délai d’annulation en ligne est passé. Appelez l’établissement.',until: 'Annulable en ligne jusqu’au {d}',statusRequested: 'En attente de confirmation',statusConfirmed: 'Confirmée',statusCancelled: 'Annulée',statusOther: 'Traitée par l’établissement',failed: 'L’annulation n’a pas pu être enregistrée. Réessayez.'
     }
     ,en: {
-      notStored: 'Link not saved in this browser. Copy it before closing this page.',evicted: 'An older booking link that was not e-mailed to you was removed from this browser to make room.',keep: 'Keep this link to view or cancel your booking.',sent: 'It was also emailed to you.',open: 'Open my booking',copy: 'Copy link',copied: 'Link copied',copyFailed: 'Unable to copy. Select and copy this link.',title: 'Your booking',cancel: 'Cancel my booking',cancelSure: 'Confirm cancellation',keepIt: 'Keep my booking',cancelled: 'Booking cancelled',cancelledSub: 'The venue has been notified.',notFound: 'This booking link is no longer valid.',closedWindow: 'The online cancellation window has closed. Please call the venue.',until: 'Cancellable online until {d}',statusRequested: 'Awaiting confirmation',statusConfirmed: 'Confirmed',statusCancelled: 'Cancelled',statusOther: 'Handled by the venue',failed: 'The cancellation could not be saved. Please try again.'
+      uncertain: 'The connection dropped. Your cancellation may already be saved. Reopen this link to check, or try again: repeating a cancellation has no effect.',notStored: 'Link not saved in this browser. Copy it before closing this page.',evicted: 'An older booking link that was not e-mailed to you was removed from this browser to make room.',keep: 'Keep this link to view or cancel your booking.',sent: 'It was also emailed to you.',open: 'Open my booking',copy: 'Copy link',copied: 'Link copied',copyFailed: 'Unable to copy. Select and copy this link.',title: 'Your booking',cancel: 'Cancel my booking',cancelSure: 'Confirm cancellation',keepIt: 'Keep my booking',cancelled: 'Booking cancelled',cancelledSub: 'The venue has been notified.',notFound: 'This booking link is no longer valid.',closedWindow: 'The online cancellation window has closed. Please call the venue.',until: 'Cancellable online until {d}',statusRequested: 'Awaiting confirmation',statusConfirmed: 'Confirmed',statusCancelled: 'Cancelled',statusOther: 'Handled by the venue',failed: 'The cancellation could not be saved. Please try again.'
     }
     ,ar: {
-      notStored: 'لم يُحفظ الرابط في هذا المتصفح. انسخه قبل إغلاق هذه الصفحة.',evicted: 'أُزيل من هذا المتصفح رابط حجز قديم لم يُرسل إليك بالبريد لإفساح المجال.',keep: 'احتفظ بهذا الرابط لعرض حجزك أو إلغائه.',sent: 'وقد أُرسل إليك أيضاً بالبريد الإلكتروني.',open: 'فتح حجزي',copy: 'نسخ الرابط',copied: 'تم نسخ الرابط',copyFailed: 'تعذر النسخ. حدد هذا الرابط وانسخه.',title: 'حجزك',cancel: 'إلغاء الحجز',cancelSure: 'تأكيد الإلغاء',keepIt: 'الاحتفاظ بالحجز',cancelled: 'تم إلغاء الحجز',cancelledSub: 'تم إخبار المؤسسة.',notFound: 'هذا الرابط لم يعد صالحاً.',closedWindow: 'انتهت مهلة الإلغاء عبر الإنترنت. اتصل بالمؤسسة.',until: 'يمكن الإلغاء عبر الإنترنت حتى {d}',statusRequested: 'في انتظار التأكيد',statusConfirmed: 'مؤكّد',statusCancelled: 'ملغى',statusOther: 'بعهدة المؤسسة',failed: 'تعذّر تسجيل الإلغاء. حاول مرة أخرى.'
+      uncertain: 'انقطع الاتصال. قد يكون الإلغاء قد سُجّل. أعد فتح هذا الرابط للتحقق أو حاول مرة أخرى: تكرار الإلغاء لا يؤثر.',notStored: 'لم يُحفظ الرابط في هذا المتصفح. انسخه قبل إغلاق هذه الصفحة.',evicted: 'أُزيل من هذا المتصفح رابط حجز قديم لم يُرسل إليك بالبريد لإفساح المجال.',keep: 'احتفظ بهذا الرابط لعرض حجزك أو إلغائه.',sent: 'وقد أُرسل إليك أيضاً بالبريد الإلكتروني.',open: 'فتح حجزي',copy: 'نسخ الرابط',copied: 'تم نسخ الرابط',copyFailed: 'تعذر النسخ. حدد هذا الرابط وانسخه.',title: 'حجزك',cancel: 'إلغاء الحجز',cancelSure: 'تأكيد الإلغاء',keepIt: 'الاحتفاظ بالحجز',cancelled: 'تم إلغاء الحجز',cancelledSub: 'تم إخبار المؤسسة.',notFound: 'هذا الرابط لم يعد صالحاً.',closedWindow: 'انتهت مهلة الإلغاء عبر الإنترنت. اتصل بالمؤسسة.',until: 'يمكن الإلغاء عبر الإنترنت حتى {d}',statusRequested: 'في انتظار التأكيد',statusConfirmed: 'مؤكّد',statusCancelled: 'ملغى',statusOther: 'بعهدة المؤسسة',failed: 'تعذّر تسجيل الإلغاء. حاول مرة أخرى.'
     }
   }
     ;
@@ -236,8 +236,11 @@ export function createBookingManage(context) {
   }
 
   async function cancelBooking(data) {
+    var sent=false;
     try {
-      var r=await (await import('./request-deadline.mjs')).deadlineFetch('/api/booking',{
+      var deadline=await import('./request-deadline.mjs'),r;
+      sent=true;
+      r=await deadline.deadlineFetch('/api/booking',{
         method: 'DELETE',headers: {
           'Content-Type': 'application/json'
         }
@@ -246,12 +249,36 @@ export function createBookingManage(context) {
         }
         )
       }
-      ),j=await r.json();
-      if(!r.ok) throw new Error(j.error||'error');
+      );
+      var j=await r.json().catch(function() {
+        throw new Error('response-uncertain')
+      }
+      );
+      if(!r.ok) throw Object.assign(new Error(j.error||'error'),{ answered: true });
       data.booking.status='cancelled';
       renderManage(data,'','');
     }
     catch(err) {
+      /* Once the DELETE left this page, a lost answer says nothing about what the
+         server did. Look the booking up again: if it is cancelled, say so; if not,
+         the outcome is uncertain, never "could not be saved". */
+      if(sent&&!err.answered&&err.message!=='request-timeout') {
+        try {
+          var g=await (await import('./request-deadline.mjs')).deadlineFetch('/api/booking?merchant='+encodeURIComponent(merchant)+'&manage='+encodeURIComponent(manageToken),{
+            credentials: 'omit'
+          }
+          ),gj=await g.json();
+          if(g.ok&&gj&&gj.booking&&gj.booking.status==='cancelled') {
+            state.config=gj;
+            renderManage(gj,'','');
+            return
+          }
+        }
+        catch(_) {
+        }
+        renderManage(data,'',mt('uncertain'));
+        return
+      }
       renderManage(data,'',err.message==='request-timeout'? t('timeout'):err.message==='cancellation-closed'? mt('closedWindow'):mt('failed'));
     }
   }

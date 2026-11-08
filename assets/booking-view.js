@@ -14,9 +14,31 @@ export function createBookingView(context) {
     }
   }
 
+  /* Retry identity of an uncertain POST. It lives in localStorage, scoped to this
+     booking page (merchant) and expiring after a day: closing the tab after a lost
+     answer must not make the next submit a second reservation. The names ssGet /
+     ssSet / ssDel stay for the submission module's context. */
+  var RETRY_TTL=24*60*60*1000;
+
+  function retryKey(k) {
+    var m='';
+    try {
+      m=new URLSearchParams(location.search).get('merchant')||''
+    }
+    catch(_) {
+    }
+    return 'kiwiBookingRetry:'+m+':'+k
+  }
+
   function ssGet(k) {
     try {
-      return sessionStorage.getItem(k)
+      var raw=localStorage.getItem(retryKey(k)),o=raw&&JSON.parse(raw);
+      if(!o||typeof o.v!=='string') return null;
+      if(!(Date.now()-(+o.at||0)<RETRY_TTL)) {
+        localStorage.removeItem(retryKey(k));
+        return null
+      }
+      return o.v
     }
     catch(_) {
       return null
@@ -25,7 +47,7 @@ export function createBookingView(context) {
 
   function ssSet(k,v) {
     try {
-      sessionStorage.setItem(k,v)
+      localStorage.setItem(retryKey(k),JSON.stringify({ v: String(v),at: Date.now() }))
     }
     catch(_) {
     }
@@ -33,7 +55,7 @@ export function createBookingView(context) {
 
   function ssDel(k) {
     try {
-      sessionStorage.removeItem(k)
+      localStorage.removeItem(retryKey(k))
     }
     catch(_) {
     }
@@ -78,7 +100,7 @@ export function createBookingView(context) {
   }
 
   function money(n) {
-    return Number(n||0).toLocaleString(state.lang==='ar'? 'ar-MA':'fr-FR')+' MAD'
+    return Number(n||0).toLocaleString(state.lang==='ar'? 'ar-MA':state.lang==='en'? 'en-GB':'fr-FR')+' MAD'
   }
 
   /* Les créneaux sont calculés à l'heure de l'établissement (Casablanca).

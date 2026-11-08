@@ -684,6 +684,20 @@ try {
     check(!(await page.$('[data-inv-act="more"]')), 'la dernière page atteinte, le bouton disparaît');
   });
 
+  /* 3 ter · r21 : fermer le composer dans la demi-seconde qui suit la frappe ne la perd pas */
+  await S.run('compte réel · fermer le composer tout de suite garde la dernière frappe', async (tr) => {
+    const { page } = await dashboard(tr, { real: true, fake });
+    const venue = await page.evaluate(() => String(window.KiwiVenue?.getVenue?.() || 'demo').replace(/[^a-z0-9_-]/gi, '').slice(0, 32) || 'demo');
+    await openInvoicing(page);
+    await click(page, '[data-inv-act="new"]');
+    await page.waitForSelector('[data-inv-compose]:not([hidden]) [data-f="name"]', { visible: true });
+    await page.type('[data-f="name"]', 'Client Flush Echap');
+    await page.keyboard.press('Escape');
+    check(!(await page.$('.inv-overlay, [data-inv-compose]:not([hidden])')), 'Échap ferme le composer');
+    const saved = await page.evaluate((v) => Object.entries(localStorage).filter(([k]) => k.startsWith('kiwi:invoicing:draft:v2:' + v + ':invoice:new')).map(([, x]) => x).join(''), venue);
+    check(/Client Flush Echap/.test(saved), 'la saisie des dernières 500 ms est enregistrée à la fermeture');
+  });
+
   /* 4 · Téléphone : le composer tient dans l’écran ────────────────────────── */
   await S.run('téléphone · pas de défilement horizontal', async (tr) => {
     const { page } = await dashboard(tr, { width: 390 });

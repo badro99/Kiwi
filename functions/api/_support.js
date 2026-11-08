@@ -256,12 +256,12 @@ export function parseJson(value, fallback) { try { return JSON.parse(value); } c
 export function classify(summary) {
   const s = cleanText(summary, 4000).toLowerCase();
   // Conservative safety floor: model output cannot demote an urgent report.
-  const urgent = /fig[ée]|refus[ée]|crash|can(?:not|'t)\s+(?:sell|take|charge|process)|suspended|ma bghatch|mrtayn|tjmed|9adrinch|لا يعمل|لا يمكننا|مرتين|bloqu|impossible|perdu|double|débité|debite|paiement|sécur|secur|vol|urgent|down|panne/.test(s);
-  const category = /imprim|ticket|bluetooth|usb/.test(s) ? 'materiel'
-    : /stock|invent|produit|article/.test(s) ? 'stock'
-    : /equipe|employ|planning|salaire|pin|accès/.test(s) ? 'equipe'
-    : /reservation|rendez|rdv|créneau/.test(s) ? 'reservations'
-    : /caisse|paiement|encaisse|table|commande/.test(s) ? 'caisse' : 'autre';
+  const urgent = /fig[ée]|refus[ée]|crash|can(?:not|'t)\s+(?:sell|take|charge|process)|suspended|suspendu|declin|ma bghatch|mrtayn|tjmed|9adrinch|لا يعمل|لا تعمل|لا يمكننا|مرتين|توقف|متوقف|تعطل|bloqu|impossible|perdu|double|débité|debite|paiement|sécur|secur|\bvol\b|urgent|\bdown\b|panne|خصم/.test(s);
+  const category = /imprim|impression|ticket|bluetooth|usb|printer|receipt|طابعة|الطابعة/.test(s) ? 'materiel'
+    : /stock|invent|produit|article|مخزون/.test(s) ? 'stock'
+    : /equipe|employ|planning|salaire|\bpin\b|accès|موظف|الموظفين|جدول/.test(s) ? 'equipe'
+    : /r[ée]servation|rendez|rdv|créneau|حجز/.test(s) ? 'reservations'
+    : /caisse|paiement|encaisse|table|commande|d[ée]bit|carte|payment|card|till|الصندوق|صندوق|خصم|دفع/.test(s) ? 'caisse' : 'autre';
   return { category, priority: urgent ? 'urgent' : 'normal' };
 }
 export async function supportActor(request, env) {

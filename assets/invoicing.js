@@ -564,11 +564,12 @@
   function close() {
     if (!overlay) return;
     closeSheet(null);
-    clearTimeout(autosaveTimer);
+    flushAutosave(); cancelAutosave();
     overlay.remove(); overlay = null; document.body.style.overflow = '';
     priorFocus?.focus?.(); priorFocus = null; refreshToken++;
   }
   function show(name) {
+    if (currentView === 'compose' && name !== 'compose') flushAutosave();
     currentView = name;
     overlay.querySelectorAll('.inv-view').forEach(v => { v.hidden = !v.hasAttribute('data-inv-' + name); });
     overlay.querySelector('.inv-body').scrollTop = 0;
@@ -727,9 +728,14 @@
 
   function composerPayload(...args) { return composerModule.composerPayload({apiLines, cmp, fv, iceCompact, readLines, shift, today}, this, args); }
   function formSnapshot(...args) { return composerModule.formSnapshot({cmp, fv, readLines}, this, args); }
-  function scheduleAutosave() {
-    clearTimeout(autosaveTimer);
-    autosaveTimer = setTimeout(() => { if (overlay && cmp && currentView === 'compose') { const kept = lsSet(draftKey(), JSON.stringify({savedAt: Date.now(), state: formSnapshot()})); const note = overlay.querySelector('[data-inv-autosave]'); if (note) { note.textContent = kept ? T().autosave : T().autosaveError; note.setAttribute('role', kept ? 'status' : 'alert'); } } }, 500);
+  function scheduleAutosave() { cancelAutosave(); autosavePending = true; autosaveTimer = setTimeout(flushAutosave, 500); }
+  /* What was typed in the last half second is written when the composer is left or closed. */
+  let autosavePending = false;
+  function cancelAutosave() { clearTimeout(autosaveTimer); autosavePending = false; }
+  function flushAutosave() {
+    if (!autosavePending) return;
+    cancelAutosave();
+    if (overlay && cmp && currentView === 'compose') { const kept = lsSet(draftKey(), JSON.stringify({savedAt: Date.now(), state: formSnapshot()})); const note = overlay.querySelector('[data-inv-autosave]'); if (note) { note.textContent = kept ? T().autosave : T().autosaveError; note.setAttribute('role', kept ? 'status' : 'alert'); } }
   }
   function checkIce(...args) { return composerModule.checkIce({F, T, iceCompact, iceProblem, overlay}, this, args); }
   function updateComposer(...args) { return composerModule.updateComposer({F, T, apiLines, computeTotals, currentView, esc, fv, lineHT, money, num, overlay, readLines, shift, toCents, today, tpl}, this, args); }
@@ -749,7 +755,7 @@
       if (!yes) return;
     }
     const staleKey = draftKey();
-    clearTimeout(autosaveTimer);
+    cancelAutosave();
     setBusy(true);
     try {
       /* Un document émis ne se réécrit pas : seul un devis reste modifiable. */
@@ -765,7 +771,7 @@
         issuedRes = res;
         doc = normDoc(docFrom(res) || doc);
       }
-      clearTimeout(autosaveTimer); lsDel(staleKey); lsDel(draftKey());
+      cancelAutosave(); lsDel(staleKey); lsDel(draftKey());
       cmp.id = doc.id;
       toast(thenIssue ? tpl(sellerIceMissing(issuedRes) ? t.issuedNoIce : t.issuedOk, {n: doc.number}) : (isQuoteDoc(cmp) && doc.number ? t.quoteUpdated : t.savedDraft));
       refreshAll();

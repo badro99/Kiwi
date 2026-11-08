@@ -2,23 +2,45 @@
 (function () {
   'use strict';
   const MAX_IMG_EDGE = 1600;
-  function downscaleImage(file) {
+  /* A photo is bounded before it is decoded: bytes first, then pixels as soon as
+     the header gives the size (the decode itself never starts for an oversize
+     image), and the whole preparation has a deadline and follows the caller's
+     abort signal, like the request that comes after it. */
+  const MAX_INPUT_BYTES = 40 * 1024 * 1024;
+  const MAX_INPUT_PIXELS = 120 * 1000 * 1000;
+  const PREPARE_DEADLINE_MS = 45000;
+  function downscaleImage(file, signal) {
     return new Promise((resolve, reject) => {
+      if (signal && signal.aborted) { reject(new Error('cancelled')); return; }
+      if (file && Number(file.size) > MAX_INPUT_BYTES) { reject(new Error('image-too-large')); return; }
       const url = URL.createObjectURL(file);
       const img = new Image();
+      let done = false, timer;
+      const finish = (fn, value) => {
+        if (done) return; done = true;
+        clearTimeout(timer);
+        if (signal) signal.removeEventListener('abort', onAbort);
+        img.onload = img.onerror = null;
+        try { img.src = ''; } catch (_) {}
+        URL.revokeObjectURL(url);
+        fn(value);
+      };
+      const onAbort = () => finish(reject, new Error('cancelled'));
+      if (signal) signal.addEventListener('abort', onAbort, { once: true });
+      timer = setTimeout(() => finish(reject, new Error('timeout')), PREPARE_DEADLINE_MS);
       img.onload = () => {
         try {
+          if (img.naturalWidth * img.naturalHeight > MAX_INPUT_PIXELS) throw new Error('image-too-large');
           const scale = Math.min(1, MAX_IMG_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
           const w = Math.max(1, Math.round(img.naturalWidth * scale));
           const h = Math.max(1, Math.round(img.naturalHeight * scale));
           const canvas = document.createElement('canvas');
           canvas.width = w; canvas.height = h;
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          URL.revokeObjectURL(url);
-          resolve(canvas.toDataURL('image/jpeg', 0.85));
-        } catch (e) { URL.revokeObjectURL(url); reject(e); }
+          finish(resolve, canvas.toDataURL('image/jpeg', 0.85));
+        } catch (e) { finish(reject, e); }
       };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image')); };
+      img.onerror = () => finish(reject, new Error('image'));
       img.src = url;
     });
   }

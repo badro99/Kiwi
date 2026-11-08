@@ -28,7 +28,7 @@ import {} from './live-link/sale-identity.js?v=4';
  * left untouched, so the demo still works with the flag off.
  */
 (function () {
-  'use strict'; if (typeof document !== 'undefined' && document.createElement) import('./queue-recovery.js?v=8').catch(function () {});
+  'use strict'; if (typeof document !== 'undefined' && document.createElement) import('./queue-recovery.js?v=9').catch(function () {});
 
   var LS = 'kiwiLive';
 
