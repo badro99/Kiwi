@@ -132,6 +132,18 @@
         {
           "file": "tools/dayreport-properties-test.mjs",
           "assertion": "revenue and net payment methods conserve integer centimes including refunds and repeated decimals"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "a one-centime sale made offline arrives as exactly 1 centime"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "add up to exactly 0,30 MAD"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "a tip equal to the whole sale is kept apart"
         }
       ]
     },
@@ -142,6 +154,22 @@
         {
           "file": "tools/offline-foundation-test.mjs",
           "assertion": "live sales use the durable outbox lifecycle"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "after a power cut the offline sale is still waiting"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "the retry after a reload does not record it a second time"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "a sale the server refuses stays visible in the queue"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "sixty sales queued offline all arrive"
         }
       ]
     },
@@ -196,6 +224,34 @@
         {
           "file": "tools/plan-tier-test.mjs",
           "assertion": "Basic 1 store -> 2nd store blocked with 403"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "after a power cut the offline sale is still waiting"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "the retry after a reload does not record it a second time"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "a sale the server refuses stays visible in the queue"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "sixty sales queued offline all arrive"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "a one-centime sale made offline arrives as exactly 1 centime"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "add up to exactly 0,30 MAD"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "a tip equal to the whole sale is kept apart"
         }
       ]
     },
@@ -354,6 +410,34 @@
         {
           "file": "tools/plan-tier-test.mjs",
           "assertion": "Basic 1 store -> 2nd store blocked with 403"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "after a power cut the offline sale is still waiting"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "the retry after a reload does not record it a second time"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "a sale the server refuses stays visible in the queue"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "sixty sales queued offline all arrive"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "a one-centime sale made offline arrives as exactly 1 centime"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "add up to exactly 0,30 MAD"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "a tip equal to the whole sale is kept apart"
         }
       ]
     },
@@ -605,6 +689,34 @@
         {
           "file": "tools/plan-tier-test.mjs",
           "assertion": "Basic 1 store -> 2nd store blocked with 403"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "after a power cut the offline sale is still waiting"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "the retry after a reload does not record it a second time"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "a sale the server refuses stays visible in the queue"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "sixty sales queued offline all arrive"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "a one-centime sale made offline arrives as exactly 1 centime"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "add up to exactly 0,30 MAD"
+        },
+        {
+          "file": "tools/landing-offline-boundaries-test.mjs",
+          "assertion": "a tip equal to the whole sale is kept apart"
         }
       ]
     },
