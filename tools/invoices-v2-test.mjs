@@ -422,6 +422,13 @@ console.log('■ Import · les factures gardées sur l’appareil');
   ok('réimporter est idempotent : rien de nouveau', r.status === 200 && r.json.importedCount === 0 && db.prepare("SELECT COUNT(*) n FROM invoice_docs WHERE legacy_ref IS NOT NULL").get().n === 2);
   r = await c.post({ action: 'import-legacy', docs: [legacy[0], legacy[0]] });
   ok('…y compris le même numéro deux fois dans un appel', r.json.importedCount === 0);
+  // Ni ligne perdue ni taux réécrit : refusé et nommé, jamais importé « presque ».
+  const rows = (n) => Array.from({ length: n }, (_, i) => ({ description: 'L' + i, qty: 1, price: 1 }));
+  r = await c.post({ action: 'import-legacy', docs: [{ id: 9201, customer: 'X', items: rows(201) }, { id: 9200, customer: 'X', items: rows(200) }] });
+  ok('201 lignes : écarté « too-many-lines », 200 lignes passent entières', r.status === 200 && r.json.importedCount === 1 && r.json.skipped.some((s) => s.legacyRef === '#9201' && s.reason === 'too-many-lines') && !db.prepare("SELECT 1 FROM invoice_docs WHERE legacy_ref = '#9201'").get() && JSON.parse(db.prepare("SELECT lines FROM invoice_docs WHERE legacy_ref = '#9200'").get().lines).length === 200);
+  r = await c.post({ action: 'import-legacy', docs: [{ id: 9301, customer: 'X', taxRate: 12, items: rows(1) }, { id: 9302, customer: 'X', taxRate: 14, items: rows(1) }, { id: 9303, customer: 'X', items: rows(1) }] });
+  ok('taux 12 % (ni 10 ni 14) : écarté « unsupported-tax-rate », jamais arrondi', r.json.skipped.some((s) => s.legacyRef === '#9301' && s.reason === 'unsupported-tax-rate') && !db.prepare("SELECT 1 FROM invoice_docs WHERE legacy_ref = '#9301'").get());
+  ok('…14 % supporté garde 14, taux absent garde 20', JSON.parse(db.prepare("SELECT lines FROM invoice_docs WHERE legacy_ref = '#9302'").get().lines)[0].vatRate === 14 && JSON.parse(db.prepare("SELECT lines FROM invoice_docs WHERE legacy_ref = '#9303'").get().lines)[0].vatRate === 20);
   const many = Array.from({ length: 501 }, (_, i) => ({ id: 5000 + i, customer: 'X', items: [{ description: 'a', qty: 1, price: 1 }] }));
   r = await c.post({ action: 'import-legacy', docs: many });
   ok('au plus 500 documents par appel', r.status === 400 && r.json.error === 'invalid-docs');
