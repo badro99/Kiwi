@@ -96,6 +96,7 @@
     const input = panel.querySelector('input');
     const target = panel.querySelector('[data-retail-balance-list]');
     let generation = 0;
+    function note(className, text) { const p = document.createElement('p'); p.className = className; p.role = 'status'; p.textContent = text; return p; }
     async function refresh() {
       const current = ++generation;
       const query = input.value.trim();
@@ -105,12 +106,10 @@
       if (current !== generation || !panel.isConnected) return;
       target.replaceChildren();
       if (status !== 'ok') {
-        const warn = document.createElement('p'); warn.className = 'krb-empty krb-stale'; warn.role = 'status';
-        warn.textContent = 'Notes du serveur indisponibles : seules les notes de cet appareil sont affichées.'; target.appendChild(warn);
+        target.appendChild(note('krb-empty krb-stale', 'Notes du serveur indisponibles : seules les notes de cet appareil sont affichées.'));
       }
       if (!rows.length) {
-        const empty = document.createElement('p'); empty.className = 'krb-empty';
-        empty.textContent = 'Aucune note ouverte pour cette recherche.'; target.appendChild(empty);
+        target.appendChild(note('krb-empty', 'Aucune note ouverte pour cette recherche.'));
       }
       for (const row of rows) {
         const button = document.createElement('button');

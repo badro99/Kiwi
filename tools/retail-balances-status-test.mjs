@@ -4,11 +4,12 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { deadlineVmSource, deadlineVmContext } from './deadline-vm-source.mjs';
 
+const SRC = fs.readFileSync('assets/retail-balances.js', 'utf8');
 const note = { id: 'n1', customerId: 'c1', ticketRef: 'T-1', totalCents: 5000, paidCents: 1000, pendingCents: 0, receipts: [] };
 function boot({ online = true, fetch }) {
   const memory = new Map([['kiwi:retailBalances:shop', JSON.stringify([note])]]);
   const window = {};
-  vm.runInNewContext(deadlineVmSource(fs.readFileSync('assets/retail-balances.js', 'utf8')), deadlineVmContext({
+  vm.runInNewContext(deadlineVmSource(SRC), deadlineVmContext({
     window, localStorage: { getItem: k => (memory.has(k) ? memory.get(k) : null), setItem: (k, v) => memory.set(k, String(v)) },
     navigator: { onLine: online }, Date, JSON, Math, Number, String, Array, Map, Set, Object, Promise,
     setTimeout, clearTimeout, fetch,
