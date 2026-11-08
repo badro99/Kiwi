@@ -1897,7 +1897,7 @@ section('Whole-project regressions');
     'credit-book-properties-test.mjs',
     'credit-book-store-test.mjs',
     'credit-book-overpay-alert-test.mjs',
-    'clients-properties-test.mjs', 'client-resilience-test.mjs',
+    'clients-properties-test.mjs', 'clients-phone-twin-crowded-test.mjs', 'client-resilience-test.mjs',
     'queues-wave-n-test.mjs',
     'clients-display-properties-test.mjs',
     'clients-outbox-owner-test.mjs', 'clients-outbox-vault-test.mjs', 'clients-push-deadline-test.mjs',
