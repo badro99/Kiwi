@@ -95,6 +95,40 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('.px-rt-card').length === 1, { timeout: 8000 });
     assert.equal(await page.evaluate(() => window.__camStopped), true, 'the camera is released once the tag is read');
   });
+
+  /* r21 pressing#A1 · the camera permission is refused mid-pickup: the same
+     ticket is still reachable by typing its garment tag, and handed over. */
+  await h.S.run('camera permission refused, manual garment tag, hand-over · fr · phone', async (t) => {
+    const { page } = await openTill(h, t, 'caisse-pressing', 'fr', 'phone');
+    t.watch(page);
+    await view(page, 'retrait');
+    await page.waitForSelector('#px-rt-q', wait);
+    const target = await page.$$eval('.px-rt-card', (cards) => {
+      const card = cards.find((c) => { const b = c.querySelector('[data-px-rt-give]'); return b && !b.disabled; });
+      return card ? { no: card.querySelector('.px-rt-who b').textContent.split(' · ')[0].trim(), give: card.querySelector('[data-px-rt-give]').dataset.pxRtGive } : null;
+    });
+    assert.ok(target && /^\d{4}/.test(target.no), 'the demo queue holds a paid, ready ticket');
+
+    t.step('the browser refuses the camera: a clear message, the manual field stays open');
+    await page.evaluate(() => {
+      navigator.mediaDevices.getUserMedia = async () => { const e = new Error('Permission denied'); e.name = 'NotAllowedError'; throw e; };
+    });
+    await click(page, '#px-rt-scan');
+    await click(page, '#px-scan-camera');
+    await page.waitForFunction(() => /Caméra non ouverte/.test(document.body.innerText), { timeout: 8000 });
+    assert.ok(await page.$eval('#px-scan-input', (el) => el.offsetParent !== null), 'the manual code field is still on screen after the refusal');
+
+    t.step('typing the garment tag finds the same ticket');
+    await page.type('#px-scan-input', target.no + '-1');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction((no) => document.querySelector('#px-rt-q') && document.querySelector('#px-rt-q').value === no, { timeout: 8000 }, target.no);
+    await page.waitForFunction(() => document.querySelectorAll('.px-rt-card').length === 1, { timeout: 8000 });
+    assert.equal(await page.$eval('[data-px-rt-give]', (el) => el.dataset.pxRtGive), target.give, 'the garment tag resolves to the ticket that was ready');
+
+    t.step('the hand-over works from that ticket');
+    await click(page, '[data-px-rt-give]');
+    await page.waitForFunction((no) => new RegExp(no + ' remis à').test(document.body.innerText), { timeout: 8000 }, target.no);
+  });
 } finally {
   await h.close();
   await h.S.finish();

@@ -10,6 +10,7 @@ import pressingSource from './pressing-test-source.cjs';
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {numberingWindow} from './pressing-numbering-model.mjs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
@@ -254,9 +255,9 @@ function runRackTest() {
   const live = functionSource(source, 'isLiveOrder');
   const merge = functionSource(source, 'mergePressingDocuments');
   /* La fusion garde deux bons distincts sous un même numéro : ses aides. */
-  const numbering = ['isTicketNo', 'normalizeOrderNo', 'publicOrderNo', 'tillHash', 'orderIdentity', 'renumberedOrder', 'mergeTills']
+  const numbering = ['isTicketNo', 'normalizeOrderNo', 'publicOrderNo', 'numberingRules', 'tillHash', 'orderIdentity', 'renumberedOrder', 'mergeTills']
     .map((name) => functionSource(source, name)).join('\n');
-  const mergePressingDocuments = new Function(`${effective}\n${status}\n${live}\n${numbering}\n${merge}\nreturn mergePressingDocuments;`)();
+  const mergePressingDocuments = new Function('window', `${effective}\n${status}\n${live}\n${numbering}\n${merge}\nreturn mergePressingDocuments;`)(numberingWindow());
   const rackSlots = Object.create(null);
   const toasts = [];
   const assignSlot = new Function('rackSlots', 'syncOwnerOps', 'toast', `${functionSource(source, 'assignSlot')}\nreturn assignSlot;`)(rackSlots, () => {}, (message) => toasts.push(message));

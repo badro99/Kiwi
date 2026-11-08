@@ -261,7 +261,7 @@
 
   function mergeDocuments(mine, theirs) {
     var cancellations = mergeRows(mine && mine.cancellations, theirs && theirs.cancellations);
-    var orders = numbering.mergeOrders(mine && mine.orders, theirs && theirs.orders).map(function (row) {
+    var orders = numbering.mergeOrders(mine && mine.orders, theirs && theirs.orders, { anchored: true }).map(function (row) {
       var tombstone = cancellations.find(function (c) { return c.id === row.id; });
       if (!tombstone) return row;
       return Object.assign({}, row, {
@@ -408,7 +408,7 @@
   /* `orderStatus` is exported so the owner dashboard derives readiness the same
      way `summary()` does. The snapshot's stored `status` is frozen at sync time;
      anything reading it after an order crosses `readyAt` gets a stale answer. */
-  window.KiwiPressingOps = { configureNumbering: configureNumbering, openNotification: openNotification, notification: notification, notificationLine: notificationLine, markNotified: markNotified, read: read, loaded: loaded, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud, cancelOrder: cancelOrder, orderStatus: orderStatus, dropoffStats: dropoffStats, mergeDocuments: mergeDocuments };
+  window.KiwiPressingOps = { configureNumbering: configureNumbering, numbering: function () { return numbering; }, openNotification: openNotification, notification: notification, notificationLine: notificationLine, markNotified: markNotified, read: read, loaded: loaded, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud, cancelOrder: cancelOrder, orderStatus: orderStatus, dropoffStats: dropoffStats, mergeDocuments: mergeDocuments };
 })();
 
 /* ── Garment product art (formerly assets/pressing-garment-icons.js) ──────────
