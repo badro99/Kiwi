@@ -50,4 +50,12 @@ function boot() {
   const host = node('div', t.doc); t.fire('kiwi:quarantine-review', host);
   assert.ok(find(host, (n) => n.attrs.role === 'alert' && /mémoire seulement/.test(n.textContent)), 'memory-only client events raise an alert');
 }
+{
+  const t = boot(), store = { 'kiwi:kitchen-relay-expired:9:1730': '[{"create":{"id":"ord-x"}}]' };
+  t.context.KiwiKitchenRelay = { recoveryCopies(key, ack) { if (key === undefined) return Object.keys(store).map((k) => ({ key: k, bytes: 40 })); const v = store[key]; if (ack) delete store[key]; return v; } };
+  const host = node('div', t.doc); t.fire('kiwi:quarantine-review', host);
+  const all = texts(host).join(' | ');
+  assert.match(all, /Bons de cuisine non envoyés, expirés après 6 h/, 'an expired kitchen ticket is listed for acknowledgement');
+  assert.ok(!/kitchen-relay-expired/.test(all), 'no raw storage key is shown');
+}
 console.log('✓ queue-recovery evidence: readable labels, in-page confirm, memory-only alert');

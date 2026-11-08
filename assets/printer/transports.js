@@ -69,8 +69,11 @@
       method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }), signal: to.signal,
       body: JSON.stringify({ action: 'save', target: t }),
     }).then(function (r) {
-      to.done();
-      return r.json().catch(function () { return {}; }).then(function (j) {
+      /* r21 · le délai reste armé jusqu'à la fin du CORPS : un bridge qui envoie ses en-têtes puis
+         se fige ne laisse plus l'appairage en attente indéfiniment. */
+      return r.json().catch(function () { return to.signal.aborted ? null : {}; }).then(function (j) {
+        to.done();
+        if (j === null) return { ok: false, error: 'bridge-unreachable' };
         return r.ok && j && j.ok ? j : { ok: false, error: j && j.error || 'bridge-capability-required' };
       });
     }).catch(function () { to.done(); return { ok: false, error: 'bridge-unreachable' }; });
@@ -85,8 +88,7 @@
         method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }),
         signal: to.signal, body: JSON.stringify({ code: code }),
       }).then(function (r) {
-        to.done();
-        return r.json().then(function (body) { return r.ok ? body : { ok: false, error: body && body.error || 'bridge-capability-required' }; });
+        return r.json().then(function (body) { to.done(); return r.ok ? body : { ok: false, error: body && body.error || 'bridge-capability-required' }; });
       }).catch(function () { to.done(); return { ok: false, error: 'bridge-unreachable' }; });
     });
   }
@@ -94,8 +96,9 @@
   function pingPort(p, ms) {
     var to = withTimeout(null, ms || 1400);
     return fetch(bridgeBase(p) + '/kiwi/ping', { signal: to.signal, cache: 'no-store' })
-      .then(function (r) { to.done(); return r.ok ? r.json() : null; })
+      .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
+        to.done();
         if (j && j.lastTiming) lastTiming = j.lastTiming;
         return (j && j.ok) ? j : null;
       })
@@ -190,13 +193,23 @@
   }
 
   // BLE writes must be chunked under the negotiated MTU; 180 B is safe on cheap printers.
+  /* r21 · un write GATT qui ne rend jamais la main ne fige plus le travail d'impression : au-delà
+   * de BT_WRITE_MS, la liaison est coupée (une écriture tardive ne sortirait pas en double après
+   * le repli sur un autre transport) et l'appelant reçoit un refus. */
+  var BT_WRITE_MS = 5000;
   function btWrite(bytes) {
     if (!btConnected()) return Promise.reject(new Error('bt-not-connected'));
     var chr = bt.chr, CH = 180, woResp = !!chr.properties.writeWithoutResponse, i = 0;
+    function guarded(p) {
+      return new Promise(function (resolve, reject) {
+        var t = setTimeout(function () { disconnectBluetooth(); reject(new Error('bt-write-timeout')); }, BT_WRITE_MS);
+        p.then(function (v) { clearTimeout(t); resolve(v); }, function (e) { clearTimeout(t); reject(e); });
+      });
+    }
     function step() {
       if (i >= bytes.length) return Promise.resolve();
       var chunk = bytes.slice(i, i + CH); i += CH;
-      var p = woResp ? chr.writeValueWithoutResponse(chunk) : chr.writeValueWithResponse(chunk);
+      var p = guarded(woResp ? chr.writeValueWithoutResponse(chunk) : chr.writeValueWithResponse(chunk));
       return p.then(function () { return new Promise(function (r) { setTimeout(r, 16); }); }).then(step);
     }
     return step();

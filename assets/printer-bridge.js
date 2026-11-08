@@ -367,11 +367,11 @@
     var type = target.type || (target.ip ? 'ip' : target.osPrinter ? 'os' : '');
     if (type === 'bt') {
       if (!btConnected()) return Promise.resolve({ ok: false, reason: 'bt-not-connected' });
-      return btWrite(bytes).then(function () { return { ok: true, via: 'bluetooth', bytes: bytes.length }; });
+      return btWrite(bytes).then(function () { return { ok: true, via: 'bluetooth', bytes: bytes.length, delivery: 'sent' }; });
     }
     if (type === 'usb') {
       if (!usbConnected()) return Promise.resolve({ ok: false, reason: 'usb-not-connected' });
-      return usbWrite(bytes).then(function () { return { ok: true, via: 'usb', bytes: bytes.length }; });
+      return usbWrite(bytes).then(function () { return { ok: true, via: 'usb', bytes: bytes.length, delivery: 'sent' }; });
     }
     if (type === 'os' || target.osPrinter) {
       return bridgePrintBytes(bytes, { osPrinter: target.osPrinter || target.name }, ref);
@@ -404,7 +404,7 @@
     function viaUsb() {
       if (!usbConnected()) return viaBridge();
       return usbWrite(bytes).then(
-        function () { return { ok: true, via: 'usb', bytes: bytes.length }; },
+        function () { return { ok: true, via: 'usb', bytes: bytes.length, delivery: 'sent' }; },
         /* A stale WebUSB grant must not prevent the configured network/OS
            printer from receiving the same job. */
         viaBridge);
@@ -412,7 +412,7 @@
     function viaWebTransports() {
       if (!btConnected()) return viaUsb();
       return btWrite(bytes).then(
-        function () { return { ok: true, via: 'bluetooth', bytes: bytes.length }; },
+        function () { return { ok: true, via: 'bluetooth', bytes: bytes.length, delivery: 'sent' }; },
         /* Bluetooth can disconnect between isConnected() and the first chunk.
            Continue down the declared transport order instead of failing early. */
         viaUsb);

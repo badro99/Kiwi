@@ -110,10 +110,41 @@
    * write threw, was swallowed, and the order existed nowhere. When the disk
    * refuses, the queue lives in memory for this page and says so. */
   var memQ = null;
+  /* r21 · une file illisible n'est plus remplacée par [] sans trace : ses octets bruts sont mis
+   * de côté (kiwi:kitchen-relay-corrupt:…) avant la prochaine écriture, annoncés, et exportables
+   * comme la file des ventes (assets/queue-recovery.js). Les bons de plus de six heures suivent
+   * le même chemin (kiwi:kitchen-relay-expired:…) : ils ne disparaissent plus, la caisse les
+   * montre et attend un accusé. */
+  var CORRUPT_PREFIX = 'kiwi:kitchen-relay-corrupt:', EXPIRED_PREFIX = 'kiwi:kitchen-relay-expired:';
+  var keptCopies = {};
+  function keepCopy(prefix, tag, raw) {
+    if (!raw) return;
+    var sum = 0; for (var i = 0; i < raw.length; i++) sum = (sum * 31 + raw.charCodeAt(i)) | 0;
+    var id = prefix + (sum >>> 0) + ':' + tag;
+    if (keptCopies[id] !== undefined) return;
+    keptCopies[id] = raw; put(id, raw);
+    try { window.dispatchEvent(new CustomEvent('kiwi:kitchen-relay-evidence', { detail: { key: id } })); } catch (_) {}
+  }
   function readQ() {
     if (memQ) return memQ.slice();
-    try { var q = JSON.parse(ls(QKEY) || '[]'); return Array.isArray(q) ? q : []; }
-    catch (_) { return []; }
+    var raw = ls(QKEY) || '';
+    try { var q = JSON.parse(raw || '[]'); if (Array.isArray(q)) return q; keepCopy(CORRUPT_PREFIX, QKEY, raw); return []; }
+    catch (_) { keepCopy(CORRUPT_PREFIX, QKEY, raw); return []; }
+  }
+  /* recoveryCopies() liste, recoveryCopies(key) lit, recoveryCopies(key, true) accuse réception et supprime. */
+  function recoveryCopies(key, acknowledge) {
+    var keys = Object.keys(keptCopies);
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = String(localStorage.key(i));
+        if ((k.indexOf(CORRUPT_PREFIX) === 0 || k.indexOf(EXPIRED_PREFIX) === 0) && keys.indexOf(k) < 0) keys.push(k);
+      }
+    } catch (_) {}
+    if (key === undefined) return keys.map(function (k) { var r = keptCopies[k] !== undefined ? keptCopies[k] : (ls(k) || ''); return { key: k, bytes: 2 * (k.length + r.length) }; });
+    if (keys.indexOf(key) < 0) return null;
+    var raw2 = keptCopies[key] !== undefined ? keptCopies[key] : ls(key);
+    if (acknowledge) { delete keptCopies[key]; try { localStorage.removeItem(key); } catch (_) {} }
+    return raw2;
   }
   function writeQ(q) {
     var rows = q.slice(-MAX_QUEUED);
@@ -142,11 +173,16 @@
       var q = readQ();
       if (!q.length) { clearInterval(retryTimer); retryTimer = null; return; }
       var now = Date.now();
-      /* Un bon vieux de six heures ne sert plus personne : le service est fini,
-         le plat a été fait à la voix ou pas du tout. Le garder ferait sortir un
-         tajine du matin au milieu du service du soir. */
+      /* Un bon vieux de six heures ne repart plus : le service est fini, le plat a été fait à la
+         voix ou pas du tout. Le renvoyer ferait sortir un tajine du matin au milieu du service du
+         soir. Mais il ne disparaît pas en silence : il passe dans la liste « expirés » que la
+         caisse montre, avec le bon tel qu'il était, jusqu'à ce que quelqu'un l'accuse. */
       var fresh = q.filter(function (x) { return x && (now - (x.at || 0)) < STALE_MS; });
-      if (fresh.length !== q.length) writeQ(fresh);
+      if (fresh.length !== q.length) {
+        var gone = q.filter(function (x) { return !(x && (now - (x.at || 0)) < STALE_MS); });
+        keepCopy(EXPIRED_PREFIX, String(now), JSON.stringify(gone));
+        writeQ(fresh);
+      }
       if (!fresh.length) return;
       post(fresh[0], true);
     }, RETRY_MS);
@@ -196,8 +232,13 @@
       }
       if (!r.ok) return later();
       backendAbsent = false;
-      dequeue(body.create.id);
-      return r.json().catch(function () { return { ok: true }; }).then(function (j) {
+      /* r21 · le bon ne quitte la file qu'une fois la réponse LUE : un 2xx dont le corps est
+       * illisible (coupure en plein milieu, portail captif qui répond 200) ne prouve pas que le plat
+       * est arrivé. Il reste en file, marqué incertain ; le rejeu est sans risque, le serveur est
+       * idempotent sur l'identifiant. */
+      return r.json().then(function (j) { return j; }, function () { return null; }).then(function (j) {
+        if (!j || typeof j !== 'object' || j.ok !== true) return later({ uncertain: true, status: r.status });
+        dequeue(body.create.id);
         /* ── LE NUMÉRO QUI ARRIVAIT TROP TARD POUR ÊTRE DIT ─────────────────
          * Une reprise de file jetait la réponse du serveur. Le bon partait
          * donc bien en cuisine au retour du réseau, mais le NUMÉRO définitif
@@ -440,5 +481,7 @@
     voidLine: voidLine,
     ackVoid: ackVoid,
     reachable: function () { return !backendAbsent; },
+    recoveryCopies: recoveryCopies,
+    expired: function () { return recoveryCopies().filter(function (c) { return c.key.indexOf(EXPIRED_PREFIX) === 0; }).length; },
   };
 })();

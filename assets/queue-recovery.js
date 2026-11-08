@@ -5,11 +5,11 @@
   var box;
   var words = {
     fr: ['Copies de ventes à vérifier', 'Exporter', 'Accuser réception et supprimer', 'Confirmer la suppression de cette copie ? Vérifiez sa récupération avant de continuer.', 'Stockage des copies presque plein. Exportez et vérifiez les copies avant de les supprimer.',
-      'Copie de ventes', 'Bons de cuisine', 'Fiches et achats clients', 'Annuler', 'Confirmer la suppression', 'Ventes clients gardées en mémoire seulement : le stockage est plein. Ne fermez pas l’application avant la synchronisation.', 'File de ventes active illisible'],
+      'Copie de ventes', 'Bons de cuisine', 'Fiches et achats clients', 'Annuler', 'Confirmer la suppression', 'Ventes clients gardées en mémoire seulement : le stockage est plein. Ne fermez pas l’application avant la synchronisation.', 'File de ventes active illisible', 'Bons de cuisine non envoyés, expirés après 6 h', 'File de bons de cuisine illisible'],
     en: ['Sale copies to review', 'Export', 'Acknowledge and delete', 'Confirm deletion of this copy? Verify its recovery before continuing.', 'Copy storage nearly full. Export and verify copies before deleting them.',
-      'Sales copy', 'Kitchen tickets', 'Customer records and purchases', 'Cancel', 'Confirm deletion', 'Customer sales are held in memory only: storage is full. Do not close the app before they sync.', 'Active sales queue unreadable'],
+      'Sales copy', 'Kitchen tickets', 'Customer records and purchases', 'Cancel', 'Confirm deletion', 'Customer sales are held in memory only: storage is full. Do not close the app before they sync.', 'Active sales queue unreadable', 'Kitchen tickets never sent, expired after 6 h', 'Kitchen ticket queue unreadable'],
     ar: ['نسخ المبيعات للمراجعة', 'تصدير', 'إقرار وحذف', 'تأكيد حذف هذه النسخة؟ تحقق من استعادتها قبل المتابعة.', 'مساحة النسخ ممتلئة تقريباً. صدّر النسخ وتحقق منها قبل حذفها.',
-      'نسخة مبيعات', 'تذاكر المطبخ', 'بطاقات العملاء ومشترياتهم', 'إلغاء', 'تأكيد الحذف', 'مبيعات العملاء محفوظة في الذاكرة فقط: التخزين ممتلئ. لا تغلق التطبيق قبل المزامنة.', 'طابور المبيعات النشط غير قابل للقراءة']
+      'نسخة مبيعات', 'تذاكر المطبخ', 'بطاقات العملاء ومشترياتهم', 'إلغاء', 'تأكيد الحذف', 'مبيعات العملاء محفوظة في الذاكرة فقط: التخزين ممتلئ. لا تغلق التطبيق قبل المزامنة.', 'طابور المبيعات النشط غير قابل للقراءة', 'تذاكر مطبخ لم تُرسل وانتهت صلاحيتها بعد 6 ساعات', 'طابور تذاكر المطبخ غير قابل للقراءة']
   };
   function text(i) {
     var C = window.KiwiCaisseLang, I = window.KiwiI18n;
@@ -26,6 +26,7 @@
   function lang() { try { return (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || (document.documentElement.lang || 'fr').slice(0, 2); } catch (_) { return 'fr'; } }
   /* What the merchant reads instead of a storage key: the kind of copy and, for a sale copy, when it was set aside. */
   function label(source, key) {
+    if (source === 'relay') return text(/relay-expired/.test(key) ? 12 : 13);
     if (source === 'kitchen') return text(6);
     if (source === 'clients') return text(7);
     var m = /:quarantine:(\d+)$/.exec(key);
@@ -36,9 +37,10 @@
     return text(5) + ' · ' + when;
   }
   function sources() {
-    var L = window.KiwiLive, K = window.KiwiKitchenPrint, C = window.KiwiOutboxVault, out = [];
+    var L = window.KiwiLive, K = window.KiwiKitchenPrint, C = window.KiwiOutboxVault, R = window.KiwiKitchenRelay, out = [];
     if (L && L.queueRecoveryCopies) out.push({ id: 'sales', api: L.queueRecoveryCopies });
     if (K && K.recoveryCopies) out.push({ id: 'kitchen', api: K.recoveryCopies });
+    if (R && R.recoveryCopies) out.push({ id: 'relay', api: R.recoveryCopies });
     if (C && C.recoveryCopies) out.push({ id: 'clients', api: C.recoveryCopies });
     return out;
   }
@@ -92,6 +94,6 @@
     (target || document.body).append(box);
   }
   window.addEventListener('kiwi:quarantine-review', function (event) { paint(event.detail); });
-  ['kiwi:sale-queue', 'storage', 'kiwi:langchange', 'kiwi:clients-quarantine', 'kiwi:clients-outbox', 'kiwi:kitchen-print-corrupt'].forEach(function (name) { window.addEventListener(name, function () { paint(); }); });
+  ['kiwi:sale-queue', 'storage', 'kiwi:langchange', 'kiwi:clients-quarantine', 'kiwi:clients-outbox', 'kiwi:kitchen-print-corrupt', 'kiwi:kitchen-relay-evidence'].forEach(function (name) { window.addEventListener(name, function () { paint(); }); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paint); else paint();
 })();

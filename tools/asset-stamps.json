@@ -1076,8 +1076,8 @@
     "sha": "ce1d2f1d743c1e39"
   },
   "assets/kitchen-relay.js": {
-    "v": "16",
-    "sha": "8521b9aa2943dac1"
+    "v": "17",
+    "sha": "fc38c1c82aab4c41"
   },
   "assets/kiwi-env.js": {
     "v": "11",
@@ -1156,8 +1156,8 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "118",
-    "sha": "ded6ed350841d7b4"
+    "v": "119",
+    "sha": "51c8f36e018bc49f"
   },
   "assets/live-link/queue-store.js": {
     "v": "23",
@@ -1908,8 +1908,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "79",
-    "sha": "71acc72a8d08d389"
+    "v": "80",
+    "sha": "4f2cd8ec5a0db73a"
   },
   "assets/printer/pairing-lang.js": {
     "v": "20",
@@ -1920,8 +1920,8 @@
     "sha": "0cae2a7cd30eb9fe"
   },
   "assets/printer/transports.js": {
-    "v": "6",
-    "sha": "02b57282a7d719d7"
+    "v": "7",
+    "sha": "1bdc6504997588db"
   },
   "assets/procurement.js": {
     "v": "6",
@@ -1952,8 +1952,8 @@
     "sha": "bd10177ac673f7ac"
   },
   "assets/queue-recovery.js": {
-    "v": "6",
-    "sha": "ed81de2f2ae84077"
+    "v": "7",
+    "sha": "c893aaa5a7e71bbb"
   },
   "assets/ramadan.js": {
     "v": "3",

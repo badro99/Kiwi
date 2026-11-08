@@ -349,8 +349,8 @@ var SHELL = [
   '/assets/operations-ui.js?v=33',
   '/assets/live-link/queue-store.js?v=23',
   '/assets/live-link/sale-identity.js?v=4',
-  '/assets/live-link.js?v=118',
-  '/assets/queue-recovery.js?v=6',
+  '/assets/live-link.js?v=119',
+  '/assets/queue-recovery.js?v=7',
   '/assets/channel-sales.js?v=8',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -401,8 +401,8 @@ var SHELL = [
   '/assets/caisse-hardware.js?v=16',
   '/assets/live-socket.js?v=5',
   '/assets/escpos.js?v=20',
-  '/assets/printer/transports.js?v=6',
-  '/assets/printer-bridge.js?v=79',
+  '/assets/printer/transports.js?v=7',
+  '/assets/printer-bridge.js?v=80',
   '/assets/printer/pairing-ui.js?v=16',
   '/assets/barcode.js?v=4',
   '/assets/scan-wedge.js?v=1',
@@ -489,7 +489,7 @@ var SHELL = [
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
-  '/assets/kitchen-relay.js?v=16',
+  '/assets/kitchen-relay.js?v=17',
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */

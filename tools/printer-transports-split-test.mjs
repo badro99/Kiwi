@@ -26,7 +26,7 @@ assert.deepEqual(Object.keys(inert.window), ['__kiwiPrinterTransports'], 'enregi
 // Doubles matériels uniquement : vérifier le partage d’état et les écritures découpées.
 {
   const context = { window: {}, navigator: {}, Promise, Uint8Array,
-    setTimeout: fn => { queueMicrotask(fn); return 1; }, clearTimeout() {} };
+    setTimeout: (fn, ms) => { if (ms > 1000) return 2; queueMicrotask(fn); return 1; }, clearTimeout() {} };   // les délais de garde (> 1 s) ne tombent pas ici : seuls les pas de 16 ms sont rejoués
   vm.runInNewContext(part, context);
   const transport = context.window.__kiwiPrinterTransports({});
   const bluetooth = [], usb = [];
