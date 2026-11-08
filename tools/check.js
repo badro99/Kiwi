@@ -2077,6 +2077,7 @@ section('Whole-project regressions');
     'menu-options-keyboard-browser-test.mjs',
     'catalog-workspace-test.mjs',
     'native-store-readiness-test.mjs',
+    'native-files-journey-browser-test.mjs',
     /* La fiche App Store collée champ par champ : longueurs Apple, pas de prix, confidentialité = manifeste. */
     'app-store-listing-test.mjs',
     'native-host-bridge-test.mjs',
