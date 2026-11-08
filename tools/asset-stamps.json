@@ -112,20 +112,20 @@
     "sha": "21f83d45179fc413"
   },
   "assets/booking-submission.js": {
-    "v": "18",
-    "sha": "89a0a3865e1b7f20"
+    "v": "19",
+    "sha": "2d6876bf58cc34a6"
   },
   "assets/booking-view.js": {
-    "v": "5",
-    "sha": "d285757c5c13d201"
+    "v": "6",
+    "sha": "95cf9c8379e9fb2b"
   },
   "assets/booking.css": {
     "v": "19",
     "sha": "3c0d798c9926b854"
   },
   "assets/booking.js": {
-    "v": "69",
-    "sha": "bbb2935c86f76480"
+    "v": "70",
+    "sha": "19fb56aade7cc1e1"
   },
   "assets/boutique-catalog-parts.js": {
     "v": "34",
@@ -1452,8 +1452,8 @@
     "sha": "19663b68aa9a8f62"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "215",
-    "sha": "30b5b20de6359532"
+    "v": "216",
+    "sha": "7fcfddc28d2c64eb"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1988,16 +1988,16 @@
     "sha": "a6f14f4f121dae07"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "128",
-    "sha": "b2c8174ff22bf858"
+    "v": "129",
+    "sha": "caf86eb94c8413bc"
   },
   "assets/restaurant-menu/recipes.js": {
     "v": "10",
     "sha": "8e9397cc4cba0e00"
   },
   "assets/restaurant-menu/strings.js": {
-    "v": "13",
-    "sha": "8803cd7f36c9a57c"
+    "v": "14",
+    "sha": "e03e28ea74fd7ffc"
   },
   "assets/restaurant-menu/styles.js": {
     "v": "5",
