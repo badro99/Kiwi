@@ -573,5 +573,10 @@
     "lucide",
     "onload",
     "shareShiftCard"
+  ],
+  "importCycles": [
+    "assets/pos-boutique.js <-> assets/pos-boutique/checkout.js <-> assets/pos-boutique/drawer.js <-> assets/pos-boutique/inventory.js <-> assets/pos-boutique/sales.js",
+    "assets/pos-maison.js <-> assets/pos-maison/checkout.js <-> assets/pos-maison/inventory.js <-> assets/pos-maison/sales.js",
+    "assets/pressing/custody.js <-> assets/pressing/deposit.js <-> assets/pressing/pickup.js <-> assets/pressing/rack.js <-> assets/pressing/workshop.js"
   ]
 }

@@ -679,25 +679,33 @@
     "v": "4",
     "sha": "7a25a26319e794aa"
   },
+  "assets/hotel-economat-api.js": {
+    "v": "3",
+    "sha": "3dc6c89208fdeae2"
+  },
   "assets/hotel-economat-outbox.js": {
-    "v": "16",
-    "sha": "a2519c075f2f620c"
+    "v": "18",
+    "sha": "470348743c31f902"
   },
   "assets/hotel-economat-requests.css": {
     "v": "4",
     "sha": "db6d66f8c079e758"
   },
   "assets/hotel-economat-requests.js": {
-    "v": "33",
-    "sha": "03d7a8683663c265"
+    "v": "35",
+    "sha": "ad53badfcfd7e4a1"
+  },
+  "assets/hotel-economat-store.js": {
+    "v": "2",
+    "sha": "702d8237f7aeba6a"
   },
   "assets/hotel-economat-transport.js": {
-    "v": "22",
-    "sha": "723d3c7bdee9e717"
+    "v": "24",
+    "sha": "c757432ab62b1f2c"
   },
   "assets/hotel-economat.js": {
-    "v": "51",
-    "sha": "d52e2d134fc68ac1"
+    "v": "53",
+    "sha": "271eb1b56e298069"
   },
   "assets/hotel-folio.js": {
     "v": "5",
@@ -1448,8 +1456,8 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "82",
-    "sha": "19663b68aa9a8f62"
+    "v": "84",
+    "sha": "fbb3859b28414c36"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "215",
@@ -2200,8 +2208,8 @@
     "sha": "6e987f641cf76d80"
   },
   "assets/tenant-purge.js": {
-    "v": "11",
-    "sha": "f22f041d78c64c35"
+    "v": "12",
+    "sha": "3b174f548cfe8bad"
   },
   "assets/theme.css": {
     "v": "2",

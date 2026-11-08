@@ -18,9 +18,11 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/hotel-economat-api.js?v=3',
+  '/assets/hotel-economat-store.js?v=2',
   '/assets/pos-boutique/return-window.js?v=11',
-  '/assets/hotel-economat-requests.js?v=33',
-  '/assets/hotel-economat-outbox.js?v=16',
+  '/assets/hotel-economat-requests.js?v=35',
+  '/assets/hotel-economat-outbox.js?v=18',
   '/assets/tickets-recovery.js?v=5',
   '/assets/clients-audit.js?v=2',
   '/assets/caisse-print-recovery.js?v=8',
@@ -35,7 +37,7 @@ var SHELL = [
   '/assets/boutique-size-colors.js?v=6',
   '/assets/team/styles.js?v=4',
   '/assets/team/access-rules.js?v=7',
-  '/assets/hotel-economat-transport.js?v=22',
+  '/assets/hotel-economat-transport.js?v=24',
   '/assets/pos-boutique/drawer.js?v=108',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
@@ -212,13 +214,13 @@ var SHELL = [
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
   '/assets/pages/dashboard-startup.js?v=215',
-  '/assets/pages/dashboard-loader.js?v=82',
+  '/assets/pages/dashboard-loader.js?v=84',
   '/assets/hotel/model.js?v=10',
   '/assets/hotel/views.js?v=9',
   '/assets/hotel/groups.js?v=6',
   '/assets/hotel/editors.js?v=10',
   '/assets/hotel.js?v=98',
-  '/assets/hotel-economat.js?v=51',
+  '/assets/hotel-economat.js?v=53',
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=13',
   '/assets/sold-insights.js?v=20',
@@ -381,7 +383,7 @@ var SHELL = [
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
-  '/assets/tenant-purge.js?v=11',
+  '/assets/tenant-purge.js?v=12',
   /* La porte du dashboard hors ligne : des lignes salées que le serveur a prouvées,
      jamais un code. Absent de la coquille, un patron hors ligne ne rentrerait plus. */
   '/assets/dashboard-pin-vault.js?v=6',

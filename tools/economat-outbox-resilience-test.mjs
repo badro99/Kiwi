@@ -3,7 +3,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const source = fs.readFileSync('assets/hotel-economat-outbox.js', 'utf8').replace(/^import .*;$/gm, '').replace(/^export /gm, '');
+const flat = file => fs.readFileSync(file, 'utf8').replace(/^import .*;$/gm, '').replace(/^export /gm, '');
+const source = flat('assets/hotel-economat-store.js') + '\n' + flat('assets/hotel-economat-outbox.js');
 const body = id => ({ action:'create', id, unitId:'rooftop', idempotencyKey:'ui:' + id + ':create', lines:[{ itemId:'cola', unit:'bouteille', qtyRequested:2 }] });
 const within = (promise, ms, what) => Promise.race([promise, new Promise((_, no) => setTimeout(() => no(Error('HANG: ' + what)), ms))]);
 
@@ -101,7 +102,7 @@ for (const denied of [false, true]) {
   for (const [lang, word] of [['fr', 'peut-être dépassées'], ['en', 'out of date'], ['ar', 'قديمة']]) {
     const window = { Kiwi:{ handlers:{} }, KiwiInventory:{ merchant:() => 'm' }, KiwiI18n:{ getLang:() => lang } };
     const host = { isConnected:true, innerHTML:'' };
-    const patched = ui.replace(/\}\(function \(\) \{ return import\('\.\/hotel-economat-transport\.js\?v=\d+'\); \}\)\);/, '}(async function () { return api; }));');
+    const patched = ui.replace(/\}\(function \(\) \{ return import\('\.\/hotel-economat-api\.js\?v=\d+'\); \}\)\);/, '}(async function () { return api; }));');
     assert.notEqual(patched, ui);
     let stale = true;
     const api = { snapshot:async () => [], subscribe(){}, replay:async () => {}, getJson:async () => (stale ? { requests:[], _stale:{ at:Date.now() - 3600e3 } } : { requests:[] }) };
