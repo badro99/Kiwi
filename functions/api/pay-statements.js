@@ -18,7 +18,7 @@
 // statement with replaces_id; a statement is replaced at most once.
 // Salary is private: only the owner session (or a named operator) reads or
 // writes, never a till, an employee or another merchant's account.
-import { entitledMerchant, isOperator } from '../auth/_lib.js';
+import { entitledMerchant, namedOperatorId, activeAccountSession } from '../auth/_lib.js';
 import { merchantZone } from './_business-day.js';
 
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
@@ -62,8 +62,20 @@ async function ownerMerchant(request, env, asked) {
   try { got = await entitledMerchant(request, env, want); } catch (_) { return ''; }
   return got && got === want ? got : '';
 }
+/* Qui a émis : « owner:<id du compte> » ou « operator:<id de l'opérateur> ». Le
+ * préfixe reste « owner » / « operator » (rôle), la suite nomme la personne. Un
+ * bulletin émis ne peut plus être corrigé : son auteur doit être écrit dès
+ * l'émission. Si l'identité ne se lit pas, on garde le rôle seul plutôt que
+ * d'inventer un nom. */
 async function actorOf(request, env) {
-  try { if (await isOperator(request, env)) return 'operator'; } catch (_) { /* owner */ }
+  try {
+    const op = await namedOperatorId(request, env);
+    if (op) return text('operator:' + op, 100);
+  } catch (_) { /* owner */ }
+  try {
+    const session = await activeAccountSession(request, env);
+    if (session && session.aid) return text('owner:' + session.aid, 100);
+  } catch (_) { /* rôle seul */ }
   return 'owner';
 }
 

@@ -225,6 +225,22 @@ try {
     ok('un curseur endommagé expose une erreur d’intégrité sans repartir de zéro', damaged.status===503 && (await damaged.json()).error==='replay-progress-corrupt');
   } finally { sql.prepare("UPDATE store_docs SET data=? WHERE merchant=? AND feature='shopify-replay'").run(savedProgress,'maison-test'); }
 
+  /* r21 shopify#A0 : un journal de catalogue au-delà du seuil de repli ne bloque plus le rattrapage. */
+  replayMode = '';
+  const journal = (n) => Array.from({ length: n }, (_, i) => ({ id: 'old-' + i, vid: 'v-a', d: i % 2 ? -1 : 1, at: 1000 + i, why: 'ajustement' }));
+  const putCatalog = (moves) => sql.prepare("UPDATE catalogs SET data = ?, rev = rev + 1 WHERE merchant = 'maison-test'").run(JSON.stringify({
+    products: [{ id: 'p1', name: 'Coussin' }], variants: [{ id: 'v-a', productId: 'p1', size: 'TU', stock: 10, base: 10, baseAt: 0 }, { id: 'v-b', productId: 'p1', size: 'TU', stock: 4, base: 4, baseAt: T0 + 2 * 86400000 }], moves }));
+  putCatalog(journal(11500));
+  const folded = await call({ since: T0 - 1 });
+  const after = JSON.parse(sql.prepare("SELECT data FROM catalogs WHERE merchant = 'maison-test'").get().data);
+  ok('11 500 mouvements : le rattrapage replie lui-même le journal et retire les pièces', folded.status === 200 && folded.body.result.applied === 1 && stockOf('v-a').stock === 8, JSON.stringify(folded.body).slice(0, 300));
+  ok('… le journal enregistré repasse sous le seuil de repli sans perdre de stock', after.moves.length <= 10001 && after.moves.some((m) => m.id === 'so-5001-9001'), 'moves=' + after.moves.length);
+  putCatalog(journal(12500));
+  const beforeHard = sql.prepare("SELECT data FROM catalogs WHERE merchant = 'maison-test'").get().data;
+  const hard = await call({ since: T0 - 2 });
+  ok('12 500 mouvements : refus actionnable (409, nombre, marche à suivre), pas une panne Shopify', hard.status === 409 && hard.body.detail === 'catalog-journal-too-long' && hard.body.recovery?.code === 'compact-catalog' && hard.body.recovery.moves === 12500 && /replié/.test(hard.body.recovery.fr), JSON.stringify(hard.body).slice(0, 300));
+  ok('… et le catalogue n\'est pas touché', sql.prepare("SELECT data FROM catalogs WHERE merchant = 'maison-test'").get().data === beforeHard);
+
 } finally {
   globalThis.fetch = realFetch;
 }

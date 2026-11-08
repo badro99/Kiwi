@@ -376,17 +376,33 @@ export async function resolveClientId(env, merchant, id) {
 /* Les fiches vivantes du magasin qui portent ce numéro, la plus ancienne au
  * curseur d'abord. Le SQL présélectionne sur les huit derniers chiffres,
  * séparateurs ôtés ; la règle complète tranche ensuite. */
+const TWIN_PAGE = 50, TWIN_MAX_PAGES = 40; // 2 000 candidats au plus par numéro
 async function phoneTwins(env, merchant, phone, exceptId) {
   const key = phoneKey(phone);
   if (!key) return [];
-  const res = await env.DB.prepare(
-    `SELECT id, phone, srv_ts FROM clients
-      WHERE merchant = ? AND deleted = 0 AND id <> ? AND phone <> ''
-        AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '.', ''), '-', ''), '(', ''), ')', '') LIKE ?
-      ORDER BY srv_ts ASC, id ASC
-      LIMIT 50`
-  ).bind(merchant, exceptId, '%' + key.slice(-8)).all();
-  return ((res && res.results) || []).filter((r) => phoneKey(r.phone) === key);
+  /* Pas de LIMIT sec : sur un suffixe encombré (huit chiffres partagés par plus de
+   * cinquante fiches d'autres pays), la vraie jumelle pouvait tomber hors des
+   * cinquante premières et la fiche neuve restait un doublon. On parcourt donc
+   * les candidats page par page (curseur srv_ts, id), du plus ancien au plus
+   * récent, jusqu'à les avoir tous vus ; la règle complète tranche. */
+  const like = '%' + key.slice(-8);
+  const twins = [];
+  let afterTs = -1, afterId = '';
+  for (let page = 0; page < TWIN_MAX_PAGES; page++) {
+    const res = await env.DB.prepare(
+      `SELECT id, phone, srv_ts FROM clients
+        WHERE merchant = ? AND deleted = 0 AND id <> ? AND phone <> ''
+          AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '.', ''), '-', ''), '(', ''), ')', '') LIKE ?
+          AND (srv_ts > ? OR (srv_ts = ? AND id > ?))
+        ORDER BY srv_ts ASC, id ASC
+        LIMIT ${TWIN_PAGE}`
+    ).bind(merchant, exceptId, like, afterTs, afterTs, afterId).all();
+    const rows = (res && res.results) || [];
+    for (const r of rows) if (phoneKey(r.phone) === key) twins.push(r);
+    if (rows.length < TWIN_PAGE) break;
+    afterTs = Number(rows[rows.length - 1].srv_ts) || 0; afterId = String(rows[rows.length - 1].id);
+  }
+  return twins;
 }
 /* Merged profiles preserve every note and tag, including overflow. */
 function mergedText(current, incoming) {

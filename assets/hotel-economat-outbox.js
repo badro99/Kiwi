@@ -1,5 +1,5 @@
 /* Durable department submissions. A lost response replays the same command key. Storage and the read cache live in hotel-economat-store.js. */
-import { post } from './hotel-economat-transport.js?v=28';
+import { post } from './hotel-economat-transport.js?v=29';
 import { account, merchants, mutate, prefix, stored } from './hotel-economat-store.js?v=2';
 const listeners = new Set(), running = new Map(), timers = new Map();
 function notify(merchant, rows) { listeners.forEach(fn => fn(merchant, rows)); }

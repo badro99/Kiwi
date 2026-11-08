@@ -242,5 +242,16 @@ await ok('r20 planning#A1: the request id changes when hours, rate, base or name
   for (const change of [{ hours: 7.5 }, { rateCents: 2400 }, { baseCents: 16000 }, { memberName: 'B' }]) assert.notEqual(requestIdFor(period, [{ ...base, ...change }]), id, JSON.stringify(change));
 });
 
+await ok('r21 planning#B0: a statement records WHO issued it, the owner account or the named operator, not just the role', async () => {
+  const { OP_COOKIE, OPID_COOKIE, operatorToken, operatorIdToken } = await import('../functions/auth/_lib.js');
+  const byOwner = (await issue(ownerA, [row('who1', 10000, 0)])).body.statements[0];
+  assert.equal(byOwner.issuedBy, 'owner:acc-pay-a');
+  sqlite.prepare("INSERT INTO operators (id, label, salt, hash, created_ts) VALUES ('op-named-1', 'Badr', 's', 'h', 1)").run();
+  const operator = `${OP_COOKIE}=${await operatorToken(SECRET)}; ${OPID_COOKIE}=${await operatorIdToken(SECRET, 'op-named-1')}`;
+  const byOperator = (await issue(operator, [row('who2', 10000, 0)])).body.statements[0];
+  assert.equal(byOperator.issuedBy, 'operator:op-named-1');
+  assert.equal(sqlite.prepare('SELECT issued_by FROM pay_statements WHERE id = ?').get(byOperator.id).issued_by, 'operator:op-named-1', 'stored, immutable');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

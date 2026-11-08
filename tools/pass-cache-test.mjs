@@ -80,6 +80,24 @@ const srv = net.createServer((c) => c.end()).listen(0, '127.0.0.1', () => {
 });
 `);
 
+// Declared inputs (gate#A2): a suite that starts a program the tracer cannot follow may list
+// what it depends on instead of being never-cached; the list is validated.
+const GIT = `import { execFileSync } from 'node:child_process';
+try { execFileSync('git', ['--version'], { stdio: 'ignore' }); } catch (_) {}
+console.log('probe ' + process.env.DECL_PROBE);
+`;
+write('tools/decl-git-test.mjs', '// kiwi-cache: inputs data/price.txt dir:data env:DECL_PROBE\n' + GIT);
+write('tools/decl-missing-test.mjs', '// kiwi-cache: inputs data/does-not-exist.txt\n' + GIT);
+write('tools/decl-escape-test.mjs', '// kiwi-cache: inputs ../outside.txt\n' + GIT);
+write('tools/decl-empty-test.mjs', '// kiwi-cache: inputs\n' + GIT);
+write('tools/decl-never-test.mjs', '// kiwi-cache: inputs data/price.txt\n// kiwi-cache: never also reads a clock\n' + GIT);
+write('tools/decl-blind-test.mjs', `// kiwi-cache: inputs data/price.txt
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+console.log('blind probe ' + fs.existsSync(path.join(os.homedir(), '.kiwi-pass-cache-test-probe')));
+`);
+
 let failures = 0;
 const ok = (cond, msg) => { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!cond) failures++; };
 
@@ -171,6 +189,28 @@ try {
   pool(['local-test.mjs']);
   res = pool(['local-test.mjs']);
   ok(cached(res, 'local-test.mjs') && /local done/.test(res['local-test.mjs'].stdout), 'loopback traffic and temp files stay cacheable');
+
+  // Declared inputs: a git-starting suite that lists what it reads is reusable, and each listed input is in the key.
+  pool(['decl-git-test.mjs'], { DECL_PROBE: 'a' });
+  ok(cached(pool(['decl-git-test.mjs'], { DECL_PROBE: 'a' }), 'decl-git-test.mjs'), 'a suite that starts git but declares its inputs is reused when none changed');
+  ok(!cached(pool(['decl-git-test.mjs'], { DECL_PROBE: 'b' }), 'decl-git-test.mjs'), 'a declared environment variable changed: runs again');
+  pool(['decl-git-test.mjs'], { DECL_PROBE: 'b' });
+  write('data/price.txt', '1400');
+  ok(!cached(pool(['decl-git-test.mjs'], { DECL_PROBE: 'b' }), 'decl-git-test.mjs'), 'a declared file changed: runs again');
+  pool(['decl-git-test.mjs'], { DECL_PROBE: 'b' });
+  write('data/c.txt', 'c');
+  ok(!cached(pool(['decl-git-test.mjs'], { DECL_PROBE: 'b' }), 'decl-git-test.mjs'), 'a declared folder listing changed: runs again');
+  for (const n of ['decl-missing-test.mjs', 'decl-escape-test.mjs', 'decl-empty-test.mjs', 'decl-never-test.mjs', 'decl-blind-test.mjs']) {
+    pool([n]);
+    const again = pool([n]);
+    ok(!cached(again, n) && again[n].status === 0, n + ': ' + ({
+      'decl-missing-test.mjs': 'a declared file that does not exist invalidates the declaration: never reused',
+      'decl-escape-test.mjs': 'a declared path outside the repo is refused: never reused',
+      'decl-empty-test.mjs': 'an empty declaration is refused: never reused',
+      'decl-never-test.mjs': '"never" outranks a declared list',
+      'decl-blind-test.mjs': 'a read outside the repo that the tracer saw is not covered by a list: never reused',
+    })[n]);
+  }
 
   const cache = JSON.parse(fs.readFileSync(path.join(tmp, 'kiwi-pass-cache.json'), 'utf8'));
   ok(Object.keys(cache).length > 0 && Object.keys(cache).every((k) => k.startsWith('tools/')), 'cache entries are keyed repo-relative, never by absolute path');

@@ -6,10 +6,14 @@ import { todayFor, draftRow, insertStatement } from './_documents.js';
 
 /* ── import-legacy : les factures gardées sur l'appareil par l'ancienne version ── */
 
-function nearestRate(rate) {
+// Un taux absent reste 20 (la valeur de l'ancienne version). Un taux renseigné
+// qui n'est pas un taux marocain supporté n'est JAMAIS arrondi vers le plus
+// proche : le document est écarté et signalé, pas recalculé en silence.
+function legacyRate(rate) {
+  if (rate == null || rate === '') return { rate: 20 };
   const r = Number(rate);
-  if (!Number.isFinite(r)) return 20;
-  return VAT_RATES.reduce((best, v) => (Math.abs(v - r) < Math.abs(best - r) ? v : best), VAT_RATES[0]);
+  if (!Number.isFinite(r) || !VAT_RATES.includes(r)) return { unsupported: true };
+  return { rate: r };
 }
 
 function legacyDoc(raw, today) {
@@ -18,9 +22,13 @@ function legacyDoc(raw, today) {
   if (!idPart) return { skip: 'missing-id' };
   const ref = '#' + idPart;
   const items = Array.isArray(raw.items) ? raw.items : [];
-  const rate = nearestRate(raw.taxRate);
+  const taxed = legacyRate(raw.taxRate);
+  if (taxed.unsupported) return { ref, skip: 'unsupported-tax-rate' };
+  const rate = taxed.rate;
+  // Au-delà du plafond, tronquer changerait le total sans que rien ne le dise.
+  if (items.length > MAX_LINES) return { ref, skip: 'too-many-lines' };
   const lines = [];
-  for (const it of items.slice(0, MAX_LINES)) {
+  for (const it of items) {
     if (!it || typeof it !== 'object') continue;
     const price = Number(it.price);
     const qty = Number(it.qty);

@@ -82,7 +82,7 @@ for (const locale of ['fr', 'en', 'ar']) {
      Object.assign(ctx, { p, moment, locale });
      const got = vm.runInContext('resolveMenu([p], {}, 100, moment, locale)', ctx);
      assert.ok(got);
-     const expected = kind === 'percent' ? '−12.5 %' : (kind === 'amount' ? '−' : '') + '12,5 MAD';
+     const expected = kind === 'percent' ? '−12,5 %' : (kind === 'amount' ? '−' : '') + '12,5 MAD';
      if (locale === 'fr') assert.equal(got.promo.badge, expected);
      else if (locale === 'en') assert.ok(got.promo.badge.includes('12.5'));
      else assert.ok(got.promo.badge.includes('د.م.') || kind === 'percent' && got.promo.badge.includes(new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(12.5)));

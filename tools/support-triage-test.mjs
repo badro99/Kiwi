@@ -140,6 +140,13 @@ try {
   ] });
   eq(withImage.images, [{ content_type: 'image/png', base64: 'AAAA' }, { content_type: 'image/webp', base64: 'BBBB' }], 'images : { content_type, base64 }, PNG/JPEG/WebP seulement');
   ok(buildTriageRequest({ summary: 'é'.repeat(9000) }).state.length < 3200, 'le texte est borné');
+  /* r21 tickets#B0 : l'information qui bloque, tard dans un long message, atteint le modèle. */
+  const filler = (n) => 'Le menu du soir change souvent chez nous. '.repeat(n);
+  const lateTail = buildTriageRequest({ summary: filler(120) + 'Depuis ce matin la caisse est bloquée et on a débité deux fois le client.' }).state;
+  ok(lateTail.includes('caisse est bloquée') && lateTail.length < 3300, 'la fin d\'un long message est gardée dans la limite');
+  const lateMiddle = buildTriageRequest({ summary: filler(60) + 'Le client a été débité deux fois sur le terminal. ' + filler(60) + 'Merci de votre aide.' }).state;
+  ok(lateMiddle.includes('débité deux fois') && lateMiddle.includes('Merci de votre aide') && lateMiddle.length < 3300, 'une phrase d\'urgence du milieu est gardée, la fin aussi');
+  ok(buildTriageRequest({ summary: 'courte et claire' }).state.includes('courte et claire') && !buildTriageRequest({ summary: 'courte et claire' }).state.includes('[…]'), 'un message court passe tel quel');
 
   /* ── 2. Lecture de la réponse ───────────────────────────────────────────── */
   const read = readTriageAnswers(clef({ urgency: [0.02, 0.08, 0.9], category: 'impression', blocked: 0.74 }), 1234);

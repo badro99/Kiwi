@@ -559,7 +559,7 @@
     const modal = Kiwi.modal({ title: T.audit, body: '<p role="status"></p><button type="button" class="kb">' + esc(copy[0]) + '</button>' });
     modal.el.querySelector('button').onclick = () => { controller.abort(); modal.close(); };
     try {
-      const result = await (await import('./clients-audit.js?v=6')).exportAudit({ book, clientId: c.id, controller, from: part.from,
+      const result = await (await import('./clients-audit.js?v=7')).exportAudit({ book, clientId: c.id, controller, from: part.from,
         current: () => KiwiClients.bookId() === book && modal.el.isConnected,
         progress: count => { modal.el.querySelector('[role=status]').textContent = copy[1] + ': ' + count; },
         download: blob => {

@@ -27,7 +27,7 @@ import { budgets, reserveNeurons, estimateNeurons } from './ai/_neurons.js';
 import { CLEF as TRIAGE_MODEL } from './ai/_models.js';
 export { TRIAGE_MODEL };
 import { quotaOk, DAILY_CAPS, ensureAiUsageSchema } from './ai/_quota.js';
-import { classify, cleanText, parseJson } from './_support.js';
+import { classify, cleanText, parseJson, URGENT_SIGNAL } from './_support.js';
 
 /* Clef complet (27B), pas Clef-flash (9B) : sur les 31 demandes synthétiques de
  * tools/support-triage-eval.mjs (2026-10-18), catégorie 96,8 % contre 93,5 %,
@@ -51,6 +51,28 @@ export const CONFIDENT_AT = 0.6;
 /* Clef lit environ les 2 000 premiers jetons du texte sur Workers AI : le message
  * du commerçant passe en premier, le reste (type d'établissement) après. */
 export const MAX_SUMMARY_CHARS = 3000;
+const HEAD_CHARS = 1500, TAIL_CHARS = 700, GAP = ' […] ';
+
+/* Un message plus long que ce que Clef lit n'est plus coupé net : le blocage ou la
+ * perte d'argent vit souvent à la fin (« …et depuis ce matin plus rien »). On garde
+ * le début, la fin, et ce que le milieu contient de phrases qui portent un signal
+ * d'urgence (les mêmes mots que le plancher de classify), dans la limite du budget.
+ * Le ticket lui-même reste entier ; seule la copie envoyée au modèle est ramenée. */
+export function fitSummary(summary, max = MAX_SUMMARY_CHARS) {
+  const full = cleanText(summary, 20000);
+  if (full.length <= max) return full;
+  const head = full.slice(0, HEAD_CHARS), tail = full.slice(-TAIL_CHARS);
+  const middle = full.slice(HEAD_CHARS, full.length - TAIL_CHARS);
+  let budget = max - head.length - tail.length - 2 * GAP.length;
+  const picked = [];
+  for (const sentence of middle.split(/(?<=[.!?؟\n])\s+/)) {
+    const piece = sentence.trim().slice(0, 400);
+    if (!piece || !URGENT_SIGNAL.test(piece.toLowerCase())) continue;
+    if (piece.length + 1 > budget) continue;
+    picked.push(piece); budget -= piece.length + 1;
+  }
+  return head + GAP + (picked.length ? picked.join(' ') + GAP : '') + tail;
+}
 export const AI_TIMEOUT_MS = 12000;
 export const MAIL_TIMEOUT_MS = 8000;
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -105,7 +127,7 @@ const round3 = (n) => Math.round(n * 1000) / 1000;
  * d'URL distante). */
 /** @param {{summary?: unknown, storeType?: unknown, images?: {content_type?: string, base64?: string}[]}} [input] */
 export function buildTriageRequest({ summary, storeType, images } = {}) {
-  const text = cleanText(summary, MAX_SUMMARY_CHARS);
+  const text = fitSummary(summary, MAX_SUMMARY_CHARS);
   const type = cleanText(storeType, 40);
   const payload = {
     model: TRIAGE_MODEL.split('/').pop(),

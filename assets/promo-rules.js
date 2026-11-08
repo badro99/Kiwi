@@ -22,10 +22,10 @@
         return { kind: kind, value: value, days: days.length === 7 ? [] : days, start: start, end: end };
       }
     const inWindow = (p, b) => {
-        if (p.days && p.days.length && p.days.indexOf(b.weekday) < 0) return false;
-        var s = toMin(p.start), e = toMin(p.end);
-        if (s == null || e == null) return true;
-        return s < e ? b.min >= s && b.min < e : b.min >= s || b.min < e;
+        var s = toMin(p.start), e = toMin(p.end), timed = s != null && e != null;
+        var owner = timed && s >= e && b.min < e && Number.isInteger(b.calWeekday) ? (b.calWeekday + 6) % 7 : b.weekday; /* an overnight window belongs to the weekday it started on */
+        if (p.days && p.days.length && p.days.indexOf(owner) < 0) return false;
+        return !timed || (s < e ? b.min >= s && b.min < e : b.min >= s || b.min < e);
       }
     const price = (p, unit, surface) => {
         var base = money(unit);
@@ -72,7 +72,7 @@
       if (!best) return null;
       const p = best.promo;
       const fr = String(locale).startsWith('fr'), n = fr ? String(p.value).replace('.', ',') : new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(p.value);
-      const badge = p.kind === 'percent' ? '−' + (fr ? p.value : n) + ' %' : (p.kind === 'amount' ? '−' : '') + n + (fr || !String(locale).startsWith('ar') ? ' MAD' : ' د.م.');
+      const badge = p.kind === 'percent' ? '−' + n + ' %' : (p.kind === 'amount' ? '−' : '') + n + (fr || !String(locale).startsWith('ar') ? ' MAD' : ' د.م.');
       return { price: best.price, promo: { id: p.id, name: p.name, badge, before: base } };
     }
     const stockOf = (item) => {
@@ -140,7 +140,7 @@
     var w = wall(now == null ? nowMs() : now, config.zone);
     var date = new Date(Date.UTC(w.y, w.mo - 1, w.d));
     if (w.min < config.cutoff) date = new Date(date.getTime() - 86400000);
-    return { date: date.toISOString().slice(0, 10), weekday: date.getUTCDay(), min: w.min };
+    return { date: date.toISOString().slice(0, 10), weekday: date.getUTCDay(), min: w.min, calWeekday: new Date(Date.UTC(w.y, w.mo - 1, w.d)).getUTCDay() };
   }
 
 
