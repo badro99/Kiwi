@@ -192,6 +192,18 @@ await S.run('page d’accueil, téléphone', async (t) => {
   compare('landing-phone', await audit(t, page));
   await keyboardWalk(t, page);
 });
+/* Les guides (audit du site public, 8 nov 2026) : aucune suite axe ne les
+ * couvrait, et deux violations sérieuses y vivaient (nom du menu de langue
+ * sans le « FR » affiché, liste des objectifs privée de son rôle). La
+ * bibliothèque et un article, bureau et téléphone. */
+await S.run('guides · bibliothèque et article', async (t) => {
+  const found = [];
+  for (const url of ['/fr/guides/index.html', '/fr/guides/calcul-food-cost-restaurant/index.html']) {
+    found.push(await audit(t, await open(t, url, { kiwiLang: 'fr' }, { pin: false })));
+    found.push(await audit(t, await open(t, url, { kiwiLang: 'fr' }, { width: 390, height: 844, mobile: true, pin: false })));
+  }
+  compare('guides', union(...found));
+});
 if (LOCALES.includes('ar')) await S.run('page d’accueil, arabe', async (t) => {
   // coverage: surface=landing locale=ar viewport=desktop
   const page = await open(t, '/ar/index.html', { kiwiLang: 'ar' });
