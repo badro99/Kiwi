@@ -624,7 +624,7 @@ for (const test of [
   'booking-properties-test.mjs',
   'booking-read-order-test.mjs',
   'hotel-properties-test.mjs',
-  'stockqueue-ruling-test.mjs', 'stock-retail-move-test.mjs', 'held-split-lines-test.mjs', 'recipe-caps-test.mjs', 'menu-missing-price-test.mjs', 'boutique-retention-day-test.mjs', 'stock-money-properties-test.mjs', 'stock-overlay-quota-test.mjs', 'serveur-loyalty-evidence-test.mjs', 'clients-evidence-test.mjs', 'kitchen-queue-evidence-test.mjs', 'queue-recovery-evidence-test.mjs', 'cash-outbox-quarantine-test.mjs', 'day-report-refused-test.mjs', 'sale-aliases-test.mjs', 'stock-count-history-evidence-test.mjs', 'cx-money-behavior-test.mjs',
+  'stockqueue-ruling-test.mjs', 'stock-retail-move-test.mjs', 'held-split-lines-test.mjs', 'recipe-caps-test.mjs', 'menu-missing-price-test.mjs', 'boutique-retention-day-test.mjs', 'stock-money-properties-test.mjs', 'stock-overlay-quota-test.mjs', 'serveur-loyalty-evidence-test.mjs', 'clients-evidence-test.mjs', 'kitchen-queue-evidence-test.mjs', 'queue-recovery-evidence-test.mjs', 'cash-outbox-quarantine-test.mjs', 'day-report-refused-test.mjs', 'credit-book-413-pending-test.mjs', 'sale-aliases-test.mjs', 'stock-count-history-evidence-test.mjs', 'cx-money-behavior-test.mjs',
   'menu-analysis-properties-test.mjs',
   'economat-properties-test.mjs',
   'economat-controller-uncertain-test.mjs',
