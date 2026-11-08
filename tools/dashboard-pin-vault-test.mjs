@@ -242,6 +242,42 @@ const allStored = () => [...store.entries()].map(([k, v]) => `${k}=${v}`).join('
 }
 
 {
+  /* r21 pairing#A0 : reculer l'horloge de l'appareil ne prolonge aucune preuve. */
+  const H = 3600 * 1000;
+  const v = load({ kiwiAccountKey: 'clock@x.com' });
+  await v.remember('2580', { id: 's', name: 'S', role: 'cashier' });
+  now += 60 * H; ok(await v.verify('2580') !== null, 'horloge : à 60 h la ligne d\'équipe (72 h) ouvre encore');
+  now += 14 * H;                       // 74 h réelles : la preuve est périmée
+  ok(await v.verify('2580') === null && v.count() === 0, 'horloge : à 74 h elle est périmée');
+  await v.remember('2580', { id: 's', name: 'S', role: 'cashier' });
+  now += 70 * H; v.verify('2580');     // la page a vu 70 h passer
+  now -= 69 * H;                       // quelqu\'un recule l\'horloge de 69 h
+  ok(v.rolledBack() === true, 'horloge : un recul de plus de 5 minutes est vu');
+  ok(await v.verify('2580') === null, 'horloge reculée : le repli hors ligne se ferme (avant : la ligne valait de nouveau 69 h)');
+  ok(v.count() === 1 && JSON.parse(store.get(v.storageKey())).length === 1, 'la ligne n\'est pas effacée : un « oui » du serveur la rouvre');
+  now += 69 * H + 4 * H;               // le temps réel avance : 74 h depuis la preuve
+  ok(await v.verify('2580') === null, 'l\'horloge revenue, la preuve est bien périmée (on ne l\'a pas prolongée)');
+  /* une dérive de 4 minutes n\'est pas une triche */
+  const w = load({ kiwiAccountKey: 'drift@x.com' });
+  await w.remember('2581', { id: 'd', name: 'D', role: 'cashier' });
+  now += H; await w.verify('2581'); now -= 4 * 60 * 1000;
+  ok(w.rolledBack() === false && await w.verify('2581') !== null, 'horloge : une correction de 4 minutes est tolérée');
+  /* le hors-ligne reprend après un \"oui\" du serveur sous l\'horloge corrigée */
+  now -= 2 * H; ok(w.rolledBack() === true, 'horloge : recul de 2 h vu');
+  await w.remember('2581', { id: 'd', name: 'D', role: 'cashier' });
+  ok(w.rolledBack() === false && await w.verify('2581') !== null, 'après un « oui » du serveur le repli reprend sur la nouvelle référence');
+  /* la pause des essais suit la même horloge : la reculer ne la raccourcit ni ne l\'allonge */
+  const l = load({ kiwiAccountKey: 'lock@x.com' });
+  await l.remember('3000', { id: 'l', name: 'L', role: 'owner' });
+  for (let i = 0; i < 5; i++) await l.verify('900' + i);
+  const wait = l.lockedFor(); ok(wait > 0, 'pause ouverte');
+  now -= 2 * H;
+  ok(l.lockedFor() === wait, 'horloge reculée pendant la pause : la pause ne change pas');
+  now += 2 * H + 5 * 60 * 1000;
+  ok(l.lockedFor() === 0, 'passé les cinq minutes réelles, elle se lève');
+}
+
+{
   /* PBKDF2 : un million de tours, un sel par compte, une dérivation par essai,
      et l'ancienne ligne SHA-256 qui ouvre encore puis se réécrit sans repousser
      son échéance. */
@@ -267,11 +303,14 @@ const allStored = () => [...store.entries()].map(([k, v]) => `${k}=${v}`).join('
   const old = Buffer.from(await webcrypto.subtle.digest('SHA-256', new TextEncoder().encode('dashboard:kdf@x.com:' + salt + ':4444'))).toString('hex');
   const exp = now + 3 * 24 * 3600 * 1000;
   store.set(scopeKey(v), JSON.stringify([{ salt, digest: old, expiresAt: exp, staff: { id: 'd', name: 'd', role: 'owner' } }]));
-  ok(await v.verify('4445') === null && JSON.parse(store.get(scopeKey(v)))[0].digest === old, 'un mauvais code ne migre rien');
-  ok((await v.verify('4444')).id === 'd', 'une ancienne ligne SHA-256 ouvre encore');
-  for (let i = 0; i < 100 && !JSON.parse(store.get(scopeKey(v)))[0].it; i++) await new Promise((r) => setTimeout(r, 25));
+  /* r21 pairing#A1 (flipped from "ouvre encore puis se réécrit") : une ancienne ligne SHA-256 se
+     laisse énumérer en millisecondes dans un stockage copié ; elle n'ouvre plus rien, il faut un
+     « oui » du serveur (qui écrit une ligne PBKDF2). */
+  ok(v.count() === 0 && await v.verify('4444') === null, 'une ancienne ligne SHA-256 n\'ouvre plus (le bon code non plus), elle ne compte pas');
+  ok(v.sweepWeakRows() === 1 && !store.has(scopeKey(v)), 'et elle est balayée du stockage');
+  await v.remember('4444', { id: 'd', name: 'd', role: 'owner' });
   rows = JSON.parse(store.get(scopeKey(v)));
-  ok(rows.length === 1 && rows[0].it >= 1000000 && rows[0].expiresAt === exp, 'puis se réécrit en PBKDF2, sans repousser son échéance');
+  ok(rows.length === 1 && rows[0].it >= 1000000 && (await v.verify('4444')).id === 'd', 'un « oui » du serveur écrit la ligne PBKDF2, qui ouvre');
   const t0 = performance.now();
   for (let i = 0; i < 10; i++) await webcrypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.from(rows[0].salt, 'hex'), iterations: rows[0].it }, key, 256);
   const minutes = (performance.now() - t0) / 10 * 10000 / 60000;

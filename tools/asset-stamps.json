@@ -39,13 +39,17 @@
     "v": "11",
     "sha": "ea7e3a1db9d7cb80"
   },
+  "assets/admin-workspace-copy.js": {
+    "v": "2",
+    "sha": "dfd39e8937cc3c5d"
+  },
   "assets/admin-workspace.css": {
     "v": "5",
     "sha": "606482db0d68d9bf"
   },
   "assets/admin-workspace.js": {
-    "v": "42",
-    "sha": "34c45ed700cd09c6"
+    "v": "43",
+    "sha": "cac5fd6885e21bce"
   },
   "assets/agent-action-center.js": {
     "v": "4",
@@ -400,8 +404,8 @@
     "sha": "87dc6f676b149a0e"
   },
   "assets/cloud-doc.js": {
-    "v": "16",
-    "sha": "161a887ed8c384db"
+    "v": "18",
+    "sha": "c00deec630dea467"
   },
   "assets/color-palette.js": {
     "v": "7",
@@ -440,8 +444,8 @@
     "sha": "52cdd8ad3877070e"
   },
   "assets/dashboard-pin-vault.js": {
-    "v": "6",
-    "sha": "b50aee6a1a42b889"
+    "v": "8",
+    "sha": "c65ff3684a189b46"
   },
   "assets/dashboard-pwa.js": {
     "v": "614",
@@ -1292,16 +1296,16 @@
     "sha": "ac1fc9442873ae3e"
   },
   "assets/onboarding-data.js": {
-    "v": "13",
-    "sha": "0adafc458b46fade"
+    "v": "16",
+    "sha": "447b7465209a8520"
   },
   "assets/onboarding.css": {
     "v": "6",
     "sha": "3bbfdb73103b33bf"
   },
   "assets/onboarding.js": {
-    "v": "2128",
-    "sha": "1710c80d78293ba4"
+    "v": "2131",
+    "sha": "63772c604439675d"
   },
   "assets/operations-ui.js": {
     "v": "33",
@@ -1452,8 +1456,8 @@
     "sha": "19663b68aa9a8f62"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "215",
-    "sha": "30b5b20de6359532"
+    "v": "218",
+    "sha": "2129d0d379561e13"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2160,8 +2164,8 @@
     "sha": "dd4d56ef6f1d15d2"
   },
   "assets/team.js": {
-    "v": "357",
-    "sha": "7827859e5a10dd0e"
+    "v": "360",
+    "sha": "93649166781a3a0f"
   },
   "assets/team/access-rules.js": {
     "v": "7",
@@ -2176,8 +2180,8 @@
     "sha": "8d76057433b0d907"
   },
   "assets/team/member-state.js": {
-    "v": "12",
-    "sha": "8d691c48db1f6609"
+    "v": "15",
+    "sha": "7427aef86d55a348"
   },
   "assets/team/merge.js": {
     "v": "2",
@@ -2200,8 +2204,8 @@
     "sha": "6e987f641cf76d80"
   },
   "assets/tenant-purge.js": {
-    "v": "11",
-    "sha": "f22f041d78c64c35"
+    "v": "12",
+    "sha": "a6308d7ffa1b375a"
   },
   "assets/theme.css": {
     "v": "2",

@@ -79,8 +79,8 @@ function browser(disk) {
   const listeners = {};
   const localStorage = { getItem: (k) => (disk.has(k) ? disk.get(k) : null), setItem: (k, v) => { disk.set(k, String(v)); }, removeItem: (k) => { disk.delete(k); }, key: (i) => [...disk.keys()][i] || null, get length() { return disk.size; } };
   const document = { visibilityState: 'visible', addEventListener(t, f) { (listeners[t] ||= []).push(f); } };
-  const syncs = [];
-  const window = { document, localStorage, KiwiEnv: { isReal: () => true }, addEventListener(t, f) { (listeners[t] ||= []).push(f); }, dispatchEvent() {},
+  const syncs = [], toasts = [];
+  const window = { document, localStorage, KiwiEnv: { isReal: () => true }, addEventListener(t, f) { (listeners[t] ||= []).push(f); }, dispatchEvent(e) { (listeners[e.type] || []).forEach((f) => f(e)); },
     KiwiVenue: { getCurrentVenueData: () => ({ id: 'v1', custom: true, slug: SHOP, type: 'boutique' }) },
     KiwiConfig: { syncPins: (pins) => { syncs.push(pins); } }, KiwiTeamParts: {} };
   window.window = window;
@@ -91,10 +91,10 @@ function browser(disk) {
   const ms = window.KiwiTeamParts.memberState.create({
     fetchDeadline: (url, opts) => fetchImpl(url, opts), teamKey: () => 'v1', teamVenueKey: () => 'v1', teamSlug: () => SHOP,
     memberBelongsToStore: () => true, scopeTeamDoc: identity, persistableTeamKey: () => true, memberFullName: (m) => m.firstName || '',
-    restorePeriodLock() {}, buildPeriod: () => ({}), render() {}, trLang: () => 'fr', toast() {}, seedFor: () => [], seedHours: () => ({}),
+    restorePeriodLock() {}, buildPeriod: () => ({}), render() {}, trLang: () => 'fr', toast: (message, options) => { toasts.push({ message, options }); }, seedFor: () => [], seedHours: () => ({}),
   });
   ms.loadCustomTeams && ms.loadCustomTeams();
-  return { ms, window, syncs, disk, handle: () => ms.teamCloudInit() };
+  return { ms, window, syncs, toasts, disk, handle: () => ms.teamCloudInit() };
 }
 const onDisk = (disk) => JSON.stringify(JSON.parse(disk.get('kiwiTeamV2:custom') || '{}'));
 /* a push may already be in flight (hydration, a scheduled one): wait it out, then push for real */
@@ -210,6 +210,26 @@ console.log('■ Codes du roster : publication interrompue, du navigateur à la 
   const sent = await flush(b);
   assert.ok(sent && sent.ok, 'resolved, the push goes out');
   assert.equal(JSON.stringify(await serverCodes()), before, 'and loses nothing');
+}
+/* F · team#A2 (r21): the till codes were PUBLISHED, then the Team profile document failed to save.
+   The owner must be told, with a way to retry, and a successful retry must clear the warning. */
+{
+  const disk = new Map(), b = browser(disk);
+  await b.handle().bind(); await b.ms.hydrateCodes();
+  place(b, b.window.__kiwiTeamV2.byVenue.v1.concat([{ id: 'm6', firstName: 'Noor', pinCode: '9753', password: '9753', venueSlug: SHOP }]));
+  const published = b.syncs.length;
+  net.cut = 'before'; b.ms.saveCustomTeams(); await flush(b); net.cut = null;
+  assert.ok(b.syncs.length > published && b.syncs[b.syncs.length - 1].some((p) => p.code === '9753'), 'the till code publication went out');
+  assert.equal((await serverCodes()).m6, undefined, 'while the profile document never reached the server');
+  assert.equal(b.toasts.length, 1, 'the owner is told once, not left believing the team is saved');
+  const t = b.toasts[0];
+  assert.match(t.message, /fiche Équipe/); assert.ok(!t.message.includes('9753'), 'the notice carries no code');
+  assert.equal(t.options.action.label, 'Réessayer');
+  t.options.action.onClick(); await flush(b);
+  assert.equal((await serverCodes()).m6, '9753', 'the retry saves the profile document');
+  net.cut = 'before'; place(b, b.window.__kiwiTeamV2.byVenue.v1.concat([{ id: 'm7', firstName: 'Ali', pinCode: '8123', password: '8123', venueSlug: SHOP }]));
+  b.ms.saveCustomTeams(); await flush(b); net.cut = null;
+  assert.equal(b.toasts.length, 2, 'after a good save a new failure is announced again');
 }
 console.log('  ✓ codes du roster : réponse perdue, requête perdue et lecture en panne, du vrai navigateur à la vraie route, sans perte ni copie en clair');
 process.exit(0);

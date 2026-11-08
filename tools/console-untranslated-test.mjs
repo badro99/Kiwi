@@ -17,7 +17,7 @@ import vm from 'node:vm';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const source = fs.readFileSync(new URL('../assets/admin-workspace.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../assets/admin-workspace-copy.js', import.meta.url), 'utf8') + ';' + fs.readFileSync(new URL('../assets/admin-workspace.js', import.meta.url), 'utf8');
 const policy = require('../assets/admin-policy.js');
 const SOURCES = ['quarantine', 'bridges', 'print', 'errors', 'support', 'integrations', 'caisseSync', 'shopify', 'shopifyLink', 'receivables', 'unpaidTables', 'zChecks', 'conflicts', 'tenantGuard', 'discountPolicy', 'saleFlags', 'activity', 'board', 'tasks', 'notes', 'events'];
 const DAY = 864e5;

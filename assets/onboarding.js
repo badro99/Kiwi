@@ -115,7 +115,7 @@
     if (dataLoad) return dataLoad;
     dataLoad = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = '/assets/onboarding-data.js?v=13';
+      script.src = '/assets/onboarding-data.js?v=16';
       const timer = setTimeout(() => failed(), 4000);
       const failed = () => { clearTimeout(timer); dataLoad = null; script.remove(); reject(new Error('onboarding-data')); };
       script.onload = () => { clearTimeout(timer); window.KiwiOnboardingData ? resolve(window.KiwiOnboardingData) : failed(); };
@@ -128,7 +128,7 @@
     const message = tr({ fr: 'Impossible de charger la configuration. Réessayez.', en: 'Could not load setup. Try again.', ar: 'تعذر تحميل الإعداد. أعد المحاولة.' });
     try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(message, { type: 'warn', force: true }); } catch (_) {}
   }
-  const warmData = () => { loadData().catch(() => {}); };
+  const warmData = () => { loadData().then((d) => { try { d.TeamImportPending.mount(window); } catch (_) {} }).catch(() => {}); };
   if (window.requestIdleCallback) window.requestIdleCallback(warmData);
   else setTimeout(warmData, 1200);
   function saveDraft() {
@@ -491,7 +491,7 @@
     } } : team;
     return { api, failed: (expected) => expected > 0 && (!seen.called || seen.threw) };
   }
-  let teamImportFailed = false;
+  let teamImportFailed = false, activationLost = false, teamBanner = false;
   /* ── Finish · persist + create venue + celebrate ─────────────────────── */
   // Submission activity belongs to the session owner.
   /* kit: the 2027 steps called this with { kit: true }; that kit was removed
@@ -534,9 +534,14 @@
       document.body.classList.add('role-owner');
     } catch (_) {}
 
-    teamImportFailed = teamTrack.failed(S.pins.filter((p) => (p.name || '').trim() || (p.role === 'owner' && S.ownerName.trim())).length);
+    const outcome = session.outcome();
+    teamImportFailed = teamTrack.failed(S.pins.filter((p) => (p.name || '').trim() || (p.role === 'owner' && S.ownerName.trim())).length) || outcome.teamPending;
+    /* The venue exists on the server but this device refused its activation
+       flags: say so, and rely on the server's verdict at the next load. */
+    teamBanner = outcome.teamPending && !outcome.persistFailed.includes('kiwiOnboardingTeamPending');
+    activationLost = outcome.persistFailed.some((k) => k !== 'kiwiOnboardingTeamPending') ? true : false;
     if (draft) draft.clear();
-    if (kit) return { vid: vid, teamImportFailed: teamImportFailed };
+    if (kit) return { vid: vid, teamImportFailed: teamImportFailed, activationLost };
     celebrate(vid);
   }
 
@@ -548,7 +553,9 @@
         <div class="kob-hero-mark kob-mint">${mi('M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z')}</div>
         <h1 class="kob-h kob-center">${name ? esc(name) + ', ' : ''}<span class="k-sans">${tr({ fr: 'votre espace est prêt.', en: 'your space is ready.', ar: 'مساحتك جاهزة.' })}</span></h1>
         <p class="kob-sub kob-sub-center">${tr({ fr: 'Enregistrez votre première vente et regardez votre tableau de bord prendre vie.', en: 'Record your first sale and watch your dashboard come alive.', ar: 'سجّل أول عملية بيع وشاهد لوحتك تنبض بالحياة.' })}</p>
-        ${teamImportFailed ? `<p class="kob-sub kob-sub-note" role="status">${tr({ fr: "Vos codes sont enregistrés, mais la liste Équipe n'a pas pu être remplie sur cet appareil. Ajoutez vos collègues depuis la page Équipe.", en: 'Your codes are saved, but the Team list could not be filled on this device. Add your colleagues from the Team page.', ar: 'تم حفظ رموزك، لكن تعذر ملء قائمة الفريق على هذا الجهاز. أضف زملاءك من صفحة الفريق.' })}</p>` : ''}
+        ${teamImportFailed && !teamBanner ? `<p class="kob-sub kob-sub-note" role="status">${tr({ fr: "Vos codes sont enregistrés, mais la liste Équipe n'a pas pu être remplie sur cet appareil. Ajoutez vos collègues depuis la page Équipe.", en: 'Your codes are saved, but the Team list could not be filled on this device. Add your colleagues from the Team page.', ar: 'تم حفظ رموزك، لكن تعذر ملء قائمة الفريق على هذا الجهاز. أضف زملاءك من صفحة الفريق.' })}</p>` : ''}
+        ${teamBanner ? `<p class="kob-sub kob-sub-note" role="status">${tr({ fr: "Vos codes sont enregistrés, mais la liste Équipe n'a pas pu être remplie sur cet appareil. Un bandeau « Terminer l'import de l'équipe » vous attend sur le tableau de bord.", en: 'Your codes are saved, but the Team list could not be filled on this device. A "Finish importing your team" banner waits for you on the dashboard.', ar: 'تم حفظ رموزك، لكن تعذر ملء قائمة الفريق على هذا الجهاز. ستجد شريط «إنهاء استيراد الفريق» في لوحة القيادة.' })}</p>` : ''}
+        ${activationLost ? `<p class="kob-sub kob-sub-note" role="alert">${tr({ fr: "Votre espace est créé, mais cet appareil n'a pas pu mémoriser la configuration (stockage plein ou bloqué). Libérez de l'espace puis reconnectez-vous : le serveur reconnaît votre établissement.", en: 'Your space is created, but this device could not remember the setup (storage full or blocked). Free some space and sign in again: the server knows your business.', ar: 'تم إنشاء مساحتك، لكن هذا الجهاز لم يتمكن من حفظ الإعداد (التخزين ممتلئ أو محظور). حرّر مساحة ثم سجّل الدخول مجدداً: الخادم يعرف نشاطك.' })}</p>` : ''}
       </div></div>
       <div class="kob-foot"><button class="kob-btn primary" data-enter>${tr({ fr: 'Entrer dans mon espace →', en: 'Enter my space →', ar: 'ادخل مساحتي ←' })}</button></div>`;
     root.querySelector('[data-enter]').focus({ preventScroll: true });
@@ -558,6 +565,7 @@
   function enterApp() {
     const name = S.ownerName.trim();
     close();
+    try { window.KiwiOnboardingData.TeamImportPending.mount(window); } catch (_) {}
     /* The identity gate answered "not onboarded" when this page loaded. Tell the
      * subscription gate (assets/entitlements-v2.js) the answer has changed, or a
      * pending store keeps writing into a server that refuses every save while
@@ -739,6 +747,8 @@
             if (value === undefined) draftAccount = result.account;
             return result.draft;
           };
+          /* Whose draft the transport talks to, so an owed deletion names its account. */
+          draft.transport.account = () => draftAccount;
           await draft.restore(S);
         }
       }

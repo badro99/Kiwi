@@ -72,7 +72,7 @@ var SHELL = [
   '/assets/team/roster-list.js?v=6',
   '/assets/team/invitations.js?v=9',
   '/assets/team/venue-scope.js?v=6',
-  '/assets/team/member-state.js?v=12',
+  '/assets/team/member-state.js?v=15',
   '/assets/stock/movements.js?v=3',
   '/assets/stock/alerts.js?v=6',
   '/assets/stock/overview.js?v=3',
@@ -108,7 +108,7 @@ var SHELL = [
   '/assets/booking-submission.js?v=18',
   '/assets/booking-hotel.js?v=5',
   '/assets/booking-service.js?v=5',
-  '/assets/onboarding-data.js?v=13',
+  '/assets/onboarding-data.js?v=16',
   // First-use dashboard owners must also open before the first offline visit.
   '/assets/ramadan.js?v=3',
   '/assets/growth-kit.js?v=2',
@@ -211,7 +211,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
-  '/assets/pages/dashboard-startup.js?v=215',
+  '/assets/pages/dashboard-startup.js?v=218',
   '/assets/pages/dashboard-loader.js?v=82',
   '/assets/hotel/model.js?v=10',
   '/assets/hotel/views.js?v=9',
@@ -230,7 +230,7 @@ var SHELL = [
   '/assets/liquid-glass.js?v=1',
   '/assets/agent-skin.css?v=15',
   '/assets/dashboard-native.css?v=1',
-  '/assets/cloud-doc.js?v=16',
+  '/assets/cloud-doc.js?v=18',
   '/assets/agent-action-center.js?v=4',
   '/assets/cancellation-history.js?v=3',
   '/assets/weather.js?v=1',
@@ -381,10 +381,10 @@ var SHELL = [
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
-  '/assets/tenant-purge.js?v=11',
+  '/assets/tenant-purge.js?v=12',
   /* La porte du dashboard hors ligne : des lignes salées que le serveur a prouvées,
      jamais un code. Absent de la coquille, un patron hors ligne ne rentrerait plus. */
-  '/assets/dashboard-pin-vault.js?v=6',
+  '/assets/dashboard-pin-vault.js?v=8',
   /* Le geste qui pose un appairage · et qui déclenche la purge ci-dessus. La
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */
@@ -465,7 +465,7 @@ var SHELL = [
   '/assets/team/catalog.js?v=2',
   '/assets/team/merge.js?v=2',
   '/assets/field-merge.js?v=8',
-  '/assets/team.js?v=357',
+  '/assets/team.js?v=360',
   '/assets/team/profile-ui.js?v=22',
   '/assets/team-hours.js?v=30',
   '/assets/menu-i18n.js?v=8',

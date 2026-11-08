@@ -46,7 +46,7 @@ const cases = {
   assert.ok(s.includes('await writeUnresolved'));
  },
  async health() {
-  const s=read('assets/admin-workspace.js');
+  const s=read('assets/admin-workspace-copy.js')+';'+read('assets/admin-workspace.js');
   const fn=s.slice(s.indexOf('  function allSignals(){'),s.indexOf('  function queue('));
   const now=Date.now(), merchant='merchant';
   for (const [reports,expected] of [[[],true],[[{updated_ts:now-86400001,sync:{},stock:{}}],true],[[{updated_ts:now,sync:{}}],true],[[{updated_ts:now,sync:{},stock:{}}],false]]) {

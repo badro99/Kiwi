@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
 const html = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'utf8');
-const workspace = fs.readFileSync(new URL('../assets/admin-workspace.js', import.meta.url), 'utf8');
+const workspace = fs.readFileSync(new URL('../assets/admin-workspace-copy.js', import.meta.url), 'utf8') + ';' + fs.readFileSync(new URL('../assets/admin-workspace.js', import.meta.url), 'utf8');
 const workspaceApi = fs.readFileSync(new URL('../functions/api/admin/_workspace.js', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../assets/admin-workspace.css', import.meta.url), 'utf8');
 const policy = fs.readFileSync(new URL('../assets/admin-policy.js', import.meta.url), 'utf8');

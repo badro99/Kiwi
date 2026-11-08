@@ -24,6 +24,8 @@
 
   var TENANT_KEYS = [
     'kiwiCustomVenues', 'kiwiVenue', 'kiwiVenueCount', 'kiwiOnboarded', 'kiwiSkipOnboard', 'kiwiOnboardingDraft:v1',
+    /* La dette de suppression du brouillon serveur nomme un COMPTE, et la tâche « terminer l'import de l'équipe » un établissement : aucun ne suit un autre commerçant. */
+    'kiwiOnboardingDraft:clear', 'kiwiOnboardingTeamPending',
     'kiwiOwnerName', 'kiwiBizName', 'kiwiBizType', 'kiwiCity', 'kiwiTeamSize', 'kiwiGoals',
     'kiwiPins', 'kiwiLiveMerchant', 'kiwiLive', 'kiwiPaired', 'kiwiPairedVenue', 'kiwiPairings',
     'kiwiBizExtra', 'kiwiTeamV2:custom', 'kiwiSet:ownerName', 'kiwiSet:ownerEmail',

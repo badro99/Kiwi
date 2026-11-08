@@ -2269,6 +2269,7 @@ section('Whole-project regressions');
     'onboarding-truth-test.mjs',
     'lane-c-labels-test.mjs',
     'onboarding-data-test.mjs',
+    'onboarding-r21-test.mjs',
     'onboarding-split-test.mjs',
     'onboarding-session-test.mjs',
     'onboarding-alignment-properties-test.mjs',
@@ -3126,7 +3127,7 @@ section('Politique typographique (tools/type-policy-test.js)');
  * coverage holds §10 to §18's quoted strings; sw holds the stamp layout;
  * bidi holds the isolation of every argument (its DOM half needs Chromium). */
 section('Chaînes à clé · design 2027 (strings-*-test, strings-lint)');
-for (const test of ['checkout-keyed-language-test.mjs', 'checkout-language-payment-test.mjs', 'i18n-cross-system-test.mjs', 'wave-p-i18n-test.mjs', 'console-untranslated-test.mjs', 'console-operators-load-test.mjs', 'wave-11-i18n-test.mjs', 'dynamic-i18n-test.mjs', 'cx-copy-language-test.mjs', 'channel-link-deadline-test.mjs', 'catalog-whole-quantity-test.mjs', 'kpi-deadline-test.mjs', 'strings-completeness-test.mjs', 'strings-lint.mjs', 'strings-coverage-test.mjs', 'strings-sw-test.mjs', 'strings-bidi-test.mjs']) {
+for (const test of ['checkout-keyed-language-test.mjs', 'checkout-language-payment-test.mjs', 'i18n-cross-system-test.mjs', 'wave-p-i18n-test.mjs', 'console-untranslated-test.mjs', 'console-copy-dictionary-test.mjs', 'console-lost-reply-test.mjs', 'console-operators-load-test.mjs', 'wave-11-i18n-test.mjs', 'dynamic-i18n-test.mjs', 'cx-copy-language-test.mjs', 'channel-link-deadline-test.mjs', 'catalog-whole-quantity-test.mjs', 'kpi-deadline-test.mjs', 'strings-completeness-test.mjs', 'strings-lint.mjs', 'strings-coverage-test.mjs', 'strings-sw-test.mjs', 'strings-bidi-test.mjs']) {
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding: 'utf8' });
   const out = (r.stdout || '') + (r.stderr || '');

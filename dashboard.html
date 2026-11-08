@@ -1113,8 +1113,8 @@
 <!-- Establish the signed account/operator identity before any tenant-scoped
      data module starts. God Mode must never infer authority from ?op=1, and
      its one-shot snapshot must not miss the identity promise at boot. -->
-<script defer src="assets/tenant-purge.js?v=11"></script>
-<script defer src="assets/dashboard-pin-vault.js?v=6"></script>
+<script defer src="assets/tenant-purge.js?v=12"></script>
+<script defer src="assets/dashboard-pin-vault.js?v=8"></script>
 <script defer src="assets/identity.js?v=12"></script>
 <link rel="modulepreload" href="assets/live-link/queue-store.js?v=23">
 <script type="module" defer src="assets/live-link.js?v=118"></script>
@@ -1140,8 +1140,8 @@
 <script src="assets/kit/motion.js?v=1" defer></script>
 <script src="assets/kit/lens.js?v=1" defer></script>
 <script src="assets/liquid-lens.js?v=11" defer></script>
-<script src="assets/onboarding-data.js?v=13" defer></script>
-<script src="assets/onboarding.js?v=2128" defer></script>
+<script src="assets/onboarding-data.js?v=16" defer></script>
+<script src="assets/onboarding.js?v=2131" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
@@ -1187,7 +1187,7 @@
 <!-- La copie serveur de tout ce qu'un commerçant configure (carte, équipe,
      fidélité…) : un deuxième appareil ne doit pas trouver un établissement
      vide. AVANT venue-store.js et team.js, qui s'y branchent. -->
-<script src="assets/cloud-doc.js?v=16" defer fetchpriority="low"></script>
+<script src="assets/cloud-doc.js?v=18" defer fetchpriority="low"></script>
 <!-- Tenant-scoped approval queue and audited inverse operations for Kiwi AI. -->
 <script src="assets/agent-action-center.js?v=4" defer fetchpriority="low"></script>
 <!-- Promotions use the same per-boutique catalogue key. The owner edits them
@@ -1242,7 +1242,7 @@
 
 <script src="assets/clients-directory.js?v=40" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=21" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=215" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=218" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1269,7 +1269,7 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=215"></script>
+<script src="assets/pages/dashboard-startup.js?v=218"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=17">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
 <script src="assets/pages/dashboard-loader.js?v=82" defer fetchpriority="low"></script>

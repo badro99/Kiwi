@@ -8,13 +8,13 @@
     {
       "name": "memberState",
       "file": "assets/team/member-state.js",
-      "prefix": "/* Owner: memberState. Exports create() through KiwiTeamParts.memberState.\n * Window reads: Kiwi, KiwiCloudDoc, KiwiConfig, KiwiPlanningCore, KiwiVenue, __kiwiTeamV2, __kiwiTenantPurging, dispatchEvent.\n * Instance exports: isCode, memberCode, codeUnresolved, rosterHasUnresolved, diskMembers, outboundMembers, fillCodes, applyServerCodes, reservedCode, publishPins, teamAccount, rosterWriteBlocked, loadCustomTeams, cleanRemoved, mergeRemoved, cleanLocks, mergeLocks, persistTeams, afterTeamChange, saveCustomTeams, mergeByDay, mergeTeamDoc, teamCloudInit, teamReadTimedOut, hydrateCodes, teamCloudBind, teamCloudPush, ensureVenueData, getMembers, getHours, getShifts, periodOffsets, current, setPageActive, resetReadFailure.\n * lexical imports: fetchDeadline, teamKey, teamVenueKey, teamSlug, memberBelongsToStore, scopeTeamDoc, persistableTeamKey, memberFullName, restorePeriodLock, buildPeriod, render, trLang, toast, seedFor, seedHours.\n * Mutable persistence and credential knowledge belong only to memberState. */\n(function () {\n  'use strict';\n  window.KiwiTeamParts ||= {};\n  const parts = window.KiwiTeamParts;\n  parts.memberState = Object.freeze({ create(deps) {\n  const {\n    fetchDeadline,\n    teamKey,\n    teamVenueKey,\n    teamSlug,\n    memberBelongsToStore,\n    scopeTeamDoc,\n    persistableTeamKey,\n    memberFullName,\n    restorePeriodLock,\n    buildPeriod,\n    render,\n    trLang,\n    toast,\n    seedFor,\n    seedHours,\n  } = deps;\n  let pageActive = false;\n  /* ═══════════════ LES CODES NE RESTENT PAS SUR LE DISQUE ═══════════════════\n   * Chaque salarié porte le code à quatre chiffres qui lui ouvre la caisse et\n   * l'app employé (`pinCode` / `password`). Il était écrit EN CLAIR dans\n   * localStorage (kiwiTeamV2:custom) : lisible dans n'importe quel navigateur où\n   * le patron a ouvert Équipe (CLAUDE.md §6). Le patron, lui, doit continuer de\n   * le LIRE ici — c'est voulu, voir functions/api/store.js › stripTeamCodes.\n   *\n   * La règle : le disque ne garde un code que tant que le serveur ne l'a pas.\n   *   · le code vit en mémoire (memberState.current()), comme avant ;\n   *   · persistTeams() l'ôte de la copie locale d'un salarié SEULEMENT si le\n   *     serveur a confirmé ce code (`serverCodes` : lu par hydrateCodes(), ou\n   *     accepté par une remontée réussie). Un code que le serveur n'a pas ne\n   *     quitte jamais le disque : jamais de perte ;\n   *   · un salarié dont le code a été ôté porte `hasCode: true` (jamais le code),\n   *     et le patron le retrouve au chargement depuis la copie serveur.\n   *\n   * ⚠ Le danger n'est pas la lecture, c'est le RENVOI. La remontée du roster\n   * (staff_pins, le document `team`, d'où l'app employé tire ses accès)\n   * REMPLACE ce que le serveur porte par ce que le navigateur envoie : un\n   * navigateur qui a oublié des codes les effacerait chez le serveur, et les\n   * caissières se retrouveraient devant un pavé qui n'ouvre plus. Donc, tant\n   * qu'un salarié a `hasCode` sans code en mémoire (« non résolu »), RIEN ne part :\n   * ni publishPins(), ni la remontée du document (canPush de cloud-doc.js). */\n  /* ═══════════════ PUBLISH THE ROSTER'S CODES TO THE TILL ═══════════════\n   * The till does not read this roster: it asks /api/config for the store's\n   * staff codes (see the PIN gate in assets/caisse-pairing.js). Only the\n   * onboarding wizard ever wrote there, so a cashier hired afterwards had a code\n   * on their profile that the till had never heard of — the owner typed it and\n   * got \"Code incorrect\". Every roster change now republishes.\n   *\n   * /api/config REPLACES the store's whole code list, so we always send the FULL\n   * roster — sending only the new hire would silently revoke everyone else,\n   * including the owner's own code from onboarding. Real (custom, onboarded)\n   * venues only: a demo venue has no session, and pushing seeded demo staff into\n   * a real merchant's row is exactly the leak the venue split exists to prevent.\n   * Fail-soft — no endpoint, no session, offline: the roster is still saved\n   * locally and this is a no-op. */\n  /* ═══════════════ LA COPIE SERVEUR ═══════════════════════════════════════\n   * Ce roster n'avait AUCUN appel réseau. Vingt salariés, leurs contrats, leurs\n   * taux horaires, et quatre semaines de planning ne vivaient que dans le\n   * localStorage du navigateur qui les avait saisis : le commerçant ouvrait Kiwi\n   * sur l'iPad du comptoir et trouvait une équipe vide, avec une masse salariale\n   * à zéro. La page s'appelle « Paie & planning » — c'est de l'argent, et il\n   * faut le ressaisir à chaque appareil.\n   *\n   * On miroite donc par MAGASIN vers /api/store (assets/cloud-doc.js), qui porte\n   * les trois règles : ne jamais perdre de donnée sur une panne, ne jamais\n   * écraser l'autre appareil, ne jamais pousser avant d'avoir lu.\n   *\n   * La clé est le slug du magasin, pas `teamKey()`. teamKey d'une venue\n   * personnalisée EST son identifiant de venue, que venues.js tire de l'horloge\n   * à la création ou du slug à l'adoption : deux navigateurs du même commerçant\n   * ne s'accordent jamais dessus. cloud-doc.js fait la traduction.\n   *\n   * Le stockage local, lui, ne bouge pas d'un octet : kiwiTeamV2:custom garde\n   * ses seaux par venue, et toutes les lectures existantes trouvent leur roster\n   * là où il a toujours été. */\n",
-      "suffix": "  return Object.freeze({ isCode, memberCode, codeUnresolved, rosterHasUnresolved, diskMembers, outboundMembers, fillCodes, applyServerCodes, reservedCode, publishPins, teamAccount, rosterWriteBlocked, loadCustomTeams, cleanRemoved, mergeRemoved, cleanLocks, mergeLocks, persistTeams, afterTeamChange, saveCustomTeams, mergeByDay, mergeTeamDoc, teamCloudInit, teamReadTimedOut, hydrateCodes, teamCloudBind, teamCloudPush, ensureVenueData, getMembers, getHours, getShifts, periodOffsets, current() { return window.__kiwiTeamV2; }, setPageActive(value) { pageActive = value; }, resetReadFailure() { teamReadFailed = false; } });\n  } });\n})();\n",
+      "prefix": "/* Owner: memberState. Exports create() through KiwiTeamParts.memberState.\n * Window reads: Kiwi, KiwiCloudDoc, KiwiConfig, KiwiPlanningCore, KiwiVenue, __kiwiTeamV2, __kiwiTenantPurging, addEventListener, dispatchEvent.\n * Instance exports: isCode, memberCode, codeUnresolved, rosterHasUnresolved, diskMembers, outboundMembers, fillCodes, applyServerCodes, reservedCode, publishPins, teamAccount, rosterWriteBlocked, loadCustomTeams, cleanRemoved, mergeRemoved, cleanLocks, mergeLocks, persistTeams, afterTeamChange, saveCustomTeams, mergeByDay, mergeTeamDoc, teamCloudInit, teamReadTimedOut, hydrateCodes, teamCloudBind, teamCloudPush, ensureVenueData, getMembers, getHours, getShifts, periodOffsets, current, setPageActive, resetReadFailure.\n * lexical imports: fetchDeadline, teamKey, teamVenueKey, teamSlug, memberBelongsToStore, scopeTeamDoc, persistableTeamKey, memberFullName, restorePeriodLock, buildPeriod, render, trLang, toast, seedFor, seedHours.\n * Mutable persistence and credential knowledge belong only to memberState. */\n(function () {\n  'use strict';\n  window.KiwiTeamParts ||= {};\n  const parts = window.KiwiTeamParts;\n  parts.memberState = Object.freeze({ create(deps) {\n  const {\n    fetchDeadline,\n    teamKey,\n    teamVenueKey,\n    teamSlug,\n    memberBelongsToStore,\n    scopeTeamDoc,\n    persistableTeamKey,\n    memberFullName,\n    restorePeriodLock,\n    buildPeriod,\n    render,\n    trLang,\n    toast,\n    seedFor,\n    seedHours,\n  } = deps;\n  let pageActive = false;\n  /* ═══════════════ LES CODES NE RESTENT PAS SUR LE DISQUE ═══════════════════\n   * Chaque salarié porte le code à quatre chiffres qui lui ouvre la caisse et\n   * l'app employé (`pinCode` / `password`). Il était écrit EN CLAIR dans\n   * localStorage (kiwiTeamV2:custom) : lisible dans n'importe quel navigateur où\n   * le patron a ouvert Équipe (CLAUDE.md §6). Le patron, lui, doit continuer de\n   * le LIRE ici — c'est voulu, voir functions/api/store.js › stripTeamCodes.\n   *\n   * La règle : le disque ne garde un code que tant que le serveur ne l'a pas.\n   *   · le code vit en mémoire (memberState.current()), comme avant ;\n   *   · persistTeams() l'ôte de la copie locale d'un salarié SEULEMENT si le\n   *     serveur a confirmé ce code (`serverCodes` : lu par hydrateCodes(), ou\n   *     accepté par une remontée réussie). Un code que le serveur n'a pas ne\n   *     quitte jamais le disque : jamais de perte ;\n   *   · un salarié dont le code a été ôté porte `hasCode: true` (jamais le code),\n   *     et le patron le retrouve au chargement depuis la copie serveur.\n   *\n   * ⚠ Le danger n'est pas la lecture, c'est le RENVOI. La remontée du roster\n   * (staff_pins, le document `team`, d'où l'app employé tire ses accès)\n   * REMPLACE ce que le serveur porte par ce que le navigateur envoie : un\n   * navigateur qui a oublié des codes les effacerait chez le serveur, et les\n   * caissières se retrouveraient devant un pavé qui n'ouvre plus. Donc, tant\n   * qu'un salarié a `hasCode` sans code en mémoire (« non résolu »), RIEN ne part :\n   * ni publishPins(), ni la remontée du document (canPush de cloud-doc.js). */\n  /* ═══════════════ PUBLISH THE ROSTER'S CODES TO THE TILL ═══════════════\n   * The till does not read this roster: it asks /api/config for the store's\n   * staff codes (see the PIN gate in assets/caisse-pairing.js). Only the\n   * onboarding wizard ever wrote there, so a cashier hired afterwards had a code\n   * on their profile that the till had never heard of — the owner typed it and\n   * got \"Code incorrect\". Every roster change now republishes.\n   *\n   * /api/config REPLACES the store's whole code list, so we always send the FULL\n   * roster — sending only the new hire would silently revoke everyone else,\n   * including the owner's own code from onboarding. Real (custom, onboarded)\n   * venues only: a demo venue has no session, and pushing seeded demo staff into\n   * a real merchant's row is exactly the leak the venue split exists to prevent.\n   * Fail-soft — no endpoint, no session, offline: the roster is still saved\n   * locally and this is a no-op. */\n  /* ═══════════════ LA COPIE SERVEUR ═══════════════════════════════════════\n   * Ce roster n'avait AUCUN appel réseau. Vingt salariés, leurs contrats, leurs\n   * taux horaires, et quatre semaines de planning ne vivaient que dans le\n   * localStorage du navigateur qui les avait saisis : le commerçant ouvrait Kiwi\n   * sur l'iPad du comptoir et trouvait une équipe vide, avec une masse salariale\n   * à zéro. La page s'appelle « Paie & planning » — c'est de l'argent, et il\n   * faut le ressaisir à chaque appareil.\n   *\n   * On miroite donc par MAGASIN vers /api/store (assets/cloud-doc.js), qui porte\n   * les trois règles : ne jamais perdre de donnée sur une panne, ne jamais\n   * écraser l'autre appareil, ne jamais pousser avant d'avoir lu.\n   *\n   * La clé est le slug du magasin, pas `teamKey()`. teamKey d'une venue\n   * personnalisée EST son identifiant de venue, que venues.js tire de l'horloge\n   * à la création ou du slug à l'adoption : deux navigateurs du même commerçant\n   * ne s'accordent jamais dessus. cloud-doc.js fait la traduction.\n   *\n   * Le stockage local, lui, ne bouge pas d'un octet : kiwiTeamV2:custom garde\n   * ses seaux par venue, et toutes les lectures existantes trouvent leur roster\n   * là où il a toujours été. */\n",
+      "suffix": "  /* Les codes partent vers la caisse AVANT la remontée de la fiche Équipe (afterTeamChange publie\n     d'abord) : si la fiche, elle, ne s'enregistre pas, le patron le voit et peut relancer, au lieu de\n     croire l'équipe sauvegardée (cloud-doc.js annonce chaque issue par `kiwi:doc-push`). */\n  let saveFailureShown = false;\n  try {\n    window.addEventListener('kiwi:doc-push', (event) => {\n      const d = event && event.detail;\n      if (!d || d.feature !== 'team') return;\n      if (d.ok) { saveFailureShown = false; return; }\n      if (saveFailureShown) return;\n      saveFailureShown = true;\n      const label = { fr: ['Les codes sont enregistrés pour la caisse, mais la fiche Équipe n’a pas pu être sauvegardée. Elle reste sur cet appareil.', 'Réessayer'], en: ['The codes are saved for the till, but the Team profiles could not be saved. They stay on this device.', 'Retry'], ar: ['حُفظت الرموز للصندوق، لكن تعذّر حفظ ملفات الفريق. تبقى على هذا الجهاز.', 'إعادة المحاولة'] };\n      const copy = label[trLang()] || label.fr;\n      toast(copy[0], { type: 'pend', duration: 12000, action: { label: copy[1], onClick: () => { saveFailureShown = false; teamCloudPush(); } } });\n    });\n  } catch (_) {}\n\n  return Object.freeze({ isCode, memberCode, codeUnresolved, rosterHasUnresolved, diskMembers, outboundMembers, fillCodes, applyServerCodes, reservedCode, publishPins, teamAccount, rosterWriteBlocked, loadCustomTeams, cleanRemoved, mergeRemoved, cleanLocks, mergeLocks, persistTeams, afterTeamChange, saveCustomTeams, mergeByDay, mergeTeamDoc, teamCloudInit, teamReadTimedOut, hydrateCodes, teamCloudBind, teamCloudPush, ensureVenueData, getMembers, getHours, getShifts, periodOffsets, current() { return window.__kiwiTeamV2; }, setPageActive(value) { pageActive = value; }, resetReadFailure() { teamReadFailed = false; } });\n  } });\n})();\n",
       "fragments": [
         {
           "start": 5204,
           "end": 5276,
-          "offset": 5329,
+          "offset": 5347,
           "length": 72,
           "replacement": "  function isCode(...args) { return memberState.isCode(...args); }\n",
           "sha256": "2ceb78879ae8a23dc1fea1f1a236d7b53b524a881746cb15353a024949aee4c8"
@@ -22,7 +22,7 @@
         {
           "start": 6900,
           "end": 7078,
-          "offset": 5402,
+          "offset": 5420,
           "length": 178,
           "replacement": "  function memberCode(...args) { return memberState.memberCode(...args); }\n",
           "sha256": "d97fef568c7d2d14a37e01cf93f7e39ea9afdc4cfe1fb09dc2622196463ce812"
@@ -30,7 +30,7 @@
         {
           "start": 7078,
           "end": 7156,
-          "offset": 5581,
+          "offset": 5599,
           "length": 78,
           "replacement": "  function codeUnresolved(...args) { return memberState.codeUnresolved(...args); }\n",
           "sha256": "d8e05670532f5f914edff3162f7010f00105f6e1e561455c9baa6f5aa47d6703"
@@ -38,7 +38,7 @@
         {
           "start": 7156,
           "end": 7269,
-          "offset": 5660,
+          "offset": 5678,
           "length": 113,
           "replacement": "  function rosterHasUnresolved(...args) { return memberState.rosterHasUnresolved(...args); }\n",
           "sha256": "a9ca4ac8fa9d870459cca04c6d04287d8f85592dbdfab14cbd583da2289f26a0"
@@ -46,7 +46,7 @@
         {
           "start": 7353,
           "end": 7702,
-          "offset": 5774,
+          "offset": 5792,
           "length": 349,
           "replacement": "  function diskMembers(...args) { return memberState.diskMembers(...args); }\n",
           "sha256": "9a0e3c510bea1c4c215dd21b234471f66e166d76363a4ef52cfc8d5e5331b643"
@@ -54,7 +54,7 @@
         {
           "start": 7791,
           "end": 8007,
-          "offset": 6124,
+          "offset": 6142,
           "length": 216,
           "replacement": "  function outboundMembers(...args) { return memberState.outboundMembers(...args); }\n",
           "sha256": "ac5d79c67daf4ebccd5e385b75786b8cd9414ee631ac62020f500240d8367504"
@@ -62,7 +62,7 @@
         {
           "start": 8126,
           "end": 8523,
-          "offset": 6341,
+          "offset": 6359,
           "length": 397,
           "replacement": "  function fillCodes(...args) { return memberState.fillCodes(...args); }\n",
           "sha256": "882d4223b856ad774daabab72032fd8dede13e3fab064777b6fcefbf96890655"
@@ -70,7 +70,7 @@
         {
           "start": 8987,
           "end": 9775,
-          "offset": 6739,
+          "offset": 6757,
           "length": 788,
           "replacement": "  function applyServerCodes(...args) { return memberState.applyServerCodes(...args); }\n",
           "sha256": "408f6d3624bac2c70d16bf0730dbd6a7ae41aa8d88cf3d902f2b47ec0c184aec"
@@ -78,7 +78,7 @@
         {
           "start": 9775,
           "end": 9817,
-          "offset": 7528,
+          "offset": 7546,
           "length": 42,
           "replacement": "  /* team-owner:memberState:serverCodes */\n",
           "sha256": "2506885b7ea1c62798fffc970edcbfeb5271ba8967374939ddc1c72991427531"
@@ -86,7 +86,7 @@
         {
           "start": 10859,
           "end": 13225,
-          "offset": 7571,
+          "offset": 7589,
           "length": 2366,
           "replacement": "  function publishPins(...args) { return memberState.publishPins(...args); }\n",
           "sha256": "8d896f327c6e20e7c534e702137fa895d31c9ad84b6e1e17bfd49aa4b0b7f37e"
@@ -94,7 +94,7 @@
         {
           "start": 26458,
           "end": 26553,
-          "offset": 9938,
+          "offset": 9956,
           "length": 95,
           "replacement": "  function getShifts(...args) { return memberState.getShifts(...args); }\n",
           "sha256": "73b3609d74703bebf6a6dd625634078302d677f77ef95facb62c58e82f20940d"
@@ -102,7 +102,7 @@
         {
           "start": 28713,
           "end": 28752,
-          "offset": 10034,
+          "offset": 10052,
           "length": 39,
           "replacement": "  /* team-owner:memberState:LS_TEAM */\n",
           "sha256": "01e27585065faaeacc2ec4a8a4c60f7e0a862f00ce93349b74d49630d7968230"
@@ -110,7 +110,7 @@
         {
           "start": 29427,
           "end": 29571,
-          "offset": 10074,
+          "offset": 10092,
           "length": 144,
           "replacement": "  function teamAccount(...args) { return memberState.teamAccount(...args); }\n",
           "sha256": "ed3a097e8a48a4b8647f870b309595229f0437963ceebc7f264b586055da328c"
@@ -118,7 +118,7 @@
         {
           "start": 29571,
           "end": 29609,
-          "offset": 10219,
+          "offset": 10237,
           "length": 38,
           "replacement": "  /* team-owner:memberState:ROSTER_ACCOUNT */\n",
           "sha256": "76ef2e177a55d8590adb19665d8ff3b34ff229412213c693325d96e59251038f"
@@ -126,7 +126,7 @@
         {
           "start": 29609,
           "end": 29794,
-          "offset": 10258,
+          "offset": 10276,
           "length": 185,
           "replacement": "  function rosterWriteBlocked(...args) { return memberState.rosterWriteBlocked(...args); }\n",
           "sha256": "a0d3f42b3ce3337855e6a56e70dd92f34247b50ac8f483ed980115762d01f63e"
@@ -134,7 +134,7 @@
         {
           "start": 29794,
           "end": 30874,
-          "offset": 10444,
+          "offset": 10462,
           "length": 1080,
           "replacement": "  function loadCustomTeams(...args) { return memberState.loadCustomTeams(...args); }\n",
           "sha256": "b0beb3159b593a6a657af25719183d539d52120f37520eb89cf4a2ffb5c21501"
@@ -142,7 +142,7 @@
         {
           "start": 30874,
           "end": 30901,
-          "offset": 11525,
+          "offset": 11543,
           "length": 27,
           "replacement": "  /* team-owner:memberState:REMOVED_CAP */\n",
           "sha256": "1ec800b7b06a58357ffea32d6ca50714fea5d11d894086c87a641213cf4798f4"
@@ -150,7 +150,7 @@
         {
           "start": 30901,
           "end": 31333,
-          "offset": 11553,
+          "offset": 11571,
           "length": 432,
           "replacement": "  function cleanRemoved(...args) { return memberState.cleanRemoved(...args); }\n",
           "sha256": "b33c729279f875e4e8449ca55705d41d4620025394fa0266f706b04e004e5ba5"
@@ -158,7 +158,7 @@
         {
           "start": 31333,
           "end": 31417,
-          "offset": 11986,
+          "offset": 12004,
           "length": 84,
           "replacement": "  function mergeRemoved(...args) { return memberState.mergeRemoved(...args); }\n",
           "sha256": "8fb507f372dd3e269287861f5ee4e57291944aaa794c8f5c6a042f3016f1c3d1"
@@ -166,7 +166,7 @@
         {
           "start": 31417,
           "end": 31503,
-          "offset": 12071,
+          "offset": 12089,
           "length": 86,
           "replacement": "  /* team-owner:memberState:LOCK_KEY_RE */\n",
           "sha256": "51c764b88d593ee619bea479a1892015a468bd5226c95f459f5feaaa3eb908c1"
@@ -174,7 +174,7 @@
         {
           "start": 31503,
           "end": 31789,
-          "offset": 12158,
+          "offset": 12176,
           "length": 286,
           "replacement": "  function cleanLocks(...args) { return memberState.cleanLocks(...args); }\n",
           "sha256": "916d70e0d3d5be58e9e0e83be9704c64bcee83b5ee578897bbf65effc326936e"
@@ -182,7 +182,7 @@
         {
           "start": 31789,
           "end": 32027,
-          "offset": 12445,
+          "offset": 12463,
           "length": 238,
           "replacement": "  function mergeLocks(...args) { return memberState.mergeLocks(...args); }\n",
           "sha256": "d66144c48389348afbd2036ba889bc718effec7662a6d6bb078c0c8e14c5b6ae"
@@ -190,7 +190,7 @@
         {
           "start": 32267,
           "end": 33205,
-          "offset": 12684,
+          "offset": 12702,
           "length": 938,
           "replacement": "  function persistTeams(...args) { return memberState.persistTeams(...args); }\n",
           "sha256": "421d0891879d7a96face0b8fe0e61d4a03638165aa2d9886a4746602a1ab5dff"
@@ -198,7 +198,7 @@
         {
           "start": 33205,
           "end": 33768,
-          "offset": 13623,
+          "offset": 13641,
           "length": 563,
           "replacement": "  function afterTeamChange(...args) { return memberState.afterTeamChange(...args); }\n",
           "sha256": "a1fea2ea026702b8cc5620a3c5313e106153e6c14ba49def2c15c257c3908158"
@@ -206,7 +206,7 @@
         {
           "start": 33768,
           "end": 34059,
-          "offset": 14187,
+          "offset": 14205,
           "length": 291,
           "replacement": "  function saveCustomTeams(...args) { return memberState.saveCustomTeams(...args); }\n",
           "sha256": "0606cdb352bad5167fcaad882405f69b4b567ff21fdf75796f58144d2afc7eda"
@@ -214,7 +214,7 @@
         {
           "start": 38394,
           "end": 38895,
-          "offset": 14479,
+          "offset": 14497,
           "length": 501,
           "replacement": "  function mergeByDay(...args) { return memberState.mergeByDay(...args); }\n",
           "sha256": "23bbfda7ce869bbd87fbe31ad7fb47d63432fcd08f4d92ada6c4ae92b406c8ad"
@@ -222,7 +222,7 @@
         {
           "start": 38895,
           "end": 40218,
-          "offset": 14981,
+          "offset": 14999,
           "length": 1323,
           "replacement": "  function mergeTeamDoc(...args) { return memberState.mergeTeamDoc(...args); }\n",
           "sha256": "c9cd97e92d4169ab5d8062b16a3bea63c57c22ddbc88bab96f825562b2143e3c"
@@ -230,7 +230,7 @@
         {
           "start": 40219,
           "end": 40243,
-          "offset": 16305,
+          "offset": 16323,
           "length": 24,
           "replacement": "  /* team-owner:memberState:teamCloud */\n",
           "sha256": "42bb234034a84995cf9fb65ab44068cf8a051ef7c74da983fe75d61db9179652"
@@ -238,7 +238,7 @@
         {
           "start": 40243,
           "end": 43097,
-          "offset": 16330,
+          "offset": 16348,
           "length": 2854,
           "replacement": "  function teamCloudInit(...args) { return memberState.teamCloudInit(...args); }\n",
           "sha256": "cc1a31f5b1d1e2bcd9dfc93745c26c7ba5c746546b5f56c85eecbbf2f92fc813"
@@ -246,7 +246,7 @@
         {
           "start": 43097,
           "end": 43120,
-          "offset": 19185,
+          "offset": 19203,
           "length": 23,
           "replacement": "  /* team-owner:memberState:heldPush */\n",
           "sha256": "4a5e5e5547b523c58e783c5a6f82920bb174f145d5a6460ec1b49c2905b8b2af"
@@ -254,7 +254,7 @@
         {
           "start": 43653,
           "end": 43683,
-          "offset": 19209,
+          "offset": 19227,
           "length": 30,
           "replacement": "  /* team-owner:memberState:teamReadFailed */\n",
           "sha256": "1fd7e1c6b0b7c93b88a4811f242e99cd074c50e21f31dc02b34d9c59c6ca6daf"
@@ -262,7 +262,7 @@
         {
           "start": 43683,
           "end": 44046,
-          "offset": 19240,
+          "offset": 19258,
           "length": 363,
           "replacement": "  function teamReadTimedOut(...args) { return memberState.teamReadTimedOut(...args); }\n",
           "sha256": "c8e690f0d80750e0fdffa94c9a3cbec25cd7c08aabb5e658f29c24b8725918ca"
@@ -270,7 +270,7 @@
         {
           "start": 44046,
           "end": 45165,
-          "offset": 19604,
+          "offset": 19622,
           "length": 1119,
           "replacement": "  function hydrateCodes(...args) { return memberState.hydrateCodes(...args); }\n",
           "sha256": "fd855bb6a8244f2e51148e1a0cd6494feab595506d117da726b9c6f44af44c3e"
@@ -278,7 +278,7 @@
         {
           "start": 45165,
           "end": 45428,
-          "offset": 20724,
+          "offset": 20742,
           "length": 263,
           "replacement": "  function teamCloudBind(...args) { return memberState.teamCloudBind(...args); }\n",
           "sha256": "e3ca33af2b0c2b0b286bbd5945b0f8d5e9823832b85d0f6aa24deb6135376121"
@@ -286,7 +286,7 @@
         {
           "start": 45428,
           "end": 45513,
-          "offset": 20988,
+          "offset": 21006,
           "length": 85,
           "replacement": "  function teamCloudPush(...args) { return memberState.teamCloudPush(...args); }\n",
           "sha256": "b8c2572dc8193af718b5ee1c30c0037f95f82629a03d8f462962d22b8a4e8bfe"
@@ -294,7 +294,7 @@
         {
           "start": 45514,
           "end": 47288,
-          "offset": 21074,
+          "offset": 21092,
           "length": 1774,
           "replacement": "  function ensureVenueData(...args) { return memberState.ensureVenueData(...args); }\n",
           "sha256": "0ca64d00b799180f01e9eb4794b789fe9584b45eceb067b75ff59ad1b064dc2f"
@@ -302,7 +302,7 @@
         {
           "start": 47288,
           "end": 47378,
-          "offset": 22849,
+          "offset": 22867,
           "length": 90,
           "replacement": "  function getMembers(...args) { return memberState.getMembers(...args); }\n",
           "sha256": "8098ad1188994d9f908907b67df5a243c7264f892f55935fc7226c36d06bc0db"
@@ -310,7 +310,7 @@
         {
           "start": 47378,
           "end": 47471,
-          "offset": 22940,
+          "offset": 22958,
           "length": 93,
           "replacement": "  function getHours(...args) { return memberState.getHours(...args); }\n",
           "sha256": "5e78e80966244c390c84c802a652689db07310f76683611eaab3e38331fa42e4"
@@ -318,7 +318,7 @@
         {
           "start": 21120,
           "end": 22701,
-          "offset": 23034,
+          "offset": 23052,
           "length": 1581,
           "replacement": "  const periodOffsets = memberState.periodOffsets;",
           "sha256": "c1c4f223211a22923ad2e0b1c10719424ec211500e65c94ebf5626789703c2f5"
@@ -332,6 +332,7 @@
         "KiwiVenue",
         "__kiwiTeamV2",
         "__kiwiTenantPurging",
+        "addEventListener",
         "dispatchEvent"
       ],
       "exports": [
@@ -396,6 +397,7 @@
         "window.__kiwiTeamV2.removedByVenue",
         "window.__kiwiTeamV2.shiftsByVenue",
         "window.__kiwiTenantPurging",
+        "window.addEventListener",
         "window.dispatchEvent"
       ]
     },

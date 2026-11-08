@@ -81,7 +81,7 @@ const button = (skip) => ({ dataset: { go: 'next' }, hasAttribute: (a) => skip &
   check(ctx.S.teamGiven === true, '« Passer » on another step leaves the team answer alone');
 }
 check(/staffCount: S\.teamGiven \? S\.teamSize : 0,/.test(DATA), 'the business is created without a staff count nobody gave');
-check(/if \(S\.teamGiven\) storage\.set\('kiwiTeamSize', String\(S\.teamSize\)\); else storage\.del\('kiwiTeamSize'\);/.test(DATA), 'kiwiTeamSize is only kept when it was given');
+check(/if \(S\.teamGiven\) put\('kiwiTeamSize', String\(S\.teamSize\)\); else storage\.del\('kiwiTeamSize'\);/.test(DATA), 'kiwiTeamSize is only kept when it was given');
 check(/teamGiven: !!S\.teamGiven/.test(DATA) && /S\.teamGiven = !!d\.teamGiven;/.test(DATA), 'a resumed draft remembers whether the team was given');
 check(!/aria-label="(moins|plus)"/.test(OB), 'the stepper buttons are named in the screen\'s language');
 

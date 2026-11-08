@@ -36,7 +36,7 @@ check('failed telemetry is not reported as an empty healthy source', failing.ava
 check('schema failure is actionable', failing.failure.kind === 'schema' && failing.failure.code === 'schema-mismatch' && failing.failure.retryable === false);
 check('failure reason identifies the source without leaking SQL', failing.reason === 'errors-schema-unavailable' && !JSON.stringify(failing).includes('telemetry_future'));
 
-const workspaceSource = fs.readFileSync(new URL('../assets/admin-workspace.js', import.meta.url), 'utf8');
+const workspaceSource = fs.readFileSync(new URL('../assets/admin-workspace-copy.js', import.meta.url), 'utf8') + ';' + fs.readFileSync(new URL('../assets/admin-workspace.js', import.meta.url), 'utf8');
 const identity = fs.readFileSync(new URL('../assets/identity.js', import.meta.url), 'utf8');
 check('workspace renders route-level read failures as unavailable, not zero', workspaceSource.includes('Lecture opérationnelle indisponible') && workspaceSource.includes('Aucun zéro n’est déduit'));
 check('workspace renders per-source failure action', workspaceSource.includes('Causes à vérifier') && workspaceSource.includes('failure.action'));

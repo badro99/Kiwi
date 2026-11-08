@@ -1,5 +1,5 @@
 /* Owner: memberState. Exports create() through KiwiTeamParts.memberState.
- * Window reads: Kiwi, KiwiCloudDoc, KiwiConfig, KiwiPlanningCore, KiwiVenue, __kiwiTeamV2, __kiwiTenantPurging, dispatchEvent.
+ * Window reads: Kiwi, KiwiCloudDoc, KiwiConfig, KiwiPlanningCore, KiwiVenue, __kiwiTeamV2, __kiwiTenantPurging, addEventListener, dispatchEvent.
  * Instance exports: isCode, memberCode, codeUnresolved, rosterHasUnresolved, diskMembers, outboundMembers, fillCodes, applyServerCodes, reservedCode, publishPins, teamAccount, rosterWriteBlocked, loadCustomTeams, cleanRemoved, mergeRemoved, cleanLocks, mergeLocks, persistTeams, afterTeamChange, saveCustomTeams, mergeByDay, mergeTeamDoc, teamCloudInit, teamReadTimedOut, hydrateCodes, teamCloudBind, teamCloudPush, ensureVenueData, getMembers, getHours, getShifts, periodOffsets, current, setPageActive, resetReadFailure.
  * lexical imports: fetchDeadline, teamKey, teamVenueKey, teamSlug, memberBelongsToStore, scopeTeamDoc, persistableTeamKey, memberFullName, restorePeriodLock, buildPeriod, render, trLang, toast, seedFor, seedHours.
  * Mutable persistence and credential knowledge belong only to memberState. */
@@ -500,6 +500,23 @@
    * et le serveur, qui refuse un document vide, ne pouvait jamais enregistrer la
    * suppression du dernier salarié : il gardait son accès à l'app employé. */
   if (!window.__kiwiTeamV2.removedByVenue) window.__kiwiTeamV2.removedByVenue = {};
+  /* Les codes partent vers la caisse AVANT la remontée de la fiche Équipe (afterTeamChange publie
+     d'abord) : si la fiche, elle, ne s'enregistre pas, le patron le voit et peut relancer, au lieu de
+     croire l'équipe sauvegardée (cloud-doc.js annonce chaque issue par `kiwi:doc-push`). */
+  let saveFailureShown = false;
+  try {
+    window.addEventListener('kiwi:doc-push', (event) => {
+      const d = event && event.detail;
+      if (!d || d.feature !== 'team') return;
+      if (d.ok) { saveFailureShown = false; return; }
+      if (saveFailureShown) return;
+      saveFailureShown = true;
+      const label = { fr: ['Les codes sont enregistrés pour la caisse, mais la fiche Équipe n’a pas pu être sauvegardée. Elle reste sur cet appareil.', 'Réessayer'], en: ['The codes are saved for the till, but the Team profiles could not be saved. They stay on this device.', 'Retry'], ar: ['حُفظت الرموز للصندوق، لكن تعذّر حفظ ملفات الفريق. تبقى على هذا الجهاز.', 'إعادة المحاولة'] };
+      const copy = label[trLang()] || label.fr;
+      toast(copy[0], { type: 'pend', duration: 12000, action: { label: copy[1], onClick: () => { saveFailureShown = false; teamCloudPush(); } } });
+    });
+  } catch (_) {}
+
   return Object.freeze({ isCode, memberCode, codeUnresolved, rosterHasUnresolved, diskMembers, outboundMembers, fillCodes, applyServerCodes, reservedCode, publishPins, teamAccount, rosterWriteBlocked, loadCustomTeams, cleanRemoved, mergeRemoved, cleanLocks, mergeLocks, persistTeams, afterTeamChange, saveCustomTeams, mergeByDay, mergeTeamDoc, teamCloudInit, teamReadTimedOut, hydrateCodes, teamCloudBind, teamCloudPush, ensureVenueData, getMembers, getHours, getShifts, periodOffsets, current() { return window.__kiwiTeamV2; }, setPageActive(value) { pageActive = value; }, resetReadFailure() { teamReadFailed = false; } });
   } });
 })();
