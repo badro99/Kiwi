@@ -32,7 +32,7 @@
     'assets/menu-i18n.js?v=8',
     'assets/kiwi-select.js?v=4',
     'assets/food-trade-settings.js?v=2',
-    'assets/menu-promos.js?v=24',
+    'assets/menu-promos.js?v=25',
     'assets/menu-promos-dashboard.js?v=10',
     'assets/restaurant-menu/strings.js?v=13',
     'assets/restaurant-menu/recipes.js?v=10',

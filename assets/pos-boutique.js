@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=191';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=109';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=191';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=191';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=192';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=110';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=192';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=192';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
@@ -1151,18 +1151,10 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
         return { kind: kind, value: value, days: days.length === 7 ? [] : days, start: start, end: end };
       }
     const inWindow = (p, b) => {
-        var s = toMin(p.start), e = toMin(p.end);
-        var timed = s != null && e != null;
-        /* A window belongs to the weekday it STARTED on. For an overnight window
-           (22:00 to 01:00) the part after midnight is read on the next calendar day:
-           its owner is the calendar day before. The business weekday is not that day
-           when the cutoff is midnight (it already rolled over), so the moment carries
-           the calendar weekday (calWeekday) and the days list is tested against it. */
-        var after = timed && s >= e && b.min < e;
-        var owner = after && Number.isInteger(b.calWeekday) ? (b.calWeekday + 6) % 7 : b.weekday;
+        var s = toMin(p.start), e = toMin(p.end), timed = s != null && e != null;
+        var owner = timed && s >= e && b.min < e && Number.isInteger(b.calWeekday) ? (b.calWeekday + 6) % 7 : b.weekday; /* an overnight window belongs to the weekday it started on */
         if (p.days && p.days.length && p.days.indexOf(owner) < 0) return false;
-        if (!timed) return true;
-        return s < e ? b.min >= s && b.min < e : b.min >= s || b.min < e;
+        return !timed || (s < e ? b.min >= s && b.min < e : b.min >= s || b.min < e);
       }
     const price = (p, unit, surface) => {
         var base = money(unit);

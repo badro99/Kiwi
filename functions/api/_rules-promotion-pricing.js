@@ -15,18 +15,10 @@ export const normalize = (p, surface) => {
     return { kind: kind, value: value, days: days.length === 7 ? [] : days, start: start, end: end };
   }
 export const inWindow = (p, b) => {
-    var s = toMin(p.start), e = toMin(p.end);
-    var timed = s != null && e != null;
-    /* A window belongs to the weekday it STARTED on. For an overnight window
-       (22:00 to 01:00) the part after midnight is read on the next calendar day:
-       its owner is the calendar day before. The business weekday is not that day
-       when the cutoff is midnight (it already rolled over), so the moment carries
-       the calendar weekday (calWeekday) and the days list is tested against it. */
-    var after = timed && s >= e && b.min < e;
-    var owner = after && Number.isInteger(b.calWeekday) ? (b.calWeekday + 6) % 7 : b.weekday;
+    var s = toMin(p.start), e = toMin(p.end), timed = s != null && e != null;
+    var owner = timed && s >= e && b.min < e && Number.isInteger(b.calWeekday) ? (b.calWeekday + 6) % 7 : b.weekday; /* an overnight window belongs to the weekday it started on */
     if (p.days && p.days.length && p.days.indexOf(owner) < 0) return false;
-    if (!timed) return true;
-    return s < e ? b.min >= s && b.min < e : b.min >= s || b.min < e;
+    return !timed || (s < e ? b.min >= s && b.min < e : b.min >= s || b.min < e);
   }
 export const price = (p, unit, surface) => {
     var base = money(unit);
