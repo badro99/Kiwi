@@ -9,9 +9,9 @@
  * or payment is posted here. */
 import { createArchive, requestIdFor, rowFromStatement } from './pay-statement-archive.js?v=5';
 const COPY = {
-  fr: { title:'Relevé de paie', notice:'Relevé de paie · document interne, ne remplace pas le bulletin de paie officiel', accountant:'CNSS, AMO et IR : à établir par le comptable. Net avant ces retenues.', period:'Période', hours:'Heures réalisées', rate:'Taux horaire', base:'Salaire de base proratisé', gross:'Brut calculé', advances:'Avances', net:'Net à payer avant retenues', input:'Avances pour cette période, enregistrées sur le serveur (MAD).', print:'Imprimer / PDF', close:'Fermer', missing:'Taux non renseigné', unavailable:'Les données de paie ne sont pas disponibles.', all:'Tous les salariés', ref:'Référence', ice:'ICE employeur', tooHigh:'Les avances de {} dépassent le brut calculé : corrigez avant d\'imprimer.', issued:'Relevés déjà émis pour cette période', reprint:'Réimprimer', replaces:'Remplace le relevé', corrected:'corrigé par', save:'Enregistrer les avances', saved:'Avances enregistrées.', noServer:'Le serveur ne répond pas : rien n\'est émis ni imprimé. Réessayez.', uncertain:'Réponse du serveur illisible : vérifiez la liste des relevés émis avant de réessayer.', refused:'Relevé refusé par le serveur ({}).', cached:'Avances affichées depuis cet appareil, le serveur ne répond pas.' },
-  en: { title:'Pay statement', notice:'Pay statement · internal document, does not replace the official payslip', accountant:'CNSS, AMO and IR: to be prepared by the accountant. Net before these deductions.', period:'Period', hours:'Hours worked', rate:'Hourly rate', base:'Prorated base salary', gross:'Calculated gross', advances:'Advances', net:'Net to pay before deductions', input:'Advances for this period, stored on the server (MAD).', print:'Print / PDF', close:'Close', missing:'Rate not entered', unavailable:'Payroll data is unavailable.', all:'All employees', ref:'Reference', ice:'Employer ICE', tooHigh:'Advances for {} exceed the calculated gross: correct them before printing.', issued:'Statements already issued for this period', reprint:'Reprint', replaces:'Replaces statement', corrected:'corrected by', save:'Save advances', saved:'Advances saved.', noServer:'The server is not responding: nothing is issued or printed. Try again.', uncertain:'The server reply was unreadable: check the list of issued statements before trying again.', refused:'Statement refused by the server ({}).', cached:'Advances shown from this device, the server is not responding.' },
-  ar: { title:'كشف الأجر', notice:'كشف الأجر · وثيقة داخلية لا تعوض بيان الأجر الرسمي', accountant:'CNSS وAMO وIR: يعدها المحاسب. الصافي قبل هذه الاقتطاعات.', period:'الفترة', hours:'ساعات العمل الفعلية', rate:'أجر الساعة', base:'الأجر الأساسي النسبي', gross:'الإجمالي المحسوب', advances:'التسبيقات', net:'الصافي للدفع قبل الاقتطاعات', input:'تسبيقات هذه الفترة، محفوظة على الخادم (درهم).', print:'طباعة / PDF', close:'إغلاق', missing:'أجر الساعة غير محدد', unavailable:'بيانات الأجور غير متاحة.', all:'جميع الموظفين', ref:'المرجع', ice:'ICE المشغل', tooHigh:'تسبيقات {} تتجاوز الإجمالي المحسوب: صححها قبل الطباعة.', issued:'الكشوف الصادرة لهذه الفترة', reprint:'إعادة الطباعة', replaces:'يحل محل الكشف', corrected:'صُحح بواسطة', save:'حفظ التسبيقات', saved:'تم حفظ التسبيقات.', noServer:'الخادم لا يستجيب: لم يصدر أو يطبع شيء. حاول مرة أخرى.', uncertain:'رد الخادم غير مقروء: تحقق من قائمة الكشوف الصادرة قبل المحاولة مجددا.', refused:'رفض الخادم الكشف ({}).', cached:'التسبيقات معروضة من هذا الجهاز، الخادم لا يستجيب.' }
+  fr: { partial:'Relevés émis : {done}. Pas encore émis : {pending}. Relancez l’impression : les relevés déjà émis ne sont pas refaits.', title:'Relevé de paie', notice:'Relevé de paie · document interne, ne remplace pas le bulletin de paie officiel', accountant:'CNSS, AMO et IR : à établir par le comptable. Net avant ces retenues.', period:'Période', hours:'Heures réalisées', rate:'Taux horaire', base:'Salaire de base proratisé', gross:'Brut calculé', advances:'Avances', net:'Net à payer avant retenues', input:'Avances pour cette période, enregistrées sur le serveur (MAD).', print:'Imprimer / PDF', close:'Fermer', missing:'Taux non renseigné', unavailable:'Les données de paie ne sont pas disponibles.', all:'Tous les salariés', ref:'Référence', ice:'ICE employeur', tooHigh:'Les avances de {} dépassent le brut calculé : corrigez avant d\'imprimer.', issued:'Relevés déjà émis pour cette période', reprint:'Réimprimer', replaces:'Remplace le relevé', corrected:'corrigé par', save:'Enregistrer les avances', saved:'Avances enregistrées.', noServer:'Le serveur ne répond pas : rien n\'est émis ni imprimé. Réessayez.', uncertain:'Réponse du serveur illisible : vérifiez la liste des relevés émis avant de réessayer.', refused:'Relevé refusé par le serveur ({}).', cached:'Avances affichées depuis cet appareil, le serveur ne répond pas.' },
+  en: { partial:'Statements issued: {done}. Not issued yet: {pending}. Print again: statements already issued are not redone.', title:'Pay statement', notice:'Pay statement · internal document, does not replace the official payslip', accountant:'CNSS, AMO and IR: to be prepared by the accountant. Net before these deductions.', period:'Period', hours:'Hours worked', rate:'Hourly rate', base:'Prorated base salary', gross:'Calculated gross', advances:'Advances', net:'Net to pay before deductions', input:'Advances for this period, stored on the server (MAD).', print:'Print / PDF', close:'Close', missing:'Rate not entered', unavailable:'Payroll data is unavailable.', all:'All employees', ref:'Reference', ice:'Employer ICE', tooHigh:'Advances for {} exceed the calculated gross: correct them before printing.', issued:'Statements already issued for this period', reprint:'Reprint', replaces:'Replaces statement', corrected:'corrected by', save:'Save advances', saved:'Advances saved.', noServer:'The server is not responding: nothing is issued or printed. Try again.', uncertain:'The server reply was unreadable: check the list of issued statements before trying again.', refused:'Statement refused by the server ({}).', cached:'Advances shown from this device, the server is not responding.' },
+  ar: { partial:'الكشوف الصادرة: {done}. لم تصدر بعد: {pending}. أعد الطباعة: الكشوف الصادرة لا تُعاد.', title:'كشف الأجر', notice:'كشف الأجر · وثيقة داخلية لا تعوض بيان الأجر الرسمي', accountant:'CNSS وAMO وIR: يعدها المحاسب. الصافي قبل هذه الاقتطاعات.', period:'الفترة', hours:'ساعات العمل الفعلية', rate:'أجر الساعة', base:'الأجر الأساسي النسبي', gross:'الإجمالي المحسوب', advances:'التسبيقات', net:'الصافي للدفع قبل الاقتطاعات', input:'تسبيقات هذه الفترة، محفوظة على الخادم (درهم).', print:'طباعة / PDF', close:'إغلاق', missing:'أجر الساعة غير محدد', unavailable:'بيانات الأجور غير متاحة.', all:'جميع الموظفين', ref:'المرجع', ice:'ICE المشغل', tooHigh:'تسبيقات {} تتجاوز الإجمالي المحسوب: صححها قبل الطباعة.', issued:'الكشوف الصادرة لهذه الفترة', reprint:'إعادة الطباعة', replaces:'يحل محل الكشف', corrected:'صُحح بواسطة', save:'حفظ التسبيقات', saved:'تم حفظ التسبيقات.', noServer:'الخادم لا يستجيب: لم يصدر أو يطبع شيء. حاول مرة أخرى.', uncertain:'رد الخادم غير مقروء: تحقق من قائمة الكشوف الصادرة قبل المحاولة مجددا.', refused:'رفض الخادم الكشف ({}).', cached:'التسبيقات معروضة من هذا الجهاز، الخادم لا يستجيب.' }
 };
 const copy = core => COPY[core?.trLang()] || COPY.fr;
 
@@ -57,7 +57,7 @@ export function statementHtml(core, venue, period, rows) {
   const money = n => esc(core.fmtPay(n / 100)) + ' MAD';
   const ice = /\d/.test(String(venue.ice || '')) ? String(venue.ice) : '';
   const field = (label, value) => `<tr><th>${esc(label)}</th><td>${value}</td></tr>`;
-  return `<!doctype html><html lang="${esc(lang)}" dir="${lang === 'ar' ? 'rtl' : 'ltr'}"><meta charset="utf-8"><title>${esc(c.title)}</title><link rel="stylesheet" href="/assets/tokens.css"><style>body{background:var(--paper);color:var(--ink);font-family:var(--sans);margin:24px}article{break-after:page}article:last-child{break-after:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;text-align:start;border-bottom:1px solid var(--line)}td{text-align:end}p{line-height:1.6}@page{size:A4;margin:18mm}</style><body>${rows.map(r => `<article><h1>${esc(c.title)}</h1><p>${esc(c.notice)}</p><h2>${esc(venue.name || '')} · ${esc(r.name)}</h2><p>${esc(c.ref)} : ${esc(r.ref || '')}${r.replaces ? ' · ' + esc(c.replaces) + ' ' + esc(r.replaces) : ''}${ice ? ' · ' + esc(c.ice) + ' : ' + esc(ice) : ''}</p><p>${esc(c.period)} : ${esc(period.days[0])} · ${esc(period.days.at(-1))}</p><table>${field(c.hours, esc(core.fmtHours(r.hours)))}${field(c.rate, r.rate === null ? esc(c.missing) : money(r.rate))}${field(c.base, money(r.base))}${field(c.gross, r.rated ? money(r.gross) : esc(c.missing))}${field(c.advances, money(r.advance))}${field(c.net, r.rated ? money(r.net) : esc(c.missing))}</table><p>${esc(c.accountant)}</p></article>`).join('')}</body></html>`;
+  return `<!doctype html><html lang="${esc(lang)}" dir="${lang === 'ar' ? 'rtl' : 'ltr'}"><meta charset="utf-8"><title>${esc(c.title)}</title><link rel="stylesheet" href="/assets/tokens.css"><style>body{background:var(--paper);color:var(--ink);font-family:var(--sans);margin:24px}article{break-after:page}article:last-child{break-after:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;text-align:start;border-bottom:1px solid var(--line)}td{text-align:end}p{line-height:1.6}h2,p,th,td{overflow-wrap:anywhere}@page{size:A4;margin:18mm}</style><body>${rows.map(r => `<article><h1>${esc(c.title)}</h1><p>${esc(c.notice)}</p><h2>${esc(venue.name || '')} · ${esc(r.name)}</h2><p>${esc(c.ref)} : ${esc(r.ref || '')}${r.replaces ? ' · ' + esc(c.replaces) + ' ' + esc(r.replaces) : ''}${ice ? ' · ' + esc(c.ice) + ' : ' + esc(ice) : ''}</p><p>${esc(c.period)} : ${esc(period.days[0])} · ${esc(period.days.at(-1))}</p><table>${field(c.hours, esc(core.fmtHours(r.hours)))}${field(c.rate, r.rate === null ? esc(c.missing) : money(r.rate))}${field(c.base, money(r.base))}${field(c.gross, r.rated ? money(r.gross) : esc(c.missing))}${field(c.advances, money(r.advance))}${field(c.net, r.rated ? money(r.net) : esc(c.missing))}</table><p>${esc(c.accountant)}</p></article>`).join('')}</body></html>`;
 }
 
 export function openPayStatement(core, selected, archiveOverride) {
@@ -83,7 +83,12 @@ export function openPayStatement(core, selected, archiveOverride) {
     if (!box) return;
     box.innerHTML = issued.length ? `<h3>${esc(c.issued)}</h3><ul>${issued.map(s => `<li>${esc(s.number)} · ${esc(s.memberName)} · ${esc(core.fmtPay(s.netCents / 100))} MAD${s.replacedById ? ' · ' + esc(c.corrected) + ' ' + esc(numberOf(s.replacedById)) : ''} <button class="kb ghost" data-pay-reprint="${esc(s.id)}">${esc(c.reprint)}</button></li>`).join('')}</ul>` : '';
   };
-  const failure = error => core.toast(error?.code === 'uncertain' ? c.uncertain : (error?.code === 'offline' || !error?.code) ? c.noServer : c.refused.replace('{}', String(error.code)), { type:'warning' });
+  const failure = error => {
+    const reason = error?.code === 'uncertain' ? c.uncertain : (error?.code === 'offline' || !error?.code) ? c.noServer : c.refused.replace('{}', String(error.code));
+    const names = list => list.slice(0, 5).join(', ') + (list.length > 5 ? ' …' : '');
+    const batch = error?.batch;
+    core.toast(batch && batch.done.length && batch.pending.length ? c.partial.replace('{done}', names(batch.done)).replace('{pending}', names(batch.pending)) + ' ' + reason : reason, { type:'warning' });
+  };
   if (archive) archive.forPeriod(period).then(data => {
     issued = Array.isArray(data.statements) ? data.statements : [];
     const stored = {};
@@ -136,16 +141,24 @@ export function openPayStatement(core, selected, archiveOverride) {
       else fixes.push([r, cur]);
     }
     const info = { name:venue.name || '', ice:/\d/.test(String(venue.ice || '')) ? String(venue.ice).replace(/\D/g, '') : '' };
-    if (fresh.length) {
-      const items = fresh.map(payload);
-      const res = await archive.issue(period, items, { requestId:requestIdFor(period, items), venue:info });
-      for (const s of res.statements) { issued.push(s); out.set(s.memberId, rowFromStatement(s)); }
-    }
-    for (const [r, cur] of fixes) {
-      const items = [payload(r)];
-      const res = await archive.issue(period, items, { requestId:requestIdFor(period, items, cur.id), replacesId:cur.id, venue:info });
-      const s = res.statements[0];
-      cur.replacedById = s.id; issued.push(s); out.set(r.id, rowFromStatement(s, cur.number));
+    try {
+      if (fresh.length) {
+        const items = fresh.map(payload);
+        const res = await archive.issue(period, items, { requestId:requestIdFor(period, items), venue:info });
+        for (const s of res.statements) { issued.push(s); out.set(s.memberId, rowFromStatement(s)); }
+      }
+      for (const [r, cur] of fixes) {
+        const items = [payload(r)];
+        const res = await archive.issue(period, items, { requestId:requestIdFor(period, items, cur.id), replacesId:cur.id, venue:info });
+        const s = res.statements[0];
+        cur.replacedById = s.id; issued.push(s); out.set(r.id, rowFromStatement(s, cur.number));
+      }
+    } catch (error) {
+      /* Issued statements stay issued (immutable, numbered): say who is done and who is not. A retry reuses the
+       * stored ones and sends only the missing requests, under the same request ids. */
+      renderIssued();
+      error.batch = { done:rows.filter(r => out.has(r.id)).map(r => r.name), pending:rows.filter(r => !out.has(r.id)).map(r => r.name) };
+      throw error;
     }
     renderIssued();
     return rows.map(r => out.get(r.id));

@@ -175,6 +175,29 @@ for (const lang of ['fr', 'en', 'ar']) {
   inputs[0].value = '0';
   await controls['[data-pay-print]'].onclick();
   assert.deepEqual(savedAdvances(core, r.venue, period), {}, 'imprimer avec une avance à zéro remplace le montant gardé');
+  /* r21 planning#A0: a batch that stops half way says who was issued and who was not, and the retry finishes the rest. */
+  {
+    controls['[data-pay-member]'].value = '*';
+    inputs[0].value = '31.00'; inputs[1].value = '5.00';
+    let issueCalls = 0;
+    const flaky = { ...archive, issue:(p, items, options) => (++issueCalls === 2 ? Promise.reject(Object.assign(new Error('offline'), { code:'offline' })) : archive.issue(p, items, options)) };
+    openPayStatement(uiCore, '*', flaky);
+    await new Promise(r => setTimeout(r, 200));
+    inputs[0].value = '31.00'; inputs[1].value = '5.00';
+    const beforeBatch = count();
+    toasts.length = 0;
+    await controls['[data-pay-print]'].onclick();
+    assert.equal(count(), beforeBatch + 1, 'le premier relevé corrigé est parti, le second non');
+    assert.equal(toasts.length, 1);
+    assert.ok(toasts[0].includes(core.memberFullName(member)) && toasts[0].includes(core.memberFullName(salaried)), 'le message nomme les relevés émis et ceux qui restent');
+    assert.ok(toasts[0].indexOf(core.memberFullName(member)) < toasts[0].indexOf(core.memberFullName(salaried)), 'émis d abord, restants ensuite');
+    openPayStatement(uiCore, '*', archive);
+    await new Promise(r => setTimeout(r, 200));
+    inputs[0].value = '31.00'; inputs[1].value = '5.00';
+    await controls['[data-pay-print]'].onclick();
+    assert.equal(count(), beforeBatch + 2, 'la reprise n émet que le relevé manquant, sans doublon');
+    assert.equal((appended.srcdoc.match(/<article>/g) || []).length, 2, 'puis le lot complet s imprime');
+  }
   openPayStatement(uiCore, '*', archive);
   assert.ok(!form.body.includes(' selected'), 'batch defaults to all employees');
   delete globalThis.window; delete globalThis.document; delete globalThis.localStorage; delete globalThis.__store;
