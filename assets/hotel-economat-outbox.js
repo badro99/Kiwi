@@ -1,88 +1,7 @@
-/* Durable department submissions. A lost response replays the same command key. */
-import { post } from './hotel-economat-transport.js?v=22';
-const prefix = 'kiwi:economat:outbox:';
+/* Durable department submissions. A lost response replays the same command key. Storage and the read cache live in hotel-economat-store.js. */
+import { post } from './hotel-economat-transport.js?v=24';
+import { account, merchants, mutate, prefix, stored } from './hotel-economat-store.js?v=2';
 const listeners = new Set(), running = new Map(), timers = new Map();
-let dbPromise, fallback = false;
-const merchants = new Set();
-// A row replays only under the account that queued it, never under whoever signs in next.
-function account() { try { return String(localStorage.getItem('kiwiAccountKey') || '').trim().toLowerCase(); } catch (_) { return ''; } }
-// Storage never hangs the queue: a blocked open or a transaction that never settles
-// ends in the localStorage fallback instead of an await that never returns.
-export const storage = { deadline: 4000 };
-function within(work, label) {
-  let timer;
-  const limit = new Promise((_, reject) => { timer = setTimeout(() => reject(Error(label)), storage.deadline); });
-  return Promise.race([work, limit]).finally(() => clearTimeout(timer));
-}
-function database() {
-  if (!dbPromise) dbPromise = within(new Promise((resolve, reject) => {
-    const r = indexedDB.open('kiwi-economat-outbox', 1);
-    r.onupgradeneeded = () => r.result.createObjectStore('merchants');
-    r.onsuccess = () => resolve(r.result);
-    r.onerror = () => reject(r.error);
-    r.onblocked = () => reject(Error('idb-blocked'));
-  }), 'idb-open-timeout').catch(error => { dbPromise = undefined; throw error; });
-  return dbPromise;
-}
-function readLocal(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
-// One read-modify-write on one bucket. In IndexedDB it is a single readwrite
-// transaction, so a tab without Web Locks cannot overwrite rows another tab added.
-async function mutate(merchant, change) {
-  const key = prefix + merchant;
-  merchants.add(merchant);
-  const viaLocal = () => {
-    const next = change(JSON.parse(localStorage.getItem(key) || '[]'));
-    localStorage.setItem(key, JSON.stringify(next));
-    return next;
-  };
-  if (readLocal(key) !== null) return viaLocal();
-  try {
-    if (fallback) throw Error('fallback');
-    const db = await database();
-    return await within(new Promise((resolve, reject) => {
-      const tx = db.transaction('merchants', 'readwrite');
-      const store = tx.objectStore('merchants');
-      let next;
-      const read = store.get(key);
-      read.onsuccess = () => {
-        try { next = change(JSON.parse(JSON.stringify(read.result || []))); store.put(next, key); }
-        catch (error) { reject(Object.assign(error, { fromChange: true })); try { tx.abort(); } catch (_) { /* already closed */ } }
-      };
-      tx.oncomplete = () => resolve(next);
-      tx.onerror = tx.onabort = () => reject(tx.error || Error('storage-failed'));
-    }), 'idb-transaction-timeout');
-  } catch (error) {
-    if (error && error.fromChange) throw error;
-    fallback = true;
-    return viaLocal();
-  }
-}
-async function stored(merchant, value, cache = false) {
-  const key = prefix + (cache ? 'cache:' : '') + merchant;
-  if (!cache) merchants.add(merchant);
-  // A bucket that fell back stays there across reloads, even if IDB recovers.
-  try {
-    const local = localStorage.getItem(key);
-    if (local !== null) {
-      if (value) localStorage.setItem(key, JSON.stringify(value));
-      return value || JSON.parse(local);
-    }
-  } catch (_) { /* IDB remains available when localStorage is denied. */ }
-  try {
-    if (fallback) throw Error('fallback');
-    const db = await database();
-    return await within(new Promise((resolve, reject) => {
-      const tx = db.transaction('merchants', value ? 'readwrite' : 'readonly');
-      const r = value ? tx.objectStore('merchants').put(value, key) : tx.objectStore('merchants').get(key);
-      tx.oncomplete = () => resolve(value || r.result || []);
-      tx.onerror = tx.onabort = () => reject(tx.error || Error('storage-failed'));
-    }), 'idb-transaction-timeout');
-  } catch (_) {
-    fallback = true;
-    if (value) localStorage.setItem(key, JSON.stringify(value));
-    return value || JSON.parse(localStorage.getItem(key) || '[]');
-  }
-}
 function notify(merchant, rows) { listeners.forEach(fn => fn(merchant, rows)); }
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 export async function snapshot(merchant) { return stored(merchant); }
@@ -171,27 +90,3 @@ function schedule(merchant, delay) {
 if (globalThis.addEventListener) globalThis.addEventListener('online', () => {
   merchants.forEach(merchant => { clearTimeout(timers.get(merchant)); void replay(merchant, true).catch(() => {}); });
 });
-
-// Reads are cached per account and role: a shared device never serves one user's
-// projection to the next. A cached answer is returned marked stale, with its age.
-function readScope() {
-  let role = '';
-  try { role = String(localStorage.getItem('kiwiRole') || '').trim().toLowerCase(); } catch (_) { /* no role stored */ }
-  return account() + '|' + role + '|';
-}
-export async function cached(url, load) {
-  if (!/[?&]merchant=/.test(url)) return load();
-  const key = readScope() + url;
-  try {
-    const value = await load();
-    try { await stored(key, { value, at: Date.now() }, true); } catch (_) { /* Reads still work when storage is full. */ }
-    return value;
-  } catch (e) {
-    if (e.status >= 400 && e.status < 500) throw e;
-    const entry = await stored(key, undefined, true);
-    if (entry && entry.value && typeof entry.value === 'object' && !Array.isArray(entry.value)) {
-      return Object.assign({}, entry.value, { _stale: { at: Number(entry.at) || 0 } });
-    }
-    throw e;
-  }
-}

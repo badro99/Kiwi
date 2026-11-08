@@ -56,6 +56,15 @@ export async function retainCorrection(env, merchant, staff, body) {
 export async function correctionList(env, merchant) {
   return (await read(env, merchant, FEATURE, { items: [] })).data.items.filter((item) => item.status === 'pending');
 }
+/* What the employee may see of their own late punches: the captured time they claimed and how the manager
+   decided. No actor, no device, no other person's item. */
+export async function ownCorrections(env, merchant, staffId) {
+  try {
+    const items = (await read(env, merchant, FEATURE, { items: [] })).data.items;
+    return items.filter((item) => item && item.staffId === staffId).sort((a, b) => Number(b.receivedTs) - Number(a.receivedTs)).slice(0, 20)
+      .map((item) => ({ opId: item.opId, action: item.action, claimedTs: item.claimedTs, status: item.status, decidedAt: Number(item.decidedAt) || 0 }));
+  } catch (_) { return []; }
+}
 export async function decideCorrection(request, env, merchant, body) {
   // Same dashboard owner / named-operator boundary as editing attendance/team.
   if (await entitledMerchant(request, env, merchant) !== merchant) return json({ error: 'forbidden-merchant' }, 403);

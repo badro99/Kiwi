@@ -18,9 +18,11 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/hotel-economat-api.js?v=3',
+  '/assets/hotel-economat-store.js?v=2',
   '/assets/pos-boutique/return-window.js?v=11',
-  '/assets/hotel-economat-requests.js?v=33',
-  '/assets/hotel-economat-outbox.js?v=16',
+  '/assets/hotel-economat-requests.js?v=35',
+  '/assets/hotel-economat-outbox.js?v=18',
   '/assets/tickets-recovery.js?v=5',
   '/assets/clients-audit.js?v=2',
   '/assets/caisse-print-recovery.js?v=8',
@@ -35,7 +37,7 @@ var SHELL = [
   '/assets/boutique-size-colors.js?v=6',
   '/assets/team/styles.js?v=4',
   '/assets/team/access-rules.js?v=7',
-  '/assets/hotel-economat-transport.js?v=22',
+  '/assets/hotel-economat-transport.js?v=24',
   '/assets/pos-boutique/drawer.js?v=108',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
@@ -49,7 +51,7 @@ var SHELL = [
   '/assets/planning/csv-import.js?v=5',
   '/assets/planning/optimiser.js?v=5',
   '/assets/planning/payroll-view.js?v=15',
-  '/assets/planning/pay-statement.js?v=17',
+  '/assets/planning/pay-statement.js?v=18',
   '/assets/planning/pay-statement-archive.js?v=5',
   '/assets/planning/corrections.js?v=3',
   '/assets/orderpro/draft.js?v=5',
@@ -201,7 +203,7 @@ var SHELL = [
   '/assets/hotel-housekeeping.js?v=1',
   '/assets/hotel-folio.js?v=5',
   '/assets/hotel-channels.js?v=4',
-  '/assets/pages-pro-office.js?v=21',
+  '/assets/pages-pro-office.js?v=22',
   '/assets/pages-pro-boutique.js?v=51',
   '/assets/boutique-stock-correct.js?v=4',
   '/assets/boutique-categories-view.js?v=3',
@@ -211,14 +213,14 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
-  '/assets/pages/dashboard-startup.js?v=216',
-  '/assets/pages/dashboard-loader.js?v=82',
+  '/assets/pages/dashboard-startup.js?v=217',
+  '/assets/pages/dashboard-loader.js?v=84',
   '/assets/hotel/model.js?v=10',
   '/assets/hotel/views.js?v=9',
   '/assets/hotel/groups.js?v=6',
   '/assets/hotel/editors.js?v=10',
   '/assets/hotel.js?v=98',
-  '/assets/hotel-economat.js?v=51',
+  '/assets/hotel-economat.js?v=53',
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=13',
   '/assets/sold-insights.js?v=20',
@@ -235,7 +237,7 @@ var SHELL = [
   '/assets/cancellation-history.js?v=3',
   '/assets/weather.js?v=1',
   '/assets/briefing-rules.js?v=7',
-  '/assets/briefing-persistence.js?v=15',
+  '/assets/briefing-persistence.js?v=16',
   '/assets/briefing.js?v=54',
   '/assets/ai-telemetry.js?v=1',
   '/assets/agent-data.js?v=7',
@@ -329,7 +331,7 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2061',
   // The Plan de salle's live-room poller (fail-soft without network).
-  '/assets/floorplan-live.js?v=20',
+  '/assets/floorplan-live.js?v=21',
   '/assets/oppo-cards.js?v=9',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
@@ -349,8 +351,8 @@ var SHELL = [
   '/assets/operations-ui.js?v=33',
   '/assets/live-link/queue-store.js?v=23',
   '/assets/live-link/sale-identity.js?v=4',
-  '/assets/live-link.js?v=119',
-  '/assets/queue-recovery.js?v=7',
+  '/assets/live-link.js?v=120',
+  '/assets/queue-recovery.js?v=8',
   '/assets/channel-sales.js?v=8',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -381,7 +383,7 @@ var SHELL = [
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
-  '/assets/tenant-purge.js?v=11',
+  '/assets/tenant-purge.js?v=12',
   /* La porte du dashboard hors ligne : des lignes salées que le serveur a prouvées,
      jamais un code. Absent de la coquille, un patron hors ligne ne rentrerait plus. */
   '/assets/dashboard-pin-vault.js?v=6',
@@ -401,8 +403,8 @@ var SHELL = [
   '/assets/caisse-hardware.js?v=16',
   '/assets/live-socket.js?v=5',
   '/assets/escpos.js?v=20',
-  '/assets/printer/transports.js?v=7',
-  '/assets/printer-bridge.js?v=80',
+  '/assets/printer/transports.js?v=8',
+  '/assets/printer-bridge.js?v=81',
   '/assets/printer/pairing-ui.js?v=16',
   '/assets/barcode.js?v=4',
   '/assets/scan-wedge.js?v=1',
@@ -445,7 +447,7 @@ var SHELL = [
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
-  '/assets/cost.js?v=12',
+  '/assets/cost.js?v=13',
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=4',
   '/assets/clients-store.js?v=61',
@@ -454,10 +456,10 @@ var SHELL = [
   '/assets/customer-retention.js?v=21',
   '/assets/menu-catalog.js?v=44',
   '/assets/stock-identity.js?v=3',
-  '/assets/restaurant-recipes.js?v=19',
+  '/assets/restaurant-recipes.js?v=20',
   '/assets/restaurant-units.js?v=2',
-  '/assets/employee-live.js?v=649',
-  '/assets/employee-planning.js?v=24',
+  '/assets/employee-live.js?v=650',
+  '/assets/employee-planning.js?v=25',
   '/assets/employee-trade-shell.css?v=4',
   '/assets/employee-trade-shell.js?v=9',
   '/assets/planning-core.js?v=15',
@@ -489,7 +491,7 @@ var SHELL = [
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
-  '/assets/kitchen-relay.js?v=17',
+  '/assets/kitchen-relay.js?v=18',
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */

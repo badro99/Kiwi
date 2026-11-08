@@ -51,6 +51,7 @@
         // Une session (re)trouvée envoie la file ; un sondage ne devance pas la relance prévue.
         var changed = owner !== queueOwner;
         queueOwner = owner;
+        try { applyDecisions(owner, data.corrections); } catch (_) { console.warn("[employee-live] decisions failed"); }
         if (changed || (!retryTimer && (readQueue(owner).length || unreported(owner).length))) schedule(0);
       }
       try { document.dispatchEvent(new CustomEvent('kiwi-employee-data', { detail: data })); } catch (_) { console.warn("[employee-live] remember failed"); }
@@ -155,6 +156,7 @@
             store().setItem(backup, raw);
             store().setItem(QUEUE_PREFIX + owner + ':recovery', '1');
             store().removeItem(key);
+            try { window.dispatchEvent(new Event('kiwi:punch-quarantine')); } catch (_) {}
           } catch (_) { recoveryBlocked[owner] = true; }
         } else recoveryBlocked[owner] = true;
         return [];
@@ -163,6 +165,39 @@
     var local = read(QUEUE_PREFIX + owner), history = read(QUEUE_PREFIX + owner + ':outcomes');
     try { if (store().getItem(QUEUE_PREFIX + owner + ':recovery')) recovery[owner] = true; } catch (_) {}
     return merge(merge(local, history), copies[owner] || []);
+  }
+  /* Copies mises à l'écart (octets bruts gardés sous une clé « :quarantine: ») : même contrat que les autres
+     files (assets/queue-recovery.js) — recoveryCopies() liste, recoveryCopies(clé) lit, recoveryCopies(clé, true)
+     accuse réception et supprime ; le drapeau de récupération tombe quand plus aucune copie ne reste. */
+  function recoveryCopies(key, acknowledge) {
+    var keys = [];
+    try { for (var n = 0; n < store().length; n++) { var k = String(store().key(n)); if (k.indexOf(QUEUE_PREFIX) === 0 && k.indexOf(':quarantine:') > 0) keys.push(k); } } catch (_) {}
+    if (key === undefined) return keys.map(function (k) { var raw = ''; try { raw = store().getItem(k) || ''; } catch (_) {} return { key: k, bytes: 2 * (k.length + raw.length) }; });
+    if (keys.indexOf(key) < 0) return null;
+    var raw = null;
+    try { raw = store().getItem(key); } catch (_) {}
+    if (acknowledge) {
+      try { store().removeItem(key); } catch (_) {}
+      var owner = key.slice(QUEUE_PREFIX.length).split(':quarantine:')[0].replace(/:outcomes$/, '');
+      if (!keys.some(function (other) { return other !== key && other.indexOf(QUEUE_PREFIX + owner + ':') === 0; })) {
+        try { store().removeItem(QUEUE_PREFIX + owner + ':recovery'); } catch (_) {}
+        delete recovery[owner]; delete recoveryBlocked[owner];
+      }
+      renderCorrections();
+    }
+    return raw;
+  }
+  /* La décision du responsable revient sur le téléphone : l'heure d'origine du geste reste celle affichée. */
+  function applyDecisions(owner, decided) {
+    if (!Array.isArray(decided) || !decided.length) return;
+    var byOp = {}; decided.forEach(function (c) { if (c && c.opId) byOp[c.opId] = c; });
+    var items = records(owner), changed = false;
+    items = items.map(function (i) {
+      var c = byOp[i.opId];
+      if (c && !i.done && (c.status === 'approved' || c.status === 'rejected') && i.decision !== c.status) { changed = true; return Object.assign({}, i, { reported: true, decision: c.status }); }
+      return i;
+    });
+    if (changed) saveTask(function () { return writeQueue(owner, items).then(function () { copies[owner] = items; renderCorrections(); }); });
   }
   function needsCorrection(i) { return !i.done && serverNow() - Number(i.at) > 12 * 3600000; }
   function readQueue(owner) { return records(owner).filter(function (i) { return !i.done && !needsCorrection(i); }); }
@@ -176,9 +211,9 @@
   }
   // Même couche de langue que le planning employé : document.documentElement.lang.
   function correctionWords(lang) {
-    if (lang === 'ar') return { title: 'تسجيل حضور يحتاج إلى تصحيح من المسؤول', in: 'حضور', out: 'انصراف', dismiss: 'إخفاء هذا التسجيل من الهاتف', sent: 'أُرسل إلى المسؤول للقرار', unsent: 'لم يُرسل بعد إلى المسؤول', persistence: 'تعذر حفظ الحضور على هذا الجهاز: ', unreadable: 'تعذر قراءة سجل الحضور. احتُفظ بالبيانات للاستعادة، تواصل مع المسؤول.' };
-    if (lang === 'en') return { title: 'Punch to be corrected by a manager', in: 'Clock in', out: 'Clock out', dismiss: 'Dismiss this punch from this phone', sent: 'Sent to your manager for a decision', unsent: 'Not yet sent to your manager', persistence: 'Attendance could not be saved on this device: ', unreadable: 'Attendance storage could not be read. Data is retained for recovery, contact your manager.' };
-    return { title: 'Pointage à corriger par un responsable', in: 'Arrivée', out: 'Départ', dismiss: 'Masquer ce pointage sur ce téléphone', sent: 'Transmis au responsable pour décision', unsent: 'Pas encore transmis au responsable', persistence: 'Pointage non sauvegardé sur cet appareil : ', unreadable: 'Le stockage des pointages est illisible. Les données sont conservées pour récupération, contactez votre responsable.' };
+    if (lang === 'ar') return { title: 'تسجيل حضور يحتاج إلى تصحيح من المسؤول', in: 'حضور', out: 'انصراف', dismiss: 'إخفاء هذا التسجيل من الهاتف', sent: 'أُرسل إلى المسؤول للقرار', unsent: 'لم يُرسل بعد إلى المسؤول', persistence: 'تعذر حفظ الحضور على هذا الجهاز: ', unreadable: 'تعذر قراءة سجل الحضور. احتُفظ بالبيانات للاستعادة، تواصل مع المسؤول.', approved: 'وافق المسؤول: احتُسب بالوقت الأصلي', rejected: 'رفضه المسؤول: لم يُحتسب' };
+    if (lang === 'en') return { title: 'Punch to be corrected by a manager', in: 'Clock in', out: 'Clock out', dismiss: 'Dismiss this punch from this phone', sent: 'Sent to your manager for a decision', unsent: 'Not yet sent to your manager', persistence: 'Attendance could not be saved on this device: ', unreadable: 'Attendance storage could not be read. Data is retained for recovery, contact your manager.', approved: 'Approved by your manager: counted at the original time', rejected: 'Refused by your manager: not counted' };
+    return { title: 'Pointage à corriger par un responsable', in: 'Arrivée', out: 'Départ', dismiss: 'Masquer ce pointage sur ce téléphone', sent: 'Transmis au responsable pour décision', unsent: 'Pas encore transmis au responsable', persistence: 'Pointage non sauvegardé sur cet appareil : ', unreadable: 'Le stockage des pointages est illisible. Les données sont conservées pour récupération, contactez votre responsable.', approved: 'Approuvé par le responsable : compté à l’heure d’origine', rejected: 'Refusé par le responsable : non compté' };
   }
   function renderCorrections() {
     if (!document.createElement || !document.body) return;
@@ -216,7 +251,7 @@
         saveTask(function () { return dropItem(owner, item.opId, { result: 'correction-dismissed' }); }).then(renderCorrections);
       });
       row.appendChild(button);
-      var state = document.createElement('p'); state.textContent = item.reported === true ? words.sent : words.unsent; row.appendChild(state);
+      var state = document.createElement('p'); state.textContent = item.decision === 'approved' ? words.approved : item.decision === 'rejected' ? words.rejected : item.reported === true ? words.sent : words.unsent; row.appendChild(state);
       panel.appendChild(row);
     });
     container.prepend(panel);
@@ -360,6 +395,7 @@
 
   if (typeof MutationObserver === 'function') new MutationObserver(renderCorrections).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 
+  window.KiwiEmployeePunchQueue = { recoveryCopies: recoveryCopies };
   window.KiwiEmployeeLive = {
     login: function (email, pin) {
       queueOwner = '';

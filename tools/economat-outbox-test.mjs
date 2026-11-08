@@ -6,7 +6,7 @@ const events = new Map(), memory = new Map();
 globalThis.addEventListener = (name, fn) => events.set(name, fn);
 globalThis.localStorage = { getItem:key => memory.get(key) || null, setItem:(key,value) => memory.set(key,value) };
 Object.defineProperty(globalThis, 'navigator', { configurable:true, value:{ onLine:false } });
-const api = await import('../assets/hotel-economat-transport.js');
+const api = await import('../assets/hotel-economat-api.js');
 const h = await createHotelRequestHarness();
 const body = id => ({ action:'create', id, unitId:'rooftop', idempotencyKey:'ui:' + id + ':create', lines:[{itemId:'cola', unit:'bouteille', qtyRequested:2}] });
 const calls = [];
@@ -90,7 +90,15 @@ await api.replay(MERCHANT, true);
 const pruned = await api.snapshot(MERCHANT);
 assert.equal(pruned.length, 5, 'sent rows are pruned to five');
 assert.deepEqual(pruned.map(row => row.body.id), ['p1','p2','p3','p4','p5']);
-assert.match(fs.readFileSync('assets/tenant-purge.js', 'utf8'), /deleteDatabase\('kiwi-economat-outbox'\)/, 'a merchant switch drops the outbox database');
+// r21 economat#B1 (owner rule: money and stock owed are never silently dropped): a merchant switch no longer
+// drops the outbox database; pending rows stay parked for their account. Behaviour: tools/economat-parked-outbox-test.mjs.
+{
+  const dropped = [], kept = new Map([['kiwi:economat:outbox:' + MERCHANT, '[]']]), purgeWindow = { indexedDB:{ deleteDatabase:name => dropped.push(name) } };
+  vm.runInNewContext(fs.readFileSync('assets/tenant-purge.js', 'utf8'), { window:purgeWindow, localStorage:{ get length() { return kept.size; }, key:i => [...kept.keys()][i] ?? null, getItem:k => kept.get(k) ?? null, setItem:(k, v) => kept.set(k, v), removeItem:k => kept.delete(k) } });
+  purgeWindow.KiwiTenantPurge.purge();
+  assert.ok(!dropped.includes('kiwi-economat-outbox'), 'a merchant switch keeps the outbox database');
+  assert.ok(kept.has('kiwi:economat:outbox:' + MERCHANT), 'and its parked rows');
+}
 // Cached catalogues are available after a reload/offline; 4xx never returns cached data.
 const url = '/api/inventory/department-catalogue?merchant=cache-hotel&unitId=roof';
 globalThis.fetch = async () => ({ok:true,json:async()=>({data:{items:[{itemId:'cola'}]}})});
@@ -104,7 +112,7 @@ const source = fs.readFileSync('assets/hotel-economat-requests.js','utf8');
 for (const [lang, labels] of Object.entries({fr:['En attente de connexion','Envoyée','Refusée'],en:['Pending connection','Sent','Refused'],ar:['في انتظار الاتصال','مُرسل','مرفوض']})) {
   const window = { Kiwi:{handlers:{}}, KiwiInventory:{merchant:()=>MERCHANT}, KiwiI18n:{getLang:()=>lang} };
   const host = {isConnected:true,innerHTML:''};
-  const modified = source.replace(/\}\(function \(\) \{ return import\('\.\/hotel-economat-transport\.js\?v=\d+'\); \}\)\);/, '}(async function () { return testApi; }));');
+  const modified = source.replace(/\}\(function \(\) \{ return import\('\.\/hotel-economat-api\.js\?v=\d+'\); \}\)\);/, '}(async function () { return testApi; }));');
   assert.notEqual(modified, source);
   const testApi = {snapshot:async()=>[...refused, {body:body('pending'),state:'pending'}],subscribe:()=>{},replay:async()=>{},getJson:async()=>{throw Error('offline');}};
   new vm.Script(modified).runInNewContext({window,document:{querySelector:()=>host},testApi});
@@ -134,7 +142,7 @@ const context = vm.createContext({
   navigator:{onLine:false}, setTimeout, clearTimeout,
   post:async body=>{ attempts++; if(!allowSend) throw Object.assign(Error('server-busy'),{status:503}); return {request:{revision:1}}; },
 });
-vm.runInContext(fs.readFileSync('assets/hotel-economat-outbox.js','utf8').replace(/^import .*;$/gm,'').replace(/^export /gm,''),context);
+vm.runInContext(['store','outbox'].map(n=>fs.readFileSync('assets/hotel-economat-'+n+'.js','utf8').replace(/^import .*;$/gm,'').replace(/^export /gm,'')).join('\n'),context);
 await context.enqueueRequest(body('idb-first'),'idb-hotel');
 await context.enqueueRequest(body('idb-second'),'idb-hotel');
 await context.replay('idb-hotel');

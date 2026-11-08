@@ -22,6 +22,7 @@
 (function () {
   'use strict';
 
+  var OUTBOX_PARKED = 'kiwi:economat:outbox:';
   var TENANT_KEYS = [
     'kiwiCustomVenues', 'kiwiVenue', 'kiwiVenueCount', 'kiwiOnboarded', 'kiwiSkipOnboard', 'kiwiOnboardingDraft:v1',
     'kiwiOwnerName', 'kiwiBizName', 'kiwiBizType', 'kiwiCity', 'kiwiTeamSize', 'kiwiGoals',
@@ -83,6 +84,10 @@
       for (var i = 0; i < localStorage.length; i++) {
         var k = localStorage.key(i);
         if (!k || PRESERVE[k]) continue;
+        /* Les demandes d'économat en attente sont de l'argent et du stock promis par un
+           compte : elles restent garées pour lui (chaque ligne porte son compte et ne
+           repart que sous celui-ci). Seul le cache de lecture, qui n'est dû à personne, part. */
+        if (k.indexOf(OUTBOX_PARKED) === 0 && k.indexOf(OUTBOX_PARKED + 'cache:') !== 0) continue;
         for (var p = 0; p < TENANT_PREFIXES.length; p++) {
           if (k.indexOf(TENANT_PREFIXES[p]) === 0) { kill.push(k); break; }
         }
@@ -92,7 +97,7 @@
          refuse) part aussi. La suppression est asynchrone et la page se
          recharge juste après : chaque copie porte donc aussi son locataire, et
          une copie qui n'est pas celle du locataire courant n'est jamais lue. */
-      try { if (window.indexedDB) { window.indexedDB.deleteDatabase('kiwi-catalog'); window.indexedDB.deleteDatabase('kiwi-clients-outbox-vault'); window.indexedDB.deleteDatabase('kiwiSalesLedger'); window.indexedDB.deleteDatabase('kiwi-economat-outbox'); } } catch (_) {}
+      try { if (window.indexedDB) { window.indexedDB.deleteDatabase('kiwi-catalog'); window.indexedDB.deleteDatabase('kiwi-clients-outbox-vault'); window.indexedDB.deleteDatabase('kiwiSalesLedger'); } } catch (_) {}
       return kill.length + TENANT_KEYS.length;
     } catch (_) { return 0; }
   }

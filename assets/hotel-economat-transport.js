@@ -1,5 +1,5 @@
-/* DOM-free economat transport. Individual HTTP attempts; durable submissions live in the outbox. */
-import { cached } from './hotel-economat-outbox.js?v=16';
+/* DOM-free economat transport. Individual HTTP attempts; durable submissions live in the outbox, storage in the store. */
+import { cached } from './hotel-economat-store.js?v=2';
 import { deadlineFetch } from './request-deadline.mjs';
 
 export function getJson(url) { return cached(url, () => readJson(url)); }
@@ -21,5 +21,3 @@ export async function post(body, merchant) {
   return out;
 }
 
-
-export { discard, enqueueRequest, replay, snapshot, subscribe } from './hotel-economat-outbox.js?v=16';

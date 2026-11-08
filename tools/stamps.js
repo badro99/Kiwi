@@ -258,7 +258,7 @@ function scan() {
   }
 
   // Explicit ES module entries: static and dynamic import URLs are stamp sites.
-  const retail = ['assets/pages-pro-office.js', 'assets/clients-directory.js', 'assets/channel-link.js', 'assets/live-link.js', 'assets/boutique-sizes.js', 'assets/hotel-economat-requests.js', 'assets/hotel-economat-transport.js', 'assets/hotel-economat-outbox.js', 'assets/pos-epicerie.js', 'assets/pos-maison.js', 'assets/pos-boutique.js', 'assets/tickets.js', 'assets/invoicing.js', 'assets/team-hours.js', 'assets/team.js', 'assets/pressing-caisse.js'];
+  const retail = ['assets/pages-pro-office.js', 'assets/clients-directory.js', 'assets/channel-link.js', 'assets/live-link.js', 'assets/boutique-sizes.js', 'assets/hotel-economat-requests.js', 'assets/hotel-economat-transport.js', 'assets/hotel-economat-outbox.js', 'assets/hotel-economat-store.js', 'assets/hotel-economat-api.js', 'assets/pos-epicerie.js', 'assets/pos-maison.js', 'assets/pos-boutique.js', 'assets/tickets.js', 'assets/invoicing.js', 'assets/team-hours.js', 'assets/team.js', 'assets/pressing-caisse.js'];
   for (const dir of ['assets/pos-maison', 'assets/pos-boutique', 'assets/pos-epicerie', 'assets/pressing']) {
     if (exists(dir)) retail.push(...fs.readdirSync(path.join(ROOT, dir)).filter(f => f.endsWith('.js')).map(f => dir + '/' + f));
   }

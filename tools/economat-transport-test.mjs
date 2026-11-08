@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
-import * as api from '../assets/hotel-economat-transport.js';
+import * as api from '../assets/hotel-economat-api.js';
 const originalFetch = globalThis.fetch, originalTimer = globalThis.setTimeout;
 const calls = [];
 try {
