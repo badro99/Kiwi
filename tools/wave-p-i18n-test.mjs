@@ -22,7 +22,7 @@ if(!job||job==='identity'){
  console.log('✓ identity Arabic normalization, stable Latin, ambiguity and recipe binding');
 }
 if(!job||job==='console'){
- const s=read('assets/admin-workspace.js');
+ const s=read('assets/admin-workspace-copy.js')+';'+read('assets/admin-workspace.js');
  for(const lang of ['fr','en','ar']){
   const ctx=vm.createContext({window:{KiwiAdminPolicy:{},KiwiOperator:{},KiwiAdminI18n:{lang}},document:{getElementById(){return {};},documentElement:{lang,dir:lang==='ar'?'rtl':'ltr'}},Intl,URLSearchParams,location:{search:''},localStorage:{getItem(){return lang;}}});
   vm.runInContext(s.slice(0,s.indexOf('  function client('))+';globalThis.result={labels,tabs,routes,date:date(1793016000000)};})();',ctx);
@@ -58,7 +58,7 @@ if(!job||job==='economat'){
  console.log('✓ economat explicit hotel zone and zone law formatter');
 }
 if(!job||job==='console'){
- const source=read('assets/admin-workspace.js');
+ const source=read('assets/admin-workspace-copy.js')+';'+read('assets/admin-workspace.js');
  const policy=require('../assets/admin-policy.js');
  for(const lang of ['fr','en','ar']){
   const elements=new Map();const element=()=>({innerHTML:'',hidden:false,contains:()=>false,querySelector:()=>null});

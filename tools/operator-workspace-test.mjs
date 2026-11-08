@@ -179,7 +179,7 @@ check('both Shopify error paths returned',moneyWorkspace.sources.shopifyLink?.av
 check('Shopify errors are scoped',moneyWorkspace.sources.shopifyLink.rows.every(r=>r.merchant==='shop-a'));
 check('Shopify projections exclude credentials',!/SECRET-(OAUTH|HASH|CONFIG)/.test(JSON.stringify(moneyWorkspace))&&moneyWorkspace.sources.shopifyLink.rows.every(r=>Object.keys(r).every(k=>!/token|secret|hash|config/i.test(k))));
 // Keep all production functions and renderers, replacing only event bootstrap.
-const uiSource=fs.readFileSync(new URL('../assets/admin-workspace.js',import.meta.url),'utf8');
+const uiSource=fs.readFileSync(new URL('../assets/admin-workspace-copy.js',import.meta.url),'utf8')+';'+fs.readFileSync(new URL('../assets/admin-workspace.js',import.meta.url),'utf8');
 const ui=uiSource.slice(0,uiSource.indexOf("  document.addEventListener('click'"))+`
   window.testWorkspace={render:function(data){state.data=data;state.clients=[{merchant:'shop-a'}];return taskRows('shop-a');},signals:allSignals};
 })();`;

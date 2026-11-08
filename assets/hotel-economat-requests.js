@@ -563,4 +563,4 @@
     reload: load,
     state: function () { return S; },
   };
-}(function () { return import('./hotel-economat-api.js?v=8'); }));
+}(function () { return import('./hotel-economat-api.js?v=9'); }));

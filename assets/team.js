@@ -1,6 +1,6 @@
 import {} from './team/styles.js?v=4';
 import {} from './team/access-rules.js?v=7';
-import {} from './team/member-state.js?v=12';
+import {} from './team/member-state.js?v=16';
 import {} from './team/venue-scope.js?v=6';
 import {} from './team/invitations.js?v=9';
 import {} from './team/roster-list.js?v=6';

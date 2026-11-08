@@ -56,7 +56,9 @@ if (process.env.KIWI_DRAFT_CASE !== 'server') {
     setTimeout(fn) { fn(); }, document: { body: { appendChild() {} }, createElement() { return { click() { clicked = true; assert.equal(this.download, 'kiwi-onboarding.json'); }, remove() {} }; } } };
   recovery.exportFile(original, browser);
   assert.ok(clicked && revoked); assert.equal(blob.type, 'application/json');
-  assert.equal(recovery.saved(), true);
+  /* r21 onboarding#B1: an accepted click is an offer, not proof of delivery. */
+  assert.equal(recovery.saved(), false, 'an offered export does not protect the draft');
+  recovery.confirmExport(); assert.equal(recovery.saved(), true);
   const file = await blob.text();
   const imported = real.createDraft(blocked, ['boutique'], ['sales']), restored = {};
   imported.importFile(file, restored);

@@ -41,7 +41,7 @@ async function api(path) {
 }
 
 // The production module, its event bootstrap replaced by a test handle.
-const source = fs.readFileSync(new URL('../assets/admin-workspace.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../assets/admin-workspace-copy.js', import.meta.url), 'utf8') + ';' + fs.readFileSync(new URL('../assets/admin-workspace.js', import.meta.url), 'utf8');
 const ui = source.slice(0, source.indexOf("  document.addEventListener('click'")) + `
   render = function () { window.__renders = (window.__renders || 0) + 1; };
   toast = function (s) { window.__toasts.push(s); };

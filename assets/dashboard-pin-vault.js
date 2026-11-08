@@ -32,6 +32,22 @@
  * stockage, il ôte seulement le code lisible. C'est le même compromis que la
  * caisse, borné de la même façon (7 jours, 12 lignes, un compte).
  *
+ * Horloge : toutes les échéances (7 j / 72 h / 24 h, la pause des essais) se
+ * mesurent à un plus-haut-point écrit ici (kiwi:dashboard:clock:v1), même règle
+ * que KiwiTrustedClock de la caisse (assets/pairing-commit.js, non chargée sur
+ * le dashboard, et un global étranger de plus n'est pas permis). Elle ne recule
+ * jamais, et une horloge d'appareil
+ * revenue de plus de 5 minutes en arrière ferme le repli hors ligne jusqu'au
+ * prochain « oui » du serveur : reculer l'horloge ne prolonge plus aucune preuve.
+ *
+ * Anciennes lignes SHA-256 (sans `it`) : elles n'ouvrent plus rien. Un SHA-256
+ * salé de quatre chiffres s'énumère en millisecondes dans un stockage copié ;
+ * garder l'ouverture jusqu'au prochain déverrouillage laissait ces lignes
+ * énumérables. Fenêtre de migration : celle de la preuve elle-même (7 jours au
+ * plus, expirée depuis le 30 octobre pour toute ligne écrite avant le passage
+ * à PBKDF2 du 23). Le propriétaire dont la dernière preuve date d'avant doit
+ * déverrouiller une fois en ligne ; le verrou des essais n'est pas touché.
+ *
  * Migration : `kiwiPins` (clair) est SUPPRIMÉ au chargement, sans conversion.
  * Ces codes n'ont jamais été prouvés par le serveur ; en faire des lignes aurait
  * donné sept jours d'ouverture hors ligne à un code peut-être changé depuis.
@@ -55,10 +71,34 @@
   var FAILS_KEY = 'kiwi:dashboard:offline-fails:v1:';
   var MAX_MISSES = 5;
   var LOCK_MS = 5 * 60 * 1000;
+  var CLOCK_KEY = 'kiwi:dashboard:clock:v1';
+  var CLOCK_TOLERANCE = 5 * 60 * 1000;   /* comme la caisse : quelques minutes ne sont pas une triche */
+  var CLOCK_SAVE_EVERY = 60 * 1000;
 
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function put(k, v) { try { localStorage.setItem(k, v); return true; } catch (_) { return false; } }
   function del(k) { try { localStorage.removeItem(k); } catch (_) {} }
+
+  /* L'horloge de confiance : le plus haut point vu. Elle ne recule jamais ;
+     reculer l'horloge de l'appareil la laisse en place et rolledBack() le dit. */
+  var hw = 0, hwSaved = 0;
+  try { hw = Math.max(0, Number(JSON.parse(ls(CLOCK_KEY) || '0')) || 0); hwSaved = hw; } catch (_) { hw = 0; }
+  function saveClock() { hwSaved = hw; put(CLOCK_KEY, JSON.stringify(hw)); }
+  function tnow() {
+    var t = Date.now();
+    if (t > hw) { hw = t; if (hw - hwSaved >= CLOCK_SAVE_EVERY) saveClock(); }
+    return hw;
+  }
+  function rolledBack() {
+    tnow();
+    return Date.now() < hw - CLOCK_TOLERANCE;
+  }
+  /* Le serveur vient de répondre « oui » : le temps de cet appareil est re-pris
+     comme référence (une preuve écrite sous une horloge reculée n'expire que plus
+     tôt, jamais plus tard). */
+  function anchorClock() {
+    hw = Date.now(); saveClock();
+  }
 
   /* Le compte de ce navigateur. Sans lui, rien n'est écrit ni lu : un
      condensat qu'on ne sait rattacher à personne ne doit ouvrir aucune porte. */
@@ -79,9 +119,10 @@
     if (!sc) return [];
     try {
       var rows = JSON.parse(ls(rowsKey(sc)) || '[]');
-      var now = Date.now();
+      var now = tnow();
       return Array.isArray(rows) ? rows.filter(function (r) {
         return r && typeof r.digest === 'string' && r.digest && typeof r.salt === 'string'
+          && Number(r.it) >= ITER
           && Number(r.expiresAt || 0) > now && r.staff && typeof r.staff === 'object'
           && now - provenOf(r) < limitFor(r.staff.role);
       }) : [];
@@ -101,14 +142,14 @@
   function lockedFor() {
     var sc = scope();
     if (!sc) return 0;
-    var left = readFails(sc).until - Date.now();
+    var left = readFails(sc).until - tnow();
     return left > 0 ? Math.ceil(left / 1000) : 0;
   }
   function noteMiss(sc) {
     var f = readFails(sc);
-    if (f.until && f.until <= Date.now()) f = { n: 0, until: 0 };
+    if (f.until && f.until <= tnow()) f = { n: 0, until: 0 };
     f.n += 1;
-    if (f.n >= MAX_MISSES) f = { n: 0, until: Date.now() + LOCK_MS };
+    if (f.n >= MAX_MISSES) f = { n: 0, until: tnow() + LOCK_MS };
     writeFails(sc, f);
   }
   function writeRows(sc, rows) {
@@ -172,6 +213,7 @@
     code = String(code || '');
     var sc = scope();
     if (!sc || !CODE.test(code) || !staff) return Promise.resolve(false);
+    if (!keepProvenAt) anchorClock();   /* appelé sur un « oui » du serveur : c'est une preuve fraîche */
     var salt = sharedSalt(sc);
     if (!salt) return Promise.resolve(false);
     return digestOf(sc, salt, code, ITER).then(function (digest) {
@@ -188,7 +230,7 @@
           return !stale[r.digest] && !(id && String(r.staff.id || '') === id);
         });
         kept.push({
-          salt: salt, digest: digest, it: ITER, provenAt: keepProvenAt || Date.now(), expiresAt: keepExpiry || Date.now() + TTL,
+          salt: salt, digest: digest, it: ITER, provenAt: keepProvenAt || tnow(), expiresAt: keepExpiry || tnow() + TTL,
           staff: {
             id: id.slice(0, 80), name: String(staff.name || '').slice(0, 80),
             role: String(staff.role || '').slice(0, 80),
@@ -205,15 +247,13 @@
     code = String(code || '');
     var sc = scope();
     if (!sc || !CODE.test(code)) return Promise.resolve(null);
+    if (rolledBack()) return Promise.resolve(null);          // horloge reculée : on attend le serveur (échec fermé)
     var rows = readRows(sc);
     if (!rows.length) return Promise.resolve(null);
     if (lockedFor() > 0) return Promise.resolve(null);       // pause : on ne hache même pas
     return matching(sc, rows, code).then(function (same) {
       for (var i = 0; i < rows.length; i++) if (same[i]) {
         writeFails(sc, { n: 0, until: 0 });
-        /* Une ancienne ligne se réécrit en v2, derrière, sans repousser son échéance :
-           seul le serveur prolonge une preuve. */
-        if (!rows[i].it) remember(code, rows[i].staff, rows[i].expiresAt, provenOf(rows[i]));
         return rows[i].staff;
       }
       noteMiss(sc);
@@ -246,12 +286,30 @@
     return had;
   }
 
-  /* Au chargement : le clair part, sans conversion. */
+  /* Un battement par minute tant que la page est ouverte : le plus haut point suit
+     le temps réel, donc un retour en arrière après des heures se voit. */
+  try { if (typeof setInterval === 'function') setInterval(tnow, CLOCK_SAVE_EVERY); } catch (_) {}
+  try { if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('pagehide', function () { tnow(); saveClock(); }); } catch (_) {}
+
+  /* Les lignes SHA-256 d'avant PBKDF2 n'ouvrent plus rien : elles partent. */
+  function sweepWeakRows() {
+    var sc = scope();
+    if (!sc) return 0;
+    var raw;
+    try { raw = JSON.parse(ls(rowsKey(sc)) || '[]'); } catch (_) { return 0; }
+    if (!Array.isArray(raw)) return 0;
+    var strong = raw.filter(function (r) { return r && Number(r.it) >= ITER; });
+    if (strong.length !== raw.length) writeRows(sc, strong);
+    return raw.length - strong.length;
+  }
+
+  /* Au chargement : le clair part, sans conversion ; les lignes faibles aussi. */
   dropLegacy();
+  sweepWeakRows();
 
   window.KiwiDashPinVault = {
     remember: remember, verify: verify, forget: forget, count: count, lockedFor: lockedFor,
-    dropLegacy: dropLegacy, TTL: TTL, STAFF_TTL: STAFF_TTL, MANAGER_TTL: MANAGER_TTL, MAX_ROWS: MAX_ROWS, MAX_MISSES: MAX_MISSES, LOCK_MS: LOCK_MS,
+    dropLegacy: dropLegacy, sweepWeakRows: sweepWeakRows, rolledBack: rolledBack, TTL: TTL, STAFF_TTL: STAFF_TTL, MANAGER_TTL: MANAGER_TTL, MAX_ROWS: MAX_ROWS, MAX_MISSES: MAX_MISSES, LOCK_MS: LOCK_MS,
     storageKey: function () { return rowsKey(scope()); },
   };
 })();

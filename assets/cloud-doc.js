@@ -821,6 +821,11 @@
         .then(function (result) {
           clearTimeout(timeout);
           st.busy = false;
+          /* Une remontée qui a ABOUTI ou ÉCHOUÉ pour de bon se dit (pas une pause voulue : held,
+             busy, unread…) : l'écran du document peut alors prévenir le patron. */
+          if (result && (result.ok === true || (result.ok === false && !/^(held|busy|unread|empty|disabled|tenant-switched|foreign-document)$/.test(String(result.error || ''))))) {
+            try { window.dispatchEvent(new CustomEvent('kiwi:doc-push', { detail: { feature: feature, ok: result.ok === true, error: result.ok ? '' : String(result.error || '').slice(0, 60) } })); } catch (_) {}
+          }
           if (st.again) {
             st.again = false;
             schedulePush(400, slug);

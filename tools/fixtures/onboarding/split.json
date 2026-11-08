@@ -1,64 +1,64 @@
 {
   "sha256": "19cd0ebd64645a0bd86cc0d1a3a4c3d3db5d8156a862924a732dd558e928ddf9",
-  "dataSha256": "c6784217cda15ac0a4a82d87b2dc51459311d174faafbead411b8e845fd41dc9",
+  "dataSha256": "e5007784039209519b9cd400966fe2d568282f4d022dd4cf426630b8a443cf4d",
   "fragments": [
     {
       "start": 17679,
       "end": 18180,
       "replacement": "  const session = window.KiwiOnboardingData.createSession({ TYPES, tr });\n  const S = session.state;",
-      "offset": 13160
+      "offset": 21048
     },
     {
       "start": 16983,
       "end": 17066,
       "replacement": "  const RESERVED = session.reserved;",
-      "offset": 13663
+      "offset": 21551
     },
     {
       "start": 26059,
       "end": 26219,
       "replacement": "  const TYPE_HINT = session.typeHint;",
-      "offset": 13748
+      "offset": 21636
     },
     {
       "start": 34253,
       "end": 34817,
       "replacement": "  const fitPinsToTeam = session.fitPinsToTeam;",
-      "offset": 13910
+      "offset": 21798
     },
     {
       "start": 40439,
       "end": 40802,
       "replacement": "  const parsedDailyGoal = session.parsedDailyGoal;",
-      "offset": 14476
+      "offset": 22364
     },
     {
       "start": 40883,
       "end": 42668,
       "replacement": "  const validate = session.validate;",
-      "offset": 14841
+      "offset": 22729
     },
     {
       "start": 68056,
       "end": 68548,
       "replacement": "  const kitCodeProblem = session.kitCodeProblem;",
-      "offset": 16628
+      "offset": 24516
     },
     {
       "start": 68549,
       "end": 68940,
       "replacement": "  const kitProblem = session.kitProblem;",
-      "offset": 17122
+      "offset": 25010
     },
     {
       "start": 45049,
       "end": 45073,
       "replacement": "  // Submission activity belongs to the session owner.",
-      "offset": 17515
+      "offset": 25403
     }
   ],
-  "dataPrefixLength": 12802,
-  "sessionLength": 5582,
+  "dataPrefixLength": 20690,
+  "sessionLength": 5798,
   "alignments": [
     {
       "original": "const finishErr = kit ? kitProblem() : validate();",
@@ -111,6 +111,34 @@
     {
       "original": "finishing = false;",
       "replacement": "session.setSubmitting(false);"
+    },
+    {
+      "original": "  const warmData = () => { loadData().catch(() => {}); };",
+      "replacement": "  const warmData = () => { loadData().then((d) => { try { d.TeamImportPending.mount(window); } catch (_) {} }).catch(() => {}); };"
+    },
+    {
+      "original": "  let teamImportFailed = false;",
+      "replacement": "  let teamImportFailed = false, activationLost = false, teamBanner = false;"
+    },
+    {
+      "original": "    teamImportFailed = teamTrack.failed(S.pins.filter((p) => (p.name || '').trim() || (p.role === 'owner' && S.ownerName.trim())).length);",
+      "replacement": "    const outcome = session.outcome();\n    teamImportFailed = teamTrack.failed(S.pins.filter((p) => (p.name || '').trim() || (p.role === 'owner' && S.ownerName.trim())).length) || outcome.teamPending;\n    /* The venue exists on the server but this device refused its activation\n       flags: say so, and rely on the server's verdict at the next load. */\n    teamBanner = outcome.teamPending && !outcome.persistFailed.includes('kiwiOnboardingTeamPending');\n    activationLost = outcome.persistFailed.some((k) => k !== 'kiwiOnboardingTeamPending') ? true : false;"
+    },
+    {
+      "original": "    if (kit) return { vid: vid, teamImportFailed: teamImportFailed };",
+      "replacement": "    if (kit) return { vid: vid, teamImportFailed: teamImportFailed, activationLost };"
+    },
+    {
+      "original": "        ${teamImportFailed ? `<p class=\"kob-sub kob-sub-note\" role=\"status\">${tr({ fr: \"Vos codes sont enregistrés, mais la liste Équipe n'a pas pu être remplie sur cet appareil. Ajoutez vos collègues depuis la page Équipe.\", en: 'Your codes are saved, but the Team list could not be filled on this device. Add your colleagues from the Team page.', ar: 'تم حفظ رموزك، لكن تعذر ملء قائمة الفريق على هذا الجهاز. أضف زملاءك من صفحة الفريق.' })}</p>` : ''}",
+      "replacement": "        ${teamImportFailed && !teamBanner ? `<p class=\"kob-sub kob-sub-note\" role=\"status\">${tr({ fr: \"Vos codes sont enregistrés, mais la liste Équipe n'a pas pu être remplie sur cet appareil. Ajoutez vos collègues depuis la page Équipe.\", en: 'Your codes are saved, but the Team list could not be filled on this device. Add your colleagues from the Team page.', ar: 'تم حفظ رموزك، لكن تعذر ملء قائمة الفريق على هذا الجهاز. أضف زملاءك من صفحة الفريق.' })}</p>` : ''}\n        ${teamBanner ? `<p class=\"kob-sub kob-sub-note\" role=\"status\">${tr({ fr: \"Vos codes sont enregistrés, mais la liste Équipe n'a pas pu être remplie sur cet appareil. Un bandeau « Terminer l'import de l'équipe » vous attend sur le tableau de bord.\", en: 'Your codes are saved, but the Team list could not be filled on this device. A \"Finish importing your team\" banner waits for you on the dashboard.', ar: 'تم حفظ رموزك، لكن تعذر ملء قائمة الفريق على هذا الجهاز. ستجد شريط «إنهاء استيراد الفريق» في لوحة القيادة.' })}</p>` : ''}\n        ${activationLost ? `<p class=\"kob-sub kob-sub-note\" role=\"alert\">${tr({ fr: \"Votre espace est créé, mais cet appareil n'a pas pu mémoriser la configuration (stockage plein ou bloqué). Libérez de l'espace puis reconnectez-vous : le serveur reconnaît votre établissement.\", en: 'Your space is created, but this device could not remember the setup (storage full or blocked). Free some space and sign in again: the server knows your business.', ar: 'تم إنشاء مساحتك، لكن هذا الجهاز لم يتمكن من حفظ الإعداد (التخزين ممتلئ أو محظور). حرّر مساحة ثم سجّل الدخول مجدداً: الخادم يعرف نشاطك.' })}</p>` : ''}"
+    },
+    {
+      "original": "    close();",
+      "replacement": "    close();\n    try { window.KiwiOnboardingData.TeamImportPending.mount(window); } catch (_) {}"
+    },
+    {
+      "original": "          };",
+      "replacement": "          };\n          /* Whose draft the transport talks to, so an owed deletion names its account. */\n          draft.transport.account = () => draftAccount;"
     }
   ]
 }

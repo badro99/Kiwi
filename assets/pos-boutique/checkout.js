@@ -1,12 +1,12 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=197';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=197';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=300';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=198';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=198';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=301';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
 import { paidCents } from './paid-share.js?v=2';
 import { tillNow, tillDate } from './till-clock.js?v=2';
-import '../money-cents.js?v=6';
+import '../money-cents.js?v=7';
 import { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=9';
 import { bqDeliveryCard } from './delivery-card.js?v=6';
 import { receiptPrinterReady, receiptDocInput } from './receipt-doc.js?v=1';

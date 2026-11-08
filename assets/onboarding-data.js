@@ -19,17 +19,82 @@
   const CLEAR_KEY = 'kiwiOnboardingDraft:clear';
   const CLEAR_NOTE = { fr: 'L’ancien brouillon n’a pas pu être supprimé du serveur et peut réapparaître. Nouvelle tentative à la prochaine synchronisation.', en: 'The old draft could not be deleted from the server and may come back. It will be retried at the next sync.', ar: 'تعذّر حذف المسودة القديمة من الخادم وقد تعود. ستُعاد المحاولة عند المزامنة التالية.' };
   const EXPORT_NOTE = { fr: 'Téléchargement impossible. Copiez ce texte et gardez-le dans un fichier.', en: 'Download unavailable. Copy this text and keep it in a file.', ar: 'التنزيل غير متاح. انسخ هذا النص واحتفظ به في ملف.' };
+  /* "Finish importing your team": the durable task submit() leaves behind (names and roles, never a
+     code; the codes already live on the server) when the roster typed in the setup could not be
+     filled on this device. The dashboard offers the retry; the task is cleared only once the local
+     roster really holds the people. Lives in this file so no extra <script> joins the dashboard;
+     assets/onboarding.js mounts it when the data module has loaded. */
+  const PENDING_COPY = {
+    fr: { text: 'Vos codes sont enregistrés, mais votre équipe n’apparaît pas encore dans la page Équipe sur cet appareil.', retry: 'Terminer l’import de l’équipe', ok: 'Équipe importée.', again: 'Import impossible pour le moment. Réessayez.' },
+    en: { text: 'Your codes are saved, but your team does not show on the Team page on this device yet.', retry: 'Finish importing your team', ok: 'Team imported.', again: 'Import is not possible right now. Try again.' },
+    ar: { text: 'تم حفظ رموزك، لكن فريقك لم يظهر بعد في صفحة الفريق على هذا الجهاز.', retry: 'إنهاء استيراد الفريق', ok: 'تم استيراد الفريق.', again: 'تعذّر الاستيراد الآن. أعد المحاولة.' },
+  };
+  /* The task, or null. A malformed value is dropped: it names nobody. */
+  function readPending(storage) {
+    let raw; try { raw = storage.get(TEAM_PENDING_KEY); } catch (_) { return null; }
+    if (!raw) return null;
+    try {
+      const task = JSON.parse(raw);
+      if (!task || typeof task.venue !== 'string' || !task.venue || !Array.isArray(task.people)) return null;
+      const people = task.people.filter((p) => p && String(p.name || '').trim()).map((p) => ({ role: p.role === 'owner' || p.role === 'manager' ? p.role : 'staff', name: String(p.name).slice(0, 20), code: '' }));
+      return people.length ? { venue: task.venue, people } : null;
+    } catch (_) { return null; }
+  }
+  /* Runs the import again. `people` may carry codes only when the caller still
+     holds them in memory (the same page load); a stored task never has any. */
+  function retryPending({ storage, venueApi, teamApi, people }) {
+    const task = readPending(storage);
+    if (!task) return { ok: true, added: 0 };
+    try {
+      const venue = venueApi && venueApi.getVenueData && venueApi.getVenueData(task.venue);
+      if (!venue || !teamApi || !teamApi.importMembers) return { ok: false, added: 0 };
+      const added = teamApi.importMembers(venue, people && people.length ? people : task.people);
+      /* importMembers skips people the roster already holds, so a clean pass
+         means the roster is complete whether it added them now or earlier. */
+      try { storage.del(TEAM_PENDING_KEY); } catch (_) {}
+      return { ok: true, added: Number(added) || 0 };
+    } catch (_) { return { ok: false, added: 0 }; }
+  }
+  function mountPending(win) {
+    const doc = win.document;
+    const storage = { get: (k) => { try { return win.localStorage.getItem(k); } catch (_) { return null; } }, del: (k) => { try { win.localStorage.removeItem(k); } catch (_) {} } };
+    if (!readPending(storage) || doc.getElementById('kiwi-team-import-pending')) return null;
+    let lang = 'fr'; try { lang = win.localStorage.getItem('kiwiLang') || 'fr'; } catch (_) {}
+    const copy = PENDING_COPY[lang] || PENDING_COPY.fr;
+    const bar = doc.createElement('div');
+    bar.id = 'kiwi-team-import-pending'; bar.setAttribute('role', 'status');
+    bar.style.cssText = 'position:sticky;top:0;z-index:50;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;padding:10px 16px;background:var(--paper);color:var(--ink);border-bottom:1px solid var(--atlas)';
+    const text = doc.createElement('span'); text.textContent = copy.text; bar.appendChild(text);
+    const button = doc.createElement('button'); button.type = 'button'; button.textContent = copy.retry;
+    button.onclick = () => {
+      const result = retryPending({ storage, venueApi: win.KiwiVenue, teamApi: win.KiwiTeam });
+      text.textContent = result.ok ? copy.ok : copy.again;
+      if (result.ok) { button.remove(); win.setTimeout(() => bar.remove(), 2500); }
+    };
+    bar.appendChild(button);
+    doc.body.insertBefore(bar, doc.body.firstChild);
+    return bar;
+  }
   function createDraft(storage, types, goals) {
-    let draftKept = true, snapshot = null, exported = null, remote = null, queue = Promise.resolve(), cleared = false, syncFailed = false, clearFailed = false, revision = 0;
+    let draftKept = true, snapshot = null, exported = null, confirmed = null, remote = null, queue = Promise.resolve(), cleared = false, syncFailed = false, clearFailed = false, revision = 0;
     return {
-      saved() { return !syncFailed && (!this.transport || snapshot === remote) && (draftKept || snapshot === exported || snapshot === remote); },
+      /* An export is OFFERED to the browser, never proven delivered: only the user
+         can say the file landed (confirmExport), so "offered" does not protect. */
+      saved() { return !syncFailed && (!this.transport || snapshot === remote) && (draftKept || snapshot === confirmed || snapshot === remote); },
+      exportOffered() { return !!snapshot && snapshot === exported && snapshot !== confirmed; },
+      confirmExport() { if (snapshot && snapshot === exported) confirmed = snapshot; return this.saved(); },
+      /* The account the transport talks to (known after its first read), so a
+         pending deletion can say whose draft it owes. */
+      accountId() { try { const a = this.transport && typeof this.transport.account === 'function' ? this.transport.account() : null; return a ? String(a) : ''; } catch (_) { return ''; } },
       clearPending() { return clearFailed; },
-      warning(lang) { return clearFailed ? (CLEAR_NOTE[lang] || CLEAR_NOTE.fr) : (syncFailed || (this.transport && snapshot !== remote)) ? (SYNC_NOTE[lang] || SYNC_NOTE.fr) : (draftKept || snapshot === exported || snapshot === remote) ? '' : (DRAFT_NOTE[lang] || DRAFT_NOTE.fr); },
+      warning(lang) { return clearFailed ? (CLEAR_NOTE[lang] || CLEAR_NOTE.fr) : (syncFailed || (this.transport && snapshot !== remote)) ? (SYNC_NOTE[lang] || SYNC_NOTE.fr) : (draftKept || snapshot === confirmed || snapshot === remote) ? '' : (DRAFT_NOTE[lang] || DRAFT_NOTE.fr); },
       clear() {
         cleared = true;
         storage.del(KEY);
         if (!this.transport) return Promise.resolve(true);
-        try { storage.set(CLEAR_KEY, '1'); } catch (_) {}
+        /* The marker names the account whose server draft is owed a deletion: a
+           later session of ANOTHER account must never delete its own draft. */
+        try { storage.set(CLEAR_KEY, JSON.stringify({ account: this.accountId() })); } catch (_) {}
         return this.retryClear();
       },
       /* Resolves true once the server confirmed the deletion. */
@@ -40,9 +105,9 @@
       },
       exportFile(S, browser) {
         this.save(S);
-        /* The draft counts as exported only when the browser accepted the download;
-           a blocked or failing one leaves the warning and returns false so the
-           caller can show the text to copy. */
+        /* Offered, not saved: a download the browser accepted may still be blocked
+           silently. Only a thrown error returns false (the caller then shows the
+           text to copy); the user confirms a delivered file with confirmExport(). */
         try {
           const url = browser.URL.createObjectURL(new browser.Blob([snapshot], { type: 'application/json' }));
           const link = browser.document.createElement('a');
@@ -59,20 +124,34 @@
         const d = JSON.parse(text);
         if (!d || typeof d !== 'object' || Array.isArray(d) || !('typeId' in d)) throw Error('draft-format');
         this.load(S, d); this.save(S);
-        exported = snapshot;
+        /* The text came FROM a file the user holds: that file is the proof. */
+        exported = confirmed = snapshot;
       },
       async restore(S) {
         if (!this.transport) return;
-        let owed = false; try { owed = storage.get(CLEAR_KEY) === '1'; } catch (_) {}
+        let owed = null; try { owed = storage.get(CLEAR_KEY); } catch (_) {}
         if (owed) {
-          cleared = true;
+          let marker = null; try { marker = JSON.parse(owed); } catch (_) {}
+          const owedAccount = marker && typeof marker === 'object' && marker.account ? String(marker.account) : '';
           /* The first read hands the transport its account; the deletion follows. */
-          try { await this.transport(); } catch (_) { clearFailed = true; syncFailed = true; return; }
-          if (!(await this.retryClear())) return;
-          cleared = false; syncFailed = false; return;
+          let first; try { first = await this.transport(); } catch (_) { cleared = true; clearFailed = true; syncFailed = true; return; }
+          const current = this.accountId();
+          if (owedAccount === current) {
+            cleared = true;
+            if (!(await this.retryClear())) return;
+            cleared = false; syncFailed = false; return;
+          }
+          /* Another account's debt (or a marker that names nobody, such as the
+             old bare "1"): it is not ours to settle, and deleting the signed-in
+             account's draft for it would lose that account's answers. */
+          try { storage.del(CLEAR_KEY); } catch (_) {}
+          return this.restoreFrom(S, first);
         }
+        let d0; try { d0 = await this.transport(); } catch (_) { syncFailed = true; return; }
+        return this.restoreFrom(S, d0);
+      },
+      restoreFrom(S, d) {
         try {
-          const d = await this.transport();
           let local; try { local = JSON.parse(storage.get(KEY) || 'null'); } catch (_) {}
           revision = Math.max(revision, Number(local?.revision) || 0);
           // Preserve working local answers when a previous server copy is older.
@@ -137,9 +216,9 @@
     };
   }
   const FILE_COPY = {
-    fr: ['Exporter le brouillon', 'Importer un brouillon', 'Fichier de brouillon invalide.', EXPORT_NOTE.fr],
-    en: ['Export draft', 'Import draft', 'Invalid draft file.', EXPORT_NOTE.en],
-    ar: ['تصدير المسودة', 'استيراد مسودة', 'ملف المسودة غير صالح.', EXPORT_NOTE.ar],
+    fr: ['Exporter le brouillon', 'Importer un brouillon', 'Fichier de brouillon invalide.', EXPORT_NOTE.fr, 'J’ai bien enregistré le fichier'],
+    en: ['Export draft', 'Import draft', 'Invalid draft file.', EXPORT_NOTE.en, 'I saved the file'],
+    ar: ['تصدير المسودة', 'استيراد مسودة', 'ملف المسودة غير صالح.', EXPORT_NOTE.ar, 'لقد حفظت الملف'],
   };
   function mountRecovery(container, draft, S, lang, browser, refresh, first) {
     const copy = FILE_COPY[lang] || FILE_COPY.fr;
@@ -157,6 +236,13 @@
         refresh();
       };
       container.appendChild(button);
+      /* The browser accepted a download; only the person can say the file landed. */
+      if (draft.exportOffered && draft.exportOffered()) {
+        const confirm = browser.document.createElement('button');
+        confirm.type = 'button'; confirm.textContent = copy[4];
+        confirm.onclick = () => { draft.confirmExport(); refresh(); };
+        container.appendChild(confirm);
+      }
     }
     if (first) {
       const label = browser.document.createElement('label');
@@ -170,7 +256,21 @@
       label.appendChild(input); container.appendChild(label);
     }
   }
-  async function submit({ S, t, goal, tr, storage, venueApi, teamApi }) {
+  /* A person typed these names for the Team page; the codes live on the server
+     (they travelled with the confirmed creation). When the local roster could not
+     be filled, this durable task (names and roles only, never a code) makes the
+     Team page offer "finish importing your team" (assets/team-import-pending.js). */
+  const TEAM_PENDING_KEY = 'kiwiOnboardingTeamPending';
+  function submitPlan(S) {
+    return S.pins.map((p) => ({
+      role: p.role,
+      code: /^\d{4}$/.test(p.code) ? p.code : '',
+      name: (p.name || '').trim() || (p.role === 'owner' ? (S.ownerName || '').trim() : ''),
+    })).filter((p) => p.name);
+  }
+  async function submit({ S, t, goal, tr, storage, venueApi, teamApi, outcome }) {
+    outcome = outcome || {};
+    outcome.persistFailed = []; outcome.teamPending = false; outcome.venueSelectFailed = false;
     const validPins = S.pins.filter((p) => /^\d{4}$/.test(p.code)).map((p) => ({
       role: p.role, code: p.code,
       name: p.name || (p.role === 'owner' ? (S.ownerName || tr({ fr: 'Propriétaire', en: 'Owner', ar: 'المالك' })) : ''),
@@ -187,36 +287,43 @@
       });
     }
     if (!vid) return null;
-    storage.set('kiwiOwnerName', S.ownerName.trim());
-    storage.set('kiwiBizName', S.bizName.trim());
-    storage.set('kiwiBizType', S.typeId);
-    storage.set('kiwiCity', S.city.trim());
-    storage.set('kiwiVenueCount', String(S.venueCount));
-    if (S.teamGiven) storage.set('kiwiTeamSize', String(S.teamSize)); else storage.del('kiwiTeamSize');
-    storage.set('kiwiGoals', JSON.stringify(S.goals));
+    /* The venue exists on the server now. A refused write below must not be
+       reported as a completed local activation: each one is counted. */
+    const put = (k, v) => { let ok; try { ok = storage.set(k, v); } catch (_) { ok = false; } if (ok === false) outcome.persistFailed.push(k); };
+    put('kiwiOwnerName', S.ownerName.trim());
+    put('kiwiBizName', S.bizName.trim());
+    put('kiwiBizType', S.typeId);
+    put('kiwiCity', S.city.trim());
+    put('kiwiVenueCount', String(S.venueCount));
+    if (S.teamGiven) put('kiwiTeamSize', String(S.teamSize)); else storage.del('kiwiTeamSize');
+    put('kiwiGoals', JSON.stringify(S.goals));
     /* Les codes sont partis avec la création confirmée, vers le serveur : c'est
        lui qui les compare. Ce navigateur n'en garde AUCUN (kiwiPins, en clair, a
        été retiré) ; le premier déverrouillage en ligne écrit la ligne salée dont
        la porte a besoin hors ligne (assets/dashboard-pin-vault.js). */
     storage.del('kiwiPins');
     // PINs and type were sent with the confirmed creation to the NEW slug.
-    storage.set('kiwiRole', 'owner');
-    storage.set('kiwiOnboarded', '1');
+    put('kiwiRole', 'owner');
+    put('kiwiOnboarded', '1');
     storage.del('kiwiSkipOnboard');
 
-    try { if (venueApi.setVenue) venueApi.setVenue(vid); } catch (_) {}
+    try { if (venueApi.setVenue) venueApi.setVenue(vid); } catch (_) { outcome.venueSelectFailed = true; }
 
     /* Seed the entered staff into the REAL per-venue roster (team.js) so they
      * persist and show on the Équipe page. */
+    const teamPeople = submitPlan(S);
+    let seeded = false;
     try {
-      const teamPeople = S.pins.map((p) => ({
-        role: p.role,
-        code: /^\d{4}$/.test(p.code) ? p.code : '',
-        name: (p.name || '').trim() || (p.role === 'owner' ? (S.ownerName || '').trim() : ''),
-      })).filter((p) => p.name);
-      const venue = venueApi && venueApi.getCurrentVenueData && venueApi.getCurrentVenueData();
-      if (venue && teamApi && teamApi.importMembers) teamApi.importMembers(venue, teamPeople);
+      /* A venue that could not be selected must not receive the roster: the
+         "current" venue would be some other one. */
+      const venue = !outcome.venueSelectFailed && venueApi && venueApi.getCurrentVenueData && venueApi.getCurrentVenueData();
+      if (venue && teamApi && teamApi.importMembers) { teamApi.importMembers(venue, teamPeople); seeded = true; }
     } catch (_) {}
+    if (teamPeople.length && !seeded) {
+      outcome.teamPending = true;
+      let kept; try { kept = storage.set(TEAM_PENDING_KEY, JSON.stringify({ venue: String(vid), people: teamPeople.map((p) => ({ role: p.role, name: p.name.slice(0, 20) })) })); } catch (_) { kept = false; }
+      if (kept === false) outcome.persistFailed.push(TEAM_PENDING_KEY);
+    }
 
     storage.del(KEY);
     return vid;
@@ -294,6 +401,7 @@
   }
 
   let finishing = false;
+  let lastOutcome = { persistFailed: [], teamPending: false };
     return {
       state: S, reserved: RESERVED, typeHint: TYPE_HINT,
       isSubmitting: () => finishing,
@@ -308,7 +416,9 @@
         try { S.step = 7; return validate(); }
         finally { S.step = step; }
       },
-      submit(adapters) { return submit({ ...adapters, S, t: TYPES.find((t) => t.id === S.typeId) || TYPES[0], goal: parsedDailyGoal(), tr }); },
+      /* What the last submit could not finish on this device (see submit). */
+      outcome: () => lastOutcome,
+      submit(adapters) { lastOutcome = {}; return submit({ ...adapters, outcome: lastOutcome, S, t: TYPES.find((t) => t.id === S.typeId) || TYPES[0], goal: parsedDailyGoal(), tr }); },
     };
   }
 
@@ -346,5 +456,6 @@
       model.steps.map((step) => '<p data-setup-step="' + step.id + '" data-done="' + step.done + '">' + labels[step.id] + ' · ' + (step.done ? L.done : L.todo) + '</p>').join('') +
       model.recap.map((line) => '<div class="r" data-recap="' + line.id + '"><span>' + esc(line.label) + '</span><b>' + esc(line.value) + '</b></div>').join('') + '<p>' + L.next + (labels[model.nextAction] || L.finish) + '</p></div>';
   }
-  return { createSession, createDraft, mountRecovery, submit, DRAFT_NOTE, viewModel, presentation };
+  const TeamImportPending = { KEY: TEAM_PENDING_KEY, read: readPending, retry: retryPending, mount: mountPending, COPY: PENDING_COPY };
+  return { createSession, createDraft, mountRecovery, submit, TeamImportPending, TEAM_PENDING_KEY, DRAFT_NOTE, viewModel, presentation };
 });

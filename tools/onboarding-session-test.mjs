@@ -24,7 +24,7 @@ for (const name of ['window', 'document', 'KiwiOnboarding', 'KiwiDashOnboarding'
 vm.runInContext(fs.readFileSync('assets/onboarding-data.js', 'utf8'), context);
 const isolated = context.KiwiOnboardingData.createSession({ TYPES: types, tr });
 assert.equal(isolated.kitProblem() !== null, true);
-assert.deepEqual(Object.keys(data.createSession({ TYPES: types, tr })).sort(), ['isSubmitting','setSubmitting','finalProblem','updatePin','addPin','removePin','state','reserved','typeHint','update','fitPinsToTeam','parsedDailyGoal','validate','kitCodeProblem','kitProblem','submit'].sort());
+assert.deepEqual(Object.keys(data.createSession({ TYPES: types, tr })).sort(), ['isSubmitting','setSubmitting','outcome','finalProblem','updatePin','addPin','removePin','state','reserved','typeHint','update','fitPinsToTeam','parsedDailyGoal','validate','kitCodeProblem','kitProblem','submit'].sort());
 assert.doesNotMatch(fs.readFileSync('assets/onboarding-data.js', 'utf8').slice(400), /\b(?:window|globalThis|host)\s*(?:\[|\.)/g, 'owner must not reach browser or sibling state');
 
 async function run(source, kit, answers) {

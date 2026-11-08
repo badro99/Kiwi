@@ -203,7 +203,7 @@ const ops = read('assets/operations.js');
 ok(/stock:\s*stock/.test(ops) && /KiwiInventory\.status/.test(ops), 'the till heartbeat carries the stock queue (KiwiInventory.status)');
 const ws = read('functions/api/admin/_workspace.js');
 ok(/stock:\s*beat\.stock/.test(ws) && /refusedEntries/.test(ws), 'the operator workspace normalises the stock block of a heartbeat');
-const aw = read('assets/admin-workspace.js');
+const aw = read('assets/admin-workspace-copy.js') + ';' + read('assets/admin-workspace.js');
 ok(/Stock bloqué en caisse/.test(aw) && /r\.stock/.test(aw), 'the operator console raises « Stock bloqué en caisse »');
 
 /* 7 · every reason a screen writes is one the server accepts */

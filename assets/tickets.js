@@ -1,4 +1,4 @@
-import { createData, createTicketState } from './tickets-data.js?v=18';
+import { createData, createTicketState } from './tickets-data.js?v=19';
 import { createBoard } from './tickets-board.js?v=7';
 import { createComposer } from './tickets-composer.js?v=5';
 import { createThread } from './tickets-thread.js?v=3';
