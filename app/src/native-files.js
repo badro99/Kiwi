@@ -107,11 +107,13 @@
 
   /* ── Documents à imprimer ────────────────────────────────────────────── */
   var nativeOpen = window.open;
-  var lastPrint = 0;
+  var lastPrint = 0, lastPrintHtml = null;
   function sendToPdf(html, title) {
     var now = Date.now();
-    if (now - lastPrint < 1500) return; // onload + bouton : un seul PDF
+    // onload + bouton : un seul PDF pour le MÊME document ; un autre document passe toujours.
+    if (html === lastPrintHtml && now - lastPrint < 1500) return;
     lastPrint = now;
+    lastPrintHtml = html;
     var name = String(title || copy().untitled).replace(/[^\p{L}\p{N}_-]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 80);
     var method = can('printHtml') ? 'printHtml' : (can('exportInvoice') ? 'exportInvoice' : '');
     if (!method) { notify(copy().failed); return; }
@@ -150,12 +152,17 @@
     sheet.className = 'kiwi-native-doc';
     sheet.setAttribute('role', 'dialog');
     sheet.setAttribute('aria-modal', 'true');
+    sheet.setAttribute('aria-label', c.untitled);
+    var opener = document.activeElement;
     sheet.innerHTML = '<div class="kiwi-native-doc-bar"><button type="button" class="kiwi-native-doc-close"></button>'
       + '<span class="kiwi-native-doc-title"></span><button type="button" class="kiwi-native-doc-share"></button></div>'
-      + '<iframe class="kiwi-native-doc-frame" title=""></iframe>';
+      + '<iframe class="kiwi-native-doc-frame"></iframe>';
+    sheet.querySelector('iframe').title = c.untitled;
     sheet.querySelector('.kiwi-native-doc-close').textContent = c.close;
     sheet.querySelector('.kiwi-native-doc-share').textContent = c.share;
     document.body.appendChild(sheet);
+    var closeBtn = sheet.querySelector('.kiwi-native-doc-close');
+    try { closeBtn.focus(); } catch (_) {}
     var frame = sheet.querySelector('iframe');
     var win = frame.contentWindow;
     var title = sheet.querySelector('.kiwi-native-doc-title');
@@ -164,23 +171,45 @@
         Object.defineProperty(win, 'print', { configurable: true, writable: true, value: function () { printDocument(win); } });
         Object.defineProperty(win, 'close', { configurable: true, writable: true, value: function () { dismiss(); } });
         armFileLinks(win);
+        win.addEventListener('blur', onFrameBlur);
         var name = win.document.title || '';
         title.textContent = name;
-        frame.title = name;
+        frame.title = name || c.untitled;
+        sheet.setAttribute('aria-label', name || c.untitled);
       } catch (_) {}
     }
     function dismiss() {
       if (!sheet.parentNode) return;
       try { win.dispatchEvent(new win.Event('unload')); } catch (_) {}
+      document.removeEventListener('focusin', keepFocus, true);
+      sheet.removeEventListener('keydown', onKey);
       sheet.parentNode.removeChild(sheet);
+      // Rend le focus au bouton qui a ouvert le document, s'il existe encore.
+      try { if (opener && opener !== document.body && opener.isConnected && typeof opener.focus === 'function') opener.focus(); } catch (_) {}
     }
+    // Modal : le focus ne sort pas de la feuille, Échap la ferme.
+    function keepFocus(event) {
+      if (!sheet.parentNode || sheet.contains(event.target)) return;
+      try { closeBtn.focus(); } catch (_) {}
+    }
+    // Tab depuis le dernier élément du document sort vers le vide : retour sur Fermer.
+    function onFrameBlur() {
+      setTimeout(function () {
+        if (sheet.parentNode && !sheet.contains(document.activeElement)) { try { closeBtn.focus(); } catch (_) {} }
+      }, 0);
+    }
+    function onKey(event) {
+      if (event.key === 'Escape') { event.preventDefault(); dismiss(); }
+    }
+    document.addEventListener('focusin', keepFocus, true);
+    sheet.addEventListener('keydown', onKey);
     var doc = win.document, write = doc.write, open = doc.open, closeDoc = doc.close;
     doc.open = function () { var out = open.apply(doc, arguments); arm(); return out; };
     doc.write = function () { var out = write.apply(doc, arguments); arm(); return out; };
     doc.close = function () { var out = closeDoc.apply(doc, arguments); arm(); return out; };
     frame.addEventListener('load', arm);
     sheet.querySelector('.kiwi-native-doc-close').addEventListener('click', dismiss);
-    sheet.querySelector('.kiwi-native-doc-share').addEventListener('click', function () { lastPrint = 0; printDocument(win); });
+    sheet.querySelector('.kiwi-native-doc-share').addEventListener('click', function () { lastPrint = 0; lastPrintHtml = null; printDocument(win); });
     arm();
     return win;
   }

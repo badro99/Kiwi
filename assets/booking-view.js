@@ -198,6 +198,7 @@ export function createBookingView(context) {
           draft[k]=form.elements[k].value
         }
         );
+        state.keepFormError=!!form;
         state.lang=b.dataset.lang;
         lsSet('kiwiBookingLang',state.lang);
         if(state.manageData) {

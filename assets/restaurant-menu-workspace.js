@@ -923,6 +923,8 @@
     $('[data-video]',m.el).onchange=async e=>{const u=await upload(e.target.files[0],'video',status);if(u){video=u;photo='';showMedia();}e.target.value='';};
     removeBtn.onclick=()=>{photo='';video='';showMedia();status.textContent=ui('itMediaRemoved');};
     $('[data-cancel]',m.el).onclick=m.close;
+    /* The server can replace the whole carte under an open editor (foreign-document 409, state.js): the item is gone, and Save would close the sheet and announce « Carte mise à jour » over nothing. Close it, say why, and park the focus on the page's search field instead of <body>. */
+    if(x){const off=S().subscribe(()=>{if(!m.el.isConnected){off();return;}if(item(x.id))return;off();m.close();render();requestAnimationFrame(()=>{/* the sync warning toast is queued next and a toast replaces the one before it: speak after it */window.Kiwi?.toast?.(ui('itGoneTitle'),{desc:ui('itGone'),type:'warn',force:true});const f=$('[data-rmw-search]')||$('[data-action="rmw-item-add"]');if(f)f.focus();});});}
     const nameInput=$('[data-name]',m.el),nameErr=$('[data-name-err]',m.el);
     nameInput.addEventListener('input',()=>{if(nameInput.value.trim()){nameErr.hidden=true;nameInput.removeAttribute('aria-invalid');}});
     const saveItem=(onSuccess)=>{

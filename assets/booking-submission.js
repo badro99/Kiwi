@@ -54,6 +54,25 @@ export function createBookingSubmission(context) {
     return state.lang === 'ar' ? 'انقطع الاتصال أثناء الإرسال. قد يكون الحجز قد سُجّل. أعد المحاولة من هذه الصفحة بنفس المرجع.' : state.lang === 'en' ? 'The connection dropped while sending. Your booking may have been saved. Retry from this page with the same reference.' : 'Connexion interrompue pendant l’envoi. Votre réservation a peut-être été enregistrée. Réessayez depuis cette page avec la même référence.';
   }
 
+  /* An error under the form is kept as a KIND, not as text: switching language
+     redraws the page, and an uncertain-send message that vanished (or stayed in
+     the old language) would hide that the booking may already exist. */
+  function formErrorText(e) {
+    var base=e.kind==='response-uncertain'? uncertainReply():e.kind==='transport-uncertain'? transportUncertain():e.kind==='request-timeout'? t('timeout'):e.kind==='room-unavailable'? ht('taken'):e.kind==='slot-unavailable'? t('taken'):t('error');
+    return e.warn? base+' '+retryWarning():base
+  }
+  function showFormError(form, kind, warn) {
+    state.formError={ kind: kind, warn: !!warn };
+    form.querySelector('[data-error]').textContent=formErrorText(state.formError)
+  }
+  /* Called when a details form is drawn: only a language switch (state.keepFormError,
+     set by the language buttons) carries the error over, any other visit starts clean. */
+  function repaintFormError(form) {
+    if(state.formError&&state.keepFormError) form.querySelector('[data-error]').textContent=formErrorText(state.formError);
+    else state.formError=null;
+    state.keepFormError=false
+  }
+
   /* What the guest typed survives a trip back to the slot list (the automatic
      return after a taken slot included). */
   function keepGuest(form) {
@@ -95,6 +114,7 @@ export function createBookingSubmission(context) {
     ))+'</strong></div><div><span>'+esc(t('price'))+'</span><strong>'+(+state.service.price>0? esc(money(state.service.price)):esc(t('free')))+'</strong></div>'+(+state.service.deposit>0? '<div data-deposit><span>'+esc(t('deposit'))+'</span><strong>'+esc(money(state.service.deposit))+'</strong></div>':'')+'<p data-payment-note>'+esc(paymentNote())+'</p></aside><div class="bk-error full" data-error role="alert" aria-live="assertive"></div><div class="bk-actions full"><button type="button" class="bk-btn" data-back>'+esc(t('back'))+'</button><button class="bk-btn primary" type="submit">'+esc(t('confirm'))+'</button></div></form></div>');
     var form=app.querySelector('[data-form]');
     restoreGuest(form);
+    repaintFormError(form);
     const saveGuest=keepGuest(form);
     app.querySelector('[data-back]').onclick=function() { saveGuest(); times() };
     form.onsubmit=submit
@@ -123,8 +143,7 @@ export function createBookingSubmission(context) {
     }
     catch(err) {
       btn.disabled=false;
-      form.querySelector('[data-error]').textContent=err.message==='response-uncertain'? uncertainReply():err.message==='transport-uncertain'? transportUncertain():err.message==='request-timeout'? t('timeout'):err.message==='slot-unavailable'? t('taken'):t('error');
-      if (ssGet('kiwiBookingRef') !== ref) form.querySelector('[data-error]').textContent += ' ' + retryWarning();
+      showFormError(form, err.message, ssGet('kiwiBookingRef') !== ref);
       if(err.message==='slot-unavailable') setTimeout(times,900)
     }
   }
@@ -145,6 +164,7 @@ export function createBookingSubmission(context) {
     layout('<div class="bk-panel">'+head(ht('details'),ht('detailsSub'))+'<form class="bk-form" data-hotel-form><div class="bk-fields"><label class="bk-field"><span>'+esc(t('name'))+'</span><input name="name" maxlength="100" autocomplete="name" required></label><label class="bk-field"><span>'+esc(t('phone'))+'</span><input name="phone" maxlength="32" inputmode="tel" autocomplete="tel" placeholder="06… / +33…"></label><label class="bk-field full"><span>'+esc(t('email'))+'</span><input name="email" maxlength="160" type="email" autocomplete="email"></label><label class="bk-field full"><span>'+esc(t('note'))+'</span><textarea name="note" maxlength="600"></textarea></label></div>'+hotelSummary()+'<div class="bk-error full" data-error role="alert" aria-live="assertive"></div><div class="bk-actions full"><button type="button" class="bk-btn" data-back>'+esc(t('back'))+'</button><button class="bk-btn primary" type="submit">'+esc(ht('confirm'))+'</button></div></form></div>');
     var form=app.querySelector('[data-hotel-form]');
     restoreGuest(form);
+    repaintFormError(form);
     const saveGuest=keepGuest(form);
     app.querySelector('[data-back]').onclick=function() { saveGuest(); hotelRoomList() };
     form.onsubmit=submitHotel
@@ -178,8 +198,7 @@ export function createBookingSubmission(context) {
         app.querySelector('[data-back]').onclick=loadHotelRooms;
         return
       }
-      form.querySelector('[data-error]').textContent=err.message==='response-uncertain'? uncertainReply():err.message==='transport-uncertain'? transportUncertain():err.message==='request-timeout'? t('timeout'):err.message==='room-unavailable'? ht('taken'):t('error');
-      if (ssGet('kiwiHotelBookingRef') !== ref) form.querySelector('[data-error]').textContent += ' ' + retryWarning();
+      showFormError(form, err.message, ssGet('kiwiHotelBookingRef') !== ref);
       if(err.message==='room-unavailable') setTimeout(loadHotelRooms,900)
     }
   }

@@ -624,6 +624,7 @@ for (const test of [
   'booking-properties-test.mjs',
   'booking-read-order-test.mjs',
   'hotel-properties-test.mjs',
+  'hotel-reconnect-journey-test.mjs',
   'stockqueue-ruling-test.mjs', 'stock-retail-move-test.mjs', 'held-split-lines-test.mjs', 'recipe-caps-test.mjs', 'menu-missing-price-test.mjs', 'boutique-retention-day-test.mjs', 'stock-money-properties-test.mjs', 'stock-overlay-quota-test.mjs', 'serveur-loyalty-evidence-test.mjs', 'clients-evidence-test.mjs', 'kitchen-queue-evidence-test.mjs', 'queue-recovery-evidence-test.mjs', 'sale-aliases-test.mjs', 'stock-count-history-evidence-test.mjs', 'cx-money-behavior-test.mjs',
   'menu-analysis-properties-test.mjs',
   'economat-properties-test.mjs',
@@ -1784,6 +1785,7 @@ section('Whole-project regressions');
     'boutique-stock-movements-test.mjs',
     /* « Gestion complète de l’inventaire sur la caisse » vaut aussi à la caisse boutique (Santos, 29 oct.) : éteint, le verrou d'août ; allumé, créer, modifier, supprimer en vrais clics. */
     'boutique-till-catalog-admin-browser-test.mjs',
+    'boutique-large-catalog-browser-test.mjs',
     /* God Mode entre dans la caisse boutique sans écran de fond ni poste ouvert ; sans preuve /api/me, l'écran revient (propriétaire, 29 oct.). */
     'boutique-operator-entry-browser-test.mjs', 'caisse-operator-entry-browser-test.mjs',
     'till-inventory-access-test.mjs',
@@ -2078,8 +2080,10 @@ section('Whole-project regressions');
     'menu-shell-browser-test.mjs',
     'menu-formula-keyboard-browser-test.mjs',
     'menu-options-keyboard-browser-test.mjs',
+    'menu-foreign-document-focus-browser-test.mjs',
     'catalog-workspace-test.mjs',
     'native-store-readiness-test.mjs',
+    'native-files-journey-browser-test.mjs',
     /* La fiche App Store collée champ par champ : longueurs Apple, pas de prix, confidentialité = manifeste. */
     'app-store-listing-test.mjs',
     'native-host-bridge-test.mjs',
@@ -2271,6 +2275,7 @@ section('Whole-project regressions');
     'booking-recover-browser-test.mjs', 'economat-storage-upgrade-browser-test.mjs', 'pay-statement-pdf-browser-test.mjs',
     'booking-lens-browser-test.mjs', 'booking-touch-browser-test.mjs',
     'booking-recover-browser-test.mjs',
+    'booking-language-uncertain-browser-test.mjs',
     'onboarding-truth-test.mjs',
     'lane-c-labels-test.mjs',
     'onboarding-data-test.mjs',

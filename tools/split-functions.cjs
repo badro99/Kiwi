@@ -29,9 +29,9 @@ function fragment(source, f) {
 // Those behaviours execute in r13-d-failsoft-test.mjs, rather than a frozen copy.
 const translated = new Set(['evicted','error.uncertain-write','notStored','filter.saveFailed','Conversion photo impossible. Essayez une autre image.','error.partial-load','uncertain','auditPartial']);
 const removedProperty = n => n && ts.isPropertyAssignment(n) && translated.has(n.name.text);
-const evolved = new Set(['rememberManage','manageBlock','cancelBooking','openManage','empPayRefsWrite','saveFilters','addFiles','cuShrinkHotelPhoto','cuUploadTypePhotos','request','publish','submitRequest','details','hotelDetails','submit','submitHotel','loadTickets','ssGet','ssSet','ssDel','money']);
+const evolved = new Set(['rememberManage','manageBlock','cancelBooking','openManage','empPayRefsWrite','saveFilters','addFiles','cuShrinkHotelPhoto','cuUploadTypePhotos','request','publish','submitRequest','details','hotelDetails','submit','submitHotel','loadTickets','ssGet','ssSet','ssDel','money','wireGlobal']);
 // New helpers a reviewed fix added next to the split bodies (r20): the archive never had them.
-const added = new Set(['transportUncertain','keepGuest','restoreGuest']);
+const added = new Set(['transportUncertain','keepGuest','restoreGuest','formErrorText','showFormError','repaintFormError']);
 function tokens(source) {
   const ast = parse(source), out = [], removedEnds = new Set();
   function walk(n) {

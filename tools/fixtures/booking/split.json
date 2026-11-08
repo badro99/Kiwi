@@ -325,74 +325,74 @@
           "start": 9464,
           "end": 9597,
           "offset": 614,
-          "length": 4465,
+          "length": 5614,
           "replacement": "\n  function phoneValue(...args) { return parts.submission.phoneValue(...args); }",
           "was": 2596
         },
         {
           "start": 9597,
           "end": 10032,
-          "offset": 5083,
+          "offset": 6232,
           "length": 432,
           "replacement": "\n  function emailOk(...args) { return parts.submission.emailOk(...args); }"
         },
         {
           "start": 10032,
           "end": 10334,
-          "offset": 5519,
+          "offset": 6668,
           "length": 299,
           "replacement": "\n  function badEmailMsg(...args) { return parts.submission.badEmailMsg(...args); }"
         },
         {
           "start": 25328,
           "end": 25720,
-          "offset": 5822,
+          "offset": 6971,
           "length": 389,
           "replacement": "\n  function paymentNote(...args) { return parts.submission.paymentNote(...args); }"
         },
         {
           "start": 25720,
           "end": 27632,
-          "offset": 6215,
-          "length": 2000,
+          "offset": 7364,
+          "length": 2028,
           "replacement": "\n  function details(...args) { return parts.submission.details(...args); }",
           "was": 1909
         },
         {
           "start": 27632,
           "end": 30458,
-          "offset": 8219,
-          "length": 1642,
+          "offset": 9396,
+          "length": 1333,
           "replacement": "\n  function submit(...args) { return parts.submission.submit(...args); }",
           "was": 1585
         },
         {
           "start": 36410,
           "end": 37205,
-          "offset": 9866,
+          "offset": 10734,
           "length": 791,
           "replacement": "\n  function success(...args) { return parts.submission.success(...args); }"
         },
         {
           "start": 45808,
           "end": 46983,
-          "offset": 10661,
-          "length": 1263,
+          "offset": 11529,
+          "length": 1291,
           "replacement": "\n  function hotelDetails(...args) { return parts.submission.hotelDetails(...args); }",
           "was": 1172
         },
         {
           "start": 46983,
           "end": 50393,
-          "offset": 11928,
-          "length": 2173,
+          "offset": 12824,
+          "length": 1863,
           "replacement": "\n  function submitHotel(...args) { return parts.submission.submitHotel(...args); }",
           "was": 2116
         },
         {
           "start": 50393,
           "end": 50876,
-          "offset": 14105,
+          "offset": 14691,
           "length": 480,
           "replacement": "\n  function hotelSuccess(...args) { return parts.submission.hotelSuccess(...args); }"
         }
@@ -465,7 +465,7 @@
         {
           "start": 36348,
           "end": 36410,
-          "offset": 6338,
+          "offset": 6505,
           "length": 62,
           "replacement": "\n  function mt(...args) { return parts.manage.mt(...args); }"
         },
@@ -486,21 +486,21 @@
         {
           "start": 52223,
           "end": 54056,
-          "offset": 7750,
+          "offset": 8196,
           "length": 1833,
           "replacement": "\n  function renderManage(...args) { return parts.manage.renderManage(...args); }"
         },
         {
           "start": 54056,
           "end": 54725,
-          "offset": 9584,
+          "offset": 10030,
           "length": 669,
           "replacement": "\n  function cancelBooking(...args) { return parts.manage.cancelBooking(...args); }"
         },
         {
           "start": 54725,
           "end": 55249,
-          "offset": 10254,
+          "offset": 10700,
           "length": 524,
           "replacement": "\n  function openManage(...args) { return parts.manage.openManage(...args); }"
         }
@@ -683,13 +683,14 @@
           "start": 55903,
           "end": 56970,
           "offset": 13248,
-          "length": 1067,
-          "replacement": "\n  function wireGlobal(...args) { return parts.view.wireGlobal(...args); }"
+          "length": 1103,
+          "replacement": "\n  function wireGlobal(...args) { return parts.view.wireGlobal(...args); }",
+          "was": 1067
         },
         {
           "start": 56970,
           "end": 58474,
-          "offset": 14316,
+          "offset": 14352,
           "length": 1504,
           "replacement": "\n  function closed(...args) { return parts.view.closed(...args); }"
         }

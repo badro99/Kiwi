@@ -6,7 +6,7 @@ import { forLocales } from './test-locales.mjs';
  * combination can hide a control, paint a dark page light or turn a label
  * italic in another (tenth blind rating, skins#2).
  *
- * For the dashboard, the restaurant till and the boutique till, in each skin
+ * For the dashboard, the restaurant, boutique, pressing and hotel tills, in each skin
  * (shipped, 2027), theme (light, dark) and size (phone, tablet, desktop), in
  * French (Arabic too with KIWI_LOCALES=fr,ar, owner rule of 26 October):
  *   1. what the page paints matches the theme it says (measured, not the flag);
@@ -18,6 +18,8 @@ import { forLocales } from './test-locales.mjs';
  *      reviewed fingerprint in tools/skin-matrix-baseline.json. A CSS edit
  *      that moves another skin, theme or size shows up here, by name.
  *      KIWI_UPDATE_SKIN_BASELINE=1 rewrites the cells that ran, after review.
+ * (Pressing and hotel joined the boutique in r21, skins#A2: their fingerprints
+ * were not pinned, only their general surface tests ran.)
  * Demo data, clock pinned, no merchant, no staff code. */
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -30,7 +32,7 @@ const UPDATE = process.env.KIWI_UPDATE_SKIN_BASELINE === '1';
 const baseline = fs.existsSync(BASELINE) ? JSON.parse(fs.readFileSync(BASELINE, 'utf8')) : { version: 1, cells: {} };
 const h = await harness('skin-matrix');
 
-const SURFACES = ['dashboard', 'caisse-restaurant', 'caisse-boutique'];
+const SURFACES = ['dashboard', 'caisse-restaurant', 'caisse-boutique', 'caisse-pressing', 'caisse-hotel'];
 const SKINS = ['shipped', '2027'];
 const THEMES = ['light', 'dark'];
 const SIZES = ['phone', 'tablet', 'desktop'];
@@ -98,9 +100,11 @@ async function open(t, surface, skin, theme, locale, size) {
   }
   await page.waitForFunction(() => window.KiwiPosDispatch, { timeout: 30000 });
   await sleep(500);
-  t.step('open the boutique till');
-  await page.evaluate(() => window.KiwiPosDispatch.unlockById('boutique'));
-  await page.waitForSelector('#pos-boutique.is-on', { visible: true, timeout: 20000 });
+  /* The boutique, the pressing and the hotel open through the same dispatcher. */
+  const vertical = surface.replace('caisse-', '');
+  t.step('open the ' + vertical + ' till');
+  await page.evaluate((id) => window.KiwiPosDispatch.unlockById(id), vertical);
+  await page.waitForSelector('#pos-' + vertical + '.is-on', { visible: true, timeout: 20000 });
   /* The unlock flash leaves the DOM 3 s after it opens (pos-dispatch.js ›
      entryFlash): measured while it fades, its « Bonjour … » h1 was counted or
      not depending on a 150 ms race. Wait until it is gone. */
