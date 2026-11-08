@@ -24,7 +24,8 @@ vm.runInContext(src.slice(src.indexOf('export async function onRequestGet')).rep
 const store = new Map();
 globalThis.localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: k => store.delete(k) };
 globalThis.document = { addEventListener() {}, documentElement: { lang: 'fr' } };
-globalThis.window = { KiwiVenue: { getVenue: () => 'shop' }, KiwiCloudDoc: { currentSlug: () => 'shop' } };
+let navs = 0;
+globalThis.window = { Kiwi: { handlers: { 'nav-returns': () => { navs++; } } }, KiwiVenue: { getVenue: () => 'shop' }, KiwiCloudDoc: { currentSlug: () => 'shop' } };
 let calls = 0, onPage = null;
 globalThis.fetch = async (url) => {
   const r = await ctx.onRequestGet({ request: { url: 'https://local' + url } , env });
@@ -66,5 +67,11 @@ const afterWarm = calls;
 await ledger.refreshReturnsLedger(null);         // demandé : relit
 assert.ok(calls > afterWarm, 'actualiser relit malgré la minute de repos');
 void before;
+// Le bouton « Actualiser » (data-action returns-refresh) : une demande, consommée une seule fois par la page, qui repasse par nav-returns.
+assert.equal(ledger.takeRefresh(), false);
+window.Kiwi.handlers['returns-refresh']();
+assert.equal(navs, 1, 'repasse par la page');
+assert.equal(ledger.takeRefresh(), true, 'la page sait que la relecture est demandée');
+assert.equal(ledger.takeRefresh(), false, 'une seule fois');
 db.close();
 console.log('PASS returns keyset: cursor paging survives a concurrent insert, dedupe by id, read age + manual refresh');

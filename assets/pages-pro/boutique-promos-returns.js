@@ -182,7 +182,7 @@
       });
     }
     liveReturnsCloud.bind();
-    loadReturnsLedger(slug);
+    loadReturnsLedger(slug, !!rxView?.takeRefresh?.());
   }
   let ledgerChanged = false, ledgerPeriod = '';
   const loadReturnsLedger = async (slug, again) => {
@@ -607,7 +607,6 @@
     });
   };
 
-  handlers['returns-refresh'] = () => { if (liveReturnsSlug) loadReturnsLedger(liveReturnsSlug, true); };
   handlers['ret-approve'] = (el, arg) => {
     const id = argOf(el, arg);
     modal({

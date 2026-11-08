@@ -1416,12 +1416,12 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2223",
-    "sha": "433c3539915024c6"
+    "v": "2224",
+    "sha": "acc685691b4dda16"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
-    "v": "24",
-    "sha": "dec46e73d7e9ea5e"
+    "v": "25",
+    "sha": "06aeac0b39846d9c"
   },
   "assets/pages-pro/boutique-web-orders.js": {
     "v": "11",
@@ -1452,8 +1452,8 @@
     "sha": "19663b68aa9a8f62"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "216",
-    "sha": "df14707f25452ac7"
+    "v": "217",
+    "sha": "e80ee6ad5ef690e3"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

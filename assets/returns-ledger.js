@@ -56,6 +56,14 @@ export function ledgerAgeLabel(rL, now = Date.now()) {
   if (min < 1) return rL('Lu à l’instant', 'Read just now', 'قُرئ للتو');
   return rL('Lu il y a ' + min + ' min', 'Read ' + min + ' min ago', 'قُرئ قبل ' + min + ' د');
 }
+/* « Actualiser » : le bouton (data-action returns-refresh) invalide la lecture, pose un drapeau que la page
+   consomme (takeRefresh) pour relire même si la période n'a pas changé, puis repasse par la page elle-même. */
+let refreshAsked = false;
+export function takeRefresh() { const asked = refreshAsked; refreshAsked = false; return asked; }
+try {
+  const handlers = window.Kiwi && window.Kiwi.handlers;
+  if (handlers) handlers['returns-refresh'] = () => { refreshAsked = true; invalidateReturnsLedger(); if (handlers['nav-returns']) handlers['nav-returns'](); };
+} catch (_) {}
 /* Relecture demandée par la personne : saute la minute de repos. */
 export function refreshReturnsLedger(period) {
   invalidateReturnsLedger();
