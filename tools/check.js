@@ -638,6 +638,8 @@ for (const test of [
   'booking-hotel-beyond-window-test.mjs',
   'hotel-dossier-safety-test.mjs',
   'cloud-doc-quota-test.mjs',
+  /* 2026-11-08 · deux appareils, mêmes lignes, autre ordre : plus de ping-pong (Santos, returns). */
+  'cloud-doc-order-loop-test.js',
   'reservation-overlap-test.mjs',
   'booking-rules-shared-test.mjs',
   'store-credit-sale-test.mjs',

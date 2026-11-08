@@ -403,6 +403,32 @@
     return JSON.stringify(e);
   }
 
+  /* LE MÊME DOCUMENT, DANS UN AUTRE ORDRE. Deux appareils qui tiennent les mêmes
+   * lignes rangées autrement (un retour noté en tête sur une caisse, reçu en queue
+   * sur l'autre) ne doivent pas se le renvoyer : identical() compare le texte
+   * JSON, et la fusion range le local d'abord. Du 4 au 7 novembre 2026, le
+   * document « returns » de Santos Store a gagné jusqu'à 1 500 révisions par
+   * soirée ainsi, la socket réveillant chaque appareil 400 ms après l'écriture
+   * de l'autre. Ici les clés d'objet sont triées, et une liste dont chaque ligne
+   * porte un identifiant se compare comme un ensemble ; une liste de valeurs
+   * sans identité (un tracé, des horaires) garde son ordre. */
+  function canon(v) {
+    if (v && typeof v.toJSON === 'function') v = v.toJSON();
+    if (Array.isArray(v)) {
+      var rows = v.map(canon);
+      if (v.length && v.every(function (e) { return !!idOf(e); })) rows.sort();
+      return '[' + rows.join(',') + ']';
+    }
+    if (v && typeof v === 'object') {
+      return '{' + Object.keys(v).filter(function (k) { return v[k] !== undefined && typeof v[k] !== 'function'; })
+        .sort().map(function (k) { return JSON.stringify(k) + ':' + canon(v[k]); }).join(',') + '}';
+    }
+    return v === undefined ? 'null' : JSON.stringify(v);
+  }
+  function sameContent(a, b) {
+    try { return canon(a) === canon(b); } catch (_) { return false; }
+  }
+
   function mergeDefault(mine, theirs) {
     if (theirs == null) return mine;
     if (mine == null) return theirs;
@@ -615,6 +641,10 @@
 
           var adopt = first && mineEmpty;
           var next = adopt ? theirs : merge(mine, theirs);
+          /* La fusion n'apporte rien que le serveur n'ait déjà (seul l'ordre change) :
+             on prend sa copie telle quelle et on ne remonte rien. Une saisie locale
+             en attente (marque « modifié ») garde son ordre et part comme avant. */
+          if (!adopt && !dirtyToken(slug) && sameContent(next, theirs)) next = theirs;
           opts.write(next);
           writeRev(slug, serverRev);
           if (opts.onPulled) { try { opts.onPulled(next); } catch (_) {} }
@@ -878,6 +908,7 @@
     slugStore: slugStore,
     carryForward: carryForward,
     mergeDefault: mergeDefault,
+    sameContent: sameContent,
     isEmpty: emptyDefault,
     isReal: isReal,
   };
