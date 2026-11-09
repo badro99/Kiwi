@@ -18,6 +18,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 
 import {
   LEGACY_FACES_V, ROOT, SITE, UI, absolute, alternateLinks, esc, extractFooter, header, icon, json,
@@ -467,27 +468,38 @@ function listPublished() {
   return found;
 }
 
-validate();
-const footers = Object.fromEntries(FEATURE_LOCALES.map((locale) => [locale, extractFooter(fs.readFileSync(path.join(ROOT, locale, 'index.html'), 'utf8'), `${locale}/index.html`)]));
-const drift = [];
-const expected = new Set();
-for (const entry of [FEATURE_HUB, ...FEATURE_PAGES]) {
-  for (const locale of FEATURE_LOCALES) {
-    const file = outputPath(entry.routes[locale]);
-    expected.add(file);
-    writeOrCheck(file, renderPage(entry, locale, footers[locale]), drift, CHECK);
+/* Rend chaque page sans rien écrire : tools/features-pages-test.mjs vérifie ce
+ * rendu, et le mode --check vérifie que le disque est ce rendu. */
+export function renderFeatureSite() {
+  validate();
+  const footers = Object.fromEntries(FEATURE_LOCALES.map((locale) => [locale, extractFooter(fs.readFileSync(path.join(ROOT, locale, 'index.html'), 'utf8'), `${locale}/index.html`)]));
+  const pages = [];
+  for (const entry of [FEATURE_HUB, ...FEATURE_PAGES]) {
+    for (const locale of FEATURE_LOCALES) pages.push({ entry, locale, file: outputPath(entry.routes[locale]), html: renderPage(entry, locale, footers[locale]) });
   }
+  return pages;
 }
-const stray = listPublished().filter((file) => !expected.has(file));
-if (stray.length) {
-  console.error('pages publiées absentes du manifeste :');
-  stray.forEach((file) => console.error('  ' + path.relative(ROOT, file)));
-  process.exit(1);
+
+function main() {
+  const drift = [];
+  const expected = new Set();
+  for (const page of renderFeatureSite()) {
+    expected.add(page.file);
+    writeOrCheck(page.file, page.html, drift, CHECK);
+  }
+  const stray = listPublished().filter((file) => !expected.has(file));
+  if (stray.length) {
+    console.error('pages publiées absentes du manifeste :');
+    stray.forEach((file) => console.error('  ' + path.relative(ROOT, file)));
+    process.exit(1);
+  }
+  if (drift.length) {
+    console.error('pages Fonctionnalités en retard sur leur source :');
+    drift.forEach((file) => console.error('  ' + file));
+    console.error('lancer : node tools/build-features.mjs');
+    process.exit(1);
+  }
+  if (CHECK) console.log(`  ✓ ${expected.size} pages Fonctionnalités conformes à leur source`);
 }
-if (drift.length) {
-  console.error('pages Fonctionnalités en retard sur leur source :');
-  drift.forEach((file) => console.error('  ' + file));
-  console.error('lancer : node tools/build-features.mjs');
-  process.exit(1);
-}
-if (CHECK) console.log(`  ✓ ${expected.size} pages Fonctionnalités conformes à leur source`);
+
+if (process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(fileURLToPath(import.meta.url))) main();

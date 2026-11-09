@@ -22,6 +22,8 @@ import { fileURLToPath } from 'node:url';
 
 import { FEATURE_HUB, FEATURE_LOCALES, FEATURE_MORE, FEATURE_PAGES } from '../content/features/manifest.mjs';
 import { TOPICS } from '../content/guides/manifest.mjs';
+import { extractFooter, header, localizeFooterAnchors } from './site-chrome.mjs';
+import pricing from '../content/landing-pricing.json' with { type: 'json' };
 import hubCopy from '../content/features/pages/hub.mjs';
 import caisse from '../content/features/pages/caisse.mjs';
 import stock from '../content/features/pages/stock.mjs';
@@ -33,17 +35,19 @@ const COPY = { caisse, stock, orderpro };
 process.chdir(ROOT);
 const { prices, formatPrice } = await import('./landing-pricing.mjs');
 const read = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8');
-const pricing = JSON.parse(read('content/landing-pricing.json'));
 const PLAN_INDEX = { basic: 0, plus: 1, pro: 2, ultra: 3 };
 
 let checks = 0;
 const failures = [];
 const ok = (condition, message) => { checks++; if (!condition) failures.push(message); };
 const decode = (s) => s.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-const text = (markup) => decode(String(markup).replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
-const pageFile = (route) => path.join(ROOT, decodeURI(route).slice(1), 'index.html');
+const visibleText = (markup) => decode(String(markup).replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
 
-/* 1 · Les pages publiées sont celles que la source produit. */
+/* 1 · Les pages publiées sont celles que la source produit : le générateur
+ * rend chaque page en mémoire (renderFeatureSite) et toute la suite vérifie ce
+ * rendu ; --check vérifie que le disque est ce rendu, octet pour octet. */
+const { renderFeatureSite } = await import('./build-features.mjs');
+const rendered = new Map(renderFeatureSite().map((page) => [`${page.entry.id}/${page.locale}`, page.html]));
 const build = spawnSync(process.execPath, [path.join(ROOT, 'tools/build-features.mjs'), '--check'], { encoding: 'utf8' });
 ok(build.status === 0, 'tools/build-features.mjs --check : les pages suivent leur source\n' + (build.stdout || '') + (build.stderr || ''));
 
@@ -55,7 +59,7 @@ ok(FEATURE_PAGES.find((p) => p.id === 'orderpro').plan === 'pro' && tierHas('pro
 const PLAN_LABEL = { plus: { 'caisse.returns': 'Retours, échanges et avoirs', 'stock.variants': 'Catalogue par tailles et couleurs', 'stock.margin': 'Suivi des ventes et des marges' }, pro: { 'stock.recipes': 'Recettes, ingrédients et coût matière' } };
 
 /* 3 · Les promesses et leurs preuves. */
-const map = JSON.parse(read('tools/feature-claims-map.json'));
+const claimsMap = JSON.parse(read('tools/feature-claims-map.json'));
 const gate = read('tools/check.js');
 const frClaims = new Map();
 for (const page of FEATURE_PAGES) {
@@ -63,8 +67,8 @@ for (const page of FEATURE_PAGES) {
   for (const fact of copy.facts) frClaims.set(fact.claim, fact.text);
   for (const section of copy.sections) for (const point of section.points) if (point.text) frClaims.set(point.claim, point.text);
 }
-ok(JSON.stringify([...frClaims.keys()].sort()) === JSON.stringify(Object.keys(map.claims).sort()), 'chaque promesse des pages a sa preuve, et la carte ne garde aucune promesse retirée');
-for (const [id, claim] of Object.entries(map.claims)) {
+ok(JSON.stringify([...frClaims.keys()].sort()) === JSON.stringify(Object.keys(claimsMap.claims).sort()), 'chaque promesse des pages a sa preuve, et la carte ne garde aucune promesse retirée');
+for (const [id, claim] of Object.entries(claimsMap.claims)) {
   ok(claim.fr === frClaims.get(id), `${id} : le texte français de la carte est celui de la page (relire la preuve si la phrase a changé)`);
   ok(Array.isArray(claim.contracts) && claim.contracts.length > 0, `${id} : au moins une preuve`);
   if (claim.plan) {
@@ -108,9 +112,8 @@ for (const entry of [FEATURE_HUB, ...FEATURE_PAGES]) {
   for (const locale of FEATURE_LOCALES) {
     const route = entry.routes[locale];
     const label = `${entry.id}/${locale}`;
-    const file = pageFile(route);
-    if (!fs.existsSync(file)) { ok(false, `${label} : ${route} n'est pas publiée`); continue; }
-    const html = fs.readFileSync(file, 'utf8');
+    const html = rendered.get(label);
+    if (!html) { ok(false, `${label} : ${route} n'est pas rendue`); continue; }
     const url = SITE + route;
     ok(html.includes(`<html lang="${locale}" dir="${locale === 'ar' ? 'rtl' : 'ltr'}">`), `${label} : langue et sens d'écriture`);
     ok((html.match(/<h1\b/g) || []).length === 1 && (html.match(/<main\b/g) || []).length === 1, `${label} : une h1, un main`);
@@ -169,7 +172,7 @@ for (const entry of [FEATURE_HUB, ...FEATURE_PAGES]) {
     const app = node('SoftwareApplication');
     ok(app?.offers?.price === String(price.monthly) && app.offers.priceCurrency === 'MAD' && app.offers.name === `Kiwi ${pricing.fr.tiers[PLAN_INDEX[entry.plan]].name}`, `${label} : l'offre structurée est Kiwi ${entry.plan} à ${price.monthly} MAD`);
     const faq = node('FAQPage')?.mainEntity || [];
-    const shown = [...html.matchAll(/<details><summary>([\s\S]*?)<\/summary><p>([\s\S]*?)<\/p><\/details>/g)].map((m) => [text(m[1]), text(m[2])]);
+    const shown = [...html.matchAll(/<details><summary>([\s\S]*?)<\/summary><p>([\s\S]*?)<\/p><\/details>/g)].map((m) => [visibleText(m[1]), visibleText(m[2])]);
     ok(shown.length >= 4 && JSON.stringify(faq.map((q) => [q.name, q.acceptedAnswer.text])) === JSON.stringify(shown), `${label} : FAQPage décrit exactement la FAQ affichée`);
     ok(node('WebPage')?.url === url, `${label} : JSON-LD WebPage`);
 
@@ -195,21 +198,24 @@ for (const entry of [FEATURE_HUB, ...FEATURE_PAGES]) {
   }
 }
 for (const locale of FEATURE_LOCALES) {
-  ok(JSON.stringify([...usedClaims[locale]].sort()) === JSON.stringify(Object.keys(map.claims).sort()), `${locale} : les pages affichent toutes les promesses de la carte, et seulement elles`);
+  ok(JSON.stringify([...usedClaims[locale]].sort()) === JSON.stringify(Object.keys(claimsMap.claims).sort()), `${locale} : les pages affichent toutes les promesses de la carte, et seulement elles`);
 }
 
-/* 5 · Les guides mènent au hub (en-tête et pied de page). */
+/* 5 · Les guides mènent au hub : le cadre partagé (tools/site-chrome.mjs) rend
+ * l'en-tête et le pied de page des guides, et article-template-test tient que
+ * les guides publiés sont ce rendu. */
+const guideRoutes = Object.fromEntries(FEATURE_LOCALES.map((l) => [l, `/${l}/guides/`]));
 for (const locale of FEATURE_LOCALES) {
-  const guides = read(`${locale}/guides/index.html`);
-  ok(guides.includes(`<a data-lens-item href="${FEATURE_HUB.routes[locale]}">`), `${locale}/guides : la navigation mène au hub des fonctionnalités`);
-  const footer = guides.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] || '';
-  ok(footer.includes(`href="${FEATURE_HUB.routes[locale]}"`), `${locale}/guides : le pied de page mène au hub des fonctionnalités`);
+  ok(header(locale, guideRoutes, FEATURE_LOCALES, 'guides').includes(`<a data-lens-item href="${FEATURE_HUB.routes[locale]}">`), `${locale}/guides : la navigation mène au hub des fonctionnalités`);
+  ok(localizeFooterAnchors(extractFooter(fs.readFileSync(path.join(ROOT, locale, 'index.html'), 'utf8'), `${locale}/index.html`), locale).includes(`href="${FEATURE_HUB.routes[locale]}"`), `${locale}/guides : le pied de page mène au hub des fonctionnalités`);
 }
 
-/* 6 · Aucune source ne glisse un tiret cadratin ou une italique dans le texte. */
-for (const source of ['content/features/manifest.mjs', 'content/features/pages/hub.mjs', 'content/features/pages/caisse.mjs', 'content/features/pages/stock.mjs', 'content/features/pages/orderpro.mjs']) {
-  const body = read(source).replace(/^\s*(?:\/\*|\*|\/\/).*$/gm, '');
-  ok(!body.includes('—'), `${source} : aucun tiret cadratin`);
+/* 6 · Aucun texte source ne glisse un tiret cadratin (y compris les alt et les
+ * messages WhatsApp, qui ne passent pas tous par la page). */
+const strings = (value) => (typeof value === 'string' ? [value] : value && typeof value === 'object' ? Object.values(value).flatMap(strings) : []);
+for (const [name, source] of Object.entries({ hub: hubCopy, ...COPY, manifest: { FEATURE_HUB, FEATURE_PAGES, FEATURE_MORE } })) {
+  const dashed = strings(source).filter((value) => value.includes('—'));
+  ok(dashed.length === 0, `${name} : aucun tiret cadratin (${dashed[0] || ''})`);
 }
 
 if (failures.length) {
