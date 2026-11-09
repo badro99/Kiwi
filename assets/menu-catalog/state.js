@@ -713,6 +713,15 @@
     if (!pendingPublishes.has(c)) {
       let queued;
       try { queued = JSON.parse(localStorage.getItem('kiwiMenuPending:' + slug) || 'null'); } catch (_) {}
+      /* Une copie en attente VIDE, sans suppression explicite, n'est pas une
+       * modification : c'est un magasin remis à zéro qu'une version précédente
+       * mettait en file. Rejouée, elle remplaçait la carte à l'écran par rien et
+       * restait « Publication en attente » pour toujours, la règle du vide
+       * refusant à juste titre de l'envoyer (Amira Cafe, 9 nov. 2026). */
+      if (queued && isEmptyMenu(queued.data) && !queued.explicitEmpty) {
+        try { localStorage.removeItem('kiwiMenuPending:' + slug); } catch (_) {}
+        queued = null;
+      }
       if (queued && queued.vid === vid && queued.data && queued.base) {
         c.base = queued.base; c.updatedTs = queued.updatedTs || 0; c.explicitEmpty = !!queued.explicitEmpty;
         adoptServerMenu(queued.data, vid); pendingPublish(c, vid, queued.data);
@@ -731,6 +740,14 @@
         c.base = menuSnapshot(j.menu);
         const waiting = pendingPublishes.get(c);
         if (waiting && waiting.base) {
+          /* Une carte locale vidée sans geste de suppression ne fusionne pas
+           * en « tout supprimer » : on reprend la carte du serveur. */
+          if (isEmptyMenu(store.get(vid)) && !c.explicitEmpty && !isEmptyMenu(j.menu)) {
+            clearTimeout(waiting.timer); try { localStorage.removeItem(waiting.key); } catch (_) {}
+            pendingPublishes.delete(c); paintPending();
+            adoptServerMenu(j.menu, vid);
+            return true;
+          }
           const merged = KiwiMenuMerge.mergeMenu(waiting.base, store.get(vid), c.base);
           if (merged.conflicts.length && window.Kiwi?.toast) window.Kiwi.toast(tr({ fr: 'Carte fusionnée avec une version enregistrée ailleurs', en: 'Menu merged with a version saved elsewhere', ar: 'دُمجت القائمة مع نسخة محفوظة في مكان آخر' }), { type: 'info', force: true });
           adoptServerMenu(merged.value, vid); pendingPublish(c, vid, merged.value);
@@ -907,7 +924,12 @@
     if (!el) { el = document.createElement('small'); el.id = 'menu-publish-pending'; el.setAttribute('role', 'status'); Object.assign(el.style, { position: 'fixed', bottom: '16px', insetInlineEnd: '16px', zIndex: '9999', padding: '8px 12px', background: 'var(--paper)', color: 'var(--atlas)' }); document.body.appendChild(el); }
     el.textContent = tr({ fr: 'Publication en attente', en: 'Publication pending', ar: 'النشر قيد الانتظار' });
   }
+  function isEmptyMenu(m) { return !(m && ((m.cats && m.cats.length) || (m.items && m.items.length))); }
   function pendingPublish(c, vid, data) {
+    /* Seule une suppression explicite met une carte vide en file : une remise à
+     * zéro du magasin (changement d'établissement, purge) laisse en place la
+     * dernière vraie modification en attente, s'il y en a une. */
+    if (isEmptyMenu(data) && !c.explicitEmpty) { const kept = pendingPublishes.get(c); return kept ? kept.version : 0; }
     let p = pendingPublishes.get(c);
     if (!p) { p = { delay: 1000, timer: null, vid, version: 0 }; pendingPublishes.set(c, p); }
     p.version++;

@@ -759,7 +759,7 @@ for (const test of [
   'config-pin-projection-test.mjs',
   'staff-publication-split-test.mjs',
   'staff-credential-parity-test.mjs',
-  'team-doc-redaction-test.mjs', 'persistence-notices-test.mjs', 'menu-pending-conflict-test.mjs',
+  'team-doc-redaction-test.mjs', 'persistence-notices-test.mjs', 'menu-pending-conflict-test.mjs', 'menu-pending-empty-test.mjs',
   'team-roster-cap-test.mjs',
   'team-properties-test.mjs',
   /* Vague 14 : un code partagé est refusé à voix haute (jamais écarté en silence), un code généré évite le roster et 0001. */
