@@ -176,7 +176,7 @@
       ':host([data-scroll])::before{width:auto}' +
       '.lens{border-radius:999px;' + LENS_PAINT + ';opacity:0;z-index:0}' +
       ':host([size="kitchen"]) .lens{border-radius:var(--k-r-3)}' +
-      '.sg{position:relative;z-index:1;flex:1 1 auto;min-width:44px;height:100%;padding-inline:12px;color:var(--k-ink-2);white-space:nowrap;' +
+      '.sg{position:relative;z-index:1;flex:1 1 auto;min-width:44px;height:100%;padding-inline:12px;text-align:center;color:var(--k-ink-2);white-space:nowrap;' +
       'scroll-snap-align:center;border-radius:999px;transition:color var(--k-dur-2) var(--k-glide)}' +
       '.sg:active{color:var(--k-ink-1);transition-duration:var(--k-dur-1)}' +
       '.sg[aria-checked="true"]{color:var(--k-ink-1)}' +
