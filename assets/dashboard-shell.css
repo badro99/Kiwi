@@ -373,9 +373,14 @@
   body.role-staff .sidebar a[data-nav="payroll"],
   body.role-staff .sidebar a[data-nav="conformite"],
   body.role-staff .sidebar a[data-nav="equipe"] { display: none !important; }
-  /* Réception d'hôtel (assets/reception-view.js) : l'accueil chiffré reste
-   * fermé même si la vue n'a pas pu se charger. */
-  body.role-reception .container > .dash-standard { display: none !important; }
+  /* Réception d'hôtel (assets/reception-view.js). Ces règles ferment la vue
+   * SANS le script : si assets/reception-view.js ne charge pas, la barre
+   * latérale ne garde que les pages du comptoir et aucune page chiffrée ne
+   * s'affiche. Liste blanche, donc une entrée ajoutée plus tard reste cachée. */
+  body.role-reception .sidebar nav a:not([data-nav="reception"]):not([data-nav="chambres"]):not([data-nav="sejours"]):not([data-nav="menage"]):not([data-nav="folios"]):not([data-nav="reservations"]):not([data-action="clients-directory"]),
+  body.role-reception .container > :is(.dash-standard, .dash-fusion, .dash-equipe, .dash-menu, .dash-stock, .dash-finance, .dash-conformite),
+  body.role-reception :is(#kcl-chip, .search-big, [data-action="open-assistant"], [data-action="settings-hours"]),
+  body.role-reception .kw-capsule :is([data-kw-tab="commandes"], [data-kw-tab="vente"], [data-kw-tab="ai"]) { display: none !important; }
   .search-big {
     flex: 1; max-width: 460px; min-width: 0;
     background: rgba(255,255,255,0.5);

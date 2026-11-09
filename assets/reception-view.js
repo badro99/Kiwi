@@ -24,6 +24,12 @@
   /* Actions hors « nav-* » qui mènent à de l'argent ou au marketing. */
   var ACTION_DENY = { 'customer-retention': 1, 'growth-crm': 1, 'open-assistant': 1,
     settings: 1, 'account-profile': 1, 'account-billing': 1 };
+  /* Familles d'actions du patron, fermées par leur préfixe : une nouvelle
+   * action de réglages, de compte, de paie, de finance, d'équipe, d'export ou
+   * de recherche est refusée sans qu'on ait à la nommer. Aucune page du
+   * comptoir n'en utilise (tools/reception-view-test.mjs le vérifie). */
+  var DENY_PREFIX = ['settings', 'account-', 'payroll', 'finance', 'team-', 'export', 'z-',
+    'depense', 'promo', 'growth-', 'search'];
   var HOME = 'nav-reception';
   /* Barre du bas sur téléphone (.kw-capsule) : Accueil (ramène à la
    * Réception) et Menu restent ; Commandes, Nouvelle vente et l'assistant
@@ -45,6 +51,7 @@
   function allowedKey(key) {
     if (!key) return true;
     if (ACTION_DENY[key]) return false;
+    for (var i = 0; i < DENY_PREFIX.length; i++) if (key.indexOf(DENY_PREFIX[i]) === 0) return false;
     if (key.indexOf('nav-') === 0) return !!NAV_OK[key.slice(4)] || key === 'nav-accueil';
     return true;
   }

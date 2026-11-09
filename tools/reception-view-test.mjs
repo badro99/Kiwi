@@ -141,7 +141,7 @@ function bootWith(stored) {
 
 /* ── D · la vue, exécutée sur un document minimal ──────────────────────── */
 function receptionView(role) {
-  const listeners = {}, toasts = [], calls = [];
+  const listeners = {}, toasts = [], calls = [], ticks = [];
   const bodyClasses = new Set([role ? 'role-' + role : 'role-owner']);
   const doc = {
     readyState: 'complete',
@@ -162,7 +162,7 @@ function receptionView(role) {
     Kiwi: { handlers: H, toast: (m) => toasts.push(m), setActivePage() {} },
     addEventListener: (type, fn) => { (listeners[type] = listeners[type] || []).push(fn); },
     MutationObserver: class { observe() {} },
-    setInterval: () => 0, clearTimeout() {}, setTimeout: (fn) => { fn(); return 0; },
+    setInterval: (fn) => { ticks.push(fn); return 0; }, clearTimeout() {}, setTimeout: (fn) => { fn(); return 0; },
   };
   ctx.window = ctx;
   vm.createContext(ctx);
@@ -177,7 +177,7 @@ function receptionView(role) {
     (listeners.click || []).forEach((fn) => fn({ target, preventDefault() {}, stopImmediatePropagation() { stopped = true; } }));
     return stopped;
   };
-  return { H, calls, toasts, click };
+  return { H, calls, toasts, click, sweep: () => ticks.forEach((fn) => fn()) };
 }
 {
   const v = receptionView('reception');
@@ -189,6 +189,15 @@ function receptionView(role) {
     'nav-hotelintel', 'nav-points-vente', 'customer-retention', 'open-assistant', 'settings', 'account-billing', 'account-profile']) {
     v.calls.length = 0; v.toasts.length = 0; v.H[k]();
     ok(`la réception n'ouvre pas « ${k} » et le dit`, !v.calls.includes(k) && v.toasts.length === 1);
+  }
+  for (const k of ['search', 'settings-hours', 'account-security', 'payroll-run', 'finance-export', 'team-add', 'export-csv']) {
+    v.H[k] = () => { v.calls.push(k); };
+  }
+  /* Le balayage repasse : les handlers ajoutés après coup sont fermés aussi. */
+  v.sweep();
+  for (const k of ['search', 'settings-hours', 'account-security', 'payroll-run', 'finance-export', 'team-add', 'export-csv']) {
+    v.calls.length = 0; v.toasts.length = 0; v.H[k]();
+    ok(`famille d'actions du patron « ${k} » fermée (préfixe)`, !v.calls.includes(k) && v.toasts.length === 1);
   }
   v.calls.length = 0; v.H['nav-accueil']();
   ok('Accueil ramène la réception à la Réception, jamais au chiffre d\'affaires', v.calls.join() === 'nav-reception', v.calls.join());
@@ -207,6 +216,22 @@ function receptionView(role) {
     ok(`le patron ouvre toujours « ${k} »`, v.calls.includes(k) && v.toasts.length === 0);
   }
   ok('le patron clique Encaissements sans être arrêté', v.click({ 'data-nav': 'transactions' }) === false);
+}
+
+{
+  const files = ['assets/hotel.js', 'assets/reservations.js', 'assets/clients-directory.js']
+    .concat(fs.readdirSync(path.join(ROOT, 'assets/hotel-core')).map((f) => 'assets/hotel-core/' + f))
+    .concat(fs.readdirSync(path.join(ROOT, 'assets/hotel')).map((f) => 'assets/hotel/' + f))
+    .filter((f) => f.endsWith('.js'));
+  const src = read('assets/reception-view.js');
+  const prefixes = vm.runInNewContext(src.match(/var DENY_PREFIX = (\[[^\]]*\]);/)[1]);
+  const used = new Set();
+  for (const f of files) for (const m of read(f).matchAll(/data-action=["']([a-z0-9-]+)/g)) used.add(m[1]);
+  /* Les refus nommés (campagne, fidélisation) sont voulus : ce sont les boutons
+     marketing de la page clients. */
+  const named = Object.keys(vm.runInNewContext('(' + src.match(/var ACTION_DENY = (\{[^}]*\});/)[1] + ')'));
+  const clash = [...used].filter((a) => !named.includes(a) && prefixes.some((p) => a.startsWith(p)));
+  ok(`aucune action des pages du comptoir ne tombe sous un préfixe fermé (${used.size} actions lues)`, used.size > 20 && clash.length === 0, clash.join(','));
 }
 
 if (failures) { console.log(`\n✗ ${failures} échec(s)`); process.exit(1); }

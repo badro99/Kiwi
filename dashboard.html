@@ -78,7 +78,7 @@
      per-vertical component CSS above, which is how it replaces four different
      stat-card implementations without editing four stylesheets. -->
 <link rel="stylesheet" href="assets/genpage.css?v=5" />
-<link rel="stylesheet" href="assets/dashboard-shell.css?v=9" />
+<link rel="stylesheet" href="assets/dashboard-shell.css?v=10" />
 <link rel="stylesheet" href="assets/mobile.css?v=13" />
 <link rel="stylesheet" href="assets/dashboard-native.css?v=3" />
 <link rel="stylesheet" href="assets/kiwi-select.css?v=3" />
@@ -166,7 +166,7 @@
    * seulement : le patron ne la télécharge jamais. */
   if (role === 'reception') {
     const s = document.createElement('script');
-    s.src = "assets/reception-view.js?v=2";
+    s.src = "assets/reception-view.js?v=3";
     s.setAttribute('data-reception-view', '');
     document.head.appendChild(s);
   }
@@ -2079,7 +2079,7 @@
      * maintenant (même fichier que le démarrage ci-dessus, une seule fois). */
     if (role === 'reception' && !document.querySelector('script[data-reception-view]')) {
       const s = document.createElement('script');
-      s.src = "assets/reception-view.js?v=2";
+      s.src = "assets/reception-view.js?v=3";
       s.setAttribute('data-reception-view', '');
       document.head.appendChild(s);
     }

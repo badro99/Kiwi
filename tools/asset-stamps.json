@@ -456,8 +456,8 @@
     "sha": "bd7aa1e435906c4e"
   },
   "assets/dashboard-shell.css": {
-    "v": "9",
-    "sha": "459351f85345203e"
+    "v": "10",
+    "sha": "4cd2522d8296736d"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -2008,8 +2008,8 @@
     "sha": "a1ae3f7db74f3170"
   },
   "assets/reception-view.js": {
-    "v": "2",
-    "sha": "a67b15325ca8d0b5"
+    "v": "3",
+    "sha": "7ad1e37907b1797c"
   },
   "assets/refund-split.js": {
     "v": "2",
