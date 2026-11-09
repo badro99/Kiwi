@@ -827,6 +827,8 @@ for (const test of [
   'inventory-expiry-test.mjs',
   'hotel-exceptions-test.mjs',
   'hotel-reception-journal-test.mjs',
+  /* Les fabriques hôtel ne masquent jamais leur état (openModal, openDrawer) par un jeton d'hôtel local. */
+  'hotel-editors-scope-test.mjs',
   'hotel-stay-editing-test.mjs',
   'hotel-commercial-test.mjs',
   'hotel-commercial-layout-test.mjs',

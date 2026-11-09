@@ -1154,16 +1154,16 @@ function cuStayEditor(booking, linked = null) {
   }
 
 async function cuOpenDossier(booking) {
-    const scope=cuStayScope(),merchant=cuChannelMerchant(),id=booking.hotel.dossierId||booking.id;
+    const stayScope=cuStayScope(),merchant=cuChannelMerchant(),id=booking.hotel.dossierId||booking.id;
     scope.openModal?.close?.();
     const m=K().modal({tag:booking.code || tx('DOSSIER'),title:tx('Chambres & préfacture'),desc:tx('Les chambres restent modifiables et annulables séparément.'),width:1080,
       body:`<div class="hx-room-form-actions"><button data-activation=write type="button" class="hx-btn ghost" data-hx-linked-room>${tx('Ajouter une chambre au dossier')}</button></div><div data-hx-dossier-body role="status">${tx('Chargement du dossier serveur…')}</div>`});
     scope.openModal={el:m.el,close:m.close};
     const host=m.el.querySelector('[data-hx-dossier-body]');
-    m.el.querySelector('[data-hx-linked-room]').onclick=()=>{m.close();if(scope===cuStayScope())cuStayEditor(null,booking);};
+    m.el.querySelector('[data-hx-linked-room]').onclick=()=>{m.close();if(stayScope===cuStayScope())cuStayEditor(null,booking);};
     try{
       const res=await cuEditorRequest('/api/hotel/billing-draft?'+new URLSearchParams({merchant,dossierId:id})),data=await res.json().catch(()=>({}));
-      if(scope!==cuStayScope()||m.el.isConnected===false)return;
+      if(stayScope!==cuStayScope()||m.el.isConnected===false)return;
       if(!res.ok){
         const code=data?.error;
         if(code==='dossier-not-found')throw new Error(tx('Dossier introuvable. Actualisez la réception puis rouvrez-le.'));
@@ -1174,9 +1174,9 @@ async function cuOpenDossier(booking) {
       host.innerHTML=cuBillingBody(data); host.removeAttribute('role');
       const error=host.querySelector('[data-hx-billing-error],[data-hx-dossier-error]');
       host.querySelectorAll('[data-hx-open-stay]').forEach(button=>button.onclick=async()=>{
-        if(scope!==cuStayScope()){m.close();return;}
+        if(stayScope!==cuStayScope()){m.close();return;}
         const response=await cuEditorRequest('/api/hotel/stays?'+new URLSearchParams({merchant,id:button.dataset.hxOpenStay,includeCancelled:'1'}));
-        const body=await response.json();if(scope!==cuStayScope())return;
+        const body=await response.json();if(stayScope!==cuStayScope())return;
         const stay=body.stays?.find(b=>b.id===button.dataset.hxOpenStay);
         if(!response.ok||!stay){if(error)error.textContent=tx('Séjour introuvable. Actualisez la réception.');return;}
         cuStayCache().set(stay.id,stay);m.close();cuStayEditor(stay);
@@ -1205,15 +1205,15 @@ async function cuOpenDossier(booking) {
         form.querySelector('[data-hx-billing-lines]').appendChild(wrap.firstElementChild);dirtyNow();summary();form.elements.extraLabel.value='';
       };
       form.addEventListener('click',e=>{const button=e.target.closest('[data-hx-remove-extra]');if(!button)return;const row=button.closest('[data-hx-billing-line]');extras=extras.filter(x=>'extra:'+x.id!==row.dataset.hxBillingLine);row.remove();dirtyNow();summary();});
-      form.querySelector('[data-hx-print-draft]').onclick=()=>{if(scope===cuStayScope()&&!dirty&&data.saved)cuPrintDraft(data.saved);};
+      form.querySelector('[data-hx-print-draft]').onclick=()=>{if(stayScope===cuStayScope()&&!dirty&&data.saved)cuPrintDraft(data.saved);};
       form.onsubmit=async e=>{
-        e.preventDefault();if(form.__saving||scope!==cuStayScope())return;
+        e.preventDefault();if(form.__saving||stayScope!==cuStayScope())return;
         try{
           const input=cuDraftInput(form,extras);
           pending ||= {action:'save-draft',merchant,dossierId:id,rev:data.rev,sourceDigest:data.sourceDigest,directoryRev:data.directoryRev,commandId:'draft-'+crypto.randomUUID(),input};
           form.__saving=true;form.querySelector('fieldset').disabled=true;error.textContent=tx('Enregistrement serveur…');
           const response=await cuEditorRequest('/api/hotel/billing-draft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pending)}),body=await response.json();
-          if(scope!==cuStayScope())return;
+          if(stayScope!==cuStayScope())return;
           if(!response.ok)throw new Error(body.error==='draft-stale'?tx('Le dossier ou ses comptes ont changé. Rouvrez-le pour vérifier les prix avant enregistrement.'):(['billing-quote-mismatch','billing-bad-status','billing-bad-stay','billing-bad-dates','directory-unreadable'].includes(body.error)?cuBillingBlocked(body.error):tx('Enregistrement refusé. Vérifiez les montants et les payeurs.')));
           data.saved=body.saved;data.rev=body.rev;pending=null;dirty=false;form.querySelector('[data-hx-print-draft]').disabled=false;
           error.textContent=tx('Préfacture enregistrée. Aucun paiement ni facture fiscale créé.');
@@ -1362,7 +1362,7 @@ async function cuSubmitStay(form, booking, modal) {
     }
     if (!slug) { error.textContent = tx('Cette boutique n’est pas encore reliée à son compte Kiwi.'); return; }
     form.__hxSubmitting = true; submit.disabled = true; error.textContent = '';
-    const scope = cuStayScope(), cache = cuStayCache();
+    const stayScope = cuStayScope(), cache = cuStayCache();
     try {
       const res = await cuEditorRequest('/api/hotel/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const body = await res.json().catch(() => ({}));
@@ -1402,7 +1402,7 @@ async function cuSubmitStay(form, booking, modal) {
       }
       cache.set(body.booking.id, body.booking);
       cuStaysChanged();
-      if (scope !== cuStayScope() || cuMerchantSlug() !== slug) { return; }
+      if (stayScope !== cuStayScope() || cuMerchantSlug() !== slug) { return; }
       const doc = window.KiwiReservations?.get?.();
       if (doc && Array.isArray(doc.bookings)) {
         const i = doc.bookings.findIndex((x) => x.id === body.booking.id);
@@ -1423,7 +1423,7 @@ async function cuSubmitStay(form, booking, modal) {
 async function cuCancelStay(id, button, modal) {
     const slug = cuMerchantSlug();
     if (!slug || !id) return;
-    const scope = cuStayScope(), cache = cuStayCache();
+    const stayScope = cuStayScope(), cache = cuStayCache();
     button.disabled = true;
     try {
       const res = await cuEditorRequest('/api/hotel/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', merchant: slug, id }) });
@@ -1431,7 +1431,7 @@ async function cuCancelStay(id, button, modal) {
       if (!res.ok || !body.booking) { toast(tx('Annulation impossible'), { type: 'warn', desc: body.error || tx('Réessayez.') }); return; }
       cache.set(body.booking.id, body.booking);
       cuStaysChanged();
-      if (scope !== cuStayScope() || cuMerchantSlug() !== slug) { return; }
+      if (stayScope !== cuStayScope() || cuMerchantSlug() !== slug) { return; }
       const doc = window.KiwiReservations?.get?.();
       if (doc && Array.isArray(doc.bookings)) {
         const i = doc.bookings.findIndex((x) => x.id === body.booking.id);
@@ -1463,7 +1463,7 @@ async function cuAwaitTariffAck(form) {
   }
 
 async function cuLoadProduction() {
-    const scope = cuStayScope(), st = cuProductionState(), sequence = ++st.request, month = st.month;
+    const stayScope = cuStayScope(), st = cuProductionState(), sequence = ++st.request, month = st.month;
     st.loading = true; st.error = ''; st.report = null;
     if (scope.openDrawer?.page === 'production') rerender();
     try {
@@ -1475,7 +1475,7 @@ async function cuLoadProduction() {
       if (st.request === sequence) st.error = e.message === 'production-limit' ? txk('Ce mois dépasse la limite de lecture. Aucun total partiel n’est affiché.') : txk('Production indisponible. Le registre complet est nécessaire ; aucun total n’est estimé depuis le cache.');
     } finally {
       if (st.request === sequence) st.loading = false;
-      if (scope === cuStayScope() && st.request === sequence && scope.openDrawer?.page === 'production') rerender();
+      if (stayScope === cuStayScope() && st.request === sequence && scope.openDrawer?.page === 'production') rerender();
     }
   }
 

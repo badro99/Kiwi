@@ -25,7 +25,7 @@
       'assets/hotel-folio.js?v=5',
       'assets/hotel-channels.js?v=4',
       'assets/hotel/views.js?v=9',
-      'assets/hotel/editors.js?v=10',
+      'assets/hotel/editors.js?v=11',
     ] },
     groups: { dependencies: ['hotel'], scripts: ['assets/hotel/groups.js?v=6'] },
     economat: { dependencies: ['hotel'], scripts: ['assets/hotel-economat.js?v=65'] },

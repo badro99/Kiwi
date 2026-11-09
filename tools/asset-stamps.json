@@ -752,8 +752,8 @@
     "sha": "cb650eda99b6fe9a"
   },
   "assets/hotel/editors.js": {
-    "v": "10",
-    "sha": "5cb9f5d04a932480"
+    "v": "11",
+    "sha": "573578a0ef26f89b"
   },
   "assets/hotel/folio-actions.js": {
     "v": "4",
@@ -1476,8 +1476,8 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "98",
-    "sha": "362d14e807c4382a"
+    "v": "99",
+    "sha": "03e559ed6bce0ad3"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "232",
