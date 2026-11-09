@@ -748,8 +748,8 @@
     "sha": "894b034541608ffa"
   },
   "assets/hotel.js": {
-    "v": "99",
-    "sha": "0efefaa9b1aa1b54"
+    "v": "100",
+    "sha": "e9e8b512cd55932e"
   },
   "assets/hotel/arrivals.js": {
     "v": "12",
@@ -1484,8 +1484,8 @@
     "sha": "0c09c0b378f2661a"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "237",
-    "sha": "01cade698716d21e"
+    "v": "238",
+    "sha": "0246e091b902d1dd"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

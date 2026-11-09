@@ -437,7 +437,21 @@
       if (read.dateChanged) cuRefreshReception(); else rerender();
     });
   }
-  handlers['hx-stay-checkin'] = (el, arg) => { if (isCustomHotel()) cuMoveStayStatus(String(arg || ''), 'checked_in', el); };
+  /* B6 · Une réservation arrivée ouvre sa note, liée au séjour, comme un walk-in : le solde s'y
+     encaisse (Espèces / Carte), et un départ avec solde dû passe par la garde serveur (code
+     manager, tracé). Un séjour facturé à un compte (agence, entreprise) se règle sur facture. */
+  handlers['hx-stay-checkin'] = async (el, arg) => {
+    if (!isCustomHotel()) return;
+    const id = String(arg || '');
+    await cuMoveStayStatus(id, 'checked_in', el);
+    const b = cuStayCache().get(id), st = cuState(), room = b && Object.values(st.rooms || {}).find((r) => r.id === b.resourceId);
+    if (!b || b.status !== 'checked_in' || !room || st.folios[room.n] || b.commercial?.accountId || !(+b.hotel?.total > 0)) return;
+    const src = ['booking', 'expedia', 'airbnb', 'walkin'].includes(b.hotel.channel) ? b.hotel.channel : 'direct';
+    st.folios[room.n] = { room: room.n, guest: b.customer?.name || '', src, pax: b.partySize || 1, nights: b.hotel.nights || 1, stayId: b.id, updatedAt: cuStamp(),
+      lines: [{ t: nowLabel(), label: tx('Séjour'), qty: '×' + (b.hotel.nights || 1), amt: +b.hotel.total, src: 'room' }] };
+    cuSave();
+    rerender();
+  };
   handlers['hx-stay-checkout'] = (el, arg) => { if (isCustomHotel()) cuMoveStayStatus(String(arg || ''), 'completed', el); };
   /* Une arrivée enregistrée sur le mauvais dossier se défait : la chambre est
      rendue et le séjour repart de « confirmé ». Sans ce geste, la réception

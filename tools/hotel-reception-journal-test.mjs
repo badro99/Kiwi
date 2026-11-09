@@ -627,6 +627,39 @@ test('B15 · a refused folio payment changes nothing', () => {
   assert.deepEqual(Array.from(f.data), storage);
 });
 
+/* B6 · H-7F9D8D61 (800 MAD, nothing paid) left without a word: a reservation had no folio, so the
+   server's unpaid-checkout guard (linked folios only) stayed silent and nothing could be paid on
+   the dashboard. A reservation checked in from the dashboard now opens its folio, linked to the stay. */
+test('B6 · checking a reservation in opens its unpaid folio, linked to the stay, once', async () => {
+  const { stayBalance } = await import('../functions/api/hotel/_stay-balance.js');
+  const f = boot();
+  const room = f.api.cuState().rooms[1];
+  const res = stay('resa-b6', 'confirmed', TODAY, '2026-09-10', { resourceId: room.id, hotel: { total: 800, nights: 2 } });
+  f.reply({ ok: true, json: async () => ({ booking: { ...res, status: 'checked_in' } }) });
+  await f.handlers['hx-stay-checkin'](null, 'resa-b6');
+  const folio = f.api.cuState().folios[room.n];
+  assert.ok(folio, 'a folio is opened');
+  assert.equal(folio.stayId, 'resa-b6', 'linked to the stay');
+  assert.equal(folio.lines.length, 1); assert.equal(folio.lines[0].amt, 800); assert.ok(!folio.lines[0].paid, 'the stay price is due');
+  const balance = stayBalance({ ...res, status: 'checked_in' }, [folio]);
+  assert.equal(balance.linked, true, 'the server now knows this stay');
+  assert.equal(balance.owedCents, 80000, 'and that 800 MAD are owed: a departure asks for the manager code');
+  f.reply({ ok: true, json: async () => ({ booking: { ...res, status: 'checked_in' } }) });
+  await f.handlers['hx-stay-checkin'](null, 'resa-b6');
+  assert.equal(f.api.cuState().folios[room.n], folio, 'a second check-in does not replace the folio');
+  f.assertNetwork();
+});
+
+test('B6 · a stay billed to a commercial account opens no folio (it is invoiced)', async () => {
+  const f = boot();
+  const room = f.api.cuState().rooms[1];
+  const res = stay('resa-agency', 'confirmed', TODAY, '2026-09-10', { resourceId: room.id, commercial: { accountId: 'acc-agency' }, hotel: { total: 1600, nights: 2 } });
+  f.reply({ ok: true, json: async () => ({ booking: { ...res, status: 'checked_in' } }) });
+  await f.handlers['hx-stay-checkin'](null, 'resa-agency');
+  assert.equal(f.api.cuState().folios[room.n], undefined);
+  f.assertNetwork();
+});
+
 test('rejected walk-in leaves room availability, folios and sold count unchanged', async () => {
   for (const result of [{ ok: false }, undefined]) {
     const f = boot();
