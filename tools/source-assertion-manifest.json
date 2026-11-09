@@ -33,6 +33,7 @@
     "kit-size-test.js": "kit bundle size budget",
     "known-issues-test.mjs": "accepted-defect list is reviewed",
     "landing-static-locale-test.mjs": "generated landing pages: DE/IT/NL carry their language in the served HTML, every page lists its hreflang alternates",
+    "landing-home-test.mjs": "generated home pages: start and WhatsApp links, JSON-LD prices against the plan table, corrected copy and the client chunks of the seven locales",
     "live-link-split-test.mjs": "byte-exact concatenation of the sales bridge parts and the names each part owns",
     "load-test-suite-test.mjs": "checks the load-test scripts' own shape",
     "maison-2027-test.mjs": "the maison till keeps the boutique 2027 skin: same stylesheet and kit at the mz- prefix, wired into the 2027 gate and precache at the same stamp",

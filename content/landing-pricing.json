@@ -91,11 +91,18 @@
         "Périmètre défini avec vous",
         "Nombre d’appareils et de caissiers convenu ensemble",
         "Fonctionnalités développées pour vous"
-      ]
+      ],
+      "contactMessage": "Bonjour, je voudrais un devis pour Kiwi Ultimate."
     },
     "numberLocale": "fr-FR",
     "metadataDescription": "Caisse, salle, cuisine, stock, équipe et pilotage réunis dans un seul logiciel, en français et en arabe. À partir de 150 MAD par mois, ou 99 par mois en annuel. 15 jours d’essai gratuit, sans engagement.",
-    "hero": "Caisse, salle, cuisine, stock, équipe et pilotage réunis dans un seul logiciel, en français et en arabe. À partir de 150 MAD par mois, 15 jours d’essai gratuit, sans engagement."
+    "hero": "Caisse, salle, cuisine, stock, équipe et pilotage réunis dans un seul logiciel, en français et en arabe. À partir de 150 MAD par mois, 15 jours d’essai gratuit, sans engagement.",
+    "ultraNoAnnual": "Sans formule annuelle.",
+    "demoMessages": {
+      "demo": "Bonjour, je voudrais une démo de Kiwi pour mon commerce.",
+      "iq": "Bonjour, je voudrais essayer Kiwi IQ.",
+      "write": "Bonjour, j’ai une question sur Kiwi."
+    }
   },
   "en": {
     "title": "A subscription. Not a commission.",
@@ -189,11 +196,18 @@
         "Scope defined with you",
         "Number of devices and cashiers agreed together",
         "Features developed for you"
-      ]
+      ],
+      "contactMessage": "Hello, I would like a quote for Kiwi Ultimate."
     },
     "numberLocale": "en-US",
     "metadataDescription": "Your till, floor, kitchen, stock, team, and reporting in one system, in French and Arabic. From 150 MAD a month, or 99 MAD a month on an annual plan. 15 days free, no commitment.",
-    "hero": "Your till, floor, kitchen, stock, team, and reporting in one system, in French and Arabic. From 150 MAD a month, 15 days free, no commitment."
+    "hero": "Your till, floor, kitchen, stock, team, and reporting in one system, in French and Arabic. From 150 MAD a month, 15 days free, no commitment.",
+    "ultraNoAnnual": "No annual plan.",
+    "demoMessages": {
+      "demo": "Hello, I would like a demo of Kiwi for my business.",
+      "iq": "Hello, I would like to try Kiwi IQ.",
+      "write": "Hello, I have a question about Kiwi."
+    }
   },
   "ar": {
     "title": "اشتراك واحد. لا عمولة.",
@@ -214,7 +228,7 @@
     "quote": "بحسب الطلب",
     "quoteDetail": "نحدد السعر معا.",
     "billedMonthly": "15 يوما مجانا، ثم تُدفع الفاتورة كل شهر.",
-    "billedYearly": "15 يوماً مجاناً، ثم {total} درهم سنوياً، في دفعة واحدة.",
+    "billedYearly": "15 يوما مجانا، ثم {total} درهم سنوياً، في دفعة واحدة.",
     "tiers": [
       {
         "name": "Basic",
@@ -287,11 +301,18 @@
         "نطاق نحدده معك",
         "عدد الأجهزة والصرافين نتفق عليه معا",
         "خصائص نطورها لك"
-      ]
+      ],
+      "contactMessage": "مرحبا، أريد عرض سعر لـ Kiwi Ultimate."
     },
     "numberLocale": "ar-MA",
     "metadataDescription": "اجمع الصندوق والصالة والمطبخ والمخزون والفريق والتقارير في برنامج واحد، بالفرنسية والعربية. ابتداء من 150 درهم شهريا، أو 99 درهم شهريا مع الاشتراك السنوي. 15 يوما تجربة مجانية، ومن دون التزام.",
-    "hero": "اجمع الصندوق والصالة والمطبخ والمخزون والفريق والتقارير في برنامج واحد، بالفرنسية والعربية. ابتداء من 150 درهم شهريا، 15 يوما تجربة مجانية، ومن دون التزام."
+    "hero": "اجمع الصندوق والصالة والمطبخ والمخزون والفريق والتقارير في برنامج واحد، بالفرنسية والعربية. ابتداء من 150 درهم شهريا، 15 يوما تجربة مجانية، ومن دون التزام.",
+    "ultraNoAnnual": "من دون صيغة سنوية.",
+    "demoMessages": {
+      "demo": "مرحبا، أريد عرضا توضيحيا لـ Kiwi لمحلي التجاري.",
+      "iq": "مرحبا، أريد تجربة Kiwi IQ.",
+      "write": "مرحبا، لدي سؤال عن Kiwi."
+    }
   },
   "de": {
     "title": "Ein Abonnement. Keine Provision.",
@@ -385,11 +406,18 @@
         "Umfang gemeinsam mit Ihnen festgelegt",
         "Anzahl der Geräte und Kassierer gemeinsam vereinbart",
         "Für Sie entwickelte Funktionen"
-      ]
+      ],
+      "contactMessage": "Hallo, ich hätte gern ein Angebot für Kiwi Ultimate."
     },
     "numberLocale": "de-DE",
     "hero": "Kasse, Gastraum, Küche, Lager, Team und Auswertungen in einem System, auf Französisch und Arabisch. Ab 150 MAD im Monat, 15 Tage kostenlos, ohne Bindung.",
-    "metadataDescription": "Kasse, Gastraum, Küche, Lager, Team und Auswertungen in einem System, auf Französisch und Arabisch. Ab 150 MAD im Monat oder 99 MAD pro Monat bei jährlicher Zahlung. 15 Tage kostenlos, ohne Bindung."
+    "metadataDescription": "Kasse, Gastraum, Küche, Lager, Team und Auswertungen in einem System, auf Französisch und Arabisch. Ab 150 MAD im Monat oder 99 MAD pro Monat bei jährlicher Zahlung. 15 Tage kostenlos, ohne Bindung.",
+    "ultraNoAnnual": "Ohne Jahrestarif.",
+    "demoMessages": {
+      "demo": "Hallo, ich möchte eine Demo von Kiwi für mein Geschäft.",
+      "iq": "Hallo, ich möchte Kiwi IQ ausprobieren.",
+      "write": "Hallo, ich habe eine Frage zu Kiwi."
+    }
   },
   "es": {
     "title": "Una suscripción. Sin comisiones.",
@@ -483,11 +511,18 @@
         "Alcance definido con usted",
         "Número de dispositivos y cajeros acordado juntos",
         "Desarrollo de funciones a medida"
-      ]
+      ],
+      "contactMessage": "Hola, me gustaría un presupuesto para Kiwi Ultimate."
     },
     "numberLocale": "es-ES",
     "metadataDescription": "Su TPV, sala, cocina, inventario, equipo e informes en un solo sistema, en francés y árabe. Desde 150 MAD al mes, o 99 MAD al mes con un plan anual. 15 días gratis, sin compromiso.",
-    "hero": "Su TPV, sala, cocina, inventario, equipo e informes en un solo sistema, en francés y árabe. Desde 150 MAD al mes, 15 días gratis, sin compromiso."
+    "hero": "Su TPV, sala, cocina, inventario, equipo e informes en un solo sistema, en francés y árabe. Desde 150 MAD al mes, 15 días gratis, sin compromiso.",
+    "ultraNoAnnual": "Sin plan anual.",
+    "demoMessages": {
+      "demo": "Hola, me gustaría una demostración de Kiwi para mi negocio.",
+      "iq": "Hola, me gustaría probar Kiwi IQ.",
+      "write": "Hola, tengo una pregunta sobre Kiwi."
+    }
   },
   "it": {
     "title": "Un abbonamento. Non una commissione.",
@@ -581,11 +616,18 @@
         "Perimetro definito con te",
         "Numero di dispositivi e cassieri concordato insieme",
         "Funzionalità sviluppate per te"
-      ]
+      ],
+      "contactMessage": "Buongiorno, vorrei un preventivo per Kiwi Ultimate."
     },
     "numberLocale": "it-IT",
     "hero": "Cassa, sala, cucina, magazzino, squadra e report in un unico sistema, in francese e arabo. Da 150 MAD al mese, 15 giorni gratuiti, senza impegno.",
-    "metadataDescription": "Cassa, sala, cucina, magazzino, squadra e report in un unico sistema, in francese e arabo. Da 150 MAD al mese, oppure 99 MAD al mese con il piano annuale. 15 giorni gratuiti, senza impegno."
+    "metadataDescription": "Cassa, sala, cucina, magazzino, squadra e report in un unico sistema, in francese e arabo. Da 150 MAD al mese, oppure 99 MAD al mese con il piano annuale. 15 giorni gratuiti, senza impegno.",
+    "ultraNoAnnual": "Nessun piano annuale.",
+    "demoMessages": {
+      "demo": "Buongiorno, vorrei una demo di Kiwi per la mia attività.",
+      "iq": "Buongiorno, vorrei provare Kiwi IQ.",
+      "write": "Buongiorno, ho una domanda su Kiwi."
+    }
   },
   "nl": {
     "title": "Een abonnement. Geen commissie.",
@@ -679,10 +721,17 @@
         "Omvang samen met u bepaald",
         "Aantal apparaten en kassamedewerkers samen afgesproken",
         "Functies die voor u zijn ontwikkeld"
-      ]
+      ],
+      "contactMessage": "Goedendag, ik wil graag een offerte voor Kiwi Ultimate."
     },
     "numberLocale": "nl-NL",
     "hero": "Kassa, zaal, keuken, voorraad, team en rapportage in één systeem, in het Frans en Arabisch. Vanaf 150 MAD per maand, 15 dagen gratis, zonder verplichtingen.",
-    "metadataDescription": "Kassa, zaal, keuken, voorraad, team en rapportage in één systeem, in het Frans en Arabisch. Vanaf 150 MAD per maand, of 99 MAD per maand bij jaarlijkse betaling. 15 dagen gratis, zonder verplichtingen."
+    "metadataDescription": "Kassa, zaal, keuken, voorraad, team en rapportage in één systeem, in het Frans en Arabisch. Vanaf 150 MAD per maand, of 99 MAD per maand bij jaarlijkse betaling. 15 dagen gratis, zonder verplichtingen.",
+    "ultraNoAnnual": "Geen jaarplan.",
+    "demoMessages": {
+      "demo": "Goedendag, ik wil graag een demo van Kiwi voor mijn zaak.",
+      "iq": "Goedendag, ik wil Kiwi IQ graag proberen.",
+      "write": "Goedendag, ik heb een vraag over Kiwi."
+    }
   }
 }

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -133,8 +134,8 @@ const LIB = Object.freeze({
     read: 'اقرأ الدليل',
     category: 'التصنيف',
     minutes: (n) => `<bdi dir="ltr">${n}</bdi> دقيقة قراءة`,
-    updated: (d) => `حُدّث في <bdi dir="ltr">${d}</bdi>`,
-    published: (d) => `نُشر في <bdi dir="ltr">${d}</bdi>`,
+    updated: (d) => `حُدّث في ${d}`,
+    published: (d) => `نُشر في ${d}`,
     total: (n) => `<bdi dir="ltr">${n}</bdi> أدلة منشورة`,
     filteredOne: (total) => `<bdi dir="ltr">{n}</bdi> من <bdi dir="ltr">${total}</bdi> دليل معروض`,
     filteredMany: (total) => `<bdi dir="ltr">{n}</bdi> من <bdi dir="ltr">${total}</bdi> أدلة معروضة`,
@@ -439,7 +440,7 @@ ${icon('search', 'search-icon')}
 <p class="visually-hidden" id="guides-search-help">${esc(lib.searchHelp)}</p>
 <nav class="goal-rail" aria-labelledby="goals-title">
 <h2 class="rail-title" id="goals-title">${esc(lib.goalsTitle)}</h2>
-<ul class="goal-list" role="group" aria-label="${esc(lib.goalsLabel)}">${goalPills}</ul>
+<div role="group" aria-label="${esc(lib.goalsLabel)}"><ul class="goal-list">${goalPills}</ul></div>
 </nav>
 </div>`;
 }
@@ -523,7 +524,7 @@ function alternateLinks(routes) {
  * « Demander une démo » ouvre la feuille de la landing sur place
  * (assets/landing-demo-funnel.js, chargé par la page, data-kiwi-demo) ; sans
  * script, le lien mène à la landing qui l'ouvre à l'arrivée (?demo=1). */
-function header(locale, routes) {
+function header(locale, routes, active = 'guides') {
   const ui = UI[locale];
   const languageLinks = PUBLISHED_LOCALES.map((code) => {
     const current = code === locale ? ' aria-current="true"' : '';
@@ -531,7 +532,7 @@ function header(locale, routes) {
   }).join('');
   const links = [
     [`/${locale}/#features`, ui.features], [`/${locale}/#security`, ui.security],
-    [`/${locale}/#pricing`, ui.pricing], [`/${locale}/guides/`, ui.guides, true],
+    [`/${locale}/#pricing`, ui.pricing], [`/${locale}/guides/`, ui.guides, active === 'guides'],
   ];
   const lens = links.map(([href, label, on]) => `<a data-lens-item${on ? ' class="on"' : ''} href="${href}"${on ? ' aria-current="page"' : ''}>${esc(label)}</a>`).join('');
   const sheet = links.map(([href, label, on]) => `<a href="${href}"${on ? ' aria-current="page"' : ''}>${esc(label)}</a>`).join('');
@@ -546,7 +547,7 @@ function header(locale, routes) {
         <span class="nav-rule" aria-hidden="true"></span>
         ${demo('')}
         <details class="language-menu">
-          <summary aria-label="${esc(ui.languagePicker)}"><span>${locale.toUpperCase()}</span>${icon('expand_more')}</summary>
+          <summary aria-label="${locale.toUpperCase()}, ${esc(ui.languagePicker)}"><span>${locale.toUpperCase()}</span>${icon('expand_more')}</summary>
           <div class="menu-pop" role="group" aria-label="${esc(ui.languagePicker)}">${languageLinks}</div>
         </details>
         <details class="nav-menu">
@@ -577,7 +578,7 @@ function heroFacts(locale) {
   const rows = [
     [lib.factGuides, number(TOPICS.length)],
     [lib.factLanguages, '<bdi dir="ltr">FR · EN · AR</bdi>'],
-    [lib.factUpdated, `<time datetime="${esc(newest.slice(0, 10))}">${number(formatDate(newest, locale))}</time>`],
+    [lib.factUpdated, `<time datetime="${esc(newest.slice(0, 10))}">${formatDate(newest, locale)}</time>`],
   ];
   return `<dl class="hero-facts">${rows
     .map(([term, value]) => `<div><dt>${esc(term)}</dt><dd>${value}</dd></div>`)
@@ -601,6 +602,29 @@ const organization = (locale) => ({
  * remplace le dernier <span> de la signature, qui porte la durée dans les
  * vingt-et-un fragments ; si ce motif disparaît un jour, la construction
  * échoue au lieu de publier une signature muette. */
+/* Les cartes « à lire ensuite » en bas de chaque article portaient des
+ * durées et un nombre de guides saisis à la main ; ils dérivaient (« 5
+ * méthodes » pour sept guides publiés, 14 min pour un guide qui en compte 12).
+ * La durée vient maintenant du même calcul que la bibliothèque et la
+ * signature, et le compte de la longueur du manifeste. */
+const MINUTE_WORD = {
+  fr: () => 'min', en: () => 'min',
+  ar: (n) => (n >= 3 && n <= 10 ? 'دقائق' : 'دقيقة'),
+};
+const LIBRARY_COUNT = /<strong>\d+ (méthodes|guides FR|methods|guides EN|طرق|أدلة AR)<\/strong>/g;
+function syncRelatedCards(fragment, locale) {
+  const byRoute = new Map(TOPICS.map((topic) => [topic.routes[locale], topic]));
+  return fragment
+    .replace(/<a class="related-card" href="([^"]+)">[\s\S]*?<\/a>/g, (card, href) => {
+      const topic = byRoute.get(href);
+      if (!topic) return card;
+      const minutes = readingMinutes(readFragment(topic, locale), locale);
+      return card.replace(/<span>([^<]*?) · \d+ (?:min|دقيقة|دقائق)<\/span>/,
+        (_, label) => `<span>${label} · ${minutes} ${MINUTE_WORD[locale](minutes)}</span>`);
+    })
+    .replace(LIBRARY_COUNT, (_, word) => `<strong>${TOPICS.length} ${word}</strong>`);
+}
+
 function enrichArticle(cluster, locale, fragment) {
   const lib = LIB[locale];
   const minutes = readingMinutes(fragment, locale);
@@ -613,7 +637,7 @@ function enrichArticle(cluster, locale, fragment) {
       + '<span class="byline-separator" aria-hidden="true"></span>'
       + `<span>${lib.minutes(minutes)}</span>$1</div>`);
   if (rebuilt === byline[0]) throw new Error(`${cluster.id}/${locale}: la durée de lecture est introuvable dans la signature`);
-  return readableTables(fragment
+  return readableTables(syncRelatedCards(fragment, locale)
     .replace(byline[0], rebuilt)
     .replace(/<\/main>$/, articleSequence(cluster, locale) + '</main>'));
 }
@@ -786,8 +810,6 @@ ${alternateLinks(cluster.routes)}
   <meta name="twitter:image" content="${esc(absolute('/' + page.image))}">
   <meta name="twitter:image:alt" content="${esc(page.twitterImageAlt || page.imageAlt)}">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="/assets/fonts/legacy-faces.css?v=${LEGACY_FACES_V}" />
   <link rel="stylesheet" href="/assets/articles/article.css?v=${ASSET_VERSIONS.css}">
   <script type="application/ld+json">${json(structuredData(cluster, locale))}</script>
@@ -852,6 +874,50 @@ function writeOrCheck(file, expected, drift) {
   console.log(`built ${path.relative(ROOT, file)}`);
 }
 
+/* ── Annuaire Kiwi · le même cadre que les guides ─────────────────────────────
+ * Les pages de l'annuaire sont rendues par une Pages Function (elles lisent
+ * D1), donc elles ne passent pas par ce générateur. Elles portent pourtant le
+ * même en-tête et le même pied de page : on les écrit ici, une fois, dans
+ * functions/api/_directory-chrome.js, avec les estampilles des feuilles et des
+ * scripts. `--check` échoue quand ce module n'est plus à jour, comme pour une
+ * page de guide. Les liens de langue de l'en-tête sont des jetons
+ * (%%ROUTE_fr%%) que la page remplace par ses propres adresses. */
+const DIRECTORY_ROUTES = Object.freeze({ fr: '/fr/annuaire/', en: '/en/directory/', ar: '/ar/annuaire/' });
+const DIRECTORY_LABEL = Object.freeze({ fr: 'Annuaire Kiwi', en: 'Kiwi directory', ar: 'دليل Kiwi' });
+function withDirectoryLink(footer, locale) {
+  const pricing = /<li><a href="[^"]*#pricing"([^>]*)>[^<]*<\/a><\/li>/;
+  if (!pricing.test(footer)) throw new Error(`${locale}: footer has no #pricing link to place the directory after`);
+  return footer.replace(pricing, (li, attrs) => `${li}<li><a href="${DIRECTORY_ROUTES[locale]}"${attrs}>${esc(DIRECTORY_LABEL[locale])}</a></li>`);
+}
+function contentStamp(rel) {
+  const digest = crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT, rel))).digest('hex');
+  return parseInt(digest.slice(0, 7), 16);
+}
+function directoryChrome(footerByLocale) {
+  const tokens = Object.fromEntries(PUBLISHED_LOCALES.map((code) => [code, `%%ROUTE_${code}%%`]));
+  const chrome = Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, {
+    header: header(locale, tokens, 'directory'),
+    footer: localizeFooterAnchors(footerByLocale[locale], locale),
+  }]));
+  const assets = {
+    legacyFaces: `/assets/fonts/legacy-faces.css?v=${LEGACY_FACES_V}`,
+    articleCss: `/assets/articles/article.css?v=${ASSET_VERSIONS.css}`,
+    directoryCss: `/assets/directory/directory.css?v=${contentStamp('assets/directory/directory.css')}`,
+    lens: '/assets/liquid-lens.js',
+    trades: `/assets/trades.js?v=${stamp('assets/trades.js')}`,
+    demoFunnel: `/assets/landing-demo-funnel.js?v=${stamp('assets/landing-demo-funnel.js')}`,
+    articleJs: `/assets/articles/article.js?v=${ASSET_VERSIONS.js}`,
+  };
+  return `// Generated by tools/build-guides.mjs. Do not edit by hand: run
+// \`node tools/build-guides.mjs\` (the guide pages and this chrome move together).
+// The directory pages (functions/api/_directory-page.js) wear the guides' header
+// and footer, and load the same stamped stylesheets and scripts.
+export const DIRECTORY_ROUTES = ${JSON.stringify(DIRECTORY_ROUTES)};
+export const ASSETS = ${JSON.stringify(assets, null, 2)};
+export const CHROME = ${JSON.stringify(chrome, null, 2)};
+`;
+}
+
 validateManifest();
 const expectedOutputs = new Set(clusters.flatMap((cluster) => PUBLISHED_LOCALES.map((locale) => outputPath(cluster.routes[locale]))));
 const unexpected = listPublishedGuideFiles().filter((file) => !expectedOutputs.has(file));
@@ -859,7 +925,7 @@ if (unexpected.length) throw new Error(`published guide pages missing from manif
 
 const footers = Object.fromEntries(PUBLISHED_LOCALES.map((locale) => {
   const landing = path.join(ROOT, locale, 'index.html');
-  return [locale, extractFooter(fs.readFileSync(landing, 'utf8'), path.relative(ROOT, landing))];
+  return [locale, withDirectoryLink(extractFooter(fs.readFileSync(landing, 'utf8'), path.relative(ROOT, landing)), locale)];
 }));
 const drift = [];
 for (const cluster of clusters) {
@@ -868,6 +934,7 @@ for (const cluster of clusters) {
   }
 }
 writeOrCheck(path.join(ROOT, 'sitemap.xml'), renderSitemap(), drift);
+writeOrCheck(path.join(ROOT, 'functions', 'api', '_directory-chrome.js'), directoryChrome(footers), drift);
 
 if (drift.length) {
   console.error('generated guide files are stale:');

@@ -7,19 +7,23 @@
 <meta name="description" content="Mentions légales Kiwi. Éditeur, hébergeur, nature de l'activité." />
 <meta name="theme-color" content="#0B6E4F" />
 <meta name="robots" content="index, follow" />
-<link rel="canonical" href="https://kiwi-os.com/mentions-legales.html" />
+<link rel="canonical" href="https://kiwi-os.com/mentions-legales" />
 
 <link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="assets/landing/kiwi-mark-app-icon.png" />
 
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="assets/fonts/legacy-faces.css?v=1" />
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* Polices auto-hébergées : aucune requête vers Google (voir privacy.html). */
+  @font-face { font-family: "Inter Tight"; src: url("/assets/fonts/inter-tight-latin-ext.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap;
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Inter Tight"; src: url("/assets/fonts/inter-tight-latin.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+</style>
 
 <link rel="stylesheet" href="assets/landing/tokens.css" />
 <link rel="stylesheet" href="assets/landing/base.css" />
-<link rel="stylesheet" href="assets/landing/components.css?v=2" />
+<link rel="stylesheet" href="assets/landing/components.css?v=3" />
 
 <style>
   body { background: var(--paper); }
@@ -67,10 +71,10 @@
     .legal-card { grid-template-columns: 1fr; padding: var(--s-6); }
   }
   .legal-back {
-    display: inline-flex; align-items: center; gap: 8px;
+    display: flex; width: fit-content; align-items: center; gap: 8px;
     font-family: var(--font-mono); font-size: 12px;
     color: var(--n-500); letter-spacing: 0.04em;
-    margin-bottom: var(--s-8);
+    margin-bottom: var(--s-6);
     transition: color var(--d-quick) var(--ease-glide);
   }
   .legal-back:hover { color: var(--atlas); }
@@ -88,7 +92,7 @@
 </nav>
 
 <section class="slab-paper legal">
-  <div class="wrap-narrow">
+  <main class="wrap-narrow" id="main">
     <a href="/" class="legal-back">← Retour à kiwi-os.com</a>
     <span class="pill pill-paper pill-dot">Légal</span>
 
@@ -171,7 +175,7 @@
       <a href="mailto:abuse@kiwi-os.com">abuse@kiwi-os.com</a>. Nous traitons chaque signalement
       sous 48 h ouvrées.
     </p>
-  </div>
+  </main>
 </section>
 
 </body>

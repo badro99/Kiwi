@@ -15,6 +15,10 @@
     "v": "5",
     "sha": "16ab61868e881b9f"
   },
+  "assets/admin-directory.js": {
+    "v": "1",
+    "sha": "91a51438de608dea"
+  },
   "assets/admin-legacy.js": {
     "v": "12",
     "sha": "7caf135e1211e6eb"
@@ -567,6 +571,10 @@
     "v": "1",
     "sha": "5d6507bf65311b04"
   },
+  "assets/directory-optin.js": {
+    "v": "1",
+    "sha": "146340a598790666"
+  },
   "assets/discount-policy.js": {
     "v": "4",
     "sha": "b43d5f8055c17c85"
@@ -824,8 +832,8 @@
     "sha": "a69c85ba97ce274b"
   },
   "assets/interactive/handlers.js": {
-    "v": "2",
-    "sha": "bbbe8a822a63c844"
+    "v": "3",
+    "sha": "71e78d1307422032"
   },
   "assets/interactive/helpers.js": {
     "v": "1",
@@ -1139,6 +1147,10 @@
     "v": "7",
     "sha": "1cb11ec873d59dd5"
   },
+  "assets/landing-home.css": {
+    "v": "2",
+    "sha": "19744053e66eb720"
+  },
   "assets/landing-locale-menu.css": {
     "v": "1",
     "sha": "b34580061e2d7bd6"
@@ -1148,12 +1160,12 @@
     "sha": "bea76e906f0af60b"
   },
   "assets/landing-runtime-translations.js": {
-    "v": "15",
-    "sha": "c9784dba9a5a97a4"
+    "v": "16",
+    "sha": "746d7b4769b85860"
   },
   "assets/landing/components.css": {
-    "v": "2",
-    "sha": "5829242ec789b552"
+    "v": "3",
+    "sha": "49ae79a906bf4639"
   },
   "assets/librairie-loyalty.js": {
     "v": "26",

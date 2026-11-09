@@ -29,7 +29,7 @@ import {
 } from './auth/_lib.js';
 import { metadataResponse, protectedResourceMetadata, authorizationServerMetadata } from './api/agent/_oauth.js';
 import { withFastNext } from './_fast-next.js';
-
+import { isPublicUtilityPath, notFoundFor, isPublicDirectoryRequest } from './_public-pages.js';
 import { visitorRedirect, recordOldOrigin } from './_origin-move.js';
 
 const GATE_COOKIE = 'kiwi_gate';
@@ -303,7 +303,7 @@ async function routeRequest(context) {
   // and returned 401, so no crawler could discover the public guide URLs named
   // by robots.txt. Exact GET/HEAD paths only; both files are static and contain
   // no merchant data.
-  if (isRead && (path === '/sitemap.xml' || path === '/robots.txt')) return next();
+  if ((isRead && (path === '/sitemap.xml' || path === '/robots.txt')) || isPublicDirectoryRequest(method, path)) return next();
 
   /* ── /guide et /guides · la bibliothèque publique, pas l'écran de connexion
    * Ces deux chemins n'ont jamais existé. Sans préfixe de langue ils ne
@@ -551,7 +551,7 @@ async function routeRequest(context) {
     || path === '/terms.html' || path === '/terms'
     || path === '/mentions-legales.html' || path === '/mentions-legales'
     || path === '/cookies.html' || path === '/cookies'
-    || path === '/support.html' || path === '/support')) return next();
+    || path === '/support.html' || path === '/support' || isPublicUtilityPath(path))) return next();
   if (isRead && (
     /* La page de base (design 2027 §4.1) : la carte en liste, pour un
      * navigateur sous le minimum client. functions/order/basic.js. */
@@ -820,7 +820,7 @@ async function routeRequest(context) {
       headers: { ...lockHeaders, 'Content-Type': 'text/html; charset=utf-8', 'Retry-After': '5' },
     });
   }
-  return new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: sessionRevoked && !liveTill, lang: requestedLanguage(request) }), {
+  return (isRead && !isApi && await notFoundFor(request, env, path)) || new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: sessionRevoked && !liveTill, lang: requestedLanguage(request) }), {
     status: 401,
     headers: { ...lockHeaders, 'Content-Type': 'text/html; charset=utf-8' },
   });

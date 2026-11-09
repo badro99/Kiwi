@@ -7,19 +7,23 @@
 <meta name="description" content="Politique de confidentialité Kiwi. Logiciel de caisse et de gestion · Kiwi n'encaisse pas les paiements par carte." />
 <meta name="theme-color" content="#0B6E4F" />
 <meta name="robots" content="index, follow" />
-<link rel="canonical" href="https://kiwi-os.com/privacy.html" />
+<link rel="canonical" href="https://kiwi-os.com/privacy" />
 
 <link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="assets/landing/kiwi-mark-app-icon.png" />
 
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="assets/fonts/legacy-faces.css?v=1" />
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* Polices auto-hébergées : aucune requête vers Google (voir privacy.html). */
+  @font-face { font-family: "Inter Tight"; src: url("/assets/fonts/inter-tight-latin-ext.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap;
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Inter Tight"; src: url("/assets/fonts/inter-tight-latin.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+</style>
 
 <link rel="stylesheet" href="assets/landing/tokens.css" />
 <link rel="stylesheet" href="assets/landing/base.css" />
-<link rel="stylesheet" href="assets/landing/components.css?v=2" />
+<link rel="stylesheet" href="assets/landing/components.css?v=3" />
 
 <style>
   body { background: var(--paper); }
@@ -70,10 +74,10 @@
   .legal a { color: var(--atlas); border-bottom: 1px solid currentColor; }
   .legal a:hover { color: var(--atlas-700); }
   .legal-back {
-    display: inline-flex; align-items: center; gap: 8px;
+    display: flex; width: fit-content; align-items: center; gap: 8px;
     font-family: var(--font-mono); font-size: 12px;
     color: var(--n-500); letter-spacing: 0.04em;
-    margin-bottom: var(--s-8);
+    margin-bottom: var(--s-6);
     transition: color var(--d-quick) var(--ease-glide);
   }
   .legal-back:hover { color: var(--atlas); }
@@ -92,7 +96,7 @@
 </nav>
 
 <section class="slab-paper legal">
-  <div class="wrap-narrow">
+  <main class="wrap-narrow" id="main">
     <a href="/" class="legal-back">← Retour à kiwi-os.com</a>
     <span class="pill pill-paper pill-dot">Légal · loi 09-08</span>
 
@@ -105,8 +109,8 @@
       établissement de paiement.
     </p>
     <div class="meta">
-      <span><b>Dernière mise à jour</b> : 28 septembre 2026</span>
-      <span><b>Version</b> : 2.4</span>
+      <span><b>Dernière mise à jour</b> : 9 novembre 2026</span>
+      <span><b>Version</b> : 2.5</span>
       <span><b>Déclaration CNDP</b> : n° en cours d'attribution</span>
     </div>
 
@@ -169,7 +173,9 @@
 
     <h3>2.4 Application Kiwi Pro (iPad, iPhone, Android)</h3>
     <p>
-      Kiwi Pro est la même caisse, le même tableau de bord et la même cuisine,
+      L’application s’appelle « Kiwi Pro » sur l’App Store ; elle est gratuite à
+      télécharger et fonctionne avec toutes les formules (Basic, Plus, Pro, Ultra),
+      son nom ne désigne pas la formule Kiwi Pro. Elle est la même caisse, le même tableau de bord et la même cuisine,
       installés sur l’appareil du commerçant. Les données fonctionnelles décrites ici
       concernent aussi l’application, avec les permissions et diagnostics ci-dessous.
       Elle ne contient pas de traceur publicitaire.
@@ -217,6 +223,17 @@
       dans <b>Plus → Confidentialité Kiwi AI</b>. Ce choix vaut pour la session en cours.
       Le texte dicté reste modifiable avant l’envoi du message à l’assistant.
       Retirer l’autorisation bloque les nouveaux envois, sans rappeler les données déjà transmises.</p>
+
+    <h2 id="annuaire">Annuaire Kiwi</h2>
+    <p>L’annuaire public de kiwi-os.com (<a href="/fr/annuaire/">/fr/annuaire/</a>) publie des
+      informations sur des <b>commerces</b> : nom, métier, ville, adresse, présentation et site web.
+      Un commerce qui demande sa fiche laisse aussi un nom, un e-mail ou un téléphone de contact :
+      ces coordonnées servent uniquement à vérifier la demande et à le joindre à ce sujet, ne sont
+      lues que par l’équipe Kiwi et ne sont jamais publiées, sauf le téléphone si la case
+      « afficher » est cochée. Un client Kiwi n’apparaît dans l’annuaire que s’il l’active lui-même
+      depuis son tableau de bord ; ses ventes, son équipe et ses clients n’y figurent jamais.
+      Chaque fiche porte un lien pour demander sa correction ou sa suppression, et vous pouvez
+      aussi écrire à l’adresse de la section Contact.</p>
 
     <h2>3. Finalités du traitement</h2>
     <ul>
@@ -286,7 +303,7 @@
       Pour toute question : <a href="mailto:dpo@kiwi-os.com">dpo@kiwi-os.com</a>
       ou par courrier postal à l'adresse indiquée dans les <a href="mentions-legales.html">mentions légales</a>.
     </p>
-  </div>
+  </main>
 </section>
 
 </body>

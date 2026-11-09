@@ -1,0 +1,31 @@
+/* Home polish (7 locales), linked after the compiled sheet by
+   tools/landing-home.mjs. Brand tokens only: the scrim is --ink
+   (#0A0F0D at 70%), text stays white. */
+
+/* The "#features" anchor sits on the section, whose first 750px are padding
+   above the heading. Land on the heading instead (header height + 24px). */
+#features { scroll-margin-top: -640px; }
+@media (max-width: 767px) { #features { scroll-margin-top: -104px; } }
+
+/* Light copy drawn over the bright green sphere: hero paragraph, section
+   subtitles, pricing subtitle, final call to action. A feathered dark scrim
+   and regular weight lift it past 4.5:1 against the brightest sphere pixels
+   (tools/landing-home-browser-test.mjs measures it). The sphere itself is not
+   dimmed. */
+p.kw-onscene,
+a.kw-onscene,
+#pricing > div:first-child > p {
+  --kw-scrim: rgba(10, 15, 13, 0.7);
+  color: #fff;
+  font-weight: 400;
+  background: var(--kw-scrim);
+  border-radius: 18px;
+  box-shadow: 0 0 22px 14px var(--kw-scrim);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+a.kw-onscene { color: #fff; font-weight: 500; }
+h2.kw-onscene, h1.kw-onscene { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55), 0 2px 24px rgba(0, 0, 0, 0.7); }
+
+/* Phone menu: seven languages wrap onto two rows. */
+#kw-mobile-menu [role="group"] { flex-wrap: wrap; row-gap: 4px; }
+#kw-mobile-menu [role="group"] > a { flex: 1 0 20%; }

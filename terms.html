@@ -7,19 +7,23 @@
 <meta name="description" content="Conditions générales de l'abonnement au logiciel de caisse et de gestion Kiwi." />
 <meta name="theme-color" content="#0B6E4F" />
 <meta name="robots" content="index, follow" />
-<link rel="canonical" href="https://kiwi-os.com/terms.html" />
+<link rel="canonical" href="https://kiwi-os.com/terms" />
 
 <link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="assets/landing/kiwi-mark-app-icon.png" />
 
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="assets/fonts/legacy-faces.css?v=1" />
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* Polices auto-hébergées : aucune requête vers Google (voir privacy.html). */
+  @font-face { font-family: "Inter Tight"; src: url("/assets/fonts/inter-tight-latin-ext.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap;
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Inter Tight"; src: url("/assets/fonts/inter-tight-latin.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+</style>
 
 <link rel="stylesheet" href="assets/landing/tokens.css" />
 <link rel="stylesheet" href="assets/landing/base.css" />
-<link rel="stylesheet" href="assets/landing/components.css?v=2" />
+<link rel="stylesheet" href="assets/landing/components.css?v=3" />
 
 <style>
   body { background: var(--paper); }
@@ -64,10 +68,10 @@
   .legal a { color: var(--atlas); border-bottom: 1px solid currentColor; }
   .legal a:hover { color: var(--atlas-700); }
   .legal-back {
-    display: inline-flex; align-items: center; gap: 8px;
+    display: flex; width: fit-content; align-items: center; gap: 8px;
     font-family: var(--font-mono); font-size: 12px;
     color: var(--n-500); letter-spacing: 0.04em;
-    margin-bottom: var(--s-8);
+    margin-bottom: var(--s-6);
     transition: color var(--d-quick) var(--ease-glide);
   }
   .legal-back:hover { color: var(--atlas); }
@@ -85,7 +89,7 @@
 </nav>
 
 <section class="slab-paper legal">
-  <div class="wrap-narrow">
+  <main class="wrap-narrow" id="main">
     <a href="/" class="legal-back">← Retour à kiwi-os.com</a>
     <span class="pill pill-paper pill-dot">Légal · abonnement logiciel</span>
 
@@ -96,8 +100,8 @@
       souscrivant à un abonnement Kiwi.
     </p>
     <div class="meta">
-      <span><b>Version</b> : 3.0</span>
-      <span><b>Entrée en vigueur</b> : 1<sup>er</sup> mai 2026</span>
+      <span><b>Version</b> : 3.1</span>
+      <span><b>Entrée en vigueur</b> : 9 novembre 2026</span>
       <span><b>Loi applicable</b> : droit marocain</span>
       <span><b>Conception</b> : Cologne, Allemagne</span>
     </div>
@@ -117,15 +121,24 @@
 
     <h2>2. Formules et tarification</h2>
     <ul>
-      <li><b>Kiwi Basic · 199 MAD / mois</b> : le logiciel sur le matériel du commerçant, appareils illimités, un établissement, formation sur place et guides inclus.</li>
-      <li><b>Kiwi Pro · 399 MAD / mois</b> : tout Basic, plus une caisse Kiwi offerte et la maintenance du matériel.</li>
-      <li><b>Kiwi Ultra · 1 499 MAD / mois</b> : établissements illimités, multi-pays, API entreprise, gestionnaire de compte dédié 24/7.</li>
-      <li><b>Kiwi Ultimate · sur devis</b> : périmètre, nombre d'appareils et de caisses convenus avec le client.</li>
+      <li><b>Kiwi Basic · 150 MAD / mois, ou 1&nbsp;188 MAD par an</b> (soit 99 MAD par mois, en un seul paiement annuel) : une caisse simple pour les petits commerces et épiceries, avec scan de codes-barres, suivi du stock, tickets de caisse, carnet de crédit client, rapport journalier, caisse utilisable hors ligne, pour un établissement.</li>
+      <li><b>Kiwi Plus · 300 MAD / mois, ou 2&nbsp;988 MAD par an</b> (soit 249 MAD par mois) : tout Basic, plus la gestion de boutique : catalogue par tailles et couleurs, retours, échanges et avoirs, promotions, Loyalty+, fiches clients, suivi des ventes et des marges.</li>
+      <li><b>Kiwi Pro · 399 MAD / mois, ou 4&nbsp;188 MAD par an</b> (soit 349 MAD par mois) : tout Plus, plus l'exploitation de restaurant : plan de salle interactif, prise de commande par les serveurs, écran cuisine, OrderPro Restaurant, carte multilingue, lien de réservation, recettes et coût matière, accès employés avec permissions, planning, pointage et paie, Kiwi IQ avancé, support prioritaire sur WhatsApp.</li>
+      <li><b>Kiwi Ultra · 1&nbsp;499 MAD / mois</b>, sans formule annuelle, souscrit avec un conseiller : tout Pro, plus établissements illimités, pilotage multi-établissements, gestion multi-pays, API entreprise et account manager dédié.</li>
+      <li><b>Kiwi Ultimate · sur devis</b> : périmètre, nombre d'appareils et de caissiers convenus avec le client.</li>
     </ul>
     <p>
-      Tarifs hors taxes, facturés mensuellement. Aucun engagement de durée, aucun
-      frais de résiliation. Toute évolution tarifaire est notifiée avec un préavis
-      de 30 jours.
+      Chaque nouvel abonnement commence par un <b>essai gratuit de 15 jours, sans
+      engagement</b>. Le commerçant choisit ensuite une facturation mensuelle ou,
+      pour Basic, Plus et Pro, annuelle. Tarifs hors taxes. Les modalités de
+      paiement et de facturation figurent sur le bon de commande ou le contrat
+      signé avec le commerçant. Toute évolution tarifaire est notifiée avec un
+      préavis de 30 jours.
+    </p>
+    <p class="note">
+      L'application Kiwi Pro (iPad, iPhone, Android) est gratuite à télécharger et
+      fonctionne avec toutes les formules ; elle ne doit pas être confondue avec
+      la formule Kiwi Pro ci-dessus.
     </p>
 
     <h2>3. Obligations du commerçant</h2>
@@ -140,7 +153,7 @@
     <ul>
       <li>Maintenir le service en conditions opérationnelles et corriger les anomalies signalées.</li>
       <li>Cloisonner les données de chaque commerçant et ne jamais les partager avec un autre client.</li>
-      <li>Mettre à disposition un support en français, darija et arabe classique.</li>
+      <li>Mettre à disposition un support en français, arabe (darija ou arabe classique) et anglais.</li>
       <li>Permettre au commerçant d'exporter ses données à tout moment, sur demande.</li>
     </ul>
 
@@ -187,7 +200,7 @@
       Pour toute réclamation : <a href="mailto:contrats@kiwi-os.com">contrats@kiwi-os.com</a>.
       Pour le support opérationnel : <a href="mailto:support@kiwi-os.com">support@kiwi-os.com</a>.
     </p>
-  </div>
+  </main>
 </section>
 
 </body>

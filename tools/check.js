@@ -1730,6 +1730,7 @@ section('Whole-project regressions');
        dans functions/_middleware.js, donc une suite d'assets ne la verrait
        pas : celle-ci appelle le middleware lui-même. */
     'guides-redirect-test.mjs',
+    'public-404-test.mjs',
     /* Les articles juridiques portent une date de revue explicite. Le check
        local valide le registre ; le workflow hebdomadaire applique la limite
        stricte de 90 jours afin de ne pas transformer chaque build en minuteur. */
@@ -1750,6 +1751,9 @@ section('Whole-project regressions');
     /* DE/IT/NL servies dans leur langue (titre, H1, maquette), hreflang complet. */
     'landing-static-locale-test.mjs',
     'landing-rewrite-test.mjs',
+    /* Accueil : boutons d'inscription et messages WhatsApp, JSON-LD aligné sur le tarif, textes corrigés. */
+    'landing-home-test.mjs',
+    'landing-home-browser-test.mjs',
     'landing-es-browser-test.mjs',
     /* Aucune page de la landing ne promet un chiffrement de bout en bout, et
        les tarifs montrent les quatre paliers de CLAUDE.md §7. */
@@ -2394,6 +2398,8 @@ section('Whole-project regressions');
     'customer-retention-test.mjs',
     'landing-demo-funnel-test.mjs',
     'demo-request-api-test.mjs',
+    // Annuaire Kiwi : routes et modération sur D1, HTML rendu (FR/EN/AR), parcours navigateur.
+    'directory-api-test.mjs', 'directory-pages-test.mjs', 'directory-browser-test.mjs',
     'app-audit-sweep-test.mjs',
     'briefing-sales-drop-test.mjs',
     'briefing-low-stock-test.mjs',
