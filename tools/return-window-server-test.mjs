@@ -27,8 +27,10 @@ const issue = async (saleId, extra = {}) => {
   return f.call('credit', { action: 'issue', id, originalSaleId: saleId, originalRef: saleId, amountCents: 1000, customerName: 'Test', reason: 'Retour', approval: await proof(id, saleId, 1000, 'avoir', extra) });
 };
 const setPolicy = (data) => sql.prepare("INSERT OR REPLACE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'policies', ?, 1, ?)").run(merchant, JSON.stringify(data), now);
-// Fixed mid-day anchors so the 05:00 business day cannot move a sale across a boundary while the test runs.
-const at = (daysAgo) => { const d = new Date(now - daysAgo * DAY); d.setUTCHours(12, 0, 0, 0); return d.getTime(); };
+// Each sale is dated `daysAgo` whole days before now, so it lands on that many business days back in
+// any zone and at any cutoff. (A noon-UTC anchor was still in the future every morning, which made
+// "today" a sale from tomorrow's business day and failed the test before 12:00 UTC.)
+const at = (daysAgo) => now - daysAgo * DAY - 1000;
 for (const [id, days] of [['fresh', 1], ['week-old', 6], ['eight-days', 8], ['two-weeks', 14], ['today', 0], ['old-timer', 60]]) f.insert('rw-' + id, 5000, { ts: at(days) });
 
 console.log('return-window-server-test');
