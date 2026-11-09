@@ -110,7 +110,7 @@ var SHELL = [
   '/assets/invoicing/composer.js?v=9',
   '/assets/invoicing/transport.js?v=16',
   '/assets/booking-view.js?v=11',
-  '/assets/booking-manage.js?v=14',
+  '/assets/booking-manage.js?v=15',
   '/assets/booking-submission.js?v=24',
   '/assets/booking-hotel.js?v=5',
   '/assets/booking-service.js?v=5',
@@ -175,7 +175,7 @@ var SHELL = [
      ligne recevait le tableau de bord du patron. Elle est légère (une page,
      un script, deux feuilles) et n'a pas de session à protéger. */
   '/booking.html',
-  '/assets/booking.js?v=76',
+  '/assets/booking.js?v=77',
   '/assets/booking-recover.js?v=7',
   '/assets/icons/material/event_busy.svg',
   '/assets/booking.css?v=25',

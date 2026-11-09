@@ -269,7 +269,7 @@ export function createBookingManage(context) {
           }
           ),gj=await g.json();
           if(g.ok&&gj&&gj.booking&&gj.booking.status==='cancelled') {
-            state.config=gj;
+            state.config=gj&&gj.booking&&gj.booking.hotel? Object.assign({},gj,{kind:'hotel'}):gj;
             renderManage(gj,'','');
             return
           }
@@ -290,7 +290,8 @@ export function createBookingManage(context) {
       }
       ),j=await r.json();
       if(!r.ok) throw new Error(j.error||'error');
-      state.config=j;
+      /* B25 · un séjour garde la présentation de l'hôtel sur sa page de gestion. */
+      state.config=j&&j.booking&&j.booking.hotel? Object.assign({},j,{kind:'hotel'}):j;
       renderManage(j,'','');
     }
     catch(err) {
