@@ -373,6 +373,9 @@
   body.role-staff .sidebar a[data-nav="payroll"],
   body.role-staff .sidebar a[data-nav="conformite"],
   body.role-staff .sidebar a[data-nav="equipe"] { display: none !important; }
+  /* Réception d'hôtel (assets/reception-view.js) : l'accueil chiffré reste
+   * fermé même si la vue n'a pas pu se charger. */
+  body.role-reception .container > .dash-standard { display: none !important; }
   .search-big {
     flex: 1; max-width: 460px; min-width: 0;
     background: rgba(255,255,255,0.5);

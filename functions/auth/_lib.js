@@ -1,3 +1,4 @@
+import { employeeRoleOpensReceptionView } from './_reception.js';
 import { deadlineFetch } from '../../assets/request-deadline.mjs';
 import { codeDocument, matchingStaffCodes, accountStaffCodes, hashStaffCode } from './_staff-codes.js';
 import { canonicalCode } from '../api/_rules-staff-credential.js';
@@ -1941,7 +1942,8 @@ export async function verifyAccountPin(request, env, pin) {
   try {
     rows = await accountStaffCodes(env, sess.aid, accSlug, pin);
   } catch (_) { return { ok: false, error: 'staff-unavailable', status: 503 }; }
-  const staff = rows.find((row) => employeeRoleOpensDashboard(row.role)) || null;
+  const staff = rows.find((row) => employeeRoleOpensDashboard(row.role))
+    || rows.find((row) => employeeRoleOpensReceptionView(row.role)) || null;
 
   if (!staff) {
     if (!await limitFail(request, env, 'pin:account', identity)) {

@@ -78,7 +78,7 @@
      per-vertical component CSS above, which is how it replaces four different
      stat-card implementations without editing four stylesheets. -->
 <link rel="stylesheet" href="assets/genpage.css?v=5" />
-<link rel="stylesheet" href="assets/dashboard-shell.css?v=7" />
+<link rel="stylesheet" href="assets/dashboard-shell.css?v=8" />
 <link rel="stylesheet" href="assets/mobile.css?v=13" />
 <link rel="stylesheet" href="assets/dashboard-native.css?v=1" />
 <link rel="stylesheet" href="assets/kiwi-select.css?v=3" />
@@ -158,9 +158,18 @@
 (function () {
   let role = 'owner';
   try { role = localStorage.getItem('kiwiRole') || 'owner'; } catch (_) {}
-  if (role !== 'owner' && role !== 'manager' && role !== 'staff') role = 'owner';
+  if (role !== 'owner' && role !== 'manager' && role !== 'staff' && role !== 'reception') role = 'owner';
   document.body.classList.add('role-' + role);
   window.__kiwiRole = role;
+  /* Vue réception (owner, 9 Nov 2026) : un code de réceptionniste ouvre le
+   * tableau de bord réduit aux pages du comptoir. Chargée pour ce rôle-là
+   * seulement : le patron ne la télécharge jamais. */
+  if (role === 'reception') {
+    const s = document.createElement('script');
+    s.src = "assets/reception-view.js?v=2";
+    s.setAttribute('data-reception-view', '');
+    document.head.appendChild(s);
+  }
 })();
 /* Fusion animation perf gate · Safari rasterises feDisplacementMap on CPU
  * and the melt drops to ~10 fps. Detect WebKit-not-Chrome and skip the SVG
@@ -1376,6 +1385,8 @@
     }
     if (id === 'proprietaire') return 'owner';
     if (id === 'manager') return 'manager';
+    /* La réception d'hôtel a sa propre vue (assets/reception-view.js). */
+    if (id === 'reception') return 'reception';
     return 'staff';
   }
 
@@ -2062,8 +2073,16 @@
     } catch (_) {}
     window.__kiwiRole = role;
     try { localStorage.setItem('kiwiRole', role); } catch (_) {}
-    document.body.classList.remove('role-owner', 'role-manager', 'role-staff');
+    document.body.classList.remove('role-owner', 'role-manager', 'role-staff', 'role-reception');
     document.body.classList.add('role-' + role);
+    /* Un code de réceptionniste tapé sur ce poste : la vue réception arrive
+     * maintenant (même fichier que le démarrage ci-dessus, une seule fois). */
+    if (role === 'reception' && !document.querySelector('script[data-reception-view]')) {
+      const s = document.createElement('script');
+      s.src = "assets/reception-view.js?v=2";
+      s.setAttribute('data-reception-view', '');
+      document.head.appendChild(s);
+    }
     if (role === 'staff') { const b = document.querySelector('[data-role-badge] span'); if (b) { b.textContent = 'Vue équipe'; b.removeAttribute('data-i18n'); } }
     /* Every passcode enables the stable Design 2026 "Liquid Glass" skin
      * (no on-screen toggle · KiwiDesign2026.disable() reverts; persists). */

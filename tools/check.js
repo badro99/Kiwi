@@ -755,7 +755,7 @@ for (const test of [
   'pin-hardening-test.mjs', 'staff-codes-seal-test.mjs', 'staff-codes-round2-test.mjs',
   /* Face ID : le serveur confirme la marque du compte (session, sans code), refuse
      tout changement de codes, et le client (native-runtime.js) lit ce verdict. */
-  'face-unlock-test.mjs',
+  'face-unlock-test.mjs', 'reception-view-test.mjs',
   'config-pin-projection-test.mjs',
   'staff-publication-split-test.mjs',
   'staff-credential-parity-test.mjs',
