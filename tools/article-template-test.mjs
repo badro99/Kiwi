@@ -180,7 +180,13 @@ for (const page of published) {
   ok(width === 1200 && height === 630, `${page.path} has a unique 1200×630 PNG social image`);
   publishedImages.add(page.image);
   const localeFooter = landingFooterByLocale[page.locale];
-  ok(footerText(footerFrom(source)) === footerText(localeFooter) && JSON.stringify(footerHrefs(footerFrom(source), page.locale)) === JSON.stringify(footerHrefs(localeFooter, page.locale)), `${page.path} preserves the exact ${page.locale.toUpperCase()} landing footer`);
+  /* Le pied de page des guides est celui de la landing, plus un seul lien :
+   * l'Annuaire Kiwi, après « Tarifs » (tools/build-guides.mjs, withDirectoryLink). */
+  const directoryLink = new RegExp(`<li><a href="/${page.locale}/(?:annuaire|directory)/"[^>]*>[^<]+</a></li>`);
+  const guideFooter = footerFrom(source);
+  ok(directoryLink.test(guideFooter), `${page.path} links the Kiwi directory from its footer`);
+  const asLanding = guideFooter.replace(directoryLink, '');
+  ok(footerText(asLanding) === footerText(localeFooter) && JSON.stringify(footerHrefs(asLanding, page.locale)) === JSON.stringify(footerHrefs(localeFooter, page.locale)), `${page.path} preserves the exact ${page.locale.toUpperCase()} landing footer`);
   /* Le pied de page de la landing porte des ancres nues (`#pricing`), justes
    * sur `/fr/` et fausses une fois recopiées dans `/fr/guides/` : le visiteur
    * cliquait « Tarifs » et ne bougeait pas. Le générateur les relocalise, donc

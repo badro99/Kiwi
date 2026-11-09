@@ -15,6 +15,10 @@
     "v": "5",
     "sha": "16ab61868e881b9f"
   },
+  "assets/admin-directory.js": {
+    "v": "1",
+    "sha": "91a51438de608dea"
+  },
   "assets/admin-legacy.js": {
     "v": "12",
     "sha": "7caf135e1211e6eb"
@@ -559,6 +563,10 @@
     "v": "1",
     "sha": "5d6507bf65311b04"
   },
+  "assets/directory-optin.js": {
+    "v": "1",
+    "sha": "146340a598790666"
+  },
   "assets/discount-policy.js": {
     "v": "4",
     "sha": "b43d5f8055c17c85"
@@ -808,8 +816,8 @@
     "sha": "a69c85ba97ce274b"
   },
   "assets/interactive/handlers.js": {
-    "v": "2",
-    "sha": "bbbe8a822a63c844"
+    "v": "3",
+    "sha": "71e78d1307422032"
   },
   "assets/interactive/helpers.js": {
     "v": "1",
