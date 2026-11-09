@@ -24,6 +24,8 @@
  * applique. Tant qu'elle n'existe pas, tout lit « vide » : l'annuaire s'affiche
  * sans fiche, jamais en 500 (tools/directory-api-test.mjs). */
 
+import { isMissingTable } from './print/_relay.js';
+
 export const PER_PAGE = 24;
 
 /* Les villes ont une liste fermée : une page par ville n'a de valeur que si
@@ -186,7 +188,8 @@ export function dedupeKey(name, city) {
 }
 
 /* ── Lecture tolérante : table absente ⇒ vide ────────────────────────────── */
-export const missingTable = (e) => /no such table|no such column/i.test(String((e && e.message) || e || ''));
+/* 0024 not yet applied in prod: the shared, pinned detector (print/_relay.js), not a new one. */
+export const missingTable = isMissingTable;
 
 async function all(env, sql, binds) {
   if (!env || !env.DB) return [];

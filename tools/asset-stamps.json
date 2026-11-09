@@ -16,8 +16,8 @@
     "sha": "16ab61868e881b9f"
   },
   "assets/admin-directory.js": {
-    "v": "1",
-    "sha": "91a51438de608dea"
+    "v": "2",
+    "sha": "2ca67dbaad608f76"
   },
   "assets/admin-legacy.js": {
     "v": "12",
@@ -572,8 +572,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/directory-optin.js": {
-    "v": "1",
-    "sha": "146340a598790666"
+    "v": "2",
+    "sha": "13f86c2a92de3f2b"
   },
   "assets/discount-policy.js": {
     "v": "4",
@@ -1476,8 +1476,8 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "96",
-    "sha": "7b56a98ceb728619"
+    "v": "98",
+    "sha": "362d14e807c4382a"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "226",

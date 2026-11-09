@@ -32,22 +32,13 @@ import { onRequest as middleware } from '../functions/_middleware.js';
 import { isPublicDirectoryRequest } from '../functions/_public-pages.js';
 import { TRADES, CITIES, formToken, sanitizeListing, cleanWebsite, baseSlug } from '../functions/api/_directory.js';
 import { normalizePhone } from '../functions/api/_phone.js';
+import { directoryDb } from './directory-fixture.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const secret = 'directory-test-secret-0123456789abcdef0123';
 
-function database() {
-  const sql = new DatabaseSync(':memory:');
-  sql.exec(fs.readFileSync(path.join(root, 'schema.sql'), 'utf8'));
-  class Statement {
-    constructor(q) { this.q = q; this.args = []; }
-    bind(...a) { this.args = a.map((x) => (x === undefined ? null : x)); return this; }
-    async first() { return sql.prepare(this.q).get(...this.args) ?? null; }
-    async all() { return { results: sql.prepare(this.q).all(...this.args) }; }
-    async run() { const r = sql.prepare(this.q).run(...this.args); return { meta: { changes: Number(r.changes) } }; }
-  }
-  return { sql, DB: { prepare: (q) => new Statement(q) } };
-}
+/* The same D1 shim as the pages and browser suites, without their fixture rows. */
+const database = () => directoryDb({ seed: false });
 const { sql, DB } = database();
 const env = { DB, AUTH_SECRET: secret };
 

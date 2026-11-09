@@ -120,3 +120,18 @@ historique ci-dessus reste un repérage de l'état initial, pas l'état des lign
 actuelles. Voir [la preuve Wave M](2026-10-26-wave-m-schema.md) pour les exceptions,
 les comparaisons avant/après et les suites. Les autres replis (sondes, ALTER hors
 helpers retirés, projections et captures d'erreurs) restent hors de ce retrait.
+
+## Annuaire Kiwi · 0024 en attente · 9 novembre 2026
+
+`migrations/0024_directory.sql` crée `directory_listings` et `directory_requests`.
+Tant que le propriétaire ne l'a pas appliquée, le minimum reste 0023 (relever
+le minimum mettrait toutes les routes en 503 pour une fonction secondaire). Les
+19 requêtes de l'annuaire qui ne se préparent pas à 0023 sont épinglées dans
+`tools/schema-fallback-baseline.json` jusqu'au relèvement du minimum, comme
+`sales.client_id` avant 0021. Le seul repli est la détection de table absente,
+qui réutilise `isMissingTable` de `print/_relay.js` (déjà épinglée) : l'annuaire
+s'affiche vide, une inscription répond 503.
+
+Après application en production :
+1. passer `MINIMUM_SCHEMA_VERSION` à 24, ajouter 24 à `REQUIRED_MIGRATIONS` et une sonde `SHAPE_PROBES`, et l'assertion de `tools/schema-minimum-test.mjs` ;
+2. `KIWI_UPDATE_SCHEMA_BASELINE=1 node tools/schema-minimum-test.mjs` : les 19 épingles `directory_*` tombent.

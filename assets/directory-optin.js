@@ -57,25 +57,35 @@
       .finally(function () { clearTimeout(timer); });
   }
 
+  /* Field styles live in one stylesheet, not in strings spliced into the markup. */
+  function styles() {
+    if (document.getElementById('kdir-optin-css')) return;
+    var css = document.createElement('style');
+    css.id = 'kdir-optin-css';
+    css.textContent = '.kdir-label{display:block;font-size:13px;margin-bottom:10px}'
+      + '.kdir-input{display:block;width:100%;min-height:44px;font-size:16px;margin-top:4px;padding:0 12px;border:1px solid var(--n-200);border-radius:10px;background:var(--surface);color:var(--ink);box-sizing:border-box}'
+      + '.kdir-area{padding:10px 12px;min-height:96px}';
+    document.head.appendChild(css);
+  }
+
   function open() {
     var K = window.Kiwi;
     if (!K || typeof K.modal !== 'function') return;
     var merchant = String((window.KiwiLive && window.KiwiLive.merchant && window.KiwiLive.merchant()) || '');
     var L = lang();
-    var input = 'display:block;width:100%;min-height:44px;font-size:16px;margin-top:4px;padding:0 12px;border:1px solid var(--n-200);border-radius:10px;background:var(--surface);color:var(--ink);box-sizing:border-box;';
-    var label = 'display:block;font-size:13px;margin-bottom:10px;';
+    styles();
     var m = K.modal({
       title: tr(T.title), tag: tr(T.tag), desc: esc(tr(T.desc)), width: 580,
       body: '<div data-dir-form>'
         + '<label style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;margin-bottom:14px;"><input type="checkbox" data-dir-on style="width:22px;height:22px;accent-color:var(--atlas);"> ' + esc(tr(T.on)) + '</label>'
         + '<div data-dir-fields>'
-        + '<label style="' + label + '">' + esc(tr(T.name)) + '<input type="text" maxlength="80" data-dir-name style="' + input + '"></label>'
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><label style="' + label + '">' + esc(tr(T.trade)) + '<select data-dir-trade style="' + input + '"></select></label>'
-        + '<label style="' + label + '">' + esc(tr(T.city)) + '<select data-dir-city style="' + input + '"></select></label></div>'
-        + '<label style="' + label + '">' + esc(tr(T.address)) + '<input type="text" maxlength="160" data-dir-address style="' + input + '"></label>'
-        + '<label style="' + label + '">' + esc(tr(T.description)) + '<textarea maxlength="600" rows="4" data-dir-description style="' + input + 'padding:10px 12px;min-height:96px;"></textarea></label>'
-        + '<label style="' + label + '">' + esc(tr(T.website)) + '<input type="url" maxlength="200" dir="ltr" data-dir-website style="' + input + '"></label>'
-        + '<label style="' + label + '">' + esc(tr(T.phone)) + '<input type="tel" maxlength="32" dir="ltr" data-dir-phone style="' + input + '"></label>'
+        + '<label class="kdir-label">' + esc(tr(T.name)) + '<input type="text" maxlength="80" data-dir-name class="kdir-input"></label>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><label class="kdir-label">' + esc(tr(T.trade)) + '<select data-dir-trade class="kdir-input"></select></label>'
+        + '<label class="kdir-label">' + esc(tr(T.city)) + '<select data-dir-city class="kdir-input"></select></label></div>'
+        + '<label class="kdir-label">' + esc(tr(T.address)) + '<input type="text" maxlength="160" data-dir-address class="kdir-input"></label>'
+        + '<label class="kdir-label">' + esc(tr(T.description)) + '<textarea maxlength="600" rows="4" data-dir-description class="kdir-input kdir-area"></textarea></label>'
+        + '<label class="kdir-label">' + esc(tr(T.website)) + '<input type="url" maxlength="200" dir="ltr" data-dir-website class="kdir-input"></label>'
+        + '<label class="kdir-label">' + esc(tr(T.phone)) + '<input type="tel" maxlength="32" dir="ltr" data-dir-phone class="kdir-input"></label>'
         + '<label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:6px;"><input type="checkbox" data-dir-show> ' + esc(tr(T.showPhone)) + '</label>'
         + '<label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:6px;"><input type="checkbox" data-dir-wa> ' + esc(tr(T.whatsapp)) + '</label>'
         + '</div>'

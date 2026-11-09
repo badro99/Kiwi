@@ -31,6 +31,8 @@
     economat: { dependencies: ['hotel'], scripts: ['assets/hotel-economat.js?v=65'] },
     /* « Ouvrir la caisse » on the PIN lock: the store picker and the opening ticket. */
     lock: { dependencies: [], scripts: ['assets/lock-till.js?v=3'] },
+    /* Paramètres → « Annuaire Kiwi »: the opt-in sheet, fetched on first open. */
+    directory: { dependencies: [], scripts: ['assets/directory-optin.js?v=2'] },
   });
   const pending = new Map(), scripts = new Map(), ready = new Set();
   function script(url) {
@@ -81,11 +83,22 @@
       if (!target.isConnected) return;
       replaying = true;
       try { activate(); } finally { replaying = false; }
-    }).catch(() => {
-      const lang = window.KiwiI18n?.getLang?.() || 'fr';
-      const message = {fr:'Chargement impossible. Réessayez.',en:'Unable to load. Please retry.',ar:'تعذر التحميل. حاول مجددا.'};
-      window.Kiwi?.toast?.(message[lang] || message.fr, {type:'error'});
-    });
+    }).catch(unavailable);
+  }
+  function unavailable() {
+    const lang = window.KiwiI18n?.getLang?.() || 'fr';
+    const message = {fr:'Chargement impossible. Réessayez.',en:'Unable to load. Please retry.',ar:'تعذر التحميل. حاول مجددا.'};
+    window.Kiwi?.toast?.(message[lang] || message.fr, {type:'error'});
+  }
+  /* The directory row's handler is a stub until directory-optin.js registers the real one. */
+  if (!H['settings-directory']) {
+    const stub = function () {
+      const self = this, args = arguments;
+      return load('directory').then(() => {
+        if (H['settings-directory'] !== stub) return H['settings-directory'].apply(self, args);
+      }, unavailable);
+    };
+    H['settings-directory'] = stub;
   }
   window.addEventListener('click', event => {
     if (replaying || ready.has('workspace')) return;

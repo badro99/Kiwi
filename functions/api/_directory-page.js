@@ -124,6 +124,7 @@ function card(r, lang) {
 </a></article></li>`;
 }
 
+/** @param {string} lang @param {any[]} rows @param {number} total @param {{ heading?: string, emptyCity?: string }} [opts] */
 function listBlock(lang, rows, total, { heading, emptyCity = '' } = {}) {
   const s = STR[lang];
   const head = `<div class="section-rule"><h2 id="dir-list-title">${esc(heading || s.allListings)}</h2><p class="library-count" role="status">${count(total, lang)}</p></div>`;
@@ -308,6 +309,8 @@ function fieldSelect(id, label, options, value, lang, invalid) {
 
 const errorBox = (lang, error) => error ? `<p class="dir-error" role="alert" id="dir-error">${esc(STR[lang].errors[error] || STR[lang].errors.unavailable)}</p>` : '';
 
+/** @typedef {{ values?: Record<string, any>, error?: string, thanks?: boolean, status?: number }} FormState */
+/** @param {any} env @param {string} lang @param {FormState} [state] */
 export async function renderAddPage(env, lang, { values = {}, error = '', thanks = false, status = 200 } = {}) {
   const s = STR[lang];
   const { html: crumbsHtml, ld } = crumbs(lang, [[BASE[lang], s.directory], ['', s.addShort]]);
@@ -341,6 +344,7 @@ ${fieldText('f-phone', s.phone2, { value: v.phone, type: 'tel', max: 32, auto: '
   return html(page(lang, { title: s.addTitle, description: s.addDescription, rel: relFor(lang, 'add'), noindex: thanks || !!error, body, ld: [ld] }), 0, status);
 }
 
+/** @param {any} env @param {string} lang @param {string} slug @param {FormState} [state] */
 export async function renderReportPage(env, lang, slug, { values = {}, error = '', thanks = false, status = 200 } = {}) {
   const r = await listingBySlug(env, slug);
   if (!r) return notFound(lang);
