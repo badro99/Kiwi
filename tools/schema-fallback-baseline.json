@@ -30,5 +30,6 @@
   "api/push/morning.js : repli de schéma": 1,
   "api/push/register.js : repli de schéma": 4,
   "api/tickets/_lib.js : repli de schéma": 1,
-  "auth/_lib.js : repli de schéma": 4
+  "auth/_lib.js : repli de schéma": 4,
+  "auth/_session-tier.js : no such table: session_tiers": 3
 }

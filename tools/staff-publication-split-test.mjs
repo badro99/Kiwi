@@ -15,6 +15,19 @@ const route = read('functions/api/config.js'), mod = read('functions/api/_staff-
 let n = 0;
 const ok = (c, m) => { assert.ok(c, m); n++; };
 
+/* One deliberate change to the route since the move (9 Nov, session tiers): a
+ * staff code list is refused below the manager tier, before anything is written.
+ * The import and that guard are the only route text the rebuild sets aside;
+ * session-tier-test runs the refusal. */
+const tierImport = "import { sessionTierAtLeast } from '../auth/_session-tier.js';\n";
+const tierGuard = "  /* Les codes de l'équipe ne changent pas depuis un tableau de bord qu'une\n"
+  + "   * réceptionniste a déverrouillé (functions/auth/_session-tier.js) : sans ce\n"
+  + "   * refus, elle se donnerait un code de patron. Refusé AVANT toute écriture. */\n"
+  + "  if (Array.isArray(body && body.pins) && !(await sessionTierAtLeast(request, env, 'manager'))) {\n"
+  + "    return json({ error: 'tier', need: 'manager' }, 403);\n  }\n";
+ok(route.split(tierImport).length === 2 && route.split(tierGuard).length === 2, 'the tier refusal sits once in the route, with its import');
+const routeBase = route.replace(tierImport, '').replace(tierGuard, '');
+
 /* The function body, moved two spaces left, with `result` its own local. */
 const head = 'export async function publishStaffCredentials(env, merchant, body) {\n  const result = {};\n';
 const tail = '\n  return result;\n}\n';
@@ -33,8 +46,8 @@ const helpers = mod.slice(mod.indexOf('const VALID_PIN'), mod.indexOf('\n}\n', m
 
 const call = "  if (Array.isArray(body && body.pins)) {\n    const published = await publishStaffCredentials(env, merchant, body);\n"
   + "    if (published instanceof Response) return published;\n    Object.assign(result, published);\n  }";
-ok(route.split(call).length === 2, 'the route publishes staff codes through exactly one call');
-let rebuilt = route.replace(call, () => '  if (Array.isArray(body && body.pins)) {\n'
+ok(routeBase.split(call).length === 2, 'the route publishes staff codes through exactly one call');
+let rebuilt = routeBase.replace(call, () => '  if (Array.isArray(body && body.pins)) {\n'
   + inner.split('\n').map((l) => (l ? '  ' + l : l)).join('\n') + '\n  }');
 rebuilt = rebuilt.replace("import { publishStaffCredentials, accountOwnerRole } from './_staff-publication.js';\n",
   "import { authFingerprint, authSentinel, planEmployeeAuth, writeEmployeeAuth, authMoved } from './_employee-auth.js';\n\n" + helpers);

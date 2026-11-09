@@ -12,6 +12,8 @@ import {
   managerRefundProof, managerStockProof, tillActorProof, employeeRoleOpensTill,
   faceAccessTier, faceMarkState, json,
 } from '../../auth/_lib.js';
+import { employeeRoleOpensReceptionView } from '../../auth/_reception.js';
+import { recordSessionTier } from '../../auth/_session-tier.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -67,6 +69,10 @@ export async function onRequestPost(context) {
   let faceMark = '';
   if (!merchant) {
     const tier = faceAccessTier(verified.staff.role);
+    /* Ce code vient d'ouvrir le tableau de bord de CET appareil : son palier est
+       celui que les routes du patron liront (functions/auth/_session-tier.js). */
+    await recordSessionTier(request, env,
+      tier || (employeeRoleOpensReceptionView(verified.staff.role) ? 'reception' : ''), verified.staff.id);
     if (tier) {
       try { const st = await faceMarkState(request, env, tier); if (st.status === 'ok') faceMark = st.mark; } catch (_) {}
     }

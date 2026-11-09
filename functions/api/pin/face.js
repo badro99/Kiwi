@@ -14,6 +14,7 @@
 // Session-bound: no session, or a suspended / revoked account, answers 401. Answers
 // are JSON with no code, no name list, and no roster.
 import { faceMarkState, json } from '../../auth/_lib.js';
+import { recordSessionTier } from '../../auth/_session-tier.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -31,5 +32,7 @@ export async function onRequestPost(context) {
   if (st.status === 'unavailable') return json({ ok: false, error: 'staff-unavailable' }, 503);
   if (st.status !== 'ok') return json({ ok: false, error: 'no-such-access' }, 403);
   if (mark !== st.mark) return json({ ok: false, error: 'changed' }, 403);
+  /* Face ID rouvre ce tableau de bord au palier de la marque, comme un code. */
+  await recordSessionTier(request, env, access, '');
   return json({ ok: true, access }, 200);
 }

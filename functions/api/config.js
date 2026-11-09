@@ -35,6 +35,7 @@ import {
   employeeRoleOpensTill,
 } from '../auth/_lib.js';
 import { publishStaffCredentials, accountOwnerRole } from './_staff-publication.js';
+import { sessionTierAtLeast } from '../auth/_session-tier.js';
 
 /* ── Ce qu'un établissement TOUT NEUF reçoit ────────────────────────────────
  * Quatre modules qui ne servent qu'à une partie des clients : un snack de quartier
@@ -377,6 +378,12 @@ export async function onRequestPost(context) {
 
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+  /* Les codes de l'équipe ne changent pas depuis un tableau de bord qu'une
+   * réceptionniste a déverrouillé (functions/auth/_session-tier.js) : sans ce
+   * refus, elle se donnerait un code de patron. Refusé AVANT toute écriture. */
+  if (Array.isArray(body && body.pins) && !(await sessionTierAtLeast(request, env, 'manager'))) {
+    return json({ error: 'tier', need: 'manager' }, 403);
+  }
 
   // Which of this account's stores is being synced?
   /** @type {import('../../types/tenant').MerchantInput} */

@@ -150,5 +150,9 @@
   "directory_requests": [
     {"id": "fixture-id-1", "listing_id": "fixture-listing_id-1", "kind": "fixture-kind-1", "message": "fixture-message-1", "contact": "fixture-contact-1", "status": "fixture-status-1", "created_ts": 137, "updated_ts": 137, "handled_by": "fixture-handled_by-1"},
     {"id": "fixture-id-2", "listing_id": "fixture-listing_id-2", "kind": "fixture-kind-2", "message": "fixture-message-2", "contact": "fixture-contact-2", "status": "fixture-status-2", "created_ts": 274, "updated_ts": 274, "handled_by": "fixture-handled_by-2"}
+  ],
+  "session_tiers": [
+    {"sid": "fixture-sid-1", "account_id": "fixture-account_id-1", "tier": "fixture-tier-1", "staff_id": "fixture-staff_id-1", "updated_ts": 137},
+    {"sid": "fixture-sid-2", "account_id": "fixture-account_id-2", "tier": "fixture-tier-2", "staff_id": "fixture-staff_id-2", "updated_ts": 274}
   ]
 }

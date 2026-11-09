@@ -31,6 +31,7 @@ import { metadataResponse, protectedResourceMetadata, authorizationServerMetadat
 import { withFastNext } from './_fast-next.js';
 import { isPublicUtilityPath, notFoundFor, isPublicDirectoryRequest } from './_public-pages.js';
 import { visitorRedirect, recordOldOrigin } from './_origin-move.js';
+import { tierBlock } from './auth/_session-tier.js';
 
 const GATE_COOKIE = 'kiwi_gate';
 const UNLOCK_PATH = '/__unlock';
@@ -640,14 +641,12 @@ async function routeRequest(context) {
   // Nothing configured → open site (local dev / preview without secrets).
   if (!authSecret && !sitePassword) return next();
 
-  // 1. Valid account session? A signed, unexpired token gets assets through
-  // immediately (they carry no per-account data). For page loads and API calls
-  // — the surfaces that expose a client's own data — we additionally confirm the
-  // account still exists and isn't suspended, so deleting or freezing a client
-  // cuts off their live session on the very next request. If the account was
-  // revoked we DON'T return next(): we fall through so a stray staff/operator
-  // cookie can still be honoured, then land on the lockout screen with the dead
-  // session cookie cleared.
+  // 1. Valid account session? Assets pass on the signed token alone. Page loads
+  // and API calls also confirm the account exists and isn't suspended, so a
+  // deleted or frozen client is cut off on the next request; an owner-only API
+  // also checks who unlocked this device (functions/auth/_session-tier.js). A
+  // revoked account falls through so a stray staff/operator cookie can still be
+  // honoured, then lands on the lockout screen with the dead cookie cleared.
   let sessionRevoked = false;
   let sessionVerificationUnavailable = false;
   if (authSecret) {
@@ -671,7 +670,7 @@ async function routeRequest(context) {
           out.headers.append('Set-Cookie', sessionCookie(await makeSession(sess.aid, authSecret, sess.sv, sess.sid)));
           return out;
         }
-        return next();
+        return (isApi && await tierBlock(request, env, path)) || next();
       }
       sessionVerificationUnavailable = !!accountState.unavailable;
       sessionRevoked = !sessionVerificationUnavailable; // only a confirmed revoke purges identity

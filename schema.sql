@@ -266,6 +266,20 @@ CREATE TABLE IF NOT EXISTS session_revocations (
   expires_ts INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_session_revocations_expires ON session_revocations (expires_ts);
+
+-- Palier de la session, par appareil (sid) : qui a déverrouillé ce tableau de
+-- bord avec son code. owner | manager | reception. Inscrit par /api/pin/verify et
+-- /api/pin/face, lu par les routes du patron (functions/auth/_session-tier.js).
+-- Pas de ligne = palier d'avant (patron) ; la ligne vit en base, pas dans un
+-- cookie, pour qu'effacer ses cookies ne rende jamais le palier du patron.
+CREATE TABLE IF NOT EXISTS session_tiers (
+  sid        TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL,
+  tier       TEXT NOT NULL,
+  staff_id   TEXT,
+  updated_ts INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_session_tiers_updated ON session_tiers (updated_ts);
 -- Base déjà déployée : `node tools/d1-schema.mjs` dit ce qui manque.
 -- The site gate (functions/_middleware.js → accountActive) revokes a live
 -- session as soon as its account row is missing (deleted) or status='suspended'.

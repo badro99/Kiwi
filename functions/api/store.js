@@ -46,6 +46,7 @@ import { cleanStorefront, STOREFRONT_FEATURE } from './shop/_settings.js';
 import { validateMonthReportPolicy } from './_month-report-policy.js';
 import { dayreportHistoryLost } from './_dayreport-history.js';
 import { json, entitledMerchant, activeAccountSession, isTillFor } from '../auth/_lib.js';
+import { storeEditorTier, docBelowTier } from './_store-tier.js';
 import { storeEtag, storeTag } from './_store-etag.js';
 import { tenantFor, storeSubscriptionPending } from './_private.js';
 import { authFingerprint, authSentinel, planEmployeeAuth, writeEmployeeAuth, authMoved } from './_employee-auth.js';
@@ -579,18 +580,15 @@ const PENDING_SETUP_FEATURES = new Set([
 ]);
 const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'monthreport', 'policies', 'foodtrade', 'guestpage', STOREFRONT_FEATURE]);
 
-/* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
- * `entitledMerchant` SANS `allowTill` répond exactement à ça : la session du
- * compte propriétaire, ou un opérateur nommé — les deux seules surfaces qui
- * éditent l'équipe. Une caisse appairée, un employé connecté : non.
- * L'opérateur reste dedans volontairement. Sa vue portée ouvre la même page
- * Équipe, et un champ code vidé n'y serait pas anodin : le formulaire
- * régénère un code quand il n'en relit pas un (assets/team.js › makeCode),
- * donc masquer sans plus reviendrait à faire tourner les codes du client dans
- * son dos. */
-async function editsRoster(request, env, merchant) {
+/* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ? `entitledMerchant`
+ * SANS `allowTill` : la session du compte, ou un opérateur nommé (pas une caisse,
+ * pas un employé), au palier qui tient les fiches (functions/api/_store-tier.js :
+ * pas une réceptionniste). L'opérateur reste dedans volontairement : sa vue
+ * portée ouvre la même page Équipe, et un code masqué y serait régénéré
+ * (assets/team.js › makeCode), donc tourné dans le dos du client. */
+async function editsRoster(request, env, merchant, feature) {
   if (!merchant) return false;
-  try { return (await entitledMerchant(request, env, merchant)) === merchant; }
+  try { return (await entitledMerchant(request, env, merchant)) === merchant && await storeEditorTier(request, env, feature); }
   catch (_) { return false; }
 }
 
@@ -763,6 +761,7 @@ export async function onRequestGet(context) {
   }
 
   if (feature === 'verticalops') return getVerticalOps(request, env, merchant);
+  if (await docBelowTier(request, env, merchant, feature)) return json({ error: 'tier', feature }, 403);
 
   try {
     const redact = REDACT[feature] || (PARTIAL[feature] && PARTIAL[feature].hide);
@@ -776,7 +775,7 @@ export async function onRequestGet(context) {
     /* Le carnet de réservations est relu à chaque sondage du tableau de bord :
        son propriétaire garde la revalidation (la vue complète est la même pour
        tous ceux qui le tiennent) ; la vue expurgée, elle, ne porte jamais d'ETag. */
-    const editor = redact ? await editsRoster(request, env, merchant) : true;
+    const editor = redact ? await editsRoster(request, env, merchant, feature) : true;
     const cacheable = !redact || (feature === 'reservations' && editor);
     const known = cacheable ? storeTag(request.headers.get('If-None-Match')) : null;
     const row = known && known.merchant === merchant && known.feature === feature
@@ -843,9 +842,10 @@ export async function onRequestPost(context) {
   let merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
   if (!merchant && PENDING_SETUP_FEATURES.has(feature)) {
     const setup = await tenantFor(request, env, body && body.merchant, { strict: true, allowPending: true });
-    if (setup && await storeSubscriptionPending(env, setup) && await editsRoster(request, env, setup)) merchant = setup;
+    if (setup && await storeSubscriptionPending(env, setup) && await editsRoster(request, env, setup, feature)) merchant = setup;
   }
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  if (await docBelowTier(request, env, merchant, feature)) return json({ error: 'tier', feature }, 403);
 
   /* Qui ne peut pas LIRE les codes ne peut pas RÉÉCRIRE le document qui les
    * porte. Sans cette ligne, la rédaction du GET creuse un trou pire que celui
@@ -854,15 +854,15 @@ export async function onRequestPost(context) {
    * silencieuse le lendemain matin, quand personne n'arrive à se connecter.
    * Aucune surface de caisse n'écrit l'équipe (seul assets/team.js le fait,
    * depuis le tableau de bord), donc c'est un verrou, pas un retrait. */
-  if (REDACT[feature] && !(await editsRoster(request, env, merchant))) {
+  if (REDACT[feature] && !(await editsRoster(request, env, merchant, feature))) {
     return json({ error: 'forbidden-feature', feature }, 403);
   }
-  if (OWNER_EDIT_FEATURES.has(feature) && !(await editsRoster(request, env, merchant))) {
+  if (OWNER_EDIT_FEATURES.has(feature) && !(await editsRoster(request, env, merchant, feature))) {
     return json({ error: 'forbidden-feature', feature }, 403);
   }
   /* Voir PARTIAL : une surface qui ne lit qu'une vue du document ne reçoit que
      cette vue, même dans une réponse de conflit, et ne peut pas effacer le reste. */
-  const partial = PARTIAL[feature] && !(await editsRoster(request, env, merchant)) ? PARTIAL[feature] : null;
+  const partial = PARTIAL[feature] && !(await editsRoster(request, env, merchant, feature)) ? PARTIAL[feature] : null;
   const view = (doc) => (partial ? partial.hide(doc) : doc);
   if ((feature === HOTEL_UNITS_FEATURE || feature === ECONOMAT_CATALOGUE_FEATURE)
       && !(await isHotelMerchant(env, merchant))) {
