@@ -560,28 +560,27 @@
 
   var lastSlug = null;
   var lastMerchant = null;
-  /* The paired till is the device physically at the store, so its clock
-   * defines the store's business day everywhere (dashboard abroad, waiter
-   * phones, server reports). When the device's zone differs from the one the
-   * server holds, tell it once per page life per zone. Any failure is silent:
-   * the till keeps using its own zone locally either way. */
+  /* The paired till closes the day, so it reports the store's business-day
+   * cutoff, once per page life per value. B24 · It no longer reports its ZONE:
+   * the device's clock is not the store's (a till paired on a Mac set to Berlin
+   * wrote Europe/Berlin for Moroccan hotels). The owner declares the zone in
+   * Horaires d'ouverture; none declared = Africa/Casablanca. Failures are silent. */
   var reportedClock = '';
   function reportTillZone(storedZone, storedCutoff) {
     try {
       // A God Mode support session (?op=1) runs on the operator's device, not at the store.
       if (!/caisse/i.test(location.pathname) || /[?&]op=1(?:&|$)/.test(location.search)
         || localStorage.getItem('kiwiPaired') !== '1') return;
-      var zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
       var slug = merchant();
       var cutoff = window.KiwiDayReport && KiwiDayReport.cutoff ? KiwiDayReport.cutoff(slug) : 5;
-      var clock = slug + ':' + zone + ':' + cutoff;
-      if (!zone || !slug || (zone === storedZone && cutoff === storedCutoff) || clock === reportedClock) return;
+      var clock = slug + ':' + cutoff;
+      if (!slug || cutoff === storedCutoff || clock === reportedClock) return;
       reportedClock = clock;
       fetch('/api/timezone', {
         method: 'POST', credentials: 'same-origin', cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ merchant: slug, timeZone: zone, businessCutoff: cutoff })
-      }).then(function (r) { if (r && r.ok) { cfg.timezone = zone; cfg.businessCutoff = cutoff; } else reportedClock = ''; })
+        body: JSON.stringify({ merchant: slug, businessCutoff: cutoff })
+      }).then(function (r) { if (r && r.ok) cfg.businessCutoff = cutoff; else reportedClock = ''; })
         .catch(function () { reportedClock = ''; });
     } catch (_) {}
   }

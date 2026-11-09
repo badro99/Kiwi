@@ -593,9 +593,32 @@
     }).join(' · ');
   }
 
+  /* B24 · Le fuseau de l'établissement se DÉCLARE ici (propriétaire), il ne se déduit
+     jamais d'un appareil. Aucun fuseau déclaré = Casablanca. */
+  var ZONE_CHOICES = ['Africa/Casablanca', 'Europe/Paris', 'Europe/Brussels', 'Europe/Madrid', 'Europe/London', 'Europe/Berlin',
+    'Africa/Algiers', 'Africa/Tunis', 'Africa/Dakar', 'Africa/Abidjan', 'Atlantic/Canary', 'America/Montreal', 'America/New_York', 'Asia/Dubai', 'UTC'];
+  function storeZone() { return zoneOf(''); }
+  function zoneChoices() { var z = storeZone(); return ZONE_CHOICES.indexOf(z) >= 0 ? ZONE_CHOICES.slice() : [z].concat(ZONE_CHOICES); }
+  function setZone(zone, venueId) {
+    var slug = '';
+    try { slug = (window.KiwiCloudDoc && window.KiwiCloudDoc.slugFor(venueId || undefined)) || ''; } catch (_) {}
+    if (!slug) return Promise.resolve({ ok: false, error: 'no-store' });
+    return fetch('/api/timezone', { method: 'POST', credentials: 'same-origin', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant: slug, timeZone: zone }) })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok || j.timeZone !== zone) return { ok: false, error: j.error || ('http-' + r.status) };
+          try { if (window.KiwiConfig) window.KiwiConfig.timezone = zone; } catch (_) {}
+          return { ok: true };
+        });
+      }, function () { return { ok: false, error: 'offline' }; });
+  }
+
   window.KiwiHours = {
     /* données */
     get: get, set: set, blank: blank, normalize: normalize,
+    /* fuseau déclaré de l'établissement (B24) */
+    zone: storeZone, zoneChoices: zoneChoices, setZone: setZone,
     isConfigured: isConfigured, subscribe: subscribe,
     /* interrogation */
     statusAt: statusAt, isOpenAt: isOpenAt, summary: summary, weekText: weekText,

@@ -1,9 +1,13 @@
-// POST /api/timezone {merchant, timeZone} — the store's paired till reports the
-// IANA zone of the device it runs on. The till is the one device physically at
-// the store, so its clock defines the store's business day for every other
-// surface (dashboard abroad, waiter phones, server reports). Only a till proven
-// for that merchant may write it; a browser elsewhere never moves a store's day.
-import { isTillFor, json } from '../auth/_lib.js';
+// POST /api/timezone {merchant, timeZone?, businessCutoff?}
+//
+// B24 · A store's time zone is DECLARED by its owner (or a named operator), never
+// inferred from a device. The paired till used to report the IANA zone of the
+// computer it ran on: a till paired on a Mac set to Berlin wrote Europe/Berlin for
+// two Moroccan hotels, and their business day, stay times, cancellation deadline
+// and reports would have moved by an hour whenever Berlin and Casablanca differ
+// (Ramadan, European summer time). The till still reports its business-day cutoff
+// (it closes the day); a zone it sends is ignored. No stored zone = Africa/Casablanca.
+import { activeAccountSession, isTillFor, json, namedOperatorId, storeOwner } from '../auth/_lib.js';
 import { validZone } from './_business-day.js';
 
 export async function onRequestPost({ request, env }) {
@@ -13,19 +17,29 @@ export async function onRequestPost({ request, env }) {
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
   const merchant = String((body && body.merchant) || '').trim().slice(0, 64);
-  const zone = validZone(body && body.timeZone);
-  if (!merchant || !zone) return json({ error: 'bad-zone' }, 400);
+  const asked = body && body.timeZone != null && body.timeZone !== '';
+  const zone = asked ? validZone(body.timeZone) : '';
   const cutoff = body && body.businessCutoff;
+  if (!merchant || (asked && !zone)) return json({ error: 'bad-zone' }, 400);
   if (cutoff != null && (!Number.isInteger(cutoff) || cutoff < 0 || cutoff > 12))
     return json({ error: 'bad-business-cutoff' }, 400);
-  let till = false;
-  try { till = await isTillFor(request, env, merchant); } catch (_) { till = false; }
-  if (!till) return json({ error: 'till-required' }, 403);
+  if (!asked && cutoff == null) return json({ error: 'nothing-to-set' }, 400);
+
+  let declares = false, till = false;
   try {
-    await env.DB.prepare('UPDATE merchant_config SET timezone = ? WHERE merchant = ? AND (timezone IS NULL OR timezone <> ?)')
+    const session = await activeAccountSession(request, env);
+    const owner = session && await storeOwner(env, merchant);
+    declares = !!(session && owner && owner === session.aid);
+  } catch (_) { declares = false; }
+  if (!declares) { try { declares = !!(await namedOperatorId(request, env)); } catch (_) { declares = false; } }
+  if (!declares) { try { till = await isTillFor(request, env, merchant); } catch (_) { till = false; } }
+  if (!declares && !till) return json({ error: asked ? 'owner-required' : 'till-required' }, 403);
+  const writeZone = asked && declares;
+  try {
+    if (writeZone) await env.DB.prepare('UPDATE merchant_config SET timezone = ? WHERE merchant = ? AND (timezone IS NULL OR timezone <> ?)')
       .bind(zone, merchant, zone).run();
     if (cutoff != null) await env.DB.prepare('UPDATE merchant_config SET business_cutoff = ? WHERE merchant = ? AND (business_cutoff IS NULL OR business_cutoff <> ?)')
       .bind(cutoff, merchant, cutoff).run();
   } catch (_) { return json({ error: 'unavailable' }, 503); }
-  return json({ ok: true, merchant, timeZone: zone, businessCutoff: cutoff });
+  return json({ ok: true, merchant, timeZone: writeZone ? zone : null, zoneIgnored: asked && !writeZone, businessCutoff: cutoff ?? null });
 }

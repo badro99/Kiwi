@@ -520,8 +520,8 @@
     "sha": "8e57c57850d5aadf"
   },
   "assets/day-report.js": {
-    "v": "55",
-    "sha": "d12b5947818be563"
+    "v": "56",
+    "sha": "f966026f048cf11c"
   },
   "assets/delivery-collect.js": {
     "v": "3",
@@ -780,12 +780,12 @@
     "sha": "6aeb0a538db41f0f"
   },
   "assets/hours-ui.js": {
-    "v": "4",
-    "sha": "c67a2e03f7dea3ae"
+    "v": "5",
+    "sha": "848d55332c735898"
   },
   "assets/hours.js": {
-    "v": "6",
-    "sha": "e41f82cc7143441b"
+    "v": "7",
+    "sha": "d5c819dbf21e4981"
   },
   "assets/i18n.js": {
     "v": "56",
@@ -1284,8 +1284,8 @@
     "sha": "723108537bee278a"
   },
   "assets/merchant-config.js": {
-    "v": "287",
-    "sha": "225f61543f12493d"
+    "v": "288",
+    "sha": "ec2f586ec755cf0b"
   },
   "assets/merchant-health.css": {
     "v": "3",
@@ -1480,8 +1480,8 @@
     "sha": "99251b2b1d185910"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "236",
-    "sha": "e622b1446810380b"
+    "v": "237",
+    "sha": "01cade698716d21e"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

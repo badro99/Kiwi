@@ -119,8 +119,11 @@ if (!process.env.KIWI_MISC_CASE || process.env.KIWI_MISC_CASE === 'timezone') {
   const db=new DatabaseSync(':memory:');db.exec(fs.readFileSync('schema.sql','utf8'));db.prepare("INSERT INTO merchant_config(merchant,features,status,updated_ts) VALUES ('shop','{}','active',0)").run();
   let ddl=0;
   const DB={prepare(sql){if(/^\s*(CREATE|ALTER)\b/i.test(sql))ddl++;let args=[];return {bind(...v){args=v;return this;},async first(){return db.prepare(sql).get(...args)||null;},async run(){return {meta:db.prepare(sql).run(...args)};}};}};
-  const secret='misc-timezone-fixture',token=await tillToken(secret,'shop');
-  const response=await onRequestPost({env:{DB,AUTH_SECRET:secret},request:new Request('https://kiwi.test/api/timezone',{method:'POST',headers:{Cookie:TILL_COOKIE+'='+token,'Content-Type':'application/json'},body:JSON.stringify({merchant:'shop',timeZone:'Pacific/Auckland',businessCutoff:6})})});
+  const secret='misc-timezone-fixture';
+  // B24 · the owner declares the zone (a till only reports its cutoff).
+  const {makeSession,SESS_COOKIE}=await import('../functions/auth/_lib.js');
+  db.prepare("INSERT INTO accounts(id,email,name,business,salt,hash,created_ts) VALUES ('owner','o@example.test','O','shop','s','h',0)").run();db.prepare("UPDATE merchant_config SET account_id='owner' WHERE merchant='shop'").run();
+  const response=await onRequestPost({env:{DB,AUTH_SECRET:secret},request:new Request('https://kiwi.test/api/timezone',{method:'POST',headers:{Cookie:SESS_COOKIE+'='+await makeSession('owner',secret),'Content-Type':'application/json'},body:JSON.stringify({merchant:'shop',timeZone:'Pacific/Auckland',businessCutoff:6})})});
   assert.equal(response.status,200);assert.equal(ddl,0);assert.equal(db.prepare("SELECT timezone FROM merchant_config WHERE merchant='shop'").get().timezone,'Pacific/Auckland');db.close();
 }
 console.log('PASS real timezone route updates migrated SQLite with zero DDL');

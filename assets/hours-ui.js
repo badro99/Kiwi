@@ -109,6 +109,8 @@
       exKindClosed: 'Fermé exceptionnellement', exKindHours: 'Horaires différents',
       exDel: 'Supprimer', exReturn: 'La semaine type reprend automatiquement à la fin de la période.',
       save: 'Enregistrer', cancel: 'Annuler', saved: 'Horaires enregistrés',
+      zone: 'Fuseau horaire', zoneNote: 'L’heure de référence de l’établissement : journée de caisse, réservations, rapports. Elle ne suit pas l’appareil utilisé.',
+      zoneFailed: 'Fuseau horaire non enregistré. Seul le propriétaire peut le changer ; vérifiez la connexion et réessayez.',
       legacyHead: 'Ancienne saisie libre à remplacer',
       legacyBody: function (v) { return 'Cet établissement porte « ' + v +' » en texte libre. Kiwi ne peut pas s’en servir : renseignez la semaine ci-dessous, l’ancienne valeur sera effacée.'; },
       presets: 'Motifs fréquents', pRamadan: 'Ramadan', pEid: 'Aïd', pHoliday: 'Jour férié',
@@ -130,6 +132,8 @@
       exKindClosed: 'Closed exceptionally', exKindHours: 'Different hours',
       exDel: 'Delete', exReturn: 'The weekly schedule resumes automatically when the period ends.',
       save: 'Save', cancel: 'Cancel', saved: 'Opening hours saved',
+      zone: 'Time zone', zoneNote: "The business's reference time: till day, bookings, reports. It does not follow the device in use.",
+      zoneFailed: 'Time zone not saved. Only the owner can change it; check the connection and try again.',
       legacyHead: 'Old free-text value to replace',
       legacyBody: function (v) { return 'This business carries “' + v + '” as free text. Kiwi cannot use it: fill in the week below and the old value will be cleared.'; },
       presets: 'Common reasons', pRamadan: 'Ramadan', pEid: 'Eid', pHoliday: 'Public holiday',
@@ -151,6 +155,8 @@
       exKindClosed: 'مغلق استثنائيًا', exKindHours: 'ساعات مختلفة',
       exDel: 'حذف', exReturn: 'يعود الأسبوع المعتاد تلقائيًا عند انتهاء الفترة.',
       save: 'حفظ', cancel: 'إلغاء', saved: 'تم حفظ ساعات العمل',
+      zone: 'المنطقة الزمنية', zoneNote: 'التوقيت المرجعي للمؤسسة: يوم الصندوق والحجوزات والتقارير. لا يتبع الجهاز المستعمل.',
+      zoneFailed: 'لم تُحفظ المنطقة الزمنية. المالك وحده يمكنه تغييرها؛ تحقّق من الاتصال وأعد المحاولة.',
       legacyHead: 'قيمة نصية قديمة يجب استبدالها',
       legacyBody: function (v) { return 'تحمل هذه المؤسسة « ' + v + ' » كنص حر. لا يستطيع كيوي استعماله: املأ الأسبوع أدناه وستُمحى القيمة القديمة.'; },
       presets: 'أسباب شائعة', pRamadan: 'رمضان', pEid: 'العيد', pHoliday: 'عطلة رسمية',
@@ -301,6 +307,8 @@
       '</div>';
     }
 
+    /* B24 · le fuseau déclaré de l'établissement, enregistré avec les horaires. */
+    var zoneDraft = K.zone ? K.zone() : '';
     function render() {
       /* Le résumé porte sur le BROUILLON, pas sur la fiche enregistrée : sinon
        * il contredirait l'écran dès la première modification. summaryOf() prend
@@ -313,6 +321,11 @@
              esc(L.legacyBody(opts.legacy)) + '</div>';
       }
       h += '<div class="kh-sum"><span class="kh-dot ' + draft.tone + '"></span><b>' + esc(draft.text) + '</b></div>';
+      if (zoneDraft) {
+        h += '<div class="kh-eyebrow">' + esc(L.zone) + '</div><select class="kh-sel kh-zone" id="kh-zone" style="width:100%;font-family:var(--sans);" aria-label="' + esc(L.zone) + '">' +
+          K.zoneChoices().map(function (z) { return '<option value="' + esc(z) + '"' + (z === zoneDraft ? ' selected' : '') + '>' + esc(z.replace(/_/g, ' ')) + '</option>'; }).join('') +
+          '</select><div class="kh-note">' + esc(L.zoneNote) + '</div>';
+      }
       h += '<div class="kh-eyebrow">' + esc(L.week) + '</div>';
       h += DAYS.map(dayRow).join('');
       h += '<div class="kh-eyebrow">' + esc(L.shortcuts) + '</div>';
@@ -340,6 +353,7 @@
     function defaultPeriod() { return { from: '09:00', to: '19:00' }; }
 
     body.addEventListener('change', function (e) {
+      if (e.target && e.target.id === 'kh-zone') { zoneDraft = e.target.value; return; }
       var sel = e.target.closest('select[data-act]');
       if (!sel) return;
       var row = sel.closest('.kh-row'); if (!row) return;
@@ -505,10 +519,14 @@
         return day && day.open && (day.periods || []).some(function (p) { return K.span(p) <= 0; });
       });
       if (bad) { if (err) err.textContent = L.errSame; return; }
-      var saved = K.set(doc, vid);
-      m.close();
-      try { Kw().toast(L.saved, { type: 'success' }); } catch (_) {}
-      if (opts.onSave) { try { opts.onSave(saved); } catch (_) {} }
+      var finish = function () {
+        var saved = K.set(doc, vid);
+        m.close();
+        try { Kw().toast(L.saved, { type: 'success' }); } catch (_) {}
+        if (opts.onSave) { try { opts.onSave(saved); } catch (_) {} }
+      };
+      if (!zoneDraft || !K.setZone || zoneDraft === K.zone()) return finish();
+      K.setZone(zoneDraft, vid).then(function (r) { if (r && r.ok) finish(); else if (err) err.textContent = L.zoneFailed; });
     };
 
     render();

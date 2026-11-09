@@ -1130,7 +1130,7 @@
 <script defer src="assets/channel-sales.js?v=8"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
-<script defer src="assets/merchant-config.js?v=287"></script>
+<script defer src="assets/merchant-config.js?v=288"></script>
 <!-- Real logged-in identity · swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
   <link rel="stylesheet" href="assets/entitlements.css?v=7">
@@ -1217,13 +1217,13 @@
      ouvert (caisse, réservations, Order Pro, page client, rapport journalier,
      assistant) interroge KiwiHours · aucun de ces modules n'a de réglage à lui.
      Après venue-store.js, dont il tient sa fiche par établissement. -->
-<script src="assets/hours.js?v=6" defer fetchpriority="low"></script>
+<script src="assets/hours.js?v=7" defer fetchpriority="low"></script>
 
 <!-- Le reçu de caisse. receipt.js n'a pas de DOM : il porte la fiche légale de
      l'établissement, la fiche d'apparence et le moteur de rendu (thermique,
      écran, pilote système). receipt-ui.js est l'éditeur, chargé ici seulement ·
      la caisse LIT le reçu, elle ne le règle pas. -->
-<script src="assets/hours-ui.js?v=4" defer fetchpriority="low"></script>
+<script src="assets/hours-ui.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/receipt.js?v=27" defer fetchpriority="low"></script>
 
 <!-- Le coût de revient · LA source unique de « combien me coûte ce produit ».
@@ -1251,7 +1251,7 @@
 
 <script src="assets/clients-directory.js?v=46" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=21" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=236" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=237" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1278,7 +1278,7 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=236"></script>
+<script src="assets/pages/dashboard-startup.js?v=237"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=17">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
 <script src="assets/pages/dashboard-loader.js?v=101" defer fetchpriority="low"></script>

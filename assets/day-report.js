@@ -209,28 +209,11 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
   var DEFAULT_TIMEZONE = 'Africa/Casablanca';
 
   /* A browser may be in Berlin while the merchant's books are in Casablanca.
-     The store's clock is the clock of the device AT the store: its paired till.
-     The till therefore uses its own device zone and reports it to the server
-     (merchant-config.js → /api/timezone); every other surface reads that stored
-     store zone. Only when nothing is known yet does a device fall back to its
-     own zone, and Morocco remains the last resort. */
-  /* Relu au plus une fois par minute (le lire construisait un formateur à chaque appel) : un changement de fuseau se voit en une minute. */
-  var deviceZone = '', deviceZoneAt = -Infinity;
-  function deviceTimezone() {
-    var now = Date.now(); if (now - deviceZoneAt < 60000 && now >= deviceZoneAt) return deviceZone;
-    try { deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (_) { deviceZone = ''; }
-    deviceZoneAt = now;
-    return deviceZone;
-  }
-  function onTill() {
-    try {
-      return /caisse/i.test(location.pathname) && !/[?&]op=1(?:&|$)/.test(location.search)
-        && localStorage.getItem('kiwiPaired') === '1';
-    } catch (_) { return false; }
-  }
+     B24 · The store's zone is the one its owner declared (Horaires d'ouverture →
+     /api/timezone), read back through /api/config; none declared = Casablanca.
+     No device, the till included, imposes its own zone any more. */
   function merchantTimezone(slug) {
     var candidates = [];
-    if (onTill()) candidates.push(deviceTimezone());
     try {
       var vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
       if (vd && (!slug || vd.slug === slug || vd.merchant === slug || vd.id === slug)) candidates.push(vd.timezone, vd.timeZone, vd.tz);
@@ -240,7 +223,6 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       var pv = window.KiwiPlatform && window.KiwiPlatform.pairedVenue && window.KiwiPlatform.pairedVenue();
       candidates.push(pv && (pv.timezone || pv.timeZone || pv.tz));
     } catch (_) {}
-    candidates.push(deviceTimezone());
     for (var i = 0; i < candidates.length; i++) {
       var zone = String(candidates[i] || '').trim();
       if (!zone) continue;

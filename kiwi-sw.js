@@ -217,7 +217,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
-  '/assets/pages/dashboard-startup.js?v=236',
+  '/assets/pages/dashboard-startup.js?v=237',
   '/assets/pages/dashboard-loader.js?v=101',
   '/assets/hotel/model.js?v=10',
   '/assets/hotel/views.js?v=9',
@@ -362,7 +362,7 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=55',
+  '/assets/day-report.js?v=56',
   '/assets/report.js?v=10',
   '/assets/day-report-dash.js?v=50',
   '/assets/day-report-export.js?v=30',
@@ -372,15 +372,15 @@ var SHELL = [
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et
      un contrôle qui ne peut pas se faire doit laisser passer · donc autant
      qu'il puisse se faire. */
-  '/assets/hours.js?v=6',
-  '/assets/hours-ui.js?v=4',
+  '/assets/hours.js?v=7',
+  '/assets/hours-ui.js?v=5',
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js?v=27',
   '/assets/receipt-ui.js?v=2',
   '/assets/invoice.js?v=28',
-  '/assets/merchant-config.js?v=287',
+  '/assets/merchant-config.js?v=288',
   '/assets/entitlements.css?v=7',
   '/assets/entitlements-v2.js?v=5',
   '/assets/staff-roles.js?v=3',
