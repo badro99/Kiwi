@@ -133,6 +133,30 @@
   }
   window.addEventListener('online', banner);
   window.addEventListener('offline', banner);
+
+  /* B14 · a document that keeps failing to reach the server (cloud-doc.js retries it on
+     its own) is announced here instead of passing for saved; a tap retries at once. */
+  var UNSAVED = {
+    fr: 'Modifications non enregistrées en ligne · nouvel essai automatique. Toucher pour réessayer.',
+    en: 'Changes not saved online · retrying automatically. Tap to retry now.',
+    ar: 'تغييرات غير محفوظة عبر الإنترنت · إعادة المحاولة تلقائيًا. اضغط لإعادة المحاولة الآن.'
+  };
+  var unsavedDocs = Object.create(null);
+  window.addEventListener('kiwi:doc-unsaved', function (e) {
+    var d = e && e.detail;
+    if (!d || !d.feature) return;
+    if (d.unsaved) unsavedDocs[d.feature] = 1; else delete unsavedDocs[d.feature];
+    var el = document.getElementById('kiwi-unsaved');
+    if (!Object.keys(unsavedDocs).length) { if (el) el.remove(); return; }
+    if (el || !document.body) return;
+    el = document.createElement('button');
+    el.type = 'button';
+    el.id = 'kiwi-unsaved';
+    el.setAttribute('role', 'status');
+    el.textContent = UNSAVED[language()];
+    el.addEventListener('click', function () { try { window.dispatchEvent(new CustomEvent('kiwi:doc-retry')); } catch (_) {} });
+    document.body.appendChild(el);
+  });
   if (document.readyState !== 'loading') banner();
   else document.addEventListener('DOMContentLoaded', banner);
 })();

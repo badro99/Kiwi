@@ -62,7 +62,7 @@ import {
   validateEconomatCatalogue,
 } from './inventory/_economat-catalogue.js';
 import { hotelUnitDeactivationBlockers } from './inventory/_hotel-unit-deactivation.js';
-import { validateCommercialSync } from './hotel/_commercial.js';
+import { validateCommercialSync, restoreProtectedStays } from './hotel/_commercial.js';
 import { reservationOverlapConflict } from './hotel/_reservation-overlap.js';
 import { capBookings, BOOKING_CAP } from './_booking-cap.js';
 import { archiveFromSnapshot, isArchivable } from './_pressing-archive.js';
@@ -1041,8 +1041,8 @@ export async function onRequestPost(context) {
   }
 
   if (feature === 'reservations') {
-    try { await validateCommercialSync(env, merchant, mine, clean.value); }
-    catch (e) { return json({ error: e?.code || 'commercial-unavailable', feature }, e?.code === 'commercial-stays-use-api' ? 409 : 503); }
+    try { clean.value = (await restoreProtectedStays(env, merchant, mine, clean.value)).value; await validateCommercialSync(env, merchant, mine, clean.value); }
+    catch (e) { return json({ error: e?.code || 'commercial-unavailable', feature, ...(e?.code === 'commercial-stays-use-api' ? { rev: serverRev, data: view(mine) } : {}) }, e?.code === 'commercial-stays-use-api' ? 409 : 503); }
     /* /api/booking et /api/hotel/stays refusent tous deux d'attribuer une
        ressource déjà prise. Ce push générique ne vérifiait rien de tel : un
        tableau de bord qui remontait son document pendant qu'une cliente

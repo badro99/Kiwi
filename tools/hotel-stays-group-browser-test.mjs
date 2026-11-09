@@ -1105,23 +1105,21 @@ console.log('\n■ T19 · agency group: every room booked, channel consistent');
 await withCtx({ hooks: {} }, async (ctx) => {
   const { page } = ctx;
   await openModal(page);
-  const offered = await page.$$eval('select[name="channel"] option', (os) => os.map((o) => o.value));
-  ok(!offered.includes('agency'), 'no « agency » channel offered (the server has none)');
+  ok(!(await page.$$eval('select[name="channel"] option', (os) => os.map((o) => o.value))).includes('agency'), 'no « agency » channel offered (the server has none)');
+  await page.evaluate(() => document.querySelector('.kiwi-modal-stub')?.remove());
   step('a draft from before the fix still carries « agency »');
-  await page.$eval('select[name="channel"]', (el) => { const o = document.createElement('option'); o.value = 'agency'; o.textContent = 'Agence'; el.appendChild(o); });
-  await fillBasics(page, { ...BASICS(), channel: 'agency', accountId: 'acc-agency-01', board: 'room_only' });
-  await selectRooms(page, 101, 102);
-  await page.click('[data-action="hx-add-group-traveler"]');
-  await fillTraveler(page, 0, { name: 'Karim Benchekroun', roomN: 101 });
-  await fillTraveler(page, 1, { name: 'Salma El Fassi', roomN: 102 });
-  await simulateAndAccept(page);
-  const dossier = await dossierOf({ page });
-  const r = await submitAndSettle(page);
-  ok(r === 'closed', `agency group confirms in one go (got ${String(r).slice(0, 160)})`);
-  const stays = await ctx.bookingsByDossier(dossier);
-  ok(stays.length === 2, 'both rooms booked');
-  ok(stays.every((s) => s.hotel?.channel === 'direct'), 'channel stored as « direct » for every room');
-  ok(stays.every((s) => s.commercial?.accountId === 'acc-agency-01'), 'the agency stays on the commercial account');
+  await page.evaluate(() => {
+    const legacy = () => document.querySelectorAll('select[name="channel"]').forEach((el) => {
+      if (![...el.options].some((o) => o.value === 'agency')) { const o = document.createElement('option'); o.value = 'agency'; o.textContent = 'Agence'; el.appendChild(o); }
+    });
+    new MutationObserver(legacy).observe(document.body, { childList: true, subtree: true });
+  });
+  const dossier = await twoRoomSetup(page, { ...BASICS(), channel: 'agency', accountId: 'acc-agency-01', board: 'room_only' }, true);
+  ok((await submitAndSettle(page)) === 'closed', 'agency group confirms in one go');
+  const booked = () => ctx.bookingsByDossier(dossier);
+  ok((await booked()).length === 2, 'both rooms booked');
+  ok((await booked()).every((s) => s.hotel?.channel === 'direct'), 'channel stored as « direct » for every room');
+  ok((await booked()).every((s) => s.commercial?.accountId === 'acc-agency-01'), 'the agency stays on the commercial account');
 });
 await withCtx({ hooks: {} }, async (ctx) => {
   const { page } = ctx;
@@ -1132,11 +1130,9 @@ await withCtx({ hooks: {} }, async (ctx) => {
     return true;
   };
   const dossier = await twoRoomSetup(page, { ...BASICS(), channel: 'booking' }, false);
-  const r = await submitAndSettle(page);
-  ok(ctx.log.some((e) => e.type === 'stay-post-rewritten'), 'the normalised answer was served');
-  ok(r === 'closed', `a fresh write is adopted, the group completes (got ${String(r).slice(0, 160)})`);
-  const stays = await ctx.bookingsByDossier(dossier);
-  ok(stays.length === 2, 'both rooms booked, none written twice');
+  ok((await submitAndSettle(page)) === 'closed', 'a fresh write is adopted, the group completes');
+  ok(stayPostsFor(ctx.log, '').length >= 2 && ctx.log.some((e) => e.type === 'stay-post-rewritten'), 'the normalised answer was served');
+  ok((await ctx.bookingsByDossier(dossier)).length === 2, 'both rooms booked, none written twice');
 });
 
 /* ── T12 · tenant isolation over HTTP ──────────────────────────────── */

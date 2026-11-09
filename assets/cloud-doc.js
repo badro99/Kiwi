@@ -84,6 +84,12 @@
   var COOLDOWN = 20000;                // relecture au retour d'onglet
   var DEBOUNCE = 900;
   var SAVE_TIMEOUT = 10000;
+  /* Une remontée refusée pour une raison passagère (hors ligne, délai, 5xx, révision
+     dépassée) n'attendait que la saisie suivante : une chambre libérée restait occupée
+     sur les autres appareils (B14). Elle est maintenant retentée seule, de plus en
+     plus espacée, et au troisième échec la page le dit (événement kiwi:doc-unsaved). */
+  var RETRY_DELAYS = [2000, 5000, 15000, 30000, 60000, 120000];
+  var UNSAVED_AFTER = 3;
 
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
 
@@ -520,7 +526,7 @@
     var localOf = typeof opts.localKey === 'function' ? opts.localKey : null;
 
     var st = { revs: Object.create(null), read: Object.create(null), timer: null, busy: false,
-               again: false, tries: 0, last: 0 };
+               again: false, tries: 0, last: 0, retryN: 0, retryTimer: null, unsaved: false, busyAt: 0, lastStatus: 0, lastError: '' };
 
     function on() { return !!(isReal() && feature && slugOf()); }
 
@@ -639,7 +645,7 @@
             return false;
           }
 
-          var adopt = first && mineEmpty;
+          var adopt = first && mineEmpty, pendingTok = dirtyToken(slug);
           var next = adopt ? theirs : merge(mine, theirs);
           /* La fusion n'apporte rien que le serveur n'ait déjà (seul l'ordre change) :
              on prend sa copie telle quelle et on ne remonte rien. Une saisie locale
@@ -656,6 +662,7 @@
            * banc : une adresse propagée correctement faisait tout de même passer
            * la révision de 2 à 3 sans qu'un caractère ait changé. */
           if (!adopt && !identical(next, theirs)) push(0);
+          else if (!adopt && pendingTok) { clearDirty(slug, pendingTok); settleRetry(slug, { ok: true }); }
           return true;
         })
         .catch(function (error) { if (opts.onPullError) opts.onPullError(error); return false; });   // hors ligne → le local fait foi
@@ -663,6 +670,8 @@
 
     function push(delay, alreadyDirty) {
       if (!on()) return;
+      st.retryN = 0;
+      if (st.retryTimer) { clearTimeout(st.retryTimer); st.retryTimer = null; }
       if (!alreadyDirty) markDirty(slugOf());
       schedulePush(delay, slugOf());
     }
@@ -720,11 +729,13 @@
         clearDirty(slug, sentDirty);
         return Promise.resolve({ ok: true, status: 204, error: 'empty', rev: revOf(slug) });
       }
+      if (st.busy && Date.now() - st.busyAt > SAVE_TIMEOUT + 5000) st.busy = false;
       if (st.busy) {
         if (!explicit) st.again = true;
         return Promise.resolve({ ok: false, status: 409, error: 'busy', rev: revOf(slug) });
       }
       st.busy = true;
+      st.busyAt = Date.now();
       var controller = typeof AbortController === 'function' ? new AbortController() : null;
       var timeout;
       var request = Promise.resolve().then(function () { return fetch('/api/store', {
@@ -771,6 +782,7 @@
               st.again = false;
             }
             st.tries = 0;
+            settleRetry(slug, { ok: true });
             return { ok: true, status: 200, rev: revOf(slug), data: (res.j && res.j.data != null) ? res.j.data : payloadData };
           }
           /* 413 : le document dépasse une borne du serveur. La copie locale est
@@ -821,6 +833,7 @@
         .then(function (result) {
           clearTimeout(timeout);
           st.busy = false;
+          if (result) { st.lastStatus = result.status || 0; st.lastError = result.ok ? '' : String(result.error || '').slice(0, 60); }
           /* Une remontée qui a ABOUTI ou ÉCHOUÉ pour de bon se dit (pas une pause voulue : held,
              busy, unread…) : l'écran du document peut alors prévenir le patron. */
           if (result && (result.ok === true || (result.ok === false && !/^(held|busy|unread|empty|disabled|tenant-switched|foreign-document)$/.test(String(result.error || ''))))) {
@@ -829,9 +842,43 @@
           if (st.again) {
             st.again = false;
             schedulePush(400, slug);
-          }
+          } else if (!explicit) settleRetry(slug, result);
           return result;
         });
+    }
+
+    /* Retente une copie « modifiée » qui n'a pas pu partir, de plus en plus espacée et
+     * un nombre borné de fois ; l'onglet qui revient, `online` et « Réessayer »
+     * relancent ensuite. Un conflit métier (chambre déjà prise, refus) n'est pas
+     * passager : il ne se retente pas tout seul. */
+    function settleRetry(slug, result) {
+      if (result && result.ok === true) {
+        st.retryN = 0;
+        if (st.retryTimer) { clearTimeout(st.retryTimer); st.retryTimer = null; }
+        if (st.unsaved) { st.unsaved = false; announceUnsaved(false, ''); }
+        return;
+      }
+      var r = result || {};
+      var passing = r.status === 0 || r.status === 408 || r.status >= 500 || (r.status === 409 && r.error === 'stale');
+      if (!passing || !dirtyToken(slug) || st.retryTimer) return;
+      if (st.retryN >= UNSAVED_AFTER - 1 && !st.unsaved) { st.unsaved = true; announceUnsaved(true, r.error); }
+      if (st.retryN >= RETRY_DELAYS.length) return;
+      var delay = RETRY_DELAYS[st.retryN++];
+      st.retryTimer = setTimeout(function () {
+        st.retryTimer = null;
+        if (slug !== slugOf() || !on() || !dirtyToken(slug)) return;
+        st.tries = 0;   // une nouvelle série de fusions sur 409
+        pushNow();
+      }, delay);
+    }
+    function announceUnsaved(unsaved, error) {
+      try { window.dispatchEvent(new CustomEvent('kiwi:doc-unsaved', { detail: { feature: feature, unsaved: unsaved, error: String(error || '').slice(0, 60) } })); } catch (_) {}
+    }
+    function retryNow() {
+      var slug = slugOf();
+      if (!on() || !(dirtyToken(slug) || isRefused(slug))) return;
+      st.tries = 0;
+      push(0, true);
     }
 
     // Le magasin actif vient de changer (ou la page vient de s'ouvrir) : on lit
@@ -847,6 +894,7 @@
      * On relit, sans marteler le serveur. */
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState !== 'visible') return;
+      if (on() && dirtyToken(slugOf())) { retryNow(); return; }
       if (!on() || Date.now() - st.last < COOLDOWN) return;
       pull(false);
     });
@@ -859,9 +907,10 @@
     window.addEventListener('online', function () {
       var slug = slugOf();
       if (!on()) return;
-      if (dirtyToken(slug) || isRefused(slug)) push(0, true);
+      if (dirtyToken(slug) || isRefused(slug)) retryNow();
       else pull(false);
     });
+    window.addEventListener('kiwi:doc-retry', retryNow);
 
     // Une modification en attente ne doit pas mourir avec l'onglet.
     window.addEventListener('pagehide', function () {
@@ -877,8 +926,15 @@
       push: push,
       pushNow: pushNow,
       rev: function () { return revOf(slugOf()); },
+      unsaved: function () { return st.unsaved; },
       save: function (data) { return pushNow({ explicit: true, noAutoMerge: true, data: snapshot(data) }); },
       flush: function () { if (st.timer) clearTimeout(st.timer); st.timer = null; return pushNow({ keepalive: true }); },
+    };
+    handle.status = function () {
+      var slug = slugOf();
+      return { feature: feature, slug: slug, enabled: on(), read: !!st.read[slug], rev: revOf(slug), dirty: !!dirtyToken(slug),
+        refused: isRefused(slug), busy: st.busy, retries: st.retryN, retrying: !!st.retryTimer, unsaved: st.unsaved,
+        lastStatus: st.lastStatus, lastError: st.lastError };
     };
     live.push(handle);
     return handle;
@@ -908,6 +964,8 @@
        du stockage. `reclaim` ne touche jamais une copie non remontée. */
     _storage: { reclaim: reclaim, keep: REV_KEEP, pending: pending, touchedAt: touchedAt },
     pullAll: pullAll,
+    /* Diagnostic en lecture seule : l'état de remontée de chaque document de la page. */
+    status: function () { return live.map(function (h) { return h.status(); }); },
     slugFor: slugFor,
     currentSlug: currentSlug,
     slugStore: slugStore,

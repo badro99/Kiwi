@@ -132,23 +132,59 @@ export function commercialSnapshot(raw) {
 
 // Legacy whole-document sync must not erase or rewrite server-accepted terms.
 // Such stays are edited exclusively through /hotel/stays, with a new quote when needed.
+const protectedStay = b => b?.commercial || b?.hotel?.dossierId || b?.hotel?.dayUse;
+const protectedValue = b => JSON.stringify({ commercial: commercialSnapshot(b?.commercial), pricing: canonDirectPricing(b?.pricing), pricingHistory: canonPricingHistory(b?.pricingHistory), options: stayOptions(b?.hotel),
+  serviceId: b?.serviceId, resourceId: b?.resourceId, startAt: b?.startAt, endAt: b?.endAt,
+  partySize: b?.partySize, status: b?.status, checkIn:b?.hotel?.checkIn, checkOut:b?.hotel?.checkOut,nights:b?.hotel?.nights,rate: b?.hotel?.rate, total: b?.hotel?.total });
+async function savedStays(env, merchant, ids, before) {
+  const table = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='hotel_reservations'").first();
+  const saved = new Map();
+  for (const id of ids) {
+    let value = before.get(id);
+    if (table) {
+      const row = await env.DB.prepare('SELECT raw_json FROM hotel_reservations WHERE merchant=? AND id=?').bind(merchant, id).first();
+      if (row) { try { value = JSON.parse(row.raw_json); } catch (_) { problem('commercial-data-invalid'); } }
+    }
+    saved.set(id, value || null);
+  }
+  return saved;
+}
 export async function validateCommercialSync(env, merchant, previous, next) {
-  const protectedStay = b => b?.commercial || b?.hotel?.dossierId || b?.hotel?.dayUse;
   const before = new Map((previous?.bookings || []).filter(protectedStay).map(b => [b.id, b]));
   const after = new Map((next?.bookings || []).map(b => [b.id, b]));
   const ids = new Set([...before.keys(), ...[...after.values()].filter(protectedStay).map(b => b.id)]);
   if (!ids.size) return false;
-  const table = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='hotel_reservations'").first();
-  const protectedValue = b => JSON.stringify({ commercial: commercialSnapshot(b?.commercial), pricing: canonDirectPricing(b?.pricing), pricingHistory: canonPricingHistory(b?.pricingHistory), options: stayOptions(b?.hotel),
-    serviceId: b?.serviceId, resourceId: b?.resourceId, startAt: b?.startAt, endAt: b?.endAt,
-    partySize: b?.partySize, status: b?.status, checkIn:b?.hotel?.checkIn, checkOut:b?.hotel?.checkOut,nights:b?.hotel?.nights,rate: b?.hotel?.rate, total: b?.hotel?.total });
+  const saved = await savedStays(env, merchant, ids, before);
   for (const id of ids) {
-    let saved = before.get(id);
-    if (table) {
-      const row = await env.DB.prepare('SELECT raw_json FROM hotel_reservations WHERE merchant=? AND id=?').bind(merchant, id).first();
-      if (row) { try { saved = JSON.parse(row.raw_json); } catch (_) { problem('commercial-data-invalid'); } }
-    }
-    if (!saved || !after.has(id) || protectedValue(saved) !== protectedValue(after.get(id))) problem('commercial-stays-use-api');
+    const value = saved.get(id);
+    if (!value || !after.has(id) || protectedValue(value) !== protectedValue(after.get(id))) problem('commercial-stays-use-api');
   }
   return true;
+}
+/* B14 · A whole-document push carries the settings and every booking. Refusing it
+ * because ONE protected stay is stale (the device merged an old copy after
+ * /hotel/stays moved it) blocked every later change of the document forever,
+ * « réservation en ligne » included. The same rule now holds by construction:
+ * whatever the push says about a protected stay, the server's own copy is kept
+ * (a dropped stay comes back, an unknown or diverging one the document never
+ * held is left out), and the rest of the document lands. Terms still cannot be
+ * forged, erased or rewritten. Returns the repaired document and the ids it kept. */
+export async function restoreProtectedStays(env, merchant, previous, next) {
+  const before = new Map((previous?.bookings || []).filter(protectedStay).map(b => [b.id, b]));
+  const sent = Array.isArray(next?.bookings) ? next.bookings : [];
+  const ids = new Set([...before.keys(), ...sent.filter(protectedStay).map(b => b?.id)]);
+  if (!ids.size) return { value: next, restored: [] };
+  const saved = await savedStays(env, merchant, ids, before), restored = [];
+  const bookings = [];
+  for (const b of sent) {
+    if (!ids.has(b?.id)) { bookings.push(b); continue; }
+    const value = saved.get(b.id);
+    if (before.has(b.id)) {
+      if (value && protectedValue(value) === protectedValue(b)) bookings.push(b);
+      else { bookings.push(before.get(b.id)); restored.push(b.id); }
+    } else if (value && protectedValue(value) === protectedValue(b)) bookings.push(b);
+    else restored.push(b.id);
+  }
+  for (const [id, b] of before) if (!sent.some(x => x?.id === id)) { bookings.push(b); restored.push(id); }
+  return { value: { ...next, bookings }, restored };
 }

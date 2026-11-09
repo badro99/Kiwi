@@ -99,7 +99,8 @@ ok('le lien public le dit une fois, à l’entrée', () => {
 
 ok('le tableau de bord ne dit plus « ouverte » quand aucun créneau n’existe', () => {
   assert.ok(/onlineNoHours: 'En ligne · aucun créneau, horaires à renseigner'/.test(DASH));
-  assert.ok(/var onlineText = doc\.settings\.published \? \(hoursMissing \? t\('onlineNoHours'\) : t\('onlineOn'\)\) : t\('onlineOff'\);/.test(DASH));
+  // B14 · ni « ouverte » tant que le serveur n'a pas reçu le réglage.
+  assert.ok(/var onlineText = doc\.settings\.published \? \(cloudPending\(\) \? t\('onlinePending'\) : hoursMissing \? t\('onlineNoHours'\) : t\('onlineOn'\)\) : t\('onlineOff'\);/.test(DASH));
 });
 ok('la page ouverte relit le serveur, seulement quand elle est à l’écran', () => {
   const body = grab(DASH, 'function schedulePull(');

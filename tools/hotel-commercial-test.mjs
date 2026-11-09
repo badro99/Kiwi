@@ -440,8 +440,38 @@ test('legacy sync cannot forge, erase or change accepted commercial terms', asyn
     await assert.rejects(validateCommercialSync(f.env, f.merchant, d, { bookings: [] }), /commercial-stays-use-api/);
     const row = f.sql.prepare("SELECT data,rev FROM store_docs WHERE feature='reservations'").get();
     const next = JSON.parse(row.data); next.bookings = [structuredClone(booking)]; next.bookings[0].commercial.quote.totalCents = 1;
-    const refused = await f.call(storePost, { feature: 'reservations', baseRev: row.rev, data: next });
-    assert.equal(refused.body.error, 'commercial-stays-use-api');
+    next.settings = { ...(next.settings || {}), published: true, updatedAt: 1 };
+    const docNow = () => JSON.parse(f.sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
+    const termsOf = (sid) => JSON.parse(f.sql.prepare('SELECT raw_json FROM hotel_reservations WHERE id=?').get(sid).raw_json).commercial.quote.totalCents;
+    assert.equal((await f.call(storePost, { feature: 'reservations', baseRev: row.rev, data: next })).status, 200, 'B14: the push is no longer refused as a whole');
+    assert.equal(termsOf(booking.id), booking.commercial.quote.totalCents, 'the authoritative terms are untouched');
+    assert.ok(!docNow().bookings.some(x => x.id === booking.id && x.commercial.quote.totalCents !== booking.commercial.quote.totalCents), 'a document push never rewrites accepted terms');
+    assert.equal(docNow().settings.published, true, 'the rest of the document lands');
+  } finally { f.sql.close(); }
+});
+test('B14 · a stale, dropped or forged protected stay no longer blocks the reservations document', async () => {
+  const f = await fixture();
+  try {
+    await f.seed();
+    // A group dossier stay dated tomorrow: protected, and inside the document's window.
+    const day = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+    const sid = (await f.stay({ clientRef: 'b14-dossier-ref', dossierId: 'dos-b14', groupName: 'Groupe B14', checkIn: day(1), checkOut: day(2) })).body.booking.id;
+    const docRev = () => f.sql.prepare("SELECT rev FROM store_docs WHERE feature='reservations'").get().rev;
+    const docNow = () => JSON.parse(f.sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
+    const stayIn = (doc, wanted) => doc.bookings.find(x => x.id === wanted);
+    const pushDoc = (data) => f.call(storePost, { feature: 'reservations', baseRev: docRev(), data });
+    const oldCopy = docNow();
+    assert.ok(stayIn(oldCopy, sid), 'the stay is in the document');
+    await f.stay({ id: sid, action: 'cancel' });
+    // The device merged its old copy (still « confirmed ») into the current revision.
+    assert.equal((await pushDoc({ ...docNow(), bookings: oldCopy.bookings, settings: { ...docNow().settings, published: true, updatedAt: 2 } })).status, 200, 'a stale protected stay no longer refuses the push');
+    assert.equal(stayIn(docNow(), sid).status, 'cancelled', 'the stale status never overwrites the server');
+    assert.equal(docNow().settings.published, true, 'the settings land despite the stale stay');
+    assert.equal((await pushDoc({ ...docNow(), bookings: [] })).status, 200);
+    assert.ok(stayIn(docNow(), sid), 'a dropped protected stay comes back');
+    const forged = { ...stayIn(docNow(), sid), id: 'forged-stay', code: 'FORGED' };
+    assert.equal((await pushDoc({ ...docNow(), bookings: [...docNow().bookings, forged] })).status, 200);
+    assert.ok(!stayIn(docNow(), 'forged-stay'), 'a protected stay the server never accepted is left out');
   } finally { f.sql.close(); }
 });
 test('browser reservation normalizer preserves the bounded commercial snapshot', () => {

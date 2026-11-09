@@ -408,8 +408,8 @@
     "sha": "cda1fec60da40d32"
   },
   "assets/cloud-doc.js": {
-    "v": "17",
-    "sha": "c00deec630dea467"
+    "v": "18",
+    "sha": "abee8da0d4f2f31c"
   },
   "assets/color-palette.js": {
     "v": "7",
@@ -440,8 +440,8 @@
     "sha": "120e6738818d0bc4"
   },
   "assets/dashboard-native.css": {
-    "v": "1",
-    "sha": "d10912c380a130a1"
+    "v": "3",
+    "sha": "c01220984113e41f"
   },
   "assets/dashboard-native.js": {
     "v": "5",
@@ -452,8 +452,8 @@
     "sha": "c65ff3684a189b46"
   },
   "assets/dashboard-pwa.js": {
-    "v": "614",
-    "sha": "eb1de027cb38b570"
+    "v": "615",
+    "sha": "bd7aa1e435906c4e"
   },
   "assets/dashboard-shell.css": {
     "v": "8",
@@ -2020,8 +2020,8 @@
     "sha": "4fd568c0b955146b"
   },
   "assets/reservations.js": {
-    "v": "39",
-    "sha": "a6f14f4f121dae07"
+    "v": "40",
+    "sha": "d21ef665ec9e36a3"
   },
   "assets/restaurant-menu-workspace.js": {
     "v": "138",
