@@ -17,7 +17,9 @@
  *   E. un appareil d'avant le palier, ou une base pas migrée, garde son accès ;
  *   F. Face ID ne relève jamais le palier (sa marque vaut pour tout le compte),
  *      une forme bizarre du chemin ne contourne pas la carte, et appairer une
- *      caisse (qui lirait les documents de gestion) demande un gérant.
+ *      caisse (qui lirait les documents de gestion) demande un gérant ;
+ *   G. une ligne ancienne n'est jamais effacée à l'âge : un comptoir resté
+ *      ouvert des mois au palier réception ne redevient pas patron.
  * Tout est exécuté : vraies routes, vrai middleware, D1 node:sqlite. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -238,6 +240,18 @@ async function through(env, request) {
   ok('réception : appairer une caisse est refusé (403)', pair.status === 403 && pair.body.need === 'manager', JSON.stringify(pair));
   const fresh = await device();
   ok('un appareil du patron (sans palier inscrit) appaire toujours', (await through(env, fresh('/api/pair/create', { method: 'POST', body: '{}' }))).passed);
+}
+
+/* ── G · pas d'effacement à l'âge ─────────────────────────────────────── */
+{
+  const { env, device } = await hotel();
+  const desk = await device();
+  const office = await device();
+  await unlock(env, desk, '5930');
+  env.sql.prepare('UPDATE session_tiers SET updated_ts = ?').run(Date.now() - 120 * 86400 * 1000);
+  ok('le patron déverrouille un autre appareil (écriture)', await unlock(env, office, '4821') === 200);
+  ok('le comptoir déverrouillé il y a 120 jours reste au palier réception', (await sessionTier(desk('/api/me'), env)).tier === 'reception'
+    && (await through(env, desk('/api/sales-summary'))).status === 403);
 }
 
 if (failures) { console.log(`\n✗ ${failures} échec(s)`); process.exit(1); }

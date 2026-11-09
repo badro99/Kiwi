@@ -85,10 +85,8 @@ export async function recordSessionTier(request, env, access, staffId) {
          staff_id = excluded.staff_id, updated_ts = excluded.updated_ts`
     ).bind(sess.sid, String(sess.aid), tier, String(staffId || '').slice(0, 80), now).run();
   } catch (_) { return false; }
-  try {
-    /* Une session vit 30 jours au plus après son dernier renouvellement. */
-    await env.DB.prepare('DELETE FROM session_tiers WHERE updated_ts < ?').bind(now - 90 * 86400 * 1000).run();
-  } catch (_) { /* ménage seulement */ }
+  /* Pas de ménage à l'âge : une session renouvelée garde son sid indéfiniment, et
+   * une ligne effacée rendrait le palier du patron à un comptoir resté ouvert. */
   return true;
 }
 
