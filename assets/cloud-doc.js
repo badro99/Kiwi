@@ -966,6 +966,11 @@
     pullAll: pullAll,
     /* Diagnostic en lecture seule : l'état de remontée de chaque document de la page. */
     status: function () { return live.map(function (h) { return h.status(); }); },
+    /* Relit seulement les documents nommés (la réception relit réservations et chambres). */
+    pullFeatures: function (features) {
+      return Promise.all(live.filter(function (h) { return h.enabled() && features.indexOf(h.feature) >= 0; })
+        .map(function (h) { return h.pull(false).catch(function () { return false; }); }));
+    },
     slugFor: slugFor,
     currentSlug: currentSlug,
     slugStore: slugStore,

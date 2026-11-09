@@ -408,8 +408,8 @@
     "sha": "cda1fec60da40d32"
   },
   "assets/cloud-doc.js": {
-    "v": "18",
-    "sha": "abee8da0d4f2f31c"
+    "v": "19",
+    "sha": "67a5a50ceb94c559"
   },
   "assets/color-palette.js": {
     "v": "7",
@@ -734,6 +734,10 @@
   "assets/hotel-language.js": {
     "v": "15",
     "sha": "ead51a0bb40f9264"
+  },
+  "assets/hotel-live.js": {
+    "v": "1",
+    "sha": "d4f2c87dcc228ba3"
   },
   "assets/hotel-rates.js": {
     "v": "1",
@@ -2024,8 +2028,8 @@
     "sha": "4fd568c0b955146b"
   },
   "assets/reservations.js": {
-    "v": "40",
-    "sha": "d21ef665ec9e36a3"
+    "v": "41",
+    "sha": "916bee1c48d16f72"
   },
   "assets/restaurant-menu-workspace.js": {
     "v": "138",
