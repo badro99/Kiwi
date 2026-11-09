@@ -14,7 +14,10 @@
  *      réécrire, ne lit ni la paie ni les charges, mais garde les réservations
  *      complètes (contacts des voyageurs) ;
  *   D. /api/config : la réception ne peut pas changer les codes de l'équipe ;
- *   E. un appareil d'avant le palier, ou une base pas migrée, garde son accès.
+ *   E. un appareil d'avant le palier, ou une base pas migrée, garde son accès ;
+ *   F. Face ID ne relève jamais le palier (sa marque vaut pour tout le compte),
+ *      une forme bizarre du chemin ne contourne pas la carte, et appairer une
+ *      caisse (qui lirait les documents de gestion) demande un gérant.
  * Tout est exécuté : vraies routes, vrai middleware, D1 node:sqlite. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -27,6 +30,8 @@ import { onRequestPost as pinVerify } from '../functions/api/pin/verify.js';
 import { onRequestGet as storeGet, onRequestPost as storePost } from '../functions/api/store.js';
 import { onRequestPost as configPost } from '../functions/api/config.js';
 import { routeMinTier, sessionTier } from '../functions/auth/_session-tier.js';
+import { onRequestPost as faceUnlock } from '../functions/api/pin/face.js';
+import { faceMarkState } from '../functions/auth/_lib.js';
 
 let failures = 0;
 function ok(label, cond, detail) {
@@ -200,6 +205,39 @@ async function through(env, request) {
   ok('base pas encore migrée : comportement d\'avant (rien ne casse au déploiement)', (await through(env, a('/api/sales-summary'))).passed);
   ok('la carte des routes : rien d\'autre que les routes du patron', routeMinTier('/api/hotel/stays') === '' && routeMinTier('/api/feed') === ''
     && routeMinTier('/api/store') === '' && routeMinTier('/api/pin/verify') === '' && routeMinTier('/api/ai/menu-translate') === 'manager');
+}
+
+/* ── F · Face ID, forme du chemin, appairage ──────────────────────────── */
+{
+  const { env, device } = await hotel();
+  const a = await device();
+  const face = async (req, access) => {
+    const st = await faceMarkState(req('/api/me'), env, access);
+    const res = await faceUnlock({ request: req('/api/pin/face', { method: 'POST', body: JSON.stringify({ access, mark: st.mark }) }), env });
+    return res.status;
+  };
+  await unlock(env, a, '5930');
+  ok('une marque Face ID patron valide répond 200…', await face(a, 'owner') === 200);
+  ok('… mais ne relève pas le comptoir de la réception au patron', (await sessionTier(a('/api/me'), env)).tier === 'reception'
+    && (await through(env, a('/api/sales-summary'))).status === 403);
+  ok('remonter demande un code : le code du patron relève', await unlock(env, a, '4821') === 200
+    && (await through(env, a('/api/sales-summary'))).passed);
+  ok('Face ID gérant baisse un appareil patron au gérant', await face(a, 'manager') === 200
+    && (await sessionTier(a('/api/me'), env)).tier === 'manager' && (await through(env, a('/api/foodcost'))).status === 403);
+
+  await unlock(env, a, '5930');
+  for (const p of ['/api/sales-summary/', '//api//sales-summary', '/api/sales%2Dsummary', '/API/Sales-Summary', '/api/ai/', '/api/ai'])
+    ok(`réception : « ${p} » reste refusé`, routeMinTier(p) !== '' && (await through(env, a(p))).status === 403, routeMinTier(p));
+  /* À mi-vie, un chargement de page renouvelle le cookie : le palier passe avant. */
+  const realNow = Date.now;
+  Date.now = () => realNow() + 20 * 86400 * 1000;
+  let doc;
+  try { doc = await through(env, a('/api/sales-summary', { headers: { 'Sec-Fetch-Dest': 'document' } })); } finally { Date.now = realNow; }
+  ok('réception : la route du patron ouverte comme une page, à mi-vie du cookie, reste refusée', doc.status === 403 && !doc.passed, JSON.stringify(doc));
+  const pair = await through(env, a('/api/pair/create', { method: 'POST', body: '{}' }));
+  ok('réception : appairer une caisse est refusé (403)', pair.status === 403 && pair.body.need === 'manager', JSON.stringify(pair));
+  const fresh = await device();
+  ok('un appareil du patron (sans palier inscrit) appaire toujours', (await through(env, fresh('/api/pair/create', { method: 'POST', body: '{}' }))).passed);
 }
 
 if (failures) { console.log(`\n✗ ${failures} échec(s)`); process.exit(1); }

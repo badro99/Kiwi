@@ -656,9 +656,10 @@ async function routeRequest(context) {
       const dest = request.headers.get('Sec-Fetch-Dest');
       const wantsDoc = dest === 'document' ||
         (!dest && (request.headers.get('Accept') || '').indexOf('text/html') !== -1);
-      if (!(wantsDoc || isApi)) return next();         // asset → trust the token
+      if (!(wantsDoc || isApi)) return (await tierBlock(request, env, path)) || next(); // asset: the token
       const accountState = await accountActive(env, sess.aid, sess.sv, sess);
       if (accountState.ok) {
+        const blocked = await tierBlock(request, env, path); if (blocked) return blocked; // before any next()
         /* Fenêtre glissante — voir sessionNeedsRefresh(). Uniquement sur un
          * CHARGEMENT DE PAGE arrivé à mi-vie : jamais sur un asset (le cookie
          * repartirait sur chaque fichier), jamais sur une réponse 101, parce
@@ -670,7 +671,7 @@ async function routeRequest(context) {
           out.headers.append('Set-Cookie', sessionCookie(await makeSession(sess.aid, authSecret, sess.sv, sess.sid)));
           return out;
         }
-        return (isApi && await tierBlock(request, env, path)) || next();
+        return next();
       }
       sessionVerificationUnavailable = !!accountState.unavailable;
       sessionRevoked = !sessionVerificationUnavailable; // only a confirmed revoke purges identity

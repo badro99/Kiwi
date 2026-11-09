@@ -92,6 +92,17 @@ export async function recordSessionTier(request, env, access, staffId) {
   return true;
 }
 
+/* Face ID garde ou baisse le palier de cette session, jamais il ne le relève : sa
+ * marque vaut pour tout le compte et n'est liée à aucun appareil, donc qui en
+ * copie une ne doit rien gagner. Remonter (réception → patron) demande un code. */
+export async function lowerSessionTier(request, env, access) {
+  const tier = tierForAccess(access);
+  if (!tier) return false;
+  const st = await sessionTier(request, env);
+  if (st.unavailable || !st.tier || tierRank(tier) >= tierRank(st.tier)) return false;
+  return recordSessionTier(request, env, tier, '');
+}
+
 /* ── LES ROUTES DU PATRON ─────────────────────────────────────────────────────
  * Palier minimal par route, pour une requête portée par la session du compte.
  * Calqué sur ce que chaque vue montre (dashboard-shell.css, reception-view.js) :
@@ -108,6 +119,7 @@ const MIN_TIER = new Map([
   ['/api/hotel/channels', 'manager'],
   ['/api/inventory/hotel-reports', 'manager'],
   ['/api/pair/revoke', 'manager'],
+  ['/api/pair/create', 'manager'],   // une caisse appairée lit les documents de gestion
   ['/api/push/morning', 'manager'],
   ['/api/foodcost', 'owner'],
   ['/api/pay-statements', 'owner'],
@@ -122,10 +134,16 @@ const MIN_TIER = new Map([
   ['/api/shopify/connect-direct', 'owner'],
 ]);
 
-export function routeMinTier(path) {
+/* Le chemin est ramené à une seule forme avant la lecture de la carte : une barre
+ * finale, une barre doublée, un caractère encodé ou des majuscules ne doivent pas
+ * faire passer une route du patron à côté de son palier. */
+export function routeMinTier(rawPath) {
+  let path = String(rawPath || '');
+  try { path = new URL(decodeURIComponent(path).replace(/\/{2,}/g, '/'), 'https://kiwi.invalid').pathname; } catch (_) {}
+  path = path.toLowerCase().replace(/\/+$/, '');
   if (MIN_TIER.has(path)) return MIN_TIER.get(path);
   /* L'IA coûte et lit les livres : gérant au moins. */
-  if (path.indexOf('/api/ai/') === 0) return 'manager';
+  if (path === '/api/ai' || path.indexOf('/api/ai/') === 0) return 'manager';
   return '';
 }
 
