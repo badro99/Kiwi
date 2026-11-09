@@ -17,6 +17,14 @@
  * (1200 × 630) suivent la règle des guides : PNG en palette de 256 couleurs,
  * sous 200 Ko, pour que WhatsApp affiche l'aperçu (commit 973b6fa31).
  *
+ * Aucun média tiers : la carte démo de Café Atlas joue des clips repris
+ * d'autres créateurs (assets/media/menu-demo/, filigranes visibles). Ils ne
+ * vont pas sur une page de vente. La capture sert donc
+ * assets/orderpro-demo.js sans ses champs `video` (sans toucher au fichier) :
+ * OrderPro rend alors sa propre illustration de repli, comme pour Noss-noss.
+ * Toute requête vers assets/media/ est en plus refusée, et chaque capture liste
+ * les images qu'elle a chargées pour qu'on puisse les relire.
+ *
  * Il faut puppeteer-core (npm --prefix app ci), Chrome, cwebp et python3 avec
  * Pillow. */
 import fs from 'node:fs';
@@ -65,8 +73,16 @@ async function open(url, storage, { width, height, mobile = false }) {
   await page.setBypassServiceWorker(true);
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }, { name: 'prefers-color-scheme', value: 'light' }]);
   await page.setRequestInterception(true);
+  page.media = new Set();
   page.on('request', (r) => {
     const u = r.url();
+    if (['image', 'media'].includes(r.resourceType()) && u.startsWith(base)) page.media.add(decodeURI(new URL(u).pathname));
+    if (u.startsWith(base + '/assets/media/')) return r.abort();
+    if (new URL(u).pathname === '/assets/orderpro-demo.js') {
+      const body = fs.readFileSync(path.join(ROOT, 'assets', 'orderpro-demo.js'), 'utf8').replace(/video: MEDIA \+ '[^']+',?\s*/g, '');
+      if (/video:/.test(body)) throw new Error('orderpro-demo.js : un clip de démo reste dans la carte capturée');
+      return r.respond({ status: 200, contentType: 'text/javascript', body });
+    }
     if (u.startsWith(base + '/api/')) return r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
     return u.startsWith(base) || u.startsWith('data:') || u.startsWith('blob:') ? r.continue() : r.abort();
   });
@@ -109,8 +125,12 @@ function dims(png) {
 async function shoot(page, name) {
   await settle(page);
   const png = path.join(TMP, name + '.png');
+  const clips = await page.evaluate(() => document.querySelectorAll('.dish-media video, .dish-media img, video[src], video[poster]').length);
+  if (clips) throw new Error(`${name} : ${clips} média(s) de plat encore à l'écran`);
   await page.screenshot({ path: png });
   toWebp(png, name);
+  const images = [...page.media].filter((p) => !/^\/assets\/(icons|landing|kit)\//.test(p) && !p.endsWith('.svg'));
+  if (images.length) console.log(`    images chargées : ${images.join(', ')}`);
   await page.ctx.close();
 }
 
