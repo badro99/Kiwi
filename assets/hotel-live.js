@@ -62,21 +62,21 @@
   function docRead() {
     try { return (window.KiwiCloudDoc.status() || []).some(function (s) { return s.feature === 'reservations' && s.read; }); } catch (_) { return false; }
   }
-  /* Compare la liste des réservations à celle déjà vue. La première lecture, une fois la
-     copie serveur lue, ne fait que mémoriser : rien n'est annoncé à l'ouverture. */
-  function scan() {
-    if (!onHotel() || (!seen && !docRead())) return;
-    var now = {}, fresh = [];
-    bookings().forEach(function (b) {
+  /* Ce que l'on a déjà vu, par réservation (statut). Deux sources l'alimentent :
+     le document des réservations, qui ne garde que les séjours de -3 à +14 jours,
+     et D1 (/api/hotel/stays), qui les a tous : une réservation en ligne pour dans
+     quinze jours n'entre jamais dans le document (H-699E42F4, 9 nov.). */
+  var openedAt = Date.now() - 60000, docSeeded = false, d1Since = 0;
+  function consider(list, isNew) {
+    var fresh = [];
+    list.forEach(function (b) {
       if (!b || !b.id) return;
-      now[b.id] = b.status;
-      if (!seen || b.source !== 'public') return;
-      if (!(b.id in seen) && ACTIVE[b.status]) fresh.push({ kind: 'booked', b: b });
-      else if (b.id in seen && ACTIVE[seen[b.id]] && b.status === 'cancelled') fresh.push({ kind: 'cancelled', b: b });
+      var before = seen[b.id];
+      seen[b.id] = b.status;
+      if (b.source !== 'public') return;
+      if (before === undefined && ACTIVE[b.status] && isNew(b)) fresh.push({ kind: 'booked', b: b });
+      else if (b.status === 'cancelled' && (before === undefined ? (+b.updatedAt || 0) >= openedAt : ACTIVE[before])) fresh.push({ kind: 'cancelled', b: b });
     });
-    var first = !seen;
-    seen = now;
-    if (first) return;
     fresh.forEach(function (e) {
       var item = { kind: e.kind, text: line(e.b), at: Date.now() };
       events.unshift(item);
@@ -84,11 +84,40 @@
     });
     if (events.length > 20) events.length = 20;
   }
+  /* Le document : sa première lecture, une fois la copie serveur lue, ne fait que mémoriser. */
+  function scan() {
+    if (!onHotel()) return;
+    if (!seen) seen = {};
+    if (!docSeeded) {
+      if (!docRead()) return;
+      bookings().forEach(function (b) { if (b && b.id && !(b.id in seen)) seen[b.id] = b.status; });
+      docSeeded = true;
+      return;
+    }
+    consider(bookings(), function (b) { return !(+b.createdAt) || +b.createdAt >= openedAt; });
+  }
+  /* D1 : ce qui a changé depuis le dernier regard, à n'importe quelle date. Seul ce qui a
+     été créé après l'ouverture de la page est annoncé. */
+  function pollStays() {
+    var slug = '';
+    try { slug = (window.KiwiCloudDoc && window.KiwiCloudDoc.slugFor && window.KiwiCloudDoc.slugFor()) || ''; } catch (_) {}
+    if (!slug || typeof fetch !== 'function') return Promise.resolve();
+    var started = Date.now(), since = d1Since || openedAt - 9 * 60000;
+    return fetch('/api/hotel/stays?merchant=' + encodeURIComponent(slug) + '&includeCancelled=1&updatedSince=' + since, { credentials: 'same-origin', cache: 'no-store' })
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !Array.isArray(j.stays)) return;
+        d1Since = started - 2 * 60000;
+        if (!seen) seen = {};
+        consider(j.stays, function (b) { return (+b.createdAt || 0) >= openedAt; });
+      }, function () {});
+  }
 
   function poll() {
     try {
       if (document.visibilityState === 'visible' && onHotel() && window.KiwiCloudDoc && window.KiwiCloudDoc.pullFeatures) {
         window.KiwiCloudDoc.pullFeatures(['reservations', 'rooms']).then(scan, function () {});
+        pollStays();
       }
     } catch (_) {}
   }

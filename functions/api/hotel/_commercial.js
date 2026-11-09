@@ -173,8 +173,7 @@ export async function restoreProtectedStays(env, merchant, previous, next) {
   const before = new Map((previous?.bookings || []).filter(protectedStay).map(b => [b.id, b]));
   const sent = Array.isArray(next?.bookings) ? next.bookings : [];
   const ids = new Set([...before.keys(), ...sent.filter(protectedStay).map(b => b?.id)]);
-  if (!ids.size) return { value: next, restored: [] };
-  const saved = await savedStays(env, merchant, ids, before), restored = [];
+  const saved = ids.size ? await savedStays(env, merchant, ids, before) : new Map(), restored = [];
   const bookings = [];
   for (const b of sent) {
     if (!ids.has(b?.id)) { bookings.push(b); continue; }
@@ -186,5 +185,12 @@ export async function restoreProtectedStays(env, merchant, previous, next) {
     else restored.push(b.id);
   }
   for (const [id, b] of before) if (!sent.some(x => x?.id === id)) { bookings.push(b); restored.push(id); }
+  /* A device that never saw an online booking (its copy predates it) must not erase it:
+     a current or future « public » booking the push omits is kept. Past ones may age out. */
+  const recent = Date.now() - 3 * 864e5;
+  for (const b of previous?.bookings || []) {
+    if (b?.source === 'public' && +b.endAt > recent && !bookings.some(x => x?.id === b.id)) { bookings.push(b); restored.push(b.id); }
+  }
+  if (!restored.length && bookings.length === sent.length) return { value: next, restored };
   return { value: { ...next, bookings }, restored };
 }

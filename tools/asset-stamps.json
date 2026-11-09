@@ -736,8 +736,8 @@
     "sha": "ead51a0bb40f9264"
   },
   "assets/hotel-live.js": {
-    "v": "1",
-    "sha": "d4f2c87dcc228ba3"
+    "v": "2",
+    "sha": "01de27a2966ee9d6"
   },
   "assets/hotel-rates.js": {
     "v": "1",
@@ -2028,8 +2028,8 @@
     "sha": "4fd568c0b955146b"
   },
   "assets/reservations.js": {
-    "v": "41",
-    "sha": "916bee1c48d16f72"
+    "v": "42",
+    "sha": "b4e47e8020beba71"
   },
   "assets/restaurant-menu-workspace.js": {
     "v": "138",

@@ -522,7 +522,7 @@
      relit le serveur toutes les 30 s ; ailleurs, rien. */
   /* B23 · la réception hôtel (toutes ses pages, pas seulement celle-ci) relit les réservations
      et annonce les réservations en ligne : assets/hotel-live.js, chargé sans balise de plus. */
-  try { import('/assets/hotel-live.js?v=1').catch(function () {}); } catch (_) {}
+  try { import('/assets/hotel-live.js?v=2').catch(function () {}); } catch (_) {}
   var pollTimer = null;
   function schedulePull() {
     clearTimeout(pollTimer);

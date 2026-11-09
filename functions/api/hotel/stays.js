@@ -436,6 +436,9 @@ export async function onRequestGet({ request, env }) {
         query += " AND status = ?";
         params.push(statusParam);
       }
+      // B23 · the front desk asks what changed since its last look, at any date (online bookings beyond the document's window).
+      const updatedSince = Number(u.searchParams.get('updatedSince')) || 0;
+      if (updatedSince > 0) { query += ' AND updated_ts >= ?'; params.push(updatedSince); }
       query += " ORDER BY start_at ASC LIMIT 1000";
 
       const stmt = env.DB.prepare(query).bind(...params);

@@ -11,9 +11,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../assets/hotel-live.js', import.meta.url), 'utf8');
+const hotelLiveJs = fs.readFileSync(new URL('../assets/hotel-live.js', import.meta.url), 'utf8');
 
-function boot({ type = 'hotel', read = true } = {}) {
+function boot({ type = 'hotel', read = true, stays = null } = {}) {
   const listeners = {}, timers = [], intervals = [], toasts = [], pulls = [];
   const doc = { bookings: [{ id: 'bk-old', code: 'H-OLD00001', source: 'public', status: 'confirmed', resourceId: 'room:101', hotel: { checkIn: '2026-11-12', checkOut: '2026-11-13' } }] };
   const status = [{ feature: 'reservations', read }];
@@ -22,15 +22,17 @@ function boot({ type = 'hotel', read = true } = {}) {
   const document = { visibilityState: 'visible', addEventListener: (t, f) => { (listeners['doc:' + t] ||= []).push(f); }, querySelectorAll: () => [drawer] };
   const window = {
     addEventListener: (t, f) => { (listeners[t] ||= []).push(f); },
-    KiwiCloudDoc: { isReal: () => true, status: () => status, pullFeatures: async (f) => { pulls.push(f); } },
+    KiwiCloudDoc: { isReal: () => true, status: () => status, slugFor: () => 'riad-atlas', pullFeatures: async (f) => { pulls.push(f); } },
     KiwiVenue: { getVenueType: () => type },
     KiwiReservations: { get: () => doc },
     KiwiHotelRooms: { current: () => ({ rooms: [{ id: 'room:105', n: 105 }, { id: 'room:101', n: 101 }] }) },
     Kiwi: { toast: (m, o) => toasts.push({ m, desc: o && o.desc, type: o && o.type }), handlers: { notifications: () => 'drawer' } },
   };
-  vm.runInNewContext(source, { window, document, Intl, Date, Promise, setTimeout: (f) => timers.push(f), setInterval: (f, ms) => intervals.push([f, ms]) });
+  const asked = [];
+  const fetch = stays ? async (url) => { asked.push(url); return { ok: true, json: async () => ({ ok: true, stays: stays() }) }; } : undefined;
+  vm.runInNewContext(hotelLiveJs, { window, document, Intl, Date, Promise, fetch, setTimeout: (f) => timers.push(f), setInterval: (f, ms) => intervals.push([f, ms]) });
   const fire = (t) => (listeners[t] || []).forEach((f) => f({}));
-  return { window, document, doc, status, toasts, pulls, timers, intervals, fire, body };
+  return { window, document, doc, status, toasts, pulls, timers, intervals, fire, body, asked };
 }
 
 // 1 · every 30 s on a visible hotel tab, only the two front-desk documents are re-read.
@@ -78,6 +80,28 @@ function boot({ type = 'hotel', read = true } = {}) {
   assert.equal(t.toasts.length, 0, 'unread: no seed, no announcement');
   t.status[0].read = true; t.fire('kiwi-reservations-changed');
   assert.equal(t.toasts.length, 0, 'the first read seeds silently');
+}
+
+// 4 · an online booking beyond the document's 14-day window (H-699E42F4, 24→25 Nov,
+// booked 9 Nov) lives only in D1: it is still announced, once; older ones stay quiet.
+{
+  const before = { id: 'bk-far-old', code: 'H-FAROLD01', source: 'public', status: 'confirmed', resourceId: 'room:101', createdAt: Date.now() - 864e5, hotel: { checkIn: '2026-12-01', checkOut: '2026-12-02' } };
+  const far = { id: 'bk-far', code: 'H-699E42F4', source: 'public', status: 'confirmed', resourceId: 'room:105', createdAt: Date.now() + 1000, hotel: { checkIn: '2026-11-24', checkOut: '2026-11-25' } };
+  let rows = [before];
+  const t = boot({ stays: () => rows });
+  t.timers.forEach((f) => f());
+  t.intervals[0][0](); await new Promise((r) => setTimeout(r, 0));
+  assert.equal(t.toasts.length, 0, 'a booking made before the page opened is not announced');
+  assert.match(t.asked[0], /\/api\/hotel\/stays\?merchant=riad-atlas&includeCancelled=1&updatedSince=\d+/, 'D1 is asked what changed, at any date');
+  rows = [before, far];
+  t.intervals[0][0](); await new Promise((r) => setTimeout(r, 0));
+  assert.equal(t.toasts.length, 1, 'the far-out online booking is announced');
+  assert.match(t.toasts[0].desc, /^H-699E42F4 · Ch\. 105 · 24 nov\.? → 25 nov\.?$/);
+  t.intervals[0][0](); await new Promise((r) => setTimeout(r, 0));
+  assert.equal(t.toasts.length, 1, 'announced once');
+  rows = [before, { ...far, status: 'cancelled', updatedAt: Date.now() + 2000 }];
+  t.intervals[0][0](); await new Promise((r) => setTimeout(r, 0));
+  assert.equal(t.toasts[1]?.m, 'Réservation en ligne annulée', 'its cancellation is announced');
 }
 
 console.log('✓ hotel-live: front-desk pages re-read reservations and rooms every 30 s; online bookings and cancellations are announced once, in the bell too');
