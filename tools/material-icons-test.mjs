@@ -16,7 +16,7 @@ import path from 'node:path';
 import {
   ROOT, ICON_DIR, RUNTIME, DOC, BASELINE_FILE, readGlyphs, readAliases, resolve,
   renderRuntime, renderDocTable, spliceDoc, sourceFiles, countDataLucide, iconNamesIn,
-  SUBSETS, subsetOf
+  SUBSETS, subsetOf, resolveFor,
 } from './build-material-icons.mjs';
 
 const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8');
@@ -39,7 +39,7 @@ ok(read(DOC) === spliceDoc(read(DOC), renderDocTable(aliases)), 'the mapping tab
 for (const [name, spec] of Object.entries(SUBSETS)) {
   const x = subsetOf(spec, glyphs, aliases);
   ok(existsSync(path.join(ROOT, spec.out)) && read(spec.out) === renderRuntime(x.glyphs, x.aliases, name), `${spec.out} is exactly what the generator writes (${Object.keys(x.glyphs).length} glyphs)`);
-  const lacking = spec.from.flatMap((f) => iconNamesIn(read(f)).filter((n) => glyphs[resolve(n.name, aliases)] && !x.glyphs[resolve(n.name, aliases)]).map((n) => `${f}:${n.line} ${n.name}`));
+  const lacking = spec.from.flatMap((f) => iconNamesIn(read(f)).filter((n) => glyphs[resolveFor(n, aliases)] && !x.glyphs[resolveFor(n, aliases)]).map((n) => `${f}:${n.line} ${n.name}`));
   ok(!lacking.length, lacking.length ? `the ${name} subset lacks names its pages ask for: ${lacking.join(', ')}` : `the ${name} subset holds every name ${spec.from.length} files ask for`);
 }
 
@@ -51,7 +51,7 @@ let asked = 0;
 for (const f of files) {
   for (const x of iconNamesIn(read(f))) {
     asked++;
-    if (!glyphs[resolve(x.name, aliases)]) unresolved.push(`${f}:${x.line} "${x.name}"`);
+    if (!glyphs[resolveFor(x, aliases)]) unresolved.push(`${f}:${x.line} "${x.name}"`);
     if (x.attr === 'icon' && !glyphs[x.name]) notMaterial.push(`${f}:${x.line} "${x.name}"`);
   }
 }
@@ -88,6 +88,9 @@ ok(!wrongTag.length, wrongTag.length ? `data-icon outside an <i> placeholder (th
   };
   const button = el('button', { 'data-icon': 'robe', class: 'bqi-icon' });
   const placeholder = el('i', { 'data-icon': 'print' });
+  /* "delete" is both a Material name (trash can) and a Lucide one (backspace). */
+  const trash = el('i', { 'data-icon': 'delete' });
+  const legacyDelete = el('i', { 'data-lucide': 'delete' });
   const warnings = [];
   const ctx = {
     console: { warn: (m) => warnings.push(m) },
@@ -96,7 +99,7 @@ ok(!wrongTag.length, wrongTag.length ? `data-icon outside an <i> placeholder (th
     document: {
       readyState: 'complete', documentElement: {},
       createElementNS: (_ns, tag) => el(tag, {}),
-      querySelectorAll: () => [button, placeholder],
+      querySelectorAll: () => [button, placeholder, trash, legacyDelete],
       addEventListener() {},
     },
   };
@@ -105,6 +108,9 @@ ok(!wrongTag.length, wrongTag.length ? `data-icon outside an <i> placeholder (th
   ctx.KiwiIcon.render(ctx.document);
   ok(button.replaced === null, 'a picker <button data-icon> is left in place, not replaced by an svg');
   ok(placeholder.replaced && placeholder.replaced.getAttribute('data-material-symbol') === 'print', 'an <i data-icon="print"> is drawn as the print glyph');
+  ok(trash.replaced && trash.replaced.getAttribute('data-material-symbol') === 'delete', 'an <i data-icon="delete"> is the Material trash can, never mapped through the Lucide table');
+  ok(legacyDelete.replaced && legacyDelete.replaced.getAttribute('data-material-symbol') === 'backspace', 'a legacy data-lucide="delete" keeps its Lucide meaning (backspace)');
+  ok(/data-material-symbol="delete"/.test(ctx.KiwiIcon.svg('delete', 20)), 'KiwiIcon.svg("delete") draws the trash can too');
   const hostile = ctx.KiwiIcon.svg('a"><img src=x onerror=alert(1)>', 18);
   ok(!/<img|onerror/.test(hostile) && (hostile.match(/"/g) || []).length % 2 === 0, 'KiwiIcon.svg() never writes a hostile name into the markup');
   ok(ctx.KiwiIcon.missing.includes('a"><img src=x onerror=alert(1)>') && warnings.length > 0, 'and reports it as a missing icon instead');

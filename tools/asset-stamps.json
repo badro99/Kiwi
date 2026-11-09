@@ -304,8 +304,8 @@
     "sha": "1ab9c2aab29f69af"
   },
   "assets/caisse/inventory.js": {
-    "v": "9",
-    "sha": "090d6a1a5498dfc5"
+    "v": "10",
+    "sha": "39d6c322496451f2"
   },
   "assets/caisse/offline.js": {
     "v": "10",
@@ -1228,12 +1228,12 @@
     "sha": "529acc4604d2e551"
   },
   "assets/material-icons.js": {
-    "v": "4",
-    "sha": "dfe724489ae0c36a"
+    "v": "5",
+    "sha": "31eb2964a67cd03e"
   },
   "assets/material-icons.ordering.js": {
-    "v": "6",
-    "sha": "6ec1737005782cd0"
+    "v": "7",
+    "sha": "fdb4997420955c12"
   },
   "assets/menu-catalog.js": {
     "v": "44",

@@ -50,7 +50,7 @@ function renderStock(){
               <div class="ss-row-main"><div class="ss-row-top"><span class="ss-row-name">${kdsEsc(it.name)}</span><span class="ss-chip">${st==='out'?'Rupture':'Stock bas'}</span></div>
               <div class="ss-row-meta"><span>${SK_CATS[it.cat]||it.cat}</span><span>${kdsEsc(it.supplier)}</span></div></div>
               <div class="ss-level"><div class="ss-level-n"><b>${it.stock}</b> / ${it.par} ${kdsEsc(it.unit)}</div>${gauge(it.stock, it.par, it.reorder)}</div>
-              <div class="ss-row-acts"><button type="button" class="ss-btn quiet danger" data-sk-waste="${it.id}"><i data-lucide="trash-2"></i><span>Perte</span></button><button type="button" class="ss-btn primary" data-sk-order="${it.id}"><i data-icon="local_shipping"></i><span>Commander</span></button></div></div>`;
+              <div class="ss-row-acts"><button type="button" class="ss-btn quiet danger" data-sk-waste="${it.id}"><i data-icon="delete"></i><span>Perte</span></button><button type="button" class="ss-btn primary" data-sk-order="${it.id}"><i data-icon="local_shipping"></i><span>Commander</span></button></div></div>`;
           }).join('')}</div></div>`
         : `<div class="ss-section"><div class="ss-empty"><i data-icon="check_circle"></i><span>Tout est au niveau, aucune alerte.</span></div></div>`;
 
@@ -117,7 +117,7 @@ function renderStock(){
             return `<div class="ss-row ${l.status === 'expired' ? 'out' : 'low'}"><span class="ss-state" aria-hidden="true"><i data-icon="${l.status === 'expired' ? 'block' : 'schedule'}"></i></span>
               <div class="ss-row-main"><div class="ss-row-top"><span class="ss-row-name">${kdsEsc(l.name)}</span><span class="ss-chip">${tag}</span></div>
               <div class="ss-row-meta"><span>${l.remainingQty} ${kdsEsc(l.unit)}</span><span>DLC ${d}</span>${l.supplierName ? `<span>${kdsEsc(l.supplierName)}</span>` : ''}</div></div>
-              <div class="ss-row-acts"><button type="button" class="ss-btn quiet danger" data-sk-dlc-waste="${kdsEsc(l.itemId)}" data-sk-dlc-lot="${kdsEsc(l.lotId || '')}" data-sk-dlc-qty="${l.remainingQty}"><i data-lucide="trash-2"></i><span>Déclarer en perte</span></button></div>
+              <div class="ss-row-acts"><button type="button" class="ss-btn quiet danger" data-sk-dlc-waste="${kdsEsc(l.itemId)}" data-sk-dlc-lot="${kdsEsc(l.lotId || '')}" data-sk-dlc-qty="${l.remainingQty}"><i data-icon="delete"></i><span>Déclarer en perte</span></button></div>
             </div>`;
           }).join('')}</div>
           ${expired ? `<div class="ss-sub ss-foot">${expired} lot${expired > 1 ? 's' : ''} déjà périmé${expired > 1 ? 's' : ''} · à sortir du stock.</div>` : ''}

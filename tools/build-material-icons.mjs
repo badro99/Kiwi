@@ -82,21 +82,27 @@ export function readGlyphs(root = ROOT) {
 
 export const readAliases = (root = ROOT) => JSON.parse(read(ALIAS_FILE, root));
 
-/* The rule the runtime applies, exported so the gate applies the same one. */
+/* The rule the runtime applies, exported so the gate applies the same one.
+   resolve() is for data-lucide (a Lucide name, mapped); a data-icon or
+   KiwiIcon.svg() name is already Material and never goes through the table:
+   "delete" is a Material trash can and a Lucide backspace key. */
 export function resolve(name, aliases) {
   const n = String(name || '');
   return Object.prototype.hasOwnProperty.call(aliases, n) ? aliases[n] : n.replace(/-/g, '_');
 }
+export const materialName = (name) => String(name || '').replace(/-/g, '_');
+export const resolveFor = (x, aliases) => (x.attr === 'lucide' ? resolve(x.name, aliases) : materialName(x.name));
 
 export function subsetOf(spec, glyphs, aliases, root = ROOT) {
-  const names = new Set(spec.also);
-  for (const f of spec.from) for (const x of iconNamesIn(read(f, root))) names.add(x.name);
+  /* `also` names come from data the page pours into data-lucide. */
+  const asked = spec.also.map((name) => ({ name, attr: 'lucide' }));
+  for (const f of spec.from) asked.push(...iconNamesIn(read(f, root)));
   const g = {}, a = {};
-  for (const n of [...names].sort()) {
-    const m = resolve(n, aliases);
+  for (const x of asked.sort((p, q) => (p.name < q.name ? -1 : p.name > q.name ? 1 : 0))) {
+    const m = resolveFor(x, aliases);
     if (!glyphs[m]) continue;
     g[m] = glyphs[m];
-    if (Object.prototype.hasOwnProperty.call(aliases, n)) a[n] = m;
+    if (x.attr === 'lucide' && Object.prototype.hasOwnProperty.call(aliases, x.name)) a[x.name] = m;
   }
   const sorted = {};
   for (const k of Object.keys(g).sort()) sorted[k] = g[k];
@@ -144,10 +150,14 @@ ${sub(`  var FULL = (function () {
     return true;
   }
 `)}
+  /* A data-lucide name is Lucide and is mapped; a data-icon or svg() name is
+     already Material and is used as it is ("delete" is a trash can there, a
+     backspace key in Lucide). */
   function resolve(name) {
     var n = String(name || '');
     return Object.prototype.hasOwnProperty.call(ALIASES, n) ? ALIASES[n] : n.replace(/-/g, '_');
   }
+  function asMaterial(name) { return String(name || '').replace(/-/g, '_'); }
 
   /* An unknown name still draws something (the ? glyph) so a layout never
      collapses, but it is reported once instead of passing for an icon. */
@@ -168,7 +178,7 @@ ${sub(`  var FULL = (function () {
     var tag = element.tagName.toLowerCase();
     if (!legacy && tag !== 'i' && !(tag === 'svg' && element.hasAttribute('data-material-symbol'))) return;
     var asked = (legacy ? element.getAttribute('data-lucide') : element.getAttribute('data-icon')) || FALLBACK;
-    var material = resolve(asked);
+    var material = legacy ? resolve(asked) : asMaterial(asked);
     if (tag === 'svg' && element.getAttribute('data-material-symbol') === material) return;
 ${sub(`    var d = glyph(material, asked);
     if (d === null) return;
@@ -208,7 +218,7 @@ ${sub(`    var d = glyph(material, asked);
      drawn as the fallback instead of being written out. */
   function svg(name, size, className) {
     var asked = String(name || FALLBACK);
-    var material = resolve(asked);
+    var material = asMaterial(asked);
     if (!NAME.test(material)) { glyph('', asked); material = FALLBACK; }
     var px = Number(size) || 24;
     var cls = ' class="material-symbol' + (className ? ' ' + String(className).replace(/"/g, '&quot;') : '') + '"';${sub(`
