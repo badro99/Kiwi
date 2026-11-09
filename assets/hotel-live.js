@@ -100,7 +100,8 @@
      été créé après l'ouverture de la page est annoncé. */
   function pollStays() {
     var slug = '';
-    try { slug = (window.KiwiCloudDoc && window.KiwiCloudDoc.slugFor && window.KiwiCloudDoc.slugFor()) || ''; } catch (_) {}
+    // The active store's slug: slugFor() needs a venue id, currentSlug() resolves the active one.
+    try { slug = (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug()) || ''; } catch (_) {}
     if (!slug || typeof fetch !== 'function') return Promise.resolve();
     var started = Date.now(), since = d1Since || openedAt - 9 * 60000;
     return fetch('/api/hotel/stays?merchant=' + encodeURIComponent(slug) + '&includeCancelled=1&updatedSince=' + since, { credentials: 'same-origin', cache: 'no-store' })

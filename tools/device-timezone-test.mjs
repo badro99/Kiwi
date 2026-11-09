@@ -117,7 +117,7 @@ check(surface({ path: '/dashboard.html', device: 'America/New_York' }) === 'Afri
 // 3b. The owner's setting (Horaires d'ouverture → Fuseau horaire) runs the real hours.js.
 {
   const posts = [];
-  const window = { KiwiConfig: { timezone: '' }, KiwiCloudDoc: { slugFor: () => 'tz-shop' }, addEventListener() {} };
+  const window = { KiwiConfig: { timezone: '' }, KiwiCloudDoc: { slugFor: (id) => (id === 'v-tz-shop' ? 'tz-shop' : ''), currentSlug: () => 'tz-shop' }, addEventListener() {} };
   const ctx = vm.createContext({ window, document: { addEventListener() {}, readyState: 'complete', querySelector: () => null }, localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     location: { pathname: '/dashboard.html', search: '' }, console, Date, Math, JSON, Intl, setTimeout, clearTimeout, setInterval() {},
     fetch: async (url, o) => { posts.push([url, JSON.parse(o.body)]); return { ok: true, json: async () => ({ ok: true, timeZone: JSON.parse(o.body).timeZone }) }; } });

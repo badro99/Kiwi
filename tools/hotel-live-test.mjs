@@ -22,7 +22,7 @@ function boot({ type = 'hotel', read = true, stays = null } = {}) {
   const document = { visibilityState: 'visible', addEventListener: (t, f) => { (listeners['doc:' + t] ||= []).push(f); }, querySelectorAll: () => [drawer] };
   const window = {
     addEventListener: (t, f) => { (listeners[t] ||= []).push(f); },
-    KiwiCloudDoc: { isReal: () => true, status: () => status, slugFor: () => 'riad-atlas', pullFeatures: async (f) => { pulls.push(f); } },
+    KiwiCloudDoc: { isReal: () => true, status: () => status, slugFor: (id) => (id === 'v-riad-atlas' ? 'riad-atlas' : ''), currentSlug: () => 'riad-atlas', pullFeatures: async (f) => { pulls.push(f); } },
     KiwiVenue: { getVenueType: () => type },
     KiwiReservations: { get: () => doc },
     KiwiHotelRooms: { current: () => ({ rooms: [{ id: 'room:105', n: 105 }, { id: 'room:101', n: 101 }] }) },

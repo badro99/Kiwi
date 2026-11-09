@@ -601,7 +601,7 @@
   function zoneChoices() { var z = storeZone(); return ZONE_CHOICES.indexOf(z) >= 0 ? ZONE_CHOICES.slice() : [z].concat(ZONE_CHOICES); }
   function setZone(zone, venueId) {
     var slug = '';
-    try { slug = (window.KiwiCloudDoc && window.KiwiCloudDoc.slugFor(venueId || undefined)) || ''; } catch (_) {}
+    try { var CD = window.KiwiCloudDoc; slug = (CD && (venueId ? CD.slugFor(venueId) : CD.currentSlug())) || ''; } catch (_) {}
     if (!slug) return Promise.resolve({ ok: false, error: 'no-store' });
     return fetch('/api/timezone', { method: 'POST', credentials: 'same-origin', cache: 'no-store',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant: slug, timeZone: zone }) })

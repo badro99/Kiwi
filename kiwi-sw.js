@@ -279,8 +279,8 @@ var SHELL = [
   '/assets/trade-workspace-schema.js?v=14',
   '/assets/trade-workspaces.js?v=21',
   '/assets/delivery-receivables.js?v=2',
-  '/assets/reservations.js?v=43',
-  '/assets/hotel-live.js?v=3',
+  '/assets/reservations.js?v=44',
+  '/assets/hotel-live.js?v=4',
   '/assets/pressing-numbering.js?v=12',
   '/assets/persistence-notices.js?v=2',
   '/assets/pressing-ops.js?v=40',
@@ -374,7 +374,7 @@ var SHELL = [
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et
      un contrôle qui ne peut pas se faire doit laisser passer · donc autant
      qu'il puisse se faire. */
-  '/assets/hours.js?v=7',
+  '/assets/hours.js?v=8',
   '/assets/hours-ui.js?v=5',
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
