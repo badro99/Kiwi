@@ -51,7 +51,7 @@
   // Arrays avoid the store's 400-key object limit and 120-character key limit.
   function versions(doc) {
     const fields = doc && doc.fieldEdits && doc.fieldEdits.fields;
-    return Array.isArray(fields) ? Object.fromEntries(fields.map(([k,at,id,seen,deleted]) => [k,{at,id,seen,deleted}])) : fields || {};
+    return Array.isArray(fields) ? Object.fromEntries(fields.map(([k,at,id,seen,deleted,edited]) => [k,{at,id,seen,deleted,edited:!!edited}])) : fields || {};
   }
   /* Bounded metadata: a plan edited every day for years must still fit its
    * store document. Each register remembers its 4 latest superseded versions
@@ -69,7 +69,7 @@
     const newest = Object.values(fields).reduce((m, v) => Math.max(m, +v.at || 0), 0);
     return Object.keys(fields).sort()
       .filter(k => !(fields[k].deleted && newest - (+fields[k].at || 0) > TOMBSTONE_MS))
-      .map(k => { const v = fields[k]; return [k,v.at,v.id,trimSeen(v.seen),!!v.deleted]; });
+      .map(k => { const v = fields[k], row = [k,v.at,v.id,trimSeen(v.seen),!!v.deleted]; if (v.edited) row.push(1); return row; });
   };
   function register(doc, fields, k, known) {
     const v = (known || versions(doc))[k];
@@ -87,7 +87,7 @@
         continue;
       }
       const old = register(prev, b, k, previousVersions);
-      fields[k] = { at, id:identity(k, at, [!!a[k], a[k] && a[k].value]), seen:[...new Set([...(old.seen || []), old.id])].sort(), deleted:!a[k] };
+      fields[k] = { at, id:identity(k, at, [!!a[k], a[k] && a[k].value]), seen:[...new Set([...(old.seen || []), old.id])].sort(), deleted:!a[k], edited:true };
     }
     out.fieldEdits = { fields:pack(fields), conflicts:trimConflicts(copy((out.fieldEdits || prev.fieldEdits || {}).conflicts || [])) };
     return out;
@@ -107,7 +107,10 @@
       if (!win.deleted && f) {
         values.push({ path:JSON.parse(k), value:f.value });
       }
-      if (hasA && hasB && av.id !== bv.id && stable(aa[k] && aa[k].value) !== stable(bb[k] && bb[k].value) && !(win.seen || []).includes(lose.id) && !(lose.seen || []).includes(win.id)) {
+      /* B28 · Only an EDIT that lost is a conflict. A register a device merely copied from what
+         it saw (stamp() records one for every field) is not: a guest cancelling online, or a
+         /api/hotel/stays write, changing a field this device never touched merges silently. */
+      if (hasA && hasB && lose.edited && av.id !== bv.id && stable(aa[k] && aa[k].value) !== stable(bb[k] && bb[k].value) && !(win.seen || []).includes(lose.id) && !(lose.seen || []).includes(win.id)) {
         const c = { field:k, kept:win.id, discarded:lose.id };
         // Credential conflicts never enter the journal.
         if (!/password|pinCode|manageToken|publicRef|secret|token/i.test(k)) { if (other) c.value = copy(other.value); conflicts.set(stable(c), c); }
