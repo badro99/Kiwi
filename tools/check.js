@@ -1725,6 +1725,7 @@ section('Whole-project regressions');
        fonctionnement sans JS restent présents à chaque nouveau guide. */
     'build-guides-check.mjs',
     'article-template-test.mjs',
+    'features-pages-test.mjs', // pages Fonctionnalités : source, SEO, prix, promesses prouvées (tools/feature-claims-map.json)
     /* /guide et /guides sans préfixe de langue tombaient dans le gate de
        compte et renvoyaient l'écran de connexion marchand. La redirection vit
        dans functions/_middleware.js, donc une suite d'assets ne la verrait
@@ -1751,9 +1752,7 @@ section('Whole-project regressions');
     /* DE/IT/NL servies dans leur langue (titre, H1, maquette), hreflang complet. */
     'landing-static-locale-test.mjs',
     'landing-rewrite-test.mjs',
-    /* Accueil : boutons d'inscription et messages WhatsApp, JSON-LD aligné sur le tarif, textes corrigés. */
-    'landing-home-test.mjs',
-    'landing-home-browser-test.mjs',
+    'landing-home-test.mjs', 'landing-home-browser-test.mjs', // accueil : inscription, WhatsApp, JSON-LD du tarif
     'landing-es-browser-test.mjs',
     /* Aucune page de la landing ne promet un chiffrement de bout en bout, et
        les tarifs montrent les quatre paliers de CLAUDE.md §7. */

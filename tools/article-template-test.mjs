@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { CATEGORIES, FEATURED, GOALS, HUBS, PATHS, PUBLISHED_LOCALES, TOPIC_CARDS, TOPIC_CATEGORY, TOPICS } from '../content/guides/manifest.mjs';
+import { FEATURE_HUB, FEATURE_LOCALES, FEATURE_PAGES } from '../content/features/manifest.mjs';
 
 const read = (path) => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const html = read('docs/templates/article.html');
@@ -53,8 +54,11 @@ const footerText = (source) => source
   .replace(/&amp;/g, '&')
   .replace(/\s+/g, ' ')
   .trim();
+/* « Fonctionnalités » mène au hub des fonctionnalités de la langue
+ * (tools/site-chrome.mjs) : c'est la même destination que l'ancre #features de
+ * l'accueil, en plus détaillé. */
 const footerHrefs = (source, locale = 'fr') => [...source.matchAll(/<a\b[^>]*href="([^"]+)"/g)]
-  .map((match) => match[1].replace(new RegExp(`^/${locale}/(?=#)`), ''));
+  .map((match) => (match[1] === FEATURE_HUB.routes[locale] ? '#features' : match[1].replace(new RegExp(`^/${locale}/(?=#)`), '')));
 
 let failures = 0;
 let checks = 0;
@@ -328,7 +332,9 @@ for (const locale of LANDING_LOCALES) {
   const actual = [...row.matchAll(/<xhtml:link rel="alternate" hreflang="([^"]+)" href="([^"]+)"/g)].map((match) => [match[1], match[2]]);
   ok(JSON.stringify(actual) === JSON.stringify(expected), `${locale.toUpperCase()} landing sitemap row is slash-final and matches the exact locale cluster`);
 }
-ok(sitemapRows.length === published.length + LANDING_LOCALES.length, 'sitemap contains only the manifested landings, hubs and localized articles');
+/* Les pages Fonctionnalités partagent le sitemap (tools/features-pages-test.mjs tient leurs lignes). */
+const featureRows = (FEATURE_PAGES.length + 1) * FEATURE_LOCALES.length;
+ok(sitemapRows.length === published.length + LANDING_LOCALES.length + featureRows, 'sitemap contains only the manifested landings, guide hubs, localized articles and feature pages');
 ok(!/<loc>https:\/\/kiwi-os\.com\/(?:fr|en|ar)<\/loc>/.test(sitemap), 'sitemap contains no redirecting slashless locale URL');
 
 try {

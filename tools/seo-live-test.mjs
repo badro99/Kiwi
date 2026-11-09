@@ -2,6 +2,7 @@
 // kiwi:network-only, needs the network or outside credentials; run by hand, never by the gate (tools/check-guard.js).
 
 import { LANDING_LOCALES, PUBLISHED_LOCALES, TOPICS } from '../content/guides/manifest.mjs';
+import { FEATURE_HUB, FEATURE_LOCALES, FEATURE_PAGES } from '../content/features/manifest.mjs';
 
 const SITE = 'https://kiwi-os.com';
 /* Seven landings, three guide languages (content/guides/manifest.mjs). The
@@ -11,12 +12,14 @@ const expectedRoutes = [
   ...LANDING_LOCALES.map((locale) => `/${locale}/`),
   ...PUBLISHED_LOCALES.map((locale) => `/${locale}/guides/`),
   ...TOPICS.flatMap((topic) => PUBLISHED_LOCALES.map((locale) => topic.routes[locale])),
+  ...[FEATURE_HUB, ...FEATURE_PAGES].flatMap((entry) => FEATURE_LOCALES.map((locale) => entry.routes[locale])),
 ];
 const expectedUrls = expectedRoutes.map((route) => SITE + route);
 const routeClusters = [
   [LANDING_LOCALES, Object.fromEntries(LANDING_LOCALES.map((locale) => [locale, `/${locale}/`]))],
   [PUBLISHED_LOCALES, Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/guides/`]))],
   ...TOPICS.map((topic) => [PUBLISHED_LOCALES, topic.routes]),
+  ...[FEATURE_HUB, ...FEATURE_PAGES].map((entry) => [FEATURE_LOCALES, entry.routes]),
 ];
 const expectedAlternatesByUrl = new Map(routeClusters.flatMap(([locales, routes]) => {
   const alternates = new Map([

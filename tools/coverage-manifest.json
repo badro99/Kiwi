@@ -1235,6 +1235,186 @@
       "state": "entry"
     },
     {
+      "id": "shell-fr-fonctionnalites-index",
+      "shells": [
+        "fr/fonctionnalites/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-fr-fonctionnalites-caisse-index",
+      "shells": [
+        "fr/fonctionnalites/caisse/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-fr-fonctionnalites-stock-catalogue-index",
+      "shells": [
+        "fr/fonctionnalites/stock-catalogue/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-fr-fonctionnalites-orderpro-index",
+      "shells": [
+        "fr/fonctionnalites/orderpro/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-en-features-index",
+      "shells": [
+        "en/features/index.html"
+      ],
+      "locales": [
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-en-features-point-of-sale-index",
+      "shells": [
+        "en/features/point-of-sale/index.html"
+      ],
+      "locales": [
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-en-features-inventory-catalog-index",
+      "shells": [
+        "en/features/inventory-catalog/index.html"
+      ],
+      "locales": [
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-en-features-orderpro-index",
+      "shells": [
+        "en/features/orderpro/index.html"
+      ],
+      "locales": [
+        "en"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-ar-features-index",
+      "shells": [
+        "ar/features/index.html"
+      ],
+      "locales": [
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-ar-features-نظام-الكاشير-index",
+      "shells": [
+        "ar/features/نظام-الكاشير/index.html"
+      ],
+      "locales": [
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-ar-features-المخزون-والكتالوج-index",
+      "shells": [
+        "ar/features/المخزون-والكتالوج/index.html"
+      ],
+      "locales": [
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
+      "id": "shell-ar-features-orderpro-index",
+      "shells": [
+        "ar/features/orderpro/index.html"
+      ],
+      "locales": [
+        "ar"
+      ],
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "state": "entry"
+    },
+    {
       "id": "shell-fr-robot-index",
       "shells": [
         "fr/robot/index.html"

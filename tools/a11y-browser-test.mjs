@@ -218,6 +218,16 @@ await S.run('annuaire · hub, fiche et inscription', async (t) => {
   }
   compare('directory', union(...found));
 });
+/* Les pages Fonctionnalités (novembre 2026) : le hub et la page Caisse, bureau
+ * et téléphone, sur le même cadre que les guides. */
+await S.run('fonctionnalités · hub et page caisse', async (t) => {
+  const found = [];
+  for (const url of ['/fr/fonctionnalites/index.html', '/fr/fonctionnalites/caisse/index.html']) {
+    found.push(await audit(t, await open(t, url, { kiwiLang: 'fr' }, { pin: false })));
+    found.push(await audit(t, await open(t, url, { kiwiLang: 'fr' }, { width: 390, height: 844, mobile: true, pin: false })));
+  }
+  compare('features', union(...found));
+});
 /* Support, état du service et pages légales : le pied de page de l'accueil y
  * mène, elles doivent tenir le même niveau (repère <main>, contrastes, noms). */
 await S.run('support, état et pages légales', async (t) => {
