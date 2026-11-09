@@ -1,5 +1,5 @@
 {
-  "sha256": "2f498ed875583e44ace3a562307070fffccb44da47161218828fe88a23c94046",
+  "sha256": "25ee1a66702df8c96c4bb08aa5a4d84f59d39b80fd38ab0f9b04cb648f823ee5",
   "parts": [
     {
       "name": "arrivals",
@@ -417,8 +417,8 @@
       "replacement": "hotelSection('receptionState').replaceState(id, cuHydrate(doc));"
     },
     {
-      "start": 259962,
-      "end": 259993,
+      "start": 260982,
+      "end": 261013,
       "original": "CUSTOM_HX[id] = cuHydrate(doc);",
       "replacement": "hotelSection('receptionState').replaceState(id, cuHydrate(doc));"
     },
@@ -429,14 +429,14 @@
       "replacement": "cuWriteLocal(hotelSection('receptionState').stateFor(id), id);"
     },
     {
-      "start": 260002,
-      "end": 260034,
+      "start": 261022,
+      "end": 261054,
       "original": "cuWriteLocal(CUSTOM_HX[id], id);",
       "replacement": "cuWriteLocal(hotelSection('receptionState').stateFor(id), id);"
     },
     {
-      "start": 260043,
-      "end": 260064,
+      "start": 261063,
+      "end": 261084,
       "original": "return CUSTOM_HX[id];",
       "replacement": "return hotelSection('receptionState').stateFor(id);"
     },

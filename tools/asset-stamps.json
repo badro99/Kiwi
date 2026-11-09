@@ -724,16 +724,16 @@
     "sha": "43c244b46e8787e2"
   },
   "assets/hotel-folio.js": {
-    "v": "5",
-    "sha": "00710704c55e7836"
+    "v": "6",
+    "sha": "e3f4ceb5b15036b2"
   },
   "assets/hotel-housekeeping.js": {
     "v": "1",
     "sha": "f3c949a80d343db2"
   },
   "assets/hotel-language.js": {
-    "v": "14",
-    "sha": "8f08ce5ec5664ec4"
+    "v": "15",
+    "sha": "ead51a0bb40f9264"
   },
   "assets/hotel-rates.js": {
     "v": "1",
@@ -744,8 +744,8 @@
     "sha": "894b034541608ffa"
   },
   "assets/hotel.js": {
-    "v": "98",
-    "sha": "e0c5653c83fd1125"
+    "v": "99",
+    "sha": "0efefaa9b1aa1b54"
   },
   "assets/hotel/arrivals.js": {
     "v": "11",
@@ -1476,12 +1476,12 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "100",
-    "sha": "489c2cda586bc018"
+    "v": "101",
+    "sha": "99251b2b1d185910"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "235",
-    "sha": "1867864cafd59739"
+    "v": "236",
+    "sha": "e622b1446810380b"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

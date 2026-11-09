@@ -411,7 +411,11 @@ for (const locale of LOCALES.filter(l => l === 'fr')) for (const [device, width,
     step('Régler le solde puis clôturer et recharger');
     await click('[data-action="nav-folios"]');
     await click('[data-action="hx-folio"][data-arg="101"]');
-    await click('[data-action="hx-checkout-pay"][data-arg="101|cash"]');
+    // B15 : encaisser le solde ne fait pas partir le client ; le départ est un geste à part.
+    await click('[data-action="hx-checkout-pay"][data-arg="101|cash|pay"]');
+    await wait(() => rooms().folios?.find(f => f.room === 101 && !f.closedAt)?.lines.every(l => l.paid));
+    assert.equal(stays().find(b => b.id === stay.id).status, 'checked_in', 'le client est toujours en chambre après l’encaissement');
+    await click('[data-action="hx-checkout-pay"][data-arg="101"]');
     await wait(() => stays().find(b => b.id === stay.id)?.status === 'completed' && rooms().folios?.some(f => f.stayId === stay.id && f.closedAt));
     await wait(() => Number(made.sql.prepare('SELECT COUNT(*) AS n FROM sales WHERE merchant=?').get(MERCHANT).n) === 2);
     const amounts = made.sql.prepare('SELECT amount_cents FROM sales WHERE merchant=? ORDER BY amount_cents').all(MERCHANT).map(r => r.amount_cents);
@@ -421,8 +425,9 @@ for (const locale of LOCALES.filter(l => l === 'fr')) for (const [device, width,
     await page.waitForFunction(() => !document.querySelector('.app.kw-app-hidden') && !document.querySelector('[data-kiwi-greet].is-visible'));
     assert.equal(stays().find(b => b.id === stay.id).status, 'completed');
     const closed = rooms().folios.find(f => f.stayId === stay.id && f.closedAt);
-    assert.equal(Math.round(closed.settlementAmount * 100), cents - paid);
-    assert.equal(paid + Math.round(closed.settlementAmount * 100), cents, 'Solde nul en centimes');
+    assert.equal(closed.settlementAmount, 0, 'le solde a été encaissé avant le départ');
+    assert.ok(closed.lines.every(l => l.paid), 'Solde nul : chaque ligne est réglée');
+    assert.equal(cents - paid, 10500, 'encaissé : la vente de 105 MAD');
     await click('[data-action="nav-chambres"]');
     await page.waitForSelector('[data-hx-room-card][data-arg="101"].st-sale');
   });

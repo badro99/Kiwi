@@ -3164,14 +3164,27 @@
       if (body) body.innerHTML = folioModalHtml(+room, true);
     };
     handlers['hx-checkout-pay'] = (el, arg) => {
-      const [roomArg, method] = String(arg || '').split('|');
+      const [roomArg, method, mode] = String(arg || '').split('|');
       const room = parseInt(roomArg, 10);
       const f = F()[room];
       if (!f) return;
       const due = folioTotal(f) - folioPaid(f);
+      /* « …|pay » encaisse sans faire partir le client (B15) : le règlement est
+         enregistré, les lignes passent « réglé », le séjour et la chambre restent
+         ouverts. Le départ reste un geste à part (« Départ »), une fois le solde réglé. */
+      const payOnly = mode === 'pay', open = f.lines.filter((l) => !l.paid);
+      if (payOnly && !(isCustomHotel() && Math.round(due * 100) > 0)) return;
       if (isCustomHotel()) {
-        if (!Number.isFinite(due) || due < 0 || (due > 0 && !recordSale(due, 'checkout-' + room + '-' + String(f.updatedAt || cuStamp()), 'Départ · Ch. ' + room, method))) {
-          toast(tx('Clôture non enregistrée'), { type: 'warn', desc: tx('Le folio et la chambre sont conservés. Vérifiez la connexion et l’enregistrement du règlement avant de réessayer.') });
+        if (!Number.isFinite(due) || due < 0 || (due > 0 && !recordSale(due, (payOnly ? 'folio-' : 'checkout-') + room + '-' + String(f.updatedAt || cuStamp()) + (payOnly ? '-' + open.length : ''), (payOnly ? 'Folio · Ch. ' : 'Départ · Ch. ') + room, method))) {
+          toast(tx(payOnly ? 'Encaissement non enregistré' : 'Clôture non enregistrée'), { type: 'warn', desc: tx(payOnly ? 'Le folio est inchangé et le client reste en chambre. Vérifiez la connexion et réessayez.' : 'Le folio et la chambre sont conservés. Vérifiez la connexion et l’enregistrement du règlement avant de réessayer.') });
+          return;
+        }
+        if (payOnly) {
+          open.forEach((l) => { l.paid = true; });
+          f.updatedAt = Math.max(cuStamp(), (+f.updatedAt || 0) + 1);
+          cuSave();
+          const body = el && el.closest ? el.closest('.kiwi-modal')?.querySelector('.kiwi-modal-body') : null;
+          if (body) body.innerHTML = folioModalHtml(room, false);
           return;
         }
         const closedAt = Math.max(cuStamp(), (+f.updatedAt || 0) + 1);

@@ -19,7 +19,7 @@ const instrumented = source.replace(/\}\)\(\);\s*$/, `
     cuState, cuHydrate, cuDocument, cuMerge, nowLabel,
     cuCommercialState, cuCommercialBody, cuQuoteRows, cuStayQuoteSignature, cuWireStayCommercial, cuLoadCommercial,
     cuProductionState, cuProductionBody, cuLoadProduction,cuSejoursBody,
-    cuRoomStatus, cuRoomOccupancy
+    cuRoomStatus, cuRoomOccupancy, folioModalHtml
   };
 })();`);
 const transportSource = fs.readFileSync('assets/request-deadline.mjs','utf8').replace('export ', '') + '\n' + fs.readFileSync('assets/hotel/request.mjs','utf8').replace(/^import .*;\n/gm,'').replace('export ', '');
@@ -575,6 +575,51 @@ test('checkout without a chosen tender records nothing (no silent card sale)', (
   f.handlers['hx-checkout-pay'](null, '1');
   assert.equal(sales.length, 0);
   assert.deepEqual(clone(f.window.KiwiHotelRooms.current()), before);
+});
+
+/* B15 · encaisser ne fait pas partir le client. Avant : « Espèces · 37 MAD » sur le folio
+   d'un walk-in enregistrait la vente ET clôturait le séjour (chambre à blanc, folio fermé). */
+function unpaidFolio() {
+  const f = folioFixture();
+  f.api.cuState().folios[1].lines.push({ label: 'Minibar', amt: 12.35, src: 'fee' });
+  return f;
+}
+test('B15 · taking a folio payment records it and keeps the stay, room and folio open', () => {
+  const f = unpaidFolio(), sales = [];
+  f.window.KiwiLive = { isOn: () => true, postSale: (sale) => { sales.push(sale); return { ok: true }; } };
+  const html = f.api.folioModalHtml(1);
+  assert.match(html, /data-action="hx-checkout-pay" data-arg="1\|cash\|pay">[^<]*37,35/, 'the cash button takes the payment, to the centime');
+  assert.match(html, /12,35/, 'the folio shows centimes');
+  assert.doesNotMatch(html, /data-action="hx-checkout-pay" data-arg="1(\|(cash|card))?"/, 'no departure while a balance is due');
+  f.handlers['hx-checkout-pay'](null, '1|cash|pay');
+  f.handlers['hx-checkout-pay'](null, '1|cash|pay');
+  assert.equal(sales.length, 1, 'a second click takes nothing more');
+  assert.equal(sales[0].amount, 37.35); assert.equal(sales[0].method, 'cash');
+  const doc = f.window.KiwiHotelRooms.current();
+  const room = doc.rooms.find((r) => r.n === 1), folio = doc.folios.find((x) => x.room === 1);
+  assert.equal(room.status, 'occ', 'the guest is still in the room');
+  assert.equal(room.guest, 'Synthetic Folio Guest');
+  assert.ok(folio && !folio.closedAt, 'the folio stays open');
+  assert.ok(folio.lines.every((l) => l.paid), 'every line is now paid');
+  assert.equal(f.requests.length, 0, 'no stay status change is sent');
+  const after = f.api.folioModalHtml(1);
+  assert.match(after, /data-action="hx-checkout-pay" data-arg="1">/, 'once settled, an explicit departure is offered');
+  assert.doesNotMatch(after, /\|pay"/);
+  f.handlers['hx-checkout-pay'](null, '1');
+  assert.equal(sales.length, 1, 'the departure takes no second payment');
+  const gone = f.window.KiwiHotelRooms.current();
+  assert.equal(gone.rooms.find((r) => r.n === 1).status, 'sale', 'the departure sends the room to housekeeping');
+  assert.equal(gone.folios.find((x) => x.room === 1).settlementState, 'previously-recorded');
+});
+
+test('B15 · a refused folio payment changes nothing', () => {
+  const f = unpaidFolio();
+  f.window.KiwiLive = { isOn: () => true, postSale: () => ({ ok: false }) };
+  const before = clone(f.window.KiwiHotelRooms.current()), storage = Array.from(f.data);
+  f.handlers['hx-checkout-pay'](null, '1|card|pay');
+  f.handlers['hx-checkout-pay'](null, '1||pay');
+  assert.deepEqual(clone(f.window.KiwiHotelRooms.current()), before);
+  assert.deepEqual(Array.from(f.data), storage);
 });
 
 test('rejected walk-in leaves room availability, folios and sold count unchanged', async () => {

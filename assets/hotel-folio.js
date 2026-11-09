@@ -7,16 +7,20 @@ window.__kiwiHotelInternal.define('folio', (scope) => {
     if (!f) return `<div style="padding:20px;color:var(--n-500);font-size:13px;">${tx('Aucun folio ouvert pour cette chambre.')}</div>`;
     const total = folioTotal(f);
     const paid = folioPaid(f);
+    /* Un vrai hôtel voit ses centimes : 12,35 reste 12,35 (B15). Un montant rond reste
+       court (la feuille tient sur un téléphone) ; la démo garde ses montants ronds. */
+    const money = (n) => { const c = Math.round(n * 100); if (!isCustomHotel() || c % 100 === 0) return MAD(n); const s = cuDraftMoney(c) + ' MAD'; return hxLang() === 'ar' ? '⁦' + s + '⁩' : s; };
+    const dueCents = Math.round((total - paid) * 100);
     const groups = ['room', 'resto', 'spa', 'fee', 'taxe'];
     const gHtml = groups.map((g) => {
       const lines = f.lines.filter((l) => l.src === g);
       if (!lines.length) return '';
       return `<div class="hx-fol-grp">
-        <div class="gh"><span class="hx-srcdot ${SRC_DOT[g]}"></span>${SRC_LBL[g]}<span style="margin-left:auto;font-weight:600;color:var(--ink);">${MAD(folioBySrc(f, g))}</span></div>
+        <div class="gh"><span class="hx-srcdot ${SRC_DOT[g]}"></span>${SRC_LBL[g]}<span style="margin-left:auto;font-weight:600;color:var(--ink);">${money(folioBySrc(f, g))}</span></div>
         ${lines.map((l) => `<div class="hx-fol-line${l.isNew && highlightNew ? ' new' : ''}">
           <span><span class="tm">${esc(l.t)}</span>${esc(l.label)}${l.paid ? ` <span class="hx-pill ok" style="margin-inline-start:6px;">${tx('RÉGLÉ')}</span>` : ''}</span>
           <span class="qt">${l.qty || ''}</span>
-          <span class="am">${MAD(l.amt)}</span>
+          <span class="am">${money(l.amt)}</span>
         </div>`).join('')}
       </div>`;
     }).join('');
@@ -29,15 +33,17 @@ window.__kiwiHotelInternal.define('folio', (scope) => {
         <span style="font-size:12px;color:var(--n-500);">${tx('{n} pers', { n: f.pax })} · ${tx('séjour {c}', { c: txn(f.nights, 'nuit') })} · ${roomTypeOf(room).name}</span>
       </div>
       ${gHtml}
-      <div class="hx-fol-tot"><span>${tx('Total folio')}</span><span class="am">${MAD(total)}</span></div>
-      ${paid > 0 ? `<div class="hx-fol-meta"><span>${tx('Dont déjà réglé')}</span><span style="font-family:var(--mono);">${MAD(paid)}</span></div>` : ''}
+      <div class="hx-fol-tot"><span>${tx('Total folio')}</span><span class="am">${money(total)}</span></div>
+      ${paid > 0 ? `<div class="hx-fol-meta"><span>${tx('Dont déjà réglé')}</span><span style="font-family:var(--mono);">${money(paid)}</span></div>` : ''}
       ${commission}
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap;">
         <button data-activation=write class="hx-btn ghost" data-action="hx-add-charge" data-arg="${room}">${tx('+ Ajouter une charge')}</button>
-        ${isCustomHotel() && total - paid > 0
-          ? `<button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}|cash">${tx('Espèces · {amount}', { amount: MAD(total - paid) })}</button>
-             <button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}|card">${tx('Carte · {amount}', { amount: MAD(total - paid) })}</button>`
-          : `<button data-activation=money class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}">${tx('Encaisser au check-out · {amount}', { amount: MAD(total - paid) })}</button>`}
+        ${!isCustomHotel()
+          ? `<button data-activation=money class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}">${tx('Encaisser au check-out · {amount}', { amount: MAD(total - paid) })}</button>`
+          : dueCents > 0
+            ? `<button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}|cash|pay">${tx('Espèces · {amount}', { amount: money(dueCents / 100) })}</button>
+             <button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}|card|pay">${tx('Carte · {amount}', { amount: money(dueCents / 100) })}</button>`
+            : `<button data-activation=write class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}">${tx('Départ')}</button>`}
       </div>`;
   }
 

@@ -1381,6 +1381,8 @@
     "Le folio et la chambre sont conservés. Vérifiez la connexion et l’enregistrement du règlement avant de réessayer.": { en: "The folio and the room are kept. Check the connection and the payment record before trying again.", ar: "الفاتورة والغرفة محفوظتان. تحقّق من الاتصال ومن تسجيل الأداء قبل إعادة المحاولة." },
     "Départ soldé · à remettre à blanc": { en: "Departure settled · to be turned over", ar: "مغادرة مسدَّدة · بانتظار التجهيز" },
     "Départ enregistré · Ch. {n}": { en: "Check-out saved · room {n}", ar: "سُجّلت المغادرة · الغرفة {n}" },
+    "Encaissement non enregistré": { en: "Payment not saved", ar: "لم يُسجَّل التحصيل" },
+    "Le folio est inchangé et le client reste en chambre. Vérifiez la connexion et réessayez.": { en: "The folio is unchanged and the guest stays in the room. Check the connection and try again.", ar: "الفاتورة دون تغيير ويبقى النزيل في غرفته. تحقّق من الاتصال وأعد المحاولة." },
     "Règlement ajouté à la file de synchronisation. Vérifiez sa confirmation dans les transactions.": { en: "Payment added to the sync queue. Check its confirmation in transactions.", ar: "أُضيف الأداء إلى قائمة المزامنة. تحقّق من تأكيده في المعاملات." },
     "Il reste {amount} MAD à régler. Confirmer le départ avec ce solde impayé ?": { en: "{amount} MAD remains due. Confirm checkout with this unpaid balance?", ar: "يتبقى {amount} درهم للدفع. هل تؤكد المغادرة بهذا الرصيد غير المدفوع؟" },
     "Solde nul. Le dernier folio clôturé est conservé dans les données de la chambre.": { en: "Zero balance. The last closed folio is kept in the room's data.", ar: "الرصيد صفر. آخر فاتورة مغلقة محفوظة في بيانات الغرفة." },
