@@ -379,6 +379,7 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
       btn.addEventListener('click', () => {
         if (btn.dataset.feature && isFeatureOff(btn.dataset.feature)) return;
         if (btn.dataset.mode && isFeatureOff(btn.dataset.mode)) return;
+        closeSideScreens();
         /* QUITTER LE MODE COMMANDE PAR LES PASTILLES.
            Le garde-fou refusait tout, toujours · y compris sur une mesa vide, où
            il n'y a rien à protéger. Or « j'ai ouvert la table par erreur, ils ne

@@ -18,29 +18,41 @@ function renderStock(){
       const alerts = stockItems.filter(i => skStatusOf(i) !== 'ok')
         .sort((a,b) => (skStatusOf(a)==='out'?0:1) - (skStatusOf(b)==='out'?0:1));
       const out = stockItems.filter(i => skStatusOf(i)==='out').length;
+      const low = alerts.length - out, okN = stockItems.length - alerts.length;
       const next = supplyOrders.find(o => o.status !== 'recue');
-      const kpis = `<div class="sk-kpis">
-        <div class="sk-kpi"><div class="sk-kpi-l">Valeur du stock<span class="sk-kpi-ico"><i data-lucide="wallet"></i></span></div><div class="sk-kpi-v">${fmtMAD(skTotalValue())}</div><div class="sk-kpi-sub">${stockItems.length} articles suivis</div></div>
-        <div class="sk-kpi"><div class="sk-kpi-l">En alerte<span class="sk-kpi-ico ${alerts.length?'warn':'ok'}"><i data-lucide="alert-triangle"></i></span></div><div class="sk-kpi-v ${alerts.length?'warn':''}">${alerts.length}</div><div class="sk-kpi-sub">${out} en rupture</div></div>
-        <div class="sk-kpi"><div class="sk-kpi-l">Prochaine livraison<span class="sk-kpi-ico"><i data-lucide="truck"></i></span></div><div class="sk-kpi-v" style="font-size:19px">${next ? next.when : '·'}</div><div class="sk-kpi-sub">${next ? kdsEsc(next.supplier) : 'Aucune commande active'}</div></div>
-        <div class="sk-kpi"><div class="sk-kpi-l">Fournisseurs<span class="sk-kpi-ico"><i data-lucide="contact"></i></span></div><div class="sk-kpi-v">${suppliers.length}</div><div class="sk-kpi-sub">actifs</div></div>
+      /* La santé du stock d'un coup d'œil : une barre, trois parts (au niveau,
+         bas, rupture), au lieu de quatre cartes de même poids. */
+      const seg = (n, cls) => n ? `<span class="ss-seg ${cls}" style="flex-grow:${n}"></span>` : '';
+      const hero = `<div class="ss-hero">
+        <div class="ss-worth">
+          <div class="ss-eyebrow">Valeur du stock</div>
+          <div class="ss-big">${fmtMAD(skTotalValue())}</div>
+          <div class="ss-sub">${stockItems.length} articles suivis</div>
+          <div class="ss-health" aria-hidden="true">${seg(okN,'ok')}${seg(low,'low')}${seg(out,'out')}</div>
+          <div class="ss-legend"><span class="ss-key ok"><b>${okN}</b><span>Au niveau</span></span><span class="ss-key low"><b>${low}</b><span>Stock bas</span></span><span class="ss-key out"><b>${out}</b><span>Rupture</span></span></div>
+        </div>
+        <div class="ss-tiles">
+          <div class="ss-tile"><span class="ss-tile-ico"><i data-icon="local_shipping"></i></span><div><div class="ss-eyebrow">Prochaine livraison</div><div class="ss-tile-v">${next ? kdsEsc(next.when) : '·'}</div><div class="ss-sub">${next ? kdsEsc(next.supplier) : 'Aucune commande active'}</div></div></div>
+          <div class="ss-tile"><span class="ss-tile-ico"><i data-icon="contacts"></i></span><div><div class="ss-eyebrow">Fournisseurs</div><div class="ss-tile-v">${suppliers.length}</div><div class="ss-sub">actifs</div></div></div>
+        </div>
       </div>`;
-      const quickActs = `<div class="sk-quick-acts" style="display:flex;gap:10px;margin-bottom:18px;">
-        <button class="ma-btn primary" data-sk-newwaste style="background:#dc2626;border-color:#b91c1c;padding:12px 18px;font-size:14px;border-radius:12px;font-weight:600;"><i data-lucide="trash-2"></i>Déclarer une perte</button>
-        <button class="ma-btn secondary" id="sk-apercu-recept-btn" data-sk-recept-act style="padding:12px 18px;font-size:14px;border-radius:12px;font-weight:600;"><i data-lucide="scan-line"></i>Réceptionner du stock</button>
-      </div>`;
+      /* Chaque alerte montre où en est l'article : la jauge part de zéro, le
+         trait marque le seuil d'alerte, le plein est le niveau par. */
+      const gauge = (stock, par, reorder) => {
+        const p = Math.max(1, +par || 0), pct = Math.max(0, Math.min(100, Math.round((+stock || 0) / p * 100)));
+        const th = reorder > 0 ? Math.min(100, Math.round(reorder / p * 100)) : 0;
+        return `<span class="ss-gauge" aria-hidden="true"><span class="ss-gauge-fill" style="width:${pct}%"></span>${th ? `<span class="ss-gauge-tick" style="inset-inline-start:${th}%"></span>` : ''}</span>`;
+      };
       const list = alerts.length
-        ? `<div class="sk-section"><div class="sk-section-head"><h3>Alertes stock</h3><span class="sk-badge warn">${alerts.length}</span></div><div class="sk-alerts">${alerts.map(it=>{
+        ? `<div class="ss-section"><div class="ss-head"><h3>Alertes stock</h3><span class="ss-count">${alerts.length}</span></div><div class="ss-rows">${alerts.map(it=>{
             const st = skStatusOf(it);
-            return `<div class="sk-alert ${st}"><div class="sk-alert-ico"><i data-lucide="${st==='out'?'x-octagon':'alert-triangle'}"></i></div>
-              <div class="sk-alert-body"><div class="sk-alert-top"><span class="sk-alert-name">${kdsEsc(it.name)}</span><span class="sk-alert-cat">${SK_CATS[it.cat]||it.cat}</span><span class="sk-alert-status ${st}">${st==='out'?'Rupture':'Bas'}</span></div>
-              <div class="sk-alert-meta">${it.stock} ${it.unit} en stock · niveau par ${it.par} ${it.unit} · ${kdsEsc(it.supplier)}</div></div>
-              <div style="display:flex;gap:6px;">
-                <button class="ma-btn secondary sk-mini" data-sk-waste="${it.id}" style="color:#b91c1c;"><i data-lucide="trash-2"></i>Perte</button>
-                <button class="ma-btn primary sk-mini" data-sk-order="${it.id}"><i data-lucide="truck"></i>Commander</button>
-              </div></div>`;
+            return `<div class="ss-row ${st}"><span class="ss-state" aria-hidden="true"><i data-icon="${st==='out'?'block':'trending_down'}"></i></span>
+              <div class="ss-row-main"><div class="ss-row-top"><span class="ss-row-name">${kdsEsc(it.name)}</span><span class="ss-chip">${st==='out'?'Rupture':'Stock bas'}</span></div>
+              <div class="ss-row-meta"><span>${SK_CATS[it.cat]||it.cat}</span><span>${kdsEsc(it.supplier)}</span></div></div>
+              <div class="ss-level"><div class="ss-level-n"><b>${it.stock}</b> / ${it.par} ${kdsEsc(it.unit)}</div>${gauge(it.stock, it.par, it.reorder)}</div>
+              <div class="ss-row-acts"><button type="button" class="ss-btn quiet danger" data-sk-waste="${it.id}"><i data-lucide="trash-2"></i><span>Perte</span></button><button type="button" class="ss-btn primary" data-sk-order="${it.id}"><i data-icon="local_shipping"></i><span>Commander</span></button></div></div>`;
           }).join('')}</div></div>`
-        : `<div class="sk-section"><div class="sk-empty"><i data-lucide="check-circle-2"></i>Tout est au niveau, aucune alerte.</div></div>`;
+        : `<div class="ss-section"><div class="ss-empty"><i data-icon="check_circle"></i><span>Tout est au niveau, aucune alerte.</span></div></div>`;
 
       // Dernières pertes (20 plus récentes, journée commerciale d'abord)
       const recentWaste = (function(){
@@ -78,31 +90,16 @@ function renderStock(){
         });
       })();
 
+      /* Une perte par ligne : l'heure, l'article et son motif, la quantité sortie, ce qu'elle a coûté. */
       const wasteSection = recentWaste.length ? `
-        <div class="sk-section" style="margin-top:20px;">
-          <div class="sk-section-head">
-            <h3>Dernières pertes</h3>
-            <span class="sk-badge" style="background:rgba(220,38,38,0.1);color:#991b1b;">${recentWaste.length}</span>
-          </div>
-          <div class="sk-tbl-wrap" tabindex="0" role="region" aria-label="${escTeam(window.KiwiCaisseLang?.tr('Dernières pertes') || 'Dernières pertes')}">
-            <table class="sk-tbl">
-              <thead><tr><th>Date &amp; heure</th><th>Article</th><th>Quantité</th><th>Motif</th><th>Valeur</th><th>Employé</th></tr></thead>
-              <tbody>
-                ${recentWaste.map(w => {
-                  const d = new Date(w.ts);
-                  const timeStr = (w.isToday ? "Aujourd'hui " : (d.toLocaleDateString('fr-FR') + ' ')) + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-                  return `<tr>
-                    <td class="sk-mono" style="font-size:12px;color:var(--n-600);">${timeStr}</td>
-                    <td><div class="sk-cell-name">${kdsEsc(w.name)}</div>${w.note ? `<div class="sk-cell-sub">${kdsEsc(w.note)}</div>` : ''}</td>
-                    <td class="sk-mono" style="color:#b91c1c;font-weight:600;">−${w.qty} ${kdsEsc(w.unit)}</td>
-                    <td><span class="sk-badge warn" style="font-size:11px;">${kdsEsc(w.reason)}</span></td>
-                    <td class="sk-mono">${fmtMAD(w.valMAD)}</td>
-                    <td style="font-size:12px;color:var(--n-600);">${kdsEsc(w.actor)}</td>
-                  </tr>`;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
+        <div class="ss-section" role="region" aria-label="${escTeam(window.KiwiCaisseLang?.tr('Dernières pertes') || 'Dernières pertes')}">
+          <div class="ss-head"><h3>Dernières pertes</h3><span class="ss-count">${recentWaste.length}</span><span class="ss-head-sum">−${fmtMAD(recentWaste.reduce((s, w) => s + w.valMAD, 0))}</span></div>
+          <ol class="ss-losses">${recentWaste.map(w => {
+            const d = new Date(w.ts);
+            return `<li class="ss-loss"><span class="ss-loss-t"><b>${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</b><span>${w.isToday ? "Aujourd'hui" : d.toLocaleDateString('fr-FR')}</span></span>
+              <div class="ss-loss-main"><div class="ss-loss-name">${kdsEsc(w.name)}</div><div class="ss-row-meta"><span class="ss-tag">${kdsEsc(w.reason)}</span>${w.note ? `<span>${kdsEsc(w.note)}</span>` : ''}<span>${kdsEsc(w.actor)}</span></div></div>
+              <span class="ss-loss-q">−${w.qty} ${kdsEsc(w.unit)}</span><span class="ss-loss-v">${fmtMAD(w.valMAD)}</span></li>`;
+          }).join('')}</ol>
         </div>` : '';
 
       // Lots proches de la DLC (7 jours) · un geste pour déclarer la perte, motif pré-rempli « Périmé »
@@ -112,21 +109,21 @@ function renderStock(){
         try { lots = (window.KiwiInventoryConsumption?.expiring && window.KiwiInventoryConsumption.expiring({ horizonDays: 7 })) || []; } catch (_) { lots = []; }
         if (!lots.length) return '';
         const expired = lots.filter(l => l.status === 'expired').length;
-        return `<div class="sk-section" style="margin-top:20px;">
-          <div class="sk-section-head"><h3>Dates limites</h3><span class="sk-badge warn">${lots.length}</span></div>
-          <div class="sk-alerts">${lots.slice(0, 12).map(l => {
+        return `<div class="ss-section">
+          <div class="ss-head"><h3>Dates limites</h3><span class="ss-count">${lots.length}</span></div>
+          <div class="ss-rows">${lots.slice(0, 12).map(l => {
             const d = new Date(l.expiresAt).toLocaleDateString('fr-FR');
             const tag = l.status === 'expired' ? 'Périmé' : (l.status === 'critical' ? `J-${Math.max(0, l.daysLeft)}` : `J-${l.daysLeft}`);
-            return `<div class="sk-alert ${l.status === 'expired' ? 'out' : 'low'}"><div class="sk-alert-ico"><i data-lucide="${l.status === 'expired' ? 'x-octagon' : 'clock'}"></i></div>
-              <div class="sk-alert-body"><div class="sk-alert-top"><span class="sk-alert-name">${kdsEsc(l.name)}</span><span class="sk-alert-status ${l.status === 'expired' ? 'out' : 'low'}">${tag}</span></div>
-              <div class="sk-alert-meta">${l.remainingQty} ${kdsEsc(l.unit)} · DLC ${d}${l.supplierName ? ' · ' + kdsEsc(l.supplierName) : ''}</div></div>
-              <button class="ma-btn secondary sk-mini" data-sk-dlc-waste="${kdsEsc(l.itemId)}" data-sk-dlc-lot="${kdsEsc(l.lotId || '')}" data-sk-dlc-qty="${l.remainingQty}" style="color:#b91c1c;"><i data-lucide="trash-2"></i>Déclarer en perte</button>
+            return `<div class="ss-row ${l.status === 'expired' ? 'out' : 'low'}"><span class="ss-state" aria-hidden="true"><i data-icon="${l.status === 'expired' ? 'block' : 'schedule'}"></i></span>
+              <div class="ss-row-main"><div class="ss-row-top"><span class="ss-row-name">${kdsEsc(l.name)}</span><span class="ss-chip">${tag}</span></div>
+              <div class="ss-row-meta"><span>${l.remainingQty} ${kdsEsc(l.unit)}</span><span>DLC ${d}</span>${l.supplierName ? `<span>${kdsEsc(l.supplierName)}</span>` : ''}</div></div>
+              <div class="ss-row-acts"><button type="button" class="ss-btn quiet danger" data-sk-dlc-waste="${kdsEsc(l.itemId)}" data-sk-dlc-lot="${kdsEsc(l.lotId || '')}" data-sk-dlc-qty="${l.remainingQty}"><i data-lucide="trash-2"></i><span>Déclarer en perte</span></button></div>
             </div>`;
           }).join('')}</div>
-          ${expired ? `<div class="sk-kpi-sub" style="margin-top:6px;">${expired} lot${expired > 1 ? 's' : ''} déjà périmé${expired > 1 ? 's' : ''} · à sortir du stock.</div>` : ''}
+          ${expired ? `<div class="ss-sub ss-foot">${expired} lot${expired > 1 ? 's' : ''} déjà périmé${expired > 1 ? 's' : ''} · à sortir du stock.</div>` : ''}
         </div>`;
       })();
-      return kpis + quickActs + list + dlcSection + wasteSection;
+      return hero + list + dlcSection + wasteSection;
     }
 
     function skFilteredItems(){

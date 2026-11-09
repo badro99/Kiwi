@@ -231,7 +231,7 @@
   <script src="assets/retail-scan.js?v=12" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=142" defer></script>
+  <script src="assets/caisse-lang.js?v=143" defer></script>
   <script src="assets/menu-i18n.js?v=8" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
@@ -250,7 +250,7 @@
   <link rel="stylesheet" href="assets/tokens.css?v=2053" />
 
   <link rel="stylesheet" href="assets/caisse-shell.css?v=29" />
-  <link rel="stylesheet" href="assets/caisse-skin.css?v=4" />
+  <link rel="stylesheet" href="assets/caisse-skin.css?v=4" /><link rel="stylesheet" href="assets/caisse-screens.css?v=1" />
   <style>
     /* Restaurant menu: keep every category within reach without a sideways swipe.
        This picker is shared by table orders and takeaway orders. */
@@ -419,7 +419,7 @@
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
   <script src="assets/orderpro-inbox.js?v=39" defer></script>
   <script src="assets/service-requests.js?v=2" defer></script>
-  <script src="assets/caisse-menu-availability.js?v=11" defer></script>
+  <script src="assets/caisse-menu-availability.js?v=12" defer></script>
   <script src="assets/caisse-pairs.js?v=3" defer></script>
   <script src="assets/caisse-doctor.js?v=1" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
@@ -1971,7 +1971,7 @@
         <div class="sub">Inventaire · commandes fournisseurs · inventaire physique</div>
       </div>
       <div class="sk-head-acts">
-        <button class="ma-btn secondary sk-head-recept" id="sk-new-waste-btn" data-sk-newwaste style="background:rgba(220,38,38,0.08);color:#b91c1c;border-color:rgba(220,38,38,0.25);"><i data-lucide="trash-2"></i>Déclarer une perte</button>
+        <button class="ma-btn secondary sk-head-recept sk-head-loss" id="sk-new-waste-btn" data-sk-newwaste><i data-lucide="trash-2"></i>Déclarer une perte</button>
         <button class="ma-btn primary sk-head-recept" id="sk-recept-btn"><i data-lucide="scan-line"></i>Réception</button>
         <button class="kds-close" id="stock-close-btn"><i data-lucide="x"></i><span>Fermer</span></button>
       </div>
@@ -2008,7 +2008,7 @@
   <link rel="preload" as="script" href="assets/caisse-floor.js?v=19" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-kitchen.js?v=29" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/catalogue.js?v=17" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse/till-frame.js?v=17" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse/till-frame.js?v=18" data-caisse-script>
   <link href="assets/caisse/orders.js?v=2" data-caisse-lazy="orders">
   <link rel="preload" as="script" href="assets/caisse/payment.js?v=9" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/split-tender.js?v=10" data-caisse-script>
@@ -2019,11 +2019,11 @@
   <link rel="preload" as="script" href="assets/caisse/returns.js?v=2" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/handover.js?v=2" data-caisse-script>
   <link href="assets/caisse-loyalty-reward.js?v=7" data-caisse-lazy="loyalty-reward">
-  <link href="assets/caisse/inventory.js?v=8" data-caisse-lazy="inventory">
+  <link href="assets/caisse/inventory.js?v=9" data-caisse-lazy="inventory">
   <link rel="preload" as="script" href="assets/caisse/offline.js?v=10" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/receipts.js?v=2" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/closing.js?v=2" data-caisse-script>
   <script src="assets/caisse/workflows-loader.js?v=3"></script>
-  <script src="assets/caisse-app.js?v=46"></script>
+  <script src="assets/caisse-app.js?v=47"></script>
 </body>
 </html>

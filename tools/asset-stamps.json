@@ -192,8 +192,8 @@
     "sha": "0149ec3062006a42"
   },
   "assets/caisse-app.js": {
-    "v": "46",
-    "sha": "bf565741f428f0e9"
+    "v": "47",
+    "sha": "bd8ba2f8b79cedde"
   },
   "assets/caisse-dna.css": {
     "v": "10",
@@ -220,8 +220,8 @@
     "sha": "c978ff18c9a0add3"
   },
   "assets/caisse-lang.js": {
-    "v": "142",
-    "sha": "06974afdb0092b2d"
+    "v": "143",
+    "sha": "bbf600ba2d738470"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -232,8 +232,8 @@
     "sha": "c6356a0e75018c0f"
   },
   "assets/caisse-menu-availability.js": {
-    "v": "11",
-    "sha": "18b0d6fedbf71be7"
+    "v": "12",
+    "sha": "3fc7228af2ae23df"
   },
   "assets/caisse-more-2027.css": {
     "v": "2",
@@ -262,6 +262,10 @@
   "assets/caisse-refresh.js": {
     "v": "9",
     "sha": "567fea581a1f1ecc"
+  },
+  "assets/caisse-screens.css": {
+    "v": "1",
+    "sha": "b4f3b64b27d3ce7f"
   },
   "assets/caisse-shell.css": {
     "v": "29",
@@ -300,8 +304,8 @@
     "sha": "1ab9c2aab29f69af"
   },
   "assets/caisse/inventory.js": {
-    "v": "8",
-    "sha": "2fb5e800c4a690b1"
+    "v": "9",
+    "sha": "090d6a1a5498dfc5"
   },
   "assets/caisse/offline.js": {
     "v": "10",
@@ -340,8 +344,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "17",
-    "sha": "a9ca0d9c44292114"
+    "v": "18",
+    "sha": "5a53d51d0534c766"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",

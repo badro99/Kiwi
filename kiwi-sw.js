@@ -140,7 +140,7 @@ var SHELL = [
   '/assets/caisse/closing.js?v=2',
   '/assets/caisse/workflows-loader.js?v=3',
   '/assets/caisse/catalogue.js?v=17',
-  '/assets/caisse/till-frame.js?v=17',
+  '/assets/caisse/till-frame.js?v=18',
   '/assets/caisse/orders.js?v=2',
   '/assets/caisse/payment.js?v=9',
   '/assets/caisse/split-tender.js?v=10',
@@ -150,9 +150,9 @@ var SHELL = [
   '/assets/caisse/discounts.js?v=4',
   '/assets/caisse/returns.js?v=2',
   '/assets/caisse/handover.js?v=2',
-  '/assets/caisse/inventory.js?v=8',
+  '/assets/caisse/inventory.js?v=9',
   '/assets/caisse/offline.js?v=10',
-  '/assets/caisse-app.js?v=46',
+  '/assets/caisse-app.js?v=47',
   '/assets/caisse-loyalty-reward.js?v=7',
   '/assets/caisse-refresh.js?v=9',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
@@ -345,6 +345,7 @@ var SHELL = [
   '/assets/dashboard-native.js?v=5',
   '/assets/pwa-update.js?v=368',
   '/assets/caisse-skin.css?v=4',
+  '/assets/caisse-screens.css?v=1',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=8',
   '/assets/caisse-pwa.js?v=631',
@@ -427,7 +428,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=37',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=142',
+  '/assets/caisse-lang.js?v=143',
   '/assets/venue-store.js?v=6',
   '/assets/discount-policy.js?v=4',
   '/assets/merchant-policies.js?v=4',

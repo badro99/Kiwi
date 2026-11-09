@@ -601,8 +601,21 @@
       }
       window.KiwiTillFrame.openMore(sections, kkt('till.nav.more'));
     }
+    /* Stock, Menu and the till check are full-screen pages over the till.
+       Choosing another place on the rail or in Plus leaves them, or they
+       stayed painted over Salle while the rail said Salle (owner, 2026-11-09).
+       Each page's own close button runs, so its sheet and state close too. */
+    function closeSideScreens() {
+      document.querySelectorAll('.kds-screen.is-open').forEach((s) => {
+        if (s.id === 'kds-screen') return;
+        const x = s.querySelector('#stock-close-btn, #menu-availability-close, #kd-close');
+        if (x) x.click();
+        s.classList.remove('is-open');
+      });
+    }
     function tillKitMore(id) {
       if (id === 'reload') { location.reload(); return; }
+      if (id !== 'sync' && id !== 'fullscreen') closeSideScreens();
       if (id === 'sync') {
         const tabs = window.KiwiTillFrame.tabs && window.KiwiTillFrame.tabs();
         tillKitOpenSync(tabs && tabs.shadowRoot ? tabs.shadowRoot.querySelector('[data-id="more"]') : null);
@@ -617,6 +630,7 @@
       if (id === 'more') { tillKitToggleMore(); window.KiwiTillFrame.paint({ rail: tillKitRail() }); return; }
       if (id && id.indexOf('m:') === 0) { tillKitSetMore(false); tillKitMore(id.slice(2)); return; }
       tillKitSetMore(false);
+      closeSideScreens();
       /* Another destination leaves the payment, as its back button does: the
          payment layer floated over the kitchen and the clients book while the
          rail said Cuisine (owner, 2026-10-24). The bill is kept. */
