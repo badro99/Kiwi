@@ -1,5 +1,5 @@
 {
-  "sha256": "25ee1a66702df8c96c4bb08aa5a4d84f59d39b80fd38ab0f9b04cb648f823ee5",
+  "sha256": "aed3c4940e8e3de0bc799d6fd06fe67405288ba99b93338e8a0501215bd4cc35",
   "parts": [
     {
       "name": "arrivals",
@@ -17,22 +17,22 @@
         {
           "name": "cuReceptionBuckets",
           "start": 55947,
-          "end": 56661,
+          "end": 57370,
           "offset": 619,
-          "length": 714
+          "length": 1423
         },
         {
           "name": "cuStayStatus",
-          "start": 65747,
-          "end": 67007,
-          "offset": 1335,
+          "start": 66456,
+          "end": 67716,
+          "offset": 2044,
           "length": 1260
         },
         {
           "name": "cuStayCancel",
-          "start": 67169,
-          "end": 68041,
-          "offset": 2597,
+          "start": 67878,
+          "end": 68750,
+          "offset": 3306,
           "length": 872
         }
       ]
@@ -52,36 +52,36 @@
       "fragments": [
         {
           "name": "cuPhotoEditorMarkup",
-          "start": 58422,
-          "end": 59297,
+          "start": 59131,
+          "end": 60006,
           "offset": 567,
           "length": 875
         },
         {
           "name": "cuRenderPhotoEditor",
-          "start": 59300,
-          "end": 59618,
+          "start": 60009,
+          "end": 60327,
           "offset": 1444,
           "length": 318
         },
         {
           "name": "cuShrinkHotelPhoto",
-          "start": 59621,
-          "end": 60790,
+          "start": 60330,
+          "end": 61499,
           "offset": 1764,
           "length": 1469
         },
         {
           "name": "cuRefreshFloorSelectors",
-          "start": 61520,
-          "end": 62246,
+          "start": 62229,
+          "end": 62955,
           "offset": 3235,
           "length": 726
         },
         {
           "name": "cuLinkConnectingRooms",
-          "start": 70862,
-          "end": 71656,
+          "start": 71571,
+          "end": 72365,
           "offset": 3963,
           "length": 794
         }
@@ -226,49 +226,49 @@
   "edits": [
     {
       "start": 55947,
-      "end": 56661,
-      "original": "function cuReceptionBuckets(stays, day, today) {\n    const buckets = { arrivals: [], departures: [], inhouse: [], attention: [] };\n    stays.forEach((b) => {\n      if (!b?.hotel || ['cancelled', 'no_show'].includes(b.status)) return;\n      const h = b.hotel;\n      if (h.checkIn === day) buckets.arrivals.push(b);\n      if (h.checkOut === day) buckets.departures.push(b);\n      // This is current presence, not a forecast inferred from booking dates.\n      if (b.status === 'checked_in') buckets.inhouse.push(b);\n      if ((b.status === 'checked_in' && h.checkOut < today) ||\n          (['requested', 'confirmed'].includes(b.status) && h.checkIn < today)) buckets.attention.push(b);\n    });\n    return buckets;\n  }",
+      "end": 57370,
+      "original": "function cuReceptionBuckets(stays, day, today) {\n    const buckets = { arrivals: [], departures: [], inhouse: [], attention: [] };\n    /* B22 · Past the check-out hour (11:00, as online booking states it), a guest still in\n       house on their departure day is late too. Same Casablanca clock as the caller's « today ». */\n    let lateToday = false;\n    try {\n      const parts = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());\n      const part = (type) => parts.find((x) => x.type === type)?.value;\n      lateToday = `${part('year')}-${part('month')}-${part('day')}` === today && +part('hour') >= 11;\n    } catch (_) {}\n    stays.forEach((b) => {\n      if (!b?.hotel || ['cancelled', 'no_show'].includes(b.status)) return;\n      const h = b.hotel;\n      if (h.checkIn === day) buckets.arrivals.push(b);\n      if (h.checkOut === day) buckets.departures.push(b);\n      // This is current presence, not a forecast inferred from booking dates.\n      if (b.status === 'checked_in') buckets.inhouse.push(b);\n      if ((b.status === 'checked_in' && (h.checkOut < today || (lateToday && h.checkOut === today))) ||\n          (['requested', 'confirmed'].includes(b.status) && h.checkIn < today)) buckets.attention.push(b);\n    });\n    return buckets;\n  }",
       "replacement": "function cuReceptionBuckets() { return hotelSection('arrivals').cuReceptionBuckets.apply(this, arguments); }"
     },
     {
-      "start": 65747,
-      "end": 67007,
+      "start": 66456,
+      "end": 67716,
       "original": "async function cuStayStatus(id, status, force = false, pin = '') {\n    const slug = cuMerchantSlug();\n    if (!slug || !id) return false;\n    try {\n      const res = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', merchant: slug, id, status, force, pin }) }, tx);\n      const data = await res.json().catch(() => ({}));\n      if (cuMerchantSlug() !== slug) return false;\n      if (res.status === 409 && data.error === 'stay-unpaid' && !force) {\n        const code = await (await import('./checkout-proof.mjs')).checkoutProof(scope.K(), tx, cuDraftMoney(data.owedCents));\n        if (code !== null && cuMerchantSlug() === slug) return cuStayStatus(id, status, true, code);\n      }\n      if (!res.ok && force) scope.toast(tx('Code manager refusé ou vérification indisponible.'), { type: 'warn' });\n      if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }\n    } catch (error) { scope.toast(error.message, { type: 'warn' }); }\n    return false;\n  }",
       "replacement": "async function cuStayStatus() { return hotelSection('arrivals').cuStayStatus.apply(this, arguments); }"
     },
     {
-      "start": 67169,
-      "end": 68041,
+      "start": 67878,
+      "end": 68750,
       "original": "async function cuStayCancel(id) {\n    const slug = cuMerchantSlug();\n    if (!slug || !id) return false;\n    await cuStayStatus(id, 'confirmed');\n    if (cuMerchantSlug() !== slug) return false;\n    try {\n      const res = await (await import('./request.mjs').catch(() => { throw new Error(tx('Chargement impossible. Réessayez.')); })).hotelRequest('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', merchant: slug, id }) }, tx);\n      const data = await res.json().catch(() => ({}));\n      if (cuMerchantSlug() !== slug) return false;\n      if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }\n    } catch (error) { scope.toast(error.message, { type: 'warn' }); }\n    return false;\n  }",
       "replacement": "async function cuStayCancel() { return hotelSection('arrivals').cuStayCancel.apply(this, arguments); }"
     },
     {
-      "start": 58422,
-      "end": 59297,
+      "start": 59131,
+      "end": 60006,
       "original": "function cuPhotoEditorMarkup(photos) {\n    return photos.length ? photos.map((p, i) => `<div class=\"hx-type-photo\"><img src=\"${esc(p.url)}\" alt=\"${esc(p.alt || '')}\"><span>${i === 0 ? tx('PHOTO PRINCIPALE') : ltr((i + 1) + ' / ' + photos.length)}</span><div><button type=\"button\" data-action=\"hx-type-photo-move\" data-arg=\"${i}:-1\" ${i === 0 ? 'disabled' : ''} aria-label=\"${tx('Déplacer avant')}\">←</button><button type=\"button\" data-action=\"hx-type-photo-move\" data-arg=\"${i}:1\" ${i === photos.length - 1 ? 'disabled' : ''} aria-label=\"${tx('Déplacer après')}\">→</button><button type=\"button\" data-action=\"hx-type-photo-remove\" data-arg=\"${i}\" aria-label=\"${tx('Retirer la photo')}\">×</button></div></div>`).join('') : `<div class=\"hx-type-photo-empty\"><b>${tx('Aucune photo')}</b><span>${tx('Le visuel Kiwi reste affiché tant que vous n’ajoutez rien.')}</span></div>`;\n  }",
       "replacement": "function cuPhotoEditorMarkup() { return hotelSection('roomBoard').cuPhotoEditorMarkup.apply(this, arguments); }"
     },
     {
-      "start": 59300,
-      "end": 59618,
+      "start": 60009,
+      "end": 60327,
       "original": "function cuRenderPhotoEditor(root) {\n    const host = root?.querySelector('[data-hx-type-photos]');\n    if (host) host.innerHTML = cuPhotoEditorMarkup(root.__hxPhotos || []);\n    const add = root?.querySelector('[data-action=\"hx-type-photo-pick\"]');\n    if (add) add.disabled = (root.__hxPhotos || []).length >= 8;\n  }",
       "replacement": "function cuRenderPhotoEditor() { return hotelSection('roomBoard').cuRenderPhotoEditor.apply(this, arguments); }"
     },
     {
-      "start": 59621,
-      "end": 60790,
+      "start": 60330,
+      "end": 61499,
       "original": "function cuShrinkHotelPhoto(file) {\n    if (!file || !/^image\\/(jpeg|png|webp|avif)$/i.test(file.type || '') || file.size < 900 * 1024 || typeof createImageBitmap !== 'function') return Promise.resolve(file);\n    return createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => createImageBitmap(file)).then((image) => {\n      const scale = Math.min(1, 1800 / Math.max(image.width, image.height));\n      const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.width * scale)); canvas.height = Math.max(1, Math.round(image.height * scale));\n      const ctx = canvas.getContext('2d'); if (!ctx) return file;\n      ctx.drawImage(image, 0, 0, canvas.width, canvas.height); try { image.close(); } catch (_) {}\n      return new Promise((resolve) => canvas.toBlob((blob) => {\n        if (!blob || blob.size >= file.size) return resolve(file);\n        const name = String(file.name || 'chambre').replace(/\\.[a-z0-9]{1,6}$/i, '') + '.jpg';\n        try { resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() })); } catch (_) { resolve(blob); }\n      }, 'image/jpeg', .84));\n    }).catch(() => file);\n  }",
       "replacement": "function cuShrinkHotelPhoto() { return hotelSection('roomBoard').cuShrinkHotelPhoto.apply(this, arguments); }"
     },
     {
-      "start": 61520,
-      "end": 62246,
+      "start": 62229,
+      "end": 62955,
       "original": "function cuRefreshFloorSelectors() {\n    if (typeof document === 'undefined' || !document.querySelectorAll) return;\n    const floors = cuFloorRows();\n    document.querySelectorAll('select[data-hx-room-floor-id], select[data-hx-bulk-floor-id]').forEach((sel) => {\n      const currentVal = sel.value;\n      const isBulk = sel.hasAttribute('data-hx-bulk-floor-id');\n      const prefix = isBulk ? `<option value=\"\">${tx('Ne pas modifier')}</option>` : '';\n      sel.innerHTML = prefix + floors.map((f) => `<option value=\"${esc(f.id)}\" ${f.id === currentVal ? 'selected' : ''}>${esc(f.name)}</option>`).join('');\n      if (currentVal && floors.some((f) => f.id === currentVal)) {\n        sel.value = currentVal;\n      }\n    });\n  }",
       "replacement": "function cuRefreshFloorSelectors() { return hotelSection('roomBoard').cuRefreshFloorSelectors.apply(this, arguments); }"
     },
     {
-      "start": 70862,
-      "end": 71656,
+      "start": 71571,
+      "end": 72365,
       "original": "function cuLinkConnectingRooms(st, roomA, roomB) {\n    if (!roomA || !roomB || roomA.id === roomB.id) return;\n    const now = cuStamp();\n    if (!Array.isArray(roomA.connectingRoomIds)) roomA.connectingRoomIds = [];\n    if (!Array.isArray(roomB.connectingRoomIds)) roomB.connectingRoomIds = [];\n    if (!roomA.connectingRoomIds.includes(roomB.id)) roomA.connectingRoomIds.push(roomB.id);\n    if (!roomB.connectingRoomIds.includes(roomA.id)) roomB.connectingRoomIds.push(roomA.id);\n    roomA.connectingMeta = { ...(roomA.connectingMeta || {}) };\n    roomB.connectingMeta = { ...(roomB.connectingMeta || {}) };\n    roomA.connectingMeta[roomB.id] = { at: now, linked: true };\n    roomB.connectingMeta[roomA.id] = { at: now, linked: true };\n    roomA.updatedAt = now;\n    roomB.updatedAt = now;\n  }",
       "replacement": "function cuLinkConnectingRooms() { return hotelSection('roomBoard').cuLinkConnectingRooms.apply(this, arguments); }"
     },
@@ -405,8 +405,8 @@
       "replacement": "set hotelCloud(value) { hotelSection('receptionState').setCloud(value); }"
     },
     {
-      "start": 230451,
-      "end": 230485,
+      "start": 231160,
+      "end": 231194,
       "original": "CUSTOM_HX[stateId] = acknowledged;",
       "replacement": "hotelSection('receptionState').replaceState(stateId, acknowledged);"
     },
@@ -417,8 +417,8 @@
       "replacement": "hotelSection('receptionState').replaceState(id, cuHydrate(doc));"
     },
     {
-      "start": 260982,
-      "end": 261013,
+      "start": 261691,
+      "end": 261722,
       "original": "CUSTOM_HX[id] = cuHydrate(doc);",
       "replacement": "hotelSection('receptionState').replaceState(id, cuHydrate(doc));"
     },
@@ -429,14 +429,14 @@
       "replacement": "cuWriteLocal(hotelSection('receptionState').stateFor(id), id);"
     },
     {
-      "start": 261022,
-      "end": 261054,
+      "start": 261731,
+      "end": 261763,
       "original": "cuWriteLocal(CUSTOM_HX[id], id);",
       "replacement": "cuWriteLocal(hotelSection('receptionState').stateFor(id), id);"
     },
     {
-      "start": 261063,
-      "end": 261084,
+      "start": 261772,
+      "end": 261793,
       "original": "return CUSTOM_HX[id];",
       "replacement": "return hotelSection('receptionState').stateFor(id);"
     },
@@ -453,26 +453,26 @@
       "replacement": "    hotelSection('receptionState').setCloud(hotelCloud);\n"
     },
     {
-      "start": 229505,
-      "end": 229515,
+      "start": 230214,
+      "end": 230224,
       "original": "hotelCloud",
       "replacement": "hotelSection('receptionState').cloud()"
     },
     {
-      "start": 229539,
-      "end": 229549,
+      "start": 230248,
+      "end": 230258,
       "original": "hotelCloud",
       "replacement": "hotelSection('receptionState').cloud()"
     },
     {
-      "start": 230696,
-      "end": 230706,
+      "start": 231405,
+      "end": 231415,
       "original": "hotelCloud",
       "replacement": "hotelSection('receptionState').cloud()"
     },
     {
-      "start": 230714,
-      "end": 230724,
+      "start": 231423,
+      "end": 231433,
       "original": "hotelCloud",
       "replacement": "hotelSection('receptionState').cloud()"
     },

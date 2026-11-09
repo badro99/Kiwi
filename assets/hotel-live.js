@@ -16,9 +16,15 @@
   'use strict';
   var POLL_MS = 30000;
   var COPY = {
-    fr: { booked: 'Nouvelle réservation en ligne', cancelled: 'Réservation en ligne annulée', room: 'Ch.', title: 'Réservations en ligne' },
-    en: { booked: 'New online booking', cancelled: 'Online booking cancelled', room: 'Room', title: 'Online bookings' },
-    ar: { booked: 'حجز جديد عبر الإنترنت', cancelled: 'أُلغي حجز عبر الإنترنت', room: 'غرفة', title: 'الحجوزات عبر الإنترنت' }
+    fr: { booked: 'Nouvelle réservation en ligne', cancelled: 'Réservation en ligne annulée', room: 'Ch.', title: 'Réservations en ligne',
+      lateToast: 'Départ en retard', late: 'Départs en retard', due: 'Départs du jour', toClean: 'À nettoyer avant une arrivée', noShow: 'Arrivées non faites',
+      today: 'aujourd’hui', tomorrow: 'demain' },
+    en: { booked: 'New online booking', cancelled: 'Online booking cancelled', room: 'Room', title: 'Online bookings',
+      lateToast: 'Late departure', late: 'Late departures', due: 'Departures today', toClean: 'To clean before an arrival', noShow: 'Arrivals not checked in',
+      today: 'today', tomorrow: 'tomorrow' },
+    ar: { booked: 'حجز جديد عبر الإنترنت', cancelled: 'أُلغي حجز عبر الإنترنت', room: 'غرفة', title: 'الحجوزات عبر الإنترنت',
+      lateToast: 'مغادرة متأخرة', late: 'مغادرات متأخرة', due: 'مغادرات اليوم', toClean: 'للتنظيف قبل وصول', noShow: 'وصول لم يتم',
+      today: 'اليوم', tomorrow: 'غدًا' }
   };
   var ACTIVE = { requested: 1, confirmed: 1, checked_in: 1 };
   var seen = null, events = [];
@@ -114,11 +120,80 @@
       }, function () {});
   }
 
+  /* B22 · Les rappels du jour de la réception, à l'heure déclarée de l'établissement :
+     départs en retard (après 11 h, comme l'annonce la réservation en ligne), départs du
+     jour, chambres à nettoyer avant une arrivée aujourd'hui ou demain, arrivées non faites
+     le soir (18 h). Relus toutes les ~5 min depuis D1 ; un nouveau retard s'annonce une fois. */
+  var desk = { late: [], due: [], toClean: [], noShow: [] }, lateSeen = {}, deskTick = 0;
+  function zoneNow() {
+    var zone = 'Africa/Casablanca';
+    try { zone = (window.KiwiHours && window.KiwiHours.zone && window.KiwiHours.zone()) || zone; } catch (_) {}
+    try {
+      var p = new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+      var v = function (t) { var x = p.find(function (y) { return y.type === t; }); return x ? x.value : ''; };
+      return { today: v('year') + '-' + v('month') + '-' + v('day'), hour: +v('hour') };
+    } catch (_) { return null; }
+  }
+  function addDays(iso, n) { var d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  function computeDesk(inHouse, around, now) {
+    var tomorrow = addDays(now.today, 1), out = { late: [], due: [], toClean: [], noShow: [] }, rooms = [];
+    inHouse.forEach(function (b) {
+      var h = (b && b.hotel) || {};
+      if (!b || b.status !== 'checked_in' || !h.checkOut) return;
+      if (h.checkOut < now.today || (h.checkOut === now.today && now.hour >= 11)) out.late.push(b);
+      else if (h.checkOut === now.today) out.due.push(b);
+    });
+    try { var d = window.KiwiHotelRooms && window.KiwiHotelRooms.current && window.KiwiHotelRooms.current(); rooms = (d && d.rooms) || []; } catch (_) {}
+    around.forEach(function (b) {
+      var h = (b && b.hotel) || {};
+      if (!b || !ACTIVE[b.status] || b.status === 'checked_in') return;
+      if (h.checkIn === now.today && now.hour >= 18) out.noShow.push(b);
+      if (h.checkIn !== now.today && h.checkIn !== tomorrow) return;
+      var room = rooms.find(function (r) { return r && r.id === b.resourceId; });
+      if (room && (room.hk === 'dirty' || room.status === 'sale')) out.toClean.push({ b: b, when: h.checkIn === now.today ? 'today' : 'tomorrow' });
+    });
+    return out;
+  }
+  function who(b) { return [roomLabel(b), (b.customer && b.customer.name) || b.code || ''].filter(Boolean).join(' '); }
+  function refreshDesk(force) {
+    if (!force && (deskTick++ % 10)) return Promise.resolve();
+    var slug = '', now = zoneNow();
+    try { slug = (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug()) || ''; } catch (_) {}
+    if (!slug || !now || typeof fetch !== 'function') return Promise.resolve();
+    var base = '/api/hotel/stays?merchant=' + encodeURIComponent(slug);
+    var get = function (q) {
+      return fetch(base + q, { credentials: 'same-origin', cache: 'no-store' })
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (j) { return (j && Array.isArray(j.stays)) ? j.stays : []; }, function () { return []; });
+    };
+    return Promise.all([get('&status=checked_in'), get('&from=' + now.today + '&to=' + addDays(now.today, 1))]).then(function (res) {
+      desk = computeDesk(res[0], res[1], now);
+      var fresh = desk.late.filter(function (b) { var k = b.id + ':' + now.today; if (lateSeen[k]) return false; lateSeen[k] = 1; return true; });
+      if (fresh.length) {
+        try { window.Kiwi && window.Kiwi.toast && window.Kiwi.toast(L().lateToast, { type: 'warn', desc: fresh.slice(0, 4).map(who).join(' · ') + (fresh.length > 4 ? ' …' : '') }); } catch (_) {}
+      }
+    });
+  }
+  function deskHtml() {
+    var c = L(), out = '';
+    var row = function (title, items, fmt) {
+      if (!items.length) return;
+      out += '<div class="notif unread"><div class="n-body"><div class="n-title">' + esc(title) + ' · ' + items.length + '</div><div class="n-desc">' +
+        esc(items.slice(0, 8).map(fmt).join(' · ') + (items.length > 8 ? ' …' : '')) + '</div></div></div>';
+    };
+    row(c.late, desk.late, who);
+    row(c.due, desk.due, who);
+    row(c.toClean, desk.toClean, function (x) { return roomLabel(x.b) + ' (' + c[x.when] + ')'; });
+    row(c.noShow, desk.noShow, who);
+    return out;
+  }
+
   function poll() {
     try {
       if (document.visibilityState === 'visible' && onHotel() && window.KiwiCloudDoc && window.KiwiCloudDoc.pullFeatures) {
         window.KiwiCloudDoc.pullFeatures(['reservations', 'rooms']).then(scan, function () {});
         pollStays();
+        refreshDesk(false);
       }
     } catch (_) {}
   }
@@ -127,13 +202,13 @@
      on met en tête ce qui vient d'arriver en ligne. */
   function bellHtml() {
     var c = L();
-    return '<div id="kiwi-hotel-live">' + events.map(function (e) {
+    return '<div id="kiwi-hotel-live">' + deskHtml() + events.map(function (e) {
       return '<div class="notif unread"><div class="n-body"><div class="n-title">' + esc(c[e.kind]) + '</div><div class="n-desc">' + esc(e.text) + '</div>' +
         '<div class="n-time">' + esc(new Date(e.at).toTimeString().slice(0, 5)) + '</div></div></div>';
     }).join('') + '</div>';
   }
   function addToBell() {
-    if (!events.length) return;
+    if (!events.length && !deskHtml()) return;
     var backs = document.querySelectorAll('.kiwi-drawer-backdrop'), back = backs[backs.length - 1];
     var body = back && back.querySelector('.kiwi-drawer-body');
     if (!body || body.querySelector('#kiwi-hotel-live')) return;
@@ -151,7 +226,7 @@
 
   window.addEventListener('kiwi-reservations-changed', scan);
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') poll(); });
-  setTimeout(function () { wire(); scan(); }, 2000);
+  setTimeout(function () { wire(); scan(); if (onHotel()) refreshDesk(true); }, 2000);
   setInterval(poll, POLL_MS);
-  window.KiwiHotelLive = { scan: scan, poll: poll, events: function () { return events.slice(); }, bellHtml: bellHtml };
+  window.KiwiHotelLive = { scan: scan, poll: poll, events: function () { return events.slice(); }, bellHtml: bellHtml, desk: function () { return desk; }, refreshDesk: refreshDesk };
 })();

@@ -8,6 +8,14 @@ function cuStaysChanged(...args) { return scope.cuStaysChanged.apply(this, args)
 function tx(...args) { return scope.tx.apply(this, args); }
 function cuReceptionBuckets(stays, day, today) {
     const buckets = { arrivals: [], departures: [], inhouse: [], attention: [] };
+    /* B22 · Past the check-out hour (11:00, as online booking states it), a guest still in
+       house on their departure day is late too. Same Casablanca clock as the caller's « today ». */
+    let lateToday = false;
+    try {
+      const parts = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+      const part = (type) => parts.find((x) => x.type === type)?.value;
+      lateToday = `${part('year')}-${part('month')}-${part('day')}` === today && +part('hour') >= 11;
+    } catch (_) {}
     stays.forEach((b) => {
       if (!b?.hotel || ['cancelled', 'no_show'].includes(b.status)) return;
       const h = b.hotel;
@@ -15,7 +23,7 @@ function cuReceptionBuckets(stays, day, today) {
       if (h.checkOut === day) buckets.departures.push(b);
       // This is current presence, not a forecast inferred from booking dates.
       if (b.status === 'checked_in') buckets.inhouse.push(b);
-      if ((b.status === 'checked_in' && h.checkOut < today) ||
+      if ((b.status === 'checked_in' && (h.checkOut < today || (lateToday && h.checkOut === today))) ||
           (['requested', 'confirmed'].includes(b.status) && h.checkIn < today)) buckets.attention.push(b);
     });
     return buckets;

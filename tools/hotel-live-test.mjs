@@ -13,7 +13,7 @@ import vm from 'node:vm';
 
 const hotelLiveJs = fs.readFileSync(new URL('../assets/hotel-live.js', import.meta.url), 'utf8');
 
-function boot({ type = 'hotel', read = true, stays = null } = {}) {
+function boot({ type = 'hotel', read = true, stays = null, at = null, rooms = null } = {}) {
   const listeners = {}, timers = [], intervals = [], toasts = [], pulls = [];
   const doc = { bookings: [{ id: 'bk-old', code: 'H-OLD00001', source: 'public', status: 'confirmed', resourceId: 'room:101', hotel: { checkIn: '2026-11-12', checkOut: '2026-11-13' } }] };
   const status = [{ feature: 'reservations', read }];
@@ -25,12 +25,14 @@ function boot({ type = 'hotel', read = true, stays = null } = {}) {
     KiwiCloudDoc: { isReal: () => true, status: () => status, slugFor: (id) => (id === 'v-riad-atlas' ? 'riad-atlas' : ''), currentSlug: () => 'riad-atlas', pullFeatures: async (f) => { pulls.push(f); } },
     KiwiVenue: { getVenueType: () => type },
     KiwiReservations: { get: () => doc },
-    KiwiHotelRooms: { current: () => ({ rooms: [{ id: 'room:105', n: 105 }, { id: 'room:101', n: 101 }] }) },
+    KiwiHotelRooms: { current: () => ({ rooms: rooms || [{ id: 'room:105', n: 105 }, { id: 'room:101', n: 101 }] }) },
+    KiwiHours: { zone: () => 'Africa/Casablanca' },
     Kiwi: { toast: (m, o) => toasts.push({ m, desc: o && o.desc, type: o && o.type }), handlers: { notifications: () => 'drawer' } },
   };
   const asked = [];
-  const fetch = stays ? async (url) => { asked.push(url); return { ok: true, json: async () => ({ ok: true, stays: stays() }) }; } : undefined;
-  vm.runInNewContext(hotelLiveJs, { window, document, Intl, Date, Promise, fetch, setTimeout: (f) => timers.push(f), setInterval: (f, ms) => intervals.push([f, ms]) });
+  const fetch = stays ? async (url) => { asked.push(url); return { ok: true, json: async () => ({ ok: true, stays: stays(url) }) }; } : undefined;
+  const Clock = at == null ? Date : class extends Date { constructor(...a) { super(...(a.length ? a : [at])); } static now() { return at; } };
+  vm.runInNewContext(hotelLiveJs, { window, document, Intl, Date: Clock, Promise, fetch, setTimeout: (f) => timers.push(f), setInterval: (f, ms) => intervals.push([f, ms]) });
   const fire = (t) => (listeners[t] || []).forEach((f) => f({}));
   return { window, document, doc, status, toasts, pulls, timers, intervals, fire, body, asked };
 }
@@ -92,7 +94,7 @@ function boot({ type = 'hotel', read = true, stays = null } = {}) {
   t.timers.forEach((f) => f());
   t.intervals[0][0](); await new Promise((r) => setTimeout(r, 0));
   assert.equal(t.toasts.length, 0, 'a booking made before the page opened is not announced');
-  assert.match(t.asked[0], /\/api\/hotel\/stays\?merchant=riad-atlas&includeCancelled=1&updatedSince=\d+/, 'D1 is asked what changed, at any date');
+  assert.ok(t.asked.some((u) => /\/api\/hotel\/stays\?merchant=riad-atlas&includeCancelled=1&updatedSince=\d+/.test(u)), 'D1 is asked what changed, at any date');
   rows = [before, far];
   t.intervals[0][0](); await new Promise((r) => setTimeout(r, 0));
   assert.equal(t.toasts.length, 1, 'the far-out online booking is announced');
@@ -102,6 +104,38 @@ function boot({ type = 'hotel', read = true, stays = null } = {}) {
   rows = [before, { ...far, status: 'cancelled', updatedAt: Date.now() + 2000 }];
   t.intervals[0][0](); await new Promise((r) => setTimeout(r, 0));
   assert.equal(t.toasts[1]?.m, 'Réservation en ligne annulée', 'its cancellation is announced');
+}
+
+// 5 · B22 · departure-day reminders, at the store's declared time (Africa/Casablanca, UTC+1 in November).
+{
+  const rooms = [{ id: 'room:206', n: 206 }, { id: 'room:303', n: 303 }, { id: 'room:202', n: 202, hk: 'dirty' }, { id: 'room:105', n: 105 }, { id: 'room:110', n: 110 }];
+  const inHouse = [
+    { id: 's-overdue', code: 'H-OVER', status: 'checked_in', resourceId: 'room:206', customer: { name: 'Dupont' }, hotel: { checkIn: '2026-11-07', checkOut: '2026-11-09' } },
+    { id: 's-today', code: 'H-TODAY', status: 'checked_in', resourceId: 'room:303', customer: { name: 'Benali' }, hotel: { checkIn: '2026-11-08', checkOut: '2026-11-10' } },
+    { id: 's-later', code: 'H-LATER', status: 'checked_in', resourceId: 'room:110', customer: { name: 'Kim' }, hotel: { checkIn: '2026-11-09', checkOut: '2026-11-12' } },
+  ];
+  const around = [
+    { id: 'a-sahara', code: 'H-SAHARA', status: 'confirmed', resourceId: 'room:202', customer: { name: 'Sahara' }, hotel: { checkIn: '2026-11-11', checkOut: '2026-11-13' } },
+    { id: 'a-today', code: 'H-ARR', status: 'confirmed', resourceId: 'room:105', customer: { name: 'Haddad' }, hotel: { checkIn: '2026-11-10', checkOut: '2026-11-11' } },
+  ];
+  const stays = (url) => (/status=checked_in/.test(url) ? inHouse : /from=/.test(url) ? around : []);
+  const run = async (iso) => { const t = boot({ stays, rooms, at: Date.parse(iso) }); t.timers.forEach((f) => f()); await new Promise((r) => setTimeout(r, 0)); return t; };
+
+  const morning = await run('2026-11-10T07:30:00Z');                     // 08:30 in Casablanca
+  let desk = morning.window.KiwiHotelLive.desk();
+  assert.equal(JSON.stringify(desk.late.map((b) => b.id)), '["s-overdue"]', 'morning: only yesterday\'s departure is late');
+  assert.equal(JSON.stringify(desk.due.map((b) => b.id)), '["s-today"]', 'morning: today\'s departure is due');
+  assert.equal(JSON.stringify(desk.toClean.map((x) => x.b.resourceId + ':' + x.when)), '["room:202:tomorrow"]', 'a dirty room with an arrival tomorrow is flagged');
+  assert.equal(desk.noShow.length, 0, 'arrivals are not « missed » in the morning');
+  assert.match(morning.window.KiwiHotelLive.bellHtml(), /Départs en retard · 1[\s\S]*Départs du jour · 1[\s\S]*À nettoyer avant une arrivée · 1[\s\S]*Ch\. 202 \(demain\)/, 'the bell lists the day');
+  assert.equal(morning.toasts.length, 1, 'the late departure is announced once');
+  assert.match(morning.toasts[0].desc, /Ch\. 206 Dupont/);
+
+  const evening = await run('2026-11-10T18:30:00Z');                     // 19:30 in Casablanca
+  desk = evening.window.KiwiHotelLive.desk();
+  assert.equal(JSON.stringify(desk.late.map((b) => b.id).sort()), '["s-overdue","s-today"]', 'after 11:00, today\'s departure still in house is late');
+  assert.equal(JSON.stringify(desk.noShow.map((b) => b.id)), '["a-today"]', 'in the evening, an arrival not checked in is listed');
+  assert.match(evening.toasts[0].desc, /Ch\. 206 Dupont · Ch\. 303 Benali/, 'one grouped announcement');
 }
 
 console.log('✓ hotel-live: front-desk pages re-read reservations and rooms every 30 s; online bookings and cancellations are announced once, in the bell too');

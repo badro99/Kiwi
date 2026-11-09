@@ -229,7 +229,12 @@ test('daily movements use the selected day; presence and overdue use current sta
   assert.deepEqual(ids(buckets.arrivals), ['arrival', 'arrived']);
   assert.deepEqual(ids(buckets.departures), ['departed', 'departure']);
   assert.deepEqual(ids(buckets.inhouse), ['arrived', 'departure', 'overdue-house']);
-  assert.deepEqual(ids(buckets.attention), ['overdue-arrival', 'overdue-house', 'overdue-request']);
+  // B22 · the fixture clock is 14:24 in Casablanca, past the 11:00 check-out: today's in-house departure is late.
+  assert.deepEqual(ids(buckets.attention), ['departure', 'overdue-arrival', 'overdue-house', 'overdue-request']);
+  const morning = boot();
+  morning.tick(Date.parse(TODAY + 'T08:30:00Z') - Date.parse(TODAY + 'T13:24:00Z'));   // 09:30 in Casablanca
+  assert.deepEqual(ids(morning.api.cuReceptionBuckets(rows, TODAY, TODAY).attention), ['overdue-arrival', 'overdue-house', 'overdue-request'],
+    'before 11:00 a guest due out today is not late yet');
   const future = f.api.cuReceptionBuckets(rows, '2026-09-09', TODAY);
   assert.deepEqual(ids(future.arrivals), ['future']);
   assert.deepEqual(ids(future.inhouse), ids(buckets.inhouse));

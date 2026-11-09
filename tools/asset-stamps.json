@@ -736,8 +736,8 @@
     "sha": "ead51a0bb40f9264"
   },
   "assets/hotel-live.js": {
-    "v": "4",
-    "sha": "3627b1162f1287ce"
+    "v": "5",
+    "sha": "e53bbbe5d95cea49"
   },
   "assets/hotel-rates.js": {
     "v": "1",
@@ -752,8 +752,8 @@
     "sha": "0efefaa9b1aa1b54"
   },
   "assets/hotel/arrivals.js": {
-    "v": "11",
-    "sha": "cb650eda99b6fe9a"
+    "v": "12",
+    "sha": "00caf4e859f1f5c7"
   },
   "assets/hotel/editors.js": {
     "v": "11",
@@ -1480,8 +1480,8 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "101",
-    "sha": "99251b2b1d185910"
+    "v": "102",
+    "sha": "0c09c0b378f2661a"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "237",
@@ -2028,8 +2028,8 @@
     "sha": "4fd568c0b955146b"
   },
   "assets/reservations.js": {
-    "v": "44",
-    "sha": "5ae89be1d7f9d96c"
+    "v": "45",
+    "sha": "e0c2ed3e44fa7274"
   },
   "assets/restaurant-menu-workspace.js": {
     "v": "138",
