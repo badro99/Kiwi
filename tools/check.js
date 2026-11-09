@@ -637,7 +637,7 @@ for (const test of [
   'kitchen-properties-test.mjs',
   'booking-manage-test.mjs',
   'locale-booking-wave-n-test.mjs',
-  'booking-hotel-beyond-window-test.mjs', 'booking-overdue-stay-test.mjs', 'booking-manage-hotel-copy-test.mjs',
+  'booking-hotel-beyond-window-test.mjs', 'booking-overdue-stay-test.mjs', 'booking-manage-hotel-copy-test.mjs', 'hotel-room-move-test.mjs',
   'hotel-dossier-safety-test.mjs',
   'cloud-doc-quota-test.mjs',
   'cloud-doc-retry-test.js', 'hotel-live-test.mjs', 'online-booking-survives-test.mjs', 'field-merge-observed-test.mjs',

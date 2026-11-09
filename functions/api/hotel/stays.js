@@ -263,6 +263,23 @@ function currentRoomFree(hotel, room, startAt, endAt, zone = TZ) {
 export const MAX_DOC_BOOKINGS = 250;
 export const HARD_DOC_LIMIT = 300;
 
+/* B11 · A guest moved while in house keeps the trace of every room slept in: the room left
+ * closes on the move day (with movedAt, so the plan sends it to cleaning) and the new room
+ * opens there. Later saves keep that history; a stay never moved keeps one segment. */
+export function stayRoomSegments(old, roomId, checkIn, checkOut, now = Date.now()) {
+  const kept = old ? readRoomSegments(old.hotel?.roomSegments, old.hotel?.checkIn, old.hotel?.checkOut) : [];
+  if (old?.status === 'checked_in' && old.resourceId && old.resourceId !== roomId) {
+    const p = dateParts(now), today = `${p.year}-${p.month}-${p.day}`;
+    const day = today < checkIn ? checkIn : (today > checkOut ? checkOut : today);
+    const before = (kept.length ? kept : currentRoomSegment(old.resourceId, checkIn, checkOut)).filter((x) => x.fromDate <= day)
+      .map((x, i, all) => (i === all.length - 1 ? { ...x, toDate: day, movedAt: now } : x));
+    return [...before, ...(day < checkOut ? [{ roomId, fromDate: day, toDate: checkOut }] : [])].slice(-20);
+  }
+  if (kept.length > 1 && kept[kept.length - 1].roomId === roomId) {
+    return kept.map((x, i) => (i === kept.length - 1 ? { ...x, toDate: checkOut } : x));
+  }
+  return currentRoomSegment(roomId, checkIn, checkOut);
+}
 export function pruneReservationsDoc(doc, now = Date.now()) {
   if (!doc || !Array.isArray(doc.bookings)) return doc;
   const p = dateParts(now);
@@ -906,7 +923,7 @@ export async function onRequestPost({ request, env }) {
         feedId: old?.hotel?.feedId || '', syncedAt: old?.hotel?.syncedAt || 0,
         conflict: false,
         guestSegments: normalizeGuestSegments(b?.guestSegments, old?.hotel?.guestSegments, partySize, checkIn, checkOut),
-        roomSegments: currentRoomSegment(room.id, checkIn, checkOut),
+        roomSegments: stayRoomSegments(old, room.id, checkIn, checkOut, now),
       },
       createdAt: old?.createdAt || now, updatedAt: now,
     };

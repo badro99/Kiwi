@@ -74,7 +74,7 @@
     'assets/liquid-glass.js?v=1',
     'assets/hotel-language.js?v=15',
     'assets/hotel-housekeeping.js?v=1',
-    'assets/hotel/model.js?v=10',
+    'assets/hotel/model.js?v=11',
     'assets/hotel.js?v=100',
   ];
   if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');

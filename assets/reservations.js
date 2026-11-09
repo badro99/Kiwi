@@ -248,7 +248,9 @@
   }
   function normalizeRoomSegments(raw, cap) {
     return (Array.isArray(raw) ? raw : []).slice(0, cap).filter(function (s) { return s && typeof s === 'object'; }).map(function (s) {
-      return { roomId: cleanText(s.roomId, 64), fromDate: cleanText(s.fromDate, 10), toDate: cleanText(s.toDate, 10) };
+      var out = { roomId: cleanText(s.roomId, 64), fromDate: cleanText(s.fromDate, 10), toDate: cleanText(s.toDate, 10) };
+      if (+s.movedAt > 0) out.movedAt = Math.round(+s.movedAt);   // B11 · when a moved guest left this room
+      return out;
     }).filter(function (s) { return s.roomId && s.fromDate && s.toDate; });
   }
   function normalizeGuestSegments(raw) {

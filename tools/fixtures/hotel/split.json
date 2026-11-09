@@ -1,5 +1,5 @@
 {
-  "sha256": "97ac013ee30b4dbf243fb4f8ad1bf40d509f78bc6519cb2d47ee9a11b830ec01",
+  "sha256": "f0bfd01391875e55981f4bb8e486e4f1e49cd29f4746d296bc2344c84e360c36",
   "start": 2304,
   "end": 169489,
   "prefix": "/* Hotel · localisation isolée, sans initialisation avant le cœur.\n * Contrat privé : une seule propriété globale, forme figée. La fabrique\n * conserve les dictionnaires et fonctions dans leur propre fermeture. */\n(() => {\n  'use strict';\n  const factories = Object.seal({ rates: null, housekeeping: null, folio: null, channels: null });\n  let shared = null;\n  let instances = Object.create(null);\n  const define = (name, factory) => {\n    if (!Object.prototype.hasOwnProperty.call(factories, name)) throw new Error('Unknown hotel part: ' + name);\n    factories[name] = factory;\n  };\n  const bind = (scope) => { shared = scope; instances = Object.create(null); };\n  const part = (name) => {\n    if (!instances[name]) instances[name] = factories[name](shared);\n    return instances[name];\n  };\n  window.__kiwiHotelInternal = Object.freeze({\n    define, bind, part,\n    language: function () {\n",

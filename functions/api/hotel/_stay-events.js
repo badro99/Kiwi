@@ -61,7 +61,11 @@ export function readRoomSegments(raw, checkIn, checkOut) {
   if (!Array.isArray(raw) || !DATE.test(checkIn) || !DATE.test(checkOut) || checkOut < checkIn) return [];
   return raw.slice(0, 40).map((item) => {
     const roomId = text(item?.roomId, 64);
-    return roomId ? { roomId, ...segmentDates(item, checkIn, checkOut) } : null;
+    if (!roomId) return null;
+    // B11 · a room left by a move keeps when it was left (movedAt), even on the arrival day.
+    const movedAt = Math.max(0, Math.round(Number(item?.movedAt) || 0));
+    if (movedAt && DATE.test(item?.fromDate) && item.fromDate === item.toDate && item.fromDate >= checkIn && item.fromDate <= checkOut) return { roomId, fromDate: item.fromDate, toDate: item.toDate, movedAt };
+    return { roomId, ...segmentDates(item, checkIn, checkOut), ...(movedAt ? { movedAt } : {}) };
   }).filter(Boolean);
 }
 

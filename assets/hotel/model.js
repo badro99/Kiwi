@@ -433,6 +433,10 @@ function cuRoomOccupancy() {
         const stamp = +b.updatedAt || 0;
         if (stamp > (completed.get(b.resourceId) || 0)) completed.set(b.resourceId, stamp);
       }
+      // B11 · a room a guest was moved out of goes to cleaning, like a departure.
+      for (const seg of b.hotel.roomSegments || []) {
+        if (seg && seg.roomId && seg.roomId !== b.resourceId && +seg.movedAt > (completed.get(seg.roomId) || 0)) completed.set(seg.roomId, +seg.movedAt);
+      }
       if (['cancelled', 'no_show', 'completed'].includes(b.status)) return;
       const cin = b.hotel.checkIn, cout = b.hotel.checkOut;
       if (!cin || !cout) return;

@@ -785,6 +785,22 @@ test('the reception journal offers the movements it lists', () => {
 
 /* Ticket #0001 · la chambre 102, occupée par un client arrivé, s'affichait
  * « Libre · propre » — et proposait de la revendre en walk-in. */
+/* B11 · Dupont moved 106 → 109 while in house: 106 went straight to « libre · propre ». */
+test('B11 · a room a guest was moved out of goes to cleaning until it is cleaned', () => {
+  const f = boot();
+  const rooms = f.api.cuState().rooms, [ka, kb] = Object.keys(rooms);
+  assert.ok(kb, 'the fixture hotel has two rooms');
+  const left = rooms[ka], now = rooms[kb];
+  left.status = 'libre'; left.updatedAt = 100; now.status = 'libre';
+  f.setDoc([stay('bk-moved', 'checked_in', '2026-09-05', '2026-09-12', { resourceId: now.id, updatedAt: 600, hotel: { roomSegments: [
+    { roomId: left.id, fromDate: '2026-09-05', toDate: TODAY, movedAt: 500 }, { roomId: now.id, fromDate: TODAY, toDate: '2026-09-12' }] } })]);
+  assert.equal(f.api.cuRoomStatus(left).key, 'sale', 'the room left is dirty, not « prête à vendre »');
+  assert.equal(f.api.cuRoomStatus(left).label, 'À nettoyer');
+  assert.equal(f.api.cuRoomStatus(now).key, 'occ', 'the new room is occupied');
+  left.updatedAt = 700;
+  assert.equal(f.api.cuRoomStatus(left).key, 'libre', 'once cleaned after the move, it is free again');
+});
+
 test('room status follows the stays, not only the housekeeping document', () => {
   const f = boot();
   const rooms = f.api.cuState().rooms;
