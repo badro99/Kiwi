@@ -22,9 +22,11 @@ export function tradingHourMs(hour = 15, now = new Date()) {
 
 export async function pinTradingHour(page, hour = 15) {
   const target = tradingHourMs(hour);
-  await page.evaluateOnNewDocument((targetMs) => {
+  /* The offset is fixed once, here: a reload keeps the clock running instead of
+     snapping back to 15:00:00, as a real till's clock would. */
+  const pinned = target - Date.now();
+  await page.evaluateOnNewDocument((offset) => {
     const RealDate = Date;
-    const offset = targetMs - RealDate.now();
     function FakeDate(...args) {
       if (!new.target) return new RealDate(RealDate.now() + offset).toString();
       return args.length ? new RealDate(...args) : new RealDate(RealDate.now() + offset);
@@ -35,6 +37,6 @@ export async function pinTradingHour(page, hour = 15) {
     FakeDate.parse = RealDate.parse;
     Object.defineProperty(FakeDate, 'name', { value: 'Date' });
     globalThis.Date = FakeDate;
-  }, target);
+  }, pinned);
   return target;
 }

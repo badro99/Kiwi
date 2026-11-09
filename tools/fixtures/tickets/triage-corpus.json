@@ -37,5 +37,7 @@
  {"text": "The card payment keeps being declined at the till", "category": "caisse", "priority": "urgent"},
  {"text": "The receipt printer is out of sync with the order", "category": "materiel", "priority": "normal"},
  {"text": "Can't sell anything since the update", "category": "autre", "priority": "urgent"},
- {"text": "Would be nice to have a dark mode", "category": "autre", "priority": "normal"}
+ {"text": "Would be nice to have a dark mode", "category": "autre", "priority": "normal"},
+ {"text": "كيف أضيف خصم على منتج", "category": "caisse", "priority": "normal"},
+ {"text": "تم خصم المبلغ من بطاقة الزبون والطلب لم يسجل", "category": "caisse", "priority": "urgent"}
 ]

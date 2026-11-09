@@ -87,7 +87,7 @@ export function openPayStatement(core, selected, archiveOverride) {
     const reason = error?.code === 'uncertain' ? c.uncertain : (error?.code === 'offline' || !error?.code) ? c.noServer : c.refused.replace('{}', String(error.code));
     const names = list => list.slice(0, 5).join(', ') + (list.length > 5 ? ' …' : '');
     const batch = error?.batch;
-    core.toast(batch && batch.done.length && batch.pending.length ? c.partial.replace('{done}', names(batch.done)).replace('{pending}', names(batch.pending)) + ' ' + reason : reason, { type:'warning' });
+    core.toast(batch && batch.done.length && batch.pending.length ? [c.partial.replace('{done}', names(batch.done)).replace('{pending}', names(batch.pending)), reason].join(' ') : reason, { type:'warning' });
   };
   if (archive) archive.forPeriod(period).then(data => {
     issued = Array.isArray(data.statements) ? data.statements : [];

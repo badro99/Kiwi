@@ -19,7 +19,7 @@
     return;
   }
   const scripts = [
-    'assets/pages-pro-office.js?v=28',
+    'assets/pages-pro-office.js?v=29',
     'assets/pages-pro.js?v=2227',
     'assets/pages-pro-boutique.js?v=51',
     'assets/boutique-stock-correct.js?v=4',

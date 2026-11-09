@@ -255,7 +255,7 @@ export function cleanText(value, max = 4000) {
 export function parseJson(value, fallback) { try { return JSON.parse(value); } catch (_) { return fallback; } }
 // Les mots qui font d'un message une urgence : le plancher de sécurité de classify(),
 // et ce que le tri sémantique garde d'un long message quand il doit le raccourcir.
-export const URGENT_SIGNAL = /fig[ée]|refus[ée]|crash|can(?:not|'t)\s+(?:sell|take|charge|process)|suspended|suspendu|declin|ma bghatch|mrtayn|tjmed|9adrinch|لا يعمل|لا تعمل|لا يمكننا|مرتين|توقف|متوقف|تعطل|bloqu|impossible|perdu|double|débité|debite|paiement|sécur|secur|\bvol\b|urgent|\bdown\b|panne|خصم/;
+export const URGENT_SIGNAL = /fig[ée]|refus[ée]|crash|can(?:not|'t)\s+(?:sell|take|charge|process)|suspended|suspendu|declin|ma bghatch|mrtayn|tjmed|9adrinch|لا يعمل|لا تعمل|لا يمكننا|مرتين|توقف|متوقف|تعطل|bloqu|impossible|perdu|double|débité|debite|paiement|sécur|secur|\bvol\b|urgent|\bdown\b|panne|تم خصم/;
 export function classify(summary) {
   const s = cleanText(summary, 4000).toLowerCase();
   // Conservative safety floor: model output cannot demote an urgent report.
