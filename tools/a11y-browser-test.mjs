@@ -31,6 +31,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { suite } from './browser-trace.mjs';
+import { startDirectoryServer } from './directory-fixture.mjs';
 import { pinTradingHour } from './demo-clock.mjs';
 import { tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 import * as kdsQueue from '../functions/api/order/queue.js';
@@ -63,7 +64,7 @@ const browser = await puppeteer.launch({ executablePath: bin, headless: true, ar
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const S = suite('a11y', { browser });
 
-async function open(t, url, storage, { width = 1440, height = 900, mobile = false, api = null, pin = true } = {}) {
+async function open(t, url, storage, { width = 1440, height = 900, mobile = false, api = null, pin = true, site = base } = {}) {
   const ctx = await browser.createBrowserContext();
   t.defer(() => ctx.close());
   const page = t.watch(await ctx.newPage());
@@ -74,15 +75,15 @@ async function open(t, url, storage, { width = 1440, height = 900, mobile = fals
   await page.setRequestInterception(true);
   page.on('request', (r) => {
     const u = r.url();
-    if (u.startsWith(base + '/api/')) return api ? api(r) : r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
-    return u.startsWith(base) || u.startsWith('data:') ? r.continue() : r.abort();
+    if (u.startsWith(site + '/api/')) return api ? api(r) : r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
+    return u.startsWith(site) || u.startsWith('data:') ? r.continue() : r.abort();
   });
   await page.evaluateOnNewDocument((items) => {
     Object.entries(items).forEach(([k, v]) => localStorage.setItem(k, v));
     try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
   }, storage);
   t.step('open ' + url);
-  await page.goto(base + url, { waitUntil: 'load' });
+  await page.goto(site + url, { waitUntil: 'load' });
   if (url.startsWith('/dashboard.html')) {
     await page.waitForFunction(() => !!window.Kiwi &&
       (!!document.querySelector('[data-kiwi-lock] k-pin-pad, #kit-onboarding, .kob-root, [data-kpi-band] .kpi-m')));
@@ -203,6 +204,19 @@ await S.run('guides · bibliothèque et article', async (t) => {
     found.push(await audit(t, await open(t, url, { kiwiLang: 'fr' }, { width: 390, height: 844, mobile: true, pin: false })));
   }
   compare('guides', union(...found));
+});
+/* L'annuaire Kiwi (9 nov 2026) : pages rendues par les vraies Pages Functions
+ * sur une base de test (tools/directory-fixture.mjs). Le hub, une fiche client
+ * et le formulaire d'inscription, bureau et téléphone. */
+await S.run('annuaire · hub, fiche et inscription', async (t) => {
+  const dir = await startDirectoryServer();
+  t.defer(() => dir.close());
+  const found = [];
+  for (const url of ['/fr/annuaire/', '/fr/annuaire/cafe-atlas-casablanca/', '/fr/annuaire/ajouter/']) {
+    found.push(await audit(t, await open(t, url, {}, { pin: false, site: dir.base })));
+    found.push(await audit(t, await open(t, url, {}, { width: 390, height: 844, mobile: true, pin: false, site: dir.base })));
+  }
+  compare('directory', union(...found));
 });
 /* Support, état du service et pages légales : le pied de page de l'accueil y
  * mène, elles doivent tenir le même niveau (repère <main>, contrastes, noms). */

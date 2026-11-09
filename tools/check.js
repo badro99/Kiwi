@@ -2386,6 +2386,8 @@ section('Whole-project regressions');
     'customer-retention-test.mjs',
     'landing-demo-funnel-test.mjs',
     'demo-request-api-test.mjs',
+    // Annuaire Kiwi : routes et modération sur D1, HTML rendu (FR/EN/AR), parcours navigateur.
+    'directory-api-test.mjs', 'directory-pages-test.mjs', 'directory-browser-test.mjs',
     'app-audit-sweep-test.mjs',
     'briefing-sales-drop-test.mjs',
     'briefing-low-stock-test.mjs',

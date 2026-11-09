@@ -18,3 +18,4 @@ Disallow: /comptable
 
 Host: https://kiwi-os.com
 Sitemap: https://kiwi-os.com/sitemap.xml
+Sitemap: https://kiwi-os.com/sitemap-annuaire.xml

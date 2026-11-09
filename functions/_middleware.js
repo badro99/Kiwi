@@ -29,7 +29,7 @@ import {
 } from './auth/_lib.js';
 import { metadataResponse, protectedResourceMetadata, authorizationServerMetadata } from './api/agent/_oauth.js';
 import { withFastNext } from './_fast-next.js';
-import { isPublicUtilityPath, notFoundFor } from './_public-pages.js';
+import { isPublicUtilityPath, notFoundFor, isPublicDirectoryRequest } from './_public-pages.js';
 import { visitorRedirect, recordOldOrigin } from './_origin-move.js';
 
 const GATE_COOKIE = 'kiwi_gate';
@@ -303,7 +303,7 @@ async function routeRequest(context) {
   // and returned 401, so no crawler could discover the public guide URLs named
   // by robots.txt. Exact GET/HEAD paths only; both files are static and contain
   // no merchant data.
-  if (isRead && (path === '/sitemap.xml' || path === '/robots.txt')) return next();
+  if ((isRead && (path === '/sitemap.xml' || path === '/robots.txt')) || isPublicDirectoryRequest(method, path)) return next();
 
   /* ── /guide et /guides · la bibliothèque publique, pas l'écran de connexion
    * Ces deux chemins n'ont jamais existé. Sans préfixe de langue ils ne

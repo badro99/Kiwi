@@ -142,5 +142,13 @@
   "pay_statements": [
     {"id": "ps-synth-1", "merchant": "upgrade-synth-1", "year": 2026, "seq": 1, "number": "RP-2026-0001", "member_id": "fixture-member-1", "member_name": "fixture-name-1", "period_start": "2026-10-05", "period_end": "2026-10-11", "gross_cents": 50000, "advance_cents": 1000, "net_cents": 49000, "rated": 1, "snapshot": "{}", "replaces_id": null, "issued_ts": 137, "issued_by": "fixture-by-1"},
     {"id": "ps-synth-2", "merchant": "upgrade-synth-2", "year": 2026, "seq": 2, "number": "RP-2026-0002", "member_id": "fixture-member-2", "member_name": "fixture-name-2", "period_start": "2026-10-05", "period_end": "2026-10-11", "gross_cents": 100000, "advance_cents": 2000, "net_cents": 98000, "rated": 1, "snapshot": "{}", "replaces_id": null, "issued_ts": 274, "issued_by": "fixture-by-2"}
+  ],
+  "directory_listings": [
+    {"id": "fixture-id-1", "slug": "fixture-slug-1", "kind": "fixture-kind-1", "merchant": "upgrade-synth-1", "status": "fixture-status-1", "name": "fixture-name-1", "trade": "fixture-trade-1", "city": "fixture-city-1", "address": "fixture-address-1", "description": "fixture-description-1", "website": "fixture-website-1", "show_phone": 137, "whatsapp": 137, "contact_name": "fixture-contact_name-1", "contact_email": "fixture-contact_email-1", "contact_phone": "fixture-contact_phone-1", "dedupe_key": "fixture-dedupe_key-1", "lang": "fixture-lang-1", "created_ts": 137, "updated_ts": 137, "reviewed_ts": 137, "reviewed_by": "fixture-reviewed_by-1"},
+    {"id": "fixture-id-2", "slug": "fixture-slug-2", "kind": "fixture-kind-2", "merchant": "upgrade-synth-2", "status": "fixture-status-2", "name": "fixture-name-2", "trade": "fixture-trade-2", "city": "fixture-city-2", "address": "fixture-address-2", "description": "fixture-description-2", "website": "fixture-website-2", "show_phone": 274, "whatsapp": 274, "contact_name": "fixture-contact_name-2", "contact_email": "fixture-contact_email-2", "contact_phone": "fixture-contact_phone-2", "dedupe_key": "fixture-dedupe_key-2", "lang": "fixture-lang-2", "created_ts": 274, "updated_ts": 274, "reviewed_ts": 274, "reviewed_by": "fixture-reviewed_by-2"}
+  ],
+  "directory_requests": [
+    {"id": "fixture-id-1", "listing_id": "fixture-listing_id-1", "kind": "fixture-kind-1", "message": "fixture-message-1", "contact": "fixture-contact-1", "status": "fixture-status-1", "created_ts": 137, "updated_ts": 137, "handled_by": "fixture-handled_by-1"},
+    {"id": "fixture-id-2", "listing_id": "fixture-listing_id-2", "kind": "fixture-kind-2", "message": "fixture-message-2", "contact": "fixture-contact-2", "status": "fixture-status-2", "created_ts": 274, "updated_ts": 274, "handled_by": "fixture-handled_by-2"}
   ]
 }

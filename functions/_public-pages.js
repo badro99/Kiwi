@@ -32,3 +32,17 @@ export async function notFoundFor(request, env, path) {
     headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
   });
 }
+
+/* L'annuaire Kiwi (functions/api/_directory-page.js). Ses pages vivent sous
+ * /fr/, /en/ et /ar/, déjà publics en lecture. Ce qui reste à ouvrir, et
+ * rien d'autre : les deux envois d'un visiteur sans compte (inscrire un
+ * commerce, signaler une fiche), qui se défendent eux-mêmes (piège, temps de
+ * saisie signé, limiteur par IP, champs bornés) et n'écrivent qu'en
+ * modération ; et le sitemap de l'annuaire. La fiche premium d'un client
+ * (/api/directory/listing) et la modération (/api/admin/directory) restent
+ * derrière la porte. Test : tools/directory-api-test.mjs. */
+const DIRECTORY_POSTS = new Set(['/api/directory/submit', '/api/directory/report']);
+export function isPublicDirectoryRequest(method, path) {
+  if (method === 'POST') return DIRECTORY_POSTS.has(path);
+  return (method === 'GET' || method === 'HEAD') && path === '/sitemap-annuaire.xml';
+}
