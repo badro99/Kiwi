@@ -245,10 +245,16 @@ body.design-vexel .loc-switch .badge { color: var(--vx-sidebar-accent); }
 /* The sidebar remains the composition's dark anchor in both modes. Its venue
  * popover and account chrome therefore consume the panel's own foreground
  * pair, never the page-mode paper/ink pair. */
+/* The 2026 glass layer (design-2026.css) lists .venue-dropdown among its glass
+ * cards with an !important white fill: cream names landed on 72 % white paper
+ * and, with « glass opaque » (blur 0), the nav read straight through the menu.
+ * The sidebar popover is a solid dark sheet, so it states its fill as firmly. */
 body.design-vexel .sidebar .venue-dropdown {
-  background: var(--vx-sidebar-popover);
-  border-color: var(--vx-sidebar-border);
+  background: var(--vx-sidebar-popover) !important;
+  border-color: var(--vx-sidebar-border) !important;
   color: var(--vx-sidebar-ink);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 body.design-vexel .sidebar :is(.venue-row:hover, .venue-row.active) {
   background: var(--vx-sidebar-hover);
@@ -5095,8 +5101,8 @@ body.design-vexel[data-vexel-mode="light"] .sidebar .sect {
 }
 
 body.design-vexel[data-vexel-mode="light"] .sidebar .venue-dropdown {
-  background: #080a09;
-  border-color: rgba(255, 255, 255, 0.11);
+  background: #080a09 !important;
+  border-color: rgba(255, 255, 255, 0.11) !important;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.68);
 }
 

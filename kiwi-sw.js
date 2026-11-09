@@ -130,7 +130,7 @@ var SHELL = [
   '/assets/finance.js?v=14',
   '/assets/conformite.js?v=8',
   '/dashboard.html',
-  '/assets/dashboard-shell.css?v=8',
+  '/assets/dashboard-shell.css?v=9',
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
   '/assets/caisse-accounting.js?v=31',
