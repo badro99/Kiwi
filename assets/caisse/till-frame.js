@@ -472,7 +472,6 @@
     const TILL_KIT_MORE_ICON = { open_drawer: 'point_of_sale', cash_in_out: 'sync_alt', shift_change: 'swap_horiz', cancel_sale: 'close',
       refund: 'undo', sales: 'receipt_long', reprint: 'receipt', team: 'group', attendance: 'key', close: 'power_settings_new',
       menu: 'menu_book', stock: 'inventory_2', printer: 'print', fullscreen: 'fullscreen', reload: 'refresh', device_id: 'tablet_mac' };
-    const TILL_KIT_DRAWER_EXTRA = [['theme', 'dark_mode', '#theme-toggle'], ['logout', 'logout', '.quick-actions a[href^="/auth/logout"]']];
     const tillKitDrawerSections = () => TILL_KIT_MORE.map(([title, rows]) => {
       /* Le libellé court du bouton livré (« Mouvement caisse », « Fin de
          service »), comme la boutique : ceux du kit passaient sur deux lignes. */
@@ -486,10 +485,6 @@
         const own = sel && !/^(sales|fullscreen|device_id)$/.test(id) ? short(tillKitLive(sel)) : '';
         return { id: 'm:' + id, icon: TILL_KIT_MORE_ICON[id] || 'more_horiz', badge: n > 0 ? n : 0,
           label: own || (id === 'fullscreen' && document.fullscreenElement ? kkt('till.more.exit_fullscreen') : kkt(key)) };
-      });
-      if (title === 'till.more.device') TILL_KIT_DRAWER_EXTRA.forEach(([id, icon, sel]) => {
-        const el = tillKitLive(sel);
-        if (el) items.push({ id: 'm:' + id, icon, label: short(el) });
       });
       return { label: kkt(title), items };
     }).filter((s) => s.items.length);
@@ -620,13 +615,7 @@
     }
     function tillKitRailSelect(id) {
       if (id === 'more') { tillKitToggleMore(); window.KiwiTillFrame.paint({ rail: tillKitRail() }); return; }
-      if (id && id.indexOf('m:') === 0) {
-        const k = id.slice(2), ex = TILL_KIT_DRAWER_EXTRA.find((r) => r[0] === k);
-        tillKitSetMore(false);
-        if (!ex) { tillKitMore(k); return; }
-        const el = tillKitLive(ex[2]); if (el) el.click();
-        return;
-      }
+      if (id && id.indexOf('m:') === 0) { tillKitSetMore(false); tillKitMore(id.slice(2)); return; }
       tillKitSetMore(false);
       /* Another destination leaves the payment, as its back button does: the
          payment layer floated over the kitchen and the clients book while the
@@ -749,11 +738,126 @@
         if (tillKitSyncPop && tillKitSyncPop.hasAttribute('open')) tillKitOpenSync(tillKitSyncPop.anchor);
       }, 600);
     }
+    /* La pastille du caissier ouvre son menu, plus le panneau Plus
+       (propriétaire, 2026-11-09) : qui tient la caisse, changer de caissier,
+       mode nuit, langue, et la vraie sortie du compte, nommée et confirmée.
+       « Changer de caissier » est le verrou de l'écran cuisine (lockoutKitchen,
+       caisse-kitchen.js) : il oublie le caissier et rouvre le pavé, la boutique
+       reste connectée, les tables restent. */
+    let tillKitMePop = null, tillKitMeAsk = false;
+    function tillKitMeWho() {
+      const cc = (typeof currentCashier !== 'undefined' && currentCashier) || {};
+      const lang = window.KiwiCaisseLang;
+      const role = cc.role && lang && lang.tr ? lang.tr(cc.role) : (cc.role || '');
+      return { name: cc.name || '', role };
+    }
+    const tillKitNight = () => document.documentElement.getAttribute('data-caisse-theme') === 'dark';
+    function tillKitLockCashier() {
+      tillKitSetMore(false);
+      if (window.KiwiTillFrame.paying()) tillKitAct('pay.leave');
+      lockoutKitchen();
+      toast(window.KiwiCaisseLang.tr('Terminal verrouillé'));
+    }
+    function tillKitMePaint() {
+      const pop = tillKitMePop, who = tillKitMeWho();
+      const lang = window.KiwiCaisseLang;
+      /* <k-popover> ne dessine son titre qu'une fois : le nom et la langue changent. */
+      const heading = who.name || kkt('till.me.title');
+      pop.setAttribute('heading', heading);
+      const ti = pop.shadowRoot && pop.shadowRoot.querySelector('.ti');
+      if (ti) ti.textContent = heading;
+      pop.textContent = '';
+      if (who.role) { const p = document.createElement('p'); p.className = 'k-foot k-ink2'; p.style.margin = '-4px 0 12px'; p.textContent = who.role; pop.appendChild(p); }
+      if (tillKitMeAsk) {
+        const p = document.createElement('p'); p.className = 'k-body'; p.style.margin = '0 0 12px'; p.textContent = kkt('till.me.logout_confirm'); pop.appendChild(p);
+        [['logout-go', 'till.me.logout_go', 'danger'], ['logout-back', 'action.back', 'secondary']].forEach(([id, key, v]) => {
+          const b = document.createElement('k-button');
+          b.setAttribute('label', kkt(key)); b.setAttribute('variant', v); b.setAttribute('full', ''); b.setAttribute('data-me', id);
+          if (id === 'logout-go') b.setAttribute('autofocus', '');
+          b.style.display = 'block'; b.style.marginBlockEnd = '8px';
+          pop.appendChild(b);
+        });
+        return;
+      }
+      const list = document.createElement('k-list');
+      list.setAttribute('label', who.name || kkt('till.me.title'));
+      const rows = [{ id: 'switch', icon: 'lock', title: kkt('till.me.switch') }];
+      if (tillKitLive('#theme-toggle')) rows.push({ id: 'night', icon: 'dark_mode', title: kkt('till.me.night'), trailing: 'switch', checked: tillKitNight() });
+      list.rows = rows;
+      list.style.marginBlockEnd = '12px';
+      pop.appendChild(list);
+      if (lang && typeof lang.set === 'function') {
+        const seg = document.createElement('k-segmented');
+        seg.setAttribute('label', kkt('till.me.language'));
+        seg.setAttribute('size', 'compact');
+        seg.options = [{ value: 'fr', label: 'FR' }, { value: 'en', label: 'EN' }, { value: 'ar', label: 'ع' }];
+        seg.setAttribute('value', lang.get());
+        seg.setAttribute('data-me', 'lang');
+        seg.style.marginBlockEnd = '16px';
+        pop.appendChild(seg);
+      }
+      if (tillKitLive('.quick-actions a[href^="/auth/logout"]')) {
+        const b = document.createElement('k-button');
+        b.setAttribute('label', kkt('till.me.logout')); b.setAttribute('icon', 'logout');
+        b.setAttribute('variant', 'tonal-danger'); b.setAttribute('full', ''); b.setAttribute('data-me', 'logout');
+        b.style.display = 'flow-root';
+        pop.appendChild(b);
+      }
+    }
+    /* Un repeint du rail remplace la pastille : on reprend la neuve. */
+    function tillKitMeAnchor(a) {
+      if (a && a.isConnected) return a;
+      const rail = document.querySelector('k-rail');
+      return (rail && rail.shadowRoot && rail.shadowRoot.querySelector('[data-r="cashier"]')) || null;
+    }
+    function tillKitOpenMe(anchor) {
+      if (!customElements.get('k-popover') || !customElements.get('k-list')) { tillKitToggleMore(); return; }
+      if (!tillKitMePop) {
+        tillKitMePop = document.createElement('k-popover');
+        tillKitMePop.addEventListener('kiwi:action', (e) => {
+          const d = e.detail || {};
+          const host = e.composedPath().find((n) => n && n.getAttribute && n.hasAttribute('data-me'));
+          const me = host ? host.getAttribute('data-me') : '';
+          if (d.action === 'k.list.select' && d.id === 'switch') { e.stopPropagation(); tillKitMePop.removeAttribute('open'); tillKitLockCashier(); return; }
+          if (d.action === 'k.list.toggle' && d.id === 'night') { e.stopPropagation(); const b = tillKitLive('#theme-toggle'); if (b && !!(d.value && d.value.checked) !== tillKitNight()) b.click(); return; }
+          if (d.action === 'k.segmented.select' && me === 'lang') {
+            e.stopPropagation();
+            const v = d.value && d.value.value;
+            if (v && window.KiwiCaisseLang) window.KiwiCaisseLang.set(v);
+            /* Le rail se repeint dans la nouvelle langue : le menu se raccroche à la pastille neuve. */
+            requestAnimationFrame(() => {
+              window.KiwiTillFrame.paint({ rail: tillKitRail() });
+              tillKitMePop.anchor = tillKitMeAnchor(tillKitMePop.anchor);
+              tillKitMePaint(); tillKitMePop.place();
+            });
+            return;
+          }
+          if (d.action !== 'k.button.press') return;
+          e.stopPropagation();
+          if (me === 'logout' || me === 'logout-back') { tillKitMeAsk = me === 'logout'; tillKitMePaint(); tillKitMePop.place(); return; }
+          if (me === 'logout-go') {
+            tillKitMePop.removeAttribute('open');
+            const a = tillKitLive('.quick-actions a[href^="/auth/logout"]');
+            if (a) a.click();
+          }
+        });
+        tillKitMePop.addEventListener('kiwi:action', (e) => { if ((e.detail || {}).action === 'k.popover.close') tillKitMeAsk = false; });
+        document.body.appendChild(tillKitMePop);
+      }
+      if (tillKitMePop.hasAttribute('open')) { tillKitMePop.removeAttribute('open'); return; }
+      if (tillKitMoreOpen) tillKitSetMore(false);
+      /* Fermer Plus repeint le rail : la pastille d'origine n'est plus dans la page. */
+      anchor = tillKitMeAnchor(anchor);
+      tillKitMeAsk = false;
+      tillKitMePaint();
+      tillKitMePop.anchor = anchor || null;
+      tillKitMePop.setAttribute('open', '');
+    }
     function tillKitAct(verb, id, value) {
       switch (verb) {
         case 'rail.sync': tillKitOpenSync(value && value.anchor); return;
         case 'rail.select': tillKitRailSelect(id); return;
-        case 'rail.cashier': tillKitToggleMore(); return;
+        case 'rail.cashier': tillKitOpenMe(value && value.anchor); return;
         case 'more.select': tillKitMore(id); return;
       }
       if (window.KiwiTillFrame.busy() && !/^(pay|split|discount)\./.test(verb)) return;

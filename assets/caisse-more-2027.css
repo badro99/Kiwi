@@ -5,10 +5,9 @@
    <k-sidebar> du kit porte toutes les commandes en sections nommées
    (assets/caisse/till-frame.js, tillKitDrawerSections) ; les cartes livrées
    (actions, compteurs, liens, pied) restent dans la page pour être cliquées,
-   sans se dessiner. Seul le sélecteur de langue garde sa place, au pied. */
-html[data-skin-2027="till"][data-k-till-more] .sidebar > :not(.brand-row, k-sidebar, .mode-selector, .quick-actions) { display: none !important; }
-html[data-skin-2027="till"][data-k-till-more] .sidebar > .quick-actions { margin-top: auto; }
-html[data-skin-2027="till"][data-k-till-more] .sidebar > .quick-actions > :not(.rail-lang) { display: none !important; }
+   sans se dessiner. Mode nuit, langue et sortie sont passés dans le menu de
+   la pastille du caissier (propriétaire, 2026-11-09). */
+html[data-skin-2027="till"][data-k-till-more] .sidebar > :not(.brand-row, k-sidebar, .mode-selector) { display: none !important; }
 /* La tête comme la boutique : le logo à sa taille, « En service » au bout de
    la même ligne, en casse normale. */
 html[data-skin-2027="till"][data-k-till-more] .sidebar > .brand-row {

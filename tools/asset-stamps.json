@@ -236,8 +236,8 @@
     "sha": "18b0d6fedbf71be7"
   },
   "assets/caisse-more-2027.css": {
-    "v": "1",
-    "sha": "676fc3c10df75c59"
+    "v": "2",
+    "sha": "188f7d5abb6bb049"
   },
   "assets/caisse-motion.js": {
     "v": "8",
@@ -340,8 +340,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "16",
-    "sha": "53245fe3639518ec"
+    "v": "17",
+    "sha": "a9ca0d9c44292114"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -968,8 +968,8 @@
     "sha": "cdaecd1fc62aa0db"
   },
   "assets/kit/overlays.js": {
-    "v": "2",
-    "sha": "11e20910aad27197"
+    "v": "3",
+    "sha": "c9ea4c8cf878eb4d"
   },
   "assets/kit/pin-flow.js": {
     "v": "7",
@@ -1048,16 +1048,16 @@
     "sha": "ead331c2ad217c31"
   },
   "assets/kit/strings/till.ar.js": {
-    "v": "14",
-    "sha": "8e6f5c7357dfbfee"
+    "v": "15",
+    "sha": "69b32852c8f55834"
   },
   "assets/kit/strings/till.en.js": {
-    "v": "14",
-    "sha": "fd2351f605d69106"
+    "v": "15",
+    "sha": "9f5b7c9ee08b2e09"
   },
   "assets/kit/strings/till.fr.js": {
-    "v": "14",
-    "sha": "05da763ced85c193"
+    "v": "15",
+    "sha": "979f4a03f14b55d2"
   },
   "assets/kit/team-pin.js": {
     "v": "5",

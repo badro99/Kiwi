@@ -319,8 +319,9 @@
     css: ':host{display:none;position:fixed;inset:0;z-index:900;pointer-events:none}:host([data-shown]){display:block}' +
       '.pop{position:fixed;pointer-events:auto;max-height:calc(100dvh - 24px);overflow:auto;background-color:var(--k-popover);border-radius:var(--k-r-3);' +
       'box-shadow:var(--k-shadow-2);padding:16px;opacity:0}' +
-      '.arrow{position:absolute;width:12px;height:12px;background-color:var(--k-popover);transform:rotate(45deg)}' +
-      '.pop[data-side="below"] .arrow{top:-6px}.pop[data-side="above"] .arrow{bottom:-6px}' +
+      /* The arrow sat half outside .pop, whose overflow:auto clipped it: it never
+         showed, and above its anchor it only added a 9 px scrollbar (2026-11-09). */
+      '.arrow{display:none}' +
       '.ti{margin:0 0 8px}' +
       '@media (max-width:599px){.pop{left:0 !important;right:0;top:auto !important;bottom:0;width:auto !important;border-radius:var(--k-r-4) var(--k-r-4) 0 0;' +
       'max-height:50dvh;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}.arrow{display:none}}'
