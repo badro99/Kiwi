@@ -143,8 +143,9 @@ try {
       const rows=await page.$$('.catalog-reorder-row');const from=await rows[0].$('button');const r1=await from.boundingBox(),r2=await rows[1].boundingBox();
       await page.mouse.move(r1.x+r1.width/2,r1.y+r1.height/2);await page.mouse.down();await page.mouse.move(r2.x+20,r2.y+r2.height/2,{steps:12});await page.mouse.up();await sleep(200);
       check(await page.evaluate(before=>KiwiMenuStore.categories()[1].id===before[0],before),lang+': real drag reorders sections');
-      check(await page.$eval('.catalog-reorder-row:nth-child(2) select',e=>{const r=e.getBoundingClientRect();return r.width>=76&&r.height>=44;}),'native position selector 76 by 44');await click('.catalog-reorder-row:nth-child(2) select');await page.keyboard.press('Home');await page.keyboard.press('Enter');await sleep(200);
-      check(await page.evaluate(before=>KiwiMenuStore.categories()[0].id===before[0],before),lang+': keyboard-compatible position selector reorders');
+      check(await page.$eval('.catalog-reorder-row:nth-child(2) [data-ro-step="-1"]',e=>{const r=e.getBoundingClientRect();return r.width>=44&&r.height>=44;}),'move-up arrow 44 by 44');await click('.catalog-reorder-row:nth-child(2) [data-ro-step="-1"]');await sleep(200);
+      check(await page.evaluate(before=>KiwiMenuStore.categories()[0].id===before[0],before),lang+': move-up arrow reorders');
+      check(await page.$eval('.catalog-reorder-row:first-child [data-ro-step="-1"]',e=>e.disabled),lang+': the first row cannot move up');
       await click('[data-catalog-done]');await sleep(450);
       await click('.rmw-row .rmw-row-main');await sleep(200);
       check(await page.$('.kiwi-modal [data-name]'),lang+': real card tap opens item editor');await close();
@@ -168,6 +169,7 @@ try {
         }
         await click('.rmw-row .rmw-row-more');await click('[data-catalog-action="archive"]');
         check(await page.evaluate(()=>KiwiMenuStore.items()[0].archived===true),'archive action is reachable');
+        check(await page.$eval('.rmw-row.rmw-archived',e=>{const c=getComputedStyle(e);return c.borderBottomStyle!=='dashed'&&c.borderLeftStyle!=='dashed'&&!!e.querySelector('.rmw-restore')&&!e.querySelector('.rmw-avail');}),'archived row: no dashed frame, a restore button instead of a dead switch');
         await click('.rmw-row .rmw-row-more');await click('[data-catalog-action="archive"]');
         check(await page.evaluate(()=>!KiwiMenuStore.items()[0].archived),'restore action is reachable');
         await go('stock');

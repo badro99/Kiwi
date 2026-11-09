@@ -1,26 +1,26 @@
 {
-  "sha256": "5a0d1dc38d8f7dc331cc98ae44128ddf0402f5b934a0f84e4d6b83a408e12b3b",
+  "sha256": "bb51d64026ca64b129a8369c2dcf9235c6f50ba18b050c6b409eb67e1ea631f1",
   "segments": [
     {
       "name": "strings",
       "file": "assets/restaurant-menu/strings.js",
       "start": 1674,
-      "end": 88993,
+      "end": 89071,
       "relay": "  const {UI_I18N} = window.KiwiMenuWorkspaceParts.strings();\n"
     },
     {
       "name": "recipes",
       "file": "assets/restaurant-menu/recipes.js",
-      "start": 216401,
-      "end": 231670,
+      "start": 216851,
+      "end": 232120,
       "relay": "  const {recipeUnitOptions, recipeIngredientRow, recipeLineInfo, recipeNutrition, recipeSummary, recipeDraft, openRecipe} = window.KiwiMenuWorkspaceParts.recipes({$, $$, esc, ui, venue, cash, cat, t, modal, recipeStyle: (...args)=>recipeStyle(...args), toast, S, render, pct1});\n"
     },
     {
       "name": "styles",
       "file": "assets/restaurant-menu/styles.js",
-      "start": 256343,
-      "end": 319399,
-      "relay": "  const {style, nutritionStyle, shellStyle, searchStyle, recipeStyle, itemStyle, performanceStyle, hoursStyle} = window.KiwiMenuWorkspaceParts.styles({$});\n"
+      "start": 256793,
+      "end": 329300,
+      "relay": "  const {style, nutritionStyle, shellStyle, searchStyle, recipeStyle, itemStyle, performanceStyle, hoursStyle, sheetStyle} = window.KiwiMenuWorkspaceParts.styles({$});\n"
     }
   ]
 }

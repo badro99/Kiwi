@@ -195,19 +195,19 @@
   }
   function row(x){
     const name=t(x.name),off=x.avail===false,n=(x.opts||[]).length,meta=[];
-    if(x.archived)meta.push(`<b class="rmw-row-state">${esc(ui('archived'))}</b>`);
-    else if(off)meta.push(`<b class="rmw-row-state">${esc(ui('unavailableBadge'))}</b>`);
+    /* L'état se lit d'abord, en pastille, avant la description (9 nov. 2026). */
+    const state=x.archived?`<b class="rmw-row-state is-archived">${esc(ui('archived'))}</b>`:off?`<b class="rmw-row-state">${esc(ui('unavailableBadge'))}</b>`:'';
     if(x.desc)meta.push(esc(t(x.desc)));
     if(x.formula)meta.push(`${esc(ui('formula'))} · ${esc(ui('stepCount',{n:(x.formula.slots||[]).length}))}`);
     if(x.formulaOnly)meta.push(esc(ui('formulaOnlyBadge')));
     const nutri=nutritionCardPill(x).replace(/^ · /,'');if(nutri)meta.push(nutri);
     const thumb=x.photo?`<img class="rmw-row-thumb" src="${esc(x.photo)}" alt="" loading="lazy"/>`:'';
     const mods=esc(ui('optGroupCount',{n}));
-    return `<div class="rmw-row${off?' rmw-off':''}${x.archived?' rmw-archived':''}" data-rmw-row="${esc(x.id)}">
-      <button data-activation=write type="button" class="rmw-row-main" data-rmw-command="edit" data-arg="${esc(x.id)}" aria-label="${esc(ui('editItemTitle',{name}))}">${thumb}<span class="rmw-row-text"><span class="rmw-row-name">${esc(name)}</span>${meta.length?`<span class="catalog-item-meta">${meta.join(' · ')}</span>`:''}</span></button>
+    return `<div class="rmw-row${off&&!x.archived?' rmw-off':''}${x.archived?' rmw-archived':''}" data-rmw-row="${esc(x.id)}">
+      <button data-activation=write type="button" class="rmw-row-main" data-rmw-command="edit" data-arg="${esc(x.id)}" aria-label="${esc(ui('editItemTitle',{name}))}">${thumb}<span class="rmw-row-text"><span class="rmw-row-name">${esc(name)}</span>${state||meta.length?`<span class="catalog-item-meta">${state}${meta.join(' · ')}</span>`:''}</span></button>
       <span class="rmw-row-price">${cash(x.price)}</span>
       <span class="rmw-row-mods${n?'':' none'}" title="${mods}">${msvg('tune')}<b aria-hidden="true">${n}</b><span class="rmw-sr">${mods}</span></span>
-      <button type="button" class="rmw-avail" role="switch" aria-checked="${!off&&!x.archived}" data-rmw-command="avail" data-arg="${esc(x.id)}" aria-label="${esc(ui('availableToggle',{name}))}"${x.archived?' disabled':''}><span></span></button>
+      ${x.archived?`<button type="button" class="rmw-restore" data-rmw-command="restore" data-arg="${esc(x.id)}" aria-label="${esc(ui('restore'))}: ${esc(name)}" title="${esc(ui('restore'))}"><span class="rmw-ico" style="--i:url(assets/icons/material/unarchive.svg)" aria-hidden="true"></span></button>`:`<button type="button" class="rmw-avail" role="switch" aria-checked="${!off}" data-rmw-command="avail" data-arg="${esc(x.id)}" aria-label="${esc(ui('availableToggle',{name}))}"><span></span></button>`}
       <button type="button" class="catalog-more rmw-row-more" data-rmw-command="actions" data-arg="${esc(x.id)}" aria-label="${esc(catalogText('itemActions','Actions de l’article'))}: ${esc(name)}">${catalogIcon('more_vert')}</button>
     </div>`;
   }
@@ -229,7 +229,7 @@
     return `<div class="mi-group-card"><div class="mi-group-card-head"><span class="mi-group-card-name">${esc(gName)}</span><span class="mi-group-card-pill ${g.required?'req':'opt'}">${esc(g.required?ui('required'):ui('optional'))}</span><span class="mi-group-card-pill mode">${esc(g.kind==='many'?ui('manyChoices'):ui('oneChoice'))}</span></div><div class="mi-group-card-opts">${choicesHtml}</div><div class="mi-group-card-scope">${esc(ui('usedByCount', { n: used }))}</div><div class="mi-group-card-acts"><button data-activation=write class="btn-slim" data-action="rmw-group-edit" data-arg="${g.id}">${ic('edit')} ${esc(ui('editGroup'))}</button><button data-activation=write class="btn-slim danger" data-action="rmw-group-delete" data-arg="${g.id}">${ic('trash')} ${esc(ui('delete'))}</button></div></div>`;
   }
   function menuPanel(){
-    searchStyle();shellStyle();
+    searchStyle();shellStyle();sheetStyle();
     if(filter!=='all'&&!cat(filter)){filter='all';subFilter=null;}
     const d=D(),list=shownItems(),selected=filter==='all'?null:cat(filter);
     const pill=(id,label,n)=>`<button class="mi-pill${filter===id?' on':''}" data-action="rmw-cat-filter" data-cat="${esc(id)}"><span class="rmw-cat-name">${esc(label)}</span><small>${n}</small></button>`;
@@ -1267,81 +1267,79 @@ table.rmw-i18n td.st-manual input{border-inline-start:3px solid var(--atlas)}
      le focus est detruit, la saisie s'arretait donc apres une seule lettre.
      On rend le focus au nouveau champ en replacant le curseur ou il etait. */
 const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI)window.KiwiCatalogUI.replace(p,html);else p.innerHTML=html;const next=$('[data-rmw-search]',p);if(next){next.focus();try{next.setSelectionRange(pos,pos);}catch(_){}}}});document.addEventListener('change',e=>{if(e.target.matches('[data-rmw-route]')){S().setCategoryStation(e.target.dataset.rmwRoute,e.target.value);render();}else if(e.target.matches('[data-rmw-i18n]')){onI18nEdit(e.target);}});window.addEventListener('click',e=>{const control=e.target.closest?.('[data-action^="rmw-"]');if(control){wire();let handler=window.Kiwi?.handlers?.[control.dataset.action];if(control.dataset.action==='rmw-formula-duplicate'&&typeof handler!=='function')handler=(_el,id)=>{const before=new Set(D().items.map(it=>it.id));S().duplicateItem(id);const copy=D().items.find(it=>!before.has(it.id));if(copy)openItem(copy);};if(typeof handler==='function'){e.preventDefault();e.stopImmediatePropagation();handler(control,control.dataset.arg);return;}}const a=e.target.closest?.('[data-nav="menu"]');if(a){e.preventDefault();show(true);}},true);}
-  const {style, nutritionStyle, shellStyle, searchStyle, recipeStyle, itemStyle, performanceStyle, hoursStyle} = window.KiwiMenuWorkspaceParts.styles({$});
-  function catalogSheet(title, actions){
-    const m=modal({title,width:480,body:`<div class="catalog-sheet">${actions.map(a=>`<button type="button" class="${a.danger?'danger':''}" data-catalog-action="${esc(a.id)}">${catalogIcon(a.icon||'menu')}<span${a.key?` data-i18n="catalog.${esc(a.key)}"`:''}>${esc(a.label)}</span></button>`).join('')}</div>`});
-    m.el.querySelectorAll('[data-catalog-action]').forEach(button=>button.onclick=()=>{const action=actions.find(a=>a.id===button.dataset.catalogAction);m.close();action?.run();});
+  const {style, nutritionStyle, shellStyle, searchStyle, recipeStyle, itemStyle, performanceStyle, hoursStyle, sheetStyle} = window.KiwiMenuWorkspaceParts.styles({$});
+  /* Feuilles d'actions de la carte (9 nov. 2026) : une tête qui dit sur quoi on agit, des groupes au lieu d'une pile de cadres, un chevron sur ce qui ouvre une autre fenêtre, la suppression posée à part. */
+  const mico=(n)=>`<span class="rmw-ico" style="--i:url(assets/icons/material/${n}.svg)" aria-hidden="true"></span>`;
+  function catalogSheet(title, groups, head){
+    sheetStyle();if(groups.length&&!Array.isArray(groups[0].actions))groups=[{actions:groups}];groups=groups.filter(g=>g.actions.length);const all=groups.flatMap(g=>g.actions);let n=0;
+    const btn=a=>`<button type="button" class="${a.danger?'danger':''}" style="--n:${n++}" data-catalog-action="${esc(a.id)}"><span class="rmw-sheet-tile">${mico(a.icon||'menu')}</span><span class="rmw-sheet-text"${a.key?` data-i18n="catalog.${esc(a.key)}"`:''}>${esc(a.label)}</span>${a.next?`<span class="rmw-sheet-go">${mico('chevron_right')}</span>`:''}</button>`;
+    const m=modal({title,width:440,body:`<div class="catalog-sheet rmw-sheet">${head||''}${groups.map(g=>`${g.label?`<p class="rmw-sheet-label">${esc(g.label)}</p>`:''}<div class="rmw-sheet-group${g.danger?' danger':''}">${g.actions.map(btn).join('')}</div>`).join('')}</div>`});
+    m.el.classList.add('rmw-sheet-modal');m.el.querySelectorAll('[data-catalog-action]').forEach(button=>button.onclick=()=>{const action=all.find(a=>a.id===button.dataset.catalogAction);m.close();action?.run();});
   }
   function openSectionActions(){
     const selected=filter==='all'?null:cat(filter);
-    const actions=[{id:'new',icon:'category',label:ui('newSection').replace(/^\+\s*/,''),run:()=>openCategory(null)},
-      {id:'reorder',key:'reorder',icon:'swap_horiz',label:catalogText('reorder','Réordonner les sections'),run:openSectionReorder},
-      {id:'reorder-dishes',icon:'swap_vert',label:ui('reorderDishes'),run:()=>openSectionReorder(selected?String(selected.id):'')}];
-    if(selected)actions.push({id:'rename',icon:'tune',label:ui('renameSection'),run:()=>openCategory(selected)},
-      {id:'delete',icon:'delete',label:ui('deleteSection'),danger:true,run:()=>window.Kiwi.handlers['rmw-cat-delete'](null,selected.id)});
-    catalogSheet(catalogText('sectionActions','Actions des sections'),actions);
+    const create={id:'new',icon:'add',label:ui('newSection').replace(/^\+\s*/,''),next:true,run:()=>openCategory(null)},
+      sections={id:'reorder',key:'reorder',icon:'swap_horiz',label:catalogText('reorder','Réordonner les sections'),next:true,run:openSectionReorder},
+      dishes={id:'reorder-dishes',icon:'swap_vert',label:ui('reorderDishes'),next:true,run:()=>openSectionReorder(selected?String(selected.id):'')};
+    if(!selected)return catalogSheet(catalogText('sectionActions','Actions des sections'),[{actions:[create,sections,dishes]}]);
+    catalogSheet(catalogText('sectionActions','Actions des sections'),[
+      {label:t(selected.name),actions:[dishes,{id:'rename',icon:'edit',label:ui('renameSection'),next:true,run:()=>openCategory(selected)}]},
+      {label:ui('sectionsTitle'),actions:[create,sections]},
+      {danger:true,actions:[{id:'delete',icon:'delete',label:ui('deleteSection'),danger:true,run:()=>window.Kiwi.handlers['rmw-cat-delete'](null,selected.id)}]}]);
   }
-  /* With a section id (even ''), the same window reorders that section's
-     dishes instead (Pasta Corner, 30 Oct 2026): d.items order is menu order. */
+  /* Réordonner (9 nov. 2026) : une seule fenêtre pour les sections et, avec un id de section (même ''), pour ses plats (d.items suit l'ordre de la carte).
+     La ligne saisie suit le doigt, les autres s'écartent pour lui faire place, le lâcher enregistre ; flèches à droite, ou ↑/↓ sur la poignée. */
   function openSectionReorder(cid,focusId){
-    if(typeof cid==='string'){
-    cid=cid||(D().cats[0]||{}).id||'';
-    const m=modal({title:ui('reorderDishes'),width:560,body:`<label class="rmw-dish-pick" style="display:flex;align-items:center;gap:10px;font-weight:600">${esc(ui('reorderPick'))}<select data-kiwi-native-select style="flex:1;min-height:44px;padding:0 12px;border:1px solid var(--n-200);border-radius:12px;background:var(--paper);color:var(--ink);font:inherit;font-weight:500">${D().cats.map(c=>`<option value="${esc(c.id)}"${c.id===cid?' selected':''}>${esc(t(c.name))}</option>`).join('')}</select></label><p class="rmw-dish-hint" style="margin:12px 0 14px;color:var(--n-500);font-size:13px;line-height:1.45">${esc(ui('reorderHint'))}</p><div class="catalog-reorder"></div>`,foot:`<button class="kb primary" data-catalog-done>${esc(ui('doneBtn'))}</button>`});
-    const list=m.el.querySelector('.catalog-reorder'),pick=m.el.querySelector('.rmw-dish-pick select');
-    const ids=()=>D().items.filter(x=>x.catId===cid).map(x=>String(x.id));
-    const move=(id,position)=>{const order=ids().filter(x=>x!==id);order.splice(position,0,id);S().orderItems(order);draw();};
-    const draw=()=>{
-      const top=list.scrollTop,dishes=D().items.filter(x=>x.catId===cid);
-      list.innerHTML=dishes.map((x,i)=>`<div class="catalog-reorder-row${String(x.id)===String(focusId)?' catalog-drop':''}" data-reorder-id="${esc(x.id)}"><button class="catalog-more catalog-drag" type="button" aria-label="${esc(ui('moveDish'))}: ${esc(t(x.name))}">${catalogIcon('menu')}</button><strong>${esc(t(x.name))}</strong><select data-kiwi-native-select aria-label="${esc(catalogText('position','Position'))}: ${esc(t(x.name))}">${dishes.map((_,j)=>`<option value="${j}"${i===j?' selected':''}>${j+1}</option>`).join('')}</select></div>`).join('');
-      list.scrollTop=top;focusId='';
-      list.querySelectorAll('[data-reorder-id]').forEach(row=>{
-        row.querySelector('select').onchange=e=>move(row.dataset.reorderId,+e.target.value);
-        const handle=row.querySelector('button');let destination=null;
-        handle.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();destination=null;handle.setPointerCapture(e.pointerId);};
-        handle.onpointermove=e=>{if(!handle.hasPointerCapture(e.pointerId))return;e.preventDefault();
-          const rows=[...list.children];const mid=r=>r.getBoundingClientRect().top+r.offsetHeight/2;const nearest=rows.reduce((best,r)=>Math.abs(e.clientY-mid(r))<Math.abs(e.clientY-mid(best))?r:best,rows[0]);
-          rows.forEach(r=>r.classList.toggle('catalog-drop',r===nearest));destination=rows.indexOf(nearest);
-          const bounds=list.getBoundingClientRect();if(e.clientY>bounds.bottom-35)list.scrollTop+=10;else if(e.clientY<bounds.top+35)list.scrollTop-=10;
-        };
-        handle.onpointerup=e=>{if(handle.hasPointerCapture(e.pointerId))handle.releasePointerCapture(e.pointerId);if(destination!==null)move(row.dataset.reorderId,destination);};
-        handle.onpointercancel=()=>{destination=null;list.querySelectorAll('.catalog-drop').forEach(r=>r.classList.remove('catalog-drop'));};
-      });
+    sheetStyle();const dishes=typeof cid==='string';if(dishes)cid=cid||(D().cats[0]||{}).id||'';const live=n=>D().items.filter(x=>x.catId===n).length;
+    const tabs=()=>D().cats.map(c=>`<button type="button" role="tab" class="rmw-ro-tab${c.id===cid?' on':''}" aria-selected="${c.id===cid}" data-lens-item data-ro-cat="${esc(c.id)}"><span>${esc(t(c.name))}</span><small>${live(c.id)}</small></button>`).join('');
+    const m=modal({title:dishes?ui('reorderDishes'):catalogText('reorder','Réordonner les sections'),width:560,body:`<div class="rmw-ro">${dishes?`<div class="rmw-ro-tabs" role="tablist" aria-label="${esc(ui('reorderPick'))}" data-lens-demo>${tabs()}</div>`:''}<p class="rmw-ro-hint">${esc(ui(dishes?'reorderHint':'reorderSectionsHint'))}</p><div class="catalog-reorder rmw-ro-list" role="list"></div><p class="rmw-sr" aria-live="polite" data-ro-live></p></div>`,foot:`<button class="kb primary" data-catalog-done>${esc(ui('doneBtn'))}</button>`});
+    m.el.classList.add('rmw-sheet-modal');const list=m.el.querySelector('.catalog-reorder'),say=m.el.querySelector('[data-ro-live]');
+    const entries=()=>dishes?D().items.filter(x=>x.catId===cid).map(x=>({id:String(x.id),name:t(x.name),sub:cash(x.price),photo:x.photo,muted:!!x.archived||x.avail===false})):D().cats.map(c=>({id:String(c.id),name:t(c.name),sub:esc(countLabel(live(c.id)))}));
+    const move=(id,position)=>{if(dishes){const order=entries().map(e=>e.id).filter(x=>x!==id);order.splice(position,0,id);S().orderItems(order);}else{const at=D().cats.findIndex(c=>String(c.id)===id),delta=position-at;for(let i=0;i<Math.abs(delta);i++)S().moveCategory(id,Math.sign(delta));}const now=entries();say.textContent=`${now.find(e=>e.id===id)?.name||''} · ${catalogText('position','Position')} ${now.findIndex(e=>e.id===id)+1}/${now.length}`;draw(id);};
+    const drag=(e,row)=>{
+      if(e.button!==0)return;e.preventDefault();const rows=[...list.querySelectorAll('[data-reorder-id]')],from=rows.indexOf(row),grab=e.currentTarget;
+      const gap=parseFloat(getComputedStyle(list).rowGap)||0,step=row.offsetHeight+gap,mid=rows.map(r=>r.offsetTop+r.offsetHeight/2);const y0=e.clientY,s0=list.scrollTop;let to=from,lastY=e.clientY;
+      grab.setPointerCapture(e.pointerId);list.classList.add('is-dragging');row.classList.add('is-lifted');
+      const place=()=>{
+        const dy=lastY-y0+list.scrollTop-s0,c=mid[from]+dy;
+        to=from;rows.forEach((r,i)=>{if(i>from&&c>=mid[i]-2)to++;else if(i<from&&c<=mid[i]+2)to--;});
+        row.style.transform=`translateY(${dy}px)`;
+        rows.forEach((r,i)=>{if(i===from)return;const shift=from<to&&i>from&&i<=to?-step:from>to&&i>=to&&i<from?step:0;r.style.transform=shift?`translateY(${shift}px)`:'';});
+      };
+      const onMove=ev=>{lastY=ev.clientY;const b=list.getBoundingClientRect();if(ev.clientY>b.bottom-36)list.scrollTop+=12;else if(ev.clientY<b.top+36)list.scrollTop-=12;place();};
+      const stop=ev=>{grab.removeEventListener('pointermove',onMove);grab.removeEventListener('pointerup',stop);grab.removeEventListener('pointercancel',stop);if(grab.hasPointerCapture(ev.pointerId))grab.releasePointerCapture(ev.pointerId);list.classList.remove('is-dragging');if(ev.type==='pointerup'&&to!==from)return move(row.dataset.reorderId,to);row.classList.remove('is-lifted');rows.forEach(r=>{r.style.transform='';});};
+      grab.addEventListener('pointermove',onMove);grab.addEventListener('pointerup',stop);grab.addEventListener('pointercancel',stop);
     };
-    pick.onchange=()=>{cid=pick.value;list.scrollTop=0;draw();};
-    draw();m.el.querySelector('[data-catalog-done]').onclick=m.close;
-      return;
-    }
-    const m=modal({title:catalogText('reorder','Réordonner les sections'),width:560,body:'<div class="catalog-reorder"></div>',foot:`<button class="kb primary" data-catalog-done>${esc(ui('doneBtn'))}</button>`});
-    const list=m.el.querySelector('.catalog-reorder');
-    const move=(id,position)=>{const at=D().cats.findIndex(c=>c.id===id),delta=position-at;for(let i=0;i<Math.abs(delta);i++)S().moveCategory(id,Math.sign(delta));draw();};
-    const draw=()=>{
-      const top=list.scrollTop;
-      list.innerHTML=D().cats.map((c,i)=>`<div class="catalog-reorder-row" data-reorder-id="${esc(c.id)}"><button class="catalog-more catalog-drag" type="button" aria-label="${esc(catalogText('moveSection','Déplacer la section'))}: ${esc(t(c.name))}">${catalogIcon('menu')}</button><strong>${esc(t(c.name))}</strong><select data-kiwi-native-select aria-label="${esc(catalogText('position','Position'))}: ${esc(t(c.name))}">${D().cats.map((_,j)=>`<option value="${j}"${i===j?' selected':''}>${j+1}</option>`).join('')}</select></div>`).join('');
+    const draw=(moved)=>{
+      const top=list.scrollTop,rows=entries(),last=rows.length-1,mark=String(moved||focusId||'');const grip=dishes?ui('moveDish'):catalogText('moveSection','Déplacer la section');
+      list.innerHTML=rows.length?rows.map((e,i)=>`<div class="catalog-reorder-row rmw-ro-row${e.muted?' muted':''}${e.id===mark?' is-moved':''}" role="listitem" data-reorder-id="${esc(e.id)}"><button class="catalog-drag rmw-ro-grip" type="button" aria-label="${esc(grip)}: ${esc(e.name)}">${mico('drag_indicator')}</button><span class="rmw-ro-pos" aria-hidden="true">${i+1}</span>${e.photo?`<img class="rmw-ro-thumb" src="${esc(e.photo)}" alt="" loading="lazy">`:''}<span class="rmw-ro-text"><strong>${esc(e.name)}</strong>${e.sub?`<small>${e.sub}</small>`:''}</span><span class="rmw-ro-steps"><button type="button" data-ro-step="-1" aria-label="${esc(ui('moveUp'))}: ${esc(e.name)}"${i===0?' disabled':''}>${mico('keyboard_arrow_up')}</button><button type="button" data-ro-step="1" aria-label="${esc(ui('moveDown'))}: ${esc(e.name)}"${i===last?' disabled':''}>${mico('keyboard_arrow_down')}</button></span></div>`).join(''):`<p class="rmw-ro-empty">${esc(ui('emptySectionText'))}</p>`;
       list.scrollTop=top;
+      if(focusId){list.querySelector('.is-moved')?.scrollIntoView({block:'nearest'});focusId='';}
       list.querySelectorAll('[data-reorder-id]').forEach(row=>{
-        row.querySelector('select').onchange=e=>move(row.dataset.reorderId,+e.target.value);
-        const handle=row.querySelector('button');let destination=null;
-        handle.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();destination=null;handle.setPointerCapture(e.pointerId);};
-        handle.onpointermove=e=>{if(!handle.hasPointerCapture(e.pointerId))return;e.preventDefault();
-          const rows=[...list.children];const nearest=rows.reduce((best,r)=>Math.abs(e.clientY-(r.getBoundingClientRect().top+r.offsetHeight/2))<Math.abs(e.clientY-(best.getBoundingClientRect().top+best.offsetHeight/2))?r:best,rows[0]);
-          rows.forEach(r=>r.classList.toggle('catalog-drop',r===nearest));destination=rows.indexOf(nearest);
-          const bounds=list.getBoundingClientRect();if(e.clientY>bounds.bottom-35)list.scrollTop+=10;else if(e.clientY<bounds.top+35)list.scrollTop-=10;
-        };
-        handle.onpointerup=e=>{if(handle.hasPointerCapture(e.pointerId))handle.releasePointerCapture(e.pointerId);if(destination!==null)move(row.dataset.reorderId,destination);};
-        handle.onpointercancel=()=>{destination=null;list.querySelectorAll('.catalog-drop').forEach(r=>r.classList.remove('catalog-drop'));};
+        const id=row.dataset.reorderId,grab=row.querySelector('.rmw-ro-grip');
+        const by=(d,refocus)=>{const at=entries().findIndex(e=>e.id===id);if(at+d<0||at+d>last)return;move(id,at+d);list.querySelector(`[data-reorder-id="${CSS.escape(id)}"] ${refocus}`)?.focus();};
+        row.querySelectorAll('[data-ro-step]').forEach(b=>b.onclick=()=>{const d=+b.dataset.roStep;by(d,`[data-ro-step="${d}"]:not(:disabled)`);if(!list.contains(document.activeElement))list.querySelector(`[data-reorder-id="${CSS.escape(id)}"] .rmw-ro-grip`)?.focus();});
+        grab.onkeydown=e=>{if(e.key!=='ArrowUp'&&e.key!=='ArrowDown')return;e.preventDefault();by(e.key==='ArrowUp'?-1:1,'.rmw-ro-grip');};
+        grab.onpointerdown=e=>drag(e,row);
+        row.onpointerdown=e=>{if(e.pointerType==='mouse'&&!e.target.closest('button'))drag(e,row);};
       });
     };
+    const strip=m.el.querySelector('.rmw-ro-tabs');
+    if(strip){strip.onclick=e=>{const b=e.target.closest('[data-ro-cat]');if(!b||b.dataset.roCat===String(cid))return;cid=D().cats.find(c=>String(c.id)===b.dataset.roCat)?.id??b.dataset.roCat;strip.querySelectorAll('[data-ro-cat]').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-selected',String(on));});list.scrollTop=0;draw();};strip.querySelector('.on')?.scrollIntoView({block:'nearest',inline:'center'});}
     draw();m.el.querySelector('[data-catalog-done]').onclick=m.close;
   }
   function openCardActions(x){
-    catalogSheet(t(x.name),[
-      {id:'edit',icon:'tune',label:ui('viewAndEdit'),run:()=>openItem(item(x.id))},
-      {id:'move',icon:'swap_vert',label:ui('moveDish'),run:()=>openSectionReorder(String(x.catId||''),x.id)},
-      ...(!x.archived?[{id:'availability',icon:'visibility',label:x.avail===false?ui('reactivate'):ui('unavailableBadge'),run:()=>S().updateItem(x.id,{avail:x.avail===false})}]:[]),
-      {id:'archive',icon:'inventory_2',label:x.archived?ui('restore'):ui('archive'),run:()=>S().updateItem(x.id,{archived:!x.archived})},
-      ...(x.formula?[{id:'reuse',icon:'folder_copy',label:ui('reuse'),run:()=>window.Kiwi.handlers['rmw-formula-duplicate'](null,x.id)}]:[]),
-      {id:'delete',icon:'delete',label:ui('delete'),danger:true,run:()=>confirm(ui('deleteItemConfirm',{name:x.name}),()=>S().deleteItem(x.id))}
-    ]);
+    const sec=cat(x.catId),name=t(x.name),off=x.avail===false;
+    const pic=x.photo?`<img class="rmw-sheet-thumb" src="${esc(x.photo)}" alt="">`:`<span class="rmw-sheet-thumb rmw-sheet-mono" aria-hidden="true">${esc((name||'?').trim().charAt(0).toUpperCase())}</span>`;
+    const state=x.archived?`<span class="rmw-chip mute">${mico('inventory_2')}${esc(ui('archived'))}</span>`:off?`<span class="rmw-chip warn">${esc(ui('unavailableBadge'))}</span>`:`<span class="rmw-chip">${esc(ui('availableOpt'))}</span>`;
+    catalogSheet(name,[
+      {actions:[{id:'edit',icon:'tune',label:ui('viewAndEdit'),next:true,run:()=>openItem(item(x.id))},
+        {id:'move',icon:'swap_vert',label:ui('moveDish'),next:true,run:()=>openSectionReorder(String(x.catId||''),x.id)}]},
+      {actions:[...(!x.archived?[{id:'availability',icon:off?'visibility':'visibility_off',label:off?ui('reactivate'):ui('unavailableBadge'),run:()=>S().updateItem(x.id,{avail:off})}]:[]),
+        {id:'archive',icon:x.archived?'unarchive':'archive',label:x.archived?ui('restore'):ui('archive'),run:()=>S().updateItem(x.id,{archived:!x.archived})},
+        ...(x.formula?[{id:'reuse',icon:'folder_copy',label:ui('reuse'),next:true,run:()=>window.Kiwi.handlers['rmw-formula-duplicate'](null,x.id)}]:[])]},
+      {danger:true,actions:[{id:'delete',icon:'delete',label:ui('delete'),danger:true,run:()=>confirm(ui('deleteItemConfirm',{name:x.name}),()=>S().deleteItem(x.id))}]}
+    ],`<div class="rmw-sheet-hero">${pic}<div class="rmw-sheet-facts"><b>${cash(x.price)}</b>${sec?`<span>${esc(t(sec.name))}</span>`:''}${state}</div></div>`);
   }
   function directCardAction(e){
     const control=e.target.closest?.('[data-rmw-command]');if(!control)return;
@@ -1350,6 +1348,7 @@ const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI
     if(control.dataset.rmwCommand==='edit')openItem(x);
     if(control.dataset.rmwCommand==='actions')openCardActions(x);
     if(control.dataset.rmwCommand==='avail'&&!x.archived)S().updateItem(x.id,{avail:x.avail===false});
+    if(control.dataset.rmwCommand==='restore'&&x.archived)S().updateItem(x.id,{archived:false});
   }
   let booted=false,storeBound=false,uiBound=false;
   function boot(){
