@@ -218,7 +218,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
-  '/assets/pages/dashboard-startup.js?v=239',
+  '/assets/pages/dashboard-startup.js?v=240',
   '/assets/pages/dashboard-loader.js?v=102',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -428,7 +428,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=37',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=143',
+  '/assets/caisse-lang.js?v=144',
   '/assets/venue-store.js?v=6',
   '/assets/discount-policy.js?v=4',
   '/assets/merchant-policies.js?v=4',
@@ -480,7 +480,7 @@ var SHELL = [
   '/assets/menu-i18n.js?v=8',
   '/assets/restaurant-menu/strings.js?v=21',
   '/assets/restaurant-menu/recipes.js?v=10',
-  '/assets/restaurant-menu/styles.js?v=11',
+  '/assets/restaurant-menu/styles.js?v=12',
   '/assets/restaurant-menu-workspace.js?v=138',
   '/assets/menu-promos-dashboard.js?v=10',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
