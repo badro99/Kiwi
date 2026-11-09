@@ -376,7 +376,7 @@ html[data-skin-2027="till"] #pos-maison .mz-more {
    s'efface, quelle que soit sa classe. Citer .mz-nav-it ou .mz-lock ici
    rouvrirait la porte au repeint que boutique-2027-test interdit — et la
    règle a raison : une barre livrée s'éteint, elle ne se redessine pas. */
-html[data-skin-2027="till"] #pos-maison .mz-more > :not(k-sidebar, .mz-more-brand, .kcl) { display: none; }
+html[data-skin-2027="till"] #pos-maison .mz-more > :not(k-sidebar, .mz-more-brand) { display: none; }
 html[data-skin-2027="till"] #pos-maison .mz-more > k-sidebar { display: block; }
 
 /* Une seule ligne : le logo à sa vraie proportion (mot-symbole ~1,8:1, il
@@ -406,34 +406,8 @@ html[data-skin-2027="till"] #pos-maison .mz-more-live {
 html[data-skin-2027="till"] #pos-maison .mz-more-live i {
   width: 7px; height: 7px; border-radius: 50%; background-color: var(--k-accent);
 }
-/* Ce qui n'est pas une rangée garde sa forme : la langue est un interrupteur
-   à trois voies, pas un lien. Elle tient le pied du tiroir — par `order`, et
-   non en la déplaçant : son module la réinsère après notre montage, et un
-   nœud déplacé serait remonté en tête au premier rendu. */
-/* L'écart au-dessus de la langue vient du nav, pas d'un rembourrage DANS la
-   pastille : celui-ci descendait les trois boutons et déséquilibrait la
-   boîte (propriétaire, 2026-10-28). Trois cases égales, une hauteur, le ع
-   sur la même ligne que FR et EN. */
-html[data-skin-2027="till"] #pos-maison .mz-more > k-sidebar { margin-block-end: 16px; }
-html[data-skin-2027="till"] #pos-maison .mz-more > .kcl {
-  order: 99; margin-block-start: auto; flex: none;
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
-  padding: 4px; border: 0; border-radius: var(--k-r-3);
-  background-color: var(--k-surface-2);
-}
-html[data-skin-2027="till"] #pos-maison .mz-more > .kcl .kcl-it {
-  display: flex; align-items: center; justify-content: center;
-  height: 40px; padding: 0; border-radius: var(--k-r-2);
-  font-family: var(--k-font); font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote-strong);
-  line-height: 1; letter-spacing: 0.04em;
-  color: var(--k-ink-2); box-shadow: none;
-}
-html[data-skin-2027="till"] #pos-maison .mz-more > .kcl .kcl-it[lang="ar"] {
-  font-size: var(--k-fs-body); letter-spacing: 0;
-}
-html[data-skin-2027="till"] #pos-maison .mz-more > .kcl .kcl-it.on {
-  background-color: var(--k-accent-tint); color: var(--k-accent-ink);
-}
+/* La langue a quitté le tiroir pour le menu du caissier (me-menu.js,
+   propriétaire, 2026-11-09) : la règle plus haut l'éteint comme le reste. */
 html[data-skin-2027="till"] #pos-maison .mz-more[hidden] { display: none; }
 /* Plus ouvert depuis Clients : le carnet (#kcb-root, 940, posé sur <body>)
    passait au-dessus de tout l'écran boutique (90), panneau compris, qui

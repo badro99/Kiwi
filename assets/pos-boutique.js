@@ -1,12 +1,12 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=199';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=117';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=199';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=199';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=202';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=120';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=202';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=202';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
-import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=20';
+import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=22';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=6'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=17'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11';
 
   'use strict';
@@ -1666,7 +1666,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
        l'ouverture de la caisse, et à chaque ouverture d'Échanges & avoirs. */
     if (!IS_DEMO) void refreshRemoteAvoirs();
 
-    bqKitRail(root, $, icons, bqKitSkin(), (STAFF.caissiere && STAFF.caissiere.name) || '');
+    bqKitRail(root, $, icons, bqKitSkin(), (STAFF.caissiere && STAFF.caissiere.name) || '', () => STAFF.caissiere);
     /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond d'ouverture d'abord, la vente ensuite. La démo entre directement. */
     if (!IS_DEMO && !bqShift) bqShowOpenScreen();
   }

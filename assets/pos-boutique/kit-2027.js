@@ -1,3 +1,4 @@
+import { posMeMenu } from './me-menu.js?v=2';
 /* La caisse boutique sous la peau 2027 (kiwiSkin2027:till) : le rail du kit et
  * le fond d'ouverture compté sur le kit. Sorti de pos-boutique.js tel quel ;
  * drapeau éteint ou éléments du kit absents, rien ici ne s'exécute. */
@@ -142,6 +143,9 @@ function bqMoreActs() {
   if (!bqMore) return [];
   return [...bqMore.children].filter((el) => (
     el !== bqSide &&
+    /* Verrouiller vit dans le menu du caissier (me-menu.js) : il reste dans
+       la page, c'est lui que « Changer de caissier » clique. */
+    el.id !== 'bq-lock' &&
     !el.classList.contains('bq-more-brand') &&
     !el.classList.contains('kcl') &&
     !el.classList.contains('kcl-hidden-net') &&
@@ -210,7 +214,7 @@ function bqKitMorePaint() {
   bqSide.setAttribute('value', (cur && cur.dataset.bqView) || 'vente');
 }
 
-function bqKitRail(root, $, icons, on, who) {
+function bqKitRail(root, $, icons, on, who, staff) {
   if (!root || !on || !customElements.get('k-rail')) return false;
   const nav = $('#bq-nav', root);
   const rail = root.querySelector('.bq-rail');
@@ -282,10 +286,8 @@ function bqKitRail(root, $, icons, on, who) {
     bqSide.setAttribute('label', tr('Plus'));
     more.insertBefore(bqSide, brand.nextSibling);
 
-    /* Ce qui n'est PAS une rangée garde sa forme : le sélecteur de langue est
-       un interrupteur à trois voies, pas un lien. Sa place au pied est tenue
-       par `order` dans la feuille, pas par un déplacement ici — son module le
-       réinsère APRÈS ce montage, et un nœud déplacé serait revenu en tête. */
+    /* La langue n'est plus dans le tiroir : elle vit dans le menu du
+       caissier (me-menu.js), et la feuille éteint le .kcl qu'y réinsère son module. */
 
     bqSide.addEventListener('kiwi:action', (e) => {
       const d = e.detail || {};
@@ -312,8 +314,17 @@ function bqKitRail(root, $, icons, on, who) {
   const close = () => { if (!more.hidden) { more.hidden = true; bqKitRailPaint(); } };
   const toggle = () => { more.hidden = !more.hidden; bqKitRailPaint(); icons(); };
 
+  /* La pastille du caissier ouvre son menu (me-menu.js), comme au restaurant. */
+  const meMenu = posMeMenu({
+    root, lockSel: '#bq-lock',
+    who: () => { const c = typeof staff === 'function' ? staff() : null; return { name: (c && c.name) || bqWho, role: (c && c.role) || '' }; },
+    beforeOpen: close,
+    repaint: () => { bqKitRailPaint(); icons(); },
+    anchor: () => (bqRail && bqRail.shadowRoot && bqRail.shadowRoot.querySelector('[data-r="cashier"]')) || null,
+  });
   bqRail.addEventListener('kiwi:action', (e) => {
     const d = e.detail || {};
+    if (d.action === 'k.rail.cashier') { e.stopPropagation(); if (meMenu) meMenu.open(d.value && d.value.anchor); return; }
     if (d.action !== 'k.rail.select') return;
     e.stopPropagation();
     const id = d.id == null ? '' : String(d.id);

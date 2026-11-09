@@ -1,3 +1,4 @@
+import { posMeMenu } from '../pos-boutique/me-menu.js?v=2';
 /* La caisse MAISON (art de table) sous la peau 2027 (kiwiSkin2027:till).
  * Copie de assets/pos-boutique/kit-2027.js, préfixe mz- : la maison est un
  * fork de la boutique, donc mêmes écrans, mêmes places (propriétaire,
@@ -168,6 +169,9 @@ function mzMoreActs() {
   if (!mzMore) return [];
   return [...mzMore.children].filter((el) => (
     el !== mzSide &&
+    /* Verrouiller vit dans le menu du caissier (me-menu.js) : il reste dans
+       la page, c'est lui que « Changer de caissier » clique. */
+    el.id !== 'mz-lock' &&
     !el.classList.contains('mz-more-brand') &&
     !el.classList.contains('kcl') &&
     !el.classList.contains('kcl-hidden-net') &&
@@ -236,7 +240,7 @@ function mzKitMorePaint() {
   mzSide.setAttribute('value', mzRailValue(cur));
 }
 
-function mzKitRail(root, $, icons, on, who) {
+function mzKitRail(root, $, icons, on, who, staff) {
   if (!root || !on || !customElements.get('k-rail')) return false;
   const nav = $('#mz-nav', root);
   const rail = root.querySelector('.mz-rail');
@@ -308,10 +312,8 @@ function mzKitRail(root, $, icons, on, who) {
     mzSide.setAttribute('label', tr('Plus'));
     more.insertBefore(mzSide, brand.nextSibling);
 
-    /* Ce qui n'est PAS une rangée garde sa forme : le sélecteur de langue est
-       un interrupteur à trois voies, pas un lien. Sa place au pied est tenue
-       par `order` dans la feuille, pas par un déplacement ici — son module le
-       réinsère APRÈS ce montage, et un nœud déplacé serait revenu en tête. */
+    /* La langue n'est plus dans le tiroir : elle vit dans le menu du
+       caissier (me-menu.js), et la feuille éteint le .kcl qu'y réinsère son module. */
 
     mzSide.addEventListener('kiwi:action', (e) => {
       const d = e.detail || {};
@@ -338,8 +340,17 @@ function mzKitRail(root, $, icons, on, who) {
   const close = () => { if (!more.hidden) { more.hidden = true; mzKitRailPaint(); } };
   const toggle = () => { more.hidden = !more.hidden; mzKitRailPaint(); icons(); };
 
+  /* La pastille du caissier ouvre son menu (me-menu.js), comme au restaurant. */
+  const meMenu = posMeMenu({
+    root, lockSel: '#mz-lock',
+    who: () => { const c = typeof staff === 'function' ? staff() : null; return { name: (c && c.name) || mzWho, role: (c && c.role) || '' }; },
+    beforeOpen: close,
+    repaint: () => { mzKitRailPaint(); icons(); },
+    anchor: () => (mzRail && mzRail.shadowRoot && mzRail.shadowRoot.querySelector('[data-r="cashier"]')) || null,
+  });
   mzRail.addEventListener('kiwi:action', (e) => {
     const d = e.detail || {};
+    if (d.action === 'k.rail.cashier') { e.stopPropagation(); if (meMenu) meMenu.open(d.value && d.value.anchor); return; }
     if (d.action !== 'k.rail.select') return;
     e.stopPropagation();
     const id = d.id == null ? '' : String(d.id);
