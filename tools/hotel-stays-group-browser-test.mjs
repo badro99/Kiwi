@@ -27,6 +27,9 @@
  *  · T10 contract change between quote responses rejects the simulation
  *  · T11 accept, then contract change → submission blocked, nothing saved
  *  · T12 tenant isolation holds over HTTP (401 on a foreign merchant)
+ *  · T19 agency groups book every room (B10): no « agency » channel, a
+ *        legacy « agency » value is sent as « direct », and a fresh write the
+ *        server normalised is adopted instead of reported as « aucune écriture »
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -277,6 +280,16 @@ async function startOrigin(env, hooks = {}) {
           log.push({ type: 'stay-post', via: via(req), action: body.action, id: body.id || '', clientRef: body.clientRef || '', status: out.status, body: await out.clone().json().catch(() => ({})) });
         } catch (_) {
           log.push({ type: 'stay-post', via: via(req), action: body.action, id: body.id || '', clientRef: body.clientRef || '', status: out.status });
+        }
+        if (req.method === 'POST' && hooks.rewriteStayPost) {
+          // The handler has written; the answer reports a normalised value.
+          const data = await out.clone().json().catch(() => null);
+          if (data && hooks.rewriteStayPost(data, body)) {
+            log.push({ type: 'stay-post-rewritten', clientRef: body.clientRef });
+            res.writeHead(out.status, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(data));
+            return;
+          }
         }
         if (req.method === 'POST' && hooks.dropStayResponse && hooks.dropStayResponse(body)) {
           // Genuine lost response: the booking is already durable (handler
@@ -1085,6 +1098,45 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
   ok(stays.length === 1, 'no second booking written');
   ok(stays[0].guests.some((g) => g.name === 'Karim Benali'), 'renamed server copy preserved');
   ok((await page.$('[data-hx-group-form]')) !== null, 'modal stays open');
+});
+
+/* ── T19 · agency groups book every room (B10) ─────────────────────── */
+console.log('\n■ T19 · agency group: every room booked, channel consistent');
+await withCtx({ hooks: {} }, async (ctx) => {
+  const { page } = ctx;
+  await openModal(page);
+  const offered = await page.$$eval('select[name="channel"] option', (os) => os.map((o) => o.value));
+  ok(!offered.includes('agency'), 'no « agency » channel offered (the server has none)');
+  step('a draft from before the fix still carries « agency »');
+  await page.$eval('select[name="channel"]', (el) => { const o = document.createElement('option'); o.value = 'agency'; o.textContent = 'Agence'; el.appendChild(o); });
+  await fillBasics(page, { ...BASICS(), channel: 'agency', accountId: 'acc-agency-01', board: 'room_only' });
+  await selectRooms(page, 101, 102);
+  await page.click('[data-action="hx-add-group-traveler"]');
+  await fillTraveler(page, 0, { name: 'Karim Benchekroun', roomN: 101 });
+  await fillTraveler(page, 1, { name: 'Salma El Fassi', roomN: 102 });
+  await simulateAndAccept(page);
+  const dossier = await dossierOf({ page });
+  const r = await submitAndSettle(page);
+  ok(r === 'closed', `agency group confirms in one go (got ${String(r).slice(0, 160)})`);
+  const stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 2, 'both rooms booked');
+  ok(stays.every((s) => s.hotel?.channel === 'direct'), 'channel stored as « direct » for every room');
+  ok(stays.every((s) => s.commercial?.accountId === 'acc-agency-01'), 'the agency stays on the commercial account');
+});
+await withCtx({ hooks: {} }, async (ctx) => {
+  const { page } = ctx;
+  step('the server normalises a value on a fresh write');
+  ctx.hooks.rewriteStayPost = (data, body) => {
+    if (!data.booking || data.replayed || !String(body.clientRef || '').endsWith('room_101')) return false;
+    data.booking.hotel = { ...data.booking.hotel, channel: 'direct' };
+    return true;
+  };
+  const dossier = await twoRoomSetup(page, { ...BASICS(), channel: 'booking' }, false);
+  const r = await submitAndSettle(page);
+  ok(ctx.log.some((e) => e.type === 'stay-post-rewritten'), 'the normalised answer was served');
+  ok(r === 'closed', `a fresh write is adopted, the group completes (got ${String(r).slice(0, 160)})`);
+  const stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 2, 'both rooms booked, none written twice');
 });
 
 /* ── T12 · tenant isolation over HTTP ──────────────────────────────── */

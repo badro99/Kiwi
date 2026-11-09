@@ -760,8 +760,8 @@
     "sha": "a4323bb95802d658"
   },
   "assets/hotel/groups.js": {
-    "v": "6",
-    "sha": "b93c749464c507e0"
+    "v": "7",
+    "sha": "c5eb893b5cd6326d"
   },
   "assets/hotel/model.js": {
     "v": "10",
@@ -1476,8 +1476,8 @@
     "sha": "6528e9c9e3079dba"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "99",
-    "sha": "03e559ed6bce0ad3"
+    "v": "100",
+    "sha": "489c2cda586bc018"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "232",

@@ -685,8 +685,8 @@
         },
         {
           "name": "cuMoveStayStatus",
-          "start": 399662,
-          "end": 403706,
+          "start": 400588,
+          "end": 404632,
           "deps": [
             "cuMerchantSlug",
             "cuStayScope",
@@ -706,8 +706,8 @@
         },
         {
           "name": "cuBirthIso",
-          "start": 405365,
-          "end": 406162,
+          "start": 406291,
+          "end": 407088,
           "deps": [],
           "mutations": [],
           "async": false,
@@ -717,8 +717,8 @@
         },
         {
           "name": "cuCommercialError",
-          "start": 408867,
-          "end": 412494,
+          "start": 409793,
+          "end": 413420,
           "deps": [
             "tx",
             "txk"
@@ -731,8 +731,8 @@
         },
         {
           "name": "cuCommercialBody",
-          "start": 413272,
-          "end": 418225,
+          "start": 414198,
+          "end": 419151,
           "deps": [
             "cuCommercialState",
             "tx",
@@ -751,8 +751,8 @@
         },
         {
           "name": "cuCommercialEditor",
-          "start": 425004,
-          "end": 430904,
+          "start": 425930,
+          "end": 431830,
           "deps": [
             "cuStayScope",
             "cuLoadCommercial",
@@ -776,8 +776,8 @@
         },
         {
           "name": "cuEconomatBody",
-          "start": 438816,
-          "end": 443038,
+          "start": 439742,
+          "end": 443964,
           "deps": [
             "cuEconomatState",
             "tx",
@@ -797,8 +797,8 @@
         },
         {
           "name": "cuUnitsEditorHtml",
-          "start": 443869,
-          "end": 447503,
+          "start": 444795,
+          "end": 448429,
           "deps": [
             "cuOutletsMapped",
             "esc",
@@ -814,8 +814,8 @@
         },
         {
           "name": "cuPdvBody",
-          "start": 447894,
-          "end": 450250,
+          "start": 448820,
+          "end": 451176,
           "deps": [
             "cuEconomatState",
             "tx",
@@ -832,8 +832,8 @@
         },
         {
           "name": "cuLoadEconomat",
-          "start": 450253,
-          "end": 452930,
+          "start": 451179,
+          "end": 453856,
           "deps": [
             "isCustomHotel",
             "cuEconomatState",
@@ -851,8 +851,8 @@
         },
         {
           "name": "cuSaveEconomat",
-          "start": 453612,
-          "end": 456480,
+          "start": 454538,
+          "end": 457406,
           "deps": [
             "cuEconomatState",
             "cuCaptureEconomatDraft",
@@ -919,7 +919,7 @@
         {
           "name": "cuGroupReservationModal",
           "start": 289074,
-          "end": 383490,
+          "end": 384416,
           "deps": [
             "cuStayScope",
             "cuMerchantSlug",
@@ -959,63 +959,63 @@
           ],
           "mutations": [
             {
-              "start": 22084,
-              "end": 22093,
+              "start": 22348,
+              "end": 22357,
               "original": "openModal",
               "replacement": "scope.openModal"
             },
             {
-              "start": 42715,
-              "end": 42724,
+              "start": 43104,
+              "end": 43113,
               "original": "openModal",
               "replacement": "scope.openModal"
             },
             {
-              "start": 64556,
-              "end": 64565,
+              "start": 64945,
+              "end": 64954,
               "original": "openModal",
               "replacement": "scope.openModal"
             },
             {
-              "start": 83337,
-              "end": 83346,
+              "start": 83874,
+              "end": 83883,
               "original": "openModal",
               "replacement": "scope.openModal"
             },
             {
-              "start": 86002,
-              "end": 86011,
+              "start": 86539,
+              "end": 86548,
               "original": "openModal",
               "replacement": "scope.openModal"
             },
             {
-              "start": 89519,
-              "end": 89528,
+              "start": 90056,
+              "end": 90065,
               "original": "openModal",
               "replacement": "scope.openModal"
             },
             {
-              "start": 92233,
-              "end": 92242,
+              "start": 93159,
+              "end": 93168,
               "original": "openModal",
               "replacement": "scope.openModal"
             },
             {
-              "start": 93010,
-              "end": 93019,
+              "start": 93936,
+              "end": 93945,
               "original": "openModal",
               "replacement": "scope.openModal"
             },
             {
-              "start": 93414,
-              "end": 93423,
+              "start": 94340,
+              "end": 94349,
               "original": "openModal",
               "replacement": "scope.openModal"
             }
           ],
           "async": true,
           "offset": 684,
-          "length": 94470,
+          "length": 95396,
           "replacement": "async function cuGroupReservationModal() { return hotelSection('groups').cuGroupReservationModal.apply(this, arguments); }"
         }
       ]
@@ -1924,8 +1924,8 @@
         },
         {
           "name": "cuSubmitStay",
-          "start": 383494,
-          "end": 397752,
+          "start": 384420,
+          "end": 398678,
           "deps": [
             "cuStayScope",
             "tx",
@@ -1967,8 +1967,8 @@
         },
         {
           "name": "cuCancelStay",
-          "start": 397756,
-          "end": 399299,
+          "start": 398682,
+          "end": 400225,
           "deps": [
             "cuMerchantSlug",
             "cuStayScope",
@@ -2000,8 +2000,8 @@
         },
         {
           "name": "cuAwaitTariffAck",
-          "start": 407131,
-          "end": 407927,
+          "start": 408057,
+          "end": 408853,
           "deps": [
             "hotelCloud"
           ],
@@ -2020,8 +2020,8 @@
         },
         {
           "name": "cuLoadProduction",
-          "start": 418715,
-          "end": 419843,
+          "start": 419641,
+          "end": 420769,
           "deps": [
             "cuStayScope",
             "cuProductionState",
@@ -2051,8 +2051,8 @@
         },
         {
           "name": "cuChannelGuide",
-          "start": 433957,
-          "end": 435411,
+          "start": 434883,
+          "end": 436337,
           "deps": [
             "tx",
             "K",
@@ -2074,8 +2074,8 @@
         },
         {
           "name": "cuCaptureEconomatDraft",
-          "start": 437788,
-          "end": 438813,
+          "start": 438714,
+          "end": 439739,
           "deps": [
             "openDrawer",
             "cuEconomatState"
@@ -2107,8 +2107,8 @@
         },
         {
           "name": "cuIntelBody",
-          "start": 456483,
-          "end": 462474,
+          "start": 457409,
+          "end": 463400,
           "deps": [
             "cuWarmStays",
             "cuState",

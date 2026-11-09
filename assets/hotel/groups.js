@@ -166,7 +166,11 @@ async function cuGroupReservationModal(options = {}) {
     const initialContactPhone = (staged && staged.contactPhone) || it.contactPhone || '';
     const initialContactEmail = (staged && staged.contactEmail) || it.contactEmail || '';
     const initialAccountId = (staged && staged.accountId) || it.accountId || '';
-    const initialChannel = (staged && staged.channel) || it.channel || 'direct';
+    /* The server keeps only these channels and stores any other one as « direct ».
+     * An agency is the commercial account, not a channel: offering « agency »
+     * here made the first room come back « direct » and jammed the group (B10). */
+    const cuGroupChannel = (v) => (['direct', 'booking', 'airbnb', 'expedia', 'walkin', 'other'].includes(v) ? v : 'direct');
+    const initialChannel = cuGroupChannel((staged && staged.channel) || it.channel);
     const initialBoard = (staged && staged.board) || it.board || 'room_only';
 
     const hasSavedRooms = Object.keys(savedRooms).length > 0;
@@ -231,7 +235,6 @@ async function cuGroupReservationModal(options = {}) {
               </select></label>
               <label><span>${tx('Canal')}</span><select name="channel">
                 <option value="direct" ${initialChannel === 'direct' ? 'selected' : ''}>${tx('Direct')}</option>
-                <option value="agency" ${initialChannel === 'agency' ? 'selected' : ''}>${tx('Agence')}</option>
                 <option value="booking" ${initialChannel === 'booking' ? 'selected' : ''}>Booking.com</option>
                 <option value="expedia" ${initialChannel === 'expedia' ? 'selected' : ''}>Expedia</option>
                 <option value="other" ${initialChannel === 'other' ? 'selected' : ''}>${tx('Autre')}</option>
@@ -407,7 +410,7 @@ async function cuGroupReservationModal(options = {}) {
     // carry them are disabled (and therefore invisible to FormData), so the
     // frozen model is the only honest source.
     const getTerms = () => {
-      if (committedTerms) return { ...committedTerms };
+      if (committedTerms) return { ...committedTerms, channel: cuGroupChannel(committedTerms.channel) };
       return {
         groupName: String(form.elements.groupName?.value || '').trim(),
         checkIn: form.elements.checkIn?.value || '',
@@ -426,7 +429,8 @@ async function cuGroupReservationModal(options = {}) {
     };
     const termsDiffer = (a, b) => {
       const keys = ['groupName', 'checkIn', 'checkOut', 'contactName', 'contactPhone', 'contactEmail', 'accountId', 'channel', 'board'];
-      return keys.some(k => String(a?.[k] ?? '') !== String(b?.[k] ?? ''));
+      const term = (t, k) => (k === 'channel' ? cuGroupChannel(t?.[k]) : String(t?.[k] ?? ''));
+      return keys.some(k => term(a, k) !== term(b, k));
     };
 
     const cuGroupQuoteSignature = () => {
@@ -1474,7 +1478,8 @@ async function cuGroupReservationModal(options = {}) {
             renderRooms();
             throw new Error(errMsg);
           }
-          const payload = entry.payload;
+          // A draft or intent saved before B10 can still carry « agency ».
+          const payload = { ...entry.payload, channel: cuGroupChannel(entry.payload && entry.payload.channel) };
           const clientRef = entry.clientRef;
           if (initialScope !== cuStayScope() || initialMerchant !== cuMerchantSlug() || scope.openModal?.el !== m.el || !form.isConnected) {
             throw new Error(tx('L’hôtel actif a changé pendant l’enregistrement.'));
@@ -1605,7 +1610,11 @@ async function cuGroupReservationModal(options = {}) {
             renderRooms();
             throw new Error(errMsg);
           }
-          const postProblem = adoptionProblem(returned, payload, room);
+          // A fresh write (not a replay) is ours: the server saved it and at most
+          // normalised a value. Refusing it left the room booked while the recap
+          // said « 0 validée » and every retry failed on it (B10). Replays and
+          // GET-found bookings keep the full comparison.
+          const postProblem = body.replayed === true || ['cancelled', 'no_show'].includes(returned.status) ? adoptionProblem(returned, payload, room) : null;
           if (postProblem) {
             const errMsg = postProblem.kind === 'cancelled'
               ? tx('La réservation retournée pour la chambre {n} est annulée ou non présentée.', { n: room.n })

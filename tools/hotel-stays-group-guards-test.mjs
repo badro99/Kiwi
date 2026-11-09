@@ -69,7 +69,7 @@ console.log('\n■ 3c. Reconciliation entries validated, replays gated (follow-u
   ok(hotelJs.includes("typeof value.status !== 'string'"), 'records without status are rejected');
   ok(hotelJs.includes('rec.publicRef !== clientRef'), 'returned identity checked against the requested reference');
   ok(hotelJs.includes('const adoptionProblem = (booking, payload, room)'), 'one adoption gate serves GET and POST results');
-  ok(hotelJs.includes('const postProblem = adoptionProblem(returned, payload, room)'), 'POST results pass the same gate, replays included');
+  ok(hotelJs.includes("const postProblem = body.replayed === true || ['cancelled', 'no_show'].includes(returned.status) ? adoptionProblem(returned, payload, room) : null;"), 'POST replays and cancelled answers pass the same gate; a fresh write is ours (B10)');
   ok(hotelJs.includes('est inexploitable'), 'malformed POST results fail instead of adopting');
   ok(hotelJs.includes('La réservation retournée'), 'POST-path messages preserved');
 }
