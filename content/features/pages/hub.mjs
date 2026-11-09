@@ -1,0 +1,47 @@
+/* Hub « Fonctionnalités ». Les cartes des pages et la liste « aussi dans
+ * Kiwi » sont produites par tools/build-features.mjs depuis le manifeste et le
+ * tarif de l'accueil : ce fichier ne porte que le texte du hub. */
+export default {
+  fr: {
+    nav: 'Fonctionnalités',
+    eyebrow: 'Kiwi · Fonctionnalités',
+    h1: ['Ce que fait Kiwi,', 'fonction par fonction.'],
+    deck: 'Kiwi est un logiciel de caisse et de gestion pour les commerces, cafés et restaurants au Maroc. Chaque page ci-dessous montre une fonction sur le vrai produit, dit ce qu’elle fait et précise le plan qui l’inclut.',
+    pagesTitle: 'Les fonctions détaillées',
+    moreTitle: 'Aussi dans Kiwi',
+    moreDeck: 'Elles sont déjà dans Kiwi. Leur page détaillée viendra ensuite.',
+    read: 'Voir la fonction',
+    plansTitle: 'Quatre plans, sans commission',
+    plansDeck: 'Chaque fonction appartient à un plan. Un plan inclut tout ce que contient le précédent. 15 jours d’essai gratuit, sans engagement.',
+    plansLink: 'Comparer les plans',
+    demo: 'Bonjour, je voudrais une démo de Kiwi pour mon commerce.',
+  },
+  en: {
+    nav: 'Features',
+    eyebrow: 'Kiwi · Features',
+    h1: ['What Kiwi does,', 'feature by feature.'],
+    deck: 'Kiwi is point of sale and management software for shops, cafes and restaurants in Morocco. Each page below shows one feature on the real product, says what it does and which plan includes it.',
+    pagesTitle: 'Features in detail',
+    moreTitle: 'Also in Kiwi',
+    moreDeck: 'They are already in Kiwi. Their detailed pages will follow.',
+    read: 'See the feature',
+    plansTitle: 'Four plans, no commission',
+    plansDeck: 'Each feature belongs to a plan. Each plan includes everything in the one before. 15 days free, no commitment.',
+    plansLink: 'Compare plans',
+    demo: 'Hello, I would like a demo of Kiwi for my business.',
+  },
+  ar: {
+    nav: 'الخصائص',
+    eyebrow: 'Kiwi · الخصائص',
+    h1: ['ما يفعله Kiwi،', 'خاصية بخاصية.'],
+    deck: 'Kiwi برنامج كاشير وتسيير للمتاجر والمقاهي والمطاعم في المغرب. كل صفحة أدناه تعرض خاصية على المنتج الحقيقي، وتشرح ما تفعله، وتحدد الباقة التي تشملها.',
+    pagesTitle: 'الخصائص بالتفصيل',
+    moreTitle: 'وأيضا في Kiwi',
+    moreDeck: 'هذه الخصائص موجودة أيضا في Kiwi. وصفحاتها المفصلة في الطريق.',
+    read: 'اكتشف الخاصية',
+    plansTitle: 'أربع باقات، دون عمولة',
+    plansDeck: 'كل خاصية تنتمي إلى باقة. وكل باقة تشمل كل ما في الباقة التي قبلها. 15 يوما تجربة مجانية، دون التزام.',
+    plansLink: 'قارن الباقات',
+    demo: 'مرحبا، أريد عرضا توضيحيا لـ Kiwi لمحلي التجاري.',
+  },
+};

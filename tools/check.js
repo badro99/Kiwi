@@ -1720,6 +1720,10 @@ section('Whole-project regressions');
        fonctionnement sans JS restent présents à chaque nouveau guide. */
     'build-guides-check.mjs',
     'article-template-test.mjs',
+    /* Les pages Fonctionnalités (caisse, stock et catalogue, OrderPro) : source
+       régénérée à l'identique, SEO, prix du tarif, et chaque promesse reliée au
+       test qui la prouve (tools/feature-claims-map.json). */
+    'features-pages-test.mjs',
     /* /guide et /guides sans préfixe de langue tombaient dans le gate de
        compte et renvoyaient l'écran de connexion marchand. La redirection vit
        dans functions/_middleware.js, donc une suite d'assets ne la verrait

@@ -1,0 +1,594 @@
+{
+  "version": 1,
+  "scope": "Chaque phrase des pages Fonctionnalités qui décrit un comportement du logiciel (data-claim), avec le test du gate qui le prouve. Le texte français fait foi ; EN et AR portent les mêmes identifiants. tools/features-pages-test.mjs tient la liste.",
+  "claims": {
+    "caisse.offline": {
+      "page": "caisse",
+      "fr": "Sans Internet, la caisse continue d’encaisser. Les ventes attendent dans l’appareil et partent dès que le réseau revient, sans doublon.",
+      "contracts": [
+        {
+          "file": "tools/offline-foundation-test.mjs",
+          "assertion": "live sales use the durable outbox lifecycle"
+        },
+        {
+          "file": "tools/caisse-outbox-full-test.mjs",
+          "assertion": "later replays never book it twice"
+        }
+      ]
+    },
+    "caisse.scan": {
+      "page": "caisse",
+      "fr": "Une douchette USB ou la caméra du téléphone lit les codes-barres, zéros de tête compris.",
+      "contracts": [
+        {
+          "file": "tools/retail-scan-test.mjs",
+          "assertion": "scanner terminator is stripped without losing leading zero"
+        },
+        {
+          "file": "tools/boutique-existing-barcode-test.mjs",
+          "assertion": "le code existant scanne"
+        }
+      ]
+    },
+    "caisse.carnet": {
+      "page": "caisse",
+      "fr": "Le carnet de crédit garde ce que doit chaque client, et chaque règlement, total ou partiel.",
+      "contracts": [
+        {
+          "file": "tools/credit-book-test.mjs",
+          "assertion": "fusionner deux fois ne double aucune ligne"
+        },
+        {
+          "file": "tools/credit-book-test.mjs",
+          "assertion": "la dette du comptoir et le règlement du téléphone restent tous les deux"
+        }
+      ]
+    },
+    "caisse.devices": {
+      "page": "caisse",
+      "fr": "La caisse s’ouvre dans le navigateur : PC, Mac, tablette Android ou iPad. Il n’y a rien à installer pour vendre.",
+      "contracts": [
+        {
+          "file": "tools/boutique-phone-browser-test.mjs",
+          "assertion": "sur l’iPad, les − et + du ticket se touchent au doigt"
+        }
+      ]
+    },
+    "caisse.receipt": {
+      "page": "caisse",
+      "fr": "Le ticket sort tout seul à l’encaissement quand une imprimante est réglée. Une réimpression porte la mention duplicata.",
+      "contracts": [
+        {
+          "file": "tools/caisse-auto-receipt-test.mjs",
+          "assertion": "cash confirmation queues exactly one receipt"
+        },
+        {
+          "file": "tools/pos-reprint-test.js",
+          "assertion": "la construction demande la mention de duplicata"
+        }
+      ]
+    },
+    "caisse.arabic": {
+      "page": "caisse",
+      "fr": "Les tickets en arabe s’impriment en vraies lettres. Si l’appareil ne sait pas les dessiner, Kiwi refuse d’imprimer des points d’interrogation.",
+      "contracts": [
+        {
+          "file": "tools/escpos-unsupported-test.mjs",
+          "assertion": "printReceipt refuses an Arabic receipt it cannot draw"
+        },
+        {
+          "file": "tools/escpos-arabic-browser-test.mjs",
+          "assertion": "no « ? » printed in place of the Arabic"
+        }
+      ]
+    },
+    "caisse.print-direct": {
+      "page": "caisse",
+      "fr": "En Bluetooth ou en USB, directement depuis Chrome ou Edge, sans logiciel en plus.",
+      "contracts": [
+        {
+          "file": "tools/printer-transports-split-test.mjs",
+          "assertion": "assert.deepEqual(bluetooth, [180, 180, 40])"
+        },
+        {
+          "file": "tools/printer-transports-split-test.mjs",
+          "assertion": "assert.equal(usb.reduce((a, b) => a + b, 0), 40000)"
+        }
+      ]
+    },
+    "caisse.bridge": {
+      "page": "caisse",
+      "fr": "Avec Kiwi Printer Bridge, sur l’ordinateur du comptoir (même un vieux Windows 7) ou sur un appareil Android, pour les imprimantes réseau ou déjà installées.",
+      "contracts": [
+        {
+          "file": "tools/bridge-win7-test.mjs",
+          "assertion": "une cible node12 64 bits existe"
+        },
+        {
+          "file": "tools/android-print-bridge-test.mjs",
+          "assertion": "APK reuses the existing Kiwi pairing and job relay"
+        }
+      ]
+    },
+    "caisse.cloudprint": {
+      "page": "caisse",
+      "fr": "Sur iPad, la caisse dépose le ticket en ligne et le bridge du comptoir l’imprime. Il s’appaire une seule fois, avec un code à 6 chiffres.",
+      "contracts": [
+        {
+          "file": "tools/print-relay-test.mjs",
+          "assertion": "A2 · la caisse de Browse obtient un code à 6 chiffres"
+        },
+        {
+          "file": "tools/print-relay-test.mjs",
+          "assertion": "B3 · la fausse imprimante a reçu exactement les octets ESC/POS du ticket"
+        }
+      ]
+    },
+    "caisse.drawer": {
+      "page": "caisse",
+      "fr": "Sur la caisse restaurant et la caisse épicerie, le tiroir s’ouvre à l’encaissement en espèces. Un paiement par carte ne l’ouvre pas.",
+      "contracts": [
+        {
+          "file": "tools/split-bill-tender-test.mjs",
+          "assertion": "markSplitPartPaid calls openCashDrawer on cash"
+        },
+        {
+          "file": "tools/hardware-test.js",
+          "assertion": "record-only card tender saves the sale without opening or increasing the cash drawer"
+        }
+      ]
+    },
+    "caisse.session": {
+      "page": "caisse",
+      "fr": "On ouvre la caisse avec un fond, on la ferme en comptant. Kiwi montre l’écart entre l’attendu et le compté, et ne laisse pas cacher un manque.",
+      "contracts": [
+        {
+          "file": "tools/cash-session-properties-test.mjs",
+          "assertion": "an honest till keeps exactly the expected cash and gap it declared"
+        },
+        {
+          "file": "tools/cash-session-properties-test.mjs",
+          "assertion": "cannot hide the shortage"
+        }
+      ]
+    },
+    "caisse.manager": {
+      "page": "caisse",
+      "fr": "Chaque employé a son code personnel. Annuler une vente encaissée demande le code d’un manager.",
+      "contracts": [
+        {
+          "file": "tools/cashier-cancel-test.mjs",
+          "assertion": "a waiter code and a cashier code cannot void a completed sale (manager required)"
+        },
+        {
+          "file": "tools/cash-sessions-auth-test.mjs",
+          "assertion": "cash-session route preserves the PIN-attributed actor"
+        }
+      ]
+    },
+    "caisse.discount": {
+      "page": "caisse",
+      "fr": "Une remise se fait avec un motif. Celle qui sort de vos règles est signalée au propriétaire.",
+      "contracts": [
+        {
+          "file": "tools/discount-reasons-test.mjs",
+          "assertion": "ok('a reason outside the set is refused"
+        },
+        {
+          "file": "tools/discount-policy-api-test.mjs",
+          "assertion": "20% retail receipt flagged for the operator"
+        }
+      ]
+    },
+    "caisse.dayreport": {
+      "page": "caisse",
+      "fr": "Le rapport journalier totalise les ventes par moyen de paiement, remboursements déduits, et s’imprime sur l’imprimante ticket.",
+      "contracts": [
+        {
+          "file": "tools/dayreport-properties-test.mjs",
+          "assertion": "revenue and net payment methods conserve integer centimes including refunds and repeated decimals"
+        },
+        {
+          "file": "tools/day-report-print-format-test.mjs",
+          "assertion": "printed Total encaissé is net of refund"
+        }
+      ]
+    },
+    "caisse.invoice": {
+      "page": "caisse",
+      "fr": "Les factures portent l’ICE, l’IF et le RC du commerce. La TVA de la facture est celle du ticket, au centime près.",
+      "contracts": [
+        {
+          "file": "tools/invoicing-print-test.mjs",
+          "assertion": "mentions du vendeur figées : raison sociale, ICE, IF, RC, patente, téléphone"
+        },
+        {
+          "file": "tools/invoice-vat-properties-test.mjs",
+          "assertion": "shared receipt included VAT equals canonical sale invoice (all tills); tips remain separate"
+        }
+      ]
+    },
+    "caisse.returns": {
+      "page": "caisse",
+      "fr": "À partir de Kiwi Plus : retours, échanges et avoirs, remboursement partiel compris.",
+      "plan": "plus",
+      "contracts": [
+        {
+          "file": "tools/sale-return-ledger-test.mjs",
+          "assertion": "un remboursement partiel est accepté"
+        },
+        {
+          "file": "tools/sale-return-ledger-test.mjs",
+          "assertion": "un avoir partiel est accepté (session propriétaire)"
+        }
+      ]
+    },
+    "stock.sale": {
+      "page": "stock",
+      "fr": "Chaque vente sort le stock de l’article vendu. Au restaurant, elle sort aussi les ingrédients de la recette.",
+      "contracts": [
+        {
+          "file": "tools/caisse-stock-test.mjs",
+          "assertion": "deux tajines et deux thés sortent leur matière"
+        },
+        {
+          "file": "tools/inventory-ledger-test.mjs",
+          "assertion": "complete recipe consumes ingredient quantities by yield"
+        }
+      ]
+    },
+    "stock.count": {
+      "page": "stock",
+      "fr": "À l’inventaire, vous comptez, Kiwi montre les écarts et le propriétaire valide.",
+      "contracts": [
+        {
+          "file": "tools/inventory-universal-count-test.mjs",
+          "assertion": "approbation propriétaire passe le statut à"
+        },
+        {
+          "file": "tools/inventory-count-test.mjs",
+          "assertion": "unexplained loss elsewhere → reasonLoss"
+        }
+      ]
+    },
+    "stock.moves": {
+      "page": "stock",
+      "fr": "Chaque correction devient un mouvement daté, avec son auteur, et jamais une vente.",
+      "contracts": [
+        {
+          "file": "tools/inventory-waste-test.mjs",
+          "assertion": "movement preserves cashier actor name"
+        },
+        {
+          "file": "tools/maison-stock-movements-test.mjs",
+          "assertion": "la saisie directe est classée en correction, jamais en vente"
+        }
+      ]
+    },
+    "stock.lowstock": {
+      "page": "stock",
+      "fr": "Fixez un seuil par article. En dessous, Kiwi vous alerte, et de nouveau si l’article tombe à zéro.",
+      "contracts": [
+        {
+          "file": "tools/boutique-inv-alerts-test.mjs",
+          "assertion": "a seen low item that runs out alerts again"
+        },
+        {
+          "file": "tools/briefing-low-stock-test.mjs",
+          "assertion": "a ledger-tracked item below its explicit threshold emits"
+        }
+      ]
+    },
+    "stock.expiry": {
+      "page": "stock",
+      "fr": "Les lots peuvent porter une date limite, et Kiwi repère ceux qui sont périmés.",
+      "contracts": [
+        {
+          "file": "tools/inventory-expiry-test.mjs",
+          "assertion": "le premier lot de saumon est identifié comme périmé"
+        }
+      ]
+    },
+    "stock.waste": {
+      "page": "stock",
+      "fr": "Pertes et casse s’enregistrent avec leur motif précis.",
+      "contracts": [
+        {
+          "file": "tools/inventory-waste-test.mjs",
+          "assertion": "movement meta preserves fine-grained reason"
+        }
+      ]
+    },
+    "stock.variants": {
+      "page": "stock",
+      "fr": "À partir de Kiwi Plus : une fiche par modèle, un stock par taille et par couleur. Vendre le noir ne touche pas au blanc.",
+      "plan": "plus",
+      "contracts": [
+        {
+          "file": "tools/boutique-variant-stock-test.mjs",
+          "assertion": "availableStock(pid, cfg.size, cfg.color, state.ticket)"
+        },
+        {
+          "file": "tools/boutique-variant-stock-test.mjs",
+          "assertion": "la déclinaison blanche reste intacte après la vente noire"
+        }
+      ]
+    },
+    "stock.margin": {
+      "page": "stock",
+      "fr": "À partir de Kiwi Plus : le prix d’achat de chaque article, et la marge qui en découle.",
+      "plan": "plus",
+      "contracts": [
+        {
+          "file": "tools/cost-margin-test.js",
+          "assertion": "4 pains : marge 60 %"
+        }
+      ]
+    },
+    "stock.labels": {
+      "page": "stock",
+      "fr": "À la réception, Kiwi prépare autant d’étiquettes code-barres que de pièces reçues.",
+      "contracts": [
+        {
+          "file": "tools/boutique-label-receipt-test.mjs",
+          "assertion": "with a receipt, labels follow the pieces received, not the stock"
+        }
+      ]
+    },
+    "stock.suppliers": {
+      "page": "stock",
+      "fr": "Fournisseurs, réceptions de marchandise et retours fournisseur sont inclus. Les bons de commande et le rapprochement des factures sont réservés à Kiwi Ultra.",
+      "contracts": [
+        {
+          "file": "tools/procurement-test.mjs",
+          "assertion": "basic direct receipt creates a goods-received document"
+        },
+        {
+          "file": "tools/procurement-test.mjs",
+          "assertion": "basic cannot create Ultra purchase orders"
+        }
+      ]
+    },
+    "stock.import": {
+      "page": "stock",
+      "fr": "Le catalogue s’importe depuis un fichier CSV, y compris un export Excel en français.",
+      "contracts": [
+        {
+          "file": "tools/import-test.js",
+          "assertion": "point-virgule (Excel FR)"
+        }
+      ]
+    },
+    "stock.recipes": {
+      "page": "stock",
+      "fr": "À partir de Kiwi Pro : une fiche recette par plat, avec son coût matière calculé depuis le prix de vos ingrédients.",
+      "plan": "pro",
+      "contracts": [
+        {
+          "file": "tools/foodcost-api-test.mjs",
+          "assertion": "le propriétaire crée une fiche (201, version 1)"
+        },
+        {
+          "file": "tools/restaurant-recipes-test.js",
+          "assertion": "ingredient quantity × stock cost drives theoretical recipe cost"
+        }
+      ]
+    },
+    "op.qr": {
+      "page": "orderpro",
+      "fr": "Un QR par table. Le client scanne et commande depuis son téléphone, sans application à installer.",
+      "contracts": [
+        {
+          "file": "tools/guest-redirect-test.mjs",
+          "assertion": "a printed table QR is sent to /order with its store and table"
+        },
+        {
+          "file": "tools/orderpro-relay-test.js",
+          "assertion": "le QR public ouvre une session de visite avant la commande"
+        }
+      ]
+    },
+    "op.inbox": {
+      "page": "orderpro",
+      "fr": "La commande arrive d’abord à la caisse. Un membre de l’équipe l’accepte, puis elle part en cuisine.",
+      "contracts": [
+        {
+          "file": "tools/orderpro-relay-test.js",
+          "assertion": "on ne saute pas la cuisine (pending → ready)"
+        },
+        {
+          "file": "tools/orderpro-inbox-confirmation-test.mjs",
+          "assertion": "pending stays visible until server confirmation"
+        }
+      ]
+    },
+    "op.price": {
+      "page": "orderpro",
+      "fr": "Le prix vient de votre carte publiée, jamais du téléphone.",
+      "contracts": [
+        {
+          "file": "tools/orderpro-relay-test.js",
+          "assertion": "le prix vient de la carte, pas du téléphone"
+        }
+      ]
+    },
+    "op.langs": {
+      "page": "orderpro",
+      "fr": "La carte s’affiche en français, en anglais et en arabe, et dans d’autres langues si vous publiez leurs traductions.",
+      "contracts": [
+        {
+          "file": "tools/order-langs-test.mjs",
+          "assertion": "dictionnaire statique présent pour les 20 langues supplémentaires"
+        },
+        {
+          "file": "tools/menu-properties-test.mjs",
+          "assertion": "language additions, aliases and removals never move ids, options or prices"
+        }
+      ]
+    },
+    "op.options": {
+      "page": "orderpro",
+      "fr": "Options, suppléments et formules : rien n’est coché d’avance, et un choix obligatoire manquant est signalé avant l’ajout.",
+      "contracts": [
+        {
+          "file": "tools/orderpro-relay-test.js",
+          "assertion": "OrderPro envoie les formules comme parent et composants liés"
+        },
+        {
+          "file": "tools/guest-options-test.mjs",
+          "assertion": "un groupe obligatoire vide est signalé"
+        }
+      ]
+    },
+    "op.allergens": {
+      "page": "orderpro",
+      "fr": "Les valeurs nutritionnelles et les 14 allergènes viennent de vos recettes complètes, et le client peut filtrer.",
+      "contracts": [
+        {
+          "file": "tools/menu-nutrition-test.mjs",
+          "assertion": "l’API ne conserve que les clés EU-14"
+        },
+        {
+          "file": "tools/orderpro-guest-hub-test.mjs",
+          "assertion": "un filtre actif cache les plats qui ont l’allergène ET ceux sans fiche"
+        }
+      ]
+    },
+    "op.kitchen": {
+      "page": "orderpro",
+      "fr": "Une fois acceptée, le bon cuisine s’imprime une seule fois et l’écran cuisine reçoit les options.",
+      "contracts": [
+        {
+          "file": "tools/orderpro-inbox-confirmation-test.mjs",
+          "assertion": "kitchen print follows confirmed acceptance exactly once"
+        },
+        {
+          "file": "tools/orderpro-relay-test.js",
+          "assertion": "les options OrderPro restent sur le parent canonique pour le KDS"
+        }
+      ]
+    },
+    "op.retry": {
+      "page": "orderpro",
+      "fr": "Un double appui ou un réseau lent ne crée pas de commande en double.",
+      "contracts": [
+        {
+          "file": "tools/orderpro-relay-test.js",
+          "assertion": "le double-tap rejoue la même commande"
+        }
+      ]
+    },
+    "op.cancel": {
+      "page": "orderpro",
+      "fr": "Une commande acceptée peut encore être annulée. Une commande déjà encaissée, non.",
+      "contracts": [
+        {
+          "file": "tools/orderpro-cancellation-lifecycle-test.mjs",
+          "assertion": "caisse can cancel an accepted OrderPro order"
+        },
+        {
+          "file": "tools/orderpro-relay-test.js",
+          "assertion": "une commande déjà encaissée ne disparaît pas par annulation"
+        }
+      ]
+    },
+    "op.status": {
+      "page": "orderpro",
+      "fr": "Le client voit où en est sa commande, appelle un serveur ou demande l’addition depuis la table.",
+      "contracts": [
+        {
+          "file": "tools/orderpro-guest-bill-test.mjs",
+          "assertion": "« en cuisine » seulement une fois acceptée"
+        },
+        {
+          "file": "tools/orderpro-relay-test.js",
+          "assertion": "Appeler un serveur publie une notification liée à la table ouverte"
+        },
+        {
+          "file": "tools/orderpro-relay-test.js",
+          "assertion": "Demander l’addition passe la table au statut rose dans serveur et caisse"
+        }
+      ]
+    },
+    "op.split": {
+      "page": "orderpro",
+      "fr": "À la caisse, l’addition se partage par article ou en parts égales. Sur son téléphone, le client calcule sa part, et l’encaissement se fait à la caisse.",
+      "contracts": [
+        {
+          "file": "tools/field-whole-item-split-test.mjs",
+          "assertion": "Whole-item assignment enables payment and preserves exact quantities/prices"
+        },
+        {
+          "file": "tools/field-whole-item-split-test.mjs",
+          "assertion": "Explicit equal splitting remains available"
+        },
+        {
+          "file": "tools/orderpro-money-properties-test.mjs",
+          "assertion": "incomplete allocations cannot confirm an underpayment"
+        }
+      ]
+    },
+    "op.nopay": {
+      "page": "orderpro",
+      "fr": "Aucun paiement en ligne : le client paie à table ou au comptoir, comme d’habitude.",
+      "contracts": [
+        {
+          "file": "tools/guest-options-test.mjs",
+          "assertion": "pas de paiement intégré, Apple Pay, wallet Kiwi"
+        }
+      ]
+    },
+    "op.soldout": {
+      "page": "orderpro",
+      "fr": "Un plat épuisé se retire de la carte, au besoin jusqu’à une heure précise, et une commande sur ce plat est refusée.",
+      "contracts": [
+        {
+          "file": "tools/orderpro-relay-test.js",
+          "assertion": "un plat épuisé est refusé"
+        },
+        {
+          "file": "tools/menu-86-until-test.mjs",
+          "assertion": "a future end keeps the dish hidden and travels with it"
+        }
+      ]
+    },
+    "op.hours": {
+      "page": "orderpro",
+      "fr": "Hors des horaires publiés, ou quand la caisse est éteinte, la carte ne prend plus de commande.",
+      "contracts": [
+        {
+          "file": "tools/orderpro-relay-test.js",
+          "assertion": "comptoir éteint ⇒ plus de commande"
+        },
+        {
+          "file": "tools/order-hours-server-test.mjs",
+          "assertion": "carte publiée avec horaires, vendredi : la commande est refusée"
+        }
+      ]
+    },
+    "op.takeaway": {
+      "page": "orderpro",
+      "fr": "Un QR ou un lien pour la vente à emporter, payée au comptoir.",
+      "contracts": [
+        {
+          "file": "tools/orderpro-relay-test.js",
+          "assertion": "deux retraits au comptoir coexistent"
+        }
+      ]
+    },
+    "op.booking": {
+      "page": "orderpro",
+      "fr": "Un lien de réservation public, avec des créneaux calculés depuis vos tables et vos horaires.",
+      "contracts": [
+        {
+          "file": "tools/booking-api-test.mjs",
+          "assertion": "availability is calculated from real resources and hours"
+        },
+        {
+          "file": "tools/booking-api-test.mjs",
+          "assertion": "international public booking is committed"
+        }
+      ]
+    }
+  }
+}
