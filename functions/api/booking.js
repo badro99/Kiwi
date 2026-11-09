@@ -174,6 +174,23 @@ function stayRange(checkIn, checkOut, settings, zone = TZ) {
   if (!startAt || !endAt || startAt < now + settings.minNoticeMinutes*60000 || startAt > now + settings.windowDays*86400000) return null;
   return { checkIn, checkOut, nights, startAt, endAt };
 }
+/* B26 · A checked-in guest past the departure date is still in the room until the
+ * front desk checks them out: the room stays blocked for tonight and tomorrow night
+ * (until 11:00 two days from today, store time), not sold as free. */
+function overdueHold(now, zone = TZ) { const p=dateParts(now,zone); return zonedEpoch(addDays(`${p.year}-${p.month}-${p.day}`,2),'11:00',zone); }
+async function d1BusyRoomsFor(env, merchant, stay, zone = TZ) {
+  const now = Date.now();
+  const stmt = env.DB.prepare(
+    "SELECT DISTINCT room_id FROM hotel_reservations WHERE merchant = ? AND ((status IN ('requested','confirmed','checked_in') AND start_at < ? AND end_at > ?)"
+    + " OR (status = 'checked_in' AND end_at <= ? AND start_at < ? AND ? > ?))"
+  ).bind(merchant, stay.endAt, stay.startAt, now, stay.endAt, overdueHold(now, zone), stay.startAt);
+  const busyRows = typeof stmt.all === 'function' ? await stmt.all() : (typeof stmt.rows === 'function' ? await stmt.rows() : null);
+  return new Set((busyRows?.results || []).map((r) => r.room_id));
+}
+function overdueFree(doc, rid, startAt, endAt, zone = TZ) {
+  const now = Date.now(), hold = overdueHold(now, zone);
+  return !(doc.bookings || []).some((b) => b.resourceId === rid && b.status === 'checked_in' && b.endAt <= now && overlaps(startAt, endAt, b.startAt, hold));
+}
 function currentRoomFree(hotel, room, startAt, endAt, zone = TZ) {
   if (room.status === 'hs') return false;
   if (!['occ','depart','arrivee'].includes(room.status)) return true;
@@ -181,15 +198,17 @@ function currentRoomFree(hotel, room, startAt, endAt, zone = TZ) {
    * time restaurant, spa or minibar posts a charge, so using it here would
    * silently extend the stay and hide inventory after each room charge. */
   const folio=hotel.folios.find((x)=>x.room===room.n), stamp=room.updatedAt||folio?.updatedAt;
-  const p=dateParts(stamp||Date.now(),zone), day=`${p.year}-${p.month}-${p.day}`;
-  const busyStart=zonedEpoch(day,'15:00',zone), busyEnd=zonedEpoch(addDays(day,folio?.nights||1),'11:00',zone);
+  const p=dateParts(stamp||Date.now(),zone), day=`${p.year}-${p.month}-${p.day}`, now=Date.now();
+  let busyEnd=zonedEpoch(addDays(day,folio?.nights||1),'11:00',zone);
+  if (room.status !== 'arrivee' && busyEnd <= now) busyEnd = overdueHold(now, zone);
+  const busyStart=zonedEpoch(day,'15:00',zone);
   return !overlaps(startAt,endAt,busyStart,busyEnd);
 }
 function hotelCategories(doc, hotel, stay, guests, onlyType='', d1BusyRooms = null, zone = TZ) {
   guests=num(guests,1,12,1);
   return hotel.types.filter((t)=>t.public&&t.maxGuests>=guests&&(!onlyType||t.id===onlyType)).map((t)=>{
     const rate=t.rate == null ? hotel.baseRate : t.rate;
-    const rooms=hotel.rooms.filter((r)=>r.typeId===t.id&&currentRoomFree(hotel,r,stay.startAt,stay.endAt,zone)&&(!d1BusyRooms||!d1BusyRooms.has(r.id))&&free(doc,r.id,stay.startAt,stay.endAt));
+    const rooms=hotel.rooms.filter((r)=>r.typeId===t.id&&currentRoomFree(hotel,r,stay.startAt,stay.endAt,zone)&&(!d1BusyRooms||!d1BusyRooms.has(r.id))&&free(doc,r.id,stay.startAt,stay.endAt)&&overdueFree(doc,r.id,stay.startAt,stay.endAt,zone));
     return { ...t, rate, total:rate == null ? null : Math.round(rate*100)*stay.nights/100, rooms };
 
   }).filter((t)=>t.rate != null);
@@ -297,13 +316,8 @@ export async function onRequestGet({ request, env }) {
       if(!stay)return json({error:'invalid-dates'},400);
       let d1BusyRooms = null;
       if (await hotelReservationsTableExists(env)) {
-        try {
-          const stmt = env.DB.prepare(
-            "SELECT DISTINCT room_id FROM hotel_reservations WHERE merchant = ? AND status IN ('requested','confirmed','checked_in') AND start_at < ? AND end_at > ?"
-          ).bind(merchant, stay.endAt, stay.startAt);
-          const busyRows = typeof stmt.all === 'function' ? await stmt.all() : (typeof stmt.rows === 'function' ? await stmt.rows() : null);
-          d1BusyRooms = new Set((busyRows?.results || []).map((r) => r.room_id));
-        } catch (_) {
+        try { d1BusyRooms = await d1BusyRoomsFor(env, merchant, stay, rows.zone); }
+        catch (_) {
           return json({ error: 'service-unavailable' }, 503);
         }
 
@@ -474,13 +488,8 @@ export async function onRequestPost({ request, env }) {
       const stay=stayRange(str(b?.checkIn,10),str(b?.checkOut,10),doc.settings,rows.zone);if(!stay)return json({error:'invalid-dates'},400);
       let d1BusyRooms = null;
       if (await hotelReservationsTableExists(env)) {
-        try {
-          const stmt = env.DB.prepare(
-            "SELECT DISTINCT room_id FROM hotel_reservations WHERE merchant = ? AND status IN ('requested','confirmed','checked_in') AND start_at < ? AND end_at > ?"
-          ).bind(merchant, stay.endAt, stay.startAt);
-          const busyRows = typeof stmt.all === 'function' ? await stmt.all() : (typeof stmt.rows === 'function' ? await stmt.rows() : null);
-          d1BusyRooms = new Set((busyRows?.results || []).map((r) => r.room_id));
-        } catch (_) {
+        try { d1BusyRooms = await d1BusyRoomsFor(env, merchant, stay, rows.zone); }
+        catch (_) {
           return json({ error: 'service-unavailable' }, 503);
         }
 

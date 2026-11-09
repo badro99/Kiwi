@@ -637,7 +637,7 @@ for (const test of [
   'kitchen-properties-test.mjs',
   'booking-manage-test.mjs',
   'locale-booking-wave-n-test.mjs',
-  'booking-hotel-beyond-window-test.mjs',
+  'booking-hotel-beyond-window-test.mjs', 'booking-overdue-stay-test.mjs',
   'hotel-dossier-safety-test.mjs',
   'cloud-doc-quota-test.mjs',
   'cloud-doc-retry-test.js',
