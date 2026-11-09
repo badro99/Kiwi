@@ -18,8 +18,9 @@ const startupTags = [...emitted.matchAll(/<script (?:type="module" )?src="([^"]+
 // 45, then the stock strings, the team catalogue, three menu parts (26 Oct 2026 splits), the stock state owner
 // and the day report's two-closures notice (wave 12, 27 Oct), then the briefing's rules and persistence owners
 // split out of briefing.js (note 13 briefing#1, 28 Oct), then the boutique « Corriger le stock » window
-// (boutique-stock-correct.js, 8356a202) and the categories page view (boutique-categories-view.js, aa737d46), 2 Nov.
-assert.equal(startupTags.length, 56, 'startup providers retain one ordered deferred execution each');
+// (boutique-stock-correct.js, 8356a202) and the categories page view (boutique-categories-view.js, aa737d46), 2 Nov,
+// then the day report's refused-sales notice (day-report-refused.js, r21 cash), 9 Nov.
+assert.equal(startupTags.length, 57, 'startup providers retain one ordered deferred execution each');
 assert.match(emitted, /<script type="module" src="assets\/team\.js\?/, 'team entry imports its pieces as a parser-ordered module');
 for (const [, url, attributes] of startupTags) {
   assert.match(attributes, /\bdefer\b/);

@@ -49,6 +49,8 @@ for (const name of ['submit', 'submitHotel']) {
   h.run(live.slice(live.indexOf('  const retryRefs = {};'), live.indexOf('  function retryWarning()')) + live.slice(live.indexOf('  function retryWarning()'), live.indexOf('\n  }\n', live.indexOf('  function retryWarning()')) + 4));
   const shared = live.indexOf('  async function submitRequest(');
   h.run(live.slice(shared, live.indexOf('\n  }\n', shared) + 4));
+  // The form error painter moved there too (r21 app): run the real formErrorText + showFormError.
+  h.run(live.slice(live.indexOf('  function formErrorText('), live.indexOf('  /* Called when a details form')));
   const fn = h.run('(' + extract('booking.js', name) + ')');
   await h.expire(fn({...event,currentTarget:{querySelector:s=>s==='[type=submit]'?button:error}}));
   assert.equal(button.disabled,false); assert.equal(error.textContent,'timeout'); assert.equal([...refs.keys()].filter(k => !k.endsWith('Intent')).length,1); assert.equal(refs.size,2,'the retry ref keeps the booked intent beside it');

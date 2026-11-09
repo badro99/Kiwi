@@ -1566,6 +1566,19 @@
       "state": "built native account, role and device setup shell"
     },
     {
+      "id": "native-files",
+      "shells": [
+        "app/src/index.html"
+      ],
+      "locales": [
+        "fr"
+      ],
+      "viewports": [
+        "phone"
+      ],
+      "state": "feuille de document modale, plugin natif qui échoue ou ne répond jamais"
+    },
+    {
       "id": "team-entry",
       "shells": [
         "kiwi-serveur.html"

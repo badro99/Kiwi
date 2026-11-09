@@ -1,5 +1,5 @@
 {
-  "sha256": "2c5314053aace74df309d97f3ab7c9ed67cfd1846c0d939fb03b4b2f865ffefb",
+  "sha256": "277103a266c8e927f2faeaf643f31d813021254e9ecb6c48b2d1089fe1137810",
   "parts": [
     {
       "name": "session",
@@ -65,9 +65,9 @@
         {
           "name": "SESSION",
           "start": 103127,
-          "end": 111494,
+          "end": 111625,
           "offset": 2152,
-          "length": 8367,
+          "length": 8498,
           "marker": "    // OrderPro session: SESSION is supplied by its private factory.\n"
         }
       ]
@@ -124,40 +124,40 @@
         },
         {
           "name": "chooseMode",
-          "start": 121213,
-          "end": 121718,
+          "start": 121344,
+          "end": 121849,
           "offset": 1379,
           "length": 505,
           "marker": "    // OrderPro table: chooseMode is supplied by its private factory.\n"
         },
         {
           "name": "seatHere",
-          "start": 121928,
-          "end": 122439,
+          "start": 122059,
+          "end": 122570,
           "offset": 1885,
           "length": 511,
           "marker": "    // OrderPro table: seatHere is supplied by its private factory.\n"
         },
         {
           "name": "applyMenuMode",
-          "start": 122440,
-          "end": 123565,
+          "start": 122571,
+          "end": 123696,
           "offset": 2397,
           "length": 1125,
           "marker": "    // OrderPro table: applyMenuMode is supplied by its private factory.\n"
         },
         {
           "name": "guestLand",
-          "start": 123803,
-          "end": 124082,
+          "start": 123934,
+          "end": 124213,
           "offset": 3523,
           "length": 279,
           "marker": "    // OrderPro table: guestLand is supplied by its private factory.\n"
         },
         {
           "name": "commitTable",
-          "start": 124153,
-          "end": 124367,
+          "start": 124284,
+          "end": 124498,
           "offset": 3803,
           "length": 214,
           "marker": "    // OrderPro table: commitTable is supplied by its private factory.\n"
@@ -411,16 +411,16 @@
         },
         {
           "name": "availabilityOf",
-          "start": 136883,
-          "end": 137181,
+          "start": 137014,
+          "end": 137312,
           "offset": 22133,
           "length": 298,
           "marker": "    // OrderPro menu: availabilityOf is supplied by its private factory.\n"
         },
         {
           "name": "bootRestaurant",
-          "start": 138139,
-          "end": 144370,
+          "start": 138270,
+          "end": 144501,
           "offset": 22432,
           "length": 6231,
           "marker": "    // OrderPro menu: bootRestaurant is supplied by its private factory.\n"
@@ -762,104 +762,104 @@
         },
         {
           "name": "onSessionClosed",
-          "start": 111787,
-          "end": 112407,
+          "start": 111918,
+          "end": 112538,
           "offset": 22972,
           "length": 620,
           "marker": "    // OrderPro payment: onSessionClosed is supplied by its private factory.\n"
         },
         {
           "name": "LIVE",
-          "start": 113318,
-          "end": 115409,
+          "start": 113449,
+          "end": 115540,
           "offset": 23593,
           "length": 2091,
           "marker": "    // OrderPro payment: LIVE is supplied by its private factory.\n"
         },
         {
           "name": "onOrderStatus",
-          "start": 115656,
-          "end": 116335,
+          "start": 115787,
+          "end": 116466,
           "offset": 25685,
           "length": 679,
           "marker": "    // OrderPro payment: onOrderStatus is supplied by its private factory.\n"
         },
         {
           "name": "applyOrderStatus",
-          "start": 116335,
-          "end": 119358,
+          "start": 116466,
+          "end": 119489,
           "offset": 26365,
           "length": 3023,
           "marker": "    // OrderPro payment: applyOrderStatus is supplied by its private factory.\n"
         },
         {
           "name": "watchTableOrder",
-          "start": 119359,
-          "end": 119738,
+          "start": 119490,
+          "end": 119869,
           "offset": 29389,
           "length": 379,
           "marker": "    // OrderPro payment: watchTableOrder is supplied by its private factory.\n"
         },
         {
           "name": "dropUnavailable",
-          "start": 120107,
-          "end": 120740,
+          "start": 120238,
+          "end": 120871,
           "offset": 29769,
           "length": 633,
           "marker": "    // OrderPro payment: dropUnavailable is supplied by its private factory.\n"
         },
         {
           "name": "restartMenu",
-          "start": 120817,
-          "end": 121150,
+          "start": 120948,
+          "end": 121281,
           "offset": 30403,
           "length": 333,
           "marker": "    // OrderPro payment: restartMenu is supplied by its private factory.\n"
         },
         {
           "name": "confirmCashierPayment",
-          "start": 124433,
-          "end": 124567,
+          "start": 124564,
+          "end": 124698,
           "offset": 30737,
           "length": 134,
           "marker": "    // OrderPro payment: confirmCashierPayment is supplied by its private factory.\n"
         },
         {
           "name": "startPreparing",
-          "start": 125091,
-          "end": 125797,
+          "start": 125222,
+          "end": 125928,
           "offset": 30872,
           "length": 706,
           "marker": "    // OrderPro payment: startPreparing is supplied by its private factory.\n"
         },
         {
           "name": "triggerReady",
-          "start": 125872,
-          "end": 126466,
+          "start": 126003,
+          "end": 126597,
           "offset": 31579,
           "length": 594,
           "marker": "    // OrderPro payment: triggerReady is supplied by its private factory.\n"
         },
         {
           "name": "playChime",
-          "start": 126547,
-          "end": 127418,
+          "start": 126678,
+          "end": 127549,
           "offset": 32174,
           "length": 871,
           "marker": "    // OrderPro payment: playChime is supplied by its private factory.\n"
         },
         {
           "name": "refreshPermBanner",
-          "start": 127484,
-          "end": 128469,
+          "start": 127615,
+          "end": 128600,
           "offset": 33046,
           "length": 985,
           "marker": "    // OrderPro payment: refreshPermBanner is supplied by its private factory.\n"
         },
         {
           "name": "askNotificationPermission",
-          "start": 128470,
-          "end": 128960,
+          "start": 128601,
+          "end": 129091,
           "offset": 34032,
           "length": 490,
           "marker": "    // OrderPro payment: askNotificationPermission is supplied by its private factory.\n"

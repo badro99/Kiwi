@@ -47,8 +47,8 @@ async function open(t) {
     if (u.pathname === '/app/src/native-files.js') return r.respond({ status: 200, contentType: 'text/javascript', body: SOURCE });
     return r.continue();
   });
-  // coverage: surface=native-files locale=fr viewport=phone
   await page.setViewport({ width: 402, height: 874, isMobile: true, hasTouch: true });
+  // coverage: surface=native-files locale=fr viewport=phone
   await page.goto(h.base + '/fixture.html', { waitUntil: 'load' });
   return page;
 }

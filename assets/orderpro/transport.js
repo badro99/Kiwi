@@ -139,7 +139,8 @@ KiwiOrderMenu.orderProParts.run('transport', function () {
         if (fingerprint) {
           try {
             const record = JSON.stringify({ v: 1, scope, fingerprint, ref });
-            const current = JSON.parse(capabilities.localStorage.getItem(key) || 'null');
+            let current = null; /* a corrupt record is overwritten, it does not cost the new send its durability */
+            try { current = JSON.parse(capabilities.localStorage.getItem(key) || 'null'); } catch (_) {}
             if (current && current.v === 1 && current.scope === scope && current.fingerprint !== fingerprint && current.ref !== ref
                 && /^r[A-Za-z0-9_-]{6,40}$/.test(current.ref || '') && !this.retiredSendRefs.has(key + ':' + current.ref)
                 && capabilities.localStorage.getItem(key + ':retired:' + current.ref) !== '1') {
