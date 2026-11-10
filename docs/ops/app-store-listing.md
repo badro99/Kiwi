@@ -61,10 +61,10 @@ Tableau de bord
 · Chiffre d'affaires, ventes par article, stock, recettes et coûts, carte du restaurant avec valeurs nutritionnelles et allergènes, tout en direct depuis la caisse.
 · En français, en anglais et en arabe, en clair comme en sombre.
 
-Kiwi Pro se connecte avec le compte Kiwi de votre établissement. L'app ne vend rien et ne contient aucun achat intégré : l'abonnement se règle entre Kiwi et le commerçant. Pour découvrir Kiwi : kiwi-os.com.
+Kiwi Pro se connecte avec le compte Kiwi de votre établissement. L'app ne contient aucun achat intégré.
 ```
 
-**Support URL** `https://kiwi-os.com/support.html` · **Marketing URL** `https://kiwi-os.com/fr`
+**Support URL** `https://kiwi-os.com/support.html` · **Marketing URL** empty (guideline 3.1.1: the site shows prices and sign-up)
 <!-- /listing:fr -->
 
 <!-- listing:en -->
@@ -109,10 +109,10 @@ Dashboard
 · Revenue, sales per item, stock, recipes and costs, the restaurant menu with nutrition and allergens, all live from the till.
 · French, English and Arabic, light and dark.
 
-Kiwi Pro signs in with your establishment's Kiwi account. The app sells nothing and has no in-app purchases: the subscription is settled between Kiwi and the merchant. Discover Kiwi at kiwi-os.com.
+Kiwi Pro signs in with your establishment's Kiwi account. The app has no in-app purchases.
 ```
 
-**Support URL** `https://kiwi-os.com/support.html` · **Marketing URL** `https://kiwi-os.com/en`
+**Support URL** `https://kiwi-os.com/support.html` · **Marketing URL** empty (guideline 3.1.1: the site shows prices and sign-up)
 <!-- /listing:en -->
 
 <!-- listing:ar -->
@@ -157,10 +157,10 @@ Kiwi Pro signs in with your establishment's Kiwi account. The app sells nothing 
 · رقم المعاملات، المبيعات حسب الصنف، المخزون، الوصفات والتكاليف، قائمة المطعم بالقيم الغذائية ومسببات الحساسية، كل ذلك مباشرة من الكاشير.
 · بالفرنسية والإنجليزية والعربية، في الوضعين الفاتح والداكن.
 
-يسجّل كيوي برو الدخول بحساب كيوي الخاص بمحلّك. التطبيق لا يبيع شيئاً ولا يحتوي على مشتريات داخلية: الاشتراك يُسوّى بين كيوي والتاجر. اكتشف كيوي على kiwi-os.com.
+يسجّل كيوي برو الدخول بحساب كيوي الخاص بمحلّك. التطبيق لا يحتوي على مشتريات داخلية.
 ```
 
-**Support URL** `https://kiwi-os.com/support.html` · **Marketing URL** `https://kiwi-os.com/ar`
+**Support URL** `https://kiwi-os.com/support.html` · **Marketing URL** empty (guideline 3.1.1: the site shows prices and sign-up)
 <!-- /listing:ar -->
 
 ## Version 1.0 (shared by every language)

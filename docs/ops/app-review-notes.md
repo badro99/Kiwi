@@ -109,6 +109,15 @@ shows them. Every subscription surface is gated on `html.kiwi-native`:
 
 `tools/native-pass4-test.mjs` holds the three gates above.
 
+**Rejected 9 Nov 2026 (build 45, guideline 3.1.1), metadata only.** The App
+Store description ended with "Explore Kiwi: https://kiwi-os.com", and the site
+shows prices and sign-up, so App Review read it as a link to an outside
+purchase. The build itself was not flagged. Fix: no link to the site anywhere in
+the description or the Marketing URL (`app-store-listing.md`); the Support and
+Privacy URLs stay. The in-app "Forgot password?" sheet opens `support.html`,
+whose logo links home: not flagged, but the first thing to change if a later
+review raises it.
+
 ## Already done, not to redo
 
 - Localised `NS*UsageDescription` strings in English, French and Arabic.
