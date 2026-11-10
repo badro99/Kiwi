@@ -63,9 +63,10 @@ assert.ok(journalListSource.includes('function renderJournalList'));
   });
   vm.runInContext(caisseTestSource.withSettlement(journalListSource), screen);
   screen.renderJournalList();
-  ok(body.innerHTML.includes('Offerte · Table 1') && body.innerHTML.includes('data-lucide="gift"')
-    && !body.innerHTML.includes('Carte · Table 1'), 'complimentary journal sale is not presented as a card payment');
-  ok(body.innerHTML.includes('Carte · Table 2') && body.innerHTML.includes('Espèces · Table 3'),
+  const shown = body.innerHTML.replace(/<[^>]+>/g, '');
+  ok(shown.includes('Offerte · Table 1') && body.innerHTML.includes('data-lucide="gift"')
+    && !shown.includes('Carte · Table 1'), 'complimentary journal sale is not presented as a card payment');
+  ok(shown.includes('Carte · Table 2') && shown.includes('Espèces · Table 3'),
     'ordinary card and cash journal labels stay intact');
   screen.journalFilter = 'complimentary';
   screen.renderJournalList();

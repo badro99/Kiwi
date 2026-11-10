@@ -288,6 +288,25 @@ const SALE = {
   RP.openCancel('restaurant');
   eq('openCancel ouvre le mode annulation', box.attrs['data-kx-rp-mode'], 'cancel');
 
+  /* La forme de Remboursement (2026-11-10) : pastille du moyen de paiement,
+     chevron, texte de recherche par ligne, recherche à partir de cinq
+     tickets, et un détail qui tombe juste (le pourboire a sa ligne). */
+  RP.provide('restaurant', () => [
+    { saleId: 's-1', ts: at(1), total: 23, tip: 5, ref: '0047-HU', label: 'À emporter', method: 'cash', lines: [{ qty: 1, name: 'Café au lait', total: 18 }] },
+    { saleId: 's-2', ts: at(2), total: 125, ref: '0045-HU', label: 'T2', method: 'card', lines: [] },
+    { saleId: 's-3', ts: at(3), total: 40, ref: '0044-HU', label: 'T4', method: 'wallet', lines: [] },
+  ]);
+  RP.open('restaurant', { mode: 'cancel', noFetch: true });
+  ok('Annuler : espèces, carte et autre ont chacun leur pastille', ['kx-rp-ic--cash', 'kx-rp-ic--card', 'kx-rp-ic--other'].every((k) => box.innerHTML.includes(k)));
+  ok('Annuler : chaque ligne a un chevron et son texte de recherche', (box.innerHTML.match(/kx-rp-go/g) || []).length === 3 && /data-kx-rp-q="[^"]*0045-hu[^"]*"/.test(box.innerHTML));
+  ok('Annuler : pas de recherche pour trois tickets', !box.innerHTML.includes('kx-rp-search'));
+  box.clicks['0']();
+  ok('Annuler : le détail montre le pourboire, les lignes tombent juste', /Café au lait[\s\S]*Pourboire<\/span><b>5/.test(box.innerHTML));
+  box.clicks['0'] = null;
+  RP.provide('restaurant', () => [1, 2, 3, 4, 5].map((n) => ({ saleId: 's' + n, ts: at(n), total: n * 10, ref: 'R' + n, label: 'T' + n, method: 'cash', lines: [] })));
+  RP.open('restaurant', { mode: 'cancel', noFetch: true });
+  ok('Annuler : une recherche dès cinq tickets', box.innerHTML.includes('class="kx-rp-search"') && box.innerHTML.includes('data-kx-rp-q autocomplete'));
+
   /* La boutique n'annule pas de vente, ni depuis « Réimprimer » ni autrement. */
   RP.open('boutique');
   box.clicks['0']();

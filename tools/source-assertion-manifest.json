@@ -91,6 +91,7 @@
     "sheet-opacity-test.mjs": "layout, contrast or copy in CSS/markup",
     "stock-alert-truth-test.mjs": "layout, contrast or copy in CSS/markup",
     "text-contrast-test.js": "layout, contrast or copy in CSS/markup",
+    "till-cancel-picker-test.mjs": "layout, contrast or copy in CSS/markup",
     "till-scroll-test.mjs": "layout, contrast or copy in CSS/markup",
     "token-contrast-test.js": "layout, contrast or copy in CSS/markup",
     "vexel-insights-card-dna-test.mjs": "layout, contrast or copy in CSS/markup",
