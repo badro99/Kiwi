@@ -518,8 +518,17 @@
          (§10.26, point 3) ; ses mots vont dans le nom accessible de Plus. */
       if (sync) { sync.a11y = kkt('till.nav.more_a11y', { status: sync.label }); footer.sync = sync; }
       /* La tête du panneau porte exactement les mêmes éléments que le rail. */
+      /* Repaint only what changed. Every till repaint (the shift's 5 s save,
+         each sync signal) rebuilt all its rows, so a row under a finger was
+         replaced before the finger lifted and the tap never landed (owner,
+         2026-11-10). The rail already skips an unchanged paint. */
       const nav = tillKitMoreNavEl();
-      if (nav) { nav.sections = [{ items: items.map((it) => Object.assign({}, it)) }].concat(tillKitDrawerSections()); nav.setAttribute('value', value || ''); }
+      if (nav) {
+        const sections = [{ items: items.map((it) => Object.assign({}, it)) }].concat(tillKitDrawerSections());
+        const sig = JSON.stringify(sections);
+        if (sig !== nav.__kSig) { nav.__kSig = sig; nav.sections = sections; }
+        if (nav.getAttribute('value') !== (value || '')) nav.setAttribute('value', value || '');
+      }
       /* Plus n'est pas une destination : la lentille reste sur le mode, et
          <k-rail> comme <k-sidebar> ne laissent pas toucher l'élément qui
          porte déjà leur valeur, ce qui empêcherait Moins de refermer. */

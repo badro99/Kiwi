@@ -449,6 +449,26 @@ try {
     await page.evaluate(() => document.getElementById('kit-more-scrim').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
     await sleep(700);
     check((await panel()).display === 'none' && !(await railMore()).open, 'a tap anywhere else puts it away too');
+    /* A row held under a real finger while the till repaints (the shift's 5 s
+       save, each sync signal) still takes the tap: every repaint used to
+       rebuild the panel's rows, and the press was lost (owner, 2026-11-10). */
+    await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]').click());
+    await sleep(700);
+    const held = await page.evaluate(() => {
+      const row = document.querySelector('.sidebar > k-sidebar').shadowRoot.querySelector('[data-id="m:cash_in_out"]');
+      const b = row.getBoundingClientRect();
+      window.__kCashTap = false;
+      document.querySelector('[data-action="cash-move"]').addEventListener('click', () => { window.__kCashTap = true; }, { once: true });
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+    });
+    await page.mouse.move(held.x, held.y);
+    await page.mouse.down();
+    await page.evaluate(() => { persistShift(); tillKitPaint(); });
+    await page.mouse.up();
+    await sleep(300);
+    check(await page.evaluate(() => window.__kCashTap), 'a panel row pressed while the till repaints still takes the tap');
+    await page.evaluate(() => { if (typeof closeCashMove === 'function') closeCashMove(); if (document.documentElement.hasAttribute('data-k-till-more')) document.getElementById('kit-more-scrim').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); });
+    await sleep(500);
     /* Sous 1000, pas la place d'un panneau de 260 à côté du rail : Plus garde
        la feuille, la route du téléphone (§18.3). */
     await page.setViewport({ width: 834, height: 1024 });
