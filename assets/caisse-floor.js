@@ -1313,7 +1313,7 @@
         `<button class="nt-chip ${n === wlDraft.size ? 'is-active' : ''}" data-wl-size="${n}">${n}</button>`
       ).join('');
       $('#wl-pref-chips').innerHTML = Object.entries(WL_PREFS).map(([key, p]) =>
-        `<button class="wl-pref-chip ${key === wlDraft.pref ? 'is-active' : ''}" data-wl-pref="${key}"><i data-lucide="${p.icon}"></i>${p.label}</button>`
+        `<button class="wl-pref-chip ${key === wlDraft.pref ? 'is-active' : ''}" data-wl-pref="${key}"><i data-lucide="${p.icon}"></i>${(globalThis.window?.KiwiCaisseLang || { tr: (x) => x }).tr(p.label)}</button>`
       ).join('');
       lucide.createIcons();
     }
@@ -1331,38 +1331,54 @@
       return Math.max(0, Math.round((Date.now() - entry.addedAt) / 60000));
     }
 
-    function renderWaitlist() {
+    /* En attente (owner, 2026-11-10): one card per party with the wait that
+       matters, the line's totals on top. renderWaitlist(true) is the 30 s
+       clock: it moves only the wait text and its tone, never the buttons
+       under a finger (a rebuild swallowed a tap on Attabler). */
+    function renderWaitlist(clockOnly) {
       const list = $('#waitlist-list');
       if (!list) return;
+      const tr = (s) => (globalThis.window?.KiwiCaisseLang || { tr: (x) => x }).tr(s);
+      const wait = (m) => ({ text: m === 0 ? tr("à l'instant") : m + ' ' + tr('min'), tone: m >= 30 ? 'is-long' : m >= 15 ? 'is-warm' : '' });
+      if (clockOnly && waitlist.length && list.querySelector('[data-wl-at]')) {
+        let longest = 0;
+        list.querySelectorAll('[data-wl-at]').forEach((w) => {
+          const m = Math.max(0, Math.round((Date.now() - Number(w.dataset.wlAt)) / 60000));
+          const card = w.closest('.wl-card'), now = wait(m);
+          longest = Math.max(longest, m);
+          card.classList.remove('is-warm', 'is-long');
+          if (now.tone) card.classList.add(now.tone);
+          w.lastElementChild.textContent = now.text;
+        });
+        const l = list.querySelector('[data-wl-longest]');
+        if (l) { l.textContent = wait(longest).text; l.parentElement.className = 'wl-stat ' + wait(longest).tone; }
+        return;
+      }
       if (!waitlist.length) {
-        list.innerHTML = `<div class="wl-empty">
-          <i data-lucide="users"></i>
-          <div class="wl-empty-title">Personne en attente</div>
-          <div class="wl-empty-sub">Clique « Ajouter à la file » quand un client se présente sans réservation.</div>
-        </div>`;
+        list.innerHTML = `<div class="wl-empty"><span class="wl-empty-ic"><i data-icon="group"></i></span>
+          <div class="wl-empty-title">${tr('Personne en attente')}</div>
+          <div class="wl-empty-sub">${tr('Ajoutez un groupe dès qu’il arrive sans réservation. La file garde son ordre et son temps d’attente.')}</div>
+          <button type="button" class="wl-empty-add" data-wl-add><i data-icon="person_add"></i>${tr('Ajouter à la file')}</button></div>`;
         lucide.createIcons();
         return;
       }
-      list.innerHTML = waitlist.map((e, i) => {
+      const people = waitlist.reduce((n, e) => n + (e.size || 0), 0);
+      const longest = Math.max(...waitlist.map(wlWaitMins));
+      const free = Object.values(tables).filter((t) => t && t.status === 'khawya').length;
+      const stat = (v, k, cls) => `<div class="wl-stat ${cls || ''}"><b>${v}</b><span>${tr(k)}</span></div>`;
+      list.innerHTML = `<div class="wl-summary">${stat(waitlist.length, waitlist.length > 1 ? 'groupes' : 'groupe')}${stat(people, people > 1 ? 'personnes' : 'personne')}`
+        + `<div class="wl-stat ${wait(longest).tone}"><b data-wl-longest>${wait(longest).text}</b><span>${tr('attente la plus longue')}</span></div>`
+        + `${stat(free, free > 1 ? 'tables libres' : 'table libre', free ? 'is-free' : '')}</div><div class="wl-grid">` + waitlist.map((e, i) => {
         const pref = WL_PREFS[e.pref] || WL_PREFS['peu-importe'];
         const mins = wlWaitMins(e);
-        const wait = mins === 0 ? "à l'instant" : `${mins} min`;
-        return `<div class="wl-card" data-wl-id="${e.id}">
-          <div class="wl-pos">${i + 1}</div>
-          <div class="wl-main">
-            <div class="wl-name">${kdsEsc(e.name)}</div>
-            <div class="wl-meta">
-              <span class="wl-size"><i data-lucide="users"></i>${e.size} pers.</span>
-              <span class="wl-pref"><i data-lucide="${pref.icon}"></i>${pref.label}</span>
-              <span class="wl-wait">${wait}</span>
-            </div>
-          </div>
-          <div class="wl-acts">
-            <button class="wl-act seat" data-wl-seat="${e.id}"><i data-lucide="door-open"></i>Attabler</button>
-            <button class="wl-act remove" data-wl-remove="${e.id}"><i data-lucide="x"></i>Retirer</button>
-          </div>
-        </div>`;
-      }).join('');
+        return `<article class="wl-card ${wait(mins).tone}" data-wl-id="${e.id}">
+          <div class="wl-top"><span class="wl-pos">${i + 1}</span><span class="wl-wait" data-wl-at="${e.addedAt}"><i data-icon="schedule"></i><span>${wait(mins).text}</span></span></div>
+          <div class="wl-name">${kdsEsc(e.name)}</div>
+          <div class="wl-meta"><span class="wl-size"><b>${e.size}</b> ${tr(e.size > 1 ? 'personnes' : 'personne')}</span><span class="wl-pref"><i data-lucide="${pref.icon}"></i>${tr(pref.label)}</span></div>
+          <div class="wl-acts"><button type="button" class="wl-act seat" data-wl-seat="${e.id}"><i data-icon="table_restaurant"></i>${tr('Attabler')}</button>
+            <button type="button" class="wl-act remove" data-wl-remove="${e.id}" aria-label="${tr('Retirer')} ${kdsEsc(e.name)}" title="${tr('Retirer')}"><i data-icon="close"></i></button></div>
+        </article>`;
+      }).join('') + '</div>';
       lucide.createIcons();
     }
 

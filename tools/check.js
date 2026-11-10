@@ -689,7 +689,7 @@ for (const test of [
   'menu-formula-bounds-test.mjs',
   /* « Épuisé jusqu'à 18 h » : la fin d'un 86 posée par la caisse, résolue par
      le serveur à chaque lecture, et le choix de durée au vrai clic. */
-  'menu-86-until-test.mjs', 'till-side-screens-test.mjs',
+  'menu-86-until-test.mjs', 'till-side-screens-test.mjs', 'till-waitlist-test.mjs',
   /* « Vérifier la caisse » : connexion, appairage, ventes à envoyer,
      imprimante (sondée, jamais imprimée), horloge, version, stockage, carte. */
   'caisse-doctor-test.mjs',

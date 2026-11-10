@@ -356,3 +356,96 @@ html[dir="rtl"] #menu-availability-screen .km-switch.on::before { transform: tra
   #menu-availability-screen .km-sheet-card { animation: none; }
   #menu-availability-screen .km-switch::before { transition: none; }
 }
+
+/* ── En attente (owner, 2026-11-10) ─────────────────────────────────────────
+   The line read at a glance (parties, people, the longest wait, free tables)
+   and one card per party: who, how many, how long, and the one move that
+   matters, Attabler. A wait past 15 min warms, past 30 it turns red. */
+#waitlist-list,
+#waitlist-modal {
+  --kwl-card: var(--k-surface-1, var(--surface, #FFFDFA));
+  --kwl-sunk: var(--k-surface-2, var(--paper-mute, #F1EFE9));
+  --kwl-line: var(--k-line, var(--line, #E4E1D8));
+  --kwl-ink: var(--k-ink-1, var(--ink, #0A0F0D));
+  --kwl-ink-2: var(--k-ink-2, var(--ink-2, #4A4A4A));
+  --kwl-ink-3: var(--k-ink-3, var(--ink-3, #6B6F6C));
+  --kwl-accent: var(--k-accent, var(--atlas, #0B6E4F));
+  --kwl-on-accent: var(--k-on-accent, #F7F5F0);
+  --kwl-warm: var(--k-warning, #B07D12);
+  --kwl-long: var(--k-danger, #B42318);
+}
+#waitlist-list.wl-list { display: block; padding: 4px 0 32px; }
+#waitlist-list .wl-summary {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px;
+}
+#waitlist-list .wl-stat {
+  display: flex; flex-direction: column; gap: 2px; padding: 14px 18px;
+  background: var(--kwl-card); border: 1px solid var(--kwl-line); border-radius: 18px;
+}
+#waitlist-list .wl-stat b { font-size: 28px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; color: var(--kwl-ink); font-variant-numeric: tabular-nums; }
+#waitlist-list .wl-stat span { font-size: 13px; color: var(--kwl-ink-3); }
+#waitlist-list .wl-stat.is-free b { color: var(--kwl-accent); }
+#waitlist-list .wl-stat.is-warm b { color: var(--kwl-warm); }
+#waitlist-list .wl-stat.is-long b { color: var(--kwl-long); }
+#waitlist-list .wl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+#waitlist-list .wl-card {
+  display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 16px 18px 18px;
+  background: var(--kwl-card); border: 1px solid var(--kwl-line); border-radius: 20px;
+}
+#waitlist-list .wl-card:hover { transform: none; }
+#waitlist-list .wl-card.is-warm { box-shadow: inset 4px 0 0 var(--kwl-warm); }
+#waitlist-list .wl-card.is-long { box-shadow: inset 4px 0 0 var(--kwl-long); }
+#waitlist-list .wl-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#waitlist-list .wl-pos {
+  width: 34px; height: 34px; border-radius: 50%; background: var(--kwl-sunk); color: var(--kwl-ink);
+  font-family: inherit; font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums;
+}
+#waitlist-list .wl-wait {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px;
+  background: var(--kwl-sunk); color: var(--kwl-ink-2);
+  font-family: inherit; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+#waitlist-list .wl-wait svg { width: 16px; height: 16px; }
+#waitlist-list .wl-card.is-warm .wl-wait { color: var(--kwl-warm); }
+#waitlist-list .wl-card.is-long .wl-wait { color: var(--kwl-long); }
+#waitlist-list .wl-name {
+  font-size: 20px; font-weight: 650; letter-spacing: -0.01em; color: var(--kwl-ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#waitlist-list .wl-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 0; font-size: 14px; color: var(--kwl-ink-2); }
+#waitlist-list .wl-size b { font-weight: 650; color: var(--kwl-ink); }
+#waitlist-list .wl-pref {
+  gap: 6px; padding: 4px 10px; border: 0; border-radius: 999px;
+  background: var(--kwl-sunk); color: var(--kwl-ink-2); font-size: 13px; font-weight: 500;
+}
+#waitlist-list .wl-pref svg { width: 14px; height: 14px; }
+#waitlist-list .wl-acts { display: flex; gap: 8px; margin-top: auto; padding-top: 6px; }
+#waitlist-list .wl-act { height: 48px; border-radius: 14px; font-size: 15px; font-weight: 600; justify-content: center; }
+#waitlist-list .wl-act svg { width: 18px; height: 18px; }
+#waitlist-list .wl-act.seat { flex: 1; background: var(--kwl-accent); color: var(--kwl-on-accent); }
+#waitlist-list .wl-act.remove { width: 48px; padding: 0; border: 0; background: var(--kwl-sunk); color: var(--kwl-ink-2); }
+#waitlist-list .wl-empty { min-height: 62vh; gap: 12px; color: var(--kwl-ink-3); }
+#waitlist-list .wl-empty-ic {
+  display: inline-flex; align-items: center; justify-content: center; width: 76px; height: 76px; margin-bottom: 4px;
+  border-radius: 50%; background: var(--kwl-sunk); color: var(--kwl-accent);
+}
+#waitlist-list .wl-empty-ic svg { width: 36px; height: 36px; color: inherit; }
+#waitlist-list .wl-empty-title { font-size: 21px; font-weight: 650; letter-spacing: -0.01em; color: var(--kwl-ink); }
+#waitlist-list .wl-empty-sub { max-width: 400px; font-size: 15px; line-height: 1.45; color: var(--kwl-ink-3); }
+#waitlist-list .wl-empty-add {
+  display: inline-flex; align-items: center; gap: 8px; height: 48px; margin-top: 8px; padding: 0 22px;
+  border-radius: 14px; background: var(--kwl-accent); color: var(--kwl-on-accent); font-size: 15px; font-weight: 600;
+}
+#waitlist-list .wl-empty-add svg { width: 18px; height: 18px; }
+/* The form: the eight sizes on one row, the four seating wishes as a 2 x 2. */
+#waitlist-modal .modal-waitlist { width: 460px; }
+#waitlist-modal #wl-size-chips { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; margin: 10px 0 16px; }
+#waitlist-modal #wl-size-chips .nt-chip { width: auto; height: 48px; }
+#waitlist-modal .wl-pref-chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0 18px; }
+#waitlist-modal .wl-pref-chip { justify-content: center; height: 46px; padding: 0 12px; border-radius: 12px; }
+#waitlist-modal .nt-chip.is-active,
+#waitlist-modal .wl-pref-chip.is-active { background: var(--kwl-accent); color: var(--kwl-on-accent); }
+@media (max-width: 720px) {
+  #waitlist-list .wl-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #waitlist-modal #wl-size-chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

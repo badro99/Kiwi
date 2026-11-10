@@ -192,8 +192,8 @@
     "sha": "0149ec3062006a42"
   },
   "assets/caisse-app.js": {
-    "v": "47",
-    "sha": "bd8ba2f8b79cedde"
+    "v": "49",
+    "sha": "4ddd83b32b2e50ab"
   },
   "assets/caisse-dna.css": {
     "v": "10",
@@ -208,8 +208,8 @@
     "sha": "20476101ff223f1f"
   },
   "assets/caisse-floor.js": {
-    "v": "19",
-    "sha": "ad81372517f39890"
+    "v": "21",
+    "sha": "b91fb861e52ebdbb"
   },
   "assets/caisse-hardware.js": {
     "v": "16",
@@ -220,8 +220,8 @@
     "sha": "c978ff18c9a0add3"
   },
   "assets/caisse-lang.js": {
-    "v": "144",
-    "sha": "65da9b5cb1cf37bb"
+    "v": "145",
+    "sha": "cdd64a8d74903ace"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -264,8 +264,8 @@
     "sha": "567fea581a1f1ecc"
   },
   "assets/caisse-screens.css": {
-    "v": "1",
-    "sha": "b4f3b64b27d3ce7f"
+    "v": "2",
+    "sha": "7849a8e2f93852b5"
   },
   "assets/caisse-shell.css": {
     "v": "29",

@@ -1482,10 +1482,11 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
       if (seat) { startSeating(parseInt(seat.dataset.wlSeat)); return; }
       const rem = e.target.closest('[data-wl-remove]');
       if (rem) { removeWaitlist(parseInt(rem.dataset.wlRemove)); return; }
+      if (e.target.closest('[data-wl-add]')) openWaitlistModal();
     });
     $('#wl-seat-banner-cancel') && $('#wl-seat-banner-cancel').addEventListener('click', () => endSeating(true));
-    // keep wait times fresh while the waitlist is on screen
-    setInterval(() => { if (mode === 'waitlist') renderWaitlist(); }, 30000);
+    // keep wait times fresh in place: a rebuild every 30 s swallowed a tap on Attabler
+    setInterval(() => { if (mode === 'waitlist') renderWaitlist(true); }, 30000);
     /* ---------- Caisse Table Transfer & Merge Handlers ---------- */
     let ctrfFromId = null;
     let ctrfSelectedToId = null;
