@@ -65,9 +65,43 @@
       '.kpr-ask p{margin:0 0 10px;font-size:.86rem;line-height:1.45;}' +
       '.kpr-ask-btns{display:flex;gap:8px;}.kpr-ask-btns .kpr-btn{padding:10px;}' +
       '.kpr-ask-yes{background:#c0392b;color:#fff;}.kpr-ask-yes:disabled{opacity:.6;cursor:default;}' +
-      '#kpr-card{background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);width:460px;max-width:94vw;max-height:92vh;overflow:auto;border-radius:18px;padding:24px;box-shadow:0 30px 70px -24px rgba(5,59,44,.5);}' +
-      '#kpr-card h2{font-size:1.16rem;letter-spacing:-.01em;margin:0 0 4px;display:flex;align-items:center;gap:8px;}' +
-      '.kpr-sub{margin:0 0 16px;color:var(--ink,#0A0F0D);opacity:.65;font-size:.9rem;line-height:1.5;}' +
+      '#kpr-card{background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);width:520px;max-width:94vw;max-height:92vh;overflow:auto;overscroll-behavior:contain;border-radius:24px;padding:0 20px 20px;box-shadow:0 30px 70px -24px rgba(5,59,44,.5);}' +
+      /* La tête reste en haut quand on fait défiler les réglages : on voit
+         toujours où l'on est et comment sortir. */
+      '.kpr-head{position:sticky;top:0;z-index:2;display:flex;align-items:flex-start;gap:12px;margin:0 -20px 14px;padding:20px 20px 14px;background:var(--paper,#F7F5F0);border-bottom:1px solid rgba(10,15,13,.07);}' +
+      '.kpr-head>div{flex:1;min-width:0;}' +
+      '#kpr-card h2{font-size:1.2rem;font-weight:650;letter-spacing:-.015em;margin:2px 0 4px;display:flex;align-items:center;gap:8px;}' +
+      '.kpr-sub{margin:0;color:var(--ink,#0A0F0D);opacity:.62;font-size:.84rem;line-height:1.45;}' +
+      '.kpr-ic{flex:none;display:inline-grid;place-items:center;width:38px;height:38px;border-radius:12px;background:rgba(11,110,79,.1);color:var(--atlas,#0B6E4F);}' +
+      '.kpr-ic svg{width:21px;height:21px;}' +
+      '.kpr-head .kpr-ic{width:44px;height:44px;border-radius:14px;background:var(--atlas,#0B6E4F);color:#fff;}' +
+      '.kpr-head .kpr-ic svg{width:24px;height:24px;}' +
+      '@media (max-width:560px){.kpr-head .kpr-ic{display:none;}#kpr-card h2{font-size:1.1rem;}.kpr-sub{font-size:.8rem;}}' +
+      /* Chaque façon de brancher l'imprimante est une carte : nom, une ligne
+         d'explication, son état, puis l'action. Pas connectée n'est pas une
+         erreur : l'état reste gris, il ne passe au vert qu'une fois branchée. */
+      '#kpr-card .kpr-bt{background:var(--surface,#fff);border:1px solid rgba(10,15,13,.08);border-radius:18px;padding:16px;margin:0 0 12px;transition:border-color .2s;}' +
+      '#kpr-card .kpr-bt:has(.kpr-status.on){border-color:rgba(11,110,79,.42);}' +
+      '#kpr-card .kpr-bt h3{display:flex;align-items:center;gap:12px;margin:0;font-size:.98rem;font-weight:650;letter-spacing:-.01em;line-height:1.25;}' +
+      '#kpr-card .kpr-bt h3+p,#kpr-card .kpr-bt>summary+p,#kpr-card .kpr-bt .kpr-st-sub{margin:6px 0 12px;font-size:.84rem;line-height:1.45;opacity:.66;}' +
+      '#kpr-card .kpr-bt .kpr-status{display:flex;align-items:center;gap:9px;padding:0;margin:0 0 12px;border:0;background:none;border-radius:0;font-size:.84rem;font-weight:600;}' +
+      '#kpr-card .kpr-bt .kpr-status .kpr-d{margin-top:0;width:8px;height:8px;}' +
+      '#kpr-card .kpr-bt .kpr-status.off{color:var(--ink,#0A0F0D);opacity:.6;}' +
+      '#kpr-card .kpr-bt .kpr-status.off .kpr-d{background:currentColor;box-shadow:none;opacity:.55;}' +
+      '#kpr-card .kpr-bt .kpr-status.on{color:var(--atlas,#0B6E4F);}' +
+      '.kpr-row{display:flex;gap:8px;}' +
+      '.kpr-row .kpr-btc{flex:1;}' +
+      '.kpr-row .kpr-test{flex:0 0 auto;padding-inline:18px;}' +
+      /* Le ticket test n'a de sens qu'une fois l'imprimante branchée : on le
+         montre à ce moment-là, plutôt qu'un bouton gris qui ne répond pas. */
+      '.kpr-row .kpr-test:disabled{display:none;}' +
+      '#kpr-card details.kpr-bt>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;}' +
+      '#kpr-card details.kpr-bt>summary::-webkit-details-marker{display:none;}' +
+      '#kpr-card details.kpr-bt>summary h3,#kpr-card details.kpr-bt>summary .kpr-st-hdr{flex:1;min-width:0;}' +
+      '#kpr-card details.kpr-bt>summary::after{content:"";flex:none;width:9px;height:9px;margin-inline-end:6px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;margin-top:-5px;transform:rotate(45deg);opacity:.45;transition:transform .2s,margin .2s;}' +
+      '#kpr-card details.kpr-bt[open]>summary::after{margin-top:4px;transform:rotate(225deg);}' +
+      '#kpr-card details.kpr-bt[open]>summary{margin-bottom:6px;}' +
+      '#kpr-card details.kpr-bt>summary:focus-visible{outline:2px solid var(--atlas,#0B6E4F);outline-offset:4px;border-radius:10px;}' +
       '.kpr-status{display:flex;align-items:flex-start;gap:11px;padding:13px 15px;border-radius:12px;margin:0 0 18px;font-size:.88rem;line-height:1.45;}' +
       '.kpr-status .kpr-d{width:9px;height:9px;border-radius:50%;flex:none;margin-top:5px;}' +
       '.kpr-status.off{background:#fbeceb;border:1px solid #f2cdc8;color:#8f2c1e;}' +
@@ -82,8 +116,8 @@
       '.kpr-field input:focus,.kpr-field select:focus{outline:none;border-color:var(--atlas,#0B6E4F);box-shadow:0 0 0 4px rgba(11,110,79,.13);}' +
       '.kpr-two{display:flex;gap:12px;}.kpr-two>*{flex:1;}' +
       '.kpr-actions{display:flex;gap:10px;margin-top:20px;}' +
-      '.kpr-btn{flex:1;font:inherit;font-weight:700;padding:13px;border-radius:12px;cursor:pointer;border:0;}' +
-      '.kpr-test{background:var(--surface);border:1.5px solid var(--atlas,#0B6E4F);color:var(--atlas,#0B6E4F);}' +
+      '.kpr-btn{flex:1;font:inherit;font-weight:650;min-height:48px;padding:12px;border-radius:14px;cursor:pointer;border:0;}' +
+      '.kpr-test{background:rgba(11,110,79,.09);border:0;color:var(--atlas,#0B6E4F);}' +
       '.kpr-test:disabled{opacity:.45;cursor:default;}' +
       '.kpr-save{background:var(--atlas,#0B6E4F);color:#fff;}' +
       '.kpr-save:hover{filter:brightness(1.06);}' +
@@ -92,18 +126,26 @@
       '.kpr-quick{display:flex;gap:10px;margin:0 0 16px;}' +
       '.kpr-quick .kpr-btn{flex:1;width:auto;margin:0;}' +
       '.kpr-quick .kpr-browser{background:var(--atlas,#0B6E4F);color:#fff;border:0;opacity:1;}' +
-      '.kpr-hub{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;border:1px solid rgba(11,110,79,.22);border-radius:12px;background:var(--surface,#fff);cursor:pointer;}' +
+      '.kpr-hub{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;border:0;border-radius:14px;background:rgba(11,110,79,.06);cursor:pointer;}' +
       '.kpr-hub input{width:19px;height:19px;margin:1px 0 0;accent-color:var(--atlas,#0B6E4F);flex:none;}' +
       '.kpr-hub span{display:grid;gap:3px;line-height:1.35;}.kpr-hub b{font-size:.88rem;}.kpr-hub small{font-size:.76rem;opacity:.68;}' +
-      '.kpr-btc{width:100%;font:inherit;font-weight:700;padding:13px;border-radius:12px;cursor:pointer;border:0;background:var(--atlas,#0B6E4F);color:#fff;}' +
+      '.kpr-btc{width:100%;font:inherit;font-weight:650;min-height:48px;padding:12px 14px;border-radius:14px;cursor:pointer;border:0;background:var(--atlas,#0B6E4F);color:#fff;}' +
+      '.kpr-btc:active,.kpr-btn:active{transform:scale(.985);}' +
       '.kpr-btc:hover{filter:brightness(1.06);}.kpr-btc:disabled{opacity:.5;cursor:default;}' +
-      '.kpr-adv{margin-top:8px;border-top:1px solid rgba(0,0,0,.08);padding-top:12px;}' +
-      '.kpr-adv>summary{cursor:pointer;font-size:.84rem;font-weight:700;color:var(--riad,#053B2C);opacity:.82;}' +
-      '.kpr-adv[open]>summary{margin-bottom:14px;}' +
-      '.kpr-x{float:right;background:none;border:0;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--ink,#0A0F0D);opacity:.5;}' +
+      '#kpr-card .kpr-adv>summary h3{font-size:.92rem;}' +
+      '#kpr-card .kpr-adv[open]>summary{margin-bottom:14px;}' +
+      '.kpr-adv .kpr-btc{margin:0 0 10px;}' +
+      /* Exporter le diagnostic sert au support, pas au réglage : bouton second. */
+      '#kpr-card #kpr-diagnostics{background:rgba(11,110,79,.09);color:var(--atlas,#0B6E4F);}' +
+      '.kpr-x{flex:none;display:inline-grid;place-items:center;width:40px;height:40px;border-radius:50%;background:rgba(10,15,13,.06);border:0;font-size:1.35rem;line-height:1;cursor:pointer;color:var(--ink,#0A0F0D);}' +
+      '.kpr-x svg{width:22px;height:22px;}.kpr-x:has(svg) .kpr-x-t{display:none;}' +
+      '.kpr-ic:not(:has(svg)){display:none;}' +
+      '.kpr-x:active{background:rgba(10,15,13,.12);}' +
+      '.kpr-x:focus-visible{outline:2px solid var(--atlas,#0B6E4F);outline-offset:2px;}' +
       '.kpr-note{margin:14px 0 0;font-size:.78rem;opacity:.6;line-height:1.5;}' +
       '.kpr-note a{color:var(--atlas,#0B6E4F);font-weight:600;text-decoration:underline;}' +
-      '.kpr-st-hdr{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;}' +
+      '.kpr-st-hdr{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;}' +
+      '.kpr-st-add{margin:0 0 12px;}' +
       '.kpr-st-hdr>div{flex:1 1 220px;min-width:0;}' +
       '.kpr-st-sub{font-size:.84rem;color:var(--ink,#0A0F0D);opacity:.68;margin:2px 0 0;line-height:1.4;}' +
       '.kpr-st-add-btn{background:var(--atlas,#0B6E4F);color:#fff;padding:8px 14px;border-radius:10px;font-size:.82rem;font-weight:600;white-space:nowrap;border:0;cursor:pointer;flex:none;}' +
@@ -129,9 +171,18 @@
       /* En arabe (caisse-lang.js pose dir="rtl") : la croix de fermeture passe à
          gauche avec le reste, et l'espacement des lettres saute · il casse la
          liaison des lettres arabes. Une adresse IP reste une suite latine. */
-      '[dir="rtl"] .kpr-x{float:left;}' +
       '[dir="rtl"] #kpr-card .kpr-field label,[dir="rtl"] #kpr-card h2{letter-spacing:0;}' +
-      '[dir="rtl"] #kpr-ip,[dir="rtl"] #kpr-port,[dir="rtl"] #kpr-prof-ip,[dir="rtl"] #kpr-prof-port{direction:ltr;text-align:right;}';
+      '[dir="rtl"] #kpr-ip,[dir="rtl"] #kpr-port,[dir="rtl"] #kpr-prof-ip,[dir="rtl"] #kpr-prof-port{direction:ltr;text-align:right;}' +
+      ':is(html[data-caisse-theme="dark"],html[data-theme="dark"]) #kpr-card,:is(html[data-caisse-theme="dark"],html[data-theme="dark"]) .kpr-head{background:#121816;color:#EEF1EC;}' +
+      ':is(html[data-caisse-theme="dark"],html[data-theme="dark"]) #kpr-card .kpr-bt{background:#1A211F;border-color:rgba(255,255,255,.07);color:#EEF1EC;}' +
+      ':is(html[data-caisse-theme="dark"],html[data-theme="dark"]) #kpr-card :is(.kpr-sub,.kpr-bt .kpr-status.off,h2,h3){color:#EEF1EC;}' +
+      ':is(html[data-caisse-theme="dark"],html[data-theme="dark"]) #kpr-card :is(.kpr-ic:not(.kpr-head .kpr-ic),.kpr-test,#kpr-diagnostics){background:rgba(125,242,176,.1);color:#7DF2B0;}' +
+      ':is(html[data-caisse-theme="dark"],html[data-theme="dark"]) #kpr-card .kpr-hub{background:rgba(255,255,255,.05);color:#EEF1EC;}' +
+      ':is(html[data-caisse-theme="dark"],html[data-theme="dark"]) #kpr-card .kpr-field label{color:#EEF1EC;opacity:.66;}' +
+      ':is(html[data-caisse-theme="dark"],html[data-theme="dark"]) #kpr-card .kpr-bt .kpr-status.on{color:#7DF2B0;}' +
+      ':is(html[data-caisse-theme="dark"],html[data-theme="dark"]) #kpr-card .kpr-x{background:rgba(255,255,255,.08);color:#EEF1EC;}' +
+      ':is(html[data-caisse-theme="dark"],html[data-theme="dark"]) .kpr-head{border-bottom-color:rgba(255,255,255,.07);}' +
+      ':is(html[data-caisse-theme="dark"],html[data-theme="dark"]) #kpr-card :is(.kpr-field input,.kpr-field select,.kpr-st-sel){background:#0E1312;color:#EEF1EC;border-color:rgba(255,255,255,.14);}';
     document.head.appendChild(cssEl);
   }
 
@@ -154,9 +205,13 @@
        its explanation. */
     var inApp = !!socket;
     var showBt = !!navigator.bluetooth || !inApp;
+    /* Les pictos viennent du jeu Material vendu (assets/material-icons.js),
+       qui peint tout nœud ajouté à la page. Une page sans ce moteur
+       (printer.html) masque les pastilles vides et garde la croix en texte. */
+    var ic = function (name) { return '<span class="kpr-ic" aria-hidden="true"><i data-icon="' + name + '"></i></span>'; };
     ov.innerHTML =
       '<div id="kpr-card">' +
-        '<button class="kpr-x" type="button" id="kpr-close" aria-label="' + esc(tr('Fermer')) + '">×</button>' +
+        '<div class="kpr-head">' + ic('print') + '<div>' +
         '<h2>' + tr(fromPrint ? (isLabel ? 'Imprimer l’étiquette' : 'Imprimer le reçu') : 'Connecter une imprimante') + '</h2>' +
         '<p class="kpr-sub">' + tr(inApp && !showBt ? (fromPrint
           ? (isLabel
@@ -166,33 +221,34 @@
           ? (isLabel
             ? 'Imprimez tout de suite, ou connectez une imprimante (Bluetooth ou réseau) pour imprimer directement la prochaine fois.'
             : 'Aucune imprimante n’est connectée à Kiwi. Si l’imprimante est déjà installée sur cette caisse, imprimez par le système · ou connectez-la en Bluetooth ou en USB pour imprimer sans boîte de dialogue la prochaine fois.')
-          : 'Connectez l’imprimante en Bluetooth ou en USB pour imprimer sans boîte de dialogue. Si elle est déjà installée sur cette caisse, Kiwi peut aussi l’utiliser via la boîte d’impression du système.') + '</p>' +
+          : 'Connectez l’imprimante en Bluetooth ou en USB pour imprimer sans boîte de dialogue. Si elle est déjà installée sur cette caisse, Kiwi peut aussi l’utiliser via la boîte d’impression du système.') + '</p></div>' +
+        '<button class="kpr-x" type="button" id="kpr-close" aria-label="' + esc(tr('Fermer')) + '"><span class="kpr-x-t" aria-hidden="true">×</span><i data-icon="close"></i></button></div>' +
         (fromPrint ? '<div class="kpr-quick">' +
           (context.onBrowserPrint ? '<button data-activation=write class="kpr-btn kpr-browser" type="button" id="kpr-browser">' + tr(inApp ? 'Imprimer ou partager le PDF' : 'Imprimer') + '</button>' : '') +
           (context.onSavePdf ? '<button data-activation=write class="kpr-btn kpr-pdf" type="button" id="kpr-savepdf">' + tr('Enregistrer en PDF') + '</button>' : '') +
         '</div>' : '') +
         (showBt ? '<div class="kpr-bt">' +
-          '<h3>' + tr('Imprimante Bluetooth') + '</h3>' +
+          '<h3>' + ic('bluetooth') + tr('Imprimante Bluetooth') + '</h3>' +
           '<p>' + tr('Sans installation. Kiwi imprime le reçu directement.') + '</p>' +
           '<div class="kpr-status ' + (btLive ? 'on' : 'off') + '" id="kpr-bt-status"><span class="kpr-d"></span><span id="kpr-bt-status-t">' + (btLive ? esc(tr('Connectée · ' + bt.name)) : tr('Aucune imprimante connectée.')) + '</span></div>' +
-          '<button data-activation=write class="kpr-btc" type="button" id="kpr-bt-connect">' + tr(btLive ? 'Changer d’imprimante' : 'Rechercher une imprimante Bluetooth') + '</button>' +
-          '<div class="kpr-actions"><button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-bt-test"' + (btLive ? '' : ' disabled') + '>' + tr('Imprimer un ticket test') + '</button></div>' +
+          '<div class="kpr-row"><button data-activation=write class="kpr-btc" type="button" id="kpr-bt-connect">' + tr(btLive ? 'Changer d’imprimante' : 'Rechercher une imprimante Bluetooth') + '</button>' +
+          '<button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-bt-test"' + (btLive ? '' : ' disabled') + '>' + tr('Imprimer un ticket test') + '</button></div>' +
         '</div>' : '') +
         (usbSupported() ? '<div class="kpr-bt">' +
-          '<h3>' + tr('Imprimante USB') + '</h3>' +
+          '<h3>' + ic('usb') + tr('Imprimante USB') + '</h3>' +
           '<p>' + tr('Branchée en USB sur la caisse. Sans installation, sans adresse IP.') + '</p>' +
           '<div class="kpr-status ' + (usbLive ? 'on' : 'off') + '" id="kpr-usb-status"><span class="kpr-d"></span><span id="kpr-usb-status-t">' + (usbLive ? esc(tr('Connectée · ' + usb.name)) : tr(usb.failure ? 'Imprimante injoignable' : 'Aucune imprimante USB connectée.')) + '</span></div>' +
-          '<button data-activation=write class="kpr-btc" type="button" id="kpr-usb-connect">' + tr(usbLive ? 'Changer d’imprimante' : 'Choisir l’imprimante USB') + '</button>' +
-          '<div class="kpr-actions"><button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-usb-test"' + (usbLive ? '' : ' disabled') + '>' + tr('Imprimer un ticket test') + '</button></div>' +
+          '<div class="kpr-row"><button data-activation=write class="kpr-btc" type="button" id="kpr-usb-connect">' + tr(usbLive ? 'Changer d’imprimante' : 'Choisir l’imprimante USB') + '</button>' +
+          '<button data-activation=write class="kpr-btn kpr-test" type="button" id="kpr-usb-test"' + (usbLive ? '' : ' disabled') + '>' + tr('Imprimer un ticket test') + '</button></div>' +
         '</div>' : '') +
         (window.KiwiKitchenPrint ? '<div class="kpr-bt" id="kpr-kitchen">' +
-          '<h3>' + tr('Tickets de production automatiques') + '</h3>' +
+          '<h3>' + ic('restaurant') + tr('Tickets de production automatiques') + '</h3>' +
           '<p>' + tr('Ce poste peut imprimer les commandes envoyées depuis la caisse, l’app employé et les autres terminaux. Activez cette option sur un seul ordinateur par établissement.') + '</p>' +
           '<label class="kpr-hub"><input type="checkbox" id="kpr-hub"' + (KiwiKitchenPrint.isHub() ? ' checked' : '') + '>' +
             '<span><b>' + tr('Faire de ce poste le hub d’impression') + '</b><small id="kpr-hub-status"></small></span></label>' +
         '</div>' : '') +
         '<div class="kpr-bt" id="kpr-os" style="display:none;">' +
-          '<h3>' + tr('Imprimante déjà installée') + '</h3>' +
+          '<h3>' + ic('desktop_windows') + tr('Imprimante déjà installée') + '</h3>' +
           '<p>' + tr('Celle que cet ordinateur utilise déjà. Kiwi lui envoie le ticket directement, sans boîte de dialogue.') + '</p>' +
           '<div class="kpr-status ' + (cfg.osPrinter ? 'on' : 'off') + '" id="kpr-os-status"><span class="kpr-d"></span><span id="kpr-os-status-t">' + (cfg.osPrinter ? esc(tr('Choisie · ' + cfg.osPrinter)) : tr('Aucune imprimante choisie.')) + '</span></div>' +
           '<div class="kpr-field"><label for="kpr-os-sel">' + tr('Imprimante') + '</label><select id="kpr-os-sel"></select></div>' +
@@ -201,14 +257,10 @@
             '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-os-save">' + tr('Utiliser cette imprimante') + '</button>' +
           '</div>' +
         '</div>' +
-        '<div class="kpr-bt" id="kpr-stations-box">' +
-          '<div class="kpr-st-hdr">' +
-            '<div>' +
-              '<h3>' + tr('Imprimantes par poste') + '</h3>' +
-              '<p class="kpr-st-sub">' + tr('Associez chaque poste (caisse, cuisine, bar…) à son imprimante physique.') + '</p>' +
-            '</div>' +
-            '<button data-activation=write type="button" class="kpr-st-add-btn" id="kpr-add-prof-btn">' + tr('+ Nouvelle imprimante') + '</button>' +
-          '</div>' +
+        '<details class="kpr-bt" id="kpr-stations-box"' + (getStationConfig().profiles.length ? ' open' : '') + '>' +
+          '<summary><h3>' + ic('tune') + tr('Imprimantes par poste') + '</h3></summary>' +
+          '<p class="kpr-st-sub">' + tr('Associez chaque poste (caisse, cuisine, bar…) à son imprimante physique.') + '</p>' +
+          '<div class="kpr-st-add"><button data-activation=write type="button" class="kpr-st-add-btn" id="kpr-add-prof-btn">' + tr('+ Nouvelle imprimante') + '</button></div>' +
           '<div id="kpr-profile-form" class="kpr-profile-card" style="display:none;">' +
             '<h4 id="kpr-prof-form-title">' + tr('Ajouter une imprimante') + '</h4>' +
             '<div class="kpr-field"><label for="kpr-prof-name">' + tr('Nom de l’imprimante') + '</label><input id="kpr-prof-name" type="text" placeholder="' + esc(tr('ex. Cuisine, Bar, Fournil…')) + '"></div>' +
@@ -239,9 +291,9 @@
           '<div class="kpr-actions" style="margin-top:12px;">' +
             '<button data-activation=write class="kpr-btn kpr-save" type="button" id="kpr-save-stations-btn">' + tr('Enregistrer le routage par poste') + '</button>' +
           '</div>' +
-        '</div>' +
-        '<div class="kpr-bt" id="kpr-relay">' +
-          '<h3>' + tr('Imprimer depuis un iPad ou une tablette · relais Kiwi') + '</h3>' +
+        '</details>' +
+        '<details class="kpr-bt" id="kpr-relay"' + (inApp || !showBt ? ' open' : '') + '>' +
+          '<summary><h3>' + ic('tablet_mac') + tr('Imprimer depuis un iPad ou une tablette · relais Kiwi') + '</h3></summary>' +
           '<p>' + tr('Sans pont sur cet appareil, Kiwi envoie les tickets au pont de l’ordinateur du comptoir, qui les imprime sur votre imprimante réseau. Une association suffit, puis tout est automatique.') + '</p>' +
           '<div class="kpr-status off" id="kpr-relay-status"><span class="kpr-d"></span><span id="kpr-relay-status-t">' + tr('Vérification du relais…') + '</span></div>' +
           '<div id="kpr-relay-list" class="kpr-note"></div>' +
@@ -250,9 +302,9 @@
             '<button class="kpr-btc" type="button" id="kpr-relay-pair">' + tr('Associer un pont') + '</button>' +
             '<button class="kpr-btc" type="button" id="kpr-relay-pair-local" style="display:none;">' + tr('Associer ce pont maintenant') + '</button>' +
           '</div>' +
-        '</div>' +
-        '<details class="kpr-adv"' + (cfg.ip ? ' open' : '') + '>' +
-          '<summary>' + tr('Option avancée · imprimante réseau globale (Wi-Fi / Ethernet)') + '</summary>' +
+        '</details>' +
+        '<details class="kpr-bt kpr-adv"' + (cfg.ip ? ' open' : '') + '>' +
+          '<summary><h3>' + ic('lan') + tr('Option avancée · imprimante réseau globale (Wi-Fi / Ethernet)') + '</h3></summary>' +
           '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">' + tr(socket ? 'Impression directe disponible dans l’app Kiwi.' : 'Vérification du pont…') + '</span></div>' +
           '<p class="kpr-note" id="kpr-target"></p>' +
           '<div class="kpr-field"><label for="kpr-ip">' + tr('Adresse IP de l’imprimante') + '</label><input id="kpr-ip" type="text" inputmode="decimal" placeholder="192.168.1.50" value="' + esc(cfg.ip) + '"></div>' +

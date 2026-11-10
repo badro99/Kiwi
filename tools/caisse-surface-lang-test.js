@@ -287,7 +287,7 @@ both("de l'objectif d'lyoum, 10 440 MAD restants.", 'of today’s target, 10 440
 check(tr('en', 'Rapproché · 1 234,50 MAD').endsWith('1 234,50 MAD'), 'un montant MAD traverse la traduction tel quel');
 
 /* ── 4 · le dialogue et la clôture suivent la page en arabe ─────────────── */
-check(/\[dir="rtl"\] \.kpr-x\{float:left;\}/.test(pb), 'en arabe, la croix du dialogue passe à gauche');
+check(/\.kpr-head\{[^}]*display:flex/.test(pb) && !/\.kpr-x\{[^}]*float:/.test(pb), 'en arabe, la croix du dialogue passe à gauche (la tête est une rangée flex, qui se retourne seule)');
 check(!/margin-left:2px/.test(between(pb, 'function injectCss()', 'function openSetup(', 'printer-bridge.js · injectCss')), 'le dialogue n\'a plus de marge physique à gauche');
 check(/\.clo-row\.is-sub \.clo-row-label \{ padding-inline-start: 14px;/.test(html), 'les sous-lignes de la clôture s\'indentent du côté où l\'on lit');
 check(/\[lang="ar"\] \.clo-eyebrow, \[lang="ar"\] \.clo-drawer-title \{ letter-spacing: 0; \}/.test(html), 'pas d\'espacement des lettres sur l\'arabe de la clôture');

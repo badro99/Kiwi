@@ -1,122 +1,122 @@
 {
-  "sha256": "5b8aa4e58f55534760a15f67e6c25806f3676f62be3bd98e6c175fa6e61d6947",
+  "sha256": "8f96a79116f2657917b1683ef095563ca23dd5545da0724be25bbc736260ff08",
   "start": 76199,
-  "end": 140295,
+  "end": 146503,
   "prefix": "/* Pairing UI, loaded on demand by assets/printer-bridge.js. The core hands\n * over its helpers on one private object; the two values bridge discovery\n * changes later (mode, capability) arrive through onBridgeState. The split is\n * proven in tools/printer-split-test.mjs (bodies sealed at split time). */\n(function (core) {\n  'use strict';\n  var BRIDGE_DOWNLOAD = core.BRIDGE_DOWNLOAD,\n    MODELS = core.MODELS,\n    bridgeBase = core.bridgeBase,\n    bridgeHeaders = core.bridgeHeaders,\n    bridgePrintBytes = core.bridgePrintBytes,\n    bt = core.bt,\n    btConnected = core.btConnected,\n    connectBluetooth = core.connectBluetooth,\n    connectUsb = core.connectUsb,\n    esc = core.esc,\n    fallbackNotice = core.fallbackNotice,\n    getConfig = core.getConfig,\n    getPrepStations = core.getPrepStations,\n    getStationConfig = core.getStationConfig,\n    labelOptions = core.labelOptions,\n    modelDriver = core.modelDriver,\n    modelNote = core.modelNote,\n    nativeSocket = core.nativeSocket,\n    nativeSocketSend = core.nativeSocketSend,\n    pairLocalBridge = core.pairLocalBridge,\n    paperOptions = core.paperOptions,\n    ping = core.ping,\n    printBytes = core.printBytes,\n    printBytesToTarget = core.printBytesToTarget,\n    printQueueIdle = core.printQueueIdle,\n    reconnectUsb = core.reconnectUsb,\n    relayFetch = core.relayFetch,\n    relayMerchantQS = core.relayMerchantQS,\n    relayPairCode = core.relayPairCode,\n    relayProbe = core.relayProbe,\n    relayRevoke = core.relayRevoke,\n    saveBridgeTarget = core.saveBridgeTarget,\n    say = core.say,\n    setConfig = core.setConfig,\n    setStationConfig = core.setStationConfig,\n    usb = core.usb,\n    usbConnected = core.usbConnected,\n    usbSupported = core.usbSupported,\n    withTimeout = core.withTimeout;\n  var initial = core.bridgeState();\n  var bridgeMode = initial.mode, bridgeCapability = initial.capability;\n  core.onBridgeState(function (mode, capability) { bridgeMode = mode; bridgeCapability = capability; });\n",
   "suffix": "  core.install({ openSetup: openSetup });\n})(window.KiwiPrinter.__core);\n",
   "moved": [
     {
       "name": "injectCss",
       "start": 76533,
-      "end": 85063,
-      "sha256": "db5748fecacbc0ffc9cf9e26dc75f335c4445ef90541afcb953372e5bb11c7f2"
+      "end": 90583,
+      "sha256": "c35e744c2c3f7aca0a4246a9a4b806dd1dea82865575b41d267937cab88909b4"
     },
     {
       "name": "openSetup",
-      "start": 85067,
-      "end": 140293,
-      "sha256": "6156ba46b16ea95efceaba1f2e7ecb04826d102597d5627a807d9f2a6060329c"
+      "start": 90587,
+      "end": 146501,
+      "sha256": "0b0f6ab480038d67a94642c7c9a9637aa9aa6e3d5fb8e3e85165e359899026ad"
     },
     {
       "name": "readForm",
-      "start": 99468,
-      "end": 99817,
+      "start": 105676,
+      "end": 106025,
       "sha256": "ca788fffc857c178a321a08d4e9d3e05ab9e5eef37cdcde29a50e462d1a9653c"
     },
     {
       "name": "close",
-      "start": 99822,
-      "end": 99855,
+      "start": 106030,
+      "end": 106063,
       "sha256": "0ec0b83e492cc6cd2a4bcd0efdb570ce05a54283ed781ee45510b35f355a730f"
     },
     {
       "name": "toast",
-      "start": 100015,
-      "end": 100133,
+      "start": 106223,
+      "end": 106341,
       "sha256": "7fcb4e740e91bf0d20a342952a1fff9badbf0ff8bf255fc600ef17b2bd5a8a5d"
     },
     {
       "name": "validIp",
-      "start": 100139,
-      "end": 100459,
+      "start": 106347,
+      "end": 106667,
       "sha256": "204ad61b079df96335c61884b58e7ec82f263e07fc1f6c626ed53379ad29d5e1"
     },
     {
       "name": "validPort",
-      "start": 100464,
-      "end": 100560,
+      "start": 106672,
+      "end": 106768,
       "sha256": "3683c4ed664fdc67a0e267c3190656cdbc78e6b4581a132793fdf4753cf3bd2b"
     },
     {
       "name": "frReason",
-      "start": 100566,
-      "end": 102642,
+      "start": 106774,
+      "end": 108850,
       "sha256": "836d9abc005060abe93c61a193f66ca4e71ca2fbea6419413ce1d559e03fa5db"
     },
     {
       "name": "paintTarget",
-      "start": 102648,
-      "end": 103023,
+      "start": 108856,
+      "end": 109231,
       "sha256": "807e0139143e6b382c4b61736b69e98b3c3ce1b2da9ad2567ed16659672a7160"
     },
     {
       "name": "paintHubStatus",
-      "start": 103028,
-      "end": 103575,
+      "start": 109236,
+      "end": 109783,
       "sha256": "d9f1008aebf7653396df4c27013e5889fbd92044690a38619aa5a2b68111142a"
     },
     {
       "name": "renderProfilesChips",
-      "start": 104060,
-      "end": 105561,
+      "start": 110268,
+      "end": 111769,
       "sha256": "74b8c81ed4f6bb2eb17ae509291ac9159a9903d6e685bb8410ee06c65ca006a8"
     },
     {
       "name": "renderStationRows",
-      "start": 105567,
-      "end": 110637,
+      "start": 111775,
+      "end": 116845,
       "sha256": "d4603bd1cbff1bfe8a1ca91d654b4490d5c9f8a5c45e36c27e0937159c309028"
     },
     {
       "name": "loadOsPrinters",
-      "start": 115319,
-      "end": 116331,
+      "start": 121527,
+      "end": 122539,
       "sha256": "d456d0e1a3fcf03ccab0ef959e25f983514c3cf3776f16133cfb948c133ac613"
     },
     {
       "name": "refreshStatus",
-      "start": 116454,
-      "end": 119064,
+      "start": 122662,
+      "end": 125272,
       "sha256": "df9b9d8ed578f1627b2e4cfbb8fd343d25b0b9dad99440a451c9cc124cafd55f"
     },
     {
       "name": "fmtAgo",
-      "start": 120327,
-      "end": 120592,
+      "start": 126535,
+      "end": 126800,
       "sha256": "ba9f37ee387689a04d58b5a201798a64c10728227c2724ac025e7571a51d9693"
     },
     {
       "name": "paintRelay",
-      "start": 120597,
-      "end": 124169,
+      "start": 126805,
+      "end": 130377,
       "sha256": "da2594823e30a2d31a59f8e179b510d88aaa86e5be7fb803d9b4b07b030b8e7e"
     },
     {
       "name": "askRevoke",
-      "start": 124739,
-      "end": 126472,
+      "start": 130947,
+      "end": 132680,
       "sha256": "a9ffd5c1b7c409839c812901280a9b4130ccdcd582b97b44ed39f1f2c4611c36"
     },
     {
       "name": "end",
-      "start": 125705,
-      "end": 125884,
+      "start": 131913,
+      "end": 132092,
       "sha256": "491d36e12d146facd7208d411bdd74c2b57b52b59739db666ecf792a9a1e5bc4"
     },
     {
       "name": "showPairCode",
-      "start": 126477,
-      "end": 126954,
+      "start": 132685,
+      "end": 133162,
       "sha256": "e614038383e336da00d2fa708395e494ee764ee9f4237f3bc53ac8c5412b4c65"
     }
   ]
