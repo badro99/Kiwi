@@ -2729,7 +2729,7 @@
              /* L'étiquette porte maintenant le nom de table, saisi par le
                 commerçant : elle passe par l'échappement comme ses voisines. */
              +   `<span class="jr-entry-label">${rpEsc(e.label)}${refundedTag}</span>`
-             +   `<span class="jr-entry-meta">${hh}:${mm} · ${mLabel} · ${e.ref}${sourceMeta}${tipMeta}</span>`
+             +   `<span class="jr-entry-meta">${hh}:${mm} · ${mLabel} · <span class="jr-ref">${rpEsc(e.ref)}</span>${sourceMeta}${tipMeta}</span>`
              + `</span>`
              + `<span class="jr-entry-amount${isRefund ? ' is-refund' : ''}">${amtTxt}</span>`
              + `<span class="jr-entry-invoice" data-jr-invoice="${escTeam(e.id || '')}" role="button" tabindex="0" aria-label="Facture A4 ${escTeam(e.ref)}"><i data-lucide="file-text"></i></span>`

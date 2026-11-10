@@ -28,4 +28,11 @@ ok(/tip: money\(Number\(entry\.tip \|\| 0\)\)/.test(app), 'the restaurant passes
 ok(/Number\(entry\.tip\) > 0\) lines \+= '<div class="kx-rp-ticket-line kx-rp-tip">/.test(rp), 'the detail shows the tip as its own line, so it adds up');
 ok(!/#kx-rp-veil[^']*background:\s*#fff/i.test(rp) && /--kx-rp-accent: var\(--k-accent/.test(rp), 'colours come from the kit tokens, no pure white');
 
+/* Rapport du jour, the drawer behind « Ventes du service »: at 420 the detail
+   line broke inside the ticket number. */
+const jv = read('assets/caisse-accounting/journal-view.js');
+const screens = read('assets/caisse-screens.css');
+ok(/<span class="jr-ref">\$\{rpEsc\(e\.ref\)\}<\/span>/.test(jv) && /#journal-drawer \.jr-ref \{ white-space: nowrap; \}/.test(screens), 'the day report keeps a ticket number whole (and escapes it)');
+ok(/#journal-drawer \.drawer \{ width: 520px; \}/.test(screens), 'the day report drawer is 520 wide');
+
 console.log(`\ntill-cancel-picker: ${passed} passed`);

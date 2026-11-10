@@ -188,8 +188,8 @@
     "sha": "468f83916655c7d7"
   },
   "assets/caisse-accounting.js": {
-    "v": "31",
-    "sha": "0149ec3062006a42"
+    "v": "33",
+    "sha": "b7c36f9126af3598"
   },
   "assets/caisse-app.js": {
     "v": "50",
@@ -264,8 +264,8 @@
     "sha": "567fea581a1f1ecc"
   },
   "assets/caisse-screens.css": {
-    "v": "2",
-    "sha": "7849a8e2f93852b5"
+    "v": "4",
+    "sha": "7e2a2bfc5f39c345"
   },
   "assets/caisse-shell.css": {
     "v": "29",

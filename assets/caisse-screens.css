@@ -449,3 +449,18 @@ html[dir="rtl"] #menu-availability-screen .km-switch.on::before { transform: tra
   #waitlist-list .wl-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #waitlist-modal #wl-size-chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* ── Rapport du jour (owner, 2026-11-10) ────────────────────────────────────
+   At 420 the detail line (hour · method · ticket · tip) broke inside the
+   ticket number, in an 11 px monospace. 520 wide, the line in the UI face
+   with tabular figures, and the rows at the size of the rest of the till. */
+#journal-drawer .drawer { width: 520px; }
+#journal-drawer .jr-entry { gap: 14px; min-height: 60px; padding: 10px 12px; }
+#journal-drawer .jr-entry-ic { width: 40px; height: 40px; flex-basis: 40px; border-radius: 12px; }
+#journal-drawer .jr-entry-ic svg { width: 20px; height: 20px; }
+#journal-drawer .jr-entry-label { font-size: 15px; }
+#journal-drawer .jr-entry-meta {
+  font-family: inherit; font-size: 13px; line-height: 1.4; font-variant-numeric: tabular-nums; color: var(--k-ink-3, var(--ink-3, #6B6F6C));
+}
+#journal-drawer .jr-ref { white-space: nowrap; }
+#journal-drawer .jr-entry-amount { font-size: 15px; font-weight: 650; }
