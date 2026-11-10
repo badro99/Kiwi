@@ -437,21 +437,30 @@ try {
       'the lens stays on the destination, so Moins can be tapped again (Plus is not one)');
     /* Le panneau EST la barre livrée : ses contrôles sont ceux de la page. */
     check(await cashRowTakesTap(page), 'its Cash in or out row is on screen and takes the tap');
-    /* Le panneau se ferme par une croix ronde dans sa tête, à côté du logo
-       (propriétaire, 10 nov. : la rangée « Moins » ne voulait rien dire). */
+    /* Le panneau se ferme par une croix ronde posée sur le voile, au ras de
+       son bord et à hauteur du logo (propriétaire, 10 nov. : la rangée
+       « Moins » ne voulait rien dire, puis la croix dans la tête du logo
+       décalait « En service »). La tête garde ses deux éléments. */
     const closeBtn = await page.evaluate(() => {
-      const x = document.querySelector('.sidebar > .brand-row > .k-more-close');
+      const x = document.getElementById('kit-more-close');
       if (!x) return null;
-      const b = x.getBoundingClientRect();
+      const b = x.getBoundingClientRect(), side = document.querySelector('.sidebar').getBoundingClientRect();
+      const logo = document.querySelector('.sidebar > .brand-row .brand-mark').getBoundingClientRect();
+      const duty = document.querySelector('.sidebar > .brand-row .duty-row').getBoundingClientRect();
+      const row = document.querySelector('.sidebar > .brand-row');
       return { x: b.x + b.width / 2, y: b.y + b.height / 2, w: Math.round(b.width), label: x.getAttribute('aria-label'),
+        outside: b.left >= side.right, gap: Math.round(b.left - side.right),
+        level: Math.abs((b.top + b.bottom) / 2 - (logo.top + logo.bottom) / 2) <= 8, logoMid: Math.round((logo.top + logo.bottom) / 2), scroll: document.querySelector('.sidebar').scrollTop, dutyMid: Math.round((duty.top + duty.bottom) / 2),
+        headKids: row.querySelectorAll('button').length, dutyAtEnd: side.right - duty.right < 32,
         hit: x.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)) };
     });
-    check(closeBtn && closeBtn.w >= 40 && closeBtn.label === 'Fermer' && closeBtn.hit,
-      `its head carries a round close button, 40 wide, named Fermer and on top (${JSON.stringify(closeBtn)})`);
+    check(closeBtn && closeBtn.w >= 44 && closeBtn.label === 'Fermer' && closeBtn.hit && closeBtn.outside && closeBtn.gap <= 16 && closeBtn.level,
+      `a round close button, 44 wide, named Fermer, on the veil just past the panel's edge and level with the logo (${JSON.stringify(closeBtn)})`);
+    check(closeBtn && closeBtn.headKids === 0 && closeBtn.dutyAtEnd, 'the head keeps only the logo and En service, at the end of its row');
     await page.mouse.click(closeBtn.x, closeBtn.y);
     await sleep(700);
     check((await panel()).display === 'none' && (await railMore()).label === 'Plus', 'a real tap on it puts the panel away and the rail comes back');
-    check(await page.evaluate(() => getComputedStyle(document.querySelector('.k-more-close')).display === 'none'), 'and the close button leaves with it');
+    check(await page.evaluate(() => getComputedStyle(document.getElementById('kit-more-close')).display === 'none'), 'and the close button leaves with it');
     await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]').click());
     await sleep(700);
     await page.evaluate(() => document.getElementById('kit-more-scrim').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));

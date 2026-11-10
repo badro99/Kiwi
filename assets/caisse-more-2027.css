@@ -20,15 +20,22 @@ html[data-skin-2027="till"][data-k-till-more] .sidebar > .brand-row .duty-row {
   font-size: var(--k-fs-footnote); letter-spacing: 0; text-transform: none;
 }
 
-/* The panel closes from its head (owner, 2026-11-10): a round × at the end of
-   the logo row, where a hand already looks to put a panel away. It replaces
-   « Moins », a close button dressed as a destination in the list. */
-.sidebar > .brand-row > .k-more-close { display: none; }
-html[data-skin-2027="till"][data-k-till-more] .sidebar > .brand-row > .k-more-close {
-  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 40px;
-  width: 40px; height: 40px; margin-inline-start: 4px; border-radius: 50%;
-  background-color: var(--k-surface-2); color: var(--k-ink-1); align-self: center;
+/* The panel closes by a round × on the veil, just past its edge (owner,
+   2026-11-10), level with the logo. It replaces « Moins », a close button
+   dressed as a destination in the list; the head above keeps the boutique's
+   two items and nothing in the panel moves. */
+#kit-more-close { display: none; }
+html[data-skin-2027="till"][data-k-till-more] #kit-more-close {
+  display: inline-flex; align-items: center; justify-content: center;
+  position: fixed; z-index: 950; inset-block-start: 14px; inset-inline-start: 272px;
+  width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;
+  background-color: var(--k-surface-1); color: var(--k-ink-1); box-shadow: var(--k-shadow-2);
+  cursor: pointer;
 }
-html[data-skin-2027="till"][data-k-till-more] .sidebar > .brand-row > .k-more-close:active { background-color: var(--k-surface-3); }
-html[data-skin-2027="till"][data-k-till-more] .sidebar > .brand-row > .k-more-close:focus-visible { box-shadow: 0 0 0 var(--k-focus-w) var(--k-focus); outline: none; }
-html[data-skin-2027="till"][data-k-till-more] .sidebar > .brand-row > .k-more-close svg { width: 22px; height: 22px; fill: currentColor; }
+html[data-skin-2027="till"][data-k-till-more] #kit-more-close:active { background-color: var(--k-surface-2); }
+html[data-skin-2027="till"][data-k-till-more] #kit-more-close:focus-visible { box-shadow: 0 0 0 var(--k-focus-w) var(--k-focus); outline: none; }
+html[data-skin-2027="till"][data-k-till-more] #kit-more-close svg { width: 22px; height: 22px; fill: currentColor; }
+@media (prefers-reduced-motion: no-preference) {
+  html[data-skin-2027="till"][data-k-till-more] #kit-more-close { animation: k-more-close-in var(--k-dur-4) var(--k-glide) both; }
+}
+@keyframes k-more-close-in { from { opacity: 0; transform: scale(0.85); } }

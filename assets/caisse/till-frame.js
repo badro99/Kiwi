@@ -525,9 +525,9 @@
       const nav = tillKitMoreNavEl();
       if (nav) {
         /* « Moins » n'est pas une destination : le panneau se ferme par le ×
-           de sa tête, le voile ou Échap (owner, 2026-11-10). */
+           posé sur le voile, le voile lui-même ou Échap (owner, 2026-11-10). */
         const sections = [{ items: items.filter((it) => it.id !== 'more').map((it) => Object.assign({}, it)) }].concat(tillKitDrawerSections());
-        const x = document.querySelector('.sidebar > .brand-row > .k-more-close');
+        const x = document.getElementById('kit-more-close');
         if (x && x.getAttribute('aria-label') !== kkt('action.close')) x.setAttribute('aria-label', kkt('action.close'));
         const sig = JSON.stringify(sections);
         if (sig !== nav.__kSig) { nav.__kSig = sig; nav.sections = sections; }
@@ -557,16 +557,6 @@
         tillKitRailSelect(d.id == null ? null : String(d.id));
       });
       side.insertBefore(nav, brand ? brand.nextSibling : side.firstChild);
-      if (brand) {
-        const x = document.createElement('button');
-        x.type = 'button';
-        x.className = 'k-more-close';
-        x.setAttribute('data-k-ground', 'inverse');
-        x.setAttribute('aria-label', kkt('action.close'));
-        x.innerHTML = window.KiwiKit.icon('close');
-        x.addEventListener('click', () => tillKitSetMore(false));
-        brand.appendChild(x);
-      }
       tillKitMoreNav = nav;
       return nav;
     }
@@ -587,6 +577,25 @@
       const root = document.documentElement;
       if (on) root.setAttribute('data-k-till-more', ''); else root.removeAttribute('data-k-till-more');
       window.KiwiTillFrame.paint({ rail: tillKitRail() });
+      if (on) requestAnimationFrame(tillKitPlaceMoreClose);
+    }
+    let tillKitMoreCloseWatch = false;
+    /* The × stands level with the logo, wherever the head sits on this
+       screen (the bar's top padding is not the same on every till). */
+    function tillKitPlaceMoreClose() {
+      const x = document.getElementById('kit-more-close');
+      const logo = document.querySelector('.sidebar > .brand-row .brand-mark');
+      if (!x || !logo || !tillKitMoreOpen) return;
+      /* The bar eases its padding as it opens (a shipped `transition: all`),
+         so the head settles after the first frame: measure again at the end. */
+      const side = logo.closest('.sidebar');
+      if (side && !tillKitMoreCloseWatch) {
+        tillKitMoreCloseWatch = true;
+        side.addEventListener('transitionend', tillKitPlaceMoreClose);
+        side.addEventListener('animationend', tillKitPlaceMoreClose);
+      }
+      const b = logo.getBoundingClientRect();
+      if (b.height) x.style.top = Math.max(8, Math.round(b.top + b.height / 2 - x.offsetHeight / 2)) + 'px';
     }
     /* Le panneau tient à partir de la bande qui donne déjà 360 au ticket
        (§13.3) : 88 de rail, 260 de panneau, le menu derrière. Plus bas, Plus
@@ -603,8 +612,19 @@
       el.id = 'kit-more-scrim';
       el.addEventListener('pointerdown', (e) => { e.preventDefault(); tillKitSetMore(false); });
       document.body.appendChild(el);
+      /* The × floats on the veil, just past the panel's edge (owner,
+         2026-11-10): inside the logo row it pushed « En service » off its
+         place and sat on its own line height. Out here the panel keeps the
+         boutique's head untouched. */
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.id = 'kit-more-close';
+      x.setAttribute('aria-label', kkt('action.close'));
+      x.innerHTML = window.KiwiKit.icon('close');
+      x.addEventListener('click', () => tillKitSetMore(false));
+      document.body.appendChild(x);
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && tillKitMoreOpen) tillKitSetMore(false); });
-      window.addEventListener('resize', () => { if (tillKitMoreOpen && !tillKitPanelFits()) tillKitSetMore(false); });
+      window.addEventListener('resize', () => { if (tillKitMoreOpen && !tillKitPanelFits()) tillKitSetMore(false); else tillKitPlaceMoreClose(); });
       return el;
     }
     function tillKitOpenMore() {
