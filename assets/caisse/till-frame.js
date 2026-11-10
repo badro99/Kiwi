@@ -524,7 +524,11 @@
          2026-11-10). The rail already skips an unchanged paint. */
       const nav = tillKitMoreNavEl();
       if (nav) {
-        const sections = [{ items: items.map((it) => Object.assign({}, it)) }].concat(tillKitDrawerSections());
+        /* « Moins » n'est pas une destination : le panneau se ferme par le ×
+           de sa tête, le voile ou Échap (owner, 2026-11-10). */
+        const sections = [{ items: items.filter((it) => it.id !== 'more').map((it) => Object.assign({}, it)) }].concat(tillKitDrawerSections());
+        const x = document.querySelector('.sidebar > .brand-row > .k-more-close');
+        if (x && x.getAttribute('aria-label') !== kkt('action.close')) x.setAttribute('aria-label', kkt('action.close'));
         const sig = JSON.stringify(sections);
         if (sig !== nav.__kSig) { nav.__kSig = sig; nav.sections = sections; }
         if (nav.getAttribute('value') !== (value || '')) nav.setAttribute('value', value || '');
@@ -553,6 +557,16 @@
         tillKitRailSelect(d.id == null ? null : String(d.id));
       });
       side.insertBefore(nav, brand ? brand.nextSibling : side.firstChild);
+      if (brand) {
+        const x = document.createElement('button');
+        x.type = 'button';
+        x.className = 'k-more-close';
+        x.setAttribute('data-k-ground', 'inverse');
+        x.setAttribute('aria-label', kkt('action.close'));
+        x.innerHTML = window.KiwiKit.icon('close');
+        x.addEventListener('click', () => tillKitSetMore(false));
+        brand.appendChild(x);
+      }
       tillKitMoreNav = nav;
       return nav;
     }

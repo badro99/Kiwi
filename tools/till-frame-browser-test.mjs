@@ -397,8 +397,8 @@ try {
     check(await page.evaluate(() => mode === 'salle' && document.querySelector('k-rail').getAttribute('value') === 'floor'), 'Floor switches to the floor plan');
     /* Plus déplie la barre latérale livrée (propriétaire, 2026-10-16) : à
        partir de 1000 de large, Plus ne tire plus de feuille, il sort le
-       panneau noir à côté du rail et devient Moins ; on le referme par Moins
-       ou par un toucher ailleurs, que le voile prend. */
+       panneau noir à côté du rail et devient Moins ; on le referme par la
+       croix de sa tête, par Moins ou par un toucher ailleurs, que le voile prend. */
     const railMore = () => page.evaluate(() => {
       const it = document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]');
       return { label: it.textContent.trim(), open: document.documentElement.hasAttribute('data-k-till-more') };
@@ -424,11 +424,11 @@ try {
     check(out.display === 'flex' && out.width === 260 && out.x === 0 && out.height === 1024 && out.railWidth === 88,
       `Plus puts the shipped sidebar in the rail's own place, 260 wide (${JSON.stringify(out)})`);
     check(out.railShown === 'hidden', 'the rail steps back under it, its 88 still in the layout so nothing reflows');
-    check(out.navIds && out.navIds.slice(0, 6).join() === 'floor,takeaway,waiting,kitchen,clients,more' && out.navValue === 'floor',
+    check(out.navIds && out.navIds.slice(0, 5).join() === 'floor,takeaway,waiting,kitchen,clients' && out.navValue === 'floor',
       `the panel's head carries the same destinations as the rail (${out.navIds && out.navIds.join(', ')})`);
     /* 26900e0e : puis Service, Gestion et Cet appareil, une rangée par bouton livré, comme le tiroir de la boutique. */
-    check(out.navIds.length > 6 && out.navIds.slice(6).every((id) => id.startsWith('m:')) && out.navIds.includes('m:cash_in_out'),
-      `then the drawer's rows, each one a shipped button (${out.navIds.slice(6).join(', ')})`);
+    check(out.navIds.length > 5 && out.navIds.slice(5).every((id) => id.startsWith('m:')) && out.navIds.includes('m:cash_in_out'),
+      `then the drawer's rows, each one a shipped button, and no Moins row among them (${out.navIds.slice(5).join(', ')})`);
     check(out.pillsShown === 'hidden', "and the shipped mode pills, which repeat three of them, are not drawn twice");
     check(out.scrim === 'auto', 'the scrim takes the taps meant for elsewhere');
     const moinsOut = await railMore();
@@ -437,13 +437,21 @@ try {
       'the lens stays on the destination, so Moins can be tapped again (Plus is not one)');
     /* Le panneau EST la barre livrée : ses contrôles sont ceux de la page. */
     check(await cashRowTakesTap(page), 'its Cash in or out row is on screen and takes the tap');
-    check(await page.evaluate(() => {
-      const nav = document.querySelector('.sidebar > k-sidebar');
-      return nav.shadowRoot.querySelector('[data-id="more"]').textContent.trim() === 'Moins';
-    }), 'its More item reads Moins');
-    await page.evaluate(() => document.querySelector('.sidebar > k-sidebar').shadowRoot.querySelector('[data-id="more"]').click());
+    /* Le panneau se ferme par une croix ronde dans sa tête, à côté du logo
+       (propriétaire, 10 nov. : la rangée « Moins » ne voulait rien dire). */
+    const closeBtn = await page.evaluate(() => {
+      const x = document.querySelector('.sidebar > .brand-row > .k-more-close');
+      if (!x) return null;
+      const b = x.getBoundingClientRect();
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2, w: Math.round(b.width), label: x.getAttribute('aria-label'),
+        hit: x.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)) };
+    });
+    check(closeBtn && closeBtn.w >= 40 && closeBtn.label === 'Fermer' && closeBtn.hit,
+      `its head carries a round close button, 40 wide, named Fermer and on top (${JSON.stringify(closeBtn)})`);
+    await page.mouse.click(closeBtn.x, closeBtn.y);
     await sleep(700);
-    check((await panel()).display === 'none' && (await railMore()).label === 'Plus', 'Moins puts it away again and the rail comes back');
+    check((await panel()).display === 'none' && (await railMore()).label === 'Plus', 'a real tap on it puts the panel away and the rail comes back');
+    check(await page.evaluate(() => getComputedStyle(document.querySelector('.k-more-close')).display === 'none'), 'and the close button leaves with it');
     await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]').click());
     await sleep(700);
     await page.evaluate(() => document.getElementById('kit-more-scrim').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));

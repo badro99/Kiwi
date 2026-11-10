@@ -19,3 +19,16 @@ html[data-skin-2027="till"][data-k-till-more] .sidebar > .brand-row .duty-row {
   margin: 0; margin-inline-start: auto; align-self: flex-end; gap: 6px; white-space: nowrap;
   font-size: var(--k-fs-footnote); letter-spacing: 0; text-transform: none;
 }
+
+/* The panel closes from its head (owner, 2026-11-10): a round × at the end of
+   the logo row, where a hand already looks to put a panel away. It replaces
+   « Moins », a close button dressed as a destination in the list. */
+.sidebar > .brand-row > .k-more-close { display: none; }
+html[data-skin-2027="till"][data-k-till-more] .sidebar > .brand-row > .k-more-close {
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 40px;
+  width: 40px; height: 40px; margin-inline-start: 4px; border-radius: 50%;
+  background-color: var(--k-surface-2); color: var(--k-ink-1); align-self: center;
+}
+html[data-skin-2027="till"][data-k-till-more] .sidebar > .brand-row > .k-more-close:active { background-color: var(--k-surface-3); }
+html[data-skin-2027="till"][data-k-till-more] .sidebar > .brand-row > .k-more-close:focus-visible { box-shadow: 0 0 0 var(--k-focus-w) var(--k-focus); outline: none; }
+html[data-skin-2027="till"][data-k-till-more] .sidebar > .brand-row > .k-more-close svg { width: 22px; height: 22px; fill: currentColor; }
