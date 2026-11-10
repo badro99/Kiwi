@@ -329,35 +329,57 @@
     st.id = 'kx-reprint-css';
     st.textContent = [
       '.kx-reprint { cursor: pointer; }',
-      '#kx-rp-veil .modal { max-width: 440px; width: calc(100vw - 32px); }',
-      '.kx-rp-head { padding: 18px 20px 12px; }',
-      '.kx-rp-head h3 { margin: 0 0 4px; font-size: 17px; }',
-      '.kx-rp-head p { margin: 0; font-size: 12.5px; opacity: .62; line-height: 1.45; }',
-      '.kx-rp-list { max-height: min(52vh, 420px); overflow-y: auto; padding: 4px 12px 12px; }',
-      '.kx-rp-day { padding: 13px 12px 5px; font-size: 10.5px; letter-spacing: .07em;',
-      '  text-transform: uppercase; opacity: .45; }',
+      '#kx-rp-veil .modal { max-width: 540px; width: calc(100vw - 32px); }',
+      '#kx-rp-veil { --kx-rp-ink: var(--k-ink-1, var(--ink, #0A0F0D)); --kx-rp-ink-3: var(--k-ink-3, var(--ink-3, #6B6F6C));',
+      '  --kx-rp-sunk: var(--k-surface-2, var(--paper-mute, #F1EFE9)); --kx-rp-line: var(--k-line, var(--line, #E4E1D8));',
+      '  --kx-rp-accent: var(--k-accent, var(--atlas, #0B6E4F)); }',
+      '.kx-rp-head { padding: 22px 22px 12px; }',
+      '.kx-rp-head h3 { margin: 0 0 6px; font-size: 21px; font-weight: 650; letter-spacing: -0.01em; color: var(--kx-rp-ink); }',
+      '.kx-rp-head p { margin: 0; font-size: 14px; color: var(--kx-rp-ink-3); line-height: 1.45; }',
+      '.kx-rp-search { display: flex; align-items: center; gap: 10px; margin: 2px 22px 8px; padding: 0 14px; height: 46px;',
+      '  border-radius: 12px; background: var(--kx-rp-sunk); color: var(--kx-rp-ink-3); }',
+      '.kx-rp-search svg { width: 18px; height: 18px; flex: 0 0 18px; }',
+      '.kx-rp-search input { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; font: inherit; font-size: 15px; color: var(--kx-rp-ink); outline: none; -webkit-appearance: none; appearance: none; }',
+      '.kx-rp-search:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, var(--kx-rp-accent) 45%, transparent); }',
+      '.kx-rp-list { max-height: min(56vh, 480px); overflow-y: auto; padding: 4px 14px 12px; }',
+      '.kx-rp-day { padding: 14px 8px 6px; font-size: 13px; font-weight: 600; color: var(--kx-rp-ink-3); }',
       '.kx-rp-list > .kx-rp-day:first-child { padding-top: 4px; }',
-      '.kx-rp-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px;',
-      '  border: 0; border-radius: 12px; background: transparent; cursor: pointer; text-align: left;',
-      '  font: inherit; color: inherit; }',
-      '.kx-rp-row + .kx-rp-row { margin-top: 2px; }',
-      '.kx-rp-row:hover, .kx-rp-row:focus-visible { background: rgba(125,242,176,.10); outline: none; }',
-      '.kx-rp-t { font-variant-numeric: tabular-nums; font-size: 12.5px; opacity: .6; min-width: 42px; }',
+      '.kx-rp-row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 10px 10px;',
+      '  border: 0; border-radius: 14px; background: transparent; cursor: pointer; text-align: start;',
+      '  font: inherit; color: var(--kx-rp-ink); }',
+      '.kx-rp-row[hidden], .kx-rp-day[hidden] { display: none; }',
+      '.kx-rp-row + .kx-rp-row { background: linear-gradient(var(--kx-rp-line), var(--kx-rp-line)) no-repeat 64px 0 / calc(100% - 74px) 1px; }',
+      '[dir="rtl"] .kx-rp-row + .kx-rp-row { background-position: 10px 0; }',
+      '.kx-rp-row:hover, .kx-rp-row:focus-visible { background: var(--kx-rp-sunk); outline: none; }',
+      '.kx-rp-ic { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 40px; width: 40px; height: 40px;',
+      '  border-radius: 12px; background: var(--kx-rp-sunk); color: var(--kx-rp-ink-3); }',
+      '.kx-rp-ic--cash { color: var(--kx-rp-accent); background: color-mix(in srgb, var(--kx-rp-accent) 12%, transparent); }',
+      '.kx-rp-ic svg { width: 20px; height: 20px; }',
       '.kx-rp-m { flex: 1; min-width: 0; }',
-      '.kx-rp-l { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
-      '.kx-rp-r { display: block; font-size: 11.5px; opacity: .55; font-variant-numeric: tabular-nums; }',
-      '.kx-rp-a { font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 600; }',
-      '.kx-rp-empty { padding: 26px 20px 30px; text-align: center; font-size: 13px; opacity: .6; line-height: 1.5; }',
-      '.kx-rp-foot { padding: 10px 16px 16px; display: flex; justify-content: flex-end;',
-      '  gap: 8px; flex-wrap: wrap; }',
+      '.kx-rp-l { display: block; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
+      '.kx-rp-r { display: block; margin-top: 2px; font-size: 13px; color: var(--kx-rp-ink-3); font-variant-numeric: tabular-nums;',
+      '  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
+      '.kx-rp-a { font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 650; white-space: nowrap; }',
+      '.kx-rp-go { display: inline-flex; color: var(--kx-rp-ink-3); }',
+      '.kx-rp-go svg { width: 20px; height: 20px; }',
+      '[dir="rtl"] .kx-rp-go svg { transform: scaleX(-1); }',
+      '.kx-rp-empty { padding: 30px 22px 34px; text-align: center; font-size: 15px; color: var(--kx-rp-ink-3); line-height: 1.5; }',
+      '.kx-rp-foot { padding: 12px 22px 20px; display: flex; justify-content: flex-end;',
+      '  gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--kx-rp-line); }',
+      '.kx-rp-foot .ma-btn { min-height: 46px; padding: 0 20px; border-radius: 12px; font-weight: 600; background: var(--kx-rp-sunk); color: var(--kx-rp-ink); }',
+      '.kx-rp-foot [data-kx-rp-close]:only-child { flex: 1; justify-content: center; }',
       '.kx-rp-all { margin-inline-end: auto; display: inline-flex; align-items: center; gap: 7px; }',
       '.kx-rp-all svg { width: 15px; height: 15px; }',
       '.kx-rp-ticket { padding: 4px 20px 18px; }',
       '.kx-rp-ticket-lines { margin: 12px 0 16px; border-top: 1px solid rgba(128,128,128,.18); }',
-      '.kx-rp-ticket-line { display:flex;justify-content:space-between;gap:12px;padding:9px 0;',
-      '  border-bottom:1px solid rgba(128,128,128,.13);font-size:13px; }',
-      '.kx-rp-ticket-actions { display:flex;gap:8px; }',
-      '.kx-rp-ticket-actions .ma-btn { flex:1;justify-content:center; }',
+      '.kx-rp-ticket-line { display:flex;justify-content:space-between;gap:12px;padding:11px 0;',
+      '  border-bottom:1px solid var(--kx-rp-line, rgba(128,128,128,.13));font-size:15px; }',
+      '.kx-rp-ticket-line b { font-weight:650;font-variant-numeric:tabular-nums; }',
+      '.kx-rp-tip { color:var(--kx-rp-ink-3); }',
+      '.kx-rp-ticket-actions { display:flex;gap:8px;flex-wrap:wrap; }',
+      '.kx-rp-ticket-actions .ma-btn { flex:1;justify-content:center;min-height:48px;border-radius:12px;font-weight:600;',
+      '  background:var(--kx-rp-sunk);color:var(--kx-rp-ink); }',
+      '.kx-rp-ticket-actions .kx-rp-cancel { background:color-mix(in srgb, var(--k-danger, #B42318) 10%, transparent); }',
       '.kx-rp-cancel { color:#b53b31!important;border-color:rgba(181,59,49,.35)!important; }',
       '.kx-rp-pin { padding: 0 20px 18px; }',
       '.kx-rp-pin input { box-sizing:border-box;width:100%;padding:13px 14px;border:1px solid rgba(128,128,128,.3);',
@@ -482,6 +504,9 @@
       return '<div class="kx-rp-ticket-line"><span>' + esc((l.qty || 1) + ' × ' + (l.name || tr('Article')))
         + '</span><b>' + esc(mad(l.total || 0)) + '</b></div>';
     }).join('');
+    /* Le total d'un ticket de salle compte le pourboire : sans sa ligne, le
+       détail ne tombait pas juste (18 MAD d'articles pour un ticket à 23). */
+    if (lines && Number(entry.tip) > 0) lines += '<div class="kx-rp-ticket-line kx-rp-tip"><span>' + tr('Pourboire') + '</span><b>' + esc(mad(entry.tip)) + '</b></div>';
     var cancelling = mode === 'cancel';
     var reopenBtn = canReopen(vertical, entry)
         ? '<button type="button" class="ma-btn" data-kx-rp-reopen>' + tr('Annuler et rouvrir la note') + '</button>' : '';
@@ -642,11 +667,15 @@
       list.forEach(function (e, i) {
         var lab = dayLabel(e.ts);
         if (lab !== day) { day = lab; body += '<div class="kx-rp-day">' + esc(lab) + '</div>'; }
-        body += '<button type="button" class="kx-rp-row" data-kx-rp="' + i + '">'
-          + '<span class="kx-rp-t">' + esc(hm(e.ts)) + '</span>'
+        /* Comme Remboursement (owner, 2026-11-10) : le moyen de paiement en
+           pastille, une ligne de détail, le montant, un chevron. */
+        var m = String(e.method || '').toLowerCase(), kind = m === 'cash' || m === 'espèces' || m === 'especes' ? 'cash' : m === 'card' || m === 'carte' ? 'card' : 'other';
+        var meta = hm(e.ts) + ' · ' + methodLabel(e.method) + ' · ' + (ticketNo(e) || 'sans numéro');
+        body += '<button type="button" class="kx-rp-row" data-kx-rp="' + i + '" data-kx-rp-q="' + esc(((e.label || '') + ' ' + meta + ' ' + mad(e.total)).toLowerCase()) + '">'
+          + '<span class="kx-rp-ic kx-rp-ic--' + kind + '"><i data-icon="' + (kind === 'cash' ? 'payments' : kind === 'card' ? 'credit_card' : 'account_balance_wallet') + '"></i></span>'
           + '<span class="kx-rp-m"><span class="kx-rp-l">' + esc(e.label || 'Vente') + '</span>'
-          + '<span class="kx-rp-r">' + esc(methodLabel(e.method) + ' · ' + (ticketNo(e) || 'sans numéro')) + '</span></span>'
-          + '<span class="kx-rp-a">' + esc(mad(e.total)) + '</span></button>';
+          + '<span class="kx-rp-r">' + esc(meta) + '</span></span>'
+          + '<span class="kx-rp-a">' + esc(mad(e.total)) + '</span><i class="kx-rp-go" data-icon="chevron_right"></i></button>';
       });
     } else {
       /* Dire POURQUOI c'est vide. « Aucun ticket » laisserait croire à une
@@ -663,6 +692,8 @@
         ? '<p>' + tr('Choisissez la vente à annuler. Un code manager à 4 chiffres est demandé, et l’annulation est journalisée.') + '</p>'
         : '<p>' + tr('Les ventes encaissées sur ce terminal. Le duplicata garde le numéro '
           + 'et l\'heure d\'origine, et porte la mention « duplicata ».') + '</p>') + '</div>'
+      + (list.length > 4 ? `<label class="kx-rp-search"><i data-icon="search"></i><input type="search" data-kx-rp-q autocomplete="off" spellcheck="false"
+        placeholder="${tr('Rechercher, table, montant, réf')}" aria-label="${tr('Rechercher une transaction')}"></label>` : '')
       + '<div class="kx-rp-list">' + body + '</div>'
       /* « Imprimer la liste » à gauche, « Fermer » à droite, et seulement quand
          il y a quelque chose à imprimer : un bouton qui sort une feuille vide
@@ -677,6 +708,18 @@
         var e = list[+b.getAttribute('data-kx-rp')];
         showTicket(vertical, e);
       });
+    });
+    /* La recherche masque les lignes, elle ne redessine rien ; un jour sans
+       ligne visible cache son en-tête. */
+    var q = box.querySelector('input[data-kx-rp-q]');
+    if (q) q.addEventListener('input', function () {
+      var v = q.value.trim().toLowerCase(), head = null, seen = false;
+      box.querySelectorAll('.kx-rp-list > *').forEach(function (el) {
+        if (el.classList.contains('kx-rp-day')) { if (head) head.hidden = !seen; head = el; seen = false; return; }
+        el.hidden = !!v && String(el.getAttribute('data-kx-rp-q') || '').indexOf(v) < 0;
+        if (!el.hidden) seen = true;
+      });
+      if (head) head.hidden = !seen;
     });
     var x = box.querySelector('[data-kx-rp-close]');
     if (x) x.addEventListener('click', close);

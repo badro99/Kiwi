@@ -1231,7 +1231,7 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
             && entry.kind !== 'refund' && entry.amount > 0).map(entry => ({
               saleId: String(entry.serverSaleId || window.KiwiLive?.saleIdFor?.(entry, currentMerchantSlug()) || entry.id || ''),
               ts: entry.time instanceof Date ? entry.time.getTime() : new Date(entry.time).getTime(),
-              total: money(Number(entry.amount || 0) + Number(entry.tip || 0)),
+              total: money(Number(entry.amount || 0) + Number(entry.tip || 0)), tip: money(Number(entry.tip || 0)),
               ref: entry.ref || '', label: entry.label || '', method: entry.method || '',
               lines: entry.lines || [], voided: !!entry.voided,
               reopenSnapshot: entry.reopenSnapshot || null,

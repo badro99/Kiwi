@@ -152,7 +152,7 @@ var SHELL = [
   '/assets/caisse/handover.js?v=2',
   '/assets/caisse/inventory.js?v=10',
   '/assets/caisse/offline.js?v=10',
-  '/assets/caisse-app.js?v=49',
+  '/assets/caisse-app.js?v=50',
   '/assets/caisse-loyalty-reward.js?v=7',
   '/assets/caisse-refresh.js?v=9',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
@@ -647,7 +647,7 @@ var SHELL = [
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
-  '/assets/pos-reprint.js?v=17',
+  '/assets/pos-reprint.js?v=21',
   '/assets/pressing-caisse.js?v=131',
   '/assets/pressing-caisse.css?v=131',
   '/assets/material-icons.js?v=5',

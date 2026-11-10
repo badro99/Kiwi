@@ -192,8 +192,8 @@
     "sha": "0149ec3062006a42"
   },
   "assets/caisse-app.js": {
-    "v": "49",
-    "sha": "4ddd83b32b2e50ab"
+    "v": "50",
+    "sha": "a03791aa4ba246c8"
   },
   "assets/caisse-dna.css": {
     "v": "10",
@@ -1848,8 +1848,8 @@
     "sha": "e4f87f9b3e7a7628"
   },
   "assets/pos-reprint.js": {
-    "v": "17",
-    "sha": "8d0c7304af2e3ee7"
+    "v": "21",
+    "sha": "146b3409ce476cb0"
   },
   "assets/pos-sale.js": {
     "v": "36",
