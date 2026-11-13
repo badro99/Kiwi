@@ -520,6 +520,27 @@ KiwiOrderMenu.orderProParts.define('menu', ["$","$$","I18N","ICON_CLASS","MENU",
           allergens: it.nutritionComplete === true && Array.isArray(it.allergens) ? it.allergens.slice() : [],
         });
       }
+      /* L'ordre du tableau de bord (Réordonner) : sections dans l'ordre de
+         cats, puis dans chaque section ses sous-sections dans l'ordre de
+         c.sub, les plats sans sous-section après, comme la carte du tableau
+         de bord ; à égalité, l'ordre des plats publié. Sans ce tri le fil
+         « Tout » suivait l'ordre de création et ignorait la section placée
+         en tête. */
+      const catRank = new Map(), subRank = new Map();
+      cats.forEach((c, ci) => {
+        if (!c) return;
+        catRank.set(String(c.id), ci);
+        (Array.isArray(c.sub) ? c.sub : []).forEach((s, si) => { if (s) subRank.set(String(c.id) + '::' + String(s.id), si); });
+      });
+      const rankOf = (m, i) => [
+        catRank.has(m.cat) ? catRank.get(m.cat) : 1e6,
+        subRank.has(m.cat + '::' + m.subId) ? subRank.get(m.cat + '::' + m.subId) : 1e6,
+        i];
+      const ranked = MENU.map((m, i) => ({ m, k: rankOf(m, i) }))
+        .sort((a, b) => a.k[0] - b.k[0] || a.k[1] - b.k[1] || a.k[2] - b.k[2]);
+      MENU.length = 0;
+      ranked.forEach(r => MENU.push(r.m));
+
       // Le patron écrit sa carte une fois ; ses traductions (tableau de bord →
       // Traductions) voyagent avec elle. Une langue non traduite retombe sur
       // son texte (itemI18n → MENU_I18N.fr).
