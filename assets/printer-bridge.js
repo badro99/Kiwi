@@ -848,20 +848,20 @@
     var batch = pendingPrint = { root: root, paper: String(paper || '') };
     setTimeout(function () {
       if (pendingPrint === batch) pendingPrint = null;
-      var sizes = null;
+      var pageStyle = null;
       try {
         var pageCss = printPageCss(root, paper);
         if (pageCss) {
-          sizes = document.createElement('style');
-          sizes.id = 'kpr-print-pages';
-          sizes.textContent = pageCss;
-          document.head.appendChild(sizes);
+          pageStyle = document.createElement('style');
+          pageStyle.id = 'kpr-print-pages';
+          pageStyle.textContent = pageCss;
+          document.head.appendChild(pageStyle);
         }
-      } catch (_) { sizes = null; }
+      } catch (_) { pageStyle = null; }
       try { window.print(); } catch (_) { fallbackNotice(say('Échec d’impression')); }
       setTimeout(function () {
         var r = document.getElementById('kpr-print-root'); if (r) r.remove();
-        if (sizes && sizes.remove) sizes.remove();
+        if (pageStyle && pageStyle.remove) pageStyle.remove();
       }, 600);
     }, 60);
     /* Dans l'app, window.print() rend un PDF à imprimer ou partager
