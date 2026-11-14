@@ -1,6 +1,6 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=202';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=202';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=305';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=203';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=203';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=306';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=3';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
@@ -1123,44 +1123,32 @@ const M = globalThis.KiwiMoney;
         <h3 class="modal-title">${tr("checkout.carte", "Carte")} · ${fmtMAD(amount)}</h3>
         <p class="modal-subtle">${rest > 0.009 ? `${tr("checkout.part.sur", "Part sur")} ${fmtMAD(due())} ${tr("checkout.restera", "· restera")} ${fmtMAD(rest)}` : subtitleText()} ${tr("checkout.kiwi.affiche.le.lecteur.encaisse", "· Kiwi affiche, le lecteur encaisse")}</p>
         <div class="reader-stage">
-          <div class="reader-disc is-pulsing" id="bq-reader-disc"><i data-lucide="credit-card"></i></div>
-          <div class="reader-status" id="bq-reader-status">${tr("checkout.montant.envoye.au.lecteur", "Montant envoyé au lecteur")}<span class="ellipsis"></span></div>
+          <div class="reader-disc" id="bq-reader-disc"><i data-lucide="credit-card"></i></div>
+          <div class="reader-status" id="bq-reader-status">${tr("checkout.confirmez.l.encaissement.sur.le.lecteur", "Confirmez l'encaissement sur le lecteur")}</div>
           <div class="reader-method">${tr("checkout.terminal.de.la.banque.montant.a.saisir.dessus", "Terminal de la banque, montant à saisir dessus")}</div>
         </div>
-        <div class="bq-card-confirm" id="bq-card-confirm" hidden>
+        <div class="bq-card-confirm" id="bq-card-confirm">
           <button class="cash-confirm" id="bq-card-ok"><i data-lucide="check"></i> ${tr("checkout.encaissement.confirme.sur.le.lecteur", "Encaissement confirmé sur le lecteur")}</button>
           <button class="bq-btn ghost" id="bq-card-cancel">${tr("checkout.paiement.refuse.annuler", "Paiement refusé · annuler")}</button>
         </div>`;
       icons(); closeBtns();
-      /* On simule l'aller au lecteur, puis — contrairement à avant — on n'encaisse
-         PAS tout seul : la caissière confirme d'un geste que le lecteur a approuvé.
-         AVANT, l'encaissement carte partait d'un minuteur de ~2,8 s ; fermer l'écran
-         carte pendant l'animation (réflexe normal, le vrai paiement se fait sur le
-         lecteur partenaire) perdait TOUTE la vente et ses points fidélité — d'où
-         « en carte la cliente ne gagne pas de points ». La confirmation explicite
-         enregistre la vente de façon fiable, exactement comme les espèces. */
-      setTimeout(() => {
-        const disc = $('#bq-reader-disc', el);
-        if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#bq-reader-status', el).textContent = tr("checkout.confirmez.l.encaissement.sur.le.lecteur", "Confirmez l'encaissement sur le lecteur");
-        $('#bq-reader-status', el).classList.add('is-success');
-        const cw = $('#bq-card-confirm', el);
-        if (cw) cw.hidden = false;
-        icons();
-        const ok = $('#bq-card-ok', el);
-        if (ok) ok.onclick = () => settle({ m: 'carte', amount });
-        const cancel = $('#bq-card-cancel', el);
-        if (cancel) cancel.onclick = () => {
-          if (settled.length || avoirPart) stepMethods();
-          else {
-            if (opts.onCancel) opts.onCancel();
-            closeVeil('#bq-pay-veil');
-          }
-        };
-      }, 1400);
+      /* Kiwi ne parle pas au terminal de la banque : c'est la caissière qui dit
+         ce que le lecteur a répondu, d'un des deux boutons, et rien ne s'encaisse
+         sans ce geste (fermer l'écran ne perd ni la vente ni ses points).
+         AVANT, un faux « envoi au lecteur » animé faisait attendre 1,4 s avant
+         d'afficher ces boutons, alors que les espèces se confirment d'un geste :
+         chez Santos (13/11), quatre paiements passés au terminal ont été saisis
+         en espèces. Les deux boutons sont donc là tout de suite. */
+      const ok = $('#bq-card-ok', el);
+      if (ok) ok.onclick = () => settle({ m: 'carte', amount });
+      const cancel = $('#bq-card-cancel', el);
+      if (cancel) cancel.onclick = () => {
+        if (settled.length || avoirPart) stepMethods();
+        else {
+          if (opts.onCancel) opts.onCancel();
+          closeVeil('#bq-pay-veil');
+        }
+      };
     };
 
     const stepExternal = (method, amount) => {

@@ -729,23 +729,60 @@
 
   /* La largeur de page suit le rouleau réglé dans les paramètres : imprimer un
    * 80 mm sur une page A4 donne un ticket minuscule perdu en haut d'une feuille,
-   * ce qui est le grand classique de l'impression navigateur ratée. */
-  function ensureReceiptPrintCss(paper) {
+   * ce qui est le grand classique de l'impression navigateur ratée.
+   *
+   * Santos, Z du 13/11 passé par la boîte Windows : bord droit rogné (« MA »
+   * pour « MAD ») et fin du ticket perdue après le quatrième rayon. Deux causes.
+   * La largeur : le ticket faisait 74 mm sans marge, or une tête 80 mm n'imprime
+   * que 72 mm (48 mm sur un 58). Il fait maintenant 70 mm (46 mm), et un libellé
+   * long passe à la ligne au lieu de pousser le montant hors du papier.
+   * La hauteur : `size: 80mm auto` n'est pas du CSS valide (« auto » ne suit pas
+   * une longueur), le navigateur l'ignorait et prenait la longueur de page du
+   * pilote. Chaque ticket a maintenant sa propre page, mesurée avant
+   * l'impression (printPageCss) : une coupe par ticket, rien au-delà. */
+  function printWidths(paper) {
     var w = String(paper || '80') === '58' ? 58 : 80;
+    return { page: w, ticket: w === 58 ? 46 : 70 };
+  }
+  function ensureReceiptPrintCss(paper) {
+    var pw = printWidths(paper), w = pw.page;
     var prev = document.getElementById('kpr-print-css');
     if (prev) { if (prev.getAttribute('data-w') === String(w)) return; prev.remove(); }
     var st = document.createElement('style');
     st.id = 'kpr-print-css';
     st.setAttribute('data-w', String(w));
+    var T = '#kpr-print-root ';
     st.textContent =
-      '#kpr-print-root{display:none;}' +
+      /* Hors impression le root reste mis en page (hors écran, invisible) :
+       * c'est ce qui permet de mesurer la hauteur de chaque ticket. */
+      '#kpr-print-root{position:absolute;left:-10000px;top:0;width:' + w + 'mm;visibility:hidden;pointer-events:none;background:#fff;color:#000;}' +
+      T + '.kpr-ticket{width:' + pw.ticket + 'mm;margin:0 auto;padding:3mm 0;color:#000;' +
+        'font-family:var(--mono,ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace);font-size:9pt;line-height:1.45;}' +
+      T + '.kpr-shop{text-align:center;font-weight:700;font-size:14pt;margin-bottom:2mm;overflow-wrap:anywhere;}' +
+      T + '.kpr-c{text-align:center;}' +
+      T + '.kpr-rule{border-top:1px dashed #000;margin:2mm 0;}' +
+      T + '.kpr-r{display:flex;justify-content:space-between;gap:3mm;break-inside:avoid;}' +
+      T + '.kpr-r>span:last-child{white-space:nowrap;flex:none;}' +
+      T + '.kpr-tot{font-weight:700;font-size:12pt;margin:1mm 0;}' +
+      T + '.kpr-foot{margin-top:3mm;}' +
+      /* Rapport journalier · le titre sous l'enseigne, la mention de copie,
+       * les lignes en gras (catégories, totaux) et la note de couverture.
+       * `pre-wrap` sur le libellé garde l'indentation de deux espaces qui
+       * distingue un produit de sa catégorie, et le laisse passer à la ligne. */
+      T + '.kpr-ttl{letter-spacing:.08em;font-size:8pt;margin-bottom:1mm;}' +
+      T + '.kpr-copy{font-weight:700;margin:1mm 0;}' +
+      T + '.kpr-r>span:first-child{white-space:pre-wrap;overflow-wrap:anywhere;min-width:0;}' +
+      T + '.kpr-b{font-weight:700;}' +
+      /* Pas de gris : une tête thermique le tramote et la ligne sort délavée. */
+      T + '.kpr-note{font-size:7.5pt;margin-top:1mm;}' +
       '@media print{' +
-        '@page{size:' + w + 'mm auto;margin:0;}' +
+        '@page{size:' + w + 'mm 297mm;margin:0;}' +
         'html,body{margin:0!important;padding:0!important;background:#fff!important;color:#000!important;color-scheme:light!important;}' +
         /* Tout le reste de la caisse disparaît : sans ça la boîte d'impression
          * sort la page entière (grille produits, panneaux) au lieu du reçu. */
         'body>*:not(#kpr-print-root){display:none!important;}' +
         '#kpr-print-root{display:block!important;position:static!important;background:#fff!important;color:#000!important;color-scheme:light!important;}' +
+        '#kpr-print-root{visibility:visible!important;width:auto!important;}' +
         /* Some verticals build their browser fallback from their on-screen
          * preview markup. Those components normally inherit the caisse theme;
          * printing must sever that inheritance at the last possible layer so
@@ -761,33 +798,27 @@
         '#kpr-print-root .px-receipt *,#kpr-print-root .px-tag *{color:#000!important;opacity:1!important;}' +
         '#kpr-print-root .px-receipt hr{border-color:#000!important;}' +
         '#kpr-print-root .px-tag::before,#kpr-print-root .bq-avoir::before{background:#fff!important;border-color:#000!important;}' +
-        '.kpr-ticket{width:' + (w - 6) + 'mm;margin:0 auto;padding:3mm 0;color:#000;' +
-          'font-family:var(--mono,ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace);font-size:9pt;line-height:1.45;}' +
-        '.kpr-shop{text-align:center;font-weight:700;font-size:14pt;margin-bottom:2mm;}' +
-        '.kpr-c{text-align:center;}' +
-        '.kpr-rule{border-top:1px dashed #000;margin:2mm 0;}' +
-        '.kpr-r{display:flex;justify-content:space-between;gap:3mm;}' +
-        '.kpr-r>span:last-child{white-space:nowrap;}' +
-        '.kpr-tot{font-weight:700;font-size:12pt;margin:1mm 0;}' +
-        '.kpr-foot{margin-top:3mm;}' +
-        /* Rapport journalier · le titre sous l'enseigne, la mention de copie,
-         * les lignes en gras (catégories, totaux) et la note de couverture.
-         * `white-space:pre` sur le libellé garde l'indentation de deux espaces
-         * qui distingue un produit de sa catégorie ; sans elle le HTML les
-         * replie et le détail perd sa hiérarchie. */
-        '.kpr-ttl{letter-spacing:.08em;font-size:8pt;margin-bottom:1mm;}' +
-        '.kpr-copy{font-weight:700;margin:1mm 0;}' +
-        '.kpr-r>span:first-child{white-space:pre;}' +
-        '.kpr-b{font-weight:700;}' +
-        '.kpr-sub{opacity:.75;}' +
-        '.kpr-note{font-size:7.5pt;opacity:.75;margin-top:1mm;}' +
-        /* Une catégorie et ses produits ne doivent pas être coupés par un saut
-         * de page au milieu · sur une imprimante à feuilles, un rayon dont le
-         * total atterrit seul sur la page suivante est illisible. */
-        '.kpr-r{break-inside:avoid;}' +
-        '.kpr-break{break-before:page;page-break-before:always;height:0;}' +
       '}';
     document.head.appendChild(st);
+  }
+
+  /* Une page nommée par ticket, à la hauteur mesurée du ticket (plus une marge
+   * de coupe). Sans mesure (root pas encore mis en page), on garde la page par
+   * défaut, valide, de ensureReceiptPrintCss. */
+  var MM_PER_PX = 25.4 / 96;
+  function printPageCss(root, paper) {
+    var w = printWidths(paper).page, css = '';
+    var pages = root.children || [];
+    for (var i = 0; i < pages.length; i++) {
+      var el = pages[i];
+      if (!el.classList || !el.classList.contains('kpr-page')) continue;
+      var h = el.getBoundingClientRect ? el.getBoundingClientRect().height : 0;
+      if (!(h > 0)) continue;
+      var mm = Math.ceil(Math.round(h * MM_PER_PX * 100) / 100) + 8;
+      css += '@page kpr-p' + i + '{size:' + w + 'mm ' + mm + 'mm;margin:0;}' +
+        '#kpr-print-root>.kpr-page:nth-child(' + (i + 1) + '){page:kpr-p' + i + ';}';
+    }
+    return css ? '@media print{' + css + '}' : '';
   }
 
   /* Repeint et ouvre la boîte d'impression. Le root est retiré après coup pour
@@ -803,7 +834,7 @@
   function browserPrintHTML(html, paper, title) {
     var root = document.getElementById('kpr-print-root');
     if (root && pendingPrint && pendingPrint.root === root && pendingPrint.paper === String(paper || '')) {
-      root.insertAdjacentHTML('beforeend', '<div class="kpr-break"></div>' + html);
+      root.insertAdjacentHTML('beforeend', '<div class="kpr-page">' + html + '</div>');
       return { ok: true, via: systemPrintVia() };
     }
     if (root) root.remove();
@@ -811,14 +842,27 @@
     root.id = 'kpr-print-root';
     // Names the PDF in the app (native-runtime.js) and the job on the web.
     if (title) root.setAttribute('data-print-title', title);
-    root.innerHTML = html;
+    root.innerHTML = '<div class="kpr-page">' + html + '</div>';
     document.body.appendChild(root);
     ensureReceiptPrintCss(paper);
     var batch = pendingPrint = { root: root, paper: String(paper || '') };
     setTimeout(function () {
       if (pendingPrint === batch) pendingPrint = null;
+      var sizes = null;
+      try {
+        var pageCss = printPageCss(root, paper);
+        if (pageCss) {
+          sizes = document.createElement('style');
+          sizes.id = 'kpr-print-pages';
+          sizes.textContent = pageCss;
+          document.head.appendChild(sizes);
+        }
+      } catch (_) { sizes = null; }
       try { window.print(); } catch (_) { fallbackNotice(say('Échec d’impression')); }
-      setTimeout(function () { var r = document.getElementById('kpr-print-root'); if (r) r.remove(); }, 600);
+      setTimeout(function () {
+        var r = document.getElementById('kpr-print-root'); if (r) r.remove();
+        if (sizes && sizes.remove) sizes.remove();
+      }, 600);
     }, 60);
     /* Dans l'app, window.print() rend un PDF à imprimer ou partager
      * (native-runtime.js) : pas un « envoi au pilote système ». */
@@ -853,7 +897,7 @@
    * (imprimante réglée mais injoignable) le premier retombait sur la boîte
    * Windows, le second arrivait trop tard pour la rejoindre et se perdait.
    * Ici les deux partent ensemble : un seul envoi ESC/POS, sinon une seule
-   * boîte d'impression avec un saut de page entre les deux. */
+   * boîte d'impression, chaque ticket sur sa propre page. */
   function printDayReportList(list) {
     var enc = window.KiwiEscPos && window.KiwiEscPos.dayReport;
     if (!enc || !isConnected()) return Promise.resolve(browserDayReports(list));
@@ -869,8 +913,15 @@
   }
   function browserDayReports(list) {
     if (list.length === 1) return browserDayReport(list[0]);
-    return browserPrintHTML(list.map(function (o) { return dayReportHTML(o); }).join('<div class="kpr-break"></div>'),
-      list[0].paper, 'Rapport journalier' + (list[0].date ? ' ' + list[0].date : ''));
+    /* Le premier ouvre le travail, les suivants s'y ajoutent chacun sur sa
+     * propre page (browserPrintHTML) : une seule boîte, une coupe par ticket. */
+    var title = 'Rapport journalier' + (list[0].date ? ' ' + list[0].date : '');
+    var first = null;
+    list.forEach(function (o) {
+      var res = browserPrintHTML(dayReportHTML(o), list[0].paper, title);
+      if (!first) first = res;
+    });
+    return first;
   }
   /* fn() appelle printDayReport autant de fois qu'il faut ; rien ne part avant
    * la fin de fn, puis tout part en un travail. Chaque appel reçoit le même

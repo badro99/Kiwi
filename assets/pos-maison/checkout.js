@@ -1,6 +1,6 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=190';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=107';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=107';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=191';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=108';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=108';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
@@ -1238,41 +1238,25 @@ import { mzDeliveryCard } from './delivery.js?v=22';
         <h3 class="modal-title">Carte · ${fmtMAD(amount)}</h3>
         <p class="modal-subtle">${rest > 0.009 ? `Part sur ${fmtMAD(due())} · restera ${fmtMAD(rest)}` : opts.subtitle} · Kiwi affiche, le lecteur encaisse</p>
         <div class="reader-stage">
-          <div class="reader-disc is-pulsing" id="mz-reader-disc"><i data-lucide="credit-card"></i></div>
-          <div class="reader-status" id="mz-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
+          <div class="reader-disc" id="mz-reader-disc"><i data-lucide="credit-card"></i></div>
+          <div class="reader-status" id="mz-reader-status">Confirmez l'encaissement sur le lecteur</div>
           <div class="reader-method">Lecteur partenaire, paiement sur votre terminal</div>
         </div>
-        <div class="mz-card-confirm" id="mz-card-confirm" hidden>
+        <div class="mz-card-confirm" id="mz-card-confirm">
           <button class="cash-confirm" id="mz-card-ok"><i data-lucide="check"></i> Encaissement confirmé sur le lecteur</button>
           <button class="mz-btn ghost" id="mz-card-cancel">Paiement refusé · annuler</button>
         </div>`;
       icons(); closeBtns();
-      /* On simule l'aller au lecteur, puis — contrairement à avant — on n'encaisse
-         PAS tout seul : la caissière confirme d'un geste que le lecteur a approuvé.
-         AVANT, l'encaissement carte partait d'un minuteur de ~2,8 s ; fermer l'écran
-         carte pendant l'animation (réflexe normal, le vrai paiement se fait sur le
-         lecteur partenaire) perdait TOUTE la vente et ses points fidélité — d'où
-         « en carte la cliente ne gagne pas de points ». La confirmation explicite
-         enregistre la vente de façon fiable, exactement comme les espèces. */
-      setTimeout(() => {
-        const disc = $('#mz-reader-disc', el);
-        if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#mz-reader-status', el).textContent = 'Confirmez l\'encaissement sur le lecteur';
-        $('#mz-reader-status', el).classList.add('is-success');
-        const cw = $('#mz-card-confirm', el);
-        if (cw) cw.hidden = false;
-        icons();
-        const ok = $('#mz-card-ok', el);
-        if (ok) ok.onclick = () => settle({ m: 'carte', amount });
-        const cancel = $('#mz-card-cancel', el);
-        if (cancel) cancel.onclick = () => {
-          if (settled.length || avoirPart) stepMethods();
-          else closeVeil('#mz-pay-veil');
-        };
-      }, 1400);
+      /* Comme la boutique : la caissière dit ce que le terminal de la banque a
+         répondu, d'un des deux boutons, affichés tout de suite. Le faux « envoi
+         au lecteur » de 1,4 s rendait la carte plus lente que les espèces. */
+      const ok = $('#mz-card-ok', el);
+      if (ok) ok.onclick = () => settle({ m: 'carte', amount });
+      const cancel = $('#mz-card-cancel', el);
+      if (cancel) cancel.onclick = () => {
+        if (settled.length || avoirPart) stepMethods();
+        else closeVeil('#mz-pay-veil');
+      };
     };
 
     const stepExternal = (method, amount) => {

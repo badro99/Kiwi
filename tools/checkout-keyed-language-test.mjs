@@ -30,7 +30,7 @@ for (const locale of ['en', 'ar']) {
     w.$$('[data-bq-m]').find(b => b.dataset.bqM === tender).onclick();
     // Delivery-card has its own translated renderer and is covered by its suite.
     if (tender !== 'livraison') check();
-    if (tender === 'carte') { while(w.timers.length) w.timers.shift()(); assert.equal(w.$('#bq-reader-status').textContent, layer.entries['checkout.confirmez.l.encaissement.sur.le.lecteur'][locale]); }
+    if (tender === 'carte') { const html = w.panel.innerHTML; assert.ok(html.includes(layer.entries['checkout.confirmez.l.encaissement.sur.le.lecteur'][locale]), 'card status translated'); assert.doesNotMatch(html, /id="bq-card-confirm"[^>]*hidden/, 'received / refused buttons show at once'); }
     if (tender === 'avoir') { w.$('#bq-av-code').value = 'INVALID'; await w.$('#bq-av-code-form').onsubmit({ preventDefault() {} }); assert.equal(w.$('#bq-av-err').textContent, layer.entries['checkout.aucun.avoir.avec.ce.code.verifiez.le.sur.le.bon'][locale]); }
   }
   assert.equal(layer.say('missing.key', 'Texte français'), 'Texte français');
