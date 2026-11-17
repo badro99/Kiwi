@@ -38,6 +38,7 @@ CREATE TABLE employee_auth_versions (merchant TEXT NOT NULL, member_id TEXT NOT 
 CREATE TABLE pair_attempts (ip TEXT PRIMARY KEY, fails INTEGER, first_ts INTEGER, blocked_until INTEGER);
 CREATE TABLE operators (id TEXT PRIMARY KEY, label TEXT, salt TEXT, hash TEXT, created_ts INTEGER);
 CREATE TABLE sales (id TEXT PRIMARY KEY, merchant TEXT, amount REAL, amount_cents INTEGER, method TEXT, ts INTEGER, void_ts INTEGER);
+CREATE TABLE session_tiers (sid TEXT PRIMARY KEY, account_id TEXT NOT NULL, tier TEXT NOT NULL, staff_id TEXT NOT NULL DEFAULT '', updated_ts INTEGER NOT NULL);
 CREATE TABLE cash_session_events (id TEXT PRIMARY KEY, merchant TEXT, session_id TEXT, terminal_id TEXT, event_type TEXT, movement_kind TEXT, movement_amount_cents INTEGER, movement_reason TEXT, actor_id TEXT, occurred_ts INTEGER);
 `);
 db.prepare(`INSERT INTO accounts VALUES ('acc-1','o@pasta.ma','Pasta Bench','s','h',?,'active',0)`).run(now);
@@ -90,6 +91,13 @@ const env = { AUTH_SECRET, DB: D1, MEDIA };
 
 const owner = sessionCookie(await makeSession('acc-1', AUTH_SECRET));
 const stranger = sessionCookie(await makeSession('acc-2', AUTH_SECRET));
+/* La session du patron déverrouillée par le code d'un gérant ou d'une
+   réceptionniste (session_tiers) : c'est l'appareil du patron, pas le patron. */
+const SID_MGR = 'a'.repeat(32), SID_RCP = 'b'.repeat(32);
+db.prepare('INSERT INTO session_tiers VALUES (?,?,?,?,?)').run(SID_MGR, 'acc-1', 'manager', 'm2', now);
+db.prepare('INSERT INTO session_tiers VALUES (?,?,?,?,?)').run(SID_RCP, 'acc-1', 'reception', 'm3', now);
+const ownerAsManager = sessionCookie(await makeSession('acc-1', AUTH_SECRET, 0, SID_MGR));
+const ownerAsReception = sessionCookie(await makeSession('acc-1', AUTH_SECRET, 0, SID_RCP));
 const till = `kiwi_till=${await tillToken(AUTH_SECRET, SHOP)}`;
 const cashier = employeeCookie(await employeeToken(AUTH_SECRET, { merchant: SHOP, staffId: 'm1' }));
 const manager = employeeCookie(await employeeToken(AUTH_SECRET, { merchant: SHOP, staffId: 'm2' }));
@@ -107,7 +115,7 @@ const ok = (name) => { n++; console.log('✓ ' + name); };
   assert.equal((await r1.json()).data.list[0].id, 'x1');
   const r2 = await fetchDoc(operator);
   assert.equal(r2.status, 200, 'operator reads for support');
-  for (const [who, c] of [['till', till], ['cashier', cashier], ['manager', manager], ['stranger', stranger], ['anonymous', '']]) {
+  for (const [who, c] of [['till', till], ['cashier', cashier], ['manager', manager], ['owner device unlocked by a manager', ownerAsManager], ['owner device unlocked by reception', ownerAsReception], ['stranger', stranger], ['anonymous', '']]) {
     const r = await fetchDoc(c);
     const body = await r.text();
     /* Refusé, ou ramené à SON propre magasin (tenantFor ignore un slug qui
@@ -118,7 +126,7 @@ const ok = (name) => { n++; console.log('✓ ' + name); };
   }
   const write = (c) => storePost({ request: req('https://k/api/store', c, { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ feature: 'expenses', merchant: SHOP, baseRev: 1, data: { list: [] } }) }), env });
-  for (const [who, c] of [['till', till], ['cashier', cashier], ['manager', manager], ['stranger', stranger]]) {
+  for (const [who, c] of [['till', till], ['cashier', cashier], ['manager', manager], ['owner device unlocked by a manager', ownerAsManager], ['stranger', stranger]]) {
     const r = await write(c);
     assert.ok(r.status === 401 || r.status === 403, who + ' write status ' + r.status);
   }
@@ -140,7 +148,7 @@ const ok = (name) => { n++; console.log('✓ ' + name); };
   assert.equal(j.cutoff, 5);
   assert.deepEqual(j.salesDays, [{ day: '2026-11-03', salesCents: 15000 }, { day: '2026-11-04', salesCents: 1500 }]);
   assert.deepEqual(j.cashOuts.map((e) => [e.id, e.day, e.movement_amount_cents, e.movement_reason, e.actor_id]), [['c1', '2026-11-03', 5000, 'Légumes', 'm1']]);
-  for (const c of [till, cashier, manager, stranger, '']) assert.equal((await get(c)).status, 403);
+  for (const c of [till, cashier, manager, ownerAsManager, ownerAsReception, stranger, '']) assert.equal((await get(c)).status, 403);
   assert.equal((await get(owner, '2026-13')).status, 400);
   assert.equal((await get(operator)).status, 200);
   ok('month summary: business-day takings net of refunds and voids, cash-outs only, owner only');
@@ -158,14 +166,14 @@ const ok = (name) => { n++; console.log('✓ ' + name); };
   assert.equal((await up(owner, '../x')).status, 400);
   assert.equal((await up(owner, 'exp_abc123', env, 'text/html')).status, 415);
   assert.equal((await up(owner, 'exp_abc123', { AUTH_SECRET, DB: D1 })).status, 503);
-  for (const c of [till, manager, stranger, '']) assert.equal((await up(c)).status, 403);
+  for (const c of [till, manager, ownerAsManager, stranger, '']) assert.equal((await up(c)).status, 403);
   const fetchReceipt = (c) => receipt.onRequestGet({ request: req(`https://k/api/expenses/receipt?merchant=${SHOP}&id=exp_abc123`, c), env });
   const g = await fetchReceipt(owner);
   assert.equal(g.status, 200);
   assert.equal(g.headers.get('Content-Type'), 'image/jpeg');
   assert.match(g.headers.get('Cache-Control') || '', /private/);
   assert.deepEqual(new Uint8Array(await g.arrayBuffer()), jpeg);
-  for (const c of [till, manager, stranger, '']) assert.equal((await fetchReceipt(c)).status, 403);
+  for (const c of [till, manager, ownerAsManager, ownerAsReception, stranger, '']) assert.equal((await fetchReceipt(c)).status, 403);
   assert.equal((await receipt.onRequestGet({ request: req(`https://k/api/expenses/receipt?merchant=${SHOP}&id=exp_none00`, owner), env })).status, 404);
   ok('receipt photos: private prefix, owner only, image types only, fail-soft without storage');
 }
