@@ -620,16 +620,16 @@
     "sha": "42c678756290613e"
   },
   "assets/expenses/engine.js": {
-    "v": "2",
-    "sha": "53162de26428901a"
+    "v": "3",
+    "sha": "1bc11bc19dfc3a9d"
   },
   "assets/expenses/index.js": {
-    "v": "2",
-    "sha": "a509ff2d71df5d71"
+    "v": "4",
+    "sha": "96ddb0d09599065b"
   },
   "assets/expenses/sheet.js": {
-    "v": "2",
-    "sha": "5fd06a23cc1c84e2"
+    "v": "4",
+    "sha": "501b329fddc59d51"
   },
   "assets/expenses/strings.js": {
     "v": "2",
@@ -1508,8 +1508,8 @@
     "sha": "91ea1202399b8d4c"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "104",
-    "sha": "fea90e67a50cb085"
+    "v": "106",
+    "sha": "bda23e0e63947ae5"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "241",

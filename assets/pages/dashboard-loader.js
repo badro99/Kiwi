@@ -34,7 +34,7 @@
     /* Paramètres → « Annuaire Kiwi »: the opt-in sheet, fetched on first open. */
     directory: { dependencies: [], scripts: ['assets/directory-optin.js?v=2'] },
     /* « Dépenses » (interrupteur par commerçant) : un module ES, ouvert au premier clic. */
-    expenses: { dependencies: [], scripts: ['assets/expenses/index.js?v=2'], module: true },
+    expenses: { dependencies: [], scripts: ['assets/expenses/index.js?v=4'], module: true },
   });
   const pending = new Map(), scripts = new Map(), ready = new Set();
   function script(url, module) {

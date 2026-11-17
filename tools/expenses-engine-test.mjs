@@ -5,7 +5,7 @@
  * (sept. à nov. 2026). */
 import assert from 'node:assert/strict';
 import {
-  parseAmount, completionId,
+  parseAmount, completionId, nextStamp,
   CATEGORIES, classifyReason, isBankDeposit, notAnExpense, uncountedCashOuts, normalize, mergeDocs,
   cashOutRows, monthView, toCsv,
 } from '../assets/expenses/engine.js';
@@ -122,15 +122,17 @@ ok('fixed charges and salaries are pro-rated and never counted twice');
 
 /* csv */
 const csv = toCsv([{ id: 'c', date: '2026-11-03', category: 'meat', supplier: 'Boucherie', method: 'cash', amountCents: 25000, vatCents: 0, source: 'manual' }], 'fr');
-assert.equal(csv.split('\n')[0], 'date,category,supplier,method,amount,vat,source,receipt');
-assert.equal(csv.split('\n')[1], '2026-11-03,meat,Boucherie,cash,250.00,0.00,manual,no');
+assert.equal(csv.split('\n')[0], 'date,category,supplier,method,amount,vat,source,receipt,note,id');
+assert.equal(csv.split('\n')[1], '2026-11-03,meat,Boucherie,cash,250.00,0.00,manual,no,,c');
+assert.equal(toCsv([{ id: 'cash:c9', date: '2026-11-04', category: 'meat', source: 'till', method: 'cash', amountCents: 9000, note: 'viande hachée' }]).split('\n')[1], '2026-11-04,meat,,cash,90.00,0.00,till,no,viande hachée,cash:c9');
+assert.equal(toCsv([{ id: 'n', date: '2026-11-04', category: 'other', amountCents: 100, note: '=cmd|calc' }]).split('\n')[1], "2026-11-04,other,,cash,1.00,0.00,manual,no,'=cmd|calc,n");
 assert.equal(toCsv([{ id: 'q', date: '2026-11-03', category: 'other', supplier: 'Dupont, "fils"', method: 'card', amountCents: 5, source: 'scan', receiptKey: 'k' }]).split('\n')[1],
-  '2026-11-03,other,"Dupont, ""fils""",card,0.05,0.00,scan,yes');
+  '2026-11-03,other,"Dupont, ""fils""",card,0.05,0.00,scan,yes,,q');
 /* Le comptable ouvre le fichier dans Excel : un texte libre qui commence par
    = + - @ ou une tabulation ne doit jamais devenir une formule. */
 const evil = toCsv([{ id: 'z', date: '2026-11-03', category: 'other', supplier: '=HYPERLINK("http://x","y")', method: '@SUM(1)', amountCents: 100, source: 'manual' },
   { id: 'z2', date: '2026-11-03', category: 'other', supplier: '+212 600\r', method: 'cash', amountCents: 100, source: 'manual' }]).split('\n');
-assert.equal(evil[1], `2026-11-03,other,"'=HYPERLINK(""http://x"",""y"")",cash,1.00,0.00,manual,no`);
+assert.equal(evil[1], `2026-11-03,other,"'=HYPERLINK(""http://x"",""y"")",cash,1.00,0.00,manual,no,,z`);
 assert.ok(evil[2].startsWith(`2026-11-03,other,"'+212 600\r"`), evil[2]);
 ok('CSV export for the accountant, safe to open in a spreadsheet');
 
@@ -164,6 +166,30 @@ ok('CSV export for the accountant, safe to open in a spreadsheet');
     ['', 0], ['0', 0], ['-50', 0], ['abc', 0], ['99999999', 0]];
   assert.deepEqual(cases.map(([t]) => parseAmount(t)), cases.map(([, c]) => c));
   ok('typed amounts: French and English separators, no negatives, nothing above the cap');
+}
+
+/* bankWords · ce que les caissiers écrivent pour un dépôt, et un TPE qui n'est pas une correction. */
+{
+  const bank = ['Versement', 'versement espèces', 'BMCE', 'dépôt bq', 'Depot BQ', 'Attijari', 'CIH', 'Banque Populaire', 'AWB', 'Barid'];
+  assert.deepEqual(bank.filter((t) => notAnExpense(t) !== 'bank'), [], 'all read as bank deposits');
+  assert.equal(notAnExpense('versement salaire Youssef'), '', 'paying a wage is spending');
+  assert.equal(notAnExpense('rouleaux TPE'), '', 'buying terminal rolls is spending');
+  assert.equal(notAnExpense('erreur TPE'), 'correction');
+  assert.equal(notAnExpense('relevé TPE'), 'correction');
+  ok('bank deposit words the team actually writes; a TPE purchase is still an expense');
+}
+
+/* skewedClock · un appareil en avance d'une heure ne gagne pas contre une modification faite après lui. */
+{
+  const now = Date.UTC(2026, 10, 17, 12);
+  const ahead = { id: 'k1', date: '2026-11-03', amountCents: 9000, category: 'meat', updatedAt: now + 3600000 };
+  const stamp = nextStamp(ahead.updatedAt, now);
+  assert.ok(stamp > ahead.updatedAt);
+  assert.equal(nextStamp(5, now), now, 'a normal clock keeps its own time');
+  const del = { ...ahead, deleted: true, updatedAt: stamp };
+  assert.equal(mergeDocs({ list: [del] }, { list: [ahead] }).list[0].deleted, true);
+  assert.equal(mergeDocs({ list: [ahead] }, { list: [del] }).list[0].deleted, true);
+  ok('an edit made after seeing a row always beats that row, whatever the clocks say');
 }
 
 console.log(n + ' groupes · expenses engine');

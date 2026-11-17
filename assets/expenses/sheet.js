@@ -7,7 +7,7 @@
  * Ce que la lecture remplit est marqué « à vérifier » ; elle ne réécrit jamais
  * un champ que le patron a déjà tapé. Un ticket illisible ou un quota épuisé
  * laisse la fiche vide avec une phrase simple, et la photo reste jointe. */
-import { CATEGORIES, METHODS, classifyReason, parseAmount, completionId } from './engine.js?v=2';
+import { CATEGORIES, METHODS, classifyReason, parseAmount, completionId, nextStamp } from './engine.js?v=3';
 import { tr, lang } from './strings.js?v=2';
 import { CAT_ICON, esc, catLabel, dayLabel } from './view.js?v=2';
 
@@ -65,15 +65,19 @@ export function openSheet(opts, cb) {
   let photo = o.photo || '';
   let scanned = false;
   const ro = mode === 'complete';
+  /* Un retrait de caisse, complété ou non : le montant et le jour sont ceux
+     du tiroir, la fiche ne les change pas (sinon « Dépensé » ne colle plus
+     au comptage de la caisse). */
+  const till = ro || !!row.cashEventId;
   const title = mode === 'complete' ? tr('sheetComplete') : mode === 'edit' ? tr('sheetEdit') : tr('sheetAdd');
   const sups = (o.suppliers || []).slice(0, 40);
 
   const body = `<form class="xp-sheet" novalidate>
-    ${ro ? `<div class="xp-note">${icon('point_of_sale')}<span>${esc(tr('tillHint', { date: dayLabel(row.date, { day: 'numeric', month: 'long' }) }))}</span></div>` : ''}
+    ${till ? `<div class="xp-note">${icon('point_of_sale')}<span>${esc(tr('tillHint', { date: dayLabel(row.date, { day: 'numeric', month: 'long' }) }))}</span></div>` : ''}
     <div class="xp-note" data-xp-scan-note${o.reading ? '' : ' hidden'}>${icon('document_scanner')}<span>${esc(tr('reading'))}</span></div>
     <div>
       <label for="xp-amount">${esc(tr('amount'))}</label>
-      <div class="xp-amount${ro ? ' ro' : ''}"><input id="xp-amount" name="amount" type="text" inputmode="decimal" autocomplete="off" value="${esc(centsToInput(row.amountCents))}"${ro ? ' readonly' : ''}><span>${esc(tr('cur'))}</span></div>
+      <div class="xp-amount${till ? ' ro' : ''}"><input id="xp-amount" name="amount" type="text" inputmode="decimal" autocomplete="off" value="${esc(centsToInput(row.amountCents))}"${till ? ' readonly' : ''}><span>${esc(tr('cur'))}</span></div>
     </div>
     <div>
       <span class="xp-lbl">${esc(tr('category'))}</span>
@@ -81,10 +85,10 @@ export function openSheet(opts, cb) {
     </div>
     <div class="xp-two">
       <div><label for="xp-supplier">${esc(tr('supplier'))}</label><input id="xp-supplier" name="supplier" type="text" list="xp-sups" autocomplete="off" maxlength="80" value="${esc(row.supplier || '')}" placeholder="${esc(tr('supplierPh'))}"></div>
-      <div><label for="xp-date">${esc(tr('date'))}</label><input id="xp-date" name="date" type="date" value="${esc(isDay(row.date) ? row.date : today)}" max="${esc(today)}"${ro ? ' readonly' : ''}></div>
+      <div><label for="xp-date">${esc(tr('date'))}</label><input id="xp-date" name="date" type="date" value="${esc(isDay(row.date) ? row.date : today)}" max="${esc(today)}"${till ? ' readonly' : ''}></div>
     </div>
     <datalist id="xp-sups">${sups.map((s) => `<option value="${esc(s)}"></option>`).join('')}</datalist>
-    ${ro ? '' : `<div>
+    ${till ? '' : `<div>
       <span class="xp-lbl">${esc(tr('paidWith'))}</span>
       <div class="xp-seg" data-lens-demo role="group" aria-label="${esc(tr('paidWith'))}">${METHODS.map((m) => `<button type="button" data-lens-item data-method="${m}" class="${m === method ? 'on' : ''}" aria-pressed="${m === method}">${esc(tr('m.' + m))}</button>`).join('')}</div>
     </div>`}
@@ -139,28 +143,28 @@ export function openSheet(opts, cb) {
     } else if (a.dataset.xpAct === 'delete-confirm') {
       e.preventDefault();
       dlg.close();
-      cb.onDelete && cb.onDelete({ ...row, deleted: true, updatedAt: Date.now() });
+      cb.onDelete && cb.onDelete({ ...row, deleted: true, updatedAt: nextStamp(row.updatedAt) });
     }
   });
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const cents = ro ? Math.round(Number(row.amountCents) || 0) : parseAmount(field('amount').value);
+    const cents = till ? Math.round(Number(row.amountCents) || 0) : parseAmount(field('amount').value);
     if (!(cents > 0)) { err(tr('amountRequired')); field('amount').focus(); return; }
     const supplier = field('supplier').value.trim().slice(0, 80);
     const note = field('note').value.trim().slice(0, 200);
-    const date = ro ? row.date : (isDay(field('date').value) ? field('date').value : today);
+    const date = till ? row.date : (isDay(field('date').value) ? field('date').value : today);
     const now = Date.now();
     const out = {
       id: mode === 'edit' ? row.id : (ro ? completionId(row.cashEventId) : newId()),
       date, amountCents: cents,
       category: cat || classifyReason(supplier + ' ' + note),
-      method: ro ? 'cash' : method,
+      method: till ? 'cash' : method,
       supplier, note,
       vatCents: Math.round(Number(row.vatCents) || 0),
       source: ro ? 'till' : (mode === 'edit' ? (row.source || 'manual') : (scanned ? 'scan' : 'manual')),
       createdAt: mode === 'edit' && row.createdAt ? row.createdAt : now,
-      updatedAt: now,
+      updatedAt: mode === 'edit' ? nextStamp(row.updatedAt, now) : now,
     };
     if (ro) out.cashEventId = row.cashEventId;
     else if (row.cashEventId) out.cashEventId = row.cashEventId;
@@ -169,7 +173,7 @@ export function openSheet(opts, cb) {
     cb.onSave && cb.onSave(out, { photo });
   });
 
-  setTimeout(() => { try { (ro ? $('[data-cat]') : field('amount')).focus(); } catch (_) {} }, 60);
+  setTimeout(() => { try { (till ? $('[data-cat]') : field('amount')).focus(); } catch (_) {} }, 60);
 
   const note = $('[data-xp-scan-note]');
   return {

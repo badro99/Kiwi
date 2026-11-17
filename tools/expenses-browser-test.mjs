@@ -70,6 +70,7 @@ const HARNESS = `<!doctype html><html lang="fr"><head><meta charset="utf-8">
       };
     },
   };
+  window.__poke = function () { subs.forEach(function (f) { f(); }); };
   window.KiwiI18n = { getLang: function () { return 'fr'; } };
   var made = URL.createObjectURL;
   window.__blobs = [];
@@ -234,6 +235,12 @@ await T.run('completeCashOut · compléter un retrait le remplace, sans le compt
   assert.equal(r.length, 1, 'the raw till row is gone');
   assert.equal(r[0].id, live[0].id);
   assert.equal(await cents(page, '[data-xp="out"]'), 8000, 'Out unchanged');
+  await page.click(`.xp-row[data-id="${live[0].id}"]`);
+  await page.waitForSelector('.xp-sheet');
+  assert.equal(await page.$eval('.xp-sheet [name="amount"]', (el) => el.readOnly), true, 'a till amount stays what the drawer says');
+  assert.equal(await page.$eval('.xp-sheet [name="date"]', (el) => el.readOnly), true);
+  await act(page, 'save');
+  assert.equal((await lastWrite(page)).list.find((x) => x.id === 'xpc_c9').amountCents, 8000);
   assert.deepEqual(page.errors, []);
 });
 
@@ -266,6 +273,13 @@ await T.run('scanFallback · ticket illisible ou quota atteint : le formulaire s
   assert.equal(saved.source, 'scan');
   await sleep(400);
   assert.ok(ctx2.calls.some((c) => c.url.includes('/api/expenses/receipt') && c.method === 'POST' && c.url.includes('id=' + saved.id)), 'the photo is kept with the expense');
+  await ctx2.waitForFunction(() => window.__writes.some((w) => w.list.some((x) => x.receiptKey)), { timeout: 5000 });
+  await ctx2.click(`.xp-row[data-id="${saved.id}"]`);
+  await ctx2.waitForSelector('.xp-sheet');
+  await act(ctx2, 'delete');
+  await act(ctx2, 'delete-confirm');
+  await sleep(300);
+  assert.ok(ctx2.calls.some((c) => c.url.includes('/api/expenses/receipt') && c.method === 'DELETE' && c.url.includes('id=' + saved.id)), 'the photo goes with the expense');
   assert.deepEqual([...page.errors, ...ctx2.errors], []);
 });
 
@@ -285,9 +299,14 @@ await T.run('filters · catégorie, recherche et export CSV', async (t) => {
   r = await rows(page);
   assert.equal(r.length, 1);
   assert.match(r[0].text, /Taxi/);
+  await page.evaluate(() => window.__poke());
+  await sleep(200);
+  const focus = await page.evaluate(() => { const el = document.activeElement; return { search: !!(el && el.matches('[data-xp-search]')), value: el && el.value, caret: el && el.selectionStart }; });
+  assert.deepEqual(focus, { search: true, value: 'taxi', caret: 4 }, 'typing is not interrupted by a refresh');
+  assert.equal((await rows(page)).length, 1, 'the filter survives the refresh');
   await act(page, 'csv');
   const csv = await page.evaluate(async () => window.__blobs.length ? await window.__blobs[window.__blobs.length - 1].text() : '');
-  assert.equal(csv.split('\n')[0], 'date,category,supplier,method,amount,vat,source,receipt');
+  assert.equal(csv.split('\n')[0], 'date,category,supplier,method,amount,vat,source,receipt,note,id');
   assert.equal(csv.split('\n').length, 4, 'the export carries the whole month, not the filtered view');
   assert.deepEqual(page.errors, []);
 });

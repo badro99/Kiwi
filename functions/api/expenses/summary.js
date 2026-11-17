@@ -12,6 +12,7 @@
 // Réservé au patron et aux opérateurs Kiwi (./_owner.js).
 import { json } from '../../auth/_lib.js';
 import { businessBoundary, businessDate, merchantCutoff, merchantZone } from '../_business-day.js';
+import { legacyBucketFor } from '../_sales-scope.js';
 import { expensesReader } from './_owner.js';
 
 const MONTH = /^(\d{4})-(0[1-9]|1[0-2])$/;
@@ -29,13 +30,16 @@ export async function onRequestGet({ request, env }) {
   if (!(await expensesReader(request, env, merchant))) return json({ error: 'owner-required' }, 403);
   if (!MONTH.test(month)) return json({ error: 'bad-month' }, 400);
 
-  const [zone, cutoff] = await Promise.all([merchantZone(env, merchant), merchantCutoff(env, merchant)]);
+  /* Les ventes d'avant un changement de nom restent sous l'ancien slug du
+     compte : le patron les retrouve ici comme dans ses KPI (sales-summary.js),
+     jamais une autre session. */
+  const [zone, cutoff, legacy] = await Promise.all([merchantZone(env, merchant), merchantCutoff(env, merchant), legacyBucketFor(request, env, merchant)]);
   const from = businessBoundary(month + '-01', cutoff, zone);
   const to = businessBoundary(nextMonth(month) + '-01', cutoff, zone);
   try {
     const [sales, moves] = await Promise.all([
       env.DB.prepare(`SELECT ts, COALESCE(amount_cents, CAST(ROUND(amount * 100) AS INTEGER)) AS cents
-        FROM sales WHERE merchant = ? AND ts >= ? AND ts < ? AND void_ts IS NULL`).bind(merchant, from, to).all(),
+        FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL`).bind(merchant, legacy || merchant, from, to).all(),
       env.DB.prepare(`SELECT id, occurred_ts, movement_amount_cents, movement_reason, actor_id
         FROM cash_session_events WHERE merchant = ? AND event_type = 'movement' AND movement_kind = 'out'
           AND occurred_ts >= ? AND occurred_ts < ? ORDER BY occurred_ts ASC LIMIT 3000`).bind(merchant, from, to).all(),

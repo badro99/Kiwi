@@ -71,6 +71,9 @@ const ok = (name) => { n++; console.log('✓ ' + name); };
     en: /'dash\.sidebar\.expenses': 'Expenses'/.test(i18n),
     ar: /'dash\.sidebar\.expenses': 'المصاريف'/.test(i18n),
   };
+  const vendored = (R('assets/icons/material/account_balance_wallet.svg').match(/ d="([^"]+)"/) || [])[1];
+  const entry = dash.slice(dash.indexOf('data-nav="expenses"'), dash.indexOf('</a>', dash.indexOf('data-nav="expenses"')));
+  wanted.icon = !!vendored && entry.includes('viewBox="0 -960 960 960"') && entry.includes(`d="${vendored}"`);
   assert.deepEqual(Object.keys(wanted).filter((k) => !wanted[k]), []);
   ok('dashboard: owner-only "Dépenses" entry behind the switch, full page, EN and AR labels');
 }

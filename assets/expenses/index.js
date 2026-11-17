@@ -18,10 +18,10 @@
  * Kiwi.handlers['nav-expenses'], rendu par Kiwi.appPage comme les autres
  * pages pleines. Logique pure dans engine.js, rendu dans view.js, fiche dans
  * sheet.js, mots dans strings.js, style dans style.js. */
-import * as E from './engine.js?v=2';
+import * as E from './engine.js?v=3';
 import { tr } from './strings.js?v=2';
 import { pageHtml, emptyHtml, loadingHtml, listHtml } from './view.js?v=2';
-import { openSheet, shrinkPhoto } from './sheet.js?v=2';
+import { openSheet, shrinkPhoto } from './sheet.js?v=4';
 import { ensureStyle } from './style.js?v=1';
 
 const ZONE = 'Africa/Casablanca';
@@ -126,8 +126,16 @@ function render(opts) {
     month: S.month, today, view, uncounted, status: sum.status, filter: S.filter,
     enter: !!(opts && opts.enter), canNext: S.month < today.slice(0, 7),
   };
+  /* Un rafraîchissement (copie d'un autre appareil, caisse relue) ne doit
+     pas arracher la recherche des doigts de celui qui tape. */
+  const typing = document.activeElement && document.activeElement.matches && document.activeElement.matches('.xp [data-xp-search]')
+    ? { start: document.activeElement.selectionStart, end: document.activeElement.selectionEnd } : null;
   const r = K.appPage('expenses', { title: tr('title'), subtitle: tr('subtitle'), body: sum.status === 'loading' ? loadingHtml(m) : firstUse ? emptyHtml(m) : pageHtml(m) });
-  if (r && r.el) bind(r.el);
+  if (r && r.el) {
+    bind(r.el);
+    const search = typing && r.el.querySelector('[data-xp-search]');
+    if (search) { search.focus({ preventScroll: true }); try { search.setSelectionRange(typing.start, typing.end); } catch (_) {} }
+  }
 }
 
 function shiftMonth(month, by) {
@@ -170,7 +178,7 @@ async function uploadReceipt(row, photo) {
     const j = r.ok ? await r.json() : null;
     if (!j || !j.ok) throw new Error('receipt ' + r.status);
     const cur = doc().list.find((x) => x.id === row.id && !x.deleted);
-    if (cur) upsert({ ...cur, receiptKey: j.key, updatedAt: Date.now() });
+    if (cur) upsert({ ...cur, receiptKey: j.key, updatedAt: E.nextStamp(cur.updatedAt) });
   } catch (_) {
     try { window.Kiwi.toast(tr('photoFailed'), { type: 'warn' }); } catch (_e) { /* pas de toast */ }
   }
@@ -184,6 +192,9 @@ const callbacks = {
   },
   onDelete(row) {
     upsert(row);
+    /* La photo part avec la dépense ; un échec la laisse, sans gêner la suppression. */
+    const url = row.receiptKey ? receiptUrl(row.id) : '';
+    if (url) fetch(url, { method: 'DELETE', credentials: 'same-origin' }).catch(() => {});
     try { window.Kiwi.toast(tr('deleted'), { type: 'success' }); } catch (_) {}
   },
 };

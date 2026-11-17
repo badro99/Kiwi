@@ -65,10 +65,12 @@ export function classifyReason(text) {
    de caisse mis de côté, la monnaie qu'on va faire, la correction d'un
    encaissement erroné, le relevé du TPE. Montré à part, jamais « Dépensé ». */
 const NOT_EXPENSE = [
-  ['bank', /\bbanque\b|\bbank\b|ايداع|بنك/],
+  /* « versement » seul est un dépôt ; « versement salaire » paie quelqu'un. */
+  ['bank', /\bbanque\b|\bbank\b|\bbq\b|\bversements?\b(?!.*\b(salaires?|avances?|loyers?|primes?)\b)|\b(bmce|attijari\w*|awb|cih|barid|cdm|sgma|bmci|cfg)\b|ايداع|بنك/],
   ['float', /\bfond\w* (de )?caiss?e?\b|\bfond de roulement\b/],
   ['change', /^\s*(change|monnaie|faire la monnaie)\s*$|\bfaire (de )?la monnaie\b/],
-  ['correction', /\b(erreu\w*|ereu\w*|correction)\b.*\b(encais\w*|caisse)\b|\breleu?v?e? ?(de )?t\.?p\.?e\b|\bt\.?p\.?e\b/],
+  /* Le TPE seul n'est pas une correction : « rouleaux TPE » est un achat. */
+  ['correction', /\b(erreu\w*|ereu\w*|correction|annul\w*)\b.*\b(encais\w*|caisse|t\.?p\.?e)\b|\breleu?v?e? ?(de )?t\.?p\.?e\b/],
 ];
 export function notAnExpense(text) {
   const t = fold(text);
@@ -116,6 +118,14 @@ export function parseAmount(text) {
 /* Un retrait complété porte un identifiant tiré du mouvement de caisse : deux
    appareils qui le complètent écrivent la MÊME ligne, la fusion garde la plus
    récente. Forme admise par la route des photos ([A-Za-z0-9_-]{6,64}). */
+/* L'horodatage d'une modification : jamais en dessous de la version qu'elle
+   remplace. Un appareil dont l'horloge avance ne gagne donc plus contre une
+   modification faite après avoir vu sa ligne (dernier qui écrit gagne, mais
+   « dernier » au sens de l'ordre des modifications, pas des horloges). */
+export function nextStamp(prev, now = Date.now()) {
+  return Math.max(num(now), num(prev) + 1);
+}
+
 export function completionId(cashEventId) {
   return ('xpc_' + String(cashEventId == null ? '' : cashEventId).replace(/[^A-Za-z0-9_-]/g, '_')).slice(0, 64);
 }
@@ -242,10 +252,10 @@ const csvCell = (v) => {
 const money = (c) => (clampCents(c) / 100).toFixed(2);
 
 export function toCsv(rows) {
-  const head = 'date,category,supplier,method,amount,vat,source,receipt';
+  const head = 'date,category,supplier,method,amount,vat,source,receipt,note,id';
   return [head, ...(Array.isArray(rows) ? rows : []).map((r) => [
     r.date, CATEGORIES.includes(r.category) ? r.category : 'other', r.supplier || '',
     METHODS.includes(r.method) ? r.method : 'cash', money(r.amountCents), money(r.vatCents),
-    r.source || 'manual', r.receiptKey ? 'yes' : 'no',
+    r.source || 'manual', r.receiptKey ? 'yes' : 'no', r.note || '', r.id || '',
   ].map(csvCell).join(','))].join('\n');
 }

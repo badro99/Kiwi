@@ -1,5 +1,6 @@
 // POST /api/expenses/receipt?merchant=<slug>&id=<expenseId>   (corps = l'image)
 // GET  /api/expenses/receipt?merchant=<slug>&id=<expenseId>
+// DELETE /api/expenses/receipt?merchant=<slug>&id=<expenseId>  (la dépense est supprimée)
 //
 // La photo d'un ticket de dépense. Elle vit dans R2 (binding MEDIA) sous
 // private/expenses/<slug>/<id>.jpg : le lecteur public des médias refuse le
@@ -53,4 +54,14 @@ export async function onRequestGet({ request, env }) {
     'Cache-Control': 'private, max-age=3600',
     'X-Content-Type-Options': 'nosniff',
   } });
+}
+
+/* La dépense supprimée emporte sa photo. Supprimer deux fois n'est pas une
+   erreur : la page peut réessayer sans savoir si la première fois a abouti. */
+export async function onRequestDelete({ request, env }) {
+  const t = await target(request, env);
+  if (t.error) return t.error;
+  if (!env || !env.MEDIA) return json({ error: 'no-media' }, 503);
+  try { await env.MEDIA.delete(t.key); } catch (_) { return json({ error: 'media-unavailable' }, 503); }
+  return json({ ok: true });
 }

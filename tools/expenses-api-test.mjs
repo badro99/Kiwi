@@ -70,6 +70,13 @@ cash.run('c2', SHOP, 'sess', 'term', 'movement', 'in', 2000, 'Fond', 'm1', T(3, 
 cash.run('c3', SHOP, 'sess', 'term', 'close', null, null, null, 'm1', T(3, 23));
 cash.run('c4', SHOP, 'sess', 'term', 'movement', 'out', 9000, 'Poulet', 'm1', Date.UTC(2026, 9, 20, 12));
 
+/* Un compte dont la boutique a changé de nom : ses anciennes ventes sont
+   rangées sous le slug du compte (« pasta-old »), sa boutique s'appelle
+   « pasta-new ». Les KPI les additionnent (_sales-scope.js) ; le résumé aussi. */
+db.prepare(`INSERT INTO accounts VALUES ('acc-3','p@renamed.ma','Pasta Old','s','h',?,'active',0)`).run(now);
+db.prepare(`INSERT INTO merchant_config (merchant,features,plan,type,account_id,name,status,till_epoch,updated_ts,timezone,business_cutoff) VALUES ('pasta-new', '{"expenses":true}','pro','restaurant','acc-3','Pasta New','active',0,?,'Africa/Casablanca',5)`).run(now);
+sale.run('n1', 'pasta-new', 40, 4000, 'cash', T(5, 12), null);
+sale.run('n2', 'pasta-old', 60, 6000, 'cash', T(5, 13), null);
 const D1 = {
   prepare(q) {
     const st = db.prepare(q);
@@ -84,6 +91,7 @@ const D1 = {
 };
 const media = new Map();
 const MEDIA = {
+  async delete(key) { media.delete(key); },
   async put(key, body, opts) { media.set(key, { body: new Uint8Array(await new Response(body).arrayBuffer()), type: opts?.httpMetadata?.contentType }); },
   async get(key) { const o = media.get(key); return o ? { body: o.body, httpMetadata: { contentType: o.type }, writeHttpMetadata(h) { h.set('Content-Type', o.type); } } : null; },
 };
@@ -91,6 +99,7 @@ const env = { AUTH_SECRET, DB: D1, MEDIA };
 
 const owner = sessionCookie(await makeSession('acc-1', AUTH_SECRET));
 const stranger = sessionCookie(await makeSession('acc-2', AUTH_SECRET));
+const renamedOwner = sessionCookie(await makeSession('acc-3', AUTH_SECRET));
 /* La session du patron déverrouillée par le code d'un gérant ou d'une
    réceptionniste (session_tiers) : c'est l'appareil du patron, pas le patron. */
 const SID_MGR = 'a'.repeat(32), SID_RCP = 'b'.repeat(32);
@@ -176,6 +185,35 @@ const ok = (name) => { n++; console.log('✓ ' + name); };
   for (const c of [till, manager, ownerAsManager, ownerAsReception, stranger, '']) assert.equal((await fetchReceipt(c)).status, 403);
   assert.equal((await receipt.onRequestGet({ request: req(`https://k/api/expenses/receipt?merchant=${SHOP}&id=exp_none00`, owner), env })).status, 404);
   ok('receipt photos: private prefix, owner only, image types only, fail-soft without storage');
+}
+
+/* legacyBucket · les ventes d'avant le changement de nom comptent dans « Encaissé ». */
+{
+  const r = await summary.onRequestGet({ request: req('https://k/api/expenses/summary?merchant=pasta-new&month=2026-11', renamedOwner), env });
+  assert.equal(r.status, 200);
+  assert.deepEqual((await r.json()).salesDays, [{ day: '2026-11-05', salesCents: 10000 }]);
+  const other = await summary.onRequestGet({ request: req('https://k/api/expenses/summary?merchant=pasta-new&month=2026-11', operator), env });
+  assert.deepEqual((await other.json()).salesDays, [{ day: '2026-11-05', salesCents: 4000 }], 'only the owner session unions its old bucket, like the KPIs');
+  ok('month summary: the owner of a renamed store gets the sales from before the rename, like the dashboard KPIs');
+}
+
+/* receiptDelete · la photo part avec la dépense. */
+{
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 9]);
+  const url = `https://k/api/expenses/receipt?merchant=${SHOP}&id=exp_del001`;
+  await receipt.onRequestPost({ request: req(url, owner, { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: jpeg }), env });
+  const key = `private/expenses/${SHOP}/exp_del001.jpg`;
+  assert.ok(media.has(key));
+  for (const c of [till, manager, ownerAsManager, stranger, '']) {
+    assert.equal((await receipt.onRequestDelete({ request: req(url, c, { method: 'DELETE' }), env })).status, 403);
+  }
+  assert.ok(media.has(key), 'nothing removed by a refused caller');
+  const d = await receipt.onRequestDelete({ request: req(url, owner, { method: 'DELETE' }), env });
+  assert.equal(d.status, 200);
+  assert.ok(!media.has(key));
+  assert.equal((await receipt.onRequestGet({ request: req(url, owner), env })).status, 404);
+  assert.equal((await receipt.onRequestDelete({ request: req(url, owner, { method: 'DELETE' }), env })).status, 200, 'deleting twice is fine');
+  ok('receipt photos are removed with their expense, by the owner only');
 }
 
 console.log(n + ' groupes · expenses api');
