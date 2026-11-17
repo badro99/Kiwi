@@ -901,6 +901,22 @@
 
   /* Request pacing: pending kitchen work keeps its fast fallback. */
   var pollDelay = POLL_MS, pollSignature = null, polling = false, pollAgain = false;
+  /* LA CAISSE QUI IMPRIME LA CUISINE NE S'ENDORT PAS (Pasta Corner, 17 nov.).
+   * Le ralentissement des appareils inactifs (bb2babdde, 25 oct.) espaçait la
+   * relève jusqu'à 2 min sur un comptoir calme, 5 min derrière l'écran de
+   * verrouillage : la première commande du téléphone serveur après un creux
+   * attendait autant avant de sortir en cuisine, et le badge passait à
+   * « Inactif ». Le poste choisi comme hub d'impression (le choix de
+   * l'opérateur, assets/kitchen-print-queue.js · HUB_KEY) garde donc la relève
+   * de 6 s. Un commerce que le serveur dit calme reste plafonné par
+   * KiwiPoll.delay (10 min) : seuls les clients actifs paient ces lectures. */
+  function printHub() {
+    try {
+      var c = JSON.parse(localStorage.getItem('kiwiKitchenPrintHubV1') || 'null');
+      var m = merchant();
+      return !!(c && c.enabled === true && m && c.merchant === m);
+    } catch (_) { return false; }
+  }
   function pollInbox() {
     if (state.timer) clearTimeout(state.timer);
     state.timer = null;
@@ -912,13 +928,14 @@
       var pending = Object.keys(state.orders).some(function (id) {
         return /^(pending|accepted|cooking|preparing|ready)$/.test(state.orders[id].status);
       });
-      pollDelay = pending || next !== pollSignature ? POLL_MS : Math.min(120000, pollDelay * 2);
+      var hub = printHub();
+      pollDelay = pending || hub || next !== pollSignature ? POLL_MS : Math.min(120000, pollDelay * 2);
       var gate = document.getElementById('pin-screen');
       var closed = document.getElementById('clockin-screen');
       var locked = function (el) { return el && el.style.display !== 'none'; };
-      if (!pending && (locked(gate) || locked(closed))) pollDelay = 300000;
+      if (!pending && !hub && (locked(gate) || locked(closed))) pollDelay = 300000;
       pollSignature = next;
-    }).catch(function () { pollDelay = Math.min(120000, pollDelay * 2); }).then(function () {
+    }).catch(function () { pollDelay = Math.min(printHub() ? 30000 : 120000, pollDelay * 2); }).then(function () {
       polling = false;
       if (!document.hidden) state.timer = setTimeout(pollInbox, window.KiwiPoll?.delay(pollAgain ? 0 : pollDelay) ?? (pollAgain ? 0 : pollDelay));
       pollAgain = false;

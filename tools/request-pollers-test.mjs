@@ -98,6 +98,35 @@ async function pacing(name, h, start, { cap = 120000, first = true, quietCap = 6
 
 }
 {
+  /* Pasta Corner, 17 nov. : le poste hub d'impression cuisine ne ralentit pas
+     sur un comptoir calme ni derrière le verrou, sinon la commande du
+     téléphone serveur attend minutes avant de sortir en cuisine. */
+  const store = new Map();
+  const localStorage = { getItem: k => store.has(k) ? store.get(k) : null, setItem: (k, v) => store.set(k, String(v)) };
+  const h = harness({ POLL_MS: 6000, state: { orders: {}, sessions: [], closedSessions: [], expired: [] }, merchant: () => 'test', chip() {}, localStorage });
+  h.ctx.pull = async () => { h.hit(); return 0; };
+  const src = read('assets/orderpro-inbox.js');
+  h.run(src.slice(src.indexOf('  /* Request pacing:'), src.indexOf("  if (document.readyState", src.indexOf('  /* Request pacing:'))));
+  store.set('kiwiKitchenPrintHubV1', JSON.stringify({ enabled: true, merchant: 'test', deviceId: 'web_a' }));
+  h.ctx.start(); await h.settle();
+  await h.advance(600000);
+  let before = h.count(); await h.advance(60000);
+  assert.equal(h.count() - before, 10, 'print hub keeps the 6 s pull on an idle counter');
+  h.document.getElementById = () => ({ style: { display: '' } });
+  h.ctx.wakeInbox(); await h.settle();
+  before = h.count(); await h.advance(60000);
+  assert.equal(h.count() - before, 10, 'print hub keeps the 6 s pull behind the lock screen');
+  h.window.KiwiPoll = { delay: ms => Math.max(600000, ms) };
+  h.ctx.wakeInbox(); await h.settle(); before = h.count();
+  await h.advance(599999); assert.equal(h.count(), before, 'a quiet merchant stays capped even on the print hub');
+  h.window.KiwiPoll = undefined; h.document.getElementById = () => null;
+  store.set('kiwiKitchenPrintHubV1', JSON.stringify({ enabled: true, merchant: 'other', deviceId: 'web_a' }));
+  h.ctx.wakeInbox(); await h.settle(); await h.advance(600000);
+  before = h.count(); await h.advance(60000);
+  assert.ok(h.count() - before <= 1, 'a hub chosen for another merchant does not keep this till awake');
+  console.log('✓ OrderPro inbox: the kitchen print hub stays at 6 s when idle or locked, quiet merchants stay capped');
+}
+{
   const h = harness({ liveTeamBusy: false, isCustomVenue: () => true, teamSlug: () => 'test',
     liveTeamSignature: JSON.stringify(['test', [], {}, {}, []]), pageActive: true, applyLiveTeam() {} });
   h.ctx.fetch = async () => { h.hit(); return { ok: true, json: async () => ({ ok: true, merchant: 'test' }) }; };
