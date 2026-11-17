@@ -33,7 +33,7 @@
 //     still holds its stock (_delivery-stock.js), its confirmation later takes
 //     the old piece out once, so the count still ends right.
 import { exactMerchant, json, readAccount, cities } from './_lib.js';
-import { sendParcel, clean, PHONE_RE, CUSTOMER_FEE_CENTS } from './parcels.js';
+import { sendParcel, clean, PHONE_RE, customerFeeCents } from './parcels.js';
 import { owedCents } from '../receivables.js';  // readExchanges lives there too: the list reads it
 import { readDeliveryCards } from '../_delivery-card.js';
 import { __test as catalogFns } from '../catalog.js';
@@ -165,7 +165,6 @@ export async function onRequestPost({ request, env }) {
   const diffCents = Math.max(0, outCents - backCents);
   const creditCents = Math.max(0, backCents - outCents);
   const feeOnCustomer = b.feeOnCustomer === true || b.feeOnCustomer === 1 || b.feeOnCustomer === '1';
-  const codCents = diffCents + (feeOnCustomer ? CUSTOMER_FEE_CENTS : 0);
 
   /* Who receives it: what the till sends, else the original parcel, else the
      delivery card taken at the sale. */
@@ -179,6 +178,8 @@ export async function onRequestPost({ request, env }) {
   let city = null;
   try { city = (await cities(env)).find((c) => c.id === cityId) || null; } catch (_) { city = null; }
   if (!city) return json({ error: 'unknown-city' }, 400);
+  /* La livraison se paie selon la ville du colis : 20 MAD à Casablanca, 50 ailleurs. */
+  const codCents = diffCents + (feeOnCustomer ? customerFeeCents(city.name) : 0);
 
   /* The new sale: what leaves, priced so that its lines add up to what the
      courier collects for the shop (the difference). */

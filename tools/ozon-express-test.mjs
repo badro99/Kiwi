@@ -97,6 +97,7 @@ sale('dlv-1', 45000, now - 3600e3);
 sale('dlv-2', 25000, now - 1800e3, 10000);
 sale('dlv-old', 30000, now - 20 * 86400e3);
 sale('dlv-fee', 85000, now - 600e3);
+sale('dlv-casa', 85000, now - 500e3);
 sale('sale-ref-fdbc450d-945e-a96b-4b8b-b947-5f02f05190ed', 85000, now - 300e3);
 
 const owner = `${SESS_COOKIE}=${await makeSession('acc-ozon-owner', SECRET)}`;
@@ -249,13 +250,25 @@ await ok('the customer pays delivery: Ozon collects price + fee, revenue on « P
     phone: '0612345678', cityId: 37, address: '2 rue Test', feeOnCustomer: true });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   const add = calls.filter((c) => c.path === 'add-parcel').pop();
-  assert.equal(add.body['parcel-price'], '900', 'the courier collects 850 + 50, whatever the city');
+  assert.equal(add.body['parcel-price'], '900', 'the courier collects 850 + 50 outside Casablanca');
   assert.equal(r.body.parcel.priceCents, 90000);
   ozon.status[r.body.parcel.tracking] = 'Payé';
   const t = await call(parcels, 'onRequestGet', `/api/ozon/parcels?merchant=${MERCHANT}&force=1`, 'GET', till);
   assert.equal(t.body.refreshed.paid, 1);
   const got = collections('dlv-fee');
   assert.equal(got.length, 1); assert.equal(got[0].amount_cents, 85000, 'the fee is Ozon\'s, never counted as a sale');
+});
+
+/* Santos, 17 Nov 2026: delivery to Casablanca costs the customer 20 MAD, 50
+   anywhere else. Ozon names Casablanca by district. */
+await ok('a Casablanca parcel: the courier collects price + 20, not + 50', async () => {
+  const r = await call(parcels, 'onRequestPost', '/api/ozon/parcels', 'POST', till, { merchant: MERCHANT, saleId: 'dlv-casa', receiver: 'Client Casa',
+    phone: '0612345678', cityId: 2174, address: '5 bd Zerktouni', feeOnCustomer: true });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const add = calls.filter((c) => c.path === 'add-parcel').pop();
+  assert.equal(add.body['parcel-city'], '2174');
+  assert.equal(add.body['parcel-price'], '870', 'the courier collects 850 + 20 in Casablanca');
+  assert.equal(r.body.parcel.priceCents, 87000);
 });
 
 await ok('the till\'s own sale id (sale-<uuid>) finds the row the server stored as sale-ref-…', async () => {

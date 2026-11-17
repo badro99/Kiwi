@@ -34,7 +34,8 @@ const PHRASES = {
   'Numéro marocain attendu': ['Moroccan number expected', 'يجب إدخال رقم مغربي'],
   'Tapez pour chercher une ville Ozon': ['Type to search an Ozon city', 'اكتب للبحث عن مدينة أوزون'],
   'Aucune ville trouvée': ['No city found', 'لم يتم العثور على مدينة'],
-  '+ 50 MAD de livraison · le client paie': ['+ 50 MAD delivery · the customer pays', '+ 50 درهم توصيل · يدفع الزبون'],
+  '+ {x} de livraison · le client paie': ['+ {x} delivery · the customer pays', '+ {x} توصيل · يدفع الزبون'],
+  'Livraison payée par le client : 20 MAD à Casablanca, 50 MAD ailleurs': ['Delivery paid by the customer: 20 MAD in Casablanca, 50 MAD elsewhere', 'يدفع الزبون التوصيل: 20 درهم داخل الدار البيضاء، و50 درهم لباقي المدن'],
   'Enregistrer et envoyer à Ozon': ['Save and send to Ozon', 'تسجيل وإرسال إلى أوزون'],
   'Le colis Ozon se crée tout seul à l’enregistrement, avec ces informations. Le client n’entre pas dans le carnet de fidélité.': ['The Ozon parcel is created automatically when you save, with these details. The customer is not added to the loyalty book.', 'يُنشأ طرد أوزون تلقائياً عند التسجيل بهذه المعلومات. لا يُضاف الزبون إلى دفتر الوفاء.'],
 };
@@ -92,7 +93,12 @@ const digits = (v) => String(v || '').replace(/\D/g, '');
 const fold = (v) => String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 /* Le format qu'Ozon accepte (functions/api/ozon/parcels.js › PHONE_RE). */
 const OZON_PHONE = /^(?:\+?212|0)?[5-7]\d{8}$/;
-const CUSTOMER_FEE = 50;   // MAD, ce que le client paie pour la livraison, partout
+/* Ce que le client paie pour la livraison : 20 MAD à Casablanca (tout quartier
+   Ozon « Casablanca – … »), 50 MAD ailleurs (Santos, 17 nov. 2026). Le serveur
+   encaisse la même chose : functions/api/ozon/parcels.js › customerFeeCents. */
+export function customerFeeMAD(cityName) {
+  return /^casablanca\b/.test(fold(cityName)) ? 20 : 50;
+}
 
 /* o : { amount, fmtMAD, esc, icons, closeBtns, prev, back, done(card),
  *       ozon?: { connected: Promise<boolean>, cities: () => Promise<[{id, name}]> } }
@@ -197,6 +203,7 @@ export function bqDeliveryCard(el, o) {
     if (hits[i] == null) return;
     cityIn.value = hits[i];
     closeSug();
+    paintFee();
     if (cityIn.getAttribute('aria-invalid') === 'true') check(FIELDS.find((x) => x.k === 'city'), true);
     const next = nodeOf('address');
     if (next && !next.value) next.focus();
@@ -229,6 +236,19 @@ export function bqDeliveryCard(el, o) {
     const li = e.target.closest && e.target.closest('li[data-i]');
     if (li) { inList = false; pick(Number(li.dataset.i)); }
   });
+  /* Ozon relié : la fiche dit ce que le client paiera au livreur, selon la
+     ville choisie (customerFeeMAD) ; tant qu'aucune ville de la liste n'est
+     choisie, les deux tarifs. */
+  const paintFee = () => {
+    const sub = el.querySelector('.modal-subtle');
+    if (!sub || !ozonCities) return;
+    const oc = ozonCities.find((c) => fold(c.name) === fold(cityIn.value));
+    if (!oc) { sub.textContent = o.fmtMAD(o.amount) + ' · ' + tr('Livraison payée par le client : 20 MAD à Casablanca, 50 MAD ailleurs'); return; }
+    const fee = customerFeeMAD(oc.name);
+    sub.textContent = o.fmtMAD(o.amount) + ' ' + tr('+ {x} de livraison · le client paie').replace('{x}', o.fmtMAD(fee)) + ' ' + o.fmtMAD((Number(o.amount) || 0) + fee);
+  };
+  cityIn.addEventListener('input', paintFee);
+  cityIn.addEventListener('change', paintFee);
   /* Ozon relié : la liste de villes devient celle d'Ozon, et la fiche dit ce
      que le client paiera au livreur. Ozon absent ou muet : la fiche d'avant. */
   if (o.ozon && o.ozon.connected) {
@@ -238,7 +258,7 @@ export function bqDeliveryCard(el, o) {
       const city = nodeOf('city');
       if (city) city.placeholder = tr('Tapez pour chercher une ville Ozon');
       const sub = el.querySelector('.modal-subtle');
-      if (sub) sub.textContent = o.fmtMAD(o.amount) + ' ' + tr('+ 50 MAD de livraison · le client paie') + ' ' + o.fmtMAD((Number(o.amount) || 0) + CUSTOMER_FEE);
+      paintFee();
       const hint = el.querySelector('.bqdc-hint');
       if (hint) hint.textContent = tr('Le colis Ozon se crée tout seul à l’enregistrement, avec ces informations. Le client n’entre pas dans le carnet de fidélité.');
       const ok = el.querySelector('#bqdc-ok');

@@ -13,7 +13,18 @@
 import { deliveryDue } from '../receivables.js';
 import { exactMerchant, json, readAccount, ozonCall, stepError, pick, cities, cents } from './_lib.js';
 import { listParcels, parcelView, refreshTracking } from './_track.js';
-export const CUSTOMER_FEE_CENTS = 5000;   // ce que le client paie pour la livraison, partout
+/* Ce que le client paie pour la livraison quand la boutique la lui fait payer :
+   20 MAD à Casablanca, 50 MAD partout ailleurs (Santos, 17 nov. 2026 ; c'était
+   50 partout depuis le 30 oct.). Ozon nomme Casablanca par quartier
+   (« Casablanca – Ain Sebaa ») : tout nom qui commence par Casablanca compte.
+   La caisse affiche la même règle : assets/pos-boutique/delivery-card.js ›
+   customerFeeMAD (tools/delivery-fee-city-test.mjs vérifie qu'elles s'accordent). */
+export const CUSTOMER_FEE_CENTS = 5000;
+export const CASABLANCA_FEE_CENTS = 2000;
+export function customerFeeCents(cityName) {
+  const n = String(cityName || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  return /^casablanca\b/.test(n) ? CASABLANCA_FEE_CENTS : CUSTOMER_FEE_CENTS;
+}
 
 export async function onRequestGet({ request, env }) {
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
@@ -93,9 +104,9 @@ export async function createParcel(env, merchant, account, b) {
      2026). Le chiffre d'affaires, lui, reste ce qui est dû sur la vente
      (_track.js › confirmByCarrier) : les frais sont à Ozon. */
   const feeOnCustomer = b.feeOnCustomer === true || b.feeOnCustomer === 1 || b.feeOnCustomer === '1';
-  /* Le client paie toujours 50 MAD, quelle que soit la ville (Santos, 30 oct.
-     2026) ; Ozon garde ses frais de ville sur ce qu'il encaisse. */
-  const codCents = due.dueCents + (feeOnCustomer ? CUSTOMER_FEE_CENTS : 0);
+  /* 20 MAD à Casablanca, 50 MAD ailleurs (customerFeeCents) ; Ozon garde ses
+     frais de ville sur ce qu'il encaisse. */
+  const codCents = due.dueCents + (feeOnCustomer ? customerFeeCents(city.name) : 0);
 
   return sendParcel(env, merchant, account, { saleId, receiver, phone, cityId, city, address, codCents,
     nature: clean(b.nature, 120) || clean(due.label, 120) || 'Commande', note: clean(b.note, 240),

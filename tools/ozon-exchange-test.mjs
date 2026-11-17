@@ -51,7 +51,8 @@ const DB = {
 const calls = [];
 const ozon = { status: {}, nextTracking: 1, refuseAdd: '' };
 const cityList = { CITIES: { 37: { ID: 37, REF: 'AGA', NAME: 'Agadir', 'DELIVERED-PRICE': 35, 'RETURNED-PRICE': 0, 'REFUSED-PRICE': 10 },
-  1790: { ID: 1790, REF: 'TNT', NAME: 'Tan-Tan', 'DELIVERED-PRICE': 40, 'RETURNED-PRICE': 0, 'REFUSED-PRICE': 10 } }, DEBUG: {} };
+  1790: { ID: 1790, REF: 'TNT', NAME: 'Tan-Tan', 'DELIVERED-PRICE': 40, 'RETURNED-PRICE': 0, 'REFUSED-PRICE': 10 },
+  2174: { ID: 2174, REF: 'CCV', NAME: 'Casablanca – Centre Ville', 'DELIVERED-PRICE': 20, 'RETURNED-PRICE': 0, 'REFUSED-PRICE': 10 } }, DEBUG: {} };
 async function fakeFetch(url, init = {}) {
   const u = String(url);
   const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -102,6 +103,7 @@ sale('dlv-a', [{ n: 'Robe M', q: 1, t: 405, v: 'p-robe:M:noir' }]);
 sale('dlv-b', [{ n: 'Robe S', q: 2, t: 900, v: 'p-robe:S:noir' }]);
 sale('dlv-c', [{ n: 'Robe M', q: 1, t: 450, v: 'p-robe:M:noir' }]);
 sale('dlv-card', [{ n: 'Robe S', q: 1, t: 450, v: 'p-robe:S:noir' }]);
+sale('dlv-casa', [{ n: 'Robe S', q: 1, t: 450, v: 'p-robe:S:noir' }]);
 sqlite.prepare(`INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id, amount, amount_cents, method, ref, sale_ts, impact, ts)
   VALUES (?, 'dlv-card', 'delivery-card', '', '', '', '', 0, 0, 'delivery', '', 0, ?, ?)`).run(MERCHANT,
   JSON.stringify({ name: 'Cliente Fiche', phone: '0612345678', city: 'Tan-Tan', address: '2 rue Fiche', cityId: 1790 }), now);
@@ -208,6 +210,16 @@ await ok('one of two pieces swapped for a cheaper article: nothing to collect, t
   assert.equal(b.lines[0].exchangedQty, 1); assert.equal(b.dueCents, 90000, 'the order itself still owes its total');
   const ret = await call(receivables, 'onRequestPost', '/api/receivables', 'POST', till, { merchant: MERCHANT, saleId: 'dlv-b', action: 'return', id: 'ret-xch-b-0001', lines: [{ i: 0, q: 1 }] });
   assert.equal(ret.status, 200, 'the other piece can still come back'); assert.equal(ret.body.returnedCents, 45000);
+});
+
+/* Santos, 17 Nov 2026: the customer pays 20 MAD delivery in Casablanca, 50 elsewhere. */
+await ok('an exchange sent to Casablanca: the courier collects the difference + 20', async () => {
+  const r = await swap({ saleId: 'dlv-casa', id: 'xch-casa000001', feeOnCustomer: true, receiver: 'Cliente Casa', phone: '0612345678',
+    address: '5 bd Zerktouni', cityId: 2174, swaps: [{ i: 0, q: 1, pid: 'p-chem', size: 'L', color: 'blanc' }] });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.exchange.diffCents, 15000, '600 out, 450 back');
+  assert.equal(r.body.exchange.codCents, 17000, '150 + 20 in Casablanca');
+  assert.equal(lastAdd().body['parcel-price'], '170');
 });
 
 await ok('stock, unknown articles and bad input are refused before Ozon', async () => {

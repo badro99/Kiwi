@@ -16,7 +16,10 @@
  *     envoyée sort, la pièce reprise rentre.
  *   · Un identifiant par échange ouvert : un double appui ou une reprise après
  *     coupure n'envoie jamais deux colis. */
-const FEE_MAD = 50;
+import { customerFeeMAD } from './delivery-card.js?v=7';
+/* La livraison payée par la cliente suit la ville du colis : 20 MAD à
+   Casablanca, 50 MAD ailleurs (le serveur décide, functions/api/ozon/exchange.js). */
+const feeMAD = (city) => customerFeeMAD(city);
 const PHRASES = {
   'Échange': ['Exchange', 'استبدال'],
   'Échanger': ['Exchange', 'استبدال'],
@@ -115,7 +118,7 @@ function variantsOf(d, pid) {
 }
 function unitBack(line) { return Math.round((line.totalCents || 0) / (line.qty || 1)); }
 /* Estimation affichée : la règle du serveur, appliquée aux chiffres de la caisse. */
-function estimate(x, d) {
+function estimate(x, d, city) {
   const P = d.products() || {};
   let back = 0, out = 0;
   Object.entries(ex.picks).forEach(([i, pk]) => {
@@ -127,7 +130,7 @@ function estimate(x, d) {
     out += from && from.pid === pk.pid ? b : Math.round(Number((P[pk.pid] || {}).price || 0) * 100) * pk.q;
   });
   const diff = Math.max(0, out - back);
-  return { back, out, diff, credit: Math.max(0, back - out), cod: diff + (ex.fee ? FEE_MAD * 100 : 0) };
+  return { back, out, diff, credit: Math.max(0, back - out), cod: diff + (ex.fee ? feeMAD(city) * 100 : 0) };
 }
 const ready = () => ex && Object.keys(ex.picks).length > 0 && Object.values(ex.picks).every((pk) => pk.size);
 
@@ -169,16 +172,17 @@ export function exchHtml(x, d, esc, who) {
     }).join('') : '<span class="bqd-note">' + esc(tr('Aucun article trouvé.')) + '</span>') + '</div>';
     return '<div class="bqx-item">' + body + '</div>';
   }).join('');
-  const e = estimate(x, d);
+  const fee = feeMAD((who || {}).city);
+  const e = estimate(x, d, (who || {}).city);
   const sum = ready() ? '<div class="bqx-sum">'
     + '<div><span>' + esc(tr('Repris')) + '</span><b>' + esc(mad(e.back)) + '</b></div>'
     + '<div><span>' + esc(tr('Envoyé')) + '</span><b>' + esc(mad(e.out)) + '</b></div>'
     + '<div class="bqx-cod"><span>' + esc(tr('Le livreur encaisse')) + '</span><b>' + esc(mad(e.cod)) + '</b>'
-    + (ex.fee ? '<small>' + esc(tr('dont {x} de livraison').replace('{x}', d.fmtMAD(FEE_MAD))) + '</small>' : '') + '</div></div>'
+    + (ex.fee ? '<small>' + esc(tr('dont {x} de livraison').replace('{x}', d.fmtMAD(fee))) + '</small>' : '') + '</div></div>'
     + (e.credit > 0 ? '<p class="bqd-note">' + esc(tr('Article moins cher : la différence de {x} reste à la boutique.').replace('{x}', mad(e.credit))) + '</p>' : '') : '';
   const c = who || {};
   return '<div class="bqd-ret bqx" data-bqx>' + rows
-    + '<label class="bqx-fee"><input type="checkbox" data-bqx-fee' + (ex.fee ? ' checked' : '') + '> ' + esc(tr('Livraison payée par la cliente ({x})').replace('{x}', d.fmtMAD(FEE_MAD))) + '</label>'
+    + '<label class="bqx-fee"><input type="checkbox" data-bqx-fee' + (ex.fee ? ' checked' : '') + '> ' + esc(tr('Livraison payée par la cliente ({x})').replace('{x}', d.fmtMAD(fee))) + '</label>'
     + sum
     + (c.name ? '<div class="bqd-addr">' + esc([c.name, c.city, c.phone].filter(Boolean).join(' · ')) + (c.address ? '<span>' + esc(c.address) + '</span>' : '') + '</div>' : '')
     + '<p class="bqd-note">' + esc(tr('Ozon livre la nouvelle pièce et reprend l’ancienne.')) + '</p>'

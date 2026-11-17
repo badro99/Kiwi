@@ -13,6 +13,7 @@
  * La clé API Ozon ne passe jamais par cette caisse : elle se règle au tableau de
  * bord et reste chiffrée sur le serveur. Sans compte Ozon relié, rien de ce
  * fichier ne s'affiche. */
+import { customerFeeMAD } from './delivery-card.js?v=7';
 const PHRASES = {
   'Envoyer avec Ozon Express': ['Send with Ozon Express', 'إرسال عبر أوزون إكسبريس'],
   'Envoyer avec Ozon': ['Send with Ozon', 'إرسال عبر أوزون'],
@@ -417,7 +418,8 @@ const REFUSAL = {
 export function ozonOpenSend(o) {
   /* Qui paie la livraison (Santos, 30 oct. 2026 : le client, en plus de
      l'article). Retenu par boutique, coché par défaut. */
-  const CUSTOMER_FEE = 5000;   // 50 MAD, en centimes
+  /* 20 MAD à Casablanca, 50 MAD ailleurs, selon la ville du colis (customerFeeMAD). */
+  const custFee = (c) => (c ? customerFeeMAD(c.name) * 100 : null);
   const FEE_PREF = 'kiwiOzonFeeOnCustomer:' + (o && o.slug);
   let feeOnCustomer = true;
   try { feeOnCustomer = localStorage.getItem(FEE_PREF) !== '0'; } catch (_) {}
@@ -450,22 +452,24 @@ export function ozonOpenSend(o) {
   const feeOn = () => { const box = $('feeOnCustomer'); return box ? box.checked : feeOnCustomer; };
   const sum = () => {
     const fee = city ? city.deliveredCents : 0;
-    /* Le client paie toujours 50 MAD de livraison, quelle que soit la ville
-       (Santos, 30 oct. 2026) ; Ozon garde ses propres frais sur ce qu'il
-       encaisse. Même règle côté serveur : functions/api/ozon/parcels.js. */
+    /* Le client paie 20 MAD de livraison à Casablanca, 50 MAD ailleurs (Santos,
+       17 nov. 2026) ; Ozon garde ses propres frais sur ce qu'il encaisse. Même
+       règle côté serveur : functions/api/ozon/parcels.js › customerFeeCents.
+       Sans ville choisie, la ligne de livraison attend la ville. */
+    const cust = custFee(city);
     const custRows = () => (o.dueCents ? '<div><span>' + esc(tr('Articles')) + '</span><b>' + esc(mad(o.dueCents)) + '</b></div>' : '')
-        + '<div><span>' + esc(tr('Livraison')) + '</span><b class="plus">' + esc(mad(CUSTOMER_FEE)) + '</b></div>'
-        + (o.dueCents ? '<div><span>' + esc(tr('Le client paie au livreur')) + '</span><b>' + esc(mad(o.dueCents + CUSTOMER_FEE)) + '</b></div>' : '')
+        + (city ? '<div><span>' + esc(tr('Livraison')) + '</span><b class="plus">' + esc(mad(cust)) + '</b></div>' : '')
+        + (city && o.dueCents ? '<div><span>' + esc(tr('Le client paie au livreur')) + '</span><b>' + esc(mad(o.dueCents + cust)) + '</b></div>' : '')
         + (city ? '<div><span>' + esc(tr('Frais de livraison Ozon')) + ' · ' + esc(city.name) + '</span><b>\u2212' + esc(mad(fee)) + '</b></div>' : '')
-        + (city && o.dueCents ? '<div class="net"><span>' + esc(tr('Vous recevrez')) + '</span><b>' + esc(mad(Math.max(0, o.dueCents + CUSTOMER_FEE - fee))) + '</b></div>' : '');
+        + (city && o.dueCents ? '<div class="net"><span>' + esc(tr('Vous recevrez')) + '</span><b>' + esc(mad(Math.max(0, o.dueCents + cust - fee))) + '</b></div>' : '');
     const shopRows = () => (o.dueCents ? '<div><span>' + esc(tr('Le client paie au livreur')) + '</span><b>' + esc(mad(o.dueCents)) + '</b></div>' : '')
         + (city ? '<div><span>' + esc(tr('Frais de livraison Ozon')) + ' · ' + esc(city.name) + '</span><b>\u2212' + esc(mad(fee)) + '</b></div>' : '')
         + (city && o.dueCents ? '<div class="net"><span>' + esc(tr('Vous recevrez')) + '</span><b>' + esc(mad(Math.max(0, o.dueCents - fee))) + '</b></div>' : '');
     $('sum').innerHTML = (feeOn() ? custRows() : shopRows())
       + (guessed && city ? '<div class="ozs-hint">' + esc(tr('Ville trouvée dans l’adresse')) + '</div>' : '');
     $('sum').hidden = !o.dueCents && !city;
-    /* Les villes ne montrent plus les frais d'Ozon : le client paie 50 MAD
-       partout, et ce qu'Ozon garde se lit dans le résumé ci-dessous. */
+    /* Les villes ne montrent pas les frais d'Ozon : ce que le client paie et ce
+       qu'Ozon garde se lisent dans le résumé ci-dessous. */
     $('fee').textContent = '';
   };
   const paintCities = () => {
