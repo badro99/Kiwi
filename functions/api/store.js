@@ -47,6 +47,7 @@ import { validateMonthReportPolicy } from './_month-report-policy.js';
 import { dayreportHistoryLost } from './_dayreport-history.js';
 import { json, entitledMerchant, activeAccountSession, isTillFor } from '../auth/_lib.js';
 import { storeEditorTier, docBelowTier } from './_store-tier.js';
+import { expensesReader } from './expenses/_owner.js';
 import { storeEtag, storeTag } from './_store-etag.js';
 import { tenantFor, storeSubscriptionPending } from './_private.js';
 import { authFingerprint, authSentinel, planEmployeeAuth, writeEmployeeAuth, authMoved } from './_employee-auth.js';
@@ -761,6 +762,9 @@ export async function onRequestGet(context) {
   }
 
   if (feature === 'verticalops') return getVerticalOps(request, env, merchant);
+  /* Les dépenses du patron : sa session ou un opérateur, ni caisse ni employé
+     (gérant compris). Voir functions/api/expenses/_owner.js. */
+  if (feature === 'expenses' && !(await expensesReader(request, env, merchant))) return json({ error: 'owner-required', feature }, 403);
   if (await docBelowTier(request, env, merchant, feature)) return json({ error: 'tier', feature }, 403);
 
   try {
@@ -845,6 +849,7 @@ export async function onRequestPost(context) {
     if (setup && await storeSubscriptionPending(env, setup) && await editsRoster(request, env, setup, feature)) merchant = setup;
   }
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  if (feature === 'expenses' && !(await expensesReader(request, env, merchant))) return json({ error: 'owner-required', feature }, 403);
   if (await docBelowTier(request, env, merchant, feature)) return json({ error: 'tier', feature }, 403);
 
   /* Qui ne peut pas LIRE les codes ne peut pas RÉÉCRIRE le document qui les

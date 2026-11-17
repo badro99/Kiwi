@@ -76,100 +76,102 @@ import * as r70 from './api/directory/submit.js';
 import * as r71 from './api/employee.js';
 import * as r72 from './api/employee-clients.js';
 import * as r73 from './api/error.js';
-import * as r74 from './api/feed.js';
-import * as r75 from './api/floor/live.js';
-import * as r76 from './api/foodcost.js';
-import * as r77 from './api/hotel/billing-draft.js';
-import * as r78 from './api/hotel/channels.js';
-import * as r79 from './api/hotel/commercial.js';
-import * as r80 from './api/hotel/cron.js';
-import * as r81 from './api/hotel/declarations.js';
-import * as r82 from './api/hotel/performance.js';
-import * as r83 from './api/hotel/production.js';
-import * as r84 from './api/hotel/room-charges.js';
-import * as r85 from './api/hotel/rooms-bulk.js';
-import * as r86 from './api/hotel/stays.js';
-import * as r87 from './api/inventory/counts.js';
-import * as r88 from './api/inventory/department-catalogue.js';
-import * as r89 from './api/inventory/hotel-reports.js';
-import * as r90 from './api/inventory/internal-requests.js';
-import * as r91 from './api/inventory/movements.js';
-import * as r92 from './api/invoice.js';
-import * as r93 from './api/invoices.js';
-import * as r94 from './api/live/socket.js';
-import * as r95 from './api/me.js';
-import * as r96 from './api/menu.js';
-import * as r97 from './api/menu/availability.js';
-import * as r98 from './api/merchant-health.js';
-import * as r99 from './api/month-report.js';
-import * as r100 from './api/operations.js';
-import * as r101 from './api/order/index.js';
-import * as r102 from './api/order-course.js';
-import * as r103 from './api/order/activity.js';
-import * as r104 from './api/order/game.js';
-import * as r105 from './api/order/guest.js';
-import * as r106 from './api/order/queue.js';
-import * as r107 from './api/order/session.js';
-import * as r108 from './api/origin-move.js';
-import * as r109 from './api/ozon/account.js';
-import * as r110 from './api/ozon/cities.js';
-import * as r111 from './api/ozon/exchange.js';
-import * as r112 from './api/ozon/notes.js';
-import * as r113 from './api/ozon/parcels.js';
-import * as r114 from './api/pair/create.js';
-import * as r115 from './api/pair/devices.js';
-import * as r116 from './api/pair/recover.js';
-import * as r117 from './api/pair/redeem.js';
-import * as r118 from './api/pair/revoke.js';
-import * as r119 from './api/pair/state.js';
-import * as r120 from './api/pairs.js';
-import * as r121 from './api/pay-statements.js';
-import * as r122 from './api/pin/face.js';
-import * as r123 from './api/pin/verify.js';
-import * as r124 from './api/pressing/cancel.js';
-import * as r125 from './api/print/bridges.js';
-import * as r126 from './api/print/jobs.js';
-import * as r127 from './api/push/morning.js';
-import * as r128 from './api/push/register.js';
-import * as r129 from './api/quarantine.js';
-import * as r130 from './api/receivables.js';
-import * as r131 from './api/retail-balances.js';
-import * as r132 from './api/sale.js';
-import * as r133 from './api/sale/cancel.js';
-import * as r134 from './api/sale/refund.js';
-import * as r135 from './api/sales-summary.js';
-import * as r136 from './api/service/events.js';
-import * as r137 from './api/shop/catalog.js';
-import * as r138 from './api/shop/decide.js';
-import * as r139 from './api/shop/orders.js';
-import * as r140 from './api/shop/status.js';
-import * as r141 from './api/shopify/callback.js';
-import * as r142 from './api/shopify/connect.js';
-import * as r143 from './api/shopify/connect-direct.js';
-import * as r144 from './api/shopify/cron.js';
-import * as r145 from './api/shopify/status.js';
-import * as r146 from './api/stock/lookup.js';
-import * as r147 from './api/store.js';
-import * as r148 from './api/store-credits.js';
-import * as r149 from './api/support/articles.js';
-import * as r150 from './api/support/attachments.js';
-import * as r151 from './api/support/inbound.js';
-import * as r152 from './api/support/tickets.js';
-import * as r153 from './api/table-time.js';
-import * as r154 from './api/team/live.js';
-import * as r155 from './api/ticket-sequence.js';
-import * as r156 from './api/tickets/index.js';
-import * as r157 from './api/timezone.js';
-import * as r158 from './api/weather.js';
-import * as r159 from './api/z-reconciliation.js';
-import * as r160 from './auth/forgot.js';
-import * as r161 from './auth/login.js';
-import * as r162 from './auth/logout.js';
-import * as r163 from './auth/operator.js';
-import * as r164 from './auth/reset.js';
-import * as r165 from './auth/signup.js';
-import * as r166 from './order/basic.js';
-import * as r167 from './sitemap-annuaire.xml.js';
+import * as r74 from './api/expenses/receipt.js';
+import * as r75 from './api/expenses/summary.js';
+import * as r76 from './api/feed.js';
+import * as r77 from './api/floor/live.js';
+import * as r78 from './api/foodcost.js';
+import * as r79 from './api/hotel/billing-draft.js';
+import * as r80 from './api/hotel/channels.js';
+import * as r81 from './api/hotel/commercial.js';
+import * as r82 from './api/hotel/cron.js';
+import * as r83 from './api/hotel/declarations.js';
+import * as r84 from './api/hotel/performance.js';
+import * as r85 from './api/hotel/production.js';
+import * as r86 from './api/hotel/room-charges.js';
+import * as r87 from './api/hotel/rooms-bulk.js';
+import * as r88 from './api/hotel/stays.js';
+import * as r89 from './api/inventory/counts.js';
+import * as r90 from './api/inventory/department-catalogue.js';
+import * as r91 from './api/inventory/hotel-reports.js';
+import * as r92 from './api/inventory/internal-requests.js';
+import * as r93 from './api/inventory/movements.js';
+import * as r94 from './api/invoice.js';
+import * as r95 from './api/invoices.js';
+import * as r96 from './api/live/socket.js';
+import * as r97 from './api/me.js';
+import * as r98 from './api/menu.js';
+import * as r99 from './api/menu/availability.js';
+import * as r100 from './api/merchant-health.js';
+import * as r101 from './api/month-report.js';
+import * as r102 from './api/operations.js';
+import * as r103 from './api/order/index.js';
+import * as r104 from './api/order-course.js';
+import * as r105 from './api/order/activity.js';
+import * as r106 from './api/order/game.js';
+import * as r107 from './api/order/guest.js';
+import * as r108 from './api/order/queue.js';
+import * as r109 from './api/order/session.js';
+import * as r110 from './api/origin-move.js';
+import * as r111 from './api/ozon/account.js';
+import * as r112 from './api/ozon/cities.js';
+import * as r113 from './api/ozon/exchange.js';
+import * as r114 from './api/ozon/notes.js';
+import * as r115 from './api/ozon/parcels.js';
+import * as r116 from './api/pair/create.js';
+import * as r117 from './api/pair/devices.js';
+import * as r118 from './api/pair/recover.js';
+import * as r119 from './api/pair/redeem.js';
+import * as r120 from './api/pair/revoke.js';
+import * as r121 from './api/pair/state.js';
+import * as r122 from './api/pairs.js';
+import * as r123 from './api/pay-statements.js';
+import * as r124 from './api/pin/face.js';
+import * as r125 from './api/pin/verify.js';
+import * as r126 from './api/pressing/cancel.js';
+import * as r127 from './api/print/bridges.js';
+import * as r128 from './api/print/jobs.js';
+import * as r129 from './api/push/morning.js';
+import * as r130 from './api/push/register.js';
+import * as r131 from './api/quarantine.js';
+import * as r132 from './api/receivables.js';
+import * as r133 from './api/retail-balances.js';
+import * as r134 from './api/sale.js';
+import * as r135 from './api/sale/cancel.js';
+import * as r136 from './api/sale/refund.js';
+import * as r137 from './api/sales-summary.js';
+import * as r138 from './api/service/events.js';
+import * as r139 from './api/shop/catalog.js';
+import * as r140 from './api/shop/decide.js';
+import * as r141 from './api/shop/orders.js';
+import * as r142 from './api/shop/status.js';
+import * as r143 from './api/shopify/callback.js';
+import * as r144 from './api/shopify/connect.js';
+import * as r145 from './api/shopify/connect-direct.js';
+import * as r146 from './api/shopify/cron.js';
+import * as r147 from './api/shopify/status.js';
+import * as r148 from './api/stock/lookup.js';
+import * as r149 from './api/store.js';
+import * as r150 from './api/store-credits.js';
+import * as r151 from './api/support/articles.js';
+import * as r152 from './api/support/attachments.js';
+import * as r153 from './api/support/inbound.js';
+import * as r154 from './api/support/tickets.js';
+import * as r155 from './api/table-time.js';
+import * as r156 from './api/team/live.js';
+import * as r157 from './api/ticket-sequence.js';
+import * as r158 from './api/tickets/index.js';
+import * as r159 from './api/timezone.js';
+import * as r160 from './api/weather.js';
+import * as r161 from './api/z-reconciliation.js';
+import * as r162 from './auth/forgot.js';
+import * as r163 from './auth/login.js';
+import * as r164 from './auth/logout.js';
+import * as r165 from './auth/operator.js';
+import * as r166 from './auth/reset.js';
+import * as r167 from './auth/signup.js';
+import * as r168 from './order/basic.js';
+import * as r169 from './sitemap-annuaire.xml.js';
 
 // Nested middlewares, outermost first, with the path each one covers.
 export const FAST_MIDDLEWARES = [
@@ -252,98 +254,100 @@ export const FAST_ROUTES = new Map(/** @type {Array<[string, Record<string, any>
   ["/api/employee", r71],
   ["/api/employee-clients", r72],
   ["/api/error", r73],
-  ["/api/feed", r74],
-  ["/api/floor/live", r75],
-  ["/api/foodcost", r76],
-  ["/api/hotel/billing-draft", r77],
-  ["/api/hotel/channels", r78],
-  ["/api/hotel/commercial", r79],
-  ["/api/hotel/cron", r80],
-  ["/api/hotel/declarations", r81],
-  ["/api/hotel/performance", r82],
-  ["/api/hotel/production", r83],
-  ["/api/hotel/room-charges", r84],
-  ["/api/hotel/rooms-bulk", r85],
-  ["/api/hotel/stays", r86],
-  ["/api/inventory/counts", r87],
-  ["/api/inventory/department-catalogue", r88],
-  ["/api/inventory/hotel-reports", r89],
-  ["/api/inventory/internal-requests", r90],
-  ["/api/inventory/movements", r91],
-  ["/api/invoice", r92],
-  ["/api/invoices", r93],
-  ["/api/live/socket", r94],
-  ["/api/me", r95],
-  ["/api/menu", r96],
-  ["/api/menu/availability", r97],
-  ["/api/merchant-health", r98],
-  ["/api/month-report", r99],
-  ["/api/operations", r100],
-  ["/api/order", r101],
-  ["/api/order-course", r102],
-  ["/api/order/activity", r103],
-  ["/api/order/game", r104],
-  ["/api/order/guest", r105],
-  ["/api/order/queue", r106],
-  ["/api/order/session", r107],
-  ["/api/origin-move", r108],
-  ["/api/ozon/account", r109],
-  ["/api/ozon/cities", r110],
-  ["/api/ozon/exchange", r111],
-  ["/api/ozon/notes", r112],
-  ["/api/ozon/parcels", r113],
-  ["/api/pair/create", r114],
-  ["/api/pair/devices", r115],
-  ["/api/pair/recover", r116],
-  ["/api/pair/redeem", r117],
-  ["/api/pair/revoke", r118],
-  ["/api/pair/state", r119],
-  ["/api/pairs", r120],
-  ["/api/pay-statements", r121],
-  ["/api/pin/face", r122],
-  ["/api/pin/verify", r123],
-  ["/api/pressing/cancel", r124],
-  ["/api/print/bridges", r125],
-  ["/api/print/jobs", r126],
-  ["/api/push/morning", r127],
-  ["/api/push/register", r128],
-  ["/api/quarantine", r129],
-  ["/api/receivables", r130],
-  ["/api/retail-balances", r131],
-  ["/api/sale", r132],
-  ["/api/sale/cancel", r133],
-  ["/api/sale/refund", r134],
-  ["/api/sales-summary", r135],
-  ["/api/service/events", r136],
-  ["/api/shop/catalog", r137],
-  ["/api/shop/decide", r138],
-  ["/api/shop/orders", r139],
-  ["/api/shop/status", r140],
-  ["/api/shopify/callback", r141],
-  ["/api/shopify/connect", r142],
-  ["/api/shopify/connect-direct", r143],
-  ["/api/shopify/cron", r144],
-  ["/api/shopify/status", r145],
-  ["/api/stock/lookup", r146],
-  ["/api/store", r147],
-  ["/api/store-credits", r148],
-  ["/api/support/articles", r149],
-  ["/api/support/attachments", r150],
-  ["/api/support/inbound", r151],
-  ["/api/support/tickets", r152],
-  ["/api/table-time", r153],
-  ["/api/team/live", r154],
-  ["/api/ticket-sequence", r155],
-  ["/api/tickets", r156],
-  ["/api/timezone", r157],
-  ["/api/weather", r158],
-  ["/api/z-reconciliation", r159],
-  ["/auth/forgot", r160],
-  ["/auth/login", r161],
-  ["/auth/logout", r162],
-  ["/auth/operator", r163],
-  ["/auth/reset", r164],
-  ["/auth/signup", r165],
-  ["/order/basic", r166],
-  ["/sitemap-annuaire.xml", r167],
+  ["/api/expenses/receipt", r74],
+  ["/api/expenses/summary", r75],
+  ["/api/feed", r76],
+  ["/api/floor/live", r77],
+  ["/api/foodcost", r78],
+  ["/api/hotel/billing-draft", r79],
+  ["/api/hotel/channels", r80],
+  ["/api/hotel/commercial", r81],
+  ["/api/hotel/cron", r82],
+  ["/api/hotel/declarations", r83],
+  ["/api/hotel/performance", r84],
+  ["/api/hotel/production", r85],
+  ["/api/hotel/room-charges", r86],
+  ["/api/hotel/rooms-bulk", r87],
+  ["/api/hotel/stays", r88],
+  ["/api/inventory/counts", r89],
+  ["/api/inventory/department-catalogue", r90],
+  ["/api/inventory/hotel-reports", r91],
+  ["/api/inventory/internal-requests", r92],
+  ["/api/inventory/movements", r93],
+  ["/api/invoice", r94],
+  ["/api/invoices", r95],
+  ["/api/live/socket", r96],
+  ["/api/me", r97],
+  ["/api/menu", r98],
+  ["/api/menu/availability", r99],
+  ["/api/merchant-health", r100],
+  ["/api/month-report", r101],
+  ["/api/operations", r102],
+  ["/api/order", r103],
+  ["/api/order-course", r104],
+  ["/api/order/activity", r105],
+  ["/api/order/game", r106],
+  ["/api/order/guest", r107],
+  ["/api/order/queue", r108],
+  ["/api/order/session", r109],
+  ["/api/origin-move", r110],
+  ["/api/ozon/account", r111],
+  ["/api/ozon/cities", r112],
+  ["/api/ozon/exchange", r113],
+  ["/api/ozon/notes", r114],
+  ["/api/ozon/parcels", r115],
+  ["/api/pair/create", r116],
+  ["/api/pair/devices", r117],
+  ["/api/pair/recover", r118],
+  ["/api/pair/redeem", r119],
+  ["/api/pair/revoke", r120],
+  ["/api/pair/state", r121],
+  ["/api/pairs", r122],
+  ["/api/pay-statements", r123],
+  ["/api/pin/face", r124],
+  ["/api/pin/verify", r125],
+  ["/api/pressing/cancel", r126],
+  ["/api/print/bridges", r127],
+  ["/api/print/jobs", r128],
+  ["/api/push/morning", r129],
+  ["/api/push/register", r130],
+  ["/api/quarantine", r131],
+  ["/api/receivables", r132],
+  ["/api/retail-balances", r133],
+  ["/api/sale", r134],
+  ["/api/sale/cancel", r135],
+  ["/api/sale/refund", r136],
+  ["/api/sales-summary", r137],
+  ["/api/service/events", r138],
+  ["/api/shop/catalog", r139],
+  ["/api/shop/decide", r140],
+  ["/api/shop/orders", r141],
+  ["/api/shop/status", r142],
+  ["/api/shopify/callback", r143],
+  ["/api/shopify/connect", r144],
+  ["/api/shopify/connect-direct", r145],
+  ["/api/shopify/cron", r146],
+  ["/api/shopify/status", r147],
+  ["/api/stock/lookup", r148],
+  ["/api/store", r149],
+  ["/api/store-credits", r150],
+  ["/api/support/articles", r151],
+  ["/api/support/attachments", r152],
+  ["/api/support/inbound", r153],
+  ["/api/support/tickets", r154],
+  ["/api/table-time", r155],
+  ["/api/team/live", r156],
+  ["/api/ticket-sequence", r157],
+  ["/api/tickets", r158],
+  ["/api/timezone", r159],
+  ["/api/weather", r160],
+  ["/api/z-reconciliation", r161],
+  ["/auth/forgot", r162],
+  ["/auth/login", r163],
+  ["/auth/logout", r164],
+  ["/auth/operator", r165],
+  ["/auth/reset", r166],
+  ["/auth/signup", r167],
+  ["/order/basic", r168],
+  ["/sitemap-annuaire.xml", r169],
 ]));
