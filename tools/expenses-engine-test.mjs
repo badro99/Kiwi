@@ -5,6 +5,7 @@
  * (sept. à nov. 2026). */
 import assert from 'node:assert/strict';
 import {
+  parseAmount, completionId,
   CATEGORIES, classifyReason, isBankDeposit, notAnExpense, uncountedCashOuts, normalize, mergeDocs,
   cashOutRows, monthView, toCsv,
 } from '../assets/expenses/engine.js';
@@ -132,5 +133,37 @@ const evil = toCsv([{ id: 'z', date: '2026-11-03', category: 'other', supplier: 
 assert.equal(evil[1], `2026-11-03,other,"'=HYPERLINK(""http://x"",""y"")",cash,1.00,0.00,manual,no`);
 assert.ok(evil[2].startsWith(`2026-11-03,other,"'+212 600\r"`), evil[2]);
 ok('CSV export for the accountant, safe to open in a spreadsheet');
+
+/* completedTwice · deux appareils complètent le même retrait : une seule ligne compte. */
+{
+  const ev = [{ id: 'c7', day: '2026-11-03', movement_kind: 'out', movement_amount_cents: 20000, movement_reason: 'Légumes' }];
+  const a = { id: 'xp_a1b2c3', date: '2026-11-03', amountCents: 20000, category: 'produce', source: 'till', cashEventId: 'c7', updatedAt: 5 };
+  const b = { ...a, id: 'xp_z9y8x7', supplier: 'Souk', updatedAt: 9 };
+  const v = monthView({ month: '2026-11', today: '2026-11-17', expenses: [a, b], cashOuts: ev, salesDays: [] });
+  assert.equal(v.outCents, 20000);
+  assert.deepEqual(v.rows.map((r) => r.id), ['xp_z9y8x7'], 'the newest completion wins');
+  assert.equal(completionId('c7'), completionId('c7'));
+  assert.match(completionId('c7'), /^[A-Za-z0-9_-]{6,64}$/);
+  assert.match(completionId('a/b:c d'.repeat(20)), /^[A-Za-z0-9_-]{6,64}$/);
+  ok('a till withdrawal completed on two devices counts once, newest completion kept');
+}
+
+/* chargesShareCategory · plusieurs charges dans la même catégorie. */
+{
+  const paid = { id: 'p1', date: '2026-11-02', amountCents: 30000, category: 'other', source: 'manual', updatedAt: 1 };
+  const v = monthView({ month: '2026-10', today: '2026-11-17', expenses: [{ ...paid, date: '2026-10-02' }], cashOuts: [], salesDays: [],
+    charges: [{ category: 'other', monthlyCents: 30000 }, { category: 'other', monthlyCents: 50000 }] });
+  assert.equal(v.fixed.chargesCents, 50000, 'planned 800 in "other", 300 already paid: 500 left');
+  ok('fixed charges are totalled per category before what was paid is taken off');
+}
+
+/* parseAmountFrench · ce que le patron tape. */
+{
+  const cases = [['250', 25000], ['250,5', 25050], ['412.50', 41250], ['1 234,50', 123450], ['1.234,50', 123450],
+    ['1,234.50', 123450], ['1.500', 150000], ['1 500', 150000], ['12,5 MAD', 1250], [' 2 000', 200000],
+    ['', 0], ['0', 0], ['-50', 0], ['abc', 0], ['99999999', 0]];
+  assert.deepEqual(cases.map(([t]) => parseAmount(t)), cases.map(([, c]) => c));
+  ok('typed amounts: French and English separators, no negatives, nothing above the cap');
+}
 
 console.log(n + ' groupes · expenses engine');

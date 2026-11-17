@@ -15,6 +15,7 @@ check(r.products.reduce((a,p)=>a+p.revenueCents,0)===30153,'line revenues alloca
 check(Math.abs(r.summary.cogsMad-3*27.2545)<1e-8,'four decimal frozen costs preserved');
 check(Math.abs(r.summary.purchasesMad-10.009)<1e-8,'linked receipt and invoice counted once; sub-centime purchase costs preserved');
 check(r.summary.expensesMad===123.45,'date-only first-of-month expense not shifted to prior day');
+{const dd=fixture();dd.docs.expenses.list.push({id:'SYN-EXP-DEL',date:'2026-09-02',amountCents:200000,category:'rent',deleted:true,updatedAt:2});const rd=M.build(dd);check(rd.summary.expensesMad===123.45,'a deleted expense (tombstone kept by the Dépenses page) is not counted');}
 check(r.inventory[0].openingValue===0.045&&r.summary.actualFoodCostMad===0.0045,'gram costs not rounded to zero');
 check(r.cashSessions[0].varianceCents===-500,'cash counted/expected variance');
 check(r.daily[1].netCents===null&&r.coverage.sales.percent<4,'missing days not fabricated as zero');

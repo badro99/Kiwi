@@ -42,7 +42,7 @@
     'assets/boutique-promos-dashboard.js?v=37',
     'assets/day-report.js?v=56',
     'assets/z-reconciliation.js?v=29',
-    'assets/month-report.js?v=16',
+    'assets/month-report.js?v=17',
     'assets/day-report-export.js?v=30',
     'assets/day-report-conflicts.js?v=2',
     'assets/day-report-dash.js?v=50',

@@ -5,6 +5,7 @@
 
 const FR = {
   title: 'Dépenses',
+  ownerOnly: 'Accès propriétaire uniquement',
   subtitle: 'Ce qui entre, ce qui sort, ce qui reste',
   prevMonth: 'Mois précédent',
   nextMonth: 'Mois suivant',
@@ -91,6 +92,7 @@ const FR = {
 
 const EN = {
   title: 'Expenses',
+  ownerOnly: 'Owner access only',
   subtitle: 'What comes in, what goes out, what is left',
   prevMonth: 'Previous month',
   nextMonth: 'Next month',
@@ -177,6 +179,7 @@ const EN = {
 
 const AR = {
   title: 'المصاريف',
+  ownerOnly: 'غير لمول المحل',
   subtitle: 'شنو دخل، شنو خرج، شنو بقى',
   prevMonth: 'الشهر اللي فات',
   nextMonth: 'الشهر الجاي',

@@ -7,9 +7,9 @@
  * Ce que la lecture remplit est marqué « à vérifier » ; elle ne réécrit jamais
  * un champ que le patron a déjà tapé. Un ticket illisible ou un quota épuisé
  * laisse la fiche vide avec une phrase simple, et la photo reste jointe. */
-import { CATEGORIES, METHODS, classifyReason } from './engine.js?v=1';
-import { tr, lang } from './strings.js?v=1';
-import { CAT_ICON, esc, catLabel, dayLabel } from './view.js?v=1';
+import { CATEGORIES, METHODS, classifyReason, parseAmount, completionId } from './engine.js?v=2';
+import { tr, lang } from './strings.js?v=2';
+import { CAT_ICON, esc, catLabel, dayLabel } from './view.js?v=2';
 
 /* Les catégories de la lecture de tickets (functions/api/ai/expense-ocr.js). */
 export const OCR_CATEGORY = {
@@ -27,12 +27,6 @@ export function centsToInput(cents) {
   const s = c % 100 ? (c / 100).toFixed(2).replace(/0$/, '') : String(c / 100);
   return lang() === 'en' ? s : s.replace('.', ',');
 }
-export function parseAmount(text) {
-  const s = String(text || '').replace(/[\s  ]/g, '').replace(',', '.').replace(/[^\d.]/g, '');
-  const v = parseFloat(s);
-  return Number.isFinite(v) && v > 0 ? Math.round(v * 100) : 0;
-}
-
 export async function shrinkPhoto(file, max = 1600) {
   const url = await new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -158,7 +152,7 @@ export function openSheet(opts, cb) {
     const date = ro ? row.date : (isDay(field('date').value) ? field('date').value : today);
     const now = Date.now();
     const out = {
-      id: mode === 'edit' ? row.id : newId(),
+      id: mode === 'edit' ? row.id : (ro ? completionId(row.cashEventId) : newId()),
       date, amountCents: cents,
       category: cat || classifyReason(supplier + ' ' + note),
       method: ro ? 'cash' : method,

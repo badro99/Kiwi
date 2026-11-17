@@ -620,28 +620,28 @@
     "sha": "42c678756290613e"
   },
   "assets/expenses/engine.js": {
-    "v": "1",
-    "sha": "64ec026e11bc2f4f"
+    "v": "2",
+    "sha": "53162de26428901a"
   },
   "assets/expenses/index.js": {
-    "v": "1",
-    "sha": "1ec85e0aca439b61"
+    "v": "2",
+    "sha": "a509ff2d71df5d71"
   },
   "assets/expenses/sheet.js": {
-    "v": "1",
-    "sha": "61bce1d2418d0537"
+    "v": "2",
+    "sha": "5fd06a23cc1c84e2"
   },
   "assets/expenses/strings.js": {
-    "v": "1",
-    "sha": "01b77d61e6af4752"
+    "v": "2",
+    "sha": "5eb53df5ec78d698"
   },
   "assets/expenses/style.js": {
     "v": "1",
     "sha": "5dbb25ae2b6385d3"
   },
   "assets/expenses/view.js": {
-    "v": "1",
-    "sha": "849a694f60b60f5b"
+    "v": "2",
+    "sha": "42549f25271e4ec6"
   },
   "assets/features.js": {
     "v": "29",
@@ -1344,8 +1344,8 @@
     "sha": "aa126f08579223b9"
   },
   "assets/month-report.js": {
-    "v": "16",
-    "sha": "d102e6dead974e4c"
+    "v": "17",
+    "sha": "987cebd2beca90e6"
   },
   "assets/offline-db.js": {
     "v": "11",
@@ -1508,12 +1508,12 @@
     "sha": "91ea1202399b8d4c"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "103",
-    "sha": "8156865732bc23e4"
+    "v": "104",
+    "sha": "fea90e67a50cb085"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "240",
-    "sha": "0a7b6980f9d7c1ca"
+    "v": "241",
+    "sha": "b1db9249ad7b8ec3"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

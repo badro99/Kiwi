@@ -3,7 +3,7 @@
  * stockage, aucun réseau. Tout texte du commerçant (fournisseur, note, motif de
  * caisse) passe par esc(). Les chiffres portent data-cents : la vérité du
  * montant, lisible par les tests et par un lecteur d'écran via aria-label. */
-import { tr, lang } from './strings.js?v=1';
+import { tr, lang } from './strings.js?v=2';
 
 export const CAT_ICON = {
   meat: 'kebab_dining', produce: 'eco', grocery: 'local_grocery_store', drinks: 'local_drink',
@@ -187,6 +187,12 @@ function fixedHtml(f) {
 
 const fileInput = () => `<input class="xp-file" type="file" accept="image/*" capture="environment" data-xp-file tabindex="-1" aria-hidden="true">`;
 
+/* Avant que la caisse réponde : ni héros ni zéros, seulement la barre du mois. */
+export function loadingHtml(m) {
+  return `<div class="xp">${barHtml(m)}
+    <section class="xp-card xp-loading" aria-busy="true"><p class="xp-soft-note">${esc(tr('loading'))}</p></section>${fileInput()}</div>`;
+}
+
 export function emptyHtml(m) {
   return `<div class="xp">${barHtml(m)}
     <section class="xp-card xp-empty">
@@ -208,7 +214,6 @@ export function pageHtml(m) {
   if (m.filter.day) chips.push(`<button type="button" class="xp-chip" data-xp-day="${esc(m.filter.day)}">${esc(dayLabel(m.filter.day, { day: 'numeric', month: 'long' }))} ${icon('close')}</button>`);
   return `<div class="xp${m.enter ? ' xp-enter' : ''}">
     ${barHtml(m)}
-    ${m.status === 'loading' ? `<p class="xp-soft-note">${esc(tr('loading'))}</p>` : ''}
     ${m.status === 'error' ? `<p class="xp-aside">${icon('info')}<span>${esc(tr('historyOff'))}</span></p>` : ''}
     ${heroHtml(v)}
     ${calloutHtml(v.rows)}

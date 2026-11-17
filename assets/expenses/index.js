@@ -18,10 +18,10 @@
  * Kiwi.handlers['nav-expenses'], rendu par Kiwi.appPage comme les autres
  * pages pleines. Logique pure dans engine.js, rendu dans view.js, fiche dans
  * sheet.js, mots dans strings.js, style dans style.js. */
-import * as E from './engine.js?v=1';
-import { tr } from './strings.js?v=1';
-import { pageHtml, emptyHtml, listHtml } from './view.js?v=1';
-import { openSheet, shrinkPhoto } from './sheet.js?v=1';
+import * as E from './engine.js?v=2';
+import { tr } from './strings.js?v=2';
+import { pageHtml, emptyHtml, loadingHtml, listHtml } from './view.js?v=2';
+import { openSheet, shrinkPhoto } from './sheet.js?v=2';
 import { ensureStyle } from './style.js?v=1';
 
 const ZONE = 'Africa/Casablanca';
@@ -126,7 +126,7 @@ function render(opts) {
     month: S.month, today, view, uncounted, status: sum.status, filter: S.filter,
     enter: !!(opts && opts.enter), canNext: S.month < today.slice(0, 7),
   };
-  const r = K.appPage('expenses', { title: tr('title'), subtitle: tr('subtitle'), body: firstUse ? emptyHtml(m) : pageHtml(m) });
+  const r = K.appPage('expenses', { title: tr('title'), subtitle: tr('subtitle'), body: sum.status === 'loading' ? loadingHtml(m) : firstUse ? emptyHtml(m) : pageHtml(m) });
   if (r && r.el) bind(r.el);
 }
 
@@ -278,6 +278,13 @@ function bind(host) {
 }
 
 function show() {
+  /* La règle du patron (dashboard.html › wrap) entourait le chargeur ; ce
+     gestionnaire le remplace, il la porte donc lui-même : un appareil
+     déverrouillé par un gérant ne rouvre pas la copie locale. */
+  if ((window.__kiwiRole || 'owner') !== 'owner') {
+    try { window.Kiwi.toast(tr('ownerOnly'), { type: 'info' }); } catch (_) {}
+    return;
+  }
   getStore();
   if (!S.month) S.month = businessToday().slice(0, 7);
   S.filter = { cat: '', day: '', q: '' };

@@ -97,6 +97,29 @@ function cleanRow(r) {
   return row;
 }
 
+/* Ce que le patron tape : « 250 », « 1 234,50 », « 1.234,50 », « 1,234.50 ».
+   Le dernier point ou la dernière virgule suivi d'un ou deux chiffres est la
+   virgule décimale ; suivi de trois chiffres, c'est un séparateur de milliers.
+   Un montant négatif, nul ou au-dessus du plafond rend 0 : la fiche le refuse. */
+export function parseAmount(text) {
+  const raw = String(text == null ? '' : text).replace(/[\s\u00a0\u202f]/g, '');
+  if (/^-/.test(raw.replace(/[^\d.,-]/g, ''))) return 0;
+  const s = raw.replace(/[^\d.,]/g, '');
+  if (!/\d/.test(s)) return 0;
+  const m = s.match(/^(.*)[.,](\d{1,2})$/);
+  const whole = (m ? m[1] : s).replace(/[.,]/g, '');
+  const frac = m ? m[2].padEnd(2, '0') : '00';
+  const cents = Number(whole || '0') * 100 + Number(frac);
+  return Number.isFinite(cents) && cents > 0 && cents <= MAX_CENTS ? cents : 0;
+}
+
+/* Un retrait complété porte un identifiant tiré du mouvement de caisse : deux
+   appareils qui le complètent écrivent la MÊME ligne, la fusion garde la plus
+   récente. Forme admise par la route des photos ([A-Za-z0-9_-]{6,64}). */
+export function completionId(cashEventId) {
+  return ('xpc_' + String(cashEventId == null ? '' : cashEventId).replace(/[^A-Za-z0-9_-]/g, '_')).slice(0, 64);
+}
+
 export function normalize(doc) {
   const list = doc && Array.isArray(doc.list) ? doc.list : [];
   return { list: list.map(cleanRow).filter(Boolean) };
@@ -151,7 +174,14 @@ function elapsed(month, today) {
 export function monthView({ month, today, expenses, cashOuts, salesDays, charges, salaries } = {}) {
   if (!isMonth(month)) throw new Error('month');
   const inMonth = (d) => typeof d === 'string' && d.slice(0, 7) === month;
-  const live = normalize({ list: expenses }).list.filter((r) => !r.deleted);
+  /* Un même retrait complété deux fois (ancien identifiant aléatoire, deux
+     appareils) ne compte qu'une fois : la complétion la plus récente gagne. */
+  const newest = new Map();
+  normalize({ list: expenses }).list.filter((r) => !r.deleted && r.cashEventId).forEach((r) => {
+    const prev = newest.get(r.cashEventId);
+    if (!prev || r.updatedAt > prev.updatedAt) newest.set(r.cashEventId, r);
+  });
+  const live = normalize({ list: expenses }).list.filter((r) => !r.deleted && (!r.cashEventId || newest.get(r.cashEventId).id === r.id));
   const rows = [
     ...live.filter((r) => inMonth(r.date)),
     ...cashOutRows(cashOuts, live).filter((r) => inMonth(r.date)),
@@ -182,10 +212,14 @@ export function monthView({ month, today, expenses, cashOuts, salesDays, charges
   if (hasCharges || hasSalaries) {
     const f = elapsed(month, today);
     const paid = (cat) => rows.filter((r) => r.source !== 'till' && r.category === cat).reduce((s, r) => s + r.amountCents, 0);
-    const chargesCents = hasCharges ? charges.reduce((s, c) => {
-      const planned = Math.round(clampCents(c && c.monthlyCents) * f);
-      return s + Math.max(0, planned - paid(c && c.category));
-    }, 0) : 0;
+    /* Totalisées par catégorie d'abord : deux charges « divers » ne retirent pas
+       chacune ce qui a déjà été payé en « divers ». */
+    const planned = new Map();
+    (hasCharges ? charges : []).forEach((c) => {
+      const cat = CATEGORIES.includes(c && c.category) ? c.category : 'other';
+      planned.set(cat, (planned.get(cat) || 0) + clampCents(c && c.monthlyCents));
+    });
+    const chargesCents = [...planned.entries()].reduce((s, [cat, cents]) => s + Math.max(0, Math.round(cents * f) - paid(cat)), 0);
     const salariesCents = hasSalaries ? Math.round(clampCents(salaries.monthlyCents) * f) : 0;
     const advancesCents = rows.filter((r) => r.category === 'staff').reduce((s, r) => s + r.amountCents, 0);
     fixed = {

@@ -112,7 +112,7 @@ const PNG_FILE = path.join(T.resultsDir, 'ticket.png');
 fs.mkdirSync(T.resultsDir, { recursive: true });
 fs.writeFileSync(PNG_FILE, png());
 
-async function bench(t, { cashOuts = [], salesDays = [], ocr = null } = {}) {
+async function bench(t, { cashOuts = [], salesDays = [], ocr = null, summaryDelay = 0 } = {}) {
   const ctx = await browser.createBrowserContext();
   t.defer(() => ctx.close());
   const page = t.watch(await ctx.newPage());
@@ -125,7 +125,7 @@ async function bench(t, { cashOuts = [], salesDays = [], ocr = null } = {}) {
     const u = r.url();
     if (u.startsWith(base + '/api/')) {
       page.calls.push({ url: u, method: r.method(), body: r.postData() || '' });
-      if (u.includes('/api/expenses/summary')) return r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, month: MONTH, zone: 'Africa/Casablanca', cutoff: 5, salesDays, cashOuts }) });
+      if (u.includes('/api/expenses/summary')) return void setTimeout(() => r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, month: MONTH, zone: 'Africa/Casablanca', cutoff: 5, salesDays, cashOuts }) }), summaryDelay);
       if (u.includes('/api/ai/expense-ocr')) return ocr ? r.respond(ocr) : r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
       if (u.includes('/api/expenses/receipt')) return r.respond({ status: 200, contentType: 'application/json', body: '{"ok":true,"key":"private/expenses/pasta-bench/x.jpg"}' });
       return r.respond({ status: 404, contentType: 'application/json', body: '{}' });
@@ -226,6 +226,7 @@ await T.run('completeCashOut · compléter un retrait le remplace, sans le compt
   const live = w.list.filter((x) => !x.deleted);
   assert.equal(live.length, 1);
   assert.equal(live[0].cashEventId, 'c9');
+  assert.equal(live[0].id, 'xpc_c9', 'the completion id comes from the till movement, so two devices write one row');
   assert.equal(live[0].category, 'produce');
   assert.equal(live[0].source, 'till');
   assert.equal(live[0].amountCents, 8000);
@@ -308,6 +309,25 @@ await T.run('noEmDash · aucun tiret cadratin dans la page ni dans la fiche', as
   assert.ok(!text.includes('—'), 'em dash found: ' + text.slice(Math.max(0, text.indexOf('—') - 40), text.indexOf('—') + 40));
   const italics = await page.evaluate(() => [...document.querySelectorAll('.xp *, .xp-sheet *')].filter((el) => getComputedStyle(el).fontStyle === 'italic').length);
   assert.equal(italics, 0, 'type is roman');
+});
+
+await T.run('loading · pendant la lecture de la caisse, pas de zéros présentés comme des chiffres', async (t) => {
+  const page = await bench(t, { cashOuts: [ev('l1', 6000, 'Légumes')], salesDays: [{ day: D1, salesCents: 40000 }], summaryDelay: 2500 });
+  assert.ok(await page.$('.xp-loading'), 'a loading state while the till is read');
+  assert.equal(await page.$('[data-xp="out"]'), null, 'no hero figures before the numbers exist');
+  assert.equal(await page.$('.xp-empty'), null, 'not the first-use screen either');
+  await page.waitForSelector('[data-xp="out"]', { timeout: 10000 });
+  assert.equal(await cents(page, '[data-xp="out"]'), 6000);
+  assert.deepEqual(page.errors, []);
+});
+
+await T.run('ownerOnly · le module chargé garde la règle du patron', async (t) => {
+  const page = await bench(t);
+  await page.evaluate(() => { window.__kiwiRole = 'manager'; document.getElementById('host').innerHTML = ''; window.__toasts.length = 0; window.Kiwi.handlers['nav-expenses'](); });
+  await sleep(300);
+  assert.equal(await page.$('.xp'), null, 'a manager does not get the page');
+  assert.ok((await page.evaluate(() => window.__toasts.join(' '))).length > 0, 'a plain message says why');
+  assert.deepEqual(page.errors, []);
 });
 
 await T.run('dashboard · le module se charge dans la vraie coquille et montre le premier usage sans données', async (t) => {
