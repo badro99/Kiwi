@@ -125,6 +125,12 @@ assert.equal(csv.split('\n')[0], 'date,category,supplier,method,amount,vat,sourc
 assert.equal(csv.split('\n')[1], '2026-11-03,meat,Boucherie,cash,250.00,0.00,manual,no');
 assert.equal(toCsv([{ id: 'q', date: '2026-11-03', category: 'other', supplier: 'Dupont, "fils"', method: 'card', amountCents: 5, source: 'scan', receiptKey: 'k' }]).split('\n')[1],
   '2026-11-03,other,"Dupont, ""fils""",card,0.05,0.00,scan,yes');
-ok('CSV export for the accountant');
+/* Le comptable ouvre le fichier dans Excel : un texte libre qui commence par
+   = + - @ ou une tabulation ne doit jamais devenir une formule. */
+const evil = toCsv([{ id: 'z', date: '2026-11-03', category: 'other', supplier: '=HYPERLINK("http://x","y")', method: '@SUM(1)', amountCents: 100, source: 'manual' },
+  { id: 'z2', date: '2026-11-03', category: 'other', supplier: '+212 600\r', method: 'cash', amountCents: 100, source: 'manual' }]).split('\n');
+assert.equal(evil[1], `2026-11-03,other,"'=HYPERLINK(""http://x"",""y"")",cash,1.00,0.00,manual,no`);
+assert.ok(evil[2].startsWith(`2026-11-03,other,"'+212 600\r"`), evil[2]);
+ok('CSV export for the accountant, safe to open in a spreadsheet');
 
 console.log(n + ' groupes · expenses engine');

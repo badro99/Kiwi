@@ -196,16 +196,22 @@ export function monthView({ month, today, expenses, cashOuts, salesDays, charges
   return { inCents, outCents, leftCents, byCategory, byDay, rows, fixed };
 }
 
+/* Le comptable ouvre ce fichier dans un tableur : un texte qui commence par
+   = + - @ ou une tabulation y deviendrait une formule. Il garde donc une
+   apostrophe devant, et tout ce qui porte une virgule, un guillemet ou un
+   retour à la ligne est entre guillemets. */
 const csvCell = (v) => {
-  const s = String(v == null ? '' : v);
-  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  let s = String(v == null ? '' : v);
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 };
 const money = (c) => (clampCents(c) / 100).toFixed(2);
 
 export function toCsv(rows) {
   const head = 'date,category,supplier,method,amount,vat,source,receipt';
   return [head, ...(Array.isArray(rows) ? rows : []).map((r) => [
-    r.date, r.category, r.supplier || '', r.method || 'cash', money(r.amountCents), money(r.vatCents),
+    r.date, CATEGORIES.includes(r.category) ? r.category : 'other', r.supplier || '',
+    METHODS.includes(r.method) ? r.method : 'cash', money(r.amountCents), money(r.vatCents),
     r.source || 'manual', r.receiptKey ? 'yes' : 'no',
   ].map(csvCell).join(','))].join('\n');
 }
