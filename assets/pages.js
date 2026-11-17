@@ -2368,7 +2368,7 @@
    * Équipe and Payroll do that in their showPage() / showDashboard()
    * pair, which keeps the highlight correct on tab-switch and on Accueil
    * return even if the user reaches the page through other means. */
-  const FULL_PAGE_NAVS = new Set([
+  const FULL_PAGE_NAVS = new Set(['expenses', 
     'accueil',
     'tables',   // Plan de Salle
     'menu',     // Menu & modificateurs

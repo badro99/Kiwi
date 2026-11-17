@@ -7,6 +7,7 @@
  * voyageurs) : c'est son travail. Le gérant garde ce qu'il avait. */
 import { isTillFor } from '../auth/_lib.js';
 import { sessionTierAtLeast } from '../auth/_session-tier.js';
+import { expensesReader } from './expenses/_owner.js';
 
 export function storeEditorTier(request, env, feature) {
   if (feature === 'reservations') return true;
@@ -21,6 +22,9 @@ const MANAGER_DOCS = new Set(['payroll', 'costs', 'charges', 'expenses', 'monthr
   'briefing', 'agentactions', 'retention', 'procurement', 'discountpolicy']);
 
 export async function docBelowTier(request, env, merchant, feature) {
+  /* Les dépenses du patron : sa session ou un opérateur Kiwi, ni caisse ni
+     employé, gérant compris (functions/api/expenses/_owner.js). */
+  if (feature === 'expenses') return !(await expensesReader(request, env, merchant));
   if (!MANAGER_DOCS.has(feature)) return false;
   if (await sessionTierAtLeast(request, env, 'manager')) return false;
   try { return !(await isTillFor(request, env, merchant)); } catch (_) { return true; }

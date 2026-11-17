@@ -249,7 +249,7 @@ var SHELL = [
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=11',
-  '/assets/i18n.js?v=56',
+  '/assets/i18n.js?v=57',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -328,7 +328,7 @@ var SHELL = [
   '/assets/pages/tables-data.js?v=3',
   '/assets/pages/tables-drawing.js?v=3',
   '/assets/pages/tables-operations.js?v=2',
-  '/assets/pages.js?v=13',
+  '/assets/pages.js?v=14',
   '/assets/help-centre.js?v=7',
   '/assets/account.js?v=33',
   '/assets/production-action-guard.js?v=6',
@@ -383,7 +383,7 @@ var SHELL = [
   '/assets/receipt.js?v=27',
   '/assets/receipt-ui.js?v=2',
   '/assets/invoice.js?v=28',
-  '/assets/merchant-config.js?v=288',
+  '/assets/merchant-config.js?v=289',
   '/assets/entitlements.css?v=7',
   '/assets/entitlements-v2.js?v=5',
   '/assets/staff-roles.js?v=3',
@@ -650,7 +650,7 @@ var SHELL = [
   '/assets/pos-reprint.js?v=21',
   '/assets/pressing-caisse.js?v=131',
   '/assets/pressing-caisse.css?v=131',
-  '/assets/material-icons.js?v=6',
+  '/assets/material-icons.js?v=7',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers
      woff2 qu'elle nomme ne sont pas listés ici : un fichier à ?v= du SHELL doit

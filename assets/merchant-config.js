@@ -144,7 +144,10 @@
 
   /* La boutique en ligne est un module payant, éteint tant qu'un opérateur
      n'a pas écrit commerce: true (comme Order Pro côté serveur). */
+  /* Dépenses (le registre du patron, assets/expenses/) : pareil, éteint tant
+     qu'un opérateur n'a pas écrit expenses: true pour ce commerçant. */
   function optInOff(key) {
+    if (key === 'expenses') return !(cfg.features && cfg.features.expenses === true);
     return key === 'weborders' && !(cfg.features && cfg.features.commerce === true);
   }
   function featureOff(key) {

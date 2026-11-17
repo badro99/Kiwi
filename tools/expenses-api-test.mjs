@@ -15,12 +15,12 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const load = (p) => import(pathToFileURL(path.join(ROOT, p)).href);
-const { onRequestGet: storeGet, onRequestPost: storePost } = await load('functions/api/store.js');
-const summary = await load('functions/api/expenses/summary.js');
-const receipt = await load('functions/api/expenses/receipt.js');
+const importModule = (p) => import(pathToFileURL(path.join(ROOT, p)).href);
+const { onRequestGet: storeGet, onRequestPost: storePost } = await importModule('functions/api/store.js');
+const summary = await importModule('functions/api/expenses/summary.js');
+const receipt = await importModule('functions/api/expenses/receipt.js');
 const { tillToken, makeSession, sessionCookie, employeeToken, employeeCookie, operatorToken, operatorIdToken, DEMO_MERCHANTS } =
-  await load('functions/auth/_lib.js');
+  await importModule('functions/auth/_lib.js');
 
 const AUTH_SECRET = 'expenses-api-secret-0123456789abcd';
 const SHOP = 'pasta-bench';
@@ -101,14 +101,14 @@ const ok = (name) => { n++; console.log('✓ ' + name); };
 
 /* managerAndTillRefused · le document */
 {
-  const read = (c) => storeGet({ request: req(`https://k/api/store?feature=expenses&merchant=${SHOP}`, c), env });
-  const r1 = await read(owner);
+  const fetchDoc = (c) => storeGet({ request: req(`https://k/api/store?feature=expenses&merchant=${SHOP}`, c), env });
+  const r1 = await fetchDoc(owner);
   assert.equal(r1.status, 200);
   assert.equal((await r1.json()).data.list[0].id, 'x1');
-  const r2 = await read(operator);
+  const r2 = await fetchDoc(operator);
   assert.equal(r2.status, 200, 'operator reads for support');
   for (const [who, c] of [['till', till], ['cashier', cashier], ['manager', manager], ['stranger', stranger], ['anonymous', '']]) {
-    const r = await read(c);
+    const r = await fetchDoc(c);
     const body = await r.text();
     /* Refusé, ou ramené à SON propre magasin (tenantFor ignore un slug qui
        n'est pas le sien) : jamais une ligne de celui-ci. */
@@ -159,13 +159,13 @@ const ok = (name) => { n++; console.log('✓ ' + name); };
   assert.equal((await up(owner, 'exp_abc123', env, 'text/html')).status, 415);
   assert.equal((await up(owner, 'exp_abc123', { AUTH_SECRET, DB: D1 })).status, 503);
   for (const c of [till, manager, stranger, '']) assert.equal((await up(c)).status, 403);
-  const read = (c) => receipt.onRequestGet({ request: req(`https://k/api/expenses/receipt?merchant=${SHOP}&id=exp_abc123`, c), env });
-  const g = await read(owner);
+  const fetchReceipt = (c) => receipt.onRequestGet({ request: req(`https://k/api/expenses/receipt?merchant=${SHOP}&id=exp_abc123`, c), env });
+  const g = await fetchReceipt(owner);
   assert.equal(g.status, 200);
   assert.equal(g.headers.get('Content-Type'), 'image/jpeg');
   assert.match(g.headers.get('Cache-Control') || '', /private/);
   assert.deepEqual(new Uint8Array(await g.arrayBuffer()), jpeg);
-  for (const c of [till, manager, stranger, '']) assert.equal((await read(c)).status, 403);
+  for (const c of [till, manager, stranger, '']) assert.equal((await fetchReceipt(c)).status, 403);
   assert.equal((await receipt.onRequestGet({ request: req(`https://k/api/expenses/receipt?merchant=${SHOP}&id=exp_none00`, owner), env })).status, 404);
   ok('receipt photos: private prefix, owner only, image types only, fail-soft without storage');
 }
