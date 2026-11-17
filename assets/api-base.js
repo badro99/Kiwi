@@ -120,20 +120,36 @@
     });
   }
 
-  /* XMLHttpRequest (assets/platform-ops.js envoie les médias en XHR) --------- */
+  /* XMLHttpRequest (assets/platform-ops.js envoie les médias en XHR) ---------
+   * Le préfixe se pose sur l'INSTANCE, pas sur le prototype. CapacitorHttp
+   * (native-bridge.js, injecté avant toute page) remplace window.XMLHttpRequest
+   * par une fabrique qui réécrit open/send sur le prototype partagé à chaque
+   * construction : un patch de prototype n'y tenait pas, et l'URL relative
+   * partait vers capacitor://localhost. Aucune photo choisie dans l'app iPhone
+   * n'atteignait /api/media (17 novembre 2026). */
   var XHR = w.XMLHttpRequest;
-  if (XHR && XHR.prototype && typeof XHR.prototype.open === 'function') {
-    var nativeOpen = XHR.prototype.open;
-    XHR.prototype.open = function kiwiOpen(method, url) {
-      var args = Array.prototype.slice.call(arguments);
-      try {
-        var s = String(url), nu = rewrite(s);
-        if (nu !== s) { args[1] = nu; this.__kiwiCrossSite = true; }
-      } catch (_) {}
-      var r = nativeOpen.apply(this, args);
-      if (this.__kiwiCrossSite) { try { this.withCredentials = true; } catch (_) {} }
-      return r;
+  if (typeof XHR === 'function') {
+    var PrefixedXHR = function PrefixedXMLHttpRequest() {
+      var xhr = new XHR(), open = xhr.open;
+      if (typeof open !== 'function') return xhr;
+      xhr.open = function kiwiOpen(method, url) {
+        var args = Array.prototype.slice.call(arguments), cross = false;
+        try {
+          var s = String(url), nu = rewrite(s);
+          if (nu !== s) { args[1] = nu; cross = true; }
+        } catch (_) {}
+        var r = open.apply(xhr, args);
+        if (cross) { try { xhr.withCredentials = true; } catch (_) {} }
+        return r;
+      };
+      return xhr;
     };
+    PrefixedXHR.prototype = XHR.prototype;
+    // La fabrique de Capacitor ne porte pas les constantes : valeurs standard.
+    ['UNSENT', 'OPENED', 'HEADERS_RECEIVED', 'LOADING', 'DONE'].forEach(function (k, i) {
+      PrefixedXHR[k] = typeof XHR[k] === 'number' ? XHR[k] : i;
+    });
+    w.XMLHttpRequest = PrefixedXHR;
   }
 
   /* navigator.sendBeacon (assets/err-reporter.js → /api/error) -------------- */

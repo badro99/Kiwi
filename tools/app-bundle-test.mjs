@@ -201,6 +201,35 @@ function runApiBase(w) {
   assert(w.KiwiApiBase.url('https://kiwi-os.com/api/me') === 'https://kiwi-os.com/api/me', 'URL déjà absolue vers l’API : intacte');
 }
 {
+  /* CapacitorHttp (native-bridge.js) runs at document start, BEFORE api-base.
+     It swaps window.XMLHttpRequest for a factory that re-assigns open/send on
+     the shared real prototype at every construction, and sends a relative URL
+     to the app's own asset handler (capacitor://localhost). A prototype patch
+     in api-base therefore never holds: on 17 Nov 2026 a photo picked in the
+     iPhone app (build 45) never reached /api/media while every fetch did. */
+  const w = fakeWindow(true);
+  const Real = w.XMLHttpRequest, realOpen = Real.prototype.open;
+  Real.DONE = 4;
+  w.CapacitorWebXMLHttpRequest = { constructor: Real, prototype: Real.prototype, open: realOpen };
+  w.XMLHttpRequest = function () {
+    const xhr = new w.CapacitorWebXMLHttpRequest.constructor();
+    w.CapacitorWebXMLHttpRequest.prototype.open = function (m, u) {
+      if (!/^https?:/.test(u)) return realOpen.call(this, m, 'capacitor://localhost' + u);
+      w.calls.xhr.push({ m, u, native: true });
+    };
+    return xhr;
+  };
+  runApiBase(w);
+  const x = new w.XMLHttpRequest(); x.open('POST', '/api/media?name=a.jpg');
+  const y = new w.XMLHttpRequest(); y.open('POST', '/api/sale');
+  const c = w.calls.xhr;
+  assert(c[0] && c[0].native && c[0].u === 'https://kiwi-os.com/api/media?name=a.jpg',
+    `CapacitorHttp installé avant : XHR.open("/api/media?…") part vers https://kiwi-os.com par le natif (reçu ${c[0] && c[0].u})`);
+  assert(c[1] && c[1].native && c[1].u === 'https://kiwi-os.com/api/sale', 'CapacitorHttp : la deuxième instance est réécrite aussi (la fabrique repatche le prototype à chaque construction)');
+  assert(x.withCredentials === true, 'CapacitorHttp : withCredentials posé sur l’instance réécrite');
+  assert(w.XMLHttpRequest.DONE === 4, 'XMLHttpRequest enveloppé : les constantes restent lisibles');
+}
+{
   const w = fakeWindow(false);
   const origFetch = w.fetch, origWS = w.WebSocket;
   runApiBase(w);
