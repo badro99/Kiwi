@@ -619,6 +619,30 @@
     "v": "20",
     "sha": "42c678756290613e"
   },
+  "assets/expenses/engine.js": {
+    "v": "1",
+    "sha": "64ec026e11bc2f4f"
+  },
+  "assets/expenses/index.js": {
+    "v": "1",
+    "sha": "1ec85e0aca439b61"
+  },
+  "assets/expenses/sheet.js": {
+    "v": "1",
+    "sha": "61bce1d2418d0537"
+  },
+  "assets/expenses/strings.js": {
+    "v": "1",
+    "sha": "01b77d61e6af4752"
+  },
+  "assets/expenses/style.js": {
+    "v": "1",
+    "sha": "5dbb25ae2b6385d3"
+  },
+  "assets/expenses/view.js": {
+    "v": "1",
+    "sha": "849a694f60b60f5b"
+  },
   "assets/features.js": {
     "v": "29",
     "sha": "2f16532d334c95cd"
@@ -1484,8 +1508,8 @@
     "sha": "91ea1202399b8d4c"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "102",
-    "sha": "0c09c0b378f2661a"
+    "v": "103",
+    "sha": "8156865732bc23e4"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "240",

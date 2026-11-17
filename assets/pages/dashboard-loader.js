@@ -33,12 +33,15 @@
     lock: { dependencies: [], scripts: ['assets/lock-till.js?v=3'] },
     /* Paramètres → « Annuaire Kiwi »: the opt-in sheet, fetched on first open. */
     directory: { dependencies: [], scripts: ['assets/directory-optin.js?v=2'] },
+    /* « Dépenses » (interrupteur par commerçant) : un module ES, ouvert au premier clic. */
+    expenses: { dependencies: [], scripts: ['assets/expenses/index.js?v=1'], module: true },
   });
   const pending = new Map(), scripts = new Map(), ready = new Set();
-  function script(url) {
+  function script(url, module) {
     if (scripts.has(url)) return scripts.get(url);
     const request = new Promise((resolve, reject) => {
       const node = document.createElement('script');
+      if (module) node.type = 'module';
       node.async = false;
       node.src = url;
       node.onload = resolve;
@@ -53,7 +56,7 @@
     const entry = REGISTRY[name];
     if (!entry) return Promise.reject(new Error('Unknown dashboard owner: ' + name));
     const request = entry.dependencies.reduce((p, dep) => p.then(() => load(dep)), Promise.resolve())
-      .then(() => entry.scripts.reduce((p, url) => p.then(() => script(url)), Promise.resolve()))
+      .then(() => entry.scripts.reduce((p, url) => p.then(() => script(url, entry.module)), Promise.resolve()))
       .then(() => {
         document.dispatchEvent(new Event('kiwi:dashboard-owners-ready'));
         ready.add(name);
@@ -99,6 +102,16 @@
       }, unavailable);
     };
     H['settings-directory'] = stub;
+  }
+  /* Same for the owner's expenses page: assets/expenses/index.js replaces it. */
+  if (!H['nav-expenses']) {
+    const stub = function () {
+      const self = this, args = arguments;
+      return load('expenses').then(() => {
+        if (H['nav-expenses'] !== stub) return H['nav-expenses'].apply(self, args);
+      }, unavailable);
+    };
+    H['nav-expenses'] = stub;
   }
   window.addEventListener('click', event => {
     if (replaying || ready.has('workspace')) return;
