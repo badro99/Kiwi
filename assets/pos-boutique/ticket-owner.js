@@ -5,7 +5,8 @@ const ticketOwner = {
   replaceLines(ticket, lines) { ticket.lines = lines; },
   prune(ticket, products) { ticket.lines = ticket.lines.filter(line => products[line.pid]); },
   addLine(ticket, line) {
-    const same = ticket.lines.find(l => l.pid === line.pid && l.size === line.size && l.color === line.color && l.remise === line.remise);
+    const same = ticket.lines.find(l => l.pid === line.pid && l.size === line.size && l.color === line.color && l.remise === line.remise
+      && (l.agreed ?? null) === (line.agreed ?? null));
     if (same) {
       same.qty += line.qty;
       if (line.promo && (!same.promo || line.promo.price < same.promo.price)) same.promo = line.promo;
@@ -22,7 +23,21 @@ const ticketOwner = {
      chaque ligne : le pourcentage vit déjà là, et ticketTotals l'y additionne.
      Rien de neuf dans le calcul, rien de neuf dans la vente envoyée — c'est le
      chemin de la remise par article, appliqué d'un geste. */
-  discountAllLines(ticket, pct) { ticket.lines.forEach((line) => { line.remise = pct; }); },
+  discountAllLines(ticket, pct) { ticket.lines.forEach((line) => { line.remise = pct; delete line.agreed; }); },
+  /* Remise à la marocaine (bargain.js) : le prix convenu d'une pièce, posé ou
+     retiré sur une ligne ; il remplace le pourcentage de cette ligne. */
+  agreeLine(ticket, index, agreed) {
+    const line = ticket.lines[index];
+    if (!line) return;
+    line.remise = 0;
+    if (agreed > 0) line.agreed = agreed; else delete line.agreed;
+  },
+  /* « Kolchi b 500 » : spreadTicket a réparti le total ; chaque entrée nomme
+     sa ligne d'origine (key = index) et peut la couper en deux. */
+  agreeTicket(ticket, assign) {
+    const from = ticket.lines;
+    ticket.lines = assign.filter((a) => from[a.key]).map((a) => Object.assign(JSON.parse(JSON.stringify(from[a.key])), { qty: a.qty, remise: 0, agreed: a.agreed }));
+  },
   applyReward(ticket, reward) { ticket.reward = reward; },
   reserveReward(ticket, ref) { return ticket.reward.reservation || (ticket.reward.reservation = { ref }); },
   acceptReward(intent) { intent.accepted = true; },

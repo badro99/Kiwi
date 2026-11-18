@@ -1245,7 +1245,8 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
   }
   const linePromo = (ln) => lineDeal(ln).promo;
   const lineBase  = (ln) => lineDeal(ln).price;
-  const lineUnit  = (ln) => KiwiPromotionPricing.lineUnit(lineBase(ln), ln.remise);
+  /* Un prix convenu (pos-boutique/bargain.js) passe avant le pourcentage ; une promotion arrivée plus bas reste la meilleure. */
+  const lineUnit  = (ln) => (+ln.agreed > 0 ? Math.min(lineBase(ln), +ln.agreed) : KiwiPromotionPricing.lineUnit(lineBase(ln), ln.remise));
   const lineTotal = (ln) => Math.round(lineUnit(ln) * 100) * ln.qty / 100;
   /* Remise fidélité au niveau du TICKET (distincte de la remise gérante par ligne).
      Attachée au client via clientId : si on détache/change la cliente, elle cesse
@@ -1855,7 +1856,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       lines: t.lines.map((ln) => {
         const p = P[ln.pid] || {};
         return {
-          pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise,
+          pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, agreed: +ln.agreed > 0 ? +ln.agreed : null,
           promo: linePromo(ln), unit: lineUnit(ln), name: p.name || 'Article',
           price: shelf(p.price), barcode: p.barcode || '', rayon: rayonOf(ln.pid) || '',
         };
@@ -1923,7 +1924,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
              autorisé, quand, quel pourcentage, et ce que la remise a coûté au
              magasin. C'est la seule chose relisible le jour d'un contrôle. */
           remiseAuth: frozen.remiseAuth
-            ? { by: frozen.remiseAuth.by || '', role: frozen.remiseAuth.role || '', at: frozen.remiseAuth.at, pct: frozen.remiseAuth.pct, amount: bqMoney((tot.remise), true) }
+            ? { by: frozen.remiseAuth.by || '', role: frozen.remiseAuth.role || '', at: frozen.remiseAuth.at, pct: frozen.remiseAuth.pct, mode: frozen.remiseAuth.mode || 'pct', value: frozen.remiseAuth.value ?? frozen.remiseAuth.pct, amount: bqMoney((tot.remise), true) }
             : null,
           promoOff: bqMoney((tot.promo), true),        // ce que les promotions ont coûté, pour la clôture
           /* `promo` suit la ligne dans le journal. Un retour se rembourse sur
@@ -1931,7 +1932,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
              trois jours plus tard a besoin de SAVOIR pourquoi le prix était bas —
              sinon la caissière voit un caftan à 700 sur un ticket, 1 000 en rayon,
              et n'a aucun moyen de trancher. */
-          lines: frozen.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, promo: ln.promo, unit: ln.unit, name: ln.name, returned: false, note: '' })),
+          lines: frozen.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, agreed: ln.agreed, promo: ln.promo, unit: ln.unit, name: ln.name, returned: false, note: '' })),
           reward: rewardUsed ? frozen.reward.label : null,
           total: receivedNow,
           balanceTotal: isAcompte ? total : null,

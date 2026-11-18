@@ -104,4 +104,27 @@ fc.assert(fc.property(fc.array(fc.record({ op: fc.integer({min:0,max:9}), pid: f
     for(const key of ['sub','promo','remise','reward','total']) assert.equal((Math.round(after(a)[key]*100) || 0),(Math.round(before(b)[key]*100) || 0));
   }
 }), {numRuns:1000,seed:20261026});
+/* Remise à la marocaine (2026-11-18) : le prix convenu vit sur la ligne. */
+{
+  const t = { lines: [] };
+  owner.addLine(t, { pid: 'a', size: 'M', color: 'noir', qty: 1, remise: 0, agreed: 300 });
+  owner.addLine(t, { pid: 'a', size: 'M', color: 'noir', qty: 1, remise: 0 });
+  assert.equal(t.lines.length, 2, 'une pièce au prix convenu ne fusionne pas avec une pièce au prix affiché');
+  owner.addLine(t, { pid: 'a', size: 'M', color: 'noir', qty: 2, remise: 0, agreed: 300 });
+  assert.equal(t.lines[0].qty, 3, 'même prix convenu : même ligne');
+  owner.discountAllLines(t, 10);
+  assert.ok(t.lines.every(l => l.remise === 10 && l.agreed === undefined), 'un pourcentage de ticket remplace le prix convenu');
+  owner.agreeLine(t, 1, 250);
+  assert.equal(t.lines[1].agreed, 250); assert.equal(t.lines[1].remise, 0);
+  owner.agreeLine(t, 1, null);
+  assert.equal(t.lines[1].agreed, undefined);
+  const k = { lines: [{ pid: 'a', size: 'M', color: 'noir', qty: 3, remise: 5, promo: { price: 290 } }, { pid: 'b', size: 'S', color: 'or', qty: 1, remise: 0 }] };
+  owner.agreeTicket(k, [{ key: 0, qty: 2, agreed: 270 }, { key: 0, qty: 1, agreed: 271 }, { key: 1, qty: 1, agreed: 90 }]);
+  assert.equal(k.lines.length, 3, 'la ligne coupée devient deux lignes');
+  assert.deepEqual(k.lines.map(l => [l.pid, l.qty, l.agreed, l.remise]), [['a', 2, 270, 0], ['a', 1, 271, 0], ['b', 1, 90, 0]]);
+  assert.equal(k.lines[1].promo.price, 290, 'la promotion reste nommée sur la ligne');
+  assert.notEqual(k.lines[0].promo, k.lines[1].promo, 'chaque ligne a sa propre copie');
+  owner.discountAllLines(k, 0);
+  assert.ok(k.lines.every(l => l.agreed === undefined && l.remise === 0), '« Sans » retire aussi le prix convenu');
+}
 console.log('✓ Ticket boutique : zéro mutation externe, mutations détectées, 1 000 séquences et centimes identiques');
