@@ -14,16 +14,20 @@ import { deliveryDue } from '../receivables.js';
 import { exactMerchant, json, readAccount, ozonCall, stepError, pick, cities, cents } from './_lib.js';
 import { listParcels, parcelView, refreshTracking } from './_track.js';
 /* Ce que le client paie pour la livraison quand la boutique la lui fait payer :
-   20 MAD à Casablanca, 50 MAD partout ailleurs (Santos, 17 nov. 2026 ; c'était
-   50 partout depuis le 30 oct.). Ozon nomme Casablanca par quartier
-   (« Casablanca – Ain Sebaa ») : tout nom qui commence par Casablanca compte.
-   La caisse affiche la même règle : assets/pos-boutique/delivery-card.js ›
+   20 MAD à Casablanca et Rabat, 30 MAD à Salé (Sala Al Jadida comprise) et
+   Témara, 50 MAD partout ailleurs (propriétaire, 18 nov. 2026 ; Casablanca seule
+   à 20 depuis le 17 nov., 50 partout depuis le 30 oct.). Ozon nomme les villes
+   par quartier (« Casablanca – Ain Sebaa ») : tout nom qui commence par la ville
+   compte. La caisse affiche la même règle : assets/pos-boutique/delivery-card.js ›
    customerFeeMAD (tools/delivery-fee-city-test.mjs vérifie qu'elles s'accordent). */
 export const CUSTOMER_FEE_CENTS = 5000;
 export const CASABLANCA_FEE_CENTS = 2000;
+export const NEAR_FEE_CENTS = 3000;
 export function customerFeeCents(cityName) {
   const n = String(cityName || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-  return /^casablanca\b/.test(n) ? CASABLANCA_FEE_CENTS : CUSTOMER_FEE_CENTS;
+  if (/^(casablanca|rabat)\b/.test(n)) return CASABLANCA_FEE_CENTS;
+  if (/^(sale|sala al jadida|temara)\b/.test(n)) return NEAR_FEE_CENTS;
+  return CUSTOMER_FEE_CENTS;
 }
 
 export async function onRequestGet({ request, env }) {
@@ -104,7 +108,7 @@ export async function createParcel(env, merchant, account, b) {
      2026). Le chiffre d'affaires, lui, reste ce qui est dû sur la vente
      (_track.js › confirmByCarrier) : les frais sont à Ozon. */
   const feeOnCustomer = b.feeOnCustomer === true || b.feeOnCustomer === 1 || b.feeOnCustomer === '1';
-  /* 20 MAD à Casablanca, 50 MAD ailleurs (customerFeeCents) ; Ozon garde ses
+  /* 20, 30 ou 50 MAD selon la ville (customerFeeCents) ; Ozon garde ses
      frais de ville sur ce qu'il encaisse. */
   const codCents = due.dueCents + (feeOnCustomer ? customerFeeCents(city.name) : 0);
 

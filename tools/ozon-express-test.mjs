@@ -52,7 +52,8 @@ const DB = {
 const calls = [];
 const ozon = { status: {}, keyOk: true, nextTracking: 1, refuseAdd: '' };
 const cityList = { CITIES: { 37: { ID: 37, REF: 'AGA', NAME: 'Agadir', 'DELIVERED-PRICE': 35, 'RETURNED-PRICE': 0, 'REFUSED-PRICE': 10 },
-  2174: { ID: 2174, REF: 'CCV', NAME: 'Casablanca – Centre Ville', 'DELIVERED-PRICE': 20, 'RETURNED-PRICE': 0, 'REFUSED-PRICE': 10 } }, DEBUG: {} };
+  2174: { ID: 2174, REF: 'CCV', NAME: 'Casablanca – Centre Ville', 'DELIVERED-PRICE': 20, 'RETURNED-PRICE': 0, 'REFUSED-PRICE': 10 },
+  410: { ID: 410, REF: 'SAL', NAME: 'Salé', 'DELIVERED-PRICE': 25, 'RETURNED-PRICE': 0, 'REFUSED-PRICE': 10 } }, DEBUG: {} };
 async function fakeFetch(url, init = {}) {
   const u = String(url);
   const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -98,6 +99,7 @@ sale('dlv-2', 25000, now - 1800e3, 10000);
 sale('dlv-old', 30000, now - 20 * 86400e3);
 sale('dlv-fee', 85000, now - 600e3);
 sale('dlv-casa', 85000, now - 500e3);
+sale('dlv-sale', 85000, now - 500e3);
 sale('sale-ref-fdbc450d-945e-a96b-4b8b-b947-5f02f05190ed', 85000, now - 300e3);
 
 const owner = `${SESS_COOKIE}=${await makeSession('acc-ozon-owner', SECRET)}`;
@@ -269,6 +271,16 @@ await ok('a Casablanca parcel: the courier collects price + 20, not + 50', async
   assert.equal(add.body['parcel-city'], '2174');
   assert.equal(add.body['parcel-price'], '870', 'the courier collects 850 + 20 in Casablanca');
   assert.equal(r.body.parcel.priceCents, 87000);
+});
+
+/* Owner, 18 Nov 2026: Rabat joins Casablanca at 20 MAD; Salé and Témara pay 30. */
+await ok('a Salé parcel: the courier collects price + 30', async () => {
+  const r = await call(parcels, 'onRequestPost', '/api/ozon/parcels', 'POST', till, { merchant: MERCHANT, saleId: 'dlv-sale', receiver: 'Client Salé',
+    phone: '0612345678', cityId: 410, address: '2 av. Tabriquet', feeOnCustomer: true });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const add = calls.filter((c) => c.path === 'add-parcel').pop();
+  assert.equal(add.body['parcel-city'], '410');
+  assert.equal(add.body['parcel-price'], '880', 'the courier collects 850 + 30 in Salé');
 });
 
 await ok('the till\'s own sale id (sale-<uuid>) finds the row the server stored as sale-ref-…', async () => {

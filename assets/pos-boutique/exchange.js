@@ -16,7 +16,7 @@
  *     envoyée sort, la pièce reprise rentre.
  *   · Un identifiant par échange ouvert : un double appui ou une reprise après
  *     coupure n'envoie jamais deux colis. */
-import { customerFeeMAD } from './delivery-card.js?v=7';
+import { customerFeeMAD } from './delivery-card.js?v=8';
 /* La livraison payée par la cliente suit la ville du colis : 20 MAD à
    Casablanca, 50 MAD ailleurs (le serveur décide, functions/api/ozon/exchange.js). */
 const feeMAD = (city) => customerFeeMAD(city);

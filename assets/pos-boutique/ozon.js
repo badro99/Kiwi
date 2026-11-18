@@ -13,7 +13,7 @@
  * La clé API Ozon ne passe jamais par cette caisse : elle se règle au tableau de
  * bord et reste chiffrée sur le serveur. Sans compte Ozon relié, rien de ce
  * fichier ne s'affiche. */
-import { customerFeeMAD } from './delivery-card.js?v=7';
+import { customerFeeMAD } from './delivery-card.js?v=8';
 const PHRASES = {
   'Envoyer avec Ozon Express': ['Send with Ozon Express', 'إرسال عبر أوزون إكسبريس'],
   'Envoyer avec Ozon': ['Send with Ozon', 'إرسال عبر أوزون'],
@@ -418,7 +418,7 @@ const REFUSAL = {
 export function ozonOpenSend(o) {
   /* Qui paie la livraison (Santos, 30 oct. 2026 : le client, en plus de
      l'article). Retenu par boutique, coché par défaut. */
-  /* 20 MAD à Casablanca, 50 MAD ailleurs, selon la ville du colis (customerFeeMAD). */
+  /* 20 MAD à Casablanca et Rabat, 30 à Salé et Témara, 50 ailleurs, selon la ville du colis (customerFeeMAD). */
   const custFee = (c) => (c ? customerFeeMAD(c.name) * 100 : null);
   const FEE_PREF = 'kiwiOzonFeeOnCustomer:' + (o && o.slug);
   let feeOnCustomer = true;
@@ -452,8 +452,8 @@ export function ozonOpenSend(o) {
   const feeOn = () => { const box = $('feeOnCustomer'); return box ? box.checked : feeOnCustomer; };
   const sum = () => {
     const fee = city ? city.deliveredCents : 0;
-    /* Le client paie 20 MAD de livraison à Casablanca, 50 MAD ailleurs (Santos,
-       17 nov. 2026) ; Ozon garde ses propres frais sur ce qu'il encaisse. Même
+    /* Le client paie 20 MAD de livraison à Casablanca et Rabat, 30 à Salé et
+       Témara, 50 ailleurs (Santos, 18 nov. 2026) ; Ozon garde ses propres frais sur ce qu'il encaisse. Même
        règle côté serveur : functions/api/ozon/parcels.js › customerFeeCents.
        Sans ville choisie, la ligne de livraison attend la ville. */
     const cust = custFee(city);

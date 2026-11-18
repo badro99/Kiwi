@@ -35,7 +35,7 @@ const PHRASES = {
   'Tapez pour chercher une ville Ozon': ['Type to search an Ozon city', 'اكتب للبحث عن مدينة أوزون'],
   'Aucune ville trouvée': ['No city found', 'لم يتم العثور على مدينة'],
   '+ {x} de livraison · le client paie': ['+ {x} delivery · the customer pays', '+ {x} توصيل · يدفع الزبون'],
-  'Livraison payée par le client : 20 MAD à Casablanca, 50 MAD ailleurs': ['Delivery paid by the customer: 20 MAD in Casablanca, 50 MAD elsewhere', 'يدفع الزبون التوصيل: 20 درهم داخل الدار البيضاء، و50 درهم لباقي المدن'],
+  'Livraison payée par le client : 20 MAD à Casablanca et Rabat, 30 MAD à Salé et Témara, 50 MAD ailleurs': ['Delivery paid by the customer: 20 MAD in Casablanca and Rabat, 30 MAD in Salé and Témara, 50 MAD elsewhere', 'يدفع الزبون التوصيل: 20 درهم في الدار البيضاء والرباط، 30 درهم في سلا وتمارة، و50 درهم لباقي المدن'],
   'Enregistrer et envoyer à Ozon': ['Save and send to Ozon', 'تسجيل وإرسال إلى أوزون'],
   'Le colis Ozon se crée tout seul à l’enregistrement, avec ces informations. Le client n’entre pas dans le carnet de fidélité.': ['The Ozon parcel is created automatically when you save, with these details. The customer is not added to the loyalty book.', 'يُنشأ طرد أوزون تلقائياً عند التسجيل بهذه المعلومات. لا يُضاف الزبون إلى دفتر الوفاء.'],
 };
@@ -93,11 +93,15 @@ const digits = (v) => String(v || '').replace(/\D/g, '');
 const fold = (v) => String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 /* Le format qu'Ozon accepte (functions/api/ozon/parcels.js › PHONE_RE). */
 const OZON_PHONE = /^(?:\+?212|0)?[5-7]\d{8}$/;
-/* Ce que le client paie pour la livraison : 20 MAD à Casablanca (tout quartier
-   Ozon « Casablanca – … »), 50 MAD ailleurs (Santos, 17 nov. 2026). Le serveur
-   encaisse la même chose : functions/api/ozon/parcels.js › customerFeeCents. */
+/* Ce que le client paie pour la livraison : 20 MAD à Casablanca et Rabat, 30 MAD
+   à Salé et Témara (tout quartier Ozon « Ville – … »), 50 MAD ailleurs
+   (propriétaire, 18 nov. 2026). Le serveur encaisse la même chose :
+   functions/api/ozon/parcels.js › customerFeeCents. */
 export function customerFeeMAD(cityName) {
-  return /^casablanca\b/.test(fold(cityName)) ? 20 : 50;
+  const n = fold(cityName);
+  if (/^(casablanca|rabat)\b/.test(n)) return 20;
+  if (/^(sale|sala al jadida|temara)\b/.test(n)) return 30;
+  return 50;
 }
 
 /* o : { amount, fmtMAD, esc, icons, closeBtns, prev, back, done(card),
@@ -243,7 +247,7 @@ export function bqDeliveryCard(el, o) {
     const sub = el.querySelector('.modal-subtle');
     if (!sub || !ozonCities) return;
     const oc = ozonCities.find((c) => fold(c.name) === fold(cityIn.value));
-    if (!oc) { sub.textContent = o.fmtMAD(o.amount) + ' · ' + tr('Livraison payée par le client : 20 MAD à Casablanca, 50 MAD ailleurs'); return; }
+    if (!oc) { sub.textContent = o.fmtMAD(o.amount) + ' · ' + tr('Livraison payée par le client : 20 MAD à Casablanca et Rabat, 30 MAD à Salé et Témara, 50 MAD ailleurs'); return; }
     const fee = customerFeeMAD(oc.name);
     sub.textContent = o.fmtMAD(o.amount) + ' ' + tr('+ {x} de livraison · le client paie').replace('{x}', o.fmtMAD(fee)) + ' ' + o.fmtMAD((Number(o.amount) || 0) + fee);
   };

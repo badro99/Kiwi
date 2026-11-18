@@ -178,7 +178,7 @@ export async function onRequestPost({ request, env }) {
   let city = null;
   try { city = (await cities(env)).find((c) => c.id === cityId) || null; } catch (_) { city = null; }
   if (!city) return json({ error: 'unknown-city' }, 400);
-  /* La livraison se paie selon la ville du colis : 20 MAD à Casablanca, 50 ailleurs. */
+  /* La livraison se paie selon la ville du colis : 20 MAD à Casablanca et Rabat, 30 à Salé et Témara, 50 ailleurs. */
   const codCents = diffCents + (feeOnCustomer ? customerFeeCents(city.name) : 0);
 
   /* The new sale: what leaves, priced so that its lines add up to what the
