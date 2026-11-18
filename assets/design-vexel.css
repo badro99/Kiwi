@@ -3173,7 +3173,8 @@ body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .m-caret {
     grid-template-columns: 38px;
   }
 
-  body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant :is(.m-info, .m-caret) {
+  body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .m-info,
+  body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .m-caret {
     display: none;
   }
 }

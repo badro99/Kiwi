@@ -571,7 +571,8 @@ html[data-skin-2027="till"] { --k-frame-label-min: 0; --k-frame-label-wrap: norm
     left: auto; right: auto; inset-inline: 88px 0; width: auto;
   }
 }
-html[data-skin-2027="till"][data-k-tabs]:is([data-kcb-open], :has(.kds-screen.is-open)) .rightpanel { display: none; }
+html[data-skin-2027="till"][data-k-tabs][data-kcb-open] .rightpanel { display: none; }
+html[data-skin-2027="till"][data-k-tabs]:has(.kds-screen.is-open) .rightpanel { display: none; }
 html[data-skin-2027="till"][data-k-tabs] #kcb-root .kcb-page { padding-bottom: calc(var(--k-tab-zone) + 28px); }
 html[data-skin-2027="till"] .rightpanel:has(#kit-bill[data-paying]) #rp-peek { display: none; }
 @media (max-height: 500px) {

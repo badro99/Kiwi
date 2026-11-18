@@ -83,7 +83,8 @@ html[data-skin-2027="till"] #pos-boutique .bq-head-sub b { color: var(--k-accent
 /* La vente ne garde que son titre : la date, l'heure, le compte du jour et
    la consigne « Scannez… » sont éteints (propriétaire, 2026-10-28). Le compte
    continue d'être écrit dans #bq-today (headSubVente), seulement plus montré. */
-html[data-skin-2027="till"] #pos-boutique .bq-sell > .bq-head :is(.bq-head-sub, .bq-head-hint) { display: none; }
+html[data-skin-2027="till"] #pos-boutique .bq-sell > .bq-head .bq-head-sub,
+html[data-skin-2027="till"] #pos-boutique .bq-sell > .bq-head .bq-head-hint { display: none; }
 /* La recherche et la barre des rayons défilent avec les articles
    (bqKitSellScroll) : seul le titre Vente reste, tout le reste rend sa
    hauteur à la grille. */
