@@ -142,6 +142,21 @@ await sleep(500);
 ok(await sizesOf(TWO) === 'XXS:3 XS:3 S:4 M:4 L:4 XL:3 XXL:3', 'saved as the even split', await sizesOf(TWO));
 await close();
 
+/* ── F : − and + on every size (owner, 18 Nov 2026: « easier to add and
+   reduce stock »). One tap moves one piece, like the arrow keys; never below
+   zero, and the count line follows. ────────────────────────────────────── */
+await create('TEST KIWI Pantalon steppers', 4);
+const stepBtn = async (row, dir) => { const b = (await page.$$('[data-kbs-step="' + dir + '"]'))[row]; await b.click(); await sleep(120); };
+ok((await page.$$('[data-kbs-step="1"]')).length === 7 && (await page.$$('[data-kbs-step="-1"]')).length === 7, 'F · a − and a + beside each of the 7 sizes');
+await stepBtn(3, 1); await stepBtn(3, 1); await stepBtn(3, 1); await stepBtn(3, -1);
+ok((await boxes())[3] === '2', 'F · + three times, − once · M holds 2', JSON.stringify(await boxes()));
+await stepBtn(1, -1);
+ok((await boxes())[1] === '', 'F · − on an empty size stays empty, never negative', JSON.stringify(await boxes()));
+ok(await page.$eval('[data-kbs-count]', (c) => /2 sur 4/.test(c.textContent)), 'F · the count line follows the taps', await page.$eval('[data-kbs-count]', (c) => c.textContent));
+ok(await page.$eval('[data-kbs-step="1"]', (b) => /Ajouter une pièce · XXS/.test(b.getAttribute('aria-label')) && b.getBoundingClientRect().height >= 40), 'F · each button names its size and is a full finger tall');
+await stepBtn(3, -1); await stepBtn(3, -1);
+await close();
+
 /* ── E : colours ──────────────────────────────────────────────────────────── */
 const THREE = 'TEST KIWI Robe noire';
 await create(THREE, 14);

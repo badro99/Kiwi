@@ -41,7 +41,7 @@ const T = {
     total: 'Quantité totale', totalHint: 'Le nombre de pièces reçues. Vous les répartirez par taille juste après.',
     totalHintTu: 'Le nombre de pièces en stock.',
     totalErr: 'Indiquez un nombre entier de pièces, 1 ou plus.',
-    size: 'Taille', tu: 'Taille unique', have: (n) => `${n} en stock`, add: 'Pièces', addMore: 'À ajouter',
+    size: 'Taille', tu: 'Taille unique', have: (n) => `${n} en stock`, add: 'Pièces', addMore: 'À ajouter', stepUp: 'Ajouter une pièce', stepDown: 'Retirer une pièce',
     split: (a, b) => `${a} sur ${b} répartie${b > 1 ? 's' : ''}`,
     received: (n, one) => (n ? `${n} pièce${n > 1 ? 's' : ''} à ajouter` : one ? 'Écrivez le nombre de pièces reçues.' : 'Écrivez le nombre de pièces reçues à côté de chaque taille.'),
     mismatch: (a, b) => `Les tailles font ${a} pièce${a > 1 ? 's' : ''}, alors que la quantité totale est de ${b}. Corrigez les tailles pour enregistrer.`,
@@ -65,7 +65,7 @@ const T = {
     total: 'Total quantity', totalHint: 'How many pieces came in. You split them by size right after.',
     totalHintTu: 'How many pieces are in stock.',
     totalErr: 'Enter a whole number of pieces, 1 or more.',
-    size: 'Size', tu: 'One size', have: (n) => `${n} in stock`, add: 'Pieces', addMore: 'To add',
+    size: 'Size', tu: 'One size', have: (n) => `${n} in stock`, add: 'Pieces', addMore: 'To add', stepUp: 'Add one piece', stepDown: 'Remove one piece',
     split: (a, b) => `${a} of ${b} assigned`,
     received: (n, one) => (n ? `${n} piece${n > 1 ? 's' : ''} to add` : one ? 'Write how many pieces came in.' : 'Write how many pieces came in next to each size.'),
     mismatch: (a, b) => `The sizes add up to ${a} piece${a > 1 ? 's' : ''}, but the total quantity is ${b}. Fix the sizes to save.`,
@@ -89,7 +89,7 @@ const T = {
     total: 'الكمية الإجمالية', totalHint: 'عدد القطع المستلمة. ستوزّعها حسب المقاس مباشرة بعد ذلك.',
     totalHintTu: 'عدد القطع في المخزون.',
     totalErr: 'أدخل عدداً صحيحاً من القطع، 1 أو أكثر.',
-    size: 'المقاس', tu: 'مقاس واحد', have: (n) => `${n} في المخزون`, add: 'القطع', addMore: 'للإضافة',
+    size: 'المقاس', tu: 'مقاس واحد', have: (n) => `${n} في المخزون`, add: 'القطع', addMore: 'للإضافة', stepUp: 'إضافة قطعة', stepDown: 'إزالة قطعة',
     split: (a, b) => `${a} من ${b} موزّعة`,
     received: (n, one) => (n ? `${n} قطعة للإضافة` : one ? 'اكتب عدد القطع المستلمة.' : 'اكتب عدد القطع المستلمة بجانب كل مقاس.'),
     mismatch: (a, b) => `مجموع المقاسات ${a} قطعة، والكمية الإجمالية ${b}. صحّح المقاسات للحفظ.`,
@@ -185,7 +185,7 @@ html[data-theme="dark"] .kbs, body[data-vexel-mode="dark"] .kbs { --kbs-card: #1
 .kbs-count.is-ok { color: var(--atlas, #0B6E4F); }
 .kbs-count.is-over { color: var(--danger, #cb5238); }
 .kbs-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--kbs-line); border-radius: 14px; background: var(--kbs-card); overflow: hidden; }
-.kbs-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) 112px; align-items: center; gap: 12px; padding: 10px 14px; }
+.kbs-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) 168px; align-items: center; gap: 12px; padding: 10px 14px; }
 .kbs-row + .kbs-row { border-top: 1px solid var(--kbs-line); }
 .kbs-size { font-size: 15px; font-weight: 600; letter-spacing: .01em; }
 .kbs-size small { display: block; font-size: 11.5px; font-weight: 500; color: var(--n-500, #77807B); letter-spacing: 0; }
@@ -202,6 +202,13 @@ html[data-theme="dark"] .kbs, body[data-vexel-mode="dark"] .kbs { --kbs-card: #1
 .kbs-in { box-sizing: border-box; width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--kbs-line); border-radius: 10px; background: var(--kbs-field);
   color: var(--ink, #0A0F0D); font: 600 15px var(--sans, inherit); text-align: center; font-variant-numeric: tabular-nums; }
 .kbs-add { position: relative; display: block; }
+.kbs-step { display: flex; align-items: center; gap: 6px; }
+.kbs-step > .kbs-in, .kbs-step > .kbs-add { width: 72px; flex: none; }
+.kbs-step .kbs-in { text-align: center; }
+.kbs-st { display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 1px solid var(--kbs-line); border-radius: 10px; background: var(--kbs-field); color: var(--atlas, #0B6E4F); cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.kbs-st svg { width: 20px; height: 20px; fill: currentColor; }
+.kbs-st:active { background: color-mix(in srgb, var(--atlas, #0B6E4F) 12%, var(--kbs-field)); }
+.kbs-st:focus-visible { outline: 0; border-color: var(--atlas, #0B6E4F); box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas, #0B6E4F) 16%, transparent); }
 .kbs-add::before { content: '+'; position: absolute; inset-inline-start: 12px; top: 50%; transform: translateY(-50%); font: 700 16px var(--sans, inherit); color: var(--atlas, #0B6E4F); pointer-events: none; }
 .kbs-add .kbs-in { padding-inline-start: 26px; border-style: dashed; background: color-mix(in srgb, var(--atlas, #0B6E4F) 5%, var(--kbs-field)); }
 .kbs-add .kbs-in:focus, .kbs-add .kbs-in:not(:placeholder-shown) { border-style: solid; }
@@ -216,7 +223,7 @@ html[data-theme="dark"] .kbs, body[data-vexel-mode="dark"] .kbs { --kbs-card: #1
 .kbs-in::placeholder { color: var(--n-400, #9AA09D); font-weight: 400; }
 .kbs-in:focus { outline: 0; border-color: var(--atlas, #0B6E4F); box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas, #0B6E4F) 16%, transparent); }
 .kbs-in[aria-invalid="true"] { border-color: var(--danger, #cb5238); }
-.kbs-colhead { display: grid; grid-template-columns: 64px minmax(0, 1fr) 112px; gap: 12px; padding: 0 14px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--n-500, #77807B); }
+.kbs-colhead { display: grid; grid-template-columns: 64px minmax(0, 1fr) 168px; gap: 12px; padding: 0 14px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--n-500, #77807B); }
 .kbs-colhead span:last-child { text-align: center; }
 .kbs-msg { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--n-600, #5D6661); }
 .kbs-msg.is-err { padding: 10px 12px; border-radius: 10px; color: var(--danger, #cb5238); font-weight: 600; background: color-mix(in srgb, var(--danger, #cb5238) 8%, transparent); }
@@ -233,7 +240,8 @@ html[data-theme="dark"] .kbs, body[data-vexel-mode="dark"] .kbs { --kbs-card: #1
 .kbs-top .kbs-last { font-weight: 700; color: var(--atlas, #0B6E4F); }
 .kbs-btn:focus-visible, .kbs-link:focus-visible { outline: 2px solid var(--atlas, #0B6E4F); outline-offset: 2px; }
 @media (max-width: 560px) {
-  .kbs-row, .kbs-colhead { grid-template-columns: 52px minmax(0, 1fr) 88px; gap: 10px; padding-inline: 12px; }
+  .kbs-row, .kbs-colhead { grid-template-columns: 52px minmax(0, 1fr) 148px; gap: 10px; padding-inline: 12px; }
+  .kbs-step { gap: 4px; } .kbs-step > .kbs-in, .kbs-step > .kbs-add { width: 60px; } .kbs-st { width: 40px; height: 40px; }
   .kbs-in { font-size: 16px; }
   .kbs-acts .kbs-btn { flex: 1 1 100%; }
 }`;
@@ -242,6 +250,7 @@ html[data-theme="dark"] .kbs, body[data-vexel-mode="dark"] .kbs { --kbs-card: #1
 
 const CLOSE_SVG = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>';
 const PLUS_SVG = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/></svg>';
+const MINUS_SVG = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M200-440v-80h560v80H200Z"/></svg>';
 const PRINT_SVG = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M640-640v-120H320v120h-80v-200h480v200h-80Zm-480 80h640-640Zm560 100q17 0 28.5-11.5T760-500q0-17-11.5-28.5T720-540q-17 0-28.5 11.5T680-500q0 17 11.5 28.5T720-460Zm-80 260v-160H320v160h320Zm80 80H240v-160H80v-240q0-51 35-85.5t85-34.5h560q51 0 85.5 34.5T880-520v240H720v160Zm80-240v-160q0-17-11.5-28.5T760-560H200q-17 0-28.5 11.5T160-520v160h80v-80h480v80h80Z"/></svg>';
 
 /* Monte l'écran des tailles dans `host`.
@@ -341,9 +350,15 @@ export function mount(host, o) {
       ? `<button type="button" class="kbs-link kbs-del" data-kbs-del="${esc(r.variant.id)}" aria-label="${esc(t.del)} · ${esc(label)}">${esc(t.del)}</button>` : '');
     /* Réassort : la case dit « + » et reste vide, pour qu'on ne la lise pas
        comme le stock. À la création, c'est la quantité : « 0 » reste. */
-    const field = (key, col, aria) => {
+    const field = (key, col, aria, label) => {
       const i = `<input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="${creating ? '0' : ''}" data-kbs-in="${esc(key)}" data-kbs-col="${esc(col)}" aria-label="${esc(aria)}" />`;
-      return creating ? i : `<span class="kbs-add">${i}</span>`;
+      const box = creating ? i : `<span class="kbs-add">${i}</span>`;
+      /* La liste des tailles (pas le tableau taille × couleur, trop serré) :
+         un − et un + d'une pièce, la même règle que les flèches du clavier
+         (boutique-size-split.js) ; propriétaire, 18 nov. 2026. */
+      if (label == null) return box;
+      const btn = (d, name, svg) => `<button type="button" class="kbs-st" data-kbs-step="${d}" data-kbs-for="${esc(key)}" aria-label="${esc(name)} · ${esc(label)}">${svg}</button>`;
+      return `<span class="kbs-step">${btn(-1, t.stepDown, MINUS_SVG)}${box}${btn(1, t.stepUp, PLUS_SVG)}</span>`;
     };
     /* « Code existant » aussi sur une taille dont le code a été généré par Kiwi :
        le code du fournisseur scanné passe devant, le généré reste en second. */
@@ -365,7 +380,7 @@ export function mount(host, o) {
       return `<li class="kbs-row" data-kbs-row="${esc(r.key)}">
         <span class="kbs-size">${esc(sizeLabel)}${colorLine}</span>
         <span class="kbs-mid">${have}${codeHtml}${delOf(r, sizeLabel + (r.multi && v ? ' · ' + (v.colorLabel || '') : ''))}</span>
-        ${ro ? '<span></span>' : field(r.key, r.col || '', `${t.add} · ${sizeLabel}`)}
+        ${ro ? '<span></span>' : field(r.key, r.col || '', `${t.add} · ${sizeLabel}`, sizeLabel + (r.multi && v ? ' · ' + (v.colorLabel || '') : ''))}
       </li>`;
     }).join('');
     const matrixHtml = !matrix ? '' : `<table class="kbm"><thead><tr><th></th>${cols.map((c) => `<th scope="col">${digDot(c)}${esc(colName(c))}<small data-kbm-tot="${esc(c.key)}"></small></th>`).join('')}</tr></thead><tbody>${sizeList.map((size) => {
@@ -570,6 +585,14 @@ export function mount(host, o) {
         if (next) next.focus(); else save();
       });
     });
+    host.querySelectorAll('[data-kbs-step]').forEach((b) => b.addEventListener('click', () => {
+      const inp = host.querySelector(`[data-kbs-in="${CSS.escape(b.getAttribute('data-kbs-for'))}"]`);
+      if (!inp) return;
+      const now = /^\d+$/.test(inp.value.trim()) ? +inp.value.trim() : 0;
+      const v = Math.max(0, Math.min(99999, now + Number(b.getAttribute('data-kbs-step'))));
+      inp.value = v ? String(v) : '';
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+    }));
     const sb = host.querySelector('[data-kbs-save]'); if (sb) sb.addEventListener('click', save);
     const printPlan = (all) => {
       if (dirty()) { say(t.printDirty, true); return; }
