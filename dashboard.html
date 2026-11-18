@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <script>(function(){if(location.hostname!=='kiwi-maroc.pages.dev')return;var s=document.createElement('script');s.src='/assets/origin-move.js?r=3';s.async=false;try{s.dataset.hadState=String(Object.keys(localStorage).some(function(k){return /^kiwi/i.test(k);}));}catch(_){}document.head.appendChild(s);})();</script>
-<meta charset="utf-8" />
+<meta charset="utf-8" /><script>/* kiwi-browser-floor · Kiwi needs Chrome/Edge 80+, Safari 13.1+ (optional chaining). Below it (old Edge, Santos PC, 18 Nov 2026) the page stayed on its mock-up behind a half-drawn code screen: hide it all, say what to open. ES5, same copy in dashboard.html and kiwi-caisse.html, tools/browser-floor-test.mjs */(function(){var ok=false;try{ok=new Function('var o={a:{b:2}};return o.a?.b??0')()===2;}catch(e){}if(ok)return;var d=document;var st=d.createElement('style');st.appendChild(d.createTextNode('body>*:not(.kiwi-too-old-msg){display:none!important}body{margin:0;background:#F7F5F0}.kiwi-too-old-msg{display:block!important;max-width:520px;margin:12vh auto 0;padding:32px;font:16px/1.5 Segoe UI,Arial,sans-serif;color:#0A0F0D;text-align:center}.kiwi-too-old-msg h1{font-size:24px;font-weight:600;margin:0 0 12px}.kiwi-too-old-msg a{display:inline-block;margin-top:20px;padding:12px 22px;border-radius:12px;background:#0B6E4F;color:#F7F5F0;text-decoration:none;font-weight:600}'));(d.head||d.documentElement).appendChild(st);function show(){if(d.querySelector('.kiwi-too-old-msg'))return;var l='fr';try{l=localStorage.getItem('kiwiLang')||'fr';}catch(e){}var T={fr:['Ce navigateur est trop ancien pour Kiwi','Ouvrez Kiwi dans Google Chrome ou dans le nouveau Microsoft Edge. Rien n’est affiché ici tant que le navigateur n’est pas à jour.','Installer Google Chrome'],en:['This browser is too old for Kiwi','Open Kiwi in Google Chrome or the new Microsoft Edge. Nothing is shown here until the browser is up to date.','Install Google Chrome'],ar:['هذا المتصفح قديم ولا يشغّل Kiwi','افتح Kiwi في Google Chrome أو في Microsoft Edge الجديد. لن يظهر هنا أي شيء قبل تحديث المتصفح.','تثبيت Google Chrome']};var t=T[l]||T.fr;var m=d.createElement('div');m.className='kiwi-too-old-msg';m.setAttribute('role','alert');if(l==='ar')m.dir='rtl';m.innerHTML='<h1>'+t[0]+'</h1><p>'+t[1]+'</p><a href="https://www.google.com/chrome/">'+t[2]+'</a>';d.body.appendChild(m);}if(d.body)show();else d.addEventListener('DOMContentLoaded',show);})();</script>
 <script src="assets/kit/haptics.js?v=7"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Kiwi · Tableau de bord commerçant</title>
@@ -78,7 +78,7 @@
      per-vertical component CSS above, which is how it replaces four different
      stat-card implementations without editing four stylesheets. -->
 <link rel="stylesheet" href="assets/genpage.css?v=5" />
-<link rel="stylesheet" href="assets/dashboard-shell.css?v=11" />
+<link rel="stylesheet" href="assets/dashboard-shell.css?v=12" />
 <link rel="stylesheet" href="assets/mobile.css?v=13" />
 <link rel="stylesheet" href="assets/dashboard-native.css?v=3" />
 <link rel="stylesheet" href="assets/kiwi-select.css?v=3" />

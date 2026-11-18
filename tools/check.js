@@ -1539,7 +1539,7 @@ section('Whole-project regressions');
     'admin-console-handlers-test.mjs',
     'forgot-password-test.mjs',
     'caisse-pairing-recovery-test.mjs',
-    'caisse-handoff-demo-reload-test.mjs', 'caisse-handoff-server-type-test.mjs',
+    'caisse-handoff-demo-reload-test.mjs', 'caisse-handoff-server-type-test.mjs', 'browser-floor-test.mjs',
     'caisse-terminal-recovery-test.mjs',
     'caisse-offline-pin-test.mjs', 'offline-pin-budget-test.mjs',
     'offline-clock-rollback-test.mjs',
