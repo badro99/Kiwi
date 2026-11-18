@@ -17,7 +17,9 @@ const fs = require('fs');
 const path = require('path');
 const { fileURLToPath } = require('url');
 
-const OUT = process.env.KIWI_DEP_TRACE;
+/* KIWI_DEP_TRACE=0 is the pool's « tracing off »: a child that inherits this
+   file through NODE_OPTIONS must not take "0" for a file name (a stray ./0). */
+const OUT = process.env.KIWI_DEP_TRACE === '0' ? '' : process.env.KIWI_DEP_TRACE;
 const ROOT = process.env.KIWI_DEP_ROOT ? path.resolve(process.env.KIWI_DEP_ROOT) + path.sep : '';
 /* Module URLs come back as real paths (/private/var/… for /var/… on macOS). */
 let REAL = ROOT;

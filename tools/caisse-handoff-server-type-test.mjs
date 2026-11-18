@@ -10,6 +10,8 @@
  * (caisse-pairing.js › bootVertical), un commerce sans type demande donc le sien
  * au serveur (assets/pairing-commit.js › typeFirst), 2,5 s au plus, et le garde.
  *
+ * Runs the real assets/tenant-purge.js + assets/pairing-commit.js (the real
+ * commit()), and the real routeFor / bootVertical of assets/caisse-pairing.js.
  *   node tools/caisse-handoff-server-type-test.mjs
  */
 import assert from 'node:assert/strict';
@@ -19,50 +21,66 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const pairing = readFileSync(path.join(ROOT, 'assets/caisse-pairing.js'), 'utf8');
-const commit = readFileSync(path.join(ROOT, 'assets/pairing-commit.js'), 'utf8');
+const read = (f) => readFileSync(path.join(ROOT, f), 'utf8');
+const pairing = read('assets/caisse-pairing.js');
+const PURGE = read('assets/tenant-purge.js'), COMMIT = read('assets/pairing-commit.js');
 let passed = 0;
 const ok = async (label, fn) => { await fn(); passed++; console.log('  ✓ ' + label); };
 
-function lift(src, file, name) {
-  const m = src.match(new RegExp('\\n  function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n  \\}'));
-  assert.ok(m, name + ' found in ' + file);
+/* One function of the pairing bundle, to run it (a missing one fails the load). */
+function lift(name) {
+  const m = pairing.match(new RegExp('\\n  function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n  \\}'));
+  if (!m) throw new Error(name + ' missing from assets/caisse-pairing.js');
   return m[0];
 }
 
-/* The real serverTyped + typeFirst (pairing-commit.js) and routeFor
-   (caisse-pairing.js), with a fake fetch, fake timers and a fake pairing. */
-function harness(reply, paired) {
-  const timers = [];
-  const asked = [];
-  const store = { kiwiPairedVenue: paired ? JSON.stringify(paired) : null };
-  const ctx = {
-    window: { KiwiPosDispatch: { registry: { '1': { id: 'boutique' }, '2': { id: 'pressing' }, '3': { id: 'hotel' } } } },
-    setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
-    clearTimeout() {},
-    fetch: (url) => { asked.push(url); return reply(url); },
-    pairedVenue: () => JSON.parse(store.kiwiPairedVenue || 'null'),
-    commit: (code, d) => { assert.equal(code, ''); store.kiwiPairedVenue = JSON.stringify(d); store.commits = (store.commits || 0) + 1; return { ok: true, venue: d, switched: false }; },
-    encodeURIComponent, Object, String, JSON, Promise,
+/* A till page: storage, a fake /api/config, fake timers, the real modules. */
+function harness(reply, seed = {}) {
+  const timers = [], asked = [], unlocked = [], events = [];
+  const memory = new Map(Object.entries(seed));
+  const localStorage = {
+    getItem: (k) => (memory.has(k) ? memory.get(k) : null),
+    setItem: (k, v) => { memory.set(k, String(v)); },
+    removeItem: (k) => { memory.delete(k); },
+    key: (i) => Array.from(memory.keys())[i] ?? null,
+    get length() { return memory.size; },
   };
-  vm.createContext(ctx);
-  vm.runInContext([lift(commit, 'pairing-commit.js', 'serverTyped'), lift(commit, 'pairing-commit.js', 'typeFirst'),
-    'var SUB_ALIAS = { bakery: \'boulangerie\', sport: \'gym\' };',
-    lift(pairing, 'caisse-pairing.js', 'registryIds'), lift(pairing, 'caisse-pairing.js', 'routeFor'),
-    'this.serverTyped = serverTyped; this.typeFirst = typeFirst; this.routeFor = routeFor;'].join('\n'), ctx);
-  const run = (h) => new Promise((resolve) => ctx.serverTyped(h, resolve));
+  const window = {
+    localStorage,
+    KiwiPosDispatch: { registry: { '1': { id: 'boutique' }, '2': { id: 'pressing' }, '3': { id: 'hotel' } }, unlockById: (id) => unlocked.push(id) },
+    __kiwiUnlockApp: () => unlocked.push('restaurant'),
+  };
+  window.window = window;
+  const ctx = vm.createContext({
+    window, localStorage,
+    document: { dispatchEvent: (e) => events.push(e.type), getElementById: () => null, addEventListener() {} },
+    CustomEvent: class { constructor(type, o) { this.type = type; this.detail = o && o.detail; } },
+    setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; }, clearTimeout() {},
+    fetch: (url) => { asked.push(url); return reply(url); },
+    encodeURIComponent, JSON, String, Object, Array, Number, Boolean, Math, Date, Promise, console,
+    hidePad() {}, hideNativePin() {},
+  });
+  vm.runInContext(PURGE, ctx);
+  vm.runInContext(COMMIT, ctx);
+  vm.runInContext(['var SUB_ALIAS = { bakery: \'boulangerie\', sport: \'gym\' };', lift('registryIds'), lift('routeFor'), lift('bootVertical'),
+    'this.routeFor = routeFor; this.bootVertical = bootVertical;'].join('\n'), ctx);
+  const pc = window.KiwiPairingCommit;
+  const run = (h) => new Promise((resolve) => pc.serverTyped(h, resolve));
   const fireTimeout = () => timers.filter((t) => t.ms >= 1000).forEach((t) => t.fn());
-  return { ctx, run, asked, fireTimeout, timers, store };
+  const saved = () => JSON.parse(memory.get('kiwiPairedVenue') || 'null');
+  const route = (v) => ({ ...ctx.routeFor(v) });
+  return { ctx, pc, run, asked, fireTimeout, timers, memory, saved, route, unlocked, events };
 }
 const answer = (body) => () => Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
-const SANTOS = { merchant: 'santos-store', name: 'Santos Store', ts: 1 };
-const route = (h, v) => ({ ...h.ctx.routeFor(v) });
+const settle = () => new Promise((r) => setImmediate(r));
+const SANTOS = { merchant: 'santos-store', name: 'Santos Store', location: 'Rabat' };
+const pairedAs = (v) => ({ kiwiPaired: '1', kiwiLive: '1', kiwiLiveMerchant: v.merchant, kiwiPairedVenue: JSON.stringify(v) });
 
 await ok('no type, the server says boutique → the boutique till', async () => {
   const h = harness(answer({ type: 'boutique', features: {} }));
   const out = await h.run({ ...SANTOS, type: '' });
   assert.equal(out.type, 'boutique');
-  assert.deepEqual(route(h, out), { kind: 'vertical', id: 'boutique' });
+  assert.deepEqual(h.route(out), { kind: 'vertical', id: 'boutique' });
   assert.match(h.asked[0], /\/api\/config\?merchant=santos-store$/);
 });
 
@@ -71,7 +89,7 @@ await ok('a wrong type (restaurant): the server wins and the stale subtype goes'
   const out = await h.run({ ...SANTOS, type: 'restaurant', subtype: 'restaurant' });
   assert.equal(out.type, 'boutique');
   assert.equal(out.subtype, '');
-  assert.deepEqual(route(h, out), { kind: 'vertical', id: 'boutique' });
+  assert.deepEqual(h.route(out), { kind: 'vertical', id: 'boutique' });
 });
 
 await ok('the server agrees → the venue is kept as it is, subtype included', async () => {
@@ -98,51 +116,54 @@ await ok('a slow server never holds the till: after 2.5 s the venue goes as it i
   const out = await p;
   assert.equal(out.type, 'boutique');
   release({ ok: true, json: () => Promise.resolve({ type: 'restaurant' }) });
-  await new Promise((r) => setImmediate(r));
+  await settle();
   assert.equal(out.type, 'boutique', 'the late answer changes nothing');
 });
 
 /* Santos's iPad: paired with type '' by the hand-off, so every start (and every
-   staff unlock) chose the restaurant till. */
-await ok('typeFirst: a pairing with no type is typed by the server, kept on the device, then routed', async () => {
-  const h = harness(answer({ type: 'boutique' }), { ...SANTOS, venueId: 'v1', type: '', subtype: '' });
-  const routed = await new Promise((resolve) => assert.equal(h.ctx.typeFirst({ ...SANTOS, venueId: 'v1', type: '' }, resolve), true));
-  assert.equal(routed.type, 'boutique');
-  assert.deepEqual(route(h, routed), { kind: 'vertical', id: 'boutique' });
-  const saved = JSON.parse(h.store.kiwiPairedVenue);
+   staff unlock) chose the restaurant till. This is the till's own path:
+   bootVertical → typeFirst → the real commit() → bootVertical again. */
+await ok('a till paired with no type opens the boutique and keeps it, through the real commit()', async () => {
+  const v = { ...SANTOS, venueId: 'v1', type: '', subtype: '' };
+  const h = harness(answer({ type: 'boutique' }), { ...pairedAs(v), 'kiwiSales:scoped@santos-store': '[{"total":450}]' });
+  h.ctx.bootVertical(v);
+  assert.deepEqual(h.unlocked, [], 'nothing opens before the answer');
+  await settle();
+  assert.deepEqual(h.unlocked, ['boutique'], 'the boutique till, not the restaurant');
+  assert.equal(h.ctx.window.__kiwiPairedBoutiqueVenue, 'v1');
+  const saved = h.saved();
   assert.equal(saved.type, 'boutique', 'the next start goes straight to the boutique');
   assert.equal(saved.venueId, 'v1');
   assert.equal(saved.typeAsked, undefined, 'the marker never reaches storage');
-  assert.equal(h.store.commits, 1, 'through commit(), the one writer of the pairing');
-  assert.equal(h.ctx.typeFirst(routed, () => assert.fail('asked twice')), false, 'the typed venue routes at once');
+  assert.equal(h.memory.get('kiwiSales:scoped@santos-store'), '[{"total":450}]', 'the same store: nothing is purged');
+  assert.deepEqual(h.events, ['kiwi-paired'], 'announced like any pairing');
+  h.ctx.bootVertical(saved);
+  assert.equal(h.asked.length, 1, 'a typed pairing never asks again');
+  assert.deepEqual(h.unlocked, ['boutique', 'boutique']);
 });
 
-await ok('typeFirst asks nothing for a typed venue, a venue with no merchant, or one already asked; no type on record ends the loop', async () => {
-  const h = harness(answer({ type: '' }), { ...SANTOS, type: '' });
-  const never = () => assert.fail('no request expected');
-  assert.equal(h.ctx.typeFirst({ ...SANTOS, type: 'boutique' }, never), false);
-  assert.equal(h.ctx.typeFirst({ name: 'Démo', type: '' }, never), false);
-  assert.equal(h.ctx.typeFirst(null, never), false);
-  assert.equal(h.asked.length, 0, 'no request for any of them');
-  const routed = await new Promise((resolve) => h.ctx.typeFirst({ ...SANTOS, type: '' }, resolve));
-  assert.equal(routed.type, '', 'the server has none: the till routes as before');
-  assert.equal(h.ctx.typeFirst(routed, never), false, 'asked once, then it routes');
-  assert.equal(JSON.parse(h.store.kiwiPairedVenue).type, '', 'nothing invented is saved');
-  assert.equal(h.store.commits, undefined, 'no commit without an answer');
-  const other = harness(answer({ type: 'boutique' }), { merchant: 'another-store', type: '' });
-  await new Promise((resolve) => other.ctx.typeFirst({ ...SANTOS, type: '' }, resolve));
-  assert.equal(JSON.parse(other.store.kiwiPairedVenue).merchant, 'another-store', 'an operator view of another store never rewrites this device\'s pairing');
-  assert.equal(JSON.parse(other.store.kiwiPairedVenue).type, '');
+await ok('a typed venue, a venue with no merchant, and a store with no type on record all route at once, as before', async () => {
+  const h = harness(answer({ type: '' }), pairedAs({ ...SANTOS, type: '' }));
+  h.ctx.bootVertical({ ...SANTOS, type: 'pressing' });
+  h.ctx.bootVertical({ name: 'Démo', type: '' });
+  assert.deepEqual(h.unlocked, ['pressing', 'restaurant'], 'synchronously');
+  assert.equal(h.asked.length, 0, 'no request for either');
+  h.ctx.bootVertical({ ...SANTOS, type: '' });
+  await settle();
+  assert.deepEqual(h.unlocked, ['pressing', 'restaurant', 'restaurant'], 'no type anywhere: the restaurant, as before, and no loop');
+  assert.equal(h.asked.length, 1);
+  assert.equal(h.saved().type, '', 'nothing invented is saved');
+  assert.deepEqual(h.events, [], 'no commit without an answer');
 });
 
-await ok('the till types a venue before it picks the vertical, and the hook ships with the till', async () => {
-  const bv = lift(pairing, 'caisse-pairing.js', 'bootVertical');
-  assert.match(bv, /^\n  function bootVertical\(v\) \{\n    var pc = window\.KiwiPairingCommit; if \(pc && pc\.typeFirst && pc\.typeFirst\(v, bootVertical\)\) return;/,
-    'the first thing bootVertical does');
-  assert.match(commit, /window\.KiwiPairingCommit = \{ commit: commit, purgeTenantData: purgeTenantData, serverTyped: serverTyped, typeFirst: typeFirst \};/);
-  const html = readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
-  const a = html.indexOf('assets/pairing-commit.js?v='), b = html.indexOf('assets/caisse-pairing.js?v=');
-  assert.ok(a > 0 && b > a, 'pairing-commit.js loads before caisse-pairing.js');
+await ok('an operator view of another store is typed but never rewrites this device\'s pairing', async () => {
+  const mine = { merchant: 'another-store', type: '' };
+  const h = harness(answer({ type: 'boutique' }), pairedAs(mine));
+  h.ctx.bootVertical({ ...SANTOS, type: '' });
+  await settle();
+  assert.deepEqual(h.unlocked, ['boutique']);
+  assert.deepEqual(h.saved(), mine);
+  assert.deepEqual(h.events, []);
 });
 
 console.log(`caisse-handoff-server-type: ${passed} passed`);
