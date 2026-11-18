@@ -152,7 +152,7 @@
     el = document.createElement('button');
     el.type = 'button';
     el.id = 'kiwi-unsaved';
-    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite'); // un bouton garde son rôle et son nom ; l'annonce passe par aria-live
     el.textContent = UNSAVED[language()];
     el.addEventListener('click', function () { try { window.dispatchEvent(new CustomEvent('kiwi:doc-retry')); } catch (_) {} });
     document.body.appendChild(el);

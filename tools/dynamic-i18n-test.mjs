@@ -22,7 +22,7 @@ const BASE = path.join(ROOT, 'tools/dynamic-i18n-baseline.json');
 // employeePick(fr, en, ar) is the waiter app's explicit per-language choice.
 // ui(key) reads UI_I18N (menu workspace, menu scan; menu-i18n-test proves every
 // key has EN/AR); ozonLabel(fr) is the Ozon module's FR/EN/AR table.
-const translated = /^(?:t|tr|dt|mt|ui|translate|translateCore|i18n|L|text|formatMessage|employeePick|ozonLabel)$/;
+const translated = /^(?:t|tr|dt|mt|ui|translate|translateCore|i18n|L|text|formatMessage|employeePick|ozonLabel|kkt|kt)$/; // kkt, kt : KiwiKit.t par clé (caisse-kitchen.js, pos-boutique/me-menu.js)
 // An icon helper takes a Material Symbols name (« storefront », « lock »), never text a person reads.
 const iconCall = /^(?:icon|materialIcon|itSvg)$/;
 const visibleKeys = /^(?:title|desc|description|message|body|content|html|label|text|confirmText|cancelText|placeholder)$/;

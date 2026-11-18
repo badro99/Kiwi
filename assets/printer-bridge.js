@@ -755,7 +755,7 @@
     st.textContent =
       /* Hors impression le root reste mis en page (hors écran, invisible) :
        * c'est ce qui permet de mesurer la hauteur de chaque ticket. */
-      '#kpr-print-root{position:absolute;left:-10000px;top:0;width:' + w + 'mm;visibility:hidden;pointer-events:none;background:#fff;color:#000;}' +
+      '#kpr-print-root{position:fixed;left:-10000px;top:0;width:' + w + 'mm;visibility:hidden;pointer-events:none;background:#fff;color:#000;}' +
       T + '.kpr-ticket{width:' + pw.ticket + 'mm;margin:0 auto;padding:3mm 0;color:#000;' +
         'font-family:var(--mono,ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace);font-size:9pt;line-height:1.45;}' +
       T + '.kpr-shop{text-align:center;font-weight:700;font-size:14pt;margin-bottom:2mm;overflow-wrap:anywhere;}' +

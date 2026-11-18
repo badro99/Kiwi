@@ -316,7 +316,7 @@
         /* markSplitPartPaid ouvre déjà le tiroir d'une part payée en espèces. */
         if (!share) openCashDrawer();
         const change = Math.round((got - total) * 100) / 100;
-        if (change > 0) toast('Monnaie à rendre : ' + fmtMAD(change));
+        if (change > 0) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Monnaie à rendre') + ' : ' + fmtMAD(change));
       }
       if (sale) printSaleTicket(sale);
       resetPayTip();
