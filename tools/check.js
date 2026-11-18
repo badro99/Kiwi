@@ -1865,6 +1865,7 @@ section('Whole-project regressions');
     'pos-maison-split-test.mjs',
     'pos-boutique-split-test.mjs',
     'boutique-ticket-owner-test.mjs',
+    'boutique-bargain-test.mjs',
     'boutique-inv-alerts-test.mjs',
     'boutique-search-variants-test.mjs',
     'boutique-ticket-number-test.mjs',
