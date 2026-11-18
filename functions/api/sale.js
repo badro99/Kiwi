@@ -668,8 +668,16 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
       || retailPercents.some(n => !Number.isInteger(n) || n < 1 || n > 100))) {
     return json({ error: 'bad-discount-percent' }, 400);
   }
+  /* Boutique « prix convenu » (2026-11-18) : la caisse envoie le pourcentage
+     effectif le plus profond de ses prix convenus. Il n'a pas à figurer dans
+     la liste du patron (300 au lieu de 350, c'est 14,3 %) ; il ne doit pas
+     dépasser le plus haut taux autorisé, qui fait le plancher de la caisse. */
+  const agreedMax = b && b.agreedMaxPercent;
+  if (agreedMax != null && (!Number.isInteger(agreedMax) || agreedMax < 1 || agreedMax > 100)) {
+    return json({ error: 'bad-discount-percent' }, 400);
+  }
   let discountFlag = null;
-  if (!stored && (hasDiscount || retailPercents?.length)) {
+  if (!stored && (hasDiscount || retailPercents?.length || agreedMax)) {
     let policyRow = null;
     try {
       policyRow = await env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'discountpolicy'")
@@ -682,6 +690,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
         const used = [];
         if (hasDiscount && String(b.discountKind || '') === 'percent') used.push(b.discountPercent);
         if (retailPercents?.length) used.push(...retailPercents);
+        if (agreedMax && agreedMax > Math.max(...allowed)) used.push(agreedMax);
         const outside = used.filter(n => !allowed.includes(n));
         if (outside.length) discountFlag = { percents: [...new Set(outside)], allowed };
         else if (hasDiscount && !['amount', 'percent'].includes(String(b.discountKind || ''))) {

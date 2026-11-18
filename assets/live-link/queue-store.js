@@ -755,7 +755,7 @@ function postSale(entry) {
       body.discountKind = String(entry.discountKind || '').slice(0, 12);
       if (entry.discountPercent != null) body.discountPercent = Number(entry.discountPercent);
     }
-    if (Array.isArray(entry.discountPercents)) body.discountPercents = entry.discountPercents.slice(0, 8).map(Number);
+    if (Array.isArray(entry.discountPercents)) body.discountPercents = entry.discountPercents.slice(0, 8).map(Number); if (entry.agreedMaxPercent != null) body.agreedMaxPercent = Number(entry.agreedMaxPercent);
     return enqueueMoneyBody(body, m);
   }
 /* <</queue:postSale>> */

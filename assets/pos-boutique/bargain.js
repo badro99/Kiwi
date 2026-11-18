@@ -35,7 +35,8 @@ export function agreedUnit(base, mode, value, pct) {
   const unitC = mode === 'price' ? cents(value) : baseC - cents(value);
   if (unitC >= baseC) return { error: 'above' };
   const fl = floorC(baseC, pct);
-  if (unitC < fl) return { error: 'floor', floor: fl / 100 };
+  /* Même à 100 % autorisé, retirer tout le prix n'est pas un prix : 0,01 au moins. */
+  if (unitC < fl || unitC <= 0) return { error: 'floor', floor: Math.max(fl, 1) / 100 };
   return { unit: unitC / 100, cut: (baseC - unitC) / 100 };
 }
 

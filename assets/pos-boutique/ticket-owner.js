@@ -14,6 +14,15 @@ const ticketOwner = {
   },
   changeQuantity(ticket, index, delta) {
     const line = ticket.lines[index];
+    /* Un prix convenu pour le ticket entier valait pour CES pièces : une pièce
+       ajoutée ensuite part à son prix, sur sa propre ligne (revue 2026-11-18). */
+    if (delta > 0 && line.agreedFrom === 'ticket') {
+      const extra = JSON.parse(JSON.stringify(line));
+      delete extra.agreed; delete extra.agreedFrom;
+      extra.qty = delta; extra.remise = 0;
+      ticket.lines.splice(index + 1, 0, extra);
+      return;
+    }
     line.qty = +line.qty + delta;
     if (line.qty <= 0) ticket.lines.splice(index, 1);
   },
@@ -23,20 +32,26 @@ const ticketOwner = {
      chaque ligne : le pourcentage vit déjà là, et ticketTotals l'y additionne.
      Rien de neuf dans le calcul, rien de neuf dans la vente envoyée — c'est le
      chemin de la remise par article, appliqué d'un geste. */
-  discountAllLines(ticket, pct) { ticket.lines.forEach((line) => { line.remise = pct; delete line.agreed; }); },
+  discountAllLines(ticket, pct) { ticket.lines.forEach((line) => { line.remise = pct; delete line.agreed; delete line.agreedFrom; }); },
   /* Remise à la marocaine (bargain.js) : le prix convenu d'une pièce, posé ou
      retiré sur une ligne ; il remplace le pourcentage de cette ligne. */
   agreeLine(ticket, index, agreed) {
     const line = ticket.lines[index];
     if (!line) return;
     line.remise = 0;
+    delete line.agreedFrom;
     if (agreed > 0) line.agreed = agreed; else delete line.agreed;
   },
   /* « Kolchi b 500 » : spreadTicket a réparti le total ; chaque entrée nomme
      sa ligne d'origine (key = index) et peut la couper en deux. */
   agreeTicket(ticket, assign) {
-    const from = ticket.lines;
-    ticket.lines = assign.filter((a) => from[a.key]).map((a) => Object.assign(JSON.parse(JSON.stringify(from[a.key])), { qty: a.qty, remise: 0, agreed: a.agreed }));
+    /* Une ligne que la répartition n'a pas reçue (pièce offerte, prix 0) reste
+       telle quelle : son stock est déjà sorti, elle doit rester sur la vente. */
+    ticket.lines = ticket.lines.flatMap((line, i) => {
+      const mine = assign.filter((a) => a.key === i);
+      if (!mine.length) return [line];
+      return mine.map((a) => Object.assign(JSON.parse(JSON.stringify(line)), { qty: a.qty, remise: 0, agreed: a.agreed, agreedFrom: 'ticket' }));
+    });
   },
   applyReward(ticket, reward) { ticket.reward = reward; },
   reserveReward(ticket, ref) { return ticket.reward.reservation || (ticket.reward.reservation = { ref }); },

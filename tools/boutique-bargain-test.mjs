@@ -38,6 +38,11 @@ ok('sous le plancher : refus qui nomme le prix minimum', () => {
   assert.deepEqual(agreedUnit(350, 'price', 280, 20), { unit: 280, cut: 70 });
 });
 
+ok('retirer tout le prix n’est pas un prix, même à 100 % autorisé', () => {
+  assert.deepEqual(agreedUnit(350, 'amount', 350, 100), { error: 'floor', floor: 0.01 });
+  assert.deepEqual(agreedUnit(350, 'amount', 400, 100), { error: 'floor', floor: 0.01 });
+});
+
 ok('un prix au-dessus du prix affiché n’est pas une remise', () => {
   assert.equal(agreedUnit(350, 'price', 400, 20).error, 'above');
   assert.equal(agreedUnit(350, 'price', 350, 20).error, 'above');

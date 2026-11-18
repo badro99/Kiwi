@@ -4,7 +4,7 @@
  * l'appelant ce qu'elle vaut (evaluate) et lui rend l'état (onChange).
  * Les pastilles de pourcentage restent celles de l'appelant, avec leurs
  * propres gestionnaires : chipsHTML est posé tel quel. */
-import { parseMad } from './bargain.js?v=2';
+import { parseMad } from './bargain.js?v=3';
 
 const MODES = ['pct', 'price', 'amount'];
 

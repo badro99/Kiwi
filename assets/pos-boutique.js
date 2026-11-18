@@ -1,11 +1,11 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=205';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=123';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=205';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=205';
-import { ticketOwner } from './pos-boutique/ticket-owner.js?v=4';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=206';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=124';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=206';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=206';
+import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
-import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=2';
+import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=3';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=22';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=6'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=18'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11';
 
@@ -2003,7 +2003,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
               amount: cashIn,
               method: method,
               paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(receivedNow * 100),
-              discountPercents: [...new Set(frozen.lines.map(ln => Number(ln.remise)).filter(n => n > 0))],
+              discountPercents: [...new Set(frozen.lines.map(ln => Number(ln.remise)).filter(n => n > 0))], agreedMaxPercent: Math.max(0, ...frozen.lines.filter(ln => ln.agreed > 0).map(ln => { const b = ln.promo && +ln.promo.price > 0 ? +ln.promo.price : +ln.price; return b > 0 ? Math.ceil((b - ln.unit) / b * 100 - 1e-9) : 0; })) || undefined,
               channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter', deliveryCard: ((parts || []).find((x) => x && x.m === 'livraison' && x.card) || {}).card, stockHeld: sale.stockHeld === true,
               label: isAcompte ? 'Acompte · ' + label : label,
               ref: sale.id,

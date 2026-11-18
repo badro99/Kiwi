@@ -124,6 +124,18 @@ fc.assert(fc.property(fc.array(fc.record({ op: fc.integer({min:0,max:9}), pid: f
   assert.deepEqual(k.lines.map(l => [l.pid, l.qty, l.agreed, l.remise]), [['a', 2, 270, 0], ['a', 1, 271, 0], ['b', 1, 90, 0]]);
   assert.equal(k.lines[1].promo.price, 290, 'la promotion reste nommée sur la ligne');
   assert.notEqual(k.lines[0].promo, k.lines[1].promo, 'chaque ligne a sa propre copie');
+  assert.ok(k.lines.every(l => l.agreedFrom === 'ticket'), 'a ticket spread marks its lines');
+  const free = { lines: [{ pid: 'a', size: 'M', color: 'noir', qty: 1, remise: 0 }, { pid: 'b', size: 'S', color: 'or', qty: 1, remise: 0, promo: { price: 0 } }] };
+  owner.agreeTicket(free, [{ key: 0, qty: 1, agreed: 900 }]);
+  assert.deepEqual(free.lines.map(l => [l.pid, l.agreed]), [['a', 900], ['b', undefined]], 'a line the spread skipped (free piece) stays on the ticket');
+  const more = { lines: [{ pid: 'a', size: 'M', color: 'noir', qty: 3, remise: 0, agreed: 166.67, agreedFrom: 'ticket' }] };
+  owner.changeQuantity(more, 0, 1);
+  assert.deepEqual(more.lines.map(l => [l.qty, l.agreed]), [[3, 166.67], [1, undefined]], '« + » after a ticket price adds a piece at its own price');
+  owner.changeQuantity(more, 0, -1);
+  assert.equal(more.lines[0].qty, 2, '« − » still removes a bargained piece');
+  const own = { lines: [{ pid: 'a', size: 'M', color: 'noir', qty: 1, remise: 0, agreed: 300 }] };
+  owner.changeQuantity(own, 0, 1);
+  assert.deepEqual(own.lines.map(l => [l.qty, l.agreed]), [[2, 300]], 'a per-piece agreed price (item sheet) is per piece: « + » keeps it');
   owner.discountAllLines(k, 0);
   assert.ok(k.lines.every(l => l.agreed === undefined && l.remise === 0), '« Sans » retire aussi le prix convenu');
 }

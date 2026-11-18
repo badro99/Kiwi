@@ -2,8 +2,8 @@
  * sortis de sales.js (plafond de taille, tools/file-size-ratchet-test.mjs).
  * Rien n'est importé : sales.js passe ses propres fonctions, donc c'est SON
  * code qui tourne (openApprove, le rendu, le propriétaire du ticket). */
-import { spreadTicket, maxPct } from './bargain.js?v=2';
-import { mountBargain } from './bargain-ui.js?v=2';
+import { spreadTicket, maxPct } from './bargain.js?v=3';
+import { mountBargain } from './bargain-ui.js?v=3';
 
 export function ticketRemise(d) {
   const { state, root, $, $$, tr, icons, toast, clById, firstName, ticketOwner,
@@ -31,6 +31,7 @@ export function ticketRemise(d) {
   function openTicketRemise() {
     const t = state.ticket;
     if (!t.lines.length) return;
+    window.KiwiDiscountPolicy?.refresh?.(); // the owner may have lowered the allowed percentages
     const pcts = (window.KiwiDiscountPolicy?.percentages(d.bqKey()) || [5, 10, 15, 20]).filter((p) => p > 0);
     const cur = t.lines.length && t.lines.every((l) => l.remise === t.lines[0].remise) ? (t.lines[0].remise || 0) : null;
     const apply = (pct) => {
