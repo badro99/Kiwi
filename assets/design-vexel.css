@@ -1635,7 +1635,13 @@ html[data-theme="dark"] .kiwi-greet-dot[data-tone="open"] { background: var(--mi
 body.design-vexel[data-vexel-mode="dark"] .kiwi-greet-dot:not([data-tone="open"]):not([data-tone="soon"]),
 html[data-theme="dark"] .kiwi-greet-dot:not([data-tone="open"]):not([data-tone="soon"]) { background: rgba(245, 250, 247, 0.38); }
 
-body.design-vexel :is(.kiwi-lock-brand-legacy, .kob-brand-legacy, .auth-brand-legacy, .reset-brand-legacy) {
+/* Plain list, not :is(): a POS browser older than Chrome 88 drops a whole
+ * :is() rule, leaving the fallback logo beside the skinned one (two wordmarks
+ * on the sign-in card of a Windows till, 2026-11-18). */
+body.design-vexel .kiwi-lock-brand-legacy,
+body.design-vexel .kob-brand-legacy,
+body.design-vexel .auth-brand-legacy,
+body.design-vexel .reset-brand-legacy {
   display: none;
 }
 
