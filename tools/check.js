@@ -2038,6 +2038,7 @@ section('Whole-project regressions');
        se construit, est déterministe, charge api-base.js en premier, et la
        porte accepte les origines de l'app sur /api et /auth seulement. */
     'app-bundle-test.mjs',
+    'app-store-skin-test.mjs', // l'app suit le design 2027 du commerce (features.skin2027), sans middleware
     /* Les polices de la direction 2027 (étape 1, docs/specs/kiwi-design-2027.md §6.1,
        §6.5, §21.3) : une fonte ne quitte pas le bundle pendant qu'une règle la nomme
        (tools/app-bundle-manifest.json lu par les deux outils de build) ; chaque

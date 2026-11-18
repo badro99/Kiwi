@@ -66,6 +66,37 @@
     rewrites: function (u) { return rewrite(u) !== u; }
   };
 
+  /* Le design 2027 par commerce (owner, 2026-11-18). Sur le web, le middleware
+   * pose <html data-store-skin="2027"> quand le commerce a features.skin2027
+   * (kiwi-admin) ; l'app sert ses pages depuis le bundle et ne passait jamais par
+   * lui. L'app retient donc l'interrupteur à chaque `kiwi-config`
+   * (assets/merchant-config.js) et repose la même marque ici, avant la tête de
+   * page qui la lit. Caisse, cuisine et équipe seulement : le tableau de bord
+   * garde ses écrans (owner, 2026-10-27). Un changement reçu au démarrage
+   * recharge une fois ; en plein service, il attend le prochain lancement.
+   * tools/app-store-skin-test.mjs. */
+  if (native) {
+    var SKIN_KEY = 'kiwiAppStoreSkin2027';
+    var staffPage = /^\/kiwi-(?:caisse|cuisine|serveur)(?:\.html)?$/.test(String((w.location && w.location.pathname) || ''));
+    try {
+      if (staffPage && w.localStorage.getItem(SKIN_KEY) === '1') w.document.documentElement.setAttribute('data-store-skin', '2027');
+    } catch (_) {}
+    if (w.document && typeof w.document.addEventListener === 'function') {
+      w.document.addEventListener('kiwi-config', function (e) {
+        var features = e && e.detail && e.detail.features;
+        if (!features || typeof features !== 'object') return;
+        try {
+          var on = features.skin2027 === true;
+          if ((w.localStorage.getItem(SKIN_KEY) === '1') === on) return;
+          if (on) w.localStorage.setItem(SKIN_KEY, '1'); else w.localStorage.removeItem(SKIN_KEY);
+          if (!staffPage || w.performance.now() > 15000 || w.sessionStorage.getItem(SKIN_KEY + ':reloaded') === '1') return;
+          w.sessionStorage.setItem(SKIN_KEY + ':reloaded', '1');
+          w.location.reload();
+        } catch (_) {}
+      });
+    }
+  }
+
   if (!base) return; // web — no-op absolu
 
   /* fetch ------------------------------------------------------------------ */
