@@ -1,11 +1,11 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=204';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=122';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=204';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=204';
-import { ticketOwner } from './pos-boutique/ticket-owner.js?v=3';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=205';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=123';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=205';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=205';
+import { ticketOwner } from './pos-boutique/ticket-owner.js?v=4';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
-import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=1';
+import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=2';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=22';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=6'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=18'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11';
 
@@ -1245,7 +1245,6 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
   }
   const linePromo = (ln) => lineDeal(ln).promo;
   const lineBase  = (ln) => lineDeal(ln).price;
-  /* Un prix convenu (pos-boutique/bargain.js) passe avant le pourcentage ; une promotion arrivée plus bas reste la meilleure. */
   const lineUnit  = (ln) => (+ln.agreed > 0 ? Math.min(lineBase(ln), +ln.agreed) : KiwiPromotionPricing.lineUnit(lineBase(ln), ln.remise));
   const lineTotal = (ln) => Math.round(lineUnit(ln) * 100) * ln.qty / 100;
   /* Remise fidélité au niveau du TICKET (distincte de la remise gérante par ligne).
@@ -1924,7 +1923,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
              autorisé, quand, quel pourcentage, et ce que la remise a coûté au
              magasin. C'est la seule chose relisible le jour d'un contrôle. */
           remiseAuth: frozen.remiseAuth
-            ? { by: frozen.remiseAuth.by || '', role: frozen.remiseAuth.role || '', at: frozen.remiseAuth.at, pct: frozen.remiseAuth.pct, mode: frozen.remiseAuth.mode || 'pct', value: frozen.remiseAuth.value ?? frozen.remiseAuth.pct, amount: bqMoney((tot.remise), true) }
+            ? { by: frozen.remiseAuth.by || '', role: frozen.remiseAuth.role || '', at: frozen.remiseAuth.at, mode: frozen.remiseAuth.mode || 'pct', value: frozen.remiseAuth.value ?? frozen.remiseAuth.pct, pct: frozen.remiseAuth.pct, amount: bqMoney((tot.remise), true) }
             : null,
           promoOff: bqMoney((tot.promo), true),        // ce que les promotions ont coûté, pour la clôture
           /* `promo` suit la ligne dans le journal. Un retour se rembourse sur

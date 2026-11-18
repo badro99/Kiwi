@@ -2,6 +2,9 @@
  * sortis de sales.js (plafond de taille, tools/file-size-ratchet-test.mjs).
  * Rien n'est importé : sales.js passe ses propres fonctions, donc c'est SON
  * code qui tourne (openApprove, le rendu, le propriétaire du ticket). */
+import { spreadTicket, maxPct } from './bargain.js?v=2';
+import { mountBargain } from './bargain-ui.js?v=2';
+
 export function ticketRemise(d) {
   const { state, root, $, $$, tr, icons, toast, clById, firstName, ticketOwner,
     renderTicket, renderGrid, renderBadges, openVeil, closeVeil, openApprove } = d;
@@ -39,9 +42,46 @@ export function ticketRemise(d) {
     /* Le squelette d'abord, les mots ensuite, chacun par tr() : aucune
        phrase n'est collée dans le gabarit. */
     el.innerHTML = '<button class="bq-modal-x" data-bq-close><i data-icon="close"></i></button>'
-      + '<h3 class="modal-title"></h3><div class="bq-chips" id="bq-tkrem-chips"></div>';
+      + '<h3 class="modal-title"></h3><div class="bq-bargain" id="bq-tkrem-bargain"></div>'
+      + '<div class="bq-sheet-foot" id="bq-tkrem-foot" hidden><button class="bq-btn primary" id="bq-tkrem-apply" disabled></button></div>';
     $('.bq-modal-x', el).setAttribute('aria-label', tr('Fermer'));
     $('.modal-title', el).textContent = tr('Remise');
+    /* « Kolchi b 500 » : le total convenu ou les dirhams retirés du ticket,
+       répartis sur les pièces par spreadTicket (bargain.js), derrière le même
+       accord gérante que le pourcentage. */
+    const rows = t.lines.map((ln, i) => ({ key: i, base: d.pieceBase(ln), qty: ln.qty }));
+    const T0 = Math.round(rows.reduce((s, r) => s + Math.round(r.base * 100) * r.qty, 0)) / 100;
+    let last = null;
+    mountBargain($('#bq-tkrem-bargain', el), {
+      tr, fmt: d.fmt, base: T0,
+      chipsHTML: '<div class="bq-chips" id="bq-tkrem-chips"></div>',
+      evaluate: (mode, value) => {
+        const target = mode === 'price' ? value : Math.round((T0 - value) * 100) / 100;
+        if (!(target > 0)) return { error: 'floor', floor: spreadTicket(rows, 0.01, maxPct(pcts)).floor || 0 };
+        const r = spreadTicket(rows, target, maxPct(pcts));
+        return r.error ? r : { after: target, cut: Math.round((T0 - target) * 100) / 100, assign: r.assign };
+      },
+      onChange: (r) => {
+        last = r;
+        $('#bq-tkrem-foot', el).hidden = r.mode === 'pct';
+        const btn = $('#bq-tkrem-apply', el);
+        btn.disabled = !r.ok;
+        btn.textContent = r.ok ? tr('Appliquer') + ' · ' + d.fmt(r.res.after) : tr('Appliquer');
+      },
+    });
+    $('#bq-tkrem-apply', el).textContent = tr('Appliquer');
+    $('#bq-tkrem-apply', el).onclick = () => {
+      const r = last;
+      if (!r || !r.ok) return;
+      const agree = () => {
+        closeVeil('#bq-approve-veil');
+        ticketOwner.agreeTicket(t, r.res.assign);
+        renderTicket(); renderGrid(); renderBadges(); icons();
+        toast(tr('Prix convenu') + ' ' + d.fmt(r.res.after));
+      };
+      if (t.remiseAuth) { agree(); return; }
+      openApprove(0, agree, { mode: r.mode, value: r.value, label: tr('Prix convenu') + ' ' + d.fmt(r.res.after), cut: d.fmt(r.res.cut) });
+    };
     [0].concat(pcts).forEach((r) => {
       const b = document.createElement('button');
       b.className = 'bq-chip' + (cur === r ? ' on' : '');

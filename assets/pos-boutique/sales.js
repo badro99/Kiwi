@@ -1,8 +1,10 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=307';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=204';
-import { offerRegister } from './inventory.js?v=204';
-import { ticketOwner } from './ticket-owner.js?v=3';
-import { ticketRemise } from './ticket-remise.js?v=3';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=309';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=205';
+import { offerRegister } from './inventory.js?v=205';
+import { ticketOwner } from './ticket-owner.js?v=4';
+import { ticketRemise } from './ticket-remise.js?v=4';
+import { agreedUnit, maxPct } from './bargain.js?v=2';
+import { mountBargain } from './bargain-ui.js?v=2';
 import { bqKitTicketFoot } from './kit-2027.js?v=22';
 import { sellSearch } from './search.js?v=16';
 import '../money-cents.js?v=7';
@@ -495,11 +497,11 @@ import { photoImg } from '../retail-photos.js?v=5';
           ${colorDot(ln.color)}
           <span class="sz">${esc(ln.size)}</span> ${esc(colorLabel(ln.color))}
           ${pr ? `<span class="bq-line-promo" title="${esc(pr.name || 'Promotion')}"><i data-lucide="tag"></i>${esc(pr.badge)}</span>` : ''}
-          ${ln.remise ? `<span class="bq-line-rem">−${ln.remise} %</span>` : ''}
+          ${ln.remise ? `<span class="bq-line-rem">−${ln.remise} %</span>` : ''}${ln.agreed ? `<span class="bq-line-rem">${esc(tr('Prix convenu'))}</span>` : ''}
         </span>
       </span>
       <span class="bq-line-right">
-        <span class="bq-line-price">${(ln.remise || pr) ? `<span class="was">${fmtMAD(shelf(p.price) * ln.qty)}</span>` : ''}${fmtMAD(u * ln.qty)}</span>
+        <span class="bq-line-price">${(ln.remise || ln.agreed || pr) ? `<span class="was">${fmtMAD(shelf(p.price) * ln.qty)}</span>` : ''}${fmtMAD(u * ln.qty)}</span>
         <span class="bq-line-qty">
           <button data-bq-minus="${i}" aria-label="Retirer">−</button><b>${ln.qty}</b><button data-bq-plus="${i}" aria-label="Ajouter">+</button>
         </span>
@@ -553,14 +555,17 @@ import { photoImg } from '../retail-photos.js?v=5';
        en vigueur. */
     const pr = promoFor(pid);
     const stamp = pr ? { price: pr.price, badge: pr.badge, name: pr.promo.name, id: pr.promo.id } : null;
-    ticketOwner.addLine(state.ticket, { pid, size: cfg.size, color: cfg.color, qty: cfg.qty, remise: cfg.remise, promo: stamp });
+    ticketOwner.addLine(state.ticket, Object.assign({ pid, size: cfg.size, color: cfg.color, qty: cfg.qty, remise: cfg.remise, promo: stamp }, cfg.agreed > 0 ? { agreed: cfg.agreed } : {}));
     renderTicket(); renderGrid(); renderBadges(); icons();
     if (!opts || !opts.quiet) toast(`${p.name} · ${cfg.size}, sur le ticket`);
     return true;
   }
 
   /* ═══════════════════════ VARIANT SHEET ═══════════════════════ */
-  const sheet = { pid: null, size: null, color: null, qty: 1, remise: 0, exchange: false };
+  const sheet = { pid: null, size: null, color: null, qty: 1, remise: 0, agreed: 0, bmode: 'pct', btext: '', bok: true, exchange: false };
+  /* Le prix d'une pièce dans la fiche : convenu (bargain.js) ou pourcentage. */
+  const sheetUnit = (base) => (sheet.agreed > 0 ? sheet.agreed : shelf(base * (100 - sheet.remise) / 100));
+  const sheetPer = (u) => (sheet.agreed > 0 ? `${tr('Prix convenu')} · accord gérante` : sheet.remise ? `−${sheet.remise} % · accord gérante` : `${fmtMAD(u)} × ${sheet.qty}`);
 
   function defaultSize(p) {
     const c = ticketClient();
@@ -573,7 +578,7 @@ import { photoImg } from '../retail-photos.js?v=5';
     const p = P[pid];
     Object.assign(sheet, {
       pid,
-      size: null, color: p.colors[0], qty: 1, remise: 0,
+      size: null, color: p.colors[0], qty: 1, remise: 0, agreed: 0, bmode: 'pct', btext: '', bok: true,
       exchange: !!(opts && opts.exchange),
     });
     sheet.size = defaultSize(p);
@@ -591,7 +596,7 @@ import { photoImg } from '../retail-photos.js?v=5';
        prix, et le ticket en affichait un autre deux secondes plus tard. */
     const shPromo = promoFor(sheet.pid);
     const shBase = shPromo ? shPromo.price : shelf(p.price);
-    const unit = shelf(shBase * (100 - sheet.remise) / 100);
+    const unit = sheetUnit(shBase);
     const available = availableStock(p.id, sheet.size, sheet.color);
     const canAdd = available >= sheet.qty;
     const el = $('#bq-sheetm', root);
@@ -602,7 +607,7 @@ import { photoImg } from '../retail-photos.js?v=5';
         <span class="bq-sheet-title"><h3>${esc(p.name)}</h3><span class="sub">${esc((RAYONS.find((r) => r.id === p.rayon) || { label: 'Divers' }).label)}${p.flag ? ` · ${esc(p.flag)}` : ''}${p.ean ? ` · ${esc(p.ean)}` : ''}</span></span>
         <span class="bq-sheet-price">
           <span class="val" id="bq-sheet-total">${fmtMAD(unit * sheet.qty)}</span>
-          <span class="per ${sheet.remise ? 'rem' : ''}" id="bq-sheet-per">${sheet.remise ? `−${sheet.remise} % · accord gérante` : `${fmtMAD(unit)} × ${sheet.qty}`}</span>
+          <span class="per ${(sheet.remise || sheet.agreed) ? 'rem' : ''}" id="bq-sheet-per">${sheetPer(unit)}</span>
         </span>
       </div>
       ${shPromo ? `
@@ -642,9 +647,7 @@ import { photoImg } from '../retail-photos.js?v=5';
         </div>
         <div class="bq-f">
           <div class="bq-f-lbl">Remise <span class="opt">· accord gérante</span></div>
-          <div class="bq-chips" id="bq-remise">
-            ${[0, ...(window.KiwiDiscountPolicy?.percentages(_bqKey) || [5, 10, 15, 20])].map((r) => `<button class="bq-chip ${sheet.remise === r ? 'on' : ''}" data-bq-rem="${r}">${r === 0 ? 'Sans' : `−${r} %`}${r > 0 && !state.ticket.remiseAuth ? ' <i data-lucide="lock"></i>' : ''}</button>`).join('')}
-          </div>
+          <div class="bq-bargain" id="bq-bargain"></div>
         </div>
       </div>`}
 
@@ -652,14 +655,34 @@ import { photoImg } from '../retail-photos.js?v=5';
         <button class="bq-btn secondary" data-bq-close>Annuler</button>
         ${sheet.exchange
           ? `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="arrow-left-right"></i><span class="bq-sheet-add-l">Choisir cet article · <span class="nb">${fmtMAD(shBase)}</span></span></button>`
-          : `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="plus"></i><span class="bq-sheet-add-l">Ajouter au ticket · <span class="nb" id="bq-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></span></button>`}
+          : `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd && sheet.bok ? '' : 'disabled'}><i data-lucide="plus"></i><span class="bq-sheet-add-l">Ajouter au ticket · <span class="nb" id="bq-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></span></button>`}
       </div>`;
 
+    /* Remise à la marocaine : % , prix convenu ou −MAD (bargain-ui.js). Les
+       pastilles gardent leur gestionnaire plus bas ; le prix convenu ne
+       demande l'accord gérante qu'à l'ajout, pas à chaque chiffre tapé. */
+    const pctList = window.KiwiDiscountPolicy?.percentages(_bqKey) || [5, 10, 15, 20];
+    const bhost = $('#bq-bargain', el);
+    if (bhost) mountBargain(bhost, {
+      tr, fmt: fmtMAD, base: shBase, mode: sheet.bmode, text: sheet.btext,
+      chipsHTML: `<div class="bq-chips" id="bq-remise">${[0, ...pctList].map((r) => `<button class="bq-chip ${sheet.remise === r ? 'on' : ''}" data-bq-rem="${r}">${r === 0 ? 'Sans' : `−${r} %`}${r > 0 && !state.ticket.remiseAuth ? ' <i data-lucide="lock"></i>' : ''}</button>`).join('')}</div>`,
+      evaluate: (mode, value) => { const r = agreedUnit(shBase, mode, value, maxPct(pctList)); return r.error ? r : { after: r.unit, cut: r.cut }; },
+      onChange: (r, switched) => {
+        sheet.bmode = r.mode; sheet.btext = r.text || '';
+        if (switched) sheet.remise = 0;
+        sheet.agreed = r.ok ? r.res.after : 0;
+        sheet.bok = r.mode === 'pct' || r.ok || r.empty;
+        if (switched) $$('[data-bq-rem]', el).forEach((x) => x.classList.toggle('on', +x.dataset.bqRem === 0));
+        refreshPrice();
+      },
+    });
     const refreshPrice = () => {
-      const u = shelf(shBase * (100 - sheet.remise) / 100);
+      const u = sheetUnit(shBase);
       $('#bq-sheet-total', el).textContent = fmtMAD(u * sheet.qty);
-      $('#bq-sheet-per', el).textContent = sheet.remise ? `−${sheet.remise} % · accord gérante` : `${fmtMAD(u)} × ${sheet.qty}`;
-      $('#bq-sheet-per', el).classList.toggle('rem', !!sheet.remise);
+      $('#bq-sheet-per', el).textContent = sheetPer(u);
+      $('#bq-sheet-per', el).classList.toggle('rem', !!(sheet.remise || sheet.agreed));
+      const addB = $('#bq-sheet-add', el);
+      if (addB && !sheet.exchange) addB.disabled = !(availableStock(p.id, sheet.size, sheet.color) >= sheet.qty) || !sheet.bok;
       const cta = $('#bq-sheet-cta', el);
       if (cta) cta.textContent = fmtMAD(u * sheet.qty);
       const qv = $('#bq-qty-val', el);
@@ -712,9 +735,17 @@ import { photoImg } from '../retail-photos.js?v=5';
         openExchSummary(sheet.pid, sheet.size, sheet.color);
         return;
       }
-      if (addToTicket(sheet.pid, { size: sheet.size, color: sheet.color, qty: sheet.qty, remise: sheet.remise })) {
-        closeVeil('#bq-sheet-veil');
+      const go = () => {
+        if (addToTicket(sheet.pid, { size: sheet.size, color: sheet.color, qty: sheet.qty, remise: sheet.remise, agreed: sheet.agreed })) {
+          closeVeil('#bq-sheet-veil');
+        }
+      };
+      if (sheet.agreed > 0 && !state.ticket.remiseAuth) {
+        const cut = Math.round((shBase - sheet.agreed) * 100) / 100;
+        openApprove(0, go, { mode: sheet.bmode, value: sheet.bmode === 'price' ? sheet.agreed : cut, label: `${tr('Prix convenu')} ${fmtMAD(sheet.agreed)}`, cut: fmtMAD(cut) });
+        return;
       }
+      go();
     };
     icons();
   }
@@ -724,8 +755,8 @@ import { photoImg } from '../retail-photos.js?v=5';
      journal » — et seul un booléen partait dans la vente : impossible, trois jours
      plus tard, de dire qui avait accordé les 20 % ni combien avaient été lâchés.
      On garde le nom (jamais le code), l'heure et le pourcentage demandé. */
-  function markRemiseAuth(pct, by, role) {
-    ticketOwner.applyDiscount(state.ticket, { pct, by: by || '', role: role || '', at: new Date().toISOString() });
+  function markRemiseAuth(pct, by, role, auth) {
+    ticketOwner.applyDiscount(state.ticket, { pct: auth ? null : pct, mode: auth ? auth.mode : 'pct', value: auth ? auth.value : pct, by: by || '', role: role || '', at: new Date().toISOString() });
   }
 
   /* Sur une boutique RÉELLE, la remise passe par le vrai code responsable — le
@@ -734,14 +765,17 @@ import { photoImg } from '../retail-photos.js?v=5';
      (« Vendeur 1 »), donc la rangée « Aicha approuve » n'y était plus qu'un
      décor : un appui suffisait, sans code, sans nom. La démo locale garde sa
      distribution nommée — elle n'a pas de portier à interroger. */
-  function openApprove(pct, onOk) {
+  /* auth (remise à la marocaine) : { mode, value, label, cut } quand la remise
+     est un prix convenu ou un montant, pas un pourcentage. */
+  function openApprove(pct, onOk, auth) {
+    const what = auth ? auth.label : `−${pct} %`;
     if (pvReal() && typeof window.requireManager === 'function') {
-      if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'discount', key: 'act.discount.pct', args: { pct: `${pct}\u202f%` } });
-      window.requireManager(`Remise −${pct} % sur le ticket ${state.ticket.num || 'en cours'}`, () => {
+      if (window.KiwiAuthAct) window.KiwiAuthAct(auth ? { kind: 'discount', key: 'act.discount.amount', args: { amount: auth.cut } } : { kind: 'discount', key: 'act.discount.pct', args: { pct: `${pct}\u202f%` } });
+      window.requireManager(`Remise ${what} sur le ticket ${state.ticket.num || 'en cours'}`, () => {
         let mgr = null;
         try { mgr = window.KiwiCaissePairing?.lastManager?.() || null; } catch (_) {}
-        markRemiseAuth(pct, mgr && mgr.name, mgr && mgr.role);
-        toast(mgr && mgr.name ? `Remise −${pct} %, accord ${mgr.name}` : `Remise −${pct} % autorisée`);
+        markRemiseAuth(pct, mgr && mgr.name, mgr && mgr.role, auth);
+        toast(mgr && mgr.name ? `Remise ${what}, accord ${mgr.name}` : `Remise ${what} autorisée`);
         onOk();
       });
       return;
@@ -749,7 +783,7 @@ import { photoImg } from '../retail-photos.js?v=5';
     const el = $('#bq-approvem', root);
     el.innerHTML = `
       <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
-      <h3 class="modal-title">Remise −${pct} %</h3>
+      <h3 class="modal-title">Remise ${esc(what)}</h3>
       <p class="modal-subtle">Une remise s'applique avec l'accord de la gérante, qui valide ?</p>
       <button class="bq-staff-row" id="bq-app-ok">
         <span class="bq-staff-ava">${initials(STAFF.gerante.name)}</span>
@@ -766,9 +800,9 @@ import { photoImg } from '../retail-photos.js?v=5';
     icons();
     $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-approve-veil'); });
     $('#bq-app-ok', el).onclick = () => {
-      markRemiseAuth(pct, STAFF.gerante.name, STAFF.gerante.role);
+      markRemiseAuth(pct, STAFF.gerante.name, STAFF.gerante.role, auth);
       closeVeil('#bq-approve-veil');
-      toast(`Remise −${pct} %, accord ${STAFF.gerante.name}`);
+      toast(`Remise ${what}, accord ${STAFF.gerante.name}`);
       onOk();
     };
     $('#bq-app-no', el).onclick = () => toast(`${STAFF.conseil.name} n'est pas habilitée, seule la gérante approuve une remise`);
@@ -782,6 +816,7 @@ import { photoImg } from '../retail-photos.js?v=5';
   const remiseKit = () => ticketRemise({
     state, root, $, $$, tr, icons, toast, clById, firstName, ticketOwner, renderBadges,
     openVeil, closeVeil, bqKey: () => _bqKey, renderTicket, renderGrid, openApprove,
+    fmt: fmtMAD, pieceBase: (ln) => lineUnit(Object.assign({}, ln, { remise: 0, agreed: 0 })),
   });
   const ticketClientLabel = (t) => remiseKit().ticketClientLabel(t);
   const openTicketRemise = () => remiseKit().openTicketRemise();

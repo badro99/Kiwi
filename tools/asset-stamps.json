@@ -220,8 +220,8 @@
     "sha": "c978ff18c9a0add3"
   },
   "assets/caisse-lang.js": {
-    "v": "146",
-    "sha": "0751eb2a5704983a"
+    "v": "147",
+    "sha": "44c613c7ece8ca58"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1628,24 +1628,32 @@
     "sha": "7cb8dd4b9c6a537a"
   },
   "assets/pos-boutique.css": {
-    "v": "307",
-    "sha": "1ccd3e7bb7e4ee86"
+    "v": "309",
+    "sha": "b684eddfee44a144"
   },
   "assets/pos-boutique.js": {
-    "v": "307",
-    "sha": "3fc20f03d1b6d71e"
+    "v": "309",
+    "sha": "3bf9ef9c4934e3bd"
+  },
+  "assets/pos-boutique/bargain-ui.js": {
+    "v": "2",
+    "sha": "32a6b0ace026e155"
+  },
+  "assets/pos-boutique/bargain.js": {
+    "v": "2",
+    "sha": "1056a50942fb4ef5"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "204",
-    "sha": "ef46803c133cdd66"
+    "v": "205",
+    "sha": "6a9cd608b05b8555"
   },
   "assets/pos-boutique/delivery-card.js": {
     "v": "7",
     "sha": "32391031fa72c30f"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "122",
-    "sha": "360ea1477f352688"
+    "v": "123",
+    "sha": "8f1ae86c855a5b50"
   },
   "assets/pos-boutique/exchange.js": {
     "v": "3",
@@ -1660,8 +1668,8 @@
     "sha": "8e6ff69221c1cf80"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "204",
-    "sha": "0e2181a3a5612246"
+    "v": "205",
+    "sha": "34aec79253766903"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "22",
@@ -1704,24 +1712,24 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "204",
-    "sha": "922520571c3d8a84"
+    "v": "205",
+    "sha": "7f9e6c3240ab5508"
   },
   "assets/pos-boutique/search.js": {
     "v": "16",
     "sha": "a8982d72bc950b5e"
   },
   "assets/pos-boutique/ticket-number.js": {
-    "v": "1",
-    "sha": "5fbda0929881f767"
+    "v": "2",
+    "sha": "c471d0efda23fd7e"
   },
   "assets/pos-boutique/ticket-owner.js": {
-    "v": "3",
-    "sha": "254a30f6c8c001a3"
+    "v": "4",
+    "sha": "f02727b26de902b7"
   },
   "assets/pos-boutique/ticket-remise.js": {
-    "v": "3",
-    "sha": "e6162143ee1205ff"
+    "v": "4",
+    "sha": "df9f2ed8612df4f5"
   },
   "assets/pos-boutique/till-clock.js": {
     "v": "2",
@@ -1740,8 +1748,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "419",
-    "sha": "b79d4af4151db6ed"
+    "v": "420",
+    "sha": "4c90bdc5fe62c0ea"
   },
   "assets/pos-epicerie.css": {
     "v": "40",

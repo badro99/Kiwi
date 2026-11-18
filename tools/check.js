@@ -1864,8 +1864,7 @@ section('Whole-project regressions');
     'pos-maison-test.mjs',
     'pos-maison-split-test.mjs',
     'pos-boutique-split-test.mjs',
-    'boutique-ticket-owner-test.mjs',
-    'boutique-bargain-test.mjs',
+    'boutique-ticket-owner-test.mjs', 'boutique-bargain-test.mjs',
     'boutique-inv-alerts-test.mjs',
     'boutique-search-variants-test.mjs',
     'boutique-ticket-number-test.mjs',
@@ -2530,7 +2529,7 @@ section('Whole-project regressions');
     /* 2026-10-19 · la caisse boutique démo au téléphone : fiche, inventaire,
        Vendus après une vente encaissée au toucher. */
     'boutique-phone-browser-test.mjs',
-    'boutique-pay-dismiss-browser-test.mjs', 'boutique-pay-reload-browser-test.mjs', 'offline-db-reload-browser-test.mjs',
+    'boutique-pay-dismiss-browser-test.mjs', 'boutique-bargain-browser-test.mjs', 'boutique-pay-reload-browser-test.mjs', 'offline-db-reload-browser-test.mjs',
     /* 2026-10-19 · chaque caisse sur un iPad tactile : − / + du ticket à
        32 px dans les treize métiers, champ code-barres de l'épicerie lisible. */
     'ipad-touch-browser-test.mjs',
