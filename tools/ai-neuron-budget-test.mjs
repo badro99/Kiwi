@@ -11,7 +11,7 @@ const env = { DB: {
     async first() { return db.prepare(sql).get(...args) || null; },
     async run() { return db.prepare(sql).run(...(args || [])); } }; }
 } };
-const model = '@cf/zai-org/glm-5.3-flash';
+const model = '@cf/google/gemma-4-26b-a4b-it'; // vision primary since 18 Nov 2026 (glm-5.3-flash deprecated)
 const { MODEL: translateModel } = await import('../functions/api/ai/menu-translate.js');
 const { MODEL: textModel } = await import('../functions/api/ai/ask.js');
 const used = (merchant = 'a') => db.prepare("SELECT calls FROM ai_usage_kind WHERE merchant=? AND kind='neurons'").get(merchant)?.calls || 0;
@@ -22,7 +22,8 @@ for (let i = 0; i < 40; i++) assert.equal(await quotaOk(env, 'a', 'ask', 200, { 
 reset();
 let allowed = 0;
 while (await quotaOk(env, 'a', 'visioninspect', 150, { models: [model], maxTokens: 8192, vision: true })) allowed++;
-assert.ok(allowed > 0 && allowed < 15, 'large vision burst hits budget');
+const visionCall = estimateNeurons({ models: [model], maxTokens: 8192, vision: true });
+assert.ok(allowed > 0 && allowed <= Math.floor(10000 / visionCall), 'large vision burst hits budget (stops at the free 10,000 neurons, whatever the model price)');
 reset();
 assert.equal(await quotaOk(env, 'a', 'ask', 200, { models: ['unknown'], maxTokens: 1 }), false);
 env.AI_GLOBAL_DAILY_NEURONS = '1000000'; env.AI_MERCHANT_DAILY_NEURONS = '1000000';
@@ -35,13 +36,15 @@ const begin = async () => { budgets.set(env, {}); assert.equal(await quotaOk(env
 await begin();
 env.AI = { async run() { return { usage: { prompt_tokens: 100, completion_tokens: 100 } }; } };
 await runAiWithGateway(env, model, { max_tokens: 700 });
-assert.equal(used(), 6, 'unused reservation refunded');
-assert.equal(used('*global*'), 6);
+// Gemma 4 $0.10/$0.30 per M: 100 + 100 tokens = $0.00004 = 3.64 neurons, rounded up.
+assert.equal(used(), 4, 'unused reservation refunded');
+assert.equal(used('*global*'), 4);
 reset(); await begin();
 env.AI = { async run() { return { usage: { input_tokens: 10000, output_tokens: 10000 } }; } };
 await runAiWithGateway(env, model, { max_tokens: 700 });
-assert.equal(used(), 591, 'overrun recorded');
-assert.equal(used('*global*'), 591);
+// 10,000 + 10,000 tokens = $0.004 = 363.6 neurons, rounded up.
+assert.equal(used(), 364, 'overrun recorded');
+assert.equal(used('*global*'), 364);
 reset(); await begin();
 env.AI = { async run() { return {}; } };
 await runAiWithGateway(env, model, { max_tokens: 700 });

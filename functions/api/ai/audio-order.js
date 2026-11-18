@@ -1,5 +1,5 @@
 import { budgetRoute } from './_budget-route.js';
-import { GLM_FLASH as MODEL, QWEN as FALLBACK_MODEL } from './_models.js';
+import { TEXT_PRIMARY as MODEL, TEXT_FALLBACK as FALLBACK_MODEL } from './_models.js';
 export { MODEL, FALLBACK_MODEL };
 // /api/ai/audio-order — Conversion de commandes WhatsApp / vocales en bons de cuisine.
 //

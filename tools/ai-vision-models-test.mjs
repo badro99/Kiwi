@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ═══════════════════════════════════════════════════════════════════════════
- * Kiwi · duo vision (GLM 5.3 Flash → Gemma 4 26B) : chaque modèle reçoit SA forme
+ * Kiwi · duo vision (Gemma 4 26B → DeepSeek V4.1 Flash, depuis le 18 nov. 2026 ; GLM 5.3 Flash avant) : chaque modèle reçoit SA forme
  * de requête, et l'outil d'évaluation (tools/ai-model-eval.mjs) tient hors réseau.
  *
  *   node tools/ai-vision-models-test.mjs
@@ -27,6 +27,11 @@ console.log('■ Duo vision & évaluation (tools/ai-vision-models-test.mjs)');
 
 const GLM = '@cf/zai-org/glm-5.3-flash';
 const GEMMA = '@cf/google/gemma-4-26b-a4b-it';
+const DEEPSEEK = '@cf/deepseek-ai/deepseek-v4.1-flash-1017';
+/* Le duo des routes. GLM 5.3 Flash (déprécié le 20 nov. 2026) reste testé ci-dessous comme FAMILLE de forme. */
+const PRIMARY = GEMMA, FALLBACK = DEEPSEEK;
+/* Gemma : messages image_url, réflexion coupée (_run.js thinkingOff), sans reasoning_effort. */
+const gemmaSent = (payload) => hasChatShape(payload) && payload.chat_template_kwargs && payload.chat_template_kwargs.enable_thinking === false && !('reasoning_effort' in payload);
 const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 const DATA_URL = `data:image/png;base64,${PNG_B64}`;
 const GOOD_MENU = { choices: [{ finish_reason: 'stop', message: { content: '{"currency":"MAD","items":[{"name":"Café","price":14.5,"cat":"Cafés"}]}' } }] };
@@ -46,7 +51,7 @@ const hasChatShape = (payload) => Array.isArray(payload.messages) && imageUrlOf(
 
 // ── 1. Familles et traduction de payload ─────────────────────────────────────
 ok(vision.visionFamily(GLM) === 'glm' && vision.visionFamily(GEMMA) === 'gemma' && vision.visionFamily('@cf/meta/llama-3.2-11b-vision-instruct') === 'llama-vision' && vision.visionFamily('@cf/qwen/qwen3-30b-a3b-fp8') === 'other', 'visionFamily reconnaît GLM, Gemma, Llama vision et le reste');
-ok(vision.VISION_PRIMARY_MODEL === GLM && vision.VISION_FALLBACK_MODEL === GEMMA, '_vision.js : primaire GLM 5.3 Flash, secours Gemma 4 26B');
+ok(vision.VISION_PRIMARY_MODEL === PRIMARY && vision.VISION_FALLBACK_MODEL === FALLBACK, '_vision.js : primaire Gemma 4 26B, secours DeepSeek V4.1 Flash');
 
 const base = { messages: vision.visionMessages({ system: 'SYS', text: 'TXT', dataUrl: DATA_URL }), max_tokens: 900, temperature: 0.1, top_p: 0.9, reasoning_effort: 'low' };
 const forGlm = vision.payloadForModel(GLM, base);
@@ -62,21 +67,21 @@ const decoded = Buffer.from(PNG_B64, 'base64');
 ok(Array.isArray(native.image) && native.image.length === decoded.length && native.image.every((b, i) => b === decoded[i]), 'forme native Llama : image = octets exacts de l\'URL data:');
 ok(native.prompt.startsWith('SYS') && native.prompt.includes('TXT') && !('messages' in native) && native.max_tokens === 900, 'forme native Llama : { prompt (système + texte), image, max_tokens }, pas de messages');
 
-// ── 2. menu-import et salle-import : primaire GLM, secours Gemma ─────────────
+// ── 2. menu-import et salle-import : primaire Gemma, secours DeepSeek ───────
 for (const [name, mod, run] of [['menu-import', menu, (env) => menu.runVision(env, DATA_URL)], ['salle-import', salle, (env) => salle.runVision(env, DATA_URL)]]) {
-  ok(mod.VISION_MODEL === GLM && mod.VISION_FALLBACK_MODEL === GEMMA, `${name} : VISION_MODEL = GLM 5.3 Flash, VISION_FALLBACK_MODEL = Gemma 4 26B`);
+  ok(mod.VISION_MODEL === PRIMARY && mod.VISION_FALLBACK_MODEL === FALLBACK, `${name} : VISION_MODEL = Gemma 4 26B, VISION_FALLBACK_MODEL = DeepSeek V4.1 Flash`);
 
   const happy = mockAi(() => GOOD_MENU);
   const r1 = await run(happy.env);
-  ok(happy.calls.length === 1 && happy.calls[0].model === GLM && r1.model === GLM, `${name} : GLM lit d'abord, un seul appel quand il répond`);
-  ok(hasChatShape(happy.calls[0].payload) && happy.calls[0].payload.reasoning_effort === 'low', `${name} : requête GLM = chat image_url + reasoning_effort « low »`);
+  ok(happy.calls.length === 1 && happy.calls[0].model === PRIMARY && r1.model === PRIMARY, `${name} : Gemma lit d'abord, un seul appel quand il répond`);
+  ok(gemmaSent(happy.calls[0].payload), `${name} : requête Gemma = chat image_url, réflexion coupée, sans reasoning_effort`);
   ok(happy.calls[0].opts && happy.calls[0].opts.gateway && happy.calls[0].opts.gateway.id === 'kiwi' && happy.calls[0].opts.gateway.cacheTtl === 0, `${name} : l'appel passe par la passerelle « kiwi », cacheTtl 0`);
 
-  const failover = mockAi((model) => { if (model === GLM) throw new Error('InferenceUpstreamError: 502 bad gateway'); return GOOD_MENU; });
+  const failover = mockAi((model) => { if (model === PRIMARY) throw new Error('InferenceUpstreamError: 502 bad gateway'); return GOOD_MENU; });
   const r2 = await run(failover.env);
-  ok(failover.calls.length === 2 && failover.calls[1].model === GEMMA && r2.model === GEMMA, `${name} : une panne de GLM bascule sur Gemma (2 appels, jamais 3)`);
+  ok(failover.calls.length === 2 && failover.calls[1].model === FALLBACK && r2.model === FALLBACK, `${name} : une panne de Gemma bascule sur DeepSeek (2 appels, jamais 3)`);
   ok(hasChatShape(failover.calls[1].payload) && !('reasoning_effort' in failover.calls[1].payload), `${name} : la requête Gemma garde l'image_url et perd reasoning_effort`);
-  ok(JSON.stringify(failover.calls[1].payload.messages) === JSON.stringify(failover.calls[0].payload.messages), `${name} : GLM et Gemma lisent exactement les mêmes messages (même prompt)`);
+  ok(JSON.stringify(failover.calls[1].payload.messages) === JSON.stringify(failover.calls[0].payload.messages), `${name} : Gemma et DeepSeek lisent exactement les mêmes messages (même prompt)`);
 
   const limited = mockAi(() => { const e = new Error('429 rate limit'); e.status = 429; throw e; });
   let threw = null;
@@ -117,7 +122,7 @@ const VISION_ROUTES = [
 for (const [file, primaryKey, fallbackKey] of VISION_ROUTES) {
   const mod = await imp(file);
   const src = fs.readFileSync(path.join(AI_DIR, file), 'utf8');
-  ok(mod[primaryKey] === GLM && mod[fallbackKey] === GEMMA, `${file} : primaire GLM 5.3 Flash, secours Gemma 4 26B`);
+  ok(mod[primaryKey] === PRIMARY && mod[fallbackKey] === FALLBACK, `${file} : primaire Gemma 4 26B, secours DeepSeek V4.1 Flash`);
   ok(/runVisionPair\(/.test(src) && !/runWithFallback\(env, VISION_MODEL/.test(src) && !/runWithPayloadFallback\(/.test(src), `${file} : la lecture d'image passe par runVisionPair (forme de requête par modèle)`);
 }
 const routeSources = fs.readdirSync(AI_DIR).filter((f) => f.endsWith('.js')).map((f) => [f, fs.readFileSync(path.join(AI_DIR, f), 'utf8')]);
@@ -128,10 +133,10 @@ ok(llamaLeft.length === 0, 'plus aucune route AI ne nomme llama-3.2-11b-vision' 
 const ev = await import(pathToFileURL(path.join(ROOT, 'tools/ai-model-eval.mjs')).href);
 const dry = await ev.dryRun({ models: ev.DEFAULT_MODELS });
 ok(dry.problems.length === 0 && dry.fixtures.length === 6, 'fixtures : 6 PNG valides, sous la borne des routes, vérité terrain cohérente' + (dry.problems.length ? ' · ' + dry.problems.join(' ; ') : ''));
-ok(ev.DEFAULT_MODELS.every((m) => dry.oracle.summary[m].all.score === 1 && dry.oracle.summary[m].all.errors === 0), 'réponse parfaite → score 1 pour GLM, Gemma et Llama (enveloppes choices[] et response lues)');
+ok(ev.DEFAULT_MODELS.every((m) => dry.oracle.summary[m].all.score === 1 && dry.oracle.summary[m].all.errors === 0), 'réponse parfaite → score 1 pour Gemma, DeepSeek et Llama (enveloppes choices[] et response lues)');
 ok(ev.DEFAULT_MODELS.every((m) => dry.noisy.summary[m].all.score < 0.95), 'réponse dégradée → score nettement plus bas');
 const shapesSeen = new Set(dry.calls.map((c) => `${c.model}=${c.shape}`));
-ok(shapesSeen.has(`${GLM}=messages`) && shapesSeen.has(`${GEMMA}=messages`) && shapesSeen.has('@cf/meta/llama-3.2-11b-vision-instruct=native'), 'le faux API valide la forme de chaque modèle (chat pour GLM/Gemma ; native après refus pour Llama)');
+ok(shapesSeen.has(`${DEEPSEEK}=messages`) && shapesSeen.has(`${GEMMA}=messages`) && shapesSeen.has('@cf/meta/llama-3.2-11b-vision-instruct=native'), 'le faux API valide la forme de chaque modèle (chat pour Gemma/DeepSeek ; native après refus pour Llama)');
 
 const truth = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/ai-eval/truth.json'), 'utf8')).fixtures;
 const bi = truth.find((f) => f.id === 'menu-bilingual-fr-ar');
@@ -149,13 +154,13 @@ ok(ev.similarity('Thé à la menthe', 'THE A LA MENTHE') === 1 && ev.normalize('
 const SECRET = 'tok_SECRET_value_9f8e7d6c';
 const ACCT = 'acct_1234567890abcdef';
 const leakyFetch = async () => ({ ok: false, status: 401, json: async () => ({ success: false, errors: [{ code: 10000, message: `Authentication error for ${SECRET} on ${ACCT}` }] }) });
-const leaked = await ev.runEval({ fetchImpl: leakyFetch, accountId: ACCT, token: SECRET, models: [GLM], runs: 1, fixtureSelect: 'menu-cafe-fr', timeoutMs: 5000, baseline: GLM });
+const leaked = await ev.runEval({ fetchImpl: leakyFetch, accountId: ACCT, token: SECRET, models: [DEEPSEEK], runs: 1, fixtureSelect: 'menu-cafe-fr', timeoutMs: 5000, baseline: DEEPSEEK });
 const blob = JSON.stringify(leaked.rows) + leaked.text;
 ok(!blob.includes(SECRET) && !blob.includes(ACCT) && leaked.rows[0].error.includes('***'), 'secrets : jeton et identifiant de compte expurgés des erreurs, du tableau et du rapport');
 ok(leaked.rows.length === 1 && leaked.rows[0].ok === false && leaked.rows[0].score === 0, 'une erreur HTTP 401 est un appel en erreur noté 0, sans nouvel essai ni exception');
 
 const full = await ev.runEval({ fetchImpl: ev.makeFakeFetch(await ev.loadRoutes(), ev.loadFixtures('all')), accountId: 'a-dry-account', token: 'a-dry-token', models: ev.DEFAULT_MODELS, runs: 1, fixtureSelect: 'all', timeoutMs: 5000, baseline: ev.BASELINE_MODEL });
-ok(/DÉCISION/.test(full.text) && full.verdicts[GLM] && full.verdicts[GEMMA] && full.verdicts[GLM].verdict === 'FALLBACK-OK', 'rapport : tableau par modèle et par fixture, puis décision (à égalité avec la base : « FALLBACK-OK », pas « PRIMARY-READY »)');
+ok(/DÉCISION/.test(full.text) && full.verdicts[DEEPSEEK] && full.verdicts[GEMMA] && full.verdicts[DEEPSEEK].verdict === 'FALLBACK-OK', 'rapport : tableau par modèle et par fixture, puis décision (à égalité avec la base : « FALLBACK-OK », pas « PRIMARY-READY »)');
 
 if (failures.length) {
   console.log(`\n✗ ${failures.length} échec(s)`);

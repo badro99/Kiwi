@@ -1,5 +1,5 @@
 import { budgetRoute } from './_budget-route.js';
-import { GLM_FLASH as MODEL, QWEN as FALLBACK_MODEL } from './_models.js';
+import { TEXT_PRIMARY as MODEL, TEXT_FALLBACK as FALLBACK_MODEL } from './_models.js';
 export { MODEL, FALLBACK_MODEL };
 // /api/ai/invoice-match — Rapprochement 3-voies et détection des hausses de prix fournisseur.
 //

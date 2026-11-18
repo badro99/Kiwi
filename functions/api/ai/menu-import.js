@@ -1,5 +1,5 @@
 import { budgetRoute } from './_budget-route.js';
-import { GLM_FLASH as VISION_MODEL, GEMMA_VISION as VISION_FALLBACK_MODEL, QWEN as MODEL, GLM_LEGACY as FALLBACK_MODEL } from './_models.js';
+import { VISION_PRIMARY as VISION_MODEL, VISION_FALLBACK as VISION_FALLBACK_MODEL, TEXT_PRIMARY as MODEL, TEXT_FALLBACK as FALLBACK_MODEL } from './_models.js';
 export { VISION_MODEL, VISION_FALLBACK_MODEL, MODEL, FALLBACK_MODEL };
 // /api/ai/menu-import · lecture et extraction structurée d'une carte de restaurant.
 //

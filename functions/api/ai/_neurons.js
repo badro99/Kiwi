@@ -1,9 +1,9 @@
-import { GLM_FLASH, GEMMA_VISION, QWEN, GLM_LEGACY, GPT_OSS, WHISPER, WHISPER_TURBO, CLEF } from './_models.js';
+import { GEMMA_VISION, QWEN, GLM_LEGACY, GPT_OSS, DEEPSEEK_FLASH, WHISPER, WHISPER_TURBO, CLEF, TEXT_PRIMARY } from './_models.js';
 
 // Source: https://developers.cloudflare.com/workers-ai/platform/pricing/
 // Free allocation: 10,000 neurons/account/UTC day; $0.011 per 1,000 neurons.
 // Model token prices: Workers AI model pages, local snapshot 2026-10-11 in
-// tools/ai-model-eval.mjs (GLM $0.15/$0.50, Gemma $0.10/$0.30 per million).
+// tools/ai-model-eval.mjs (Gemma $0.10/$0.30 per million).
 // Qwen/GPT rates: tools/copilot-model-eval.mjs, local snapshot 2026-10-18.
 // Clef input-only rate: functions/api/_support-triage.js, local model notes.
 // Legacy GLM retains the conservative $0.35/$0.75 envelope until re-priced.
@@ -17,7 +17,8 @@ import { GLM_FLASH, GEMMA_VISION, QWEN, GLM_LEGACY, GPT_OSS, WHISPER, WHISPER_TU
 export const FREE_DAILY_NEURONS = 10000;
 export const INPUT_TOKEN_ALLOWANCE = 4096;
 export const budgets = new WeakMap();
-const RATES = new Map([[GLM_FLASH, [.15, .5]], [GEMMA_VISION, [.1, .3]],
+// DeepSeek V4.1 Flash: Workers AI pricing page, 2026-11-18.
+const RATES = new Map([[GEMMA_VISION, [.1, .3]], [DEEPSEEK_FLASH, [.3, 1.2]],
   [CLEF, [.24, 0]], [QWEN, [.051, .335]], [GLM_LEGACY, [.35, .75]], [GPT_OSS, [.35, .75]],
   [WHISPER, [.35, .75]], [WHISPER_TURBO, [.35, .75]]]);
 // Whisper bills by audio duration (~41.14 neurons/minute). Without a size, reserve
@@ -28,7 +29,7 @@ function whisperNeurons(audioBytes) {
   return Math.ceil(Math.max(1, minutes) * WHISPER_PER_MINUTE);
 }
 /** @param {{ models?: string[], maxTokens?: number, vision?: boolean, audioBytes?: number }} [options] */
-export function estimateNeurons({ models = [GLM_FLASH], maxTokens = 8192, vision = false, audioBytes } = {}) {
+export function estimateNeurons({ models = [TEXT_PRIMARY], maxTokens = 8192, vision = false, audioBytes } = {}) {
   if (!models.length) return 0; // Intake commit stores a document, without model inference.
   if (!Number.isSafeInteger(maxTokens) || maxTokens < 1) return Infinity;
   const costs = models.map((model) => {

@@ -1,5 +1,5 @@
 import { budgetRoute } from './_budget-route.js';
-import { GLM_FLASH as PRIMARY_MODEL, QWEN as FALLBACK_MODEL } from './_models.js';
+import { TEXT_PRIMARY as PRIMARY_MODEL, TEXT_FALLBACK as FALLBACK_MODEL } from './_models.js';
 import { json, readSession, readCookie, SESS_COOKIE } from '../../auth/_lib.js';
 import { tenantFor, storeOwner } from '../_private.js';
 import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';

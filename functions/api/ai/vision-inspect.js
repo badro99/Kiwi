@@ -1,5 +1,5 @@
 import { budgetRoute } from './_budget-route.js';
-import { GLM_FLASH as MODEL, GEMMA_VISION as FALLBACK_MODEL } from './_models.js';
+import { VISION_PRIMARY as MODEL, VISION_FALLBACK as FALLBACK_MODEL } from './_models.js';
 export { MODEL, FALLBACK_MODEL };
 // /api/ai/vision-inspect — Inspection visuelle et classification universelle de photos & documents.
 //

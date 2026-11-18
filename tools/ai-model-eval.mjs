@@ -44,10 +44,11 @@ const FIXTURE_DIR = path.join(HERE, 'fixtures', 'ai-eval');
 process.removeAllListeners('warning');
 
 export const BASELINE_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
+// glm-5.3-flash left the defaults on 18 Nov 2026 (Cloudflare deprecation 20 Nov).
 export const DEFAULT_MODELS = [
   BASELINE_MODEL,
-  '@cf/zai-org/glm-5.3-flash',
   '@cf/google/gemma-4-26b-a4b-it',
+  '@cf/deepseek-ai/deepseek-v4.1-flash-1017',
 ];
 
 /* Dollars par million de tokens (entrée, sortie) · pages modèles Workers AI,
@@ -56,6 +57,7 @@ export const PRICING = {
   '@cf/zai-org/glm-5.3-flash': [0.15, 0.5],
   '@cf/google/gemma-4-26b-a4b-it': [0.1, 0.3],
   '@cf/meta/llama-3.2-11b-vision-instruct': [0.049, 0.676],
+  '@cf/deepseek-ai/deepseek-v4.1-flash-1017': [0.3, 1.2], // pricing page, 2026-11-18
 };
 export const PRICING_DATE = '2026-10-11';
 
@@ -286,7 +288,8 @@ export async function loadRoutes() {
     validateMenuItems: menu.validateMenuItems,
     buildSallePayload: salle.buildSallePayload,
     validateSalle: salle.validateSalle,
-    payloadForModel: vision.payloadForModel,
+    // Same order as production: the route's shape, then runAiWithGateway's thinking switch.
+    payloadForModel: (model, payload) => run.thinkingOff(model, vision.payloadForModel(model, payload)),
     nativeLlamaPayload: vision.nativeLlamaPayload,
     visionFamily: vision.visionFamily,
     aiText: run.aiText,
@@ -586,7 +589,7 @@ function parseArgs(argv) {
 }
 
 const HELP = `Usage : CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… node tools/ai-model-eval.mjs [options]
-  --models a,b,c     modèles à comparer (défaut : llama-3.2-11b-vision, glm-5.3-flash, gemma-4-26b-a4b-it)
+  --models a,b,c     modèles à comparer (défaut : llama-3.2-11b-vision, gemma-4-26b-a4b-it, deepseek-v4.1-flash)
   --baseline <id>    modèle de référence de la décision (défaut : llama-3.2-11b-vision)
   --runs N           passages par fixture et par modèle, 1 à 10 (défaut 2)
   --fixtures X       all | menu | salle | id1,id2

@@ -1,5 +1,5 @@
 import { budgetRoute } from './_budget-route.js';
-import { GLM_FLASH as MODEL, GLM_FLASH as VISION_MODEL, GEMMA_VISION as VISION_FALLBACK_MODEL, QWEN as FALLBACK_MODEL } from './_models.js';
+import { TEXT_PRIMARY as MODEL, VISION_PRIMARY as VISION_MODEL, VISION_FALLBACK as VISION_FALLBACK_MODEL, TEXT_FALLBACK as FALLBACK_MODEL } from './_models.js';
 export { MODEL, VISION_MODEL, VISION_FALLBACK_MODEL, FALLBACK_MODEL };
 // /api/ai/expense-ocr — OCR et extraction de bons de caisse et reçus de dépenses.
 //

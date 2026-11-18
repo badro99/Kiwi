@@ -1,4 +1,4 @@
-import { GLM_FLASH as VISION_PRIMARY_MODEL, GEMMA_VISION as VISION_FALLBACK_MODEL, GLM_PREFIX, GEMMA_PREFIX, LLAMA_PREFIX } from './_models.js';
+import { VISION_PRIMARY as VISION_PRIMARY_MODEL, VISION_FALLBACK as VISION_FALLBACK_MODEL, GLM_PREFIX, GEMMA_PREFIX, LLAMA_PREFIX } from './_models.js';
 export { VISION_PRIMARY_MODEL, VISION_FALLBACK_MODEL };
 // functions/api/ai/_vision.js — le duo vision partagé : qui lit l'image, et dans quelle forme.
 //

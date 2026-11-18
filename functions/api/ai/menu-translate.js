@@ -1,5 +1,5 @@
 import { budgetRoute } from './_budget-route.js';
-import { QWEN as MODEL, GLM_LEGACY as FALLBACK_MODEL } from './_models.js';
+import { TEXT_PRIMARY as MODEL, TEXT_FALLBACK as FALLBACK_MODEL } from './_models.js';
 export { MODEL, FALLBACK_MODEL };
 // /api/ai/menu-translate — traduction et adaptation intelligente de la carte d'un restaurant.
 //

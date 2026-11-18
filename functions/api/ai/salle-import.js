@@ -1,5 +1,5 @@
 import { budgetRoute } from './_budget-route.js';
-import { GLM_FLASH as VISION_MODEL, GEMMA_VISION as VISION_FALLBACK_MODEL, QWEN as TEXT_MODEL, GLM_LEGACY as TEXT_FALLBACK_MODEL } from './_models.js';
+import { VISION_PRIMARY as VISION_MODEL, VISION_FALLBACK as VISION_FALLBACK_MODEL, TEXT_PRIMARY as TEXT_MODEL, TEXT_FALLBACK as TEXT_FALLBACK_MODEL } from './_models.js';
 export { VISION_MODEL, VISION_FALLBACK_MODEL, TEXT_MODEL, TEXT_FALLBACK_MODEL };
 // /api/ai/salle-import — lecture d'une photo de salle pour préparer le plan de salle.
 //

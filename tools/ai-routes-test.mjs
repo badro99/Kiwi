@@ -53,7 +53,7 @@ const invSrc = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/ai/inv
 
 ok(/from '\.\/_run\.js'/.test(invSrc) && !/gateway:\s*\{/.test(invSrc), 'invoice.js imports the shared gateway runner (no local copy)');
 ok(invoiceModels.MODEL === '@cf/qwen/qwen3-30b-a3b-fp8', 'invoice.js primary model stays @cf/qwen/qwen3-30b-a3b-fp8');
-ok(invoiceModels.FALLBACK_MODEL === '@cf/zai-org/glm-4.7-flash', 'invoice.js fallback model is @cf/zai-org/glm-4.7-flash');
+ok(invoiceModels.MODEL === '@cf/qwen/qwen3-30b-a3b-fp8' && invoiceModels.FALLBACK_MODEL === '@cf/google/gemma-4-26b-a4b-it', 'invoice.js: Qwen primary, Gemma 4 fallback (glm-4.7-flash scored 3/21 on 18 Nov 2026)');
 
 // ── 2b. Every model id in every AI route is Cloudflare-hosted ─────────────────
 /* A third-party id (openai/, anthropic/, google/, x-ai/…) through the same
@@ -246,6 +246,25 @@ ok(primaryModelCalls === 1, 'Primary attempted once through gateway');
 ok(fallbackModelCalls === 1, 'Fallback attempted once through gateway');
 
 
+// ── 6b. Thinking off for Gemma 4 and Qwen 3 ──────────────────────────────────
+/* Neither model honours reasoning_effort 'low': on the real menu-rank prompt
+ * both spent all 1200 tokens thinking and returned no JSON (18 Nov 2026,
+ * 10/21 and 9/21 readable answers). Gemma stops with
+ * chat_template_kwargs.enable_thinking=false, Qwen with « /no_think ». */
+const { thinkingOff } = await import(pathToFileURL(path.join(ROOT, 'functions/api/ai/_run.js')).href);
+const { GEMMA_VISION: GEMMA_ID, QWEN: QWEN_ID, GPT_OSS: GPT_OSS_ID } = await import(pathToFileURL(path.join(ROOT, 'functions/api/ai/_models.js')).href);
+const thinkBase = { messages: [{ role: 'system', content: 'S' }, { role: 'user', content: 'U' }], max_tokens: 10, reasoning_effort: 'low' };
+const gOff = thinkingOff(GEMMA_ID, thinkBase);
+ok(gOff.chat_template_kwargs && gOff.chat_template_kwargs.enable_thinking === false && gOff.messages[1].content === 'U', 'thinkingOff: Gemma gets chat_template_kwargs.enable_thinking = false, messages untouched');
+const qOff = thinkingOff(QWEN_ID, thinkBase);
+ok(qOff.messages[1].content === 'U /no_think' && qOff.messages[0].content === 'S' && thinkBase.messages[1].content === 'U', 'thinkingOff: Qwen gets « /no_think » on the last user message, input not mutated');
+ok(thinkingOff(QWEN_ID, qOff).messages[1].content === 'U /no_think', 'thinkingOff: Qwen switch is not doubled');
+ok(thinkingOff(QWEN_ID, { prompt: 'P', max_tokens: 5 }).prompt === 'P /no_think', 'thinkingOff: Qwen prompt-style payload gets « /no_think »');
+ok(thinkingOff(GPT_OSS_ID, thinkBase) === thinkBase, 'thinkingOff: other families pass through unchanged');
+const seen = [];
+await runAiWithGateway({ AI: { run: async (m, p) => { seen.push(p); return {}; } } }, GEMMA_ID, thinkBase);
+ok(seen[0] && seen[0].chat_template_kwargs && seen[0].chat_template_kwargs.enable_thinking === false, 'runAiWithGateway sends the thinking-off payload to Workers AI');
+
 // ── 7. Function calling on /api/ai/ask (pure functions + route shape) ─────────
 const { cleanTools, cleanToolCalls, allowedToolCalls, cleanMessages: cleanMsgs } = await import(pathToFileURL(path.join(ROOT, 'functions/api/ai/ask.js')).href);
 const goodTool = { type: 'function', function: { name: 'sales_between', description: 'x', parameters: { type: 'object', properties: { from: { type: 'string' } } } } };
@@ -319,7 +338,7 @@ for (const file of routeFiles) {
 }
 
 // ── 9. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 61 + routeFiles.filter(f => !f.startsWith('_')).length;
+const EXPECTED_COUNT = 67 + routeFiles.filter(f => !f.startsWith('_')).length;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {

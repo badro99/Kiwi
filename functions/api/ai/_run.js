@@ -1,4 +1,29 @@
 import { meteredAttempt } from './_neurons.js';
+import { GEMMA_PREFIX, QWEN } from './_models.js';
+
+/* Gemma 4 et Qwen 3 ignorent reasoning_effort 'low' : sur le vrai prompt de
+ * menu-rank, les deux passaient leurs 1200 tokens à réfléchir et ne rendaient
+ * aucun JSON (18 nov. 2026 : 10/21 et 9/21 réponses lisibles). Gemma s'arrête
+ * avec chat_template_kwargs.enable_thinking=false (230 tokens, 7 s), Qwen avec
+ * « /no_think » sur le dernier message utilisateur. Les autres familles passent
+ * telles quelles. Ne modifie jamais l'objet reçu. */
+const NO_THINK = ' /no_think';
+export function thinkingOff(model, payload) {
+  if (!payload || typeof payload !== 'object') return payload;
+  if (String(model).startsWith(GEMMA_PREFIX)) {
+    return { ...payload, chat_template_kwargs: { ...(payload.chat_template_kwargs || {}), enable_thinking: false } };
+  }
+  if (model !== QWEN) return payload;
+  const tag = (s) => (s.endsWith(NO_THINK) ? s : s + NO_THINK);
+  if (Array.isArray(payload.messages)) {
+    const i = payload.messages.map((m) => m && m.role).lastIndexOf('user');
+    if (i < 0 || typeof payload.messages[i].content !== 'string') return payload;
+    const messages = payload.messages.slice();
+    messages[i] = { ...messages[i], content: tag(messages[i].content) };
+    return { ...payload, messages };
+  }
+  return typeof payload.prompt === 'string' ? { ...payload, prompt: tag(payload.prompt) } : payload;
+}
 // functions/api/ai/_run.js — l'appel Workers AI partagé par toutes les routes AI.
 //
 // Passerelle Cloudflare AI Gateway « kiwi » (journal, coût par modèle, limites),
@@ -7,7 +32,8 @@ import { meteredAttempt } from './_neurons.js';
 export const GATEWAY_OPTS = { gateway: { id: 'kiwi', cacheTtl: 0 } };
 
 export async function runAiWithGateway(env, model, payload) {
-  return meteredAttempt(env, model, payload, () => env.AI.run(model, payload, GATEWAY_OPTS));
+  const sent = thinkingOff(model, payload);
+  return meteredAttempt(env, model, sent, () => env.AI.run(model, sent, GATEWAY_OPTS));
 }
 
 /* Texte d'une réponse Workers AI, quel que soit le modèle : `response` (Qwen,
