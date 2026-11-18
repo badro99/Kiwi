@@ -20,8 +20,8 @@
     "sha": "2ca67dbaad608f76"
   },
   "assets/admin-legacy.js": {
-    "v": "12",
-    "sha": "7caf135e1211e6eb"
+    "v": "13",
+    "sha": "03872e627777e491"
   },
   "assets/admin-origin-devices.js": {
     "v": "1",
@@ -220,8 +220,8 @@
     "sha": "c978ff18c9a0add3"
   },
   "assets/caisse-lang.js": {
-    "v": "147",
-    "sha": "44c613c7ece8ca58"
+    "v": "148",
+    "sha": "8559f8b9a6dccb1d"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -344,8 +344,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "21",
-    "sha": "077a4279a005572e"
+    "v": "22",
+    "sha": "ab1fe74ae1a1dc26"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -456,8 +456,8 @@
     "sha": "c65ff3684a189b46"
   },
   "assets/dashboard-pwa.js": {
-    "v": "615",
-    "sha": "bd7aa1e435906c4e"
+    "v": "616",
+    "sha": "2f2e29a063408cdf"
   },
   "assets/dashboard-shell.css": {
     "v": "10",
@@ -1984,8 +1984,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "91",
-    "sha": "2d05a2df55e3039b"
+    "v": "92",
+    "sha": "ace85becad93b91c"
   },
   "assets/printer/pairing-lang.js": {
     "v": "21",
