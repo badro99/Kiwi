@@ -120,6 +120,7 @@ function saveDeps() {
 
 const results = {};
 let running = 0, runningSlow = 0, done = 0;
+const lingering = [], lingerMs = Number(process.env.KIWI_CHECK_LINGER_MS) || 10000;
 const t0 = Date.now();
 
 /* Pass cache. A test that passed reads the same bytes again → it passes again.
@@ -270,9 +271,9 @@ function start(task) {
   const trace = envFor(task);
   const probe = withProbe(task, trace.env);
   const child = cp.spawn(process.execPath, task.args, { cwd: task.cwd || undefined, env: probe.env, stdio: ['ignore', 'pipe', 'pipe'] });
-  let stdout = '', stderr = '';
-  child.stdout.on('data', (d) => { stdout += d; });
-  child.stderr.on('data', (d) => { stderr += d; });
+  let stdout = '', stderr = '', lastOut = Date.now();
+  child.stdout.on('data', (d) => { stdout += d; lastOut = Date.now(); });
+  child.stderr.on('data', (d) => { stderr += d; lastOut = Date.now(); });
   const timer = setTimeout(() => { try { child.kill('SIGKILL'); } catch (_) {} }, timeout);
   const began = Date.now();
   child.on('close', (status, signal) => {
@@ -295,6 +296,9 @@ function start(task) {
     }
     running--; if (task.slow) runningSlow--;
     done++;
+    /* A pass that kept its process alive long after its last word is waiting on
+       a timer nobody needs (hotel-cloud-save held 230 s on a retry ladder). */
+    if (status === 0 && Date.now() - lastOut > lingerMs) lingering.push([nameOf(task), Date.now() - lastOut]);
     results[task.key] = { status, signal, stdout, stderr, cpuMs, wallMs: Date.now() - began, cells };
     if (status !== 0) {
       if (cacheOn) delete passCache[relOf(task.args[task.args.length - 1])];
@@ -318,6 +322,7 @@ function pump() {
     savePassCache();
     if (ledgerDir) { try { fs.rmSync(ledgerDir, { recursive: true, force: true }); } catch (_) {} }
     if (reused) console.log(`  ✓ ${reused} test files reused from the pass cache (same inputs as their last pass, under 24 h; KIWI_PASS_CACHE=0 runs them)`);
+    lingering.sort((a, b) => b[1] - a[1]).slice(0, 5).forEach(([name, ms]) => console.log(`  ⚠ ${name} stayed open ${Math.round(ms / 1000)} s after its last output: a timer or handle keeps Node alive (unref it)`));
     console.log(`  ✓ ${done} test files run in parallel in ${Math.round((Date.now() - t0) / 1000)}s (${jobs} at a time, ${browserJobs} browsers)`);
   }
 }

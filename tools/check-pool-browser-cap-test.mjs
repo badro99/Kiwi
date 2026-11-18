@@ -66,4 +66,18 @@ ok('KIWI_CHECK_BROWSER_JOBS_IDLE égal au plafond rend l’ancien comportement',
 ok('par défaut, deux navigateurs de plus que le plafond', () => {
   assert.equal(run(null).maxPages, 4);
 });
+ok('une suite qui reste ouverte après sa dernière ligne est nommée', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-pool-linger-'));
+  const held = path.join(dir, 'held-test.mjs'), quick = path.join(dir, 'quick-test.mjs');
+  fs.writeFileSync(held, "console.log('✓ done'); setTimeout(() => {}, 900);\n");
+  fs.writeFileSync(quick, "console.log('✓ done');\n");
+  const records = path.join(dir, 'records.jsonl');
+  fs.writeFileSync(records, [held, quick].map((f) => JSON.stringify({ key: f, args: [f] })).join('\n') + '\n');
+  const env = { ...process.env, TMPDIR: dir, KIWI_PASS_CACHE: '0', KIWI_DEP_TRACE: '0', KIWI_COVERAGE_PROBE: '0', KIWI_CHECK_LINGER_MS: '500' };
+  const r = spawnSync(process.execPath, [POOL, records, path.join(dir, 'results.json'), '4', '1'], { cwd: ROOT, env, encoding: 'utf8', timeout: 30000 });
+  fs.rmSync(dir, { recursive: true, force: true });
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /⚠ held-test\.mjs stayed open \d+ s after its last output/);
+  assert.doesNotMatch(r.stdout, /quick-test\.mjs stayed open/);
+});
 console.log(`check-pool-browser-cap: ${n} checks ok`);
