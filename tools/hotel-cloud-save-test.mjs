@@ -45,7 +45,11 @@ function browser({ real = true, initialSlug = 'hotel-a', fetchImpl }) {
   window.window = window;
   const context = vm.createContext({
     window, document, localStorage, console, JSON, Date, Math, Object, Array, String,
-    Promise, AbortController, setTimeout, clearTimeout,
+    Promise, AbortController, clearTimeout,
+    /* The module's retry ladder (2 s … 120 s) must not keep Node alive once the
+       cases are done: it held this suite open 230 s after its last assertion.
+       The cases' own waits (wait() above) keep their ordinary timers. */
+    setTimeout: (fn, ms, ...args) => { const t = setTimeout(fn, ms, ...args); t.unref(); return t; },
     fetch: (url, options) => fetchImpl(String(url), options),
   });
   vm.runInContext(source, context, { filename: 'assets/cloud-doc.js' });

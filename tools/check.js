@@ -2393,7 +2393,7 @@ section('Whole-project regressions');
     'layout-test.mjs',
     'segment-test.mjs',
     'target-audit-test.mjs',
-    'check-parallel-test.mjs',
+    'check-parallel-test.mjs', 'check-pool-browser-cap-test.mjs',
     'day-report-inset-test.mjs',
     'menu-phone-test.mjs',
     'caisse-client-sale-test.mjs',

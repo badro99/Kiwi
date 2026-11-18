@@ -25,6 +25,12 @@ const { isSlow, DEFAULT_TIMEOUT_MS } = require('./check-guard');
 const [recordsFile, resultsFile, jobsArg, browserArg] = process.argv.slice(2);
 const jobs = Math.max(1, Number(jobsArg) || 4);
 const browserJobs = Math.max(1, Math.min(jobs, Number(browserArg) || 3));
+/* Once every node suite has started, their slots sit empty while the browser
+ * suites queue three at a time: that tail was about 20 of a gate's 30 minutes
+ * (18 Nov 2026). The cap rises to browserIdle then. Six browsers overloaded
+ * this Mac only while node suites ran beside them. KIWI_CHECK_BROWSER_JOBS_IDLE
+ * tunes it; set it to the browser count to keep the old flat cap. */
+const browserIdle = Math.max(browserJobs, Math.min(jobs, Number(process.env.KIWI_CHECK_BROWSER_JOBS_IDLE) || browserJobs + 2));
 const timeout = Number(process.env.KIWI_CHECK_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
 
 const seen = new Set();
@@ -254,7 +260,8 @@ function savePassCache() {
 
 function next() {
   if (!tasks.length) return null;
-  const i = tasks.findIndex((t) => !t.slow || runningSlow < browserJobs);
+  const cap = (tasks.some((t) => !t.slow) || running - runningSlow > 1) ? browserJobs : browserIdle;
+  const i = tasks.findIndex((t) => !t.slow || runningSlow < cap);
   return i < 0 ? null : tasks.splice(i, 1)[0];
 }
 
@@ -315,5 +322,5 @@ function pump() {
   }
 }
 
-console.log(`  … running ${tasks.length} test files in parallel (${jobs} at a time, ${browserJobs} browsers)`);
+console.log(`  … running ${tasks.length} test files in parallel (${jobs} at a time, ${browserJobs} browsers, ${browserIdle} once node suites are done)`);
 pump();

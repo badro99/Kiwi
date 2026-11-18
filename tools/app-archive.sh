@@ -32,7 +32,9 @@ trap 'exit 143' TERM
 cd "$ROOT"
 # Gate the exact commit, and preserve its output with the archive evidence.
 SOURCE=$(git rev-parse HEAD)
-node tools/check.js > "$RUN/check.log" 2>&1 || { tail -60 "$RUN/check.log"; exit 1; }
+# The build number and team are not test inputs; left in the environment they
+# changed every pass-cache key (tools/check-pool.js) and each release gate ran cold.
+env -u KIWI_BUILD_NUMBER -u KIWI_DEVELOPMENT_TEAM -u KIWI_ARCHIVE_OUT node tools/check.js > "$RUN/check.log" 2>&1 || { tail -60 "$RUN/check.log"; exit 1; }
 if [ "$(git rev-parse HEAD)" != "$SOURCE" ] || [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
   echo 'Source changed during validation; restart the release from a clean commit.' >&2; exit 1
 fi

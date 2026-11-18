@@ -268,7 +268,7 @@ one browser and one page per locale and viewport instead of relaunching.
 
 **Every tier runs in parallel by default.** Before its sections start, check.js
 reads every test file it names and runs them side by side (`tools/check-pool.js`,
-up to 8 at a time, 3 browsers, longest first from the last run's timings), then
+up to 8 at a time, 3 browsers rising to 5 once the node suites are done (`KIWI_CHECK_BROWSER_JOBS_IDLE`), longest first from the last run's timings), then
 replays its sections in order against those results: same output, same verdict.
 Only a pass is reused; a test that failed in parallel runs again alone at its
 usual place, so a red still means red. `KIWI_CHECK_JOBS=1` is the old serial
