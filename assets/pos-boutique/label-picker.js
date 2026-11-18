@@ -10,7 +10,7 @@
  * Le contenu de l'étiquette (nom, prix, promo, code) reste celui de
  * labelForVariant() (pos-boutique/inventory.js) : rien n'est recalculé ici.
  * La réception est marquée imprimée dès qu'une étiquette part, comme avant. */
-import * as SZ from '../boutique-sizes.js?v=23';
+import * as SZ from '../boutique-sizes.js?v=24';
 
 const MAX = 999;
 const PHRASES = {
