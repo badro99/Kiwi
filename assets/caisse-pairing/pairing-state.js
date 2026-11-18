@@ -80,6 +80,7 @@
     return { kind: 'app' };
   }
   function bootVertical(v) {
+    var pc = window.KiwiPairingCommit; if (pc && pc.typeFirst && pc.typeFirst(v, bootVertical)) return; /* no type on record: the server's first */
     var gate = document.getElementById('till-boot-gate');
     if (gate) gate.remove();
     hidePad();

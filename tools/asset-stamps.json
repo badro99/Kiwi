@@ -244,8 +244,8 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "72",
-    "sha": "509092fa441699b4"
+    "v": "75",
+    "sha": "88bb025e8342c67a"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
@@ -1532,8 +1532,8 @@
     "sha": "58807c0272c55d44"
   },
   "assets/pairing-commit.js": {
-    "v": "13",
-    "sha": "8020f203ba9ba4ce"
+    "v": "15",
+    "sha": "6de061c7ee12b006"
   },
   "assets/persistence-notices.js": {
     "v": "2",

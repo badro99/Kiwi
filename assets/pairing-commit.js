@@ -165,7 +165,44 @@
     return { ok: true, venue: venue, switched: switched };
   }
 
-  window.KiwiPairingCommit = { commit: commit, purgeTenantData: purgeTenantData };
+  /* « Ouvrir la caisse sur cet appareil » opened Santos Store, a boutique, on the
+   * restaurant till (owner's video, 18 Nov 2026): the dashboard's hand-off
+   * carried no type, the pairing was saved without one, and caisse-pairing.js ›
+   * routeFor() sends a type it does not know to the restaurant. The store's type
+   * on the server is the truth. serverTyped asks /api/config once, 2.5 s at most,
+   * and keeps the venue as it came offline, on an error, or when the server has
+   * no type on record; a changed type drops the old subtype with it.
+   * typeFirst is the till's hook (caisse-pairing.js › bootVertical): a venue with
+   * no type is typed first, the answer re-committed on this device's pairing (the
+   * same store: nothing is purged), then routed.
+   * It asks once per boot, and never for a venue that has a type.
+   * tools/caisse-handoff-server-type-test.mjs */
+  function serverTyped(h, then) {
+    var done = false;
+    function go(t) {
+      if (done) return;
+      done = true;
+      var mine = String(h.type || '').trim().toLowerCase();
+      then(t && t !== mine ? Object.assign({}, h, { type: t, subtype: '' }) : h);
+    }
+    setTimeout(function () { go(''); }, 2500);
+    try {
+      fetch('/api/config?merchant=' + encodeURIComponent(h.merchant), { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (d) { go(d && typeof d.type === 'string' ? d.type.trim().toLowerCase() : ''); }, function () { go(''); });
+    } catch (_) { go(''); }
+  }
+  function typeFirst(v, then) {
+    if (!v || !v.merchant || String(v.type || '').trim() || v.typeAsked) return false;
+    serverTyped(v, function (t) {
+      var pv = pairedVenue();
+      if (t.type && pv && pv.merchant === v.merchant) commit('', Object.assign({}, pv, { type: t.type, subtype: '' }));
+      then(Object.assign({}, t, { typeAsked: true }));
+    });
+    return true;
+  }
+
+  window.KiwiPairingCommit = { commit: commit, purgeTenantData: purgeTenantData, serverTyped: serverTyped, typeFirst: typeFirst };
 })();
 
 /* ── window.KiwiTrustedClock · une horloge que reculer l'heure de l'appareil ne trompe pas.

@@ -405,7 +405,7 @@ var SHELL = [
   /* Le geste qui pose un appairage · et qui déclenche la purge ci-dessus. La
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */
-  '/assets/pairing-commit.js?v=13',
+  '/assets/pairing-commit.js?v=15',
   /* Le verrou d'une caisse dépairée ou réappairée en plein service. Sans lui
      hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
   '/assets/till-tenant.js?v=7',
@@ -649,7 +649,7 @@ var SHELL = [
   '/assets/refund-split.js?v=2',
   '/assets/pos-maison/inventory.js?v=110',
   '/assets/pos-maison.js?v=193',
-  '/assets/caisse-pairing.js?v=72',
+  '/assets/caisse-pairing.js?v=75',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
