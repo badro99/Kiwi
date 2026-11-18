@@ -1,11 +1,11 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=312';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=208';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=313';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=209';
 import { openMoves } from './inv-moves.js?v=7';
 import * as SZ from '../boutique-sizes.js?v=24';
 import { openLabelPicker } from './label-picker.js?v=3';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=20';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=208';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=209';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -1120,14 +1120,27 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh"><div><h3>Code existant à enregistrer</h3><span>Code scanné : <b>${esc(code)}</b>, rattachez-le à un article (sans réimprimer).</span></div></div>
       <div class="bqi-form">
-        <div class="bqi-fg"><label for="bqi-or-prod">Article</label><select id="bqi-or-prod">${products.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>
-        <div class="bqi-fg"><label for="bqi-or-var">Variante (couleur · taille)</label><select id="bqi-or-var">${products.length ? varOptions(products[0].id) : ''}</select></div>
+        <div class="bqi-fg"><label for="bqi-or-prod">Article</label><select id="bqi-or-prod"><option value="" selected>Choisir un article</option>${products.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>
+        <div class="bqi-fg"><label for="bqi-or-var">Variante (couleur · taille)</label><select id="bqi-or-var" disabled><option value="" selected>Choisir d’abord l’article</option></select></div>
       </div>
-      <div class="bqi-modfoot"><span class="bqi-dashboard-only">Créer l’article dans le tableau de bord</span><button class="bq-btn" id="bqi-or-save">Rattacher le code</button></div>`;
+      <div class="bqi-modfoot"><span class="bqi-dashboard-only">Créer l’article dans le tableau de bord</span><button class="bq-btn" id="bqi-or-save" disabled>Rattacher le code</button></div>`;
     invSetModal(html, (el) => {
       const prodSel = $('#bqi-or-prod', el), varSel = $('#bqi-or-var', el);
-      if (prodSel) prodSel.addEventListener('change', () => { varSel.innerHTML = varOptions(prodSel.value); });
-      $('#bqi-or-save', el).addEventListener('click', () => {
+      const saveBtn = $('#bqi-or-save', el);
+      /* Rien n'est présélectionné. Avant, le premier article et sa première
+         variante l'étaient : un appui sur « Rattacher » collait chaque code
+         inconnu au même article, et la caisse le vendait ensuite à chaque scan
+         (Santos, 2026-11-18). Le bouton attend un choix explicite. */
+      const sync = () => { if (saveBtn) saveBtn.disabled = !(varSel && varSel.value); };
+      if (prodSel) prodSel.addEventListener('change', () => {
+        varSel.innerHTML = prodSel.value
+          ? `<option value="" selected>Choisir la variante</option>${varOptions(prodSel.value)}`
+          : '<option value="" selected>Choisir d’abord l’article</option>';
+        varSel.disabled = !prodSel.value;
+        sync();
+      });
+      if (varSel) varSel.addEventListener('change', sync);
+      saveBtn.addEventListener('click', () => {
         const vid = varSel && varSel.value;
         if (!vid) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Choisissez une variante (ajoutez-en une d\'abord)')); return; }
         const res = cat.attachBarcode(vid, code);
