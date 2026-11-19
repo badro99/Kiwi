@@ -197,6 +197,13 @@
     if (type === 'rayon' || type === 'produits') {
       scope.ids = Array.isArray(sc.ids) ? sc.ids.map(str).filter(Boolean) : [];
     }
+    /* « Tout le magasin, sauf ces articles » (Santos, le week-end : −50 MAD
+       partout, les hauts à 150 MAD gardent leur prix). Seulement sur les
+       cibles larges : sur une liste d'articles, on retire l'article. */
+    if ((type === 'tout' || type === 'rayon') && Array.isArray(sc.exclude)) {
+      var ex = sc.exclude.map(str).filter(function (id, i, a) { return id && a.indexOf(id) === i; });
+      if (ex.length) scope.exclude = ex;
+    }
     /* `avant` sans date ne vise RIEN (et non pas « tout ») : une cible vide qui
        se lit comme le magasin entier, c'est le magasin bradé par accident. */
     if (type === 'avant') scope.before = num(sc.before, 0);
@@ -441,7 +448,7 @@
       }
     const matches = (p, item, stock) => {
         if (!p || !item) return false;
-        var sc = p.scope || {};
+        var sc = p.scope || {}; if (Array.isArray(sc.exclude) && sc.exclude.indexOf(item.id) >= 0) return false; /* « sauf ces articles » : ils gardent leur prix */
         if (sc.type === 'tout') return true;
         if (sc.type === 'rayon') return (sc.ids || []).indexOf(item.rayon) >= 0 || (!!item.uncat && (sc.ids || []).indexOf('_uncat') >= 0);
         if (sc.type === 'produits') return (sc.ids || []).indexOf(item.id) >= 0;

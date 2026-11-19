@@ -22,6 +22,7 @@ export function badPromotion(doc) {
     if (p.scope != null) {
       if (typeof p.scope !== 'object' || !SCOPES.includes(p.scope.type)) return 'promo-scope';
       if (p.scope.before != null && (!isNum(p.scope.before) || p.scope.before < 0)) return 'promo-scope-date';
+      if (p.scope.exclude != null && (!Array.isArray(p.scope.exclude) || p.scope.exclude.length > 5000 || p.scope.exclude.some((id) => typeof id !== 'string'))) return 'promo-scope-exclude';
       if (p.scope.max != null && (!isNum(p.scope.max) || p.scope.max < 0)) return 'promo-scope-max';
     }
     for (const k of ['from', 'to']) if (p[k] != null && (!isNum(p[k]) || p[k] < 0)) return 'promo-date';

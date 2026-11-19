@@ -80,7 +80,7 @@ export const toTs = (v) => {
   }
 export const matches = (p, item, stock) => {
     if (!p || !item) return false;
-    var sc = p.scope || {};
+    var sc = p.scope || {}; if (Array.isArray(sc.exclude) && sc.exclude.indexOf(item.id) >= 0) return false; /* « sauf ces articles » : ils gardent leur prix */
     if (sc.type === 'tout') return true;
     if (sc.type === 'rayon') return (sc.ids || []).indexOf(item.rayon) >= 0 || (!!item.uncat && (sc.ids || []).indexOf('_uncat') >= 0);
     if (sc.type === 'produits') return (sc.ids || []).indexOf(item.id) >= 0;

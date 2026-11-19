@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=211';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=129';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=211';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=211';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=212';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=130';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=212';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=212';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
@@ -1216,7 +1216,7 @@ import { zServiceStart, zMarkDay, zIsDelivery, zSplitParts, zSalesFor, zSentPart
       }
     const matches = (p, item, stock) => {
         if (!p || !item) return false;
-        var sc = p.scope || {};
+        var sc = p.scope || {}; if (Array.isArray(sc.exclude) && sc.exclude.indexOf(item.id) >= 0) return false; /* « sauf ces articles » : ils gardent leur prix */
         if (sc.type === 'tout') return true;
         if (sc.type === 'rayon') return (sc.ids || []).indexOf(item.rayon) >= 0 || (!!item.uncat && (sc.ids || []).indexOf('_uncat') >= 0);
         if (sc.type === 'produits') return (sc.ids || []).indexOf(item.id) >= 0;

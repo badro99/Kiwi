@@ -157,6 +157,17 @@ const vieux = { v: 1, promos: [PR.normalize({ id: 'a', name: 'Ancien', kind: 'pe
 const frais = { v: 1, promos: [PR.normalize({ id: 'a', name: 'Corrigé', kind: 'percent', value: 40, scope: { type: 'tout' }, updatedAt: now })], deleted: [] };
 check(PR.merge(vieux, frais).promos[0].value === 40, 'la version la plus récente l\'emporte, d\'où qu\'elle vienne');
 
+/* ── « tout le magasin, sauf ces articles » (Santos, le week-end) ──────────── */
+{
+  const wk = PR.normalize({ id: 'wk', kind: 'amount', value: 50, scope: { type: 'tout', exclude: ['top', 'top', ''] } });
+  check(JSON.stringify(wk.scope.exclude) === '["top"]', 'la liste des exceptions est gardée, sans doublon ni vide');
+  check(PR.matches(wk, item({ id: 'jean' })) && !PR.matches(wk, item({ id: 'top' })), 'un article exclu garde son prix, les autres baissent');
+  const ray = PR.normalize({ kind: 'amount', value: 50, scope: { type: 'rayon', ids: ['caftans'], exclude: ['top'] } });
+  check(!PR.matches(ray, item({ id: 'top' })) && PR.matches(ray, item({ id: 'p9' })), 'l\'exception vaut aussi dans un rayon');
+  check(PR.normalize({ scope: { type: 'produits', ids: ['a'], exclude: ['a'] } }).scope.exclude === undefined, 'une liste d\'articles n\'a pas d\'exceptions');
+  check(PR.normalize({ scope: { type: 'tout' } }).scope.exclude === undefined, 'sans exception, rien n\'est ajouté au document');
+}
+
 /* ── saisie hostile ──────────────────────────────────────────────────────── */
 const junk = PR.normalize({ kind: 'chelou', value: -40, scope: { type: 'nawak' } });
 check(junk.kind === 'percent' && junk.value === 0 && junk.scope.type === 'tout', 'une promotion illisible retombe sur une valeur inoffensive');

@@ -127,6 +127,10 @@
 
 
   function scopeText(ctx, p) {
+    var base = scopeBaseText(ctx, p), n = ((p.scope || {}).exclude || []).length;
+    return n ? tr("promos.copy201", { p0: base, p1: nItems(n) }) : base;
+  }
+  function scopeBaseText(ctx, p) {
     var sc = p.scope || {};
     if (sc.type === 'tout') return tr("promos.copy8");
     if (sc.type === 'rayon') {
@@ -338,8 +342,8 @@
 
   function scopeControl(ctx, d) {
     var sc = d.scope || {};
-    if (sc.type === 'tout') return '<div class="bpd-hint">' + tr("promos.copy115") + '</div>';
-    if (sc.type === 'rayon') return '<div class="bpd-chips">' + ctx.rayons.map(function (r) { return '<button class="bpd-chip ' + ((sc.ids || []).indexOf(r.id) >= 0 ? 'on' : '') + '" data-prr="' + esc(r.id) + '">' + esc(r.label) + ' <small>' + r.items.length + '</small></button>'; }).join('') + '</div>';
+    if (sc.type === 'tout') return exclusionHtml(ctx, sc);
+    if (sc.type === 'rayon') return '<div class="bpd-chips">' + ctx.rayons.map(function (r) { return '<button class="bpd-chip ' + ((sc.ids || []).indexOf(r.id) >= 0 ? 'on' : '') + '" data-prr="' + esc(r.id) + '">' + esc(r.label) + ' <small>' + r.items.length + '</small></button>'; }).join('') + '</div>' + exclusionHtml(ctx, sc);
     if (sc.type === 'produits') {
       var ids = sc.ids || [];
       return '<div class="bpd-search"><i data-bpd-icon="search"></i><input aria-label="' + tr("promos.copy116") + '" id="bpd-q" placeholder="' + tr("promos.copy117") + '" autocomplete="off"></div>' +
@@ -350,6 +354,16 @@
     return '';
   }
 
+  /* « Sauf ces articles » : la cible large d'abord (tout le magasin, un rayon),
+     puis les articles qui gardent leur prix. La recherche accepte un nom, un
+     code-barres ou un prix (« 150 » liste les articles à 150 MAD), pour que le
+     commerçant pose lui-même « −50 MAD partout sauf les hauts à 150 ». */
+  function exclusionHtml(ctx, sc) {
+    var ex = sc.exclude || [];
+    return '<div class="bpd-excl"><label for="bpd-xq">' + tr("promos.copy196") + ' <span>' + tr("promos.copy197") + '</span></label>' +
+      '<div class="bpd-search"><i data-bpd-icon="search"></i><input id="bpd-xq" placeholder="' + tr("promos.copy198") + '" autocomplete="off"></div>' +
+      '<div class="bpd-chips">' + (ex.length ? ex.map(function (id) { return '<button class="bpd-chip" data-prx="' + esc(id) + '">' + esc(ctx.products[id] ? ctx.products[id].name : id) + ' <i data-bpd-icon="x"></i></button>'; }).join('') : '<span class="bpd-hint">' + tr("promos.copy199") + '</span>') + '</div><div class="bpd-hits" id="bpd-xhits"></div></div>';
+  }
   function composerHtml(ctx) {
     var d = composer.draft;
     var prev = preview(ctx, d);
@@ -428,6 +442,25 @@
       var hits = el.querySelector('#bpd-hits');
       var paint = function () { var term=q.value.trim().toLowerCase(); if(!term){hits.innerHTML='';return;} var by=ctx.byEan[q.value.trim()]; var found=by?[ctx.products[by]].filter(Boolean):items(ctx).filter(function(it){return it.name.toLowerCase().indexOf(term)>=0;}); hits.innerHTML=found.map(function(it){return '<button class="bpd-hit" data-pick="'+esc(it.id)+'"><span>'+esc(it.name)+'</span><b>'+money(it.price)+'</b></button>';}).join('')||'<div class="bpd-hint">'+tr("promos.copy177")+'</div>'; hits.querySelectorAll('[data-pick]').forEach(function(b){b.onclick=function(){var ids=d.scope.ids||(d.scope.ids=[]);if(ids.indexOf(b.dataset.pick)<0)ids.push(b.dataset.pick);redraw();};}); };
       q.oninput = paint; q.onkeydown = function(e){if(e.key==='Enter'){e.preventDefault();paint();}};
+    }
+    el.querySelectorAll('[data-prx]').forEach(function (b) { b.onclick = function () { var ex = d.scope.exclude || [], i = ex.indexOf(b.dataset.prx); if (i >= 0) ex.splice(i, 1); redraw(); }; });
+    var xq = el.querySelector('#bpd-xq');
+    if (xq) {
+      var xhits = el.querySelector('#bpd-xhits');
+      var exclude = function (ids) { var ex = d.scope.exclude || (d.scope.exclude = []); ids.forEach(function (id) { if (ex.indexOf(id) < 0) ex.push(id); }); redraw(); };
+      var xpaint = function () {
+        var raw = xq.value.trim(), term = raw.toLowerCase(), ex = d.scope.exclude || [];
+        if (!term) { xhits.innerHTML = ''; return; }
+        var price = /^\d+([.,]\d+)?$/.test(raw) ? +raw.replace(',', '.') : null, by = ctx.byEan[raw];
+        var found = (by ? [ctx.products[by]].filter(Boolean) : items(ctx).filter(function (it) {
+          return it.name.toLowerCase().indexOf(term) >= 0 || (price != null && +it.price === price);
+        })).filter(function (it) { return ex.indexOf(it.id) < 0; });
+        xhits.innerHTML = (found.length > 1 ? '<button class="bpd-hit bpd-hit-all" data-xall><span>' + tr("promos.copy200", { p0: found.length }) + '</span></button>' : '') +
+          (found.map(function (it) { return '<button class="bpd-hit" data-xpick="' + esc(it.id) + '"><span>' + esc(it.name) + '</span><b>' + money(it.price) + '</b></button>'; }).join('') || '<div class="bpd-hint">' + tr("promos.copy177") + '</div>');
+        xhits.querySelectorAll('[data-xpick]').forEach(function (b) { b.onclick = function () { exclude([b.dataset.xpick]); }; });
+        var all = xhits.querySelector('[data-xall]'); if (all) all.onclick = function () { exclude(found.map(function (it) { return it.id; })); };
+      };
+      xq.oninput = xpaint; xq.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); xpaint(); } };
     }
     el.querySelectorAll('[data-pra]').forEach(function(b){b.onclick=function(){d.scope.before=startOfDay(new Date(Date.now()-(+b.dataset.pra)*30*DAY));redraw();};});
     /* Les champs date et heure ne reconstruisent PAS le formulaire : Chrome
