@@ -1,6 +1,6 @@
 /* Owner: dashboard kpi. Exports: renderKpiBand, hotelPerfEntry, hotelTilesFrom, tableTimeEntry, openKpiCustomizer, dutyBand, retailBand, kpiByVenue.
  * Sibling calls via live owner: openDays, vData.
- * Reads live owner: BAND_NAV, HOTEL_PERF_TTL, KC_STR, KPI_CATALOG, KPI_DELTA_SUFFIX, KPI_MATERIAL_ICONS, KPI_MAX, KPI_SPARKS, RANGE_DAYS, TABLE_TIME_TTL, animateNumber, arrowSvg, basketCents, closedBounds, curUnit, currentRange, defaultKpiKeys, effRange, escTxt, fmtKpiVal, fmtPct, frInt, getCurrentVenue, getKpiLayout, getLang, getSim, guardOperatorFigures, homeSet, hotelBandTiles, hotelDelta, hotelMerchant, hotelPerf, isLiveDemo, kpiByVenue, kpiLabel, lastBand, openDays, operatorUnavailableText, ownData, parseAmountFromEl, realClientMix, realDeltaPct, realGrossProfit, realSalesTotals, realWindowStats, renderKpiBand, resetKpiLayout, saveKpiLayout, tableTime, tableTimeTile, vData.
+ * Reads live owner: BAND_NAV, HOTEL_PERF_TTL, KC_STR, KPI_CATALOG, KPI_DELTA_SUFFIX, KPI_MATERIAL_ICONS, KPI_MAX, KPI_SPARKS, RANGE_DAYS, TABLE_TIME_TTL, animateNumber, arrowSvg, basketCents, closedBounds, curUnit, currentRange, defaultKpiKeys, effRange, escTxt, fmtKpiVal, fmtPct, frInt, getCurrentVenue, getKpiLayout, getLang, getSim, guardOperatorFigures, homeSet, hotelBandTiles, hotelDelta, hotelMerchant, hotelPerf, isLiveDemo, kpiByVenue, kpiLabel, lastBand, openDays, operatorLedgerPending, operatorUnavailableText, ownData, parseAmountFromEl, realClientMix, realDeltaPct, realGrossProfit, realSalesTotals, realWindowStats, renderKpiBand, resetKpiLayout, saveKpiLayout, tableTime, tableTimeTile, vData.
  * Reads globalThis: KiwiZoneLaw.
  * Reads window: Kiwi, KiwiHotelRooms, KiwiI18n, KiwiPressingOps, KiwiSales, KiwiTradeSchema, KiwiTradeWorkspaces, KiwiVenue. No state is copied. */
 (function () {
@@ -10,7 +10,7 @@
   function openDays(...args) { return __state.openDays.apply(this, args); }
   function vData(...args) { return __state.vData.apply(this, args); }
 function renderKpiBand() {
-    if (__state.guardOperatorFigures('[data-kpi-band]')) {
+    if (__state.guardOperatorFigures('[data-kpi-band]', 'served')) {
       const wrap = document.querySelector('[data-kpi-band]');
       if (wrap) wrap.textContent = __state.operatorUnavailableText();
       typeof __state.homeSet === 'function' && __state.homeSet('tiles', null);
@@ -208,6 +208,17 @@ function renderKpiBand() {
         data.marge = { ...dash };
         data.profit = { ...dash };
         data.cogs = { ...dash };
+      }
+      /* Vue opérateur, journal encore en relecture : la bande vient du serveur
+       * (operatorLedgerPending 'served'). La marge et les clients se lisent
+       * ticket par ticket : « … » jusqu'à la fin de la relecture, jamais un
+       * chiffre tiré d'un historique à moitié chargé. */
+      if (__state.operatorLedgerPending?.()) {
+        const wait = { text: '…', unit: '', delta: null };
+        /* Sans valeur, margeOf() rend null : Bénéfice brut et Coût matière attendent aussi. */
+        data.marge = { ...wait }; data.profit = { ...wait }; data.cogs = { ...wait };
+        if (data.regulars) data.regulars = { ...data.regulars, ...wait };
+        data.clientMix = null;
       }
       /* Hôtel : les tuiles viennent du registre des séjours (voir
        * hotelBandTiles), plus des zéros écrits à la main. Le dénominateur du

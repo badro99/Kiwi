@@ -9,7 +9,7 @@
   registry['hero'] = function (__state) {
 function renderHero() {
     __state.demoHeroSim = null;
-    if (__state.guardOperatorFigures('.hero-breakdown')) {
+    if (__state.guardOperatorFigures('.hero-breakdown', 'served')) {
       const amount = document.querySelector('[data-hero-amount]');
       if (amount) { amount.textContent = '…'; amount.setAttribute('aria-label', __state.operatorUnavailableText()); }
       const label = document.querySelector('[data-hero-label]');
@@ -212,7 +212,7 @@ function renderHeatmapAi() {
     if (ctaEl)   ctaEl.textContent = rec.cta;
   }
 function renderGoal() {
-    if (__state.guardOperatorFigures('[data-goal-label], [data-goal-pct]')) {
+    if (__state.guardOperatorFigures('[data-goal-label], [data-goal-pct]', 'served')) {
       const fill = document.querySelector('[data-goal-fill]');
       if (fill) fill.style.width = '0%';
       typeof __state.homeSet === 'function' && __state.homeSet('goal', null);

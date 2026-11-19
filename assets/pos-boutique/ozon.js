@@ -13,7 +13,7 @@
  * La clé API Ozon ne passe jamais par cette caisse : elle se règle au tableau de
  * bord et reste chiffrée sur le serveur. Sans compte Ozon relié, rien de ce
  * fichier ne s'affiche. */
-import { customerFeeMAD } from './delivery-card.js?v=9';
+import { customerFeeMAD } from './delivery-card.js?v=10';
 const PHRASES = {
   'Envoyer avec Ozon Express': ['Send with Ozon Express', 'إرسال عبر أوزون إكسبريس'],
   'Envoyer avec Ozon': ['Send with Ozon', 'إرسال عبر أوزون'],

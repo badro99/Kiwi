@@ -234,7 +234,10 @@
       return recent;
     } catch (_) { return fallback(); } // Partial-day windows cannot use daily totals.
   }
-  window.KiwiSalesSummary = Object.freeze({ coverageStart, get, stats,
+  /* Vrai quand le serveur compte déjà cette fenêtre (voir early) : la vue
+     opérateur peut alors montrer ses chiffres pendant la relecture du journal. */
+  const serves = (from, to) => !!early(merchant(), from, to);
+  window.KiwiSalesSummary = Object.freeze({ coverageStart, get, stats, serves,
     invalidate(m) {
       generations.set(m, (generations.get(m) || 0) + 1);
       tenants.delete(m);
@@ -713,6 +716,8 @@
     return { sum: days.reduce((n, d) => n + d.tipCents, 0) / 100, days: days.length };
   }
   window.KiwiSalesHistory = Object.freeze({ ...window.KiwiSalesHistory, channels, oldTips,
+    /* Vue opérateur : le serveur compte-t-il déjà cette fenêtre ? (KiwiSalesSummary.serves) */
+    serves: (from, to) => !!window.KiwiSalesSummary?.serves?.(from, to),
     invalidate(merchant) { for (const key of cache.keys()) if (JSON.parse(key)[0] === merchant) cache.delete(key); } });
 })();
 

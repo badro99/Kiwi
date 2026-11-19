@@ -1771,7 +1771,7 @@ section('Whole-project regressions');
     'catalog-stock-transaction-test.mjs',
     /* Deux comptoirs, un stock : fusion, suppression, comptage et repli du
        journal contre un modèle de ce que la boutique a fait. */
-    'catalog-merge-properties-test.mjs', 'catalog-family-test.mjs', 'catalog-family-id-test.mjs', 'stock-transfers-test.mjs', 'stock-transfers-browser-test.mjs', 'delivery-ship-from-test.mjs', 'z-delivery-collections-test.mjs', // + catalogue partagé, transferts, « Envoyé de », argent des livreurs à part
+    'catalog-merge-properties-test.mjs', 'catalog-family-test.mjs', 'catalog-family-id-test.mjs', 'stock-transfers-test.mjs', 'stock-transfers-browser-test.mjs', 'delivery-ship-from-test.mjs', 'z-delivery-collections-test.mjs', 'operator-served-figures-test.mjs', 'operator-pairing-shadow-test.mjs', // + catalogue partagé, transferts, « Envoyé de », argent des livreurs à part
     /* Deux appareils, une fiche : chaque champ garde sa dernière édition, un
        même champ changé des deux côtés est soumis au commerçant. */
     'catalog-field-merge-test.mjs',

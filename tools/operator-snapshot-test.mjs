@@ -120,7 +120,7 @@ function renderers(h) {
   };
   vm.runInContext([
     select('  function kitCase(', '  const DELTA_LABELS = {'),
-    select('  function operatorLedgerPending()', '  function renderHero()'),
+    select('  function operatorLedgerPending(', '  function renderHero()'),
     select('  function renderHero()', '  function renderHeroAi()'),
     select('  function renderGoal()', '  function intensityClass('),
     select('  function renderKpiBand()', '  function openKpiCustomizer('),

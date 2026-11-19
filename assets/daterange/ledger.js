@@ -504,15 +504,27 @@ function deltaTenths(cur, base) {
     return Math.round(((cur - base) / base) * 1000) / 10;
   }
 
-function operatorLedgerPending() {
+function operatorLedgerPending(scope) {
+    /* `scope === 'served'` : les chiffres que le serveur additionne lui-même
+     * (chiffre d'affaires, commandes, panier, carte / espèces, retours) peuvent
+     * s'afficher PENDANT la relecture du journal. Santos, 19 nov. 2026 : la vue
+     * opérateur restait sur « Chargement du journal… » 15 s (8 pages de 1,5 s)
+     * alors que /api/sales-summary répond en 0,4 s. Le résumé est compté pour le
+     * commerce demandé dans l'URL, jamais lu d'un cache : il ne peut pas montrer
+     * les chiffres d'un autre. Tout ce qui demande chaque ticket (marge, clients,
+     * courbe horaire) attend la fin de la relecture, comme avant. */
     if (!/[?&]op=1(?:&|$)/.test(location.search)) return false;
     const live = window.KiwiLive;
     const state = live?.snapshotStatus?.();
     const requested = new URLSearchParams(location.search).get('merchant');
     const venue = window.KiwiVenue?.getCurrentVenueData?.();
-    return !state || state.phase !== 'complete' || (requested && state.merchant !== requested) ||
-      !venue || (venue.slug && venue.slug !== state.merchant) ||
-      !state.venue || state.venue !== window.KiwiVenue?.getVenue?.();
+    if (!state || (requested && state.merchant !== requested) || !venue || (venue.slug && venue.slug !== state.merchant)) return true;
+    if (state.phase === 'complete' && state.venue && state.venue === window.KiwiVenue?.getVenue?.()) return false;
+    if (scope !== 'served' || state.phase !== 'loading' || live?.merchant?.() !== state.merchant) return true;
+    try {
+      const [from, to] = __state.closedBounds(__state.currentRange);
+      return !window.KiwiSalesHistory?.serves?.(from, to);
+    } catch (_) { return true; }
   }
 
 function buildHeatmap(rng) {

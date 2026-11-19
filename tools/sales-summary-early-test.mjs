@@ -148,4 +148,14 @@ await ok('a window that starts inside a business day stays local and never throw
   }
 });
 
+await ok('serves() says whether the server already counts a window (operator view reads it)', async () => {
+  const t = setup();
+  assert.equal(t.store.serves(...today), false, 'nothing yet: the request is only starting');
+  await settle();
+  assert.equal(t.store.serves(...today), true, 'today is counted by the server');
+  assert.equal(t.store.serves(boundary(58), boundary(58) + 10 * 3600000), false, 'a window cutting a day is not');
+  const done = setup({ live: { backfillComplete: true } });
+  assert.equal(done.store.serves(...today), false, 'after the replay the ledger counts, not the server');
+});
+
 console.log(`sales-summary-early: ${passed} passed`);

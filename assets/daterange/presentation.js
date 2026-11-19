@@ -42,14 +42,17 @@ function paintNumber(el, html) {
 
 function animateNumber(el, from, to, { duration = 800, format } = {}) {
     if (!el) return;
-    if (operatorLedgerPending()) { el.textContent = '…'; return; }
+    /* Pendant la relecture du journal, seuls les chiffres comptés par le serveur
+     * (bande, montant du hero, objectif) s'animent ; le reste garde « … ». */
+    const pendingFor = (n) => operatorLedgerPending(n.closest && n.closest('[data-kpi-band], [data-hero-amount], .hero-breakdown, [data-goal-label], [data-goal-pct]') ? 'served' : undefined);
+    if (pendingFor(el)) { el.textContent = '…'; return; }
     // Hidden tabs freeze requestAnimationFrame — set the final value at once
     // so a background re-render never leaves a tile blank.
     if (document.hidden || duration === 0 || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { el['inner' + 'HTML'] = format(to); return; }
     const start = performance.now();
     const ease = t => 1 - Math.pow(1 - t, 3);
     function tick(now) {
-      if (operatorLedgerPending()) { el.textContent = '…'; return; }
+      if (pendingFor(el)) { el.textContent = '…'; return; }
       const p = Math.min(1, (now - start) / duration);
       const v = from + (to - from) * ease(p);
       paintNumber(el, format(v));

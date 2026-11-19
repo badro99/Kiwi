@@ -18,8 +18,8 @@
  * vente, jamais par la tablette. La tablette ne remet en stock qu'un retour
  * que le serveur vient d'accepter pour la première fois (already === false) :
  * rejouer un retour ne recrédite jamais le stock deux fois. */
-import { ozonParcels, ozonLine, ozonNote, ozonOpenSend, ozonMakeNote, ozonLabel as translate, ozonBoard } from './ozon.js?v=12';
-import { exchButton, exchHtml, exchHistory, exchClick, exchInput, exchClose, exchOpenFor, exchCss } from './exchange.js?v=5';
+import { ozonParcels, ozonLine, ozonNote, ozonOpenSend, ozonMakeNote, ozonLabel as translate, ozonBoard } from './ozon.js?v=13';
+import { exchButton, exchHtml, exchHistory, exchClick, exchInput, exchClose, exchOpenFor, exchCss } from './exchange.js?v=6';
 /* translate : les phrases Ozon (ozon.js), en français, anglais ou arabe. */
 const DAY = 86400000;
 const OZON_EVERY = 15 * 60 * 1000;   // la caisse reste ouverte : le suivi Ozon se relit tout seul

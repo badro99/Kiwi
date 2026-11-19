@@ -129,7 +129,7 @@ export function bqTransfers(root, d) {
     }
     btn = document.createElement('button');
     btn.className = 'bq-lock'; btn.id = 'bq-transfers'; btn.type = 'button';
-    btn.innerHTML = `<i data-lucide="swap_horiz"></i><span>${esc(tr('Transferts'))}</span><b class="bq-tr-dot" hidden></b>`;
+    btn.innerHTML = `<i data-icon="swap_horiz"></i><span>${esc(tr('Transferts'))}</span><b class="bq-tr-dot" hidden></b>`;
     const lock = foot.querySelector('#bq-lock');
     foot.insertBefore(btn, lock || null);
     btn.addEventListener('click', open);

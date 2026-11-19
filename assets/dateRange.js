@@ -254,7 +254,7 @@
     openKpiCustomizer: { get: () => openKpiCustomizer },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/daterange/renderers.js?v=49';
+  const partUrl = 'assets/daterange/renderers.js?v=51';
   function installPart() {
     if (!partFunctions && window.__kiwiDateRangeParts) partFunctions = window.__kiwiDateRangeParts(partState);
     return partFunctions;
@@ -1806,8 +1806,8 @@
       ? { fr: 'Chargement du journal…', en: 'Loading ledger…', ar: 'جارٍ تحميل السجل…' }
       : { fr: 'Chiffres indisponibles · actualiser le journal', en: 'Figures unavailable · refresh the ledger', ar: 'الأرقام غير متاحة · حدّث السجل' })[lang] || 'Journal indisponible';
   }
-  function guardOperatorFigures(selector) {
-    if (!operatorLedgerPending()) return false;
+  function guardOperatorFigures(selector, scope) {
+    if (!operatorLedgerPending(scope)) return false;
     document.querySelectorAll(selector).forEach(el => { el.textContent = ''; });
     return true;
   }
