@@ -732,7 +732,7 @@ for (const test of [
   /* Une caisse appairée s'ouvre sur sa propre preuve, sans le mot de passe du
      patron : page et API de la caisse seulement, jamais le tableau de bord. */
   'till-gate-test.mjs', 'sister-stock-test.mjs',
-  'staff-skin-test.mjs',
+  'staff-skin-test.mjs', 'staff-skin-operator-test.mjs',
   'skin-cloak-test.mjs',
   /* La peau 2027 de la boutique est de la PEINTURE : aucune branche dans le JS
      du métier, chaque règle portée par le drapeau, aucune couleur en dur, et

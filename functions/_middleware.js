@@ -876,8 +876,8 @@ export async function staffSkinOn(request, env, kind) {
   let aid = '';
   try {
     if (kind === 'device') {
-      const store = readCookie(request, TILL_STORE_COOKIE) || '';
-      if (TILL_STORE.test(store)) slugs.push(store);
+      const url = new URL(request.url), shown = url.searchParams.get('op') === '1' ? (url.searchParams.get('merchant') || '').trim() : ''; // operator view: the store on screen, not this browser's paired one
+      const store = TILL_STORE.test(shown) ? shown : (readCookie(request, TILL_STORE_COOKIE) || ''); if (TILL_STORE.test(store)) slugs.push(store);
     }
     if (kind === 'employee' && env.AUTH_SECRET) {
       const emp = await readEmployee(request, env);
