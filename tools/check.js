@@ -2003,7 +2003,7 @@ section('Whole-project regressions');
   'economat-rd-invariants-test.mjs',
     'formula-protocol-test.mjs',
     'formula-child-options-test.mjs',
-    'formula-kitchen-paper-test.mjs', 'serveur-formula-minus-test.mjs',
+    'formula-kitchen-paper-test.mjs', 'serveur-formula-minus-test.mjs', 'print-type-uniform-test.mjs',
     'orderpro-split-test.mjs',
     'orderpro-draft-transport-test.mjs',
     'orderpro-boundary-test.mjs', 'orderpro-module-manifest-test.mjs', 'orderpro-reload-uncertain-submit-test.mjs', 'orderpro-money-properties-test.mjs', 'orderpro-deadline-test.mjs', 'net1-request-test.mjs', 'orderpro-storage-failure-test.mjs',

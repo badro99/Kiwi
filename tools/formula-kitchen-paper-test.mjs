@@ -82,26 +82,6 @@ assert.equal(text.includes('[Prépare ton Plat'), false, 'technical formula grou
 assert.ok(raw.subarray(Math.max(0, gnocchiAt - 12), gnocchiAt).includes(0x00), 'formula choices use the small 1×1 ESC/POS text size');
 assert.ok(text.includes('2× Harira') && text.includes('> bien chaude'), 'ordinary item and note layout remains unchanged');
 
-/* Browse, 19 nov. 2026 (photo) : « Le Gourmand » a des choix de formule ET un
-   groupe d'options sur la formule elle-même. Le choix de l'option (« Granola &
-   Fruit ») sortait en note, double hauteur et gras, sous trois choix en petit :
-   un bon à deux tailles. Une option de la formule est un choix comme les autres ;
-   seule la note libre du serveur garde son relief. */
-const gourmand = kitchenPaperItems([
-  { q: 1, n: 'Le Gourmand', kind: 'formula', formulaUid: 'f-g', formulaName: 'Le Gourmand', note: 'sans jambon',
-    paperNote: 'Granola & Fruit · sans jambon', visuals: [{ emoji: '', name: 'Granola & Fruit' }], stations: ['bar'] },
-  { q: 1, n: 'Orange Juice', kind: 'formula-part', formulaUid: 'f-g', formulaName: 'Le Gourmand', paperNote: '[Le Gourmand · Jus]', stations: ['bar'] },
-  { q: 1, n: 'Espresso', kind: 'formula-part', formulaUid: 'f-g', formulaName: 'Le Gourmand', paperNote: '[Le Gourmand · Boisson] · Hot', stations: ['bar'] },
-], 'bar', 'kitchen');
-assert.deepEqual(gourmand, [{ qty: 1, name: 'Le Gourmand', note: 'sans jambon', formulaChoices: [
-  { name: 'Granola & Fruit', note: '' }, { name: 'Orange Juice', note: '' }, { name: 'Espresso', note: 'Hot' },
-] }], "the formula's own option prints as a choice, the free note stays a note");
-const gBytes = Buffer.from(escContext.window.KiwiEscPos.kitchenTicket({ title: 'COMPTOIR', order: '#1', paper: '80', items: gourmand }));
-const gText = gBytes.toString('latin1'), granolaAt = gText.indexOf('> Granola & Fruit'), juiceAt = gText.indexOf('> Orange Juice');
-assert.ok(granolaAt > 0 && juiceAt > granolaAt, 'option, then the formula choices');
-assert.deepEqual([...gBytes.subarray(granolaAt - 3, granolaAt)], [...gBytes.subarray(juiceAt - 3, juiceAt)], 'the option prints at the same size as the choices');
-assert.ok(gText.indexOf('sans jambon') > juiceAt, 'the free note still prints after the choices');
-
 assert.ok(orderPro.includes("kind: 'formula-part'") && orderPro.includes('formulaUid'), 'OrderPro sends formula identity');
 assert.ok(serveur.includes('if (l.kind) linePayload.kind = l.kind') && serveur.includes('if (l.formulaUid) linePayload.formulaUid = l.formulaUid'), 'employee app sends formula identity');
 assert.ok(caisse.includes('kind: l.kind || \'\'') && caisse.includes('formulaUid: l.formulaUid || \'\''), 'caisse ingests formula identity from remote inputs');

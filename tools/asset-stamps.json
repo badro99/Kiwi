@@ -616,8 +616,8 @@
     "sha": "43d0c87422fc61c2"
   },
   "assets/escpos.js": {
-    "v": "20",
-    "sha": "42c678756290613e"
+    "v": "21",
+    "sha": "c0289627464a7ba1"
   },
   "assets/expenses/engine.js": {
     "v": "3",
@@ -2048,8 +2048,8 @@
     "sha": "32a784d29a003d95"
   },
   "assets/receipt.js": {
-    "v": "27",
-    "sha": "a1ae3f7db74f3170"
+    "v": "28",
+    "sha": "7a02f4da9386383e"
   },
   "assets/reception-view.js": {
     "v": "3",

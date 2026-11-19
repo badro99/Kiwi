@@ -297,19 +297,19 @@
   // ── high-level tickets ───────────────────────────────────────────────────
   function receipt(o) {
     o = o || {}; var paper = o.paper || '80';
-    var b = new Builder(paper).init();
-    b.align('center').bold(true).size(2, 2).line(fit(o.shop || 'Kiwi', paper, 2)).size(1, 1).bold(false);
+    var b = new Builder(paper).init().bold(true); // one weight on the whole receipt
+    b.align('center').size(2, 2).line(fit(o.shop || 'Kiwi', paper, 2)).size(1, 1);
     if (o.address) b.line(fit(o.address, paper));
     if (o.phone) b.line(fit(o.phone, paper));
     if (o.ref || o.date) b.line(fit([o.ref, o.date].filter(Boolean).join('  '), paper));
-    if (o.copy) b.bold(true).size(1, 2).line(fit(o.copy, paper)).size(1, 1).bold(false);
+    if (o.copy) b.size(1, 2).line(fit(o.copy, paper)).size(1, 1);
     b.align('left').line(rule(paper));
     (o.lines || []).forEach(function (l) {
       var name = (l.qty ? l.qty + '× ' : '') + (l.name || '');
       b.line(row(name, l.price != null ? String(l.price) : '', paper));
     });
     b.line(rule(paper));
-    b.bold(true).size(1, 2).line(row('TOTAL', (o.total != null ? o.total : '') + '', paper)).size(1, 1).bold(false);
+    b.size(1, 2).line(row('TOTAL', (o.total != null ? o.total : '') + '', paper)).size(1, 1);
     if (o.method) b.line(row('Paiement', o.method, paper));
     if (o.footer) b.feed(1).align('center').line(fit(o.footer, paper));
     b.align('center').feed(1).line(PLATFORM_CREDIT);
@@ -320,39 +320,34 @@
 
   function kitchenTicket(o) {
     o = o || {}; var paper = o.paper || '80';
-    var b = new Builder(paper).init();
-    b.align('center').bold(true).size(2, 2).line(fit(o.title || 'CUISINE', paper, 2)).size(1, 1).bold(false);
-    if (o.table || o.order) b.bold(true).size(2, 2).line(fit([o.table, o.order].filter(Boolean).join('  ·  '), paper, 2)).size(1, 1).bold(false);
+    /* Une seule graisse (gras, du premier trait à la coupe) et deux tailles :
+     * GRAND pour ce qu'on cherche de loin (poste, table, plat), normal pour le
+     * reste. Chaque détail sous un plat (choix de formule, option, note) commence
+     * par le même « > », au même alignement : un bon homogène se lit d'un coup
+     * d'œil (Browse, 19 nov. 2026 : gras et maigre, trois tailles sur un bon). */
+    var b = new Builder(paper).init().bold(true);
+    var detail = function (text) { wrap('> ' + text, paper, 1, '  ').forEach(function (l) { b.line(l); }); };
+    b.align('center').size(2, 2).line(fit(o.title || 'CUISINE', paper, 2));
+    if (o.table || o.order) b.line(fit([o.table, o.order].filter(Boolean).join('  ·  '), paper, 2));
+    b.size(1, 1);
     if (o.time) b.line(fit(o.time, paper));
     b.align('left').line(rule(paper));
     (o.items || []).forEach(function (it) {
-      b.bold(true).size(2, 2);
+      b.size(2, 2);
       wrap((it.qty ? it.qty + '× ' : '') + (it.name || ''), paper, 2, '   ').forEach(function (l) { b.line(l); });
-      b.size(1, 1).bold(false);
-      /* A composed menu is one kitchen instruction, not a row of unrelated
-       * dishes. Its selected components are deliberately smaller than the
-       * formula name and each starts with the same unmistakable `>` marker.
-       * Ordinary dishes never carry formulaChoices, so their long-standing
-       * name + note layout stays byte-for-byte unchanged. */
+      b.size(1, 1);
       (it.formulaChoices || []).forEach(function (choice) {
         var label = typeof choice === 'string' ? choice : (choice && choice.name);
-        var detail = typeof choice === 'object' && choice ? choice.note : '';
-        if (!label) return;
-        b.bold(false).size(1, 1);
-        wrap('> ' + label + (detail ? ' · ' + detail : ''), paper, 1, '  ').forEach(function (l) { b.line(l); });
-        b.size(1, 1);
+        var note = typeof choice === 'object' && choice ? choice.note : '';
+        if (label) detail(label + (note ? ' · ' + note : ''));
       });
-      if (it.note) {
-        b.bold(true).size(1, 2);
-        wrap('   > ' + it.note, paper, 1, '     ').forEach(function (l) { b.line(l); });
-        b.size(1, 1).bold(false);
-      }
+      if (it.note) detail(it.note);
     });
     /* Ce que la table a commandé pour plus tard (« À suivre ») : la cuisine
-     * le sait sans le lancer. Petit, après un trait, sans quantité en gros :
-     * rien ici ne doit pouvoir se lire comme un plat à faire maintenant. */
+     * le sait sans le lancer. Taille normale, après un trait : rien ici ne doit
+     * pouvoir se lire comme un plat à faire maintenant. */
     if (o.following && o.following.length) {
-      b.line(rule(paper)).bold(true).line(fit('À SUIVRE', paper)).bold(false);
+      b.line(rule(paper)).line(fit('À SUIVRE', paper));
       o.following.forEach(function (it) {
         wrap((it.qty ? it.qty + '× ' : '') + (it.name || ''), paper, 1, '   ').forEach(function (l) { b.line(l); });
       });

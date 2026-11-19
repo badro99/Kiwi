@@ -885,7 +885,9 @@
     var paper = doc.paper || '80';
     var rawCols = E.paperCols ? E.paperCols(paper) : 48;
     var cols = (paper === '80' || !paper) ? 44 : rawCols;
-    var b = E.builder(paper).init();
+    /* Une seule graisse sur tout le reçu : le gras, posé une fois. Les tailles
+       gardent chacune un rôle (enseigne, bandeaux, TOTAL). */
+    var b = E.builder(paper).init().bold(true);
     var T = doc.T || dict(doc.lang);
     var refund = doc.kind === 'refund';
     var rule = function () { b.line(' ' + new Array(cols - 1).join('-')); };
@@ -894,31 +896,29 @@
       var usable = cols - 2;
       if (l.length + r.length + 1 > usable) l = l.slice(0, Math.max(0, usable - r.length - 1));
       var gap = Math.max(1, usable - l.length - r.length);
-      if (bold) b.bold(true);
       b.line(' ' + l + new Array(gap + 1).join(' ') + r);
-      if (bold) b.bold(false);
     };
 
     /* — l'enseigne — */
     b.align('center');
     if (o.logoRaster && o.logoRaster.length) b.raw(o.logoRaster).feed(1);
-    if (doc.shop.name) b.bold(true).size(2, 2).line(doc.shop.name).size(1, 1).bold(false);
+    if (doc.shop.name) b.size(2, 2).line(doc.shop.name).size(1, 1);
     if (doc.shop.legalName) b.line(doc.shop.legalName);
     if (doc.shop.tagline) b.line(doc.shop.tagline);
     doc.shop.contact.forEach(function (c) { b.line(c); });
     doc.shop.legal.forEach(function (l) { b.line(l); });
     if (doc.welcome) b.feed(1).line(doc.welcome);
-    if (refund) b.feed(1).bold(true).size(2, 2).line(T.refund).size(1, 1).bold(false);
-    if (doc.acompte) b.feed(1).bold(true).line(doc.acompte.remaining > 0 ? 'ACOMPTE' : 'SOLDE DE L’ACOMPTE').bold(false);
+    if (refund) b.feed(1).size(2, 2).line(T.refund).size(1, 1);
+    if (doc.acompte) b.feed(1).line(doc.acompte.remaining > 0 ? 'ACOMPTE' : 'SOLDE DE L’ACOMPTE');
     /* Le bandeau du récapitulatif. En gras et en grand, pour la même raison que
        celui du remboursement : ce papier ne doit pas pouvoir passer pour un
        ticket de vente. */
-    if (doc.summary) b.feed(1).bold(true).size(1, 2).line(doc.summary.title).size(1, 1).bold(false);
-    if (doc.copy) b.bold(true).line('·' + doc.copy + '·').bold(false);
+    if (doc.summary) b.feed(1).size(1, 2).line(doc.summary.title).size(1, 1);
+    if (doc.copy) b.line('·' + doc.copy + '·');
 
     if (doc.voucher) {
       var vo = doc.voucher, V = vo.V;
-      b.feed(1).bold(true).size(2, 2).line(V.title).line(moneyMAD(vo.balance, doc)).size(1, 1).bold(false);
+      b.feed(1).size(2, 2).line(V.title).line(moneyMAD(vo.balance, doc)).size(1, 1);
       if (vo.balance !== vo.amount) b.line(V.issuedFor + ' ' + moneyMAD(vo.amount, doc) + ', ' + V.left);
       b.align('left'); rule();
       row(V.code, vo.code, true);
@@ -1004,7 +1004,7 @@
        ligne qu'on relit dans le sac en rentrant — et la seule preuve papier que
        la promotion affichée en vitrine a bien été appliquée. */
     if (!refund && (t.promo + t.discount) > 0) {
-      b.align('center').bold(true).line(T.saved + ' ' + moneyMAD(t.promo + t.discount, doc)).bold(false).align('left');
+      b.align('center').line(T.saved + ' ' + moneyMAD(t.promo + t.discount, doc)).align('left');
     }
     doc.pay.forEach(function (p) { row(p.label, moneyMAD(p.amount, doc)); });
     if (doc.acompte) {
