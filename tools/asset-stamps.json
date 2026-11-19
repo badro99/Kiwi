@@ -468,8 +468,8 @@
     "sha": "37e7d396bdf155a8"
   },
   "assets/dateRange.js": {
-    "v": "154",
-    "sha": "73c1173018fb503d"
+    "v": "155",
+    "sha": "88137682c58b66d0"
   },
   "assets/daterange/activity.js": {
     "v": "7",
@@ -484,7 +484,7 @@
     "sha": "56b7975f2e5e6c44"
   },
   "assets/daterange/hero.js": {
-    "v": "15",
+    "v": "16",
     "sha": "c3f989b51c219213"
   },
   "assets/daterange/kpi.js": {
@@ -500,8 +500,8 @@
     "sha": "fed02e7171af24bd"
   },
   "assets/daterange/renderers.js": {
-    "v": "51",
-    "sha": "298054e746dde132"
+    "v": "52",
+    "sha": "bfb16334d2439d8d"
   },
   "assets/daterange/revenue.js": {
     "v": "5",
