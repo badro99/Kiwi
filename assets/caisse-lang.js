@@ -2841,7 +2841,7 @@
       'Ignorer': ['Skip', 'تجاهل'],
       'Le nom du produit est requis': ['The product name is required', 'اسم المنتج مطلوب'],
       'Le prix est invalide': ['The price is invalid', 'السعر غير صالح'],
-      'Création impossible': ['Could not create', 'تعذّر الإنشاء'],
+      'Création impossible': ['Could not create', 'تعذّر الإنشاء'], 'Choisir la variante': ['Choose the variant', 'اختر النوع'], 'Choisir d’abord l’article': ['Choose the item first', 'اختر المنتج أولاً'],
       'Créé dans le catalogue partagé': ['Created in the shared catalogue', 'تم الإنشاء في الكتالوج المشترك'],
       'Encaissement': ['Checkout', 'الاستخلاص'],
       'Reste à régler': ['Left to pay', 'الباقي للأداء'],

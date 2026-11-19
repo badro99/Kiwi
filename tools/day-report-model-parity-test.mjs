@@ -53,6 +53,7 @@ const c = vm.createContext({Date});
 let ownerCalls = 0; const owner = contexts[0].KiwiDayReportModel.reportFigures;
 c.DR = () => ({dayBounds:()=>({from,to}), normSale:s=>s, model:{reportFigures:(r)=>{ownerCalls++; return owner(r);}}});
 c.dashSales = () => [...rows, rows[0], {id:'before',ts:from-1,amount:999}, {id:'after',ts:to,amount:999}];
+vm.runInContext(dashSource.match(/var apartHere = function \(\) \{[^\n]*?\};/)[0], c); // real helper (bdfbb7d10): no apart store here
 vm.runInContext(declaration(dashSource.split('  function feedTotals')[1].replace(/^/, 'function feedTotals'), 'feedTotals'),c);
 assert.deepEqual(plain(c.feedTotals('2026-10-26')), {net:80,gross:100,txns:1});
 assert.equal(ownerCalls, 1, 'the dashboard figures come from the till model');

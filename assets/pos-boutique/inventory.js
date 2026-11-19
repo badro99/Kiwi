@@ -1,12 +1,12 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=326';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=222';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=327';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=223';
 import { openMoves } from './inv-moves.js?v=7';
 import * as SZ from '../boutique-sizes.js?v=24';
 import { openLabelPicker } from './label-picker.js?v=3';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=20';
 import { sisterStock } from './sister-stock.js?v=1';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=222';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=223';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -1135,9 +1135,10 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
          (Santos, 2026-11-18). Le bouton attend un choix explicite. */
       const sync = () => { if (saveBtn) saveBtn.disabled = !(varSel && varSel.value); };
       if (prodSel) prodSel.addEventListener('change', () => {
+        const tr = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
         varSel.innerHTML = prodSel.value
-          ? `<option value="" selected>Choisir la variante</option>${varOptions(prodSel.value)}`
-          : '<option value="" selected>Choisir d’abord l’article</option>';
+          ? `<option value="" selected>${esc(tr('Choisir la variante'))}</option>${varOptions(prodSel.value)}`
+          : `<option value="" selected>${esc(tr('Choisir d’abord l’article'))}</option>`;
         varSel.disabled = !prodSel.value;
         sync();
       });

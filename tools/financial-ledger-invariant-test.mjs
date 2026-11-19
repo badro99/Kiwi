@@ -32,6 +32,8 @@ const ctx = vm.createContext({ DR: () => ({ dayBounds: () => ({ from: 10, to: 20
   dashSales: () => sales, archivedDay: () => false, window: { KiwiLive: { status: () => ({ on: true, backfillComplete: true }) } } });
 /* The dashboard report reads the till's model (day-report.js), its single browser copy. */
 vm.runInContext(read('assets/day-report.js').match(/\/\* GENERATED SHARED KiwiDayReportModel BEGIN \*\/[\s\S]*?\/\* GENERATED SHARED KiwiDayReportModel END \*\//)[0], ctx);
+/* feedTotals asks apartHere() (Santos, deliveries kept apart since bdfbb7d10); the real helper, no apart store here. */
+vm.runInContext(report.match(/var apartHere = function \(\) \{[^\n]*?\};/)[0], ctx);
 vm.runInContext(declaration(report.slice(report.indexOf('  function feedTotals')), 'feedTotals') + '\n' + declaration(report.slice(report.indexOf('  function feedIsAuthoritative')), 'feedIsAuthoritative'), ctx);
 assert.equal(Math.round(ctx.feedTotals('day').net * 100), 1025, 'run: refunds subtract exact centimes once');
 assert.equal(Math.round(ctx.feedTotals('day').gross * 100), 1250);

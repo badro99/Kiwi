@@ -148,8 +148,8 @@
     "sha": "2d94a235fec8bc7c"
   },
   "assets/boutique-promos-dashboard.css": {
-    "v": "7",
-    "sha": "e4c0f9a1312b9853"
+    "v": "8",
+    "sha": "b9371500d29e8013"
   },
   "assets/boutique-promos-dashboard.js": {
     "v": "39",
@@ -220,8 +220,8 @@
     "sha": "2aec622ff3447940"
   },
   "assets/caisse-lang.js": {
-    "v": "148",
-    "sha": "8559f8b9a6dccb1d"
+    "v": "149",
+    "sha": "7f775cf589b42dd7"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1632,12 +1632,12 @@
     "sha": "fdeb683e53871093"
   },
   "assets/pos-boutique.css": {
-    "v": "326",
+    "v": "327",
     "sha": "b684eddfee44a144"
   },
   "assets/pos-boutique.js": {
-    "v": "326",
-    "sha": "2e28918b1e8ba5f9"
+    "v": "327",
+    "sha": "6918d18d6f9488e6"
   },
   "assets/pos-boutique/bargain-ui.js": {
     "v": "3",
@@ -1648,16 +1648,16 @@
     "sha": "7234a8ebd42e4f26"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "222",
-    "sha": "2d28fe12ad561f79"
+    "v": "223",
+    "sha": "d1e37523fac531ff"
   },
   "assets/pos-boutique/delivery-card.js": {
     "v": "10",
     "sha": "c1c7e9fb01688344"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "140",
-    "sha": "ada3769f5940f45c"
+    "v": "141",
+    "sha": "63193086a7178153"
   },
   "assets/pos-boutique/exchange.js": {
     "v": "6",
@@ -1672,8 +1672,8 @@
     "sha": "8e6ff69221c1cf80"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "222",
-    "sha": "e0c5bd829e7df205"
+    "v": "223",
+    "sha": "796ee1147c4675d1"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "22",
@@ -1716,8 +1716,8 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "222",
-    "sha": "783b46ed5e9ce608"
+    "v": "223",
+    "sha": "d418d80fb6140346"
   },
   "assets/pos-boutique/search.js": {
     "v": "16",
@@ -1760,8 +1760,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "437",
-    "sha": "ef571cca2d91aca8"
+    "v": "438",
+    "sha": "62edde5992eca398"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
