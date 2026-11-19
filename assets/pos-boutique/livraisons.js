@@ -76,7 +76,8 @@ const PHRASES = {
   'Sans fiche client': ['No customer details', 'بدون بيانات الزبون'],
   'Ozon a refusé le colis. Vérifiez le téléphone et l’adresse, puis Envoyer avec Ozon.': ['Ozon refused the parcel. Check the phone and address, then Send with Ozon.', 'رفضت أوزون الطرد. تحقق من الهاتف والعنوان ثم أرسل مع أوزون.'],
   'Vendue le': ['Sold on', 'بيع في'],
-  'confirmée dans {n} j': ['confirmed in {n} d', 'يُؤكد بعد {n} ي'],
+  'à confirmer dans {n} j': ['to confirm in {n} d', 'للتأكيد بعد {n} ي'],
+  'À confirmer : le client a-t-il payé ?': ['To confirm: did the customer pay?', 'للتأكيد: هل دفع الزبون؟'],
   'confirmée le': ['confirmed on', 'أُكد في'],
   'déjà revenu': ['already returned', 'أُرجع سابقاً'],
   'jour {d} sur {t}': ['day {d} of {t}', 'اليوم {d} من {t}'],
@@ -303,7 +304,7 @@ function rowOpen(x, d, esc) {
   }
   return '<div class="bqd-row" data-bqd-row="' + esc(x.saleId) + '">'
     + '<div class="bqd-top"><div>' + title(x, esc) + '<small>' + esc(sub.join(' · ')) + '</small></div>'
-    + '<div class="bqd-amt">' + esc(madC(x.dueCents, d)) + '<small><br>' + esc(parcel ? ozonNote() : tr('confirmée dans {n} j').replace('{n}', String(left))) + '</small></div>'
+    + '<div class="bqd-amt">' + esc(madC(x.dueCents, d)) + '<small><br>' + esc(parcel ? ozonNote() : x.toConfirm ? tr('À confirmer : le client a-t-il payé ?') : tr('à confirmer dans {n} j').replace('{n}', String(left))) + '</small></div>'
     + '</div>'
     + (parcel ? ozonLine(parcel) : '<div class="bqd-bar"><i style="width:' + Math.min(100, Math.round(days / total * 100)) + '%"></i></div>')
     + exchHistory(x, esc, (id) => ozonLine(ozonOf(id)))

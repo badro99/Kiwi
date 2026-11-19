@@ -124,23 +124,26 @@ ok(r.status === 200 && r.body.confirmDays === 15, 'the list says the delay is 15
 const open = Object.fromEntries(r.body.open.map((d) => [d.saleId, d]));
 ok(open['r-part'] && open['r-part'].dueCents === 90000 && open['r-part'].returnedCents === 45000, 'a partly returned order stays open for what is still out');
 ok(open['r-part'].lines[0].returnedQty === 1 && open['r-part'].lines[1].returnedQty === 0, 'its lines say what already came back');
-ok(open['r-young'] && !r.body.collected.some((d) => d.saleId === 'r-young'), 'an order younger than 15 days is not confirmed');
-ok(open['r-backlog'] && open['r-backlog'].dueCents === 40000, 'an order sold before the launch cutoff stays to receive: history is never confirmed in bulk');
+ok(open['r-young'] && open['r-young'].toConfirm === false && !r.body.collected.some((d) => d.saleId === 'r-young'), 'an order younger than 15 days is simply to receive');
+ok(open['r-backlog'] && open['r-backlog'].dueCents === 40000, 'an order sold before the launch cutoff stays to receive');
 ok(r.body.returned.some((d) => d.saleId === 'r-full'), 'the fully returned order is listed as returned, not collected');
-const col = Object.fromEntries(r.body.collected.map((d) => [d.saleId, d]));
-ok(col['r-old'] && col['r-old'].collected.auto === true && col['r-old'].collected.amountCents === 135000, 'an order older than 15 days with no return is confirmed automatically for its whole amount');
-ok(col['r-oldpart'] && col['r-oldpart'].collected.amountCents === 100000, 'a partly returned old order is confirmed only for what was kept (1000 MAD)');
-const autoSale = sqlite.prepare('SELECT amount_cents, method, ts, lines FROM sales WHERE id = ?').get('dlv-auto-r-old');
-const oldTs = sqlite.prepare('SELECT ts FROM sales WHERE id = ?').get('r-old').ts;
-ok(autoSale && autoSale.amount_cents === 135000 && autoSale.method === 'transfer', 'the confirmation is ONE ordinary sale: revenue enters then, never before');
-ok(autoSale.ts === oldTs + CONFIRM_DAYS * DAY, 'it is dated the fifteenth day, whenever the list was read');
-const kept = JSON.parse(sqlite.prepare('SELECT lines FROM sales WHERE id = ?').get('dlv-auto-r-oldpart').lines);
-ok(kept.find((l) => l.n === 'Cape TU').q === 1 && kept.find((l) => l.n === 'Cape TU').t === 350, 'its basket leaves out the cape that came back');
+/* Santos, 18 nov. 2026 : la confirmation automatique écrivait un virement
+   « Livraison reçue » au 15e jour. Le propriétaire le lisait comme de l'argent
+   rentré au magasin ce jour-là. Désormais le délai ne fait que signaler : la
+   livraison reste à recevoir, marquée « à confirmer », et rien n'entre au
+   chiffre d'affaires tant qu'une personne n'a pas confirmé le paiement. */
+ok(open['r-old'] && open['r-old'].dueCents === 135000 && open['r-old'].toConfirm === true, 'after 15 days an order stays to receive, marked to confirm, for its whole amount');
+ok(open['r-oldpart'] && open['r-oldpart'].dueCents === 100000 && open['r-oldpart'].toConfirm === true, 'a partly returned old order is to confirm for what was kept (1000 MAD)');
+ok(!r.body.collected.some((d) => d.saleId === 'r-old' || d.saleId === 'r-oldpart'), 'nothing is listed as collected without a person confirming it');
+ok(sqlite.prepare("SELECT COUNT(*) AS n FROM sales WHERE id LIKE 'dlv-auto-%'").get().n === 0, 'the delay writes no sale: no money enters the books by itself');
+ok(sqlite.prepare("SELECT COUNT(*) AS n FROM delivery_collections").get().n === 0, 'and no collection');
 r = await get(owner);
-ok(sqlite.prepare("SELECT COUNT(*) AS n FROM sales WHERE id LIKE 'dlv-auto-%'").get().n === 2, 'reading again confirms nothing twice');
+ok(sqlite.prepare("SELECT COUNT(*) AS n FROM sales WHERE merchant = ? AND id LIKE 'dlv-%'").get(MERCHANT).n === 0, 'reading again still writes nothing');
 ok(!('lines' in r.body.open[0]) || r.body.open[0].lines === undefined, 'the dashboard list stays light: no basket unless asked');
-r = await post({ saleId: 'r-old', action: 'return', id: 'ret-old-late', all: true });
-ok(r.status === 409, 'a confirmed order is no longer a pending return (a late return is a refund)');
+r = await post({ saleId: 'r-old', method: 'transfer' }, owner);
+ok(r.status === 200 && sqlite.prepare("SELECT COUNT(*) AS n FROM delivery_collections WHERE sale_id = 'r-old'").get().n === 1, 'confirming it by hand records the money, once');
+r = await post({ saleId: 'r-oldpart', action: 'return', id: 'ret-oldpart-late', lines: [{ i: 0, q: 1 }], returnedBy: mgr });
+ok(r.status === 200, 'an order still to confirm can still come back');
 
 /* Le pavé 2027 refuse un acte « refund » sans preuve signée d'un remboursement
    précis : ouvrir la page Livraisons ne doit pas s'annoncer comme tel, sinon

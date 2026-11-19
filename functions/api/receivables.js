@@ -183,50 +183,38 @@ function view(row, collections, returns, card, exchanges) {
   };
 }
 
-/* Confirmation automatique : une livraison qui n'est pas revenue après
- * CONFIRM_DAYS jours est réputée payée par le transporteur. Le reste dû entre
- * alors dans le chiffre d'affaires par un encaissement ordinaire (virement),
- * daté du jour où le délai tombe (vente + 15 jours), pas du jour où quelqu'un
- * ouvre la page : le chiffre tombe toujours le même jour. Le flux suit le
- * rowid, une vente datée du passé arrive donc quand même au tableau de bord.
- * L'identifiant 'dlv-auto-<vente>' rend l'écriture idempotente : deux lectures
- * simultanées n'encaissent jamais deux fois. */
+/* Le délai de 15 jours ne confirme plus rien (Santos, 18 nov. 2026). Il
+ * écrivait un virement « Livraison reçue » au quinzième jour : le propriétaire
+ * le lisait comme de l'argent entré au magasin ce jour-là, et cherchait qui
+ * l'avait pris. Désormais une livraison restée sans nouvelles 15 jours reste à
+ * recevoir, marquée `toConfirm` (« à confirmer ») : rien n'entre au chiffre
+ * d'affaires tant qu'une personne n'a pas confirmé le paiement, ou Ozon « Payé ».
+ * Le colis, lui, est parti : son stock retenu sort à ce moment-là, comme il
+ * sortait avec l'ancienne confirmation. Les virements automatiques déjà écrits
+ * (identifiant 'dlv-auto-<vente>') restent tels quels : `collected.auto` les
+ * nomme. tools/delivery-returns-test.mjs */
 export const CONFIRM_DAYS = 15;
 const DAY_MS = 86400000;
-/* Le délai ne s'applique qu'aux livraisons vendues depuis le 14 octobre 2026
- * (minuit, Maroc) : celles dont le quinzième jour tombe après la mise en
- * service. Les plus anciennes, jamais marquées reçues, restent « à recevoir »
- * jusqu'à ce que le propriétaire décide : les confirmer d'un coup réécrirait
- * le chiffre d'affaires de journées déjà closes. */
+/* Seules les livraisons vendues depuis le 14 octobre 2026 (minuit, Maroc) ont
+ * du stock retenu à sortir au quinzième jour. */
 export const AUTO_FROM_TS = Date.UTC(2026, 9, 13, 23);
 const AUTO_BATCH = 25;
-async function autoConfirm(env, merchant, rows, bySale, returnsBySale, now) {
-  let wrote = 0;
+export function isAged(ts, now) { return !!ts && now - ts >= CONFIRM_DAYS * DAY_MS; }
+async function settleAgedStock(env, merchant, rows, bySale, returnsBySale, now, held) {
+  let done = 0;
   const from = Number(env && env.DELIVERY_AUTO_FROM_TS) || AUTO_FROM_TS;   // réglable pour les tests
-  /* Un colis confié à Ozon Express n'a pas de délai : c'est « Payé » chez
-     Ozon qui le confirme (confirmByCarrier, functions/api/ozon/track.js). */
-  const carried = new Set();
-  try {
-    const rs = await env.DB.prepare("SELECT sale_id FROM ozon_parcels WHERE merchant = ? AND status != 'cancelled'").bind(merchant).all();
-    (rs.results || []).forEach((r) => carried.add(String(r.sale_id)));
-  } catch (_) { /* table absente : aucun colis Ozon */ }
   for (const row of rows) {
-    if (wrote >= AUTO_BATCH) break;
-    const ts = Number(row.ts) || 0;
-    if (!ts || ts < from || now - ts < CONFIRM_DAYS * DAY_MS) continue;
-    if (row.delivery_written_off || row.delivery_returned || carried.has(String(row.id))) continue;
-    const d = view(row, bySale.get(String(row.id)), returnsBySale.get(String(row.id)));
+    if (done >= AUTO_BATCH) break;
+    const id = String(row.id), ts = Number(row.ts) || 0;
+    if (!held.has(id) || ts < from || !isAged(ts, now)) continue;
+    if (row.delivery_written_off || row.delivery_returned) continue;
+    const d = view(row, bySale.get(id), returnsBySale.get(id));
     if (!(d.dueCents > 0)) continue;
-    try {
-      await writeCollection(env, merchant, row, {
-        collectionId: 'dlv-auto-' + String(row.id), method: 'transfer', amount: d.dueCents,
-        owed: d.owedCents - d.returnedCents, byId: 'auto', byName: 'Confirmation automatique · ' + CONFIRM_DAYS + ' jours',
-        ts: ts + CONFIRM_DAYS * DAY_MS, returns: returnsBySale.get(String(row.id)),
-      });
-      wrote += 1;
-    } catch (_) { /* une autre lecture l'a écrite au même instant : rien à faire */ }
+    done += 1;
+    await takeHeldStock(env, merchant, id);
+    held.delete(id);
   }
-  return wrote;
+  return done;
 }
 
 /* Le transporteur a payé (Ozon Express : « Payé »). Le reste dû entre dans le
@@ -267,7 +255,6 @@ export async function onRequestGet({ request, env }) {
   let rows = await readDeliveries(env.DB, merchant, null, withLines);
   let bySale = await readCollections(env.DB, merchant);
   const returnsBySale = await readReturns(env.DB, merchant);
-  if (await autoConfirm(env, merchant, rows, bySale, returnsBySale, Date.now())) bySale = await readCollections(env.DB, merchant);
   const cards = await readDeliveryCards(env.DB, merchant);
   const exchangesBySale = await readExchanges(env.DB, merchant);
   /* Le destinataire vient du colis Ozon quand il y en a un : c'est là qu'il se
@@ -288,6 +275,8 @@ export async function onRequestGet({ request, env }) {
      écriture au même instant) sort ici, à la lecture suivante. La caisse lit
      `stockHeld` pour ne pas remettre en stock un retour qui n'en était pas sorti. */
   const held = await heldStockSales(env.DB, merchant);
+  const now = Date.now();
+  await settleAgedStock(env, merchant, rows, bySale, returnsBySale, now, held);
   let caught = 0;
   for (const row of rows) {
     const id = String(row.id);
@@ -298,7 +287,12 @@ export async function onRequestGet({ request, env }) {
     await takeHeldStock(env, merchant, id);
     held.delete(id);
   }
-  all.forEach((d) => { d.stockHeld = held.has(d.saleId); });
+  all.forEach((d) => {
+    d.stockHeld = held.has(d.saleId);
+    /* « À confirmer » : due, sans nouvelles depuis 15 jours. Un colis Ozon est
+       confirmé par son statut chez Ozon, jamais par le délai. */
+    d.toConfirm = d.dueCents > 0 && !d.needsReview && !parcelSales.has(d.saleId) && isAged(d.ts, now);
+  });
   /* Un colis qu'Ozon a refusé à la création automatique (téléphone, adresse) :
      la caisse le dit sur la ligne, tant qu'aucun colis n'existe. */
   try {

@@ -227,12 +227,16 @@ await ok('« Retourné » moves no money: the order waits for a manager in Livra
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM sale_audit WHERE sale_id = 'dlv-1'").get().n, 0, 'no return recorded on its own');
 });
 
-await ok('an Ozon parcel is out of the 15-day auto-confirm; a plain delivery still gets it', async () => {
+await ok('after 15 days nothing is collected by itself; a plain delivery is « to confirm », an Ozon parcel waits for Ozon', async () => {
   sqlite.prepare("UPDATE sales SET ts = ? WHERE id = 'dlv-1'").run(now - 20 * 86400e3);
   const r = await receivablesGet({ request: req(`/api/receivables?merchant=${MERCHANT}`, 'GET', owner), env: { ...env, DELIVERY_AUTO_FROM_TS: 1 } });
   assert.equal(r.status, 200);
+  const body = await r.json();
   assert.equal(collections('dlv-1').length, 0, 'Ozon parcel waits for Ozon');
-  assert.equal(collections('dlv-old').length, 1, 'plain delivery confirmed at 15 days');
+  assert.equal(collections('dlv-old').length, 0, 'a plain delivery is not collected by the delay');
+  const open = Object.fromEntries(body.open.map((d) => [d.saleId, d]));
+  assert.equal(open['dlv-old'].toConfirm, true, 'it is marked to confirm');
+  assert.equal(open['dlv-1'].toConfirm, false, 'an Ozon parcel is never « to confirm » by the delay');
 });
 
 await ok('a delivery note runs Ozon\'s three steps on open parcels and marks them', async () => {
