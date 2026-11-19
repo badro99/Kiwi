@@ -150,29 +150,30 @@ import * as r144 from './api/shopify/connect.js';
 import * as r145 from './api/shopify/connect-direct.js';
 import * as r146 from './api/shopify/cron.js';
 import * as r147 from './api/shopify/status.js';
-import * as r148 from './api/stock-transfers.js';
-import * as r149 from './api/stock/lookup.js';
-import * as r150 from './api/store.js';
-import * as r151 from './api/store-credits.js';
-import * as r152 from './api/support/articles.js';
-import * as r153 from './api/support/attachments.js';
-import * as r154 from './api/support/inbound.js';
-import * as r155 from './api/support/tickets.js';
-import * as r156 from './api/table-time.js';
-import * as r157 from './api/team/live.js';
-import * as r158 from './api/ticket-sequence.js';
-import * as r159 from './api/tickets/index.js';
-import * as r160 from './api/timezone.js';
-import * as r161 from './api/weather.js';
-import * as r162 from './api/z-reconciliation.js';
-import * as r163 from './auth/forgot.js';
-import * as r164 from './auth/login.js';
-import * as r165 from './auth/logout.js';
-import * as r166 from './auth/operator.js';
-import * as r167 from './auth/reset.js';
-import * as r168 from './auth/signup.js';
-import * as r169 from './order/basic.js';
-import * as r170 from './sitemap-annuaire.xml.js';
+import * as r148 from './api/sister-stock.js';
+import * as r149 from './api/stock-transfers.js';
+import * as r150 from './api/stock/lookup.js';
+import * as r151 from './api/store.js';
+import * as r152 from './api/store-credits.js';
+import * as r153 from './api/support/articles.js';
+import * as r154 from './api/support/attachments.js';
+import * as r155 from './api/support/inbound.js';
+import * as r156 from './api/support/tickets.js';
+import * as r157 from './api/table-time.js';
+import * as r158 from './api/team/live.js';
+import * as r159 from './api/ticket-sequence.js';
+import * as r160 from './api/tickets/index.js';
+import * as r161 from './api/timezone.js';
+import * as r162 from './api/weather.js';
+import * as r163 from './api/z-reconciliation.js';
+import * as r164 from './auth/forgot.js';
+import * as r165 from './auth/login.js';
+import * as r166 from './auth/logout.js';
+import * as r167 from './auth/operator.js';
+import * as r168 from './auth/reset.js';
+import * as r169 from './auth/signup.js';
+import * as r170 from './order/basic.js';
+import * as r171 from './sitemap-annuaire.xml.js';
 
 // Nested middlewares, outermost first, with the path each one covers.
 export const FAST_MIDDLEWARES = [
@@ -329,27 +330,28 @@ export const FAST_ROUTES = new Map(/** @type {Array<[string, Record<string, any>
   ["/api/shopify/connect-direct", r145],
   ["/api/shopify/cron", r146],
   ["/api/shopify/status", r147],
-  ["/api/stock-transfers", r148],
-  ["/api/stock/lookup", r149],
-  ["/api/store", r150],
-  ["/api/store-credits", r151],
-  ["/api/support/articles", r152],
-  ["/api/support/attachments", r153],
-  ["/api/support/inbound", r154],
-  ["/api/support/tickets", r155],
-  ["/api/table-time", r156],
-  ["/api/team/live", r157],
-  ["/api/ticket-sequence", r158],
-  ["/api/tickets", r159],
-  ["/api/timezone", r160],
-  ["/api/weather", r161],
-  ["/api/z-reconciliation", r162],
-  ["/auth/forgot", r163],
-  ["/auth/login", r164],
-  ["/auth/logout", r165],
-  ["/auth/operator", r166],
-  ["/auth/reset", r167],
-  ["/auth/signup", r168],
-  ["/order/basic", r169],
-  ["/sitemap-annuaire.xml", r170],
+  ["/api/sister-stock", r148],
+  ["/api/stock-transfers", r149],
+  ["/api/stock/lookup", r150],
+  ["/api/store", r151],
+  ["/api/store-credits", r152],
+  ["/api/support/articles", r153],
+  ["/api/support/attachments", r154],
+  ["/api/support/inbound", r155],
+  ["/api/support/tickets", r156],
+  ["/api/table-time", r157],
+  ["/api/team/live", r158],
+  ["/api/ticket-sequence", r159],
+  ["/api/tickets", r160],
+  ["/api/timezone", r161],
+  ["/api/weather", r162],
+  ["/api/z-reconciliation", r163],
+  ["/auth/forgot", r164],
+  ["/auth/login", r165],
+  ["/auth/logout", r166],
+  ["/auth/operator", r167],
+  ["/auth/reset", r168],
+  ["/auth/signup", r169],
+  ["/order/basic", r170],
+  ["/sitemap-annuaire.xml", r171],
 ]));

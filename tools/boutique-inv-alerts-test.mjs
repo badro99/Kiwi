@@ -50,7 +50,7 @@ function inventoryHtml() {
   shippedFunction(inventorySource, 'renderInventaire', {
     catDB: () => ({ stats: () => ({ products: 0, variants: 0, totalStock: 91, low: 7, ruptures: 3 }), listCategories: () => [], listProducts: () => [] }),
     $: (q) => q.startsWith('[data-bq-panel') ? panel : null, root: {}, state: {},
-    invPaint: (_, value) => { html = value; }, invSearch() {}, invCountAsks() {},
+    invPaint: (_, value) => { html = value; }, invSearch() {}, invCountAsks() {}, sisterStock() {},
     bqKitSkin() {}, pvReal: () => false, _bqKey: K, fmtMAD: String, esc: String, icons() {}, artOf() {}, tillInventoryAllowed: () => false,
   })();
   return html;
