@@ -244,8 +244,8 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "76",
-    "sha": "1e48f474fbaac1f4"
+    "v": "77",
+    "sha": "001eba03b062043a"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
@@ -284,8 +284,8 @@
     "sha": "2da470cdcee6759e"
   },
   "assets/caisse/catalogue.js": {
-    "v": "18",
-    "sha": "d55631f17d548395"
+    "v": "19",
+    "sha": "971c8708664bc9e4"
   },
   "assets/caisse/closing.js": {
     "v": "2",
@@ -294,6 +294,10 @@
   "assets/caisse/discounts.js": {
     "v": "4",
     "sha": "289d3d48c6bc6349"
+  },
+  "assets/caisse/dish-words.js": {
+    "v": "1",
+    "sha": "4b4eb898d4ed76f1"
   },
   "assets/caisse/handover.js": {
     "v": "2",
@@ -1216,8 +1220,8 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "129",
-    "sha": "26311888505b0ff1"
+    "v": "130",
+    "sha": "3c5f79816d10695e"
   },
   "assets/live-link/queue-store.js": {
     "v": "24",

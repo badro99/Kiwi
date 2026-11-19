@@ -172,7 +172,7 @@
           "concern": "the till proof check and the boot sequence",
           "lines": [
             1017,
-            1126
+            1127
           ],
           "declares": [
             "tillProofChecked",
@@ -184,8 +184,8 @@
           "file": "assets/caisse-pairing/verify.js",
           "concern": "server verification of a staff or manager code and approvals",
           "lines": [
-            1127,
-            1213
+            1128,
+            1214
           ],
           "declares": [
             "lastVerify",
@@ -199,8 +199,8 @@
           "file": "assets/caisse-pairing/api.js",
           "concern": "window.KiwiCaissePairing and the start",
           "lines": [
-            1214,
-            1283
+            1215,
+            1284
           ],
           "declares": [
             "window.KiwiCaissePairing"

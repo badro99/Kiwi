@@ -16,7 +16,7 @@ import fs from 'node:fs';
 const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const app = read('assets/caisse-app.js'), catalogue = read('assets/caisse/catalogue.js');
 const tables = app.slice(app.indexOf('    const MENU_ART = {'), app.indexOf('/* The language module loads deferred'));
-const resolver = catalogue.slice(catalogue.indexOf('    const normalizeMenuArtName'), catalogue.indexOf('    /* Une carte vide'));
+const resolver = read('assets/caisse/dish-words.js') + '\n' + catalogue.slice(catalogue.indexOf('    const normalizeMenuArtName'), catalogue.indexOf('    /* Une carte vide'));
 const { key } = Function('catLabels', `${tables}\n${resolver}\nreturn { key: menuArtKey };`)({});
 const pic = (name, sub) => key('it_x', '', name, sub);
 

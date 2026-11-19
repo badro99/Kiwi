@@ -36,7 +36,7 @@ ok(!/<svg class="menu-art/.test(catalogue) && !/const _bowl|const _tajine|MENU_L
 
 // Run the resolver the cards run, not a text search.
 const tables = app.slice(app.indexOf('    const MENU_ART = {'), app.indexOf('/* The language module loads deferred'));
-const resolver = catalogue.slice(catalogue.indexOf('    const normalizeMenuArtName'), catalogue.indexOf('    /* Une carte vide'));
+const resolver = read('assets/caisse/dish-words.js') + '\n' + catalogue.slice(catalogue.indexOf('    const normalizeMenuArtName'), catalogue.indexOf('    /* Une carte vide'));
 ok(tables.includes('CAT_GLYPH_RULES') && resolver.includes('menuArtKey') && resolver.includes('DISH_WORDS'), 'the picture tables and resolver are extractable');
 ok(!/MENU_ART_RULES/.test(app + catalogue), 'the old hand-ordered regex list is gone: the dictionary decides');
 const { key, html, MENU_ART, DISH_WORDS, CAT_GLYPH_RULES, SODA_CANS, OWN_ICONS } = Function('catLabels',

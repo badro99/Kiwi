@@ -130,14 +130,13 @@
           "concern": "pompe et bandeau de la vue opérateur, surveillance des annulations",
           "lines": [
             1166,
-            1385
+            1383
           ],
           "declares": [
             "pumping",
             "snapshotVenue",
             "verifySnapshotLedger",
             "initPump",
-            "shopName",
             "paintSnapshot",
             "initOperatorBanner",
             "opSkipLock",
@@ -149,8 +148,8 @@
           "file": "assets/live-link/parts/boot.js",
           "concern": "démarrage et interface publique",
           "lines": [
-            1386,
-            1569
+            1384,
+            1567
           ],
           "declares": [
             "boot",

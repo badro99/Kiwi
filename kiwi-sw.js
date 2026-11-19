@@ -142,7 +142,8 @@ var SHELL = [
   '/assets/caisse/receipts.js?v=2',
   '/assets/caisse/closing.js?v=2',
   '/assets/caisse/workflows-loader.js?v=3',
-  '/assets/caisse/catalogue.js?v=18',
+  '/assets/caisse/dish-words.js?v=1',
+  '/assets/caisse/catalogue.js?v=19',
   '/assets/caisse/till-frame.js?v=22',
   '/assets/caisse/orders.js?v=2',
   '/assets/caisse/payment.js?v=9',
@@ -361,7 +362,7 @@ var SHELL = [
   '/assets/operations-ui.js?v=33',
   '/assets/live-link/queue-store.js?v=24',
   '/assets/live-link/sale-identity.js?v=4',
-  '/assets/live-link.js?v=129',
+  '/assets/live-link.js?v=130',
   '/assets/expenses/index.js?v=4',
   '/assets/expenses/engine.js?v=3',
   '/assets/expenses/strings.js?v=2',
@@ -651,7 +652,7 @@ var SHELL = [
   '/assets/refund-split.js?v=2',
   '/assets/pos-maison/inventory.js?v=117',
   '/assets/pos-maison.js?v=200',
-  '/assets/caisse-pairing.js?v=76',
+  '/assets/caisse-pairing.js?v=77',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

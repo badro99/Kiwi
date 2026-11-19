@@ -117,20 +117,18 @@ try {
     localStorage.setItem('kiwiLiveMerchant', v.merchant);
     localStorage.setItem('kiwiPairedVenue', JSON.stringify(v));
   }, other);
-  await F.page.goto(base + '/kiwi-caisse.html?pair=1&op=1&merchant=' + MERCHANT, { waitUntil: 'load' });
+  const asked = []; F.page.on('request', (r) => { if (r.isNavigationRequest()) asked.push(r.url()); });
+  await F.page.goto(base + '/kiwi-caisse.html?pair=1&op=1&merchant=' + MERCHANT, { waitUntil: 'load' }).catch(() => {});
   await sleep(3000);
-  const f = await F.page.evaluate(() => {
-    const n = document.getElementById('op-link-stale');
-    const pin = document.getElementById('pin-screen');
-    return { on: document.body.classList.contains('is-unlocked'), notice: n && getComputedStyle(n).display !== 'none' ? n.innerText : '',
-      href: n && n.querySelector('a') ? n.querySelector('a').getAttribute('href') : '',
-      pin: !!(pin && getComputedStyle(pin).display !== 'none' && pin.getBoundingClientRect().height > 0),
-      paired: localStorage.getItem('kiwiLiveMerchant') };
-  });
-  ok(!f.on, 'no till opens', JSON.stringify(f));
-  ok(!f.pin, 'not even the code screen of the paired store', JSON.stringify(f));
-  ok(f.notice.includes(MERCHANT), 'a notice names the store of the link', f.notice);
-  ok(/kiwi-admin/.test(f.href), 'and leads back to the console', f.href);
+  /* No till of another store, not even its code screen: the tab goes back to
+     this client's page in the console, where « Ouvrir la caisse » proves the
+     operator again. */
+  const f = { url: asked[asked.length - 1] || F.page.url() };
+  /* The local server has no /kiwi-admin route (Pages serves it in production): read the pairing back on the till's origin. */
+  await F.page.goto(base + '/kiwi-caisse.html?__blank', { waitUntil: 'domcontentloaded' }).catch(() => {});
+  f.paired = await F.page.evaluate(() => localStorage.getItem('kiwiLiveMerchant')).catch(() => '');
+  ok(!/kiwi-caisse/.test(f.url), 'no till opens, the tab leaves the caisse', f.url);
+  ok(f.url.includes('kiwi-admin') && f.url.endsWith('#merchant/' + MERCHANT + '/summary'), 'it lands on the client page of the link\'s store in the console', f.url);
   ok(f.paired === 'other-store-test', 'this browser stays paired to its own store', String(f.paired));
   ok(F.errors.length === 0, 'no page error', F.errors.slice(0, 3).join(' | '));
   await F.ctx.close();

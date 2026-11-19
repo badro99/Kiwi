@@ -85,6 +85,7 @@
       }
     }
 
+    var opStore = wantsOperatorAccess() && !ls(HANDOFF) && ((location.search || '').match(/[?&]merchant=([a-z0-9][a-z0-9_-]{0,63})(?:&|$)/) || [])[1]; if (opStore) { var opVenue = isPaired() ? pairedVenue() : null; if (opVenue && opVenue.merchant === opStore) { bootForOperator(opVenue); return; } location.replace('/kiwi-admin#merchant/' + opStore + '/summary'); return; }   // 19 nov. 2026 : lien opérateur sans relais (onglet rechargé, lien recopié). Même magasin : /api/me le prouve à nouveau ; autre magasin : retour à sa fiche dans la console, jamais la caisse appairée à ce navigateur (Santos s'ouvrait à la place de Browse).
     if (isPaired()) { bootWithPin(pairedVenue()); ensureTillProof(pairedVenue()); return; }
 
     var h2 = takeHandoff();

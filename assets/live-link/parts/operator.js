@@ -82,11 +82,6 @@
   }
 
   /* ─── operator view banner ─── */
-  /* Le nom que l'opérateur connaît (« Browse »), pas l'identifiant technique. */
-  function shopName() {
-    try { var d = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData(); if (d && d.name && (d.slug || slugify(d.name)) === merchant()) return d.name; } catch (_) {}
-    return merchant();
-  }
   function paintSnapshot() {
     var status = document.getElementById && document.getElementById('kiwi-op-snapshot');
     if (!status || !operatorSnapshot) return;
@@ -101,7 +96,10 @@
       ? 'Chiffres du serveur à ' + new Date(s.completedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + ' · pas en direct' + pending
       : s.phase === 'loading' ? 'Chargement des chiffres du serveur' + (s.rows ? ' · ' + s.rows + ' enregistrement(s) reçu(s)' : '') + ' · chiffres indisponibles'
         : (s.phase === 'incomplete' ? 'Chiffres incomplets' : 'Échec du chargement') + ' · ' + (errors[s.error] || 'Serveur indisponible') + pending + ' · chiffres indisponibles';
-    status.textContent = shopName() + ' · ' + message;
+    /* Le nom que l'opérateur connaît (« Browse »), pas l'identifiant technique. */
+    var shop = merchant();
+    try { var d = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData(); if (d && d.name && (d.slug || slugify(d.name)) === shop) shop = d.name; } catch (_) {}
+    status.textContent = shop + ' · ' + message;
     status.setAttribute('data-state', s.phase);
     status.setAttribute('aria-busy', String(s.phase === 'loading'));
   }
