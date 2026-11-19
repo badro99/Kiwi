@@ -220,7 +220,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2102',
-  '/assets/pages/dashboard-startup.js?v=243',
+  '/assets/pages/dashboard-startup.js?v=244',
   '/assets/pages/dashboard-loader.js?v=106',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -251,7 +251,7 @@ var SHELL = [
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=11',
-  '/assets/i18n.js?v=58',
+  '/assets/i18n.js?v=59',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -432,8 +432,8 @@ var SHELL = [
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
   '/assets/promo-rules.js?v=26',
   '/assets/promos.js?v=31',
-  '/assets/boutique-promos-dashboard.css?v=6',
-  '/assets/boutique-promos-dashboard.js?v=38',
+  '/assets/boutique-promos-dashboard.css?v=7',
+  '/assets/boutique-promos-dashboard.js?v=39',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js?v=148',

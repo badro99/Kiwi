@@ -148,12 +148,12 @@
     "sha": "2d94a235fec8bc7c"
   },
   "assets/boutique-promos-dashboard.css": {
-    "v": "6",
-    "sha": "ed543fe437bc4fee"
+    "v": "7",
+    "sha": "e4c0f9a1312b9853"
   },
   "assets/boutique-promos-dashboard.js": {
-    "v": "38",
-    "sha": "47c31655e048733d"
+    "v": "39",
+    "sha": "e78e4bd2265774e4"
   },
   "assets/boutique-size-codes.js": {
     "v": "3",
@@ -820,8 +820,8 @@
     "sha": "079d2785b601cc2e"
   },
   "assets/i18n.js": {
-    "v": "58",
-    "sha": "3b8773783641162e"
+    "v": "59",
+    "sha": "8b1f5807ef047a15"
   },
   "assets/icons/material/sprite.access.svg": {
     "v": "1",
@@ -1512,8 +1512,8 @@
     "sha": "bda23e0e63947ae5"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "243",
-    "sha": "6f96aeb1c57bc214"
+    "v": "244",
+    "sha": "9ba78c05f9d30d20"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

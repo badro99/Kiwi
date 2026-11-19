@@ -168,11 +168,13 @@
     var day = next.day === 0 ? tr("promos.copy22") : next.day === 1 ? tr("promos.copy23") : dayLong(next.weekday);
     return tr("promos.copy24", { p0: day, p1: (next.at ? ' à ' + next.at : ''), p2: day, p3: (next.at ? ' at ' + next.at : ''), p4: day, p5: (next.at ? ' في الساعة ' + next.at : '') });
   }
-  function whenText(p, now) {
-    var st = PRM().status(p, now || Date.now());
-    var slot = windowText(p);
-    var base = whenBase(p, st);
-    return slot && st !== 'ended' ? slot + ' · ' + (st === 'waiting' ? resumeText(p, now) + ' · ' : '') + base : base;
+  /* La période en deux temps : ce qu'on lit d'un coup d'œil (« Ven, Sam, Dim »),
+     puis le détail en gris (« Reprend vendredi · Sans date de fin »). Sur une
+     seule ligne, la colonne passait à trois lignes serrées. */
+  function whenParts(p, now) {
+    var st = PRM().status(p, now || Date.now()), slot = windowText(p), base = whenBase(p, st);
+    if (!slot || st === 'ended') return [base, ''];
+    return [slot, (st === 'waiting' ? resumeText(p, now) + ' · ' : '') + base];
   }
   function whenBase(p, st) {
     if (st === 'paused') return tr("promos.copy25");
@@ -212,20 +214,68 @@
   function row(ctx, p, now) {
     var status = PRM().status(p, now);
     var n = preview(ctx, p).count;
-    var tone = status === 'active' ? 'active' : status === 'ended' ? 'ended' : 'soon';
+    /* « Hors créneau » n'est pas une alerte : la promotion du week-end attend
+       vendredi. Ton neutre ; l'orangé reste à ce qui est programmé. */
+    var tone = status === 'active' ? 'active' : status === 'ended' ? 'ended' : status === 'waiting' ? 'wait' : status === 'paused' ? 'paused' : 'soon';
+    var when = whenParts(p, now);
     var label = status === 'active' ? tr("promos.copy44") : status === 'waiting' ? tr("promos.copy45") : status === 'scheduled' ? tr("promos.copy46") : status === 'paused' ? tr("promos.copy47") : tr("promos.copy48");
     var tPrint = tr("promos.copy49");
     var tToggle = p.paused ? tr("promos.copy50") : tr("promos.copy51");
     var tEdit = tr("promos.copy52");
     var tDel = tr("promos.copy53");
     return '<div class="bpd-row ' + tone + '"><span><span class="bpd-off">' + esc(PRM().badgeOf(p)) + '</span></span>' +
-      '<span class="bpd-rname"><b>' + esc(p.name) + '</b><span class="bpd-state ' + tone + '">' + label + '</span></span>' +
-      '<span class="bpd-rtxt">' + esc(scopeText(ctx, p)) + '</span><span class="bpd-rtxt">' + esc(whenText(p, now)) + '</span>' +
-      '<span class="bpd-rnum">' + nItems(n) + '</span><span class="bpd-actions">' +
+      '<span class="bpd-rname"><b>' + esc(p.name) + '</b><span class="bpd-state ' + tone + '"><i class="bpd-dot ' + (tone === 'active' ? 'live pulse' : tone === 'wait' ? 'live' : tone) + '"></i>' + label + '</span></span>' +
+      '<span class="bpd-rtxt">' + esc(scopeText(ctx, p)) + '</span><span class="bpd-rtxt bpd-when"><span>' + esc(when[0]) + '</span>' + (when[1] ? '<small>' + esc(when[1]) + '</small>' : '') + '</span>' +
+      '<span class="bpd-rnum">' + nItems(n) + '<i class="bpd-meter" aria-hidden="true"><i style="width:' + Math.round(100 * n / Math.max(1, items(ctx).length)) + '%"></i></i></span><span class="bpd-actions">' +
+      (status !== 'ended' ? '<button class="bpd-switch' + (p.paused ? '' : ' on') + '" role="switch" aria-checked="' + !p.paused + '" data-action="bpd-toggle" data-arg="' + esc(p.id) + '" title="' + tToggle + '" aria-label="' + tToggle + '"><i></i></button>' : '') +
       (n ? '<button data-activation=write class="bpd-icon" data-action="bpd-print" data-arg="' + esc(p.id) + '" title="' + tPrint + '" aria-label="' + tPrint + '"><i data-bpd-icon="printer"></i></button>' : '') +
-      (status !== 'ended' ? '<button class="bpd-icon" data-action="bpd-toggle" data-arg="' + esc(p.id) + '" title="' + tToggle + '" aria-label="' + tToggle + '"><i data-bpd-icon="' + (p.paused ? 'play' : 'pause') + '"></i></button>' : '') +
       '<button data-activation=write class="bpd-icon" data-action="bpd-edit" data-arg="' + esc(p.id) + '" title="' + tEdit + '" aria-label="' + tEdit + '"><i data-bpd-icon="pencil"></i></button>' +
       '<button data-activation=write class="bpd-icon danger" data-action="bpd-delete" data-arg="' + esc(p.id) + '" title="' + tDel + '" aria-label="' + tDel + '"><i data-bpd-icon="trash-2"></i></button></span></div>';
+  }
+
+  /* ── LA SEMAINE ─────────────────────────────────────────────────────────
+     Sept journées commerciales à partir d'aujourd'hui, une ligne par promotion
+     qui n'est pas finie, une barre sur les jours où la caisse l'applique. La
+     question du commerçant n'est pas « quelles règles ai-je écrites » mais
+     « qu'est-ce qui se passe samedi » : la grille y répond d'un regard. La
+     ligne verticale est l'heure actuelle dans la journée d'aujourd'hui. */
+  function weekKeys(now) {
+    var k0 = dayKey(now), y = +k0.slice(0, 4), m = +k0.slice(5, 7) - 1, d = +k0.slice(8, 10), out = [];
+    for (var i = 0; i < 7; i++) out.push(new Date(Date.UTC(y, m, d + i, 12)).toISOString().slice(0, 10));
+    return out;
+  }
+  var weekdayOf = function (key) { return new Date(key + 'T12:00:00Z').getUTCDay(); };
+  function runsOn(p, key) {
+    if (p.from && p.from > endOfDay(key)) return false;
+    if (p.to && p.to < startOfDay(key)) return false;
+    return !(p.days && p.days.length) || p.days.indexOf(weekdayOf(key)) >= 0;
+  }
+  function weekHtml(ctx, list, now) {
+    var keys = weekKeys(now), live = list.filter(function (p) { return PRM().status(p, now) !== 'ended'; });
+    if (!live.length) return '';
+    var rank = { active: 0, waiting: 1, scheduled: 2, paused: 3 };
+    live.sort(function (a, b) { return (rank[PRM().status(a, now)] - rank[PRM().status(b, now)]) || ((a.from || 0) - (b.from || 0)); });
+    var t0 = startOfDay(keys[0]), frac = Math.max(0, Math.min(1, (now - t0) / (endOfDay(keys[0]) + 1 - t0)));
+    var head = '<div class="bpd-wk-corner" style="grid-row:1;grid-column:1"></div>' + keys.map(function (k, i) {
+      var wd = weekdayOf(k), we = wd === 0 || wd === 6;
+      return '<div class="bpd-wk-day' + (i ? '' : ' today') + (we ? ' we' : '') + '" style="grid-row:1;grid-column:' + (i + 2) + '"><small>' + (i ? dayShort(wd) : tr("promos.copy131")) + '</small><b>' + (+k.slice(8, 10)) + '</b></div>';
+    }).join('');
+    var rows = live.map(function (p, r) {
+      var st = PRM().status(p, now), tone = p.paused ? 'paused' : (st === 'active' || st === 'waiting') ? 'live' : 'soon';
+      var line = r + 2, bars = '', i = 0, slot = p.start && p.end ? p.start + '–' + p.end : '';
+      while (i < 7) {
+        if (!runsOn(p, keys[i])) { i++; continue; }
+        var j = i; while (j + 1 < 7 && runsOn(p, keys[j + 1])) j++;
+        bars += '<button data-activation=write class="bpd-wk-bar ' + tone + (i === 0 && st === 'active' ? ' now' : '') + '" style="grid-row:' + line + ';grid-column:' + (i + 2) + '/' + (j + 3) + ';--d:' + (r * 70 + i * 25) + 'ms" data-action="bpd-edit" data-arg="' + esc(p.id) + '" title="' + esc(p.name) + '"><b>' + esc(PRM().badgeOf(p)) + '</b>' + (slot && j - i >= 0 ? '<span>' + slot + '</span>' : '') + '</button>';
+        i = j + 1;
+      }
+      return '<div class="bpd-wk-name" style="grid-row:' + line + ';grid-column:1"><i class="bpd-dot ' + tone + (st === 'active' ? ' pulse' : '') + '"></i><span>' + esc(p.name) + '</span></div>' + (bars || '<div class="bpd-wk-none" style="grid-row:' + line + ';grid-column:2/9">' + esc(tr("promos.copy205")) + '</div>');
+    }).join('');
+    return '<section class="bpd-panel bpd-week"><header class="bpd-phead"><div><h3>' + tr("promos.copy203") + '</h3><p class="bpd-sync-note">' + tr("promos.copy204") + '</p></div>' +
+      '<div class="bpd-wk-legend"><span><i class="bpd-dot live"></i>' + tr("promos.copy44") + '</span><span><i class="bpd-dot soon"></i>' + tr("promos.copy46") + '</span><span><i class="bpd-dot paused"></i>' + tr("promos.copy47") + '</span></div></header>' +
+      '<div class="bpd-wk-scroll"><div class="bpd-wk" style="grid-template-rows:auto repeat(' + live.length + ',44px)">' +
+      '<div class="bpd-wk-col" style="grid-column:2;grid-row:1/' + (live.length + 2) + '"><i class="bpd-wk-nowline" style="inset-inline-start:' + (frac * 100).toFixed(2) + '%"></i></div>' +
+      head + rows + '</div></div></section>';
   }
 
   function startersHtml(title) {
@@ -283,9 +333,15 @@
         ? '<div class="kx-kpi-strip cols-3 bpd-kpis"><div class="kx-kpi' + (groups.active.length ? ' good' : '') + '"><div class="l">' + lActive + '</div><div class="v">' + groups.active.length + '</div><div class="d">' + seenDesc + '</div></div>' +
           '<div class="kx-kpi"><div class="l">' + lSoon + '</div><div class="v">' + groups.soon.length + '</div><div class="d">' + tr("promos.copy85") + '</div></div>' +
           '<div class="kx-kpi"><div class="l">' + lEnded + '</div><div class="v">' + groups.ended.length + '</div><div class="d">' + tr("promos.copy86") + '</div></div></div>' +
-          '<div class="bpd-bar"><div class="kx-tabs" role="group" aria-label="' + tr("promos.copy87") + '">' + tab('active', lActive) + tab('soon', lSoon) + tab('ended', lEnded) + '</div>' +
-          '<div class="bpd-bar-r">' + (tillApplies() ? '<span class="bpd-sync-note"><i data-bpd-icon="refresh-cw"></i>' + tr("promos.copy88") + '</span>' : '<span class="bpd-sync-note">' + tr("promos.copy89") + '</span>') + '<button data-activation=write class="bpd-btn primary" data-action="bpd-new"><i data-bpd-icon="plus"></i>' + tr("promos.copy90") + '</button></div></div>' +
-          listHtml + startersHtml(tr("promos.copy91"))
+          weekHtml(ctx, all, now) +
+          /* Un seul panneau, comme Retours & échanges : le titre et l'état de
+             synchro à gauche, les onglets et « Nouvelle promotion » à droite,
+             la liste dessous. */
+          '<section class="bpd-panel"><header class="bpd-phead"><div><h3>' + tr("promos.copy202") + '</h3>' +
+          (tillApplies() ? '<p class="bpd-sync-note"><i data-bpd-icon="refresh-cw"></i>' + tr("promos.copy88") + '</p>' : '<p class="bpd-sync-note">' + tr("promos.copy89") + '</p>') + '</div>' +
+          '<div class="bpd-tools"><div class="kx-tabs" role="group" aria-label="' + tr("promos.copy87") + '">' + tab('active', lActive) + tab('soon', lSoon) + tab('ended', lEnded) + '</div>' +
+          '<button data-activation=write class="bpd-btn primary" data-action="bpd-new"><i data-bpd-icon="plus"></i>' + tr("promos.copy90") + '</button></div></header>' +
+          listHtml + '</section>' + startersHtml(tr("promos.copy91"))
         : emptyHtml()) + '</div>' });
     icons();
     if (!subscribed) {

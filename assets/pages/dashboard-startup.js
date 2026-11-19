@@ -39,7 +39,7 @@
     'assets/restaurant-menu/styles.js?v=12',
     'assets/restaurant-menu-workspace.js?v=138',
     'assets/sold-insights.js?v=20',
-    'assets/boutique-promos-dashboard.js?v=38',
+    'assets/boutique-promos-dashboard.js?v=39',
     'assets/day-report.js?v=56',
     'assets/z-reconciliation.js?v=29',
     'assets/month-report.js?v=17',
