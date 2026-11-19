@@ -22,20 +22,38 @@
  *
  * Aucune migration : sale_audit existe partout. */
 import { __test as catalogFns } from './catalog.js';
+import { catalogFamily } from './_catalog-family.js';
 
 const HELD = 'delivery-stock-held';
 const TAKEN = 'delivery-stock-taken';
 const colorMatch = (v, color) => String(v.colorId || '') === String(color || '')
   || String(v.colorFamily || '') === String(color || '');
 
-export async function markStockHeld(db, merchant, saleId, saleTs) {
+/* `from` : la boutique d'où part le colis (« Envoyé de », Santos 19 nov. 2026),
+ * gardée telle que demandée ; takeHeldStock() ne la suit que si elle est de la
+ * même famille de catalogue que la caisse (_catalog-family.js). */
+export async function markStockHeld(db, merchant, saleId, saleTs, from) {
   if (!db || !merchant || !saleId) return false;
+  const ship = String(from || '').slice(0, 64).trim();
+  const impact = ship && ship !== merchant ? JSON.stringify({ from: ship }) : '{}';
   await db.prepare(
     `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id, amount, amount_cents, method, ref, sale_ts, impact, ts)
-     SELECT ?, ?, '${HELD}', '', '', '', '', 0, 0, 'delivery', '', ?, '{}', ?
+     SELECT ?, ?, '${HELD}', '', '', '', '', 0, 0, 'delivery', '', ?, ?, ?
       WHERE NOT EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = '${HELD}')`
-  ).bind(merchant, saleId, Number(saleTs) || 0, Date.now(), merchant, saleId).run();
+  ).bind(merchant, saleId, Number(saleTs) || 0, impact, Date.now(), merchant, saleId).run();
   return true;
+}
+
+/* Le catalogue d'où sort le stock : la boutique « Envoyé de » si elle est de la
+ * famille, sinon la caisse. */
+async function stockShop(env, merchant, saleId) {
+  try {
+    const r = await env.DB.prepare(`SELECT impact FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = '${HELD}'`).bind(merchant, saleId).first();
+    const from = String(((r && JSON.parse(r.impact || '{}')) || {}).from || '');
+    if (!from || from === merchant) return merchant;
+    const family = await catalogFamily(env, merchant);
+    return family && family.members.includes(from) ? from : merchant;
+  } catch (_) { return merchant; }
 }
 
 /* Les livraisons du commerce dont le stock attend encore la confirmation. */
@@ -90,9 +108,10 @@ export async function takeHeldStock(env, merchant, saleId) {
     if (!Array.isArray(basket)) basket = [];
     const kept = await keptQty(db, merchant, saleId, basket);
     const tag = String(saleId).replace(/[^a-zA-Z0-9_-]/g, '').slice(-40);
+    const shop = await stockShop(env, merchant, saleId);
     let result = null;
     for (let attempt = 0; attempt < 4 && !result; attempt++) {
-      const row = await db.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first();
+      const row = await db.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(shop).first();
       if (!row || !row.data) { result = { applied: 0, short: kept.reduce((a, b) => a + b, 0) }; break; }
       let raw;
       try { raw = JSON.parse(row.data); } catch (_) { return { applied: 0, short: 0 }; }
@@ -130,11 +149,12 @@ export async function takeHeldStock(env, merchant, saleId) {
       let write = null;
       try {
         write = await db.prepare('UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?')
-          .bind(JSON.stringify(data), Number(row.rev || 0) + 1, Date.now(), merchant, Number(row.rev || 0)).run();
+          .bind(JSON.stringify(data), Number(row.rev || 0) + 1, Date.now(), shop, Number(row.rev || 0)).run();
       } catch (_) { write = null; }
       if (write && write.meta && Number(write.meta.changes) === 1) result = { applied, short };
     }
     if (!result) return { applied: 0, short: 0 };   // le catalogue a bougé quatre fois : la prochaine confirmation lue réessaiera
+    if (shop !== merchant) result.from = shop;
     await db.prepare(
       `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id, amount, amount_cents, method, ref, sale_ts, impact, ts)
        SELECT ?, ?, '${TAKEN}', '', '', '', '', 0, 0, 'delivery', '', 0, ?, ?

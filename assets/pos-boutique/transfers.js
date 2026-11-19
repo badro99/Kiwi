@@ -98,6 +98,11 @@ const CSS = [
   '.bq-tr-empty{color:var(--ink-soft);font-size:14px;margin:4px 0 8px}',
 ];
 
+/* La famille vue par la dernière lecture : la fiche de livraison y prend
+   « Envoyé de » (delivery-card.js). Vide hors catalogue partagé. */
+let family = null;
+export function shipChoices() { return family && family.self ? [family.self].concat(family.shops) : []; }
+
 export function bqTransfers(root, d) {
   const slug = typeof d.slug === 'function' ? d.slug() : d.slug;
   if (!root || d.demo || !slug) return null;
@@ -144,6 +149,7 @@ export function bqTransfers(root, d) {
       const sig = JSON.stringify(j);
       if (sig === st.sig) return;
       st.sig = sig; st.data = j;
+      family = (j.shops || []).length && j.self ? { self: j.self, shops: j.shops } : null;
       ensureButton(); paintDot();
       if (st.open) paint();
     }).catch(() => {});

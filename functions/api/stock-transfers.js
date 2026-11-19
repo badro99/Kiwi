@@ -11,6 +11,11 @@
 //            l'écart). Seule la boutique destinataire confirme.
 // Un transfert ouvert depuis 3 jours est `overdue` (« non reçu »).
 //
+// `by` est le nom du caissier DÉCLARÉ par la caisse, au même titre que le
+// caissier d'une vente : une indication, pas une preuve. Ce que le serveur
+// vérifie, c'est la boutique (caisse appairée ou session du compte) : elle seule
+// peut faire partir son stock, et seule la destinataire peut confirmer.
+//
 // Les transferts vivent dans le store_doc `stock-transfers` de la boutique qui
 // envoie (aucune table nouvelle). Le stock et le transfert changent dans UNE
 // transaction D1 : la mise à jour du catalogue exige la révision du document
@@ -238,7 +243,7 @@ export async function onRequestGet(context) {
     }
     const byDate = (a, b) => b.at - a.at;
     return json({ merchant, incoming: incoming.sort(byDate).slice(0, 100), outgoing: outgoing.sort(byDate).slice(0, 100),
-      shops: shops.filter((s) => s.merchant !== merchant) });
+      self: shops.find((s) => s.merchant === merchant), shops: shops.filter((s) => s.merchant !== merchant) });
   } catch (_) { return json({ merchant, incoming: [], outgoing: [], shops: [], unavailable: true }); }
 }
 

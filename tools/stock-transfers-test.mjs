@@ -125,6 +125,7 @@ ok('…avec le nom de la boutique d’origine (Casablanca)', r.body.incoming[0].
 r = await list(CASA, casaTill);
 ok('Casablanca le voit dans ses envois', r.body.outgoing.length === 1 && r.body.incoming.length === 0);
 ok('…et sait vers où elle peut envoyer (Rabat seulement)', JSON.stringify(r.body.shops.map((s) => s.merchant)) === JSON.stringify([RABAT]), JSON.stringify(r.body.shops));
+ok('…et se nomme elle-même (« Envoyé de » sur la fiche de livraison)', r.body.self && r.body.self.merchant === CASA && r.body.self.name === 'Casablanca', JSON.stringify(r.body.self));
 r = await call(trPost, 'POST', '/api/stock-transfers', { merchant: CASA, action: 'receive', id: t1, mode: 'all' }, casaTill);
 ok('Casablanca ne peut pas confirmer à la place de Rabat', r.status === 403 || r.status === 404, String(r.status));
 

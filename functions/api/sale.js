@@ -900,7 +900,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
   /* La caisse n'a pas touché au stock : il sortira à la confirmation
      (functions/api/_delivery-stock.js). Une seule fois, au mieux. */
   if (channel === 'delivery' && b.stockHeld === true) {
-    try { await markStockHeld(env.DB, merchant, id, ts); } catch (_) { /* la vente reste */ }
+    try { await markStockHeld(env.DB, merchant, id, ts, b.deliveryCard && b.deliveryCard.from); } catch (_) { /* la vente reste ; « Envoyé de » : _delivery-stock.js */ }
   }
 
   if (paymentParts) {

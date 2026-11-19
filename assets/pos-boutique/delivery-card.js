@@ -11,7 +11,10 @@
  * Ce destinataire n'entre PAS dans le carnet de clients : pas de fiche
  * cliente, pas de points, pas de fidélité. */
 
+import { shipChoices } from './transfers.js?v=6';
+
 const PHRASES = {
+  'Envoyé de': ['Sent from', 'يُرسَل من'],
   'Livraison · destinataire': ['Delivery · recipient', 'التوصيل · المستلم'],
   'Ces informations restent sur la commande pour la retrouver en cas de retour. Le client n’entre pas dans le carnet de fidélité.': ['These details stay on the order so it can be found if it comes back. The customer is not added to the loyalty book.', 'تبقى هذه المعلومات مع الطلب للعثور عليه عند الإرجاع. لا يُضاف الزبون إلى دفتر الولاء.'],
   'Nom du client': ['Customer name', 'اسم الزبون'],
@@ -69,6 +72,10 @@ function css() {
     '.bqdc-form{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin:14px 0 4px;text-align:start;}',
     '.bqdc-f{display:flex;flex-direction:column;gap:5px;min-width:0;}',
     '.bqdc-f.wide{grid-column:1 / -1;}',
+    '.bqdc-from{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;border:0;margin:0;padding:0;}',
+    '.bqdc-from legend{font-weight:600;margin-block-end:6px;}',
+    '.bqdc-from label{display:inline-flex;align-items:center;gap:8px;min-block-size:44px;font-size:15px;cursor:pointer;}',
+    '.bqdc-from input{inline-size:20px;block-size:20px;accent-color:var(--atlas);}',
     '.bqdc-f.combo{position:relative;}',
     '.bqdc-sug{position:absolute;z-index:5;left:0;right:0;top:calc(100% - 2px);margin:0;padding:4px;list-style:none;max-height:300px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:var(--paper-elev,#FFFDFA);border:1px solid var(--line,#E2DDD2);border-radius:10px;box-shadow:0 10px 28px rgba(10,15,13,.12);}',
     '.bqdc-sug[hidden]{display:none;}',
@@ -129,10 +136,17 @@ export function bqDeliveryCard(el, o) {
       + (f.need ? '' : ' <small>· ' + esc(tr('facultatif')) + '</small>') + '</label>' + input
       + '<span class="bqdc-err" id="' + id + '-err" role="alert"></span></div>';
   };
+  /* « Envoyé de » (Santos, 19 nov. 2026) : la boutique d'où part le colis, celle
+     de la caisse par défaut ; le stock en sortira à la confirmation
+     (functions/api/_delivery-stock.js). Seulement avec un catalogue partagé. */
+  const ships = shipChoices();
+  const fromField = () => (ships.length > 1 ? '<fieldset class="bqdc-from"><legend>' + esc(tr('Envoyé de')) + '</legend>'
+    + ships.map((s, i) => '<label><input type="radio" name="bqdc-from" value="' + esc(s.merchant) + '"'
+      + ((prev.from ? prev.from === s.merchant : !i) ? ' checked' : '') + '> ' + esc(s.name) + '</label>').join('') + '</fieldset>' : '');
   const sheet = () => '<button class="bq-modal-x" data-bq-close aria-label="' + esc(tr('Fermer')) + '"><i data-icon="close"></i></button>'
     + '<h3 class="modal-title">' + esc(tr('Livraison · destinataire')) + '</h3>'
     + '<p class="modal-subtle">' + esc(o.fmtMAD(o.amount)) + '</p>'
-    + '<form class="bqdc-form" id="bqdc-form" novalidate>' + FIELDS.map(field).join('')
+    + '<form class="bqdc-form" id="bqdc-form" novalidate>' + fromField() + FIELDS.map(field).join('')
     + '</form>'
     + '<p class="bqdc-hint">' + esc(tr('Ces informations restent sur la commande pour la retrouver en cas de retour. Le client n’entre pas dans le carnet de fidélité.')) + '</p>'
     + '<div class="bq-sheet-foot"><button class="bq-btn secondary" type="button" id="bqdc-back">' + esc(tr('Retour')) + '</button>'
@@ -170,6 +184,8 @@ export function bqDeliveryCard(el, o) {
     FIELDS.forEach((f) => { card[f.k] = String(nodeOf(f.k).value || '').replace(/\s+/g, ' ').trim(); });
     const oc = ozonCities && ozonCities.find((c) => fold(c.name) === fold(card.city));
     if (oc) { card.city = oc.name; card.cityId = oc.id; }
+    const pick = form.querySelector('input[name="bqdc-from"]:checked');
+    if (pick) card.from = pick.value;
     o.done(card);
   };
   /* La liste des villes : la nôtre, claire, sous le champ, et toute la liste

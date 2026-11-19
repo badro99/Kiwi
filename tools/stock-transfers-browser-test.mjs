@@ -96,6 +96,7 @@ const server = http.createServer(async (req, res) => {
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
 const stamp = (fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8').match(/transfers\.js\?v=(\d+)/) || [])[1];
+const cardStamp = (fs.readFileSync(path.join(ROOT, 'assets/pos-boutique/checkout.js'), 'utf8').match(/delivery-card\.js\?v=(\d+)/) || [])[1];
 
 const browser = await puppeteer.launch({ executablePath: bin, headless: true, args: ['--no-sandbox'] });
 const S = suite('stock-transfers', { browser });
@@ -165,6 +166,28 @@ await S.run('Casablanca sends two pieces, Rabat receives part then reports one m
   const saved = JSON.parse(db.prepare(`SELECT data FROM store_docs WHERE merchant = ? AND feature = 'stock-transfers'`).get(CASA).data).list[0];
   assert.equal(saved.status, 'manque');
   assert.equal(saved.by, 'Sara');
+});
+
+await S.run('the delivery card asks « Envoyé de », the till’s own shop first', async (t) => {
+  const casa = await till(t, CASA);
+  await casa.waitForSelector('#bq-transfers', { visible: true });
+  await casa.evaluate(async (src) => {
+    const { bqDeliveryCard } = await import(src);
+    const el = document.createElement('div'); el.id = 'card'; document.body.appendChild(el);
+    const esc = (x) => String(x).replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
+    bqDeliveryCard(el, { amount: 900, fmtMAD: (x) => x + ' MAD', esc, icons() {}, closeBtns() {}, back() {}, done(card) { window.__card = card; } });
+  }, `${base}/assets/pos-boutique/delivery-card.js?v=${cardStamp}`);
+  await casa.waitForSelector('.bqdc-from', { visible: true });
+  const opts = await casa.$$eval('.bqdc-from label', (ls) => ls.map((l) => [l.textContent.trim(), l.querySelector('input').checked]));
+  assert.deepEqual(opts, [['Casablanca', true], ['Rabat', false]]);
+  await casa.type('#bqdc-name', 'Salma Benali');
+  await casa.type('#bqdc-phone', '0612345678');
+  await casa.type('#bqdc-city', 'Casablanca');
+  await casa.type('#bqdc-address', 'Maarif, rue 12');
+  await casa.click('input[name="bqdc-from"][value="santos-store"]');
+  await casa.click('#bqdc-ok');
+  await casa.waitForFunction(() => !!window.__card);
+  assert.equal(await casa.evaluate(() => window.__card.from), RABAT, 'the parcel is sent from Rabat');
 });
 
 await S.run('a shop outside the shared catalogue gets no button', async (t) => {
