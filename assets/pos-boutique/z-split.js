@@ -16,7 +16,30 @@ const zIsDelivery = (s) => (Array.isArray(s.parts) && s.parts.length)
 /* Les parts d'argent d'une vente qui reviennent au ticket `only`. */
 const zSplitParts = (s, parts, only) => (!only || !zIsDelivery(s)) ? parts
   : parts.filter((p) => (p.m === 'livraison') === (only === 'delivery'));
-const zSalesFor = (sales, only) => only === 'delivery' ? sales.filter(zIsDelivery) : sales;
+/* L'argent d'un livreur (Santos, 19 nov.) : le règlement d'une livraison déjà
+ * vendue, jamais une vente du magasin. Il sort du ticket magasin (le 18 nov.,
+ * 500 MAD de virement livreur y gonflaient « hors livraisons » sous « Autres »,
+ * avec une transaction et ses articles) et va au ticket livraisons comme argent
+ * reçu ce jour-là. Les espèces qu'un livreur laisse AU COMPTOIR restent dans le
+ * tiroir, en mouvement d'entrée ; un encaissement relu du serveur (autre caisse,
+ * virement) n'y est pas. */
+const zIsCollection = (s) => !!s && s.kind === 'livraison-reglement';
+const zRowKind = (row) => String((row && row.channel) || '') === 'delivery' && /^Livraison reçue · /.test(String((row && row.label) || '')) ? 'livraison-reglement' : 'vente';
+const zSalesFor = (sales, only) => only === 'delivery' ? sales.filter(zIsDelivery) : only === 'store' ? sales.filter((s) => !zIsCollection(s)) : sales;
+/* Une livraison vue du Z magasin : son argent du comptoir seul, ni ticket ni articles. */
+const zAway = (s, only) => only === 'store' && zIsDelivery(s);
+/* L'argent des livreurs reçu dans la journée, quel que soit son moyen : le
+ * troisième chiffre de l'écran de clôture, à côté du magasin et des colis à
+ * recevoir. Le ticket livraisons imprimé garde son sens (les colis partis). */
+const zCollected = (sales) => (sales || []).filter(zIsCollection).reduce((n, s) => n + ((Array.isArray(s.parts) && s.parts.length)
+  ? s.parts.reduce((m, p) => m + (p && p.m !== 'avoir' ? Math.max(0, +p.amount || 0) : 0), 0)
+  : Math.max(0, s.remote && Number.isFinite(+s.received) ? +s.received : +s.total || 0)), 0);
+const zDrawerCash = (sales) => (sales || []).filter((s) => zIsCollection(s) && !s.remote)
+  .reduce((n, s) => n + (s.parts || []).reduce((m, p) => m + (p && p.m === 'espèces' ? Math.max(0, +p.amount || 0) : 0), 0), 0);
+/* Les mêmes espèces, en entrées de tiroir pour le Z magasin (KiwiDayReport). */
+const zDrawerMoves = (sales, only) => only !== 'store' ? [] : (sales || []).filter((s) => zIsCollection(s) && !s.remote && zDrawerCash([s]) > 0)
+  .map((s) => ({ ts: +new Date(s.at), type: 'in', amount: Math.round(zDrawerCash([s]) * 100) / 100, reason: 'Livraison reçue' }));
+const zDrawerRows = (sales, fmt) => { const c = zDrawerCash(sales); return c > 0 ? [[ztr('Espèces des livraisons'), '+ ' + fmt(c), '']] : []; };
 /* Les parts décrites au rapport, partagées comme l'argent. */
 const zSentParts = (s, only) => (!only || !zIsDelivery(s)) ? s.parts
   : (s.parts || []).filter((p) => p && (only === 'delivery') !== (p.m !== 'livraison' && p.m !== 'avoir'));
@@ -59,6 +82,8 @@ const ZPH = {
   'Réductions sur les livraisons': ['Discounts on deliveries', 'التخفيضات على التوصيلات'],
   'Montant à recevoir': ['Amount to collect', 'المبلغ المنتظر'],
   'Livraisons · à recevoir': ['Deliveries · to collect', 'التوصيلات · قيد التحصيل'],
+  'Argent des livraisons reçu': ['Delivery money received', 'مبالغ التوصيل المستلمة'],
+  'Espèces des livraisons': ['Delivery cash', 'نقود التوصيل'],
 };
 const ztr = (s) => {
   const C = globalThis.window && window.KiwiCaisseLang;
@@ -69,12 +94,13 @@ const ztr = (s) => {
 };
 /* Lignes de l'écran de clôture : [libellé, valeur, mono, genre]. */
 const zStoreHead = () => [ztr('Caisse · hors livraisons'), '', false, 'head'];
-const zDeliveryRows = (td, fmt) => [
+const zDeliveryRows = (td, fmt, got) => [
   [ztr('Livraisons'), '', false, 'head'],
   [ztr('Ventes en livraison'), String(td.txns), false, ''],
   ...(td.items > 0 ? [[ztr('Articles en livraison'), String(td.items), false, '']] : []),
   ...(td.discounts > 0 ? [[ztr('Réductions sur les livraisons'), fmt(td.discounts), true, '']] : []),
   [ztr('Montant à recevoir'), fmt(td.delivery), true, 'total'],
+  ...(got > 0 ? [[ztr('Argent des livraisons reçu'), fmt(Math.round(got * 100) / 100), true, 'total']] : []),
 ];
 /* L'écran d'après-clôture : deux chiffres quand les deux tickets existent. Le
  * net du ticket livraisons vaut 0 (rien n'est encore encaissé) : on montre ce
@@ -110,4 +136,4 @@ const zMarkDay = (shift, isToday, now) => {
   if (!shift || !shift.openedAt || isToday(shift.openedAt) || (shift.dayAt && isToday(shift.dayAt))) return false;
   shift.dayAt = now; return true;
 };
-export { zServiceStart, zMarkDay, zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock };
+export { zServiceStart, zMarkDay, zIsDelivery, zIsCollection, zRowKind, zAway, zCollected, zDrawerCash, zDrawerMoves, zDrawerRows, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock };

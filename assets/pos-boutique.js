@@ -1,13 +1,13 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=219';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=137';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=219';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=219';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=220';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=138';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=220';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=220';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=3';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=22';
-import { zServiceStart, zMarkDay, zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=7'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=22'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11'; import { bqTransfers } from './pos-boutique/transfers.js?v=6';
+import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zDrawerCash, zDrawerMoves, zDrawerRows, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=10'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=22'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11'; import { bqTransfers } from './pos-boutique/transfers.js?v=6';
 
   'use strict';
 
@@ -750,7 +750,7 @@ import { zServiceStart, zMarkDay, zIsDelivery, zSplitParts, zSalesFor, zSentPart
    * encore l'id de variante. On les rattache au produit par le plus long nom de
    * catalogue, puis à sa taille. Ce repli rend les ventes déjà faites utilisables
    * immédiatement ; aucune donnée n'est inventée si aucun produit ne correspond. */
-  const srvMethod = (m) => ({ cash: 'espèces', card: 'carte', delivery: 'livraison' }[m] || m || 'paiement');
+  const srvMethod = (m) => ({ cash: 'espèces', card: 'carte', delivery: 'livraison', transfer: 'virement', cheque: 'chèque' }[m] || m || 'paiement');
   function remoteLine(line) {
     if (!line) return null;
     const raw = String(line.name || '').trim();
@@ -812,13 +812,13 @@ import { zServiceStart, zMarkDay, zIsDelivery, zSplitParts, zSalesFor, zSentPart
       let added = 0;
       ((data && data.sales) || []).forEach((row) => {
         const ref = String(row.ref || '');
-        if (!ref || SALES.some((s) => s && s.id === ref) || (day ? retDayKey(Number(row.ts) || tillNow()) !== day : retDayKey(Number(row.ts) || tillNow()) < oldest)) return;
+        if (!ref || SALES.some((s) => s && (s.id === ref || (row.id && s.serverId === String(row.id)))) || (day ? retDayKey(Number(row.ts) || tillNow()) !== day : retDayKey(Number(row.ts) || tillNow()) < oldest)) return;
         const lines = (Array.isArray(row.lines) ? row.lines : []).map(remoteLine).filter(Boolean);
         if (!lines.length) return; // sans article identifiable, aucun échange honnête à proposer
         const total = lines.reduce((sum, l) => sum + l.unit * l.qty, 0);
         SALES.push({
           id: ref, serverId: String(row.id || ''), at: new Date(Number(row.ts) || Date.now()),
-          clientId: row.clientId || null, by: 'Caisse', kind: 'vente', methods: srvMethod(row.method), lines,
+          clientId: row.clientId || null, by: 'Caisse', kind: zRowKind(row), methods: srvMethod(row.method), lines,
           total, remote: true, ...remoteMoney(row, total),
         });
         added++;
@@ -2237,7 +2237,7 @@ import { zServiceStart, zMarkDay, zIsDelivery, zSplitParts, zSalesFor, zSentPart
   function bqDayTotals(only) {
     const t = { moneyIn: 0, cash: 0, card: 0, transfer: 0, cheque: 0, delivery: 0, other: 0, txns: 0, paidTxns: 0, items: 0, itemsReturned: 0, discounts: 0, discountsN: 0, promoOff: 0, avoirUsed: 0, avoirUsedN: 0, avoirIssued: 0, avoirIssuedN: 0, acompteReceived: 0, outstanding: 0 };
     zSalesFor(salesToday(), only).forEach((s) => {
-      let took = 0; const away = only === 'store' && zIsDelivery(s);   /* livraison vue du Z magasin : l'argent du comptoir seul */
+      let took = 0; const away = zAway(s, only);   /* livraison vue du Z magasin : l'argent du comptoir seul */
       /* L'avoir consommé, compté À PART du reste. bqMoneyParts l'écarte — à
          raison, ce n'est pas de l'argent qui rentre — mais l'écarter du total
          ne dispense pas de le dire : la marchandise, elle, est bien sortie du
@@ -2296,7 +2296,7 @@ import { zServiceStart, zMarkDay, zIsDelivery, zSplitParts, zSalesFor, zSentPart
   function bqReportSales(only) {
     const out = [];
     zSalesFor(salesToday(), only).forEach((s) => {
-      const at = (s.at instanceof Date ? s.at : new Date(s.at)).getTime(), away = only === 'store' && zIsDelivery(s);
+      const at = (s.at instanceof Date ? s.at : new Date(s.at)).getTime(), away = zAway(s, only);
       const lines = (away ? [] : s.lines || []).filter((ln) => (+ln.qty || 0) > 0).map((ln) => ({
         name: ((P[ln.pid] && P[ln.pid].name) || 'Article') + (ln.size ? ' ' + ln.size : ''),
         qty: +ln.qty, /* brut, comme les lignes du serveur : les pièces rendues sortent à part (itemsReturned) */
@@ -2309,7 +2309,7 @@ import { zServiceStart, zMarkDay, zIsDelivery, zSplitParts, zSalesFor, zSentPart
           amount: taken.reduce((sum, part) => sum + part.amount, 0),
           method: bqPaymentMethod(zSentParts(s, only)),
           parts: bqPaymentParts(taken),
-          label: s.kind === 'echange' ? 'Différence échange' : s.kind === 'acompte' ? 'Acompte' : s.kind === 'acompte-reglement' ? 'Règlement acompte' : 'Vente',
+          label: zIsCollection(s) ? 'Livraison reçue' : s.kind === 'echange' ? 'Différence échange' : s.kind === 'acompte' ? 'Acompte' : s.kind === 'acompte-reglement' ? 'Règlement acompte' : 'Vente',
           ref: s.id, cashier: s.by || '', lines: lines.length ? lines : null });
         return;
       }
@@ -2320,7 +2320,7 @@ import { zServiceStart, zMarkDay, zIsDelivery, zSplitParts, zSalesFor, zSentPart
           ts: at,
           amount: p.amount,
           method: BQ_SRV_METHOD[p.m] || 'wallet',
-          label: s.kind === 'echange' ? 'Différence échange' : s.kind === 'acompte' ? 'Acompte' : s.kind === 'acompte-reglement' ? 'Règlement acompte' : 'Vente',
+          label: zIsCollection(s) ? 'Livraison reçue' : s.kind === 'echange' ? 'Différence échange' : s.kind === 'acompte' ? 'Acompte' : s.kind === 'acompte-reglement' ? 'Règlement acompte' : 'Vente',
           ref: s.id,
           cashier: s.by || '',
           lines: first && lines.length ? lines : null,
@@ -2338,7 +2338,7 @@ import { zServiceStart, zMarkDay, zIsDelivery, zSplitParts, zSalesFor, zSentPart
       openedBy: bqShift ? bqShift.openedBy : '',
       closedBy: (STAFF.caissiere && STAFF.caissiere.name) || '',
       openingFloat: only !== 'delivery' && bqShift ? bqShift.float : 0,
-      cashMovements: [], handovers: [],
+      cashMovements: zDrawerMoves(salesToday(), only), handovers: [],
       discounts: t.discounts, discountsCount: t.discountsN, cancels: 0, itemsReturned: t.itemsReturned,
       /* L'avoir voyage jusqu'au rapport, sinon il ne sort que sur l'écran de
          clôture et disparaît du Z imprimé — le seul document qui reste. */
@@ -2731,14 +2731,14 @@ import { zServiceStart, zMarkDay, zIsDelivery, zSplitParts, zSalesFor, zSentPart
     /* Réglé en avoir : la contrepartie du « Total encaissé ». Ces tickets ont
        vidé des rayons sans faire sonner le tiroir — les compter nulle part
        revenait à imprimer un Z où la marchandise partie ne figure pas. */
-    if (t.avoirUsed > 0) rows.push([`Réglé en avoir (${t.avoirUsedN})`, fmtMAD(t.avoirUsed), true, '']); rows.push(...zDeliveryRows(td, fmtMAD));
+    if (t.avoirUsed > 0) rows.push([`Réglé en avoir (${t.avoirUsedN})`, fmtMAD(t.avoirUsed), true, '']); rows.push(...zDeliveryRows(td, fmtMAD, zCollected(salesToday())));
 
     /* Tiroir : fond + espèces. La boutique n'a ni pourboires ni mouvements de
        caisse — les lignes qui n'existent pas ne s'affichent pas. */
-    bqCloExpected = (bqShift ? bqShift.float : 0) + t.cash;
+    bqCloExpected = (bqShift ? bqShift.float : 0) + t.cash + zDrawerCash(salesToday());   /* + les espèces qu'un livreur a laissées au comptoir */
     const dLines = [
       ["Fond d'ouverture", fmtMAD(bqShift ? bqShift.float : 0), ''],
-      ['Espèces encaissées', '+ ' + fmtMAD(t.cash), ''],
+      ['Espèces encaissées', '+ ' + fmtMAD(t.cash), ''], ...zDrawerRows(salesToday(), fmtMAD),
       ['Attendu en caisse', fmtMAD(bqCloExpected), 'is-total'],
     ];
 
