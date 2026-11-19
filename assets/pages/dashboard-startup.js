@@ -45,7 +45,7 @@
     'assets/month-report.js?v=17',
     'assets/day-report-export.js?v=30',
     'assets/day-report-conflicts.js?v=2',
-    'assets/day-report-dash.js?v=51',
+    'assets/day-report-dash.js?v=52',
     'assets/day-report-refused.js?v=2',
     'assets/stock/strings.js?v=20',
     'assets/stock/state.js?v=13',

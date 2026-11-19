@@ -512,8 +512,8 @@
     "sha": "c280918a4865ae88"
   },
   "assets/day-report-dash.js": {
-    "v": "51",
-    "sha": "610769b710567d29"
+    "v": "52",
+    "sha": "1a1738df3ca8d24c"
   },
   "assets/day-report-export.js": {
     "v": "30",
@@ -1512,8 +1512,8 @@
     "sha": "bda23e0e63947ae5"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "248",
-    "sha": "2c41dd36639118b9"
+    "v": "249",
+    "sha": "953461dedaea485d"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

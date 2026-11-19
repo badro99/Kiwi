@@ -221,7 +221,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
-  '/assets/pages/dashboard-startup.js?v=248',
+  '/assets/pages/dashboard-startup.js?v=249',
   '/assets/pages/dashboard-loader.js?v=106',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -376,7 +376,7 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=57',
   '/assets/report.js?v=10',
-  '/assets/day-report-dash.js?v=51',
+  '/assets/day-report-dash.js?v=52',
   '/assets/day-report-export.js?v=30',
   '/assets/month-report.js?v=17',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse

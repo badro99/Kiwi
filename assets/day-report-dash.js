@@ -372,8 +372,8 @@
     var d = DR(); if (!d) return null;
     var b;
     try { b = d.dayBounds(day); } catch (_) { return null; }
-    var rows = [], seen = Object.create(null);
-    dashSales().forEach(function (raw) {
+    var rows = [], seen = Object.create(null), A = apartHere();   /* Santos : la frise et les comparaisons sans livraisons */
+    dashSales().map(function (s) { return A ? A.shopPart(s) : s; }).filter(Boolean).forEach(function (raw) {
       var s = null;
       try { s = d.normSale(raw); } catch (_) {}
       if (!s || s.ts < b.from || s.ts >= b.to) return;
@@ -402,6 +402,7 @@
     var d = DR(), bounds = d.dayBounds(day), S = window.KiwiSalesSummary;
     var summary = S && S.get(bounds.from, bounds.to), stats = null;
     if (summary) { try { stats = window.KiwiSalesMath.statsFromSummary(summary.days, summary.splits, bounds.from, bounds.to); } catch (_) {} }
+    if (stats && apartHere()) (summary.days || []).forEach(function (x) { var c = x && x.channels && x.channels.delivery; if (c && x.from >= bounds.from && x.from < bounds.to) { stats.revenue -= (+c.cents || 0) / 100; stats.gross -= (+c.cents || 0) / 100; stats.count -= +c.count || 0; } });
     return { day: day, historical: true, partial: !stats, detailsUnavailable: true,
       net: stats ? stats.revenue : null, gross: stats ? stats.gross : null, txns: stats ? stats.count : null };
   }
@@ -409,7 +410,7 @@
     if (day && archivedDay(day)) return false;
     try {
       var status = window.KiwiLive && window.KiwiLive.status && window.KiwiLive.status();
-      return !!(status && status.on && status.backfillComplete);
+      return !!(status && status.on && status.backfillComplete) || !!apartHere();   /* Santos : un instantané de caisse compte les livraisons, le feed se recalcule sans */
     } catch (_) { return false; }
   }
 
@@ -454,7 +455,7 @@
     var d = DR(); if (!d) return null;
     var snap = null;
     try { snap = d.load(day); } catch (_) {}
-    if (archivedDay(day)) return snap || historicalReport(day);
+    if (archivedDay(day)) return (apartHere() ? null : snap) || historicalReport(day);
     if (snap && !feedIsAuthoritative(day) && !snapMissesSales(snap, day)) return snap;
     var built = null, opts = { day: day, sales: dashSales(), session: snap ? sessionOf(snap) : {},
                                store: storeInfo(), source: 'dashboard', categoryIndex: catIndex() };
@@ -497,8 +498,8 @@
     var type = String((r.store && r.store.type) || storeInfo().type || '').toLowerCase();
     if (type !== 'boutique') return null;
     var f = feedTotals(day);
-    if (!f || f.txns < (+r.txns || 0)) return null;
-    var sales = dashSales(), shop = [], away = [], disc = 0, discN = 0, apart = apartHere();
+    var apart = apartHere(); if (!f || (!apart && f.txns < (+r.txns || 0))) return null;
+    var sales = dashSales(), shop = [], away = [], disc = 0, discN = 0;
     sales.forEach(function (s) {
       if (!s || !isDeliverySale(s) || s.kind === 'refund') { shop.push(s); return; }
       var cents = deliveryCents(s), off = Math.max(0, Math.round(+s.discountAmountCents || 0));
@@ -547,7 +548,7 @@
     var d = DR(); if (!d) return { net: 0, gross: 0, txns: 0, has: false, closed: false };
     var snap = null;
     try { snap = d.load(day); } catch (_) {}
-    if (archivedDay(day) && !snap) {
+    if (archivedDay(day) && (!snap || apartHere())) {
       var history = historicalReport(day);
       return { net: history.net, gross: history.gross, txns: history.txns, has: !!history.txns, closed: false, partial: history.partial };
     }
@@ -1079,8 +1080,7 @@
         return;
       }
       if (a === 'csv') {   /* l'export garde la journée entière */
-        var whole = apartHere() ? report : (report.fullReport || report); if (window.KiwiDayReportExport && window.KiwiDayReportExport.open) window.KiwiDayReportExport.open(whole);
-        else exportCsv(whole); /* cache partiel : conserver l'ancien filet */
+        var whole = apartHere() ? report : (report.fullReport || report); if (window.KiwiDayReportExport && window.KiwiDayReportExport.open) window.KiwiDayReportExport.open(whole); else exportCsv(whole); /* cache partiel : conserver l'ancien filet */
         return;
       }
     });
