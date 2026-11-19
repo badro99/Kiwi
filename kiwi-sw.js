@@ -276,7 +276,7 @@ var SHELL = [
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
   '/assets/venues/data.js?v=4',
   '/assets/venues/helpers.js?v=10',
-  '/assets/venues.js?v=76',
+  '/assets/venues.js?v=77',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=14',
   '/assets/trade-workspaces.js?v=21',

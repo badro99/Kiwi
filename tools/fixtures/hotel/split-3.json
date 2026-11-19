@@ -123,8 +123,8 @@
         },
         {
           "name": "cuFetchInHouseStays",
-          "start": 110625,
-          "end": 111881,
+          "start": 110936,
+          "end": 112192,
           "deps": [
             "cuVenueId",
             "cuStayScope",
@@ -141,8 +141,8 @@
         },
         {
           "name": "cuRoomOccupancy",
-          "start": 145669,
-          "end": 147452,
+          "start": 145980,
+          "end": 147763,
           "deps": [
             "cuAllStays",
             "cuStayScope",
@@ -182,8 +182,8 @@
         },
         {
           "name": "cuRoomStatus",
-          "start": 147702,
-          "end": 149077,
+          "start": 148013,
+          "end": 149388,
           "deps": [
             "tx",
             "cuRoomLive",
@@ -293,8 +293,8 @@
       "fragments": [
         {
           "name": "counts",
-          "start": 66140,
-          "end": 66827,
+          "start": 66451,
+          "end": 67138,
           "deps": [
             "isCustomHotel",
             "R",
@@ -313,8 +313,8 @@
         },
         {
           "name": "receptionBody",
-          "start": 66830,
-          "end": 70910,
+          "start": 67141,
+          "end": 71221,
           "deps": [
             "counts",
             "ARRIVALS",
@@ -331,8 +331,8 @@
         },
         {
           "name": "rackBody",
-          "start": 70979,
-          "end": 72907,
+          "start": 71290,
+          "end": 73218,
           "deps": [
             "FLOORS",
             "ROOMS",
@@ -346,8 +346,8 @@
         },
         {
           "name": "cuConnectingAvail",
-          "start": 72910,
-          "end": 74040,
+          "start": 73221,
+          "end": 74351,
           "deps": [
             "cuRoomStatus",
             "tx"
@@ -360,8 +360,8 @@
         },
         {
           "name": "tapeBody",
-          "start": 78868,
-          "end": 81090,
+          "start": 79179,
+          "end": 81401,
           "deps": [
             "occupancyByDay",
             "TAPE_DAYS",
@@ -380,8 +380,8 @@
         },
         {
           "name": "hotesBody",
-          "start": 85503,
-          "end": 88269,
+          "start": 85814,
+          "end": 88580,
           "deps": [
             "GUESTS",
             "MAD",
@@ -396,8 +396,8 @@
         },
         {
           "name": "forecastSvg",
-          "start": 90872,
-          "end": 92934,
+          "start": 91183,
+          "end": 93245,
           "deps": [
             "FORECAST"
           ],
@@ -409,8 +409,8 @@
         },
         {
           "name": "intelBody",
-          "start": 92937,
-          "end": 96400,
+          "start": 93248,
+          "end": 96711,
           "deps": [
             "NOSHOW_RISK",
             "forecastSvg",
@@ -424,8 +424,8 @@
         },
         {
           "name": "cuEvaluateStayExceptions",
-          "start": 99616,
-          "end": 101936,
+          "start": 99927,
+          "end": 102247,
           "deps": [
             "tx"
           ],
@@ -437,8 +437,8 @@
         },
         {
           "name": "cuReceptionJournal",
-          "start": 103583,
-          "end": 109959,
+          "start": 103894,
+          "end": 110270,
           "deps": [
             "cuReceptionSelection",
             "cuReceptionBuckets",
@@ -461,8 +461,8 @@
         },
         {
           "name": "cuReceptionBody",
-          "start": 111884,
-          "end": 115295,
+          "start": 112195,
+          "end": 115606,
           "deps": [
             "cuAllStays",
             "cuEvaluateStayExceptions",
@@ -483,8 +483,8 @@
         },
         {
           "name": "cuParseRoomNumbers",
-          "start": 115651,
-          "end": 116250,
+          "start": 115962,
+          "end": 116561,
           "deps": [],
           "mutations": [],
           "async": false,
@@ -494,8 +494,8 @@
         },
         {
           "name": "cuUploadTypePhotos",
-          "start": 126658,
-          "end": 128763,
+          "start": 126969,
+          "end": 129074,
           "deps": [
             "tx",
             "cuShrinkHotelPhoto",
@@ -513,8 +513,8 @@
         },
         {
           "name": "cuUpdateFloorsManagerModal",
-          "start": 140288,
-          "end": 141517,
+          "start": 140599,
+          "end": 141828,
           "deps": [
             "cuState",
             "cuFloorRows",
@@ -530,8 +530,8 @@
         },
         {
           "name": "cuRegisterWalkin",
-          "start": 150371,
-          "end": 151814,
+          "start": 150682,
+          "end": 152125,
           "deps": [
             "cuMerchantSlug",
             "R",
@@ -547,8 +547,8 @@
         },
         {
           "name": "cuUnlinkConnectingRooms",
-          "start": 157729,
-          "end": 158448,
+          "start": 158040,
+          "end": 158759,
           "deps": [
             "cuStamp"
           ],
@@ -560,8 +560,8 @@
         },
         {
           "name": "cuSetConnectingRooms",
-          "start": 158451,
-          "end": 160232,
+          "start": 158762,
+          "end": 160543,
           "deps": [
             "cuStamp"
           ],
@@ -573,8 +573,8 @@
         },
         {
           "name": "cuRoomMatchesFilter",
-          "start": 161557,
-          "end": 163483,
+          "start": 161868,
+          "end": 163794,
           "deps": [
             "cuRackFilter",
             "cuRoomStatus",
@@ -591,8 +591,8 @@
         },
         {
           "name": "cuFilterChipsMarkup",
-          "start": 163486,
-          "end": 167386,
+          "start": 163797,
+          "end": 167697,
           "deps": [
             "cuHasActiveFilters",
             "cuState",
@@ -612,8 +612,8 @@
         },
         {
           "name": "cuMatchNationality",
-          "start": 252857,
-          "end": 254503,
+          "start": 253168,
+          "end": 254814,
           "deps": [
             "cuNationalities",
             "cuNormalizeText"
@@ -626,8 +626,8 @@
         },
         {
           "name": "cuNationalitySelectorHtml",
-          "start": 254836,
-          "end": 256635,
+          "start": 255147,
+          "end": 256946,
           "deps": [
             "cuMatchNationality",
             "cuNationalityLabel",
@@ -642,8 +642,8 @@
         },
         {
           "name": "cuWireNationalitySelectors",
-          "start": 256639,
-          "end": 264774,
+          "start": 256950,
+          "end": 265085,
           "deps": [
             "tx",
             "cuLang",
@@ -661,8 +661,8 @@
         },
         {
           "name": "cuParseDelimitedLine",
-          "start": 288530,
-          "end": 289415,
+          "start": 288841,
+          "end": 289726,
           "deps": [],
           "mutations": [],
           "async": false,
@@ -672,8 +672,8 @@
         },
         {
           "name": "cuHasGroupRecovery",
-          "start": 289419,
-          "end": 290078,
+          "start": 289730,
+          "end": 290389,
           "deps": [
             "cuMerchantSlug"
           ],
@@ -685,8 +685,8 @@
         },
         {
           "name": "cuMoveStayStatus",
-          "start": 401596,
-          "end": 405640,
+          "start": 401907,
+          "end": 405951,
           "deps": [
             "cuMerchantSlug",
             "cuStayScope",
@@ -706,8 +706,8 @@
         },
         {
           "name": "cuBirthIso",
-          "start": 407299,
-          "end": 408096,
+          "start": 407610,
+          "end": 408407,
           "deps": [],
           "mutations": [],
           "async": false,
@@ -717,8 +717,8 @@
         },
         {
           "name": "cuCommercialError",
-          "start": 410801,
-          "end": 414428,
+          "start": 411112,
+          "end": 414739,
           "deps": [
             "tx",
             "txk"
@@ -731,8 +731,8 @@
         },
         {
           "name": "cuCommercialBody",
-          "start": 415206,
-          "end": 420159,
+          "start": 415517,
+          "end": 420470,
           "deps": [
             "cuCommercialState",
             "tx",
@@ -751,8 +751,8 @@
         },
         {
           "name": "cuCommercialEditor",
-          "start": 426938,
-          "end": 432838,
+          "start": 427249,
+          "end": 433149,
           "deps": [
             "cuStayScope",
             "cuLoadCommercial",
@@ -776,8 +776,8 @@
         },
         {
           "name": "cuEconomatBody",
-          "start": 440750,
-          "end": 444972,
+          "start": 441061,
+          "end": 445283,
           "deps": [
             "cuEconomatState",
             "tx",
@@ -797,8 +797,8 @@
         },
         {
           "name": "cuUnitsEditorHtml",
-          "start": 445803,
-          "end": 449437,
+          "start": 446114,
+          "end": 449748,
           "deps": [
             "cuOutletsMapped",
             "esc",
@@ -814,8 +814,8 @@
         },
         {
           "name": "cuPdvBody",
-          "start": 449828,
-          "end": 452184,
+          "start": 450139,
+          "end": 452495,
           "deps": [
             "cuEconomatState",
             "tx",
@@ -832,8 +832,8 @@
         },
         {
           "name": "cuLoadEconomat",
-          "start": 452187,
-          "end": 454864,
+          "start": 452498,
+          "end": 455175,
           "deps": [
             "isCustomHotel",
             "cuEconomatState",
@@ -851,8 +851,8 @@
         },
         {
           "name": "cuSaveEconomat",
-          "start": 455546,
-          "end": 458414,
+          "start": 455857,
+          "end": 458725,
           "deps": [
             "cuEconomatState",
             "cuCaptureEconomatDraft",
@@ -918,8 +918,8 @@
       "fragments": [
         {
           "name": "cuGroupReservationModal",
-          "start": 290082,
-          "end": 385424,
+          "start": 290393,
+          "end": 385735,
           "deps": [
             "cuStayScope",
             "cuMerchantSlug",
@@ -1133,8 +1133,8 @@
       "fragments": [
         {
           "name": "rerender",
-          "start": 60680,
-          "end": 64180,
+          "start": 60991,
+          "end": 64491,
           "deps": [
             "cuOccupancyMemo",
             "openDrawer",
@@ -1192,8 +1192,8 @@
         },
         {
           "name": "roomModal",
-          "start": 74043,
-          "end": 78604,
+          "start": 74354,
+          "end": 78915,
           "deps": [
             "R",
             "F",
@@ -1229,8 +1229,8 @@
         },
         {
           "name": "tarifsBody",
-          "start": 81334,
-          "end": 85207,
+          "start": 81645,
+          "end": 85518,
           "deps": [
             "aiApplied",
             "RATE_DAYS",
@@ -1277,8 +1277,8 @@
         },
         {
           "name": "guestModal",
-          "start": 88272,
-          "end": 90467,
+          "start": 88583,
+          "end": 90778,
           "deps": [
             "GUESTS",
             "K",
@@ -1301,8 +1301,8 @@
         },
         {
           "name": "cuStrip",
-          "start": 97877,
-          "end": 99583,
+          "start": 98188,
+          "end": 99894,
           "deps": [
             "cuWarmStays",
             "counts",
@@ -1331,8 +1331,8 @@
         },
         {
           "name": "cuRoomBatchEditor",
-          "start": 116253,
-          "end": 118329,
+          "start": 116564,
+          "end": 118640,
           "deps": [
             "cuTypes",
             "cuFloorRows",
@@ -1357,8 +1357,8 @@
         },
         {
           "name": "cuRoomEditor",
-          "start": 118332,
-          "end": 122519,
+          "start": 118643,
+          "end": 122830,
           "deps": [
             "cuState",
             "cuRoomStatus",
@@ -1390,8 +1390,8 @@
         },
         {
           "name": "cuTypesManager",
-          "start": 122522,
-          "end": 123984,
+          "start": 122833,
+          "end": 124295,
           "deps": [
             "cuState",
             "cuTypes",
@@ -1417,8 +1417,8 @@
         },
         {
           "name": "cuTypeEditor",
-          "start": 128766,
-          "end": 133798,
+          "start": 129077,
+          "end": 134109,
           "deps": [
             "cuState",
             "K",
@@ -1443,8 +1443,8 @@
         },
         {
           "name": "cuFloorsManager",
-          "start": 133970,
-          "end": 135659,
+          "start": 134281,
+          "end": 135970,
           "deps": [
             "cuState",
             "cuFloorRows",
@@ -1470,8 +1470,8 @@
         },
         {
           "name": "cuViewsAndCharsManager",
-          "start": 135662,
-          "end": 140285,
+          "start": 135973,
+          "end": 140596,
           "deps": [
             "cuState",
             "cuAllViews",
@@ -1498,8 +1498,8 @@
         },
         {
           "name": "cuFloorEditor",
-          "start": 142249,
-          "end": 144114,
+          "start": 142560,
+          "end": 144425,
           "deps": [
             "cuState",
             "cuFloorRows",
@@ -1524,8 +1524,8 @@
         },
         {
           "name": "cuRackBody",
-          "start": 167389,
-          "end": 179869,
+          "start": 167700,
+          "end": 180180,
           "deps": [
             "cuEnsureFilterVenue",
             "cuPendingBulk",
@@ -1597,8 +1597,8 @@
         },
         {
           "name": "cuFiltersModal",
-          "start": 179872,
-          "end": 183439,
+          "start": 180183,
+          "end": 183750,
           "deps": [
             "cuState",
             "cuFloorRows",
@@ -1629,8 +1629,8 @@
         },
         {
           "name": "cuBulkEditModal",
-          "start": 183469,
-          "end": 187345,
+          "start": 183780,
+          "end": 187656,
           "deps": [
             "cuSelectedNumbers",
             "toast",
@@ -1670,8 +1670,8 @@
         },
         {
           "name": "cuBulkReviewModal",
-          "start": 187348,
-          "end": 190626,
+          "start": 187659,
+          "end": 190937,
           "deps": [
             "cuBulkPlan",
             "cuSelectedNumbers",
@@ -1712,8 +1712,8 @@
         },
         {
           "name": "cuLoadPerformance",
-          "start": 191771,
-          "end": 192654,
+          "start": 192082,
+          "end": 192965,
           "deps": [
             "cuMerchantSlug",
             "cuPerfState",
@@ -1736,8 +1736,8 @@
         },
         {
           "name": "cuFoliosBody",
-          "start": 192899,
-          "end": 196847,
+          "start": 193210,
+          "end": 197158,
           "deps": [
             "cuWarmStays",
             "F",
@@ -1769,8 +1769,8 @@
         },
         {
           "name": "cuSejoursBody",
-          "start": 196850,
-          "end": 203322,
+          "start": 197161,
+          "end": 203633,
           "deps": [
             "cuStayView",
             "cuSejoursAvailabilityBody",
@@ -1808,8 +1808,8 @@
         },
         {
           "name": "cuDispoBody",
-          "start": 205530,
-          "end": 210413,
+          "start": 205841,
+          "end": 210724,
           "deps": [
             "cuState",
             "roomTypeOf",
@@ -1850,8 +1850,8 @@
         },
         {
           "name": "cuStayEditor",
-          "start": 264778,
-          "end": 280075,
+          "start": 265089,
+          "end": 280386,
           "deps": [
             "cuState",
             "cuTypes",
@@ -1884,8 +1884,8 @@
         },
         {
           "name": "cuOpenDossier",
-          "start": 281613,
-          "end": 288526,
+          "start": 281924,
+          "end": 288837,
           "deps": [
             "cuStayScope",
             "cuChannelMerchant",
@@ -1924,8 +1924,8 @@
         },
         {
           "name": "cuSubmitStay",
-          "start": 385428,
-          "end": 399686,
+          "start": 385739,
+          "end": 399997,
           "deps": [
             "cuStayScope",
             "tx",
@@ -1967,8 +1967,8 @@
         },
         {
           "name": "cuCancelStay",
-          "start": 399690,
-          "end": 401233,
+          "start": 400001,
+          "end": 401544,
           "deps": [
             "cuMerchantSlug",
             "cuStayScope",
@@ -2000,8 +2000,8 @@
         },
         {
           "name": "cuAwaitTariffAck",
-          "start": 409065,
-          "end": 409861,
+          "start": 409376,
+          "end": 410172,
           "deps": [
             "hotelCloud"
           ],
@@ -2020,8 +2020,8 @@
         },
         {
           "name": "cuLoadProduction",
-          "start": 420649,
-          "end": 421777,
+          "start": 420960,
+          "end": 422088,
           "deps": [
             "cuStayScope",
             "cuProductionState",
@@ -2051,8 +2051,8 @@
         },
         {
           "name": "cuChannelGuide",
-          "start": 435891,
-          "end": 437345,
+          "start": 436202,
+          "end": 437656,
           "deps": [
             "tx",
             "K",
@@ -2074,8 +2074,8 @@
         },
         {
           "name": "cuCaptureEconomatDraft",
-          "start": 439722,
-          "end": 440747,
+          "start": 440033,
+          "end": 441058,
           "deps": [
             "openDrawer",
             "cuEconomatState"
@@ -2107,8 +2107,8 @@
         },
         {
           "name": "cuIntelBody",
-          "start": 458417,
-          "end": 464408,
+          "start": 458728,
+          "end": 464719,
           "deps": [
             "cuWarmStays",
             "cuState",

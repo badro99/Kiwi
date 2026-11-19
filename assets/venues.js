@@ -460,7 +460,7 @@
     const location = String(me.city || (paired && paired.location) || '').trim();
     VENUES.own = {
       id: 'own', name, location,
-      fullDisplay: displayOf(name, location),
+      fullDisplay: location ? `${name} · ${location}` : name,
       type: base,
       subtype: ownType, profileInfo: null,
       siblings: '', status: 'En service', ice: '·',
@@ -570,8 +570,11 @@
     if (badgeText) {
       const pend = isPendingVenue(currentVenue), L = window.KiwiI18n?.getLang?.() || 'fr';
       badge.classList.toggle('is-pending', pend);
-      if (pend) { badgeText.removeAttribute('data-i18n'); badgeText.textContent = ({ en: 'AWAITING ACTIVATION', ar: 'في انتظار التفعيل' })[L] || "EN ATTENTE D'ACTIVATION"; }
-      else if (!badgeText.hasAttribute('data-i18n')) { badgeText.setAttribute('data-i18n', 'dash.sidebar.inService'); badgeText.textContent = (L !== 'fr' && window.KiwiI18n?.T?.[L]?.['dash.sidebar.inService']) || 'EN SERVICE'; }
+      const tr = (o) => o[L] || o.fr, k = 'dash.sidebar.inService', T = window.KiwiI18n?.T || {};
+      if (pend || !badgeText.hasAttribute('data-i18n')) {
+        if (pend) badgeText.removeAttribute('data-i18n'); else badgeText.setAttribute('data-i18n', k);
+        badgeText.textContent = tr(pend ? { fr: "EN ATTENTE D'ACTIVATION", en: 'AWAITING ACTIVATION', ar: 'في انتظار التفعيل' } : { fr: 'EN SERVICE', en: T.en?.[k] || 'IN SERVICE', ar: T.ar?.[k] || 'في الخدمة' });
+      }
     }
     const slang = window.KiwiI18n?.getLang?.() || 'fr';
     if (metaEl) metaEl.textContent = (isRealMerchant() && !isCustom(currentVenue))
