@@ -150,28 +150,29 @@ import * as r144 from './api/shopify/connect.js';
 import * as r145 from './api/shopify/connect-direct.js';
 import * as r146 from './api/shopify/cron.js';
 import * as r147 from './api/shopify/status.js';
-import * as r148 from './api/stock/lookup.js';
-import * as r149 from './api/store.js';
-import * as r150 from './api/store-credits.js';
-import * as r151 from './api/support/articles.js';
-import * as r152 from './api/support/attachments.js';
-import * as r153 from './api/support/inbound.js';
-import * as r154 from './api/support/tickets.js';
-import * as r155 from './api/table-time.js';
-import * as r156 from './api/team/live.js';
-import * as r157 from './api/ticket-sequence.js';
-import * as r158 from './api/tickets/index.js';
-import * as r159 from './api/timezone.js';
-import * as r160 from './api/weather.js';
-import * as r161 from './api/z-reconciliation.js';
-import * as r162 from './auth/forgot.js';
-import * as r163 from './auth/login.js';
-import * as r164 from './auth/logout.js';
-import * as r165 from './auth/operator.js';
-import * as r166 from './auth/reset.js';
-import * as r167 from './auth/signup.js';
-import * as r168 from './order/basic.js';
-import * as r169 from './sitemap-annuaire.xml.js';
+import * as r148 from './api/stock-transfers.js';
+import * as r149 from './api/stock/lookup.js';
+import * as r150 from './api/store.js';
+import * as r151 from './api/store-credits.js';
+import * as r152 from './api/support/articles.js';
+import * as r153 from './api/support/attachments.js';
+import * as r154 from './api/support/inbound.js';
+import * as r155 from './api/support/tickets.js';
+import * as r156 from './api/table-time.js';
+import * as r157 from './api/team/live.js';
+import * as r158 from './api/ticket-sequence.js';
+import * as r159 from './api/tickets/index.js';
+import * as r160 from './api/timezone.js';
+import * as r161 from './api/weather.js';
+import * as r162 from './api/z-reconciliation.js';
+import * as r163 from './auth/forgot.js';
+import * as r164 from './auth/login.js';
+import * as r165 from './auth/logout.js';
+import * as r166 from './auth/operator.js';
+import * as r167 from './auth/reset.js';
+import * as r168 from './auth/signup.js';
+import * as r169 from './order/basic.js';
+import * as r170 from './sitemap-annuaire.xml.js';
 
 // Nested middlewares, outermost first, with the path each one covers.
 export const FAST_MIDDLEWARES = [
@@ -328,26 +329,27 @@ export const FAST_ROUTES = new Map(/** @type {Array<[string, Record<string, any>
   ["/api/shopify/connect-direct", r145],
   ["/api/shopify/cron", r146],
   ["/api/shopify/status", r147],
-  ["/api/stock/lookup", r148],
-  ["/api/store", r149],
-  ["/api/store-credits", r150],
-  ["/api/support/articles", r151],
-  ["/api/support/attachments", r152],
-  ["/api/support/inbound", r153],
-  ["/api/support/tickets", r154],
-  ["/api/table-time", r155],
-  ["/api/team/live", r156],
-  ["/api/ticket-sequence", r157],
-  ["/api/tickets", r158],
-  ["/api/timezone", r159],
-  ["/api/weather", r160],
-  ["/api/z-reconciliation", r161],
-  ["/auth/forgot", r162],
-  ["/auth/login", r163],
-  ["/auth/logout", r164],
-  ["/auth/operator", r165],
-  ["/auth/reset", r166],
-  ["/auth/signup", r167],
-  ["/order/basic", r168],
-  ["/sitemap-annuaire.xml", r169],
+  ["/api/stock-transfers", r148],
+  ["/api/stock/lookup", r149],
+  ["/api/store", r150],
+  ["/api/store-credits", r151],
+  ["/api/support/articles", r152],
+  ["/api/support/attachments", r153],
+  ["/api/support/inbound", r154],
+  ["/api/support/tickets", r155],
+  ["/api/table-time", r156],
+  ["/api/team/live", r157],
+  ["/api/ticket-sequence", r158],
+  ["/api/tickets", r159],
+  ["/api/timezone", r160],
+  ["/api/weather", r161],
+  ["/api/z-reconciliation", r162],
+  ["/auth/forgot", r163],
+  ["/auth/login", r164],
+  ["/auth/logout", r165],
+  ["/auth/operator", r166],
+  ["/auth/reset", r167],
+  ["/auth/signup", r168],
+  ["/order/basic", r169],
+  ["/sitemap-annuaire.xml", r170],
 ]));
