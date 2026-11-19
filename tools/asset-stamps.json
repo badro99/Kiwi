@@ -216,8 +216,8 @@
     "sha": "690e7d77e134c697"
   },
   "assets/caisse-kitchen.js": {
-    "v": "29",
-    "sha": "c978ff18c9a0add3"
+    "v": "30",
+    "sha": "2aec622ff3447940"
   },
   "assets/caisse-lang.js": {
     "v": "148",
@@ -2160,8 +2160,8 @@
     "sha": "35eb41b159c67704"
   },
   "assets/serveur/service.js": {
-    "v": "32",
-    "sha": "03ccc91112f3d873"
+    "v": "33",
+    "sha": "c09f5c6620a3904f"
   },
   "assets/service-requests.js": {
     "v": "2",

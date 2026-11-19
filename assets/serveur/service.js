@@ -2706,11 +2706,11 @@
         if (itemHasOptions(itemId)) { openOptionsSheet(itemId); return; }
         addToTableOrder(tableId, itemId); return;
       }
-      const lines = (tableOrders[tableId] || []).filter(l => l.id === itemId);
+      /* A formula's included items (0 MAD) are never picked on their own, and leave with it. */
+      const lines = (tableOrders[tableId] || []).filter(l => l.id === itemId && l.kind !== 'formula-part');
       const line = lines.find(l => !(l.note || '').trim()) || lines[lines.length - 1];
       if (!line) return;
-      line.qty--;
-      if (line.qty <= 0) tableOrders[tableId] = tableOrders[tableId].filter(l => l.uid !== line.uid && (!line.formulaUid || l.formulaUid !== line.formulaUid));
+      tableOrders[tableId] = applyGroupedLineQtyDelta(tableOrders[tableId], line, -1);
       markDirty(tableId);
       renderMenu();
       renderCartBar();

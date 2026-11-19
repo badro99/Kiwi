@@ -138,7 +138,7 @@ var SHELL = [
   '/assets/caisse/table-settlement.js?v=2',
   '/assets/caisse-accounting.js?v=33',
   '/assets/caisse-floor.js?v=21',
-  '/assets/caisse-kitchen.js?v=29',
+  '/assets/caisse-kitchen.js?v=30',
   '/assets/caisse/receipts.js?v=2',
   '/assets/caisse/closing.js?v=2',
   '/assets/caisse/workflows-loader.js?v=3',
@@ -166,7 +166,7 @@ var SHELL = [
   '/assets/serveur-shell.css?v=8',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
   '/assets/serveur/payment-support.js?v=9',
-  '/assets/serveur/service.js?v=32',
+  '/assets/serveur/service.js?v=33',
   '/assets/serveur-app.js?v=30',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,

@@ -71,15 +71,14 @@
           if (!formula) {
             const parent = parents.get(it.formulaUid);
             const parentVisual = parent ? visualText(parent) : '';
+            /* The formula's own option (« Granola & Fruit ») is one more choice,
+               printed small like the others; only the free note stays a note. */
             formula = {
               qty: (parent && parent.q) || it.q || 1,
               name: (parent && (parent.formulaName || parent.n))
                 || it.formulaName || 'Formule',
-              note: parent
-                ? [parentVisual, parentVisual ? parent.note : (parent.paperNote || parent.note)]
-                    .filter(Boolean).join(' · ')
-                : '',
-              formulaChoices: [],
+              note: parent ? String((parentVisual ? parent.note : (parent.paperNote || parent.note)) || '').trim() : '',
+              formulaChoices: parentVisual ? parentVisual.split(' · ').map(name => ({ name, note: '' })) : [],
             };
             grouped.set(it.formulaUid, formula);
             out.push(formula);
