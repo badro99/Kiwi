@@ -33,7 +33,7 @@ function world(zone='UTC'){
  const bridge=vm.createContext({...common,merchant:()=> 'property-shop',feedSales:[],feedSeen:{},feedComplete:{},moneySignal:no,voidedRefs:[],voidedIds:[],voidedEvents:[]});
  load(bridge,'assets/live-link.js',['accumulateFeed','bridgeToStore','applyVoids']);
  const c=vm.createContext({...common,getCurrentVenue:()=> 'scoped',currentRange:'septJours',customRange:null,
-   frInt:String,getLang:()=> 'fr',getSim:()=>null,ownData:()=>true,isLiveDemo:()=>false,guardOperatorFigures:()=>false,
+   frInt:String,getLang:()=> 'fr',getSim:()=>null,ownData:()=>true,isLiveDemo:()=>false,guardOperatorFigures:()=>false,operatorLedgerPending:()=>false,
    kpiByVenue:{},vData:()=>({tx:{},panier:{}}),KPI_DELTA_SUFFIX:{fr:{}},screenBook:()=>null,realGrossProfit:()=>null});
  load(c,'assets/dateRange.js',['DEFAULT_MERCHANT_TZ','z2','dateToIso','RANGE_DAYS','DAY_ABBR','salesMath','tenderBucket','tenderAmounts','deliveryDue',
    'activeMerchantSlug','merchantTimeZone','merchantParts','addMerchantDays','merchantBoundary','merchantDayKey','merchantDayBounds','dayCutoffH','dayStartMs','realSalesList','realRefundList','realMoneyList','calendarStartKey','calendarBounds','rangeBounds','closedBounds','shiftedBusinessBounds','realWindowStats','realSalesTotals','windowDays','realClientMix','realDeltaPct','halfUpDiv','deltaTenths','basketCents','niceCeil','hourlyCumul','dailyTotals','realRevSeries','renderKpiBand']);

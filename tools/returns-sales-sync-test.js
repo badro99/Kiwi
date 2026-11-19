@@ -13,7 +13,7 @@ const feed = fs.readFileSync(path.join(__dirname, '..', 'functions', 'api', 'fee
 const checks = [
   ['Échanges relit les sept jours réels du magasin', /retShiftDay\(retDayKey\(tillNow\(\)\), -\(retainDays\(\) - 1\)\)[\s\S]*KiwiPosSale\?\.feedDay[\s\S]*'\/api\/feed\?merchant='/.test(src)],
   ['la requête garde le cookie de la caisse appairée', /syncReturnSales[\s\S]*credentials: 'same-origin'/.test(src)],
-  ['une référence déjà locale gagne sur la copie serveur', /SALES\.some\(\(s\) => s && s\.id === ref\)/.test(src)],
+  ['une référence déjà locale gagne sur la copie serveur (et la même vente relue par son id serveur aussi)', /SALES\.some\(\(s\) => s && \(?s\.id === ref(?:\)| \|\| \(row\.id && s\.serverId === String\(row\.id\)\)\)\))/.test(src)],
   ['les tickets serveur sont fusionnés dans le journal des échanges', /serverId:[\s\S]*remote: true/.test(src)],
   ['un ticket sans article identifiable ne devient pas un faux échange', /if \(!lines\.length\) return/.test(src)],
   ['une copie d’une autre caisse ne rend pas deux fois le stock sur un void', /if \(sale\.remote\) return/.test(src)],

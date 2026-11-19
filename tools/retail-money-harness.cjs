@@ -55,7 +55,7 @@ function world(vertical) {
   c.readDayRows=async()=>null;
   const core=`assets/pos-${vertical}.js`, checkout=`assets/pos-${vertical}/checkout.js`;
   load(c,`assets/pos-${vertical}/sales.js`,['shelf']);
-  if(vertical==='boutique'||vertical==='maison')load(c,'assets/pos-boutique/z-split.js',['zIsDelivery','zSplitParts','zSalesFor','zSentParts','zHoldsStock']);
+  if(vertical==='boutique'||vertical==='maison')load(c,'assets/pos-boutique/z-split.js',['zIsDelivery','zSplitParts','zSalesFor','zSentParts','zHoldsStock','zIsCollection','zRowKind','zAway','zCollected','zDrawerCash','zDrawerMoves','zDrawerRows']);
   load(c,core,['lineBase','lineUnit','lineTotal','rewardDiscount',...(vertical==='maison'?['isConsigned','consignedOf']:[]),'ticketTotals',
     'RETAIN_DAYS','srvMethod','remoteLine',...(vertical==='boutique'?['retDayKey','retShiftDay','remoteMoney']:[]),'syncReturnSales','bqLineTotals','bqFoldBasket','BQ_SRV_METHOD','bqPaymentParts','bqPaymentMethod','originalSalePayload',
     'businessDayKey','isToday','salesToday','notCashedOf',...(vertical==='maison'?['cashedOf']:[]),'caToday','bqMoneyParts','bqDayTotals','bqZJournal']);

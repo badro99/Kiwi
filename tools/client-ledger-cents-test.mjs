@@ -190,6 +190,7 @@ try {
       Date, Number, Math, isNaN, RegExp, String, Array, encodeURIComponent, fetch() {}, IS_DEMO: false, merchantSlug: () => 'm', SALES, RETAIN_DAYS: 7, retainDays: () => 7, tillNow: () => Date.now(), readDayRows() {},
       remoteLine: (l) => l, srvMethod: (m) => [m], remoteMoney: () => ({}), persistDay() {}, root: null, state: {}, renderEchanges() {}, renderBadges() {}, icons() {},
       clById: (id) => book[id] || null });
+    vm.runInContext(split.declaration(fs.readFileSync(new URL('../assets/pos-boutique/z-split.js', import.meta.url), 'utf8'), 'zRowKind'), ctx);
     vm.runInContext(pick('retDayKey', 'retShiftDay', 'syncReturnSales', 'saleClient') + ';this.sync=syncReturnSales;this.saleClient=saleClient;', ctx);
     await ctx.sync();
     const withClient = SALES.find((s) => s.id === 'T-100'), without = SALES.find((s) => s.id === 'T-101');

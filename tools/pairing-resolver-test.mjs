@@ -899,6 +899,20 @@ function auditPairingKeyUsage() {
         if (ownerStart !== -1 && ownerEnd !== -1 && idx < ownerEnd) continue;
       }
 
+      // dashboard-startup-gate.js hides the pairing from READS on the operator
+      // view only (dashboard?op=1&merchant=…): a till paired to another store
+      // on this computer made the Santos operator page query Amira Boutique
+      // (19 nov. 2026). It never writes or removes the key; the exception is
+      // the literal hide list alone, and the file must hold no storage write.
+      if (rel === 'assets/dashboard-startup-gate.js') {
+        const ownerStart = content.lastIndexOf('const hidden = new Set([', idx);
+        const ownerEnd = ownerStart === -1 ? -1 : content.indexOf(']);', ownerStart);
+        if (ownerStart !== -1 && ownerEnd !== -1 && idx < ownerEnd) {
+          if (/\.(?:setItem|removeItem|clear)\s*\(/.test(content)) violations.push({ file: rel, line, snippet, reason: 'the operator pairing mask must not write storage' });
+          continue;
+        }
+      }
+
       // 4. All other production files: MUST be an allow-listed read.
       // Narrow exception: a storage-event key comparison (e.key === '…') routes
       // cross-tab sync restarts; it never reads the key's VALUE, so it cannot

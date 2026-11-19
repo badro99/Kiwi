@@ -26,6 +26,7 @@ const feed = { sales: [
 const sctx = vm.createContext({ window: { KiwiDayReport: { businessDay }, KiwiPosSale: { feedDay: (u) => { urls.push(u); return Promise.resolve(feed); } } },
   Date, Number, Math, isNaN, RegExp, String, Array, encodeURIComponent, fetch() {}, IS_DEMO: false, merchantSlug: () => 'm', SALES, RETAIN_DAYS: 7, retainDays: () => 7, tillNow: () => Date.now(), readDayRows() {},
   remoteLine: (l) => l, srvMethod: (m) => [m], remoteMoney: () => ({}), persistDay() {}, root: null, state: {}, renderEchanges() {}, renderBadges() {}, icons() {} });
+vm.runInContext(split.declaration(fs.readFileSync('assets/pos-boutique/z-split.js', 'utf8'), 'zRowKind'), sctx);  // un encaissement de livreur relu reste à part (z-split.js)
 vm.runInContext(pick('retDayKey', 'retShiftDay', 'syncReturnSales').replace('function syncReturnSales', 'function syncReturnSales') + ';this.sync=syncReturnSales;', sctx);
 await sctx.sync();
 const from = Number(/from=(\d+)/.exec(urls[0])[1]);
