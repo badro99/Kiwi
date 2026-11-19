@@ -2702,6 +2702,8 @@
     subSales();
     window.KiwiSalesSummary?.subscribe(() => {
       subscribers.forEach(fn => { try { fn(currentRange); } catch (_) {} });
+      /* Le hero n'est pas un abonné : peint « … » avant la réponse du serveur, il y restait jusqu'à la fin de la relecture (vue opérateur Santos, 19 nov.). */
+      try { renderKpiBand(); renderHero(); } catch (_) {}
     });
     /* « Pourboires » lit les journées closes du classeur, qui arrive du
      * serveur après le premier rendu (et à chaque clôture d'une autre caisse) :

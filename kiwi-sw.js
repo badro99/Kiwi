@@ -320,7 +320,7 @@ var SHELL = [
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=5',
   '/assets/sales-history.js?v=16',
-  '/assets/dateRange.js?v=153',
+  '/assets/dateRange.js?v=154',
   '/assets/daterange/renderers.js?v=51',
   '/assets/agent/ui.js?v=3',
   '/assets/mobile-nav.js?v=9',

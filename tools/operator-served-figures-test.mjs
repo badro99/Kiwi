@@ -69,4 +69,15 @@ ok('animateNumber: a KPI tile animates during the replay, any other number keeps
   assert.notEqual(kpi.textContent, '…', 'KPI tile painted');
   assert.equal(other.textContent, '…', 'non-served number waits');
 });
+ok('the server totals arriving repaint the band and the hero, painted « … » before they came', () => {
+  /* Santos, 19 nov. : la bande montrait 11 commandes à 2,6 s, le montant du hero
+     restait sur « … » jusqu'à la fin de la relecture (16,8 s). Seuls les
+     abonnés de la période étaient prévenus ; le hero n'en est pas un. */
+  const src = fs.readFileSync('assets/dateRange.js', 'utf8');
+  const at = src.indexOf('window.KiwiSalesSummary?.subscribe(');
+  assert.ok(at > 0, 'dateRange.js listens to the server totals');
+  const body = src.slice(at, src.indexOf('\n    });', at));
+  assert.match(body, /renderHero\(\)/, 'the hero repaints');
+  assert.match(body, /renderKpiBand\(\)/, 'the band repaints');
+});
 console.log(`operator-served-figures: ${passed} passed`);
