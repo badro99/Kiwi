@@ -318,7 +318,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=5',
-  '/assets/sales-history.js?v=12',
+  '/assets/sales-history.js?v=13',
   '/assets/dateRange.js?v=151',
   '/assets/daterange/renderers.js?v=49',
   '/assets/agent/ui.js?v=3',

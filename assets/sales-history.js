@@ -202,8 +202,26 @@
     if (missing) return null;
     return { days: bounds.map(b => s.days.get(b.from).day), splits: bounds.flatMap(b => s.days.get(b.from).splits) };
   }
+  /* Until this store's ledger replay ends, the server's count (3 ms for a year
+     of Santos) is the headline; the replay downloaded every ticket first (2.4 MB,
+     4 s+ at Santos's size) before any total moved. A device still owing the
+     server sales, or a window cutting a business day, keeps the local count. */
+  function early(m, from, to) {
+    const live = window.KiwiLive?.status?.();
+    if (!live || !live.on || live.merchant !== m || live.backfillComplete !== false || live.queued > 0) return null;
+    if (!Number.isFinite(from)) return null;
+    // « So far » (to now, or open-ended) ends with today's whole bucket: no sale is dated later.
+    let end = to;
+    const now = Date.now(), R = clock();
+    if (to > now) { if (!R) return null; end = R.dayBounds(R.businessDay(now, m), m).to; }
+    if (!Number.isFinite(end) || end <= from) return null;
+    const summary = get(from, end);
+    if (!summary) return null;
+    try { return window.KiwiSalesMath.statsFromSummary(summary.days, summary.splits, from, end); } catch (_) { return null; }
+  }
   function stats(sales, refunds, from, to, venueId) {
     const M = window.KiwiSalesMath, boundary = coverageStart(venueId);
+    if (boundary === null) { const served = early(merchant(), from, to); if (served) return served; }
     if (boundary === null || from >= boundary) return M.statsFromSales(sales, refunds, from, to);
     const end = Math.min(to, boundary), summary = get(from, end);
     const fallback = () => Object.assign(M.statsFromSales(sales, refunds, from, to), { partial: true });
