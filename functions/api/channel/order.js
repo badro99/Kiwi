@@ -26,13 +26,10 @@
 // d'occuper un four sans que le restaurant l'ait voulu.
 //
 // ── L'état de l'intégration Glovo, écrit ici pour qu'il ne se perde pas ─────
-// Glovo appartient à Delivery Hero et son programme POS
-// (developers.deliveryhero.com/documentation/pos.html) exige un accord signé :
-// on soumet une clé publique PGP, un représentant LOCAL renvoie des identifiants
-// chiffrés, on fournit l'URL HTTPS du connecteur, on teste, puis on déploie.
-// Ce fichier EST cette URL. Tant que le contrat n'existe pas, aucune ligne de
-// code ne peut faire arriver une commande Glovo — et Kiwi ne doit rien afficher
-// qui prétende le contraire.
+// Glovo ne passe PAS par cette porte. Son équipe Maroc l'a confirmé le
+// 19 nov. 2026 (ticket NFQC-5519) : pas de connecteur côté Glovo, c'est le
+// logiciel de caisse qui intègre l'API Partners (un jeton partagé, le magasin
+// lu dans `store_id`). Cette intégration vit dans functions/api/channel/glovo/.
 // Jumia Food, encore listé dans plusieurs écrans, a quitté le Maroc fin 2023.
 
 import { json } from '../../auth/_lib.js';

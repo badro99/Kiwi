@@ -6,6 +6,7 @@
 import { json } from '../../auth/_lib.js';
 import { recordOrderCourse, closeOrderCourses } from './_course.js';
 import { deferCourse, displayMoney, operationId, atomicStatements, statement, employeeName } from './_queue-shared.js';
+import { notifyGlovo } from '../channel/glovo/_glovo.js';
 
 /* Les transitions LÉGALES, par état d'arrivée. Avant, l'UPDATE ne regardait pas
  * l'état de départ : on pouvait faire passer une commande de `pending`
@@ -272,6 +273,8 @@ export async function advanceOrder(ctx, id, status) {
       merchant, orderId: row.id, orderNumber: row.number,
     }, milestone)));
   }
+  // Une commande Glovo : dire à Glovo qu'elle est acceptée / prête / retirée, après la réponse.
+  if (env.GLOVO_TOKEN) deferCourse(context, notifyGlovo(env, merchant, row.id, row.status, now));
 
   /* ── La remise en main propre CLÔT la session du comptoir ─────────────────
    * Un retrait au comptoir n'a pas d'addition à encaisser plus tard : si rien

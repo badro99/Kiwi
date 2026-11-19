@@ -15,11 +15,11 @@
  * La clé est réelle et fonctionne dès maintenant : n'importe quel système
  * capable de faire un POST HTTP (le connecteur d'un prestataire, un relais
  * Make / Zapier, un script de la boutique) dépose une commande qui devient un
- * ticket imprimable. Ce que Kiwi ne peut PAS faire seul, c'est obliger Glovo à
- * appeler cette URL : le programme POS de Delivery Hero (propriétaire de Glovo)
- * passe par un accord signé et des identifiants remis par un représentant
- * local. Tant qu'il n'existe pas, la clé attend — et l'écran le dit, plutôt que
- * d'afficher une pastille verte.
+ * ticket imprimable. Glovo, lui, n'utilise PAS cette clé : depuis le 19 nov.
+ * 2026, Kiwi est intégrateur de l'API Partners de Glovo (un jeton pour toute
+ * l'intégration, functions/api/channel/glovo/), et l'opérateur relie l'adresse
+ * Glovo du magasin à son commerçant. L'écran le dit au lieu d'afficher une
+ * pastille verte.
  *
  * API
  *   KiwiChannels.connect(channel, label)  → ouvre le panneau, renvoie Promise<bool>
@@ -34,9 +34,9 @@
    * commerçant ne peut pas deviner et que personne d'autre ne lui dira. */
   var NOTES = {
     glovo: {
-      fr: 'Glovo (groupe Delivery Hero) ne laisse pas un logiciel de caisse se brancher tout seul : leur programme POS demande un accord signé, puis des identifiants remis par leur représentant au Maroc. Donnez-leur l\'adresse et la clé ci-dessous · c\'est exactement ce qu\'ils réclament. En attendant, la clé fonctionne déjà avec un relais (Make, Zapier, votre propre script).',
-      en: 'Glovo (Delivery Hero group) does not let a POS connect on its own: their POS programme requires a signed agreement, then credentials handed over by their representative in Morocco. Give them the address and key below · that is exactly what they ask for. Meanwhile the key already works with a relay (Make, Zapier, your own script).',
-      ar: 'لا تسمح Glovo (مجموعة Delivery Hero) لبرنامج صندوق بالاتصال وحده: برنامجهم يتطلب اتفاقًا موقعًا ثم بيانات اعتماد يسلمها ممثلهم في المغرب. أعطهم العنوان والمفتاح أدناه.',
+      fr: 'Glovo se branche directement sur Kiwi : leurs commandes arrivent à la caisse comme un ticket en attente, et Kiwi leur dit quand la commande est acceptée puis prête. Pour l\'activer, écrivez au support Kiwi avec le nom de votre magasin sur Glovo · nous faisons le lien avec leur équipe. La clé ci-dessous ne sert pas pour Glovo ; elle reste utile pour un relais (Make, Zapier, votre propre script).',
+      en: 'Glovo connects directly to Kiwi: their orders reach the till as a pending ticket, and Kiwi tells them when the order is accepted, then ready. To switch it on, write to Kiwi support with your store name on Glovo · we set up the link with their team. The key below is not used for Glovo; it stays useful for a relay (Make, Zapier, your own script).',
+      ar: 'تتصل Glovo مباشرة بـ Kiwi: تصل طلباتها إلى الصندوق كتذكرة في الانتظار، وتُعلمها Kiwi عند قبول الطلب ثم عند جاهزيته. لتفعيل ذلك، راسل دعم Kiwi باسم متجرك على Glovo · ونتولى الربط مع فريقهم. المفتاح أدناه لا يُستعمل مع Glovo، ويبقى مفيدًا لوسيط مثل Make أو Zapier.',
     },
     yassir: {
       fr: 'Yassir Express ne publie pas d\'interface de caisse ouverte. Passez par votre gestionnaire de compte, ou reliez leur tableau de bord à cette adresse via un relais (Make, Zapier).',
