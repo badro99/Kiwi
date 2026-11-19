@@ -87,13 +87,17 @@ if (acceptMatch && refreshMatch && identityMatch) {
     const doc = { documentElement: { classList: cls } };
     const build = new Function('showPill', 'pillRef', 'closePaywall', 'installPrivacy', 'document', `
       var pending=false, onboarded=true, identitySettled=false, pill=pillRef, modal=null, operator=false, privacy=false, wantsPrivacy=false;
+      var hasActiveStore=false;
+      ${(entSrc.match(/function locked\(\)\{[^}]*\}/) || [''])[0]}
+      ${(entSrc.match(/function setupMode\(\)\{[^}]*\}/) || [''])[0]}
       function clearPillTimer(){}
+      function showStorePill(){}
       ${refreshMatch[0]}
       ${acceptMatch[0]}
       ${identityMatch[0]}
       return { cfg: acceptConfig, id: confirmIdentity, state: function(){ return { pending: pending, onboarded: onboarded }; } };
     `);
-    const api = build(() => { shown = true; }, { remove() {}, focus() {} }, () => {}, () => {}, doc);
+    const api = build(() => { shown = true; }, { remove() {}, focus() {}, hasAttribute() { return false; } }, () => {}, () => {}, doc);
     if (order === 'me-first') { api.id(identity); api.cfg(cfg); }
     else { api.cfg(cfg); api.id(identity); }
     return { ...api.state(), shown };
@@ -127,18 +131,18 @@ if (acceptMatch && refreshMatch && identityMatch) {
 
 /* ── 5 · Les écouteurs consultent la même question ───────────────────────── */
 ok(/function heldBack\(el\)\{/.test(entSrc), 'une seule question (heldBack) décide pour tous les écouteurs');
-ok(/showPaywall\(\)\{\s*\n?\s*if\(operator\|\|!pending\|\|!onboarded\)/.test(entSrc),
+ok(/showPaywall\(\)\{\s*\n?\s*if\(operator\|\|!pending\|\|!onboarded[|)]/.test(entSrc),
   'le panneau lui-même refuse de s’ouvrir pendant l’installation');
-ok(/function showPill\(\)\{if\(pill\|\|operator\|\|!pending\|\|!onboarded\)/.test(entSrc),
+ok(/function showPill\(\)\{if\(pill\|\|operator\|\|!pending\|\|!(?:onboarded|locked\(\))\)/.test(entSrc),   // locked() = installé ET sans boutique déjà active (9175b4aa2)
   'la pastille aussi');
 
 /* ── 6 · Un geste retenu pendant l’installation DIT pourquoi ─────────────── */
 ok(/function installToast\(\)\{/.test(entSrc), 'un message existe pour les gestes retenus pendant l’installation');
-ok(/if\(onboarded\)showPaywall\(\);else installToast\(\);/.test(entSrc),
+ok(/if\((?:onboarded|locked\(\))\)showPaywall\(\);else installToast\(\);/.test(entSrc),
   'le clic retenu ouvre le panneau une fois installé, et explique pendant l’installation');
 ok((entSrc.match(/else installToast\(\);/g) || []).length >= 2,
   'le clic ET la requête réseau expliquent tous les deux : aucun bouton muet');
-ok(/if\(byHand\(\)\)\{if\(onboarded\)showPaywall\(\);else installToast\(\);\}/.test(entSrc),
+ok(/if\(byHand\(\)\)\{if\((?:onboarded|locked\(\))\)showPaywall\(\);else installToast\(\);\}/.test(entSrc),
   'la requête réseau n’explique que si elle suit un geste : une synchronisation de fond n’ouvre rien');
 
 /* ── 7 · Le ton ─────────────────────────────────────────────────────────── */

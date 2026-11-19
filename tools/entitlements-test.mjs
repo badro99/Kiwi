@@ -15,6 +15,7 @@
  * répond 200, la console est vide, et le correctif n'apparaît pas.
  * ─────────────────────────────────────────────────────────────────────────── */
 import fs from 'fs';
+import vm from 'vm';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -120,10 +121,18 @@ ok(/function showPaywall\(\)\{\s*if\(operator\|\|!pending(\|\|[^)]+)?\)return tr
 ok(/function showPaywall\(\)\{\s*if\(operator\|\|!pending\|\|!onboarded(\|\|[^)]+)?\)return true;/.test(js),
   'et le panneau reste fermé tant que l’installation n’est pas finie');
 /* 2026-11-19 · un compte qui vend déjà ailleurs n'est pas un prospect : son
-   deuxième établissement en attente s'installe sans panneau de vente. */
-ok(/function showPaywall\(\)\{\s*if\([^)]*\|\|hasActiveStore\)return true;/.test(js)
-  && /hasActiveStore=!!\(state&&Array\.isArray\(state\.stores\)&&state\.stores\.some\(function\(s\)\{return s&&s\.pending===false;\}\)\)/.test(js),
-  'un client déjà actif prépare sa nouvelle boutique sans panneau d’activation');
+   deuxième établissement en attente s'installe sans panneau de vente. Le vrai
+   calcul de hasActiveStore et la vraie garde de showPaywall, exécutés. */
+{
+  const assign = (js.match(/hasActiveStore=!!\(.*\)\);/) || [''])[0];
+  const guard = (js.match(/function showPaywall\(\)\{\s*(if\([^)]*\)return true;)/) || [])[1] || '';
+  const paywall = vm.runInNewContext(
+    `(function(state,operator,pending,onboarded){var hasActiveStore=false;${assign}${guard}return 'paywall';})`);
+  ok(paywall({ stores: [{ pending: false }, { pending: true }] }, false, true, true) === true,
+    'un client déjà actif prépare sa nouvelle boutique sans panneau d’activation');
+  ok(paywall({ stores: [{ pending: true }] }, false, true, true) === 'paywall' && paywall(null, false, true, true) === 'paywall',
+    'un compte sans aucune boutique active voit toujours le panneau');
+}
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) process.exit(1);

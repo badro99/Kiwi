@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=221';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=139';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=221';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=221';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=222';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=140';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=222';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=222';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
@@ -1501,11 +1501,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     setupFullscreenBtn();
     $$('.modal-veil', root).forEach((v) => {
       v.addEventListener('click', (e) => {
-        /* Payment owns a server stock reservation. It may close only through its
-           own handlers, which release that reservation when nothing was paid.
-           Inventaire : la fiche d'un nouvel article et sa grille de stock taille par
-           taille prennent du temps, un toucher à côté effaçait tout (Santos). Elle ne
-           se ferme plus que par sa croix ou ses boutons. */
+        /* Paiement (il tient une réservation de stock) et Inventaire (une fiche longue à remplir, un toucher à côté effaçait tout chez Santos) : fermés par leurs seuls boutons. */
         if (e.target === v && v.id !== 'bq-pay-veil' && v.id !== 'bq-inv-veil') closeVeil(v);
       });
     });
