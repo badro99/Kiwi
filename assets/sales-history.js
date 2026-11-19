@@ -213,7 +213,11 @@
     // « So far » (to now, or open-ended) ends with today's whole bucket: no sale is dated later.
     let end = to;
     const now = Date.now(), R = clock();
-    if (to > now) { if (!R) return null; end = R.dayBounds(R.businessDay(now, m), m).to; }
+    /* « Aujourd'hui » se calcule Date.now() + 1 au rendu (closedBounds) : lu
+       quelques millisecondes plus tard, il passait pour une fenêtre coupée et
+       le serveur n'était jamais consulté (vue opérateur Santos, 19 nov.). Une
+       fin à moins de 5 s de maintenant est « jusqu'à maintenant ». */
+    if (to > now - 5000) { if (!R) return null; end = R.dayBounds(R.businessDay(now, m), m).to; }
     if (!Number.isFinite(end) || end <= from) return null;
     const summary = get(from, end);
     if (!summary) return null;

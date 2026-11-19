@@ -319,7 +319,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=5',
-  '/assets/sales-history.js?v=15',
+  '/assets/sales-history.js?v=16',
   '/assets/dateRange.js?v=153',
   '/assets/daterange/renderers.js?v=51',
   '/assets/agent/ui.js?v=3',

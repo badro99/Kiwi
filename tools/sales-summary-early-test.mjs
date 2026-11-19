@@ -148,6 +148,15 @@ await ok('a window that starts inside a business day stays local and never throw
   }
 });
 
+await ok('« today » computed a few milliseconds earlier (closedBounds: Date.now() + 1) is still today so far', async () => {
+  const t = setup(), now = boundary(59) + 10 * 3600000;
+  for (const to of [now - 3, now - 1500]) {
+    t.c.realWindowStats(boundary(59), to); await settle();
+    assert.equal(t.store.serves(boundary(59), to), true, 'served at now - ' + (now - to) + ' ms');
+  }
+  assert.equal(t.store.serves(boundary(59), now - 2 * 3600000), false, 'two hours ago is a real cut');
+});
+
 await ok('serves() says whether the server already counts a window (operator view reads it)', async () => {
   const t = setup();
   assert.equal(t.store.serves(...today), false, 'nothing yet: the request is only starting');
