@@ -181,7 +181,13 @@
   let db = null;               // { v, categories[], products[], variants[], seq }
   const subs = new Set();      // change listeners on this page
 
-  function nextId(prefix) { db.seq = (db.seq || 0) + 1; return prefix + '_' + db.seq; }
+  /* Catalogue partagé entre boutiques (functions/api/_catalog-family.js) : le serveur donne à
+     chacune une étiquette, ajoutée aux identifiants qu'elle crée, pour que deux boutiques jamais
+     ne créent le même « prod_14 » avant de s'être vues. Hors famille : rien, comme avant. */
+  function nextId(prefix) {
+    let t = ''; try { t = String(localStorage.getItem('kiwiCatalogIdTag:v1:' + VENUE) || ''); } catch (e) {}
+    db.seq = (db.seq || 0) + 1; return prefix + '_' + db.seq + (/^[a-z0-9]{3,8}$/.test(t) ? '_' + t : '');
+  }
 
   /* `removed` : les SUPPRESSIONS, nommées. Voir la note au-dessus de mergeDocs —
      sans cette carte, une absence ne se distingue pas d'une ignorance, et un

@@ -1771,7 +1771,7 @@ section('Whole-project regressions');
     'catalog-stock-transaction-test.mjs',
     /* Deux comptoirs, un stock : fusion, suppression, comptage et repli du
        journal contre un modèle de ce que la boutique a fait. */
-    'catalog-merge-properties-test.mjs',
+    'catalog-merge-properties-test.mjs', 'catalog-family-test.mjs', 'catalog-family-id-test.mjs', // + catalogue partagé entre boutiques
     /* Deux appareils, une fiche : chaque champ garde sa dernière édition, un
        même champ changé des deux côtés est soumis au commerçant. */
     'catalog-field-merge-test.mjs',

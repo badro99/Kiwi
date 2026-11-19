@@ -39,6 +39,7 @@ import { json, entitledMerchant } from '../auth/_lib.js';
 // corrige une, les deux autres restent ouvertes.
 import { tenantFor, storeSubscriptionPending } from './_private.js';
 import { enqueueStockChanges, flushShopifyOutbox } from './shopify/_lib.js';
+import { catalogFamily, idTagFor, seedFromFamily, syncFamily } from './_catalog-family.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const num = (v, max) => Math.max(0, Math.min(max, Number(v) || 0));
@@ -389,10 +390,21 @@ export async function onRequestGet(context) {
     const row = await env.DB.prepare(
       'SELECT data, rev, updated_ts FROM catalogs WHERE merchant = ?'
     ).bind(merchant).first();
-    if (!row) return json({ merchant, data: null, rev: 0 });
+    /* Une boutique d'une famille (catalogue partagé, _catalog-family.js) reçoit
+     * son étiquette d'identifiant, et, à sa première ouverture, les articles
+     * de la famille à zéro pièce. */
+    const family = await catalogFamily(env, merchant);
+    const idTag = idTagFor(family, merchant);
+    if (!row && family) {
+      const seeded = await seedFromFamily(env, merchant, family, sanitize).catch(() => null);
+      if (seeded) return json({ merchant, data: seeded.data, rev: seeded.rev, updated_ts: seeded.updated_ts, idTag });
+    }
+    if (!row) return json(idTag ? { merchant, data: null, rev: 0, idTag } : { merchant, data: null, rev: 0 });
     let data = null;
     try { data = sanitize(JSON.parse(row.data)); } catch (_) { data = null; }
-    return json({ merchant, data, rev: row.rev || 0, updated_ts: row.updated_ts || 0 });
+    const out = { merchant, data, rev: row.rev || 0, updated_ts: row.updated_ts || 0 };
+    if (idTag) out.idTag = idTag;
+    return json(out);
   } catch (_) {
     // Table absente (migration pas encore passée) → neutre, surtout pas une
     // erreur : le client doit continuer à fonctionner en local.
@@ -517,6 +529,10 @@ export async function onRequestPost(context) {
   let before = null;
   try { before = current && current.data ? materialize(sanitize(JSON.parse(current.data))) : null; } catch (_) {}
   scheduleShopifySync(env, merchant, before, data, rev, waitUntil);
+  /* Catalogue partagé : la définition enregistrée ici part chez les autres
+   * boutiques de la famille, leur stock reste le leur. Un échec n'annule
+   * jamais l'écriture de cette boutique : la suivante rattrape. */
+  try { await syncFamily(env, merchant, data, sanitize); } catch (_) {}
 
   return json({
     ok: true, merchant, rev, updated_ts: now,

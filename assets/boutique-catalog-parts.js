@@ -840,6 +840,7 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
            to become `null` but still set cloud.read, licensing the next local
            mutation to overwrite a server copy this browser had never seen. */
         cloud.read[slug] = 1;
+        try { if (/^[a-z0-9]{3,8}$/.test(String(res.idTag || ''))) localStorage.setItem('kiwiCatalogIdTag:v1:' + slug, res.idTag); else localStorage.removeItem('kiwiCatalogIdTag:v1:' + slug); } catch (e) {}
         cloud.last = Date.now();
         cloud.dirty = cloud.dirty || !!dirtyToken(slug);
 

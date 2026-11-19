@@ -1051,7 +1051,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
-  <script src="assets/admin-legacy.js?v=13"></script>
+  <script src="assets/admin-legacy.js?v=14"></script>
   <script src="assets/staff-roles.js?v=3"></script>
   <!-- The brand's one selection motion, for the établissement switcher. Self-
        contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
@@ -1309,6 +1309,8 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
         hint:'Éteint par défaut. À la réception d’un article, répartit le carton sur les tailles en un geste (« S-XL 5 M3 »), et ouvre une colonne par couleur (« noir S-XL 4 bleu M3 ») : chaque taille de chaque couleur reçoit son code-barres. Éteint, l’écran des tailles reste celui d’avant.' },
       { key:'expenses', label:'Dépenses (registre du propriétaire)', off:true,
         hint:'Éteint par défaut. Ajoute « Dépenses » au tableau de bord du propriétaire : l’argent entré, l’argent sorti (dépenses saisies, tickets scannés et retraits de la caisse classés automatiquement) et ce qui reste ce mois-ci. Réservé au propriétaire : ni la caisse ni les employés ne le voient. Éteint après usage : rien n’est effacé.' },
+      { key:'sharedCatalog', label:'Catalogue partagé entre boutiques', off:true,
+        hint:'Éteint par défaut. À allumer sur CHAQUE boutique du même compte qui vend les mêmes articles (Santos Rabat et Casablanca) : articles, tailles, prix et codes-barres deviennent communs, le stock reste celui de chaque boutique. Une nouvelle boutique reçoit les articles à zéro pièce. Éteint, chaque boutique garde ce qu’elle a, rien n’est effacé.' },
       { key:'caisseInventoryValue', label:'Afficher la valeur du stock sur la caisse',
         hint:'Allumé par défaut. À couper pour masquer le montant total investi dans le stock sur les caisses Maison et Boutique. Les quantités restent visibles.' },
     ],
