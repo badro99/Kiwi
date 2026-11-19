@@ -305,8 +305,21 @@ export async function onRequestGet({ request, env }) {
       if (f && !parcelSales.has(d.saleId)) d.ozonError = { error: String(f.error || ''), message: String(f.message || '') };
     });
   } catch (_) { /* pas de trace : rien à dire */ }
+  /* Le résumé de « Boutique en ligne » (Santos) : sur toutes les livraisons,
+     pas sur les 50 dernières listées. `since` borne l'encaissé et les retours
+     au jour où l'argent est arrivé ou l'article est revenu. */
+  const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
+  const summary = { since, collectedCents: 0, collectedCount: 0, dueCents: 0, dueCount: 0, toConfirmCount: 0, returnedCents: 0, returnedCount: 0 };
+  all.forEach((d) => {
+    const got = d.collections.filter((c) => c.ts >= since).reduce((n, c) => n + c.amountCents, 0);
+    if (got > 0) { summary.collectedCents += got; summary.collectedCount += 1; }
+    if (d.dueCents > 0) { summary.dueCents += d.dueCents; summary.dueCount += 1; if (d.toConfirm) summary.toConfirmCount += 1; }
+    if (d.returned && d.returned.ts >= since) { summary.returnedCents += d.returnedCents; summary.returnedCount += 1; }
+  });
   return json({
+    merchant,
     confirmDays: CONFIRM_DAYS,
+    summary,
     open: all.filter((d) => d.dueCents > 0),
     collected: all.filter((d) => d.dueCents === 0 && d.collected).sort((a, b) => b.collected.ts - a.collected.ts).slice(0, 50),
     returned: all.filter((d) => d.dueCents === 0 && !d.collected && d.returned).sort((a, b) => b.returned.ts - a.returned.ts).slice(0, 50),

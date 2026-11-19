@@ -349,11 +349,15 @@
     try { return new Date(ts).toLocaleString(document.documentElement.lang || 'fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
     catch (_) { return ''; }
   };
-  const slug = () => { try { return window.KiwiCloudDoc?.currentSlug?.() || ''; } catch (_) { return ''; } };
+  /* Santos : Rabat et Casablanca expédient les mêmes commandes, la page est
+     la même depuis les deux boutiques (KiwiDayReport.deliveryApart, day-report.js). */
+  const here = () => { try { return window.KiwiCloudDoc?.currentSlug?.() || ''; } catch (_) { return ''; } };
+  const apart = () => { const A = window.KiwiDayReport?.deliveryApart; return A && A.on(here()) ? A : null; };
+  const slug = () => { const A = apart(); return A ? A.stores(here())[0] : here(); };
   const CAT = () => window.KiwiBoutiqueCatalog || null;
 
   const state = { tab: 'overview', filter: 'pending', orders: [], enabled: true, loaded: false, error: '', query: '', sig: '', token: '',
-    settings: null, rev: 0, draft: null, dirty: false, saving: false };
+    settings: null, rev: 0, draft: null, dirty: false, saving: false, dlv: null };
   const WS = () => window.KiwiWebShop || null;
   const TABS = ['overview', 'orders', 'products', 'settings'];
   let poll = 0;
@@ -422,6 +426,9 @@
 .wo-switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;min-height:44px}
 .wo-switch input{width:20px;height:20px;accent-color:var(--atlas,#0B6E4F)}
 .wo-search{min-height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line,rgba(10,15,13,.16));font:inherit;min-width:220px;background:var(--paper,#F7F5F0)}
+.wo-dlv{display:grid;gap:12px;margin-bottom:14px}.wo-dlv h3{margin:0}.wo-dlv .ws-kpis{margin:0}
+.wo-dlv-split{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--ink-2,#3a4440);font-variant-numeric:tabular-nums}
+.wo-dlv-split b{font-weight:600;color:var(--ink,#0A0F0D)}
 .wo-token{font-family:var(--mono-code,'JetBrains Mono',monospace);font-size:12px;word-break:break-all;padding:10px 12px;border-radius:10px;background:var(--surface-2,rgba(10,15,13,.05))}
 `;
     document.head.appendChild(style);
@@ -440,6 +447,59 @@
       state.error = String(e && e.message || e);
     }
     state.loaded = true;
+  }
+
+  /* LIVRAISONS · le petit tableau de bord (Santos). L'argent des livraisons
+     n'entre ni dans Ventes ni dans le Rapport journalier : il se lit ici,
+     Rabat et Casablanca ensemble. Même source que la page Livraisons de la
+     caisse (/api/receivables), résumée sur toutes les livraisons du mois. */
+  function monthStart() {
+    const R = window.KiwiDayReport;
+    try {
+      const day = R.businessDay(Date.now());
+      return R.dayBounds(day.slice(0, 8) + '01').from;
+    } catch (_) { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime(); }
+  }
+  async function loadDeliveries() {
+    const A = apart();
+    if (!A) { state.dlv = null; return; }
+    const since = monthStart();
+    const seen = new Set();
+    const per = (await Promise.all(A.stores(here()).map(async (m) => {
+      try {
+        const r = await fetch('/api/receivables?merchant=' + encodeURIComponent(m) + '&since=' + since, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+        const j = r.ok ? await r.json() : null;
+        /* Une boutique que la session ne peut pas lire revient sous le nom d'une
+           autre : elle ne compte jamais deux fois. */
+        if (!j || !j.summary || (j.merchant && j.merchant !== m) || seen.has(m)) return null;
+        seen.add(m);
+        return { m, s: j.summary };
+      } catch (_) { return null; }
+    }))).filter(Boolean);
+    if (!per.length) { state.dlv = { error: true }; return; }
+    const sum = (k) => per.reduce((n, x) => n + (Number(x.s[k]) || 0), 0);
+    state.dlv = { per, total: { collectedCents: sum('collectedCents'), collectedCount: sum('collectedCount'), dueCents: sum('dueCents'),
+      dueCount: sum('dueCount'), toConfirmCount: sum('toConfirmCount'), returnedCents: sum('returnedCents'), returnedCount: sum('returnedCount') } };
+  }
+  function deliveriesBlock() {
+    const A = apart(), d = state.dlv;
+    if (!A) return '';
+    const month = (() => { try { return new Date().toLocaleDateString(window.KiwiI18n?.getLang?.() === 'ar' ? 'ar-MA' : (window.KiwiI18n?.getLang?.() || 'fr'), { month: 'long' }); } catch (_) { return ''; } })();
+    const head = `<h3 id="wo-dlv-t">${esc(L('Livraisons', 'Deliveries', 'التوصيلات'))}</h3><p class="ws-sub">${esc(L('Rabat et Casablanca ensemble. Cet argent ne compte ni dans Ventes ni dans le Rapport journalier.', 'Rabat and Casablanca together. This money is not counted in Sales or the Daily report.', 'الرباط والدار البيضاء معًا. هذا المال لا يُحتسب في المبيعات ولا في التقرير اليومي.'))}</p>`;
+    if (!d) return `<section class="ws-card wo-dlv" aria-labelledby="wo-dlv-t">${head}<p class="ws-sub">${esc(L('Chargement…', 'Loading…', 'جارٍ التحميل…'))}</p></section>`;
+    if (d.error) return `<section class="ws-card wo-dlv" aria-labelledby="wo-dlv-t">${head}<p class="ws-sub">${esc(L('Les livraisons ne se chargent pas pour l’instant.', 'Deliveries are not loading right now.', 'تعذر تحميل التوصيلات حاليًا.'))}</p></section>`;
+    const t = d.total;
+    const n = (v, one, many) => num(v) + ' ' + (v === 1 ? one : many);
+    const tile = (l, v, sub) => `<div class="kx-kpi"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div><div class="d">${esc(sub)}</div></div>`;
+    const split = d.per.length > 1 ? `<div class="wo-dlv-split">${d.per.map((x) => `<span><b>${esc(A.city(x.m) || x.m)}</b> ${esc(L('encaissé', 'collected', 'محصّل'))} ${esc(mad(x.s.collectedCents))} · ${esc(L('à recevoir', 'to collect', 'للتحصيل'))} ${esc(mad(x.s.dueCents))}</span>`).join('')}</div>` : '';
+    return `<section class="ws-card wo-dlv" aria-labelledby="wo-dlv-t">${head}
+      <div class="kx-kpi-strip cols-3 ws-kpis">
+        ${tile(L('Encaissé', 'Collected', 'محصّل') + (month ? ' · ' + month : ''), mad(t.collectedCents), n(t.collectedCount, L('livraison payée', 'delivery paid', 'توصيل مدفوع'), L('livraisons payées', 'deliveries paid', 'توصيلات مدفوعة')))}
+        ${tile(L('À recevoir', 'To collect', 'للتحصيل'), mad(t.dueCents), n(t.dueCount, L('commande en cours', 'order on the way', 'طلب جارٍ'), L('commandes en cours', 'orders on the way', 'طلبات جارية')) + (t.toConfirmCount ? ' · ' + num(t.toConfirmCount) + ' ' + L('à confirmer', 'to confirm', 'للتأكيد') : ''))}
+        ${tile(L('Retournées', 'Returned', 'مرتجعة') + (month ? ' · ' + month : ''), mad(t.returnedCents), n(t.returnedCount, L('commande revenue', 'order back', 'طلب مرتجع'), L('commandes revenues', 'orders back', 'طلبات مرتجعة')))}
+      </div>${split}
+      <p class="ws-sub">${esc(L('Une livraison compte une fois que le client a payé. Un retour remet les articles en stock et ne rapporte rien.', 'A delivery counts once the customer has paid. A return puts the items back in stock and brings in nothing.', 'يُحتسب التوصيل بعد أن يدفع العميل. الإرجاع يعيد المواد إلى المخزون ولا يُدخل شيئًا.'))}</p>
+    </section>`;
   }
 
   /* The storefront document (functions/api/shop/_settings.js). */
@@ -615,8 +675,8 @@
     if (state.tab === 'overview') {
       const list = productsList(), C = CAT(), texts = (state.settings && state.settings.pieces) || {};
       const live = list.filter((p) => p.online !== false);
-      main = W ? W.overview({ orders: state.orders, enabled: state.enabled, settings: state.settings || {}, products: list,
-        withText: live.filter((p) => hasText(texts[p.id])).length, clashes: live.filter((p) => colourClash(p, C)).length }) : '';
+      main = deliveriesBlock() + (W ? W.overview({ orders: state.orders, enabled: state.enabled, settings: state.settings || {}, products: list,
+        withText: live.filter((p) => hasText(texts[p.id])).length, clashes: live.filter((p) => colourClash(p, C)).length }) : '');
     } else if (state.tab === 'settings') {
       main = W && state.draft ? W.settings({ draft: state.draft, shopName: shopName() }) : `<p class="wo-note">${esc(L('Chargement des réglages…', 'Loading settings…', 'جارٍ تحميل الإعدادات…'))}</p>`;
     } else if (state.tab === 'orders') {
@@ -653,9 +713,9 @@
     poll = setInterval(async () => {
       if (!document.querySelector('[data-wo-page]')) { clearInterval(poll); return; }
       if (document.hidden || document.querySelector('.kiwi-backdrop') || (state.tab !== 'orders' && state.tab !== 'overview')) return;
-      const before = state.sig;
-      await load();
-      if (JSON.stringify(state.orders.map((o) => [o.id, o.status])) !== before) render();
+      const before = state.sig, dlvBefore = JSON.stringify(state.dlv);
+      await Promise.all([load(), loadDeliveries()]);
+      if (JSON.stringify(state.orders.map((o) => [o.id, o.status])) !== before || (state.tab === 'overview' && JSON.stringify(state.dlv) !== dlvBefore)) render();
     }, 30000);
   }
 
@@ -671,7 +731,7 @@
   handlers['nav-weborders'] = async () => {
     state.loaded = false;
     render();
-    await Promise.all([load(), loadSettings()]);
+    await Promise.all([load(), loadSettings(), loadDeliveries()]);
     render();
     startPoll();
   };
@@ -684,7 +744,7 @@
     render();
   };
   handlers['wo-filter'] = (el, arg) => { const k = typeof el === 'string' ? el : arg; state.filter = ['pending', 'confirmed', 'declined'].includes(k) ? k : 'pending'; render(); };
-  handlers['wo-refresh'] = async () => { await load(); render(); };
+  handlers['wo-refresh'] = async () => { await Promise.all([load(), loadDeliveries()]); render(); };
 
   handlers['wo-confirm'] = async (el, arg) => {
     const id = typeof el === 'string' ? el : arg;

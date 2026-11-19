@@ -498,12 +498,12 @@
     if (type !== 'boutique') return null;
     var f = feedTotals(day);
     if (!f || f.txns < (+r.txns || 0)) return null;
-    var sales = dashSales(), shop = [], away = [], disc = 0, discN = 0;
+    var sales = dashSales(), shop = [], away = [], disc = 0, discN = 0, apart = apartHere();
     sales.forEach(function (s) {
       if (!s || !isDeliverySale(s) || s.kind === 'refund') { shop.push(s); return; }
       var cents = deliveryCents(s), off = Math.max(0, Math.round(+s.discountAmountCents || 0));
       if (off) { disc += off; discN++; }
-      if ((+s.amount || 0) > 0) shop.push(Object.assign({}, s, { lines: null, channel: '', discountAmountCents: 0 }));
+      var kept = apart ? apart.shopPart(s) : ((+s.amount || 0) > 0 ? s : null); if (kept) shop.push(Object.assign({}, kept, { lines: null, channel: '', discountAmountCents: 0 }));
       away.push(Object.assign({}, s, { amount: cents / 100, amountCents: cents, method: 'delivery', paymentParts: null, parts: [{ method: 'delivery', amountCents: cents }] }));
     });
     var sess = r.live ? {} : sessionOf(r);
@@ -524,7 +524,7 @@
     store.store = r.store || store.store; delivery.closedAt = store.closedAt; delivery.closedCount = store.closedCount;
     store.deliverySplit = delivery; store.fullReport = r;
     return store;
-  };
+  }; /* Santos : livraisons à part (KiwiDayReport.deliveryApart), ni section ni ticket ici */ var apartHere = function () { var A = DR() && DR().deliveryApart; return A && A.on(storeInfo().slug) ? A : null; };
   var deliveryHtml = function (r) {
     var cats = [];
     (r.categories || []).forEach(function (c) { (c.products || []).forEach(function (p) {
@@ -1018,7 +1018,7 @@
       body: nav + strip + idBlock + kpis
         + hourlyHtml(r)
         + '<div class="kdr-two">' + payBlock + cashBlock + '</div>' + acompteBlock
-        + (r.deliverySplit ? deliveryHtml(r.deliverySplit) : '')
+        + (r.deliverySplit && !apartHere() ? deliveryHtml(r.deliverySplit) : '')
         + topHtml(r, V)
         + catBlock
         + '<div class="kdr-two">' + adj + cshBlock + '</div>'
@@ -1072,15 +1072,15 @@
       if (a === 'month') { window.KiwiMonthReport?.open?.(); return; }
       if (a === 'print') {
         /* Boutique : les deux tickets du Z, le magasin puis les livraisons, l'un après l'autre. */
-        var dl = report && report.deliverySplit;
+        var dl = report && !apartHere() && report.deliverySplit;
         var first = printReport(report, dl ? { title: T({ fr: 'Rapport Z · hors livraisons', en: 'Z report · excluding deliveries', ar: 'تقرير Z · بدون التوصيلات' }).toUpperCase() } : null);
         if (dl) Promise.resolve(first).then(function () { printReport(dl, { title: T({ fr: 'Rapport Z · livraisons', en: 'Z report · deliveries', ar: 'تقرير Z · التوصيلات' }).toUpperCase(),
           netLabel: T({ fr: 'Net livraisons', en: 'Deliveries net', ar: 'صافي التوصيلات' }).toUpperCase(), noDrawer: true, copy: isClosed(report) ? '' : 'PROVISOIRE' }); });
         return;
       }
       if (a === 'csv') {   /* l'export garde la journée entière */
-        if (window.KiwiDayReportExport && window.KiwiDayReportExport.open) window.KiwiDayReportExport.open(report.fullReport || report);
-        else exportCsv(report.fullReport || report); /* cache partiel : conserver l'ancien filet */
+        var whole = apartHere() ? report : (report.fullReport || report); if (window.KiwiDayReportExport && window.KiwiDayReportExport.open) window.KiwiDayReportExport.open(whole);
+        else exportCsv(whole); /* cache partiel : conserver l'ancien filet */
         return;
       }
     });

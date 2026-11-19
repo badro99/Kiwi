@@ -1449,6 +1449,23 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     if (e && e.key && e.key.indexOf(LOCAL_PREFIX) === 0) notify(null);
   });
 
+  /* LIVRAISONS À PART · Santos, 19 nov. 2026 : l'argent des livraisons (Rabat et Casablanca) n'est ni dans Ventes ni dans
+     le Rapport journalier, jamais, même confirmé ; il vit dans « Boutique en ligne » (une page pour les deux) et à l'accueil. */
+  var APART = { 'santos-store': 'Rabat', 'santos-store-casablanca': 'Casablanca' };
+  var isDlvPart = function (p) { return !!p && /^(delivery|livraison)$/i.test(String(p.method || p.m || '')); };
+  var isDlv = function (s) { return !!s && (s.channel === 'delivery' || isDlvPart(s) || (s.paymentParts || []).some(isDlvPart)); };
+  var deliveryApart = {
+    on: function (m) { return Object.prototype.hasOwnProperty.call(APART, m); },
+    stores: function (m) { return deliveryApart.on(m) ? Object.keys(APART) : [m]; }, city: function (m) { return deliveryApart.on(m) ? APART[m] : ''; },
+    /* Au magasin : rien d'une livraison ni de « Livraison reçue », seulement les espèces d'un acompte (elles sont au tiroir). */
+    shopPart: function (s) {
+      if (!isDlv(s) || s.kind === 'refund') return s;
+      var parts = (s.paymentParts || []).filter(function (p) { return p && !isDlvPart(p); }), paid = parts.reduce(function (n, p) { return n + Math.max(0, Math.round(+p.amountCents || 0)); }, 0);
+      if (!(paid > 0) || !(+s.amount > 0)) return null;
+      return Object.assign({}, s, { channel: 'counter', paymentParts: parts, method: parts.length === 1 ? parts[0].method : s.method, amount: Math.min(+s.amount, paid / 100), amountCents: Math.min(Math.round(+s.amount * 100), paid) });
+    },
+  };
+
   window.KiwiDayReport = {
     /* journée commerciale */
     businessDay: businessDay, dayBounds: dayBounds, today: today, now: nowMs, hourOf: hourOf,
@@ -1464,6 +1481,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     /* classeur */
     save: save, load: load, list: list, days: days,
     storeSlug: storeSlug, isReal: isReal,
+    deliveryApart: deliveryApart,
     /* serveur */
     push: push, pull: pull, flush: flush,
     subscribe: function (fn) { subs.add(fn); return function () { subs.delete(fn); }; },

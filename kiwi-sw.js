@@ -126,8 +126,8 @@ var SHELL = [
   '/assets/channel-link.js?v=202608272326',
   '/assets/marketing-suite-tease.js?v=1',
   '/assets/reception-view.js?v=3',
-  '/assets/pages-pro.js?v=2227',
-  '/assets/pages-pro-spa-starter.js?v=7',
+  '/assets/pages-pro.js?v=2228',
+  '/assets/pages-pro-spa-starter.js?v=8',
   '/assets/cash-sessions.js?v=15',
   '/assets/simple-food-cost.js?v=29',
   '/assets/finance.js?v=14',
@@ -221,7 +221,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
-  '/assets/pages/dashboard-startup.js?v=245',
+  '/assets/pages/dashboard-startup.js?v=247',
   '/assets/pages/dashboard-loader.js?v=106',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -374,9 +374,9 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=56',
+  '/assets/day-report.js?v=57',
   '/assets/report.js?v=10',
-  '/assets/day-report-dash.js?v=50',
+  '/assets/day-report-dash.js?v=51',
   '/assets/day-report-export.js?v=30',
   '/assets/month-report.js?v=17',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse

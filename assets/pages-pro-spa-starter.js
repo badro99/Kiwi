@@ -1023,7 +1023,10 @@
     const KV = window.KiwiVenue;
     const vd = KV?.getCurrentVenueData?.() || {};
     const lang = window.KiwiI18n?.getLang?.() || 'fr';
-    const sales = (window.KiwiSales?.list?.() || []).slice();
+    /* Santos : l'argent des livraisons n'est pas la caisse du magasin, il vit
+       dans « Boutique en ligne » (KiwiDayReport.deliveryApart, day-report.js). */
+    const apart = window.KiwiDayReport?.deliveryApart?.on?.(auditMerchant()) ? window.KiwiDayReport.deliveryApart : null;
+    const sales = (window.KiwiSales?.list?.() || []).map((s) => (apart ? apart.shopPart(s) : s)).filter(Boolean);
     const refunds = (window.KiwiRefunds?.list?.() || []).map((r) => ({
       ...r, amount: -Math.abs(+r.amount || 0), kind: 'refund', origin: 'caisse',
     }));
@@ -1132,7 +1135,7 @@
       all: T({ fr: 'Tout', en: 'All', ar: 'الكل' }),
       cash: L.cash, card: L.card, delivery: L.delivery,
     }; const seenMethods = daySales.filter((s) => s.kind !== 'refund').flatMap(salesMethodKeys).filter(salesMethodOk);   /* Santos, 30/10 : 2 virements invisibles sous tous les filtres */
-    const methodButtons = ['all', ...new Set(['cash', 'card', 'transfer', 'cheque', 'delivery', ...seenMethods, ...selectedMethods].filter((m) => ['cash', 'card', 'delivery'].includes(m) || seenMethods.includes(m) || selectedMethods.includes(m)))].map((method) => {
+    const methodButtons = ['all', ...new Set(['cash', 'card', 'transfer', 'cheque', 'delivery', ...seenMethods, ...selectedMethods].filter((m) => (apart ? ['cash', 'card'] : ['cash', 'card', 'delivery']).includes(m) || seenMethods.includes(m) || selectedMethods.includes(m)))].map((method) => {
       const active = method === 'all' ? selectedMethods.length === 0 : selectedMethods.includes(method);
       return `<button data-activation=write class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${method}" aria-pressed="${active}">${escS(methodLabels[method] || L[method] || method)}</button>`;
     }).join('');
