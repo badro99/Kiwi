@@ -323,4 +323,21 @@ await ok('admin: a store link refuses a malformed store id or merchant, and clam
   assert.equal(r.prepMinutes, 120);
 });
 
+/* ── La porte du site ──────────────────────────────────────────────────────
+ * Glovo n'a pas de cookie : sans exception exacte dans le middleware, ses appels
+ * reçoivent la page de connexion et aucune commande n'arrive jamais. */
+const { onRequest: gate } = await import('../functions/_middleware.js');
+await ok('gate: the two Glovo webhooks reach their handler without a session; nothing else under /api/channel/glovo/ does', async () => {
+  const hit = async (p, method = 'POST') => {
+    const r = await gate({ request: new Request('https://kiwi-os.com' + p, { method, headers: { 'Content-Type': 'application/json' }, body: method === 'POST' ? '{}' : undefined }),
+      env: { AUTH_SECRET: 'x'.repeat(40) }, next: async () => new Response('NEXT', { status: 299 }), waitUntil() {}, data: {} });
+    return r.status;
+  };
+  assert.equal(await hit('/api/channel/glovo/dispatched'), 299);
+  assert.equal(await hit('/api/channel/glovo/cancelled'), 299);
+  assert.notEqual(await hit('/api/channel/glovo/picked_up'), 299);
+  assert.notEqual(await hit('/api/channel/glovo/dispatched/x'), 299);
+  assert.notEqual(await hit('/api/admin/glovo-stores'), 299);
+});
+
 console.log(`glovo-channel: ${passed} passed`);

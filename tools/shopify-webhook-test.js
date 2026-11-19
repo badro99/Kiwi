@@ -384,9 +384,13 @@ const ORDER = (over) => JSON.stringify(Object.assign({
    * large ouvrirait la gestion des clés, qui elle doit rester fermée.
    * On relit donc la règle telle qu'elle est écrite et on la met à l'épreuve. */
   {
-    const src = fs.readFileSync(new URL('../functions/_middleware.js', import.meta.url), 'utf8');
-    const m = /path === '\/api\/channel\/order'\) return next\(\);[\s\S]{0,900}?&& (\/\^[^\n]+?\/)\.test\(path\)/.exec(src);
-    ok('la règle du webhook Shopify existe dans _middleware.js', !!m, 'aucune exception trouvée');
+    /* Depuis le 19 nov. 2026 les exceptions des partenaires vivent dans
+       functions/_partner-webhooks.js, que la porte appelle. */
+    const gateSrc = fs.readFileSync(new URL('../functions/_middleware.js', import.meta.url), 'utf8');
+    ok('la porte consulte la liste des webhooks partenaires', /if \(partnerWebhookOpen\(method, path\)\) return next\(\);/.test(gateSrc));
+    const src = fs.readFileSync(new URL('../functions/_partner-webhooks.js', import.meta.url), 'utf8');
+    const m = /path === '\/api\/channel\/order'\) return true;[\s\S]{0,1400}?&& (\/\^[^\n]+?\/)\.test\(path\)/.exec(src);
+    ok('la règle du webhook Shopify existe dans _partner-webhooks.js', !!m, 'aucune exception trouvée');
     if (m) {
       const re = new RegExp(m[1].slice(1, -1));
       ok('…elle laisse passer une adresse de webhook', re.test('/api/channel/shopify/chl-0e4a1b2c-1111-2222-3333-444455556666'));

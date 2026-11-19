@@ -19,6 +19,7 @@
 // With NEITHER AUTH_SECRET nor SITE_PASSWORD set, the site serves openly (dev).
 // Changing a variable requires a fresh deployment (not "Retry") to take effect.
 
+import { partnerWebhookOpen } from './_partner-webhooks.js';
 import {
   readSession, readCookie, SESS_COOKIE, clearSessionCookie, staffToken,
   makeSession, sessionCookie, sessionNeedsRefresh, sessionRevocation,
@@ -592,25 +593,7 @@ async function routeRequest(context) {
    * OUVERTE (celle du tag), note lui-même les réponses, et refuse quand les
    * jeux sont coupés. Chemin exact. */
   if (method === 'POST' && path === '/api/order/game') return next();
-  /* Le dépôt d'une commande par un canal extérieur (Glovo, Shopify, un relais
-   * Make). Ces appelants n'ont ni session ni cookie et n'en auront jamais : ils
-   * présentent une clé porteuse dans l'en-tête Authorization, que le handler
-   * vérifie lui-même contre channel_links. Passer cette porte-ci ne prouve donc
-   * toujours rien — exactement comme /api/order, qui est ouvert mais refuse si
-   * Order Pro n'est pas activé. Chemin EXACT : rien sous /api/channel/ d'autre
-   * n'est ouvert, et la gestion des clés reste derrière la porte normale. */
-  if (method === 'POST' && path === '/api/channel/order') return next();
-  /* La réception native de Shopify. Même raisonnement, une exception près : son
-   * chemin PORTE l'identifiant du lien, donc il ne peut pas être exact. Le
-   * préfixe est aussi étroit que possible — POST seulement, un seul segment
-   * après, et rien d'autre sous /api/channel/ n'y correspond : la gestion des
-   * clés (/api/channel/keys) reste derrière la porte normale.
-   *
-   * Ouvrir ce chemin ne prouve rien non plus. Shopify ne sait envoyer aucun
-   * en-tête d'authentification ; ce qui tient la porte fermée, c'est la
-   * signature HMAC que le handler vérifie lui-même, et il refuse tout tant que
-   * le commerçant n'a pas enregistré la clé de signature de sa boutique. */
-  if (method === 'POST' && /^\/api\/channel\/shopify\/[A-Za-z0-9-]{6,64}$/.test(path)) return next();
+  if (partnerWebhookOpen(method, path)) return next(); // canaux extérieurs : functions/_partner-webhooks.js
   if ((method === 'POST' && path === '/api/shop/orders') || (method === 'GET' && (path === '/api/shop/catalog' || path === '/api/shop/status'))) return next(); // boutique en ligne : clé storefront vérifiée par chaque handler (GET /api/shop/orders et /api/shop/decide restent derrière la porte)
   /* Le relais d'impression (functions/api/print/*). Le Kiwi Printer Bridge du
    * comptoir n'est pas un navigateur : pas de cookie de porte, jamais. Il
