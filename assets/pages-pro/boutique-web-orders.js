@@ -489,6 +489,7 @@
     if (!d) return `<section class="ws-card wo-dlv" aria-labelledby="wo-dlv-t">${head}<p class="ws-sub">${esc(L('Chargement…', 'Loading…', 'جارٍ التحميل…'))}</p></section>`;
     if (d.error) return `<section class="ws-card wo-dlv" aria-labelledby="wo-dlv-t">${head}<p class="ws-sub">${esc(L('Les livraisons ne se chargent pas pour l’instant.', 'Deliveries are not loading right now.', 'تعذر تحميل التوصيلات حاليًا.'))}</p></section>`;
     const t = d.total;
+    const num = (v) => window.KiwiNumber?.format(v, { maximumFractionDigits: 0 }) ?? String(v);
     const n = (v, one, many) => num(v) + ' ' + (v === 1 ? one : many);
     const tile = (l, v, sub) => `<div class="kx-kpi"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div><div class="d">${esc(sub)}</div></div>`;
     const split = d.per.length > 1 ? `<div class="wo-dlv-split">${d.per.map((x) => `<span><b>${esc(A.city(x.m) || x.m)}</b> ${esc(L('encaissé', 'collected', 'محصّل'))} ${esc(mad(x.s.collectedCents))} · ${esc(L('à recevoir', 'to collect', 'للتحصيل'))} ${esc(mad(x.s.dueCents))}</span>`).join('')}</div>` : '';
