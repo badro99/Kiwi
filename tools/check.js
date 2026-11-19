@@ -1582,7 +1582,7 @@ section('Whole-project regressions');
     'operating-day-ai-context-test.mjs',
     'agent-month-business-day-test.mjs',
     'operating-day-split-ui-test.mjs',
-    'operating-day-operator-test.mjs',
+    'operating-day-operator-test.mjs', 'operator-health-week-test.mjs', 'operator-queue-grouping-test.mjs',
     'operating-day-orders-integration-test.mjs',
     'operating-day-admin-test.mjs',
     'operating-day-handover-test.mjs',
@@ -1794,7 +1794,7 @@ section('Whole-project regressions');
     'boutique-till-catalog-admin-browser-test.mjs',
     'boutique-large-catalog-browser-test.mjs',
     /* God Mode entre dans la caisse boutique sans écran de fond ni poste ouvert ; sans preuve /api/me, l'écran revient (propriétaire, 29 oct.). */
-    'boutique-operator-entry-browser-test.mjs', 'caisse-operator-entry-browser-test.mjs',
+    'boutique-operator-entry-browser-test.mjs', 'caisse-operator-entry-browser-test.mjs', 'caisse-operator-reload-browser-test.mjs',
     'till-inventory-access-test.mjs',
     /* Un carton réparti sur ses tailles en un geste : comme les ventes de la boutique, égal, saisie rapide « M3 L5 XL2 », le reste sur la dernière taille (propriétaire, 29 oct.). */
     'boutique-size-split-test.mjs',

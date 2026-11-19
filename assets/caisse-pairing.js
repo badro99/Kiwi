@@ -188,6 +188,29 @@
   // browser, having named the store in kiwiPairHandoff (caisse-link.js handOff).
   function wantsPair() { try { return /[?&]pair=1\b/.test(location.search || ''); } catch (_) { return false; } }
   function wantsOperatorAccess() { try { return /[?&]op=1\b/.test(location.search || ''); } catch (_) { return false; } }
+  /* La vue opérateur nomme son magasin dans l'adresse (?op=1&merchant=…). Le relais
+   * de la console est à usage unique : un onglet rechargé ou un lien recopié n'en a
+   * plus. 19 nov. 2026 : la caisse ouvrait alors le magasin appairé à ce navigateur
+   * (Santos à la place de Browse). Même magasin : on redemande la preuve /api/me ;
+   * autre magasin : aucune caisse, un avis qui renvoie à la console. */
+  function operatorStoreInUrl() {
+    if (!wantsOperatorAccess()) return '';
+    try { var m = new URLSearchParams(location.search).get('merchant') || ''; return /^[a-z0-9][a-z0-9_-]{0,63}$/.test(m) ? m : ''; } catch (_) { return ''; }
+  }
+  function tr(fr, en, ar) { var l = ''; try { l = localStorage.getItem('kiwiLang') || document.documentElement.lang || ''; } catch (_) {} l = String(l).slice(0, 2); return l === 'ar' ? ar : l === 'en' ? en : fr; }
+  function showOperatorLinkStale(store) {
+    var box = document.createElement('div'); box.id = 'op-link-stale'; box.setAttribute('role', 'alert');
+    box.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);font:15px/1.5 "Inter Tight",system-ui,sans-serif';
+    var title = document.createElement('h2'); title.style.cssText = 'margin:0;font-size:22px;font-weight:600'; title.textContent = tr('Vue opérateur · ', 'Operator view · ', 'عرض المشغّل · ') + store;
+    var text = document.createElement('p'); text.style.cssText = 'margin:0;max-width:440px;opacity:.75';
+    text.textContent = tr('Cet onglet ne porte plus l’ouverture de la console. Pour ne rien saisir dans un autre commerce, la caisse de ce poste n’est pas ouverte ici.', 'This tab no longer carries the opening from the console. So that nothing is entered in another business, this device’s till is not opened here.', 'لم تعد هذه الصفحة مفتوحة من لوحة المشغّل. حتى لا يُسجَّل شيء في محل آخر، لم نفتح صندوق هذا الجهاز هنا.');
+    var back = document.createElement('a'); back.href = '/kiwi-admin#merchant/' + encodeURIComponent(store) + '/summary';
+    back.style.cssText = 'padding:12px 20px;border-radius:999px;background:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0);text-decoration:none;font-weight:600';
+    back.textContent = tr('Retour à la console', 'Back to the console', 'الرجوع إلى لوحة المشغّل');
+    box.appendChild(title); box.appendChild(text); box.appendChild(back);
+    (document.body || document.documentElement).appendChild(box);
+    var pad = document.getElementById('pin-screen'); if (pad) pad.style.display = 'none';   // ni clic ni chiffre au clavier vers la caisse d'un autre commerce
+  }
   /* Read and CONSUME the hand-off. Consuming it matters: it is a one-shot
    * instruction from a specific click, and leaving it behind would re-bind the
    * device on some later unrelated visit. Stale ones are ignored — a record older
@@ -1103,6 +1126,12 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
       }
     }
 
+    var opStore = operatorStoreInUrl();
+    if (opStore && !ls(HANDOFF)) {
+      var opVenue = isPaired() ? pairedVenue() : null;
+      if (opVenue && opVenue.merchant === opStore) { bootForOperator(opVenue); return; }   // onglet opérateur rechargé : /api/me le prouve à nouveau
+      showOperatorLinkStale(opStore); return;
+    }
     if (isPaired()) { bootWithPin(pairedVenue()); ensureTillProof(pairedVenue()); return; }
 
     var h2 = takeHandoff();

@@ -95,7 +95,7 @@ export async function workspace(env, merchant = '') {
       FROM z_reconciliations WHERE updated_ts>=?${where} ORDER BY business_day DESC,updated_ts DESC LIMIT 201`,[now-14*86400000,...binds]],
     conflicts:[`SELECT merchant,sale_id AS id,amount_cents,method,first_ts,updated_ts FROM sale_sync_conflicts WHERE updated_ts>=?${where} ORDER BY updated_ts DESC LIMIT 201`,[now-14*86400000,...binds]],
     activity:[`SELECT merchant,COUNT(*) AS sales_7d,COUNT(DISTINCT CAST((ts-18000000)/86400000 AS INTEGER)) AS active_days_7d,MAX(ts) AS last_ts
-      FROM sales WHERE ts>=? AND void_ts IS NULL AND COALESCE(amount_cents,amount*100)>0${where} GROUP BY merchant LIMIT 201`,[now-7*86400000,...binds]],
+      FROM sales WHERE ts>=? AND void_ts IS NULL AND COALESCE(amount_cents,amount*100)>0${where} GROUP BY merchant LIMIT 201`,[Math.floor((now-18000000)/86400000)*86400000+18000000-6*86400000,...binds]], // seven business days (05 h cut), today included: never « 8 j sur 7 »
     /* Writes refused because they carried another store's records
      * (functions/api/_tenant-guard.js). Each group means a device still holds
      * a foreign copy and keeps offering it. */

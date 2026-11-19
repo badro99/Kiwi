@@ -44,16 +44,16 @@
     "sha": "ea7e3a1db9d7cb80"
   },
   "assets/admin-workspace-copy.js": {
-    "v": "2",
-    "sha": "dfd39e8937cc3c5d"
+    "v": "3",
+    "sha": "e43e42a25c8cdc90"
   },
   "assets/admin-workspace.css": {
     "v": "5",
     "sha": "606482db0d68d9bf"
   },
   "assets/admin-workspace.js": {
-    "v": "43",
-    "sha": "cac5fd6885e21bce"
+    "v": "44",
+    "sha": "3f4f13285f717723"
   },
   "assets/agent-action-center.js": {
     "v": "4",
@@ -244,8 +244,8 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "75",
-    "sha": "88bb025e8342c67a"
+    "v": "76",
+    "sha": "1e48f474fbaac1f4"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
