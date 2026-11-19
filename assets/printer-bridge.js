@@ -777,12 +777,19 @@
       T + '.kpr-note{font-size:7.5pt;margin-top:1mm;}' +
       '@media print{' +
         '@page{size:' + w + 'mm 297mm;margin:0;}' +
-        'html,body{margin:0!important;padding:0!important;background:#fff!important;color:#000!important;color-scheme:light!important;}' +
+        /* La caisse fige body (flex, 100dvh, overflow:hidden) : Chrome n'imprimait
+         * alors que la première page, et le ticket livraisons du Z disparaissait
+         * (Santos, 18 novembre, « nombre maximal de pages : 1 »). On rend au
+         * document sa hauteur, et chaque ticket suivant force sa propre page,
+         * même sur un Chrome qui ignore les pages nommées. */
+        'html,body{margin:0!important;padding:0!important;background:#fff!important;color:#000!important;color-scheme:light!important;' +
+          'display:block!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;}' +
+        '#kpr-print-root>.kpr-page+.kpr-page{break-before:page;page-break-before:always;}' +
         /* Tout le reste de la caisse disparaît : sans ça la boîte d'impression
          * sort la page entière (grille produits, panneaux) au lieu du reçu. */
         'body>*:not(#kpr-print-root){display:none!important;}' +
         '#kpr-print-root{display:block!important;position:static!important;background:#fff!important;color:#000!important;color-scheme:light!important;}' +
-        '#kpr-print-root{visibility:visible!important;width:auto!important;}' +
+        '#kpr-print-root{visibility:visible!important;width:auto!important;height:auto!important;overflow:visible!important;}' +
         /* Some verticals build their browser fallback from their on-screen
          * preview markup. Those components normally inherit the caisse theme;
          * printing must sever that inheritance at the last possible layer so

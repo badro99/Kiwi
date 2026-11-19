@@ -89,4 +89,25 @@ const zCloseTotals = (pair, net, fmt, esc) => !pair ? '<div class="zs-total mono
  * serveur s'en charge alors (functions/api/_delivery-stock.js). Hors Live, rien
  * ne la rapporterait : le stock sort à la vente comme avant. */
 const zHoldsStock = (parts, live) => !!live && (parts || []).some((x) => x && x.m === 'livraison');
-export { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock };
+/* L'heure d'ouverture que montrent l'écran de clôture et le Z. Le poste vit
+ * dans le navigateur : une journée finie sans « Fermer la caisse » sur CET
+ * appareil (fermée ailleurs, onglet resté ouvert) le gardait ouvert des jours,
+ * et le Z, qui ne compte que les ventes du jour, annonçait plus de 100 h de
+ * service (Santos, 18 novembre). Ouvert un jour d'activité précédent : le
+ * service du jour part du premier passage du jour (dayAt, posé par zMarkDay)
+ * ou de la première vente du jour. shift.openedAt reste intact : le registre
+ * des postes (ouverture / clôture) le garde comme clé. */
+const zServiceStart = (shift, sales, isToday, now) => {
+  if (!shift || !shift.openedAt) return 0;
+  if (isToday(shift.openedAt)) return shift.openedAt;
+  const marks = (sales || []).map((s) => +new Date(s.at)).filter((t) => t > 0);
+  if (shift.dayAt && isToday(shift.dayAt)) marks.push(shift.dayAt);
+  return marks.length ? Math.min(...marks) : now;
+};
+/* Vrai quand le poste vient d'un jour précédent et n'avait pas encore son
+ * premier passage du jour : l'appelant persiste alors le poste. */
+const zMarkDay = (shift, isToday, now) => {
+  if (!shift || !shift.openedAt || isToday(shift.openedAt) || (shift.dayAt && isToday(shift.dayAt))) return false;
+  shift.dayAt = now; return true;
+};
+export { zServiceStart, zMarkDay, zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock };

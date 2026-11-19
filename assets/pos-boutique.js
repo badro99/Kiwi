@@ -1,13 +1,13 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=210';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=128';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=210';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=210';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=211';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=129';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=211';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=211';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=3';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=22';
-import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=6'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=19'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11';
+import { zServiceStart, zMarkDay, zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=7'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=19'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11';
 
   'use strict';
 
@@ -1671,7 +1671,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
 
     bqKitRail(root, $, icons, bqKitSkin(), (STAFF.caissiere && STAFF.caissiere.name) || '', () => STAFF.caissiere);
     /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond d'ouverture d'abord, la vente ensuite. La démo entre directement. */
-    if (!IS_DEMO && !bqShift) bqShowOpenScreen();
+    if (!IS_DEMO && !bqShift) bqShowOpenScreen(); else if (zMarkDay(bqShift, isToday, tillNow())) bqShiftPersist();
   }
 
   /* Pick the first two in-stock articles from the live catalogue for the mid-day demo ticket (ids are the DB's, not the old hard-coded literals). */
@@ -1705,7 +1705,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
   function onShow() {
     if (!root) return;
     syncTillStaff();                      // a new shift may have unlocked the till
-    if (!IS_DEMO && !bqShift) bqShowOpenScreen();                  // re-unlock without a poste open → fond d'ouverture
+    if (!IS_DEMO && !bqShift) bqShowOpenScreen(); else if (zMarkDay(bqShift, isToday, tillNow())) bqShiftPersist();  // re-unlock without a poste open → fond d'ouverture
     const today = $('#bq-today', root);
     if (today) today.textContent = headSubVente();
     renderBadges();
@@ -2150,7 +2150,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
       /* Un poste ouvert avant que la boutique n'annonce ses postes n'a jamais
          été vu du registre : il s'annonce au premier passage (bqAnnounceOpen). */
       if (s && +s.openedAt > 0) bqShift = { openedAt: +s.openedAt, openedBy: String(s.openedBy || ''), float: +s.float || 0,
-        sid: String(s.sid || ''), openSent: !!s.openSent };
+        sid: String(s.sid || ''), openSent: !!s.openSent, dayAt: +s.dayAt || 0 };
     } catch (_) {}
   })();
   /* ── LE RÉCONCILIATEUR DOIT VOIR CE COMPTOIR ───────────────────────────────
@@ -2334,7 +2334,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
   function bqReportSession(counted, only) {
     const t = bqDayTotals(only);
     return {
-      openedAt: bqShift ? bqShift.openedAt : 0,
+      openedAt: zServiceStart(bqShift, salesToday(), isToday, tillNow()),   /* le service du jour, pas un poste resté ouvert depuis des jours */
       openedBy: bqShift ? bqShift.openedBy : '',
       closedBy: (STAFF.caissiere && STAFF.caissiere.name) || '',
       openingFloat: only !== 'delivery' && bqShift ? bqShift.float : 0,
@@ -2699,7 +2699,7 @@ import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zP
     }
     const v = bqCloVeil;
     const now = new Date();
-    const openedAt = bqShift ? new Date(bqShift.openedAt) : now;
+    const openedAt = bqShift ? new Date(zServiceStart(bqShift, salesToday(), isToday, +now)) : now;
     const durMin = Math.max(0, Math.floor((now - openedAt) / 60000));
     const t = bqDayTotals('store'), td = bqDayTotals('delivery');   /* l'écran comme le papier : la caisse hors livraisons, puis les livraisons */
     const pv = pvPaired() || {};
