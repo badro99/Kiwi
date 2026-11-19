@@ -731,7 +731,11 @@
     if (!window.KiwiCloudDoc || !window.KiwiVenue) return;
     if (!hotelCloud) hotelCloud = window.KiwiCloudDoc.attach({
       feature: 'rooms',
-      slug: () => window.KiwiCloudDoc.slugFor(cuVenueId()),
+      /* Only a hotel owns a room register. The handle is bound on every
+       * dashboard, and a boutique's default room types are not "empty", so
+       * switching to a new boutique pushed a `rooms` document into its books.
+       * An empty slug tells CloudDoc to sync nothing. */
+      slug: () => (isCustomHotel() ? window.KiwiCloudDoc.slugFor(cuVenueId()) : ''),
       localKey: () => cuStoreKey(),
       read: () => cuDocument(cuState()),
       write: cuCloudWrite,
@@ -1655,7 +1659,10 @@
   function obOnboard() {
     const Kw = window.Kiwi;
     const trL = (o) => { const l = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; return o == null ? '' : (o[l] ?? o.fr ?? o); };
-    let picked = 'restaurant';
+    /* Un client qui regarde déjà un de SES établissements en ajoute un : on ne lui dit pas
+     * « Bienvenue sur Kiwi », et on part de son métier plutôt que de Restaurant. */
+    const existing = (() => { try { const cur = window.KiwiVenue?.getCurrentVenueData?.(); return (cur && cur.custom && cur.id !== 'own' && cur.id !== 'scoped') ? cur : null; } catch (_) { return null; } })();
+    let picked = (existing && (existing.subtype || existing.type)) || 'restaurant';
     /* Material Symbols (Outlined, 400, grade 0, grille 24), recopiés depuis
      * assets/icons/material/ — voir le README de ce dossier. Forme pleine,
      * viewBox natif 0 -960 960 960 : la CSS pilote `color`, pas `stroke`. */
@@ -1686,13 +1693,14 @@
       { id: 'coiffure',   base: 'spa',                       label: trL({fr:'Salon de coiffure', en:'Hair salon', ar:'صالون حلاقة'}),   /* content_cut.svg */ icon: mi('M760-120 480-400l-94 94q8 15 11 32t3 34q0 66-47 113T240-80q-66 0-113-47T80-240q0-66 47-113t113-47q17 0 34 3t32 11l94-94-94-94q-15 8-32 11t-34 3q-66 0-113-47T80-720q0-66 47-113t113-47q66 0 113 47t47 113q0 17-3 34t-11 32l494 494v40H760ZM600-520l-80-80 240-240h120v40L600-520ZM296.5-663.5Q320-687 320-720t-23.5-56.5Q273-800 240-800t-56.5 23.5Q160-753 160-720t23.5 56.5Q207-640 240-640t56.5-23.5ZM494-466q6-6 6-14t-6-14q-6-6-14-6t-14 6q-6 6-6 14t6 14q6 6 14 6t14-6ZM296.5-183.5Q320-207 320-240t-23.5-56.5Q273-320 240-320t-56.5 23.5Q160-273 160-240t23.5 56.5Q207-160 240-160t56.5-23.5Z') },
       { id: 'sport',      base: 'spa',                       label: trL({fr:'Salle de sport', en:'Gym', ar:'صالة رياضية'}),      /* fitness_center.svg */ icon: mi('m536-84-56-56 142-142-340-340-142 142-56-56 56-58-56-56 84-84-56-58 56-56 58 56 84-84 56 56 58-56 56 56-142 142 340 340 142-142 56 56-56 58 56 56-84 84 56 58-56 56-58-56-84 84-56-56-58 56Z') },
     ];
+    if (!TYPES_OB.some((t) => t.id === picked)) picked = 'restaurant';
     const moreCount = TYPES_OB.filter((t) => !t.primary).length;
     const fld = 'width:100%;padding:11px 13px;border:1px solid var(--n-200);border-radius:10px;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--surface);outline:none;box-sizing:border-box;';
     const lbl = 'display:block;font-size:12px;font-weight:500;color:var(--n-600);margin:16px 0 6px;';
     const m = Kw.modal({
-      tag: trL({fr:'BIENVENUE SUR KIWI', en:'WELCOME TO KIWI', ar:'مرحبًا بك في Kiwi'}),
-      title: trL({fr:'Configurez votre tableau de bord', en:'Set up your dashboard', ar:'اضبط لوحة التحكم'}),
-      desc: trL({fr:'Une minute pour créer le vôtre, vide, prêt à se remplir avec vos vraies ventes.', en:'One minute to create yours, empty and ready to fill with your real sales.', ar:'دقيقة واحدة لإنشاء لوحتك، فارغة وجاهزة لتمتلئ بمبيعاتك الحقيقية.'}),
+      tag: existing ? trL({fr:'NOUVEL ÉTABLISSEMENT', en:'NEW BUSINESS', ar:'مؤسسة جديدة'}) : trL({fr:'BIENVENUE SUR KIWI', en:'WELCOME TO KIWI', ar:'مرحبًا بك في Kiwi'}),
+      title: existing ? trL({fr:'Ajouter un établissement', en:'Add a business', ar:'إضافة مؤسسة'}) : trL({fr:'Configurez votre tableau de bord', en:'Set up your dashboard', ar:'اضبط لوحة التحكم'}),
+      desc: existing ? trL({fr:'Il rejoint votre compte avec son propre stock, son équipe et sa caisse. Vous le préparez tout de suite. Ses ventes s\'ouvrent quand Kiwi active son abonnement.', en:'It joins your account with its own stock, team and till. You can set it up right away. Its sales open once Kiwi activates its subscription.', ar:'تنضم إلى حسابك بمخزونها وفريقها وصندوقها الخاص. يمكنك تجهيزها الآن. تُفتح مبيعاتها عندما يفعّل كيوي اشتراكها.'}) : trL({fr:'Une minute pour créer le vôtre, vide, prêt à se remplir avec vos vraies ventes.', en:'One minute to create yours, empty and ready to fill with your real sales.', ar:'دقيقة واحدة لإنشاء لوحتك، فارغة وجاهزة لتمتلئ بمبيعاتك الحقيقية.'}),
       width: 520,
       body: `
         <style>
@@ -1722,43 +1730,51 @@
         <label style="${lbl}">${trL({fr:'Objectif de chiffre d\'affaires par jour', en:'Daily revenue goal', ar:'هدف رقم المعاملات اليومي'})} <span style="color: var(--n-500);font-weight:400;">· ${trL({fr:'optionnel', en:'optional', ar:'اختياري'})}</span></label>
         <input class="ob-field" data-ob-goal type="number" dir="ltr" inputmode="numeric" placeholder="${trL({fr:'Ex. 5000 MAD', en:'e.g. 5000 MAD', ar:'مثال: 5000 MAD'})}" style="${fld}" min="0"/>
       `,
-      foot: `<button data-activation=write class="kb atlas" data-ob-create type="button" style="width:100%;justify-content:center;padding:13px;font-size:15px;">${trL({fr:'Créer mon tableau de bord →', en:'Create my dashboard →', ar:'أنشئ لوحة التحكم ←'})}</button>`,
+      foot: `<button data-activation=write class="kb atlas" data-ob-create type="button" style="width:100%;justify-content:center;padding:13px;font-size:15px;">${existing ? trL({fr:'Créer l\'établissement', en:'Create the business', ar:'إنشاء المؤسسة'}) : trL({fr:'Créer mon tableau de bord →', en:'Create my dashboard →', ar:'أنشئ لوحة التحكم ←'})}</button>`,
     });
     const nameInput = m.el.querySelector('[data-ob-name]');
     setTimeout(() => nameInput && nameInput.focus(), 320);
     m.el.querySelectorAll('[data-ob-type]').forEach((x) => x.classList.toggle('sel', x.dataset.obType === picked));
-    let step1 = null;
-    const doCreate = (answers) => {
-      const { name, city, goal, def } = step1;
-      let id = null;
+    /* Pre-picked trade among « Plus de types » : show the list, or the selection is invisible. */
+    if (m.el.querySelector('.ob-type.sel.ob-more')) {
+      m.el.querySelectorAll('.ob-type.ob-more').forEach((x) => x.classList.remove('ob-more'));
+      const more = m.el.querySelector('[data-ob-more]'); if (more) more.style.display = 'none';
+    }
+    let creating = false;
+    /* Sur un compte réel createVenue rend une PROMESSE (le serveur confirme la fiche d'abord) :
+     * setVenue(promesse) ne basculait pas. On attend l'id. Promesse = vrai compte = activation à venir. */
+    const doCreate = ({ name, city, goal, def }) => {
+      if (creating) return;
+      creating = true;
+      const btn = m.el.querySelector('[data-ob-create]');
+      if (btn) btn.disabled = true;
+      const fail = () => {
+        creating = false; if (btn) btn.disabled = false;
+        Kw.toast(trL({fr:'Création impossible', en:'Creation failed', ar:'تعذّر الإنشاء'}), { type: 'warn', force: true });
+      };
+      let made;
       try {
-        id = window.KiwiVenue?.createVenue?.({
-          type: def.base, subtype: def.id,
-          name, location: city, goal, profile: answers,
-        });
-      } catch (_) {}
-      if (!id) { Kw.toast(trL({fr:'Création impossible', en:'Creation failed', ar:'تعذّر الإنشاء'}), { type: 'warn', force: true }); return; }
-      m.close();
-      try { window.KiwiVenue.setVenue(id); } catch (_) {}
-      const todayPill = document.querySelector('[data-action="date-range"][data-range="aujourdhui"]');
-      if (todayPill && !todayPill.classList.contains('on')) todayPill.click();
-      Kw.confetti();
-      Kw.toast(trL({fr:'Votre tableau de bord est prêt', en:'Your dashboard is ready', ar:'لوحة التحكم جاهزة'}), { type: 'success', force: true,
-        desc: `${name}, ${answers
-          ? trL({fr:'profil complété ✓ · enregistrez votre première vente.', en:'profile completed ✓ · record your first sale.', ar:'اكتمل الملف ✓ · سجّل أول عملية بيع.'})
-          : trL({fr:'enregistrez votre première vente pour le voir prendre vie.', en:'record your first sale to see it come alive.', ar:'سجّل أول عملية بيع لتراها تنبض بالحياة.'})}` });
-      if (def.id === 'hotel') {
-        setTimeout(() => Kw.toast(trL({fr:'Votre hôtel est en place', en:'Your hotel is set up', ar:'فندقك جاهز'}), { type: 'info', force: true,
-          desc: trL({fr:'Plan des chambres, réception, folios et ménage sont prêts, vendez votre première chambre en walk-in.', en:'Room rack, front desk, folios and housekeeping are ready, sell your first room as a walk-in.', ar:'مخطط الغرف والاستقبال والفواتير جاهزة، بِع أول غرفة walk-in.'}) }), 1700);
-      }
-    };
-    const readAnswers = () => {
-      const out = {};
-      m.el.querySelectorAll('[data-ob-q]').forEach((i) => {
-        const v = (i.value || '').trim();
-        if (v) out[i.dataset.obQ] = v;
-      });
-      return Object.keys(out).length ? out : null;
+        made = window.KiwiVenue?.createVenue?.({ type: def.base, subtype: def.id, name, location: city, goal });
+      } catch (_) { made = null; }
+      Promise.resolve(made).then((id) => {
+        if (!id || typeof id !== 'string') { fail(); return; }
+        m.close();
+        try { window.KiwiVenue.setVenue(id); } catch (_) {}
+        const todayPill = document.querySelector('[data-action="date-range"][data-range="aujourdhui"]');
+        if (todayPill && !todayPill.classList.contains('on')) todayPill.click();
+        Kw.confetti();
+        if (existing && made && typeof made.then === 'function') {
+          Kw.toast(trL({fr:'Établissement créé', en:'Business created', ar:'تم إنشاء المؤسسة'}), { type: 'success', force: true,
+            desc: name + trL({fr:' attend son activation. Préparez dès maintenant vos articles et votre équipe, ses ventes s\'ouvrent dès que Kiwi l\'active.', en:' is awaiting activation. Set up its items and team now, its sales open as soon as Kiwi activates it.', ar:' في انتظار التفعيل. جهّز منتجاتها وفريقها الآن، تُفتح مبيعاتها فور تفعيلها من كيوي.'}) });
+        } else {
+          Kw.toast(trL({fr:'Votre tableau de bord est prêt', en:'Your dashboard is ready', ar:'لوحة التحكم جاهزة'}), { type: 'success', force: true,
+            desc: name + ', ' + trL({fr:'enregistrez votre première vente pour le voir prendre vie.', en:'record your first sale to see it come alive.', ar:'سجّل أول عملية بيع لتراها تنبض بالحياة.'}) });
+        }
+        if (def.id === 'hotel') {
+          setTimeout(() => Kw.toast(trL({fr:'Votre hôtel est en place', en:'Your hotel is set up', ar:'فندقك جاهز'}), { type: 'info', force: true,
+            desc: trL({fr:'Plan des chambres, réception, folios et ménage sont prêts, vendez votre première chambre en walk-in.', en:'Room rack, front desk, folios and housekeeping are ready, sell your first room as a walk-in.', ar:'مخطط الغرف والاستقبال والفواتير جاهزة، بِع أول غرفة walk-in.'}) }), 1700);
+        }
+      }, fail);
     };
     m.el.addEventListener('click', (e) => {
       if (e.target.closest('[data-ob-more]')) {
@@ -1779,28 +1795,12 @@
         const city = (m.el.querySelector('[data-ob-city]').value || '').trim();
         const goal = +(m.el.querySelector('[data-ob-goal]').value) || 0;
         const def = TYPES_OB.find((x) => x.id === picked) || TYPES_OB[0];
-        step1 = { name, city, goal, def };
-        const prof = window.KiwiVenue?.getSubtypeProfile?.(picked);
-        if (!prof || !prof.questions || !prof.questions.length) { doCreate(null); return; }
-        const optWord = trL({fr:'optionnel', en:'optional', ar:'اختياري'});
-        m.el.querySelector('.kiwi-modal-body').innerHTML = `
-          <style>.ob-field:focus{border-color:var(--atlas)!important;}</style>
-          <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.1em;color:var(--atlas);margin:2px 0 10px;">${trL({fr:'ÉTAPE 2 / 2 · TOUT EST OPTIONNEL', en:'STEP 2 / 2 · ALL OPTIONAL', ar:'الخطوة 2/2 · كل شيء اختياري'})}</div>
-          <div style="font-size:17px;font-weight:600;letter-spacing:-0.01em;">${trL({fr:'Parlez-nous de votre activité', en:'Tell us about your business', ar:'حدثنا عن نشاطك'})} · ${def.label}</div>
-          <p style="font-size:13px;color:var(--n-500);margin:6px 0 2px;line-height:1.5;">${trL({fr:'30 secondes, Kiwi personnalise vos indicateurs et vos modules. Modifiable plus tard dans Paramètres.', en:'30 seconds, Kiwi tailors your indicators and modules. Editable later in Settings.', ar:'30 ثانية, يخصص كيوي مؤشراتك ووحداتك. قابل للتعديل لاحقًا في الإعدادات.'})}</p>
-          ${prof.questions.map((q) => `
-            <label style="${lbl}">${trL(q.label)} <span style="color: var(--n-500);font-weight:400;">· ${optWord}</span></label>
-            <input class="ob-field" data-ob-q="${q.k}" ${q.type === 'number' ? 'type="number" inputmode="numeric" min="0"' : 'maxlength="60"'} placeholder="${q.ph}" style="${fld}"/>
-          `).join('')}`;
-        const foot = m.el.querySelector('.kiwi-modal-foot');
-        if (foot) foot.innerHTML = `
-          <button class="kb ghost" data-ob-skip type="button" style="flex:1;justify-content:center;">${trL({fr:'Passer pour l\'instant', en:'Skip for now', ar:'تخطّ الآن'})}</button>
-          <button class="kb atlas" data-ob-finish type="button" style="flex:1.4;justify-content:center;">${trL({fr:'Terminer →', en:'Finish →', ar:'إنهاء ←'})}</button>`;
-        setTimeout(() => { const f = m.el.querySelector('[data-ob-q]'); if (f) f.focus(); }, 120);
-        return;
+        /* Plus de deuxième étape : ses réponses (références, surface,
+         * vendeurs…) ne quittaient jamais l'appareil et aucun écran ne les
+         * lisait, alors qu'elle promettait de « personnaliser vos indicateurs
+         * et vos modules ». Une étape qui ne sert à rien coûte un écran. */
+        doCreate({ name, city, goal, def });
       }
-      if (e.target.closest('[data-ob-skip]')) { doCreate(null); return; }
-      if (e.target.closest('[data-ob-finish]')) { doCreate(readAnswers()); return; }
     });
   }
 

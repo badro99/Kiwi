@@ -95,7 +95,10 @@ async function establishments(env, aid, slug) {
       return false;
     }
     seen.add(m);
-    out.stores.push({ merchant: m, name: String(r.name || ''), type: String(r.type || ''), city: String(r.city || '') });
+    /* `pending`: created, waiting for Kiwi to accept its subscription. The
+     * switcher shows it, and the activation guard knows the account already
+     * has a shop that sells (assets/entitlements-v2.js). */
+    out.stores.push({ merchant: m, name: String(r.name || ''), type: String(r.type || ''), city: String(r.city || ''), pending: String(r.status || '') === 'pending' });
     return true;
   };
 

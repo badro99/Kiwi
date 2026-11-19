@@ -180,7 +180,11 @@
     if (!window.KiwiCloudDoc || !window.KiwiVenue) return;
     if (!hotelCloud) hotelCloud = window.KiwiCloudDoc.attach({
       feature: 'rooms',
-      slug: () => window.KiwiCloudDoc.slugFor(cuVenueId()),
+      /* Only a hotel owns a room register. The handle is bound on every
+       * dashboard, and a boutique's default room types are not "empty", so
+       * switching to a new boutique pushed a `rooms` document into its books.
+       * An empty slug tells CloudDoc to sync nothing. */
+      slug: () => (isCustomHotel() ? window.KiwiCloudDoc.slugFor(cuVenueId()) : ''),
       localKey: () => cuStoreKey(),
       read: () => cuDocument(cuState()),
       write: cuCloudWrite,

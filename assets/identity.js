@@ -547,6 +547,8 @@
         try {
           if (window.KiwiVenue && window.KiwiVenue.adoptServerStores) window.KiwiVenue.adoptServerStores(me.stores);
         } catch (_) {}
+        // Which of them still waits for activation (switcher badge + dot).
+        try { if (window.KiwiVenue && window.KiwiVenue.noteStoreStates) window.KiwiVenue.noteStoreStates(me.stores); } catch (_) {}
       }
       run(id, false);
       applyOwnType(id.type);   // boutique renders as boutique, not restaurant (F3)

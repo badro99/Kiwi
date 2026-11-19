@@ -123,6 +123,11 @@
   .venue-row-name { font-size: 13px; font-weight: 500; color: var(--ink); letter-spacing: -0.005em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .venue-row-type { font-size: 11px; color: var(--n-500); margin-top: 2px; }
   .venue-row-status i { width: 7px; height: 7px; background: var(--success); border-radius: 50%; display: inline-block; animation: pulse-dot 2s infinite; }
+  /* Awaiting activation: a hollow, still dot. Same colour family, no pulse, so
+     « sells now » and « not yet » read apart without a new accent colour. */
+  .venue-row.is-pending .venue-row-status i,
+  .loc-switch .badge.is-pending i { background: transparent !important; box-shadow: inset 0 0 0 1.5px currentColor !important; animation: none; }
+  .venue-row.is-pending .venue-row-status { color: var(--n-500); }
 
   /* Sidebar vertical section · fade swap on venue switch */
   [data-vertical-section] { transition: opacity 150ms ease-out; }
@@ -2395,7 +2400,7 @@
   .venue-action.fusion-cta .va-icon {
     width: 28px; height: 28px; border-radius: 50%;
     background: rgba(125,242,176,0.18); border: 1px solid rgba(125,242,176,0.3);
-    display: grid; place-items: center; color: var(--fs-bahia); flex-shrink: 0;
+    display: grid; place-items: center; color: var(--mint, #7DF2B0); flex-shrink: 0;
   }
   .venue-action.fusion-cta .va-title { font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em; color: #fff; }
   .venue-action.fusion-cta .va-sub { font-size: 11px; color: #BFE6CF; margin-top: 1px; letter-spacing: 0.01em; }

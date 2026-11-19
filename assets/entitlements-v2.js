@@ -37,6 +37,20 @@
      l'installation, c'est-à-dire exactement au moment qu'on voulait laisser
      tranquille. On attend donc que l'identité ait tranché. */
   var identitySettled=false;
+  /* ── UN CLIENT QUI OUVRE UN DEUXIÈME ÉTABLISSEMENT ─────────────────────────
+   * `onboarded` est un verdict de COMPTE : un propriétaire qui vend déjà dans
+   * une boutique l'a, à vie. Sa deuxième boutique, créée « en attente », passait
+   * donc directement en mode verrouillé : chaque frappe dans « Nouveau produit »
+   * ouvrait ce panneau, rien ne pouvait se préparer, alors que le panneau même
+   * promet « tout ce que vous avez saisi demeure » (Santos Store Casablanca,
+   * 2026-11-19). Ce compte est déjà client : son magasin en attente s'installe
+   * comme pendant une première installation (seuls les gestes d'argent restent
+   * retenus), et la pastille dit ce qui se passe au lieu de vendre Kiwi à
+   * quelqu'un qui l'utilise déjà. Absent d'un ancien serveur ⇒ faux ⇒ rien ne
+   * change. */
+  var hasActiveStore=false;
+  function locked(){return onboarded&&!hasActiveStore;}
+  function setupMode(){return pending&&!operator&&!locked();}
   var nativeFetch=window.fetch&&window.fetch.bind(window);
 
   function node(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
@@ -117,7 +131,7 @@
     document.documentElement.classList.add('kiwi-entitlement-open');
   }
   function showPaywall(){
-    if(operator||!pending||!onboarded)return true;
+    if(operator||!pending||!onboarded||hasActiveStore)return true;
     /* Un refus reste un refus, mais le grand panneau n'a aucune raison de
        recouvrir l'écran à chaque geste. Une sortie le met en veille dix
        minutes, même après une navigation ou un rechargement. La petite
@@ -173,7 +187,12 @@
      reçoit le focus (tabindex=-1), la lecture d'écran annonce le dialogue, et
      la première tabulation tombe sur la croix. */
   function focusFirst(){try{modal.querySelector('.kiwi-entitlement-card').focus({preventScroll:true});}catch(_){}}
-  function showPill(){if(pill||operator||!pending||!onboarded)return;if(paywallCoolingDown()){schedulePillAfterCooldown();return;}pill=node('button','kiwi-entitlement-pill');pill.type='button';pill.append(node('i'),node('span','',pillText()));pill.onclick=showPaywall;document.body.append(pill);}
+  function showPill(){if(pill||operator||!pending||!locked())return;if(paywallCoolingDown()){schedulePillAfterCooldown();return;}pill=node('button','kiwi-entitlement-pill');pill.type='button';pill.append(node('i'),node('span','',pillText()));pill.onclick=showPaywall;document.body.append(pill);}
+  /* Déjà client, magasin en attente : une pastille qui DIT l'état (pas de
+     panneau de vente) et qui mène à la personne qui l'active. */
+  function pendingStoreText(){return L('En attente d\u2019activation \u00b7 contacter Kiwi','Awaiting activation \u00b7 contact Kiwi','\u0641\u064a \u0627\u0646\u062a\u0638\u0627\u0631 \u0627\u0644\u062a\u0641\u0639\u064a\u0644 \u00b7 \u062a\u0648\u0627\u0635\u0644 \u0645\u0639 \u0643\u064a\u0648\u064a');}
+  function storeWaLink(){var n='';try{var el=document.querySelector('[data-loc-name]');n=el&&el.textContent.trim()||'';}catch(_){}return WA.split('?')[0]+'?text='+encodeURIComponent(L('Bonjour Kiwi, je viens d\u2019ouvrir un nouvel \u00e9tablissement'+(n?' ('+n+')':'')+' et je souhaite l\u2019activer.','Hello Kiwi, I just opened a new business'+(n?' ('+n+')':'')+' and would like to activate it.','\u0645\u0631\u062d\u0628\u064b\u0627 \u0643\u064a\u0648\u064a\u060c \u0641\u062a\u062d\u062a \u0645\u0624\u0633\u0633\u0629 \u062c\u062f\u064a\u062f\u0629'+(n?' ('+n+')':'')+' \u0648\u0623\u0648\u062f\u0651 \u062a\u0641\u0639\u064a\u0644\u0647\u0627.'));}
+  function showStorePill(){if(pill||!setupMode()||!hasActiveStore)return;pill=node('a','kiwi-entitlement-pill');pill.href=storeWaLink();pill.target='_blank';pill.rel='noopener';pill.setAttribute('data-store-pending','');pill.append(node('i'),node('span','',pendingStoreText()));document.body.append(pill);}
   function blockedWord(el){
     if(!el)return false;if(el.closest('nav,.sidebar,[role="tablist"],.kiwi-entitlement-layer,.kiwi-entitlement-pill,.kiwi-held-toast'))return false;
     if(el.hasAttribute&&el.hasAttribute('download'))return true;
@@ -194,6 +213,7 @@
      La peau du bandeau est celle du mode confidentialité : même forme, même
      place, et pas une feuille de style de plus pour trois phrases. */
   function installToast(){
+    if(hasActiveStore){heldLine(L('Les ventes de cet \u00e9tablissement s\u2019ouvrent \u00e0 son activation. Tout le reste se pr\u00e9pare d\u00e8s maintenant.','Sales at this business open once it is activated. Everything else can be set up now.','\u062a\u064f\u0641\u062a\u062d \u0645\u0628\u064a\u0639\u0627\u062a \u0647\u0630\u0647 \u0627\u0644\u0645\u0624\u0633\u0633\u0629 \u0628\u0639\u062f \u062a\u0641\u0639\u064a\u0644\u0647\u0627. \u0643\u0644 \u0645\u0627 \u0639\u062f\u0627 \u0630\u0644\u0643 \u064a\u064f\u062c\u0647\u0651\u0632 \u0627\u0644\u0622\u0646.'),false);return;}
     heldLine(L('Cette action s\u2019ouvre \u00e0 l\u2019activation. Terminez votre installation, on en parle ensuite.','This action opens once your account is activated. Finish setting up first, we\u2019ll talk after.','\u064a\u064f\u062a\u0627\u062d \u0647\u0630\u0627 \u0627\u0644\u0625\u062c\u0631\u0627\u0621 \u0628\u0639\u062f \u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u062d\u0633\u0627\u0628. \u0623\u0643\u0645\u0644 \u0627\u0644\u0625\u0639\u062f\u0627\u062f \u0623\u0648\u0644\u064b\u0627\u060c \u062b\u0645 \u0646\u062a\u062d\u062f\u062b.'),false);
   }
   /* Une seule question, posée au même endroit par tous les écouteurs. */
@@ -206,7 +226,7 @@
   function leaving(el){if(!el||!el.getAttribute)return false;var s=((el.getAttribute('data-action')||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.textContent||'')).toLowerCase();return /\/auth\/logout/.test(el.getAttribute('href')||'')||/(d\u00e9connect|deconnect|logout|log out|sign out|\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062e\u0631\u0648\u062c)/.test(s);}
   function heldBack(el){
     if(!pending||operator||lockScreen(el)||leaving(el))return false;
-    return onboarded?blockedWord(el):moneyWord(el);
+    return locked()?blockedWord(el):moneyWord(el);
   }
   function explorationControl(el){
     if(lockScreen(el))return true;
@@ -216,14 +236,14 @@
   function installSubscription(){
     document.addEventListener('pointerdown',markGesture,true);document.addEventListener('keydown',markGesture,true);
     window.addEventListener('kiwi:langchange',function(){var s=pill&&pill.querySelector('span');if(s)s.textContent=pillText();if(modal&&modal.classList.contains('is-off')){modal.remove();modal=null;}});
-    document.addEventListener('click',function(e){var el=e.target&&e.target.closest&&e.target.closest('button,a,[role="button"]');if(heldBack(el)){e.preventDefault();e.stopImmediatePropagation();if(onboarded)showPaywall();else installToast();}},true);
+    document.addEventListener('click',function(e){var el=e.target&&e.target.closest&&e.target.closest('button,a,[role="button"]');if(heldBack(el)){e.preventDefault();e.stopImmediatePropagation();if(locked())showPaywall();else installToast();}},true);
     /* Saisir, cocher, envoyer un formulaire : c'est l'installation elle-même.
        Tant qu'elle n'est pas finie, on ne s'interpose pas entre le commerçant
        et son clavier. */
-    document.addEventListener('beforeinput',function(e){if(!pending||operator||!onboarded||explorationControl(e.target))return;e.preventDefault();e.stopImmediatePropagation();showPaywall();},true);
-    document.addEventListener('click',function(e){if(!pending||operator||!onboarded)return;var el=e.target&&e.target.closest&&e.target.closest('input,select,textarea,[contenteditable="true"]');if(el&&!explorationControl(el)){e.preventDefault();e.stopImmediatePropagation();showPaywall();}},true);
-    document.addEventListener('submit',function(e){if(!pending||operator||!onboarded||lockScreen(e.target))return;var f=e.target;if(f&&/search|filter/i.test(String(f.getAttribute('role')||'')+' '+String(f.className||'')))return;e.preventDefault();e.stopImmediatePropagation();showPaywall();},true);
-    if(nativeFetch)window.fetch=function(input,init){var method=String((init&&init.method)||'GET').toUpperCase(),url=String(typeof input==='string'?input:(input&&input.url)||'');if(pending&&!operator&&!/^(GET|HEAD|OPTIONS)$/.test(method)&&!/^\/(?:api\/config|api\/me|auth\/|api\/support)/.test(url)&&(onboarded||/^\/(?:api\/sale|api\/payment|api\/refund)/.test(url))){if(byHand()){if(onboarded)showPaywall();else installToast();}return Promise.resolve(new Response(JSON.stringify({error:'subscription-required'}),{status:402,headers:{'Content-Type':'application/json'}}));}return nativeFetch(input,init);};
+    document.addEventListener('beforeinput',function(e){if(!pending||operator||!locked()||explorationControl(e.target))return;e.preventDefault();e.stopImmediatePropagation();showPaywall();},true);
+    document.addEventListener('click',function(e){if(!pending||operator||!locked())return;var el=e.target&&e.target.closest&&e.target.closest('input,select,textarea,[contenteditable="true"]');if(el&&!explorationControl(el)){e.preventDefault();e.stopImmediatePropagation();showPaywall();}},true);
+    document.addEventListener('submit',function(e){if(!pending||operator||!locked()||lockScreen(e.target))return;var f=e.target;if(f&&/search|filter/i.test(String(f.getAttribute('role')||'')+' '+String(f.className||'')))return;e.preventDefault();e.stopImmediatePropagation();showPaywall();},true);
+    if(nativeFetch)window.fetch=function(input,init){var method=String((init&&init.method)||'GET').toUpperCase(),url=String(typeof input==='string'?input:(input&&input.url)||'');if(pending&&!operator&&!/^(GET|HEAD|OPTIONS)$/.test(method)&&!/^\/(?:api\/config|api\/me|auth\/|api\/support)/.test(url)&&(locked()||/^\/(?:api\/sale|api\/payment|api\/refund)/.test(url))){if(byHand()){if(locked())showPaywall();else installToast();}return Promise.resolve(new Response(JSON.stringify({error:'subscription-required'}),{status:402,headers:{'Content-Type':'application/json'}}));}return nativeFetch(input,init);};
   }
   function privacyToast(){var t=node('div','kiwi-privacy-toast','Mode confidentialité : action désactivée pour protéger le client.');document.body.append(t);setTimeout(function(){t.remove();},2600);}
   function sensitive(el){
@@ -253,8 +273,11 @@
      par /api/config, l'installation par /api/me — et dans un ordre qu'on ne
      choisit pas. Un seul endroit décide donc, rappelé par les deux. */
   function refreshPill(){
-    if(pending&&onboarded&&identitySettled)showPill();
-    else{clearPillTimer();if(pill){pill.remove();pill=null;}if(modal&&!onboarded)closePaywall(false);}
+    var wantStore=identitySettled&&setupMode()&&hasActiveStore;
+    if(pill&&(!!pill.hasAttribute('data-store-pending'))!==wantStore){pill.remove();pill=null;}
+    if(pending&&locked()&&identitySettled)showPill();
+    else if(wantStore){clearPillTimer();if(modal)closePaywall(false);showStorePill();}
+    else{clearPillTimer();if(pill){pill.remove();pill=null;}if(modal&&!locked())closePaywall(false);}
   }
   document.addEventListener('kiwi-config',function(e){acceptConfig(e.detail||window.KiwiConfig);});
   /* L'identité est lue UNE fois, au chargement. Un commerçant qui termine
@@ -270,6 +293,7 @@
        ou une session sans compte se comportent exactement comme avant. Une
        nouveauté ne doit jamais ouvrir une porte payante en étant absente. */
     if(state&&state.authenticated===true)onboarded=state.onboarded!==false;
+    hasActiveStore=!!(state&&Array.isArray(state.stores)&&state.stores.some(function(s){return s&&s.pending===false;}));
     refreshPill();
     document.documentElement.classList.remove('kiwi-privacy-pending');
     if(operator){if(pill){pill.remove();pill=null;}if(modal){modal.remove();modal=null;}document.documentElement.classList.remove('kiwi-entitlement-open');}
@@ -283,5 +307,5 @@
     else confirmIdentity(null);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-  window.KiwiSubscription={active:function(){return !pending;},guard:function(){return pending?showPaywall():true;},open:showPaywall,whatsapp:WA};
+  window.KiwiSubscription={active:function(){return !pending;},setup:setupMode,guard:function(){return pending?showPaywall():true;},open:showPaywall,whatsapp:WA};
 })();

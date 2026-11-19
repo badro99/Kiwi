@@ -176,8 +176,8 @@
     "sha": "75fc4494935af382"
   },
   "assets/briefing-persistence.js": {
-    "v": "22",
-    "sha": "3ec8aebcebdf962e"
+    "v": "23",
+    "sha": "7a802156cd62c526"
   },
   "assets/briefing-rules.js": {
     "v": "7",
@@ -460,8 +460,8 @@
     "sha": "2f2e29a063408cdf"
   },
   "assets/dashboard-shell.css": {
-    "v": "12",
-    "sha": "f81e783156c3d4d3"
+    "v": "13",
+    "sha": "2b37c3b287fd4457"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -556,8 +556,8 @@
     "sha": "98582fcbb429a66c"
   },
   "assets/design-vexel-layout.js": {
-    "v": "2102",
-    "sha": "0e11ff9791231896"
+    "v": "2103",
+    "sha": "e5d63dda817f0cd8"
   },
   "assets/design-vexel.css": {
     "v": "2133",
@@ -604,12 +604,12 @@
     "sha": "91e84c47c7bd2296"
   },
   "assets/entitlements-v2.js": {
-    "v": "5",
-    "sha": "8f2819be383ad3f6"
+    "v": "6",
+    "sha": "605a92a0a3dfc708"
   },
   "assets/entitlements.css": {
-    "v": "7",
-    "sha": "06ffe2c1aad9bba1"
+    "v": "8",
+    "sha": "e20b3c24ead53d1c"
   },
   "assets/err-reporter.js": {
     "v": "2",
@@ -776,8 +776,8 @@
     "sha": "894b034541608ffa"
   },
   "assets/hotel.js": {
-    "v": "100",
-    "sha": "e9e8b512cd55932e"
+    "v": "101",
+    "sha": "fd57416292e2cc63"
   },
   "assets/hotel/arrivals.js": {
     "v": "12",
@@ -844,8 +844,8 @@
     "sha": "60ad3ded10f9e520"
   },
   "assets/identity.js": {
-    "v": "12",
-    "sha": "26bd8c22ae534f02"
+    "v": "13",
+    "sha": "ce82c15cdd4b4e54"
   },
   "assets/idle-lock.js": {
     "v": "2",
@@ -1512,8 +1512,8 @@
     "sha": "bda23e0e63947ae5"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "244",
-    "sha": "9ba78c05f9d30d20"
+    "v": "245",
+    "sha": "d16a85543cce0f74"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2364,8 +2364,8 @@
     "sha": "d6306e52e72f7a69"
   },
   "assets/venues.js": {
-    "v": "75",
-    "sha": "17720ecde1f415bb"
+    "v": "76",
+    "sha": "b5e9ec9d1faa9d8f"
   },
   "assets/venues/data.js": {
     "v": "4",

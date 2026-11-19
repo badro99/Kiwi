@@ -213,9 +213,9 @@
   var CLIENT_RING_C = 2 * Math.PI * CLIENT_RING_R;
 
   var CLIENT_STR = {
-    fr: { label: 'Clients réguliers', of: 'sur {n} clients vus' },
-    en: { label: 'Returning customers', of: 'of {n} customers seen' },
-    ar: { label: 'العملاء المنتظمون', of: 'من {n} عميل مسجل' }
+    fr: { label: 'Clients réguliers', of: 'sur {n} clients vus', none: 'Aucun client vu sur la période' },
+    en: { label: 'Returning customers', of: 'of {n} customers seen', none: 'No customers seen in this period' },
+    ar: { label: 'العملاء المنتظمون', of: 'من {n} عميل مسجل', none: 'لا عملاء في هذه الفترة' }
   };
 
   function lang() {
@@ -1004,7 +1004,7 @@
     var goalUnset = !!(goalLabel && goalLabel.dataset && goalLabel.dataset.goalUnset);
     /* Sans objectif, le chiffre du jour sous « OBJECTIF DU JOUR » se lisait
      * comme l'objectif lui-même (« 85,00 · Aucun objectif défini »). */
-    setText(currentTarget, goalUnset ? '·' : amountText);
+    setText(currentTarget, goalUnset ? '' : amountText);
     setText(targetTarget, goalUnset ? '' : (targetText ? '/ ' + targetText : ''));
     /* Objectif proposé par le tableau de bord (hero.js › suggestedGoal) : on le dit. */
     var goalSuggested = !goalUnset && !!(goalLabel && goalLabel.dataset && goalLabel.dataset.goalSuggested);
@@ -1071,18 +1071,24 @@
     /* Un vrai établissement lit son carnet directement : la carte ne dépend plus
        d'une tuile de la bande, absente chez une boutique ou retirée par le
        commerçant, et qui la laissait sur « · » malgré des clients venus. */
+    /* Le carnet a répondu « personne » (boutique neuve, journée calme) : c'est
+       un zéro mesuré, pas une donnée manquante. La carte disait « · » et un
+       anneau vide sans un mot, et se lisait comme une panne. */
+    var noneSeen = false;
     try {
       var mix = window.KiwiDateRange && window.KiwiDateRange.clientMix && window.KiwiDateRange.clientMix();
       if (mix && mix.visitors > 0) read = parseClients(mix.regulars + ' / ' + mix.visitors);
+      else if (mix && mix.visitors === 0 && !read.known) noneSeen = true;
     } catch (_) {}
     var clientCopy = CLIENT_STR[lang()] || CLIENT_STR.fr;
-    setText(clientValue, read.known ? read.currentText : '·');
+    setText(clientValue, read.known ? read.currentText : (noneSeen ? '0' : '·'));
     setText(document.querySelector('[data-vexel-client-caption]'),
-      read.known ? clientCopy.of.replace('{n}', read.totalText) : '');
+      read.known ? clientCopy.of.replace('{n}', read.totalText) : (noneSeen ? clientCopy.none : ''));
     if (clientDelta) clientDelta.dir = 'ltr';
     if (clientValue) clientValue.dir = 'ltr';
     setText(clientDelta, clientDeltaText);
     renderClientRing(read);
+    if (noneSeen) setText(document.querySelector('[data-vexel-client-pct]'), '');
   }
 
   function scheduleRefresh() {

@@ -32,12 +32,12 @@
 // jamais perdre de stock parce que le serveur tousse.
 
 import { materialize, compactForWrite } from './_rules-catalog.js';
-import { json } from '../auth/_lib.js';
+import { json, entitledMerchant } from '../auth/_lib.js';
 // La règle de tenancy vivait ici. Elle vaut maintenant aussi pour /api/store et
 // /api/clients, qui exposent les mêmes données privées ; elle a donc déménagé
 // dans _private.js pour qu'il n'en existe qu'UNE. Trois copies dérivent : on en
 // corrige une, les deux autres restent ouvertes.
-import { tenantFor } from './_private.js';
+import { tenantFor, storeSubscriptionPending } from './_private.js';
 import { enqueueStockChanges, flushShopifyOutbox } from './shopify/_lib.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
@@ -407,7 +407,20 @@ export async function onRequestPost(context) {
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
-  const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
+  let merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
+  /* Un magasin EN ATTENTE d'activation monte son catalogue avant d'ouvrir,
+   * comme il monte déjà son équipe et ses réglages (store.js,
+   * PENDING_SETUP_FEATURES, décision du 2026-10-13). Le catalogue boutique
+   * n'était pas dans cette liste : la deuxième boutique d'un client ne pouvait
+   * pas recevoir un seul article avant l'activation (Santos Store Casablanca,
+   * 2026-11-19). Même borne qu'ailleurs : la session du compte ou un opérateur
+   * nommé, jamais une caisse appairée, et jamais un mouvement de stock
+   * (`stockAction` : vente, retour, casse), qui reste une opération. */
+  if (!merchant && !(body && body.stockAction)) {
+    const setup = await tenantFor(request, env, body && body.merchant, { strict: true, allowPending: true });
+    if (setup && await storeSubscriptionPending(env, setup)
+        && (await entitledMerchant(request, env, setup)) === setup) merchant = setup;
+  }
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   if (body && body.stockAction) return applyStockAction(env, merchant, body, waitUntil);

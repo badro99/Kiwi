@@ -574,9 +574,9 @@ export function ownBriefingDays(doc, merchant) {
  * et seulement depuis la session du compte propriétaire ou un opérateur nommé ;
  * une caisse appairée n'écrit toujours rien avant l'activation. Ventes,
  * pointage, paie, avoirs, retours, réservations restent bloqués. */
-const PENDING_SETUP_FEATURES = new Set([
-  'team', 'floorplan', 'services', 'rooms', HOTEL_UNITS_FEATURE, 'kds',
-  'foodtrade', 'discountpolicy', 'fidelity', 'recipes', 'costs', 'promotions', 'suppliers',
+const PENDING_SETUP_FEATURES = new Set([ // + horaires, fiche légale, ticket, relance : des réglages aussi (2026-11-19)
+  'team', 'floorplan', 'services', 'rooms', HOTEL_UNITS_FEATURE, 'kds', 'foodtrade', 'discountpolicy', 'fidelity',
+  'recipes', 'costs', 'promotions', 'suppliers', 'hours', 'business', 'receipt', 'retention',
 ]);
 const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'monthreport', 'policies', 'foodtrade', 'guestpage', STOREFRONT_FEATURE]);
 

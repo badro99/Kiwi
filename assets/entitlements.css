@@ -64,3 +64,5 @@ html.kiwi-gate-up .kiwi-entitlement-pill{display:none}
    elle couvrait le calendrier de la feuille de dates. */
 @media(max-width:640px){.kiwi-entitlement-layer{padding:10px}.kiwi-entitlement-card{border-radius:22px;max-height:calc(100vh - 20px)}.kiwi-entitlement-head{padding:30px 22px 4px}.kiwi-entitlement-card h2{max-width:none}.kiwi-entitlement-benefits{padding:18px 22px 14px}.kiwi-entitlement-actions{padding:4px 22px 0;flex-direction:column-reverse}.kiwi-entitlement-actions a,.kiwi-entitlement-actions button{width:100%}.kiwi-entitlement-foot{padding:14px 22px 24px}.kiwi-privacy-bar{top:46px;max-width:calc(100vw - 16px);white-space:nowrap}}
 @media(prefers-reduced-motion:reduce){.kiwi-entitlement-layer{backdrop-filter:none;animation:none}.kiwi-entitlement-card{animation:none}.kiwi-entitlement-actions a:hover,.kiwi-entitlement-actions button:hover{transform:none}}
+a.kiwi-entitlement-pill{text-decoration:none}
+.kiwi-entitlement-pill[data-store-pending] i{background:transparent;box-shadow:inset 0 0 0 2px #7df2b0}

@@ -83,7 +83,7 @@ ok('channels say "Aucune vente" before the first sale, "indisponible" only for u
 });
 
 ok('goal card shows no amount when no goal is set', () => {
-  assert.ok(/setText\(currentTarget, goalUnset \? '·' : amountText\)/.test(VX));
+  assert.ok(/setText\(currentTarget, goalUnset \? '' : amountText\)/.test(VX));
 });
 
 ok('payment mix ships no demo figure in its markup', () => {

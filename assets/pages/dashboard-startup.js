@@ -60,7 +60,7 @@
     'assets/cash-sessions.js?v=15',
     'assets/weather.js?v=1',
     'assets/briefing-rules.js?v=7',
-    'assets/briefing-persistence.js?v=22',
+    'assets/briefing-persistence.js?v=23',
     'assets/briefing.js?v=54',
     'assets/simple-food-cost.js?v=29',
     'assets/finance.js?v=14',
@@ -70,12 +70,12 @@
     'assets/help-centre.js?v=7',
     'assets/account.js?v=33',
     'assets/design-2026.js?v=2',
-    'assets/design-vexel-layout.js?v=2102',
+    'assets/design-vexel-layout.js?v=2103',
     'assets/liquid-glass.js?v=1',
     'assets/hotel-language.js?v=15',
     'assets/hotel-housekeeping.js?v=1',
     'assets/hotel/model.js?v=11',
-    'assets/hotel.js?v=100',
+    'assets/hotel.js?v=101',
   ];
   if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');
   const normalPriority = new Set(['assets/kiwi-select.js', 'assets/catalog-workspace.js', 'assets/staff-roles.js', 'assets/design-vexel-layout.js']);

@@ -120,8 +120,24 @@
     });
     return safeDoc({ days: left.days.concat(right.days), settings: settings, settingsFieldsAt: clocks, settingsAt: Math.max(left.settingsAt, right.settingsAt) });
   }
+  /* A store awaiting activation cannot write its briefing (the server refuses
+     every operational document until Kiwi activates it). Asking anyway was a
+     refused POST per recompute and a « copie cloud non confirmée » warning on a
+     shop that has nothing wrong. The day stays on this device until then. */
+  function held() {
+    try {
+      if (typeof window === 'undefined') return false;
+      /* Juste après un changement d'établissement, KiwiSubscription parle
+       * encore de l'ancien : le registre des magasins sait déjà. */
+      var V = window.KiwiVenue;
+      if (V && typeof V.isPendingVenue === 'function' && typeof V.getVenue === 'function' && V.isPendingVenue(V.getVenue())) return true;
+      var S = window.KiwiSubscription; return !!(S && typeof S.active === 'function' && !S.active());
+    }
+    catch (_) { return false; }
+  }
   function save() {
     writeLocal(doc);
+    if (held()) return Promise.resolve({ ok: false, error: 'pending-activation' });
     var key = localKey() + ':cloud-save', handle = cloud, venue = slug();
     var id = String(Date.now()) + ':' + Math.random().toString(36).slice(2);
     try { localStorage.setItem(key, id); } catch (_) { localKept = false; render(); }
@@ -144,10 +160,11 @@
       feature: FEATURE, slug: slug, localKey: localKey,
       read: function () { return safeDoc(own()); }, write: writeLocal, merge: mergeDocs,
       isEmpty: function (x) { return !x || (!(x.days || []).length && !Object.keys(x.settings || {}).length); },
+      canPush: function () { return !held(); },
       onPulled: function () { compute(); }
     });
   }
-  return { own: own, writeLocal: writeLocal, mergeDocs: mergeDocs, save: save, attachCloud: attachCloud, reload: function () { doc = readLocal(); }, bind: function () { return cloud && cloud.bind ? cloud.bind() : false; }, durable: function () { return localKept; }, cloudFailed: function () { try { return !localKept || !!localStorage.getItem(localKey() + ':cloud-save'); } catch (_) { localKept = false; return true; } } };
+  return { own: own, writeLocal: writeLocal, mergeDocs: mergeDocs, save: save, attachCloud: attachCloud, reload: function () { doc = readLocal(); }, bind: function () { return cloud && cloud.bind ? cloud.bind() : false; }, durable: function () { return localKept; }, cloudFailed: function () { try { return !localKept || (!held() && !!localStorage.getItem(localKey() + ':cloud-save')); } catch (_) { localKept = false; return true; } } };
   }
   return { createPersistence: createPersistence };
 }));

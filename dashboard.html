@@ -78,7 +78,7 @@
      per-vertical component CSS above, which is how it replaces four different
      stat-card implementations without editing four stylesheets. -->
 <link rel="stylesheet" href="assets/genpage.css?v=5" />
-<link rel="stylesheet" href="assets/dashboard-shell.css?v=12" />
+<link rel="stylesheet" href="assets/dashboard-shell.css?v=13" />
 <link rel="stylesheet" href="assets/mobile.css?v=13" />
 <link rel="stylesheet" href="assets/dashboard-native.css?v=3" />
 <link rel="stylesheet" href="assets/kiwi-select.css?v=3" />
@@ -1105,7 +1105,7 @@
      dans la liste de pré-cache de kiwi-sw.js. -->
 <script src="assets/venues/data.js?v=4" defer></script>
 <script src="assets/venues/helpers.js?v=10" defer></script>
-<script src="assets/venues.js?v=75" defer></script>
+<script src="assets/venues.js?v=76" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot
      and the garment product art (both in pressing-ops.js). -->
 <script src="assets/pressing-ops.js?v=40" defer></script>
@@ -1131,7 +1131,7 @@
      its one-shot snapshot must not miss the identity promise at boot. -->
 <script defer src="assets/tenant-purge.js?v=18"></script>
 <script defer src="assets/dashboard-pin-vault.js?v=7"></script>
-<script defer src="assets/identity.js?v=12"></script>
+<script defer src="assets/identity.js?v=13"></script>
 <link rel="modulepreload" href="assets/live-link/queue-store.js?v=24">
 <script type="module" defer src="assets/live-link.js?v=128"></script>
 <script defer src="assets/channel-sales.js?v=8"></script>
@@ -1140,8 +1140,8 @@
 <script defer src="assets/merchant-config.js?v=289"></script>
 <!-- Real logged-in identity · swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
-  <link rel="stylesheet" href="assets/entitlements.css?v=7">
-  <script defer src="assets/entitlements-v2.js?v=5"></script>
+  <link rel="stylesheet" href="assets/entitlements.css?v=8">
+  <script defer src="assets/entitlements-v2.js?v=6"></script>
 <!-- Auth guard: redirects to the auth page the moment the server signals
      the account has been deleted / suspended, so a revoked merchant never
      gets stranded in a half-broken shell (see assets/auth-guard.js). -->
@@ -1258,7 +1258,7 @@
 
 <script src="assets/clients-directory.js?v=46" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=21" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=244" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=245" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1285,7 +1285,7 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=244"></script>
+<script src="assets/pages/dashboard-startup.js?v=245"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=17">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
 <script src="assets/pages/dashboard-loader.js?v=106" defer fetchpriority="low"></script>

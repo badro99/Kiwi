@@ -117,8 +117,13 @@ ok(/@media\(prefers-reduced-motion:reduce\)/.test(css) && /animation:none/.test(
    régression. */
 ok(/function showPaywall\(\)\{\s*if\(operator\|\|!pending(\|\|[^)]+)?\)return true;/.test(js),
   'ni l’opérateur ni un abonnement actif ne voient le panneau');
-ok(/function showPaywall\(\)\{\s*if\(operator\|\|!pending\|\|!onboarded\)return true;/.test(js),
+ok(/function showPaywall\(\)\{\s*if\(operator\|\|!pending\|\|!onboarded(\|\|[^)]+)?\)return true;/.test(js),
   'et le panneau reste fermé tant que l’installation n’est pas finie');
+/* 2026-11-19 · un compte qui vend déjà ailleurs n'est pas un prospect : son
+   deuxième établissement en attente s'installe sans panneau de vente. */
+ok(/function showPaywall\(\)\{\s*if\([^)]*\|\|hasActiveStore\)return true;/.test(js)
+  && /hasActiveStore=!!\(state&&Array\.isArray\(state\.stores\)&&state\.stores\.some\(function\(s\)\{return s&&s\.pending===false;\}\)\)/.test(js),
+  'un client déjà actif prépare sa nouvelle boutique sans panneau d’activation');
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) process.exit(1);

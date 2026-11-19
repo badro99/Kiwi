@@ -122,6 +122,22 @@
     return s;
   }
 
+  /* « Santos Store Casablanca · Casablanca » : append the city only when the name lacks it. */
+  const foldTxt = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const displayOf = (name, location) => { const n = String(name || ''), l = String(location || '').trim(); return !l || foldTxt(n).indexOf(foldTxt(l)) >= 0 ? n : `${n} · ${l}`; };
+  /* A new établissement waits for Kiwi to activate it before it can sell, but the sidebar said
+   * « EN SERVICE ». The server says which store is pending (/api/me stores[].pending, /api/config). */
+  const pendingSlugs = new Set();
+  const noteStoreStates = (list) => {
+    let changed = false;
+    (Array.isArray(list) ? list : []).forEach((s) => {
+      const slug = String((s && s.merchant) || '').trim();
+      if (slug && typeof s.pending === 'boolean' && s.pending !== pendingSlugs.has(slug)) { changed = true; pendingSlugs[s.pending ? 'add' : 'delete'](slug); }
+    });
+    if (changed) { try { renderLocSwitch(); renderDropdown(); } catch (_) {} }
+  };
+  const isPendingVenue = (id) => { const v = VENUES[id]; return !!(v && v.custom && v.slug && pendingSlugs.has(v.slug)); };
+
   /* Build + register a venue from the wizard config. Returns the new id. */
   function createVenue(cfg) {
     cfg = cfg || {};
@@ -148,7 +164,7 @@
       const id = 'v' + Date.now().toString(36);
       VENUES[id] = {
         id, name, location,
-        fullDisplay: location ? `${name} · ${location}` : name,
+        fullDisplay: displayOf(name, location),
         /* L'identité réseau, gravée au même nom que la déclaration acceptée par
          * le serveur. Elle ne suit plus les futurs changements de nom. */
         slug: slugMerchant(name),
@@ -210,7 +226,7 @@
     if (patch.hours != null)    v.hours = String(patch.hours).trim();
     if (patch.methods != null)  v.methods = String(patch.methods).trim();
     if (patch.goal != null)     v.goal = Math.max(0, +patch.goal || 0);
-    v.fullDisplay = v.location ? `${v.name} · ${v.location}` : v.name;
+    v.fullDisplay = displayOf(v.name, v.location);
     persistCustomVenues();
     if (id === currentVenue) {
       renderAll();
@@ -400,7 +416,7 @@
       }));
     VENUES.scoped = {
       id: 'scoped', name, location, slug,
-      fullDisplay: location ? `${name} · ${location}` : name,
+      fullDisplay: displayOf(name, location),
       type: base,
       subtype: subtypeOf(info.type), profileInfo: null,
       siblings: '', status: 'En service', ice: '·',
@@ -444,7 +460,7 @@
     const location = String(me.city || (paired && paired.location) || '').trim();
     VENUES.own = {
       id: 'own', name, location,
-      fullDisplay: location ? `${name} · ${location}` : name,
+      fullDisplay: displayOf(name, location),
       type: base,
       subtype: ownType, profileInfo: null,
       siblings: '', status: 'En service', ice: '·',
@@ -492,7 +508,7 @@
       const location = String((s && s.city) || '').trim();
       VENUES[id] = {
         id, name, location,
-        fullDisplay: location ? `${name} · ${location}` : name,
+        fullDisplay: displayOf(name, location),
         /* Ici le slug ne se déduit pas, il se sait : il vient du registre du
          * serveur. C'est même la seule source qui ne peut pas se tromper — et
          * elle vaut mieux que le nom, qui n'est qu'un reflet. */
@@ -548,7 +564,15 @@
     const v = safeVenueData(currentVenue);
     const nameEl = document.querySelector('[data-loc-name]');
     const metaEl = document.querySelector('[data-loc-meta]');
-    if (nameEl) nameEl.textContent = v.fullDisplay;
+    if (nameEl) nameEl.textContent = v.custom ? displayOf(v.name, v.location) : v.fullDisplay;
+    /* Pending, the badge drops data-i18n so a language pass cannot paint « EN SERVICE » back. */
+    const badge = document.querySelector('.loc-switch .badge'), badgeText = badge && badge.querySelector('span');
+    if (badgeText) {
+      const pend = isPendingVenue(currentVenue), L = window.KiwiI18n?.getLang?.() || 'fr';
+      badge.classList.toggle('is-pending', pend);
+      if (pend) { badgeText.removeAttribute('data-i18n'); badgeText.textContent = ({ en: 'AWAITING ACTIVATION', ar: 'في انتظار التفعيل' })[L] || "EN ATTENTE D'ACTIVATION"; }
+      else if (!badgeText.hasAttribute('data-i18n')) { badgeText.setAttribute('data-i18n', 'dash.sidebar.inService'); badgeText.textContent = (L !== 'fr' && window.KiwiI18n?.T?.[L]?.['dash.sidebar.inService']) || 'EN SERVICE'; }
+    }
     const slang = window.KiwiI18n?.getLang?.() || 'fr';
     if (metaEl) metaEl.textContent = (isRealMerchant() && !isCustom(currentVenue))
       ? (v.siblings || '')
@@ -624,17 +648,19 @@
         : REAL_VENUES;
     /* Custom venue names/locations are merchant-typed — escape them. */
     const escD = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const pendWord = ({ fr: 'en attente', en: 'pending', ar: 'قيد الانتظار' })[window.KiwiI18n?.getLang?.() || 'fr'] || 'en attente';
     const venueRows = listIds.map(id => {
       const v = VENUES[id];
       const isActive = !inFusion && id === currentVenue;
+      const pend = isPendingVenue(id);
       return `
-        <button data-activation=write type="button" class="venue-row${isActive ? ' active' : ''}" data-action="venue-pick" data-venue="${escD(id)}">
+        <button data-activation=write type="button" class="venue-row${isActive ? ' active' : ''}${pend ? ' is-pending' : ''}" data-action="venue-pick" data-venue="${escD(id)}" title="${escD(v.custom ? displayOf(v.name, v.location) : v.name)}">
           <div class="venue-row-icon">${typeIconOf(v)}</div>
           <div class="venue-row-body">
-            <div class="venue-row-name">${escD(v.name)}${v.location ? ' · ' + escD(v.location) : ''}</div>
-            <div class="venue-row-type">${escD(typeLabelOf(v))}</div>
+            <div class="venue-row-name">${escD(v.custom ? v.name : (v.name + (v.location ? ' · ' + v.location : '')))}</div>
+            <div class="venue-row-type">${escD(typeLabelOf(v))}${v.custom && v.location ? ' · ' + escD(v.location) : ''}${pend ? ' · ' + escD(pendWord) : ''}</div>
           </div>
-          <div class="venue-row-status" aria-label="${escD(v.status || 'en service')}"><i></i></div>
+          <div class="venue-row-status"><i></i></div>
         </button>
       `;
     }).join('');
@@ -645,7 +671,7 @@
     const cta = scopedActive ? '' : onboard ? `
         <button type="button" class="venue-action fusion-cta" data-action="onboard">
           <div class="va-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/></svg>
           </div>
           <div class="va-body">
             <div class="va-title">${dd.addT}</div>
@@ -1763,6 +1789,11 @@
       renderUpsell(); renderDropdown(); renderLocSwitch();
       renderVerticalSection({ skipFade: true });
     });
+    /* /api/config answers for the store on screen only, so its subscription is this store's state. */
+    document.addEventListener('kiwi-config', (e) => {
+      const cfg = e && e.detail, v = VENUES[currentVenue];
+      if (v && v.custom && v.slug && cfg && cfg.subscription) noteStoreStates([{ merchant: v.slug, pending: cfg.subscription.active === false }]);
+    });
 
     /* Operator (God-mode) scoped view (?op=1 &/or ?merchant=slug) — DO NOT
      * initialize the venue from THIS browser's localStorage. That path was
@@ -2351,6 +2382,8 @@
        rend au commerçant son propre magasin plutôt qu'un écran vide. */
     cancelScope,
     adoptServerStores,
+    noteStoreStates,
+    isPendingVenue,
     getKpiSpec: type => {
       /* Subtype profile first: a custom venue's KPI band speaks its trade's
        * language (labels resolve per-language; dateRange re-renders the band

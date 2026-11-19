@@ -144,6 +144,43 @@ async function seedBlankFeatures(env, merchant) {
   } catch (_) { /* pré-migration → on reste sur le comportement d'avant */ }
 }
 
+/* Une deuxième boutique du même propriétaire naissait sans la répartition
+ * rapide tailles × couleurs que la première utilise déjà : le propriétaire
+ * retrouvait l'ancien écran et ne savait pas pourquoi (Santos Store
+ * Casablanca, 2026-11-19). On reprend CETTE préférence d'affichage, et
+ * seulement depuis un établissement ACTIF du même compte et du même métier.
+ * Les accès (caisseInventoryAdmin…) ne se recopient pas : ils restent une
+ * décision prise à l'activation. */
+const INHERITED_TRADE_OPTIONS = ['boutiqueSizeColors'];
+async function inheritTradeOptions(env, merchant, accountId, type) {
+  type = String(type || '').trim();
+  if (!type || !accountId) return;
+  try {
+    const rs = await env.DB.prepare(
+      `SELECT features FROM merchant_config
+        WHERE account_id = ? AND merchant <> ? AND type = ? AND (status IS NULL OR status <> 'pending')`
+    ).bind(accountId, merchant, type).all();
+    const want = {};
+    for (const r of (rs && rs.results) || []) {
+      let f = {};
+      try { f = JSON.parse(r.features || '{}') || {}; } catch (_) { f = {}; }
+      for (const k of INHERITED_TRADE_OPTIONS) if (f[k] === true) want[k] = true;
+    }
+    if (!Object.keys(want).length) return;
+    const row = await env.DB.prepare('SELECT features FROM merchant_config WHERE merchant = ? AND account_id = ?')
+      .bind(merchant, accountId).first();
+    if (!row) return;
+    let mine = {};
+    try { mine = JSON.parse(row.features || '{}') || {}; } catch (_) { mine = {}; }
+    let changed = false;
+    for (const k of Object.keys(want)) if (!(k in mine)) { mine[k] = true; changed = true; }
+    if (changed) {
+      await env.DB.prepare('UPDATE merchant_config SET features = ?, updated_ts = ? WHERE merchant = ? AND account_id = ?')
+        .bind(JSON.stringify(mine), Date.now(), merchant, accountId).run();
+    }
+  } catch (_) { /* pré-migration ou lecture impossible → rien n'est hérité */ }
+}
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -519,6 +556,7 @@ export async function onRequestPost(context) {
     return json({ error: 'merchant-ownership-unavailable' }, 503);
   }
   if (wantSeed) await seedBlankFeatures(env, merchant);
+  if (body && body.fresh === true) await inheritTradeOptions(env, merchant, sess.aid, body.type);
 
   // City is supplied by the owner during creation, but never replaces an
   // operator-entered location. Keep the write scoped to the claimed row.
