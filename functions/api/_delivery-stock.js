@@ -109,6 +109,7 @@ export async function takeHeldStock(env, merchant, saleId) {
     const kept = await keptQty(db, merchant, saleId, basket);
     const tag = String(saleId).replace(/[^a-zA-Z0-9_-]/g, '').slice(-40);
     const shop = await stockShop(env, merchant, saleId);
+    /** @type {{ applied: number, short: number, from?: string } | null} */
     let result = null;
     for (let attempt = 0; attempt < 4 && !result; attempt++) {
       const row = await db.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(shop).first();
