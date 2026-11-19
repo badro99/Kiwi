@@ -1247,6 +1247,11 @@ import {} from './live-link/sale-identity.js?v=4';
   }
 
   /* ─── operator view banner ─── */
+  /* Le nom que l'opérateur connaît (« Browse »), pas l'identifiant technique. */
+  function shopName() {
+    try { var d = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData(); if (d && d.name && (d.slug || slugify(d.name)) === merchant()) return d.name; } catch (_) {}
+    return merchant();
+  }
   function paintSnapshot() {
     var status = document.getElementById && document.getElementById('kiwi-op-snapshot');
     if (!status || !operatorSnapshot) return;
@@ -1256,13 +1261,12 @@ import {} from './live-link/sale-identity.js?v=4';
       'invalid-feed': 'Réponse du journal invalide', 'invalid-sales': 'Ventes illisibles',
       timeout: 'Le serveur ne répond pas, réessayez', cursor: 'Pagination invalide', ledger: 'Journal local non vérifié', identity: 'Identité non confirmée',
       venue: 'Journal reçu · établissement en attente de résolution' };
-    var progress = s.pages + ' page(s) · ' + s.rows + ' écriture(s) reçue(s)'
-      + (s.pending ? ' · ' + s.pending + ' écriture(s) locale(s) en attente' : '');
+    var pending = s.pending ? ' · ' + s.pending + ' envoi(s) local(aux) en attente' : '';
     var message = s.phase === 'complete'
-      ? 'Instantané complet · ' + progress + ' · reçu le ' + new Date(s.completedAt).toLocaleString() + ' · hors direct'
-      : s.phase === 'loading' ? 'Chargement du journal · ' + progress + ' · chiffres indisponibles'
-        : (s.phase === 'incomplete' ? 'Instantané incomplet' : 'Échec du chargement') + ' · ' + (errors[s.error] || 'Journal indisponible') + ' · ' + progress + ' · chiffres indisponibles';
-    status.textContent = 'Client : ' + s.merchant + ' · historique autorisé servi par /api/feed · ' + message;
+      ? 'Chiffres du serveur à ' + new Date(s.completedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + ' · pas en direct' + pending
+      : s.phase === 'loading' ? 'Chargement des chiffres du serveur' + (s.rows ? ' · ' + s.rows + ' enregistrement(s) reçu(s)' : '') + ' · chiffres indisponibles'
+        : (s.phase === 'incomplete' ? 'Chiffres incomplets' : 'Échec du chargement') + ' · ' + (errors[s.error] || 'Serveur indisponible') + pending + ' · chiffres indisponibles';
+    status.textContent = shopName() + ' · ' + message;
     status.setAttribute('data-state', s.phase);
     status.setAttribute('aria-busy', String(s.phase === 'loading'));
   }
@@ -1280,7 +1284,7 @@ import {} from './live-link/sale-identity.js?v=4';
     var dot = el('span');
     dot.setAttribute('style', 'width:7px;height:7px;border-radius:50%;background:#7DF2B0');
     bar.appendChild(dot);
-    bar.appendChild(document.createTextNode('Vue opérateur · ' + merchant() + ' · données du client'));
+    bar.appendChild(document.createTextNode('Vue opérateur'));
     var status = el('span');
     status.id = 'kiwi-op-snapshot';
     status.setAttribute('role', 'status');
@@ -1288,7 +1292,7 @@ import {} from './live-link/sale-identity.js?v=4';
     status.setAttribute('aria-atomic', 'true');
     bar.appendChild(status);
     var back = el('a', null, 'Retour console ›');
-    back.setAttribute('href', '/kiwi-admin.html');
+    back.setAttribute('href', '/kiwi-admin#merchant/' + encodeURIComponent(merchant()) + '/summary');   // retour au dossier de ce client, pas à l'accueil de la console
     back.setAttribute('style', 'margin-inline-start:14px;color:#7DF2B0;text-decoration:none;font-weight:700');
     bar.appendChild(back);
     var refresh = el('button', null, 'Actualiser');

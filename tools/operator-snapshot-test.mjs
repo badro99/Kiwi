@@ -239,7 +239,12 @@ for (const pages of [[page()], [page([sale(1)])], [page(full()), page([sale(51)]
     assert.equal(h.selectors.get('[data-hero-amount]').attrs['aria-label'], undefined);
   }
   assert.equal(h.window.KiwiLive.status().backfillComplete, true); assert.equal(h.requests.length, pages.length);
-  assert.match(h.ids.get('kiwi-op-snapshot').textContent, /santos-store.*historique autorisé.*Instantané complet.*reçu le.*hors direct/);
+  /* Browse, 19 nov. 2026 : le bandeau parlait de « /api/feed », de pages et d'écritures, avec une date à l'américaine. */
+  const said = h.ids.get('kiwi-op-snapshot').textContent;
+  assert.match(said, /Chiffres du serveur à \d{2}:\d{2} · pas en direct/, said);
+  assert.doesNotMatch(said, /api\/feed|Client :|page\(s\)|écriture/, said);
+  const back = h.ids.get('kiwi-op-banner').children.find(c => c.attrs && c.attrs.href);
+  assert.equal(back.attrs.href, '/kiwi-admin#merchant/santos-store/summary', 'back to this client’s file in the console, not its home page');
   assert.ok(h.requests.at(-1).url.endsWith('since=' + (pages.length > 1 ? 50 : 0) + '&limit=500'));
   const copy = h.state(); copy.phase = 'error'; assert.equal(h.state().phase, 'complete', 'status is a copy');
   h.window.KiwiVenue.getVenue = () => 'other-venue'; assert.equal(r.pending(), true, 'different venue stays guarded');

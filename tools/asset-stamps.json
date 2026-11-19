@@ -284,8 +284,8 @@
     "sha": "2da470cdcee6759e"
   },
   "assets/caisse/catalogue.js": {
-    "v": "17",
-    "sha": "2d7b199a071d7b75"
+    "v": "18",
+    "sha": "d55631f17d548395"
   },
   "assets/caisse/closing.js": {
     "v": "2",
@@ -412,8 +412,8 @@
     "sha": "cda1fec60da40d32"
   },
   "assets/cloud-doc.js": {
-    "v": "19",
-    "sha": "67a5a50ceb94c559"
+    "v": "20",
+    "sha": "e22be7af801bc8b2"
   },
   "assets/color-palette.js": {
     "v": "7",
@@ -1216,8 +1216,8 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "128",
-    "sha": "b5c2ee96750f600b"
+    "v": "129",
+    "sha": "26311888505b0ff1"
   },
   "assets/live-link/queue-store.js": {
     "v": "24",

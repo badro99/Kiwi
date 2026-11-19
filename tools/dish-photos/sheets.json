@@ -1164,5 +1164,353 @@
    "sauce-piquante",
    "a small white ceramic ramekin filled with deep red harissa chili paste with a little olive oil"
   ]
+ ],
+ "s32": [
+  [
+   "brunch-veggie",
+   "brunch formula served on a small light wooden tray: open toast with creamy stracciatella, mini mozzarella balls and green pesto, a small glass of fresh orange juice and a cup of coffee"
+  ],
+  [
+   "brunch-gourmand",
+   "brunch formula served on a small light wooden tray: a croissant filled with scrambled eggs, smoked ham and guacamole, a small glass of orange juice and a cup of coffee"
+  ],
+  [
+   "brunch-nordique",
+   "brunch formula served on a small light wooden tray: toast with smoked salmon, eggs benedict with hollandaise and guacamole, a small glass of orange juice and a cup of coffee"
+  ],
+  [
+   "brunch-boeuf",
+   "brunch formula served on a small light wooden tray: toast with sliced beef ham, a breaded soft-boiled egg cut open with a runny yolk, lemony cheese sauce, a small glass of orange juice and a cup of coffee"
+  ],
+  [
+   "petit-dej-marocain",
+   "Moroccan breakfast served on a small light wooden tray: msemen and baghrir, small bowls of honey, amlou and black olives, a glass of mint tea"
+  ],
+  [
+   "petit-dej-continental",
+   "continental breakfast served on a small light wooden tray: a croissant, a piece of baguette, butter and jam in small pots, a small glass of orange juice and a coffee"
+  ],
+  [
+   "petit-dej-sante",
+   "healthy breakfast served on a small light wooden tray: a yogurt bowl with granola and fresh fruit, a slice of avocado toast, a small glass of green juice"
+  ],
+  [
+   "pain-perdu",
+   "thick slices of French toast topped with caramelised pear and caramel sauce on a plate"
+  ],
+  [
+   "banana-bread",
+   "slices of moist banana bread from a loaf, with half a banana beside them"
+  ]
+ ],
+ "s33": [
+  [
+   "latte-vert",
+   "a latte in a clear glass, pale green colour from matcha and moringa, foam on top"
+  ],
+  [
+   "latte-ube",
+   "a latte in a clear glass, vivid purple colour from ube purple sweet potato, foam on top"
+  ],
+  [
+   "latte-bleu",
+   "a latte in a clear glass, sky blue colour from blue spirulina and coconut, foam on top"
+  ],
+  [
+   "latte-dore",
+   "a golden latte in a clear glass, bright yellow from turmeric, a slice of fresh ginger beside it"
+  ],
+  [
+   "latte-rose",
+   "a latte in a clear glass, pink colour from beetroot and raw cacao, foam on top"
+  ],
+  [
+   "latte-citrouille",
+   "a pumpkin latte in a clear glass, orange colour, dusted with cinnamon, a small roasted butternut piece beside it"
+  ],
+  [
+   "latte-cacao",
+   "a raw cacao latte in a clear glass, deep chocolate brown, a few cacao beans beside it"
+  ],
+  [
+   "flat-white",
+   "a flat white in a small white ceramic cup with saucer and a rosetta latte art"
+  ],
+  [
+   "cortado",
+   "a cortado in a small short glass, half espresso half steamed milk, on a small saucer"
+  ]
+ ],
+ "s34": [
+  [
+   "latte-caramel",
+   "a latte in a clear glass topped with salted caramel drizzle and a few flakes of salt"
+  ],
+  [
+   "latte-speculoos",
+   "a latte in a clear glass topped with whipped cream and crushed spiced caramelised biscuit, one plain biscuit with a scalloped edge beside it, the biscuit has no letters, no words and no embossed text"
+  ],
+  [
+   "latte-creme-brulee",
+   "a latte in a white cup topped with a caramelised crackled sugar crust like a creme brulee"
+  ],
+  [
+   "latte-tiramisu",
+   "a latte in a clear glass topped with mascarpone foam dusted with cocoa, a ladyfinger biscuit beside it"
+  ],
+  [
+   "latte-red-velvet",
+   "a red velvet latte in a clear glass, soft red colour, topped with cream cheese foam and red crumbs"
+  ],
+  [
+   "latte-popcorn",
+   "a latte in a clear glass topped with whipped cream and caramel popcorn"
+  ],
+  [
+   "matcha-coco",
+   "an iced matcha latte in a tall clear glass with coconut milk, toasted coconut flakes on top"
+  ],
+  [
+   "matcha-mangue",
+   "an iced matcha latte in a tall clear glass layered over bright mango puree at the bottom"
+  ],
+  [
+   "matcha-fraise",
+   "an iced matcha latte in a tall clear glass layered over red strawberry puree at the bottom"
+  ]
+ ],
+ "s35": [
+  [
+   "matcha-pumpkin",
+   "a hot matcha latte in a white cup with a pumpkin spice dusting and a cinnamon stick"
+  ],
+  [
+   "the-vert",
+   "a clear glass cup of light green tea with a few green tea leaves beside it"
+  ],
+  [
+   "the-jasmin",
+   "a clear glass cup of green tea with white jasmine flowers floating and beside it"
+  ],
+  [
+   "the-gingembre-citron",
+   "a clear glass cup of tea with fresh ginger slices and a lemon wheel"
+  ],
+  [
+   "chai",
+   "a chai masala latte in a ceramic cup with cinnamon sticks, star anise and cardamom beside it"
+  ],
+  [
+   "camomille",
+   "a clear glass cup of chamomile infusion with small chamomile flowers beside it"
+  ],
+  [
+   "rooibos",
+   "a clear glass cup of red rooibos tea with a strawberry and a vanilla pod beside it"
+  ],
+  [
+   "mocha",
+   "a mocha in a clear glass with whipped cream, chocolate sauce and crushed dark chocolate cookie crumbs"
+  ],
+  [
+   "the-glace-mangue",
+   "a tall glass of iced tea with mango cubes and ice"
+  ]
+ ],
+ "s36": [
+  [
+   "pina-colada",
+   "a non-alcoholic pina colada in a tall glass, creamy pineapple and coconut, a pineapple wedge on the rim"
+  ],
+  [
+   "the-glace-poire",
+   "a tall glass of iced tea with pear slices, ice and a mint leaf"
+  ],
+  [
+   "citron-gingembre",
+   "a glass of lemon ginger juice with a lemon half and a piece of ginger root beside it"
+  ],
+  [
+   "smoothie-coco",
+   "a creamy white coconut smoothie in a tall glass with half a coconut beside it"
+  ],
+  [
+   "smoothie-vert",
+   "a green smoothie in a tall glass with kiwi, apple and spinach beside it"
+  ],
+  [
+   "milkshake-caramel",
+   "a caramel milkshake in a tall glass with whipped cream, caramel drizzle and a piece of caramel cake on top"
+  ],
+  [
+   "milkshake-chocolat-banane",
+   "a chocolate banana milkshake in a tall glass with whipped cream and banana slices"
+  ],
+  [
+   "milkshake-oreo",
+   "a vanilla cookies and cream milkshake in a tall glass with whipped cream and dark chocolate sandwich cookie pieces"
+  ],
+  [
+   "milkshake-framboise",
+   "a pink raspberry milkshake in a tall glass with whipped cream and fresh raspberries"
+  ]
+ ],
+ "s37": [
+  [
+   "milkshake-brownie",
+   "a chocolate milkshake in a tall glass with whipped cream and brownie chunks on top"
+  ],
+  [
+   "brookie",
+   "a brookie bar, half fudgy brownie half chocolate chip cookie baked together"
+  ],
+  [
+   "brookie-cacahuete",
+   "a brookie bar swirled with peanut butter, a few peanuts beside it"
+  ],
+  [
+   "cookie-pistache",
+   "a thick cookie stuffed with green pistachio cream and crispy kunafa strands, broken open"
+  ],
+  [
+   "cookie-speculoos",
+   "a thick cookie with speculoos spread and crushed speculoos biscuit on top"
+  ],
+  [
+   "cookie-bueno",
+   "a thick cookie topped with hazelnut cream and pieces of crispy hazelnut wafer bar"
+  ],
+  [
+   "cookie-bueno-chocolat",
+   "a dark chocolate cookie topped with hazelnut cream and crispy hazelnut wafer pieces"
+  ],
+  [
+   "cheesecake-basque",
+   "a slice of burnt Basque cheesecake with a dark caramelised top and creamy centre"
+  ],
+  [
+   "cheesecake-oreo",
+   "a slice of cookies and cream cheesecake with dark chocolate cookie crumbs and a cookie on top"
+  ]
+ ],
+ "s38": [
+  [
+   "cheesecake-speculoos",
+   "a slice of cheesecake with a speculoos biscuit base and speculoos spread on top"
+  ],
+  [
+   "gateau-miel",
+   "a slice of layered honey cake with thin golden layers and cream"
+  ],
+  [
+   "gateau-sunset",
+   "a slice of layered sunset cake with orange and pink layers of mango and passion fruit"
+  ],
+  [
+   "gateau-matilda",
+   "a slice of rich dark chocolate fudge cake with glossy chocolate frosting"
+  ],
+  [
+   "carrot-cake",
+   "a slice of carrot cake with cream cheese frosting and walnuts"
+  ],
+  [
+   "pancakes-chocolat",
+   "two chocolate pancakes with chocolate sauce and fresh fruit"
+  ],
+  [
+   "pancakes-fruits-rouges",
+   "a stack of pancakes with red berries and a drizzle of syrup"
+  ],
+  [
+   "crepe-nutella-banane",
+   "a folded crepe filled with hazelnut chocolate spread and banana slices"
+  ],
+  [
+   "crepe-lotus",
+   "a folded crepe with caramel biscuit spread and crushed caramelised biscuits"
+  ]
+ ],
+ "s39": [
+  [
+   "crepe-bueno",
+   "a folded crepe with hazelnut cream, milk chocolate drizzle and crispy hazelnut wafer pieces"
+  ],
+  [
+   "crepe-pistache",
+   "a folded crepe with green pistachio cream and chopped pistachios"
+  ],
+  [
+   "crepe-dubai",
+   "a folded crepe with chocolate and green pistachio kunafa filling, crispy kunafa strands visible"
+  ],
+  [
+   "crepe-oreo",
+   "a folded crepe with vanilla cream and crushed dark chocolate sandwich cookies"
+  ],
+  [
+   "mini-pancakes-nutella",
+   "a small bowl of fluffy mini pancakes drizzled with hazelnut chocolate spread"
+  ],
+  [
+   "mini-pancakes-lotus",
+   "a small bowl of fluffy mini pancakes with caramel biscuit spread and crushed biscuits"
+  ],
+  [
+   "mini-pancakes-bueno",
+   "a small bowl of fluffy mini pancakes with hazelnut cream and crispy hazelnut wafer pieces"
+  ],
+  [
+   "mini-pancakes-oreo",
+   "a small bowl of fluffy mini pancakes with vanilla cream and crushed dark chocolate sandwich cookies"
+  ],
+  [
+   "mini-pancakes-pistache",
+   "a small bowl of fluffy mini pancakes with green pistachio cream and chopped pistachios"
+  ]
+ ],
+ "s40": [
+  [
+   "mini-pancakes-dubai",
+   "a small bowl of fluffy mini pancakes with chocolate and green pistachio kunafa"
+  ],
+  [
+   "mini-pancakes-caramel",
+   "a small bowl of fluffy mini pancakes with salted caramel sauce"
+  ],
+  [
+   "mini-pancakes-kinder",
+   "a small bowl of fluffy mini pancakes with white milk cream and milk chocolate drizzle"
+  ],
+  [
+   "mini-pancakes-brownie",
+   "a small bowl of fluffy mini pancakes with chocolate sauce and brownie pieces"
+  ],
+  [
+   "crepes-francaises",
+   "two plain French crepes folded in quarters, dusted with sugar, a lemon wedge beside them"
+  ],
+  [
+   "cold-brew",
+   "a tall glass of iced cold brew coffee with ice cubes"
+  ],
+  [
+   "iced-latte",
+   "a tall glass of iced latte with milk swirling into coffee and ice cubes"
+  ],
+  [
+   "espresso-tonic",
+   "a tall glass of espresso tonic, coffee floating over sparkling tonic with ice and an orange slice"
+  ],
+  [
+   "matcha-glace",
+   "a tall glass of plain iced matcha latte, green over white milk with ice"
+  ]
+ ],
+ "f41": [
+  [
+   "latte-speculoos",
+   "a latte in a clear glass topped with whipped cream and crushed spiced caramelised biscuit, one plain biscuit with a scalloped edge beside it, the biscuit has no letters, no words and no embossed text"
+  ]
  ]
 }

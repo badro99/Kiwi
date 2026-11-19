@@ -136,15 +136,15 @@ const traps = [
 ];
 for (const [name, want] of traps) eq(key('it_x', 'x', name), want, `« ${name} » shows ${want}`);
 
-// What the published menus (25 October 2026) taught: the subcategory speaks
+// What the published menus (25 October 2026) taught (Browse's own pictures since 19 November): the subcategory speaks
 // when the name only names a flavour, and a drink shelf beats a food name.
 const shelved = [
-  ['Brownie & Chocolate', 'Milkshake', 'milkshake'], ['Caramel cookie', 'B Frappé', 'milkshake'],
-  ['Mocca Cake', 'Black tea', 'the-noir'], ['Chocolat Banane', 'B Frappé', 'milkshake'],
-  ['Coconut Kiss', 'Smoothies', 'smoothie'], ['Le Nordique', 'All Day Brunch', 'petit-dejeuner'],
+  ['Brownie & Chocolate', 'Milkshake', 'milkshake-brownie'], ['Caramel cookie', 'B Frappé', 'milkshake-caramel'],
+  ['Mocca Cake', 'Black tea', 'the-noir'], ['Chocolat Banane', 'B Frappé', 'milkshake-chocolat-banane'],
+  ['Coconut Kiss', 'Smoothies', 'smoothie-coco'], ['Le Nordique', 'All Day Brunch', 'brunch-nordique'],
   ['Smash Bacon', 'Smash Burgers', 'burger'], ['Rosa Pomodoro', 'Sauce', 'pasta'],
-  ['Tiramisu latte', 'Signatures', 'latte'], ['Kinder Bueno Crêpe', 'Crêpes', 'crepe'],
-  ['Brownie Mini Pancakes', 'Mini Pancakes', 'pancakes'], ['Tacos Cordon Bleu', '', 'tacos'],
+  ['Tiramisu latte', 'Signatures', 'latte-tiramisu'], ['Kinder Bueno Crêpe', 'Crêpes', 'crepe-bueno'],
+  ['Brownie Mini Pancakes', 'Mini Pancakes', 'mini-pancakes-brownie'], ['Tacos Cordon Bleu', '', 'tacos'],
   ['Œufs bénédicte', '', 'oeufs-benedicte'], ['Spaghetti Fruits de Mer', '', 'pasta'],
   ['Crispy Fried Chicken Burger', 'Burger', 'chicken-burger'], ['Salmon Bagel', 'Sandwich', 'bagel'],
   ['Tiramisu', 'Desserts', 'tiramisu'], ['Cheese burger', 'Menu Enfants', 'cheeseburger']

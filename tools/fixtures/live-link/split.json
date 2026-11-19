@@ -11,7 +11,7 @@
           "concern": "allumage, mode et commerçant résolu",
           "lines": [
             1,
-            194
+            206
           ],
           "declares": [
             "LS",
@@ -29,8 +29,8 @@
           "file": "assets/live-link/parts/signals.js",
           "concern": "affichage, réveil entre onglets, signal d'argent",
           "lines": [
-            195,
-            270
+            207,
+            277
           ],
           "declares": [
             "SALE_COPY",
@@ -48,8 +48,8 @@
           "file": "assets/live-link/parts/outbox.js",
           "concern": "file d'envoi des ventes : statut, identité, reprise, requêtes d'argent",
           "lines": [
-            271,
-            570
+            278,
+            578
           ],
           "declares": [
             "saleQueue",
@@ -86,8 +86,8 @@
           "file": "assets/live-link/parts/feed.js",
           "concern": "lecture du flux et instantanés",
           "lines": [
-            571,
-            904
+            579,
+            912
           ],
           "declares": [
             "FAST_MS",
@@ -106,8 +106,8 @@
           "file": "assets/live-link/parts/ledger-bridge.js",
           "concern": "annulations, cumul du flux, pont vers les ventes du tableau de bord",
           "lines": [
-            905,
-            1157
+            913,
+            1165
           ],
           "declares": [
             "lastSync",
@@ -129,14 +129,15 @@
           "file": "assets/live-link/parts/operator.js",
           "concern": "pompe et bandeau de la vue opérateur, surveillance des annulations",
           "lines": [
-            1158,
-            1373
+            1166,
+            1385
           ],
           "declares": [
             "pumping",
             "snapshotVenue",
             "verifySnapshotLedger",
             "initPump",
+            "shopName",
             "paintSnapshot",
             "initOperatorBanner",
             "opSkipLock",
@@ -148,8 +149,8 @@
           "file": "assets/live-link/parts/boot.js",
           "concern": "démarrage et interface publique",
           "lines": [
-            1374,
-            1557
+            1386,
+            1569
           ],
           "declares": [
             "boot",

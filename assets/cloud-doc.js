@@ -211,6 +211,17 @@
     } catch (_) { return ''; }
   }
 
+  /* La vue opérateur (console → caisse ?op=1, ou tableau de bord en vue portée)
+   * regarde le commerce d'un AUTRE. Ce que ce navigateur garde de lui en local
+   * est un cache d'une visite précédente, pas du travail : Browse, 19 nov. 2026,
+   * un plan de salle d'août fusionné puis repoussé a remplacé celui que l'équipe
+   * venait de dessiner (tools/cloud-doc-operator-test.mjs). */
+  function operatorLooking(slug) {
+    if (!slug) return false;
+    try { if (window.sessionStorage && window.sessionStorage.getItem('kiwi:tillOperator:v1') === slug) return true; } catch (_) {}
+    return scopedSlug() === slug;
+  }
+
   function isReal() {
     try {
       if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
@@ -631,9 +642,9 @@
           var theirsEmpty = empty(theirs);
 
           if (theirsEmpty) {
-            // Rien en ligne : c'est ce navigateur qui fait référence.
+            // Rien en ligne : c'est ce navigateur qui fait référence (sauf en vue opérateur).
             setRevOf(slug, serverRev);
-            if (!mineEmpty) push(0);
+            if (!mineEmpty && !operatorLooking(slug)) push(0);
             return false;
           }
           setRevOf(slug, serverRev);
@@ -645,7 +656,11 @@
             return false;
           }
 
-          var adopt = first && mineEmpty, pendingTok = dirtyToken(slug);
+          /* Vue opérateur, copie locale en retard : on prend le serveur tel quel,
+             on ne remonte rien, et les marques d'une ancienne visite tombent. */
+          var operatorCache = operatorLooking(slug) && readRev(slug) !== serverRev;
+          if (operatorCache) { clearDirty(slug); clearRefused(slug); }
+          var adopt = (first && mineEmpty) || operatorCache, pendingTok = dirtyToken(slug);
           var next = adopt ? theirs : merge(mine, theirs);
           /* La fusion n'apporte rien que le serveur n'ait déjà (seul l'ordre change) :
              on prend sa copie telle quelle et on ne remonte rien. Une saisie locale

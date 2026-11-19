@@ -13,6 +13,12 @@ Turkish, Spanish, Asian and Indian dishes, latte, bubble tea, lemonade,
 karantika, medfouna, berkoukes): 267 in all.
 On 2 November 2026 sheet `s31` added nine sauces in a ramekin (white, mushroom,
 cheese, mayonnaise, algérienne, barbecue, green, tomato, harissa): 276 in all.
+On 19 November 2026 sheets `s32`…`s40` added 81 café pictures for Browse's
+menu, one per item (brunch trays, coloured and flavoured lattes, matcha, teas,
+milkshakes, cookies, cakes, crêpes, mini pancakes); `f41` redrew the speculoos
+latte without the brand lettering on its biscuit. A drink sub-category now keeps
+the flavour of the name (« Caramel cookie » under « B Frappé » is a caramel
+milkshake). `tools/browse-menu-art-test.mjs` runs Browse's real card. 357 in all.
 
 ## A merchant's own photos
 
