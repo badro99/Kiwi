@@ -46,6 +46,8 @@ function world(vertical) {
     // The recipient form of a delivery part is a browser edge: it submits a
     // filled card at once, and the real done() → settle() books the money.
     bqDeliveryCard:(el,o)=>o.done({...DELIVERY_CARD}),mzDeliveryCard:(el,o)=>o.done({...DELIVERY_CARD},{}),
+    // The drawer pulse is hardware (pos-maison/drawer.js, tools/maison-drawer-test.mjs): recorded, never sent.
+    mzKickForCash:(parts)=>{events.push(['drawer',parts.some(p=>p.m==='espèces')]);return Promise.resolve(null);},
     retainDays:()=>7,windowDays:()=>7,outsideWindow:()=>false,ozonConnected:()=>false,ozonCities:()=>[],clById:id=>({id,name:'Test'}),
   });c.window=c;c.KiwiLive={saleIdFor:({id})=>id};
   // The real shared modules of the till (exports stripped), not stubs: the paid-share allocation and the till clock.

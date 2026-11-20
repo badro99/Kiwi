@@ -187,7 +187,10 @@
     this._st.w = wm + 1; this._st.h = hm + 1;
     return this.raw([GS, 0x21, (wm << 4) | hm]);
   };
-  Builder.prototype.drawer = function () { return this.raw([ESC, 0x70, 0x00, 0x19, 0xFA]); };    // kick pin 2
+  /* Le tiroir se branche sur la broche 2 ou la broche 5 du connecteur RJ11 de
+     l'imprimante, selon le câble. On envoie l'impulsion aux deux, comme le font
+     les caisses du marché : un tiroir câblé sur la 5 ne s'ouvrait jamais. */
+  Builder.prototype.drawer = function () { return this.raw([ESC, 0x70, 0x00, 0x19, 0xFA, ESC, 0x70, 0x01, 0x19, 0xFA]); };    // kick pins 2 and 5
   Builder.prototype.cut = function () { return this.feed(5).raw([GS, 0x56, 0x00]); };            // feed + full cut
   Builder.prototype.cutNow = function () { return this.raw([GS, 0x56, 0x00]); };                  // full cut, no receipt feed
 
