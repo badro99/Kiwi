@@ -37,6 +37,7 @@
 // et attend le même geste humain qu'une commande au comptoir.
 
 import { json } from '../../../auth/_lib.js';
+import { loadParts, packCatalog, runCatalogWrite } from '../../_catalog-parts.js';
 import { startOfWeek } from '../../order/_lib.js';
 import { merchantZone } from '../../_business-day.js';
 import { __test as catalogFns } from '../../catalog.js';
@@ -250,7 +251,8 @@ async function applyShopifyOrderStock(env, merchant, order) {
   if (!links.size) return { applied: 0, unmatched: lines.length };
 
   for (let attempt = 0; attempt < 4; attempt++) {
-    const row = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first().catch(() => null);
+    const row = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first()
+      .then((r) => loadParts(env.DB, merchant, r)).catch(() => null);
     if (!row || !row.data) return { applied: 0, unmatched: lines.length };
     let data, rawData;
     try { rawData = JSON.parse(row.data); } catch (_) { return { applied: 0, unmatched: lines.length }; }
@@ -296,9 +298,10 @@ async function applyShopifyOrderStock(env, merchant, order) {
     if (!applied) return { applied: 0, unmatched, short };
     catalogFns.materialize(data);
     const next = Number(row.rev || 0) + 1;
-    const write = await env.DB.prepare(
+    const packed = packCatalog(data);
+    const write = await runCatalogWrite(env.DB, merchant, packed, env.DB.prepare(
       `UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?`
-    ).bind(JSON.stringify(data), next, Date.now(), merchant, Number(row.rev || 0)).run().catch(() => null);
+    ).bind(packed.head, next, Date.now(), merchant, Number(row.rev || 0)), row.split).catch(() => null);
     if (write && write.meta && Number(write.meta.changes) === 1) return { applied, unmatched, short };
   }
   return { applied: 0, unmatched: lines.length };

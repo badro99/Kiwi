@@ -28,6 +28,7 @@
 // parcourt l'inventaire d'un frère que l'opérateur a lié, rien d'autre.
 
 import { json } from '../auth/_lib.js';
+import { loadParts } from './_catalog-parts.js';
 import { tenantFor } from './_private.js';
 import { materialize } from './_rules-catalog.js';
 import { catalogFamily } from './_catalog-family.js';
@@ -113,7 +114,7 @@ export async function onRequestGet(context) {
   if (!sib) return json({ error: 'not-linked' }, 403, headers);
   let row = null;
   try {
-    row = await env.DB.prepare('SELECT data, updated_ts FROM catalogs WHERE merchant = ?').bind(store).first();
+    row = await loadParts(env.DB, store, await env.DB.prepare('SELECT data, updated_ts FROM catalogs WHERE merchant = ?').bind(store).first());
   } catch (_) { return json({ ok: true, store: sib, known: false, products: [], variants: [] }, 200, headers); }
   if (!row || !row.data) return json({ ok: true, store: sib, known: false, products: [], variants: [] }, 200, headers);
   let raw = null;

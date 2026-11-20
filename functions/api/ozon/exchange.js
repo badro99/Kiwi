@@ -33,6 +33,7 @@
 //     still holds its stock (_delivery-stock.js), its confirmation later takes
 //     the old piece out once, so the count still ends right.
 import { exactMerchant, json, readAccount, cities } from './_lib.js';
+import { loadParts } from '../_catalog-parts.js';
 import { sendParcel, clean, PHONE_RE, customerFeeCents } from './parcels.js';
 import { owedCents } from '../receivables.js';  // readExchanges lives there too: the list reads it
 import { readDeliveryCards } from '../_delivery-card.js';
@@ -127,7 +128,8 @@ export async function onRequestPost({ request, env }) {
   const raw = Array.isArray(b.swaps) ? b.swaps : [];
   if (!raw.length || raw.length > MAX_SWAPS) return json({ error: 'bad-swaps' }, 400);
 
-  const catRow = await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first();
+  let catRow = await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first();
+  try { catRow = await loadParts(env.DB, merchant, catRow); } catch (_) { catRow = null; }
   let cat = null;
   try { cat = catalogFns.sanitize(JSON.parse(catRow && catRow.data || 'null')); catalogFns.materialize(cat); } catch (_) { cat = null; }
   if (!cat) return json({ error: 'no-catalog' }, 409);

@@ -473,6 +473,9 @@ export async function onRequestDelete(context) {
         { table: 'support_attachments', sql: 'SELECT COUNT(*) AS n FROM support_attachments WHERE merchant = ?', args: [merchant] },
         { table: 'menus', sql: 'SELECT COUNT(*) AS n FROM menus WHERE merchant = ? AND (instr(data, ?) > 0 OR instr(data, ?) > 0)', args: [merchant, ...mediaNeedles] },
         { table: 'catalogs', sql: 'SELECT COUNT(*) AS n FROM catalogs WHERE merchant = ? AND (instr(data, ?) > 0 OR instr(data, ?) > 0)', args: [merchant, ...mediaNeedles] },
+        /* Un grand catalogue range ses articles dans catalog_parts (_catalog-parts.js) :
+           une photo référencée là est tout autant en usage. */
+        { table: 'catalog_parts', sql: 'SELECT COUNT(*) AS n FROM catalog_parts WHERE merchant = ? AND (instr(data, ?) > 0 OR instr(data, ?) > 0)', args: [merchant, ...mediaNeedles] },
         { table: 'store_docs', sql: 'SELECT COUNT(*) AS n FROM store_docs WHERE merchant = ? AND (instr(data, ?) > 0 OR instr(data, ?) > 0)', args: [merchant, ...mediaNeedles] },
       ];
       const pending = {};

@@ -14,6 +14,7 @@
 // réservation de stock et le décompte n'ont pas une ligne à changer.
 
 import { mergeDocs, materialize } from './_rules-catalog.js';
+import { loadParts, packCatalog, runCatalogWrite } from './_catalog-parts.js';
 
 const SHARED = 'sharedCatalog';
 const shares = (features) => {
@@ -75,7 +76,8 @@ export async function seedFromFamily(env, merchant, family, sanitize) {
   let source = null;
   for (const m of family.members) {
     if (m === merchant) continue;
-    const r = await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(m).first();
+    let r = null;
+    try { r = await loadParts(env.DB, m, await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(m).first()); } catch (_) { continue; }
     if (!r || !r.data) continue;
     let d; try { d = sanitize(JSON.parse(r.data)); } catch (_) { continue; }
     if (!source || (d.products || []).length > (source.products || []).length) source = d;
@@ -83,9 +85,10 @@ export async function seedFromFamily(env, merchant, family, sanitize) {
   if (!source) return null;
   const data = sanitize(materialize(mergeDocs(blank(), definitionsOf(source), Date.now()).doc));
   const now = Date.now();
-  await env.DB.prepare('INSERT OR IGNORE INTO catalogs (merchant, data, rev, updated_ts) VALUES (?, ?, 1, ?)')
-    .bind(merchant, JSON.stringify(data), now).run();
-  const r = await env.DB.prepare('SELECT data, rev, updated_ts FROM catalogs WHERE merchant = ?').bind(merchant).first();
+  const packed = packCatalog(data);
+  await runCatalogWrite(env.DB, merchant, packed, env.DB.prepare('INSERT OR IGNORE INTO catalogs (merchant, data, rev, updated_ts) VALUES (?, ?, 1, ?)')
+    .bind(merchant, packed.head, now), false);
+  const r = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data, rev, updated_ts FROM catalogs WHERE merchant = ?').bind(merchant).first());
   if (!r) return null;
   let out = null; try { out = sanitize(JSON.parse(r.data)); } catch (_) {}
   return { data: out, rev: Number(r.rev) || 0, updated_ts: Number(r.updated_ts) || 0 };
@@ -104,7 +107,8 @@ export async function syncFamily(env, merchant, data, sanitize) {
     if (m === merchant) continue;
     for (let attempt = 0; attempt < 4; attempt++) {
       const defs = definitionsOf(data);   // mergeDocs garde les objets reçus : une copie par écriture
-      const r = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(m).first();
+      let r;
+      try { r = await loadParts(env.DB, m, await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(m).first()); } catch (_) { break; }
       let mine = blank();
       if (r && r.data) { try { mine = sanitize(JSON.parse(r.data)); } catch (_) { break; } }
       const { doc, ahead } = mergeDocs(mine, defs, Date.now());
@@ -115,11 +119,12 @@ export async function syncFamily(env, merchant, data, sanitize) {
       const next = sanitize(materialize(doc));
       const rev = (Number(r && r.rev) || 0) + 1;
       const now = Date.now();
+      const packed = packCatalog(next);
       const write = r
-        ? await env.DB.prepare('UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?')
-          .bind(JSON.stringify(next), rev, now, m, Number(r.rev) || 0).run()
-        : await env.DB.prepare('INSERT OR IGNORE INTO catalogs (merchant, data, rev, updated_ts) VALUES (?, ?, ?, ?)')
-          .bind(m, JSON.stringify(next), rev, now).run();
+        ? await runCatalogWrite(env.DB, m, packed, env.DB.prepare('UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?')
+          .bind(packed.head, rev, now, m, Number(r.rev) || 0), r.split)
+        : await runCatalogWrite(env.DB, m, packed, env.DB.prepare('INSERT OR IGNORE INTO catalogs (merchant, data, rev, updated_ts) VALUES (?, ?, ?, ?)')
+          .bind(m, packed.head, rev, now), false);
       if (write && write.meta && Number(write.meta.changes) === 1) { synced.push(m); break; }
     }
   }

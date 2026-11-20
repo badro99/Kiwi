@@ -11,6 +11,7 @@
 //   · POST /api/inventory/counts (action=review/approve/reject/request-correction) → Décision propriétaire
 
 import { json, entitledMerchant } from '../../auth/_lib.js';
+import { loadParts, packCatalog, runCatalogWrite } from '../_catalog-parts.js';
 import { tenantFor } from '../_private.js';
 import { resolveInventoryUnitScope, scopeSql } from './_unit-scope.js';
 
@@ -453,9 +454,9 @@ export async function onRequestPost({ request, env }) {
        * présents, une reprise après erreur ne double donc jamais le stock. */
       let catRow = null;
       try {
-        catRow = await env.DB.prepare(
+        catRow = await loadParts(env.DB, merchant, await env.DB.prepare(
           `SELECT data, rev FROM catalogs WHERE merchant = ?`
-        ).bind(merchant).first();
+        ).bind(merchant).first());
       } catch (_) {
         return json({ error: 'catalog-unreadable' }, 503);
       }
@@ -484,9 +485,10 @@ export async function onRequestPost({ request, env }) {
         const prevRev = num(catRow.rev) || 0;
         let applied = null;
         try {
-          applied = await env.DB.prepare(
+          const packed = packCatalog(catalog);
+          applied = await runCatalogWrite(env.DB, merchant, packed, env.DB.prepare(
             `UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?`
-          ).bind(JSON.stringify(catalog), prevRev + 1, nowMs, merchant, prevRev).run();
+          ).bind(packed.head, prevRev + 1, nowMs, merchant, prevRev), catRow.split);
         } catch (_) { applied = null; }
         if (!applied || !applied.meta || !applied.meta.changes) {
           return json({ error: 'catalog-conflict' }, 409);
@@ -579,7 +581,7 @@ export async function onRequestPost({ request, env }) {
   let boutiqueStockMap = new Map();
   if (engine === 'boutique' || engine === 'maison') {
     try {
-      const catRow = await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first();
+      const catRow = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first());
       if (catRow && catRow.data) {
         const cat = JSON.parse(catRow.data);
         /* Le stock d'une déclinaison se dérive comme dans le catalogue

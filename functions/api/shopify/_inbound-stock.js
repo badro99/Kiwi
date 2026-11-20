@@ -5,6 +5,8 @@
  * avec l'attente qui monte jusqu'à une heure (≈ 14 h au total), elle passe en
  * « dead » et le panneau de santé du connecteur la signale pour un traitement
  * manuel. Le stock n'a jamais été touché pour la ligne en cause. */
+import { loadParts } from '../_catalog-parts.js';
+
 export const INBOUND_MAX_ATTEMPTS = 20;
 
 async function ensure(db) {
@@ -69,7 +71,7 @@ export async function flushInboundStock(env, apply, merchant = '', ref = '', lim
 export async function retryDeadInboundStock(env, merchant) {
   const rows = await env.DB.prepare("SELECT order_ref, payload FROM shopify_inbound_stock WHERE merchant = ? AND status = 'dead'").bind(merchant).all();
   const links = await env.DB.prepare("SELECT shopify_variant_id, kiwi_variant_id FROM shopify_variant_links WHERE merchant = ? AND status IN ('active','drift')").bind(merchant).all();
-  const catalog = await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first();
+  const catalog = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first());
   const data = JSON.parse(catalog?.data || '{}');
   const variants = new Set((data.variants || []).map(v => String(v.id)));
   const mapped = new Map((links.results || []).map(l => [String(l.shopify_variant_id), String(l.kiwi_variant_id)]));

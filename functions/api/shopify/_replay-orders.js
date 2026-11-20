@@ -25,6 +25,7 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import { __test as catalogFns } from '../catalog.js';
+import { loadParts, packCatalog, runCatalogWrite } from '../_catalog-parts.js';
 import { shopifyGraphQL } from './_lib.js';
 import { saleMoveId } from './_move-ids.js';
 
@@ -231,7 +232,7 @@ async function replayBatch(env, merchant, { sinceTs, dryRun } = {}) {
   };
 
   for (let attempt = 0; attempt < 4; attempt++) {
-    const row = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first();
+    const row = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first());
     if (!row || !row.data) throw new Error('catalog-missing');
     const raw = JSON.parse(row.data);
     const journal = Array.isArray(raw.moves) ? raw.moves.length : 0;
@@ -264,9 +265,10 @@ async function replayBatch(env, merchant, { sinceTs, dryRun } = {}) {
     }
     catalogFns.materialize(data);
     const next = Number(row.rev || 0) + 1;
-    const write = await env.DB.prepare(
+    const packed = packCatalog(data);
+    const write = await runCatalogWrite(env.DB, merchant, packed, env.DB.prepare(
       `UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?`
-    ).bind(JSON.stringify(data), next, Date.now(), merchant, Number(row.rev || 0)).run();
+    ).bind(packed.head, next, Date.now(), merchant, Number(row.rev || 0)), row.split);
     if (write && write.meta && Number(write.meta.changes) === 1) {
       await keepCursor(plan);
       return { ...summary, applied: plan.apply.length, dryRun: false };

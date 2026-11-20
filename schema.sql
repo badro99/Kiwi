@@ -793,6 +793,19 @@ CREATE TABLE IF NOT EXISTS catalogs (
   updated_ts INTEGER NOT NULL
 );
 
+-- Un catalogue au-delà de 1,5 Mo ne tient plus dans une valeur D1 (2 Mo max).
+-- Ses listes products / variants / moves sont alors réparties ici, en parts
+-- d'éléments entiers ; la ligne `catalogs` garde une tête qui désigne la
+-- génération courante. Voir functions/api/_catalog-parts.js. Les petits
+-- catalogues ne lisent ni n'écrivent jamais cette table.
+CREATE TABLE IF NOT EXISTS catalog_parts (
+  merchant TEXT NOT NULL,       -- slugMerchant, comme catalogs.merchant
+  gen      TEXT NOT NULL,       -- génération : celle que la tête désigne est la bonne
+  part     INTEGER NOT NULL,    -- 0…n-1, dans l'ordre du document
+  data     TEXT NOT NULL,       -- {"k":"products|variants|moves","items":[…]}
+  PRIMARY KEY (merchant, gen, part)
+);
+
 -- ── LES AUTRES DONNÉES D'UN ÉTABLISSEMENT (carte, équipe, fidélité, plan…) ───
 -- L'inventaire d'une boutique a eu sa copie serveur (table `catalogs`). Tout le
 -- reste de ce qu'un commerçant configure vivait encore UNIQUEMENT dans le

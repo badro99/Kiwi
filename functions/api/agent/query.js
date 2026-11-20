@@ -1,5 +1,6 @@
 import { authorize, body, response, text } from './_core.js';
 import { businessBoundary, addBusinessDays, merchantZone, merchantCutoff } from '../_business-day.js';
+import { loadParts } from '../_catalog-parts.js';
 
 const REQUIRED = {
   merchant_overview: 'overview:read',
@@ -73,7 +74,7 @@ export async function onRequestPost({ request, env }) {
     } else if (tool === 'catalog_search') {
       const q = text(data.query, 80).toLocaleLowerCase(), max = limit(data);
       if (q.length < 2) return response({ error: 'query-too-short' }, 400);
-      const row = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first();
+      const row = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first());
       const parsed = row ? JSON.parse(row.data) : {};
       const products = (Array.isArray(parsed.products) ? parsed.products : [])
         .filter(p => p && !p.archived && String(p.name || '').toLocaleLowerCase().includes(q))

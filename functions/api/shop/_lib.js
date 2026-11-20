@@ -6,6 +6,7 @@
  * catalogue (the `catalogs` row), the order waits `pending`, and only a
  * person in the shop turns it into a delivery sale. */
 import { __test as catalogFns } from '../catalog.js';
+import { loadParts } from '../_catalog-parts.js';
 import { linkFor } from '../channel/_link.js';
 import { hmacKey } from '../../auth/_crypto.js';
 
@@ -54,7 +55,7 @@ export async function commerceEnabled(env, merchant) {
 
 /* The merchant's catalogue as the server knows it, stock materialised. */
 export async function readCatalog(env, merchant) {
-  const row = await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first();
+  const row = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first());
   if (!row || !row.data) return null;
   const data = catalogFns.sanitize(JSON.parse(row.data));
   catalogFns.materialize(data);

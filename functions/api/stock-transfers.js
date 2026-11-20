@@ -27,6 +27,7 @@ import { tenantFor } from './_private.js';
 import { materialize, compactForWrite, mergeDocs } from './_rules-catalog.js';
 import { catalogFamily, definitionsOf, seedFromFamily } from './_catalog-family.js';
 import { __test as catalogRules } from './catalog.js';
+import { loadParts, packCatalog, partStatements, catalogContains } from './_catalog-parts.js';
 
 const { sanitize } = catalogRules;
 const FEATURE = 'stock-transfers';
@@ -70,10 +71,10 @@ async function ensureDoc(env, merchant) {
     .bind(merchant, FEATURE, EMPTY_DOC, Date.now()).run();
 }
 async function readCatalog(env, merchant) {
-  const r = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first();
+  const r = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first());
   if (!r || !r.data) return null;
   let data; try { data = sanitize(JSON.parse(r.data)); } catch (_) { return null; }
-  return { data: materialize(data), rev: Number(r.rev) || 0 };
+  return { data: materialize(data), rev: Number(r.rev) || 0, split: !!r.split };
 }
 
 /* Les fermés les plus anciens partent ; un transfert ouvert ne part jamais. */
@@ -92,11 +93,16 @@ function view(t, names, now) {
 /* Une écriture couplée : catalogue (si des pièces bougent) + document des transferts. */
 async function commit(env, cat, catMerchant, docMerchant, docRev, nextDoc, firstMove) {
   const now = Date.now();
+  /* Catalogue réparti (_catalog-parts.js) : le mouvement peut être dans une
+     part, la garde cherche donc aussi dans la génération que la tête désigne
+     une fois l'UPDATE du catalogue passé. */
+  const packed = firstMove ? packCatalog(cat.data) : null;
+  const guard = firstMove ? catalogContains(packed.parts.length > 0, catMerchant, firstMove) : null;
   const docSql = env.DB.prepare(
     `UPDATE store_docs SET data = ?, rev = rev + 1, updated_ts = ? WHERE merchant = ? AND feature = ? AND rev = ?`
-    + (firstMove ? ' AND instr((SELECT data FROM catalogs WHERE merchant = ?), ?) > 0' : ''),
+    + (firstMove ? ' AND ' + guard.sql : ''),
   );
-  const docArgs = [JSON.stringify(nextDoc), now, docMerchant, FEATURE, docRev].concat(firstMove ? [catMerchant, firstMove] : []);
+  const docArgs = [JSON.stringify(nextDoc), now, docMerchant, FEATURE, docRev].concat(firstMove ? guard.args : []);
   if (!firstMove) {
     const r = await docSql.bind(...docArgs).run();
     return !!(r && r.meta && Number(r.meta.changes) === 1);
@@ -104,9 +110,11 @@ async function commit(env, cat, catMerchant, docMerchant, docRev, nextDoc, first
   const catSql = env.DB.prepare(
     `UPDATE catalogs SET data = ?, rev = rev + 1, updated_ts = ? WHERE merchant = ? AND rev = ?
        AND (SELECT rev FROM store_docs WHERE merchant = ? AND feature = ?) = ?`,
-  ).bind(JSON.stringify(cat.data), now, catMerchant, cat.rev, docMerchant, FEATURE, docRev);
-  const out = await env.DB.batch([catSql, docSql.bind(...docArgs)]);
-  return !!(out && out[0] && out[1] && Number(out[0].meta.changes) === 1 && Number(out[1].meta.changes) === 1);
+  ).bind(packed.head, now, catMerchant, cat.rev, docMerchant, FEATURE, docRev);
+  const parts = partStatements(env.DB, catMerchant, packed, cat.split);
+  const out = await env.DB.batch([...parts.before, catSql, docSql.bind(...docArgs), ...parts.after]);
+  const at = parts.before.length;
+  return !!(out && out[at] && out[at + 1] && Number(out[at].meta.changes) === 1 && Number(out[at + 1].meta.changes) === 1);
 }
 
 async function send(env, merchant, family, body) {

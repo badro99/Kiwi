@@ -1,4 +1,5 @@
 import { retryDeadInboundStock, flushInboundStock } from './_inbound-stock.js';
+import { loadParts, packCatalog, runCatalogWrite } from '../_catalog-parts.js';
 import { __test as inboundStock } from '../channel/shopify/[link].js';
 // Merchant-facing control plane for the invisible Shopify connector.
 // It exposes health and mapping metadata only; encrypted tokens stay server-side.
@@ -71,11 +72,11 @@ async function health(env, merchant) {
 }
 
 async function catalogue(env, merchant) {
-  const row = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first();
+  const row = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first());
   if (!row || !row.data) return { data: { products: [], variants: [] }, rev: 0 };
   let data;
   try { data = JSON.parse(row.data); } catch (_) { throw new Error('catalog-invalid'); }
-  return { data, rev: n(row.rev) };
+  return { data, rev: n(row.rev), split: !!row.split };
 }
 
 function importCandidates(catalog, shopifyVariants, result) {
@@ -288,11 +289,12 @@ async function importSelected(env, merchant, rawIds) {
     const imported = appendImportedVariants(cat.data, selected, now);
     if (!imported.variants) throw new Error('import-selection-stale');
     const next = cat.rev + 1;
+    const packed = packCatalog(imported.data);
     const write = cat.rev
-      ? await env.DB.prepare('UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?')
-        .bind(JSON.stringify(imported.data), next, now, merchant, cat.rev).run()
-      : await env.DB.prepare('INSERT OR IGNORE INTO catalogs (merchant, data, rev, updated_ts) VALUES (?, ?, ?, ?)')
-        .bind(merchant, JSON.stringify(imported.data), next, now).run();
+      ? await runCatalogWrite(env.DB, merchant, packed, env.DB.prepare('UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?')
+        .bind(packed.head, next, now, merchant, cat.rev), cat.split)
+      : await runCatalogWrite(env.DB, merchant, packed, env.DB.prepare('INSERT OR IGNORE INTO catalogs (merchant, data, rev, updated_ts) VALUES (?, ?, ?, ?)')
+        .bind(merchant, packed.head, next, now), false);
     if (write && write.meta && Number(write.meta.changes) === 1) {
       const mapped = await refreshMapping(env, merchant);
       return { imported: imported.variants, createdProducts: imported.products, inactive: true, preview: mapped };
@@ -307,9 +309,10 @@ async function configureImportedProducts(env, merchant, rows) {
     const now = Date.now();
     const configured = applyImportSetup(cat.data, rows, now);
     const next = cat.rev + 1;
+    const packed = packCatalog(configured.data);
     const write = cat.rev
-      ? await env.DB.prepare('UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?')
-        .bind(JSON.stringify(configured.data), next, now, merchant, cat.rev).run()
+      ? await runCatalogWrite(env.DB, merchant, packed, env.DB.prepare('UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?')
+        .bind(packed.head, next, now, merchant, cat.rev), cat.split)
       : null;
     if (write && write.meta && Number(write.meta.changes) === 1) {
       const mapped = await refreshMapping(env, merchant);

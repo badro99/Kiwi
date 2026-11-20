@@ -17,6 +17,7 @@
 // Cost. One computation per store per two minutes per isolate, and the
 // dashboard asks once per load. No polling anywhere.
 import { entitledMerchant, json } from '../auth/_lib.js';
+import { loadParts } from './_catalog-parts.js';
 import { businessDate, businessDayWindows, merchantZone, merchantCutoff } from './_business-day.js';
 import { computeHealth, baseOf } from './_merchant-health.js';
 
@@ -165,7 +166,8 @@ export async function gatherFacts(env, merchant, now = Date.now()) {
     f.stockCounts = await count(env, "SELECT COUNT(*) AS n FROM inventory_counts WHERE merchant = ? AND submitted_at >= ?", merchant, now - 90 * DAY);
   }
   if (base === 'boutique') {
-    const catalog = await first(env, 'SELECT data FROM catalogs WHERE merchant = ?', merchant);
+    let catalog = await first(env, 'SELECT data FROM catalogs WHERE merchant = ?', merchant);
+    try { catalog = await loadParts(env.DB, merchant, catalog); } catch (_) { catalog = undefined; }
     if (catalog !== undefined) {
       let data = {};
       try { data = JSON.parse((catalog && catalog.data) || '{}'); } catch (_) {}

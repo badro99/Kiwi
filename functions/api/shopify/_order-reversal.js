@@ -20,6 +20,7 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import { __test as catalogFns } from '../catalog.js';
+import { loadParts, packCatalog, runCatalogWrite } from '../_catalog-parts.js';
 import { saleMoveId, reversalMoveId } from './_move-ids.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
@@ -31,7 +32,9 @@ const CANCELLABLE = "('pending','accepted','ready')";
 export async function restockShopifyOrder(env, merchant, ref, wanted, kind, refundId = '') {
   const shopRef = `shopify:${ref}`.slice(0, 64);
   for (let attempt = 0; attempt < 4; attempt++) {
-    const row = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first().catch(() => null);
+    let row;
+    try { row = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first()); }
+    catch (e) { if (e && e.message === 'catalog-parts-incomplete') return { done: false }; row = null; }
     if (!row || !row.data) return { done: true, restored: 0, skipped: 0 };   // aucun catalogue : rien n'a pu être retiré
     let raw;
     try { raw = JSON.parse(row.data); } catch (_) { return { done: false }; }
@@ -78,9 +81,10 @@ export async function restockShopifyOrder(env, merchant, ref, wanted, kind, refu
     if (!restored) return { done: true, restored: 0, skipped };
     data.moves = moves;
     catalogFns.materialize(data);
-    const write = await env.DB.prepare(
+    const packed = packCatalog(data);
+    const write = await runCatalogWrite(env.DB, merchant, packed, env.DB.prepare(
       'UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?'
-    ).bind(JSON.stringify(data), Number(row.rev || 0) + 1, Date.now(), merchant, Number(row.rev || 0)).run().catch(() => null);
+    ).bind(packed.head, Number(row.rev || 0) + 1, Date.now(), merchant, Number(row.rev || 0)), row.split).catch(() => null);
     if (write && write.meta && Number(write.meta.changes) === 1) return { done: true, restored, skipped };
   }
   return { done: false };

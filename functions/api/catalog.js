@@ -40,6 +40,7 @@ import { json, entitledMerchant } from '../auth/_lib.js';
 import { tenantFor, storeSubscriptionPending } from './_private.js';
 import { enqueueStockChanges, flushShopifyOutbox } from './shopify/_lib.js';
 import { catalogFamily, idTagFor, seedFromFamily, syncFamily } from './_catalog-family.js';
+import { loadParts, packCatalog, runCatalogWrite } from './_catalog-parts.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const num = (v, max) => Math.max(0, Math.min(max, Number(v) || 0));
@@ -346,7 +347,7 @@ async function applyStockAction(env, merchant, body, waitUntil) {
   for (let attempt = 0; attempt < 4; attempt++) {
     let row;
     try {
-      row = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first();
+      row = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first());
     } catch (_) { return json({ error: 'unmigrated' }, 503); }
     if (!row || !row.data) return json({ error: 'catalog-missing' }, 409);
     let data;
@@ -357,9 +358,10 @@ async function applyStockAction(env, merchant, body, waitUntil) {
     const next = Number(row.rev || 0) + 1;
     let write;
     try {
-      write = await env.DB.prepare(
+      const packed = packCatalog(data);
+      write = await runCatalogWrite(env.DB, merchant, packed, env.DB.prepare(
         'UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?'
-      ).bind(JSON.stringify(data), next, Date.now(), merchant, Number(row.rev || 0)).run();
+      ).bind(packed.head, next, Date.now(), merchant, Number(row.rev || 0)), row.split);
     } catch (_) { return json({ error: 'write-failed' }, 500); }
     if (write && write.meta && Number(write.meta.changes) === 1) {
       scheduleShopifySync(env, merchant, before, data, next, waitUntil);
@@ -387,9 +389,9 @@ export async function onRequestGet(context) {
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   try {
-    const row = await env.DB.prepare(
+    const row = await loadParts(env.DB, merchant, await env.DB.prepare(
       'SELECT data, rev, updated_ts FROM catalogs WHERE merchant = ?'
-    ).bind(merchant).first();
+    ).bind(merchant).first());
     /* Une boutique d'une famille (catalogue partagé, _catalog-family.js) reçoit
      * son étiquette d'identifiant, et, à sa première ouverture, les articles
      * de la famille à zéro pièce. */
@@ -474,8 +476,8 @@ export async function onRequestPost(context) {
 
   let current = null;
   try {
-    current = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?')
-      .bind(merchant).first();
+    current = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?')
+      .bind(merchant).first());
   } catch (_) {
     // Table absente : la migration n'est pas passée. 503 → le client garde tout
     // en local et retentera au prochain enregistrement.
@@ -504,22 +506,23 @@ export async function onRequestPost(context) {
   const rev = serverRev + 1;
   try {
     let write;
+    const packed = packCatalog(data);
     if (serverRev) {
       /* The earlier SELECT is only a snapshot. The revision predicate on the
        * UPDATE is the actual compare-and-swap: two requests may both read N, but
        * only one is allowed to turn N into N+1. */
-      write = await env.DB.prepare(
+      write = await runCatalogWrite(env.DB, merchant, packed, env.DB.prepare(
         `UPDATE catalogs SET data = ?, rev = ?, updated_ts = ?
           WHERE merchant = ? AND rev = ?`
-      ).bind(JSON.stringify(data), rev, now, merchant, serverRev).run();
+      ).bind(packed.head, rev, now, merchant, serverRev), current && current.split);
     } else {
-      write = await env.DB.prepare(
+      write = await runCatalogWrite(env.DB, merchant, packed, env.DB.prepare(
         `INSERT OR IGNORE INTO catalogs (merchant, data, rev, updated_ts)
          VALUES (?, ?, ?, ?)`
-      ).bind(merchant, JSON.stringify(data), rev, now).run();
+      ).bind(merchant, packed.head, rev, now), false);
     }
     if (!write || !write.meta || Number(write.meta.changes) !== 1) {
-      const latest = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first();
+      const latest = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first());
       let mine = null;
       try { mine = latest && latest.data ? sanitize(JSON.parse(latest.data)) : null; } catch (_) {}
       return json({ error: 'stale', rev: Number(latest && latest.rev) || 0, data: mine }, 409);

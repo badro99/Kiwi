@@ -28,6 +28,7 @@
 // qu'un complément, jamais un préalable.
 
 import { json } from '../../auth/_lib.js';
+import { loadParts } from '../_catalog-parts.js';
 import { ownedStores } from '../_private.js';
 
 const MAX_STORES = 12;    // au-delà, ce n'est plus un commerçant, c'est une chaîne
@@ -73,8 +74,8 @@ const fold = (v) => String(v == null ? '' : v)
  * try : un document illisible en cache un seul, jamais toute la réponse. */
 async function readCatalog(env, merchant) {
   try {
-    const row = await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?')
-      .bind(merchant).first();
+    const row = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?')
+      .bind(merchant).first());
     if (!row || !row.data) return null;
     const db = JSON.parse(row.data);
     if (!db || !Array.isArray(db.products) || !Array.isArray(db.variants)) return null;

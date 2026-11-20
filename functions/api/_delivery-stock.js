@@ -22,6 +22,7 @@
  *
  * Aucune migration : sale_audit existe partout. */
 import { __test as catalogFns } from './catalog.js';
+import { loadParts, packCatalog, runCatalogWrite } from './_catalog-parts.js';
 import { catalogFamily } from './_catalog-family.js';
 
 const HELD = 'delivery-stock-held';
@@ -112,7 +113,7 @@ export async function takeHeldStock(env, merchant, saleId) {
     /** @type {{ applied: number, short: number, from?: string } | null} */
     let result = null;
     for (let attempt = 0; attempt < 4 && !result; attempt++) {
-      const row = await db.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(shop).first();
+      const row = await loadParts(db, shop, await db.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(shop).first());
       if (!row || !row.data) { result = { applied: 0, short: kept.reduce((a, b) => a + b, 0) }; break; }
       let raw;
       try { raw = JSON.parse(row.data); } catch (_) { return { applied: 0, short: 0 }; }
@@ -149,8 +150,9 @@ export async function takeHeldStock(env, merchant, saleId) {
       catalogFns.materialize(catalogFns.compactForWrite(data));
       let write = null;
       try {
-        write = await db.prepare('UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?')
-          .bind(JSON.stringify(data), Number(row.rev || 0) + 1, Date.now(), shop, Number(row.rev || 0)).run();
+        const packed = packCatalog(data);
+        write = await runCatalogWrite(db, shop, packed, db.prepare('UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?')
+          .bind(packed.head, Number(row.rev || 0) + 1, Date.now(), shop, Number(row.rev || 0)), row.split);
       } catch (_) { write = null; }
       if (write && write.meta && Number(write.meta.changes) === 1) result = { applied, short };
     }
