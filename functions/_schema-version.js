@@ -1,8 +1,9 @@
-// Production minimum: migration 0026 (Glovo store links). 0020 to 0023 (client
+// Production minimum: migration 0027 (catalog parts). 0020 to 0023 (client
 // spend in centimes, sale client_id, pay statements, trusted clock) and 0024 to
-// 0026 (directory, session tiers, Glovo; prod ledger checked 20 Nov 2026) must be
+// 0027 (directory, session tiers, Glovo, catalog parts; prod ledger checked
+// 20 Nov 2026, 0027_catalog_parts.sql applied) must be
 // applied by the owner before this code deploys; below it every route answers 503.
-export const MINIMUM_SCHEMA_VERSION = 26;
+export const MINIMUM_SCHEMA_VERSION = 27;
 // The migrations whose columns and tables this code reads. They were applied by
 // hand, so the highest number alone proves nothing: a ledger that holds 0023 but
 // lacks 0021 still lacks sales.client_id. Every one of them must be recorded.

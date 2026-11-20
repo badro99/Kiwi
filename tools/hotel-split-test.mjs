@@ -63,7 +63,10 @@ const splitTags = (html.match(/<script\b[^>]*\bsrc=[^>]*><\/script>/g) || []);
 const removed = ['agent-vision.js', 'agent-skin.js', 'month-report-tools.js', 'month-report-pdf.js', 'month-report-ui.js'];
 const lazyLoader = read('assets/pages/dashboard-loader.js');
 const isLazy = tag => { const file = tag.match(/src="([^?]+)/)?.[1]; return file && lazyLoader.includes("'" + file + '?v='); };
-const expectedTags = hotelParts.scriptsBefore.filter(tag => !removed.some(file => tag.includes('/' + file + '?v=')));
+// 20 Nov: the parts tag became the bundle boutique-catalog-till.js (parts + shelf, the caisse's own file), same slot.
+const replaced = { 'assets/boutique-catalog-parts.js': 'assets/boutique-catalog-till.js' };
+const expectedTags = hotelParts.scriptsBefore.filter(tag => !removed.some(file => tag.includes('/' + file + '?v=')))
+  .map(tag => Object.entries(replaced).reduce((t, [from, to]) => t.replace('"' + from + '?v=', '"' + to + '?v='), tag));
 const hotelAt = expectedTags.findIndex(tag => tag.includes('assets/hotel.js?'));
 expectedTags.splice(hotelAt, 0, ...hotelParts.parts.map(p => '<script src="' + p.file + '?v=1" defer fetchpriority="low"></script>'));
 const unstamped = tags => tags.map(tag => tag.replace(/\?v=\d+/, '?v=N'));
