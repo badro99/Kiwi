@@ -1,9 +1,9 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=226';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=144';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=226';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=226';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=227';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=145';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=227';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=227';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
-import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
+import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=1';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=3';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=22';
@@ -2081,49 +2081,14 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     state.checkoutBusy = true;
     beginPay();
   }
-  function payExistingBalance(row) {
+  /* Acomptes par cliente : une ou plusieurs notes, un seul paiement, un reçu par note (retail-settle.js). */
+  function payExistingBalance(sel) {
     const R = window.KiwiRetailBalances;
-    if (!R || row.pendingCents > 0) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Synchronisation de l’acompte en attente')); return; }
-    const remaining = R.due(row) / 100;
-    if (!(remaining > 0)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Cette note est déjà réglée')); renderAcomptes(); return; }
-    const client = clById(row.customerId);
-    openPay({
-      amount: remaining, balanceExisting: true, balanceTotal: row.totalCents / 100,
-      balancePaid: row.paidCents / 100, customerId: row.customerId,
-      title: 'Régler un acompte', subtitle: `${row.ticketRef} · ${client ? esc(client.name) : 'Cliente'}`,
-      ref: row.ticketRef, lines: [], customer: client ? { name: client.name, phone: client.phone } : null,
-      waName: client ? firstName(client.name) : '', waPhone: client ? client.phone : '',
-      onPaid: (parts, context) => {
-        const amount = context.paidNow;
-        const at = new Date();
-        const syncId = newSaleId();
-        const method = bqPaymentMethod(parts);
-        const sale = {
-          id: row.ticketRef + '-P' + at.getTime(), syncId, tenderVersion: 2, at,
-          clientId: row.customerId, by: STAFF.caissiere.name, kind: 'acompte-reglement',
-          methods: parts[0].m, parts: [{ m: parts[0].m, amount }], lines: [], total: amount,
-          balanceTotal: row.totalCents / 100,
-          balanceDue: Math.max(0, (R.due(row) / 100) - amount),
-        };
-        const saved = R.record(merchantSlug(), {
-          id: row.id, customerId: row.customerId, ticketRef: row.ticketRef,
-          totalCents: row.totalCents, basePaidCents: row.paidCents,
-          receipt: { id: syncId, amountCents: Math.round(amount * 100), method, ts: +at },
-        });
-        if (!saved) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Règlement non conservé : stockage local indisponible')); return { error: 'balance-storage-failed' }; }
-        bqOutstandingCents = R.read(merchantSlug()).reduce((sum, item) => sum + R.due(item), 0);
-        SALES.unshift(sale); persistDay(); bqSaveProvisional(true);
-        try { if (window.KiwiLive && window.KiwiLive.isOn()) bqPost(sale, {
-          id: syncId, amount, amountCents: Math.round(amount * 100), method,
-          paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(amount * 100),
-          label: 'Règlement acompte', ref: row.ticketRef, time: at, channel: 'counter',
-          retailBalance: { id: row.id, customerId: row.customerId, ticketRef: row.ticketRef,
-            totalCents: row.totalCents, stage: 'payment' },
-        }); } catch (_) { /* the local journal remains readable */ }
-        renderAcomptes(); renderAll();
-        return { sale, line: `Reçu ${fmtMAD(amount)} · reste ${fmtMAD(sale.balanceDue)}` };
-      },
-    });
+    settleBalances(sel, { R, merchant: merchantSlug(), clById, esc, firstName, openPay, toast, fmtMAD, newSaleId,
+      staffName: STAFF.caissiere.name, payMethod: bqPaymentMethod, payParts: bqPaymentParts, refresh: () => renderAcomptes(),
+      addSale: (sale) => SALES.unshift(sale),
+      post: (sale, body) => { if (window.KiwiLive && window.KiwiLive.isOn()) bqPost(sale, body); },
+      after: () => { bqOutstandingCents = R.read(merchantSlug()).reduce((sum, item) => sum + R.due(item), 0); persistDay(); bqSaveProvisional(true); renderAcomptes(); renderAll(); } });
   }
 
   /* ═══════════════════════ FIN DE SERVICE ═══════════════════════

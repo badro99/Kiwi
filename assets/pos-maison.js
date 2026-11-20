@@ -1,8 +1,8 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=129';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=130';
 import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=18';
-import { tillNow } from './pos-boutique/till-clock.js?v=2';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=129';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=129';
+import { tillNow } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=1';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=130';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=130';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=10'; import { mzLivraisons } from './pos-maison/delivery.js?v=28';
 import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=9'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=5'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
 
@@ -2151,49 +2151,14 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
     });
     if (!(RS && RS.confirmRepeat({ scope: 'maison', sig: repeatSig, el: $('#mz-paym', root), open: () => openVeil('#mz-pay-veil'), close: () => closeVeil('#mz-pay-veil'), busy: () => {}, go: () => state.ticket === t && beginPay(), classes: { x: 'mz-modal-x', foot: 'mz-sheet-foot', no: 'mz-btn secondary', yes: 'cash-confirm' } }))) beginPay();
   }
-  function payExistingBalance(row) {
+  /* Acomptes par cliente : une ou plusieurs notes, un seul paiement, un reçu par note (retail-settle.js). */
+  function payExistingBalance(sel) {
     const R = window.KiwiRetailBalances;
-    if (!R || row.pendingCents > 0) { toast('Synchronisation de l’acompte en attente'); return; }
-    const remaining = R.due(row) / 100;
-    if (!(remaining > 0)) { toast('Cette note est déjà réglée'); renderAcomptes(); return; }
-    const client = clById(row.customerId);
-    openPay({
-      amount: remaining, balanceExisting: true, balanceTotal: row.totalCents / 100,
-      balancePaid: row.paidCents / 100, customerId: row.customerId,
-      title: 'Régler un acompte', subtitle: `${row.ticketRef} · ${client ? esc(client.name) : 'Cliente'}`,
-      ref: row.ticketRef, lines: [], customer: client ? { name: client.name, phone: client.phone } : null,
-      waName: client ? firstName(client.name) : '', waPhone: client ? client.phone : '',
-      onPaid: (parts, context) => {
-        const amount = context.paidNow;
-        const at = new Date();
-        const syncId = newSaleId();
-        const method = bqPaymentMethod(parts);
-        const sale = {
-          id: row.ticketRef + '-P' + at.getTime(), syncId, tenderVersion: 2, at,
-          clientId: row.customerId, by: STAFF.caissiere.name, kind: 'acompte-reglement',
-          methods: parts[0].m, parts: [{ m: parts[0].m, amount }], lines: [], total: amount,
-          balanceTotal: row.totalCents / 100,
-          balanceDue: Math.max(0, (R.due(row) / 100) - amount),
-        };
-        const saved = R.record(merchantSlug(), {
-          id: row.id, customerId: row.customerId, ticketRef: row.ticketRef,
-          totalCents: row.totalCents, basePaidCents: row.paidCents,
-          receipt: { id: syncId, amountCents: Math.round(amount * 100), method, ts: +at },
-        });
-        if (!saved) { toast('Règlement non conservé : stockage local indisponible'); return { error: 'balance-storage-failed' }; }
-        bqOutstandingCents = R.read(merchantSlug()).reduce((sum, item) => sum + R.due(item), 0);
-        SALES.unshift(sale); persistDay(); bqSaveProvisional(true);
-        try { if (window.KiwiLive && window.KiwiLive.isOn()) bqPost(sale, {
-          id: syncId, amount, amountCents: Math.round(amount * 100), method,
-          paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(amount * 100),
-          label: 'Règlement acompte', ref: row.ticketRef, time: at, channel: 'counter',
-          retailBalance: { id: row.id, customerId: row.customerId, ticketRef: row.ticketRef,
-            totalCents: row.totalCents, stage: 'payment' },
-        }); } catch (_) { /* the local journal remains readable */ }
-        renderAcomptes(); renderAll();
-        return { sale, line: `Reçu ${fmtMAD(amount)} · reste ${fmtMAD(sale.balanceDue)}` };
-      },
-    });
+    settleBalances(sel, { R, merchant: merchantSlug(), clById, esc, firstName, openPay, toast, fmtMAD, newSaleId,
+      staffName: STAFF.caissiere.name, payMethod: bqPaymentMethod, payParts: bqPaymentParts, refresh: () => renderAcomptes(),
+      addSale: (sale) => SALES.unshift(sale),
+      post: (sale, body) => { if (window.KiwiLive && window.KiwiLive.isOn()) bqPost(sale, body); },
+      after: () => { bqOutstandingCents = R.read(merchantSlug()).reduce((sum, item) => sum + R.due(item), 0); persistDay(); bqSaveProvisional(true); renderAcomptes(); renderAll(); } });
   }
 
   /* ═══════════════════════ FIN DE SERVICE ═══════════════════════

@@ -20,6 +20,7 @@
   background: var(--surface); color: var(--ink); font: inherit; font-size: 14px;
 }
 .krb-search input:focus { outline: 2px solid var(--forest); outline-offset: 2px; }
+.krb-search[hidden] { display: none; }
 .krb-list { display: grid; gap: 12px; }
 .krb-card {
   box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 1fr) auto;
@@ -67,4 +68,31 @@
   .kdc-card { grid-template-columns: minmax(0, 1fr) auto; }
   .kdc-go { grid-column: 1 / -1; }
   .kdc-actions > * { flex: 1 1 0; }
+}
+
+/* Acomptes par cliente : la fiche ouverte, ses notes à cocher, le montant reçu. */
+.krb-back { justify-self: start; min-height: 44px; padding: 0 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink-2); font: inherit; font-size: 14px; cursor: pointer; touch-action: manipulation; }
+.krb-client { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 20px; padding: 6px 2px 4px; }
+.krb-client strong { font-size: 20px; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.krb-client .krb-amount { grid-row: 1; }
+.krb-client p { grid-column: 1 / -1; margin: 0; color: var(--ink-3); font-size: 13px; line-height: 1.45; }
+.krb-note { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 6px 16px; min-height: 64px; padding: 12px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); cursor: pointer; }
+.krb-note:has(input:checked) { border-color: var(--forest); }
+.krb-note.is-locked { cursor: default; opacity: .65; }
+.krb-note input { width: 22px; height: 22px; margin: 0; accent-color: var(--forest); }
+.krb-note-text, .krb-note-side { display: grid; gap: 3px; min-width: 0; }
+.krb-note-text strong { font-size: 15px; overflow-wrap: anywhere; }
+.krb-note-text small, .krb-note-cover { color: var(--ink-3); font-size: 12.5px; }
+.krb-note-side { justify-items: end; text-align: end; }
+.krb-note-due { color: var(--ink); font-size: 16px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.krb-note-cover { color: var(--forest); font-weight: 600; white-space: nowrap; }
+.krb-pay { display: grid; gap: 8px; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--line); }
+.krb-pay .krb-search { margin: 0; max-width: 320px; }
+.krb-pay input { font-size: 18px; font-variant-numeric: tabular-nums; }
+.krb-hint { min-height: 1em; color: var(--ink-3); font-size: 12.5px; }
+.krb-go { min-height: 52px; padding: 0 22px; border: 0; border-radius: 14px; background: var(--forest); color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
+.krb-go:disabled { opacity: .5; cursor: default; }
+@media (max-width: 600px) {
+  .krb-note { grid-template-columns: auto minmax(0, 1fr); }
+  .krb-note-side { grid-column: 2; justify-items: start; text-align: start; }
 }

@@ -2472,7 +2472,7 @@ section('Whole-project regressions');
     'menu-i18n-test.mjs',
     'order-langs-test.mjs',
     'salle-scan-test.mjs',
-    'ai-quota-order-test.mjs', 'invoice-photo-test.mjs', 'stock-photo-heic-test.mjs', 'supplier-ranking-test.mjs', 'client-filters-test.mjs',
+    'ai-quota-order-test.mjs', 'invoice-photo-test.mjs', 'stock-photo-heic-test.mjs', 'supplier-ranking-test.mjs', 'client-filters-test.mjs', 'retail-balances-group-test.mjs',
     'ai-global-quota-test.mjs',
     /* Plafonds du jour : une seule table, la phrase FR/EN/AR d'un plafond atteint. */
     'ai-daily-caps-test.mjs',
@@ -2534,7 +2534,7 @@ section('Whole-project regressions');
     'ipad-touch-browser-test.mjs',
     /* 2026-10-19 · livraisons à encaisser : le livreur rapporte l'argent au
        comptoir, encaissé une fois, compté le jour où il est reçu. */
-    'delivery-collect-browser-test.mjs',
+    'delivery-collect-browser-test.mjs', 'acomptes-client-browser-test.mjs',
     /* 2026-10-19 · le grand livre de la synchro : ventes réelles sur une caisse
        restaurant et une caisse boutique (espèces, carte, partage, remboursement,
        annulation, hors ligne, la bascule de 05:00), et le tableau de bord qui

@@ -62,6 +62,8 @@ try {
     screen = await click(screen, /button Acomptes$/);
     assert.ok(screen.includes(`Reste ${due}.00 MAD`), 'visible outstanding amount'); checks++;
     screen = await click(screen, new RegExp(`Reste ${due}\\.00 MAD`));
+    /* Acomptes par cliente (20 nov. 2026) : la carte ouvre la cliente, ses notes sont cochées, le bouton encaisse le tout. */
+    screen = await click(screen, new RegExp(`Encaisser ${due}\\.00 MAD`));
     screen = await click(screen, /Virement \/ Versement/);
     screen = await click(screen, /Versement reçu · confirmer/);
     const closed = text(await call('ui_assert', { selector: '[data-retail-balance-list]',
