@@ -112,6 +112,10 @@ const inv = inventory(root);
 const transport = 'assets/clients-store-vault.js';
 assert.equal(inv.sources.get(transport), fs.readFileSync(path.join(root, 'assets/clients-outbox-vault.js'), 'utf8') + fs.readFileSync(path.join(root, 'assets/clients-store.js'), 'utf8'), transport + ' must stay the exact concatenation');
 inv.sources.delete(transport);
+// Same for the catalogue's: the till and the dashboard load the stock ledger and the shelf as one file.
+const catalogTransport = 'assets/boutique-catalog-till.js';
+assert.equal(inv.sources.get(catalogTransport), fs.readFileSync(path.join(root, 'assets/boutique-catalog-parts.js'), 'utf8') + fs.readFileSync(path.join(root, 'assets/boutique-catalog-shelf.js'), 'utf8'), catalogTransport + ' must stay the exact concatenation');
+inv.sources.delete(catalogTransport);
 const result = inspect(inv.sources, inv.shells, manifest);
 if (result.failures.length) {
   for (const f of result.failures) console.error(`✗ ${f}`);

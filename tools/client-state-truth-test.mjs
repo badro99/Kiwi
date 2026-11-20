@@ -86,7 +86,7 @@ cases.booking = async () => {
   assert.equal(refs.length,2);assert.equal(refs[0],refs[1],'same-tab retry keeps reference despite failed storage');
 };
 cases.catalog = () => {
-  let listener,alerts=[],events=[],pushed=0;const c=vm.createContext({window:{addEventListener:(_,f)=>listener=f,alert:s=>alerts.push(s),dispatchEvent:e=>(events.push(e),true)},CustomEvent:class{constructor(t,o){this.type=t;this.detail=o.detail}},schedulePush:()=>{pushed++},document:{documentElement:{lang:'en'}},cloud:{dirty:true},localKept:false,KEY:'catalog',VENUE:'shop',DIRTY_KEY:()=> 'dirty',db:{products:[{id:'local'}]},dropIndex(){},migrate(){},notify(){}});
+  let listener,alerts=[],events=[],pushed=0;const c=vm.createContext({window:{addEventListener:(_,f)=>listener=f,alert:s=>alerts.push(s),dispatchEvent:e=>(events.push(e),true)},CustomEvent:class{constructor(t,o){this.type=t;this.detail=o.detail}},schedulePush:()=>{pushed++},document:{documentElement:{lang:'en'}},cloud:{dirty:true},localKept:false,shelf:null,KEY:'catalog',VENUE:'shop',DIRTY_KEY:()=> 'dirty',db:{products:[{id:'local'}]},dropIndex(){},migrate(){},notify(){}});
   const s=read('assets/boutique-catalog.js');const start=s.indexOf("  window.addEventListener('storage'");
   vm.runInContext(s.slice(start,s.indexOf('\n  });',start)+6),c);
   listener({key:'dirty',newValue:null});assert.equal(c.cloud.dirty,true,'another tab cannot clear our dirty status');
