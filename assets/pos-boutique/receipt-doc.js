@@ -42,4 +42,19 @@ function receiptDocInput(opts, parts, cashier) {
   };
 }
 
-export { receiptPrinterReady, receiptDocInput };
+/* Les lignes que le reçu WhatsApp place entre les articles et le TOTAL :
+   sous-total, promotion nommée, remise. Sans elles, les articles dépassaient
+   le total et la cliente ne lisait que le mode de paiement. Rien quand la
+   vente n'a ni remise ni promotion. */
+function waReceiptTotals(opts, fmt, tr) {
+  const promo = Math.abs(+(opts.promo && opts.promo.amount) || 0);
+  const off = Math.abs(+opts.discount || 0);
+  if (!(promo > 0) && !(off > 0)) return [];
+  const rows = [];
+  if (opts.subtotal != null) rows.push(`${tr('checkout.sous.total', 'Sous-total')} ${fmt(opts.subtotal)}`);
+  if (promo > 0) rows.push(`${(opts.promo && opts.promo.label) || tr('checkout.promotion', 'Promotion')} −${fmt(promo)}`);
+  if (off > 0) rows.push(`${tr('checkout.remise', 'Remise')} −${fmt(off)}`);
+  return rows;
+}
+
+export { receiptPrinterReady, receiptDocInput, waReceiptTotals };

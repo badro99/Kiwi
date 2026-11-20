@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=223';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=141';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=223';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=223';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=225';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=143';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=225';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=225';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
@@ -2933,7 +2933,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
           label: !head ? 'Vente'
             : (lines.length > 1 ? head.name + ' +' + (pieces - head.qty) + ' art.' : head.name),
           raw: s.methods,
-          rc: s.rc || null,
+          discount: s.kind === 'acompte' ? 0 : s.discount, promo: s.kind === 'acompte' ? 0 : s.promoOff, rc: s.rc || null,
           lines: lines,
         };
       }));

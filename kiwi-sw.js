@@ -34,7 +34,7 @@ var SHELL = [
   '/assets/caisse-print-recovery.js?v=8',
   '/assets/loyalty-rules.js?v=18',
   '/assets/clients-store-vault.js?v=29',
-  '/assets/caisse-strings.js?v=3',
+  '/assets/caisse-strings.js?v=4',
   '/assets/pos-boutique/ozon.js?v=13',
   '/assets/lock-till.js?v=3',
   '/assets/directory-optin.js?v=2',
@@ -45,7 +45,7 @@ var SHELL = [
   '/assets/team/styles.js?v=4',
   '/assets/team/access-rules.js?v=7',
   '/assets/hotel-economat-transport.js?v=30',
-  '/assets/pos-boutique/drawer.js?v=141',
+  '/assets/pos-boutique/drawer.js?v=143',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=26',
@@ -515,7 +515,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=37',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=36',
-  '/assets/pos-dispatch.js?v=438',
+  '/assets/pos-dispatch.js?v=440',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -586,8 +586,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=327',
-  '/assets/pos-boutique/sales.js?v=223',
+  '/assets/pos-boutique.css?v=329',
+  '/assets/pos-boutique/sales.js?v=225',
   '/assets/retail-photos.js?v=5',
   '/assets/retail-icon-picker.js?v=4',
   '/assets/pos-boutique/ticket-owner.js?v=5',
@@ -595,7 +595,7 @@ var SHELL = [
   '/assets/pos-boutique/old-sales.js?v=2',
   '/assets/pos-boutique/paid-share.js?v=2',
   '/assets/pos-boutique/ticket-number.js?v=3',
-  '/assets/pos-boutique/receipt-doc.js?v=1',
+  '/assets/pos-boutique/receipt-doc.js?v=2',
   '/assets/pos-boutique/z-split.js?v=10',
   '/assets/pos-boutique/livraisons.js?v=23',
   '/assets/pos-boutique/exchange.js?v=6',
@@ -607,10 +607,10 @@ var SHELL = [
   '/assets/pos-boutique/inv-moves.js?v=7',
   '/assets/pos-maison/inv-moves.js?v=3',
   '/assets/pos-boutique/kit-2027.js?v=22',
-  '/assets/pos-boutique/checkout.js?v=223',
-  '/assets/pos-boutique/inventory.js?v=223',
+  '/assets/pos-boutique/checkout.js?v=225',
+  '/assets/pos-boutique/inventory.js?v=225',
   '/assets/pos-boutique/sister-stock.js?v=1',
-  '/assets/pos-boutique.js?v=327',
+  '/assets/pos-boutique.js?v=329',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -658,7 +658,7 @@ var SHELL = [
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
-  '/assets/pos-reprint.js?v=21',
+  '/assets/pos-reprint.js?v=22',
   '/assets/pressing-caisse.js?v=131',
   '/assets/pressing-caisse.css?v=131',
   '/assets/material-icons.js?v=7',

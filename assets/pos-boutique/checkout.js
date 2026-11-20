@@ -1,6 +1,6 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=223';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=223';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=327';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=225';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=225';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=329';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=5';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
@@ -9,7 +9,7 @@ import { tillNow, tillDate } from './till-clock.js?v=2';
 import '../money-cents.js?v=7';
 import { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=13';
 import { bqDeliveryCard } from './delivery-card.js?v=10';
-import { receiptPrinterReady, receiptDocInput } from './receipt-doc.js?v=1';
+import { receiptPrinterReady, receiptDocInput, waReceiptTotals } from './receipt-doc.js?v=2';
 const M = globalThis.KiwiMoney;
 
 
@@ -1277,6 +1277,7 @@ const M = globalThis.KiwiMoney;
           '',
           ...(opts.lines || []).map((l) => `${l.qty ? l.qty + '× ' : ''}${l.name} · ${fmtMAD(l.amount)}`),
           '',
+          ...waReceiptTotals(opts, fmtMAD, tr),
           `${tr("checkout.total", "TOTAL")} ${fmtMAD(opts.amount)}`,
           (parts || []).map((x) => x.m === 'avoir' ? tr("checkout.avoir", "Avoir") : x.m === 'livraison' ? tr("checkout.livraison.a.recevoir", "Livraison · à recevoir") : mLabel(x.m)).join(' + '),
           '',

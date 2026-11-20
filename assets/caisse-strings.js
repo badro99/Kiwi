@@ -457,6 +457,21 @@
     "en": "Thank you!",
     "ar": "شكراً!"
   },
+  "checkout.sous.total": {
+    "fr": "Sous-total",
+    "en": "Subtotal",
+    "ar": "المجموع الفرعي"
+  },
+  "checkout.promotion": {
+    "fr": "Promotion",
+    "en": "Promotion",
+    "ar": "تخفيض"
+  },
+  "checkout.remise": {
+    "fr": "Remise",
+    "en": "Discount",
+    "ar": "خصم"
+  },
   "checkout.total": {
     "fr": "TOTAL",
     "en": "TOTAL",

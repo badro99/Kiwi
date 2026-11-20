@@ -240,6 +240,20 @@
    * quelqu'un qu'un champ vide. */
   function docFrom(entry) {
     if (!entry) return null;
+    var doc = docBase(entry);
+    /* La remise et la promotion suivent le duplicata. Sans elles, une vente
+     * boutique sans ticket figé ressortait avec des lignes plus hautes que le
+     * total et rien entre les deux que « Espèces ». Le sous-total se remonte
+     * depuis ce qui a été PAYÉ (total + remise + promotion), jamais l'inverse. */
+    var off = Math.abs(+entry.discount || 0), promo = Math.abs(+entry.promo || 0);
+    if (off > 0 || promo > 0) {
+      if (off > 0) doc.discount = off;
+      if (promo > 0) doc.promo = { amount: promo, label: String(entry.promoLabel || '') };
+      doc.subtotal = Math.round((doc.total + off + promo) * 100) / 100;
+    }
+    return doc;
+  }
+  function docBase(entry) {
     return {
       ref: String(entry.ref == null ? '' : entry.ref),
       ts: entry.ts,
