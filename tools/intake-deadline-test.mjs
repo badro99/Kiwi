@@ -4,11 +4,12 @@ import vm from 'node:vm';
 const src = fs.readFileSync('assets/stock/intake.js', 'utf8').replaceAll('S.stockState.stIntakeRequest', 'stIntakeRequest') + fs.readFileSync('assets/stock/state.js', 'utf8');
 const names = ['stIntakeRequest', 'stIntakeMerchant', 'stIntakePrepare', 'stIntakeCommit', 'stIntakeUpload', 'stIntakeServerStatus', 'stIntakeMarkOnce', 'stIntakeOutboxKey', 'stIntakeOutboxRead', 'stIntakeOutboxWrite', 'stIntakeFlushOutbox', 'stIntakeFetchRecorded', 'stIntakeArchiveList'];
 const extract = name => src.match(new RegExp('  (?:async )?function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n  \\}'))?.[0] || '';
-const invoice = src.match(/const res = await (?:fetch|stIntakeRequest)\('\/api\/ai\/invoice',[\s\S]*?\n          \}\);/)[0];
+const invoice = src.match(/const res = await (?:fetch|stIntakeRequest)\('\/api\/ai\/invoice', \{\n[\s\S]*?\n          \}\);/)[0];
 const storage = new Map(), delays = [], calls = [];
 let mode = 'fetch', serverStatus = 'received', now = 1000;
 class Clock extends Date { static now() { return now; } }
 const ctx = vm.createContext({ AbortController, Date: Clock, TextEncoder, encodeURIComponent,
+  S: { stMerchantSlug: () => 'shop' },   // stock.js's shared scope: the merchant on screen (KiwiCloudDoc.currentSlug)
   setTimeout: (fn, ms) => { delays.push(ms); return setTimeout(fn, 2); }, clearTimeout,
   window: { Kiwi: { venue: () => 'shop' }, localStorage: { getItem: k => storage.get(k), setItem: (k,v) => storage.set(k,v) } },
   fetch: async (url, options) => {

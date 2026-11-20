@@ -1,10 +1,10 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=125';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=127';
 import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=18';
 import { tillNow } from './pos-boutique/till-clock.js?v=2';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=125';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=125';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=127';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=127';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=10'; import { mzLivraisons } from './pos-maison/delivery.js?v=28';
-import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=9'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=4'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
+import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=9'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=5'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
 
   'use strict';
 
@@ -1528,7 +1528,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
             <i class="mz-net-dot"></i><span class="mz-net-label">En ligne</span>
           </button>
           <button class="mz-lock" id="mz-fs" title="Plein écran" aria-label="Basculer le plein écran" aria-pressed="false"><svg data-fs="enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg><svg data-fs="exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg><span>Plein écran</span></button>
-          ${IS_DEMO ? '' : '<button class="mz-lock" id="mz-cash-move"><i data-lucide="arrow-left-right"></i><span>Mouvement de caisse</span></button>'}${IS_DEMO ? '' : '<button class="mz-lock" id="mz-close-day"><i data-lucide="power"></i><span>Fin de service</span></button>'}
+          ${IS_DEMO ? '' : '<button class="mz-lock" id="mz-cash-move"><i data-icon="swap_horiz"></i><span>Mouvement de caisse</span></button>'}${IS_DEMO ? '' : '<button class="mz-lock" id="mz-close-day"><i data-lucide="power"></i><span>Fin de service</span></button>'}
           <button class="mz-lock" id="mz-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
         </div>
       </aside>

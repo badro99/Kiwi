@@ -31,8 +31,8 @@ function scope(o = {}) {
     },
   };
   const fetchStub = async () => { if (!o.online) throw new Error('offline'); return { ok: true, json: async () => ({ ok: true, doc: { status: 'received' } }) }; };
-  const api = new vm.Script('(function (window, fetch) {\n' + NAMES.map(fn).join('\n') + '\nreturn { ' + NAMES.join(', ') + ' };\n})')
-    .runInThisContext()(win, fetchStub);
+  const api = new vm.Script('(function (window, fetch, S) {\n' + NAMES.map(fn).join('\n') + '\nreturn { ' + NAMES.join(', ') + ' };\n})')
+    .runInThisContext()(win, fetchStub, { stMerchantSlug: () => '' });   // no merchant on screen: the local outbox
   return { api, map };
 }
 

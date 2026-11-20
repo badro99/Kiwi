@@ -2452,7 +2452,7 @@
     'assets/stock/alerts.js?v=6',
     'assets/stock/loss.js?v=3',
     'assets/stock/counts.js?v=12',
-    'assets/stock/purchasing.js?v=7',
+    'assets/stock/purchasing.js?v=8',
     'assets/stock/intake.js?v=23',
     'assets/stock/photo.js?v=2',
     'assets/stock/catalog.js?v=11',

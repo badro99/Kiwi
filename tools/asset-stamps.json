@@ -1528,8 +1528,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "262",
-    "sha": "e8f6fbb135f79ac9"
+    "v": "263",
+    "sha": "070f6d9d3c7b1db1"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1772,8 +1772,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "447",
-    "sha": "ce3ac403c6611da9"
+    "v": "449",
+    "sha": "ad54c5484f909fc3"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1844,20 +1844,20 @@
     "sha": "f20985296d118fa0"
   },
   "assets/pos-maison.css": {
-    "v": "208",
+    "v": "210",
     "sha": "ddaa2e289dfb5fc6"
   },
   "assets/pos-maison.js": {
-    "v": "208",
-    "sha": "030fa387c3d7b6c4"
+    "v": "210",
+    "sha": "ccf7b5d72c784327"
   },
   "assets/pos-maison/cash-moves.js": {
-    "v": "4",
-    "sha": "d1e2db4eb6c5c0d5"
+    "v": "5",
+    "sha": "c1437e52e1a63e99"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "125",
-    "sha": "af7838a74eeb3c6c"
+    "v": "127",
+    "sha": "8353aaa065b3ecaf"
   },
   "assets/pos-maison/delivery.js": {
     "v": "28",
@@ -1868,16 +1868,16 @@
     "sha": "feb0865a7163d8c9"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "125",
-    "sha": "ebe0dca4ccd82a3b"
+    "v": "127",
+    "sha": "7712e031ee7b57bb"
   },
   "assets/pos-maison/kit-2027.js": {
     "v": "9",
     "sha": "f515821f6c5e0e52"
   },
   "assets/pos-maison/sales.js": {
-    "v": "125",
-    "sha": "f38d4e5b8343d870"
+    "v": "127",
+    "sha": "54a009c6ecc55459"
   },
   "assets/pos-maison/ticket-remise.js": {
     "v": "3",
@@ -2216,8 +2216,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "137",
-    "sha": "2a6b241dda70b375"
+    "v": "138",
+    "sha": "21f755b0066f3392"
   },
   "assets/stock/alerts.js": {
     "v": "6",
@@ -2252,8 +2252,8 @@
     "sha": "ac383672fe16c958"
   },
   "assets/stock/purchasing.js": {
-    "v": "7",
-    "sha": "3c0432ea786a8fa0"
+    "v": "8",
+    "sha": "face8317a3ee53af"
   },
   "assets/stock/state.js": {
     "v": "13",

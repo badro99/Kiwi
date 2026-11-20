@@ -46,11 +46,11 @@ export function openMzCashMove(ctx) {
   if (ctx.off && ctx.off()) { ctx.toast(tr('Mouvements de caisse désactivés pour cet établissement')); return; }
   const shift = ctx.shift();
   if (!shift) return;
-  let veil = document.getElementById('mz-cash-move');
+  let veil = document.getElementById('mz-cash-move-sheet');
   if (!veil) {
     veil = document.createElement('div');
     veil.className = 'modal-veil';
-    veil.id = 'mz-cash-move';
+    veil.id = 'mz-cash-move-sheet'; /* pas l'id du bouton de la caisse : getElementById rendait le bouton et la feuille s'y peignait */
     veil.setAttribute('role', 'dialog');
     veil.setAttribute('aria-modal', 'true');
     document.body.appendChild(veil);

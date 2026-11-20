@@ -74,21 +74,55 @@ ok(/cashMovements: only === 'delivery' \? \[\] : mzReportMoves\(bqShift\)/.test(
 ok(/bqCloExpected = Math\.round\(\(\(bqShift \? bqShift\.float : 0\) \+ t\.cash \+ mv\.movesIn - mv\.movesOut\) \* 100\) \/ 100/.test(MAISON),
   'the closing sheet expects float + cash + in − out, like the Z');
 ok(/'Sorties de caisse', '− ' \+ fmtMAD\(mv\.movesOut\)/.test(MAISON), 'the closing sheet shows the cash-outs line');
-const MOD = fs.readFileSync(path.join(ROOT, 'assets/pos-maison/cash-moves.js'), 'utf8');
-
-/* ── the till wiring (cash-moves.js) ── */
-const mod = await import('../assets/pos-maison/cash-moves.js');
-ok(typeof mod.mzCashMoveFor === 'function', 'the till wiring lives in the module');
-ok(/approve: \(label, kind, go\) => \{\s*if \(!t\.real\(\)\) \{ go\(null\); return true; \}\s*if \(typeof window\.requireManager !== 'function'\) return false;[\s\S]*?window\.requireManager\(label, go\);/.test(MOD),
-  'a real store records a movement only after a manager code, and refuses (fails closed) when the gate is missing');
-ok(/expected = \(\) => \{ const s = t\.shift\(\), mv = mzMoveTotals\(s\); return Math\.round\(\(\(s \? \+s\.float \|\| 0 : 0\) \+ \(\+t\.cashToday\(\) \|\| 0\) \+ mv\.movesIn - mv\.movesOut\) \* 100\) \/ 100; \}/.test(MOD),
-  'the sheet shows the same expected cash as the closing');
-ok(/t\.emit\('movement', Object\.assign\(\{ movementKind: kind, movementAmountCents: amountCents, movementReason: reason, expectedCents: Math\.round\(expected\(\) \* 100\) \},\s*who && who\.id \? \{ actorId: String\(who\.id\)/.test(MOD),
-  'each movement reaches the cash reconciliation like the restaurant till, under the approver');
-ok(/ctx\.approve\([^;]*\(who\) => \{[\s\S]*?s\.moves = mzMoves\(s\)\.concat/.test(MOD), 'the movement is written inside the approval callback, never before it');
-ok(/if \(asked === false\) ctx\.toast\(tr\('Code manager ou propriétaire requis'\)\)/.test(MOD), 'a refused gate says so, translated');
-ok(/by: String\(\(who && who\.name\) \|\| ctx\.actor\(\)/.test(MOD), 'the movement carries the name of whoever approved it');
-ok(/C\.off\('cash-move'\) \|\| C\.off\('cashMove'\)/.test(MOD), 'the operator can switch it off with the restaurant flag');
+/* ── la feuille, exécutée (cash-moves.js) dans un DOM minimal ── */
+const { mzCashMoveFor } = await import('../assets/pos-maison/cash-moves.js');
+function node(id = '') {
+  const cls = new Set();
+  return { id, dataset: {}, value: '', hidden: false, attrs: {}, html: '',
+    classList: { add: (c) => cls.add(c), remove: (c) => cls.delete(c), contains: (c) => cls.has(c), toggle: (c, on) => (on ? cls.add(c) : cls.delete(c)) },
+    setAttribute(k, v) { this.attrs[k] = v; }, focus() {},
+    set innerHTML(v) { this.html = String(v); }, get innerHTML() { return this.html; } };
+}
+function till({ real = true, gate = 'approve', off = false } = {}) {
+  const button = node('mz-cash-move');                       // the till's own button carries this id
+  const byId = new Map([[button.id, button]]), body = [], toasts = [], emits = [], acts = [];
+  const amount = node('mzcm-amount'), custom = node('mzcm-custom'), wrap = node();
+  const types = ['out', 'in'].map((t) => Object.assign(node(), { dataset: { mzcmType: t } }));
+  globalThis.document = {
+    getElementById: (id) => byId.get(id) || null,
+    createElement: () => { const n = node(); n.querySelector = (q) => ({ '#mzcm-amount': amount, '#mzcm-custom': custom, '.cm-custom-wrap': wrap })[q] || null;
+      n.querySelectorAll = (q) => (q === '[data-mzcm-type]' ? types : []); return n; },
+    body: { appendChild: (n) => { body.push(n); if (n.id) byId.set(n.id, n); } },
+  };
+  globalThis.window = { KiwiAuthAct: (a) => acts.push(a), KiwiConfig: { off: (k) => off && k === 'cash-move' } };
+  if (gate === 'approve') window.requireManager = (label, go) => go({ id: 'u-7', name: 'Sara' });
+  else if (gate === 'refuse') window.requireManager = () => {};
+  const shift = { float: 200, moves: [] };
+  mzCashMoveFor({ shift: () => shift, save: () => {}, cashToday: () => 300, real: () => real,
+    emit: (type, extra) => emits.push([type, extra]), name: () => 'Caissière', fmt: (n) => n.toFixed(2) + ' MAD', toast: (m) => toasts.push(m) });
+  const sheet = body[0];
+  const click = (sel) => sheet && sheet.onclick({ target: { closest: (q) => (q === sel ? {} : null) } });
+  return { button, sheet, shift, toasts, emits, acts, amount, custom, click };
+}
+let w = till();
+ok(w.sheet && w.sheet !== w.button && !w.button.html, 'the sheet is its own element, never painted inside the till button that shares the page');
+ok(w.sheet.classList.contains('is-open') && /Mouvement de caisse/.test(w.sheet.html) && /500\.00 MAD/.test(w.sheet.html), 'it opens showing the drawer: float 200 + cash 300');
+w.amount.value = '12.5'; w.click('[data-mzcm-confirm]');
+eq(w.shift.moves.map((m) => [m.type, m.amount, m.reason, m.by]), [['out', 12.5, 'Achat fournisseur', 'Sara']], 'an approved cash-out is written once, under the approver');
+eq(w.emits, [['movement', { movementKind: 'out', movementAmountCents: 1250, movementReason: 'Achat fournisseur', expectedCents: 48750, actorId: 'u-7' }]],
+  'the reconciliation hears it in cents, with the drawer after the move and the approver');
+eq(w.acts.map((a) => a.kind), ['cash_out'], 'the audit trail records a cash_out');
+w = till({ gate: 'refuse' }); w.amount.value = '40'; w.click('[data-mzcm-confirm]');
+ok(!w.shift.moves.length && !w.emits.length, 'no manager code, no movement: nothing is written before approval');
+w = till({ gate: 'missing' }); w.amount.value = '40'; w.click('[data-mzcm-confirm]');
+ok(!w.shift.moves.length && w.toasts.includes('Code manager ou propriétaire requis'), 'a real store without the gate refuses (fails closed) and says why');
+w = till({ real: false, gate: 'missing' }); w.amount.value = '40'; w.click('[data-mzcm-confirm]');
+eq(w.shift.moves.map((m) => [m.amount, m.by]), [[40, 'Caissière']], 'the demo till records without a code, under the cashier');
+w = till(); w.amount.value = '0'; w.click('[data-mzcm-confirm]');
+ok(!w.shift.moves.length && w.toasts.includes('Saisis un montant'), 'a zero amount is refused');
+w = till({ off: true });
+ok(!w.sheet && w.toasts.includes('Mouvements de caisse désactivés pour cet établissement'), 'the operator switch (cash-move off) keeps the sheet closed');
+delete globalThis.document; delete globalThis.window;
 const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
 const stamp = RAW.match(/pos-maison\/cash-moves\.js\?v=(\d+)/)[1];
 ok(SW.includes(`'/assets/pos-maison/cash-moves.js?v=${stamp}'`), 'the service worker precaches the same stamp');
