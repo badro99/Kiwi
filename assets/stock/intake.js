@@ -803,8 +803,10 @@ window.KiwiStockInternal.install('intake', (S) => {
           return;
         }
       } else {
-        try { await readPhoto(await S.stockPhoto.stPhotoDataUrl(file)); } catch (_) {
-          window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
+        try { await readPhoto(await S.stockPhoto.stPhotoDataUrl(file)); } catch (e) {
+          /* Dire pourquoi : un format que le navigateur n'ouvre pas, une photo que le modèle n'a pas lue, ou le service indisponible. */
+          const why = e && (e.name === 'EncodingError' || /^heif-/.test(e.message || '')) ? 'mScanPhotoFormat' : e && e.message === 'unparsed' ? 'mScanPhotoUnread' : 'mScanFailFallback';
+          window.Kiwi.toast?.(t(why), { type: 'warn' });
           stage.innerHTML = renderRealReceiptReview({ supplier: null }); wireScanReview();
         }
       }
