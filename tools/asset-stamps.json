@@ -1528,8 +1528,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "259",
-    "sha": "3650da44a04b22a0"
+    "v": "261",
+    "sha": "beacf78aa6e61406"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2216,8 +2216,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "134",
-    "sha": "028cb646dca60386"
+    "v": "136",
+    "sha": "0b2285e08327bb2b"
   },
   "assets/stock/alerts.js": {
     "v": "6",
@@ -2252,8 +2252,8 @@
     "sha": "ac383672fe16c958"
   },
   "assets/stock/purchasing.js": {
-    "v": "6",
-    "sha": "5137dec77c14fe2a"
+    "v": "7",
+    "sha": "3c0432ea786a8fa0"
   },
   "assets/stock/state.js": {
     "v": "13",
@@ -2262,6 +2262,10 @@
   "assets/stock/strings.js": {
     "v": "23",
     "sha": "e8e116e60a84d222"
+  },
+  "assets/stock/suppliers.js": {
+    "v": "1",
+    "sha": "41161c0d9f89ceb2"
   },
   "assets/store-templates.js": {
     "v": "4",

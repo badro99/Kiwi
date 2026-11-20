@@ -158,25 +158,26 @@ import * as r152 from './api/stock-transfers.js';
 import * as r153 from './api/stock/lookup.js';
 import * as r154 from './api/store.js';
 import * as r155 from './api/store-credits.js';
-import * as r156 from './api/support/articles.js';
-import * as r157 from './api/support/attachments.js';
-import * as r158 from './api/support/inbound.js';
-import * as r159 from './api/support/tickets.js';
-import * as r160 from './api/table-time.js';
-import * as r161 from './api/team/live.js';
-import * as r162 from './api/ticket-sequence.js';
-import * as r163 from './api/tickets/index.js';
-import * as r164 from './api/timezone.js';
-import * as r165 from './api/weather.js';
-import * as r166 from './api/z-reconciliation.js';
-import * as r167 from './auth/forgot.js';
-import * as r168 from './auth/login.js';
-import * as r169 from './auth/logout.js';
-import * as r170 from './auth/operator.js';
-import * as r171 from './auth/reset.js';
-import * as r172 from './auth/signup.js';
-import * as r173 from './order/basic.js';
-import * as r174 from './sitemap-annuaire.xml.js';
+import * as r156 from './api/suppliers/ranking.js';
+import * as r157 from './api/support/articles.js';
+import * as r158 from './api/support/attachments.js';
+import * as r159 from './api/support/inbound.js';
+import * as r160 from './api/support/tickets.js';
+import * as r161 from './api/table-time.js';
+import * as r162 from './api/team/live.js';
+import * as r163 from './api/ticket-sequence.js';
+import * as r164 from './api/tickets/index.js';
+import * as r165 from './api/timezone.js';
+import * as r166 from './api/weather.js';
+import * as r167 from './api/z-reconciliation.js';
+import * as r168 from './auth/forgot.js';
+import * as r169 from './auth/login.js';
+import * as r170 from './auth/logout.js';
+import * as r171 from './auth/operator.js';
+import * as r172 from './auth/reset.js';
+import * as r173 from './auth/signup.js';
+import * as r174 from './order/basic.js';
+import * as r175 from './sitemap-annuaire.xml.js';
 
 // Nested middlewares, outermost first, with the path each one covers.
 export const FAST_MIDDLEWARES = [
@@ -341,23 +342,24 @@ export const FAST_ROUTES = new Map(/** @type {Array<[string, Record<string, any>
   ["/api/stock/lookup", r153],
   ["/api/store", r154],
   ["/api/store-credits", r155],
-  ["/api/support/articles", r156],
-  ["/api/support/attachments", r157],
-  ["/api/support/inbound", r158],
-  ["/api/support/tickets", r159],
-  ["/api/table-time", r160],
-  ["/api/team/live", r161],
-  ["/api/ticket-sequence", r162],
-  ["/api/tickets", r163],
-  ["/api/timezone", r164],
-  ["/api/weather", r165],
-  ["/api/z-reconciliation", r166],
-  ["/auth/forgot", r167],
-  ["/auth/login", r168],
-  ["/auth/logout", r169],
-  ["/auth/operator", r170],
-  ["/auth/reset", r171],
-  ["/auth/signup", r172],
-  ["/order/basic", r173],
-  ["/sitemap-annuaire.xml", r174],
+  ["/api/suppliers/ranking", r156],
+  ["/api/support/articles", r157],
+  ["/api/support/attachments", r158],
+  ["/api/support/inbound", r159],
+  ["/api/support/tickets", r160],
+  ["/api/table-time", r161],
+  ["/api/team/live", r162],
+  ["/api/ticket-sequence", r163],
+  ["/api/tickets", r164],
+  ["/api/timezone", r165],
+  ["/api/weather", r166],
+  ["/api/z-reconciliation", r167],
+  ["/auth/forgot", r168],
+  ["/auth/login", r169],
+  ["/auth/logout", r170],
+  ["/auth/operator", r171],
+  ["/auth/reset", r172],
+  ["/auth/signup", r173],
+  ["/order/basic", r174],
+  ["/sitemap-annuaire.xml", r175],
 ]));

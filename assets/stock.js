@@ -2178,6 +2178,7 @@
     // Tabs / filters / view
     H['stock-workspace-actions']=()=>{
       const actions=[['stock-scan-invoice',t('btnScan')],['stock-count-sheet',t('btnSheet')],['stock-physical-count',t('btnCount')]];
+      if(isRetailStock())actions.push(['stock-supplier-ranking',({en:'Supplier ranking',ar:'ترتيب الموردين'})[lang()]||'Classement des fournisseurs']);
       const m=window.Kiwi.modal({title:catalogText('stockActions','Outils du stock'),width:480,body:`<div class="catalog-sheet">${actions.map(([action,label])=>`<button type="button" data-catalog-stock="${action}">${esc(label)}</button>`).join('')}</div>`});
       m.el.querySelectorAll('[data-catalog-stock]').forEach(button=>button.onclick=()=>{m.close();H[button.dataset.catalogStock]?.(button);});
     };
@@ -2208,6 +2209,7 @@
 
     // Header actions
     H['stock-scan-invoice'] = () => openInvoiceScan();
+    H['stock-supplier-ranking'] = () => stockParts.suppliers.open();
     H['stock-physical-count'] = () => openPhysicalCount();
     H['stock-count-sheet'] = () => openCountSheet();
     H['stock-add-item'] = () => openAddItem();
@@ -2450,10 +2452,11 @@
     'assets/stock/alerts.js?v=6',
     'assets/stock/loss.js?v=3',
     'assets/stock/counts.js?v=12',
-    'assets/stock/purchasing.js?v=6',
+    'assets/stock/purchasing.js?v=7',
     'assets/stock/intake.js?v=23',
     'assets/stock/photo.js?v=2',
     'assets/stock/catalog.js?v=11',
+    'assets/stock/suppliers.js?v=1',
   ];
   const stockLoads = new Map();
   function loadStockParts() {

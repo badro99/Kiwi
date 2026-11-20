@@ -2472,7 +2472,7 @@ section('Whole-project regressions');
     'menu-i18n-test.mjs',
     'order-langs-test.mjs',
     'salle-scan-test.mjs',
-    'ai-quota-order-test.mjs', 'invoice-photo-test.mjs', 'stock-photo-heic-test.mjs',
+    'ai-quota-order-test.mjs', 'invoice-photo-test.mjs', 'stock-photo-heic-test.mjs', 'supplier-ranking-test.mjs',
     'ai-global-quota-test.mjs',
     /* Plafonds du jour : une seule table, la phrase FR/EN/AR d'un plafond atteint. */
     'ai-daily-caps-test.mjs',
