@@ -2332,6 +2332,8 @@
     get stockMovements() { return stockParts.movements; },
     get stockPhoto() { return stockParts.photo; },
     stockState,
+    /* Le commerce dont on lit les documents (God Mode compris) : KiwiCloudDoc reste l'affaire de stock.js. */
+    stMerchantSlug() { try { return (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug()) || ''; } catch (_) { return ''; } },
     get IGNORE_KEY() { return IGNORE_KEY; },
     get M86_COPY() { return M86_COPY; },
     get TIER_LOW() { return TIER_LOW; },
@@ -2449,8 +2451,8 @@
     'assets/stock/loss.js?v=3',
     'assets/stock/counts.js?v=12',
     'assets/stock/purchasing.js?v=6',
-    'assets/stock/intake.js?v=21',
-    'assets/stock/photo.js?v=1',
+    'assets/stock/intake.js?v=22',
+    'assets/stock/photo.js?v=2',
     'assets/stock/catalog.js?v=11',
   ];
   const stockLoads = new Map();

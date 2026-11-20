@@ -1,10 +1,10 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=122';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=124';
 import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=18';
 import { tillNow } from './pos-boutique/till-clock.js?v=2';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=122';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=122';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=124';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=124';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=10'; import { mzLivraisons } from './pos-maison/delivery.js?v=28';
-import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=9'; import { openMzCashMove, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=2'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
+import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=9'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=4'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
 
   'use strict';
 
@@ -1588,7 +1588,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
       window.KiwiPosDispatch.lock();
     });
     const closeDay = $('#mz-close-day', root);
-    if (closeDay) closeDay.addEventListener('click', bqOpenCloture); const cashMove = $('#mz-cash-move', root); if (cashMove) cashMove.addEventListener('click', bqOpenCashMove);
+    if (closeDay) closeDay.addEventListener('click', bqOpenCloture); const cashMove = $('#mz-cash-move', root); if (cashMove) cashMove.addEventListener('click', () => { if (bqShift) mzCashMoveFor({ shift: () => bqShift, save: bqShiftPersist, cashToday: () => bqDayTotals('store').cash, real: pvReal, emit: bqCashEvent, name: () => (STAFF.caissiere && STAFF.caissiere.name) || '', fmt: fmtMAD, toast }); });
     if (window.KiwiShiftNudge) window.KiwiShiftNudge.check({ host: root, scope: 'maison@' + merchantSlug(),
       openedAt: () => bqShift && bqShift.openedAt, open: bqOpenCloture, isBusy: () => state.checkoutBusy });
     $('#mz-net', root).addEventListener('click', toggleOffline);
@@ -2262,9 +2262,6 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
     } catch (_) { return false; }
   }
   const bqCents = (v) => Math.round((+v || 0) * 100);
-  /* Sorties et entrées de caisse du poste (pos-maison/cash-moves.js) : l'attendu du tiroir les compte, le Z les porte, le rapprochement les reçoit. */
-  function bqOpenCashMove() { if (!bqShift) return; const off = () => { try { return !!(window.KiwiConfig && typeof window.KiwiConfig.off === 'function' && (window.KiwiConfig.off('cash-move') || window.KiwiConfig.off('cashMove'))); } catch (_) { return false; } }; const expected = () => { const mv = mzMoveTotals(bqShift); return Math.round(((bqShift ? bqShift.float : 0) + bqDayTotals('store').cash + mv.movesIn - mv.movesOut) * 100) / 100; };
-    openMzCashMove({ shift: () => bqShift, save: bqShiftPersist, off, expected, fmt: fmtMAD, toast, actor: () => (STAFF.caissiere && STAFF.caissiere.name) || '', emit: (kind, amountCents, reason) => bqCashEvent('movement', { movementKind: kind, movementAmountCents: amountCents, movementReason: reason, expectedCents: bqCents(expected()) }) }); }
 
   function bqShiftPersist() {
     try {

@@ -1,0 +1,6 @@
+libheif 1.23.5, WebAssembly single-file build (libheif-wasm/libheif-bundle.js)
+from the npm package libheif-js@1.23.5 (https://github.com/catdad-experiments/libheif-js),
+built from https://github.com/strukturag/libheif. Unmodified.
+License: GNU LGPL v3 (LICENSE.txt). Loaded on demand by assets/stock/photo.js only
+when the browser cannot decode a HEIC/HEIF photo itself (desktop Chrome, Firefox).
+sha256 074b2b55ef3de477ba9f794ca381f3f0324c1cba8c91b4af07395f39c22d54cc

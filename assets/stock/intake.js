@@ -332,7 +332,7 @@ window.KiwiStockInternal.install('intake', (S) => {
   /* Le magasin à l'écran, vue portée (God mode) comprise. Kiwi.venue n'existe pas au tableau
    * de bord : l'envoi vide passait pour le patron, et donnait 401 à l'opérateur. */
   function stIntakeMerchant() {
-    try { return (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug()) || ''; } catch (_) { return ''; }
+    return S.stMerchantSlug();
   }
 
   async function stIntakeCommit(payload) {

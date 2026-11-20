@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { fixture } from './server-money-fixture.mjs';
 import { onRequestPost as invoiceAi } from '../functions/api/ai/invoice.js';
-import { VISION_PRIMARY, TEXT_PRIMARY } from '../functions/api/ai/_models.js';
+import { DOCUMENT_VISION_PRIMARY, DOCUMENT_VISION_FALLBACK, DEEPSEEK_FLASH, GEMMA_VISION, TEXT_PRIMARY } from '../functions/api/ai/_models.js';
 import { makeSession, SESS_COOKIE } from '../functions/auth/_lib.js';
 
 const root = new URL('..', import.meta.url).pathname;
@@ -34,7 +34,15 @@ assert.equal(ok.body.ok, true, 'une photo de BL est lue');
 assert.equal(ok.body.supplier.name, 'Textiles Atlas');
 assert.equal(ok.body.number, 'BL-1182');
 assert.deepEqual(ok.body.lines.map((l) => [l.label, l.qty]), [['Trench beige', 6], ['Manteau rayé', 4]], 'un BL sans prix garde ses quantités');
-assert.equal(seen[0].model, VISION_PRIMARY, 'la photo part au modèle vision, pas au lecteur de texte');
+/* Le BL réel de La Maison en Vogue (Lahlou Menage, 24 lignes, 20 nov. 2026) :
+   Gemma 4 lisait 19 à 20 lignes aux libellés brouillés, à 1600 comme à 2400 px ;
+   DeepSeek V4.1 Flash réflexion coupée : 24/24, références, prix et totaux exacts,
+   7,8 s, 1 705 jetons. Avec la réflexion, il épuisait 2 500 jetons sans rendre de JSON. */
+assert.equal(DOCUMENT_VISION_PRIMARY, DEEPSEEK_FLASH, 'un document se lit d’abord avec DeepSeek V4.1 Flash');
+assert.equal(DOCUMENT_VISION_FALLBACK, GEMMA_VISION, 'Gemma 4 reste le secours');
+assert.equal(seen[0].model, DOCUMENT_VISION_PRIMARY, 'la photo part au lecteur de documents, pas au lecteur de texte');
+assert.equal(seen[0].payload.chat_template_kwargs && seen[0].payload.chat_template_kwargs.thinking, false, 'réflexion coupée : sinon les jetons partent avant le JSON');
+assert.ok(seen[0].payload.max_tokens >= 6000, 'un BL de 40 lignes tient dans la réponse');
 const user = seen[0].payload.messages.find((m) => m.role === 'user');
 assert.ok(Array.isArray(user.content) && user.content.some((p) => p.type === 'image_url' && p.image_url.url === photo), 'l’image voyage dans le message');
 assert.equal(calls(), 1, 'une lecture = une place du jour');

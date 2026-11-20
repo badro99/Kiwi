@@ -65,8 +65,8 @@ eq(report.cash.ecart, 0, 'a drawer that paid its expenses closes without a gap')
 const RAW = fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8');
 const MAISON = maisonSource(RAW);
 ok(/from '\.\/pos-maison\/cash-moves\.js\?v=\d+'/.test(RAW), 'pos-maison imports the module with a stamp');
-ok(/id="mz-cash-move"/.test(MAISON) && /\$\('#mz-cash-move', root\)[^;]*;\s*if \(cashMove\) cashMove\.addEventListener\('click', bqOpenCashMove\)/.test(MAISON),
-  'a real store has a « Mouvement de caisse » button wired to the sheet');
+ok(/id="mz-cash-move"/.test(MAISON) && /\$\('#mz-cash-move', root\)[^;]*;\s*if \(cashMove\) cashMove\.addEventListener\('click', \(\) => \{ if \(bqShift\) mzCashMoveFor\(\{ shift: \(\) => bqShift, save: bqShiftPersist, cashToday: \(\) => bqDayTotals\('store'\)\.cash, real: pvReal, emit: bqCashEvent/.test(MAISON),
+  'a real store has a « Mouvement de caisse » button wired to the sheet, with the shift, the day cash and the reconciliation channel');
 ok(/IS_DEMO \? '' : '<button class="mz-lock" id="mz-cash-move"/.test(MAISON), 'the demo till has no drawer, so no button');
 ok(/moves: Array\.isArray\(s\.moves\) \? s\.moves : \[\]/.test(MAISON), 'a reload keeps the movements of the open shift');
 ok(/cashMovements: only === 'delivery' \? \[\] : mzReportMoves\(bqShift\)/.test(MAISON),
@@ -74,9 +74,21 @@ ok(/cashMovements: only === 'delivery' \? \[\] : mzReportMoves\(bqShift\)/.test(
 ok(/bqCloExpected = Math\.round\(\(\(bqShift \? bqShift\.float : 0\) \+ t\.cash \+ mv\.movesIn - mv\.movesOut\) \* 100\) \/ 100/.test(MAISON),
   'the closing sheet expects float + cash + in − out, like the Z');
 ok(/'Sorties de caisse', '− ' \+ fmtMAD\(mv\.movesOut\)/.test(MAISON), 'the closing sheet shows the cash-outs line');
-ok(/bqCashEvent\('movement', \{ movementKind: kind, movementAmountCents: amountCents, movementReason: reason/.test(MAISON),
-  'each movement reaches the cash reconciliation like the restaurant till');
-ok(/KiwiConfig\.off\('cash-move'\) \|\| window\.KiwiConfig\.off\('cashMove'\)/.test(MAISON), 'the operator can switch it off with the restaurant flag');
+const MOD = fs.readFileSync(path.join(ROOT, 'assets/pos-maison/cash-moves.js'), 'utf8');
+
+/* ── the till wiring (cash-moves.js) ── */
+const mod = await import('../assets/pos-maison/cash-moves.js');
+ok(typeof mod.mzCashMoveFor === 'function', 'the till wiring lives in the module');
+ok(/approve: \(label, kind, go\) => \{\s*if \(!t\.real\(\)\) \{ go\(null\); return true; \}\s*if \(typeof window\.requireManager !== 'function'\) return false;[\s\S]*?window\.requireManager\(label, go\);/.test(MOD),
+  'a real store records a movement only after a manager code, and refuses (fails closed) when the gate is missing');
+ok(/expected = \(\) => \{ const s = t\.shift\(\), mv = mzMoveTotals\(s\); return Math\.round\(\(\(s \? \+s\.float \|\| 0 : 0\) \+ \(\+t\.cashToday\(\) \|\| 0\) \+ mv\.movesIn - mv\.movesOut\) \* 100\) \/ 100; \}/.test(MOD),
+  'the sheet shows the same expected cash as the closing');
+ok(/t\.emit\('movement', Object\.assign\(\{ movementKind: kind, movementAmountCents: amountCents, movementReason: reason, expectedCents: Math\.round\(expected\(\) \* 100\) \},\s*who && who\.id \? \{ actorId: String\(who\.id\)/.test(MOD),
+  'each movement reaches the cash reconciliation like the restaurant till, under the approver');
+ok(/ctx\.approve\([^;]*\(who\) => \{[\s\S]*?s\.moves = mzMoves\(s\)\.concat/.test(MOD), 'the movement is written inside the approval callback, never before it');
+ok(/if \(asked === false\) ctx\.toast\(tr\('Code manager ou propriétaire requis'\)\)/.test(MOD), 'a refused gate says so, translated');
+ok(/by: String\(\(who && who\.name\) \|\| ctx\.actor\(\)/.test(MOD), 'the movement carries the name of whoever approved it');
+ok(/C\.off\('cash-move'\) \|\| C\.off\('cashMove'\)/.test(MOD), 'the operator can switch it off with the restaurant flag');
 const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
 const stamp = RAW.match(/pos-maison\/cash-moves\.js\?v=(\d+)/)[1];
 ok(SW.includes(`'/assets/pos-maison/cash-moves.js?v=${stamp}'`), 'the service worker precaches the same stamp');

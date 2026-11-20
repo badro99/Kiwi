@@ -27,3 +27,11 @@ export const TEXT_PRIMARY = QWEN;
 export const TEXT_FALLBACK = GEMMA_VISION;
 export const VISION_PRIMARY = GEMMA_VISION;
 export const VISION_FALLBACK = DEEPSEEK_FLASH;
+/* Documents (bons de livraison, factures fournisseur en photo) : un tableau
+ * dense, pas un menu. Mesuré le 20 nov. 2026 sur le vrai BL de La Maison en
+ * Vogue (Lahlou Menage, 24 lignes) avec le prompt et le validateur de
+ * /api/ai/invoice : Gemma 4 rendait 19 à 20 lignes aux libellés brouillés
+ * (1600 et 2400 px) ; DeepSeek V4.1 Flash, réflexion coupée
+ * (chat_template_kwargs.thinking=false), 24/24 exact en 7,8 s et 1 705 jetons. */
+export const DOCUMENT_VISION_PRIMARY = DEEPSEEK_FLASH;
+export const DOCUMENT_VISION_FALLBACK = GEMMA_VISION;

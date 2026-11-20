@@ -2841,7 +2841,7 @@
       'Ignorer': ['Skip', 'تجاهل'],
       'Le nom du produit est requis': ['The product name is required', 'اسم المنتج مطلوب'],
       'Le prix est invalide': ['The price is invalid', 'السعر غير صالح'],
-      'Création impossible': ['Could not create', 'تعذّر الإنشاء'], 'Choisir la variante': ['Choose the variant', 'اختر النوع'], 'Choisir d’abord l’article': ['Choose the item first', 'اختر المنتج أولاً'],
+      'Création impossible': ['Could not create', 'تعذّر الإنشاء'], 'Choisir la variante': ['Choose the variant', 'اختر النوع'], 'Choisir d’abord l’article': ['Choose the item first', 'اختر المنتج أولاً'], 'Compte client': ['Customer account', 'حساب الزبون'], 'Choisissez d’abord la cliente sur le ticket.': ['Choose the customer on the ticket first.', 'اختر الزبون على التذكرة أولاً.'], 'Le ticket entier passe sur le compte, sans autre règlement.': ['The whole ticket goes on the account, with no other payment.', 'التذكرة كاملة تُسجَّل على الحساب، بدون أي دفع آخر.'], 'Acompte': ['Deposit', 'عربون'], 'Solde de l’acompte': ['Deposit balance', 'باقي العربون'],
       'Créé dans le catalogue partagé': ['Created in the shared catalogue', 'تم الإنشاء في الكتالوج المشترك'],
       'Encaissement': ['Checkout', 'الاستخلاص'],
       'Reste à régler': ['Left to pay', 'الباقي للأداء'],

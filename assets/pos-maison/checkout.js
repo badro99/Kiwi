@@ -1,10 +1,11 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=205';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=122';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=122';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=207';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=124';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=124';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
 import { mzDeliveryCard } from './delivery.js?v=28';
+const tr = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);   /* « Compte client » et l'acompte, dans la langue de la caisse */
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */
@@ -1287,8 +1288,8 @@ import { mzDeliveryCard } from './delivery.js?v=28';
        ouverte au nom de la cliente (la même que les acomptes). On le confirme
        sur un écran à part : c'est une dette, pas un moyen de paiement. */
     const stepAccount = () => {
-      if (!opts.customerId) { toast('Compte client', 'Choisissez d’abord la cliente sur le ticket.'); return; }
-      if (settled.length || avoirPart) { toast('Compte client', 'Le ticket entier passe sur le compte, sans autre règlement.'); return; }
+      if (!opts.customerId) { toast(tr('Compte client'), tr('Choisissez d’abord la cliente sur le ticket.')); return; }
+      if (settled.length || avoirPart) { toast(tr('Compte client'), tr('Le ticket entier passe sur le compte, sans autre règlement.')); return; }
       const who = clById(opts.customerId);
       el.innerHTML = `
         <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -1364,7 +1365,7 @@ import { mzDeliveryCard } from './delivery.js?v=28';
           paid: (opts.balancePaid || 0) + paidNow,
           remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow) };
         opts.amount = paidNow;
-        opts.title = onAccount ? 'Compte client' : partial ? 'Acompte' : 'Solde de l’acompte';
+        opts.title = onAccount ? tr('Compte client') : partial ? tr('Acompte') : tr('Solde de l’acompte');
       }
       if (res.delivery || parts.some((x) => x.m === 'livraison')) stepSuccess(parts, res);
       else { closeVeil('#mz-pay-veil'); printReceiptNow(opts, parts); }

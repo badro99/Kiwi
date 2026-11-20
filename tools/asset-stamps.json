@@ -232,8 +232,8 @@
     "sha": "2aec622ff3447940"
   },
   "assets/caisse-lang.js": {
-    "v": "149",
-    "sha": "7f775cf589b42dd7"
+    "v": "150",
+    "sha": "d70a864f4f2bde2f"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1528,8 +1528,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "253",
-    "sha": "45c423c23c7638eb"
+    "v": "255",
+    "sha": "4588e15d49c0511d"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1772,8 +1772,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "444",
-    "sha": "9d8541056bdaa382"
+    "v": "446",
+    "sha": "bf1f57c9d4e8eb20"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1844,20 +1844,20 @@
     "sha": "f20985296d118fa0"
   },
   "assets/pos-maison.css": {
-    "v": "205",
+    "v": "207",
     "sha": "ddaa2e289dfb5fc6"
   },
   "assets/pos-maison.js": {
-    "v": "205",
-    "sha": "08b9aad9df581a83"
+    "v": "207",
+    "sha": "8684bf25f44cbead"
   },
   "assets/pos-maison/cash-moves.js": {
-    "v": "2",
-    "sha": "8b92577e90131f17"
+    "v": "4",
+    "sha": "d1e2db4eb6c5c0d5"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "122",
-    "sha": "35fac7e68f41a901"
+    "v": "124",
+    "sha": "df8f2214003fb239"
   },
   "assets/pos-maison/delivery.js": {
     "v": "28",
@@ -1868,16 +1868,16 @@
     "sha": "feb0865a7163d8c9"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "122",
-    "sha": "1476788e4cc99b1a"
+    "v": "124",
+    "sha": "43021539d284a577"
   },
   "assets/pos-maison/kit-2027.js": {
     "v": "9",
     "sha": "f515821f6c5e0e52"
   },
   "assets/pos-maison/sales.js": {
-    "v": "122",
-    "sha": "4dd3ea239ae75e3f"
+    "v": "124",
+    "sha": "26bcd3f0835ee977"
   },
   "assets/pos-maison/ticket-remise.js": {
     "v": "3",
@@ -2216,8 +2216,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "131",
-    "sha": "92a2e77c0c4a979c"
+    "v": "133",
+    "sha": "5c892e2303a971b3"
   },
   "assets/stock/alerts.js": {
     "v": "6",
@@ -2232,8 +2232,8 @@
     "sha": "802b0269cbd00e8c"
   },
   "assets/stock/intake.js": {
-    "v": "21",
-    "sha": "3d6fc3f3a6ade83c"
+    "v": "22",
+    "sha": "71da0779a3a0686f"
   },
   "assets/stock/loss.js": {
     "v": "3",
@@ -2248,8 +2248,8 @@
     "sha": "b3c3dac3db831fbb"
   },
   "assets/stock/photo.js": {
-    "v": "1",
-    "sha": "49444697cb268ec2"
+    "v": "2",
+    "sha": "ac383672fe16c958"
   },
   "assets/stock/purchasing.js": {
     "v": "6",

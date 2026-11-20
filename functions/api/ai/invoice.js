@@ -1,5 +1,5 @@
 import { budgetRoute } from './_budget-route.js';
-import { TEXT_PRIMARY as MODEL, TEXT_FALLBACK as FALLBACK_MODEL, VISION_PRIMARY as VISION_MODEL, VISION_FALLBACK as VISION_FALLBACK_MODEL } from './_models.js';
+import { TEXT_PRIMARY as MODEL, TEXT_FALLBACK as FALLBACK_MODEL, DOCUMENT_VISION_PRIMARY as VISION_MODEL, DOCUMENT_VISION_FALLBACK as VISION_FALLBACK_MODEL } from './_models.js';
 import { runVisionPair, visionMessages } from './_vision.js';
 export { MODEL, FALLBACK_MODEL, VISION_MODEL, VISION_FALLBACK_MODEL };
 // /api/ai/invoice — lecture et extraction structurée de factures fournisseur.
@@ -27,6 +27,8 @@ export { GATEWAY_OPTS, runAiWithGateway };
  * Qwen ne couche pas les deux. */
 
 const MAX_TOKENS = 2500;
+/* Une photo : la réponse porte chaque ligne (réf, libellé, qté, prix, total) ; 24 lignes = 1 705 jetons. */
+const MAX_TOKENS_IMAGE = 6000;
 const TEMPERATURE = 0.1;
 const TOP_P = 0.9;
 const DAILY_CAP = DAILY_CAPS.invoice;
@@ -163,7 +165,7 @@ async function budgetHandler(context) {
   if (kind === 'text' && !text) return json({ ok: false, error: 'empty-text' }, 400);
 
   const models = image ? [VISION_MODEL, VISION_FALLBACK_MODEL] : [MODEL, FALLBACK_MODEL];
-  if (!(await quotaOk(env, who, 'invoice', DAILY_CAP, { models, maxTokens: Math.max(MAX_TOKENS), vision: !!image }))) return json(quotaBody('invoice'), 429);
+  if (!(await quotaOk(env, who, 'invoice', DAILY_CAP, { models, maxTokens: image ? MAX_TOKENS_IMAGE : MAX_TOKENS, vision: !!image }))) return json(quotaBody('invoice'), 429);
 
   const cleanText = text.slice(0, MAX_TEXT_CHARS);
 
@@ -201,9 +203,11 @@ Règles :
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Voici le texte de la facture :\n\n${cleanText}` },
       ],
-    max_tokens: MAX_TOKENS,
+    max_tokens: image ? MAX_TOKENS_IMAGE : MAX_TOKENS,
     temperature: TEMPERATURE,
     top_p: TOP_P,
+    /* DeepSeek réfléchit par défaut et épuisait la réponse avant le JSON ; Gemma reçoit en plus enable_thinking=false (_run.js). */
+    ...(image ? { chat_template_kwargs: { thinking: false } } : {}),
   };
 
   let aiRes;
