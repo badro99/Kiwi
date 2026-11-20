@@ -585,7 +585,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
        snapshots carry their own accounting basis in parts and stay intact. */
     var paymentSource = Array.isArray(s.parts) ? s.parts :
       (Array.isArray(s.paymentParts) ? s.paymentParts.filter(function (p) {
-        return p && p.method !== 'credit' && p.method !== 'delivery';
+        return p && p.method !== 'credit' && p.method !== 'delivery' && p.method !== 'compte';
       }) : null);
     return {
       /* Le feed du tableau de bord ne porte PAS d'`id` : l'identifiant du serveur

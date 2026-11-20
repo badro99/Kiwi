@@ -1,8 +1,8 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=117';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=119';
 import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=18';
 import { tillNow } from './pos-boutique/till-clock.js?v=2';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=117';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=117';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=119';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=119';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=10'; import { mzLivraisons } from './pos-maison/delivery.js?v=28';
 import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=8'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
 
@@ -500,7 +500,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
   function originalSalePayload(sale) {
     if (!sale) return null;
     const parts = Array.isArray(sale.parts) ? sale.parts : [];
-    const received = parts.filter((part) => part && part.m !== 'avoir' && part.m !== 'livraison' && (+part.amount || 0) > 0);
+    const received = parts.filter((part) => part && part.m !== 'avoir' && part.m !== 'livraison' && part.m !== 'compte' && (+part.amount || 0) > 0);
     const methods = received.map((part) => part.m);
     const method = sale.tenderVersion === 2 ? bqPaymentMethod(parts)
       : (methods.includes('carte') ? 'card' : (methods.includes('espèces') ? 'cash' : 'wallet'));
@@ -1940,6 +1940,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
     const beginPay = () => openPay({
       amount: total,
       customerId: c ? c.id : null,
+      allowAccount: !!window.KiwiRetailBalances && !(tot.consigned > 0),
       beforePaid: () => window.KiwiLoyaltyReserve.create({ isDemo: IS_DEMO, ticket: t, client: c, render: renderTicket, close: () => { state.checkoutBusy = false; closeVeil('#mz-pay-veil'); } }).confirm(),
       title: 'Encaissement',
       subtitle: `${t.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
@@ -1965,13 +1966,14 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
       waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
       onPaid: (parts, paymentContext) => {
         const isAcompte = !!(paymentContext && paymentContext.partial);
+        const onAccount = !!(paymentContext && paymentContext.onAccount);
         const receivedNow = isAcompte ? paymentContext.paidNow : total;
         if (isAcompte && (!c || !c.id || !window.KiwiRetailBalances || tot.consigned > 0)) {
-          toast('Acompte : cliente requise, hors articles en dépôt-vente'); return { error: 'acompte-not-eligible' };
+          toast(onAccount ? 'Compte client : cliente requise, hors articles en dépôt-vente' : 'Acompte : cliente requise, hors articles en dépôt-vente'); return { error: 'acompte-not-eligible' };
         }
         const rewardUsed = !!(t.reward && c && c.id && t.reward.clientId === c.id);
         const sale = {
-          id: t.num, syncId: t.syncId || newSaleId(), tenderVersion: 2, at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: isAcompte ? 'acompte' : 'vente',
+          id: t.num, syncId: t.syncId || newSaleId(), tenderVersion: 2, at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: isAcompte ? 'acompte' : 'vente', onAccount: onAccount || undefined,
           /* Référence provisoire émise hors ligne : le journal doit le dire, la
              vente elle-même est complète et synchronisable. */
           offlineRef: isOfflineRef(t.num) || undefined,
@@ -2010,7 +2012,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
         if (isAcompte) {
           const savedBalance = window.KiwiRetailBalances.record(merchantSlug(), {
             id: balanceId, customerId: c.id, ticketRef: sale.id,
-            totalCents: Math.round(total * 100), receipt: {
+            totalCents: Math.round(total * 100), receipt: onAccount ? undefined : {
               id: sale.syncId, amountCents: Math.round(receivedNow * 100),
               method: bqPaymentMethod(parts), ts: +sale.at,
             },
@@ -2027,7 +2029,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
         if (typeof updateRegistryContribution === 'function') updateRegistryContribution(sale);
         try {
           if (window.KiwiLive && window.KiwiLive.isOn()) {
-            const received = (parts || []).filter((x) => x && x.m !== 'avoir' && x.m !== 'livraison' && (+x.amount || 0) > 0);
+            const received = (parts || []).filter((x) => x && x.m !== 'avoir' && x.m !== 'livraison' && x.m !== 'compte' && (+x.amount || 0) > 0);
             const receivedMethods = received.map((x) => x.m);
             const method = bqPaymentMethod(parts);
             const first = t.lines[0];
@@ -2077,13 +2079,14 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
               id: sale.syncId,
               amount: cashIn,
               amountCents: Math.round(cashIn * 100),
-              ticketAmountCents: Math.round(receivedNow * 100),
+              /* Sur le compte client, rien n'est reçu mais le ticket entier est attribué à « compte ». */
+              ticketAmountCents: Math.round((onAccount ? total : receivedNow) * 100),
               consignedAmountCents: Math.round(tot.consigned * 100),
               method: method,
               paymentParts: bqPaymentParts(parts),
               discountPercents: [...new Set(t.lines.map(ln => Number(ln.remise)).filter(n => n > 0))],
               channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter', deliveryCard: ((parts || []).find((x) => x && x.m === 'livraison' && x.card) || {}).card,
-              label: isAcompte ? 'Acompte · ' + label : label,
+              label: onAccount ? 'Compte client · ' + label : isAcompte ? 'Acompte · ' + label : label,
               ref: sale.id,
               time: sale.at,
               lines: basket,
@@ -2098,6 +2101,8 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
             } else if (cashIn <= 0 && tot.consigned >= total && basket.length) {
               payload.settlementKind = 'consignment';
             } else if (cashIn <= 0 && (parts || []).some((x) => x && x.m === 'livraison') && basket.length) {
+              payload.settlementKind = 'receivable';
+            } else if (onAccount && basket.length) {
               payload.settlementKind = 'receivable';
             }
             bqPost(sale, payload);
@@ -2273,7 +2278,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
      jamais de l'argent qui rentre : il consomme une dette déjà comptée. */
   function bqMoneyParts(s) {
     if (Array.isArray(s.parts) && s.parts.length) {
-      return s.parts.filter((p) => p && p.m !== 'avoir' && +p.amount > 0)
+      return s.parts.filter((p) => p && p.m !== 'avoir' && p.m !== 'compte' && +p.amount > 0)
         .map((p) => ({ m: p.m, amount: +p.amount }));
     }
     const names = String(s.methods || '').split(' + ').filter((m) => m && m !== 'avoir');
@@ -2282,7 +2287,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
     const amount = s.remote && Number.isFinite(+s.receivedAmount) ? Math.min(+s.total || 0, +s.receivedAmount) : +s.total;
     return names.length && amount > 0 && !(s.remote && names[0] === 'livraison') ? [{ m: names[0], amount }] : [];
   }
-  const BQ_SRV_METHOD = { 'espèces': 'cash', 'carte': 'card', 'virement': 'transfer', 'chèque': 'cheque', 'avoir': 'credit', 'livraison': 'delivery' };
+  const BQ_SRV_METHOD = { 'espèces': 'cash', 'carte': 'card', 'virement': 'transfer', 'chèque': 'cheque', 'avoir': 'credit', 'livraison': 'delivery', 'compte': 'compte' };
   function bqPaymentParts(parts) {
     const by = new Map();   // le serveur refuse plus de huit lignes (_retail-tenders.js) : les parts d'un même mode s'additionnent
     (parts || []).filter((part) => part && +part.amount > 0).forEach((part) => { const m = BQ_SRV_METHOD[part.m] || 'wallet'; by.set(m, (by.get(m) || 0) + Math.round((+part.amount || 0) * 100)); });
@@ -2291,7 +2296,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
   function bqPaymentMethod(parts) {
     const methods = bqPaymentParts(parts);
     if (methods.length === 1) return methods[0].method;
-    if (methods.some((part) => part.method !== 'credit' && part.method !== 'delivery')) return 'split';
+    if (methods.some((part) => part.method !== 'credit' && part.method !== 'delivery' && part.method !== 'compte')) return 'split';
     return methods.some((part) => part.method === 'delivery') ? 'delivery' : 'credit';
   }
 

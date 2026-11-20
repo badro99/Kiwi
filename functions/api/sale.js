@@ -361,6 +361,14 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
   if (paymentParts === false || (paymentParts && method !== retailTenderMethod(paymentParts))) {
     return json({ error: 'bad-payment-parts' }, 400);
   }
+  /* « Compte client » : the only debt a receipt may carry is one written into an
+     open note for a named customer (retail_balances). Without that note the sum
+     would be owed by nobody, and no screen could ever collect it. */
+  if (paymentParts && paymentParts.some((p) => p.method === 'compte')
+      && !(b.retailBalance && b.retailBalance.stage === 'open' && receivable && amountCents === 0
+        && paymentParts.length === 1)) {
+    return json({ error: 'bad-account-settlement' }, 400);
+  }
   /* Le pourboire, à côté de la vente et jamais dedans : `amount` reste le
      chiffre d'affaires. Facultatif ; quand il est là, un entier de centimes de
      0 au montant de la vente, sinon la vente est refusée (§10.26) : un

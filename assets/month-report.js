@@ -97,7 +97,7 @@
       if(s.amount_cents==null&&s.amountCents==null)warn('legacy-precision',s.id,'Montant historique sans centimes : précision limitée à celle du registre original.');
       var tx=taxes.get(s);s.tax=tx;if(tx){taxed++;htTotal+=tx.ht;vatTotal+=tx.vat;(tx.pieces||[Object.assign({ttc:s.cents},tx)]).forEach(function(t){var group=String(t.rate==null?'Montants figés, taux absent':t.rate+' %'),g=taxGroups.get(group)||{rate:group,ht:0,vat:0,ttc:0,count:0};g.ht+=t.ht;g.vat+=t.vat;g.ttc+=t.ttc;g.count++;taxGroups.set(group,g);});}else warn('missing-tax',s.ref||s.id,'Taux/ventilation historique non enregistré dans Kiwi. Le réglage courant sans date n’est pas utilisé.');
       add(channels,s.channel,s.cents);
-      var parts=list(s.payment_parts||s.paymentParts), received=parts.filter(function(p){return !/^(credit|delivery|deferred)$/i.test(p.method||'');}),partSum=knownSum(received,cents);
+      var parts=list(s.payment_parts||s.paymentParts), received=parts.filter(function(p){return !/^(credit|delivery|deferred|compte)$/i.test(p.method||'');}),partSum=knownSum(received,cents);
       if(parts.length&&partSum===s.cents)received.forEach(function(p){add(methods,p.method,cents(p));});
       else{add(methods,s.method,s.cents);if(s.method==='split'||parts.length)warn('payment-split',s.id,'Ventilation des encaissements fractionnés absente ou non rapprochée; crédit et paiements différés ne sont pas du numéraire.');}
       if(!s.lines.length){if(s.cents<0)warn('refund-items',s.id,'Articles effectivement remboursés non enregistrés : ne pas supposer un retour physique du panier entier.');warn('missing-basket',s.id,'Détail produit non enregistré dans Kiwi.');return;}

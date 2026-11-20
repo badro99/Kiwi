@@ -1,6 +1,9 @@
 // Retail receipts remain one sale/idempotency key. Tender parts are immutable
 // payment attribution within that receipt, not extra sales or extra stock moves.
-const METHODS = new Set(['cash', 'card', 'transfer', 'cheque', 'credit', 'delivery']);
+// `compte` = put on the customer's account (an open note in retail_balances):
+// goods leave, nothing is received today, the money arrives with a later receipt.
+const METHODS = new Set(['cash', 'card', 'transfer', 'cheque', 'credit', 'delivery', 'compte']);
+const NOT_RECEIVED = new Set(['credit', 'delivery', 'compte']);
 
 export function validateRetailTenders(raw, amountCents, ticketAmountCents, consignedCents = 0) {
   if (raw == null) return null; // legacy tills did not send tender detail
@@ -13,7 +16,7 @@ export function validateRetailTenders(raw, amountCents, ticketAmountCents, consi
     const cents = Number(part && part.amountCents);
     if (!METHODS.has(method) || !Number.isSafeInteger(cents) || cents <= 0) return false;
     full += cents;
-    if (method !== 'credit' && method !== 'delivery') received += cents;
+    if (!NOT_RECEIVED.has(method)) received += cents;
     parts.push({ method, amountCents: cents });
   }
   // The ticket is fully allocated, while the owner revenue excludes consigned
@@ -23,8 +26,9 @@ export function validateRetailTenders(raw, amountCents, ticketAmountCents, consi
 }
 
 export function retailTenderMethod(parts) {
-  const money = parts.filter(p => p.method !== 'credit' && p.method !== 'delivery');
+  const money = parts.filter(p => !NOT_RECEIVED.has(p.method));
   if (money.length === 1 && parts.length === 1) return money[0].method;
   if (money.length) return 'split';
+  if (parts.length === 1 && parts[0].method === 'compte') return 'compte';
   return parts.some(p => p.method === 'delivery') ? 'delivery' : 'credit';
 }

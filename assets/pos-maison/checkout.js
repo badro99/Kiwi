@@ -1,6 +1,6 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=200';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=117';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=117';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=202';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=119';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=119';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
@@ -845,7 +845,7 @@ import { mzDeliveryCard } from './delivery.js?v=28';
         total: opts.amount,
         acompte: opts.acompte || null,
         customer: opts.customer || null,
-        pay: (parts || []).map((x) => ({ label: x.m === 'avoir' ? ('Avoir ' + (x.code || '')) : x.m, amount: x.amount })),
+        pay: (parts || []).map((x) => ({ label: x.m === 'avoir' ? ('Avoir ' + (x.code || '')) : x.m === 'compte' ? 'Compte client' : x.m, amount: x.amount })),
         received: (function () {
           const c = (parts || []).find((x) => x.m === 'espèces' && x.rendu > 0);
           return c ? (+c.amount || 0) + (+c.rendu || 0) : null;
@@ -982,7 +982,7 @@ import { mzDeliveryCard } from './delivery.js?v=28';
       };
     });
 
-    const mLabel = (m) => (m === 'espèces' ? 'Espèces' : m === 'carte' ? 'Carte' : m === 'virement' ? 'Virement / Versement' : m === 'chèque' ? 'Chèque' : m === 'livraison' ? 'Livraison' : m === 'avoir' ? 'Avoir' : m);
+    const mLabel = (m) => (m === 'espèces' ? 'Espèces' : m === 'carte' ? 'Carte' : m === 'virement' ? 'Virement / Versement' : m === 'chèque' ? 'Chèque' : m === 'livraison' ? 'Livraison' : m === 'avoir' ? 'Avoir' : m === 'compte' ? 'Compte client' : m);
 
     const appliedBanner = () => {
       const rows = [];
@@ -1045,6 +1045,12 @@ import { mzDeliveryCard } from './delivery.js?v=28';
             <span class="l"><b>Livraison</b><span>Vente enregistrée, paiement à recevoir du transporteur</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
+          ${opts.allowAccount && !settled.length && !avoirPart ? `
+          <button class="mz-pay-opt" data-mz-m="compte">
+            <span class="ic"><img src="assets/icons/material/account_balance_wallet.svg" alt=""></span>
+            <span class="l"><b>Compte client</b><span>${opts.customerId ? 'Tout le ticket à régler plus tard, suivi dans Acomptes' : 'Choisir d’abord la cliente sur le ticket'}</span></span>
+            <span class="amt">${fmtMAD(due())}</span>
+          </button>` : ''}
           ${remAvoirs.length ? `
           <button class="mz-pay-opt" data-mz-m="avoir">
             <span class="ic"><i data-lucide="ticket"></i></span>
@@ -1091,6 +1097,7 @@ import { mzDeliveryCard } from './delivery.js?v=28';
              et son plafond propre (le solde du bon). */
           $$('[data-mz-m]', el).forEach((b) => {
             const a = $('.amt', b); if (!a) return;
+            if (b.dataset.mzM === 'compte') return;   /* le compte prend toujours le ticket entier */
             if (/^avoir/.test(b.dataset.mzM)) {
               const bal = (remainingAvoirs()[0] || {}).balance;
               if (bal != null) a.textContent = '−' + fmtMAD(Math.min(bal, portion()));
@@ -1118,6 +1125,7 @@ import { mzDeliveryCard } from './delivery.js?v=28';
               } });
           }
           else if (m === 'avoir') stepAvoir();
+          else if (m === 'compte') stepAccount();
           else toast('Aucun avoir actif, émettez-en un depuis Échanges & avoirs');
         };
       });
@@ -1275,14 +1283,38 @@ import { mzDeliveryCard } from './delivery.js?v=28';
       $('#mz-external-ok', el).onclick = () => settle({ m: cheque ? 'chèque' : 'virement', amount });
     };
 
+    /* Le compte client : rien n'est encaissé, le ticket entier devient une note
+       ouverte au nom de la cliente (la même que les acomptes). On le confirme
+       sur un écran à part : c'est une dette, pas un moyen de paiement. */
+    const stepAccount = () => {
+      if (!opts.customerId) { toast('Compte client', 'Choisissez d’abord la cliente sur le ticket.'); return; }
+      if (settled.length || avoirPart) { toast('Compte client', 'Le ticket entier passe sur le compte, sans autre règlement.'); return; }
+      const who = clById(opts.customerId);
+      el.innerHTML = `
+        <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
+        <h3 class="modal-title">Mettre sur le compte client</h3>
+        <p class="modal-subtle">${who ? esc(who.name) : 'Cliente'} · ${esc(opts.ref || '')}</p>
+        <div class="modal-amount size-md">${fmtMAD(opts.amount)}</div>
+        <p class="modal-subtle">Aucun encaissement aujourd’hui. La note reste ouverte dans Acomptes jusqu’au règlement, qui comptera le jour où l’argent est reçu.</p>
+        <div class="mz-sheet-foot">
+          <button class="mz-btn secondary" id="mz-account-back">Retour</button>
+          <button class="cash-confirm" id="mz-account-ok">Confirmer · ${fmtMAD(opts.amount)} à régler</button>
+        </div>`;
+      icons(); closeBtns();
+      $('#mz-account-back', el).onclick = stepMethods;
+      $('#mz-account-ok', el).onclick = () => { void commit('account'); };
+    };
+
     const commit = async (partial) => {
       if (committed) return;
-      if (partial && (!opts.customerId || settled.length !== 1 || avoirPart
+      const onAccount = partial === 'account';
+      if (onAccount && (!opts.customerId || settled.length || avoirPart)) return;
+      if (partial && !onAccount && (!opts.customerId || settled.length !== 1 || avoirPart
           || !['espèces','carte','virement','chèque'].includes(settled[0].m))) {
         toast('Acompte : une cliente et un seul règlement sont requis'); return;
       }
-      const parts = (avoirPart ? [avoirPart] : []).concat(settled);
-      const paidNow = Math.round(parts.reduce((sum, part) => sum + (+part.amount || 0), 0) * 100) / 100;
+      const parts = onAccount ? [{ m: 'compte', amount: opts.amount }] : (avoirPart ? [avoirPart] : []).concat(settled);
+      const paidNow = onAccount ? 0 : Math.round(parts.reduce((sum, part) => sum + (+part.amount || 0), 0) * 100) / 100;
       for (const part of parts) {
         if (part.m !== 'avoir') continue;
         const av = AVOIRS.find((a) => a.code === part.code);
@@ -1324,7 +1356,7 @@ import { mzDeliveryCard } from './delivery.js?v=28';
         stepMethods();
         return;
       }
-      const res = opts.onPaid(parts, { partial: !!partial, paidNow }) || {};
+      const res = opts.onPaid(parts, { partial: !!partial, paidNow, onAccount }) || {};
       if (res.error) { committed = false; stepMethods(); return; }
       if (res.sale) opts.sale = res.sale;
       if (partial || opts.balanceExisting) {
@@ -1332,7 +1364,7 @@ import { mzDeliveryCard } from './delivery.js?v=28';
           paid: (opts.balancePaid || 0) + paidNow,
           remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow) };
         opts.amount = paidNow;
-        opts.title = partial ? 'Acompte' : 'Solde de l’acompte';
+        opts.title = onAccount ? 'Compte client' : partial ? 'Acompte' : 'Solde de l’acompte';
       }
       if (res.delivery || parts.some((x) => x.m === 'livraison')) stepSuccess(parts, res);
       else { closeVeil('#mz-pay-veil'); printReceiptNow(opts, parts); }

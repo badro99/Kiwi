@@ -14,8 +14,13 @@ export async function claimRetailBalance(db, merchant, raw, saleId, amountCents,
   if (!/^[A-Za-z0-9_-]{8,64}$/.test(id) || !/^[A-Za-z0-9_-]{1,64}$/.test(customerId)
       || !ticketRef || !Number.isSafeInteger(totalCents) || totalCents < 1
       || totalCents > 20000000 || !['open', 'payment'].includes(stage)
-      || !Number.isSafeInteger(amountCents) || amountCents < 1 || amountCents > totalCents
-      || !['cash', 'card', 'transfer', 'cheque'].includes(method)) {
+      || !Number.isSafeInteger(amountCents) || amountCents > totalCents) {
+    return json({ error: 'bad-retail-balance' }, 400);
+  }
+  // Two shapes only: a real payment (1 cent or more, money method), or the whole
+  // ticket put on the customer's account when the note opens (0 received, `compte`).
+  const onAccount = stage === 'open' && amountCents === 0 && method === 'compte';
+  if (!onAccount && (amountCents < 1 || !['cash', 'card', 'transfer', 'cheque'].includes(method))) {
     return json({ error: 'bad-retail-balance' }, 400);
   }
   let customer;
@@ -39,6 +44,9 @@ export async function claimRetailBalance(db, merchant, raw, saleId, amountCents,
         || Number(bill.total_cents) !== totalCents) {
       return json({ error: 'retail-balance-conflict' }, 409);
     }
+    // Nothing was received: the note itself is the whole record. No receipt row,
+    // so the note's paid amount stays 0 and every later payment is a new sale.
+    if (onAccount) return null;
     const previous = await db.prepare(`SELECT balance_id,amount_cents,method FROM retail_balance_receipts
       WHERE merchant = ? AND sale_id = ?`).bind(merchant, saleId).first();
     if (previous) return previous.balance_id === id && Number(previous.amount_cents) === amountCents && previous.method === method

@@ -251,7 +251,7 @@
       else {
         out.collected += amount;
         var parts = Array.isArray(row && row.paymentParts) ? row.paymentParts.filter(function (part) {
-          return part && part.method !== 'credit' && part.method !== 'delivery' && Number(part.amountCents) > 0;
+          return part && part.method !== 'credit' && part.method !== 'delivery' && part.method !== 'compte' && Number(part.amountCents) > 0;
         }) : [];
         var partTotal = parts.reduce(function (sum, part) { return sum + Number(part.amountCents); }, 0);
         if (!partTotal) parts = [{ method: method, amountCents: Math.abs(amount) * 100 }], partTotal = Math.abs(amount) * 100;

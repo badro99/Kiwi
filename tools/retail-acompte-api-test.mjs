@@ -117,4 +117,36 @@ for (const [day, expected, method, outstanding] of [
   assert.equal(report.acomptes.outstanding, outstanding, `${day} Z displays outstanding balances`);
   assert.equal(report.cash.expected, method === 'cash' ? 300 : 0, `${day} drawer excludes transfer`);
 }
-console.log('✓ retail acompte API: 2 days, 2 distinct receipts, retry, overpayment and Z totals');
+/* Compte client: the whole ticket on the customer's account. Nothing is
+   received, the note opens at the full amount, a later payment is a new sale. */
+const accountBill = { ...bill, id: 'balance-test-0004', ticketRef: 'TEST-KIWI-compte', totalCents: 50000 };
+const onAccount = (id, extra = {}) => post(id, 0, 'compte', '2026-09-28', 'open', {
+  ticketAmountCents: 50000, paymentParts: [{ method: 'compte', amountCents: 50000 }],
+  settlementKind: 'receivable', retailBalance: { ...accountBill, stage: 'open' }, ...extra });
+async function noteFor(ref) {
+  const request = new Request('https://kiwi.test/api/retail-balances?merchant=' + merchant + '&q=' + ref, { headers: { cookie } });
+  return ((await (await onRequestGet({ request, env })).json()).balances || [])[0];
+}
+r = await onAccount('compte-open-500');
+assert.equal(r.status, 200, `a sale fully on account is accepted: ${JSON.stringify(r)}`);
+assert.deepEqual(Object.values(sql.prepare("SELECT amount_cents, method FROM sales WHERE id='compte-open-500'").get()), [0, 'compte'],
+  'no money enters the takings the day goods leave on account');
+assert.equal((await noteFor('TEST-KIWI-compte')).balanceCents, 50000, 'the whole ticket is owed');
+assert.equal(sql.prepare("SELECT COUNT(*) n FROM retail_balance_receipts WHERE balance_id='balance-test-0004'").get().n, 0,
+  'putting a ticket on account writes no receipt');
+r = await onAccount('compte-open-500');
+assert.equal(r.status, 200, 'the till can retry the same on-account sale');
+assert.equal(sql.prepare("SELECT COUNT(*) n FROM retail_balances WHERE id='balance-test-0004'").get().n, 1);
+r = await post('compte-pay-200', 20000, 'cash', '2026-09-29', 'payment', { retailBalance: { ...accountBill, stage: 'payment' } });
+assert.equal(r.status, 200, `a later cash payment settles part of the account: ${JSON.stringify(r)}`);
+assert.equal((await noteFor('TEST-KIWI-compte')).balanceCents, 30000, '300 MAD still owed');
+r = await post('compte-bad-stage', 0, 'compte', '2026-09-29', 'payment', { ticketAmountCents: 30000,
+  paymentParts: [{ method: 'compte', amountCents: 30000 }], settlementKind: 'receivable',
+  retailBalance: { ...accountBill, stage: 'payment' }, lines: [{ name: 'TEST KIWI item', qty: 1, total: 300 }] });
+assert.equal(r.status, 400, 'an existing note cannot be paid with « compte »');
+r = await post('compte-no-note', 0, 'compte', '2026-09-29', 'open', { ticketAmountCents: 30000,
+  paymentParts: [{ method: 'compte', amountCents: 30000 }], settlementKind: 'receivable', retailBalance: undefined,
+  lines: [{ name: 'TEST KIWI item', qty: 1, total: 300 }] });
+assert.equal(r.status, 400, 'a sale on account must open a note for a named customer');
+
+console.log('✓ retail acompte API: 2 days, 2 distinct receipts, retry, overpayment, Z totals and compte client');

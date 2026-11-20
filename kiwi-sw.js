@@ -222,7 +222,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
-  '/assets/pages/dashboard-startup.js?v=249',
+  '/assets/pages/dashboard-startup.js?v=250',
   '/assets/pages/dashboard-loader.js?v=106',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -375,11 +375,11 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=57',
-  '/assets/report.js?v=10',
+  '/assets/day-report.js?v=58',
+  '/assets/report.js?v=11',
   '/assets/day-report-dash.js?v=52',
   '/assets/day-report-export.js?v=30',
-  '/assets/month-report.js?v=17',
+  '/assets/month-report.js?v=18',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et
@@ -515,7 +515,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=37',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=36',
-  '/assets/pos-dispatch.js?v=440',
+  '/assets/pos-dispatch.js?v=441',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -644,14 +644,14 @@ var SHELL = [
   '/assets/pos-gym.js?v=9',
   '/assets/pos-autre.css?v=9',
   '/assets/pos-autre.js?v=9',
-  '/assets/pos-maison.css?v=200',
-  '/assets/pos-maison/sales.js?v=117',
+  '/assets/pos-maison.css?v=202',
+  '/assets/pos-maison/sales.js?v=119',
   '/assets/pos-maison/ticket-remise.js?v=3',
-  '/assets/pos-maison/checkout.js?v=117',
+  '/assets/pos-maison/checkout.js?v=119',
   '/assets/pos-maison/delivery.js?v=28',
   '/assets/refund-split.js?v=2',
-  '/assets/pos-maison/inventory.js?v=117',
-  '/assets/pos-maison.js?v=200',
+  '/assets/pos-maison/inventory.js?v=119',
+  '/assets/pos-maison.js?v=202',
   '/assets/caisse-pairing.js?v=77',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
