@@ -19,7 +19,7 @@
  * ─────────────────────────────────────────────────────────────────────────── */
 
 /* Injected controls never show on the desk layout. */
-.vx-burger, .vx-scrim, .vx-peek { display: none; }
+.vx-burger, .vx-scrim, .vx-peek { display: none; }   html { -webkit-tap-highlight-color: transparent; }   /* le carré bleu d'Android sur chaque article touché */
 
 /* The register is position:fixed, so it ignores the padding the native app puts
  * on <body> for the status bar and the home indicator: the clock was painted
@@ -35,7 +35,7 @@
  * pixels wide). A short viewport is still a handheld register even when its
  * long edge clears 860px, so keep the phone shell through 1024×600 landscape. */
 @media (max-width: 860px),
-       (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+       (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) and (max-device-width: 500px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) and (max-device-height: 500px) {
 
   /* ── Shell ─────────────────────────────────────────────────────────────── */
   .vx-root {
@@ -265,7 +265,7 @@
 /* Landscape phones have room for three product targets while remaining far
  * too short for the desktop rail + docked ticket. This avoids wasting half of
  * the long edge without shrinking the 44px navigation controls. */
-@media (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+@media (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) and (max-device-width: 500px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) and (max-device-height: 500px) {
   .vx-root .vx-rail,
   .vx-screen.kiwi-dna .kiwi-dna-rail {
     padding-top: calc(max(var(--vx-safe-top), 0px) + 12px) !important;

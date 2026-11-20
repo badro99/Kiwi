@@ -201,7 +201,7 @@
          leaves by touching the next rail entry; a phone's rail is a drawer the
          carnet sits on top of, so it carries a close control (hidden on desk). */
       '#kcb-root .kcb-back{display:none;}',
-      '@media (max-width:860px),(orientation:landscape) and (max-width:1024px) and (max-height:600px){',
+      '@media (max-width:860px),(orientation:landscape) and (max-width:1024px) and (max-height:600px) and (max-device-width:500px),(orientation:landscape) and (max-width:1024px) and (max-height:600px) and (max-device-height:500px){',
         '#kcb-root{border-inline-start:0;border-start-start-radius:0;box-shadow:none;}',
         '#kcb-root .kcb-page{padding:calc(14px + var(--kiwi-safe-top,env(safe-area-inset-top,0px))) 16px calc(28px + var(--kiwi-safe-bottom,env(safe-area-inset-bottom,0px)));}',
         '#kcb-root .kcb-top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;}',
@@ -523,7 +523,7 @@
    * measuring it only ever caught it mid-slide (a 212px gap beside a drawer
    * that was closing) and, with the drawer shut, the carnet covered every
    * control of the register with no way back (ticket #0137). */
-  var PHONE_Q = '(max-width: 860px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px)';
+  var PHONE_Q = '(max-width: 860px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) and (max-device-width: 500px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) and (max-device-height: 500px)';
   function isPhone() { try { return !!(window.matchMedia && window.matchMedia(PHONE_Q).matches); } catch (_) { return false; } }
   /* La caisse 2027 sur téléphone a une capsule d'onglets en bas (#kit-tabbar,
      html[data-k-tabs]) : le carnet s'arrête au-dessus, sinon on ne pourrait

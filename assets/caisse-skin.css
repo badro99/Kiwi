@@ -50,7 +50,7 @@
 /* Portrait handheld — ticket becomes a bottom sheet, sidebar goes off-canvas */
 /* Include short landscape phones: a 932px-wide iPhone is not a desktop till. */
 @media (max-width: 900px),
-       (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+       (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) and (max-device-width: 500px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) and (max-device-height: 500px) {
   /* ── Sideways-scroll guard ─────────────────────────────────────────────
    * The register header is a nowrap flex row built for a 1280px desk screen;
    * its min-content width (~562px) used to force the whole page wider than
@@ -220,7 +220,7 @@
   .sk-alert > :last-child { grid-column: 2; }
 }
 
-@media (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+@media (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) and (max-device-width: 500px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) and (max-device-height: 500px) {
   .main { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   .menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .rightpanel { max-height: 92dvh; }

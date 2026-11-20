@@ -169,7 +169,7 @@
     if (setCapsule) { setCapsule(); return; }
     if (!root.matchMedia) return;
     var md = root.KiwiLayout && root.KiwiLayout.BREAKS ? root.KiwiLayout.BREAKS.md : 768;
-    capsuleMq = root.matchMedia('(max-width:' + (md - 0.02) + 'px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px)');
+    capsuleMq = root.matchMedia('(max-width:' + (md - 0.02) + 'px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) and (max-device-width: 500px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) and (max-device-height: 500px)');
     var set = setCapsule = function () {
       if (capsuleOn()) doc.documentElement.setAttribute('data-k-tabs', ''); else doc.documentElement.removeAttribute('data-k-tabs');
     };

@@ -313,6 +313,13 @@ function bqKitRail(root, $, icons, on, who, staff) {
 
   const close = () => { if (!more.hidden) { more.hidden = true; bqKitRailPaint(); } };
   const toggle = () => { more.hidden = !more.hidden; bqKitRailPaint(); icons(); };
+  /* Gabarit téléphone (pos-mobile.css) : le rail du kit s'efface et le bouton
+     du haut (.vx-burger, pos-mobile.js) ouvrait l'ancien rail, vide sous ce
+     skin : le voile sans panneau. Il ouvre Plus, le vrai menu. */
+  root.addEventListener('click', (e) => {
+    if (!e.target.closest || !e.target.closest('.vx-burger')) return;
+    e.stopImmediatePropagation(); e.preventDefault(); toggle();
+  }, true);
 
   /* La pastille du caissier ouvre son menu (me-menu.js), comme au restaurant. */
   const meMenu = posMeMenu({

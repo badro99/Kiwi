@@ -287,7 +287,7 @@
          roomy header and stacked footer left one bill line visible. There the
          header tightens, split / discount sit in the pay button's row, and the
          Total row goes: the sheet's own bar and the pay button both carry it. */
-      '@media (orientation:landscape) and (max-width:1024px) and (max-height:600px){' +
+      '@media (orientation:landscape) and (max-width:1024px) and (max-height:600px) and (max-device-width:500px),(orientation:landscape) and (max-width:1024px) and (max-height:600px) and (max-device-height:500px){' +
         '.hd{padding:12px 24px 4px;align-items:center}.ti{font-size:var(--k-fs-heading,20px);line-height:1.2}' +
         '.gh{margin-block-start:8px}' +
         '.ft{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:12px;row-gap:4px;padding-block:8px calc(8px + env(safe-area-inset-bottom,0px))}' +

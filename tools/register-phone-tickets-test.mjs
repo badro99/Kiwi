@@ -132,7 +132,7 @@ ok('an open ticket sheet folds on a tap outside it, and says it is a control', (
   assert.match(pmCss, /\.vx-peek-l::before/);
 });
 ok('the client carnet takes the whole screen on a phone', () => {
-  assert.match(cb, /PHONE_Q = '\(max-width: 860px\), \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)'/);
+  assert.match(cb, /PHONE_Q = '\(max-width: 860px\), \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\) and \(max-device-width: 500px\), /);
   // The 2027 till keeps its rail on an iPad, so the carnet opens beside it there;
   // a phone (no rail at that width) still gets the whole screen.
   assert.match(cb, /var b = isPhone\(\) && !beside \? \{ left: 0, top: 0, right: 0, bottom: phoneTabInset\(\) \} : panelInset\(\)/);
