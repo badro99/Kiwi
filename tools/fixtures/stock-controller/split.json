@@ -366,6 +366,18 @@
     {
       "before": "    'assets/stock/intake.js?v=23',\n",
       "after": "    'assets/stock/intake.js?v=23',\n    'assets/stock/photo.js?v=2',\n"
+    },
+    {
+      "before": "      const actions=[['stock-scan-invoice',t('btnScan')],['stock-count-sheet',t('btnSheet')],['stock-physical-count',t('btnCount')]];\n",
+      "after": "      const actions=[['stock-scan-invoice',t('btnScan')],['stock-count-sheet',t('btnSheet')],['stock-physical-count',t('btnCount')]];\n      if(isRetailStock())actions.push(['stock-supplier-ranking',({en:'Supplier ranking',ar:'ترتيب الموردين'})[lang()]||'Classement des fournisseurs']);\n"
+    },
+    {
+      "before": "    H['stock-scan-invoice'] = () => openInvoiceScan();\n",
+      "after": "    H['stock-scan-invoice'] = () => openInvoiceScan();\n    H['stock-supplier-ranking'] = () => stockParts.suppliers.open();\n"
+    },
+    {
+      "before": "    'assets/stock/catalog.js?v=11',\n",
+      "after": "    'assets/stock/catalog.js?v=11',\n    'assets/stock/suppliers.js?v=1',\n"
     }
   ],
   "legacyBoundaries": {
