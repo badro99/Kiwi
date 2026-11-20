@@ -87,6 +87,18 @@
     {
       "before": "      mScanFailFallback: 'القراءة التلقائية غير متوفرة · التحويل إلى الإدخال اليدوي.',",
       "after": "      mScanFailFallback: 'القراءة التلقائية غير متوفرة · التحويل إلى الإدخال اليدوي.', mScanPhotoFormat: 'هذا المتصفح لا يفتح صيغة هذه الصورة · التحويل إلى الإدخال اليدوي.', mScanPhotoUnread: 'تعذّرت قراءة الصورة · صوّر الصفحة كاملة، مستوية وواضحة، أو أدخل السطور يدوياً.',"
+    },
+    {
+      "before": "      mScanTitle: 'Scanner une facture',",
+      "after": "      mScanTitle: 'Scanner un bon ou une facture',"
+    },
+    {
+      "before": "      mScanTitle: 'Scan invoice',",
+      "after": "      mScanTitle: 'Scan delivery note or invoice',"
+    },
+    {
+      "before": "      mScanTitle: 'مسح فاتورة',",
+      "after": "      mScanTitle: 'مسح وصل الاستلام أو الفاتورة',"
     }
   ]
 }

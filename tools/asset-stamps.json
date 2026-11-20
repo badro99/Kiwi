@@ -1528,8 +1528,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "256",
-    "sha": "148aa2be4fe21fc3"
+    "v": "257",
+    "sha": "0d68ca6955375455"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2260,8 +2260,8 @@
     "sha": "ad3af92eb31669f1"
   },
   "assets/stock/strings.js": {
-    "v": "22",
-    "sha": "ab0db6c994892ed1"
+    "v": "23",
+    "sha": "e8e116e60a84d222"
   },
   "assets/store-templates.js": {
     "v": "4",

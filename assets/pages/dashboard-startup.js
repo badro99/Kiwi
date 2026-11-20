@@ -47,7 +47,7 @@
     'assets/day-report-conflicts.js?v=2',
     'assets/day-report-dash.js?v=52',
     'assets/day-report-refused.js?v=2',
-    'assets/stock/strings.js?v=22',
+    'assets/stock/strings.js?v=23',
     'assets/stock/state.js?v=13',
     'assets/stock.js?v=134',
     'assets/catalog-workspace.js?v=7',
