@@ -414,6 +414,16 @@
         }
         .kbl-s { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .kbl-m.has-price .kbl-s { display: ${short ? 'none' : 'block'}; }
+        /* Taille et couleur sur la petite étiquette (Vogue, 20 nov.) : on colle
+           l'étiquette sur le vêtement, il faut lire S ou M sans scanner. Le prix
+           rapetisse pour leur faire de la place ; la couleur cède (points de
+           suspension) avant la taille, qui ne se coupe jamais. */
+        .kbl-m.has-var { gap: 1.2mm; }
+        .kbl-m.has-var .kbl-c, .kbl-m.has-var .kbl-z { font-family: Arial, Helvetica, sans-serif; font-weight: 700; color: #0A0F0D; line-height: 0.95; font-size: ${short ? 14 : metaPt}pt; }
+        .kbl-m.has-var .kbl-c { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
+        .kbl-m.has-var .kbl-z { flex: 0 0 auto; max-width: 60%; overflow: hidden; border: 0.3mm solid #0A0F0D; border-radius: 0.8mm; padding: 0.2mm 0.6mm; }
+        .kbl-m.has-var b { font-size: ${short ? 14 : pricePt}pt; }
+        .kbl-m.has-var s { display: ${short ? 'none' : 'inline'}; }
         .kbl-m b { color: #0A0F0D; font-family: Arial, Helvetica, sans-serif; font-size: ${pricePt}pt; line-height: 0.95; flex: 0 0 auto; }
         /* Le prix barré d'une promotion. Volontairement PLUS PETIT que le prix
            courant : sur une étiquette de rayon, deux nombres de même taille se
@@ -478,7 +488,14 @@
     const wasNum = l.was == null ? NaN : parseFloat(String(l.was).replace(',', '.'));
     const hasWas = hasPrice && Number.isFinite(wasNum) && wasNum > parseFloat(String(l.price).replace(',', '.'));
     const wasStr = hasWas ? `<s>${escapeXml(String(l.was))}</s>` : '';
-    const meta = (l.sub || hasPrice) ? `<div class="kbl-m${hasPrice ? ' has-price' : ''}"><span class="kbl-s">${escapeXml(l.sub || '')}</span>${wasStr}${priceStr}</div>` : '';
+    /* `sub` vaut « Couleur · Taille », ou la taille seule (variantWords). Sur la
+       petite étiquette la taille passe en pastille à part, jamais coupée. */
+    const subStr = String(l.sub || '');
+    const cut = subStr.lastIndexOf(' · ');
+    const varStr = subStr && hasPrice
+      ? (cut > 0 ? `<span class="kbl-c">${escapeXml(subStr.slice(0, cut))}</span>` : '') + `<span class="kbl-z">${escapeXml(cut > 0 ? subStr.slice(cut + 3) : subStr)}</span>`
+      : `<span class="kbl-s">${escapeXml(subStr)}</span>`;
+    const meta = (subStr || hasPrice) ? `<div class="kbl-m${hasPrice ? ' has-price' : ''}${subStr && hasPrice ? ' has-var' : ''}">${varStr}${wasStr}${priceStr}</div>` : '';
     return `<div class="kbl">` +
              `<div class="kbl-head"><div class="kbl-t">${escapeXml(l.title || '')}</div>${meta}</div>` +
              `<div class="kbl-bc">${svg}</div>` +
@@ -525,7 +542,7 @@
     // WinAnsi-safe text: map common typographic chars to their WinAnsi byte, drop
     // anything else >255, escape PDF string metacharacters. (é/è/à… are ≤255 and
     // pass straight through since Latin-1 aligns with WinAnsi for them.)
-    const WA = { '·': '\x97', '–': '\x96', '‘': '\x91', '’': '\x92', '“': '\x93', '”': '\x94', '…': '\x85', '•': '\x95', '€': '\x80' };
+    const WA = { '–': '\x96', '‘': '\x91', '’': '\x92', '“': '\x93', '”': '\x94', '…': '\x85', '•': '\x95', '€': '\x80' };
     const tx = (s) => String(s == null ? '' : s).split('').map((c) => WA[c] || (c.charCodeAt(0) > 255 ? '?' : c)).join('').replace(/[\\()]/g, '\\$&');
     const clip = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '.' : s; };
     const wid = (s, sz, bold) => s.length * sz * (bold ? 0.56 : 0.52);   // rough Helvetica width
@@ -549,9 +566,22 @@
       const wasNum2 = l.was == null ? NaN : parseFloat(String(l.was).replace(',', '.'));
       const hasWas2 = hasPrice && Number.isFinite(wasNum2) && wasNum2 > parseFloat(String(l.price).replace(',', '.'));
       let meta = short && hasPrice ? (l.price + ' MAD') : (l.sub || '');
+      let mSize = metaSize;
+      /* Petite étiquette : taille et couleur à côté du prix, le tout réduit pour
+         tenir sur la largeur. Trop long même petit : la couleur saute, la
+         taille reste. */
+      if (short && hasPrice && l.sub) {
+        const sub = String(l.sub), cut = sub.lastIndexOf(' · ');
+        const fitSize = (str) => Math.min(16, (PW - 8) / (str.length * 0.6));
+        const price = '   ' + l.price + ' MAD';
+        meta = sub + price;
+        if (fitSize(meta) < 8 && cut > 0) meta = sub.slice(0, cut).replace(/\s*\([^)]*\)/g, '') + sub.slice(cut) + price;
+        if (fitSize(meta) < 8 && cut > 0) meta = sub.slice(cut + 3) + price;
+        mSize = Math.max(7, +fitSize(meta).toFixed(1));
+      }
       if (!short && hasPrice) meta = meta ? (meta + '   ' + l.price + ' MAD') : (l.price + ' MAD');
       if (!short && hasWas2) meta += ' (au lieu de ' + l.was + ')';
-      if (meta) s += 'BT /F2 ' + metaSize + ' Tf ' + cx(meta, metaSize, true).toFixed(1) + ' ' + (PH - (short ? 30 : 25)).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
+      if (meta) s += 'BT /F2 ' + mSize + ' Tf ' + cx(meta, mSize, true).toFixed(1) + ' ' + (PH - (short ? 30 : 25)).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
       if (enc && enc.modules) {
         // Bars take whatever height the text leaves: a fixed 30 pt bar block
         // overlapped the text on 20 mm stock (pages only 56.7 pt tall).
