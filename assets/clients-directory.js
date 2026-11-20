@@ -160,6 +160,8 @@
     '.cd-bar{display:flex;flex-direction:column;align-items:flex-start;gap:12px;}',
     '.cd-segs{display:flex;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);overflow-x:auto;scrollbar-width:none;max-width:100%;}',
     '.cd-segs::-webkit-scrollbar{display:none;}',
+    /* Puces et tri sur une seule ligne : sur téléphone, une ligne de plus poussait la première fiche sous la barre du bas. */
+    '.cd-segrow{display:flex;align-items:center;gap:10px;width:100%;min-width:0;}.cd-segrow .cd-segs{flex:1 1 auto;min-width:0;}.cd-segrow .cd-sort{flex:none;}@media (max-width:600px){.cd-sort>span{display:none;}}',
     '.cd-seg{flex:none;border:0;background:transparent;color:var(--n-600);font:inherit;font-size:13px;font-weight:500;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:color .2s;}',
     '.cd-seg em{font-style:normal;color:var(--n-500);margin-inline-start:6px;font-variant-numeric:tabular-nums;}',
     '.cd-sort{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--n-600);}.cd-sort select{font:inherit;font-size:13px;padding:7px 10px;border-radius:10px;border:1px solid var(--n-200);background:var(--surface);color:var(--ink);min-height:36px;}',
@@ -300,7 +302,7 @@
     function filtered() {
       var q = state.q.trim().toLowerCase();
       return all.filter(function (c) {
-        if (!segMatch(c, state.seg)) return false;
+        if (state.seg !== 'all' && !segMatch(c, state.seg)) return false;
         if (!q) return true;
         return (c.name || '').toLowerCase().indexOf(q) >= 0 ||
           (window.KiwiPhone && window.KiwiPhone.same(c.phone, q)) ||
@@ -366,7 +368,7 @@
       return rows.slice().sort(function (a, b) { return (b.spend || 0) - (a.spend || 0); });
     }
     function sortSelect() {
-      return '<label class="cd-sort"><span>' + esc(T.sortBy) + '</span><select id="cd-sort">' + ['spend', 'recent', 'visits', 'owes', 'name'].map(function (k) {
+      return '<label class="cd-sort"><span>' + esc(T.sortBy) + '</span><select id="cd-sort" aria-label="' + esc(T.sortBy) + '">' + ['spend', 'recent', 'visits', 'owes', 'name'].map(function (k) {
         return '<option value="' + k + '"' + (k === state.sort ? ' selected' : '') + '>' + esc(T.sorts[k]) + '</option>'; }).join('') + '</select></label>';
     }
     function moneyTags(c) {
@@ -400,7 +402,7 @@
           (campaignsEnabled() ? '<button type="button" class="cd-exp cd-camp" id="cd-campaign" aria-label="' + esc(T.campaign) + '">' + ico('campaign') + '<span>' + T.campaign + '</span></button>' : '') +
           '<button type="button" class="cd-exp cd-new" id="cd-new">' + ico('personAdd') + '<span>' + esc(T.newShort) + '</span></button>' +
         '</div>' +
-        '<div class="cd-segs" id="cd-segs" data-lens-demo role="group" aria-label="' + esc(T.th.seg) + '">' + segChips() + '</div>' + sortSelect() +
+        '<div class="cd-segrow"><div class="cd-segs" id="cd-segs" data-lens-demo role="group" aria-label="' + esc(T.th.seg) + '">' + segChips() + '</div>' + sortSelect() + '</div>' +
       '</div>' +
       '<div id="cd-table">' + tableHtml() + '</div></div>';
 
@@ -458,7 +460,10 @@
       return bookMerchant ? lib.loadClientMoney(bookMerchant) : null;
     }).then(function (m) {
       if (!m || !root.isConnected) return;
-      money = m; rerenderSegs(); rerenderTable();
+      /* Rien à montrer (hors ligne, ou personne ne doit rien) : la table reste
+         telle quelle, une réécriture sous le doigt avalait le toucher sur une fiche. */
+      money = m; rerenderSegs();
+      if (m.owes.size || m.avoir.size) rerenderTable();
     }).catch(function () { /* hors ligne : les deux puces restent à zéro */ });
     root.addEventListener('click', function (e) {
       var sg = e.target.closest('[data-cd-seg]');
