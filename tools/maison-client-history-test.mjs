@@ -74,7 +74,9 @@ ok(afterReplay.history.length === 1 && afterReplay.history[0].ref === '2001',
   'the local client fiche keeps one detailed ticket row');
 
 const caisse = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8'));
-ok(caisse.includes('const syncedRefs = new Set') && caisse.includes('const spent = c.spent || 0'),
+/* The fiche lives in its own module since 20 Nov. 2026 (assets/pos-maison/client-fiche.js). */
+const fiche = fs.readFileSync(path.join(ROOT, 'assets/pos-maison/client-fiche.js'), 'utf8');
+ok(fiche.includes('const syncedRefs = new Set') && fiche.includes('const spent = +client.spent || 0') && !/spent\s*\+=/.test(fiche),
   'the caisse fiche deduplicates synced tickets and uses the canonical spend total');
 ok(caisse.includes('eventRef: sale.syncId'), 'checkout binds client history to the sale UUID');
 

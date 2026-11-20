@@ -438,6 +438,8 @@ console.log('■ Prix d’une ligne de caisse Maison');
   });
   const MAISON_DAY = [
     mFn('function bqLineTotals('), mFn('function bqFoldBasket('),
+    /* la remise envoyée avec la vente (pos-maison/sale-discount.js), la vraie */
+    fs.readFileSync(path.join(ROOT, 'assets/pos-maison/sale-discount.js'), 'utf8').replace('export function', 'function'),
     mFn('function originalSalePayload('),
     mStatement(/const notCashedOf = [\s\S]*?;\n/),
     mStatement(/const cashedOf = [\s\S]*?;\n/),
