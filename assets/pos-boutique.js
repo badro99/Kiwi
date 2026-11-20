@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=225';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=143';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=225';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=225';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=226';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=144';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=226';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=226';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2';
@@ -2551,6 +2551,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
         <div class="clockin-float">
           <span class="clockin-float-label">Fond d'ouverture</span>
           <div class="clockin-float-chips" id="bqci-chips">
+            <button class="ci-float-chip" data-float="0">0 MAD</button>
             <button class="ci-float-chip" data-float="300">300 MAD</button>
             <button class="ci-float-chip" data-float="500">500 MAD</button>
             <button class="ci-float-chip" data-float="1000">1 000 MAD</button>
