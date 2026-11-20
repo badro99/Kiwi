@@ -329,8 +329,10 @@ window.KiwiStockInternal.install('intake', (S) => {
     return Array.from(new Uint8Array(digest)).map((x) => x.toString(16).padStart(2, '0')).join('');
   }
 
+  /* Le magasin à l'écran, vue portée (God mode) comprise. Kiwi.venue n'existe pas au tableau
+   * de bord : l'envoi vide passait pour le patron, et donnait 401 à l'opérateur. */
   function stIntakeMerchant() {
-    try { return (window.Kiwi && window.Kiwi.venue && window.Kiwi.venue()) || ''; } catch (_) { return ''; }
+    try { return (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug()) || ''; } catch (_) { return ''; }
   }
 
   async function stIntakeCommit(payload) {
@@ -703,6 +705,14 @@ window.KiwiStockInternal.install('intake', (S) => {
       btnCam.onclick = () => camInp.click();
     }
 
+    /* Photo d'un BL ou d'une facture (ou PDF scanné) : lue par le duo vision de /api/ai/invoice. */
+    const readPhoto = async (image) => {
+      const res = await S.stockState.stIntakeRequest('/api/ai/invoice', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchant: stIntakeMerchant(), kind: 'image', image }) });
+      const data = res.ok ? await res.json() : {};
+      if (!(data.ok && Array.isArray(data.lines) && data.lines.length)) throw new Error(data.error || data.reason || 'server-error-' + res.status);
+      stage.innerHTML = renderRealReceiptReview({ parsed: data }); wireScanReview();
+    };
     const processFile = async (file) => {
       if (!file || !stage) return;
       const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
@@ -718,7 +728,7 @@ window.KiwiStockInternal.install('intake', (S) => {
       if (isPdf) {
         try {
           const text = await extractPdfText(file);
-          if (!text) throw new Error('empty-text');
+          if (!text) { await readPhoto(await S.stockPhoto.stPhotoDataUrl(await S.stockPhoto.stPdfPageCanvas(file, await loadPdfJs()))); return; } // PDF scanné : aucune couche texte
 
           // Guichet unique (fanion stIntakeEnabled) : le texte est déjà là,
           // donc le pré-filtre identité ne coûte aucun appel et précède tout.
@@ -767,7 +777,7 @@ window.KiwiStockInternal.install('intake', (S) => {
             } catch (_) { intakeDocId = ''; }
           }
 
-          const venue = (window.Kiwi && window.Kiwi.venue && window.Kiwi.venue()) || '';
+          const venue = stIntakeMerchant();
           const res = await S.stockState.stIntakeRequest('/api/ai/invoice', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -793,11 +803,10 @@ window.KiwiStockInternal.install('intake', (S) => {
           return;
         }
       } else {
-        // Image scan / photo — repli sur la table pour l'instant (Commit 1)
-        setTimeout(() => {
-          stage.innerHTML = renderRealReceiptReview({ supplier: null });
-          wireScanReview();
-        }, 800);
+        try { await readPhoto(await S.stockPhoto.stPhotoDataUrl(file)); } catch (_) {
+          window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
+          stage.innerHTML = renderRealReceiptReview({ supplier: null }); wireScanReview();
+        }
       }
     };
 

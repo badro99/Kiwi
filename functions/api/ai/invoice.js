@@ -1,9 +1,10 @@
 import { budgetRoute } from './_budget-route.js';
-import { TEXT_PRIMARY as MODEL, TEXT_FALLBACK as FALLBACK_MODEL } from './_models.js';
-export { MODEL, FALLBACK_MODEL };
+import { TEXT_PRIMARY as MODEL, TEXT_FALLBACK as FALLBACK_MODEL, VISION_PRIMARY as VISION_MODEL, VISION_FALLBACK as VISION_FALLBACK_MODEL } from './_models.js';
+import { runVisionPair, visionMessages } from './_vision.js';
+export { MODEL, FALLBACK_MODEL, VISION_MODEL, VISION_FALLBACK_MODEL };
 // /api/ai/invoice — lecture et extraction structurée de factures fournisseur.
 //
-// Reçoit le texte extrait côté client par pdf.js (ou plus tard les images de scan),
+// Reçoit le texte extrait côté client par pdf.js, ou une photo (kind 'image') lue par le duo vision,
 // appelle Workers AI pour structurer le document en JSON strict, valide et borne
 // chaque champ avant de renvoyer le résultat pré-rempli au navigateur.
 //
@@ -30,6 +31,10 @@ const TEMPERATURE = 0.1;
 const TOP_P = 0.9;
 const DAILY_CAP = DAILY_CAPS.invoice;
 const MAX_TEXT_CHARS = 40000;
+/* Une photo de bon de livraison ou de facture (kind 'image'), réduite en JPEG
+ * côté client : même plafond que la lecture des reçus de dépense. */
+const MAX_IMAGE_DATAURL = 2_600_000;
+const IMAGE_RE = /^data:image\/(jpeg|png|webp);base64,/;
 
 /* Validation et bornage strict des données extraites.
    Garantit : <= 200 lignes, label <= 120 car., nombres >= 0, format propre. */
@@ -145,19 +150,25 @@ async function budgetHandler(context) {
   if (!env.AI) return json({ ok: false, error: 'unbound' }, 503);
 
   const kind = body.kind || 'text';
-  if (kind !== 'text') {
+  if (kind !== 'text' && kind !== 'image') {
     return json({ ok: false, error: 'unsupported-kind' }, 400);
   }
 
-  const text = String(body.text || '').trim();
-  if (!text) return json({ ok: false, error: 'empty-text' }, 400);
+  /* Tous les refus locaux AVANT le quota : une photo illisible par le
+   * navigateur ou trop lourde ne coûte ni place du jour ni appel de modèle. */
+  const image = kind === 'image' && typeof body.image === 'string' ? body.image.trim() : '';
+  if (kind === 'image' && !IMAGE_RE.test(image)) return json({ ok: false, error: 'bad-image' }, 400);
+  if (image.length > MAX_IMAGE_DATAURL) return json({ ok: false, error: 'image-too-large' }, 413);
+  const text = kind === 'text' ? String(body.text || '').trim() : '';
+  if (kind === 'text' && !text) return json({ ok: false, error: 'empty-text' }, 400);
 
-  if (!(await quotaOk(env, who, 'invoice', DAILY_CAP, { models: [MODEL, FALLBACK_MODEL], maxTokens: Math.max(MAX_TOKENS) }))) return json(quotaBody('invoice'), 429);
+  const models = image ? [VISION_MODEL, VISION_FALLBACK_MODEL] : [MODEL, FALLBACK_MODEL];
+  if (!(await quotaOk(env, who, 'invoice', DAILY_CAP, { models, maxTokens: Math.max(MAX_TOKENS), vision: !!image }))) return json(quotaBody('invoice'), 429);
 
   const cleanText = text.slice(0, MAX_TEXT_CHARS);
 
   const systemPrompt = `Tu es un extracteur de factures et bons de livraison pour commerces et restaurants au Maroc.
-Analyse le texte de la facture et extrais les informations au format JSON strict avec cette structure exacte :
+Analyse la facture ou le bon de livraison (texte extrait ou photo) et extrais les informations au format JSON strict avec cette structure exacte :
 {
   "supplier": { "name": "Nom du fournisseur", "ice": "ICE si présent" },
   "number": "Numéro de facture ou BL",
@@ -179,22 +190,28 @@ Analyse le texte de la facture et extrais les informations au format JSON strict
 Règles :
 - Réponds UNIQUEMENT avec un objet JSON valide, sans texte d'introduction ni commentaire.
 - Si un champ est inconnu, mets une chaîne vide ou omet-le.
-- Les nombres (qty, unitCost, total) doivent être des nombres numériques (pas de chaînes).`;
+- Les nombres (qty, unitCost, total) doivent être des nombres numériques (pas de chaînes).
+- Un bon de livraison sans prix : garde les quantités, mets unitCost à 0.
+- Si le document n'est ni une facture ni un bon de livraison (pièce d'identité, photo sans rapport), réponds {"lines": []}.`;
 
   const payload = {
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Voici le texte de la facture :\n\n${cleanText}` },
-    ],
+    messages: image
+      ? visionMessages({ system: systemPrompt, text: 'Voici la photo du bon de livraison ou de la facture fournisseur. Extrais chaque ligne.', dataUrl: image })
+      : [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Voici le texte de la facture :\n\n${cleanText}` },
+      ],
     max_tokens: MAX_TOKENS,
     temperature: TEMPERATURE,
     top_p: TOP_P,
   };
 
   let aiRes;
-  let usedModel = MODEL;
+  let usedModel = image ? VISION_MODEL : MODEL;
   try {
-    const r = await runWithFallback(env, MODEL, FALLBACK_MODEL, payload);
+    const r = image
+      ? await runVisionPair(env, VISION_MODEL, VISION_FALLBACK_MODEL, payload)
+      : await runWithFallback(env, MODEL, FALLBACK_MODEL, payload);
     aiRes = r.result;
     usedModel = r.model;
   } catch (_) {

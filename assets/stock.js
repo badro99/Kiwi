@@ -932,6 +932,7 @@
           <div class="st-sub">${esc(subText)}</div>
         </div>
         <div class="st-head-acts">
+          <button data-activation=write class="st-btn" type="button" data-action="stock-scan-invoice" data-stock-head-scan>${svg('camera',13)}<span>${esc(t('btnScan'))}</span></button>
           <button data-activation=write class="st-btn primary" type="button" data-action="stock-add-item">${svg('plus',13)}<span>${esc(t('btnAdd'))}</span></button>
           <button class="catalog-more" type="button" data-action="stock-workspace-actions" aria-label="${esc(catalogText('stockActions','Outils du stock'))}">${catalogIcon('tune')}</button>
         </div>
@@ -2329,6 +2330,7 @@
   const stockParts = Object.create(null);
   const stockScope = {
     get stockMovements() { return stockParts.movements; },
+    get stockPhoto() { return stockParts.photo; },
     stockState,
     get IGNORE_KEY() { return IGNORE_KEY; },
     get M86_COPY() { return M86_COPY; },
@@ -2447,7 +2449,8 @@
     'assets/stock/loss.js?v=3',
     'assets/stock/counts.js?v=12',
     'assets/stock/purchasing.js?v=6',
-    'assets/stock/intake.js?v=19',
+    'assets/stock/intake.js?v=21',
+    'assets/stock/photo.js?v=1',
     'assets/stock/catalog.js?v=11',
   ];
   const stockLoads = new Map();

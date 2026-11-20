@@ -222,8 +222,8 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=29',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
-  '/assets/pages/dashboard-startup.js?v=250',
-  '/assets/pages/dashboard-loader.js?v=106',
+  '/assets/pages/dashboard-startup.js?v=253',
+  '/assets/pages/dashboard-loader.js?v=107',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
   '/assets/hotel/groups.js?v=7',
@@ -252,7 +252,7 @@ var SHELL = [
   '/assets/agent-data.js?v=7',
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
-  '/assets/agent-voice.js?v=11',
+  '/assets/agent-voice.js?v=12',
   '/assets/i18n.js?v=59',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
@@ -453,12 +453,13 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=9',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=20',
-  '/assets/stock/strings.js?v=20',
-  '/assets/stock.js?v=128',
+  '/assets/stock/strings.js?v=21',
+  '/assets/stock.js?v=131',
   '/assets/stock/loss.js?v=3',
   '/assets/stock/counts.js?v=12',
   '/assets/stock/purchasing.js?v=6',
-  '/assets/stock/intake.js?v=19',
+  '/assets/stock/intake.js?v=21',
+  '/assets/stock/photo.js?v=1',
   '/assets/stock/catalog.js?v=11',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
@@ -496,7 +497,7 @@ var SHELL = [
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=22',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
-  '/assets/ai-image-import.js?v=7',
+  '/assets/ai-image-import.js?v=8',
   '/assets/menu-scan-reader.js?v=9',
   '/assets/menu-scan.js?v=20',
   '/assets/salle-scan.js?v=16',

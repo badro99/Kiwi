@@ -80,8 +80,8 @@
     "sha": "436c5e1a15598bb1"
   },
   "assets/agent-voice.js": {
-    "v": "11",
-    "sha": "b348ff5930ca5542"
+    "v": "12",
+    "sha": "f426fe7dfc542068"
   },
   "assets/agent.js": {
     "v": "44",
@@ -92,8 +92,8 @@
     "sha": "f9cecd4026f4dec6"
   },
   "assets/ai-image-import.js": {
-    "v": "7",
-    "sha": "b59f61ba35798062"
+    "v": "8",
+    "sha": "91ec272a9da8474b"
   },
   "assets/ai-telemetry.js": {
     "v": "1",
@@ -1516,12 +1516,12 @@
     "sha": "91ea1202399b8d4c"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "106",
-    "sha": "bda23e0e63947ae5"
+    "v": "107",
+    "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "250",
-    "sha": "1fba8f4074124dcd"
+    "v": "253",
+    "sha": "45c423c23c7638eb"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2204,8 +2204,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "128",
-    "sha": "3a4c334d1794c984"
+    "v": "131",
+    "sha": "92a2e77c0c4a979c"
   },
   "assets/stock/alerts.js": {
     "v": "6",
@@ -2220,8 +2220,8 @@
     "sha": "802b0269cbd00e8c"
   },
   "assets/stock/intake.js": {
-    "v": "19",
-    "sha": "c8d9f5b6d349dd3f"
+    "v": "21",
+    "sha": "3d6fc3f3a6ade83c"
   },
   "assets/stock/loss.js": {
     "v": "3",
@@ -2235,6 +2235,10 @@
     "v": "3",
     "sha": "b3c3dac3db831fbb"
   },
+  "assets/stock/photo.js": {
+    "v": "1",
+    "sha": "49444697cb268ec2"
+  },
   "assets/stock/purchasing.js": {
     "v": "6",
     "sha": "5137dec77c14fe2a"
@@ -2244,8 +2248,8 @@
     "sha": "ad3af92eb31669f1"
   },
   "assets/stock/strings.js": {
-    "v": "20",
-    "sha": "3fadc6cad0285a45"
+    "v": "21",
+    "sha": "3e45afed5716a09a"
   },
   "assets/store-templates.js": {
     "v": "4",

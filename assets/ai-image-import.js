@@ -56,7 +56,7 @@
     try {
       if (signal && signal.aborted) { cancel(); return await stopped; }
       return await Promise.race([stopped, (async () => {
-        const venue = (window.Kiwi && Kiwi.venue && Kiwi.venue()) || '';
+        const venue = (window.KiwiCloudDoc && KiwiCloudDoc.currentSlug && KiwiCloudDoc.currentSlug()) || ''; // le magasin à l'écran, God mode compris
         const res = await fetch(endpoint, {
           method: 'POST', signal: controller.signal,
           headers: { 'Content-Type': 'application/json' },

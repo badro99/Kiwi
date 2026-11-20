@@ -70,11 +70,13 @@ const intake = {
     await page.evaluateOnNewDocument(() => performance.setResourceTimingBufferSize(4000));
     t.defer(() => ctx.close());
     t.watch(page);
-    let modelRequests = 0;
+    let modelRequests = 0, invoiceKind = '';
     // demoPage already responds offline to every API request and aborts every
     // external origin. Even a regression cannot reach a paid model.
     page.on('request', (r) => {
-      if (new URL(r.url()).pathname.startsWith('/api/ai/')) modelRequests++;
+      const p = new URL(r.url()).pathname;
+      if (p.startsWith('/api/ai/')) modelRequests++;
+      if (p === '/api/ai/invoice') { try { const b = JSON.parse(r.postData() || '{}'); invoiceKind = b.kind + (b.kind === 'image' && /^data:image\/jpeg;base64,/.test(b.image) ? ':jpeg' : ''); } catch (_) {} }
     });
     t.step('load demo dashboard and enter the demo using its visible button');
     await page.goto(h.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
@@ -114,13 +116,18 @@ const intake = {
     assert.deepEqual(await ownerCounts(), { 'catalog-import': 1, finance: 1, conformite: 1, 'operations-ui': 1 },
       'first use loads the importer once and never executes eager providers again');
     if (!assistant) {
-      t.step('open stock tools and photo/document intake');
-      await click(page, '[data-action="stock-workspace-actions"]');
-      await click(page, '[data-catalog-stock="stock-scan-invoice"]');
+      if (viewport === 'phone') {
+        t.step('open photo/document intake from the visible Stock header button');
+        await click(page, '[data-stock-head-scan]');
+      } else {
+        t.step('open stock tools and photo/document intake');
+        await click(page, '[data-action="stock-workspace-actions"]');
+        await click(page, '[data-catalog-stock="stock-scan-invoice"]');
+      }
     }
     await page.waitForSelector('[data-stock-pick-file]', wait);
     await page.waitForSelector('[data-stock-pick-cam]', wait);
-    return { page, region: '.kiwi-backdrop .kiwi-modal', modelRequests: () => modelRequests };
+    return { page, region: '.kiwi-backdrop .kiwi-modal', modelRequests: () => modelRequests, invoiceKind: () => invoiceKind };
   },
 };
 
@@ -135,9 +142,9 @@ async function review(t, cell, locale, viewport, document = false) {
   await input.dispose();
   await cell.page.waitForSelector('[data-stock-receive-rows]', wait);
   await cell.page.waitForSelector('[data-stock-scan-confirm]', wait);
-  assert.equal(await cell.page.$$eval('[data-stock-receive-row]', (rows) => rows.length), document ? 1 : 3,
-    'the shared review exposes extracted document lines or three manual photo lines');
-  if (!document) t.notice('Photo intake deliberately uses manual review, no image extraction is claimed.');
+  assert.equal(await cell.page.$$eval('[data-stock-receive-row]', (rows) => rows.length), 1,
+    'the shared review exposes the lines read from the document or the photo');
+  assert.equal(cell.invoiceKind(), document ? 'text' : 'image:jpeg', 'a PDF sends its text, a photo a reduced JPEG');
   await check(t, cell, 'manual-review', locale, viewport);
   t.step('correct the first line quantity using typing and verify the editable value');
   const qty = '[data-stock-receive-qty]';
@@ -147,7 +154,7 @@ async function review(t, cell, locale, viewport, document = false) {
   await cell.page.type(qty, '2');
   await cell.page.keyboard.press('Tab');
   assert.equal(await cell.page.$eval(qty, (el) => el.value), '2');
-  assert.equal(cell.modelRequests(), document ? 1 : 0, 'only the document fixture route may be requested');
+  assert.equal(cell.modelRequests(), 1, 'only the invoice fixture route is requested, once');
   await check(t, cell, 'corrected-review', locale, viewport);
   t.step('select a stock item, name the supplier and save the reviewed receipt');
   const itemId = await cell.page.$eval('[data-stock-receive-item]', el => [...el.options].find(o => o.value).value);

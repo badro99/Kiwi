@@ -541,7 +541,8 @@
     /* 3. Appel de l'endpoint /api/ai/vision-inspect */
     var merchant = '';
     try {
-      if (window.KiwiEnv && window.KiwiEnv.account) merchant = window.KiwiEnv.account().merchant || '';
+      /* Le magasin à l'écran (God mode compris) : KiwiEnv.account n'existe pas, le champ partait vide et l'opérateur prenait un 401. */
+      if (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug) merchant = window.KiwiCloudDoc.currentSlug() || '';
     } catch (_) {}
 
     fetch('/api/ai/vision-inspect', {
