@@ -1456,6 +1456,9 @@ body.is-pos .clockin-screen.mz-clockin { display: flex !important; }
 /* ── Filter Axis & Chips ── */
 .mz-filter-wrap { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .mz-filter-axis { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+/* Vogue, 20 nov. 2026 : 20 rayons sur six lignes cachaient les articles. Une ligne qui défile au doigt. */
+.mz-cats-row { display: flex; gap: 7px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; padding-bottom: 2px; }
+.mz-cats-row::-webkit-scrollbar { display: none; }
 .mz-axis-btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 12px; border-radius: 999px;

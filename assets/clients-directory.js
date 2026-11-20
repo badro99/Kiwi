@@ -29,7 +29,8 @@
     fr: { auditCancel: 'Annuler', auditProgress: 'Événements chargés', auditLimit: 'Journal trop volumineux. Contactez votre responsable pour un export complet.', auditPartial: 'Export partiel enregistré ({n} événements). Relancez l’export pour obtenir la suite.', mergeUncertain: 'Résultat de fusion non confirmé. Actualisez les fiches avant de réessayer.', merge: 'Fusionner', mergePick: 'Fiche à fusionner dans celle-ci', mergeConfirm: 'Confirmer la fusion', mergeExplain: 'Les visites et dépenses seront additionnées, sans compter deux fois un achat identifié. Points et tampons seront réunis, notes concaténées, étiquettes réunies. Cette fiche conserve ses coordonnées, sauf les champs vides. Les avoirs seront rattachés à cette fiche sans modifier leurs soldes ni leurs échéances. L’ancien identifiant continuera de fonctionner. Cette opération ne peut pas être annulée.', mergeError: 'Fusion impossible. Vérifiez vos droits propriétaire ou responsable et réessayez.', mergeDone: 'Fiches fusionnées', title: 'Clients', sub: 'Le carnet complet · coordonnées, fidélité et consentement.',
       search: 'Rechercher un nom, téléphone ou email…', export: 'Exporter (CSV)', campaign: 'Campagne', program: 'Programme de fidélité', retention: 'Fidélisation', newClient: '+ Nouveau client',
       total: 'clients', withEmail: 'avec email', withPhone: 'avec téléphone', consented: 'contactables',
-      seg: { all: 'Tous', reg: 'Réguliers', vip: 'VIP', new: 'Nouveaux', win: 'Dormants' },
+      seg: { all: 'Tous', owes: 'Doivent un solde', avoir: 'Avoir en cours', once: '1 seul achat', reg: 'Réguliers', vip: 'VIP', new: 'Nouveaux', win: 'Dormants' },
+      sortBy: 'Trier', sorts: { spend: 'Plus dépensé', recent: 'Passage récent', visits: 'Plus d’achats', owes: 'Plus gros solde dû', name: 'Nom A → Z' }, owesTag: 'doit', avoirTag: 'avoir',
       th: { name: 'Client', phone: 'Téléphone', email: 'Email', city: 'Ville', visits: 'Visites', spend: 'Dépensé', points: 'Points', seg: 'Segment', last: 'Dernière visite' },
       tag: { reg: 'Régulier', vip: 'VIP', new: 'Nouveau', win: 'Dormant' }, none: '·', empty: 'Aucun client · créez la première fiche avec « Nouveau client ».',
       ago: function (d) { return d == null ? '·' : d === 0 ? "aujourd'hui" : 'il y a ' + d + ' j'; }, close: 'Fermer',
@@ -41,7 +42,8 @@
         consentHint: 'Facultatif · cochez uniquement les canaux acceptés par le client pour les communications marketing.', alreadyExists: 'Client déjà enregistré', added: 'Client ajouté' } },
     en: { auditCancel: 'Cancel', auditProgress: 'Events loaded', auditLimit: 'History too large. Contact your manager for a complete export.', auditPartial: 'Partial export saved ({n} events). Export again to get the rest.', mergeUncertain: 'Merge result unconfirmed. Refresh the profiles before retrying.', merge: 'Merge', mergePick: 'Profile to merge into this one', mergeConfirm: 'Confirm merge', mergeExplain: 'Visits and spend will be added, counting each identified purchase once. Points and stamps will be combined, notes concatenated and tags united. This profile keeps its contact details unless empty. Credit instruments will move to this profile with their balances and expiry dates preserved. The old ID will keep working. This operation cannot be undone.', mergeError: 'Merge unavailable. Check your owner or manager access and retry.', mergeDone: 'Profiles merged', title: 'Customers', sub: 'The full book · contacts, loyalty and consent.',
       search: 'Search name, phone or email…', export: 'Export (CSV)', campaign: 'Campaign', program: 'Loyalty program', retention: 'Retention', newClient: '+ New customer', total: 'customers', withEmail: 'with email', withPhone: 'with phone', consented: 'contactable',
-      seg: { all: 'All', reg: 'Regulars', vip: 'VIP', new: 'New', win: 'Dormant' },
+      seg: { all: 'All', owes: 'Owe a balance', avoir: 'Store credit', once: 'One purchase', reg: 'Regulars', vip: 'VIP', new: 'New', win: 'Dormant' },
+      sortBy: 'Sort', sorts: { spend: 'Top spend', recent: 'Most recent', visits: 'Most purchases', owes: 'Largest balance due', name: 'Name A → Z' }, owesTag: 'owes', avoirTag: 'credit',
       th: { name: 'Customer', phone: 'Phone', email: 'Email', city: 'City', visits: 'Visits', spend: 'Spent', points: 'Points', seg: 'Segment', last: 'Last visit' },
       tag: { reg: 'Regular', vip: 'VIP', new: 'New', win: 'Dormant' }, none: '·', empty: 'No customers yet · create the first record with “New customer”.',
       ago: function (d) { return d == null ? '·' : d === 0 ? 'today' : d + 'd ago'; }, close: 'Close',
@@ -53,7 +55,8 @@
         consentHint: 'Optional · select only the channels the customer has agreed to for marketing messages.', alreadyExists: 'Customer already on file', added: 'Customer added' } },
     ar: { auditCancel: 'إلغاء', auditProgress: 'الأحداث المحملة', auditLimit: 'السجل كبير جداً. اتصل بالمسؤول للحصول على تصدير كامل.', auditPartial: 'تم حفظ تصدير جزئي ({n} حدثاً). أعد التصدير للحصول على الباقي.', mergeUncertain: 'نتيجة الدمج غير مؤكدة. حدّث الملفات قبل إعادة المحاولة.', merge: 'دمج', mergePick: 'الملف المراد دمجه في هذا الملف', mergeConfirm: 'تأكيد الدمج', mergeExplain: 'ستجمع الزيارات والمبالغ مع احتساب كل عملية شراء محددة مرة واحدة. ستجمع النقاط والأختام والملاحظات والوسوم. يحتفظ هذا الملف ببيانات الاتصال إلا إذا كانت فارغة. ستنقل قسائم الرصيد إلى هذا الملف مع الاحتفاظ بأرصدتها وتواريخ صلاحيتها. سيستمر المعرف القديم في العمل. لا يمكن التراجع عن هذه العملية.', mergeError: 'تعذر الدمج. تحقق من صلاحيات المالك أو المدير وأعد المحاولة.', mergeDone: 'تم دمج الملفين', title: 'العملاء', sub: 'الدفتر الكامل · جهات الاتصال والوفاء والموافقة.',
       search: 'ابحث بالاسم أو الهاتف أو البريد…', export: 'تصدير (CSV)', campaign: 'حملة', program: 'برنامج الوفاء', retention: 'الاحتفاظ', newClient: '+ عميل جديد', total: 'عميل', withEmail: 'ببريد', withPhone: 'بهاتف', consented: 'قابلون للتواصل',
-      seg: { all: 'الكل', reg: 'دائمون', vip: 'كبار', new: 'جدد', win: 'خاملون' },
+      seg: { all: 'الكل', owes: 'عليهم باقي', avoir: 'لديهم رصيد', once: 'شراء واحد', reg: 'دائمون', vip: 'كبار', new: 'جدد', win: 'خاملون' },
+      sortBy: 'ترتيب', sorts: { spend: 'الأكثر إنفاقًا', recent: 'آخر زيارة', visits: 'الأكثر شراءً', owes: 'أكبر باقٍ مستحق', name: 'الاسم أ → ي' }, owesTag: 'عليه', avoirTag: 'رصيد',
       th: { name: 'العميل', phone: 'الهاتف', email: 'البريد', city: 'المدينة', visits: 'الزيارات', spend: 'الإنفاق', points: 'النقاط', seg: 'الفئة', last: 'آخر زيارة' },
       tag: { reg: 'دائم', vip: 'كبير', new: 'جديد', win: 'خامل' }, none: '·', empty: 'لا يوجد عملاء بعد · أنشئ أول بطاقة بزر «عميل جديد».',
       ago: function (d) { return d == null ? '·' : d === 0 ? 'اليوم' : 'منذ ' + d + ' ي'; }, close: 'إغلاق',
@@ -159,6 +162,8 @@
     '.cd-segs::-webkit-scrollbar{display:none;}',
     '.cd-seg{flex:none;border:0;background:transparent;color:var(--n-600);font:inherit;font-size:13px;font-weight:500;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:color .2s;}',
     '.cd-seg em{font-style:normal;color:var(--n-500);margin-inline-start:6px;font-variant-numeric:tabular-nums;}',
+    '.cd-sort{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--n-600);}.cd-sort select{font:inherit;font-size:13px;padding:7px 10px;border-radius:10px;border:1px solid var(--n-200);background:var(--surface);color:var(--ink);min-height:36px;}',
+    '.cd-tag.owes{background:color-mix(in srgb,#C0492F 14%,transparent);color:color-mix(in srgb,#C0492F 85%,var(--ink));}.cd-tag.avoir{background:color-mix(in srgb,var(--atlas) 14%,transparent);color:var(--atlas);}',
     '.cd-seg.on{color:var(--ink);}',
     '.cd-seg:not([data-kw-lens] *).on{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.08);}',
     '.genpage-body .cd-segs .kw-lens{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.10),inset 0 1px 0 rgba(255,255,255,.4);}',
@@ -275,7 +280,18 @@
     if (hotel) T = Object.assign({}, T, { title: H.title, sub: H.sub, empty: H.empty });
     var data = load();
     var all = data.rows.slice().sort(function (a, b) { return (b.spend || 0) - (a.spend || 0); });
-    var state = { q: '', seg: 'all' };
+    var state = { q: '', seg: 'all', sort: 'spend' };
+    /* Qui doit un solde (notes ouvertes) et qui porte un avoir : lus sur le
+       serveur, règles partagées avec la caisse (assets/client-filters.js). Tant
+       qu'ils ne sont pas arrivés, ces deux puces comptent zéro, jamais un faux. */
+    var money = { owes: new Map(), avoir: new Map() }, filtersLib = null;
+    var moneyOf = function (c, k) { return money[k].get(String(c.id)) || 0; };
+    function segMatch(c, id) {
+      if (id === 'all') return true;
+      if (id === 'owes' || id === 'avoir') return moneyOf(c, id) > 0;
+      if (id === 'once') return (c.visits || 0) === 1;
+      return c.seg === id;
+    }
 
     function withEmail() { return all.filter(function (c) { return c.email; }).length; }
     function withPhone() { return all.filter(function (c) { return c.phone; }).length; }
@@ -284,7 +300,7 @@
     function filtered() {
       var q = state.q.trim().toLowerCase();
       return all.filter(function (c) {
-        if (state.seg !== 'all' && c.seg !== state.seg) return false;
+        if (!segMatch(c, state.seg)) return false;
         if (!q) return true;
         return (c.name || '').toLowerCase().indexOf(q) >= 0 ||
           (window.KiwiPhone && window.KiwiPhone.same(c.phone, q)) ||
@@ -325,11 +341,11 @@
         '<td class="num">' + (c.visits || 0) + '</td>' +
         '<td class="num">' + fmt(c.spend) + ' ' + T.currency + '</td>' +
         '<td class="num">' + fmt(c.points) + '</td>' +
-        '<td><span class="cd-tag ' + c.seg + '">' + SEG_LBL(T, c.seg) + '</span></td>' +
+        '<td><span class="cd-tag ' + c.seg + '">' + SEG_LBL(T, c.seg) + '</span>' + moneyTags(c) + '</td>' +
         '<td class="cd-muted">' + T.ago(c.last) + '</td></tr>';
     }
     function tableHtml() {
-      var rows = filtered();
+      var rows = sorted(filtered());
       if (!rows.length) {
         if (!all.length) return '<div class="cd-empty"><span class="cd-empty-ic">' + ico('group') + '</span><b>' + esc(T.emptyTitle) + '</b><p>' + esc(T.emptyText) + '</p>' +
           '<button type="button" class="cd-exp cd-new" data-cd-new>' + ico('personAdd') + '<span>' + esc(T.newShort) + '</span></button></div>';
@@ -343,8 +359,21 @@
         ['name', 'phone', 'email', 'visits', 'spend', 'points', 'seg', 'last'].map(function (k) { return '<th' + (k === 'visits' || k === 'spend' || k === 'points' ? ' class="num"' : '') + '>' + T.th[k] + '</th>'; }).join('') +
         '</tr></thead><tbody>' + rows.map(rowHtml).join('') + '</tbody></table></div>';
     }
-    var SEGS = ['all', 'reg', 'vip', 'new', 'win'];
-    function segCount(id) { return id === 'all' ? all.length : all.filter(function (c) { return c.seg === id; }).length; }
+    var SEGS = ['all', 'owes', 'avoir', 'once', 'reg', 'vip', 'new', 'win'];
+    function segCount(id) { return id === 'all' ? all.length : all.filter(function (c) { return segMatch(c, id); }).length; }
+    function sorted(rows) {
+      if (filtersLib && state.sort !== 'spend') return filtersLib.sortClients(rows, state.sort, money);
+      return rows.slice().sort(function (a, b) { return (b.spend || 0) - (a.spend || 0); });
+    }
+    function sortSelect() {
+      return '<label class="cd-sort"><span>' + esc(T.sortBy) + '</span><select id="cd-sort">' + ['spend', 'recent', 'visits', 'owes', 'name'].map(function (k) {
+        return '<option value="' + k + '"' + (k === state.sort ? ' selected' : '') + '>' + esc(T.sorts[k]) + '</option>'; }).join('') + '</select></label>';
+    }
+    function moneyTags(c) {
+      var o = moneyOf(c, 'owes'), a = moneyOf(c, 'avoir');
+      return (o ? ' <span class="cd-tag owes">' + esc(T.owesTag) + ' ' + fmt(o / 100) + ' ' + T.currency + '</span>' : '') +
+        (a ? ' <span class="cd-tag avoir">' + esc(T.avoirTag) + ' ' + fmt(a / 100) + ' ' + T.currency + '</span>' : '');
+    }
     function segChips() {
       return SEGS.map(function (id) {
         var on = state.seg === id;
@@ -371,7 +400,7 @@
           (campaignsEnabled() ? '<button type="button" class="cd-exp cd-camp" id="cd-campaign" aria-label="' + esc(T.campaign) + '">' + ico('campaign') + '<span>' + T.campaign + '</span></button>' : '') +
           '<button type="button" class="cd-exp cd-new" id="cd-new">' + ico('personAdd') + '<span>' + esc(T.newShort) + '</span></button>' +
         '</div>' +
-        '<div class="cd-segs" id="cd-segs" data-lens-demo role="group" aria-label="' + esc(T.th.seg) + '">' + segChips() + '</div>' +
+        '<div class="cd-segs" id="cd-segs" data-lens-demo role="group" aria-label="' + esc(T.th.seg) + '">' + segChips() + '</div>' + sortSelect() +
       '</div>' +
       '<div id="cd-table">' + tableHtml() + '</div></div>';
 
@@ -422,6 +451,15 @@
 
     var q = root.querySelector('#cd-q');
     q.addEventListener('input', function () { state.q = q.value; rerenderTable(); });
+    root.querySelector('#cd-sort').addEventListener('change', function (e) { state.sort = e.target.value; rerenderTable(); });
+    var bookMerchant = data.real && window.KiwiClients && KiwiClients.bookId ? KiwiClients.bookId() : '';
+    import('./client-filters.js?v=1').then(function (lib) {
+      filtersLib = lib;
+      return bookMerchant ? lib.loadClientMoney(bookMerchant) : null;
+    }).then(function (m) {
+      if (!m || !root.isConnected) return;
+      money = m; rerenderSegs(); rerenderTable();
+    }).catch(function () { /* hors ligne : les deux puces restent à zéro */ });
     root.addEventListener('click', function (e) {
       var sg = e.target.closest('[data-cd-seg]');
       if (sg) { state.seg = sg.getAttribute('data-cd-seg'); rerenderSegs(); rerenderTable(); return; }

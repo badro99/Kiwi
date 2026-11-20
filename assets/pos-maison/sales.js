@@ -1,10 +1,11 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=210';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=127';
-import { invSetModal, offerRegister } from './inventory.js?v=127';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=213';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=129';
+import { invSetModal, offerRegister } from './inventory.js?v=129';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=5';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=9';
 import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
+import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsEmpty } from './client-view.js?v=1';
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -162,7 +163,7 @@ import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
   function fromKiwi(c) {
     if (!c) return null;
     return { id: c.id, name: c.name || 'Sans nom', phone: c.phone || '', points: c.points || 0,
-      taille: '', achats: c.visits || 0, spent: c.spend || 0,
+      taille: '', achats: c.visits || 0, spent: c.spend || 0, lastSeen: c.lastSeen || 0,
       vip: !!(window.KiwiClients && KiwiClients.segment(c) === 'vip'), prefs: c.notes ? [c.notes] : [], history: Array.isArray(c.history) ? c.history : [] };
   }
   // A REAL store shows ONLY its own KiwiClients book (empty until captured) — NEVER
@@ -280,7 +281,8 @@ import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
 
     const catsEl = $('#mz-cats', root);
     if (!catsEl) return;
-    catsEl.innerHTML = `<div class="mz-filter-wrap">${axisRow}${chipsRow}</div>`;
+    const keepX = ($('.mz-cats-row', catsEl) || {}).scrollLeft || 0;   /* une seule ligne qui défile : le rayon touché reste où il était */
+    catsEl.innerHTML = `<div class="mz-filter-wrap">${axisRow}${chipsRow}</div>`; const rowEl = $('.mz-cats-row', catsEl); if (rowEl) rowEl.scrollLeft = keepX;
 
     catsEl.onclick = (e) => {
       const axisB = e.target.closest('[data-mz-axis]');
@@ -1149,14 +1151,14 @@ import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
   function renderClientes() {
     const panel = $('[data-mz-panel="clientes"]', root);
     const q = state.clQuery;
-    const hits = clienteHits(q);
+    const hits = mzClientsView(clienteHits(q), { merchant: IS_DEMO ? '' : merchantSlug(), avoirs: activeAvoirs(), rerender: () => { if (panel.isConnected && panel.querySelector('#mz-clv-q') && document.activeElement !== panel.querySelector('#mz-clv-q')) { renderClientes(); icons(); } } });
     panel.innerHTML = `
       <div class="mz-clients mz-page">
         <header class="mz-head">
           <div><h1>Clientes</h1><div class="mz-head-sub">Rechercher par nom ou téléphone, la fiche suit la cliente</div></div>
           <div class="mz-search"><i data-lucide="search"></i>
             <input id="mz-clv-q" type="text" enterkeyhint="search" placeholder="Nom ou 06…" value="${esc(q)}" /></div>
-        </header>
+        </header>${mzClientsBar()}
         <div class="mz-cl-scroll">
           <div class="mz-cl-grid">
             ${hits.map((c) => {
@@ -1173,10 +1175,10 @@ import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
                   <span class="mz-mini ok"><i data-lucide="star"></i>${c.points} pts</span>
                   <span class="mz-mini"><i data-lucide="ruler"></i>taille ${esc(c.taille)}</span>
                   <span class="mz-mini"><i data-lucide="receipt"></i>${c.achats} achat${c.achats > 1 ? 's' : ''}</span>
-                  ${av ? `<span class="mz-mini warn"><i data-lucide="ticket"></i>avoir ${fmtMAD(av.balance)}</span>` : ''}
+                  ${av ? `<span class="mz-mini warn"><i data-lucide="ticket"></i>avoir ${fmtMAD(av.balance)}</span>` : ''}${mzClientsMoney(c, fmtMAD)}
                 </span>
               </button>`;
-            }).join('') || `<div class="mz-empty" style="grid-column:1/-1;">Aucune fiche pour « ${esc(q)} »</div>`}
+            }).join('') || `<div class="mz-empty" style="grid-column:1/-1;">${mzClientsEmpty(q, esc)}</div>`}
           </div>
         </div>
       </div>`;
@@ -1185,7 +1187,8 @@ import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
       renderClientes(); icons();
       const i = $('#mz-clv-q', panel); i.focus(); moveCaretEnd(i);
     };
-    panel.onclick = (e) => {
+    panel.onclick = panel.onchange = (e) => {
+      if (mzClientsEvent(e, () => { renderClientes(); icons(); })) return;
       const b = e.target.closest('[data-mz-fiche]');
       if (b) openFiche(b.dataset.mzFiche);
     };
