@@ -1,6 +1,6 @@
 {
   "file": "assets/venues.js",
-  "sha256": "d24d6501836d8ab7bce04743df80ccbbe75689643f5e190822e467a41b46eeec",
+  "sha256": "909711afec1c35e4ee229953b2125a0ac351ce4b514e195dbed4a5b634ae9a8c",
   "parts": [
     "assets/venues/data.js",
     "assets/venues/helpers.js"

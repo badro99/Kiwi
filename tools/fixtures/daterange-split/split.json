@@ -1,7 +1,7 @@
 {
   "file": "assets/dateRange.js",
   "part": "assets/daterange/renderers.js",
-  "sha256": "7ec1d80a8dd30e95e7513a7d57f7a8bd6fd3060dc12110615cb17d54cc4d319a",
+  "sha256": "532297c57a84347618db52178f42c5f3e598b1828db3f74f9f1f62b3386d7a00",
   "bridge": "\n  /* Private split bridge: live bindings, not a second copy of range/profile state. */\n  const partState = Object.seal(Object.defineProperties({}, {\n    BENCH_CITY: { get: () => BENCH_CITY },\n    BENCH_EMPTY: { get: () => BENCH_EMPTY },\n    BENCH_LBL: { get: () => BENCH_LBL },\n    BENCH_PEER: { get: () => BENCH_PEER },\n    BENCH_RANK_SUB: { get: () => BENCH_RANK_SUB },\n    BENCH_SUB: { get: () => BENCH_SUB },\n    BENCH_TITLE_FALLBACK: { get: () => BENCH_TITLE_FALLBACK },\n    CMP_EMPTY_TITLE: { get: () => CMP_EMPTY_TITLE },\n    COMPARE_CAPTION: { get: () => COMPARE_CAPTION },\n    COMPARE_SHORT: { get: () => COMPARE_SHORT },\n    COVERS_LABEL: { get: () => COVERS_LABEL },\n    DAY_ABBR: { get: () => DAY_ABBR },\n    EVENING_EMPTY: { get: () => EVENING_EMPTY },\n    FEED_BY_VENUE: { get: () => FEED_BY_VENUE },\n    FEED_EMPTY: { get: () => FEED_EMPTY },\n    FEED_SUB: { get: () => FEED_SUB },\n    FEED_TITLE: { get: () => FEED_TITLE },\n    GOAL_LABEL: { get: () => GOAL_LABEL },\n    GOAL_UNSET: { get: () => GOAL_UNSET },\n    HEALTH_CHIP: { get: () => HEALTH_CHIP },\n    HEALTH_EMPTY: { get: () => HEALTH_EMPTY },\n    HEALTH_SUB: { get: () => HEALTH_SUB },\n    HERO_LABEL: { get: () => HERO_LABEL },\n    HH_SUB: { get: () => HH_SUB },\n    INTEG_LIST: { get: () => INTEG_LIST },\n    INTEG_NOTCONN: { get: () => INTEG_NOTCONN },\n    INTEG_SUB: { get: () => INTEG_SUB },\n    INTEG_TITLE: { get: () => INTEG_TITLE },\n    KPI_CATALOG: { get: () => KPI_CATALOG },\n    KPI_DELTA_SUFFIX: { get: () => KPI_DELTA_SUFFIX },\n    KPI_MATERIAL_ICONS: { get: () => KPI_MATERIAL_ICONS },\n    KPI_MAX: { get: () => KPI_MAX },\n    KPI_SPARKS: { get: () => KPI_SPARKS },\n    LEGEND_PREFIX: { get: () => LEGEND_PREFIX },\n    LOWSTK_STR: { get: () => LOWSTK_STR },\n    MIX_CENTER_ALL: { get: () => MIX_CENTER_ALL },\n    MIX_EMPTY: { get: () => MIX_EMPTY },\n    ORDERS_LABEL: { get: () => ORDERS_LABEL },\n    PAIRS_MIN_BASKETS: { get: () => PAIRS_MIN_BASKETS },\n    PAIRS_STR: { get: () => PAIRS_STR },\n    PLAN_ACTIVE: { get: () => PLAN_ACTIVE },\n    PLAN_NAME: { get: () => PLAN_NAME },\n    PLAN_PENDING: { get: () => PLAN_PENDING },\n    PRODUCTS_COVERAGE: { get: () => PRODUCTS_COVERAGE },\n    PRODUCTS_EMPTY: { get: () => PRODUCTS_EMPTY },\n    PRODUCTS_MANAGE: { get: () => PRODUCTS_MANAGE },\n    PRODUCTS_NO_LINES: { get: () => PRODUCTS_NO_LINES },\n    PRODUCTS_SUB: { get: () => PRODUCTS_SUB },\n    PRODUCTS_TITLE: { get: () => PRODUCTS_TITLE },\n    PRODUCT_SOLD: { get: () => PRODUCT_SOLD },\n    RANGE_DAYS: { get: () => RANGE_DAYS },\n    RANGE_STR: { get: () => RANGE_STR },\n    REV_BADGE: { get: () => REV_BADGE },\n    REV_SUB: { get: () => REV_SUB },\n    RUPTURE_STR: { get: () => RUPTURE_STR },\n    SETTLE_DETAIL_LBL: { get: () => SETTLE_DETAIL_LBL },\n    SETTLE_LBL: { get: () => SETTLE_LBL },\n    STAFF_EMPTY: { get: () => STAFF_EMPTY },\n    STAFF_ONDUTY_STR: { get: () => STAFF_ONDUTY_STR },\n    STAFF_SUB: { get: () => STAFF_SUB },\n    STAFF_TITLE: { get: () => STAFF_TITLE },\n    STOCK_EMPTY: { get: () => STOCK_EMPTY },\n    STOCK_NO_THRESHOLDS: { get: () => STOCK_NO_THRESHOLDS },\n    STOCK_OK_STR: { get: () => STOCK_OK_STR },\n    STOCK_SUB_STR: { get: () => STOCK_SUB_STR },\n    STOCK_TITLE_STR: { get: () => STOCK_TITLE_STR },\n    _benchOrig: { get: () => _benchOrig, set: value => { _benchOrig = value; } },\n    _eveningOrig: { get: () => _eveningOrig, set: value => { _eveningOrig = value; } },\n    _healthOrig: { get: () => _healthOrig, set: value => { _healthOrig = value; } },\n    _integOrig: { get: () => _integOrig, set: value => { _integOrig = value; } },\n    _stockOrig: { get: () => _stockOrig, set: value => { _stockOrig = value; } },\n    activeMerchantSlug: { get: () => activeMerchantSlug },\n    animateNumber: { get: () => animateNumber },\n    arrowSvg: { get: () => arrowSvg },\n    basketCents: { get: () => basketCents },\n    benchByVenue: { get: () => benchByVenue },\n    buildCustomFeed: { get: () => buildCustomFeed },\n    buildHeatmap: { get: () => buildHeatmap },\n    buildLiveFeed: { get: () => buildLiveFeed },\n    buildRealHeatmapRec: { get: () => buildRealHeatmapRec },\n    buildRealHeroRec: { get: () => buildRealHeroRec },\n    closedBounds: { get: () => closedBounds },\n    curUnit: { get: () => curUnit },\n    currentRange: { get: () => currentRange, set: value => { currentRange = value; } },\n    defaultKpiKeys: { get: () => defaultKpiKeys },\n    deltaLabels: { get: () => deltaLabels },\n    demoHeroSim: { get: () => demoHeroSim, set: value => { demoHeroSim = value; } },\n    demoPreviousAt: { get: () => demoPreviousAt },\n    demoRole: { get: () => demoRole },\n    dutyBand: { get: () => dutyBand },\n    effRange: { get: () => effRange },\n    emptyBlockBody: { get: () => emptyBlockBody },\n    emptyListBody: { get: () => emptyListBody },\n    escTxt: { get: () => escTxt },\n    fitHeroAmount: { get: () => fitHeroAmount },\n    fmtHeroAmount: { get: () => fmtHeroAmount },\n    fmtHeures: { get: () => fmtHeures },\n    fmtKpiVal: { get: () => fmtKpiVal },\n    fmtPct: { get: () => fmtPct },\n    fmtSettleAmount: { get: () => fmtSettleAmount },\n    frInt: { get: () => frInt },\n    frMoney: { get: () => frMoney },\n    getCurrentVenue: { get: () => getCurrentVenue },\n    getKpiLayout: { get: () => getKpiLayout },\n    getLang: { get: () => getLang },\n    getSim: { get: () => getSim },\n    goalByVenue: { get: () => goalByVenue },\n    growBars: { get: () => growBars },\n    guardOperatorFigures: { get: () => guardOperatorFigures },\n    healthByVenue: { get: () => healthByVenue },\n    heroDataByVenue: { get: () => heroDataByVenue },\n    homeSet: { get: () => homeSet },\n    hotelBandTiles: { get: () => hotelBandTiles },\n    intensityClass: { get: () => intensityClass },\n    isLiveDemo: { get: () => isLiveDemo },\n    kitCase: { get: () => kitCase },\n    kpiByVenue: { get: () => kpiByVenue },\n    kpiLabel: { get: () => kpiLabel },\n    lastBand: { get: () => lastBand, set: value => { lastBand = value; } },\n    liveTickInProgress: { get: () => liveTickInProgress, set: value => { liveTickInProgress = value; } },\n    localDayTick: { get: () => localDayTick },\n    merchantDayBounds: { get: () => merchantDayBounds },\n    merchantDayKey: { get: () => merchantDayKey },\n    mixByVenue: { get: () => mixByVenue },\n    openDays: { get: () => openDays },\n    operatorUnavailableText: { get: () => operatorUnavailableText },\n    ownData: { get: () => ownData },\n    parseAmountFromEl: { get: () => parseAmountFromEl },\n    parseIntFromEl: { get: () => parseIntFromEl },\n    parsePctFromEl: { get: () => parsePctFromEl },\n    productsByVenue: { get: () => productsByVenue },\n    rangeBounds: { get: () => rangeBounds },\n    realClientMix: { get: () => realClientMix },\n    realDeltaPct: { get: () => realDeltaPct },\n    realGrossProfit: { get: () => realGrossProfit },\n    realLowStock: { get: () => realLowStock },\n    realMixRows: { get: () => realMixRows },\n    realPairs: { get: () => realPairs },\n    realRevSeries: { get: () => realRevSeries },\n    realRoster: { get: () => realRoster },\n    realSalesTotals: { get: () => realSalesTotals },\n    realTopProducts: { get: () => realTopProducts },\n    realWindowStats: { get: () => realWindowStats },\n    renderMixPlan: { get: () => renderMixPlan },\n    renderPairs: { get: () => renderPairs },\n    retailBand: { get: () => retailBand },\n    revChartByVenue: { get: () => revChartByVenue },\n    settleByVenue: { get: () => settleByVenue },\n    showComparison: { get: () => showComparison, set: value => { showComparison = value; } },\n    staffByVenue: { get: () => staffByVenue },\n    tableTimeTile: { get: () => tableTimeTile },\n    timelineWeekTotalByVenue: { get: () => timelineWeekTotalByVenue },\n    trLegend: { get: () => trLegend },\n    trStr: { get: () => trStr },\n    tradeStr: { get: () => tradeStr },\n    vData: { get: () => vData },\n    FUSION_AVG_KEYS: { get: () => FUSION_AVG_KEYS },\n    isPlainObj: { get: () => isPlainObj },\n    ledgerSum: { get: () => ledgerSum },\n    tenderAmounts: { get: () => tenderAmounts },\n    REAL_MIX: { get: () => REAL_MIX },\n    DEMO_ROLE: { get: () => DEMO_ROLE },\n    VALID: { get: () => VALID },\n    DEFAULT_RANGE: { get: () => DEFAULT_RANGE },\n    customRange: { get: () => customRange, set: value => { customRange = value; } },\n    STORAGE_KEY: { get: () => STORAGE_KEY },\n    renderSelector: { get: () => renderSelector },\n    subscribers: { get: () => subscribers },\n    CUSTOM_KEY: { get: () => CUSTOM_KEY },\n    dateToIso: { get: () => dateToIso },\n    CMP_KEY: { get: () => CMP_KEY },\n    renderRevChart: { get: () => renderRevChart },\n    homeStore: { get: () => homeStore },\n    numberShape: { get: () => numberShape },\n    textNodesOf: { get: () => textNodesOf },\n    DEFAULT_MERCHANT_TZ: { get: () => DEFAULT_MERCHANT_TZ },\n    dayCutoffH: { get: () => dayCutoffH },\n    addMerchantDays: { get: () => addMerchantDays },\n    realSalesList: { get: () => realSalesList },\n    saleHour: { get: () => saleHour },\n    tenderBucket: { get: () => tenderBucket },\n    salesMath: { get: () => salesMath },\n    realRefundList: { get: () => realRefundList },\n    deliveryDue: { get: () => deliveryDue },\n    TENDER_NAME: { get: () => TENDER_NAME },\n    shiftedBusinessBounds: { get: () => shiftedBusinessBounds },\n    halfUpDiv: { get: () => halfUpDiv },\n    realMoneyList: { get: () => realMoneyList },\n    niceCeil: { get: () => niceCeil },\n    HH_HOURS: { get: () => HH_HOURS },\n    HH_RAW_BY_VENUE: { get: () => HH_RAW_BY_VENUE },\n    HH_COVERS_BY_VENUE: { get: () => HH_COVERS_BY_VENUE },\n    hotelMerchant: { get: () => hotelMerchant },\n    hotelPerf: { get: () => hotelPerf },\n    HOTEL_PERF_TTL: { get: () => HOTEL_PERF_TTL },\n    renderKpiBand: { get: () => renderKpiBand },\n    hotelDelta: { get: () => hotelDelta },\n    tableTime: { get: () => tableTime },\n    TABLE_TIME_TTL: { get: () => TABLE_TIME_TTL },\n    KC_STR: { get: () => KC_STR },\n    saveKpiLayout: { get: () => saveKpiLayout },\n    resetKpiLayout: { get: () => resetKpiLayout },\n    LOW_STOCK_SEUIL: { get: () => LOW_STOCK_SEUIL },\n    PAIRS_MAX_KEYS: { get: () => PAIRS_MAX_KEYS },\n    PAIRS_MIN_TOGETHER: { get: () => PAIRS_MIN_TOGETHER },\n    BAND_NAV: { get: () => BAND_NAV },\n    renderHero: { get: () => renderHero },\n    renderHeroAi: { get: () => renderHeroAi },\n    renderGoal: { get: () => renderGoal },\n    renderHeatmap: { get: () => renderHeatmap },\n    renderMix: { get: () => renderMix },\n    renderFeed: { get: () => renderFeed },\n    renderSettle: { get: () => renderSettle },\n    renderEvening: { get: () => renderEvening },\n    renderStock: { get: () => renderStock },\n    renderHealth: { get: () => renderHealth },\n    renderBench: { get: () => renderBench },\n    renderInteg: { get: () => renderInteg },\n    renderProducts: { get: () => renderProducts },\n    renderStaff: { get: () => renderStaff },\n    sameDay: { get: () => sameDay },\n    monthOnly: { get: () => monthOnly },\n    dpEl: { get: () => dpEl, set: value => { dpEl = value; } },\n    dpOutside: { get: () => dpOutside, set: value => { dpOutside = value; } },\n    dpKey: { get: () => dpKey, set: value => { dpKey = value; } },\n    dpControl: { get: () => dpControl, set: value => { dpControl = value; } },\n    PICKER_STR: { get: () => PICKER_STR },\n    isoToDate: { get: () => isoToDate },\n    startOfDay: { get: () => startOfDay },\n    shiftMonth: { get: () => shiftMonth },\n    addDays: { get: () => addDays },\n    LOCALES: { get: () => LOCALES },\n    dpEsc: { get: () => dpEsc },\n    ymdInt: { get: () => ymdInt },\n    monthLabel: { get: () => monthLabel },\n    spanDays: { get: () => spanDays },\n    onAction: { get: () => onAction },\n    onCompareToggle: { get: () => onCompareToggle },\n    GLOVO_TOAST: { get: () => GLOVO_TOAST },\n    /* Sibling calls between parts go through this owner too. */\n    merchantParts: { get: () => merchantParts },\n    operatorLedgerPending: { get: () => operatorLedgerPending },\n    openKpiCustomizer: { get: () => openKpiCustomizer },\n  }));\n  let partFunctions = null, partLoading = null;\n  const partUrl = 'assets/daterange/renderers.js?v=1';\n  function installPart() {\n    if (!partFunctions && window.__kiwiDateRangeParts) partFunctions = window.__kiwiDateRangeParts(partState);\n    return partFunctions;\n  }\n  function loadPart() {\n    if (installPart()) return Promise.resolve(partFunctions);\n    if (partLoading) return partLoading;\n    partLoading = new Promise((resolve, reject) => {\n      const script = document.createElement('script');\n      script.src = partUrl;\n      script.onload = () => {\n        if (installPart()) resolve(partFunctions);\n        else { partLoading = null; script.remove(); reject(new Error(partUrl)); }\n      };\n      script.onerror = () => { partLoading = null; script.remove(); reject(new Error(partUrl)); };\n      document.head.appendChild(script);\n    });\n    return partLoading;\n  }\n  function callPart(name, self, args) {\n    const functions = installPart();\n    if (functions) return functions[name].apply(self, args);\n    return loadPart().then(functions => functions[name].apply(self, args), () => {\n      // Leave the loader retryable on the next render/open after a network error.\n    });\n  }\n",
   "anchor": "  'use strict';",
   "attach": "  Object.defineProperty(window.KiwiDateRange, '__internal', { value: partState });\n",
@@ -9,8 +9,8 @@
   "entries": [
     {
       "name": "renderHero",
-      "start": 165808,
-      "end": 171948,
+      "start": 166162,
+      "end": 172302,
       "partStart": 283,
       "partEnd": 6839,
       "changes": [
@@ -330,8 +330,8 @@
     },
     {
       "name": "renderHeroAi",
-      "start": 172027,
-      "end": 175550,
+      "start": 172381,
+      "end": 175904,
       "partStart": 6840,
       "partEnd": 10395,
       "changes": [
@@ -363,8 +363,8 @@
     },
     {
       "name": "renderHeatmapAi",
-      "start": 175631,
-      "end": 176913,
+      "start": 175985,
+      "end": 177267,
       "partStart": 10396,
       "partEnd": 11702,
       "changes": [
@@ -390,8 +390,8 @@
     },
     {
       "name": "renderGoal",
-      "start": 176980,
-      "end": 184649,
+      "start": 177334,
+      "end": 185003,
       "partStart": 11703,
       "partEnd": 19652,
       "changes": [
@@ -609,8 +609,8 @@
     },
     {
       "name": "renderHeatmap",
-      "start": 188698,
-      "end": 190279,
+      "start": 189052,
+      "end": 190633,
       "partStart": 19653,
       "partEnd": 21378,
       "changes": [
@@ -726,8 +726,8 @@
     },
     {
       "name": "renderKpiBand",
-      "start": 217674,
-      "end": 246012,
+      "start": 218223,
+      "end": 246561,
       "partStart": 21379,
       "partEnd": 50436,
       "changes": [
@@ -1227,8 +1227,8 @@
     },
     {
       "name": "renderRevChart",
-      "start": 251454,
-      "end": 289564,
+      "start": 252003,
+      "end": 290113,
       "partStart": 50437,
       "partEnd": 89099,
       "changes": [
@@ -1650,8 +1650,8 @@
     },
     {
       "name": "renderMix",
-      "start": 293466,
-      "end": 300338,
+      "start": 294015,
+      "end": 300887,
       "partStart": 89100,
       "partEnd": 96140,
       "changes": [
@@ -1785,8 +1785,8 @@
     },
     {
       "name": "renderMixPlan",
-      "start": 300653,
-      "end": 302230,
+      "start": 301202,
+      "end": 302779,
       "partStart": 96141,
       "partEnd": 97774,
       "changes": [
@@ -1836,8 +1836,8 @@
     },
     {
       "name": "renderFeed",
-      "start": 315747,
-      "end": 325572,
+      "start": 316296,
+      "end": 326121,
       "partStart": 97775,
       "partEnd": 107936,
       "changes": [
@@ -2097,8 +2097,8 @@
     },
     {
       "name": "renderSettle",
-      "start": 325636,
-      "end": 326553,
+      "start": 326185,
+      "end": 327102,
       "partStart": 107937,
       "partEnd": 108966,
       "changes": [
@@ -2190,8 +2190,8 @@
     },
     {
       "name": "renderPairs",
-      "start": 340191,
-      "end": 341252,
+      "start": 340740,
+      "end": 341801,
       "partStart": 108967,
       "partEnd": 110164,
       "changes": [
@@ -2301,8 +2301,8 @@
     },
     {
       "name": "renderInteg",
-      "start": 345795,
-      "end": 347211,
+      "start": 346344,
+      "end": 347760,
       "partStart": 110165,
       "partEnd": 111693,
       "changes": [
@@ -2394,8 +2394,8 @@
     },
     {
       "name": "renderNotifBadge",
-      "start": 347284,
-      "end": 347444,
+      "start": 347833,
+      "end": 347993,
       "partStart": 111694,
       "partEnd": 111862,
       "changes": [
@@ -2409,8 +2409,8 @@
     },
     {
       "name": "renderEvening",
-      "start": 353374,
-      "end": 359102,
+      "start": 353923,
+      "end": 359651,
       "partStart": 111863,
       "partEnd": 117735,
       "changes": [
@@ -2526,8 +2526,8 @@
     },
     {
       "name": "renderStock",
-      "start": 359106,
-      "end": 362876,
+      "start": 359655,
+      "end": 363425,
       "partStart": 117736,
       "partEnd": 121722,
       "changes": [
@@ -2697,8 +2697,8 @@
     },
     {
       "name": "renderTimeline",
-      "start": 362949,
-      "end": 363811,
+      "start": 363498,
+      "end": 364360,
       "partStart": 121723,
       "partEnd": 122657,
       "changes": [
@@ -2760,8 +2760,8 @@
     },
     {
       "name": "renderHealth",
-      "start": 363877,
-      "end": 365414,
+      "start": 364426,
+      "end": 365963,
       "partStart": 122658,
       "partEnd": 124371,
       "changes": [
@@ -2901,8 +2901,8 @@
     },
     {
       "name": "renderBench",
-      "start": 365477,
-      "end": 368754,
+      "start": 366026,
+      "end": 369303,
       "partStart": 124372,
       "partEnd": 127929,
       "changes": [
@@ -3120,8 +3120,8 @@
     },
     {
       "name": "renderProducts",
-      "start": 368820,
-      "end": 371488,
+      "start": 369369,
+      "end": 372037,
       "partStart": 127930,
       "partEnd": 130846,
       "changes": [
@@ -3315,8 +3315,8 @@
     },
     {
       "name": "renderStaff",
-      "start": 371547,
-      "end": 374472,
+      "start": 372096,
+      "end": 375021,
       "partStart": 130847,
       "partEnd": 133972,
       "changes": [
@@ -3984,8 +3984,8 @@
       "changes": [],
       "partStart": 151117,
       "partEnd": 151530,
-      "start": 133340,
-      "end": 133753
+      "start": 133694,
+      "end": 134107
     },
     {
       "name": "calendarBounds",
@@ -4011,8 +4011,8 @@
       ],
       "partStart": 151532,
       "partEnd": 152158,
-      "start": 133981,
-      "end": 134583
+      "start": 134335,
+      "end": 134937
     },
     {
       "name": "rangeBounds",
@@ -4116,8 +4116,8 @@
       ],
       "partStart": 152160,
       "partEnd": 153450,
-      "start": 134586,
-      "end": 135748
+      "start": 134940,
+      "end": 136102
     },
     {
       "name": "realInsightSummary",
@@ -4191,8 +4191,8 @@
       ],
       "partStart": 153452,
       "partEnd": 155723,
-      "start": 137934,
-      "end": 140117
+      "start": 138288,
+      "end": 140471
     },
     {
       "name": "buildRealHeroRec",
@@ -4230,8 +4230,8 @@
       ],
       "partStart": 155725,
       "partEnd": 157749,
-      "start": 140729,
-      "end": 142713
+      "start": 141083,
+      "end": 143067
     },
     {
       "name": "buildRealHeatmapRec",
@@ -4251,16 +4251,16 @@
       ],
       "partStart": 157751,
       "partEnd": 158749,
-      "start": 142716,
-      "end": 143698
+      "start": 143070,
+      "end": 144052
     },
     {
       "name": "screenBook",
       "changes": [],
       "partStart": 158751,
       "partEnd": 159220,
-      "start": 148020,
-      "end": 148489
+      "start": 148374,
+      "end": 148843
     },
     {
       "name": "realClosedTips",
@@ -4292,16 +4292,16 @@
       ],
       "partStart": 159222,
       "partEnd": 161450,
-      "start": 149025,
-      "end": 151221
+      "start": 149379,
+      "end": 151575
     },
     {
       "name": "realClientMix",
       "changes": [],
       "partStart": 161452,
       "partEnd": 162659,
-      "start": 151972,
-      "end": 153179
+      "start": 152326,
+      "end": 153533
     },
     {
       "name": "openDays",
@@ -4327,8 +4327,8 @@
       ],
       "partStart": 162661,
       "partEnd": 163004,
-      "start": 153938,
-      "end": 154257
+      "start": 154292,
+      "end": 154611
     },
     {
       "name": "realDeltaPct",
@@ -4378,8 +4378,8 @@
       ],
       "partStart": 163006,
       "partEnd": 164483,
-      "start": 154260,
-      "end": 155681
+      "start": 154614,
+      "end": 156035
     },
     {
       "name": "deltaTenths",
@@ -4393,16 +4393,16 @@
       ],
       "partStart": 164485,
       "partEnd": 164919,
-      "start": 156345,
-      "end": 156771
+      "start": 156699,
+      "end": 157125
     },
     {
       "name": "hourlyCumul",
       "changes": [],
       "partStart": 164921,
       "partEnd": 165422,
-      "start": 158401,
-      "end": 158902
+      "start": 158755,
+      "end": 159256
     },
     {
       "name": "dailyTotals",
@@ -4422,8 +4422,8 @@
       ],
       "partStart": 165424,
       "partEnd": 165942,
-      "start": 158971,
-      "end": 159473
+      "start": 159325,
+      "end": 159827
     },
     {
       "name": "realRevSeries",
@@ -4539,8 +4539,8 @@
       ],
       "partStart": 165944,
       "partEnd": 170189,
-      "start": 160265,
-      "end": 164366
+      "start": 160619,
+      "end": 164720
     },
     {
       "name": "operatorLedgerPending",
@@ -4560,8 +4560,8 @@
       ],
       "partStart": 170191,
       "partEnd": 170741,
-      "start": 164583,
-      "end": 165133
+      "start": 164937,
+      "end": 165487
     },
     {
       "name": "buildHeatmap",
@@ -4659,8 +4659,8 @@
       ],
       "partStart": 170743,
       "partEnd": 174669,
-      "start": 184889,
-      "end": 188695
+      "start": 185243,
+      "end": 189049
     },
     {
       "name": "hotelPerfEntry",
@@ -4698,8 +4698,8 @@
       ],
       "partStart": 174671,
       "partEnd": 176384,
-      "start": 209430,
-      "end": 211105
+      "start": 209979,
+      "end": 211654
     },
     {
       "name": "hotelTilesFrom",
@@ -4713,8 +4713,8 @@
       ],
       "partStart": 176386,
       "partEnd": 177748,
-      "start": 211521,
-      "end": 212875
+      "start": 212070,
+      "end": 213424
     },
     {
       "name": "tableTimeEntry",
@@ -4752,8 +4752,8 @@
       ],
       "partStart": 177750,
       "partEnd": 179365,
-      "start": 214774,
-      "end": 216349
+      "start": 215323,
+      "end": 216898
     },
     {
       "name": "openKpiCustomizer",
@@ -5007,8 +5007,8 @@
       ],
       "partEnd": 184986,
       "partStart": 179367,
-      "start": 246091,
-      "end": 251382
+      "start": 246640,
+      "end": 251931
     },
     {
       "name": "realMixRows",
@@ -5058,24 +5058,24 @@
       ],
       "partStart": 184988,
       "partEnd": 186764,
-      "start": 291742,
-      "end": 293462
+      "start": 292291,
+      "end": 294011
     },
     {
       "name": "buildOrder",
       "changes": [],
       "partStart": 186766,
       "partEnd": 192354,
-      "start": 303001,
-      "end": 308589
+      "start": 303550,
+      "end": 309138
     },
     {
       "name": "buildLiveFeed",
       "changes": [],
       "partStart": 192356,
       "partEnd": 193729,
-      "start": 308660,
-      "end": 310033
+      "start": 309209,
+      "end": 310582
     },
     {
       "name": "buildCustomFeed",
@@ -5095,8 +5095,8 @@
       ],
       "partStart": 193731,
       "partEnd": 199377,
-      "start": 310113,
-      "end": 315743
+      "start": 310662,
+      "end": 316292
     },
     {
       "name": "realLowStock",
@@ -5116,8 +5116,8 @@
       ],
       "partStart": 199379,
       "partEnd": 201226,
-      "start": 332395,
-      "end": 334226
+      "start": 332944,
+      "end": 334775
     },
     {
       "name": "realTopProducts",
@@ -5137,8 +5137,8 @@
       ],
       "partStart": 201228,
       "partEnd": 202972,
-      "start": 334230,
-      "end": 335958
+      "start": 334779,
+      "end": 336507
     },
     {
       "name": "realPairs",
@@ -5176,16 +5176,16 @@
       ],
       "partStart": 202974,
       "partEnd": 205363,
-      "start": 336702,
-      "end": 339051
+      "start": 337251,
+      "end": 339600
     },
     {
       "name": "growBars",
       "changes": [],
       "partStart": 205365,
       "partEnd": 206009,
-      "start": 344046,
-      "end": 344690
+      "start": 344595,
+      "end": 345239
     },
     {
       "name": "dutyBand",
@@ -5241,8 +5241,8 @@
       ],
       "partStart": 206011,
       "partEnd": 208839,
-      "start": 347894,
-      "end": 350658
+      "start": 348443,
+      "end": 351207
     },
     {
       "name": "retailBand",
@@ -5256,8 +5256,8 @@
       ],
       "partStart": 208841,
       "partEnd": 210864,
-      "start": 351355,
-      "end": 353370
+      "start": 351904,
+      "end": 353919
     },
     {
       "name": "hookI18n",
@@ -5367,8 +5367,8 @@
       ],
       "partStart": 210866,
       "partEnd": 211697,
-      "start": 374722,
-      "end": 375417
+      "start": 375271,
+      "end": 375966
     },
     {
       "name": "fmtHumanRange",
@@ -5418,8 +5418,8 @@
       ],
       "partStart": 211699,
       "partEnd": 212405,
-      "start": 378115,
-      "end": 378765
+      "start": 378664,
+      "end": 379314
     },
     {
       "name": "closeCustomPicker",
@@ -5493,8 +5493,8 @@
       ],
       "partStart": 212407,
       "partEnd": 213416,
-      "start": 378839,
-      "end": 379760
+      "start": 379388,
+      "end": 380309
     },
     {
       "name": "openCustomPicker",
@@ -5964,8 +5964,8 @@
       ],
       "partStart": 213418,
       "partEnd": 227819,
-      "start": 379764,
-      "end": 393549
+      "start": 380313,
+      "end": 394098
     },
     {
       "name": "mountDaySelector",
@@ -6033,8 +6033,8 @@
       ],
       "partStart": 227821,
       "partEnd": 230225,
-      "start": 393788,
-      "end": 396112
+      "start": 394337,
+      "end": 396661
     },
     {
       "name": "registerHandler",
@@ -6078,8 +6078,8 @@
       ],
       "partStart": 230227,
       "partEnd": 231776,
-      "start": 396116,
-      "end": 397617
+      "start": 396665,
+      "end": 398166
     },
     {
       "name": "tickLiveRevenue",
@@ -6135,8 +6135,8 @@
       ],
       "partStart": 231778,
       "partEnd": 233097,
-      "start": 412327,
-      "end": 413582
+      "start": 412876,
+      "end": 414131
     }
   ],
   "partHash": "3ca9fe2148462d135119bb7fe931597e3009dbe80c68b0400c2bb617a99d70bf",

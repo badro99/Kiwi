@@ -27,10 +27,14 @@ const sales = [
 ];
 const refunds = [{ ts: day(5), amount: 850, method: 'credit', label: 'Retour en avoir' }];
 
+/* The real browser files, compiled once and run in a fresh realm per case:
+   every figure below is what that code returns, never a line of its text. */
+const script = (file) => new vm.Script(fs.readFileSync(new URL('../assets/' + file, import.meta.url), 'utf8'), { filename: file });
+const SALES_HISTORY = script('sales-history.js');
+const Z_RECONCILIATION = script('z-reconciliation.js');
 function salesMath(features) {
   const w = { KiwiVenue: { revenueAtSale: () => !!(features && features.revenueAtSale === true) }, KiwiDayReportVat: {} };
-  const ctx = vm.createContext({ window: w });
-  vm.runInContext(fs.readFileSync(new URL('../assets/sales-history.js', import.meta.url), 'utf8'), ctx);
+  SALES_HISTORY.runInContext(vm.createContext({ window: w }));
   return w;
 }
 
@@ -67,10 +71,12 @@ function salesMath(features) {
 
 /* 3 · Le rapport journalier : le détail, et les chiffres de tête qui suivent. */
 {
-  const src = fs.readFileSync(new URL('../assets/z-reconciliation.js', import.meta.url), 'utf8');
-  const part = src.slice(src.lastIndexOf('/* ═', src.indexOf('KiwiDayReportVat.sale')));
+  /* The whole shipped file: snapshot module (inert until the page loads),
+     VAT by rate, then the « à la vente » detail attached to it. */
   const w = salesMath({ revenueAtSale: true });
-  vm.runInContext(part, vm.createContext({ window: w }));
+  const inert = { readyState: 'loading', addEventListener() {} };
+  Z_RECONCILIATION.runInContext(vm.createContext({ window: w, document: inert, location: { pathname: '/dashboard.html' } }));
+  assert.equal(typeof w.KiwiDayReportVat.compute, 'function', 'the VAT module the detail extends is the real one');
   const S = w.KiwiDayReportVat.sale;
   /* normSale (day-report.js) : amount = argent reçu, parts compte/avoir à part. */
   const rows = [

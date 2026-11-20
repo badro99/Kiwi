@@ -49,7 +49,8 @@ const rows = [
   {id:'refund', ts:from+1, amount:-20, method:'cash', kind:'refund', tip:0},
 ];
 assert.ok(!/\bKiwiDayReportModel\b/.test(dashSource), 'the dashboard report names no model of its own, not even a forwarding one');
-const c = vm.createContext({Date});
+// feedTotals reads window for the « à la vente » switch (52fcb9e59); off here, so the till model answers.
+const c = vm.createContext({Date, window: {}});
 let ownerCalls = 0; const owner = contexts[0].KiwiDayReportModel.reportFigures;
 c.DR = () => ({dayBounds:()=>({from,to}), normSale:s=>s, model:{reportFigures:(r)=>{ownerCalls++; return owner(r);}}});
 c.dashSales = () => [...rows, rows[0], {id:'before',ts:from-1,amount:999}, {id:'after',ts:to,amount:999}];
