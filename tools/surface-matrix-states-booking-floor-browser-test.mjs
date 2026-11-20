@@ -23,7 +23,10 @@ async function tap(page, selector) {
     if (!r) return false;
     const key = [r.x, r.y, r.width, r.height].join(','), previous = e.__matrixTouchBox;
     e.__matrixTouchBox = key;
-    return previous === key && e.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+    const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    // Content that lands above after the first scroll can push the button out of view: bring it back.
+    if (!hit) e.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
+    return previous === key && e.contains(hit);
   }, { polling: 'raf', timeout: wait.timeout }, selector);
   const box = await page.$eval(selector, e => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
   await page.touchscreen.tap(box.x, box.y);
