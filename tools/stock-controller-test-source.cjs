@@ -6,7 +6,10 @@ const map = require('./fixtures/stock-controller/split.json');
 module.exports = function stockControllerSource(file = 'assets/stock.js', base = path.resolve(__dirname, '..')) {
   const read = f => fs.readFileSync(path.join(base, f), 'utf8');
   let source = read(file);
-  if (file === 'assets/stock.js') for (const edit of [...map.edits].reverse()) {
+  /* Later edits to a moved file are recorded as { before, after } pairs: map.edits for
+   * stock.js, map.fileEdits[file] for the others (the BL photo scan, 20 Nov 2026). */
+  const edits = file === 'assets/stock.js' ? map.edits : ((map.fileEdits && map.fileEdits[file]) || []);
+  for (const edit of [...edits].reverse()) {
     // Asset stamps are metadata, independent of the byte proof.
     const loose = value => value.replace(/\?v=\d+/g, '?v=N');
     if (source.includes(edit.after)) source = source.replace(edit.after, () => edit.before);

@@ -63,6 +63,30 @@
     {
       "before": "",
       "after": "      mCountLocalWarn: (durable, cut) => (durable ? '' : 'لم يُحفظ الجرد على هذا الجهاز (التخزين ممتلئ) · ') + (cut ? 'السجل المحلي مقتطع، التفاصيل الكاملة على الخادم' : 'للمراجعة'), stockLocalOnly: 'التخزين ممتلئ: تُحفظ مدخلات المخزون حتى إعادة التحميل فقط. حرّر مساحة أو ابقَ متصلاً.',\n"
+    },
+    {
+      "before": "      btnScan: 'Scanner une facture',",
+      "after": "      btnScan: 'Scanner un bon ou une facture',"
+    },
+    {
+      "before": "      mScanFailFallback: 'Lecture automatique indisponible · passage en saisie manuelle.',",
+      "after": "      mScanFailFallback: 'Lecture automatique indisponible · passage en saisie manuelle.', mScanPhotoFormat: 'Ce navigateur ne sait pas ouvrir ce format de photo · passage en saisie manuelle.', mScanPhotoUnread: 'Photo non lue · photographiez la page entière, à plat et nette, ou saisissez les lignes.',"
+    },
+    {
+      "before": "      btnScan: 'Scan invoice',",
+      "after": "      btnScan: 'Scan delivery note or invoice',"
+    },
+    {
+      "before": "      mScanFailFallback: 'Automatic reading unavailable · switched to manual entry.',",
+      "after": "      mScanFailFallback: 'Automatic reading unavailable · switched to manual entry.', mScanPhotoFormat: 'This browser cannot open this photo format · switched to manual entry.', mScanPhotoUnread: 'The photo could not be read · shoot the whole page, flat and sharp, or type the lines.',"
+    },
+    {
+      "before": "      btnScan: 'مسح فاتورة', btnCount: 'جرد فعلي', btnAdd: 'منتج جديد',",
+      "after": "      btnScan: 'مسح وصل الاستلام أو الفاتورة', btnCount: 'جرد فعلي', btnAdd: 'منتج جديد',"
+    },
+    {
+      "before": "      mScanFailFallback: 'القراءة التلقائية غير متوفرة · التحويل إلى الإدخال اليدوي.',",
+      "after": "      mScanFailFallback: 'القراءة التلقائية غير متوفرة · التحويل إلى الإدخال اليدوي.', mScanPhotoFormat: 'هذا المتصفح لا يفتح صيغة هذه الصورة · التحويل إلى الإدخال اليدوي.', mScanPhotoUnread: 'تعذّرت قراءة الصورة · صوّر الصفحة كاملة، مستوية وواضحة، أو أدخل السطور يدوياً.',"
     }
   ]
 }

@@ -354,6 +354,18 @@
     {
       "before": "  const stockUrls = [",
       "after": "  const stockUrls = [\n    'assets/stock/movements.js?v=1',"
+    },
+    {
+      "before": "  const stockScope = {\n    get stockMovements() { return stockParts.movements; },\n    stockState,\n",
+      "after": "  const stockScope = {\n    get stockMovements() { return stockParts.movements; },\n    get stockPhoto() { return stockParts.photo; },\n    stockState,\n    /* Le commerce dont on lit les documents (God Mode compris) : KiwiCloudDoc reste l'affaire de stock.js. */\n    stMerchantSlug() { try { return (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug()) || ''; } catch (_) { return ''; } },\n"
+    },
+    {
+      "before": "        <div class=\"st-head-acts\">\n",
+      "after": "        <div class=\"st-head-acts\">\n          <button data-activation=write class=\"st-btn\" type=\"button\" data-action=\"stock-scan-invoice\" data-stock-head-scan>${svg('camera',13)}<span>${esc(t('btnScan'))}</span></button>\n"
+    },
+    {
+      "before": "    'assets/stock/intake.js?v=23',\n",
+      "after": "    'assets/stock/intake.js?v=23',\n    'assets/stock/photo.js?v=2',\n"
     }
   ],
   "legacyBoundaries": {
@@ -387,7 +399,9 @@
       "state": [
         "_pdfjsPromise",
         "stConflictStash",
+        "stMerchantSlug",
         "stPageActive",
+        "stockPhoto",
         "stockState"
       ]
     },
@@ -442,5 +456,33 @@
         "stUserSuppliers"
       ]
     }
+  },
+  "fileEdits": {
+    "assets/stock/intake.js": [
+      {
+        "before": "\n",
+        "after": "\n  /* Le magasin à l'écran, vue portée (God mode) comprise. Kiwi.venue n'existe pas au tableau\n   * de bord : l'envoi vide passait pour le patron, et donnait 401 à l'opérateur. */\n"
+      },
+      {
+        "before": "  function stIntakeMerchant() {\n    try { return (window.Kiwi && window.Kiwi.venue && window.Kiwi.venue()) || ''; } catch (_) { return ''; }\n",
+        "after": "  function stIntakeMerchant() {\n    return S.stMerchantSlug();\n"
+      },
+      {
+        "before": "\n",
+        "after": "\n    /* Photo d'un BL ou d'une facture (ou PDF scanné) : lue par le duo vision de /api/ai/invoice. */\n    const readPhoto = async (image) => {\n      const res = await S.stockState.stIntakeRequest('/api/ai/invoice', { method: 'POST', headers: { 'Content-Type': 'application/json' },\n        body: JSON.stringify({ merchant: stIntakeMerchant(), kind: 'image', image }) });\n      const data = res.ok ? await res.json() : {};\n      if (!(data.ok && Array.isArray(data.lines) && data.lines.length)) throw new Error(data.error || data.reason || 'server-error-' + res.status);\n      stage.innerHTML = renderRealReceiptReview({ parsed: data }); wireScanReview();\n    };\n"
+      },
+      {
+        "before": "          const text = await extractPdfText(file);\n          if (!text) throw new Error('empty-text');\n",
+        "after": "          const text = await extractPdfText(file);\n          if (!text) { await readPhoto(await S.stockPhoto.stPhotoDataUrl(await S.stockPhoto.stPdfPageCanvas(file, await loadPdfJs()))); return; } // PDF scanné : aucune couche texte\n"
+      },
+      {
+        "before": "\n          const venue = (window.Kiwi && window.Kiwi.venue && window.Kiwi.venue()) || '';\n",
+        "after": "\n          const venue = stIntakeMerchant();\n"
+      },
+      {
+        "before": "      } else {\n        // Image scan / photo — repli sur la table pour l'instant (Commit 1)\n        setTimeout(() => {\n          stage.innerHTML = renderRealReceiptReview({ supplier: null });\n          wireScanReview();\n        }, 800);\n",
+        "after": "      } else {\n        try { await readPhoto(await S.stockPhoto.stPhotoDataUrl(file)); } catch (e) {\n          /* Dire pourquoi : un format que le navigateur n'ouvre pas, une photo que le modèle n'a pas lue, ou le service indisponible. */\n          const why = e && (e.name === 'EncodingError' || /^heif-/.test(e.message || '')) ? 'mScanPhotoFormat' : e && e.message === 'unparsed' ? 'mScanPhotoUnread' : 'mScanFailFallback';\n          window.Kiwi.toast?.(t(why), { type: 'warn' });\n          stage.innerHTML = renderRealReceiptReview({ supplier: null }); wireScanReview();\n        }\n"
+      }
+    ]
   }
 }
