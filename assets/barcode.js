@@ -414,16 +414,15 @@
         }
         .kbl-s { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .kbl-m.has-price .kbl-s { display: ${short ? 'none' : 'block'}; }
-        /* Taille et couleur sur la petite étiquette (Vogue, 20 nov.) : on colle
-           l'étiquette sur le vêtement, il faut lire S ou M sans scanner. Le prix
-           rapetisse pour leur faire de la place ; la couleur cède (points de
-           suspension) avant la taille, qui ne se coupe jamais. */
-        .kbl-m.has-var { gap: 1.2mm; }
-        .kbl-m.has-var .kbl-c, .kbl-m.has-var .kbl-z { font-family: Arial, Helvetica, sans-serif; font-weight: 700; color: #0A0F0D; line-height: 0.95; font-size: ${short ? 14 : metaPt}pt; }
-        .kbl-m.has-var .kbl-c { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
-        .kbl-m.has-var .kbl-z { flex: 0 0 auto; max-width: 60%; overflow: hidden; border: 0.3mm solid #0A0F0D; border-radius: 0.8mm; padding: 0.2mm 0.6mm; }
-        .kbl-m.has-var b { font-size: ${short ? 14 : pricePt}pt; }
-        .kbl-m.has-var s { display: ${short ? 'none' : 'inline'}; }
+        /* La taille sur l'étiquette (Vogue, 20 nov.) : on colle l'étiquette sur
+           le vêtement, il faut lire S ou M sans scanner. Elle monte sur la ligne
+           du nom, encadrée, loin du prix : en chaussures, « 42 » à côté de
+           « 650 MAD » se lisait comme un second prix. La couleur et le nom
+           cèdent (points de suspension) ; la taille ne se coupe jamais. */
+        .kbl-t.has-var { display: flex; align-items: center; justify-content: center; gap: 1mm; white-space: nowrap; }
+        .kbl-tn { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .kbl-z { flex: 0 0 auto; max-width: 45%; overflow: hidden; font-family: Arial, Helvetica, sans-serif; font-weight: 700; font-size: 0.92em; line-height: 1;
+                 border: 0.3mm solid #0A0F0D; border-radius: 0.8mm; padding: 0 0.6mm; }
         .kbl-m b { color: #0A0F0D; font-family: Arial, Helvetica, sans-serif; font-size: ${pricePt}pt; line-height: 0.95; flex: 0 0 auto; }
         /* Le prix barré d'une promotion. Volontairement PLUS PETIT que le prix
            courant : sur une étiquette de rayon, deux nombres de même taille se
@@ -488,16 +487,24 @@
     const wasNum = l.was == null ? NaN : parseFloat(String(l.was).replace(',', '.'));
     const hasWas = hasPrice && Number.isFinite(wasNum) && wasNum > parseFloat(String(l.price).replace(',', '.'));
     const wasStr = hasWas ? `<s>${escapeXml(String(l.was))}</s>` : '';
-    /* `sub` vaut « Couleur · Taille », ou la taille seule (variantWords). Sur la
-       petite étiquette la taille passe en pastille à part, jamais coupée. */
+    /* `sub` vaut « Couleur · Taille », ou la taille seule (variantWords). La
+       taille passe sur la ligne du nom, encadrée ; le prix reste seul. */
     const subStr = String(l.sub || '');
     const cut = subStr.lastIndexOf(' · ');
-    const varStr = subStr && hasPrice
-      ? (cut > 0 ? `<span class="kbl-c">${escapeXml(subStr.slice(0, cut))}</span>` : '') + `<span class="kbl-z">${escapeXml(cut > 0 ? subStr.slice(cut + 3) : subStr)}</span>`
-      : `<span class="kbl-s">${escapeXml(subStr)}</span>`;
-    const meta = (subStr || hasPrice) ? `<div class="kbl-m${hasPrice ? ' has-price' : ''}${subStr && hasPrice ? ' has-var' : ''}">${varStr}${wasStr}${priceStr}</div>` : '';
+    const withVar = !!(subStr && hasPrice);
+    /* Une couleur coupée en deux (« N… ») n'aide personne : si nom + couleur
+       ne tiennent pas, la note de couleur saute, puis la couleur. */
+    const nameMax = labelSize().h <= 24 ? 19 : 26;
+    const colour = cut > 0 ? subStr.slice(0, cut) : '';
+    const nameStr = [colour, colour.replace(/\s*\([^)]*\)/g, ''), '']
+      .map((c) => (l.title || '') + (c ? ' · ' + c : ''))
+      .find((t, i, all) => t.length <= nameMax || i === all.length - 1);
+    const head = withVar
+      ? `<div class="kbl-t has-var"><span class="kbl-tn">${escapeXml(nameStr)}</span><span class="kbl-z">${escapeXml(cut > 0 ? subStr.slice(cut + 3) : subStr)}</span></div>`
+      : `<div class="kbl-t">${escapeXml(l.title || '')}</div>`;
+    const meta = (subStr || hasPrice) ? `<div class="kbl-m${hasPrice ? ' has-price' : ''}">${withVar ? '' : `<span class="kbl-s">${escapeXml(subStr)}</span>`}${wasStr}${priceStr}</div>` : '';
     return `<div class="kbl">` +
-             `<div class="kbl-head"><div class="kbl-t">${escapeXml(l.title || '')}</div>${meta}</div>` +
+             `<div class="kbl-head">${head}${meta}</div>` +
              `<div class="kbl-bc">${svg}</div>` +
            `</div>`;
   }
@@ -556,7 +563,6 @@
       const titleSize = short ? 12 : 11;
       const metaSize = short ? 22 : 9;
       const numberSize = short ? 6.5 : 7;
-      if (title) s += 'BT /F2 ' + titleSize + ' Tf ' + cx(title, titleSize, true).toFixed(1) + ' ' + (PH - (short ? 9.5 : 13)).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
       const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
       /* Pas de barré possible ici (texte PDF nu), donc on l'écrit en toutes
          lettres — et seulement sur les grandes étiquettes. Sur une 20 mm il n'y
@@ -565,20 +571,32 @@
          pas le mentionner du tout. */
       const wasNum2 = l.was == null ? NaN : parseFloat(String(l.was).replace(',', '.'));
       const hasWas2 = hasPrice && Number.isFinite(wasNum2) && wasNum2 > parseFloat(String(l.price).replace(',', '.'));
-      let meta = short && hasPrice ? (l.price + ' MAD') : (l.sub || '');
-      let mSize = metaSize;
-      /* Petite étiquette : taille et couleur à côté du prix, le tout réduit pour
-         tenir sur la largeur. Trop long même petit : la couleur saute, la
-         taille reste. */
-      if (short && hasPrice && l.sub) {
-        const sub = String(l.sub), cut = sub.lastIndexOf(' · ');
-        const fitSize = (str) => Math.min(16, (PW - 8) / (str.length * 0.6));
-        const price = '   ' + l.price + ' MAD';
-        meta = sub + price;
-        if (fitSize(meta) < 8 && cut > 0) meta = sub.slice(0, cut).replace(/\s*\([^)]*\)/g, '') + sub.slice(cut) + price;
-        if (fitSize(meta) < 8 && cut > 0) meta = sub.slice(cut + 3) + price;
-        mSize = Math.max(7, +fitSize(meta).toFixed(1));
-      }
+      /* La ligne du nom porte la taille dans un cadre (voir la feuille de style
+         plus haut) : jamais à côté du prix. Trop long : la note de couleur, puis
+         la couleur, puis la fin du nom cèdent ; la taille reste. */
+      const sub = String(l.sub || ''), cut = sub.lastIndexOf(' · ');
+      const withVar = !!(sub && hasPrice);
+      const ty = (PH - (short ? (withVar ? 10.5 : 9.5) : 13)).toFixed(1);
+      // Largeurs Helvetica-Bold approchées par famille de glyphes (en em).
+      const wB = (str, sz) => String(str).split('').reduce((n, c) => n + (c === ' ' || c === '·' || c === '.' ? 0.28 : /[MW]/.test(c) ? 0.9 : /[mw]/.test(c) ? 0.86 : /[0-9]/.test(c) ? 0.56 : /[A-Z]/.test(c) ? 0.74 : /[iljft]/.test(c) ? 0.33 : 0.59), 0) * sz;
+      if (withVar) {
+        const size = cut > 0 ? sub.slice(cut + 3) : sub;
+        const colour = cut > 0 ? sub.slice(0, cut) : '';
+        const room = PW - 8;
+        const top = short ? 11 : titleSize;
+        const total = (name, sz) => wB(name, sz) + 5 + wB(size, sz) + 5;
+        const tries = [colour, colour.replace(/\s*\([^)]*\)/g, ''), ''].map((c) => (l.title || '') + (c ? ' · ' + c : ''));
+        let name = tries[2], ts = 9;
+        for (const t of tries) { const z = Math.floor(Math.min(top, (room - 10) / (wB(t, 1) + wB(size, 1))) * 10) / 10; if (z >= 9) { name = t; ts = z; break; } }
+        while (name.length > 3 && total(name, ts) > room) name = name.slice(0, -2) + '.';
+        const x0 = Math.max(4, (PW - total(name, ts)) / 2);
+        const bx = x0 + wB(name, ts) + 5, bw = wB(size, ts) + 5;
+        s += 'BT /F2 ' + ts + ' Tf ' + x0.toFixed(1) + ' ' + ty + ' Td (' + tx(name) + ') Tj ET\n';
+        s += '0.7 w ' + bx.toFixed(1) + ' ' + (+ty - 1.6).toFixed(1) + ' ' + bw.toFixed(1) + ' ' + (ts * 0.72 + 3).toFixed(1) + ' re S\n';
+        s += 'BT /F2 ' + ts + ' Tf ' + (bx + 2.5).toFixed(1) + ' ' + ty + ' Td (' + tx(size) + ') Tj ET\n';
+      } else if (title) s += 'BT /F2 ' + titleSize + ' Tf ' + cx(title, titleSize, true).toFixed(1) + ' ' + ty + ' Td (' + tx(title) + ') Tj ET\n';
+      let meta = short && hasPrice ? (l.price + ' MAD') : (withVar ? '' : sub);
+      const mSize = metaSize;
       if (!short && hasPrice) meta = meta ? (meta + '   ' + l.price + ' MAD') : (l.price + ' MAD');
       if (!short && hasWas2) meta += ' (au lieu de ' + l.was + ')';
       if (meta) s += 'BT /F2 ' + mSize + ' Tf ' + cx(meta, mSize, true).toFixed(1) + ' ' + (PH - (short ? 30 : 25)).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
