@@ -113,6 +113,7 @@ const MZ_MORE_ICONS = [
      service (pos-boutique.js), Code de pointage (caisse-refresh.js) et
      Réimprimer (pos-reprint.js). */
   ['#mz-open-drawer', 'point_of_sale'],
+  ['#mz-cancel-sale', 'block'],
   ['#mz-cash-move', 'payments'],
   ['#mz-close-day', 'power_settings_new'],
   ['.kx-attendance-code', 'key'],

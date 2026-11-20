@@ -1,6 +1,6 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=214';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=130';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=130';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=217';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=132';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=132';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
@@ -87,6 +87,22 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
         }
         return;
       }
+      /* Annuler une vente (propriétaire, 20 nov. 2026) : toutes les pièces encore là, en entier ;
+         le remboursement sur le moyen d'origine (code responsable) remet le stock et rend l'argent. */
+      const cancelAll = e.target.closest('[data-mz-cancel-all]');
+      if (cancelAll) {
+        const saleId = cancelAll.dataset.mzCancelAll, sale = findSale(saleId);
+        if (!sale) return;
+        if (sale.kind === 'acompte') { toast('Retour suspendu : cette vente a plusieurs reçus d’acompte. Contacter le responsable.'); return; }
+        const picks = new Set(), quantities = new Map();
+        sale.lines.forEach((l, i) => { const n = lineAvailableQty(l); if (n > 0) { picks.add(i); quantities.set(i, n); } });
+        if (!picks.size) return;
+        state.ret = { saleId, picks, quantities, motif: null };
+        renderEchanges(); icons();
+        const go = $('[data-mz-do-refund]', panel);
+        if (go) go.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        return;
+      }
       const lnB = e.target.closest('[data-mz-pick]');
       if (lnB) { togglePick(lnB.dataset.mzPick); return; }
       const lockB = e.target.closest('[data-mz-locked]');
@@ -147,6 +163,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
         ${hasRet ? '<span class="mz-pill warn">retour</span>' : ''}
         ${s.kind === 'acompte' ? '<span class="mz-pill warn">Acompte · retour suspendu, contacter le responsable</span>' : ''}
         <span class="mz-sale-who"><i data-lucide="${c ? 'user' : 'users'}"></i>${c ? esc(c.name) : 'Cliente de passage'} · ${fmtMAD(s.total)}</span>
+        ${s.kind !== 'acompte' && s.lines.some((l) => lineAvailableQty(l) > 0) ? `<button type="button" class="mz-btn secondary mz-sale-cancel" data-mz-cancel-all="${esc(s.id)}"><i data-icon="block"></i>Annuler la vente</button>` : ''}
       </div>
       <div class="mz-sale-lines">
         ${s.lines.map((l, i) => {
