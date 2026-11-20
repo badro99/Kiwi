@@ -55,6 +55,12 @@ function world(vertical) {
   vm.runInContext(moduleSource('assets/pos-boutique/paid-share.js')+'\nObject.assign(globalThis,{paidCents,lineBudgets});',c);
   vm.runInContext(moduleSource('assets/pos-boutique/till-clock.js')+'\nObject.assign(globalThis,{tillNow,tillDate});',c);
   c.readDayRows=async()=>null;
+  // The maison credit sheet (pos-maison/avoir-sheet.js) is a browser edge like the delivery card: its real
+  // refusal rule and code cleaning run here, and a valid code reaches the real ctx.lookup → ctx.apply of checkout.js.
+  vm.runInContext('(()=>{'+moduleSource('assets/pos-maison/avoir-sheet.js')+'\nglobalThis.__avoirSheet={refusal,cleanCode};globalThis.codeKey=codeKey;})();',c);
+  c.mzAvoirSheet=(el,ctx)=>{const form=element({id:'mz-av-code-form'}),input=element({id:'mz-av-code'});nodes.set(input.id,input);nodes.set(form.id,form);
+    let done=false;form.onsubmit=async()=>{if(done)return;const S=c.__avoirSheet,av=await ctx.lookup(S.cleanCode(input.value));
+      if(S.refusal(av,{expired:ctx.expired,active:ctx.active,untilOf:ctx.untilOf}))return;done=true;ctx.apply(av);};};
   const core=`assets/pos-${vertical}.js`, checkout=`assets/pos-${vertical}/checkout.js`;
   load(c,`assets/pos-${vertical}/sales.js`,['shelf']);
   if(vertical==='boutique'||vertical==='maison')load(c,'assets/pos-boutique/z-split.js',['zIsDelivery','zSplitParts','zSalesFor','zSentParts','zHoldsStock','zIsCollection','zRowKind','zAway','zCollected','zDrawerCash','zDrawerMoves','zDrawerRows']);

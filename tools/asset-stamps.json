@@ -224,8 +224,8 @@
     "sha": "2aec622ff3447940"
   },
   "assets/caisse-lang.js": {
-    "v": "151",
-    "sha": "a2cc513f4b5d3cbf"
+    "v": "152",
+    "sha": "a8966df81b367f05"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1768,8 +1768,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "455",
-    "sha": "a656ae025cb30ea4"
+    "v": "456",
+    "sha": "b3ff6b9fdabe7e16"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1840,20 +1840,24 @@
     "sha": "f20985296d118fa0"
   },
   "assets/pos-maison.css": {
-    "v": "218",
+    "v": "219",
     "sha": "e7ebbfb89dedcc5c"
   },
   "assets/pos-maison.js": {
-    "v": "218",
-    "sha": "68c6843acf00989d"
+    "v": "219",
+    "sha": "a8240a887221a43f"
+  },
+  "assets/pos-maison/avoir-sheet.js": {
+    "v": "9",
+    "sha": "1d6dbca93c0688d8"
   },
   "assets/pos-maison/cash-moves.js": {
     "v": "5",
     "sha": "c1437e52e1a63e99"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "133",
-    "sha": "48a69e9fdf80f5c3"
+    "v": "134",
+    "sha": "f65c3fbc9881dcd7"
   },
   "assets/pos-maison/client-view.js": {
     "v": "1",
@@ -1872,16 +1876,16 @@
     "sha": "feb0865a7163d8c9"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "133",
-    "sha": "43e4bd280c3d303d"
+    "v": "134",
+    "sha": "6ece676861099878"
   },
   "assets/pos-maison/kit-2027.js": {
     "v": "10",
     "sha": "0b8808d873bf27f0"
   },
   "assets/pos-maison/sales.js": {
-    "v": "133",
-    "sha": "09c04222b03adc46"
+    "v": "134",
+    "sha": "a82f48f8e729bb71"
   },
   "assets/pos-maison/ticket-remise.js": {
     "v": "3",
@@ -2016,12 +2020,12 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "93",
-    "sha": "ac29aa71e7ea6e0d"
+    "v": "94",
+    "sha": "4159f443943d7adc"
   },
   "assets/printer/pairing-lang.js": {
-    "v": "21",
-    "sha": "81990e4980894d51"
+    "v": "22",
+    "sha": "34a7b149cab95a89"
   },
   "assets/printer/pairing-ui.js": {
     "v": "17",

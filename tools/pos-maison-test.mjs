@@ -108,7 +108,7 @@ ok(jsSrc.includes("motif !== 'Défaut'") && jsSrc.includes('markDamagedLines'),
   'damaged returns are audited without returning them to sellable stock');
 ok(jsSrc.includes("locationId: 'damaged'") && jsSrc.includes("refType: 'damaged-return'") && jsSrc.includes("stockStatus: 'damaged'"),
   'damaged returns create a separate durable quarantine movement');
-ok(jsSrc.includes('mz-av-code-form') && jsSrc.includes("'&code=' + encodeURIComponent(code)"),
+ok(jsSrc.includes('mzAvoirSheet(el, {') && jsSrc.includes("'&code=' + encodeURIComponent(code)"),
   'walk-in credits can be scanned or entered and resolved against the shared register');
 ok(jsSrc.includes('const swapped = apply()') && jsSrc.includes('markLineReturned(ln, 1, `échange ${sale.id}`)'),
   'exchange settlement records the return and handles a stock race honestly');

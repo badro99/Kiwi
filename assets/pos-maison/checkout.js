@@ -1,11 +1,12 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=218';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=133';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=133';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=219';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=134';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=134';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
 import { mzDeliveryCard } from './delivery.js?v=28';
 import { mzKickForCash } from './drawer.js?v=2';
+import { mzAvoirSheet, codeKey } from './avoir-sheet.js?v=9';
 const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);   /* « Compte client » et l'acompte, dans la langue de la caisse */
 
 
@@ -1161,31 +1162,15 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
       else commit();
     };
 
-    const stepAvoir = () => {
-      const avs = remainingAvoirs();
-      el.innerHTML = `
-        <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
-        <h3 class="modal-title">Avoir en paiement</h3>
-        <p class="modal-subtle">Scannez le bon, ou choisissez-le, il se déduit du total</p>
-        <form id="mz-av-code-form" style="display:flex;gap:8px;margin:12px 0;">
-          <input class="sk-input mono" id="mz-av-code" autocomplete="off" autocapitalize="characters" placeholder="Scanner ou saisir AV-…" aria-label="Code de l’avoir" style="flex:1;min-width:0;" />
-          <button class="mz-btn secondary" type="submit">Utiliser</button>
-        </form>
-        <div class="mz-pay-opts">
-          ${avs.map((a) => `
-            <button class="mz-pay-opt" data-mz-av-use="${a.code}">
-              <span class="ic"><i data-lucide="scan-line"></i></span>
-              <span class="l"><b>${a.code} · ${fmtMAD(a.balance)}</b><span>${esc(a.holderName)} · ${esc(a.motif)} · valable jusqu'au ${fmtValidUntil(a.until)}</span></span>
-              <span class="amt">−${fmtMAD(Math.min(a.balance, portion()))}</span>
-            </button>`).join('')}
-        </div>
-        <div class="mz-sheet-foot"><button class="mz-btn secondary" id="mz-av-back" style="flex:1;">Retour</button></div>`;
-      icons(); closeBtns();
-      $('#mz-av-back', el).onclick = stepMethods;
-      const applyCode = async (rawCode) => {
-        const code = String(rawCode || '').trim().toUpperCase();
-        if (!code) return;
-        let av = AVOIRS.find((item) => String(item.code).toUpperCase() === code);
+    /* La feuille (assets/pos-maison/avoir-sheet.js) montre et choisit ; le
+       registre et le règlement restent ici. */
+    const stepAvoir = () => mzAvoirSheet(el, {
+      due, portion, mine: remainingAvoirs, fmt: fmtMAD, untilOf: (a) => fmtValidUntil(a.until), icons, closeBtns, back: stepMethods,
+      all: () => { const used = new Set(appliedAvoirCodes()); return activeAvoirs().filter((a) => !used.has(a.code)); },
+      expired: avoirExpired, active: (av) => activeAvoirs().includes(av) && !appliedAvoirCodes().includes(av.code),
+      lookup: async (code) => {
+        let av = AVOIRS.find((item) => codeKey(item.code) === codeKey(code));
+        /* un bon émis par l'autre caisse : on le demande au registre */
         if (!av && !IS_DEMO) {
           try {
             const data = await creditRequest(null, '&code=' + encodeURIComponent(code));
@@ -1198,26 +1183,17 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
             }
           } catch (_) {}
         }
-        if (!av || !activeAvoirs().includes(av)) {
-          toast('Bon indisponible', 'Code introuvable, expiré ou déjà consommé.');
-          return;
-        }
+        return av || null;
+      },
+      apply: (av) => {
         const applied = Math.min(av.balance, portion());
         if (avoirPart) settled.push({ m: 'avoir', amount: avoirPart.amount, code: avoirPart.code });
         avoirPart = { m: 'avoir', amount: applied, code: av.code };
         share = 1; custom = 0;
         if (due() <= 0.009) void commit();
         else { toast(`${av.code} appliqué, reste ${fmtMAD(due())} à payer`); stepMethods(); }
-      };
-      $('#mz-av-code-form', el).onsubmit = (event) => {
-        event.preventDefault();
-        void applyCode($('#mz-av-code', el).value);
-      };
-      $('#mz-av-code', el).focus();
-      $$('[data-mz-av-use]', el).forEach((b) => {
-        b.onclick = () => { void applyCode(b.dataset.mzAvUse); };
-      });
-    };
+      },
+    });
 
     const stepCash = (amount) => {
       amount = amount > 0 ? amount : due();
