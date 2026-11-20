@@ -133,6 +133,7 @@
             "pendingRedemptionDelta",
             "mergeServer",
             "clientPulls",
+            "lastBookKept",
             "pull",
             "pollTimer",
             "tick",

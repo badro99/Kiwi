@@ -48,7 +48,8 @@ function files() {
   })('assets');
   // A transport copy has exactly the same owners as its checked sources.
   assert.equal(fs.readFileSync(path.join(ROOT, 'assets/clients-store-vault.js'), 'utf8'), fs.readFileSync(path.join(ROOT, 'assets/clients-outbox-vault.js'), 'utf8') + fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8'));
-  return out.filter(f => f !== 'assets/clients-store-vault.js').sort();
+  assert.equal(fs.readFileSync(path.join(ROOT, 'assets/boutique-catalog-till.js'), 'utf8'), fs.readFileSync(path.join(ROOT, 'assets/boutique-catalog-parts.js'), 'utf8') + fs.readFileSync(path.join(ROOT, 'assets/boutique-catalog-shelf.js'), 'utf8'));
+  return out.filter(f => f !== 'assets/clients-store-vault.js' && f !== 'assets/boutique-catalog-till.js').sort();
 }
 
 /* Comments say a lot about globals; they do not couple anything. Strings are

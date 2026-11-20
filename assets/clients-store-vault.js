@@ -1211,9 +1211,9 @@
         Object.assign(local, sc); changed = true;
       }
     });
-    if (changed) {
+    lastBookKept = true; if (changed) {
       d.list = d.list.filter(function (c) { return !gone[c.id]; });
-      clientsStore.set(d, book); // notifies subscribers; does NOT re-push
+      clientsStore.set(d, book); try { lastBookKept = localStorage.getItem(clientsStore.key(book)) === JSON.stringify(d); } catch (_) { lastBookKept = false; } // notifies, no re-push; a full storage is swallowed, so re-read
     }
     return changed;
   }
@@ -1222,7 +1222,7 @@
    * reste des pages, sinon il s'arrête à la première et croit avoir tout lu.
    * Le garde-fou de profondeur évite qu'une réponse incohérente ne fasse
    * tourner la boucle sans fin. */
-  var clientPulls = Object.create(null);
+  var clientPulls = Object.create(null), lastBookKept = true;
   function pull(book, cb, depth) {
     // Tolerate pull(cb): the till modals call KiwiClients.pull(callback).
     // Without this the callback (a function) becomes the merchant key and the
@@ -1245,8 +1245,8 @@
         .then(function (data) {
           if (!data || !Array.isArray(data.clients)) { if (cb) cb(false); return; }
           var changed = data.clients.length ? mergeServer(book, data.clients) : false;
-          // Le curseur n'avance que s'il avance vraiment : sur une réponse
-          // incohérente, mieux vaut relire deux fois que sauter des fiches.
+          // Le curseur n'avance que s'il avance vraiment, et jamais sur un carnet non enregistré (stockage plein : ces fiches ne reviendraient plus).
+          if (changed && !lastBookKept) { var lost = new Error('book-storage-unavailable'); try { window.dispatchEvent(new CustomEvent('kiwi:clients-sync', { detail: { merchant: book, error: lost.message } })); } catch (_) {} if (cb) cb(changed, lost); return; }
           if (data.cursor > since && !setCursor(book, data.cursor)) {
             var error = new Error('cursor-storage-unavailable');
             try { window.dispatchEvent(new CustomEvent('kiwi:clients-sync', { detail: { merchant: book, error: error.message } })); } catch (_) {}

@@ -1777,7 +1777,7 @@ section('Whole-project regressions');
        même champ changé des deux côtés est soumis au commerçant. */
     'catalog-field-merge-test.mjs',
     'catalog-ledger-properties-test.mjs',
-    'catalog-durable-recovery-test.mjs',
+    'catalog-durable-recovery-test.mjs', 'catalog-shelf-split-test.mjs',   // gros catalogue : le rayon en local, la réserve en IndexedDB, jamais d'envoi partiel
     'catalog-cross-tab-conflict-test.mjs',
     'catalog-cross-tab-browser-test.mjs',
     'inventory-ledger-test.mjs',

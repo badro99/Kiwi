@@ -776,9 +776,8 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
   function readRev(slug) {
     try { return parseInt(localStorage.getItem(REV_KEY(slug)) || '0', 10) || 0; } catch (e) { return 0; }
   }
-  function writeRev(slug, rev) {
-    try { localStorage.setItem(REV_KEY(slug), String(rev || 0)); } catch (e) {}
-  }
+  /* « Copie locale = révision N » ne se note que si la copie a pris (sinon pull() la croit à jour : Vogue, 91 articles au lieu de 2 948). */
+  function writeRev(slug, rev) { try { if (core.kept === false) localStorage.removeItem(REV_KEY(slug)); else localStorage.setItem(REV_KEY(slug), String(rev || 0)); } catch (e) {} }
   function dirtyToken(slug) {
     try { return localStorage.getItem(DIRTY_KEY(slug)); } catch (e) { return null; }
   }
@@ -853,11 +852,11 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
         if (theirsEmpty) {
           // Rien en ligne : c'est ce navigateur qui fait référence.
           cloud.rev = serverRev;
-          if (!mineEmpty) schedulePush(0);
+          if (!mineEmpty && !core.partial) schedulePush(0);
           return false;
         }
         cloud.rev = serverRev;
-        if (!mineEmpty && readRev(slug) === serverRev) {
+        if (!mineEmpty && readRev(slug) === serverRev && !core.partial) {   // le rayon seul n'est jamais « à jour » (boutique-catalog-shelf.js)
           /* Same revision does not mean "nothing to do" when a prior offline
              push failed. The local movement is still dirty and must leave now
              that the server is reachable again. */
@@ -867,7 +866,7 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
         }
 
         const adopt = first && mineEmpty;
-        core.db = adopt ? theirs : mergeDocs(core.db, theirs); materialize(core.db);
+        core.db = adopt ? theirs : mergeDocs(core.db, theirs); materialize(core.db); core.partial = false;
         dropIndex();
         migrate();   // la copie serveur peut venir d'un build antérieur aux familles
         persist(); writeRev(slug, serverRev); healSeq(); notify();
@@ -928,6 +927,7 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
     const slug = core.VENUE;
     // Règle 3 : jamais pousser avant d'avoir lu, sinon un navigateur neuf efface.
     if (!cloud.read[slug]) { pull(true); return; }
+    if (core.partial) { pull(false); return; }   // jamais le rayon seul : il effacerait les épuisés en ligne
     if (cloud.busy) { cloud.again = true; return; }
     const sentDirty = dirtyToken(slug);
     cloud.busy = true;
@@ -992,17 +992,17 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
     }, 4500)).then((r) => r.json().then((j) => ({ status: r.status, j })).catch(() => ({ status: r.status, j: null })))
       .then((res) => {
         if (res.status === 200 && res.j && res.j.ok && res.j.data) {
-          core.db = mergeDocs(core.db, res.j.data);
+          core.db = mergeDocs(core.db, res.j.data); core.partial = false;
           dropIndex(); migrate(); materialize(core.db);
           cloud.rev = Math.max(cloud.rev, +res.j.rev || 0);
-          writeRev(core.VENUE, cloud.rev); persist(); healSeq(); notify();
+          persist(); writeRev(core.VENUE, cloud.rev); healSeq(); notify();
           if (ledger.ahead.mine) { markCatalogDirty(); schedulePush(0); }
           return { ok: true };
         }
         if (res.status === 409 && res.j && res.j.error === 'stock-insufficient') {
           if (res.j.data) {
-            core.db = mergeDocs(core.db, res.j.data); dropIndex(); migrate(); materialize(core.db);
-            cloud.rev = Math.max(cloud.rev, +res.j.rev || 0); writeRev(core.VENUE, cloud.rev); persist(); notify();
+            core.db = mergeDocs(core.db, res.j.data); core.partial = false; dropIndex(); migrate(); materialize(core.db);
+            cloud.rev = Math.max(cloud.rev, +res.j.rev || 0); persist(); writeRev(core.VENUE, cloud.rev); notify();
             if (ledger.ahead.mine) { markCatalogDirty(); schedulePush(0); }
           }
           return { ok: false, issue: res.j.issue || null };
@@ -1021,8 +1021,8 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
         }
         if (res.status === 409) {
           if (res.j && res.j.data) {
-            core.db = mergeDocs(core.db, res.j.data); dropIndex(); migrate(); materialize(core.db);
-            cloud.rev = Math.max(cloud.rev, +res.j.rev || 0); writeRev(core.VENUE, cloud.rev); persist(); notify();
+            core.db = mergeDocs(core.db, res.j.data); core.partial = false; dropIndex(); migrate(); materialize(core.db);
+            cloud.rev = Math.max(cloud.rev, +res.j.rev || 0); persist(); writeRev(core.VENUE, cloud.rev); notify();
             if (ledger.ahead.mine) { markCatalogDirty(); schedulePush(0); }
           }
           return { ok: false, fatal: true, reason: (res.j && res.j.error) || 'stock-contention' };

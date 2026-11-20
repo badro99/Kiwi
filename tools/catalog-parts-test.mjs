@@ -194,7 +194,13 @@ const missed = f.sql.prepare('SELECT 1 AS hit WHERE ' + plain.sql).get(...plain.
 ok(found && found.hit === 1 && !missed, 'garde des transferts : trouvé dans les parts (et l\'ancienne garde l\'aurait manqué)');
 
 // 2h · le catalogue redevient petit : les parts disparaissent
+/* Omettre 3 060 articles sans les supprimer n'est pas une suppression : c'est
+   une copie partielle (le rayon d'un gros catalogue). Refusée, copie rendue. */
 r = await post({ baseRev: syncRev, data: bigCatalog(40) });
+ok(r.status === 409 && r.body.error === 'items-omitted' && r.body.count === 3060 && r.body.data.products.length > 3000, 'omission muette : refusée, copie serveur rendue');
+const shrunk = bigCatalog(40);
+for (let i = 40; i < 3100; i++) shrunk.removed['prod_' + i] = 1795000000000 + 99;
+r = await post({ baseRev: syncRev, data: shrunk });
 ok(r.status === 200, 'retour à un petit catalogue : accepté');
 ok(!row().data.startsWith('{"_parts":') && parts().length === 0, 'retour à un petit catalogue : document entier, plus aucune part');
 g = await get();

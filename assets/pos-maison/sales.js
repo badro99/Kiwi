@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=203';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=120';
-import { invSetModal, offerRegister } from './inventory.js?v=120';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=204';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=121';
+import { invSetModal, offerRegister } from './inventory.js?v=121';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=5';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=8';
@@ -201,26 +201,36 @@ import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
   }
 
   /* ═══════════════════════ VENTE — grille par rayon / marque / motif ═══════════════════════ */
+  /* La grille montre le RAYON : ce qui peut se vendre. Un catalogue repris
+     d'une autre caisse traîne des milliers de références épuisées (La Maison
+     en Vogue : 2 442 sur 2 948) qu'il n'y a aucune raison de dessiner à chaque
+     scan. Elles restent trouvables par la recherche et la douchette, et d'un
+     geste par le filtre « Épuisés ». */
+  const isSoldOut = (p) => (p && p.format === 'service' ? sellableStockOf(p) : stockOf(p)) === 0;
+  const pickRayons = (keep) => RAYONS.map((r) => ({ ...r, items: r.items.filter(keep) })).filter((r) => r.items.length);
+  const SHELF = () => pickRayons((p) => !isSoldOut(p));
+  const soldOutCount = () => RAYONS.reduce((n, r) => n + r.items.filter(isSoldOut).length, 0);
   function listAllDistinctMarques() {
     const s = new Set();
-    RAYONS.forEach((r) => r.items.forEach((p) => { if (p.marque) s.add(p.marque); }));
+    SHELF().forEach((r) => r.items.forEach((p) => { if (p.marque) s.add(p.marque); }));
     return Array.from(s).sort();
   }
   function listAllDistinctMotifs() {
     const s = new Set();
-    RAYONS.forEach((r) => r.items.forEach((p) => { if (p.motif) s.add(p.motif); }));
+    SHELF().forEach((r) => r.items.forEach((p) => { if (p.motif) s.add(p.motif); }));
     return Array.from(s).sort();
   }
   function countFragileItems() {
     let count = 0;
-    RAYONS.forEach((r) => r.items.forEach((p) => { if (p.fragile) count++; }));
+    SHELF().forEach((r) => r.items.forEach((p) => { if (p.fragile) count++; }));
     return count;
   }
 
   function renderCats() {
-    const all = RAYONS.reduce((s, r) => s + r.items.length, 0);
+    const all = SHELF().reduce((s, r) => s + r.items.length, 0);
     const promoN = promoedIds().size;
     const fragileN = countFragileItems();
+    const outN = soldOutCount();
     const marques = listAllDistinctMarques();
     const motifs = listAllDistinctMotifs();
     const axis = state.filterAxis || 'rayons';
@@ -232,6 +242,7 @@ import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
         ${motifs.length ? `<button class="mz-axis-btn ${axis === 'motifs' ? 'on' : ''}" data-mz-axis="motifs"><i data-lucide="sparkles"></i>Motifs (${motifs.length})</button>` : ''}
         ${promoN ? `<button class="mz-axis-btn ${axis === 'promo' ? 'on' : ''}" data-mz-axis="promo"><i data-lucide="flame"></i>En promo (${promoN})</button>` : ''}
         ${fragileN ? `<button class="mz-axis-btn ${axis === 'fragile' ? 'on' : ''}" data-mz-axis="fragile"><i data-lucide="shield-alert"></i>Fragile (${fragileN})</button>` : ''}
+        ${outN ? `<button class="mz-axis-btn ${axis === 'epuises' ? 'on' : ''}" data-mz-axis="epuises"><i data-lucide="package-x"></i>Épuisés (${outN})</button>` : ''}
       </div>`;
 
     let chipsRow = '';
@@ -239,14 +250,14 @@ import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
       chipsRow = `
         <div class="mz-cats-row">
           <button class="mz-cat ${state.rayon === 'tous' ? 'on' : ''}" data-mz-cat="tous">Tous <span class="mz-cat-ct">${all}</span></button>
-          ${RAYONS.map((r) => `<button class="mz-cat ${state.rayon === r.id ? 'on' : ''}" data-mz-cat="${r.id}">${esc(r.label)} <span class="mz-cat-ct">${r.items.length}</span></button>`).join('')}
+          ${SHELF().map((r) => `<button class="mz-cat ${state.rayon === r.id ? 'on' : ''}" data-mz-cat="${r.id}">${esc(r.label)} <span class="mz-cat-ct">${r.items.length}</span></button>`).join('')}
         </div>`;
     } else if (axis === 'marques') {
       chipsRow = `
         <div class="mz-cats-row">
           <button class="mz-cat ${state.selectedMarque === 'tous' ? 'on' : ''}" data-mz-marque="tous">Toutes les marques</button>
           ${marques.map((m) => {
-            const count = RAYONS.reduce((acc, r) => acc + r.items.filter((p) => p.marque === m).length, 0);
+            const count = SHELF().reduce((acc, r) => acc + r.items.filter((p) => p.marque === m).length, 0);
             return `<button class="mz-cat ${state.selectedMarque === m ? 'on' : ''}" data-mz-marque="${esc(m)}">${esc(m)} <span class="mz-cat-ct">${count}</span></button>`;
           }).join('')}
         </div>`;
@@ -255,7 +266,7 @@ import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
         <div class="mz-cats-row">
           <button class="mz-cat ${state.selectedMotif === 'tous' ? 'on' : ''}" data-mz-motif-filter="tous">Tous les motifs</button>
           ${motifs.map((mot) => {
-            const count = RAYONS.reduce((acc, r) => acc + r.items.filter((p) => p.motif === mot).length, 0);
+            const count = SHELF().reduce((acc, r) => acc + r.items.filter((p) => p.motif === mot).length, 0);
             return `<button class="mz-cat ${state.selectedMotif === mot ? 'on' : ''}" data-mz-motif-filter="${esc(mot)}">${esc(mot)} <span class="mz-cat-ct">${count}</span></button>`;
           }).join('')}
         </div>`;
@@ -263,6 +274,8 @@ import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
       chipsRow = `<div class="mz-cats-row"><button class="mz-cat on" data-mz-cat="_promo">Articles en promotion (${promoN})</button></div>`;
     } else if (axis === 'fragile') {
       chipsRow = `<div class="mz-cats-row"><button class="mz-cat on" data-mz-axis="fragile">Articles céramique & verrerie fragile (${fragileN})</button></div>`;
+    } else if (axis === 'epuises') {
+      chipsRow = `<div class="mz-cats-row"><button class="mz-cat on" data-mz-axis="epuises">Articles épuisés, à réassortir (${outN})</button></div>`;
     }
 
     const catsEl = $('#mz-cats', root);
@@ -313,29 +326,31 @@ import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
   function promoedIds() {
     const out = new Set();
     if (!window.KiwiPromos) return out;
-    RAYONS.forEach((r) => r.items.forEach((it) => { if (promoFor(it.id)) out.add(it.id); }));
+    SHELF().forEach((r) => r.items.forEach((it) => { if (promoFor(it.id)) out.add(it.id); }));
     return out;
   }
 
   function renderGrid() {
-    let rayons = RAYONS;
+    let rayons = SHELF();
     const axis = state.filterAxis || 'rayons';
 
-    if (axis === 'promo') {
+    if (axis === 'epuises') {
+      rayons = pickRayons(isSoldOut);
+    } else if (axis === 'promo') {
       const ids = promoedIds();
-      rayons = RAYONS.map((r) => ({ ...r, items: r.items.filter((it) => ids.has(it.id)) })).filter((r) => r.items.length);
+      rayons = SHELF().map((r) => ({ ...r, items: r.items.filter((it) => ids.has(it.id)) })).filter((r) => r.items.length);
     } else if (axis === 'fragile') {
-      rayons = RAYONS.map((r) => ({ ...r, items: r.items.filter((it) => !!it.fragile) })).filter((r) => r.items.length);
+      rayons = SHELF().map((r) => ({ ...r, items: r.items.filter((it) => !!it.fragile) })).filter((r) => r.items.length);
     } else if (axis === 'marques') {
       if (state.selectedMarque && state.selectedMarque !== 'tous') {
-        rayons = RAYONS.map((r) => ({ ...r, items: r.items.filter((it) => it.marque === state.selectedMarque) })).filter((r) => r.items.length);
+        rayons = SHELF().map((r) => ({ ...r, items: r.items.filter((it) => it.marque === state.selectedMarque) })).filter((r) => r.items.length);
       }
     } else if (axis === 'motifs') {
       if (state.selectedMotif && state.selectedMotif !== 'tous') {
-        rayons = RAYONS.map((r) => ({ ...r, items: r.items.filter((it) => it.motif === state.selectedMotif) })).filter((r) => r.items.length);
+        rayons = SHELF().map((r) => ({ ...r, items: r.items.filter((it) => it.motif === state.selectedMotif) })).filter((r) => r.items.length);
       }
     } else {
-      rayons = state.rayon === 'tous' ? RAYONS : RAYONS.filter((r) => r.id === state.rayon);
+      rayons = state.rayon === 'tous' ? SHELF() : SHELF().filter((r) => r.id === state.rayon);
     }
 
     let i = 0;

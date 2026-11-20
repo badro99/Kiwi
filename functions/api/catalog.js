@@ -377,6 +377,14 @@ async function applyStockAction(env, merchant, body, waitUntil) {
 export const __test = { sanitize, materialize, stockMutation, compactForWrite };
 
 const empty = (d) => !d || !(d.products && d.products.length) && !(d.variants && d.variants.length);
+/* Articles que le serveur porte et que l'envoi omet SANS les avoir supprimés
+   (pas de pierre tombale dans `removed`). Une suppression laisse toujours sa
+   pierre ; une omission muette est une copie partielle : le rayon d'un gros
+   catalogue (articles en stock seulement) lu par un onglet d'avant la réserve. */
+const omitted = (mine, data) => {
+  const have = new Set(((data && data.products) || []).map((e) => e && e.id)), gone = (data && data.removed) || {};
+  return ((mine && mine.products) || []).filter((e) => e && e.id && !have.has(e.id) && !gone[e.id]).length;
+};
 
 export async function onRequestGet(context) {
   const { request, env } = context;
@@ -501,6 +509,14 @@ export async function onRequestPost(context) {
     let mine = null;
     try { mine = sanitize(JSON.parse(current.data)); } catch (_) { mine = null; }
     if (!empty(mine)) return json({ error: 'refused-empty', rev: serverRev, data: mine }, 409);
+  }
+  /* Même garde pour une omission partielle : le client fusionne la copie rendue
+     (union, les suppressions gagnent) et repropose le document entier. */
+  if (serverRev && current && current.data) {
+    let mine = null;
+    try { mine = sanitize(JSON.parse(current.data)); } catch (_) { mine = null; }
+    const lost = omitted(mine, data);
+    if (lost) return json({ error: 'items-omitted', count: lost, rev: serverRev, data: mine }, 409);
   }
 
   const rev = serverRev + 1;

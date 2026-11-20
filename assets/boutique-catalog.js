@@ -210,6 +210,7 @@
   const core = {
     get db() { return db; },
     set db(next) { db = next; },
+    get kept() { return localKept; }, get partial() { return partial; }, set partial(v) { partial = !!v; },   // writeRev, et le rayon (boutique-catalog-shelf.js)
     get VENUE() { return VENUE; },
     DEMO_VENUE,
     load, persist, notify, dropIndex, migrate, commit, famOf, COLOR_BY_ID,
@@ -249,7 +250,7 @@
     // et la page se re-rend via notify() quand la copie arrive.
     setTimeout(cloudBind, 0);
     const key = KEY, epoch = ++loadEpoch;
-    localKept = true;
+    localKept = true; partial = false;
     // La lecture précède toute écriture du document vide de démarrage.
     well.read(key).then(copy => {
       if (epoch !== loadEpoch || key !== KEY || !copy || !copy.doc) return;
@@ -257,14 +258,14 @@
          identifiants transitoires comme « own » se réutilisent) n'est jamais
          fusionnée ; elle est effacée. */
       if (copy.owner !== wellOwner()) { well.save(key, null, () => {}); return; }
-      db = mergeDocs(db, copy.doc);
+      const fromShelf = partial; db = mergeDocs(db, copy.doc); partial = false;
       materialize(db); dropIndex(); migrate();
-      persist(); notify(); schedulePush();
+      persist(); notify(); if (!fromShelf || cloud.dirty) schedulePush();   // relire la réserve n'apprend rien au serveur
     }).catch(() => {});
     let raw = null;
     try { raw = localStorage.getItem(KEY); } catch (e) {}
     if (raw) {
-      try { db = JSON.parse(raw); } catch (e) { db = null; }
+      try { db = JSON.parse(raw); } catch (e) { db = null; } if (db && db._shelf) { delete db._shelf; partial = true; }
     }
     if (!db || !db.products) {
       db = blank();
@@ -308,7 +309,8 @@
      qu'un rechargement la perdrait. On le DIT : persist() rend vrai ou faux,
      durable() le lit, et l'événement « kiwi:local-save » prévient la surface
      à chaque échec, puis une fois au retour à la normale. */
-  let localKept = true;
+  let localKept = true, partial = false;
+  const shelf = PARTS.shelf ? PARTS.shelf() : null;   // gros catalogue : le rayon en local, la réserve en IndexedDB
   function sayKept(ok) {
     const was = localKept;
     localKept = ok;
@@ -320,10 +322,11 @@
     } catch (e) {}
   }
   function persist(startingEmpty) {
-    let ok = false;
-    try { localStorage.setItem(KEY, JSON.stringify(db)); ok = true; } catch (e) {}
+    const out = shelf ? shelf.text(db, partial) : { text: JSON.stringify(db) }; let ok = false;
+    try { localStorage.setItem(KEY, out.text); ok = true; } catch (e) {}
     const key = KEY, epoch = ++saveEpoch, load = loadEpoch;
     sayKept(ok);
+    if (out.split) return (partial || startingEmpty) ? ok : shelf.keep(well, key, db, wellOwner(), (kept) => { if (key === KEY && epoch === saveEpoch && load === loadEpoch && (!ok || !kept)) sayKept(kept); }, ok);
     if (!ok && !startingEmpty) well.save(key, db, kept => {
       if (key === KEY && epoch === saveEpoch && load === loadEpoch) sayKept(kept);
     }, wellOwner());
@@ -378,6 +381,7 @@
     // The dirty mark and the catalogue are shared by every tab; only a refused local
     // write leaves edits here that no other tab holds, and those must not be dropped.
     if (e.key === DIRTY_KEY(VENUE)) { cloud.dirty = !!e.newValue || !localKept; return; }
+    if (shelf && e.key === shelf.FULL_KEY(KEY) && e.newValue) { const key = KEY; well.read(key).then((c) => { if (key === KEY && db && c && c.doc && c.owner === wellOwner()) { db = mergeDocs(db, c.doc); partial = false; dropIndex(); migrate(); notify(); } }).catch(() => {}); return; }
     if (e.key !== KEY) return;
     if (!localKept) {
       const lang = (document.documentElement || {}).lang;
@@ -391,7 +395,8 @@
       if (!handled) detail.sync();
       return;
     }
-    try { db = e.newValue ? JSON.parse(e.newValue) : blank(); } catch (err) { return; }
+    let next; try { next = e.newValue ? JSON.parse(e.newValue) : blank(); } catch (err) { return; }
+    if (next && next._shelf) { delete next._shelf; db = db ? mergeDocs(db, next) : (partial = true, next); } else db = next;   // un rayon ne remplace pas les épuisés tenus
     dropIndex();
     migrate();   // the other tab may be an older build, or a cloud copy just landed
     notify();
