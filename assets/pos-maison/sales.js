@@ -1,11 +1,11 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=220';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=135';
-import { invSetModal, offerRegister } from './inventory.js?v=135';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=221';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=136';
+import { invSetModal, offerRegister } from './inventory.js?v=136';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=5';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=10';
 import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
-import { mzPageGrid } from './grid-pager.js?v=1';
+import { mzPageGrid } from './grid-pager.js?v=1'; import { mzOpenFiche } from './client-fiche.js?v=1';
 import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsEmpty } from './client-view.js?v=1';
 
 
@@ -1195,98 +1195,13 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     icons();
   }
 
-  function creditHistoryRows(credits) {
-    const rows = Array.isArray(credits) ? credits : [];
-    if (!rows.length) return '<div class="mz-empty" style="padding:16px;">Aucun avoir enregistré.</div>';
-    return rows.map((credit) => {
-      const issued = (credit.events || []).find((event) => event.action === 'issue') || {};
-      const lines = Array.isArray(issued.lines) ? issued.lines : [];
-      const eventRows = (credit.events || []).filter((event) => event.action !== 'issue').map((event) =>
-        `<small style="display:block;margin-top:4px;color:var(--ink-3);">${event.action === 'redeem' ? 'Utilisé' : event.action === 'cancel' ? 'Annulé' : esc(event.action)} · ${fmtMAD((event.amountCents || 0) / 100)} · ${whenLabel(event.ts)} · ${esc(event.actor || 'Caisse')} · solde ${fmtMAD((event.balanceAfterCents || 0) / 100)}</small>`
-      ).join('');
-      return `<div class="mz-fhist-row" style="align-items:flex-start;">
-        <span class="when">${whenLabel(credit.at)}<small style="display:block;">expire ${fmtValidUntil(credit.until)}</small></span>
-        <span class="what"><b>${esc(credit.code)}</b> · vente ${esc(credit.from || '·')}<small style="display:block;">${lines.length ? esc(lines.map((line) => `${line.qty || 1}× ${line.name || 'Article'}`).join(' + ')) : esc(credit.motif || 'Retour')} · ${esc(issued.actor || 'Caisse')}</small>${eventRows}</span>
-        <span class="amt">${fmtMAD(credit.amount)}<small style="display:block;color:var(--ink-3);">reste ${fmtMAD(credit.balance)}</small></span>
-      </div>`;
-    }).join('');
-  }
-
-  async function fillClientCreditHistory(cid, host) {
-    if (!host) return;
-    try {
-      const credits = IS_DEMO ? AVOIRS.filter((item) => item.holderId === cid)
-        : (await creditRequest(null, '&customerId=' + encodeURIComponent(cid))).credits.map(creditFromServer);
-      if (!host.isConnected) return;
-      host.innerHTML = creditHistoryRows(credits);
-      icons();
-    } catch (_) {
-      if (host.isConnected) host.innerHTML = '<div class="mz-empty" style="padding:16px;">Historique des avoirs indisponible. Réessayez.</div>';
-    }
-  }
-
+  /* La fiche complète (contact, doit, avoirs, achats) : pos-maison/client-fiche.js. */
   function openFiche(cid) {
-    const c = clById(cid);   // clById, pas CL[…] : sur une vraie boutique le carnet vit dans KiwiClients (CL est vide)
-    if (!c) return;
-    const el = $('#mz-fichem', root);
-    const av = clAvoirOf(c);
-    const cloudHistory = (c.history || []).map((h) => ({
-      when: h.when || whenLabel(h.ts || h.createdAt || 0),
-      what: h.what || (Array.isArray(h.items) && h.items.length ? h.items.map((it) => `${it.qty || 1}× ${it.name || 'Article'}`).join(' + ') : (h.ref || 'Achat')),
-      amt: h.amt != null ? h.amt : h.amount,
-      method: h.method || '', ref: h.ref || '', ts: +(h.ts || h.createdAt || 0),
-    }));
-    const syncedRefs = new Set(cloudHistory.map((h) => String(h.ref || '')).filter(Boolean));
-    const localOnly = SALES.filter((s) => s.clientId === cid && !s.voided
-      && !syncedRefs.has(String(s.id || '')) && !syncedRefs.has(String(s.num || ''))).map((s) => ({
-      when: whenLabel(s.at),
-      // idem : une vente de la semaine peut porter un article supprimé depuis.
-      what: s.lines.map((l) => `${(P[l.pid] && P[l.pid].name) || l.name || 'Article'} · ${l.size}`).join(' + '),
-      amt: s.total, method: s.methods || '', ref: s.id || s.num || '', ts: +s.at || 0,
-    }));
-    const hist = localOnly.concat(cloudHistory).sort((a, b) => Number(b.ts || 0) - Number(a.ts || 0));
-    /* c.spent already includes every locally recorded purchase immediately and
-       every acknowledged purchase after sync. Adding today's rows again made
-       the fiche double its turnover. */
-    const spent = c.spent || 0;
-    el.innerHTML = `
-      <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-icon="close"></i></button>
-      <div class="mz-fiche-head">
-        <span class="mz-fiche-ava">${esc(initials(c.name))}</span>
-        <div>
-          <h3>${esc(c.name)} ${c.vip ? '<span class="mz-vip-chip">VIP</span>' : ''}</h3>
-          <div class="tel">${esc(c.phone || 'sans téléphone')}</div>
-        </div>
-      </div>
-      <div class="mz-fstats">
-        <div class="mz-fstat"><b>${c.points}</b><span>points fidélité</span></div>
-        <div class="mz-fstat"><b>${esc(c.taille)}</b><span>taille habituelle</span></div>
-        <div class="mz-fstat"><b>${fmtMAD(spent)}</b><span>dépensé</span></div>
-      </div>
-      ${(c.prefs || []).length ? `<div class="mz-fnotes">${c.prefs.map((p) => `<div class="mz-fnote"><i data-lucide="heart"></i>${esc(p)}</div>`).join('')}</div>` : ''}
-      ${av ? `<button class="mz-favoir" id="mz-fiche-av"><i data-lucide="ticket"></i>Avoir actif <b>${av.code}</b> · ${fmtMAD(av.balance)}, utilisable en caisse<span class="see">Voir</span></button>` : ''}
-      <div class="mz-f-lbl" style="margin-bottom:6px;">Historique</div>
-      <div class="mz-fhist">
-        ${hist.length ? hist.map((h) => `<div class="mz-fhist-row"><span class="when">${esc(h.when)}${h.method ? `<small style="display:block;">${esc(h.method)}</small>` : ''}</span><span class="what">${esc(h.what)}${h.ref ? `<small style="display:block;">Ticket ${esc(h.ref)}</small>` : ''}</span><span class="amt">${fmtMAD(h.amt)}</span></div>`).join('') : '<div class="mz-empty">Aucun achat enregistré.</div>'}
-      </div>
-      <div class="mz-f-lbl" style="margin:16px 0 6px;">Avoirs et remboursements</div>
-      <div class="mz-fhist" id="mz-fiche-credits"><div class="mz-empty" style="padding:16px;">Chargement du registre…</div></div>
-      <div class="mz-sheet-foot">
-        <button class="mz-btn secondary" data-mz-close>Fermer</button>
-        <button class="mz-btn primary" id="mz-fiche-sell"><i data-lucide="shopping-bag"></i>Nouvelle vente pour elle</button>
-      </div>`;
-    openVeil('#mz-fiche-veil');
-    icons();
-    $$('[data-mz-close]', el).forEach((b) => { b.onclick = () => closeVeil('#mz-fiche-veil'); });
-    const avB = $('#mz-fiche-av', el);
-    if (avB) avB.onclick = () => { closeVeil('#mz-fiche-veil'); openVoucher(av, { mode: 'view' }); };
-    $('#mz-fiche-sell', el).onclick = () => {
-      state.ticket.client = c.id;
-      closeVeil('#mz-fiche-veil');
-      switchView('vente');
-      toast(`${firstName(c.name)} au comptoir, taille ${c.taille} pré-sélectionnée`);
-    };
-    void fillClientCreditHistory(cid, $('#mz-fiche-credits', el));
+    mzOpenFiche(cid, { merchant: merchantSlug(), el: $('#mz-fichem', root), clById, clAvoirOf, esc, fmtMAD, whenLabel, fmtValidUntil, initials, icons, openVeil, closeVeil, $$, openVoucher,
+      SALES, P, AVOIRS, demo: IS_DEMO, creditRequest, creditFromServer, reward: clReward, avoirs: activeAvoirs,
+      raw: (id) => (useKiwiCl() ? window.KiwiClients.get(id) : CL[id]) || null,
+      onSettle: (id) => { state.acompteFor = id; switchView('acomptes'); },
+      onSell: (c) => { state.ticket.client = c.id; switchView('vente'); toast(`${firstName(c.name)} au comptoir${c.taille ? `, taille ${c.taille} pré-sélectionnée` : ''}`); } });
   }
 
   /* ═══════════════════════ SCAN ═══════════════════════ */
