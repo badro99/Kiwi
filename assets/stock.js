@@ -2456,7 +2456,7 @@
     'assets/stock/intake.js?v=23',
     'assets/stock/photo.js?v=2',
     'assets/stock/catalog.js?v=11',
-    'assets/stock/suppliers.js?v=1',
+    'assets/stock/suppliers.js?v=2',
   ];
   const stockLoads = new Map();
   function loadStockParts() {

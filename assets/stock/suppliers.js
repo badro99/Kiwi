@@ -99,7 +99,7 @@ window.KiwiStockInternal.install('suppliers', (S) => {
   .sr-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sr-actions>*{flex:1 1 180px}`;
   function styles() {
     if (document.getElementById('sr-css')) return;
-    const st = document.createElement('style'); st.id = 'sr-css'; st.textContent = CSS; document.head.appendChild(st);
+    const style = document.createElement('style'); style.id = 'sr-css'; style.textContent = CSS; document.head.appendChild(style);
   }
   const catalog = () => window.KiwiBoutiqueCatalog || null;
   const procurement = () => window.KiwiProcurement || null;
