@@ -1896,7 +1896,8 @@
    * all date ranges without extra datasets. */
   const DEFAULT_MARGIN = { restaurant: 69, spa: 78, boutique: 54, fusion: 69 };
   const TIP_RATE = { restaurant: 0.072, spa: 0.055, boutique: 0, fusion: 0.06 };
-  const RANGE_DAYS = { aujourdhui: 1, hier: 1, septJours: 7, trenteJours: 30, moisDernier: 30, trimestre: 90, annee: 365, personnalise: 1 };
+  /* « Personnalisé » compte ses vrais jours : l'objectif suggéré (daterange/hero.js) s'y multiplie. */
+  const RANGE_DAYS = { aujourdhui: 1, hier: 1, septJours: 7, trenteJours: 30, moisDernier: 30, trimestre: 90, annee: 365, get personnalise() { return customRange ? Math.max(1, spanDays(customRange.start, customRange.end)) : 1; } };
   const r1 = (n) => Math.round(n * 10) / 10;
   /* Derived tiles combine the deltas of their inputs. A null input means "no
    * baseline to compare against" — and `null + null` is 0 in JS, which would

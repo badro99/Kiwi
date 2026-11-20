@@ -41,7 +41,7 @@ function el() {
 }
 
 /* revenueByDaysAgo[k] = chiffre du jour J-k (k = 1..28). */
-function run({ revenueByDaysAgo = {}, merchantGoal = 0, range = 'aujourdhui', today = 0, lang = 'fr' }) {
+function run({ revenueByDaysAgo = {}, merchantGoal = 0, range = 'aujourdhui', today = 0, lang = 'fr', rangeDays = null }) {
   const nodes = { '[data-goal-label]': el(), '[data-goal-pct]': el(), '[data-goal-fill]': el() };
   const homes = [];
   const window = {
@@ -62,7 +62,7 @@ function run({ revenueByDaysAgo = {}, merchantGoal = 0, range = 'aujourdhui', to
     realSalesTotals: () => ({ revenue: today }),
     rangeBounds: (r) => (r === 'aujourdhui' ? [TODAY, TODAY + DAY] : [TODAY - 6 * DAY, TODAY + DAY]),
     realWindowStats: (from) => ({ revenue: revenueByDaysAgo[Math.round((TODAY - from) / DAY)] || 0 }),
-    RANGE_DAYS: { aujourdhui: 1, hier: 1, septJours: 7, trenteJours: 30 },
+    RANGE_DAYS: rangeDays || { aujourdhui: 1, hier: 1, septJours: 7, trenteJours: 30 },
     GOAL_LABEL: { fr: { aujourdhui: 'OBJECTIF JOUR', septJours: 'OBJECTIF SEMAINE', trenteJours: 'OBJECTIF MOIS' }, en: { aujourdhui: 'DAILY GOAL' }, ar: { aujourdhui: 'الهدف اليومي' } },
     GOAL_UNSET: { fr: 'à définir' },
     kitCase: (t) => t,
@@ -193,6 +193,24 @@ ok('stockage refusé : le registre des ventes reste lisible, l’incident remont
   assert.equal(rejected.length, 1, 'un seul rapport par page');
   assert.match(rejected[0], /^kiwi-ledger-storage-refused: kiwiSales:own 3171 rows \d+ chars, storage \d+ chars, QuotaExceededError$/);
   assert.doesNotMatch(rejected[0], /santos/, 'pas de slug dans le rapport');
+});
+
+ok('période personnalisée : la suggestion couvre ses vrais jours, pas une seule journée', () => {
+  /* La table de dateRange.js elle-même : « Personnalisé » valait 1 jour, et le
+     1-20 novembre de La Maison en Vogue proposait l'objectif d'une journée. */
+  const src = readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
+  const table = src.match(/^ {2}const RANGE_DAYS = \{.*\};$/m)[0];
+  const spanDays = src.match(/^ {2}function spanDays\(a, b\) \{[\s\S]*?^ {2}\}$/m)[0];
+  const box = { customRange: null };
+  vm.runInNewContext(`${spanDays}\nvar customRange = null;\n${table}\nthis.set = (r) => { customRange = r; }; this.days = RANGE_DAYS;`, box);
+  assert.equal(box.days.personnalise, 1, 'sans période choisie : un jour');
+  box.set({ start: new Date(2026, 10, 1), end: new Date(2026, 10, 20) });
+  assert.equal(box.days.personnalise, 20);
+  const total = Object.values(weeks).reduce((a, b) => a + b, 0);
+  const expected = Math.ceil(total / 28 * 20 / 1000) * 1000;
+  const r = run({ revenueByDaysAgo: weeks, range: 'personnalise', rangeDays: box.days });
+  assert.equal(r.suggested, true);
+  assert.equal(r.home.goal, expected, '20 jours × la moyenne par jour');
 });
 
 console.log(`dashboard-goal-suggestion · ${n} checks`);
