@@ -113,6 +113,7 @@ const MZ_MORE_ICONS = [
      service (pos-boutique.js), Code de pointage (caisse-refresh.js) et
      Réimprimer (pos-reprint.js). */
   ['#mz-open-drawer', 'point_of_sale'],
+  ['#mz-cash-move', 'payments'],
   ['#mz-close-day', 'power_settings_new'],
   ['.kx-attendance-code', 'key'],
   ['.kx-reprint', 'receipt'],
@@ -185,6 +186,7 @@ function mzMoreActs() {
    inconnue se range dans Service, avant la fin de service. */
 const MZ_MORE_ORDER = [
   ['#mz-open-drawer', 1],
+  ['#mz-cash-move', 1],
   ['.kx-reprint, [data-mz-act="reprint"]', 2],
   ['.kx-attendance-code, [data-mz-act="clock"]', 3],
   ['#mz-close-day, [data-mz-act="endshift"]', 9],

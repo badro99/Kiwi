@@ -1,10 +1,10 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=121';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=122';
 import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=18';
 import { tillNow } from './pos-boutique/till-clock.js?v=2';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=121';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=121';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=122';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=122';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=10'; import { mzLivraisons } from './pos-maison/delivery.js?v=28';
-import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=8'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
+import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=9'; import { openMzCashMove, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=2'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
 
   'use strict';
 
@@ -1528,7 +1528,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
             <i class="mz-net-dot"></i><span class="mz-net-label">En ligne</span>
           </button>
           <button class="mz-lock" id="mz-fs" title="Plein écran" aria-label="Basculer le plein écran" aria-pressed="false"><svg data-fs="enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg><svg data-fs="exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg><span>Plein écran</span></button>
-          ${IS_DEMO ? '' : '<button class="mz-lock" id="mz-close-day"><i data-lucide="power"></i><span>Fin de service</span></button>'}
+          ${IS_DEMO ? '' : '<button class="mz-lock" id="mz-cash-move"><i data-lucide="arrow-left-right"></i><span>Mouvement de caisse</span></button>'}${IS_DEMO ? '' : '<button class="mz-lock" id="mz-close-day"><i data-lucide="power"></i><span>Fin de service</span></button>'}
           <button class="mz-lock" id="mz-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
         </div>
       </aside>
@@ -1588,7 +1588,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
       window.KiwiPosDispatch.lock();
     });
     const closeDay = $('#mz-close-day', root);
-    if (closeDay) closeDay.addEventListener('click', bqOpenCloture);
+    if (closeDay) closeDay.addEventListener('click', bqOpenCloture); const cashMove = $('#mz-cash-move', root); if (cashMove) cashMove.addEventListener('click', bqOpenCashMove);
     if (window.KiwiShiftNudge) window.KiwiShiftNudge.check({ host: root, scope: 'maison@' + merchantSlug(),
       openedAt: () => bqShift && bqShift.openedAt, open: bqOpenCloture, isBusy: () => state.checkoutBusy });
     $('#mz-net', root).addEventListener('click', toggleOffline);
@@ -2216,7 +2216,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
       /* Maison annonce ses postes depuis l'ouverture : un poste plus ancien
          que le drapeau openSent l'a déjà été. */
       if (s && +s.openedAt > 0) bqShift = { openedAt: +s.openedAt, openedBy: String(s.openedBy || ''), float: +s.float || 0,
-        sid: String(s.sid || ''), openSent: s.openSent !== false };
+        sid: String(s.sid || ''), openSent: s.openSent !== false, moves: Array.isArray(s.moves) ? s.moves : [] };
     } catch (_) {}
   })();
   /* ── LE RÉCONCILIATEUR DOIT VOIR CE COMPTOIR ───────────────────────────────
@@ -2262,6 +2262,9 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
     } catch (_) { return false; }
   }
   const bqCents = (v) => Math.round((+v || 0) * 100);
+  /* Sorties et entrées de caisse du poste (pos-maison/cash-moves.js) : l'attendu du tiroir les compte, le Z les porte, le rapprochement les reçoit. */
+  function bqOpenCashMove() { if (!bqShift) return; const off = () => { try { return !!(window.KiwiConfig && typeof window.KiwiConfig.off === 'function' && (window.KiwiConfig.off('cash-move') || window.KiwiConfig.off('cashMove'))); } catch (_) { return false; } }; const expected = () => { const mv = mzMoveTotals(bqShift); return Math.round(((bqShift ? bqShift.float : 0) + bqDayTotals('store').cash + mv.movesIn - mv.movesOut) * 100) / 100; };
+    openMzCashMove({ shift: () => bqShift, save: bqShiftPersist, off, expected, fmt: fmtMAD, toast, actor: () => (STAFF.caissiere && STAFF.caissiere.name) || '', emit: (kind, amountCents, reason) => bqCashEvent('movement', { movementKind: kind, movementAmountCents: amountCents, movementReason: reason, expectedCents: bqCents(expected()) }) }); }
 
   function bqShiftPersist() {
     try {
@@ -2404,7 +2407,7 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
       openedBy: bqShift ? bqShift.openedBy : '',
       closedBy: (STAFF.caissiere && STAFF.caissiere.name) || '',
       openingFloat: only !== 'delivery' && bqShift ? bqShift.float : 0,
-      cashMovements: [], handovers: [],
+      cashMovements: only === 'delivery' ? [] : mzReportMoves(bqShift), handovers: [],
       discounts: t.discounts, discountsCount: t.discountsN, cancels: 0,
       /* L'avoir voyage jusqu'au rapport, sinon il ne sort que sur l'écran de
          clôture et disparaît du Z imprimé — le seul document qui reste. */
@@ -2810,12 +2813,12 @@ import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/
 
     /* Tiroir : fond + espèces. La boutique n'a ni pourboires ni mouvements de
        caisse — les lignes qui n'existent pas ne s'affichent pas. */
-    bqCloExpected = (bqShift ? bqShift.float : 0) + t.cash;
+    const mv = mzMoveTotals(bqShift); bqCloExpected = Math.round(((bqShift ? bqShift.float : 0) + t.cash + mv.movesIn - mv.movesOut) * 100) / 100;
     const dLines = [
       ["Fond d'ouverture", fmtMAD(bqShift ? bqShift.float : 0), ''],
       ['Espèces encaissées', '+ ' + fmtMAD(t.cash), ''],
       ['Attendu en caisse', fmtMAD(bqCloExpected), 'is-total'],
-    ];
+    ]; if (mv.movesIn > 0) dLines.splice(2, 0, ['Entrées de caisse', '+ ' + fmtMAD(mv.movesIn), '']); if (mv.movesOut > 0) dLines.splice(dLines.length - 1, 0, ['Sorties de caisse', '− ' + fmtMAD(mv.movesOut), '']);
 
     const nCats = (() => {
       const seen = {};
