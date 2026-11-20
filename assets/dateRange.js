@@ -1557,7 +1557,10 @@
     return merchantDayBounds(merchantDayKey(t, slug), slug).from;
   }
   function realSalesList() {
-    try { return (window.KiwiSales?.list?.(getCurrentVenue()) || []); } catch (_) { return []; }
+    let list; try { list = (window.KiwiSales?.list?.(getCurrentVenue()) || []); } catch (_) { return []; }
+    /* Chiffre d'affaires « à la vente » (sales-history.js) : chaque lecteur voit le ticket, jamais un règlement de compte client. */
+    const M = window.KiwiSalesMath;
+    return M && M.atSale && M.atSale() ? list.filter((e) => !M.isSettlement(e)).map((e) => ({ ...e, amount: M.saleValue(e), received: Math.max(0, +e.amount || 0) })) : list;
   }
   function realRefundList() {
     try { return (window.KiwiRefunds?.list?.(getCurrentVenue()) || []); } catch (_) { return []; }

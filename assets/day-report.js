@@ -606,7 +606,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       ref: String(s.ref || ''),
       kind: String(s.kind || ''),
       tip: num(s.tip), tipMethod: String(s.tipMethod || s.tip_method || '').toLowerCase(),
-      discount: num(s.discount), creditCents: Array.isArray(s.paymentParts) ? s.paymentParts.reduce(function (n, p) { return n + (p && (p.method === 'credit' || p.method === 'avoir') ? Math.max(0, Math.round(num(p.amountCents))) : 0); }, 0) : 0,
+      discount: num(s.discount), creditCents: Array.isArray(s.paymentParts) ? s.paymentParts.reduce(function (n, p) { return n + (p && (p.method === 'credit' || p.method === 'avoir') ? Math.max(0, Math.round(num(p.amountCents))) : 0); }, 0) : 0, compteCents: Array.isArray(s.paymentParts) ? s.paymentParts.reduce(function (n, p) { return n + (p && p.method === 'compte' ? Math.max(0, Math.round(num(p.amountCents))) : 0); }, 0) : 0,
       cashier: String(s.cashier || ''),
       lines: lines,
       voided: Boolean(s.voided || s.void_ts),
@@ -860,7 +860,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     var receivable = round2(num(methods.delivery) + num(methods.credit));
     if (receivable < 0) receivable = 0;
 
-    return {
+    return (window.KiwiDayReportVat && window.KiwiDayReportVat.sale ? window.KiwiDayReportVat.sale.apply : function (x) { return x; })({
       v: VER,
       day: day,
       cutoff: cutoff(slug),
@@ -934,7 +934,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       source: String(opts.source || 'caisse'),
       vat: window.KiwiDayReportVat ? window.KiwiDayReportVat.compute(rows) : null,
       duplicates: dupN ? { count: dupN, amount: round2(dupAmt) } : null,
-    };
+    }, rows, opts, !!(window.KiwiVenue && window.KiwiVenue.revenueAtSale && window.KiwiVenue.revenueAtSale())); /* à la vente (z-reconciliation.js) : CA comme l'ancienne caisse, détaillé */
   }
 
   /* ──────────────────── le classeur ──────────────────── */

@@ -563,3 +563,108 @@
 
   window.KiwiDayReportVat = { compute: compute, merge: merge, html: html, csvRows: csvRows, tableRows: tableRows, ticketBlock: ticketBlock };
 })();
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Le chiffre d'affaires À LA VENTE (KiwiDayReportVat.sale)
+ * ---------------------------------------------------------------------------
+ * Par défaut, Kiwi compte l'argent entré : une vente sur compte client vaut 0
+ * le jour où elle sort, et son règlement compte le jour où il arrive. Un
+ * commerce venu d'une autre caisse (La Maison en Vogue, caisse.ma, 20 nov.
+ * 2026) compte le ticket entier le jour de la vente : espèces, carte, avoir et
+ * compte client, moins les retours ; le règlement d'un compte n'est pas une
+ * seconde vente. merchant_config.features.revenueAtSale choisit la règle
+ * (KiwiVenue.revenueAtSale ; assets/sales-history.js applique la même aux tuiles).
+ *
+ * Le rapport journalier du tableau de bord (build() avec source 'dashboard')
+ * passe ici : brut, net, transactions et panier suivent la règle, et le
+ * détail `sale` dit d'où vient chaque dirham. Le Z de la caisse ne passe pas
+ * ici : son journal ne porte pas les parts compte client.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  var SETTLE = /^Règlement acompte/;
+  var c = function (n) { var x = Math.round((+n || 0) * 100); return isFinite(x) ? x : 0; };
+  var r2 = function (cents) { return Math.round(cents) / 100; };
+
+  /* Les lignes normalisées de build() (day-report.js · normSale). */
+  function figures(rows) {
+    var f = { paidC: 0, avoirC: 0, compteC: 0, n: 0, retAvoirC: 0, retAvoirN: 0, retOtherC: 0, retOtherN: 0, settleC: 0, settleN: 0 };
+    (rows || []).forEach(function (s) {
+      if (!s) return;
+      if (s.kind === 'refund' || s.amount < 0) {
+        if (s.method === 'credit' || s.method === 'avoir') { f.retAvoirC += Math.abs(c(s.amount)); f.retAvoirN++; }
+        else { f.retOtherC += Math.abs(c(s.amount)); f.retOtherN++; }
+        return;
+      }
+      if (SETTLE.test(String(s.label || ''))) { f.settleC += c(s.amount); f.settleN++; return; }
+      f.paidC += c(s.amount); f.avoirC += Math.max(0, +s.creditCents || 0); f.compteC += Math.max(0, +s.compteCents || 0); f.n++;
+    });
+    f.soldC = f.paidC + f.avoirC + f.compteC;
+    f.caC = f.soldC - f.retAvoirC - f.retOtherC;
+    return f;
+  }
+
+  /* `atSale` : le réglage, que day-report.js lit chez KiwiVenue.revenueAtSale. */
+  function apply(report, rows, opts, atSale) {
+    if (!report || !opts || opts.source !== 'dashboard' || !atSale) return report;
+    var f = figures(rows);
+    report.sale = { sold: r2(f.soldC), paid: r2(f.paidC), avoir: r2(f.avoirC), compte: r2(f.compteC), count: f.n,
+      returnsAvoir: { count: f.retAvoirN, amount: r2(f.retAvoirC) }, returnsOther: { count: f.retOtherN, amount: r2(f.retOtherC) },
+      settlements: { count: f.settleN, amount: r2(f.settleC) }, ca: r2(f.caC) };
+    report.gross = r2(f.soldC);
+    report.net = r2(f.caC);
+    report.txns = f.n;
+    report.basket = f.n ? r2(f.soldC / f.n) : 0;
+    /* Un retour en avoir ne sort pas d'argent : il n'a rien à faire dans les moyens de paiement. */
+    if (report.methods && f.retAvoirC) {
+      var left = c(report.methods.credit) + f.retAvoirC;
+      if (left) report.methods.credit = r2(left); else delete report.methods.credit;
+    }
+    report.receivable = r2(Math.max(0, c(report.methods && report.methods.delivery)) + f.compteC);   /* ce qui reste dû : livraisons en compte et comptes clients */
+    return report;
+  }
+
+  var TXT = {
+    title: { fr: 'Chiffre d’affaires à la vente', en: 'Revenue at sale', ar: 'رقم المعاملات عند البيع' },
+    paid: { fr: 'Encaissé (espèces, carte)', en: 'Collected (cash, card)', ar: 'محصّل (نقداً، بطاقة)' },
+    avoir: { fr: 'Réglé en avoir', en: 'Paid with credit note', ar: 'مدفوع بسند استرجاع' },
+    compte: { fr: 'Vendu sur compte client', en: 'Sold on customer account', ar: 'مبيع على حساب الزبون' },
+    sold: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' },
+    retAvoir: { fr: 'Retours en avoir', en: 'Returns to credit note', ar: 'مرتجعات بسند استرجاع' },
+    retOther: { fr: 'Remboursements', en: 'Refunds', ar: 'المبالغ المستردة' },
+    ca: { fr: 'Chiffre d’affaires', en: 'Revenue', ar: 'رقم المعاملات' },
+    settle: { fr: 'Règlements de comptes clients', en: 'Customer account payments', ar: 'تسديدات حسابات الزبائن' },
+    settleNote: { fr: 'Encaissés ce jour, déjà comptés le jour de la vente : hors chiffre d’affaires.', en: 'Collected today, already counted on the day of sale: not in revenue.', ar: 'حُصّلت اليوم وسبق احتسابها يوم البيع: خارج رقم المعاملات.' },
+  };
+  function T(k, lang) { var o = TXT[k]; return o[lang] || o.fr; }
+
+  /* Les lignes, une fois pour l'écran et pour le CSV : [clé, montant signé, nombre, style]. */
+  function lines(sale) {
+    var out = [['paid', sale.paid, 0, ''], ['avoir', sale.avoir, 0, ''], ['compte', sale.compte, 0, ''], ['sold', sale.sold, sale.count, 'sub']];
+    if (sale.returnsAvoir && sale.returnsAvoir.count) out.push(['retAvoir', -sale.returnsAvoir.amount, sale.returnsAvoir.count, '']);
+    if (sale.returnsOther && sale.returnsOther.count) out.push(['retOther', -sale.returnsOther.amount, sale.returnsOther.count, '']);
+    out.push(['ca', sale.ca, 0, 'total']);
+    return out;
+  }
+
+  function html(r, ui) {
+    var sale = r && r.sale;
+    if (!sale) return '';
+    var L = ui.LANG(), m = function (v) { return (v < 0 ? '− ' : '') + ui.money(Math.abs(v)) + ' ' + ui.CUR(); };
+    var body = lines(sale).map(function (x) { return ui.row(T(x[0], L) + (x[2] ? ' (' + x[2] + ')' : ''), m(x[1]), x[3] || undefined); }).join('');
+    if (sale.settlements && sale.settlements.count) body += ui.row(T('settle', L) + ' (' + sale.settlements.count + ')', m(sale.settlements.amount), 'sub')
+      + '<div class="kdr-note">' + ui.esc(T('settleNote', L)) + '</div>';
+    return '<div class="kdr-sec" data-kdr-sale><div class="kdr-h"><span>' + ui.esc(T('title', L)) + '</span><em>' + ui.esc(m(sale.ca)) + '</em></div>' + body + '</div>';
+  }
+
+  function csvRows(r, lang) {
+    var sale = r && r.sale, L = lang || 'fr';
+    if (!sale) return [];
+    var out = [[T('title', L), 'MAD']].concat(lines(sale).map(function (x) { return [T(x[0], L) + (x[2] ? ' (' + x[2] + ')' : ''), x[1].toFixed(2)]; }));
+    if (sale.settlements && sale.settlements.count) out.push([T('settle', L) + ' (' + sale.settlements.count + ')', sale.settlements.amount.toFixed(2)]);
+    return out;
+  }
+
+  /* Rangé sur KiwiDayReportVat, l'interface que le rapport lit déjà dans ce fichier. */
+  window.KiwiDayReportVat.sale = { figures: figures, apply: apply, html: html, csvRows: csvRows };
+})();

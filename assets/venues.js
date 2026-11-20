@@ -2361,7 +2361,7 @@
   window.KiwiVenue = {
     /* Menu: the restaurant workspace for the restaurant family, the
      * activity's own catalogue otherwise (see MENU · ROUTING). */
-    showMenu,
+    showMenu, revenueAtSale: () => { try { return window.KiwiConfig?.features?.revenueAtSale === true; } catch (_) { return false; } },   /* CA à la vente : assets/sales-history.js */
     refreshMenu: () => {
       if (!document.body.classList.contains('page-menu') || !menuOwnedByWorkspace()) return;
       menuWorkspace()?.render?.();

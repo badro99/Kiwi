@@ -220,10 +220,10 @@ var SHELL = [
   '/assets/menu-nutrition.js?v=4',
   '/assets/kiwi-select.js?v=4',
   '/assets/food-trade-settings.js?v=2',
-  '/assets/z-reconciliation.js?v=29',
+  '/assets/z-reconciliation.js?v=30',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
-  '/assets/pages/dashboard-startup.js?v=257',
+  '/assets/pages/dashboard-startup.js?v=258',
   '/assets/pages/dashboard-loader.js?v=107',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -279,7 +279,7 @@ var SHELL = [
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
   '/assets/venues/data.js?v=4',
   '/assets/venues/helpers.js?v=10',
-  '/assets/venues.js?v=77',
+  '/assets/venues.js?v=78',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=14',
   '/assets/trade-workspaces.js?v=21',
@@ -321,8 +321,8 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=5',
-  '/assets/sales-history.js?v=16',
-  '/assets/dateRange.js?v=155',
+  '/assets/sales-history.js?v=17',
+  '/assets/dateRange.js?v=156',
   '/assets/daterange/renderers.js?v=52',
   '/assets/agent/ui.js?v=3',
   '/assets/mobile-nav.js?v=9',
@@ -376,9 +376,9 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=58',
+  '/assets/day-report.js?v=59',
   '/assets/report.js?v=11',
-  '/assets/day-report-dash.js?v=52',
+  '/assets/day-report-dash.js?v=53',
   '/assets/day-report-export.js?v=30',
   '/assets/month-report.js?v=18',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse

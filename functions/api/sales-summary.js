@@ -60,7 +60,10 @@ function validParts(raw) {
 }
 
 /* Pure: rows → per-day buckets. Exported for the parity test. */
-export function summarize(rows, from, to, cutoff, zone) {
+/* `atSale` : chiffre d'affaires « à la vente » (merchant_config.features.revenueAtSale,
+   même règle que assets/sales-history.js saleValue) : une vente vaut son ticket,
+   avoir et compte client compris, et un « Règlement acompte » n'est pas une vente. */
+export function summarize(rows, from, to, cutoff, zone, atSale = false) {
   const days = new Map();
   for (let d = businessDate(from, cutoff, zone), guard = 0; guard <= MAX_SPAN_DAYS + 2; d = addBusinessDays(d, 1), guard++) {
     const start = businessBoundary(d, cutoff, zone);
@@ -78,7 +81,10 @@ export function summarize(rows, from, to, cutoff, zone) {
     if (ts < from || ts >= to) continue;
     const bucket = days.get(businessDate(ts, cutoff, zone));
     if (!bucket) continue;
-    const cents = saleCents(row);
+    if (atSale && /^Règlement acompte/.test(String(row.label || ''))) continue;
+    const cents = atSale && saleCents(row) >= 0
+      ? Math.max(saleCents(row), (validParts(row.payment_parts) || []).reduce((n, p) => n + p.amountCents, 0))
+      : saleCents(row);
     const method = String(row.method || '');
     if (cents < 0) {
       bucket.refundCount++; bucket.refundCents += -cents;
@@ -104,7 +110,7 @@ export function summarize(rows, from, to, cutoff, zone) {
 
 async function readRows(env, merchant, legacy, from, to) {
   const shapes = [
-    'SELECT ts, amount, amount_cents, method, payment_parts, tip_cents, channel FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL',
+    'SELECT ts, amount, amount_cents, method, payment_parts, tip_cents, channel, label FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL',
     /* Older schemas: no tip column, no tender split column, or no centimes / void columns. */
     'SELECT ts, amount, amount_cents, method, payment_parts, channel FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL',
     'SELECT ts, amount, amount_cents, method FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL',
@@ -141,6 +147,11 @@ export async function onRequestGet({ request, env }) {
   try { rows = await readRows(env, merchant, legacy, from, to); }
   catch (_) { return json({ merchant, error: 'db', days: [], splits: [] }, 500); }
 
-  const { days, splits } = summarize(rows, from, to, cutoff, zone);
+  let atSale = false;
+  try {
+    const cfg = await env.DB.prepare('SELECT features FROM merchant_config WHERE merchant = ?').bind(merchant).first();
+    atSale = !!(cfg && JSON.parse(cfg.features || '{}').revenueAtSale === true);
+  } catch (_) { atSale = false; }
+  const { days, splits } = summarize(rows, from, to, cutoff, zone, atSale);
   return json({ merchant, zone, cutoff, from, to, days, splits, generatedAt: Date.now() });
 }

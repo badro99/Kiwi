@@ -269,6 +269,21 @@ export async function onRequestPost({ request, env }) {
       ]);
       const credit = await env.DB.prepare('SELECT * FROM store_credits WHERE merchant = ? AND id = ?').bind(merchant, requestId).first();
       if (credit) {
+        /* Chiffre d'affaires « à la vente » (merchant_config.features.revenueAtSale,
+           assets/sales-history.js) : un retour en avoir retire la marchandise du
+           chiffre comme caisse.ma, donc il entre au journal comme une vente
+           négative payée en avoir. Le tiroir n'est pas touché (méthode credit). */
+        try {
+          const cfg = await env.DB.prepare('SELECT features FROM merchant_config WHERE merchant = ?').bind(merchant).first();
+          if (cfg && JSON.parse(cfg.features || '{}').revenueAtSale === true) {
+            await env.DB.prepare(
+              `INSERT OR IGNORE INTO sales (id, merchant, amount, amount_cents, method, label, ref, ts, lines, channel, payment_parts, client_id)
+               VALUES (?, ?, ?, ?, 'credit', ?, ?, ?, ?, 'refund', ?, ?)`
+            ).bind('ret-' + requestId, merchant, -credit.amount_cents / 100, -credit.amount_cents, 'Retour en avoir · ' + reason,
+              originalRef, at, JSON.stringify(Array.isArray(body && body.lines) ? body.lines.slice(0, 40) : []),
+              JSON.stringify([{ method: 'credit', amountCents: credit.amount_cents }]), credit.customer_id || null).run();
+          }
+        } catch (_) { /* le chiffre « à la vente » attendra ; l'avoir, lui, est émis */ }
         try { await poke(env, merchant, 'store-credit-issued'); } catch (_) {}
         return json({ ok: true, credit: view(credit) });
       }

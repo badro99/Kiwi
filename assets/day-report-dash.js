@@ -385,8 +385,8 @@
     /* The day's money figures have ONE browser owner, day-report.js (loaded
        before this file): the dashboard reads the till's model instead of
        carrying a second copy of it (note 13, dayreport#2). */
-    var figures = DR().model.reportFigures(rows);
-    return { net: figures.net, gross: Math.round(figures.gross * 100) / 100, txns: figures.txns };
+    var figures = DR().model.reportFigures(rows), S = window.KiwiDayReportVat && window.KiwiDayReportVat.sale, f = S && window.KiwiSalesMath && window.KiwiSalesMath.atSale() ? S.figures(rows) : null;   /* à la vente : z-reconciliation.js */
+    return f ? { net: f.caC / 100, gross: f.soldC / 100, txns: f.n } : { net: figures.net, gross: Math.round(figures.gross * 100) / 100, txns: figures.txns };
   }
 
   function historyNotice() {
@@ -897,7 +897,7 @@
        affichait 500 au-dessus de lignes qui font 450 dès qu'on remboursait. */
     var mSum = Object.keys(r.methods || {}).reduce(function (s, k) { return s + (+r.methods[k] || 0); }, 0);
     var payBlock = mRows ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.payments)) + '</span><em>' + esc(money(Math.round(mSum * 100) / 100)) + ' ' + CUR() + '</em></div>' + mRows + '</div>' : '';
-    payBlock += window.KiwiDayReportVat ? window.KiwiDayReportVat.html(r, { LANG: LANG, esc: esc, money: money, CUR: CUR, row: row }) : '';
+    var ui = { LANG: LANG, esc: esc, money: money, CUR: CUR, row: row }; payBlock = (window.KiwiDayReportVat && window.KiwiDayReportVat.sale ? window.KiwiDayReportVat.sale.html(r, ui) : '') + payBlock + (window.KiwiDayReportVat ? window.KiwiDayReportVat.html(r, ui) : '');
     var acompteBlock = r.acomptes && (r.acomptes.received || r.acomptes.outstanding)
       ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T({fr:'Acomptes',en:'Down payments',ar:'الدفعات المقدمة'})) + '</span></div>'
         + row(T({fr:'Acomptes reçus',en:'Received today',ar:'دفعات مستلمة اليوم'}), money(r.acomptes.received) + ' ' + CUR())
@@ -1139,7 +1139,7 @@
     if (r.discounts && r.discounts.amount) out.push(q([T(L.discounts), raw2(r.discounts.amount), 'MAD', r.discounts.count || '']));
     if (r.tips) out.push(q([LANG() === 'en' ? 'Tips' : 'Pourboires', raw2(r.tips), 'MAD']));
     out.push('');
-    if (window.KiwiDayReportVat) window.KiwiDayReportVat.csvRows(r.vat, LANG()).forEach(function (x) { out.push(q(x)); }), out.push('');
+    if (window.KiwiDayReportVat && window.KiwiDayReportVat.sale && r.sale) window.KiwiDayReportVat.sale.csvRows(r, LANG()).forEach(function (x) { out.push(q(x)); }), out.push(''); if (window.KiwiDayReportVat) window.KiwiDayReportVat.csvRows(r.vat, LANG()).forEach(function (x) { out.push(q(x)); }), out.push('');
     out.push(q([T(L.payments), 'MAD']));
     Object.keys(r.methods || {}).forEach(function (k) {
       if (r.methods[k]) out.push(q([methodLabel(k), raw2(r.methods[k])]));

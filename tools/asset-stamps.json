@@ -484,8 +484,8 @@
     "sha": "37e7d396bdf155a8"
   },
   "assets/dateRange.js": {
-    "v": "155",
-    "sha": "88137682c58b66d0"
+    "v": "156",
+    "sha": "7ffddaac78cfe824"
   },
   "assets/daterange/activity.js": {
     "v": "7",
@@ -528,8 +528,8 @@
     "sha": "c280918a4865ae88"
   },
   "assets/day-report-dash.js": {
-    "v": "52",
-    "sha": "1a1738df3ca8d24c"
+    "v": "53",
+    "sha": "088588308b798a8f"
   },
   "assets/day-report-export.js": {
     "v": "30",
@@ -540,8 +540,8 @@
     "sha": "8e57c57850d5aadf"
   },
   "assets/day-report.js": {
-    "v": "58",
-    "sha": "c28b920a07a067f8"
+    "v": "59",
+    "sha": "e8fd025c07708022"
   },
   "assets/delivery-collect.js": {
     "v": "3",
@@ -1528,8 +1528,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "257",
-    "sha": "0d68ca6955375455"
+    "v": "258",
+    "sha": "73fbff172b935bab"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2152,8 +2152,8 @@
     "sha": "8abf8684b022329c"
   },
   "assets/sales-history.js": {
-    "v": "16",
-    "sha": "b3943e1f85f47024"
+    "v": "17",
+    "sha": "1a6970f09a85d34a"
   },
   "assets/salle-scan.js": {
     "v": "16",
@@ -2396,8 +2396,8 @@
     "sha": "d6306e52e72f7a69"
   },
   "assets/venues.js": {
-    "v": "77",
-    "sha": "7fefdaa52512fafe"
+    "v": "78",
+    "sha": "d1a57d0eb2a5723e"
   },
   "assets/venues/data.js": {
     "v": "4",
@@ -2424,7 +2424,7 @@
     "sha": "e586c803c9e3e1e2"
   },
   "assets/z-reconciliation.js": {
-    "v": "29",
-    "sha": "b6a92cdbae71a645"
+    "v": "30",
+    "sha": "17fb4389224da2e4"
   }
 }

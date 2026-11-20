@@ -14,12 +14,33 @@
     if (RECEIVABLE_METHODS.includes(m)) return null;
     return 'other';
   }
+  /* ── Chiffre d'affaires « à la vente » ─────────────────────────────────
+     Réglage du magasin (merchant_config.features.revenueAtSale, lu par KiwiVenue.revenueAtSale, posé par
+     l'opérateur ; La Maison en Vogue, 20 nov. 2026, pour compter comme
+     caisse.ma). Sans lui, une vente vaut l'argent reçu, comme toujours. Avec
+     lui, elle vaut son ticket : espèces, carte, avoir utilisé et vendu sur
+     compte client ; le règlement plus tard d'un compte client (« Règlement
+     acompte ») n'est pas une deuxième vente ; un retour en avoir est une vente
+     négative (functions/api/store-credits.js). Le tiroir, le Z et les
+     encaissements restent de l'argent reçu (assets/day-report.js). */
+  const atSale = () => { try { return !!(window.KiwiVenue && window.KiwiVenue.revenueAtSale && window.KiwiVenue.revenueAtSale()); } catch (_) { return false; } };
+  const isSettlement = (e) => /^Règlement acompte/.test(String((e && e.label) || ''));
+  function saleValue(e) {
+    const amount = Math.max(0, +e.amount || 0);
+    if (!atSale()) return amount;
+    if (isSettlement(e)) return 0;
+    const parts = Array.isArray(e.paymentParts) ? e.paymentParts : [];
+    const ticket = parts.reduce((sum, p) => sum + (p && Number.isSafeInteger(+p.amountCents) && +p.amountCents > 0 ? +p.amountCents : 0), 0);
+    return Math.max(amount, ticket / 100);
+  }
   function tenderAmounts(entry) {
     const amount = Math.max(0, +entry.amount || 0);
     const parts = Array.isArray(entry.paymentParts) ? entry.paymentParts.filter(part =>
       part && tenderBucket(part.method) && Number.isSafeInteger(+part.amountCents) && +part.amountCents > 0) : [];
     if (!parts.length) return [{ key: tenderBucket(entry.method), amount }];
     const received = parts.reduce((sum, part) => sum + +part.amountCents, 0);
+    // À la vente, le montant est le ticket (avoir, compte compris) : chaque moyen garde ce qu'il a réellement reçu.
+    if (atSale() && amount * 100 > received) return parts.map(part => ({ key: tenderBucket(part.method), amount: +part.amountCents / 100 }));
     // Dashboard revenue excludes consigned liability; preserve that measure
     // while attributing its received part to the actual tender(s).
     return parts.map(part => ({ key: tenderBucket(part.method), amount: amount * +part.amountCents / received }));
@@ -29,10 +50,12 @@
     sales.forEach((e) => {
       const ts = +e.ts || 0;
       if (ts < from || ts >= to) return;
-      const amt = Math.max(0, +e.amount || 0);
+      if (atSale() && isSettlement(e)) return;
+      const amt = saleValue(e);
       revenue += amt; gross += amt; count++;
       const tender = tenderBucket(e.method);
-      if (tender) collected += amt;
+      if (atSale()) { const paid = tenderAmounts(e).reduce((n, part) => n + (part.key ? part.amount : 0), 0); collected += paid; receivable += Math.max(0, amt - paid); }
+      else if (tender) collected += amt;
       else if (RECEIVABLE_METHODS.includes(String(e.method || '').trim().toLowerCase())) receivable += amt;
       tenderAmounts(e).forEach(part => {
         if (part.key === 'cash') cash += part.amount;
@@ -43,10 +66,11 @@
       const ts = +e.ts || 0;
       if (ts < from || ts >= to) return;
       const amt = Math.abs(+e.amount || 0);
-      revenue -= Math.abs(+e.amount || 0); refunds += amt;
+      // À la vente, un retour en avoir baisse le chiffre ; « Taux retour » le lit déjà au registre des avoirs.
+      revenue -= Math.abs(+e.amount || 0); if (!(atSale() && tenderBucket(e.method) === null)) refunds += amt;
       const tender = tenderBucket(e.method);
       if (tender) collected -= amt;
-      else if (RECEIVABLE_METHODS.includes(String(e.method || '').trim().toLowerCase())) receivable -= amt;
+      else if (!atSale() && RECEIVABLE_METHODS.includes(String(e.method || '').trim().toLowerCase())) receivable -= amt;
       if (tender === 'cash') cash -= amt;
       if (tender === 'card' || tender === 'tap') card -= amt;
     });
@@ -100,7 +124,7 @@
     }));
     return hours;
   }
-  window.KiwiSalesMath = Object.freeze({ tenderBucket, tenderAmounts, RECEIVABLE_METHODS,
+  window.KiwiSalesMath = Object.freeze({ tenderBucket, tenderAmounts, RECEIVABLE_METHODS, atSale, isSettlement, saleValue,
     statsFromSales, statsFromSummary, hoursFromSales, hoursFromSummary });
 })();
 
