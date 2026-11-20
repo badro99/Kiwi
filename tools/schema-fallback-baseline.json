@@ -12,6 +12,8 @@
   "api/admin/sales.js : repli de schéma": 1,
   "api/ai/_quota.js : repli de schéma": 1,
   "api/cash-sessions.js : repli de schéma": 2,
+  "api/channel/glovo/_glovo.js : no such table: glovo_orders": 6,
+  "api/channel/glovo/_glovo.js : no such table: glovo_stores": 2,
   "api/clients.js : repli de schéma": 2,
   "api/comptable/books.js : repli de schéma": 2,
   "api/directory/listing.js : no such table: directory_listings": 3,
