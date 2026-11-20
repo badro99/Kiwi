@@ -48,11 +48,18 @@ if (!process.env.KIWI_MISC_CASE || ['briefing','clock'].includes(process.env.KIW
 console.log('PASS briefing reaches cloud despite quota failure and rejects future field clocks');
 if (!process.env.KIWI_MISC_CASE || process.env.KIWI_MISC_CASE === 'cursor') {
   let durable=false, callback, events=[];
-  const globals={syncable:()=>true,bookId:()=> 'shop',clientPulls:{},getCursor:()=>0,setCursor:()=>durable,mergeServer:()=>true,fetchDeadline:async()=>({ok:true,json:async()=>({clients:[{}],cursor:2,more:true})}),window:{dispatchEvent:e=>events.push(e)},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}}};
+  const globals={syncable:()=>true,bookId:()=> 'shop',clientPulls:{},lastBookKept:true,getCursor:()=>0,setCursor:()=>durable,mergeServer:()=>true,fetchDeadline:async()=>({ok:true,json:async()=>({clients:[{}],cursor:2,more:true})}),window:{dispatchEvent:e=>events.push(e)},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}}};
   globals.pull=fn('assets/clients-store/sync.js','pull',globals);
   globals.pull('shop',(changed,error)=>{callback={changed,error};});
   await new Promise(r=>setImmediate(r));
   assert.equal(callback.changed,true);assert.equal(callback.error.message,'cursor-storage-unavailable');assert.equal(events[0].detail.error,'cursor-storage-unavailable');
+  // A merged page that storage refused to keep must not move the cursor.
+  let cursorMoves=0, unkept;
+  const lost={...globals,clientPulls:{},lastBookKept:false,setCursor:()=>{cursorMoves++;return true;},window:{dispatchEvent(){}}};
+  lost.pull=fn('assets/clients-store/sync.js','pull',lost);
+  lost.pull('shop',(changed,error)=>{unkept={changed,error};});
+  await new Promise(r=>setImmediate(r));
+  assert.equal(unkept.changed,true);assert.equal(unkept.error.message,'book-storage-unavailable');assert.equal(cursorMoves,0);
 }
 console.log('PASS client pull reports cursor durability failure rather than recursing from zero');
 if (!process.env.KIWI_MISC_CASE || process.env.KIWI_MISC_CASE === 'employee') {

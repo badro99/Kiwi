@@ -6,8 +6,10 @@ const shared = read('assets/ai-image-import.js');
 const settle = async () => { for (let i = 0; i < 40; i++) await Promise.resolve(); };
 async function run(surface, legacy, scenario, width = 4000, height = 3000) {
   let timer, request, revoked = 0, drawn;
-  const window = { Kiwi: { venue: () => 'fixture' } };
-  const context = vm.createContext({window, Kiwi: window.Kiwi, AbortController,
+  // The legacy surfaces named the store with Kiwi.venue(); the shared transport names the
+  // store on screen (KiwiCloudDoc.currentSlug, God mode included). Same store in both.
+  const window = { Kiwi: { venue: () => 'fixture' }, KiwiCloudDoc: { currentSlug: () => 'fixture' } };
+  const context = vm.createContext({window, Kiwi: window.Kiwi, KiwiCloudDoc: window.KiwiCloudDoc, AbortController,
     esc: s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
     MAX_IMG_EDGE: 1600, language: () => 'fr', localStorage: {getItem: () => 'fr'},
     document: { documentElement: {lang: 'fr'}, createElement: () => ({

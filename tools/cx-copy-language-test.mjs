@@ -125,10 +125,11 @@ for (const locale of ['fr', 'en', 'ar']) {
  });
 }
 await test('Shopify retry stores a code without merchant details', async () => {
- const src = read('functions/api/shopify/_inbound-stock.js').replace(/^export /gm, ''), writes = [];
+ // The module's static imports (loadParts) are not used by the flush; a script realm cannot hold them.
+ const src = read('functions/api/shopify/_inbound-stock.js').replace(/^import \{[^}]*\} from '[^']+';$/gm, '').replace(/^export /gm, ''), writes = [];
  const row = { merchant: 'fixture', order_ref: 'fixture-ref', attempts: 19, payload: '{}' };
  const DB = { prepare(sql) { return { bind(...values) { return { all: async () => ({ results: [row] }), run: async () => { writes.push({ sql, values }); } }; } }; } };
- const ctx = vm.createContext({ Date, env: { DB } }); vm.runInContext(src, ctx); await ctx.flushInboundStock({ DB }, async () => ({ unmatched: 1 }));
+ const ctx = vm.createContext({ Date, env: { DB }, loadParts: () => { throw new Error('flush must not read the catalogue'); } }); vm.runInContext(src, ctx); await ctx.flushInboundStock({ DB }, async () => ({ unmatched: 1 }));
  const error = JSON.parse(writes.find(w => w.sql.includes('UPDATE shopify_connections')).values[0]);
  assert.equal(error.code, 'stock-dead'); assert.equal(error.orderRef, 'fixture-ref'); assert.equal(error.attempts, 20);
  const shape = vm.createContext({ clean: v => String(v || ''), n: v => Number(v) || 0 });

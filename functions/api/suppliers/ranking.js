@@ -125,6 +125,8 @@ export function rankSuppliers({ products, variants, suppliers, receipts, sales, 
       stock: inStock, stockValue: money(stockValue),
       returnedUnits: returned, returnRate: units > 0 ? returned / units : null,
       deadProducts: dead, top: rows.length && rows[0].units > 0 ? { id: rows[0].id, name: rows[0].name } : null,
+      // Filled once every supplier is known (score needs the best revenue, rank the sorted list).
+      score: /** @type {number|null} */ (null), rank: 0,
     };
   });
   const maxRevenue = Math.max(0, ...list.map((s) => s.revenue));
