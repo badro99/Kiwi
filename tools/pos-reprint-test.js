@@ -128,24 +128,6 @@ const SALE = {
   const nude = RP.docFrom({ ts: at(5), total: 12, method: 'cash', ref: '' });
   eq('une vente sans numéro reste sans numéro', nude.ref, '');
 
-  /* La remise ne se perd pas à la réimpression. Une vente boutique encaissée
-     sans ticket imprimé n'a pas de `rc` : le duplicata est recomposé, et sans
-     la remise ses lignes dépassent le total, qui ne porte plus que « Espèces »
-     (Santos, 20 nov.). Le sous-total se remonte depuis ce qui a été payé. */
-  const off = RP.docFrom({ ts: at(6), total: 250, method: 'espèces', ref: 'B-7', discount: 50, promo: 30,
-    lines: [{ name: 'Caftan S', qty: 1, total: 300 }] });
-  eq('la remise suit le duplicata', off.discount, 50);
-  eq('la promotion suit le duplicata', off.promo && off.promo.amount, 30);
-  eq('le sous-total remonte du payé : total + remise + promotion', off.subtotal, 330);
-  const plain = RP.docFrom(SALE);
-  ok('sans remise, rien n\'est inventé', plain.discount == null && plain.subtotal == null && plain.promo == null);
-
-  /* Et la boutique les lui passe : remise (gérante + fidélité) et promotions,
-     sauf sur un acompte, dont le total n'est que la part encaissée. */
-  const bq = fs.readFileSync(path.join(__dirname, '..', 'assets', 'pos-boutique.js'), 'utf8');
-  const seg = bq.slice(bq.indexOf("provide('boutique'"), bq.indexOf("provide('boutique'") + 1400);
-  ok('boutique : le fournisseur passe la remise de la vente', /discount:\s*s\.kind === 'acompte' \? 0 : s\.discount/.test(seg));
-  ok('boutique : le fournisseur passe les promotions de la vente', /promo:\s*s\.kind === 'acompte' \? 0 : s\.promoOff/.test(seg));
 }
 
 /* ═══ 3 · le double se dit ═══ */

@@ -6,10 +6,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const src = fs.readFileSync('assets/pos-boutique/receipt-doc.js', 'utf8').replace(/\nexport \{[^}]*\};\s*$/, '\n');
-const ctx = vm.createContext({});
-vm.runInContext(src + '\nthis.waReceiptTotals = waReceiptTotals;', ctx);
-const { waReceiptTotals } = ctx;
+const docBox = vm.createContext({});
+vm.runInContext(fs.readFileSync('assets/pos-boutique/receipt-doc.js', 'utf8').replace(/\nexport \{[^}]*\};\s*$/, '\n') + '\nthis.waReceiptTotals = waReceiptTotals;', docBox);
+const waReceiptTotals = docBox.waReceiptTotals;
 
 const fmt = (n) => `${n} MAD`;
 const tr = (_k, fr) => fr;
@@ -31,4 +30,25 @@ const co = fs.readFileSync('assets/pos-boutique/checkout.js', 'utf8');
 const wa = co.slice(co.indexOf("$('#bq-pay-wa', el).onclick"), co.indexOf("$('#bq-pay-done', el).onclick"));
 assert.match(wa, /\.\.\.waReceiptTotals\(opts, fmtMAD, tr\),\s*`\$\{tr\("checkout\.total"/, 'le reçu WhatsApp place la remise juste avant le TOTAL');
 
-console.log('✓ reçu WhatsApp boutique : sous-total, promotion et remise avant le TOTAL');
+// Le duplicata recomposé dit aussi sa remise. Une vente boutique encaissée
+// sans ticket imprimé n'a pas de `rc` : la réimpression la recompose (docFrom),
+// et sans la remise ses lignes dépassaient le total, suivi du seul « Espèces ».
+const stubNode = () => ({ style: {}, classList: { add() {}, remove() {}, contains: () => false }, appendChild() {}, setAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [] });
+const reprintWin = { KiwiPosSale: { isReal: () => true, today: () => [] }, addEventListener() {} };
+const reprintBox = vm.createContext({ window: reprintWin, document: { getElementById: () => null, createElement: stubNode, querySelector: () => null, querySelectorAll: () => [], body: stubNode(), head: { appendChild() {} }, addEventListener() {} }, setTimeout() {}, clearTimeout() {}, console });
+vm.runInContext(fs.readFileSync('assets/pos-reprint.js', 'utf8'), reprintBox);
+const RP = reprintWin.KiwiPosReprint;
+const dup = RP.docFrom({ ts: 1, total: 250, method: 'espèces', ref: 'B-7', discount: 50, promo: 30, lines: [{ name: 'Caftan S', qty: 1, total: 300 }] });
+assert.equal(dup.discount, 50, 'la remise suit le duplicata');
+assert.equal(dup.promo.amount, 30, 'la promotion suit le duplicata');
+assert.equal(dup.subtotal, 330, 'le sous-total remonte du payé : total + remise + promotion');
+const plain = RP.docFrom({ ts: 1, total: 84.5, method: 'espèces', ref: 'T-1', lines: [{ name: 'Pain', qty: 2, total: 84.5 }] });
+assert.ok(plain.discount == null && plain.subtotal == null && plain.promo == null, 'sans remise, rien n’est inventé');
+
+// Et la boutique lui passe la remise et les promotions de la vente, sauf sur
+// un acompte, dont le total n'est que la part encaissée.
+const bq = fs.readFileSync('assets/pos-boutique.js', 'utf8');
+const prov = bq.slice(bq.indexOf("provide('boutique'"), bq.indexOf("provide('boutique'") + 1400);
+assert.match(prov, /discount: s\.kind === 'acompte' \? 0 : s\.discount, promo: s\.kind === 'acompte' \? 0 : s\.promoOff/, 'le fournisseur boutique passe remise et promotions');
+
+console.log('✓ remise sur les reçus boutique : WhatsApp et duplicata recomposé portent sous-total, promotion et remise avant le TOTAL');

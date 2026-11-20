@@ -34,7 +34,7 @@ function req(method, body, { cookie = opCookie, origin = 'https://kiwi-os.com' }
   if (origin) headers.Origin = origin;
   return { env, request: new Request(URL_, { method, headers, body: body == null ? undefined : JSON.stringify(body) }) };
 }
-const read = async (r) => ({ status: r.status, body: await r.json() });
+const call = async (r) => ({ status: r.status, body: await r.json() });
 let checks = 0;
 const t = async (name, fn) => { await fn(); checks++; };
 
@@ -45,54 +45,54 @@ await t('non-opérateur refusé, en lecture comme en écriture', async () => {
 });
 
 await t('liste vide, avec les commerçants pour le choix', async () => {
-  const { status, body } = await read(await onRequestGet(req('GET')));
+  const { status, body } = await call(await onRequestGet(req('GET')));
   assert.equal(status, 200);
   assert.deepEqual(body.stores, []);
   assert.deepEqual(body.merchants.map((m) => m.merchant), ['test-kiwi-cafe', 'test-kiwi-pizza']);
 });
 
 await t('relier un magasin, et le webhook le retrouve', async () => {
-  const { status, body } = await read(await onRequestPost(req('POST', { storeId: 'glovo-cafe-1', merchant: 'test-kiwi-cafe', prepMinutes: 20 })));
+  const { status, body } = await call(await onRequestPost(req('POST', { storeId: 'glovo-cafe-1', merchant: 'test-kiwi-cafe', prepMinutes: 20 })));
   assert.equal(status, 200);
   assert.equal(body.merchant, 'test-kiwi-cafe');
   assert.equal(body.prepMinutes, 20);
   assert.equal(body.status, 'active');
   const row = await storeFor(env, 'glovo-cafe-1');
   assert.equal(row && row.merchant, 'test-kiwi-cafe');
-  const list = (await read(await onRequestGet(req('GET')))).body.stores;
+  const list = (await call(await onRequestGet(req('GET')))).body.stores;
   assert.equal(list.length, 1);
   assert.equal(list[0].name, 'TEST KIWI Café');
 });
 
 await t('délai par défaut 15 min, borné à 120', async () => {
-  const a = (await read(await onRequestPost(req('POST', { storeId: 'glovo-pizza-1', merchant: 'test-kiwi-pizza' })))).body;
+  const a = (await call(await onRequestPost(req('POST', { storeId: 'glovo-pizza-1', merchant: 'test-kiwi-pizza' })))).body;
   assert.equal(a.prepMinutes, 15);
-  assert.equal((await read(await onRequestPost(req('POST', { storeId: 'glovo-pizza-1', merchant: 'test-kiwi-pizza', prepMinutes: 500 })))).body.prepMinutes, 120);
+  assert.equal((await call(await onRequestPost(req('POST', { storeId: 'glovo-pizza-1', merchant: 'test-kiwi-pizza', prepMinutes: 500 })))).body.prepMinutes, 120);
 });
 
 await t('entrées invalides refusées', async () => {
-  assert.equal((await read(await onRequestPost(req('POST', { storeId: 'a b/c', merchant: 'test-kiwi-cafe' })))).body.error, 'bad-store-id');
-  const r = await read(await onRequestPost(req('POST', { storeId: 'X', merchant: 'inconnu' })));
+  assert.equal((await call(await onRequestPost(req('POST', { storeId: 'a b/c', merchant: 'test-kiwi-cafe' })))).body.error, 'bad-store-id');
+  const r = await call(await onRequestPost(req('POST', { storeId: 'X', merchant: 'inconnu' })));
   assert.equal(r.status, 404);
   assert.equal(r.body.error, 'merchant-not-found');
 });
 
 await t('un store_id ne change pas de commerçant en silence', async () => {
-  const r = await read(await onRequestPost(req('POST', { storeId: 'glovo-cafe-1', merchant: 'test-kiwi-pizza' })));
+  const r = await call(await onRequestPost(req('POST', { storeId: 'glovo-cafe-1', merchant: 'test-kiwi-pizza' })));
   assert.equal(r.status, 409);
   assert.equal(r.body.error, 'store-taken');
   assert.equal((await storeFor(env, 'glovo-cafe-1')).merchant, 'test-kiwi-cafe');
   // Le même commerçant : simple mise à jour du délai.
-  const same = await read(await onRequestPost(req('POST', { storeId: 'glovo-cafe-1', merchant: 'test-kiwi-cafe', prepMinutes: 25 })));
+  const same = await call(await onRequestPost(req('POST', { storeId: 'glovo-cafe-1', merchant: 'test-kiwi-cafe', prepMinutes: 25 })));
   assert.equal(same.status, 200);
   assert.equal(same.body.prepMinutes, 25);
 });
 
 await t('pause puis reprise, le webhook suit', async () => {
-  const p = await read(await onRequestPatch(req('PATCH', { storeId: 'glovo-cafe-1', status: 'paused' })));
+  const p = await call(await onRequestPatch(req('PATCH', { storeId: 'glovo-cafe-1', status: 'paused' })));
   assert.equal(p.status, 200);
   assert.equal(p.body.status, 'paused');
-  assert.equal((await read(await onRequestGet(req('GET')))).body.stores.find((x) => x.store_id === 'glovo-cafe-1').prep_minutes, 25, 'la pause garde le délai');
+  assert.equal((await call(await onRequestGet(req('GET')))).body.stores.find((x) => x.store_id === 'glovo-cafe-1').prep_minutes, 25, 'la pause garde le délai');
   assert.equal(await storeFor(env, 'glovo-cafe-1'), null, 'un magasin en pause ne reçoit plus de commande');
   await onRequestPatch(req('PATCH', { storeId: 'glovo-cafe-1', status: 'active' }));
   assert.equal((await storeFor(env, 'glovo-cafe-1')).merchant, 'test-kiwi-cafe');
