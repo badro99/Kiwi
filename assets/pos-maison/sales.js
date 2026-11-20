@@ -1,10 +1,11 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=219';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=134';
-import { invSetModal, offerRegister } from './inventory.js?v=134';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=220';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=135';
+import { invSetModal, offerRegister } from './inventory.js?v=135';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=5';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=10';
 import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
+import { mzPageGrid } from './grid-pager.js?v=1';
 import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsEmpty } from './client-view.js?v=1';
 
 
@@ -355,13 +356,13 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
       rayons = state.rayon === 'tous' ? SHELF() : SHELF().filter((r) => r.id === state.rayon);
     }
 
-    let i = 0;
-    $('#mz-gridwrap', root).innerHTML = (rayons.length ? rayons.map((r) => `
-      <div class="mz-cat-head">${esc(r.label)}</div>
-      <div class="mz-grid">${r.items.map((p) => {
+    /* Par pages (grid-pager.js) : 562 tuiles d'un coup figeaient la caisse après le code. */
+    const wrap = $('#mz-gridwrap', root);
+    if (!rayons.length) { if (wrap.__mzPager) wrap.__mzPager.stop(); wrap.innerHTML = '<div class="mz-empty" style="margin:40px auto; text-align:center;">Aucun article dans cette sélection.</div>'; }
+    else mzPageGrid(wrap, rayons, { head: (r) => esc(r.label), after: icons, tile: (p, i) => {
         const pr = promoFor(p.id);
         return `
-        <button class="mz-card ${(p.format === 'service' ? sellableStockOf(p) : stockOf(p)) === 0 ? 'is-out' : ''}${pr ? ' is-promo' : ''}" data-mz-item="${p.id}" style="--i:${i++}">
+        <button class="mz-card ${(p.format === 'service' ? sellableStockOf(p) : stockOf(p)) === 0 ? 'is-out' : ''}${pr ? ' is-promo' : ''}" data-mz-item="${p.id}" style="--i:${i}">
           <span class="mz-card-art">${artOf(p)}</span>
           ${p.marque ? `<span class="mz-card-brand">${esc(p.marque)}</span>` : ''}
           ${isConsignedProduct(p) ? `<span class="mz-consign-tag" title="Catégorie B">B</span>` : ''}
@@ -374,8 +375,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
           <span class="mz-card-price">${pr ? `<s>${fmtMAD(pr.was)}</s> ` : ''}${fmtMAD(pr ? pr.price : shelf(p.price))}</span>
           ${cardFlag(p)}
           ${pr ? `<span class="mz-card-promo" title="${esc(pr.promo.name)}">${esc(pr.badge)}</span>` : ''}
-        </button>`; }).join('')}
-      </div>`).join('') : '<div class="mz-empty" style="margin:40px auto; text-align:center;">Aucun article dans cette sélection.</div>');
+        </button>`; } });
     $('#mz-gridwrap', root).onclick = (e) => {
       const b = e.target.closest('[data-mz-item]');
       if (b) openSheet(b.dataset.mzItem || b.dataset.mzItem, state.exchange ? { exchange: true } : null);

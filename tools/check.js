@@ -1803,7 +1803,7 @@ section('Whole-project regressions');
     /* Après une réception, les étiquettes ne sortent que pour les nouvelles pièces, même fiche rouverte (Santos, 31 oct.). */
     'boutique-label-receipt-test.mjs',
     'maison-till-stock-journal-test.mjs',
-    'maison-ticket-offline-test.mjs', 'maison-counter-truth-test.mjs', 'maison-cash-moves-test.mjs', 'maison-drawer-test.mjs', 'maison-avoir-sheet-test.mjs',
+    'maison-ticket-offline-test.mjs', 'maison-counter-truth-test.mjs', 'maison-cash-moves-test.mjs', 'maison-drawer-test.mjs', 'maison-avoir-sheet-test.mjs', 'maison-grid-pager-test.mjs', 'maison-catalog-settle-test.mjs',
     'stock-costing-migration-test.mjs', 'stock-category-management-test.mjs',
     'pairing-resolver-test.mjs',
     /* pairing-resolver vérifie qui LIT l'appairage ; celui-ci vérifie qu'il n'y
