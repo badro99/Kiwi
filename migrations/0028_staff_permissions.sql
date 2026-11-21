@@ -6,6 +6,8 @@
 -- (aucun 503) ; l'écran des droits dit au propriétaire qu'elle manque. Rien ne
 -- change non plus après l'avoir appliquée, tant que le propriétaire n'a pas
 -- activé les droits depuis l'écran (staff_permission_settings.activated_ts).
+-- held_ts : une personne ajoutée ou retitrée par une session qui n'est pas celle
+-- du propriétaire n'a aucun droit tant qu'il ne l'a pas revue.
 
 CREATE TABLE IF NOT EXISTS staff_permissions (
   merchant   TEXT NOT NULL,
@@ -16,6 +18,8 @@ CREATE TABLE IF NOT EXISTS staff_permissions (
   name       TEXT NOT NULL DEFAULT '',
   updated_ts INTEGER NOT NULL,
   updated_by TEXT NOT NULL DEFAULT '',
+  held_ts    INTEGER NOT NULL DEFAULT 0,
+  held_by    TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (merchant, staff_key)
 );
 
@@ -51,4 +55,15 @@ CREATE TABLE IF NOT EXISTS staff_permission_audit (
 );
 
 CREATE INDEX IF NOT EXISTS idx_staff_permission_audit ON staff_permission_audit (merchant, ts);
+
+-- Une preuve de geste ne couvre qu'un fait (functions/api/_act-proof.js).
+CREATE TABLE IF NOT EXISTS staff_permission_proofs (
+  merchant TEXT NOT NULL,
+  jti      TEXT NOT NULL,
+  kind     TEXT NOT NULL,
+  ref      TEXT NOT NULL,
+  staff_id TEXT NOT NULL DEFAULT '',
+  used_ts  INTEGER NOT NULL,
+  PRIMARY KEY (merchant, jti)
+);
 

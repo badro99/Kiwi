@@ -15,6 +15,7 @@ import {
 import { recordSessionTier } from '../../auth/_session-tier.js';
 import { tillSellerProof } from '../_seller.js';
 import { decide, Catalog } from '../_permissions.js';
+import { tillActProof, ACT_KINDS } from '../_act-proof.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -94,6 +95,10 @@ export async function onRequestPost(context) {
     /* Commissions vendeurs : la preuve que CETTE personne tient la caisse ; /api/sale en tire le vendeur. */
     ...(merchant && employeeRoleOpensTill(verified.staff.role) ? { sellerProof: await tillSellerProof(env.AUTH_SECRET, merchant, verified.staff) } : {}),
     ...(approval ? { approval } : {}),
+    /* Espèces, tiroir, clôture, remise : la preuve de CE geste (acte, montant,
+       sens), valable pour un seul fait (functions/api/_act-proof.js). */
+    ...(merchant && action && ruling && ruling.ok && ACT_KINDS.has(String(action.kind || ''))
+      ? { actProof: await tillActProof(env.AUTH_SECRET, merchant, verified.staff, action) } : {}),
     /* La caisse sait si CE code couvre l'acte demandé (aucun code dedans). */
     /* Le verdict pour le SEUL droit demandé (action.kind) : jamais la liste
        entière, pour qu'un accord ne serve pas à un autre acte. */

@@ -36,7 +36,7 @@
       })
       .then(function (d) {
         if (!(d && d.ok && d.staff)) return null;
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.actProof ? { actProof: String(d.actProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
         /* The server said yes: unlock now, refresh the offline verifier behind. */
         rememberOfflinePin(merchant, code, staff);
         return staff;
@@ -64,7 +64,7 @@
       lastFailed = reply.kind !== 'answer';
       var d = reply.body;
       if (reply.kind === 'answer' && reply.status === 200 && d && d.ok && d.staff) {
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.actProof ? { actProof: String(d.actProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
         return rememberOfflinePin(merchant, code, staff).then(function () { return reply; }, function () { return reply; });
       }
       if (reply.kind === 'answer' && (reply.status === 401 || reply.status === 403)) return verifyOfflinePin(merchant, code, true).then(function (gone) {
@@ -77,9 +77,9 @@
   function noteApproval(who, level) {
     if (!who) return;
     var id = String(who.id || '').slice(0, 80), role = String(who.role || '').trim();
-    lastOperator = { id: id, name: String(who.name || '').trim() || 'Caissier', role: role, actorProof: who.actorProof || '', verdict: who.verdict || 'online', provenAt: who.provenAt || null };
+    lastOperator = { id: id, name: String(who.name || '').trim() || 'Caissier', role: role, actorProof: who.actorProof || '', actProof: who.actProof || '', verdict: who.verdict || 'online', provenAt: who.provenAt || null };
     if (level === 'manager') {
-      lastManager = { id: id, name: String(who.name || '').trim() || 'Responsable', role: role, approval: String(who.approval || ''), actorProof: who.actorProof || '', verdict: who.verdict || 'online', provenAt: who.provenAt || null };
+      lastManager = { id: id, name: String(who.name || '').trim() || 'Responsable', role: role, approval: String(who.approval || ''), actorProof: who.actorProof || '', actProof: who.actProof || '', verdict: who.verdict || 'online', provenAt: who.provenAt || null };
       lastOperator = lastManager;
     }
   }

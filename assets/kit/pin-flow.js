@@ -184,6 +184,7 @@
       if (reply.body.actorProof) who.actorProof = String(reply.body.actorProof);
       if (reply.body.sellerProof) who.sellerProof = String(reply.body.sellerProof);   /* qui vend (commissions vendeurs) */
       if (reply.body.permission && typeof reply.body.permission === 'object') who.permission = reply.body.permission;
+      if (reply.body.actProof) who.actProof = String(reply.body.actProof);   /* la preuve de CE geste (droits de l'équipe) */
       if (use === 'manager') return managerRole(who, ctx) || { success: who };
       return tillRole(use, who, ctx) || { success: who };
     }

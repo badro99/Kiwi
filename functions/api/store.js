@@ -46,7 +46,7 @@ import { cleanStorefront, STOREFRONT_FEATURE } from './shop/_settings.js';
 import { validateMonthReportPolicy } from './_month-report-policy.js';
 import { dayreportHistoryLost } from './_dayreport-history.js';
 import { json, entitledMerchant, activeAccountSession, isTillFor } from '../auth/_lib.js';
-import { storeEditorTier, docBelowTier } from './_store-tier.js'; import { docWriteGuard } from './_permissions.js';
+import { storeEditorTier, docBelowTier } from './_store-tier.js'; import { docWriteGuard, afterDocWrite } from './_permissions.js';
 import { storeEtag, storeTag } from './_store-etag.js';
 import { tenantFor, storeSubscriptionPending } from './_private.js';
 import { authFingerprint, authSentinel, planEmployeeAuth, writeEmployeeAuth, authMoved } from './_employee-auth.js';
@@ -1252,7 +1252,7 @@ export async function onRequestPost(context) {
    * détaché — sans binding c'est un simple test de vérité, et avec binding
    * l'aller-retour reste dans le même centre de données, à côté des requêtes D1
    * qu'on vient déjà de faire. */
-  await poke(env, merchant, feature);
+  await poke(env, merchant, feature); await afterDocWrite(request, env);   // Équipe : journal des droits et retenue des nouvelles fiches (_permissions.js)
 
   return json({ ok: true, feature, merchant, rev, updated_ts: now, bytes: text.length, ...(bookSaved?.creditConflicts?.length ? { creditConflicts: bookSaved.creditConflicts } : {}) });
 }

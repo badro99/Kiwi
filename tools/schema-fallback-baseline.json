@@ -1,10 +1,11 @@
 {
+  "api/_act-proof.js : no such table: staff_permission_proofs": 3,
   "api/_client-audit.js : repli de schéma": 1,
   "api/_invoice-series.js : repli de schéma": 1,
-  "api/_permissions.js : no such table: staff_permission_audit": 1,
+  "api/_permissions.js : no such table: staff_permission_audit": 2,
   "api/_permissions.js : no such table: staff_permission_presets": 1,
   "api/_permissions.js : no such table: staff_permission_settings": 1,
-  "api/_permissions.js : no such table: staff_permissions": 1,
+  "api/_permissions.js : no such table: staff_permissions": 2,
   "api/_quarantine-guard.js : repli de schéma": 1,
   "api/_support.js : repli de schéma": 8,
   "api/admin/_workspace.js : repli de schéma": 1,

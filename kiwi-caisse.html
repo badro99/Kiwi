@@ -208,7 +208,7 @@
         js("assets/kit/core.js?v=2") +
         js("assets/kit/overlays.js?v=3") +
         js("assets/kit/pin.js?v=6") +
-        js("assets/kit/pin-flow.js?v=9") +
+        js("assets/kit/pin-flow.js?v=10") +
         js("assets/kit/till-pin.js?v=10") +
         js("assets/kit/controls/button.js?v=1") +
         js("assets/kit/controls/chip.js?v=1") +
@@ -237,7 +237,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=470" defer></script>
+  <script src="assets/pos-dispatch.js?v=471" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=10" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>
@@ -354,9 +354,9 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=15" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=82" defer></script>
+  <script src="assets/caisse-pairing.js?v=83" defer></script>
   <script src="assets/kiwi-select.js?v=4" defer></script>
-  <script src="assets/cash-sessions.js?v=16" defer></script>
+  <script src="assets/cash-sessions.js?v=17" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
@@ -2003,8 +2003,8 @@
   </div>
 
   <!-- Caisse declarations: parser-ordered classic scripts, before shared state. -->
-  <link rel="preload" as="script" href="assets/caisse-strings.js?v=4" data-caisse-script><link rel="preload" as="script" href="assets/caisse/dish-words.js?v=1" data-caisse-script><link rel="preload" as="script" href="assets/caisse/table-settlement.js?v=2" data-caisse-script><link rel="preload" as="script" href="assets/staff-perms-till.js?v=7" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse-accounting.js?v=33" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse-strings.js?v=4" data-caisse-script><link rel="preload" as="script" href="assets/caisse/dish-words.js?v=1" data-caisse-script><link rel="preload" as="script" href="assets/caisse/table-settlement.js?v=2" data-caisse-script><link rel="preload" as="script" href="assets/staff-perms-till.js?v=8" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse-accounting.js?v=34" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-floor.js?v=23" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-kitchen.js?v=30" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/catalogue.js?v=21" data-caisse-script>
@@ -2013,9 +2013,9 @@
   <link rel="preload" as="script" href="assets/caisse/payment.js?v=9" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/split-tender.js?v=10" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/shift.js?v=4" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse/settings.js?v=5" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse/settings.js?v=6" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/held-sales.js?v=5" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse/discounts.js?v=4" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse/discounts.js?v=5" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/returns.js?v=2" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/handover.js?v=2" data-caisse-script>
   <link href="assets/caisse-loyalty-reward.js?v=7" data-caisse-lazy="loyalty-reward">

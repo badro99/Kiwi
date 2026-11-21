@@ -101,8 +101,8 @@
         see: { fr: 'les marges', en: 'margins', ar: 'الربح' } },
     ] },
     { id: 'team', icon: 'badge', fr: 'Équipe', en: 'Team', ar: 'الخدّامة', perms: [
-      { id: 'team.manage', check: 'server', at: 'office', fr: 'Gérer l’équipe et les plannings', en: 'Manage staff and schedules', ar: 'يسيّر الخدّامة والتوقيت',
-        can: { fr: 'gérer l’équipe et les plannings', en: 'manage staff and schedules', ar: 'يسيّر الخدّامة والتوقيت' } },
+      { id: 'team.manage', check: 'server', at: 'office', fr: 'Gérer l’équipe, ses codes et les plannings', en: 'Manage staff, their codes and schedules', ar: 'يسيّر الخدّامة، الكودات ديالهم والتوقيت',
+        can: { fr: 'gérer l’équipe, ses codes et les plannings', en: 'manage staff, their codes and schedules', ar: 'يسيّر الخدّامة، الكودات ديالهم والتوقيت' } },
       { id: 'team.payroll', check: 'server', at: 'office', fr: 'Voir et préparer la paie', en: 'See and prepare payroll', ar: 'يشوف ويوجّد الخلاص',
         can: { fr: 'voir la paie', en: 'see payroll', ar: 'يشوف الخلاص' },
         see: { fr: 'la paie', en: 'payroll', ar: 'الخلاص' } },

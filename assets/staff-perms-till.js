@@ -47,7 +47,8 @@
     'sales.price': ['changer un prix à la caisse', 'change a price at the till', 'يبدّل الثمن فالصندوق'],
   };
   /* Le dernier accord donné sur le pavé (ou par le droit de la personne en
-     poste) : sa preuve vaut cinq minutes (comme côté serveur) pour le geste qui le suit. */
+     poste) : la preuve de CE geste, signée par le serveur ; elle ne couvre
+     qu'un fait, jugé à sa réception (functions/api/_act-proof.js). */
   var lastApproval = null, APPROVAL_MS = 5 * 60 * 1000;
 
   function lang() { try { return (window.KiwiCaisseLang && window.KiwiCaisseLang.lang && window.KiwiCaisseLang.lang()) || document.documentElement.lang || 'fr'; } catch (_) { return 'fr'; } }
@@ -135,7 +136,7 @@
   /* Les preuves à joindre à un mouvement : jamais un code, jamais un nom. */
   function proofs() {
     var out = {}, s = window.KiwiStaff;
-    if (lastApproval && lastApproval.proof && Date.now() - lastApproval.at < APPROVAL_MS) out.actorProof = lastApproval.proof;
+    if (lastApproval && lastApproval.proof && Date.now() - lastApproval.at < APPROVAL_MS) out.actProof = lastApproval.proof;
     if (s && typeof s.sellerProof === 'string' && s.sellerProof) out.sellerProof = s.sellerProof;
     return out;
   }
@@ -160,10 +161,19 @@
     };
     if (!o.hint) o.hint = needHint(perm);
     var approved = typeof onApprove === 'function' ? function (who) {
-      lastApproval = { proof: String((who && who.actorProof) || ''), at: Date.now() };
+      lastApproval = { proof: String((who && who.actProof) || ''), at: Date.now() };
       return onApprove.apply(this, arguments);
     } : onApprove;
-    return { authContext: authContext || (access === 'till' ? authContext : { kind: PERM_KIND[perm] }), opts: o, onApprove: approved };
+    /* L'acte part avec le code, aux deux niveaux : le serveur signe la preuve de
+       CE geste (acte, montant, sens ; functions/api/_act-proof.js). */
+    var ctx = authContext;
+    if (!ctx && PERM_KIND[perm]) {
+      ctx = { kind: PERM_KIND[perm] };
+      if (Number.isInteger(act.amountCents) && act.amountCents > 0) ctx.amountCents = act.amountCents;
+      if (act.move === 'in' || act.move === 'out') ctx.move = act.move;
+      if (Number.isFinite(act.pct) && act.pct > 0) ctx.pct = act.pct;
+    }
+    return { authContext: ctx, opts: o, onApprove: approved };
   }
 
   /* data-perm : cadenas et demande d'accord. */

@@ -141,7 +141,7 @@
       if (typeof ask !== 'function') return Promise.resolve(false);
       /* authorizeTill takes `{ needsServer }` as its second argument,
          authorizeManager takes the action context. */
-      const second = mgrAccess === 'till' ? { needsServer: mgrNeedsServer } : mgrAuthContext;
+      const second = mgrAccess === 'till' ? { needsServer: mgrNeedsServer, action: mgrAuthContext || undefined } : mgrAuthContext;
       try { return Promise.resolve(ask.call(P, code, second)).then((ok) => ok === true, () => false); }
       catch (_) { return Promise.resolve(false); }
     }

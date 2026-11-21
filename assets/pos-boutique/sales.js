@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=342';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=238';
-import { offerRegister } from './inventory.js?v=238';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=343';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=239';
+import { offerRegister } from './inventory.js?v=239';
 import { ticketOwner } from './ticket-owner.js?v=5';
 import { ticketRemise } from './ticket-remise.js?v=5';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
@@ -760,8 +760,8 @@ import { photoImg } from '../retail-photos.js?v=5';
      journal » — et seul un booléen partait dans la vente : impossible, trois jours
      plus tard, de dire qui avait accordé les 20 % ni combien avaient été lâchés.
      On garde le nom (jamais le code), l'heure et le pourcentage demandé. */
-  /* proof : l'actorProof du responsable qui a validé (pin/verify), pour que le
-     serveur juge l'auteur prouvé de la remise, pas un nom (functions/api/_sale-truth.js). */
+  /* proof : la preuve du geste signée pour le responsable qui a validé (pin/verify ›
+     actProof), pour que le serveur juge l'auteur prouvé de la remise, pas un nom. */
   function markRemiseAuth(pct, by, role, auth, proof) {
     ticketOwner.applyDiscount(state.ticket, { pct: auth ? null : pct, mode: auth ? auth.mode : 'pct', value: auth ? auth.value : pct, by: by || '', role: role || '', at: new Date().toISOString(), ...(proof ? { proof: String(proof) } : {}) });
   }
@@ -777,11 +777,11 @@ import { photoImg } from '../retail-photos.js?v=5';
   function openApprove(pct, onOk, auth) {
     const what = auth ? auth.label : `−${pct} %`;
     if (pvReal() && typeof window.requireManager === 'function') {
-      if (window.KiwiAuthAct) window.KiwiAuthAct(auth ? { kind: 'discount', key: 'act.discount.amount', args: { amount: auth.cut } } : { kind: 'discount', key: 'act.discount.pct', args: { pct: `${pct}\u202f%` } });
+      if (window.KiwiAuthAct) window.KiwiAuthAct(auth ? { kind: 'discount', key: 'act.discount.amount', args: { amount: auth.cut } } : { kind: 'discount', key: 'act.discount.pct', args: { pct: `${pct}\u202f%` }, pct: Number(pct) });
       window.requireManager(`Remise ${what} sur le ticket ${state.ticket.num || 'en cours'}`, () => {
         let mgr = null;
         try { mgr = window.KiwiCaissePairing?.lastManager?.() || null; } catch (_) {}
-        markRemiseAuth(pct, mgr && mgr.name, mgr && mgr.role, auth, mgr && mgr.actorProof);
+        markRemiseAuth(pct, mgr && mgr.name, mgr && mgr.role, auth, mgr && mgr.actProof);
         toast(mgr && mgr.name ? `Remise ${what}, accord ${mgr.name}` : `Remise ${what} autorisée`);
         onOk();
       });

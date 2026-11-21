@@ -16,12 +16,14 @@ import { flagDiscountPermission, provenActor } from './_permissions.js';
    qui a validé la remise, sinon `seller.proof` de la personne en poste. Le
    `actorId` que la caisse déclare n'est qu'un dire, gardé dans le détail. */
 export async function flagSaleDiscount(env, merchant, saleId, body, at, grossCents, discountCents, claimed) {
-  /* L'accord du responsable d'abord (actorProof), sinon la personne en poste
-     (seller.proof) : une preuve expirée ne retombe jamais sur le nom déclaré. */
-  const approver = body && typeof body.actorProof === 'string' && body.actorProof ? body.actorProof : '';
-  const seller = body && body.seller && typeof body.seller.proof === 'string' ? body.seller.proof : '';
-  const proven = (approver ? await provenActor(env, merchant, approver, at) : null) || (seller ? await provenActor(env, merchant, seller, at) : null);
-  return flagDiscountPermission(env, merchant, saleId, proven, grossCents, discountCents, claimed);
+  /* La preuve de la remise (actProof, liée à l'acte et à cette vente) d'abord,
+     sinon la personne en poste (seller.proof) ; jugées à la réception. */
+  const gross = Number(grossCents) || 0, off = Number(discountCents) || 0;
+  if (!(gross > 0 && off > 0)) return false;
+  const proofs = { actProof: body && typeof body.actProof === 'string' ? body.actProof : '',
+    sellerProof: body && body.seller && typeof body.seller.proof === 'string' ? body.seller.proof : '' };
+  const proven = await provenActor(env, merchant, proofs, { kind: 'discount', pct: Math.round((off / gross) * 1000) / 10, at, ref: saleId });
+  return flagDiscountPermission(env, merchant, saleId, proven, gross, off, claimed);
 }
 
 /* The `lines` column is a TEXT, but the dashboard and the assistant parse it on

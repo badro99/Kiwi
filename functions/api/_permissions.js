@@ -29,11 +29,12 @@
 import Catalog from '../../assets/permissions-catalog.js';
 import {
   json, readSession, readCookie, SESS_COOKIE, operatorActor, isOperator, teamRemovedIds,
-  employeeRoleOpensDashboard, faceAccessTier, readTillActorProof,
+  employeeRoleOpensDashboard, faceAccessTier,
 } from '../auth/_lib.js';
 import { sessionTier } from '../auth/_session-tier.js';
 import { isMissingTable } from './print/_relay.js';
 import { readTillSellerProof } from './_seller.js';
+import { consumeActProof } from './_act-proof.js';
 
 export { Catalog };
 
@@ -147,13 +148,14 @@ export async function loadState(env, merchant) {
     configured: false, activatedTs: 0, missing: false };
   try {
     const [rows, presets, settings] = await Promise.all([
-      env.DB.prepare('SELECT staff_key, preset, grants, denies, name, updated_ts, updated_by FROM staff_permissions WHERE merchant = ?').bind(merchant).all(),
+      env.DB.prepare('SELECT staff_key, preset, grants, denies, name, updated_ts, updated_by, held_ts, held_by FROM staff_permissions WHERE merchant = ?').bind(merchant).all(),
       env.DB.prepare('SELECT preset, perms FROM staff_permission_presets WHERE merchant = ?').bind(merchant).all(),
       env.DB.prepare('SELECT free_discount_pct, legacy_imported_ts, activated_ts FROM staff_permission_settings WHERE merchant = ?').bind(merchant).first(),
     ]);
     for (const r of rows.results || []) {
       state.rows.set(String(r.staff_key), { preset: String(r.preset || ''), grants: Catalog.cleanList(parse(r.grants, [])),
-        denies: Catalog.cleanList(parse(r.denies, [])), name: String(r.name || ''), updatedTs: Number(r.updated_ts) || 0, updatedBy: String(r.updated_by || '') });
+        denies: Catalog.cleanList(parse(r.denies, [])), name: String(r.name || ''), updatedTs: Number(r.updated_ts) || 0, updatedBy: String(r.updated_by || ''),
+        heldTs: Number(r.held_ts) || 0, heldBy: String(r.held_by || '') });
     }
     for (const p of presets.results || []) {
       if (Catalog.PRESET_IDS.includes(p.preset)) state.presets[p.preset] = Catalog.cleanList(parse(p.perms, []));
@@ -172,10 +174,18 @@ export async function loadState(env, merchant) {
   return state;
 }
 
-/* Les droits effectifs d'une personne dans un état déjà lu. Jamais le rôle du
-   compte du propriétaire : un membre a au plus ce qu'on lui a donné. */
+/* Les droits effectifs d'une personne dans un état déjà lu.
+ *   · intitulé de propriétaire (« Propriétaire », « Direction »…) : ce code
+ *     ouvre le compte comme le propriétaire (faceAccessTier), donc TOUS les
+ *     droits, et l'écran le dit ; seul le propriétaire pose ces intitulés
+ *     (teamEditRefusal, /api/config) ;
+ *   · personne retenue (held) : ajoutée ou retitrée par une autre session que
+ *     celle du propriétaire, AUCUN droit tant qu'il ne l'a pas revue ;
+ *   · sinon : son rôle, plus ses ajouts, moins ses retraits. */
 export function permsIn(state, subject) {
+  if (Catalog.ownerTitle(subject.role)) return { preset: Catalog.ACCOUNT_OWNER, perms: Catalog.ALL.slice(), grants: [], denies: [], ownerAccess: true };
   const row = state.rows.get(subject.key);
+  if (row && row.heldTs) return { preset: Catalog.PRESET_IDS.includes(row.preset) ? row.preset : Catalog.presetForRole(subject.role), perms: [], grants: [], denies: [], held: true };
   const preset = (row && Catalog.PRESET_IDS.includes(row.preset)) ? row.preset : Catalog.presetForRole(subject.role);
   return { preset, perms: Catalog.effective(preset, row && row.grants, row && row.denies, state.presets),
     grants: (row && row.grants) || [], denies: (row && row.denies) || [] };
@@ -228,12 +238,25 @@ export async function sessionPerson(request, env) {
   const st = await sessionTier(request, env);
   if (st.unavailable) return { unavailable: true };
   if (!st.tier) return null;
-  if (st.tier === 'owner') return { owner: true, aid: sess.aid };
   const tier = st.tier;
   let row;
   try {
     row = await env.DB.prepare('SELECT staff_id FROM session_tiers WHERE sid = ? AND account_id = ?').bind(sess.sid, String(sess.aid)).first();
-  } catch (_) { return { unavailable: true }; }
+  } catch (_) { row = null; if (tier !== 'owner') return { unavailable: true }; }
+  if (tier === 'owner') {
+    /* Le palier du patron, ouvert par le compte lui-même ou par un code à
+       intitulé de propriétaire : le journal dit lequel (permissionEditor). */
+    let code = null;
+    if (row && row.staff_id) {
+      try {
+        const pin = await env.DB.prepare(
+          `SELECT p.id, p.name FROM staff_pins p JOIN merchant_config c ON c.merchant = p.merchant WHERE p.id = ? AND c.account_id = ? LIMIT 1`
+        ).bind(String(row.staff_id), String(sess.aid)).first();
+        if (pin) code = { id: String(pin.id).slice(0, 96), name: String(pin.name || '').slice(0, 60) };
+      } catch (_) { code = null; }
+    }
+    return { owner: true, aid: sess.aid, ...(code ? { code } : {}) };
+  }
   let staff = null;
   if (row && row.staff_id) {
     try {
@@ -327,9 +350,14 @@ export async function docWriteGuard(request, env, merchant, feature, before, aft
     const refused = await teamEditRefusal(request, env, merchant, before, after);
     if (refused) return refused;
   }
+  let plan = null;
   for (const perm of needed) {
     const denied = await sessionGuard(request, env, merchant, perm);
     if (denied) return denied;
+  }
+  if (feature === 'team') {
+    try { plan = await teamPlan(request, env, merchant, before, after); } catch (_) { plan = null; }
+    if (plan && plan.length) pendingWrites.set(request, plan);
   }
   return null;
 }
@@ -382,8 +410,109 @@ export async function permissionEditor(request, env) {
   } catch (_) { /* fall through */ }
   const who = await sessionPerson(request, env);
   if (who && who.unavailable) return { ok: false, unavailable: true };
-  if (who && who.owner) return { ok: true, id: 'account:' + String(who.aid).slice(0, 80), label: 'propriétaire' };
+  if (who && who.owner && who.code) return { ok: true, id: 'code:' + who.code.id, label: (who.code.name || 'code') + ' · code propriétaire' };
+  if (who && who.owner) return { ok: true, id: 'account:' + String(who.aid).slice(0, 80), label: 'compte du propriétaire' };
   return { ok: false };
+}
+
+/* Qui écrit, pour le journal, quel que soit son palier. */
+async function sessionActor(request, env) {
+  try {
+    if (await isOperator(request, env)) { const op = await operatorActor(request, env); return { owner: true, id: 'operator:' + String(op.id || '').slice(0, 80), label: String(op.label || 'opérateur').slice(0, 80) }; }
+  } catch (_) {}
+  const editor = await permissionEditor(request, env);
+  if (editor.ok) return { owner: true, id: editor.id, label: editor.label };
+  const who = await sessionPerson(request, env);
+  if (who && who.staff) return { owner: false, id: 'session:' + nameKey(who.staff.name), label: who.staff.name || 'session' };
+  return { owner: false, id: 'session', label: who && who.tier ? 'session ' + who.tier : 'session' };
+}
+
+/* ── LES IDENTITÉS NOUVELLES ─────────────────────────────────────────────────
+ * Une fois les droits activés, une personne qu'une autre session que celle du
+ * propriétaire AJOUTE (fiche d'Équipe, ou code publié par /api/config) ou
+ * RETITRE n'a aucun droit tant que le propriétaire ne l'a pas revue
+ * (staff_permissions.held_ts, levé par n'importe quel enregistrement de ses
+ * droits). Sans cela, un gérant privé de « Rembourser » se publierait un second
+ * code « Sara Deux · Gérant ». Chaque changement d'Équipe va aussi au journal,
+ * à côté des changements de droits. */
+function holdStmt(env, merchant, subject, actor, ts) {
+  const preset = Catalog.presetForRole(subject.role);
+  return env.DB.prepare(
+    `INSERT INTO staff_permissions (merchant, staff_key, preset, grants, denies, name, updated_ts, updated_by, held_ts, held_by)
+     VALUES (?, ?, ?, '[]', ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(merchant, staff_key) DO UPDATE SET preset = excluded.preset, grants = '[]', denies = excluded.denies,
+       name = excluded.name, updated_ts = excluded.updated_ts, updated_by = excluded.updated_by, held_ts = excluded.held_ts, held_by = excluded.held_by`
+  ).bind(merchant, String(subject.key).slice(0, 120), preset, JSON.stringify(Catalog.presetPerms(preset)), String(subject.name || '').slice(0, 80),
+    ts, actor.id.slice(0, 120), ts, actor.label.slice(0, 80));
+}
+function journalStmt(env, merchant, actor, subject, label, change, ts) {
+  return env.DB.prepare(
+    `INSERT INTO staff_permission_audit (merchant, ts, actor, actor_label, subject, subject_label, change) VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).bind(merchant, ts, actor.id.slice(0, 120), actor.label.slice(0, 80), String(subject).slice(0, 120), String(label || '').slice(0, 80), JSON.stringify(change).slice(0, 8000));
+}
+/* Le plan d'un document Équipe qui change : journal pour tous, retenue pour
+   les fiches ajoutées ou retitrées hors de la session du propriétaire. */
+async function teamPlan(request, env, merchant, before, after) {
+  const state = await loadState(env, merchant);
+  if (state.unavailable || state.missing) return null;
+  const old = new Map(membersOf(before || {}).map((m) => [m.key, m]));
+  const next = membersOf(after || {});
+  const added = next.filter((m) => !old.has(m.key));
+  const retitled = next.filter((m) => old.has(m.key) && Catalog.normRole(old.get(m.key).role) !== Catalog.normRole(m.role));
+  const removed = [...old.values()].filter((m) => !next.some((n) => n.key === m.key));
+  if (!added.length && !retitled.length && !removed.length) return null;
+  const actor = await sessionActor(request, env);
+  const ts = Date.now();
+  const hold = state.configured && !actor.owner;
+  const stmts = [];
+  for (const m of added) {
+    if (hold && !Catalog.ownerTitle(m.role)) stmts.push(holdStmt(env, merchant, m, actor, ts));
+    stmts.push(journalStmt(env, merchant, actor, 'staff:' + m.key, m.name, { kind: 'team-added', role: m.role, held: hold }, ts));
+  }
+  for (const m of retitled) {
+    if (hold && !Catalog.ownerTitle(m.role)) stmts.push(holdStmt(env, merchant, m, actor, ts));
+    stmts.push(journalStmt(env, merchant, actor, 'staff:' + m.key, m.name, { kind: 'team-retitled', from: old.get(m.key).role, role: m.role, held: hold }, ts));
+  }
+  for (const m of removed) stmts.push(journalStmt(env, merchant, actor, 'staff:' + m.key, m.name, { kind: 'team-removed', role: m.role }, ts));
+  return stmts;
+}
+const pendingWrites = new WeakMap();
+/* Appelé par /api/store APRÈS une écriture réussie : le plan ne s'applique qu'à
+   ce qui a vraiment été écrit (une écriture refusée ou périmée n'en laisse rien). */
+export async function afterDocWrite(request, env) {
+  const stmts = pendingWrites.get(request);
+  pendingWrites.delete(request);
+  if (!stmts || !stmts.length || !env || !env.DB) return;
+  try { if (typeof env.DB.batch === 'function') await env.DB.batch(stmts); else for (const st of stmts) await st.run(); } catch (_) {}
+}
+/* /api/config, avant de publier des codes : ceux qui font naître une identité
+   (nom inconnu des codes, ou même nom sous un autre intitulé) hors de la session
+   du propriétaire seront retenus. Rend la suite à appeler APRÈS la publication. */
+export async function codeHolds(request, env, merchant, body) {
+  if (!env || !env.DB || !merchant || !Array.isArray(body && body.pins)) return null;
+  const state = await loadState(env, merchant);
+  if (state.unavailable || state.missing || !state.configured) return null;
+  const actor = await sessionActor(request, env);
+  if (actor.owner) return null;
+  let before = [];
+  try { before = (await env.DB.prepare('SELECT name, role FROM staff_pins WHERE merchant = ?').bind(merchant).all()).results || []; }
+  catch (_) { return null; }
+  const had = new Map(before.map((r) => [nameKey(r.name), Catalog.normRole(r.role)]));
+  const fresh = body.pins.filter((p) => p && typeof p === 'object' && String(p.name || '').trim()
+    && !Catalog.ownerTitle(p.role) && had.get(nameKey(p.name)) !== Catalog.normRole(String(p.role || '').trim().slice(0, 24) || 'staff'));
+  if (!fresh.length) return null;
+  return async () => {
+    const ts = Date.now(), stmts = [];
+    for (const p of fresh.slice(0, 60)) {
+      const role = String(p.role || '').trim().slice(0, 24) || 'staff';
+      const subject = await subjectFor(env, merchant, { name: String(p.name).trim().slice(0, 60), role });
+      stmts.push(holdStmt(env, merchant, { ...subject, role }, actor, ts));
+      const from = had.get(nameKey(p.name));
+      stmts.push(journalStmt(env, merchant, actor, 'staff:' + subject.key, subject.name,
+        { kind: from ? 'code-retitled' : 'code-added', role, ...(from ? { from } : {}), held: true }, ts));
+    }
+    try { if (typeof env.DB.batch === 'function') await env.DB.batch(stmts); else for (const st of stmts) await st.run(); } catch (_) {}
+  };
 }
 
 /* ── LES FAITS DÉJÀ ACCOMPLIS ────────────────────────────────────────────────
@@ -395,26 +524,30 @@ export async function permissionEditor(request, env) {
  * des droits du propriétaire (« fait sans le droit »).
  *
  * L'AUTEUR EST PROUVÉ, JAMAIS DÉCLARÉ. Le seul auteur reconnu est celui d'une
- * preuve signée par /api/pin/verify pour ce commerce : la preuve d'acteur d'un
- * responsable qui vient de valider (actorProof), ou celle de la personne en
- * poste (sellerProof, valable le temps d'un service). Un identifiant envoyé
- * par la caisse n'est qu'un dire, gardé dans le détail : sans preuve, le fait
- * est inscrit « auteur non prouvé ». `at` est l'heure du fait (une caisse hors
- * ligne le livre plus tard) : la preuve devait être valable à ce moment-là.
+ * preuve signée par /api/pin/verify pour ce commerce : la preuve du GESTE
+ * qu'un code vient de couvrir (actProof : acte, montant, sens, un seul fait,
+ * functions/api/_act-proof.js), ou celle de la personne en poste (sellerProof,
+ * valable le temps d'un service). Toutes deux sont jugées à l'heure où le
+ * serveur reçoit le fait, jamais à l'heure que la caisse déclare. Un
+ * identifiant envoyé par la caisse n'est qu'un dire, gardé dans le détail :
+ * sans preuve valable, le fait est inscrit « auteur non prouvé ».
  * Une seule ligne par fait : `ref` est l'identifiant de la vente ou du
  * mouvement, rejouer ne double rien. */
-export async function provenActor(env, merchant, token, at) {
-  if (!env || !env.AUTH_SECRET || typeof token !== 'string' || !token || token.length > 2048) return null;
-  const now = Date.now();
-  const when = Number.isFinite(at) && at <= now && at > now - 2 * 86400000 ? at : now;
-  try {
-    const actor = await readTillActorProof(token, env.AUTH_SECRET, merchant, when);
-    if (actor && actor.id) return { id: String(actor.id).slice(0, 96), name: String(actor.name || ''), role: String(actor.role || '') };
-  } catch (_) {}
-  try {
-    const seller = await readTillSellerProof(token, env.AUTH_SECRET, merchant, when);
-    if (seller && seller.id) return { id: seller.id, name: seller.name, role: '' };
-  } catch (_) {}
+export async function provenActor(env, merchant, proofs, fact) {
+  /* L'heure qui juge est celle de la RÉCEPTION, jamais celle que la caisse
+     déclare : une preuve vue il y a une heure ne couvre pas un fait antidaté. */
+  const received = Date.now();
+  const p = proofs && typeof proofs === 'object' ? proofs : {};
+  if (typeof p.actProof === 'string' && p.actProof) {
+    const act = await consumeActProof(env, merchant, p.actProof, fact, received);
+    if (act) return { id: act.id.slice(0, 96), name: act.name, role: act.role, via: 'act' };
+  }
+  if (env && env.AUTH_SECRET && typeof p.sellerProof === 'string' && p.sellerProof && p.sellerProof.length <= 2048) {
+    try {
+      const seller = await readTillSellerProof(p.sellerProof, env.AUTH_SECRET, merchant, received);
+      if (seller && seller.id) return { id: seller.id, name: seller.name, role: '', via: 'seller' };
+    } catch (_) {}
+  }
   return null;
 }
 

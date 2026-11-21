@@ -171,9 +171,17 @@
     removed && removed.length ? `<span class="pm-minus">− ${esc(names(removed))}</span>` : '',
   ].filter(Boolean).join(' · ');
   const diff = (from, to) => ({ added: to.filter((id) => !from.includes(id)), removed: from.filter((id) => !to.includes(id)) });
-  const ownerTitleNote = () => L('Son intitulé dit « propriétaire », mais un intitulé n’ouvre pas les droits du compte du propriétaire : rôle Manager, plus ce que vous lui donnez.',
-    'The job title says “owner”, but a title does not open the owner account’s rights: Manager role, plus what you give.',
-    'الخدمة ديالو مكتوب فيها «مول المحل»، ولكن السمية ما كتعطيش الحقوق ديال الحساب ديال مول المحل: دور المسؤول، وزيد عليه اللي عطيتيه نتا.');
+  /* Un code intitulé « Propriétaire » ouvre le compte au palier du patron : tout, sans réglage. */
+  const ownerAccessNote = () => L('Accès propriétaire complet. Ce code ouvre le compte comme vous : tous les droits, rien à régler ici. Vous seul pouvez donner cet intitulé ; pour limiter cette personne, changez son intitulé dans Équipe.',
+    'Full owner access. This code opens the account like you do: every permission, nothing to set here. Only you can give this title; to limit this person, change the title in Team.',
+    'دخول كامل بحال مول المحل. هاد الكود كيحلّ الحساب بحالك: كاع الحقوق، والو ما يتّعدّل هنا. غير نتا اللي تقدر تعطي هاد السمية؛ باش تحدّ ليه، بدّل السمية ديالو فالفريق.');
+  const ownerBadge = () => `<span class="pm-chk">${esc(L('Accès propriétaire complet', 'Full owner access', 'دخول كامل بحال مول المحل'))}</span>`;
+  /* Une fiche ou un code ajouté hors de votre session : aucun droit tant que vous ne l'avez pas revu. */
+  const heldNote = (s) => L(`Ajouté ou retitré par ${s.heldBy || 'un membre de l’équipe'} : aucun droit tant que vous ne l’avez pas revu. Choisissez son rôle puis Enregistrer.`,
+    `Added or retitled by ${s.heldBy || 'a team member'}: no permissions until you review them. Pick a role, then Save.`,
+    `زادو ولا بدّل ليه السمية ${s.heldBy || 'واحد من الفريق'}: حتى حق حتى تراجعو نتا. ختار الدور ديالو ومن بعد سجّل.`);
+  const personNote = (s) => s.ownerAccess ? `<p class="pm-note">${esc(ownerAccessNote())}</p>` : s.held ? `<p class="pm-note">${esc(heldNote(s))}</p>` : '';
+  const cans = (ids) => ids.map((id) => C().BY_ID[id] && C().BY_ID[id].can[lang()]).filter(Boolean).join(', ');
 
   /* Un droit, sa bascule et l'endroit où il est tenu. */
   function permRow(p, on, action, argv, disabled) {
@@ -203,8 +211,16 @@
       const delta = dd.added.length || dd.removed.length
         ? `<span class="pm-muted">${esc(L('Avec le rôle proposé : ', 'With the proposed role: ', 'بالدور المقترح: '))}${changes(dd.added, dd.removed)}</span>`
         : `<span class="pm-muted">${esc(L('Le rôle proposé ne change rien pour cette personne.', 'The proposed role changes nothing for this person.', 'الدور المقترح ما كيبدّل والو لهاد الشخص.'))}</span>`;
+      if (s.ownerAccess) return `<div class="pm-card"><div class="pm-head"><div><strong>${esc(s.name)}</strong><span class="pm-muted">${esc(s.role || '')}</span></div>${ownerBadge()}</div><p class="pm-note">${esc(ownerAccessNote())}</p></div>`;
+      const plain = dd.added.length || dd.removed.length ? `<p class="pm-sum">${esc([
+        L(`Avec le rôle ${presetLabel(s.defaultPreset)}, ${s.name}`, `With the ${presetLabel(s.defaultPreset)} role, ${s.name}`, `بالدور ${presetLabel(s.defaultPreset)}، ${s.name}`),
+        dd.added.length ? L(` pourrait en plus ${cans(dd.added)}`, ` could also ${cans(dd.added)}`, ` يقدر حتى ${cans(dd.added)}`) : '',
+        dd.added.length && dd.removed.length ? L(' ;', ';', '؛') : '',
+        dd.removed.length ? L(` ne pourrait plus ${cans(dd.removed)}`, ` could no longer ${cans(dd.removed)}`, ` ما بقاش يقدر ${cans(dd.removed)}`) : '',
+        L('. Garder ses droits d’aujourd’hui ne change rien.', '. Keeping today’s permissions changes nothing.', '. إلا خلّيتي الحقوق ديال اليوم، والو ما كيتبدّل.'),
+      ].join(''))}</p>` : '';
       return `<div class="pm-card"><div class="pm-head"><div><strong>${esc(s.name)}</strong><span class="pm-muted">${esc(s.role || '')}</span></div></div>
-        <p class="pm-sum">${esc(Cat.summary(today, s.name, lang()))}</p>${partial}${delta}${s.ownerTitle ? `<span class="pm-muted">${esc(ownerTitleNote())}</span>` : ''}
+        <p class="pm-sum">${esc(Cat.summary(today, s.name, lang()))}</p>${partial}${plain}${delta}
         <div class="pm-line"><select class="pm-sel" data-pm-choice="${esc(s.key)}" aria-label="${esc(s.name)}">${opts}</select></div></div>`;
     }).join('');
     const pct = state.pct == null ? d.freeDiscountPct : state.pct;
@@ -247,11 +263,11 @@
     const body = rows.map((s) => {
       const dr = draftOf(s);
       const cells = Cat.GROUPS.map((g) => {
-        if (state.expanded === g.id) return g.perms.map((p) => `<td><button type="button" class="pm-tog" data-action="pm-toggle" data-arg="${esc(s.key)}|${p.id}" aria-pressed="${dr.perms.includes(p.id)}" aria-label="${esc(p[lang()])}" ${ro() ? 'disabled' : ''}></button></td>`).join('');
+        if (state.expanded === g.id) return g.perms.map((p) => `<td><button type="button" class="pm-tog" data-action="pm-toggle" data-arg="${esc(s.key)}|${p.id}" aria-pressed="${dr.perms.includes(p.id)}" aria-label="${esc(p[lang()])}" ${ro() || s.ownerAccess ? 'disabled' : ''}></button></td>`).join('');
         const n = g.perms.filter((p) => dr.perms.includes(p.id)).length;
         return `<td><button type="button" class="pm-cell ${n === g.perms.length ? 'full' : n ? 'part' : ''}" data-action="pm-expand" data-arg="${g.id}" title="${esc(g[lang()])}">${n}/${g.perms.length}</button></td>`;
       }).join('');
-      return `<tr class="${dirty(s) ? 'pm-dirty' : ''}${state.open === s.key ? ' on' : ''}"><td class="pm-who"><button type="button" class="pm-name" data-action="pm-open" data-arg="${esc(s.key)}" aria-expanded="${state.open === s.key}">${esc(s.name)}</button><span class="pm-muted">${esc(s.role || '')}</span></td><td>${presetSelect(s, dr)}</td>${cells}<td>${saveActs(s)}</td></tr>`;
+      return `<tr class="${dirty(s) ? 'pm-dirty' : ''}${state.open === s.key ? ' on' : ''}"><td class="pm-who"><button type="button" class="pm-name" data-action="pm-open" data-arg="${esc(s.key)}" aria-expanded="${state.open === s.key}">${esc(s.name)}</button><span class="pm-muted">${esc(s.role || '')}</span>${s.held ? `<span class="pm-chk">${esc(L('À revoir', 'To review', 'خاصو مراجعة'))}</span>` : ''}</td><td>${s.ownerAccess ? ownerBadge() : presetSelect(s, dr)}</td>${cells}<td>${saveActs(s)}</td></tr>`;
     }).join('');
     const none = esc(L('Personne ne correspond.', 'Nobody matches.', 'حتى واحد ما كيطابق.'));
     const table = `<div class="pm-scroll"><table class="pm-grid"><thead><tr><th class="pm-who">${esc(L('Personne', 'Person', 'الشخص'))}</th><th>${esc(L('Rôle', 'Role', 'الدور'))}</th>${head}<th></th></tr>${sub}</thead>
@@ -260,7 +276,7 @@
     const cards = `<div class="pm-cards">${rows.map((s) => {
       const dr = draftOf(s);
       return `<div class="pm-card"><div class="pm-head"><div><strong>${esc(s.name)}</strong><span class="pm-muted">${esc(s.role || '')}</span></div></div>
-        <p class="pm-sum">${esc(Cat.summary(dr.perms, s.name, lang()))}</p><div class="pm-line">${presetSelect(s, dr)}</div>
+        <p class="pm-sum">${esc(Cat.summary(dr.perms, s.name, lang()))}</p>${personNote(s)}<div class="pm-line">${s.ownerAccess ? ownerBadge() : presetSelect(s, dr)}</div>
         <div class="pm-line">${btn('pm-open', s.key, state.open === s.key ? L('Fermer le détail', 'Hide details', 'سدّ التفاصيل') : L('Droit par droit', 'Permission by permission', 'حق بحق'), true, ` aria-expanded="${state.open === s.key}"`)}${saveActs(s)}</div>
         ${state.open === s.key ? personDetail(s) : ''}</div>`;
     }).join('') || `<p class="pm-note">${none}</p>`}</div>`;
@@ -275,7 +291,7 @@
     const others = d.staff.filter((o) => o.key !== s.key);
     const copy = ro() ? '' : `<div class="pm-line"><label>${esc(L('Copier les droits de', 'Copy permissions from', 'نسخ الحقوق ديال'))} <select class="pm-sel" data-pm-copyfrom="${esc(s.key)}"><option value="" selected>${esc(L('Choisir une personne', 'Pick a person', 'ختار شي واحد'))}</option>${others.map((o) => `<option value="${esc(o.key)}">${esc(o.name)}</option>`).join('')}</select></label>
       ${btn('pm-copy', s.key, L('Copier', 'Copy', 'نسخ'), true)}</div>`;
-    return `${s.ownerTitle ? `<p class="pm-note">${esc(ownerTitleNote())}</p>` : ''}${copy}${groupsOf(dr.perms, 'pm-toggle', s.key, ro())}`;
+    return `${personNote(s)}${s.ownerAccess ? '' : copy}${groupsOf(dr.perms, 'pm-toggle', s.key, ro() || s.ownerAccess)}`;
   }
 
   /* ── Rôles ───────────────────────────────────────────────────────────── */
@@ -312,6 +328,13 @@
         const actor = c.unproven ? esc(L('Auteur non prouvé', 'Author not proven', 'ما معروفش شكون')) + (c.claimed ? ` (${esc(L('la caisse dit', 'the till says', 'الصندوق كيقول'))} ${esc(c.claimed)})` : '') : who;
         return `<span class="pm-flag">${esc(L('Fait sans le droit', 'Done without the right', 'تدار بلا الحق'))}</span> ${actor} · ${esc(permLabel(c.permission))}${c.percent ? ' · ' + esc(c.percent) + ' %' : ''}${c.amountCents ? ' · ' + esc((c.amountCents / 100).toFixed(2)) + ' MAD' : ''}`;
       }
+      /* L'équipe elle-même (fiches et codes), à côté des droits. */
+      const heldTail = c.held ? ` <span class="pm-flag">${esc(L('sans droit jusqu’à votre revue', 'no permissions until you review', 'بلا حق حتى تراجعو'))}</span>` : '';
+      const title = esc(c.role || '');
+      if (c.kind === 'team-added' || c.kind === 'code-added') return (c.kind === 'code-added' ? esc(L(`Nouveau code · ${a.subjectLabel || ''} · ${c.role || ''}`, `New code · ${a.subjectLabel || ''} · ${c.role || ''}`, `كود جديد · ${a.subjectLabel || ''} · ${c.role || ''}`))
+        : esc(L(`Fiche ajoutée · ${a.subjectLabel || ''} · ${c.role || ''}`, `Staff card added · ${a.subjectLabel || ''} · ${c.role || ''}`, `تزادت بطاقة · ${a.subjectLabel || ''} · ${c.role || ''}`))) + heldTail;
+      if (c.kind === 'team-retitled' || c.kind === 'code-retitled') return `${who} · ${esc(c.from || '')} → ${title}` + heldTail;
+      if (c.kind === 'team-removed') return esc(L(`Fiche retirée · ${a.subjectLabel || ''}`, `Staff card removed · ${a.subjectLabel || ''}`, `تحيّدات بطاقة · ${a.subjectLabel || ''}`));
       if (c.kind === 'activated') return esc(L(`Droits activés · remise libre ${c.freeDiscountPct} %`, `Permissions switched on · free discount ${c.freeDiscountPct} %`, `الحقوق تشعّلو · التخفيض الحر ${c.freeDiscountPct} %`));
       if (c.kind === 'deactivated') return esc(L('Droits désactivés : règles d’avant', 'Permissions switched off: previous rules', 'الحقوق تطفّاو: القواعد القديمة'));
       if (c.kind === 'legacy-dismissed') return esc(L('Anciens réglages de l’appareil écartés', 'Old device settings dropped', 'الإعدادات القديمة ديال الجهاز تخلّاو'));

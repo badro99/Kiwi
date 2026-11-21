@@ -162,9 +162,9 @@
     if (!real() || !slug || !event || !event.sessionId) return false;
     var row = Object.assign({}, event, { id: event.id || uid(event) });
     /* Droits de l'équipe : le serveur juge l'auteur PROUVÉ d'un mouvement ou
-       d'une clôture (actorProof du dernier accord, sellerProof de la personne
-       en poste, assets/staff-perms-till.js), jamais l'actorId déclaré ici. */
-    if ((row.eventType === 'movement' || row.eventType === 'close') && !row.actorProof && !row.sellerProof) {
+       d'une clôture (actProof du geste qu'un code vient de couvrir, sellerProof
+       de la personne en poste, assets/staff-perms-till.js), jamais l'actorId déclaré ici. */
+    if ((row.eventType === 'movement' || row.eventType === 'close') && !row.actProof && !row.sellerProof) {
       try { var P = window.KiwiCaissePairing, pr = P && typeof P.permsProofs === 'function' ? P.permsProofs() : null; if (pr) Object.assign(row, pr); } catch (_) {}
     }
     if (!row.merchant) row.merchant = slug;

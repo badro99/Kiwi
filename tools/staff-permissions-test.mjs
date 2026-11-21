@@ -47,13 +47,14 @@ const store = await imp('functions/api/store.js');
 const config = await imp('functions/api/config.js');
 const { makeSession, SESS_COOKIE, TILL_COOKIE, tillToken, tillActorProof, managerRefundProof, managerStockProof } = await imp('functions/auth/_lib.js');
 const { tillSellerProof } = await imp('functions/api/_seller.js');
+const { tillActProof } = await imp('functions/api/_act-proof.js');
 
 const SECRET = 'staff-permissions-bench-secret-01';
 const SHOP = 'cafe-droits-banc';
 const OTHER = 'boutique-voisine-droits';
 const SISTER = 'cafe-droits-soeur';   // seconde boutique du MÊME compte
 const CODES = { owner: '6201', manager: '6202', caisse: '6203', voisin: '6204', hind: '6205' };
-const SID_MGR = 'a'.repeat(32), SID_OWNER = 'b'.repeat(32);
+const SID_MGR = 'a'.repeat(32), SID_OWNER = 'b'.repeat(32), SID_NADIA = 'c'.repeat(32);
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 /* Chaque droit prouvé contre une vraie route s'inscrit ici ; la fin du banc
@@ -123,6 +124,8 @@ function world({ migrated = true } = {}) {
   sale.run('sale-1', SHOP, 250, 25000, 'cash', 'Table 4', '1001', now - 60000, '[{"n":"Tajine","q":1,"t":250}]');
   sale.run('sale-2', SHOP, 90, 9000, 'card', 'Comptoir', '1002', now - 90000, '[{"n":"Thé","q":3,"t":90}]');
   sql.prepare('INSERT INTO session_tiers (sid, account_id, tier, staff_id, updated_ts) VALUES (?,?,?,?,?)').run(SID_MGR, 'acc-droits', 'manager', 'pin-sara', now);
+  /* Le tableau de bord du compte, déverrouillé par le code « Propriétaire » de Nadia. */
+  sql.prepare('INSERT INTO session_tiers (sid, account_id, tier, staff_id, updated_ts) VALUES (?,?,?,?,?)').run(SID_NADIA, 'acc-droits', 'owner', 'pin-nadia', now);
   const DB = {
     prepare(query) {
       const statement = sql.prepare(query);
@@ -146,6 +149,7 @@ const ip = { 'CF-Connecting-IP': '10.0.0.9' };
 const cookieTill = `${TILL_COOKIE}=${await tillToken(SECRET, SHOP)}`;
 const cookieOwner = `${SESS_COOKIE}=${await makeSession('acc-droits', SECRET, 0, SID_OWNER)}`;
 const cookieManager = `${SESS_COOKIE}=${await makeSession('acc-droits', SECRET, 0, SID_MGR)}`;
+const cookieNadia = `${SESS_COOKIE}=${await makeSession('acc-droits', SECRET, 0, SID_NADIA)}`;
 const cookieOtherOwner = `${SESS_COOKIE}=${await makeSession('acc-voisin', SECRET)}`;
 const req = (url, { method = 'GET', body, cookie } = {}) => new Request('https://kiwi.test' + url, {
   method, headers: { 'Content-Type': 'application/json', ...ip, ...(cookie ? { Cookie: cookie } : {}) },
@@ -180,7 +184,7 @@ console.log('■ Activation');
     'activation par défaut : chacun garde EXACTEMENT ses droits d’aujourd’hui (Responsable, Magasinier compris), personne n’en gagne');
   const hind = after.staff.find((s) => s.key === 'm-hind');
   check(hind.proposed.some((id) => !hind.perms.includes(id)), 'Hind (Responsable) : le rôle proposé lui donnerait plus, il reste une proposition tant qu’on ne le choisit pas');
-  check(audit(w).filter((r) => JSON.parse(r.change).kind === 'activate').length === after.staff.length, 'chaque personne a sa ligne d’activation (défaisable)');
+  check(audit(w).filter((r) => JSON.parse(r.change).kind === 'activate').length === after.staff.filter((s) => !s.ownerAccess).length, 'chaque personne a sa ligne d’activation (défaisable), sauf l’accès propriétaire');
   check((await activate(w)).status === 409, 'activer deux fois : refusé');
 
   const w2 = world();
@@ -202,7 +206,8 @@ console.log('■ /api/permissions');
   check(denied.status === 403 && (await denied.json()).error === 'owner-required', 'un gérant (son code) ne change aucun droit, pas même les siens');
   check((await post(w, cookieTill, { action: 'save-staff', key: 'm-lina', preset: 'cashier', perms: [] })).status === 403, 'une caisse appairée n’écrit pas');
   const nadia = await person(w, 'name:nadia patron');
-  check(nadia.preset === 'manager' && nadia.ownerTitle === true, 'un code intitulé « Propriétaire » a le rôle Manager, signalé à l’écran');
+  check(nadia.ownerAccess === true && nadia.perms.length === Catalog.ALL.length, 'un code intitulé « Propriétaire » : accès propriétaire complet, dit tel quel à l’écran');
+  check((await post(w, cookieOwner, { action: 'save-staff', key: 'name:nadia patron', preset: 'cashier', perms: [] })).status === 409, 'ses droits ne se règlent pas un par un : on change son intitulé dans Équipe');
   check((await post(w, cookieOwner, { action: 'save-staff', key: 'm-inconnu', preset: 'cashier', perms: [] })).status === 404, 'une personne hors de l’équipe est refusée');
   check((await post(w, cookieOwner, { action: 'save-staff', key: 'm-lina', preset: 'owner', perms: [] })).status === 400, 'le rôle « propriétaire » ne se donne pas');
 
@@ -254,7 +259,8 @@ console.log('■ Un gérant ne se fait pas propriétaire');
 {
   const w = world();
   await activate(w);
-  const team = JSON.parse(w.sql.prepare('SELECT data FROM store_docs WHERE merchant = ? AND feature = ?').get(SHOP, 'team').data);
+  const doc = w.sql.prepare('SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = ?').get(SHOP, 'team');
+  const team = JSON.parse(doc.data);
   const edit = (fn) => { const next = structuredClone(team); fn(next.members); return next; };
   const asMgr = (after) => perms.docWriteGuard(req('/api/store', { method: 'POST', cookie: cookieManager }), w.env, SHOP, 'team', team, after, false);
   const asOwner = (after) => perms.docWriteGuard(req('/api/store', { method: 'POST', cookie: cookieOwner }), w.env, SHOP, 'team', team, after, false);
@@ -271,8 +277,7 @@ console.log('■ Un gérant ne se fait pas propriétaire');
     body: { merchant: SHOP, feature: 'team', data: edit((m) => { m[0].function = 'Propriétaire'; }) } }) });
   check(viaStore.status === 403 && (await viaStore.json()).error === 'owner-title-reserved', 'refusé aussi par /api/store, la route réelle');
   check(await asOwner(edit((m) => { m[0].function = 'Propriétaire'; })) === null, 'le compte du propriétaire, lui, le peut');
-  const sara = await perms.permissionsFor(w.env, SHOP, { name: 'Sara Alaoui', role: 'Propriétaire' });
-  check(sara.perms.length < Catalog.ALL.length && !sara.perms.includes('team.payroll'), 'et même retitrée, une personne n’a que ses droits, jamais tous');
+
   await without(w, 'm-sara', 'team.manage');
   prove('team.manage', !(await storeTier.storeEditorTier(req('/api/store', { cookie: cookieManager }), w.env, 'team')), 'retiré : la session de Sara ne tient plus le document Équipe');
 }
@@ -409,7 +414,9 @@ console.log('■ Remise, espèces, tiroir, clôture sans le droit');
   await activate(w);
   const now = Date.now();
   const linaSeller = await tillSellerProof(SECRET, SHOP, { id: 'pin-lina', name: 'Lina Saidi' });
-  const saraActor = await tillActorProof(SECRET, SHOP, { id: 'pin-sara', name: 'Sara Alaoui', role: 'Manager' });
+  const sara = { id: 'pin-sara', name: 'Sara Alaoui', role: 'Manager' };
+  const saraAct = (terms, at = Date.now()) => tillActProof(SECRET, SHOP, sara, terms, at);
+  const genericActor = await tillActorProof(SECRET, SHOP, sara);
   let terminal = '';
   const ev = (id, eventType, extra) => cash.onRequestPost({ env: w.env, request: req('/api/cash-sessions', { method: 'POST', cookie: cookieTill + terminal,
     body: { merchant: SHOP, terminalId: 'term-banc-1', sessionId: 'shift-1', id, eventType, openedAt: now - 1000, occurredAt: now, ...extra } }) });
@@ -424,8 +431,28 @@ console.log('■ Remise, espèces, tiroir, clôture sans le droit');
   await ev('ev-2', 'movement', { ...out, actorId: 'pin-sara', sellerProof: linaSeller });
   const f2 = flags().filter((r) => r.c.ref === 'ev-2');
   prove('money.cash', f2.length === 1 && f2[0].subject_label === 'Lina Saidi', 'la preuve dit Lina : inscrit une fois, à son nom, quoi que la caisse déclare');
-  await ev('ev-3', 'movement', { ...out, actorId: 'pin-lina', actorProof: saraActor, sellerProof: linaSeller });
-  check(!flags().some((r) => r.c.ref === 'ev-3'), 'Sara a validé sur le pavé (sa preuve) et a le droit : rien n’est inscrit');
+  const ok = await saraAct({ kind: 'cash', amountCents: 2000, move: 'out' });
+  await ev('ev-3', 'movement', { ...out, actorId: 'pin-lina', actProof: ok, sellerProof: linaSeller });
+  check(!flags().some((r) => r.c.ref === 'ev-3'), 'Sara a validé CE geste sur le pavé (sa preuve : espèces, 20 MAD, sortie) : rien n’est inscrit');
+  await ev('ev-3b', 'movement', { ...out, actorId: 'pin-lina', actProof: ok, sellerProof: linaSeller });
+  check(flags().some((r) => r.c.ref === 'ev-3b' && r.subject_label === 'Lina Saidi'), 'la même preuve ne couvre pas une seconde sortie : celle-ci revient à Lina');
+  await ev('ev-3c', 'movement', { ...out, movementAmountCents: 50000, actorId: 'pin-lina', actProof: await saraAct({ kind: 'cash', amountCents: 2000, move: 'out' }), sellerProof: linaSeller });
+  check(flags().some((r) => r.c.ref === 'ev-3c'), 'une preuve pour 20 MAD ne couvre pas une sortie de 500 MAD');
+  /* Le sondage du juge : une preuve vieille d'une heure, un fait antidaté dans sa fenêtre. */
+  const hourAgo = Date.now() - 3600000;
+  const old = await saraAct({ kind: 'cash', amountCents: 2000, move: 'out' }, hourAgo);
+  await cash.onRequestPost({ env: w.env, request: req('/api/cash-sessions', { method: 'POST', cookie: cookieTill + terminal,
+    body: { merchant: SHOP, terminalId: 'term-banc-1', sessionId: 'shift-1', id: 'ev-old', eventType: 'movement', openedAt: hourAgo - 1000, occurredAt: hourAgo + 60000,
+      ...out, actorId: 'pin-sara', actProof: old } }) });
+  check(flags().some((r) => r.c.ref === 'ev-old' && r.subject === 'staff:unproven'), 'une sortie ANTIDATÉE avec une preuve d’il y a une heure : « auteur non prouvé » (la réception juge)');
+  await ev('ev-gen', 'movement', { ...out, actorId: 'pin-sara', actProof: genericActor, actorProof: genericActor });
+  check(flags().some((r) => r.c.ref === 'ev-gen' && r.subject === 'staff:unproven'), 'la preuve d’identité générique (5 min, sans acte) ne couvre aucune sortie');
+  const drawerProof = await saraAct({ kind: 'drawer' });
+  await ev('ev-dr', 'movement', { ...out, actorId: 'pin-sara', actProof: drawerProof });
+  check(flags().some((r) => r.c.ref === 'ev-dr'), 'une preuve « tiroir » ne couvre pas une sortie d’espèces');
+  const viaPad = await (await pinVerify(w, CODES.manager, { kind: 'cash', amountCents: 2000, move: 'out' })).json();
+  await ev('ev-pad', 'movement', { ...out, actorId: 'pin-lina', actProof: viaPad.actProof });
+  check(typeof viaPad.actProof === 'string' && !flags().some((r) => r.c.ref === 'ev-pad'), '/api/pin/verify signe la preuve de ce geste, et la sortie qu’elle couvre n’est pas inscrite');
   await ev('ev-4', 'movement', { movementKind: 'no-sale', movementAmountCents: 0, movementReason: 'Monnaie', actorId: 'pin-lina', sellerProof: linaSeller });
   prove('sales.drawer', flags().some((r) => r.c.ref === 'ev-4' && r.c.permission === 'sales.drawer'), 'tiroir ouvert sans vente, sans le droit : inscrit');
   await ev('ev-5', 'close', { expectedCents: 6000, countedCents: 6000, gapCents: 0, actorId: 'pin-lina', sellerProof: linaSeller });
@@ -433,12 +460,61 @@ console.log('■ Remise, espèces, tiroir, clôture sans le droit');
   const disc = (id, body, off) => saleTruth.flagSaleDiscount(w.env, SHOP, id, body, Date.now(), 10000, off, 'pin-sara');
   await disc('sale-d1', { seller: { proof: linaSeller } }, 500);
   await disc('sale-d2', { seller: { proof: linaSeller } }, 3000);
-  await disc('sale-d3', { actorProof: saraActor, seller: { proof: linaSeller } }, 3000);
+  await disc('sale-d3', { actProof: await saraAct({ kind: 'discount', pct: 30 }), seller: { proof: linaSeller } }, 3000);
+  await disc('sale-d4', { actProof: await saraAct({ kind: 'discount', pct: 10 }), seller: { proof: linaSeller } }, 4000);
   const d = flags().filter((r) => r.c.permission === 'sales.discount');
-  prove('sales.discount', d.length === 1 && d[0].c.ref === 'sale-d2' && d[0].subject_label === 'Lina Saidi' && d[0].c.percent === 30,
-    '5 % sous le seuil passe ; 30 % par Lina est inscrit ; validé par Sara (preuve), rien');
+  prove('sales.discount', d.length === 2 && d[0].c.ref === 'sale-d2' && d[0].subject_label === 'Lina Saidi' && d[0].c.percent === 30 && d[1].c.ref === 'sale-d4',
+    '5 % sous le seuil passe ; 30 % par Lina est inscrit ; validé à 30 % par Sara, rien ; un accord pour 10 % ne couvre pas 40 %');
   const week = await state(w);
   check(week.unauthorizedWeek === flags().length, 'l’écran compte les faits sans le droit de la semaine');
+}
+
+/* ── 9b · Une identité fabriquée après un retrait ───────────────────────── */
+console.log('■ Un gérant ne se fabrique pas un second code');
+{
+  const w = world();
+  await activate(w);
+  await without(w, 'm-sara', 'sales.refund');
+  const refundAct = { kind: 'refund', refundId: 'rf-9', originalSaleId: 'sale-1', amountCents: 1000, refundMethod: 'cash' };
+  const doc = w.sql.prepare('SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = ?').get(SHOP, 'team');
+  const team = JSON.parse(doc.data);
+  team.members.push({ id: 'm-sara2', firstName: 'Sara', lastName: 'Deux', function: 'Gérant' });
+  const viaTeam = await store.onRequestPost({ env: w.env, request: req('/api/store', { method: 'POST', cookie: cookieManager, body: { merchant: SHOP, feature: 'team', baseRev: doc.rev, data: team } }) });
+  const held = await person(w, 'm-sara2');
+  check(viaTeam.status === 200 && held.held === true && held.perms.length === 0, 'la fiche « Sara Deux · Gérant » ajoutée par Sara : aucun droit tant que le patron ne l’a pas revue');
+  const pins = [{ name: 'Sara Deux', role: 'Gérant', pin: '7741' }, { name: 'Lina Saidi', role: 'Caissière', pin: CODES.caisse }, { name: 'Hind Amrani', role: 'Responsable', pin: CODES.hind }];
+  const pub = await config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie: cookieManager, body: { merchant: SHOP, name: 'Café Droits', pins } }) });
+  const minted = await (await pinVerify(w, '7741', refundAct)).json();
+  check(pub.status === 200 && minted.ok && !minted.approval && minted.permission.granted === false, 'et son code tout neuf ne valide pas le remboursement qu’on lui a retiré');
+  const pins2 = [{ name: 'Joker', role: 'Gérant', pin: '7742' }, ...pins];
+  await config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie: cookieManager, body: { merchant: SHOP, name: 'Café Droits', pins: pins2 } }) });
+  const joker = await (await pinVerify(w, '7742', refundAct)).json();
+  check(joker.ok && !joker.approval, 'un code publié sans fiche (« Joker · Gérant ») : retenu aussi');
+  const log = (await state(w)).audit.map((a) => a.change.kind);
+  check(log.includes('team-added') && log.includes('code-added'), 'le journal montre la fiche et le code ajoutés, à côté des droits');
+  await post(w, cookieOwner, { action: 'save-staff', key: 'm-sara2', preset: 'manager', perms: Catalog.effective('manager') });
+  check((await person(w, 'm-sara2')).held === false, 'le patron revoit Sara Deux : la retenue tombe avec son choix');
+  const w2 = world();
+  await activate(w2);
+  const doc2 = w2.sql.prepare('SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = ?').get(SHOP, 'team');
+  const t2 = JSON.parse(doc2.data);
+  t2.members.push({ id: 'm-new', firstName: 'Nouvelle', lastName: 'Caissière', function: 'Caissière' });
+  await store.onRequestPost({ env: w2.env, request: req('/api/store', { method: 'POST', cookie: cookieOwner, body: { merchant: SHOP, feature: 'team', baseRev: doc2.rev, data: t2 } }) });
+  check((await person(w2, 'm-new')).held === false, 'une fiche ajoutée par le propriétaire part de son rôle, sans retenue');
+}
+
+/* ── 9c · Un code « Propriétaire » qui écrit des droits ─────────────────── */
+console.log('■ Le journal nomme le code');
+{
+  const w = world();
+  await activate(w);
+  const s = await person(w, 'm-lina');
+  const res = await post(w, cookieNadia, { action: 'save-staff', key: 'm-lina', preset: s.preset, perms: [...s.perms, 'sales.refund'] });
+  const last = audit(w).at(-1);
+  check(res.status === 200 && last.actor === 'code:pin-nadia' && last.actor_label === 'Nadia Patron · code propriétaire',
+    'une écriture faite par le code « Propriétaire » de Nadia est inscrite à son nom, pas « propriétaire »');
+  await post(w, cookieOwner, { action: 'settings', freeDiscountPct: 12 });
+  check(audit(w).at(-1).actor === 'account:acc-droits' && audit(w).at(-1).actor_label === 'compte du propriétaire', 'celle du compte lui-même reste « compte du propriétaire »');
 }
 
 /* ── 10 · Tables 0028 absentes : la règle d'avant, sans 503 ─────────────── */

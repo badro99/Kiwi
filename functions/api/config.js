@@ -36,6 +36,7 @@ import {
 } from '../auth/_lib.js';
 import { publishStaffCredentials, accountOwnerRole } from './_staff-publication.js';
 import { sessionTierAtLeast } from '../auth/_session-tier.js';
+import { codeHolds } from './_permissions.js';
 
 /* ── Ce qu'un établissement TOUT NEUF reçoit ────────────────────────────────
  * Quatre modules qui ne servent qu'à une partie des clients : un snack de quartier
@@ -582,9 +583,11 @@ export async function onRequestPost(context) {
 
   // ── PINs (only when the client actually sent a list) ───────────────────────
   if (Array.isArray(body && body.pins)) {
+    const holdCodes = await codeHolds(request, env, merchant, body); // un code qui fait naître une identité hors du patron : retenu (_permissions.js)
     const published = await publishStaffCredentials(env, merchant, body);
     if (published instanceof Response) return published;
     Object.assign(result, published);
+    if (holdCodes) await holdCodes();
   }
 
   // ── Business type (only when sent) — upsert without disturbing features/plan ─

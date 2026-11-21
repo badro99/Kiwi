@@ -40,8 +40,10 @@ async function publicState(env, merchant, full) {
     const eff = permsIn(state, m);
     const row = state.rows.get(m.key);
     if (!full) return { key: m.key, name: m.name, preset: eff.preset, perms: eff.perms };
+    /* `today` : ce que la personne fait aujourd'hui, règle d'avant. */
     const before = legacyPerms(m.role);
-    return { key: m.key, name: m.name, role: m.role, defaultPreset: m.defaultPreset, ownerTitle: m.ownerTitle, preset: eff.preset,
+    return { key: m.key, name: m.name, role: m.role, defaultPreset: m.defaultPreset, ownerTitle: m.ownerTitle, ownerAccess: !!eff.ownerAccess,
+      held: !!eff.held, heldBy: eff.held && row ? row.heldBy : '', preset: eff.preset,
       grants: eff.grants, denies: eff.denies, perms: eff.perms, custom: !!row, updatedTs: row ? row.updatedTs : 0,
       today: before.perms, todayPartial: before.partial, proposed: Catalog.presetPerms(m.defaultPreset, state.presets) };
   });
@@ -109,7 +111,8 @@ function staffStmt(env, merchant, key, name, preset, grants, denies, actor, ts) 
     `INSERT INTO staff_permissions (merchant, staff_key, preset, grants, denies, name, updated_ts, updated_by)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(merchant, staff_key) DO UPDATE SET preset = excluded.preset, grants = excluded.grants,
-       denies = excluded.denies, name = excluded.name, updated_ts = excluded.updated_ts, updated_by = excluded.updated_by`
+       denies = excluded.denies, name = excluded.name, updated_ts = excluded.updated_ts, updated_by = excluded.updated_by,
+       held_ts = 0, held_by = ''`
   ).bind(merchant, key, preset, JSON.stringify(grants), JSON.stringify(denies), clip(name, 80), ts, clip(actor.id, 120));
 }
 async function commit(env, statements) {
@@ -145,7 +148,7 @@ function legacyPlan(body, roster, state) {
   const people = [];
   for (const m of roster) {
     const rule = mapped.people[m.key];
-    if (!rule) continue;
+    if (!rule || m.ownerTitle) continue;
     const cur = permsIn(state, m);
     const row = state.rows.get(m.key);
     const grants = Catalog.cleanList([...((row && row.grants) || []), ...rule.grants]);
@@ -199,6 +202,7 @@ async function writePermissions({ request, env }) {
     ).bind(merchant, pct, ts, clip(actor.id, 120), ts, clip(actor.id, 120))];
     const summary = [];
     for (const m of roster) {
+      if (m.ownerTitle) { summary.push({ key: m.key, choice: 'owner', perms: Catalog.ALL.slice() }); continue; }
       /* Par défaut, chacun garde ses droits d'aujourd'hui : activer n'en donne
          jamais un seul de plus sans que le propriétaire l'ait choisi. Une
          personne déjà réglée (activation précédente) garde son réglage. */
@@ -237,13 +241,16 @@ async function writePermissions({ request, env }) {
   if (action === 'save-staff' || action === 'copy-from') {
     const person = byKey.get(clip(body.key, 120));
     if (!person) return json({ error: 'unknown-staff' }, 404);
+    /* Un code à intitulé de propriétaire ouvre le compte comme le propriétaire :
+       ses droits ne se règlent pas ici, on change son intitulé dans Équipe. */
+    if (person.ownerTitle) return json({ error: 'owner-access' }, 409);
     const before = permsIn(state, person);
     let preset, wanted;
     if (action === 'copy-from') {
       const source = byKey.get(clip(body.from, 120));
       if (!source || source.key === person.key) return json({ error: 'unknown-staff' }, 404);
       const eff = permsIn(state, source);
-      preset = eff.preset;
+      preset = eff.ownerAccess ? 'manager' : eff.preset;
       wanted = eff.perms;
     } else {
       preset = clip(body.preset, 16);

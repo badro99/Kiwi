@@ -295,6 +295,8 @@ CREATE TABLE IF NOT EXISTS staff_permissions (
   name       TEXT NOT NULL DEFAULT '',
   updated_ts INTEGER NOT NULL,
   updated_by TEXT NOT NULL DEFAULT '',
+  held_ts    INTEGER NOT NULL DEFAULT 0,
+  held_by    TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (merchant, staff_key)
 );
 -- Les rôles par défaut modifiés par le propriétaire.
@@ -329,6 +331,17 @@ CREATE TABLE IF NOT EXISTS staff_permission_audit (
   change        TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_staff_permission_audit ON staff_permission_audit (merchant, ts);
+-- La preuve d'un geste (espèces, tiroir, clôture, remise) ne couvre qu'un fait :
+-- la première route qui la consomme y attache sa référence (functions/api/_act-proof.js).
+CREATE TABLE IF NOT EXISTS staff_permission_proofs (
+  merchant TEXT NOT NULL,
+  jti      TEXT NOT NULL,
+  kind     TEXT NOT NULL,
+  ref      TEXT NOT NULL,
+  staff_id TEXT NOT NULL DEFAULT '',
+  used_ts  INTEGER NOT NULL,
+  PRIMARY KEY (merchant, jti)
+);
 -- Base déjà déployée : `node tools/d1-schema.mjs` dit ce qui manque.
 -- The site gate (functions/_middleware.js → accountActive) revokes a live
 -- session as soon as its account row is missing (deleted) or status='suspended'.

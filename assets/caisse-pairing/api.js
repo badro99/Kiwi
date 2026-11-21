@@ -20,9 +20,9 @@
     authorizeTill: function (code, opts) {
       var roles = window.KiwiRoles;
       if (!roles || typeof roles.opensTill !== 'function') return Promise.resolve(false);
-      return verifyCode(code, undefined, opts && opts.needsServer ? { needsServer: true } : undefined).then(function (who) {
+      return verifyCode(code, opts && opts.action ? opts.action : undefined, opts && opts.needsServer ? { needsServer: true } : undefined).then(function (who) { // opts.action : l'acte du pavé, le serveur signe la preuve de CE geste
         if (!who || !roles.opensTill(who.role || '')) return false;
-        lastOperator = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Caissier', role: String(who.role || '').trim(), actorProof: who.actorProof || '' };
+        lastOperator = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Caissier', role: String(who.role || '').trim(), actorProof: who.actorProof || '', actProof: who.actProof || '' };
         return true;
       });
     },
@@ -36,7 +36,7 @@
          * (jamais le code) pour que la surface qui a demandé l'accord puisse
          * l'écrire dans sa vente. */
         if (action && action.kind === 'refund' && !who.approval) return false;
-        lastManager = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Responsable', role: String(who.role || '').trim(), approval: String(who.approval || ''), actorProof: String(who.actorProof || '') };
+        lastManager = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Responsable', role: String(who.role || '').trim(), approval: String(who.approval || ''), actorProof: String(who.actorProof || ''), actProof: String(who.actProof || '') };
         lastOperator = lastManager;
         return true;
       });

@@ -258,11 +258,12 @@ export async function onRequestPost({ request, env }) {
     /* Des espèces sorties ou entrées, le tiroir ouvert sans vente, la journée
        clôturée, sans le droit : le tiroir a déjà bougé, on garde l'écriture (le
        compte du soir en dépend) et on l'inscrit au journal des droits du patron.
-       L'auteur jugé est celui de la preuve signée (`actorProof`), jamais
-       `actorId`, que la caisse déclare (functions/api/_permissions.js). */
+       L'auteur jugé est celui de la preuve signée (`actProof` du geste, ou
+       `sellerProof` de la personne en poste), jamais `actorId`, que la caisse
+       déclare (functions/api/_permissions.js, _act-proof.js). */
     if (eventType === 'movement' || eventType === 'close') {
-      const proven = (typeof body.actorProof === 'string' && body.actorProof ? await provenActor(env, merchant, body.actorProof, occurredAt) : null)
-        || (typeof body.sellerProof === 'string' && body.sellerProof ? await provenActor(env, merchant, body.sellerProof, occurredAt) : null);
+      const proven = await provenActor(env, merchant, { actProof: body.actProof, sellerProof: body.sellerProof },
+        { kind: eventType === 'close' ? 'close-day' : movementKind === 'no-sale' ? 'drawer' : 'cash', move: movementKind, amountCents: movementAmount, at: occurredAt, ref: id });
       await flagUnauthorized(env, merchant, proven, eventType === 'close' ? 'money.close-day' : movementKind === 'no-sale' ? 'sales.drawer' : 'money.cash', id,
         eventType === 'close' ? { claimed: actorId, gapCents: gapFinal } : { movementKind, amountCents: movementAmount, reason: movementReason, claimed: actorId });
     }
