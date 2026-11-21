@@ -1532,8 +1532,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "275",
-    "sha": "69d72bec2e096e30"
+    "v": "276",
+    "sha": "0533473e2aace87e"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2268,8 +2268,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "139",
-    "sha": "40391b0001952324"
+    "v": "140",
+    "sha": "39e197910abc17be"
   },
   "assets/stock/alerts.js": {
     "v": "6",
@@ -2316,8 +2316,8 @@
     "sha": "e8e116e60a84d222"
   },
   "assets/stock/suppliers.js": {
-    "v": "3",
-    "sha": "18f15509652d9ab3"
+    "v": "4",
+    "sha": "5ee5ec64ce25bffa"
   },
   "assets/store-templates.js": {
     "v": "4",

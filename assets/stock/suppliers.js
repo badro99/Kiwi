@@ -12,7 +12,10 @@
  * `supplierId`, et le prochain classement les compte. */
 window.KiwiStockInternal.install('suppliers', (S) => {
   'use strict';
-  const { esc, fmtMad, lang, stMerchantSlug } = S;
+  const { esc, fmtMad: fmtMadExact, lang, stMerchantSlug } = S;
+  /* Des dirhams entiers : sur un classement, les centimes ne départagent rien
+     et font passer « 15 195,28 MAD » à la ligne. */
+  const fmtMad = (v) => fmtMadExact(Math.round(+v || 0));
   const STR = {
     fr: {
       eyebrow: 'Fournisseurs en compétition', title: 'Qui mérite la prochaine commande\u00a0?',
@@ -22,6 +25,13 @@ window.KiwiStockInternal.install('suppliers', (S) => {
       legendReturns: 'Peu de retours', colSupplier: 'Fournisseur', colParts: 'Score détaillé', colSales: 'Ventes',
       offline: 'Le classement a besoin de la boutique en ligne : connectez-vous à votre compte pour le voir.',
       empty: 'Aucun fournisseur encore. Scannez un bon de livraison ou rangez vos articles par fournisseur.',
+      noCostShort: 'non renseignée', retiredTag: 'retiré',
+      costAll: 'Aucun prix d’achat renseigné : la marge compte pour moitié chez tous vos fournisseurs. Ajoutez les prix d’achat dans les fiches article pour les départager.',
+      firstT: (n) => `Rangez vos ${n} article${n > 1 ? 's' : ''} par fournisseur, le classement se calcule tout seul.`,
+      firstSub: (v, d) => `Sur les ${d}, ces articles ont fait ${v} de ventes. Pour l’instant, elles ne comptent pour aucun fournisseur.`,
+      firstSubNone: 'Chaque vente de la caisse comptera pour le fournisseur de l’article vendu.',
+      firstAlt: 'Un bon de livraison scanné range aussi ses articles tout seul.',
+      retiredNote: (v) => `${v} de ventes portent sur des articles supprimés du catalogue sans bon de livraison : impossible de dire de quel fournisseur ils venaient.`,
       score: 'Score', revenue: 'Ventes', margin: 'Marge', sell: 'Écoulement', returns: 'Retours', units: 'Pièces vendues',
       stock: 'En stock', noCost: 'prix d’achat manquant', none: '·', ord: (n) => (n === 1 ? '1er' : `${n}e`),
       up: (n) => `${n} place${n > 1 ? 's' : ''}`, down: (n) => `${n} place${n > 1 ? 's' : ''}`, same: 'Stable', fresh: 'Nouveau',
@@ -53,12 +63,19 @@ window.KiwiStockInternal.install('suppliers', (S) => {
     },
     en: {
       eyebrow: 'Suppliers head to head', title: 'Who earns the next order?',
-      sub: (d, n) => `Ranked on till sales · ${d} · ${n} supplier${n > 1 ? 's' : ''}`,
+      sub: (d, n) => `Ranked on till sales · ${d} · ${n} supplier${n === 1 ? '' : 's'}`,
       period: { 30: '30 d', 90: '90 d', 365: '1 yr' }, periodLong: { 30: 'last 30 days', 90: 'last 90 days', 365: 'last 12 months' },
       loading: 'Ranking suppliers…', demo: 'Demo', demoNote: 'Example built on the demo catalogue. Your suppliers will show here after your first sales.',
       legendReturns: 'Few returns', colSupplier: 'Supplier', colParts: 'Score breakdown', colSales: 'Sales',
       offline: 'The ranking needs your shop online: sign in to your account to see it.',
       empty: 'No suppliers yet. Scan a delivery note or file your products by supplier.',
+      noCostShort: 'not set', retiredTag: 'deleted',
+      costAll: 'No cost prices yet: margin counts for half for every supplier. Add cost prices on your products to tell them apart.',
+      firstT: (n) => `File your ${n} product${n > 1 ? 's' : ''} by supplier and the ranking builds itself.`,
+      firstSub: (v, d) => `Over the ${d}, these products sold ${v}. Right now those sales count for no supplier.`,
+      firstSubNone: 'Every till sale will count for the supplier of the product sold.',
+      firstAlt: 'A scanned delivery note files its products on its own too.',
+      retiredNote: (v) => `${v} of sales are on products deleted from the catalogue with no delivery note, so there is no telling which supplier they came from.`,
       score: 'Score', revenue: 'Sales', margin: 'Margin', sell: 'Sell-through', returns: 'Returns', units: 'Units sold',
       stock: 'In stock', noCost: 'cost price missing', none: '·', ord: (n) => `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`,
       up: (n) => `${n} place${n > 1 ? 's' : ''}`, down: (n) => `${n} place${n > 1 ? 's' : ''}`, same: 'Steady', fresh: 'New',
@@ -90,12 +107,19 @@ window.KiwiStockInternal.install('suppliers', (S) => {
     },
     ar: {
       eyebrow: 'الموردون في منافسة', title: 'من يستحق الطلبية القادمة؟',
-      sub: (d, n) => `مرتبون حسب مبيعات الصندوق · ${d} · ${n === 1 ? 'مورد واحد' : n === 2 ? 'موردان' : n <= 10 ? `${n} موردين` : `${n} موردًا`}`,
+      sub: (d, n) => `مرتبون حسب مبيعات الصندوق · ${d} · ${n === 0 ? 'لا مورد بعد' : n === 1 ? 'مورد واحد' : n === 2 ? 'موردان' : n <= 10 ? `${n} موردين` : `${n} موردًا`}`,
       period: { 30: '30 يومًا', 90: '90 يومًا', 365: 'سنة' }, periodLong: { 30: 'آخر 30 يومًا', 90: 'آخر 90 يومًا', 365: 'آخر 12 شهرًا' },
       loading: 'جارٍ ترتيب الموردين…', demo: 'عرض تجريبي', demoNote: 'مثال محسوب على كتالوج العرض التجريبي. سيظهر موردوك هنا بعد مبيعاتك الأولى.',
       legendReturns: 'قلة المرتجعات', colSupplier: 'المورد', colParts: 'تفصيل النقطة', colSales: 'المبيعات',
       offline: 'الترتيب يحتاج المتجر متصلًا: ادخل إلى حسابك لتراه.',
       empty: 'لا يوجد موردون بعد. امسح وصل استلام أو صنّف سلعك حسب المورد.',
+      noCostShort: 'غير مسجّل', retiredTag: 'محذوفة',
+      costAll: 'لم يُسجَّل أي ثمن شراء بعد، لذا يُحتسب الهامش بالنصف لكل الموردين. أضف أثمنة الشراء في بطاقات السلع لتظهر الفوارق بينهم.',
+      firstT: () => 'صنّف سلعك حسب المورد، والترتيب يُبنى وحده.',
+      firstSub: (v, d) => `خلال ${d}، باعت هذه السلع بقيمة ${v}. حتى الآن لا تُحسب هذه المبيعات لأي مورد.`,
+      firstSubNone: 'كل بيعة في الصندوق ستُحسب لمورد السلعة المبيعة.',
+      firstAlt: 'وصل الاستلام الممسوح يصنّف سلعه تلقائيًا أيضًا.',
+      retiredNote: (v) => `${v} من المبيعات تخص سلعًا حُذفت من الكتالوج دون وصل استلام، فلا يُعرف من أي مورد جاءت.`,
       score: 'النقطة', revenue: 'المبيعات', margin: 'الهامش', sell: 'التصريف', returns: 'المرتجعات', units: 'القطع المبيعة',
       stock: 'في المخزون', noCost: 'ثمن الشراء غير مسجل', none: '·', ord: (n) => `${n}`,
       up: (n) => `${n}`, down: (n) => `${n}`, same: 'ثابت', fresh: 'جديد',
@@ -131,7 +155,7 @@ window.KiwiStockInternal.install('suppliers', (S) => {
   const PERIODS = [30, 90, 365];
   const PARTS = [['sales', 40, 'revenue'], ['margin', 30, 'margin'], ['sell', 20, 'sell'], ['returns', 10, 'returns']];
   const TTL = 60000;
-  let days = 30, last = null;
+  let days = 30, last = null, costAll = false;
   const cache = new Map();
   const isReal = () => { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) { return false; } };
 
@@ -247,6 +271,29 @@ window.KiwiStockInternal.install('suppliers', (S) => {
   .sr-money{font-size:12.5px;font-variant-numeric:tabular-nums;text-align:end}
   .sr-money small{display:block;margin-top:2px}
   .sr-sc{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.03em;text-align:end}
+  .sr-nc{font-style:normal;font-weight:500;opacity:.72}
+  .sr-pair bdi,.sr-money bdi,.sr-first-sub bdi{white-space:nowrap}
+  .sr-note.sr-costall{justify-content:flex-start;align-items:flex-start;flex-wrap:nowrap;margin:18px 0 14px;line-height:1.45}
+  .sr-costall i[data-icon],.sr-gone i[data-icon]{flex:none}
+  .sr-gone{display:flex;gap:8px;align-items:flex-start;margin-top:12px}
+  .sr-first{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:26px;align-items:center;padding:26px;border-radius:20px;background:radial-gradient(120% 90% at 100% 0%,rgba(125,242,176,.14),transparent 58%),#053B2C;color:#F7F5F0}
+  .sr-first-t{margin:0 0 10px;font-size:21px;line-height:1.25;font-weight:600;letter-spacing:-.015em;text-wrap:balance}
+  .sr-first-sub{margin:0 0 18px;font-size:14px;line-height:1.5;color:rgba(247,245,240,.78)}
+  .sr-first-sub bdi{color:#7DF2B0;font-weight:600}
+  .sr-first-act{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+  .sr-first-cta{display:inline-flex;gap:8px;align-items:center;min-height:42px;padding:0 18px;border-radius:12px;border:0;background:#F7F5F0;color:#053B2C;font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:transform .31s var(--spring),box-shadow .18s}
+  .sr-first-cta:hover{box-shadow:0 10px 24px -12px rgba(0,0,0,.6);transform:translateY(-1px)}
+  .sr-first-cta:focus-visible{outline:2px solid #7DF2B0;outline-offset:3px}
+  .sr-first-alt{font-size:12.5px;color:rgba(247,245,240,.62)}
+  .sr-ghost{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:end}
+  .sr-ghost-card{display:grid;justify-items:center;gap:8px;padding:14px 8px 16px;border-radius:14px;border:1px dashed rgba(247,245,240,.22)}
+  .sr-ghost-card.one{padding-top:22px;border-color:rgba(125,242,176,.4)}
+  .sr-ghost-card .sr-ord{font-size:15px;color:rgba(247,245,240,.7)}
+  .sr-ghost-card.one .sr-ord{color:#7DF2B0;font-size:19px}
+  .sr-ghost-card .sr-ring .trk{stroke:rgba(247,245,240,.16)}
+  .sr-ghost-card i{display:block;width:70%;height:7px;border-radius:4px;background:rgba(247,245,240,.14)}
+  .sr-ghost-card i.short{width:45%}
+  @media (max-width:720px){.sr-first{grid-template-columns:1fr;padding:20px}.sr-ghost{display:none}.sr-first-t{font-size:18px}}
   .sr-note{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:14px;padding:12px 14px;border-radius:13px;background:var(--warn-soft);color:var(--warn-ink);font-size:13px}
   .sr-state{padding:28px 18px;border-radius:14px;border:1px dashed var(--sr-line);text-align:center;color:var(--sr-mute);font-size:13px}
   .sr-skel{display:grid;grid-template-columns:1fr 1.12fr 1fr;gap:12px;align-items:end}
@@ -376,10 +423,10 @@ window.KiwiStockInternal.install('suppliers', (S) => {
     const V = L().v;
     let k, tone, ico;
     if (!s.productCount || !(s.revenue > 0)) { k = 'idle'; tone = 'idle'; ico = 'remove'; }
-    else if (s.marginRate == null) { k = 'cost'; tone = 'watch'; ico = 'sell'; }
+    else if (s.marginRate == null && !costAll) { k = 'cost'; tone = 'watch'; ico = 'sell'; }
     else if (s.sellThrough != null && s.sellThrough < 0.25 && s.stock > 0) { k = 'sleep'; tone = 'bad'; ico = 'inventory_2'; }
     else if (s.returnRate != null && s.returnRate >= 0.15) { k = 'back'; tone = 'bad'; ico = 'undo'; }
-    else if (s.marginRate < 0.4) { k = 'thin'; tone = 'watch'; ico = 'trending_down'; }
+    else if (s.marginRate != null && s.marginRate < 0.4) { k = 'thin'; tone = 'watch'; ico = 'trending_down'; }
     else if (s.rank === 1 || s.score >= 75) { k = 'reorder'; tone = 'good'; ico = 'check_circle'; }
     else if (s.sellThrough != null && s.sellThrough >= 0.6) { k = 'fast'; tone = 'good'; ico = 'check_circle'; }
     else { k = 'keep'; tone = 'ok'; ico = 'remove'; }
@@ -430,8 +477,7 @@ window.KiwiStockInternal.install('suppliers', (S) => {
   /* Les mêmes deux chiffres sur chaque marche du podium, pour comparer d'un coup d'œil. */
   function pair(s) {
     const T = L();
-    const margin = s.marginRate == null ? T.noCost : `${fmtMad(s.margin || 0)} · ${pct(s.marginRate)}`;
-    return `<span class="sr-pair"><span><small>${esc(T.revenue)}</small>${nb(fmtMad(s.revenue))}</span><span><small>${esc(T.margin)}</small>${s.marginRate == null ? esc(margin) : nb(pct(s.marginRate))}</span></span>`;
+    return `<span class="sr-pair"><span><small>${esc(T.revenue)}</small>${nb(fmtMad(s.revenue))}</span><span><small>${esc(T.margin)}</small>${s.marginRate == null ? `<em class="sr-nc">${esc(T.noCostShort)}</em>` : nb(pct(s.marginRate))}</span></span>`;
   }
 
   function stack(s) {
@@ -473,23 +519,51 @@ window.KiwiStockInternal.install('suppliers', (S) => {
       <p class="sr-sub">${esc(T.sub(T.periodLong[days], n))}</p>${data && data.demo ? `<p class="sr-demonote">${icon('info')}<span>${esc(T.demoNote)}</span></p>` : ''}</div>${seg}</div>`;
   }
 
+  /* Un montant dans une phrase garde son sens de lecture, même en arabe. */
+  function withMoney(fn, v, ...rest) { return esc(fn('\u0001', ...rest)).replace('\u0001', nb(fmtMad(v))); }
+
+  /* Ce que voit une vraie boutique avant d'avoir rangé ses articles : ses
+     propres chiffres, ce qu'ils deviendront, et un seul bouton. Mesuré sur
+     les boutiques en production (21 nov. 2026) : aucune n'avait encore de
+     fournisseur, c'était donc le premier écran de toutes. */
+  function firstHtml(data, n) {
+    const T = L(), u = data.untagged || {};
+    const sub = u.revenue > 0 ? withMoney(T.firstSub, u.revenue, T.periodLong[days]) : esc(T.firstSubNone);
+    const ghost = [2, 1, 3].map((r) => `<span class="sr-ghost-card${r === 1 ? ' one' : ''}"><span class="sr-ord">${esc(T.ord(r))}</span>${ring(null, r === 1 ? 64 : 52, 6)}<i></i><i class="short"></i></span>`).join('');
+    return `<div class="sr-first sr-anim">
+      <div class="sr-first-copy">
+        <p class="sr-first-t">${esc(T.firstT(n))}</p>
+        <p class="sr-first-sub">${sub}</p>
+        <div class="sr-first-act"><button type="button" class="sr-first-cta" data-sr-tag>${icon('category')}<span>${esc(T.tagCta)}</span></button><span class="sr-first-alt">${esc(T.firstAlt)}</span></div>
+      </div>
+      <div class="sr-ghost" aria-hidden="true">${ghost}</div>
+    </div>`;
+  }
+
   function boardHtml(data, howOpen) {
     const T = L();
     if (!data) return `${headHtml(null)}<div class="sr-skel" aria-label="${esc(T.loading)}"><i></i><i></i><i></i></div>`;
-    const loose = data.demo ? 0 : untaggedLocal().length;
+    /* Le catalogue local fait foi (c'est lui qu'on range) ; tant qu'il n'est pas
+       chargé, le compte du serveur prend le relais. */
+    const loose = data.demo ? 0 : (untaggedLocal().length || (data.untagged && data.untagged.products) || 0);
     const note = loose ? `<div class="sr-note"><span>${esc(T.untagged(loose))}</span><button type="button" class="st-btn" data-sr-tag>${esc(T.tagCta)}</button></div>` : '';
     if (data.offline) return `${headHtml(null)}<div class="sr-state">${esc(T.offline)}</div>${note}`;
     const list = data.suppliers || [];
-    if (!list.length) return `${headHtml(data)}<div class="sr-state">${esc(T.empty)}</div>${note}`;
+    costAll = list.length > 0 && list.every((s) => s.marginRate == null);
+    const gone = data.retired && data.retired.revenue > 0 ? `<p class="sr-howbody sr-gone">${icon('inventory_2')}<span>${withMoney(T.retiredNote, data.retired.revenue)}</span></p>` : '';
+    if (!list.length && !data.demo && loose) return `${headHtml(data)}${firstHtml(data, loose)}${gone}`;
+    if (!list.length) return `${headHtml(data)}<div class="sr-state">${esc(T.empty)}</div>${note}${gone}`;
+    const costNote = costAll ? `<p class="sr-note sr-costall">${icon('sell')}<span>${esc(T.costAll)}</span></p>` : '';
     const podium = list.slice(0, 3);
     const order = podium.length === 3 ? [podium[1], podium[0], podium[2]] : podium;
     const legend = `<span class="sr-legend">${PARTS.map(([k, max, label]) => `<span><i class="p-${k}"></i>${esc(k === 'returns' ? T.legendReturns : T[label])} ${max}</span>`).join('')}</span>`;
     return `${headHtml(data)}
       <div class="sr-podium" style="${podium.length < 3 ? `grid-template-columns:repeat(${podium.length},1fr)` : ''}">${order.map(cardHtml).join('')}</div>
+      ${costNote}
       <div class="sr-tablehead"><h4>${esc(T.table)}</h4>${legend}<button type="button" class="sr-howbtn" data-sr-how aria-expanded="${!!howOpen}">${icon('info')}<span>${esc(T.how)}</span></button></div>
       ${howOpen ? `<p class="sr-howbody">${esc(T.howBody)}</p>` : ''}
       <div class="sr-cols" aria-hidden="true"><span>#</span><span>${esc(T.colSupplier)}</span><span>${esc(T.colParts)}</span><span>${esc(T.colSales)}</span><span>${esc(T.score)}</span><span></span></div>
-      <ol class="sr-rows">${list.map(rowHtml).join('')}</ol>${note}`;
+      <ol class="sr-rows">${list.map(rowHtml).join('')}</ol>${note}${gone}`;
   }
 
   /* ─── La fiche d'un fournisseur ─── */
@@ -509,7 +583,8 @@ window.KiwiStockInternal.install('suppliers', (S) => {
     const want = suggestions(s);
     const rows = s.products.map((it, i) => {
       const tag = i === 0 && it.units > 0 ? `<span class="sr-pill best">${esc(T.best)}</span>` : (it.units === 0 && it.stock > 0 ? `<span class="sr-pill dead">${esc(T.sleeping)}</span>` : '');
-      return `<tr><td>${esc(it.name)}${tag}</td><td>${it.units}</td><td>${esc(fmtMad(it.revenue))}</td><td>${it.margin == null ? esc(T.none) : esc(fmtMad(it.margin))}</td><td>${it.stock}</td><td>${it.returned || 0}</td>
+      const gone = it.retired ? `<span class="sr-pill dead">${esc(T.retiredTag)}</span>` : '';
+      return `<tr><td>${esc(it.name)}${tag}${gone}</td><td>${it.units}</td><td>${esc(fmtMad(it.revenue))}</td><td>${it.margin == null ? esc(T.none) : esc(fmtMad(it.margin))}</td><td>${it.stock}</td><td>${it.returned || 0}</td>
         <td class="sr-qty"><input type="number" min="0" step="1" inputmode="numeric" value="${want[i]}" data-sr-qty="${i}" aria-label="${esc(T.orderQty)} · ${esc(it.name)}"></td></tr>`;
     }).join('');
     return `<div class="sr-pro sr-anim">

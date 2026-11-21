@@ -117,4 +117,24 @@ assert.equal((await get(`merchant=${f.merchant}`, '')).status, 403, 'sans sessio
 const foreign = await get('merchant=nobody-else', owner);
 assert.notEqual(foreign.body.merchant, 'nobody-else', 'une boutique qui n\'est pas la sienne n\'est jamais lue : le slug revient à la sienne');
 f.close();
+// Un article vendu puis supprimé (épuisé, retiré du catalogue) garde ses ventes.
+// Santos (nov. 2026) : 91 % du CA de 90 jours portait sur des articles supprimés.
+{
+  const gone = [
+    { ts: now - 5 * DAY, ref: 'G1', lines: [line('prod_old', 4, 2000, 'Robe satin M'), line('prod_lost', 2, 300, 'Top XS')] },
+  ];
+  const rc = receipts.concat([{ id: 'rcv_2', supplierId: 'sup_nord', receivedAt: now - 60 * DAY, lines: [{ itemId: 'prod_old', name: 'Robe satin', qty: 6, unitCost: 200 }] }]);
+  const g = rankSuppliers({ products, variants, suppliers, receipts: rc, sales: sales.concat(gone), returns, days: 30, now });
+  const nord = g.suppliers.find((x) => x.id === 'sup_nord');
+  const row = nord.products.find((x) => x.id === 'prod_old');
+  assert.ok(row && row.retired, 'l\'article supprimé reste dans le dossier de son fournisseur, marqué retiré');
+  assert.equal(row.name, 'Robe satin', 'son nom vient du bon de réception');
+  assert.equal(row.cost, 200, 'son prix d\'achat aussi');
+  assert.equal(nord.revenue, 250 + 2000, 'ses ventes comptent pour le fournisseur du bon');
+  assert.equal(row.stock, 0);
+  assert.deepEqual(g.retired, { products: 1, revenue: 300, units: 2 }, 'sans bon, les ventes d\'un article supprimé sont comptées à part, pas perdues');
+  assert.equal(g.untagged.products, 1, 'un article supprimé ne compte pas parmi ceux à ranger');
+  assert.deepEqual(out.retired, { products: 0, revenue: 0, units: 0 });
+}
+
 console.log('supplier-ranking: ok');

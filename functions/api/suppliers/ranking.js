@@ -71,11 +71,36 @@ export function rankSuppliers({ products, variants, suppliers, receipts, sales, 
   arr(suppliers).forEach((s) => { if (s && s.id && !s.archived) ensure(String(s.id), String(s.name || '')); });
 
   /* Le dernier bon de réception d'un article désigne son fournisseur. */
-  const fromReceipt = new Map();
+  const fromReceipt = new Map(), lastLine = new Map();
   arr(receipts).slice().sort((a, b) => tsOf(a) - tsOf(b)).forEach((r) => {
     if (!r || !r.supplierId) return;
-    arr(r.lines).forEach((l) => { if (l && l.itemId) fromReceipt.set(String(l.itemId), String(r.supplierId)); });
+    arr(r.lines).forEach((l) => {
+      if (!l || !l.itemId) return;
+      fromReceipt.set(String(l.itemId), String(r.supplierId));
+      lastLine.set(String(l.itemId), l);
+    });
   });
+
+  /* Un article vendu puis supprimé du catalogue (une boutique de mode retire
+   * ce qui est épuisé) garde ses ventes : si un bon de réception dit d'où il
+   * venait, elles comptent pour ce fournisseur, au prix d'achat du bon. Sans
+   * bon, on ne sait pas à qui les rendre : elles sont comptées à part
+   * (`retired`), pour que l'écran ne fasse pas croire qu'elles n'existent pas. */
+  const retired = { products: 0, revenue: 0, units: 0 };
+  const retiredSeen = new Set();
+  arr(sales).forEach((s) => {
+    if (!s || num(s.ts) < from || num(s.ts) > now) return;
+    arr(s.lines).forEach((l) => {
+      const id = l && l.i != null ? String(l.i) : '';
+      if (!id || prodById.has(id)) return;
+      const line = lastLine.get(id);
+      if (line) { prodById.set(id, { id, name: String(line.name || l.n || ''), cost: num(line.unitCost), retired: true }); return; }
+      if (!retiredSeen.has(id)) { retiredSeen.add(id); retired.products += 1; }
+      retired.units += Math.max(0, num(l.q));
+      retired.revenue += num(l.t);
+    });
+  });
+  retired.revenue = money(retired.revenue);
   const supplierOf = new Map();
   prodById.forEach((p, id) => {
     const sid = String(p.supplierId || '').trim() || fromReceipt.get(id) || '';
@@ -109,7 +134,7 @@ export function rankSuppliers({ products, variants, suppliers, receipts, sales, 
 
   const untagged = { products: 0, revenue: 0, units: 0 };
   prodById.forEach((p, id) => {
-    if (supplierOf.has(id)) return;
+    if (supplierOf.has(id) || p.retired) return;
     const st = perProduct.get(id);
     untagged.products += 1;
     if (st) { untagged.revenue += st.revenue; untagged.units += st.units; }
@@ -126,7 +151,7 @@ export function rankSuppliers({ products, variants, suppliers, receipts, sales, 
       units += st.units; revenue += st.revenue; returned += st.returned; inStock += left;
       if (unitCost > 0) { cost += unitCost * st.units; stockValue += unitCost * left; } else if (st.units > 0) costKnown = false;
       if (left > 0 && st.units === 0) dead += 1;
-      return { id, name: String(p.name || ''), units: st.units, revenue: money(st.revenue), stock: left, returned: st.returned, cost: unitCost > 0 ? unitCost : null,
+      return { id, name: String(p.name || ''), retired: !!p.retired, units: st.units, revenue: money(st.revenue), stock: left, returned: st.returned, cost: unitCost > 0 ? unitCost : null,
         margin: unitCost > 0 ? money(st.revenue - unitCost * st.units) : null };
     }).sort((a, b) => b.revenue - a.revenue || b.units - a.units || a.name.localeCompare(b.name));
     const margin = costKnown && revenue > 0 ? money(revenue - cost) : null;
@@ -154,7 +179,7 @@ export function rankSuppliers({ products, variants, suppliers, receipts, sales, 
   });
   list.sort((a, b) => (b.score == null ? -1 : b.score) - (a.score == null ? -1 : a.score) || b.revenue - a.revenue || a.name.localeCompare(b.name));
   list.forEach((s, i) => { s.rank = i + 1; });
-  return { suppliers: list, untagged, period: { days, from, to: now } };
+  return { suppliers: list, untagged, retired, period: { days, from, to: now } };
 }
 
 export async function onRequestGet({ request, env }) {
