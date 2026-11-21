@@ -32,6 +32,8 @@ const context = {
   svStations: [], svFormulaItems: [], optionGroups: {}, itemOptions: {},
   catLabels: { all: 'Tout' }, catOrder: ['all'], menuItems: [], activeCat: 'all',
   renderCatPills() { paints++; }, renderMenu() { paints++; },
+  /* Personne ne touche l'écran : le dessin part tout de suite. */
+  svWhenIdle: (_key, fn) => fn(),
   console,
 };
 vm.createContext(context);

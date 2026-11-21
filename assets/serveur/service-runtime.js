@@ -235,7 +235,7 @@
          append items. This also removes any old fabricated snapshot that was
          already stored in service-events but has no KDS/order counterpart. */
       Object.keys(tables).forEach((table) => reconcileCanonicalServiceBill(table));
-      try { renderAll(); } catch (_) {}
+      svWhenIdle('all', () => { try { renderAll(); } catch (_) {} });   // repeint sous le doigt, la table ou le plat touché était perdu
     }
 
     function reconcileCanonicalServiceBill(table) {
@@ -386,7 +386,7 @@
         };
         if (messages[event.status]) serviceNotify(`Table ${id}`, messages[event.status], { table: id, type: event.status, id: event.id, ts: event.ts });
       });
-      try { renderAll(); } catch (_) {}
+      svWhenIdle('all', () => { try { renderAll(); } catch (_) {} });
     }
 
     function pollServiceSync() {

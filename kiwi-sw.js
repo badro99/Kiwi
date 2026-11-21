@@ -175,8 +175,8 @@ var SHELL = [
   '/assets/serveur-shell.css?v=9',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
   '/assets/serveur/payment-support.js?v=9',
-  '/assets/serveur/service.js?v=34',
-  '/assets/serveur-app.js?v=30',
+  '/assets/serveur/service.js?v=35',
+  '/assets/serveur-app.js?v=31',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau

@@ -609,7 +609,7 @@
          une sous-catégorie ou une option par son libellé canonique. */
       try { if (window.KiwiMenuI18n) window.KiwiMenuI18n.index({ cats, items: allItems, opts: Array.isArray(d.opts) ? d.opts : [] }); } catch (_) {}
       if (!catLabels[activeCat]) activeCat = 'all';
-      try { renderCatPills(); renderMenu(); } catch (_) {}
+      svWhenIdle('carte', () => { try { renderCatPills(); renderMenu(); } catch (_) {} });   // jamais sous le doigt : le plat touché serait perdu
       return true;
     }
     function svRebuildCarte() {
@@ -679,11 +679,13 @@
             svCarteState = j.unreachable ? 'error' : 'empty';
             return false;
           }
-          try { localStorage.setItem(SV_CARTE_MIRROR + slug, JSON.stringify(m)); } catch (_) {}
+          const text = JSON.stringify(m);   // la même carte qu'au dernier tour : rien à refaire ni à repeindre
+          if (text === svCarteText && svCarteState === 'ok' && menuItems.length) return true;
+          try { localStorage.setItem(SV_CARTE_MIRROR + slug, text); } catch (_) {}
           /* Paint from the response itself. The mirror is a best-effort offline
              copy, never a prerequisite for showing today's catalogue. */
           const shown = svApplyCarte(m);
-          svCarteState = shown ? 'ok' : 'empty';
+          svCarteState = shown ? 'ok' : 'empty'; svCarteText = shown ? text : '';
           return shown;
         })
         .catch(() => { svCarteState = 'error'; return false; })
@@ -702,7 +704,7 @@
     }
     const SV_CARTE_FRESH_MS = 10000;
     const SV_CARTE_TIMEOUT_MS = 10000;
-    let svCarteFlight = null, svCarteAt = 0, svCarteSlug = '';
+    let svCarteFlight = null, svCarteAt = 0, svCarteSlug = '', svCarteText = '';
     let svCarteState = 'idle';      // idle | loading | ok | empty | error
     /* Retour à l'écran, appairage : on veut la carte du moment, pas celle
        d'il y a dix secondes. Une lecture déjà en vol est partagée. */
