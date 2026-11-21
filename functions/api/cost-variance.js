@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Kiwi · COÛT THÉORIQUE ET COÛT RÉEL — GET /api/cost-variance
+ * Kiwi · COÛT THÉORIQUE ET COÛT RÉEL · GET /api/cost-variance
  * ---------------------------------------------------------------------------
  * Remplace le moteur de démonstration (assets/venues/data.js : réel = théorique
  * × 1,04, ou consommation hebdomadaire × 4,33) par les vrais livres :
@@ -38,6 +38,7 @@ import {
 } from './_business-day.js';
 import {
   keyRatios, sumRatios, ledgerTotals, pickWindow, itemVariance, sortLeaks, resolveDays,
+  returnsCost, targetCheck, cleanTargetPct, mergeStockAggregates, stockFromAggregates,
 } from './_cost-variance.js';
 
 const noStore = { 'Cache-Control': 'no-store' };
@@ -51,9 +52,6 @@ const n0 = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const CENTS = 'COALESCE(amount_cents, CAST(ROUND(amount * 100) AS INTEGER))';
 /* Le panier d'une vente ; un panier illisible compte comme « sans détail ». */
 const LINES = "json_each(CASE WHEN s.lines IS NOT NULL AND json_valid(s.lines) THEN s.lines ELSE '[]' END)";
-/* Les lignes qui ne sont pas de la marchandise ne comptent ni comme chiffrées
- * ni comme à chiffrer (pourboire, service, taxe). */
-const GOODS = "COALESCE(json_extract(l.value, '$.kd'), '') NOT IN ('service', 'tip', 'tax', 'payment')";
 /* Valeur d'un mouvement en centimes : qty_milli × taux (MAD) ÷ 10. */
 const RATE = 'COALESCE(m.unit_cost_rate / 10000.0, m.unit_cost_cents / 100.0)';
 const META = (col, key) => `CASE WHEN ${col} IS NOT NULL AND json_valid(${col}) THEN NULLIF(json_extract(${col}, '$.${key}'), '') END`;
@@ -74,9 +72,36 @@ async function soft(promise, fallback, missing, key) {
   try { return await promise; } catch (_) { missing.push(key); return fallback; }
 }
 
+/* Chaque ligne de panier, une fois : son genre de ticket, son nom, sa
+ * quantité, son coût gelé (k ; un coût nul ou absent est INCONNU, comme
+ * assets/cost.js › frozen : la caisse épicerie envoie 0 pour un produit sans
+ * coût) et son montant. Les retours en avoir écrivent leurs lignes avec
+ * `qty`/`amountCents` : les deux formes sont lues.
+ *   sale   vente payée        gift  ticket offert (complimentary)
+ *   zero   reçu à 0 MAD (carnet, livraison à encaisser) : la marchandise part
+ *   refund remboursement ou retour : la marchandise revient */
+const LINE_ROWS = (inRangeOnly) => `WITH raw AS (
+    SELECT CASE WHEN ${CENTS.replace(/amount/g, 's.amount')} < 0 THEN 'refund'
+                WHEN s.method = 'complimentary' THEN 'gift'
+                WHEN ${CENTS.replace(/amount/g, 's.amount')} = 0 THEN 'zero' ELSE 'sale' END AS kind,
+      s.ts >= ? AS inRange,
+      COALESCE(json_extract(l.value, '$.n'), json_extract(l.value, '$.name'), 'Article') AS n,
+      COALESCE(json_extract(l.value, '$.q'), json_extract(l.value, '$.qty'), 0) AS q,
+      COALESCE(json_extract(l.value, '$.k'), json_extract(l.value, '$.unitCost')) AS kr,
+      COALESCE(json_extract(l.value, '$.t'), json_extract(l.value, '$.amountCents') / 100.0, json_extract(l.value, '$.total'), 0) AS t,
+      COALESCE(json_extract(l.value, '$.kd'), json_extract(l.value, '$.kind'), '') AS kd
+    FROM sales s, ${LINES} l
+    WHERE s.merchant IN (?, ?) AND s.ts >= ? AND s.ts < ? AND s.void_ts IS NULL AND json_type(l.value) = 'object'
+  ), ln AS (
+    SELECT kind, inRange, n, q, t, CASE WHEN typeof(kr) IN ('integer', 'real') AND kr > 0 THEN kr END AS k
+    FROM raw WHERE kd NOT IN ('service', 'tip', 'tax', 'payment')${inRangeOnly ? ' AND inRange' : ''}
+  )`;
+const AVG_LOOKBACK_MS = 90 * 86400000;
+
 async function salesBlock(env, merchant, legacy, from, to) {
   const scope = [merchant, legacy || merchant, from, to];
-  const [tot, lines, uncosted] = await Promise.all([
+  const lineScope = [from, merchant, legacy || merchant, from, to];
+  const [tot, kinds, uncosted, returned] = await Promise.all([
     one(env, `SELECT
         SUM(CASE WHEN c >= 0 THEN c ELSE 0 END) AS pos,
         SUM(CASE WHEN c < 0 THEN -c ELSE 0 END) AS refunds,
@@ -85,32 +110,43 @@ async function salesBlock(env, merchant, legacy, from, to) {
         SUM(CASE WHEN c > 0 THEN 1 ELSE 0 END) AS n
       FROM (SELECT ${CENTS} AS c, discount_amount_cents AS d, lines FROM sales
             WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL)`, ...scope),
-    one(env, `SELECT
-        SUM(CASE WHEN json_type(l.value, '$.k') IN ('integer', 'real')
-                 THEN json_extract(l.value, '$.q') * json_extract(l.value, '$.k') ELSE 0 END) AS cogs,
-        SUM(CASE WHEN json_type(l.value, '$.k') IN ('integer', 'real') THEN json_extract(l.value, '$.t') ELSE 0 END) AS costed,
-        SUM(json_extract(l.value, '$.t')) AS total
-      FROM sales s, ${LINES} l
-      WHERE s.merchant IN (?, ?) AND s.ts >= ? AND s.ts < ? AND s.void_ts IS NULL
-        AND ${CENTS.replace(/amount/g, 's.amount')} > 0 AND ${GOODS}`, ...scope),
-    all(env, `SELECT json_extract(l.value, '$.n') AS name, SUM(json_extract(l.value, '$.q')) AS qty,
-             SUM(json_extract(l.value, '$.t')) AS total
-      FROM sales s, ${LINES} l
-      WHERE s.merchant IN (?, ?) AND s.ts >= ? AND s.ts < ? AND s.void_ts IS NULL
-        AND ${CENTS.replace(/amount/g, 's.amount')} > 0 AND ${GOODS}
-        AND json_type(l.value, '$.k') IS NULL
-      GROUP BY name ORDER BY total DESC LIMIT 12`, ...scope),
+    all(env, `${LINE_ROWS(true)}
+      SELECT kind, SUM(CASE WHEN k IS NOT NULL THEN q * k ELSE 0 END) AS cogs,
+             SUM(CASE WHEN k IS NOT NULL THEN t ELSE 0 END) AS costed, SUM(t) AS total, COUNT(*) AS lines
+      FROM ln GROUP BY kind`, ...lineScope),
+    all(env, `${LINE_ROWS(true)}
+      SELECT n AS name, SUM(q) AS qty, SUM(t) AS total FROM ln
+      WHERE kind != 'refund' AND k IS NULL GROUP BY n ORDER BY total DESC LIMIT 12`, ...lineScope),
+    /* Les lignes rendues dans la période, et le coût moyen gelé du même
+       article vendu dans les 90 jours qui précèdent la fin de la période. */
+    all(env, `${LINE_ROWS(false)}
+      SELECT n AS name,
+        SUM(CASE WHEN kind = 'refund' AND inRange AND k IS NOT NULL THEN ABS(q) * k ELSE 0 END) AS costedMad,
+        SUM(CASE WHEN kind = 'refund' AND inRange AND k IS NULL THEN ABS(q) ELSE 0 END) AS qty,
+        SUM(CASE WHEN kind = 'refund' AND inRange AND k IS NULL THEN ABS(t) ELSE 0 END) AS total,
+        SUM(CASE WHEN kind != 'refund' AND k IS NOT NULL THEN q * k END) / SUM(CASE WHEN kind != 'refund' AND k IS NOT NULL THEN q END) AS avgCost
+      FROM ln GROUP BY n HAVING SUM(CASE WHEN kind = 'refund' AND inRange THEN 1 ELSE 0 END) > 0 LIMIT 500`,
+      from, merchant, legacy || merchant, from - AVG_LOOKBACK_MS, to),
   ]);
-  const lineTotal = Math.round(n0(lines.total) * 100);
-  const costed = Math.round(n0(lines.costed) * 100);
+  const k = Object.fromEntries(kinds.map((r) => [r.kind, r]));
+  const cents = (kind, col) => Math.round(n0(k[kind] && k[kind][col]) * 100);
+  const back = returnsCost(returned.map((r) => ({ name: r.name, costedCents: Math.round(n0(r.costedMad) * 100), qty: n0(r.qty), cents: Math.round(n0(r.total) * 100), avgCost: r.avgCost })));
+  const lineTotal = cents('sale', 'total');
+  const costed = cents('sale', 'costed');
   return {
     salesCents: n0(tot.pos), refundCents: n0(tot.refunds), discountCents: n0(tot.disc), saleCount: n0(tot.n),
-    cogsCents: Math.round(n0(lines.cogs) * 100),
+    cogsCents: cents('sale', 'cogs') + cents('zero', 'cogs'),
+    returnsCostCents: back.returnsCostCents,
+    giftCostCents: cents('gift', 'cogs'),
     coverage: {
       lineRevenueCents: lineTotal,
       costedRevenueCents: costed,
       costedPct: lineTotal > 0 ? Math.round(costed / lineTotal * 1000) / 10 : null,
       undetailedCents: n0(tot.bare),
+      creditSalesCostCents: cents('zero', 'cogs'),
+      giftLines: n0(k.gift && k.gift.lines),
+      uncostedReturnCents: back.uncostedReturnCents,
+      uncostedReturnLines: back.uncostedReturnLines,
       uncosted: uncosted.map((r) => ({ name: str(r.name, 60) || 'Article', qty: Math.round(n0(r.qty) * 1000) / 1000, cents: Math.round(n0(r.total) * 100) })),
     },
   };
@@ -132,27 +168,85 @@ async function ledgerBlock(env, merchant, from, to) {
 }
 
 /* Stock maintenant, et le coût moyen d'entrée de chaque article (les entrées
- * chiffrées d'abord ; à défaut, tout mouvement chiffré). */
-async function stockBlock(env, merchant) {
-  const rows = await all(env, `SELECT m.item_id AS itemId, SUM(m.qty_milli) / 1000.0 AS onHand,
-        SUM(CASE WHEN m.qty_milli > 0 AND m.reason IN ('opening', 'receipt', 'transfer-in', 'production-output') AND ${RATE} IS NOT NULL THEN m.qty_milli * ${RATE} END)
-          / SUM(CASE WHEN m.qty_milli > 0 AND m.reason IN ('opening', 'receipt', 'transfer-in', 'production-output') AND ${RATE} IS NOT NULL THEN m.qty_milli END) AS inCost,
-        SUM(CASE WHEN ${RATE} IS NOT NULL THEN ABS(m.qty_milli) * ${RATE} END)
-          / SUM(CASE WHEN ${RATE} IS NOT NULL THEN ABS(m.qty_milli) END) AS anyCost
-      FROM inventory_movements m WHERE m.merchant = ? GROUP BY m.item_id`, merchant);
-  const cost = new Map();
-  let value = 0, noCost = 0, items = 0;
-  for (const r of rows) {
-    const c = r.inCost != null ? n0(r.inCost) : (r.anyCost != null ? n0(r.anyCost) : null);
-    if (c != null && c > 0) cost.set(String(r.itemId), c);
-    const q = n0(r.onHand);
-    if (q > 0) {
-      items++;
-      if (c != null && c > 0) value += q * c * 100;
-      else noCost++;
-    }
+ * chiffrées d'abord ; à défaut, tout mouvement chiffré). Lu depuis un
+ * instantané (cost_stock_snapshots) + les mouvements arrivés depuis son
+ * curseur srv_ts, par l'index (merchant, srv_ts) : un rafraîchissement ne
+ * relit plus tout l'historique. L'instantané avance quand la suite grossit ou
+ * vieillit, et seulement jusqu'à « maintenant − 5 min » : un mouvement dont le
+ * curseur a été tiré mais pas encore écrit (movements.js › nextCursor) ne peut
+ * pas tomber derrière lui. */
+const SNAPSHOT_SETTLE_MS = 5 * 60000;
+const SNAPSHOT_REFRESH_ROWS = 200;
+const SNAPSHOT_MAX_AGE_MS = 6 * 3600000;
+const IN_REASONS = "('opening', 'receipt', 'transfer-in', 'production-output')";
+async function stockBlock(env, merchant, now = Date.now()) {
+  let snap = null;
+  try { snap = await one(env, 'SELECT cursor, items_json, updated_ts FROM cost_stock_snapshots WHERE merchant = ?', merchant); } catch (_) { snap = null; }
+  let base = {};
+  const cursor = snap && snap.cursor != null ? Number(snap.cursor) : -1;
+  if (cursor >= 0) { try { base = JSON.parse(snap.items_json || '{}') || {}; } catch (_) { base = {}; } }
+  const settleAt = now - SNAPSHOT_SETTLE_MS;
+  const rows = await all(env, `SELECT m.item_id AS itemId, m.srv_ts <= ? AS settled, COUNT(*) AS n,
+        SUM(m.qty_milli) AS q,
+        SUM(CASE WHEN m.qty_milli > 0 AND m.reason IN ${IN_REASONS} AND ${RATE} IS NOT NULL THEN m.qty_milli * ${RATE} ELSE 0 END) AS inV,
+        SUM(CASE WHEN m.qty_milli > 0 AND m.reason IN ${IN_REASONS} AND ${RATE} IS NOT NULL THEN m.qty_milli ELSE 0 END) AS inQ,
+        SUM(CASE WHEN ${RATE} IS NOT NULL THEN ABS(m.qty_milli) * ${RATE} ELSE 0 END) AS anyV,
+        SUM(CASE WHEN ${RATE} IS NOT NULL THEN ABS(m.qty_milli) ELSE 0 END) AS anyQ
+      FROM inventory_movements m WHERE m.merchant = ? AND m.srv_ts > ?
+      GROUP BY m.item_id, settled`, settleAt, merchant, cursor);
+  const settled = rows.filter((r) => Number(r.settled) === 1);
+  const settledRows = settled.reduce((a, r) => a + n0(r.n), 0);
+  const nextBase = mergeStockAggregates(base, settled);
+  const agg = mergeStockAggregates(nextBase, rows.filter((r) => Number(r.settled) !== 1));
+  const stale = cursor < 0 || settledRows >= SNAPSHOT_REFRESH_ROWS || now - n0(snap && snap.updated_ts) > SNAPSHOT_MAX_AGE_MS;
+  let snapshot = cursor >= 0 ? 'read' : 'none';
+  if (stale && settleAt > cursor) {
+    try {
+      await env.DB.prepare(`INSERT INTO cost_stock_snapshots (merchant, cursor, items_json, updated_ts) VALUES (?, ?, ?, ?)
+          ON CONFLICT (merchant) DO UPDATE SET cursor = excluded.cursor, items_json = excluded.items_json, updated_ts = excluded.updated_ts
+          WHERE excluded.cursor > cost_stock_snapshots.cursor`).bind(merchant, settleAt, JSON.stringify(nextBase), now).run();
+      snapshot = 'written';
+    } catch (_) { /* table absente : le calcul reste juste, seulement plus lent */ }
   }
-  return { cost, stockValueCents: Math.round(value), stockItems: items, stockNoCost: noCost };
+  return { ...stockFromAggregates(agg), snapshot, deltaRows: rows.reduce((a, r) => a + n0(r.n), 0) };
+}
+
+/* Ce qui voyage entre deux magasins du compte.
+ *   · registre : une sortie `transfer-out` sans l'entrée `transfer-in` de même
+ *     référence chez le destinataire (90 jours), valorisée à son coût de sortie ;
+ *   · boutiques : les transferts « en route » ou « partiel » du document
+ *     stock-transfers (functions/api/stock-transfers.js), en pièces : ce
+ *     document ne porte pas de coût, la valeur n'est pas inventée. */
+const TRANSIT_LOOKBACK_MS = 90 * 86400000;
+async function transitBlock(env, merchant, family, now = Date.now()) {
+  const list = family.length ? family : [merchant];
+  const [ledger, pieces] = await Promise.all([
+    all(env, `SELECT m.ref_id AS ref,
+          MIN(CASE WHEN m.reason = 'transfer-out' THEN m.merchant END) AS sender,
+          SUM(CASE WHEN m.reason = 'transfer-out' THEN -m.qty_milli ELSE 0 END) AS outQ,
+          SUM(CASE WHEN m.reason = 'transfer-out' THEN -m.qty_milli * ${RATE} ELSE 0 END) / 10.0 AS outCents,
+          SUM(CASE WHEN m.reason = 'transfer-in' THEN m.qty_milli ELSE 0 END) AS inQ
+        FROM inventory_movements m
+        WHERE m.merchant IN (${list.map(() => '?').join(',')}) AND m.occurred_ts >= ?
+          AND m.reason IN ('transfer-out', 'transfer-in') AND m.ref_id != ''
+        GROUP BY m.ref_id`, ...list, now - TRANSIT_LOOKBACK_MS),
+    one(env, `SELECT COUNT(DISTINCT t.key) AS n,
+          SUM(MAX(0, COALESCE(json_extract(l.value, '$.qty'), 0) - COALESCE(json_extract(l.value, '$.received'), 0) - COALESCE(json_extract(l.value, '$.missing'), 0))) AS pieces
+        FROM store_docs d, json_each(CASE WHEN json_valid(d.data) THEN json_extract(d.data, '$.list') END) t,
+             json_each(json_extract(t.value, '$.lines')) l
+        WHERE d.merchant = ? AND d.feature = 'stock-transfers'
+          AND json_extract(t.value, '$.status') IN ('en-route', 'partiel')
+          AND COALESCE(json_extract(t.value, '$.from'), d.merchant) = d.merchant`, merchant).catch(() => ({})),
+  ]);
+  let cents = 0, count = 0;
+  for (const r of ledger) {
+    if (r.sender !== merchant) continue;
+    const out = n0(r.outQ), back = n0(r.inQ);
+    if (!(out > back)) continue;
+    count++;
+    cents += n0(r.outCents) * (out - back) / out;
+  }
+  return { inTransitCents: Math.round(cents), inTransitPieces: Math.round(n0(pieces.pieces)), inTransitCount: count + n0(pieces.n) };
 }
 
 async function poBlock(env, merchant) {
@@ -181,15 +275,21 @@ async function namesBlock(env, merchant) {
 }
 
 /* Les inventaires validés qui encadrent la période, matière par matière. */
-async function countPoints(env, merchant, from, to) {
+async function countPoints(env, merchant, from, to, itemId) {
+  /* Les inventaires les PLUS RÉCENTS d'abord : 40 avant la fin de la période,
+   * plus les 10 derniers avant son début (l'ouverture). Une longue histoire
+   * de comptages ne fait plus tomber l'inventaire de clôture. */
+  const pick = `SELECT id FROM inventory_counts WHERE merchant = ? AND engine = 'ledger' AND status = 'applied'`;
   const rows = await all(env, `SELECT c.id AS countId, c.submitted_at AS ts,
         json_extract(l.value, '$.itemId') AS itemId, json_extract(l.value, '$.countedQty') AS counted,
         json_extract(l.value, '$.unitCost') AS unitCost, json_extract(l.value, '$.productName') AS name,
         json_extract(l.value, '$.unit') AS unit
       FROM inventory_counts c, json_each(CASE WHEN json_valid(c.lines_json) THEN c.lines_json ELSE '[]' END) l
-      WHERE c.merchant = ? AND c.engine = 'ledger' AND c.status = 'applied'
-        AND c.submitted_at >= ? AND c.submitted_at < ?
-      ORDER BY c.submitted_at LIMIT 20000`, merchant, from - COUNT_LOOKBACK_MS, to);
+      WHERE c.merchant = ? AND c.id IN (
+          SELECT id FROM (${pick} AND submitted_at < ? AND submitted_at >= ? ORDER BY submitted_at DESC LIMIT 40)
+          UNION SELECT id FROM (${pick} AND submitted_at <= ? AND submitted_at >= ? ORDER BY submitted_at DESC LIMIT 10))
+        ${itemId ? "AND json_extract(l.value, '$.itemId') = ?" : ''}`,
+    merchant, merchant, to, from - COUNT_LOOKBACK_MS, merchant, from, from - COUNT_LOOKBACK_MS, ...(itemId ? [itemId] : []));
   const byItem = new Map();
   for (const r of rows) {
     const id = str(r.itemId, 80);
@@ -289,25 +389,62 @@ async function varianceBlock(env, merchant, from, to, stock, names) {
   };
 }
 
-async function siteReport(env, site, legacy, from, to) {
+async function targetOf(env, merchant) {
+  try {
+    const r = await one(env, 'SELECT min_margin_pct FROM cost_targets WHERE merchant = ?', merchant);
+    return r.min_margin_pct != null ? Number(r.min_margin_pct) : null;
+  } catch (_) { return null; }
+}
+
+async function siteReport(env, site, legacy, from, to, family) {
   const missing = [];
-  const [sales, ledger, stock, po, names] = await Promise.all([
+  const [sales, ledger, stock, po, names, transit, target] = await Promise.all([
     salesBlock(env, site.merchant, legacy, from, to),
     soft(ledgerBlock(env, site.merchant, from, to), ledgerTotals([]), missing, 'ledger'),
     soft(stockBlock(env, site.merchant), { cost: new Map(), stockValueCents: 0, stockItems: 0, stockNoCost: 0 }, missing, 'stock'),
     soft(poBlock(env, site.merchant), { pendingPoCents: 0, pendingPoCount: 0 }, missing, 'purchase-orders'),
     namesBlock(env, site.merchant),
+    soft(transitBlock(env, site.merchant, family), { inTransitCents: 0, inTransitPieces: 0, inTransitCount: 0 }, missing, 'transfers'),
+    targetOf(env, site.merchant),
   ]);
   const variance = await soft(varianceBlock(env, site.merchant, from, to, stock, names),
     { rows: [], countsFound: false, windows: [], leakCents: 0, surplusCents: 0, netGapCents: 0, measured: 0, missingCount: 0, noCost: 0 }, missing, 'variance');
-  const ratios = keyRatios({ ...sales, ...ledger, stockValueCents: stock.stockValueCents, ...po });
+  const ratios = keyRatios({ ...sales, ...ledger, stockValueCents: stock.stockValueCents, ...transit, ...po });
+  /* Un ticket offert est une perte, rangée sous son motif. */
+  const losses = ledger.byReason.slice();
+  if (sales.giftCostCents) losses.push({ reason: 'offert', source: 'ticket', cents: sales.giftCostCents });
+  losses.sort((a, b) => b.cents - a.cents);
   return {
     merchant: site.merchant, name: site.name || site.merchant,
     ratios,
-    coverage: { ...sales.coverage, saleCount: sales.saleCount, ledgerNoCostRows: ledger.noCostRows, theoreticalLedgerCents: ledger.theoreticalLedgerCents, stockItems: stock.stockItems, stockNoCost: stock.stockNoCost },
-    losses: ledger.byReason,
+    target: targetCheck(ratios, target),
+    coverage: { ...sales.coverage, saleCount: sales.saleCount, ledgerNoCostRows: ledger.noCostRows, theoreticalLedgerCents: ledger.theoreticalLedgerCents, stockItems: stock.stockItems, stockNoCost: stock.stockNoCost, stockSnapshot: stock.snapshot || 'none' },
+    losses,
     variance,
     missing,
+  };
+}
+
+/* Une matière, un tap : ses mouvements et ses inventaires sur la fenêtre. */
+const DETAIL_LIMIT = 300;
+async function itemDetail(env, merchant, itemId, from, to) {
+  const [moves, counts, names] = await Promise.all([
+    all(env, `SELECT m.occurred_ts AS ts, m.reason AS reason, m.ref_type AS refType, m.qty_milli / 1000.0 AS qty,
+          ROUND(m.qty_milli * ${RATE} / 10.0) AS cents, m.note AS note, m.actor AS actor,
+          COALESCE(${META('m.meta', 'wasteReason')}, ${META('m.meta', 'lossReason')}, '') AS lossReason
+        FROM inventory_movements m
+        WHERE m.merchant = ? AND m.item_id = ? AND m.occurred_ts >= ? AND m.occurred_ts < ?
+        ORDER BY m.occurred_ts DESC LIMIT ${DETAIL_LIMIT}`, merchant, itemId, from, to),
+    countPoints(env, merchant, from, to, itemId),
+    namesBlock(env, merchant),
+  ]);
+  const c = counts.get(itemId);
+  return {
+    itemId, name: (names.get(itemId) || {}).name || (c && c.name) || itemId, unit: (names.get(itemId) || {}).unit || (c && c.unit) || '',
+    movements: moves.map((r) => ({ ts: n0(r.ts), reason: r.reason, refType: r.refType, qty: Math.round(n0(r.qty) * 1000) / 1000,
+      cents: r.cents == null ? null : n0(r.cents), note: str(r.note, 120), actor: str(r.actor, 60), lossReason: r.lossReason || '' })),
+    counts: c ? [...c.points.values()].sort((a, b) => b.ts - a.ts) : [],
+    truncated: moves.length >= DETAIL_LIMIT,
   };
 }
 
@@ -324,14 +461,29 @@ export async function onRequestGet({ request, env }) {
   const from = businessBoundary(span.fromDay, cutoff, zone);
   const to = Math.min(businessBoundary(addBusinessDays(span.toDay, 1), cutoff, zone), Date.now() + 1);
 
+  const item = str(url.searchParams.get('item'), 80);
+  if (item) {
+    /* La fenêtre de la matière (entre ses deux inventaires) peut déborder la
+       période : open/close la donnent, bornés à 400 jours. */
+    const open = Math.round(Number(url.searchParams.get('open')));
+    const close = Math.round(Number(url.searchParams.get('close')));
+    const wf = Number.isSafeInteger(open) && open > 0 ? open : from;
+    const wt = Number.isSafeInteger(close) && close > wf ? close + 1 : to;
+    if (wt - wf > 401 * 86400000) return json({ error: 'range-too-long' }, 400, noStore);
+    try { return json({ merchant, item: await itemDetail(env, merchant, item, wf, wt) }, 200, noStore); }
+    catch (_) { return json({ error: 'storage' }, 503, noStore); }
+  }
+
   const wantAll = url.searchParams.get('scope') === 'all';
-  /* Les magasins du compte : la liste du sélecteur, et le périmètre de
-   * « tous les établissements ». Le magasin demandé y reste même si le
-   * registre ne le connaît pas encore : il a déjà passé la porte ci-dessus. */
+  /* Les magasins du compte : la liste du sélecteur, le périmètre de « tous
+   * les établissements » et celui des transferts en route. Le magasin demandé
+   * y reste même si le registre ne le connaît pas encore : il a déjà passé la
+   * porte ci-dessus. */
   let owned = [];
   try { owned = ((await ownedStores(request, env, merchant)).stores || []).filter((s) => s && s.merchant); } catch (_) { owned = []; }
   if (!owned.some((s) => s.merchant === merchant)) owned.unshift({ merchant, name: '' });
   owned = owned.slice(0, MAX_SITES);
+  const family = owned.map((s) => s.merchant);
   let sites = wantAll ? owned : owned.filter((s) => s.merchant === merchant);
   try {
     const nameRows = await all(env, `SELECT merchant, name FROM merchant_config WHERE merchant IN (${sites.map(() => '?').join(',')})`, ...sites.map((s) => s.merchant));
@@ -341,17 +493,47 @@ export async function onRequestGet({ request, env }) {
 
   try {
     const legacy = await legacyBucketFor(request, env, merchant);
-    const reports = await Promise.all(sites.map((s) => siteReport(env, s, s.merchant === merchant ? legacy : '', from, to)));
-    const total = wantAll ? {
-      ratios: sumRatios(reports.map((r) => r.ratios)),
-      leakCents: reports.reduce((a, r) => a + r.variance.leakCents, 0),
-      netGapCents: reports.reduce((a, r) => a + r.variance.netGapCents, 0),
-    } : null;
+    const reports = await Promise.all(sites.map((s) => siteReport(env, s, s.merchant === merchant ? legacy : '', from, to, family)));
+    let total = null;
+    if (wantAll) {
+      const ratios = sumRatios(reports.map((r) => r.ratios));
+      const own = reports.find((r) => r.merchant === merchant);
+      total = {
+        ratios,
+        target: targetCheck(ratios, own && own.target ? own.target.minMarginPct : null),
+        leakCents: reports.reduce((a, r) => a + r.variance.leakCents, 0),
+        netGapCents: reports.reduce((a, r) => a + r.variance.netGapCents, 0),
+      };
+    }
     return json({
-      merchant, scope: wantAll ? 'all' : 'site', storeCount: owned.length,
+      merchant, scope: wantAll ? 'all' : 'site', storeCount: owned.length, canEdit: true,
       range: { fromDay: span.fromDay, toDay: span.toDay, days: span.days, from, to, cutoff, zone },
       sites: reports, total, generatedAt: Date.now(),
     }, 200, noStore);
+  } catch (_) {
+    return json({ error: 'storage' }, 503, noStore);
+  }
+}
+
+/* Le seuil de marge minimum, par magasin. Même porte que la lecture :
+ * le propriétaire de CE magasin ou un opérateur nommé. null l'efface. */
+export async function onRequestPost({ request, env }) {
+  if (!env || !env.DB) return json({ error: 'storage' }, 503, noStore);
+  let body;
+  try { const text = await request.text(); if (text.length > 4096) return json({ error: 'too-large' }, 413, noStore); body = JSON.parse(text || '{}'); }
+  catch (_) { return json({ error: 'bad-json' }, 400, noStore); }
+  const merchant = str(body && body.merchant, 64);
+  const actor = await foodCostActor(request, env, merchant);
+  if (!actor) return json({ error: 'forbidden' }, 403, noStore);
+  if (str(body.action, 20) !== 'target') return json({ error: 'bad-action' }, 400, noStore);
+  const pct = cleanTargetPct(body.minMarginPct);
+  if (Number.isNaN(pct)) return json({ error: 'bad-target' }, 400, noStore);
+  try {
+    if (pct == null) await env.DB.prepare('DELETE FROM cost_targets WHERE merchant = ?').bind(merchant).run();
+    else await env.DB.prepare(`INSERT INTO cost_targets (merchant, min_margin_pct, updated_ts, updated_by) VALUES (?, ?, ?, ?)
+        ON CONFLICT (merchant) DO UPDATE SET min_margin_pct = excluded.min_margin_pct, updated_ts = excluded.updated_ts, updated_by = excluded.updated_by`)
+      .bind(merchant, pct, Date.now(), actor.label).run();
+    return json({ ok: true, minMarginPct: pct }, 200, noStore);
   } catch (_) {
     return json({ error: 'storage' }, 503, noStore);
   }

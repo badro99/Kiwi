@@ -1131,18 +1131,18 @@
   /* Coût théorique et réel (assets/pages-pro/cost-variance.js, chargé au
      premier usage) : /api/cost-variance pour un vrai commerçant, un exemple
      en démonstration. Plus jamais le « réel = théorique × 1,04 ». */
-  const mountVariance = (root, v) => {
+  const mountVariance = (root, v, restaurant) => {
     const slot = root && root.querySelector ? root.querySelector('[data-costvar-slot]') : null;
     if (!slot) return;
-    try { const r = window.Kiwi.handlers['costvar-mount'](slot, { real: finShowReal(v) }); if (r && r.catch) r.catch(() => {}); } catch (_) {}
+    try { const r = window.Kiwi.handlers['costvar-mount'](slot, { real: finShowReal(v), restaurant: !!restaurant }); if (r && r.catch) r.catch(() => {}); } catch (_) {}
   };
   function render() {
     const root = document.querySelector('[data-finance-root]');
     if (!root) return;
     const v = currentVenueId();
     const A = menuAnalysis();
-    if (A) { finCss(); finBindLive(); root.innerHTML = analysisPage(v, A); mountVariance(root, v); return; }
-    if (finShowReal(v)) { finBindLive(); root.innerHTML = finReal(v); mountVariance(root, v); return; }
+    if (A) { finCss(); finBindLive(); root.innerHTML = analysisPage(v, A); mountVariance(root, v, true); return; }
+    if (finShowReal(v)) { finBindLive(); root.innerHTML = finReal(v); mountVariance(root, v, false); return; }
     root.innerHTML = `
       <div class="fin-page">
         <div class="fin-head">

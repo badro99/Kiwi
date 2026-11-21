@@ -13,7 +13,10 @@
  *   5. Le motif « vol » et le motif par ligne d'inventaire, sans casser les
  *      comptages existants (même empreinte sans motif).
  *   6. Les magasins : propriétaire et opérateur oui ; caisse, employé, autre
- *      compte non ; « tous les établissements » = les magasins du compte. */
+ *      compte non ; « tous les établissements » = les magasins du compte.
+ *   7. Le retour du juge : coût 0 = inconnu, retours déduits, offerts et
+ *      reçus à 0 MAD, seuil de marge, transferts en route, inventaires les
+ *      plus récents d'abord, instantané du stock, détail d'une matière. */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -21,7 +24,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const imp = (p) => import(pathToFileURL(path.join(ROOT, p)).href);
-const { onRequestGet } = await imp('functions/api/cost-variance.js');
+const { onRequestGet, onRequestPost: postTarget } = await imp('functions/api/cost-variance.js');
 const F = await imp('functions/api/_cost-variance.js');
 const counts = await imp('functions/api/inventory/counts.js');
 const auth = await imp('functions/auth/_lib.js');
@@ -298,6 +301,112 @@ const mv2 = sqlite.prepare("SELECT meta FROM inventory_movements WHERE merchant 
 ok('sans motif valide, aucun motif inventé', mv2 && JSON.parse(mv2.meta).lossReason === undefined, mv2);
 const tillCount = await post({ merchant: SHOP, action: 'approve', id: 'cnt_noreason' }, till);
 eq('une caisse ne valide pas un écart', tillCount.status, 403);
+
+/* ── 7. Épicerie : coût 0, retours, offerts, carnet, seuil, transferts ─────── */
+const EPI = 'epi-cv', EPI2 = 'epi-cv-2';
+run(`INSERT INTO accounts (id,email,business,salt,hash,created_ts,status) VALUES ('acc-3','epi@cv.ma','Epi CV','s','h',?,'active')`, now);
+for (const m of [EPI, EPI2]) run(`INSERT INTO merchant_config (merchant,features,plan,type,account_id,name,status,updated_ts) VALUES (?,'{}','basic','epicerie','acc-3',?,'active',?)`, m, m, now);
+const owner3 = auth.sessionCookie(await auth.makeSession('acc-3', SECRET)).split(';')[0];
+const till3 = `kiwi_till=${await auth.tillToken(SECRET, EPI)}`;
+const sale3 = (merchant, ts, cents, method, lines) => run(
+  `INSERT INTO sales (id,merchant,amount,amount_cents,method,ts,lines) VALUES (?,?,?,?,?,?,?)`,
+  'sale-' + (++sid), merchant, cents / 100, cents, method, ts, JSON.stringify(lines));
+/* Lait : la caisse épicerie envoie k:0 pour un produit sans coût. */
+sale3(EPI, T(11, 12), 50000, 'cash', [{ n: 'Lait', q: 2, t: 250, k: 0 }, { n: 'Huile', q: 1, t: 250, k: 20 }]);
+sale3(EPI, T(5, 12), 3000, 'cash', [{ n: 'Savon', q: 1, t: 30, k: 12 }]);                       // avant la période : donne le coût moyen du savon
+sale3(EPI, T(12, 10), -5000, 'cash', [{ n: 'Huile', q: 1, t: -50, k: 20 }]);                    // remboursement qui porte son coût
+sale3(EPI, T(12, 11), -3000, 'credit', [{ itemId: 'sv', name: 'Savon', qty: 2, unitCents: 1500, amountCents: 3000 }]); // retour en avoir
+sale3(EPI, T(12, 12), -1000, 'cash', [{ n: 'Inconnu', q: 1, t: -10 }]);                         // retour sans coût connu
+sale3(EPI, T(13, 12), 0, 'complimentary', [{ n: 'Huile', q: 1, t: 0, k: 20 }]);                  // ticket offert
+sale3(EPI, T(13, 13), 0, 'credit', [{ n: 'Huile', q: 2, t: 100, k: 20 }]);                       // reçu à 0 MAD (carnet)
+const e = await get(`merchant=${EPI}&${RANGE}`, owner3);
+const ES = (e.body.sites || [])[0] || {};
+const ER = ES.ratios || {}, EC = ES.coverage || {};
+eq('épicerie : 200', e.status, 200);
+eq('coût 0 = inconnu : seul l’huile entre au coût vendu (k:0 ne compte pas)', ER.soldCostCents, 2000 + 4000);
+eq('coût 0 = inconnu : couverture 250 MAD chiffrés sur 500', [EC.costedRevenueCents, EC.lineRevenueCents, EC.costedPct], [25000, 50000, 50]);
+eq('coût 0 = inconnu : le lait est listé « sans coût », pas à 0', (EC.uncosted || []).map((u) => u.name), ['Lait']);
+eq('remboursements : 50 + 30 + 10 MAD', ER.refundCents, 9000);
+eq('coût des retours : 20 MAD gelés + 2 savons au coût moyen de 12 MAD', ER.returnsCostCents, 2000 + 2400);
+eq('retour sans coût connu : dit, pas compté à 0', [EC.uncostedReturnCents, EC.uncostedReturnLines], [1000, 1]);
+eq('A = coût vendu − coût des retours', ER.cogsCents, 6000 - 4400);
+eq('reçu à 0 MAD (carnet) : la marchandise part, son coût entre en A', EC.creditSalesCostCents, 4000);
+eq('ticket offert : coût rangé en perte « offert », hors A', [ER.giftCostCents, ER.wasteCents], [2000, 2000]);
+const EL = new Map((ES.losses || []).map((x) => [x.source + ':' + x.reason, x.cents]));
+eq('motif « offert » venu des tickets', EL.get('ticket:offert'), 2000);
+eq('b ventes nettes', ER.netSalesCents, 41000);
+eq('Z = A + pertes', ER.consumptionCents, 1600 + 2000);
+ok('sans seuil : pas d’alerte', ES.target === null, ES.target);
+
+/* Le seuil de marge minimum. */
+const target = async (body, cookie) => {
+  const r = await postTarget({ env, request: new Request('https://kiwi.test/api/cost-variance', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) }, body: JSON.stringify(body) }) });
+  return { status: r.status, body: await r.json() };
+};
+eq('seuil : la caisse ne le fixe pas', (await target({ merchant: EPI, action: 'target', minMarginPct: 60 }, till3)).status, 403);
+eq('seuil : un autre compte non plus', (await target({ merchant: EPI, action: 'target', minMarginPct: 60 }, owner)).status, 403);
+eq('seuil : 150 % refusé', (await target({ merchant: EPI, action: 'target', minMarginPct: 150 }, owner3)).status, 400);
+eq('seuil : du texte refusé', (await target({ merchant: EPI, action: 'target', minMarginPct: 'beaucoup' }, owner3)).status, 400);
+eq('seuil : 70 % enregistré', (await target({ merchant: EPI, action: 'target', minMarginPct: 70 }, owner3)).body, { ok: true, minMarginPct: 70 });
+let tg = ((await get(`merchant=${EPI}&${RANGE}`, owner3)).body.sites[0] || {}).target || {};
+eq('seuil 70 % : plafond de consommation 123 MAD, marge réelle tenue', [tg.thresholdCents, tg.maxConsumptionCents, tg.breached, tg.shortfallCents], [28700, 12300, false, 0]);
+await target({ merchant: EPI, action: 'target', minMarginPct: 95 }, owner3);
+tg = ((await get(`merchant=${EPI}&${RANGE}`, owner3)).body.sites[0] || {}).target || {};
+eq('seuil 95 % : alerte, il manque 15,50 MAD de marge', [tg.breached, tg.shortfallCents, tg.realMarginPct], [true, 41000 * 0.95 - 37400, 91.2]);
+eq('seuil : vide l’efface', (await target({ merchant: EPI, action: 'target', minMarginPct: null }, owner3)).body.minMarginPct, null);
+eq('seuil effacé : plus d’alerte', ((await get(`merchant=${EPI}&${RANGE}`, owner3)).body.sites[0] || {}).target, null);
+
+/* Transferts en route, chez l'expéditeur seulement. */
+move(EPI, 'huile', T(14, 10), -4, 'transfer-out', { cost: 20, refType: 'transfer', refId: 'tr-1' });
+move(EPI2, 'huile', T(15, 10), 1, 'transfer-in', { cost: 20, refType: 'transfer', refId: 'tr-1' });
+move(EPI, 'huile', T(14, 11), -2, 'transfer-out', { cost: 20, refType: 'transfer', refId: 'tr-2' });
+move(EPI2, 'huile', T(15, 11), 2, 'transfer-in', { cost: 20, refType: 'transfer', refId: 'tr-2' });
+run(`INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,'stock-transfers',?,1,?)`, EPI, JSON.stringify({ v: 1, list: [
+  { id: 't1', from: EPI, to: EPI2, status: 'en-route', lines: [{ qty: 5, received: 0, missing: 0 }] },
+  { id: 't2', from: EPI, to: EPI2, status: 'recu', lines: [{ qty: 3, received: 3, missing: 0 }] },
+  { id: 't3', from: EPI, to: EPI2, status: 'partiel', lines: [{ qty: 4, received: 1, missing: 1 }] },
+] }), now);
+const tr = await get(`merchant=${EPI}&${RANGE}&scope=all`, owner3);
+const trR = (tr.body.sites.find((x) => x.merchant === EPI) || {}).ratios || {};
+const trR2 = (tr.body.sites.find((x) => x.merchant === EPI2) || {}).ratios || {};
+eq('en route : 3 L d’huile sur 4 pas arrivés (60 MAD) + 7 pièces boutique', [trR.inTransitCents, trR.inTransitPieces, trR.inTransitCount], [6000, 7, 3]);
+eq('le destinataire ne le compte pas une deuxième fois', [trR2.inTransitCents, trR2.inTransitPieces], [0, 0]);
+eq('tous les établissements : somme des transferts en route', tr.body.total.ratios.inTransitCents, 6000);
+
+/* Inventaires : les plus récents d'abord, l'inventaire de clôture n'est jamais perdu. */
+for (let i = 0; i < 60; i++) countRow(EPI2, 'old-' + i, T(9, 21) - (i + 1) * 3600000, [{ itemId: 'riz', countedQty: 99 }]);
+countRow(EPI2, 'open-riz', T(9, 21), [{ itemId: 'riz', countedQty: 10 }]);
+countRow(EPI2, 'close-riz', T(16, 22), [{ itemId: 'riz', countedQty: 7 }]);
+move(EPI2, 'riz', T(1, 9), 10, 'opening', { cost: 10 });
+move(EPI2, 'riz', T(12, 12), -2, 'sale', { cost: 10, refType: 'sale' });
+/* Le jeu de test date srv_ts dans le passé (la vraie base l'écrit au présent) :
+   l'instantané écrit plus haut ne verrait pas ces lignes. */
+sqlite.prepare('DELETE FROM cost_stock_snapshots WHERE merchant = ?').run(EPI2);
+const rz = ((await get(`merchant=${EPI2}&${RANGE}`, owner3)).body.sites[0].variance.rows || []).find((x) => x.itemId === 'riz') || {};
+eq('62 inventaires : ouverture et clôture retrouvées', [rz.status, rz.opening, rz.closing, rz.closeTs], ['ok', 10, 7, T(16, 22)]);
+eq('riz : écart 1 kg = 10 MAD', [rz.actualUse, rz.theoretical, rz.gapCents], [3, 2, 1000]);
+
+/* Instantané du stock : relu, puis complété par les mouvements récents. */
+sqlite.prepare('DELETE FROM cost_stock_snapshots WHERE merchant = ?').run(EPI2);
+const s1 = (await get(`merchant=${EPI2}&${RANGE}`, owner3)).body.sites[0];
+const s2 = (await get(`merchant=${EPI2}&${RANGE}`, owner3)).body.sites[0];
+eq('premier calcul : instantané écrit, le second le relit', [s1.coverage.stockSnapshot, s2.coverage.stockSnapshot], ['written', 'read']);
+eq('même valeur du stock par l’instantané (riz 8 kg + huile 3 L)', [s1.ratios.stockValueCents, s2.ratios.stockValueCents], [8000 + 6000, 8000 + 6000]);
+run(`INSERT INTO inventory_movements (id,merchant,item_id,qty_milli,reason,unit_cost_rate,occurred_ts,srv_ts,created_ts) VALUES ('fresh',?,'riz',5000,'receipt',100000,?,?,?)`, EPI2, Date.now(), Date.now(), Date.now());
+const s3 = (await get(`merchant=${EPI2}&${RANGE}`, owner3)).body.sites[0];
+sqlite.prepare('DELETE FROM cost_stock_snapshots WHERE merchant = ?').run(EPI2);
+const s4 = (await get(`merchant=${EPI2}&${RANGE}`, owner3)).body.sites[0];
+eq('un mouvement arrivé après l’instantané compte (+50 MAD), comme un recalcul complet', [s3.ratios.stockValueCents, s4.ratios.stockValueCents], [19000, 19000]);
+
+/* Le détail d'une matière : ses mouvements et ses inventaires, du seul magasin. */
+const d = await get(`merchant=${SHOP}&${RANGE}&item=poulet&open=${T(9, 22)}&close=${T(16, 22)}`, owner);
+const DI = d.body.item || {};
+eq('détail : 200, nom de la fiche', [d.status, DI.name], [200, 'Poulet fermier']);
+ok('détail : aucun mouvement de l’autre commerçant (−500 kg)', (DI.movements || []).length > 0 && !(DI.movements || []).some((m) => m.qty === -500 || m.qty === -50), DI.movements);
+ok('détail : la perte « vol » y est, avec son montant', (DI.movements || []).some((m) => m.reason === 'loss' && m.lossReason === 'vol' && m.cents === -8000), DI.movements);
+eq('détail : les inventaires, le plus récent d’abord', (DI.counts || []).slice(0, 2).map((c) => c.qty), [3, 10]);
+eq('détail : un autre compte, 403', (await get(`merchant=${SHOP}&${RANGE}&item=poulet`, stranger)).status, 403);
+eq('détail : la caisse, 403', (await get(`merchant=${SHOP}&${RANGE}&item=poulet`, till)).status, 403);
 
 /* L'index qui garde les sommes sur la période. */
 const plan = sqlite.prepare(`EXPLAIN QUERY PLAN SELECT SUM(qty_milli) FROM inventory_movements WHERE merchant = ? AND occurred_ts >= ? AND occurred_ts < ?`).all(SHOP, 1, 2);

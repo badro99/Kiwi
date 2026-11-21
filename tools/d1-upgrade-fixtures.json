@@ -166,5 +166,13 @@
   "catalog_parts": [
     {"merchant": "upgrade-synth-1", "gen": "fixture-gen-1", "part": 137, "data": "fixture-data-1"},
     {"merchant": "upgrade-synth-2", "gen": "fixture-gen-2", "part": 274, "data": "fixture-data-2"}
+  ],
+  "cost_stock_snapshots": [
+    {"merchant": "upgrade-synth-1", "cursor": 137, "items_json": "{\"fixture-1\":[1,2,3,4,5]}", "updated_ts": 137},
+    {"merchant": "upgrade-synth-2", "cursor": 274, "items_json": "{\"fixture-2\":[2,4,6,8,10]}", "updated_ts": 274}
+  ],
+  "cost_targets": [
+    {"merchant": "upgrade-synth-1", "min_margin_pct": 62.5, "updated_ts": 137, "updated_by": "fixture-updated_by-1"},
+    {"merchant": "upgrade-synth-2", "min_margin_pct": 70, "updated_ts": 274, "updated_by": "fixture-updated_by-2"}
   ]
 }
