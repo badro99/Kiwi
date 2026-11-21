@@ -18,8 +18,8 @@
  * alors depuis son cache (60 s) sans requête ni clignotement. */
 (() => {
   'use strict';
-  const H = window.Kiwi && window.Kiwi.handlers;
-  if (!H) return;
+  const handlers = window.Kiwi && window.Kiwi.handlers;
+  if (!handlers) return;
 
   const lang = () => { try { return window.KiwiI18n.getLang() || 'fr'; } catch (_) { return 'fr'; } };
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -57,6 +57,7 @@
   const STR = {
     fr: {
       title: 'Coût théorique et coût réel',
+      pageTitle: 'Coût réel', pageSub: 'Coût théorique, pertes et écarts d’inventaire, sur vos vrais livres',
       sub: (a, b) => `Du ${a} au ${b} · journées de caisse`,
       days: { 7: '7 jours', 30: '30 jours', 90: '90 jours' },
       periodAria: 'Période', scopeAria: 'Établissements',
@@ -131,6 +132,7 @@
     },
     en: {
       title: 'Theoretical vs actual cost',
+      pageTitle: 'Actual cost', pageSub: 'Theoretical cost, losses and stock-count gaps, from your real books',
       sub: (a, b) => `${a} to ${b} · trading days`,
       days: { 7: '7 days', 30: '30 days', 90: '90 days' },
       periodAria: 'Period', scopeAria: 'Locations',
@@ -205,6 +207,7 @@
     },
     ar: {
       title: 'الكلفة النظرية والكلفة الفعلية',
+      pageTitle: 'الكلفة الفعلية', pageSub: 'الكلفة النظرية والخسائر وفروق الجرد، من سجلاتك الفعلية',
       sub: (a, b) => `من ${a} إلى ${b} · أيام العمل`,
       days: { 7: '7 أيام', 30: '30 يومًا', 90: '90 يومًا' },
       periodAria: 'الفترة', scopeAria: 'المحلات',
@@ -767,34 +770,48 @@
     return '\uFEFF' + [c.csvCols.map(text), ...rows].map((r) => r.join(',')).join('\r\n');
   }
 
-  H['costvar-mount'] = (slot, opts) => mount(slot && slot.nodeType === 1 ? slot : null, opts || {});
-  H['costvar-period'] = (el) => {
+  handlers['costvar-mount'] = (slot, opts) => mount(slot && slot.nodeType === 1 ? slot : null, opts || {});
+  /* Le panneau en page à part (lien direct, recherche) : même contenu que
+     l'onglet « Coût réel » d'Analyse du menu et le bas de Marges. */
+  handlers['costvar-open'] = () => {
+    const c = t();
+    if (!window.Kiwi.appPage) return;
+    window.Kiwi.appPage('cost-variance', { title: c.pageTitle, subtitle: c.pageSub,
+      body: '<div class="cv-page" data-costvar-page><div data-costvar-slot></div></div>' });
+    const slot = document.querySelector('[data-costvar-page] [data-costvar-slot]');
+    if (!slot) return;
+    let real = false, restaurant = false;
+    try { real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) {}
+    try { const W = window.KiwiRestaurantMenuWorkspace; restaurant = !!(W && W.isRestaurant && W.isRestaurant()); } catch (_) {}
+    mount(slot, { real, restaurant });
+  };
+  handlers['costvar-period'] = (el) => {
     const d = +(el && el.dataset && el.dataset.days);
     if (!(d === 7 || d === 30 || d === 90) || d === S.days) return;
     S.days = d;
     try { localStorage.setItem('kiwiCostVarDays', String(d)); } catch (_) {}
     remount();
   };
-  H['costvar-scope'] = (el) => {
+  handlers['costvar-scope'] = (el) => {
     const k = el && el.dataset && el.dataset.scope;
     if ((k !== 'site' && k !== 'all') || k === S.scope) return;
     S.scope = k;
     remount();
   };
-  H['costvar-retry'] = () => { const m = merchant(); if (m) cache.delete(keyOf(m)); remount(); };
-  H['costvar-go'] = (el) => {
+  handlers['costvar-retry'] = () => { const m = merchant(); if (m) cache.delete(keyOf(m)); remount(); };
+  handlers['costvar-go'] = (el) => {
     const go = el && el.dataset && el.dataset.go;
     const list = (GO[trade()] || {})[go] || [];
-    const name = list.find((n) => typeof H[n] === 'function');
-    if (name) H[name](el); else toast(t().goMissing, 'warn');
+    const name = list.find((n) => typeof handlers[n] === 'function');
+    if (name) handlers[name](el); else toast(t().goMissing, 'warn');
   };
-  H['costvar-item'] = (el) => { openItem(el).catch(() => {}); };
-  H['costvar-wa'] = () => {
+  handlers['costvar-item'] = (el) => { openItem(el).catch(() => {}); };
+  handlers['costvar-wa'] = () => {
     const text = shareText();
     if (!text) return;
     try { window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener'); } catch (_) {}
   };
-  H['costvar-csv'] = () => {
+  handlers['costvar-csv'] = () => {
     if (!last.data) return;
     const r = (last.data.range || {});
     try {
@@ -805,7 +822,7 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (_) {}
   };
-  H['costvar-target'] = async (el) => {
+  handlers['costvar-target'] = async (el) => {
     const c = t();
     const box = el && el.closest && el.closest('[data-cv-target]');
     const input = box && box.querySelector('[data-cv-target-input]');
