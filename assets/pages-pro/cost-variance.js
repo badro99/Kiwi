@@ -34,6 +34,10 @@
      ignorent l'isolat), le signe ne passe pas derrière la devise. Le
      moins est toujours U+2212, pour les montants comme pour les pourcentages. */
   const iso = (x) => '\u2066\u200e' + x + '\u200e\u2069';
+  /* Dans le HTML posé, chaque isolat devient un vrai <bdi dir="ltr"> : le
+     pourcentage d'une phrase arabe (« 55,7 % ») ne se retourne plus, même là
+     où le moteur ignore U+2066. Les attributs n'en portent jamais. */
+  const bdi = (html) => String(html).replace(/\u2066\u200e?([^\u2066\u2069]*?)\u200e?\u2069/g, '<bdi dir="ltr">$1</bdi>');
   const sign = (v, signed) => (v < 0 ? '\u2212' : (signed && v > 0 ? '+' : ''));
   /* Centimes → « 1 234,50 MAD » ; les entiers sans décimales. */
   const mad = (cents, signed) => {
@@ -70,6 +74,9 @@
       el: 'Approvisionnement net', elSub: (m) => `achats + transferts · marge ${m}`,
       stock: 'Valeur du stock maintenant', po: (n) => `Commandes fournisseur en attente · ${n}`,
       transit: 'En route entre magasins', pieces: (n) => `${n} pièce(s) sans coût`,
+      courier: (n) => `Chez le livreur, pas encore encaissé · ${n} livraison(s)`,
+      ABare: (x) => `${x} remboursés sans détail : coût non déduit`,
+      lossBy: (who) => `déclarée par ${who}`,
       target: 'Seuil de marge',
       targetIntro: 'Fixez la marge réelle minimum : une alerte s’affiche dès que la période passe dessous.',
       targetLabel: 'Marge minimum (%)', targetSave: 'Enregistrer', targetClear: 'Retirer',
@@ -78,7 +85,7 @@
       targetOk: (r, m, x) => `Marge réelle ${r}, au-dessus de votre seuil de ${m}. Consommation à ne pas dépasser : ${x}.`,
       targetTheo: 'Même la marge théorique est sous le seuil : revoyez vos prix de vente ou vos fiches techniques.',
       losses: 'Pertes par motif', lossesEmpty: 'Aucune perte enregistrée sur la période.',
-      lossSrc: { declared: 'déclarée', count: 'inventaire', ticket: 'ticket offert' },
+      lossSrc: { declared: 'déclarée', count: 'inventaire', ticket: 'ticket offert', livraison: 'livraison' },
       reasons: { perime: 'Périmé', casse: 'Casse', avarie: 'Avarié', offert: 'Offert', 'repas-equipe': 'Repas équipe', vol: 'Vol', perdu: 'Perdu', erreur: 'Erreur de saisie', autre: 'Autre', 'non-explique': 'Écart sans motif' },
       leaks: 'Où l’argent fuit',
       leaksSub: (a, b) => `Matière par matière, entre l’inventaire du ${a} et celui du ${b}`,
@@ -102,6 +109,7 @@
       uncosted: (n, a) => `Produits vendus sans coût : ${n} (${a} de ventes). Ajoutez leur coût d’achat ou leur fiche technique.`,
       bare: (a) => `${a} de ventes sans détail article (montant libre) : comptées dans les ventes, jamais dans le coût.`,
       backNoCost: (a, n) => `Retours sans coût connu : ${a} sur ${n} ligne(s). Leur marchandise n’est pas déduite du coût.`,
+      bareRefund: (a) => `${a} remboursés sans détail : coût non déduit. Le coût en % des ventes est donc un peu haut ; rembourser depuis le ticket garde les articles.`,
       needCount: (n) => `Matières consommées sans deux inventaires : ${n}. Faites un inventaire au début et à la fin de la période.`,
       stockNoCost: (n) => `Articles en stock sans prix d’achat : ${n}. La valeur du stock les ignore.`,
       ledgerNoCost: (n) => `Mouvements de stock sans coût : ${n}. Leurs montants manquent aux pertes et aux achats.`,
@@ -138,6 +146,9 @@
       el: 'Net supply', elSub: (m) => `purchases + transfers · margin ${m}`,
       stock: 'Stock value now', po: (n) => `Supplier orders pending · ${n}`,
       transit: 'In transit between locations', pieces: (n) => `${n} piece(s) without a cost`,
+      courier: (n) => `With the courier, not yet collected · ${n} deliver${n === 1 ? 'y' : 'ies'}`,
+      ABare: (x) => `${x} refunded without detail: cost not deducted`,
+      lossBy: (who) => `declared by ${who}`,
       target: 'Margin floor',
       targetIntro: 'Set the minimum actual margin: an alert shows as soon as the period falls below it.',
       targetLabel: 'Minimum margin (%)', targetSave: 'Save', targetClear: 'Remove',
@@ -146,7 +157,7 @@
       targetOk: (r, m, x) => `Actual margin ${r}, above your ${m} floor. Consumption must stay under ${x}.`,
       targetTheo: 'Even the theoretical margin is below the floor: review your selling prices or recipes.',
       losses: 'Losses by reason', lossesEmpty: 'No loss recorded in this period.',
-      lossSrc: { declared: 'declared', count: 'stock count', ticket: 'free ticket' },
+      lossSrc: { declared: 'declared', count: 'stock count', ticket: 'free ticket', livraison: 'delivery' },
       reasons: { perime: 'Expired', casse: 'Breakage', avarie: 'Damaged', offert: 'Given away', 'repas-equipe': 'Staff meal', vol: 'Theft', perdu: 'Lost', erreur: 'Entry error', autre: 'Other', 'non-explique': 'Unexplained gap' },
       leaks: 'Where the money leaks',
       leaksSub: (a, b) => `Ingredient by ingredient, between the ${a} and ${b} stock counts`,
@@ -170,6 +181,7 @@
       uncosted: (n, a) => `Products sold without a cost: ${n} (${a} of sales). Add their purchase cost or recipe.`,
       bare: (a) => `${a} of sales without item detail (free amount): counted in sales, never in cost.`,
       backNoCost: (a, n) => `Returns without a known cost: ${a} over ${n} line(s). Their goods are not taken off the cost.`,
+      bareRefund: (a) => `${a} refunded without detail: cost not deducted. Cost as a % of sales reads slightly high; refunding from the receipt keeps the items.`,
       needCount: (n) => `Ingredients used without two stock counts: ${n}. Count at the start and at the end of the period.`,
       stockNoCost: (n) => `Stock items without a purchase price: ${n}. Stock value leaves them out.`,
       ledgerNoCost: (n) => `Stock movements without a cost: ${n}. Their amounts are missing from losses and purchases.`,
@@ -206,6 +218,9 @@
       el: 'صافي التموين', elSub: (m) => `المشتريات + التحويلات · الهامش ${m}`,
       stock: 'قيمة المخزون الآن', po: (n) => `طلبيات الموردين قيد الانتظار · ${n}`,
       transit: 'في الطريق بين المحلات', pieces: (n) => `عدد القطع دون كلفة: ${n}`,
+      courier: (n) => `لدى عامل التوصيل ولم تُحصَّل بعد · عدد الطلبيات: ${n}`,
+      ABare: (x) => `${x} مستردة دون تفاصيل: لم تُخصم كلفتها`,
+      lossBy: (who) => `صرّح بها ${who}`,
       target: 'الحد الأدنى للهامش',
       targetIntro: 'حدّد أدنى هامش فعلي تقبله، وسيظهر تنبيه حين تنخفض الفترة عنه.',
       targetLabel: 'الهامش الأدنى (%)', targetSave: 'حفظ', targetClear: 'إزالة',
@@ -214,7 +229,7 @@
       targetOk: (r, m, x) => `الهامش الفعلي ${r} أعلى من الحد الأدنى ${m}. يجب ألا يتجاوز الاستهلاك ${x}.`,
       targetTheo: 'حتى الهامش النظري أقل من الحد الأدنى: راجع أسعار البيع أو البطاقات التقنية.',
       losses: 'الخسائر حسب السبب', lossesEmpty: 'لا توجد خسائر مسجلة في هذه الفترة.',
-      lossSrc: { declared: 'مصرّح بها', count: 'الجرد', ticket: 'تذكرة مجانية' },
+      lossSrc: { declared: 'مصرّح بها', count: 'الجرد', ticket: 'تذكرة مجانية', livraison: 'توصيل' },
       reasons: { perime: 'منتهي الصلاحية', casse: 'كسر', avarie: 'تالف', offert: 'مقدَّم مجانًا', 'repas-equipe': 'وجبات الفريق', vol: 'سرقة', perdu: 'مفقود', erreur: 'خطأ في الإدخال', autre: 'أسباب أخرى', 'non-explique': 'فرق غير مبرَّر' },
       leaks: 'أين يضيع المال',
       leaksSub: (a, b) => `كل مادة على حدة، بين جرد ${a} وجرد ${b}`,
@@ -238,6 +253,7 @@
       uncosted: (n, a) => `منتجات بيعت دون كلفة: ${n} (${a} من المبيعات). أضف سعر شرائها أو بطاقتها التقنية.`,
       bare: (a) => `${a} من المبيعات دون تفاصيل المنتجات (مبلغ حر): تُحتسب في المبيعات، ولا تدخل في الكلفة.`,
       backNoCost: (a, n) => `مرتجعات دون كلفة معروفة: ${a} في ${n} سطر. لم تُخصم بضاعتها من الكلفة.`,
+      bareRefund: (a) => `${a} مستردة دون تفاصيل: لم تُخصم كلفتها، لذا تبدو نسبة الكلفة من المبيعات أعلى قليلًا. الاسترداد من التذكرة يحفظ المنتجات.`,
       needCount: (n) => `مواد استُعملت دون جردين: ${n}. أجرِ جردًا في بداية الفترة وآخر في نهايتها.`,
       stockNoCost: (n) => `منتجات في المخزون دون سعر شراء: ${n}. قيمة المخزون لا تشملها.`,
       ledgerNoCost: (n) => `حركات مخزون دون كلفة: ${n}. مبالغها غائبة عن الخسائر والمشتريات.`,
@@ -374,6 +390,7 @@
 .cv-loss b{font-weight:550;color:var(--ink)}
 .cv-loss small{color:var(--n-500);font-size:11.5px;margin-inline-start:6px}
 .cv-loss span{font-variant-numeric:tabular-nums;text-align:end}
+.cv-loss .cv-by{grid-column:1/-1;margin:0;color:var(--n-600);font-size:12px}
 .cv-bar{grid-column:1/-1;height:6px;border-radius:99px;background:var(--n-100);overflow:hidden}
 .cv-bar i{display:block;height:100%;border-radius:99px;background:var(--danger)}
 .cv-bar i.pos{background:var(--atlas)}
@@ -459,18 +476,20 @@
     const line = (label, value, subs, neg) => `<div class="cv-r${neg ? ' neg' : ''}"><b>${esc(label)}</b><span>${value}</span>${subs.filter(Boolean).map((x) => `<small>${esc(x)}</small>`).join('')}</div>`;
     const transit = R.inTransitCents || R.inTransitPieces
       ? `<span>${esc(c.transit)} · <b>${mad(R.inTransitCents)}</b>${R.inTransitPieces ? ' · ' + esc(c.pieces(R.inTransitPieces)) : ''}</span>` : '';
+    const courier = R.atCourierCents ? `<span>${esc(c.courier((C && C.atCourierCount) || 0))} · <b>${mad(R.atCourierCents)}</b></span>` : '';
     return `<div class="cv-card"><div class="cv-eyebrow">${esc(c.ratios)}</div>
       ${line(c.b, mad(R.netSalesCents), [c.bSub(mad(R.discountCents), mad(R.refundCents))])}
       ${line(c.A, mad(R.cogsCents), [c.ASub(pct(R.costPct), mad(R.marginCents)),
         R.returnsCostCents ? c.ABack(mad(R.soldCostCents), mad(R.returnsCostCents)) : '',
-        C && C.creditSalesCostCents ? c.ACredit(mad(C.creditSalesCostCents)) : ''])}
+        C && C.creditSalesCostCents ? c.ACredit(mad(C.creditSalesCostCents)) : '',
+        R.refundUndetailedCents ? c.ABare(mad(R.refundUndetailedCents)) : ''])}
       ${line(c.v, mad(R.wasteCents), [c.vSub(pct(R.wastePct), mad(R.declaredWasteCents), mad(R.countShrinkCents - R.countOverCents, true)),
         R.giftCostCents ? c.vGift(mad(R.giftCostCents)) : ''], R.wasteCents > 0)}
       ${line(c.Z, mad(R.consumptionCents), [c.ZSub(mad(R.marginOnConsumptionCents))], R.marginOnConsumptionCents < 0)}
       ${line(c.L, mad(R.purchasesCents), [c.LSub(mad(R.receivedCents), mad(R.returnedCents))])}
       ${line(c.G, mad(R.transfersCents, true), [c.GSub(mad(R.transferInCents), mad(R.transferOutCents))])}
       ${line(c.el, mad(R.supplyCents), [c.elSub(mad(R.marginOnSupplyCents))], R.marginOnSupplyCents < 0)}
-      <div class="cv-foot"><span>${esc(c.stock)} · <b>${mad(R.stockValueCents)}</b></span><span>${esc(c.po(R.pendingPoCount || 0))} · <b>${mad(R.pendingPoCents)}</b></span>${transit}</div>
+      <div class="cv-foot"><span>${esc(c.stock)} · <b>${mad(R.stockValueCents)}</b></span><span>${esc(c.po(R.pendingPoCount || 0))} · <b>${mad(R.pendingPoCents)}</b></span>${transit}${courier}</div>
     </div>`;
   }
 
@@ -501,6 +520,7 @@
     const max = Math.max(...rows.map((x) => Math.abs(x.cents)));
     return `<div class="cv-card"><div class="cv-eyebrow">${esc(c.losses)}</div>${rows.map((x) => `
       <div class="cv-loss"><b>${esc(c.reasons[x.reason] || x.reason)}<small>${esc(c.lossSrc[x.source] || '')}</small></b><span>${mad(x.cents)}</span>
+      ${(x.by || []).length ? `<small class="cv-by">${esc(c.lossBy(x.by.map((p) => p.name + ' ' + mad(p.cents)).join(', ')))}</small>` : ''}
       <div class="cv-bar"><i class="${x.cents < 0 ? 'pos' : ''}" style="width:${Math.max(3, Math.round(Math.abs(x.cents) / max * 100))}%"></i></div></div>`).join('')}</div>`;
   }
 
@@ -555,6 +575,7 @@
     }
     if (C.undetailedCents > 0) items.push(esc(c.bare(mad(C.undetailedCents))));
     if (C.uncostedReturnCents > 0) items.push(esc(c.backNoCost(mad(C.uncostedReturnCents), C.uncostedReturnLines || 1)));
+    if ((site.ratios || {}).refundUndetailedCents > 0) items.push(esc(c.bareRefund(mad(site.ratios.refundUndetailedCents))));
     if (V.missingCount > 0) items.push(esc(c.needCount(V.missingCount)));
     if (C.stockNoCost > 0) items.push(esc(c.stockNoCost(C.stockNoCost)));
     if (C.ledgerNoCostRows > 0) items.push(esc(c.ledgerNoCost(C.ledgerNoCostRows)));
@@ -602,10 +623,12 @@
     const m = new Map();
     sites.forEach((s) => (s.losses || []).forEach((x) => {
       const k = x.source + '|' + x.reason;
-      const cur = m.get(k) || { reason: x.reason, source: x.source, cents: 0 };
-      cur.cents += x.cents; m.set(k, cur);
+      const cur = m.get(k) || { reason: x.reason, source: x.source, cents: 0, by: [] };
+      cur.cents += x.cents;
+      (x.by || []).forEach((p) => cur.by.push({ name: s.name ? p.name + ' · ' + s.name : p.name, cents: p.cents }));
+      m.set(k, cur);
     }));
-    return [...m.values()].sort((a, b) => b.cents - a.cents);
+    return [...m.values()].map((x) => Object.assign(x, { by: x.by.sort((a, b) => b.cents - a.cents).slice(0, 5) })).sort((a, b) => b.cents - a.cents);
   }
   function mergeVariance(sites) {
     const rows = [];
@@ -625,7 +648,7 @@
     if (!slot || !slot.isConnected) return;
     css();
     const c = t();
-    if (!real) { const d = sample(); last.data = d; slot.innerHTML = `<section class="cv" data-costvar>${head(d)}${body(d)}</section>`; return; }
+    if (!real) { const d = sample(); last.data = d; slot.innerHTML = bdi(`<section class="cv" data-costvar>${head(d)}${body(d)}</section>`); return; }
     if (!entry || (!entry.data && !entry.error)) {
       slot.innerHTML = `<section class="cv" data-costvar aria-busy="true">${head(null)}<div class="cv-skel" role="status" aria-label="${esc(c.loading)}"></div></section>`;
       return;
@@ -636,7 +659,7 @@
       return;
     }
     last.data = entry.data;
-    slot.innerHTML = `<section class="cv" data-costvar>${head(entry.data)}${body(entry.data)}</section>`;
+    slot.innerHTML = bdi(`<section class="cv" data-costvar>${head(entry.data)}${body(entry.data)}</section>`);
   }
 
   function mount(slot, opts) {
@@ -683,7 +706,7 @@
     const row = rowsOf(data).find((r) => r.itemId === id && (!el.dataset.site || r.siteMerchant === el.dataset.site)) || null;
     const zone = data && data.range && data.range.zone;
     const m = window.Kiwi.modal({ title: (row && row.name) || id, tag: c.leaks, body: '<div class="cv"><div class="cv-skel sm"></div></div>', width: 560 });
-    const fill = (html) => { const b = m && m.el && m.el.querySelector('.kiwi-modal-body'); if (b) b.innerHTML = `<div class="cv">${html}</div>`; };
+    const fill = (html) => { const b = m && m.el && m.el.querySelector('.kiwi-modal-body'); if (b) b.innerHTML = bdi(`<div class="cv">${html}</div>`); };
     if (!last.real || (data && data.demo)) {
       fill(itemBody(row, { movements: [], counts: row && row.openTs ? [{ ts: row.closeTs, qty: row.closing }, { ts: row.openTs, qty: row.opening }] : [], unit: row && row.unit }, zone));
       return;

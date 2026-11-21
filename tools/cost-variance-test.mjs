@@ -16,7 +16,11 @@
  *      compte non ; « tous les établissements » = les magasins du compte.
  *   7. Le retour du juge : coût 0 = inconnu, retours déduits, offerts et
  *      reçus à 0 MAD, seuil de marge, transferts en route, inventaires les
- *      plus récents d'abord, instantané du stock, détail d'une matière. */
+ *      plus récents d'abord, instantané du stock, détail d'une matière.
+ *   8. L'export CSV ne fabrique pas de formule.
+ *   9. Livraisons : encaissée une fois, chez le livreur, revenue, perdue ;
+ *      retours rapprochés par identifiant d'article ; remboursements sans
+ *      panier signalés ; pertes rattachées à qui les a déclarées. */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -313,7 +317,7 @@ const sale3 = (merchant, ts, cents, method, lines) => run(
   'sale-' + (++sid), merchant, cents / 100, cents, method, ts, JSON.stringify(lines));
 /* Lait : la caisse épicerie envoie k:0 pour un produit sans coût. */
 sale3(EPI, T(11, 12), 50000, 'cash', [{ n: 'Lait', q: 2, t: 250, k: 0 }, { n: 'Huile', q: 1, t: 250, k: 20 }]);
-sale3(EPI, T(5, 12), 3000, 'cash', [{ n: 'Savon', q: 1, t: 30, k: 12 }]);                       // avant la période : donne le coût moyen du savon
+sale3(EPI, T(5, 12), 3000, 'cash', [{ n: 'Savon', q: 1, t: 30, k: 12, i: 'sv' }]);                       // avant la période : donne le coût moyen du savon
 sale3(EPI, T(12, 10), -5000, 'cash', [{ n: 'Huile', q: 1, t: -50, k: 20 }]);                    // remboursement qui porte son coût
 sale3(EPI, T(12, 11), -3000, 'credit', [{ itemId: 'sv', name: 'Savon', qty: 2, unitCents: 1500, amountCents: 3000 }]); // retour en avoir
 sale3(EPI, T(12, 12), -1000, 'cash', [{ n: 'Inconnu', q: 1, t: -10 }]);                         // retour sans coût connu
@@ -413,7 +417,8 @@ eq('détail : la caisse, 403', (await get(`merchant=${SHOP}&${RANGE}&item=poulet
   const vm = await import('node:vm');
   const blobs = [];
   const el = () => ({ click() {}, remove() {}, style: {} });
-  const window = { Kiwi: { handlers: {}, toast() {} }, KiwiI18n: { getLang: () => 'fr' }, KiwiCloudDoc: { currentSlug: () => 'resto-cv' } };
+  let LANG = 'fr';
+  const window = { Kiwi: { handlers: {}, toast() {} }, KiwiI18n: { getLang: () => LANG }, KiwiCloudDoc: { currentSlug: () => 'resto-cv' } };
   const rows = [
     { itemId: 'a', name: '=HYPERLINK("http://x","clic")', unit: 'kg', status: 'ok', opening: 1, supply: 0, closing: 2, actualUse: -1, theoretical: 0, waste: 0, gap: -1, gapCents: -2500 },
     { itemId: 'b', name: '+1+1', unit: '@u', status: 'ok', opening: 1, supply: 0, closing: 0, actualUse: 1, theoretical: 0, waste: 0, gap: 1, gapCents: 900 },
@@ -422,7 +427,7 @@ eq('détail : la caisse, 403', (await get(`merchant=${SHOP}&${RANGE}&item=poulet
     { itemId: 'e', name: 'Poulet, fermier', unit: 'kg', status: 'ok', opening: 1, supply: 0, closing: 1, actualUse: 0, theoretical: 0, waste: 0, gap: 0, gapCents: 0 },
   ];
   const payload = { merchant: 'resto-cv', scope: 'all', storeCount: 2, canEdit: true, range: { fromDay: '2026-11-10', toDay: '2026-11-16', from: T(10, 5), to: T(17, 5) },
-    total: { ratios: {}, target: null, leakCents: 0, netGapCents: 0 },
+    total: { ratios: { netSalesCents: 100000 }, target: { minMarginPct: 65, realMarginPct: 55.7, breached: true, shortfallCents: 9300, thresholdCents: 65000, maxConsumptionCents: 35000 }, leakCents: 0, netGapCents: 0 },
     sites: [{ merchant: 'resto-cv', name: '@Centre', ratios: {}, coverage: {}, losses: [], variance: { rows, countsFound: true, windows: [] } }] };
   const ctx = {
     window, navigator: { onLine: true }, console, setTimeout: () => 0,
@@ -437,7 +442,8 @@ eq('détail : la caisse, 403', (await get(`merchant=${SHOP}&${RANGE}&item=poulet
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/pages-pro/cost-variance.js'), 'utf8'), ctx);
   const H = window.Kiwi.handlers;
   H['costvar-scope']({ dataset: { scope: 'all' } });
-  H['costvar-mount']({ nodeType: 1, isConnected: true, innerHTML: '' }, { real: true });
+  const slot = { nodeType: 1, isConnected: true, innerHTML: '' };
+  H['costvar-mount'](slot, { real: true });
   await new Promise((r) => setImmediate(r)); await new Promise((r) => setImmediate(r));
   H['costvar-csv']();
   const csv = (blobs[0] || '').replace(/^﻿/, '').split('\r\n');
@@ -452,7 +458,85 @@ eq('détail : la caisse, 403', (await get(`merchant=${SHOP}&${RANGE}&item=poulet
   eq('CSV : le nom du magasin aussi', byName("'=HYPERLINK")[2], "'@Centre");
   eq('CSV : un écart négatif reste un nombre (pas d’apostrophe)', [byName("'=HYPERLINK")[7], byName("'=HYPERLINK")[10], byName("'=HYPERLINK")[11]], ['-1', '-1', '-25.00']);
   eq('CSV : une virgule dans un nom reste dans sa cellule', byName('Poulet')[0], 'Poulet, fermier');
+  /* RTL : dans la phrase d'alerte arabe, le pourcentage est un vrai <bdi dir="ltr">. */
+  LANG = 'ar';
+  H['costvar-mount'](slot, { real: true });
+  const alertHtml = (/<div class="cv-alert bad"[^]*?<\/div>/.exec(slot.innerHTML) || [''])[0];
+  ok('alerte arabe : « 55,7 % » et « 65 % » isolés en <bdi dir="ltr">', /<bdi dir="ltr">55[,٫.]7 %<\/bdi>/.test(alertHtml) && /<bdi dir="ltr">65[,٫.]0 %<\/bdi>/.test(alertHtml), alertHtml);
+  ok('aucun isolat Unicode ne reste dans le HTML posé', !/[\u2066\u2069]/.test(slot.innerHTML));
   ok('CSV : aucune cellule ne commence par un déclencheur de formule', body.every((r) => r.slice(0, 4).every((x) => !/^[=+\-@\t\r]/.test(x))), body);
+}
+
+/* ── 9. Livraisons, retours sans identifiant, remboursements sans panier ──── */
+{
+  /* La sonde du juge (cv-double.mjs), telle quelle : une robe à 120 MAD de
+     coût vendue en livraison comptait 245 MAD (120 au reçu à 0 MAD + 120 à
+     l'encaissement + 5 d'un autre « Article » prêté à un retour de 400 MAD). */
+  const D = 864e5;
+  run(`INSERT INTO accounts (id,email,business,salt,hash,created_ts,status) VALUES ('acc-x','o@x.t','Shop X','s','h',?,'active')`, now);
+  run(`INSERT INTO merchant_config (merchant,features,plan,type,account_id,name,status,updated_ts) VALUES ('shop-x','{}','plus','boutique','acc-x','Shop X','active',?)`, now);
+  const RL = JSON.stringify([{ n: 'Robe', q: 1, t: 300, k: 120, i: 'robe' }]);
+  run(`INSERT INTO sales (id,merchant,amount,amount_cents,method,ts,lines) VALUES ('px-s1','shop-x',0,0,'consignment',?,?)`, now - 2 * D, RL);
+  run(`INSERT INTO sales (id,merchant,amount,amount_cents,method,ts,lines,channel) VALUES ('px-c1','shop-x',300,30000,'cash',?,?,'delivery')`, now - D, RL);
+  run(`INSERT INTO sales (id,merchant,amount,amount_cents,method,ts,lines,channel) VALUES ('px-s2','shop-x',50,5000,'cash',?,?,NULL)`, now - 3 * D, JSON.stringify([{ n: 'Article', q: 1, t: 50, k: 5 }]));
+  run(`INSERT INTO sales (id,merchant,amount,amount_cents,method,ts,lines,channel) VALUES ('px-r1','shop-x',-400,-40000,'credit',?,?,'refund')`, now - D, JSON.stringify([{ qty: 1, amountCents: 40000 }]));
+  const ownerX = auth.sessionCookie(await auth.makeSession('acc-x', SECRET)).split(';')[0];
+  const px = await get('merchant=shop-x&days=7', ownerX);
+  const PR = px.body.sites[0].ratios, PC = px.body.sites[0].coverage;
+  eq('sonde : coût vendu 125 MAD (robe une fois + article), plus 245', PR.soldCostCents, 12000 + 500);
+  eq('sonde : le retour de 400 MAD sans identifiant n’emprunte aucun coût', [PR.returnsCostCents, PC.uncostedReturnCents, PC.uncostedReturnLines], [0, 40000, 1]);
+
+  /* Une boutique et ses livraisons, une par cas. */
+  const BTQ = 'btq-cv';
+  run(`INSERT INTO accounts (id,email,business,salt,hash,created_ts,status) VALUES ('acc-4','btq@cv.ma','Btq CV','s','h',?,'active')`, now);
+  run(`INSERT INTO merchant_config (merchant,features,plan,type,account_id,name,status,updated_ts) VALUES (?,'{}','plus','boutique','acc-4','Btq CV','active',?)`, BTQ, now);
+  const owner4 = auth.sessionCookie(await auth.makeSession('acc-4', SECRET)).split(';')[0];
+  const ins = (id, cents, method, ts, lines, channel = null) => run(
+    `INSERT INTO sales (id,merchant,amount,amount_cents,method,ts,lines,channel) VALUES (?,?,?,?,?,?,?,?)`,
+    id, BTQ, cents / 100, cents, method, ts, lines == null ? null : JSON.stringify(lines), channel);
+  const audit = (saleId, action, ts, impact) => run(
+    `INSERT INTO sale_audit (merchant,sale_id,action,reason,amount,amount_cents,method,sale_ts,impact,ts) VALUES (?,?,?,'test',0,0,'delivery',?,?,?)`,
+    BTQ, saleId, action, ts, JSON.stringify(impact || {}), ts);
+  const ROBE = { n: 'Robe', q: 1, t: 300, k: 120, i: 'robe' };
+  ins('b-big', 100000, 'cash', T(11, 9), [{ n: 'Manteau', q: 1, t: 1000, k: 400, i: 'manteau' }]);
+  // livrée puis encaissée : le panier voyage avec l'encaissement (receivables.js)
+  ins('b-d1', 0, 'delivery', T(11, 10), [ROBE], 'delivery');
+  run(`INSERT INTO delivery_collections (merchant,collection_sale_id,sale_id,method,amount_cents,ts) VALUES (?,'b-c1','b-d1','cash',30000,?)`, BTQ, T(12, 10));
+  ins('b-c1', 30000, 'cash', T(12, 10), [ROBE], 'delivery');
+  // livrée, pas encore encaissée (méthode « consignment » comme la sonde)
+  ins('b-d2', 0, 'consignment', T(13, 10), [{ n: 'Jupe', q: 2, t: 200, k: 50, i: 'jupe' }]);
+  // revenue chez nous par le livreur
+  ins('b-d3', 0, 'delivery', T(13, 11), [ROBE], 'delivery');
+  audit('b-d3', 'delivery-return', T(14, 9), { lines: [{ i: 0, q: 1 }] });
+  // une sur deux revenue, l'autre toujours dehors
+  ins('b-d5', 0, 'delivery', T(13, 12), [{ ...ROBE, q: 2, t: 600 }], 'delivery');
+  audit('b-d5', 'delivery-return', T(14, 10), { lines: [{ i: 0, q: 1 }] });
+  // passée en perte par le propriétaire
+  ins('b-d4', 0, 'delivery', T(14, 10), [{ n: 'Sac', q: 1, t: 150, k: 70, i: 'sac' }], 'delivery');
+  audit('b-d4', 'delivery-writeoff', T(15, 10));
+  // remboursement de caisse sans panier (sale/refund.js)
+  ins('b-rb', -2500, 'cash', T(12, 12), null);
+  // pertes déclarées, avec qui les a déclarées ; une annulation revient à l'auteur
+  const loss = (id, ts, qty, why, actor, extra = {}) => run(
+    `INSERT INTO inventory_movements (id,merchant,item_id,qty_milli,reason,unit_cost_rate,ref_type,ref_id,occurred_ts,srv_ts,reversal_of,meta,actor,created_ts)
+     VALUES (?,?,?,?,?,?,'waste','',?,?,?,?,?,?)`, id, BTQ, 'robe', Math.round(qty * 1000), extra.reason || 'loss', 1200000, ts, ts, extra.reversalOf || '',
+    why ? JSON.stringify({ wasteReason: why }) : null, actor, ts);
+  loss('bl-1', T(14, 12), -1, 'vol', 'Karim');
+  loss('bl-2', T(14, 13), -1, 'vol', 'Karim');
+  loss('bl-2r', T(14, 14), 1, '', 'Patron', { reason: 'manual', reversalOf: 'bl-2' });
+  loss('bl-3', T(15, 12), -0.5, 'casse', 'Nadia');
+  const bq = await get(`merchant=${BTQ}&${RANGE}`, owner4);
+  const BR = bq.body.sites[0].ratios, BC = bq.body.sites[0].coverage;
+  const BL = bq.body.sites[0].losses || [];
+  eq('livrée puis encaissée : la robe compte une fois (à l’encaissement), le reçu à 0 MAD jamais', BR.soldCostCents, 40000 + 12000);
+  eq('livrées pas encore encaissées : chez le livreur, hors du coût vendu (jupes 100 MAD + 1 robe sur 2)', [BR.atCourierCents, BC.atCourierCount], [10000 + 12000, 2]);
+  eq('revenue par le livreur : ni vendue, ni chez le livreur, ni perdue', [BR.lostDeliveryCents, BC.lostDeliveryCount], [7000, 1]);
+  eq('passée en perte : motif « perdu », source livraison', (BL.find((x) => x.source === 'livraison') || {}).cents, 7000);
+  eq('pertes v = déclarées + livraison perdue', BR.wasteCents, 12000 + 6000 + 7000);
+  eq('remboursement sans panier : 25 MAD signalés, coût non déduit', [BR.refundUndetailedCents, BR.returnsCostCents], [2500, 0]);
+  const vol = BL.find((x) => x.source === 'declared' && x.reason === 'vol') || {};
+  eq('vol déclaré : 120 MAD, par Karim (son annulation lui revient)', [vol.cents, vol.by], [12000, [{ name: 'Karim', cents: 12000 }]]);
+  eq('casse déclarée par Nadia', (BL.find((x) => x.reason === 'casse') || {}).by, [{ name: 'Nadia', cents: 6000 }]);
 }
 
 /* L'index qui garde les sommes sur la période. */

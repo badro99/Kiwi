@@ -54,7 +54,11 @@ const qty3 = (v) => Math.round((Number(v) || 0) * 1000) / 1000;
  *                   0 MAD au carnet : la marchandise est partie)
  *   returnsCostCents coût des lignes rendues (remboursement, retour en avoir) :
  *                   la marchandise revient, son coût sort de A
- *   giftCostCents   coût des tickets offerts : une perte, motif « offert » */
+ *   giftCostCents   coût des tickets offerts : une perte, motif « offert »
+ *   lostDeliveryCents coût d'une livraison passée en perte (le colis ne
+ *                   reviendra pas, rien n'a été encaissé) : une perte
+ *   atCourierCents  coût de ce qui est chez le livreur, pas encore encaissé :
+ *                   ni vendu ni perdu, montré à part, hors de A et de v */
 export function keyRatios(input) {
   const s = input || {};
   const gross = int(s.salesCents);
@@ -65,10 +69,11 @@ export function keyRatios(input) {
   const A = sold - back;
   const declared = int(s.declaredWasteCents);
   const gifts = int(s.giftCostCents);
+  const lost = int(s.lostDeliveryCents);
   const shrink = int(s.countShrinkCents);
   const over = int(s.countOverCents);
   /* Signé : un surplus compté réduit la perte, il ne l'augmente pas. */
-  const v = declared + gifts + shrink - over;
+  const v = declared + gifts + lost + shrink - over;
   const Z = A + v;
   const received = int(s.receivedCents);
   const returned = int(s.returnedCents);
@@ -89,6 +94,9 @@ export function keyRatios(input) {
     costPct: pct(A, b),
     declaredWasteCents: declared,
     giftCostCents: gifts,
+    lostDeliveryCents: lost,
+    atCourierCents: int(s.atCourierCents),
+    refundUndetailedCents: int(s.refundUndetailedCents),
     countShrinkCents: shrink,
     countOverCents: over,
     wasteCents: v,
@@ -119,6 +127,7 @@ export function keyRatios(input) {
 const SUMMED = {
   salesCents: 'grossSalesCents', refundCents: 'refundCents', discountCents: 'discountCents',
   cogsCents: 'soldCostCents', returnsCostCents: 'returnsCostCents', giftCostCents: 'giftCostCents',
+  lostDeliveryCents: 'lostDeliveryCents', atCourierCents: 'atCourierCents', refundUndetailedCents: 'refundUndetailedCents',
   declaredWasteCents: 'declaredWasteCents', countShrinkCents: 'countShrinkCents', countOverCents: 'countOverCents',
   receivedCents: 'receivedCents', returnedCents: 'returnedCents', transferInCents: 'transferInCents',
   transferOutCents: 'transferOutCents', stockValueCents: 'stockValueCents', inTransitCents: 'inTransitCents',
@@ -159,19 +168,20 @@ export function cleanTargetPct(value) {
 
 /* Le coût des lignes rendues. Une ligne rendue porte rarement son coût (un
  * retour en avoir ne transporte que le prix payé) : elle prend alors le coût
- * moyen gelé du même article vendu ces 90 derniers jours ; à défaut, elle
- * reste « non chiffrée » et le dit, jamais à 0.
- * rows : [{ name, costedCents (déjà chiffré), qty (sans coût), cents (prix),
- *           avgCost (MAD, ou null) }] */
+ * moyen gelé du MÊME ARTICLE (son identifiant, jamais son nom : deux
+ * « Article » n'ont rien en commun) vendu ces 90 derniers jours ; à défaut,
+ * ou sans identifiant, elle reste « non chiffrée » et le dit, jamais à 0.
+ * rows : [{ id, costedCents (déjà chiffré), qty (sans coût), cents (prix),
+ *           lines (nombre de lignes sans coût), avgCost (MAD, ou null) }] */
 export function returnsCost(rows) {
   let costed = 0, uncostedCents = 0, uncostedLines = 0;
   for (const r of rows || []) {
     costed += int(r.costedCents);
     const q = Number(r.qty) || 0;
     if (!(q > 0)) continue;
-    const k = Number(r.avgCost);
+    const k = r.id ? Number(r.avgCost) : NaN;
     if (k > 0) costed += Math.round(q * k * 100);
-    else { uncostedCents += int(r.cents); uncostedLines++; }
+    else { uncostedCents += int(r.cents); uncostedLines += Math.max(1, int(r.lines)); }
   }
   return { returnsCostCents: costed, uncostedReturnCents: uncostedCents, uncostedReturnLines: uncostedLines };
 }
@@ -186,11 +196,16 @@ export function ledgerTotals(rows) {
     theoreticalLedgerCents: 0, noCostRows: 0, byReason: [],
   };
   const reasons = new Map();
-  const addReason = (reason, source, cents) => {
+  const addReason = (reason, source, cents, actor) => {
     if (!cents) return;
     const key = source + '|' + reason;
-    const cur = reasons.get(key) || { reason, source, cents: 0 };
+    const cur = reasons.get(key) || { reason, source, cents: 0, actors: new Map() };
     cur.cents += cents;
+    /* Qui l'a déclarée : le nom posé sur le mouvement (le responsable qui a
+       autorisé la sortie à la caisse, movements.js), une annulation revenant
+       à l'auteur de la perte qu'elle annule. */
+    const who = String(actor || '').trim().slice(0, 60);
+    if (who) cur.actors.set(who, (cur.actors.get(who) || 0) + cents);
     reasons.set(key, cur);
   };
   for (const r of rows || []) {
@@ -200,7 +215,7 @@ export function ledgerTotals(rows) {
     if (cls === 'theoretical') out.theoreticalLedgerCents += -value;
     else if (cls === 'waste') {
       out.declaredWasteCents += -value;
-      addReason(lossReason(r.lossReason || r.reason) || 'autre', 'declared', -value);
+      addReason(lossReason(r.lossReason || r.reason) || 'autre', 'declared', -value, r.actor);
     } else if (cls === 'count') {
       const shrink = -int(r.negCents);
       const over = int(r.posCents);
@@ -212,7 +227,10 @@ export function ledgerTotals(rows) {
     else if (r.reason === 'transfer-in') out.transferInCents += value;
     else if (r.reason === 'transfer-out') out.transferOutCents += -value;
   }
-  out.byReason = [...reasons.values()].filter((x) => x.cents).sort((a, b) => b.cents - a.cents);
+  out.byReason = [...reasons.values()].filter((x) => x.cents).sort((a, b) => b.cents - a.cents).map(({ actors, ...x }) => {
+    const by = [...actors].filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, cents]) => ({ name, cents }));
+    return by.length ? { ...x, by } : x;
+  });
   return out;
 }
 

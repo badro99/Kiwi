@@ -78,14 +78,22 @@ async function soft(promise, fallback, missing, key) {
  * coût) et son montant. Les retours en avoir écrivent leurs lignes avec
  * `qty`/`amountCents` : les deux formes sont lues.
  *   sale   vente payée        gift  ticket offert (complimentary)
- *   zero   reçu à 0 MAD (carnet, livraison à encaisser) : la marchandise part
- *   refund remboursement ou retour : la marchandise revient */
+ *   zero   reçu à 0 MAD au carnet : la marchandise part, son coût entre en A
+ *   delivery reçu à 0 MAD d'une livraison : JAMAIS dans A. Le chiffre d'une
+ *          livraison entre à l'encaissement (receivables.js › writeCollection
+ *          recopie le panier sur la vente encaissée, comptée « sale ») ; ce
+ *          reçu-là ne fait que dire que le colis est parti (deliveryBlock)
+ *   refund remboursement ou retour : la marchandise revient
+ * `id` est l'identifiant de l'article (i, itemId), seul lien sûr entre une
+ * ligne rendue et le coût moyen de ses ventes ; `n` n'est qu'un libellé. */
 const LINE_ROWS = (inRangeOnly) => `WITH raw AS (
     SELECT CASE WHEN ${CENTS.replace(/amount/g, 's.amount')} < 0 THEN 'refund'
                 WHEN s.method = 'complimentary' THEN 'gift'
+                WHEN ${CENTS.replace(/amount/g, 's.amount')} = 0 AND (s.method IN ('delivery', 'consignment') OR COALESCE(s.channel, '') = 'delivery') THEN 'delivery'
                 WHEN ${CENTS.replace(/amount/g, 's.amount')} = 0 THEN 'zero' ELSE 'sale' END AS kind,
       s.ts >= ? AS inRange,
       COALESCE(json_extract(l.value, '$.n'), json_extract(l.value, '$.name'), 'Article') AS n,
+      NULLIF(CAST(COALESCE(json_extract(l.value, '$.i'), json_extract(l.value, '$.itemId')) AS TEXT), '') AS id,
       COALESCE(json_extract(l.value, '$.q'), json_extract(l.value, '$.qty'), 0) AS q,
       COALESCE(json_extract(l.value, '$.k'), json_extract(l.value, '$.unitCost')) AS kr,
       COALESCE(json_extract(l.value, '$.t'), json_extract(l.value, '$.amountCents') / 100.0, json_extract(l.value, '$.total'), 0) AS t,
@@ -93,7 +101,7 @@ const LINE_ROWS = (inRangeOnly) => `WITH raw AS (
     FROM sales s, ${LINES} l
     WHERE s.merchant IN (?, ?) AND s.ts >= ? AND s.ts < ? AND s.void_ts IS NULL AND json_type(l.value) = 'object'
   ), ln AS (
-    SELECT kind, inRange, n, q, t, CASE WHEN typeof(kr) IN ('integer', 'real') AND kr > 0 THEN kr END AS k
+    SELECT kind, inRange, n, id, q, t, CASE WHEN typeof(kr) IN ('integer', 'real') AND kr > 0 THEN kr END AS k
     FROM raw WHERE kd NOT IN ('service', 'tip', 'tax', 'payment')${inRangeOnly ? ' AND inRange' : ''}
   )`;
 const AVG_LOOKBACK_MS = 90 * 86400000;
@@ -107,6 +115,7 @@ async function salesBlock(env, merchant, legacy, from, to) {
         SUM(CASE WHEN c < 0 THEN -c ELSE 0 END) AS refunds,
         SUM(CASE WHEN c >= 0 THEN COALESCE(d, 0) ELSE 0 END) AS disc,
         SUM(CASE WHEN c > 0 AND (lines IS NULL OR NOT json_valid(lines) OR lines = '[]') THEN c ELSE 0 END) AS bare,
+        SUM(CASE WHEN c < 0 AND (lines IS NULL OR NOT json_valid(lines) OR lines = '[]') THEN -c ELSE 0 END) AS bareRefunds,
         SUM(CASE WHEN c > 0 THEN 1 ELSE 0 END) AS n
       FROM (SELECT ${CENTS} AS c, discount_amount_cents AS d, lines FROM sales
             WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL)`, ...scope),
@@ -116,21 +125,25 @@ async function salesBlock(env, merchant, legacy, from, to) {
       FROM ln GROUP BY kind`, ...lineScope),
     all(env, `${LINE_ROWS(true)}
       SELECT n AS name, SUM(q) AS qty, SUM(t) AS total FROM ln
-      WHERE kind != 'refund' AND k IS NULL GROUP BY n ORDER BY total DESC LIMIT 12`, ...lineScope),
-    /* Les lignes rendues dans la période, et le coût moyen gelé du même
-       article vendu dans les 90 jours qui précèdent la fin de la période. */
+      WHERE kind IN ('sale', 'zero', 'gift') AND k IS NULL GROUP BY n ORDER BY total DESC LIMIT 12`, ...lineScope),
+    /* Les lignes rendues dans la période, et le coût moyen gelé du MÊME
+       article (son identifiant) vendu dans les 90 jours qui précèdent la fin
+       de la période. Une ligne rendue sans identifiant forme le groupe NULL :
+       pas de moyenne, elle est signalée (returnsCost). */
     all(env, `${LINE_ROWS(false)}
-      SELECT n AS name,
+      SELECT id,
         SUM(CASE WHEN kind = 'refund' AND inRange AND k IS NOT NULL THEN ABS(q) * k ELSE 0 END) AS costedMad,
         SUM(CASE WHEN kind = 'refund' AND inRange AND k IS NULL THEN ABS(q) ELSE 0 END) AS qty,
         SUM(CASE WHEN kind = 'refund' AND inRange AND k IS NULL THEN ABS(t) ELSE 0 END) AS total,
-        SUM(CASE WHEN kind != 'refund' AND k IS NOT NULL THEN q * k END) / SUM(CASE WHEN kind != 'refund' AND k IS NOT NULL THEN q END) AS avgCost
-      FROM ln GROUP BY n HAVING SUM(CASE WHEN kind = 'refund' AND inRange THEN 1 ELSE 0 END) > 0 LIMIT 500`,
+        SUM(CASE WHEN kind = 'refund' AND inRange AND k IS NULL THEN 1 ELSE 0 END) AS lines,
+        CASE WHEN id IS NOT NULL THEN SUM(CASE WHEN kind IN ('sale', 'zero') AND k IS NOT NULL THEN q * k END)
+          / SUM(CASE WHEN kind IN ('sale', 'zero') AND k IS NOT NULL THEN q END) END AS avgCost
+      FROM ln GROUP BY id HAVING SUM(CASE WHEN kind = 'refund' AND inRange THEN 1 ELSE 0 END) > 0 LIMIT 500`,
       from, merchant, legacy || merchant, from - AVG_LOOKBACK_MS, to),
   ]);
   const k = Object.fromEntries(kinds.map((r) => [r.kind, r]));
   const cents = (kind, col) => Math.round(n0(k[kind] && k[kind][col]) * 100);
-  const back = returnsCost(returned.map((r) => ({ name: r.name, costedCents: Math.round(n0(r.costedMad) * 100), qty: n0(r.qty), cents: Math.round(n0(r.total) * 100), avgCost: r.avgCost })));
+  const back = returnsCost(returned.map((r) => ({ id: r.id, costedCents: Math.round(n0(r.costedMad) * 100), qty: n0(r.qty), lines: n0(r.lines), cents: Math.round(n0(r.total) * 100), avgCost: r.avgCost })));
   const lineTotal = cents('sale', 'total');
   const costed = cents('sale', 'costed');
   return {
@@ -138,6 +151,10 @@ async function salesBlock(env, merchant, legacy, from, to) {
     cogsCents: cents('sale', 'cogs') + cents('zero', 'cogs'),
     returnsCostCents: back.returnsCostCents,
     giftCostCents: cents('gift', 'cogs'),
+    /* Un remboursement de caisse sans panier (sale/refund.js) baisse les
+       ventes, mais rien ne dit quelle marchandise est revenue : le coût n'en
+       est pas déduit, et on le dit. */
+    refundUndetailedCents: n0(tot.bareRefunds),
     coverage: {
       lineRevenueCents: lineTotal,
       costedRevenueCents: costed,
@@ -152,9 +169,67 @@ async function salesBlock(env, merchant, legacy, from, to) {
   };
 }
 
+/* Les livraisons (reçu à 0 MAD, functions/api/receivables.js). Encaissée :
+ * rien ici, la vente encaissée porte le panier et son coût. Pas encore
+ * encaissée : le coût est « chez le livreur », montré à part (ni vendu, ni
+ * perdu). Revenue chez nous (retour livreur, ou remboursée) : rien, la
+ * marchandise est rentrée. Passée en perte par le propriétaire : une perte
+ * « perdu », à la date de la décision. Les retours partiels ({i, q} dans
+ * sale_audit 'delivery-return') sont retirés ligne par ligne. */
+const DELIVERY_LOOKBACK_MS = 90 * 86400000;
+const NOT_GOODS = new Set(['service', 'tip', 'tax', 'payment']);
+async function deliveryBlock(env, merchant, legacy, from, to, now = Date.now()) {
+  const rows = await all(env, `SELECT s.id AS id, s.merchant AS m, s.lines AS lines,
+        EXISTS (SELECT 1 FROM delivery_collections c WHERE c.merchant = s.merchant AND c.sale_id = s.id) AS collected,
+        EXISTS (SELECT 1 FROM sale_audit a WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'refund') AS refunded,
+        (SELECT MAX(a.ts) FROM sale_audit a WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'delivery-writeoff') AS lostTs,
+        (SELECT json_group_array(a.impact) FROM sale_audit a WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'delivery-return') AS backs
+      FROM sales s
+      WHERE s.merchant IN (?, ?) AND s.ts >= ? AND s.ts < ? AND s.void_ts IS NULL
+        AND ${CENTS.replace(/amount/g, 's.amount')} = 0
+        AND (s.method IN ('delivery', 'consignment') OR COALESCE(s.channel, '') = 'delivery')
+      ORDER BY s.ts DESC LIMIT 500`, merchant, legacy || merchant, Math.min(from, now - DELIVERY_LOOKBACK_MS), Math.max(to, now + 1));
+  const out = { atCourierCents: 0, atCourierCount: 0, lostDeliveryCents: 0, lostDeliveryCount: 0, deliveryUncostedLines: 0 };
+  for (const r of rows) {
+    if (Number(r.collected) || Number(r.refunded)) continue;
+    let lines = [];
+    try { lines = JSON.parse(r.lines || '[]'); } catch (_) { lines = []; }
+    if (!Array.isArray(lines)) continue;
+    const back = new Map();
+    try {
+      for (const raw of JSON.parse(r.backs || '[]')) {
+        let imp = {};
+        try { imp = JSON.parse(raw || '{}') || {}; } catch (_) { imp = {}; }
+        for (const l of Array.isArray(imp.lines) ? imp.lines : []) {
+          const i = Number(l && l.i), q = Number(l && l.q);
+          if (Number.isSafeInteger(i) && q > 0) back.set(i, (back.get(i) || 0) + q);
+        }
+      }
+    } catch (_) {}
+    let cost = 0, uncosted = 0, out_ = 0;
+    lines.forEach((l, i) => {
+      if (!l || typeof l !== 'object' || NOT_GOODS.has(String(l.kd || l.kind || ''))) return;
+      const q = Math.max(0, (Number(l.q != null ? l.q : l.qty) || 0) - (back.get(i) || 0));
+      if (!(q > 0)) return;
+      out_ += q;
+      const k = Number(l.k != null ? l.k : l.unitCost);
+      if (k > 0) cost += q * k * 100; else uncosted++;
+    });
+    if (!(out_ > 0)) continue;                         // tout est revenu
+    if (r.lostTs != null) {
+      const ts = Number(r.lostTs);
+      if (ts >= from && ts < to) { out.lostDeliveryCents += Math.round(cost); out.lostDeliveryCount++; out.deliveryUncostedLines += uncosted; }
+      continue;
+    }
+    out.atCourierCents += Math.round(cost); out.atCourierCount++; out.deliveryUncostedLines += uncosted;
+  }
+  return out;
+}
+
 async function ledgerBlock(env, merchant, from, to) {
   const rows = await all(env, `SELECT m.reason AS reason, m.ref_type AS refType,
         COALESCE(${META('m.meta', 'wasteReason')}, ${META('m.meta', 'lossReason')}, ${META('o.meta', 'wasteReason')}, o.reason, '') AS lossReason,
+        CASE WHEN ${CLASS_SQL} = 'w' THEN COALESCE(NULLIF(o.actor, ''), m.actor, '') ELSE '' END AS declarer,
         SUM(m.qty_milli * ${RATE}) / 10.0 AS valueCents,
         SUM(CASE WHEN m.qty_milli < 0 THEN m.qty_milli * ${RATE} END) / 10.0 AS negCents,
         SUM(CASE WHEN m.qty_milli > 0 THEN m.qty_milli * ${RATE} END) / 10.0 AS posCents,
@@ -163,8 +238,8 @@ async function ledgerBlock(env, merchant, from, to) {
       FROM inventory_movements m
       LEFT JOIN inventory_movements o ON m.reversal_of != '' AND o.id = m.reversal_of AND o.merchant = m.merchant
       WHERE m.merchant = ? AND m.occurred_ts >= ? AND m.occurred_ts < ?
-      GROUP BY m.reason, m.ref_type, lossReason`, merchant, from, to);
-  return ledgerTotals(rows.map((r) => ({ ...r, valueCents: Math.round(n0(r.valueCents)), negCents: Math.round(n0(r.negCents)), posCents: Math.round(n0(r.posCents)) })));
+      GROUP BY m.reason, m.ref_type, lossReason, declarer`, merchant, from, to);
+  return ledgerTotals(rows.map((r) => ({ ...r, actor: r.declarer, valueCents: Math.round(n0(r.valueCents)), negCents: Math.round(n0(r.negCents)), posCents: Math.round(n0(r.posCents)) })));
 }
 
 /* Stock maintenant, et le coût moyen d'entrée de chaque article (les entrées
@@ -398,7 +473,7 @@ async function targetOf(env, merchant) {
 
 async function siteReport(env, site, legacy, from, to, family) {
   const missing = [];
-  const [sales, ledger, stock, po, names, transit, target] = await Promise.all([
+  const [sales, ledger, stock, po, names, transit, target, delivery] = await Promise.all([
     salesBlock(env, site.merchant, legacy, from, to),
     soft(ledgerBlock(env, site.merchant, from, to), ledgerTotals([]), missing, 'ledger'),
     soft(stockBlock(env, site.merchant), { cost: new Map(), stockValueCents: 0, stockItems: 0, stockNoCost: 0 }, missing, 'stock'),
@@ -406,19 +481,23 @@ async function siteReport(env, site, legacy, from, to, family) {
     namesBlock(env, site.merchant),
     soft(transitBlock(env, site.merchant, family), { inTransitCents: 0, inTransitPieces: 0, inTransitCount: 0 }, missing, 'transfers'),
     targetOf(env, site.merchant),
+    soft(deliveryBlock(env, site.merchant, legacy, from, to), { atCourierCents: 0, atCourierCount: 0, lostDeliveryCents: 0, lostDeliveryCount: 0, deliveryUncostedLines: 0 }, missing, 'deliveries'),
   ]);
   const variance = await soft(varianceBlock(env, site.merchant, from, to, stock, names),
     { rows: [], countsFound: false, windows: [], leakCents: 0, surplusCents: 0, netGapCents: 0, measured: 0, missingCount: 0, noCost: 0 }, missing, 'variance');
-  const ratios = keyRatios({ ...sales, ...ledger, stockValueCents: stock.stockValueCents, ...transit, ...po });
+  const ratios = keyRatios({ ...sales, ...ledger, stockValueCents: stock.stockValueCents, ...transit, ...po,
+    lostDeliveryCents: delivery.lostDeliveryCents, atCourierCents: delivery.atCourierCents });
   /* Un ticket offert est une perte, rangée sous son motif. */
   const losses = ledger.byReason.slice();
   if (sales.giftCostCents) losses.push({ reason: 'offert', source: 'ticket', cents: sales.giftCostCents });
+  if (delivery.lostDeliveryCents) losses.push({ reason: 'perdu', source: 'livraison', cents: delivery.lostDeliveryCents });
   losses.sort((a, b) => b.cents - a.cents);
   return {
     merchant: site.merchant, name: site.name || site.merchant,
     ratios,
     target: targetCheck(ratios, target),
-    coverage: { ...sales.coverage, saleCount: sales.saleCount, ledgerNoCostRows: ledger.noCostRows, theoreticalLedgerCents: ledger.theoreticalLedgerCents, stockItems: stock.stockItems, stockNoCost: stock.stockNoCost, stockSnapshot: stock.snapshot || 'none' },
+    coverage: { ...sales.coverage, saleCount: sales.saleCount, ledgerNoCostRows: ledger.noCostRows, theoreticalLedgerCents: ledger.theoreticalLedgerCents, stockItems: stock.stockItems, stockNoCost: stock.stockNoCost, stockSnapshot: stock.snapshot || 'none',
+      atCourierCount: delivery.atCourierCount, lostDeliveryCount: delivery.lostDeliveryCount, deliveryUncostedLines: delivery.deliveryUncostedLines },
     losses,
     variance,
     missing,
