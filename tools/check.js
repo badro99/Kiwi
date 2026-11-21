@@ -1613,7 +1613,7 @@ section('Whole-project regressions');
     'sales-summary-test.mjs',
     'sales-history-parity-test.mjs', 'revenue-at-sale-test.mjs',
     'sales-summary-store-test.mjs', 'seller-commissions-test.mjs', 'sales-summary-early-test.mjs',
-    'sales-reconcile-test.mjs',
+    'sales-reconcile-test.mjs', 'reports-test.mjs',
     'sales-trim-test.mjs',
     'sales-scope-test.mjs',
     'ticket-141-test.mjs',
