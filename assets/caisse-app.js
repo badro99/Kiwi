@@ -3490,6 +3490,9 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
           if (current && String(current.session) !== String(closed.id)) return;
           if (mode === 'order' && selectedId === id) return;
           if (billBelongsToOtherVisit(id, closed.id)) return;
+          /* « empty » : le serveur a clos une visite sans commande. Ce que la
+             caisse tient encore sur cette table (saisi, pas envoyé) reste. */
+          if (closed.closed_by === 'empty' && ((tableOrders[id] || []).length || (orders[id] || []).length)) return;
           tableSettlement().project(tables[id], { status: 'khawya' });
           tableSettlement().project(tables[id], { covers: 0 });
           resetTableTimer(tables[id]);

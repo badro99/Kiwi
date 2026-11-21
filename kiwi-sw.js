@@ -163,7 +163,7 @@ var SHELL = [
   '/assets/caisse/handover.js?v=2',
   '/assets/caisse/inventory.js?v=10',
   '/assets/caisse/offline.js?v=10',
-  '/assets/caisse-app.js?v=50',
+  '/assets/caisse-app.js?v=51',
   '/assets/caisse-loyalty-reward.js?v=7',
   '/assets/caisse-refresh.js?v=9',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :

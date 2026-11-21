@@ -2249,7 +2249,7 @@ section('Whole-project regressions');
     'menu-promos-test.mjs',
     'menu-promos-server-test.mjs',
     'menu-promos-browser-test.mjs',
-    'menu-promos-properties-test.mjs', 'formula-extra-drink-browser-test.mjs', 'waiter-orders-off-inbox-test.mjs',
+    'menu-promos-properties-test.mjs', 'formula-extra-drink-browser-test.mjs', 'waiter-orders-off-inbox-test.mjs', 'empty-visit-release-test.mjs', 'empty-visit-till-browser-test.mjs',
     'caisse-pay-subtitle-test.mjs',
     /* Le fil d'Ariane du tableau de bord : une seule peinture (Kiwi.breadcrumb),
        « Home » / « الرئيسية » sur chaque page, et un changement de langue page

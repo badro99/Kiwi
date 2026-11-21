@@ -7,6 +7,7 @@ import { visitCredits } from '../_visit-cover.js';
 import { displayMoney, MAX_LINES } from './_queue-shared.js';
 import { reopenedFloorBills } from './_queue-reopened.js';
 import { COL_SETS, COL_SET_MISSING } from './_queue-columns.js';
+import { settleServiceTable } from '../service/events.js';
 import { MAX_ROWS, readPageCursor, PENDING_TTL_MS, KITCHEN_TTL_MS, OPEN_VISIT_RECOVERY_MS, ARCHIVED_TOMBSTONE_MS, EXPIRED_MS, SERVICE_TOUCH_MS } from './_queue-poll-policy.js';
 // Contrat : env, URL, marchand autorisé, rôle et périmètre déjà contrôlés ; sondage, expiration et présence des visites uniquement. La route garde les droits et le pointage du comptoir.
 export async function pollQueue({ env, url, merchant, role, service }) {
@@ -53,11 +54,48 @@ export async function pollQueue({ env, url, merchant, role, service }) {
       await env.DB.prepare(
         `UPDATE table_sessions SET seen_ts = ?
           WHERE merchant = ? AND status = 'open' AND mode = 'table'
-            AND seen_ts < ? AND table_no IN (${marks})`
+            AND seen_ts < ? AND table_no IN (${marks})
+            AND EXISTS (SELECT 1 FROM orders o WHERE o.merchant = table_sessions.merchant
+              AND o.session_id = table_sessions.id AND o.status <> 'rejected')`
       ).bind(now, merchant, now - SERVICE_TOUCH_MS, ...tables).run();
     } catch (err) {
       console.error('[queue] Failed to update table sessions seen_ts for merchant', merchant);
     }
+  }
+
+  /* Une visite sans commande ni paiement, sans signe de vie depuis
+   * EMPTY_VISIT_MS, est close : sinon la table reste occupée à vide jusqu'à ce
+   * que quelqu'un la libère à la main. Le téléphone d'un client qui regarde la
+   * carte rafraîchit seen_ts lui-même (session.js) et n'est donc pas touché. */
+  /* Une table installée sans aucune commande (clients repartis, mauvaise table
+   * touchée, commande refusée) n'est plus tenue en vie par les sondages des
+   * serveurs : sans signe de vie depuis trente minutes, elle est close
+   * (`empty`) et la table se libère partout. Browse, 21 nov. 2026. */
+  const EMPTY_VISIT_MS = 30 * 60 * 1000;
+  const EMPTY = `NOT EXISTS (SELECT 1 FROM orders o WHERE o.merchant = table_sessions.merchant
+            AND o.session_id = table_sessions.id AND o.status <> 'rejected')
+          AND NOT EXISTS (SELECT 1 FROM sales s WHERE s.merchant = table_sessions.merchant
+            AND s.session_id = table_sessions.id)`;
+  try {
+    const stale = await env.DB.prepare(
+      `SELECT id, table_no, opened_ts FROM table_sessions
+        WHERE merchant = ? AND status = 'open' AND mode = 'table' AND seen_ts < ? AND ${EMPTY}
+        ORDER BY opened_ts LIMIT 20`
+    ).bind(merchant, now - EMPTY_VISIT_MS).all();
+    for (const visit of (stale.results || [])) {
+      const closed = await env.DB.prepare(
+        `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = 'empty'
+          WHERE id = ? AND merchant = ? AND status = 'open' AND seen_ts < ? AND ${EMPTY}`
+      ).bind(now, visit.id, merchant, now - EMPTY_VISIT_MS).run();
+      /* Le plan de salle partagé (service-events) est ce qui allume la table
+       * sur les téléphones : on la remet libre, comme un encaissement, et
+       * seulement si c'est ce sondage-ci qui a clos la visite. */
+      if (Number(closed && closed.meta && closed.meta.changes)) {
+        await settleServiceTable(env, merchant, visit.table_no, { id: visit.id, opened_ts: visit.opened_ts });
+      }
+    }
+  } catch (err) {
+    console.error('[queue] Failed to close empty table visits for merchant', merchant);
   }
 
   /* A phone order nobody accepted is not a kitchen ticket forever. Test taps,
