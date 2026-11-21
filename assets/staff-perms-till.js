@@ -132,13 +132,13 @@
   }
   function css() {
     if (document.getElementById('kiwi-perm-css')) return;
-    var st = document.createElement('style');
-    st.id = 'kiwi-perm-css';
+    var sheetStyle = document.createElement('style');
+    sheetStyle.id = 'kiwi-perm-css';
     /* Material Symbols « lock » (assets/icons/material/lock.svg), en masque : la couleur suit le texte. */
-    st.textContent = '[data-perm-locked]{position:relative;opacity:.62}' +
+    sheetStyle.textContent = '[data-perm-locked]{position:relative;opacity:.62}' +
       '[data-perm-locked]::after{content:"";position:absolute;top:4px;inset-inline-end:4px;width:13px;height:13px;background:currentColor;' +
       '-webkit-mask:url(assets/icons/material/lock.svg) center/contain no-repeat;mask:url(assets/icons/material/lock.svg) center/contain no-repeat}';
-    document.head.appendChild(st);
+    document.head.appendChild(sheetStyle);
   }
 
   /* Le pavé (caisse/settings.js) nous joint par l'espace de l'appairage, qu'il

@@ -35,9 +35,9 @@
 
   function css() {
     if (document.getElementById('pm-css')) return;
-    const st = document.createElement('style');
-    st.id = 'pm-css';
-    st.textContent = `
+    const sheetStyle = document.createElement('style');
+    sheetStyle.id = 'pm-css';
+    sheetStyle.textContent = `
 .pm-page{display:grid;gap:14px}
 .pm-i{width:14px;height:14px;flex:none;vertical-align:-2px}
 .pm-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
@@ -87,7 +87,7 @@
 .pm-minus{color:var(--n-600,#4B4944)}
 @media(max-width:640px){.pm-entry{grid-template-columns:1fr;gap:2px}.pm-search{max-width:none}}
 `;
-    document.head.appendChild(st);
+    document.head.appendChild(sheetStyle);
   }
 
   /* ── Données ─────────────────────────────────────────────────────────── */
