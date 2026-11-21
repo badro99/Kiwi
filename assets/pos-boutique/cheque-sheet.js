@@ -13,14 +13,16 @@
  * qu'un renvoi n'écrit jamais deux chèques. La caisse ne fait qu'enregistrer :
  * remise, encaissement et rejet se décident au tableau de bord (patron, gérant).
  * Une caisse de démonstration n'envoie rien. */
+/* L'arabe suit le registre de la caisse (caisse-strings.js : « العميلة »,
+   « الإيصال », « البنك »), pas la darija du tableau de bord. */
 const PHRASES = {
   'Numéro du chèque': ['Cheque number', 'رقم الشيك'],
-  'Échéance': ['Due date', 'تاريخ الصرف'],
-  'Tireur, si ce n\'est pas la cliente': ['Drawer, if not the customer', 'مول الشيك، إلا ماشي الكليانة'],
-  'Banque': ['Bank', 'البنكة'],
-  'Tout est facultatif : le chèque rejoint le portefeuille du tableau de bord, relié au ticket.': ['All optional: the cheque joins the dashboard portfolio, linked to the ticket.', 'كلشي اختياري: الشيك كيدخل لمحفظة الشيكات فلوحة التحكم، مربوط بالتيكي.'],
-  'Chèque ajouté au portefeuille': ['Cheque added to the portfolio', 'الشيك تزاد للمحفظة'],
-  'Chèque gardé sur la caisse, il partira au retour du réseau': ['Cheque kept on the till, it will be sent when the network is back', 'الشيك محفوظ فالكاسة، غادي يتصيفط ملي يرجع الريزو'],
+  'Échéance': ['Due date', 'تاريخ الاستحقاق'],
+  'Tireur, si ce n\'est pas la cliente': ['Drawer, if not the customer', 'صاحب الشيك، إن لم تكن العميلة'],
+  'Banque': ['Bank', 'البنك'],
+  'Tout est facultatif : le chèque rejoint le portefeuille du tableau de bord, relié au ticket.': ['All optional: the cheque joins the dashboard portfolio, linked to the receipt.', 'كل الحقول اختيارية: يُضاف الشيك إلى محفظة الشيكات في لوحة التحكم، مرتبطًا بالإيصال.'],
+  'Chèque ajouté au portefeuille': ['Cheque added to the portfolio', 'أُضيف الشيك إلى المحفظة'],
+  'Chèque gardé sur la caisse, il partira au retour du réseau': ['Cheque kept on the till, it will be sent when the network is back', 'الشيك محفوظ في الصندوق، وسيُرسل عند عودة الاتصال'],
 };
 const tr = (s) => {
   const C = globalThis.window && globalThis.window.KiwiCaisseLang;
@@ -39,10 +41,12 @@ const clean = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f
 
 /* Les champs, glissés dans la fenêtre « Chèque reçu ». */
 export function chequeFields() {
-  const field = (name, label, extra) => `<label style="display:grid;gap:4px;font-size:12.5px;color:var(--n-600,#3a4440)">${esc(tr(label))}<input class="bq-in" data-cq-f="${name}" autocomplete="off" ${extra || ''}></label>`;
-  return `<div data-cq-sheet style="display:grid;gap:10px;margin:12px 0">
+  const field = (name, label, extra) => `<label style="display:grid;gap:4px;font-size:12.5px;color:var(--n-600,#3a4440);min-width:0">${esc(tr(label))}<input class="bq-in" data-cq-f="${name}" autocomplete="off" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box" ${extra || ''}></label>`;
+  /* Sur téléphone, un sélecteur de date iOS refuse de rétrécir sous sa largeur :
+     deux colonnes seulement quand chacune garde 200px, sinon l'une sous l'autre. */
+  return `<div data-cq-sheet style="display:grid;gap:10px;margin:12px 0;grid-template-columns:minmax(0,1fr);min-width:0">
     ${field('number', 'Numéro du chèque', 'inputmode="numeric" maxlength="40" dir="ltr"')}
-    <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+    <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));min-width:0">
       ${field('due', 'Échéance', 'type="date"')}
       ${field('drawerBank', 'Banque', 'maxlength="80" list="cq-till-banks"')}
     </div>
@@ -95,10 +99,16 @@ export function chequeFlush(slug) {
   return run;
 }
 
-/* Après la vente : chaque règlement par chèque devient un chèque du portefeuille. */
-export function chequeRecord(parts, sale, ctx) {
+/* Après la vente : chaque règlement par chèque devient un chèque du portefeuille.
+   `sales` : la vente, ou toutes celles qu'un même encaissement écrit (un chèque
+   qui solde trois notes d'acompte paie les trois tickets, il est relié aux trois). */
+export function chequeRecord(parts, sales, ctx) {
   const o = ctx || {};
-  if (o.demo || !o.slug || !sale || !sale.syncId) return;
+  const list0 = (Array.isArray(sales) ? sales : [sales]).filter((x) => x && x.syncId);
+  if (o.demo || !o.slug || !list0.length) return;
+  const sale = list0[0];
+  const saleIds = [...new Set(list0.map((x) => String(x.syncId)))].slice(0, 20);
+  const clientId = /^[A-Za-z0-9_-]{1,64}$/.test(String(o.clientId || '')) ? String(o.clientId) : '';
   const ticket = String(sale.syncId).replace(/[^A-Za-z0-9:._@-]/g, '').slice(0, 80);
   const list = (parts || []).map((p, i) => [p, i]).filter(([p]) => p && p.m === 'chèque' && held.has(p));
   if (!list.length) return;
@@ -110,7 +120,7 @@ export function chequeRecord(parts, sale, ctx) {
     const idemKey = 'till:' + ticket + ':' + i;
     if (box.some((x) => x.body.idemKey === idemKey)) continue;
     box.push({ at: Date.now(), body: { merchant: o.slug, idemKey, kind: 'cheque', direction: 'received', amountCents: cents, number: info.number, dueDate: info.dueDate, drawerBank: info.drawerBank,
-      drawerName: info.drawerName || clean(o.client, 120), partyName: clean(o.client, 120), saleIds: [String(sale.syncId)], by: clean(o.by, 40) } });
+      drawerName: info.drawerName || clean(o.client, 120), partyType: 'customer', partyId: clientId, partyName: clean(o.client, 120), saleIds, by: clean(o.by, 40) } });
   }
   const kept = writeBox(o.slug, box);
   chequeFlush(o.slug).then((sent) => {

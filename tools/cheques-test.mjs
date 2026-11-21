@@ -560,13 +560,57 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
   await S.chequeFlush(OTHER);
   assert.equal(JSON.parse(store.get('kiwiChqOutbox:' + OTHER)).length, 1, '403 keeps the cheque queued');
   store.delete('kiwiChqOutbox:' + OTHER);
-  /* L'encaissement boutique le branche : champs dans « Chèque reçu », détails tenus, puis enregistrés après la vente. */
+  /* Un chèque qui solde trois notes d'acompte paie trois tickets : relié aux trois, et à la fiche cliente (nom pris sur la fiche). */
+  const settle = [{ syncId: 'sale-acpt-1', clientId: 'cl-leila' }, { syncId: 'sale-acpt-2' }, { syncId: 'sale-acpt-3' }];
+  const multi = S.chequeHold(form({ number: '8800123' }), { m: 'chèque', amount: 600 });
+  S.chequeRecord([multi], settle, { slug: SHOP, client: 'Leila', clientId: 'cl-leila', by: 'Saad' });
+  await S.chequeFlush(SHOP);
+  const m3 = (await call(listRoute.onRequestGet, `/api/cheques?merchant=${SHOP}&q=8800123`, owner)).data.cheques[0];
+  assert.ok(m3, 'the balance cheque reached the portfolio');
+  assert.deepEqual(db.prepare("SELECT link_id FROM cheque_links WHERE merchant = ? AND cheque_id = ? AND link_type = 'sale' ORDER BY link_id").all(SHOP, m3.id).map((r) => r.link_id), ['sale-acpt-1', 'sale-acpt-2', 'sale-acpt-3'], 'linked to every ticket it pays, not only the first');
+  assert.equal(m3.partyId, 'cl-leila'); assert.equal(m3.partyName, 'Leila Amrani', 'customer card name, not the till label');
+  assert.equal(m3.clientId, 'cl-leila');
+  /* Les caisses le branchent : boutique (vente, échange, règlement de notes) et Maison. */
   const co = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique/checkout.js'), 'utf8');
-  assert.match(co, /import\('\.\/cheque-sheet\.js\?v=\d+'\)/);
-  assert.match(co, /cheque && CQ \? CQ\.chequeFields\(\)/);
-  assert.match(co, /CQ\.chequeHold\(el, \{ m: 'chèque', amount \}\)/);
-  assert.match(co, /if \(res\.sale\) opts\.sale = res\.sale;\n\s*if \(CQ && res\.sale\) CQ\.chequeRecord\(parts, res\.sale/);
-  ok('till: cheque sheet fields, demo sends nothing, offline queue per shop, idempotent per ticket, lands in the portfolio linked to the sale, 403 keeps the queue, wired into the boutique checkout');
+  const mz = fs.readFileSync(path.join(ROOT, 'assets/pos-maison/checkout.js'), 'utf8');
+  for (const [name, src, rel] of [['boutique', co, '\\.\\/cheque-sheet'], ['maison', mz, '\\.\\.\\/pos-boutique\\/cheque-sheet']]) {
+    assert.match(src, new RegExp(`import\\('${rel}\\.js\\?v=\\d+'\\)`), name + ' loads the cheque sheet');
+    assert.match(src, /cheque && CQ \? CQ\.chequeFields\(\)/, name + ' shows the fields');
+    assert.match(src, /CQ\.chequeHold\(el, \{ m: 'chèque', amount \}\)/, name + ' holds the details');
+    assert.match(src, /if \(res\.sale\) opts\.sale = res\.sale;\n\s*if \(CQ && res\.sale\) \{ const cid = opts\.customerId \|\| res\.sale\.clientId \|\| ''; CQ\.chequeRecord\(parts, res\.sales \|\| \[res\.sale\], \{[^\n]*clientId: cid/, name + ' records after the sale, every ticket, with the card');
+  }
+  /* L'échange avec différence à payer rend sa vente : le chèque qui la règle est enregistré comme une vente. */
+  assert.equal((co.match(/return \{ ref: rec\.id, sale: rec, line: `Échange/g) || []).length, 1, 'boutique exchange difference returns its sale');
+  assert.match(fs.readFileSync(path.join(ROOT, 'assets/pos-boutique/exch-combined.js'), 'utf8'), /return \{ ref: rec\.id, sale: rec, line:/, 'grouped exchange returns its sale');
+  assert.match(fs.readFileSync(path.join(ROOT, 'assets/retail-settle.js'), 'utf8'), /return \{ sale: sales\[0\], sales, line:/, 'balance settlement hands back every sale');
+  /* L'arabe de la caisse est celui de la caisse (registre soutenu), pas la darija du tableau de bord. */
+  const sheetSrc = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique/cheque-sheet.js'), 'utf8');
+  for (const w of ['البنكة', 'الكليانة', 'كلشي', 'فالكاسة', 'الريزو', 'تزاد']) assert.ok(!sheetSrc.includes(w), 'no Darija in the till sheet: ' + w);
+  assert.match(sheetSrc, /minmax\(min\(200px,100%\),1fr\)/, 'due date and bank stack on a phone instead of overlapping');
+  ok('till: cheque sheet fields, demo sends nothing, offline queue per shop, idempotent per ticket, lands in the portfolio linked to the sale, 403 keeps the queue, one cheque for several balance tickets links them all and the customer card, wired into boutique (sale, exchange, balances) and Maison, formal till Arabic');
+}
+
+/* ── 6c · fiche cliente : ses chèques en main et impayés ───────────── */
+{
+  const B = await importFresh('assets/client-cheques.js');
+  const list = (await call(listRoute.onRequestGet, `/api/cheques?merchant=${SHOP}&party=${encodeURIComponent('customer|cl-leila')}`, owner)).data.cheques;
+  assert.ok(list.length >= 1 && list.every((c) => c.partyId === 'cl-leila'), 'the party filter returns this customer only');
+  const sum = B.chequeSummary([...list.filter((c) => c.status === 'received'), { direction: 'received', status: 'rejected', debtOpen: true, amountCents: 50000, debt: { onAccount: true, remainingCents: 30000 } }, { direction: 'issued', status: 'issued', amountCents: 999 }]);
+  assert.equal(sum.handCount, list.filter((c) => c.status === 'received').length);
+  assert.equal(sum.badCount, 1); assert.equal(sum.badCents, 30000, 'what is still owed on the account, not the face value');
+  const html = B.chequeLine(sum, 'cl-leila', 'fr');
+  assert.match(html, /chèques? en main/); assert.match(html, /data-action="nav-cheques" data-arg="party:customer\|cl-leila"/);
+  assert.match(B.chequeLine(sum, 'cl-leila', 'ar'), /فاليد/);
+  assert.equal(B.chequeLine(B.chequeSummary([]), 'x', 'fr'), '', 'nothing to say: no line, never a false zero');
+  let mounted = '';
+  const host = { isConnected: true, querySelector: () => null, insertAdjacentHTML: (_w, h) => { mounted = h; } };
+  assert.equal(await B.mountClientCheques(host, { merchant: SHOP, clientId: 'cl-leila', lang: 'fr', fetchImpl: async () => new Response('{}', { status: 403 }) }), false, 'a cashier (403) sees nothing');
+  assert.equal(mounted, '');
+  const dir = fs.readFileSync(path.join(ROOT, 'assets/clients-directory.js'), 'utf8');
+  assert.match(dir, /import\('\.\/client-cheques\.js\?v=\d+'\)\.then\(function \(lib\) \{ return lib\.mountClientCheques\(/, 'the client card loads it');
+  const page = fs.readFileSync(path.join(ROOT, 'assets/pages-pro/cheques.js'), 'utf8');
+  assert.match(page, /filter\.startsWith\('party:'\)/, 'the portfolio opens filtered on that customer');
+  ok('client card: cheques in hand and bounced (owed on the account), link to the filtered portfolio, nothing for a cashier or an empty book');
 }
 
 /* ── 7 · base sans 0032 : calme en lecture, 503 en écriture ────────── */

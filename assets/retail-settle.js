@@ -75,7 +75,7 @@ export function settleBalances(sel, d) {
       }
       d.after();
       const received = sales.reduce((sum, sale) => sum + sale.total, 0);
-      return { sale: sales[0], line: `Reçu ${d.fmtMAD(received)} · reste ${d.fmtMAD(Math.max(0, owed / 100 - received))}` };
+      return { sale: sales[0], sales, line: `Reçu ${d.fmtMAD(received)} · reste ${d.fmtMAD(Math.max(0, owed / 100 - received))}` };
     },
   });
 }
