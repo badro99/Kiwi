@@ -1165,7 +1165,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
       })
       .then(function (d) {
         if (!(d && d.ok && d.staff)) return null;
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
         /* The server said yes: unlock now, refresh the offline verifier behind. */
         rememberOfflinePin(merchant, code, staff);
         return staff;
@@ -1193,7 +1193,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
       lastFailed = reply.kind !== 'answer';
       var d = reply.body;
       if (reply.kind === 'answer' && reply.status === 200 && d && d.ok && d.staff) {
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
         return rememberOfflinePin(merchant, code, staff).then(function () { return reply; }, function () { return reply; });
       }
       if (reply.kind === 'answer' && (reply.status === 401 || reply.status === 403)) return verifyOfflinePin(merchant, code, true).then(function (gone) {
@@ -1244,7 +1244,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
       return verifyCode(code, action).then(function (who) {
         if (who && who.offline && (window.KiwiTrustedClock || Date).now() - who.provenAt >= 24 * 60 * 60 * 1000) return false;
         var role = String((who && who.role) || '').toLowerCase();
-        if (!who || !/owner|propri|manager|g[eé]rant|responsable|admin/.test(role)) return false;
+        if (!who || (who.permission && who.permission.configured ? !who.permission.granted : !/owner|propri|manager|g[eé]rant|responsable|admin/.test(role))) return false;   // droits configurés : le serveur dit si CE code couvre l'acte (functions/api/pin/verify.js)
         /* Une autorisation qui ne dit pas QUI a autorisé ne vaut rien le jour où
          * on la relit : le code prouve une personne, on garde donc son nom
          * (jamais le code) pour que la surface qui a demandé l'accord puisse

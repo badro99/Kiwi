@@ -248,8 +248,8 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "79",
-    "sha": "27460f08df7d3444"
+    "v": "80",
+    "sha": "f44b400d78f5f0fc"
   },
   "assets/caisse-pairs.js": {
     "v": "4",
@@ -2242,6 +2242,10 @@
   "assets/sold-insights.js": {
     "v": "20",
     "sha": "b5ec8044f1b088eb"
+  },
+  "assets/staff-perms-till.js": {
+    "v": "1",
+    "sha": "6fc2a711cc55257a"
   },
   "assets/staff-roles.js": {
     "v": "3",

@@ -354,7 +354,7 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=15" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=79" defer></script>
+  <script src="assets/caisse-pairing.js?v=80" defer></script>
   <script src="assets/kiwi-select.js?v=4" defer></script>
   <script src="assets/cash-sessions.js?v=15" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
@@ -1556,7 +1556,7 @@
         <button class="clo-btn secondary" id="clo-print">
           <i data-lucide="printer"></i><span>Imprimer le rapport Z</span>
         </button>
-        <button class="clo-btn primary" id="clo-close">
+        <button class="clo-btn primary" id="clo-close" data-perm="money.close-day" data-perm-flow>
           <i data-lucide="lock"></i><span>Fermer la caisse</span>
         </button>
       </div>
@@ -1815,7 +1815,7 @@
         <div class="rf-preview" id="rf-preview"></div>
         <div class="modal-actions is-visible">
           <button class="ma-btn secondary" id="rf-confirm-cancel" style="flex:1;">Annuler</button>
-          <button class="ma-btn danger" id="rf-confirm" style="flex:2;"><i data-lucide="corner-up-left"></i><span id="rf-confirm-label">Rembourser</span></button>
+          <button class="ma-btn danger" id="rf-confirm" style="flex:2;" data-perm="sales.refund" data-perm-flow><i data-lucide="corner-up-left"></i><span id="rf-confirm-label">Rembourser</span></button>
         </div>
         <a id="rf-back" class="rf-back">← Choisir une autre transaction</a>
       </div>
@@ -2003,7 +2003,7 @@
   </div>
 
   <!-- Caisse declarations: parser-ordered classic scripts, before shared state. -->
-  <link rel="preload" as="script" href="assets/caisse-strings.js?v=4" data-caisse-script><link rel="preload" as="script" href="assets/caisse/dish-words.js?v=1" data-caisse-script><link rel="preload" as="script" href="assets/caisse/table-settlement.js?v=2" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse-strings.js?v=4" data-caisse-script><link rel="preload" as="script" href="assets/caisse/dish-words.js?v=1" data-caisse-script><link rel="preload" as="script" href="assets/caisse/table-settlement.js?v=2" data-caisse-script><link rel="preload" as="script" href="assets/staff-perms-till.js?v=1" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-accounting.js?v=33" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-floor.js?v=23" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-kitchen.js?v=30" data-caisse-script>
