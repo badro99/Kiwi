@@ -2014,6 +2014,9 @@
       const sourceT = tables[source];
       const targetT = tables[target];
       if (!sourceT || !targetT) return;
+      if (svReadPending(source) && svReadPending(target)) {   // deux « Lancer » sans réponse : un seul lot survivrait à la fusion
+        if (confirmBtn) confirmBtn.disabled = false;
+        return void toast(employeePick('Fusion impossible · attendez la confirmation du Lancer', 'Cannot merge · wait for the Send to be confirmed', 'تعذّر الدمج · انتظر تأكيد الإرسال'), 4800); }
 
       let merged = null;
       if (!SV_DEMO) {
@@ -2061,8 +2064,8 @@
         dirtyOrders.delete(source);
         dirtyOrders.add(target);
       }
-      const mergedBatch = svReadPending(source);   // même règle qu'au déplacement ; un lot déjà en attente sur la cible garde la sienne
-      if (mergedBatch) { svForgetPending(source); if (!svReadPending(target)) svWritePending(target, mergedBatch); }
+      const mergedBatch = svReadPending(source);   // même règle qu'au déplacement (deux lots en attente : fusion refusée plus haut)
+      if (mergedBatch) { svForgetPending(source); svWritePending(target, mergedBatch); }
 
       /* Ce qui a déjà été payé sur l'une ou l'autre table suit la visite
          fusionnée : on facture le reste que le serveur vient de calculer, et
