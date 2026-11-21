@@ -150,9 +150,17 @@
   let focusFor = '', focusTs = 0;
   function focus(customerId) { focusFor = String(customerId || ''); focusTs = Date.now(); }
   function takeFocus() { const id = Date.now() - focusTs < 5000 ? focusFor : ''; focusFor = ''; return id; }
+  /* La caisse repeint ses écrans d'elle-même (catalogue tiré toutes les 20 s,
+     promos, retour au premier plan), et chaque repeinte rappelle render().
+     Reconstruire la page renvoyait la caissière sur la liste au milieu d'un
+     encaissement. Un panneau déjà monté pour le même commerce garde donc sa
+     page : render() n'y fait que relire les notes, et la cliente ouverte, la
+     recherche, les cases et le montant tapé restent. */
   async function render(panel, opts) {
     if (!panel) return;
-    const tr = opts.tr || (text => text);
+    const live = panel.__krb;
+    if (live && live.merchant === opts.merchant && live.root.isConnected && panel.contains(live.root)) return live.refresh(opts);
+    const tr = text => (opts.tr ? opts.tr(text) : text);
     const name = id => (opts.customerName ? opts.customerName(id) : id) || id;
     panel.innerHTML = `<div class="kiwi-retail-balances"><header class="krb-head">
       <span class="krb-eyebrow">PAIEMENTS ÉCHELONNÉS</span><h1>Acomptes</h1>
@@ -165,6 +173,8 @@
     const target = panel.querySelector('[data-retail-balance-list]');
     const search = panel.querySelector('.krb-search');
     let generation = 0, groups = [];
+    let pick = null; // la cliente ouverte : { customerId, sig, unchecked, typedCents }
+    panel.__krb = { merchant: opts.merchant, root: panel.querySelector('.kiwi-retail-balances'), refresh: next => { opts = next; return refresh(); } };
     function note(className, text) { const p = el('p', className, text); p.role = 'status'; return p; }
     async function refresh() {
       const current = ++generation;
@@ -172,8 +182,17 @@
       if (current !== generation || !panel.isConnected) return;
       groups = groupByCustomer(rows);
       const want = opts.customerId || takeFocus(); opts.customerId = '';
-      if (want) { const open = groups.find(group => group.customerId === want); if (open) { detail(open); return; } }
-      list(status);
+      const reopen = want || (pick && pick.customerId);
+      const open = reopen && groups.find(group => group.customerId === reopen);
+      if (open) {
+        if (want && (!pick || pick.customerId !== want)) pick = null;
+        if (!pick || pick.sig !== signature(open)) detail(open);
+        return;
+      }
+      pick = null; list(status);
+    }
+    function signature(group) {
+      return group.rows.map(row => [row.id, due(row), cents(row.pendingCents), row.expiresAt || 0].join(':')).join('|');
     }
     function list(status) {
       if (search) search.hidden = false;
@@ -198,11 +217,18 @@
       if (search) search.hidden = true;
       const payable = group.rows.filter(row => !(cents(row.pendingCents) > 0) && due(row) > 0);
       const owed = payable.reduce((sum, row) => sum + due(row), 0);
-      const checked = new Set(payable.map(row => row.id));
-      let amount = owed;
+      if (!pick || pick.customerId !== group.customerId) pick = { customerId: group.customerId, unchecked: new Set(), typedCents: null };
+      pick.sig = signature(group);
+      const state = pick;
+      const checked = new Set(payable.map(row => row.id).filter(id => !state.unchecked.has(id)));
+      let amount = payable.filter(row => checked.has(row.id)).reduce((sum, row) => sum + due(row), 0);
+      if (state.typedCents != null) {
+        amount = Math.min(state.typedCents, owed);
+        checked.clear(); allocate(payable, amount).forEach(item => checked.add(item.row.id));
+      }
       target.replaceChildren();
       const back = el('button', 'krb-back', tr('Toutes les clientes')); back.type = 'button';
-      back.addEventListener('click', () => { generation++; list(); });
+      back.addEventListener('click', () => { generation++; pick = null; list(); });
       const head = el('div', 'krb-client');
       head.append(el('strong', '', name(group.customerId)), el('span', 'krb-amount', tr(`Reste ${mad(group.dueCents)} MAD`)),
         el('p', '', tr('Cochez les notes qu’elle règle, ou tapez le montant qu’elle donne : il couvre d’abord les plus anciennes.')));
@@ -222,7 +248,8 @@
         if (!locked) {
           lines.set(row.id, { box, cover, row });
           box.addEventListener('change', () => {
-            if (box.checked) checked.add(row.id); else checked.delete(row.id);
+            if (box.checked) { checked.add(row.id); state.unchecked.delete(row.id); } else { checked.delete(row.id); state.unchecked.add(row.id); }
+            state.typedCents = null;
             amount = payable.filter(item => checked.has(item.id)).reduce((sum, item) => sum + due(item), 0);
             field.value = mad(amount); paint();
           });
@@ -237,10 +264,11 @@
       pay.append(label, hint, go); target.appendChild(pay);
       field.addEventListener('input', () => {
         const typed = Math.round(Number(String(field.value).replace(',', '.').replace(/[^\d.]/g, '')) * 100) || 0;
-        amount = Math.min(typed, owed);
+        amount = Math.min(typed, owed); state.typedCents = typed;
         hint.textContent = typed > owed ? tr(`Elle ne doit que ${mad(owed)} MAD`) : '';
         const covered = new Set(allocate(payable, amount).map(item => item.row.id));
         checked.clear(); covered.forEach(id => checked.add(id));
+        state.unchecked = new Set(payable.map(row => row.id).filter(id => !covered.has(id)));
         paint();
       });
       function plan() { return allocate(payable.filter(row => checked.has(row.id)), amount); }

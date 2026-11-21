@@ -110,6 +110,70 @@ await S.run('une cliente, toutes ses notes, un montant qui couvre les plus ancie
   assert.equal(await page.$$eval('.krb-card', (els) => els.length), 2);
 });
 
+/* La caisse repeint l'écran toute seule (catalogue tiré toutes les 20 s,
+   promos, retour au premier plan) : chaque repeinte rappelait render(), qui
+   reconstruisait la page sur la liste. La caissière qui venait d'ouvrir une
+   cliente se retrouvait renvoyée à la recherche (vidéo du 21 nov. 2026).
+   Un deuxième render() sur le même panneau rafraîchit les notes sur place. */
+await S.run('une repeinte de la caisse garde la cliente ouverte, le montant tapé et la recherche', async (t) => {
+  const ctx = await browser.createBrowserContext();
+  t.defer(() => ctx.close());
+  const page = t.watch(await ctx.newPage());
+  await page.setViewport(IPAD);
+  await page.setRequestInterception(true);
+  let served = NOTES;
+  page.on('request', (r) => {
+    const u = r.url();
+    if (u.startsWith(base + '/api/retail-balances')) return r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ balances: served }) });
+    return u.startsWith(base) ? r.continue() : r.abort();
+  });
+  await page.goto(base + '/assets/tokens.css');
+  await page.setContent('<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/assets/tokens.css"><link rel="stylesheet" href="/assets/retail-balances.css"><div id="h"></div><script charset="utf-8" src="/assets/retail-balances.js"></script>');
+  await page.waitForFunction(() => window.KiwiRetailBalances);
+  await page.evaluate(() => {
+    const names = { c1: 'Lalla Kenza Alami', c2: 'Mme Ghita Benjelloun' };
+    window.__opts = () => ({ merchant: 'test-shop', prefix: 'mz', customerName: (id) => names[id], onSettle: () => {} });
+    window.__repaint = () => window.KiwiRetailBalances.render(document.getElementById('h'), window.__opts());
+    return window.__repaint();
+  });
+  await page.waitForSelector('.krb-card');
+
+  t.step('open Kenza and type what she hands over');
+  await page.tap('.krb-card');
+  await page.waitForSelector('.krb-note');
+  await page.$eval('.krb-pay input', (e) => { e.value = ''; e.__mine = true; });
+  await page.type('.krb-pay input', '700');
+
+  t.step('the till repaints: she stays open, the amount and the focused field survive');
+  await page.evaluate(() => window.__repaint());
+  assert.ok(await page.$('.krb-back'), 'still on her notes, not sent back to the list');
+  assert.equal(await page.$$eval('.krb-note', (els) => els.length), 2);
+  assert.equal(await page.$eval('.krb-pay input', (e) => e.value), '700', 'the amount she typed is kept');
+  assert.equal(await page.$eval('.krb-pay input', (e) => e.__mine === true && document.activeElement === e), true, 'the same field keeps the keyboard');
+  assert.equal(await page.$eval('.krb-go', (b) => b.textContent), 'Encaisser 700.00 MAD');
+
+  t.step('the server says the oldest note was paid elsewhere: her notes refresh in place');
+  served = NOTES.filter((n) => n.id !== 'n1');
+  await page.evaluate(() => window.__repaint());
+  assert.ok(await page.$('.krb-back'), 'still on her notes');
+  assert.deepEqual(await page.$$eval('.krb-note', (els) => els.map((e) => e.innerText.match(/M-\d+/)[0])), ['M-0012']);
+  assert.equal(await page.$eval('.krb-go', (b) => b.textContent), 'Encaisser 600.00 MAD', 'what she typed is brought back to what she still owes');
+  served = NOTES;
+
+  t.step('back to the list, search, repaint: the search and the list stay');
+  await page.tap('.krb-back');
+  await page.type('.kiwi-retail-balances > .krb-search input', 'Ghita');
+  await page.evaluate(() => window.__repaint());
+  assert.equal(await page.$('.krb-back'), null, 'a repaint does not reopen the last client');
+  assert.equal(await page.$eval('.kiwi-retail-balances > .krb-search input', (e) => e.value), 'Ghita');
+  assert.deepEqual(await page.$$eval('.krb-card strong', (els) => els.map((e) => e.textContent)), ['Mme Ghita Benjelloun']);
+
+  t.step('a request from the client card still opens that client');
+  await page.evaluate(() => { window.KiwiRetailBalances.focus('c1'); return window.__repaint(); });
+  assert.ok(await page.$('.krb-back'), 'the client card asked for Kenza');
+  assert.match(await page.$eval('.krb-client strong', (e) => e.textContent), /Kenza/);
+});
+
 await S.finish();
 await browser.close();
 server.close();
