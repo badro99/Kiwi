@@ -166,5 +166,13 @@
   "catalog_parts": [
     {"merchant": "upgrade-synth-1", "gen": "fixture-gen-1", "part": 137, "data": "fixture-data-1"},
     {"merchant": "upgrade-synth-2", "gen": "fixture-gen-2", "part": 274, "data": "fixture-data-2"}
+    ],
+  "credit_accounts": [
+    {"merchant": "upgrade-synth-1", "source": "carnet", "customer_key": "fixture-key-1", "limit_cents": 50000, "lang": "fr", "paid_mark_cents": 137, "reminded_ts": 137, "schedule": "[]", "rev": 1, "updated_ts": 137},
+    {"merchant": "upgrade-synth-2", "source": "client", "customer_key": "fixture-key-2", "limit_cents": null, "lang": "", "paid_mark_cents": 274, "reminded_ts": 0, "schedule": "[]", "rev": 2, "updated_ts": 274}
+  ],
+  "credit_events": [
+    {"merchant": "upgrade-synth-1", "id": "fixture-id-1", "source": "carnet", "customer_key": "fixture-key-1", "kind": "schedule", "amount_cents": 137, "actor": "fixture-actor-1", "detail": "fixture-detail-1", "ts": 137},
+    {"merchant": "upgrade-synth-2", "id": "fixture-id-2", "source": "client", "customer_key": "fixture-key-2", "kind": "reminded", "amount_cents": 274, "actor": "fixture-actor-2", "detail": "fixture-detail-2", "ts": 274}
   ]
 }

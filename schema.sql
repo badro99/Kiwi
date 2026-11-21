@@ -172,6 +172,34 @@ CREATE TABLE IF NOT EXISTS retail_balance_receipts (
 );
 CREATE INDEX IF NOT EXISTS retail_balance_receipts_by_balance
   ON retail_balance_receipts(merchant, balance_id, created_ts);
+-- Carnet de crédit du patron (21 nov. 2026, functions/api/_credit-accounts.js).
+-- Ce qui est dû reste lu dans l'ardoise (store_docs 'creditbook') et dans
+-- retail_balances ; une ligne par client garde le plafond, la langue des
+-- rappels, le dernier rappel et l'échéancier (JSON, écrit en compare-and-swap
+-- sur rev). paid_mark_cents : le total déjà versé que l'échéancier a vu.
+CREATE TABLE IF NOT EXISTS credit_accounts (
+  merchant TEXT NOT NULL,
+  source TEXT NOT NULL CHECK(source IN ('carnet','client')),
+  customer_key TEXT NOT NULL,
+  limit_cents INTEGER CHECK(limit_cents IS NULL OR limit_cents >= 0),
+  lang TEXT NOT NULL DEFAULT '',
+  paid_mark_cents INTEGER NOT NULL DEFAULT 0,
+  reminded_ts INTEGER NOT NULL DEFAULT 0,
+  schedule TEXT NOT NULL DEFAULT '[]',
+  rev INTEGER NOT NULL DEFAULT 0,
+  updated_ts INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (merchant, source, customer_key)
+);
+CREATE TABLE IF NOT EXISTS credit_events (
+  merchant TEXT NOT NULL, id TEXT NOT NULL,
+  source TEXT NOT NULL, customer_key TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK(kind IN ('schedule','limit','limit-override','collected','reminded','promise')),
+  amount_cents INTEGER NOT NULL DEFAULT 0,
+  actor TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '',
+  ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, id)
+);
+CREATE INDEX IF NOT EXISTS credit_events_customer ON credit_events(merchant, source, customer_key, ts DESC);
 -- Existing databases: add the column in place. SQLite has no
 -- ADD COLUMN IF NOT EXISTS, so this errors harmlessly ("duplicate column name")
 -- when re-run on a schema that already has it — the rest of the file still
