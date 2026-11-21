@@ -37,6 +37,8 @@ const _ICN = {
   upload: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>',
   // Same tray as `upload`, arrow reversed — the file comes IN (import).
   download: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
+  // Material Symbols document_scanner (assets/icons/material/), pour « Scanner ».
+  docScan: '<svg width="13" height="13" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M80-720v-200h200v80H160v120H80Zm720 0v-120H680v-80h200v200h-80ZM80-40v-200h80v120h120v80H80Zm600 0v-80h120v-120h80v200H680ZM280-240h400v-480H280v480Zm0 80q-33 0-56.5-23.5T200-240v-480q0-33 23.5-56.5T280-800h400q33 0 56.5 23.5T760-720v480q0 33-23.5 56.5T680-160H280Zm80-400h240v-80H360v80Zm0 120h240v-80H360v80Zm0 120h240v-80H360v80Zm-80 80v-480 480Z"/></svg>',
   plus:   '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
   edit:   '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
   copy:   '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>',
@@ -524,7 +526,7 @@ const _BQX_INV = {
     kFilterOn: 'Filtre actif · toucher pour tout revoir', kLowOut: '{low} stock bas · {out} en rupture', kNone: 'Rien sous 5 pièces',
     search: 'Rechercher un produit, un rayon, un code-barres', searchAria: 'Rechercher dans l’inventaire',
     view: 'Affichage', grid: 'Grille', list: 'Liste', done: 'Terminer', select: 'Sélectionner',
-    moreAria: 'Plus d’actions', more: 'Plus', newProduct: 'Nouveau produit', all: 'Tous', archivedPill: 'Archivés',
+    moreAria: 'Plus d’actions', more: 'Plus', newProduct: 'Nouveau produit', scan: 'Scanner', scanHint: 'Carton, facture, reçu ou article : Kiwi lit la photo', all: 'Tous', archivedPill: 'Archivés',
     selBarAria: 'Actions sur la sélection', tapToSelect: 'Touchez les produits à sélectionner',
     selAll: 'Tout sélectionner', selNone: 'Tout désélectionner', selAllShort: 'Tout', selNoneShort: 'Aucun',
     restore: 'Restaurer', archive: 'Archiver', move: 'Changer de catégorie', moveShort: 'Catégorie', delete: 'Supprimer',
@@ -577,7 +579,7 @@ const _BQX_INV = {
     kFilterOn: 'Filter on · tap to see everything', kLowOut: '{low} low · {out} out of stock', kNone: 'Nothing under 5 pieces',
     search: 'Search a product, a shelf, a barcode', searchAria: 'Search the inventory',
     view: 'View', grid: 'Grid', list: 'List', done: 'Done', select: 'Select',
-    moreAria: 'More actions', more: 'More', newProduct: 'New product', all: 'All', archivedPill: 'Archived',
+    moreAria: 'More actions', more: 'More', newProduct: 'New product', scan: 'Scan', scanHint: 'Carton, invoice, receipt or item: Kiwi reads the photo', all: 'All', archivedPill: 'Archived',
     selBarAria: 'Actions on the selection', tapToSelect: 'Tap the products to select them',
     selAll: 'Select all', selNone: 'Deselect all', selAllShort: 'All', selNoneShort: 'None',
     restore: 'Restore', archive: 'Archive', move: 'Change category', moveShort: 'Category', delete: 'Delete',
@@ -630,7 +632,7 @@ const _BQX_INV = {
     kFilterOn: 'التصفية مفعّلة · المس لرؤية الكل', kLowOut: 'منخفض: {low} · نفد: {out}', kNone: 'لا شيء تحت 5 قطع',
     search: 'ابحث عن منتج أو قسم أو رمز شريطي', searchAria: 'البحث في الجرد',
     view: 'العرض', grid: 'شبكة', list: 'قائمة', done: 'إنهاء', select: 'تحديد',
-    moreAria: 'إجراءات أخرى', more: 'المزيد', newProduct: 'منتج جديد', all: 'الكل', archivedPill: 'المؤرشفة',
+    moreAria: 'إجراءات أخرى', more: 'المزيد', newProduct: 'منتج جديد', scan: 'مسح', scanHint: 'كرتون أو فاتورة أو إيصال أو منتج: يقرأ Kiwi الصورة', all: 'الكل', archivedPill: 'المؤرشفة',
     selBarAria: 'إجراءات على التحديد', tapToSelect: 'المس المنتجات لتحديدها',
     selAll: 'تحديد الكل', selNone: 'إلغاء تحديد الكل', selAllShort: 'الكل', selNoneShort: 'لا شيء',
     restore: 'استعادة', archive: 'أرشفة', move: 'تغيير الفئة', moveShort: 'الفئة', delete: 'حذف',
@@ -1067,6 +1069,7 @@ function _renderInventory() {
         <button class="kb ${_bqxSelecting ? 'atlas' : 'ghost'}" data-action="bqx-sel-mode" aria-pressed="${_bqxSelecting}">${_esc(_bqxSelecting ? t.done : t.select)}</button>
         <details class="bqx-more"><summary class="kb ghost" aria-label="${_esc(t.moreAria)}">${_BQX_MORE}<span>${_esc(t.more)}</span></summary>
           <div class="bqx-more-pop">${more}</div></details>
+        <button class="kb ghost" data-action="bqx-scan" title="${_esc(t.scanHint)}">${_ICN.docScan}${_esc(t.scan)}</button>
         <button class="kb primary" data-action="bqx-new">${_ICN.plus}${_esc(t.newProduct)}</button>
       </div>
 
@@ -3468,6 +3471,11 @@ handlers['bqx-templates'] = () => {
   T.open({ onApplied: () => _renderInventory() });
 };
 
+handlers['bqx-scan'] = () => {
+  const inp = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*,application/pdf', hidden: true });
+  inp.addEventListener('change', () => { const f = inp.files && inp.files[0]; inp.remove(); if (f && window.KiwiVision && window.KiwiVision.scan) window.KiwiVision.scan(f); });
+  document.body.appendChild(inp); inp.click();
+};
 handlers['bqx-new'] = () => {
   _bqxPfOpen(null);
 };

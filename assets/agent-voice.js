@@ -965,8 +965,26 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
+  /* « Scanner » de l'inventaire (21 nov. 2026) : n'importe quelle photo ou PDF part
+     à l'assistant, qui s'ouvre, l'affiche et l'analyse comme une pièce jointe. */
+  function scanFile(file) {
+    if (!file) return;
+    if (window.KiwiAgent && window.KiwiAgent.open) window.KiwiAgent.open();
+    var tries = 0;
+    (function attach() {
+      sweep();
+      var wrap = document.querySelector('.fa-drawer .fa-inputwrap[data-kv-attach-wired="1"]');
+      if (!wrap) { if (++tries < 50) { setTimeout(attach, 100); return; } toast(T().error, 'danger'); return; }
+      fileToDataUrl(file, function (err, dataUrl, name, type) {
+        if (err) { toast(T().error, 'danger'); return; }
+        setAttachment(wrap, dataUrl, name, type);
+        executeVisionInspection(wrap, attachments.get(wrap), '');
+      });
+    })();
+  }
+
   window.KiwiVision = {
-    sweep: sweep, setAttachment: setAttachment, clearAttachment: clearAttachment,
+    sweep: sweep, setAttachment: setAttachment, clearAttachment: clearAttachment, scan: scanFile,
     /* Exposés pour tools/agent-vision-test.mjs : le rendu d'une lecture et l'exécution d'une action. */
     renderResult: renderVisionResult, runAction: handleActionResult,
   };

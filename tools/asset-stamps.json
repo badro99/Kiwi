@@ -80,8 +80,8 @@
     "sha": "436c5e1a15598bb1"
   },
   "assets/agent-voice.js": {
-    "v": "14",
-    "sha": "fdd9d5bf45e2024c"
+    "v": "15",
+    "sha": "2ff56d6b3dbd283d"
   },
   "assets/agent.js": {
     "v": "44",
@@ -1480,8 +1480,8 @@
     "sha": "d8150ae77563aa16"
   },
   "assets/pages-pro-boutique.js": {
-    "v": "53",
-    "sha": "43b37e0dc10e9a43"
+    "v": "54",
+    "sha": "e75246c5221fd87b"
   },
   "assets/pages-pro-office.js": {
     "v": "29",
@@ -1532,8 +1532,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "276",
-    "sha": "0533473e2aace87e"
+    "v": "277",
+    "sha": "5b1b81f256722520"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
