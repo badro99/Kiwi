@@ -17,6 +17,7 @@ const runbook = read('docs/ops/APP.md');
 const plist = read('app/ios/App/App/Info.plist');
 const exportOptions = read('app/ios/ExportOptions.plist');
 const archiveScript = read('tools/app-archive.sh');
+const androidReleaseScript = read('tools/app-android-release.sh');
 const gradle = read('app/android/app/build.gradle');
 const appIgnore = read('app/.gitignore');
 const gate = read('functions/_middleware.js');
@@ -106,6 +107,11 @@ check('the archive script injects the Team ID from the environment only',
   archiveScript.includes('KIWI_DEVELOPMENT_TEAM') && archiveScript.includes('-exportOptionsPlist') && !/(?![X]{10})[A-Z0-9]{10}/.test(archiveScript.replace(/KIWI_[A-Z_]+|PlistBuddy|ExportOptions|DEVELOPER_DIR/g, '')));
 check('Android release signing reads keystore.properties or env, never a committed key',
   gradle.includes("rootProject.file('keystore.properties')") && gradle.includes('KIWI_ANDROID_KEYSTORE') && appIgnore.includes('android/keystore.properties') && appIgnore.includes('*.jks'));
+check('the Android release script gates the commit, signs from outside the repo and proves the signature',
+  androidReleaseScript.includes('node tools/check.js') && androidReleaseScript.includes('KIWI_VERSION_CODE must be a new positive integer') &&
+  androidReleaseScript.includes('security find-generic-password -s kiwi-android-upload') && androidReleaseScript.includes('.kiwi-signing/') &&
+  androidReleaseScript.includes('jarsigner" -verify') && androidReleaseScript.includes('npm ci') &&
+  !/storePassword\s*=|-storepass|PASS=['"][^$]/.test(androidReleaseScript));
 check('the store pack exists with listing, privacy labels, review notes and demo account',
   storeDoc.includes('## 3. Fiche App Store Connect') && storeDoc.includes('## 4. App Privacy') && storeDoc.includes('## 5. Notes pour la revue') && storeDoc.includes('## 2. Compte démo'));
 check('the dashboard offers in-app account deletion (App Store 5.1.1 v)',

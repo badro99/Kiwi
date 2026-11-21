@@ -66,11 +66,15 @@ fiche est le nom de la personne jusqu'au transfert.
    sert à Browse et à la revue, la production attend ce délai ou le compte
    Organisation).
 2. Créer l'app « Kiwi Pro », catégorie Business, gratuite.
-3. Générer la clé d'upload **une seule fois** (commande dans
-   `app/android/keystore.properties.example`), la sauvegarder hors machine, activer
-   **Play App Signing**. `cd app/android && ./gradlew bundleRelease` → l'AAB dans
-   `app/build/outputs/bundle/release/`.
-4. Piste **test interne** d'abord (tablette Android de Browse), production ensuite.
+3. La clé d'upload existe déjà (2026-11-21, `~/.kiwi-signing/kiwi-pro-upload.jks`,
+   mot de passe dans le trousseau macOS, voir `docs/ops/APP.md` §8 Android) : la
+   sauvegarder hors machine (fichier + mot de passe), activer **Play App Signing**
+   (clé générée par Google). Construire avec
+   `KIWI_VERSION_CODE=1 sh tools/app-android-release.sh` → l'AAB signé et vérifié
+   dans `app/android/build/releases/release-1-…/`.
+4. Piste **test interne** d'abord (tablette Android de Browse), puis **test fermé**
+   avec au moins 12 testeurs inscrits pendant 14 jours d'affilée, puis demande
+   d'accès à la production. Chaque nouvel envoi prend le `versionCode` suivant.
 
 ### Plus tard, quand la société existe
 D-U-N-S (gratuit, dnb.com, 5 à 10 jours ouvrés) → compte Apple *Organisation* et

@@ -280,5 +280,19 @@ ok(/c == '-' \|\| c == '_' \|\| c == '\.'/.test(printerJava) && /int room = 120 
 ok(/<cache-path name="kiwi_share" path="kiwi-share\/" \/>/.test(read(RES + 'xml/file_paths.xml')), 'the FileProvider exposes cache/kiwi-share');
 ok(/androidx\.core:core:/.test(printerGradle) && /androidx\.appcompat:appcompat:/.test(printerGradle), 'the plugin declares the AndroidX libraries it now compiles against');
 
+// Measured on the API 36 emulator (WebView 133, 21 Nov 2026): Android 15+ draws
+// no status-bar colour and an old WebView is padded clear of the bars, so the
+// window background showed as white strips around the ink till.
+const chrome = read('app/src/native-chrome.js');
+const boot = read('app/src/native-boot.js');
+ok(/@JavascriptInterface fun setBarColor\(hex: String\)/.test(kt) && /BAR_COLOR\.matches\(hex\)/.test(kt) &&
+  /fun setBarColor[\s\S]{0,400}startsWith\("https:\/\/localhost\/"\)[\s\S]{0,200}decorView\?\.setBackgroundColor/.test(kt),
+  'the window behind the bars takes a validated #RRGGBB, only from the bundled page');
+ok(/Regex\("\^#\[0-9A-Fa-f\]\{6\}\$"\)/.test(kt), 'the bar colour accepts six hex digits and nothing else');
+ok(/host\.setBarColor\(barColor\)/.test(chrome) && /setBackgroundColor', \{ color: barColor \}/.test(chrome),
+  'the web paints the status bar and the window behind it with the same ink or paper');
+ok(/var ios = [^;]*getPlatform\(\) === 'ios'/.test(boot) && /if \(ios\) \{\s*document\.addEventListener\('focusin', syncAccessoryBar/.test(boot),
+  'the WKWebView accessory bar is asked for on iOS only (Android answers UNIMPLEMENTED)');
+
 console.log(`android-native-test: ${pass} passed, ${fail} failed.`);
 if (fail) process.exit(1);

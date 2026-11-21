@@ -137,6 +137,7 @@ private fun kiwiLanguage(raw: String?): String? {
     return if (code == "fr" || code == "en" || code == "ar") code else null
 }
 
+private val BAR_COLOR = Regex("^#[0-9A-Fa-f]{6}$")
 private data class HostField(val id: String, val label: String, val value: String, val input: String, val secure: Boolean)
 private data class HostChoice(val id: String, val title: String, val subtitle: String, val selected: Boolean, val group: String)
 private data class HostAction(val id: String, val label: String, val style: String, val enabled: Boolean)
@@ -237,6 +238,18 @@ class MainActivity : BridgeActivity() {
                 revision += 1
                 applyOverlayLayout()
                 publishHostInsets(force = true)
+            }
+        }
+
+        /* The window behind the system bars. Android 15+ draws no status-bar
+         * colour, and a WebView older than 140 is padded clear of the bars
+         * (Capacitor SystemBars), so this background is what shows there. */
+        @JavascriptInterface fun setBarColor(hex: String) {
+            if (!BAR_COLOR.matches(hex)) return
+            runOnUiThread {
+                val url = bridge?.webView?.url.orEmpty()
+                if (!url.startsWith("https://localhost/") && !url.startsWith("http://localhost/")) return@runOnUiThread
+                window?.decorView?.setBackgroundColor(android.graphics.Color.parseColor(hex))
             }
         }
     }

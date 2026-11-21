@@ -63,8 +63,13 @@
     accessoryShown = numeric;
     call(keyboardPlugin, 'setAccessoryBarVisible', { isVisible:numeric });
   }
-  document.addEventListener('focusin', syncAccessoryBar, true);
-  call(keyboardPlugin, 'setAccessoryBarVisible', { isVisible:false }).then(function () { accessoryShown = false; });
+  // The accessory bar is a WKWebView thing: Android's Keyboard plugin answers
+  // UNIMPLEMENTED and the rejection lands in the console on every load.
+  var ios = !!(window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'ios');
+  if (ios) {
+    document.addEventListener('focusin', syncAccessoryBar, true);
+    call(keyboardPlugin, 'setAccessoryBarVisible', { isVisible:false }).then(function () { accessoryShown = false; });
+  }
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', keyboardInsets);
     window.visualViewport.addEventListener('scroll', keyboardInsets);

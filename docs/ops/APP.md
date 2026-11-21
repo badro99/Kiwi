@@ -201,12 +201,44 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk@21 ANDROID_HOME=$HOME/Library/Android
 
 Play refuse un `versionCode` déjà vu : chaque release passe le suivant
 (`-PKIWI_VERSION_CODE` ou la variable d'environnement du même nom ; 1 par défaut).
-Vérifié le 2026-10-12 : `assembleDebug` compile sans avertissement Kotlin. Aucun
-appareil ni émulateur Android n'est installé ici : le rendu reste à prouver sur
-appareil.
+Vérifié le 2026-10-12 : `assembleDebug` compile sans avertissement Kotlin.
 
-La signature release vient de variables CI ou d'un fichier local ignoré. Aucun
-`*.keystore` ni `google-services.json` ne doit entrer dans Git.
+**Émulateur, 2026-11-21** (AVD Pixel Tablet, API 36 `google_apis` arm64, WebView 133,
+build debug) : écran de connexion natif, choix du rôle, caisse démo ouverte avec
+fond de caisse, vente espèces encaissée, ticket envoyé à la boîte d'impression du
+système faute d'imprimante ESC/POS (repli voulu, comme la feuille d'impression iOS),
+arabe en RTL, police Inter Tight chargée, fuseau `Africa/Casablanca`. Deux défauts
+trouvés et corrigés :
+- Android 15+ ignore la couleur de barre d'état ; avec un WebView < 140,
+  Capacitor (SystemBars) écarte la page des barres et ce rembourrage montrait le
+  fond de fenêtre clair : deux bandes blanches autour de la caisse encre. La page
+  peint désormais aussi ce fond (`KiwiShellHost.setBarColor`, `native-chrome.js`).
+  Avec un WebView ≥ 140 la page dessine elle-même sous les barres.
+- `Keyboard.setAccessoryBarVisible` (WKWebView seulement) répondait UNIMPLEMENTED
+  dans la console à chaque chargement : appelé sur iOS seulement.
+
+Reste à prouver **sur un vrai appareil** (aucun compte réel n'a été ouvert sur
+l'émulateur) : connexion propriétaire, appairage d'une caisse, `/api/me`, une vente
+Live Link vue au tableau de bord, le cookie de session sur EventSource/WebSocket,
+une impression ESC/POS, et le temps de démarrage (10,9 s jusqu'à `load` sur
+l'émulateur, dont ~4,4 s par fichier local servi en parallèle : à mesurer sur
+tablette). Sur l'émulateur, l'heure du ticket suivait le tzdata de l'image (Maroc
+encore à +01) quand l'horloge de la caisse applique UTC+0 : un appareil à jour
+n'a pas l'écart, une tablette au tzdata figé l'aurait.
+
+**Release Play** : `KIWI_VERSION_CODE=1 sh tools/app-android-release.sh` (arbre
+propre et commité, `check.js` complet, `npm ci`, bundle, `cap sync`, `bundleRelease`
+signé, `jarsigner -verify`, `release.txt`). Le nom de version suit le
+`MARKETING_VERSION` iOS. La clé d'upload vit **hors du dépôt** :
+`~/.kiwi-signing/kiwi-pro-upload.jks` (PKCS12, RSA 4096, alias `kiwi-pro`), son mot de
+passe dans le trousseau macOS (service `kiwi-android-upload`, compte `kiwi-pro`).
+Empreinte SHA-256 du certificat d'upload :
+`E7:C6:2A:AF:89:53:38:0E:EC:67:A1:5A:EC:18:00:24:AE:80:B9:E2:65:4D:F7:38:CE:E8:54:E2:45:2E:49:79`.
+Avec Play App Signing, une clé d'upload perdue se remplace par une demande au
+support Play ; la sauvegarder quand même hors machine (fichier + mot de passe).
+
+Aucun `*.jks`, `*.keystore`, `keystore.properties` ni `google-services.json` ne doit
+entrer dans Git.
 
 ### Rollback
 

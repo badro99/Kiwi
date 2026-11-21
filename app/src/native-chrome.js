@@ -67,7 +67,15 @@
     if (nextStyle === lastStatusBarStyle) return;
     lastStatusBarStyle = nextStyle;
     call(statusBar, 'setStyle', { style: nextStyle });
-    if (cap.getPlatform && cap.getPlatform() === 'android') call(statusBar, 'setBackgroundColor', { color: dark ? '#0A0F0D' : '#F7F5F0' });
+    if (cap.getPlatform && cap.getPlatform() === 'android') {
+      var barColor = dark ? '#0A0F0D' : '#F7F5F0';
+      call(statusBar, 'setBackgroundColor', { color: barColor });
+      // Android 15+ ignores the status-bar colour. With a WebView older than 140
+      // Capacitor pads the window instead of letting the page draw behind the
+      // bars, and that padding shows the window background: paint it too.
+      var host = window.KiwiShellHost;
+      if (host && typeof host.setBarColor === 'function') { try { host.setBarColor(barColor); } catch (_) {} }
+    }
   }
   function keyboardInsets() {
     if (!window.visualViewport) return;
