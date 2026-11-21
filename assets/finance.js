@@ -1062,14 +1062,14 @@
    * onglets. */
   const ANALYSIS = {
     fr: { title: 'Analyse du menu', sub: (v) => `Ce que votre carte vend, et ce qu’elle vous laisse · ${v}`, aria: 'Sections de l’analyse',
-      tabs: { overview: 'Vue d’ensemble', sales: 'Ventes', performance: 'Performance', hours: 'Heures de pointe', variance: 'Coût réel' } },
+      tabs: { overview: 'Vue d’ensemble', sales: 'Ventes', performance: 'Performance', hours: 'Heures de pointe' } },
     en: { title: 'Menu analysis', sub: (v) => `What your menu sells, and what it leaves you · ${v}`, aria: 'Analysis sections',
-      tabs: { overview: 'Overview', sales: 'Sales', performance: 'Performance', hours: 'Peak hours', variance: 'Actual cost' } },
+      tabs: { overview: 'Overview', sales: 'Sales', performance: 'Performance', hours: 'Peak hours' } },
     ar: { title: 'تحليل القائمة', sub: (v) => `ما تبيعه قائمتك، وما تتركه لك · ${v}`, aria: 'أقسام التحليل',
-      tabs: { overview: 'نظرة عامة', sales: 'المبيعات', performance: 'الأداء', hours: 'ساعات الذروة', variance: 'الكلفة الفعلية' } },
+      tabs: { overview: 'نظرة عامة', sales: 'المبيعات', performance: 'الأداء', hours: 'ساعات الذروة' } },
   };
   const at = () => ANALYSIS[lang()] || ANALYSIS.fr;
-  const FIN_TABS = ['overview', 'sales', 'performance', 'hours', 'variance', 'cost'];
+  const FIN_TABS = ['overview', 'sales', 'performance', 'hours', 'cost'];
   /* « Coût simple » n'existe que là où l'option `simple_food_cost` est
      explicitement allumée (assets/simple-food-cost.js › available). Un onglet
      retenu qui n'est plus disponible retombe sur la vue d'ensemble. */
@@ -1091,8 +1091,11 @@
       `</div>`;
     let seg = '';
     let body = '';
-    if (finTab === 'cost') body = window.KiwiSimpleFoodCost.panel();
-    else if (finTab === 'variance') body = '<div data-costvar-slot></div>';
+    /* Le coût réel (assets/pages-pro/cost-variance.js) vit sur l'écran du
+       coût, jamais dans Ventes, qui ne parle que d'argent encaissé : au bas de
+       l'onglet Coût quand il existe, sinon au bas de la vue d'ensemble. */
+    const varianceSlot = '<div data-costvar-slot></div>';
+    if (finTab === 'cost') body = window.KiwiSimpleFoodCost.panel() + varianceSlot;
     else if (finTab === 'sales' && A.sales) body = A.sales();
     else if (finTab === 'performance') body = A.performance();
     else if (finTab === 'hours') body = A.hours();
@@ -1104,6 +1107,7 @@
       body = `<div class="fin-grid">${pnlHtml()}${budgetHtml()}${breakevenHtml()}${serviceHtml()}${priceHtml()}</div>
         <div class="fin-note">${esc(t('noteUpdatePolicy'))}</div>`;
     }
+    if (finTab === 'overview' && !costOn()) body += varianceSlot;
     return `<div class="fin-page fin-analysis" data-fin-tab-open="${finTab}">
       <div class="fin-head">
         <div>
