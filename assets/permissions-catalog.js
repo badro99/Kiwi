@@ -147,7 +147,7 @@
   var PRESET_LABEL = {
     owner: { fr: 'Propriétaire', en: 'Owner', ar: 'مول المحل' },
     manager: { fr: 'Manager', en: 'Manager', ar: 'المسؤول' },
-    cashier: { fr: 'Caisse', en: 'Cashier', ar: 'الكاسيي' },
+    cashier: { fr: 'Caisse', en: 'Cashier', ar: 'الكاشير' },
     server: { fr: 'Service', en: 'Floor staff', ar: 'السرفور' },
     stock: { fr: 'Magasinier', en: 'Stock keeper', ar: 'مول السلعة' },
   };

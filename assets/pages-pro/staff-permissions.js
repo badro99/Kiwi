@@ -292,7 +292,7 @@
     const cards = `<div class="pm-cards">${rows.map((s) => {
       const dr = draftOf(s);
       return `<div class="pm-card"><div class="pm-head"><div><strong>${esc(s.name)}</strong><span class="pm-muted">${esc(s.role || '')}</span></div></div>
-        <p class="pm-sum">${esc(Cat.summary(dr.perms, s.name, lang()))}</p>${personNote(s)}<div class="pm-line">${s.ownerAccess ? ownerBadge() : presetSelect(s, dr)}</div>
+        <p class="pm-sum">${esc(Cat.summary(dr.perms, s.name, lang()))}</p>${state.open === s.key ? '' : personNote(s)}<div class="pm-line">${s.ownerAccess ? ownerBadge() : presetSelect(s, dr)}</div>
         <div class="pm-line">${btn('pm-open', s.key, state.open === s.key ? L('Fermer le détail', 'Hide details', 'سدّ التفاصيل') : L('Droit par droit', 'Permission by permission', 'حق بحق'), true, ` aria-expanded="${state.open === s.key}"`)}${saveActs(s)}</div>
         ${state.open === s.key ? personDetail(s) : ''}</div>`;
     }).join('') || `<p class="pm-note">${none}</p>`}</div>`;

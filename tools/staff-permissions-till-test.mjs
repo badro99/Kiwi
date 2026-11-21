@@ -136,6 +136,22 @@ console.log('■ staff-perms-till.js › le pavé connaît le droit de l’acte'
     'hors ligne : Lina clôture et sort des espèces sans pavé, sans preuve de geste (le journal du patron les inscrira à la synchro)');
   check(offDisc && !offDisc.done, 'hors ligne, la remise au-delà du seuil garde le pavé');
   online = true;
+  /* navigator.onLine dit « en ligne » mais la dernière vérification de code n'a pas eu de réponse. */
+  P.lastRequestFailed = () => true;
+  const netClose = forAct({ kind: 'close_till' }, 'manager', () => {}, null, {});
+  const netCash = forAct({ kind: 'cash_in', amountCents: 500, move: 'in' }, 'till', () => {}, null, {});
+  const netDisc = forAct({ kind: 'discount', pct: 30 }, 'manager', () => {}, null, {});
+  check(netClose && netClose.done && netClose.offline && netCash && netCash.done && netDisc && !netDisc.done,
+    'une vérification de code restée sans réponse vaut hors ligne : clôture et espèces passent, la remise garde le pavé');
+  P.lastRequestFailed = () => false;
+  check(!forAct({ kind: 'close_till' }, 'manager', () => {}, null, {}).done, 'le réseau répond de nouveau : la clôture repasse par le pavé');
+  delete P.lastRequestFailed;
+  {
+    const pairing = fs.readFileSync(new URL('../assets/caisse-pairing.js', import.meta.url), 'utf8');
+    const verify = pairing.slice(pairing.indexOf('function verifyCode('), pairing.indexOf('function verifyReply('));
+    check(/fetchDeadline\('\/api\/pin\/verify'[\s\S]*?\.then\(function \(r\) \{ lastFailed = false; return r; \}, function \(e\) \{ lastFailed = true; throw e; \}\)/.test(verify),
+      'le pavé classique note lui aussi une vérification restée sans réponse (lastRequestFailed)');
+  }
   ctx.navigator = undefined;
   const refund = forAct({ kind: 'refund' }, 'manager', () => { throw new Error('jamais sans pavé'); }, { kind: 'refund', refundId: 'r' }, {});
   check(refund && !refund.done && refund.authContext.kind === 'refund', 'un remboursement passe toujours par le pavé (preuve signée liée à la commande)');

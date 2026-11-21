@@ -42,7 +42,12 @@
      le journal du patron l'inscrit (« sans code », ou « sans le droit » si elle
      ne l'a pas). Remise et tiroir sans vente gardent le pavé : ils attendent. */
   var OFFLINE_SELF = { 'money.cash': 1, 'money.close-day': 1 };
-  function offline() { try { return window.navigator && window.navigator.onLine === false; } catch (_) { return false; } }
+  /* navigator.onLine === true ne prouve rien : une vérification de code qui
+     vient d'échouer sur le réseau (/api/pin/verify sans réponse) vaut hors ligne. */
+  function offline() {
+    try { if (window.navigator && window.navigator.onLine === false) return true; } catch (_) {}
+    try { var P = window.KiwiCaissePairing; return !!(P && typeof P.lastRequestFailed === 'function' && P.lastRequestFailed() === true); } catch (_) { return false; }
+  }
   /* Arabe : darija, comme le catalogue (assets/permissions-catalog.js › can). */
   var LABEL = {
     'money.cash': ['sortir ou entrer des espèces', 'move cash in or out', 'يدخّل ولا يخرّج الفلوس من الكاشة'],

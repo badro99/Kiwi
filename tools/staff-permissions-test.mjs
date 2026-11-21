@@ -292,7 +292,7 @@ console.log('■ Un gérant ne se fait pas propriétaire');
   const { accountOwnerRole } = await imp('functions/api/_staff-publication.js');
   const variants = ['Propriétaire', 'proprietaire', '  OWNER ', 'Patronne', 'PATRON', 'Direction', 'Manager-Owner', 'propriétaire ', 'Gérant', 'Manager', 'Caissière', 'Directeur', 'Responsable'];
   const auth = await imp('functions/auth/_lib.js');
-  check(variants.every((v) => accountOwnerRole(v) === Catalog.reservedTitle(v)), 'publication et filtre : la même table des intitulés réservés au patron');
+  check(variants.every((v) => accountOwnerRole(v) === Catalog.ownerTitle(v)), 'publication : une ligne propriétaire est exactement un intitulé de la liste unique (« Patronne » n’en est pas une)');
   check(variants.every((v) => Catalog.ownerTitle(v) === (auth.faceAccessTier(v) === 'owner') && (!Catalog.ownerTitle(v) || auth.employeeRoleOpensDashboard(v))),
     'UNE liste d’intitulés propriétaire : accès complet aux droits = palier du patron au tableau de bord : ' + variants.map((v) => v.trim() + '=' + Catalog.ownerTitle(v)).join(' '));
   check(Catalog.reservedTitle('Patronne') && !Catalog.ownerTitle('Patronne') && Catalog.presetForRole('Patronne') === 'manager',
@@ -611,6 +611,39 @@ console.log('■ Un homonyme ne prend pas l’accès propriétaire ; une retenue
   const failPlan = await addOne(w, 'm-y');
   restore();
   check(failPlan.status === 503 && !JSON.parse(doc().data).members.some((m) => m.id === 'm-y'), 'plan impossible : la fiche n’est pas écrite (503)');
+}
+
+/* ── 9f · Juge 5 : le code du patron survit à la page Équipe, une collision ne se voit pas ── */
+console.log('■ Le code du patron ne s’efface pas, une collision ne se devine pas');
+{
+  const w = world();
+  await activate(w);
+  const publishAs = (cookie, pins) => config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie, body: { merchant: SHOP, name: 'Café Droits', pins } }) });
+  const team = [{ name: 'Lina Saidi', role: 'Caissière', pin: CODES.caisse }, { name: 'Sara Alaoui', role: 'Manager', pin: CODES.manager }];
+  /* Le patron enregistre sa page Équipe (qui ne le contient jamais) avec une « Patronne » puis une « Direction ». */
+  const withPatronne = await publishAs(cookieOwner, [...team, { name: 'Fatima Zahra', role: 'Patronne', pin: '7801' }]);
+  const nadia1 = await (await pinVerify(w, CODES.owner, {})).json();
+  check(withPatronne.status === 200 && nadia1.ok && nadia1.staff.name === 'Nadia Patron' && (await (await pinVerify(w, '7801', {})).json()).staff.role === 'Patronne',
+    'une employée « Patronne » publiée par le patron : le code de Nadia vérifie toujours');
+  const withDirection = await publishAs(cookieOwner, [...team, { name: 'Driss Alami', role: 'Direction', pin: '7802' }]);
+  const nadia2 = await (await pinVerify(w, CODES.owner, {})).json();
+  check(withDirection.status === 200 && nadia2.ok && nadia2.staff.name === 'Nadia Patron' && (await (await pinVerify(w, '7802', {})).json()).staff.role === 'Direction',
+    'un employé « Direction » (intitulé propriétaire) : il ne remplace que la ligne à SON nom, Nadia reste');
+  const replaced = await publishAs(cookieOwner, [...team, { name: 'Nadia Patron', role: 'Propriétaire', pin: '7803' }]);
+  check(replaced.status === 200 && (await (await pinVerify(w, '7803', {})).json()).staff.name === 'Nadia Patron' && !(await (await pinVerify(w, CODES.owner, {})).json()).ok,
+    'le patron qui republie SA ligne (wizard, console) change bien son code');
+  /* Un gérant publie « Probe X » avec le code du patron, puis avec un autre : rien ne les distingue. */
+  const roster = async () => {
+    const cfg = await (await config.onRequestGet({ env: w.env, request: req('/api/config?merchant=' + SHOP, { cookie: cookieManager }) })).json();
+    const st = await (await get(w, cookieManager)).json();
+    return JSON.stringify([(cfg.pins || []).map((r) => r.name + '·' + r.role), (st.staff || []).map((r) => r.name)]);
+  };
+  const probe = (pin) => publishAs(cookieManager, [...team, { name: 'Probe X', role: 'Caissière', pin }]);
+  const hit = await probe('7803'), hitBody = await hit.text(), hitRoster = await roster();
+  const miss = await probe('7804'), missBody = await miss.text(), missRoster = await roster();
+  check(hit.status === miss.status && hitBody === missBody && hitRoster === missRoster && hitRoster.includes('Probe X·Caissière'),
+    'collision avec le code du patron ou non : même réponse, même roster (Probe X y est dans les deux cas)');
+  check((await (await pinVerify(w, '7803', {})).json()).staff.name === 'Nadia Patron', 'et le code du patron reste à lui seul : la ligne en collision porte un sceau mort');
 }
 
 /* ── 9e · Un code changé par un gérant, et la revue du patron ──────────── */

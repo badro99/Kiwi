@@ -26,10 +26,41 @@ const VALID_PIN = /^\d{4}$/;
 const MAX_ROSTER = 200;
 
 function accountOwnerRole(value) {
-  return Catalog.reservedTitle(value);   // les intitulés réservés au patron, une seule table pour publication, filtre et droits (assets/permissions-catalog.js)
+  return Catalog.ownerTitle(value);   // les intitulés propriétaire, la liste unique du palier et des droits (assets/permissions-catalog.js)
 }
 
 export { accountOwnerRole };
+
+/* LES LIGNES PROPRIÉTAIRE QUI RESTENT (21 nov.). Une ligne d'équipe titrée
+ * comme le patron (« Direction ») ne remplace plus TOUTES les lignes
+ * propriétaire : elle ne remplace que celle qui porte SON nom. La page Équipe
+ * (qui ne contient jamais le patron) ne peut donc plus effacer le code du
+ * patron ; le wizard et la console, qui envoient le patron par son nom,
+ * remplacent toujours son code. null = base muette (503). */
+async function ownerRowsToKeep(env, merchant, tillPins) {
+  const incoming = new Set(tillPins.filter((p) => accountOwnerRole(p.role)).map((p) => Catalog.normRole(p.name)));
+  try {
+    const existing = await env.DB.prepare('SELECT id, name, role FROM staff_pins WHERE merchant = ?').bind(merchant).all();
+    await sealMerchantStaff(env, merchant);
+    return (existing.results || []).filter((row) => accountOwnerRole(row.role) && !incoming.has(Catalog.normRole(row.name))).map((row) => String(row.id));
+  } catch (_) { return null; }
+}
+
+/* UNE LIGNE D'ÉQUIPE S'ÉCRIT TOUJOURS (21 nov.). Avant, un code égal à celui
+ * d'une ligne gardée (le patron) n'était pas inséré : la personne manquait au
+ * roster, et un gérant trouvait le code du patron en dix mille publications.
+ * Désormais la ligne est écrite dans tous les cas, sous le même nom et le même
+ * intitulé ; si son code est déjà pris, SQL lui donne une empreinte morte (au
+ * format scellé, qui ne correspond à aucun code) : vu du gérant, rien ne
+ * distingue une collision d'une ligne neuve, et deux personnes ne partagent
+ * jamais un code. Aucune comparaison en JavaScript : tout reste dans SQL. */
+function insertStaffRow(env, merchant, p, ts) {
+  const dead = p.storedCode.slice(0, p.storedCode.lastIndexOf('$') + 1) + 'x' + crypto.randomUUID().replace(/-/g, '');
+  return env.DB.prepare(
+    'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) SELECT ?, ?, '
+    + 'CASE WHEN EXISTS (SELECT 1 FROM staff_pins WHERE merchant = ? AND pin IN (' + p.candidates.map(() => '?').join(',') + ')) THEN ? ELSE ? END, ?, ?, ?'
+  ).bind(p.keepId || 'pin-' + crypto.randomUUID(), merchant, merchant, ...p.candidates, dead, p.storedCode, p.name, p.role, ts);
+}
 
 /* Un code republié tel quel (même nom, même intitulé, même code) garde son
  * identifiant : une session de tableau de bord ouverte par ce code (session_tiers
@@ -117,19 +148,8 @@ export async function publishStaffCredentials(env, merchant, body) {
    * sa caissière restait. Règle : une liste SANS propriétaire ne touche pas
    * aux lignes propriétaire existantes ; une liste AVEC propriétaire (le
    * wizard d'onboarding, la console) les remplace comme avant. */
-  const incomingHasOwner = tillPins.some((p) => accountOwnerRole(p.role));
-  const keepIds = [];
-  if (!incomingHasOwner) {
-    try {
-      const existing = await env.DB.prepare(
-        'SELECT id, role FROM staff_pins WHERE merchant = ?'
-      ).bind(merchant).all();
-      await sealMerchantStaff(env, merchant);
-      for (const row of existing.results || []) {
-        if (accountOwnerRole(row.role)) keepIds.push(String(row.id));
-      }
-    } catch (_) { return json({ error: 'staff-unavailable' }, 503); }
-  }
+  const keepIds = await ownerRowsToKeep(env, merchant, tillPins);
+  if (keepIds === null) return json({ error: 'staff-unavailable' }, 503);
   /* Les révisions de connexion s'écrivent dans le lot (_employee-auth.js) ;
    * si une autre sauvegarde les a bougées entre notre lecture et notre lot,
    * le lot échoue entier et on recommence sur l'état neuf. */
@@ -142,10 +162,7 @@ export async function publishStaffCredentials(env, merchant, body) {
         ).bind(merchant, ...keepIds)
       : env.DB.prepare('DELETE FROM staff_pins WHERE merchant = ?').bind(merchant)];
     tillPins.forEach((p, i) => {
-      stmts.push(env.DB.prepare(
-        'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) SELECT ?,?,?,?,?,? '
-        + 'WHERE NOT EXISTS (SELECT 1 FROM staff_pins WHERE merchant = ? AND pin IN (' + p.candidates.map(() => '?').join(',') + '))'
-      ).bind(p.keepId || 'pin-' + crypto.randomUUID(), merchant, p.storedCode, p.name, p.role, base + i, merchant, ...p.candidates));
+      stmts.push(insertStaffRow(env, merchant, p, base + i));
     });
     /* Le code conservé du patron gagne : une ligne d'équipe qui porterait les
      * mêmes quatre chiffres créerait un doublon dont le rôle dépendrait de

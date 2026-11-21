@@ -71,7 +71,8 @@ ok(ownerRole('Propriétaire') === true && ownerRole('owner') === true && ownerRo
 ok(ownerRole('manager') === false && ownerRole('Caissier') === false, 'manager et caissier ne sont pas le patron — leurs lignes suivent le roster d\'équipe');
 
 const pinsBlock = staffPub.slice(staffPub.indexOf('export async function publishStaffCredentials('));
-ok(pinsBlock.includes('const incomingHasOwner = tillPins.some((p) => accountOwnerRole(p.role))'), 'la liste entrante est inspectée : porte-t-elle un propriétaire ?');
+ok(pinsBlock.includes('const keepIds = await ownerRowsToKeep(env, merchant, tillPins);') && /filter\(\(row\) => accountOwnerRole\(row\.role\) && !incoming\.has\(Catalog\.normRole\(row\.name\)\)\)/.test(staffPub),
+  'la liste entrante est inspectée : une ligne propriétaire n’est remplacée que par une ligne au MÊME nom (une « Direction » d’équipe n’efface plus le patron)');
 ok(/DELETE FROM staff_pins WHERE merchant = \? AND id NOT IN \(/.test(pinsBlock), 'sans propriétaire entrant, les lignes propriétaire existantes sont PRÉSERVÉES');
 ok(/AND EXISTS \(SELECT 1 FROM staff_pins k WHERE k\.id IN/.test(pinsBlock), 'le code conservé du patron gagne sur un doublon d\'équipe — comparaison en SQL, jamais en JS');
 ok(!/SELECT id, pin|SELECT pin/.test(pinsBlock), 'la préservation ne projette JAMAIS la colonne pin vers JavaScript');

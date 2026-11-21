@@ -75,13 +75,24 @@ ok(moved.split(sharedGuard).length === 2, 'the shared-code refusal sits once in 
 const keepCall = "  await keepUnchangedIds(env, merchant, clean);\n";
 const keepBindNow = ".bind(p.keepId || 'pin-' + crypto.randomUUID(), merchant,";
 const keepBindThen = ".bind('pin-' + crypto.randomUUID(), merchant,";
-ok(moved.split(keepCall).length === 2 && moved.split(keepBindNow).length === 2 && mod.includes('async function keepUnchangedIds(env, merchant, clean) {'), 'unchanged codes keep their id, once');
-const inner = moved.replace(sharedGuard, '').replace(keepCall, '').replace(keepBindNow, keepBindThen);
+ok(moved.split(keepCall).length === 2 && mod.split(keepBindNow).length === 2 && mod.includes('async function keepUnchangedIds(env, merchant, clean) {'), 'unchanged codes keep their id, once');
+/* Two more (21 Nov, judge round 5): owner rows are kept by NAME, so a team
+ * list with a « Direction » employee no longer deletes the owner's code; and a
+ * team row is always written (a code already taken gets a dead seal in SQL),
+ * so a collision with the owner's code looks like any other row. Each new
+ * call stands where the old block stood; staff-permissions-test runs both. */
+const ownerKeepNow = "  const keepIds = await ownerRowsToKeep(env, merchant, tillPins);\n  if (keepIds === null) return json({ error: 'staff-unavailable' }, 503);\n";
+const ownerKeepThen = "  const incomingHasOwner = tillPins.some((p) => accountOwnerRole(p.role));\n  const keepIds = [];\n  if (!incomingHasOwner) {\n    try {\n      const existing = await env.DB.prepare(\n        'SELECT id, role FROM staff_pins WHERE merchant = ?'\n      ).bind(merchant).all();\n      await sealMerchantStaff(env, merchant);\n      for (const row of existing.results || []) {\n        if (accountOwnerRole(row.role)) keepIds.push(String(row.id));\n      }\n    } catch (_) { return json({ error: 'staff-unavailable' }, 503); }\n  }\n";
+const insertNow = "      stmts.push(insertStaffRow(env, merchant, p, base + i));";
+const insertThen = "      stmts.push(env.DB.prepare(\n        'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) SELECT ?,?,?,?,?,? '\n        + 'WHERE NOT EXISTS (SELECT 1 FROM staff_pins WHERE merchant = ? AND pin IN (' + p.candidates.map(() => '?').join(',') + '))'\n      ).bind(p.keepId || 'pin-' + crypto.randomUUID(), merchant, p.storedCode, p.name, p.role, base + i, merchant, ...p.candidates));";
+ok(moved.split(ownerKeepNow).length === 2 && moved.split(insertNow).length === 2
+  && mod.includes('async function ownerRowsToKeep(env, merchant, tillPins) {') && mod.includes('function insertStaffRow(env, merchant, p, ts) {'), 'owner rows kept by name, team rows always written, once each');
+const inner = moved.replace(sharedGuard, '').replace(keepCall, '').replace(ownerKeepNow, ownerKeepThen).replace(insertNow, insertThen.replace(keepBindNow, keepBindThen));
 /* A deliberate change since the move (21 Nov): accountOwnerRole reads the one
  * shared table of owner titles (assets/permissions-catalog.js), so publish,
  * route filter and permission evaluator agree. The rebuild puts the old body
  * back; staff-permissions-test holds the agreement on a table of variants. */
-const ownerRoleNow = "function accountOwnerRole(value) {\n  return Catalog.reservedTitle(value);   // les intitulés réservés au patron, une seule table pour publication, filtre et droits (assets/permissions-catalog.js)\n}\n";
+const ownerRoleNow = "function accountOwnerRole(value) {\n  return Catalog.ownerTitle(value);   // les intitulés propriétaire, la liste unique du palier et des droits (assets/permissions-catalog.js)\n}\n";
 const ownerRoleThen = "function accountOwnerRole(value) {\n  let role = String(value || '').trim().toLowerCase();\n"
   + "  try { role = role.normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''); } catch (_) {}\n"
   + "  return new Set(['owner', 'proprietaire', 'direction', 'patron']).has(role);\n}\n";

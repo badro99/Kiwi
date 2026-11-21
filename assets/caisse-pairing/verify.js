@@ -17,6 +17,7 @@
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ merchant: merchant, pin: code, ...(action ? { action: action } : {}) }),
     })
+      .then(function (r) { lastFailed = false; return r; }, function (e) { lastFailed = true; throw e; })   // le pavé classique aussi dit si le réseau a lâché (assets/staff-perms-till.js › offline)
       .then(function (r) {
         try { if (window.KiwiTrustedClock) window.KiwiTrustedClock.observe(r); } catch (_) {}
         if (r && r.status === 429) {
