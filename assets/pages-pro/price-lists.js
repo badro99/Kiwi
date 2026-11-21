@@ -31,6 +31,23 @@
   };
   const inputMad = (cents) => (cents == null ? '' : String(cents / 100).replace('.', ','));
   const API = () => window.KiwiPriceListsApi;
+  /* Le client des tarifs (assets/price-lists.js) se charge à l'inactivité ; si l'écran
+     s'ouvre avant, il le demande lui-même (aucune balise de plus dans le tableau). */
+  let apiLoading = null;
+  function ensureApi() {
+    if (API()) return Promise.resolve();
+    if (!apiLoading) {
+      apiLoading = new Promise((resolve) => {
+        try {
+          const tag = document.createElement('script');
+          tag.src = 'assets/price-lists.js?v=2';
+          tag.onload = tag.onerror = () => resolve();
+          document.head.appendChild(tag);
+        } catch (_) { resolve(); }
+      }).then(() => { apiLoading = null; });
+    }
+    return apiLoading;
+  }
   const CAT = () => window.KiwiBoutiqueCatalog || null;
   const BOOK = () => window.KiwiClients || null;
 
@@ -303,6 +320,7 @@
   handlers['nav-pricelists'] = async () => {
     state.loaded = false; state.open = null; state.tab = 'lists';
     render();
+    await ensureApi();
     await loadLists();
     render();
   };

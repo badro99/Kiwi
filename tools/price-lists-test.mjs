@@ -30,7 +30,7 @@ const clientsRoute = await imp('functions/api/price-lists/clients.js');
 const lib = await imp('functions/api/_price-lists.js');
 const { priceListProof, readPriceListProof } = await imp('functions/api/_price-list-sale.js');
 const { stampSale } = await imp('functions/api/_sale-stamp.js');
-const { readCatalog } = await imp('functions/api/shop/_lib.js');
+const { readCatalog: shopCatalog } = await imp('functions/api/shop/_lib.js');
 const { liveShop } = await imp('functions/api/shop/catalog.js');
 const { tillToken, makeSession, sessionCookie } = await imp('functions/auth/_lib.js');
 
@@ -217,14 +217,14 @@ console.log('\nLa boutique en ligne');
 r = await call(lists.onRequestPost, '/api/price-lists', { body: { merchant: A, action: 'create', name: 'Web', channels: ['online'], base: 'main', pct: -10, step: 100, compareListId: 'main' } });
 ok('un tarif Web (-10 %, prix barré = principal)', r.status === 200, r);
 const WEB = r.body.id;
-const shopCat = await readCatalog(env, A);
+const shopCat = await shopCatalog(env, A);
 const huile = shopCat.products.find((p) => p.id === 'huile');
 ok('la vitrine et le contrôle des commandes lisent 22 MAD, barré 24', huile.priceMAD === 22 && huile.compareMAD === 24, huile);
 const live = liveShop(shopCat, null).products.find((p) => p.id === 'huile');
 ok('/api/shop/catalog sert compareMAD', live.priceMAD === 22 && live.compareMAD === 24, live);
 const sucreWeb = shopCat.products.find((p) => p.id === 'sucre');
 ok('le sucre aussi : 11 MAD, barré 12,50', sucreWeb.priceMAD === 11 && sucreWeb.compareMAD === 12.5, sucreWeb);
-ok('B, sans tarif en ligne, garde son prix', (await readCatalog(env, B)).products[0].priceMAD === 99);
+ok('B, sans tarif en ligne, garde son prix', (await shopCatalog(env, B)).products[0].priceMAD === 99);
 
 console.log('\nLes factures');
 const fail = (status, code) => Object.assign(new Error(code), { status, code });

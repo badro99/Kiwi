@@ -35,7 +35,9 @@ const businessDate = () => '2026-01-01';
 const merchantCutoff = async () => 5;
 const merchantZone = async () => 'Africa/Casablanca';
 ${read('functions/api/_sale-truth.js').replace(/^import .*;$/gm, '').replace(/^export /gm, '')}
-${read('functions/api/_sale-stamp.js').replace(/^export /gm, '')}
+// The price-list stamp (_price-list-sale.js) has its own suite (price-lists-test); these baskets carry none.
+const stampPriceList = async () => {};
+${read('functions/api/_sale-stamp.js').replace(/^import .*;$/gm, '').replace(/^export /gm, '')}
 
 const MAX_AMOUNT_CENTS`);
 const mod = await import('data:text/javascript;base64,' + Buffer.from(api).toString('base64'));

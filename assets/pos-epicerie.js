@@ -1113,7 +1113,7 @@
   function postDay(total, method, label, ref, lines) {
     try {
       /* Le tarif du ticket (et l'accord du responsable) suit la vente ; le ticket suivant repart au principal. */
-      const pl = TPL(), out = window.KiwiPosSale ? window.KiwiPosSale.record('epicerie', { total, method, label, ref, lines, ...(pl ? pl.saleFields() : {}) }) || null : null;
+      const pl = (window.KiwiPosSale && window.KiwiPosSale.priceList) || null, out = window.KiwiPosSale ? window.KiwiPosSale.record('epicerie', { total, method, label, ref, lines, ...(pl ? pl.saleFields() : {}) }) || null : null;
       if (pl) pl.reset();
       return out;
     } catch (_) {}
