@@ -561,7 +561,7 @@
       <div data-dep-real-list><div class="dep-empty">·</div></div></div>`;
   }
   async function fillRealSuppliers(root) {
-    const host = root && root.querySelector('[data-dep-real-list]');
+    const host = root && typeof root.querySelector === 'function' && root.querySelector('[data-dep-real-list]');
     if (!host || !handlers['sup-owed']) return;
     try {
       /* La page Fournisseurs (chargée à la demande) lit le grand livre. */

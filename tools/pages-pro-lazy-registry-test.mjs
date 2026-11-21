@@ -18,6 +18,8 @@ const REFERENCES = {
   'assets/pages-pro/restaurant-stations.js': ['nav-menu', 'tools/pages-pro-restaurant-stations-reference.json'],
   /* Born lazy (Kiwi Commerce, 31 October 2026): its reference is its own first render. */
   'assets/pages-pro/boutique-web-orders.js': ['nav-weborders', 'tools/pages-pro-boutique-web-orders-reference.json'],
+  /* Born lazy (Fournisseurs, 21 November 2026): its reference is its own first render. */
+  'assets/pages-pro/suppliers.js': ['nav-fournisseurs', 'tools/pages-pro-suppliers-reference.json'],
 };
 const entries = [...registry.matchAll(/url: '([^']+)', handlers: (\[[^\]]+\])/g)];
 assert.ok(entries.length >= 1, 'registry lists its chunks');

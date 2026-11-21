@@ -20,7 +20,7 @@
   }
   const scripts = [
     'assets/pages-pro-office.js?v=29',
-    'assets/pages-pro.js?v=2233',
+    'assets/pages-pro.js?v=2234',
     'assets/pages-pro-boutique.js?v=53',
     'assets/boutique-stock-correct.js?v=4',
     'assets/boutique-categories-view.js?v=3',

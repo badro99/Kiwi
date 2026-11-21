@@ -16,7 +16,7 @@
   'use strict';
   const K = window.Kiwi;
   if (!K || !K.handlers) return;
-  const H = K.handlers;
+  const handlers = K.handlers;
   const lang = () => (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
   const L = (fr, en, ar) => { const l = lang(); return l === 'en' ? en : l === 'ar' ? ar : fr; };
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -628,19 +628,19 @@ table{width:100%;border-collapse:collapse;margin-top:18px;font-variant-numeric:t
   }
 
   /* ── Handlers (enregistrés d'un coup : LAZY_SECTIONS les compte) ───── */
-  H['nav-fournisseurs'] = () => { S.list = null; showList(); };
-  H['sup-open'] = (_el, id) => openSupplier(String(id || ''));
-  H['sup-back'] = () => showList();
-  H['sup-sort'] = (_el, k) => {
+  handlers['nav-fournisseurs'] = () => { S.list = null; showList(); };
+  handlers['sup-open'] = (_el, id) => openSupplier(String(id || ''));
+  handlers['sup-back'] = () => showList();
+  handlers['sup-sort'] = (_el, k) => {
     S.sort = ['owe', 'recent', 'name'].includes(k) ? k : 'owe';
     /* Basculer .on suffit : la lentille liquide fait glisser la pastille. */
     document.querySelectorAll('[data-action="sup-sort"]').forEach((b) => b.classList.toggle('on', b.dataset.arg === S.sort));
     const card = document.querySelector('.dash-genpage .sp-list');
     if (card) card.innerHTML = sorted((S.list && S.list.suppliers) || []).map(rowHtml).join('');
   };
-  H['sup-new'] = () => supplierModal(null);
-  H['sup-edit'] = async (_el, id) => { if (await ensureDetail(String(id || ''))) supplierModal(S.detail.supplier); };
-  H['sup-archive'] = async (_el, id) => {
+  handlers['sup-new'] = () => supplierModal(null);
+  handlers['sup-edit'] = async (_el, id) => { if (await ensureDetail(String(id || ''))) supplierModal(S.detail.supplier); };
+  handlers['sup-archive'] = async (_el, id) => {
     id = String(id || '');
     const b = S.detail && S.detail.balance ? S.detail.balance.balanceCents : 0;
     const msg = b ? L('Ce fournisseur a encore un solde. Il sortira de la liste, son relevé reste consultable.', 'This supplier still has a balance. It leaves the list, its statement stays readable.', 'هاد المورد باقي عندو رصيد. غادي يخرج من اللائحة والكشف ديالو يبقى.')
@@ -653,13 +653,13 @@ table{width:100%;border-collapse:collapse;margin-top:18px;font-variant-numeric:t
       S.list = null; showList();
     } catch (e) { K.toast(tr(e.code), { type: 'warning' }); }
   };
-  H['sup-pay'] = (_el, id) => payModal(String(id || ''));
-  H['sup-pay-po'] = (_el, arg) => {
+  handlers['sup-pay'] = (_el, id) => payModal(String(id || ''));
+  handlers['sup-pay-po'] = (_el, arg) => {
     const [id, po, cents] = String(arg || '').split('|');
     payModal(id, { po: po || '', cents: Number(cents) || 0 });
   };
-  H['sup-bill'] = (_el, id) => billModal(String(id || ''));
-  H['sup-void'] = async (_el, arg) => {
+  handlers['sup-bill'] = (_el, id) => billModal(String(id || ''));
+  handlers['sup-void'] = async (_el, arg) => {
     const raw = String(arg || ''), cash = raw.startsWith('cash:'), id = cash ? raw.slice(5) : raw;
     if (!window.confirm(L('Annuler cette ligne ? Elle sort du solde et reste dans l\'historique.', 'Void this entry? It leaves the balance and stays in the history.', 'نلغيو هاد السطر؟ غادي يخرج من الرصيد ويبقى فالتاريخ.'))) return;
     try {
@@ -669,7 +669,7 @@ table{width:100%;border-collapse:collapse;margin-top:18px;font-variant-numeric:t
       refreshDetail();
     } catch (e) { K.toast(tr(e.code), { type: 'warning' }); }
   };
-  H['sup-approve'] = async (_el, id) => {
+  handlers['sup-approve'] = async (_el, id) => {
     try {
       if (isReal()) await api('/api/suppliers/entry', { action: 'approve', id: String(id || '') });
       K.toast(L('Ligne approuvée', 'Entry approved', 'توافق على السطر'), { type: 'success' });
@@ -677,16 +677,16 @@ table{width:100%;border-collapse:collapse;margin-top:18px;font-variant-numeric:t
     } catch (e) { K.toast(tr(e.code), { type: 'warning' }); }
   };
   /* Pour la page Dépenses : les cinq fournisseurs à qui l'on doit le plus. */
-  H['sup-owed'] = async () => {
+  handlers['sup-owed'] = async () => {
     if (!isReal()) return [];
     const j = await api('/api/suppliers');
     return ((j && j.suppliers) || []).filter((x) => x.balanceCents > 0).sort((a, b) => b.balanceCents - a.balanceCents).slice(0, 5);
   };
-  H['sup-wa'] = (_el, id) => whatsapp(String(id || ''));
-  H['sup-print'] = (_el, id) => print(String(id || ''));
-  H['sup-csv'] = (_el, id) => csv(String(id || ''));
-  H['sup-cashbook'] = async () => { S.view = 'cashbook'; S.cash = null; paint(); await loadCash(); if (S.view === 'cashbook') paint(); };
-  H['sup-cash-add'] = (_el, dir) => {
+  handlers['sup-wa'] = (_el, id) => whatsapp(String(id || ''));
+  handlers['sup-print'] = (_el, id) => print(String(id || ''));
+  handlers['sup-csv'] = (_el, id) => csv(String(id || ''));
+  handlers['sup-cashbook'] = async () => { S.view = 'cashbook'; S.cash = null; paint(); await loadCash(); if (S.view === 'cashbook') paint(); };
+  handlers['sup-cash-add'] = (_el, dir) => {
     const out = dir === 'out';
     moneyModal({
       mode: out ? 'cash-out' : 'cash-in', title: out ? L("Sortie d'argent", 'Money out', 'خروج الفلوس') : L("Entrée d'argent", 'Money in', 'دخول الفلوس'), cta: L('Enregistrer', 'Save', 'سجّل'),
@@ -700,7 +700,7 @@ table{width:100%;border-collapse:collapse;margin-top:18px;font-variant-numeric:t
     });
   };
 
-  window.addEventListener('kiwi:langchange', () => {
+  if (typeof window.addEventListener === 'function') window.addEventListener('kiwi:langchange', () => {
     if (document.body.classList.contains('page-genpage') && document.querySelector('.dash-genpage .sp-wrap, .dash-genpage .sp-card')) paint();
   });
 })();
