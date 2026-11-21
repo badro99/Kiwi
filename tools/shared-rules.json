@@ -107,6 +107,20 @@
         "assets/caisse-kitchen.js",
         "assets/caisse-kitchen/kds-board.js"
       ]
+    },
+    {
+      "name": "KiwiReportWords",
+      "source": "functions/api/_reports-words.js",
+      "targets": [
+        "assets/pages-pro/reports-demo.js"
+      ]
+    },
+    {
+      "name": "KiwiReportCsv",
+      "source": "functions/api/_reports-csv.js",
+      "targets": [
+        "assets/pages-pro/reports-demo.js"
+      ]
     }
   ]
 }

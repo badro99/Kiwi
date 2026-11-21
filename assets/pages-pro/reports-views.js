@@ -46,6 +46,7 @@
     description: 'M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z',
     trending_up: 'm136-240-56-56 296-298 160 160 208-206H640v-80h240v240h-80v-104L536-320 376-480 136-240Z',
     trending_down: 'M640-240v-80h104L536-526 376-366 80-664l56-56 240 240 160-160 264 264v-104h80v240H640Z',
+    share: 'M680-80q-50 0-85-35t-35-85q0-6 3-28L282-392q-16 15-37 23.5t-45 8.5q-50 0-85-35t-35-85q0-50 35-85t85-35q24 0 45 8.5t37 23.5l281-164q-2-7-2.5-13.5T560-760q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35q-24 0-45-8.5T598-672L317-508q2 7 2.5 13.5t.5 14.5q0 8-.5 14.5T317-452l281 164q16-15 37-23.5t45-8.5q50 0 85 35t35 85q0 50-35 85t-85 35Zm0-80q17 0 28.5-11.5T720-200q0-17-11.5-28.5T680-240q-17 0-28.5 11.5T640-200q0 17 11.5 28.5T680-160ZM200-440q17 0 28.5-11.5T240-480q0-17-11.5-28.5T200-520q-17 0-28.5 11.5T160-480q0 17 11.5 28.5T200-440Zm508.5-291.5Q720-743 720-760t-11.5-28.5Q697-800 680-800t-28.5 11.5Q640-777 640-760t11.5 28.5Q663-720 680-720t28.5-11.5ZM680-200ZM200-480Zm480-280Z',
     chevron_left: 'M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z',
     chevron_right: 'M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z',
   };
@@ -55,6 +56,9 @@
 .rp-page{display:grid;gap:16px;--rp-up:var(--atlas,#0B6E4F);--rp-down:var(--danger,#B3261E)}
 .rp-i{width:18px;height:18px;flex:none}
 .rp-bar{position:sticky;top:0;z-index:4;display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 0;background:var(--paper,#F7F5F0)}
+.rp-acts{display:inline-flex;flex-wrap:nowrap;gap:8px;margin-inline-start:auto}
+.rp-bar2{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.rp-bar2:empty{display:none}
 .rp-seg{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;border-radius:12px;background:var(--n-100,rgba(10,15,13,.06))}
 .rp-seg button{border:0;background:none;font:inherit;font-size:13px;padding:7px 12px;border-radius:9px;color:var(--n-700,#3a4440);cursor:pointer;min-height:34px;white-space:nowrap}
 .rp-seg button.on{color:var(--ink,#0A0F0D);font-weight:500}
@@ -69,10 +73,18 @@
 .rp-act{display:inline-flex;align-items:center;gap:6px}
 .rp-custom{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}
 .rp-custom input{min-height:38px;padding:6px 10px;border-radius:10px;border:1px solid var(--n-200,rgba(10,15,13,.15));background:var(--surface,#FFFDFA);font:inherit;color:inherit}
-.rp-lede{display:grid;gap:8px;padding:22px 24px;border-radius:20px;background:var(--riad,#053B2C);color:var(--paper,#F7F5F0)}
+/* La phrase d'ouverture garde ses couleurs dans les deux thèmes : le vert
+   profond et le papier sont écrits en dur, pas lus dans des variables que le
+   thème sombre redéfinit (le fond disparaissait). */
+.rp-lede{display:grid;gap:8px;padding:22px 24px;border-radius:20px;background:linear-gradient(135deg,#0B6E4F 0%,#053B2C 70%);color:#F7F5F0;border:1px solid rgba(125,242,176,.22)}
+.rp-lede-foot{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.rp-lede a{display:inline-flex;align-items:center;gap:6px;color:#F7F5F0;font-size:12.5px;font-weight:500;text-decoration:none;padding:6px 10px;border-radius:999px;border:1px solid rgba(247,245,240,.28);min-height:32px}
+.rp-lede a:hover{background:rgba(247,245,240,.1)}
+.rp-lede a:focus-visible{outline:2px solid #7DF2B0;outline-offset:2px}
+.rp-demo{display:inline-block;margin-inline-start:8px;padding:1px 8px;border-radius:999px;background:rgba(125,242,176,.18);color:#7DF2B0;font-size:11px;font-weight:600}
 .rp-lede p{margin:0;font-size:clamp(18px,2.2vw,24px);line-height:1.35;font-weight:500;letter-spacing:-.01em;max-width:62ch}
 .rp-lede small{font-size:12.5px;opacity:.72}
-.rp-lede .rp-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mint,#7DF2B0);margin-inline-end:8px;vertical-align:middle}
+.rp-lede .rp-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#7DF2B0;margin-inline-end:8px;vertical-align:middle}
 .rp-card{border:1px solid var(--n-200,rgba(10,15,13,.12));border-radius:18px;background:var(--surface,#FFFDFA);padding:18px;min-width:0}
 .rp-card h3{margin:0 0 12px;font-size:14px;font-weight:600}
 .rp-note{margin:0;color:var(--n-500,#6F6C65);font-size:12.5px;line-height:1.5}
@@ -87,7 +99,10 @@
 .rp-d .rp-i{width:15px;height:15px}
 .rp-d.up{color:var(--rp-up)} .rp-d.down{color:var(--rp-down)} .rp-d.flat{color:var(--n-500,#6F6C65)}
 .rp-chart{width:100%;height:auto;display:block}
-.rp-chart .cur{fill:var(--atlas,#0B6E4F)} .rp-chart .prev{fill:var(--n-200,rgba(10,15,13,.14))}
+.rp-chart .cur{fill:var(--atlas,#0B6E4F)} .rp-chart .prev{fill:var(--n-200,rgba(10,15,13,.14))} .rp-chart .peak{fill:var(--riad,#053B2C)}
+.rp-chart .call{fill:var(--ink,#0A0F0D);font-weight:600;font-size:12px}
+.rp-peak{display:flex;align-items:baseline;gap:8px;margin:0 0 10px;font-size:13px;color:var(--n-500,#6F6C65)}
+.rp-peak b{font-size:18px;font-weight:600;color:var(--ink,#0A0F0D);font-variant-numeric:tabular-nums}
 .rp-chart text{fill:var(--n-500,#6F6C65);font-size:11px;font-family:inherit}
 .rp-legend{display:flex;gap:14px;font-size:12px;color:var(--n-500,#6F6C65);margin-top:8px}
 .rp-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px;vertical-align:-1px}
@@ -96,6 +111,7 @@
 .rp-table td{padding:10px;border-bottom:1px solid var(--n-100,rgba(10,15,13,.07));vertical-align:middle}
 .rp-table td.n,.rp-table th.n{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
 .rp-table tr.tot td{font-weight:600;border-bottom:0}
+.rp-table tr.rec td{color:var(--n-500,#6F6C65);font-size:12.5px}
 .rp-table td small{display:block;color:var(--n-500,#6F6C65);font-size:12px}
 .rp-scroll{overflow-x:auto}
 .rp-share{display:grid;grid-template-columns:minmax(40px,1fr) auto;gap:8px;align-items:center;min-width:110px}
@@ -116,6 +132,11 @@
 .rp-site-card dl{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin:0;font-size:13px}
 .rp-site-card dt{color:var(--n-500,#6F6C65)} .rp-site-card dd{margin:0;text-align:end;font-variant-numeric:tabular-nums}
 .rp-site-card.total{background:var(--paper-soft,#EFECE4)}
+.rp-vs{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:10px;background:var(--n-100,rgba(10,15,13,.05));font-size:12.5px}
+.rp-vs span{color:var(--n-500,#6F6C65)}
+.rp-cover{display:grid;gap:14px;padding:6px 0 18px;margin-bottom:18px;border-bottom:1px solid #E4E0D6;break-after:page}
+.rp-cover h2{margin:0;font-size:15px;font-weight:600}
+.rp-cover .rp-kpis{grid-template-columns:repeat(4,1fr)}
 .rp-index{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
 .rp-index button{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;text-align:start;border:1px solid var(--n-200,rgba(10,15,13,.12));border-radius:14px;background:var(--surface,#FFFDFA);padding:14px;font:inherit;color:inherit;cursor:pointer;min-height:44px}
 .rp-index button:hover{border-color:var(--atlas,#0B6E4F)}
@@ -127,7 +148,7 @@
 .rp-skel{height:120px;border-radius:18px;background:linear-gradient(90deg,var(--n-100,rgba(10,15,13,.05)),var(--n-50,rgba(10,15,13,.02)),var(--n-100,rgba(10,15,13,.05)));background-size:200% 100%;animation:rp-sk 1.4s ease-in-out infinite}
 @keyframes rp-sk{to{background-position:-200% 0}}
 @media(prefers-reduced-motion:reduce){.rp-skel{animation:none}}
-@media(max-width:640px){.rp-kpi.hero{grid-column:span 1}.rp-bar{position:static}.rp-lede{padding:18px}}
+@media(max-width:640px){.rp-chart text{font-size:22px}.rp-chart .call{font-size:24px}.rp-kpi.hero{grid-column:span 1}.rp-bar{position:static}.rp-lede{padding:18px}.rp-acts{margin-inline-start:0}.rp-site{max-width:100%}}
 [dir=rtl] .rp-d .rp-i,[dir=rtl] .rp-pager .rp-i{transform:scaleX(-1)}
 `;
   function css() {
@@ -150,10 +171,16 @@
   }
   const share = (p) => `<div class="rp-share"><i style="width:${Math.max(1, Math.min(100, p || 0))}%"></i><em>${esc(pctTxt(p))}</em></div>`;
 
-  function lede(data, versusLabel) {
+  /* La phrase d'ouverture, et un brouillon WhatsApp de cette phrase (wa.me :
+     rien n'est envoyé, le commerçant choisit à qui l'envoyer, zéro coût). */
+  function lede(data, versusLabel, opts) {
     const h = data.headline || {};
-    return `<section class="rp-lede" aria-live="polite"><p><span class="rp-dot" aria-hidden="true"></span>${esc(h[lang()] || h.fr || '')}</p>
-      <small>${esc(rangeTxt(data.period))} · ${esc(versusLabel)} ${esc(rangeTxt(data.previous))}</small></section>`;
+    const text = h[lang()] || h.fr || '';
+    const when = rangeTxt(data.period) + ' · ' + versusLabel + ' ' + rangeTxt(data.previous);
+    const draft = (opts && opts.title ? opts.title + ' · ' : '') + rangeTxt(data.period) + '\n' + text + '\nKiwi';
+    const wa = opts && opts.share === false ? '' : `<a href="https://wa.me/?text=${encodeURIComponent(draft)}" target="_blank" rel="noopener noreferrer">${ic('share')}${esc(L('Brouillon WhatsApp', 'WhatsApp draft', 'مسودة واتساب'))}</a>`;
+    return `<section class="rp-lede" aria-live="polite"><p><span class="rp-dot" aria-hidden="true"></span>${esc(text)}</p>
+      <div class="rp-lede-foot"><small>${esc(when)}${data.demo ? `<span class="rp-demo">${esc(L('Données de démonstration', 'Demo data', 'بيانات تجريبية'))}</span>` : ''}</small>${wa}</div></section>`;
   }
 
   function kpiTile(label, cur, prev, money, opts) {
@@ -185,6 +212,27 @@
       <div class="rp-legend"><span><i style="background:var(--atlas,#0B6E4F)"></i>${esc(L('Période', 'Period', 'الفترة'))}</span><span><i style="background:var(--n-200,rgba(10,15,13,.14))"></i>${esc(L('Période d’avant', 'Previous period', 'الفترة السابقة'))}</span></div>`;
   }
 
+  /* Une journée seule : vingt-quatre barres, de la coupure à la coupure, la
+     même heure de la journée d'avant derrière, l'heure de pointe nommée. */
+  function hourlyChart(hourly, peak) {
+    const W = 720, H = 190, pad = 22, n = hourly.length;
+    const max = Math.max(1, ...hourly.map((s) => Math.max(s.net, s.prevNet || 0)));
+    const bw = (W - pad) / n;
+    const y = (v) => H - pad - (Math.max(0, v) / max) * (H - pad - 22);
+    const bars = hourly.map((s, i) => {
+      const x = pad + i * bw, w = Math.max(2, bw * 0.62);
+      const isPeak = peak && s.hour === peak.hour;
+      const prev = `<rect class="prev" x="${x + bw * 0.06}" y="${y(s.prevNet)}" width="${w}" height="${H - pad - y(s.prevNet)}" rx="2"><title>${s.hour}:00 · ${esc(mad0(s.prevNet))}</title></rect>`;
+      const cur = `<rect class="${isPeak ? 'peak' : 'cur'}" x="${x + bw * 0.24}" y="${y(s.net)}" width="${w}" height="${H - pad - y(s.net)}" rx="2"><title>${s.hour}:00 · ${esc(mad0(s.net))}</title></rect>`;
+      const call = isPeak ? `<text class="call" x="${x + bw * 0.24 + w / 2}" y="${Math.max(12, y(s.net) - 6)}" text-anchor="middle">${esc(mad0(s.net))}</text>` : '';
+      const label = s.hour % 3 === 0 ? `<text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${s.hour}h</text>` : '';
+      return prev + cur + call + label;
+    }).join('');
+    const head = peak ? `<p class="rp-peak">${esc(L('Heure de pointe', 'Peak hour', 'ساعة الذروة'))} <b>${peak.hour}:00 – ${(peak.hour + 1) % 24}:00</b> ${esc(mad0(peak.net))}${peak.tickets ? ' · ' + esc(fmt(peak.tickets)) + ' ' + esc(L('tickets', 'tickets', 'تذاكر')) : ''}</p>` : '';
+    return `${head}<svg class="rp-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(L('Ventes nettes par heure', 'Net sales by hour', 'المبيعات الصافية حسب الساعة'))}">${bars}</svg>
+      <div class="rp-legend"><span><i style="background:var(--atlas,#0B6E4F)"></i>${esc(L('Journée', 'Day', 'اليوم'))}</span><span><i style="background:var(--n-200,rgba(10,15,13,.14))"></i>${esc(L('Journée d’avant, même heure', 'Day before, same hour', 'اليوم السابق، نفس الساعة'))}</span></div>`;
+  }
+
   function summary(d) {
     const c = d.totals.cur, p = d.totals.prev;
     const costNote = c.costCoverage != null && c.costCoverage < 99.5
@@ -205,7 +253,8 @@
     const unknownVat = c.vat && c.vat.unknown > 0 ? `<p class="rp-note">${esc(L('Une partie des ventes n’a pas de taux de TVA connu. Réglez la TVA du ticket (Réglages › Ticket) ou les taux par rayon (Dossier du mois).', 'Some sales have no known VAT rate. Set the receipt VAT (Settings › Receipt) or rates per category (Month pack).', 'جزء من المبيعات بدون نسبة ضريبة معروفة. حدّد الضريبة في التذكرة (الإعدادات › التذكرة) أو نسبة كل قسم (ملف الشهر).'))}</p>` : '';
     const noDetail = c.tickets && c.detailed < c.tickets ? `<p class="rp-note">${esc(L(`${c.tickets - c.detailed} ticket(s) sans détail d’articles : comptés dans les totaux, absents des classements.`, `${c.tickets - c.detailed} ticket(s) without item detail: in the totals, missing from rankings.`, `${c.tickets - c.detailed} تذكرة بدون تفاصيل المنتجات: محسوبة في المجاميع وغائبة عن الترتيب.`))}</p>` : '';
     return `<div class="rp-kpis">${tiles}</div>
-      <section class="rp-card"><h3>${esc(L('Ventes nettes par journée', 'Net sales by business day', 'المبيعات الصافية حسب اليوم'))}</h3>${seriesChart(d.series)}</section>
+      ${d.hourly ? `<section class="rp-card"><h3>${esc(L('Ventes nettes par heure', 'Net sales by hour', 'المبيعات الصافية حسب الساعة'))}</h3>${hourlyChart(d.hourly, d.peakHour)}</section>`
+        : `<section class="rp-card"><h3>${esc(L('Ventes nettes par journée', 'Net sales by business day', 'المبيعات الصافية حسب اليوم'))}</h3>${seriesChart(d.series)}</section>`}
       ${unknownVat}${noDetail}`;
   }
 
@@ -225,12 +274,21 @@
 
   function ranking(d, kind) {
     if (!d.rows.length) return empty();
+    /* Vendu, retours (les remboursements rattachés à leur vente reviennent sur
+       leurs produits), net. Le pied raccorde la liste aux ventes nettes du
+       résumé : ce qui n'a pas de détail d'article est sur sa propre ligne. */
     const head = [{ t: kind === 'products' ? L('Produit', 'Product', 'المنتج') : L('Rayon', 'Category', 'القسم') }, { t: L('Qté', 'Qty', 'الكمية'), n: 1 },
+      { t: L('Vendu', 'Sold', 'المبيع'), n: 1 }, { t: L('Retours', 'Returns', 'المرجوعات'), n: 1 },
       { t: L('Ventes nettes', 'Net sales', 'المبيعات الصافية'), n: 1 }, { t: L('Part', 'Share', 'الحصة') }, { t: L('Évolution', 'Change', 'التطور'), n: 1 }];
     if (d.showCost) head.push({ t: L('Marge', 'Margin', 'الهامش'), n: 1 });
     const rows = d.rows.map((r) => `<tr>${td(`${esc(r.name || L('Sans catégorie', 'No category', 'بدون قسم'))}${kind === 'products' && r.category ? `<small>${esc(r.category)}</small>` : ''}`)}${td(esc(qtyTxt(r.qty)), 1)}
+      ${td(esc(mad(r.sold)), 1)}${td(r.refunded ? esc(mad(r.refunded)) + (r.refundedQty ? `<small>${esc(qtyTxt(r.refundedQty))} ${esc(L('rendu(s)', 'returned', 'مُرجَع'))}</small>` : '') : '–', 1)}
       ${td(esc(mad(r.net)), 1)}${td(share(r.share))}${td(delta(r.net, r.prevNet), 1)}${d.showCost ? td(r.marginPct == null ? '<small>' + esc(L('coût inconnu', 'cost unknown', 'تكلفة غير معروفة')) + '</small>' : esc(pctTxt(r.marginPct)) + `<small>${esc(mad0(r.margin))}</small>`, 1) : ''}</tr>`);
-    return `<section class="rp-card">${table(head, rows)}${pager(d.page, 'rp-page')}</section>`;
+    const t = d.totals || {};
+    const span = 4, tail = d.showCost ? 3 : 2;
+    const rec = t.unattributed ? `<tr class="rec"><td colspan="${span}">${esc(L('Ventes sans détail d’article et retours non rattachés', 'Sales without item detail and unlinked refunds', 'مبيعات بدون تفاصيل المنتجات ومرجوعات غير مرتبطة بتذكرتها'))}</td>${td(esc(mad(t.unattributed)), 1)}<td colspan="${tail}"></td></tr>` : '';
+    const foot = rec + `<tr class="tot"><td colspan="${span}">${esc(L('Ventes nettes du résumé', 'Summary net sales', 'المبيعات الصافية في الملخص'))}</td>${td(esc(mad(t.net)), 1)}<td></td>${td(delta(t.net, t.prevNet), 1)}${d.showCost ? '<td></td>' : ''}</tr>`;
+    return `<section class="rp-card">${table(head, rows, foot)}${pager(d.page, 'rp-page')}</section>`;
   }
 
   function staff(d) {
@@ -297,6 +355,7 @@
     const card = (r, extra) => `<section class="rp-card rp-site-card${extra || ''}"><header><h4>${esc(r.name)}</h4>${r.merchant === d.best && d.rows.length > 1 ? `<span class="rp-tag">${esc(L('meilleur', 'best', 'الأفضل'))}</span>` : r.merchant === d.worst ? `<span class="rp-tag low">${esc(L('à surveiller', 'watch', 'للمتابعة'))}</span>` : ''}</header>
       <div class="big">${esc(mad0(r.cur.net))}</div><div>${delta(r.cur.net, r.prev.net)} <small class="rp-note">${esc(L('avant', 'before', 'قبل'))} ${esc(mad0(r.prev.net))}</small></div>
       ${r.share != null ? share(r.share) : ''}
+      ${r.vsAverage && r.vsAverage.net != null && d.rows.length > 1 ? `<div class="rp-vs"><span>${esc(L('Face à la moyenne du groupe', 'vs group average', 'مقارنة مع متوسط المجموعة'))}</span>${delta(r.cur.net, d.average.net)}</div>` : ''}
       <dl><dt>${esc(L('Tickets', 'Tickets', 'التذاكر'))}</dt><dd>${esc(fmt(r.cur.tickets))}</dd><dt>${esc(L('Panier moyen', 'Average basket', 'متوسط السلة'))}</dt><dd>${esc(mad0(r.cur.basket))}</dd>
       <dt>${esc(L('Remises', 'Discounts', 'التخفيضات'))}</dt><dd>${esc(mad0(r.cur.discounts))}</dd><dt>${esc(L('Remboursements', 'Refunds', 'المرجوعات'))}</dt><dd>${esc(mad0(r.cur.refunds))}</dd>
       ${d.showCost && r.cur.marginPct != null ? `<dt>${esc(L('Marge brute', 'Gross margin', 'الهامش الإجمالي'))}</dt><dd>${esc(pctTxt(r.cur.marginPct))}</dd>` : ''}</dl></section>`;
@@ -306,7 +365,23 @@
 
   /* La version imprimable : une page autonome, sans la coquille du tableau de
      bord, que le navigateur imprime ou enregistre en PDF. */
-  function printable(title, siteName, body, data) {
+  /* La page de garde pour le comptable : la période, les totaux et la TVA
+     par taux, avant le rapport lui-même. */
+  function cover(sum, vatData, siteName) {
+    if (!sum) return '';
+    const c = sum.totals.cur;
+    const tile = (label, v) => `<div class="rp-kpi"><span>${esc(label)}</span><b>${esc(v)}</b></div>`;
+    const vatRows = vatData && vatData.rows ? vatData.rows.map((r) => `<tr>${td(r.rate == null ? esc(L('Taux inconnu', 'Unknown rate', 'نسبة غير معروفة')) : esc(pctTxt(r.rate)))}${td(esc(mad(r.ht)), 1)}${td(esc(mad(r.vat)), 1)}${td(esc(mad(r.ttc)), 1)}</tr>`) : [];
+    const vt = vatData && vatData.totals;
+    const vatTable = vatRows.length ? table([{ t: L('Taux', 'Rate', 'النسبة') }, { t: L('HT', 'Excl. VAT', 'دون ضريبة'), n: 1 }, { t: L('TVA', 'VAT', 'الضريبة'), n: 1 }, { t: L('TTC', 'Incl. VAT', 'بالضريبة'), n: 1 }],
+      vatRows, `<tr class="tot">${td(esc(L('Total', 'Total', 'المجموع')))}${td(esc(mad(vt.ht)), 1)}${td(esc(mad(vt.vat)), 1)}${td(esc(mad(vt.ttc)), 1)}</tr>`) : '';
+    return `<section class="rp-cover"><h2>${esc(L('Synthèse pour le comptable', 'Summary for the accountant', 'ملخص للمحاسب'))} · ${esc(siteName)}</h2>
+      <div class="rp-kpis">${tile(L('Ventes brutes', 'Gross sales', 'المبيعات الإجمالية'), mad(c.gross))}${tile(L('Remises', 'Discounts', 'التخفيضات'), mad(c.discounts))}${tile(L('Remboursements', 'Refunds', 'المرجوعات'), mad(c.refunds))}${tile(L('Ventes nettes TTC', 'Net sales incl. VAT', 'المبيعات الصافية بالضريبة'), mad(c.net))}
+      ${tile(L('Tickets', 'Tickets', 'التذاكر'), fmt(c.tickets))}${tile(L('Panier moyen', 'Average basket', 'متوسط السلة'), mad(c.basket))}${tile(L('Pourboires (hors CA)', 'Tips (not revenue)', 'البقشيش (خارج رقم المعاملات)'), mad(c.tips))}${tile(L('TVA collectée', 'VAT collected', 'الضريبة المحصّلة'), mad(vt ? vt.vat : c.vat && c.vat.vat))}</div>
+      <h2>${esc(L('TVA par taux', 'VAT by rate', 'الضريبة حسب النسبة'))}</h2>${vatTable || `<p class="rp-note">${esc(L('Aucune vente taxable.', 'No taxable sales.', 'لا مبيعات خاضعة للضريبة.'))}</p>`}</section>`;
+  }
+
+  function printable(title, siteName, body, data, extra) {
     const dir = lang() === 'ar' ? 'rtl' : 'ltr';
     return `<!doctype html><html lang="${lang()}" dir="${dir}"><head><meta charset="utf-8"><title>${esc(title)}</title>
 <link rel="stylesheet" href="${esc(new URL('assets/tokens.css', document.baseURI).href)}">
@@ -314,17 +389,40 @@
 body{margin:0;padding:28px 32px;background:#FDFCF9;color:#0A0F0D;font-family:'Inter Tight','IBM Plex Sans Arabic',system-ui,sans-serif}
 .pr-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid #0B6E4F;padding-bottom:12px;margin-bottom:18px}
 .pr-head h1{margin:0;font-size:22px;font-weight:600}.pr-head p{margin:4px 0 0;color:#6F6C65;font-size:13px}
-.rp-lede{background:#F2F0EA;color:#0A0F0D}.rp-lede .rp-dot{background:#0B6E4F}
+.rp-lede{background:#F2F0EA;color:#0A0F0D;border-color:#E4E0D6}.rp-lede .rp-dot{background:#0B6E4F}.rp-lede a{display:none}
 .rp-card,.rp-kpi{break-inside:avoid;background:#FDFCF9}.rp-pager{display:none}
 .pr-foot{margin-top:22px;color:#6F6C65;font-size:11px}
 @page{size:A4;margin:14mm}
 @media print{body{padding:0}.rp-scroll{overflow:visible}.rp-heat{min-width:0}}
 </style></head><body><div class="rp-page">
 <div class="pr-head"><div><h1>${esc(title)}</h1><p>${esc(siteName)} · ${esc(rangeTxt(data.period))}</p></div><p>Kiwi</p></div>
+${extra && extra.summary ? cover(extra.summary, extra.vat, siteName) : ''}
 ${body}
 <p class="pr-foot">${esc(L('Généré par Kiwi le', 'Generated by Kiwi on', 'أُنشئ بواسطة Kiwi في'))} ${esc(new Date(data.generatedAt).toLocaleString(lang() === 'en' ? 'en-GB' : lang() === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-FR'))}. ${esc(L('Montants TTC en dirhams, journées commerciales de la boutique.', 'Amounts include VAT, in dirhams, by the store’s business days.', 'المبالغ بالدرهم شاملة للضريبة، حسب الأيام التجارية للمحل.'))}</p>
 </div></body></html>`;
   }
 
-  window.KiwiReportViews = { css, ic, esc, L, lang, mad, mad0, pctTxt, dayTxt, rangeTxt, lede, summary, ranking, staff, bars, heatmap, vat, customers, sites, printable, delta };
+  /* Les noms des moyens et des canaux, les mêmes que functions/api/reports.js
+     (le CSV) : en arabe, des noms (« الأداء نقدا »), jamais l'adverbe seul. */
+  const METHOD = {
+    cash: ['Espèces', 'Cash', 'الأداء نقدا'], card: ['Carte', 'Card', 'الأداء بالبطاقة'], tap: ['Sans contact', 'Contactless', 'الأداء بدون تلامس'],
+    transfer: ['Virement', 'Bank transfer', 'التحويل البنكي'], cheque: ['Chèque', 'Cheque', 'الشيك'], split: ['Paiement mixte', 'Split payment', 'الأداء المختلط'],
+    qr: ['QR', 'QR', 'الأداء عبر QR'], wallet: ['Portefeuille', 'Wallet', 'المحفظة الإلكترونية'], credit: ['Avoir / compte client', 'Store credit / account', 'رصيد الزبون وحسابه'],
+    delivery: ['À la livraison', 'Cash on delivery', 'الأداء عند التسليم'], complimentary: ['Offert', 'On the house', 'ما قُدّم مجانا'], '': ['Non précisé', 'Not recorded', 'وسيلة غير محددة'],
+  };
+  const CHANNEL = {
+    '': ['Non renseigné', 'Not recorded', 'قناة غير محددة'], surplace: ['Sur place', 'Dine-in', 'الأكل في المحل'], dining: ['Sur place', 'Dine-in', 'الأكل في المحل'],
+    emporter: ['À emporter', 'Takeaway', 'الطلبات للأخذ'], takeaway: ['À emporter', 'Takeaway', 'الطلبات للأخذ'], terrace: ['Terrasse', 'Terrace', 'التراس'],
+    delivery: ['Livraison', 'Delivery', 'التوصيل'], counter: ['Comptoir', 'Counter', 'الكونطوار'], walkin: ['En boutique', 'Walk-in', 'البيع في المحل'],
+    storefront: ['Boutique en ligne', 'Online shop', 'المتجر الإلكتروني'], hotel: ['Hôtel', 'Hotel', 'الفندق'], direct: ['Direct', 'Direct', 'البيع المباشر'],
+    whatsapp: ['WhatsApp', 'WhatsApp', 'واتساب'], glovo: ['Glovo', 'Glovo', 'Glovo'], ozon: ['Ozon Express', 'Ozon Express', 'Ozon Express'],
+  };
+  const title = (k) => String(k || '').replace(/^\w/, (c) => c.toUpperCase());
+  const tri = (table) => (code) => (table[code] ? { fr: table[code][0], en: table[code][1], ar: table[code][2] } : { fr: title(code), en: title(code), ar: title(code) });
+  const pick = (t) => t[lang()] || t.fr;
+  const methodTri = tri(METHOD), channelTri = tri(CHANNEL);
+  const methodLabel = (m) => pick(methodTri(m)), channelLabel = (c) => pick(channelTri(c));
+
+  window.KiwiReportViews = { css, ic, esc, L, lang, mad, mad0, pctTxt, dayTxt, rangeTxt, lede, summary, ranking, staff, bars, heatmap, vat, customers, sites, printable, delta,
+    methodTri, channelTri, methodLabel, channelLabel };
 })();

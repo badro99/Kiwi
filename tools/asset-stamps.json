@@ -1488,8 +1488,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2230",
-    "sha": "ff5559114452e017"
+    "v": "2231",
+    "sha": "810d3fe217b7c35e"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1499,13 +1499,17 @@
     "v": "13",
     "sha": "7abe777e8ea9c4fb"
   },
-  "assets/pages-pro/reports-hub.js": {
+  "assets/pages-pro/reports-demo.js": {
     "v": "1",
-    "sha": "87fd1ed968a0ba97"
+    "sha": "68b59f5bb376a797"
+  },
+  "assets/pages-pro/reports-hub.js": {
+    "v": "2",
+    "sha": "a710a602c0dea7c2"
   },
   "assets/pages-pro/reports-views.js": {
-    "v": "1",
-    "sha": "460b10e46f8018fc"
+    "v": "2",
+    "sha": "b1e187ee819953d6"
   },
   "assets/pages-pro/restaurant-stations.js": {
     "v": "2",
@@ -1532,8 +1536,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "270",
-    "sha": "fb8ba7d651357724"
+    "v": "271",
+    "sha": "48031c06699681bf"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

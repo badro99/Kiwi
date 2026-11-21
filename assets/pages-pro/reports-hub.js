@@ -13,8 +13,12 @@
  *
  * La période est celle du tableau de bord (assets/dateRange.js) : la choisir
  * ici la choisit aussi pour l'accueil, et inversement. La vue multi-site est
- * la vraie : les ventes de chaque établissement du compte, côte à côte. La vue
- * « Fusion » de la démo reste celle de la démo (assets/venues.js).
+ * la vraie : les ventes de chaque établissement du compte, côte à côte.
+ *
+ * La démo n'a pas de ventes sur le serveur : ses rapports viennent de
+ * assets/pages-pro/reports-demo.js (mêmes formes, mêmes phrases, chiffres à
+ * graine pour Café Atlas, Maison Mansour et Spa Bahia), et seulement quand
+ * KiwiEnv dit que la session n'est pas réelle.
  *
  * Section paresseuse (assets/pages-pro.js › LAZY_SECTIONS) : chaque handler
  * listé là-bas est enregistré ici, ni plus ni moins. */
@@ -28,6 +32,12 @@
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const here = () => { try { return window.KiwiCloudDoc?.currentSlug?.() || ''; } catch (_) { return ''; } };
   const isReal = () => { try { return !!window.KiwiEnv?.isReal?.(); } catch (_) { return true; } };
+  /* Démo : KiwiEnv chargé ET qui dit « pas réel ». Sans KiwiEnv, rien de fabriqué. */
+  const demo = () => { try { return !!window.KiwiReportDemo && typeof window.KiwiEnv?.isReal === 'function' && !window.KiwiEnv.isReal(); } catch (_) { return false; } };
+  const demoAnchor = () => {
+    const v = (() => { try { return window.KiwiVenue?.getVenue?.() || ''; } catch (_) { return ''; } })();
+    return window.KiwiReportDemo.SITES.some((s) => s.merchant === v) ? v : window.KiwiReportDemo.SITES[0].merchant;
+  };
   const DR = () => window.KiwiDateRange || null;
 
   const REPORTS = [
@@ -35,7 +45,7 @@
     { id: 'products', icon: 'inventory_2', t: () => L('Produits', 'Products', 'المنتجات'), d: () => L('Ce qui se vend, ce qui recule, la marge de chacun', 'What sells, what slips, each one’s margin', 'ما يُباع، ما يتراجع، وهامش كل منتج') },
     { id: 'categories', icon: 'category', t: () => L('Rayons', 'Categories', 'الأقسام'), d: () => L('Le poids de chaque rayon dans les ventes', 'Each category’s weight in sales', 'وزن كل قسم في المبيعات') },
     { id: 'staff', icon: 'groups', t: () => L('Équipe', 'Team', 'الفريق'), d: () => L('Ventes, panier, remises, remboursements, pourboires par vendeur', 'Sales, basket, discounts, refunds, tips per seller', 'المبيعات، السلة، التخفيضات، المرجوعات والبقشيش لكل بائع') },
-    { id: 'payments', icon: 'payments', t: () => L('Encaissements', 'Payments', 'المداخيل'), d: () => L('Espèces, carte, virement… et les remboursements', 'Cash, card, transfer… and refunds', 'نقدا، بطاقة، تحويل… والمرجوعات') },
+    { id: 'payments', icon: 'payments', t: () => L('Encaissements', 'Payments', 'المداخيل'), d: () => L('Espèces, carte, virement… et les remboursements', 'Cash, card, transfer… and refunds', 'الأداء نقدا، بالبطاقة، التحويل… والمرجوعات') },
     { id: 'heatmap', icon: 'schedule', t: () => L('Rythme', 'Rhythm', 'الإيقاع'), d: () => L('Les heures et les jours qui comptent', 'The hours and days that matter', 'الساعات والأيام المهمة') },
     { id: 'channels', icon: 'storefront', t: () => L('Canaux', 'Channels', 'القنوات'), d: () => L('Sur place, à emporter, livraison, en ligne', 'Dine-in, takeaway, delivery, online', 'في المحل، للأخذ، التوصيل، عبر الإنترنت') },
     { id: 'vat', icon: 'percent', t: () => L('TVA', 'VAT', 'الضريبة'), d: () => L('HT, TVA et TTC par taux', 'Excl. VAT, VAT and total by rate', 'دون ضريبة، الضريبة والمجموع حسب النسبة') },
@@ -79,8 +89,19 @@
     return '/api/reports?' + p.toString();
   }
 
+  function demoData(extra) {
+    return window.KiwiReportDemo.build(Object.assign({ report: state.report, preset: state.preset, from: state.from, to: state.to,
+      site: state.site, anchor: demoAnchor(), offset: state.offset }, extra || {}), Date.now());
+  }
+
   async function load() {
     const seq = ++state.seq;
+    if (demo()) {
+      state.loading = false; state.error = '';
+      try { state.data = demoData(); state.sites = state.data.sites; } catch (_) { state.data = null; state.error = 'error'; }
+      render();
+      return;
+    }
     if (!here()) { state.error = 'nostore'; state.loading = false; render(); return; }
     state.loading = true; state.error = '';
     render();
@@ -102,15 +123,6 @@
   }
 
   const versusLabel = () => L('comparé à', 'compared with', 'مقارنة مع');
-  const methodLabel = (m) => ({ cash: L('Espèces', 'Cash', 'نقدا'), card: L('Carte', 'Card', 'بطاقة'), tap: L('Sans contact', 'Contactless', 'بدون تلامس'),
-    transfer: L('Virement', 'Bank transfer', 'تحويل بنكي'), cheque: L('Chèque', 'Cheque', 'شيك'), split: L('Paiement mixte', 'Split payment', 'أداء مختلط'),
-    qr: 'QR', wallet: L('Portefeuille', 'Wallet', 'محفظة'), credit: L('Avoir / compte client', 'Store credit / account', 'رصيد / حساب الزبون'),
-    delivery: L('À la livraison', 'Cash on delivery', 'عند التسليم'), complimentary: L('Offert', 'On the house', 'مجاني'), '': L('Non précisé', 'Not recorded', 'غير محدد') })[m] ?? String(m).replace(/^\w/, (c) => c.toUpperCase());
-  const channelLabel = (c) => ({ '': L('Non renseigné', 'Not recorded', 'غير محدد'), surplace: L('Sur place', 'Dine-in', 'في المحل'), dining: L('Sur place', 'Dine-in', 'في المحل'),
-    emporter: L('À emporter', 'Takeaway', 'للأخذ'), takeaway: L('À emporter', 'Takeaway', 'للأخذ'), terrace: L('Terrasse', 'Terrace', 'التراس'),
-    delivery: L('Livraison', 'Delivery', 'التوصيل'), counter: L('Comptoir', 'Counter', 'الكونطوار'), walkin: L('En boutique', 'Walk-in', 'في المحل'),
-    storefront: L('Boutique en ligne', 'Online shop', 'المتجر الإلكتروني'), hotel: L('Hôtel', 'Hotel', 'الفندق'), whatsapp: 'WhatsApp', ozon: 'Ozon Express' })[c] ?? String(c).replace(/^\w/, (x) => x.toUpperCase());
-
   function reportBody(d) {
     const W = V();
     switch (d.report) {
@@ -118,8 +130,8 @@
       case 'products': return W.ranking(d, 'products');
       case 'categories': return W.ranking(d, 'categories');
       case 'staff': return W.staff(d);
-      case 'payments': return W.bars(d, methodLabel, 'payments');
-      case 'channels': return W.bars(d, channelLabel, 'channels');
+      case 'payments': return W.bars(d, W.methodLabel, 'payments');
+      case 'channels': return W.bars(d, W.channelLabel, 'channels');
       case 'heatmap': return W.heatmap(d);
       case 'vat': return W.vat(d);
       case 'customers': return W.customers(d);
@@ -150,6 +162,7 @@
   function siteName() {
     if (state.site === 'all' || state.report === 'sites') return L('Tous les établissements', 'All locations', 'كل المؤسسات');
     const s = state.sites.find((x) => x.merchant === (state.site || here()));
+    if (!s && state.data && state.data.site) return (state.sites.find((x) => x.merchant === state.data.site) || {}).name || '';
     return s ? s.name : '';
   }
 
@@ -162,29 +175,29 @@
     const tabs = REPORTS.filter((r) => r.id !== 'sites' || multi || !isReal())
       .map((r) => lensBtn('rp-tab', r.id, r.t(), state.report === r.id, W.ic(r.icon))).join('');
     const ranges = PRESETS.map(([k, t]) => lensBtn('rp-range', k, t(), state.preset === k)).join('');
+    const current = state.site || (state.data && state.data.site) || here();
     const sitePick = multi && state.report !== 'sites' ? `<label class="rp-act"><span class="rp-note">${esc(L('Établissement', 'Location', 'المؤسسة'))}</span>
       <select class="rp-site" data-rp-site aria-label="${esc(L('Établissement', 'Location', 'المؤسسة'))}">
-        ${state.sites.map((s) => `<option value="${esc(s.merchant)}"${(state.site || here()) === s.merchant ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}
+        ${state.sites.map((s) => `<option value="${esc(s.merchant)}"${current === s.merchant ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}
         <option value="all"${state.site === 'all' ? ' selected' : ''}>${esc(L('Tous les établissements', 'All locations', 'كل المؤسسات'))}</option></select></label>` : '';
     const custom = state.preset === 'personnalise' ? `<form class="rp-custom" data-rp-custom><label>${esc(L('Du', 'From', 'من'))} <input type="date" name="from" value="${esc(state.from)}" required></label>
       <label>${esc(L('au', 'to', 'إلى'))} <input type="date" name="to" value="${esc(state.to)}" required></label>
       <button type="submit" class="kb atlas" data-action="rp-custom">${esc(L('Afficher', 'Show', 'عرض'))}</button></form>` : '';
     const d = state.data && state.data.report === state.report ? state.data : null;
-    const demoSites = state.report === 'sites' && !isReal() && !(d && d.rows && d.rows.length > 1)
-      ? `<section class="rp-card"><p class="rp-note">${esc(L('La démo montre un seul établissement réel. La vue consolidée de démonstration reste disponible.', 'The demo has a single real location. The demo consolidated view is still available.', 'العرض التجريبي فيه مؤسسة واحدة. العرض الموحّد التجريبي ما زال متاحا.'))}</p>
-        <button type="button" class="kb ghost" data-action="venue-enter-fusion">${esc(L('Ouvrir la vue consolidée de démo', 'Open the demo consolidated view', 'فتح العرض الموحّد التجريبي'))}</button></section>` : '';
     let main;
     if (state.error) main = errorBody();
-    else if (!d || state.loading) main = (d ? W.lede(d, versusLabel()) : '') + '<div class="rp-skel" aria-hidden="true"></div><div class="rp-skel" aria-hidden="true"></div>';
-    else main = W.lede(d, versusLabel()) + reportBody(d) + demoSites;
-    const actions = `<button type="button" class="kb ghost rp-act" data-action="rp-csv" ${d ? '' : 'disabled'}>${W.ic('download')}${esc(L('CSV', 'CSV', 'CSV'))}</button>
-      <button type="button" class="kb ghost rp-act" data-action="rp-print" ${d ? '' : 'disabled'}>${W.ic('print')}${esc(L('Imprimer / PDF', 'Print / PDF', 'طباعة / PDF'))}</button>`;
+    else if (!d || state.loading) main = (d ? W.lede(d, versusLabel(), { title: reportTitle(d) }) : '') + '<div class="rp-skel" aria-hidden="true"></div><div class="rp-skel" aria-hidden="true"></div>';
+    else main = W.lede(d, versusLabel(), { title: reportTitle(d) }) + reportBody(d);
+    /* Les actions restent groupées (elles ne passent jamais seules à la ligne) ;
+       l'établissement et les dates choisies vont sur la deuxième ligne. */
+    const actions = `<span class="rp-acts"><button type="button" class="kb ghost rp-act" data-action="rp-csv" ${d ? '' : 'disabled'}>${W.ic('download')}${esc(L('CSV', 'CSV', 'CSV'))}</button>
+      <button type="button" class="kb ghost rp-act" data-action="rp-print" ${d ? '' : 'disabled'}>${W.ic('print')}${esc(L('Imprimer / PDF', 'Print / PDF', 'طباعة / PDF'))}</button></span>`;
     const page = window.Kiwi.appPage('reports', {
       title: L('Rapports', 'Reports', 'التقارير'),
       subtitle: [siteName(), d ? W.rangeTxt(d.period) : ''].filter(Boolean).join(' · '),
       body: `<div class="rp-page" data-rp-page>
-        <div class="rp-bar"><div class="rp-seg" data-lens-demo role="group" aria-label="${esc(L('Période', 'Period', 'الفترة'))}">${ranges}</div>${sitePick}<span class="rp-spacer"></span>${actions}</div>
-        ${custom}
+        <div class="rp-bar"><div class="rp-seg" data-lens-demo role="group" aria-label="${esc(L('Période', 'Period', 'الفترة'))}">${ranges}</div>${actions}</div>
+        <div class="rp-bar2">${sitePick}${custom}</div>
         <nav class="rp-tabs" aria-label="${esc(L('Rapports', 'Reports', 'التقارير'))}"><div class="rp-seg" data-lens-demo>${tabs}</div></nav>
         ${main}
         ${state.report === 'summary' && !state.loading ? index() : ''}
@@ -204,10 +217,12 @@
     load();
   }
 
+  const reportTitle = (d) => (REPORTS.find((r) => r.id === d.report)?.t() || '');
+
   async function open(report) {
     if (report) state.report = report;
     state.offset = 0;
-    if (!state.site) state.site = here();
+    if (!state.site) state.site = demo() ? demoAnchor() : here();
     adoptDashboardRange();
     await load();
   }
@@ -245,13 +260,22 @@
     const btn = el && el.closest ? el : null;
     if (btn) btn.disabled = true;
     try {
-      const res = await fetch(query({ format: 'csv', lang: lang(), offset: '0', limit: '200' }), { credentials: 'same-origin' });
-      if (!res.ok) throw new Error('csv');
-      const blob = await res.blob();
-      const name = (res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/);
+      /* Tout le rapport : le serveur ignore la page affichée pour un CSV. */
+      let blob, file;
+      if (demo()) {
+        const d = demoData({ csv: true, offset: 0 });
+        blob = new Blob([window.KiwiReportDemo.csv(d, lang())], { type: 'text/csv;charset=utf-8' });
+        file = `kiwi-demo-${d.report}-${d.site}-${d.period.fromDay}_${d.period.toDay}.csv`;
+      } else {
+        const res = await fetch(query({ format: 'csv', lang: lang() }), { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('csv');
+        blob = await res.blob();
+        const name = (res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/);
+        file = name ? name[1] : 'kiwi-rapport.csv';
+      }
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = name ? name[1] : 'kiwi-rapport.csv';
+      a.download = file;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 4000);
       toast(L('CSV téléchargé', 'CSV downloaded', 'تم تنزيل CSV'), { type: 'success' });
@@ -260,17 +284,28 @@
     } finally { if (btn) btn.disabled = false; }
   };
 
-  handlers['rp-print'] = () => {
+  /* Imprimer / PDF : une page de garde pour le comptable (totaux de la
+     période et TVA par taux, lus pour la même période et le même
+     établissement), puis le rapport affiché. La fenêtre s'ouvre tout de suite
+     (sinon le navigateur la bloque), le contenu arrive ensuite. */
+  handlers['rp-print'] = async () => {
     const d = state.data;
     if (!d) return;
     const W = V();
     const popup = window.open('', '_blank');
     if (!popup) { toast(L('La fenêtre d’impression a été bloquée par le navigateur.', 'The print window was blocked by the browser.', 'منع المتصفح نافذة الطباعة.'), { type: 'error' }); return; }
-    const title = L('Rapport', 'Report', 'تقرير') + ' · ' + (REPORTS.find((r) => r.id === d.report)?.t() || '');
+    popup.document.write(`<p style="font-family:system-ui;padding:24px">${esc(L('Préparation du document…', 'Preparing the document…', 'جاري تحضير الوثيقة…'))}</p>`);
+    const extra = {};
+    try {
+      const want = (report) => (d.report === report ? d : demo() ? demoData({ report })
+        : fetch(query({ report }), { credentials: 'same-origin', headers: { Accept: 'application/json' } }).then((r) => (r.ok ? r.json() : null)).catch(() => null));
+      [extra.summary, extra.vat] = await Promise.all([want('summary'), want('vat')]);
+    } catch (_) { /* la page de garde est un plus : le rapport s'imprime sans elle */ }
+    const title = L('Rapport', 'Report', 'تقرير') + ' · ' + reportTitle(d);
     popup.document.open();
-    popup.document.write(W.printable(title, siteName(), W.lede(d, versusLabel()) + reportBody(d), d));
+    popup.document.write(W.printable(title, siteName(), W.lede(d, versusLabel(), { share: false }) + reportBody(d), d, extra));
     popup.document.close();
-    popup.addEventListener('load', () => { try { popup.focus(); popup.print(); } catch (_) {} });
+    setTimeout(() => { try { popup.focus(); popup.print(); } catch (_) {} }, 350);
   };
 
   /* Les rapports qui existaient avant le hub, ouverts par leur propre chemin. */
