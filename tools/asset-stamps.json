@@ -80,8 +80,8 @@
     "sha": "436c5e1a15598bb1"
   },
   "assets/agent-voice.js": {
-    "v": "15",
-    "sha": "2ff56d6b3dbd283d"
+    "v": "16",
+    "sha": "9b0d977cf6e47577"
   },
   "assets/agent.js": {
     "v": "44",
@@ -899,6 +899,10 @@
     "v": "19",
     "sha": "309ecc8628296690"
   },
+  "assets/inventory-scan.js": {
+    "v": "1",
+    "sha": "c1cc956607940807"
+  },
   "assets/invoice.js": {
     "v": "28",
     "sha": "9e05bdaa41da6a20"
@@ -1480,8 +1484,8 @@
     "sha": "d8150ae77563aa16"
   },
   "assets/pages-pro-boutique.js": {
-    "v": "54",
-    "sha": "e75246c5221fd87b"
+    "v": "55",
+    "sha": "7f428b243ee10aaa"
   },
   "assets/pages-pro-office.js": {
     "v": "29",
@@ -1532,8 +1536,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "277",
-    "sha": "5b1b81f256722520"
+    "v": "278",
+    "sha": "2d53b43eb0dbcb67"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

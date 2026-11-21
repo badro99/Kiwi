@@ -221,7 +221,8 @@ var SHELL = [
   '/assets/hotel-folio.js?v=6',
   '/assets/hotel-channels.js?v=4',
   '/assets/pages-pro-office.js?v=29',
-  '/assets/pages-pro-boutique.js?v=54',
+  '/assets/pages-pro-boutique.js?v=55',
+  '/assets/inventory-scan.js?v=1',
   '/assets/boutique-stock-correct.js?v=4',
   '/assets/boutique-categories-view.js?v=3',
   '/assets/menu-nutrition.js?v=4',
@@ -230,7 +231,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=31',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
-  '/assets/pages/dashboard-startup.js?v=277',
+  '/assets/pages/dashboard-startup.js?v=278',
   '/assets/pages/dashboard-loader.js?v=107',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -260,7 +261,7 @@ var SHELL = [
   '/assets/agent-data.js?v=7',
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
-  '/assets/agent-voice.js?v=15',
+  '/assets/agent-voice.js?v=16',
   '/assets/i18n.js?v=59',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */

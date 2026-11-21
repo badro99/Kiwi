@@ -16,6 +16,9 @@ const ok = (value, message) => { if (!value) { console.error('  ✗ ' + message)
 const eq = (actual, expected, message) => ok(JSON.stringify(actual) === JSON.stringify(expected),
   `${message} : attendu ${JSON.stringify(expected)}, obtenu ${JSON.stringify(actual)}`);
 
+/* Les quatre scripts du catalogue, lus une fois ; chaque boutique les exécute. */
+const CATALOG_SCRIPTS = ['assets/barcode.js', 'assets/color-palette.js', 'assets/boutique-catalog-parts.js', 'assets/boutique-catalog.js']
+  .map((rel) => retailSource(fs.readFileSync(path.join(ROOT, rel), 'utf8')));
 function shop() {
   const store = new Map();
   const localStorage = {
@@ -32,8 +35,7 @@ function shop() {
     navigator: { userAgent: 'node' }, setTimeout, clearTimeout, fetch: () => Promise.reject(new Error('offline test')),
   };
   window.window = window;
-  for (const rel of ['assets/barcode.js', 'assets/color-palette.js', 'assets/boutique-catalog-parts.js', 'assets/boutique-catalog.js']) {
-    const src = retailSource(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
+  for (const src of CATALOG_SCRIPTS) {
     new Function('window', 'document', 'localStorage', 'CustomEvent', 'navigator', 'setTimeout', 'clearTimeout', 'fetch', 'self', 'console', src)(
       window, document, localStorage, window.CustomEvent, window.navigator, setTimeout, clearTimeout, window.fetch, window, console);
   }

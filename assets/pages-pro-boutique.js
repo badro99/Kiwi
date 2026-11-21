@@ -3471,11 +3471,6 @@ handlers['bqx-templates'] = () => {
   T.open({ onApplied: () => _renderInventory() });
 };
 
-handlers['bqx-scan'] = () => {
-  const inp = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*,application/pdf', hidden: true });
-  inp.addEventListener('change', () => { const f = inp.files && inp.files[0]; inp.remove(); if (f && window.KiwiVision && window.KiwiVision.scan) window.KiwiVision.scan(f); });
-  document.body.appendChild(inp); inp.click();
-};
 handlers['bqx-new'] = () => {
   _bqxPfOpen(null);
 };
