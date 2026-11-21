@@ -961,6 +961,11 @@ CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_cursor
   ON inventory_movements (merchant, srv_ts);
 CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_item
   ON inventory_movements (merchant, item_id, occurred_ts);
+-- Coût théorique et réel (functions/api/cost-variance.js) : toutes ses sommes
+-- portent sur une période d'un magasin ; sans cet index, chaque rapport lisait
+-- tout l'historique du magasin.
+CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_time
+  ON inventory_movements (merchant, occurred_ts);
 CREATE TABLE IF NOT EXISTS inventory_sync_sequences (
   merchant TEXT PRIMARY KEY,
   last_ts   INTEGER NOT NULL
