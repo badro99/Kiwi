@@ -31,7 +31,7 @@
     P('foodtruck','vehicle','checklist',L('Camion & tournée','Truck & route','الشاحنة والجولة'),L('Ouverture, énergie, eau, froid et fermeture du camion.','Opening, power, water, cold chain and truck close.','الفتح والطاقة والماء والتبريد وإغلاق الشاحنة.'),L('contrôle','check','فحص'),{money:false}),
 
     P('epicerie','returns','checklist',L('Retours & casse','Returns & breakage','المرتجعات والتالف'),L('Tracez les retours, écarts, produits cassés et pertes.','Track returns, discrepancies, breakage and loss.','تتبع المرتجعات والفروقات والتالف والخسائر.'),L('incident','incident','حادث'),{money:true}),
-    P('epicerie','credit','ledger',L('Carnet de crédit','Credit ledger','دفتر الديون'),L('Suivez chaque crédit client et son règlement, sans perdre le contexte.','Track every customer credit and settlement with full context.','تتبع كل دين للعميل وتسويته مع كامل التفاصيل.'),L('crédit','credit entry','دين'),{money:true}),
+    P('epicerie','credit','ledger',L('Ardoises et avances','Tabs and advances','الديون والتسبيقات'),L('Suivez chaque crédit client et son règlement, sans perdre le contexte.','Track every customer credit and settlement with full context.','تتبع كل دين للعميل وتسويته مع كامل التفاصيل.'),L('crédit','credit entry','دين'),{money:true,sidebar:false}),
     P('epicerie','suppliers','schedule',L('Fournisseurs','Suppliers','الموردون'),L('Commandes, livraisons attendues et problèmes fournisseur.','Orders, expected deliveries and supplier issues.','الطلبات والتوصيلات المتوقعة ومشاكل الموردين.'),L('livraison fournisseur','supplier delivery','توصيل مورد'),{money:true}),
     P('epicerie','weighed','catalog',L('Produits au poids','Weighed products','المنتجات بالوزن'),L('Les produits du catalogue vendus à la balance : leur prix est alors le prix du kilo (ou du litre).','Catalogue products sold by weight: their price is then the price per kilo (or litre).','منتجات الكتالوج التي تباع بالميزان: سعرها هو سعر الكيلوغرام (أو اللتر).'),L('produit','product','منتج'),{money:false,date:false}),
 
@@ -148,6 +148,9 @@
     try { cloud?.bind?.(); } catch (_) {}
   }
   function config(nav) { return map[trade() + ':' + nav] || null; }
+  /* `sidebar:false` : la page s'ouvre par un lien, l'entrée du menu va ailleurs
+     (l'ardoise de l'épicerie : le menu ouvre le carnet du patron, assets/pages-pro/credit-book.js). */
+  function sidebarPage(nav) { const cfg = config(nav); return cfg && cfg.sidebar !== false ? cfg : null; }
   function rows(nav, includeDeleted) {
     const a = read().records[nav] || [];
     return includeDeleted ? a.slice() : a.filter((r) => !r.deletedAt);
@@ -448,9 +451,9 @@
   }
   function install() {
     const H=window.Kiwi?.handlers;if(!H)return;
-    [...new Set(pages.map((p)=>p.nav))].forEach((nav)=>{const key='nav-'+nav,orig=H[key];if(orig?.__kiwiTradeWorkspace)return;const fn=function(){return config(nav)?render(nav):(orig?orig.apply(this,arguments):undefined);};fn.__kiwiTradeWorkspace=true;fn.__kiwiTradeOriginal=orig;H[key]=fn;});
+    [...new Set(pages.map((p)=>p.nav))].forEach((nav)=>{const key='nav-'+nav,orig=H[key];if(orig?.__kiwiTradeWorkspace)return;const fn=function(){return sidebarPage(nav)?render(nav):(orig?orig.apply(this,arguments):undefined);};fn.__kiwiTradeWorkspace=true;fn.__kiwiTradeOriginal=orig;H[key]=fn;});
   }
-  document.addEventListener('click',(e)=>{const a=e.target.closest?.('.sidebar a[data-nav]');if(!a)return;const nav=a.dataset.nav;if(!config(nav))return;e.preventDefault();e.stopImmediatePropagation();render(nav);},true);
+  document.addEventListener('click',(e)=>{const a=e.target.closest?.('.sidebar a[data-nav]');if(!a)return;const nav=a.dataset.nav;if(!sidebarPage(nav))return;e.preventDefault();e.stopImmediatePropagation();render(nav);},true);
   window.addEventListener('load',()=>{setTimeout(()=>{bindCloud();install();},280);window.KiwiVenue?.subscribe?.(()=>{openPage=null;bindCloud();setTimeout(install,0);});window.KiwiSales?.subscribe?.(()=>{if(openPage&&document.querySelector('[data-tw-page]'))render(openPage.nav);});window.addEventListener('kiwi:langchange',()=>{if(openPage&&document.querySelector('[data-tw-page]'))render(openPage.nav);});});
   /* La caisse écrit son état dans `verticalops` : la planche ouverte se met à jour toute seule. */
   window.addEventListener('load',()=>{try{window.KiwiVerticalState?.store?.subscribe?.(()=>{if(openPage&&document.querySelector('[data-tw-page]'))render(openPage.nav);});}catch(_){}});

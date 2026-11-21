@@ -12,7 +12,12 @@
  * ou en retard, un rappel WhatsApp (wa.me) prêt à envoyer dans la langue du
  * client (français, arabe, darija), poli et court, avec le montant et le nom
  * du commerce. Kiwi n'envoie rien : le patron appuie sur Envoyer. Le rappel
- * est noté (« relancé à 10:42 ») pour ne pas relancer deux fois le même jour.
+ * est noté (« relancé à 10:42 ») pour ne pas relancer deux fois la même journée
+ * d'activité (la journée de la caisse, qui finit à 5 h, pas à minuit).
+ *
+ * Une dette sans échéance devient due après le délai du commerce (30 jours par
+ * défaut, réglable ici par le patron). Une vente passée au-delà du plafond sans
+ * l'accord d'un responsable est signalée (functions/api/_credit-audit.js).
  *
  * Les échéances se règlent toutes seules : un règlement noté à la caisse est
  * versé sur les lignes par ordre de date (functions/api/_credit-accounts.js).
@@ -39,6 +44,16 @@
   const fmtTime = (ts) => { try { return new Intl.DateTimeFormat(uiLocale(), { hour: '2-digit', minute: '2-digit' }).format(new Date(ts)); } catch (_) { return ''; } };
   const fmtWhen = (ts) => { try { return new Intl.DateTimeFormat(uiLocale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(ts)); } catch (_) { return ''; } };
   const idOf = (c) => c.source + ':' + c.key;
+  /* L'arabe accorde le nom au nombre : يوم واحد، يومان/يومين، 3 à 10 أيام،
+     11 à 99 يومًا، et 100, 101, 102 reprennent يوم. `gen` : après un nom
+     (تأخير يومين). */
+  function arDays(n, gen) {
+    n = Math.abs(Math.round(Number(n) || 0));
+    if (n === 1) return 'يوم واحد';
+    if (n === 2) return gen ? 'يومين' : 'يومان';
+    const r = n % 100;
+    return n + (r >= 3 && r <= 10 ? ' أيام' : r >= 11 ? ' يومًا' : ' يوم');
+  }
   const BUCKETS = [
     ['notDue', () => L('Pas encore dû', 'Not due yet', 'لم يحن أجله')],
     ['d1_30', () => L('1 à 30 j', '1 to 30 d', '1 إلى 30 يومًا')],
@@ -138,18 +153,20 @@
     const customers = [
       c('d-rkia', 'Mme Rkia', '0661442187', 17400, 4, 12000, { d1_30: 17400 }, { lang: 'darija', limitCents: 30000 }),
       c('d-driss', 'Hajj Driss', '0670331209', 9800, 0, 9800, { notDue: 9800 }, { lang: 'ar' }),
-      c('d-cafe', 'Café Rif', '0539940321', 208000, 38, 100000, { d31_60: 100000, d1_30: 108000 }, { limitCents: 150000 }),
+      c('d-cafe', 'Café Rif', '0539940321', 208000, 38, 100000, { d31_60: 100000, d1_30: 108000 }, { limitCents: 150000, unapproved: 1 }),
       c('d-mustapha', 'Mustapha (menuisier)', '0662784533', 10300, 8, 0, { d1_30: 10300 }, {}),
       c('d-fatiha', 'Fatiha', '', 2700, -3, 0, { notDue: 2700 }, {}),
     ];
-    const summary = { owedCents: 0, debtors: customers.length, buckets: { notDue: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90p: 0 }, dueToday: 0, dueTodayCents: 0, overLimit: 0 };
+    customers[0].pending.push({ id: 'd-rkia-r2', amountCents: 5400, originalCents: 5400, dueDate: plusDays(today, 26), note: '', origin: 'owner' });
+    const summary = { owedCents: 0, debtors: customers.length, buckets: { notDue: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90p: 0 }, dueToday: 0, dueTodayCents: 0, overLimit: 0, unapproved: 0 };
     for (const x of customers) {
       summary.owedCents += x.owedCents;
       for (const b of Object.keys(summary.buckets)) summary.buckets[b] += x.buckets[b];
       if (x.dueCents) { summary.dueToday++; summary.dueTodayCents += x.dueCents; }
       if (x.limitCents != null && x.owedCents > x.limitCents) summary.overLimit++;
+      if (x.unapproved) summary.unapproved++;
     }
-    return { today, summary, customers };
+    return { today, termDays: 30, summary, customers };
   }
 
   async function api(method, query, body) {
@@ -175,18 +192,25 @@
 
   /* ── le rappel WhatsApp : un brouillon, jamais un envoi ── */
   const firstName = (name) => String(name || '').trim().split(/\s+/).slice(0, 2).join(' ');
+  /* Un registre par modèle : l'arabe reste en arabe standard du début à la
+     fin, la darija reste en darija. Les deux prochaines échéances suivent le
+     montant dû, quand il y en a. */
   function waText(c, lang) {
     const shop = shopName() || (lang === 'fr' ? 'votre commerce' : 'المحل');
     const amount = mad(c.dueCents || c.owedCents);
     const name = firstName(c.name);
     const date = c.dueDate || '';
+    const loc = lang === 'fr' ? 'fr-FR' : 'ar-MA-u-nu-latn';
+    const coming = (c.pending || []).filter((r) => r.dueDate > ((state.book && state.book.today) || '')).slice(0, 2);
+    const next = coming.map((r) => fmtDay(r.dueDate, loc) + ' · ' + mad(r.amountCents)).join(lang === 'fr' ? ', ' : '، ');
+    const two = coming.length === 2;
     if (lang === 'ar') {
-      return `السلام عليكم ${name}، نرجو أن تكونوا بخير. تذكير لطيف من ${shop}: يتبقى مبلغ ${amount}${date ? `، وكان الموعد المتفق عليه ${fmtDay(date, 'ar-MA-u-nu-latn')}` : ''}. شكرًا جزيلًا ونهاركم سعيد.`;
+      return `السلام عليكم ${name}، نرجو أن تكونوا بخير. نذكّركم بلطف من ${shop} بأن مبلغ ${amount} ما زال مستحقًا${date ? `، وكان موعده المتفق عليه ${fmtDay(date, loc)}` : ''}.${next ? ` ${two ? 'الموعدان القادمان' : 'الموعد القادم'}: ${next}.` : ''} مع خالص الشكر والتقدير.`;
     }
     if (lang === 'darija') {
-      return `السلام ${name}، لاباس عليك؟ غير تذكير صغير من ${shop}: باقي ${amount} فالكريدي${date ? `، كنا متافقين على ${fmtDay(date, 'ar-MA-u-nu-latn')}` : ''}. ملي تقدر الله يخليك، وشكرا بزاف.`;
+      return `السلام ${name}، لاباس عليك؟ غير تذكير صغير من ${shop}: باقي ${amount} فالكريدي${date ? `، كنا متافقين على ${fmtDay(date, loc)}` : ''}.${next ? ` ${two ? 'الموعدين الجايين' : 'الموعد الجاي'}: ${next}.` : ''} ملي تقدر الله يخليك، وشكرا بزاف.`;
     }
-    return `Bonjour ${name}, j’espère que vous allez bien. Petit rappel de ${shop} : ${amount} reste${date ? ` à régler, prévu le ${fmtDay(date, 'fr-FR')}` : ' à régler'}. Merci beaucoup et bonne journée.`;
+    return `Bonjour ${name}, j’espère que vous allez bien. Petit rappel de ${shop} : ${amount} reste${date ? ` à régler, prévu le ${fmtDay(date, loc)}` : ' à régler'}.${next ? ` ${two ? 'Prochaines échéances' : 'Prochaine échéance'} : ${next}.` : ''} Merci beaucoup et bonne journée.`;
   }
   /* 06… / 07… / 05… marocains → 2126…, +33… → 33… */
   function waNumber(phone) {
@@ -196,13 +220,14 @@
     return d.length >= 8 ? d : '';
   }
   const langOf = (c) => c.lang || (window.KiwiI18n?.getLang?.() === 'ar' ? 'darija' : 'fr');
-  const remindedToday = (c) => c.remindedTs > 0 && localDay(c.remindedTs) === localDay(Date.now());
+  /* La journée d'activité du commerce (5 h), donnée par le serveur. */
+  const remindedToday = (c) => c.remindedTs > 0 && (c.remindedDay ? c.remindedDay === state.book?.today : localDay(c.remindedTs) === localDay(Date.now()));
   const findCustomer = (id) => (state.book?.customers || []).find((c) => idOf(c) === id) || null;
 
   /* ── l'affichage ── */
   function lateLabel(c) {
     if (c.dueDate && c.dueDate === state.book.today) return `<span class="cb-pill warn">${esc(L('Dû aujourd’hui', 'Due today', 'مستحق اليوم'))}</span>`;
-    if (c.daysLate > 0) return `<span class="cb-pill warn cb-late">${esc(L(`${c.daysLate} j de retard`, `${c.daysLate} d late`, `متأخر ${c.daysLate} يومًا`))}</span>`;
+    if (c.daysLate > 0) return `<span class="cb-pill warn cb-late">${esc(L(`${c.daysLate} j de retard`, `${c.daysLate} d late`, `تأخير ${arDays(c.daysLate, true)}`))}</span>`;
     if (c.nextDue) return `<span class="cb-pill">${esc(L('Prochaine échéance', 'Next due', 'الموعد القادم'))} · ${esc(fmtShort(c.nextDue))}</span>`;
     return '';
   }
@@ -211,13 +236,14 @@
     const b = (k, t) => `<button type="button" data-lens-item class="${l === k ? 'on' : ''}" aria-pressed="${l === k}" data-action="credit-lang" data-arg="${esc(idOf(c) + '|' + k)}">${esc(t)}</button>`;
     return `<div class="cb-seg sm" data-lens-demo role="group" aria-label="${esc(L('Langue du rappel', 'Reminder language', 'لغة التذكير'))}">${b('fr', 'FR')}${b('ar', 'عربي')}${b('darija', 'Darija')}</div>`;
   }
+  const unapprovedPill = (c) => (c.unapproved > 0 ? `<span class="cb-pill warn">${esc(L('Plafond dépassé sans accord', 'Limit passed without approval', 'تجاوز السقف دون موافقة'))}</span>` : '');
   function dueCard(c) {
     const again = remindedToday(c);
     const phone = waNumber(c.phone);
     return `<article class="cb-row">
       <div class="cb-row-top">
         <div class="cb-who"><button type="button" data-action="credit-open" data-arg="${esc(idOf(c))}">${esc(c.name || L('Client', 'Customer', 'زبون'))}</button>
-          <div class="cb-meta">${lateLabel(c)}${again ? `<span class="cb-pill ok">${ic('check')}${esc(L('Relancé à', 'Reminded at', 'تم التذكير على'))} ${esc(fmtTime(c.remindedTs))}</span>` : ''}</div></div>
+          <div class="cb-meta">${lateLabel(c)}${unapprovedPill(c)}${again ? `<span class="cb-pill ok">${ic('check')}${esc(L('Relancé à', 'Reminded at', 'تم التذكير على'))} ${esc(fmtTime(c.remindedTs))}</span>` : ''}</div></div>
         <div class="cb-amt"><b>${esc(mad(c.dueCents))}</b><small>${esc(L('sur', 'of', 'من أصل'))} ${esc(mad(c.owedCents))}</small></div>
       </div>
       <div class="cb-acts">${langSeg(c)}
@@ -228,7 +254,7 @@
     const over = c.limitCents != null && c.owedCents > c.limitCents;
     return `<article class="cb-row"><div class="cb-row-top">
       <div class="cb-who"><button type="button" data-action="credit-open" data-arg="${esc(idOf(c))}">${esc(c.name || L('Client', 'Customer', 'زبون'))}</button>
-        <div class="cb-meta">${lateLabel(c)}${c.unscheduledCents > 0 && c.hasSchedule ? `<span class="cb-pill">${esc(mad(c.unscheduledCents))} ${esc(L('sans date', 'without a date', 'بدون تاريخ'))}</span>` : ''}${over ? `<span class="cb-pill warn">${esc(L('Au-dessus du plafond', 'Over the limit', 'فوق السقف'))}</span>` : ''}${c.source === 'client' ? `<span class="cb-pill">${esc(L('Compte client', 'Customer account', 'حساب الزبون'))}</span>` : ''}</div></div>
+        <div class="cb-meta">${lateLabel(c)}${c.unscheduledCents > 0 && c.hasSchedule ? `<span class="cb-pill">${esc(mad(c.unscheduledCents))} ${esc(L('sans date', 'without a date', 'بدون تاريخ'))}</span>` : ''}${over ? `<span class="cb-pill warn">${esc(L('Au-dessus du plafond', 'Over the limit', 'فوق السقف'))}</span>` : ''}${unapprovedPill(c)}${c.source === 'client' ? `<span class="cb-pill">${esc(L('Compte client', 'Customer account', 'حساب الزبون'))}</span>` : ''}</div></div>
       <div class="cb-amt"><b>${esc(mad(c.owedCents))}</b>${c.limitCents != null ? `<small>${esc(L('plafond', 'limit', 'السقف'))} ${esc(mad(c.limitCents))}</small>` : ''}</div>
     </div></article>`;
   }
@@ -237,6 +263,14 @@
     return `<section class="cb-card"><h3>${esc(L('Ancienneté des créances', 'Ageing', 'أعمار الديون'))}</h3>
       <div class="cb-age" role="img" aria-label="${esc(BUCKETS.map(([k, t]) => t() + ' ' + mad(s.buckets[k])).join(', '))}">${BUCKETS.map(([k]) => s.buckets[k] > 0 ? `<span class="cb-b-${k}" style="width:${(s.buckets[k] / total * 100).toFixed(2)}%"></span>` : '').join('')}</div>
       <div class="cb-legend">${BUCKETS.map(([k, t]) => `<div><i class="cb-b-${k}"></i>${esc(t())}<b>${esc(mad(s.buckets[k]))}</b></div>`).join('')}</div></section>`;
+  }
+  function termCard(b) {
+    const ledger = (() => { try { return !!window.KiwiTradeWorkspaces?.config?.('credit'); } catch (_) { return false; } })();
+    return `<section class="cb-card"><h3>${esc(L('Dette sans échéance', 'Debt without a date', 'دين بلا موعد'))}</h3>
+      <p class="cb-note">${esc(L('Sans date convenue, une dette devient due ce nombre de jours après l’achat, puis entre dans « À relancer ».', 'Without an agreed date, a debt falls due this many days after the purchase, then joins “To remind”.', 'دون موعد متفق عليه، يصبح الدين مستحقًا بعد هذا العدد من الأيام من الشراء، ثم يدخل قائمة «للتذكير».'))}</p>
+      <div class="cb-limit"><input inputmode="numeric" data-cb-term value="${esc(b.termDays == null ? 30 : b.termDays)}" aria-label="${esc(L('Délai en jours', 'Term in days', 'المهلة بالأيام'))}"><span>${esc(L('jours', 'days', 'يومًا'))}</span>
+        <button type="button" class="cb-btn" data-action="credit-term-save">${esc(L('Enregistrer', 'Save', 'حفظ'))}</button></div>
+      ${ledger ? `<p class="cb-note"><button type="button" class="cb-btn" data-action="credit-ledger">${esc(L('Ardoises et avances', 'Tabs and advances', 'الديون والتسبيقات'))}</button></p>` : ''}</section>`;
   }
   function render() {
     css();
@@ -272,8 +306,10 @@
         </div>
         <div class="cb-bar"><div class="cb-seg" data-lens-demo role="group" aria-label="${esc(L('Sections du carnet', 'Credit book sections', 'أقسام الدفتر'))}">${tab('due', L('À relancer', 'To remind', 'للتذكير') + (s.dueToday ? ' (' + s.dueToday + ')' : ''))}${tab('all', L('Tous les débiteurs', 'All debtors', 'كل المدينين'))}</div>
           <button type="button" class="cb-btn" data-action="credit-refresh">${esc(L('Actualiser', 'Refresh', 'تحديث'))}</button></div>
+        ${s.unapproved ? `<div class="cb-card"><p class="cb-note cb-late">${esc(L(`${s.unapproved} client(s) passé(s) au-delà du plafond sans l’accord d’un responsable, ces 30 derniers jours.`, `${s.unapproved} customer(s) went past the limit without a manager’s approval in the last 30 days.`, `عدد الزبائن الذين تجاوزوا السقف دون موافقة مسؤول خلال 30 يومًا الأخيرة: ${s.unapproved}.`))}</p></div>` : ''}
         ${main}
-        ${ageingCard(s)}`;
+        ${ageingCard(s)}
+        ${termCard(b)}`;
     }
     window.Kiwi.appPage('credit', {
       title: L('Carnet de crédit', 'Credit book', 'دفتر الديون'),
@@ -297,6 +333,16 @@
     try { render(); } catch (_) {}
   };
   handlers['credit-refresh'] = async () => { await load(); render(); };
+  handlers['credit-ledger'] = () => { try { window.KiwiTradeWorkspaces?.render?.('credit'); } catch (_) {} };
+  handlers['credit-term-save'] = async () => {
+    const input = document.querySelector('[data-cb-term]');
+    const days = Number(String(input ? input.value : '').trim());
+    if (!Number.isSafeInteger(days) || days < 0 || days > 365) { toast(L('Délai entre 0 et 365 jours', 'Term between 0 and 365 days', 'المهلة بين 0 و365 يومًا'), '', true); return; }
+    if (state.demo) { state.book.termDays = days; toast(L('Démo : rien n’est enregistré', 'Demo: nothing is saved', 'عرض تجريبي: لا شيء يُحفظ'), ''); return; }
+    const r = await api('POST', '', { action: 'settings', termDays: days });
+    if (r.status === 200) { toast(L('Délai enregistré', 'Term saved', 'تم حفظ المهلة'), ''); await load(); render(); return; }
+    toast(r.status === 403 ? L('Seul le patron fixe le délai', 'Only the owner sets the term', 'وحده صاحب المحل يحدد المهلة') : L('Délai non enregistré', 'Term not saved', 'لم تُحفظ المهلة'), '', true);
+  };
   handlers['credit-tab'] = (el, arg) => { const k = typeof el === 'string' ? el : arg; state.tab = k === 'all' ? 'all' : 'due'; render(); };
   handlers['credit-sort'] = (el, arg) => { const k = typeof el === 'string' ? el : arg; state.sort = k === 'amount' ? 'amount' : 'late'; render(); };
 
@@ -324,7 +370,7 @@
        ouverte après une attente. */
     try { window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(waText(c, lang)), '_blank', 'noopener'); } catch (_) {}
     const out = await savePrefs(c, { reminded: true, lang });
-    if (out) { c.remindedTs = out.remindedTs || Date.now(); c.lang = lang; render(); }
+    if (out) { c.remindedTs = out.remindedTs || Date.now(); c.remindedDay = state.book?.today || ''; c.lang = lang; render(); }
     else toast(L('Rappel ouvert, mais non noté', 'Reminder opened, but not recorded', 'فُتح التذكير لكن لم يُسجَّل'), '', true);
   };
 
@@ -349,11 +395,11 @@
       : c.owedCents > 0 ? `<p class="cb-note">${esc(L('Aucune échéance. Fixez des dates avec le client : chaque règlement noté à la caisse les solde dans l’ordre.', 'No payment dates yet. Agree dates with the customer: every payment taken at the till settles them in order.', 'لا مواعيد بعد. اتفق مع الزبون على مواعيد: كل دفعة تُسجَّل في الصندوق تُسدّدها بالترتيب.'))}</p>
         <button type="button" class="cb-btn go" data-action="credit-seed">${esc(L('Créer un échéancier', 'Create a schedule', 'إنشاء جدول دفع'))}</button>` : '';
     const hist = (d.history || []).map((h) => ({ ts: h.ts, label: h.kind === 'debt' ? (h.label || L('Achat à crédit', 'Credit purchase', 'شراء بالكريدي')) : L('Règlement', 'Payment', 'دفعة'), cents: h.kind === 'debt' ? h.cents : -h.cents }))
-      .concat((d.events || []).filter((e) => e.kind !== 'collected' && e.kind !== 'schedule').map((e) => ({ ts: e.ts, label: { 'limit-override': L('Plafond dépassé, accord de ', 'Limit passed, approved by ', 'تجاوز السقف بموافقة ') + (e.actor || ''), reminded: L('Rappel WhatsApp', 'WhatsApp reminder', 'تذكير واتساب'), promise: L('Promesse prise à la caisse', 'Promise taken at the till', 'وعد سُجّل في الصندوق'), limit: L('Plafond modifié', 'Limit changed', 'تغيير السقف') }[e.kind] || e.kind, cents: null })))
+      .concat((d.events || []).filter((e) => !['collected', 'schedule', 'limit-used', 'settings'].includes(e.kind)).map((e) => ({ ts: e.ts, label: { 'limit-override': L('Plafond dépassé, accord de ', 'Limit passed, approved by ', 'تجاوز السقف بموافقة ') + (e.actor || ''), 'limit-unapproved': L('Vente au-delà du plafond, sans accord', 'Sale past the limit, no approval', 'بيع فوق السقف دون موافقة'), reminded: L('Rappel WhatsApp', 'WhatsApp reminder', 'تذكير واتساب'), promise: L('Promesse prise à la caisse', 'Promise taken at the till', 'وعد سُجّل في الصندوق'), limit: L('Plafond modifié', 'Limit changed', 'تغيير السقف') }[e.kind] || e.kind, cents: null })))
       .sort((a, b) => b.ts - a.ts).slice(0, 30);
     return `<div class="cb-sum">
         <div><small>${esc(L('Doit', 'Owes', 'عليه'))}</small><b>${esc(mad(c.owedCents))}</b></div>
-        <div><small>${esc(L('En retard', 'Overdue', 'متأخر'))}</small><b class="${c.daysLate > 0 ? 'cb-late' : ''}">${esc(c.daysLate > 0 ? L(c.daysLate + ' j', c.daysLate + ' d', c.daysLate + ' يوم') : L('Non', 'No', 'لا'))}</b></div>
+        <div><small>${esc(L('En retard', 'Overdue', 'متأخر'))}</small><b class="${c.daysLate > 0 ? 'cb-late' : ''}">${esc(c.daysLate > 0 ? L(c.daysLate + ' j', c.daysLate + ' d', arDays(c.daysLate)) : L('Non', 'No', 'لا'))}</b></div>
         <div><small>${esc(L('Dernier règlement', 'Last payment', 'آخر دفعة'))}</small><b>${esc(c.lastPayTs ? fmtShort(localDay(c.lastPayTs)) : '·')}</b></div>
         <div><small>${esc(L('Sans date', 'Without a date', 'بدون تاريخ'))}</small><b>${esc(mad(c.unscheduledCents))}</b></div>
       </div>

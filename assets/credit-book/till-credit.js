@@ -17,16 +17,14 @@ const PHRASES = {
   '{n} doit déjà {a}. Avec cette vente : {b}, pour un plafond de {c}.': ['{n} already owes {a}. With this sale: {b}, against a limit of {c}.', '{n} عليه {a}. مع هذا البيع: {b}، والسقف {c}.'],
   'Accord d’un responsable': ['Manager approval', 'موافقة المسؤول'],
   'Entrez le code responsable à 4 chiffres.': ['Enter the 4-digit manager code.', 'أدخل رمز المسؤول المكوّن من 4 أرقام.'],
-  'Annuler la vente à crédit': ['Cancel the credit sale', 'إلغاء البيع بالكريدي'],
   'Code responsable': ['Manager code', 'رمز المسؤول'],
-  'Valider': ['Confirm', 'تأكيد'],
   'Accordé par {n}': ['Approved by {n}', 'وافق عليه {n}'],
   'Code refusé': ['Code refused', 'الرمز مرفوض'],
   'Seul un responsable peut dépasser le plafond': ['Only a manager can go over the limit', 'وحده المسؤول يمكنه تجاوز السقف'],
   'Hors ligne : dépasser le plafond demande la connexion': ['Offline: going over the limit needs a connection', 'دون اتصال: تجاوز السقف يحتاج إلى الإنترنت'],
   'Vente à crédit non enregistrée': ['Credit sale not recorded', 'لم يُسجَّل البيع بالكريدي'],
   'Paiera le…': ['Will pay on…', 'سيدفع يوم…'],
-  '{n} · {a} sur le carnet': ['{n} · {a} on the book', '{n} · {a} في الكارني'],
+  '{n} · {a} sur le carnet': ['{n} · {a} on the book', '{n} · {a} في دفتر الديون'],
   'Dans 7 jours': ['In 7 days', 'بعد 7 أيام'],
   'Fin du mois': ['End of month', 'آخر الشهر'],
   'Autre date': ['Other date', 'تاريخ آخر'],
@@ -85,6 +83,24 @@ export async function refreshLimits(merchant) {
   } catch (_) { /* hors ligne : on garde le dernier connu */ }
 }
 
+function ensureCss() {
+  if (!document.getElementById('kc-credit-css')) {
+    const style = document.createElement('style');
+    style.id = 'kc-credit-css';
+    style.textContent = `.kc-credit-veil{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:16px;background:rgba(10,15,13,.42)}
+  .kc-credit-card{width:min(420px,100%);max-height:calc(100vh - 32px);overflow:auto;border-radius:20px;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);padding:20px;font-family:var(--font-ui,'Inter Tight',system-ui,sans-serif);box-shadow:0 24px 60px -24px rgba(5,59,44,.45)}
+  .kc-credit-card h3{margin:0 0 6px;font-size:18px;font-weight:600}
+  .kc-credit-card p{margin:0 0 14px;font-size:14px;line-height:1.5;color:var(--ink-2,#3a4440)}
+  .kc-credit-opts{display:grid;gap:8px}
+  .kc-credit-opts button,.kc-credit-foot button{min-height:48px;border-radius:12px;border:1px solid var(--line,rgba(10,15,13,.14));background:var(--surface,#FDFCF9);color:inherit;font:inherit;font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 14px;cursor:pointer}
+  .kc-credit-opts button span{color:var(--ink-3,#667);font-variant-numeric:tabular-nums}
+  .kc-credit-opts input{min-height:48px;border-radius:12px;border:1px solid var(--line,rgba(10,15,13,.14));padding:0 12px;font:inherit;background:var(--surface,#FDFCF9);color:inherit}
+  .kc-credit-foot{display:flex;gap:8px;margin-top:14px}.kc-credit-foot button{flex:1;justify-content:center}
+  .kc-credit-foot .go{background:var(--atlas,#0B6E4F);border-color:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0)}
+  .kc-credit-warn{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:12px;background:var(--warn-soft,#FFF4DD);color:var(--warn-ink,#8A6210);margin-bottom:12px;font-size:14px;line-height:1.45}`;
+    document.head.appendChild(style);
+  }
+}
 /* Un petit panneau à part, posé sur la caisse (les deux caisses n'ont pas les
    mêmes fenêtres). Rend { close, el }. */
 function sheet(html) {
@@ -97,24 +113,7 @@ function sheet(html) {
   card.dir = lang() === 'ar' ? 'rtl' : 'ltr';
   card.innerHTML = html;
   wrap.appendChild(card);
-  if (!document.getElementById('kc-credit-css')) {
-    const style = document.createElement('style');
-    style.id = 'kc-credit-css';
-    style.textContent = `.kc-credit-veil{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:16px;background:rgba(10,15,13,.42)}
-.kc-credit-card{width:min(420px,100%);max-height:calc(100vh - 32px);overflow:auto;border-radius:20px;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);padding:20px;font-family:var(--font-ui,'Inter Tight',system-ui,sans-serif);box-shadow:0 24px 60px -24px rgba(5,59,44,.45)}
-.kc-credit-card h3{margin:0 0 6px;font-size:18px;font-weight:600}
-.kc-credit-card p{margin:0 0 14px;font-size:14px;line-height:1.5;color:var(--ink-2,#3a4440)}
-.kc-credit-opts{display:grid;gap:8px}
-.kc-credit-opts button,.kc-credit-foot button{min-height:48px;border-radius:12px;border:1px solid var(--line,rgba(10,15,13,.14));background:var(--surface,#FDFCF9);color:inherit;font:inherit;font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 14px;cursor:pointer}
-.kc-credit-opts button span{color:var(--ink-3,#667);font-variant-numeric:tabular-nums}
-.kc-credit-opts input{min-height:48px;border-radius:12px;border:1px solid var(--line,rgba(10,15,13,.14));padding:0 12px;font:inherit;background:var(--surface,#FDFCF9);color:inherit}
-.kc-credit-foot{display:flex;gap:8px;margin-top:14px}.kc-credit-foot button{flex:1;justify-content:center}
-.kc-credit-foot .go{background:var(--atlas,#0B6E4F);border-color:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0)}
-.kc-credit-warn{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:12px;background:var(--warn-soft,#FFF4DD);color:var(--warn-ink,#8A6210);margin-bottom:12px;font-size:14px;line-height:1.45}
-.kc-credit-pin{display:grid;gap:8px}.kc-credit-pin input{min-height:52px;font-size:22px;letter-spacing:.4em;text-align:center;border-radius:12px;border:1px solid var(--line,rgba(10,15,13,.14));background:var(--surface,#FDFCF9);color:inherit}
-.kc-credit-err{color:var(--danger,#C94A3A);font-size:13px;min-height:18px}`;
-    document.head.appendChild(style);
-  }
+  ensureCss();
   document.body.appendChild(wrap);
   const prev = document.activeElement;
   const close = () => { wrap.remove(); try { prev && prev.focus && prev.focus(); } catch (_) {} };
@@ -123,39 +122,64 @@ function sheet(html) {
 }
 
 /* Le code du responsable, comparé par le serveur. Rend la réponse d'accord ou null. */
+/* L'accord d'un responsable : le pavé du kit (<k-pin-pad>, assets/kit/pin.js)
+ * dans une feuille du kit (<k-sheet>), comme les remises du pressing
+ * (assets/pressing/manager-approval.js). Le pavé ne garde jamais le code : il
+ * le passe à onsubmit, la caisse l'envoie au serveur qui le compare
+ * (verifyStaffPin), et le pavé est vidé à chaque réponse. Sans le kit chargé,
+ * pas d'accord possible : la vente à crédit est refusée. */
 function askManager({ merchant, base, text }) {
   return new Promise((resolve) => {
-    const s = sheet(`<h3>${esc(tr('Plafond de crédit dépassé'))}</h3>
-      <div class="kc-credit-warn">${esc(text)}</div>
-      <div class="kc-credit-pin"><label for="kc-credit-code">${esc(tr('Code responsable'))}</label>
-      <input id="kc-credit-code" type="password" inputmode="numeric" autocomplete="off" maxlength="4" aria-describedby="kc-credit-err">
-      <div class="kc-credit-err" id="kc-credit-err" role="alert"></div></div>
-      <div class="kc-credit-foot"><button type="button" data-no>${esc(tr('Annuler la vente à crédit'))}</button><button type="button" class="go" data-yes>${esc(tr('Valider'))}</button></div>`);
-    const input = s.el.querySelector('input'), err = s.el.querySelector('#kc-credit-err');
-    const done = (v) => { s.close(); resolve(v); };
-    s.el.addEventListener('kc-dismiss', () => done(null));
-    s.el.querySelector('[data-no]').onclick = () => done(null);
-    const go = async () => {
-      const pin = String(input.value || '').replace(/\D/g, '');
-      if (pin.length !== 4) { err.textContent = tr('Entrez le code responsable à 4 chiffres.'); return; }
-      let r;
-      try { r = await post({ ...base, merchant, action: 'approve', pin }); } catch (_) { r = null; }
-      input.value = '';
-      if (r && r.status === 200 && r.body.approved) return done(r.body);
-      if (r && r.status === 200 && !r.body.over) return done(r.body);
-      err.textContent = !r ? tr('Hors ligne : dépasser le plafond demande la connexion')
-        : r.body.error === 'not-manager' ? tr('Seul un responsable peut dépasser le plafond') : tr('Code refusé');
-      input.focus();
+    if (!window.customElements || !customElements.get('k-pin-pad') || !customElements.get('k-sheet')) { resolve(null); return; }
+    ensureCss();
+    const sheetEl = document.createElement('k-sheet');
+    const pad = document.createElement('k-pin-pad');
+    const warn = document.createElement('div');
+    warn.className = 'kc-credit-warn';
+    warn.textContent = text;
+    sheetEl.setAttribute('heading', tr('Plafond de crédit dépassé'));
+    sheetEl.setAttribute('data-kc-credit-approval', '');
+    pad.setAttribute('heading', tr('Code responsable'));
+    pad.setAttribute('sub', tr('Entrez le code responsable à 4 chiffres.'));
+    pad.setAttribute('size', 'ipad');
+    let busy = false, settled = false;
+    const done = (v) => {
+      if (settled) return;
+      settled = true;
+      pad.onsubmit = null; sheetEl.removeAttribute('open'); sheetEl.remove();
+      resolve(v);
     };
-    s.el.querySelector('[data-yes]').onclick = go;
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
-    setTimeout(() => input.focus(), 30);
+    pad.onsubmit = async (code) => {
+      if (busy) return;
+      busy = true;
+      let r;
+      try { r = await post({ ...base, merchant, action: 'approve', pin: String(code || '') }); } catch (_) { r = null; }
+      busy = false;
+      if (r && r.status === 200 && (r.body.approved || !r.body.over)) return done(r.body);
+      pad.answer({ clear: true, shake: true, dots: 'danger', assertive: true, haptic: 'Failed',
+        message: !r || r.status >= 500 ? tr('Hors ligne : dépasser le plafond demande la connexion')
+          : r.body.error === 'not-manager' ? tr('Seul un responsable peut dépasser le plafond') : tr('Code refusé') });
+    };
+    sheetEl.addEventListener('kiwi:action', (e) => { if (e.detail && e.detail.action === 'k.sheet.close') done(null); });
+    sheetEl.appendChild(warn);
+    sheetEl.appendChild(pad);
+    document.body.appendChild(sheetEl);
+    sheetEl.setAttribute('open', '');
+    try { pad.shadowRoot && pad.shadowRoot.querySelector('[data-key="1"]') && pad.shadowRoot.querySelector('[data-key="1"]').focus(); } catch (_) {}
   });
 }
 
 /* { ok: true } quand la vente à crédit peut passer, { ok: false, reason } sinon.
  * `toast(title, desc)` est celui de la caisse. */
-export async function creditGate({ merchant = tillMerchant(), source, customer, name = '', amountCents, localOwedCents = 0, toast = () => {} }) {
+/* Une seule question à la fois : un second appui pendant qu'elle est posée
+ * (réseau lent, pavé à code ouvert) est ignoré, jamais un second pavé. */
+let gateBusy = false;
+export async function creditGate(args) {
+  if (gateBusy) return { ok: false, reason: 'busy' };
+  gateBusy = true;
+  try { return await gateOnce(args || {}); } finally { gateBusy = false; }
+}
+async function gateOnce({ merchant = tillMerchant(), source, customer, name = '', amountCents, localOwedCents = 0, toast = () => {} }) {
   if (!tillIsReal() || !merchant || !customer || !(amountCents > 0)) return { ok: true };
   const base = { source, customer: String(customer), addCents: Math.round(amountCents), localOwedCents: Math.max(0, Math.round(localOwedCents || 0)) };
   let decision = null, offline = false;
@@ -208,21 +232,28 @@ const plus = (day, n) => new Date(Date.parse(day + 'T00:00:00Z') + n * DAY).toIS
 const monthEnd = (day) => { const d = new Date(day + 'T00:00:00Z'); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).toISOString().slice(0, 10); };
 
 /* Le choix de la date, puis la ligne envoyée (ou gardée pour plus tard). */
+let promiseOpen = false;
 export function promiseAfterSale({ merchant = tillMerchant(), source, customer, name = '', amountCents, toast = () => {} }) {
-  if (!customer || !(amountCents > 0)) return Promise.resolve(null);
+  if (!customer || !(amountCents > 0) || promiseOpen) return Promise.resolve(null);
+  promiseOpen = true;
   const today = todayLocal();
   const week = plus(today, 7), eom = monthEnd(today) <= today ? monthEnd(plus(today, 1)) : monthEnd(today);
   return new Promise((resolve) => {
-    const s = sheet(`<h3>${esc(tr('Paiera le…'))}</h3>
-      <p>${esc(tr('{n} · {a} sur le carnet', { n: name || '·', a: mad(amountCents) }))}</p>
-      <div class="kc-credit-opts">
-        <button type="button" data-day="${week}">${esc(tr('Dans 7 jours'))}<span>${esc(fmtDay(week))}</span></button>
-        <button type="button" data-day="${eom}">${esc(tr('Fin du mois'))}<span>${esc(fmtDay(eom))}</span></button>
-        <label class="kc-credit-other">${esc(tr('Autre date'))}</label>
-        <input type="date" min="${plus(today, 1)}" max="${plus(today, 365)}" aria-label="${esc(tr('Autre date'))}">
-      </div>
-      <div class="kc-credit-foot"><button type="button" data-no>${esc(tr('Sans date'))}</button></div>`);
+    let s;
+    try {
+      s = sheet(`<h3>${esc(tr('Paiera le…'))}</h3>
+        <p>${esc(tr('{n} · {a} sur le carnet', { n: name || '·', a: mad(amountCents) }))}</p>
+        <div class="kc-credit-opts">
+          <button type="button" data-day="${week}">${esc(tr('Dans 7 jours'))}<span>${esc(fmtDay(week))}</span></button>
+          <button type="button" data-day="${eom}">${esc(tr('Fin du mois'))}<span>${esc(fmtDay(eom))}</span></button>
+          <label class="kc-credit-other">${esc(tr('Autre date'))}</label>
+          <input type="date" min="${plus(today, 1)}" max="${plus(today, 365)}" aria-label="${esc(tr('Autre date'))}">
+        </div>
+        <div class="kc-credit-foot"><button type="button" data-no>${esc(tr('Sans date'))}</button></div>`);
+    } catch (_) { promiseOpen = false; resolve(null); return; }
     const done = (day) => {
+      if (!promiseOpen) return;
+      promiseOpen = false;
       s.close();
       if (!day) return resolve(null);
       toast(tr('Promesse notée : {d}', { d: fmtDay(day) }), '');
