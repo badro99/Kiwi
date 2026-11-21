@@ -78,6 +78,7 @@
  */
 import { normalizeEntry, validYmd } from './_ledger.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
+import { getSupplier } from './_suppliers.js';
 
 export const KINDS = ['cheque', 'lcn'];
 export const DIRECTIONS = ['received', 'issued'];
@@ -480,12 +481,23 @@ export async function editCheque(env, merchant, id, body, ctx) {
   const stmtsAfter = [];
   if (b.partyName !== undefined || b.partyId !== undefined) {
     if (c.direction === 'issued') return { ok: false, error: 'party-locked', status: 409 };
-    const name = clean(b.partyName, 120);
+    let name = clean(b.partyName, 120);
     let pid = clean(b.partyId, 80);
     const ptype = b.partyType === 'supplier' ? 'supplier' : (pid || name) ? 'customer' : '';
     if (ptype === 'customer' && !pid && name) pid = 'n:' + normName(name);
     if (pid && (pid.startsWith('cheque:') || pid.startsWith('po:'))) return { ok: false, error: 'bad-party', status: 400 };
     if (ptype && !pid) return { ok: false, error: 'bad-party', status: 400 };
+    /* Un fournisseur se rattache comme à la création (index.js) : patron ou
+       opérateur seulement (un gérant écrirait au grand livre fournisseurs), une
+       fiche vivante de CE commerçant, et le nom vient de la fiche, jamais du corps. */
+    if (ctx.only && String(c.party_type || '') === 'supplier') return { ok: false, error: 'supplier-owner-only', status: 403 };
+    if (ptype === 'supplier') {
+      if (ctx.only) return { ok: false, error: 'supplier-owner-only', status: 403 };
+      const sup = await getSupplier(env, merchant, pid);
+      if (!sup) return { ok: false, error: 'supplier-not-found', status: 404 };
+      if (Number(sup.archived) === 1) return { ok: false, error: 'supplier-archived', status: 409 };
+      pid = String(sup.id); name = clean(sup.name, 120);
+    }
     if (ptype !== String(c.party_type || '') || pid !== String(c.party_id || '') || name !== String(c.party_name || '')) {
       /* L'argent déjà écrit pour ce chèque suit son tiers : depuis un tiers
          provisoire (« cheque:<id> »), toutes ses lignes partent vers le client ;

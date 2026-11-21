@@ -55,6 +55,9 @@ export async function onRequestPost({ request, env }) {
   if (!(await chequesReady(env))) return json({ error: 'unmigrated' }, 503);
   const input = { ...body, direction };
   let poId = null;
+  /* Un tiers fournisseur écrit au grand livre fournisseurs : patron et opérateur
+     seulement, même sur un chèque reçu (gérant et caisse : 403). */
+  if (actor.only && input.partyType === 'supplier') return json({ error: 'supplier-owner-only' }, 403);
   if (direction === 'issued' || input.partyType === 'supplier') {
     const sup = await getSupplier(env, merchant, input.partyId);
     if (!sup) return json({ error: 'supplier-not-found' }, 404);

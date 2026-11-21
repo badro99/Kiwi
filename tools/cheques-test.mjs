@@ -367,13 +367,37 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
   const before = db.prepare('SELECT COUNT(*) AS n FROM cheques WHERE merchant = ?').get(SHOP).n;
   assert.equal((await call(listRoute.onRequestPost, '/api/cheques', stranger, { merchant: SHOP, idemKey: key('evil'), amountCents: 100 })).status, 403);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM cheques WHERE merchant = ?').get(SHOP).n, before);
+  /* Un tiers fournisseur écrit au grand livre fournisseurs : patron et opérateur seulement. */
+  const supLines = () => db.prepare("SELECT COUNT(*) AS n FROM money_ledger WHERE merchant = ? AND party_type = 'supplier'").get(SHOP).n;
+  const supBefore = supLines();
+  for (const [who, c] of [['manager', managerTier], ['till', till]]) {
+    const r = await call(listRoute.onRequestPost, '/api/cheques', c, { merchant: SHOP, idemKey: key('sup'), amountCents: 100, partyType: 'supplier', partyId: 'sup-fassi' });
+    assert.equal(r.status, 403, who + ' cannot create a supplier-party cheque, even received');
+    assert.equal(r.data.error, 'supplier-owner-only');
+  }
+  const edit = (body, cookie = owner) => call(editRoute.onRequestPost, '/api/cheques/edit', cookie, { merchant: SHOP, requestId: key('ed'), ...body });
+  const plain = (await create({ amountCents: 4200, partyName: 'Client simple' })).data.cheque;
+  const mEd = await edit({ id: plain.id, partyType: 'supplier', partyId: 'sup-fassi', partyName: 'Faux nom' }, managerTier);
+  assert.equal(mEd.status, 403, 'manager cannot relink a received cheque to a supplier');
+  assert.equal(mEd.data.error, 'supplier-owner-only');
+  assert.equal((await edit({ id: plain.id, partyType: 'supplier', partyId: 'sup-nope' })).status, 404, 'owner: unknown supplier refused');
+  assert.equal((await edit({ id: plain.id, partyType: 'supplier', partyId: 'sup-other' })).status, 404, "owner: another merchant's supplier refused");
+  assert.equal((await edit({ id: plain.id, partyType: 'supplier', partyId: 'sup-old' })).status, 409, 'owner: archived supplier refused');
+  assert.equal((await edit({ id: plain.id, partyType: 'supplier', partyId: '' })).status, 400, 'owner: supplier without id refused');
+  const okEd = await edit({ id: plain.id, partyType: 'supplier', partyId: 'sup-fassi', partyName: 'Nom inventé' });
+  assert.equal(okEd.status, 200, JSON.stringify(okEd.data));
+  assert.equal(okEd.data.cheque.partyType, 'supplier');
+  assert.equal(okEd.data.cheque.partyName, 'Atelier Fassi', 'the name comes from the supplier card, never from the body');
+  const mBack = await edit({ id: plain.id, partyName: 'Client simple' }, managerTier);
+  assert.equal(mBack.status, 403, 'manager cannot relink a supplier-party cheque either');
+  assert.equal(supLines(), supBefore, 'no supplier ledger line was written by the refused calls');
   /* Magasin suspendu : lecture oui, écriture non. */
   db.prepare("UPDATE merchant_config SET status = 'suspended' WHERE merchant = ?").run(SHOP);
   assert.equal((await call(listRoute.onRequestGet, `/api/cheques?merchant=${SHOP}`, owner)).status, 200);
   assert.equal((await create({ amountCents: 100 })).status, 403);
   assert.equal((await call(listRoute.onRequestPost, '/api/cheques', till, { merchant: SHOP, idemKey: key('till'), amountCents: 100 })).status, 403);
   db.prepare("UPDATE merchant_config SET status = 'active' WHERE merchant = ?").run(SHOP);
-  ok('roles and tenants: owner + operator all; manager received only (issued invisible); till records received only; cashier, reception, other merchant, other till, anonymous refused; suspended shop read-only');
+  ok('roles and tenants: owner + operator all; manager received only (issued invisible); till records received only; supplier parties owner-only on create and edit (name from the card, missing/archived/other-tenant refused); cashier, reception, other merchant, other till, anonymous refused; suspended shop read-only');
 }
 
 /* ── 6 · bordereau, modification, détail ───────────────────────────── */
