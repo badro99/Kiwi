@@ -61,6 +61,8 @@ const windowListeners = {};
 const appListeners = {};
 const hapticCalls = [];
 const statusBarCalls = [];
+const barColors = [];
+const accessoryCalls = [];
 const hostContexts = [];
 const appearanceListeners = [];
 const appearance = { matches: false, addEventListener(type, handler) { if (type === 'change') appearanceListeners.push(handler); } };
@@ -72,6 +74,7 @@ const history = { length: 2, back() { backs++; } };
 const window = {
   innerWidth: 390,
   __kiwiHostCaps: { sheet: 1 }, // the iOS host announces its sheet (SceneDelegate.swift)
+  KiwiShellHost: { postMessage() {}, setBarColor(hex) { barColors.push(hex); } },
   webkit: { messageHandlers: { kiwiShell: { postMessage(value) { hostContexts.push(value); } } } },
   Capacitor: {
     isNativePlatform: () => true, getPlatform: () => 'android',
@@ -79,6 +82,7 @@ const window = {
       App: { getInfo: () => Promise.resolve({ version: '1', build: '1' }), addListener(type, handler) { (appListeners[type] ||= []).push(handler); }, exitApp() { exits++; } },
       Haptics: { impact(args) { hapticCalls.push(['impact', args.style]); }, notification(args) { hapticCalls.push(['notification', args.type]); } },
       StatusBar: { setStyle(args) { statusBarCalls.push(args.style); }, setBackgroundColor() {} },
+      Keyboard: { setAccessoryBarVisible(args) { accessoryCalls.push(args); return Promise.resolve(); } },
       KiwiDynamicType: { getDynamicTypeScale: () => Promise.resolve({ scale: 1.3 }), addListener() {} }
     }
   },
@@ -162,10 +166,11 @@ ok(hapticCalls.length === beforeLate, 'a refusal answered more than 600 ms after
 location.pathname = '/dashboard.html';
 appearance.matches = true;
 appearanceListeners.forEach((handler) => handler({ matches: true }));
-ok(statusBarCalls.at(-1) === 'LIGHT', 'system dark appearance does not hide dark status text over the light dashboard');
+ok(statusBarCalls.at(-1) === 'LIGHT' && barColors.at(-1) === '#F7F5F0', 'system dark appearance does not hide dark status text over the light dashboard, and the window behind the bars is paper');
 root.setAttribute('data-theme', 'dark');
 appearanceListeners.forEach((handler) => handler({ matches: true }));
-ok(statusBarCalls.at(-1) === 'DARK', 'the painted dark dashboard requests light status text');
+ok(statusBarCalls.at(-1) === 'DARK' && barColors.at(-1) === '#0A0F0D', 'the painted dark dashboard requests light status text over an ink window');
+ok(accessoryCalls.length === 0, 'Android never asks for the WKWebView accessory bar (UNIMPLEMENTED there)');
 root.setAttribute('data-theme', 'light');
 appearance.matches = false;
 body.classList.add('native-shell-page');
