@@ -1,6 +1,6 @@
 import { codeDocument } from '../auth/_staff-codes.js';
 import { canonicalCode, normalizeMember } from './_rules-staff-credential.js';
-import { cleanFloorplan } from './_rules-floorplan-clean.js';
+import { cleanStoredFloorplan } from './_floorplan-field-edits.js';
 import { cleanBriefingSettings } from './_briefing-settings.js';
 import { refundCreditBook } from './_credit-book-refund.js';
 import { BOOK_FEATURE, commitBook, getVerticalOps, legacyBook, readBook, withBook, withoutBook } from './_credit-book-store.js';
@@ -888,7 +888,7 @@ export async function onRequestPost(context) {
   /* Le plan de salle s'écrit aussi depuis une caisse appairée et se lit en HTML
    * chez le propriétaire : ids et couleurs ramenés à ce qu'un attribut peut
    * porter sans danger (functions/api/_rules-floorplan-clean.js). */
-  if (feature === 'floorplan') cleanFloorplan(raw);
+  if (feature === 'floorplan') cleanStoredFloorplan(raw);
   const clean = bounded(feature === 'guestpage' ? cleanGuestDoc(raw)
     : feature === STOREFRONT_FEATURE ? cleanStorefront(raw, Date.now()) : raw, FEATURES[feature].maxStr);
   // Refus plutôt que troncature : voir la note de `bounded`. Le client garde sa

@@ -49,9 +49,13 @@
     }
   }
   // Arrays avoid the store's 400-key object limit and 120-character key limit.
+  /* A plan saved through the old floor-plan rule (27 Oct to 21 Nov 2026) has its
+   * path keys written with typographic quotes; read them as the paths they are,
+   * or no edit time is ever found and disagreeing devices settle on a hash. */
+  const unbent = k => String(k).replace(/[\u201c\u201d]/g, '"');
   function versions(doc) {
     const fields = doc && doc.fieldEdits && doc.fieldEdits.fields;
-    return Array.isArray(fields) ? Object.fromEntries(fields.map(([k,at,id,seen,deleted,edited]) => [k,{at,id,seen,deleted,edited:!!edited}])) : fields || {};
+    return Array.isArray(fields) ? Object.fromEntries(fields.map(([k,at,id,seen,deleted,edited]) => [unbent(k),{at,id,seen,deleted,edited:!!edited}])) : fields || {};
   }
   /* Bounded metadata: a plan edited every day for years must still fit its
    * store document. Each register remembers its 4 latest superseded versions
@@ -96,7 +100,7 @@
     a = a || {}; b = b || {};
     const aa = flatten(a), bb = flatten(b), out = {}, fields = {}, va = versions(a), vb = versions(b);
     const conflicts = new Map(), values = [];
-    [...((a.fieldEdits || {}).conflicts || []), ...((b.fieldEdits || {}).conflicts || [])].forEach(c => conflicts.set(stable(c), c));
+    [...((a.fieldEdits || {}).conflicts || []), ...((b.fieldEdits || {}).conflicts || [])].forEach(c => { c = c && c.field ? { ...c, field:unbent(c.field) } : c; conflicts.set(stable(c), c); });
     const keys = [...new Set([...Object.keys(aa), ...Object.keys(bb), ...Object.keys(va), ...Object.keys(vb)])].sort();
     for (const k of keys) {
       const av = register(a, aa, k, va), bv = register(b, bb, k, vb);
