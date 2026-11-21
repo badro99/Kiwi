@@ -315,7 +315,7 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
     const total = ticketTotal(t);
     if (!c || total <= 0) return;
     const C = await creditTill();
-    const who = { source: 'carnet', customer: c.id, name: c.name, amountCents: Math.round(total * 100), toast: (a, b) => toast(b ? a + ' · ' + b : a) };
+    const who = { source: 'carnet', customer: c.id, name: c.name, amountCents: Math.round(total * 100), toast: (...parts) => toast(parts.filter(Boolean).join(' · ')) };
     if (C && !(await C.creditGate({ ...who, localOwedCents: Math.round(Math.max(0, balanceOf(c)) * 100) })).ok) return;
     if (ctx.state.ticket !== t) return;
     attachBasket(c);

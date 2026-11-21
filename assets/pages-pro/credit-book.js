@@ -23,7 +23,7 @@
   const { handlers } = window.Kiwi;
   const L = (fr, en, ar) => { const l = window.KiwiI18n?.getLang?.(); return l === 'en' ? en : l === 'ar' ? ar : fr; };
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const toast = (title, desc, type) => { try { window.Kiwi.toast(title, { desc: desc || '', type: type || 'info' }); } catch (_) {} };
+  const toast = (title, desc, bad) => { try { window.Kiwi.toast(title, { desc: desc || '', type: bad ? 'error' : 'info' }); } catch (_) {} };
   const num = (n, d) => window.KiwiNumber?.format(n, { minimumFractionDigits: d || 0, maximumFractionDigits: d == null ? 2 : d }) ?? String(n);
   const mad = (cents) => num(Math.round(Number(cents) || 0) / 100) + ' MAD';
   const slug = () => { try { return window.KiwiCloudDoc?.currentSlug?.() || ''; } catch (_) { return ''; } };
@@ -312,7 +312,7 @@
     if (!c || !['fr', 'ar', 'darija'].includes(lang)) return;
     c.lang = lang;
     render();
-    if (!await savePrefs(c, { lang })) toast(L('Langue non enregistrée', 'Language not saved', 'لم تُحفظ اللغة'), '', 'error');
+    if (!await savePrefs(c, { lang })) toast(L('Langue non enregistrée', 'Language not saved', 'لم تُحفظ اللغة'), '', true);
   };
   handlers['credit-wa'] = async (el, arg) => {
     const c = findCustomer(typeof el === 'string' ? el : arg);
@@ -325,7 +325,7 @@
     try { window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(waText(c, lang)), '_blank', 'noopener'); } catch (_) {}
     const out = await savePrefs(c, { reminded: true, lang });
     if (out) { c.remindedTs = out.remindedTs || Date.now(); c.lang = lang; render(); }
-    else toast(L('Rappel ouvert, mais non noté', 'Reminder opened, but not recorded', 'فُتح التذكير لكن لم يُسجَّل'), '', 'error');
+    else toast(L('Rappel ouvert, mais non noté', 'Reminder opened, but not recorded', 'فُتح التذكير لكن لم يُسجَّل'), '', true);
   };
 
   /* ── la fiche d'un client : échéancier, plafond, historique ── */
@@ -380,7 +380,7 @@
     if (state.demo) state.detail = { customer: c, seed: [{ amountCents: c.owedCents, dueDate: plusDays(state.book.today, 7) }], collected: [], history: [{ kind: 'debt', cents: c.owedCents, ts: Date.now() - 9 * DAY, label: L('Courses', 'Groceries', 'مشتريات') }], events: [] };
     else {
       const r = await api('GET', '&source=' + encodeURIComponent(c.source) + '&customer=' + encodeURIComponent(c.key));
-      if (r.status !== 200) { toast(L('Fiche indisponible', 'Record unavailable', 'البطاقة غير متاحة'), '', 'error'); return; }
+      if (r.status !== 200) { toast(L('Fiche indisponible', 'Record unavailable', 'البطاقة غير متاحة'), '', true); return; }
       state.detail = r.body;
     }
     state.draft = draftFrom(state.detail.customer);
@@ -428,8 +428,8 @@
     const d = state.detail;
     if (!d || !state.draft || state.saving) return;
     const rows = state.draft.map((r) => ({ ...(r.id ? { id: r.id } : {}), amountCents: toCents(r.amount), dueDate: r.dueDate, note: r.note }));
-    if (rows.some((r) => !(r.amountCents > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(r.dueDate || ''))) { toast(L('Chaque ligne demande un montant et une date', 'Each row needs an amount and a date', 'كل سطر يحتاج مبلغًا وتاريخًا'), '', 'error'); return; }
-    if (draftTotal() > d.customer.owedCents) { toast(L('Montant supérieur au solde du client', 'Amount above the customer balance', 'المبلغ أكبر من رصيد الزبون'), '', 'error'); return; }
+    if (rows.some((r) => !(r.amountCents > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(r.dueDate || ''))) { toast(L('Chaque ligne demande un montant et une date', 'Each row needs an amount and a date', 'كل سطر يحتاج مبلغًا وتاريخًا'), '', true); return; }
+    if (draftTotal() > d.customer.owedCents) { toast(L('Montant supérieur au solde du client', 'Amount above the customer balance', 'المبلغ أكبر من رصيد الزبون'), '', true); return; }
     if (state.demo) { toast(L('Démo : rien n’est enregistré', 'Demo: nothing is saved', 'عرض تجريبي: لا شيء يُحفظ'), ''); return; }
     state.saving = true;
     const r = await api('POST', '', { action: 'schedule', source: d.customer.source, customer: d.customer.key, rows, baseRev: d.customer.rev });
@@ -437,7 +437,7 @@
     if (r.status === 200) { toast(L('Échéancier enregistré', 'Schedule saved', 'تم حفظ الجدول'), ''); await reloadOpen(); return; }
     toast(r.body.error === 'credit-schedule-changed' ? L('La fiche a changé entre-temps, relue', 'The record changed meanwhile, reloaded', 'تغيّرت البطاقة، أُعيد تحميلها')
       : r.body.error === 'schedule-exceeds-balance' ? L('Montant supérieur au solde du client', 'Amount above the customer balance', 'المبلغ أكبر من رصيد الزبون')
-      : L('Échéancier non enregistré', 'Schedule not saved', 'لم يُحفظ الجدول'), '', 'error');
+      : L('Échéancier non enregistré', 'Schedule not saved', 'لم يُحفظ الجدول'), '', true);
     if (r.body.error === 'credit-schedule-changed') await reloadOpen();
   };
   handlers['credit-limit-save'] = async () => {
@@ -446,10 +446,10 @@
     if (!d || !input) return;
     const raw = String(input.value || '').trim();
     const limitCents = raw === '' ? null : toCents(raw);
-    if (limitCents !== null && !(limitCents >= 0)) { toast(L('Plafond invalide', 'Invalid limit', 'سقف غير صالح'), '', 'error'); return; }
+    if (limitCents !== null && !(limitCents >= 0)) { toast(L('Plafond invalide', 'Invalid limit', 'سقف غير صالح'), '', true); return; }
     if (state.demo) { d.customer.limitCents = limitCents; toast(L('Démo : rien n’est enregistré', 'Demo: nothing is saved', 'عرض تجريبي: لا شيء يُحفظ'), ''); return; }
     const r = await api('POST', '', { action: 'limit', source: d.customer.source, customer: d.customer.key, limitCents });
     if (r.status === 200) { toast(L('Plafond enregistré', 'Limit saved', 'تم حفظ السقف'), ''); await reloadOpen(); return; }
-    toast(r.status === 403 ? L('Seul le patron fixe un plafond', 'Only the owner sets a limit', 'وحده صاحب المحل يحدد السقف') : L('Plafond non enregistré', 'Limit not saved', 'لم يُحفظ السقف'), '', 'error');
+    toast(r.status === 403 ? L('Seul le patron fixe un plafond', 'Only the owner sets a limit', 'وحده صاحب المحل يحدد السقف') : L('Plafond non enregistré', 'Limit not saved', 'لم يُحفظ السقف'), '', true);
   };
 })();

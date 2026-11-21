@@ -92,11 +92,15 @@ function sheet(html) {
   wrap.className = 'kc-credit-veil';
   wrap.setAttribute('role', 'dialog');
   wrap.setAttribute('aria-modal', 'true');
-  wrap.innerHTML = `<div class="kc-credit-card" dir="${lang() === 'ar' ? 'rtl' : 'ltr'}">${html}</div>`;
+  const card = document.createElement('div');
+  card.className = 'kc-credit-card';
+  card.dir = lang() === 'ar' ? 'rtl' : 'ltr';
+  card.innerHTML = html;
+  wrap.appendChild(card);
   if (!document.getElementById('kc-credit-css')) {
-    const st = document.createElement('style');
-    st.id = 'kc-credit-css';
-    st.textContent = `.kc-credit-veil{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:16px;background:rgba(10,15,13,.42)}
+    const style = document.createElement('style');
+    style.id = 'kc-credit-css';
+    style.textContent = `.kc-credit-veil{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:16px;background:rgba(10,15,13,.42)}
 .kc-credit-card{width:min(420px,100%);max-height:calc(100vh - 32px);overflow:auto;border-radius:20px;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);padding:20px;font-family:var(--font-ui,'Inter Tight',system-ui,sans-serif);box-shadow:0 24px 60px -24px rgba(5,59,44,.45)}
 .kc-credit-card h3{margin:0 0 6px;font-size:18px;font-weight:600}
 .kc-credit-card p{margin:0 0 14px;font-size:14px;line-height:1.5;color:var(--ink-2,#3a4440)}
@@ -109,7 +113,7 @@ function sheet(html) {
 .kc-credit-warn{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:12px;background:var(--warn-soft,#FFF4DD);color:var(--warn-ink,#8A6210);margin-bottom:12px;font-size:14px;line-height:1.45}
 .kc-credit-pin{display:grid;gap:8px}.kc-credit-pin input{min-height:52px;font-size:22px;letter-spacing:.4em;text-align:center;border-radius:12px;border:1px solid var(--line,rgba(10,15,13,.14));background:var(--surface,#FDFCF9);color:inherit}
 .kc-credit-err{color:var(--danger,#C94A3A);font-size:13px;min-height:18px}`;
-    document.head.appendChild(st);
+    document.head.appendChild(style);
   }
   document.body.appendChild(wrap);
   const prev = document.activeElement;
