@@ -19,6 +19,7 @@ import * as plan from '../functions/api/_credit-plan.js';
 import { settled } from '../functions/api/_credit-accounts.js';
 import { commitBook, unionBook } from '../functions/api/_credit-book-store.js';
 import { claimRetailBalance } from '../functions/api/_retail-balances.js';
+import { deferAudit } from '../functions/api/_credit-audit.js';
 import * as book from '../functions/api/credit/book.js';
 import * as tillRoute from '../functions/api/credit/till.js';
 
@@ -445,6 +446,10 @@ ok('promise date from the till: one row, idempotent');
   assert.equal(creditQueries(), 0, 'an épicerie book write in a shop with no limit costs no credit query');
   for (const t of ['retail_balances', 'clients']) sql.prepare(`DELETE FROM ${t} WHERE merchant = 'stranger-shop'`).run();
   sql.prepare("DELETE FROM store_docs WHERE merchant = 'stranger-shop' AND feature = 'creditbook'").run();
+  let runs = 0;
+  await deferAudit(() => { throw new Error('waitUntil refused'); }, async () => { runs++; });
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(runs, 1, 'a waitUntil that throws does not run the audit twice');
   ok('the limit audit is off the response path (waitUntil) and free for a shop without limits');
 }
 

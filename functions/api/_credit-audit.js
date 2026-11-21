@@ -40,11 +40,13 @@ async function merchantHasLimits(db, merchant, now) {
 /* Lance `job` après la réponse quand la plateforme le permet (rend null tout
  * de suite), sinon l'attend (banc d'essai, dev). Jamais une requête avant. */
 export function deferAudit(defer, job) {
-  const run = () => Promise.resolve().then(job).catch(() => null);
+  /* Lancé une seule fois : si waitUntil refuse la promesse, on attend celle
+     qui tourne déjà, on n'en relance pas une seconde. */
+  const running = Promise.resolve().then(job).catch(() => null);
   if (typeof defer === 'function') {
-    try { defer(run()); return Promise.resolve(null); } catch (_) { /* repli : attendu */ }
+    try { defer(running); return Promise.resolve(null); } catch (_) { /* repli : attendu */ }
   }
-  return run();
+  return running;
 }
 const entryCents = (h) => Math.round((Number(h && h.amt) || 0) * 100);
 const owedOf = (c) => (Array.isArray(c && c.hist) ? c.hist : [])

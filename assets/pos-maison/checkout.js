@@ -1,6 +1,6 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=229';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=144';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=144';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=230';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=145';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=145';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
@@ -1325,7 +1325,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
       icons(); closeBtns();
       $('#mz-account-back', el).onclick = stepMethods;
       /* Plafond, note, « paiera le … », garde du double appui : assets/credit-book/till-credit.js accountCheckout. */
-      $('#mz-account-ok', el).onclick = (e) => { const btn = e.currentTarget; import('../credit-book/till-credit.js?v=3').then((C) => C.accountCheckout(btn, { merchant: merchantSlug(), source: 'client', customer: opts.customerId, name: who ? who.name : '', amountCents: Math.round(opts.amount * 100), toast, demo: IS_DEMO }, async () => { await commit('account'); return committed; }), () => commit('account')); };
+      $('#mz-account-ok', el).onclick = (e) => { const btn = e.currentTarget; import('../credit-book/till-credit.js?v=4').then((C) => C.accountCheckout(btn, { merchant: merchantSlug(), source: 'client', customer: opts.customerId, name: who ? who.name : '', amountCents: Math.round(opts.amount * 100), toast, demo: IS_DEMO }, async () => { await commit('account'); return committed; }), () => commit('account')); };
     };
 
     const commit = async (partial) => {

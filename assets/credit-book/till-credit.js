@@ -170,6 +170,22 @@ export function ensureKit() {
   return kitLoading;
 }
 
+/* Une phrase traduite dont les noms et montants sont isolés (<bdi>) : en
+ * arabe, « 500 MAD » ou un nom latin ne déplacent plus le point final. Écrit
+ * en nœuds, jamais en HTML. */
+function fillIsolated(el, phrase, vars) {
+  const parts = tr(phrase).split(/(\{[a-z]\})/);
+  for (const part of parts) {
+    const m = /^\{([a-z])\}$/.exec(part);
+    if (m && vars && m[1] in vars) {
+      const b = document.createElement('bdi');
+      b.textContent = String(vars[m[1]]);
+      el.appendChild(b);
+    } else if (part) el.appendChild(document.createTextNode(part));
+  }
+  return el;
+}
+
 async function askManager({ merchant, base, text }) {
   const ready = await ensureKit();
   return new Promise((resolve) => {
@@ -179,7 +195,7 @@ async function askManager({ merchant, base, text }) {
     const pad = document.createElement('k-pin-pad');
     const warn = document.createElement('div');
     warn.className = 'kc-credit-warn';
-    warn.textContent = text;
+    fillIsolated(warn, text.phrase, text.vars);
     sheetEl.setAttribute('heading', tr('Plafond de crédit dépassé'));
     sheetEl.setAttribute('data-kc-credit-approval', '');
     pad.setAttribute('heading', tr('Code responsable'));
@@ -246,7 +262,7 @@ async function gateOnce({ merchant = tillMerchant(), source, customer, name = ''
   }
   if (!decision.over) return { ok: true };
   const owed = decision.afterCents - base.addCents;
-  const text = tr('{n} doit déjà {a}. Avec cette vente : {b}, pour un plafond de {c}.', { n: name || '·', a: mad(owed), b: mad(decision.afterCents), c: mad(decision.limitCents) });
+  const text = { phrase: '{n} doit déjà {a}. Avec cette vente : {b}, pour un plafond de {c}.', vars: { n: name || '·', a: mad(owed), b: mad(decision.afterCents), c: mad(decision.limitCents) } };
   const approved = await askManager({ merchant, base, text });
   if (!approved) { toast(tr('Vente à crédit non enregistrée'), ''); return { ok: false, reason: 'cancelled' }; }
   if (approved.approvedBy) toast(tr('Accordé par {n}', { n: approved.approvedBy.name || '' }), '');
@@ -301,7 +317,7 @@ export function promiseAfterSale({ merchant = tillMerchant(), source, customer, 
     let s;
     try {
       s = sheet(`<h3>${esc(tr('Paiera le…'))}</h3>
-        <p>${esc(tr('{n} · {a} sur le carnet', { n: name || '·', a: mad(amountCents) }))}</p>
+        <p data-kc-credit-who></p>
         <div class="kc-credit-opts">
           <button type="button" data-day="${week}">${esc(tr('Dans 7 jours'))}<span>${esc(fmtDay(week))}</span></button>
           <button type="button" data-day="${eom}">${esc(tr('Fin du mois'))}<span>${esc(fmtDay(eom))}</span></button>
@@ -310,6 +326,8 @@ export function promiseAfterSale({ merchant = tillMerchant(), source, customer, 
         </div>
         <div class="kc-credit-foot"><button type="button" data-no>${esc(tr('Sans date'))}</button></div>`);
     } catch (_) { promiseOpen = false; resolve(null); return; }
+    const who = s.el.querySelector('[data-kc-credit-who]');
+    if (who) fillIsolated(who, '{n} · {a} sur le carnet', { n: name || '·', a: mad(amountCents) });
     const done = (day) => {
       if (!promiseOpen) return;
       promiseOpen = false;

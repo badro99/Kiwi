@@ -222,17 +222,20 @@
     const amount = mad(c.dueCents || c.owedCents);
     const name = firstName(c.name);
     const date = c.dueDate || '';
+    /* Une date convenue (une échéance) ou seulement le délai du commerce
+       (dette sans échéance) : on ne dit pas « convenu » de ce qui ne l'a pas été. */
+    const agreed = !!date && (c.pending || []).some((r) => r.dueDate === date);
     const loc = lang === 'fr' ? 'fr-FR' : 'ar-MA-u-nu-latn';
     const coming = (c.pending || []).filter((r) => r.dueDate > ((state.book && state.book.today) || '')).slice(0, 2);
     const next = coming.map((r) => fmtDay(r.dueDate, loc) + ' · ' + mad(r.amountCents)).join(lang === 'fr' ? ', ' : '، ');
     const two = coming.length === 2;
     if (lang === 'ar') {
-      return `السلام عليكم ${name}، نرجو أن تكونوا بخير. نذكّركم بلطف من ${shop} بأن مبلغ ${amount} ما زال مستحقًا${date ? `، وكان موعده المتفق عليه ${fmtDay(date, loc)}` : ''}.${next ? ` ${two ? 'الموعدان القادمان' : 'الموعد القادم'}: ${next}.` : ''} مع خالص الشكر والتقدير.`;
+      return `السلام عليكم ${name}، نرجو أن تكونوا بخير. نذكّركم بلطف من ${shop} بأن مبلغ ${amount} ما زال مستحقًا${date ? (agreed ? `، وكان موعده المتفق عليه ${fmtDay(date, loc)}` : `، وهو مستحق منذ ${fmtDay(date, loc)}`) : ''}.${next ? ` ${two ? 'الموعدان القادمان' : 'الموعد القادم'}: ${next}.` : ''} مع خالص الشكر والتقدير.`;
     }
     if (lang === 'darija') {
-      return `السلام ${name}، لاباس عليك؟ غير تذكير صغير من ${shop}: باقي ${amount} فالكريدي${date ? `، كنا متافقين على ${fmtDay(date, loc)}` : ''}.${next ? ` ${two ? 'الموعدين الجايين' : 'الموعد الجاي'}: ${next}.` : ''} ملي تقدر الله يخليك، وشكرا بزاف.`;
+      return `السلام ${name}، لاباس عليك؟ غير تذكير صغير من ${shop}: باقي ${amount} فالكريدي${date ? (agreed ? `، كنا متافقين على ${fmtDay(date, loc)}` : `، خاصو يتخلص من ${fmtDay(date, loc)}`) : ''}.${next ? ` ${two ? 'الموعدين الجايين' : 'الموعد الجاي'}: ${next}.` : ''} ملي تقدر الله يخليك، وشكرا بزاف.`;
     }
-    return `Bonjour ${name}, j’espère que vous allez bien. Petit rappel de ${shop} : ${amount} reste${date ? ` à régler, prévu le ${fmtDay(date, loc)}` : ' à régler'}.${next ? ` ${two ? 'Prochaines échéances' : 'Prochaine échéance'} : ${next}.` : ''} Merci beaucoup et bonne journée.`;
+    return `Bonjour ${name}, j’espère que vous allez bien. Petit rappel de ${shop} : ${amount} reste${date ? (agreed ? ` à régler, prévu le ${fmtDay(date, loc)}` : ` à régler depuis le ${fmtDay(date, loc)}`) : ' à régler'}.${next ? ` ${two ? 'Prochaines échéances' : 'Prochaine échéance'} : ${next}.` : ''} Merci beaucoup et bonne journée.`;
   }
   /* 06… / 07… / 05… marocains → 2126…, +33… → 33… */
   function waNumber(phone) {
