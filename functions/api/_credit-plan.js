@@ -49,7 +49,8 @@ export function dayDiff(from, to) {
 
 const byDue = (a, b) => (a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1
   : (a.createdTs || 0) - (b.createdTs || 0) || String(a.id).localeCompare(String(b.id)));
-export const pendingOf = (rows) => (Array.isArray(rows) ? rows : []).filter((r) => r && r.status === 'pending').sort(byDue);
+export const pendingOf = (rows) => (Array.isArray(rows) ? rows : []).filter((r) => r && !r.block && r.status === 'pending').sort(byDue);
+export const collectedOf = (rows) => (Array.isArray(rows) ? rows : []).filter((r) => r && !r.block && r.status === 'collected');
 export const pendingTotal = (rows) => pendingOf(rows).reduce((n, r) => n + r.amountCents, 0);
 
 /* La première ligne d'un échéancier : tout ce qui est dû, à une date. */
@@ -84,45 +85,59 @@ export function checkTotal(rows, owedCents) {
   return pendingTotal(rows) > Math.max(0, cents(owedCents)) ? 'schedule-exceeds-balance' : '';
 }
 
-/* Ce que les règlements couvrent, recalculé : les lignes écrites (chacune avec
- * ce qu'elle avait reçu, `coveredCents`), le total versé quand elles l'ont été
- * (`baselineCents`), le reste d'alors (`excessCents` : positif, ce qui
- * dépassait l'échéancier et a payé la dette sans date ; négatif, un règlement
- * d'avant l'échéancier annulé depuis), et le total versé aujourd'hui.
- * Le total couvert est toujours le même nombre, borné à [0, somme des lignes] :
- *   couvert + reste = couvert d'alors + reste d'alors + (versé − versé d'alors).
- * Ce qui monte couvre les lignes par ordre de date ; ce qui descend (un
- * règlement annulé) rouvre de la plus tardive à la plus ancienne. Rejouer,
- * lire en retard puis à jour, annuler puis payer : même total, même réponse.
- * Rend des copies : `amountCents` est ce qui reste à payer sur la ligne. */
-export function derive(rows, { baselineCents = 0, excessCents = 0, paidCents = 0, now = Date.now() } = {}) {
-  const list = (Array.isArray(rows) ? rows : []).filter((r) => r && typeof r === 'object').map((r) => {
-    const original = Math.max(0, cents(r.originalCents != null ? r.originalCents : r.amountCents));
-    const covered = r.coveredCents != null ? cents(r.coveredCents)
-      : r.status === 'collected' ? original : original - Math.max(0, cents(r.amountCents != null ? r.amountCents : original));
-    return { ...r, originalCents: original, coveredCents: Math.min(original, Math.max(0, covered)) };
-  }).sort(byDue);
-  const total = list.reduce((n, r) => n + r.originalCents, 0);
-  const before = list.reduce((n, r) => n + r.coveredCents, 0);
-  const pool = before + cents(excessCents) + Math.max(0, cents(paidCents)) - Math.max(0, cents(baselineCents));
-  const target = Math.max(0, Math.min(total, pool));
-  let up = Math.max(0, target - before), down = Math.max(0, before - target);
+/* Ce que les règlements couvrent. Les lignes sont rangées comme sur une
+ * ligne d'argent, de bas en haut (l'ordre du tableau écrit) : d'abord ce qui
+ * est déjà encaissé, puis un éventuel « bloc » (l'argent versé qui ne couvre
+ * aucune échéance visible : la part payée d'une ligne réécrite, ou un
+ * trop-perçu mis de côté), puis les échéances en attente par date.
+ * `poolCents` est l'argent posé sur cette ligne quand le total versé valait
+ * `baselineCents`. Aujourd'hui il vaut poolCents + (versé − baselineCents), et
+ * il couvre les lignes de bas en haut. C'est une fonction affine du total
+ * versé : lire en retard, écrire en retard puis relire à jour, annuler puis
+ * repayer, rien ne dépend du chemin, seulement du dernier total. Un règlement
+ * annulé retire l'argent par le haut : le bloc mis de côté avant les
+ * échéances plus récentes que lui part après elles, et avant les plus
+ * anciennes. Rend des copies : `amountCents` est ce qui reste sur la ligne. */
+export function derive(rows, { baselineCents = 0, poolCents = 0, paidCents = 0, now = Date.now() } = {}) {
+  const list = (Array.isArray(rows) ? rows : []).filter((r) => r && typeof r === 'object')
+    .map((r) => ({ ...r, originalCents: Math.max(0, cents(r.originalCents != null ? r.originalCents : r.amountCents)) }));
+  const before = list.reduce((n, r) => n + Math.min(r.originalCents, Math.max(0, cents(r.coveredCents || 0))), 0);
+  const pool = cents(poolCents) + Math.max(0, cents(paidCents)) - Math.max(0, cents(baselineCents));
+  let left = Math.max(0, pool);
   for (const r of list) {
-    if (up <= 0) break;
-    const take = Math.min(r.originalCents - r.coveredCents, up);
-    r.coveredCents += take; up -= take;
-  }
-  for (let i = list.length - 1; i >= 0 && down > 0; i--) {
-    const take = Math.min(list[i].coveredCents, down);
-    list[i].coveredCents -= take; down -= take;
-  }
-  for (const r of list) {
+    r.coveredCents = Math.min(r.originalCents, left);
+    left -= r.coveredCents;
     r.amountCents = r.originalCents - r.coveredCents;
     const done = r.amountCents <= 0;
-    r.collectedTs = done ? (r.status === 'collected' && r.collectedTs ? r.collectedTs : now) : 0;
+    r.collectedTs = done ? (r.collectedTs || now) : 0;
     r.status = done ? 'collected' : 'pending';
   }
-  return { rows: list, excessCents: pool - target, appliedCents: Math.max(0, target - before), reopenedCents: Math.max(0, before - target) };
+  const covered = list.reduce((n, r) => n + r.coveredCents, 0);
+  return { rows: list, poolCents: pool, excessCents: left, appliedCents: Math.max(0, covered - before), reopenedCents: Math.max(0, before - covered) };
+}
+
+/* Réécrire l'échéancier (le patron, une promesse du comptoir) : ce qui est
+ * déjà encaissé reste en bas, tout l'argent posé qui ne couvre pas une ligne
+ * entière (une part d'échéance, un trop-perçu) devient UN bloc juste dessous
+ * des nouvelles lignes, et les échéances en attente repartent au-dessus, par
+ * date, du montant qui reste à payer. L'argent posé ne change pas : les
+ * nouvelles lignes ne sont couvertes que par un règlement à venir, et un
+ * remboursement reprend d'abord ce bloc. Au-delà de KEEP_COLLECTED lignes
+ * encaissées, les plus anciennes sortent du bas, avec leur argent. */
+export function rebase(acct, pendingRows, makeId) {
+  const pool = cents(acct.poolCents);
+  let collected = collectedOf(acct.rows);
+  let block = Math.max(0, pool) - collected.reduce((n, r) => n + r.originalCents, 0);
+  let next = pool;
+  if (collected.length > KEEP_COLLECTED) {
+    const gone = collected.slice(0, collected.length - KEEP_COLLECTED);
+    next -= gone.reduce((n, r) => n + r.originalCents, 0);
+    collected = collected.slice(-KEEP_COLLECTED);
+  }
+  const rows = collected.map((r) => ({ ...r }));
+  if (block > 0) rows.push({ id: (makeId ? makeId() : 'blk' + Date.now().toString(36)), block: true, originalCents: block, amountCents: 0, dueDate: '', note: '', origin: 'block', status: 'collected', createdTs: 0, collectedTs: 0 });
+  const pending = (Array.isArray(pendingRows) ? pendingRows : []).map((r) => ({ ...r, originalCents: r.amountCents, coveredCents: 0, status: 'pending', collectedTs: 0 })).sort(byDue);
+  return { ...acct, poolCents: next, rows: rows.concat(pending) };
 }
 
 /* Un règlement seul sur des lignes neuves (la cascade) : ce qu'il couvre,
@@ -133,18 +148,18 @@ export function waterfall(rows, payCents, now = Date.now()) {
   const collected = [];
   let reduced = null;
   for (const r of out.rows) {
-    if (!before.has(r.id)) continue;
     if (r.status === 'collected') collected.push(r.id);
     else if (r.amountCents < before.get(r.id) && !reduced) reduced = { id: r.id, fromCents: before.get(r.id), toCents: r.amountCents };
   }
   const rest = (Array.isArray(rows) ? rows : []).filter((r) => r && r.status !== 'pending').map((r) => ({ ...r }));
-  return { rows: out.rows.concat(rest), appliedCents: out.appliedCents, leftoverCents: Math.max(0, out.excessCents), collected, reduced };
+  return { rows: out.rows.concat(rest), appliedCents: out.appliedCents, leftoverCents: out.excessCents, collected, reduced };
 }
 
 /* Ce qui s'écrit d'une ligne : rien de ce qui se recalcule. */
 export function storedRow(r) {
-  return { id: r.id, originalCents: r.originalCents, coveredCents: r.coveredCents, dueDate: r.dueDate, note: r.note || '',
-    origin: r.origin || 'owner', createdTs: r.createdTs || 0, collectedTs: r.collectedTs || 0, status: r.status };
+  const out = { id: r.id, originalCents: r.originalCents, dueDate: r.dueDate || '', note: r.note || '', origin: r.origin || 'owner', createdTs: r.createdTs || 0, collectedTs: r.collectedTs || 0 };
+  if (r.block) out.block = true;
+  return out;
 }
 
 /* Ce que l'écran montre. Une ligne promise au comptoir peut arriver avant la
@@ -238,13 +253,4 @@ export function limitDecision({ owedCents, addCents, limitCents }) {
     return { limited: false, over: false, afterCents: after, headroomCents: null, limitCents: null };
   }
   return { limited: true, over: after > limitCents, afterCents: after, headroomCents: Math.max(0, limitCents - owed), limitCents };
-}
-
-/* Ne garder que l'utile : les lignes en attente, et les dernières encaissées. */
-export function trimRows(rows) {
-  const list = Array.isArray(rows) ? rows : [];
-  const pending = pendingOf(list);
-  const done = list.filter((r) => r && r.status === 'collected')
-    .sort((a, b) => (b.collectedTs || 0) - (a.collectedTs || 0)).slice(0, KEEP_COLLECTED);
-  return pending.concat(done);
 }

@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS credit_accounts (
   limit_cents INTEGER CHECK(limit_cents IS NULL OR limit_cents >= 0),
   lang TEXT NOT NULL DEFAULT '',
   baseline_paid_cents INTEGER NOT NULL DEFAULT 0,
-  excess_cents INTEGER NOT NULL DEFAULT 0,
+  pool_cents INTEGER NOT NULL DEFAULT 0,
   reminded_ts INTEGER NOT NULL DEFAULT 0,
   schedule TEXT NOT NULL DEFAULT '[]',
   rev INTEGER NOT NULL DEFAULT 0,

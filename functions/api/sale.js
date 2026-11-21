@@ -752,7 +752,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
   // the device outbox retries this same id until it can be confirmed.
   if (b.retailBalance != null) {
     const claimError = await claimRetailBalance(env.DB, merchant, b.retailBalance,
-      id, amountCents, method, ts);
+      id, amountCents, method, ts, waitUntil);
     if (claimError) return claimError;
   }
 

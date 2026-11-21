@@ -1,4 +1,4 @@
-import { auditRetailOnAccount } from './_credit-audit.js';
+import { auditRetailOnAccount, deferAudit } from './_credit-audit.js';
 
 // A retail bill is not a day's takings. Each confirmed payment is still a
 // distinct /api/sale receipt; this table only protects and locates the balance.
@@ -7,7 +7,7 @@ const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
 });
 
-export async function claimRetailBalance(db, merchant, raw, saleId, amountCents, method, ts) {
+export async function claimRetailBalance(db, merchant, raw, saleId, amountCents, method, ts, defer) {
   const id = token(raw && raw.id);
   const customerId = token(raw && raw.customerId);
   const ticketRef = token(raw && raw.ticketRef);
@@ -50,7 +50,7 @@ export async function claimRetailBalance(db, merchant, raw, saleId, amountCents,
     // so the note's paid amount stays 0 and every later payment is a new sale.
     // Past the customer's credit limit without a manager's approval, the owner's
     // credit book flags it (functions/api/_credit-audit.js, never blocks).
-    if (onAccount) { await auditRetailOnAccount(db, merchant, customerId, id, totalCents); return null; }
+    if (onAccount) { await deferAudit(defer, () => auditRetailOnAccount(db, merchant, customerId, id, totalCents)); return null; }
     const previous = await db.prepare(`SELECT balance_id,amount_cents,method FROM retail_balance_receipts
       WHERE merchant = ? AND sale_id = ?`).bind(merchant, saleId).first();
     if (previous) return previous.balance_id === id && Number(previous.amount_cents) === amountCents && previous.method === method

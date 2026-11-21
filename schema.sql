@@ -178,7 +178,7 @@ CREATE INDEX IF NOT EXISTS retail_balance_receipts_by_balance
 -- rappels, le dernier rappel et l'échéancier (JSON, écrit en compare-and-swap
 -- sur rev). Ce que les règlements couvrent se recalcule à chaque lecture
 -- (baseline_paid_cents : le total versé quand les lignes ont été écrites,
--- excess_cents : ce qui, alors, n'était sur aucune ligne, voir _credit-plan.js). credit_settings :
+-- pool_cents : l'argent alors posé sur la ligne des échéances, voir _credit-plan.js). credit_settings :
 -- le délai accordé à une dette sans échéance (30 jours par défaut).
 CREATE TABLE IF NOT EXISTS credit_accounts (
   merchant TEXT NOT NULL,
@@ -187,7 +187,7 @@ CREATE TABLE IF NOT EXISTS credit_accounts (
   limit_cents INTEGER CHECK(limit_cents IS NULL OR limit_cents >= 0),
   lang TEXT NOT NULL DEFAULT '',
   baseline_paid_cents INTEGER NOT NULL DEFAULT 0,
-  excess_cents INTEGER NOT NULL DEFAULT 0,
+  pool_cents INTEGER NOT NULL DEFAULT 0,
   reminded_ts INTEGER NOT NULL DEFAULT 0,
   schedule TEXT NOT NULL DEFAULT '[]',
   rev INTEGER NOT NULL DEFAULT 0,

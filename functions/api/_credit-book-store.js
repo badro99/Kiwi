@@ -24,7 +24,7 @@
 import { json } from '../auth/_lib.js';
 import { advanceDebtConflicts, creditRefundEdit, creditSettlementAlerts, keepAdvanceConflicts } from './_credit-book-refund.js';
 import { storeEtag, storeTag } from './_store-etag.js';
-import { auditCarnetWrite } from './_credit-audit.js';
+import { auditCarnetWrite, deferAudit } from './_credit-audit.js';
 
 export const BOOK_FEATURE = 'creditbook';
 export const BOOK_MAX = 1500000;
@@ -128,9 +128,9 @@ export async function readBook(env, merchant, legacyDoc) {
  * @param {string} merchant
  * @param {any} legacyDoc
  * @param {any[]} incoming
- * @param {{ guard?: (next: any, current: any, text: string) => Promise<any>, keepHistory?: () => Promise<any>, now?: number }} [options]
+ * @param {{ guard?: (next: any, current: any, text: string) => Promise<any>, keepHistory?: () => Promise<any>, now?: number, defer?: (p: Promise<any>) => void }} [options]
  */
-export async function commitBook(env, merchant, legacyDoc, incoming, { guard, keepHistory, now = Date.now() } = {}) {
+export async function commitBook(env, merchant, legacyDoc, incoming, { guard, keepHistory, now = Date.now(), defer } = {}) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const book = await readBook(env, merchant, legacyDoc);
     const merged = unionBook(book.carnet, incoming);
@@ -163,7 +163,7 @@ export async function commitBook(env, merchant, legacyDoc, incoming, { guard, ke
     }
     if (Number(written && written.meta && written.meta.changes) === 1) {
       /* Une dette au-delà d'un plafond, sans accord : le carnet du patron le montre. */
-      await auditCarnetWrite(env.DB, merchant, merged.appended, merged.carnet, now);
+      await deferAudit(defer, () => auditCarnetWrite(env.DB, merchant, merged.appended, merged.carnet, now));
       return { ok: true, exists: true, carnet: merged.carnet, rev: book.exists ? book.rev + 1 : 1, changed: true, creditConflicts };
     }
   }

@@ -18,6 +18,7 @@ import { makeSession, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/a
 import * as plan from '../functions/api/_credit-plan.js';
 import { settled } from '../functions/api/_credit-accounts.js';
 import { commitBook, unionBook } from '../functions/api/_credit-book-store.js';
+import { claimRetailBalance } from '../functions/api/_retail-balances.js';
 import * as book from '../functions/api/credit/book.js';
 import * as tillRoute from '../functions/api/credit/till.js';
 
@@ -87,47 +88,74 @@ const ok = (name) => { n++; console.log('  ✓ ' + name); };
   ok('limit decision and promise dates');
 
   /* Le règlement n'est jamais accumulé : il se recalcule du total versé. */
-  const three = [1, 2, 3].map((i) => ({ id: 'row00' + i, originalCents: 10000, coveredCents: 0, dueDate: '2026-12-0' + i, createdTs: i }));
-  const fresh = { rows: plan.derive(three).rows, baselineCents: 0, excessCents: 0 };
+  const three = plan.rebase({ rows: [], poolCents: 0 }, [1, 2, 3].map((i) => ({ id: 'row00' + i, amountCents: 10000, dueDate: '2026-12-0' + i, createdTs: i }))).rows;
+  const fresh = { rows: plan.derive(three).rows, baselineCents: 0, poolCents: 0 };
   const pendingCents = (a) => plan.pendingTotal(a.rows);
-  const collectedRows = (a) => a.rows.filter((r) => r.status === 'collected').length;
+  const collectedRows = (a) => plan.collectedOf(a.rows).length;
+  /* Ce qui s'écrit, relu : ce que verrait l'écriture suivante. */
+  const stored = (a) => ({ ...a, rows: plan.derive(a.rows.map(plan.storedRow), { baselineCents: a.baselineCents, poolCents: a.poolCents, paidCents: a.baselineCents }).rows });
   /* Deux lecteurs (repro du juge) : B voit 150 versés et écrit ; A, resté sur
      100, écrit après lui ; la lecture suivante voit le vrai total, 150. */
-  const B = settled(fresh, 15000, 1);
-  const A = settled(B, 10000, 2);
+  const B = stored(settled(fresh, 15000, 1));
+  const A = stored(settled(B, 10000, 2));
   const C = settled(A, 15000, 3);
   assert.equal(pendingCents(C), 15000, 'a stale writer never applies a payment twice: 150 of 300 paid leaves 150');
   assert.equal(collectedRows(C), 1);
-  assert.deepEqual(settled(settled(B, 15000, 4), 15000, 5).rows.map((r) => r.coveredCents), B.rows.map((r) => r.coveredCents), 'reading again changes nothing');
   /* Payer, annuler, payer : 100 versés au bout du compte, 200 restent. */
-  let pv = settled(fresh, 10000, 1); pv = settled(pv, 0, 2); pv = settled(pv, 10000, 3);
+  let pv = stored(settled(fresh, 10000, 1)); pv = stored(settled(pv, 0, 2)); pv = settled(pv, 10000, 3);
   assert.equal(pendingCents(pv), 20000, 'pay, void, pay: one payment counted once');
-  /* Une annulation rouvre la dernière échéance couverte d'abord. */
-  const paid250 = settled(fresh, 25000, 1);
-  const back = settled(paid250, 15000, 2);
+  const back = settled(stored(settled(fresh, 25000, 1)), 15000, 2);
   assert.deepEqual(back.rows.map((r) => r.amountCents), [0, 5000, 10000], 'a void reopens the latest covered rows first');
-  assert.deepEqual(back.rows.map((r) => r.coveredCents), settled(fresh, 15000, 9).rows.map((r) => r.coveredCents), 'same total, same rows, whatever the path');
-  /* Trop-perçu puis annulation de ce trop-perçu : les lignes restent couvertes. */
-  const over = settled(fresh, 40000, 1);
-  assert.equal(over.excessCents, 10000);
-  assert.equal(pendingCents(settled(over, 30000, 2)), 0, 'voiding the over-payment reopens nothing');
-  /* Un règlement d'avant l'échéancier annulé, puis repayé : rien ne bouge. */
-  const before = settled({ ...fresh, baselineCents: 5000 }, 0, 1);
-  assert.equal(pendingCents(settled(before, 5000, 2)), 30000, 'repaying a voided pre-schedule payment covers nothing new');
-  /* N'importe quel chemin de totaux, écrit ou pas en route : la fin ne dépend que du dernier total. */
+  /* Trop-perçu, nouvelle vente promise, remboursement du trop-perçu (repro 2 du
+     juge) : 350 versés sur 300 d'échéances ; une vente de 50 promise au
+     20 décembre ; les 50 de trop rendus. La promesse reste due le 20 décembre,
+     rien ne se rouvre le 2. */
+  let o = stored(settled(fresh, 35000, 1));
+  o = stored(plan.rebase(settled(o, 35000, 2), plan.pendingOf(o.rows).concat([{ id: 'promise-dec20', amountCents: 5000, dueDate: '2026-12-20', createdTs: 9 }])));
+  assert.equal(pendingCents(settled(o, 35000, 3)), 5000, 'the new promise is not covered by the old over-payment');
+  const refunded = settled(o, 30000, 4);
+  assert.deepEqual(plan.pendingOf(refunded.rows).map((r) => [r.id, r.amountCents, r.dueDate]), [['promise-dec20', 5000, '2026-12-20']],
+    'refunding the over-payment uses the set-aside credit first: row 2 (2 December) stays paid');
+  /* N'importe quel chemin : des totaux versés qui montent et descendent, des
+     écritures en retard, des promesses et des échéanciers réécrits. Chaque
+     réécriture se fait sur le vrai total (mutate relit), comme sur un compte
+     témoin qui n'écrit jamais en retard : à chaque pas, les deux comptes
+     donnent la même réponse au même total. */
   let seed = 7;
   const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
-  for (let run = 0; run < 300; run++) {
-    let acc = fresh;
-    let last = 0;
-    for (let step = 0; step < 8; step++) {
-      last = Math.round(rnd() * 45000);
-      const next = settled(acc, last, step);
-      if (rnd() < 0.5) acc = next;
+  const day = (n) => plan.addDays('2026-12-01', n);
+  let checks = 0;
+  for (let run = 0; run < 400; run++) {
+    let racy = fresh, witness = fresh, paid = 0, k = 0;
+    const seen = [0];
+    for (let step = 0; step < 16; step++) {
+      const roll = rnd();
+      if (roll < 0.45) { paid = Math.max(0, paid + Math.round((rnd() - 0.4) * 20000)); seen.push(paid); }
+      else if (roll < 0.65) {
+        racy = stored(settled(racy, seen[Math.floor(rnd() * seen.length)], step));
+      } else {
+        const edit = (acct) => {
+          const now = settled(acct, paid, step);
+          let pend = plan.pendingOf(now.rows).map((r) => ({ id: r.id, amountCents: r.amountCents, dueDate: r.dueDate, createdTs: r.createdTs }));
+          if (roll < 0.8) pend = pend.concat([{ id: 'p' + run + '-' + (k), amountCents: 1000 + Math.round(rnd() * 9000), dueDate: day(Math.round(rnd() * 60)), createdTs: step }]);
+          else pend = pend.filter(() => rnd() < 0.7).map((r) => ({ ...r, amountCents: Math.max(1, r.amountCents - Math.round(rnd() * 2000)) }));
+          return pend;
+        };
+        const s0 = seed;
+        const pend = edit(witness);
+        seed = s0;
+        const pendRacy = edit(racy);
+        assert.deepEqual(pendRacy, pend, 'both accounts see the same rows at the true total');
+        witness = stored(plan.rebase(settled(witness, paid, step), pend, () => 'blk' + run + '-' + k));
+        racy = stored(plan.rebase(settled(racy, paid, step), pend, () => 'blk' + run + '-' + k));
+        k++;
+      }
+      const w = settled(witness, paid, 99), r = settled(racy, paid, 99);
+      assert.deepEqual(r.rows.map((x) => [x.id, x.coveredCents]), w.rows.map((x) => [x.id, x.coveredCents]), 'same rows, same coverage, at the same total');
+      checks++;
     }
-    assert.deepEqual(settled(acc, last, 99).rows.map((r) => r.coveredCents), settled(fresh, last, 99).rows.map((r) => r.coveredCents));
   }
-  ok('settlement: stale writer, pay/void/pay, voids reopen latest, path-independent (300 random paths)');
+  ok(`settlement: stale writer, pay/void/pay, over-payment set aside then refunded, ${checks} random steps with promises and edits`);
 }
 
 /* ── 2. de bout en bout, sur la base ── */
@@ -380,6 +408,44 @@ ok('promise date from the till: one row, idempotent');
   carnet.pop();
   writeBook(carnet);
   ok('limit audit follows the union exactly: long ids sharing a prefix, twins, label-only differences, hashed event ids');
+}
+
+/* ── 4b''. hors du temps de réponse, et rien pour un commerce sans plafond ── */
+{
+  sql.prepare("INSERT OR IGNORE INTO clients (merchant, id, name) VALUES ('stranger-shop', 'client-nolimit', 'TEST KIWI')").run();
+  const seen = [];
+  /* Les requêtes du carnet attendent qu'on les libère : si la vente les
+     attendait, elle ne répondrait jamais. */
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const held = (stmt) => new Proxy(stmt, { get: (t, k) => (k === 'bind' ? (...v) => held(t.bind(...v))
+    : ['first', 'all', 'run'].includes(k) ? async (...v) => { await gate; return t[k](...v); } : t[k]) });
+  const counting = { prepare: (text) => { seen.push(text); return /credit_/.test(text) ? held(env.DB.prepare(text)) : env.DB.prepare(text); } };
+  const creditQueries = () => seen.filter((q) => /credit_/.test(q)).length;
+  const open = (i) => ({ id: 'nolimit-bal-' + String(i).padStart(4, '0'), customerId: 'client-nolimit', ticketRef: 'TEST-KIWI-NL' + i, totalCents: 90000, stage: 'open' });
+  const deferred = [];
+  let out = await claimRetailBalance(counting, 'stranger-shop', open(1), 'nolimit-sale-1', 0, 'compte', Date.now(), (p) => deferred.push(p));
+  assert.equal(out, null, 'the on-account sale answers while the credit lookup is still waiting (off the response path)');
+  assert.equal(deferred.length, 1, 'the audit runs through waitUntil');
+  release();
+  await Promise.all(deferred);
+  assert.equal(creditQueries(), 1, 'one indexed lookup, after the response, learns the shop has no limit');
+  seen.length = 0; deferred.length = 0;
+  for (let i = 2; i <= 4; i++) {
+    out = await claimRetailBalance(counting, 'stranger-shop', open(i), 'nolimit-sale-' + i, 0, 'compte', Date.now(), (p) => deferred.push(p));
+    assert.equal(out, null);
+  }
+  await Promise.all(deferred);
+  assert.equal(creditQueries(), 0, 'a shop with no limit: zero extra queries per on-account sale');
+  const counted = { prepare: (text) => { seen.push(text); return env.DB.prepare(text); } };
+  seen.length = 0;
+  const strangerBook = [{ id: 'k-stranger', name: 'TEST KIWI', phone: '', hist: [{ id: 'sd1', type: 'debt', label: 'Courses', amt: 20, at: iso(0) }] }];
+  const w = await commitBook({ ...env, DB: counted }, 'stranger-shop', null, strangerBook);
+  assert.equal(w.ok, true, JSON.stringify(w));
+  assert.equal(creditQueries(), 0, 'an épicerie book write in a shop with no limit costs no credit query');
+  for (const t of ['retail_balances', 'clients']) sql.prepare(`DELETE FROM ${t} WHERE merchant = 'stranger-shop'`).run();
+  sql.prepare("DELETE FROM store_docs WHERE merchant = 'stranger-shop' AND feature = 'creditbook'").run();
+  ok('the limit audit is off the response path (waitUntil) and free for a shop without limits');
 }
 
 /* ── 4c. une écriture perdue relit ce que le client a versé ── */

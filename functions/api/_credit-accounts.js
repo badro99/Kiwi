@@ -15,17 +15,17 @@
  *
  * Les règlements, d'où qu'ils viennent (ardoise, Acomptes, autre caisse, hors
  * ligne) : rien ne s'accumule. La ligne garde ce que chaque échéance avait reçu
- * quand elle a été écrite, avec le total versé à ce moment (baseline_paid_cents)
- * et ce qui n'était alors sur aucune échéance (excess_cents). Ce qu'elle a reçu
- * aujourd'hui se recalcule à partir du total versé aujourd'hui
- * (_credit-plan.js derive) : une lecture n'écrit rien, une écriture en retard
- * ne peut pas verser deux fois, et un règlement annulé rouvre les dernières
- * échéances couvertes. */
+ * rangées sur une ligne d'argent, et l'argent posé dessus (pool_cents) quand le
+ * total versé valait baseline_paid_cents. Ce que chaque échéance a reçu se
+ * recalcule du total versé aujourd'hui (_credit-plan.js derive), une fonction
+ * affine de ce total : une lecture n'écrit rien, une écriture en retard ne peut
+ * pas verser deux fois, un règlement annulé rouvre par le haut. */
 import { readBook, legacyBook } from './_credit-book-store.js';
+import { noteLimits } from './_credit-audit.js';
 import { businessDate, merchantCutoff, merchantZone } from './_business-day.js';
 import {
   addDays, ageing, cents, checkTotal, cleanRows, CUSTOMER_KEY, DEFAULT_TERM_DAYS, derive, LANGS, limitDecision, looseDue,
-  MAX_CENTS, NOTE_MAX, pendingOf, ROW_ID, seedRows, SOURCES, storedRow, trimRows, unpaidPieces, newestPieces, validDay, viewRows,
+  MAX_CENTS, NOTE_MAX, collectedOf, pendingOf, rebase, ROW_ID, seedRows, SOURCES, storedRow, unpaidPieces, newestPieces, validDay, viewRows,
 } from './_credit-plan.js';
 
 const rid = (p) => p + (globalThis.crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(16).slice(2)).replace(/-/g, '');
@@ -121,14 +121,14 @@ export async function debtorOf(env, merchant, source, key, dayOf) {
 /* ── la ligne credit_accounts ── */
 function accountFrom(row) {
   const baselineCents = Math.max(0, Number(row.baseline_paid_cents) || 0);
-  const excessCents = Math.trunc(Number(row.excess_cents) || 0);
+  const poolCents = Math.trunc(Number(row.pool_cents) || 0);
   return {
     source: row.source, key: row.customer_key,
     limitCents: row.limit_cents == null ? null : Number(row.limit_cents),
     lang: LANGS.includes(row.lang) ? row.lang : '',
-    baselineCents, excessCents,
+    baselineCents, poolCents,
     remindedTs: Number(row.reminded_ts) || 0,
-    rows: derive(parse(row.schedule, []), { baselineCents, excessCents, paidCents: baselineCents }).rows,
+    rows: derive(parse(row.schedule, []), { baselineCents, poolCents, paidCents: baselineCents }).rows,
     rev: Number(row.rev) || 0,
   };
 }
@@ -150,10 +150,10 @@ async function ensureAccount(env, merchant, source, key, paidTotalCents, now) {
   return readAccount(env, merchant, source, key);
 }
 async function casWrite(env, merchant, acct, next, now) {
-  const res = await env.DB.prepare(`UPDATE credit_accounts SET limit_cents = ?, lang = ?, baseline_paid_cents = ?, excess_cents = ?,
+  const res = await env.DB.prepare(`UPDATE credit_accounts SET limit_cents = ?, lang = ?, baseline_paid_cents = ?, pool_cents = ?,
       reminded_ts = ?, schedule = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND source = ? AND customer_key = ? AND rev = ?`)
-    .bind(next.limitCents, next.lang, Math.max(0, cents(next.baselineCents)), cents(next.excessCents), next.remindedTs,
-      JSON.stringify(trimRows(next.rows).map(storedRow)), acct.rev + 1, now, merchant, acct.source, acct.key, acct.rev).run();
+    .bind(next.limitCents, next.lang, Math.max(0, cents(next.baselineCents)), cents(next.poolCents), next.remindedTs,
+      JSON.stringify(next.rows.map(storedRow)), acct.rev + 1, now, merchant, acct.source, acct.key, acct.rev).run();
   return Number(res && res.meta && res.meta.changes) === 1;
 }
 export async function logEvent(env, merchant, ev, now) {
@@ -168,8 +168,8 @@ export async function logEvent(env, merchant, ev, now) {
  * s'écrit. `paidTotalCents` absent (client introuvable) : rien ne bouge. */
 export function settled(acct, paidTotalCents, now = Date.now()) {
   const paid = paidTotalCents == null ? acct.baselineCents : Math.max(0, cents(paidTotalCents));
-  const out = derive(acct.rows, { baselineCents: acct.baselineCents, excessCents: acct.excessCents, paidCents: paid, now });
-  return { ...acct, rows: out.rows, baselineCents: paid, excessCents: out.excessCents, appliedCents: out.appliedCents, reopenedCents: out.reopenedCents };
+  const out = derive(acct.rows, { baselineCents: acct.baselineCents, poolCents: acct.poolCents, paidCents: paid, now });
+  return { ...acct, rows: out.rows, baselineCents: paid, poolCents: out.poolCents, appliedCents: out.appliedCents, reopenedCents: out.reopenedCents };
 }
 const paidOf = (debtor) => (debtor ? debtor.paidTotalCents : null);
 
@@ -229,7 +229,7 @@ function present(debtor, acct, today, term, flags, dayOf) {
     looseDueCents: dueLoose.reduce((n, p) => n + p.cents, 0),
     limitCents: acct ? acct.limitCents : null, lang: acct ? acct.lang : '',
     remindedTs: acct ? acct.remindedTs : 0, remindedDay: acct && acct.remindedTs && dayOf ? dayOf(acct.remindedTs) : '',
-    rev: acct ? acct.rev : 0, hasSchedule: !!(acct && acct.rows.length),
+    rev: acct ? acct.rev : 0, hasSchedule: !!(acct && acct.rows.some((r) => !r.block)),
     lastPayTs: debtor ? debtor.lastPayTs : 0,
     daysLate: age.daysLate, buckets: age.buckets, nextDue: age.nextDue,
     dueCents: dueRows.reduce((n, r) => n + r.shownCents, 0) + dueLoose.reduce((n, p) => n + p.cents, 0),
@@ -288,7 +288,7 @@ export async function customerDetail(env, merchant, source, key, now = Date.now(
   return {
     today, termDays: term, customer: card,
     seed: card.hasSchedule || !(card.owedCents > 0) ? [] : seedRows(card.owedCents, addDays(today, 7), now, 'seed').map((r) => ({ amountCents: r.amountCents, dueDate: r.dueDate, note: '' })),
-    collected: (acct ? acct.rows : []).filter((r) => r.status === 'collected').map((r) => ({ id: r.id, originalCents: r.originalCents, dueDate: r.dueDate, note: r.note, collectedTs: r.collectedTs })),
+    collected: collectedOf(acct ? acct.rows : []).map((r) => ({ id: r.id, originalCents: r.originalCents, dueDate: r.dueDate, note: r.note, collectedTs: r.collectedTs })),
     history: debtor ? debtor.history : [],
     events: events.map((e) => ({ kind: e.kind, amountCents: Number(e.amount_cents) || 0, actor: e.actor, ts: Number(e.ts) || 0 })),
   };
@@ -316,15 +316,12 @@ export async function saveSchedule(env, merchant, source, key, body, actor, now 
     if (baseRev != null && acct.rev !== baseRev && !(baseRev === 0 && !acct.rows.length)) return { error: 'credit-schedule-changed', status: 409 };
     if (body.seed === true && pendingOf(acct.rows).length) return { error: 'schedule-exists', status: 409 };
     owedNow = d ? d.owedCents : 0;
-    /* Une ligne gardée garde ce qu'un règlement en a déjà couvert : le montant
-       envoyé est ce qui reste à payer dessus. */
+    /* Le montant envoyé pour une ligne gardée est ce qui reste à payer dessus ;
+       ce qu'elle avait déjà reçu passe dans le bloc (_credit-plan.js rebase). */
     const kept = new Map(pendingOf(acct.rows).map((r) => [r.id, r]));
-    const nextRows = rows.map((r) => (kept.has(r.id) ? { ...kept.get(r.id), amountCents: r.amountCents,
-      originalCents: kept.get(r.id).coveredCents + r.amountCents, dueDate: r.dueDate, note: r.note } : r));
+    const nextRows = rows.map((r) => (kept.has(r.id) ? { ...kept.get(r.id), amountCents: r.amountCents, dueDate: r.dueDate, note: r.note, status: 'pending' } : r));
     if (checkTotal(nextRows, owedNow)) return { error: 'schedule-exceeds-balance', status: 409, owedCents: owedNow };
-    /* Ce qui dépassait l'ancien échéancier a payé la dette sans date : il ne
-       couvre pas les nouvelles lignes (elles décrivent ce qui reste dû). */
-    return { ...acct, excessCents: Math.min(0, acct.excessCents), rows: nextRows.concat(acct.rows.filter((r) => r.status === 'collected')) };
+    return rebase(acct, nextRows, () => rid('cb'));
   }, now, reread);
   if (out.error) return out;
   await logEvent(env, merchant, { source, key, kind: 'schedule', amountCents: rows.reduce((n, r) => n + r.amountCents, 0), actor }, now);
@@ -342,6 +339,7 @@ export async function setLimit(env, merchant, source, key, limitCents, actor, no
   } else if (!debtor) return { error: 'unknown-customer', status: 404 };
   const out = await mutate(env, merchant, source, key, debtor, (acct) => ({ ...acct, limitCents }), now, reread);
   if (out.error) return out;
+  if (limitCents !== null) noteLimits(merchant, true, now); else noteLimits(merchant, null, 0);
   await logEvent(env, merchant, { source, key, kind: 'limit', amountCents: limitCents || 0, actor, detail: limitCents === null ? 'none' : '' }, now);
   return { ok: true, rev: out.account.rev };
 }
@@ -399,8 +397,8 @@ export async function addPromise(env, merchant, source, key, body, actor, now = 
     if (acct.rows.some((r) => r.id === id)) return { error: 'duplicate', duplicate: true };
     if (pendingOf(acct.rows).length >= 24) return { error: 'schedule-too-long', status: 409 };
     fresh = true;
-    return { ...acct, excessCents: Math.min(0, acct.excessCents), rows: acct.rows.concat([{ id, amountCents: amount, originalCents: amount, coveredCents: 0, dueDate: body.dueDate,
-      note: String(body.note || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, NOTE_MAX), status: 'pending', origin: 'till', createdTs: now, collectedTs: 0 }]) };
+    return rebase(acct, pendingOf(acct.rows).concat([{ id, amountCents: amount, originalCents: amount, coveredCents: 0, dueDate: body.dueDate,
+      note: String(body.note || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, NOTE_MAX), status: 'pending', origin: 'till', createdTs: now, collectedTs: 0 }]), () => rid('cb'));
   }, now, reread);
   if (out.duplicate) return { ok: true, duplicate: true };
   if (out.error) return out;

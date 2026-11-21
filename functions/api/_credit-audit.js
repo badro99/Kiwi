@@ -13,9 +13,39 @@
  * même vente retrouve le sien.
  *
  * Ne bloque jamais une vente : la dette est déjà là, le rôle d'ici est de la
- * montrer. Toute erreur rend null. */
+ * montrer. Toute erreur rend null. Hors du temps de réponse : la vente passe
+ * son travail par `defer` (ctx.waitUntil) et n'attend rien. Un commerce sans
+ * aucun plafond ne coûte aucune requête : l'isolat se souvient une minute
+ * qu'il n'en a pas (setLimit le prévient aussitôt dans le même isolat). */
 
 export const APPROVAL_WINDOW_MS = 2 * 3600000;
+export const LIMITS_TTL_MS = 60000;
+const limitsSeen = new Map();
+/* Le commerce a-t-il au moins un plafond ? false/true connus, null à demander. */
+function knownLimits(merchant, now) {
+  const c = limitsSeen.get(merchant);
+  return c && now - c.at < LIMITS_TTL_MS ? c.has : null;
+}
+export function noteLimits(merchant, has, now = Date.now()) {
+  if (limitsSeen.size > 5000) limitsSeen.clear();
+  limitsSeen.set(merchant, { at: now, has: !!has });
+}
+async function merchantHasLimits(db, merchant, now) {
+  const known = knownLimits(merchant, now);
+  if (known != null) return known;
+  const row = await db.prepare('SELECT 1 AS x FROM credit_accounts WHERE merchant = ? AND limit_cents IS NOT NULL LIMIT 1').bind(merchant).first();
+  noteLimits(merchant, !!row, now);
+  return !!row;
+}
+/* Lance `job` après la réponse quand la plateforme le permet (rend null tout
+ * de suite), sinon l'attend (banc d'essai, dev). Jamais une requête avant. */
+export function deferAudit(defer, job) {
+  const run = () => Promise.resolve().then(job).catch(() => null);
+  if (typeof defer === 'function') {
+    try { defer(run()); return Promise.resolve(null); } catch (_) { /* repli : attendu */ }
+  }
+  return run();
+}
 const entryCents = (h) => Math.round((Number(h && h.amt) || 0) * 100);
 const owedOf = (c) => (Array.isArray(c && c.hist) ? c.hist : [])
   .reduce((n, h) => n + (h && h.type === 'debt' ? entryCents(h) : -entryCents(h)), 0);
@@ -68,10 +98,11 @@ export async function auditCreditDebt(db, merchant, { source, key, addCents, owe
 export async function auditCarnetWrite(db, merchant, appended, after, now = Date.now()) {
   try {
     const fresh = (Array.isArray(appended) ? appended : []).filter((a) => a && a.entry && a.entry.type === 'debt' && entryCents(a.entry) > 0);
-    if (!fresh.length) return [];
+    if (!fresh.length || knownLimits(merchant, now) === false) return [];
     const limits = new Map(((await db.prepare(`SELECT customer_key, limit_cents FROM credit_accounts
       WHERE merchant = ? AND source = 'carnet' AND limit_cents IS NOT NULL`).bind(merchant).all()).results || [])
       .map((r) => [String(r.customer_key), Number(r.limit_cents)]));
+    noteLimits(merchant, limits.size > 0, now);
     if (!limits.size) return [];
     const byId = new Map((Array.isArray(after) ? after : []).filter((c) => c && c.id != null).map((c) => [String(c.id), c]));
     const groups = new Map();
@@ -93,6 +124,7 @@ export async function auditCarnetWrite(db, merchant, appended, after, now = Date
 /* Une note « compte client » vient de s'ouvrir (rien encaissé, tout est dû). */
 export async function auditRetailOnAccount(db, merchant, customerId, balanceId, totalCents, now = Date.now()) {
   try {
+    if (!await merchantHasLimits(db, merchant, now)) return null;
     const limit = await limitOf(db, merchant, 'client', customerId);
     if (limit == null) return null;
     const row = await db.prepare(`SELECT COALESCE(SUM(b.total_cents - COALESCE((SELECT SUM(r.amount_cents) FROM retail_balance_receipts r
