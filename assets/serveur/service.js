@@ -2278,7 +2278,7 @@
          disappear or be re-counted. New taps live in an explicit local draft
          until their own canonical ticket returns from /api/order/queue. */
       const priced = svPromoPrice(item, item.price);
-      const line = tableOrders[tableId].find(l => l.sourceLocal === true && l.id === itemId && !(l.note || '').trim()
+      const line = tableOrders[tableId].find(l => l.sourceLocal === true && l.id === itemId && !(l.note || '').trim() && !l.kind
         && svPromoKey(l.promo) === svPromoKey(priced.promo));
       if (line) line.qty++;
       else tableOrders[tableId].push(Object.assign({ uid: newLineUid(), id: itemId, name: item.name, price: priced.price, basePrice: item.price, qty: 1, sentQty: 0, note: '', sourceLocal: true },
@@ -2358,7 +2358,7 @@
       const priced = svPromoPrice(item, item.price + optsExtra(opts));
       const price = priced.price;
       const sig = optsSig(opts);
-      const line = tableOrders[tableId].find(l => l.sourceLocal === true && l.id === item.id && !(l.note || '').trim() && (l.optsSig || '') === sig
+      const line = tableOrders[tableId].find(l => l.sourceLocal === true && l.id === item.id && !(l.note || '').trim() && !l.kind && (l.optsSig || '') === sig
         && svPromoKey(l.promo) === svPromoKey(priced.promo));
       if (line) line.qty++;
       else tableOrders[tableId].push(Object.assign({ uid: newLineUid(), id: item.id, name: item.name, price, basePrice: item.price, qty: 1, sentQty: 0, note: '', opts, optsSig: sig, sourceLocal: true },

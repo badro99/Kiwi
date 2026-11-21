@@ -20,7 +20,7 @@
          ne doit jamais se confondre avec sans salade + sauce blanche. */
       const priced = promoPrice(item, item.price + extra);
       const line = tableOrders[tableId].find(l => l.id === item.id && !l.sent
-        && !l.hold && !l.committed
+        && !l.hold && !l.committed && !l.kind
         && !(l.note || '').trim() && (l.optSig || '') === sig && promoKey(l.promo) === promoKey(priced.promo));
       if (line) currentOrder().patchLine(line, { qty: +line.qty + 1 });
       else currentOrder().append(tableOrders[tableId], Object.assign({ uid: newLineUid(), id: item.id, name: item.name,

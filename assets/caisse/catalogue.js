@@ -757,7 +757,7 @@
          Les empiler enverrait un seul café en cuisine, et le second client
          attendrait une boisson que personne n'a commencée. */
       const priced = promoPrice(item, item.price + extra);
-      const line = cart.find(c => c.id === item.id && !(c.note || '').trim() && (c.optSig || '') === sig
+      const line = cart.find(c => c.id === item.id && !(c.note || '').trim() && !c.kind && (c.optSig || '') === sig
         && promoKey(c.promo) === promoKey(priced.promo));
       if (line) currentOrder().patchLine(line, { qty: +line.qty + 1 });
       else currentOrder().append(cart, Object.assign({ uid: newLineUid(), id: item.id, name: item.name, price: priced.price,

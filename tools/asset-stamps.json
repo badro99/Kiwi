@@ -212,8 +212,8 @@
     "sha": "20476101ff223f1f"
   },
   "assets/caisse-floor.js": {
-    "v": "21",
-    "sha": "b91fb861e52ebdbb"
+    "v": "22",
+    "sha": "de5d32286fcf1cdc"
   },
   "assets/caisse-hardware.js": {
     "v": "16",
@@ -288,8 +288,8 @@
     "sha": "06474b0671fb9627"
   },
   "assets/caisse/catalogue.js": {
-    "v": "19",
-    "sha": "971c8708664bc9e4"
+    "v": "20",
+    "sha": "62f07bd2ae5d3c67"
   },
   "assets/caisse/closing.js": {
     "v": "2",
@@ -2208,8 +2208,8 @@
     "sha": "35eb41b159c67704"
   },
   "assets/serveur/service.js": {
-    "v": "33",
-    "sha": "c09f5c6620a3904f"
+    "v": "34",
+    "sha": "f087ce8952cb8cdb"
   },
   "assets/service-requests.js": {
     "v": "2",
