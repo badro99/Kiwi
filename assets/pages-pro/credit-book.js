@@ -176,7 +176,7 @@
   /* ── le rappel WhatsApp : un brouillon, jamais un envoi ── */
   const firstName = (name) => String(name || '').trim().split(/\s+/).slice(0, 2).join(' ');
   function waText(c, lang) {
-    const shop = shopName() || L('votre commerce', 'your shop', 'المحل');
+    const shop = shopName() || (lang === 'fr' ? 'votre commerce' : 'المحل');
     const amount = mad(c.dueCents || c.owedCents);
     const name = firstName(c.name);
     const date = c.dueDate || '';
