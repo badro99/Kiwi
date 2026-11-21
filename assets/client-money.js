@@ -92,6 +92,25 @@ function ensureStyles() {
   const style = doc.createElement('style'); style.id = 'kcm-css'; style.textContent = CSS; doc.head.appendChild(style);
 }
 
+/* Les filtres « Avance en cours » et « Crédit en cours » du carnet : par
+   cliente, ce qui reste dû (centimes) sur ses avances et sur son compte. Les
+   anciens acomptes sans genre comptent comme avances. Journal de la caisse et
+   serveur fusionnés, comme Acomptes ; sans registre, rien (jamais deviné). */
+export async function noteKindsByClient(merchant) {
+  const R = globalThis.window?.KiwiRetailBalances;
+  if (!R || !merchant) return null;
+  let rows;
+  try { rows = await R.list(merchant, ''); } catch (_) { rows = R.read(merchant); }
+  const out = { avance: {}, credit: {} };
+  (rows || []).forEach((row) => {
+    if (!row || !row.customerId || row.closedTs || row.closed_ts) return;
+    const due = R.due(row); if (!(due > 0)) return;
+    const kind = row.kind === 'credit' ? 'credit' : 'avance', id = String(row.customerId);
+    out[kind][id] = (out[kind][id] || 0) + due;
+  });
+  return out;
+}
+
 /* k : { customerId, merchant, esc, fmt, avoirHost, close(), spend()|null, toast } */
 export function paintClientMoney(slot, k) {
   const R = globalThis.window?.KiwiRetailBalances;
