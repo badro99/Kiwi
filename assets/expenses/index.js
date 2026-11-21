@@ -144,8 +144,30 @@ function shiftMonth(month, by) {
   return d.toISOString().slice(0, 7);
 }
 
+/* Les fiches fournisseurs du grand livre (/api/suppliers) se proposent aussi :
+   une dépense qui en nomme une s'inscrit à son relevé (linkSupplier). */
+let ledgerNames = null;
+function loadLedgerNames() {
+  const slug = merchant();
+  if (ledgerNames || !slug) return;
+  ledgerNames = [];
+  fetch('/api/suppliers?merchant=' + encodeURIComponent(slug), { credentials: 'same-origin' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j) => { ledgerNames = ((j && j.suppliers) || []).map((x) => String(x.name || '')).filter(Boolean); })
+    .catch(() => {});
+}
+function linkSupplier(row, deleted) {
+  const slug = merchant();
+  if (!slug || !row || !row.id) return;
+  fetch('/api/suppliers/expense', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ merchant: slug, expenseId: row.id, supplier: row.supplier || '', amountCents: row.amountCents, date: row.date,
+      method: row.method, note: row.note || '', version: row.updatedAt || 0, deleted: !!(deleted || row.deleted) }) }).catch(() => {});
+}
+
 function suppliers() {
+  loadLedgerNames();
   const seen = new Map();
+  (ledgerNames || []).forEach((n) => { const k = n.toLowerCase(); if (!seen.has(k)) seen.set(k, n); });
   doc().list.filter((r) => !r.deleted && r.supplier).sort((a, b) => b.updatedAt - a.updatedAt)
     .forEach((r) => { const k = r.supplier.toLowerCase(); if (!seen.has(k)) seen.set(k, r.supplier); });
   return [...seen.values()];
@@ -187,11 +209,13 @@ async function uploadReceipt(row, photo) {
 const callbacks = {
   onSave(row, extra) {
     upsert(row);
+    linkSupplier(row, false);
     try { window.Kiwi.toast(tr('saved'), { type: 'success' }); } catch (_) {}
     if (extra && extra.photo) uploadReceipt(row, extra.photo);
   },
   onDelete(row) {
     upsert(row);
+    linkSupplier(row, true);
     /* La photo part avec la dépense ; un échec la laisse, sans gêner la suppression. */
     const url = row.receiptKey ? receiptUrl(row.id) : '';
     if (url) fetch(url, { method: 'DELETE', credentials: 'same-origin' }).catch(() => {});

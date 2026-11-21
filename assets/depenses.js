@@ -104,6 +104,10 @@
     stB1:     { fr: 'Cartes équipe avec plafond et catégorie', en: 'Team cards with a limit and category', ar: 'بطاقات للفريق بحدّ وفئة' },
     stB2:     { fr: 'Approbation avant chaque dépense', en: 'Approval before each expense', ar: 'موافقة قبل كل مصروف' },
     stB3:     { fr: 'Factures fournisseurs et export comptable', en: 'Supplier bills and accounting export', ar: 'فواتير المورّدين والتصدير المحاسبي' },
+    realSuppH:{ fr: 'Ce que vous devez à vos fournisseurs', en: 'What you owe your suppliers', ar: 'شنو عليك للموردين' },
+    realAll:  { fr: 'Tous les fournisseurs', en: 'All suppliers', ar: 'جميع الموردين' },
+    realNone: { fr: 'Vous ne devez rien à vos fournisseurs.', en: 'You owe your suppliers nothing.', ar: 'ما عليك والو للموردين.' },
+    realOld:  { fr: 'plus ancien', en: 'oldest', ar: 'الأقدم' },
     stFoot:   { fr: 'Pas encore disponible. Rien n\'est à configurer ici pour l\'instant.', en: 'Not available yet. Nothing to set up here for now.', ar: 'غير متاح بعد. لا شيء لإعداده هنا حالياً.' },
   };
 
@@ -548,6 +552,37 @@
     </div>`;
   }
 
+  /* Compte réel : les vraies factures fournisseurs, depuis le grand livre
+   * (/api/suppliers, functions/api/_ledger.js). « Payer » ouvre la saisie du
+   * paiement de la page Fournisseurs (assets/pages-pro/suppliers.js). */
+  function realSuppliersHtml() {
+    return `<div class="dep-card" data-dep-real-supp style="max-width:720px;margin:0 auto 18px;">
+      <div class="dep-h"><div class="t">${pick(T.realSuppH)}</div><button class="cta" data-action="nav-fournisseurs">${pick(T.realAll)}</button></div>
+      <div data-dep-real-list><div class="dep-empty">·</div></div></div>`;
+  }
+  async function fillRealSuppliers(root) {
+    const host = root && root.querySelector('[data-dep-real-list]');
+    const slug = (() => { try { return window.KiwiStore?.slugFor?.() || ''; } catch (_) { return ''; } })();
+    if (!host || !slug) return;
+    try {
+      const r = await fetch('/api/suppliers?merchant=' + encodeURIComponent(slug), { credentials: 'same-origin' });
+      const j = r.ok ? await r.json() : null;
+      const owed = ((j && j.suppliers) || []).filter((x) => x.balanceCents > 0).sort((a, b) => b.balanceCents - a.balanceCents).slice(0, 5);
+      host.innerHTML = owed.length ? owed.map((x) => `
+        <div class="dep-supp">
+          <div class="dep-supp-mid">
+            <div class="dep-supp-n">${esc(x.name)}</div>
+            <div class="dep-supp-s${x.ageing && x.ageing.oldestDays > 60 ? ' soon' : ''}">${x.ageing && x.ageing.oldestDays ? pick(T.realOld) + ' ' + x.ageing.oldestDays + 'j' : ''}</div>
+          </div>
+          <div class="dep-supp-amt">${mad(x.balanceCents / 100)} MAD</div>
+          <button class="dep-mini ok" data-action="sup-pay" data-arg="${esc(x.id)}">${pick(T.pay)}</button>
+        </div>`).join('') : `<div class="dep-empty">${pick(T.realNone)}</div>`;
+    } catch (_) {
+      const card = root.querySelector('[data-dep-real-supp]');
+      if (card) card.remove();
+    }
+  }
+
   function growBars(host) {
     if (!host) return;
     const els = host.querySelectorAll('[data-grow]');
@@ -574,8 +609,9 @@
       title: fusion && !real ? pick(T.uTitle) : pick(T.title),
       subtitle: real ? (((custom && KV.getCurrentVenueData && KV.getCurrentVenueData().name) || '') + ' · compte en démarrage')
               : fusion ? pick(T.uSub) : pick(T.subtitle),
-      body: real ? starterHtml() : fusion ? fusionBodyHtml() : bodyHtml(),
+      body: real ? realSuppliersHtml() + starterHtml() : fusion ? fusionBodyHtml() : bodyHtml(),
     });
+    if (real) fillRealSuppliers(r && r.el ? r.el : document.querySelector('.dash-genpage'));
     if (!real && r && r.el) growBars(r.el);
   }
 

@@ -1020,8 +1020,8 @@
           body:'<div class="ops-proc"><div class="p-card"><b>' + esc(c.procDenied) + '</b><p class="ops-proc-hint" style="margin:8px 0 0">' + esc(c.procDeniedD) + '</p></div></div>' });
         return;
       }
-      /* Les fournisseurs déjà connus du poste servent de suggestions ; le champ
-         reste libre parce que le serveur ne tient pas de table fournisseurs. */
+      /* Les fournisseurs connus servent de suggestions. Le serveur relie le bon
+         à sa fiche (table suppliers) : nom connu, sinon fiche créée à ce nom. */
       var P = window.KiwiProcurement, doc = P && P.doc && P.doc();
       var suppliers = ((doc && doc.suppliers) || []).filter(function (s) { return s.active !== false; });
       var confirmBox = '<label class="ops-acct-confirm"><input type="checkbox" data-acct-confirm><span>' + esc(c.confirmLabel) + '</span></label>';
@@ -1111,7 +1111,7 @@
             '<button class="kb atlas xs" style="margin-top:12px" type="button" data-po-run="supplier-return">' + esc(c.pRun) + '</button></div>';
         }
         return '<div class="p-card ops-proc-order" data-po-card="' + esc(o.number) + '">' +
-          '<div class="ops-proc-head"><div><div class="ops-proc-num">' + esc(o.number) + '</div>' +
+          '<div class="ops-proc-head" data-po-sup="' + esc(o.supplierId || '') + '"><div><div class="ops-proc-num">' + esc(o.number) + '</div>' +
             '<div class="ops-proc-sup">' + esc(o.supplier || '') + (o.expectedDate ? ' · ' + esc(o.expectedDate) : '') + '</div></div>' +
             '<div><span class="chip ' + (o.status === 'received' ? 'ok' : 'info-soft') + '">' + esc((c.pStatus && c.pStatus[o.status]) || o.status) + '</span> <b>' + esc(money(o.totalCents)) + '</b></div></div>' +
           '<div class="ops-proc-scroll"><table class="ops-proc-table"><thead><tr><th>' + esc(c.pSku) + '</th><th>' + esc(c.pLabel) + '</th>' +
@@ -1206,7 +1206,11 @@
           var got = procOutcome(result);
           if (got.queued) { host.innerHTML = ''; return toastResult(result); }
           if (got.error) { button.disabled = false; return card(host, got.error); }
-          Kiwi.toast(c.pDone, { type:'success' });
+          /* Réception = ce que nous devons (grand livre) : payer est à un geste. */
+          var supEl = order.querySelector('[data-po-sup]'), supId = supEl ? supEl.getAttribute('data-po-sup') : '';
+          var paid = action === 'receive-po' && supId && Kiwi.handlers['sup-pay-po'] && got.data && got.data.receivedCents;
+          Kiwi.toast(c.pDone, { type:'success', action: paid ? { label: ({ en:'Pay supplier', ar:'خلّص المورد' })[(window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'] || 'Payer le fournisseur',
+            onClick: function () { Kiwi.handlers['sup-pay-po'](null, supId + '|' + payload.po + '|' + got.data.receivedCents); } } : null });
           loadOrders();
         } catch (error) { button.disabled = false; card(host, error && (error.code || error.message)); }
       });
