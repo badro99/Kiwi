@@ -32,6 +32,7 @@ import { routeMinTier } from '../functions/auth/_session-tier.js';
 import { businessBoundary } from '../functions/api/_business-day.js';
 import { summarize } from '../functions/api/sales-summary.js';
 import { reconcileNote } from '../functions/api/_reports-words.js';
+import { MINIMUM_SCHEMA_VERSION } from '../functions/_schema-version.js';
 import { baseCte, Q, LINES_CTE } from '../functions/api/_reports-sql.js';
 import { listMigrations, MIGRATIONS_DIR } from './d1-migrations.mjs';
 
@@ -381,16 +382,42 @@ check(r.body.rows.length === route.MAX_SITES && r.body.rows[0].merchant === 'atl
 
 const REPORTS_ALL = route.REPORTS;
 console.log('\nLe hub du tableau de bord');
-const pagesPro = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
-const entry = pagesPro.match(/\{ url: 'assets\/pages-pro\/reports-hub\.js\?v=\d+'[^\n]*handlers: \[([^\]]*)\]/);
-const listed = entry ? entry[1].match(/"([^"]+)"/g).map((x) => x.slice(1, -1)).sort() : [];
-const hub = fs.readFileSync(path.join(ROOT, 'assets/pages-pro/reports-hub.js'), 'utf8');
-const views = fs.readFileSync(path.join(ROOT, 'assets/pages-pro/reports-views.js'), 'utf8');
-const registered = [...hub.matchAll(/handlers\['([a-z-]+)'\] = /g)].map((m) => m[1]).sort();
+/* Le hub tel qu'il tourne : vues, démo et hub chargés dans un bac à sable
+   (le tableau de bord réduit à ce que le hub appelle), puis ouverts. */
+const vmMod = await import('node:vm');
+const HUB_FILES = ['reports-views.js', 'reports-demo.js', 'reports-hub.js'].map((f) => fs.readFileSync(path.join(ROOT, 'assets/pages-pro', f), 'utf8'));
+function hubBox(env) {
+  const handlers = {}, pages = [], styles = [];
+  const window = { Kiwi: { handlers, toast() {}, appPage: (key, o) => { pages.push(o.body); return o; } }, KiwiI18n: { getLang: () => 'fr' }, addEventListener() {} };
+  if (env) window.KiwiEnv = env;
+  const document = { getElementById: () => null, querySelector: () => null, head: { appendChild() {} }, baseURI: 'https://k.invalid/dashboard.html',
+    createElement: () => { const node = {}; Object.defineProperty(node, 'textContent', { set(v) { styles.push(v); } }); return node; } };
+  const box = { window, document, URL, URLSearchParams, setTimeout, console, fetch: async () => { throw new Error('offline'); } };
+  vmMod.createContext(box);
+  for (const src of HUB_FILES) vmMod.runInContext(src, box);
+  return { handlers, pages, styles };
+}
+const lazyEntry = vmMod.runInNewContext('(' + /\{ url: 'assets\/pages-pro\/reports-hub\.js[^\n]*?\] \}/.exec(fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8'))[0] + ')');
+const listed = lazyEntry.handlers.slice().sort();
+const demoHub = hubBox({ isReal: () => false });
+const registered = Object.keys(demoHub.handlers).sort();
 check(listed.length > 0 && listed.join() === registered.join(), 'la section paresseuse liste exactement les handlers que le hub enregistre', { listed, registered });
-const actions = [...(hub + views).matchAll(/data-action="([a-z-]+)"/g)].map((m) => m[1]);
-check(actions.every((a) => registered.includes(a) || a === 'venue-enter-fusion' || a === '${action}'), 'chaque data-action du hub a son handler', actions);
-check(!/\u2014/.test(hub + views) && !/font-style:\s*italic/.test(hub + views) && !/!important/.test(hub + views), 'ni tiret cadratin, ni italique, ni !important');
+await demoHub.handlers['nav-reports']();
+for (const id of route.REPORTS) demoHub.handlers['rp-tab'](id);
+demoHub.handlers['rp-range']('aujourdhui');
+demoHub.handlers['rp-range']('personnalise');
+const actions = [...new Set(demoHub.pages.join('').match(/data-action="[a-z-]+"/g).map((x) => x.slice(13, -1)))];
+check(demoHub.pages.length > 10 && actions.length >= 6 && actions.includes('rp-custom') && actions.every((a) => registered.includes(a)), 'chaque data-action que le hub dessine (dix rapports ouverts) a son handler', actions);
+check(demoHub.pages.every((html) => !/—/.test(html)) && !/font-style:\s*italic|!important/.test(demoHub.styles.join('')) && demoHub.styles.join('').includes('.rp-table .rp-s{display:none}'),
+  'ni tiret cadratin dans les pages dessinées, ni italique ni !important dans le style injecté ; les colonnes secondaires se replient sur téléphone');
+check(/Données de démonstration/.test(demoHub.pages.at(-1)) && /Café Atlas/.test(demoHub.pages.join('')), 'démo (KiwiEnv dit « pas réel ») : les rapports s’ouvrent sur les données de démonstration');
+const realHub = hubBox({ isReal: () => true });
+await realHub.handlers['nav-reports']();
+const bareHub = hubBox(null);
+await bareHub.handlers['nav-reports']();
+check(/Aucun établissement ouvert/.test(realHub.pages.at(-1)) && !/démonstration|Café Atlas/.test(realHub.pages.join(''))
+  && /Aucun établissement ouvert/.test(bareHub.pages.at(-1)) && !/démonstration|Café Atlas/.test(bareHub.pages.join('')),
+  'session réelle, ou KiwiEnv absent : jamais un chiffre de démonstration');
 check(/data-nav="reports"/.test(fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8')), 'le lien « Rapports » est dans la barre latérale');
 check(/data-action="reports-sites"/.test(fs.readFileSync(path.join(ROOT, 'assets/venues.js'), 'utf8')), 'le sélecteur d’établissement ouvre la vraie vue multi-site');
 r = await get(`merchant=atlas-casa&report=payments&${day(D)}`, owner);
@@ -414,7 +441,6 @@ console.log('\nLa démo et l’impression');
   check(dt.hourly && dt.hourly.reduce((a, x) => a + x.net, 0) === dt.totals.cur.net && dt.peakHour, 'démo : une journée se lit à l’heure, les heures refont le net', dt.peakHour);
   check(REPORTS_ALL.every((rep) => { const d = build(rep); return d.headline && d.headline.fr && d.headline.en && d.headline.ar; }), 'démo : chaque rapport a sa phrase dans les trois langues');
   check(Demo.csv(build('products', { csv: true }), 'fr').startsWith(BOM), 'démo : le CSV est fait sur place, BOM compris');
-  check(/typeof window\.KiwiEnv\?\.isReal === 'function' && !window\.KiwiEnv\.isReal\(\)/.test(hub), 'les chiffres de démo ne s’affichent que si KiwiEnv dit « pas réel » (jamais sans KiwiEnv)');
   const page = Views.printable('Rapport', 'Café Atlas', '<p>corps</p>', dt, { summary: dt, vat: build('vat', { preset: 'aujourdhui' }) });
   const page2 = Views.printable('Rapport', 'Atlas', '', dt, { summary: Object.assign({}, dt, { reconcile: Object.assign({ z: 7000, credit: 3000, net: 4000, tickets: 1 }, reconcileNote(1)) }), vat: null });
   check(/Raccord avec le rapport journalier/.test(page2) && /Retours rendus en avoir/.test(page2) && /reste en caisse, mais il est dû au client/.test(page2), 'la page de garde imprimée porte le raccord avec le Z');
@@ -427,10 +453,10 @@ console.log('\nLa démo et l’impression');
   const recData = Object.assign({ z: 7000, credit: 3000, net: 4000, tickets: 1 }, reconcileNote(1));
   const recHtml = Views.summary(Object.assign({}, sum2, { reconcile: recData }));
   check(/cet argent reste en caisse, mais il est dû au client/.test(recHtml) && /dont 1 retour en avoir/.test(recHtml)
-    && !/ne reste pas en caisse/.test(fs.readFileSync(path.join(ROOT, 'assets/pages-pro/reports-views.js'), 'utf8') + recHtml), 'la carte du résumé dit la phrase corrigée, l’ancienne a disparu du code');
+    && !/ne reste pas en caisse/.test(recHtml), 'la carte du résumé dit la phrase corrigée, plus l’ancienne');
   const neg = Views.ranking({ showCost: false, rows: [{ name: 'X', category: '', qty: -0.5, sold: 0, refunded: 500, refundedQty: 0.5, net: -500, prevNet: 0, share: -0.9 }], totals: { net: -500 }, page: { offset: 0, limit: 50, total: 1 } }, 'products');
   check(/\u22120,5</.test(neg) && /\u22120,9/.test(neg) && !/>-0,5|-0,9/.test(neg), 'quantités et parts négatives avec le vrai signe moins');
-  check((neg.match(/class="n rp-s"/g) || []).length === 4 && /<th>Produit<\/th>/.test(neg) && /\.rp-table \.rp-s\{display:none\}/.test(fs.readFileSync(path.join(ROOT, 'assets/pages-pro/reports-views.js'), 'utf8')),
+  check((neg.match(/class="n rp-s"/g) || []).length === 4 && /<th>Produit<\/th>/.test(neg),
     'sur téléphone, Vendu, Retours et Part se replient : la vente nette reste à l’écran');
   check(/Raccord avec le rapport journalier/.test(recHtml) && /data-action="rp-open" data-arg="z"/.test(recHtml), 'le résumé affiche le raccord et ouvre le Z d’un clic');
   const lede = Views.lede(dt, 'comparé à', { title: 'Résumé' });
@@ -438,9 +464,7 @@ console.log('\nLa démo et l’impression');
 }
 
 console.log('\nSchéma');
-const reportsSql = fs.readFileSync(path.join(ROOT, 'functions/api/_reports-sql.js'), 'utf8');
-check(!/PRAGMA|table_info|ALTER\s+TABLE|CREATE\s+TABLE/i.test(reportsSql), 'aucune sonde de colonnes ni repli de schéma : les requêtes lisent schema.sql');
-const minimum = Number(/MINIMUM_SCHEMA_VERSION\s*=\s*(\d+)/.exec(fs.readFileSync(path.join(ROOT, 'functions/_schema-version.js'), 'utf8'))[1]);
+const minimum = MINIMUM_SCHEMA_VERSION;
 const prod = new DatabaseSync(':memory:');
 for (const f of listMigrations().filter((x) => Number(x.slice(0, 4)) <= minimum)) prod.exec(fs.readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8'));
 const win = { from: 1, to: 2 };
@@ -449,6 +473,7 @@ const pg = { limit: 10, offset: 0 };
 const queries = [Q.hours(), Q.lineTotals(), Q.ranking('name', pg), Q.ranking('cat', pg), Q.drivers('name'), Q.staff(), Q.staffRefunds(), Q.payments(),
   Q.refundMethods(), Q.channels(), Q.vatLines([[5, 9], []]), Q.vatRest([[5], [7]]), Q.customers(pg), Q.topTen()];
 for (const q of queries) prod.prepare(base.sql + '\n' + q);
+check([base.sql, ...queries].every((q) => !/PRAGMA|table_info|ALTER\s+TABLE|CREATE\s+TABLE/i.test(q)), 'aucune sonde de colonnes ni repli de schéma dans le SQL produit : il lit schema.sql');
 check(queries.length === 14 && LINES_CTE.includes('o.lines'), `les ${queries.length} requêtes préparent sur le schéma minimum de production (migrations jusqu’à ${String(minimum).padStart(4, '0')})`);
 
 console.log(`\n${n} checks passed`);
