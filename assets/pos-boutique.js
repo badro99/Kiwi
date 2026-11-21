@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=247';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=165';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=247';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=247';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=248';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=166';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=248';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=248';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=1';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=4';
@@ -511,7 +511,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       itemId: line.pid || '', variantId: [line.pid || '', line.size || '', line.color || ''].join(':'),
       name: line.name || (P[line.pid] && P[line.pid].name) || 'Article retiré du catalogue',
       qty: Math.max(1, Number(line.qty) || 1), total: lineTotals[i],
-      cat: rayonOf(line.pid) || '', unit: 'piece', kind: 'product',
+      cat: rayonOf(line.pid) || '', unit: 'piece', kind: 'product', supplierId: (P[line.pid] && P[line.pid].supplierId) || '',
     })));
     const payload = {
       id: sale.serverId || sale.syncId || sale.id,
@@ -2010,7 +2010,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
               total: lineTotals[i],
               cat: ln.rayon,
               unit: 'piece',
-              kind: 'product',
+              kind: 'product', supplierId: (P[ln.pid] && P[ln.pid].supplierId) || '',
             })));
             const payload = {
               id: sale.syncId,

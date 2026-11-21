@@ -27,14 +27,14 @@ function foldedLine(rows, label) {
 
 /* A basket that does not fit is shrunk, never dropped: a `lines = null` basket
  * leaves the revenue with no product detail at all. First the optional detail
- * goes (formula choices, options, promo, base name), then the tail is folded
+ * goes (formula choices, options, promo, base name, supplier), then the tail is folded
  * into one « N autres articles » line that keeps every centime and unit, as the
  * till does above 40 lines. */
 export function fitBasket(rows, limit = BASKET_LIMIT) {
   let text = JSON.stringify(rows);
   if (text.length <= limit) return { text, rows, folded: false };
   let work = rows.map((row) => {
-    const { fc, o, pm, bn, ...rest } = row;
+    const { fc, o, pm, bn, sp, ...rest } = row;
     return rest;
   });
   text = JSON.stringify(work);
@@ -46,6 +46,16 @@ export function fitBasket(rows, limit = BASKET_LIMIT) {
     text = JSON.stringify(work);
   }
   return { text, rows: work, folded: true };
+}
+
+/* `sp` : le fournisseur de l'article au moment de la vente, daté comme la
+ * catégorie `c` d'une ligne. /api/suppliers/ranking s'en sert quand l'article a
+ * quitté le catalogue (un article épuisé puis supprimé garde son fournisseur).
+ * Absent quand la caisse n'en connaît pas : jamais une clé vide. */
+export function stampSupplier(o, l) {
+  const supplier = String((l && (l.sp ?? l.supplierId)) || '').trim().slice(0, 80);
+  if (supplier) o.sp = supplier;
+  return o;
 }
 
 export function basketCents(rows) {

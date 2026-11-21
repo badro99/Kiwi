@@ -4,6 +4,7 @@ import retailSource from './pos-retail-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fitBasket, basketCents } from '../functions/api/_sale-truth.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => retailSource(coreTestSource.readFileSync(path.join(root, p), 'utf8'));
@@ -26,6 +27,8 @@ const settleServiceTable = async () => ({ ok: true });
 const poke = async () => {};
 // Owner custody of refused operations has its own suite (quarantine-settlement-test).
 const quarantineGuard = async () => ({ sql: '', args: [] });
+// Who sold it (seller commissions) has its own suite; these baskets carry no seller.
+const sellerOf = async () => null;
 // This harness exercises legacy sale baskets without tender detail. The new
 // retail tender validator has its own end-to-end D1 test in check.js.
 const validateRetailTenders = () => null;
@@ -78,7 +81,7 @@ const rich = await store({
   lines: [{
     itemId: 'chemise', variantId: 'blanc', name: 'Chemise (Blanc)', baseName: 'Chemise', category: 'hauts',
     quantity: 1.25, total: 75.5, unit: 'piece', kind: 'service', unitCost: 12.345,
-    recipeVersionId: 'recipe-7', options: [{ id: 'lavage', qty: 1 }, 'repassage'],
+    recipeVersionId: 'recipe-7', options: [{ id: 'lavage', qty: 1 }, 'repassage'], supplierId: 'sup_atlas',
   }],
   channel: 'counter',
 });
@@ -141,7 +144,21 @@ const legacy = await store({
 });
 ok('legacy name/qty/total remains accepted', legacy[0].n === 'Pain' && legacy[0].q === 2 && legacy[0].t === 20);
 
+ok('supplier at sale time survives', rich[0].sp === 'sup_atlas');
+ok('legacy line carries no supplier key', !('sp' in legacy[0]));
+const blank = await store({ id: 'sale-v2-sp0', merchant: 'pressing-amira', amount: 10, method: 'cash', label: 'X', ref: 'P-9', ts: Date.now(),
+  lines: [{ itemId: 'x', name: 'X', quantity: 1, total: 10, supplierId: '   ' }] });
+ok('blank supplier is omitted, not stored empty', !('sp' in blank[0]));
+{
+  // A basket at the size limit sheds the supplier (optional detail) before it folds lines, and keeps every centime.
+  const rows = Array.from({ length: 40 }, () => ({ n: 'x'.repeat(60), q: 1, t: 1, i: 'i'.repeat(80), v: 'v'.repeat(80), c: 'c'.repeat(40), sp: 's'.repeat(80) }));
+  const fit = fitBasket(rows, JSON.stringify(rows).length - 1);
+  ok('oversized basket keeps every centime', basketCents(fit.rows) === 4000);
+  ok('oversized basket drops the supplier first', fit.folded && fit.rows.every((r) => !('sp' in r)) && fit.rows.length === 40);
+}
+
 const live = read('assets/live-link.js');
+ok('offline queue keeps the supplier', /if \(sp\) o\.sp = sp/.test(live + read('assets/live-link/queue-store.js')));
 const feed = read('functions/api/feed.js');
 const config = read('functions/api/config.js');
 const storeApi = read('functions/api/store.js');
@@ -183,6 +200,11 @@ verticals.forEach((vertical) => {
 });
 ok('boutique basket keeps stable identity and variants',
   /itemId: ln\.pid/.test(read('assets/pos-boutique.js')) && /variantId: \[ln\.pid, ln\.size/.test(read('assets/pos-boutique.js')));
+
+ok('till product map carries the supplier', /supplierId: p\.supplierId \|\| ''/.test(read('assets/boutique-catalog.js')));
+ok('boutique lines stamp the supplier at sale time', (read('assets/pos-boutique.js').match(/supplierId: \(P\[(ln|line)\.pid\] && P\[(ln|line)\.pid\]\.supplierId\) \|\| ''/g) || []).length === 2);
+ok('maison lines stamp the supplier at sale time', (read('assets/pos-maison.js').match(/supplierId: \(P\[(ln|line)\.pid\] && P\[(ln|line)\.pid\]\.supplierId\) \|\| ''/g) || []).length === 2);
+ok('shared journal keeps the supplier', /if \(supplier\) o\.supplierId = supplier/.test(read('assets/pos-sale.js')));
 
 if (process.exitCode) process.exit(process.exitCode);
 console.log(`  ✓ sale-line v2 (${pass} controls: legacy compatibility, stable truth, offline transport, every caisse producer)`);

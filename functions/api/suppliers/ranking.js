@@ -83,22 +83,35 @@ export function rankSuppliers({ products, variants, suppliers, receipts, sales, 
 
   /* Un article vendu puis supprimé du catalogue (une boutique de mode retire
    * ce qui est épuisé) garde ses ventes : si un bon de réception dit d'où il
-   * venait, elles comptent pour ce fournisseur, au prix d'achat du bon. Sans
-   * bon, on ne sait pas à qui les rendre : elles sont comptées à part
-   * (`retired`), pour que l'écran ne fasse pas croire qu'elles n'existent pas. */
+   * venait, elles comptent pour ce fournisseur, au prix d'achat du bon. La
+   * caisse écrit aussi le fournisseur sur chaque ligne (`sp`, depuis le
+   * 21 nov. 2026) : la dernière ligne qui le nomme vaut un bon. Sans l'un ni
+   * l'autre, on ne sait pas à qui les rendre : elles sont comptées à part
+   * (`retired`), pour que l'écran ne fasse pas croire qu'elles n'existent pas.
+   * Un article encore au catalogue suit son fournisseur d'aujourd'hui. */
   const retired = { products: 0, revenue: 0, units: 0 };
-  const retiredSeen = new Set();
+  const orphan = new Map(), fromLine = new Map();
   arr(sales).forEach((s) => {
     if (!s || num(s.ts) < from || num(s.ts) > now) return;
     arr(s.lines).forEach((l) => {
       const id = l && l.i != null ? String(l.i) : '';
       if (!id || prodById.has(id)) return;
-      const line = lastLine.get(id);
-      if (line) { prodById.set(id, { id, name: String(line.name || l.n || ''), cost: num(line.unitCost), retired: true }); return; }
-      if (!retiredSeen.has(id)) { retiredSeen.add(id); retired.products += 1; }
-      retired.units += Math.max(0, num(l.q));
-      retired.revenue += num(l.t);
+      const sp = String((l && l.sp) || '').trim();
+      const seen = fromLine.get(id);
+      if (sp && (!seen || num(s.ts) >= seen.ts)) fromLine.set(id, { ts: num(s.ts), sp, name: String(l.n || '') });
+      const o = orphan.get(id) || { units: 0, revenue: 0, ts: -1, name: '' };
+      o.units += Math.max(0, num(l.q)); o.revenue += num(l.t);
+      if (l.n && num(s.ts) >= o.ts) { o.ts = num(s.ts); o.name = String(l.n); }
+      orphan.set(id, o);
     });
+  });
+  orphan.forEach((o, id) => {
+    const bon = lastLine.get(id), ln = fromLine.get(id);
+    if (bon || ln) {
+      prodById.set(id, { id, name: String((bon && bon.name) || (ln && ln.name) || o.name || ''), cost: bon ? num(bon.unitCost) : 0, retired: true, supplierId: ln ? ln.sp : '' });
+      return;
+    }
+    retired.products += 1; retired.units += o.units; retired.revenue += o.revenue;
   });
   retired.revenue = money(retired.revenue);
   const supplierOf = new Map();
@@ -142,23 +155,28 @@ export function rankSuppliers({ products, variants, suppliers, receipts, sales, 
   untagged.revenue = money(untagged.revenue);
 
   const list = [...bySupplier.values()].map((s) => {
-    let units = 0, revenue = 0, cost = 0, costKnown = true, returned = 0, inStock = 0, stockValue = 0, dead = 0;
+    let units = 0, revenue = 0, cost = 0, costed = 0, costKnown = true, returned = 0, inStock = 0, stockValue = 0, dead = 0;
     const series = new Array(SERIES).fill(0);
     const rows = s.productIds.map((id) => {
       const p = prodById.get(id), st = perProduct.get(id) || { units: 0, revenue: 0, returned: 0, series: null };
       if (st.series) st.series.forEach((v, k) => { series[k] += v; });
       const unitCost = num(p.cost), left = stock.get(id) || 0;
       units += st.units; revenue += st.revenue; returned += st.returned; inStock += left;
-      if (unitCost > 0) { cost += unitCost * st.units; stockValue += unitCost * left; } else if (st.units > 0) costKnown = false;
+      /* Un article retiré sans prix d'achat compte dans les ventes mais pas dans
+         la marge : il ne doit pas rendre inconnue celle des autres. */
+      if (unitCost > 0) { cost += unitCost * st.units; costed += st.revenue; stockValue += unitCost * left; } else if (st.units > 0 && !p.retired) costKnown = false;
       if (left > 0 && st.units === 0) dead += 1;
       return { id, name: String(p.name || ''), retired: !!p.retired, units: st.units, revenue: money(st.revenue), stock: left, returned: st.returned, cost: unitCost > 0 ? unitCost : null,
         margin: unitCost > 0 ? money(st.revenue - unitCost * st.units) : null };
     }).sort((a, b) => b.revenue - a.revenue || b.units - a.units || a.name.localeCompare(b.name));
-    const margin = costKnown && revenue > 0 ? money(revenue - cost) : null;
+    /* La marge ne se lit que sur au moins la moitié des ventes : un gros
+       article retiré sans prix d'achat la rend inconnue (demi-note neutre),
+       au lieu d'une marge flatteuse mesurée sur une petite part. */
+    const margin = costKnown && costed > 0 && costed * 2 >= revenue ? money(costed - cost) : null;
     return {
       id: s.id, name: s.name, productCount: rows.length, products: rows,
       revenue: money(revenue), units, margin,
-      marginRate: margin == null ? null : margin / revenue,
+      marginRate: margin == null ? null : margin / costed,
       sellThrough: units + inStock > 0 ? units / (units + inStock) : null,
       stock: inStock, stockValue: money(stockValue),
       returnedUnits: returned, returnRate: units > 0 ? returned / units : null,

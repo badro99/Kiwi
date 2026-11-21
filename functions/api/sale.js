@@ -18,7 +18,7 @@ import { settleCoveredOrders } from './_visit-cover.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { validateRetailTenders, retailTenderMethod } from './_retail-tenders.js';
 import { claimRetailBalance, confirmRetailBalance } from './_retail-balances.js';
-import { fitBasket, basketMismatch, clockFlags, recordSaleFlag } from './_sale-truth.js';
+import { fitBasket, basketMismatch, clockFlags, recordSaleFlag, stampSupplier } from './_sale-truth.js';
 import { stampSale } from './_sale-stamp.js';
 import { saveDeliveryCard, cleanDeliveryCard } from './_delivery-card.js';
 import { markStockHeld } from './_delivery-stock.js';
@@ -485,7 +485,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
         const recipeVersion = String((l && (l.r ?? l.recipeVersionId ?? l.recipe_version_id)) || '').slice(0, 80);
         if (itemId) o.i = itemId;
         if (variantId) o.v = variantId;
-        if (unit) o.u = unit;
+        if (unit) o.u = unit; stampSupplier(o, l); // + `sp` (fournisseur), _sale-truth.js
         if (kind) o.kd = kind;
         if (recipeVersion) o.r = recipeVersion;
 
