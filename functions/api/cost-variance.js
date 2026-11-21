@@ -169,59 +169,103 @@ async function salesBlock(env, merchant, legacy, from, to) {
   };
 }
 
-/* Les livraisons (reçu à 0 MAD, functions/api/receivables.js). Encaissée :
- * rien ici, la vente encaissée porte le panier et son coût. Pas encore
- * encaissée : le coût est « chez le livreur », montré à part (ni vendu, ni
- * perdu). Revenue chez nous (retour livreur, ou remboursée) : rien, la
- * marchandise est rentrée. Passée en perte par le propriétaire : une perte
- * « perdu », à la date de la décision. Les retours partiels ({i, q} dans
- * sale_audit 'delivery-return') sont retirés ligne par ligne. */
-const DELIVERY_LOOKBACK_MS = 90 * 86400000;
+/* Les livraisons (reçu à 0 MAD, functions/api/receivables.js). Le chiffre
+ * et le coût d'une livraison entrent à l'encaissement : la vente encaissée
+ * porte le panier (moins les retours connus à cet instant, keptLines).
+ * Trois lectures, chacune bornée sur ce qu'elle cherche :
+ *   · ouvertes : pas encaissées, pas remboursées, pas passées en perte. Leur
+ *     coût est « chez le livreur », à part, ni vendu ni perdu. Le plafond ne
+ *     compte QUE ces colis-là, et s'il est atteint, l'écran le dit ;
+ *   · pertes : les passages en perte DATÉS DANS LA PÉRIODE (sale_audit.ts),
+ *     quelle que soit la date d'envoi du colis ;
+ *   · retours tardifs : un colis revenu APRÈS que son panier a été compté
+ *     (encaissement antérieur, ou acompte déjà passé avec ses articles) : sa
+ *     marchandise rentre, son coût sort de A à la date du retour.
+ * Les retours partiels ({i, q} dans sale_audit 'delivery-return') sont
+ * retirés ligne par ligne. */
+const OPEN_LOOKBACK_MS = 365 * 86400000;
+const DELIVERY_CAP = 500;
 const NOT_GOODS = new Set(['service', 'tip', 'tax', 'payment']);
-async function deliveryBlock(env, merchant, legacy, from, to, now = Date.now()) {
-  const rows = await all(env, `SELECT s.id AS id, s.merchant AS m, s.lines AS lines,
-        EXISTS (SELECT 1 FROM delivery_collections c WHERE c.merchant = s.merchant AND c.sale_id = s.id) AS collected,
-        EXISTS (SELECT 1 FROM sale_audit a WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'refund') AS refunded,
-        (SELECT MAX(a.ts) FROM sale_audit a WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'delivery-writeoff') AS lostTs,
-        (SELECT json_group_array(a.impact) FROM sale_audit a WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'delivery-return') AS backs
-      FROM sales s
-      WHERE s.merchant IN (?, ?) AND s.ts >= ? AND s.ts < ? AND s.void_ts IS NULL
-        AND ${CENTS.replace(/amount/g, 's.amount')} = 0
-        AND (s.method IN ('delivery', 'consignment') OR COALESCE(s.channel, '') = 'delivery')
-      ORDER BY s.ts DESC LIMIT 500`, merchant, legacy || merchant, Math.min(from, now - DELIVERY_LOOKBACK_MS), Math.max(to, now + 1));
-  const out = { atCourierCents: 0, atCourierCount: 0, lostDeliveryCents: 0, lostDeliveryCount: 0, deliveryUncostedLines: 0 };
-  for (const r of rows) {
-    if (Number(r.collected) || Number(r.refunded)) continue;
-    let lines = [];
-    try { lines = JSON.parse(r.lines || '[]'); } catch (_) { lines = []; }
-    if (!Array.isArray(lines)) continue;
-    const back = new Map();
-    try {
-      for (const raw of JSON.parse(r.backs || '[]')) {
-        let imp = {};
-        try { imp = JSON.parse(raw || '{}') || {}; } catch (_) { imp = {}; }
-        for (const l of Array.isArray(imp.lines) ? imp.lines : []) {
-          const i = Number(l && l.i), q = Number(l && l.q);
-          if (Number.isSafeInteger(i) && q > 0) back.set(i, (back.get(i) || 0) + q);
-        }
-      }
-    } catch (_) {}
-    let cost = 0, uncosted = 0, out_ = 0;
-    lines.forEach((l, i) => {
-      if (!l || typeof l !== 'object' || NOT_GOODS.has(String(l.kd || l.kind || ''))) return;
-      const q = Math.max(0, (Number(l.q != null ? l.q : l.qty) || 0) - (back.get(i) || 0));
-      if (!(q > 0)) return;
-      out_ += q;
-      const k = Number(l.k != null ? l.k : l.unitCost);
-      if (k > 0) cost += q * k * 100; else uncosted++;
-    });
-    if (!(out_ > 0)) continue;                         // tout est revenu
-    if (r.lostTs != null) {
-      const ts = Number(r.lostTs);
-      if (ts >= from && ts < to) { out.lostDeliveryCents += Math.round(cost); out.lostDeliveryCount++; out.deliveryUncostedLines += uncosted; }
-      continue;
+const IS_DELIVERY = `${CENTS.replace(/amount/g, 's.amount')} = 0
+        AND (s.method IN ('delivery', 'consignment') OR COALESCE(s.channel, '') = 'delivery')`;
+const BACKS = `(SELECT json_group_array(b.impact) FROM sale_audit b
+          WHERE b.merchant = s.merchant AND b.sale_id = s.id AND b.action = 'delivery-return'%) AS backs`;
+const parseLines = (raw) => { try { const l = JSON.parse(raw || '[]'); return Array.isArray(l) ? l : []; } catch (_) { return []; } };
+function returnedQty(rawList) {
+  const back = new Map();
+  let list = [];
+  try { list = Array.isArray(rawList) ? rawList : JSON.parse(rawList || '[]'); } catch (_) { list = []; }
+  for (const raw of list) {
+    let imp = {};
+    try { imp = (typeof raw === 'string' ? JSON.parse(raw || '{}') : raw) || {}; } catch (_) { imp = {}; }
+    for (const l of Array.isArray(imp.lines) ? imp.lines : []) {
+      const i = Number(l && l.i), q = Number(l && l.q);
+      if (Number.isSafeInteger(i) && q > 0) back.set(i, (back.get(i) || 0) + q);
     }
-    out.atCourierCents += Math.round(cost); out.atCourierCount++; out.deliveryUncostedLines += uncosted;
+  }
+  return back;
+}
+/* Le coût d'un panier, ligne i par ligne i, avec la quantité que `qtyOf`
+ * retient (gardée, ou rendue). */
+function basketCost(lines, qtyOf) {
+  let cents = 0, uncosted = 0, pieces = 0;
+  lines.forEach((l, i) => {
+    if (!l || typeof l !== 'object' || NOT_GOODS.has(String(l.kd || l.kind || ''))) return;
+    const q = qtyOf(Number(l.q != null ? l.q : l.qty) || 0, i);
+    if (!(q > 0)) return;
+    pieces += q;
+    const k = Number(l.k != null ? l.k : l.unitCost);
+    if (k > 0) cents += q * k * 100; else uncosted++;
+  });
+  return { cents: Math.round(cents), uncosted, pieces };
+}
+
+async function deliveryBlock(env, merchant, legacy, from, to, now = Date.now()) {
+  const scope = [merchant, legacy || merchant];
+  const [open, lost, late] = await Promise.all([
+    all(env, `SELECT s.id AS id, s.ts AS ts, s.lines AS lines, ${BACKS.replace('%', '')}
+      FROM sales s
+      WHERE s.merchant IN (?, ?) AND s.ts >= ? AND s.void_ts IS NULL AND ${IS_DELIVERY}
+        AND NOT EXISTS (SELECT 1 FROM delivery_collections c WHERE c.merchant = s.merchant AND c.sale_id = s.id)
+        AND NOT EXISTS (SELECT 1 FROM sale_audit a WHERE a.merchant = s.merchant AND a.sale_id = s.id
+                          AND a.action IN ('refund', 'delivery-writeoff'))
+      ORDER BY s.ts DESC LIMIT ${DELIVERY_CAP + 1}`, ...scope, now - OPEN_LOOKBACK_MS),
+    all(env, `SELECT a.ts AS lostTs, s.lines AS lines, ${BACKS.replace('%', ' AND b.ts <= a.ts')},
+          EXISTS (SELECT 1 FROM delivery_collections c WHERE c.merchant = s.merchant AND c.sale_id = s.id AND c.ts <= a.ts) AS collected
+      FROM sale_audit a JOIN sales s ON s.merchant = a.merchant AND s.id = a.sale_id
+      WHERE a.merchant IN (?, ?) AND a.action = 'delivery-writeoff' AND a.ts >= ? AND a.ts < ?
+        AND s.void_ts IS NULL AND ${IS_DELIVERY}
+      ORDER BY a.ts DESC LIMIT ${DELIVERY_CAP + 1}`, ...scope, from, to),
+    all(env, `SELECT a.impact AS impact, s.lines AS lines
+      FROM sale_audit a JOIN sales s ON s.merchant = a.merchant AND s.id = a.sale_id
+      WHERE a.merchant IN (?, ?) AND a.action = 'delivery-return' AND a.ts >= ? AND a.ts < ? AND s.void_ts IS NULL
+        AND (${CENTS.replace(/amount/g, 's.amount')} > 0
+          OR EXISTS (SELECT 1 FROM delivery_collections c WHERE c.merchant = a.merchant AND c.sale_id = a.sale_id AND c.ts <= a.ts))
+      ORDER BY a.ts DESC LIMIT ${DELIVERY_CAP + 1}`, ...scope, from, to),
+  ]);
+  const out = { atCourierCents: 0, atCourierCount: 0, atCourierOldestTs: null, lostDeliveryCents: 0, lostDeliveryCount: 0,
+    lateReturnCostCents: 0, lateReturnCount: 0, deliveryUncostedLines: 0,
+    deliveryCapped: open.length > DELIVERY_CAP || lost.length > DELIVERY_CAP || late.length > DELIVERY_CAP };
+  for (const r of open.slice(0, DELIVERY_CAP)) {
+    const back = returnedQty(r.backs);
+    const c = basketCost(parseLines(r.lines), (q, i) => q - (back.get(i) || 0));
+    if (!(c.pieces > 0)) continue;                       // tout est revenu
+    out.atCourierCents += c.cents; out.atCourierCount++; out.deliveryUncostedLines += c.uncosted;
+    const ts = n0(r.ts);
+    if (out.atCourierOldestTs == null || ts < out.atCourierOldestTs) out.atCourierOldestTs = ts;
+  }
+  for (const r of lost.slice(0, DELIVERY_CAP)) {
+    if (Number(r.collected)) continue;                   // le panier est déjà parti avec l'encaissement
+    const back = returnedQty(r.backs);
+    const c = basketCost(parseLines(r.lines), (q, i) => q - (back.get(i) || 0));
+    if (!(c.pieces > 0)) continue;
+    out.lostDeliveryCents += c.cents; out.lostDeliveryCount++; out.deliveryUncostedLines += c.uncosted;
+  }
+  for (const r of late.slice(0, DELIVERY_CAP)) {
+    const back = returnedQty([r.impact]);
+    const c = basketCost(parseLines(r.lines), (q, i) => Math.min(q, back.get(i) || 0));
+    if (!(c.pieces > 0)) continue;
+    out.lateReturnCostCents += c.cents; out.lateReturnCount++; out.deliveryUncostedLines += c.uncosted;
   }
   return out;
 }
@@ -481,11 +525,13 @@ async function siteReport(env, site, legacy, from, to, family) {
     namesBlock(env, site.merchant),
     soft(transitBlock(env, site.merchant, family), { inTransitCents: 0, inTransitPieces: 0, inTransitCount: 0 }, missing, 'transfers'),
     targetOf(env, site.merchant),
-    soft(deliveryBlock(env, site.merchant, legacy, from, to), { atCourierCents: 0, atCourierCount: 0, lostDeliveryCents: 0, lostDeliveryCount: 0, deliveryUncostedLines: 0 }, missing, 'deliveries'),
+    soft(deliveryBlock(env, site.merchant, legacy, from, to), { atCourierCents: 0, atCourierCount: 0, atCourierOldestTs: null, lostDeliveryCents: 0, lostDeliveryCount: 0,
+      lateReturnCostCents: 0, lateReturnCount: 0, deliveryUncostedLines: 0, deliveryCapped: false }, missing, 'deliveries'),
   ]);
   const variance = await soft(varianceBlock(env, site.merchant, from, to, stock, names),
     { rows: [], countsFound: false, windows: [], leakCents: 0, surplusCents: 0, netGapCents: 0, measured: 0, missingCount: 0, noCost: 0 }, missing, 'variance');
   const ratios = keyRatios({ ...sales, ...ledger, stockValueCents: stock.stockValueCents, ...transit, ...po,
+    returnsCostCents: sales.returnsCostCents + delivery.lateReturnCostCents,
     lostDeliveryCents: delivery.lostDeliveryCents, atCourierCents: delivery.atCourierCents });
   /* Un ticket offert est une perte, rangée sous son motif. */
   const losses = ledger.byReason.slice();
@@ -497,7 +543,9 @@ async function siteReport(env, site, legacy, from, to, family) {
     ratios,
     target: targetCheck(ratios, target),
     coverage: { ...sales.coverage, saleCount: sales.saleCount, ledgerNoCostRows: ledger.noCostRows, theoreticalLedgerCents: ledger.theoreticalLedgerCents, stockItems: stock.stockItems, stockNoCost: stock.stockNoCost, stockSnapshot: stock.snapshot || 'none',
-      atCourierCount: delivery.atCourierCount, lostDeliveryCount: delivery.lostDeliveryCount, deliveryUncostedLines: delivery.deliveryUncostedLines },
+      atCourierCount: delivery.atCourierCount, atCourierOldestTs: delivery.atCourierOldestTs, lostDeliveryCount: delivery.lostDeliveryCount,
+      lateReturnCostCents: delivery.lateReturnCostCents, lateReturnCount: delivery.lateReturnCount,
+      deliveryUncostedLines: delivery.deliveryUncostedLines, deliveryCapped: delivery.deliveryCapped },
     losses,
     variance,
     missing,

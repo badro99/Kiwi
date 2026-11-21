@@ -20,7 +20,10 @@
  *   8. L'export CSV ne fabrique pas de formule.
  *   9. Livraisons : encaissée une fois, chez le livreur, revenue, perdue ;
  *      retours rapprochés par identifiant d'article ; remboursements sans
- *      panier signalés ; pertes rattachées à qui les a déclarées. */
+ *      panier signalés ; pertes rattachées à qui les a déclarées.
+ *  10. Livraisons, suite (juge, 3e tour) : le plafond ne compte que les colis
+ *      ouverts et se signale ; une perte se date au passage en perte, pas à
+ *      l'envoi ; un retour après encaissement sort son coût de A. */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -537,6 +540,60 @@ eq('détail : la caisse, 403', (await get(`merchant=${SHOP}&${RANGE}&item=poulet
   const vol = BL.find((x) => x.source === 'declared' && x.reason === 'vol') || {};
   eq('vol déclaré : 120 MAD, par Karim (son annulation lui revient)', [vol.cents, vol.by], [12000, [{ name: 'Karim', cents: 12000 }]]);
   eq('casse déclarée par Nadia', (BL.find((x) => x.reason === 'casse') || {}).by, [{ name: 'Nadia', cents: 6000 }]);
+}
+
+/* ── 10. Livraisons : plafond, perte tardive, retour après encaissement ───── */
+{
+  const D = 864e5;
+  run(`INSERT INTO accounts (id,email,business,salt,hash,created_ts,status) VALUES ('acc-5','btq5@cv.ma','Btq5','s','h',?,'active')`, now);
+  for (const m of ['btq5-a', 'btq5-b', 'btq5-c']) run(`INSERT INTO merchant_config (merchant,features,plan,type,account_id,name,status,updated_ts) VALUES (?,'{}','plus','boutique','acc-5',?,'active',?)`, m, m, now);
+  const owner5 = auth.sessionCookie(await auth.makeSession('acc-5', SECRET)).split(';')[0];
+  const ROBE = (q = 1) => JSON.stringify([{ n: 'Robe', q, t: 300 * q, k: 120, i: 'robe' }]);
+  const put = sqlite.prepare(`INSERT INTO sales (id,merchant,amount,amount_cents,method,ts,lines,channel) VALUES (?,?,?,?,?,?,?,?)`);
+  const coll = sqlite.prepare(`INSERT INTO delivery_collections (merchant,collection_sale_id,sale_id,method,amount_cents,ts) VALUES (?,?,?,'cash',?,?)`);
+  const aud = sqlite.prepare(`INSERT INTO sale_audit (merchant,sale_id,action,reason,amount,amount_cents,method,sale_ts,impact,ts) VALUES (?,?,?,'test',0,0,'delivery',?,?,?)`);
+  const sumOf = async (m) => { const r = await get(`merchant=${m}&${RANGE}`, owner5); return { R: r.body.sites[0].ratios, C: r.body.sites[0].coverage }; };
+
+  /* Plafond : 501 colis encaissés ces 30 derniers jours n'effacent pas le colis
+     bloqué chez le livreur depuis 60 jours ; 501 colis ouverts le signalent. */
+  sqlite.exec('BEGIN');
+  put.run('q5a-old', 'btq5-a', 0, 0, 'delivery', now - 60 * D, ROBE(), 'delivery');
+  for (let i = 0; i < 501; i++) {
+    put.run('q5a-d' + i, 'btq5-a', 0, 0, 'delivery', now - 30 * D + i * 1000, ROBE(), 'delivery');
+    coll.run('btq5-a', 'q5a-c' + i, 'q5a-d' + i, 30000, now - 29 * D);
+  }
+  for (let i = 0; i < 501; i++) put.run('q5b-d' + i, 'btq5-b', 0, 0, 'delivery', now - 20 * D + i * 1000, ROBE(), 'delivery');
+  sqlite.exec('COMMIT');
+  const A5 = await sumOf('btq5-a');
+  eq('plafond : 501 encaissés + 1 colis bloqué depuis 60 j → le colis est chez le livreur', [A5.R.atCourierCents, A5.C.atCourierCount, A5.C.deliveryCapped], [12000, 1, false]);
+  ok('le plus ancien colis chez le livreur est daté', Math.abs(A5.C.atCourierOldestTs - (now - 60 * D)) < 1000, A5.C.atCourierOldestTs);
+  const B5 = await sumOf('btq5-b');
+  eq('plafond atteint : 500 colis lus et l’écran le sait', [B5.C.atCourierCount, B5.C.deliveryCapped], [500, true]);
+
+  /* Perte tardive : envoyé il y a 120 jours avant la période, passé en perte
+     pendant la période → la perte compte, à la date de la décision. */
+  put.run('q5c-old', 'btq5-c', 0, 0, 'delivery', T(15, 10) - 120 * D, ROBE(2), 'delivery');
+  aud.run('btq5-c', 'q5c-old', 'delivery-writeoff', T(15, 10) - 120 * D, '{}', T(15, 12));
+  /* Passé en perte APRÈS la période : rien dans la période. */
+  put.run('q5c-after', 'btq5-c', 0, 0, 'delivery', T(14, 10), ROBE(), 'delivery');
+  aud.run('btq5-c', 'q5c-after', 'delivery-writeoff', T(14, 10), '{}', T(18, 12));
+  /* Retour après un encaissement partiel : l'encaissement a emporté les deux
+     robes (keptLines ne connaissait pas encore le retour). */
+  put.run('q5c-l1', 'btq5-c', 0, 0, 'delivery', T(11, 10), ROBE(2), 'delivery');
+  coll.run('btq5-c', 'q5c-l1c', 'q5c-l1', 30000, T(12, 10));
+  put.run('q5c-l1c', 'btq5-c', 300, 30000, 'cash', T(12, 10), ROBE(2), 'delivery');
+  aud.run('btq5-c', 'q5c-l1', 'delivery-return', T(11, 10), JSON.stringify({ lines: [{ i: 0, q: 1 }] }), T(13, 10));
+  /* Acompte + livraison : le ticket a compté le sac à la vente ; le colis revient. */
+  put.run('q5c-sp', 'btq5-c', 100, 10000, 'split', T(11, 11), JSON.stringify([{ n: 'Sac', q: 1, t: 150, k: 70, i: 'sac' }]), null);
+  aud.run('btq5-c', 'q5c-sp', 'delivery-return', T(11, 11), JSON.stringify({ lines: [{ i: 0, q: 1 }] }), T(14, 10));
+  /* Retour AVANT l'encaissement : keptLines l'a déjà retiré, rien à refaire. */
+  put.run('q5c-l2', 'btq5-c', 0, 0, 'delivery', T(11, 12), ROBE(), 'delivery');
+  aud.run('btq5-c', 'q5c-l2', 'delivery-return', T(11, 12), JSON.stringify({ lines: [{ i: 0, q: 1 }] }), T(12, 9));
+  coll.run('btq5-c', 'q5c-l2c', 'q5c-l2', 0, T(13, 9));
+  const C5 = await sumOf('btq5-c');
+  eq('perte tardive : envoyé 120 j plus tôt, passé en perte dans la période → 2 robes perdues', [C5.R.lostDeliveryCents, C5.C.lostDeliveryCount], [24000, 1]);
+  eq('retour après encaissement : la robe revenue et le sac revenu sortent du coût', [C5.R.soldCostCents, C5.R.returnsCostCents, C5.R.cogsCents], [24000 + 7000, 12000 + 7000, 12000]);
+  eq('deux retours tardifs comptés, le retour d’avant l’encaissement ignoré', C5.C.lateReturnCount, 2);
 }
 
 /* L'index qui garde les sommes sur la période. */

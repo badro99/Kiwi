@@ -75,6 +75,8 @@
       stock: 'Valeur du stock maintenant', po: (n) => `Commandes fournisseur en attente · ${n}`,
       transit: 'En route entre magasins', pieces: (n) => `${n} pièce(s) sans coût`,
       courier: (n) => `Chez le livreur, pas encore encaissé · ${n} livraison(s)`,
+      courierAge: (d) => `la plus ancienne depuis ${d} j`,
+      capped: 'Plus de 500 livraisons ouvertes : seules les 500 plus récentes sont comptées chez le livreur.',
       ABare: (x) => `${x} remboursés sans détail : coût non déduit`,
       lossBy: (who) => `déclarée par ${who}`,
       target: 'Seuil de marge',
@@ -147,6 +149,8 @@
       stock: 'Stock value now', po: (n) => `Supplier orders pending · ${n}`,
       transit: 'In transit between locations', pieces: (n) => `${n} piece(s) without a cost`,
       courier: (n) => `With the courier, not yet collected · ${n} deliver${n === 1 ? 'y' : 'ies'}`,
+      courierAge: (d) => `oldest out for ${d} d`,
+      capped: 'Over 500 open deliveries: only the 500 most recent are counted with the courier.',
       ABare: (x) => `${x} refunded without detail: cost not deducted`,
       lossBy: (who) => `declared by ${who}`,
       target: 'Margin floor',
@@ -219,6 +223,8 @@
       stock: 'قيمة المخزون الآن', po: (n) => `طلبيات الموردين قيد الانتظار · ${n}`,
       transit: 'في الطريق بين المحلات', pieces: (n) => `عدد القطع دون كلفة: ${n}`,
       courier: (n) => `لدى عامل التوصيل ولم تُحصَّل بعد · عدد الطلبيات: ${n}`,
+      courierAge: (d) => `عمر أقدم طلبية بالأيام: ${d}`,
+      capped: 'أكثر من 500 طلبية توصيل مفتوحة: لا تُحتسب لدى عامل التوصيل إلا أحدث 500 منها.',
       ABare: (x) => `${x} مستردة دون تفاصيل: لم تُخصم كلفتها`,
       lossBy: (who) => `صرّح بها ${who}`,
       target: 'الحد الأدنى للهامش',
@@ -476,7 +482,8 @@
     const line = (label, value, subs, neg) => `<div class="cv-r${neg ? ' neg' : ''}"><b>${esc(label)}</b><span>${value}</span>${subs.filter(Boolean).map((x) => `<small>${esc(x)}</small>`).join('')}</div>`;
     const transit = R.inTransitCents || R.inTransitPieces
       ? `<span>${esc(c.transit)} · <b>${mad(R.inTransitCents)}</b>${R.inTransitPieces ? ' · ' + esc(c.pieces(R.inTransitPieces)) : ''}</span>` : '';
-    const courier = R.atCourierCents ? `<span>${esc(c.courier((C && C.atCourierCount) || 0))} · <b>${mad(R.atCourierCents)}</b></span>` : '';
+    const age = C && C.atCourierOldestTs ? Math.floor((Date.now() - C.atCourierOldestTs) / 864e5) : 0;
+    const courier = R.atCourierCents ? `<span>${esc(c.courier((C && C.atCourierCount) || 0))} · <b>${mad(R.atCourierCents)}</b>${age >= 1 ? ' · ' + esc(c.courierAge(age)) : ''}</span>` : '';
     return `<div class="cv-card"><div class="cv-eyebrow">${esc(c.ratios)}</div>
       ${line(c.b, mad(R.netSalesCents), [c.bSub(mad(R.discountCents), mad(R.refundCents))])}
       ${line(c.A, mad(R.cogsCents), [c.ASub(pct(R.costPct), mad(R.marginCents)),
@@ -575,6 +582,7 @@
     }
     if (C.undetailedCents > 0) items.push(esc(c.bare(mad(C.undetailedCents))));
     if (C.uncostedReturnCents > 0) items.push(esc(c.backNoCost(mad(C.uncostedReturnCents), C.uncostedReturnLines || 1)));
+    if (C.deliveryCapped) items.push(esc(c.capped));
     if ((site.ratios || {}).refundUndetailedCents > 0) items.push(esc(c.bareRefund(mad(site.ratios.refundUndetailedCents))));
     if (V.missingCount > 0) items.push(esc(c.needCount(V.missingCount)));
     if (C.stockNoCost > 0) items.push(esc(c.stockNoCost(C.stockNoCost)));
