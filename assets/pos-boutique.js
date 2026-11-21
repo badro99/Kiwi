@@ -1,12 +1,12 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=231';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=149';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=231';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=231';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=234';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=152';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=234';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=234';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=1';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=3';
-import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=23';
+import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=23'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=2';
 import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zDrawerCash, zDrawerMoves, zDrawerRows, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=10'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=23'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11'; import { bqTransfers } from './pos-boutique/transfers.js?v=7';
 
   'use strict';
@@ -2012,6 +2012,8 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
               ...(mzSaleDiscount({ amountCents: Math.round(cashIn * 100), totalCents: Math.round(total * 100), remiseCents: Math.round(tot.remise * 100), rewardCents: Math.round(tot.reward * 100), actorId: bqActorId() }) || {}),
             };
             if (sale.clientId) payload.clientId = sale.clientId;
+            const sellerProof = !IS_DEMO && window.KiwiStaff && window.KiwiStaff.sellerProof;   // commissions vendeurs : la preuve signée de qui a saisi son code, jamais un nom
+            if (typeof sellerProof === 'string' && sellerProof) payload.seller = { proof: sellerProof };
             if (isAcompte) payload.retailBalance = {
               id: balanceId, customerId: c.id, ticketRef: sale.id,
               totalCents: Math.round(total * 100), stage: 'open',
@@ -2747,6 +2749,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
           <div class="clo-highlight-icon"><i data-lucide="shopping-bag"></i></div>
           <div class="clo-highlight-text">${hlText}</div>
         </div>
+        <div id="bqclo-sellers"></div>
         <div class="clo-actions">
           <button class="clo-btn secondary" id="bqclo-print"><i data-lucide="printer"></i><span>Imprimer le rapport Z</span></button>
           <button class="clo-btn primary" id="bqclo-close"><i data-lucide="lock"></i><span>Fermer la caisse</span></button>
@@ -2755,6 +2758,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       </div>`;
     v.classList.add('is-open');
     icons();
+    void mountSellerDay(v.querySelector('#bqclo-sellers'), { slug: merchantSlug, day: retDayKey(tillNow()), esc, fmtMAD });   // design 2027 + option « Commissions vendeurs » seulement
 
     v.querySelector('#bqclo-count').addEventListener('input', bqUpdateEcart);
     v.querySelector('#bqclo-continue').onclick = () => v.classList.remove('is-open');

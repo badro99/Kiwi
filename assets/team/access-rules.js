@@ -68,6 +68,12 @@
       baseSalary: parseFloat(data.baseSalary) || 0,
       hourlyRate: parseFloat(data.hourlyRate) || 0,
       contractHours: Math.min(80, Math.max(0, parseFloat(data.contractHours) || 0)),
+      /* Commission sur ses ventes, en % (0 = aucune). Lue par /api/commissions,
+         qui la croise avec les ventes de caisse portant son nom. */
+      /* Champ absent (option « Commissions vendeurs » éteinte) : on garde le taux. */
+      commissionRate: data.commissionRate == null
+        ? Math.min(100, Math.max(0, parseFloat(prev && prev.commissionRate) || 0))
+        : Math.min(100, Math.max(0, parseFloat(data.commissionRate) || 0)),
       languages: st.languages.slice(),
       address: (data.address || '').trim(),
       cin: (data.cin || '').trim(),

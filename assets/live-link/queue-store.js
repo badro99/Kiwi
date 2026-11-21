@@ -756,6 +756,11 @@ function postSale(entry) {
     if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
     /* La fiche cliente de la vente : le serveur la range avec la vente (sales.client_id). */
     if (entry.clientId) body.clientId = String(entry.clientId).slice(0, 64);
+    /* Qui a vendu (commissions vendeurs) : la preuve signée par /api/pin/verify
+       pour la personne qui a déverrouillé la caisse. Le serveur en tire le nom. */
+    if (entry.seller && typeof entry.seller === 'object' && typeof entry.seller.proof === 'string' && entry.seller.proof) {
+      body.seller = { proof: entry.seller.proof.slice(0, 2048) };
+    }
     /* La fiche du destinataire d'une livraison (functions/api/_delivery-card.js). */
     if (entry.deliveryCard && typeof entry.deliveryCard === 'object') {
       var dc = entry.deliveryCard;

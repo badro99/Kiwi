@@ -224,8 +224,8 @@
     "sha": "2aec622ff3447940"
   },
   "assets/caisse-lang.js": {
-    "v": "153",
-    "sha": "b7b6be76bd80ec2c"
+    "v": "155",
+    "sha": "e0a71ec964ea36ca"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -248,8 +248,8 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "77",
-    "sha": "001eba03b062043a"
+    "v": "79",
+    "sha": "27460f08df7d3444"
   },
   "assets/caisse-pairs.js": {
     "v": "4",
@@ -1016,8 +1016,8 @@
     "sha": "c9ea4c8cf878eb4d"
   },
   "assets/kit/pin-flow.js": {
-    "v": "7",
-    "sha": "58e1209d6fe9935a"
+    "v": "8",
+    "sha": "476f90aa7108cc80"
   },
   "assets/kit/pin.js": {
     "v": "6",
@@ -1228,12 +1228,12 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "132",
-    "sha": "f529949a1cc588d4"
+    "v": "134",
+    "sha": "79d351eb87d166eb"
   },
   "assets/live-link/queue-store.js": {
-    "v": "25",
-    "sha": "0f4d24996ec2e7bf"
+    "v": "27",
+    "sha": "251a7f752092f7ec"
   },
   "assets/live-link/sale-identity.js": {
     "v": "4",
@@ -1524,8 +1524,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "268",
-    "sha": "1bac356b3b031227"
+    "v": "269",
+    "sha": "6014f9f943203d0e"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1588,8 +1588,12 @@
     "sha": "1803c6a453438f4f"
   },
   "assets/planning/payroll-view.js": {
-    "v": "15",
-    "sha": "4731950e958b08a6"
+    "v": "17",
+    "sha": "307f2956b5155420"
+  },
+  "assets/planning/seller-commissions.js": {
+    "v": "1",
+    "sha": "5602977f0d836923"
   },
   "assets/planning/shift-editor.js": {
     "v": "5",
@@ -1640,12 +1644,12 @@
     "sha": "bee5b88b8cabff28"
   },
   "assets/pos-boutique.css": {
-    "v": "335",
+    "v": "338",
     "sha": "b684eddfee44a144"
   },
   "assets/pos-boutique.js": {
-    "v": "335",
-    "sha": "7c0c707162302e50"
+    "v": "338",
+    "sha": "aaca25411bc04259"
   },
   "assets/pos-boutique/bargain-ui.js": {
     "v": "3",
@@ -1656,16 +1660,16 @@
     "sha": "7234a8ebd42e4f26"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "231",
-    "sha": "8ebb7486116976b8"
+    "v": "234",
+    "sha": "02d33db3c874fe29"
   },
   "assets/pos-boutique/delivery-card.js": {
     "v": "10",
     "sha": "c1c7e9fb01688344"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "149",
-    "sha": "44e4e37e9e309ab8"
+    "v": "152",
+    "sha": "5a41cf1aa4b3b85a"
   },
   "assets/pos-boutique/exchange.js": {
     "v": "6",
@@ -1680,8 +1684,8 @@
     "sha": "9be89b70db7c0336"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "231",
-    "sha": "f26fb1df9b52fea0"
+    "v": "234",
+    "sha": "cb47c400015906e2"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "23",
@@ -1724,12 +1728,16 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "231",
-    "sha": "6379db365d6445d3"
+    "v": "234",
+    "sha": "3e62e5836e896462"
   },
   "assets/pos-boutique/search.js": {
     "v": "17",
     "sha": "a45c77c8274ec2fe"
+  },
+  "assets/pos-boutique/seller-day.js": {
+    "v": "2",
+    "sha": "7b269d73ab576902"
   },
   "assets/pos-boutique/sister-stock.js": {
     "v": "1",
@@ -1768,8 +1776,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "463",
-    "sha": "5c7362129e35f058"
+    "v": "466",
+    "sha": "eba299a8667555ba"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -2300,16 +2308,16 @@
     "sha": "3cb977732d0c9fb3"
   },
   "assets/team-hours.js": {
-    "v": "30",
-    "sha": "dd4d56ef6f1d15d2"
+    "v": "32",
+    "sha": "3e72c82b3a82c76b"
   },
   "assets/team.js": {
-    "v": "361",
-    "sha": "8c66f305daa8a514"
+    "v": "362",
+    "sha": "e87cbf97e745e102"
   },
   "assets/team/access-rules.js": {
-    "v": "7",
-    "sha": "241e2a90f709653c"
+    "v": "8",
+    "sha": "a57b95c0756c77ba"
   },
   "assets/team/catalog.js": {
     "v": "2",
@@ -2328,16 +2336,16 @@
     "sha": "5fa184b6eea75f72"
   },
   "assets/team/profile-ui.js": {
-    "v": "22",
-    "sha": "96373d93950f2579"
+    "v": "23",
+    "sha": "e675f6efde29d098"
   },
   "assets/team/roster-list.js": {
     "v": "6",
     "sha": "f8d4f03e16d05978"
   },
   "assets/team/styles.js": {
-    "v": "4",
-    "sha": "2663352f1dc71346"
+    "v": "5",
+    "sha": "b8c91be73fccc740"
   },
   "assets/team/venue-scope.js": {
     "v": "6",

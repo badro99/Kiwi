@@ -177,6 +177,8 @@
       edPerHour: 'MAD / heure',
       edContractHours: 'Heures du contrat',
       edPerWeek: 'h / semaine',
+      edCommission: 'Commission sur ses ventes',
+      edPctSales: '% des ventes',
       edCompHint: "Laissez vide ce qui ne s'applique pas. Avec un salaire, le taux horaire ne paie que les heures au-delà du contrat (44 h par semaine si rien n'est saisi).",
       edCodeT: 'Code personnel',
       edCodeHint: "Ouvre la caisse et l'app employé. Quatre chiffres, propres à cette personne.",
@@ -375,6 +377,8 @@
       edPerHour: 'MAD / hour',
       edContractHours: 'Contract hours',
       edPerWeek: 'h / week',
+      edCommission: 'Commission on their sales',
+      edPctSales: '% of sales',
       edCompHint: 'Leave blank what does not apply. With a salary, the hourly rate only pays hours beyond the contract (44 h a week if nothing is entered).',
       edCodeT: 'Personal code',
       edCodeHint: 'Opens the till and the employee app. Four digits, unique to this person.',
@@ -572,6 +576,8 @@
       edPerHour: 'درهم / ساعة',
       edContractHours: 'ساعات العقد',
       edPerWeek: 'ساعة / أسبوع',
+      edCommission: 'عمولته من المبيعات',
+      edPctSales: '٪ من المبيعات',
       edCompHint: 'اترك الحقل فارغًا إن لم ينطبق. مع راتب شهري، لا يُحتسب الأجر بالساعة إلا للساعات التي تتجاوز العقد (44 ساعة في الأسبوع إن لم يُدخَل شيء).',
       edCodeT: 'الرمز الشخصي',
       edCodeHint: 'يفتح الصندوق وتطبيق الموظف. أربعة أرقام خاصة بهذا الشخص.',
@@ -1160,6 +1166,7 @@
          was booked at an invented salary, and Masse salariale summed it. */
       baseSalary: '',
       hourlyRate: '',
+      commissionRate: '',
       languages: [],
       address: '',
       cin: '',
@@ -1248,6 +1255,7 @@
                 ${edField(T, 'baseSalary', T.edSalary, `<span class="kt-ed-suffix">${edInput('number', 'baseSalary', m.baseSalary, '', 'min="0" step="50" inputmode="decimal"')}<i>${esc(T.edPerMonth)}</i></span>`)}
                 ${edField(T, 'hourlyRate', T.edHourly, `<span class="kt-ed-suffix">${edInput('number', 'hourlyRate', m.hourlyRate, '', 'min="0" step="0.5" inputmode="decimal"')}<i>${esc(T.edPerHour)}</i></span>`)}
                 ${edField(T, 'contractHours', T.edContractHours, `<span class="kt-ed-suffix">${edInput('number', 'contractHours', (+m.contractHours || 0) > 0 ? m.contractHours : '', '44', 'min="0" max="80" step="0.5" inputmode="decimal"')}<i>${esc(T.edPerWeek)}</i></span>`)}
+                ${window.KiwiConfig?.features?.sellerCommissions !== true ? '' : edField(T, 'commissionRate', T.edCommission, `<span class="kt-ed-suffix">${edInput('number', 'commissionRate', (+m.commissionRate || 0) > 0 ? m.commissionRate : '', '', 'min="0" max="100" step="0.5" inputmode="decimal"')}<i>${esc(T.edPctSales)}</i></span>`)}
               </div>
             </section>
 
@@ -1531,6 +1539,7 @@
                 ${row(T.edSalary, pay(m.baseSalary, T.edPerMonth))}
                 ${row(T.edHourly, pay(m.hourlyRate, T.edPerHour))}
                 ${(+m.baseSalary || 0) > 0 && (+m.hourlyRate || 0) > 0 ? row(T.edContractHours, `<span class="kt-pv-num">${esc(String(contractWeekHours(m)))} <i>${esc(T.edPerWeek)}</i></span>`) : ''}
+                ${window.KiwiConfig?.features?.sellerCommissions === true && (+m.commissionRate || 0) > 0 ? row(T.edCommission, `<span class="kt-pv-num">${esc(window.KiwiNumber?.format((+m.commissionRate), {}) ?? String(+m.commissionRate))} <i>${esc(T.edPctSales)}</i></span>`) : ''}
               </dl>
             </section>
 

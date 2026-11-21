@@ -13,6 +13,7 @@ import {
   faceAccessTier, faceMarkState, json,
 } from '../../auth/_lib.js';
 import { recordSessionTier } from '../../auth/_session-tier.js';
+import { tillSellerProof } from '../_seller.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -82,6 +83,8 @@ export async function onRequestPost(context) {
     staff: verified.staff,
     ...(faceMark ? { faceMark } : {}),
     ...(merchant && employeeRoleOpensTill(verified.staff.role) ? { actorProof: await tillActorProof(env.AUTH_SECRET, merchant, verified.staff) } : {}),
+    /* Commissions vendeurs : la preuve que CETTE personne tient la caisse ; /api/sale en tire le vendeur. */
+    ...(merchant && employeeRoleOpensTill(verified.staff.role) ? { sellerProof: await tillSellerProof(env.AUTH_SECRET, merchant, verified.staff) } : {}),
     ...(approval ? { approval } : {}),
     ...(verified.merchant ? { merchant: verified.merchant } : {}),
   });

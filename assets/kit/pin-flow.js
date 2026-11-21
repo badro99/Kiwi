@@ -173,6 +173,7 @@
       var who = assign({ verdict: 'online' }, reply.body.staff || reply.body.who || {});
       if (reply.body.approval) who.approval = String(reply.body.approval);
       if (reply.body.actorProof) who.actorProof = String(reply.body.actorProof);
+      if (reply.body.sellerProof) who.sellerProof = String(reply.body.sellerProof);   /* qui vend (commissions vendeurs) */
       if (use === 'manager') return managerRole(who, ctx) || { success: who };
       return tillRole(use, who, ctx) || { success: who };
     }

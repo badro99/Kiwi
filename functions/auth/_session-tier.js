@@ -121,6 +121,7 @@ const MIN_TIER = new Map([
   ['/api/push/morning', 'manager'],
   ['/api/foodcost', 'owner'],
   ['/api/pay-statements', 'owner'],
+  ['/api/commissions', 'owner'],      // commissions vendeurs : des montants de paie
   ['/api/month-report', 'owner'],
   ['/api/comptable/access', 'owner'],
   ['/api/agent/keys', 'owner'],

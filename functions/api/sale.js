@@ -24,6 +24,7 @@ import { saveDeliveryCard, cleanDeliveryCard } from './_delivery-card.js';
 import { markStockHeld } from './_delivery-stock.js';
 import { autoParcel } from './ozon/parcels.js';
 import { exactMerchant } from './ozon/_lib.js';
+import { sellerOf } from './_seller.js';
 
 async function legacyPaymentId(merchant, legacyId, payment) {
   const input = JSON.stringify([merchant, legacyId, payment.ref, payment.ts,
@@ -762,38 +763,39 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
   const signed = await writtenBy(request, env, merchant);
   // Seul un id de visite que le serveur a réellement remplacé perd l'auteur qui certifie ;
   // une vente envoyée sans id reste à l'appareil qui l'a écrite (sinon une caisse se soustrairait au Z).
-  const sellerId = employee ? String(employee.session.staffId) : null;
+  const seller = await sellerOf(employee, b, env.AUTH_SECRET, merchant);   // qui a vendu (_seller.js) : l'employé en service, sinon la preuve signée de la caisse
+  const sellerCols = seller ? ['seller_id', ...(seller.name ? ['seller_name'] : [])] : [], sellerVals = seller ? [seller.id || null, ...(seller.name ? [seller.name] : [])] : [];
   const author = signed && signed.startsWith('till:') && isLegacyVisitId && id !== requestedId ? signed + '#rekeyed' : signed;
   if (hasDiscount) {
     try {
       await env.DB.prepare(
-        `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents, ${hasVisitLink ? 'session_id, split_flow_id, ' : ''}gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id${sellerId ? ', seller_id' : ''}${author ? ', written_by' : ''}) VALUES (${Array((hasVisitLink ? 16 : 14) + (sellerId ? 1 : 0) + (author ? 1 : 0)).fill('?').join(', ')})`
+        `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents, ${hasVisitLink ? 'session_id, split_flow_id, ' : ''}gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id${sellerCols.map((c) => ', ' + c).join('')}${author ? ', written_by' : ''}) VALUES (${Array((hasVisitLink ? 16 : 14) + sellerCols.length + (author ? 1 : 0)).fill('?').join(', ')})`
       ).bind(...[id, merchant, amount, method, label, ref, ts, lines, channel || null, amountCents,
              ...(hasVisitLink ? [effectiveSessionId || null, splitFlowId || null] : []),
              grossAmountCents, discountAmountCents, discountReason, discountActorId,
-             ...(sellerId ? [sellerId] : []),
+             ...sellerVals,
              ...(author ? [author] : [])]).run();
       stored = true;
     } catch (discountError) {
       const message = String((discountError && discountError.message) || discountError);
-      if (!/gross_amount_cents|discount_amount_cents|discount_reason|discount_actor_id/.test(message)) {
+      if (!/gross_amount_cents|discount_amount_cents|discount_reason|discount_actor_id|seller_id|seller_name/.test(message)) {
         return json({ error: 'db', detail: safeDetail('sale', message) }, 500);
       }
     }
   }
   if (!stored) try {
     await env.DB.prepare(
-      `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents${hasVisitLink ? ', session_id, split_flow_id' : ''}${sellerId ? ', seller_id' : ''}${author ? ', written_by' : ''}) VALUES (${Array((hasVisitLink ? 12 : 10) + (sellerId ? 1 : 0) + (author ? 1 : 0)).fill('?').join(', ')})`
+      `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents${hasVisitLink ? ', session_id, split_flow_id' : ''}${sellerCols.map((c) => ', ' + c).join('')}${author ? ', written_by' : ''}) VALUES (${Array((hasVisitLink ? 12 : 10) + sellerCols.length + (author ? 1 : 0)).fill('?').join(', ')})`
     ).bind(...[id, merchant, amount, method, label, ref, ts, lines, channel || null, amountCents,
       ...(hasVisitLink ? [effectiveSessionId || null, splitFlowId || null] : []),
-      ...(sellerId ? [sellerId] : []),
+      ...sellerVals,
       ...(author ? [author] : [])]).run();
   } catch (e) {
     // Optional legacy columns may be absent, but cents must never be dropped.
     const columns = ['lines', 'channel', 'amount_cents', ...(hasVisitLink ? ['session_id', 'split_flow_id'] : []),
-      ...(sellerId ? ['seller_id'] : []), ...(author ? ['written_by'] : [])];
+      ...sellerCols, ...(author ? ['written_by'] : [])];
     const values = [lines, channel || null, amountCents, ...(hasVisitLink ? [effectiveSessionId || null, splitFlowId || null] : []),
-      ...(sellerId ? [sellerId] : []), ...(author ? [author] : [])];
+      ...sellerVals, ...(author ? [author] : [])];
     let error = e;
     for (;;) {
       const message = String(error && error.message || error);

@@ -1612,7 +1612,7 @@ section('Whole-project regressions');
     'sales-window-test.mjs',
     'sales-summary-test.mjs',
     'sales-history-parity-test.mjs', 'revenue-at-sale-test.mjs',
-    'sales-summary-store-test.mjs', 'sales-summary-early-test.mjs',
+    'sales-summary-store-test.mjs', 'seller-commissions-test.mjs', 'sales-summary-early-test.mjs',
     'sales-reconcile-test.mjs',
     'sales-trim-test.mjs',
     'sales-scope-test.mjs',

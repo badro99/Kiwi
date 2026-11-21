@@ -3,6 +3,23 @@
  * Reads window: KiwiConfig, KiwiVenue, __kiwiRole, __kiwiTeamV2. Mutable UI state is private to this factory. */
 export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correctionsHtml, dateLocale, deferredMark, esc, fmtHours, fmtMad, fmtPay, getHours, getMembers, handlers, hourlyPayFor, initials, jobName, live, memberFullName, pad, payCents, payrollFigures, periodNavigatorHtml, periodPillsHtml, render, renderPlanningPane, saveCustomTeams, shiftHours, svgIcon, t, teamKey, toISO, trLang }) {
   let payTab = 'planning';
+  /* Onglet « Commissions » (assets/planning/seller-commissions.js) : seulement
+     avec l'option « Commissions vendeurs » du commerce (kiwi-admin) ET le kit
+     2027 du tableau de bord. Le module se charge à la première ouverture. */
+  const commissionsOn = () => window.KiwiConfig?.features?.sellerCommissions === true
+    && document.documentElement.getAttribute('data-skin-2027') === 'dashboard';
+  const commissionsWait = { pane: () => '<div class="eq-section kt-com-state" data-kt-commissions="loading"></div>', forget() {},
+    tabLabel: () => ({ fr: 'Commissions', en: 'Commissions', ar: 'العمولات' })[trLang()] || 'Commissions' };
+  let commissions = null;
+  function commissionsView() {
+    if (commissions) return commissions;
+    commissions = commissionsWait;
+    import('./seller-commissions.js?v=1').then((m) => {
+      commissions = m.createSellerCommissions({ esc, fmtPay, trLang, render, slug: () => Kiwi?.__teamProfileCore?.teamSlug?.() || '' });
+      render();
+    }).catch(() => { commissions = null; });
+    return commissions;
+  }
   /* La paie est calculée au centime (hourlyPayFor) et affichée au centime par
      fmtPay (équipe, centimes entiers), comme la grille de planning : une
      semaine, un seul total. */
@@ -114,7 +131,8 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
   }
 
   handlers['kt-paytab'] = (_el, kind) => {
-    if (kind !== 'planning' && kind !== 'hours') return;
+    if (kind !== 'planning' && kind !== 'hours' && !(kind === 'commissions' && commissionsOn())) return;
+    if (kind === 'commissions') commissionsView().forget();   // rouvrir l'onglet relit les ventes
     payTab = kind;
     render();
   };
@@ -293,11 +311,14 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
             <button class="btn-slim" type="button" data-action="generate-payslips">${esc(({ fr:'Relevés de toute l’équipe', en:'Statements for all employees', ar:'كشوف جميع الموظفين' })[trLang()])}</button>
             <button class="eq-pill${payTab === 'planning' ? ' on' : ''}" type="button" data-action="kt-paytab" data-arg="planning">${esc(T.tabPlanning)}</button>
             <button class="eq-pill${payTab === 'hours' ? ' on' : ''}" type="button" data-action="kt-paytab" data-arg="hours">${esc(T.tabRealised)}</button>
+            ${commissionsOn() ? `<button class="eq-pill${payTab === 'commissions' ? ' on' : ''}" type="button" data-action="kt-paytab" data-arg="commissions">${esc(commissionsView().tabLabel())}</button>` : ''}
           </div>
         </div>
-        ${payTab === 'planning'
-          ? renderPlanningPane(T, venue, venueType, members, { showCosts: true })
-          : renderHoursPane(T, venue, venueType, members)}
+        ${payTab === 'commissions' && commissionsOn()
+          ? commissionsView().pane(period)
+          : payTab === 'planning'
+            ? renderPlanningPane(T, venue, venueType, members, { showCosts: true })
+            : renderHoursPane(T, venue, venueType, members)}
       </div>`;
   }
 

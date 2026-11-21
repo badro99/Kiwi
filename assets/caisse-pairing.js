@@ -756,7 +756,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
     if (p) {
       var name = String(p.name || '').trim() || 'Caissier';
       s = { id: String(p.id || '').slice(0, 80), name: name, role: String(p.role || '').trim() || 'Caissier', first: firstNameOf(name) || name };
-      if (p.offline) s.offline = true;   // proven against a cached verifier, not the server
+      if (p.offline) s.offline = true; if (typeof p.sellerProof === 'string' && p.sellerProof) s.sellerProof = p.sellerProof.slice(0, 2048);   // offline: proven against a cached verifier · sellerProof: qui vend, signé par /api/pin/verify (commissions)
     }
     window.KiwiStaff = s; if (!(p && p.operator)) try { sessionStorage.removeItem('kiwi:tillOperator:v1'); } catch (_) {}   // seul bootForOperator garde la vue opérateur ; tout vrai poste l'efface
     try {
@@ -1165,7 +1165,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
       })
       .then(function (d) {
         if (!(d && d.ok && d.staff)) return null;
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {});
         /* The server said yes: unlock now, refresh the offline verifier behind. */
         rememberOfflinePin(merchant, code, staff);
         return staff;
@@ -1193,7 +1193,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
       lastFailed = reply.kind !== 'answer';
       var d = reply.body;
       if (reply.kind === 'answer' && reply.status === 200 && d && d.ok && d.staff) {
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {});
         return rememberOfflinePin(merchant, code, staff).then(function () { return reply; }, function () { return reply; });
       }
       if (reply.kind === 'answer' && (reply.status === 401 || reply.status === 403)) return verifyOfflinePin(merchant, code, true).then(function (gone) {
