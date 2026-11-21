@@ -952,10 +952,17 @@
   /* Onglet caché (YouTube sur la tablette…) : la relève s'arrête, donc le
    * comptoir laisse une marque « absente » qui garde Order Pro ouvert pendant
    * les horaires publiés (functions/api/order/_guest-sessions.js › deskAway). */
-  document.addEventListener('visibilitychange', function () {
+  /* Toujours cachée : la marque (valable 2 h) est renouvelée toutes les 2 h,
+   * un peu avant l'échéance. Une tablette éteinte ne renouvelle plus rien. */
+  var awayTimer = null;
+  function markAway() {
     var m = document.hidden && orderProOn() && merchant();
     if (m) fetch('/api/order/queue', { method: 'POST', keepalive: true, credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant: m, away: true }) }).catch(function () {});
+  }
+  document.addEventListener('visibilitychange', function () {
+    clearInterval(awayTimer); awayTimer = null;
+    if (document.hidden) { markAway(); awayTimer = setInterval(markAway, 115 * 60 * 1000); }
   });
   document.addEventListener('kiwi:request-wake', wakeInbox);
   window.addEventListener('focus', wakeInbox);

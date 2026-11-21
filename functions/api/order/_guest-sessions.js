@@ -52,11 +52,11 @@ export async function deskTouch(env, merchant) {
  * client voyait « fermé » en plein service, jusqu'à ce que quelqu'un revienne
  * sur l'onglet Kiwi. Au moment où elle se cache, la caisse laisse donc une
  * marque « absente » (ligne `away:<commerce>` de la même table, aucune colonne
- * nouvelle). Cette marque garde la porte ouverte DESK_AWAY_MS au plus, et
+ * nouvelle). Cette marque garde la porte ouverte DESK_AWAY_MS (2 h), renouvelée toutes les 2 h tant que la page vit, et
  * seulement pendant les horaires publiés : sans horaires, rien ne change, et
  * une tablette éteinte le soir ferme toujours à l'heure de fermeture. Une
  * marque plus ancienne que le dernier passage de la caisse ne compte pas. */
-export const DESK_AWAY_MS = 3 * 60 * 60 * 1000;
+export const DESK_AWAY_MS = 2 * 60 * 60 * 1000;
 const awayKey = (merchant) => 'away:' + merchant;
 
 export async function deskAway(env, merchant) {
