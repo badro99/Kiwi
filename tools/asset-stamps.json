@@ -1788,8 +1788,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "470",
-    "sha": "2d10e79e13cfd47d"
+    "v": "471",
+    "sha": "9407f33aa2ac77c4"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1800,7 +1800,7 @@
     "sha": "2726f858d71edecf"
   },
   "assets/pos-epicerie/carnet.js": {
-    "v": "16",
+    "v": "17",
     "sha": "1b7f9ea5fa36d438"
   },
   "assets/pos-fastfood.css": {
