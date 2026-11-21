@@ -1159,7 +1159,7 @@ button.bq-pill.ok {
 }
 .bq-modal-x:hover { background: var(--paper-mute); color: var(--ink); }
 .bq-modal-x svg { width: 16px; height: 16px; }
-.modal.bq-rel { position: relative; }
+.modal.bq-rel { position: relative; max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; }   /* une tablette en paysage voyait l'encaissement coupé en bas : chaque fenêtre de la caisse défile dans l'écran */
 .bq-foot-note { font-size: 11px; color: var(--ink-4); text-align: center; margin-top: 10px; }
 
 @media (max-width: 1240px) {

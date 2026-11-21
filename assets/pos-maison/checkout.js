@@ -1,14 +1,14 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=232';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=236';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=147';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=147';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=149';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=149';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
 import { mzDeliveryCard } from './delivery.js?v=28';
 import { mzKickForCash } from './drawer.js?v=2';
 import { mzAvoirSheet, codeKey } from './avoir-sheet.js?v=9';
-import { retailModes, heldUntilText } from '../retail-avance.js?v=3';
+import { retailModes, heldUntilText, avanceOptionHtml, avanceStep, dropOffMethods } from '../retail-avance.js?v=4';
 const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);   /* « Compte client » et l'acompte, dans la langue de la caisse */
 
 
@@ -982,6 +982,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
     const ownAvoirs = () => opts.customerId
       ? activeAvoirs().filter((a) => a.holderId === opts.customerId) : [];
     let avoirPart = null;                   /* { m:'avoir', amount, code } */
+    let avanceFlow = false;                 /* le règlement en cours est le versement d'une avance */
     const settled = [];                     /* les règlements déjà posés */
     let committed = false;                  /* double tap must never book twice */
     const creditCommitId = creditIntent('credit-redeem');
@@ -1046,7 +1047,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
       <p class="mz-split-note"${portion() < due() ? '' : ' hidden'}>Cette part : ${fmtMAD(portion())} · restera ${fmtMAD(r2(due() - portion()))}</p>`;
 
     const stepMethods = () => {
-      const avs = ownAvoirs();
+      const avs = ownAvoirs(); avanceFlow = false;
       const remAvoirs = remainingAvoirs();
       el.innerHTML = `
         <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -1069,6 +1070,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
             <span class="l"><b>Carte</b><span>Lecteur partenaire, paiement sur votre terminal</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
+          ${avanceOptionHtml(opts.allowAccount !== undefined && !opts.balanceExisting && retailModes('maison').avance && !settled.length && !avoirPart && due() > 0.009, opts.customerId, 'mz')}
           <button class="mz-pay-opt" data-mz-m="virement">
             <span class="ic"><img src="assets/icons/material/account_balance.svg" alt=""></span>
             <span class="l"><b>Virement / Versement</b><span>Confirmer uniquement après réception en banque</span></span>
@@ -1101,7 +1103,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
             <span class="l"><b>Code d’avoir</b><span>${avs.length ? 'Tous les bons de cette cliente sont déjà posés · scanner ou saisir un autre code' : 'Scanner ou saisir le code du bon'}</span></span>
           </button>`}
         </div>`;
-      icons(); closeBtns();
+      dropOffMethods(el, 'maison', 'mz'); icons(); closeBtns();
       const saveAcompte = $('#mz-save-acompte', el);
       if (saveAcompte) saveAcompte.onclick = () => { void commit(true); };
       const inp = $('#mz-split-in', el);
@@ -1165,6 +1167,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
           }
           else if (m === 'avoir') stepAvoir();
           else if (m === 'compte') stepAccount();
+          else if (m === 'avance') stepAvance();
           else toast('Aucun avoir actif, émettez-en un depuis Échanges & avoirs');
         };
       });
@@ -1176,6 +1179,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
     const settle = (part) => {
       settled.push(part);
       share = 1; custom = 0;
+      if (avanceFlow && due() > 0.009) { void commit(true); return; }   /* l'avance : ce versement, la pièce gardée */
       if (opts.balanceExisting) void commit(due() > 0.009);
       else if (due() > 0.009) { toast(`Reste ${fmtMAD(due())} à régler`); stepMethods(); }
       else commit();
@@ -1300,6 +1304,9 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
     /* Le compte client : rien n'est encaissé, le ticket entier devient une note
        ouverte au nom de la cliente (la même que les acomptes). On le confirme
        sur un écran à part : c'est une dette, pas un moyen de paiement. */
+    const stepAvance = () => avanceStep(el, { cls: 'mz', trade: 'maison', customerId: opts.customerId, busy: settled.length || avoirPart, who: clById(opts.customerId), due: due(), fmt: fmtMAD, esc, toast: (msg) => toast(msg),
+      after: () => { icons(); closeBtns(); }, back: stepMethods,
+      pay: (m, amount) => { avanceFlow = true; if (m === 'especes') stepCash(amount); else if (m === 'carte') stepCard(amount); else stepExternal(m, amount); } });
     const stepAccount = () => {
       if (!opts.customerId) { toast(mt('Compte client'), mt('Choisissez d’abord la cliente sur le ticket.')); return; }
       if (settled.length || avoirPart) { toast(mt('Compte client'), mt('Le ticket entier passe sur le compte, sans autre règlement.')); return; }

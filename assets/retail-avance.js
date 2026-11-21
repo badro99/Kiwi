@@ -34,7 +34,20 @@ export function retailModes(trade) {
   return {
     avance: f.retailAvance !== false,
     credit: f.retailCredit === true || (trade === 'maison' && f.retailCredit !== false),
+    /* God mode › Caisse · Moyens de paiement. Espèces et carte ne se coupent
+       pas. Clé absente = allumé (les magasins d'avant gardent tout) ; un
+       nouveau magasin naît avec les trois coupés (functions/api/config.js ›
+       NEW_STORE_FEATURES). */
+    virement: f.payVirement !== false,
+    cheque: f.payCheque !== false,
+    livraison: f.payLivraison !== false,
   };
+}
+
+/* Retire de la liste des modes ceux que God mode a coupés. */
+export function dropOffMethods(el, trade, cls) {
+  const m = retailModes(trade);
+  ['virement', 'cheque', 'livraison'].forEach((k) => { if (!m[k]) el.querySelectorAll(`[data-${cls}-m="${k}"]`).forEach((b) => b.remove()); });
 }
 
 function receiptConfig() {
@@ -155,6 +168,53 @@ export function accountStep(el, s) {
   s.after();
   el.querySelector('[data-acct-back]').onclick = s.back;
   el.querySelector('[data-acct-ok]').onclick = s.ok;
+}
+
+/* « Avance » dans la liste des modes : la cliente verse une partie, la pièce
+   est gardée à son nom. Avant, l'avance n'apparaissait qu'après un premier
+   règlement partiel, et personne ne la trouvait. */
+export function avanceOptionHtml(show, customerId, cls) {
+  if (!show) return '';
+  return `<button class="${cls}-pay-opt" data-${cls}-m="avance">
+    <span class="ic"><img src="assets/icons/material/pending_actions.svg" alt=""></span>
+    <span class="l"><b>${tr('Avance')}</b><span>${customerId ? tr('La cliente verse une partie, la pièce est gardée à son nom') : tr('Choisir d’abord la cliente sur le ticket')}</span></span>
+  </button>`;
+}
+/* s : { cls, trade, customerId, busy, who, due (nombre), fmt, esc, toast, after, back, pay(mode, montant) } */
+export function avanceStep(el, s) {
+  if (!s.customerId) { s.toast(tr('Avance : choisissez d’abord la cliente sur le ticket.')); return; }
+  if (s.busy) { s.toast(tr('Avance : un seul règlement, avant tout autre.')); return; }
+  const c = s.cls, m = retailModes(s.trade), until = heldUntilText(avanceExpiresAt());
+  const methods = [['especes', 'Espèces'], ['carte', 'Carte'], m.virement && ['virement', 'Virement / Versement'], m.cheque && ['cheque', 'Chèque']].filter(Boolean);
+  el.innerHTML = `
+    <button class="${c}-modal-x" data-${c}-close aria-label="${tr('Fermer')}"><i data-lucide="x"></i></button>
+    <h3 class="modal-title">${tr('Avance')}</h3>
+    <p class="modal-subtle">${s.who ? s.esc(s.who.name) : tr('Cliente')} · ${tr('Total')} ${s.fmt(s.due)}</p>
+    <label class="modal-subtle" for="${c}-avance-in" style="display:block;margin-top:14px;">${tr('Montant versé aujourd’hui')}</label>
+    <input class="${c}-in mono" id="${c}-avance-in" type="number" inputmode="decimal" min="1" step="1" placeholder="MAD" autocomplete="off" style="width:100%;box-sizing:border-box;font-size:22px;margin:6px 0;" />
+    <p class="modal-subtle" data-avance-note>${until ? `${tr('Pièce gardée jusqu’au')} ${until}` : tr('Pièce gardée sans date limite')}</p>
+    <div class="${c}-pay-opts" style="margin-top:12px;">${methods.map(([k, l]) => `
+      <button class="${c}-pay-opt" data-avance-m="${k}"><span class="l"><b>${tr(l)}</b></span><span class="amt" data-avance-amt></span></button>`).join('')}
+    </div>
+    <div class="${c}-sheet-foot"><button class="${c}-btn secondary" data-avance-back style="flex:1;">${tr('Retour')}</button></div>`;
+  s.after();
+  const inp = el.querySelector(`#${c}-avance-in`), note = el.querySelector('[data-avance-note]');
+  const amount = () => Math.round((Number(String(inp.value).replace(',', '.')) || 0) * 100) / 100;
+  inp.oninput = () => {
+    const a = amount(), ok = a > 0 && a < s.due;
+    el.querySelectorAll('[data-avance-amt]').forEach((x) => { x.textContent = ok ? s.fmt(a) : ''; });
+    note.textContent = (ok ? `${tr('Reste à régler')} ${s.fmt(Math.round((s.due - a) * 100) / 100)} · ` : '')
+      + (until ? `${tr('Pièce gardée jusqu’au')} ${until}` : tr('Pièce gardée sans date limite'));
+  };
+  el.querySelector('[data-avance-back]').onclick = s.back;
+  el.querySelectorAll('[data-avance-m]').forEach((b) => {
+    b.onclick = () => {
+      const a = amount();
+      if (!(a > 0) || a >= s.due) { s.toast(tr('Avance : saisir un montant plus petit que le total.')); inp.focus(); return; }
+      s.pay(b.dataset.avanceM, a);
+    };
+  });
+  setTimeout(() => { try { inp.focus(); } catch (_) {} }, 60);
 }
 
 export function expiredAvances(rows, R, now = Date.now()) {

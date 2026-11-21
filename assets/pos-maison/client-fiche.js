@@ -115,7 +115,7 @@ function oweHtml(m, k) {
 
 /* Les notes ouvertes de la boutique : le journal de la caisse tout de suite,
    puis serveur + journal (KiwiRetailBalances, comme l'écran Acomptes). */
-import { noteDetail } from '../retail-avance.js?v=3';   /* avance ou compte, pièce gardée jusqu'au… */
+import { noteDetail } from '../retail-avance.js?v=4';   /* avance ou compte, pièce gardée jusqu'au… */
 const balances = () => globalThis.window?.KiwiRetailBalances || null;
 const owedCache = (slug) => { const R = balances(); return R ? R.read(slug) : []; };
 const owedFresh = (slug) => { const R = balances(); return R ? R.list(slug) : null; };

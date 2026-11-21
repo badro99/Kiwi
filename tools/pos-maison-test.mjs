@@ -412,7 +412,7 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
     'l’option vit dans la console opérateur, côté boutique');
   ok(/key:'depotvente'[^}]*off:true/.test(optin),
     'elle est marquée off:true — clé absente ⇒ éteinte, comme Order Pro');
-  ok(/{ title:'Options à la demande', items:\(OPTIN_MODULES\[base\] \|\| \[\]\) }/.test(adminSrc),
+  ok(/{ title:'Options à la demande', items:\(OPTIN_MODULES\[base\] \|\| \[\]\)(\.filter\(function\(m\)\{ return m\.group !== 'pay'; \}\))? }/.test(adminSrc),   // les moyens de paiement ont leur propre bande
     'la bande n’apparaît que pour les métiers qui en ont une');
   ok(/Object\.keys\(OPTIN_MODULES\)\.forEach/.test(adminSrc),
     'le journal d’audit sait nommer la clé (moduleLabel la connaît)');

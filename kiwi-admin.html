@@ -1301,9 +1301,12 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
         hint:'Éteint par défaut. Ajoute l’onglet « Coût simple » dans Analyse du menu : une calculatrice de coût par plat (prix d’achat, rendement, emballages, portions), réservée au propriétaire. Ne touche pas au stock. Éteint après usage : les fiches restent lisibles, rien n’est effacé.' },
     ],
     boutique: [
-      { key:'retailAvance', label:'Avance (la cliente verse une partie, la pièce est gardée)',
+      { key:'payVirement', label:'Paiement · Virement / Versement', group:'pay', hint:'Espèces et carte sont toujours proposées et ne se coupent pas. Ce mode s’ajoute à l’encaissement de la caisse. Allumé pour les magasins existants, éteint pour un nouveau magasin. Coupé, le bouton disparaît de l’encaissement au prochain chargement ; les ventes passées ne changent pas.' },
+      { key:'payCheque', label:'Paiement · Chèque', group:'pay', hint:'Allumé pour les magasins existants, éteint pour un nouveau magasin. Coupé, « Chèque » disparaît de l’encaissement et de l’avance.' },
+      { key:'payLivraison', label:'Paiement · Livraison (à recevoir du transporteur)', group:'pay', hint:'Allumé pour les magasins existants, éteint pour un nouveau magasin. Coupé, la vente à livrer disparaît de l’encaissement ; les livraisons déjà enregistrées restent dans Livraisons.' },
+      { key:'retailAvance', label:'Avance (la cliente verse une partie, la pièce est gardée)', group:'pay',
         hint:'Allumé par défaut. À l’encaissement, la caissière peut prendre une partie du prix et garder la pièce au nom de la cliente jusqu’à une date (Reçu · Validité des bons, au tableau de bord). Passée cette date, l’Inventaire de la caisse propose « Avances expirées » : chaque pièce est scannée pour revenir en stock, et l’argent versé devient un avoir sur la fiche de la cliente. Coupé, le bouton d’avance disparaît de la caisse ; les avances déjà ouvertes restent dans Acomptes.' },
-      { key:'retailCredit', label:'Crédit client (tout le ticket sur le compte)', off:true, onFor:['maison'],
+      { key:'retailCredit', label:'Crédit client (tout le ticket sur le compte)', off:true, onFor:['maison'], group:'pay',
         hint:'Éteint par défaut en boutique, allumé par défaut en maison. À l’encaissement, « Compte client » met le ticket entier sur la fiche de la cliente, sans rien encaisser ; elle règle plus tard depuis Acomptes, et l’argent compte le jour où il est reçu. Avance et crédit peuvent être allumés ensemble.' },
       { key:'skin2027', label:'Caisse · design 2027', off:true,
         hint:'Éteint par défaut. La caisse boutique ou maison prend le design 2027 sur chaque appareil appairé à ce magasin : écran de code, fond d’ouverture, rail, ticket et recherche. Rien ne change dans les ventes ni le stock. Se coupe ici à tout moment, appliqué au prochain chargement.' },
@@ -1364,8 +1367,8 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
         items:(VERTICAL_MODULES[base] || VERTICAL_MODULES.restaurant) },
       { title:'Caisse · Modes de service', items:CAISSE_MODES },
       { title:'Caisse · Actions rapides & Tiroir', items:CAISSE_ACTIONS },
-      // Bande vide ⇒ non affichée (renderFeatures saute les groupes sans item).
-      { title:'Options à la demande', items:(OPTIN_MODULES[base] || []) },
+      { title:'Caisse · Moyens de paiement (espèces et carte toujours)', items:(OPTIN_MODULES[base] || []).filter(function(m){ return m.group === 'pay'; }) },   // bande vide ⇒ non affichée (renderFeatures saute les groupes sans item)
+      { title:'Options à la demande', items:(OPTIN_MODULES[base] || []).filter(function(m){ return m.group !== 'pay'; }) },
       { title:'Options payantes (Add-ons)', items:ADDON_MODULES }
     ];
   }
