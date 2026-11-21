@@ -123,12 +123,15 @@ export function summarySentence(d) {
 
 /* Un classement (produits, rayons, vendeurs, moyens, canaux, clients, sites). */
 export function rankingSentence(kind, d) {
-  const top = d.top, total = d.total;
+  const total = d.total;
   return each((lang) => {
+    let top = d.top;
     if (!top || !(total > 0)) {
       return { fr: 'Rien à classer sur cette période.', en: 'Nothing to rank in this period.', ar: 'لا شيء للترتيب في هذه الفترة.' }[lang];
     }
     const share = pct((top.value / total) * 100, lang);
+    const name = top.name && typeof top.name === 'object' ? (top.name[lang] || top.name.fr) : top.name;
+    top = Object.assign({}, top, { name });
     const ch = deltaPct(top.value, top.prev);
     const trend = ch == null || Math.abs(ch) < 1 ? '' : {
       fr: `, ${ch > 0 ? 'en hausse' : 'en baisse'} de ${pct(ch, 'fr')}`,

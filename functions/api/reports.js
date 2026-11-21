@@ -192,6 +192,9 @@ export async function buildReport(env, request, url) {
   const ctx = { period, sites: scoped, showCost, page: { limit, offset } };
   const lang = LANGS.includes(q('lang', 2)) ? q('lang', 2) : 'fr';
   const L = labels(lang);
+  /* Les noms des moyens et des canaux dans les trois langues : la phrase
+     d'ouverture est rendue dans les trois, quelle que soit la langue du CSV. */
+  const tri = (kind) => (code) => Object.fromEntries(LANGS.map((l) => [l, labels(l)[kind](code)]));
 
   const cols = await salesColumns(env);
   const base = baseCte({ sites: scoped }, cols);
@@ -209,9 +212,9 @@ export async function buildReport(env, request, url) {
     } else if (report === 'staff') {
       data = buildStaff(ctx, await run(env, base, [Q.staff(), Q.staffRefunds()]), await sellerNames(env, scoped));
     } else if (report === 'payments') {
-      data = buildPayments(ctx, await run(env, base, [Q.payments(), Q.refundMethods()]), L.method);
+      data = buildPayments(ctx, await run(env, base, [Q.payments(), Q.refundMethods()]), tri('method'));
     } else if (report === 'channels') {
-      data = buildChannels(ctx, await run(env, base, [Q.channels()]), L.channel);
+      data = buildChannels(ctx, await run(env, base, [Q.channels()]), tri('channel'));
     } else if (report === 'heatmap') {
       data = buildHeatmap(ctx, await run(env, base, [Q.hours()]));
     } else if (report === 'vat') {

@@ -260,4 +260,20 @@ check(maxParams <= 100, 'aucune requête ne lie plus de 100 paramètres', maxPar
 r = await get(`merchant=atlas-casa&report=sites&${day(D)}`, owner);
 check(r.body.rows.length === route.MAX_SITES && r.body.rows[0].merchant === 'atlas-casa', 'au plus 12 établissements, la boutique ouverte en premier', r.body.rows.length);
 
+console.log('\nLe hub du tableau de bord');
+const pagesPro = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+const entry = pagesPro.match(/\{ url: 'assets\/pages-pro\/reports-hub\.js\?v=\d+'[^\n]*handlers: \[([^\]]*)\]/);
+const listed = entry ? entry[1].match(/"([^"]+)"/g).map((x) => x.slice(1, -1)).sort() : [];
+const hub = fs.readFileSync(path.join(ROOT, 'assets/pages-pro/reports-hub.js'), 'utf8');
+const views = fs.readFileSync(path.join(ROOT, 'assets/pages-pro/reports-views.js'), 'utf8');
+const registered = [...hub.matchAll(/handlers\['([a-z-]+)'\] = /g)].map((m) => m[1]).sort();
+check(listed.length > 0 && listed.join() === registered.join(), 'la section paresseuse liste exactement les handlers que le hub enregistre', { listed, registered });
+const actions = [...(hub + views).matchAll(/data-action="([a-z-]+)"/g)].map((m) => m[1]);
+check(actions.every((a) => registered.includes(a) || a === 'venue-enter-fusion' || a === '${action}'), 'chaque data-action du hub a son handler', actions);
+check(!/\u2014/.test(hub + views) && !/font-style:\s*italic/.test(hub + views) && !/!important/.test(hub + views), 'ni tiret cadratin, ni italique, ni !important');
+check(/data-nav="reports"/.test(fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8')), 'le lien « Rapports » est dans la barre latérale');
+check(/data-action="reports-sites"/.test(fs.readFileSync(path.join(ROOT, 'assets/venues.js'), 'utf8')), 'le sélecteur d’établissement ouvre la vraie vue multi-site');
+r = await get(`merchant=atlas-casa&report=payments&${day(D)}`, owner);
+check(/^Cash accounts for 61% of payments/.test(r.body.headline.en) && /^نقدا يمثل/.test(r.body.headline.ar), 'le moyen de paiement est nommé dans la langue de la phrase', r.body.headline);
+
 console.log(`\n${n} checks passed`);

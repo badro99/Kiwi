@@ -2162,9 +2162,9 @@
 /* <<split:dropdown>> */
 
   const DROPDOWN_CTA = {
-    fr: { exitT: 'Revenir à la vue simple', exitS: 'Repasser sur un seul emplacement', enterT: 'Go Ultra', enterS: 'Vue consolidée · données multi-sites', addT: 'Ajouter un établissement', addS: 'Une autre activité, un autre lieu' },
-    en: { exitT: 'Back to single view', exitS: 'Return to a single location', enterT: 'Go Ultra', enterS: 'Consolidated view · multi-site data', addT: 'Add a venue', addS: 'Another business, another location' },
-    ar: { exitT: 'العودة إلى العرض البسيط', exitS: 'الرجوع إلى موقع واحد', enterT: 'Go Ultra', enterS: 'عرض موحّد · بيانات متعدّدة المواقع', addT: 'إضافة منشأة', addS: 'نشاط آخر، موقع آخر' },
+    fr: { exitT: 'Revenir à la vue simple', exitS: 'Repasser sur un seul emplacement', enterT: 'Go Ultra', enterS: 'Vue consolidée · données multi-sites', sitesT: 'Tous mes établissements', sitesS: 'Ventes réelles côte à côte', addT: 'Ajouter un établissement', addS: 'Une autre activité, un autre lieu' },
+    en: { exitT: 'Back to single view', exitS: 'Return to a single location', enterT: 'Go Ultra', enterS: 'Consolidated view · multi-site data', sitesT: 'All my locations', sitesS: 'Real sales side by side', addT: 'Add a venue', addS: 'Another business, another location' },
+    ar: { exitT: 'العودة إلى العرض البسيط', exitS: 'الرجوع إلى موقع واحد', enterT: 'Go Ultra', enterS: 'عرض موحّد · بيانات متعدّدة المواقع', sitesT: 'كل مؤسساتي', sitesS: 'المبيعات الحقيقية جنبا إلى جنب', addT: 'إضافة منشأة', addS: 'نشاط آخر، موقع آخر' },
   };
 /* <</split:dropdown>> */
     return { DROPDOWN_CTA };
