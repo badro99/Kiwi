@@ -110,6 +110,12 @@ env.AI = { async run(model, payload, opts) {
 } };
 try { await runAiWithGateway(env, M.GEMMA_VISION, { messages: [] }); } catch (_) {}
 ok(sent.join() === 'gateway', 'un refus de la passerelle (limite) n’est jamais contourné par un appel direct');
+for (const [msg, status] of [['Rate limit: 2001 requests per minute exceeded', 429], ['Gateway rule 2001 blocked this request', 403], ['2001: Please configure AI Gateway in the Cloudflare dashboard', 429]]) {
+  _resetGatewayMemo(); sent = [];
+  env.AI = { async run(model, payload, opts) { sent.push(opts && opts.gateway ? 'gateway' : 'direct'); throw Object.assign(new Error(msg), { status }); } };
+  try { await runAiWithGateway(env, M.GEMMA_VISION, { messages: [] }); } catch (_) {}
+  ok(sent.join() === 'gateway', `« ${msg} » (${status}) n’ouvre pas d’appel direct`);
+}
 budgets.delete(env);
 
 console.log(`✓ ai-retired-model · ${passed} contrôles : aucune route sur Qwen retiré, DeepSeek sans réflexion, un refus « retiré » ne mange pas le budget`);

@@ -43,7 +43,7 @@ export const GATEWAY_OPTS = { gateway: { id: 'kiwi', cacheTtl: 0 } };
  * refus de la passerelle n'est jamais contourné. Le plafond de Kiwi
  * (_neurons.js, 10 000 gratuits par jour) borne toujours le coût. L'instance
  * retient l'absence 10 min pour ne pas payer un aller-retour par appel. */
-const GATEWAY_MISSING = /\b2001\b|configure AI Gateway/i;
+const GATEWAY_MISSING = /^\s*(?:AiError:\s*)?2001:\s*Please configure AI Gateway\b/i;
 const GATEWAY_MEMO_MS = 10 * 60 * 1000;
 let gatewayMissingUntil = 0;
 export function _resetGatewayMemo() { gatewayMissingUntil = 0; }
@@ -54,7 +54,8 @@ export async function runAiWithGateway(env, model, payload) {
     if (Date.now() < gatewayMissingUntil) return env.AI.run(model, sent);
     try { return await env.AI.run(model, sent, GATEWAY_OPTS); }
     catch (error) {
-      if (!GATEWAY_MISSING.test(String(error && error.message || error))) throw error;
+      const status = Number(error && (error.status || error.statusCode || error.response?.status));
+      if ([401, 403, 429].includes(status) || !GATEWAY_MISSING.test(String(error && error.message || error))) throw error;
       gatewayMissingUntil = Date.now() + GATEWAY_MEMO_MS;
       console.warn('[ai] passerelle « kiwi » absente (2001) : appel direct au modèle', model);
       return env.AI.run(model, sent);
