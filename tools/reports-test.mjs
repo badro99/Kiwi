@@ -11,7 +11,13 @@
  *   · l'isolation : un commerçant ne voit jamais la boutique d'un autre, une
  *     caisse ou un anonyme n'ouvrent rien, un gérant ne voit pas les coûts ;
  *   · le CSV : BOM, point-virgule, guillemets doublés, formules neutralisées ;
- *   · la pagination, la limite des 100 paramètres de D1. */
+ *   · les remboursements : un retour rendu en avoir (ligne à 0 centime) est un
+ *     remboursement, jamais un ticket ; un retour rattaché revient sur ses produits,
+ *     et le classement des produits se raccorde au résumé ;
+ *   · la TVA datée suit la journée commerciale, pas la journée UTC ;
+ *   · une journée seule se lit à l'heure, avec son heure de pointe ;
+ *   · la pagination, l'export CSV complet, la limite des 100 paramètres de D1,
+ *     et chaque requête prépare sur le schéma minimum de production. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -24,6 +30,8 @@ import { cell, toCsv, BOM } from '../functions/api/_reports-csv.js';
 import { summarySentence, rankingSentence } from '../functions/api/_reports-words.js';
 import { routeMinTier } from '../functions/auth/_session-tier.js';
 import { businessBoundary } from '../functions/api/_business-day.js';
+import { baseCte, Q, LINES_CTE } from '../functions/api/_reports-sql.js';
+import { listMigrations, MIGRATIONS_DIR } from './d1-migrations.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let n = 0;
@@ -69,7 +77,8 @@ sql.prepare('INSERT INTO operators (id, label, salt, hash, created_ts) VALUES (?
 
 const doc = (m, feature, data) => sql.prepare('INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, ?)').run(m, feature, JSON.stringify(data), now);
 doc('atlas-casa', 'receipt', { vat: { mode: 'rate', rate: 10, included: true } });
-doc('atlas-casa', 'monthreport', { taxPeriods: [{ id: 'p1', category: 'Boissons', rate: 20, effectiveFrom: '2026-01-01', recordedAt: 1 }] });
+doc('atlas-casa', 'monthreport', { taxPeriods: [{ id: 'p1', category: 'Boissons', rate: 20, effectiveFrom: '2026-01-01', recordedAt: 1 },
+  { id: 'p2', category: '*', rate: 14, effectiveFrom: '2026-10-14', recordedAt: 2 }] });
 doc('atlas-casa', 'team', { members: [{ id: 'm1', firstName: 'Sara', pinCode: '1234' }, { id: 'm2', firstName: 'Youssef', password: 'secret' }] });
 
 /* Lundi 12 octobre 2026 (Maroc en UTC depuis le 20 septembre : 05:00 locale = 05:00 UTC). */
@@ -88,7 +97,7 @@ sale({ id: 's2', c: 5000, method: 'cash', ts: at(D, 20), channel: 'emporter', se
   lines: [{ n: 'Tajine kefta', c: 'Plats', q: 1, t: 50, k: 30 }] });
 sale({ id: 's3', c: 3000, method: 'card', ts: at(D, 26), channel: 'surplace', lines: [{ n: 'Café', c: 'Boissons', q: 1, t: 30 }] }); // 02:00 le 13 → journée du 12
 sale({ id: 'r1', c: -2000, method: 'cash', ts: at(D, 21), channel: 'refund', label: 'Remboursement · Vente' });
-sql.prepare("INSERT INTO sale_audit (merchant, sale_id, action, note, amount, amount_cents, method, ts) VALUES ('atlas-casa', 's2', 'refund', 'r1', -20, -2000, 'cash', ?)").run(at(D, 21));
+sql.prepare("INSERT INTO sale_audit (merchant, sale_id, action, note, amount, amount_cents, method, ts) VALUES ('atlas-casa', 's2', 'refund', 'r1', 20, 2000, 'cash', ?)").run(at(D, 21));
 sale({ id: 'v1', c: 9999, ts: at(D, 12), void: at(D, 13), lines: [{ n: 'Annulée', q: 1, t: 99.99 }] });                       // annulée
 sale({ id: 's5', c: 7000, ts: at(D, 30), lines: [{ n: 'Brunch', c: 'Plats', q: 1, t: 70 }] });                                  // 06:00 le 13 → journée du 13
 sale({ id: 'x1', m: 'rival', c: 50000, ts: at(D, 12), lines: [{ n: 'Secret rival', q: 1, t: 500 }] });                         // autre commerçant
@@ -96,6 +105,20 @@ sale({ id: 'p1', c: 8000, ts: at('2026-10-11', 13), lines: [{ n: 'Couscous', c: 
 sale({ id: 'rb1', m: 'atlas-rabat', c: 4000, ts: at(D, 13), method: 'card', lines: [{ n: 'Pastilla', c: 'Plats', q: 1, t: 40 }] });
 sale({ id: 'rb2', m: 'atlas-rabat', c: -500, ts: at(D, 14), method: 'card', channel: 'refund' });
 sql.prepare("INSERT INTO clients (merchant, id, name) VALUES ('atlas-casa', 'cl1', 'Nadia')").run();
+/* Le 13 : une vente de 03:00 le 14 appartient encore à la journée du 13 (TVA d'avant le taux du 14). */
+sale({ id: 'e1', c: 1000, ts: at('2026-10-14', 3), lines: [{ n: 'Brunch', c: 'Plats', q: 1, t: 10 }] });
+/* Le 14 : un pull rendu en avoir (sale/refund.js écrit 0 centime, canal 'refund'), une vente sans détail et son retour en espèces. */
+const D2 = '2026-10-14';
+const audit = sql.prepare("INSERT INTO sale_audit (merchant, sale_id, action, note, amount, amount_cents, method, ts) VALUES ('atlas-casa', ?, 'refund', ?, ?, ?, ?, ?)");
+sale({ id: 'c1', c: 6000, method: 'card', ts: at(D2, 11), lines: [{ n: 'Pull', c: 'Mode', q: 2, t: 60, k: 20 }] });
+sale({ id: 'rc', c: 0, method: 'cash', ts: at(D2, 12), channel: 'refund', label: 'Remboursement · Vente' });
+audit.run('c1', 'rc', 30, 3000, 'cash', at(D2, 12));
+sale({ id: 'b1', c: 1500, method: 'cash', ts: at(D2, 13) });
+sale({ id: 'rb', c: -500, method: 'cash', ts: at(D2, 14), channel: 'refund' });
+audit.run('b1', 'rb', 5, 500, 'cash', at(D2, 14));
+/* Le 16 : 210 produits différents, pour l'export complet. */
+const D3 = '2026-10-16';
+for (let i = 0; i < 210; i++) sale({ id: 'bulk' + i, c: 100 + i, ts: at(D3, 12, i % 60), lines: [{ n: 'Produit ' + String(i).padStart(3, '0'), c: 'Vrac', q: 1, t: (100 + i) / 100 }] });
 
 const owner = sessionCookie(await makeSession('acc-atlas', SECRET));
 const rival = sessionCookie(await makeSession('acc-rival', SECRET));
@@ -123,8 +146,8 @@ check(k.discounts === 2000 && k.gross === 20000, 'brut = encaissé + remises (20
 check(k.refunds === 2000 && k.refundCount === 1 && k.net === 16000, 'net = encaissé − remboursements = 160 MAD', k);
 check(k.basket === 6000, 'panier moyen 60 MAD (encaissé ÷ tickets)', k.basket);
 check(k.items === 5 && k.itemsPerTicket === 1.7, '5 articles, 1,7 par ticket détaillé', k);
-check(k.cogs === 7000 && k.margin === 8000 && k.marginPct === 53.3, 'coût 70 MAD sur les lignes au coût connu, marge 80 MAD (53,3 %)', k);
-check(k.costCoverage === 83.3, 'le coût est connu pour 83,3 % des ventes (le café n’a pas de coût)', k.costCoverage);
+check(k.cogs === 5800 && k.margin === 7200 && k.marginPct === 55.4, 'coût 58 MAD (70 vendus, 12 revenus avec le tajine rendu), marge 72 MAD (55,4 %)', k);
+check(k.costCoverage === 81.3, 'le coût est connu pour 81,3 % des ventes nettes (le café n’a pas de coût)', k.costCoverage);
 check(k.tips === 500 && k.knownClients === 2, 'pourboires 5 MAD, 2 tickets rattachés à un client', k);
 check(k.vat && k.vat.ttc === 16000 && k.vat.vat === 1934 && k.vat.unknown === 0,
   'TVA : 10 % (taux du ticket) sur les plats et le remboursement, 20 % (rayon Boissons daté) : 19,34 MAD, TTC = net', k.vat);
@@ -135,9 +158,46 @@ check(/^Net sales up 100% vs the day before, driven by Tajine kefta/.test(r.body
 check(!/—/.test(JSON.stringify(r.body)), 'aucun tiret cadratin dans les textes');
 check(r.body.series.length === 1 && r.body.series[0].net === 16000 && r.body.series[0].prevNet === 8000, 'la série par journée porte la comparaison', r.body.series);
 check(!/Secret rival/.test(r.text) && !/1234|secret/.test(r.text), 'rien d’un autre commerçant, aucun code d’équipe dans la réponse');
+check(Array.isArray(r.body.sites) && r.body.sites.map((x) => x.merchant).join() === 'atlas-casa,atlas-rabat' && r.body.perSite.length === 1,
+  'le résumé garde la liste de TOUS les établissements du compte (sélecteur), le détail par boutique est sous perSite', { sites: r.body.sites, perSite: r.body.perSite && r.body.perSite.length });
+check(r.body.hourly && r.body.hourly.length === 24 && r.body.hourly[0].hour === 5 && r.body.hourly[23].hour === 4, 'une journée se lit à l’heure, de 05:00 à 04:00', r.body.hourly && r.body.hourly.map((x) => x.hour));
+check(r.body.peakHour && r.body.peakHour.hour === 10 && r.body.peakHour.net === 10000 && / Pic de la journée à 10 h\.$/.test(r.body.headline.fr)
+  && /Busiest hour: 10:00\.$/.test(r.body.headline.en) && /ذروة اليوم على الساعة 10:00/.test(r.body.headline.ar), 'l’heure de pointe est dite dans la phrase', [r.body.peakHour, r.body.headline]);
+const hourSum = r.body.hourly.reduce((a, x) => a + x.net, 0);
+check(hourSum === k.net, 'les heures refont les ventes nettes de la journée', hourSum);
 
 r = await get(`merchant=atlas-casa&report=summary&${day('2026-10-13')}`, owner);
-check(r.body.totals.cur.tickets === 1 && r.body.totals.cur.sales === 7000, 'la vente de 06:00 ouvre la journée du 13, seule', r.body.totals.cur);
+check(r.body.totals.cur.tickets === 2 && r.body.totals.cur.sales === 8000, 'la vente de 06:00 ouvre la journée du 13, celle de 03:00 le 14 la ferme', r.body.totals.cur);
+check(r.body.totals.cur.vat.ttc === 8000 && r.body.totals.cur.vat.vat === 727, 'TVA du 13 : tout à 10 %, la vente de 03:00 le 14 garde le taux de sa journée commerciale (14 % ne commence que le 14)', r.body.totals.cur.vat);
+r = await get(`merchant=atlas-casa&report=vat&${day('2026-10-13')}`, owner);
+check(r.body.rows.length === 1 && r.body.rows[0].rate === 10 && r.body.rows[0].ttc === 8000, 'rapport TVA du 13 : un seul taux, 10 %', r.body.rows);
+r = await get(`merchant=atlas-casa&report=vat&${day(D2)}`, owner);
+check(r.body.rows.length === 1 && r.body.rows[0].rate === 14 && r.body.totals.ttc === 4000, 'le 14, le nouveau taux (14 %) s’applique, retours compris', r.body.rows);
+
+console.log('\nRemboursements en avoir et raccord des produits');
+r = await get(`merchant=atlas-casa&report=summary&${day(D2)}`, owner);
+const k2 = r.body.totals.cur;
+check(k2.tickets === 2 && k2.sales === 7500, 'le retour en avoir (0 centime, canal refund) n’est pas un ticket : deux ventes, 75 MAD', k2);
+check(k2.refundCount === 2 && k2.refunds === 3500 && k2.net === 4000, 'il compte comme remboursement pour sa valeur (30 MAD d’avoir + 5 MAD espèces), net 40 MAD', k2);
+check(k2.basket === 3750, 'le panier moyen ignore les remboursements', k2.basket);
+r = await get(`merchant=atlas-casa&report=payments&${day(D2)}`, owner);
+const credit = r.body.rows.find((x) => x.method === 'credit'), cash2 = r.body.rows.find((x) => x.method === 'cash');
+check(credit && credit.refunds === 3000 && credit.cents === 0 && cash2.refunds === 500 && cash2.cents === 1500, 'encaissements : l’avoir rendu sur « Avoir », l’argent rendu sur son moyen', r.body.rows);
+r = await get(`merchant=atlas-casa&report=channels&${day(D2)}`, owner);
+check(!r.body.rows.find((x) => x.channel === 'refund') && r.body.totals.cents === 7500, 'le retour n’est pas un canal de vente', r.body.rows);
+r = await get(`merchant=atlas-casa&report=products&${day(D2)}`, owner);
+const pull = r.body.rows.find((x) => x.name === 'Pull');
+check(pull && pull.qty === 1 && pull.sold === 6000 && pull.refunded === 3000 && pull.refundedQty === 1 && pull.net === 3000 && pull.cost === 2000,
+  'le pull rendu revient sur le pull : 2 vendus, 1 rendu, 30 MAD nets, coût d’un seul', pull);
+check(r.body.totals.unattributed === 1000 && r.body.totals.net === k2.net
+  && r.body.rows.reduce((a, x) => a + x.net, 0) + r.body.totals.unattributed === k2.net,
+  'produits + ventes sans détail (15 MAD − 5 MAD rendus) = ventes nettes du résumé, au centime', r.body.totals);
+r = await get(`merchant=atlas-casa&report=staff&${day(D2)}`, owner);
+check(r.body.rows.reduce((a, x) => a + x.refunds, 0) === 3500 && r.body.rows.reduce((a, x) => a + x.tickets, 0) === 2, 'vendeurs : deux tickets, 35 MAD rendus', r.body.rows);
+r = await get(`merchant=atlas-casa&report=products&${day(D2)}&format=csv`, owner);
+const lines2 = r.text.split('\r\n').filter(Boolean);
+check(/Ventes sans détail d’article et retours non rattachés";"";"";"";"";"10,00"/.test(r.text) && /^"Total";"";"";"";"30,00";"40,00"/.test(lines2[lines2.length - 1]),
+  'le CSV des produits se raccorde au résumé : ligne sans détail, puis le total des ventes nettes', lines2.slice(-2));
 
 console.log('\nPériodes et journée commerciale');
 const zone = 'Africa/Casablanca';
@@ -168,9 +228,11 @@ check(h.day === D && h.hour === 2 && h.weekday === 0, 'l’heure 02:00 du mardi 
 console.log('\nProduits, rayons, vendeurs, encaissements, canaux, clients, rythme');
 r = await get(`merchant=atlas-casa&report=products&${day(D)}`, owner);
 const tajine = r.body.rows[0];
-check(tajine.name === 'Tajine kefta' && tajine.qty === 2 && tajine.net === 11667 && tajine.cost === 6000, 'Tajine kefta en tête : 2 vendus, 116,67 MAD nets (remise répartie), coût 60 MAD', tajine);
+check(tajine.name === 'Tajine kefta' && tajine.sold === 11667 && tajine.refunded === 2000 && tajine.net === 9667 && tajine.qty === 1.6 && tajine.cost === 4800,
+  'Tajine kefta en tête : 116,67 MAD vendus (remise répartie), 20 MAD rendus sur sa vente, 96,67 nets, 1,6 gardé, coût 48 MAD', tajine);
 check(r.body.page.total === 4 && r.body.rows[3].name === 'Couscous' && r.body.rows[3].change === -100, 'quatre produits : le couscous de la veille reste, à −100 %', r.body.rows);
-check(Math.abs(r.body.rows.reduce((a, x) => a + x.net, 0) - 18000) <= 1, 'les ventes nettes des produits refont l’encaissé au centime près', r.body.rows);
+check(Math.abs(r.body.rows.reduce((a, x) => a + x.net, 0) - 16000) <= 1 && r.body.totals.unattributed === 0 && r.body.totals.net === 16000,
+  'les ventes nettes des produits refont les ventes nettes du résumé (160 MAD, retour déduit)', r.body.totals);
 r = await get(`merchant=atlas-casa&report=products&${day(D)}&limit=1&offset=1`, owner);
 check(r.body.rows.length === 1 && r.body.page.total === 4 && r.body.rows[0].name === 'Thé "menthe"; nana', 'pagination : une ligne, la deuxième, le total reste 4', r.body);
 r = await get(`merchant=atlas-casa&report=categories&${day(D)}`, owner);
@@ -184,6 +246,7 @@ r = await get(`merchant=atlas-casa&report=payments&${day(D)}`, owner);
 const cash = r.body.rows.find((x) => x.method === 'cash'), card = r.body.rows.find((x) => x.method === 'card');
 check(cash.cents === 11000 && card.cents === 7000 && cash.refunds === 2000, 'le paiement mixte compte chaque part sur son moyen ; remboursement en espèces', r.body.rows);
 check(/Espèces représente 61 % des encaissements/.test(r.body.headline.fr), 'la phrase nomme le premier moyen', r.body.headline.fr);
+check(r.body.headline.ar.startsWith('حصة الأداء نقدا من المداخيل 61%'), 'en arabe, un nom ouvre la phrase (« حصة الأداء نقدا »), pas l’adverbe « نقدا »', r.body.headline.ar);
 r = await get(`merchant=atlas-casa&report=channels&${day(D)}`, owner);
 check(r.body.rows[0].channel === 'surplace' && r.body.rows[0].cents === 13000 && !r.body.rows.find((x) => x.channel === 'refund'), 'canaux : sur place d’abord, le remboursement n’est pas un canal', r.body.rows);
 r = await get(`merchant=atlas-casa&report=customers&${day(D)}`, owner);
@@ -201,6 +264,8 @@ for (const key of ['net', 'sales', 'tickets', 'refunds', 'discounts', 'gross', '
   check(r.body.totals.cur[key] === sum((x) => x.cur[key]), `le total « ${key} » est la somme des établissements`, [r.body.totals.cur[key], sum((x) => x.cur[key])]);
 }
 check(r.body.totals.cur.net === 16000 + 3500 && r.body.best === 'atlas-casa' && r.body.worst === 'atlas-rabat', 'Casablanca meilleure, Rabat moins bonne', r.body);
+check(r.body.average.net === 9750 && Math.round(r.body.rows[0].vsAverage.net) === 64 && Math.round(r.body.rows[1].vsAverage.net) === -64,
+  'chaque établissement se place face à la moyenne du groupe (97,50 MAD) : +64 % et −64 %', [r.body.average, r.body.rows.map((x) => x.vsAverage)]);
 check(!/rival/i.test(JSON.stringify(r.body.sites)), 'la liste des établissements ne contient que ceux du compte');
 const all = await get(`merchant=atlas-casa&report=summary&site=all&${day(D)}`, owner);
 check(all.body.totals.cur.net === 19500 && all.body.scope === 'all', 'le résumé « tous les établissements » additionne les deux', all.body.totals.cur.net);
@@ -230,6 +295,10 @@ check(toCsv(['a'], [['b']]).startsWith(BOM) && toCsv(['a'], [['b']]).endsWith('\
 r = await get(`merchant=atlas-casa&report=products&${day(D)}&format=csv`, owner);
 check(r.status === 200 && /text\/csv; charset=utf-8/.test(r.type) && r.bom, 'l’export est un CSV UTF-8 avec BOM', r.type);
 check(r.text.includes('"Thé ""menthe""; nana";"Boissons"') && r.text.includes('"116,67"'), 'le nom est échappé, les montants ont la virgule décimale', r.text.slice(0, 300));
+r = await get(`merchant=atlas-casa&report=products&${day(D3)}&format=csv`, owner);
+check(r.text.split('\r\n').filter(Boolean).length === 1 + 210 + 1 && r.text.includes('"Produit 209"') && r.text.includes('"Produit 000"'),
+  'le CSV exporte les 210 produits, pas la page affichée (plus de coupure à 200)', r.text.split('\r\n').length);
+check((await get(`merchant=atlas-casa&report=products&${day(D3)}`, owner)).body.rows.length === 50, 'à l’écran, la même liste reste paginée par 50');
 r = await get(`merchant=atlas-casa&report=summary&${day(D)}&format=csv&lang=ar`, owner);
 check(r.text.includes('المبيعات الصافية (درهم)') && r.text.includes('"160,00"'), 'en arabe, les en-têtes arabes passent intacts', r.text.slice(0, 200));
 r = await get(`merchant=atlas-casa&report=sites&${day(D)}&format=csv`, owner);
@@ -260,6 +329,7 @@ check(maxParams <= 100, 'aucune requête ne lie plus de 100 paramètres', maxPar
 r = await get(`merchant=atlas-casa&report=sites&${day(D)}`, owner);
 check(r.body.rows.length === route.MAX_SITES && r.body.rows[0].merchant === 'atlas-casa', 'au plus 12 établissements, la boutique ouverte en premier', r.body.rows.length);
 
+const REPORTS_ALL = route.REPORTS;
 console.log('\nLe hub du tableau de bord');
 const pagesPro = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
 const entry = pagesPro.match(/\{ url: 'assets\/pages-pro\/reports-hub\.js\?v=\d+'[^\n]*handlers: \[([^\]]*)\]/);
@@ -274,6 +344,45 @@ check(!/\u2014/.test(hub + views) && !/font-style:\s*italic/.test(hub + views) &
 check(/data-nav="reports"/.test(fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8')), 'le lien « Rapports » est dans la barre latérale');
 check(/data-action="reports-sites"/.test(fs.readFileSync(path.join(ROOT, 'assets/venues.js'), 'utf8')), 'le sélecteur d’établissement ouvre la vraie vue multi-site');
 r = await get(`merchant=atlas-casa&report=payments&${day(D)}`, owner);
-check(/^Cash accounts for 61% of payments/.test(r.body.headline.en) && /^نقدا يمثل/.test(r.body.headline.ar), 'le moyen de paiement est nommé dans la langue de la phrase', r.body.headline);
+check(/^Cash accounts for 61% of payments/.test(r.body.headline.en) && /^حصة الأداء نقدا/.test(r.body.headline.ar), 'le moyen de paiement est nommé dans la langue de la phrase', r.body.headline);
+
+console.log('\nLa démo et l’impression');
+{
+  const vm = await import('node:vm');
+  const box = { window: { KiwiI18n: { getLang: () => 'fr' } }, URL, document: { baseURI: 'https://k.invalid/dashboard.html' } };
+  vm.createContext(box);
+  for (const f of ['reports-views.js', 'reports-demo.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/pages-pro', f), 'utf8'), box);
+  const Demo = box.window.KiwiReportDemo, Views = box.window.KiwiReportViews;
+  const at0 = Date.parse('2026-11-21T19:00:00Z');
+  const build = (report, extra) => Demo.build(Object.assign({ report, preset: 'septJours', site: 'cafeAtlas', anchor: 'cafeAtlas', offset: 0 }, extra || {}), at0);
+  const ds = build('sites');
+  check(ds.demo === true && ds.rows.length === 3 && ds.rows.reduce((a, x) => a + x.cur.net, 0) === ds.totals.cur.net && ds.average && ds.rows.every((x) => x.vsAverage),
+    'démo : trois établissements, le total est leur somme, chacun face à la moyenne', ds.rows.map((x) => x.name));
+  const dp = build('products', { site: 'all' });
+  check(Math.abs(dp.rows.reduce((a, x) => a + x.net, 0) - dp.totals.net) <= 1 && dp.page.total > 20, 'démo : les produits refont les ventes nettes', [dp.rows.reduce((a, x) => a + x.net, 0), dp.totals.net]);
+  const dt = build('summary', { preset: 'aujourdhui' });
+  check(dt.hourly && dt.hourly.reduce((a, x) => a + x.net, 0) === dt.totals.cur.net && dt.peakHour, 'démo : une journée se lit à l’heure, les heures refont le net', dt.peakHour);
+  check(REPORTS_ALL.every((rep) => { const d = build(rep); return d.headline && d.headline.fr && d.headline.en && d.headline.ar; }), 'démo : chaque rapport a sa phrase dans les trois langues');
+  check(Demo.csv(build('products', { csv: true }), 'fr').startsWith(BOM), 'démo : le CSV est fait sur place, BOM compris');
+  check(/typeof window\.KiwiEnv\?\.isReal === 'function' && !window\.KiwiEnv\.isReal\(\)/.test(hub), 'les chiffres de démo ne s’affichent que si KiwiEnv dit « pas réel » (jamais sans KiwiEnv)');
+  const page = Views.printable('Rapport', 'Café Atlas', '<p>corps</p>', dt, { summary: dt, vat: build('vat', { preset: 'aujourdhui' }) });
+  check(/Synthèse pour le comptable/.test(page) && /TVA par taux/.test(page) && page.indexOf('Synthèse') < page.indexOf('corps'), 'l’impression commence par une page de garde pour le comptable (totaux, TVA par taux)');
+  const lede = Views.lede(dt, 'comparé à', { title: 'Résumé' });
+  check(/href="https:\/\/wa\.me\/\?text=/.test(lede) && !/api\.whatsapp|graph\.facebook/.test(lede), 'la phrase se partage en brouillon wa.me (rien n’est envoyé, aucun service payant)');
+}
+
+console.log('\nSchéma');
+const reportsSql = fs.readFileSync(path.join(ROOT, 'functions/api/_reports-sql.js'), 'utf8');
+check(!/PRAGMA|table_info|ALTER\s+TABLE|CREATE\s+TABLE/i.test(reportsSql), 'aucune sonde de colonnes ni repli de schéma : les requêtes lisent schema.sql');
+const minimum = Number(/MINIMUM_SCHEMA_VERSION\s*=\s*(\d+)/.exec(fs.readFileSync(path.join(ROOT, 'functions/_schema-version.js'), 'utf8'))[1]);
+const prod = new DatabaseSync(':memory:');
+for (const f of listMigrations().filter((x) => Number(x.slice(0, 4)) <= minimum)) prod.exec(fs.readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8'));
+const win = { from: 1, to: 2 };
+const base = baseCte({ sites: [{ buckets: ['a', 'b'], cur: win, prev: win, atSale: true }, { buckets: ['c'], cur: win, prev: win }] });
+const pg = { limit: 10, offset: 0 };
+const queries = [Q.hours(), Q.lineTotals(), Q.ranking('name', pg), Q.ranking('cat', pg), Q.drivers('name'), Q.staff(), Q.staffRefunds(), Q.payments(),
+  Q.refundMethods(), Q.channels(), Q.vatLines([[5, 9], []]), Q.vatRest([[5], [7]]), Q.customers(pg), Q.topTen()];
+for (const q of queries) prod.prepare(base.sql + '\n' + q);
+check(queries.length === 14 && LINES_CTE.includes('o.lines'), `les ${queries.length} requêtes préparent sur le schéma minimum de production (migrations jusqu’à ${String(minimum).padStart(4, '0')})`);
 
 console.log(`\n${n} checks passed`);

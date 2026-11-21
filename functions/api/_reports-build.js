@@ -50,6 +50,7 @@ function timeline(hours, sites, pd) {
   const byDay = new Map();
   const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
   const slots = new Map();
+  const byHour = Array(24).fill(0), ticketsByHour = Array(24).fill(0);
   for (const h of hours) {
     if (h.pd !== pd) continue;
     const site = sites[h.site];
@@ -57,11 +58,12 @@ function timeline(hours, sites, pd) {
     const t = hourClock(site.zone, site.cutoff)(num(h.h));
     const net = num(h.pos) - num(h.neg);
     byDay.set(t.day, (byDay.get(t.day) || 0) + net);
+    byHour[t.hour] += net; ticketsByHour[t.hour] += num(h.n);
     grid[t.weekday][t.hour] += num(h.pos);
     const key = t.weekday + ':' + daypart(t.hour);
     slots.set(key, (slots.get(key) || 0) + num(h.pos));
   }
-  return { byDay, grid, slots };
+  return { byDay, grid, slots, byHour, ticketsByHour };
 }
 
 function slotDrivers(cur, prev, sameWeekdays) {
@@ -109,21 +111,40 @@ export function buildSummary(ctx, [hours, lineTotals, drivers]) {
       down: downs[0] ? { name: String(downs[0].k), delta: r0(downs[0].delta) } : null },
     slots: slotDrivers(tc, tp, period.days % 7 === 0),
   };
+  /* Une seule journée : la série passe à l'heure, dans l'ordre de la
+     journée commerciale (de la coupure à la coupure), avec l'heure de pointe. */
+  let hourly = null, peakHour = null;
+  if (period.days === 1) {
+    const cut = (sites[0] && sites[0].cutoff) || 0;
+    hourly = Array.from({ length: 24 }, (_, i) => (cut + i) % 24)
+      .map((hour) => ({ hour, net: r0(tc.byHour[hour]), tickets: tc.ticketsByHour[hour], prevNet: r0(tp.byHour[hour]) }));
+    const top = hourly.reduce((best, x) => (x.net > 0 && (!best || x.net > best.net) ? x : best), null);
+    if (top) { peakHour = { hour: top.hour, net: top.net, tickets: top.tickets }; d.peakHour = peakHour; }
+  }
+  /* Chaque boutique, sous `perSite` : `sites` reste la liste des boutiques du
+     compte que l'enveloppe (reports.js) donne au sélecteur. */
   const perSite = sites.map((s, i) => ({ merchant: s.merchant, name: s.name,
     cur: kpis(hours, lineTotals, 'c', i, showCost), prev: kpis(hours, lineTotals, 'p', i, showCost) }));
-  return { totals: { cur, prev, change: deltaPct(cur.net, prev.net) }, series, drivers: d.drivers, slots: d.slots,
-    sites: perSite, headline: summarySentence(d) };
+  return { totals: { cur, prev, change: deltaPct(cur.net, prev.net) }, series, hourly, peakHour, drivers: d.drivers, slots: d.slots,
+    perSite, headline: summarySentence(d) };
 }
 
 /* Produits ou rayons. */
-export function buildRanking(ctx, kind, [rows, lineTotals]) {
+export function buildRanking(ctx, kind, [rows, lineTotals, hours]) {
   const { showCost, page } = ctx;
   const total = lineTotals.filter((l) => l.pd === 'c').reduce((n, l) => n + num(l.net), 0);
+  const prevTotal = lineTotals.filter((l) => l.pd === 'p').reduce((n, l) => n + num(l.net), 0);
+  /* Le classement se raccorde au résumé : ventes nettes du résumé = somme des
+     lignes + ce qui n'a pas de détail d'article (ventes sans lignes,
+     remboursements dont la vente d'origine n'a pas de lignes). */
+  const k = kpis(hours || [], [], 'c', null, false), pk = kpis(hours || [], [], 'p', null, false);
+  const refunded = lineTotals.filter((l) => l.pd === 'c').reduce((n, l) => n + num(l.refunded), 0);
   const out = rows.map((r) => {
     const net = num(r.net), pnet = num(r.pnet);
     const row = { key: String(r.k == null ? '' : r.k), name: String(r.k == null ? '' : r.k), category: String(r.cat || ''),
       qty: Math.round(num(r.q) * 1000) / 1000, prevQty: Math.round(num(r.pq) * 1000) / 1000,
-      net: r0(net), prevNet: r0(pnet), gross: r0(r.gross), tickets: num(r.tickets),
+      net: r0(net), prevNet: r0(pnet), gross: r0(r.gross), sold: r0(r.sold), refunded: r0(r.refunded),
+      refundedQty: Math.round(num(r.rq) * 1000) / 1000, tickets: num(r.tickets),
       share: total > 0 ? Math.round((net / total) * 1000) / 10 : 0, change: deltaPct(net, pnet),
       cost: null, margin: null, marginPct: null };
     if (showCost && r.cost != null) {
@@ -137,7 +158,8 @@ export function buildRanking(ctx, kind, [rows, lineTotals]) {
   const mover = out.filter((r) => r.net - r.prevNet > 0).sort((a, b) => (b.net - b.prevNet) - (a.net - a.prevNet))[0];
   const first = page.offset === 0 && out[0] ? out[0] : null;
   return { rows: out, page: { offset: page.offset, limit: page.limit, total: count },
-    totals: { net: r0(total), prevNet: r0(lineTotals.filter((l) => l.pd === 'p').reduce((n, l) => n + num(l.net), 0)) },
+    totals: { lines: r0(total), prevLines: r0(prevTotal), refunded: r0(refunded),
+      unattributed: r0(k.net - total), prevUnattributed: r0(pk.net - prevTotal), net: k.net, prevNet: pk.net },
     headline: rankingSentence(kind, { top: first && { name: first.name, value: first.net, prev: first.prevNet }, total,
       mover: mover && { name: mover.name, delta: mover.net - mover.prevNet } }) };
 }
@@ -222,17 +244,22 @@ export function vatFor(ctx, [lines, rest], pd) {
     if (!bySite.has(site)) bySite.set(site, []);
     bySite.get(site).push({ amount: cents / 100, lines: [{ total: Math.abs(cents) / 100, rate }] });
   };
-  const dayKey = (d) => new Date(num(d) * 86400000).toISOString().slice(0, 10);
+  /* Le segment d'une ligne (_reports-sql.js segExpr) donne la journée
+     commerciale où son taux a commencé ; 0 = avant tout taux daté. */
+  const dayKey = (site, seg) => {
+    const list = (ctx.vatSegs && ctx.vatSegs[site] && ctx.vatSegs[site].days) || [];
+    return num(seg) > 0 && list[num(seg) - 1] ? list[num(seg) - 1] : '0000-01-01';
+  };
   for (const l of lines) {
     if (l.pd !== pd) continue;
     const cfg = ctx.vatConfig[l.site] || {};
     const c = r0(l.net);
-    if (c) push(l.site, c, rateFor(cfg, String(l.cat || ''), dayKey(l.d)));
+    if (c) push(l.site, c, rateFor(cfg, String(l.cat || ''), dayKey(l.site, l.seg)));
   }
   for (const r of rest) {
     if (r.pd !== pd) continue;
     const cfg = ctx.vatConfig[r.site] || {};
-    const day = dayKey(r.d);
+    const day = dayKey(r.site, r.seg);
     if (num(r.bare)) push(r.site, num(r.bare), rateFor(cfg, '', day));
     if (num(r.neg)) push(r.site, num(r.neg), rateFor(cfg, '', day));
   }
@@ -292,8 +319,19 @@ export function buildSites(ctx, [hours, lineTotals]) {
   const ranked = rows.filter((r) => r.cur.tickets || r.cur.refundCount).sort((a, b) => b.cur.net - a.cur.net);
   const best = ranked[0] || null, worst = ranked.length > 1 ? ranked[ranked.length - 1] : null;
   const mover = rows.filter((r) => r.cur.net - r.prev.net > 0).sort((a, b) => (b.cur.net - b.prev.net) - (a.cur.net - a.prev.net))[0];
-  rows.forEach((r) => { r.share = total.net > 0 ? Math.round((r.cur.net / total.net) * 1000) / 10 : 0; });
-  return { rows, totals: { cur: total, prev: prevTotal, change: deltaPct(total.net, prevTotal.net) },
+  /* La moyenne du groupe : les boutiques qui ont vendu sur la période. Chaque
+     carte dit où elle se place (`vsAverage`, en %). */
+  const active = rows.filter((r) => r.cur.tickets || r.cur.refundCount);
+  const avg = active.length ? {
+    net: Math.round(active.reduce((n, r) => n + r.cur.net, 0) / active.length),
+    basket: Math.round(active.reduce((n, r) => n + r.cur.basket, 0) / active.length),
+    tickets: Math.round(active.reduce((n, r) => n + r.cur.tickets, 0) / active.length),
+  } : null;
+  rows.forEach((r) => {
+    r.share = total.net > 0 ? Math.round((r.cur.net / total.net) * 1000) / 10 : 0;
+    r.vsAverage = avg && (r.cur.tickets || r.cur.refundCount) ? { net: deltaPct(r.cur.net, avg.net), basket: deltaPct(r.cur.basket, avg.basket) } : null;
+  });
+  return { rows, totals: { cur: total, prev: prevTotal, change: deltaPct(total.net, prevTotal.net) }, average: avg,
     best: best && best.merchant, worst: worst && worst.merchant,
     headline: rankingSentence('sites', { top: best && { name: best.name, value: best.cur.net, prev: best.prev.net }, total: total.net,
       mover: mover && { name: mover.name, delta: mover.cur.net - mover.prev.net } }) };

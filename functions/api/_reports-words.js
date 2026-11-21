@@ -62,7 +62,7 @@ export function slotName(slot, lang) {
   if (slot.weekday == null) return (PART_ALONE[lang] || PART_ALONE.fr)[slot.part];
   const wd = weekdayName(slot.weekday, lang), part = (PART[lang] || PART.fr)[slot.part];
   if (lang === 'en') return wd + ' ' + part;
-  if (lang === 'ar') return part + ' ' + wd;
+  if (lang === 'ar') return slot.part === 'night' ? 'آخر الليل يوم ' + wd : part + ' ' + wd;
   return 'le ' + wd + ' ' + part;
 }
 
@@ -70,15 +70,15 @@ export function slotName(slot, lang) {
 export function versus(period, lang) {
   const n = period.days;
   const T = {
-    aujourdhui: { fr: 'hier à la même heure', en: 'yesterday at the same time', ar: 'أمس في نفس الساعة' },
-    hier: { fr: 'la veille', en: 'the day before', ar: 'اليوم الذي قبله' },
-    moisDernier: { fr: 'le mois d’avant', en: 'the month before', ar: 'الشهر الذي قبله' },
-    trimestre: { fr: 'le trimestre précédent au même stade', en: 'last quarter at the same point', ar: 'الربع السابق في نفس المرحلة' },
-    annee: { fr: 'l’an dernier à la même date', en: 'last year to the same date', ar: 'السنة الماضية في نفس التاريخ' },
+    aujourdhui: { fr: 'hier à la même heure', en: 'yesterday at the same time', ar: 'أمس في الساعة نفسها' },
+    hier: { fr: 'la veille', en: 'the day before', ar: 'اليوم السابق' },
+    moisDernier: { fr: 'le mois d’avant', en: 'the month before', ar: 'الشهر السابق' },
+    trimestre: { fr: 'le trimestre précédent au même stade', en: 'last quarter at the same point', ar: 'الربع السابق في المرحلة نفسها' },
+    annee: { fr: 'l’an dernier à la même date', en: 'last year to the same date', ar: 'السنة الماضية إلى التاريخ نفسه' },
   }[period.preset];
   if (T) return T[lang] || T.fr;
   if (lang === 'en') return n === 1 ? 'the day before' : `the previous ${n} days`;
-  if (lang === 'ar') return n === 1 ? 'اليوم الذي قبله' : n === 7 ? 'الأيام السبعة السابقة' : `الـ${n} يوما السابقة`;
+  if (lang === 'ar') return n === 1 ? 'اليوم السابق' : n === 7 ? 'الأيام السبعة السابقة' : `الـ${n} يوما السابقة`;
   return n === 1 ? 'la veille' : `les ${n} jours précédents`;
 }
 /* « par rapport aux 7 jours précédents », « par rapport au mois d’avant ». */
@@ -88,6 +88,13 @@ export function frVersus(vs) {
 
 function each(fn) { const out = {}; for (const l of LANGS) out[l] = fn(l); return out; }
 const join2 = (a, b, lang) => (a && b ? a + (lang === 'ar' ? ' و' : lang === 'en' ? ' and ' : ' et ') + b : a || b || '');
+
+/* Une seule journée : l'heure de pointe, après la tendance. */
+function peak(d, lang) {
+  if (!d.peakHour) return '';
+  const h = d.peakHour.hour;
+  return { fr: ` Pic de la journée à ${h} h.`, en: ` Busiest hour: ${h}:00.`, ar: ` ذروة اليوم على الساعة ${h}:00.` }[lang];
+}
 
 /* Le résumé : la tendance des ventes nettes, puis ce qui l'explique. */
 export function summarySentence(d) {
@@ -102,7 +109,7 @@ export function summarySentence(d) {
         fr: `${money(cur, 'fr')} de ventes nettes sur la période. Pas de vente à comparer sur la période précédente.`,
         en: `${money(cur, 'en')} in net sales this period. No sales in the previous period to compare with.`,
         ar: `${money(cur, 'ar')} من المبيعات الصافية في هذه الفترة. لا توجد مبيعات في الفترة السابقة للمقارنة.`,
-      }[lang];
+      }[lang] + peak(d, lang);
     }
     const up = change >= 0;
     const product = up ? d.drivers.up : d.drivers.down;
@@ -113,11 +120,11 @@ export function summarySentence(d) {
         fr: `Ventes nettes stables à ${money(cur, 'fr')} ${frVersus(vs)}.`,
         en: `Net sales steady at ${money(cur, 'en')} vs ${vs}.`,
         ar: `المبيعات الصافية مستقرة عند ${money(cur, 'ar')} مقارنة مع ${vs}.`,
-      }[lang];
+      }[lang] + peak(d, lang);
     }
-    if (lang === 'en') return `Net sales ${up ? 'up' : 'down'} ${pct(change, lang)} vs ${vs}${why ? (up ? ', driven by ' : ', dragged by ') + why : ''}.`;
-    if (lang === 'ar') return `${up ? 'ارتفعت' : 'انخفضت'} المبيعات الصافية بـ${pct(change, lang)} مقارنة مع ${vs}${why ? (up ? '، بفضل ' : '، بسبب تراجع ') + why : ''}.`;
-    return `Ventes nettes en ${up ? 'hausse' : 'baisse'} de ${pct(change, 'fr')} ${frVersus(vs)}${why ? (up ? ', portées par ' : ', freinées par ') + why : ''}.`;
+    if (lang === 'en') return `Net sales ${up ? 'up' : 'down'} ${pct(change, lang)} vs ${vs}${why ? (up ? ', driven by ' : ', dragged by ') + why : ''}.` + peak(d, lang);
+    if (lang === 'ar') return `${up ? 'ارتفعت' : 'انخفضت'} المبيعات الصافية بـ${pct(change, lang)} مقارنة مع ${vs}${why ? (up ? '، بفضل ' : '، بسبب تراجع ') + why : ''}.` + peak(d, lang);
+    return `Ventes nettes en ${up ? 'hausse' : 'baisse'} de ${pct(change, 'fr')} ${frVersus(vs)}${why ? (up ? ', portées par ' : ', freinées par ') + why : ''}.` + peak(d, lang);
   });
 }
 
@@ -142,15 +149,15 @@ export function rankingSentence(kind, d) {
     const moverText = !mover ? '' : {
       fr: ` ${mover.name} progresse le plus (${mover.delta > 0 ? '+' : ''}${money(mover.delta, 'fr')}).`,
       en: ` ${mover.name} grew the most (${mover.delta > 0 ? '+' : ''}${money(mover.delta, 'en')}).`,
-      ar: ` ${mover.name} هو الأكثر تقدما (${mover.delta > 0 ? '+' : ''}${money(mover.delta, 'ar')}).`,
+      ar: ` أكبر تقدم كان من نصيب ${mover.name} (${mover.delta > 0 ? '+' : ''}${money(mover.delta, 'ar')}).`,
     }[lang];
     const lead = {
       products: { fr: `${top.name} mène avec ${share} des ventes nettes`, en: `${top.name} leads with ${share} of net sales`, ar: `${top.name} في الصدارة بـ${share} من المبيعات الصافية` },
-      categories: { fr: `Le rayon ${top.name} pèse ${share} des ventes nettes`, en: `${top.name} makes up ${share} of net sales`, ar: `قسم ${top.name} يمثل ${share} من المبيعات الصافية` },
-      staff: { fr: `${top.name} a encaissé ${share} des ventes, panier moyen ${money(top.basket, 'fr')}`, en: `${top.name} rang up ${share} of sales, average basket ${money(top.basket, 'en')}`, ar: `${top.name} سجّل ${share} من المبيعات، بمتوسط سلة ${money(top.basket, 'ar')}` },
-      payments: { fr: `${top.name} représente ${share} des encaissements`, en: `${top.name} accounts for ${share} of payments`, ar: `${top.name} يمثل ${share} من المداخيل` },
-      channels: { fr: `${top.name} apporte ${share} des ventes`, en: `${top.name} brings ${share} of sales`, ar: `${top.name} يجلب ${share} من المبيعات` },
-      customers: { fr: `Vos 10 meilleurs clients font ${pct(d.topTenShare || 0, 'fr')} des ventes rattachées à un client ; ${top.name} arrive en tête`, en: `Your top 10 customers make ${pct(d.topTenShare || 0, 'en')} of sales tied to a customer; ${top.name} comes first`, ar: `أفضل 10 زبناء عندك يصنعون ${pct(d.topTenShare || 0, 'ar')} من المبيعات المرتبطة بزبون، و${top.name} في المقدمة` },
+      categories: { fr: `Le rayon ${top.name} pèse ${share} des ventes nettes`, en: `${top.name} makes up ${share} of net sales`, ar: `حصة قسم ${top.name} من المبيعات الصافية ${share}` },
+      staff: { fr: `${top.name} a encaissé ${share} des ventes, panier moyen ${money(top.basket, 'fr')}`, en: `${top.name} rang up ${share} of sales, average basket ${money(top.basket, 'en')}`, ar: `حصة ${top.name} من المبيعات ${share}، بمتوسط سلة ${money(top.basket, 'ar')}` },
+      payments: { fr: `${top.name} représente ${share} des encaissements`, en: `${top.name} accounts for ${share} of payments`, ar: `حصة ${top.name} من المداخيل ${share}` },
+      channels: { fr: `${top.name} apporte ${share} des ventes`, en: `${top.name} brings ${share} of sales`, ar: `حصة ${top.name} من المبيعات ${share}` },
+      customers: { fr: `Vos 10 meilleurs clients font ${pct(d.topTenShare || 0, 'fr')} des ventes rattachées à un client ; ${top.name} arrive en tête`, en: `Your top 10 customers make ${pct(d.topTenShare || 0, 'en')} of sales tied to a customer; ${top.name} comes first`, ar: `أفضل 10 زبناء عندك يمثلون ${pct(d.topTenShare || 0, 'ar')} من المبيعات المرتبطة بزبون، وفي مقدمتهم ${top.name}` },
       sites: { fr: `${top.name} mène avec ${share} des ventes nettes du groupe`, en: `${top.name} leads with ${share} of group net sales`, ar: `${top.name} في الصدارة بـ${share} من المبيعات الصافية للمجموعة` },
     }[kind];
     const tail = kind === 'customers' ? '' : trend;
@@ -165,7 +172,7 @@ export function heatmapSentence(d) {
     const h = d.peak.hour, h2 = (h + 1) % 24;
     const wd = weekdayName(d.peak.weekday, lang);
     if (lang === 'en') return `Your busiest hour is ${wd} from ${h}:00 to ${h2}:00, with ${share} of sales. ${d.quiet ? `${weekdayName(d.quiet, 'en')} is the quietest day.` : ''}`.trim();
-    if (lang === 'ar') return `أقوى ساعة عندك هي يوم ${wd} بين ${h}:00 و${h2}:00، بـ${share} من المبيعات.${d.quiet != null ? ` و${weekdayName(d.quiet, 'ar')} هو أهدأ يوم.` : ''}`;
+    if (lang === 'ar') return `أقوى ساعة عندك هي يوم ${wd} بين ${h}:00 و${h2}:00، بـ${share} من المبيعات.${d.quiet != null ? ` وأهدأ يوم هو ${weekdayName(d.quiet, 'ar')}.` : ''}`;
     return `Votre heure la plus forte est le ${wd} entre ${h} h et ${h2} h, avec ${share} des ventes.${d.quiet != null ? ` Le ${weekdayName(d.quiet, 'fr')} est le jour le plus calme.` : ''}`;
   });
 }

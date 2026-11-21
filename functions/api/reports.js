@@ -1,4 +1,4 @@
-// GET /api/reports — les rapports d'une période, pour une boutique ou pour
+// GET /api/reports · les rapports d'une période, pour une boutique ou pour
 // toutes les boutiques du compte.
 //
 //   ?merchant=<boutique ouverte>        la boutique du tableau de bord (obligatoire)
@@ -25,9 +25,9 @@
 import { json, entitledMerchant, isOperator, activeAccountSession, storeOwner } from '../auth/_lib.js';
 import { sessionTierAtLeast } from '../auth/_session-tier.js';
 import { legacyBucketFor } from './_sales-scope.js';
-import { validZone, DEFAULT_ZONE, DEFAULT_CUTOFF } from './_business-day.js';
+import { validZone, businessBoundary, DEFAULT_ZONE, DEFAULT_CUTOFF } from './_business-day.js';
 import { resolvePeriod, windowFor } from './_reports-period.js';
-import { salesColumns, baseCte, Q, run } from './_reports-sql.js';
+import { baseCte, Q, run } from './_reports-sql.js';
 import { buildSummary, buildRanking, buildStaff, buildPayments, buildChannels, buildHeatmap, buildVat, buildCustomers, buildSites, vatFor } from './_reports-build.js';
 import { reportCsv } from './_reports-csv.js';
 import { memberName } from './_commissions.js';
@@ -35,23 +35,27 @@ import { weekdayName } from './_reports-words.js';
 
 export const REPORTS = ['summary', 'products', 'categories', 'staff', 'payments', 'heatmap', 'channels', 'vat', 'customers', 'sites'];
 export const MAX_SITES = 12;
+export const CSV_ROWS = 20000;
 const SLUG = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const LANGS = ['fr', 'en', 'ar'];
 
+/* Les noms des moyens et des canaux. En arabe, des noms qui peuvent ouvrir une
+   phrase (« حصة الأداء نقدا من المداخيل… ») : un adverbe comme « نقدا » ne
+   peut pas en être le sujet. */
 const METHOD = {
-  cash: ['Espèces', 'Cash', 'نقدا'], card: ['Carte', 'Card', 'بطاقة'], tap: ['Sans contact', 'Contactless', 'بدون تلامس'],
-  transfer: ['Virement', 'Bank transfer', 'تحويل بنكي'], cheque: ['Chèque', 'Cheque', 'شيك'], split: ['Paiement mixte', 'Split payment', 'أداء مختلط'],
-  qr: ['QR', 'QR', 'QR'], wallet: ['Portefeuille', 'Wallet', 'محفظة'], credit: ['Avoir / compte client', 'Store credit / account', 'رصيد / حساب الزبون'],
-  delivery: ['À la livraison', 'Cash on delivery', 'عند التسليم'], complimentary: ['Offert', 'On the house', 'مجاني'], '': ['Non précisé', 'Not recorded', 'غير محدد'],
+  cash: ['Espèces', 'Cash', 'الأداء نقدا'], card: ['Carte', 'Card', 'الأداء بالبطاقة'], tap: ['Sans contact', 'Contactless', 'الأداء بدون تلامس'],
+  transfer: ['Virement', 'Bank transfer', 'التحويل البنكي'], cheque: ['Chèque', 'Cheque', 'الشيك'], split: ['Paiement mixte', 'Split payment', 'الأداء المختلط'],
+  qr: ['QR', 'QR', 'الأداء عبر QR'], wallet: ['Portefeuille', 'Wallet', 'المحفظة الإلكترونية'], credit: ['Avoir / compte client', 'Store credit / account', 'رصيد الزبون وحسابه'],
+  delivery: ['À la livraison', 'Cash on delivery', 'الأداء عند التسليم'], complimentary: ['Offert', 'On the house', 'ما قُدّم مجانا'], '': ['Non précisé', 'Not recorded', 'وسيلة غير محددة'],
 };
 const CHANNEL = {
-  '': ['Non renseigné', 'Not recorded', 'غير محدد'], surplace: ['Sur place', 'Dine-in', 'في المحل'], dining: ['Sur place', 'Dine-in', 'في المحل'],
-  emporter: ['À emporter', 'Takeaway', 'للأخذ'], takeaway: ['À emporter', 'Takeaway', 'للأخذ'], terrace: ['Terrasse', 'Terrace', 'التراس'],
-  delivery: ['Livraison', 'Delivery', 'التوصيل'], counter: ['Comptoir', 'Counter', 'الكونطوار'], walkin: ['En boutique', 'Walk-in', 'في المحل'],
+  '': ['Non renseigné', 'Not recorded', 'قناة غير محددة'], surplace: ['Sur place', 'Dine-in', 'الأكل في المحل'], dining: ['Sur place', 'Dine-in', 'الأكل في المحل'],
+  emporter: ['À emporter', 'Takeaway', 'الطلبات للأخذ'], takeaway: ['À emporter', 'Takeaway', 'الطلبات للأخذ'], terrace: ['Terrasse', 'Terrace', 'التراس'],
+  delivery: ['Livraison', 'Delivery', 'التوصيل'], counter: ['Comptoir', 'Counter', 'الكونطوار'], walkin: ['En boutique', 'Walk-in', 'البيع في المحل'],
   glovo: ['Glovo', 'Glovo', 'Glovo'], yassir: ['Yassir', 'Yassir', 'Yassir'], shopify: ['Shopify', 'Shopify', 'Shopify'],
   storefront: ['Boutique en ligne', 'Online shop', 'المتجر الإلكتروني'], orderpro: ['OrderPro', 'OrderPro', 'OrderPro'],
   whatsapp: ['WhatsApp', 'WhatsApp', 'واتساب'], ozon: ['Ozon Express', 'Ozon Express', 'Ozon Express'], hotel: ['Hôtel', 'Hotel', 'الفندق'],
-  kiwi: ['Kiwi', 'Kiwi', 'Kiwi'], direct: ['Direct', 'Direct', 'مباشر'],
+  kiwi: ['Kiwi', 'Kiwi', 'Kiwi'], direct: ['Direct', 'Direct', 'البيع المباشر'],
 };
 export function labels(lang) {
   const i = Math.max(0, LANGS.indexOf(lang));
@@ -129,6 +133,18 @@ async function vatConfigs(env, sites) {
   }));
 }
 
+/* Les journées où un taux daté commence, par boutique, et le début (ms) de
+   chacune dans l'horloge de la boutique : _reports-sql.js segExpr() range
+   chaque vente dans son segment, donc dans sa journée commerciale. Soixante
+   changements au plus par boutique, les plus récents. */
+export function vatSegments(configs, sites, toDay) {
+  return sites.map((s, i) => {
+    const daysList = [...new Set(((configs[i] && configs[i].periods) || []).map((p) => String(p.effectiveFrom)))]
+      .filter((d) => d <= toDay).sort().slice(-60);
+    return { days: daysList, ms: daysList.map((d) => businessBoundary(d, s.cutoff, s.zone)) };
+  });
+}
+
 /* Les noms des vendeurs sans nom sur la vente : la fiche Équipe, le nom seul. */
 async function sellerNames(env, sites) {
   const names = new Map();
@@ -187,8 +203,11 @@ export async function buildReport(env, request, url) {
       cur: windowFor(period.fromDay, period.toDay, period.cutMs, s.zone, s.cutoff),
       prev: windowFor(period.prev.fromDay, period.prev.toDay, period.cutMs, s.zone, s.cutoff) });
   }
-  const limit = Math.max(1, Math.min(200, Math.floor(Number(url.searchParams.get('limit')) || 50)));
-  const offset = Math.max(0, Math.min(100000, Math.floor(Number(url.searchParams.get('offset')) || 0)));
+  /* Le CSV exporte tout le rapport, pas la page affichée : D1 regroupe déjà,
+     une ligne par produit ou par client, et 20 000 lignes restent légères. */
+  const csv = url.searchParams.get('format') === 'csv';
+  const limit = csv ? CSV_ROWS : Math.max(1, Math.min(200, Math.floor(Number(url.searchParams.get('limit')) || 50)));
+  const offset = csv ? 0 : Math.max(0, Math.min(100000, Math.floor(Number(url.searchParams.get('offset')) || 0)));
   const ctx = { period, sites: scoped, showCost, page: { limit, offset } };
   const lang = LANGS.includes(q('lang', 2)) ? q('lang', 2) : 'fr';
   const L = labels(lang);
@@ -196,19 +215,23 @@ export async function buildReport(env, request, url) {
      d'ouverture est rendue dans les trois, quelle que soit la langue du CSV. */
   const tri = (kind) => (code) => Object.fromEntries(LANGS.map((l) => [l, labels(l)[kind](code)]));
 
-  const cols = await salesColumns(env);
-  const base = baseCte({ sites: scoped }, cols);
+  const base = baseCte({ sites: scoped });
   let data;
   try {
-    if (report === 'summary') {
-      const [hours, lineTotals, drivers, vl, vr] = await run(env, base, [Q.hours(), Q.lineTotals(), Q.drivers('name'), Q.vatLines(), Q.vatRest()]);
+    if (report === 'summary' || report === 'vat') {
       ctx.vatConfig = await vatConfigs(env, scoped);
+      ctx.vatSegs = vatSegments(ctx.vatConfig, scoped, period.toDay);
+    }
+    if (report === 'summary') {
+      const segs = ctx.vatSegs.map((x) => x.ms);
+      const [hours, lineTotals, drivers, vl, vr] = await run(env, base,
+        [Q.hours(), Q.lineTotals(), Q.drivers('name'), Q.vatLines(segs), Q.vatRest(segs)]);
       const vc = vatFor(ctx, [vl, vr], 'c').totals, vp = vatFor(ctx, [vl, vr], 'p').totals;
       ctx.vat = { cur: vc, prev: vp };
       data = buildSummary(ctx, [hours, lineTotals, drivers]);
     } else if (report === 'products' || report === 'categories') {
       const key = report === 'products' ? 'name' : 'cat';
-      data = buildRanking(ctx, report, await run(env, base, [Q.ranking(key, ctx.page), Q.lineTotals()]));
+      data = buildRanking(ctx, report, await run(env, base, [Q.ranking(key, ctx.page), Q.lineTotals(), Q.hours()]));
     } else if (report === 'staff') {
       data = buildStaff(ctx, await run(env, base, [Q.staff(), Q.staffRefunds()]), await sellerNames(env, scoped));
     } else if (report === 'payments') {
@@ -218,8 +241,8 @@ export async function buildReport(env, request, url) {
     } else if (report === 'heatmap') {
       data = buildHeatmap(ctx, await run(env, base, [Q.hours()]));
     } else if (report === 'vat') {
-      ctx.vatConfig = await vatConfigs(env, scoped);
-      data = buildVat(ctx, await run(env, base, [Q.vatLines(), Q.vatRest()]));
+      const segs = ctx.vatSegs.map((x) => x.ms);
+      data = buildVat(ctx, await run(env, base, [Q.vatLines(segs), Q.vatRest(segs)]));
     } else if (report === 'customers') {
       data = buildCustomers(ctx, await run(env, base, [Q.customers(ctx.page), Q.topTen(), Q.hours()]));
     } else {

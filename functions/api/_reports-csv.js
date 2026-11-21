@@ -34,7 +34,8 @@ const H = {
     rate: 'Taux TVA (%)', ht: 'HT (MAD)', vat: 'TVA (MAD)', ttc: 'TTC (MAD)', unknownRate: 'Taux inconnu',
     customer: 'Client', spend: 'Dépense (MAD)', last: 'Dernière visite', prevSpend: 'Dépense comparée (MAD)', site: 'Établissement',
     weekday: 'Jour', hour: 'Heure', metric: 'Indicateur', value: 'Valeur', prevValue: 'Valeur comparée',
-    unassigned: 'Sans vendeur', none: 'Sans catégorie', total: 'Total' },
+    unassigned: 'Sans vendeur', none: 'Sans catégorie', total: 'Total',
+    sold: 'Vendu avant retours (MAD)', refunded: 'Retours (MAD)', unattributed: 'Ventes sans détail d’article et retours non rattachés', vsAvg: 'Écart à la moyenne du groupe (%)' },
   en: { day: 'Business day', net: 'Net sales (MAD)', prevDay: 'Compared day', prevNet: 'Compared net sales (MAD)',
     name: 'Name', category: 'Category', qty: 'Quantity', prevQty: 'Compared quantity', gross: 'Line gross (MAD)', share: 'Share (%)', change: 'Change (%)',
     tickets: 'Tickets', cost: 'Cost (MAD)', margin: 'Margin (MAD)', marginPct: 'Margin (%)', sales: 'Sales (MAD)', prevSales: 'Compared sales (MAD)', basket: 'Average basket (MAD)',
@@ -43,7 +44,8 @@ const H = {
     rate: 'VAT rate (%)', ht: 'Excl. VAT (MAD)', vat: 'VAT (MAD)', ttc: 'Incl. VAT (MAD)', unknownRate: 'Unknown rate',
     customer: 'Customer', spend: 'Spend (MAD)', last: 'Last visit', prevSpend: 'Compared spend (MAD)', site: 'Location',
     weekday: 'Day', hour: 'Hour', metric: 'Metric', value: 'Value', prevValue: 'Compared value',
-    unassigned: 'No seller', none: 'No category', total: 'Total' },
+    unassigned: 'No seller', none: 'No category', total: 'Total',
+    sold: 'Sold before returns (MAD)', refunded: 'Returns (MAD)', unattributed: 'Sales without item detail and unlinked refunds', vsAvg: 'vs group average (%)' },
   ar: { day: 'اليوم التجاري', net: 'المبيعات الصافية (درهم)', prevDay: 'يوم المقارنة', prevNet: 'المبيعات الصافية للمقارنة (درهم)',
     name: 'الاسم', category: 'القسم', qty: 'الكمية', prevQty: 'الكمية للمقارنة', gross: 'إجمالي السطور (درهم)', share: 'الحصة (%)', change: 'التطور (%)',
     tickets: 'التذاكر', cost: 'التكلفة (درهم)', margin: 'الهامش (درهم)', marginPct: 'الهامش (%)', sales: 'المبيعات (درهم)', prevSales: 'المبيعات للمقارنة (درهم)', basket: 'متوسط السلة (درهم)',
@@ -52,7 +54,8 @@ const H = {
     rate: 'نسبة الضريبة (%)', ht: 'دون ضريبة (درهم)', vat: 'الضريبة (درهم)', ttc: 'بالضريبة (درهم)', unknownRate: 'نسبة غير معروفة',
     customer: 'الزبون', spend: 'الإنفاق (درهم)', last: 'آخر زيارة', prevSpend: 'الإنفاق للمقارنة (درهم)', site: 'المؤسسة',
     weekday: 'اليوم', hour: 'الساعة', metric: 'المؤشر', value: 'القيمة', prevValue: 'القيمة للمقارنة',
-    unassigned: 'بدون بائع', none: 'بدون قسم', total: 'المجموع' },
+    unassigned: 'بدون بائع', none: 'بدون قسم', total: 'المجموع',
+    sold: 'المبيعات قبل المرجوعات (درهم)', refunded: 'المرجوعات (درهم)', unattributed: 'مبيعات بدون تفاصيل المنتجات ومرجوعات غير مرتبطة بتذكرتها', vsAvg: 'الفرق مع متوسط المجموعة (%)' },
 };
 const METRICS = {
   fr: { gross: 'Ventes brutes (MAD)', discounts: 'Remises (MAD)', refunds: 'Remboursements (MAD)', net: 'Ventes nettes (MAD)', vat: 'TVA collectée (MAD)',
@@ -86,12 +89,23 @@ export function reportCsv(name, data, lang, labels) {
   if (name === 'summary') {
     const head = [h.metric, h.value, h.prevValue, h.change];
     const series = data.series.map((s) => [s.day, mad(s.net), s.prevDay, mad(s.prevNet), pc(deltaOf(s.net, s.prevNet))]);
+    if (data.hourly) {
+      const hours = data.hourly.map((x) => [String(x.hour).padStart(2, '0') + ':00', mad(x.net), { n: String(x.tickets) }, mad(x.prevNet), pc(deltaOf(x.net, x.prevNet))]);
+      return toCsv(head, metricRows(data.totals.cur, data.totals.prev, lang).concat([[]], [[h.hour, h.net, h.tickets, h.prevNet, h.change]], hours));
+    }
     return toCsv(head, metricRows(data.totals.cur, data.totals.prev, lang).concat([[]], [[h.day, h.net, h.prevDay, h.prevNet, h.change]], series));
   }
   if (name === 'products' || name === 'categories') {
-    const head = [h.name, h.category, h.qty, h.net, h.share, h.prevQty, h.prevNet, h.change, h.tickets, h.cost, h.margin, h.marginPct];
-    return toCsv(head, data.rows.map((r) => [name === 'categories' && !r.name ? h.none : r.name, r.category, qty(r.qty), mad(r.net), pc(r.share),
-      qty(r.prevQty), mad(r.prevNet), pc(r.change), { n: String(r.tickets) }, mad(r.cost), mad(r.margin), pc(r.marginPct)]));
+    const head = [h.name, h.category, h.qty, h.sold, h.refunded, h.net, h.share, h.prevQty, h.prevNet, h.change, h.tickets, h.cost, h.margin, h.marginPct];
+    const rows = data.rows.map((r) => [name === 'categories' && !r.name ? h.none : r.name, r.category, qty(r.qty), mad(r.sold), mad(r.refunded), mad(r.net), pc(r.share),
+      qty(r.prevQty), mad(r.prevNet), pc(r.change), { n: String(r.tickets) }, mad(r.cost), mad(r.margin), pc(r.marginPct)]);
+    /* La ligne qui raccorde le classement au résumé, puis le total : la
+       colonne des ventes nettes s'additionne jusqu'aux ventes nettes du
+       résumé. */
+    const t = data.totals || {};
+    if (t.unattributed) rows.push([h.unattributed, '', null, null, null, mad(t.unattributed), null, null, mad(t.prevUnattributed), null, null, null, null, null]);
+    rows.push([h.total, '', null, null, mad(t.refunded), mad(t.net), pc(100), null, mad(t.prevNet), pc(deltaOf(t.net, t.prevNet)), null, null, null, null]);
+    return toCsv(head, rows);
   }
   if (name === 'staff') {
     const head = [h.name, h.tickets, h.sales, h.share, h.basket, h.discounts, h.refunds, h.refundCount, h.tips, h.prevSales, h.change];
@@ -123,11 +137,11 @@ export function reportCsv(name, data, lang, labels) {
   }
   if (name === 'sites') {
     const M = METRICS[lang] || METRICS.fr;
-    const head = [h.site, M.net, h.share, M.tickets, M.basket, M.discounts, M.refunds, h.prevNet, h.change];
-    const rows = data.rows.map((r) => [r.name || r.merchant, mad(r.cur.net), pc(r.share), { n: String(r.cur.tickets) }, mad(r.cur.basket),
+    const head = [h.site, M.net, h.share, h.vsAvg, M.tickets, M.basket, M.discounts, M.refunds, h.prevNet, h.change];
+    const rows = data.rows.map((r) => [r.name || r.merchant, mad(r.cur.net), pc(r.share), pc(r.vsAverage && r.vsAverage.net), { n: String(r.cur.tickets) }, mad(r.cur.basket),
       mad(r.cur.discounts), mad(r.cur.refunds), mad(r.prev.net), pc(r.change)]);
     const t = data.totals;
-    rows.push([h.total, mad(t.cur.net), pc(100), { n: String(t.cur.tickets) }, mad(t.cur.basket), mad(t.cur.discounts), mad(t.cur.refunds), mad(t.prev.net), pc(t.change)]);
+    rows.push([h.total, mad(t.cur.net), pc(100), null, { n: String(t.cur.tickets) }, mad(t.cur.basket), mad(t.cur.discounts), mad(t.cur.refunds), mad(t.prev.net), pc(t.change)]);
     return toCsv(head, rows);
   }
   return toCsv([h.name], []);
