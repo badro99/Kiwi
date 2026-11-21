@@ -100,7 +100,8 @@ export async function harness({ menu = DEFAULT_MENU, plan = DEFAULT_PLAN, browse
   function wire(page, who, cookie) {
     page.on('request', (r) => {
       const u = r.url();
-      if (!u.startsWith(base + '/api/')) return void (u.startsWith(base) || u.startsWith('data:') ? r.continue() : r.abort());
+      /* Un fichier du site se perd aussi (`drop` reçoit 'GET /assets/…') : un module chargé à la demande injoignable. */
+      if (!u.startsWith(base + '/api/')) return void ((u.startsWith(base) && !drops.some((fn) => fn('GET ' + new URL(u).pathname, ''))) || u.startsWith('data:') ? r.continue() : r.abort());
       const url = new URL(u);
       const key = r.method() + ' ' + url.pathname;
       const handler = HANDLERS[key];

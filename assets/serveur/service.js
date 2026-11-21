@@ -3194,7 +3194,13 @@ cashModal.addEventListener('click', (e) => {
            (assets/serveur/reopened-bill.mjs). Visite soldée : rien à encaisser. */
         else if (err.reopened) {
           try { (await import('./reopened-bill.mjs?v=1')).dropReopenedBill(id, method || 'card'); }
-          catch (_) { keepServiceBillOpen(id, {}); try { pollServiceSync(); } catch (__) {} }
+          catch (_) {
+            /* Module injoignable (hors ligne, cache vidé) : le même ménage que dropReopenedBill. Sans lui, la relecture
+               ajoutait les lignes de l'ancienne visite à la nouvelle note (64,00 au lieu de 50,00). */
+            keepServiceBillOpen(id, {}); serviceTableSessions.delete(id); delete tableOrders[id]; for (let i = 0; i < 12; i++) employeePaymentRefForget(id + ':split:' + i);
+            serviceCanonicalOrders.forEach((o, k) => { if (o && String(o.table) === String(id)) serviceCanonicalOrders.delete(k); }); if (splitState.tableId === id) { splitState.flow = null; closeSplitModal({ skipRevert: true }); }
+            toast(employeePick(`Table ${id} · la note a changé. Vérifiez le total et le ticket du terminal avant de réessayer`, `Table ${id} · the bill changed. Check the total and the terminal slip before retrying`, `الطاولة ${id} · تغيّرت الفاتورة. تحقّق من المجموع ومن وصل الجهاز قبل إعادة المحاولة`), 9000); try { pollServiceSync(); } catch (__) {}
+          }
         }
         else if (err.message === 'visit-already-settled') { toast(employeePick(`Table ${id} · déjà réglée, rien à encaisser`, `Table ${id} · already settled, nothing to collect`, `الطاولة ${id} · سبق دفعها، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }
         else if (err.message === 'server-payments-off') toast(employeePick(`Table ${id} · l'encaissement se fait à la caisse`, `Table ${id} · payment is taken at the till`, `الطاولة ${id} · الدفع يتم في الصندوق`), 5200); else toast(employeePick(`Table ${id} · paiement non enregistré, réessayez`, `Table ${id} · payment not saved, try again`, `الطاولة ${id} · لم يُسجَّل الدفع، أعد المحاولة`), 5200);
@@ -3860,7 +3866,12 @@ cashModal.addEventListener('click', (e) => {
            (assets/serveur/reopened-bill.mjs). Visite soldée : rien à encaisser. */
         else if (err.reopened && tableId) {
           try { (await import('./reopened-bill.mjs?v=1')).dropReopenedBill(tableId, payMethod); }
-          catch (_) { keepServiceBillOpen(tableId, {}); try { pollServiceSync(); } catch (__) {} }
+          catch (_) {
+            // Module injoignable : le même ménage que dropReopenedBill (voir markTablePaid).
+            keepServiceBillOpen(tableId, {}); serviceTableSessions.delete(tableId); delete tableOrders[tableId]; for (let i = 0; i < 12; i++) employeePaymentRefForget(tableId + ':split:' + i);
+            serviceCanonicalOrders.forEach((o, k) => { if (o && String(o.table) === String(tableId)) serviceCanonicalOrders.delete(k); }); if (splitState.tableId === tableId) { splitState.flow = null; closeSplitModal({ skipRevert: true }); }
+            toast(employeePick(`Table ${tableId} · la note a changé. Vérifiez le total et le ticket du terminal avant de réessayer`, `Table ${tableId} · the bill changed. Check the total and the terminal slip before retrying`, `الطاولة ${tableId} · تغيّرت الفاتورة. تحقّق من المجموع ومن وصل الجهاز قبل إعادة المحاولة`), 9000); try { pollServiceSync(); } catch (__) {}
+          }
         }
         else if (err.message === 'visit-already-settled') { toast(employeePick(`Table ${tableId || ''} · déjà réglée, rien à encaisser`, `Table ${tableId || ''} · already settled, nothing to collect`, `الطاولة ${tableId || ''} · سبق دفعها، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }
         else toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non enregistrée, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not saved, try again`, `الطاولة ${tableId || ''} · لم يُسجَّل الجزء ${partIdx + 1}، أعد المحاولة`), 5200);

@@ -17,7 +17,11 @@
  *     son montant ;
  *   · part d'un partage : refusée, le partage de l'ancienne note est jeté
  *     (feuille fermée, parts, identifiants) ; relu, un nouveau partage part du
- *     total de la nouvelle visite et l'encaissement va sur elle.
+ *     total de la nouvelle visite et l'encaissement va sur elle ;
+ *   · le même paiement par carte quand assets/serveur/reopened-bill.mjs ne se
+ *     charge pas (juge, 21 nov.) : le repli fait le même ménage, sinon la
+ *     relecture rajoutait l'ancienne ligne (64,00 au lieu de 50,00).
+ * Les paiements par carte passent par les gestes du serveur, pas par un appel.
  * Restaurant inventé, aucun code saisi. */
 import assert from 'node:assert/strict';
 import { harness, chromium } from './serveur-live-harness.mjs';
@@ -97,6 +101,20 @@ async function openSplit(page, table) {
   await h.tap(page, '[data-action="pay"]');
   await h.tap(page, '[data-pay="split"]');
 }
+/* Par carte, par gestes : la table, « Encaisser », « Carte », « Paiement reçu », puis « Fermer ». Rend la
+ * réponse de /api/sale à ce paiement. */
+async function payCard(page, table) {
+  const sent = () => h.calls.filter((c) => c.who === 'serveur' && c.path === '/api/sale').length;
+  const before = sent();
+  if (await page.evaluate(() => document.getElementById('screen-table')?.classList.contains('is-active'))) await h.tap(page, '#td-back');
+  await h.tap(page, `.table-card[data-table="${table}"]`);
+  await h.tap(page, '[data-action="pay"]');
+  await h.tap(page, '#pay-choice-modal [data-pay="card"]');
+  await h.tap(page, '#card-confirm');
+  await h.tap(page, '#card-foot.is-visible [data-modal-action="close"]');
+  await h.until(() => sent() > before, `le paiement carte de la table ${table} part`, 10000);
+  return lastSale();
+}
 /* Une part en espèces, par gestes : le bouton « Cash » de la part, puis « Confirmer » (montant prérempli). */
 async function payPartCash(page, idx) {
   await h.tap(page, `.split-part-btn[data-pay-part="${idx}"][data-pay-method="cash"]`);
@@ -116,10 +134,10 @@ try {
     await newParty('tsx-reopen-b-table4', '4', 'it_omelette', 'Omelette', 2, 25);
 
     t.step('le serveur encaisse par carte la note qu’il voit encore');
-    const first = await page.evaluate(() => markTablePaid('4', 'card'));
-    const refused = lastSale();
-    check(first === false && refused.status === 409 && /"reopened":true/.test(refused.body || '') && /"amountCents":1400/.test(refused.sent || '') && new RegExp(`"session":"${visitA}"`).test(refused.sent || ''),
-      `refusé : 14,00 contre la visite A, 409 reopened (${refused.status} ${first} ${await toasts(page)})`);
+    const refused = await payCard(page, '4');
+    await page.waitForFunction(() => [...document.querySelectorAll('#toast-stack .toast')].some((x) => /la note a changé/.test(x.textContent)), { timeout: 10000 });
+    check(refused.status === 409 && /"reopened":true/.test(refused.body || '') && /"amountCents":1400/.test(refused.sent || '') && new RegExp(`"session":"${visitA}"`).test(refused.sent || ''),
+      `refusé : 14,00 contre la visite A, 409 reopened (${refused.status} ${await toasts(page)})`);
     check(salesOn(visitA).length === 1 && salesOn('tsx-reopen-b-table4').length === 0, 'rien n’est écrit : A garde la seule vente de la caisse, B n’a rien');
     check(await toastSays(page, /carte a pu être débitée : ne la repassez pas, vérifiez le ticket/), 'le téléphone dit que la carte a pu être débitée et de vérifier le ticket');
     check(await page.evaluate(() => !serviceTableSessions.has('4')), 'il oublie la visite A');
@@ -128,9 +146,9 @@ try {
     h.release('GET /api/order/queue');
     await page.evaluate(() => pollServiceSync());
     await phoneSees(page, '4', () => serviceTableSessions.get('4') === 'tsx-reopen-b-table4' && Math.round(getTableTotal('4') * 100) === 5000, 'la visite B à 50,00');
-    const second = await page.evaluate(() => markTablePaid('4', 'card'));
-    const landed = lastSale();
-    check(second === true && landed.status === 200 && /"amountCents":5000/.test(landed.sent || '') && /"session":"tsx-reopen-b-table4"/.test(landed.sent || ''),
+    const landed = await payCard(page, '4');
+    await h.until(() => status('tsx-reopen-b-table4') === 'closed', 'B soldée', 10000).catch(() => {});
+    check(landed.status === 200 && /"amountCents":5000/.test(landed.sent || '') && /"session":"tsx-reopen-b-table4"/.test(landed.sent || ''),
       `la relance va sur la visite B, à son montant : 50,00 (${landed.status})`);
     const onB = salesOn('tsx-reopen-b-table4');
     check(onB.length === 1 && onB[0].amount_cents === 5000 && onB[0].method === 'card' && status('tsx-reopen-b-table4') === 'closed', 'une vente de 50,00 sur B, B soldée');
@@ -202,6 +220,44 @@ try {
     await h.until(() => status('tsx-reopen-b-table5') === 'closed', 'B soldée', 10000).catch(() => {});
     check(onB.length === 2 && onB.reduce((sum, x) => sum + x.amount_cents, 0) === 5600 && status('tsx-reopen-b-table5') === 'closed', `deux parts sur B, 56,00 au centime, B soldée (${onB.map((x) => x.amount_cents).join(' + ')})`);
     check(h.sql.prepare('SELECT COUNT(*) AS n FROM sales WHERE split_flow_id = ? AND session_id = ?').get(flowId, 'tsx-reopen-b-table5').n === 0, 'aucune part de l’ancien partage sur B');
+    check(page.errors.length === 0, 'aucune erreur de script' + (page.errors.length ? ' : ' + page.errors.join(' | ') : ''));
+  });
+  await S.run('paiement par carte, table rouverte, module de la note rouverte injoignable (vrais gestes)', async (t) => {
+    const page = await h.openWaiter(t);
+    let blocked = 0;
+    const heal = h.drop((key) => key === 'GET /assets/serveur/reopened-bill.mjs' && ++blocked > 0);
+    t.defer(heal);
+    const visitA = await sends(page, '6', 'it_msemen', 1);
+
+    t.step('la caisse solde la table et une nouvelle tablée de 50,00 s’installe ; le téléphone n’a pas relu');
+    h.hold('GET /api/order/queue');
+    await tillPays('till-a-6', '6', visitA, 1400);
+    check(status(visitA) === 'closed', 'la visite A est soldée à la caisse');
+    await newParty('tsx-reopen-b-table6', '6', 'it_omelette', 'Omelette', 2, 25);
+
+    t.step('le serveur encaisse par carte la note qu’il voit encore ; le module ne se charge pas');
+    const refused = await payCard(page, '6');
+    await page.waitForFunction(() => [...document.querySelectorAll('#toast-stack .toast')].some((x) => /la note a changé/.test(x.textContent)), { timeout: 10000 }).catch(() => {});
+    check(blocked > 0, `reopened-bill.mjs n’a pas pu se charger (${blocked} requête perdue)`);
+    check(refused.status === 409 && /"reopened":true/.test(refused.body || '') && /"amountCents":1400/.test(refused.sent || '') && new RegExp(`"session":"${visitA}"`).test(refused.sent || ''),
+      `refusé : 14,00 contre la visite A, 409 reopened (${refused.status})`);
+    check(salesOn(visitA).length === 1 && salesOn('tsx-reopen-b-table6').length === 0, 'rien n’est écrit');
+    check(await toastSays(page, /la note a changé\. Vérifiez le total et le ticket du terminal/), `le téléphone le dit quand même, ticket du terminal compris (${await toasts(page)})`);
+    const left = await page.evaluate(() => ({ visit: serviceTableSessions.has('6'), lines: (tableOrders['6'] || []).length,
+      canon: [...serviceCanonicalOrders.values()].filter((o) => String(o.table) === '6').length }));
+    check(!left.visit && left.lines === 0 && left.canon === 0, `il oublie la visite A, ses lignes et ses commandes (${JSON.stringify(left)})`);
+
+    t.step('la relecture arrive ; il relance');
+    h.release('GET /api/order/queue');
+    await page.evaluate(() => pollServiceSync());
+    await phoneSees(page, '6', () => serviceTableSessions.get('6') === 'tsx-reopen-b-table6' && Math.round(getTableTotal('6') * 100) === 5000, 'la visite B à 50,00 (pas 64,00)');
+    check(true, 'relue, la note est celle de B : 50,00, sans la ligne de A');
+    const landed = await payCard(page, '6');
+    await h.until(() => status('tsx-reopen-b-table6') === 'closed', 'B soldée', 10000).catch(() => {});
+    check(landed.status === 200 && /"amountCents":5000/.test(landed.sent || '') && /"session":"tsx-reopen-b-table6"/.test(landed.sent || ''),
+      `la relance va sur la visite B, à son montant : 50,00 (${landed.status})`);
+    const onB = salesOn('tsx-reopen-b-table6');
+    check(onB.length === 1 && onB[0].amount_cents === 5000 && status('tsx-reopen-b-table6') === 'closed', 'une vente de 50,00 sur B, B soldée');
     check(page.errors.length === 0, 'aucune erreur de script' + (page.errors.length ? ' : ' + page.errors.join(' | ') : ''));
   });
 } finally {
