@@ -22,8 +22,7 @@ import { sessionTierAtLeast } from '../../auth/_session-tier.js';
 import { tenantFor, ownerMerchant } from '../_private.js';
 import {
   MAIN_ID, MAX_LISTS, str, isId, cleanChannels, cleanSites, cleanPct, cleanStep, derivePrice,
-  visibleLists, findList, mainPrices, listPrices, canManage, newListId, runBatches,
-} from '../_price-lists.js';
+  visibleLists, findList, mainPrices, listPrices, canManage, newListId, runBatches, tablesReady } from '../_price-lists.js';
 
 const DEPS = { isOperator, sessionTierAtLeast, ownerMerchant };
 
@@ -36,13 +35,14 @@ export async function onRequestGet({ request, env }) {
   try { lists = await visibleLists(env, merchant, { archived: url.searchParams.get('archived') === '1' }); }
   catch (_) { return json({ ok: true, lists: [], degraded: true }); }
   const priced = new Map(), clients = new Map();
+  let pending = false;
   try {
     const p = ((await env.DB.prepare('SELECT list_id, COUNT(*) AS n FROM item_prices WHERE merchant = ? GROUP BY list_id').bind(merchant).all()).results) || [];
     p.forEach((r) => priced.set(r.list_id, Number(r.n)));
     const c = ((await env.DB.prepare('SELECT list_id, COUNT(*) AS n FROM price_list_clients WHERE merchant = ? GROUP BY list_id').bind(merchant).all()).results) || [];
     c.forEach((r) => clients.set(r.list_id, Number(r.n)));
-  } catch (_) { /* compteurs facultatifs */ }
-  return json({ ok: true, merchant, lists: lists.map((l) => ({ ...l, priced: priced.get(l.id) || 0, clients: clients.get(l.id) || 0 })) });
+  } catch (_) { pending = !(await tablesReady(env)); /* compteurs facultatifs ; sans les tables de 0028, l'écran dit « mise à jour en attente » */ }
+  return json({ ok: true, merchant, lists: lists.map((l) => ({ ...l, priced: priced.get(l.id) || 0, clients: clients.get(l.id) || 0 })), ...(pending ? { degraded: true } : {}) });
 }
 
 async function readBody(request) {
@@ -56,6 +56,7 @@ export async function onRequestPost({ request, env }) {
   const asked = str(b.merchant, 64);
   if (!asked) return json({ error: 'merchant-required' }, 400);
   if (!(await canManage(request, env, asked, DEPS))) return json({ error: 'forbidden' }, 403);
+  if (!(await tablesReady(env))) return json({ error: 'pending-migration' }, 503);
   const merchant = asked;
   const now = Date.now();
   const action = str(b.action, 16);

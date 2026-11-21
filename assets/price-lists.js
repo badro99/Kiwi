@@ -84,7 +84,7 @@
   window.KiwiPriceLists = { list: list, prices: prices, setPrices: setPrices };
 
   window.KiwiPriceListsApi = {
-    lists: function (o) { return call(o && o.archived ? '?archived=1' : '').then(function (j) { return j.lists || []; }); },
+    lists: function (o) { return call(o && o.archived ? '?archived=1' : '').then(function (j) { var ls = j.lists || []; if (j.degraded) ls.pending = true; return ls; }); },
     create: function (spec) { return call('', Object.assign({ action: 'create' }, spec)); },
     update: function (id, patch) { return call('', Object.assign({ action: 'update', id: id }, patch)); },
     archive: function (id, replacement) { return call('', { action: 'archive', id: id, replacement: replacement || 'main' }); },

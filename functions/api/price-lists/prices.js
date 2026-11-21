@@ -25,8 +25,7 @@ import { sessionTierAtLeast } from '../../auth/_session-tier.js';
 import { tenantFor, ownerMerchant } from '../_private.js';
 import {
   MAIN_ID, MAX_ROWS, str, isId, isKey, cleanPct, cleanStep, cleanPrice, derivePrice,
-  visibleLists, findList, mainPrices, listPrices, priceOf, canManage, runBatches,
-} from '../_price-lists.js';
+  visibleLists, findList, mainPrices, listPrices, priceOf, canManage, runBatches, tablesReady } from '../_price-lists.js';
 
 const DEPS = { isOperator, sessionTierAtLeast, ownerMerchant };
 
@@ -76,6 +75,7 @@ export async function onRequestPost({ request, env }) {
   const merchant = str(b.merchant, 64);
   if (!merchant) return json({ error: 'merchant-required' }, 400);
   if (!(await canManage(request, env, merchant, DEPS))) return json({ error: 'forbidden' }, 403);
+  if (!(await tablesReady(env))) return json({ error: 'pending-migration' }, 503);
   const now = Date.now();
 
   if (b.action === 'derive') {

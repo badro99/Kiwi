@@ -226,6 +226,27 @@ sale('s-alien');
 await stampSale(env, A, 's-alien', { priceListId: 'pl_inexistant' });
 ok('un tarif inconnu du magasin est signalé unknown-list', audit('s-alien') && audit('s-alien').reason === 'unknown-list', audit('s-alien'));
 
+/* La règle de la caisse (lowers) côté serveur : un tarif qui ne baisse rien passe sans code, il ne doit pas lever d'alerte. */
+r = await call(lists.onRequestPost, '/api/price-lists', { body: { merchant: A, action: 'create', name: 'Touristes', channels: ['till'], base: 'main', pct: 10, step: 0 } });
+const TOUR = r.body.id;
+await call(clientsRoute.onRequestPost, '/api/price-lists/clients', { body: { merchant: A, clientId: 'cl-touriste', listId: TOUR } });
+sale('s-tour');
+await stampSale(env, A, 's-tour', { priceListId: TOUR, clientId: 'cl-touriste', lines: [{ n: 'Huile', q: 1, t: 26.4, i: 'huile' }] });
+ok('fiche client à un tarif plus cher (+10 %) sans code : tarif écrit, aucun signalement', listOf('s-tour') === TOUR && !audit('s-tour'), audit('s-tour'));
+sale('s-tour-nolines');
+await stampSale(env, A, 's-tour-nolines', { priceListId: TOUR, clientId: 'cl-touriste' });
+ok('…même sans lignes : le tarif entier ne baisse rien, pas d’alerte', !audit('s-tour-nolines'), audit('s-tour-nolines'));
+await call(pricesRoute.onRequestPost, '/api/price-lists/prices', { body: { merchant: A, rows: [{ listId: TOUR, itemKey: 'sucre', price: 1100 }] } });
+sale('s-tour-huile');
+await stampSale(env, A, 's-tour-huile', { priceListId: TOUR, clientId: 'cl-touriste', lines: [{ n: 'Huile', q: 1, t: 26.4, i: 'huile' }] });
+ok('le tarif baisse le sucre, mais le panier n’a que de l’huile (plus chère) : pas d’alerte', !audit('s-tour-huile'), audit('s-tour-huile'));
+sale('s-tour-sucre');
+await stampSale(env, A, 's-tour-sucre', { priceListId: TOUR, clientId: 'cl-touriste', lines: [{ n: 'Sucre', q: 2, t: 22, i: 'sucre' }] });
+ok('le panier contient le sucre baissé (11 < 12,50) : signalé customer-default-no-approval', audit('s-tour-sucre') && audit('s-tour-sucre').reason === 'customer-default-no-approval', audit('s-tour-sucre'));
+sale('s-tour-old');
+await stampSale(env, A, 's-tour-old', { priceListId: TOUR, clientId: 'cl-touriste' });
+ok('sans lignes, le tarif entier baisse un article : signalé, comme la caisse aurait demandé le code', audit('s-tour-old') && audit('s-tour-old').reason === 'customer-default-no-approval', audit('s-tour-old'));
+
 const verifySrc = fs.readFileSync(path.join(ROOT, 'functions/api/pin/verify.js'), 'utf8');
 ok('/api/pin/verify ne signe un changement de tarif que pour un rôle de responsable',
   /action\.kind === 'price-list'\s*\n\s*&& employeeRoleOpensDashboard\(verified\.staff\.role\)/.test(verifySrc));
@@ -237,6 +258,19 @@ r = await call(salesRoute.onRequestGet, `/api/price-lists/sales?merchant=${A}&da
 const grosSales = (r.body.lists || []).find((x) => x.listId === GROS);
 ok('Gros : 5 ventes, 220 MAD, 3 signalées', r.status === 200 && grosSales && grosSales.sales === 5 && grosSales.amountCents === 22000 && grosSales.flagged === 3, r.body.lists);
 ok('les signalements disent pourquoi (fiche client sans code, sans accord, preuve fausse)', ['customer-default-no-approval', 'no-approval', 'approval-invalid'].every((c) => r.body.flags.some((f) => f.reason === c && f.listId === GROS)), r.body.flags);
+/* Remboursements et retours : déduits du tarif de la vente d'origine ; sans lien, une ligne à part. */
+const negSale = (id, cents, extra = {}) => db.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, label, ref, ts, channel) VALUES (?, ?, ?, ?, 'cash', 'Remboursement', ?, ?, ?)`).run(id, A, cents / 100, cents, id, now, extra.channel || null);
+negSale('r-1', -1000);
+db.prepare(`INSERT INTO sale_audit (merchant, sale_id, action, reason, note, amount, amount_cents, method, ref, sale_ts, impact, ts) VALUES (?, 's-client', 'refund', 'retour', 'r-1', 10, 1000, 'cash', 's-client', ?, '', ?)`).run(A, now, now);
+db.prepare(`INSERT INTO store_credits (id, merchant, code, original_sale_id, amount_cents, balance_cents, expires_ts, created_ts, updated_ts) VALUES ('sc1', ?, 'AV-1', 's-free', 400, 400, ?, ?, ?)`).run(A, now + 86400000, now, now);
+negSale('ret-sc1', -400);
+negSale('r-loose', -700);
+negSale('cb-1', -500, { channel: 'credit-book' });
+r = await call(salesRoute.onRequestGet, `/api/price-lists/sales?merchant=${A}&days=30`);
+const grosNet = (r.body.lists || []).find((x) => x.listId === GROS);
+ok('Gros : 220 MAD vendus, 14 MAD remboursés (caisse 10 + avoir 4), 206 MAD net', grosNet && grosNet.grossCents === 22000 && grosNet.refundCents === 1400 && grosNet.refunds === 2 && grosNet.amountCents === 20600, grosNet);
+ok('un remboursement sans vente d’origine : « non attribué », 7 MAD (le remboursement d’avance du carnet n’en est pas un)', r.body.unattributed && r.body.unattributed.count === 1 && r.body.unattributed.cents === 700, r.body.unattributed);
+ok('les ventes négatives ne gonflent pas le nombre de ventes', grosNet.sales === 5, grosNet);
 r = await call(salesRoute.onRequestGet, `/api/price-lists/sales?merchant=${A}`, { cookie: tillA });
 ok('une caisse ne lit pas les montants par tarif', r.status === 403, r);
 r = await call(salesRoute.onRequestGet, `/api/price-lists/sales?merchant=${A}`, { cookie: ownerB });
@@ -267,6 +301,13 @@ r = await call(lists.onRequestGet, `/api/price-lists?merchant=${A}`, { cookie: '
 ok('sans session ni caisse : rien', r.status === 401, r);
 await stampSale(env, B, 's-free', { priceListId: GROS });
 ok('le tarif de A ne s’écrit pas sur une vente de B', db.prepare('SELECT COUNT(*) n FROM sales WHERE merchant=? AND price_list_id IS NOT NULL').get(B).n === 0);
+
+r = await call(pricesRoute.onRequestPost, '/api/price-lists/prices', { on: env27, body: { merchant: A, rows: [{ listId: 'pl_x', itemKey: 'sucre', price: 1000 }] } });
+ok('base pas encore migrée (0027) : écrire un prix répond pending-migration, pas une erreur 500', r.status === 503 && r.body.error === 'pending-migration', r);
+r = await call(lists.onRequestPost, '/api/price-lists', { on: env27, body: { merchant: A, action: 'create', name: 'Gros' } });
+ok('…créer un tarif aussi', r.status === 503 && r.body.error === 'pending-migration', r);
+r = await call(lists.onRequestGet, `/api/price-lists?merchant=${A}`, { on: env27 });
+ok('…et la lecture le dit (degraded)', r.status === 200 && r.body.degraded === true, r.body);
 
 console.log('\nLa boutique en ligne');
 r = await call(lists.onRequestPost, '/api/price-lists', { body: { merchant: A, action: 'create', name: 'Web', channels: ['online'], base: 'main', pct: -10, step: 100 } });
@@ -408,7 +449,8 @@ console.log('\nL’écran Tarifs (assets/pages-pro/price-lists.js) : saisie des 
     Kiwi: { handlers, toast: (m, o) => toasts.push([m, o]), modal: () => null, appPage: (_n, o) => { shown = o; } },
     KiwiPriceListsApi: { lists: async () => [{ id: 'main', name: 'Prix principal', isMain: true, defaultName: true, channels: [] }, { id: 'pl_g', name: 'Gros', isMain: false, channels: ['till'] }],
       listPrices: async () => [{ itemKey: 'huile', cents: 2200, costCents: 2050 }],
-      sales: async () => ({ ok: true, lists: [{ listId: 'pl_g', name: 'Gros', sales: 5, amountCents: 22000, flagged: 3 }],
+      sales: async () => ({ ok: true, lists: [{ listId: 'pl_g', name: 'Gros', sales: 5, grossCents: 22000, refundCents: 1400, refunds: 2, amountCents: 20600, flagged: 3 }],
+        unattributed: { count: 1, cents: 700 },
         flags: [{ saleId: 's-1', ref: 'T-12', amountCents: 4400, reason: 'customer-default-no-approval', note: '', saleTs: now, listId: 'pl_g' }] }) },
     KiwiPriceLists: { setPrices: async (rows) => { writes.push(rows); return { written: rows.length, removed: 0 }; } },
     KiwiBoutiqueCatalog: { listProducts: () => [{ id: 'huile', name: 'Huile', priceMAD: 24, cost: 20.5 }] },
@@ -418,6 +460,9 @@ console.log('\nL’écran Tarifs (assets/pages-pro/price-lists.js) : saisie des 
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/pages-pro/price-lists.js'), 'utf8'), ctx);
   await handlers['nav-pricelists']();
   await handlers['pl-open']('pl_g');
+  const delivery = (shown.body.match(/<label[^>]*><input type="checkbox" data-pl-chan="delivery"[^>]*>[^<]*<span[^>]*>[^<]*<\/span><\/label>/) || [''])[0];
+  ok('le canal Livraison est visible mais grisé, marqué « bientôt »', /disabled/.test(delivery) && /bientôt/.test(delivery) && /pl-soon/.test(delivery), delivery || shown.body.slice(0, 300));
+  ok('les autres canaux restent actifs', /data-pl-chan="till" checked>/.test(shown.body) && !/data-pl-chan="online"[^>]*disabled/.test(shown.body));
   inp.value = '21,5'; listeners.price();
   ok('21,5 MAD tapé : un prix à enregistrer, bouton actif', !btn.disabled && /1 prix/.test(btn.textContent), btn);
   ok('la marge sur le prix d’achat s’affiche à côté (21,50 sur 20,50)', /marge/.test(note.innerHTML), note.innerHTML);
@@ -431,7 +476,11 @@ console.log('\nL’écran Tarifs (assets/pages-pro/price-lists.js) : saisie des 
   ok('19 MAD part tel quel (1 900 centimes)', writes.length === 1 && writes[0][0].price === 1900 && writes[0][0].itemKey === 'huile', writes);
   await handlers['pl-tab']('sales');
   ok('onglet Ventes : chaque tarif, ses ventes, et les ventes signalées avec leur raison', /Ventes signalées/.test(shown.body) && /T-12/.test(shown.body)
-    && /fiche client, sans code responsable/.test(shown.body) && /220 MAD/.test(shown.body), shown && shown.body.slice(0, 200));
+    && /fiche client, sans code responsable/.test(shown.body) && /206 MAD/.test(shown.body), shown && shown.body.slice(0, 200));
+  ok('les remboursements sont déduits et ceux sans vente d’origine ont leur ligne', /−14 MAD/.test(shown.body) && /Remboursements non attribués : 1 · 7 MAD/.test(shown.body), shown.body.match(/Rembours[^<]*/g));
+  win.KiwiPriceListsApi.lists = async () => Object.assign([], { pending: true });
+  await handlers['nav-pricelists']();
+  ok('base pas encore migrée : l’écran Tarifs dit « mise à jour en attente »', /Mise à jour en attente/.test(shown.body) && /data-pl-pending/.test(shown.body), shown.body.slice(0, 300));
 }
 
 console.log(`\n${passed} vérifications · ${fails} échec(s)`);

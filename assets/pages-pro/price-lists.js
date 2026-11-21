@@ -69,8 +69,12 @@
     ['till', () => L('Caisse', 'Till', 'الصندوق')],
     ['online', () => L('En ligne', 'Online', 'المتجر الإلكتروني')],
     ['invoices', () => L('Factures et devis', 'Invoices and quotes', 'الفواتير وعروض الأثمان')],
-    ['delivery', () => L('Livraison', 'Delivery apps', 'تطبيقات التوصيل')],
+    ['delivery', () => L('Livraison', 'Delivery apps', 'تطبيقات التوصيل'), true],
   ];
+  /* Un canal que rien ne lit encore (les applications de livraison : aucune
+     commande Glovo n'entre par Kiwi) reste visible mais grisé, avec « bientôt » :
+     le cocher laisserait croire que ces prix partent quelque part. */
+  const chanBox = ([id, label, soon], attr, on) => `<label${soon ? ' class="pl-soon"' : ''}><input type="checkbox" ${attr}="${id}"${on ? ' checked' : ''}${soon ? ' disabled' : ''}> ${esc(label())}${soon ? ` <span class="pl-pill off">${esc(L('bientôt', 'soon', 'قريباً'))}</span>` : ''}</label>`;
   const STEPS = [[0, () => L('Sans arrondi', 'No rounding', 'بلا تقريب')], [50, () => '0,50 MAD'], [100, () => '1 MAD'], [500, () => '5 MAD']];
   const TABS = ['lists', 'items', 'clients', 'sales'];
 
@@ -112,6 +116,7 @@
 .pl-form input[type=text],.pl-form input[type=number],.pl-form select,.pl-search{font:inherit;font-size:14px;padding:9px 11px;border-radius:10px;border:1px solid var(--line,rgba(10,15,13,.16));background:#FDFCF9;color:var(--ink,#0A0F0D);min-width:0}
 .pl-checks{display:flex;flex-wrap:wrap;gap:8px}
 .pl-checks label{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;border:1px solid var(--line,rgba(10,15,13,.12));font-size:13px}
+.pl-checks label.pl-soon{opacity:.62;cursor:not-allowed}
 .pl-row2{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
 .pl-hint{font-size:12.5px;color:var(--ink-3,#5d6662);line-height:1.45}
 .pl-table{width:100%;border-collapse:collapse;font-size:14px}
@@ -170,6 +175,8 @@
 
   function listsBody() {
     if (!state.loaded) return `<p class="pl-sub">${esc(L('Chargement des tarifs…', 'Loading price lists…', 'جارٍ تحميل التسعيرات…'))}</p>`;
+    /* Base pas encore migrée (0028) : le dire, au lieu d'un écran vide et d'un échec à l'enregistrement. */
+    if (state.lists.pending) return `<div class="pl-empty" data-pl-pending>${esc(errorText('pending-migration'))}</div>`;
     if (state.error) return `<p class="pl-sub">${esc(L('Tarifs indisponibles pour le moment. Rien n’a changé ; réessayez dans un instant.', 'Price lists are unavailable right now. Nothing changed; try again in a moment.', 'التسعيرات غير متاحة حالياً. لم يتغير شيء؛ أعد المحاولة بعد قليل.'))}</p>`;
     const intro = state.lists.length < 2
       ? `<p class="pl-sub">${esc(L('Un seul prix aujourd’hui : celui du rayon. Créez un tarif « Gros » pour vos clients revendeurs, ou un tarif en ligne. Un article sans prix dans un tarif garde son prix principal.',
@@ -193,7 +200,7 @@
           const dirty = Object.prototype.hasOwnProperty.call(state.draft, p.id);
           return `<tr><td>${esc(p.name)}</td><td class="n">${esc(cost == null ? '·' : mad(cost))}</td><td class="n">${esc(mad(main))}${marginHtml(main, cost)}</td><td class="n"><input inputmode="decimal" data-pl-price="${esc(p.id)}" class="${dirty ? 'dirty' : ''}" value="${esc(inputMad(own))}" placeholder="${esc(inputMad(main))}" aria-label="${esc(l.name + ' · ' + p.name)}"><div data-pl-note="${esc(p.id)}">${own == null ? `<div class="pl-fb">${esc(L('principal', 'main', 'أساسي'))}</div>` : (own === 0 ? `<div class="pl-fb">${esc(L('offert', 'free', 'مجاني'))}</div>` : marginHtml(own, cost))}</div></td></tr>`;
         }).join('')}</tbody></table>`;
-    const checks = CHANNELS.map(([id, label]) => `<label><input type="checkbox" data-pl-chan="${id}"${l.channels.includes(id) ? ' checked' : ''}> ${esc(label())}</label>`).join('');
+    const checks = CHANNELS.map((c) => chanBox(c, 'data-pl-chan', l.channels.includes(c[0]))).join('');
     const dirtyN = Object.keys(state.draft).length;
     return `<div class="pl-head"><button class="kb ghost" data-action="pl-back">${ic('back')}${esc(L('Tous les tarifs', 'All price lists', 'كل التسعيرات'))}</button><h2>${esc(l.name)}</h2></div>
       <div class="pl-card pl-form">
@@ -261,13 +268,18 @@
     })[r] || r;
     const when = (ts) => { try { return new Date(ts).toLocaleString(window.KiwiI18n?.getLang?.() === 'ar' ? 'ar-MA' : window.KiwiI18n?.getLang?.() === 'en' ? 'en-GB' : 'fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', numberingSystem: 'latn' }); } catch (_) { return ''; } };
     const lists = d.lists.length
-      ? `<table class="pl-table"><thead><tr><th>${esc(L('Tarif', 'Price list', 'التسعيرة'))}</th><th class="n">${esc(L('Ventes', 'Sales', 'المبيعات'))}</th><th class="n">${esc(L('Montant', 'Amount', 'المبلغ'))}</th><th class="n">${esc(L('Signalées', 'Flagged', 'مُبلَّغ عنها'))}</th></tr></thead><tbody>${d.lists.map((r) => `<tr><td>${esc(listName(r.listId) || r.name)}</td><td class="n">${esc(num(r.sales, 0))}</td><td class="n">${esc(mad(r.amountCents))}</td><td class="n">${r.flagged ? `<span class="pl-under">${esc(num(r.flagged, 0))}</span>` : '0'}</td></tr>`).join('')}</tbody></table>`
+      ? `<table class="pl-table"><thead><tr><th>${esc(L('Tarif', 'Price list', 'التسعيرة'))}</th><th class="n">${esc(L('Ventes', 'Sales', 'المبيعات'))}</th><th class="n">${esc(L('Remboursé', 'Refunded', 'المُسترجَع'))}</th><th class="n">${esc(L('Net', 'Net', 'الصافي'))}</th><th class="n">${esc(L('Signalées', 'Flagged', 'مُبلَّغ عنها'))}</th></tr></thead><tbody>${d.lists.map((r) => `<tr><td>${esc(listName(r.listId) || r.name)}</td><td class="n">${esc(num(r.sales, 0))}</td><td class="n">${r.refundCents ? esc('−' + mad(r.refundCents)) : '0'}</td><td class="n">${esc(mad(r.amountCents))}</td><td class="n">${r.flagged ? `<span class="pl-under">${esc(num(r.flagged, 0))}</span>` : '0'}</td></tr>`).join('')}</tbody></table>`
       : `<div class="pl-empty">${esc(L('Aucune vente à un autre tarif que le principal sur 30 jours.', 'No sale at a list other than main in 30 days.', 'لا مبيعات بتسعيرة غير الأساسية خلال 30 يوماً.'))}</div>`;
     const flags = d.flags.length
       ? `<table class="pl-table"><thead><tr><th>${esc(L('Ticket', 'Ticket', 'التذكرة'))}</th><th>${esc(L('Tarif', 'Price list', 'التسعيرة'))}</th><th>${esc(L('Pourquoi', 'Why', 'السبب'))}</th><th class="n">${esc(L('Montant', 'Amount', 'المبلغ'))}</th><th class="n">${esc(L('Quand', 'When', 'متى'))}</th></tr></thead><tbody>${d.flags.map((f) => `<tr><td>${esc(f.ref || f.saleId.slice(-8))}</td><td>${esc(listName(f.listId) || f.listId)}</td><td>${esc(reason(f.reason))}</td><td class="n">${esc(mad(f.amountCents))}</td><td class="n">${esc(when(f.saleTs))}</td></tr>`).join('')}</tbody></table>`
       : `<div class="pl-empty">${esc(L('Aucune vente signalée : chaque tarif a eu son code responsable.', 'No flagged sale: every list had its manager code.', 'لا مبيعات مُبلَّغ عنها: كل تسعيرة كان لها رمز المسؤول.'))}</div>`;
-    return `<p class="pl-sub">${esc(L('30 derniers jours. Une vente signalée est comptée : elle dit seulement qu’un tarif a été appliqué sans le code d’un responsable.', 'Last 30 days. A flagged sale is counted: it only says a list was applied without a manager code.', 'آخر 30 يوماً. البيع المُبلَّغ عنه محسوب: يعني فقط أن تسعيرة طُبّقت دون رمز المسؤول.'))}</p>
-      <div class="pl-wrap">${lists}</div>
+    const un = d.unattributed || { count: 0, cents: 0 };
+    const loose = un.count ? `<p class="pl-hint" data-pl-unattributed>${esc(L(
+      `Remboursements non attribués : ${num(un.count, 0)} · ${mad(un.cents)}. Aucune vente d’origine ne les relie à un tarif, ils ne sont déduits d’aucune ligne.`,
+      `Unattributed refunds: ${num(un.count, 0)} · ${mad(un.cents)}. No original sale links them to a list, so no row above includes them.`,
+      `استرجاعات غير منسوبة: ${num(un.count, 0)} · ${mad(un.cents)}. لا يربطها أي بيع أصلي بتسعيرة، فلم تُخصم من أي سطر.`))}</p>` : '';
+    return `<p class="pl-sub">${esc(L('30 derniers jours, remboursements et retours déduits le jour où ils sont faits. Une vente signalée est comptée : elle dit seulement qu’un tarif plus bas a été appliqué sans le code d’un responsable.', 'Last 30 days, refunds and returns taken off on the day they are made. A flagged sale is counted: it only says a lower list was applied without a manager code.', 'آخر 30 يوماً، مع خصم الاسترجاعات والمرتجعات يوم حدوثها. البيع المُبلَّغ عنه محسوب: يعني فقط أن تسعيرة أرخص طُبّقت دون رمز المسؤول.'))}</p>
+      <div class="pl-wrap">${lists}</div>${loose}
       <div class="pl-head"><h2>${esc(L('Ventes signalées', 'Flagged sales', 'مبيعات مُبلَّغ عنها'))}</h2></div>
       <div class="pl-wrap">${flags}</div>`;
   }
@@ -351,6 +363,7 @@
       offline: L('Pas de connexion. Rien n’a été enregistré.', 'No connection. Nothing was saved.', 'لا يوجد اتصال. لم يُحفظ شيء.'),
       'zero-price': L('Un prix à 0 MAD doit être confirmé comme offert.', 'A 0 MAD price must be confirmed as free.', 'ثمن 0 درهم يجب تأكيده كمجاني.'),
       'bad-price': L('Prix invalide : deux décimales au plus.', 'Invalid price: two decimals at most.', 'ثمن غير صالح: رقمان عشريان على الأكثر.'),
+      'pending-migration': L('Mise à jour en attente : les tarifs s’activent dès que Kiwi aura mis à jour votre base. Rien n’a été enregistré.', 'Update pending: price lists switch on as soon as Kiwi has updated your database. Nothing was saved.', 'تحديث قيد الانتظار: تُفعَّل التسعيرات بمجرد أن تُحدِّث Kiwi قاعدة بياناتك. لم يُحفظ شيء.'),
     })[code] || L('Impossible pour le moment. Rien n’a été enregistré.', 'Not possible right now. Nothing was saved.', 'غير ممكن حالياً. لم يُحفظ شيء.');
   }
   const failToast = (e) => toast(errorText(e && e.code), { type: 'error' });
@@ -400,7 +413,7 @@
       title: L('Nouveau tarif', 'New price list', 'تسعيرة جديدة'),
       body: `<div class="pl-form">
         <label>${esc(L('Nom', 'Name', 'الاسم'))}<input type="text" data-n maxlength="60" placeholder="${esc(L('Gros, Revendeurs, En ligne…', 'Wholesale, Resellers, Online…', 'الجملة، البائعون، المتجر…'))}"></label>
-        <div><div class="pl-hint">${esc(L('Où il s’applique', 'Where it applies', 'أين تُطبّق'))}</div><div class="pl-checks">${CHANNELS.map(([id, t]) => `<label><input type="checkbox" data-c="${id}"${id === 'till' ? ' checked' : ''}> ${esc(t())}</label>`).join('')}</div></div>
+        <div><div class="pl-hint">${esc(L('Où il s’applique', 'Where it applies', 'أين تُطبّق'))}</div><div class="pl-checks">${CHANNELS.map((c) => chanBox(c, 'data-c', c[0] === 'till')).join('')}</div></div>
         <label>${esc(L('Partir de', 'Start from', 'البداية من'))}<select data-b>${bases.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('')}</select></label>
         <div class="pl-row2"><label>${esc(L('Variation (%)', 'Change (%)', 'التغيير (%)'))}<input type="number" step="0.5" data-p value="-10"></label>
         <label>${esc(L('Arrondi', 'Rounding', 'التقريب'))}<select data-s>${STEPS.map(([v, t]) => `<option value="${v}"${v === 100 ? ' selected' : ''}>${esc(t())}</option>`).join('')}</select></label></div>

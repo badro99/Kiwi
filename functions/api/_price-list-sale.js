@@ -9,14 +9,17 @@
 //
 // La fiche client attachée ne suffit pas : la caisse demande aussi le code
 // quand une fiche fait passer le ticket à un tarif plus bas. Une vente au tarif
-// d'une fiche sans preuve est signalée « customer-default-no-approval ».
+// d'une fiche sans preuve est signalée « customer-default-no-approval », mais
+// seulement si ce tarif baisse vraiment le ticket (lowersSale, la même règle
+// que till-price-list.js › lowers) : un tarif égal ou plus cher que le
+// principal passe à la caisse sans code, il ne doit pas lever d'alerte ici.
 //
 // Comme pour la remise hors réglage (sale.js › discount-policy), une vente
 // encaissée n'est JAMAIS refusée pour ça : l'argent est déjà dans le tiroir.
 // Le tarif est écrit sur la vente tel quel, et l'écart est consigné une fois
 // dans sale_audit (« price-list-policy ») pour la console et le patron.
 
-import { clientDefault, findList, MAIN_ID } from './_price-lists.js';
+import { clientDefault, findList, listPrices, mainPrices, MAIN_ID } from './_price-lists.js';
 
 const enc = new TextEncoder();
 export const PROOF_MS = 4 * 3600000;
@@ -68,6 +71,23 @@ export async function readPriceListProof(token, secret, merchant, listId, saleTs
   return { id: String(body.id), name: String(body.name || ''), role: String(body.role || '') };
 }
 
+/* Un tarif « baisse » une vente quand un article y coûte moins qu'au prix
+ * principal (un article offert compte). Si la vente porte ses lignes avec
+ * l'id de l'article, on juge le panier lui-même ; sinon, le tarif entier, comme
+ * la caisse le fait avant de connaître le panier. Dans le doute (lecture
+ * impossible), on le tient pour plus bas : mieux vaut une alerte de trop. */
+export async function lowersSale(env, merchant, list, lines) {
+  try {
+    const main = await mainPrices(env, merchant);
+    const prices = await listPrices(env, list);
+    const below = (k) => { const c = prices.get(k + '|'), m = main.get(k); return c != null && !!m && m.cents > 0 && c < m.cents; };
+    const ids = (Array.isArray(lines) ? lines : []).slice(0, 500)
+      .map((l) => String((l && (l.i ?? l.itemId ?? l.item_id ?? l.id)) || '')).filter((k) => main.has(k));
+    if (ids.length) return ids.some(below);
+    return [...prices.keys()].some((k) => below(k.slice(0, -1)));
+  } catch (_) { return true; }
+}
+
 /* Appelée par _sale-stamp.js une fois la vente écrite. Au mieux : une erreur
  * ici ne défait jamais la vente. */
 export async function stampPriceList(env, merchant, saleId, body) {
@@ -89,7 +109,7 @@ export async function stampPriceList(env, merchant, saleId, body) {
     if (!list) verdict = { code: 'unknown-list' };
     else if (await readPriceListProof(body.priceListApproval, env.AUTH_SECRET, merchant, listId, ts)) verdict = null;
     else if (body.priceListApproval) verdict = { code: 'approval-invalid' };
-    else verdict = { code: viaClient ? 'customer-default-no-approval' : 'no-approval' };
+    else if (await lowersSale(env, merchant, list, body.lines)) verdict = { code: viaClient ? 'customer-default-no-approval' : 'no-approval' };
     if (!verdict || !sale) return;
     const note = (list ? 'Tarif « ' + list.name + ' »' : 'Tarif inconnu')
       + (verdict.code === 'unknown-list' ? ' introuvable' : viaClient ? ' (fiche client) sans code responsable' : ' sans code responsable');
