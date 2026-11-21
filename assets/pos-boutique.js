@@ -1,11 +1,11 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=240';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=158';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=240';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=240';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=241';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=159';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=241';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=241';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=7';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=1';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
-import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=5'; import { tillPriceList as tpl } from './pos-boutique/price-list.js?v=2';   // tarifs (gros, jomla)
+import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=5'; import { tillPriceList as tpl } from './pos-boutique/price-list.js?v=2';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=25'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=2'; import { mountSellerPick, sellerPickOn } from './pos-boutique/seller-pick.js?v=1';
 import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zDrawerCash, zDrawerMoves, zDrawerRows, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=10'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=23'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11'; import { bqTransfers } from './pos-boutique/transfers.js?v=7';
 
