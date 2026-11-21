@@ -168,9 +168,12 @@ const probes = {
     const nameInput = { value:'  ', setAttribute: (k,v) => attrs[k] = v, focus: () => focused++ }, nameErr = {hidden:true};
     const fields = { '[data-price]': {value:'12.50'}, '[data-cat]': {value:'drinks'}, '[data-desc]': {value:''}, '[data-avail]': {checked:false}, '[data-standalone]': {checked:true} };
     const saved = [];
-    const save = vm.runInNewContext(code + '\nsaveItem', { nameInput, nameErr, isFormulaCb: {checked:false}, formulaSlots:[], $: k => fields[k], $$: () => [], m:{el:{},close(){}}, x:null, photo:'', video:'', S: () => ({addItem: p => { writes++; saved.push(p); }}), render(){}, toast(){}, ui:k=>k });
+    const catSel = {value:'drinks'}, subSel = {value:''};
+    const save = vm.runInNewContext(code + '\nsaveItem', { nameInput, nameErr, catSel, subSel, isFormulaCb: {checked:false}, formulaSlots:[], $: k => fields[k], $$: () => [], m:{el:{},close(){}}, x:null, photo:'', video:'', S: () => ({addItem: p => { writes++; saved.push(p); }}), render(){}, toast(){}, ui:k=>k });
     save(); assert.equal(writes, 0); assert.equal(focused, 1); assert.equal(nameErr.hidden, false); assert.equal(attrs['aria-invalid'], 'true');
     nameInput.value = ' Tea '; save(); assert.equal(writes, 1); assert.equal(saved[0].name, 'Tea'); assert.equal(saved[0].avail, false); assert.equal(Math.round(saved[0].price*100),1250);
+    assert.equal(saved[0].catId, 'drinks'); assert.equal(saved[0].subId, null, 'no sub-category chosen is saved as none');
+    subSel.value = 'sub_cold'; save(); assert.equal(saved[1].subId, 'sub_cold', 'the sub-category picked on the card is saved');
   },
   'scan-view'() {
     let native = true, real = true, camera = false;
