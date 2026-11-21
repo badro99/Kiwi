@@ -1613,7 +1613,7 @@ section('Whole-project regressions');
     'sales-summary-test.mjs',
     'sales-history-parity-test.mjs', 'revenue-at-sale-test.mjs',
     'sales-summary-store-test.mjs', 'seller-commissions-test.mjs', 'sales-summary-early-test.mjs',
-    'sales-reconcile-test.mjs',
+    'sales-reconcile-test.mjs', 'reports-test.mjs',
     'sales-trim-test.mjs',
     'sales-scope-test.mjs',
     'ticket-141-test.mjs',
@@ -1769,10 +1769,10 @@ section('Whole-project regressions');
     'scan-wedge-browser-test.mjs',
     'boutique-custom-color-test.js',
     'catalog-stock-transaction-test.mjs',
-    'catalog-parts-test.mjs',   // un catalogue plus grand qu'une ligne D1 (La Maison en Vogue, 3 039 articles)
+    'catalog-parts-test.mjs', 'price-lists-test.mjs',   // tarifs (gros, en ligne, factures) ; un catalogue plus grand qu'une ligne D1 (La Maison en Vogue, 3 039 articles)
     /* Deux comptoirs, un stock : fusion, suppression, comptage et repli du
        journal contre un modèle de ce que la boutique a fait. */
-    'catalog-merge-properties-test.mjs', 'catalog-family-test.mjs', 'catalog-family-id-test.mjs', 'stock-transfers-test.mjs', 'stock-transfers-browser-test.mjs', 'delivery-ship-from-test.mjs', 'z-delivery-collections-test.mjs', 'operator-served-figures-test.mjs', 'operator-pairing-shadow-test.mjs', // + catalogue partagé, transferts, « Envoyé de », argent des livreurs à part
+    'catalog-merge-properties-test.mjs', 'catalog-family-test.mjs', 'catalog-bulk-test.mjs', 'catalog-family-id-test.mjs', 'stock-transfers-test.mjs', 'stock-transfers-browser-test.mjs', 'delivery-ship-from-test.mjs', 'z-delivery-collections-test.mjs', 'operator-served-figures-test.mjs', 'operator-pairing-shadow-test.mjs', // + catalogue partagé, transferts, « Envoyé de », argent des livreurs à part
     /* Deux appareils, une fiche : chaque champ garde sa dernière édition, un
        même champ changé des deux côtés est soumis au commerçant. */
     'catalog-field-merge-test.mjs',
@@ -2357,7 +2357,7 @@ section('Whole-project regressions');
     'service-trades-truth-test.mjs',
     'specialty-retail-truth-test.mjs',
     'menu-sales-test.mjs',
-    'foodcost-api-test.mjs',
+    'foodcost-api-test.mjs', 'cost-variance-test.mjs', 'cost-variance-rtl-browser-test.mjs',
     'simple-food-cost-export-test.mjs', 'simple-food-cost-test.mjs', 'net-scope-test.mjs', 'net-recovery-test.mjs',
     'simple-food-cost-split-test.mjs',
     'simple-food-cost-browser-test.mjs',
@@ -2371,7 +2371,7 @@ section('Whole-project regressions');
     'lock-caisse-handoff-test.mjs',
     'till-role-parity-test.mjs',
     'operator-roster-route-test.mjs',
-    'ozon-express-test.mjs', 'delivery-fee-city-test.mjs', 'expenses-engine-test.mjs', 'expenses-api-test.mjs', 'supplier-ledger-test.mjs', 'cheques-test.mjs', 'expenses-switch-test.mjs', 'expenses-browser-test.mjs', 'ozon-exchange-test.mjs', 'ozon-exchange-browser-test.mjs', 'label-picker-browser-test.mjs',
+    'ozon-express-test.mjs', 'credit-schedule-test.mjs', 'credit-till-test.mjs', 'credit-till-classic-browser-test.mjs', 'delivery-fee-city-test.mjs', 'expenses-engine-test.mjs', 'expenses-api-test.mjs', 'supplier-ledger-test.mjs', 'cheques-test.mjs', 'expenses-switch-test.mjs', 'expenses-browser-test.mjs', 'ozon-exchange-test.mjs', 'ozon-exchange-browser-test.mjs', 'label-picker-browser-test.mjs',
     'lock-greeting-truth-test.mjs',
     'check-guard-test.mjs',
     'check-verdict-test.mjs',

@@ -96,7 +96,11 @@ CREATE TABLE IF NOT EXISTS sales (
   -- caisse. NULL pour toute vente écrite avant cette colonne : l'écran dit
   -- « client non renseigné ». Un avoir émis contre une vente importée retrouve
   -- ainsi la bonne fiche.
-  client_id   TEXT
+  client_id   TEXT,
+
+  -- Le tarif appliqué à la vente (price_lists.id) ; NULL = prix principal du
+  -- catalogue. Écrit par _sale-stamp.js, jamais déplacé par un renvoi.
+  price_list_id TEXT
 );
 
 -- Atomic invalidations for every sales mutation, including rowid reuse.
@@ -172,6 +176,43 @@ CREATE TABLE IF NOT EXISTS retail_balance_receipts (
 );
 CREATE INDEX IF NOT EXISTS retail_balance_receipts_by_balance
   ON retail_balance_receipts(merchant, balance_id, created_ts);
+-- Carnet de crédit du patron (21 nov. 2026, functions/api/_credit-accounts.js).
+-- Ce qui est dû reste lu dans l'ardoise (store_docs 'creditbook') et dans
+-- retail_balances ; une ligne par client garde le plafond, la langue des
+-- rappels, le dernier rappel et l'échéancier (JSON, écrit en compare-and-swap
+-- sur rev). Ce que les règlements couvrent se recalcule à chaque lecture
+-- (baseline_paid_cents : le total versé quand les lignes ont été écrites,
+-- pool_cents : l'argent alors posé sur la ligne des échéances, voir _credit-plan.js). credit_settings :
+-- le délai accordé à une dette sans échéance (30 jours par défaut).
+CREATE TABLE IF NOT EXISTS credit_accounts (
+  merchant TEXT NOT NULL,
+  source TEXT NOT NULL CHECK(source IN ('carnet','client')),
+  customer_key TEXT NOT NULL,
+  limit_cents INTEGER CHECK(limit_cents IS NULL OR limit_cents >= 0),
+  lang TEXT NOT NULL DEFAULT '',
+  baseline_paid_cents INTEGER NOT NULL DEFAULT 0,
+  pool_cents INTEGER NOT NULL DEFAULT 0,
+  reminded_ts INTEGER NOT NULL DEFAULT 0,
+  schedule TEXT NOT NULL DEFAULT '[]',
+  rev INTEGER NOT NULL DEFAULT 0,
+  updated_ts INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (merchant, source, customer_key)
+);
+CREATE TABLE IF NOT EXISTS credit_events (
+  merchant TEXT NOT NULL, id TEXT NOT NULL,
+  source TEXT NOT NULL, customer_key TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK(kind IN ('schedule','limit','limit-override','limit-used','limit-unapproved','collected','reminded','promise','settings')),
+  amount_cents INTEGER NOT NULL DEFAULT 0,
+  actor TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '',
+  ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, id)
+);
+CREATE INDEX IF NOT EXISTS credit_events_customer ON credit_events(merchant, source, customer_key, ts DESC);
+CREATE TABLE IF NOT EXISTS credit_settings (
+  merchant TEXT PRIMARY KEY,
+  term_days INTEGER NOT NULL DEFAULT 30 CHECK(term_days >= 0 AND term_days <= 365),
+  updated_ts INTEGER NOT NULL DEFAULT 0
+);
 -- Existing databases: add the column in place. SQLite has no
 -- ADD COLUMN IF NOT EXISTS, so this errors harmlessly ("duplicate column name")
 -- when re-run on a schema that already has it — the rest of the file still
@@ -961,6 +1002,27 @@ CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_cursor
   ON inventory_movements (merchant, srv_ts);
 CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_item
   ON inventory_movements (merchant, item_id, occurred_ts);
+-- Coût théorique et réel (functions/api/cost-variance.js) : toutes ses sommes
+-- portent sur une période d'un magasin ; sans cet index, chaque rapport lisait
+-- tout l'historique du magasin.
+CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_time
+  ON inventory_movements (merchant, occurred_ts);
+-- Valeur du stock sans relire l'historique : sommes par article jusqu'à un
+-- curseur srv_ts (functions/api/cost-variance.js › stockBlock). Un cache
+-- recalculable, jamais une écriture comptable : le supprimer ne perd rien.
+CREATE TABLE IF NOT EXISTS cost_stock_snapshots (
+  merchant   TEXT PRIMARY KEY,
+  cursor     INTEGER NOT NULL,
+  items_json TEXT NOT NULL,
+  updated_ts INTEGER NOT NULL
+);
+-- Le seuil de marge minimum fixé par le propriétaire (Coût réel).
+CREATE TABLE IF NOT EXISTS cost_targets (
+  merchant       TEXT PRIMARY KEY,
+  min_margin_pct REAL NOT NULL,
+  updated_ts     INTEGER NOT NULL,
+  updated_by     TEXT NOT NULL DEFAULT ''
+);
 CREATE TABLE IF NOT EXISTS inventory_sync_sequences (
   merchant TEXT PRIMARY KEY,
   last_ts   INTEGER NOT NULL
@@ -1635,7 +1697,8 @@ CREATE TABLE IF NOT EXISTS invoice_docs (
   sent_ts           INTEGER,
   cancelled_ts      INTEGER,
   created_by        TEXT,
-  legacy_ref        TEXT
+  legacy_ref        TEXT,
+  price_list_id     TEXT              -- le tarif choisi pour le document ; NULL = prix principal
 );
 CREATE INDEX IF NOT EXISTS idx_invoice_docs_merchant ON invoice_docs (merchant, type, issue_date);
 CREATE INDEX IF NOT EXISTS idx_invoice_docs_original ON invoice_docs (merchant, original_id);
@@ -1814,7 +1877,7 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
   command_id TEXT NOT NULL DEFAULT '',
   created_ts INTEGER NOT NULL,
   updated_ts INTEGER NOT NULL,
-  -- suppliers.id (0028). `supplier` reste le nom imprimé sur le bon, pour l'histoire.
+  -- suppliers.id (0030). `supplier` reste le nom imprimé sur le bon, pour l'histoire.
   supplier_id TEXT NOT NULL DEFAULT ''
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_po_number ON purchase_orders (merchant, number);
@@ -2681,7 +2744,50 @@ CREATE TABLE IF NOT EXISTS directory_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_directory_requests_open ON directory_requests(status, created_ts);
 
--- Fournisseurs et grand livre d'argent signé (0028, functions/api/_ledger.js).
+-- ── LES TARIFS (listes de prix : détail, gros / jomla, en ligne, livraison) ──
+-- Le tarif PRINCIPAL n'est pas dupliqué ici : c'est le prix du catalogue
+-- (catalogs, priceMAD). Une ligne is_main = 1 ne porte que son nom affiché.
+-- Un article sans prix dans un tarif retombe sur le prix principal.
+-- channels : JSON ["till","online","invoices","delivery"] ; sites : JSON des
+-- boutiques soeurs (même famille de catalogue) où le tarif vaut aussi.
+CREATE TABLE IF NOT EXISTS price_lists (
+  merchant        TEXT NOT NULL,
+  id              TEXT NOT NULL,
+  name            TEXT NOT NULL,
+  is_main         INTEGER NOT NULL DEFAULT 0,
+  channels        TEXT NOT NULL DEFAULT '[]',
+  sites           TEXT NOT NULL DEFAULT '[]',
+  archived        INTEGER NOT NULL DEFAULT 0,
+  sort            INTEGER NOT NULL DEFAULT 0,
+  created_ts      INTEGER NOT NULL,
+  updated_ts      INTEGER NOT NULL,
+  PRIMARY KEY (merchant, id)
+);
+-- Un prix par (tarif, article, déclinaison) ; variant_key '' = toutes les
+-- déclinaisons de l'article. Centimes entiers.
+CREATE TABLE IF NOT EXISTS item_prices (
+  merchant     TEXT NOT NULL,
+  list_id      TEXT NOT NULL,
+  item_key     TEXT NOT NULL,
+  variant_key  TEXT NOT NULL DEFAULT '',
+  price_cents  INTEGER NOT NULL,
+  free         INTEGER NOT NULL DEFAULT 0,   -- 1 : offert exprès par le patron (seul cas d'un prix à 0)
+  updated_ts   INTEGER NOT NULL,
+  PRIMARY KEY (merchant, list_id, item_key, variant_key),
+  CHECK (price_cents > 0 OR free = 1)
+);
+CREATE INDEX IF NOT EXISTS idx_item_prices_item ON item_prices (merchant, item_key);
+-- Le tarif par défaut d'une fiche client (clients.id) : appliqué tout seul à la
+-- caisse et sur les factures quand la cliente est attachée.
+CREATE TABLE IF NOT EXISTS price_list_clients (
+  merchant    TEXT NOT NULL,
+  client_id   TEXT NOT NULL,
+  list_id     TEXT NOT NULL,
+  updated_ts  INTEGER NOT NULL,
+  PRIMARY KEY (merchant, client_id)
+);
+CREATE INDEX IF NOT EXISTS idx_price_list_clients_list ON price_list_clients (merchant, list_id);
+-- Fournisseurs et grand livre d'argent signé (0030, functions/api/_ledger.js).
 -- `suppliers` est la source de vérité des fournisseurs ; ceux du document
 -- `procurement` y sont importés avec le même id (functions/api/_suppliers.js).
 CREATE TABLE IF NOT EXISTS suppliers (

@@ -112,6 +112,7 @@ export async function lowerSessionTier(request, env, access) {
  * Ce qui n'est pas listé garde ses règles d'aujourd'hui. */
 const MIN_TIER = new Map([
   ['/api/sales-summary', 'manager'],
+  ['/api/reports', 'manager'],       // coûts et marges : le patron seul, tranché dans la route
   ['/api/invoices', 'manager'],
   ['/api/hotel/performance', 'manager'],
   ['/api/hotel/channels', 'manager'],

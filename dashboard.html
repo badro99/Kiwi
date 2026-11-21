@@ -272,6 +272,13 @@
         <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M240-80q-50 0-85-35t-35-85v-120h120v-560l60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60v680q0 50-35 85t-85 35H240Zm480-80q17 0 28.5-11.5T760-200v-560H320v440h360v120q0 17 11.5 28.5T720-160ZM360-600v-80h240v80H360Zm0 120v-80h240v80H360Zm320-120q-17 0-28.5-11.5T640-640q0-17 11.5-28.5T680-680q17 0 28.5 11.5T720-640q0 17-11.5 28.5T680-600Zm0 120q-17 0-28.5-11.5T640-520q0-17 11.5-28.5T680-560q17 0 28.5 11.5T720-520q0 17-11.5 28.5T680-480ZM240-160h360v-80H200v40q0 17 11.5 28.5T240-160Z"/></svg>
         <span data-i18n="dash.sidebar.dayreport">Rapport journalier</span>
       </a>
+      <!-- Rapports · toutes les périodes, tous les établissements, calculés au
+           serveur (assets/pages-pro/reports-hub.js, /api/reports). Même
+           interrupteur que le Rapport journalier. -->
+      <a href="#" data-nav="reports" data-feature="rapport">
+        <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M640-160v-280h160v280H640Zm-240 0v-640h160v640H400Zm-240 0v-440h160v440H160Z"/></svg>
+        <span data-i18n="dash.sidebar.reports">Rapports</span>
+      </a>
       <!-- Dépenses · le registre du patron (assets/expenses/). Éteint pour tout
            commerçant tant que l'opérateur n'a pas allumé `expenses` ; réservé
            au propriétaire, sur la page et au serveur. -->
@@ -1066,7 +1073,7 @@
 <script src="assets/err-reporter.js?v=2" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js?v=11" defer></script>
-<script src="assets/i18n.js?v=62" defer></script>
+<script src="assets/i18n.js?v=64" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
@@ -1087,8 +1094,8 @@
 
 
 <script src="assets/invoice.js?v=28" defer></script>
-<script src="assets/invoicing.js?v=65" defer></script>
-<script src="assets/depenses.js?v=9" defer></script>
+<script src="assets/invoicing.js?v=66" defer></script>
+<script src="assets/depenses.js?v=10" defer></script>
 <script src="assets/oppo-cards.js?v=12" defer></script>
 <script src="assets/merchant-health.js?v=5" defer></script>
 <script src="assets/insights.js?v=3" defer></script>
@@ -1116,9 +1123,9 @@
      Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
-<script src="assets/venues/data.js?v=4" defer></script>
+<script src="assets/venues/data.js?v=7" defer></script>
 <script src="assets/venues/helpers.js?v=10" defer></script>
-<script src="assets/venues.js?v=78" defer></script>
+<script src="assets/venues.js?v=79" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot
      and the garment product art (both in pressing-ops.js). -->
 <script src="assets/pressing-ops.js?v=40" defer></script>
@@ -1145,8 +1152,8 @@
 <script defer src="assets/tenant-purge.js?v=18"></script>
 <script defer src="assets/dashboard-pin-vault.js?v=7"></script>
 <script defer src="assets/identity.js?v=13"></script>
-<link rel="modulepreload" href="assets/live-link/queue-store.js?v=28">
-<script type="module" defer src="assets/live-link.js?v=135"></script>
+<link rel="modulepreload" href="assets/live-link/queue-store.js?v=29">
+<script type="module" defer src="assets/live-link.js?v=136"></script>
 <script defer src="assets/channel-sales.js?v=9"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
@@ -1268,12 +1275,13 @@
 <script src="assets/procurement.js?v=6" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
 <script src="assets/clients-store.js?v=71" defer fetchpriority="low"></script>
+<!-- Tarifs · window.KiwiPriceLists (contrat du tableau en masse) et KiwiPriceListsApi (écran Tarifs, factures). -->
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
 
 
 <script src="assets/clients-directory.js?v=49" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=21" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=283" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=290" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1300,16 +1308,16 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=283"></script>
+<script src="assets/pages/dashboard-startup.js?v=290"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=17">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
-<script src="assets/pages/dashboard-loader.js?v=109" defer fetchpriority="low"></script>
+<script src="assets/pages/dashboard-loader.js?v=110" defer fetchpriority="low"></script>
 <script src="assets/trade-workspace-schema.js?v=14" defer fetchpriority="low"></script>
-<script src="assets/trade-workspaces.js?v=21" defer fetchpriority="low"></script>
+<script src="assets/trade-workspaces.js?v=23" defer fetchpriority="low"></script>
 <script src="assets/delivery-receivables.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/reservations.js?v=46" defer fetchpriority="low"></script>
 <script src="assets/operations.js?v=18" defer fetchpriority="low"></script>
-<script src="assets/operations-ui.js?v=36" defer fetchpriority="low"></script>
+<script src="assets/operations-ui.js?v=37" defer fetchpriority="low"></script>
 <script src="assets/marketing-suite-tease.js?v=1" defer fetchpriority="low"></script>
 <!-- Exact-trade operational boards. Loaded after the specialist modules so it
      only replaces the generic placeholders; Accueil and Hotel stay untouched. -->

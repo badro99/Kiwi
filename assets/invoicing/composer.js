@@ -103,6 +103,8 @@ function composerPayload() {
       lines, issueDate: fv('issue') || today(), note: fv('note'), exemptionMention: fv('exempt'),
     };
     if (cmp.id) payload.id = cmp.id;
+    const priceList = fv('pricelist');   // le tarif choisi sur la fiche « Articles du catalogue » (assets/price-lists.js)
+    if (priceList) payload.priceListId = priceList;
     if (cmp.type === 'quote') payload.validUntil = fv('valid') || shift(30);
     else {
       if (t === 'custom') payload.dueDate = fv('due'); else payload.termsDays = Number(t || 0);

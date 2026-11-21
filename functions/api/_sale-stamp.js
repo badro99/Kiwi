@@ -5,6 +5,11 @@
 // One UPDATE, each column set once: a till replaying the same receipt never
 // moves the customer or the arrival time. Best effort: a failure here never
 // un-books the money, the sale stands as written.
+//
+// The price list the till applied (migration 0029, `price_list_id`) is stamped
+// by _price-list-sale.js, which also checks who chose it.
+
+import { stampPriceList } from './_price-list-sale.js';
 
 export async function stampSale(env, merchant, id, body) {
   const clientId = typeof body?.clientId === 'string' ? body.clientId.trim().slice(0, 64) : '';
@@ -15,4 +20,5 @@ export async function stampSale(env, merchant, id, body) {
         WHERE merchant = ? AND id = ?`
     ).bind(clientId || null, Date.now(), Number.isFinite(deviceTs) && deviceTs > 0 ? Math.round(deviceTs) : null, merchant, id).run();
   } catch (_) { /* the sale stands */ }
+  if (body && body.priceListId) await stampPriceList(env, merchant, id, body);
 }

@@ -11,7 +11,9 @@
     'svc-export', 'svc-season', 'svc-season-edit', 'svc-ai-action',
     'spa-cli-add-confirm', 'spa-cli-wa-send', 'spa-cli-bday-send',
     'spa-cli-bday-batch-send', 'spa-cli-gift-confirm', 'spa-cli-block-confirm',
-    'menu-mass', 'menu-schedule', 'menu-promote', 'menu-publish',
+    /* 'menu-mass' left on 2026-11-21: it opens the real re-price of the
+     * carte (assets/pages-pro/catalog-bulk/), which writes through /api/catalog/batch. */
+    'menu-schedule', 'menu-promote', 'menu-publish',
     'kds-bump', 'kds-recall', 'kds-86', 'kds-print-summary',
     /* Équipe, paie et planning : ces boutons annonçaient un envoi WhatsApp et
      * un PDF « envoyé au gérant » alors que rien ne part. 'eq-publish-plan'

@@ -756,6 +756,7 @@ function postSale(entry) {
     if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
     /* La fiche cliente de la vente : le serveur la range avec la vente (sales.client_id). */
     if (entry.clientId) body.clientId = String(entry.clientId).slice(0, 64);
+    if (entry.priceListId) { body.priceListId = String(entry.priceListId).slice(0, 64); if (entry.priceListApproval) body.priceListApproval = String(entry.priceListApproval).slice(0, 2048); }   // tarif + accord responsable
     /* Qui a vendu (commissions vendeurs) : la preuve signée par /api/pin/verify
        pour la personne qui a déverrouillé la caisse, ou la fiche Équipe choisie
        à l'encaissement (sellerPicker). Le serveur en tire le nom, toujours. */

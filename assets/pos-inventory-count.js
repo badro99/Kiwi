@@ -85,7 +85,9 @@
      montre dans sa colonne Motif. */
   const REASONS = [
     ['casse', 'Cassé ou abîmé'],
-    ['perdu', 'Perdu ou volé'],
+    ['perime', 'Périmé ou jeté'],
+    ['vol', 'Volé'],
+    ['perdu', 'Perdu'],
     ['erreur', 'Erreur d’étiquette ou de saisie'],
     ['autre', 'Autre'],
   ];
@@ -916,6 +918,9 @@ ${S} .kcnt-done-card span{font-size:var(--k-fs-footnote);color:var(--k-ink-3)}
         systemQty: i.systemQty,
         countedQty: i.countedQty,
         explanation: [reasonLabel(i.reason), i.explanation || ''].filter(Boolean).join(' · ').slice(0, 200),
+        /* Le code, pas seulement le libellé : le serveur le porte jusqu'au
+           mouvement de stock, et « Coût réel » range l'écart sous son motif. */
+        reason: i.reason || '',
         note: i.note || ''
       }))
     };

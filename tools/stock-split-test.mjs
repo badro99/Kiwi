@@ -68,7 +68,23 @@ function realm(source, real) {
 const exposed = [...new Set([...map.moved.map(m => m.name), 'stCurrentTab'])];
 const expose = '  window.__scope = { ' + exposed.map(n => `get ${n}() { return ${n}; }`).join(', ') + ' };\n';
 const seam = '  /* Private bridge used by restaurant recipes.';
-const baseline = original.replace(seam, expose + seam);
+/* Rendu revu APRÈS la découpe, chacun avec sa propre suite : appliqué à la copie
+ * de référence, la comparaison continue de garder tout le reste à l'octet.
+ * Le motif « Vol » des pertes (feat/inyad-foodcost, tools/cost-variance-test.mjs). */
+const LATER_EDITS = [
+  ["rsStaff: 'Repas équipe', rsOther:", "rsStaff: 'Repas équipe', rsVol: 'Vol', optVol: 'Vol', rsOther:"],
+  ["rsStaff: 'Staff meal', rsOther:", "rsStaff: 'Staff meal', rsVol: 'Theft', optVol: 'Theft', rsOther:"],
+  ["rsStaff: 'وجبة الفريق', rsOther:", "rsStaff: 'وجبة الفريق', rsVol: 'سرقة', optVol: 'سرقة', rsOther:"],
+  ["'staff-meal': 'rsStaff', autre: 'rsOther' }[code]", "'staff-meal': 'rsStaff', vol: 'rsVol', theft: 'rsVol', autre: 'rsOther' }[code]"],
+  ["${reasonPill('repas-equipe', ct('rsStaff'))}\n", "${reasonPill('repas-equipe', ct('rsStaff'))}\n            ${reasonPill('vol', ct('rsVol'))}\n"],
+  ["<option value=\"repas-equipe\"${prefillReason === 'repas-equipe' ? ' selected' : ''}>${esc(ct('optStaff'))}</option>\n",
+   "<option value=\"repas-equipe\"${prefillReason === 'repas-equipe' ? ' selected' : ''}>${esc(ct('optStaff'))}</option>\n              <option value=\"vol\"${prefillReason === 'vol' ? ' selected' : ''}>${esc(ct('optVol'))}</option>\n"],
+];
+const reviewed = LATER_EDITS.reduce((src, [before, after]) => {
+  assert.equal(src.split(before).length, 2, 'retouche revue, ancre unique : ' + before.slice(0, 40));
+  return src.replace(before, () => after);
+}, original);
+const baseline = reviewed.replace(seam, expose + seam);
 const actual = core.replace(seam, expose + seam);
 for (const real of [false, true]) {
   const before = realm(baseline, real), after = realm(actual, real);

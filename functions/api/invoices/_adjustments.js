@@ -58,7 +58,7 @@ async function convertQuote(ctx, body) {
     type: 'invoice', issue_date: today, due_date: terms == null ? null : addDays(today, terms), terms_days: terms,
     customer: row.customer, lines: row.lines, totals: row.totals, ttc_cents: row.ttc_cents,
     payment_method: row.payment_method || null, note: row.note || null, exemption_mention: row.exemption_mention || null,
-    source_quote_id: row.id,
+    source_quote_id: row.id, price_list_id: row.price_list_id || null,
   });
   const guard = { sql: "EXISTS (SELECT 1 FROM invoice_docs WHERE id = ? AND merchant = ? AND type = 'quote' AND status IN ('sent', 'accepted'))", params: [row.id, ctx.merchant] };
   const results = await ctx.db.batch([
@@ -83,6 +83,7 @@ async function duplicate(ctx, body) {
     valid_until: row.type === 'quote' ? addDays(today, QUOTE_VALID_DAYS) : null,
     customer: row.customer, lines: row.lines, totals: row.totals, ttc_cents: row.ttc_cents,
     payment_method: row.payment_method || null, note: row.note || null, exemption_mention: row.exemption_mention || null,
+    price_list_id: row.price_list_id || null,
   });
   await insertStatement(ctx, d).run();
   return json({ ok: true, doc: await presentFull(ctx, await getRow(ctx, d.id)) });

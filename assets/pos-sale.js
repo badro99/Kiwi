@@ -486,6 +486,8 @@
     };
     var saleChannel = String(sale.channel || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 24);
     if (saleChannel) entry.channel = saleChannel;
+    /* Le tarif du ticket (assets/till-price-list.js) et l'accord signé du responsable, relus par /api/sale. */
+    if (sale.priceListId) { entry.priceListId = String(sale.priceListId).slice(0, 64); if (sale.priceListApproval) entry.priceListApproval = String(sale.priceListApproval).slice(0, 2048); }
     if (Array.isArray(sale.lines) && sale.lines.length) {
       entry.lines = sale.lines.map(cleanLine);
     }
@@ -531,6 +533,7 @@
           // Garder le détail local pour le reçu et le stock, borner seulement le miroir.
           lines: foldLines(entry.lines) || null,
         };
+        if (entry.priceListId) { payload.priceListId = entry.priceListId; if (entry.priceListApproval) payload.priceListApproval = entry.priceListApproval; }
         /* Le reçu et le serveur gardent la même ventilation, mais seulement quand
            le serveur peut l'accepter telle quelle : de l'argent reçu (espèces,
            carte, virement, chèque) qui fait exactement le ticket. Une part sur

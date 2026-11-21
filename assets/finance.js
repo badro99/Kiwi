@@ -888,6 +888,7 @@
         ${parts.seg}
       </div>
       ${parts.body}
+      <div data-costvar-slot></div>
     </div>`;
   }
   /* Le contenu de la page réelle, sans son en-tête : « Analyse du menu » le
@@ -1090,7 +1091,11 @@
       `</div>`;
     let seg = '';
     let body = '';
-    if (finTab === 'cost') body = window.KiwiSimpleFoodCost.panel();
+    /* Le coût réel (assets/pages-pro/cost-variance.js) vit sur l'écran du
+       coût, jamais dans Ventes, qui ne parle que d'argent encaissé : au bas de
+       l'onglet Coût quand il existe, sinon au bas de la vue d'ensemble. */
+    const varianceSlot = '<div data-costvar-slot></div>';
+    if (finTab === 'cost') body = window.KiwiSimpleFoodCost.panel() + varianceSlot;
     else if (finTab === 'sales' && A.sales) body = A.sales();
     else if (finTab === 'performance') body = A.performance();
     else if (finTab === 'hours') body = A.hours();
@@ -1102,6 +1107,7 @@
       body = `<div class="fin-grid">${pnlHtml()}${budgetHtml()}${breakevenHtml()}${serviceHtml()}${priceHtml()}</div>
         <div class="fin-note">${esc(t('noteUpdatePolicy'))}</div>`;
     }
+    if (finTab === 'overview' && !costOn()) body += varianceSlot;
     return `<div class="fin-page fin-analysis" data-fin-tab-open="${finTab}">
       <div class="fin-head">
         <div>
@@ -1126,13 +1132,21 @@
     if (pageActive) render();
   }
 
+  /* Coût théorique et réel (assets/pages-pro/cost-variance.js, chargé au
+     premier usage) : /api/cost-variance pour un vrai commerçant, un exemple
+     en démonstration. Plus jamais le « réel = théorique × 1,04 ». */
+  const mountVariance = (root, v, restaurant) => {
+    const slot = root && root.querySelector ? root.querySelector('[data-costvar-slot]') : null;
+    if (!slot) return;
+    try { const r = window.Kiwi.handlers['costvar-mount'](slot, { real: finShowReal(v), restaurant: !!restaurant }); if (r && r.catch) r.catch(() => {}); } catch (_) {}
+  };
   function render() {
     const root = document.querySelector('[data-finance-root]');
     if (!root) return;
     const v = currentVenueId();
     const A = menuAnalysis();
-    if (A) { finCss(); finBindLive(); root.innerHTML = analysisPage(v, A); return; }
-    if (finShowReal(v)) { finBindLive(); root.innerHTML = finReal(v); return; }
+    if (A) { finCss(); finBindLive(); root.innerHTML = analysisPage(v, A); mountVariance(root, v, true); return; }
+    if (finShowReal(v)) { finBindLive(); root.innerHTML = finReal(v); mountVariance(root, v, false); return; }
     root.innerHTML = `
       <div class="fin-page">
         <div class="fin-head">

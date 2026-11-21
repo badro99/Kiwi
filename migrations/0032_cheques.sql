@@ -1,4 +1,4 @@
--- 0029 · Portefeuille de chèques et d'effets (LCN) : le papier, ce qu'il règle
+-- 0032 · Portefeuille de chèques et d'effets (LCN) : le papier, ce qu'il règle
 -- (ventes, lignes du grand livre, bons) et son historique en ajout seul.
 -- functions/api/_cheques.js. Création seule (IF NOT EXISTS) : rejouable.
 CREATE TABLE IF NOT EXISTS cheques (

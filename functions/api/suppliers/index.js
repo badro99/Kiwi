@@ -6,7 +6,7 @@
 //   (terms_days) : `notDueCents` n'est pas encore échu, `overdueCents` l'est.
 //   `inbox` : toutes les lignes en attente (réceptions et retours saisis par
 //   l'équipe), et `unlinked` : les réceptions d'un bon sans fiche, à rattacher.
-//   `migrated:false` : la base n'a pas encore 0028 (l'écran dit « mise à jour
+//   `migrated:false` : la base n'a pas encore 0030 (l'écran dit « mise à jour
 //   en cours » au lieu d'une erreur).
 //   Importe au passage l'identité des fournisseurs du document `procurement`
 //   (functions/api/_suppliers.js › syncProcurement), jamais de montant.

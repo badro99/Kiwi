@@ -9,6 +9,7 @@ import { __test as catalogFns } from '../catalog.js';
 import { loadParts } from '../_catalog-parts.js';
 import { linkFor } from '../channel/_link.js';
 import { hmacKey } from '../../auth/_crypto.js';
+import { applyOnlinePrices } from '../_price-lists.js';
 
 export const MAX_LINES = 20;
 export const MAX_QTY = 10;
@@ -53,12 +54,16 @@ export async function commerceEnabled(env, merchant) {
   } catch (_) { return false; }
 }
 
-/* The merchant's catalogue as the server knows it, stock materialised. */
+/* The merchant's catalogue as the server knows it, stock materialised, priced
+ * for the shop: a price list bound to the `online` channel replaces priceMAD.
+ * The page (shop/catalog) and the order check (checkLines) both read this, so
+ * they always agree. */
 export async function readCatalog(env, merchant) {
   const row = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first());
   if (!row || !row.data) return null;
   const data = catalogFns.sanitize(JSON.parse(row.data));
   catalogFns.materialize(data);
+  try { await applyOnlinePrices(env, merchant, data); } catch (_) { /* main prices stand */ }
   return data;
 }
 

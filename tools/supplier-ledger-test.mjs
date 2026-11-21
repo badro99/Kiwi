@@ -575,7 +575,7 @@ const opsPost = async (cookie, id, action, payload, extra) => {
   ok('ageing by due date: terms_days splits not-yet-due from overdue');
 }
 
-/* ── 17 · base d'avant 0028 : les bons marchent, le grand livre attend ── */
+/* ── 17 · base d'avant 0030 : les bons marchent, le grand livre attend ── */
 {
   const { listMigrations, MIGRATIONS_DIR } = await importFresh('tools/d1-migrations.mjs');
   const { readFileSync } = await import('node:fs');
@@ -614,7 +614,7 @@ const opsPost = async (cookie, id, action, payload, extra) => {
   const lo = await listOld.json();
   assert.equal(listOld.status, 200);
   assert.equal(lo.migrated, false, 'the screen shows "update in progress", not an error');
-  ok('pre-0028 base: create/submit/receive PO still work, ledger reports unmigrated, list says migrated:false');
+  ok('pre-0030 base: create/submit/receive PO still work, ledger reports unmigrated, list says migrated:false');
 }
 
 /* ── 18 · la page, par rôle : grand livre au patron, classement ouvert ── */

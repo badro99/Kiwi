@@ -720,7 +720,7 @@
         </button>
       `).join('') : '';
 
-    wrap.innerHTML = venueRows + scopeRows + cta;
+    wrap.innerHTML = venueRows + scopeRows + (onboard && !scopedActive && isRealMerchant() && listIds.length > 1 ? `<button type="button" class="venue-action fusion-cta" data-action="reports-sites"><div class="va-icon"><svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M640-160v-280h160v280H640Zm-240 0v-640h160v640H400Zm-240 0v-440h160v440H160Z"/></svg></div><div class="va-body"><div class="va-title">${dd.sitesT}</div><div class="va-sub">${dd.sitesS}</div></div></button>` : '') + cta; // la vraie vue multi-site (assets/pages-pro/reports-hub.js), pas la Fusion de démo
   }
 
   function toggleDropdown() {

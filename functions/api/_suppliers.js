@@ -1,4 +1,4 @@
-/* Les fournisseurs, en D1 (table `suppliers`, migration 0028).
+/* Les fournisseurs, en D1 (table `suppliers`, migration 0030).
  *
  * Avant : chaque écran rangeait ses fournisseurs dans le document `procurement`
  * du navigateur, les bons de commande D1 portaient un nom libre, les dépenses
@@ -236,7 +236,7 @@ export const unlinkedParty = (number) => 'po:' + clean(number, 60);
  * une réception = ce que nous devons (in), un retour = ce qu'il nous reprend
  * (out). La clé est l'id de la commande opérationnelle, unique par geste.
  *   → { status: 'posted'|'pending'|'unlinked', partyId, statements: [..] }
- *   → { status: 'unmigrated' } (base d'avant 0028 : le stock passe seul)
+ *   → { status: 'unmigrated' } (base d'avant 0030 : le stock passe seul)
  *   → { status: 'none' } (rien à écrire)
  * Un bon d'avant les fiches se relie à la volée par son nom ; sinon le patron
  * crée la fiche (`trusted`), et un employé laisse la ligne sous « po:<n°> ». */
@@ -329,7 +329,7 @@ export async function orderBalances(env, merchant, supplierId) {
          FROM purchase_orders o WHERE o.merchant = ? AND o.supplier_id = ? ORDER BY o.created_ts DESC LIMIT 20`
     ).bind(merchant, supplierId).all();
     rows = (got && got.results) || [];
-  } catch (_) { return []; /* base d'avant 0028 : pas de lien bon ↔ fiche */ }
+  } catch (_) { return []; /* base d'avant 0030 : pas de lien bon ↔ fiche */ }
   let lines = [];
   try {
     const got = await env.DB.prepare(

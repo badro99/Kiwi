@@ -10,7 +10,7 @@
       'assets/order-qr.js?v=6',
       'assets/growth-crm.js?v=7',
       'assets/ramadan.js?v=3',
-      'assets/catalog-import.js?v=22',
+      'assets/catalog-import.js?v=24',
       'assets/ai-image-import.js?v=8',
       'assets/menu-scan-reader.js?v=9',
       'assets/menu-scan.js?v=20',
@@ -34,7 +34,7 @@
     /* Paramètres → « Annuaire Kiwi »: the opt-in sheet, fetched on first open. */
     directory: { dependencies: [], scripts: ['assets/directory-optin.js?v=2'] },
     /* « Dépenses » (interrupteur par commerçant) : un module ES, ouvert au premier clic. */
-    expenses: { dependencies: [], scripts: ['assets/expenses/index.js?v=6'], module: true },
+    expenses: { dependencies: [], scripts: ['assets/expenses/index.js?v=7'], module: true },
   });
   const pending = new Map(), scripts = new Map(), ready = new Set();
   function script(url, module) {

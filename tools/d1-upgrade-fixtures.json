@@ -167,6 +167,26 @@
     {"merchant": "upgrade-synth-1", "gen": "fixture-gen-1", "part": 137, "data": "fixture-data-1"},
     {"merchant": "upgrade-synth-2", "gen": "fixture-gen-2", "part": 274, "data": "fixture-data-2"}
   ],
+  "cost_stock_snapshots": [
+    {"merchant": "upgrade-synth-1", "cursor": 137, "items_json": "{\"fixture-1\":[1,2,3,4,5]}", "updated_ts": 137},
+    {"merchant": "upgrade-synth-2", "cursor": 274, "items_json": "{\"fixture-2\":[2,4,6,8,10]}", "updated_ts": 274}
+  ],
+  "cost_targets": [
+    {"merchant": "upgrade-synth-1", "min_margin_pct": 62.5, "updated_ts": 137, "updated_by": "fixture-updated_by-1"},
+    {"merchant": "upgrade-synth-2", "min_margin_pct": 70, "updated_ts": 274, "updated_by": "fixture-updated_by-2"}
+  ],
+  "price_lists": [
+    {"merchant": "upgrade-synth-1", "id": "pl-synth-1", "name": "fixture-name-1", "is_main": 0, "channels": "[\"till\"]", "sites": "[]", "archived": 0, "sort": 1, "created_ts": 151, "updated_ts": 152},
+    {"merchant": "upgrade-synth-2", "id": "pl-synth-2", "name": "fixture-name-2", "is_main": 1, "channels": "[\"online\"]", "sites": "[\"upgrade-synth-1\"]", "archived": 1, "sort": 2, "created_ts": 153, "updated_ts": 154}
+  ],
+  "item_prices": [
+    {"merchant": "upgrade-synth-1", "list_id": "pl-synth-1", "item_key": "item-synth-1", "variant_key": "", "price_cents": 12001, "updated_ts": 155},
+    {"merchant": "upgrade-synth-2", "list_id": "pl-synth-2", "item_key": "item-synth-2", "variant_key": "var-synth-2", "price_cents": 12002, "updated_ts": 156}
+  ],
+  "price_list_clients": [
+    {"merchant": "upgrade-synth-1", "client_id": "client-synth-1", "list_id": "pl-synth-1", "updated_ts": 157},
+    {"merchant": "upgrade-synth-2", "client_id": "client-synth-2", "list_id": "pl-synth-2", "updated_ts": 158}
+  ],
   "suppliers": [
     {"merchant": "upgrade-synth-1", "id": "fixture-id-1", "name": "fixture-name-1", "phone": "fixture-phone-1", "email": "fixture-email-1", "ice": "fixture-ice-1", "rib": "fixture-rib-1", "bank": "fixture-bank-1", "address": "fixture-address-1", "notes": "fixture-notes-1", "terms_days": 137, "archived": 0, "source": "fixture-source-1", "created_ts": 137, "updated_ts": 137},
     {"merchant": "upgrade-synth-2", "id": "fixture-id-2", "name": "fixture-name-2", "phone": "fixture-phone-2", "email": "fixture-email-2", "ice": "fixture-ice-2", "rib": "fixture-rib-2", "bank": "fixture-bank-2", "address": "fixture-address-2", "notes": "fixture-notes-2", "terms_days": 274, "archived": 1, "source": "fixture-source-2", "created_ts": 274, "updated_ts": 274}
@@ -190,5 +210,17 @@
   "cheque_history": [
     {"merchant": "upgrade-synth-1", "id": "fixture-id-1", "cheque_id": "fixture-cheque_id-1", "request_id": "fixture-request_id-1", "action": "create", "from_status": "fixture-from_status-1", "to_status": "fixture-to_status-1", "event_date": "fixture-event_date-1", "reason": "fixture-reason-1", "detail": "fixture-detail-1", "ledger_entry_id": "fixture-ledger_entry_id-1", "actor": "fixture-actor-1", "at": 137},
     {"merchant": "upgrade-synth-2", "id": "fixture-id-2", "cheque_id": "fixture-cheque_id-2", "request_id": "fixture-request_id-2", "action": "move", "from_status": "fixture-from_status-2", "to_status": "fixture-to_status-2", "event_date": "fixture-event_date-2", "reason": "fixture-reason-2", "detail": "fixture-detail-2", "ledger_entry_id": "fixture-ledger_entry_id-2", "actor": "fixture-actor-2", "at": 274}
+  ],
+  "credit_accounts": [
+    {"merchant": "upgrade-synth-1", "source": "carnet", "customer_key": "fixture-key-1", "limit_cents": 50000, "lang": "fr", "baseline_paid_cents": 137, "pool_cents": 0, "reminded_ts": 137, "schedule": "[]", "rev": 1, "updated_ts": 137},
+    {"merchant": "upgrade-synth-2", "source": "client", "customer_key": "fixture-key-2", "limit_cents": null, "lang": "", "baseline_paid_cents": 274, "pool_cents": 12, "reminded_ts": 0, "schedule": "[]", "rev": 2, "updated_ts": 274}
+  ],
+  "credit_events": [
+    {"merchant": "upgrade-synth-1", "id": "fixture-id-1", "source": "carnet", "customer_key": "fixture-key-1", "kind": "schedule", "amount_cents": 137, "actor": "fixture-actor-1", "detail": "fixture-detail-1", "ts": 137},
+    {"merchant": "upgrade-synth-2", "id": "fixture-id-2", "source": "client", "customer_key": "fixture-key-2", "kind": "reminded", "amount_cents": 274, "actor": "fixture-actor-2", "detail": "fixture-detail-2", "ts": 274}
+  ],
+  "credit_settings": [
+    {"merchant": "upgrade-synth-1", "term_days": 30, "updated_ts": 137},
+    {"merchant": "upgrade-synth-2", "term_days": 7, "updated_ts": 274}
   ]
 }

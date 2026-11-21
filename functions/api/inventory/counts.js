@@ -14,6 +14,7 @@ import { json, entitledMerchant } from '../../auth/_lib.js';
 import { loadParts, packCatalog, runCatalogWrite } from '../_catalog-parts.js';
 import { tenantFor } from '../_private.js';
 import { resolveInventoryUnitScope, scopeSql } from './_unit-scope.js';
+import { lossReason } from '../_cost-variance.js';
 
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 const num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
@@ -434,7 +435,8 @@ export async function onRequestPost({ request, env }) {
           ).bind(
             movId, merchant, itemId, variantId, locationId, qtyMilli,
             unitCostCents, countId, lineNote, reviewerName,
-            nowMs, merchant, JSON.stringify({ countId, unitId: row.store_id || '', lineKey: line.key || itemId }), nowMs
+            nowMs, merchant, JSON.stringify({ countId, unitId: row.store_id || '', lineKey: line.key || itemId,
+              ...(lossReason(line.reason) ? { lossReason: lossReason(line.reason) } : {}) }), nowMs
           )
         );
       }
@@ -557,6 +559,9 @@ export async function onRequestPost({ request, env }) {
       unitCost: line && (line.unitCost != null ? line.unitCost : line.cost),
       countedQty: line && (line.countedQty != null ? line.countedQty : line.counted),
       explanation: line && line.explanation, note: line && line.note,
+      /* Absent des anciens comptages : undefined disparaît du JSON, leur
+         empreinte reste donc identique. */
+      reason: line && line.reason ? lossReason(line.reason) || undefined : undefined,
     })),
   });
   if (!supersedesId && countId) {
@@ -656,7 +661,10 @@ export async function onRequestPost({ request, env }) {
       diff,
       varianceCost,
       explanation: str(l.explanation, 200),
-      note: str(l.note, 500)
+      note: str(l.note, 500),
+      /* Le motif de l'écart, ligne par ligne (casse, vol, erreur…). Un code
+         inconnu reste vide : jamais deviné. */
+      reason: lossReason(l.reason)
     };
   });
 

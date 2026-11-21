@@ -1,6 +1,6 @@
 {
   "file": "assets/venues.js",
-  "sha256": "909711afec1c35e4ee229953b2125a0ac351ce4b514e195dbed4a5b634ae9a8c",
+  "sha256": "7d434097dbf08bf81e025f08c4dd4b9f65b20fa3e2062e53516e8b5701b578aa",
   "parts": [
     "assets/venues/data.js",
     "assets/venues/helpers.js"
@@ -30,7 +30,7 @@
       ],
       "deps": [],
       "start": 1595,
-      "end": 107313,
+      "end": 107573,
       "bridge": "\n  /* <<split:bridge:profiles>> */\n  const { VENUES, ICONS, MATERIAL_PRESSING, VERTICAL_SECTIONS, subLang, pickL, SUBTYPE_PROFILES, BASE_VOCAB, KPI_BY_TYPE, SIBLINGS, TYPE_LABELS, typeLabelOf, HEADER_SUB, HERO_AI_REC, HEATMAP_AI_REC, MIX_CMI_SAVINGS, BENCH_LABELS } = window.__kiwiVenueParts.profiles.call(this, {  });\n  /* <</split:bridge:profiles>> */"
     },
     {
@@ -41,8 +41,8 @@
         "EQ_MONTH_WEEKS"
       ],
       "deps": [],
-      "start": 228801,
-      "end": 239345,
+      "start": 229835,
+      "end": 240379,
       "bridge": "\n  /* <<split:bridge:staff>> */\n  const { STAFF, EQ_MONTH_WEEKS } = window.__kiwiVenueParts.staff.call(this, {  });\n  /* <</split:bridge:staff>> */"
     },
     {
@@ -54,8 +54,8 @@
         "miStations"
       ],
       "deps": [],
-      "start": 239978,
-      "end": 250708,
+      "start": 241012,
+      "end": 251742,
       "bridge": "\n  /* <<split:bridge:menu>> */\n  const { MENU, MI_STATION_STATE, miStations } = window.__kiwiVenueParts.menu.call(this, {  });\n  /* <</split:bridge:menu>> */"
     },
     {
@@ -89,8 +89,8 @@
         "REAL_VENUES",
         "STAFF"
       ],
-      "start": 285912,
-      "end": 333376,
+      "start": 286946,
+      "end": 334410,
       "bridge": "\n  /* <<split:bridge:recipes>> */\n  const { INVENTORY, SUPPLIERS, PLACEHOLDER_COSTS, RECIPES, RECIPES_SESSION, STAFF_DISH_RESPONSIBILITY, recFindInventoryItem, recResolveIngredient, recPortionCost, recFindMenuItem, recGetRecipe, recSetRecipe, recListRecipes, recRecipeStats, recTheoreticalConsumption, recActualConsumption, recComputeVariance, recVarianceByRecipe, recVarianceByCategory, recVariancePerStaffMember } = window.__kiwiVenueParts.recipes.call(this, { EQ_MONTH_WEEKS, MENU, REAL_VENUES, STAFF });\n  /* <</split:bridge:recipes>> */"
     },
     {
@@ -100,8 +100,8 @@
         "buildOverlayMarkup"
       ],
       "deps": [],
-      "start": 167369,
-      "end": 169722,
+      "start": 168403,
+      "end": 170756,
       "bridge": "\n  /* <<split:bridge:overlay>> */\n  const { buildOverlayMarkup } = window.__kiwiVenueParts.overlay.call(this, {  });\n  /* <</split:bridge:overlay>> */"
     },
     {
@@ -112,8 +112,8 @@
         "restoreThemeChoice"
       ],
       "deps": [],
-      "start": 173868,
-      "end": 175382,
+      "start": 174902,
+      "end": 176416,
       "bridge": "\n  /* <<split:bridge:theme>> */\n  const { themeChoiceIsDark, restoreThemeChoice } = window.__kiwiVenueParts.theme.call(this, {  });\n  /* <</split:bridge:theme>> */"
     },
     {
@@ -150,8 +150,8 @@
         "VENUES",
         "typeIconOf"
       ],
-      "start": 180276,
-      "end": 196792,
+      "start": 181310,
+      "end": 197826,
       "bridge": "\n  /* <<split:bridge:fusion>> */\n  const { FUSION_PER_VENUE_TARGETS, FUSION_PER_VENUE_WEIGHTS, FUSION_HOUR_LABELS, FUSION_N, FUSION_PORTFOLIO_GOAL, FUSION_VENUE_IDS, fusionCumulativeAt, computePerVenueLive, fusionAnimateNumber, fusionFrInt, fusionFmtMad, fusionFmtMadCents, fusionFmtPct, fusionParseAmount, FUSION_DELTA_LABELS, FS_ULTRA_STR, FUSION_HERO_LABELS, fusionLang, fusionEffectiveRange, FUSION_MATERIAL_ICONS, fusionIcon, fusionTypeIcon, fusionSparkPath, fusionSparkSvg, fusionStackedAreaSvg } = window.__kiwiVenueParts.fusion.call(this, { VENUES, typeIconOf });\n  /* <</split:bridge:fusion>> */"
     },
     {
@@ -162,8 +162,8 @@
         "annotatedEntry"
       ],
       "deps": [],
-      "start": 266285,
-      "end": 273051,
+      "start": 267319,
+      "end": 274085,
       "bridge": "\n  /* <<split:bridge:entries>> */\n  const { salesEntry, annotatedEntry } = window.__kiwiVenueParts.entries.call(this, {  });\n  /* <</split:bridge:entries>> */"
     },
     {
@@ -176,8 +176,8 @@
         "refundsList",
         "salesList"
       ],
-      "start": 281170,
-      "end": 282181,
+      "start": 282204,
+      "end": 283215,
       "bridge": "\n  /* <<split:bridge:totals>> */\n  const { salesTotals } = window.__kiwiVenueParts.totals.call(this, { refundsList, salesList });\n  /* <</split:bridge:totals>> */"
     },
     {
@@ -190,8 +190,8 @@
       "deps": [
         "MI_STATION_STATE"
       ],
-      "start": 253068,
-      "end": 253930,
+      "start": 254102,
+      "end": 254964,
       "bridge": "\n  /* <<split:bridge:stations>> */\n  const { MI_STATION_ALIASES, miStationState } = window.__kiwiVenueParts.stations.call(this, { MI_STATION_STATE });\n  /* <</split:bridge:stations>> */"
     },
     {
@@ -203,8 +203,8 @@
       "deps": [
         "currentPlan"
       ],
-      "start": 150343,
-      "end": 151397,
+      "start": 151377,
+      "end": 152431,
       "bridge": "\n  /* <<split:bridge:sidebar>> */\n  const { fusionSidebarHtml } = window.__kiwiVenueParts.sidebar.call(this, { currentPlan });\n  /* <</split:bridge:sidebar>> */"
     },
     {
@@ -215,8 +215,8 @@
         "typeIconOf"
       ],
       "deps": [],
-      "start": 141605,
-      "end": 142650,
+      "start": 141865,
+      "end": 142910,
       "bridge": "\n  /* <<split:bridge:icon>> */\n  const { MATERIAL_VENUE_FALLBACK, typeIconOf } = window.__kiwiVenueParts.icon.call(this, {  });\n  /* <</split:bridge:icon>> */"
     },
     {
@@ -238,8 +238,8 @@
       "deps": [
         "salesSubs"
       ],
-      "start": 260381,
-      "end": 264359,
+      "start": 261415,
+      "end": 265393,
       "bridge": "\n  /* <<split:bridge:cache>> */\n  const { ledgerCache, deepFreeze, cachedLedger, ledgerWrite, ledgerFreshness, ledgerReady } = window.__kiwiVenueParts.cache.call(this, { salesSubs });\n  /* <</split:bridge:cache>> */"
     },
     {
@@ -257,8 +257,8 @@
         "salesSubs",
         "salesWrite"
       ],
-      "start": 280034,
-      "end": 281170,
+      "start": 281068,
+      "end": 282204,
       "bridge": "\n  /* <<split:bridge:reconcile>> */\n  const { salesReconcile } = window.__kiwiVenueParts.reconcile.call(this, { refundSubs, refundsList, refundsWrite, salesEntry, salesList, salesSubs, salesWrite });\n  /* <</split:bridge:reconcile>> */"
     },
     {
@@ -272,8 +272,8 @@
         "MENU_TYPES",
         "getVenueType"
       ],
-      "start": 254820,
-      "end": 255183,
+      "start": 255854,
+      "end": 256217,
       "bridge": "\n  /* <<split:bridge:menuRouting>> */\n  const { menuWorkspace, menuOwnedByWorkspace } = window.__kiwiVenueParts.menuRouting.call(this, { MENU_TYPES, getVenueType });\n  /* <</split:bridge:menuRouting>> */"
     },
     {
@@ -286,8 +286,8 @@
       "deps": [
         "menuNavHandler"
       ],
-      "start": 256296,
-      "end": 257013,
+      "start": 257330,
+      "end": 258047,
       "bridge": "\n  /* <<split:bridge:menuDashboard>> */\n  const { menuShowDashboard, menuWireHandlers } = window.__kiwiVenueParts.menuDashboard.call(this, { menuNavHandler });\n  /* <</split:bridge:menuDashboard>> */"
     },
     {
@@ -300,8 +300,8 @@
       "deps": [
         "STAFF"
       ],
-      "start": 239345,
-      "end": 239618,
+      "start": 240379,
+      "end": 240652,
       "bridge": "\n  /* <<split:bridge:escaping>> */\n  const { eqEsc, eqAllStaff } = window.__kiwiVenueParts.escaping.call(this, { STAFF });\n  /* <</split:bridge:escaping>> */"
     },
     {
@@ -312,8 +312,8 @@
         "APP_INSTALL_STR"
       ],
       "deps": [],
-      "start": 138736,
-      "end": 140414,
+      "start": 138996,
+      "end": 140674,
       "bridge": "\n  /* <<split:bridge:upsell>> */\n  const { UPSELL_STR, APP_INSTALL_STR } = window.__kiwiVenueParts.upsell.call(this, {  });\n  /* <</split:bridge:upsell>> */"
     },
     {
@@ -323,8 +323,8 @@
         "DROPDOWN_CTA"
       ],
       "deps": [],
-      "start": 142650,
-      "end": 143319,
+      "start": 142910,
+      "end": 143779,
       "bridge": "\n  /* <<split:bridge:dropdown>> */\n  const { DROPDOWN_CTA } = window.__kiwiVenueParts.dropdown.call(this, {  });\n  /* <</split:bridge:dropdown>> */"
     },
     {
@@ -337,8 +337,8 @@
         "navTag"
       ],
       "deps": [],
-      "start": 152537,
-      "end": 153527,
+      "start": 153571,
+      "end": 154561,
       "bridge": "\n  /* <<split:bridge:navigation>> */\n  const { NAV_ORDERS_STR, DASHBOARD_HIDDEN_NAV, NAV_TAG_TEXT, navTag } = window.__kiwiVenueParts.navigation.call(this, {  });\n  /* <</split:bridge:navigation>> */"
     },
     {
@@ -350,8 +350,8 @@
         "MENU_NONE"
       ],
       "deps": [],
-      "start": 253930,
-      "end": 254800,
+      "start": 254964,
+      "end": 255834,
       "bridge": "\n  /* <<split:bridge:menuTypes>> */\n  const { MENU_TYPES, MENU_FALLBACK_NAVS, MENU_NONE } = window.__kiwiVenueParts.menuTypes.call(this, {  });\n  /* <</split:bridge:menuTypes>> */"
     },
     {
@@ -362,8 +362,8 @@
         "SUBTYPE_BASE"
       ],
       "deps": [],
-      "start": 121086,
-      "end": 122317,
+      "start": 121346,
+      "end": 122577,
       "bridge": "\n  /* <<split:bridge:types>> */\n  const { TYPE_BASES, SUBTYPE_BASE } = window.__kiwiVenueParts.types.call(this, {  });\n  /* <</split:bridge:types>> */"
     }
   ]

@@ -1086,7 +1086,7 @@
       wasteSearchPh: 'Chercher un article, employé, note…', wasteSearchAria: 'Recherche journal des pertes',
       declareBtn: 'Déclarer une perte', reasonAll: 'Tous motifs',
       rsPerime: 'Périmé', rsCasse: 'Casse', rsAvarie: 'Avarié / Abîmé', rsAvarieShort: 'Avarié', rsOffert: 'Offert',
-      rsStaff: 'Repas équipe', rsOther: 'Autre perte', rsLoss: 'Perte', rsReversal: 'Annulation',
+      rsStaff: 'Repas équipe', rsVol: 'Vol', optVol: 'Vol', rsOther: 'Autre perte', rsLoss: 'Perte', rsReversal: 'Annulation',
       kpiLostValue: 'TOTAL VALEUR PERDUE', kpiLostRecords: (n) => `${n} déclarations de pertes`,
       kpiLostVolume: "VOLUME D'ARTICLES PERDUS", kpiLostVolumeSub: 'unités / kg sorties',
       thQty: 'Quantité', thUnit: 'Unité', thReason: 'Motif', thNote: 'Note',
@@ -1152,7 +1152,7 @@
       wasteSearchPh: 'Search an item, employee or note…', wasteSearchAria: 'Search the waste journal',
       declareBtn: 'Record a loss', reasonAll: 'All reasons',
       rsPerime: 'Expired', rsCasse: 'Breakage', rsAvarie: 'Damaged', rsAvarieShort: 'Damaged', rsOffert: 'Given away',
-      rsStaff: 'Staff meal', rsOther: 'Other loss', rsLoss: 'Loss', rsReversal: 'Cancellation',
+      rsStaff: 'Staff meal', rsVol: 'Theft', optVol: 'Theft', rsOther: 'Other loss', rsLoss: 'Loss', rsReversal: 'Cancellation',
       kpiLostValue: 'TOTAL VALUE LOST', kpiLostRecords: (n) => `${n} loss record${n === 1 ? '' : 's'}`,
       kpiLostVolume: 'VOLUME OF ITEMS LOST', kpiLostVolumeSub: 'units / kg removed',
       thQty: 'Quantity', thUnit: 'Unit', thReason: 'Reason', thNote: 'Note',
@@ -1213,7 +1213,7 @@
       wasteSearchPh: 'ابحث عن منتج أو موظف أو ملاحظة…', wasteSearchAria: 'البحث في سجل الهدر',
       declareBtn: 'تسجيل خسارة', reasonAll: 'كل الأسباب',
       rsPerime: 'منتهي الصلاحية', rsCasse: 'كسر', rsAvarie: 'تالف', rsAvarieShort: 'تالف', rsOffert: 'هدية',
-      rsStaff: 'وجبة الفريق', rsOther: 'خسارة أخرى', rsLoss: 'خسارة', rsReversal: 'إلغاء',
+      rsStaff: 'وجبة الفريق', rsVol: 'سرقة', optVol: 'سرقة', rsOther: 'خسارة أخرى', rsLoss: 'خسارة', rsReversal: 'إلغاء',
       kpiLostValue: 'إجمالي القيمة المفقودة', kpiLostRecords: (n) => `عدد التصريحات: ${n}`,
       kpiLostVolume: 'حجم المنتجات المفقودة', kpiLostVolumeSub: 'وحدات أو كيلوغرامات خرجت من المخزون',
       thQty: 'الكمية', thUnit: 'الوحدة', thReason: 'السبب', thNote: 'ملاحظة',
@@ -1322,7 +1322,7 @@
   /* Motif d'une ligne du journal ; un code inconnu (« waste », …) se lit « Perte ». */
   function ctReason(code, isReversal) {
     if (isReversal) return ct('rsReversal');
-    const key = { perime: 'rsPerime', expiry: 'rsPerime', 'Péremption': 'rsPerime', casse: 'rsCasse', avarie: 'rsAvarie', offert: 'rsOffert', gift: 'rsOffert', 'repas-equipe': 'rsStaff', 'staff-meal': 'rsStaff', autre: 'rsOther' }[code];
+    const key = { perime: 'rsPerime', expiry: 'rsPerime', 'Péremption': 'rsPerime', casse: 'rsCasse', avarie: 'rsAvarie', offert: 'rsOffert', gift: 'rsOffert', 'repas-equipe': 'rsStaff', 'staff-meal': 'rsStaff', vol: 'rsVol', theft: 'rsVol', autre: 'rsOther' }[code];
     return ct(key || 'rsLoss');
   }
   /* Notes générées par Kiwi (déclaration, annulation) ; une note saisie reste telle quelle. */
@@ -2450,13 +2450,13 @@
     'assets/stock/movements.js?v=3',
     'assets/stock/overview.js?v=3',
     'assets/stock/alerts.js?v=6',
-    'assets/stock/loss.js?v=3',
+    'assets/stock/loss.js?v=4',
     'assets/stock/counts.js?v=12',
-    'assets/stock/purchasing.js?v=10',
+    'assets/stock/purchasing.js?v=11',
     'assets/stock/intake.js?v=23',
     'assets/stock/photo.js?v=2',
     'assets/stock/catalog.js?v=11',
-    'assets/stock/suppliers.js?v=4',
+    'assets/stock/suppliers.js?v=5',
   ];
   const stockLoads = new Map();
   function loadStockParts() {

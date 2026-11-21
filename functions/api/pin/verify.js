@@ -14,6 +14,7 @@ import {
 } from '../../auth/_lib.js';
 import { recordSessionTier } from '../../auth/_session-tier.js';
 import { tillSellerProof } from '../_seller.js';
+import { priceListProof } from '../_price-list-sale.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -61,6 +62,13 @@ export async function onRequestPost(context) {
       merchant, staffId: verified.staff.id, staffName: verified.staff.name,
       staffRole: verified.staff.role, movementIds: action.movementIds,
     });
+  }
+
+  /* Un changement de tarif au comptoir (le prix de gros pour ce client) : la
+   * preuve est liée à ce magasin et à CE tarif ; /api/sale la relit sur la vente. */
+  if (!approval && merchant && action && action.kind === 'price-list'
+      && employeeRoleOpensDashboard(verified.staff.role)) {
+    approval = await priceListProof(env.AUTH_SECRET, merchant, verified.staff, String(action.listId || ''));
   }
 
   /* The dashboard lock (no merchant): a code just proven at owner or manager tier

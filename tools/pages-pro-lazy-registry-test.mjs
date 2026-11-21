@@ -18,8 +18,13 @@ const REFERENCES = {
   'assets/pages-pro/restaurant-stations.js': ['nav-menu', 'tools/pages-pro-restaurant-stations-reference.json'],
   /* Born lazy (Kiwi Commerce, 31 October 2026): its reference is its own first render. */
   'assets/pages-pro/boutique-web-orders.js': ['nav-weborders', 'tools/pages-pro-boutique-web-orders-reference.json'],
+  /* Born lazy too (Coût réel, 21 November 2026): its page, first render, demo. */
+  'assets/pages-pro/cost-variance.js': ['costvar-open', 'tools/pages-pro-cost-variance-reference.json'],
+  /* Born lazy (price lists, 21 November 2026): its reference is its own first render. */
+  'assets/pages-pro/price-lists.js': ['nav-pricelists', 'tools/pages-pro-price-lists-reference.json'],
   /* Born lazy (Fournisseurs, 21 November 2026): its reference is its own first render. */
   'assets/pages-pro/suppliers.js': ['nav-fournisseurs', 'tools/pages-pro-suppliers-reference.json'],
+  'assets/pages-pro/credit-book.js': ['nav-credit', 'tools/pages-pro-credit-book-reference.json'],
   /* Born lazy (Chèques et effets, 21 November 2026): its reference is its own first render. */
   'assets/pages-pro/cheques.js': ['nav-cheques', 'tools/pages-pro-cheques-reference.json'],
 };

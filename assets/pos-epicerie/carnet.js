@@ -281,7 +281,7 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
       icons();
       $$('[data-ep-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ep-carnetpick-veil'); });
       $$('[data-ep-cp]', el).forEach((b) => {
-        b.onclick = () => attachBasket(CRED[b.dataset.epCp]);
+        b.onclick = () => chargeOnCredit(CRED[b.dataset.epCp]);
       });
       const nw = $('#ep-cp-new', el);
       if (nw) nw.onclick = () => { mode = 'create'; render(); };
@@ -294,7 +294,7 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
         if (!name) { toast('Le nom est requis pour ouvrir une ardoise'); return; }
         const c = { id: uid('kx'), name, phone: tel, note: 'nouvelle ardoise', hist: [] };
         CARNET.push(c); CRED[c.id] = c;
-        attachBasket(c);
+        chargeOnCredit(c);
       };
     };
     rememberView('#ep-carnetpick-veil', () => {
@@ -307,6 +307,26 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
     icons();
   }
 
+  /* Carnet du patron (assets/credit-book/till-credit.js) : plafond avant la
+     vente, « paiera le … » après. Chargé à la première vente à crédit. */
+  const creditTill = () => import('../credit-book/till-credit.js?v=5').catch(() => null);
+  /* Un double appui pendant la question au serveur n'ouvre ni deux codes ni
+     deux paniers sur l'ardoise : un seul passage à la fois. */
+  let charging = false;
+  async function chargeOnCredit(c) {
+    const t = ctx.state.ticket;
+    const total = ticketTotal(t);
+    if (!c || total <= 0 || charging) return;
+    charging = true;
+    try {
+      const C = await creditTill();
+      const who = { source: 'carnet', customer: c.id, name: c.name, amountCents: Math.round(total * 100), toast: (...parts) => toast(parts.filter(Boolean).join(' · ')) };
+      if (C && !(await C.creditGate({ ...who, localOwedCents: Math.round(Math.max(0, balanceOf(c)) * 100) })).ok) return;
+      if (ctx.state.ticket !== t) return;
+      attachBasket(c);
+      if (C) C.promiseAfterSale(who).then(() => focusScan());
+    } finally { charging = false; }
+  }
   function attachBasket(c) {
     const t = ctx.state.ticket;
     const total = ticketTotal(t);
