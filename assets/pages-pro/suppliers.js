@@ -665,6 +665,12 @@ table{width:100%;border-collapse:collapse;margin-top:18px;font-variant-numeric:t
       refreshDetail();
     } catch (e) { K.toast(errText(e.code), { type: 'warning' }); }
   };
+  /* Pour la page Dépenses : les cinq fournisseurs à qui l'on doit le plus. */
+  H['sup-owed'] = async () => {
+    if (!isReal()) return [];
+    const j = await api('/api/suppliers');
+    return ((j && j.suppliers) || []).filter((x) => x.balanceCents > 0).sort((a, b) => b.balanceCents - a.balanceCents).slice(0, 5);
+  };
   H['sup-wa'] = (_el, id) => whatsapp(String(id || ''));
   H['sup-print'] = (_el, id) => print(String(id || ''));
   H['sup-csv'] = (_el, id) => csv(String(id || ''));

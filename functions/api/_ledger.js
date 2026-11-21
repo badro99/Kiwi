@@ -277,8 +277,8 @@ export async function partyStatement(env, merchant, partyType, partyId, opts) {
   if (o.to && validYmd(o.to)) { where.push('entry_date <= ?'); params.push(o.to); }
   try {
     const rows = await env.DB.prepare(
-      `SELECT * FROM money_ledger WHERE ${where.join(' AND ')}
-        ORDER BY entry_date DESC, created_at DESC, id DESC LIMIT ?`
+      `SELECT *, rowid AS rid FROM money_ledger WHERE ${where.join(' AND ')}
+        ORDER BY entry_date DESC, created_at DESC, rowid DESC LIMIT ?`
     ).bind(...params, limit + 1).all();
     let list = (rows && rows.results) || [];
     out.truncated = list.length > limit;
@@ -289,8 +289,8 @@ export async function partyStatement(env, merchant, partyType, partyId, opts) {
       const before = await env.DB.prepare(
         `SELECT COALESCE(SUM(CASE WHEN direction = 'in' THEN amount_cents ELSE -amount_cents END), 0) AS net
            FROM money_ledger WHERE merchant = ? AND party_type = ? AND party_id = ? AND ${LIVE}
-            AND (entry_date < ? OR (entry_date = ? AND created_at < ?) OR (entry_date = ? AND created_at = ? AND id < ?))`
-      ).bind(merchant, partyType, pid, first.entry_date, first.entry_date, first.created_at, first.entry_date, first.created_at, first.id).first();
+            AND (entry_date < ? OR (entry_date = ? AND created_at < ?) OR (entry_date = ? AND created_at = ? AND rowid < ?))`
+      ).bind(merchant, partyType, pid, first.entry_date, first.entry_date, first.created_at, first.entry_date, first.created_at, first.rid).first();
       out.openingCents = Number(before && before.net) || 0;
     } else if (o.from && validYmd(o.from)) {
       const before = await env.DB.prepare(
@@ -330,6 +330,7 @@ export function ageBuckets(rows, partyType, today) {
   const cents = [0, 0, 0, 0];
   let oldest = 0;
   for (const list of byParty.values()) {
+    /* Tri stable : à date et instant égaux, l'ordre de lecture (rowid) tient. */
     list.sort((a, b) => String(a.entry_date || a.date).localeCompare(String(b.entry_date || b.date)) || (Number(a.created_at || a.createdAt) - Number(b.created_at || b.createdAt)));
     const debts = [];
     let credit = 0;
@@ -363,7 +364,7 @@ export async function ledgerAgeing(env, merchant, partyType, partyId, opts) {
     const rows = await env.DB.prepare(
       `SELECT party_id, entry_date, created_at, direction, amount_cents FROM money_ledger
         WHERE merchant = ? AND party_type = ?${one ? ' AND party_id = ?' : ''} AND ${LIVE}
-        ORDER BY party_id, entry_date, created_at LIMIT 20000`
+        ORDER BY party_id, entry_date, created_at, rowid LIMIT 20000`
     ).bind(...(one ? [merchant, partyType, clean(partyId, 80)] : [merchant, partyType])).all();
     return ageBuckets((rows && rows.results) || [], partyType, today);
   } catch (_) { return ageBuckets([], partyType, today); }

@@ -562,12 +562,11 @@
   }
   async function fillRealSuppliers(root) {
     const host = root && root.querySelector('[data-dep-real-list]');
-    const slug = (() => { try { return window.KiwiStore?.slugFor?.() || ''; } catch (_) { return ''; } })();
-    if (!host || !slug) return;
+    if (!host || !handlers['sup-owed']) return;
     try {
-      const r = await fetch('/api/suppliers?merchant=' + encodeURIComponent(slug), { credentials: 'same-origin' });
-      const j = r.ok ? await r.json() : null;
-      const owed = ((j && j.suppliers) || []).filter((x) => x.balanceCents > 0).sort((a, b) => b.balanceCents - a.balanceCents).slice(0, 5);
+      /* La page Fournisseurs (chargée à la demande) lit le grand livre. */
+      const owed = await handlers['sup-owed']();
+      if (!Array.isArray(owed)) throw new Error('unavailable');
       host.innerHTML = owed.length ? owed.map((x) => `
         <div class="dep-supp">
           <div class="dep-supp-mid">
