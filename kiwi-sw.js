@@ -536,7 +536,7 @@ var SHELL = [
   '/assets/retail-scan.css?v=11',
   '/assets/retail-balances.css?v=5',
   '/assets/vendor/zxing-browser.min.js?v=1',
-  '/assets/kit/haptics.js?v=8',
+  '/assets/kit/haptics.js?v=9',
   /* Design 2027, stage 3a: the till's code doors on the kit's pad, loaded
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=17',
