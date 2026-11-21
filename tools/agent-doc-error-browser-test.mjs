@@ -27,12 +27,12 @@ const CASES = [
 ];
 try {
   for (const [name, status, body, code, reason] of CASES) await h.S.run(name + ' · fr · phone', async (t) => {
-    // coverage: surface=dashboard locale=fr viewport=phone
     const { ctx, page } = await demoPage(h, 'fr', 'phone', {}, {
       'POST /api/ai/vision-inspect': () => ({ status, body }),
     });
     t.defer(() => ctx.close()); t.watch(page);
     t.step('open the demo dashboard and its assistant');
+    // coverage: surface=dashboard locale=fr viewport=phone
     await page.goto(h.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
     await sleep(1500);
     const explore = await page.evaluateHandle(() => [...document.querySelectorAll('button,a')]

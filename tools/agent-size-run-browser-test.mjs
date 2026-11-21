@@ -34,12 +34,12 @@ const stock = (page) => page.evaluate(() => {
 });
 try {
   await h.S.run('a carton label fills the size grid of a stock reception · fr · phone', async (t) => {
-    // coverage: surface=dashboard locale=fr viewport=phone
     const { ctx, page } = await demoPage(h, 'fr', 'phone', {
       kiwiCustomVenues: JSON.stringify([venue]), kiwiVenue: venue.id, kiwiOnboarded: '1',
     }, { 'POST /api/ai/vision-inspect': () => ({ status: 200, body: { ok: true, data: READING } }) });
     t.defer(() => ctx.close()); t.watch(page);
     t.step('open the demo boutique dashboard and its assistant');
+    // coverage: surface=dashboard locale=fr viewport=phone
     await page.goto(h.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
     await sleep(1500);
     const explore = await page.evaluateHandle(() => [...document.querySelectorAll('button,a')]

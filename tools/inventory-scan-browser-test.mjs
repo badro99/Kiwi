@@ -23,13 +23,13 @@ const venue = { id: 'matrix-scan', name: 'Matrix Scan', fullDisplay: 'Matrix Sca
   type: 'boutique', custom: true, location: '', siblings: '', status: '', txCount: 0, staffCount: 0, hours: '', methods: '', goal: 0 };
 try {
   for (const viewport of ['desktop', 'phone']) await h.S.run(`the inventory scan button sends any photo to the assistant · fr · ${viewport}`, async (t) => {
-    // coverage: surface=dashboard locale=fr viewport=desktop
     let sent = 0;
     const { ctx, page } = await demoPage(h, 'fr', viewport, {
       kiwiCustomVenues: JSON.stringify([venue]), kiwiVenue: venue.id, kiwiOnboarded: '1',
     }, { 'POST /api/ai/vision-inspect': () => { sent++; return { status: 200, body: { ok: true, data: READING } }; } });
     t.defer(() => ctx.close()); t.watch(page);
     t.step('open the inventory of the demo boutique');
+    // coverage: surface=dashboard locale=fr viewport=desktop
     await page.goto(h.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
     await sleep(1500);
     await page.keyboard.press('Escape');

@@ -354,10 +354,10 @@
     });
   }
 
-  function toast(msg, type) {
+  function toast(msg, isError) {
     try {
-      /* Sans type, Kiwi.toast annonce un succès (coche verte) : un échec le dit. */
-      if (window.Kiwi && window.Kiwi.toast) { window.Kiwi.toast(msg, type ? { type: type, force: true } : undefined); return; }
+      /* Sans drapeau, Kiwi.toast annonce un succès (coche verte) : un échec le dit. */
+      if (window.Kiwi && window.Kiwi.toast) { window.Kiwi.toast(msg, isError ? { type: 'danger', force: true } : undefined); return; }
       var el = document.createElement('div');
       el.textContent = msg;
       el.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--inverse-surface);color:var(--inverse-ink);padding:10px 18px;border-radius:10px;z-index:99999;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);';
@@ -583,7 +583,7 @@
         thread.appendChild(errMsg);
         scrollDown();
       }
-      toast(T().error, 'danger');
+      toast(T().error, true);
     });
   }
 
@@ -738,7 +738,7 @@
     btn.classList.add('failed');
     btn.innerHTML = esc(label);
     actionStatus(btn, msg);
-    toast(msg, 'danger');
+    toast(msg, true);
     return false;
   }
 
@@ -790,7 +790,7 @@
       if (!fileInput.files || !fileInput.files[0]) return;
       var file = fileInput.files[0];
       fileToDataUrl(file, function (err, dataUrl, name, type) {
-        if (err) { toast('Impossible de lire le fichier', 'danger'); return; }
+        if (err) { toast('Impossible de lire le fichier', true); return; }
         setAttachment(ctx.wrap, dataUrl, name, type);
       });
       fileInput.value = '';
@@ -971,7 +971,7 @@
        puis Envoyer (assets/inventory-scan.js, bouton « Scanner » de l'inventaire). */
     scan: function (wrap, file) {
       fileToDataUrl(file, function (err, dataUrl, name, type) {
-        if (err || !attachments.get(wrap)) { toast(T().error, 'danger'); return; }
+        if (err || !attachments.get(wrap)) { toast(T().error, true); return; }
         setAttachment(wrap, dataUrl, name, type);
         executeVisionInspection(wrap, attachments.get(wrap), '');
       });
