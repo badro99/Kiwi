@@ -20,8 +20,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-await import(pathToFileURL(path.join(ROOT, 'assets/catalog-bulk/rules.js')).href);
-await import(pathToFileURL(path.join(ROOT, 'assets/catalog-bulk/xlsx.js')).href);
+await import(pathToFileURL(path.join(ROOT, 'assets/pages-pro/catalog-bulk/rules.js')).href);
+await import(pathToFileURL(path.join(ROOT, 'assets/pages-pro/catalog-bulk/xlsx.js')).href);
 const B = globalThis.KiwiBulkRules, X = globalThis.KiwiXlsx;
 const { onRequestPost: batchPost } = await import(pathToFileURL(path.join(ROOT, 'functions/api/catalog/batch.js')).href);
 const { tillToken, makeSession, sessionCookie } = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);

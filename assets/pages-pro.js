@@ -380,38 +380,8 @@ handlers['menu-add'] = () => {
   }));
 };
 
-handlers['menu-mass'] = () => {
-  wireDismiss(modal({
-    tag: 'ÉDITION GROUPÉE',
-    title: 'Modifier toute une catégorie',
-    desc: 'Affecte tous les items sélectionnés en une opération.',
-    width: 540,
-    body: `
-      <div class="kf-group"><label class="kf-label">Catégorie</label>
-        <select class="kf-input"><option>Entrées (8)</option><option selected>Tajines (9)</option><option>Couscous (5)</option><option>Desserts (8)</option><option>Boissons (18)</option></select>
-      </div>
-      <div class="kf-group"><label class="kf-label">Action</label>
-        <select class="kf-input">
-          <option>Augmenter les prix de…</option>
-          <option>Diminuer les prix de…</option>
-          <option>Marquer la catégorie 86 (rupture)</option>
-          <option>Activer disponibilité midi uniquement</option>
-          <option>Cacher de la carte client</option>
-        </select>
-      </div>
-      <div class="kf-group"><label class="kf-label">Pourcentage</label>
-        <div style="display:flex; gap:6px;">
-          ${['+ 2 %', '+ 5 %', '+ 8 %', '+ 10 %', 'autre'].map((p, i) => `<button class="kb ${i===1?'atlas':'ghost'}" style="flex:1; justify-content:center;">${p}</button>`).join('')}
-        </div>
-      </div>
-      <div class="kf-help">9 items recevront +5 % · panier moyen estimé : 165 MAD (vs 158 MAD aujourd'hui).</div>
-    `,
-    foot: `
-      <button class="kb ghost" data-dismiss>Annuler</button>
-      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('9 tajines ré-tarifés (+5 %)',{type:'success',desc:'Sync en cours · prochaine commande à 16:42.'})">Appliquer</button>
-    `
-  }));
-};
+/* 'menu-mass' lives in assets/pages-pro/catalog-bulk/page.js: the real bulk re-price
+ * (LAZY_SECTIONS below). The modal that stood here only showed a toast. */
 
 handlers['menu-schedule'] = () => {
   wireDismiss(modal({
@@ -725,6 +695,7 @@ handlers['menu-publish'] = () => {
     { url: 'assets/pages-pro/spa-practitioners.js?v=2', handlers: ["nav-practitioners", "practitioner-add", "practitioner-commission", "practitioner-edit", "practitioner-tracker"] },
     { url: 'assets/pages-pro/boutique-promos-returns.js?v=28', handlers: ["nav-returns", "credit-adjust", "credit-adjust-confirm", "credit-cancel", "ret-approve", "ret-block", "ret-detail", "ret-exchange", "ret-export", "ret-policy-jump", "ret-policy-save", "ret-refund-credit", "ret-refund-original", "ret-refund-whatsapp", "ret-refuse"] },
     { url: 'assets/pages-pro/boutique-web-orders.js?v=13', handlers: ["nav-weborders", "wo-tab", "wo-filter", "wo-confirm", "wo-decline", "wo-refresh", "wo-online", "wo-connect", "wo-copy-link", "wo-share-wa", "wo-qr-download", "wo-coupon-add", "wo-coupon-del", "wo-settings-reset", "wo-settings-save", "wo-piece"] },
+    { url: 'assets/pages-pro/catalog-bulk/page.js?v=1', dependencies: ['assets/pages-pro/catalog-bulk/rules.js?v=1', 'assets/pages-pro/catalog-bulk/xlsx.js?v=1', 'assets/pages-pro/catalog-bulk/grid.js?v=1', 'assets/pages-pro/catalog-bulk/source.js?v=1', 'assets/pages-pro/catalog-bulk/reprice.js?v=1', 'assets/pages-pro/catalog-bulk/import.js?v=1'], handlers: ["catalog-grid", "menu-mass", "cg-back", "cg-filter", "cg-save", "cg-discard", "cg-undo-save", "cg-bulk-edit", "cg-unselect", "cg-reprice", "cg-import", "cg-export"] },
     { url: 'assets/pages-pro/restaurant-stations.js?v=2', handlers: ["nav-menu", "nav-kds", "menu-stations-manage", "menu-station-create", "menu-cat-add", "menu-cat-edit", "menu-opt-add", "menu-promote", "menu-add", "menu-schedule", "menu-publish", "kds-bump", "kds-recall", "kds-86", "kds-fullscreen", "kds-reassign", "kds-print-summary"] },
   ];
   LAZY_SECTIONS.forEach(entry => {

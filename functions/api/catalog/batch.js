@@ -3,7 +3,7 @@
 //
 // Body: { kind: 'boutique'|'menu', merchant, opId, rows: [{ id, set: {field: value},
 //         was: {field: value} }] }
-// Fields (assets/catalog-bulk/rules.js, the same rules the grid ran):
+// Fields (assets/pages-pro/catalog-bulk/rules.js, the same rules the grid ran):
 //   boutique  name, sku, barcode, price, cost, lowStock, category, sellable
 //   menu      name, price, category, sellable
 //
@@ -28,7 +28,7 @@
 // (metaAt), so every device's merge (assets/boutique-catalog-parts.js) takes the
 // new values, and the shared-catalogue family (_catalog-family.js) follows.
 
-import '../../../assets/catalog-bulk/rules.js';
+import '../../../assets/pages-pro/catalog-bulk/rules.js';
 import { json, isOperator } from '../../auth/_lib.js';
 import { tenantFor, ownerMerchant } from '../_private.js';
 import { sanitizeCatalog, __test as catalogInternals } from '../catalog.js';

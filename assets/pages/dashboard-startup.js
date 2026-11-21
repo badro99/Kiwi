@@ -8,7 +8,7 @@
     const menuScripts = [
       'assets/menu-catalog/state.js?v=17',
       'assets/menu-catalog/modifiers.js?v=5',
-      'assets/menu-catalog/item-list.js?v=3',
+      'assets/menu-catalog/item-list.js?v=4',
       'assets/menu-catalog/formulas.js?v=3',
       'assets/menu-catalog/item-editor.js?v=7',
       'assets/menu-catalog/media.js?v=3',
@@ -20,8 +20,8 @@
   }
   const scripts = [
     'assets/pages-pro-office.js?v=29',
-    'assets/pages-pro.js?v=2229',
-    'assets/pages-pro-boutique.js?v=53',
+    'assets/pages-pro.js?v=2230',
+    'assets/pages-pro-boutique.js?v=54',
     'assets/boutique-stock-correct.js?v=4',
     'assets/boutique-categories-view.js?v=3',
     'assets/pages-pro-spa-starter.js?v=8',
@@ -65,7 +65,7 @@
     'assets/simple-food-cost.js?v=29',
     'assets/finance.js?v=14',
     'assets/conformite.js?v=8',
-    'assets/production-action-guard.js?v=6',
+    'assets/production-action-guard.js?v=7',
     'assets/staff-roles.js?v=3',
     'assets/help-centre.js?v=7',
     'assets/account.js?v=33',

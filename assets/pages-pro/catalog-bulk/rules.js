@@ -3,7 +3,7 @@
  * The arithmetic and the validation behind the catalogue spreadsheet, the bulk
  * re-price and the Excel import. Pure: no DOM, no store, no network. One copy,
  * read by three readers:
- *   · the dashboard grid (assets/catalog-bulk/*.js, lazy loaded);
+ *   · the dashboard grid (assets/pages-pro/catalog-bulk/*.js, lazy loaded);
  *   · the batch route, functions/api/catalog/batch.js, which imports this file
  *     for its side effect and validates every patch again with the SAME rules;
  *   · tools/catalog-bulk-test.mjs.
@@ -253,9 +253,9 @@
     barcode: ['code_barres', 'codebarres', 'code_barre', 'barcode', 'ean', 'ean13', 'gencod', 'الباركود', 'رمز_الباركود'],
     price: ['prix_de_vente', 'prix_vente', 'prix', 'price', 'selling_price', 'pv', 'prix_mad', 'prix_ttc', 'tarif', 'ثمن_البيع', 'الثمن'],
     cost: ['prix_d_achat', 'prix_achat', 'cout', 'cost', 'purchase_cost', 'purchase_price', 'pa', 'ثمن_الشراء'],
-    lowStock: ['alerte_stock_bas', 'alerte_stock', 'seuil', 'low_stock_alert', 'low_stock', 'reorder_level', 'تنبيه_المخزون'],
+    lowStock: ['alerte_stock_bas', 'alerte_stock', 'seuil', 'low_stock_alert', 'low_stock', 'reorder_level', 'تنبيه_المخزون', 'تنبيه_نقص_المخزون'],
     category: ['categorie', 'category', 'rayon', 'famille', 'الفئة', 'الصنف'],
-    sellable: ['en_vente', 'en_vente_oui_non', 'disponible', 'sellable', 'available', 'available_for_sale', 'معروض_للبيع', 'للبيع'],
+    sellable: ['en_vente', 'en_vente_oui_non', 'disponible', 'sellable', 'for_sale', 'available', 'available_for_sale', 'معروض_للبيع', 'للبيع'],
   };
   function mapHeader(header, kind) {
     const keys = (header || []).map(normKey);

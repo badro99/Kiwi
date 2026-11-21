@@ -1038,6 +1038,7 @@ function _renderInventory() {
   const k = _bqxStockKPI(st);
   const t = _bqxInvT();
   const more = [
+    `<button data-activation=write type="button" data-action="catalog-grid" data-arg="boutique">${_esc(({ en: 'Spreadsheet · Excel', ar: 'الجدول · Excel' })[window.KiwiI18n?.getLang?.()] || 'Tableur · Excel')}</button>`,
     `<button data-activation=write type="button" data-action="bqx-import">${_ICN.download}${_esc(t.import)}</button>`,
     `<button data-activation=money type="button" data-action="bqx-export">${_ICN.upload}${_esc(t.export)}</button>`,
     _bqxTemplatesOn() ? `<button type="button" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}${_esc(t.templates)}</button>` : '',
