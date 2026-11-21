@@ -26,7 +26,19 @@ const tierGuard = "  /* Les codes de l'équipe ne changent pas depuis un tableau
   + "  if (Array.isArray(body && body.pins) && !(await sessionTierAtLeast(request, env, 'manager'))) {\n"
   + "    return json({ error: 'tier', need: 'manager' }, 403);\n  }\n";
 ok(route.split(tierImport).length === 2 && route.split(tierGuard).length === 2, 'the tier refusal sits once in the route, with its import');
-const routeBase = route.replace(tierImport, '').replace(tierGuard, '');
+/* A second one (21 Nov, team permissions): below the owner tier, a code titled
+ * like the owner is dropped from the list, so a manager cannot publish one for
+ * herself. staff-permissions-test runs it against the real route. */
+const ownerGuard = "  /* Un code à intitulé de propriétaire (« Propriétaire », « Direction »…) ouvre\n"
+  + "   * le tableau de bord au palier du patron (faceAccessTier). Sous ce palier, une\n"
+  + "   * session ne peut ni en créer, ni en renommer, ni en recoder un : ces lignes\n"
+  + "   * de la liste sont ignorées, et celles déjà en base restent telles quelles\n"
+  + "   * (_staff-publication.js garde les codes propriétaire d'une liste qui n'en a\n"
+  + "   * pas). Sinon un gérant se donnerait le palier du patron. */\n"
+  + "  if (Array.isArray(body && body.pins) && !(await sessionTierAtLeast(request, env, 'owner'))) {\n"
+  + "    body.pins = body.pins.filter((p) => !(p && accountOwnerRole(String(p.role || '').trim().slice(0, 24))));\n  }\n";
+ok(route.split(ownerGuard).length === 2, 'the owner-title filter sits once in the route');
+const routeBase = route.replace(tierImport, '').replace(tierGuard, '').replace(ownerGuard, '');
 
 /* The function body, moved two spaces left, with `result` its own local. */
 const head = 'export async function publishStaffCredentials(env, merchant, body) {\n  const result = {};\n';
