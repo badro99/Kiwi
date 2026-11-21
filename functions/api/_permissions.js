@@ -19,9 +19,10 @@
  * nom et rôle ; de staff_pins il ne sélectionne que nom, rôle et boutique. Les
  * trois vérificateurs de code restent dans functions/auth/_lib.js.
  *
- * Pannes : une table absente (base pas encore migrée) vaut « droits par
- * défaut » ; toute autre erreur de lecture vaut « indisponible » et la route
- * refuse (503), comme functions/auth/_session-tier.js.
+ * Pannes : les tables viennent de la migration 0028, que le minimum de
+ * production (functions/_schema-version.js) exige avant tout déploiement ; une
+ * lecture qui échoue vaut « indisponible » et la route refuse (503). Jamais de
+ * repli silencieux sur les droits par défaut.
  * ───────────────────────────────────────────────────────────────────────── */
 import Catalog from '../../assets/permissions-catalog.js';
 import { json, readSession, readCookie, SESS_COOKIE, operatorActor, isOperator, teamRemovedIds } from '../auth/_lib.js';
@@ -29,7 +30,6 @@ import { json, readSession, readCookie, SESS_COOKIE, operatorActor, isOperator, 
 export { Catalog };
 
 const SID_RE = /^[0-9a-f]{32}$/;
-function isMissingTable(e) { return /no such table/i.test(String((e && e.message) || e || '')); }
 function parse(text, fallback) { try { const v = JSON.parse(text); return v == null ? fallback : v; } catch (_) { return fallback; } }
 
 export function nameKey(value) {
@@ -88,7 +88,7 @@ export async function subjectFor(env, merchant, staff) {
 
 /* L'état d'une boutique : surcharges par personne, rôles modifiés, réglages. */
 export async function loadState(env, merchant) {
-  const state = { rows: new Map(), presets: {}, freeDiscountPct: Catalog.DEFAULT_FREE_DISCOUNT_PCT, legacyImportedTs: 0, migrated: true, configured: false };
+  const state = { rows: new Map(), presets: {}, freeDiscountPct: Catalog.DEFAULT_FREE_DISCOUNT_PCT, legacyImportedTs: 0, configured: false };
   try {
     const [rows, presets, settings] = await Promise.all([
       env.DB.prepare('SELECT staff_key, preset, grants, denies, name, updated_ts, updated_by FROM staff_permissions WHERE merchant = ?').bind(merchant).all(),
@@ -110,10 +110,7 @@ export async function loadState(env, merchant) {
       if (Number.isInteger(pct) && pct >= 0 && pct <= 100) state.freeDiscountPct = pct;
       state.legacyImportedTs = Number(settings.legacy_imported_ts) || 0;
     }
-  } catch (e) {
-    if (!isMissingTable(e)) return { unavailable: true };
-    state.migrated = false;
-  }
+  } catch (_) { return { unavailable: true }; }
   return state;
 }
 
@@ -179,7 +176,7 @@ export async function sessionPerson(request, env) {
   let row;
   try {
     row = await env.DB.prepare('SELECT tier, staff_id FROM session_tiers WHERE sid = ? AND account_id = ?').bind(sess.sid, String(sess.aid)).first();
-  } catch (e) { return isMissingTable(e) ? { owner: true, aid: sess.aid } : { unavailable: true }; }
+  } catch (_) { return { unavailable: true }; }
   const tier = row && String(row.tier || '');
   if (!row || !tier || tier === 'owner') return { owner: true, aid: sess.aid };
   let staff = null;

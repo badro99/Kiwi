@@ -36,7 +36,7 @@ async function publicState(env, merchant, full) {
   });
   const presets = {};
   Catalog.PRESET_IDS.forEach((id) => { presets[id] = Catalog.presetPerms(id, state.presets); });
-  return { roster, state, body: { ok: true, merchant, configured: state.configured, migrated: state.migrated,
+  return { roster, state, body: { ok: true, merchant, configured: state.configured,
     freeDiscountPct: state.freeDiscountPct, presets, staff,
     ...(full ? { customPresets: Object.keys(state.presets), legacyImported: !!state.legacyImportedTs } : {}) } };
 }
@@ -104,9 +104,9 @@ const diff = (before, after) => ({
 
 export async function onRequestPost(context) {
   try { return await writePermissions(context); }
-  catch (e) {
-    /* Base pas migrée (0028) ou D1 muette : rien n'est écrit, le lot est entier. */
-    return json({ error: /no such table/i.test(String(e && e.message)) ? 'unmigrated' : 'write-unavailable' }, 503);
+  catch (_) {
+    /* D1 muette : rien n'est écrit, le lot est entier. */
+    return json({ error: 'write-unavailable' }, 503);
   }
 }
 

@@ -340,16 +340,20 @@ console.log('■ Remise et espèces sans le droit');
     'remise : 5 % sous le seuil passe, 30 % sans le droit est inscrite');
 }
 
-/* ── 8 · Base pas migrée ────────────────────────────────────────────────── */
-console.log('■ Base sans les tables 0028');
+/* ── 8 · D1 muette : on refuse, jamais de repli ─────────────────────────── */
+console.log('■ Lecture des droits impossible');
 {
+  /* Les tables viennent de 0028, exigée par le minimum de production
+     (functions/_schema-version.js). Si la lecture échoue malgré tout, rien ne
+     retombe sur les droits par défaut : la route refuse. */
   const w = world({ migrated: false });
-  const body = await (await get(w, cookieOwner)).json();
-  check(body.ok && body.migrated === false && body.staff.length === 4, 'la lecture rend les rôles par défaut');
+  check((await get(w, cookieOwner)).status === 503, 'l’écran répond 503');
   const write = await post(w, cookieOwner, { action: 'settings', freeDiscountPct: 5 });
-  check(write.status === 503 && (await write.json()).error === 'unmigrated', 'l’écriture dit que la migration manque');
-  const mgr = await (await pinVerify(w, CODES.manager, { kind: 'refund', refundId: 'rf-1', originalSaleId: 'sale-1', amountCents: 100, refundMethod: 'cash' })).json();
-  check(!!mgr.approval, 'les approbations gardent la règle d’avant');
+  check(write.status === 503, 'aucune écriture');
+  const mgr = await pinVerify(w, CODES.manager, { kind: 'refund', refundId: 'rf-1', originalSaleId: 'sale-1', amountCents: 100, refundMethod: 'cash' });
+  check(mgr.status === 503 && (await mgr.json()).error === 'permissions-unavailable', 'aucune approbation n’est signée sans pouvoir lire les droits');
+  const block = await tiers.tierBlock(req('/api/sales-summary?merchant=' + SHOP, { cookie: cookieManager }), w.env, '/api/sales-summary');
+  check(block && block.status === 503, 'le palier refuse aussi (503), il ne laisse pas passer');
 }
 
 console.log(`\nstaff-permissions-test · ${checks} vérifications`);

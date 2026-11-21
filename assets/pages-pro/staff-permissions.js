@@ -109,7 +109,6 @@
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
       const msg = j.error === 'owner-required' ? L('Seul le propriétaire change les droits.', 'Only the owner changes permissions.', 'غير مول المحل اللي يقدر يبدّل الحقوق.')
-        : j.error === 'unmigrated' ? L('La base n’a pas encore reçu la mise à jour des droits. Kiwi doit l’appliquer.', 'The database has not received the permissions update yet. Kiwi has to apply it.', 'قاعدة البيانات مازال ما توصلاتش بتحديث الحقوق. خاص Kiwi يطبّقو.')
           : L('Enregistrement impossible. Réessayez.', 'Could not save. Try again.', 'ما تسجّلش. عاود المحاولة.');
       toast(msg, { type: 'error' });
       return null;
@@ -243,7 +242,6 @@
       const tab = (k, label) => `<button type="button" data-lens-item class="${state.tab === k ? 'on' : ''}" data-action="pm-tab" data-arg="${k}" aria-pressed="${state.tab === k}">${esc(label)}</button>`;
       const notes = [
         d.readOnly ? L('Lecture seule : seul le propriétaire change les droits.', 'Read only: only the owner changes permissions.', 'غير للقراءة: غير مول المحل اللي يبدّل الحقوق.') : '',
-        d.migrated === false ? L('La base n’a pas encore reçu la mise à jour des droits : les rôles par défaut s’appliquent.', 'The database has not received the permissions update yet: default roles apply.', 'قاعدة البيانات مازال ما توصلاتش بالتحديث: الأدوار الأصلية هي اللي خدامة.') : '',
         d.configured === false && !d.readOnly ? L('Rien n’a encore été enregistré : chaque route garde sa règle d’avant (le code d’un responsable pour rembourser, annuler, corriger le stock). Votre premier enregistrement active ces droits.', 'Nothing saved yet: every action keeps its previous rule (a manager code to refund, cancel or adjust stock). Your first save switches these permissions on.', 'مازال ما تسجّل والو: كل عملية باقة بالقاعدة القديمة (كود المسيّر للترجيع، الإلغاء وتصحيح المخزون). أول تسجيل كيشعّل هاد الحقوق.') : '',
       ].filter(Boolean).map((t) => `<p class="pm-note">${esc(t)}</p>`).join('');
       main = `<div class="pm-bar"><div class="pm-tabs" data-lens-demo>${tab('team', L('Équipe', 'Team', 'الفريق'))}${tab('roles', L('Rôles par défaut', 'Default roles', 'الأدوار الأصلية'))}${tab('journal', L('Journal', 'Log', 'السجل'))}</div></div>${notes}${state.tab === 'roles' ? rolesTab() : state.tab === 'journal' ? journalTab() : teamTab()}`;
