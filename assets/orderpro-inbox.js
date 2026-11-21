@@ -949,6 +949,14 @@
     wakeInbox();
   }
   document.addEventListener('visibilitychange', wakeInbox);
+  /* Onglet caché (YouTube sur la tablette…) : la relève s'arrête, donc le
+   * comptoir laisse une marque « absente » qui garde Order Pro ouvert pendant
+   * les horaires publiés (functions/api/order/_guest-sessions.js › deskAway). */
+  document.addEventListener('visibilitychange', function () {
+    var m = document.hidden && orderProOn() && merchant();
+    if (m) fetch('/api/order/queue', { method: 'POST', keepalive: true, credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant: m, away: true }) }).catch(function () {});
+  });
   document.addEventListener('kiwi:request-wake', wakeInbox);
   window.addEventListener('focus', wakeInbox);
   window.addEventListener('online', wakeInbox);

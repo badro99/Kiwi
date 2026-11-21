@@ -1,4 +1,5 @@
 // Contrat : capacités de session et présence du comptoir dans order_desk uniquement.
+import { hoursOpenNow } from './_guest-hours.js';
 /* ── L'identifiant de session ──────────────────────────────────────────────
  * Il EST la capacité : le téléphone n'a pas de compte, pas de mot de passe et
  * pas de cookie garanti (navigation privée, cookies coupés). C'est donc 132
@@ -45,13 +46,42 @@ export async function deskTouch(env, merchant) {
   } catch (_) { /* table pas encore migrée → la présence reste inconnue, on laisse passer */ }
 }
 
-export async function deskOpen(env, merchant) {
+/* ── La caisse passée en arrière-plan ─────────────────────────────────────
+ * Une tablette de comptoir sur YouTube, ou n'importe quel autre onglet, ne
+ * sonde plus : le navigateur endort la page cachée. Au bout de cinq minutes le
+ * client voyait « fermé » en plein service, jusqu'à ce que quelqu'un revienne
+ * sur l'onglet Kiwi. Au moment où elle se cache, la caisse laisse donc une
+ * marque « absente » (ligne `away:<commerce>` de la même table, aucune colonne
+ * nouvelle). Cette marque garde la porte ouverte DESK_AWAY_MS au plus, et
+ * seulement pendant les horaires publiés : sans horaires, rien ne change, et
+ * une tablette éteinte le soir ferme toujours à l'heure de fermeture. Une
+ * marque plus ancienne que le dernier passage de la caisse ne compte pas. */
+export const DESK_AWAY_MS = 3 * 60 * 60 * 1000;
+const awayKey = (merchant) => 'away:' + merchant;
+
+export async function deskAway(env, merchant) {
   try {
-    const row = await env.DB.prepare(
-      'SELECT seen_ts FROM order_desk WHERE merchant = ?'
-    ).bind(merchant).first();
-    if (!row) return false;                // jamais vue ⇒ personne ne lirait la commande
-    return (Date.now() - (row.seen_ts || 0)) < DESK_FRESH_MS;
-  } catch (_) { return true; }             // table absente ⇒ idem
+    await env.DB.prepare(
+      `INSERT INTO order_desk (merchant, seen_ts) VALUES (?, ?)
+         ON CONFLICT(merchant) DO UPDATE SET seen_ts = excluded.seen_ts`
+    ).bind(awayKey(merchant), Date.now()).run();
+  } catch (_) {}
 }
 
+export async function deskOpen(env, merchant) {
+  let desk = null, away = null;
+  try {
+    const rows = await env.DB.prepare(
+      'SELECT merchant, seen_ts FROM order_desk WHERE merchant IN (?, ?)'
+    ).bind(merchant, awayKey(merchant)).all();
+    ((rows && rows.results) || []).forEach((r) => {
+      if (r.merchant === merchant) desk = Number(r.seen_ts) || 0;
+      else away = Number(r.seen_ts) || 0;
+    });
+  } catch (_) { return true; }             // table absente ⇒ idem
+  if (desk == null) return false;          // jamais vue ⇒ personne ne lirait la commande
+  const now = Date.now();
+  if (now - desk < DESK_FRESH_MS) return true;
+  if (away == null || away < desk || now - away >= DESK_AWAY_MS) return false;
+  return (await hoursOpenNow(env, merchant, now)) === true;
+}

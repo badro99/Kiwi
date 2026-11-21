@@ -65,13 +65,17 @@ export function hoursOpenAt(hours, ts, zone) {
   }
   return false;
 }
-export async function hoursClosed(env, merchant, now = Date.now()) {
+/* true / false selon les horaires publiés, null quand il n'y en a pas. */
+export async function hoursOpenNow(env, merchant, now = Date.now()) {
   let hours = null;
   try {
     const row = await env.DB.prepare('SELECT data FROM menus WHERE merchant = ?').bind(merchant).first();
     hours = row && row.data ? (JSON.parse(row.data) || {}).hours : null;
-  } catch (_) { return false; }
-  if (!hours) return false;
-  return hoursOpenAt(hours, now, await merchantZone(env, merchant)) === false;
+  } catch (_) { return null; }
+  if (!hours) return null;
+  return hoursOpenAt(hours, now, await merchantZone(env, merchant));
+}
+export async function hoursClosed(env, merchant, now = Date.now()) {
+  return (await hoursOpenNow(env, merchant, now)) === false;
 }
 

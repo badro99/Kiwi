@@ -34,6 +34,11 @@
   function key(sale, channelIds, tradeRegistry, tradeId) {
     sale = sale || {};
     var ids = Array.isArray(channelIds) ? channelIds : [];
+    /* Une table ouverte par Order Pro garde son numéro « OP-12 » (« OPD-12 » à
+     * emporter) jusqu'au ticket, mais la caisse qui l'encaisse écrit le canal
+     * « salle » : l'anneau Order Pro restait à 0 % chez un client qui commande
+     * surtout par là (Pasta Corner, « Table 1 #OP-60 »). Le numéro fait foi. */
+    if (allowed('orderpro', ids) && /(?:^|[\s#])OPD?-\d+\b/.test(String(sale.label || '') + ' ' + String(sale.orderRef || sale.ref || ''))) return 'orderpro';
     var candidates = [sale.channel, sale.salesChannel, sale.orderChannel];
     for (var i = 0; i < candidates.length; i += 1) {
       var direct = DIRECT[text(candidates[i])] || text(candidates[i]);

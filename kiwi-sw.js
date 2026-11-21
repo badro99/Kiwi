@@ -377,7 +377,7 @@ var SHELL = [
   '/assets/expenses/sheet.js?v=4',
   '/assets/expenses/style.js?v=1',
   '/assets/queue-recovery.js?v=15',
-  '/assets/channel-sales.js?v=8',
+  '/assets/channel-sales.js?v=9',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
@@ -514,7 +514,7 @@ var SHELL = [
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=10',
   '/assets/orderpro-panel.js?v=5',
-  '/assets/orderpro-inbox.js?v=41',
+  '/assets/orderpro-inbox.js?v=42',
   '/assets/service-requests.js?v=2',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de

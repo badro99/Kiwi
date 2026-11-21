@@ -48,6 +48,7 @@ export { reopenedFloorBills } from './_queue-reopened.js';
 
 import { json, entitledMerchant, activeServiceEmployee, isTillFor, readTillActorProof } from '../../auth/_lib.js';
 import { startOfDay, deskTouch, normTable, CURSOR_LAG_MS, pollCursor } from './_lib.js';
+import { deskAway } from './_guest-sessions.js';
 import { merchantZone } from '../_business-day.js';
 import { visitCredits } from '../_visit-cover.js';
 import { ORDER_ID, MAX_LINES, displayMoney, employeeName, ensureServiceTableSession } from './_queue-shared.js';
@@ -147,6 +148,14 @@ export async function onRequestPost(context) {
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
   const now = Date.now();
+
+  /* La caisse passe en arrière-plan (_guest-sessions.js › deskAway). Même
+   * preuve que le pointage du GET : la caisse appairée ou le propriétaire. */
+  if (b && b.away === true) {
+    if (!await entitledMerchant(request, env, asked, { allowTill: true })) return json({ error: 'forbidden-merchant' }, 403);
+    await deskAway(env, merchant);
+    return json({ ok: true, away: true });
+  }
 
   /* Permettre au caissier de congédier une commande expirée ou annulée pour qu'elle
    * ne pollue plus l'écran "Expirées · à reprendre". */
