@@ -16,7 +16,7 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
   function commissionsView() {
     if (commissions) return commissions;
     commissions = commissionsWait;
-    import('./seller-commissions.js?v=3').then((m) => {
+    import('./seller-commissions.js?v=4').then((m) => {
       commissions = m.createSellerCommissions({ esc, fmtPay, trLang, render, slug: () => Kiwi?.__teamProfileCore?.teamSlug?.() || '', members: () => getMembers(teamKey(window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' })), saveMembers: saveCustomTeams, initials, avatarColors: AVATAR_COLORS, memberName: memberFullName, roleName: jobName, toast: (msg) => Kiwi?.toast?.(msg, { type: 'success' }), pickerMode: () => window.KiwiConfig?.features?.sellerPicker === true });
       render();
     }).catch(() => { commissions = null; });

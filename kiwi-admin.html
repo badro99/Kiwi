@@ -1052,7 +1052,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
-  <script src="assets/admin-legacy.js?v=14"></script>
+  <script src="assets/admin-legacy.js?v=15"></script>
   <script src="assets/staff-roles.js?v=3"></script>
   <!-- The brand's one selection motion, for the établissement switcher. Self-
        contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
@@ -1311,7 +1311,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
       { key:'skin2027', label:'Caisse · design 2027', off:true,
         hint:'Éteint par défaut. La caisse boutique ou maison prend le design 2027 sur chaque appareil appairé à ce magasin : écran de code, fond d’ouverture, rail, ticket et recherche. Rien ne change dans les ventes ni le stock. Se coupe ici à tout moment, appliqué au prochain chargement.' },
       { key:'sellerCommissions', label:'Commissions vendeurs', off:true,
-        hint:'Éteint par défaut. Le propriétaire saisit un taux de commission sur la fiche Équipe de chaque vendeur ; la clôture de la caisse montre les ventes et la commission de chacun (caisse en design 2027 seulement), et Paie & planning ajoute un onglet « Commissions » (tableau de bord en design 2027 seulement). Chaque vente est attribuée à qui a saisi son code sur la caisse. Éteint après usage : rien n’est effacé.' },
+        hint:'Éteint par défaut. Le propriétaire saisit un taux de commission sur la fiche Équipe de chaque vendeur ; la clôture de la caisse montre les ventes et la commission de chacun (caisse en design 2027 seulement), et Équipe ajoute un onglet « Commissions », avec le classement « Meilleurs vendeurs » sur l’accueil (tableau de bord en design 2027 seulement). Chaque vente est attribuée à qui a saisi son code sur la caisse. Éteint après usage : rien n’est effacé.' },
       { key:'sellerPicker', label:'Vendeur choisi à l’encaissement', off:true,
         hint:'Éteint par défaut, et sans effet tant que « Commissions vendeurs » est éteint. Pour un magasin où une seule caissière encaisse pour plusieurs vendeurs : à l’encaissement, elle touche le nom du vendeur (les fiches Équipe qui ont un taux de commission). La vente lui est attribuée, et une vente sans vendeur choisi reste « sans vendeur », jamais créditée à la caissière. Caisse en design 2027 seulement.' },
       { key:'depotvente', label:'Catégories A / B', off:true,

@@ -56,7 +56,7 @@
     'assets/team/catalog.js?v=2',
     'assets/team.js?v=363',
     'assets/team/profile-ui.js?v=23',
-    'assets/team-hours.js?v=37',
+    'assets/team-hours.js?v=38',
     'assets/cancellation-history.js?v=3',
     'assets/cash-sessions.js?v=15',
     'assets/weather.js?v=1',

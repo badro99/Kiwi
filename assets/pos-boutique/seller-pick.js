@@ -12,12 +12,14 @@
  *   active dans CE commerce et prend le nom sur la fiche (functions/api/_seller.js).
  *
  * Seulement avec les options « Commissions vendeurs » ET « Vendeur choisi à
- * l'encaissement » (kiwi-admin), sur la caisse en design 2027. */
+ * l'encaissement » (kiwi-admin), sur la caisse en design 2027. Le drapeau du
+ * design se lit dans pos-boutique.js (bqKitSkin, la seule branche 2027 permise
+ * à la boutique) et arrive ici en `skin`. Le ticket ne s'écrit que par son
+ * propriétaire (ticket-owner.js) : la rangée rend le choix par `pick`. */
 
-export function sellerPickOn(doc = globalThis.document, cfg = globalThis.window?.KiwiConfig) {
+export function sellerPickOn(skin, cfg = globalThis.window?.KiwiConfig) {
   try {
-    return cfg?.features?.sellerCommissions === true && cfg?.features?.sellerPicker === true
-      && doc?.documentElement?.getAttribute('data-skin-2027') === 'till';
+    return skin === true && cfg?.features?.sellerCommissions === true && cfg?.features?.sellerPicker === true;
   } catch (_) { return false; }
 }
 
@@ -75,16 +77,17 @@ export function sellerStripHtml(list, picked, esc) {
     </div>`;
 }
 
-/* el : la fiche de paiement qui vient d'être dessinée ; ticket : le ticket en cours. */
-export function mountSellerPick(el, ticket, { slug, esc, fetchImpl } = {}) {
-  if (!el || !ticket || !slug || !sellerPickOn()) return;
+/* el : la fiche de paiement qui vient d'être dessinée ; ticket : le ticket en
+ * cours, lu seulement ; pick(vendeur | null) : l'écriture, par ticket-owner.js. */
+export function mountSellerPick(el, ticket, { slug, esc, fetchImpl, skin, pick } = {}) {
+  if (!el || !ticket || !slug || typeof pick !== 'function' || !sellerPickOn(skin)) return;
   const draw = (list) => {
     const anchor = el.querySelector('.bq-pay-opts');
     if (!anchor || !el.isConnected) return;
     const old = el.querySelector('.bq-seller');
     if (old) old.remove();
     /* Un vendeur retiré de l'équipe entre deux écrans ne reste pas choisi. */
-    if (ticket.seller && !list.some((s) => s.id === ticket.seller.id)) ticket.seller = null;
+    if (ticket.seller && !list.some((s) => s.id === ticket.seller.id)) pick(null);
     anchor.insertAdjacentHTML('beforebegin', sellerStripHtml(list, ticket.seller, esc));
     const strip = el.querySelector('.bq-seller');
     if (!strip) return;
@@ -92,7 +95,7 @@ export function mountSellerPick(el, ticket, { slug, esc, fetchImpl } = {}) {
       const b = e.target.closest('[data-bq-seller]');
       if (!b) return;
       const s = list.find((x) => x.id === b.getAttribute('data-bq-seller'));
-      ticket.seller = s && !(ticket.seller && ticket.seller.id === s.id) ? { id: s.id, name: s.name } : null;
+      pick(s && !(ticket.seller && ticket.seller.id === s.id) ? { id: s.id, name: s.name } : null);
       strip.querySelectorAll('[data-bq-seller]').forEach((x) => {
         const yes = !!ticket.seller && x.getAttribute('data-bq-seller') === ticket.seller.id;
         x.classList.toggle('is-on', yes);

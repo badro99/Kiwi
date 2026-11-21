@@ -40,6 +40,8 @@ function world(vertical) {
     localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,String(v))},navigator:{onLine:false},
     SALES:[],AVOIRS:[],P:{},state:{},STAFF:{caissiere:{name:'Test'}},bqOutstandingCents:0,
     renderEchanges:no,icons:no,openVeil:no,closeVeil:no,toast:no,persistDay:no,persistAvoirs:no,bqSaveProvisional:no,renderAll:no,
+    // « Vendu par » (pos-boutique/seller-pick.js) : option éteinte, caisse hors design 2027.
+    bqKitSkin:()=>false,sellerPickOn:()=>false,mountSellerPick:no,
     creditIntent:()=> 'test-intent',IS_DEMO:true,activeAvoirs:()=>c.AVOIRS.filter(a=>a.balance>0),avoirExpired:()=>false,
     mt:s=>s,printReceiptNow:(...args)=>events.push(['print',...args]),fmtMAD:n=>String(n),fmtDayY:()=>'',fmtValidUntil:()=>'',esc:s=>String(s??''),
     sizesOf:()=>['TU'],merchantSlug:()=> 'test-shop',rayonOf:()=>'',lineDeal:ln=>({price:ln.promoPrice}),

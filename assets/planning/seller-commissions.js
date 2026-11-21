@@ -25,8 +25,9 @@ export function sellerCommissionsOn(doc = globalThis.document, cfg = globalThis.
 const STRINGS = {
   fr: {
     tab: 'Commissions',
-    eyebrow: (a, b) => `Commissions dues · du ${a} au ${b}`,
-    lede: (net, n) => `sur ${net} de ventes attribuées à ${n} vendeur${n > 1 ? 's' : ''}, remboursements déduits`,
+    eyebrow: (a, b) => `Ventes des vendeurs · du ${a} au ${b}`,
+    lede: (n) => `vendus par ${n} vendeur${n > 1 ? 's' : ''}, remboursements déduits`,
+    dueLine: (amt, n) => `${amt} de commissions à verser à ${n} vendeur${n > 1 ? 's' : ''}`,
     ledeNone: 'Aucune vente attribuée sur cette période pour l’instant.',
     share: (p) => `${p} % des ventes ont un vendeur`,
     shareAll: 'Toutes les ventes ont un vendeur',
@@ -34,7 +35,7 @@ const STRINGS = {
     tickets: (n) => `${n} ticket${n > 1 ? 's' : ''}`, net: 'net', quiet: 'Pas encore de vente sur la période',
     refunded: (amt) => `${amt} remboursés déduits`,
     rate: 'Taux', rateOf: (name) => `Taux de commission de ${name}`,
-    math: (r, amt) => `= ${r} % de ${amt}`, unset: 'Donnez un taux', example: 'ex. 5', colRate: 'Taux', colDue: 'À verser',
+    commission: (amt, r) => `commission ${amt} · ${r} %`, unset: 'Donnez un taux', example: 'ex. 5', colRate: 'Taux', colSales: 'Ventes',
     pending: (who, amt) => `${who} · ${amt} pas encore comptés : taux manquant`, pendingMany: (n) => `${n} vendeurs`,
     fixPick: 'Pour qu’elles comptent : toucher le nom du vendeur avant d’encaisser.',
     fixCode: 'Pour qu’elles comptent : chaque vendeur saisit son code avant d’encaisser.',
@@ -60,8 +61,9 @@ const STRINGS = {
   },
   en: {
     tab: 'Commissions',
-    eyebrow: (a, b) => `Commissions due · ${a} to ${b}`,
-    lede: (net, n) => `on ${net} of sales by ${n} seller${n > 1 ? 's' : ''}, refunds deducted`,
+    eyebrow: (a, b) => `Sellers’ sales · ${a} to ${b}`,
+    lede: (n) => `sold by ${n} seller${n > 1 ? 's' : ''}, refunds deducted`,
+    dueLine: (amt, n) => `${amt} in commissions to pay ${n} seller${n > 1 ? 's' : ''}`,
     ledeNone: 'No attributed sales in this period yet.',
     share: (p) => `${p}% of sales have a seller`,
     shareAll: 'Every sale has a seller',
@@ -69,7 +71,7 @@ const STRINGS = {
     tickets: (n) => `${n} ticket${n > 1 ? 's' : ''}`, net: 'net', quiet: 'No sales yet in this period',
     refunded: (amt) => `${amt} refunded, deducted`,
     rate: 'Rate', rateOf: (name) => `${name}’s commission rate`,
-    math: (r, amt) => `= ${r}% of ${amt}`, unset: 'Set a rate', example: 'e.g. 5', colRate: 'Rate', colDue: 'To pay',
+    commission: (amt, r) => `commission ${amt} · ${r}%`, unset: 'Set a rate', example: 'e.g. 5', colRate: 'Rate', colSales: 'Sales',
     pending: (who, amt) => `${who} · ${amt} not counted yet: no rate`, pendingMany: (n) => `${n} sellers`,
     fixPick: 'To count them: tap the seller’s name before taking payment.',
     fixCode: 'To count them: each seller enters their code before taking payment.',
@@ -95,8 +97,9 @@ const STRINGS = {
   },
   ar: {
     tab: 'العمولات',
-    eyebrow: (a, b) => `العمولات المستحقة · من ${a} إلى ${b}`,
-    lede: (net, n) => `على ${net} من المبيعات باسم ${n} ${n > 1 ? 'بائعين' : 'بائع'}، بعد خصم المرتجعات`,
+    eyebrow: (a, b) => `مبيعات البائعين · من ${a} إلى ${b}`,
+    lede: (n) => `باعها ${n} ${n > 1 ? 'بائعين' : 'بائع'}، بعد خصم المرتجعات`,
+    dueLine: (amt, n) => `${amt} عمولات تُدفع لـ${n} ${n > 1 ? 'بائعين' : 'بائع'}`,
     ledeNone: 'لا مبيعات باسم أي بائع في هذه الفترة بعد.',
     share: (p) => `${p}٪ من المبيعات معروف بائعها`,
     shareAll: 'كل المبيعات معروف بائعها',
@@ -104,7 +107,7 @@ const STRINGS = {
     tickets: (n) => `${n} ${n > 1 ? 'تذاكر' : 'تذكرة'}`, net: 'صافي', quiet: 'لا مبيعات بعد في هذه الفترة',
     refunded: (amt) => `خُصم منها ${amt} مرتجعات`,
     rate: 'النسبة', rateOf: (name) => `نسبة عمولة ${name}`,
-    math: (r, amt) => `= ${r}٪ من ${amt}`, unset: 'حدّد النسبة', example: 'مثلاً 5', colRate: 'النسبة', colDue: 'للدفع',
+    commission: (amt, r) => `عمولة ${amt} · ${r}٪`, unset: 'حدّد النسبة', example: 'مثلاً 5', colRate: 'النسبة', colSales: 'المبيعات',
     pending: (who, amt) => `${who} · ${amt} لم تُحسب بعد: النسبة غير محدّدة`, pendingMany: (n) => `${n} بائعين`,
     fixPick: 'لكي تُحسب: المسي اسم البائع قبل الدفع.',
     fixCode: 'لكي تُحسب: يُدخل كل بائع رمزه قبل الدفع.',
@@ -165,6 +168,7 @@ const CSS = `
 .dash-equipe .kt-com-rate input:focus{outline:none;border-color:var(--atlas);box-shadow:0 0 0 3px rgba(11,110,79,.14)}
 .dash-equipe .kt-com-rate b{position:absolute;inset-inline-end:12px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:500;color:var(--n-500);pointer-events:none}
 [dir="rtl"] .dash-equipe .kt-com-rate input{padding:8px 12px 8px 26px}
+.dash-equipe .kt-com-dueline{margin:6px 0 0;font-size:15px;font-weight:600;color:var(--atlas);font-variant-numeric:tabular-nums}
 .dash-equipe .kt-com-due{text-align:end}
 .dash-equipe .kt-com-due b{display:block;font-size:17px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--ink)}
 .dash-equipe .kt-com-due span{display:block;margin-top:3px;font-family:var(--mono);font-size:11px;color:var(--n-500);font-variant-numeric:tabular-nums}
@@ -201,10 +205,10 @@ const CSS = `
 function injectCss(doc) {
   try {
     if (!doc || doc.getElementById('kt-com-css')) return;
-    const s = doc.createElement('style');
-    s.id = 'kt-com-css';
-    s.textContent = CSS;
-    doc.head.appendChild(s);
+    const style = doc.createElement('style');
+    style.id = 'kt-com-css';
+    style.textContent = CSS;
+    doc.head.appendChild(style);
   } catch (_) {}
 }
 
@@ -318,11 +322,12 @@ export function createSellerCommissions({ esc, fmtPay, trLang, slug, render, fet
     const name = r.member ? nameOf(r.member) : r.name;
     const width = top > 0 && r.netCents > 0 ? Math.max(2, Math.round(r.netCents / top * 100)) : 0;
     const sub = !r.netCents && !r.tickets ? esc(t.quiet)
-      : [esc(t.tickets(r.tickets)), money(r.netCents) + ' ' + esc(t.net), r.refundCents ? esc(t.refunded(fmtPay(r.refundCents / 100) + ' MAD')) : ''].filter(Boolean).join(' · ');
-    const tag = !r.inTeam || (!r.member && r.memberId) ? `<span class="kt-com-tag is-out">${esc(t.notTeam)}</span>` : (i === 0 && r.netCents > 0 && r.commissionCents ? `<span class="kt-com-tag">${esc(t.top)}</span>` : '');
-    const due = r.commissionCents == null
-      ? (r.member ? `<label class="is-unset" for="${esc(rateId(r.member))}">${esc(t.unset)}</label>` : `<span class="is-unset">·</span>`)
-      : `<b>${money(r.commissionCents)}</b>${r.netCents ? `<span>${esc(t.math(fmtRate(r.rate), fmtPay(r.netCents / 100) + ' MAD'))}</span>` : ''}`;
+      : [esc(t.tickets(r.tickets)), r.refundCents ? esc(t.refunded(fmtPay(r.refundCents / 100) + ' MAD')) : ''].filter(Boolean).join(' · ');
+    const tag = !r.inTeam || (!r.member && r.memberId) ? `<span class="kt-com-tag is-out">${esc(t.notTeam)}</span>` : (i === 0 && r.netCents > 0 ? `<span class="kt-com-tag">${esc(t.top)}</span>` : '');
+    /* Ce que le vendeur a fait entrer d'abord ; sa commission dessous. */
+    const due = `<b>${money(r.netCents)}</b>` + (r.commissionCents == null
+      ? (r.member ? `<label class="is-unset" for="${esc(rateId(r.member))}">${esc(t.unset)}</label>` : '')
+      : r.netCents ? `<span>${esc(t.commission(fmtPay(r.commissionCents / 100) + '\u00a0MAD', fmtRate(r.rate)))}</span>` : '');
     return `<li class="kt-com-row${r.netCents ? '' : ' is-quiet'}${r.member && r.rate == null ? ' needs-rate' : ''}" data-kt-seller="${esc(r.key)}">
         ${avatar(r.member, name)}
         <div class="kt-com-who"><div class="kt-com-name">${esc(name)}${tag}</div><div class="kt-com-sub">${sub}</div>
@@ -370,13 +375,14 @@ export function createSellerCommissions({ esc, fmtPay, trLang, slug, render, fet
     return `<div class="kt-com" data-kt-commissions="ok">
       <section class="kt-com-hero">
         <div><div class="kt-com-eyebrow">${esc(t.eyebrow(period.startFr, period.endFr))}</div>
-          <div class="kt-com-big">${esc(fmtPay(b.dueCents / 100))}<small>MAD</small></div>
-          <p class="kt-com-lede">${b.counted ? esc(t.lede(fmtPay(b.countedCents / 100) + ' MAD', b.counted)) : esc(t.ledeNone)}</p>
+          <div class="kt-com-big">${esc(fmtPay(b.netCents / 100))}<small>MAD</small></div>
+          <p class="kt-com-lede">${b.sellers ? esc(t.lede(b.sellers)) : esc(t.ledeNone)}</p>
+          ${b.counted ? `<p class="kt-com-dueline">${esc(t.dueLine(fmtPay(b.dueCents / 100) + '\u00a0MAD', b.counted))}</p>` : ''}
           ${b.pending.names.length ? `<p class="kt-com-pending">${esc(t.pending(b.pending.names.length === 1 ? b.pending.names[0] : t.pendingMany(b.pending.names.length), fmtPay(b.pending.netCents / 100) + ' MAD'))}</p>` : ''}</div>
         ${health}
       </section>
       ${how(t)}
-      <ol class="kt-com-board"><li class="kt-com-row kt-com-head" aria-hidden="true"><span></span><span></span><span>${esc(t.colRate)}</span><span>${esc(t.colDue)}</span></li>${b.board.map((r, i) => boardRow(r, i, top, t)).join('')}</ol>
+      <ol class="kt-com-board"><li class="kt-com-row kt-com-head" aria-hidden="true"><span></span><span></span><span>${esc(t.colRate)}</span><span>${esc(t.colSales)}</span></li>${b.board.map((r, i) => boardRow(r, i, top, t)).join('')}</ol>
       ${b.others.length ? `<section class="kt-com-section"><h4>${esc(t.others)}</h4><p>${esc(t.othersHint)}</p><ul class="kt-com-board kt-com-flat">${teamRows(b.others)}</ul></section>` : ''}
     </div>`;
   }

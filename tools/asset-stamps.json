@@ -24,8 +24,8 @@
     "sha": "fcb1b49c67af7322"
   },
   "assets/admin-legacy.js": {
-    "v": "14",
-    "sha": "8611f8ea6a7a0f6f"
+    "v": "15",
+    "sha": "33a1376b8a86aa6d"
   },
   "assets/admin-origin-devices.js": {
     "v": "1",
@@ -736,8 +736,8 @@
     "sha": "29803657f951ca07"
   },
   "assets/home-top-sellers.js": {
-    "v": "3",
-    "sha": "0e1218c2bee6befa"
+    "v": "4",
+    "sha": "87c2a2b64a95bfb3"
   },
   "assets/hotel-channels.js": {
     "v": "4",
@@ -1400,8 +1400,8 @@
     "sha": "bfb67d0993b644f5"
   },
   "assets/oppo-cards.js": {
-    "v": "12",
-    "sha": "b8ce394a4fe2edcd"
+    "v": "13",
+    "sha": "13685ba49ad6e0d4"
   },
   "assets/order-qr.js": {
     "v": "6",
@@ -1536,8 +1536,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "278",
-    "sha": "2d53b43eb0dbcb67"
+    "v": "279",
+    "sha": "daaa1ee2c46ea67f"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1600,12 +1600,12 @@
     "sha": "1803c6a453438f4f"
   },
   "assets/planning/payroll-view.js": {
-    "v": "22",
-    "sha": "aef9f44c8fa465e8"
+    "v": "23",
+    "sha": "ddb2a639b625df36"
   },
   "assets/planning/seller-commissions.js": {
-    "v": "3",
-    "sha": "05c57d527fe5f4fc"
+    "v": "4",
+    "sha": "0a073895e0970b1d"
   },
   "assets/planning/shift-editor.js": {
     "v": "5",
@@ -1656,16 +1656,16 @@
     "sha": "bee5b88b8cabff28"
   },
   "assets/pos-boutique.css": {
-    "v": "354",
+    "v": "355",
     "sha": "1ab96bb59018670a"
   },
   "assets/pos-boutique.js": {
-    "v": "354",
-    "sha": "7365d58aa4156d7b"
+    "v": "355",
+    "sha": "0ae7a4ee872c2685"
   },
   "assets/pos-boutique/avance-restock.js": {
-    "v": "7",
-    "sha": "28b7cf2747dd0fb4"
+    "v": "8",
+    "sha": "8dcade4a7110ab87"
   },
   "assets/pos-boutique/bargain-ui.js": {
     "v": "3",
@@ -1676,20 +1676,20 @@
     "sha": "7234a8ebd42e4f26"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "248",
-    "sha": "9aac70bdf4f4fdc1"
+    "v": "249",
+    "sha": "82afe1ce215b9efd"
   },
   "assets/pos-boutique/delivery-card.js": {
     "v": "10",
     "sha": "c1c7e9fb01688344"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "166",
-    "sha": "b4911039b0bc8ac1"
+    "v": "167",
+    "sha": "a90743894c13e42d"
   },
   "assets/pos-boutique/exch-combined.js": {
-    "v": "10",
-    "sha": "223063178a806b11"
+    "v": "11",
+    "sha": "b2ff5b9ac2251ca3"
   },
   "assets/pos-boutique/exchange.js": {
     "v": "6",
@@ -1704,8 +1704,8 @@
     "sha": "3bf3273561b9c4f7"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "248",
-    "sha": "b296e36d7109f828"
+    "v": "249",
+    "sha": "1318416a4ce1e651"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "26",
@@ -1748,32 +1748,32 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "248",
-    "sha": "d55d38cb59242428"
+    "v": "249",
+    "sha": "8ce0d976221c2f52"
   },
   "assets/pos-boutique/search.js": {
     "v": "20",
     "sha": "4a6416c42b0193d0"
   },
   "assets/pos-boutique/seller-day.js": {
-    "v": "2",
-    "sha": "7b269d73ab576902"
+    "v": "3",
+    "sha": "bda3d047f8f2a137"
   },
   "assets/pos-boutique/seller-pick.js": {
-    "v": "1",
-    "sha": "d8ce67fb9685db80"
+    "v": "2",
+    "sha": "f35ed167f53ecabc"
   },
   "assets/pos-boutique/sister-stock.js": {
     "v": "1",
     "sha": "c2188a2b942fc4c9"
   },
   "assets/pos-boutique/ticket-number.js": {
-    "v": "3",
-    "sha": "2d8a9a7d522f90c5"
+    "v": "4",
+    "sha": "acc0992e2568926e"
   },
   "assets/pos-boutique/ticket-owner.js": {
-    "v": "5",
-    "sha": "4b00f62b3f465b1c"
+    "v": "6",
+    "sha": "5e0aeb760ae6b4cf"
   },
   "assets/pos-boutique/ticket-remise.js": {
     "v": "5",
@@ -1800,8 +1800,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "481",
-    "sha": "dd1241d74669bb66"
+    "v": "482",
+    "sha": "96b18685a2c03fc2"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -2340,8 +2340,8 @@
     "sha": "3cb977732d0c9fb3"
   },
   "assets/team-hours.js": {
-    "v": "37",
-    "sha": "ddc60a309ab48638"
+    "v": "38",
+    "sha": "ede6ccd85551c163"
   },
   "assets/team.js": {
     "v": "363",

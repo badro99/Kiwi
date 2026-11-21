@@ -1,13 +1,13 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=248';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=166';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=248';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=248';
-import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=249';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=167';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=249';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=249';
+import { ticketOwner } from './pos-boutique/ticket-owner.js?v=6';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=1';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=4';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
-import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=3';
-import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=26'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=2'; import { mountSellerPick, sellerPickOn } from './pos-boutique/seller-pick.js?v=1';
+import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=4';
+import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=26'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=3'; import { mountSellerPick, sellerPickOn } from './pos-boutique/seller-pick.js?v=2';
 import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zDrawerCash, zDrawerMoves, zDrawerRows, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=10'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=23'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11'; import { bqTransfers } from './pos-boutique/transfers.js?v=7';
 
   'use strict';
@@ -1874,7 +1874,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       customerId: c ? c.id : null,
       beforePaid: () => window.KiwiLoyaltyReserve.create({ isDemo: IS_DEMO, ticket: t, ticketOwner, client: c, render: renderTicket, close: () => { state.checkoutBusy = false; closeVeil('#bq-pay-veil'); } }).confirm(),
       allowAccount: !!window.KiwiRetailBalances,   /* « Compte client » si God mode l'allume (retail-avance.js › retailModes) */
-      title: 'Encaissement', afterMethods: (el) => mountSellerPick(el, t, { slug: merchantSlug(), esc }),   // « Vendu par » : option « Vendeur choisi à l'encaissement »
+      title: 'Encaissement', afterMethods: (el) => mountSellerPick(el, t, { slug: merchantSlug(), esc, skin: bqKitSkin(), pick: (seller) => ticketOwner.setSeller(t, seller) }),   // « Vendu par » : option « Vendeur choisi à l'encaissement »
       subtitle: `${frozen.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
       // Real ticket contents, so the printed receipt itemises the sale instead
       // of showing a single lump sum.
@@ -2027,7 +2027,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
             };
             if (sale.clientId) payload.clientId = sale.clientId;
             const sellerProof = !IS_DEMO && window.KiwiStaff && window.KiwiStaff.sellerProof;   // commissions vendeurs : la preuve signée de qui a saisi son code, jamais un nom
-            if (!IS_DEMO && sellerPickOn()) { if (t.seller && t.seller.id) payload.seller = { member: t.seller.id }; }   // vendeur choisi à l'encaissement : rien de choisi, personne de crédité
+            if (!IS_DEMO && sellerPickOn(bqKitSkin())) { if (t.seller && t.seller.id) payload.seller = { member: t.seller.id }; }   // vendeur choisi à l'encaissement : rien de choisi, personne de crédité
             else if (typeof sellerProof === 'string' && sellerProof) payload.seller = { proof: sellerProof };
             if (isAcompte) payload.retailBalance = {
               id: balanceId, customerId: c.id, ticketRef: sale.id,
@@ -2775,7 +2775,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       </div>`;
     v.classList.add('is-open');
     icons();
-    void mountSellerDay(v.querySelector('#bqclo-sellers'), { slug: merchantSlug, day: retDayKey(tillNow()), esc, fmtMAD });   // design 2027 + option « Commissions vendeurs » seulement
+    void mountSellerDay(v.querySelector('#bqclo-sellers'), { slug: merchantSlug, day: retDayKey(tillNow()), esc, fmtMAD, skin: bqKitSkin() });   // design 2027 + option « Commissions vendeurs » seulement
 
     v.querySelector('#bqclo-count').addEventListener('input', bqUpdateEcart);
     v.querySelector('#bqclo-continue').onclick = () => v.classList.remove('is-open');

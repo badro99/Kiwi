@@ -212,7 +212,9 @@ const IDENTICAL_OK = new Set(['Table', 'Bluetooth', 'Scan', 'Promotions', 'Total
   // La vue Vendus de la boutique, la cuisine du restaurant (2026-10-21).
   'Dates', 'Table {n}', 'navigation', 'Date',
   // La fiche cliente complète de la caisse maison (2026-11-20).
-  'total', 'points', 'VIP']);
+  'total', 'points', 'VIP',
+  // « Ventes par vendeur » à la clôture boutique (2026-11-21).
+  'ticket', 'tickets', 'commission']);
 const lazy = enKeys.filter((k) => EN[k] === k && !IDENTICAL_OK.has(k));
 check(!lazy.length, `aucune traduction anglaise oubliée${lazy.length ? ' — ' + lazy.slice(0, 5).join(', ') : ''}`);
 /* Une paire mal tapée (['Ready'] sans l'arabe, ou une chaîne vide) fusionne

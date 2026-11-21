@@ -21,17 +21,17 @@ export function topSellersOn(doc = globalThis.document, cfg = globalThis.window?
 }
 
 const STR = {
-  fr: { title: 'Meilleurs vendeurs', due: (amt) => `${amt} de commissions`, open: 'Commissions →',
+  fr: { title: 'Meilleurs vendeurs', sold: (amt) => `${amt} vendus`, open: 'Commissions →',
     tickets: (n) => `${n} ticket${n > 1 ? 's' : ''}`, commission: (amt) => `commission ${amt}`, noRate: 'taux à définir',
     loose: (n, amt) => `${n} ticket${n > 1 ? 's' : ''} · ${amt} sans vendeur`, top: 'En tête',
     empty: 'Aucune vente attribuée sur cette période. Chaque vente se range ici sous le nom de qui l’a faite.',
     today: 'Aujourd’hui', yesterday: 'Hier', span: (a, b) => `du ${a} au ${b}` },
-  en: { title: 'Top sellers', due: (amt) => `${amt} in commissions`, open: 'Commissions →',
+  en: { title: 'Top sellers', sold: (amt) => `${amt} sold`, open: 'Commissions →',
     tickets: (n) => `${n} ticket${n > 1 ? 's' : ''}`, commission: (amt) => `commission ${amt}`, noRate: 'no rate yet',
     loose: (n, amt) => `${n} ticket${n > 1 ? 's' : ''} · ${amt} with no seller`, top: 'Leading',
     empty: 'No attributed sales in this period. Each sale lands here under the name of whoever made it.',
     today: 'Today', yesterday: 'Yesterday', span: (a, b) => `${a} to ${b}` },
-  ar: { title: 'أفضل البائعين', due: (amt) => `${amt} عمولات`, open: 'العمولات ←',
+  ar: { title: 'أفضل البائعين', sold: (amt) => `${amt} مبيعات`, open: 'العمولات ←',
     tickets: (n) => `${n} ${n > 1 ? 'تذاكر' : 'تذكرة'}`, commission: (amt) => `عمولة ${amt}`, noRate: 'النسبة غير محدّدة',
     loose: (n, amt) => `${n} ${n > 1 ? 'تذاكر' : 'تذكرة'} · ${amt} بلا بائع`, top: 'في الصدارة',
     empty: 'لا مبيعات منسوبة لأحد في هذه الفترة. كل بيعة تظهر هنا باسم من باعها.',
@@ -102,6 +102,7 @@ export function rankSellers(data) {
   const loose = (data && data.unattributed) || {};
   return {
     rows,
+    soldCents: rows.reduce((n, r) => n + r.netCents, 0),
     dueCents: rows.reduce((n, r) => n + (r.commissionCents || 0), 0),
     loose: { tickets: Number(loose.tickets) || 0, netCents: Math.max(0, Number(loose.netCents) || 0) },
   };
@@ -113,7 +114,7 @@ export function topSellersHtml(data, { lang = 'fr', money, period } = {}) {
   const r = rankSellers(data);
   const top = r.rows.length ? Math.max(1, r.rows[0].netCents) : 1;
   const head = `<div class="block-head"><div><div class="t">${esc(t.title)}</div>
-      <div class="s">${esc(period || '')}${r.rows.length ? ' · ' + esc(t.due(m(r.dueCents))) : ''}</div></div>
+      <div class="s">${esc(period || '')}${r.rows.length ? ' · ' + esc(t.sold(m(r.soldCents))) : ''}</div></div>
       <a href="#" data-action="home-commissions" style="font-size:13px;color:var(--atlas);font-weight:500">${esc(t.open)}</a></div>`;
   if (!r.rows.length) return head + `<p class="tsl-empty">${esc(t.empty)}</p>`;
   const meta = (s) => `${esc(t.tickets(s.tickets))} · ${s.commissionCents == null ? esc(t.noRate) : `<b>${esc(t.commission(m(s.commissionCents)))}</b>`}`;
