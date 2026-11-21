@@ -252,5 +252,49 @@ ok('un tarif jamais vendu s’efface pour de bon, ses prix avec', r.body.deleted
   && db.prepare('SELECT COUNT(*) n FROM item_prices WHERE list_id=?').get(WEB).n === 0, r);
 ok('et sa fiche client retombe sur le principal', !db.prepare("SELECT 1 FROM price_list_clients WHERE client_id='cl-grossiste'").get());
 
+console.log('\nLa caisse (assets/till-price-list.js) : copie hors ligne, fiche client, code responsable');
+{
+  const vm = await import('node:vm');
+  const store = new Map();
+  const snapshot = { ok: true, at: now, lists: [{ id: 'main', name: 'Détail', isMain: true }, { id: 'pl_gros', name: 'Gros', isMain: false, channels: ['till'] }],
+    prices: { pl_gros: { huile: 2200, 'huile|v-noir': 2100 } }, clients: { 'cl-1': 'pl_gros' } };
+  const asks = [];
+  const win = {
+    KiwiLive: { merchant: () => A }, KiwiEnv: { isReal: () => true }, KiwiPosSale: {},
+    KiwiCaissePairing: { lastManager: () => ({ name: 'Rachid', approval: 'proof-xyz' }) },
+    requireManager: (label, ok, ctx) => { asks.push(ctx); ok(); },
+    addEventListener() {},
+  };
+  const ctx = vm.createContext({
+    window: win, document: { addEventListener() {}, hidden: false, getElementById: () => ({}), head: { appendChild() {} } },
+    localStorage: { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)) },
+    fetch: async () => ({ ok: true, json: async () => snapshot }), setInterval: () => 0, setTimeout: (fn) => fn(), console,
+  });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/till-price-list.js'), 'utf8'), ctx);
+  const T = win.KiwiTillPriceList;
+  await new Promise((r) => setImmediate(r));
+  ok('posé aussi sur le service de vente (épicerie)', win.KiwiPosSale.priceList === T);
+  ok('la copie est gardée pour le hors-ligne', JSON.parse(store.get('kiwiPriceLists:' + A)).prices.pl_gros.huile === 2200);
+  const P = () => ({ huile: { id: 'huile', price: 24 }, sucre: { id: 'sucre', price: 12.5 } });
+  let p = T.apply(P());
+  ok('au départ : prix principal, rien à joindre à la vente', p.huile.price === 24 && JSON.stringify(T.saleFields()) === '{}');
+  T.onCustomer('cl-1');
+  p = T.apply(P());
+  ok('fiche grossiste attachée : Gros sans code', T.current().id === 'pl_gros' && T.current().why === 'client' && asks.length === 0);
+  ok('huile 22 MAD, sucre sans prix de gros garde 12,50 (repli)', p.huile.price === 22 && p.huile.mainPrice === 24 && p.sucre.price === 12.5);
+  ok('la vente porte le tarif, sans preuve (le serveur relit la fiche)', T.saleFields().priceListId === 'pl_gros' && !T.saleFields().priceListApproval);
+  T.onCustomer('passage');
+  ok('la fiche retirée : retour au principal', T.current().isMain);
+  T.choose('pl_gros');
+  ok('changer de tarif sans fiche : le pavé responsable, lié à CE tarif', asks.length === 1 && asks[0].kind === 'price-list' && asks[0].listId === 'pl_gros');
+  ok('…et la preuve signée part avec la vente', T.saleFields().priceListApproval === 'proof-xyz' && T.current().approvedBy === 'Rachid');
+  ok('le reçu dit le tarif', T.receiptLabel() === 'Tarif · Gros');
+  T.reset();
+  ok('ticket suivant : principal', T.current().isMain && JSON.stringify(T.saleFields()) === '{}');
+  win.requireManager = (label, ok2, c, opts) => { asks.push(c); opts.onCancel(); };
+  T.choose('pl_gros');
+  ok('pavé refermé sans code : le tarif ne change pas', T.current().isMain);
+}
+
 console.log(`\n${passed} vérifications · ${fails} échec(s)`);
 process.exit(fails ? 1 : 0);
