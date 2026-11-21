@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=223';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=138';
-import { invSetModal, offerRegister } from './inventory.js?v=138';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=224';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=139';
+import { invSetModal, offerRegister } from './inventory.js?v=139';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=5';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=11';
@@ -753,6 +753,12 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
   function openSheet(pid, opts) {
     window.KiwiDiscountPolicy?.refresh?.(); // the owner may have changed the allowed percentages
     const p = P[pid];
+    /* Taille unique, une seule couleur, vendu tel quel : rien à choisir, la fiche
+       ne faisait que ralentir. Un service garde sa fiche (complet ou à la pièce). */
+    if (!(opts && opts.exchange) && p.format !== 'service' && sizesOf(p).length === 1 && (p.colors || []).length <= 1) {
+      addToTicket(pid, { size: sizesOf(p)[0], color: p.colors[0], qty: 1, remise: 0, format: p.format || 'piece', marque: p.marque, motif: p.motif, fragile: p.fragile });
+      return;
+    }
     Object.assign(sheet, {
       pid,
       size: null, color: p.colors[0], qty: 1, remise: 0,

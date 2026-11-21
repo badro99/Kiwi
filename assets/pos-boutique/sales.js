@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=334';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=230';
-import { offerRegister } from './inventory.js?v=230';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=335';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=231';
+import { offerRegister } from './inventory.js?v=231';
 import { ticketOwner } from './ticket-owner.js?v=5';
 import { ticketRemise } from './ticket-remise.js?v=5';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
@@ -576,6 +576,12 @@ import { photoImg } from '../retail-photos.js?v=5';
   function openSheet(pid, opts) {
     window.KiwiDiscountPolicy?.refresh?.(); // the owner may have changed the allowed percentages
     const p = P[pid];
+    /* Taille unique, une seule couleur : rien à choisir, la fiche ne faisait que
+       ralentir. Le toucher pose une pièce ; un second toucher en ajoute une. */
+    if (!(opts && opts.exchange) && sizesOf(p).length === 1 && (p.colors || []).length <= 1) {
+      addToTicket(pid, { size: sizesOf(p)[0], color: p.colors[0], qty: 1, remise: 0 });
+      return;
+    }
     Object.assign(sheet, {
       pid,
       size: null, color: p.colors[0], qty: 1, remise: 0, agreed: 0, bmode: 'pct', btext: '', bok: true,
