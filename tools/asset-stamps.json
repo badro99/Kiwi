@@ -439,6 +439,10 @@
     "v": "19",
     "sha": "5d37133013eff834"
   },
+  "assets/credit-book/till-credit.js": {
+    "v": "1",
+    "sha": "f218a8b9cdcb87ef"
+  },
   "assets/credit-history-page.js": {
     "v": "3",
     "sha": "2d7b6732612470e0"
@@ -1780,8 +1784,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "469",
-    "sha": "2ccc6618c5b05800"
+    "v": "470",
+    "sha": "2d10e79e13cfd47d"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1792,8 +1796,8 @@
     "sha": "2726f858d71edecf"
   },
   "assets/pos-epicerie/carnet.js": {
-    "v": "15",
-    "sha": "e37db7a8a31e8e08"
+    "v": "16",
+    "sha": "c9866aaf5e581d92"
   },
   "assets/pos-fastfood.css": {
     "v": "15",
@@ -1852,12 +1856,12 @@
     "sha": "3b1ecc2cbfa231cd"
   },
   "assets/pos-maison.css": {
-    "v": "226",
+    "v": "227",
     "sha": "e7ebbfb89dedcc5c"
   },
   "assets/pos-maison.js": {
-    "v": "226",
-    "sha": "52ba34c482f093e1"
+    "v": "227",
+    "sha": "34e0b0889d051485"
   },
   "assets/pos-maison/avoir-sheet.js": {
     "v": "9",
@@ -1872,8 +1876,8 @@
     "sha": "64bf43e6710c5268"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "141",
-    "sha": "5abe2cb7a84c9fcd"
+    "v": "142",
+    "sha": "6db0a00ef26f6075"
   },
   "assets/pos-maison/client-fiche.js": {
     "v": "1",
@@ -1900,8 +1904,8 @@
     "sha": "feb0865a7163d8c9"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "141",
-    "sha": "0cc9a0747845dc0c"
+    "v": "142",
+    "sha": "c632b471ac4a0094"
   },
   "assets/pos-maison/kit-2027.js": {
     "v": "13",
@@ -1912,8 +1916,8 @@
     "sha": "f505c28b4b344afc"
   },
   "assets/pos-maison/sales.js": {
-    "v": "141",
-    "sha": "7951367d4edb4251"
+    "v": "142",
+    "sha": "dc19659c2aaaf09a"
   },
   "assets/pos-maison/ticket-remise.js": {
     "v": "3",
