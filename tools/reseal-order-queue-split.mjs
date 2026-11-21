@@ -15,6 +15,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { gunzipSync } from 'node:zlib';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
@@ -23,6 +25,15 @@ const require = createRequire(import.meta.url);
 const source = require('./order-queue-test-source.cjs');
 const mapPath = path.join(root, 'tools/fixtures/order-queue/split.json');
 const maps = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+/* Le corps de chaque segment tel que HEAD l'a scellé, pour dire ce qui a changé. */
+const git = (args, enc) => { try { return execFileSync('git', args, { cwd: root, encoding: enc, maxBuffer: 64 << 20 }); } catch (_) { return null; } };
+const sealedMaps = JSON.parse(git(['show', 'HEAD:tools/fixtures/order-queue/split.json'], 'utf8') || '[]');
+const sealedBody = (file, seg) => {
+  const m = sealedMaps.find((x) => x.file === file), p = m && m.segments.find((x) => x.file === seg);
+  const gz = m && git(['show', 'HEAD:tools/fixtures/order-queue/' + m.fixture]);
+  return p && gz ? gunzipSync(gz).toString('utf8').slice(p.start, p.end) : null;
+};
+const changed = [];
 let touched = 0;
 for (const map of maps) {
   const rebuilt = source(map.file);
@@ -40,6 +51,7 @@ for (const map of maps) {
     for (const s of spans) { if (s.start >= at + part.marker.length) { s.start += delta; s.end += delta; } }
     text = text.slice(0, at) + inner + text.slice(at + part.marker.length);
     spans.push({ part, start: at, end: at + inner.length });
+    if (sealedBody(map.file, part.file) !== inner) changed.push(part.file);
   }
   if (text !== rebuilt) throw new Error('reconstruction divergente : ' + map.file);
   for (const s of spans) { s.part.start = s.start; s.part.end = s.end; }
@@ -51,3 +63,4 @@ for (const map of maps) {
 }
 fs.writeFileSync(mapPath, JSON.stringify(maps, null, 2) + '\n');
 console.log(`✓ preuve de la file rescellée : ${touched} original(aux) mis à jour`);
+console.log(changed.length ? `  contenu changé depuis HEAD (à relire) :\n${changed.map((c) => '    · ' + c).join('\n')}` : '  aucun segment n\'a changé de contenu depuis HEAD');

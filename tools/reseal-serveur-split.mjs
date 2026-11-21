@@ -79,6 +79,7 @@ const { fragments } = require('./serveur-source.cjs');
 const live = fragments();
 
 /* 2. Les points d'insertion suivent le noyau. */
+const sealedBefore = map.moved.map((m) => m.sha256);
 const toCore = mapper(CORE);
 let removed = 0;
 const corePos = map.moved.map((m) => {
@@ -108,4 +109,7 @@ delete require.cache[require.resolve('./fixtures/serveur/split.json')];
 delete require.cache[require.resolve('./serveur-source.cjs')];
 const source = require('./serveur-source.cjs');
 if (source() !== original) throw new Error('la reconstruction ne redonne pas l\'archive');
+/* Ce qui a changé de contenu, à relire avant de committer : le sceau suit le code, il ne le juge pas. */
+const changed = map.moved.filter((m, i) => m.sha256 !== sealedBefore[i]).map((m) => `${m.file} › ${m.name}`);
 console.log(`✓ preuve serveur rescellée : ${map.moved.length} fragments, archive ${map.sha256.slice(0, 12)}`);
+console.log(changed.length ? `  contenu changé depuis HEAD (à relire) :\n${changed.map((c) => '    · ' + c).join('\n')}` : '  aucun fragment n\'a changé de contenu depuis HEAD');
