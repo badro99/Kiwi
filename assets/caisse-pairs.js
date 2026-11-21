@@ -67,7 +67,12 @@
     if (!m || typeof fetch !== 'function') return Promise.resolve(null);
     fromCache(m);
     if (inflight) return inflight;
-    inflight = fetch('/api/pairs?merchant=' + encodeURIComponent(m), { credentials: 'same-origin' })
+    /* fetch n'a aucun délai par lui-même : une lecture restée sans réponse
+     * gardait `inflight`, et les paires ne se relisaient plus, même après un
+     * réappairage sur un autre commerce. */
+    var quit = typeof AbortController === 'function' ? new AbortController() : null;
+    if (quit) setTimeout(function () { quit.abort(); }, 20000);
+    inflight = fetch('/api/pairs?merchant=' + encodeURIComponent(m), { credentials: 'same-origin', signal: quit ? quit.signal : undefined })
       .then(function (r) { return r && r.ok ? r.json() : null; })
       .then(function (body) {
         var next = clean(body, m);

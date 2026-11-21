@@ -252,8 +252,8 @@
     "sha": "001eba03b062043a"
   },
   "assets/caisse-pairs.js": {
-    "v": "3",
-    "sha": "146e4fbca0dcad56"
+    "v": "4",
+    "sha": "2b16f407897e2e9e"
   },
   "assets/caisse-print-recovery.js": {
     "v": "8",
@@ -264,8 +264,8 @@
     "sha": "96edba8a879f9511"
   },
   "assets/caisse-refresh.js": {
-    "v": "9",
-    "sha": "567fea581a1f1ecc"
+    "v": "10",
+    "sha": "8e782868d9122861"
   },
   "assets/caisse-screens.css": {
     "v": "4",
@@ -888,8 +888,8 @@
     "sha": "fe4026ec50814736"
   },
   "assets/inventory-ledger.js": {
-    "v": "18",
-    "sha": "21223ad72de672f1"
+    "v": "19",
+    "sha": "309ecc8628296690"
   },
   "assets/invoice.js": {
     "v": "28",
@@ -1228,8 +1228,8 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "131",
-    "sha": "1c16b79a6b96f59d"
+    "v": "132",
+    "sha": "f529949a1cc588d4"
   },
   "assets/live-link/queue-store.js": {
     "v": "25",
@@ -1300,8 +1300,8 @@
     "sha": "8861554a5809b819"
   },
   "assets/menu-catalog/state.js": {
-    "v": "16",
-    "sha": "836e1de5b0b5d663"
+    "v": "17",
+    "sha": "f61089e0f11aeb47"
   },
   "assets/menu-i18n.js": {
     "v": "8",
@@ -1524,8 +1524,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "267",
-    "sha": "e2a6c7fd99d561d5"
+    "v": "268",
+    "sha": "1bac356b3b031227"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

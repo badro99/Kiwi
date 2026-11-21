@@ -390,8 +390,22 @@
    * le portait était refusé (400) et la file de l'appareil restait bloquée
    * derrière lui. On l'envoie sous son nom serveur. */
   var WIRE_REASON = { waste: 'loss', casse: 'loss', perte: 'loss', perime: 'expiry' };
+  /* fetch n'a aucun délai par lui-même, et `syncing` n'est rendu qu'à la fin
+   * du tour : une seule requête restée sans réponse (wifi qui change, tablette
+   * qui sort de veille) arrêtait la synchro du stock jusqu'au rechargement de
+   * la page. Chaque requête a donc le sien ; abandonnée, elle fait échouer le
+   * tour, et le suivant repart du même curseur. */
+  var NET_MS = 30000;
+  function timed(url, opts) {
+    if (typeof AbortController === 'function') {
+      var ctl = new AbortController();
+      opts.signal = ctl.signal;
+      setTimeout(function () { ctl.abort(); }, NET_MS);
+    }
+    return fetch(url, opts);
+  }
   function post(m, movements) {
-    return fetch('/api/inventory/movements', {
+    return timed('/api/inventory/movements', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin', body: JSON.stringify({ merchant: m, movements: movements, terminalId: terminalId() }),
     });
@@ -486,7 +500,7 @@
   async function pull(d, m) {
     var since = d.cursor;
     do {
-      var res = await fetch('/api/inventory/movements?merchant=' + encodeURIComponent(m) + '&since=' + encodeURIComponent(since) + '&terminalId=' + encodeURIComponent(terminalId()), { credentials: 'same-origin', cache: 'no-store' });
+      var res = await timed('/api/inventory/movements?merchant=' + encodeURIComponent(m) + '&since=' + encodeURIComponent(since) + '&terminalId=' + encodeURIComponent(terminalId()), { credentials: 'same-origin', cache: 'no-store' });
       if (!res.ok) throw new Error('inventory-pull-' + res.status);
       var body = await res.json(); retainScope(d, body.scope);
       var byId = new Map(d.rows.map(function (r) { return [r.id, r]; }));

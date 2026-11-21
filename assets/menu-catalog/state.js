@@ -728,10 +728,16 @@
       }
     }
     c.pulling = true;
+    /* fetch n'a aucun délai par lui-même : une lecture restée sans réponse
+     * gardait `pulling` levé, et plus aucune lecture ni publication ne partait
+     * de cet onglet avant son rechargement. */
+    const quit = typeof AbortController === 'function' ? new AbortController() : null;
+    const quitTimer = quit ? setTimeout(() => quit.abort(), 20000) : 0;
     return fetch('/api/menu?mine=1' + (slug ? '&merchant=' + encodeURIComponent(slug) : ''),
-                 { headers: { Accept: 'application/json' } })
+                 { headers: { Accept: 'application/json' }, signal: quit ? quit.signal : undefined })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
+        if (quitTimer) clearTimeout(quitTimer);
         c.pulling = false;
         if (!j || j.error || j.unreachable) return false;   // injoignable → surtout ne pas publier
         c.merchant = j.merchant || '';
@@ -776,7 +782,7 @@
         } catch (_) {}
         return true;
       })
-      .catch(() => { c.pulling = false; return false; });   // hors ligne → local reste la vérité
+      .catch(() => { if (quitTimer) clearTimeout(quitTimer); c.pulling = false; return false; });   // hors ligne → local reste la vérité
   }
 
   /* GENERATED SHARED KiwiMenuMerge BEGIN */

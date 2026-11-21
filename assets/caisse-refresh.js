@@ -87,7 +87,7 @@ try { (function () {
    * Tout en parallèle : ces quatre appels ne dépendent pas les uns des autres,
    * et le commerçant attend devant l'écran. Aucun ne peut faire échouer le
    * bouton — chacun se rabat sur « je n'ai rien appris ». */
-  var busy = null;
+  var busy = null, TASK_MS = 20000;
 
   function run() {
     if (busy) return busy;                     // double tap = un seul aller-retour
@@ -104,8 +104,18 @@ try { (function () {
       var p;
       try { p = fn(); } catch (_) { return Promise.resolve(null); }
       if (!p || typeof p.then !== 'function') return Promise.resolve(null);
-      return p.then(function (v) { if (v === true && label) changed.push(label); return v; })
-        .catch(function () { return null; });
+      return capped(p.then(function (v) { if (v === true && label) changed.push(label); return v; }), null);
+    }
+    /* Aucun module ne retient le tour. Passé TASK_MS sans réponse il compte pour
+     * « rien appris » : sans cette borne, un seul appel muet gardait `busy`
+     * pour toujours, et le rafraîchissement automatique ne repartait plus
+     * avant le rechargement de la caisse. */
+    function capped(p, fallback) {
+      return new Promise(function (resolve) {
+        var t = setTimeout(function () { resolve(fallback); }, TASK_MS);
+        p.then(function (v) { clearTimeout(t); resolve(v); },
+          function () { clearTimeout(t); resolve(fallback); });
+      });
     }
 
     var cat = window.KiwiBoutiqueCatalog;
@@ -124,7 +134,7 @@ try { (function () {
       carte && carte.fetch ? task('carte', function () { return carte.fetch(); }) : null,
       cfg && cfg.reload ? task(null, function () { return cfg.reload(); }) : null,
       box && box.refresh
-        ? Promise.resolve().then(function () { return box.refresh(); }).catch(function () { return -1; })
+        ? capped(Promise.resolve().then(function () { return box.refresh(); }), -1)
         : Promise.resolve(-1),
     ]).then(function (r) {
       /* Les rangs suivent l'ordre du tableau ci-dessus : inventaire, documents,

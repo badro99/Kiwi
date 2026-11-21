@@ -1,5 +1,5 @@
 {
-  "sha256": "6460aa75aa745a6814b54c8a4a369249ba29854bd0b516ca23dd72bb04c4e118",
+  "sha256": "43233ca6eb1f7d3e76a24fa46c34abb65ab77eba61b30517a813dc69d1fd2730",
   "bind": "  const editor = window.KiwiMenuCatalogParts.item_editor({ store, tr, T, esc, catById, itemById, optsOf, optById, cleanFormula, fmt, fmtPct, venueName, promptText, render, addCategory, renameCategory, deleteCategory, addSubcategory, deleteItem, addItem, updateItem, confirmThen, categoryStationModal, stationsModal, optsModal, PLUS, TRASH, PICKER_SEARCH, PICKER_CHEVRON });\n",
   "parts": [
     {
@@ -24,9 +24,9 @@
         },
         {
           "start": 155884,
-          "end": 195138,
+          "end": 195629,
           "offset": 21670,
-          "length": 39254,
+          "length": 39745,
           "replacement": "  /* menu-state: lifecycle owned by state. */\n"
         }
       ],
@@ -340,8 +340,8 @@
       "suffix": "\n    return { toggleAvailable };\n  };\n})(window.KiwiMenuCatalogParts = window.KiwiMenuCatalogParts || {});\n",
       "fragments": [
         {
-          "start": 198018,
-          "end": 198160,
+          "start": 198509,
+          "end": 198651,
           "offset": 185,
           "length": 147,
           "replacement": "    toggleAvailable: window.KiwiMenuCatalogParts.availability({ store, updateItem, itemById }).toggleAvailable,",

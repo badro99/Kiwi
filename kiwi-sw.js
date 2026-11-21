@@ -99,7 +99,7 @@ var SHELL = [
   '/assets/menu-catalog/formulas.js?v=3',
   '/assets/menu-catalog/item-list.js?v=3',
   '/assets/menu-catalog/modifiers.js?v=5',
-  '/assets/menu-catalog/state.js?v=16',
+  '/assets/menu-catalog/state.js?v=17',
   '/assets/pressing/custody.js?v=54',
   '/assets/pressing/rack.js?v=53',
   '/assets/pressing/pickup.js?v=53',
@@ -165,7 +165,7 @@ var SHELL = [
   '/assets/caisse/offline.js?v=10',
   '/assets/caisse-app.js?v=51',
   '/assets/caisse-loyalty-reward.js?v=7',
-  '/assets/caisse-refresh.js?v=9',
+  '/assets/caisse-refresh.js?v=10',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
      dans la coquille · en silence, puisque install() avale l'échec. Et c'est
@@ -229,7 +229,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=31',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
-  '/assets/pages/dashboard-startup.js?v=267',
+  '/assets/pages/dashboard-startup.js?v=268',
   '/assets/pages/dashboard-loader.js?v=107',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -369,7 +369,7 @@ var SHELL = [
   '/assets/operations-ui.js?v=33',
   '/assets/live-link/queue-store.js?v=25',
   '/assets/live-link/sale-identity.js?v=4',
-  '/assets/live-link.js?v=131',
+  '/assets/live-link.js?v=132',
   '/assets/expenses/index.js?v=4',
   '/assets/expenses/engine.js?v=3',
   '/assets/expenses/strings.js?v=2',
@@ -457,7 +457,7 @@ var SHELL = [
   '/assets/delivery-collect.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
-  '/assets/inventory-ledger.js?v=18',
+  '/assets/inventory-ledger.js?v=19',
   '/assets/maison-stock-movements.js?v=9',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=20',

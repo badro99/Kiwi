@@ -189,7 +189,7 @@
       var m = merchant();
       if (!m) { arm(); return; }
       busy = true;
-      fetch('/api/feed?voids=1&merchant=' + encodeURIComponent(m), { headers: { Accept: 'application/json' } })
+      fetch('/api/feed?voids=1&merchant=' + encodeURIComponent(m), { headers: { Accept: 'application/json' }, signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined })
         .then(function (r) { return (r && r.ok) ? r.json() : null; })
         .then(function (d) {
           if (merchant() !== m) return;
