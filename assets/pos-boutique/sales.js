@@ -1,7 +1,7 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=342';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=238';
-import { offerRegister } from './inventory.js?v=238';
-import { ticketOwner } from './ticket-owner.js?v=6';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=343'; import { tillPriceList as tpl } from './price-list.js?v=1';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=239';
+import { offerRegister } from './inventory.js?v=239';
+import { ticketOwner } from './ticket-owner.js?v=7';
 import { ticketRemise } from './ticket-remise.js?v=5';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
 import { mountBargain } from './bargain-ui.js?v=3';
@@ -386,7 +386,7 @@ import { photoImg } from '../retail-photos.js?v=5';
         ${!t.num && t.numError ? '<button class="bq-tk-retry" id="bq-tk-retry">Réessayer</button>' : ''}
         ${t.lines.length ? '<button class="bq-tk-reset" id="bq-tk-reset">Vider</button>' : ''}
       </div>
-      <div class="bq-tk-meta">${clientRow(t)}${window.KiwiTillPriceList ? window.KiwiTillPriceList.chipHtml() : ''}${rewardRow(t)}</div>
+      <div class="bq-tk-meta">${clientRow(t)}${tpl() ? tpl().chipHtml(t.client) : ''}${rewardRow(t)}</div>
       <div class="bq-tk-lines" id="bq-tk-lines">
         ${t.lines.length ? t.lines.map((ln, i) => lineRow(ln, i)).join('') + pairRow(t) : `
           <div class="bq-tk-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">

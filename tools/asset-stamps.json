@@ -1648,12 +1648,12 @@
     "sha": "bee5b88b8cabff28"
   },
   "assets/pos-boutique.css": {
-    "v": "342",
+    "v": "343",
     "sha": "b684eddfee44a144"
   },
   "assets/pos-boutique.js": {
-    "v": "342",
-    "sha": "95c00c2e0e8e8676"
+    "v": "343",
+    "sha": "0612b56aa6409175"
   },
   "assets/pos-boutique/bargain-ui.js": {
     "v": "3",
@@ -1664,16 +1664,16 @@
     "sha": "7234a8ebd42e4f26"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "238",
-    "sha": "a45abc29888321d3"
+    "v": "239",
+    "sha": "7e9231752b0beb8f"
   },
   "assets/pos-boutique/delivery-card.js": {
     "v": "10",
     "sha": "c1c7e9fb01688344"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "156",
-    "sha": "a1ef7dfe54fc9752"
+    "v": "157",
+    "sha": "c0fde5fddda3b8f0"
   },
   "assets/pos-boutique/exchange.js": {
     "v": "6",
@@ -1688,8 +1688,8 @@
     "sha": "be11ff98121e6e25"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "238",
-    "sha": "386b25b81d09fd15"
+    "v": "239",
+    "sha": "eb58d3e1fe01409a"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "25",
@@ -1719,6 +1719,10 @@
     "v": "2",
     "sha": "30ec6df3ff7d4a9a"
   },
+  "assets/pos-boutique/price-list.js": {
+    "v": "1",
+    "sha": "3c33dffd6df37698"
+  },
   "assets/pos-boutique/receipt-doc.js": {
     "v": "3",
     "sha": "6959e9686e141add"
@@ -1732,8 +1736,8 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "238",
-    "sha": "1945fc08228078a4"
+    "v": "239",
+    "sha": "9959007c4aea8b2c"
   },
   "assets/pos-boutique/search.js": {
     "v": "19",
@@ -1752,12 +1756,12 @@
     "sha": "c2188a2b942fc4c9"
   },
   "assets/pos-boutique/ticket-number.js": {
-    "v": "4",
-    "sha": "acc0992e2568926e"
+    "v": "5",
+    "sha": "53f4c8460f3c337b"
   },
   "assets/pos-boutique/ticket-owner.js": {
-    "v": "6",
-    "sha": "c4603ac5169ba889"
+    "v": "7",
+    "sha": "4b00f62b3f465b1c"
   },
   "assets/pos-boutique/ticket-remise.js": {
     "v": "5",
@@ -1784,16 +1788,16 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "470",
-    "sha": "0f7cc06b595bc6f8"
+    "v": "471",
+    "sha": "c6b6cc7d3a2b5f63"
   },
   "assets/pos-epicerie.css": {
-    "v": "41",
+    "v": "42",
     "sha": "d6fa42fcbe6f00d8"
   },
   "assets/pos-epicerie.js": {
-    "v": "41",
-    "sha": "f996de80c8af11d8"
+    "v": "42",
+    "sha": "97ef4b114cdc1cbd"
   },
   "assets/pos-epicerie/carnet.js": {
     "v": "15",
@@ -2404,8 +2408,8 @@
     "sha": "6145873b12f5e69b"
   },
   "assets/till-price-list.js": {
-    "v": "1",
-    "sha": "35a0d1970189afc9"
+    "v": "2",
+    "sha": "21f50bc670f15ece"
   },
   "assets/till-tenant.js": {
     "v": "7",

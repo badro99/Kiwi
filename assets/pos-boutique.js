@@ -1,11 +1,11 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=238';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=156';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=238';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=238';
-import { ticketOwner } from './pos-boutique/ticket-owner.js?v=6';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=239';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=157';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=239';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=239';
+import { ticketOwner } from './pos-boutique/ticket-owner.js?v=7';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=1';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
-import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=4'; import './till-price-list.js?v=1';   // tarifs (gros, jomla) : window.KiwiTillPriceList
+import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=5'; import { tillPriceList as tpl } from './pos-boutique/price-list.js?v=1';   // tarifs (gros, jomla)
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=25'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=2'; import { mountSellerPick, sellerPickOn } from './pos-boutique/seller-pick.js?v=1';
 import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zDrawerCash, zDrawerMoves, zDrawerRows, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=10'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=23'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11'; import { bqTransfers } from './pos-boutique/transfers.js?v=7';
 
@@ -63,7 +63,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   function rebuildCatalog() {
     if (!window.KiwiBoutiqueCatalog) { RAYONS = []; P = {}; BY_EAN = {}; return; }
     const c = window.KiwiBoutiqueCatalog.compat();
-    RAYONS = c.RAYONS; P = c.P; BY_EAN = c.BY_EAN; if (window.KiwiTillPriceList) window.KiwiTillPriceList.apply(P);   // le tarif du ticket (P est une copie)
+    RAYONS = c.RAYONS; P = c.P; BY_EAN = c.BY_EAN; if (tpl()) tpl().apply(P);   // le tarif du ticket (P est une copie)
   }
   rebuildCatalog();
 
@@ -1594,7 +1594,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
         rebuildCatalog();
         if (root) { pruneTicket(); refreshAfterCatalog(); }
       });
-      if (window.KiwiTillPriceList) window.KiwiTillPriceList.subscribe(() => { if (intake.open) return; rebuildCatalog(); if (root) { pruneTicket(); refreshAfterCatalog(); } });   // tarif changé : le ticket se re-prix
+      if (tpl()) tpl().subscribe(() => { if (intake.open) return; rebuildCatalog(); if (root) { pruneTicket(); refreshAfterCatalog(); } });   // tarif changé : le ticket se re-prix
     }
     /* Le stock que la caisse vient de toucher n'a pas pris sur cette tablette
        (stockage plein ou refusé) : la vente continue et la baisse part au
@@ -1853,7 +1853,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       num: t.num, syncId: t.syncId || newSaleId(), clientId: c ? c.id : null,
       reward: t.reward ? Object.assign({}, t.reward) : null,
       remiseAuth: (t.remiseAuth && typeof t.remiseAuth === 'object') ? Object.assign({}, t.remiseAuth) : null,
-      priceList: window.KiwiTillPriceList ? { ...window.KiwiTillPriceList.current(), fields: window.KiwiTillPriceList.saleFields(), label: window.KiwiTillPriceList.receiptLabel() } : null,
+      priceList: tpl() ? { ...tpl().current(), fields: tpl().saleFields(), label: tpl().receiptLabel() } : null,
       lines: t.lines.map((ln) => {
         const p = P[ln.pid] || {};
         return {
@@ -2029,7 +2029,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
               payload.creditAmountCents = Math.round((parts || []).filter(x => x.m === 'avoir')
                 .reduce((sum, x) => sum + (+x.amount || 0), 0) * 100);
             }
-            bqPost(sale, payload); if (window.KiwiTillPriceList) window.KiwiTillPriceList.reset();   // le ticket suivant repart au prix principal
+            bqPost(sale, payload); if (tpl()) tpl().reset();   // le ticket suivant repart au prix principal
           }
         } catch (_) {}
         let ptsLine = '';

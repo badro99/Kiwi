@@ -16,7 +16,7 @@
  *   apply(P)          remplace item.price par le prix du tarif (item.mainPrice garde le principal)
  *   priceFor(id, mad) le prix d'un article dans le tarif courant, en MAD
  *   current()         { id, name, isMain, why, approvedBy }
- *   onCustomer(id)    une fiche attachée (ou 'passage', ou null)
+ *   onCustomer(id)    une fiche attachée (ou 'passage', ou null) ; chipHtml(id) l'appelle tout seul
  *   choose(id)        changer de tarif (code responsable si ce n'est pas celui de la fiche)
  *   saleFields()      { priceListId, priceListApproval } à joindre à la vente
  *   receiptLabel()    « Tarif · Gros » pour le reçu, '' au principal
@@ -175,7 +175,18 @@
     document.head.appendChild(s);
   }
   var ICON = 'M856-390 570-104q-12 12-27 18t-30 6q-15 0-30-6t-27-18L103-457q-11-11-17-25.5T80-513v-287q0-33 23.5-56.5T160-880h287q16 0 31 6.5t26 17.5l352 353q12 12 17.5 27t5.5 30q0 15-5.5 29.5T856-390ZM513-160l286-286-353-354H160v286l353 354ZM260-640q25 0 42.5-17.5T320-700q0-25-17.5-42.5T260-760q-25 0-42.5 17.5T200-700q0 25 17.5 42.5T260-640Zm220 160Z';
-  function chipHtml() {
+  /* `clientId` (facultatif) : la fiche du ticket qu'on dessine. Le ticket se
+     redessine à chaque fiche attachée ou retirée ; le tarif la suit au tour
+     suivant, jamais pendant le dessin. */
+  var pendingClient = null;
+  function chipHtml(clientId) {
+    if (arguments.length) {
+      var cid = clientId && clientId !== 'passage' ? String(clientId) : '';
+      if (cid !== sel.clientId && pendingClient !== cid) {
+        pendingClient = cid;
+        setTimeout(function () { var next = pendingClient; pendingClient = null; if (next != null && next !== sel.clientId) onCustomer(next); }, 0);
+      }
+    }
     if (!others().length) return '';
     css();
     var c = current();
@@ -226,6 +237,9 @@
     lists: function () { return [mainList()].concat(others()); },
     chipHtml: chipHtml, open: open,
   };
+  /* Les caisses à script classique (épicerie) le trouvent sur le service de vente
+     qu'elles lisent déjà (assets/pos-sale.js) : aucun global de plus chez elles. */
+  try { if (window.KiwiPosSale && !window.KiwiPosSale.priceList) window.KiwiPosSale.priceList = window.KiwiTillPriceList; } catch (_) {}
   refresh();
   setInterval(function () { if (!document.hidden) refresh(); }, REFRESH_MS);
   window.addEventListener('online', function () { refresh(); });
