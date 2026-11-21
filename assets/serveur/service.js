@@ -1928,6 +1928,10 @@
         tableSplits.set(to, tableSplits.get(from));
         tableSplits.delete(from);
       }
+      /* Le « Lancer » resté sans réponse suit la table : laissé sous l'ancien numéro, il repartait vers la
+         table vide au retour du réseau, et la nouvelle table renvoyait les mêmes plats sous une autre référence. */
+      const movedBatch = svReadPending(from);
+      if (movedBatch) { svForgetPending(from); svWritePending(to, movedBatch); }
       // L'acompte suit la visite déplacée, comme son partage.
       if (serviceVisitCredit.has(from)) serviceVisitCredit.set(to, serviceVisitCredit.get(from));
       else serviceVisitCredit.delete(to);
@@ -2053,6 +2057,8 @@
         dirtyOrders.delete(source);
         dirtyOrders.add(target);
       }
+      const mergedBatch = svReadPending(source);   // même règle qu'au déplacement ; un lot déjà en attente sur la cible garde la sienne
+      if (mergedBatch) { svForgetPending(source); if (!svReadPending(target)) svWritePending(target, mergedBatch); }
 
       /* Ce qui a déjà été payé sur l'une ou l'autre table suit la visite
          fusionnée : on facture le reste que le serveur vient de calculer, et
