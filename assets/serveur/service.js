@@ -2763,8 +2763,13 @@
       empPayRefsWrite(stored);
     }
 
-    function keepServiceBillOpen(tableId, saved) {
+    /* `reopened` (la méthode, 'card' ou 'cash') : le serveur a refusé un paiement parce que la visite
+       qu'il visait est soldée et que la table a rouvert sous une autre. Rien n'a été écrit. On jette tout
+       ce qui appartenait à l'ancienne note : le partage (feuille, parts, leurs identifiants de vente),
+       l'identifiant de visite, puis on relit. La relance part contre la nouvelle note, à son montant. */
+    function keepServiceBillOpen(tableId, saved, reopened) {
       const t = tables[tableId];
+      const oldSplit = tableSplits.get(tableId) || (splitState.tableId === tableId && splitState.flow) || null;
       (Array.isArray(saved.settledOrders) ? saved.settledOrders : [])
         .forEach((orderId) => serviceCanonicalOrders.delete(String(orderId)));
       employeePaymentRefForget(tableId);
@@ -2781,6 +2786,16 @@
       try { reconcileCanonicalServiceBill(tableId); } catch (_) {}
       if (currentTab === 'tables') renderTables();
       if (activeTableId === tableId) renderTableDetail();
+      if (reopened) {
+        for (let i = 0; i < Math.max(oldSplit && oldSplit.parts ? oldSplit.parts.length : 0, 12); i++) employeePaymentRefForget(tableId + ':split:' + i);
+        serviceTableSessions.delete(tableId);   // et l'ancienne note elle-même : relue, l'addition ne vient que de la nouvelle visite (sinon 14,00 déjà payés s'y ajoutaient)
+        Array.from(serviceCanonicalOrders.entries()).forEach(([k, o]) => { if (o && String(o.table) === String(tableId)) serviceCanonicalOrders.delete(k); }); delete tableOrders[tableId];
+        if (splitState.tableId === tableId) { splitState.flow = null; if ($('#split-modal').classList.contains('is-open')) closeSplitModal({ skipRevert: true }); }
+        if (reopened === 'card') toast(employeePick(`Table ${tableId} · la note a changé. La carte a pu être débitée : ne la repassez pas, vérifiez le ticket du terminal avant de réessayer`, `Table ${tableId} · the bill changed. The card may already have been charged: do not run it again, check the terminal slip before retrying`, `الطاولة ${tableId} · تغيّرت الفاتورة. ربما خُصم المبلغ من البطاقة: لا تمرّرها مجدداً، تحقّق من وصل الجهاز قبل إعادة المحاولة`), 9000);
+        else toast(employeePick(`Table ${tableId} · la note a changé, vérifiez le total puis réessayez`, `Table ${tableId} · the bill changed, check the total then try again`, `الطاولة ${tableId} · تغيّرت الفاتورة، تحقّق من المجموع ثم أعد المحاولة`), 6000);
+        try { pollServiceSync(); } catch (_) {}
+        return;
+      }
       const rest = Math.max(0, Number(saved.remainingCents) || 0) / 100;
       toast(employeePick( `Table ${tableId} · reste ${fmtMADcents(rest)} : une commande est arrivée pendant l'encaissement`, `Table ${tableId} · ${fmtMADcents(rest)} left: an order arrived during payment`, `الطاولة ${tableId} · المتبقي ${fmtMADcents(rest)} : وصل طلب أثناء الدفع`), 6500);
     }
@@ -3188,8 +3203,9 @@ cashModal.addEventListener('click', (e) => {
         } else if (err && !err.refused) toast(SV_PAY_OFFLINE_MSG, 6000);
         /* Déjà soldée (la caisse, un autre téléphone, ou une note rouverte sous une autre visite) : rien
            à encaisser ici, la salle est relue. Le message ne nomme pas qui l'a réglée, il ne le sait pas. */
-        /* Soldée ; ou rouverte sous une autre visite : rien n'est écrit sur l'ancienne, on oublie son identifiant, on relit, et la relance (même identifiant de vente) part contre la nouvelle note. */
-        else if (err.message === 'visit-already-settled') { if (err.reopened) { serviceTableSessions.delete(id); toast(employeePick(`Table ${id} · la note a changé, vérifiez le total puis réessayez`, `Table ${id} · the bill changed, check the total then try again`, `الطاولة ${id} · تغيّرت الفاتورة، تحقّق من المجموع ثم أعد المحاولة`), 6000); } else toast(employeePick(`Table ${id} · déjà réglée, rien à encaisser`, `Table ${id} · already settled, nothing to collect`, `الطاولة ${id} · سبق دفعها، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }
+        /* Rouverte sous une autre visite (ou une part d'un partage d'une autre visite) : rien n'est écrit, l'ancienne note est jetée (keepServiceBillOpen). Soldée : rien à encaisser. */
+        else if (err.reopened) keepServiceBillOpen(id, {}, method || 'card');
+        else if (err.message === 'visit-already-settled') { toast(employeePick(`Table ${id} · déjà réglée, rien à encaisser`, `Table ${id} · already settled, nothing to collect`, `الطاولة ${id} · سبق دفعها، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }
         else if (err.message === 'server-payments-off') toast(employeePick(`Table ${id} · l'encaissement se fait à la caisse`, `Table ${id} · payment is taken at the till`, `الطاولة ${id} · الدفع يتم في الصندوق`), 5200); else toast(employeePick(`Table ${id} · paiement non enregistré, réessayez`, `Table ${id} · payment not saved, try again`, `الطاولة ${id} · لم يُسجَّل الدفع، أعد المحاولة`), 5200);
         return false;
       } finally {
@@ -3849,8 +3865,9 @@ cashModal.addEventListener('click', (e) => {
           if (payMethod === 'card') toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, ne repassez pas la carte, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not confirmed, do not run the card again, just retry`, `الطاولة ${tableId || ''} · لم يتأكد الجزء ${partIdx + 1}، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط`), 6000);
           else toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not confirmed, try again`, `الطاولة ${tableId || ''} · لم يتأكد الجزء ${partIdx + 1}، أعد المحاولة`), 6000);
         } else if (err && !err.refused) toast(employeePick("Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.", 'No network. The payment is not recorded, try again when the network is back.', 'لا توجد شبكة. لم يُسجَّل الدفع، أعد المحاولة عند عودة الشبكة.'), 6000);
-        /* Soldée ; ou rouverte sous une autre visite : rien n'est écrit sur l'ancienne, on oublie son identifiant, on relit, et la relance (même identifiant de vente) part contre la nouvelle note. */
-        else if (err.message === 'visit-already-settled') { if (err.reopened) { serviceTableSessions.delete(tableId || ''); toast(employeePick(`Table ${tableId || ''} · la note a changé, vérifiez le total puis réessayez`, `Table ${tableId || ''} · the bill changed, check the total then try again`, `الطاولة ${tableId || ''} · تغيّرت الفاتورة، تحقّق من المجموع ثم أعد المحاولة`), 6000); } else toast(employeePick(`Table ${tableId || ''} · déjà réglée, rien à encaisser`, `Table ${tableId || ''} · already settled, nothing to collect`, `الطاولة ${tableId || ''} · سبق دفعها، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }
+        /* Rouverte sous une autre visite (ou une part d'un partage d'une autre visite) : rien n'est écrit, l'ancienne note est jetée (keepServiceBillOpen). Soldée : rien à encaisser. */
+        else if (err.reopened && tableId) keepServiceBillOpen(tableId, {}, payMethod);
+        else if (err.message === 'visit-already-settled') { toast(employeePick(`Table ${tableId || ''} · déjà réglée, rien à encaisser`, `Table ${tableId || ''} · already settled, nothing to collect`, `الطاولة ${tableId || ''} · سبق دفعها، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }
         else toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non enregistrée, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not saved, try again`, `الطاولة ${tableId || ''} · لم يُسجَّل الجزء ${partIdx + 1}، أعد المحاولة`), 5200);
         return false;
       } finally {
