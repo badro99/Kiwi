@@ -836,8 +836,8 @@
     "sha": "079d2785b601cc2e"
   },
   "assets/i18n.js": {
-    "v": "59",
-    "sha": "8b1f5807ef047a15"
+    "v": "60",
+    "sha": "ab6e92e7f523d90a"
   },
   "assets/icons/material/sprite.access.svg": {
     "v": "1",
@@ -1492,8 +1492,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2229",
-    "sha": "34e2452443a5f74c"
+    "v": "2230",
+    "sha": "47f74c36c644b848"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1502,6 +1502,10 @@
   "assets/pages-pro/boutique-web-orders.js": {
     "v": "13",
     "sha": "7abe777e8ea9c4fb"
+  },
+  "assets/pages-pro/credit-book.js": {
+    "v": "1",
+    "sha": "7096b9f44ddbd6d3"
   },
   "assets/pages-pro/restaurant-stations.js": {
     "v": "2",
@@ -1528,8 +1532,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "269",
-    "sha": "6014f9f943203d0e"
+    "v": "270",
+    "sha": "fb8ba7d651357724"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2448,8 +2452,8 @@
     "sha": "d1a57d0eb2a5723e"
   },
   "assets/venues/data.js": {
-    "v": "4",
-    "sha": "c62dabb90b2af89a"
+    "v": "5",
+    "sha": "4be331bdf0309f5d"
   },
   "assets/venues/helpers.js": {
     "v": "10",
