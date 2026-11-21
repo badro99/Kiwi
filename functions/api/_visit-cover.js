@@ -78,7 +78,8 @@ export async function visitCredits(env, merchant, sessionIds) {
  * ran, and the phone's sale id is its own: the same bill entered the books
  * twice (tools/shared-table-two-devices-browser-test.mjs, « défaut connu »).
  * A closed visit whose tickets are all paid has nothing left to collect.
- * Called for a waiter phone naming its visit only: the till keeps its rule
+ * Called for the waiter app naming its visit only (an employee, or the owner or
+ * an operator using the app, which says `surface: 'serveur'`): the till keeps its rule
  * (« a closed visit must still be allowed to write its sale », its own close
  * can arrive first), and a replay of a sale already stored never gets here.
  * Returns { status, body } to refuse, or null. */

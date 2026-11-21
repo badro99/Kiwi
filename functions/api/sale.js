@@ -612,7 +612,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     }
     stored = true;
   }
-  if (!stored && employee && requestedSession) { const refused = await staleVisitPayment(env, merchant, serviceSession, employeeTable); if (refused) return json(refused.body, refused.status); }
+  if (!stored && (employee || b.surface === 'serveur') && requestedSession) { const refused = await staleVisitPayment(env, merchant, serviceSession, employeeTable); if (refused) return json(refused.body, refused.status); }
 
   /* SAME SETTLEMENT, DIFFERENT ID. The id above is derived from the table
      visit when the till names a table without a session, so a replay after

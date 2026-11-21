@@ -19,7 +19,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fixture } from './server-money-fixture.mjs';
-import { employeeToken, employeeCookie, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
+import { employeeToken, employeeCookie, tillToken, TILL_COOKIE, makeSession, SESS_COOKIE } from '../functions/auth/_lib.js';
 import { onRequestPost as sale } from '../functions/api/sale.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -33,6 +33,7 @@ doc('team', { members: [{ id: 'w1', firstName: 'Salma', lastName: 'Test', functi
 doc('attendance', { entries: [{ id: 'att-1', staffId: 'w1', memberId: 'w1', name: 'Salma Test', role: 'serveur', inTs: now - 3600e3, outTs: 0 }] });
 const waiter = employeeCookie(await employeeToken(env.AUTH_SECRET, { merchant, staffId: 'w1', authVersion: 0 })).split(';')[0];
 const till = `${TILL_COOKIE}=${await tillToken(env.AUTH_SECRET, merchant)}`;
+const owner = `${SESS_COOKIE}=${await makeSession('money-owner', env.AUTH_SECRET)}`;
 
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
@@ -84,6 +85,16 @@ sql.prepare("INSERT INTO table_sessions (id, merchant, mode, table_no, status, o
 sql.prepare("INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, created_ts, updated_ts, session_id, paid_ts) VALUES ('other-o', 'server-other-shop', 1, 'table', '8', 28, '[]', 'served', ?, ?, 'tsx-other-shop-000005', ?)").run(now, now, now);
 r = await pay(waiter, { id: 'emp-pay-other-5', table: '8', session: 'tsx-other-shop-000005', amount: 28, amountCents: 2800, ref: 'ST-103', label: 'ST-103' });
 check(!(r.status === 409 && r.body.error === 'visit-already-settled'), `la visite d'une autre boutique ne décide rien ici (${r.status} ${r.body.error || ''})`);
+
+/* 6 · le patron sert lui-même avec l'app serveur (pas de fiche employé) : même garde. */
+visit('tsx-owner-on-the-app-06', '9');
+r = await pay(owner, { id: 'own-pay-stale-6', table: '9', session: 'tsx-owner-on-the-app-06', surface: 'serveur', amount: 28, amountCents: 2800, ref: 'ST-104', label: 'ST-104' });
+check(r.status === 409 && r.body.error === 'visit-already-settled' && salesById('own-pay-stale-6') === 0, `patron sur l'app serveur, visite déjà soldée : refusé (${r.status} ${r.body.error || ''})`);
+
+/* 7 · le même patron à la caisse (sans « surface ») garde la règle de la caisse. */
+visit('tsx-owner-at-the-till-07', '10');
+r = await pay(owner, { id: 'own-till-pay-7', table: '10', session: 'tsx-owner-at-the-till-07', amount: 28, amountCents: 2800, ref: 'T10', label: 'T10' });
+check(r.status === 200 && r.body.ok && salesById('own-till-pay-7') === 1, `patron à la caisse : la vente d'une visite qu'il vient de clore passe (${r.status} ${r.body.error || ''})`);
 
 f.close();
 console.log(`serveur-stale-visit-payment-test: ${checks} checks passed`);
