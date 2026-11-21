@@ -87,6 +87,11 @@
     rows = rows.filter((d) => d && (+d.dueCents || 0) > 0).sort((a, b) => (+a.ts || 0) - (+b.ts || 0));
     if (!host.isConnected && !opts.detached) return;
     if (!rows.length) { host.replaceChildren(); return; }
+    /* La caisse repeint l'écran d'elle-même (catalogue, promos, retour au
+       premier plan) et rappelle render() : un encaissement en cours de saisie
+       pour une livraison toujours due garde son formulaire et son montant. */
+    const typing = host.querySelector('.kdc-form');
+    if (typing && rows.some((d) => keyOf(d) === typing.getAttribute('data-kdc-for'))) return;
     const total = rows.reduce((n, d) => n + (+d.dueCents || 0), 0);
     host.innerHTML = `<section class="kdc" aria-labelledby="kdc-h">
       <div class="kdc-head"><h2 id="kdc-h">Livraisons à encaisser</h2>
@@ -104,11 +109,14 @@
     });
   }
 
+  const keyOf = (d) => String(d.saleId || d.id || d.ref || '');
+
   function openForm(host, opts, d, card) {
     if (!d || !card || card.querySelector('.kdc-form')) return;
     let id = payId();                        /* un paiement = une clé, gardée pour ses nouveaux essais */
     const form = document.createElement('form');
     form.className = 'kdc-form';
+    form.setAttribute('data-kdc-for', keyOf(d));
     form.innerHTML = `<label><span>Montant reçu en espèces</span>
         <input name="amount" inputmode="decimal" autocomplete="off" value="${esc(String((+d.dueCents || 0) / 100).replace('.', ','))}"></label>
       <p class="kdc-err" role="alert" hidden></p>
@@ -150,6 +158,7 @@
       if (opts.onCollected) opts.onCollected({ id: res.sale.id, amountCents, ts: +res.sale.ts || Date.now() }, d);
       if (opts.toast) opts.toast(`Livraison encaissée, ${mad(amountCents)}`, 3600, 'success',
         (+res.dueCents || 0) > 0 ? `Reste ${mad(res.dueCents)} à recevoir` : 'Livraison soldée');
+      form.remove();
       void render(host, opts);
     });
   }
