@@ -1164,20 +1164,20 @@
     /* Background refreshes wait for the waiter's hand. A poll or the minute
        tick rebuilt the menu or the table sheet mid-tap: the button under the
        finger vanished before its click, and a kitchen note lost focus and
-       closed the keyboard. A rebuild now waits until no finger is down, no
-       field is focused and the last touch is 900 ms old. */
+       closed the keyboard. A rebuild waits until no finger is down, no field it
+       would replace is focused (a note holds the table sheet, never the floor) and the last touch is 900 ms old. */
     let svTouching = false, svLastTouch = 0;
     ['pointerdown', 'pointerup', 'pointercancel'].forEach((type) => {
       document.addEventListener(type, () => { svTouching = type === 'pointerdown'; svLastTouch = Date.now(); }, true);
     });
-    function svUserBusy() {
+    function svUserBusy(key) {
       const a = document.activeElement;
-      if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
+      if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.closest(key === 'detail' ? '#screen-table' : '#screen-main')) return true;
       return svTouching || Date.now() - svLastTouch < 900;
     }
     const svDeferred = {};
     function svWhenIdle(key, fn) {
-      if (!svUserBusy()) { clearTimeout(svDeferred[key]); delete svDeferred[key]; fn(); return; }
+      if (!svUserBusy(key)) { clearTimeout(svDeferred[key]); delete svDeferred[key]; fn(); return; }
       if (svDeferred[key]) return;
       svDeferred[key] = setTimeout(() => { delete svDeferred[key]; svWhenIdle(key, fn); }, 700);
     }

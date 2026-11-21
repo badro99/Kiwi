@@ -17,6 +17,7 @@
 import assert from 'node:assert/strict';
 import { harness, chromium } from './serveur-live-harness.mjs';
 import { suite } from './browser-trace.mjs';
+import * as eventsApi from '../functions/api/service/events.js';
 
 if (!chromium()) { console.log('○ skip: Chromium/puppeteer-core unavailable, browser assertions not executed'); process.exit(process.env.CI ? 1 : 0); }
 const h = await harness();
@@ -50,11 +51,8 @@ try {
     await tapDuringPoll(page, '.table-card[data-table="4"]');
     check(await page.evaluate(() => document.getElementById('new-table-modal')?.classList.contains('is-open')
       || document.querySelector('#nt-confirm')?.offsetParent != null), 'la table touchée pendant la synchro s’ouvre');
-    await h.sleep(400);
-    await page.click('#nt-confirm');
-    await page.waitForFunction(() => { const b = document.querySelector('[data-action="take-order"]'); return b && b.offsetParent; }, { timeout: 15000 });
-    await h.sleep(500);   // la feuille de table glisse (300 ms) : un clic plus tôt ferait défiler .app
-    await page.click('[data-action="take-order"]');
+    await h.tap(page, '#nt-confirm');
+    await h.tap(page, '[data-action="take-order"]');
     await page.waitForSelector('.menu-item[data-menu-id="it_msemen"]', { visible: true, timeout: 15000 });
 
     t.step('trois msemen, chacun touché pendant un tour de synchro');
@@ -71,6 +69,29 @@ try {
     check(page.errors.length === 0, 'aucune erreur de script' + (page.errors.length ? ' : ' + page.errors.join(' | ') : ''));
   });
 
+  /* Un champ retient le seul dessin qui le remplacerait. La note d'un plat
+     tenait le plan, la carte et les avis tant qu'elle avait le focus : le
+     serveur qui tapait « sans sucre » revenait sur un plan figé. */
+  await S.run('une note ouverte ne fige pas le plan', async (t) => {
+    const page = await h.openWaiter(t);
+    await h.tap(page, '.table-card[data-table="6"]');
+    await h.tap(page, '#nt-confirm');
+    await h.tap(page, '[data-action="take-order"]');
+    await h.tap(page, '.menu-item[data-menu-id="it_msemen"]');
+    await h.tap(page, '#menu-cart-bar.is-visible');
+    await h.tap(page, '.td-item-note');
+    await page.keyboard.type('sans sucre');
+    t.step('la caisse installe la table 5 pendant que la note est ouverte');
+    const res = await eventsApi.onRequestPost({ env: h.env, waitUntil() {}, request: new Request('https://kiwi-os.com/api/service/events', {
+      method: 'POST', headers: { Cookie: h.tillCookie, 'Content-Type': 'application/json', Origin: 'https://kiwi-os.com' },
+      body: JSON.stringify({ merchant: h.merchant, snapshot: { tables: [{ table: '5', status: 'ka-yaklo', covers: 3 }] } }) }) });
+    check(res.status === 200, 'la caisse publie la table 5');
+    await page.evaluate(() => pollServiceSync());
+    await page.waitForFunction(() => document.querySelector('.table-card[data-table="5"]')?.dataset.status === 'ka-yaklo', { timeout: 6000 }).catch(() => {});
+    check(await page.evaluate(() => document.querySelector('.table-card[data-table="5"]')?.dataset.status) === 'ka-yaklo', 'le plan derrière la fiche se repeint : la table 5 est occupée');
+    check(await page.evaluate(() => document.activeElement?.classList.contains('td-item-note') && document.activeElement.value === 'sans sucre'), 'la note garde le focus et ce qui est tapé');
+    check(page.errors.length === 0, 'aucune erreur de script' + (page.errors.length ? ' : ' + page.errors.join(' | ') : ''));
+  });
 } finally {
   await h.close();
 }
