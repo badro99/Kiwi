@@ -3,16 +3,20 @@
  * qui les applique, sur le schéma complet (schema.sql) dans un SQLite en mémoire.
  *
  * Ce que ce banc tient :
- *   · les rôles par défaut reproduisent la règle d'avant (parité) ;
- *   · tant que le patron n'a rien enregistré, aucune route ne change d'avis ;
- *   · ensuite, un droit accordé ouvre et un droit retiré ferme : approbation
- *     de remboursement et de stock au comptoir, annulation, réouverture,
- *     palier du tableau de bord ;
- *   · seul le patron (ou un opérateur) écrit, chaque écriture laisse sa ligne
- *     au journal, une boutique ne lit ni n'écrit celle d'un autre compte ;
- *   · aucune réponse ne contient un code ;
- *   · les anciens réglages du navigateur sont repris une seule fois ;
- *   · une remise ou des espèces sans le droit sont inscrites, jamais refusées.
+ *   · rien ne change avant l'ACTIVATION, et l'activation par défaut garde à
+ *     chacun exactement ses droits d'aujourd'hui (personne n'en gagne) ;
+ *   · ensuite, un droit accordé ouvre et un droit retiré ferme, route par
+ *     route : CHAQUE droit marqué « serveur » ou « journal » au catalogue est
+ *     prouvé ici contre la vraie route (la liste est vérifiée à la fin) ;
+ *   · aucun intitulé de poste ne donne le rôle du propriétaire, et une session
+ *     de gérant ne peut ni poser un tel intitulé ni toucher à sa propre fiche ;
+ *   · les anciens réglages du navigateur ne partent que personne par personne,
+ *     sur accord, et une règle joker n'est jamais étendue ;
+ *   · l'auteur d'un fait accompli est celui d'une preuve signée, jamais
+ *     l'identifiant que la caisse déclare ;
+ *   · tables 0028 absentes : la règle d'avant, partout, sans 503 ;
+ *   · seul le patron écrit, tout s'inscrit au journal, tout se défait ;
+ *   · aucune réponse ne contient un code.
  *
  * Les codes à quatre chiffres ci-dessous sont des valeurs de banc, inventées
  * pour ce fichier ; ils ne correspondent à aucun commerçant.
@@ -35,50 +39,56 @@ const movements = await imp('functions/api/inventory/movements.js');
 const cash = await imp('functions/api/cash-sessions.js');
 const tiers = await imp('functions/auth/_session-tier.js');
 const perms = await imp('functions/api/_permissions.js');
+const storeTier = await imp('functions/api/_store-tier.js');
+const saleTruth = await imp('functions/api/_sale-truth.js');
 const catalogRoute = await imp('functions/api/catalog.js');
-const { makeSession, SESS_COOKIE, TILL_COOKIE, tillToken, managerRefundProof, managerStockProof } = await imp('functions/auth/_lib.js');
+const credits = await imp('functions/api/store-credits.js');
+const store = await imp('functions/api/store.js');
+const config = await imp('functions/api/config.js');
+const { makeSession, SESS_COOKIE, TILL_COOKIE, tillToken, tillActorProof, managerRefundProof, managerStockProof } = await imp('functions/auth/_lib.js');
+const { tillSellerProof } = await imp('functions/api/_seller.js');
 
 const SECRET = 'staff-permissions-bench-secret-01';
 const SHOP = 'cafe-droits-banc';
 const OTHER = 'boutique-voisine-droits';
 const SISTER = 'cafe-droits-soeur';   // seconde boutique du MÊME compte
-const CODES = { owner: '6201', manager: '6202', caisse: '6203', voisin: '6204' };
+const CODES = { owner: '6201', manager: '6202', caisse: '6203', voisin: '6204', hind: '6205' };
 const SID_MGR = 'a'.repeat(32), SID_OWNER = 'b'.repeat(32);
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
+/* Chaque droit prouvé contre une vraie route s'inscrit ici ; la fin du banc
+   exige que tout droit « serveur » ou « journal » du catalogue y soit. */
+const proven = new Set();
+const prove = (perm, yes, msg) => { check(yes, `${perm} · ${msg}`); proven.add(perm); };
 
 /* ── 1 · Le catalogue ───────────────────────────────────────────────────── */
 console.log('■ Catalogue et rôles par défaut');
 {
-  check(Catalog.GROUPS.length === 10 && Catalog.ALL.length === 28 && new Set(Catalog.ALL).size === 28, '10 groupes, 28 droits, sans doublon');
+  check(Catalog.GROUPS.length === 10 && Catalog.ALL.length === 26 && new Set(Catalog.ALL).size === 26, '10 groupes, 26 droits, sans doublon');
   check(Catalog.GROUPS.every((g) => g.fr && g.en && g.ar && g.perms.every((p) => p.fr && p.en && p.ar && p.can.fr && p.can.en && p.can.ar)), 'chaque groupe et chaque droit existe en FR, EN et AR');
-  const text = JSON.stringify(Catalog.GROUPS);
-  check(!text.includes('—'), 'aucun tiret cadratin dans les libellés');
-  check(Catalog.effective('owner', [], Catalog.ALL).length === 28, 'le propriétaire a tout, même avec des retraits');
+  check(Catalog.ALL.every((id) => ['server', 'journal', 'till'].includes(Catalog.BY_ID[id].check) && ['office', 'till', 'both'].includes(Catalog.BY_ID[id].at) && Catalog.checkLabel(id, 'fr')),
+    'chaque droit dit où il est tenu (serveur, journal, caisse seule) et l’écran l’affiche');
+  check(JSON.stringify(Catalog.ALL.filter((id) => Catalog.BY_ID[id].check === 'till')) === '["sales.price","sales.void-sent"]',
+    'deux droits seulement sont tenus par la caisse seule, et l’écran le dit');
+  check(!Catalog.ALL.includes('sales.credit') && !Catalog.ALL.includes('sales.pricelist'), 'pas de droit sans route sur cette branche (carnet, listes de prix)');
+  check(!JSON.stringify(Catalog.GROUPS).includes('—'), 'aucun tiret cadratin dans les libellés');
+  check(!Catalog.PRESET_IDS.includes('owner') && Catalog.presetForRole('Propriétaire') === 'manager' && Catalog.presetForRole('Patronne') === 'manager'
+    && Catalog.ownerTitle('Direction') && !Catalog.ownerTitle('Gérant'), 'aucun intitulé ne donne le rôle du propriétaire : « Propriétaire » propose Manager');
   const mgr = Catalog.effective('manager');
-  check(mgr.includes('sales.refund') && mgr.includes('sales.cancel') && mgr.includes('stock.adjust') && mgr.includes('reports.revenue')
-    && !mgr.includes('reports.margins') && !mgr.includes('team.payroll') && !mgr.includes('settings.edit'),
-  'manager : remboursement, annulation, stock, chiffre d’affaires ; ni marges ni paie ni réglages (parité avec le palier)');
-  const cashier = Catalog.effective('cashier');
-  check(!cashier.includes('sales.refund') && !cashier.includes('sales.cancel') && !cashier.includes('stock.adjust') && !cashier.includes('sales.drawer') && !cashier.includes('sales.discount'),
-    'caisse : ni remboursement, ni annulation, ni stock, ni tiroir, ni remise au-delà du seuil');
-  check(Catalog.presetForRole('Caissière') === 'cashier' && Catalog.presetForRole('Gérant') === 'manager'
-    && Catalog.presetForRole('Propriétaire') === 'owner' && Catalog.presetForRole('Magasinier') === 'stock'
-    && Catalog.presetForRole('Serveur') === 'server' && Catalog.presetForRole('Vendeuse conseil') === 'cashier'
-    && Catalog.presetForRole('chef-manager') === 'manager', 'un intitulé libre tombe sur le bon rôle par défaut');
+  check(mgr.includes('sales.refund') && !mgr.includes('reports.margins') && !mgr.includes('team.payroll') && !mgr.includes('settings.edit'),
+    'rôle proposé Manager : ni marges, ni paie, ni réglages');
+  check(Catalog.presetForRole('Caissière') === 'cashier' && Catalog.presetForRole('Magasinier') === 'stock'
+    && Catalog.presetForRole('Serveur') === 'server' && Catalog.presetForRole('chef-manager') === 'manager', 'un intitulé libre tombe sur le bon rôle proposé');
   const eff = Catalog.effective('cashier', ['sales.refund', 'nope'], ['money.cash']);
   check(eff.includes('sales.refund') && !eff.includes('money.cash') && !eff.includes('nope'), 'rôle + ajouts − retraits ; un droit inconnu est ignoré');
-  const over = Catalog.overridesFor('cashier', [...Catalog.effective('cashier').filter((id) => id !== 'money.cash'), 'sales.refund']);
-  check(JSON.stringify(over) === JSON.stringify({ grants: ['sales.refund'], denies: ['money.cash'] }), 'les surcharges se réduisent au strict écart avec le rôle');
-  for (const l of ['fr', 'en', 'ar']) {
-    const s = Catalog.summary(eff, 'Lina', l);
-    check(s.includes('Lina') && s.length > 40 && !s.includes('—'), `résumé en clair (${l}) : « ${s.slice(0, 70)}… »`);
-  }
-  const legacy = Catalog.fromLegacy({ grants: [{ subject: 'caisse', action: 'action', resource: 'refund' }, 'write:catalog'], denies: [{ action: 'write', resource: 'customers' }] },
+  const fr = Catalog.summary(Catalog.effective('cashier'), 'Lina', 'fr');
+  const [, askPart = ''] = fr.split('code d’un responsable pour ');
+  check(askPart && !askPart.split('.')[0].includes('paie') && fr.includes('Ne voit pas'),
+    'le résumé ne prétend pas qu’un code de responsable ouvre la paie : il la range dans « Ne voit pas »');
+  const wild = Catalog.fromLegacy({ grants: ['*', { action: '*', resource: 'catalog' }, { subject: 'caisse', action: 'action', resource: 'refund' }] },
     [{ key: 'm-lina', role: 'Caissière' }, { key: 'm-omar', role: 'Serveur' }]);
-  check(legacy['m-lina'].grants.includes('sales.refund') && !legacy['m-omar'].grants.includes('sales.refund')
-    && legacy['m-omar'].grants.includes('catalog.edit') && legacy['m-omar'].denies.includes('customers.edit'),
-  'anciens réglages du navigateur : règle par rôle, règle pour tous, retrait');
+  check(wild.ignored.filter((r) => r.why === 'wildcard').length === 2 && !wild.people['m-omar'] && JSON.stringify(wild.people['m-lina'].grants) === '["sales.refund"]',
+    'ancien réglage joker : jamais étendu, montré comme ignoré ; une règle par rôle trouve sa personne');
 }
 
 /* ── Le banc ────────────────────────────────────────────────────────────── */
@@ -98,12 +108,14 @@ function world({ migrated = true } = {}) {
   pin.run('pin-nadia', SHOP, CODES.owner, 'Nadia Patron', 'Propriétaire', now);
   pin.run('pin-sara', SHOP, CODES.manager, 'Sara Alaoui', 'Manager', now + 1);
   pin.run('pin-lina', SHOP, CODES.caisse, 'Lina Saidi', 'Caissière', now + 2);
+  pin.run('pin-hind', SHOP, CODES.hind, 'Hind Amrani', 'Responsable', now + 3);
   pin.run('pin-leila', OTHER, CODES.voisin, 'Leila', 'Manager', now);
   /* Le document team porte des secrets : le banc en met, la route ne doit jamais les rendre. */
   const team = { members: [
     { id: 'm-sara', firstName: 'Sara', lastName: 'Alaoui', function: 'Manager', pinCode: '9911', password: 'secret-banc' },
     { id: 'm-lina', firstName: 'Lina', lastName: 'Saidi', function: 'Caissière', pinCode: '9912' },
     { id: 'm-omar', firstName: 'Omar', lastName: 'Berrada', function: 'Serveur', pinCode: '9913' },
+    { id: 'm-hind', firstName: 'Hind', lastName: 'Amrani', function: 'Responsable', pinCode: '9914' },
     { id: 'm-gone', firstName: 'Ancien', lastName: 'Membre', function: 'Caissier' },
   ], removed: [{ id: 'm-gone', ts: now }] };
   sql.prepare('INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?,?,?,?,?)').run(SHOP, 'team', JSON.stringify(team), 1, now);
@@ -143,218 +155,313 @@ const get = async (w, cookie, merchant = SHOP) => route.onRequestGet({ env: w.en
 const post = async (w, cookie, body) => route.onRequestPost({ env: w.env, request: req('/api/permissions', { method: 'POST', cookie, body: { merchant: SHOP, ...body } }) });
 const pinVerify = (w, pin, action) => verify.onRequestPost({ env: w.env, request: req('/api/pin/verify', { method: 'POST', cookie: cookieTill, body: { merchant: SHOP, pin, ...(action ? { action } : {}) } }) });
 const audit = (w) => w.sql.prepare('SELECT * FROM staff_permission_audit WHERE merchant = ? ORDER BY id').all(SHOP);
+const state = async (w) => (await get(w, cookieOwner)).json();
+const person = async (w, key) => (await state(w)).staff.find((s) => s.key === key);
+const activate = (w, choices = {}) => post(w, cookieOwner, { action: 'activate', choices });
+/* Retire des droits à une personne (le patron, après activation). */
+const without = async (w, key, ...ids) => { const s = await person(w, key); return post(w, cookieOwner, { action: 'save-staff', key, preset: s.preset, perms: s.perms.filter((id) => !ids.includes(id)) }); };
+const withPerm = async (w, key, ...ids) => { const s = await person(w, key); return post(w, cookieOwner, { action: 'save-staff', key, preset: s.preset, perms: [...s.perms, ...ids] }); };
 
-/* ── 2 · La route ───────────────────────────────────────────────────────── */
+/* ── 2 · Activation : rien avant, rien de plus après ────────────────────── */
+console.log('■ Activation');
+{
+  const w = world();
+  const body = await state(w);
+  check(body.configured === false && body.missingTables === false && body.staff.every((s) => Array.isArray(s.today) && Array.isArray(s.proposed)),
+    'avant activation : l’écran montre, par personne, ses droits d’aujourd’hui et le rôle proposé');
+  check(!/9911|9912|9913|9914|secret-banc|6201|6202|6203|6205|pinCode|password|"pin"/.test(JSON.stringify(body)), 'aucun code, aucun mot de passe dans la réponse');
+  const keys = body.staff.map((s) => s.key);
+  check(keys.includes('m-sara') && keys.includes('name:nadia patron') && !keys.includes('m-gone'), 'l’équipe = membres d’Équipe + codes sans membre ; un membre retiré n’y est pas');
+  check((await post(w, cookieOwner, { action: 'save-staff', key: 'm-lina', preset: 'cashier', perms: [] })).status === 409
+    && (await post(w, cookieOwner, { action: 'settings', freeDiscountPct: 3 })).status === 409, 'aucun enregistrement n’active en douce : 409 not-activated');
+  check((await activate(w)).status === 200, 'le patron active');
+  const after = await state(w);
+  check(after.configured === true && after.staff.every((s) => JSON.stringify(s.perms) === JSON.stringify(s.today)),
+    'activation par défaut : chacun garde EXACTEMENT ses droits d’aujourd’hui (Responsable, Magasinier compris), personne n’en gagne');
+  const hind = after.staff.find((s) => s.key === 'm-hind');
+  check(hind.proposed.some((id) => !hind.perms.includes(id)), 'Hind (Responsable) : le rôle proposé lui donnerait plus, il reste une proposition tant qu’on ne le choisit pas');
+  check(audit(w).filter((r) => JSON.parse(r.change).kind === 'activate').length === after.staff.length, 'chaque personne a sa ligne d’activation (défaisable)');
+  check((await activate(w)).status === 409, 'activer deux fois : refusé');
+
+  const w2 = world();
+  await activate(w2, { 'm-lina': 'preset' });
+  const lina = await person(w2, 'm-lina');
+  check(JSON.stringify(lina.perms) === JSON.stringify(Catalog.effective('cashier')), 'choisir le rôle proposé pour Lina lui donne ce rôle, à elle seule');
+  check((await post(w, cookieManager, { action: 'activate' })).status === 403, 'un gérant n’active rien');
+}
+
+/* ── 3 · La route : lecture, écriture, journal, défaire ─────────────────── */
 console.log('■ /api/permissions');
 {
   const w = world();
-  const res = await get(w, cookieOwner);
-  const body = await res.json();
-  const raw = JSON.stringify(body);
-  check(res.status === 200 && body.readOnly === false && body.configured === false, 'le patron lit l’écran complet ; rien n’est encore configuré');
-  const keys = body.staff.map((s) => s.key);
-  check(keys.includes('m-sara') && keys.includes('m-lina') && keys.includes('m-omar') && keys.includes('name:nadia patron') && !keys.includes('m-gone'),
-    'l’équipe = membres d’Équipe (clé stable) + codes sans membre ; un membre retiré n’y est pas');
-  check(!/9911|9912|9913|secret-banc|6201|6202|6203|pinCode|password|"pin"/.test(raw), 'aucun code, aucun mot de passe dans la réponse');
-  const lina = body.staff.find((s) => s.key === 'm-lina');
-  check(lina.preset === 'cashier' && !lina.perms.includes('sales.refund'), 'Lina (Caissière) part du rôle Caisse');
-
+  await activate(w);
   const till = await (await get(w, cookieTill)).json();
-  check(till.readOnly === true && !('audit' in till) && !('customPresets' in till) && till.staff[0] && !('grants' in till.staff[0]),
-    'la caisse appairée lit l’équipe réduite (droits effectifs), sans surcharges ni journal');
-  check((await get(w, cookieOtherOwner)).status === 403, 'le patron d’un autre compte ne lit pas cette boutique');
-  check((await get(w, '')).status === 403, 'sans session ni caisse : refusé');
-
+  check(till.readOnly === true && !('audit' in till) && till.staff[0] && !('grants' in till.staff[0]), 'la caisse appairée lit l’équipe réduite, sans surcharges ni journal');
+  check((await get(w, cookieOtherOwner)).status === 403 && (await get(w, '')).status === 403, 'un autre compte, ou personne : refusé');
   const denied = await post(w, cookieManager, { action: 'save-staff', key: 'm-sara', preset: 'manager', perms: Catalog.ALL });
   check(denied.status === 403 && (await denied.json()).error === 'owner-required', 'un gérant (son code) ne change aucun droit, pas même les siens');
-  check((await post(w, cookieOtherOwner, { action: 'save-staff', key: 'm-lina', preset: 'cashier', perms: [] })).status === 403,
-    'le patron d’un autre compte n’écrit pas ici');
   check((await post(w, cookieTill, { action: 'save-staff', key: 'm-lina', preset: 'cashier', perms: [] })).status === 403, 'une caisse appairée n’écrit pas');
-  check((await post(w, cookieOwner, { action: 'save-staff', key: 'name:nadia patron', preset: 'cashier', perms: [] })).status === 409, 'le propriétaire est verrouillé');
+  const nadia = await person(w, 'name:nadia patron');
+  check(nadia.preset === 'manager' && nadia.ownerTitle === true, 'un code intitulé « Propriétaire » a le rôle Manager, signalé à l’écran');
   check((await post(w, cookieOwner, { action: 'save-staff', key: 'm-inconnu', preset: 'cashier', perms: [] })).status === 404, 'une personne hors de l’équipe est refusée');
+  check((await post(w, cookieOwner, { action: 'save-staff', key: 'm-lina', preset: 'owner', perms: [] })).status === 400, 'le rôle « propriétaire » ne se donne pas');
 
-  const grant = await post(w, cookieOwner, { action: 'save-staff', key: 'm-lina', preset: 'cashier', perms: [...lina.perms, 'sales.refund'] });
-  const g = await grant.json();
-  check(grant.status === 200 && JSON.stringify(g.grants) === '["sales.refund"]' && g.perms.includes('sales.refund'), 'le patron donne « Rembourser » à Lina');
-  const rows = audit(w);
-  check(rows.length === 1 && rows[0].subject === 'staff:m-lina' && JSON.parse(rows[0].change).added[0] === 'sales.refund' && rows[0].actor === 'account:acc-droits',
-    'journal : qui (le patron), quoi (+ Rembourser), pour qui (Lina), quand');
-
+  const g = await (await withPerm(w, 'm-lina', 'sales.refund')).json();
+  check(g.perms.includes('sales.refund'), 'le patron donne « Rembourser » à Lina');
+  const row = audit(w).at(-1);
+  check(row.subject === 'staff:m-lina' && JSON.parse(row.change).added[0] === 'sales.refund' && row.actor === 'account:acc-droits', 'journal : qui, quoi, pour qui, quand');
   const copy = await (await post(w, cookieOwner, { action: 'copy-from', key: 'm-omar', from: 'm-lina' })).json();
-  check(copy.preset === 'cashier' && copy.perms.includes('sales.refund'), '« copier depuis » : Omar reçoit les droits de Lina');
-  const preset = await (await post(w, cookieOwner, { action: 'save-preset', preset: 'server', perms: ['customers.edit', 'sales.void-sent'] })).json();
-  check(preset.perms.includes('sales.void-sent'), 'un rôle par défaut se modifie');
-  check((await post(w, cookieOwner, { action: 'save-preset', preset: 'owner', perms: [] })).status === 400, 'le rôle propriétaire ne se modifie pas');
-  check((await post(w, cookieOwner, { action: 'settings', freeDiscountPct: 150 })).status === 400, 'un seuil de remise hors 0..100 est refusé');
+  check(copy.perms.includes('sales.refund'), '« copier depuis » : Omar reçoit les droits de Lina');
   check((await (await post(w, cookieOwner, { action: 'settings', freeDiscountPct: 15 })).json()).freeDiscountPct === 15, 'le seuil de remise libre se règle');
-  const full = await (await get(w, cookieOwner)).json();
-  check(full.configured === true && full.audit.length === 4 && full.audit[0].change.kind === 'settings', 'le journal est rendu au patron, le plus récent d’abord');
+
+  const st = await state(w);
+  const grantRow = st.audit.find((a) => a.subject === 'staff:m-lina' && a.change.kind === 'staff');
+  check(grantRow.undoable === true && !('before' in grantRow.change), 'chaque changement est défaisable ; l’état d’avant n’est pas exposé');
+  check((await post(w, cookieOwner, { action: 'undo', id: grantRow.id })).status === 200 && !(await person(w, 'm-lina')).perms.includes('sales.refund'), '« Défaire » rend à Lina ses droits d’avant');
+  check((await post(w, cookieOwner, { action: 'undo', id: grantRow.id })).status === 409 && (await state(w)).audit.find((a) => a.id === grantRow.id).undone === true,
+    'une ligne ne se défait qu’une fois, et le journal le montre');
+  check((await post(w, cookieManager, { action: 'undo', id: grantRow.id })).status === 403, 'un gérant ne défait rien');
+  check((await post(w, cookieOwner, { action: 'deactivate' })).status === 200 && (await state(w)).configured === false, 'désactiver : retour à la règle d’avant');
 }
 
-/* ── 3 · Reprise des anciens réglages du navigateur ─────────────────────── */
+/* ── 4 · Reprise des anciens réglages du navigateur ─────────────────────── */
 console.log('■ Reprise des réglages du navigateur');
 {
   const w = world();
-  const legacy = { grants: [{ subject: 'serveur', action: 'write', resource: 'catalog' }], denies: [{ subject: 'caissiere', action: 'write', resource: 'customers' }] };
-  const first = await (await post(w, cookieOwner, { action: 'import-legacy', legacy })).json();
-  const st = await (await get(w, cookieOwner)).json();
-  const omar = st.staff.find((s) => s.key === 'm-omar'), lina = st.staff.find((s) => s.key === 'm-lina');
-  check(first.imported === 2 && omar.perms.includes('catalog.edit') && !lina.perms.includes('customers.edit'), 'chaque règle retrouve sa personne, rien ne se perd');
-  check(st.legacyImported === true && st.audit.filter((a) => a.change.kind === 'legacy-import').length === 2, 'la reprise est marquée et journalisée');
-  const again = await (await post(w, cookieOwner, { action: 'import-legacy', legacy: { grants: ['*'] } })).json();
-  check(again.already === true && !(await (await get(w, cookieOwner)).json()).staff.find((s) => s.key === 'm-omar').perms.includes('team.payroll'),
-    'une seconde reprise ne rejoue rien par-dessus les décisions du patron');
+  await activate(w);
+  const legacy = { grants: [{ subject: 'serveur', action: 'write', resource: 'catalog' }, '*', { subject: 'caissiere', action: '*', resource: '*' }],
+    denies: [{ subject: 'caissiere', action: 'write', resource: 'customers' }] };
+  const before = audit(w).length;
+  const preview = await (await post(w, cookieOwner, { action: 'legacy-preview', legacy })).json();
+  check(audit(w).length === before && preview.people.length === 1 && preview.people[0].key === 'm-omar' && preview.ignored.filter((r) => r.why === 'wildcard').length === 2,
+    'aperçu : rien n’est écrit ; Omar gagnerait « articles », les deux jokers sont montrés et ignorés');
+  const wildOnly = await (await post(w, cookieOwner, { action: 'legacy-preview', legacy: { grants: ['*'] } })).json();
+  check(wildOnly.people.length === 0, 'un joker seul ne donne rien à personne (ni paie, ni réglages)');
+  const done = await (await post(w, cookieOwner, { action: 'import-legacy', legacy, accept: [] })).json();
+  const st = await state(w);
+  check(done.imported === 0 && !st.staff.find((s) => s.key === 'm-omar').perms.includes('catalog.edit') && st.legacyImported === true,
+    'sans accord, rien n’est repris (et la reprise est close)');
+  const w2 = world();
+  await activate(w2);
+  const ok = await (await post(w2, cookieOwner, { action: 'import-legacy', legacy, accept: ['m-omar'] })).json();
+  const omar = await person(w2, 'm-omar');
+  check(ok.imported === 1 && omar.perms.includes('catalog.edit') && !omar.perms.includes('team.payroll'), 'avec accord, Omar seul est repris, sans aucun droit tiré d’un joker');
+  check((await (await post(w2, cookieOwner, { action: 'import-legacy', legacy, accept: ['m-omar'] })).json()).already === true, 'une seconde reprise ne rejoue rien');
 }
 
-/* ── 4 · Au comptoir : approbations ─────────────────────────────────────── */
+/* ── 5 · Intitulé de propriétaire, fiche personnelle ────────────────────── */
+console.log('■ Un gérant ne se fait pas propriétaire');
+{
+  const w = world();
+  await activate(w);
+  const team = JSON.parse(w.sql.prepare('SELECT data FROM store_docs WHERE merchant = ? AND feature = ?').get(SHOP, 'team').data);
+  const edit = (fn) => { const next = structuredClone(team); fn(next.members); return next; };
+  const asMgr = (after) => perms.docWriteGuard(req('/api/store', { method: 'POST', cookie: cookieManager }), w.env, SHOP, 'team', team, after, false);
+  const asOwner = (after) => perms.docWriteGuard(req('/api/store', { method: 'POST', cookie: cookieOwner }), w.env, SHOP, 'team', team, after, false);
+  const selfTitle = await asMgr(edit((m) => { m[0].function = 'Propriétaire'; }));
+  check(selfTitle && selfTitle.status === 403 && (await selfTitle.json()).error === 'owner-title-reserved', 'Sara se renomme « Propriétaire » : refusé (team doc)');
+  const other = await asMgr(edit((m) => { m[1].function = 'Patronne'; }));
+  check(other && other.status === 403, 'ni pour quelqu’un d’autre (« Patronne » pour Lina)');
+  const added = await asMgr(edit((m) => { m.push({ id: 'm-new', firstName: 'Neuf', function: 'Direction' }); }));
+  check(added && added.status === 403, 'ni en créant une fiche « Direction »');
+  const own = await asMgr(edit((m) => { m[0].lastName = 'Alaoui-Bis'; }));
+  check(own && own.status === 403 && (await own.json()).error === 'own-record-locked', 'Sara ne touche pas à sa propre fiche');
+  check(await asMgr(edit((m) => { m[2].function = 'Serveur chef'; })) === null, 'elle gère toujours les autres fiches (team.manage)');
+  const viaStore = await store.onRequestPost({ env: w.env, request: req('/api/store', { method: 'POST', cookie: cookieManager,
+    body: { merchant: SHOP, feature: 'team', data: edit((m) => { m[0].function = 'Propriétaire'; }) } }) });
+  check(viaStore.status === 403 && (await viaStore.json()).error === 'owner-title-reserved', 'refusé aussi par /api/store, la route réelle');
+  check(await asOwner(edit((m) => { m[0].function = 'Propriétaire'; })) === null, 'le compte du propriétaire, lui, le peut');
+  const sara = await perms.permissionsFor(w.env, SHOP, { name: 'Sara Alaoui', role: 'Propriétaire' });
+  check(sara.perms.length < Catalog.ALL.length && !sara.perms.includes('team.payroll'), 'et même retitrée, une personne n’a que ses droits, jamais tous');
+  await without(w, 'm-sara', 'team.manage');
+  prove('team.manage', !(await storeTier.storeEditorTier(req('/api/store', { cookie: cookieManager }), w.env, 'team')), 'retiré : la session de Sara ne tient plus le document Équipe');
+}
+{
+  /* Les codes publiés (/api/config) : un code « Propriétaire » ouvre le palier du patron ; une session de gérant n'en pose aucun. */
+  const w = world();
+  const cfgRes = await config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie: cookieManager,
+    body: { merchant: SHOP, name: 'Café Droits', pins: [{ name: 'Sara Alaoui', role: 'Propriétaire', pin: '7731' }, { name: 'Lina Saidi', role: 'Caissière', pin: '7732' }] } }) });
+  const owners = w.sql.prepare("SELECT name FROM staff_pins WHERE merchant = ? AND role = 'Propriétaire'").all(SHOP).map((r) => r.name);
+  check(cfgRes.status === 200 && JSON.stringify(owners) === '["Nadia Patron"]', '/api/config : le code « Propriétaire » que Sara se publie est ignoré, celui du patron reste');
+}
+
+/* ── 6 · Au comptoir : approbations ─────────────────────────────────────── */
 console.log('■ Approbations au comptoir (/api/pin/verify)');
 {
   const w = world();
   const action = { kind: 'refund', refundId: 'rf-1', originalSaleId: 'sale-1', amountCents: 5000, refundMethod: 'cash' };
   const before = await (await pinVerify(w, CODES.caisse, action)).json();
   const mgr = await (await pinVerify(w, CODES.manager, action)).json();
-  check(before.ok && !before.approval && mgr.approval && !mgr.permits, 'avant configuration : le gérant valide, la caissière non (règle d’avant), aucune liste de droits envoyée');
-  const lina = (await (await get(w, cookieOwner)).json()).staff.find((s) => s.key === 'm-lina');
-  await post(w, cookieOwner, { action: 'save-staff', key: 'm-lina', preset: 'cashier', perms: [...lina.perms, 'sales.refund'] });
-  const sara = (await (await get(w, cookieOwner)).json()).staff.find((s) => s.key === 'm-sara');
-  await post(w, cookieOwner, { action: 'save-staff', key: 'm-sara', preset: 'manager', perms: sara.perms.filter((id) => id !== 'sales.refund' && id !== 'stock.adjust') });
+  check(before.ok && !before.approval && mgr.approval, 'avant activation : le gérant valide, la caissière non (règle d’avant)');
+  await activate(w);
+  await withPerm(w, 'm-lina', 'sales.refund');
+  await without(w, 'm-sara', 'sales.refund', 'stock.adjust');
   const after = await (await pinVerify(w, CODES.caisse, action)).json();
   const mgrAfter = await (await pinVerify(w, CODES.manager, action)).json();
-  check(after.approval && after.permission.granted === true && after.permission.id === 'sales.refund' && !('permits' in after), 'Lina, avec le droit, valide un remboursement avec son propre code (verdict pour ce seul droit)');
-  const drawer = await (await pinVerify(w, CODES.caisse, { kind: 'drawer' })).json();
-  check(drawer.permission.id === 'sales.drawer' && drawer.permission.granted === false && !drawer.approval,
-    'le verdict suit le droit demandé : pour le tiroir, Lina n’a pas le droit, et rien n’est signé');
-  check(!mgrAfter.approval && mgrAfter.permission.granted === false, 'Sara, privée du droit, ne valide plus');
-  const stock = await (await pinVerify(w, CODES.manager, { kind: 'inventory', movementIds: ['mv-1'] })).json();
-  check(!stock.approval, 'ni un mouvement de stock');
-  const owner = await (await pinVerify(w, CODES.owner, action)).json();
-  check(!!owner.approval, 'le propriétaire valide toujours');
-  check(!/6201|6202|6203|9911/.test(JSON.stringify([after, mgrAfter, stock])), 'la réponse ne contient aucun code');
-
-  /* Une approbation encore valable dix minutes ne survit pas au retrait. */
+  prove('sales.refund', after.approval && after.permission.granted === true && !mgrAfter.approval && mgrAfter.permission.granted === false,
+    'Lina, avec le droit, valide avec son propre code ; Sara, sans, ne valide plus');
   const proof = await managerRefundProof(SECRET, { merchant: SHOP, staffId: 'pin-sara', staffName: 'Sara Alaoui', staffRole: 'Manager',
     refundId: 'rf-2', originalSaleId: 'sale-1', amountCents: 5000, refundMethod: 'cash' });
   const r = await refund.onRequestPost({ env: w.env, request: req('/api/sale/refund', { method: 'POST', cookie: cookieTill,
     body: { merchant: SHOP, id: 'rf-2', originalSaleId: 'sale-1', amountCents: 5000, refundMethod: 'cash', approval: proof } }) });
   const rb = await r.json();
-  check(r.status === 403 && rb.error === 'permission-denied' && rb.permission === 'sales.refund' && rb.label.ar, '/api/sale/refund relit le droit : 403 lisible (FR, EN, AR)');
+  check(r.status === 403 && rb.error === 'permission-denied' && rb.label.ar && rb.approval === 'manager-code', '/api/sale/refund relit le droit : 403 lisible, voie du code responsable');
   const sproof = await managerStockProof(SECRET, { merchant: SHOP, staffId: 'pin-sara', staffName: 'Sara Alaoui', staffRole: 'Manager', movementIds: ['mv-9'] });
   const m = await movements.onRequestPost({ env: w.env, request: req('/api/inventory/movements', { method: 'POST', cookie: cookieTill,
     body: { merchant: SHOP, approval: sproof, movements: [{ id: 'mv-9', itemId: 'it-1', qty: -1, reason: 'loss', ts: Date.now() }] } }) });
-  const mb = await m.json();
-  check(m.status === 403 && mb.permission === 'stock.adjust', '/api/inventory/movements relit le droit : perte refusée');
+  prove('stock.adjust', m.status === 403 && (await m.json()).permission === 'stock.adjust', '/api/inventory/movements relit le droit : perte refusée');
+  const drawer = await (await pinVerify(w, CODES.caisse, { kind: 'drawer' })).json();
+  check(drawer.permission.id === 'sales.drawer' && drawer.permission.granted === false && !drawer.approval, 'le verdict ne vaut que pour le droit demandé');
+  check(!/6201|6202|6203|9911/.test(JSON.stringify([after, mgrAfter, drawer])), 'la réponse ne contient aucun code');
 }
 
-/* ── 5 · Annulation et réouverture ──────────────────────────────────────── */
-console.log('■ Annulation (/api/sale/cancel)');
+/* ── 7 · Annulation et réouverture ──────────────────────────────────────── */
+console.log('■ Annulation et réouverture (/api/sale/cancel)');
 {
   const w = world();
-  const doCancel = (pin, id) => cancel.onRequestPost({ env: w.env, request: req('/api/sale/cancel', { method: 'POST', cookie: cookieTill, body: { merchant: SHOP, id, pin } }) });
-  check((await doCancel(CODES.caisse, 'sale-1')).status === 403, 'avant configuration : la caissière n’annule pas');
-  const lina = (await (await get(w, cookieOwner)).json()).staff.find((s) => s.key === 'm-lina');
-  await post(w, cookieOwner, { action: 'save-staff', key: 'm-lina', preset: 'cashier', perms: [...lina.perms, 'sales.cancel'] });
+  const doCancel = (pin, id, extra) => cancel.onRequestPost({ env: w.env, request: req('/api/sale/cancel', { method: 'POST', cookie: cookieTill, body: { merchant: SHOP, id, pin, ...extra } }) });
+  check((await doCancel(CODES.caisse, 'sale-1')).status === 403, 'avant activation : la caissière n’annule pas');
+  check(perms.cancelManagerRole('Gérante') === false && perms.cancelManagerRole('Responsable') && perms.cancelManagerRole('chef-manager'), 'la règle d’avant de l’annulation est recopiée telle quelle');
+  await activate(w);
+  await withPerm(w, 'm-lina', 'sales.cancel');
   const ok = await doCancel(CODES.caisse, 'sale-1');
-  check(ok.status === 200 && w.sql.prepare('SELECT void_ts FROM sales WHERE id = ?').get('sale-1').void_ts > 0, 'avec le droit « Annuler », elle annule (vente marquée, jamais effacée)');
-  const sara = (await (await get(w, cookieOwner)).json()).staff.find((s) => s.key === 'm-sara');
-  await post(w, cookieOwner, { action: 'save-staff', key: 'm-sara', preset: 'manager', perms: sara.perms.filter((id) => id !== 'sales.cancel') });
-  const no = await doCancel(CODES.manager, 'sale-2');
-  const nb = await no.json();
-  check(no.status === 403 && nb.error === 'manager-required' && nb.permission === 'sales.cancel', 'un gérant privé du droit est refusé (la caisse garde son message)');
-  const dash = await cancel.onRequestPost({ env: w.env, request: req('/api/sale/cancel', { method: 'POST', cookie: cookieManager, body: { merchant: SHOP, id: 'sale-2', source: 'dashboard' } }) });
-  check(dash.status === 403 && (await dash.json()).permission === 'sales.cancel', 'même refus depuis le tableau de bord déverrouillé par son code');
+  prove('sales.cancel', ok.status === 200 && w.sql.prepare('SELECT void_ts FROM sales WHERE id = ?').get('sale-1').void_ts > 0, 'avec le droit, Lina annule (vente marquée, jamais effacée)');
+  await without(w, 'm-sara', 'sales.reopen');
+  const re = await doCancel(CODES.manager, 'sale-1', { reopen: true });
+  prove('sales.reopen', re.status === 403 && (await re.json()).permission === 'sales.reopen', 'Sara, privée de « Rouvrir », est refusée');
 }
 
-/* ── 6 · Le palier du tableau de bord ───────────────────────────────────── */
-console.log('■ Routes du tableau de bord (tierBlock)');
+/* ── 8 · Le tableau de bord : routes et documents ───────────────────────── */
+console.log('■ Routes et documents du tableau de bord');
 {
   const w = world();
   const block = (url, method = 'GET', cookie = cookieManager) => tiers.tierBlock(req(url, { method, cookie }), w.env, url.split('?')[0]);
-  check(await block('/api/sales-summary?merchant=' + SHOP) === null, 'avant configuration : le gérant lit le chiffre d’affaires (palier)');
-  const before = await block('/api/foodcost?merchant=' + SHOP);
-  check(before && before.status === 403 && (await before.json()).error === 'tier', 'avant configuration : les marges restent au patron (palier)');
-  const sara = (await (await get(w, cookieOwner)).json()).staff.find((s) => s.key === 'm-sara');
-  await post(w, cookieOwner, { action: 'save-staff', key: 'm-sara', preset: 'manager', perms: [...sara.perms.filter((id) => id !== 'reports.revenue'), 'reports.margins'] });
-  const rev = await block('/api/sales-summary?merchant=' + SHOP);
-  check(rev && rev.status === 403 && (await rev.json()).permission === 'reports.revenue', 'chiffre d’affaires retiré : la route se ferme');
-  check(await block('/api/foodcost?merchant=' + SHOP) === null, 'marges accordées : la route du patron s’ouvre à elle');
-  check(await block('/api/sales-summary?merchant=' + SHOP, 'GET', cookieOwner) === null, 'le patron passe toujours');
-  check(await block('/assets/app.js') === null, 'un fichier statique ne coûte aucun droit');
+  check(await block('/api/sales-summary?merchant=' + SHOP) === null, 'avant activation : le gérant lit le chiffre d’affaires (palier)');
+  await activate(w);
+  const closes = async (perm, url, method = 'GET') => {
+    const before = await block(url, method);
+    await without(w, 'm-sara', perm);
+    const after = await block(url, method);
+    await withPerm(w, 'm-sara', perm);
+    return before === null && after && after.status === 403 && (await after.json()).permission === perm;
+  };
+  for (const [perm, url, method] of [
+    ['reports.revenue', '/api/sales-summary?merchant=' + SHOP, 'GET'],
+    ['catalog.edit', '/api/catalog?merchant=' + SHOP, 'POST'],
+    ['stock.count', '/api/inventory/counts?merchant=' + SHOP, 'POST'],
+    ['stock.receive', '/api/stock-transfers?merchant=' + SHOP, 'POST'],
+    ['customers.edit', '/api/clients?merchant=' + SHOP, 'POST'],
+    ['customers.delete', '/api/clients?merchant=' + SHOP, 'DELETE'],
+  ]) prove(perm, await closes(perm, url, method), `retiré à Sara : ${method} ${url.split('?')[0]} se ferme`);
+  const margins = await block('/api/foodcost?merchant=' + SHOP);
+  await withPerm(w, 'm-sara', 'reports.margins', 'team.payroll');
+  prove('reports.margins', margins && margins.status === 403 && await block('/api/foodcost?merchant=' + SHOP) === null, 'donné par le patron : les marges s’ouvrent à Sara');
+  prove('team.payroll', await block('/api/pay-statements?merchant=' + SHOP) === null, 'donné : les fiches de paie aussi');
+  await without(w, 'm-sara', 'team.payroll', 'stock.value');
+  const below = (feature) => storeTier.docBelowTier(req('/api/store', { cookie: cookieManager }), w.env, SHOP, feature);
+  check(await below('payroll') === true, 'team.payroll retiré : le document de paie se ferme à sa session');
+  prove('stock.value', await below('costs') === true, 'retiré : les coûts (prix d’achat) se ferment');
+  check(await block('/api/sales-summary?merchant=' + SHOP, 'GET', cookieOwner) === null, 'le compte du propriétaire passe toujours');
+
+  /* Les documents s'écrivent en entier : ce qui change dit le droit (store.js › docWriteGuard). */
+  const doc = (feature, before, after, settings = false) => perms.docWriteGuard(req('/api/store', { method: 'POST', cookie: cookieManager }), w.env, SHOP, feature, before, after, settings);
+  for (const [perm, feature, key, settings] of [
+    ['purchases.create', 'procurement', 'orders'], ['purchases.pay', 'procurement', 'invoices'],
+    ['suppliers.edit', 'suppliers', 'list'], ['settings.edit', 'policies', 'rules', true],
+  ]) {
+    const okBefore = await doc(feature, { [key]: [] }, { [key]: [{ id: 'x' }] }, settings);
+    await without(w, 'm-sara', perm);
+    const no = await doc(feature, { [key]: [] }, { [key]: [{ id: 'x' }] }, settings);
+    const untouched = await doc(feature, { [key]: [], other: 1 }, { [key]: [], other: 2 }, false);
+    await withPerm(w, 'm-sara', perm);
+    prove(perm, (settings || okBefore === null) && no && no.status === 403 && (await no.json()).permission === perm && untouched === null,
+      `retiré : écrire « ${feature}.${key} » est refusé, le reste du document passe`);
+  }
+
+  await without(w, 'm-sara', 'purchases.create');
+  const viaStore = await store.onRequestPost({ env: w.env, request: req('/api/store', { method: 'POST', cookie: cookieManager,
+    body: { merchant: SHOP, feature: 'procurement', data: { orders: [{ id: 'po-1' }] } } }) });
+  check(viaStore.status === 403 && (await viaStore.json()).permission === 'purchases.create', 'et /api/store applique ce garde pour de vrai');
+  await withPerm(w, 'm-sara', 'purchases.create');
+
+  /* Dans la route elle-même, contre le merchant qu'elle utilise. */
+  await without(w, 'm-sara', 'catalog.price', 'customers.balance');
+  const putCatalog = (cookie, priceMAD, baseRev) => catalogRoute.onRequestPost({ env: w.env, request: req('/api/catalog', { method: 'POST', cookie,
+    body: { merchant: SHOP, baseRev, data: { products: [{ id: 'p1', name: 'Thé', priceMAD }] } } }) });
+  const first = await putCatalog(cookieOwner, 10, 0);
+  const rev = (await first.json()).rev;
+  const renamed = await putCatalog(cookieManager, 10, rev);
+  const price = await putCatalog(cookieManager, 12, rev + 1);
+  prove('catalog.price', first.status === 200 && renamed.status === 200 && price.status === 403 && (await price.json()).permission === 'catalog.price',
+    'sans le droit, Sara enregistre le catalogue mais ne change pas un prix existant');
+  const credit = await credits.onRequestPost({ env: w.env, request: req('/api/store-credits', { method: 'POST', cookie: cookieManager,
+    body: { merchant: SHOP, action: 'adjust', id: 'sc-1', customerId: 'c-1', deltaCents: 500, reason: 'geste' } }) });
+  prove('customers.balance', credit.status === 403 && (await credit.json()).permission === 'customers.balance', 'corriger un solde client (/api/store-credits › adjust) : refusé');
+  const sister = await catalogRoute.onRequestPost({ env: w.env, request: req('/api/catalog', { method: 'POST', cookie: cookieManager, body: { merchant: SISTER, data: { items: [] } } }) });
+  check(sister.status === 403, 'une session de gérant ne vise pas une autre boutique pour retomber sur l’ancienne règle');
 }
 
-/* ── 6b · Le merchant de la requête ne choisit pas la règle ─────────────── */
-console.log('■ Merchant nommé par la requête (adresse, corps)');
+/* ── 9 · Faits accomplis : l'auteur prouvé, jamais déclaré ──────────────── */
+console.log('■ Remise, espèces, tiroir, clôture sans le droit');
 {
   const w = world();
-  const block = (url, method = 'GET', body) => tiers.tierBlock(req(url, { method, cookie: cookieManager, body }), w.env, url.split('?')[0]);
-  const sara = (await (await get(w, cookieOwner)).json()).staff.find((s) => s.key === 'm-sara');
-  await post(w, cookieOwner, { action: 'save-staff', key: 'm-sara', preset: 'manager', perms: sara.perms.filter((id) => id !== 'reports.revenue' && id !== 'catalog.edit') });
-  const viaQuery = await block('/api/sales-summary?merchant=' + SISTER);
-  check(viaQuery && viaQuery.status === 403 && (await viaQuery.json()).error === 'permission-denied',
-    '?merchant=<une boutique sans configuration> ne fait pas retomber sur le palier : refusé');
-  const viaOther = await block('/api/sales-summary?merchant=' + OTHER);
-  check(viaOther && viaOther.status === 403, '?merchant=<la boutique d’un autre compte> : refusé');
-  const viaBody = await block('/api/catalog', 'POST', { merchant: SISTER, data: {} });
-  check(viaBody && viaBody.status === 403 && (await viaBody.json()).permission === 'catalog.edit', 'un merchant de corps différent du sien est refusé (garde du palier)');
-  const handler = await catalogRoute.onRequestPost({ env: w.env, request: req('/api/catalog', { method: 'POST', cookie: cookieManager, body: { merchant: SISTER, data: { items: [] } } }) });
-  check(handler.status === 403 && (await handler.json()).error === 'permission-denied', 'et la route elle-même le refuse contre le merchant qu’elle utilise');
-  const own = await catalogRoute.onRequestPost({ env: w.env, request: req('/api/catalog', { method: 'POST', cookie: cookieManager, body: { merchant: SHOP, data: { items: [] } } }) });
-  check(own.status === 403 && (await own.json()).permission === 'catalog.edit', 'sur sa propre boutique, le droit retiré ferme la route');
-  const mv = await movements.onRequestPost({ env: w.env, request: req('/api/inventory/movements', { method: 'POST', cookie: cookieManager,
-    body: { merchant: SISTER, movements: [{ id: 'mv-s1', itemId: 'it-1', qty: -1, reason: 'loss', ts: Date.now() }] } }) });
-  check(mv.status === 403, 'un mouvement de stock sur une autre boutique que la sienne est refusé');
-}
-{
-  /* « Non configuré » ne vaut que pour SA boutique : configurer la sœur ne
-     change rien chez soi, et la sœur reste fermée à une session d'ailleurs. */
-  const w = world();
-  const ownerPost = (body) => route.onRequestPost({ env: w.env, request: req('/api/permissions', { method: 'POST', cookie: cookieOwner, body: { merchant: SISTER, ...body } }) });
-  check((await ownerPost({ action: 'settings', freeDiscountPct: 0 })).status === 200, 'le patron configure la boutique sœur');
-  const block = (url) => tiers.tierBlock(req(url, { cookie: cookieManager }), w.env, url.split('?')[0]);
-  check(await block('/api/sales-summary?merchant=' + SHOP) === null, 'chez Sara (non configurée), le palier décide comme avant');
-  const sister = await block('/api/sales-summary?merchant=' + SISTER);
-  check(sister && sister.status === 403, 'la sœur configurée ne s’ouvre pas à une session venue d’une autre boutique');
-}
-
-/* ── 7 · Faits accomplis : inscrits, jamais refusés ─────────────────────── */
-console.log('■ Remise et espèces sans le droit');
-{
-  const w = world();
-  check(await perms.flagUnauthorized(w.env, SHOP, { id: 'pin-lina' }, 'money.cash', 'cash-x') === false, 'avant configuration : rien n’est inscrit');
-  const lina = (await (await get(w, cookieOwner)).json()).staff.find((s) => s.key === 'm-lina');
-  await post(w, cookieOwner, { action: 'save-staff', key: 'm-lina', preset: 'cashier', perms: lina.perms.filter((id) => id !== 'money.cash') });
+  check(await perms.flagUnauthorized(w.env, SHOP, { id: 'pin-lina' }, 'money.cash', 'cash-x') === false, 'avant activation : rien n’est inscrit');
+  await activate(w);
   const now = Date.now();
+  const linaSeller = await tillSellerProof(SECRET, SHOP, { id: 'pin-lina', name: 'Lina Saidi' });
+  const saraActor = await tillActorProof(SECRET, SHOP, { id: 'pin-sara', name: 'Sara Alaoui', role: 'Manager' });
   let terminal = '';
   const ev = (id, eventType, extra) => cash.onRequestPost({ env: w.env, request: req('/api/cash-sessions', { method: 'POST', cookie: cookieTill + terminal,
-    body: { merchant: SHOP, terminalId: 'term-banc-1', sessionId: 'shift-1', id, eventType, actorId: 'pin-lina', openedAt: now - 1000, occurredAt: now, ...extra } }) });
-  const open = await ev('ev-open', 'open', { expectedCents: 10000 });
-  terminal = '; ' + String(open.headers.get('Set-Cookie') || '').split(';')[0];   // le poste neuf reçoit son cookie
-  const out = await ev('ev-out', 'movement', { movementKind: 'out', movementAmountCents: 2000, movementReason: 'Fournisseur pain' });
-  await ev('ev-out', 'movement', { movementKind: 'out', movementAmountCents: 2000, movementReason: 'Fournisseur pain' });
-  const flagged = audit(w).filter((r) => JSON.parse(r.change).kind === 'unauthorized');
-  check(open.status === 201 && out.status === 201, 'la sortie d’espèces est écrite (le tiroir a déjà bougé)');
-  check(flagged.length === 1 && JSON.parse(flagged[0].change).permission === 'money.cash' && flagged[0].subject_label === 'Lina Saidi',
-    'et inscrite une seule fois au journal du patron, au nom de Lina');
-  await perms.flagDiscountPermission(w.env, SHOP, 'sale-d1', 'pin-lina', 10000, 500);
-  await perms.flagDiscountPermission(w.env, SHOP, 'sale-d2', 'pin-lina', 10000, 3000);
-  const disc = audit(w).filter((r) => JSON.parse(r.change).permission === 'sales.discount');
-  check(disc.length === 1 && JSON.parse(disc[0].change).ref === 'sale-d2' && JSON.parse(disc[0].change).percent === 30,
-    'remise : 5 % sous le seuil passe, 30 % sans le droit est inscrite');
+    body: { merchant: SHOP, terminalId: 'term-banc-1', sessionId: 'shift-1', id, eventType, openedAt: now - 1000, occurredAt: now, ...extra } }) });
+  const open = await ev('ev-open', 'open', { expectedCents: 10000, actorId: 'pin-lina' });
+  terminal = '; ' + String(open.headers.get('Set-Cookie') || '').split(';')[0];
+  const flags = () => audit(w).map((r) => ({ ...r, c: JSON.parse(r.change) })).filter((r) => r.c.kind === 'unauthorized');
+  const out = { movementKind: 'out', movementAmountCents: 2000, movementReason: 'Fournisseur pain' };
+  await ev('ev-1', 'movement', { ...out, actorId: 'pin-sara' });
+  const f1 = flags().find((r) => r.c.ref === 'ev-1');
+  check(f1 && f1.subject === 'staff:unproven' && f1.c.claimed === 'pin-sara', 'la caisse dit « Sara » sans preuve : inscrit « auteur non prouvé », Sara n’est pas créditée');
+  await ev('ev-2', 'movement', { ...out, actorId: 'pin-sara', sellerProof: linaSeller });
+  await ev('ev-2', 'movement', { ...out, actorId: 'pin-sara', sellerProof: linaSeller });
+  const f2 = flags().filter((r) => r.c.ref === 'ev-2');
+  prove('money.cash', f2.length === 1 && f2[0].subject_label === 'Lina Saidi', 'la preuve dit Lina : inscrit une fois, à son nom, quoi que la caisse déclare');
+  await ev('ev-3', 'movement', { ...out, actorId: 'pin-lina', actorProof: saraActor, sellerProof: linaSeller });
+  check(!flags().some((r) => r.c.ref === 'ev-3'), 'Sara a validé sur le pavé (sa preuve) et a le droit : rien n’est inscrit');
+  await ev('ev-4', 'movement', { movementKind: 'no-sale', movementAmountCents: 0, movementReason: 'Monnaie', actorId: 'pin-lina', sellerProof: linaSeller });
+  prove('sales.drawer', flags().some((r) => r.c.ref === 'ev-4' && r.c.permission === 'sales.drawer'), 'tiroir ouvert sans vente, sans le droit : inscrit');
+  await ev('ev-5', 'close', { expectedCents: 6000, countedCents: 6000, gapCents: 0, actorId: 'pin-lina', sellerProof: linaSeller });
+  prove('money.close-day', flags().some((r) => r.c.ref === 'ev-5' && r.c.permission === 'money.close-day'), 'clôture sans le droit : inscrite (le compte du soir reste écrit)');
+  const disc = (id, body, off) => saleTruth.flagSaleDiscount(w.env, SHOP, id, body, Date.now(), 10000, off, 'pin-sara');
+  await disc('sale-d1', { seller: { proof: linaSeller } }, 500);
+  await disc('sale-d2', { seller: { proof: linaSeller } }, 3000);
+  await disc('sale-d3', { actorProof: saraActor, seller: { proof: linaSeller } }, 3000);
+  const d = flags().filter((r) => r.c.permission === 'sales.discount');
+  prove('sales.discount', d.length === 1 && d[0].c.ref === 'sale-d2' && d[0].subject_label === 'Lina Saidi' && d[0].c.percent === 30,
+    '5 % sous le seuil passe ; 30 % par Lina est inscrit ; validé par Sara (preuve), rien');
+  const week = await state(w);
+  check(week.unauthorizedWeek === flags().length, 'l’écran compte les faits sans le droit de la semaine');
 }
 
-/* ── 8 · D1 muette : on refuse, jamais de repli ─────────────────────────── */
-console.log('■ Lecture des droits impossible');
+/* ── 10 · Tables 0028 absentes : la règle d'avant, sans 503 ─────────────── */
+console.log('■ Tables pas encore migrées');
 {
-  /* Les tables viennent de 0028, exigée par le minimum de production
-     (functions/_schema-version.js). Si la lecture échoue malgré tout, rien ne
-     retombe sur les droits par défaut : la route refuse. */
   const w = world({ migrated: false });
-  check((await get(w, cookieOwner)).status === 503, 'l’écran répond 503');
-  const write = await post(w, cookieOwner, { action: 'settings', freeDiscountPct: 5 });
-  check(write.status === 503, 'aucune écriture');
-  const mgr = await pinVerify(w, CODES.manager, { kind: 'refund', refundId: 'rf-1', originalSaleId: 'sale-1', amountCents: 100, refundMethod: 'cash' });
-  check(mgr.status === 503 && (await mgr.json()).error === 'permissions-unavailable', 'aucune approbation n’est signée sans pouvoir lire les droits');
-  const block = await tiers.tierBlock(req('/api/sales-summary?merchant=' + SHOP, { cookie: cookieManager }), w.env, '/api/sales-summary');
-  check(block && block.status === 503, 'le palier refuse aussi (503), il ne laisse pas passer');
+  const st = await get(w, cookieOwner);
+  const body = await st.json();
+  check(st.status === 200 && body.missingTables === true && body.configured === false, 'l’écran s’ouvre et dit que les droits ne sont pas installés');
+  check((await post(w, cookieOwner, { action: 'activate' })).status === 503, 'rien ne s’écrit (503 permissions-not-migrated)');
+  const mgr = await (await pinVerify(w, CODES.manager, { kind: 'refund', refundId: 'rf-1', originalSaleId: 'sale-1', amountCents: 100, refundMethod: 'cash' })).json();
+  const lina = await (await pinVerify(w, CODES.caisse, { kind: 'refund', refundId: 'rf-1', originalSaleId: 'sale-1', amountCents: 100, refundMethod: 'cash' })).json();
+  check(mgr.ok && mgr.approval && !lina.approval, 'au comptoir : le gérant valide, la caissière non, comme avant');
+  check(await tiers.tierBlock(req('/api/sales-summary?merchant=' + SHOP, { cookie: cookieManager }), w.env, '/api/sales-summary') === null, 'le palier décide comme avant');
+  check(await perms.flagUnauthorized(w.env, SHOP, { id: 'pin-lina' }, 'money.cash', 'x') === false, 'rien n’est inscrit');
+}
+
+/* ── 11 · Chaque bascule a un effet, ou l'écran dit qu'elle n'en a pas côté serveur ── */
+console.log('■ Couverture du catalogue');
+{
+  const held = Catalog.ALL.filter((id) => Catalog.BY_ID[id].check !== 'till');
+  const missing = held.filter((id) => !proven.has(id));
+  check(missing.length === 0, `les ${held.length} droits « serveur » ou « journal » sont tous prouvés contre une vraie route` + (missing.length ? ' (manque : ' + missing.join(', ') + ')' : ''));
 }
 
 console.log(`\nstaff-permissions-test · ${checks} vérifications`);

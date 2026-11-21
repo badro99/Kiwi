@@ -91,6 +91,15 @@
   }
   function managerRole(who, ctx) {
     var kind = ctx && ctx.act && ctx.act.kind;
+    /* Les droits de l'équipe activés : le verdict du serveur pour CET acte
+       (pin/verify › permission), puis la copie de la caisse (ctx.permits) ;
+       le rôle ne décide plus que lorsqu'aucun des deux ne sait. */
+    var p = who && who.permission;
+    if (p && p.configured && !who.offline) {
+      if (!p.granted) return refused('pin.manager.not_manager', null, { shake: false });
+      if (kind !== 'refund' && kind !== 'stock_adjust') return null;
+    }
+    if (ctx && typeof ctx.permits === 'function' && ctx.permits(who) === false) return refused('pin.manager.not_manager', null, { shake: false });
     if ((kind === 'refund' || kind === 'stock_adjust') && !(who && who.approval)) return refused('pin.manager.not_manager', null, { shake: false });
     if (kind !== 'refund' && kind !== 'stock_adjust' && kind !== 'cancel_sale' && !isManager(who && who.role, ctx)) return refused('pin.manager.not_manager', null, { shake: false });
     return null;
@@ -174,6 +183,7 @@
       if (reply.body.approval) who.approval = String(reply.body.approval);
       if (reply.body.actorProof) who.actorProof = String(reply.body.actorProof);
       if (reply.body.sellerProof) who.sellerProof = String(reply.body.sellerProof);   /* qui vend (commissions vendeurs) */
+      if (reply.body.permission && typeof reply.body.permission === 'object') who.permission = reply.body.permission;
       if (use === 'manager') return managerRole(who, ctx) || { success: who };
       return tillRole(use, who, ctx) || { success: who };
     }
@@ -263,7 +273,7 @@
       return b;
     }
     function ctx(extra) {
-      return assign({ act: opts.act, actLabel: actLabel, incoming: opts.incoming, venue: opts.venue || '',
+      return assign({ act: opts.act, actLabel: actLabel, incoming: opts.incoming, permits: opts.permits, venue: opts.venue || '',
         pinUnlock: !!opts.pinUnlock, roles: opts.roles, tier: opts.tier,
         online: !(typeof navigator !== 'undefined' && navigator.onLine === false) }, extra);
     }

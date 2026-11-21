@@ -176,8 +176,8 @@
     {"merchant": "upgrade-synth-2", "preset": "fixture-preset-2", "perms": "fixture-perms-2", "updated_ts": 274, "updated_by": "fixture-updated_by-2"}
   ],
   "staff_permission_settings": [
-    {"merchant": "upgrade-synth-1", "free_discount_pct": 137, "legacy_doc": "fixture-legacy_doc-1", "legacy_imported_ts": 137, "updated_ts": 137, "updated_by": "fixture-updated_by-1"},
-    {"merchant": "upgrade-synth-2", "free_discount_pct": 274, "legacy_doc": "fixture-legacy_doc-2", "legacy_imported_ts": 274, "updated_ts": 274, "updated_by": "fixture-updated_by-2"}
+    {"merchant": "upgrade-synth-1", "free_discount_pct": 137, "legacy_doc": "fixture-legacy_doc-1", "legacy_imported_ts": 137, "activated_ts": 137, "activated_by": "fixture-activated_by-1", "updated_ts": 137, "updated_by": "fixture-updated_by-1"},
+    {"merchant": "upgrade-synth-2", "free_discount_pct": 274, "legacy_doc": "fixture-legacy_doc-2", "legacy_imported_ts": 274, "activated_ts": 274, "activated_by": "fixture-activated_by-2", "updated_ts": 274, "updated_by": "fixture-updated_by-2"}
   ],
   "staff_permission_audit": [
     {"id": 137, "merchant": "upgrade-synth-1", "ts": 137, "actor": "fixture-actor-1", "actor_label": "fixture-actor_label-1", "subject": "fixture-subject-1", "subject_label": "fixture-subject_label-1", "change": "fixture-change-1"},

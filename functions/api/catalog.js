@@ -521,6 +521,19 @@ export async function onRequestPost(context) {
     if (lost) return json({ error: 'items-omitted', count: lost, rev: serverRev, data: mine }, 409);
   }
 
+  /* Le prix d'un article qui existe déjà : il faut « Changer le prix d'un
+     article existant » en plus de catalog.edit (droits par personne,
+     functions/api/_permissions.js). Un article neuf porte son premier prix. */
+  if (serverRev && current && current.data) {
+    let old = null;
+    try { old = sanitize(JSON.parse(current.data)); } catch (_) { old = null; }
+    const was = new Map(((old && old.products) || []).map((p) => [p.id, Math.round(Number(p.priceMAD || 0) * 100)]));
+    if (data.products.some((p) => was.has(p.id) && was.get(p.id) !== Math.round(Number(p.priceMAD || 0) * 100))) {
+      const denied = await sessionGuard(request, env, merchant, 'catalog.price');
+      if (denied) return denied;
+    }
+  }
+
   const rev = serverRev + 1;
   try {
     let write;

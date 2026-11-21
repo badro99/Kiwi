@@ -46,7 +46,7 @@ import { cleanStorefront, STOREFRONT_FEATURE } from './shop/_settings.js';
 import { validateMonthReportPolicy } from './_month-report-policy.js';
 import { dayreportHistoryLost } from './_dayreport-history.js';
 import { json, entitledMerchant, activeAccountSession, isTillFor } from '../auth/_lib.js';
-import { storeEditorTier, docBelowTier } from './_store-tier.js';
+import { storeEditorTier, docBelowTier } from './_store-tier.js'; import { docWriteGuard } from './_permissions.js';
 import { storeEtag, storeTag } from './_store-etag.js';
 import { tenantFor, storeSubscriptionPending } from './_private.js';
 import { authFingerprint, authSentinel, planEmployeeAuth, writeEmployeeAuth, authMoved } from './_employee-auth.js';
@@ -922,7 +922,7 @@ export async function onRequestPost(context) {
   try { mine = current ? JSON.parse(current.data) : null; } catch (_) { mine = null; }
   const rawMine = mine;
   try { mine = await codeDocument(env, merchant, feature, mine); }
-  catch (_) { return json({ error: 'staff-code-key-unavailable', detail: 'Restore the previous staff key before editing codes.' }, 409); }
+  catch (_) { return json({ error: 'staff-code-key-unavailable', detail: 'Restore the previous staff key before editing codes.' }, 409); } { const denied = await docWriteGuard(request, env, merchant, feature, mine, clean.value, OWNER_EDIT_FEATURES.has(feature)); if (denied) return denied; } // droits par personne, intitulés de propriétaire, sa propre fiche (_permissions.js)
   /* Le carnet de crédit a son propre document (functions/api/_credit-book-store.js).
    * `book` est le carnet enregistré : la ligne creditbook, ou à défaut la copie
    * encore rangée dans verticalops. */

@@ -421,6 +421,15 @@ export async function onRequestPost(context) {
   if (Array.isArray(body && body.pins) && !(await sessionTierAtLeast(request, env, 'manager'))) {
     return json({ error: 'tier', need: 'manager' }, 403);
   }
+  /* Un code à intitulé de propriétaire (« Propriétaire », « Direction »…) ouvre
+   * le tableau de bord au palier du patron (faceAccessTier). Sous ce palier, une
+   * session ne peut ni en créer, ni en renommer, ni en recoder un : ces lignes
+   * de la liste sont ignorées, et celles déjà en base restent telles quelles
+   * (_staff-publication.js garde les codes propriétaire d'une liste qui n'en a
+   * pas). Sinon un gérant se donnerait le palier du patron. */
+  if (Array.isArray(body && body.pins) && !(await sessionTierAtLeast(request, env, 'owner'))) {
+    body.pins = body.pins.filter((p) => !(p && accountOwnerRole(String(p.role || '').trim().slice(0, 24))));
+  }
 
   // Which of this account's stores is being synced?
   /** @type {import('../../types/tenant').MerchantInput} */

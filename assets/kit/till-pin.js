@@ -82,8 +82,9 @@
     var pad = doc.createElement('k-pin-pad');
     pad.setAttribute('size', 'ipad');
     pad.setAttribute('heading', t('pin.title'));
+    /* o.hint (assets/staff-perms-till.js) : le droit qui manque et qui peut valider, dit avant le code. */
     var sub = o.incoming ? t('pin.till.handover_sub', { name: o.incoming.name || '' })
-      : t(level === 'till' ? 'pin.till.sub' : 'pin.manager.sub', { act: actLabel });
+      : o.hint ? String(o.hint) : t(level === 'till' ? 'pin.till.sub' : 'pin.manager.sub', { act: actLabel });
     pad.setAttribute('sub', sub);
     sheet.appendChild(pad);
     doc.body.appendChild(sheet);
@@ -92,6 +93,8 @@
       use: level === 'till' ? 'approval' : 'manager',
       act: Object.assign(act, { label: actLabel }),
       incoming: o.incoming ? { name: o.incoming.name, match: function (who) { return typeof o.validate === 'function' ? !o.validate(who) : true; } } : null,
+      /* Les droits de l'équipe, une fois activés : ce code couvre-t-il l'acte ? (false refuse ; null laisse la règle d'avant). */
+      permits: !o.incoming && typeof o.validate === 'function' ? function (who) { return o.validate(who) ? false : null; } : null,
       venue: (P().pairedVenue && (P().pairedVenue() || {}).name) || '',
       request: function (code) {
         if (!protectedTill()) return demoReply();

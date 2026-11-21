@@ -79,7 +79,7 @@
     var id = String(who.id || '').slice(0, 80), role = String(who.role || '').trim();
     lastOperator = { id: id, name: String(who.name || '').trim() || 'Caissier', role: role, actorProof: who.actorProof || '', verdict: who.verdict || 'online', provenAt: who.provenAt || null };
     if (level === 'manager') {
-      lastManager = { id: id, name: String(who.name || '').trim() || 'Responsable', role: role, approval: String(who.approval || ''), verdict: who.verdict || 'online', provenAt: who.provenAt || null };
+      lastManager = { id: id, name: String(who.name || '').trim() || 'Responsable', role: role, approval: String(who.approval || ''), actorProof: who.actorProof || '', verdict: who.verdict || 'online', provenAt: who.provenAt || null };
       lastOperator = lastManager;
     }
   }

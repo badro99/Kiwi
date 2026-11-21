@@ -208,8 +208,8 @@
         js("assets/kit/core.js?v=2") +
         js("assets/kit/overlays.js?v=3") +
         js("assets/kit/pin.js?v=6") +
-        js("assets/kit/pin-flow.js?v=8") +
-        js("assets/kit/till-pin.js?v=9") +
+        js("assets/kit/pin-flow.js?v=9") +
+        js("assets/kit/till-pin.js?v=10") +
         js("assets/kit/controls/button.js?v=1") +
         js("assets/kit/controls/chip.js?v=1") +
         js("assets/kit/controls/keypad.js?v=3") +
@@ -237,7 +237,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=469" defer></script>
+  <script src="assets/pos-dispatch.js?v=470" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=10" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>
@@ -354,9 +354,9 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=15" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=81" defer></script>
+  <script src="assets/caisse-pairing.js?v=82" defer></script>
   <script src="assets/kiwi-select.js?v=4" defer></script>
-  <script src="assets/cash-sessions.js?v=15" defer></script>
+  <script src="assets/cash-sessions.js?v=16" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
@@ -738,7 +738,7 @@
           <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M320-200q-17 0-28.5-11.5T280-240q0-17 11.5-28.5T320-280h244q63 0 109.5-40T720-420q0-60-46.5-100T564-560H312l76 76q11 11 11 28t-11 28q-11 11-28 11t-28-11L188-572q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l144-144q11-11 28-11t28 11q11 11 11 28t-11 28l-76 76h252q97 0 166.5 63T800-420q0 94-69.5 157T564-200H320Z"/></svg>
           <span>Remboursement</span>
         </button>
-        <button class="act-pill" data-action="cash-move" data-feature="cash-move">
+        <button class="act-pill" data-action="cash-move" data-feature="cash-move" data-perm="money.cash" data-perm-flow>
           <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M331.5-451.5Q320-463 320-480v-247l-75 75q-11 11-27.5 11T189-652q-12-12-12-28.5t12-28.5l143-143q6-6 13-8.5t15-2.5q8 0 15 2.5t13 8.5l144 144q12 12 11.5 28T531-652q-12 11-28 11.5T475-652l-75-75v247q0 17-11.5 28.5T360-440q-17 0-28.5-11.5ZM585-99.5q-7-2.5-13-8.5L428-252q-12-12-11.5-28t12.5-28q12-11 28-11.5t28 11.5l75 75v-247q0-17 11.5-28.5T600-520q17 0 28.5 11.5T640-480v247l75-75q11-11 27.5-11t28.5 11q12 12 12 28.5T771-251L628-108q-6 6-13 8.5T600-97q-8 0-15-2.5Z"/></svg>
           <span>Mouvement caisse</span>
         </button>
@@ -746,7 +746,7 @@
           <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m233-280 76 76q12 12 11.5 28T308-148q-12 11-28 11.5T252-148L108-292q-6-6-8.5-13T97-320q0-8 2.5-15t8.5-13l144-144q11-11 27.5-11t28.5 11q12 12 12 28.5T308-435l-75 75h567q17 0 28.5 11.5T840-320q0 17-11.5 28.5T800-280H233Zm494-320H160q-17 0-28.5-11.5T120-640q0-17 11.5-28.5T160-680h567l-76-76q-12-12-11.5-28t12.5-28q12-11 28-11.5t28 11.5l144 144q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L708-468q-11 11-27.5 11T652-468q-12-12-12-28.5t12-28.5l75-75Z"/></svg>
           <span>Passation caisse</span>
         </button>
-        <button class="act-pill" data-action="open-drawer" data-feature="open-drawer">
+        <button class="act-pill" data-action="open-drawer" data-feature="open-drawer" data-perm="sales.drawer" data-perm-flow>
           <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm40-80h320q16 0 22.5-14.5T680-760q0-17-11.5-28.5T640-800H320q-17 0-28.5 11.5T280-760q11 11 17.5 25.5T320-720ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Zm260-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Z"/></svg>
           <span>Ouvrir le tiroir</span>
         </button>
@@ -2003,7 +2003,7 @@
   </div>
 
   <!-- Caisse declarations: parser-ordered classic scripts, before shared state. -->
-  <link rel="preload" as="script" href="assets/caisse-strings.js?v=4" data-caisse-script><link rel="preload" as="script" href="assets/caisse/dish-words.js?v=1" data-caisse-script><link rel="preload" as="script" href="assets/caisse/table-settlement.js?v=2" data-caisse-script><link rel="preload" as="script" href="assets/staff-perms-till.js?v=6" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse-strings.js?v=4" data-caisse-script><link rel="preload" as="script" href="assets/caisse/dish-words.js?v=1" data-caisse-script><link rel="preload" as="script" href="assets/caisse/table-settlement.js?v=2" data-caisse-script><link rel="preload" as="script" href="assets/staff-perms-till.js?v=7" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-accounting.js?v=33" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-floor.js?v=23" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-kitchen.js?v=30" data-caisse-script>
@@ -2013,7 +2013,7 @@
   <link rel="preload" as="script" href="assets/caisse/payment.js?v=9" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/split-tender.js?v=10" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/shift.js?v=4" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse/settings.js?v=4" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse/settings.js?v=5" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/held-sales.js?v=5" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/discounts.js?v=4" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/returns.js?v=2" data-caisse-script>

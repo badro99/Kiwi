@@ -9,10 +9,20 @@
 // the operator console reads those rows (functions/api/admin/_workspace.js).
 
 import { businessDate, merchantCutoff, merchantZone } from './_business-day.js';
+import { flagDiscountPermission, provenActor } from './_permissions.js';
 /* La remise au-delà du seuil libre, sans le droit : inscrite au journal des
-   droits, jamais refusée (functions/api/_permissions.js). Ré-exportée ici pour
-   que /api/sale la lise avec ses autres vérités. */
-export { flagDiscountPermission } from './_permissions.js';
+   droits, jamais refusée (functions/api/_permissions.js). L'auteur jugé est
+   celui d'une preuve signée par /api/pin/verify : `actorProof` du responsable
+   qui a validé la remise, sinon `seller.proof` de la personne en poste. Le
+   `actorId` que la caisse déclare n'est qu'un dire, gardé dans le détail. */
+export async function flagSaleDiscount(env, merchant, saleId, body, at, grossCents, discountCents, claimed) {
+  /* L'accord du responsable d'abord (actorProof), sinon la personne en poste
+     (seller.proof) : une preuve expirée ne retombe jamais sur le nom déclaré. */
+  const approver = body && typeof body.actorProof === 'string' && body.actorProof ? body.actorProof : '';
+  const seller = body && body.seller && typeof body.seller.proof === 'string' ? body.seller.proof : '';
+  const proven = (approver ? await provenActor(env, merchant, approver, at) : null) || (seller ? await provenActor(env, merchant, seller, at) : null);
+  return flagDiscountPermission(env, merchant, saleId, proven, grossCents, discountCents, claimed);
+}
 
 /* The `lines` column is a TEXT, but the dashboard and the assistant parse it on
  * every poll: a basket is bounded. */

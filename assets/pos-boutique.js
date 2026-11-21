@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=237';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=155';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=237';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=237';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=238';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=156';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=238';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=238';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=1';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
@@ -2014,7 +2014,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
             if (sale.clientId) payload.clientId = sale.clientId;
             const sellerProof = !IS_DEMO && window.KiwiStaff && window.KiwiStaff.sellerProof;   // commissions vendeurs : la preuve signée de qui a saisi son code, jamais un nom
             if (!IS_DEMO && sellerPickOn()) { if (t.seller && t.seller.id) payload.seller = { member: t.seller.id }; }   // vendeur choisi à l'encaissement : rien de choisi, personne de crédité
-            else if (typeof sellerProof === 'string' && sellerProof) payload.seller = { proof: sellerProof };
+            else if (typeof sellerProof === 'string' && sellerProof) payload.seller = { proof: sellerProof }; if (!IS_DEMO && frozen.remiseAuth && typeof frozen.remiseAuth.proof === 'string' && frozen.remiseAuth.proof) payload.actorProof = frozen.remiseAuth.proof;   // qui a validé la remise (droits de l'équipe)
             if (isAcompte) payload.retailBalance = {
               id: balanceId, customerId: c.id, ticketRef: sale.id,
               totalCents: Math.round(total * 100), stage: 'open',

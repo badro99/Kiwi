@@ -549,7 +549,7 @@
       "name": "rosterList",
       "file": "assets/team/roster-list.js",
       "prefix": "/* Owner: rosterList. Exports create() through KiwiTeamParts.rosterList.\n * Window reads: KiwiRoles, KiwiVenue, __kiwiTeamV2.\n * Instance exports: memberMatchesFilters, rerenderProfilesGrid, renderHeader, roster, daySnapshot, planningDay, bookingCoverage, labour, setActiveTab.\n * lexical imports: memberFullName, jobName, t, teamKey, getMembers, getHours, getShifts, toISO, memberDutyStatus, liveMember, normShift, hhmmToMin, addDays, fromISO, payrollFigures, renderMembersTable, esc, trLang, tradeKey, todayLongLabel, svgIcon, activeFilters, IC.\n * Mutable persistence and credential knowledge belong only to memberState. */\n(function () {\n  'use strict';\n  window.KiwiTeamParts ||= {};\n  const parts = window.KiwiTeamParts;\n  parts.rosterList = Object.freeze({ create(deps) {\n  const {\n    memberFullName,\n    jobName,\n    t,\n    teamKey,\n    getMembers,\n    getHours,\n    getShifts,\n    toISO,\n    memberDutyStatus,\n    liveMember,\n    normShift,\n    hhmmToMin,\n    addDays,\n    fromISO,\n    payrollFigures,\n    renderMembersTable,\n    esc,\n    trLang,\n    tradeKey,\n    todayLongLabel,\n    svgIcon,\n    activeFilters,\n    IC,\n  } = deps;\n  let activeTab = 'profiles';\n",
-      "suffix": "  return Object.freeze({ memberMatchesFilters, rerenderProfilesGrid, renderHeader, roster, daySnapshot, planningDay, bookingCoverage, labour, setActiveTab(value) { activeTab = value; } });\n  } });\n})();\n",
+      "suffix": "  /* Droits de l'équipe (assets/pages-pro/staff-permissions.js) : un bouton de plus dans l'en-tête, posé ici pour que le fragment déplacé reste octet pour octet. */\n  return Object.freeze({ memberMatchesFilters, rerenderProfilesGrid, renderHeader: (...args) => String(renderHeader(...args)).replace('<div class=\"eq-head-acts\">', '<div class=\"eq-head-acts\"><button class=\"btn-slim\" type=\"button\" data-action=\"nav-permissions\">' + svgIcon(IC.users, 13) + '<span>' + esc(trLang() === 'ar' ? 'الحقوق' : trLang() === 'en' ? 'Permissions' : 'Droits') + '</span></button>'), roster, daySnapshot, planningDay, bookingCoverage, labour, setActiveTab(value) { activeTab = value; } });\n  } });\n})();\n",
       "fragments": [
         {
           "start": 59308,
@@ -571,14 +571,14 @@
           "start": 66248,
           "end": 67322,
           "offset": 2689,
-          "length": 1283,
+          "length": 1074,
           "replacement": "  function renderHeader(...args) { return rosterList.renderHeader(...args); }\n",
           "sha256": "93795f265b4c6908b37ae2c0de7344984469e9efcbebf24ae50fce11b84fa977"
         },
         {
           "start": 88267,
           "end": 89159,
-          "offset": 3973,
+          "offset": 3764,
           "length": 892,
           "replacement": "  function roster(...args) { return rosterList.roster(...args); }\n",
           "sha256": "3002fc2fd3b75eec03b3e6959820b9fc33597d2c0069612123e5583457869e2d"
@@ -586,7 +586,7 @@
         {
           "start": 89560,
           "end": 90748,
-          "offset": 4866,
+          "offset": 4657,
           "length": 1188,
           "replacement": "  function daySnapshot(...args) { return rosterList.daySnapshot(...args); }\n",
           "sha256": "075576c0691e02bff94e07de818934512521758447fccb55306144b9062b93d7"
@@ -594,7 +594,7 @@
         {
           "start": 91060,
           "end": 92384,
-          "offset": 6055,
+          "offset": 5846,
           "length": 1324,
           "replacement": "  function planningDay(...args) { return rosterList.planningDay(...args); }\n",
           "sha256": "303f5f571b4cdd91548146425a2fabe5d73456a704dec562064152b2ede24081"
@@ -602,7 +602,7 @@
         {
           "start": 92733,
           "end": 94322,
-          "offset": 7380,
+          "offset": 7171,
           "length": 1589,
           "replacement": "  function bookingCoverage(...args) { return rosterList.bookingCoverage(...args); }\n",
           "sha256": "8b19f706b76bc08cd8a3280a05229b692ed5dac6f497e0cb000d5b1c49362b82"
@@ -610,7 +610,7 @@
         {
           "start": 94759,
           "end": 95345,
-          "offset": 8970,
+          "offset": 8761,
           "length": 586,
           "replacement": "  function labour(...args) { return rosterList.labour(...args); }\n",
           "sha256": "14ca803bb4e9386c89a4805fd12ab6b1e3a09520ba52449bf428c00ee72e4637"

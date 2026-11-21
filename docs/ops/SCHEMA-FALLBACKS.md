@@ -135,3 +135,22 @@ s'affiche vide, une inscription répond 503.
 Après application en production :
 1. passer `MINIMUM_SCHEMA_VERSION` à 24, ajouter 24 à `REQUIRED_MIGRATIONS` et une sonde `SHAPE_PROBES`, et l'assertion de `tools/schema-minimum-test.mjs` ;
 2. `KIWI_UPDATE_SCHEMA_BASELINE=1 node tools/schema-minimum-test.mjs` : les 19 épingles `directory_*` tombent.
+
+## Droits de l'équipe · 0028 en attente · 21 novembre 2026
+
+`migrations/0028_staff_permissions.sql` crée `staff_permissions`,
+`staff_permission_presets`, `staff_permission_settings` et
+`staff_permission_audit`. Tant que le propriétaire ne l'a pas appliquée, le
+minimum reste 0027 : le relever mettrait les approbations de caisse, le
+remboursement et l'annulation en 503 pour une fonction qui n'est pas encore
+allumée. Les 20 requêtes de `functions/api/_permissions.js` et
+`functions/api/permissions.js` qui ne se préparent pas à 0027 sont épinglées
+dans `tools/schema-fallback-baseline.json`, comme l'annuaire avant 0024. Le
+seul repli est la détection de table absente, qui réutilise `isMissingTable`
+de `print/_relay.js` (déjà épinglée) : table absente = droits non activés,
+chaque route garde sa règle d'avant ; l'écran des droits le dit, une écriture
+répond 503 `permissions-not-migrated`.
+
+Après application en production :
+1. passer `MINIMUM_SCHEMA_VERSION` à 28 et l'assertion de `tools/schema-minimum-test.mjs` ;
+2. `KIWI_UPDATE_SCHEMA_BASELINE=1 node tools/schema-minimum-test.mjs` : les épingles `staff_permission*` tombent.

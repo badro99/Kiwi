@@ -284,8 +284,8 @@ CREATE INDEX IF NOT EXISTS idx_session_tiers_updated ON session_tiers (updated_t
 -- Droits de l'équipe, par personne (functions/api/_permissions.js,
 -- assets/permissions-catalog.js). `staff_key` est l'identifiant du membre dans
 -- le document `team` (stable), sinon « name:<nom normalisé> ». Aucun code ici.
--- Sans ligne, une personne a les droits par défaut de son rôle : le
--- comportement d'avant cette table.
+-- Rien ne s'applique avant l'activation par le propriétaire
+-- (staff_permission_settings.activated_ts) : chaque route garde sa règle d'avant.
 CREATE TABLE IF NOT EXISTS staff_permissions (
   merchant   TEXT NOT NULL,
   staff_key  TEXT NOT NULL,
@@ -297,7 +297,7 @@ CREATE TABLE IF NOT EXISTS staff_permissions (
   updated_by TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (merchant, staff_key)
 );
--- Les rôles par défaut modifiés par le propriétaire (owner reste verrouillé).
+-- Les rôles par défaut modifiés par le propriétaire.
 CREATE TABLE IF NOT EXISTS staff_permission_presets (
   merchant   TEXT NOT NULL,
   preset     TEXT NOT NULL,
@@ -306,12 +306,14 @@ CREATE TABLE IF NOT EXISTS staff_permission_presets (
   updated_by TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (merchant, preset)
 );
--- Seuil de remise libre et reprise unique des anciens réglages du navigateur.
+-- Activation, seuil de remise libre et reprise des anciens réglages du navigateur.
 CREATE TABLE IF NOT EXISTS staff_permission_settings (
   merchant           TEXT PRIMARY KEY,
   free_discount_pct  INTEGER NOT NULL DEFAULT 10,
   legacy_doc         TEXT,
   legacy_imported_ts INTEGER,
+  activated_ts       INTEGER NOT NULL DEFAULT 0,
+  activated_by       TEXT NOT NULL DEFAULT '',
   updated_ts         INTEGER NOT NULL,
   updated_by         TEXT NOT NULL DEFAULT ''
 );

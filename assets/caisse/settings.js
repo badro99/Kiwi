@@ -86,7 +86,7 @@
          responsable. Rien ne change tant que le patron n'a pas configuré ses droits. */
       const ruled = window.KiwiCaissePairing?.permsForAct?.(act, access, onApprove, authContext, opts);
       if (ruled && ruled.done) return;
-      if (ruled) { authContext = ruled.authContext; opts = ruled.opts; }
+      if (ruled) { authContext = ruled.authContext; opts = ruled.opts; if (ruled.onApprove) onApprove = ruled.onApprove; }
       /* kiwiSkin2027:till · the approval on the kit's pad (assets/kit/till-pin.js).
          Every approval, at both levels, joins the authorization log with the
          identity, the verdict and, for a verdict read from a row, provenAt. */
@@ -94,7 +94,7 @@
         window.KiwiTillPin.approve({
           level: access === 'till' ? 'till' : 'manager', act, label: actionLabel,
           onApprove, onCancel: opts && opts.onCancel, needsServer: !!(opts && opts.needsServer),
-          authContext: authContext || null, incoming: opts && opts.incoming, validate: opts && opts.validate,
+          authContext: authContext || null, incoming: opts && opts.incoming, validate: opts && opts.validate, hint: opts && opts.hint,
           log: (e) => authorizations.push({ id: 'auth-' + Date.now(), time: new Date(), action: e.label, level: e.level,
             who: { id: e.id, name: e.name, role: e.role }, verdict: e.verdict, provenAt: e.provenAt }),
         });

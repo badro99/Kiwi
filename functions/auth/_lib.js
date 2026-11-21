@@ -246,9 +246,10 @@ export async function tillActorProof(secret, merchant, staff) {
 }
 /**
  * @param {import('../../types/tenant').MerchantInput} merchant
+ * @param {number} [now] the moment the proof must have been valid (a fact a till recorded offline)
  * @returns {Promise<import('../../types/tenant').TillActor | null>}
  */
-export async function readTillActorProof(token, secret, merchant) {
+export async function readTillActorProof(token, secret, merchant, now = Date.now()) {
   if (!secret || typeof token !== 'string' || token.length > 2048 || !token.includes('.')) return null;
   const [payload, signature] = token.split('.');
   const expected = await hmacHex(secret, 'kiwi-till-actor-v1:' + payload);
@@ -256,7 +257,7 @@ export async function readTillActorProof(token, secret, merchant) {
   try {
     const body = JSON.parse(new TextDecoder().decode(b64urlToBytes(payload)));
     // Trust boundary: signature, merchant match, identity and expiry checked here.
-    return body.merchant === merchant && body.id && Number.isFinite(body.exp) && body.exp > Date.now() ? /** @type {import('../../types/tenant').TillActor} */ (body) : null;
+    return body.merchant === merchant && body.id && Number.isFinite(body.exp) && body.exp > now ? /** @type {import('../../types/tenant').TillActor} */ (body) : null;
   } catch (_) { return null; }
 }
 

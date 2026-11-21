@@ -77,7 +77,6 @@
         </div>
         <div class="eq-head-acts">
           ${showEmployeeApp ? `<button class="btn-slim" type="button" data-action="kt-employee-app">${svgIcon(IC.users, 13)}<span>${esc(employeeAppLabel)}</span></button>` : ''}
-          <button class="btn-slim" type="button" data-action="nav-permissions">${svgIcon(IC.users, 13)}<span>${esc(trLang() === 'ar' ? 'الحقوق' : trLang() === 'en' ? 'Permissions' : 'Droits')}</span></button>
           <button data-activation=money class="btn-slim" type="button" data-action="kt-export-csv">${svgIcon(IC.download, 13)}<span>${esc(T.exportCsv)}</span></button>
           <button data-activation=write class="btn-slim primary" type="button" data-action="kt-add-member">${svgIcon(IC.plus, 13)}<span>${esc(T.addMember)}</span></button>
         </div>
@@ -189,6 +188,7 @@
       salaried: f.salaried, rated: f.rated, members: members.length, totalHours: f.totalHours };
   }
 
-  return Object.freeze({ memberMatchesFilters, rerenderProfilesGrid, renderHeader, roster, daySnapshot, planningDay, bookingCoverage, labour, setActiveTab(value) { activeTab = value; } });
+  /* Droits de l'équipe (assets/pages-pro/staff-permissions.js) : un bouton de plus dans l'en-tête, posé ici pour que le fragment déplacé reste octet pour octet. */
+  return Object.freeze({ memberMatchesFilters, rerenderProfilesGrid, renderHeader: (...args) => String(renderHeader(...args)).replace('<div class="eq-head-acts">', '<div class="eq-head-acts"><button class="btn-slim" type="button" data-action="nav-permissions">' + svgIcon(IC.users, 13) + '<span>' + esc(trLang() === 'ar' ? 'الحقوق' : trLang() === 'en' ? 'Permissions' : 'Droits') + '</span></button>'), roster, daySnapshot, planningDay, bookingCoverage, labour, setActiveTab(value) { activeTab = value; } });
   } });
 })();

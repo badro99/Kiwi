@@ -489,6 +489,7 @@ export async function onRequestPost(context) {
     if (employee) merchant = employee.merchant;
   }
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  { const denied = await sessionGuard(request, env, merchant, 'customers.edit'); if (denied) return denied; } // droits par personne (_permissions.js), sur CE merchant
   const state = body && body.merge ? await storeOperationalState(env, merchant) : null;
   const operational = state ? state.ok && !state.pending && !state.suspended
     : await tenantFor(request, env, merchant, { strict: true }) === merchant;

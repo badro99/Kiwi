@@ -3,7 +3,7 @@ import {
   entitledMerchant, isTillFor, isTerminalFor, json, readCookie,
   TERMINAL_COOKIE, terminalToken, terminalCookie, tillEpoch
 } from '../auth/_lib.js';
-import { flagUnauthorized } from './_permissions.js';
+import { flagUnauthorized, provenActor } from './_permissions.js';
 
 const EVENT_TYPES = new Set(['open', 'movement', 'handover', 'close']);
 const MOVEMENT_KINDS = new Set(['in', 'out', 'no-sale']);
@@ -255,12 +255,16 @@ export async function onRequestPost({ request, env }) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .bind(...eventBinds).run();
     }
-    /* Des espèces sorties ou entrées sans le droit « Entrées et sorties
-       d'espèces » : le tiroir a déjà bougé, on garde l'écriture (le compte du
-       soir en dépend) et on l'inscrit au journal des droits du patron. */
-    if (eventType === 'movement') {
-      await flagUnauthorized(env, merchant, { id: actorId }, movementKind === 'no-sale' ? 'sales.drawer' : 'money.cash', id,
-        { movementKind, amountCents: movementAmount, reason: movementReason });
+    /* Des espèces sorties ou entrées, le tiroir ouvert sans vente, la journée
+       clôturée, sans le droit : le tiroir a déjà bougé, on garde l'écriture (le
+       compte du soir en dépend) et on l'inscrit au journal des droits du patron.
+       L'auteur jugé est celui de la preuve signée (`actorProof`), jamais
+       `actorId`, que la caisse déclare (functions/api/_permissions.js). */
+    if (eventType === 'movement' || eventType === 'close') {
+      const proven = (typeof body.actorProof === 'string' && body.actorProof ? await provenActor(env, merchant, body.actorProof, occurredAt) : null)
+        || (typeof body.sellerProof === 'string' && body.sellerProof ? await provenActor(env, merchant, body.sellerProof, occurredAt) : null);
+      await flagUnauthorized(env, merchant, proven, eventType === 'close' ? 'money.close-day' : movementKind === 'no-sale' ? 'sales.drawer' : 'money.cash', id,
+        eventType === 'close' ? { claimed: actorId, gapCents: gapFinal } : { movementKind, amountCents: movementAmount, reason: movementReason, claimed: actorId });
     }
     const response = json({ ok: true, id }, 201);
     if (bootstrapTerminal) {

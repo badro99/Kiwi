@@ -29,14 +29,19 @@ export async function storeEditorTier(request, env, feature) {
 const MANAGER_DOCS = new Set(['payroll', 'costs', 'charges', 'expenses', 'monthreport', 'dayreports',
   'briefing', 'agentactions', 'retention', 'procurement', 'discountpolicy']);
 
+const DOC_READ_PERMS = { payroll: 'team.payroll', costs: 'stock.value' };
+
 export async function docBelowTier(request, env, merchant, feature) {
   /* Les dépenses du patron : sa session ou un opérateur Kiwi, ni caisse ni
      employé, gérant compris (functions/api/expenses/_owner.js). */
   if (feature === 'expenses') return !(await expensesReader(request, env, merchant));
   if (!MANAGER_DOCS.has(feature)) return false;
   if (await sessionTierAtLeast(request, env, 'manager')) {
-    if (feature !== 'payroll') return false;
-    const may = await sessionMay(request, env, merchant, 'team.payroll', true);
+    /* Au palier gérant, les droits par personne peuvent retirer la paie et les
+       coûts (prix d'achat) ; ils ne donnent rien sous ce palier. */
+    const perm = DOC_READ_PERMS[feature];
+    if (!perm) return false;
+    const may = await sessionMay(request, env, merchant, perm, true);
     return !may.ok;
   }
   try { return !(await isTillFor(request, env, merchant)); } catch (_) { return true; }

@@ -90,7 +90,8 @@ console.log('■ staff-perms-till.js › le pavé connaît le droit de l’acte'
 {
   const src = fs.readFileSync(new URL('../assets/staff-perms-till.js', import.meta.url), 'utf8');
   const store = new Map();
-  const doc = { configured: true, freeDiscountPct: 10, ts: 1, staff: [{ k: 'lina saidi', perms: ['sales.drawer'] }, { k: 'sara alaoui', perms: ['money.cash', 'sales.drawer'] }] };
+  const doc = { configured: true, freeDiscountPct: 10, ts: 1, staff: [{ k: 'lina saidi', n: 'Lina Saidi', perms: ['sales.drawer'] },
+    { k: 'sara alaoui', n: 'Sara Alaoui', perms: ['money.cash', 'sales.drawer'] }, { k: 'omar berrada', n: 'Omar Berrada', perms: ['money.cash'] }] };
   store.set('kiwiPerms:v1:droits-fixture', JSON.stringify(doc));
   const ctx = {
     console, JSON, Object, Array, String, Number, Math, Date, Promise, setInterval: () => 0,
@@ -102,7 +103,7 @@ console.log('■ staff-perms-till.js › le pavé connaît le droit de l’acte'
   ctx.window = ctx;
   ctx.addEventListener = () => {};
   ctx.KiwiCaissePairing = { pairedVenue: () => ({ merchant: 'droits-fixture' }) };
-  ctx.KiwiStaff = { id: 'pin-lina', name: 'Lina Saidi', role: 'Caissière' };
+  ctx.KiwiStaff = { id: 'pin-lina', name: 'Lina Saidi', role: 'Caissière', sellerProof: 'seller-lina' };
   vm.runInNewContext(src, ctx, { filename: 'assets/staff-perms-till.js' });
   const forAct = ctx.KiwiCaissePairing.permsForAct;
   check(typeof forAct === 'function', 'le module se branche sur l’espace de l’appairage, que le pavé lit déjà');
@@ -110,15 +111,37 @@ console.log('■ staff-perms-till.js › le pavé connaît le droit de l’acte'
   check(out && typeof out.opts.validate === 'function', 'sortie d’espèces : le pavé reçoit un juge du droit');
   check(/Lina Saidi.*sortir ou entrer des espèces/.test(out.opts.validate({ name: 'Lina Saidi' })), 'le code de Lina (sans le droit) est refusé, avec son nom et l’acte');
   check(out.opts.validate({ name: 'Sara Alaoui' }) === null, 'celui de Sara (avec le droit) passe et devient l’auteur');
+  check(out.opts.hint === 'Lina Saidi n’a pas le droit de sortir ou entrer des espèces. Sara Alaoui ou Omar Berrada peuvent valider.',
+    'avant tout code, le pavé dit le droit qui manque et qui peut valider');
+  const P = ctx.KiwiCaissePairing;
+  check(JSON.stringify(P.permsProofs()) === '{"sellerProof":"seller-lina"}', 'sans accord récent, un mouvement part avec la preuve de la personne en poste');
+  out.onApprove({ id: 'pin-sara', name: 'Sara Alaoui', actorProof: 'actor-sara' });
+  check(P.permsProofs().actorProof === 'actor-sara', 'après l’accord de Sara sur le pavé, le mouvement part avec SA preuve signée');
   check(out.opts.validate({ name: 'Sara Alaoui', offline: true, permission: { id: 'money.cash', granted: false, configured: true } }) === null,
     'un verdict hors ligne n’est jamais lu : la copie de l’équipe tranche');
   let approved = null;
   const self = forAct({ kind: 'open_drawer' }, 'manager', (who) => { approved = who; }, null, {});
   check(self && self.done && approved && approved.viaPermission === 'sales.drawer', 'Lina a le droit au tiroir : pas de pavé responsable pour elle');
+  check(!('actorProof' in P.permsProofs()), 'et ce geste-là ne réutilise pas la preuve de Sara : c’est Lina, prouvée par sa propre preuve');
   const refund = forAct({ kind: 'refund' }, 'manager', () => { throw new Error('jamais sans pavé'); }, { kind: 'refund', refundId: 'r' }, {});
   check(refund && !refund.done && refund.authContext.kind === 'refund', 'un remboursement passe toujours par le pavé (preuve signée liée à la commande)');
   store.set('kiwiPerms:v1:droits-fixture', JSON.stringify({ ...doc, configured: false }));
   check(forAct({ kind: 'cash_out' }, 'till', () => {}, null, {}) === null, 'boutique non configurée : le pavé ne change rien');
+}
+
+console.log('■ Le pavé 2027 (assets/kit/pin-flow.js) suit le droit, plus le rôle');
+{
+  const src = fs.readFileSync(new URL('../assets/kit/pin-flow.js', import.meta.url), 'utf8');
+  const ctx = { console, JSON, Object, Array, String, Number, Math, Date, Promise };
+  ctx.window = ctx;
+  vm.runInNewContext(src, ctx, { filename: 'assets/kit/pin-flow.js' });
+  const F = ctx.KiwiPinFlow;
+  const reply = (staff, permission) => ({ kind: 'answer', status: 200, json: true, body: { ok: true, staff, ...(permission ? { permission } : {}) } });
+  const drawer = { act: { kind: 'open_drawer' } };
+  check(F.classify('manager', reply(manager, { id: 'sales.drawer', granted: false, configured: true }), drawer).key === 'pin.manager.not_manager', 'un gérant privé du droit par le patron : refusé sur le pavé 2027');
+  check(!!F.classify('manager', reply(cashier, { id: 'sales.drawer', granted: true, configured: true }), drawer).success, 'une caissière qui a le droit : acceptée, quel que soit son intitulé');
+  check(F.classify('manager', reply(cashier, { id: 'sales.drawer', granted: false, configured: false }), drawer).key === 'pin.manager.not_manager', 'droits pas activés : la règle d’avant (le rôle) tient');
+  check(F.classify('manager', reply(manager), { ...drawer, permits: () => false }).key === 'pin.manager.not_manager', 'sans verdict du serveur, la copie de la caisse refuse un code sans le droit');
 }
 
 console.log(`\nstaff-permissions-till-test · ${checks} vérifications`);

@@ -12,8 +12,13 @@
  *   3. Les éléments marqués data-perm="…" portent un cadenas quand la personne
  *      en poste n'a pas le droit ; un clic demande le code d'un responsable
  *      (sauf data-perm-flow : le parcours le demande déjà lui-même).
+ * Avant même qu'un code soit tapé, le pavé dit quel droit manque et qui peut
+ * valider (« Sara n'a pas le droit de… Omar ou Hind peuvent valider »).
+ * Les preuves signées par le serveur (actorProof du dernier accord, sellerProof
+ * de la personne en poste) partent avec les mouvements de caisse : le serveur
+ * juge l'auteur prouvé, jamais l'identifiant que la caisse déclare.
  * Ce n'est jamais la seule barrière : le serveur relit chaque droit
- * (functions/api/_permissions.js). Tant que le patron n'a pas enregistré ses
+ * (functions/api/_permissions.js). Tant que le patron n'a pas ACTIVÉ ses
  * droits, rien ici ne change le comportement de la caisse.
  */
 (function () {
@@ -22,20 +27,28 @@
   var REFRESH_MS = 10 * 60 * 1000;
   /* L'acte du pavé → le droit (assets/permissions-catalog.js › ACTION_PERM). */
   var ACT_PERM = { cash_in: 'money.cash', cash_out: 'money.cash', open_drawer: 'sales.drawer', close_till: 'money.close-day',
-    refund: 'sales.refund', stock_adjust: 'stock.adjust', cancel_order: 'sales.void-sent', cancel_table: 'sales.void-sent' };
+    refund: 'sales.refund', stock_adjust: 'stock.adjust', cancel_order: 'sales.void-sent', cancel_table: 'sales.void-sent',
+    discount: 'sales.discount' };
   var PERM_KIND = { 'money.cash': 'cash', 'sales.drawer': 'drawer', 'money.close-day': 'close-day', 'sales.refund': 'refund',
     'stock.adjust': 'inventory', 'sales.void-sent': 'void-sent', 'sales.discount': 'discount', 'sales.price': 'price', 'sales.cancel': 'cancel' };
   /* Ce que la personne en poste peut faire elle-même sans pavé : rien qui
      demande une preuve signée liée à la commande (remboursement, stock). */
-  var SELF_SERVE = { 'money.cash': 1, 'sales.drawer': 1, 'money.close-day': 1, 'sales.void-sent': 1 };
+  var SELF_SERVE = { 'money.cash': 1, 'sales.drawer': 1, 'money.close-day': 1, 'sales.void-sent': 1, 'sales.discount': 1 };
+  /* Arabe : darija, comme le catalogue (assets/permissions-catalog.js › can). */
   var LABEL = {
-    'money.cash': ['sortir ou entrer des espèces', 'move cash in or out', 'إدخال وإخراج الكاش'],
-    'sales.drawer': ['ouvrir le tiroir sans vente', 'open the drawer without a sale', 'فتح الدرج بلا بيع'],
-    'money.close-day': ['clôturer la journée', 'close the day', 'سدّ النهار'],
-    'sales.refund': ['rembourser un client', 'refund a customer', 'إرجاع الفلوس للزبون'],
-    'stock.adjust': ['corriger le stock', 'adjust stock', 'تصحيح المخزون'],
-    'sales.void-sent': ['retirer un article déjà envoyé', 'remove an item already sent', 'حذف طلب بعدما مشى للكوزينة'],
+    'money.cash': ['sortir ou entrer des espèces', 'move cash in or out', 'يدخّل ولا يخرّج الفلوس من الكاشة'],
+    'sales.drawer': ['ouvrir le tiroir sans vente', 'open the drawer without a sale', 'يحلّ الكاشة بلا بيع'],
+    'money.close-day': ['clôturer la journée', 'close the day', 'يسدّ النهار'],
+    'sales.refund': ['rembourser un client', 'refund a customer', 'يرجّع الفلوس للكليان'],
+    'stock.adjust': ['corriger le stock', 'adjust stock', 'يصحّح السلعة'],
+    'sales.void-sent': ['retirer un article déjà envoyé', 'remove an item already sent', 'يحيّد طلب مشى للكوزينة'],
+    'sales.discount': ['faire une remise au-delà du seuil', 'give a discount above the limit', 'يدير تخفيض فوق الحد'],
+    'sales.cancel': ['annuler une vente encaissée', 'cancel a paid sale', 'يلغي بيعة تخلّصات'],
+    'sales.price': ['changer un prix à la caisse', 'change a price at the till', 'يبدّل الثمن فالصندوق'],
   };
+  /* Le dernier accord donné sur le pavé (ou par le droit de la personne en
+     poste) : sa preuve vaut cinq minutes (comme côté serveur) pour le geste qui le suit. */
+  var lastApproval = null, APPROVAL_MS = 5 * 60 * 1000;
 
   function lang() { try { return (window.KiwiCaisseLang && window.KiwiCaisseLang.lang && window.KiwiCaisseLang.lang()) || document.documentElement.lang || 'fr'; } catch (_) { return 'fr'; } }
   function say(perm) { var l = String(lang()).slice(0, 2), row = LABEL[perm]; return row ? row[l === 'en' ? 1 : l === 'ar' ? 2 : 0] : perm; }
@@ -64,7 +77,7 @@
       .then(function (d) {
         if (!d || !d.ok || !Array.isArray(d.staff)) return null;
         var doc = { configured: !!d.configured, freeDiscountPct: Number(d.freeDiscountPct) || 0, ts: Date.now(),
-          staff: d.staff.map(function (s) { return { k: nameKey(s.name), perms: Array.isArray(s.perms) ? s.perms : [] }; }) };
+          staff: d.staff.map(function (s) { return { k: nameKey(s.name), n: String(s.name || '').slice(0, 60), perms: Array.isArray(s.perms) ? s.perms : [] }; }) };
         try { localStorage.setItem(KEY + m, JSON.stringify(doc)); } catch (_) {}
         apply();
         return doc;
@@ -82,11 +95,49 @@
     for (var i = 0; i < doc.staff.length; i++) if (doc.staff[i].k === k) { row = doc.staff[i]; break; }
     return row ? row.perms.indexOf(perm) !== -1 : null;
   }
+  /* Qui, dans la copie de la boutique, a ce droit (trois noms au plus). */
+  function holders(perm, except) {
+    var doc = read(), out = [], skip = nameKey(except || '');
+    if (!doc) return out;
+    for (var i = 0; i < doc.staff.length && out.length < 3; i++) {
+      var s = doc.staff[i];
+      if (s.n && s.k !== skip && s.perms.indexOf(perm) !== -1) out.push(s.n);
+    }
+    return out;
+  }
+  function orList(names, l) {
+    if (names.length < 2) return names.join('');
+    var word = l === 'en' ? ' or ' : l === 'ar' ? ' ولا ' : ' ou ';
+    return names.slice(0, -1).join(', ') + word + names[names.length - 1];
+  }
+  function canValidate(perm, except) {
+    var l = String(lang()).slice(0, 2), list = holders(perm, except);
+    if (!list.length) return l === 'en' ? 'A manager can approve with their code.' : l === 'ar' ? 'المسؤول يقدر يوافق بالكود ديالو.' : 'Un responsable peut valider avec son code.';
+    var many = list.length > 1;
+    if (l === 'en') return orList(list, l) + ' can approve.';
+    if (l === 'ar') return orList(list, l) + (many ? ' يقدرو يوافقو.' : ' يقدر يوافق.');
+    return orList(list, l) + (many ? ' peuvent valider.' : ' peut valider.');
+  }
   function refusal(who, perm) {
     var l = String(lang()).slice(0, 2), name = String((who && who.name) || '').trim();
-    if (l === 'en') return (name || 'This code') + ' is not allowed to ' + say(perm) + '. A manager can approve with their code.';
-    if (l === 'ar') return (name || 'هاد الكود') + ' ما عندوش الحق: ' + say(perm) + '. المسيّر يقدر يوافق بالكود ديالو.';
-    return (name || 'Ce code') + ' n’a pas le droit de ' + say(perm) + '. Un responsable peut valider avec son code.';
+    if (l === 'en') return (name || 'This code') + ' is not allowed to ' + say(perm) + '. ' + canValidate(perm, name);
+    if (l === 'ar') return (name || 'هاد الكود') + ' ما عندوش الحق باش ' + say(perm) + '. ' + canValidate(perm, name);
+    return (name || 'Ce code') + ' n’a pas le droit de ' + say(perm) + '. ' + canValidate(perm, name);
+  }
+  /* Ce que le pavé affiche AVANT le code : le droit qui manque, et qui l'a. */
+  function needHint(perm) {
+    var s = window.KiwiStaff || {}, l = String(lang()).slice(0, 2), name = String(s.name || '').trim();
+    if (name && can(perm) === false) return refusal(s, perm);
+    if (l === 'en') return 'Needs the right to ' + say(perm) + '. ' + canValidate(perm, name);
+    if (l === 'ar') return 'خاص الحق باش ' + say(perm) + '. ' + canValidate(perm, name);
+    return 'Il faut le droit de ' + say(perm) + '. ' + canValidate(perm, name);
+  }
+  /* Les preuves à joindre à un mouvement : jamais un code, jamais un nom. */
+  function proofs() {
+    var out = {}, s = window.KiwiStaff;
+    if (lastApproval && lastApproval.proof && Date.now() - lastApproval.at < APPROVAL_MS) out.actorProof = lastApproval.proof;
+    if (s && typeof s.sellerProof === 'string' && s.sellerProof) out.sellerProof = s.sellerProof;
+    return out;
   }
 
   /* Appelé par caisse/settings.js › openAuthorization avec l'acte annoncé
@@ -98,6 +149,7 @@
     if (!perm || !doc || !doc.configured) return null;
     if (access !== 'till' && SELF_SERVE[perm] && can(perm) === true && typeof onApprove === 'function') {
       var s = window.KiwiStaff || {};
+      lastApproval = { proof: '', at: Date.now() };   // la personne en poste : sa sellerProof suffit
       onApprove({ id: s.id, name: s.name, role: s.role, viaPermission: perm });
       return { done: true };
     }
@@ -106,7 +158,12 @@
       if (can(perm, who) === false) return refusal(who, perm);
       return typeof before === 'function' ? before(who) : null;
     };
-    return { authContext: authContext || (access === 'till' ? authContext : { kind: PERM_KIND[perm] }), opts: o };
+    if (!o.hint) o.hint = needHint(perm);
+    var approved = typeof onApprove === 'function' ? function (who) {
+      lastApproval = { proof: String((who && who.actorProof) || ''), at: Date.now() };
+      return onApprove.apply(this, arguments);
+    } : onApprove;
+    return { authContext: authContext || (access === 'till' ? authContext : { kind: PERM_KIND[perm] }), opts: o, onApprove: approved };
   }
 
   /* data-perm : cadenas et demande d'accord. */
@@ -144,7 +201,11 @@
   /* Le pavé (caisse/settings.js) nous joint par l'espace de l'appairage, qu'il
      lit déjà : la caisse ne gagne pas un global de plus à surveiller. */
   function attach() {
-    try { if (window.KiwiCaissePairing && !window.KiwiCaissePairing.permsForAct) window.KiwiCaissePairing.permsForAct = forAct; } catch (_) {}
+    try {
+      var P = window.KiwiCaissePairing;
+      if (P && !P.permsForAct) P.permsForAct = forAct;
+      if (P && !P.permsProofs) P.permsProofs = proofs;
+    } catch (_) {}
   }
   attach();
   /* Jamais bloquant : un document réduit (banc, page sans DOM complet) ne doit rien casser. */
@@ -161,6 +222,6 @@
   try {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
     else boot();
-    window.KiwiStaffPerms = { can: can, sync: sync, apply: apply, read: read, forAct: forAct };
+    window.KiwiStaffPerms = { can: can, sync: sync, apply: apply, read: read, forAct: forAct, proofs: proofs, needHint: needHint };
   } catch (_) {}
 })();
