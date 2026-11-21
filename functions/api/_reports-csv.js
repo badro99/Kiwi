@@ -35,6 +35,7 @@ const H = {
     customer: 'Client', spend: 'Dépense (MAD)', last: 'Dernière visite', prevSpend: 'Dépense comparée (MAD)', site: 'Établissement',
     weekday: 'Jour', hour: 'Heure', metric: 'Indicateur', value: 'Valeur', prevValue: 'Valeur comparée',
     unassigned: 'Sans vendeur', none: 'Sans catégorie', total: 'Total',
+    zNet: 'Rapport journalier (Z) et accueil (MAD)', creditRefunds: 'Retours rendus en avoir (MAD)', reportNet: 'Ventes nettes du rapport (MAD)',
     sold: 'Vendu avant retours (MAD)', refunded: 'Retours (MAD)', unattributed: 'Ventes sans détail d’article et retours non rattachés', vsAvg: 'Écart à la moyenne du groupe (%)' },
   en: { day: 'Business day', net: 'Net sales (MAD)', prevDay: 'Compared day', prevNet: 'Compared net sales (MAD)',
     name: 'Name', category: 'Category', qty: 'Quantity', prevQty: 'Compared quantity', gross: 'Line gross (MAD)', share: 'Share (%)', change: 'Change (%)',
@@ -45,6 +46,7 @@ const H = {
     customer: 'Customer', spend: 'Spend (MAD)', last: 'Last visit', prevSpend: 'Compared spend (MAD)', site: 'Location',
     weekday: 'Day', hour: 'Hour', metric: 'Metric', value: 'Value', prevValue: 'Compared value',
     unassigned: 'No seller', none: 'No category', total: 'Total',
+    zNet: 'Daily report (Z) and home (MAD)', creditRefunds: 'Returns given as store credit (MAD)', reportNet: 'Report net sales (MAD)',
     sold: 'Sold before returns (MAD)', refunded: 'Returns (MAD)', unattributed: 'Sales without item detail and unlinked refunds', vsAvg: 'vs group average (%)' },
   ar: { day: 'اليوم التجاري', net: 'المبيعات الصافية (درهم)', prevDay: 'يوم المقارنة', prevNet: 'المبيعات الصافية للمقارنة (درهم)',
     name: 'الاسم', category: 'القسم', qty: 'الكمية', prevQty: 'الكمية للمقارنة', gross: 'إجمالي السطور (درهم)', share: 'الحصة (%)', change: 'التطور (%)',
@@ -55,6 +57,7 @@ const H = {
     customer: 'الزبون', spend: 'الإنفاق (درهم)', last: 'آخر زيارة', prevSpend: 'الإنفاق للمقارنة (درهم)', site: 'المؤسسة',
     weekday: 'اليوم', hour: 'الساعة', metric: 'المؤشر', value: 'القيمة', prevValue: 'القيمة للمقارنة',
     unassigned: 'بدون بائع', none: 'بدون قسم', total: 'المجموع',
+    zNet: 'التقرير اليومي (Z) والصفحة الرئيسية (درهم)', creditRefunds: 'مرجوعات رُدّت رصيدا للزبون (درهم)', reportNet: 'المبيعات الصافية في هذا التقرير (درهم)',
     sold: 'المبيعات قبل المرجوعات (درهم)', refunded: 'المرجوعات (درهم)', unattributed: 'مبيعات بدون تفاصيل المنتجات ومرجوعات غير مرتبطة بتذكرتها', vsAvg: 'الفرق مع متوسط المجموعة (%)' },
 };
 const METRICS = {
@@ -89,11 +92,14 @@ export function reportCsv(name, data, lang, labels) {
   if (name === 'summary') {
     const head = [h.metric, h.value, h.prevValue, h.change];
     const series = data.series.map((s) => [s.day, mad(s.net), s.prevDay, mad(s.prevNet), pc(deltaOf(s.net, s.prevNet))]);
+    /* Le raccord avec le Z, sous les indicateurs, quand la période a des retours rendus en avoir. */
+    const rc = data.reconcile;
+    const rec = rc ? [[], [h.zNet, mad(rc.z)], [h.creditRefunds, mad(-rc.credit)], [h.reportNet, mad(rc.net)]] : [];
     if (data.hourly) {
       const hours = data.hourly.map((x) => [String(x.hour).padStart(2, '0') + ':00', mad(x.net), { n: String(x.tickets) }, mad(x.prevNet), pc(deltaOf(x.net, x.prevNet))]);
-      return toCsv(head, metricRows(data.totals.cur, data.totals.prev, lang).concat([[]], [[h.hour, h.net, h.tickets, h.prevNet, h.change]], hours));
+      return toCsv(head, metricRows(data.totals.cur, data.totals.prev, lang).concat(rec, [[]], [[h.hour, h.net, h.tickets, h.prevNet, h.change]], hours));
     }
-    return toCsv(head, metricRows(data.totals.cur, data.totals.prev, lang).concat([[]], [[h.day, h.net, h.prevDay, h.prevNet, h.change]], series));
+    return toCsv(head, metricRows(data.totals.cur, data.totals.prev, lang).concat(rec, [[]], [[h.day, h.net, h.prevDay, h.prevNet, h.change]], series));
   }
   if (name === 'products' || name === 'categories') {
     const head = [h.name, h.category, h.qty, h.sold, h.refunded, h.net, h.share, h.prevQty, h.prevNet, h.change, h.tickets, h.cost, h.margin, h.marginPct];

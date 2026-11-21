@@ -16,10 +16,18 @@
   const fmt = (n, d) => window.KiwiNumber?.format(n, { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 })
     ?? Number(n).toLocaleString(lang() === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
   const CUR = () => L('MAD', 'MAD', 'درهم');
-  const mad = (c) => (c == null ? '–' : fmt(Math.round(Number(c) || 0) / 100, Math.abs(Math.round(c)) % 100 ? 2 : 0) + ' ' + CUR());
-  const mad0 = (c) => (c == null ? '–' : fmt(Math.round((Number(c) || 0) / 100)) + ' ' + CUR());
+  /* Un montant négatif prend le vrai signe moins, pas le trait d'union. */
+  const minus = (t) => String(t).replace(/^-/, '\u2212');
+  const mad = (c) => (c == null ? '–' : minus(fmt(Math.round(Number(c) || 0) / 100, Math.abs(Math.round(c)) % 100 ? 2 : 0)) + ' ' + CUR());
+  const mad0 = (c) => (c == null ? '–' : minus(fmt(Math.round((Number(c) || 0) / 100))) + ' ' + CUR());
   const pctTxt = (p) => (p == null ? '–' : fmt(Math.round(p * 10) / 10, Math.round(p * 10) % 10 ? 1 : 0) + ' %');
-  const qtyTxt = (q) => fmt(q, Math.round(q) === q ? 0 : 2);
+  /* Une quantité : entière telle quelle, sinon au dixième (ou au centième pour
+     un poids comme 0,25), jamais de zéro inutile. */
+  const qtyTxt = (q) => { const r = Math.round(Number(q || 0) * 100) / 100; return fmt(r, Number.isInteger(r) ? 0 : Number.isInteger(r * 10) ? 1 : 2); };
+  const returnedTxt = (q) => {
+    const r = Math.round(Number(q || 0) * 10) / 10, n = qtyTxt(r);
+    return L(`${n} rendu${r >= 2 ? 's' : ''}`, `${n} returned`, `أُرجع منه ${n}`);
+  };
   const dayTxt = (day, opts) => {
     try { return new Date(day + 'T12:00:00Z').toLocaleDateString(lang() === 'ar' ? 'ar-MA-u-nu-latn' : lang() === 'en' ? 'en-GB' : 'fr-FR', Object.assign({ timeZone: 'UTC', day: 'numeric', month: 'short' }, opts || {})); }
     catch (_) { return day; }
@@ -100,6 +108,8 @@
 .rp-d.up{color:var(--rp-up)} .rp-d.down{color:var(--rp-down)} .rp-d.flat{color:var(--n-500,#6F6C65)}
 .rp-chart{width:100%;height:auto;display:block}
 .rp-chart .cur{fill:var(--atlas,#0B6E4F)} .rp-chart .prev{fill:var(--n-200,rgba(10,15,13,.14))} .rp-chart .peak{fill:var(--riad,#053B2C)}
+.rp-chart .tk{fill:none;stroke:var(--ink,#0A0F0D);stroke-width:1.5;stroke-linejoin:round;opacity:.55}
+.rp-legend i.rp-tk{height:2px;border-radius:1px;vertical-align:3px;background:var(--ink,#0A0F0D);opacity:.55}
 .rp-chart .call{fill:var(--ink,#0A0F0D);font-weight:600;font-size:12px}
 .rp-peak{display:flex;align-items:baseline;gap:8px;margin:0 0 10px;font-size:13px;color:var(--n-500,#6F6C65)}
 .rp-peak b{font-size:18px;font-weight:600;color:var(--ink,#0A0F0D);font-variant-numeric:tabular-nums}
@@ -112,6 +122,7 @@
 .rp-table td.n,.rp-table th.n{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
 .rp-table tr.tot td{font-weight:600;border-bottom:0}
 .rp-table tr.rec td{color:var(--n-500,#6F6C65);font-size:12.5px}
+.rp-rec{display:grid;gap:10px;justify-items:start}.rp-rec .rp-scroll{width:100%}
 .rp-table td small{display:block;color:var(--n-500,#6F6C65);font-size:12px}
 .rp-scroll{overflow-x:auto}
 .rp-share{display:grid;grid-template-columns:minmax(40px,1fr) auto;gap:8px;align-items:center;min-width:110px}
@@ -148,7 +159,9 @@
 .rp-skel{height:120px;border-radius:18px;background:linear-gradient(90deg,var(--n-100,rgba(10,15,13,.05)),var(--n-50,rgba(10,15,13,.02)),var(--n-100,rgba(10,15,13,.05)));background-size:200% 100%;animation:rp-sk 1.4s ease-in-out infinite}
 @keyframes rp-sk{to{background-position:-200% 0}}
 @media(prefers-reduced-motion:reduce){.rp-skel{animation:none}}
-@media(max-width:640px){.rp-chart text{font-size:22px}.rp-chart .call{font-size:24px}.rp-kpi.hero{grid-column:span 1}.rp-bar{position:static}.rp-lede{padding:18px}.rp-acts{margin-inline-start:0}.rp-site{max-width:100%}}
+@media(max-width:640px){.rp-chart text{font-size:22px}.rp-chart .tk{fill:none;stroke:var(--ink,#0A0F0D);stroke-width:1.5;stroke-linejoin:round;opacity:.55}
+.rp-legend i.rp-tk{height:2px;border-radius:1px;vertical-align:3px;background:var(--ink,#0A0F0D);opacity:.55}
+.rp-chart .call{font-size:24px}.rp-kpi.hero{grid-column:span 1}.rp-bar{position:static}.rp-lede{padding:18px}.rp-acts{margin-inline-start:0}.rp-site{max-width:100%}}
 [dir=rtl] .rp-d .rp-i,[dir=rtl] .rp-pager .rp-i{transform:scaleX(-1)}
 `;
   function css() {
@@ -228,9 +241,31 @@
       const label = s.hour % 3 === 0 ? `<text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${s.hour}h</text>` : '';
       return prev + cur + call + label;
     }).join('');
+    /* Les tickets de chaque heure, en fine ligne sur leur propre échelle. */
+    const tmax = Math.max(1, ...hourly.map((s) => s.tickets || 0));
+    const pts = hourly.map((s, i) => `${(pad + i * bw + bw / 2).toFixed(1)},${(H - pad - ((s.tickets || 0) / tmax) * (H - pad - 22)).toFixed(1)}`).join(' ');
+    const line = hourly.some((s) => s.tickets) ? `<polyline class="tk" points="${pts}"><title>${esc(L('Tickets par heure', 'Tickets per hour', 'التذاكر في كل ساعة'))}</title></polyline>` : '';
     const head = peak ? `<p class="rp-peak">${esc(L('Heure de pointe', 'Peak hour', 'ساعة الذروة'))} <b>${peak.hour}:00 – ${(peak.hour + 1) % 24}:00</b> ${esc(mad0(peak.net))}${peak.tickets ? ' · ' + esc(fmt(peak.tickets)) + ' ' + esc(L('tickets', 'tickets', 'تذاكر')) : ''}</p>` : '';
-    return `${head}<svg class="rp-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(L('Ventes nettes par heure', 'Net sales by hour', 'المبيعات الصافية حسب الساعة'))}">${bars}</svg>
-      <div class="rp-legend"><span><i style="background:var(--atlas,#0B6E4F)"></i>${esc(L('Journée', 'Day', 'اليوم'))}</span><span><i style="background:var(--n-200,rgba(10,15,13,.14))"></i>${esc(L('Journée d’avant, même heure', 'Day before, same hour', 'اليوم السابق، نفس الساعة'))}</span></div>`;
+    return `${head}<svg class="rp-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(L('Ventes nettes par heure', 'Net sales by hour', 'المبيعات الصافية حسب الساعة'))}">${bars}${line}</svg>
+      <div class="rp-legend"><span><i style="background:var(--atlas,#0B6E4F)"></i>${esc(L('Journée', 'Day', 'اليوم'))}</span><span><i style="background:var(--n-200,rgba(10,15,13,.14))"></i>${esc(L('Journée d’avant, même heure', 'Day before, same hour', 'اليوم السابق، نفس الساعة'))}</span><span><i class="rp-tk"></i>${esc(L('Tickets', 'Tickets', 'التذاكر'))}</span></div>`;
+  }
+
+  /* Le raccord avec le Z et l'accueil : eux ne déduisent pas encore la part
+     d'un retour rendue en avoir, ce rapport la déduit (l'avoir est dû au
+     client). Les trois chiffres, et le Z à un clic. */
+  function reconcile(d, withLink) {
+    const r = d.reconcile;
+    if (!r) return '';
+    const row = (label, v, cls) => `<tr${cls ? ` class="${cls}"` : ''}>${td(esc(label))}${td(esc(mad(v)), 1)}</tr>`;
+    return `<section class="rp-card rp-rec"><h3>${esc(L('Raccord avec le rapport journalier (Z)', 'Reconciling with the daily report (Z)', 'المطابقة مع التقرير اليومي (Z)'))}</h3>
+      ${table([{ t: L('Chiffre', 'Figure', 'الرقم') }, { t: L('Montant', 'Amount', 'المبلغ'), n: 1 }], [
+        row(L('Rapport journalier (Z) et accueil', 'Daily report (Z) and home page', 'التقرير اليومي (Z) والصفحة الرئيسية'), r.z),
+        row(L('Retours rendus en avoir', 'Returns given as store credit', 'مرجوعات رُدّت رصيدا للزبون'), -r.credit)],
+        row(L('Ventes nettes du rapport', 'Net sales in this report', 'المبيعات الصافية في هذا التقرير'), r.net, 'tot'))}
+      <p class="rp-note">${esc(L('Le Z et l’accueil ne déduisent que l’argent rendu. Ce rapport déduit aussi la part rendue en avoir : elle est due au client et ne reste pas en caisse.',
+        'The Z and the home page only deduct money handed back. This report also deducts the part given as store credit: it is owed to the customer and does not stay in the till.',
+        'التقرير اليومي والصفحة الرئيسية يخصمان فقط المال الذي رُدّ للزبون. أما هذا التقرير فيخصم أيضا ما رُدّ كرصيد، لأنه دَين للزبون ولا يبقى في الصندوق.'))}</p>
+      ${withLink ? `<button type="button" class="kb ghost rp-act" data-action="rp-open" data-arg="z">${ic('receipt_long')}${esc(L('Ouvrir le rapport journalier (Z)', 'Open the daily report (Z)', 'فتح التقرير اليومي (Z)'))}</button>` : ''}</section>`;
   }
 
   function summary(d) {
@@ -255,7 +290,7 @@
     return `<div class="rp-kpis">${tiles}</div>
       ${d.hourly ? `<section class="rp-card"><h3>${esc(L('Ventes nettes par heure', 'Net sales by hour', 'المبيعات الصافية حسب الساعة'))}</h3>${hourlyChart(d.hourly, d.peakHour)}</section>`
         : `<section class="rp-card"><h3>${esc(L('Ventes nettes par journée', 'Net sales by business day', 'المبيعات الصافية حسب اليوم'))}</h3>${seriesChart(d.series)}</section>`}
-      ${unknownVat}${noDetail}`;
+      ${reconcile(d, true)}${unknownVat}${noDetail}`;
   }
 
   function table(head, rows, foot) {
@@ -282,7 +317,7 @@
       { t: L('Ventes nettes', 'Net sales', 'المبيعات الصافية'), n: 1 }, { t: L('Part', 'Share', 'الحصة') }, { t: L('Évolution', 'Change', 'التطور'), n: 1 }];
     if (d.showCost) head.push({ t: L('Marge', 'Margin', 'الهامش'), n: 1 });
     const rows = d.rows.map((r) => `<tr>${td(`${esc(r.name || L('Sans catégorie', 'No category', 'بدون قسم'))}${kind === 'products' && r.category ? `<small>${esc(r.category)}</small>` : ''}`)}${td(esc(qtyTxt(r.qty)), 1)}
-      ${td(esc(mad(r.sold)), 1)}${td(r.refunded ? esc(mad(r.refunded)) + (r.refundedQty ? `<small>${esc(qtyTxt(r.refundedQty))} ${esc(L('rendu(s)', 'returned', 'مُرجَع'))}</small>` : '') : '–', 1)}
+      ${td(esc(mad(r.sold)), 1)}${td(r.refunded ? esc(mad(r.refunded)) + (r.refundedQty ? `<small>${esc(returnedTxt(r.refundedQty))}</small>` : '') : '–', 1)}
       ${td(esc(mad(r.net)), 1)}${td(share(r.share))}${td(delta(r.net, r.prevNet), 1)}${d.showCost ? td(r.marginPct == null ? '<small>' + esc(L('coût inconnu', 'cost unknown', 'تكلفة غير معروفة')) + '</small>' : esc(pctTxt(r.marginPct)) + `<small>${esc(mad0(r.margin))}</small>`, 1) : ''}</tr>`);
     const t = d.totals || {};
     const span = 4, tail = d.showCost ? 3 : 2;
@@ -355,7 +390,7 @@
     const card = (r, extra) => `<section class="rp-card rp-site-card${extra || ''}"><header><h4>${esc(r.name)}</h4>${r.merchant === d.best && d.rows.length > 1 ? `<span class="rp-tag">${esc(L('meilleur', 'best', 'الأفضل'))}</span>` : r.merchant === d.worst ? `<span class="rp-tag low">${esc(L('à surveiller', 'watch', 'للمتابعة'))}</span>` : ''}</header>
       <div class="big">${esc(mad0(r.cur.net))}</div><div>${delta(r.cur.net, r.prev.net)} <small class="rp-note">${esc(L('avant', 'before', 'قبل'))} ${esc(mad0(r.prev.net))}</small></div>
       ${r.share != null ? share(r.share) : ''}
-      ${r.vsAverage && r.vsAverage.net != null && d.rows.length > 1 ? `<div class="rp-vs"><span>${esc(L('Face à la moyenne du groupe', 'vs group average', 'مقارنة مع متوسط المجموعة'))}</span>${delta(r.cur.net, d.average.net)}</div>` : ''}
+      ${r.vsAverage && r.vsAverage.net != null && d.average && d.rows.filter((x) => x.cur.tickets || x.cur.refundCount).length > 1 ? `<div class="rp-vs"><span>${esc(L('Face à la moyenne du groupe', 'vs group average', 'مقارنة مع متوسط المجموعة'))}</span>${delta(r.cur.net, d.average.net)}</div>` : ''}
       <dl><dt>${esc(L('Tickets', 'Tickets', 'التذاكر'))}</dt><dd>${esc(fmt(r.cur.tickets))}</dd><dt>${esc(L('Panier moyen', 'Average basket', 'متوسط السلة'))}</dt><dd>${esc(mad0(r.cur.basket))}</dd>
       <dt>${esc(L('Remises', 'Discounts', 'التخفيضات'))}</dt><dd>${esc(mad0(r.cur.discounts))}</dd><dt>${esc(L('Remboursements', 'Refunds', 'المرجوعات'))}</dt><dd>${esc(mad0(r.cur.refunds))}</dd>
       ${d.showCost && r.cur.marginPct != null ? `<dt>${esc(L('Marge brute', 'Gross margin', 'الهامش الإجمالي'))}</dt><dd>${esc(pctTxt(r.cur.marginPct))}</dd>` : ''}</dl></section>`;
@@ -378,6 +413,7 @@
     return `<section class="rp-cover"><h2>${esc(L('Synthèse pour le comptable', 'Summary for the accountant', 'ملخص للمحاسب'))} · ${esc(siteName)}</h2>
       <div class="rp-kpis">${tile(L('Ventes brutes', 'Gross sales', 'المبيعات الإجمالية'), mad(c.gross))}${tile(L('Remises', 'Discounts', 'التخفيضات'), mad(c.discounts))}${tile(L('Remboursements', 'Refunds', 'المرجوعات'), mad(c.refunds))}${tile(L('Ventes nettes TTC', 'Net sales incl. VAT', 'المبيعات الصافية بالضريبة'), mad(c.net))}
       ${tile(L('Tickets', 'Tickets', 'التذاكر'), fmt(c.tickets))}${tile(L('Panier moyen', 'Average basket', 'متوسط السلة'), mad(c.basket))}${tile(L('Pourboires (hors CA)', 'Tips (not revenue)', 'البقشيش (خارج رقم المعاملات)'), mad(c.tips))}${tile(L('TVA collectée', 'VAT collected', 'الضريبة المحصّلة'), mad(vt ? vt.vat : c.vat && c.vat.vat))}</div>
+      ${reconcile(sum, false)}
       <h2>${esc(L('TVA par taux', 'VAT by rate', 'الضريبة حسب النسبة'))}</h2>${vatTable || `<p class="rp-note">${esc(L('Aucune vente taxable.', 'No taxable sales.', 'لا مبيعات خاضعة للضريبة.'))}</p>`}</section>`;
   }
 
@@ -390,7 +426,7 @@ body{margin:0;padding:28px 32px;background:#FDFCF9;color:#0A0F0D;font-family:'In
 .pr-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid #0B6E4F;padding-bottom:12px;margin-bottom:18px}
 .pr-head h1{margin:0;font-size:22px;font-weight:600}.pr-head p{margin:4px 0 0;color:#6F6C65;font-size:13px}
 .rp-lede{background:#F2F0EA;color:#0A0F0D;border-color:#E4E0D6}.rp-lede .rp-dot{background:#0B6E4F}.rp-lede a{display:none}
-.rp-card,.rp-kpi{break-inside:avoid;background:#FDFCF9}.rp-pager{display:none}
+.rp-card,.rp-kpi{break-inside:avoid;background:#FDFCF9}.rp-pager,.rp-rec .kb{display:none}
 .pr-foot{margin-top:22px;color:#6F6C65;font-size:11px}
 @page{size:A4;margin:14mm}
 @media print{body{padding:0}.rp-scroll{overflow:visible}.rp-heat{min-width:0}}

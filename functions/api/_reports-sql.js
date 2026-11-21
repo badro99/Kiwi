@@ -124,6 +124,7 @@ export const Q = {
       SUM(CASE WHEN rf = 0 THEN c ELSE 0 END) AS pos,
       SUM(rf) AS nref,
       SUM(CASE WHEN rf = 1 THEN -c ELSE 0 END) AS neg,
+      SUM(CASE WHEN rf = 1 THEN b - c ELSE 0 END) AS credit,
       SUM(CASE WHEN rf = 0 THEN disc ELSE 0 END) AS disc,
       SUM(CASE WHEN rf = 0 AND tip > 0 THEN tip ELSE 0 END) AS tips,
       SUM(CASE WHEN rf = 0 AND client_id IS NOT NULL AND client_id <> '' THEN 1 ELSE 0 END) AS known,

@@ -11,7 +11,7 @@ const r0 = (n) => Math.round(Number(n) || 0);
 const num = (n) => Number(n) || 0;
 
 function emptyK() {
-  return { gross: 0, discounts: 0, refunds: 0, refundCount: 0, net: 0, sales: 0, tickets: 0, basket: 0, tips: 0,
+  return { gross: 0, discounts: 0, refunds: 0, refundCount: 0, creditRefunds: 0, net: 0, sales: 0, tickets: 0, basket: 0, tips: 0,
     items: 0, itemsPerTicket: null, detailed: 0, knownClients: 0, cogs: null, costCoverage: null, margin: null, marginPct: null, vat: null };
 }
 
@@ -21,7 +21,7 @@ export function kpis(hours, lineTotals, pd, site, showCost) {
   const k = emptyK();
   for (const h of hours) {
     if (h.pd !== pd || (site != null && h.site !== site)) continue;
-    k.tickets += num(h.n); k.sales += num(h.pos); k.refundCount += num(h.nref); k.refunds += num(h.neg);
+    k.tickets += num(h.n); k.sales += num(h.pos); k.refundCount += num(h.nref); k.refunds += num(h.neg); k.creditRefunds += num(h.credit);
     k.discounts += num(h.disc); k.tips += num(h.tips); k.knownClients += num(h.known); k.detailed += num(h.detailed);
   }
   k.gross = k.sales + k.discounts;
@@ -125,7 +125,12 @@ export function buildSummary(ctx, [hours, lineTotals, drivers]) {
      compte que l'enveloppe (reports.js) donne au sélecteur. */
   const perSite = sites.map((s, i) => ({ merchant: s.merchant, name: s.name,
     cur: kpis(hours, lineTotals, 'c', i, showCost), prev: kpis(hours, lineTotals, 'p', i, showCost) }));
-  return { totals: { cur, prev, change: deltaPct(cur.net, prev.net) }, series, hourly, peakHour, drivers: d.drivers, slots: d.slots,
+  /* Le raccord avec le Z et l'accueil (/api/sales-summary) : eux ne
+     déduisent que l'argent rendu, pas la part rendue en avoir. Leur net =
+     ce net + les retours rendus en avoir, au centime (tools/reports-test.mjs
+     le vérifie avec leur propre fonction). Rien à raccorder sans avoir. */
+  const reconcile = cur.creditRefunds > 0 ? { z: cur.net + cur.creditRefunds, credit: cur.creditRefunds, net: cur.net } : null;
+  return { totals: { cur, prev, change: deltaPct(cur.net, prev.net) }, series, hourly, peakHour, reconcile, drivers: d.drivers, slots: d.slots,
     perSite, headline: summarySentence(d) };
 }
 
@@ -329,7 +334,9 @@ export function buildSites(ctx, [hours, lineTotals]) {
   } : null;
   rows.forEach((r) => {
     r.share = total.net > 0 ? Math.round((r.cur.net / total.net) * 1000) / 10 : 0;
-    r.vsAverage = avg && (r.cur.tickets || r.cur.refundCount) ? { net: deltaPct(r.cur.net, avg.net), basket: deltaPct(r.cur.basket, avg.basket) } : null;
+    /* Une moyenne d'une seule boutique ne dit rien : pas d'écart sans au
+       moins deux boutiques qui ont vendu. */
+    r.vsAverage = avg && active.length > 1 && (r.cur.tickets || r.cur.refundCount) ? { net: deltaPct(r.cur.net, avg.net), basket: deltaPct(r.cur.basket, avg.basket) } : null;
   });
   return { rows, totals: { cur: total, prev: prevTotal, change: deltaPct(total.net, prevTotal.net) }, average: avg,
     best: best && best.merchant, worst: worst && worst.merchant,

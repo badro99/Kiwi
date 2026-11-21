@@ -30,6 +30,7 @@ import { cell, toCsv, BOM } from '../functions/api/_reports-csv.js';
 import { summarySentence, rankingSentence } from '../functions/api/_reports-words.js';
 import { routeMinTier } from '../functions/auth/_session-tier.js';
 import { businessBoundary } from '../functions/api/_business-day.js';
+import { summarize } from '../functions/api/sales-summary.js';
 import { baseCte, Q, LINES_CTE } from '../functions/api/_reports-sql.js';
 import { listMigrations, MIGRATIONS_DIR } from './d1-migrations.mjs';
 
@@ -118,7 +119,10 @@ sale({ id: 'rb', c: -500, method: 'cash', ts: at(D2, 14), channel: 'refund' });
 audit.run('b1', 'rb', 5, 500, 'cash', at(D2, 14));
 /* Le 16 : 210 produits différents, pour l'export complet. */
 const D3 = '2026-10-16';
-for (let i = 0; i < 210; i++) sale({ id: 'bulk' + i, c: 100 + i, ts: at(D3, 12, i % 60), lines: [{ n: 'Produit ' + String(i).padStart(3, '0'), c: 'Vrac', q: 1, t: (100 + i) / 100 }] });
+for (let i = 0; i < 210; i++) {
+  sale({ id: 'bulk' + i, c: 100 + i, ts: at(D3, 12, i % 60), client: 'bc' + i, lines: [{ n: 'Produit ' + String(i).padStart(3, '0'), c: 'Vrac', q: 1, t: (100 + i) / 100 }] });
+  sql.prepare('INSERT INTO clients (merchant, id, name) VALUES (?, ?, ?)').run('atlas-casa', 'bc' + i, 'Client ' + String(i).padStart(3, '0'));
+}
 
 const owner = sessionCookie(await makeSession('acc-atlas', SECRET));
 const rival = sessionCookie(await makeSession('acc-rival', SECRET));
@@ -192,6 +196,27 @@ check(pull && pull.qty === 1 && pull.sold === 6000 && pull.refunded === 3000 && 
 check(r.body.totals.unattributed === 1000 && r.body.totals.net === k2.net
   && r.body.rows.reduce((a, x) => a + x.net, 0) + r.body.totals.unattributed === k2.net,
   'produits + ventes sans détail (15 MAD − 5 MAD rendus) = ventes nettes du résumé, au centime', r.body.totals);
+/* Le raccord avec le Z et l'accueil : leur net se calcule avec LEUR fonction
+   (/api/sales-summary › summarize), sur les mêmes lignes. */
+const zNet = (fromDay, toDay) => {
+  const w = windowFor(fromDay, toDay, null, 'Africa/Casablanca', 5);
+  const rows = sql.prepare('SELECT ts, amount, amount_cents, method, payment_parts, tip_cents, channel, label FROM sales WHERE merchant = ? AND ts >= ? AND ts < ? AND void_ts IS NULL').all('atlas-casa', w.from, w.to);
+  return summarize(rows, w.from, w.to, 5, 'Africa/Casablanca').days.reduce((a, x) => a + x.cents - x.refundCents, 0);
+};
+r = await get(`merchant=atlas-casa&report=summary&${day(D2)}`, owner);
+const rc = r.body.reconcile;
+check(rc && rc.z === zNet(D2, D2) && rc.credit === 3000 && rc.z - rc.credit === rc.net && rc.net === k2.net,
+  'raccord : Z et accueil (70 MAD, leur propre calcul) − retours en avoir (30 MAD) = ventes nettes du rapport (40 MAD), au centime', [rc, zNet(D2, D2)]);
+r = await get(`merchant=atlas-casa&report=summary&from=${D}&to=${D2}`, owner);
+check(r.body.reconcile && r.body.reconcile.z === zNet(D, D2) && r.body.reconcile.z - r.body.reconcile.credit === r.body.totals.cur.net,
+  'sur trois journées aussi, X − Y = net au centime', [r.body.reconcile, zNet(D, D2)]);
+check((await get(`merchant=atlas-casa&report=summary&${day(D)}`, owner)).body.reconcile === null && zNet(D, D) === 16000,
+  'sans retour en avoir, rien à raccorder : le Z et le rapport disent 160 MAD', zNet(D, D));
+r = await get(`merchant=atlas-casa&report=summary&${day(D2)}&format=csv`, owner);
+check(r.text.includes('"Rapport journalier (Z) et accueil (MAD)";"70,00"') && r.text.includes('"Retours rendus en avoir (MAD)";"-30,00"') && r.text.includes('"Ventes nettes du rapport (MAD)";"40,00"'),
+  'le CSV du résumé porte les trois lignes du raccord', r.text.slice(0, 900));
+r = await get(`merchant=atlas-casa&report=summary&${day(D2)}&format=csv&lang=ar`, owner);
+check(r.text.includes('مرجوعات رُدّت رصيدا للزبون (درهم)'), 'en arabe aussi');
 r = await get(`merchant=atlas-casa&report=staff&${day(D2)}`, owner);
 check(r.body.rows.reduce((a, x) => a + x.refunds, 0) === 3500 && r.body.rows.reduce((a, x) => a + x.tickets, 0) === 2, 'vendeurs : deux tickets, 35 MAD rendus', r.body.rows);
 r = await get(`merchant=atlas-casa&report=products&${day(D2)}&format=csv`, owner);
@@ -279,6 +304,7 @@ check((await get(`merchant=atlas-casa&report=summary&site=rival&${day(D)}`, owne
 check((await get(`merchant=atlas-casa&report=summary&${day(D)}`, till)).status === 403, 'une caisse appairée n’ouvre pas les rapports');
 r = await get(`merchant=rival&report=sites&${day(D)}`, rival);
 check(r.status === 200 && r.body.rows.length === 1 && r.body.totals.cur.net === 50000, 'le concurrent ne voit que sa boutique', r.body.rows);
+check(r.body.rows[0].vsAverage === null, 'une seule boutique qui vend : pas d’écart à une « moyenne du groupe »', r.body.rows[0]);
 r = await get(`merchant=atlas-casa&report=summary&${day(D)}`, manager);
 check(r.status === 200 && r.body.showCost === false && r.body.totals.cur.cogs === null && r.body.totals.cur.margin === null, 'un gérant voit les ventes, pas les coûts ni les marges', r.body.totals.cur);
 r = await get(`merchant=atlas-casa&report=products&${day(D)}`, manager);
@@ -299,6 +325,10 @@ r = await get(`merchant=atlas-casa&report=products&${day(D3)}&format=csv`, owner
 check(r.text.split('\r\n').filter(Boolean).length === 1 + 210 + 1 && r.text.includes('"Produit 209"') && r.text.includes('"Produit 000"'),
   'le CSV exporte les 210 produits, pas la page affichée (plus de coupure à 200)', r.text.split('\r\n').length);
 check((await get(`merchant=atlas-casa&report=products&${day(D3)}`, owner)).body.rows.length === 50, 'à l’écran, la même liste reste paginée par 50');
+r = await get(`merchant=atlas-casa&report=customers&${day(D3)}&format=csv`, owner);
+check(r.text.split('\r\n').filter(Boolean).length === 1 + 210 && r.text.includes('"Client 000"') && r.text.includes('"Client 209"'),
+  'le CSV des clients exporte les 210 clients, pas la page affichée', r.text.split('\r\n').length);
+check((await get(`merchant=atlas-casa&report=customers&${day(D3)}`, owner)).body.page.total === 210, 'à l’écran, 210 clients au total, paginés');
 r = await get(`merchant=atlas-casa&report=summary&${day(D)}&format=csv&lang=ar`, owner);
 check(r.text.includes('المبيعات الصافية (درهم)') && r.text.includes('"160,00"'), 'en arabe, les en-têtes arabes passent intacts', r.text.slice(0, 200));
 r = await get(`merchant=atlas-casa&report=sites&${day(D)}&format=csv`, owner);
@@ -366,7 +396,16 @@ console.log('\nLa démo et l’impression');
   check(Demo.csv(build('products', { csv: true }), 'fr').startsWith(BOM), 'démo : le CSV est fait sur place, BOM compris');
   check(/typeof window\.KiwiEnv\?\.isReal === 'function' && !window\.KiwiEnv\.isReal\(\)/.test(hub), 'les chiffres de démo ne s’affichent que si KiwiEnv dit « pas réel » (jamais sans KiwiEnv)');
   const page = Views.printable('Rapport', 'Café Atlas', '<p>corps</p>', dt, { summary: dt, vat: build('vat', { preset: 'aujourdhui' }) });
+  const page2 = Views.printable('Rapport', 'Atlas', '', dt, { summary: Object.assign({}, dt, { reconcile: { z: 7000, credit: 3000, net: 4000 } }), vat: null });
+  check(/Raccord avec le rapport journalier/.test(page2) && /Retours rendus en avoir/.test(page2), 'la page de garde imprimée porte le raccord avec le Z');
   check(/Synthèse pour le comptable/.test(page) && /TVA par taux/.test(page) && page.indexOf('Synthèse') < page.indexOf('corps'), 'l’impression commence par une page de garde pour le comptable (totaux, TVA par taux)');
+  const rk = Views.ranking({ showCost: false, rows: [{ name: 'Pull', category: 'Mode', qty: 1.5, sold: 9000, refunded: 1500, refundedQty: 2.5, net: 7500, prevNet: 0, share: 100 },
+    { name: 'Robe', category: 'Mode', qty: 1, sold: 3000, refunded: 1000, refundedQty: 1, net: 2000, prevNet: 0, share: 20 }], totals: { net: 9500 }, page: { offset: 0, limit: 50, total: 2 } }, 'products');
+  check(/2,5 rendus/.test(rk) && /1 rendu</.test(rk) && !/rendu\(s\)|2,50/.test(rk), 'quantité rendue : « 2,5 rendus », « 1 rendu », jamais « 2,50 rendu(s) »');
+  const sum2 = Demo.build({ report: 'summary', preset: 'aujourdhui', site: 'cafeAtlas', anchor: 'cafeAtlas' }, at0);
+  check(/<polyline class="tk"/.test(Views.summary(sum2)), 'la courbe à l’heure porte les tickets de chaque heure en fine ligne');
+  const recHtml = Views.summary(Object.assign({}, sum2, { reconcile: { z: 7000, credit: 3000, net: 4000 } }));
+  check(/Raccord avec le rapport journalier/.test(recHtml) && /data-action="rp-open" data-arg="z"/.test(recHtml), 'le résumé affiche le raccord et ouvre le Z d’un clic');
   const lede = Views.lede(dt, 'comparé à', { title: 'Résumé' });
   check(/href="https:\/\/wa\.me\/\?text=/.test(lede) && !/api\.whatsapp|graph\.facebook/.test(lede), 'la phrase se partage en brouillon wa.me (rien n’est envoyé, aucun service payant)');
 }
