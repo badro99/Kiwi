@@ -1,10 +1,10 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=229';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=147';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=229';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=229';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=230';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=148';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=230';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=230';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=1';
-import { readDayRows } from './pos-boutique/old-sales.js?v=2';
+import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=3';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=23';
 import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zDrawerCash, zDrawerMoves, zDrawerRows, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=10'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=23'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11'; import { bqTransfers } from './pos-boutique/transfers.js?v=7';
@@ -517,6 +517,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       ticketAmountCents: Math.round(total * 100), consignedAmountCents: 0,
       method, channel: delivery ? 'delivery' : 'counter', label: (lines[0] && lines[0].name) || 'Vente',
       ref: sale.id, ts: +new Date(sale.at || Date.now()), lines,
+      ...(mzSaleDiscount({ amountCents: Math.round(cashIn * 100), totalCents: Math.round(total * 100), remiseCents: Math.round((+sale.discount || 0) * 100), actorId: '' }) || {}),
     };
     if (sale.clientId) payload.clientId = sale.clientId;
     if (sale.tenderVersion === 2) payload.paymentParts = bqPaymentParts(parts);
@@ -2008,6 +2009,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
               ref: sale.id,
               time: sale.at, deviceTs: sale.deviceTs,
               lines: basket,
+              ...(mzSaleDiscount({ amountCents: Math.round(cashIn * 100), totalCents: Math.round(total * 100), remiseCents: Math.round(tot.remise * 100), rewardCents: Math.round(tot.reward * 100), actorId: bqActorId() }) || {}),
             };
             if (sale.clientId) payload.clientId = sale.clientId;
             if (isAcompte) payload.retailBalance = {

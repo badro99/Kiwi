@@ -86,6 +86,8 @@ function tillContext(globals) {
     grabStatement(/const lineUnit {0,2}= \(ln\) => [^\n]+\n/),
     grabStatement(/const lineTotal = [^\n]+\n/),
     grabFn('function bqLineTotals('), grabFn('function bqFoldBasket('),
+    /* la remise envoyée avec la vente, la vraie (pos-maison/sale-discount.js, partagée avec la boutique) */
+    fs.readFileSync(path.join(ROOT, 'assets/pos-maison/sale-discount.js'), 'utf8').replace('export function', 'function'),
     grabFn('function originalSalePayload('),
     /* le correctif « argent qui rentre » peut avoir ajouté une aide à caToday */
     (SRC.match(/const notCashedOf = [\s\S]*?;\n/) || [''])[0],

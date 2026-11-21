@@ -189,7 +189,9 @@ const basket = [{ itemId: 'p1', name: 'Caftan', qty: 1, total: 1200 }];
   vm.createContext(sandbox);
   /* originalSalePayload envoie ses lignes par bqLineTotals (le panier au centime), défini plus bas dans le fichier. */
   const lineTotalsSrc = src.slice(src.indexOf('  function bqFoldBasket('), src.indexOf('  function bqZJournal('));
-  vm.runInContext(lineTotalsSrc + src.slice(from, to).replace(/\n\s*refreshRemoteAvoirs\(\);\s*\n/g, '\n') +
+  /* et la remise qu'il envoie avec la vente (pos-maison/sale-discount.js, le vrai module). */
+  const discountSrc = nativeFs.readFileSync(path.join(ROOT, 'assets/pos-maison/sale-discount.js'), 'utf8').replace('export function', 'function');
+  vm.runInContext(discountSrc + lineTotalsSrc + src.slice(from, to).replace(/\n\s*refreshRemoteAvoirs\(\);\s*\n/g, '\n') +
     '\n;this.api = { creditFromServer, creditRequest, stableCreditIssueId, originalSalePayload, creditErrorDetail };', sandbox);
   const api = sandbox.api;
   const lookup = await api.creditRequest(null, '&code=AV-OTHER');
