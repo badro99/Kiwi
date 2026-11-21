@@ -87,16 +87,17 @@
 .cgp-err[hidden]{display:none}
 .cgp-err b{font-weight:600}
 .cgp-ic{display:inline-block;width:18px;height:18px;flex:none;background:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat;vertical-align:-4px;margin-inline-end:6px}
-.cgp-ic.back{--ic:url(assets/icons/material/arrow_back.svg)}
-[dir="rtl"] .cgp-ic.back{transform:scaleX(-1)}
-.cgp-ic.tune{--ic:url(assets/icons/material/sell.svg)}
-.cgp-ic.up{--ic:url(assets/icons/material/upload.svg)}
-.cgp-ic.down{--ic:url(assets/icons/material/download.svg)}
-.cgp-ic.undo{--ic:url(assets/icons/material/undo.svg)}
-.cgp-ic.warn{--ic:url(assets/icons/material/warning.svg)}
-.cgp-ic.big{width:40px;height:40px;margin:0 auto;display:block;color:var(--atlas,#0B6E4F)}
+.cgp-i-back{--ic:url(assets/icons/material/arrow_back.svg)}
+[dir="rtl"] .cgp-i-back{transform:scaleX(-1)}
+.cgp-i-tune{--ic:url(assets/icons/material/sell.svg)}
+.cgp-i-up{--ic:url(assets/icons/material/upload.svg)}
+.cgp-i-down{--ic:url(assets/icons/material/download.svg)}
+.cgp-i-undo{--ic:url(assets/icons/material/undo.svg)}
+.cgp-i-warn{--ic:url(assets/icons/material/warning.svg)}
+.cgp-i-big{width:40px;height:40px;margin:0 auto;display:block;color:var(--atlas,#0B6E4F)}
 .cgp-empty{display:grid;justify-items:center;gap:10px;text-align:center;padding:56px 20px;border:1px dashed var(--n-200,rgba(10,15,13,.16));border-radius:14px;background:var(--paper,#F7F5F0)}
 .cgp-empty[hidden]{display:none}
+.cgp.is-empty .cgp-foot,.cgp.is-empty .cgp-search,.cgp.is-empty .cgp-seg,.cgp.is-empty .cgp-bar>.kiwi-select,.cgp.is-empty .cgp-bar>select{display:none}
 .cgp-empty h3{margin:0;font-size:18px;font-weight:600;color:var(--ink,#0A0F0D)}
 .cgp-empty p{margin:0;max-width:440px;font-size:13.5px;color:var(--n-600,#4a5550)}
 .cgp-empty .acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:6px}
@@ -246,6 +247,7 @@
     const empty = !S.data.rows.length;
     host.querySelector('[data-cgp-empty]').hidden = !empty;
     host.querySelector('[data-cgp-grid]').hidden = empty;
+    host.classList.toggle('is-empty', empty);
     const seg = host.querySelector('[data-cgp-seg]');
     seg.querySelector('[data-n="changed"]').textContent = fmtNum(c.rows, 0);
     const nb = seg.querySelector('[data-n="errors"]'); nb.textContent = fmtNum(c.bad.size, 0); nb.classList.toggle('bad', c.bad.size > 0);
@@ -323,15 +325,15 @@
       subtitle: [vd.fullDisplay || vd.name || '', plural(data.rows.length, L('{n} article', '{n} item', '{n} منتج'), L('{n} articles', '{n} items', '{n} منتجات')), where].filter(Boolean).join(' · '),
       body: `<div class="cgp" data-cgp>
         <div class="cgp-bar">
-          <button type="button" class="kb ghost" data-action="cg-back"><span class="cgp-ic back" aria-hidden="true"></span>${esc(isB ? L('Inventaire', 'Inventory', 'المخزون') : L('La carte', 'Menu', 'القائمة'))}</button>
+          <button type="button" class="kb ghost" data-action="cg-back"><span class="cgp-ic cgp-i-back" aria-hidden="true"></span>${esc(isB ? L('Inventaire', 'Inventory', 'المخزون') : L('La carte', 'Menu', 'القائمة'))}</button>
           <input class="cgp-in cgp-search" type="search" data-cgp-q placeholder="${esc(L('Nom, SKU ou code-barres', 'Name, SKU or barcode', 'الاسم، SKU ولا الباركود'))}" aria-label="${esc(L('Rechercher', 'Search', 'قلّب'))}">
           <select class="cgp-in" data-cgp-cat aria-label="${esc(L('Catégorie', 'Category', 'الفئة'))}"><option value="">${esc(L('Toutes les catégories', 'All categories', 'جميع الفئات'))}</option>${data.categories.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}<option value="__none">${esc(L('Sans catégorie', 'No category', 'بلا فئة'))}</option></select>
           <div class="cgp-seg" data-lens-demo data-cgp-seg role="group" aria-label="${esc(L('Afficher', 'Show', 'بيّن'))}">${seg('all', L('Tout', 'All', 'الكل'))}${seg('changed', L('Modifiés', 'Changed', 'المبدّلين'), true)}${seg('errors', L('Erreurs', 'Errors', 'الأغلاط'), true)}</div>
           <span class="sp"></span>
-          <button type="button" class="kb ghost" data-activation=write data-action="cg-reprice" data-cgp-has-rows><span class="cgp-ic tune" aria-hidden="true"></span>${esc(L('Ajuster les prix', 'Adjust prices', 'بدّل الأثمنة'))}</button>
-          <button type="button" class="kb ghost" data-activation=write data-action="cg-import"><span class="cgp-ic up" aria-hidden="true"></span>${esc(L('Importer Excel', 'Import Excel', 'استورد Excel'))}</button>
-          <button type="button" class="kb ghost" data-activation=money data-action="cg-export" data-arg="xlsx" data-cgp-has-rows><span class="cgp-ic down" aria-hidden="true"></span>${esc(L('Exporter Excel', 'Export Excel', 'صدّر Excel'))}</button>
-          <button type="button" class="kb ghost" data-activation=money data-action="cg-export" data-arg="csv" data-cgp-has-rows><span class="cgp-ic down" aria-hidden="true"></span>CSV</button>
+          <button type="button" class="kb ghost" data-activation=write data-action="cg-reprice" data-cgp-has-rows><span class="cgp-ic cgp-i-tune" aria-hidden="true"></span>${esc(L('Ajuster les prix', 'Adjust prices', 'بدّل الأثمنة'))}</button>
+          <button type="button" class="kb ghost" data-activation=write data-action="cg-import"><span class="cgp-ic cgp-i-up" aria-hidden="true"></span>${esc(L('Importer Excel', 'Import Excel', 'استورد Excel'))}</button>
+          <button type="button" class="kb ghost" data-activation=money data-action="cg-export" data-arg="xlsx" data-cgp-has-rows><span class="cgp-ic cgp-i-down" aria-hidden="true"></span>${esc(L('Exporter Excel', 'Export Excel', 'صدّر Excel'))}</button>
+          <button type="button" class="kb ghost" data-activation=money data-action="cg-export" data-arg="csv" data-cgp-has-rows><span class="cgp-ic cgp-i-down" aria-hidden="true"></span>CSV</button>
         </div>
         <div class="cgp-sel" data-cgp-sel hidden role="status"><span class="t"></span>
           <button type="button" class="kb atlas" data-activation=write data-action="cg-bulk-edit">${esc(L('Modifier la sélection', 'Edit selection', 'بدّل المختارين'))}</button>
@@ -339,17 +341,17 @@
           <button type="button" class="kb ghost" data-action="cg-unselect">${esc(L('Désélectionner', 'Clear selection', 'لغي الاختيار'))}</button>
         </div>
         <div class="cgp-empty" data-cgp-empty hidden>
-          <span class="cgp-ic big up" aria-hidden="true"></span>
+          <span class="cgp-ic cgp-i-big cgp-i-up" aria-hidden="true"></span>
           <h3>${esc(isB ? L('Votre inventaire est vide', 'Your inventory is empty', 'المخزون ديالك خاوي') : L('Votre carte est vide', 'Your menu is empty', 'القائمة ديالك خاوية'))}</h3>
           <p>${esc(L('Importez votre fichier Excel ou CSV : chaque ligne devient un article. Le modèle montre les colonnes attendues.', 'Import your Excel or CSV file: each row becomes an item. The template shows the expected columns.', 'دخّل الملف ديالك Excel ولا CSV: كل سطر كايولّي منتج. النموذج كايبيّن الأعمدة اللي خاصّين.'))}</p>
           <div class="acts"><button type="button" class="kb atlas" data-activation=write data-action="cg-import">${esc(L('Importer votre fichier Excel', 'Import your Excel file', 'دخّل ملف Excel ديالك'))}</button><button type="button" class="kb ghost" data-action="cg-template">${esc(L('Télécharger le modèle', 'Download the template', 'حمّل النموذج'))}</button></div>
         </div>
         <div data-cgp-grid></div>
         <div class="cgp-foot">
-          <span class="cgp-err" id="cgp-err" data-cgp-err hidden><span class="cgp-ic warn" aria-hidden="true"></span><span data-cgp-err-t></span></span>
+          <span class="cgp-err" id="cgp-err" data-cgp-err hidden><span class="cgp-ic cgp-i-warn" aria-hidden="true"></span><span data-cgp-err-t></span></span>
           <span class="st" data-cgp-st aria-live="polite"></span>
           <span class="cgp-keys">${esc(L('Collez depuis Excel', 'Paste from Excel', 'لصق من Excel'))} <kbd>${/Mac/.test(navigator.platform) ? '⌘' : 'Ctrl'} V</kbd> · ${esc(L('recopier vers le bas', 'fill down', 'نسخ للتحت'))} <kbd>${/Mac/.test(navigator.platform) ? '⌘' : 'Ctrl'} D</kbd> · ${esc(L('annuler', 'undo', 'رجوع'))} <kbd>${/Mac/.test(navigator.platform) ? '⌘' : 'Ctrl'} Z</kbd></span>
-          <button type="button" class="kb ghost" data-action="cg-undo-save" data-cgp-undo hidden><span class="cgp-ic undo" aria-hidden="true"></span>${esc(L('Annuler le dernier enregistrement', 'Undo last save', 'رجّع آخر تسجيل'))}</button>
+          <button type="button" class="kb ghost" data-action="cg-undo-save" data-cgp-undo hidden><span class="cgp-ic cgp-i-undo" aria-hidden="true"></span>${esc(L('Annuler le dernier enregistrement', 'Undo last save', 'رجّع آخر تسجيل'))}</button>
           <button type="button" class="kb ghost" data-action="cg-discard" data-cgp-discard>${esc(L('Tout annuler', 'Discard all', 'لغي كلشي'))}</button>
           <button type="button" class="kb atlas" data-activation=write data-action="cg-save" data-cgp-save>${esc(L('Enregistrer', 'Save', 'سجّل'))}</button>
         </div>
