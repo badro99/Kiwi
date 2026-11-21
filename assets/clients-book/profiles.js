@@ -552,7 +552,7 @@
       /* La phrase fixe dans son propre nœud : la récompense qui suit est le texte
          du commerçant, elle doit traverser telle quelle. */
       (rewardReady ? '<div class="kcb-reward">' + ICON.gift + '<span>Récompense prête</span> · ' + esc((rw && rw.label) || (cfg.model === 'amount' ? cfg.amount.reward : (cfg.model === 'product' ? cfg.product.reward : cfg.visit.reward)) || '1 offert') + (cost ? '<span class="cost">' + esc(cost) + '</span>' : '') + '</div>' : '') +
-      attachBlock +
+      attachBlock + '<div id="kcb-money"></div>' +   // l'argent en cours, chaque ligne mène où il se règle (client-money.js)
       noteBlock +
       '<div class="kcb-stat"><div class="kcb-progtxt">' + progTxt + '</div>' +
         '<div class="kcb-progwrap" role="progressbar" aria-label="' + esc(tr('Fidélité')) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(prog * 100) + '"><div class="kcb-progbar" style="width:' + Math.round(prog * 100) + '%"></div></div></div>' +
@@ -581,7 +581,7 @@
       var button = e.target.closest('[data-history-page]');
       if (button && !button.disabled) this.innerHTML = renderHistory(Number(button.dataset.historyPage));
     };
-    loadClientCredits(c.id, sh.querySelector('#kcb-credit-history'));
+    loadClientCredits(c.id, sh.querySelector('#kcb-credit-history')); import('./client-money.js?v=1').then(function (m) { m.paintClientMoney(sh.querySelector('#kcb-money'), { customerId: c.id, merchant: creditMerchant(), esc: esc, fmt: fmt, toast: toast, avoirHost: sh.querySelector('#kcb-credit-history'), close: function () { closeSheet(); close(); }, spend: target ? function () { if (target.current() !== c.id) target.attach(c); } : null }); }).catch(function () {});
     sh.querySelector('#kcb-d-close').onclick = closeSheet;
     sh.querySelector('#kcb-d-back').onclick = closeSheet;
     sh.querySelector('#kcb-edit').onclick = function () { openForm(c); };

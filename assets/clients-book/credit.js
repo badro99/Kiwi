@@ -77,7 +77,7 @@
               + '<small style="display:block;margin-top:3px">' + esc(tr('Vente')) + ' ' + esc(credit.originalRef || credit.originalSaleId || '·') + ' · ' + esc(products) + ' · ' + esc(issued.actor || credit.issuedBy || 'Caisse') + '</small>' + movements + '</span></div>';
           }).join('') + '</div>'
         : '<div class="kcb-empty" style="min-height:70px"><b>' + esc(tr('Aucun avoir')) + '</b><div>' + esc(tr('Les crédits boutique émis à ce client apparaîtront ici.')) + '</div></div>');
-      var retry = failed && host.querySelector('[data-credit-retry]');
+      var retry = failed && host.querySelector('[data-credit-retry]'); try { host.setAttribute('data-avoir-cents', String(Math.round(active * 100))); host.dispatchEvent(new Event('kcb:avoir')); } catch (_) {}   // l'en-tête « Argent en cours » (client-money.js)
       if (retry) retry.onclick = function () { loadClientCredits(clientId, host); };
     }
     var merchant = creditMerchant();

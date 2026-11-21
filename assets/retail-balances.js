@@ -139,6 +139,12 @@
     const node = document.createElement(tag); if (className) node.className = className;
     if (text != null) node.textContent = text; return node;
   }
+  /* La fiche cliente du carnet (assets/client-money.js) ouvre Acomptes sur
+     une cliente : elle pose son id ici puis touche l'entrée du rail. L'écran
+     le reprend au prochain rendu, dans les 5 secondes, une seule fois. */
+  let focusFor = '', focusTs = 0;
+  function focus(customerId) { focusFor = String(customerId || ''); focusTs = Date.now(); }
+  function takeFocus() { const id = Date.now() - focusTs < 5000 ? focusFor : ''; focusFor = ''; return id; }
   async function render(panel, opts) {
     if (!panel) return;
     const tr = opts.tr || (text => text);
@@ -160,7 +166,8 @@
       const { rows, status } = await listWithStatus(opts.merchant, '');
       if (current !== generation || !panel.isConnected) return;
       groups = groupByCustomer(rows);
-      if (opts.customerId) { const open = groups.find(group => group.customerId === opts.customerId); opts.customerId = ''; if (open) { detail(open); return; } }
+      const want = opts.customerId || takeFocus(); opts.customerId = '';
+      if (want) { const open = groups.find(group => group.customerId === want); if (open) { detail(open); return; } }
       list(status);
     }
     function list(status) {
@@ -253,5 +260,5 @@
     input.addEventListener('input', () => list());
     await refresh();
   }
-  window.KiwiRetailBalances = Object.freeze({ read, record, list, listWithStatus, due, render, groupByCustomer, allocate, sliceTender });
+  window.KiwiRetailBalances = Object.freeze({ read, record, list, listWithStatus, due, render, groupByCustomer, allocate, sliceTender, focus });
 })();
