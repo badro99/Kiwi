@@ -1,8 +1,8 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=237';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=150';
-import { invSetModal, offerRegister } from './inventory.js?v=150';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=238';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=151';
+import { invSetModal, offerRegister } from './inventory.js?v=151';
 import '../money-cents.js?v=7';
-import { photoImg } from '../retail-photos.js?v=5';
+import { photoImg } from '../retail-photos.js?v=5'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=14';
 import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
 import { mzPageGrid } from './grid-pager.js?v=1'; import { mzOpenFiche } from './client-fiche.js?v=4';
@@ -231,13 +231,13 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
   }
 
   function renderCats() {
-    const all = SHELF().reduce((s, r) => s + r.items.length, 0);
+    const all = SHELF().reduce((s, r) => s + r.items.length, 0), best = bestItems(merchantSlug(), SHELF(), null, () => { if ($('#mz-cats', root)) { renderCats(); renderGrid(); icons(); } });   /* en tête après la 1re semaine de ventes (retail-bestsellers.js) */
     const promoN = promoedIds().size;
     const fragileN = countFragileItems();
     const outN = soldOutCount();
     const marques = listAllDistinctMarques();
     const motifs = listAllDistinctMotifs();
-    const axis = state.filterAxis || 'rayons';
+    const axis = state.filterAxis || 'rayons'; bestOpen(state, merchantSlug(), best);
 
     const axisRow = `
       <div class="mz-filter-axis">
@@ -253,7 +253,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     if (axis === 'rayons') {
       chipsRow = `
         <div class="mz-cats-row">
-          <button class="mz-cat ${state.rayon === 'tous' ? 'on' : ''}" data-mz-cat="tous">Tous <span class="mz-cat-ct">${all}</span></button>
+          ${best ? `<button class="mz-cat is-best ${state.rayon === '_best' ? 'on' : ''}" data-mz-cat="_best">${esc(tr(BEST_LABEL))} <span class="mz-cat-ct">${best.length}</span></button>` : ''}<button class="mz-cat ${state.rayon === 'tous' ? 'on' : ''}" data-mz-cat="tous">Tous <span class="mz-cat-ct">${all}</span></button>
           ${SHELF().map((r) => `<button class="mz-cat ${state.rayon === r.id ? 'on' : ''}" data-mz-cat="${r.id}">${esc(r.label)} <span class="mz-cat-ct">${r.items.length}</span></button>`).join('')}
         </div>`;
     } else if (axis === 'marques') {
@@ -299,7 +299,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
       }
       const catB = e.target.closest('[data-mz-cat]');
       if (catB) {
-        state.rayon = catB.dataset.mzCat || catB.dataset.mzCat;
+        state.rayon = catB.dataset.mzCat || catB.dataset.mzCat; bestTouched(merchantSlug());
         renderCats(); renderGrid(); icons();
         return;
       }
@@ -355,7 +355,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
         rayons = SHELF().map((r) => ({ ...r, items: r.items.filter((it) => it.motif === state.selectedMotif) })).filter((r) => r.items.length);
       }
     } else {
-      rayons = state.rayon === 'tous' ? SHELF() : SHELF().filter((r) => r.id === state.rayon);
+      rayons = state.rayon === '_best' ? [{ id: '_best', label: tr(BEST_LABEL), items: bestItems(merchantSlug(), SHELF(), null) || [] }] : state.rayon === 'tous' ? SHELF() : SHELF().filter((r) => r.id === state.rayon);
     }
 
     /* Par pages (grid-pager.js) : 562 tuiles d'un coup figeaient la caisse après le code. */

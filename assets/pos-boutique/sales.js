@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=355';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=249';
-import { offerRegister } from './inventory.js?v=249';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=356';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=250';
+import { offerRegister } from './inventory.js?v=250';
 import { ticketOwner } from './ticket-owner.js?v=6';
 import { ticketRemise } from './ticket-remise.js?v=5';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
@@ -8,10 +8,10 @@ import { mountBargain } from './bargain-ui.js?v=3';
 import { bqKitTicketFoot } from './kit-2027.js?v=26';
 import { sellSearch } from './search.js?v=20';
 import '../money-cents.js?v=7';
-import { photoImg } from '../retail-photos.js?v=5';
+import { photoImg } from '../retail-photos.js?v=5'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=4';
 let CX = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=11').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=12').then((m) => { CX = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -216,7 +216,7 @@ import('./exch-combined.js?v=11').then((m) => { CX = m; }).catch(() => {});
 
   /* ═══════════════════════ VENTE — grille par rayon ═══════════════════════ */
   function renderCats() {
-    const all = RAYONS.reduce((s, r) => s + r.items.length, 0);
+    const all = RAYONS.reduce((s, r) => s + r.items.length, 0), best = bestItems(merchantSlug(), RAYONS, (p) => stockOf(p) > 0, () => { if ($('#bq-cats', root)) { renderCats(); renderGrid(); icons(); } });   /* en tête après la 1re semaine de ventes (retail-bestsellers.js) */
     /* « C'est en promo ? » est LA question du comptoir un jour de soldes, et
        jusqu'ici la caissière n'avait aucun moyen d'y répondre autrement qu'en
        parcourant la grille à l'œil. Le filtre n'apparaît que s'il a quelque
@@ -225,9 +225,9 @@ import('./exch-combined.js?v=11').then((m) => { CX = m; }).catch(() => {});
     /* La dernière promotion vient de s'arrêter pendant qu'on regardait ce
        filtre : sans ce repli, l'onglet disparaît et la grille reste vide sans
        qu'aucun bouton ne soit sélectionné — la caisse a l'air cassée. */
-    if (state.rayon === '_promo' && !promoN) state.rayon = 'tous';
+    if (state.rayon === '_promo' && !promoN) state.rayon = 'tous'; bestOpen(state, merchantSlug(), best);
     $('#bq-cats', root).innerHTML =
-      `<button class="bq-cat ${state.rayon === 'tous' ? 'on' : ''}" data-bq-cat="tous">Tous <span class="bq-cat-ct">${all}</span></button>` +
+      (best ? `<button class="bq-cat is-best ${state.rayon === '_best' ? 'on' : ''}" data-bq-cat="_best">${esc(tr(BEST_LABEL))} <span class="bq-cat-ct">${best.length}</span></button>` : '') + `<button class="bq-cat ${state.rayon === 'tous' ? 'on' : ''}" data-bq-cat="tous">Tous <span class="bq-cat-ct">${all}</span></button>` +
       (promoN ? `<button class="bq-cat is-promo ${state.rayon === '_promo' ? 'on' : ''}" data-bq-cat="_promo">En promo <span class="bq-cat-ct">${promoN}</span></button>` : '') +
       RAYONS.map((r) =>
         `<button class="bq-cat ${state.rayon === r.id ? 'on' : ''}" data-bq-cat="${r.id}">${esc(r.label)} <span class="bq-cat-ct">${r.items.length}</span></button>`
@@ -235,7 +235,7 @@ import('./exch-combined.js?v=11').then((m) => { CX = m; }).catch(() => {});
     $('#bq-cats', root).onclick = (e) => {
       const b = e.target.closest('[data-bq-cat]');
       if (!b) return;
-      state.rayon = b.dataset.bqCat;
+      state.rayon = b.dataset.bqCat; bestTouched(merchantSlug());
       renderCats(); renderGrid(); icons();
     };
   }
@@ -265,7 +265,7 @@ import('./exch-combined.js?v=11').then((m) => { CX = m; }).catch(() => {});
       const ids = promoedIds();
       rayons = RAYONS.map((r) => ({ ...r, items: r.items.filter((it) => ids.has(it.id)) })).filter((r) => r.items.length);
     } else {
-      rayons = state.rayon === 'tous' ? RAYONS : RAYONS.filter((r) => r.id === state.rayon);
+      rayons = state.rayon === '_best' ? [{ id: '_best', label: tr(BEST_LABEL), items: bestItems(merchantSlug(), RAYONS, (p) => stockOf(p) > 0) || [] }] : state.rayon === 'tous' ? RAYONS : RAYONS.filter((r) => r.id === state.rayon);
     }
     let i = 0;
     const wrap = $('#bq-gridwrap', root);
