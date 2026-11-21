@@ -10,7 +10,8 @@
  * la requête arrivait quand même, le serveur retapait, et le café était
  * facturé deux fois. Maintenant le geste garde son identifiant tant qu'il n'a
  * pas eu de réponse, la table est relue, le serveur lit « vérifiez la table
- * avant de réessayer », et le même geste retapé est rejoué, pas recompté.
+ * avant de réessayer », et le même geste retapé est rejoué, pas recompté ; une
+ * fois la relecture montrant le café ajouté, le « + » suivant en ajoute un.
  * Vraies routes (tools/serveur-live-harness.mjs › hold), vrais clics,
  * restaurant inventé. */
 import assert from 'node:assert/strict';
@@ -56,13 +57,31 @@ try {
     check(queueReads() > readsBefore, 'et le téléphone relit la table tout de suite');
 
     t.step('la requête retenue arrive enfin, le serveur retape « + »');
+    h.hold('GET /api/order/queue');   // le téléphone n'a pas encore relu : il ne sait pas si le « + » est passé
     h.release('POST /api/order/queue');
     await h.until(() => cafes() === 2, 'le premier « + » arrive', 10000);
     await h.tap(page, plusOnCafe);
-    await h.sleep(1500);
+    await h.until(() => h.calls.filter((c) => c.method === 'POST' && /"replayed":true/.test(c.body || '')).length > 0, 'la réponse rejouée', 10000).catch(() => {});
+    h.release('GET /api/order/queue');
     check(cafes() === 2, `le « + » retapé est rejoué, pas recompté : 2 cafés, pas 3 (${cafes()})`);
     const total = h.db.tickets('4').reduce((s, x) => s + Number(x.total), 0);
     check(total === 24, `24 MAD sur l’addition (${total})`);
+
+    t.step('encore un délai ; cette fois la relecture montre le café ajouté, puis un vrai « + »');
+    const phoneCafes = (n) => page.waitForFunction((want) => [...serviceCanonicalOrders.values()].flatMap((o) => o.lines || []).filter((l) => l.id === 'it_cafe').reduce((k, l) => k + Number(l.qty), 0) === want, { timeout: 10000 }, n);
+    await page.evaluate(() => pollServiceSync());
+    await phoneCafes(2);
+    await page.evaluate(() => document.querySelectorAll('#toast-stack .toast').forEach((x) => x.remove()));
+    h.hold('POST /api/order/queue');
+    await h.tap(page, plusOnCafe);
+    await page.waitForFunction(() => [...document.querySelectorAll('#toast-stack .toast')].some((x) => /vérifiez la table avant de réessayer/.test(x.textContent)), { timeout: 20000 });
+    h.release('POST /api/order/queue');
+    await h.until(() => cafes() === 3, 'le « + » retenu arrive', 10000);
+    await page.evaluate(() => pollServiceSync());
+    await phoneCafes(3);
+    await h.tap(page, plusOnCafe);
+    await h.until(() => cafes() === 4, 'le vrai « + » suivant', 10000).catch(() => {});
+    check(cafes() === 4, `la relecture a montré le café : le « + » suivant est un nouveau geste, il ajoute un café (${cafes()}, attendu 4)`);
     check(page.errors.length === 0, 'aucune erreur de script' + (page.errors.length ? ' : ' + page.errors.join(' | ') : ''));
   });
 } finally {

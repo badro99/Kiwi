@@ -1691,8 +1691,9 @@
          et dit l'état lu de la commande ; sans réponse, la table est relue. */
       const pending = changeOrderQty.pending || (changeOrderQty.pending = new Map());
       const send = async (qty, extra) => {
-        const key = flightKey + '|' + qty, seen = serviceCanonicalOrders.get(line.orderId);
-        const requestId = pending.get(key) || 'edl-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+        const key = flightKey + '|' + qty, seen = serviceCanonicalOrders.get(line.orderId), kept = pending.get(key);   // déjà visible à la relecture : geste fait, le suivant est neuf
+        const done = kept && [...serviceCanonicalOrders.values()].some(o => (o.lines || []).some(l => l && (l.editReq === kept || (l.voidAlert && l.voidAlert.requestId === kept))));
+        const requestId = (!done && kept) || 'edl-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
         pending.set(key, requestId);
         try {
           const res = await svFetchJson('/api/order/queue', { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
