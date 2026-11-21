@@ -72,8 +72,13 @@
       // Cross-device totals and local outbox payments are disjoint by receipt
       // ID, not by amount: another till can have taken money simultaneously.
       if (saved && Array.isArray(row.receiptIds)) {
-        const known = new Set(row.receiptIds);
-        const unsynced = (saved.receipts || []).filter(item => !known.has(item.id))
+        /* The server files a till receipt under its sale's server id, « sale-ref-<hash>-<last 32> »
+           (assets/live-link.js › stableId), not the till's « sale-<uuid> ». Matching on the raw id
+           counted an avance's first payment twice, and the note vanished from Acomptes and the
+           client card (Amira Boutique, 21 nov. 2026). Same tail, same receipt, as the server reads it. */
+        const tail = (id) => { const t = String(id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(-32); return t.length >= 16 ? t : String(id || ''); };
+        const known = new Set(row.receiptIds.flatMap(id => [String(id), tail(id)]));
+        const unsynced = (saved.receipts || []).filter(item => !known.has(String(item.id)) && !known.has(tail(item.id)))
           .reduce((sum, item) => sum + cents(item.amountCents), 0);
         merged.set(row.id, { ...row, pendingCents: cents(row.pendingCents) + unsynced });
       } else if (saved && cents(saved.paidCents) > cents(row.paidCents) + cents(row.pendingCents)) {
