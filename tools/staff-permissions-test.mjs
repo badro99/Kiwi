@@ -82,9 +82,10 @@ console.log('■ Catalogue et rôles par défaut');
 }
 
 /* ── Le banc ────────────────────────────────────────────────────────────── */
+const SCHEMA_SQL = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');   // lu une fois pour tout le banc
 function world({ migrated = true } = {}) {
   const sql = new DatabaseSync(':memory:');
-  sql.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+  sql.exec(SCHEMA_SQL);
   if (!migrated) for (const t of ['staff_permissions', 'staff_permission_presets', 'staff_permission_settings', 'staff_permission_audit']) sql.exec(`DROP TABLE ${t}`);
   const now = Date.now();
   sql.prepare('INSERT INTO accounts (id,email,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?)').run('acc-droits', 'o@banc.invalid', 'Café Droits Banc', 's', 'h', now);

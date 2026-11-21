@@ -26,6 +26,7 @@
  * ───────────────────────────────────────────────────────────────────────── */
 import Catalog from '../../assets/permissions-catalog.js';
 import { json, readSession, readCookie, SESS_COOKIE, operatorActor, isOperator, teamRemovedIds } from '../auth/_lib.js';
+import { sessionTier } from '../auth/_session-tier.js';
 
 export { Catalog };
 
@@ -173,14 +174,19 @@ export async function sessionPerson(request, env) {
   let sess = null;
   try { sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET); } catch (_) { sess = null; }
   if (!sess || !sess.aid || !SID_RE.test(String(sess.sid || ''))) return null;
+  /* Le palier se lit comme partout (sessionTier, même repli) ; la personne
+     n'est cherchée que pour une session sous le palier du patron. */
+  const st = await sessionTier(request, env);
+  if (st.unavailable) return { unavailable: true };
+  if (!st.tier) return null;
+  if (st.tier === 'owner') return { owner: true, aid: sess.aid };
+  const tier = st.tier;
   let row;
   try {
-    row = await env.DB.prepare('SELECT tier, staff_id FROM session_tiers WHERE sid = ? AND account_id = ?').bind(sess.sid, String(sess.aid)).first();
+    row = await env.DB.prepare('SELECT staff_id FROM session_tiers WHERE sid = ? AND account_id = ?').bind(sess.sid, String(sess.aid)).first();
   } catch (_) { return { unavailable: true }; }
-  const tier = row && String(row.tier || '');
-  if (!row || !tier || tier === 'owner') return { owner: true, aid: sess.aid };
   let staff = null;
-  if (row.staff_id) {
+  if (row && row.staff_id) {
     try {
       const pin = await env.DB.prepare(
         `SELECT p.merchant, p.name, p.role FROM staff_pins p JOIN merchant_config c ON c.merchant = p.merchant

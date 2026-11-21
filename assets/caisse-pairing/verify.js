@@ -36,7 +36,7 @@
       })
       .then(function (d) {
         if (!(d && d.ok && d.staff)) return null;
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
         /* The server said yes: unlock now, refresh the offline verifier behind. */
         rememberOfflinePin(merchant, code, staff);
         return staff;
@@ -64,7 +64,7 @@
       lastFailed = reply.kind !== 'answer';
       var d = reply.body;
       if (reply.kind === 'answer' && reply.status === 200 && d && d.ok && d.staff) {
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
         return rememberOfflinePin(merchant, code, staff).then(function () { return reply; }, function () { return reply; });
       }
       if (reply.kind === 'answer' && (reply.status === 401 || reply.status === 403)) return verifyOfflinePin(merchant, code, true).then(function (gone) {
