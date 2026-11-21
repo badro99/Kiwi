@@ -281,7 +281,7 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
       icons();
       $$('[data-ep-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ep-carnetpick-veil'); });
       $$('[data-ep-cp]', el).forEach((b) => {
-        b.onclick = () => attachBasket(CRED[b.dataset.epCp]);
+        b.onclick = () => chargeOnCredit(CRED[b.dataset.epCp]);
       });
       const nw = $('#ep-cp-new', el);
       if (nw) nw.onclick = () => { mode = 'create'; render(); };
@@ -294,7 +294,7 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
         if (!name) { toast('Le nom est requis pour ouvrir une ardoise'); return; }
         const c = { id: uid('kx'), name, phone: tel, note: 'nouvelle ardoise', hist: [] };
         CARNET.push(c); CRED[c.id] = c;
-        attachBasket(c);
+        chargeOnCredit(c);
       };
     };
     rememberView('#ep-carnetpick-veil', () => {
@@ -310,14 +310,21 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
   /* Carnet du patron (assets/credit-book/till-credit.js) : plafond avant la
      vente, « paiera le … » après. Chargé à la première vente à crédit. */
   const creditTill = () => import('../credit-book/till-credit.js?v=1').catch(() => null);
-  async function attachBasket(c) {
+  async function chargeOnCredit(c) {
     const t = ctx.state.ticket;
     const total = ticketTotal(t);
-    if (total <= 0) return;
+    if (!c || total <= 0) return;
     const C = await creditTill();
     const who = { source: 'carnet', customer: c.id, name: c.name, amountCents: Math.round(total * 100), toast: (a, b) => toast(b ? a + ' · ' + b : a) };
     if (C && !(await C.creditGate({ ...who, localOwedCents: Math.round(Math.max(0, balanceOf(c)) * 100) })).ok) return;
     if (ctx.state.ticket !== t) return;
+    attachBasket(c);
+    if (C) C.promiseAfterSale(who).then(() => focusScan());
+  }
+  function attachBasket(c) {
+    const t = ctx.state.ticket;
+    const total = ticketTotal(t);
+    if (total <= 0) return;
     const label = t.lines.length === 1 ? ctx.ITEMS[t.lines[0].itemId].label : `Courses (${ticketCount(t)} articles)`;
     /* Le montant exact du panier, au centime. Math.round notait 12,50 MAD
        comme 13 sur l'ardoise du voisin : au-dessus du prix affiché, ce que la
@@ -334,7 +341,6 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
     queueIfOffline('Ardoise');
     toast(`Sur l'ardoise de ${c.name} · +${fmtMAD2(total)} · ${phrase('solde {x}', balTxt(balanceOf(c)))}`);
     focusScan();
-    if (C) C.promiseAfterSale(who).then(() => focusScan());
   }
 
   /* ═══════════════════════ CARNET DE CRÉDIT (écran) ═══════════════════════ */
