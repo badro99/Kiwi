@@ -116,3 +116,32 @@ export async function staleVisitPayment(env, merchant, session, table) {
   if (reopened) return { status: 409, body: { error: 'visit-already-settled', table: table || '', reopened: true, openSession: reopened } };
   return { status: 409, body: { error: 'visit-already-settled', table: table || '' } };
 }
+
+/* Tolerance between a payment's device timestamp and the server time its
+ * table visit was opened. */
+const VISIT_BIND_SKEW_MS = 2 * 60 * 1000;
+
+/* The table visit a payment belongs to (/api/sale). A named visit is read as
+ * is, whatever its status. Otherwise the table's open visit, but never one
+ * opened AFTER the payment: a till replays its offline queue later, sometimes
+ * the next evening, and "the table's open visit" is by then a NEW party.
+ * Binding to it gave the replay a new idempotency id (a second ledger row: 320
+ * MAD at Restaurant MixMax on 11-12 Sep 2026) and could close the new party's
+ * table with an old payment. Two minutes absorb the till opening the visit at
+ * payment time and ordinary clock drift. Returns the row or null; throws when
+ * the lookup itself fails (the caller answers 503). */
+export async function paymentVisit(env, merchant, { requestedSession, table, paymentTs }) {
+  if (requestedSession) {
+    return env.DB.prepare(
+      `SELECT id, table_no, status, opened_ts, closed_ts FROM table_sessions
+        WHERE id = ? AND merchant = ? AND mode = 'table' LIMIT 1`
+    ).bind(requestedSession, merchant).first();
+  }
+  const aliases = tableAliases(table);
+  return env.DB.prepare(
+    `SELECT id, table_no, status, opened_ts, closed_ts FROM table_sessions
+      WHERE merchant = ? AND table_no IN (${aliases.map(() => '?').join(',')}) AND mode = 'table' AND status = 'open'
+        AND opened_ts <= ?
+      ORDER BY opened_ts DESC LIMIT 1`
+  ).bind(merchant, ...aliases, paymentTs + VISIT_BIND_SKEW_MS).first();
+}
