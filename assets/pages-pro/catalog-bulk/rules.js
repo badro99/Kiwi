@@ -219,7 +219,7 @@
     return rows;
   }
   function parseTsv(text) {
-    const rows = parseDelimited(String(text || '').replace(/^﻿/, ''), '\t');
+    const rows = parseDelimited(String(text || '').replace(/^\uFEFF/, ''), '\t');
     while (rows.length && rows[rows.length - 1].every((c) => c === '')) rows.pop();
     return rows;
   }
@@ -230,7 +230,7 @@
     }).join('\t')).join('\r\n');
   }
   function parseCsv(text) {
-    const t = String(text || '').replace(/^﻿/, '');
+    const t = String(text || '').replace(/^\uFEFF/, '');
     let best = null;
     [',', ';', '\t'].forEach((d) => {
       const rows = parseDelimited(t, d).filter((r) => r.some((c) => String(c).trim() !== ''));
@@ -243,7 +243,7 @@
    * Header matching: accents, case and punctuation out, then aliases in the
    * three languages and the words old tills print. */
   function normKey(s) {
-    return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '')
+    return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .toLowerCase().replace(/\*/g, '').replace(/[^a-z0-9؀-ۿ]+/g, '_').replace(/^_+|_+$/g, '');
   }
   const ALIASES = {

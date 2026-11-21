@@ -17,12 +17,13 @@
 (function () {
   'use strict';
   const MAX_BYTES = 3 * 1024 * 1024;
+  const BAD = { true: 'bad', false: '' };   // a cell's class, by whether it holds an error
 
   function css() {
     if (document.getElementById('cbi-css')) return;
-    const s = document.createElement('style');
-    s.id = 'cbi-css';
-    s.textContent = `
+    const style = document.createElement('style');
+    style.id = 'cbi-css';
+    style.textContent = `
 .cbi{display:grid;gap:14px}
 .cbi-steps{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;font-weight:600}
 .cbi-steps span{padding:5px 11px;border-radius:999px;background:var(--n-100,rgba(10,15,13,.05));color:var(--n-500,#6b7570)}
@@ -50,7 +51,7 @@
 .cbi-sum{display:grid;gap:8px;font-size:14px}
 .cbi-sum b{font-weight:600}
 `;
-    document.head.appendChild(s);
+    document.head.appendChild(style);
   }
 
   async function readFile(file) {
@@ -136,18 +137,20 @@
           <span class="cbi-pill"><b>${fmtNum(c.updated, 0)}</b>${esc(L('mis à jour', 'updated', 'متبدّلين'))}</span>
           <span class="cbi-pill"><b>${fmtNum(c.unchanged, 0)}</b>${esc(L('inchangés', 'unchanged', 'بلا تبديل'))}</span>
           <span class="cbi-pill error"><b>${fmtNum(c.error, 0)}</b>${esc(L('avec erreurs', 'with errors', 'فيهم أغلاط'))}</span>
-          <label class="cbi-pill" style="cursor:pointer"><input type="checkbox" data-eo ${errorsOnly ? 'checked' : ''}> ${esc(L('Erreurs seulement', 'Errors only', 'غير الأغلاط'))}</label>
+          <label class="cbi-pill" style="cursor:pointer"><input type="checkbox" data-eo> ${esc(L('Erreurs seulement', 'Errors only', 'غير الأغلاط'))}</label>
           ${cats.length ? `<button type="button" class="kb ghost" data-mkcat>${esc(plural(cats.length, L('Créer la catégorie manquante', 'Create the missing category', 'زيد الفئة الناقصة'), L('Créer les {n} catégories manquantes', 'Create the {n} missing categories', 'زيد {n} فئات ناقصين')))}</button>` : ''}
         </div>
         <div class="cbi-tab"><table><thead><tr><th>#</th><th>${esc(L('État', 'Status', 'الحالة'))}</th>${cols.map((f) => `<th>${esc(LABEL[f] || f)}</th>`).join('')}</tr></thead><tbody>
         ${shown.slice(0, 500).map((r) => `<tr data-line="${r.line}"><td class="l"><div>${r.line}</div></td><td class="l"><div><span class="cbi-st ${r.status}">${esc(STATUS[r.status])}</span></div></td>${cols.map((f) => {
           const err = r.errors[f];
-          return `<td class="${err ? 'bad' : ''}" data-f="${f}"><div title="${esc(err ? message(err) : '')}">${esc(r.raw[f] == null ? '' : r.raw[f])}${err ? ` <small>· ${esc(message(err))}</small>` : ''}</div></td>`;
+          return `<td class="${BAD[!!err]}" data-f="${f}"><div title="${esc(err ? message(err) : '')}">${esc(r.raw[f] == null ? '' : r.raw[f])}${err ? ` <small>· ${esc(message(err))}</small>` : ''}</div></td>`;
         }).join('')}</tr>`).join('')}
         </tbody></table>${shown.length > 500 ? `<div class="cbi-note" style="padding:10px">${esc(L('500 premières lignes affichées.', 'First 500 rows shown.', 'كانبيّنو غير أول 500 سطر.'))}</div>` : ''}${!shown.length ? `<div class="cbi-note" style="padding:14px">${esc(L('Aucune erreur.', 'No errors.', 'حتى غلطة.'))}</div>` : ''}</div>
         <div class="cbi-note">${esc(L('Cliquez sur une cellule pour la corriger ici, sans repasser par Excel.', 'Click a cell to fix it here, without going back to Excel.', 'كليكي على خانة باش تصحّحها هنا، بلا ما ترجع لExcel.'))}</div>`;
       foot.innerHTML = `<button type="button" class="kb ghost" data-back>${esc(L('Autre fichier', 'Another file', 'ملف آخر'))}</button>
-        <button type="button" class="kb atlas" data-next ${c.error ? 'disabled' : ''}>${esc(c.error ? plural(c.error, L('{n} ligne à corriger', '{n} row to fix', '{n} سطر خاصو تصحيح'), L('{n} lignes à corriger', '{n} rows to fix', '{n} سطور خاصهم تصحيح')) : L('Continuer', 'Continue', 'كمّل'))}</button>`;
+        <button type="button" class="kb atlas" data-next>${esc(c.error ? plural(c.error, L('{n} ligne à corriger', '{n} row to fix', '{n} سطر خاصو تصحيح'), L('{n} lignes à corriger', '{n} rows to fix', '{n} سطور خاصهم تصحيح')) : L('Continuer', 'Continue', 'كمّل'))}</button>`;
+      foot.querySelector('[data-next]').disabled = !!c.error;
+      box.querySelector('[data-eo]').checked = errorsOnly;
       foot.querySelector('[data-back]').addEventListener('click', () => stepOne());
       foot.querySelector('[data-next]').addEventListener('click', stepThree);
       box.querySelector('[data-eo]').addEventListener('change', (e) => { errorsOnly = e.target.checked; stepTwo(); });
@@ -185,7 +188,8 @@
         <div><b>${fmtNum(c.updated, 0)}</b> ${esc(L('articles seront mis à jour, seules les colonnes du fichier changent', 'items will be updated, only the file’s columns change', 'منتجات غادي يتبدّلو، غير الأعمدة اللي فالملف'))}</div>
         <div><b>${fmtNum(c.unchanged, 0)}</b> ${esc(L('lignes sont déjà à jour et ne touchent à rien', 'rows are already up to date and touch nothing', 'سطور ديجا محيّنين وما كايقيسو والو'))}</div>
         <div class="cbi-note">${esc(L('Le stock n’est jamais modifié par cet import.', 'Stock is never changed by this import.', 'المخزون عمرو ما كايتبدّل بهاد الاستيراد.'))}</div></div>`;
-      foot.innerHTML = `<button type="button" class="kb ghost" data-back>${esc(L('Retour', 'Back', 'رجوع'))}</button><button type="button" class="kb atlas" data-go ${c.new + c.updated ? '' : 'disabled'}>${esc(L('Importer', 'Import', 'استورد'))}</button>`;
+      foot.innerHTML = `<button type="button" class="kb ghost" data-back>${esc(L('Retour', 'Back', 'رجوع'))}</button><button type="button" class="kb atlas" data-go>${esc(L('Importer', 'Import', 'استورد'))}</button>`;
+      foot.querySelector('[data-go]').disabled = !(c.new + c.updated);
       foot.querySelector('[data-back]').addEventListener('click', stepTwo);
       foot.querySelector('[data-go]').addEventListener('click', confirm);
     }

@@ -49,14 +49,16 @@
 
   function css() {
     if (document.getElementById('cgp-css')) return;
-    const s = document.createElement('style');
-    s.id = 'cgp-css';
-    s.textContent = `
-.cgp{display:grid;gap:12px}
+    const style = document.createElement('style');
+    style.id = 'cgp-css';
+    style.textContent = `
+.cgp{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.cgp>*{min-width:0}
 .cgp-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .cgp-bar .sp{flex:1}
 .cgp-in{height:38px;border:1px solid var(--n-200,rgba(10,15,13,.12));border-radius:10px;padding:0 12px;font:inherit;font-size:13px;background:var(--paper-elev,#FDFCF9);color:var(--ink,#0A0F0D);min-width:0}
 .cgp-search{width:220px}
+.cgp-bar>.kiwi-select{width:220px;flex:0 0 auto}
 .cgp-seg{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--n-100,rgba(10,15,13,.05))}
 .cgp-seg button{border:0;background:transparent;font:inherit;font-weight:600;font-size:12.5px;padding:6px 12px;border-radius:999px;color:var(--n-600,#4a5550);cursor:pointer;min-height:30px}
 .cgp-seg button.on{background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);box-shadow:0 1px 2px rgba(10,15,13,.12)}
@@ -81,7 +83,7 @@
 .cgp-dr .hint{font-weight:400;color:var(--n-500,#6b7570)}
 @media (max-width:760px){.cgp-search{width:100%}.cgp-keys{display:none}}
 `;
-    document.head.appendChild(s);
+    document.head.appendChild(style);
   }
 
   /* ── columns ──────────────────────────────────────────────────────────── */
@@ -144,11 +146,12 @@
   let dupes = { sku: new Map(), barcode: new Map() };
   function recount() {
     const g = S.grid, d = { sku: new Map(), barcode: new Map() };
+    if (!g) return;
     S.data.rows.forEach((r) => {
       ['sku', 'barcode'].forEach((f) => {
         if (!S.data.fields.includes(f)) return;
         const v = g.value(r.id, f); if (!v) return;
-        const k = f === 'sku' ? String(v).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '') : String(v);
+        const k = f === 'sku' ? String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '') : String(v);
         if (k) d[f].set(k, (d[f].get(k) || 0) + 1);
       });
     });
@@ -162,9 +165,9 @@
     const c = R().checkValue(S.kind, key, v, { categories: cats });
     if (c.error) return c.error;
     if ((key === 'sku' || key === 'barcode') && v) {
-      const e = S.grid.edits()[row.id];
+      const e = S.grid && S.grid.edits()[row.id];   // null while the grid paints for the first time
       if (e && key in e) {
-        const k = key === 'sku' ? String(v).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '') : String(v);
+        const k = key === 'sku' ? String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '') : String(v);
         if ((dupes[key].get(k) || 0) > 1) return 'duplicate';
       }
     }
@@ -239,16 +242,36 @@
     const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
     const t = String(vd.subtype || vd.type || '').toLowerCase();
     if (/boutique|retail|mode|pret|shop|store|epicerie|concept/.test(t)) return 'boutique';
-    if (t) return 'menu';
-    return window.KiwiBoutiqueCatalog && !window.KiwiMenuStore ? 'boutique' : 'menu';
+    return 'menu';
+  }
+  /* The grid keeps its rows while it is on screen (the inventory and menu
+     re-renders stand aside for it), so a venue switch has to be caught here:
+     the sheet is rebuilt for the new venue, and a save never writes rows read
+     from one venue into another. */
+  function venueKey(kind) {
+    const KV = window.KiwiVenue;
+    let id = '';
+    try { id = String((KV && KV.getVenue && KV.getVenue()) || ''); } catch (_) {}
+    return id + '|' + window.KiwiBulkSource.merchantFor(kind);
+  }
+  let venueBound = false;
+  function bindVenue() {
+    const KV = window.KiwiVenue;
+    if (venueBound || !KV || !KV.subscribe) return;
+    venueBound = true;
+    KV.subscribe(() => {
+      if (!S || !document.querySelector('[data-cgp]') || venueKey(S.kind) === S.venue) return;
+      open(null);
+    });
   }
   async function open(kind, then) {
     css();
+    bindVenue();
     kind = kind === 'boutique' || kind === 'menu' ? kind : kindHere();
     if (S && S.grid) S.grid.destroy();
     const data = await window.KiwiBulkSource.load(kind);
     if (!data) { toast(L('Catalogue indisponible', 'Catalogue unavailable', 'الكتالوج ما متوفرش'), { type: 'error' }); return; }
-    S = { kind, data, grid: null, filter: 'all', query: '', cat: '', lastSave: (S && S.kind === kind && S.lastSave) || null, busy: false, shown: null };
+    S = { kind, data, grid: null, filter: 'all', query: '', cat: '', lastSave: (S && S.kind === kind && S.lastSave) || null, busy: false, shown: null, venue: venueKey(kind) };
     const KV = window.KiwiVenue;
     const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
     const where = data.cloud ? L('enregistré pour tous vos appareils', 'saved for all your devices', 'كايتسجّل لجميع الأجهزة ديالك')
@@ -316,6 +339,7 @@
   /* ── save ─────────────────────────────────────────────────────────────── */
   async function save(override, opts) {
     if (!S || S.busy) return false;
+    if (venueKey(S.kind) !== S.venue) { open(null); return false; }
     const c = override ? { patches: override, lists: [], errors: 0 } : changes();
     if (c.errors) {
       S.filter = 'errors'; markSeg(); applyFilter();
@@ -360,6 +384,7 @@
       return false;
     }
     toast(res.error === 'unauthorized' ? L('Seul le propriétaire peut modifier en masse', 'Only the owner can bulk edit', 'غير مول المحل اللي يقدر يبدّل بالجملة')
+      : res.error === 'price-lists' ? L('Les tarifs n’ont pas pu être enregistrés', 'The price lists could not be saved', 'ما قدرناش نسجّلو التعريفات')
       : L('Enregistrement impossible', 'Could not save', 'ما قدرناش نسجّلو'), { type: 'error', desc: L('Vos modifications restent à l’écran.', 'Your changes stay on screen.', 'التبديلات ديالك باقيين فالشاشة.') });
     status();
     return false;
@@ -442,7 +467,7 @@
   function fileName(ext) {
     const KV = window.KiwiVenue;
     const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
-    const slug = String(vd.name || (S.kind === 'boutique' ? 'inventaire' : 'carte')).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'catalogue';
+    const slug = String(vd.name || (S.kind === 'boutique' ? 'inventaire' : 'carte')).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'catalogue';
     return `${S.kind === 'boutique' ? 'inventaire' : 'carte'}-${slug}-${new Date().toISOString().slice(0, 10)}.${ext}`;
   }
   function download(bytes, name, type) {
@@ -453,14 +478,12 @@
   }
   const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   function exportFile(fmt) {
-    if (fmt === 'csv' && S.kind === 'boutique' && window.KiwiBoutiqueCatalog && window.KiwiBoutiqueCatalog.exportCsv) {
-      download('﻿' + window.KiwiBoutiqueCatalog.exportCsv(), fileName('csv'), 'text/csv;charset=utf-8');   // the same CSV as before, re-importable
-      return;
-    }
+    const legacy = fmt === 'csv' ? window.KiwiBulkSource.legacyCsv(S.kind) : null;
+    if (legacy != null) { download('\uFEFF' + legacy, fileName('csv'), 'text/csv;charset=utf-8'); return; }   // the boutique CSV as before, re-importable
     const { rows } = sheetRows(true);
     if (fmt === 'csv') {
       const csv = rows.map((r) => r.map((c) => { const s = String(c == null ? '' : c); return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(',')).join('\r\n');
-      download('﻿' + csv, fileName('csv'), 'text/csv;charset=utf-8');
+      download('\uFEFF' + csv, fileName('csv'), 'text/csv;charset=utf-8');
       return;
     }
     download(window.KiwiXlsx.write(rows, { sheet: S.kind === 'boutique' ? L('Inventaire', 'Inventory', 'المخزون') : L('Carte', 'Menu', 'القائمة') }), fileName('xlsx'), XLSX_TYPE);
@@ -478,7 +501,7 @@
       items: S.data.rows.map((r) => current(r.id)),
       selected: selection(), scope: scope || '',
       existing: S.data.rows.map((r) => ({ id: r.id, name: g.value(r.id, 'name'), sku: g.value(r.id, 'sku') || '', barcode: g.value(r.id, 'barcode') || '', price: g.value(r.id, 'price'), cost: g.value(r.id, 'cost'), lowStock: g.value(r.id, 'lowStock'), category: g.value(r.id, 'category'), sellable: g.value(r.id, 'sellable'), multi: !!r.multi })),
-      template: () => window.KiwiXlsx.write(sheetRows(false).rows.concat([['', S.kind === 'boutique' ? L('Chemise en lin', 'Linen shirt', 'قميجة كتان') : L('Thé à la menthe', 'Mint tea', 'أتاي بالنعناع')].concat(sheetRows(false).cols.slice(1).map((c) => (c.key === 'price' ? 120 : c.key === 'cost' ? 60 : c.key === 'sellable' ? L('Oui', 'Yes', 'نعم') : c.key === 'lowStock' ? 2 : c.key === 'category' ? (S.data.categories[0] ? S.data.categories[0].name : '') : '')))]), { sheet: 'Kiwi' }),
+      template: () => window.KiwiXlsx.write(sheetRows(false).rows.concat([['', S.kind === 'boutique' ? L('Chemise en lin', 'Linen shirt', 'قميجة كتان') : L('Thé à la menthe', 'Mint tea', 'أتاي بالنعناع')].concat(sheetRows(false).cols.slice(1).map((c) => (c.key === 'price' ? (S.kind === 'boutique' ? 120 : 15) : c.key === 'cost' ? (S.kind === 'boutique' ? 60 : 5) : c.key === 'sellable' ? L('Oui', 'Yes', 'نعم') : c.key === 'lowStock' ? 2 : c.key === 'category' ? (S.data.categories[0] ? S.data.categories[0].name : '') : '')))]), { sheet: 'Kiwi' }),
       download: (bytes, name) => download(bytes, name, XLSX_TYPE),
       /* Re-price and import both end here: values into the sheet, then the
          one batch save. */

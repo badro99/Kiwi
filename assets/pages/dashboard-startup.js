@@ -8,7 +8,7 @@
     const menuScripts = [
       'assets/menu-catalog/state.js?v=17',
       'assets/menu-catalog/modifiers.js?v=5',
-      'assets/menu-catalog/item-list.js?v=4',
+      'assets/menu-catalog/item-list.js?v=5',
       'assets/menu-catalog/formulas.js?v=3',
       'assets/menu-catalog/item-editor.js?v=7',
       'assets/menu-catalog/media.js?v=3',
@@ -20,8 +20,8 @@
   }
   const scripts = [
     'assets/pages-pro-office.js?v=29',
-    'assets/pages-pro.js?v=2230',
-    'assets/pages-pro-boutique.js?v=54',
+    'assets/pages-pro.js?v=2234',
+    'assets/pages-pro-boutique.js?v=55',
     'assets/boutique-stock-correct.js?v=4',
     'assets/boutique-categories-view.js?v=3',
     'assets/pages-pro-spa-starter.js?v=8',
@@ -34,10 +34,10 @@
     'assets/food-trade-settings.js?v=2',
     'assets/menu-promos.js?v=28',
     'assets/menu-promos-dashboard.js?v=10',
-    'assets/restaurant-menu/strings.js?v=24',
+    'assets/restaurant-menu/strings.js?v=25',
     'assets/restaurant-menu/recipes.js?v=10',
     'assets/restaurant-menu/styles.js?v=12',
-    'assets/restaurant-menu-workspace.js?v=140',
+    'assets/restaurant-menu-workspace.js?v=142',
     'assets/sold-insights.js?v=20',
     'assets/boutique-promos-dashboard.js?v=39',
     'assets/day-report.js?v=59',

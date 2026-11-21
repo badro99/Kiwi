@@ -133,7 +133,6 @@
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto;">
               ${cat ? `<button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-stations">${BELL}<span>${esc(tr(T.catStationL))}</span></button>` : ''}
-              <button data-activation=write class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="catalog-grid" data-arg="menu"><span>${esc(tr({ fr: 'Tableur', en: 'Spreadsheet', ar: 'الجدول' }))}</span></button>
               <button data-activation=write class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
               <button data-activation=write class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-cat-add">${PLUS}<span>${esc(tr(T.addCat))}</span></button>
               <button data-activation=write class="mx-pane-add" data-action="mx-item-add">${PLUS}<span>${esc(tr(T.addItem))}</span></button>

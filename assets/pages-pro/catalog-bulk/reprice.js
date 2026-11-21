@@ -14,9 +14,9 @@
   'use strict';
   function css() {
     if (document.getElementById('cbr-css')) return;
-    const s = document.createElement('style');
-    s.id = 'cbr-css';
-    s.textContent = `
+    const style = document.createElement('style');
+    style.id = 'cbr-css';
+    style.textContent = `
 .cbr{display:grid;gap:14px}
 .cbr-row{display:grid;gap:6px}
 .cbr-row>span{font-size:12px;font-weight:600;color:var(--n-600,#4a5550)}
@@ -41,7 +41,7 @@
 .cbr-empty{padding:18px;text-align:center;color:var(--n-500,#6b7570);font-size:13px}
 @media (max-width:560px){.cbr-two{grid-template-columns:1fr}}
 `;
-    document.head.appendChild(s);
+    document.head.appendChild(style);
   }
 
   function open(ctx) {
@@ -49,20 +49,18 @@
     const { L, esc, fmtNum, plural } = ctx;
     const R = window.KiwiBulkRules;
     const st = {
-      scope: ctx.scope === 'selection' && ctx.selected.length ? 'selection' : ctx.selected.length ? 'selection' : ctx.categories.length ? 'category' : 'all',
+      scope: ctx.scope === 'all' ? 'all' : ctx.selected.length ? 'selection' : ctx.categories.length ? 'category' : 'all',
       cat: (ctx.categories[0] || {}).id || '', basis: 'price', op: 'pct+', value: '5', step: '1', mode: 'nearest',
     };
-    if (ctx.scope === 'all') st.scope = 'all';
-    const seg = (name, items) => `<div class="cbr-seg" data-lens-demo role="group" data-seg="${name}">${items.map(([k, label, off]) => `<button type="button" data-lens-item data-k="${k}"${off ? ' disabled' : ''} class="${st[name] === k ? 'on' : ''}" aria-pressed="${st[name] === k}">${esc(label)}</button>`).join('')}</div>`;
-    const m = window.Kiwi.modal({
-      tag: L('PRIX EN MASSE', 'BULK PRICES', 'الأثمنة بالجملة'),
-      title: L('Ajuster les prix', 'Adjust prices', 'بدّل الأثمنة'),
-      desc: esc(L('Rien n’est écrit avant « Appliquer ». Vous voyez chaque nouveau prix d’abord.', 'Nothing is written before « Apply ». You see every new price first.', 'حتى حاجة ما كاتتسجّل قبل « طبّق ». كاتشوف كل ثمن جديد قبل.')),
-      width: 640,
-      body: `<div class="cbr">
+    /* Pills are drawn plain; which one is on, and which is unavailable, is set
+       on the DOM right after (paintSegs), the same way a click sets it. */
+    const off = { selection: !ctx.selected.length, category: !ctx.categories.length };
+    const seg = (name, items) => `<div class="cbr-seg" data-lens-demo role="group" data-seg="${name}">${items.map(([k, label]) => `<button type="button" data-lens-item data-k="${k}">${esc(label)}</button>`).join('')}</div>`;
+    const MAD = L(' MAD', ' MAD', ' درهم');
+    const view = () => `<div class="cbr">
         <div class="cbr-row"><span>${esc(L('Articles', 'Items', 'المنتجات'))}</span>
-          ${seg('scope', [['category', L('Une catégorie', 'A category', 'فئة وحدة'), !ctx.categories.length], ['selection', L('Sélection', 'Selection', 'المختارين') + ' (' + fmtNum(ctx.selected.length, 0) + ')', !ctx.selected.length], ['all', L('Tout', 'Everything', 'كلشي') + ' (' + fmtNum(ctx.items.length, 0) + ')']])}
-          <select class="cbr-in" data-cat ${st.scope === 'category' ? '' : 'hidden'}>${ctx.categories.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
+          ${seg('scope', [['category', L('Une catégorie', 'A category', 'فئة وحدة')], ['selection', L('Sélection', 'Selection', 'المختارين') + ' (' + fmtNum(ctx.selected.length, 0) + ')'], ['all', L('Tout', 'Everything', 'كلشي') + ' (' + fmtNum(ctx.items.length, 0) + ')']])}
+          <select class="cbr-in" data-cat>${ctx.categories.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
         </div>
         ${ctx.hasCost ? `<div class="cbr-row"><span>${esc(L('Calculer à partir de', 'Calculate from', 'نحسبو من'))}</span>${seg('basis', [['price', L('Prix de vente actuel', 'Current selling price', 'ثمن البيع الحالي')], ['cost', L('Prix d’achat', 'Cost', 'ثمن الشراء')]])}</div>` : ''}
         <div class="cbr-two">
@@ -79,13 +77,19 @@
         <div class="cbr-quick" data-quick>${['2', '5', '10', '15'].map((v) => `<button type="button" data-q="${v}">${v} %</button>`).join('')}</div>
         <div class="cbr-two">
           <label class="cbr-row"><span>${esc(L('Arrondir au', 'Round to', 'قرّب ل'))}</span>
-            <select class="cbr-in" data-step><option value="0">${esc(L('Centime près', 'Nearest centime', 'أقرب سنتيم'))}</option><option value="0.5">0,50 MAD</option><option value="1" selected>1 MAD</option><option value="5">5 MAD</option></select></label>
+            <select class="cbr-in" data-step><option value="0">${esc(L('Centime près', 'Nearest centime', 'أقرب سنتيم'))}</option><option value="0.5">${esc(fmtNum(0.5, 2) + MAD)}</option><option value="1" selected>${esc(fmtNum(1, 0) + MAD)}</option><option value="5">${esc(fmtNum(5, 0) + MAD)}</option></select></label>
           <label class="cbr-row"><span>${esc(L('Sens', 'Direction', 'الاتجاه'))}</span>
             <select class="cbr-in" data-mode><option value="nearest">${esc(L('Au plus proche', 'Nearest', 'الأقرب'))}</option><option value="up">${esc(L('Vers le haut', 'Up', 'للفوق'))}</option><option value="down">${esc(L('Vers le bas', 'Down', 'للتحت'))}</option></select></label>
         </div>
         <div class="cbr-sum" data-sum aria-live="polite"></div>
         <div class="cbr-prev" data-prev></div>
-      </div>`,
+      </div>`;
+    const m = window.Kiwi.modal({
+      tag: L('PRIX EN MASSE', 'BULK PRICES', 'الأثمنة بالجملة'),
+      title: L('Ajuster les prix', 'Adjust prices', 'بدّل الأثمنة'),
+      desc: esc(L('Rien n’est écrit avant « Appliquer ». Vous voyez chaque nouveau prix d’abord.', 'Nothing is written before « Apply ». You see every new price first.', 'حتى حاجة ما كاتتسجّل قبل « طبّق ». كاتشوف كل ثمن جديد قبل.')),
+      width: 640,
+      body: view(),
       foot: `<button type="button" class="kb ghost" data-dismiss>${esc(L('Annuler', 'Cancel', 'لغي'))}</button><button type="button" class="kb atlas" data-apply disabled>${esc(L('Appliquer', 'Apply', 'طبّق'))}</button>`,
     });
     const el = m.el;
@@ -115,7 +119,7 @@
       const total = rows.reduce((s, r) => s + r.delta, 0);
       q('[data-sum]').innerHTML = sk['bad-value'] ? esc(L('Entrez une valeur.', 'Enter a value.', 'دخّل قيمة.'))
         : `<b>${esc(plural(rows.length, L('{n} prix changera', '{n} price will change', '{n} ثمن غادي يتبدّل'), L('{n} prix changeront', '{n} prices will change', '{n} أثمنة غادي يتبدّلو')))}</b>`
-          + (rows.length ? ' · ' + esc(L('écart moyen ', 'average change ', 'الفرق المتوسط ') + (total >= 0 ? '+' : '') + fmtNum(total / rows.length, 2) + ' MAD') : '')
+          + (rows.length ? ' · ' + esc(L('écart moyen ', 'average change ', 'الفرق المتوسط ') + (total >= 0 ? '+' : '') + fmtNum(total / rows.length, 2) + MAD) : '')
           + (skips.length ? ' · ' + esc(L('ignorés : ', 'skipped: ', 'متخطّين: ') + skips.join(', ')) : '');
       q('[data-prev]').innerHTML = rows.length
         ? `<table><thead><tr><th>${esc(L('Article', 'Item', 'المنتج'))}</th><th class="n">${esc(L('Avant', 'Before', 'قبل'))}</th><th class="n">${esc(L('Après', 'After', 'من بعد'))}</th><th class="n">${esc(L('Écart', 'Change', 'الفرق'))}</th></tr></thead><tbody>${rows.slice(0, 400).map((r) => `<tr><td>${esc(r.name)}</td><td class="n old">${fmtNum(r.old, 2)}</td><td class="n">${fmtNum(r.next, 2)}</td><td class="n ${r.delta > 0 ? 'up' : 'down'}">${r.delta > 0 ? '+' : ''}${fmtNum(r.delta, 2)}</td></tr>`).join('')}</tbody></table>`
@@ -126,11 +130,18 @@
       apply.textContent = rows.length ? plural(rows.length, L('Appliquer et enregistrer {n} prix', 'Apply and save {n} price', 'طبّق وسجّل {n} ثمن'), L('Appliquer et enregistrer {n} prix', 'Apply and save {n} prices', 'طبّق وسجّل {n} أثمنة')) : L('Appliquer', 'Apply', 'طبّق');
       q('[data-quick]').hidden = !st.op.startsWith('pct');
     }
+    function paintSegs() {
+      el.querySelectorAll('[data-seg]').forEach((g) => g.querySelectorAll('[data-k]').forEach((x) => {
+        const on = st[g.dataset.seg] === x.dataset.k;
+        x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on));
+        if (g.dataset.seg === 'scope') x.disabled = !!off[x.dataset.k];
+      }));
+      q('[data-cat]').hidden = st.scope !== 'category';
+    }
     el.querySelectorAll('[data-seg]').forEach((g) => g.addEventListener('click', (e) => {
       const b = e.target.closest('[data-k]'); if (!b || b.disabled) return;
       st[g.dataset.seg] = b.dataset.k;
-      g.querySelectorAll('[data-k]').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', String(x === b)); });
-      q('[data-cat]').hidden = st.scope !== 'category';
+      paintSegs();
       refresh();
     }));
     q('[data-cat]').addEventListener('change', (e) => { st.cat = e.target.value; refresh(); });
@@ -146,6 +157,7 @@
       ctx.put(rows.map((r) => ({ id: r.id, key: 'price', value: r.next })));
       await ctx.save();
     });
+    paintSegs();
     refresh();
     setTimeout(() => { const v = q('[data-val]'); if (v) { v.focus(); v.select(); } }, 60);
   }

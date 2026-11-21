@@ -368,7 +368,7 @@ function _bqxSubscribe() {
     const nav = document.querySelector('.sidebar nav a.active');
     const navKey = nav && nav.getAttribute('data-nav');
     const drawerOpen = document.querySelector('.kiwi-drawer-backdrop');
-    if (!drawerOpen) {
+    if (!drawerOpen && !document.querySelector('.cgp')) {   // le tableur (catalog-bulk) recharge seul ses lignes
       if (navKey === 'inventory' || _bqxOnInv()) _renderInventory();
       else if (navKey === 'categories') _renderCategories();
     }

@@ -24,9 +24,9 @@
 
   function css() {
     if (document.getElementById('cbg-css')) return;
-    const s = document.createElement('style');
-    s.id = 'cbg-css';
-    s.textContent = `
+    const style = document.createElement('style');
+    style.id = 'cbg-css';
+    style.textContent = `
 .cbg{position:relative;border:1px solid var(--n-200,rgba(10,15,13,.12));border-radius:14px;background:var(--paper,#F7F5F0);outline:none;font-size:13px;color:var(--ink,#0A0F0D)}
 .cbg:focus-visible{box-shadow:0 0 0 2px var(--atlas,#0B6E4F)}
 .cbg-scroll{overflow:auto;height:var(--cbg-h,560px);border-radius:14px;overscroll-behavior:contain}
@@ -62,7 +62,7 @@
 .cbg-empty{padding:40px 16px;text-align:center;color:var(--n-500,#6b7570)}
 .cbg-tip{position:absolute;z-index:5;max-width:280px;padding:7px 10px;border-radius:8px;background:var(--ink,#0A0F0D);color:var(--paper,#F7F5F0);font-size:12px;pointer-events:none}
 `;
-    document.head.appendChild(s);
+    document.head.appendChild(style);
   }
 
   function create(host, opts) {
@@ -83,11 +83,12 @@
 
     const template = SEL_W + 'px ' + cols.map((c) => (c.width || 140) + 'px').join(' ');
     host.innerHTML = `<div class="cbg" role="grid" tabindex="0" aria-multiselectable="true" aria-colcount="${cols.length + 1}" aria-label="${esc(o.label || '')}">
-      <div class="cbg-scroll"><div class="cbg-head" role="row" style="grid-template-columns:${template}">
+      <div class="cbg-scroll"><div class="cbg-head" role="row">
         <div class="cbg-h" role="columnheader" style="justify-content:center"><span class="cbg-box" data-cbg-all></span></div>
         ${cols.map((c, j) => `<div class="cbg-h${c.num ? ' num' : ''}" role="columnheader" aria-colindex="${j + 2}" title="${esc(c.hint || c.label)}">${esc(c.label)}${c.required ? '<span class="req" aria-hidden="true">*</span>' : ''}</div>`).join('')}
       </div><div class="cbg-body" role="rowgroup"></div></div></div>`;
     const root = host.firstElementChild;
+    root.querySelector('.cbg-head').style.gridTemplateColumns = template;
     const scroller = root.querySelector('.cbg-scroll');
     const body = root.querySelector('.cbg-body');
     const allBox = root.querySelector('[data-cbg-all]');

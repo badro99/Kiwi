@@ -1288,8 +1288,8 @@
     "sha": "f74b82616dc128c2"
   },
   "assets/menu-catalog/item-list.js": {
-    "v": "4",
-    "sha": "4fd3b283f06cd35c"
+    "v": "5",
+    "sha": "d61ba49f2864dae2"
   },
   "assets/menu-catalog/media.js": {
     "v": "3",
@@ -1472,8 +1472,8 @@
     "sha": "d8150ae77563aa16"
   },
   "assets/pages-pro-boutique.js": {
-    "v": "54",
-    "sha": "387ceec83a5250e0"
+    "v": "55",
+    "sha": "a248d758fb337ac0"
   },
   "assets/pages-pro-office.js": {
     "v": "29",
@@ -1488,8 +1488,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2230",
-    "sha": "8ec525410e2ac372"
+    "v": "2234",
+    "sha": "a717df21f1b4a798"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1500,28 +1500,28 @@
     "sha": "7abe777e8ea9c4fb"
   },
   "assets/pages-pro/catalog-bulk/grid.js": {
-    "v": "1",
-    "sha": "dff7ed8ae6d1f283"
+    "v": "2",
+    "sha": "533d0bfc20c96d68"
   },
   "assets/pages-pro/catalog-bulk/import.js": {
-    "v": "1",
-    "sha": "8ad807854edb8da2"
+    "v": "2",
+    "sha": "b4852996949c3fd4"
   },
   "assets/pages-pro/catalog-bulk/page.js": {
-    "v": "1",
-    "sha": "4d2de4c022f583a6"
+    "v": "4",
+    "sha": "7cae8e179d053d03"
   },
   "assets/pages-pro/catalog-bulk/reprice.js": {
-    "v": "1",
-    "sha": "6f13f8a2c2de5cda"
+    "v": "2",
+    "sha": "f479d2ec6822db17"
   },
   "assets/pages-pro/catalog-bulk/rules.js": {
-    "v": "1",
-    "sha": "e3a3e608fb6b22aa"
+    "v": "2",
+    "sha": "5d4fcb85ed486766"
   },
   "assets/pages-pro/catalog-bulk/source.js": {
-    "v": "1",
-    "sha": "9af69a5828902a58"
+    "v": "2",
+    "sha": "535713d33d6de376"
   },
   "assets/pages-pro/catalog-bulk/xlsx.js": {
     "v": "1",
@@ -1552,8 +1552,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "270",
-    "sha": "13550bdb5e219365"
+    "v": "276",
+    "sha": "e3cf9191eaafdad9"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2160,16 +2160,16 @@
     "sha": "28d06df4ffa421b5"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "140",
-    "sha": "73773abfe8fa2eb9"
+    "v": "142",
+    "sha": "72dba3b7c6daa656"
   },
   "assets/restaurant-menu/recipes.js": {
     "v": "10",
     "sha": "8e9397cc4cba0e00"
   },
   "assets/restaurant-menu/strings.js": {
-    "v": "24",
-    "sha": "866d9718427b8b5c"
+    "v": "25",
+    "sha": "a334caa9c7b76a6f"
   },
   "assets/restaurant-menu/styles.js": {
     "v": "12",

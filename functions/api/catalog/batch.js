@@ -87,7 +87,7 @@ function boutiqueView(doc) {
   };
   return { view, variantsOf };
 }
-const skuKey = (s) => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const skuKey = (s) => String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 /* Validate and apply to `doc` in place. Returns { issues, conflicts, changed, unchanged }. */
 export function applyBoutique(doc, rows, now) {

@@ -70,8 +70,11 @@
     return { rows, categories };
   }
 
-  /* Price lists, read defensively: the module is another team's, and its
-     answers may be a promise, an array of rows or a map. */
+  /* Price lists (assets/price-lists.js, the « Tarifs » feature): its contract
+     with this sheet is list() → [{ id, name, isMain }], prices(listId) →
+     Map<itemKey, cents>, setPrices([{ itemKey, listId, price: cents | null }]).
+     Prices cross that boundary in integer centimes; the sheet shows MAD.
+     Read defensively all the same: an array of rows is accepted too. */
   async function priceLists(rows) {
     const PL = window.KiwiPriceLists;
     if (!PL || typeof PL.list !== 'function' || typeof PL.prices !== 'function') return [];
@@ -81,8 +84,9 @@
       for (const l of lists) {
         const got = await PL.prices(l.id);
         const map = new Map();
-        if (Array.isArray(got)) got.forEach((x) => { const id = x && (x.itemId || x.productId || x.id); if (id && x.price != null) map.set(String(id), Number(x.price)); });
-        else if (got && typeof got === 'object') Object.keys(got).forEach((id) => { if (got[id] != null) map.set(id, Number(got[id])); });
+        const mad = (c) => Math.round(Number(c)) / 100;
+        if (got instanceof Map) got.forEach((c, id) => { if (c != null && Number.isFinite(Number(c))) map.set(String(id), mad(c)); });
+        else if (Array.isArray(got)) got.forEach((x) => { const id = x && (x.itemKey || x.itemId || x.id); const c = x && (x.cents != null ? x.cents : x.price); if (id && c != null) map.set(String(id), mad(c)); });
         rows.forEach((r) => { r['pl:' + l.id] = map.has(r.id) ? map.get(r.id) : null; });
       }
       return lists.map((l) => ({ id: l.id, name: String(l.name || l.id) }));
@@ -137,13 +141,15 @@
     const PL = window.KiwiPriceLists;
     if (!listChanges.length) return { ok: true, count: 0 };
     if (!PL || typeof PL.setPrices !== 'function') return { ok: false, count: 0 };
-    try { await PL.setPrices(listChanges); return { ok: true, count: listChanges.length }; }
+    const rows = listChanges.map((x) => ({ itemKey: x.itemId, listId: x.listId, price: x.price == null || x.price === '' ? null : Math.round(Number(x.price) * 100) }));
+    try { await PL.setPrices(rows); return { ok: true, count: listChanges.length }; }
     catch (_) { return { ok: false, count: 0 }; }
   }
 
   async function save(kind, patches, listChanges) {
     const lists = await savePriceLists(listChanges || []);
-    if (!patches.length) return { ok: lists.ok, updated: 0, unchanged: 0, lists: lists.count };
+    if (!lists.ok) return { ok: false, error: 'price-lists' };   // nothing else leaves: the sheet keeps every edit
+    if (!patches.length) return { ok: true, updated: 0, unchanged: 0, lists: lists.count };
     if (!cloud(kind)) { applyLocal(kind, patches); return { ok: true, updated: patches.length, local: true, lists: lists.count }; }
     let res, body = null;
     try {
@@ -154,11 +160,24 @@
       body = await res.json().catch(() => null);
     } catch (_) { res = null; }
     if (res && res.ok && body && body.ok) {
-      if (kind === 'boutique') { try { await CAT().sync(); } catch (_) {} }
-      else applyLocal('menu', patches);
+      if (kind === 'boutique') {
+        try { await CAT().sync(); } catch (_) {}
+        /* The re-read can miss (network gone right after the write): whatever
+           the local copy still lacks is applied here too, so the screen never
+           shows a saved value as unsaved. */
+        const now = new Map((boutiqueRows() || { rows: [] }).rows.map((r) => [r.id, r]));
+        const behind = patches.filter((p) => { const r = now.get(p.id); return r && Object.keys(p.set).some((f) => !RULES().sameValue(f, r[f], p.set[f])); });
+        if (behind.length) applyLocal('boutique', behind);
+      } else applyLocal('menu', patches);
       return { ok: true, updated: body.updated, unchanged: body.unchanged, lists: lists.count };
     }
     if (res && res.status === 409 && body && body.error === 'conflict') return { ok: false, conflicts: body.conflicts || [] };
+    /* Articles created on this device and not yet mirrored up are unknown to
+       the server. They travel with the device's own sync, so the whole batch
+       does too, instead of failing on a row the merchant can see. */
+    const unsynced = res && ((res.status === 422 && body && body.issues && body.issues.length && body.issues.every((i) => i.code === 'not-found'))
+      || (res.status === 409 && body && (body.error === 'catalog-missing' || body.error === 'menu-missing')));
+    if (unsynced) { applyLocal(kind, patches); return { ok: true, updated: patches.length, local: true, lists: lists.count }; }
     if (res && res.status === 422 && body && body.issues) return { ok: false, issues: body.issues };
     if (res && (res.status === 401 || res.status === 403)) return { ok: false, error: 'unauthorized' };
     if (res && res.status < 500 && res.status !== 0 && body && body.error && body.error !== 'unmigrated') return { ok: false, error: body.error };
@@ -167,5 +186,9 @@
     return { ok: true, updated: patches.length, local: true, offline: true, lists: lists.count };
   }
 
-  window.KiwiBulkSource = { load, save, cloud, merchantFor, applyLocal };
+  /* The boutique CSV export, unchanged (assets/boutique-catalog.js · exportCsv):
+     its columns are the ones the CSV importer reads back. */
+  const legacyCsv = (kind) => (kind === 'boutique' && CAT() && CAT().exportCsv ? CAT().exportCsv() : null);
+
+  window.KiwiBulkSource = { load, save, cloud, merchantFor, applyLocal, legacyCsv };
 })();
