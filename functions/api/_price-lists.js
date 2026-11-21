@@ -1,0 +1,290 @@
+// Les TARIFS d'un commerce : plusieurs prix pour un même article.
+//
+// Un grossiste (jomla) n'achète pas au prix du rayon, la boutique en ligne
+// peut vendre plus cher que le comptoir, Glovo prend sa commission sur un prix
+// à part. Un tarif est une liste de prix nommée, liée à des canaux (caisse,
+// en ligne, factures, livraison) ; un client peut en avoir un par défaut.
+//
+// Trois règles tiennent tout le reste :
+//   · le tarif PRINCIPAL n'existe pas en double : c'est le prix du catalogue
+//     (catalogs › products[].priceMAD). Son id est réservé : 'main' ;
+//   · un article sans prix dans un tarif RETOMBE sur le prix principal. Un
+//     tarif neuf, vide, vend donc exactement comme avant ;
+//   · tout se résout côté serveur, dans le magasin résolu par la session ou la
+//     caisse appairée, jamais d'après un identifiant de commerçant du corps.
+//
+// Les montants sont des centimes entiers ; le catalogue parle en MAD, la
+// conversion se fait une fois, ici (Math.round(MAD × 100)).
+
+import { __test as catalogFns } from './catalog.js';
+import { loadParts } from './_catalog-parts.js';
+import { catalogFamily } from './_catalog-family.js';
+
+export const MAIN_ID = 'main';
+export const CHANNELS = ['till', 'online', 'invoices', 'delivery'];
+export const STEPS = [0, 10, 50, 100, 500, 1000];        // centimes : 0,10 · 0,50 · 1 · 5 · 10 MAD
+export const MAX_PRICE_CENTS = 1000000000;                // 10 000 000 MAD, la borne du catalogue
+export const MAX_ROWS = 5000;                             // une écriture en masse
+export const MAX_LISTS = 40;
+const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const KEY_RE = /^[^\u0000-\u001f]{1,80}$/;
+
+export const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+export const isId = (v) => typeof v === 'string' && ID_RE.test(v);
+export const isKey = (v) => typeof v === 'string' && KEY_RE.test(v);
+const parse = (text, fallback) => { try { const v = JSON.parse(text); return v == null ? fallback : v; } catch (_) { return fallback; } };
+
+export function cleanChannels(raw) {
+  const list = Array.isArray(raw) ? raw : [];
+  return CHANNELS.filter((c) => list.includes(c));
+}
+export function cleanSites(raw, selfSlug) {
+  const list = Array.isArray(raw) ? raw : [];
+  const out = [];
+  for (const s of list) {
+    const slug = String(s || '').toLowerCase().slice(0, 64);
+    if (/^[a-z0-9][a-z0-9-]{0,63}$/.test(slug) && slug !== selfSlug && !out.includes(slug)) out.push(slug);
+    if (out.length >= 20) break;
+  }
+  return out;
+}
+
+/* ── L'ARITHMÉTIQUE ────────────────────────────────────────────────────────
+ * Un tarif dérivé du principal : ± un pourcentage, arrondi au pas le plus
+ * proche (0,50 · 1 · 5 MAD). Tout en centimes entiers ; le pourcentage garde
+ * deux décimales. Jamais négatif, jamais au-delà de la borne du catalogue. */
+export function roundToStep(cents, step) {
+  const c = Math.max(0, Math.round(Number(cents) || 0));
+  const s = Math.round(Number(step) || 0);
+  if (!(s > 0)) return Math.min(MAX_PRICE_CENTS, c);
+  return Math.min(MAX_PRICE_CENTS, Math.round(c / s) * s);
+}
+export function derivePrice(mainCents, pct, step) {
+  const p = Math.round((Number(pct) || 0) * 100);          // centièmes de pour cent
+  const raw = Math.round(Math.max(0, Number(mainCents) || 0) * (10000 + p) / 10000);
+  return roundToStep(raw, step);
+}
+export function cleanPct(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < -90 || n > 500) return null;
+  return Math.round(n * 100) / 100;
+}
+export function cleanStep(v) {
+  const n = Math.round(Number(v) || 0);
+  return STEPS.includes(n) ? n : null;
+}
+export function cleanPrice(v) {
+  if (v === null) return null;
+  const n = Number(v);
+  if (!Number.isSafeInteger(n) || n < 0 || n > MAX_PRICE_CENTS) return undefined;
+  return n;
+}
+
+/* ── LE CATALOGUE : le prix principal ─────────────────────────────────────── */
+export async function readCatalogDoc(env, merchant) {
+  const row = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first());
+  if (!row || !row.data) return null;
+  const data = catalogFns.sanitize(JSON.parse(row.data));
+  catalogFns.materialize(data);
+  return data;
+}
+/* Map item_key → { cents, name }. Les articles archivés restent lisibles : une
+ * facture ou un retour peut encore les citer. */
+export async function mainPrices(env, merchant, catalog) {
+  const doc = catalog || await readCatalogDoc(env, merchant).catch(() => null);
+  const out = new Map();
+  for (const p of (doc && doc.products) || []) {
+    if (!p || !p.id) continue;
+    const entry = { cents: Math.round((Number(p.priceMAD) || 0) * 100), name: p.name || '', archived: !!p.archived, categoryId: p.categoryId || null };
+    out.set(p.id, entry);
+    if (p.legacyId && !out.has(p.legacyId)) out.set(p.legacyId, entry);
+  }
+  return out;
+}
+
+/* ── LES TARIFS ───────────────────────────────────────────────────────────── */
+function shapeList(row, viewer) {
+  const owner = String(row.merchant || viewer);
+  return {
+    id: String(row.id), name: String(row.name || ''), isMain: Number(row.is_main) === 1,
+    channels: cleanChannels(parse(row.channels, [])), sites: Array.isArray(parse(row.sites, [])) ? parse(row.sites, []) : [],
+    compareListId: row.compare_list_id || null, archived: Number(row.archived) === 1,
+    sort: Number(row.sort) || 0, createdTs: Number(row.created_ts) || 0, updatedTs: Number(row.updated_ts) || 0,
+    owner, shared: owner !== viewer,
+  };
+}
+export function virtualMain(row) {
+  return {
+    id: MAIN_ID, name: row && row.name ? String(row.name) : 'Prix principal', isMain: true,
+    channels: CHANNELS.slice(), sites: [], compareListId: null, archived: false, sort: -1,
+    createdTs: 0, updatedTs: row ? Number(row.updated_ts) || 0 : 0, owner: row ? String(row.merchant) : '', shared: false,
+  };
+}
+
+/* Les tarifs que VOIT un magasin : les siens, plus ceux d'une boutique soeur
+ * (même famille de catalogue, donc mêmes articles) qui le nomme dans `sites`.
+ * Le principal d'abord, toujours présent, même sans ligne en base. */
+export async function visibleLists(env, merchant, opts) {
+  const withArchived = !!(opts && opts.archived);
+  let rows = [];
+  try {
+    rows = ((await env.DB.prepare('SELECT * FROM price_lists WHERE merchant = ? ORDER BY sort, created_ts').bind(merchant).all()).results) || [];
+  } catch (_) { rows = []; }
+  let mainRow = null;
+  const own = [];
+  for (const r of rows) { if (Number(r.is_main) === 1) mainRow = r; else own.push(shapeList(r, merchant)); }
+  const shared = [];
+  try {
+    const fam = await catalogFamily(env, merchant);
+    for (const sister of (fam && fam.members) || []) {
+      if (sister === merchant) continue;
+      const rs = ((await env.DB.prepare('SELECT * FROM price_lists WHERE merchant = ? AND is_main = 0 AND archived = 0').bind(sister).all()).results) || [];
+      for (const r of rs) if (parse(r.sites, []).includes(merchant)) shared.push(shapeList(r, merchant));
+    }
+  } catch (_) { /* pas de famille : rien de partagé */ }
+  const lists = [virtualMain(mainRow ? { ...mainRow } : null), ...own, ...shared];
+  if (lists[0].owner === '') lists[0].owner = merchant;
+  return withArchived ? lists : lists.filter((l) => !l.archived);
+}
+export async function findList(env, merchant, id, opts) {
+  if (!isId(id)) return null;
+  const lists = await visibleLists(env, merchant, opts);
+  return lists.find((l) => l.id === id) || null;
+}
+
+/* Les prix d'un tarif : Map `item|variant` → centimes. */
+export async function listPrices(env, list) {
+  const out = new Map();
+  if (!list || list.isMain) return out;
+  const rs = ((await env.DB.prepare('SELECT item_key, variant_key, price_cents FROM item_prices WHERE merchant = ? AND list_id = ?')
+    .bind(list.owner, list.id).all()).results) || [];
+  for (const r of rs) out.set(r.item_key + '|' + (r.variant_key || ''), Number(r.price_cents));
+  return out;
+}
+
+export async function clientDefault(env, merchant, clientId) {
+  const id = typeof clientId === 'string' ? clientId.trim().slice(0, 64) : '';
+  if (!id) return null;
+  try {
+    const row = await env.DB.prepare('SELECT list_id FROM price_list_clients WHERE merchant = ? AND client_id = ?').bind(merchant, id).first();
+    return row ? String(row.list_id) : null;
+  } catch (_) { return null; }
+}
+
+/* Quel tarif s'applique : celui qu'on nomme (s'il est visible et actif), sinon
+ * celui de la fiche client, sinon le tarif lié au canal, sinon le principal.
+ * `why` dit lequel a gagné, pour l'écran et pour l'audit. */
+export async function pickList(env, merchant, want) {
+  const w = want || {};
+  const lists = await visibleLists(env, merchant);
+  const main = lists[0];
+  if (w.listId != null && w.listId !== '') {
+    const hit = lists.find((l) => l.id === w.listId);
+    return hit ? { list: hit, why: hit.isMain ? 'main' : 'asked' } : { list: null, why: 'unknown-list' };
+  }
+  const fromClient = await clientDefault(env, merchant, w.clientId);
+  if (fromClient) {
+    const hit = lists.find((l) => l.id === fromClient);
+    if (hit) return { list: hit, why: 'client-default' };
+  }
+  if (w.channel && CHANNELS.includes(w.channel)) {
+    const hit = lists.find((l) => !l.isMain && l.channels.includes(w.channel));
+    if (hit) return { list: hit, why: 'channel' };
+  }
+  return { list: main, why: 'main' };
+}
+
+/* Le prix d'une ligne : (article, déclinaison) → (article) → principal. */
+export function priceOf(main, prices, itemKey, variantKey) {
+  const base = main.get(itemKey);
+  const mainCents = base ? base.cents : null;
+  const v = variantKey ? prices.get(itemKey + '|' + variantKey) : undefined;
+  if (v != null) return { cents: v, mainCents, source: 'list' };
+  const i = prices.get(itemKey + '|');
+  if (i != null) return { cents: i, mainCents, source: 'list' };
+  return { cents: mainCents, mainCents, source: mainCents == null ? 'unknown' : 'main' };
+}
+
+/* Un panier entier, côté serveur. Une ligne inconnue du catalogue n'est pas
+ * devinée : elle revient `unknown`, sans prix, et le total la laisse de côté. */
+export async function resolveCart(env, merchant, want, items) {
+  const pick = await pickList(env, merchant, want);
+  if (!pick.list) return { error: 'unknown-list' };
+  const main = await mainPrices(env, merchant);
+  const prices = await listPrices(env, pick.list);
+  let compare = null;
+  if (pick.list.compareListId) {
+    const cl = pick.list.compareListId === MAIN_ID ? { isMain: true } : await findList(env, merchant, pick.list.compareListId);
+    if (cl) compare = { list: cl, prices: await listPrices(env, cl) };
+  }
+  let totalCents = 0;
+  const lines = (Array.isArray(items) ? items : []).slice(0, 500).map((it) => {
+    const itemKey = str(it && it.itemKey, 80), variantKey = str(it && it.variantKey, 80);
+    const qty = Math.max(0, Math.min(1e6, Number(it && it.qty) || 1));
+    const p = priceOf(main, prices, itemKey, variantKey);
+    const line = { itemKey, variantKey, qty, unitCents: p.cents, mainCents: p.mainCents, source: p.source };
+    if (compare) {
+      const c = compare.list.isMain ? p.mainCents : priceOf(main, compare.prices, itemKey, variantKey).cents;
+      if (c != null && p.cents != null && c > p.cents) line.compareCents = c;
+    }
+    if (p.cents != null) { line.totalCents = Math.round(p.cents * qty); totalCents += line.totalCents; }
+    return line;
+  });
+  return { list: { id: pick.list.id, name: pick.list.name, isMain: pick.list.isMain }, why: pick.why, lines, totalCents };
+}
+
+/* ── LE CANAL EN LIGNE ─────────────────────────────────────────────────────
+ * La boutique en ligne lit le catalogue via shop/_lib.js › readCatalog. Un
+ * tarif lié au canal `online` y remplace le prix ; son `compareListId`
+ * donne le prix barré. Le document est modifié en place, avant que la page ET
+ * le contrôle des commandes ne le lisent : les deux voient le même prix. */
+export async function applyOnlinePrices(env, merchant, catalog) {
+  if (!catalog || !Array.isArray(catalog.products)) return catalog;
+  let pick;
+  try { pick = await pickList(env, merchant, { channel: 'online' }); } catch (_) { return catalog; }
+  if (!pick || !pick.list || pick.list.isMain) return catalog;
+  const prices = await listPrices(env, pick.list).catch(() => new Map());
+  let compare = null;
+  if (pick.list.compareListId === MAIN_ID) compare = 'main';
+  else if (pick.list.compareListId) {
+    const cl = await findList(env, merchant, pick.list.compareListId).catch(() => null);
+    if (cl) compare = await listPrices(env, cl).catch(() => null);
+  }
+  for (const p of catalog.products) {
+    if (!p || !p.id) continue;
+    const mainCents = Math.round((Number(p.priceMAD) || 0) * 100);
+    const own = prices.get(p.id + '|');
+    const cents = own != null ? own : mainCents;
+    const before = compare === 'main' ? mainCents : (compare && compare.get(p.id + '|'));
+    p.priceMAD = cents / 100;
+    if (before != null && before > cents) p.compareMAD = before / 100;
+  }
+  catalog.priceList = { id: pick.list.id, name: pick.list.name };
+  return catalog;
+}
+
+/* ── QUI GÈRE LES TARIFS ───────────────────────────────────────────────────
+ * Décider d'un prix, c'est décider de la marge : le patron, ou l'appareil du
+ * patron déverrouillé par un gérant, ou un opérateur Kiwi nommé. Jamais une
+ * caisse appairée ni un employé. La lecture, elle, suit tenantFor (la caisse
+ * en a besoin pour vendre). */
+export async function canManage(request, env, merchant, deps) {
+  const { isOperator, sessionTierAtLeast, ownerMerchant } = deps;
+  try { if (await isOperator(request, env)) return true; } catch (_) { /* pas opérateur */ }
+  try { if (!(await sessionTierAtLeast(request, env, 'manager'))) return false; } catch (_) { return false; }
+  try { return (await ownerMerchant(request, env, merchant, { strict: true })) === merchant; } catch (_) { return false; }
+}
+
+export function newListId() {
+  return 'pl_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+}
+
+/* D1 batch par paquets : une écriture de 5 000 prix ne passe pas en une fois. */
+export async function runBatches(db, statements, size) {
+  const n = size || 90;
+  for (let i = 0; i < statements.length; i += n) {
+    const chunk = statements.slice(i, i + n);
+    if (db.batch) await db.batch(chunk);
+    else for (const s of chunk) await s.run();
+  }
+}

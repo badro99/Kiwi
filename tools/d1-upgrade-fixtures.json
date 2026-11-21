@@ -166,5 +166,17 @@
   "catalog_parts": [
     {"merchant": "upgrade-synth-1", "gen": "fixture-gen-1", "part": 137, "data": "fixture-data-1"},
     {"merchant": "upgrade-synth-2", "gen": "fixture-gen-2", "part": 274, "data": "fixture-data-2"}
+  ],
+  "price_lists": [
+    {"merchant": "upgrade-synth-1", "id": "pl-synth-1", "name": "fixture-name-1", "is_main": 0, "channels": "[\"till\"]", "sites": "[]", "compare_list_id": "main", "archived": 0, "sort": 1, "created_ts": 151, "updated_ts": 152},
+    {"merchant": "upgrade-synth-2", "id": "pl-synth-2", "name": "fixture-name-2", "is_main": 1, "channels": "[\"online\"]", "sites": "[\"upgrade-synth-1\"]", "compare_list_id": null, "archived": 1, "sort": 2, "created_ts": 153, "updated_ts": 154}
+  ],
+  "item_prices": [
+    {"merchant": "upgrade-synth-1", "list_id": "pl-synth-1", "item_key": "item-synth-1", "variant_key": "", "price_cents": 12001, "updated_ts": 155},
+    {"merchant": "upgrade-synth-2", "list_id": "pl-synth-2", "item_key": "item-synth-2", "variant_key": "var-synth-2", "price_cents": 12002, "updated_ts": 156}
+  ],
+  "price_list_clients": [
+    {"merchant": "upgrade-synth-1", "client_id": "client-synth-1", "list_id": "pl-synth-1", "updated_ts": 157},
+    {"merchant": "upgrade-synth-2", "client_id": "client-synth-2", "list_id": "pl-synth-2", "updated_ts": 158}
   ]
 }
