@@ -162,9 +162,19 @@ async function permissionBlock(request, env, path) {
   if (!who || who.owner) return undefined;
   if (who.unavailable) return json({ error: 'tier-unavailable' }, 503);
   if (!who.staff) return undefined;
-  const ruling = await decide(env, askedMerchant(request) || who.staff.merchant, who.staff, perm, false);
+  /* Toujours la boutique de la personne, lue en base. Un merchant nommé par la
+     requête (adresse ou corps) qui n'est pas le sien est un refus, jamais un
+     repli sur la règle d'avant : nommer une boutique sans configuration ne
+     doit rien ouvrir. Les routes relisent le corps elles-mêmes (sessionGuard). */
+  const store = who.staff.merchant;
+  let asked = askedMerchant(request);
+  if (!asked && request.method !== 'GET' && request.method !== 'HEAD') {
+    try { const b = await request.clone().json(); asked = String((b && b.merchant) || '').slice(0, 64); } catch (_) { asked = ''; }
+  }
+  if (!store || (asked && asked !== store)) return permissionDenied(perm);
+  const ruling = await decide(env, store, who.staff, perm, false);
   if (ruling.unavailable) return json({ error: 'permissions-unavailable' }, 503);
-  if (!ruling.configured) return undefined;
+  if (!ruling.configured) return undefined;   // SA boutique n'a rien configuré : le palier décide
   return ruling.ok ? null : permissionDenied(perm);
 }
 

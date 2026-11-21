@@ -195,18 +195,34 @@ export async function sessionPerson(request, env) {
   return { tier, staff, aid: sess.aid };
 }
 
-/* Le droit d'une session sur une boutique. Une personne retrouvée a ses
- * droits ; un palier sans personne (Face ID, code republié depuis) a ceux du
- * rôle par défaut de ce palier. */
+/* Le droit d'une session sur une boutique. La décision est TOUJOURS prise sur
+ * la boutique de la personne qui a déverrouillé (staff_pins.merchant, lu en
+ * base) ; jamais sur un merchant venu de la requête. Une requête qui vise une
+ * autre boutique que la sienne est refusée (`mismatch`) : sinon il suffirait de
+ * nommer une boutique sans configuration pour retomber sur la règle d'avant.
+ * Un palier sans personne retrouvée (Face ID, code republié) garde ses règles
+ * de palier, jugées par l'appelant, avec le rôle par défaut de ce palier. */
 export async function sessionMay(request, env, merchant, perm, legacy = true) {
   const who = await sessionPerson(request, env);
   if (!who || who.owner) return { ok: true, owner: !!(who && who.owner) };
   if (who.unavailable) return { ok: false, unavailable: true };
-  const staff = who.staff || { name: '', role: who.tier === 'manager' ? 'manager' : 'service' };
-  const store = merchant || (who.staff && who.staff.merchant) || '';
-  if (!store) return { ok: !!legacy };
-  const got = await decide(env, store, staff, perm, legacy);
-  return { ...got, staff, tier: who.tier };
+  if (!who.staff) {
+    if (!merchant) return { ok: !!legacy, tier: who.tier };
+    const role = who.tier === 'manager' ? 'manager' : 'service';
+    return { ...(await decide(env, merchant, { name: '', role }, perm, legacy)), tier: who.tier };
+  }
+  const store = who.staff.merchant;
+  if (!store || (merchant && merchant !== store)) return { ok: false, mismatch: true, configured: true, staff: who.staff, tier: who.tier };
+  const got = await decide(env, store, who.staff, perm, legacy);
+  return { ...got, staff: who.staff, tier: who.tier };
+}
+
+/* Le garde d'une route du tableau de bord, posé DANS la route, contre le
+ * merchant qu'elle utilise vraiment (corps compris). null = continuer. */
+export async function sessionGuard(request, env, merchant, perm, legacy = true) {
+  const may = await sessionMay(request, env, merchant, perm, legacy);
+  if (may.unavailable) return permissionUnavailable();
+  return may.ok ? null : permissionDenied(perm);
 }
 
 /* ── LES ROUTES ──────────────────────────────────────────────────────────────

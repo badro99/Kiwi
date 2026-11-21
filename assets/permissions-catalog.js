@@ -145,6 +145,8 @@
     receptionniste: 1, reception: 1, 'agent de reception': 1, equipier: 1, 'equipier polyvalent': 1, 'equipier food truck': 1,
     barista: 1, comptoir: 1, 'responsable rayon': 1, rayon: 1 };
 
+  var SERVER_WORDS = { serveur: 1, serveuse: 1, server: 1, service: 1, salle: 1, kitchen: 1, cuisinier: 1, employee: 1, employe: 1 };
+
   /* Le rôle par défaut d'un intitulé de poste libre (« Caissière », « Gérant »). */
   function presetForRole(role) {
     var r = normRole(role);
@@ -270,7 +272,10 @@
       list.forEach(function (s) {
         if (!s || !s.key) return;
         var subject = normRole(r.subject);
-        if (subject && subject !== normRole(s.key) && subject !== normRole(s.role) && subject !== presetForRole(s.role)) return;
+        /* Un sujet est un identifiant, un intitulé, ou un mot de rôle de l'ancien
+           noyau (« caisse », « serveur »…) : ce dernier vaut pour tout le rôle. */
+        var asRole = subject && (presetForRole(subject) !== 'server' || SERVER_WORDS[subject]) ? presetForRole(subject) : '';
+        if (subject && subject !== normRole(s.key) && subject !== normRole(s.role) && asRole !== presetForRole(s.role)) return;
         var row = out[s.key] || (out[s.key] = { grants: [], denies: [] });
         row[field] = cleanList(row[field].concat(r.perms));
       });

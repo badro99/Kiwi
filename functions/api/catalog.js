@@ -41,6 +41,7 @@ import { tenantFor, storeSubscriptionPending } from './_private.js';
 import { enqueueStockChanges, flushShopifyOutbox } from './shopify/_lib.js';
 import { catalogFamily, idTagFor, seedFromFamily, syncFamily } from './_catalog-family.js';
 import { loadParts, packCatalog, runCatalogWrite } from './_catalog-parts.js';
+import { sessionGuard } from './_permissions.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const num = (v, max) => Math.max(0, Math.min(max, Number(v) || 0));
@@ -446,6 +447,7 @@ export async function onRequestPost(context) {
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   if (body && body.stockAction) return applyStockAction(env, merchant, body, waitUntil);
+  { const denied = await sessionGuard(request, env, merchant, 'catalog.edit'); if (denied) return denied; } // droits par personne (_permissions.js), sur CE merchant
 
   const raw = (body && body.data) || null;
 

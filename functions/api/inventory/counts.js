@@ -14,6 +14,7 @@ import { json, entitledMerchant } from '../../auth/_lib.js';
 import { loadParts, packCatalog, runCatalogWrite } from '../_catalog-parts.js';
 import { tenantFor } from '../_private.js';
 import { resolveInventoryUnitScope, scopeSql } from './_unit-scope.js';
+import { sessionGuard } from '../_permissions.js';
 
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 const num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
@@ -299,6 +300,7 @@ export async function onRequestPost({ request, env }) {
     terminalId: body && body.terminalId,
   });
   if (scope.scoped && !scope.allowed) return json({ error: 'unit-forbidden' }, 403);
+  { const denied = await sessionGuard(request, env, merchant, 'stock.count'); if (denied) return denied; } // droits par personne (_permissions.js), sur CE merchant
 
   try { await ensureSchema(env); } catch (_) {}
 

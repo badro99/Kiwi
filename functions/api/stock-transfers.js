@@ -28,6 +28,7 @@ import { materialize, compactForWrite, mergeDocs } from './_rules-catalog.js';
 import { catalogFamily, definitionsOf, seedFromFamily } from './_catalog-family.js';
 import { __test as catalogRules } from './catalog.js';
 import { loadParts, packCatalog, partStatements, catalogContains } from './_catalog-parts.js';
+import { sessionGuard } from './_permissions.js';
 
 const { sanitize } = catalogRules;
 const FEATURE = 'stock-transfers';
@@ -263,6 +264,7 @@ export async function onRequestPost(context) {
   const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
   if (!merchant) return bad('unauthorized', 401);
   if (body.merchant && String(body.merchant) !== merchant) return bad('forbidden', 403);
+  { const denied = await sessionGuard(request, env, merchant, 'stock.receive'); if (denied) return denied; } // droits par personne (_permissions.js), sur CE merchant
   const family = await catalogFamily(env, merchant);
   if (!family) return bad('not-in-family', 403);
   try {

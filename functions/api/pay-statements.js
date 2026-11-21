@@ -20,6 +20,7 @@
 // writes, never a till, an employee or another merchant's account.
 import { entitledMerchant, namedOperatorId, activeAccountSession } from '../auth/_lib.js';
 import { merchantZone } from './_business-day.js';
+import { sessionGuard } from './_permissions.js';
 
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
@@ -211,6 +212,7 @@ export async function onRequestPost({ request, env }) {
   try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
   const merchant = await ownerMerchant(request, env, b && b.merchant);
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+  { const denied = await sessionGuard(request, env, merchant, 'team.payroll'); if (denied) return denied; } // droits par personne (_permissions.js), sur CE merchant
   const start = b.periodStart, end = b.periodEnd;
   if (!validDay(start) || !validDay(end) || end < start || (Date.parse(end) - Date.parse(start)) > 62 * 86400000) return json({ error: 'bad-period' }, 400);
   const by = await actorOf(request, env);
