@@ -194,6 +194,22 @@ ok(robe.codes && robe.blueLabel === 'Bleu', 'each has its barcode, and carries i
 await page.waitForSelector('table.kbm', { visible: true, timeout: 5000 }).catch(() => {});
 const dels = await page.$$eval('table.kbm td [data-kbs-del]', (bs) => bs.map((b) => b.getAttribute('aria-label')));
 ok(dels.length === 6 && dels.includes('Supprimer · M · Bleu'), 'after saving, each cell of the size × colour grid offers « Supprimer » for its own variant', JSON.stringify(dels));
+/* ── G : the − and + stay when a second colour turns the list into a grid
+   (owner, 21 Nov 2026: « − disappears when you add a colour »). ─────────── */
+const cellIns = await page.$$eval('table.kbm td [data-kbs-in]', (a) => a.length);
+const cellSteps = await page.$$eval('table.kbm td', (tds) => tds.filter((td) => td.querySelector('[data-kbs-in]')).map((td) => [td.querySelectorAll('[data-kbs-step="-1"]').length, td.querySelectorAll('[data-kbs-step="1"]').length].join('')));
+ok(cellIns > 0 && cellSteps.length === cellIns && cellSteps.every((s) => s === '11'), 'G · every cell of the size × colour grid has its − and its +', JSON.stringify(cellSteps));
+const mBleu = () => page.$eval('table.kbm td [data-kbs-step="1"][aria-label="Ajouter une pièce · M · Bleu"]', (b) => b.closest('td').querySelector('[data-kbs-in]').value);
+await page.click('table.kbm td [data-kbs-step="1"][aria-label="Ajouter une pièce · M · Bleu"]'); await sleep(120);
+await page.click('table.kbm td [data-kbs-step="1"][aria-label="Ajouter une pièce · M · Bleu"]'); await sleep(120);
+ok(await mBleu() === '2', 'G · + twice on M · Bleu puts 2 in that cell', await mBleu());
+await page.click('table.kbm td [data-kbs-step="-1"][aria-label="Retirer une pièce · M · Bleu"]'); await sleep(120);
+await page.click('table.kbm td [data-kbs-step="-1"][aria-label="Retirer une pièce · M · Bleu"]'); await sleep(120);
+ok(await mBleu() === '', 'G · − twice empties it again', await mBleu());
+ok(await page.$eval('table.kbm', (t) => {
+  const box = t.getBoundingClientRect();
+  return [...t.querySelectorAll('.kbs-st')].every((b) => { const r = b.getBoundingClientRect(); return r.height >= 36 && r.left >= box.left - 0.5 && r.right <= box.right + 0.5; });
+}), 'G · the grid buttons are finger sized and stay inside the grid');
 const label = await page.evaluate(async (u) => {
   const m = await import(u.replace(/pos-boutique\.js\?v=\d+$/, 'boutique-sizes.js'));
   return m.variantWords({ colorId: 'bleu', colorLabel: 'Bleu', size: 'M' }, 'fr');

@@ -215,6 +215,11 @@ html[data-theme="dark"] .kbs, body[data-vexel-mode="dark"] .kbs { --kbs-card: #1
 .kbs.is-restock .kbs-have { font-size: 14px; font-weight: 600; color: var(--ink, #0A0F0D); }
 .kbs.is-restock .kbs-have.is-out { color: var(--danger, #cb5238); }
 .kbm .kbs-add { max-width: 74px; margin: 0 auto; }
+.kbm .kbs-step { justify-content: center; gap: 4px; }
+.kbm .kbs-step > .kbs-in, .kbm .kbs-step > .kbs-add { width: 64px; margin: 0; }
+.kbm .kbs-st { width: 36px; height: 38px; border-radius: 9px; }
+.kbm .kbs-st svg { width: 18px; height: 18px; }
+@media (max-width: 560px) { .kbm .kbs-step { flex-wrap: wrap; } .kbm .kbs-step > .kbs-in, .kbm .kbs-step > .kbs-add { order: -1; flex: 1 0 100%; max-width: none; } .kbm .kbs-step .kbs-in { max-width: none; } }
 .kbm .kbs-add::before { inset-inline-start: 9px; }
 .kbm .kbs-add .kbs-in { padding-inline-start: 20px; }
 .kbs-have.is-up, .kbs.is-restock .kbs-have.is-up, .kbm td small.is-up { color: var(--atlas, #0B6E4F); font-weight: 600; }
@@ -353,9 +358,9 @@ export function mount(host, o) {
     const field = (key, col, aria, label) => {
       const i = `<input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="${creating ? '0' : ''}" data-kbs-in="${esc(key)}" data-kbs-col="${esc(col)}" aria-label="${esc(aria)}" />`;
       const box = creating ? i : `<span class="kbs-add">${i}</span>`;
-      /* La liste des tailles (pas le tableau taille × couleur, trop serré) :
-         un − et un + d'une pièce, la même règle que les flèches du clavier
-         (boutique-size-split.js) ; propriétaire, 18 nov. 2026. */
+      /* Un − et un + d'une pièce, la même règle que les flèches du clavier
+         (boutique-size-split.js) ; propriétaire, 18 nov. 2026. Le tableau
+         taille × couleur les garde aussi, en plus serré (21 nov. 2026). */
       if (label == null) return box;
       const btn = (d, name, svg) => `<button type="button" class="kbs-st" data-kbs-step="${d}" data-kbs-for="${esc(key)}" aria-label="${esc(name)} · ${esc(label)}">${svg}</button>`;
       return `<span class="kbs-step">${btn(-1, t.stepDown, MINUS_SVG)}${box}${btn(1, t.stepUp, PLUS_SVG)}</span>`;
@@ -389,7 +394,7 @@ export function mount(host, o) {
         const r = shown.find((x) => x.size === size && x.col === c.key);
         if (!r) return '<td></td>';
         const st = r.variant ? Math.max(0, +r.variant.stock || 0) : 0;
-        return `<td>${field(r.key, c.key, `${t.add} · ${sl} · ${colName(c)}`)}${r.variant ? `<small class="${st ? '' : 'is-out'}" data-kbs-have="${esc(r.key)}" data-st="${st}">${esc(st ? t.have(st) : t.out)}</small>${codeOf(r)}${regOf(r.variant)}${delOf(r, sl + ' · ' + colName(c))}` : ''}</td>`;
+        return `<td>${field(r.key, c.key, `${t.add} · ${sl} · ${colName(c)}`, `${sl} · ${colName(c)}`)}${r.variant ? `<small class="${st ? '' : 'is-out'}" data-kbs-have="${esc(r.key)}" data-st="${st}">${esc(st ? t.have(st) : t.out)}</small>${codeOf(r)}${regOf(r.variant)}${delOf(r, sl + ' · ' + colName(c))}` : ''}</td>`;
       }).join('')}</tr>`;
     }).join('')}</tbody></table>${anySmart ? `<p class="kbm-key">${esc(t.codeKey)}</p>` : ''}`;
     const used = (k) => shown.some((r) => r.col === k && r.variant);
