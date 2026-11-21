@@ -1,9 +1,9 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=250';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=168';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=250';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=250';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=251';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=169';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=251';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=251';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=6';
-import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=1';
+import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=1';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=4';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=4';
@@ -1575,7 +1575,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
                quelque chose à montrer, donc il apparaît et disparaît AVEC les
                promotions. Le laisser hors du repeint, c'était un onglet qui ne
                s'affichait qu'au prochain changement de rayon. */
-            try { renderCats(); renderView(state.view); renderBadges(); icons(); } catch (_) {}
+            repaintCalm(viewPanel(), () => { renderCats(); renderView(state.view); renderBadges(); icons(); });
           });
         }
       }
@@ -1698,8 +1698,9 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
      * milliers d'articles la caisse ralentissait scan après scan, exactement là où
      * elle doit rester vive. On redessine une fois, à la fermeture. */
     if (intake.open) return;
-    try { renderCats(); renderView(state.view); renderBadges(); icons(); } catch (e) {}
+    repaintCalm(viewPanel(), () => { renderCats(); renderView(state.view); renderBadges(); icons(); });
   }
+  const viewPanel = () => $(`[data-bq-panel="${state.view}"]`, root);
 
   function onShow() {
     if (!root) return;
@@ -1708,8 +1709,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     const today = $('#bq-today', root);
     if (today) today.textContent = headSubVente();
     renderBadges();
-    renderView(state.view);
-    icons();
+    repaintCalm(viewPanel(), () => { renderView(state.view); icons(); });
   }
 
   function openVeil(id) { const v = $(id, root); v.classList.add('is-open'); return v; }
