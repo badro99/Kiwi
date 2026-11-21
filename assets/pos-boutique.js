@@ -1,11 +1,11 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=242';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=160';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=242';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=242';
-import { ticketOwner } from './pos-boutique/ticket-owner.js?v=5';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=244';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=162';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=244';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=244';
+import { ticketOwner } from './pos-boutique/ticket-owner.js?v=7';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=1';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
-import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=3';
+import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=5'; import { tillPriceList as tpl } from './pos-boutique/price-list.js?v=3';
 import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=26'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=2'; import { mountSellerPick, sellerPickOn } from './pos-boutique/seller-pick.js?v=1';
 import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zDrawerCash, zDrawerMoves, zDrawerRows, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=10'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=23'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11'; import { bqTransfers } from './pos-boutique/transfers.js?v=7';
 
@@ -63,7 +63,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   function rebuildCatalog() {
     if (!window.KiwiBoutiqueCatalog) { RAYONS = []; P = {}; BY_EAN = {}; return; }
     const c = window.KiwiBoutiqueCatalog.compat();
-    RAYONS = c.RAYONS; P = c.P; BY_EAN = c.BY_EAN;
+    RAYONS = c.RAYONS; P = c.P; BY_EAN = c.BY_EAN; { const pl = (typeof tpl === 'function' ? tpl() : null); if (pl) pl.apply(P); }   // le tarif du ticket (P est une copie)
   }
   rebuildCatalog();
 
@@ -1594,6 +1594,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
         rebuildCatalog();
         if (root) { pruneTicket(); refreshAfterCatalog(); }
       });
+      const pl = (typeof tpl === 'function' ? tpl() : null); if (pl) pl.subscribe(() => { if (intake.open) return; rebuildCatalog(); if (root) { pruneTicket(); refreshAfterCatalog(); } });   // tarif changé : le ticket se re-prix
     }
     /* Le stock que la caisse vient de toucher n'a pas pris sur cette tablette
        (stockage plein ou refusé) : la vente continue et la baisse part au
@@ -1852,6 +1853,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       num: t.num, syncId: t.syncId || newSaleId(), clientId: c ? c.id : null,
       reward: t.reward ? Object.assign({}, t.reward) : null,
       remiseAuth: (t.remiseAuth && typeof t.remiseAuth === 'object') ? Object.assign({}, t.remiseAuth) : null,
+      priceList: ((pl) => pl ? { ...pl.current(), fields: pl.saleFields(), label: pl.receiptLabel() } : null)(typeof tpl === 'function' ? tpl() : null),
       lines: t.lines.map((ln) => {
         const p = P[ln.pid] || {};
         return {
@@ -1864,7 +1866,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     const RS = window.KiwiRepeatSale, repeatSig = RS ? RS.signature(frozen.lines, total) : ''; // même panier qu'il y a < 2 min
     const beginPay = () => openPay({
       amount: total,
-      customerId: c ? c.id : null,
+      customerId: c ? c.id : null, priceList: frozen.priceList,
       beforePaid: () => window.KiwiLoyaltyReserve.create({ isDemo: IS_DEMO, ticket: t, ticketOwner, client: c, render: renderTicket, close: () => { state.checkoutBusy = false; closeVeil('#bq-pay-veil'); } }).confirm(),
       title: 'Encaissement', afterMethods: (el) => mountSellerPick(el, t, { slug: merchantSlug(), esc }),   // « Vendu par » : option « Vendeur choisi à l'encaissement »
       subtitle: `${frozen.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
@@ -1913,6 +1915,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
         const rewardUsed = !!(frozen.reward && c && c.id && frozen.reward.clientId === c.id);
         const sale = {
           id: frozen.num, syncId: frozen.syncId, tenderVersion: 2, at: new Date((window.KiwiLive?.now || Date.now)()), deviceTs: Date.now(), clientId: frozen.clientId, by: STAFF.caissiere.name, kind: isAcompte ? 'acompte' : 'vente',
+          ...(frozen.priceList && !frozen.priceList.isMain ? { priceListId: frozen.priceList.id, priceListName: frozen.priceList.name } : {}),
           methods: parts.map((x) => x.m).join(' + '),
           /* Les parts de règlement, figées : c'est elles qui rendent le tiroir
              de la clôture exact quand un ticket est réglé moitié carte moitié
@@ -2012,6 +2015,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
               ...(mzSaleDiscount({ amountCents: Math.round(cashIn * 100), totalCents: Math.round(total * 100), remiseCents: Math.round(tot.remise * 100), rewardCents: Math.round(tot.reward * 100), actorId: bqActorId() }) || {}),
             };
             if (sale.clientId) payload.clientId = sale.clientId;
+            if (frozen.priceList) Object.assign(payload, frozen.priceList.fields);   // tarif + accord responsable, relus par /api/sale
             const sellerProof = !IS_DEMO && window.KiwiStaff && window.KiwiStaff.sellerProof;   // commissions vendeurs : la preuve signée de qui a saisi son code, jamais un nom
             if (!IS_DEMO && sellerPickOn()) { if (t.seller && t.seller.id) payload.seller = { member: t.seller.id }; }   // vendeur choisi à l'encaissement : rien de choisi, personne de crédité
             else if (typeof sellerProof === 'string' && sellerProof) payload.seller = { proof: sellerProof };
@@ -2025,7 +2029,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
               payload.creditAmountCents = Math.round((parts || []).filter(x => x.m === 'avoir')
                 .reduce((sum, x) => sum + (+x.amount || 0), 0) * 100);
             }
-            bqPost(sale, payload);
+            bqPost(sale, payload); { const pl = (typeof tpl === 'function' ? tpl() : null); if (pl) pl.reset(); }   // le ticket suivant repart au prix principal
           }
         } catch (_) {}
         let ptsLine = '';

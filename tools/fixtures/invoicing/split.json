@@ -1,5 +1,5 @@
 {
-  "sha256": "f606b245635727d78c053441aaa57d02fbf13f641813015fd5e1467ec3c1e874",
+  "sha256": "ee311fe7052ad79d67ea059c0c861f899389b07742fa296858b7c4d4646046dd",
   "parts": [
     {
       "file": "assets/invoicing/transport.js",
@@ -283,7 +283,7 @@
         {
           "name": "composerPayload",
           "start": 92010,
-          "end": 92719,
+          "end": 92894,
           "deps": [
             "apiLines",
             "cmp",
@@ -295,25 +295,25 @@
           ],
           "offset": 5821,
           "replacement": "function composerPayload(...args) { return composerModule.composerPayload({apiLines, cmp, fv, iceCompact, readLines, shift, today}, this, args); }",
-          "length": 709
+          "length": 884
         },
         {
           "name": "formSnapshot",
-          "start": 92722,
-          "end": 93092,
+          "start": 92897,
+          "end": 93267,
           "deps": [
             "cmp",
             "fv",
             "readLines"
           ],
-          "offset": 6640,
+          "offset": 6815,
           "replacement": "function formSnapshot(...args) { return composerModule.formSnapshot({cmp, fv, readLines}, this, args); }",
           "length": 370
         },
         {
           "name": "checkIce",
-          "start": 93546,
-          "end": 94056,
+          "start": 93721,
+          "end": 94231,
           "deps": [
             "F",
             "T",
@@ -321,14 +321,14 @@
             "iceProblem",
             "overlay"
           ],
-          "offset": 7132,
+          "offset": 7307,
           "replacement": "function checkIce(...args) { return composerModule.checkIce({F, T, iceCompact, iceProblem, overlay}, this, args); }",
           "length": 510
         },
         {
           "name": "updateComposer",
-          "start": 94059,
-          "end": 95396,
+          "start": 94234,
+          "end": 95571,
           "deps": [
             "F",
             "T",
@@ -347,14 +347,14 @@
             "today",
             "tpl"
           ],
-          "offset": 7848,
+          "offset": 8023,
           "replacement": "function updateComposer(...args) { return composerModule.updateComposer({F, T, apiLines, computeTotals, currentView, esc, fv, lineHT, money, num, overlay, readLines, shift, toCents, today, tpl}, this, args); }",
           "length": 1337
         },
         {
           "name": "validateComposer",
-          "start": 95400,
-          "end": 95896,
+          "start": 95575,
+          "end": 96071,
           "deps": [
             "F",
             "T",
@@ -362,7 +362,7 @@
             "composerPayload",
             "toast"
           ],
-          "offset": 9318,
+          "offset": 9493,
           "replacement": "function validateComposer(...args) { return composerModule.validateComposer({F, T, checkIce, composerPayload, toast}, this, args); }",
           "length": 496
         },
@@ -392,7 +392,7 @@
           ],
           "length": 5605,
           "replacement": "composerModule.renderComposerForm({overlay, cmp, st, locked, isQuote, title, book, t, dis, showIssue, issueLabel, termsOptions, METHODS, renderSellerLogo, esc, ICON, seller});",
-          "offset": 10115
+          "offset": 10290
         }
       ],
       "windowReads": [
@@ -591,8 +591,8 @@
         },
         {
           "name": "csvCell",
-          "start": 126787,
-          "end": 127145,
+          "start": 126962,
+          "end": 127320,
           "deps": [],
           "offset": 12253,
           "replacement": "function csvCell(...args) { return historyModule.csvCell({}, this, args); }",
@@ -600,8 +600,8 @@
         },
         {
           "name": "exportCsv",
-          "start": 127148,
-          "end": 130969,
+          "start": 127323,
+          "end": 131144,
           "deps": [
             "NO_OF",
             "T",
@@ -628,8 +628,8 @@
       "entries": [
         {
           "name": "termsText",
-          "start": 116037,
-          "end": 116506,
+          "start": 116212,
+          "end": 116681,
           "deps": [
             "T",
             "tpl"
@@ -640,8 +640,8 @@
         },
         {
           "name": "printable",
-          "start": 116509,
-          "end": 125568,
+          "start": 116684,
+          "end": 125743,
           "deps": [
             "T",
             "businessName",
@@ -662,8 +662,8 @@
         },
         {
           "name": "printDocument",
-          "start": 125589,
-          "end": 126539,
+          "start": 125764,
+          "end": 126714,
           "deps": [
             "T",
             "detail",

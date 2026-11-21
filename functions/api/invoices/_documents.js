@@ -57,7 +57,7 @@ const SNAKE = {
   paymentMethod: 'payment_method', exemptionMention: 'exemption_mention', internalNote: 'internal_note',
   originalId: 'original_id', originalNumber: 'original_number', sourceQuoteId: 'source_quote_id',
   createdTs: 'created_ts', updatedTs: 'updated_ts', issuedTs: 'issued_ts', sentTs: 'sent_ts',
-  cancelledTs: 'cancelled_ts', legacyRef: 'legacy_ref',
+  cancelledTs: 'cancelled_ts', legacyRef: 'legacy_ref', priceListId: 'price_list_id',
 };
 
 /* Le document tel que le client le lit : le contrat dit « la ligne complète »,
@@ -81,7 +81,7 @@ function present(row, ctx) {
     issuedTs: row.issued_ts == null ? null : Number(row.issued_ts),
     sentTs: row.sent_ts == null ? null : Number(row.sent_ts),
     cancelledTs: row.cancelled_ts == null ? null : Number(row.cancelled_ts),
-    legacyRef: row.legacy_ref || null,
+    legacyRef: row.legacy_ref || null, priceListId: row.price_list_id || null,
     paidCents: ctx.paid, creditedCents: ctx.credited,
     balanceCents: balanceOf(row, ctx.paid, ctx.credited),
   };
@@ -104,18 +104,20 @@ async function presentFull(ctx, row) {
 const COLS = ['id', 'merchant', 'type', 'status', 'number', 'seq', 'issue_date', 'due_date', 'terms_days', 'valid_until',
   'customer', 'seller', 'lines', 'totals', 'ttc_cents', 'payment_method', 'note', 'exemption_mention', 'internal_note',
   'original_id', 'source_quote_id', 'reason', 'created_ts', 'updated_ts', 'issued_ts', 'sent_ts', 'cancelled_ts',
-  'created_by', 'legacy_ref'];
+  'created_by', 'legacy_ref', 'price_list_id'];
 
 /* INSERT d'un brouillon. Avec `guard` ({sql, params}), la ligne n'est insérée que
  * si la condition tient, dans la même transaction que ce qui la précède. */
 function insertStatement(ctx, d, guard) {
-  const values = COLS.map((c) => (d[c] === undefined ? null : d[c]));
-  const marks = COLS.map(() => '?').join(', ');
+  // Sans tarif, la colonne n'est pas écrite : une base encore à 0027 enregistre la facture.
+  const cols = COLS.filter((c) => c !== 'price_list_id' || d[c] != null);
+  const values = cols.map((c) => (d[c] === undefined ? null : d[c]));
+  const marks = cols.map(() => '?').join(', ');
   if (guard) {
-    return ctx.db.prepare(`INSERT INTO invoice_docs (${COLS.join(', ')}) SELECT ${marks} WHERE ${guard.sql}`)
+    return ctx.db.prepare(`INSERT INTO invoice_docs (${cols.join(', ')}) SELECT ${marks} WHERE ${guard.sql}`)
       .bind(...values, ...(guard.params || []));
   }
-  return ctx.db.prepare(`INSERT INTO invoice_docs (${COLS.join(', ')}) VALUES (${marks})`).bind(...values);
+  return ctx.db.prepare(`INSERT INTO invoice_docs (${cols.join(', ')}) VALUES (${marks})`).bind(...values);
 }
 
 function draftRow(ctx, fields) {
