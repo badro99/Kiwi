@@ -95,8 +95,9 @@ export async function onRequestPost(context) {
     ...(merchant && employeeRoleOpensTill(verified.staff.role) ? { sellerProof: await tillSellerProof(env.AUTH_SECRET, merchant, verified.staff) } : {}),
     ...(approval ? { approval } : {}),
     /* La caisse sait si CE code couvre l'acte demandé (aucun code dedans). */
+    /* Le verdict pour le SEUL droit demandé (action.kind) : jamais la liste
+       entière, pour qu'un accord ne serve pas à un autre acte. */
     ...(ruling ? { permission: { id: kindPerm, granted: !!ruling.ok, configured: !!ruling.configured } } : {}),
-    ...(merchant && ruling && ruling.configured ? { permits: ruling.perms } : {}),
     ...(verified.merchant ? { merchant: verified.merchant } : {}),
   });
 }

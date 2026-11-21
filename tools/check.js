@@ -758,7 +758,7 @@ for (const test of [
      tout changement de codes, et le client (native-runtime.js) lit ce verdict. */
   'face-unlock-test.mjs', 'reception-view-test.mjs', 'session-tier-test.mjs',
   /* Droits de l'équipe par personne : catalogue, route, et chaque route qui les applique. */
-  'staff-permissions-test.mjs',
+  'staff-permissions-test.mjs', 'staff-permissions-till-test.mjs',
   'config-pin-projection-test.mjs',
   'staff-publication-split-test.mjs',
   'staff-credential-parity-test.mjs',

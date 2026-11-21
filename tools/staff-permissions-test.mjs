@@ -219,7 +219,10 @@ console.log('■ Approbations au comptoir (/api/pin/verify)');
   await post(w, cookieOwner, { action: 'save-staff', key: 'm-sara', preset: 'manager', perms: sara.perms.filter((id) => id !== 'sales.refund' && id !== 'stock.adjust') });
   const after = await (await pinVerify(w, CODES.caisse, action)).json();
   const mgrAfter = await (await pinVerify(w, CODES.manager, action)).json();
-  check(after.approval && after.permission.granted === true && after.permits.includes('sales.refund'), 'Lina, avec le droit, valide un remboursement avec son propre code');
+  check(after.approval && after.permission.granted === true && after.permission.id === 'sales.refund' && !('permits' in after), 'Lina, avec le droit, valide un remboursement avec son propre code (verdict pour ce seul droit)');
+  const drawer = await (await pinVerify(w, CODES.caisse, { kind: 'drawer' })).json();
+  check(drawer.permission.id === 'sales.drawer' && drawer.permission.granted === false && !drawer.approval,
+    'le verdict suit le droit demandé : pour le tiroir, Lina n’a pas le droit, et rien n’est signé');
   check(!mgrAfter.approval && mgrAfter.permission.granted === false, 'Sara, privée du droit, ne valide plus');
   const stock = await (await pinVerify(w, CODES.manager, { kind: 'inventory', movementIds: ['mv-1'] })).json();
   check(!stock.approval, 'ni un mouvement de stock');

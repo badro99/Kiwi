@@ -77,7 +77,7 @@
     who = who || window.KiwiStaff;
     var doc = read();
     if (!who || !doc || !doc.configured) return null;
-    if (who.permission && who.permission.id === perm && who.permission.configured) return !!who.permission.granted;
+    if (!who.offline && who.permission && who.permission.id === perm && who.permission.configured) return !!who.permission.granted;
     var k = nameKey(who.name), row = null;
     for (var i = 0; i < doc.staff.length; i++) if (doc.staff[i].k === k) { row = doc.staff[i]; break; }
     return row ? row.perms.indexOf(perm) !== -1 : null;
