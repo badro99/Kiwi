@@ -1,3 +1,5 @@
+import { auditRetailOnAccount } from './_credit-audit.js';
+
 // A retail bill is not a day's takings. Each confirmed payment is still a
 // distinct /api/sale receipt; this table only protects and locates the balance.
 const token = value => String(value || '').trim().slice(0, 64);
@@ -46,7 +48,9 @@ export async function claimRetailBalance(db, merchant, raw, saleId, amountCents,
     }
     // Nothing was received: the note itself is the whole record. No receipt row,
     // so the note's paid amount stays 0 and every later payment is a new sale.
-    if (onAccount) return null;
+    // Past the customer's credit limit without a manager's approval, the owner's
+    // credit book flags it (functions/api/_credit-audit.js, never blocks).
+    if (onAccount) { await auditRetailOnAccount(db, merchant, customerId, id, totalCents); return null; }
     const previous = await db.prepare(`SELECT balance_id,amount_cents,method FROM retail_balance_receipts
       WHERE merchant = ? AND sale_id = ?`).bind(merchant, saleId).first();
     if (previous) return previous.balance_id === id && Number(previous.amount_cents) === amountCents && previous.method === method

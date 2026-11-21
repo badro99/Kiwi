@@ -176,14 +176,18 @@ CREATE INDEX IF NOT EXISTS retail_balance_receipts_by_balance
 -- Ce qui est dû reste lu dans l'ardoise (store_docs 'creditbook') et dans
 -- retail_balances ; une ligne par client garde le plafond, la langue des
 -- rappels, le dernier rappel et l'échéancier (JSON, écrit en compare-and-swap
--- sur rev). paid_mark_cents : le total déjà versé que l'échéancier a vu.
+-- sur rev). Ce que les règlements couvrent se recalcule à chaque lecture
+-- (baseline_paid_cents : le total versé quand les lignes ont été écrites,
+-- excess_cents : ce qui, alors, n'était sur aucune ligne, voir _credit-plan.js). credit_settings :
+-- le délai accordé à une dette sans échéance (30 jours par défaut).
 CREATE TABLE IF NOT EXISTS credit_accounts (
   merchant TEXT NOT NULL,
   source TEXT NOT NULL CHECK(source IN ('carnet','client')),
   customer_key TEXT NOT NULL,
   limit_cents INTEGER CHECK(limit_cents IS NULL OR limit_cents >= 0),
   lang TEXT NOT NULL DEFAULT '',
-  paid_mark_cents INTEGER NOT NULL DEFAULT 0,
+  baseline_paid_cents INTEGER NOT NULL DEFAULT 0,
+  excess_cents INTEGER NOT NULL DEFAULT 0,
   reminded_ts INTEGER NOT NULL DEFAULT 0,
   schedule TEXT NOT NULL DEFAULT '[]',
   rev INTEGER NOT NULL DEFAULT 0,
@@ -193,13 +197,18 @@ CREATE TABLE IF NOT EXISTS credit_accounts (
 CREATE TABLE IF NOT EXISTS credit_events (
   merchant TEXT NOT NULL, id TEXT NOT NULL,
   source TEXT NOT NULL, customer_key TEXT NOT NULL,
-  kind TEXT NOT NULL CHECK(kind IN ('schedule','limit','limit-override','collected','reminded','promise')),
+  kind TEXT NOT NULL CHECK(kind IN ('schedule','limit','limit-override','limit-used','limit-unapproved','collected','reminded','promise','settings')),
   amount_cents INTEGER NOT NULL DEFAULT 0,
   actor TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '',
   ts INTEGER NOT NULL,
   PRIMARY KEY (merchant, id)
 );
 CREATE INDEX IF NOT EXISTS credit_events_customer ON credit_events(merchant, source, customer_key, ts DESC);
+CREATE TABLE IF NOT EXISTS credit_settings (
+  merchant TEXT PRIMARY KEY,
+  term_days INTEGER NOT NULL DEFAULT 30 CHECK(term_days >= 0 AND term_days <= 365),
+  updated_ts INTEGER NOT NULL DEFAULT 0
+);
 -- Existing databases: add the column in place. SQLite has no
 -- ADD COLUMN IF NOT EXISTS, so this errors harmlessly ("duplicate column name")
 -- when re-run on a schema that already has it — the rest of the file still

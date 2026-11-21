@@ -24,6 +24,7 @@
 import { json } from '../auth/_lib.js';
 import { advanceDebtConflicts, creditRefundEdit, creditSettlementAlerts, keepAdvanceConflicts } from './_credit-book-refund.js';
 import { storeEtag, storeTag } from './_store-etag.js';
+import { auditCarnetWrite } from './_credit-audit.js';
 
 export const BOOK_FEATURE = 'creditbook';
 export const BOOK_MAX = 1500000;
@@ -154,6 +155,8 @@ export async function commitBook(env, merchant, legacyDoc, incoming, { guard, ke
         .bind(merchant, BOOK_FEATURE, text, 1, now).run();
     }
     if (Number(written && written.meta && written.meta.changes) === 1) {
+      /* Une dette au-delà d'un plafond, sans accord : le carnet du patron le montre. */
+      await auditCarnetWrite(env.DB, merchant, book.carnet, merged.carnet, now);
       return { ok: true, exists: true, carnet: merged.carnet, rev: book.exists ? book.rev + 1 : 1, changed: true, creditConflicts };
     }
   }

@@ -13,18 +13,19 @@
  * d'un coup (la cascade), et D1 n'a pas de transaction interactive. Une seule
  * ligne par client rend chaque cascade atomique et rejouable.
  *
- * Les règlements, d'où qu'ils viennent : `paid_mark_cents` retient le total
- * déjà versé par ce client quand l'échéancier a vu passer son dernier
- * règlement. À chaque lecture, le total versé d'aujourd'hui moins cette marque
- * est le nouveau règlement, versé sur les lignes (_credit-plan.js waterfall),
- * et la marque avance dans la même écriture. Rejouer la lecture ne verse rien
- * une seconde fois : c'est l'idempotence. Un règlement noté hors ligne, sur une
- * autre caisse, à l'écran Acomptes ou à l'ardoise, est vu de la même façon. */
+ * Les règlements, d'où qu'ils viennent (ardoise, Acomptes, autre caisse, hors
+ * ligne) : rien ne s'accumule. La ligne garde ce que chaque échéance avait reçu
+ * quand elle a été écrite, avec le total versé à ce moment (baseline_paid_cents)
+ * et ce qui n'était alors sur aucune échéance (excess_cents). Ce qu'elle a reçu
+ * aujourd'hui se recalcule à partir du total versé aujourd'hui
+ * (_credit-plan.js derive) : une lecture n'écrit rien, une écriture en retard
+ * ne peut pas verser deux fois, et un règlement annulé rouvre les dernières
+ * échéances couvertes. */
 import { readBook, legacyBook } from './_credit-book-store.js';
 import { businessDate, merchantCutoff, merchantZone } from './_business-day.js';
 import {
-  addDays, ageing, cents, checkTotal, cleanRows, CUSTOMER_KEY, LANGS, limitDecision, MAX_CENTS,
-  NOTE_MAX, pendingOf, ROW_ID, seedRows, SOURCES, trimRows, unpaidPieces, newestPieces, validDay, viewRows, waterfall,
+  addDays, ageing, cents, checkTotal, cleanRows, CUSTOMER_KEY, DEFAULT_TERM_DAYS, derive, LANGS, limitDecision, looseDue,
+  MAX_CENTS, NOTE_MAX, pendingOf, ROW_ID, seedRows, SOURCES, storedRow, trimRows, unpaidPieces, newestPieces, validDay, viewRows,
 } from './_credit-plan.js';
 
 const rid = (p) => p + (globalThis.crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(16).slice(2)).replace(/-/g, '');
@@ -119,13 +120,16 @@ export async function debtorOf(env, merchant, source, key, dayOf) {
 
 /* ── la ligne credit_accounts ── */
 function accountFrom(row) {
+  const baselineCents = Math.max(0, Number(row.baseline_paid_cents) || 0);
+  const excessCents = Math.trunc(Number(row.excess_cents) || 0);
   return {
     source: row.source, key: row.customer_key,
     limitCents: row.limit_cents == null ? null : Number(row.limit_cents),
     lang: LANGS.includes(row.lang) ? row.lang : '',
-    paidMarkCents: Number(row.paid_mark_cents) || 0,
+    baselineCents, excessCents,
     remindedTs: Number(row.reminded_ts) || 0,
-    rows: trimRows(parse(row.schedule, [])), rev: Number(row.rev) || 0,
+    rows: derive(parse(row.schedule, []), { baselineCents, excessCents, paidCents: baselineCents }).rows,
+    rev: Number(row.rev) || 0,
   };
 }
 export async function readAccounts(env, merchant) {
@@ -137,19 +141,19 @@ export async function readAccount(env, merchant, source, key) {
     .bind(merchant, source, key).first();
   return row ? accountFrom(row) : null;
 }
-/* Crée la ligne (la marque part du total déjà versé : un règlement d'avant
- * l'échéancier n'y est jamais versé), puis la relit. */
+/* Crée la ligne : elle part du total déjà versé, un règlement d'avant
+ * l'échéancier n'y est jamais versé. Puis la relit. */
 async function ensureAccount(env, merchant, source, key, paidTotalCents, now) {
-  await env.DB.prepare(`INSERT INTO credit_accounts (merchant, source, customer_key, paid_mark_cents, schedule, rev, updated_ts)
+  await env.DB.prepare(`INSERT INTO credit_accounts (merchant, source, customer_key, baseline_paid_cents, schedule, rev, updated_ts)
     VALUES (?, ?, ?, ?, '[]', 0, ?) ON CONFLICT(merchant, source, customer_key) DO NOTHING`)
     .bind(merchant, source, key, Math.max(0, cents(paidTotalCents)), now).run();
   return readAccount(env, merchant, source, key);
 }
 async function casWrite(env, merchant, acct, next, now) {
-  const res = await env.DB.prepare(`UPDATE credit_accounts SET limit_cents = ?, lang = ?, paid_mark_cents = ?, reminded_ts = ?,
-      schedule = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND source = ? AND customer_key = ? AND rev = ?`)
-    .bind(next.limitCents, next.lang, next.paidMarkCents, next.remindedTs, JSON.stringify(trimRows(next.rows)),
-      acct.rev + 1, now, merchant, acct.source, acct.key, acct.rev).run();
+  const res = await env.DB.prepare(`UPDATE credit_accounts SET limit_cents = ?, lang = ?, baseline_paid_cents = ?, excess_cents = ?,
+      reminded_ts = ?, schedule = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND source = ? AND customer_key = ? AND rev = ?`)
+    .bind(next.limitCents, next.lang, Math.max(0, cents(next.baselineCents)), cents(next.excessCents), next.remindedTs,
+      JSON.stringify(trimRows(next.rows).map(storedRow)), acct.rev + 1, now, merchant, acct.source, acct.key, acct.rev).run();
   return Number(res && res.meta && res.meta.changes) === 1;
 }
 export async function logEvent(env, merchant, ev, now) {
@@ -160,46 +164,49 @@ export async function logEvent(env, merchant, ev, now) {
   } catch (_) { /* le journal accompagne, il ne bloque jamais */ }
 }
 
-/* Verse sur l'échéancier ce que le client a payé depuis la dernière marque. */
-export function settle(acct, paidTotalCents, now) {
-  const delta = Math.max(0, cents(paidTotalCents)) - acct.paidMarkCents;
-  if (delta === 0) return null;
-  if (delta < 0) return { next: { ...acct, paidMarkCents: Math.max(0, cents(paidTotalCents)) }, plan: null };
-  const plan = waterfall(acct.rows, delta, now);
-  return { next: { ...acct, rows: plan.rows, paidMarkCents: acct.paidMarkCents + delta }, plan };
+/* Le compte tel que les règlements d'aujourd'hui le laissent. Pur : rien ne
+ * s'écrit. `paidTotalCents` absent (client introuvable) : rien ne bouge. */
+export function settled(acct, paidTotalCents, now = Date.now()) {
+  const paid = paidTotalCents == null ? acct.baselineCents : Math.max(0, cents(paidTotalCents));
+  const out = derive(acct.rows, { baselineCents: acct.baselineCents, excessCents: acct.excessCents, paidCents: paid, now });
+  return { ...acct, rows: out.rows, baselineCents: paid, excessCents: out.excessCents, appliedCents: out.appliedCents, reopenedCents: out.reopenedCents };
 }
+const paidOf = (debtor) => (debtor ? debtor.paidTotalCents : null);
 
-/* Applique, une fois, les règlements arrivés depuis la marque. Rend le compte à jour. */
-export async function reconcile(env, merchant, acct, debtor, now = Date.now()) {
-  let current = acct;
-  for (let i = 0; i < 5 && current; i++) {
-    const step = settle(current, debtor ? debtor.paidTotalCents : current.paidMarkCents, now);
-    if (!step) return current;
-    if (await casWrite(env, merchant, current, step.next, now)) {
-      if (step.plan && step.plan.appliedCents > 0) {
-        await logEvent(env, merchant, { id: `pay-${current.source}-${current.key}-${step.next.paidMarkCents}`, source: current.source,
-          key: current.key, kind: 'collected', amountCents: step.plan.appliedCents,
-          detail: JSON.stringify({ collected: step.plan.collected, reduced: step.plan.reduced }) }, now);
-      }
-      return { ...step.next, rev: current.rev + 1 };
-    }
-    current = await readAccount(env, merchant, current.source, current.key);
-  }
-  throw Object.assign(new Error('credit-busy'), { code: 'credit-busy' });
-}
-
-/* Lit, applique les règlements, écrit en compare-and-swap. `change(acct)` rend
- * le compte suivant, ou { error }. */
-async function mutate(env, merchant, source, key, debtor, change, now) {
-  let acct = await readAccount(env, merchant, source, key) || await ensureAccount(env, merchant, source, key, debtor ? debtor.paidTotalCents : 0, now);
+/* Une écriture : relit la ligne ET ce que le client a versé, applique
+ * `change(compte à jour, débiteur)`, écrit en compare-and-swap sur rev. Une
+ * écriture perdue relit les deux : jamais un total versé en retard sur une
+ * ligne plus récente. */
+async function mutate(env, merchant, source, key, debtor, change, now, reread) {
+  let acct = await readAccount(env, merchant, source, key) || await ensureAccount(env, merchant, source, key, paidOf(debtor) || 0, now);
   for (let i = 0; i < 5; i++) {
-    acct = await reconcile(env, merchant, acct, debtor, now);
-    const next = change(acct);
+    const current = settled(acct, paidOf(debtor), now);
+    const next = change(current, debtor);
     if (!next || next.error) return next || { error: 'no-change' };
-    if (await casWrite(env, merchant, acct, next, now)) return { account: { ...next, rev: acct.rev + 1 } };
+    if (await casWrite(env, merchant, acct, next, now)) {
+      if (current.appliedCents > 0 || current.reopenedCents > 0) {
+        await logEvent(env, merchant, { id: `cov-${source}-${key}-${acct.rev + 1}`.slice(0, 160), source, key, kind: 'collected',
+          amountCents: current.appliedCents, detail: current.reopenedCents ? JSON.stringify({ reopenedCents: current.reopenedCents }) : '' }, now);
+      }
+      return { account: { ...next, rev: acct.rev + 1 } };
+    }
     acct = await readAccount(env, merchant, source, key);
+    if (reread) debtor = await reread();
   }
   return { error: 'credit-busy', status: 409 };
+}
+
+/* Le délai accordé à une dette sans échéance. */
+export async function termDays(env, merchant) {
+  const row = await env.DB.prepare('SELECT term_days FROM credit_settings WHERE merchant = ?').bind(merchant).first();
+  return row && Number.isSafeInteger(Number(row.term_days)) ? Number(row.term_days) : DEFAULT_TERM_DAYS;
+}
+export async function setTerm(env, merchant, days, actor, now = Date.now()) {
+  if (!Number.isSafeInteger(days) || days < 0 || days > 365) return { error: 'bad-term', status: 400 };
+  await env.DB.prepare(`INSERT INTO credit_settings (merchant, term_days, updated_ts) VALUES (?, ?, ?)
+    ON CONFLICT(merchant) DO UPDATE SET term_days = excluded.term_days, updated_ts = excluded.updated_ts`).bind(merchant, days, now).run();
+  await logEvent(env, merchant, { source: 'carnet', key: '*', kind: 'settings', amountCents: 0, actor, detail: JSON.stringify({ termDays: days }) }, now);
+  return { ok: true, termDays: days };
 }
 
 export function validTarget(source, key) {
@@ -207,62 +214,79 @@ export function validTarget(source, key) {
 }
 
 /* ── le carnet du patron ── */
-function present(debtor, acct, today) {
+function present(debtor, acct, today, term, flags, dayOf) {
   const owed = debtor ? debtor.owedCents : 0;
   const view = viewRows(acct ? acct.rows : [], owed);
   const loose = newestPieces(debtor ? debtor.pieces : [], view.unscheduledCents);
-  const age = ageing(view.pending, loose, today);
+  const age = ageing(view.pending, loose, today, term);
   const dueRows = view.pending.filter((r) => r.dueDate <= today);
+  const dueLoose = loose.map((p) => ({ cents: p.cents, dueDate: looseDue(p, term) })).filter((p) => p.dueDate <= today);
+  const dueDates = dueRows.map((r) => r.dueDate).concat(dueLoose.map((p) => p.dueDate)).sort();
   return {
     source: debtor ? debtor.source : acct.source, key: debtor ? debtor.key : acct.key,
     name: debtor ? debtor.name : '', phone: debtor ? debtor.phone : '',
     owedCents: owed, scheduledCents: view.scheduledCents, unscheduledCents: view.unscheduledCents,
+    looseDueCents: dueLoose.reduce((n, p) => n + p.cents, 0),
     limitCents: acct ? acct.limitCents : null, lang: acct ? acct.lang : '',
-    remindedTs: acct ? acct.remindedTs : 0, rev: acct ? acct.rev : 0, hasSchedule: !!(acct && acct.rows.length),
+    remindedTs: acct ? acct.remindedTs : 0, remindedDay: acct && acct.remindedTs && dayOf ? dayOf(acct.remindedTs) : '',
+    rev: acct ? acct.rev : 0, hasSchedule: !!(acct && acct.rows.length),
     lastPayTs: debtor ? debtor.lastPayTs : 0,
     daysLate: age.daysLate, buckets: age.buckets, nextDue: age.nextDue,
-    dueCents: dueRows.reduce((n, r) => n + r.shownCents, 0),
-    dueDate: dueRows.length ? dueRows[0].dueDate : '',
+    dueCents: dueRows.reduce((n, r) => n + r.shownCents, 0) + dueLoose.reduce((n, p) => n + p.cents, 0),
+    dueDate: dueDates[0] || '',
+    unapproved: flags ? flags.n : 0, unapprovedTs: flags ? flags.ts : 0,
     pending: view.pending.map((r) => ({ id: r.id, amountCents: r.shownCents, originalCents: r.originalCents, dueDate: r.dueDate, note: r.note, origin: r.origin })),
   };
 }
 
+/* Les ventes passées au-delà du plafond sans accord (_credit-audit.js), 30 jours. */
+async function unapprovedFlags(env, merchant, now, source, key) {
+  const res = await env.DB.prepare(`SELECT source, customer_key, COUNT(*) AS n, MAX(ts) AS ts FROM credit_events
+    WHERE merchant = ? AND kind = 'limit-unapproved' AND ts >= ? ${source ? 'AND source = ? AND customer_key = ?' : ''}
+    GROUP BY source, customer_key`).bind(...(source ? [merchant, now - 30 * 86400000, source, key] : [merchant, now - 30 * 86400000])).all();
+  return new Map((res.results || []).map((r) => [r.source + ':' + r.customer_key, { n: Number(r.n) || 0, ts: Number(r.ts) || 0 }]));
+}
+
+/* Le carnet entier. Une lecture : rien ne s'écrit, chaque échéancier se
+ * recalcule sur ce que le client a versé à cet instant. */
 export async function creditBook(env, merchant, now = Date.now()) {
   const { today, dayOf } = await merchantToday(env, merchant, now);
-  const debtors = await debtorsOf(env, merchant, dayOf);
-  const accounts = await readAccounts(env, merchant);
+  const [debtors, accounts, term, flags] = await Promise.all([debtorsOf(env, merchant, dayOf), readAccounts(env, merchant),
+    termDays(env, merchant), unapprovedFlags(env, merchant, now)]);
   const accOf = new Map(accounts.map((a) => [a.source + ':' + a.key, a]));
   const customers = [];
   for (const d of debtors) {
-    let acct = accOf.get(d.source + ':' + d.key) || null;
-    if (acct) { acct = await reconcile(env, merchant, acct, d, now); accOf.delete(d.source + ':' + d.key); }
-    if (d.owedCents > 0 || (acct && (acct.limitCents != null || pendingOf(acct.rows).length))) customers.push(present(d, acct, today));
+    const id = d.source + ':' + d.key;
+    const acct = accOf.has(id) ? settled(accOf.get(id), d.paidTotalCents, d.lastPayTs || now) : null;
+    if (d.owedCents > 0 || flags.has(id) || (acct && (acct.limitCents != null || pendingOf(acct.rows).length))) customers.push(present(d, acct, today, term, flags.get(id), dayOf));
   }
-  const summary = { owedCents: 0, debtors: 0, buckets: { notDue: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90p: 0 }, dueToday: 0, dueTodayCents: 0, overLimit: 0 };
+  const summary = { owedCents: 0, debtors: 0, buckets: { notDue: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90p: 0 }, dueToday: 0, dueTodayCents: 0, overLimit: 0, unapproved: 0 };
   for (const c of customers) {
     summary.owedCents += c.owedCents;
     if (c.owedCents > 0) summary.debtors++;
     for (const b of Object.keys(summary.buckets)) summary.buckets[b] += c.buckets[b];
     if (c.dueCents > 0) { summary.dueToday++; summary.dueTodayCents += c.dueCents; }
     if (c.limitCents != null && c.owedCents > c.limitCents) summary.overLimit++;
+    if (c.unapproved) summary.unapproved++;
   }
-  return { today, summary, customers };
+  return { today, termDays: term, summary, customers };
 }
 
 export async function customerDetail(env, merchant, source, key, now = Date.now()) {
   const { today, dayOf } = await merchantToday(env, merchant, now);
   const debtor = await debtorOf(env, merchant, source, key, dayOf);
-  let acct = await readAccount(env, merchant, source, key);
-  if (!debtor && !acct) return null;
-  if (acct) acct = await reconcile(env, merchant, acct, debtor, now);
+  const stored = await readAccount(env, merchant, source, key);
+  if (!debtor && !stored) return null;
+  const acct = stored ? settled(stored, paidOf(debtor), (debtor && debtor.lastPayTs) || now) : null;
+  const [term, flags] = await Promise.all([termDays(env, merchant), unapprovedFlags(env, merchant, now, source, key)]);
   let events = [];
   try {
     events = (await env.DB.prepare(`SELECT kind, amount_cents, actor, detail, ts FROM credit_events
       WHERE merchant = ? AND source = ? AND customer_key = ? ORDER BY ts DESC LIMIT 40`).bind(merchant, source, key).all()).results || [];
   } catch (_) { events = []; }
-  const card = present(debtor, acct, today);
+  const card = present(debtor, acct, today, term, flags.get(source + ':' + key), dayOf);
   return {
-    today, customer: card,
+    today, termDays: term, customer: card,
     seed: card.hasSchedule || !(card.owedCents > 0) ? [] : seedRows(card.owedCents, addDays(today, 7), now, 'seed').map((r) => ({ amountCents: r.amountCents, dueDate: r.dueDate, note: '' })),
     collected: (acct ? acct.rows : []).filter((r) => r.status === 'collected').map((r) => ({ id: r.id, originalCents: r.originalCents, dueDate: r.dueDate, note: r.note, collectedTs: r.collectedTs })),
     history: debtor ? debtor.history : [],
@@ -273,7 +297,8 @@ export async function customerDetail(env, merchant, source, key, now = Date.now(
 /* ── écritures du patron ── */
 export async function saveSchedule(env, merchant, source, key, body, actor, now = Date.now()) {
   const { today, dayOf } = await merchantToday(env, merchant, now);
-  const debtor = await debtorOf(env, merchant, source, key, dayOf);
+  const reread = () => debtorOf(env, merchant, source, key, dayOf);
+  const debtor = await reread();
   if (!debtor) return { error: 'unknown-customer', status: 404 };
   let rows;
   if (body.seed === true) {
@@ -286,15 +311,21 @@ export async function saveSchedule(env, merchant, source, key, body, actor, now 
     rows = clean.rows;
   }
   const baseRev = body.baseRev == null ? null : Number(body.baseRev);
-  const out = await mutate(env, merchant, source, key, debtor, (acct) => {
+  let owedNow = debtor.owedCents;
+  const out = await mutate(env, merchant, source, key, debtor, (acct, d) => {
     if (baseRev != null && acct.rev !== baseRev && !(baseRev === 0 && !acct.rows.length)) return { error: 'credit-schedule-changed', status: 409 };
     if (body.seed === true && pendingOf(acct.rows).length) return { error: 'schedule-exists', status: 409 };
-    /* Une ligne gardée garde ce qu'un règlement en a déjà retiré. */
+    owedNow = d ? d.owedCents : 0;
+    /* Une ligne gardée garde ce qu'un règlement en a déjà couvert : le montant
+       envoyé est ce qui reste à payer dessus. */
     const kept = new Map(pendingOf(acct.rows).map((r) => [r.id, r]));
-    const nextRows = rows.map((r) => (kept.has(r.id) ? { ...kept.get(r.id), amountCents: r.amountCents, originalCents: Math.max(kept.get(r.id).originalCents, r.amountCents), dueDate: r.dueDate, note: r.note } : r));
-    if (checkTotal(nextRows, debtor.owedCents)) return { error: 'schedule-exceeds-balance', status: 409, owedCents: debtor.owedCents };
-    return { ...acct, rows: nextRows.concat(acct.rows.filter((r) => r.status === 'collected')) };
-  }, now);
+    const nextRows = rows.map((r) => (kept.has(r.id) ? { ...kept.get(r.id), amountCents: r.amountCents,
+      originalCents: kept.get(r.id).coveredCents + r.amountCents, dueDate: r.dueDate, note: r.note } : r));
+    if (checkTotal(nextRows, owedNow)) return { error: 'schedule-exceeds-balance', status: 409, owedCents: owedNow };
+    /* Ce qui dépassait l'ancien échéancier a payé la dette sans date : il ne
+       couvre pas les nouvelles lignes (elles décrivent ce qui reste dû). */
+    return { ...acct, excessCents: Math.min(0, acct.excessCents), rows: nextRows.concat(acct.rows.filter((r) => r.status === 'collected')) };
+  }, now, reread);
   if (out.error) return out;
   await logEvent(env, merchant, { source, key, kind: 'schedule', amountCents: rows.reduce((n, r) => n + r.amountCents, 0), actor }, now);
   return { ok: true, rev: out.account.rev };
@@ -303,12 +334,13 @@ export async function saveSchedule(env, merchant, source, key, body, actor, now 
 export async function setLimit(env, merchant, source, key, limitCents, actor, now = Date.now()) {
   if (!(limitCents === null || (Number.isSafeInteger(limitCents) && limitCents >= 0 && limitCents <= MAX_CENTS))) return { error: 'bad-limit', status: 400 };
   const { dayOf } = await merchantToday(env, merchant, now);
-  const debtor = await debtorOf(env, merchant, source, key, dayOf);
+  const reread = () => debtorOf(env, merchant, source, key, dayOf);
+  const debtor = await reread();
   if (!debtor && source === 'client') {
     const known = await env.DB.prepare('SELECT id FROM clients WHERE merchant = ? AND id = ? AND deleted = 0').bind(merchant, key).first();
     if (!known) return { error: 'unknown-customer', status: 404 };
   } else if (!debtor) return { error: 'unknown-customer', status: 404 };
-  const out = await mutate(env, merchant, source, key, debtor, (acct) => ({ ...acct, limitCents }), now);
+  const out = await mutate(env, merchant, source, key, debtor, (acct) => ({ ...acct, limitCents }), now, reread);
   if (out.error) return out;
   await logEvent(env, merchant, { source, key, kind: 'limit', amountCents: limitCents || 0, actor, detail: limitCents === null ? 'none' : '' }, now);
   return { ok: true, rev: out.account.rev };
@@ -319,10 +351,11 @@ export async function setPrefs(env, merchant, source, key, body, actor, now = Da
   if (lang != null && lang !== '' && !LANGS.includes(lang)) return { error: 'bad-lang', status: 400 };
   const reminded = body.reminded === true;
   const { dayOf } = await merchantToday(env, merchant, now);
-  const debtor = await debtorOf(env, merchant, source, key, dayOf);
+  const reread = () => debtorOf(env, merchant, source, key, dayOf);
+  const debtor = await reread();
   if (!debtor) return { error: 'unknown-customer', status: 404 };
   const out = await mutate(env, merchant, source, key, debtor, (acct) => ({ ...acct,
-    lang: lang == null ? acct.lang : lang, remindedTs: reminded ? now : acct.remindedTs }), now);
+    lang: lang == null ? acct.lang : lang, remindedTs: reminded ? now : acct.remindedTs }), now, reread);
   if (out.error) return out;
   if (reminded) await logEvent(env, merchant, { source, key, kind: 'reminded', amountCents: debtor.owedCents, actor, detail: out.account.lang || '' }, now);
   return { ok: true, rev: out.account.rev, remindedTs: out.account.remindedTs };
@@ -355,7 +388,8 @@ export async function addPromise(env, merchant, source, key, body, actor, now = 
   if (body.dueDate < today || body.dueDate > addDays(today, 366)) return { error: 'bad-promise-date', status: 400 };
   /* Une lecture ratée n'est pas « client inconnu » : la marque de départ en
      dépend (sinon d'anciens règlements tomberaient sur cette promesse). */
-  const debtor = await debtorOf(env, merchant, source, key, dayOf);
+  const reread = () => debtorOf(env, merchant, source, key, dayOf);
+  const debtor = await reread();
   if (source === 'client' && !debtor) {
     const known = await env.DB.prepare('SELECT id FROM clients WHERE merchant = ? AND id = ? AND deleted = 0').bind(merchant, key).first();
     if (!known) return { error: 'unknown-customer', status: 404 };
@@ -365,9 +399,9 @@ export async function addPromise(env, merchant, source, key, body, actor, now = 
     if (acct.rows.some((r) => r.id === id)) return { error: 'duplicate', duplicate: true };
     if (pendingOf(acct.rows).length >= 24) return { error: 'schedule-too-long', status: 409 };
     fresh = true;
-    return { ...acct, rows: acct.rows.concat([{ id, amountCents: amount, originalCents: amount, dueDate: body.dueDate,
+    return { ...acct, excessCents: Math.min(0, acct.excessCents), rows: acct.rows.concat([{ id, amountCents: amount, originalCents: amount, coveredCents: 0, dueDate: body.dueDate,
       note: String(body.note || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, NOTE_MAX), status: 'pending', origin: 'till', createdTs: now, collectedTs: 0 }]) };
-  }, now);
+  }, now, reread);
   if (out.duplicate) return { ok: true, duplicate: true };
   if (out.error) return out;
   if (fresh) await logEvent(env, merchant, { id: 'promise-' + id, source, key, kind: 'promise', amountCents: amount, actor, detail: body.dueDate }, now);

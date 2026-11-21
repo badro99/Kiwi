@@ -6,7 +6,13 @@
  *   · la somme des lignes en attente ne dépasse jamais ce que le client doit,
  *     le reste sans date est montré (« 120 MAD sans date ») ;
  *   · un règlement couvre les lignes en attente par ordre de date : une ligne
- *     couverte passe « encaissée », un reste partiel réduit la suivante.
+ *     couverte passe « encaissée », un reste partiel réduit la suivante ;
+ *   · un règlement annulé rouvre les lignes dans l'ordre inverse : la dernière
+ *     couverte se rouvre la première.
+ * Ce qu'une ligne a reçu n'est jamais accumulé à chaque lecture : c'est une
+ * fonction (derive) des lignes écrites et du total versé aujourd'hui. Lire
+ * deux fois, lire avec un total en retard, annuler puis payer à nouveau donne
+ * toujours la même réponse pour le même total versé.
  * Tout se compte en centimes entiers. Les dates d'échéance sont des jours
  * 'AAAA-MM-JJ' de la journée d'activité du commerce (functions/api/_business-day.js). */
 
@@ -50,7 +56,7 @@ export const pendingTotal = (rows) => pendingOf(rows).reduce((n, r) => n + r.amo
 export function seedRows(owedCents, dueDate, now, id) {
   const amount = cents(owedCents);
   if (!(amount > 0) || !validDay(dueDate)) return [];
-  return [{ id, amountCents: amount, originalCents: amount, dueDate, note: '', status: 'pending', origin: 'seed', createdTs: now, collectedTs: 0 }];
+  return [{ id, amountCents: amount, originalCents: amount, coveredCents: 0, dueDate, note: '', status: 'pending', origin: 'seed', createdTs: now, collectedTs: 0 }];
 }
 
 /* Les lignes envoyées par un écran, nettoyées. `{ rows }` ou `{ error }`. */
@@ -66,7 +72,7 @@ export function cleanRows(input, { now = Date.now(), origin = 'owner', makeId } 
     let id = raw.id == null || raw.id === '' ? (makeId ? makeId() : '') : String(raw.id);
     if (!ROW_ID.test(id) || seen.has(id)) return { error: 'bad-schedule-id' };
     seen.add(id);
-    rows.push({ id, amountCents: amount, originalCents: amount, dueDate: raw.dueDate,
+    rows.push({ id, amountCents: amount, originalCents: amount, coveredCents: 0, dueDate: raw.dueDate,
       note: String(raw.note == null ? '' : raw.note).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, NOTE_MAX),
       status: 'pending', origin, createdTs: now, collectedTs: 0 });
   }
@@ -78,28 +84,67 @@ export function checkTotal(rows, owedCents) {
   return pendingTotal(rows) > Math.max(0, cents(owedCents)) ? 'schedule-exceeds-balance' : '';
 }
 
-/* Un règlement versé sur les lignes en attente, par ordre de date. Rend une
- * copie des lignes, ce qui a été affecté, ce qui reste du règlement (un
- * trop-perçu ne crée aucune ligne), et ce qui a changé. */
+/* Ce que les règlements couvrent, recalculé : les lignes écrites (chacune avec
+ * ce qu'elle avait reçu, `coveredCents`), le total versé quand elles l'ont été
+ * (`baselineCents`), le reste d'alors (`excessCents` : positif, ce qui
+ * dépassait l'échéancier et a payé la dette sans date ; négatif, un règlement
+ * d'avant l'échéancier annulé depuis), et le total versé aujourd'hui.
+ * Le total couvert est toujours le même nombre, borné à [0, somme des lignes] :
+ *   couvert + reste = couvert d'alors + reste d'alors + (versé − versé d'alors).
+ * Ce qui monte couvre les lignes par ordre de date ; ce qui descend (un
+ * règlement annulé) rouvre de la plus tardive à la plus ancienne. Rejouer,
+ * lire en retard puis à jour, annuler puis payer : même total, même réponse.
+ * Rend des copies : `amountCents` est ce qui reste à payer sur la ligne. */
+export function derive(rows, { baselineCents = 0, excessCents = 0, paidCents = 0, now = Date.now() } = {}) {
+  const list = (Array.isArray(rows) ? rows : []).filter((r) => r && typeof r === 'object').map((r) => {
+    const original = Math.max(0, cents(r.originalCents != null ? r.originalCents : r.amountCents));
+    const covered = r.coveredCents != null ? cents(r.coveredCents)
+      : r.status === 'collected' ? original : original - Math.max(0, cents(r.amountCents != null ? r.amountCents : original));
+    return { ...r, originalCents: original, coveredCents: Math.min(original, Math.max(0, covered)) };
+  }).sort(byDue);
+  const total = list.reduce((n, r) => n + r.originalCents, 0);
+  const before = list.reduce((n, r) => n + r.coveredCents, 0);
+  const pool = before + cents(excessCents) + Math.max(0, cents(paidCents)) - Math.max(0, cents(baselineCents));
+  const target = Math.max(0, Math.min(total, pool));
+  let up = Math.max(0, target - before), down = Math.max(0, before - target);
+  for (const r of list) {
+    if (up <= 0) break;
+    const take = Math.min(r.originalCents - r.coveredCents, up);
+    r.coveredCents += take; up -= take;
+  }
+  for (let i = list.length - 1; i >= 0 && down > 0; i--) {
+    const take = Math.min(list[i].coveredCents, down);
+    list[i].coveredCents -= take; down -= take;
+  }
+  for (const r of list) {
+    r.amountCents = r.originalCents - r.coveredCents;
+    const done = r.amountCents <= 0;
+    r.collectedTs = done ? (r.status === 'collected' && r.collectedTs ? r.collectedTs : now) : 0;
+    r.status = done ? 'collected' : 'pending';
+  }
+  return { rows: list, excessCents: pool - target, appliedCents: Math.max(0, target - before), reopenedCents: Math.max(0, before - target) };
+}
+
+/* Un règlement seul sur des lignes neuves (la cascade) : ce qu'il couvre,
+ * ce qui en reste (un trop-perçu ne crée aucune ligne), ce qui a changé. */
 export function waterfall(rows, payCents, now = Date.now()) {
-  const all = (Array.isArray(rows) ? rows : []).map((r) => ({ ...r }));
-  let left = Math.max(0, cents(payCents));
+  const before = new Map(pendingOf(rows).map((r) => [r.id, r.amountCents]));
+  const out = derive(pendingOf(rows).map((r) => ({ ...r, originalCents: r.amountCents, coveredCents: 0 })), { paidCents: payCents, now });
   const collected = [];
   let reduced = null;
-  for (const row of pendingOf(all)) {
-    if (left <= 0) break;
-    if (row.amountCents <= left) {
-      left -= row.amountCents;
-      row.status = 'collected';
-      row.collectedTs = now;
-      collected.push(row.id);
-      continue;
-    }
-    reduced = { id: row.id, fromCents: row.amountCents, toCents: row.amountCents - left };
-    row.amountCents -= left;
-    left = 0;
+  for (const r of out.rows) {
+    if (!before.has(r.id)) continue;
+    if (r.status === 'collected') collected.push(r.id);
+    else if (r.amountCents < before.get(r.id) && !reduced) reduced = { id: r.id, fromCents: before.get(r.id), toCents: r.amountCents };
   }
-  return { rows: all, appliedCents: Math.max(0, cents(payCents)) - left, leftoverCents: left, collected, reduced };
+  const rest = (Array.isArray(rows) ? rows : []).filter((r) => r && r.status !== 'pending').map((r) => ({ ...r }));
+  return { rows: out.rows.concat(rest), appliedCents: out.appliedCents, leftoverCents: Math.max(0, out.excessCents), collected, reduced };
+}
+
+/* Ce qui s'écrit d'une ligne : rien de ce qui se recalcule. */
+export function storedRow(r) {
+  return { id: r.id, originalCents: r.originalCents, coveredCents: r.coveredCents, dueDate: r.dueDate, note: r.note || '',
+    origin: r.origin || 'owner', createdTs: r.createdTs || 0, collectedTs: r.collectedTs || 0, status: r.status };
 }
 
 /* Ce que l'écran montre. Une ligne promise au comptoir peut arriver avant la
@@ -156,8 +201,11 @@ export function bucketFor(daysLate) {
   return 'd90p';
 }
 /* Balance âgée d'un client : chaque ligne datée compte à sa date d'échéance,
- * le reste sans date compte depuis l'achat qu'il couvre (dû au comptoir). */
-export function ageing(pendingShown, loosePieces, today) {
+ * le reste sans date compte depuis l'achat qu'il couvre, plus le délai que le
+ * commerce accorde (`termDays`, 30 jours par défaut, credit_settings). */
+export const DEFAULT_TERM_DAYS = 30;
+export const looseDue = (piece, termDays) => addDays(piece.day, Math.max(0, Math.min(365, cents(termDays))));
+export function ageing(pendingShown, loosePieces, today, termDays = 0) {
   const buckets = Object.fromEntries(BUCKETS.map((b) => [b, 0]));
   let daysLate = 0;
   let nextDue = '';
@@ -171,7 +219,12 @@ export function ageing(pendingShown, loosePieces, today) {
     add(r.shownCents != null ? r.shownCents : r.amountCents, r.dueDate);
     if (r.dueDate >= today && (!nextDue || r.dueDate < nextDue)) nextDue = r.dueDate;
   }
-  for (const p of loosePieces || []) add(p.cents, p.day);
+  for (const p of loosePieces || []) {
+    if (!validDay(p.day)) continue;
+    const due = looseDue(p, termDays);
+    add(p.cents, due);
+    if (due >= today && (!nextDue || due < nextDue)) nextDue = due;
+  }
   return { buckets, daysLate, nextDue };
 }
 

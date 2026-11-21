@@ -16,7 +16,8 @@ import { fileURLToPath } from 'node:url';
 import { fixture } from './server-money-fixture.mjs';
 import { makeSession, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 import * as plan from '../functions/api/_credit-plan.js';
-import { settle } from '../functions/api/_credit-accounts.js';
+import { settled } from '../functions/api/_credit-accounts.js';
+import { commitBook } from '../functions/api/_credit-book-store.js';
 import * as book from '../functions/api/credit/book.js';
 import * as tillRoute from '../functions/api/credit/till.js';
 
@@ -85,13 +86,48 @@ const ok = (name) => { n++; console.log('  ✓ ' + name); };
   assert.equal(plan.addDays('2026-11-28', 7), '2026-12-05');
   ok('limit decision and promise dates');
 
-  const acct = { rows, paidMarkCents: 1000 };
-  const a = settle(acct, 21000, 1);
-  assert.equal(a.plan.appliedCents, 20000);
-  assert.equal(a.next.paidMarkCents, 21000);
-  assert.equal(settle(a.next, 21000, 2), null, 'the same total paid again applies nothing');
-  assert.equal(settle(a.next, 15000, 2).plan, null, 'a voided payment lowers the mark without reopening rows');
-  ok('settle: payments counted once against the mark');
+  /* Le règlement n'est jamais accumulé : il se recalcule du total versé. */
+  const three = [1, 2, 3].map((i) => ({ id: 'row00' + i, originalCents: 10000, coveredCents: 0, dueDate: '2026-12-0' + i, createdTs: i }));
+  const fresh = { rows: plan.derive(three).rows, baselineCents: 0, excessCents: 0 };
+  const pendingCents = (a) => plan.pendingTotal(a.rows);
+  const collectedRows = (a) => a.rows.filter((r) => r.status === 'collected').length;
+  /* Deux lecteurs (repro du juge) : B voit 150 versés et écrit ; A, resté sur
+     100, écrit après lui ; la lecture suivante voit le vrai total, 150. */
+  const B = settled(fresh, 15000, 1);
+  const A = settled(B, 10000, 2);
+  const C = settled(A, 15000, 3);
+  assert.equal(pendingCents(C), 15000, 'a stale writer never applies a payment twice: 150 of 300 paid leaves 150');
+  assert.equal(collectedRows(C), 1);
+  assert.deepEqual(settled(settled(B, 15000, 4), 15000, 5).rows.map((r) => r.coveredCents), B.rows.map((r) => r.coveredCents), 'reading again changes nothing');
+  /* Payer, annuler, payer : 100 versés au bout du compte, 200 restent. */
+  let pv = settled(fresh, 10000, 1); pv = settled(pv, 0, 2); pv = settled(pv, 10000, 3);
+  assert.equal(pendingCents(pv), 20000, 'pay, void, pay: one payment counted once');
+  /* Une annulation rouvre la dernière échéance couverte d'abord. */
+  const paid250 = settled(fresh, 25000, 1);
+  const back = settled(paid250, 15000, 2);
+  assert.deepEqual(back.rows.map((r) => r.amountCents), [0, 5000, 10000], 'a void reopens the latest covered rows first');
+  assert.deepEqual(back.rows.map((r) => r.coveredCents), settled(fresh, 15000, 9).rows.map((r) => r.coveredCents), 'same total, same rows, whatever the path');
+  /* Trop-perçu puis annulation de ce trop-perçu : les lignes restent couvertes. */
+  const over = settled(fresh, 40000, 1);
+  assert.equal(over.excessCents, 10000);
+  assert.equal(pendingCents(settled(over, 30000, 2)), 0, 'voiding the over-payment reopens nothing');
+  /* Un règlement d'avant l'échéancier annulé, puis repayé : rien ne bouge. */
+  const before = settled({ ...fresh, baselineCents: 5000 }, 0, 1);
+  assert.equal(pendingCents(settled(before, 5000, 2)), 30000, 'repaying a voided pre-schedule payment covers nothing new');
+  /* N'importe quel chemin de totaux, écrit ou pas en route : la fin ne dépend que du dernier total. */
+  let seed = 7;
+  const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+  for (let run = 0; run < 300; run++) {
+    let acc = fresh;
+    let last = 0;
+    for (let step = 0; step < 8; step++) {
+      last = Math.round(rnd() * 45000);
+      const next = settled(acc, last, step);
+      if (rnd() < 0.5) acc = next;
+    }
+    assert.deepEqual(settled(acc, last, 99).rows.map((r) => r.coveredCents), settled(fresh, last, 99).rows.map((r) => r.coveredCents));
+  }
+  ok('settlement: stale writer, pay/void/pay, voids reopen latest, path-independent (300 random paths)');
 }
 
 /* ── 2. de bout en bout, sur la base ── */
@@ -158,9 +194,26 @@ assert.equal(rkia.scheduledCents, 25000);
 assert.equal(rkia.unscheduledCents, 5000, 'the remaining amount without a date is shown');
 assert.equal(rkia.dueCents, 10000, 'a late row is due today');
 assert.equal(r.body.summary.dueToday, 1);
-assert.equal(rkia.buckets.d1_30, 15000, 'the late row and the undated rest (from the purchase 10 days ago)');
-assert.equal(rkia.buckets.notDue, 15000);
+assert.equal(r.body.termDays, 30, 'debt without a date gets the default 30-day term');
+assert.equal(rkia.buckets.d1_30, 10000, 'the late row');
+assert.equal(rkia.buckets.notDue, 20000, 'the undated rest (bought 10 days ago) is not late before its 30-day term');
 ok('schedule saved, total ≤ balance, unscheduled remainder, due today');
+
+/* Le délai par défaut : 7 jours, la dette sans date d'il y a 10 jours a 3 jours de retard. */
+r = await call(book, 'POST', owner, { action: 'settings', termDays: 7 });
+assert.equal(r.status, 200, JSON.stringify(r.body));
+r = await call(book, 'POST', till, { action: 'settings', termDays: 0 });
+assert.equal(r.status, 403, 'a till cannot change the term');
+r = await call(book, 'POST', owner, { action: 'settings', termDays: 9999 });
+assert.equal(r.status, 400);
+r = await call(book, 'GET', owner);
+rkia = r.body.customers.find((c) => c.key === 'k-rkia');
+assert.equal(rkia.dueCents, 15000, 'the undated rest past its term is due too');
+assert.equal(rkia.looseDueCents, 5000);
+assert.equal(rkia.daysLate, 3);
+assert.equal(rkia.buckets.d1_30, 15000);
+await call(book, 'POST', owner, { action: 'settings', termDays: 30 });
+ok('default term for debt without a schedule: lateness counts from purchase + term');
 
 /* Un règlement noté à l'ardoise (n'importe quelle caisse) : 120 MAD. */
 carnet[0].hist.push({ id: 'h4', type: 'pay', label: 'Règlement', amt: 120, at: iso(0) });
@@ -172,8 +225,17 @@ assert.deepEqual(rkia.pending.map((p) => [p.id, p.amountCents]), [['rk-row-2', 1
 r = await call(book, 'GET', owner);
 rkia = r.body.customers.find((c) => c.key === 'k-rkia');
 assert.deepEqual(rkia.pending.map((p) => [p.id, p.amountCents]), [['rk-row-2', 13000]], 'reading again applies nothing twice');
-assert.equal(sql.prepare("SELECT COUNT(*) n FROM credit_events WHERE merchant = ? AND kind = 'collected'").get(merchant).n, 1);
-ok('a carnet payment waterfalls once, idempotent on every read');
+const revBefore = sql.prepare("SELECT rev, updated_ts FROM credit_accounts WHERE merchant = ? AND customer_key = 'k-rkia'").get(merchant);
+await call(book, 'GET', owner); await call(book, 'GET', owner, null, '&source=carnet&customer=k-rkia');
+assert.deepEqual(sql.prepare("SELECT rev, updated_ts FROM credit_accounts WHERE merchant = ? AND customer_key = 'k-rkia'").get(merchant), revBefore, 'reading the book writes nothing');
+/* Le règlement de 120 MAD est annulé (retiré de l'ardoise) : la ligne se rouvre. */
+const h4 = carnet[0].hist.pop();
+writeBook(carnet);
+rkia = (await call(book, 'GET', owner)).body.customers.find((c) => c.key === 'k-rkia');
+assert.deepEqual(rkia.pending.map((p) => [p.id, p.amountCents]), [['rk-row-1', 10000], ['rk-row-2', 15000]], 'a voided payment reopens its rows');
+carnet[0].hist.push(h4);
+writeBook(carnet);
+ok('a carnet payment waterfalls once, idempotent on every read, reopened when voided');
 
 /* Trop-perçu : 200 MAD alors qu'il en reste 180. */
 carnet[0].hist.push({ id: 'h5', type: 'pay', label: 'Règlement', amt: 200, at: iso(0) });
@@ -247,6 +309,66 @@ r = await call(book, 'GET', owner, null, '&source=carnet&customer=k-rkia');
 assert.deepEqual(r.body.customer.pending.map((p) => [p.id, p.amountCents, p.origin]), [['promise-0001', 2000, 'till']],
   'the promise shows, clamped to what is owed (the earlier 20 MAD advance)');
 ok('promise date from the till: one row, idempotent');
+
+/* ── 4b. une dette au-delà du plafond, arrivée sans accord ── */
+{
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+  const before = sql.prepare("SELECT COUNT(*) n FROM credit_events WHERE merchant = ? AND kind = 'limit-unapproved'").get(merchant).n;
+  /* 500,01 MAD : l'accord du responsable (section 3, 50 001 centimes) la couvre. */
+  carnet[0].hist.push({ id: 'h7', type: 'debt', label: 'Courses', amt: 500.01, at: iso(0) });
+  let w = await commitBook(env, merchant, null, clone(carnet));
+  assert.equal(w.ok, true, JSON.stringify(w));
+  assert.equal(sql.prepare("SELECT COUNT(*) n FROM credit_events WHERE merchant = ? AND kind = 'limit-unapproved'").get(merchant).n, before, 'an approved sale is not flagged');
+  assert.equal(sql.prepare("SELECT COUNT(*) n FROM credit_events WHERE merchant = ? AND kind = 'limit-used'").get(merchant).n, 1, 'the approval is used by that sale');
+  /* 100 MAD de plus, sans nouvel accord : l'accord déjà pris ne couvre pas deux ventes. */
+  carnet[0].hist.push({ id: 'h8', type: 'debt', label: 'Courses', amt: 100, at: iso(0) });
+  w = await commitBook(env, merchant, null, clone(carnet));
+  assert.equal(w.ok, true);
+  w = await commitBook(env, merchant, null, clone(carnet));
+  assert.equal(sql.prepare("SELECT COUNT(*) n FROM credit_events WHERE merchant = ? AND kind = 'limit-unapproved'").get(merchant).n, before + 1, 'flagged once, a resent book flags nothing more');
+  r = await call(book, 'GET', owner);
+  const card = r.body.customers.find((c) => c.key === 'k-rkia');
+  assert.equal(card.unapproved, 1, 'the owner sees the customer flagged');
+  assert.equal(r.body.summary.unapproved, 1);
+  /* La boutique : une note « compte client » de 400 MAD au-delà d'un plafond de 100 MAD. */
+  r = await call(book, 'POST', owner, { action: 'limit', source: 'client', customer: 'client-fixture', limitCents: 10000 });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const acct = { id: 'credit-bill-0002', customerId: 'client-fixture', ticketRef: 'TEST-KIWI-CR2', totalCents: 40000, stage: 'open' };
+  r = await f.call('sale', { id: 'credit-compte-1', amountCents: 0, amount: 0, method: 'compte', label: 'TEST KIWI', ref: acct.ticketRef, ts: Date.now(),
+    ticketAmountCents: 40000, paymentParts: [{ method: 'compte', amountCents: 40000 }], settlementKind: 'receivable', retailBalance: acct,
+    lines: [{ name: 'TEST KIWI item', qty: 1, total: 400 }] });
+  assert.equal(r.status, 200, 'the sale itself is never blocked: ' + JSON.stringify(r.body));
+  const flag = sql.prepare("SELECT detail FROM credit_events WHERE merchant = ? AND kind = 'limit-unapproved' AND source = 'client'").get(merchant);
+  assert.ok(flag, 'an on-account note past the limit is flagged on the server');
+  assert.equal(JSON.parse(flag.detail).afterCents, 55000, '150 still owed on the first note + 400');
+  ok('limit-unapproved: a debt past the limit without approval is logged and badged (carnet and boutique), approvals used once');
+}
+
+/* ── 4c. une écriture perdue relit ce que le client a versé ── */
+{
+  /* Pendant qu'une écriture du patron est en route, un autre appareil écrit la
+     ligne (rev +1) et un règlement de 50 MAD arrive sur l'ardoise. L'écriture
+     perdue doit relire les deux, sinon elle poserait un total versé en retard. */
+  const realPrepare = env.DB.prepare.bind(env.DB);
+  let raced = false;
+  env.DB.prepare = (text) => {
+    if (!raced && /^UPDATE credit_accounts SET/.test(text)) {
+      raced = true;
+      carnet[0].hist.push({ id: 'h9', type: 'pay', label: 'Règlement', amt: 50, at: iso(0) });
+      writeBook(carnet);
+      sql.prepare("UPDATE credit_accounts SET rev = rev + 1 WHERE merchant = ? AND customer_key = 'k-rkia'").run(merchant);
+    }
+    return realPrepare(text);
+  };
+  try {
+    r = await call(book, 'POST', owner, { action: 'prefs', source: 'carnet', customer: 'k-rkia', lang: 'fr' });
+  } finally { env.DB.prepare = realPrepare; }
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const row = sql.prepare("SELECT baseline_paid_cents FROM credit_accounts WHERE merchant = ? AND customer_key = 'k-rkia'").get(merchant);
+  const paidNow = carnet[0].hist.filter((h) => h.type === 'pay').reduce((n, h) => n + Math.round(h.amt * 100), 0);
+  assert.equal(row.baseline_paid_cents, paidNow, 'the retried write carries the fresh paid total, not the one read before the race');
+  ok('a lost compare-and-swap re-reads the account and the payments');
+}
 
 /* ── 5. un magasin ne voit que le sien ── */
 for (const [who, cookie] of [['stranger owner', stranger], ['another shop till', strangerTill], ['anonymous', '']]) {

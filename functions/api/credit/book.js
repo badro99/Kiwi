@@ -4,10 +4,11 @@
  *   action 'schedule' : { rows:[{id?,amountCents,dueDate,note}], baseRev } ou { seed:true, dueDate? }
  *   action 'limit'    : { limitCents | null }   (palier patron)
  *   action 'prefs'    : { lang?, reminded? }    (langue des rappels, « relancé »)
+ *   action 'settings' : { termDays }            (délai d'une dette sans échéance, palier patron)
  * Tout se lit dans les carnets existants (ardoise, notes boutique) ; voir
  * functions/api/_credit-accounts.js. */
 import { json } from '../../auth/_lib.js';
-import { creditBook, customerDetail, saveSchedule, setLimit, setPrefs, validTarget } from '../_credit-accounts.js';
+import { creditBook, customerDetail, saveSchedule, setLimit, setPrefs, setTerm, validTarget } from '../_credit-accounts.js';
 import { creditReader } from './_reader.js';
 
 const fail = (e) => json({ error: (e && e.code) || 'credit-unavailable' }, 503);
@@ -36,11 +37,17 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
   if (!body || typeof body !== 'object') return json({ error: 'bad-json' }, 400);
   const action = String(body.action || '');
-  const merchant = await creditReader(request, env, String(body.merchant || '').slice(0, 64), action === 'limit' ? 'owner' : 'manager');
+  const merchant = await creditReader(request, env, String(body.merchant || '').slice(0, 64), action === 'limit' || action === 'settings' ? 'owner' : 'manager');
   if (!merchant) return json({ error: 'forbidden' }, 403);
+  const actor = 'dashboard';
+  if (action === 'settings') {
+    try {
+      const out = await setTerm(env, merchant, body.termDays, actor);
+      return out.error ? json({ error: out.error }, out.status || 400) : json(out, 200, noStore);
+    } catch (e) { return fail(e); }
+  }
   const source = String(body.source || ''), key = String(body.customer || '');
   if (!validTarget(source, key)) return json({ error: 'bad-customer' }, 400);
-  const actor = 'dashboard';
   try {
     let out;
     if (action === 'schedule') out = await saveSchedule(env, merchant, source, key, body, actor);
