@@ -427,6 +427,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       box-shadow: var(--shadow-3);
       position: relative;
       overflow: hidden;
+      /* La fiche de table attend hors champ à droite (translateX 100 %) : avec
+         `hidden`, un focus ou un clic pendant sa glissade faisait défiler .app
+         de toute sa largeur, et l'écran du serveur partait de côté. `clip`
+         coupe pareil mais ne défile jamais. */
+      overflow: clip;
     }
 
     /* Mobile: fill viewport, no frame */

@@ -25,12 +25,12 @@ const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ 
 try {
   await S.run('ouvrir une table sur un réseau qui avale la réponse', async (t) => {
     const page = await h.openWaiter(t);
-    await page.click('.table-card[data-table="4"]');
+    await h.tap(page, '.table-card[data-table="4"]');
     await page.waitForSelector('#nt-confirm', { visible: true });
     await h.sleep(400);
     t.step('la réponse ne revient pas');
     h.hold('POST /api/order/queue');
-    await page.click('#nt-confirm');
+    await h.tap(page, '#nt-confirm');
     await h.sleep(300);
     check(await page.evaluate(() => document.getElementById('nt-confirm').disabled), 'le bouton se verrouille le temps de l’aller-retour');
     await page.waitForFunction(() => !document.getElementById('nt-confirm').disabled, { timeout: 20000 }).catch(() => {});
@@ -40,7 +40,7 @@ try {
     await h.sleep(500);
 
     t.step('le réseau revient, il retape');
-    await page.click('#nt-confirm');
+    await h.tap(page, '#nt-confirm');
     await page.waitForFunction(() => document.getElementById('screen-table')?.classList.contains('is-active'), { timeout: 10000 }).catch(() => {});
     check(await page.evaluate(() => document.getElementById('screen-table')?.classList.contains('is-active')), 'la table s’ouvre au second essai');
     check(h.db.openSessions().filter((x) => x.table_no === '4').length === 1, 'une seule visite ouverte au serveur, malgré la requête retenue');
