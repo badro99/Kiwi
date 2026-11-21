@@ -1,7 +1,7 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=229';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=230';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=144';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=144';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=145';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=145';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
@@ -23,15 +23,21 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
   }
 
   /* Chaque toucher (cocher une pièce, choisir un motif, changer la quantité)
-     redessine toute la page : le conteneur qui défile était remplacé et la
-     vendeuse remontait en haut, loin de la pièce qu'elle venait de toucher
-     (Vogue, 21 nov. 2026). On garde la position ; seul un changement de jour
-     repart du haut. */
-  const RET_SCROLLERS = ['.mz-ret', '.mz-ret-scroll'];
+     redessine la page, et la vendeuse remontait en haut, loin de la pièce
+     qu'elle venait de toucher (Vogue, 21 nov. 2026). Remettre scrollTop sur un
+     conteneur tout neuf suffisait sur ordinateur, pas sur l'iPad : Safari iOS
+     ignore la position posée sur un défileur créé dans la même tâche. Le
+     défileur .mz-ret n'est donc plus jamais remplacé : seul son contenu l'est,
+     et la position reste d'elle-même. Ouvrir la page ou changer de jour repart
+     du haut (opts.top). */
   function renderEchanges(opts) {
     const panel = $('[data-mz-panel="echanges"]', root);
-    const keepScroll = opts && opts.top ? RET_SCROLLERS.map(() => 0)
-      : RET_SCROLLERS.map((sel) => { const el = $(sel, panel); return el ? el.scrollTop : 0; });
+    const top = !!(opts && opts.top);
+    let box = $(':scope > .mz-ret', panel);
+    if (!box) { panel.innerHTML = '<div class="mz-ret mz-page"></div>'; box = $(':scope > .mz-ret', panel); }
+    const keep = top ? 0 : box.scrollTop;
+    const oldInner = $('.mz-ret-scroll', box);
+    const keepInner = top || !oldInner ? 0 : oldInner.scrollTop;   /* ancien habillage : c'est lui qui défile */
     const q = state.retQuery;
     /* Une vente sortie des livres ne se retourne pas : elle n'a plus eu lieu, sa
        marchandise est déjà revenue en stock, et l'échanger créerait un avoir
@@ -42,8 +48,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
     if (state.retDate < oldestKey || state.retDate > todayKey) state.retDate = todayKey;
     const hits = SALES.filter((s) => !s.voided && dateKey(s.at) === state.retDate && saleMatches(s, q));
     const ret = state.ret;
-    panel.innerHTML = `
-      <div class="mz-ret mz-page">
+    box.innerHTML = `
         <header class="mz-head">
           <div><h1>Retours, remboursements &amp; avoirs</h1><div class="mz-head-sub">Avoir boutique ou remboursement sur le moyen d’origine · remboursement protégé par un responsable</div></div>
           <div class="mz-search"><i data-lucide="search"></i>
@@ -70,9 +75,14 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
             /* Rien tapé encore : une boutique sans vente du jour ouvrait cette page
                sur « Rien pour «  » », un échec de recherche que personne n'a lancée. */
             : `<div class="mz-empty">Scannez le ticket de la cliente, ou tapez son numéro de téléphone.</div>`)}
-        </div></div>
-      </div>`;
-    RET_SCROLLERS.forEach((sel, i) => { const el = $(sel, panel); if (el && keepScroll[i]) el.scrollTop = keepScroll[i]; });
+        </div></div>`;
+    const inner = $('.mz-ret-scroll', box);
+    const settle = () => {
+      if (Math.abs(box.scrollTop - keep) > 1) box.scrollTop = keep;
+      if (inner && Math.abs(inner.scrollTop - keepInner) > 1) inner.scrollTop = keepInner;
+    };
+    settle();
+    requestAnimationFrame(settle);
     $('#mz-ret-q', panel).oninput = (e) => {
       state.retQuery = e.target.value;
       renderEchanges(); icons();
