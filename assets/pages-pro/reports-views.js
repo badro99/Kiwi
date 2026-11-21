@@ -20,10 +20,10 @@
   const minus = (t) => String(t).replace(/^-/, '\u2212');
   const mad = (c) => (c == null ? '–' : minus(fmt(Math.round(Number(c) || 0) / 100, Math.abs(Math.round(c)) % 100 ? 2 : 0)) + ' ' + CUR());
   const mad0 = (c) => (c == null ? '–' : minus(fmt(Math.round((Number(c) || 0) / 100))) + ' ' + CUR());
-  const pctTxt = (p) => (p == null ? '–' : fmt(Math.round(p * 10) / 10, Math.round(p * 10) % 10 ? 1 : 0) + ' %');
+  const pctTxt = (p) => (p == null ? '–' : minus(fmt(Math.round(p * 10) / 10, Math.round(p * 10) % 10 ? 1 : 0)) + ' %');
   /* Une quantité : entière telle quelle, sinon au dixième (ou au centième pour
      un poids comme 0,25), jamais de zéro inutile. */
-  const qtyTxt = (q) => { const r = Math.round(Number(q || 0) * 100) / 100; return fmt(r, Number.isInteger(r) ? 0 : Number.isInteger(r * 10) ? 1 : 2); };
+  const qtyTxt = (q) => { const r = Math.round(Number(q || 0) * 100) / 100; return minus(fmt(r, Number.isInteger(r) ? 0 : Number.isInteger(r * 10) ? 1 : 2)); };
   const returnedTxt = (q) => {
     const r = Math.round(Number(q || 0) * 10) / 10, n = qtyTxt(r);
     return L(`${n} rendu${r >= 2 ? 's' : ''}`, `${n} returned`, `أُرجع منه ${n}`);
@@ -159,7 +159,7 @@
 .rp-skel{height:120px;border-radius:18px;background:linear-gradient(90deg,var(--n-100,rgba(10,15,13,.05)),var(--n-50,rgba(10,15,13,.02)),var(--n-100,rgba(10,15,13,.05)));background-size:200% 100%;animation:rp-sk 1.4s ease-in-out infinite}
 @keyframes rp-sk{to{background-position:-200% 0}}
 @media(prefers-reduced-motion:reduce){.rp-skel{animation:none}}
-@media(max-width:640px){.rp-chart text{font-size:22px}.rp-chart .tk{fill:none;stroke:var(--ink,#0A0F0D);stroke-width:1.5;stroke-linejoin:round;opacity:.55}
+@media(max-width:640px){.rp-table .rp-s{display:none}.rp-chart text{font-size:22px}.rp-chart .tk{fill:none;stroke:var(--ink,#0A0F0D);stroke-width:1.5;stroke-linejoin:round;opacity:.55}
 .rp-legend i.rp-tk{height:2px;border-radius:1px;vertical-align:3px;background:var(--ink,#0A0F0D);opacity:.55}
 .rp-chart .call{font-size:24px}.rp-kpi.hero{grid-column:span 1}.rp-bar{position:static}.rp-lede{padding:18px}.rp-acts{margin-inline-start:0}.rp-site{max-width:100%}}
 [dir=rtl] .rp-d .rp-i,[dir=rtl] .rp-pager .rp-i{transform:scaleX(-1)}
@@ -260,11 +260,9 @@
     return `<section class="rp-card rp-rec"><h3>${esc(L('Raccord avec le rapport journalier (Z)', 'Reconciling with the daily report (Z)', 'المطابقة مع التقرير اليومي (Z)'))}</h3>
       ${table([{ t: L('Chiffre', 'Figure', 'الرقم') }, { t: L('Montant', 'Amount', 'المبلغ'), n: 1 }], [
         row(L('Rapport journalier (Z) et accueil', 'Daily report (Z) and home page', 'التقرير اليومي (Z) والصفحة الرئيسية'), r.z),
-        row(L('Retours rendus en avoir', 'Returns given as store credit', 'مرجوعات رُدّت رصيدا للزبون'), -r.credit)],
+        `<tr>${td(esc(L('Retours rendus en avoir', 'Returns given as store credit', 'مرجوعات رُدّت رصيدا للزبون')) + (r.tickets && r.ticketsNote ? `<small>${esc(r.ticketsNote[lang()] || r.ticketsNote.fr)}</small>` : ''))}${td(esc(mad(-r.credit)), 1)}</tr>`],
         row(L('Ventes nettes du rapport', 'Net sales in this report', 'المبيعات الصافية في هذا التقرير'), r.net, 'tot'))}
-      <p class="rp-note">${esc(L('Le Z et l’accueil ne déduisent que l’argent rendu. Ce rapport déduit aussi la part rendue en avoir : elle est due au client et ne reste pas en caisse.',
-        'The Z and the home page only deduct money handed back. This report also deducts the part given as store credit: it is owed to the customer and does not stay in the till.',
-        'التقرير اليومي والصفحة الرئيسية يخصمان فقط المال الذي رُدّ للزبون. أما هذا التقرير فيخصم أيضا ما رُدّ كرصيد، لأنه دَين للزبون ولا يبقى في الصندوق.'))}</p>
+      <p class="rp-note">${esc(r.note ? (r.note[lang()] || r.note.fr) : '')}</p>
       ${withLink ? `<button type="button" class="kb ghost rp-act" data-action="rp-open" data-arg="z">${ic('receipt_long')}${esc(L('Ouvrir le rapport journalier (Z)', 'Open the daily report (Z)', 'فتح التقرير اليومي (Z)'))}</button>` : ''}</section>`;
   }
 
@@ -294,10 +292,12 @@
   }
 
   function table(head, rows, foot) {
-    return `<div class="rp-scroll"><table class="rp-table"><thead><tr>${head.map((h) => `<th${h.n ? ' class="n"' : ''}>${esc(h.t)}</th>`).join('')}</tr></thead>
+    return `<div class="rp-scroll"><table class="rp-table"><thead><tr>${head.map((h) => `<th${h.n || h.s ? ` class="${[h.n ? 'n' : '', h.s ? 'rp-s' : ''].join(' ').trim()}"` : ''}>${esc(h.t)}</th>`).join('')}</tr></thead>
       <tbody>${rows.join('')}${foot || ''}</tbody></table></div>`;
   }
-  const td = (v, n) => `<td${n ? ' class="n"' : ''}>${v}</td>`;
+  /* `s` : une colonne secondaire, repliée sur téléphone (la vente nette reste
+     à l'écran sans défilement). */
+  const td = (v, n, s) => `<td${n || s ? ` class="${[n ? 'n' : '', s ? 'rp-s' : ''].join(' ').trim()}"` : ''}>${v}</td>`;
   function pager(page, action) {
     if (!page || page.total <= page.limit) return '';
     const from = page.offset + 1, to = Math.min(page.total, page.offset + page.limit);
@@ -313,16 +313,16 @@
        leurs produits), net. Le pied raccorde la liste aux ventes nettes du
        résumé : ce qui n'a pas de détail d'article est sur sa propre ligne. */
     const head = [{ t: kind === 'products' ? L('Produit', 'Product', 'المنتج') : L('Rayon', 'Category', 'القسم') }, { t: L('Qté', 'Qty', 'الكمية'), n: 1 },
-      { t: L('Vendu', 'Sold', 'المبيع'), n: 1 }, { t: L('Retours', 'Returns', 'المرجوعات'), n: 1 },
-      { t: L('Ventes nettes', 'Net sales', 'المبيعات الصافية'), n: 1 }, { t: L('Part', 'Share', 'الحصة') }, { t: L('Évolution', 'Change', 'التطور'), n: 1 }];
+      { t: L('Vendu', 'Sold', 'المبيع'), n: 1, s: 1 }, { t: L('Retours', 'Returns', 'المرجوعات'), n: 1, s: 1 },
+      { t: L('Ventes nettes', 'Net sales', 'المبيعات الصافية'), n: 1 }, { t: L('Part', 'Share', 'الحصة'), s: 1 }, { t: L('Évolution', 'Change', 'التطور'), n: 1 }];
     if (d.showCost) head.push({ t: L('Marge', 'Margin', 'الهامش'), n: 1 });
     const rows = d.rows.map((r) => `<tr>${td(`${esc(r.name || L('Sans catégorie', 'No category', 'بدون قسم'))}${kind === 'products' && r.category ? `<small>${esc(r.category)}</small>` : ''}`)}${td(esc(qtyTxt(r.qty)), 1)}
-      ${td(esc(mad(r.sold)), 1)}${td(r.refunded ? esc(mad(r.refunded)) + (r.refundedQty ? `<small>${esc(returnedTxt(r.refundedQty))}</small>` : '') : '–', 1)}
-      ${td(esc(mad(r.net)), 1)}${td(share(r.share))}${td(delta(r.net, r.prevNet), 1)}${d.showCost ? td(r.marginPct == null ? '<small>' + esc(L('coût inconnu', 'cost unknown', 'تكلفة غير معروفة')) + '</small>' : esc(pctTxt(r.marginPct)) + `<small>${esc(mad0(r.margin))}</small>`, 1) : ''}</tr>`);
+      ${td(esc(mad(r.sold)), 1, 1)}${td(r.refunded ? esc(mad(r.refunded)) + (r.refundedQty ? `<small>${esc(returnedTxt(r.refundedQty))}</small>` : '') : '–', 1, 1)}
+      ${td(esc(mad(r.net)), 1)}${td(share(r.share), 0, 1)}${td(delta(r.net, r.prevNet), 1)}${d.showCost ? td(r.marginPct == null ? '<small>' + esc(L('coût inconnu', 'cost unknown', 'تكلفة غير معروفة')) + '</small>' : esc(pctTxt(r.marginPct)) + `<small>${esc(mad0(r.margin))}</small>`, 1) : ''}</tr>`);
     const t = d.totals || {};
-    const span = 4, tail = d.showCost ? 3 : 2;
-    const rec = t.unattributed ? `<tr class="rec"><td colspan="${span}">${esc(L('Ventes sans détail d’article et retours non rattachés', 'Sales without item detail and unlinked refunds', 'مبيعات بدون تفاصيل المنتجات ومرجوعات غير مرتبطة بتذكرتها'))}</td>${td(esc(mad(t.unattributed)), 1)}<td colspan="${tail}"></td></tr>` : '';
-    const foot = rec + `<tr class="tot"><td colspan="${span}">${esc(L('Ventes nettes du résumé', 'Summary net sales', 'المبيعات الصافية في الملخص'))}</td>${td(esc(mad(t.net)), 1)}<td></td>${td(delta(t.net, t.prevNet), 1)}${d.showCost ? '<td></td>' : ''}</tr>`;
+    const gap = '<td class="rp-s"></td><td class="rp-s"></td>';
+    const rec = t.unattributed ? `<tr class="rec"><td colspan="2">${esc(L('Ventes sans détail d’article et retours non rattachés', 'Sales without item detail and unlinked refunds', 'مبيعات بدون تفاصيل المنتجات ومرجوعات غير مرتبطة بتذكرتها'))}</td>${gap}${td(esc(mad(t.unattributed)), 1)}<td class="rp-s"></td><td></td>${d.showCost ? '<td></td>' : ''}</tr>` : '';
+    const foot = rec + `<tr class="tot"><td colspan="2">${esc(L('Ventes nettes du résumé', 'Summary net sales', 'المبيعات الصافية في الملخص'))}</td>${gap}${td(esc(mad(t.net)), 1)}<td class="rp-s"></td>${td(delta(t.net, t.prevNet), 1)}${d.showCost ? '<td></td>' : ''}</tr>`;
     return `<section class="rp-card">${table(head, rows, foot)}${pager(d.page, 'rp-page')}</section>`;
   }
 

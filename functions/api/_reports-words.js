@@ -89,6 +89,30 @@ export function frVersus(vs) {
 function each(fn) { const out = {}; for (const l of LANGS) out[l] = fn(l); return out; }
 const join2 = (a, b, lang) => (a && b ? a + (lang === 'ar' ? ' و' : lang === 'en' ? ' and ' : ' et ') + b : a || b || '');
 
+/* Le raccord avec le Z : pourquoi deux nets. Un retour rendu en avoir ne fait
+   sortir aucun argent : l'argent reste en caisse, mais il est dû au client.
+   Le Z ne le déduit pas encore, ce rapport le déduit. `tickets` : les retours
+   entièrement rendus en avoir, que le Z compte comme des ventes à 0 et que ce
+   rapport ne compte pas comme tickets. */
+export function reconcileNote(tickets) {
+  const n = Math.max(0, Math.round(Number(tickets) || 0));
+  const arCount = n === 1 ? 'منها مرجوع واحد بالرصيد، لا يُحتسب هنا كتذكرة'
+    : n === 2 ? 'منها مرجوعان بالرصيد، لا يُحتسبان هنا كتذكرتين'
+      : n <= 10 ? `منها ${n} مرجوعات بالرصيد، لا تُحتسب هنا كتذاكر` : `منها ${n} مرجوعا بالرصيد، لا تُحتسب هنا كتذاكر`;
+  return {
+    note: {
+      fr: 'Le Z et l’accueil ne déduisent que l’argent rendu. Ce rapport déduit aussi les retours rendus en avoir : cet argent reste en caisse, mais il est dû au client.',
+      en: 'The Z and the home page only deduct money handed back. This report also deducts returns given as store credit: that money stays in the till, but it is owed to the customer.',
+      ar: 'التقرير اليومي (Z) والصفحة الرئيسية لا يخصمان إلا المال الذي رُدّ للزبون. أما هذا التقرير فيخصم أيضا المرجوعات التي رُدّت رصيدا: هذا المال يبقى في الصندوق، لكنه دَين عليك للزبون.',
+    },
+    ticketsNote: n ? {
+      fr: n === 1 ? 'dont 1 retour en avoir, non compté comme ticket ici' : `dont ${n} retours en avoir, non comptés comme tickets ici`,
+      en: n === 1 ? 'including 1 store-credit return, not counted as a ticket here' : `including ${n} store-credit returns, not counted as tickets here`,
+      ar: arCount,
+    } : null,
+  };
+}
+
 /* Une seule journée : l'heure de pointe, après la tendance. */
 function peak(d, lang) {
   if (!d.peakHour) return '';

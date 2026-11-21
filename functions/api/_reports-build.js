@@ -5,13 +5,13 @@
 
 import { hourClock, weekdayOf } from './_reports-period.js';
 import { dayVat } from './_rules-day-vat.js';
-import { daypart, deltaPct, summarySentence, rankingSentence, heatmapSentence, vatSentence } from './_reports-words.js';
+import { daypart, deltaPct, reconcileNote, summarySentence, rankingSentence, heatmapSentence, vatSentence } from './_reports-words.js';
 
 const r0 = (n) => Math.round(Number(n) || 0);
 const num = (n) => Number(n) || 0;
 
 function emptyK() {
-  return { gross: 0, discounts: 0, refunds: 0, refundCount: 0, creditRefunds: 0, net: 0, sales: 0, tickets: 0, basket: 0, tips: 0,
+  return { gross: 0, discounts: 0, refunds: 0, refundCount: 0, creditRefunds: 0, creditTickets: 0, net: 0, sales: 0, tickets: 0, basket: 0, tips: 0,
     items: 0, itemsPerTicket: null, detailed: 0, knownClients: 0, cogs: null, costCoverage: null, margin: null, marginPct: null, vat: null };
 }
 
@@ -21,7 +21,7 @@ export function kpis(hours, lineTotals, pd, site, showCost) {
   const k = emptyK();
   for (const h of hours) {
     if (h.pd !== pd || (site != null && h.site !== site)) continue;
-    k.tickets += num(h.n); k.sales += num(h.pos); k.refundCount += num(h.nref); k.refunds += num(h.neg); k.creditRefunds += num(h.credit);
+    k.tickets += num(h.n); k.sales += num(h.pos); k.refundCount += num(h.nref); k.refunds += num(h.neg); k.creditRefunds += num(h.credit); k.creditTickets += num(h.zt);
     k.discounts += num(h.disc); k.tips += num(h.tips); k.knownClients += num(h.known); k.detailed += num(h.detailed);
   }
   k.gross = k.sales + k.discounts;
@@ -129,7 +129,9 @@ export function buildSummary(ctx, [hours, lineTotals, drivers]) {
      déduisent que l'argent rendu, pas la part rendue en avoir. Leur net =
      ce net + les retours rendus en avoir, au centime (tools/reports-test.mjs
      le vérifie avec leur propre fonction). Rien à raccorder sans avoir. */
-  const reconcile = cur.creditRefunds > 0 ? { z: cur.net + cur.creditRefunds, credit: cur.creditRefunds, net: cur.net } : null;
+  const reconcile = cur.creditRefunds > 0
+    ? Object.assign({ z: cur.net + cur.creditRefunds, credit: cur.creditRefunds, net: cur.net, tickets: cur.creditTickets }, reconcileNote(cur.creditTickets))
+    : null;
   return { totals: { cur, prev, change: deltaPct(cur.net, prev.net) }, series, hourly, peakHour, reconcile, drivers: d.drivers, slots: d.slots,
     perSite, headline: summarySentence(d) };
 }

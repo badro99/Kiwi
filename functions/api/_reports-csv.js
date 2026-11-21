@@ -94,7 +94,8 @@ export function reportCsv(name, data, lang, labels) {
     const series = data.series.map((s) => [s.day, mad(s.net), s.prevDay, mad(s.prevNet), pc(deltaOf(s.net, s.prevNet))]);
     /* Le raccord avec le Z, sous les indicateurs, quand la période a des retours rendus en avoir. */
     const rc = data.reconcile;
-    const rec = rc ? [[], [h.zNet, mad(rc.z)], [h.creditRefunds, mad(-rc.credit)], [h.reportNet, mad(rc.net)]] : [];
+    const pickL = (t) => (t ? t[lang] || t.fr : '');
+    const rec = rc ? [[], [h.zNet, mad(rc.z)], [h.creditRefunds, mad(-rc.credit), pickL(rc.ticketsNote)], [h.reportNet, mad(rc.net)], [pickL(rc.note)]] : [];
     if (data.hourly) {
       const hours = data.hourly.map((x) => [String(x.hour).padStart(2, '0') + ':00', mad(x.net), { n: String(x.tickets) }, mad(x.prevNet), pc(deltaOf(x.net, x.prevNet))]);
       return toCsv(head, metricRows(data.totals.cur, data.totals.prev, lang).concat(rec, [[]], [[h.hour, h.net, h.tickets, h.prevNet, h.change]], hours));

@@ -31,6 +31,7 @@ import { summarySentence, rankingSentence } from '../functions/api/_reports-word
 import { routeMinTier } from '../functions/auth/_session-tier.js';
 import { businessBoundary } from '../functions/api/_business-day.js';
 import { summarize } from '../functions/api/sales-summary.js';
+import { reconcileNote } from '../functions/api/_reports-words.js';
 import { baseCte, Q, LINES_CTE } from '../functions/api/_reports-sql.js';
 import { listMigrations, MIGRATIONS_DIR } from './d1-migrations.mjs';
 
@@ -207,6 +208,21 @@ r = await get(`merchant=atlas-casa&report=summary&${day(D2)}`, owner);
 const rc = r.body.reconcile;
 check(rc && rc.z === zNet(D2, D2) && rc.credit === 3000 && rc.z - rc.credit === rc.net && rc.net === k2.net,
   'raccord : Z et accueil (70 MAD, leur propre calcul) − retours en avoir (30 MAD) = ventes nettes du rapport (40 MAD), au centime', [rc, zNet(D2, D2)]);
+/* Le sens de la phrase : l'argent d'un retour en avoir RESTE en caisse et il est dû au client ; jamais « ne reste pas ». */
+const NOTE = { fr: [/reste en caisse/, /dû au client/, /ne reste pas|sort de la caisse|quitte la caisse/],
+  en: [/stays in the till/, /owed to the customer/, /does not stay|leaves the till|not in the till/],
+  ar: [/يبقى في الصندوق/, /دَين/, /لا يبقى|ولا يبقى|يخرج من الصندوق/] };
+for (const l of ['fr', 'en', 'ar']) {
+  check(rc.note && NOTE[l][0].test(rc.note[l]) && NOTE[l][1].test(rc.note[l]) && !NOTE[l][2].test(rc.note[l]),
+    `raccord (${l}) : l’argent reste en caisse et il est dû au client ; la phrase ne dit plus que la caisse est à découvert`, rc.note && rc.note[l]);
+}
+const zDays = (() => { const w = windowFor(D2, D2, null, 'Africa/Casablanca', 5);
+  return summarize(sql.prepare('SELECT ts, amount, amount_cents, method, payment_parts, tip_cents, channel, label FROM sales WHERE merchant = ? AND ts >= ? AND ts < ? AND void_ts IS NULL').all('atlas-casa', w.from, w.to), w.from, w.to, 5, 'Africa/Casablanca').days; })();
+check(rc.tickets === 1 && zDays.reduce((a, x) => a + x.count, 0) - k2.tickets === rc.tickets
+  && rc.ticketsNote.fr === 'dont 1 retour en avoir, non compté comme ticket ici' && /not counted as a ticket here/.test(rc.ticketsNote.en) && /لا يُحتسب هنا كتذكرة/.test(rc.ticketsNote.ar),
+  'la carte dit combien de retours en avoir le Z compte comme tickets et pas ce rapport (1)', [rc.tickets, rc.ticketsNote]);
+check(/dont 3 retours en avoir, non comptés comme tickets ici/.test(reconcileNote(3).ticketsNote.fr) && /منها مرجوعان/.test(reconcileNote(2).ticketsNote.ar) && reconcileNote(0).ticketsNote === null,
+  'accord du pluriel dans les trois langues');
 r = await get(`merchant=atlas-casa&report=summary&from=${D}&to=${D2}`, owner);
 check(r.body.reconcile && r.body.reconcile.z === zNet(D, D2) && r.body.reconcile.z - r.body.reconcile.credit === r.body.totals.cur.net,
   'sur trois journées aussi, X − Y = net au centime', [r.body.reconcile, zNet(D, D2)]);
@@ -215,8 +231,12 @@ check((await get(`merchant=atlas-casa&report=summary&${day(D)}`, owner)).body.re
 r = await get(`merchant=atlas-casa&report=summary&${day(D2)}&format=csv`, owner);
 check(r.text.includes('"Rapport journalier (Z) et accueil (MAD)";"70,00"') && r.text.includes('"Retours rendus en avoir (MAD)";"-30,00"') && r.text.includes('"Ventes nettes du rapport (MAD)";"40,00"'),
   'le CSV du résumé porte les trois lignes du raccord', r.text.slice(0, 900));
+check(r.text.includes('cet argent reste en caisse, mais il est dû au client') && r.text.includes('dont 1 retour en avoir') && !/ne reste pas en caisse/.test(r.text),
+  'le CSV porte la phrase corrigée et le nombre de retours en avoir');
 r = await get(`merchant=atlas-casa&report=summary&${day(D2)}&format=csv&lang=ar`, owner);
-check(r.text.includes('مرجوعات رُدّت رصيدا للزبون (درهم)'), 'en arabe aussi');
+check(r.text.includes('مرجوعات رُدّت رصيدا للزبون (درهم)') && r.text.includes('يبقى في الصندوق') && !/ولا يبقى/.test(r.text), 'en arabe aussi, phrase corrigée');
+r = await get(`merchant=atlas-casa&report=summary&${day(D2)}&format=csv&lang=en`, owner);
+check(r.text.includes('that money stays in the till, but it is owed to the customer'), 'en anglais aussi');
 r = await get(`merchant=atlas-casa&report=staff&${day(D2)}`, owner);
 check(r.body.rows.reduce((a, x) => a + x.refunds, 0) === 3500 && r.body.rows.reduce((a, x) => a + x.tickets, 0) === 2, 'vendeurs : deux tickets, 35 MAD rendus', r.body.rows);
 r = await get(`merchant=atlas-casa&report=products&${day(D2)}&format=csv`, owner);
@@ -396,15 +416,22 @@ console.log('\nLa démo et l’impression');
   check(Demo.csv(build('products', { csv: true }), 'fr').startsWith(BOM), 'démo : le CSV est fait sur place, BOM compris');
   check(/typeof window\.KiwiEnv\?\.isReal === 'function' && !window\.KiwiEnv\.isReal\(\)/.test(hub), 'les chiffres de démo ne s’affichent que si KiwiEnv dit « pas réel » (jamais sans KiwiEnv)');
   const page = Views.printable('Rapport', 'Café Atlas', '<p>corps</p>', dt, { summary: dt, vat: build('vat', { preset: 'aujourdhui' }) });
-  const page2 = Views.printable('Rapport', 'Atlas', '', dt, { summary: Object.assign({}, dt, { reconcile: { z: 7000, credit: 3000, net: 4000 } }), vat: null });
-  check(/Raccord avec le rapport journalier/.test(page2) && /Retours rendus en avoir/.test(page2), 'la page de garde imprimée porte le raccord avec le Z');
+  const page2 = Views.printable('Rapport', 'Atlas', '', dt, { summary: Object.assign({}, dt, { reconcile: Object.assign({ z: 7000, credit: 3000, net: 4000, tickets: 1 }, reconcileNote(1)) }), vat: null });
+  check(/Raccord avec le rapport journalier/.test(page2) && /Retours rendus en avoir/.test(page2) && /reste en caisse, mais il est dû au client/.test(page2), 'la page de garde imprimée porte le raccord avec le Z');
   check(/Synthèse pour le comptable/.test(page) && /TVA par taux/.test(page) && page.indexOf('Synthèse') < page.indexOf('corps'), 'l’impression commence par une page de garde pour le comptable (totaux, TVA par taux)');
   const rk = Views.ranking({ showCost: false, rows: [{ name: 'Pull', category: 'Mode', qty: 1.5, sold: 9000, refunded: 1500, refundedQty: 2.5, net: 7500, prevNet: 0, share: 100 },
     { name: 'Robe', category: 'Mode', qty: 1, sold: 3000, refunded: 1000, refundedQty: 1, net: 2000, prevNet: 0, share: 20 }], totals: { net: 9500 }, page: { offset: 0, limit: 50, total: 2 } }, 'products');
   check(/2,5 rendus/.test(rk) && /1 rendu</.test(rk) && !/rendu\(s\)|2,50/.test(rk), 'quantité rendue : « 2,5 rendus », « 1 rendu », jamais « 2,50 rendu(s) »');
   const sum2 = Demo.build({ report: 'summary', preset: 'aujourdhui', site: 'cafeAtlas', anchor: 'cafeAtlas' }, at0);
   check(/<polyline class="tk"/.test(Views.summary(sum2)), 'la courbe à l’heure porte les tickets de chaque heure en fine ligne');
-  const recHtml = Views.summary(Object.assign({}, sum2, { reconcile: { z: 7000, credit: 3000, net: 4000 } }));
+  const recData = Object.assign({ z: 7000, credit: 3000, net: 4000, tickets: 1 }, reconcileNote(1));
+  const recHtml = Views.summary(Object.assign({}, sum2, { reconcile: recData }));
+  check(/cet argent reste en caisse, mais il est dû au client/.test(recHtml) && /dont 1 retour en avoir/.test(recHtml)
+    && !/ne reste pas en caisse/.test(fs.readFileSync(path.join(ROOT, 'assets/pages-pro/reports-views.js'), 'utf8') + recHtml), 'la carte du résumé dit la phrase corrigée, l’ancienne a disparu du code');
+  const neg = Views.ranking({ showCost: false, rows: [{ name: 'X', category: '', qty: -0.5, sold: 0, refunded: 500, refundedQty: 0.5, net: -500, prevNet: 0, share: -0.9 }], totals: { net: -500 }, page: { offset: 0, limit: 50, total: 1 } }, 'products');
+  check(/\u22120,5</.test(neg) && /\u22120,9/.test(neg) && !/>-0,5|-0,9/.test(neg), 'quantités et parts négatives avec le vrai signe moins');
+  check((neg.match(/class="n rp-s"/g) || []).length === 4 && /<th>Produit<\/th>/.test(neg) && /\.rp-table \.rp-s\{display:none\}/.test(fs.readFileSync(path.join(ROOT, 'assets/pages-pro/reports-views.js'), 'utf8')),
+    'sur téléphone, Vendu, Retours et Part se replient : la vente nette reste à l’écran');
   check(/Raccord avec le rapport journalier/.test(recHtml) && /data-action="rp-open" data-arg="z"/.test(recHtml), 'le résumé affiche le raccord et ouvre le Z d’un clic');
   const lede = Views.lede(dt, 'comparé à', { title: 'Résumé' });
   check(/href="https:\/\/wa\.me\/\?text=/.test(lede) && !/api\.whatsapp|graph\.facebook/.test(lede), 'la phrase se partage en brouillon wa.me (rien n’est envoyé, aucun service payant)');
