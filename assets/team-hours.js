@@ -1,5 +1,5 @@
 import { createCorrections } from './planning/corrections.js?v=3';
-import { createPayrollView } from './planning/payroll-view.js?v=17';
+import { createPayrollView } from './planning/payroll-view.js?v=22';
 import { createOptimiser } from './planning/optimiser.js?v=5';
 import { createCsvImport } from './planning/csv-import.js?v=5';
 import { createShiftEditor } from './planning/shift-editor.js?v=5';
@@ -74,6 +74,10 @@ import { createShiftEditor } from './planning/shift-editor.js?v=5';
   function payTiles(...args) { return payrollView.payTiles(...args); }
   function payrollAccess(...args) { return payrollView.payrollAccess(...args); }
   function renderPayrollBody(...args) { return payrollView.renderPayrollBody(...args); }
+  function renderCommissionsPane(...args) { return payrollView.renderCommissionsPane(...args); }
+  function commissionsOn(...args) { return payrollView.commissionsOn(...args); }
+  function commissionsLabel(...args) { return payrollView.commissionsLabel(...args); }
+  function forgetCommissions(...args) { return payrollView.forgetCommissions(...args); }
   function fairScheduleCopy(...args) { return optimiser.fairScheduleCopy(...args); }
   function optimizationCopy(...args) { return optimiser.optimizationCopy(...args); }
   function closeShiftPop(...args) { return shiftEditor.closeShiftPop(...args); }
@@ -765,6 +769,7 @@ import { createShiftEditor } from './planning/shift-editor.js?v=5';
   /* ═══════════════ CE QUE team.js APPELLE ═══════════════ */
   Object.assign(core.hours, {
     renderHoursPane, closeShiftPop, payrollAccess, renderPayrollBody,
+    renderCommissionsPane, commissionsOn, commissionsLabel, forgetCommissions,   // Équipe › Commissions
     isShiftPopOpen: () => shiftEditor.isShiftPopOpen(),
   });
 })();

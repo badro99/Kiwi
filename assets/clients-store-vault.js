@@ -412,7 +412,7 @@
    * rewards for the same customer. */
   var fidelityStore = KiwiStore.define('fidelity', {
     blank: function () { return null; },
-    cloud: true,
+    cloud: true, serverWins: true, // une caisse au vieux programme ne le réimpose plus (cloud-doc.js › serverWins)
     // Un programme déduit ne compte pas comme un réglage : voir DEFAULT_CFG.
     isEmpty: function (d) { return !d || !d.model || !!d.auto; },
   });

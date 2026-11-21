@@ -1,7 +1,7 @@
 export { startOfDay, startOfWeek, nextOrderNumber } from './_guest-clock.js';
 export { normTable, tableKey, planTableKey, floorPlanTables, KNOWN_TABLES_DAYS, servedTables } from './_guest-tables.js';
-export { newSessionId, SESSION_ID, DESK_FRESH_MS, deskTouch, deskOpen } from './_guest-sessions.js';
-export { hoursOpenAt, hoursClosed } from './_guest-hours.js';
+export { newSessionId, SESSION_ID, DESK_FRESH_MS, DESK_AWAY_MS, deskTouch, deskAway, deskOpen } from './_guest-sessions.js';
+export { hoursOpenAt, hoursOpenNow, hoursClosed } from './_guest-hours.js';
 export { priceOrder } from './_guest-pricing.js';
 import { ZONE_LAWS, effectiveZone } from '../_zone-law.js';
 import { DateTimeFormat } from '../_cached-clock.js';

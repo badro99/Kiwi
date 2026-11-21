@@ -37,7 +37,7 @@ ok(/gateway:\s*\{\s*id:\s*'kiwi',\s*cacheTtl:\s*0\s*\}/.test(runSrc), '_run.js c
 ok(/from '\.\/_run\.js'/.test(askSrc) && !/gateway:\s*\{/.test(askSrc), 'ask.js imports the shared gateway runner (no local copy)');
 
 ok(askModels.MODEL === '@cf/openai/gpt-oss-120b', 'ask.js primary model is @cf/openai/gpt-oss-120b');
-ok(askModels.FALLBACK_MODEL === '@cf/qwen/qwen3-30b-a3b-fp8', 'ask.js fallback model is @cf/qwen/qwen3-30b-a3b-fp8');
+ok(askModels.FALLBACK_MODEL === '@cf/google/gemma-4-26b-a4b-it', 'ask.js fallback model is Gemma 4 (Qwen 3 retired by Cloudflare on 20 Nov 2026, 410)');
 /* gpt-oss without reasoning_effort spends max_tokens thinking and returns
  * content:null (observed 2026-08-19). The payload MUST carry it. */
 ok(/reasoning_effort:\s*REASONING_EFFORT/.test(askSrc) && /const REASONING_EFFORT = 'low'/.test(askSrc), 'ask.js payload carries reasoning_effort: low');
@@ -52,8 +52,8 @@ ok(!!askQuotaCall, 'ask.js calls quotaOk with kind "ask"');
 const invSrc = coreTestSource.readFileSync(path.join(ROOT, 'functions/api/ai/invoice.js'), 'utf8');
 
 ok(/from '\.\/_run\.js'/.test(invSrc) && !/gateway:\s*\{/.test(invSrc), 'invoice.js imports the shared gateway runner (no local copy)');
-ok(invoiceModels.MODEL === '@cf/qwen/qwen3-30b-a3b-fp8', 'invoice.js primary model stays @cf/qwen/qwen3-30b-a3b-fp8');
-ok(invoiceModels.MODEL === '@cf/qwen/qwen3-30b-a3b-fp8' && invoiceModels.FALLBACK_MODEL === '@cf/google/gemma-4-26b-a4b-it', 'invoice.js: Qwen primary, Gemma 4 fallback (glm-4.7-flash scored 3/21 on 18 Nov 2026)');
+ok(invoiceModels.MODEL === '@cf/google/gemma-4-26b-a4b-it', 'invoice.js text primary is Gemma 4 (Qwen 3 retired on 20 Nov 2026)');
+ok(invoiceModels.MODEL === '@cf/google/gemma-4-26b-a4b-it' && invoiceModels.FALLBACK_MODEL === '@cf/deepseek-ai/deepseek-v4.1-flash-1017', 'invoice.js: Gemma 4 primary, DeepSeek V4.1 Flash fallback (glm-4.7-flash scored 3/21 on 18 Nov 2026)');
 
 // ── 2b. Every model id in every AI route is Cloudflare-hosted ─────────────────
 /* A third-party id (openai/, anthropic/, google/, x-ai/…) through the same

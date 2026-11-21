@@ -1,25 +1,25 @@
 {
-  "sha256": "7e30815db6e1c6005e7ac3d8ab0c14dd4670746782d8d19d848cd16f1fd16a8a",
+  "sha256": "4e21af3e4286bcdbf860443b2da3a5c3f0e03d039f796ace87d2911dd8ffbc80",
   "segments": [
     {
       "name": "locale",
       "start": 1977,
-      "end": 41013,
-      "sha256": "5c89174dfdb13b3ff80560dd7edb6b62f13254801100ecdcf362ef5e45862888",
+      "end": 41254,
+      "sha256": "c91060a8edb9919dc4107402ce45a4f27d8c36c82d5f7a428a1c1f5cef1a2d5a",
       "relay": "  /* team-part:locale */\n  function t(...args) { return teamProfiles.t(...args); }\n  function jobName(...args) { return teamProfiles.jobName(...args); }\n  /* /team-part:locale */\n\n"
     },
     {
       "name": "profiles",
-      "start": 112809,
-      "end": 122728,
+      "start": 113369,
+      "end": 123288,
       "sha256": "211f94f7de5bb7c0bc1892134f5f017c794ced09c0875b18f87dfb924544f32b",
       "relay": "  /* team-part:profiles */\n  function renderProfilesPane(...args) { return teamProfiles.renderProfilesPane(...args); }\n  function renderMembersTable(...args) { return teamProfiles.renderMembersTable(...args); }\n  /* /team-part:profiles */\n\n"
     },
     {
       "name": "editor",
-      "start": 125764,
-      "end": 173071,
-      "sha256": "fd7deb36d0d7b5177d6ee49fca287167b2e0866bddad47057eb47d9a488d69f8",
+      "start": 126517,
+      "end": 174920,
+      "sha256": "924fcd261dd8da3bf42124fb2ca392b32da28a818ea22d74ec93d960a36346a3",
       "relay": "  /* team-part:editor */\n  function langLabel(...args) { return teamProfiles.langLabel(...args); }\n  function contractLabel(...args) { return teamProfiles.contractLabel(...args); }\n  function rolePreview(...args) { return teamProfiles.rolePreview(...args); }\n  function openMemberModal(...args) { return teamProfiles.openMemberModal(...args); }\n  /* /team-part:editor */\n\n"
     }
   ],
@@ -27,181 +27,181 @@
     {
       "name": "STR",
       "start": 2114,
-      "end": 32350,
-      "sha256": "d39626a82cdf74d41599e443201aefd3fd5d66d8c3070a62f4d6046efc94b206"
+      "end": 32591,
+      "sha256": "2d97ec3bb2e217fc988cf78d0240b54708dc1e8f905caf5e8d83a6b6a66ca2af"
     },
     {
       "name": "t",
-      "start": 32351,
-      "end": 32393,
+      "start": 32592,
+      "end": 32634,
       "sha256": "514be2f6c77efb7c86fbfe8ff02f3202a9c9e640e9dcebca558f5d0aed936f34"
     },
     {
       "name": "JOB_FN",
-      "start": 32837,
-      "end": 38272,
+      "start": 33078,
+      "end": 38513,
       "sha256": "9bcc8c9a054bd902221318099222a89751a8bf0291cb60e35f2a50e3845c682c"
     },
     {
       "name": "JOB_DEPT",
-      "start": 38273,
-      "end": 40712,
+      "start": 38514,
+      "end": 40953,
       "sha256": "33f87f440d24d6507fbc199ab499c7429387d1e083bfde7173ee2b6bf9fed161"
     },
     {
       "name": "jobName",
-      "start": 40713,
-      "end": 41011,
+      "start": 40954,
+      "end": 41252,
       "sha256": "cfee26fcefda0007ea3bcd1e3ae5381d84ef7634d988604b11c6b075c96f0600"
     },
     {
       "name": "renderProfilesPane",
-      "start": 112809,
-      "end": 118276,
+      "start": 113369,
+      "end": 118836,
       "sha256": "c1dd0b97ddfb8da519fde63cbd89dac2fd51f78feb0704c8a8180e428c51dccf"
     },
     {
       "name": "renderMembersTable",
-      "start": 118278,
-      "end": 122726,
+      "start": 118838,
+      "end": 123286,
       "sha256": "bae1aa47cb900e97d4fe39615aa3dff72efc6c19bcf18b5b3ec84bc31bf777aa"
     },
     {
       "name": "LANG_KEY",
-      "start": 126760,
-      "end": 126909,
+      "start": 127513,
+      "end": 127662,
       "sha256": "830f33592d194ffb1ab9fc47f4ee6775a933bac5e99a9421d6ed912bde66ef53"
     },
     {
       "name": "CONTRACT_KEY",
-      "start": 126910,
-      "end": 127032,
+      "start": 127663,
+      "end": 127785,
       "sha256": "a75cf5499629d5a34ed12a1909b2c13a47e102ca8e676febc768cbe71f207c7b"
     },
     {
       "name": "langLabel",
-      "start": 127033,
-      "end": 127100,
+      "start": 127786,
+      "end": 127853,
       "sha256": "ab3af5e94b478f097767468c982f3c8338240383ebfd2c6e3f6f631af1eb2efd"
     },
     {
       "name": "contractLabel",
-      "start": 127101,
-      "end": 127180,
+      "start": 127854,
+      "end": 127933,
       "sha256": "bd2a48c976bca5d0ac9313f11c87a8770c0438d0adccc46e379ce7d3c3254744"
     },
     {
       "name": "rolePreview",
-      "start": 127181,
-      "end": 127302,
+      "start": 127934,
+      "end": 128055,
       "sha256": "ad2ad6cb32630ff839e58c23e18e78beecfc269860228db5ad6912f4fd16182a"
     },
     {
       "name": "edInput",
-      "start": 127303,
-      "end": 127520,
+      "start": 128056,
+      "end": 128273,
       "sha256": "f2982170904ad1ded8d41847c0e4b2756658951c62ab7d96dbc6e34ce09058ea"
     },
     {
       "name": "edField",
-      "start": 127521,
-      "end": 127958,
+      "start": 128274,
+      "end": 128711,
       "sha256": "0f0de029c5999fa1b1dc6ef60d40d6abcb731c445d9611f0f9ab7d99530104f2"
     },
     {
       "name": "edError",
-      "start": 128023,
-      "end": 129324,
+      "start": 128776,
+      "end": 130077,
       "sha256": "f0b587cb1f4552b41aa631f080e72b09a32244874f162aaad9af05de1a50b7db"
     },
     {
       "name": "edPreview",
-      "start": 129325,
-      "end": 130252,
+      "start": 130078,
+      "end": 131005,
       "sha256": "5b7da5373e75f629ba75246099baebda380ffbcf28dee0c9fa1fc9a1a063716f"
     },
     {
       "name": "PROFILE_CSS",
-      "start": 130382,
-      "end": 152841,
-      "sha256": "b48738b1d42f339af64601649cea868ac5d24fcd1233d83536c64549b5591780"
+      "start": 131135,
+      "end": 153960,
+      "sha256": "b6b7e97613bd5ac291f237ab59aef2c64882537d93e769b4f9f4ef3f9e255172"
     },
     {
       "name": "EDITOR_CSS",
-      "start": 133581,
-      "end": 152841,
-      "sha256": "660975fa903eea13b50855b51b954f416751f64ea381674fda5e768d559fba67"
+      "start": 134334,
+      "end": 153960,
+      "sha256": "a49102ed22f5d975347a474f12c2d6f134bca4048205f52276a1d147accce886"
     },
     {
       "name": "openMemberModal",
-      "start": 141720,
-      "end": 152841,
-      "sha256": "b753fc22834f2a7dbb4a42209aa87879d95c19e46017df08e99bf31e8625a6cf"
+      "start": 142473,
+      "end": 153960,
+      "sha256": "8825564212632c22dd7a421d87ead32011efdbeb39d985f079de71f6800291c9"
     },
     {
       "name": "handlers.kt-add-member",
-      "start": 152843,
-      "end": 152902,
+      "start": 153962,
+      "end": 154021,
       "sha256": "13c296ae8f445c4f3d2fda831c261cfd19d3f0b6428b62bc89aa850fa591ce51"
     },
     {
       "name": "handlers.kt-employee-app",
-      "start": 152903,
-      "end": 153532,
+      "start": 154022,
+      "end": 154651,
       "sha256": "2bec6586ecd08eca3a07afb59b1cd92bd0847e14dcbaf5d422e668572d235d00"
     },
     {
       "name": "handlers.kt-edit-member",
-      "start": 153533,
-      "end": 153768,
+      "start": 154652,
+      "end": 154887,
       "sha256": "5fa5a9ec655996cc08382a2bf9ce5de88cedad4b5ab8478ce93f8bc6a4173172"
     },
     {
       "name": "handlers.kt-pwd-gen",
-      "start": 153930,
-      "end": 154269,
+      "start": 155049,
+      "end": 155388,
       "sha256": "192162810842f0d532136df2183d4613bb544999cb393aed975da253db167d7e"
     },
     {
       "name": "handlers.kt-pwd-copy",
-      "start": 154270,
-      "end": 154752,
+      "start": 155389,
+      "end": 155871,
       "sha256": "fd630463bd34620d2ec1904b8cae308439181c8c91fe9be85626de85b7b714a3"
     },
     {
       "name": "handlers.kt-lang-toggle",
-      "start": 154753,
-      "end": 155154,
+      "start": 155872,
+      "end": 156273,
       "sha256": "a95c0512ab9c1de96e298ebd1d8ba2a31eaef338e2a44234f1807facbb9b48c0"
     },
     {
       "name": "handlers.kt-submit-member",
-      "start": 157064,
-      "end": 163633,
-      "sha256": "c7184a53207bd117b88dce3491fe16941210905d4638320f4dbd5401f4453e57"
+      "start": 158183,
+      "end": 165198,
+      "sha256": "396afc999a7c7ccbcab07b8d67653a2695f5eca17a7e1bd3f26f490b174bf1d3"
     },
     {
       "name": "handlers.kt-view-profile",
-      "start": 163694,
-      "end": 169411,
-      "sha256": "29b91b48d8aa1c9b89a19f5012afa32011a38f9496e28e63fb52cbcae11457f3"
+      "start": 165259,
+      "end": 171260,
+      "sha256": "f88f49ae4a79861a8c39263a0e72a5f62cdca0404bdfae3d6561c75978e12deb"
     },
     {
       "name": "profileSection",
-      "start": 169413,
-      "end": 169893,
+      "start": 171262,
+      "end": 171742,
       "sha256": "30435a7fe174b5251635e4ffa483ca66bb785e36a5c3648e26f3a814ba68cc6b"
     },
     {
       "name": "handlers.kt-delete-member",
-      "start": 169895,
-      "end": 172060,
+      "start": 171744,
+      "end": 173909,
       "sha256": "5fd04af3e7361ac7a4de1c58ca7a57e7e463f1785b33f7f2eab1aa3df106787a"
     },
     {
       "name": "handlers.kt-confirm-delete",
-      "start": 172062,
-      "end": 173069,
+      "start": 173911,
+      "end": 174918,
       "sha256": "2d7d446975495e09ed5a53725476e42fc9934ab665d4dcadde9bfedc1cd182fd"
     }
   ]

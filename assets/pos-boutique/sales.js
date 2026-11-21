@@ -1,14 +1,16 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=341';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=237';
-import { offerRegister } from './inventory.js?v=237';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=346';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=242';
+import { offerRegister } from './inventory.js?v=242';
 import { ticketOwner } from './ticket-owner.js?v=5';
 import { ticketRemise } from './ticket-remise.js?v=5';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
 import { mountBargain } from './bargain-ui.js?v=3';
-import { bqKitTicketFoot } from './kit-2027.js?v=25';
-import { sellSearch } from './search.js?v=19';
+import { bqKitTicketFoot } from './kit-2027.js?v=26';
+import { sellSearch } from './search.js?v=20';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=5';
+let CX = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
+import('./exch-combined.js?v=4').then((m) => { CX = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -202,8 +204,8 @@ import { photoImg } from '../retail-photos.js?v=5';
     let kind = 'percent', value = 10, label = '−10 %';
     if (cfg.model === 'amount') {
       const txt = (cfg.amount && cfg.amount.reward) || '−10 %';
-      const m = String(txt).match(/(\d+)\s*%/);
-      kind = 'percent'; value = m ? +m[1] : 10; label = txt;
+      const m = String(txt).match(/(\d+(?:[.,]\d+)?)\s*%/);
+      kind = 'percent'; value = m ? +m[1].replace(',', '.') : 10; label = txt;
     } else {
       const txt = (cfg.model === 'product' ? (cfg.product && cfg.product.reward) : (cfg.visit && cfg.visit.reward)) || '1 offert';
       kind = 'free'; label = txt;
@@ -306,6 +308,7 @@ import { photoImg } from '../retail-photos.js?v=5';
   function renderExchNote() {
     const slot = $('#bq-exch-slot', root);
     if (!state.exchange) { slot.innerHTML = ''; return; }
+    if (state.exchange.combined) { if (CX) CX.combinedNote(slot); return; }   // essai Amira Boutique
     const sale = findSale(state.exchange.saleId);
     const ln = sale.lines[state.exchange.idx];
     slot.innerHTML = `

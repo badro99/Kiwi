@@ -2,8 +2,8 @@
   {
     "file": "functions/api/order/_lib.js",
     "fixture": "_lib.js.gz",
-    "sha256": "da479700b94142406b0773915fd93ee0a6fa617aac74b461dccae3a5d1c3391c",
-    "prefix": "export { startOfDay, startOfWeek, nextOrderNumber } from './_guest-clock.js';\nexport { normTable, tableKey, planTableKey, floorPlanTables, KNOWN_TABLES_DAYS, servedTables } from './_guest-tables.js';\nexport { newSessionId, SESSION_ID, DESK_FRESH_MS, deskTouch, deskOpen } from './_guest-sessions.js';\nexport { hoursOpenAt, hoursClosed } from './_guest-hours.js';\nexport { priceOrder } from './_guest-pricing.js';\n",
+    "sha256": "369d5e8167c17d9ddf90877326275ea65f85813259cf31353870545213b6fee7",
+    "prefix": "export { startOfDay, startOfWeek, nextOrderNumber } from './_guest-clock.js';\nexport { normTable, tableKey, planTableKey, floorPlanTables, KNOWN_TABLES_DAYS, servedTables } from './_guest-tables.js';\nexport { newSessionId, SESSION_ID, DESK_FRESH_MS, DESK_AWAY_MS, deskTouch, deskAway, deskOpen } from './_guest-sessions.js';\nexport { hoursOpenAt, hoursOpenNow, hoursClosed } from './_guest-hours.js';\nexport { priceOrder } from './_guest-pricing.js';\n",
     "segments": [
       {
         "file": "functions/api/order/_guest-clock.js",
@@ -50,16 +50,20 @@
       {
         "file": "functions/api/order/_guest-sessions.js",
         "start": 10845,
-        "end": 13647,
+        "end": 15376,
         "header": "// Contrat : capacités de session et présence du comptoir dans order_desk uniquement.\n",
         "footer": "",
         "marker": "/* Extraction privée : _guest-sessions */\n",
-        "imports": [],
+        "imports": [
+          "import { hoursOpenNow } from './_guest-hours.js';"
+        ],
         "exports": [
           "newSessionId",
           "SESSION_ID",
           "DESK_FRESH_MS",
+          "DESK_AWAY_MS",
           "deskTouch",
+          "deskAway",
           "deskOpen"
         ],
         "tables": [
@@ -69,8 +73,8 @@
       },
       {
         "file": "functions/api/order/_guest-hours.js",
-        "start": 13647,
-        "end": 17288,
+        "start": 15376,
+        "end": 19213,
         "header": "import { DateTimeFormat } from '../_cached-clock.js';\nimport { merchantZone } from '../_business-day.js';\n// Contrat : lecture des horaires publiés ; aucune mutation.\n",
         "footer": "",
         "marker": "/* Extraction privée : _guest-hours */\n",
@@ -80,6 +84,7 @@
         ],
         "exports": [
           "hoursOpenAt",
+          "hoursOpenNow",
           "hoursClosed"
         ],
         "tables": [
@@ -88,8 +93,8 @@
       },
       {
         "file": "functions/api/order/_guest-pricing.js",
-        "start": 17288,
-        "end": 39765,
+        "start": 19213,
+        "end": 41690,
         "header": "import '../../../assets/promo-rules.js';\nimport '../../../assets/menu-promos.js';\nconst MenuPromos = () => globalThis.KiwiMenuPromos;\nimport { merchantZone } from '../_business-day.js';\n// Contrat : catalogue publié et lignes entrantes vers prix canoniques ; lit le catalogue menus, jamais les commandes ni les sessions.\n",
         "footer": "",
         "marker": "/* Extraction privée : _guest-pricing */\n",
@@ -113,13 +118,13 @@
   {
     "file": "functions/api/order/queue.js",
     "fixture": "queue.js.gz",
-    "sha256": "9a3c8a85e8f0730f1a52d21699e0ffb794e813502a36de688ba7830e21256ab0",
+    "sha256": "20f186c870928375c5ec8be22893472fb82e9dd1a50b0c14cc73d4cd3ea1c26c",
     "prefix": "import { pollQueue } from './_queue-poll.js';\nimport { serviceScope } from './_queue-service.js';\nimport { reopenedFloorBills } from './_queue-reopened.js';\nexport { reopenedFloorBills } from './_queue-reopened.js';\n",
     "segments": [
       {
         "file": "functions/api/order/_queue-service.js",
-        "start": 7210,
-        "end": 10902,
+        "start": 7259,
+        "end": 10951,
         "header": "import { activeServiceEmployee } from '../../auth/_lib.js';\nimport { normTable } from './_guest-tables.js';\nimport { employeeName } from './_queue-shared.js';\n// Contrat : requête authentifiée vers périmètre de service ; lecture seule.\n",
         "footer": "\nexport { serviceScope };\n",
         "marker": "/* Extraction privée : _queue-service */\n",
@@ -137,8 +142,8 @@
       },
       {
         "file": "functions/api/order/_queue-reopened.js",
-        "start": 12354,
-        "end": 14335,
+        "start": 12403,
+        "end": 14384,
         "header": "// Contrat : sessions actives vers projections des additions réouvertes ; lecture seule.\n",
         "footer": "",
         "marker": "/* Extraction privée : _queue-reopened */\n",
@@ -152,8 +157,8 @@
       },
       {
         "file": "functions/api/order/_queue-poll-policy.js",
-        "start": 5448,
-        "end": 7210,
+        "start": 5497,
+        "end": 7259,
         "header": "import { CURSOR_LAG_MS } from './_lib.js';\n// Contrat : validation du curseur et fenêtres de lecture ; aucune donnée marchande.\n",
         "footer": "\nexport { MAX_ROWS, readPageCursor, PENDING_TTL_MS, KITCHEN_TTL_MS, OPEN_VISIT_RECOVERY_MS, ARCHIVED_TOMBSTONE_MS, EXPIRED_MS, SERVICE_TOUCH_MS };\n",
         "marker": "/* Extraction privée : _queue-poll-policy */\n",
@@ -167,8 +172,8 @@
       },
       {
         "file": "functions/api/order/_queue-columns.js",
-        "start": 10902,
-        "end": 12354,
+        "start": 10951,
+        "end": 12403,
         "header": "// Contrat : variantes de projection SQL et diagnostics de colonnes ; aucune écriture.\n",
         "footer": "\nexport { COL_SETS, COL_SET_MISSING };\n",
         "marker": "/* Extraction privée : _queue-columns */\n",
@@ -180,8 +185,8 @@
       },
       {
         "file": "functions/api/order/_queue-poll.js",
-        "start": 16891,
-        "end": 39979,
+        "start": 16940,
+        "end": 40028,
         "header": "import { json } from '../../auth/_lib.js';\nimport { startOfDay } from './_guest-clock.js';\nimport { normTable } from './_guest-tables.js';\nimport { CURSOR_LAG_MS, pollCursor } from './_lib.js';\nimport { merchantZone } from '../_business-day.js';\nimport { visitCredits } from '../_visit-cover.js';\nimport { displayMoney, MAX_LINES } from './_queue-shared.js';\nimport { reopenedFloorBills } from './_queue-reopened.js';\nimport { COL_SETS, COL_SET_MISSING } from './_queue-columns.js';\nimport { settleServiceTable } from '../service/events.js';\nimport { MAX_ROWS, readPageCursor, PENDING_TTL_MS, KITCHEN_TTL_MS, OPEN_VISIT_RECOVERY_MS, ARCHIVED_TOMBSTONE_MS, EXPIRED_MS, SERVICE_TOUCH_MS } from './_queue-poll-policy.js';\n// Contrat : env, URL, marchand autorisé, rôle et périmètre déjà contrôlés ; sondage, expiration et présence des visites uniquement. La route garde les droits et le pointage du comptoir.\nexport async function pollQueue({ env, url, merchant, role, service }) {\n",
         "footer": "\n}\n",
         "marker": "  return pollQueue({ env, url, merchant, role, service });",

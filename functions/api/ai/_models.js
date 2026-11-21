@@ -23,8 +23,17 @@ export const CLEF = '@cf/cloudflare/clef';
  *            (GLM 5.3 $0.00048, Llama 3.2 vision menus 0.250); DeepSeek V4.1
  *            Flash menus and salles 1.000, p50 7 s, fallback only ($0.30/$1.20
  *            per million, three times Gemma). */
-export const TEXT_PRIMARY = QWEN;
-export const TEXT_FALLBACK = GEMMA_VISION;
+/* Qwen 3 30B est retiré par Cloudflare le 20 nov. 2026 : il répond 410
+ * « Model has been deprecated ». Chaque appel texte commençait par lui et y
+ * laissait sa réservation de neurones sans rien coûter ; le 21 nov. 31 appels
+ * avaient porté le compteur du jour à 9 869 pour 374 neurones réellement
+ * facturés, et l'assistant photo refusait (429). Gemma prend le texte (21/21
+ * ci-dessus, le moins cher), DeepSeek V4.1 Flash le secours (vérifiés le
+ * 21 nov. avec reasoning_effort et chat_template_kwargs : 200, JSON, usage).
+ * QWEN reste exporté pour l'histoire et les outils d'évaluation, aucune route
+ * ne doit l'appeler. */
+export const TEXT_PRIMARY = GEMMA_VISION;
+export const TEXT_FALLBACK = DEEPSEEK_FLASH;
 export const VISION_PRIMARY = GEMMA_VISION;
 export const VISION_FALLBACK = DEEPSEEK_FLASH;
 /* Documents (bons de livraison, factures fournisseur en photo) : un tableau

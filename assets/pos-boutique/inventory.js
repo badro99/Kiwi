@@ -1,12 +1,12 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=341';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=237';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=346';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=242';
 import { openMoves } from './inv-moves.js?v=7';
 import * as SZ from '../boutique-sizes.js?v=25';
 import { openLabelPicker } from './label-picker.js?v=4';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
-import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=23';
+import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=24';
 import { sisterStock } from './sister-stock.js?v=1';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=237';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=242';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -859,8 +859,13 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
   /* Le formulaire de création : le même que celui du tableau de bord (Article,
      Prix, Stock et la photo de la caisse à droite). Après « Créer le produit »,
      la même fenêtre passe aux tailles. */
-  function openNewProduct() {
+  /* `scanned` : le code inconnu que la douchette vient de lire (offerRegister).
+     Il arrive déjà dans le champ « Il a déjà un code », en taille unique, le
+     seul type où un code se pose à la création ; passer aux tailles le range,
+     chaque taille prenant ensuite son propre code. */
+  function openNewProduct(scanned) {
     if (!tillInventoryAllowed()) { catalogDashboardOnly(); return; }
+    const preset = typeof scanned === 'string' ? normScan(scanned) : '';
     const lang = szLang();
     const f = SZ.formWords(lang);
     const catSel = state.invFilter && state.invFilter !== 'all' ? state.invFilter : '';
@@ -936,6 +941,13 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       /* Un article déjà étiqueté : la douchette remplit le champ du code. */
       const onScan = (c) => SZ.putCode(el, cat, lang, normScan(c));
       SZ.wireCode(el, cat, lang, (on) => (on ? armScanCapture(onScan) : disarmScanCapture(onScan)));
+      if (preset) {
+        const tu = q('input[name="bqx-pf-kind"][value="tu"]'), own = q('[data-kbs-bc][value="own"]');
+        if (tu) tu.checked = true;
+        if (own) own.checked = true;
+        if (tu) tu.dispatchEvent(new Event('change', { bubbles: true }));
+        SZ.putCode(el, cat, lang, preset);
+      }
       /* La photo de la caisse, choisie comme au tableau de bord. */
       import('../retail-icon-picker.js?v=4').then((m) => m.mountTillPhoto(el, null, { lang, trade: 'boutique', media: () => false })).catch(() => {});
 
@@ -1111,6 +1123,10 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const cat = catDB(); if (!cat) return;
     if (state.view !== 'inventaire') switchView('inventaire');
     const products = cat.listProducts({});
+    /* « Gestion complète de l’inventaire sur la caisse » allumée (God mode) et
+       la bonne personne au pavé : la caisse crée l'article elle-même, code déjà
+       posé. Éteinte, le renvoi au tableau de bord reste (Amira, 2026-11-21). */
+    const canCreate = tillInventoryAllowed();
     // Une liste déroulante ne peut pas montrer de pastille : c'est le seul
     // endroit où la couleur reste écrite. Quand deux variantes portent la même
     // famille, la nuance d'origine ou la précision les départage.
@@ -1125,10 +1141,14 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         <div class="bqi-fg"><label for="bqi-or-prod">Article</label><select id="bqi-or-prod"><option value="" selected>Choisir un article</option>${products.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>
         <div class="bqi-fg"><label for="bqi-or-var">Variante (couleur · taille)</label><select id="bqi-or-var" disabled><option value="" selected>Choisir d’abord l’article</option></select></div>
       </div>
-      <div class="bqi-modfoot"><span class="bqi-dashboard-only">Créer l’article dans le tableau de bord</span><button class="bq-btn" id="bqi-or-save" disabled>Rattacher le code</button></div>`;
+      <div class="bqi-modfoot">${canCreate
+        ? '<button class="bq-btn secondary" id="bqi-or-new"><i data-icon="add"></i>Créer un article avec ce code</button>'
+        : '<span class="bqi-dashboard-only">Créer l’article dans le tableau de bord</span>'}<button class="bq-btn" id="bqi-or-save" disabled>Rattacher le code</button></div>`;
     invSetModal(html, (el) => {
       const prodSel = $('#bqi-or-prod', el), varSel = $('#bqi-or-var', el);
       const saveBtn = $('#bqi-or-save', el);
+      const newBtn = $('#bqi-or-new', el);
+      if (newBtn) newBtn.addEventListener('click', () => openNewProduct(code));
       /* Rien n'est présélectionné. Avant, le premier article et sa première
          variante l'étaient : un appui sur « Rattacher » collait chaque code
          inconnu au même article, et la caisse le vendait ensuite à chaque scan

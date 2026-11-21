@@ -642,7 +642,7 @@ for (const test of [
   'cloud-doc-quota-test.mjs',
   'cloud-doc-retry-test.js', 'hotel-live-test.mjs', 'online-booking-survives-test.mjs', 'field-merge-observed-test.mjs',
   /* 2026-11-08 · deux appareils, mêmes lignes, autre ordre : plus de ping-pong (Santos, returns). */
-  'cloud-doc-order-loop-test.js',
+  'cloud-doc-order-loop-test.js', 'cloud-doc-settings-wins-test.js', // 2026-11-21 · un vieux cache ne réimpose plus un réglage (Amira, fidélité)
   'reservation-overlap-test.mjs',
   'booking-rules-shared-test.mjs',
   'store-credit-sale-test.mjs',
@@ -2249,7 +2249,7 @@ section('Whole-project regressions');
     'menu-promos-test.mjs',
     'menu-promos-server-test.mjs',
     'menu-promos-browser-test.mjs',
-    'menu-promos-properties-test.mjs', 'formula-extra-drink-browser-test.mjs', 'waiter-orders-off-inbox-test.mjs', 'empty-visit-release-test.mjs', 'empty-visit-till-browser-test.mjs', 'outbox-stale-lock-test.mjs', 'till-verify-hiccup-test.mjs', 'stuck-guard-test.mjs',
+    'menu-promos-properties-test.mjs', 'formula-extra-drink-browser-test.mjs', 'waiter-orders-off-inbox-test.mjs', 'empty-visit-release-test.mjs', 'empty-visit-till-browser-test.mjs', 'outbox-stale-lock-test.mjs', 'till-verify-hiccup-test.mjs', 'stuck-guard-test.mjs', 'vision-size-run-test.mjs', 'agent-size-run-test.mjs', 'agent-size-run-browser-test.mjs', 'agent-doc-error-browser-test.mjs', 'ai-retired-model-test.mjs',
     'caisse-pay-subtitle-test.mjs',
     /* Le fil d'Ariane du tableau de bord : une seule peinture (Kiwi.breadcrumb),
        « Home » / « الرئيسية » sur chaque page, et un changement de langue page

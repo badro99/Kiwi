@@ -660,7 +660,7 @@
              on ne remonte rien, et les marques d'une ancienne visite tombent. */
           var operatorCache = operatorLooking(slug) && readRev(slug) !== serverRev;
           if (operatorCache) { clearDirty(slug); clearRefused(slug); }
-          var adopt = (first && mineEmpty) || operatorCache, pendingTok = dirtyToken(slug);
+          var pendingTok = dirtyToken(slug), adopt = (first && mineEmpty) || operatorCache || (opts.serverWins && (mineEmpty || (!pendingTok && !isRefused(slug)))); // serverWins : un réglage (fidélité) dont la copie locale n'a pas de saisie en attente n'est qu'un vieux cache ; le fusionner rendait l'ancien seuil au serveur toutes les 30 s (Amira Boutique, 21/11/2026)
           var next = adopt ? theirs : merge(mine, theirs);
           /* La fusion n'apporte rien que le serveur n'ait déjà (seul l'ordre change) :
              on prend sa copie telle quelle et on ne remonte rien. Une saisie locale

@@ -104,17 +104,15 @@ window.KiwiStockInternal.install('purchasing', (S) => {
     const totalSpend = sup.reduce((s, x) => s + x.monthlySpend, 0);
     const weightedPrice = sup.reduce((s, x) => s + (x.priceChangeLast30d * x.monthlySpend), 0) / (totalSpend || 1);
     const trendCls = weightedPrice > 1 ? 'up' : weightedPrice < -1 ? 'down' : '';
-    return `
+    /* Commerce : le classement des fournisseurs ouvre l'onglet (stock/suppliers.js le monte). */
+    return `${isRetailStock() ? '<div class="st-section sr-board" data-sr-board></div>' : ''}
       <div class="st-section">
         <div class="st-section-head" style="justify-content:space-between; flex-wrap:wrap; gap:10px;">
           <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
             <h3>${esc(t('supTitle'))}</h3>
             <span class="st-section-sub">${esc(t('supSub', sup.length))}</span>
           </div>
-          ${isRetailStock() ? `<div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="st-btn" type="button" data-action="stock-supplier-ranking" data-stock-sup-ranking>${svg('trendingUp', 13)}<span>${esc(({ en: 'Supplier ranking', ar: 'ترتيب الموردين' })[lang()] || 'Classement des fournisseurs')}</span></button>
-            <button data-activation=write class="st-btn primary" type="button" data-action="stock-add-supplier">${svg('plus', 13)}<span>${esc(t('addSupCta'))}</span></button>
-          </div>` : `<button data-activation=write class="st-btn primary" type="button" data-action="stock-add-supplier">${svg('plus', 13)}<span>${esc(t('addSupCta'))}</span></button>`}
+          <button data-activation=write class="st-btn primary" type="button" data-action="stock-add-supplier">${svg('plus', 13)}<span>${esc(t('addSupCta'))}</span></button>
         </div>
         <div class="st-sup-stats">
           <div class="st-sup-stat"><div class="l">${esc(t('supStatActive'))}</div><div class="v">${sup.length}</div></div>

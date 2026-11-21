@@ -281,6 +281,16 @@
   /* The config lands after this band is first painted (one fetch), and again on
    * every venue switch — so re-deal whenever it arrives. */
   document.addEventListener('kiwi-config', render);
+  /* « Meilleurs vendeurs » (assets/home-top-sellers.js) : chargé seulement pour les
+   * commerces qui ont l'option Commissions vendeurs ; il se range devant cette rangée. */
+  let topSellers = false;
+  function loadTopSellers() {
+    if (topSellers || window.KiwiConfig?.features?.sellerCommissions !== true) return;
+    topSellers = true;
+    import('./home-top-sellers.js?v=3').catch(() => { topSellers = false; });
+  }
+  document.addEventListener('kiwi-config', loadTopSellers);
+  setTimeout(loadTopSellers, 0);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render);
   else render();
   /* Le programme de fidélité arrive du nuage après le premier rendu : on

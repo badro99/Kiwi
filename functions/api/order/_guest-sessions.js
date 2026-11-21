@@ -74,10 +74,11 @@ export async function deskOpen(env, merchant) {
     const rows = await env.DB.prepare(
       'SELECT merchant, seen_ts FROM order_desk WHERE merchant IN (?, ?)'
     ).bind(merchant, awayKey(merchant)).all();
-    ((rows && rows.results) || []).forEach((r) => {
+    // A loop, not forEach: inside a closure the type check loses the null checks below.
+    for (const r of ((rows && rows.results) || [])) {
       if (r.merchant === merchant) desk = Number(r.seen_ts) || 0;
       else away = Number(r.seen_ts) || 0;
-    });
+    }
   } catch (_) { return true; }             // table absente ⇒ idem
   if (desk == null) return false;          // jamais vue ⇒ personne ne lirait la commande
   const now = Date.now();

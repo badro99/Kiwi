@@ -116,7 +116,7 @@
     /* browns */
     chocolat: 'marron', cafe: 'marron', moka: 'marron', cognac: 'marron', fauve: 'marron',
     taupe: 'marron', chataigne: 'marron', noisette: 'marron', bronze: 'marron', rouille: 'marron',
-    tabac: 'marron', chameau: 'marron', brun: 'marron', brown: 'marron', kaki: 'vert',
+    tabac: 'marron', chameau: 'marron', brun: 'marron', brown: 'marron', kaki: 'vert', khaki: 'vert',
 
     /* reds */
     burgundy: 'rouge', grenat: 'rouge', carmin: 'rouge', vermillon: 'rouge', cerise: 'rouge',
