@@ -1,5 +1,6 @@
 {
-  "api/_cheques.js : no such table: cheque_history": 9,
+  "api/_cheque-debt.js : no such table: cheque_links": 1,
+  "api/_cheques.js : no such table: cheque_history": 11,
   "api/_cheques.js : no such table: cheque_links": 1,
   "api/_cheques.js : no such table: cheques": 5,
   "api/_cheques.js : no such table: money_ledger": 4,
@@ -55,6 +56,7 @@
   "api/print/_relay.js : repli de schéma": 1,
   "api/push/morning.js : repli de schéma": 1,
   "api/push/register.js : repli de schéma": 4,
+  "api/sale/cancel.js : no such table: cheque_links": 1,
   "api/suppliers/entry.js : no such column: supplier_id": 1,
   "api/suppliers/entry.js : no such table: money_ledger": 1,
   "api/suppliers/expense.js : no such table: money_ledger": 3,

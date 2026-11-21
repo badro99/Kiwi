@@ -52,10 +52,11 @@ export async function sessionTier(request, env) {
   const sess = await sessionOf(request, env);
   if (!sess) return { tier: null };
   try {
-    const row = await env.DB.prepare('SELECT tier FROM session_tiers WHERE sid = ? AND account_id = ?')
+    const row = await env.DB.prepare('SELECT tier, staff_id FROM session_tiers WHERE sid = ? AND account_id = ?')
       .bind(sess.sid, String(sess.aid)).first();
     const tier = row && tierForAccess(String(row.tier || ''));
-    return { tier: tier || 'owner' };
+    /* staffId : la fiche dont le code a ouvert ce palier (jamais le code), pour signer un geste. */
+    return { tier: tier || 'owner', staffId: tier && row.staff_id ? String(row.staff_id) : '' };
   } catch (e) {
     if (isMissingTable(e)) return { tier: 'owner' };
     return { tier: null, unavailable: true };

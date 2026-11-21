@@ -29,19 +29,22 @@
  * Le papier n'est pas l'argent. Un chèque REÇU paie quelque chose que Kiwi a
  * déjà enregistré ailleurs : une vente de caisse (comptée au chiffre
  * d'affaires du jour, moyen « chèque »), un remboursement du carnet. Le
- * recevoir, le remettre à la banque ou le voir encaissé ne change donc RIEN
- * au solde du client : l'encaissement normal n'écrit aucune ligne, sinon la
- * vente compterait deux fois. L'argent ne bouge vraiment qu'au rejet :
- *   · rejet (premier) ............ out = montant, kind 'cheque-rejected' :
- *                                  le client doit de nouveau la somme ;
- *                                  debt_open = 1. Un second rejet du même
- *                                  chèque (représenté puis rejeté encore)
- *                                  n'écrit rien : la dette est déjà ouverte.
- *   · encaissé après un rejet .... in = montant, kind 'repayment', moyen
- *                                  chèque : la dette ouverte se referme.
+ * recevoir, le remettre à la banque ou le voir encaissé ne change donc RIEN :
+ * l'encaissement normal n'écrit aucune ligne, sinon la vente compterait deux
+ * fois. L'argent ne bouge vraiment qu'au rejet (debt_open = 1 au premier
+ * rejet ; un second rejet du même chèque n'écrit rien).
+ * Chèque d'un CLIENT (tiers client, fiche ou simple nom, ou sans tiers) : la
+ * dette va au compte de la cliente, dans la note ouverte que lisent le carnet
+ * de crédit, la fiche cliente et la caisse, et le flux des ventes reste juste
+ * (ligne « Chèque impayé » négative, puis retour du reste) :
+ * functions/api/_cheque-debt.js porte ces règles, aucune ligne client n'est
+ * écrite au grand livre money_ledger.
+ * Chèque reçu d'un FOURNISSEUR (il nous rembourse ; patron seulement) : son
+ * grand livre, comme avant :
+ *   · rejet (premier) ............ out = montant, kind 'cheque-rejected' ;
+ *   · encaissé après un rejet .... in = montant, kind 'repayment', moyen chèque ;
  *   · réglé autrement après rejet  in = montant, kind 'repayment', moyen choisi.
- *   · réglé autrement avant remise rien : aucune dette n'a existé.
- *   · contentieux, représentation, annulation : rien.
+ * Réglé autrement avant remise, contentieux, représentation, annulation : rien.
  * Un chèque ÉMIS est, lui, le paiement du fournisseur : sa création écrit
  *   · out = montant, kind 'payment', moyen chèque (idem 'chqi:<clé>') ;
  *   · rejet (premier) ............ in : nous devons de nouveau, debt_open = 1 ;
@@ -50,10 +53,9 @@
  *   · annulé sans rejet .......... la ligne de paiement de la création est
  *                                  archivée (le paiement n'a pas eu lieu) ;
  *     annulé après un rejet ...... rien : la dette rouverte reste due.
- * Sans tiers connu, la dette d'un rejet va sur un tiers client provisoire
- * « cheque:<id> » ; donner un client au chèque l'y rattache (relinkStatements).
- * Un nom sans fiche devient le tiers « n:<nom normalisé> » : deux chèques de
- * la même personne se cumulent.
+ * Le tiers client d'un chèque est la fiche cliente (son id, comme la caisse
+ * et le carnet) ; un nom sans fiche devient « n:<nom normalisé> » et sa dette
+ * n'entre au carnet qu'une fois une fiche donnée au chèque.
  *
  * ── Idempotence et concurrence ───────────────────────────────────────────────
  * Création : (merchant, idem_key) unique ; un rejeu rend le même chèque
@@ -79,6 +81,7 @@
 import { normalizeEntry, validYmd } from './_ledger.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { getSupplier } from './_suppliers.js';
+import { annotateCheques, clientOf, customerDebtStatements, debtNote, openNoteStatement, planCustomerDebt, salesOf } from './_cheque-debt.js';
 
 export const KINDS = ['cheque', 'lcn'];
 export const DIRECTIONS = ['received', 'issued'];
@@ -99,7 +102,7 @@ export const TRANSITIONS = Object.freeze({
 /* Encore « en cours » : l'argent n'a pas fini de bouger. */
 export const OPEN_STATUSES = ['received', 'deposited', 'rejected', 'in_litigation', 'issued'];
 export const FINAL_STATUSES = ['collected', 'debited', 'replaced', 'cancelled'];
-const REPLACE_METHODS = ['cash', 'transfer', 'card', 'other'];
+const REPLACE_METHODS = ['cash', 'transfer', 'card', 'other', 'till'];
 
 const SLUG = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const KEY = /^[A-Za-z0-9:._@-]{8,100}$/;
@@ -305,6 +308,11 @@ export function moneyEffect(c, to, opts) {
   const received = c.direction === 'received';
   const party = debtParty(c);
   const base = { amountCents: Number(c.amount_cents), partyType: party.type, partyId: party.id, chequeId: c.id, ref: c.number || '' };
+  if (received && c.party_type !== 'supplier') {
+    if (to === 'rejected') return { debtOpen: 1, entry: null, customer: open ? null : 'bounce' };
+    if (to === 'collected' || to === 'replaced') return { debtOpen: 0, entry: null, customer: open ? 'close' : null, method: to === 'collected' ? 'cheque' : (REPLACE_METHODS.includes(o.method) ? o.method : 'other') };
+    return { debtOpen: open ? 1 : 0, entry: null };
+  }
   if (to === 'rejected') {
     if (open) return { debtOpen: 1, entry: null };
     return { debtOpen: 1, entry: { ...base, direction: received ? 'out' : 'in', kind: 'cheque-rejected', method: 'cheque' } };
@@ -315,7 +323,7 @@ export function moneyEffect(c, to, opts) {
   }
   if (to === 'replaced') {
     if (!open) return { debtOpen: 0, entry: null };
-    const method = REPLACE_METHODS.includes(o.method) ? o.method : 'other';
+    const method = REPLACE_METHODS.includes(o.method) && o.method !== 'till' ? o.method : 'other';
     return { debtOpen: 0, entry: { ...base, direction: received ? 'in' : 'out', kind: received ? 'repayment' : 'payment', method } };
   }
   if (to === 'cancelled' && !received && !open) return { debtOpen: 0, entry: null, archiveIssue: true };
@@ -324,12 +332,12 @@ export function moneyEffect(c, to, opts) {
 
 /* Statements d'un passage, tous conditionnés à la ligne d'historique `histId`. */
 function moveStatements(env, merchant, c, to, p) {
-  const { histId, requestId, date, reason, actor, now, slip, method } = p;
+  const { histId, requestId, date, reason, actor, now, slip, method, debt } = p;
   const eff = moneyEffect(c, to, { method });
   const stmts = [env.DB.prepare(`INSERT OR IGNORE INTO cheque_history ${HIST_COLS}
       SELECT ?, ?, id, ?, 'move', status, ?, ?, ?, ?, NULL, ?, ? FROM cheques
        WHERE merchant = ? AND id = ? AND version = ? AND status = ?`)
-    .bind(merchant, histId, requestId, to, date, reason, slip ? 'slip:' + slip : (eff.entry && to === 'replaced' ? 'method:' + eff.entry.method : ''), actor, now,
+    .bind(merchant, histId, requestId, to, date, reason, slip ? 'slip:' + slip : (to === 'replaced' && (eff.entry || eff.customer) ? 'method:' + (eff.entry ? eff.entry.method : eff.method) : ''), actor, now,
       merchant, c.id, Number(c.version), c.status)];
   const sets = ['status = ?', 'version = version + 1', 'debt_open = ?', 'updated_at = ?'];
   const vals = [to, eff.debtOpen, now];
@@ -348,6 +356,7 @@ function moveStatements(env, merchant, c, to, p) {
     stmts.push(led.statement);
     stmts.push(env.DB.prepare('UPDATE cheque_history SET ledger_entry_id = ? WHERE merchant = ? AND id = ?').bind(ledgerId, merchant, histId));
   }
+  if (debt) stmts.push(...customerDebtStatements(env, merchant, c, debt, { histId, now, requestId }));
   if (eff.archiveIssue) {
     stmts.push(env.DB.prepare(`UPDATE money_ledger SET archived = 1, voided_by = ?
        WHERE merchant = ? AND idem_key = ? AND archived = 0 AND EXISTS (SELECT 1 FROM cheque_history WHERE merchant = ? AND id = ?)`)
@@ -387,6 +396,11 @@ export async function moveCheque(env, merchant, id, body, ctx) {
   const input = moveInput(c, to, b, ctx.today);
   if (input.error) return { ok: false, error: input.error, status: input.error === 'debt-open' ? 409 : 400, allowed: allowedNext(c.direction, c.status) };
   const p = { histId: rid('chh'), requestId, date: input.date, reason: clean(b.reason, 280), actor: clean(ctx.actor, 100), now: Date.now(), method: String(b.method || '') };
+  const eff = moneyEffect(c, to, { method: p.method });
+  if (eff.customer) {
+    p.debt = await planCustomerDebt(env, merchant, c, eff.customer, eff.method);
+    if (p.debt && p.debt.error) return { ok: false, error: p.debt.error, status: 409, remainingCents: p.debt.remaining, allowed: allowedNext(c.direction, c.status) };
+  }
   const plan = moveStatements(env, merchant, c, to, p);
   if (plan.error) return { ok: false, error: plan.error, status: 400 };
   try { await env.DB.batch(plan.stmts); }
@@ -475,6 +489,8 @@ export async function editCheque(env, merchant, id, body, ctx) {
     if (cents !== Number(c.amount_cents)) {
       /* Le montant ne bouge que sur un chèque reçu jamais rejeté : aucune ligne d'argent ne le porte. */
       if (!(c.direction === 'received' && c.status === 'received' && Number(c.debt_open) === 0)) return { ok: false, error: 'amount-locked', status: 409 };
+      /* Un chèque qui paie une vente porte le montant de son règlement : il ne bouge pas. */
+      if ((await salesOf(env, merchant, c.id)).linked > 0) return { ok: false, error: 'amount-locked', status: 409 };
       patch.amount_cents = cents; changed.push('amount');
     }
   }
@@ -498,7 +514,22 @@ export async function editCheque(env, merchant, id, body, ctx) {
       if (Number(sup.archived) === 1) return { ok: false, error: 'supplier-archived', status: 409 };
       pid = String(sup.id); name = clean(sup.name, 120);
     }
+    /* Une fiche cliente : elle doit exister chez CE commerçant, son nom fait foi. */
+    let clientId = '';
+    if (ptype === 'customer' && !pid.startsWith('n:')) {
+      const cl = await clientOf(env, merchant, pid);
+      if (!cl) return { ok: false, error: 'client-not-found', status: 404 };
+      clientId = String(cl.id); pid = clientId; name = clean(cl.name, 120) || name;
+    }
     if (ptype !== String(c.party_type || '') || pid !== String(c.party_id || '') || name !== String(c.party_name || '')) {
+      /* La dette d'un chèque client rejeté suit sa cliente : la note ouverte
+         passe à la nouvelle fiche (ou naît), tant que la caisse n'a encaissé
+         aucun règlement dessus ; ensuite le tiers est verrouillé. */
+      if (c.direction === 'received' && ptype !== 'supplier' && String(c.party_type || '') !== 'supplier' && Number(c.debt_open) === 1) {
+        const note = await debtNote(env, merchant, c.id);
+        if (note && note.receipts > 0) return { ok: false, error: 'party-locked', status: 409 };
+        stmtsAfter.push({ note, clientId });
+      }
       /* L'argent déjà écrit pour ce chèque suit son tiers : depuis un tiers
          provisoire (« cheque:<id> »), toutes ses lignes partent vers le client ;
          depuis un vrai tiers, on ne déplace rien (ce serait mélanger ses
@@ -527,6 +558,13 @@ export async function editCheque(env, merchant, id, body, ctx) {
       .bind(...cols.map((k) => patch[k]), now, merchant, c.id, Number(c.version), merchant, histId),
   ];
   for (const s of stmtsAfter) {
+    if ('note' in s) {
+      if (s.note && s.clientId) stmts.push(env.DB.prepare(`UPDATE retail_balances SET customer_id = ? WHERE merchant = ? AND id = ? AND EXISTS (SELECT 1 FROM cheque_history WHERE merchant = ? AND id = ?)`)
+        .bind(s.clientId, merchant, s.note.id, merchant, histId));
+      else if (s.note) stmts.push(env.DB.prepare(`DELETE FROM retail_balances WHERE merchant = ? AND id = ? AND EXISTS (SELECT 1 FROM cheque_history WHERE merchant = ? AND id = ?)
+          AND NOT EXISTS (SELECT 1 FROM retail_balance_receipts r WHERE r.merchant = ? AND r.balance_id = ?)`).bind(merchant, s.note.id, merchant, histId, merchant, s.note.id));
+      else if (s.clientId) stmts.push(openNoteStatement(env, merchant, { ...c, party_id: s.clientId }, s.clientId, now, histId));
+    }
     if (s.relink) stmts.push(env.DB.prepare(`UPDATE money_ledger SET party_id = ?
         WHERE merchant = ? AND party_type = 'customer' AND party_id = ? AND cheque_id = ? AND EXISTS (SELECT 1 FROM cheque_history WHERE merchant = ? AND id = ?)`)
       .bind(s.relink.to, merchant, s.relink.from, c.id, merchant, histId));
@@ -672,8 +710,11 @@ export async function chequeDetail(env, merchant, id, only) {
       sales = ((rs && rs.results) || []).map((s) => ({ id: String(s.id), amountCents: s.amount_cents != null ? Number(s.amount_cents) : Math.round(Number(s.amount || 0) * 100), method: String(s.method || ''), ts: Number(s.ts) || 0, ref: String(s.ref || '') }));
     } catch (_) { sales = []; }
   }
+  const [view] = await annotateCheques(env, merchant, [chequeView(c)]);
+  const cl = view.clientId ? await clientOf(env, merchant, view.clientId) : null;
   return {
-    cheque: chequeView(c),
+    cheque: view,
+    client: cl ? { id: String(cl.id), name: String(cl.name || ''), phone: String(cl.phone || '') } : null,
     history: ((hist && hist.results) || []).map(historyView),
     links: linkRows.map((l) => ({ type: String(l.link_type), id: String(l.link_id), amountCents: l.amount_cents == null ? null : Number(l.amount_cents) })),
     sales,

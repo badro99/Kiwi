@@ -18,6 +18,7 @@ import { json } from '../../auth/_lib.js';
 import { chequeActor, readBody } from './_access.js';
 import { chequesReady, createCheque, listCheques, openCheques, chequeSummary, chequeAgeing, merchantDays } from '../_cheques.js';
 import { getSupplier, listSuppliers } from '../_suppliers.js';
+import { annotateCheques, clientOf } from '../_cheque-debt.js';
 
 export async function onRequestGet({ request, env }) {
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
@@ -37,7 +38,7 @@ export async function onRequestGet({ request, env }) {
   const suppliers = actor.only ? [] : (await listSuppliers(env, merchant)).map((s) => ({ id: String(s.id), name: String(s.name) }));
   return json({
     ok: true, migrated: true, merchant, role: actor.kind, today: today.civil,
-    cheques: list.cheques, truncated: list.truncated,
+    cheques: await annotateCheques(env, merchant, list.cheques), truncated: list.truncated,
     summary: chequeSummary(open, today.civil), ageing: chequeAgeing(open, today.civil), suppliers,
   });
 }
@@ -54,6 +55,18 @@ export async function onRequestPost({ request, env }) {
   if (actor.only && direction !== actor.only) return json({ error: 'owner-required' }, 403);
   if (!(await chequesReady(env))) return json({ error: 'unmigrated' }, 503);
   const input = { ...body, direction };
+  /* La caisse ne date pas un chèque : il est reçu dans la journée commerciale du serveur. */
+  if (actor.kind === 'till') delete input.receptionDate;
+  /* Une fiche cliente (son id) : elle doit exister chez CE commerçant, son nom fait foi. */
+  if (direction === 'received' && input.partyType !== 'supplier' && input.partyId && !String(input.partyId).startsWith('n:')) {
+    const cl = await clientOf(env, merchant, input.partyId);
+    if (cl) { input.partyType = 'customer'; input.partyId = String(cl.id); input.partyName = String(cl.name || input.partyName || ''); }
+    /* Une fiche créée à la caisse peut encore attendre sa synchronisation : le chèque
+       garde son id et le nom affiché ; la dette d'un rejet n'entre au compte
+       qu'une fois la fiche arrivée (functions/api/_cheque-debt.js relit la fiche). */
+    else if (actor.kind === 'till') { input.partyType = 'customer'; if (!/^[A-Za-z0-9_-]{1,64}$/.test(String(input.partyId))) input.partyId = ''; }
+    else return json({ error: 'client-not-found' }, 404);
+  }
   let poId = null;
   /* Un tiers fournisseur écrit au grand livre fournisseurs : patron et opérateur
      seulement, même sur un chèque reçu (gérant et caisse : 403). */

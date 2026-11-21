@@ -444,6 +444,15 @@ export async function onRequestPost({ request, env }) {
     } catch (_) { /* history unavailable: keep the successful void response */ }
   }
 
+  /* Un chèque encore en portefeuille payait ce ticket : le serveur le nomme pour
+     que l'écran propose de l'annuler (le portefeuille le marque « ticket annulé »). */
+  let cheques = [];
+  try {
+    const rs = await env.DB.prepare(`SELECT c.id, c.number, c.amount_cents FROM cheque_links l JOIN cheques c ON c.merchant = l.merchant AND c.id = l.cheque_id
+       WHERE l.merchant = ? AND l.link_type = 'sale' AND l.link_id = ? AND c.status = 'received'`).bind(merchant, id).all();
+    cheques = ((rs && rs.results) || []).map((c) => ({ id: String(c.id), number: String(c.number || ''), amountCents: Number(c.amount_cents) || 0 }));
+  } catch (_) { cheques = []; }
+
   return json({ ok: true, id, ref: sale.ref || '', amount: saleAmount, amountCents: saleAmountCents,
-                actor, actor_id: actorId, source, ts });
+                actor, actor_id: actorId, source, ts, ...(cheques.length ? { cheques } : {}) });
 }

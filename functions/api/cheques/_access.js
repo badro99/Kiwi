@@ -30,6 +30,17 @@ async function activeStore(env, merchant) {
   return !!(state.ok && !state.suspended && !state.pending);
 }
 
+/* « · Prénom » de la fiche dont le code a ouvert la session (staff_pins.name,
+   jamais le code) ; rien quand le patron a ouvert avec son propre compte. */
+async function staffName(env, merchant, staffId) {
+  if (!staffId) return '';
+  try {
+    const row = await env.DB.prepare('SELECT name FROM staff_pins WHERE id = ?').bind(String(staffId)).first();
+    const n = String((row && row.name) || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 40);
+    return n ? ' · ' + n : '';
+  } catch (_) { return ''; }
+}
+
 export async function chequeActor(request, env, merchant, opts) {
   const write = !!(opts && opts.write);
   if (!env || !env.DB || !SLUG.test(String(merchant || ''))) return null;
@@ -45,8 +56,8 @@ export async function chequeActor(request, env, merchant, opts) {
     let st = { tier: null };
     try { st = await sessionTier(request, env); } catch (_) { st = { unavailable: true }; }
     if (!st.unavailable) {
-      if (st.tier === 'owner') return { kind: 'owner', only: '', name: 'Propriétaire' };
-      if (st.tier === 'manager') return { kind: 'manager', only: 'received', name: 'Gérant' };
+      if (st.tier === 'owner') return { kind: 'owner', only: '', name: 'Propriétaire' + await staffName(env, merchant, st.staffId) };
+      if (st.tier === 'manager') return { kind: 'manager', only: 'received', name: 'Gérant' + await staffName(env, merchant, st.staffId) };
     }
   }
   if (opts && opts.allowTill) {

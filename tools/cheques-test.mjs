@@ -32,6 +32,7 @@ const listRoute = await importFresh('functions/api/cheques/index.js');
 const moveRoute = await importFresh('functions/api/cheques/move.js');
 const editRoute = await importFresh('functions/api/cheques/edit.js');
 const detailRoute = await importFresh('functions/api/cheques/detail.js');
+const rbRoute = await importFresh('functions/api/retail-balances.js');
 const { makeSession, sessionCookie, tillToken, employeeToken, employeeCookie, operatorToken, operatorIdToken, DEMO_MERCHANTS } = await importFresh('functions/auth/_lib.js');
 
 const SECRET = 'cheque-portfolio-secret-0123456789';
@@ -79,6 +80,16 @@ db.prepare(`INSERT INTO suppliers (merchant, id, name, created_ts, updated_ts) V
 db.prepare(`INSERT INTO suppliers (merchant, id, name, archived, created_ts, updated_ts) VALUES (?, 'sup-old', 'Ancien fournisseur', 1, ?, ?)`).run(SHOP, now, now);
 db.prepare(`INSERT INTO suppliers (merchant, id, name, created_ts, updated_ts) VALUES (?, 'sup-other', 'Fournisseur ailleurs', ?, ?)`).run(OTHER, now, now);
 db.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, ts, ref) VALUES ('sale-1', ?, 1250, 125000, 'cheque', ?, 'T-0001')`).run(SHOP, now);
+const addSale = (id, cents, extra) => db.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, ts, ref, void_ts) VALUES (?, ?, ?, ?, 'cheque', ?, ?, ?)`)
+  .run(id, (extra && extra.merchant) || SHOP, Math.round(cents / 100), cents, now, 'T-' + id, (extra && extra.void) ? now : null);
+const addClient = (id, name, merchant = SHOP) => db.prepare(`INSERT INTO clients (merchant, id, name, phone) VALUES (?, ?, ?, '0612345678')`).run(merchant, id, name);
+for (const [id, name] of [['cl-hajar', 'Hajar Bennani'], ['cl-youssef', 'Youssef Alami'], ['cl-karim', 'Karim Tazi'], ['cl-nord', 'Société Nord'], ['cl-rachid', 'Rachid Idrissi'], ['cl-leila', 'Leila Amrani'], ['cl-autre', 'Autre Cliente']]) addClient(id, name);
+addClient('cl-ailleurs', 'Cliente ailleurs', OTHER);
+/* Le flux des ventes d'un chèque (lignes « Chèque impayé » et retours) et la note au compte de la cliente. */
+const flow = (chequeId) => db.prepare("SELECT COALESCE(SUM(amount_cents), 0) AS n FROM sales WHERE merchant = ? AND id = ?").get(SHOP, 'chqbounce-' + chequeId.replace(/^chq_/, '')).n;
+const flowRows = () => db.prepare("SELECT id, amount_cents, method FROM sales WHERE merchant = ? AND channel = 'cheque' ORDER BY rowid").all(SHOP);
+const note = (chequeId) => db.prepare('SELECT * FROM retail_balances WHERE merchant = ? AND id = ?').get(SHOP, 'chqdebt-' + chequeId.replace(/^chq_/, ''));
+const owed = async (clientId) => (await importFresh('functions/api/_credit-accounts.js')).clientDebtors(env, SHOP, (t) => '2026-11-21', clientId).then((d) => (d[0] ? d[0].owedCents : 0));
 
 const owner = sessionCookie(await makeSession('acc-1', SECRET));
 const stranger = sessionCookie(await makeSession('acc-2', SECRET));
@@ -156,8 +167,9 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
 /* ── 2 · idempotence et course entre deux appareils ────────────────── */
 {
   const k = key('idem');
-  const a = await create({ idemKey: k, amountCents: 42000, number: '1234567' });
-  const b = await create({ idemKey: k, amountCents: 42000, number: '1234567' });
+  addSale('sale-idem', 42000);
+  const a = await create({ idemKey: k, amountCents: 42000, number: '1234567', partyId: 'cl-autre', saleIds: ['sale-idem'] });
+  const b = await create({ idemKey: k, amountCents: 42000, number: '1234567', partyId: 'cl-autre', saleIds: ['sale-idem'] });
   assert.ok(a.data.ok && !a.data.duplicate && b.data.duplicate && b.data.cheque.id === a.data.cheque.id, 'create replay = same cheque');
   const clash = await create({ idemKey: k, amountCents: 99999 });
   assert.equal(clash.status, 409); assert.equal(clash.data.error, 'idempotency-conflict');
@@ -169,7 +181,9 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
   const again = await call(moveRoute.onRequestPost, '/api/cheques/move', owner, { merchant: SHOP, id, to: 'rejected', requestId: rid });
   assert.equal(first.status, 200); assert.equal(again.status, 200);
   assert.ok(!first.data.duplicate && again.data.duplicate, 'double tap: the second is a duplicate');
-  assert.equal(ledgerLines(id).length, 1, 'double tap posts the debt once');
+  assert.equal(note(id).total_cents, 42000, 'double tap opens one note on the customer account');
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM sales WHERE merchant = ? AND id LIKE 'chqbounce-%' AND amount_cents = -42000").get(SHOP).n, 1, 'double tap: one negative line in the sales flow');
+  assert.equal(ledgerLines(id).length, 0, 'no customer line in money_ledger any more');
   assert.equal(histCount(id), 3, 'create, deposit, reject: one row each');
   const reuse = await call(moveRoute.onRequestPost, '/api/cheques/move', owner, { merchant: SHOP, id, to: 'deposited', requestId: rid });
   assert.equal(reuse.status, 409); assert.equal(reuse.data.error, 'idempotency-conflict');
@@ -185,56 +199,75 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
   const lost = [r1, r2].find((r) => !r.ok);
   assert.equal(lost.error, 'stale'); assert.equal(lost.status, 409);
   assert.equal(histCount(race.data.cheque.id), 2, 'one create + one move');
-  ok('idempotency: create and move replays write once (one ledger line), reused keys refused, concurrent moves: one wins, the other is 409 stale');
+  ok('idempotency: create and move replays write once (one note, one sales line), reused keys refused, concurrent moves: one wins, the other is 409 stale');
 }
 
 /* ── 3 · l'argent, en centimes, avant et après ─────────────────────── */
 {
   /* Chèque reçu pour une vente : l'encaissement n'écrit rien (la vente a compté). */
-  const sale = await create({ amountCents: 125000, partyName: 'Hajar Bennani', number: '0040012', saleIds: ['sale-1'] });
-  const pid = sale.data.cheque.partyId;
-  assert.equal(pid, 'n:hajar-bennani');
+  const flowBefore = flowRows().length;
+  const sale = await create({ amountCents: 125000, partyId: 'cl-hajar', partyName: 'Faux nom', number: '0040012', saleIds: ['sale-1'] });
+  assert.equal(sale.data.cheque.partyId, 'cl-hajar'); assert.equal(sale.data.cheque.partyName, 'Hajar Bennani', 'the client card names the customer');
   await move(sale.data.cheque.id, 'deposited'); await move(sale.data.cheque.id, 'collected');
   assert.equal(ledgerLines(sale.data.cheque.id).length, 0, 'a normal collection writes no money line');
-  assert.equal(await balance('customer', pid), 0);
+  assert.equal(flowRows().length, flowBefore, 'nor any sales line');
+  assert.equal(await owed('cl-hajar'), 0);
 
-  /* Rejet, représentation, second rejet, encaissement. */
-  const c1 = await create({ amountCents: 87550, partyName: 'Youssef Alami', number: '7788' });
-  const p1 = c1.data.cheque.partyId;
-  await move(c1.data.cheque.id, 'deposited');
-  await move(c1.data.cheque.id, 'rejected', { reason: 'Provision insuffisante' });
-  assert.equal(await balance('customer', p1), -87550, 'rejected: the customer owes 875,50 again');
-  await move(c1.data.cheque.id, 'deposited');
-  assert.equal(await balance('customer', p1), -87550, 're-presented: still owed until the money lands');
-  await move(c1.data.cheque.id, 'rejected');
-  assert.equal(await balance('customer', p1), -87550, 'second rejection: no second debt');
-  await move(c1.data.cheque.id, 'deposited');
-  await move(c1.data.cheque.id, 'collected');
-  assert.equal(await balance('customer', p1), 0, 'collected after rejection: debt closed');
-  const l1 = ledgerLines(c1.data.cheque.id);
-  assert.deepEqual(l1.map((l) => [l.direction, l.kind, l.method, l.amount_cents]), [['out', 'cheque-rejected', 'cheque', 87550], ['in', 'repayment', 'cheque', 87550]]);
-  assert.ok(!(await call(detailRoute.onRequestGet, `/api/cheques/detail?merchant=${SHOP}&id=${c1.data.cheque.id}`, owner)).data.cheque.debtOpen);
+  /* Rejet d'un chèque de caisse : la dette au compte de la cliente (carnet de crédit),
+     le flux des ventes rendu juste ; représentation, second rejet, encaissement. */
+  addSale('sale-y', 87550);
+  const c1 = await create({ amountCents: 87550, partyId: 'cl-youssef', number: '7788', saleIds: ['sale-y'] });
+  const id1 = c1.data.cheque.id;
+  await move(id1, 'deposited');
+  await move(id1, 'rejected', { reason: 'Provision insuffisante' });
+  assert.equal(await owed('cl-youssef'), 87550, 'rejected: the credit book shows 875,50 owed by the customer');
+  assert.equal(flow(id1), -87550, 'the cheque money never came: −875,50 in the sales flow');
+  const listed = (await call(listRoute.onRequestGet, `/api/cheques?merchant=${SHOP}&q=7788`, owner)).data.cheques[0];
+  assert.deepEqual([listed.clientId, listed.debt.onAccount, listed.debt.remainingCents], ['cl-youssef', true, 87550]);
+  const tillView = await call(rbRoute.onRequestGet, `/api/retail-balances?merchant=${SHOP}&q=cl-youssef`, till);
+  assert.equal(tillView.data.balances[0].balanceCents, 87550, 'the till sees what the customer owes');
+  await move(id1, 'deposited');
+  assert.equal(await owed('cl-youssef'), 87550, 're-presented: still owed until the money lands');
+  await move(id1, 'rejected');
+  assert.equal(await owed('cl-youssef'), 87550, 'second rejection: no second debt');
+  assert.equal(flow(id1), -87550);
+  await move(id1, 'deposited');
+  const back = await move(id1, 'collected');
+  assert.equal(back.status, 200, JSON.stringify(back.data));
+  assert.equal(await owed('cl-youssef'), 0, 'collected after rejection: debt closed');
+  assert.equal(note(id1), undefined, 'the note leaves the customer account');
+  assert.deepEqual(flowRows().filter((r) => r.amount_cents === 87550 || r.amount_cents === -87550).map((r) => [r.amount_cents, r.method]), [[-87550, 'cheque'], [87550, 'cheque']], 'sale X − X + X = X, never 2X');
+  assert.equal(ledgerLines(id1).length, 0);
 
-  /* Rejet puis réglé autrement (espèces). */
-  const c2 = await create({ amountCents: 20000, partyName: 'Karim Tazi' });
+  /* Rejet, la cliente paie une partie à la caisse (reçu acompte-reglement), le reste en espèces au bureau. */
+  addSale('sale-k', 20000);
+  const c2 = await create({ amountCents: 20000, partyId: 'cl-karim', saleIds: ['sale-k'] });
   await move(c2.data.cheque.id, 'deposited'); await move(c2.data.cheque.id, 'rejected');
-  assert.equal(await balance('customer', c2.data.cheque.partyId), -20000);
+  const n2 = note(c2.data.cheque.id);
+  addSale('pay-k', 5000);
+  db.prepare(`INSERT INTO retail_balance_receipts (merchant, balance_id, sale_id, amount_cents, method, status, created_ts) VALUES (?, ?, 'pay-k', 5000, 'cash', 'posted', ?)`).run(SHOP, n2.id, now);
+  assert.equal(await owed('cl-karim'), 15000, 'a till receipt reduces the debt once');
+  const tillOnly = await move(c2.data.cheque.id, 'replaced', { method: 'till' });
+  assert.equal(tillOnly.status, 409); assert.equal(tillOnly.data.error, 'balance-open', '« réglé à la caisse » needs the note paid at the till');
   await move(c2.data.cheque.id, 'replaced', { method: 'cash' });
-  assert.equal(await balance('customer', c2.data.cheque.partyId), 0);
-  assert.equal(ledgerLines(c2.data.cheque.id)[1].method, 'cash');
+  assert.equal(await owed('cl-karim'), 0);
+  assert.equal(note(c2.data.cheque.id).total_cents, 5000, 'the note closes at what the till received');
+  const k2 = flowRows().filter((r) => r.id.startsWith('chqback-') && r.amount_cents === 15000);
+  assert.deepEqual(k2.map((r) => r.method), ['cash'], 'only the rest (150,00) comes back, in cash');
 
-  /* Contentieux puis virement. */
-  const c3 = await create({ amountCents: 1500001, partyName: 'Société Nord' });
+  /* Contentieux puis virement : la dette reste, rien de plus n'est écrit au contentieux. */
+  const c3 = await create({ amountCents: 1500001, partyId: 'cl-nord' });
   await move(c3.data.cheque.id, 'deposited'); await move(c3.data.cheque.id, 'rejected'); await move(c3.data.cheque.id, 'in_litigation');
-  assert.equal(await balance('customer', c3.data.cheque.partyId), -1500001, 'litigation keeps the debt, no new line');
-  assert.equal(ledgerLines(c3.data.cheque.id).length, 1);
+  assert.equal(await owed('cl-nord'), 1500001, 'litigation keeps the debt');
+  assert.equal(flowRows().filter((r) => Math.abs(r.amount_cents) === 1500001).length, 0, 'a dashboard cheque without a sale never counted: nothing to take back');
   await move(c3.data.cheque.id, 'replaced', { method: 'transfer' });
-  assert.equal(await balance('customer', c3.data.cheque.partyId), 0);
+  assert.equal(await owed('cl-nord'), 0);
+  assert.equal(flowRows().filter((r) => Math.abs(r.amount_cents) === 1500001).length, 0);
 
   /* Réglé autrement avant remise : aucune dette n'a existé, rien n'est écrit. */
   const c4 = await create({ amountCents: 9900, partyName: 'Sans dette' });
   await move(c4.data.cheque.id, 'replaced', { method: 'cash' });
-  assert.equal(ledgerLines(c4.data.cheque.id).length, 0);
+  assert.equal(ledgerLines(c4.data.cheque.id).length, 0); assert.equal(note(c4.data.cheque.id), undefined);
 
   /* Annuler un reçu dont la dette est ouverte : refusé (la dette resterait orpheline). */
   const c5 = await create({ amountCents: 4000, partyName: 'Dette ouverte' });
@@ -242,19 +275,42 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
   const cancel = await move(c5.data.cheque.id, 'cancelled');
   assert.equal(cancel.status, 409); assert.equal(cancel.data.error, 'debt-open');
 
-  /* Sans tiers : la dette va sur un tiers provisoire, puis suit le client nommé. */
-  const c6 = await create({ amountCents: 33300 });
+  /* Sans fiche : la dette reste sur le chèque ; donner une fiche l'inscrit au compte, une autre fiche la déplace. */
+  addSale('sale-r', 33300);
+  const c6 = await create({ amountCents: 33300, saleIds: ['sale-r'] });
   assert.equal(c6.data.cheque.partyId, '');
   await move(c6.data.cheque.id, 'deposited'); await move(c6.data.cheque.id, 'rejected');
-  assert.equal(await balance('customer', 'cheque:' + c6.data.cheque.id), -33300);
-  const named = await call(editRoute.onRequestPost, '/api/cheques/edit', owner, { merchant: SHOP, id: c6.data.cheque.id, requestId: key('ed'), partyName: 'Rachid Idrissi' });
+  assert.equal(note(c6.data.cheque.id), undefined, 'no client card: nothing on an account yet');
+  assert.equal(flow(c6.data.cheque.id), -33300, 'but the sales flow is already right');
+  const det6 = (await call(detailRoute.onRequestGet, `/api/cheques/detail?merchant=${SHOP}&id=${c6.data.cheque.id}`, owner)).data;
+  assert.equal(det6.cheque.debt, null, 'the sheet says the debt is on no account');
+  const named = await call(editRoute.onRequestPost, '/api/cheques/edit', owner, { merchant: SHOP, id: c6.data.cheque.id, requestId: key('ed'), partyId: 'cl-rachid', partyName: 'ignoré' });
   assert.equal(named.status, 200, JSON.stringify(named.data));
-  assert.equal(await balance('customer', 'cheque:' + c6.data.cheque.id), 0);
-  assert.equal(await balance('customer', 'n:rachid-idrissi'), -33300, 'the debt follows the named customer');
-  const relock = await call(editRoute.onRequestPost, '/api/cheques/edit', owner, { merchant: SHOP, id: c6.data.cheque.id, requestId: key('ed'), partyName: 'Quelqu un d autre' });
-  assert.equal(relock.status, 409); assert.equal(relock.data.error, 'party-locked', 'a real party with money lines is not moved');
+  assert.equal(named.data.cheque.partyName, 'Rachid Idrissi');
+  assert.equal(await owed('cl-rachid'), 33300, 'the debt enters the customer account');
+  const moved = await call(editRoute.onRequestPost, '/api/cheques/edit', owner, { merchant: SHOP, id: c6.data.cheque.id, requestId: key('ed'), partyId: 'cl-leila' });
+  assert.equal(moved.status, 200);
+  assert.deepEqual([await owed('cl-rachid'), await owed('cl-leila')], [0, 33300], 'the note follows the client card');
+  const foreign = await call(editRoute.onRequestPost, '/api/cheques/edit', owner, { merchant: SHOP, id: c6.data.cheque.id, requestId: key('ed'), partyId: 'cl-ailleurs' });
+  assert.equal(foreign.status, 404, "another merchant's client card is not ours");
+  addSale('pay-l', 1000);
+  db.prepare(`INSERT INTO retail_balance_receipts (merchant, balance_id, sale_id, amount_cents, method, status, created_ts) VALUES (?, ?, 'pay-l', 1000, 'cash', 'posted', ?)`).run(SHOP, note(c6.data.cheque.id).id, now);
+  const relock = await call(editRoute.onRequestPost, '/api/cheques/edit', owner, { merchant: SHOP, id: c6.data.cheque.id, requestId: key('ed'), partyId: 'cl-rachid' });
+  assert.equal(relock.status, 409); assert.equal(relock.data.error, 'party-locked', 'once the till took money on the note, the customer is locked');
   const amt = await call(editRoute.onRequestPost, '/api/cheques/edit', owner, { merchant: SHOP, id: c6.data.cheque.id, requestId: key('ed'), amountCents: 1 });
   assert.equal(amt.data.error, 'amount-locked');
+  /* Un chèque qui paie une vente garde son montant, même en portefeuille, même pour le gérant. */
+  addSale('sale-lock', 50000);
+  const c7 = await create({ amountCents: 50000, saleIds: ['sale-lock'] });
+  const lock = await call(editRoute.onRequestPost, '/api/cheques/edit', managerTier, { merchant: SHOP, id: c7.data.cheque.id, requestId: key('ed'), amountCents: 1 });
+  assert.equal(lock.status, 409); assert.equal(lock.data.error, 'amount-locked');
+  /* La vente annulée : rien à reprendre au flux, le chèque le signale. */
+  addSale('sale-void', 7000, { void: true });
+  const c8 = await create({ amountCents: 7000, partyId: 'cl-autre', saleIds: ['sale-void'] });
+  const v8 = (await call(listRoute.onRequestGet, `/api/cheques?merchant=${SHOP}&status=received`, owner)).data.cheques.find((x) => x.id === c8.data.cheque.id);
+  assert.equal(v8.saleVoided, true, 'ticket annulé is flagged');
+  await move(c8.data.cheque.id, 'deposited'); await move(c8.data.cheque.id, 'rejected');
+  assert.equal(flow(c8.data.cheque.id), 0, 'a voided sale already left the flow: no negative line');
 
   /* Chèque émis : c'est le paiement du fournisseur. */
   await L.postLedgerEntry(env, SHOP, { idemKey: 't:bill:1', amountCents: 300000, direction: 'in', partyType: 'supplier', partyId: 'sup-fassi', kind: 'bill' });
@@ -287,7 +343,7 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
     assert.equal((await create({ ...('amount' in bad ? {} : { amountCents: 100 }), ...bad })).status, 400, JSON.stringify(bad));
   }
   assert.equal((await create({ amount: '1 250,50' })).data.cheque.amountCents, 125050, 'amount typed in dirhams with a comma');
-  ok('money in centimes: collection writes nothing, rejection −, re-presentation and second rejection unchanged, collection/replacement close the debt, litigation, provisional party relinked, issued cheque = supplier payment (reject, re-present, debit, cancel before/after rejection)');
+  ok('money in centimes: collection writes nothing; a bounced customer cheque goes to the credit book (note on the client card, seen by the till) and takes its sale back out of the flow once; re-presentation and second rejection unchanged; collection, till receipts and replacement close it at X, never 2X; litigation; no card → note on linking, follows the card, locked once paid at the till; amount locked on sale-linked cheques; voided sale flagged; issued cheque = supplier payment (reject, re-present, debit, cancel before/after rejection)');
 }
 
 /* ── 4 · ancienneté, cette semaine, pastille, jour civil ───────────── */
@@ -360,6 +416,14 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
   const tilled = await call(listRoute.onRequestPost, '/api/cheques', till, { merchant: SHOP, idemKey: key('till'), amountCents: 64000, number: '5550001', drawerName: 'Nadia', dueDate: '2026-12-15', saleIds: ['sale-1'], by: 'Saad' });
   assert.equal(tilled.status, 200, JSON.stringify(tilled.data));
   assert.equal(tilled.data.cheque.source, 'till'); assert.equal(tilled.data.cheque.createdBy, 'Caisse · Saad');
+  const back = await call(listRoute.onRequestPost, '/api/cheques', till, { merchant: SHOP, idemKey: key('till'), amountCents: 100, receptionDate: '2020-01-01' });
+  assert.equal(back.data.cheque.receptionDate, (await C.merchantDays(env, SHOP)).business, 'the till cannot backdate: the server business day');
+  const pending = await call(listRoute.onRequestPost, '/api/cheques', till, { merchant: SHOP, idemKey: key('till'), amountCents: 100, partyId: 'cl-not-synced-yet', partyName: 'Nouvelle' });
+  assert.equal(pending.status, 200, 'a client card still in the till outbox does not lose the cheque');
+  assert.equal(pending.data.cheque.partyId, 'cl-not-synced-yet');
+  db.prepare("INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES ('m2', ?, 'x', 'Mehdi', 'manager', ?)").run(SHOP, now);
+  const signed = await create({ amountCents: 100 }, managerTier);
+  assert.equal(signed.data.cheque.createdBy, 'Gérant · Mehdi', 'the acting staff name comes from the session tier');
   assert.equal((await call(listRoute.onRequestPost, '/api/cheques', till, { merchant: SHOP, idemKey: key('till'), direction: 'issued', amountCents: 100, partyType: 'supplier', partyId: 'sup-fassi' })).status, 403, 'a till cannot issue');
   assert.equal((await call(listRoute.onRequestPost, '/api/cheques', otherTill, { merchant: SHOP, idemKey: key('till'), amountCents: 100 })).status, 403, "another shop's till");
   assert.equal((await call(listRoute.onRequestPost, '/api/cheques', till, { merchant: OTHER, idemKey: key('till'), amountCents: 100 })).status, 403, 'a till names another shop');
