@@ -41,6 +41,29 @@
               'من قائمة المتصفح، اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».'));
     });
     document.body.appendChild(b);
+    fit();
+  }
+  /* Le bouton flotte en bas à droite, au-dessus de tout (z 9998). Sur la
+     fiche d'une table, sur la carte et sous une feuille ouverte, il couvrait
+     « Annuler toute la table », « Voir la commande » ou un bouton de la
+     feuille, et le toucher du serveur ouvrait la consigne d'installation. Il
+     ne se montre que sur le plan de salle et le profil, sans feuille ouverte. */
+  function fit() {
+    var b = document.getElementById('kiwi-employee-install');
+    if (!b) return;
+    var tab = document.querySelector('#screen-main.is-active .tab.is-active');
+    var name = tab && tab.getAttribute('data-tab');
+    var hide = !(name === 'tables' || name === 'profil') || !!document.querySelector('.modal-veil.is-open');
+    if (b.hidden !== hide) b.hidden = hide;   // une écriture identique relancerait l'observateur à chaque image
+  }
+  var queued = false;
+  function soon() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(function () { queued = false; fit(); });
+  }
+  if (window.MutationObserver) {
+    new MutationObserver(soon).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['class', 'hidden'] });
   }
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault(); deferred = e; show();
