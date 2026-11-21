@@ -49,7 +49,7 @@ has(hotel, 'dernier : ${esc(g.last)}', 'hôtel : fiche client échappée');
 
 /* Le scan de documents : tout ce qui vient du modèle ou du fichier passe par esc(). */
 const vision = mergedPart('assets/agent-voice.js', 'assets/agent-vision.js');
-const escSrc = vision.slice(vision.indexOf('function esc(v)'), vision.indexOf('function toast(msg)'));
+const escSrc = vision.slice(vision.indexOf('function esc(v)'), vision.indexOf('function toast(msg'));
 const sandbox = {};
 vm.createContext(sandbox);
 vm.runInContext(escSrc + '\nglobalThis.esc = esc;', sandbox);

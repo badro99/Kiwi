@@ -41,6 +41,8 @@ Ta mission :
 
 Signale incomplete:true si une page, ligne ou portion est illisible, omise ou coupée. Ne limite jamais les lignes extraites.
 
+Étiquette de carton, de colis ou liste de colisage avec un assortiment de tailles ou de pointures (ART NO., COLOUR, SIZE 36 37 38 avec une quantité sous chaque taille, QTY 12 PRS) : docType "boutique_product". sizeRun porte UNE entrée par taille avec sa quantité, dans l'ordre imprimé ; reference le numéro d'article, color la couleur, packQty la quantité totale imprimée. L'assortiment va dans sizeRun, jamais dans notes ni dans items. Aucun prix n'est imprimé : n'en invente pas.
+
 4. Proposer les ACTIONS 1-CLIC les plus adaptées pour le commerçant.
 
 Réponds UNIQUEMENT avec un objet JSON valide structuré exactement ainsi :
@@ -65,6 +67,12 @@ Réponds UNIQUEMENT avec un objet JSON valide structuré exactement ainsi :
     "tpeTotal": 0.0,
     "tpeCount": 0,
     "tablesCount": 0,
+    "reference": "Numéro d'article d'une étiquette de carton (ex: 1986-10)",
+    "color": "Couleur imprimée sur l'étiquette",
+    "packQty": 12,
+    "sizeRun": [
+      { "size": "36", "qty": 1 }
+    ],
     "notes": "Mentions utiles"
   },
   "suggestedActions": [
@@ -149,10 +157,27 @@ export function validateVisionData(raw) {
   const tpeCount = Math.round(number(entities.tpeCount));
   const tablesCount = Math.round(number(entities.tablesCount));
   if (raw.incomplete || raw.reviewNeeded) issues.push('incomplete');
+  /* L'assortiment d'une étiquette de carton : une entrée par taille, des unités
+   * entières. Une entrée illisible n'est ni devinée ni arrondie, et une somme
+   * qui ne tombe pas sur la quantité imprimée rend toute la lecture « à
+   * vérifier » : ce sont des pièces qui entreraient en stock. */
+  const rawRun = Array.isArray(entities.sizeRun) ? entities.sizeRun : [];
+  const sizeRun = [];
+  for (const row of rawRun.slice(0, 40)) {
+    const size = String(row?.size ?? '').trim().slice(0, 12);
+    const qty = ['number', 'string'].includes(typeof row?.qty) && String(row.qty).trim() !== '' ? Number(row.qty) : NaN;
+    if (!size || !Number.isSafeInteger(qty) || qty < 0 || qty > 100000 || sizeRun.some(r => r.size === size)) issues.push('invalid-size-run');
+    else sizeRun.push({ size, qty });
+  }
+  const rawPack = entities.packQty == null || entities.packQty === '' ? null : Number(entities.packQty);
+  const packQty = Number.isSafeInteger(rawPack) && rawPack > 0 ? rawPack : null;
+  if (rawRun.length > 40 || (rawPack != null && rawPack !== 0 && packQty == null)) issues.push('invalid-size-run');
+  if (sizeRun.length && packQty != null && sizeRun.reduce((sum, r) => sum + r.qty, 0) !== packQty) issues.push('size-run-mismatch');
   const clipped = (value, limit) => String(value || '').length > limit;
   if (clipped(raw.title, 140) || clipped(raw.summary, 1000) || clipped(raw.categoryLabel, 80)
     || clipped(entities.supplier, 120) || clipped(entities.date, 20) || clipped(entities.invoiceNumber, 60)
     || clipped(entities.category, 40) || clipped(entities.paymentMethod, 30) || clipped(entities.notes, 300)
+    || clipped(entities.reference, 60) || clipped(entities.color, 40)
     || (Array.isArray(entities.items) && entities.items.some(it => clipped(it?.name, 120) || clipped(it?.category, 60)))
     || (raw.suggestedActions || []).length > 4
     || (Array.isArray(raw.suggestedActions) && raw.suggestedActions.some(act => clipped(act?.id, 40) || clipped(act?.type, 40) || clipped(act?.label, 80)))) issues.push('truncated-fields');
@@ -182,6 +207,10 @@ export function validateVisionData(raw) {
       tpeTotal,
       tpeCount,
       tablesCount,
+      reference: String(entities.reference || '').trim().slice(0, 60),
+      color: String(entities.color || '').trim().slice(0, 40),
+      packQty,
+      sizeRun,
       notes: String(entities.notes || '').slice(0, 300),
     },
     suggestedActions: issues.length ? [] : suggestedActions,
@@ -249,6 +278,9 @@ async function budgetHandler(context) {
       'x-kiwi-ai-model': model,
     });
   } catch (err) {
+    /* La raison part aussi au journal de la fonction : le 21 nov. 2026 deux photos
+     * ont répondu 502 et rien ne disait pourquoi. Jamais l'image, jamais le prompt. */
+    console.warn('[vision-inspect] model-failed', who, String(err?.message || err).slice(0, 300));
     return json({ ok: false, error: 'model-failed', message: err?.message || 'Inference error' }, 502);
   }
 }

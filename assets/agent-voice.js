@@ -322,7 +322,7 @@
  *  - Coller depuis le presse-papier (Ctrl+V / Cmd+V)
  *  - Redimensionnement client instantané (Canvas max 1600px) pour un upload ultra-rapide
  *  - Aperçu avant envoi avec miniature et bouton de suppression
- *  - Analyse et classification automatique via /api/ai/vision-inspect (GLM-5.3 Flash)
+ *  - Analyse et classification automatique via /api/ai/vision-inspect (duo vision de _models.js)
  *  - Rendu d'une carte interactive avec actions 1-clic directes (Stock, Dépenses, Carte, Salle, TPE)
  */
 (function () {
@@ -354,9 +354,10 @@
     });
   }
 
-  function toast(msg) {
+  function toast(msg, type) {
     try {
-      if (window.Kiwi && window.Kiwi.toast) { window.Kiwi.toast(msg); return; }
+      /* Sans type, Kiwi.toast annonce un succès (coche verte) : un échec le dit. */
+      if (window.Kiwi && window.Kiwi.toast) { window.Kiwi.toast(msg, type ? { type: type, force: true } : undefined); return; }
       var el = document.createElement('div');
       el.textContent = msg;
       el.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--inverse-surface);color:var(--inverse-ink);padding:10px 18px;border-radius:10px;z-index:99999;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);';
@@ -375,7 +376,7 @@
   var LBL = {
     fr: {
       btnTitle: 'Joindre une photo ou document (Facture, Reçu, Menu, Plan, Article…)',
-      analyzing: 'Analyse du document avec GLM 5.3 Flash…',
+      analyzing: 'Analyse du document en cours…',
       analyzingSub: 'Détection automatique du type de pièce et extraction des montants.',
       defaultPrompt: 'Analyse cette photo ou ce document et dis-moi directement ce qu’il faut faire.',
       uploaded: 'Document joint :',
@@ -389,7 +390,7 @@
     },
     en: {
       btnTitle: 'Attach a photo or document (Invoice, Receipt, Menu, Floorplan, Item…)',
-      analyzing: 'Analyzing document with GLM 5.3 Flash…',
+      analyzing: 'Analyzing the document…',
       analyzingSub: 'Automatic document classification and amount extraction.',
       defaultPrompt: 'Analyze this photo or document and tell me what to do.',
       uploaded: 'Attached document:',
@@ -557,8 +558,13 @@
       }),
     })
     .then(function (res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
+      if (res.ok) return res.json();
+      /* Le serveur dit pourquoi (quota du jour, photo trop lourde, modèle qui
+         n'a pas répondu) : l'écran garde sa raison au lieu d'un « HTTP 502 » nu. */
+      return res.json().catch(function () { return null; }).then(function (b) {
+        var why = b && (b.message || b.error);
+        throw new Error('HTTP ' + res.status + (why ? ' · ' + String(why).slice(0, 120) : ''));
+      });
     })
     .then(function (body) {
       if (typingMsg) typingMsg.remove();
@@ -574,7 +580,7 @@
         thread.appendChild(errMsg);
         scrollDown();
       }
-      toast(T().error);
+      toast(T().error, 'danger');
     });
   }
 
@@ -627,9 +633,15 @@
       '</div>';
     }
 
+    /* Étiquette de carton : l'assortiment de tailles a sa table et sa réception
+       (agent-size-run.mjs, chargé à la demande). Les actions du modèle ne
+       savent pas remplir une grille : elles cèdent la place. */
+    var sizeRun = Array.isArray(ent.sizeRun) && ent.sizeRun.length > 0;
+    if (sizeRun) itemsHtml = '<div class="kv-size-run" data-kv-size-run></div>';
+
     var actionsHtml = '';
-    var actions = data.suggestedActions || [];
-    if (!actions.length) {
+    var actions = sizeRun ? [] : (data.suggestedActions || []);
+    if (!actions.length && !sizeRun) {
       if (data.docType === 'invoice') actions = [{ id: 'st-rec', type: 'stock-receive', label: 'Enregistrer la réception en stock', primary: true }];
       else if (data.docType === 'expense_receipt') actions = [{ id: 'exp-add', type: 'expense-add', label: 'Ajouter aux dépenses', primary: true }];
       else if (data.docType === 'restaurant_menu') actions = [{ id: 'menu-imp', type: 'menu-import', label: 'Importer dans le catalogue', primary: true }];
@@ -666,6 +678,7 @@
     thread.appendChild(msg);
     scrollDown();
     var result = msg;
+    if (sizeRun) import('./agent-size-run.mjs?v=1').then(function (m) { m.mount(msg.querySelector('[data-kv-size-run]'), ent); scrollDown(); }).catch(function () {});
 
     /* Câblage des boutons d'actions */
     msg.querySelectorAll('[data-kv-action]').forEach(function (btn) {
@@ -722,7 +735,7 @@
     btn.classList.add('failed');
     btn.innerHTML = esc(label);
     actionStatus(btn, msg);
-    toast(msg);
+    toast(msg, 'danger');
     return false;
   }
 
@@ -774,7 +787,7 @@
       if (!fileInput.files || !fileInput.files[0]) return;
       var file = fileInput.files[0];
       fileToDataUrl(file, function (err, dataUrl, name, type) {
-        if (err) { toast('Impossible de lire le fichier'); return; }
+        if (err) { toast('Impossible de lire le fichier', 'danger'); return; }
         setAttachment(ctx.wrap, dataUrl, name, type);
       });
       fileInput.value = '';
