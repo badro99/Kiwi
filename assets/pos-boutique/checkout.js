@@ -1,7 +1,7 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=246';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=247';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=246';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=352';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=247';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=353';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=5';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
@@ -16,7 +16,7 @@ const M = globalThis.KiwiMoney;
 /* L'échange groupé (essai Amira Boutique) se charge à part : il importe la
    caisse, la caisse ne l'importe pas, pour ne pas allonger le cycle. */
 let CX = null;
-import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=9').then((m) => { CX = m; }).catch(() => {});
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */
@@ -800,7 +800,7 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
   function openPay(opts) {
     // Translation is optional: payment always has its French copy locally.
     const tr = (key, fr, vars) => {
-      let text = fr;
+      let text = fr == null ? String(key) : fr;   // sans texte français, la clé : jamais undefined.replace (Compte client figé, 21 nov. 2026)
       try {
         const layer = globalThis.window?.KiwiCaisseStrings;
         const value = layer?.say(key, fr, vars);
@@ -1244,7 +1244,7 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
           remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow),
           untilText: held };
         opts.amount = paidNow;
-        opts.title = onAccount ? tr('Compte client') : partial ? tr("checkout.acompte", "Acompte") : tr("checkout.solde.de.l.acompte", "Solde de l’acompte");
+        opts.title = onAccount ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Compte client') : partial ? tr("checkout.acompte", "Acompte") : tr("checkout.solde.de.l.acompte", "Solde de l’acompte");
       }
       if (res.delivery || parts.some((x) => x.m === 'livraison')) stepSuccess(parts, res);
       else {
