@@ -1342,7 +1342,8 @@
   /* Manager can operate the schedule; assets/team.js removes every salary,
    * cost and realised-pay view for that role. Staff cannot enter at all. */
   wrap('nav-payroll', ['owner', 'manager']);
-  ['nav-depenses', 'nav-promos', 'nav-expenses', 'nav-fournisseurs'].forEach((key) => wrap(key, ['owner']));
+  ['nav-depenses', 'nav-promos', 'nav-expenses'].forEach((key) => wrap(key, ['owner']));
+  wrap('nav-fournisseurs', ['owner']);
   /* Staff-only exclusions: the badge that cannot see Équipe cannot see the
    * team's contracts or the compliance file either. */
   if ((window.__kiwiRole || 'owner') === 'staff') ['nav-equipe', 'nav-conformite'].forEach((key) => wrap(key, ['owner', 'manager']));
