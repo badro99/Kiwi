@@ -29,7 +29,6 @@ import {
 
 const rid = (p) => p + (globalThis.crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(16).slice(2)).replace(/-/g, '');
 const parse = (text, fallback) => { try { const v = JSON.parse(text); return v == null ? fallback : v; } catch (_) { return fallback; } };
-export const missingTable = (e) => /no such table/i.test(String((e && e.message) || e || ''));
 
 export async function merchantToday(env, merchant, now = Date.now()) {
   const [cutoff, zone] = await Promise.all([merchantCutoff(env, merchant), merchantZone(env, merchant)]);
@@ -109,7 +108,7 @@ async function debtorsOf(env, merchant, dayOf) {
   const out = [];
   let carnetError = null;
   try { out.push(...await carnetDebtors(env, merchant, dayOf)); } catch (e) { carnetError = e; }
-  try { out.push(...await clientDebtors(env, merchant, dayOf)); } catch (e) { if (!missingTable(e)) throw e; }
+  out.push(...await clientDebtors(env, merchant, dayOf));
   if (carnetError) throw carnetError;
   return out;
 }
@@ -231,8 +230,7 @@ function present(debtor, acct, today) {
 export async function creditBook(env, merchant, now = Date.now()) {
   const { today, dayOf } = await merchantToday(env, merchant, now);
   const debtors = await debtorsOf(env, merchant, dayOf);
-  let accounts = [];
-  try { accounts = await readAccounts(env, merchant); } catch (e) { if (!missingTable(e)) throw e; }
+  const accounts = await readAccounts(env, merchant);
   const accOf = new Map(accounts.map((a) => [a.source + ':' + a.key, a]));
   const customers = [];
   for (const d of debtors) {
@@ -254,8 +252,7 @@ export async function creditBook(env, merchant, now = Date.now()) {
 export async function customerDetail(env, merchant, source, key, now = Date.now()) {
   const { today, dayOf } = await merchantToday(env, merchant, now);
   const debtor = await debtorOf(env, merchant, source, key, dayOf);
-  let acct = null;
-  try { acct = await readAccount(env, merchant, source, key); } catch (e) { if (!missingTable(e)) throw e; }
+  let acct = await readAccount(env, merchant, source, key);
   if (!debtor && !acct) return null;
   if (acct) acct = await reconcile(env, merchant, acct, debtor, now);
   let events = [];
@@ -338,17 +335,14 @@ export async function limitCheck(env, merchant, source, key, addCents, localOwed
   const { dayOf } = await merchantToday(env, merchant, now);
   let debtor = null;
   try { debtor = await debtorOf(env, merchant, source, key, dayOf); } catch (_) { debtor = null; }
-  let acct = null;
-  try { acct = await readAccount(env, merchant, source, key); } catch (e) { if (!missingTable(e)) throw e; }
+  const acct = await readAccount(env, merchant, source, key);
   const owed = Math.max(debtor ? debtor.owedCents : 0, Math.max(0, cents(localOwedCents || 0)));
   return limitDecision({ owedCents: owed, addCents, limitCents: acct ? acct.limitCents : null });
 }
 
 export async function tillLimits(env, merchant) {
-  try {
-    const res = await env.DB.prepare('SELECT source, customer_key, limit_cents FROM credit_accounts WHERE merchant = ? AND limit_cents IS NOT NULL').bind(merchant).all();
-    return Object.fromEntries((res.results || []).map((r) => [r.source + ':' + r.customer_key, Number(r.limit_cents)]));
-  } catch (e) { if (missingTable(e)) return {}; throw e; }
+  const res = await env.DB.prepare('SELECT source, customer_key, limit_cents FROM credit_accounts WHERE merchant = ? AND limit_cents IS NOT NULL').bind(merchant).all();
+  return Object.fromEntries((res.results || []).map((r) => [r.source + ':' + r.customer_key, Number(r.limit_cents)]));
 }
 
 /* « Paiera le … » : une ligne d'échéancier posée au comptoir avec la vente.

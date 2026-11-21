@@ -7,10 +7,10 @@
  * Tout se lit dans les carnets existants (ardoise, notes boutique) ; voir
  * functions/api/_credit-accounts.js. */
 import { json } from '../../auth/_lib.js';
-import { creditBook, customerDetail, saveSchedule, setLimit, setPrefs, validTarget, missingTable } from '../_credit-accounts.js';
+import { creditBook, customerDetail, saveSchedule, setLimit, setPrefs, validTarget } from '../_credit-accounts.js';
 import { creditReader } from './_reader.js';
 
-const fail = (e) => json({ error: missingTable(e) ? 'credit-not-migrated' : (e && e.code) || 'credit-unavailable' }, 503);
+const fail = (e) => json({ error: (e && e.code) || 'credit-unavailable' }, 503);
 const noStore = { 'Cache-Control': 'no-store' };
 
 export async function onRequestGet({ request, env }) {

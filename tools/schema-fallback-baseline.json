@@ -1,5 +1,7 @@
 {
   "api/_client-audit.js : repli de schéma": 1,
+  "api/_credit-accounts.js : no such table: credit_accounts": 5,
+  "api/_credit-accounts.js : no such table: credit_events": 2,
   "api/_invoice-series.js : repli de schéma": 1,
   "api/_quarantine-guard.js : repli de schéma": 1,
   "api/_support.js : repli de schéma": 8,

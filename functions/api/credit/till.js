@@ -7,9 +7,9 @@
  *             et seul un rôle qui ouvre le tableau de bord accorde. L'accord est journalisé.
  *   'promise' { id, amountCents, dueDate, note }  « paiera le … », une ligne d'échéancier. */
 import { entitledMerchant, verifyStaffPin, employeeRoleOpensDashboard, json } from '../../auth/_lib.js';
-import { addPromise, limitCheck, logEvent, missingTable, tillLimits, validTarget } from '../_credit-accounts.js';
+import { addPromise, limitCheck, logEvent, tillLimits, validTarget } from '../_credit-accounts.js';
 
-const fail = (e) => json({ error: missingTable(e) ? 'credit-not-migrated' : 'credit-unavailable' }, 503);
+const fail = () => json({ error: 'credit-unavailable' }, 503);
 const noStore = { 'Cache-Control': 'no-store' };
 const amount = (v) => (Number.isSafeInteger(v) && v >= 0 && v <= 20000000 ? v : null);
 
