@@ -1994,7 +1994,7 @@
        tombait sur le plat déjà en cuisine et refusait, alors que le serveur
        venait juste d'en ajouter un qu'il pouvait parfaitement reprendre. */
     function tableOrderMinusMenu(tableId, itemId) {
-      const lines = (tableOrders[tableId] || []).filter(l => l.id === itemId && !l.sent);
+      const lines = (tableOrders[tableId] || []).filter(l => l.id === itemId && !l.sent && l.kind !== 'formula-part');
       const line = lines.find(l => !(l.note || '').trim()) || lines[lines.length - 1];
       if (line) { changeTableOrderLineQty(tableId, line.uid, -1); return; }
       if ((tableOrders[tableId] || []).some(l => l.id === itemId)) {

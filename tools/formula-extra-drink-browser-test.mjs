@@ -129,16 +129,24 @@ try {
     const counter = await page.evaluate((id) => cart.filter((l) => l.id === id).map((l) => ({ kind: l.kind || '', qty: +l.qty, price: +l.price })), drink.id);
     check(counter.some((l) => l.kind === 'formula-part' && l.qty === 1 && l.price === 0), 'counter · the formula\'s included drink stays 1 × 0 MAD', JSON.stringify(counter));
     check(counter.some((l) => l.kind === '' && l.qty === 1 && l.price === drink.price), `counter · the extra drink is its own line at ${drink.price} MAD`, JSON.stringify(counter));
+    tr.step('counter: the − on the same menu card takes back the paid drink, never the included one');
+    const counterMinus = await page.evaluate((id) => { cartMinusMenu(id); return cart.filter((l) => l.id === id).map((l) => ({ kind: l.kind || '', qty: +l.qty, price: +l.price })); }, drink.id);
+    check(counterMinus.length === 1 && counterMinus[0].kind === 'formula-part' && counterMinus[0].qty === 1, 'counter · the card − removes the paid drink and leaves the formula whole', JSON.stringify(counterMinus));
     tr.step('table: a formula on T1, then the same drink');
     const table = await page.evaluate((seedSrc, id) => {
       const seed = new Function('return (' + seedSrc + ')')();
       const t = Object.keys(tables)[0];
       currentOrder().replaceTable(t, seed(id, {}));
       pushTableOrderLine(t, menuItems.find((m) => m.id === id), []);
-      return tableOrders[t].filter((l) => l.id === id).map((l) => ({ kind: l.kind || '', qty: +l.qty, price: +l.price }));
+      const pick = () => tableOrders[t].filter((l) => l.id === id).map((l) => ({ kind: l.kind || '', qty: +l.qty, price: +l.price }));
+      const added = pick();
+      tableOrderMinusMenu(t, id);
+      return { added, minus: pick() };
     }, seedFormula.toString(), drink.id);
-    check(table.some((l) => l.kind === 'formula-part' && l.qty === 1 && l.price === 0), 'table · the formula\'s included drink stays 1 × 0 MAD', JSON.stringify(table));
-    check(table.some((l) => l.kind === '' && l.qty === 1 && l.price === drink.price), `table · the extra drink is its own line at ${drink.price} MAD`, JSON.stringify(table));
+    const tableMinus = table.minus;
+    check(table.added.some((l) => l.kind === 'formula-part' && l.qty === 1 && l.price === 0), 'table · the formula\'s included drink stays 1 × 0 MAD', JSON.stringify(table.added));
+    check(table.added.some((l) => l.kind === '' && l.qty === 1 && l.price === drink.price), `table · the extra drink is its own line at ${drink.price} MAD`, JSON.stringify(table.added));
+    check(tableMinus.length === 1 && tableMinus[0].kind === 'formula-part' && tableMinus[0].qty === 1, 'table · the card − removes the paid drink and leaves the formula whole', JSON.stringify(tableMinus));
     check(errors.length === 0, 'no script error on the till', errors.join(' | '));
   });
 } finally {

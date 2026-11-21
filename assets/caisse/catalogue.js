@@ -1088,9 +1088,10 @@
       renderCart();
     }
 
-    /* Menu-card − · removes one unit of a dish (the plain line, else the last). */
+    /* Menu-card − · removes one unit of a dish (the plain line, else the last).
+       Never a formula's included item (0 MAD) : it leaves with its formula. */
     function cartMinusMenu(itemId) {
-      const lines = cart.filter(c => c.id === itemId);
+      const lines = cart.filter(c => c.id === itemId && c.kind !== 'formula-part');
       const line = lines.find(c => !(c.note || '').trim()) || lines[lines.length - 1];
       if (line) changeCartLineQty(line.uid, -1);
     }
