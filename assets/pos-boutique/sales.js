@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=344';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=240';
-import { offerRegister } from './inventory.js?v=240';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=345';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=241';
+import { offerRegister } from './inventory.js?v=241';
 import { ticketOwner } from './ticket-owner.js?v=5';
 import { ticketRemise } from './ticket-remise.js?v=5';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
@@ -10,7 +10,7 @@ import { sellSearch } from './search.js?v=20';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=5';
 let CX = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=2').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=3').then((m) => { CX = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -204,8 +204,8 @@ import('./exch-combined.js?v=2').then((m) => { CX = m; }).catch(() => {});
     let kind = 'percent', value = 10, label = '−10 %';
     if (cfg.model === 'amount') {
       const txt = (cfg.amount && cfg.amount.reward) || '−10 %';
-      const m = String(txt).match(/(\d+)\s*%/);
-      kind = 'percent'; value = m ? +m[1] : 10; label = txt;
+      const m = String(txt).match(/(\d+(?:[.,]\d+)?)\s*%/);
+      kind = 'percent'; value = m ? +m[1].replace(',', '.') : 10; label = txt;
     } else {
       const txt = (cfg.model === 'product' ? (cfg.product && cfg.product.reward) : (cfg.visit && cfg.visit.reward)) || '1 offert';
       kind = 'free'; label = txt;

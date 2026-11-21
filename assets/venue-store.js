@@ -184,7 +184,7 @@
           rawSet(feature, vid, d);
           notify(feature, vid);          // the open page re-renders with the server's copy
         },
-        merge: opts.merge,
+        merge: opts.merge, serverWins: !!opts.serverWins, // un réglage : sans saisie locale en attente, la copie serveur fait foi
         isEmpty: (d) => empty(d),
         // Le serveur a refusé la copie (document hors bornes) : la fonctionnalité
         // doit pouvoir le dire au commerçant plutôt que de le laisser croire que

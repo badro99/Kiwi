@@ -642,7 +642,7 @@ for (const test of [
   'cloud-doc-quota-test.mjs',
   'cloud-doc-retry-test.js', 'hotel-live-test.mjs', 'online-booking-survives-test.mjs', 'field-merge-observed-test.mjs',
   /* 2026-11-08 · deux appareils, mêmes lignes, autre ordre : plus de ping-pong (Santos, returns). */
-  'cloud-doc-order-loop-test.js',
+  'cloud-doc-order-loop-test.js', 'cloud-doc-settings-wins-test.js', // 2026-11-21 · un vieux cache ne réimpose plus un réglage (Amira, fidélité)
   'reservation-overlap-test.mjs',
   'booking-rules-shared-test.mjs',
   'store-credit-sale-test.mjs',
