@@ -961,6 +961,27 @@ CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_cursor
   ON inventory_movements (merchant, srv_ts);
 CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_item
   ON inventory_movements (merchant, item_id, occurred_ts);
+-- Coût théorique et réel (functions/api/cost-variance.js) : toutes ses sommes
+-- portent sur une période d'un magasin ; sans cet index, chaque rapport lisait
+-- tout l'historique du magasin.
+CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_time
+  ON inventory_movements (merchant, occurred_ts);
+-- Valeur du stock sans relire l'historique : sommes par article jusqu'à un
+-- curseur srv_ts (functions/api/cost-variance.js › stockBlock). Un cache
+-- recalculable, jamais une écriture comptable : le supprimer ne perd rien.
+CREATE TABLE IF NOT EXISTS cost_stock_snapshots (
+  merchant   TEXT PRIMARY KEY,
+  cursor     INTEGER NOT NULL,
+  items_json TEXT NOT NULL,
+  updated_ts INTEGER NOT NULL
+);
+-- Le seuil de marge minimum fixé par le propriétaire (Coût réel).
+CREATE TABLE IF NOT EXISTS cost_targets (
+  merchant       TEXT PRIMARY KEY,
+  min_margin_pct REAL NOT NULL,
+  updated_ts     INTEGER NOT NULL,
+  updated_by     TEXT NOT NULL DEFAULT ''
+);
 CREATE TABLE IF NOT EXISTS inventory_sync_sequences (
   merchant TEXT PRIMARY KEY,
   last_ts   INTEGER NOT NULL

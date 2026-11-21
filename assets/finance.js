@@ -888,6 +888,7 @@
         ${parts.seg}
       </div>
       ${parts.body}
+      <div data-costvar-slot></div>
     </div>`;
   }
   /* Le contenu de la page réelle, sans son en-tête : « Analyse du menu » le
@@ -1061,14 +1062,14 @@
    * onglets. */
   const ANALYSIS = {
     fr: { title: 'Analyse du menu', sub: (v) => `Ce que votre carte vend, et ce qu’elle vous laisse · ${v}`, aria: 'Sections de l’analyse',
-      tabs: { overview: 'Vue d’ensemble', sales: 'Ventes', performance: 'Performance', hours: 'Heures de pointe' } },
+      tabs: { overview: 'Vue d’ensemble', sales: 'Ventes', performance: 'Performance', hours: 'Heures de pointe', variance: 'Coût réel' } },
     en: { title: 'Menu analysis', sub: (v) => `What your menu sells, and what it leaves you · ${v}`, aria: 'Analysis sections',
-      tabs: { overview: 'Overview', sales: 'Sales', performance: 'Performance', hours: 'Peak hours' } },
+      tabs: { overview: 'Overview', sales: 'Sales', performance: 'Performance', hours: 'Peak hours', variance: 'Actual cost' } },
     ar: { title: 'تحليل القائمة', sub: (v) => `ما تبيعه قائمتك، وما تتركه لك · ${v}`, aria: 'أقسام التحليل',
-      tabs: { overview: 'نظرة عامة', sales: 'المبيعات', performance: 'الأداء', hours: 'ساعات الذروة' } },
+      tabs: { overview: 'نظرة عامة', sales: 'المبيعات', performance: 'الأداء', hours: 'ساعات الذروة', variance: 'الكلفة الفعلية' } },
   };
   const at = () => ANALYSIS[lang()] || ANALYSIS.fr;
-  const FIN_TABS = ['overview', 'sales', 'performance', 'hours', 'cost'];
+  const FIN_TABS = ['overview', 'sales', 'performance', 'hours', 'variance', 'cost'];
   /* « Coût simple » n'existe que là où l'option `simple_food_cost` est
      explicitement allumée (assets/simple-food-cost.js › available). Un onglet
      retenu qui n'est plus disponible retombe sur la vue d'ensemble. */
@@ -1091,6 +1092,7 @@
     let seg = '';
     let body = '';
     if (finTab === 'cost') body = window.KiwiSimpleFoodCost.panel();
+    else if (finTab === 'variance') body = '<div data-costvar-slot></div>';
     else if (finTab === 'sales' && A.sales) body = A.sales();
     else if (finTab === 'performance') body = A.performance();
     else if (finTab === 'hours') body = A.hours();
@@ -1126,13 +1128,21 @@
     if (pageActive) render();
   }
 
+  /* Coût théorique et réel (assets/pages-pro/cost-variance.js, chargé au
+     premier usage) : /api/cost-variance pour un vrai commerçant, un exemple
+     en démonstration. Plus jamais le « réel = théorique × 1,04 ». */
+  const mountVariance = (root, v, restaurant) => {
+    const slot = root && root.querySelector ? root.querySelector('[data-costvar-slot]') : null;
+    if (!slot) return;
+    try { const r = window.Kiwi.handlers['costvar-mount'](slot, { real: finShowReal(v), restaurant: !!restaurant }); if (r && r.catch) r.catch(() => {}); } catch (_) {}
+  };
   function render() {
     const root = document.querySelector('[data-finance-root]');
     if (!root) return;
     const v = currentVenueId();
     const A = menuAnalysis();
-    if (A) { finCss(); finBindLive(); root.innerHTML = analysisPage(v, A); return; }
-    if (finShowReal(v)) { finBindLive(); root.innerHTML = finReal(v); return; }
+    if (A) { finCss(); finBindLive(); root.innerHTML = analysisPage(v, A); mountVariance(root, v, true); return; }
+    if (finShowReal(v)) { finBindLive(); root.innerHTML = finReal(v); mountVariance(root, v, false); return; }
     root.innerHTML = `
       <div class="fin-page">
         <div class="fin-head">
