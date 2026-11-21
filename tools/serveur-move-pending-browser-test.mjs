@@ -64,7 +64,8 @@ try {
 
     t.step('le réseau revient : les lots en attente repartent');
     await h.sleep(4200);
-    await page.evaluate(() => svDrainPendingBatches());
+    // svDrainAt = 0 : sans quoi un vidage lancé par la synchro dans les 4 s rend cet appel muet.
+    await page.evaluate(() => { svDrainAt = 0; svDrainPendingBatches(); });
     await h.sleep(1500);
     const tickets = h.db.tickets();
     check(tickets.length === 1 && tickets[0].table_no === '5', `un seul bon en cuisine, sur la table 5 (${JSON.stringify(tickets.map((x) => x.table_no))})`);

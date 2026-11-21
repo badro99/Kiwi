@@ -62,7 +62,9 @@ try {
     check(await page.evaluate(() => !document.getElementById('mrg-confirm').disabled), 'le bouton reste utilisable');
 
     t.step('le réseau revient, les lots partent, la fusion passe');
-    await page.evaluate(() => { document.getElementById('merge-table-modal').classList.remove('is-open'); svDrainPendingBatches(); });
+    /* svDrainPendingBatches ignore un appel à moins de 4 s du précédent (svDrainAt) : celui qu'a lancé la
+       synchro pendant la panne le rendait muet, et le prochain pouvait tomber après l'attente ci-dessous. */
+    await page.evaluate(() => { document.getElementById('merge-table-modal').classList.remove('is-open'); svDrainAt = 0; svDrainPendingBatches(); });
     await h.until(() => h.db.tickets().length === 2, 'les deux bons arrivent', 15000);
     await page.waitForFunction(() => !Object.keys(localStorage).some((k) => k.startsWith('kiwi:service-pending-v1:')), { timeout: 10000 });
     await page.evaluate(() => pollServiceSync());
