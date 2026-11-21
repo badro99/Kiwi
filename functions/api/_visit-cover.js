@@ -1,3 +1,4 @@
+import { tableAliases } from './service/events.js';
 /* What a table visit's receipts actually paid for. Shared by the two places
  * that settle a visit: the payment itself (/api/sale) and the till's
  * "settled" close (/api/order/queue, closeSession + closedBy settle). Both
@@ -94,16 +95,20 @@ export async function staleVisitPayment(env, merchant, session, table) {
     ).bind(merchant, session.id).first();
   } catch (_) { return { status: 503, body: { error: 'visit-order-lookup-unavailable' } }; }
   if (!(tally && Number(tally.paid) > 0 && !Number(tally.unpaid))) return null;
-  /* Une nouvelle visite déjà ouverte sur la même table : le téléphone règle la note qu'il affiche
-     (la nouvelle) avec un identifiant de visite pas encore relu. /api/sale la rattache à la
-     table ouverte, comme avant ; refuser ici bloquait l'encaissement d'une vraie note. */
+  /* Une nouvelle visite déjà ouverte sur la même table ne change rien : une vente n'est JAMAIS
+     écrite sur une visite soldée. L'accepter ici payait une seconde fois « à travers » l'ancienne
+     visite dès que la table était rouverte, et rangeait l'argent sur la mauvaise visite. Le refus
+     nomme la visite ouverte (alias « 4 » / « T4 » compris) : le téléphone relit la note et
+     relance contre elle, avec le même identifiant de vente. */
+  let reopened = '';
   if (table) {
-    let current = null;
     try {
-      current = await env.DB.prepare("SELECT id FROM table_sessions WHERE merchant = ? AND table_no = ? AND status = 'open' AND id <> ? LIMIT 1")
-        .bind(merchant, table, session.id).first();
+      const aliases = tableAliases(table);
+      const current = await env.DB.prepare(`SELECT id FROM table_sessions WHERE merchant = ? AND table_no IN (${aliases.map(() => '?').join(',')}) AND mode = 'table' AND status = 'open' AND id <> ? ORDER BY opened_ts DESC LIMIT 1`)
+        .bind(merchant, ...aliases, session.id).first();
+      reopened = (current && current.id) ? String(current.id) : '';
     } catch (_) { return { status: 503, body: { error: 'visit-order-lookup-unavailable' } }; }
-    if (current && current.id) return null;
   }
+  if (reopened) return { status: 409, body: { error: 'visit-already-settled', table: table || '', reopened: true, openSession: reopened } };
   return { status: 409, body: { error: 'visit-already-settled', table: table || '' } };
 }

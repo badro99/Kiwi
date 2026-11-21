@@ -14,7 +14,8 @@
  *   · le même téléphone qui REJOUE une vente déjà écrite ⇒ accepté, une ligne ;
  *   · téléphone, visite close mais un ticket encore dû ⇒ pas refusé ici ;
  *   · la caisse appairée, visite close ⇒ sa règle reste (elle écrit sa vente) ;
- *   · une autre boutique ne voit rien de la visite (409 jamais par erreur). */
+ *   · une autre boutique ne voit rien de la visite (409 jamais par erreur) ;
+ *   · table rouverte sous une autre visite (alias compris) ⇒ 409 qui la nomme, rien sur l'ancienne. */
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -96,12 +97,33 @@ visit('tsx-owner-at-the-till-07', '10');
 r = await pay(owner, { id: 'own-till-pay-7', table: '10', session: 'tsx-owner-at-the-till-07', amount: 28, amountCents: 2800, ref: 'T10', label: 'T10' });
 check(r.status === 200 && r.body.ok && salesById('own-till-pay-7') === 1, `patron à la caisse : la vente d'une visite qu'il vient de clore passe (${r.status} ${r.body.error || ''})`);
 
-/* 8 · la table a déjà une nouvelle visite ouverte : le téléphone règle la note qu'il affiche avec
- * l'identifiant de la visite d'avant (pas encore relu) ; ce n'est pas un second encaissement. */
+/* 8 · la table a déjà une nouvelle visite ouverte, le téléphone envoie encore l'identifiant de la
+ * visite soldée. Revue de sécurité : accepter ici écrivait la vente sur la visite soldée (un second
+ * encaissement « à travers » elle, rangé sur la mauvaise visite). Refusé, et le refus nomme la
+ * visite ouverte ; la relance contre elle, même identifiant de vente, passe une fois. */
 visit('tsx-previous-settled-08', '11');
 visit('tsx-new-visit-open-0008', '11', { closed: false, paid: [false] });
+const before8 = salesOn('tsx-previous-settled-08');
 r = await pay(waiter, { id: 'emp-pay-new-8', table: '11', session: 'tsx-previous-settled-08', amount: 28, amountCents: 2800, ref: 'ST-105', label: 'ST-105' });
-check(!(r.status === 409 && r.body.error === 'visit-already-settled'), `nouvelle visite ouverte sur la table : pas refusée comme « déjà réglée » (${r.status} ${r.body.error || ''})`);
+check(r.status === 409 && r.body.error === 'visit-already-settled' && r.body.reopened === true && r.body.openSession === 'tsx-new-visit-open-0008', `nouvelle visite ouverte : refusé, et le refus nomme la visite ouverte (${r.status} ${r.body.error || ''} ${r.body.openSession || ''})`);
+check(salesById('emp-pay-new-8') === 0 && salesOn('tsx-previous-settled-08') === before8, "rien n'est écrit, et surtout pas sur la visite soldée");
+r = await pay(waiter, { id: 'emp-pay-new-8', table: '11', session: 'tsx-new-visit-open-0008', amount: 28, amountCents: 2800, ref: 'ST-105', label: 'ST-105' });
+check(r.status === 200 && r.body.ok && salesOn('tsx-new-visit-open-0008') === 1 && salesOn('tsx-previous-settled-08') === before8, `relu, le téléphone relance contre la visite ouverte : une vente, sur elle (${r.status} ${r.body.error || ''})`);
+r = await pay(waiter, { id: 'emp-pay-new-8', table: '11', session: 'tsx-new-visit-open-0008', amount: 28, amountCents: 2800, ref: 'ST-105', label: 'ST-105' });
+check(r.status === 200 && r.body.ok && salesById('emp-pay-new-8') === 1, `le rejeu du même identifiant reste accepté, une seule ligne (${r.status})`);
+r = await pay(waiter, { id: 'emp-pay-new-8', table: '11', session: 'tsx-previous-settled-08', amount: 28, amountCents: 2800, ref: 'ST-105', label: 'ST-105' });
+check(r.status === 200 && r.body.ok && salesById('emp-pay-new-8') === 1 && salesOn('tsx-previous-settled-08') === before8, `même rejoué avec l'ancienne visite, la vente déjà écrite répond 200 sans seconde ligne (${r.status})`);
+
+/* 9 · la nouvelle visite est rangée sous un alias (« T12 ») et le téléphone dit « 12 » : même refus. */
+visit('tsx-alias-settled-00009', 'T12');
+visit('tsx-alias-reopened-0009', 'T12', { closed: false, paid: [false] });
+r = await pay(waiter, { id: 'emp-pay-alias-9', table: '12', session: 'tsx-alias-settled-00009', amount: 28, amountCents: 2800, ref: 'ST-106', label: 'ST-106' });
+check(r.status === 409 && r.body.reopened === true && r.body.openSession === 'tsx-alias-reopened-0009' && salesById('emp-pay-alias-9') === 0, `alias « 12 » / « T12 » : la visite rouverte est trouvée, rien n'est écrit (${r.status} ${r.body.openSession || ''})`);
+
+/* 10 · soldée sans nouvelle visite : le refus ne prétend pas qu'il y en a une. */
+check(salesById('emp-pay-stale-1') === 0, 'rappel : la table 4 soldée sans nouvelle visite a été refusée plus haut');
+r = await pay(waiter, { id: 'emp-pay-stale-10', table: '4', session: 'tsx-settled-at-till-0001', amount: 28, amountCents: 2800, ref: 'ST-107', label: 'ST-107' });
+check(r.status === 409 && !r.body.reopened && !r.body.openSession, `sans nouvelle visite, le refus ne nomme aucune visite ouverte (${r.status})`);
 
 f.close();
 console.log(`serveur-stale-visit-payment-test: ${checks} checks passed`);
