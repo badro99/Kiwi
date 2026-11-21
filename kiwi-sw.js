@@ -134,7 +134,7 @@ var SHELL = [
   '/assets/channel-link.js?v=202608272327',
   '/assets/marketing-suite-tease.js?v=1',
   '/assets/reception-view.js?v=3',
-  '/assets/pages-pro.js?v=2237',
+  '/assets/pages-pro.js?v=2238',
   '/assets/pages-pro-spa-starter.js?v=8',
   '/assets/cash-sessions.js?v=15',
   '/assets/simple-food-cost.js?v=29',
@@ -230,7 +230,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=31',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
-  '/assets/pages/dashboard-startup.js?v=280',
+  '/assets/pages/dashboard-startup.js?v=281',
   '/assets/pages/dashboard-loader.js?v=107',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -261,7 +261,7 @@ var SHELL = [
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=14',
-  '/assets/i18n.js?v=59',
+  '/assets/i18n.js?v=60',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -284,9 +284,9 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues/data.js?v=4',
+  '/assets/venues/data.js?v=5',
   '/assets/venues/helpers.js?v=10',
-  '/assets/venues.js?v=78',
+  '/assets/venues.js?v=79',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=14',
   '/assets/trade-workspaces.js?v=21',
