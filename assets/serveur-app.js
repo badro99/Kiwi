@@ -1788,10 +1788,10 @@
      * tablette qui se recharge au mauvais moment laissait donc une commande en
      * suspens que personne ne savait en suspens.
      *
-     * On les vide au démarrage, et dès que le réseau revient. `svSendOrderBatch`
+     * On les vide au démarrage, au retour du réseau et après chaque synchro réussie. `svSendOrder`
      * repart du lot stocké avec sa référence d'origine : c'est la même
      * commande, pas une seconde. */
-    let svDrainAt = 0;
+    let svDrainAt = 0, svDrainTimer = 0; // fenêtre de 4 s, et le vidage reporté à sa fin
 
 
     window.addEventListener('online', () => { try { svDrainPendingBatches(); } catch (_) {} });

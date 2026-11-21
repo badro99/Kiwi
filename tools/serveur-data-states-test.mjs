@@ -224,7 +224,7 @@ function header() {
   ok('fin de service : l’état de synchro repart de zéro', never.el.hidden === true && never.ctx.sync.lastOkAt === 0);
 }
 ok('chaque tour de synchro le marque, réussi ou non',
-  /svSyncMark\(!!\(res\.events && res\.events\.ok && res\.orders && res\.orders\.ok\)\);\s*\}\)\.catch\(\(\) => \{ svSyncMark\(false\); \}\);/.test(html));
+  /const synced = !!\(res\.events && res\.events\.ok && res\.orders && res\.orders\.ok\); svSyncMark\(synced\);[^\n]*\s*\}\)\.catch\(\(\) => \{ svSyncMark\(false\); \}\);/.test(html));
 ok('les lectures de synchro ont un délai réel',
   /svFetchJson\('\/api\/service\/events[\s\S]{0,260}SV_POLL_TIMEOUT_MS\)/.test(html)
   && /await svFetchJson\(url, \{[\s\S]{0,120}SV_POLL_TIMEOUT_MS\)/.test(html));

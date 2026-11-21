@@ -429,7 +429,7 @@
       }).then((res) => {
         if (res === SV_POLL_SKIP) return;
         ingestServiceOrders(res.orders);
-        svSyncMark(!!(res.events && res.events.ok && res.orders && res.orders.ok));
+        const synced = !!(res.events && res.events.ok && res.orders && res.orders.ok); svSyncMark(synced); if (synced) { try { svDrainPendingBatches(); } catch (_) {} }
       }).catch(() => { svSyncMark(false); });
       servicePlanTick++;
       /* Team, schedule and floor assignments share this six-second live loop.
@@ -532,7 +532,7 @@
     function svDrainPendingBatches() {
       if (SV_DEMO || svBrowseMode()) return;
       const now = Date.now();
-      if (now - svDrainAt < 4000) return;
+      if (now - svDrainAt < 4000) { if (!svDrainTimer) svDrainTimer = setTimeout(() => { svDrainTimer = 0; try { svDrainPendingBatches(); } catch (_) {} }, 4001 - (now - svDrainAt)); return; }
       svDrainAt = now;
       const prefix = 'kiwi:service-pending-v1:';
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug() || 'store';
@@ -547,13 +547,13 @@
       } catch (_) { return; }
       ids.forEach((id) => {
         const pending = svReadPending(id);
-        if (!pending) return;
+        if (!pending || svSendFlights.has(id)) return; // un « Lancer » en vol finit seul
         /* Un lot très ancien n'est plus une commande en cours : le rejouer
            enverrait en cuisine des plats d'un service terminé. On le laisse
            visible plutôt que de l'imprimer. */
         if (Date.now() - Number(pending.createdAt || 0) > SV_DRAFT_TTL) return;
         try {
-          svSendOrderBatch(id).then((r) => {
+          svSendOrder(id).then((r) => {
             if (r && r.ok && !r.nothing) toast('Commande en attente envoyée · cuisine', 'ok');
           }).catch(() => {});
         } catch (_) {}

@@ -2220,8 +2220,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "33",
-    "sha": "94e6a6913ea647de"
+    "v": "34",
+    "sha": "0f6d469156d1e5f2"
   },
   "assets/serveur-lang.js": {
     "v": "18",
@@ -2240,8 +2240,8 @@
     "sha": "5911048d786d702a"
   },
   "assets/serveur/service.js": {
-    "v": "49",
-    "sha": "3c3d0a948879701e"
+    "v": "50",
+    "sha": "6af7e654440e43de"
   },
   "assets/service-requests.js": {
     "v": "2",

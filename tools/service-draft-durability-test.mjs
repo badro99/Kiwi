@@ -146,7 +146,7 @@ function draftSandbox(storageBehaviour = {}) {
   ok(/kiwi:service-pending-v1:/.test(drain), 'le balayage cherche les lots réellement enregistrés');
   ok(/prefix \+ merchant \+ ':' \+ operator \+ ':'/.test(drain),
     'et seulement ceux de CE commerce et de CET opérateur');
-  ok(/svSendOrderBatch\(id\)/.test(drain),
+  ok(/svSendOrder\(id\)/.test(drain),
     'chaque lot repart par le même chemin, avec sa référence d\'origine : c\'est la même commande, pas une seconde');
   ok(/pending\.createdAt \|\| 0\) > SV_DRAFT_TTL/.test(drain),
     'un lot d\'un service terminé n\'est pas rejoué — il enverrait en cuisine des plats d\'hier');
@@ -161,6 +161,57 @@ function draftSandbox(storageBehaviour = {}) {
     'et l\'onglet qui disparaît écrit une dernière fois : l\'iOS ne prévient pas plus tard');
   ok(/svTouchDrafts\(\);\n      const id = activeTableId;/.test(SERVEUR),
     'chaque modification de la commande déclenche l\'enregistrement');
+}
+
+/* ═══ Un vidage tombé dans la fenêtre de 4 s est reporté, pas perdu ═══════
+ * Juge, 21 nov. : seuls le démarrage et l'événement 'online' vidaient les lots.
+ * Un appel à moins de 4 s du précédent était jeté ; après un vidage raté, un
+ * « Lancer » non confirmé attendait un nouveau tap ou un redémarrage (le wifi de
+ * terrasse sans internet ne déclenche jamais 'online'). Exécuté, horloge et
+ * minuteries à la main. */
+{
+  const src = SERVEUR.slice(SERVEUR.indexOf('function svDrainPendingBatches()'), SERVEUR.indexOf('function startServiceSync()'));
+  const timers = [];
+  const sent = [];
+  const keys = ['kiwi:service-pending-v1:santos:emp-7:4'];
+  const box = {
+    clock: 100000, SV_DEMO: false, SV_DRAFT_TTL: 864e5, currentUser: '',
+    svDrainAt: 0, svDrainTimer: 0, svSendFlights: new Map(),
+    liveEmployeeState: { merchant: 'santos', staffId: 'emp-7' },
+    svBrowseMode: () => false, svSlug: () => 'santos', toast: () => {},
+    localStorage: { get length() { return keys.length; }, key: (i) => keys[i] },
+    svReadPending: () => ({ createdAt: box.clock, ref: 'r1' }),
+    svSendOrder: (id) => { sent.push(id); return Promise.resolve({ ok: false }); },
+    svSendOrderBatch: (id) => { sent.push(id); return Promise.resolve({ ok: false }); },
+    setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
+  };
+  box.Date = { now: () => box.clock };
+  vm.createContext(box);
+  vm.runInContext(src + '\nglobalThis.drain = svDrainPendingBatches;', box, { filename: 'drain.js' });
+
+  box.drain();
+  ok(sent.length === 1, 'un premier vidage part tout de suite');
+  box.clock += 1000;
+  box.drain();
+  ok(sent.length === 1 && timers.length === 1 && timers[0].ms > 2900 && timers[0].ms <= 3100,
+    `un appel 1 s plus tard n'est plus jeté : un vidage est prévu à la fin de la fenêtre (${timers.length} minuterie, ${timers[0] && timers[0].ms} ms)`);
+  box.clock += 500;
+  box.drain();
+  ok(timers.length === 1, 'un second appel dans la fenêtre ne prévoit pas un deuxième vidage');
+  box.clock += timers[0].ms;
+  timers[0].fn();
+  ok(sent.length === 2, 'à la fin de la fenêtre, le lot repart sans geste ni redémarrage');
+  box.clock += 5000;
+  box.drain();
+  ok(sent.length === 3 && timers.length === 1, 'la fenêtre se rouvre après le vidage reporté');
+  box.svSendFlights.set('4', Promise.resolve());
+  box.clock += 5000;
+  box.drain();
+  ok(sent.length === 3, 'un lot dont le « Lancer » est encore en vol n\'est pas renvoyé en même temps');
+
+  const poll = SERVEUR.slice(SERVEUR.indexOf('function pollServiceSync()'), SERVEUR.indexOf('function svSyncMark('));
+  ok(/svSyncMark\(synced\);[^\n]*svDrainPendingBatches\(\)/.test(poll),
+    'une synchro réussie vide aussi les lots : le réseau répond, c\'est le moment');
 }
 
 /* ═══ 2 · le numéro provisoire, exécuté ═══════════════════════════════════ */

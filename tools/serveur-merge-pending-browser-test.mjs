@@ -47,7 +47,6 @@ try {
     await lostLancer(page, '4', 'it_msemen');
     await lostLancer(page, '5', 'it_the');
     check(JSON.stringify(await pendingTables(page)) === '["4","5"]', 'les deux lots attendent');
-    heal();
 
     t.step('fusionner la 4 dans la 5');
     await h.tap(page, '.table-card[data-table="4"]');
@@ -62,9 +61,10 @@ try {
     check(await page.evaluate(() => !document.getElementById('mrg-confirm').disabled), 'le bouton reste utilisable');
 
     t.step('le réseau revient, les lots partent, la fusion passe');
-    /* svDrainPendingBatches ignore un appel à moins de 4 s du précédent (svDrainAt) : celui qu'a lancé la
-       synchro pendant la panne le rendait muet, et le prochain pouvait tomber après l'attente ci-dessous. */
-    await page.evaluate(() => { document.getElementById('merge-table-modal').classList.remove('is-open'); svDrainAt = 0; svDrainPendingBatches(); });
+    heal(); // ici seulement : la synchro qui réussit vide maintenant les lots, ils ne doivent pas partir avant le refus
+    /* Aucun appel à la main : pas d'événement 'online' (le wifi n'est jamais tombé), c'est la synchro
+       réussie qui vide les lots, ou le vidage reporté à la fin de la fenêtre de 4 s. */
+    await page.evaluate(() => { document.getElementById('merge-table-modal').classList.remove('is-open'); });
     await h.until(() => h.db.tickets().length === 2, 'les deux bons arrivent', 15000);
     await page.waitForFunction(() => !Object.keys(localStorage).some((k) => k.startsWith('kiwi:service-pending-v1:')), { timeout: 10000 });
     await page.evaluate(() => pollServiceSync());

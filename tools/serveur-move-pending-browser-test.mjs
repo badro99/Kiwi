@@ -45,7 +45,6 @@ try {
     await h.sleep(800);
     check(JSON.stringify(await pendingTables(page)) === '["4"]', 'le lot attend sous la table 4');
     check(h.db.tickets().length === 0, 'rien n’est arrivé en cuisine');
-    heal();
 
     t.step('déplacer la 4 vers la 5, puis relancer');
     await tap(page, '[data-action="transfer-table"]');
@@ -55,6 +54,7 @@ try {
     await page.waitForFunction(() => !document.getElementById('transfer-table-modal').classList.contains('is-open'), { timeout: 10000 });
     await h.sleep(600);
     const followed = JSON.stringify(await pendingTables(page));
+    heal(); // après le déplacement : la synchro réussie vide les lots, celui-ci ne doit partir que sous la 5
     if (!await page.evaluate(() => document.getElementById('screen-table')?.classList.contains('is-active'))) {
       await tap(page, '.table-card[data-table="5"]');
       await onTable(page);
@@ -63,9 +63,8 @@ try {
     await h.until(() => h.db.tickets().length > 0, 'un bon en cuisine', 10000).catch(() => {});
 
     t.step('le réseau revient : les lots en attente repartent');
-    await h.sleep(4200);
-    // svDrainAt = 0 : sans quoi un vidage lancé par la synchro dans les 4 s rend cet appel muet.
-    await page.evaluate(() => { svDrainAt = 0; svDrainPendingBatches(); });
+    // Sans geste ni appel à la main : la synchro réussie vide le lot.
+    await page.waitForFunction(() => !Object.keys(localStorage).some((k) => k.startsWith('kiwi:service-pending-v1:')), { timeout: 20000 }).catch(() => {});
     await h.sleep(1500);
     const tickets = h.db.tickets();
     check(tickets.length === 1 && tickets[0].table_no === '5', `un seul bon en cuisine, sur la table 5 (${JSON.stringify(tickets.map((x) => x.table_no))})`);
