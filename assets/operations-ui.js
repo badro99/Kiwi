@@ -1206,9 +1206,11 @@
           var got = procOutcome(result);
           if (got.queued) { host.innerHTML = ''; return toastResult(result); }
           if (got.error) { button.disabled = false; return card(host, got.error); }
-          /* Réception = ce que nous devons (grand livre) : payer est à un geste. */
-          var supEl = order.querySelector('[data-po-sup]'), supId = supEl ? supEl.getAttribute('data-po-sup') : '';
-          var paid = action === 'receive-po' && supId && Kiwi.handlers['sup-pay-po'] && got.data && got.data.receivedCents;
+          /* Réception = ce que nous devons (grand livre) : payer est à un geste,
+             mais seulement quand la dette est inscrite (pas en attente du patron,
+             pas sans fiche, pas avant la migration). */
+          var supEl = order.querySelector('[data-po-sup]'), supId = (got.data && got.data.supplierId) || (supEl ? supEl.getAttribute('data-po-sup') : '');
+          var paid = action === 'receive-po' && supId && Kiwi.handlers['sup-pay-po'] && got.data && got.data.receivedCents && got.data.ledgerStatus === 'posted';
           Kiwi.toast(c.pDone, { type:'success', action: paid ? { label: ({ en:'Pay supplier', ar:'خلّص المورد' })[(window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'] || 'Payer le fournisseur',
             onClick: function () { Kiwi.handlers['sup-pay-po'](null, supId + '|' + payload.po + '|' + got.data.receivedCents); } } : null });
           loadOrders();

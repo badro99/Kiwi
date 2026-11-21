@@ -1384,8 +1384,8 @@
     "sha": "71605c184cc0886d"
   },
   "assets/operations-ui.js": {
-    "v": "35",
-    "sha": "efed258551aaa063"
+    "v": "36",
+    "sha": "010e3fcd182a64cb"
   },
   "assets/operations.js": {
     "v": "18",
@@ -1496,8 +1496,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2235",
-    "sha": "234074e007543dd3"
+    "v": "2238",
+    "sha": "7a51fe5aa573c5ed"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1524,8 +1524,8 @@
     "sha": "d527709a3bdeb87e"
   },
   "assets/pages-pro/suppliers.js": {
-    "v": "5",
-    "sha": "868b4a8dc56bde4f"
+    "v": "8",
+    "sha": "dd74c50d86512912"
   },
   "assets/pages.js": {
     "v": "14",
@@ -1536,8 +1536,8 @@
     "sha": "ec3117f68fa55fbf"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "276",
-    "sha": "794497f283359f69"
+    "v": "279",
+    "sha": "e9a2a07372619667"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2272,8 +2272,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "139",
-    "sha": "40391b0001952324"
+    "v": "140",
+    "sha": "2e9f25868bbb98fb"
   },
   "assets/stock/alerts.js": {
     "v": "6",
@@ -2308,20 +2308,20 @@
     "sha": "ac383672fe16c958"
   },
   "assets/stock/purchasing.js": {
-    "v": "9",
-    "sha": "acc7358eaa9e5635"
+    "v": "10",
+    "sha": "87c94db8b0889c2f"
   },
   "assets/stock/state.js": {
     "v": "13",
     "sha": "ad3af92eb31669f1"
   },
   "assets/stock/strings.js": {
-    "v": "23",
-    "sha": "e8e116e60a84d222"
+    "v": "24",
+    "sha": "d7cd02554da781ec"
   },
   "assets/stock/suppliers.js": {
-    "v": "3",
-    "sha": "18f15509652d9ab3"
+    "v": "4",
+    "sha": "c6110d6e57bb1a85"
   },
   "assets/store-templates.js": {
     "v": "4",

@@ -104,8 +104,10 @@ window.KiwiStockInternal.install('purchasing', (S) => {
     const totalSpend = sup.reduce((s, x) => s + x.monthlySpend, 0);
     const weightedPrice = sup.reduce((s, x) => s + (x.priceChangeLast30d * x.monthlySpend), 0) / (totalSpend || 1);
     const trendCls = weightedPrice > 1 ? 'up' : weightedPrice < -1 ? 'down' : '';
-    /* Commerce : le classement des fournisseurs ouvre l'onglet (stock/suppliers.js le monte). */
-    return `${isRetailStock() ? '<div class="st-section sr-board" data-sr-board></div>' : ''}
+    /* Commerce : le classement vit dans la page Fournisseurs (onglet
+       Classement, à côté des soldes) ; l'onglet du stock y mène. */
+    return `${isRetailStock() ? `<div class="st-section"><div class="st-section-head" style="justify-content:space-between; flex-wrap:wrap; gap:10px;"><div><h3>${esc(t('supRankT'))}</h3><span class="st-section-sub">${esc(t('supRankS'))}</span></div>
+        <button class="st-btn primary" type="button" data-action="nav-fournisseurs" data-arg="rank">${esc(t('supRankCta'))}</button></div></div>` : ''}
       <div class="st-section">
         <div class="st-section-head" style="justify-content:space-between; flex-wrap:wrap; gap:10px;">
           <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">

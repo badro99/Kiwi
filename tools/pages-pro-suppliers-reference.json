@@ -1,4 +1,4 @@
 {
-  "description": "SHA-256 of the appPage options rendered by the Fournisseurs page (assets/pages-pro/suppliers.js) on first open, before any supplier is read: no merchant (demo), default French locale, loading card. Sealed 21 November 2026 when the page was born lazy.",
-  "sha": "35f086bc3aa4157473a8202d4725d99450677b7fe9cd058067c7f0e310e98794"
+  "description": "SHA-256 of the appPage options rendered by the Fournisseurs page (assets/pages-pro/suppliers.js) on first open, before any supplier is read: no merchant (demo), default French locale, loading card. Sealed 21 November 2026 when the page was born lazy; resealed the same day when the subtitle gained the ranking (one destination for what I owe and who deserves the next order).",
+  "sha": "390caca508c24bcd8c220b39693afe85f483ceec5d2877c00c45b2c30b653037"
 }
