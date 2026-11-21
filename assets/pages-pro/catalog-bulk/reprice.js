@@ -2,10 +2,13 @@
  *
  * Choose the articles (a category, the ticked rows, or everything), a basis
  * (the current price, or the cost for a boutique), an operation (+/− %, +/−
- * MAD, set to), a shelf rounding (0,50 / 1 / 5 MAD, up, down or nearest), see
- * every old → new price BEFORE anything is written, then apply: the new prices
- * enter the spreadsheet and leave in the same batch save as a hand edit.
- * The maths live in assets/pages-pro/catalog-bulk/rules.js (reprice, roundTo).
+ * MAD, set to), a shelf rounding (0,50 / 1 / 5 / 10 MAD, or an ending: ,90,
+ * ,99, ends in 9; up, down or nearest), an optional minimum margin that lifts
+ * any price falling under it, see every old → new price BEFORE anything is
+ * written (rows at or under cost, or under 15 % margin, are flagged), then
+ * apply: the new prices enter the spreadsheet and leave in the same batch save
+ * as a hand edit. The maths live in assets/pages-pro/catalog-bulk/rules.js
+ * (reprice, roundTo, endTo).
  *
  * Replaces the « Édition groupée » modal of assets/pages-pro.js, whose Apply
  * button only showed « 9 tajines ré-tarifés » and changed nothing.
@@ -38,6 +41,10 @@
 .cbr-prev .old{color:var(--n-500,#6b7570);text-decoration:line-through}
 .cbr-prev .up{color:var(--atlas,#0B6E4F)}
 .cbr-prev .down{color:var(--danger,#C94A3A)}
+.cbr-prev tr.warn td{background:color-mix(in srgb,var(--danger,#C94A3A) 7%,transparent)}
+.cbr-prev .flag{display:block;font-size:11px;color:var(--danger,#C94A3A);margin-top:2px}
+.cbr-prev .flag.ok{color:var(--atlas,#0B6E4F)}
+.cbr-sum .bad{color:var(--danger,#C94A3A)}
 .cbr-empty{padding:18px;text-align:center;color:var(--n-500,#6b7570);font-size:13px}
 @media (max-width:560px){.cbr-two{grid-template-columns:1fr}}
 `;
@@ -50,8 +57,11 @@
     const R = window.KiwiBulkRules;
     const st = {
       scope: ctx.scope === 'all' ? 'all' : ctx.selected.length ? 'selection' : ctx.categories.length ? 'category' : 'all',
-      cat: (ctx.categories[0] || {}).id || '', basis: 'price', op: 'pct+', value: '5', step: '1', mode: 'nearest',
+      cat: (ctx.categories[0] || {}).id || '', basis: 'price', op: 'pct+', value: '5', step: '1', mode: 'nearest', minMargin: '',
     };
+    /* Signed amounts are isolated left-to-right (U+2066 … U+2069): in Arabic
+       a bare « +120,00 » is drawn « 120,00+ ». */
+    const signed = (n) => '\u2066' + (n > 0 ? '+' : '') + fmtNum(n, 2) + '\u2069';
     /* Pills are drawn plain; which one is on, and which is unavailable, is set
        on the DOM right after (paintSegs), the same way a click sets it. */
     const off = { selection: !ctx.selected.length, category: !ctx.categories.length };
@@ -77,10 +87,12 @@
         <div class="cbr-quick" data-quick>${['2', '5', '10', '15'].map((v) => `<button type="button" data-q="${v}">${v} %</button>`).join('')}</div>
         <div class="cbr-two">
           <label class="cbr-row"><span>${esc(L('Arrondir au', 'Round to', 'قرّب ل'))}</span>
-            <select class="cbr-in" data-step><option value="0">${esc(L('Centime près', 'Nearest centime', 'أقرب سنتيم'))}</option><option value="0.5">${esc(fmtNum(0.5, 2) + MAD)}</option><option value="1" selected>${esc(fmtNum(1, 0) + MAD)}</option><option value="5">${esc(fmtNum(5, 0) + MAD)}</option></select></label>
+            <select class="cbr-in" data-step><option value="0">${esc(L('Centime près', 'Nearest centime', 'أقرب سنتيم'))}</option><option value="0.5">${esc(fmtNum(0.5, 2) + MAD)}</option><option value="1" selected>${esc(fmtNum(1, 0) + MAD)}</option><option value="5">${esc(fmtNum(5, 0) + MAD)}</option><option value="10">${esc(fmtNum(10, 0) + MAD)}</option>
+              <option value="e90">${esc(L('Finir par ', 'End in ', 'يسالي ب ') + fmtNum(0.9, 2).replace(/^\D*0/, ''))}</option><option value="e99">${esc(L('Finir par ', 'End in ', 'يسالي ب ') + fmtNum(0.99, 2).replace(/^\D*0/, ''))}</option><option value="e9">${esc(L('Finir par 9 (19, 29, 129…)', 'End in 9 (19, 29, 129…)', 'يسالي ب 9 (19، 29، 129…)'))}</option></select></label>
           <label class="cbr-row"><span>${esc(L('Sens', 'Direction', 'الاتجاه'))}</span>
             <select class="cbr-in" data-mode><option value="nearest">${esc(L('Au plus proche', 'Nearest', 'الأقرب'))}</option><option value="up">${esc(L('Vers le haut', 'Up', 'للفوق'))}</option><option value="down">${esc(L('Vers le bas', 'Down', 'للتحت'))}</option></select></label>
         </div>
+        ${ctx.hasCost ? `<label class="cbr-row"><span>${esc(L('Marge minimale (facultatif)', 'Minimum margin (optional)', 'أقل هامش (اختياري)'))}</span><input class="cbr-in" data-mm inputmode="decimal" placeholder="${esc(L('ex. 30 %', 'e.g. 30 %', 'مثلا 30 %'))}"></label>` : ''}
         <div class="cbr-sum" data-sum aria-live="polite"></div>
         <div class="cbr-prev" data-prev></div>
       </div>`;
@@ -94,7 +106,8 @@
     });
     const el = m.el;
     const q = (s) => el.querySelector(s);
-    let result = { rows: [], skipped: {} };
+    let result = { rows: [], skipped: {}, flagged: {} };
+    const WARN = { true: 'warn', false: '' }, DIR = { true: 'up', false: 'down' };
 
     function items() {
       if (st.scope === 'selection') { const set = new Set(ctx.selected); return ctx.items.filter((i) => set.has(i.id)); }
@@ -105,11 +118,14 @@
       const raw = R.parseNumber(st.value);
       const v = raw == null || Number.isNaN(raw) ? NaN : Math.abs(raw);
       const op = st.op.slice(0, 3), sign = st.op.endsWith('-') ? -1 : 1;
-      return { basis: st.basis, op: op === 'set' ? 'set' : op, value: op === 'set' ? v : sign * v, step: Number(st.step), mode: st.mode };
+      const end = st.step.charAt(0) === 'e' ? st.step.slice(1) : '';
+      const mm = R.parseNumber(st.minMargin);
+      return { basis: st.basis, op: op === 'set' ? 'set' : op, value: op === 'set' ? v : sign * v, step: end ? 0 : Number(st.step), ending: end, mode: st.mode,
+        minMargin: typeof mm === 'number' && mm > 0 && mm < 100 ? mm : 0 };
     }
     function refresh() {
       result = R.reprice(items(), rule());
-      const rows = result.rows, sk = result.skipped;
+      const rows = result.rows, sk = result.skipped, fl = result.flagged || {};
       const skips = [
         sk['no-basis'] ? plural(sk['no-basis'], L('{n} sans prix d’achat', '{n} without a cost', '{n} بلا ثمن الشراء'), L('{n} sans prix d’achat', '{n} without a cost', '{n} بلا ثمن الشراء')) : '',
         sk.same ? plural(sk.same, L('{n} déjà à ce prix', '{n} already at that price', '{n} فنفس الثمن'), L('{n} déjà à ce prix', '{n} already at that price', '{n} فنفس الثمن')) : '',
@@ -117,12 +133,20 @@
         sk['too-high'] ? plural(sk['too-high'], L('{n} trop élevé', '{n} too high', '{n} غالي بزاف'), L('{n} trop élevés', '{n} too high', '{n} غاليين بزاف')) : '',
       ].filter(Boolean);
       const total = rows.reduce((s, r) => s + r.delta, 0);
+      const warn = [
+        fl['below-cost'] ? plural(fl['below-cost'], L('{n} au prix d’achat ou dessous', '{n} at or under cost', '{n} فثمن الشراء ولا تحتو'), L('{n} au prix d’achat ou dessous', '{n} at or under cost', '{n} فثمن الشراء ولا تحتو')) : '',
+        fl['low-margin'] ? plural(fl['low-margin'], L('{n} sous 15 % de marge', '{n} under 15 % margin', '{n} تحت 15 % ديال الهامش'), L('{n} sous 15 % de marge', '{n} under 15 % margin', '{n} تحت 15 % ديال الهامش')) : '',
+      ].filter(Boolean);
       q('[data-sum]').innerHTML = sk['bad-value'] ? esc(L('Entrez une valeur.', 'Enter a value.', 'دخّل قيمة.'))
         : `<b>${esc(plural(rows.length, L('{n} prix changera', '{n} price will change', '{n} ثمن غادي يتبدّل'), L('{n} prix changeront', '{n} prices will change', '{n} أثمنة غادي يتبدّلو')))}</b>`
-          + (rows.length ? ' · ' + esc(L('écart moyen ', 'average change ', 'الفرق المتوسط ') + (total >= 0 ? '+' : '') + fmtNum(total / rows.length, 2) + MAD) : '')
+          + (rows.length ? ' · ' + esc(L('écart moyen ', 'average change ', 'الفرق المتوسط ') + signed(total / rows.length) + MAD) : '')
+          + (warn.length ? ' · <span class="bad">' + esc(L('à vérifier : ', 'to check: ', 'خاص تشوف: ') + warn.join(', ')) + '</span>' : '')
+          + (fl.lifted ? ' · ' + esc(plural(fl.lifted, L('{n} relevé à la marge minimale', '{n} lifted to the minimum margin', '{n} طلع للهامش الأدنى'), L('{n} relevés à la marge minimale', '{n} lifted to the minimum margin', '{n} طلعو للهامش الأدنى'))) : '')
           + (skips.length ? ' · ' + esc(L('ignorés : ', 'skipped: ', 'متخطّين: ') + skips.join(', ')) : '');
+      const FLAG = { 'below-cost': L('au prix d’achat ou dessous', 'at or under cost', 'فثمن الشراء ولا تحتو'), 'low-margin': L('marge sous 15 %', 'margin under 15 %', 'الهامش تحت 15 %') };
+      const cell = (r) => esc(r.name) + (r.flag ? `<span class="flag">${esc(FLAG[r.flag])}</span>` : r.lifted ? `<span class="flag ok">${esc(L('relevé à la marge minimale', 'lifted to the minimum margin', 'طلع للهامش الأدنى'))}</span>` : '');
       q('[data-prev]').innerHTML = rows.length
-        ? `<table><thead><tr><th>${esc(L('Article', 'Item', 'المنتج'))}</th><th class="n">${esc(L('Avant', 'Before', 'قبل'))}</th><th class="n">${esc(L('Après', 'After', 'من بعد'))}</th><th class="n">${esc(L('Écart', 'Change', 'الفرق'))}</th></tr></thead><tbody>${rows.slice(0, 400).map((r) => `<tr><td>${esc(r.name)}</td><td class="n old">${fmtNum(r.old, 2)}</td><td class="n">${fmtNum(r.next, 2)}</td><td class="n ${r.delta > 0 ? 'up' : 'down'}">${r.delta > 0 ? '+' : ''}${fmtNum(r.delta, 2)}</td></tr>`).join('')}</tbody></table>`
+        ? `<table><thead><tr><th>${esc(L('Article', 'Item', 'المنتج'))}</th><th class="n">${esc(L('Avant', 'Before', 'قبل'))}</th><th class="n">${esc(L('Après', 'After', 'من بعد'))}</th><th class="n">${esc(L('Écart', 'Change', 'الفرق'))}</th>${ctx.hasCost ? `<th class="n">${esc(L('Marge', 'Margin', 'الهامش'))}</th>` : ''}</tr></thead><tbody>${rows.slice(0, 400).map((r) => `<tr class="${WARN[!!r.flag]}"><td>${cell(r)}</td><td class="n old">${fmtNum(r.old, 2)}</td><td class="n">${fmtNum(r.next, 2)}</td><td class="n ${DIR[r.delta > 0]}">${signed(r.delta)}</td>${ctx.hasCost ? `<td class="n">${r.margin == null ? '·' : '\u2066' + fmtNum(r.margin, 1) + ' %\u2069'}</td>` : ''}</tr>`).join('')}</tbody></table>`
           + (rows.length > 400 ? `<div class="cbr-empty">${esc(L('… et ', '… and ', '… و ') + fmtNum(rows.length - 400, 0) + L(' de plus', ' more', ' آخرين'))}</div>` : '')
         : `<div class="cbr-empty">${esc(L('Aucun prix ne change avec ces réglages.', 'No price changes with these settings.', 'حتى ثمن ما كايتبدّل بهاد الإعدادات.'))}</div>`;
       const apply = q('[data-apply]');
@@ -149,13 +173,14 @@
     q('[data-val]').addEventListener('input', (e) => { st.value = e.target.value; refresh(); });
     q('[data-step]').addEventListener('change', (e) => { st.step = e.target.value; refresh(); });
     q('[data-mode]').addEventListener('change', (e) => { st.mode = e.target.value; refresh(); });
+    if (q('[data-mm]')) q('[data-mm]').addEventListener('input', (e) => { st.minMargin = e.target.value; refresh(); });
     q('[data-quick]').addEventListener('click', (e) => { const b = e.target.closest('[data-q]'); if (!b) return; st.value = b.dataset.q; q('[data-val]').value = b.dataset.q; refresh(); });
     q('[data-apply]').addEventListener('click', async () => {
       const rows = result.rows;
       if (!rows.length) return;
       m.close();
       ctx.put(rows.map((r) => ({ id: r.id, key: 'price', value: r.next })));
-      await ctx.save();
+      await ctx.save({ reviewed: true });   // every new price, flags included, was just on screen
     });
     paintSegs();
     refresh();

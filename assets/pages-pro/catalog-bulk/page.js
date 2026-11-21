@@ -42,6 +42,7 @@
     'multi-variant': () => L('Plusieurs déclinaisons : à modifier dans la fiche', 'Several variants: edit it in the item sheet', 'بزاف ديال الأنواع: بدّلو من بطاقة المنتج'),
     'bad-barcode': () => L('Pas d’espace dans un code-barres', 'No spaces in a barcode', 'الباركود ما فيهش فراغات'),
     'not-found': () => L('Article introuvable, rechargez la page', 'Item not found, reload the page', 'المنتج ما كاينش، عاود حمّل الصفحة'),
+    'too-many-decimals': () => L('Deux décimales au plus (1 234 s’écrit sans virgule)', 'Two decimals at most (write 1234 without a comma)', 'جوج أرقام من بعد الفاصلة على الأكثر (1234 كاتكتب بلا فاصلة)'),
   };
   const message = (code) => (MSG[code] ? MSG[code]() : code);
 
@@ -81,6 +82,31 @@
 .cgp-dr .cgp-in{width:100%}
 .cgp-dr .cgp-in.touched{border-color:var(--atlas,#0B6E4F);box-shadow:0 0 0 2px color-mix(in srgb,var(--atlas,#0B6E4F) 18%,transparent)}
 .cgp-dr .hint{font-weight:400;color:var(--n-500,#6b7570)}
+.cgp-foot .kb[hidden],.cgp-bar .kb[hidden]{display:none}
+.cgp-err{flex-basis:100%;order:-1;display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--danger,#C94A3A)}
+.cgp-err[hidden]{display:none}
+.cgp-err b{font-weight:600}
+.cgp-ic{display:inline-block;width:18px;height:18px;flex:none;background:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat;vertical-align:-4px;margin-inline-end:6px}
+.cgp-ic.back{--ic:url(assets/icons/material/arrow_back.svg)}
+[dir="rtl"] .cgp-ic.back{transform:scaleX(-1)}
+.cgp-ic.tune{--ic:url(assets/icons/material/sell.svg)}
+.cgp-ic.up{--ic:url(assets/icons/material/upload.svg)}
+.cgp-ic.down{--ic:url(assets/icons/material/download.svg)}
+.cgp-ic.undo{--ic:url(assets/icons/material/undo.svg)}
+.cgp-ic.warn{--ic:url(assets/icons/material/warning.svg)}
+.cgp-ic.big{width:40px;height:40px;margin:0 auto;display:block;color:var(--atlas,#0B6E4F)}
+.cgp-empty{display:grid;justify-items:center;gap:10px;text-align:center;padding:56px 20px;border:1px dashed var(--n-200,rgba(10,15,13,.16));border-radius:14px;background:var(--paper,#F7F5F0)}
+.cgp-empty[hidden]{display:none}
+.cgp-empty h3{margin:0;font-size:18px;font-weight:600;color:var(--ink,#0A0F0D)}
+.cgp-empty p{margin:0;max-width:440px;font-size:13.5px;color:var(--n-600,#4a5550)}
+.cgp-empty .acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:6px}
+.cgp-ask{display:grid;gap:10px}
+.cgp-ask ul{margin:0;padding:0;list-style:none;max-height:260px;overflow:auto;border:1px solid var(--n-200,rgba(10,15,13,.12));border-radius:12px}
+.cgp-ask li{display:flex;justify-content:space-between;gap:12px;padding:8px 12px;font-size:13px;border-top:1px solid var(--n-100,rgba(10,15,13,.06))}
+.cgp-ask li:first-child{border-top:0}
+.cgp-ask li .why{color:var(--danger,#C94A3A);font-size:12px}
+.cgp-ask li .n{font-variant-numeric:tabular-nums;white-space:nowrap}
+@media (max-width:860px){.cgp-foot{bottom:calc(92px + env(safe-area-inset-bottom,0px))}}
 @media (max-width:760px){.cgp-search{width:100%}.cgp-keys{display:none}}
 `;
     document.head.appendChild(style);
@@ -128,6 +154,7 @@
       const n = R().parseNumber(s);
       if (n == null) return col.type === 'list' ? null : '';
       if (Number.isNaN(n)) return s.trim();
+      if (col.type !== 'int' && !R().centsExact(n)) return s.trim();   // shown as typed, refused by validate
       return col.type === 'int' ? n : Math.round(n * 100) / 100;
     }
     if (col.type === 'bool') { const b = R().parseBool(s); return typeof b === 'boolean' ? b : s.trim(); }
@@ -159,7 +186,13 @@
   }
   function validate(row, key, v) {
     if (key === 'margin' || key === 'stock') return '';
-    if (key.startsWith('pl:')) return v == null || v === '' || (typeof v === 'number' && v >= 0) ? '' : 'not-a-number';
+    if (key.startsWith('pl:')) {
+      if (v == null || v === '') return '';
+      const n = R().parseNumber(v);
+      if (n == null || Number.isNaN(n)) return 'not-a-number';
+      if (n < 0) return 'negative';
+      return R().centsExact(n) ? '' : 'too-many-decimals';
+    }
     if (key === 'barcode' && row.multi) return '';
     const cats = new Set(S.data.categories.map((c) => c.id));
     const c = R().checkValue(S.kind, key, v, { categories: cats });
@@ -181,7 +214,11 @@
     const patches = R().diff(S.data.rows, edits, fields);
     const lists = [];
     Object.keys(edits).forEach((id) => Object.keys(edits[id]).forEach((k) => {
-      if (k.startsWith('pl:')) lists.push({ listId: k.slice(3), itemId: id, price: edits[id][k] === '' ? null : edits[id][k] });
+      if (!k.startsWith('pl:')) return;
+      const row = S.data.rows.find((r) => r.id === id);
+      const was = row ? row[k] : null;
+      const price = edits[id][k] === '' ? null : edits[id][k];
+      if ((was == null ? null : was) !== price) lists.push({ listId: k.slice(3), itemId: id, price, was: was == null ? null : was });
     }));
     let errors = 0; const bad = new Set();
     Object.keys(edits).forEach((id) => {
@@ -206,6 +243,9 @@
     save.textContent = S.busy ? L('Enregistrement…', 'Saving…', 'كايتسجّل…') : c.rows ? L('Enregistrer ', 'Save ', 'سجّل ') + fmtNum(c.rows, 0) : L('Enregistrer', 'Save', 'سجّل');
     host.querySelector('[data-cgp-discard]').disabled = !c.rows || S.busy;
     host.querySelector('[data-cgp-undo]').hidden = !S.lastSave || S.busy;
+    const empty = !S.data.rows.length;
+    host.querySelector('[data-cgp-empty]').hidden = !empty;
+    host.querySelector('[data-cgp-grid]').hidden = empty;
     const seg = host.querySelector('[data-cgp-seg]');
     seg.querySelector('[data-n="changed"]').textContent = fmtNum(c.rows, 0);
     const nb = seg.querySelector('[data-n="errors"]'); nb.textContent = fmtNum(c.bad.size, 0); nb.classList.toggle('bad', c.bad.size > 0);
@@ -283,26 +323,33 @@
       subtitle: [vd.fullDisplay || vd.name || '', plural(data.rows.length, L('{n} article', '{n} item', '{n} منتج'), L('{n} articles', '{n} items', '{n} منتجات')), where].filter(Boolean).join(' · '),
       body: `<div class="cgp" data-cgp>
         <div class="cgp-bar">
-          <button type="button" class="kb ghost" data-action="cg-back">${esc(isB ? L('Inventaire', 'Inventory', 'المخزون') : L('La carte', 'Menu', 'القائمة'))}</button>
+          <button type="button" class="kb ghost" data-action="cg-back"><span class="cgp-ic back" aria-hidden="true"></span>${esc(isB ? L('Inventaire', 'Inventory', 'المخزون') : L('La carte', 'Menu', 'القائمة'))}</button>
           <input class="cgp-in cgp-search" type="search" data-cgp-q placeholder="${esc(L('Nom, SKU ou code-barres', 'Name, SKU or barcode', 'الاسم، SKU ولا الباركود'))}" aria-label="${esc(L('Rechercher', 'Search', 'قلّب'))}">
           <select class="cgp-in" data-cgp-cat aria-label="${esc(L('Catégorie', 'Category', 'الفئة'))}"><option value="">${esc(L('Toutes les catégories', 'All categories', 'جميع الفئات'))}</option>${data.categories.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}<option value="__none">${esc(L('Sans catégorie', 'No category', 'بلا فئة'))}</option></select>
           <div class="cgp-seg" data-lens-demo data-cgp-seg role="group" aria-label="${esc(L('Afficher', 'Show', 'بيّن'))}">${seg('all', L('Tout', 'All', 'الكل'))}${seg('changed', L('Modifiés', 'Changed', 'المبدّلين'), true)}${seg('errors', L('Erreurs', 'Errors', 'الأغلاط'), true)}</div>
           <span class="sp"></span>
-          <button type="button" class="kb ghost" data-activation=write data-action="cg-reprice">${esc(L('Ajuster les prix', 'Adjust prices', 'بدّل الأثمنة'))}</button>
-          <button type="button" class="kb ghost" data-activation=write data-action="cg-import">${esc(L('Importer Excel', 'Import Excel', 'استورد Excel'))}</button>
-          <button type="button" class="kb ghost" data-activation=money data-action="cg-export" data-arg="xlsx">${esc(L('Exporter Excel', 'Export Excel', 'صدّر Excel'))}</button>
-          <button type="button" class="kb ghost" data-activation=money data-action="cg-export" data-arg="csv">CSV</button>
+          <button type="button" class="kb ghost" data-activation=write data-action="cg-reprice" data-cgp-has-rows><span class="cgp-ic tune" aria-hidden="true"></span>${esc(L('Ajuster les prix', 'Adjust prices', 'بدّل الأثمنة'))}</button>
+          <button type="button" class="kb ghost" data-activation=write data-action="cg-import"><span class="cgp-ic up" aria-hidden="true"></span>${esc(L('Importer Excel', 'Import Excel', 'استورد Excel'))}</button>
+          <button type="button" class="kb ghost" data-activation=money data-action="cg-export" data-arg="xlsx" data-cgp-has-rows><span class="cgp-ic down" aria-hidden="true"></span>${esc(L('Exporter Excel', 'Export Excel', 'صدّر Excel'))}</button>
+          <button type="button" class="kb ghost" data-activation=money data-action="cg-export" data-arg="csv" data-cgp-has-rows><span class="cgp-ic down" aria-hidden="true"></span>CSV</button>
         </div>
         <div class="cgp-sel" data-cgp-sel hidden role="status"><span class="t"></span>
           <button type="button" class="kb atlas" data-activation=write data-action="cg-bulk-edit">${esc(L('Modifier la sélection', 'Edit selection', 'بدّل المختارين'))}</button>
           <button type="button" class="kb ghost" data-activation=write data-action="cg-reprice" data-arg="selection">${esc(L('Ajuster leurs prix', 'Adjust their prices', 'بدّل الأثمنة ديالهم'))}</button>
           <button type="button" class="kb ghost" data-action="cg-unselect">${esc(L('Désélectionner', 'Clear selection', 'لغي الاختيار'))}</button>
         </div>
+        <div class="cgp-empty" data-cgp-empty hidden>
+          <span class="cgp-ic big up" aria-hidden="true"></span>
+          <h3>${esc(isB ? L('Votre inventaire est vide', 'Your inventory is empty', 'المخزون ديالك خاوي') : L('Votre carte est vide', 'Your menu is empty', 'القائمة ديالك خاوية'))}</h3>
+          <p>${esc(L('Importez votre fichier Excel ou CSV : chaque ligne devient un article. Le modèle montre les colonnes attendues.', 'Import your Excel or CSV file: each row becomes an item. The template shows the expected columns.', 'دخّل الملف ديالك Excel ولا CSV: كل سطر كايولّي منتج. النموذج كايبيّن الأعمدة اللي خاصّين.'))}</p>
+          <div class="acts"><button type="button" class="kb atlas" data-activation=write data-action="cg-import">${esc(L('Importer votre fichier Excel', 'Import your Excel file', 'دخّل ملف Excel ديالك'))}</button><button type="button" class="kb ghost" data-action="cg-template">${esc(L('Télécharger le modèle', 'Download the template', 'حمّل النموذج'))}</button></div>
+        </div>
         <div data-cgp-grid></div>
         <div class="cgp-foot">
+          <span class="cgp-err" id="cgp-err" data-cgp-err hidden><span class="cgp-ic warn" aria-hidden="true"></span><span data-cgp-err-t></span></span>
           <span class="st" data-cgp-st aria-live="polite"></span>
           <span class="cgp-keys">${esc(L('Collez depuis Excel', 'Paste from Excel', 'لصق من Excel'))} <kbd>${/Mac/.test(navigator.platform) ? '⌘' : 'Ctrl'} V</kbd> · ${esc(L('recopier vers le bas', 'fill down', 'نسخ للتحت'))} <kbd>${/Mac/.test(navigator.platform) ? '⌘' : 'Ctrl'} D</kbd> · ${esc(L('annuler', 'undo', 'رجوع'))} <kbd>${/Mac/.test(navigator.platform) ? '⌘' : 'Ctrl'} Z</kbd></span>
-          <button type="button" class="kb ghost" data-action="cg-undo-save" data-cgp-undo hidden>${esc(L('Annuler le dernier enregistrement', 'Undo last save', 'رجّع آخر تسجيل'))}</button>
+          <button type="button" class="kb ghost" data-action="cg-undo-save" data-cgp-undo hidden><span class="cgp-ic undo" aria-hidden="true"></span>${esc(L('Annuler le dernier enregistrement', 'Undo last save', 'رجّع آخر تسجيل'))}</button>
           <button type="button" class="kb ghost" data-action="cg-discard" data-cgp-discard>${esc(L('Tout annuler', 'Discard all', 'لغي كلشي'))}</button>
           <button type="button" class="kb atlas" data-activation=write data-action="cg-save" data-cgp-save>${esc(L('Enregistrer', 'Save', 'سجّل'))}</button>
         </div>
@@ -315,6 +362,12 @@
       emptyText: L('Aucun article ne correspond.', 'No item matches.', 'حتى منتج ما كايطابق.'),
       parse, validate, message, same: (k, a, b) => (k.startsWith('pl:') ? (a == null ? '' : a) === (b == null ? '' : b) : R().sameValue(k, a, b)),
       onChange: status, onSelect: selBar,
+      describedBy: 'cgp-err',
+      onCursor(info) {
+        const box = document.querySelector('[data-cgp-err]'); if (!box) return;
+        box.hidden = !info.error;
+        box.querySelector('[data-cgp-err-t]').textContent = info.error ? info.label + ' : ' + info.text : '';
+      },
       onNotice(kind2, res) {
         if (kind2 === 'paste' && res) {
           const extra = [res.skipped ? plural(res.skipped, L('{n} cellule en lecture seule ignorée', '{n} read-only cell skipped', '{n} خانة للقراءة فقط تخطّات'), L('{n} cellules en lecture seule ignorées', '{n} read-only cells skipped', '{n} خانات للقراءة فقط تخطّات')) : '',
@@ -328,37 +381,85 @@
     host.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) { e.preventDefault(); save(); }
     });
+    host.querySelectorAll('[data-cgp-has-rows]').forEach((b) => { b.hidden = !data.rows.length; });
     status();
-    S.grid.focus();
+    if (data.rows.length) S.grid.focus();
     if (then) then();
   }
   window.addEventListener('beforeunload', (e) => {
     if (S && S.grid && document.querySelector('[data-cgp]') && S.grid.dirtyCount()) { e.preventDefault(); e.returnValue = ''; }
   });
 
+  /* ── a branded question (never window.confirm) ────────────────────────── */
+  function ask({ title, desc, body, ok, cancel, danger }) {
+    return new Promise((resolve) => {
+      let done = false;
+      const end = (v) => { if (done) return; done = true; resolve(v); };
+      const m = window.Kiwi.modal({
+        tag: L('À VÉRIFIER', 'PLEASE CHECK', 'خاص تشوف'), title, desc: desc ? esc(desc) : '', width: 520, body: body || '',
+        foot: `<button type="button" class="kb ghost" data-ask-no>${esc(cancel || L('Revenir', 'Go back', 'رجع'))}</button><button type="button" class="kb ${danger ? 'danger' : 'atlas'}" data-ask-yes>${esc(ok)}</button>`,
+      });
+      if (!m || !m.el) { end(false); return; }
+      m.el.querySelector('[data-ask-no]').addEventListener('click', () => { end(false); m.close(); });
+      m.el.querySelector('[data-ask-yes]').addEventListener('click', () => { end(true); m.close(); });
+      /* Escape, the close button and the backdrop all remove the sheet: that is « no ». */
+      new MutationObserver((_, obs) => { if (!m.el.isConnected) { obs.disconnect(); end(false); } }).observe(document.body, { childList: true });
+      setTimeout(() => { const b = m.el.querySelector('[data-ask-no]'); if (b) b.focus(); }, 40);
+    });
+  }
+
+  /* A price moved by 90 % or more, or set at or under its cost, is asked
+     about once before it leaves: « 1,234 » typed for 1 234 MAD is the usual
+     cause. Undo and the re-price (whose preview already showed every row) skip it. */
+  async function confirmRisky(patches) {
+    const risky = R().riskyChanges(patches, S.data.rows);
+    if (!risky.length) return true;
+    const name = (id) => (S.grid.value(id, 'name') || '');
+    const MAD = L(' MAD', ' MAD', ' درهم');
+    const why = (x) => (x.code === 'big-change'
+      ? L('écart de ', 'change of ', 'فرق ديال ') + '\u2066' + (x.next >= x.old ? '+' : '') + fmtNum((x.next - x.old) / x.old * 100, 0) + ' %\u2069'
+      : L('au prix d’achat ou dessous (', 'at or under cost (', 'فثمن الشراء ولا تحتو (') + fmtNum(x.cost, 2) + MAD + ')');
+    const list = risky.slice(0, 50).map((x) => `<li><span>${esc(name(x.id))}<br><span class="why">${esc(why(x))}</span></span><span class="n">${esc('\u2066' + fmtNum(x.old, 2) + ' → ' + fmtNum(x.next, 2) + '\u2069' + MAD)}</span></li>`).join('');
+    return ask({
+      title: plural(risky.length, L('{n} prix à vérifier', '{n} price to check', '{n} ثمن خاص تشوفو'), L('{n} prix à vérifier', '{n} prices to check', '{n} أثمنة خاص تشوفهم')),
+      desc: L('Ces changements sont inhabituels. Enregistrez-les seulement s’ils sont voulus.', 'These changes are unusual. Save them only if you meant them.', 'هاد التبديلات ماشي عادية. سجّلهم غير إلا كنتي باغيهم.'),
+      body: `<div class="cgp-ask"><ul>${list}</ul></div>`,
+      ok: L('Enregistrer quand même', 'Save anyway', 'سجّل على أي حال'), cancel: L('Revoir les prix', 'Review the prices', 'راجع الأثمنة'),
+    });
+  }
+
   /* ── save ─────────────────────────────────────────────────────────────── */
-  async function save(override, opts) {
+  /* opts: { patches, lists } to send a given set (the undo), { isUndo },
+     { reviewed } when the merchant has just seen every new value (re-price). */
+  async function save(opts) {
+    opts = opts || {};
     if (!S || S.busy) return false;
     if (venueKey(S.kind) !== S.venue) { open(null); return false; }
-    const c = override ? { patches: override, lists: [], errors: 0 } : changes();
+    const c = opts.patches ? { patches: opts.patches, lists: opts.lists || [], errors: 0 } : changes();
     if (c.errors) {
       S.filter = 'errors'; markSeg(); applyFilter();
-      toast(plural(c.errors, L('{n} cellule à corriger', '{n} cell to fix', '{n} خانة خاصها تصحيح'), L('{n} cellules à corriger', '{n} cells to fix', '{n} خانات خاصهم تصحيح')), { type: 'warn', desc: L('Survolez une cellule rouge pour voir pourquoi.', 'Hover a red cell to see why.', 'دوز على الخانة الحمرا باش تشوف علاش.') });
+      toast(plural(c.errors, L('{n} cellule à corriger', '{n} cell to fix', '{n} خانة خاصها تصحيح'), L('{n} cellules à corriger', '{n} cells to fix', '{n} خانات خاصهم تصحيح')), { type: 'warn', desc: L('Seules les cellules en erreur restent affichées. La raison s’écrit en bas, sur la cellule choisie.', 'Only the cells in error stay on screen. The reason shows at the bottom for the selected cell.', 'غير الخانات اللي فيهم الغلط باقيين. السبب كايبان لتحت فالخانة المختارة.') });
+      S.grid.focus();
       return false;
     }
     if (!c.patches.length && !c.lists.length) return false;
+    if (!opts.isUndo && !opts.reviewed && !(await confirmRisky(c.patches))) { S.grid.focus(); return false; }
     S.busy = true; status();
-    const res = await window.KiwiBulkSource.save(S.kind, c.patches, c.lists);
+    const res = await window.KiwiBulkSource.save(S.kind, c.patches, c.lists.map(({ listId, itemId, price }) => ({ listId, itemId, price })));
     S.busy = false;
     if (res.ok) {
-      S.lastSave = (opts && opts.isUndo) ? null : c.patches;
-      const n = (res.updated || 0) + (c.lists.length ? new Set(c.lists.map((x) => x.itemId)).size : 0);
+      /* The undo record holds both halves of the save: catalogue rows and
+         price-list cells, each with the value it replaced. */
+      const listsSaved = c.lists.length && !res.listsFailed ? c.lists : [];
+      S.lastSave = opts.isUndo ? null : (c.patches.length || listsSaved.length ? { patches: c.patches, lists: listsSaved } : null);
+      const n = (res.updated || 0) + (listsSaved.length ? new Set(listsSaved.map((x) => x.itemId)).size : 0);
       toast(plural(n, L('{n} article mis à jour', '{n} item updated', 'تبدّل {n} منتج'), L('{n} articles mis à jour', '{n} items updated', 'تبدّلو {n} منتجات')), {
         type: 'success',
         desc: res.offline ? L('Hors ligne : gardé sur cet appareil, envoyé dès le retour du réseau.', 'Offline: kept on this device, sent when the network is back.', 'بلا أنترنيت: محفوظ فهاد الجهاز، غادي يتصيفط ملي يرجع الريزو.')
           : res.local ? L('Enregistré sur cet appareil.', 'Saved on this device.', 'تسجّل فهاد الجهاز.')
           : L('La caisse et la boutique en ligne voient déjà les nouvelles valeurs.', 'The till and online shop already see the new values.', 'الكاسة والمتجر الإلكتروني كايشوفو القيم الجداد دابا.'),
       });
+      if (res.listsFailed) toast(L('Les tarifs n’ont pas pu être enregistrés', 'The price lists could not be saved', 'ما قدرناش نسجّلو التعريفات'), { type: 'warn', desc: L('Le reste est enregistré. Les cellules des tarifs restent modifiées à l’écran : réessayez.', 'Everything else is saved. The price-list cells stay edited on screen: try again.', 'الباقي تسجّل. خانات التعريفات باقيين مبدّلين فالشاشة: عاود جرّب.') });
       await reload();
       return true;
     }
@@ -371,7 +472,7 @@
           + (x.field === 'category' ? catName(x.current) : String(x.current)) + L('. Enregistrez de nouveau pour garder votre valeur.', '. Save again to keep your value.', '. سجّل مرة أخرى باش تخلي القيمة ديالك.');
       });
       S.grid.reset(S.data.rows); S.grid.setFlags(flags);
-      toast(L('Des valeurs ont changé ailleurs', 'Some values changed elsewhere', 'شي قيم تبدّلات من بلاصة أخرى'), { type: 'warn', desc: L('Rien n’a été écrit. Les cellules soulignées montrent la valeur actuelle.', 'Nothing was written. Underlined cells show the current value.', 'حتى حاجة ما تسجّلات. الخانات اللي تحتهم خط كايبيّنو القيمة الحالية.') });
+      toast(L('Des valeurs ont changé ailleurs', 'Some values changed elsewhere', 'شي قيم تبدّلات من بلاصة أخرى'), { type: 'warn', desc: L('Rien n’a été écrit, tarifs compris. Les cellules soulignées montrent la valeur actuelle.', 'Nothing was written, price lists included. Underlined cells show the current value.', 'حتى حاجة ما تسجّلات، حتى التعريفات. الخانات اللي تحتهم خط كايبيّنو القيمة الحالية.') });
       status();
       return false;
     }
@@ -384,7 +485,6 @@
       return false;
     }
     toast(res.error === 'unauthorized' ? L('Seul le propriétaire peut modifier en masse', 'Only the owner can bulk edit', 'غير مول المحل اللي يقدر يبدّل بالجملة')
-      : res.error === 'price-lists' ? L('Les tarifs n’ont pas pu être enregistrés', 'The price lists could not be saved', 'ما قدرناش نسجّلو التعريفات')
       : L('Enregistrement impossible', 'Could not save', 'ما قدرناش نسجّلو'), { type: 'error', desc: L('Vos modifications restent à l’écran.', 'Your changes stay on screen.', 'التبديلات ديالك باقيين فالشاشة.') });
     status();
     return false;
@@ -479,10 +579,10 @@
   const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   function exportFile(fmt) {
     const legacy = fmt === 'csv' ? window.KiwiBulkSource.legacyCsv(S.kind) : null;
-    if (legacy != null) { download('\uFEFF' + legacy, fileName('csv'), 'text/csv;charset=utf-8'); return; }   // the boutique CSV as before, re-importable
+    if (legacy != null) { download('\uFEFF' + R().safeCsv(legacy), fileName('csv'), 'text/csv;charset=utf-8'); return; }   // the boutique CSV as before, re-importable, formulas neutralised
     const { rows } = sheetRows(true);
     if (fmt === 'csv') {
-      const csv = rows.map((r) => r.map((c) => { const s = String(c == null ? '' : c); return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(',')).join('\r\n');
+      const csv = rows.map((r) => r.map((c) => { const s = R().safeCell(c); return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(',')).join('\r\n');
       download('\uFEFF' + csv, fileName('csv'), 'text/csv;charset=utf-8');
       return;
     }
@@ -506,7 +606,7 @@
       /* Re-price and import both end here: values into the sheet, then the
          one batch save. */
       put: (changes) => S.grid.setValues(changes),
-      save: () => save(),
+      save: (o) => save(o),
       reload,
     };
   }
@@ -517,8 +617,8 @@
   /* The old « Édition groupée » of the carte: now the real re-price, on the
      real carte, through the batch save. */
   handlers['menu-mass'] = () => open('menu', () => window.KiwiBulkReprice.open(toolContext('')));
-  handlers['cg-back'] = () => {
-    if (S && S.grid && S.grid.dirtyCount() && !window.confirm(L('Quitter sans enregistrer vos modifications ?', 'Leave without saving your changes?', 'تخرج بلا ما تسجّل التبديلات؟'))) return;
+  handlers['cg-back'] = async () => {
+    if (S && S.grid && S.grid.dirtyCount() && !(await ask({ title: L('Quitter sans enregistrer ?', 'Leave without saving?', 'تخرج بلا ما تسجّل؟'), desc: plural(S.grid.dirtyCount(), L('{n} article modifié sera perdu.', '{n} changed item will be lost.', '{n} منتج مبدّل غادي يضيع.'), L('{n} articles modifiés seront perdus.', '{n} changed items will be lost.', '{n} منتجات مبدّلين غادي يضيعو.')), ok: L('Quitter sans enregistrer', 'Leave without saving', 'خرج بلا تسجيل'), cancel: L('Rester', 'Stay', 'بقى'), danger: true }))) return;
     const k = S ? S.kind : 'menu';
     if (S && S.grid) S.grid.destroy();
     const h = handlers[k === 'boutique' ? 'nav-inventory' : 'nav-menu'];
@@ -526,19 +626,21 @@
   };
   handlers['cg-filter'] = (el, arg) => { if (!S) return; const k = argOf(el, arg); S.filter = ['all', 'changed', 'errors'].includes(k) ? k : 'all'; markSeg(); S.shown = null; applyFilter(); };
   handlers['cg-save'] = () => save();
-  handlers['cg-discard'] = () => {
+  handlers['cg-discard'] = async () => {
     if (!S || !S.grid.dirtyCount()) return;
-    if (!window.confirm(L('Annuler toutes les modifications non enregistrées ?', 'Discard all unsaved changes?', 'تلغي جميع التبديلات اللي ما تسجّلوش؟'))) return;
+    if (!(await ask({ title: L('Tout annuler ?', 'Discard everything?', 'تلغي كلشي؟'), desc: L('Les modifications non enregistrées sont effacées. Rien n’est écrit.', 'Unsaved changes are cleared. Nothing is written.', 'التبديلات اللي ما تسجّلوش كاتتمسح. حتى حاجة ما كاتتسجّل.'), ok: L('Tout annuler', 'Discard all', 'لغي كلشي'), cancel: L('Garder', 'Keep', 'خلّي'), danger: true }))) return;
     S.grid.discard(); status();
   };
   handlers['cg-undo-save'] = async () => {
     if (!S || !S.lastSave) return;
-    const back = S.lastSave.map((p) => ({ id: p.id, set: p.was, was: p.set }));
-    if (await save(back, { isUndo: true })) toast(L('Dernier enregistrement annulé', 'Last save undone', 'آخر تسجيل ترجّع'), { type: 'success' });
+    const back = S.lastSave.patches.map((p) => ({ id: p.id, set: p.was, was: p.set }));
+    const lists = S.lastSave.lists.map((x) => ({ listId: x.listId, itemId: x.itemId, price: x.was, was: x.price }));
+    if (await save({ patches: back, lists, isUndo: true })) toast(L('Dernier enregistrement annulé', 'Last save undone', 'آخر تسجيل ترجّع'), { type: 'success', desc: lists.length ? L('Tarifs compris.', 'Price lists included.', 'حتى التعريفات.') : '' });
   };
   handlers['cg-bulk-edit'] = () => { if (S) bulkEdit(); };
   handlers['cg-unselect'] = () => { if (S) S.grid.clearChecked(); };
   handlers['cg-reprice'] = (el, arg) => { if (S) window.KiwiBulkReprice.open(toolContext(argOf(el, arg))); };
   handlers['cg-import'] = () => { if (S) window.KiwiBulkImport.open(toolContext('')); };
+  handlers['cg-template'] = () => { if (!S) return; const t = toolContext(''); t.download(t.template(), (S.kind === 'boutique' ? 'modele-inventaire' : 'modele-carte') + '-kiwi.xlsx'); };
   handlers['cg-export'] = (el, arg) => { if (S) exportFile(argOf(el, arg) === 'csv' ? 'csv' : 'xlsx'); };
 })();

@@ -8,23 +8,32 @@
  *     DEFLATED file with shared strings (what Excel saves) reads too;
  *   · import analysis: required, not a number, duplicate barcode / SKU,
  *     unknown category, new / updated / unchanged;
- *   · POST /api/catalog/batch on a real schema: owner only (a paired till and a
- *     stranger are refused), another account's store never touched, all or
- *     nothing on a bad row, conflicts refused, a retry writes nothing, the
- *     barcode and SKU uniqueness, and the carte of a restaurant.
+ *   · POST /api/catalog/batch on a real schema: owner only (a paired till, a
+ *     stranger, an employee and a manager are refused), another account's
+ *     store never touched, all or nothing on a bad row, conflicts refused, a
+ *     retry writes nothing, the barcode and SKU uniqueness, money with three
+ *     decimals refused, a sale landing between read and write kept, a split
+ *     (large) catalogue, and the carte of a restaurant written exactly once;
+ *   · hostile workbooks: a zip bomb and a row 300 000 000 are refused fast;
+ *   · the browser side, run for real in a sandbox: one carte save is one
+ *     network write (the menu store adopts the answer, it does not republish),
+ *     and price lists leave only after the batch succeeded.
  *   node tools/catalog-bulk-test.mjs
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
+import vm from 'node:vm';
+import { createRequire } from 'node:module';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 await import(pathToFileURL(path.join(ROOT, 'assets/pages-pro/catalog-bulk/rules.js')).href);
 await import(pathToFileURL(path.join(ROOT, 'assets/pages-pro/catalog-bulk/xlsx.js')).href);
 const B = globalThis.KiwiBulkRules, X = globalThis.KiwiXlsx;
 const { onRequestPost: batchPost } = await import(pathToFileURL(path.join(ROOT, 'functions/api/catalog/batch.js')).href);
-const { tillToken, makeSession, sessionCookie } = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
+const { tillToken, makeSession, sessionCookie, employeeToken, employeeCookie } = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
+const { packCatalog, runCatalogWrite, loadParts } = await import(pathToFileURL(path.join(ROOT, 'functions/api/_catalog-parts.js')).href);
 
 let fails = 0, passed = 0;
 function ok(label, cond, detail) {
@@ -84,6 +93,31 @@ eq('checkValue sellable "non"', B.checkValue('menu', 'sellable', 'non', null), {
 eq('checkValue name too long', B.checkValue('menu', 'name', 'x'.repeat(121), null), { error: 'too-long' });
 eq('menu has no barcode field', B.checkValue('menu', 'barcode', '123', null), { error: 'unknown-field' });
 
+/* ── money is never rounded in silence ────────────────────────────────── */
+eq('« 1,234 » for a price is refused, not stored as 1,23', B.checkValue('boutique', 'price', '1,234'), { error: 'too-many-decimals' });
+eq('…a cost too', B.checkValue('boutique', 'cost', '0,125'), { error: 'too-many-decimals' });
+eq('spreadsheet float noise is still two decimals', B.checkValue('boutique', 'price', 19.990000000000002), { value: 19.99 });
+eq('« 1 234 » is a thousand', B.checkValue('boutique', 'price', '1 234'), { value: 1234 });
+eq('a 90 % move and a price under cost are both asked about', B.riskyChanges([
+  { id: 'a', set: { price: 1.23 } }, { id: 'b', set: { price: 50 } }, { id: 'c', set: { cost: 80 } }, { id: 'd', set: { price: 110 } },
+], [{ id: 'a', price: 1200, cost: 600 }, { id: 'b', price: 60, cost: 55 }, { id: 'c', price: 70, cost: 30 }, { id: 'd', price: 100, cost: 40 }]).map((x) => [x.id, x.code]),
+[['a', 'big-change'], ['b', 'below-cost'], ['c', 'below-cost']]);
+
+/* ── shelf endings, the 10 MAD step and the margin guard ──────────────── */
+eq('endings ,90 ,99 and « ends in 9 »', [B.endTo(123.4, '90', 'nearest'), B.endTo(123.4, '99', 'up'), B.endTo(123.4, '9', 'nearest'), B.endTo(124.5, '9', 'down')], [123.9, 123.99, 119, 119]);
+eq('10 MAD step', B.roundTo(143, 10, 'nearest'), 140);
+eq('a re-price can end in ,90', B.reprice([{ id: 'a', name: 'A', price: 100 }], { basis: 'price', op: 'pct', value: 7, ending: '90', mode: 'up' }).rows[0].next, 107.9);
+const cheap = B.reprice([{ id: 'a', name: 'A', price: 8, cost: 7 }, { id: 'b', name: 'B', price: 100, cost: 80 }], { basis: 'cost', op: 'pct', value: -50, step: 1, mode: 'nearest' });
+eq('cost −50 % is flagged under cost, never hidden', [cheap.rows.map((r) => [r.next, r.flag]), cheap.flagged['below-cost']], [[[4, 'below-cost'], [40, 'below-cost']], 2]);
+const guarded = B.reprice([{ id: 'a', name: 'A', price: 8, cost: 7 }], { basis: 'cost', op: 'pct', value: -50, step: 1, mode: 'nearest', minMargin: 20 });
+eq('a minimum margin lifts the price to keep it (rounded up)', [guarded.rows[0].next, guarded.rows[0].lifted, guarded.rows[0].flag], [9, true, '']);
+eq('a thin margin is flagged', B.reprice([{ id: 'a', name: 'A', price: 10, cost: 9 }], { basis: 'price', op: 'amt', value: 0.5, step: 0, mode: 'nearest' }).rows[0].flag, 'low-margin');
+
+/* ── CSV formulas never reach a spreadsheet live ──────────────────────── */
+eq('formula-like text is neutralised, numbers are not', [B.safeCell('=HYPERLINK("x")'), B.safeCell('@cmd'), B.safeCell('+33'), B.safeCell('-20% promo'), B.safeCell(-5), B.safeCell('-5'), B.safeCell('Thé')], ["'=HYPERLINK(\"x\")", "'@cmd", "'+33", "'-20% promo", '-5', '-5', 'Thé']);
+eq('a CSV written by someone else is neutralised with its own delimiter', B.safeCsv('nom;prix\n=1+1;12,5\n'), "nom;prix\r\n'=1+1;12,5");
+eq('the importer takes the apostrophe off again', [B.restoreCell("'=1+1"), B.restoreCell("l'atelier"), B.restoreCell(12)], ['=1+1', "l'atelier", 12]);
+
 /* ── TSV clipboard ────────────────────────────────────────────────────── */
 eq('TSV from Excel with a quoted newline', B.parseTsv('A\t"b\nc"\t3\r\nD\tE\t4\r\n'), [['A', 'b\nc', '3'], ['D', 'E', '4']]);
 eq('TSV round trip', B.parseTsv(B.toTsv([['x\ty', 'q"'], ['1', '']])), [['x\ty', 'q"'], ['1', '']]);
@@ -140,6 +174,27 @@ eq('deflated Excel file: shared strings, rich text, gaps, prefixes', excel.rows,
 let notZip = '';
 try { await X.read(new TextEncoder().encode('nom,prix\n')); } catch (e) { notZip = e.message; }
 eq('a CSV given as xlsx is refused', notZip, 'not-a-zip');
+
+/* Hostile workbooks. Each must fail fast, with its own reason, never by
+   inflating gigabytes or allocating a 300-million-row array. */
+const sheetFiles = (sheet) => ({ 'xl/workbook.xml': xmlFiles['xl/workbook.xml'], 'xl/_rels/workbook.xml.rels': xmlFiles['xl/_rels/workbook.xml.rels'], 'xl/worksheets/data.xml': sheet });
+const build = async (files, lie) => zipDeflated(await Promise.all(Object.entries(files).map(async ([name, text]) => {
+  const raw = enc.encode(text);
+  return { name, raw: lie && name.includes('worksheets') ? raw.subarray(0, 64) : raw, data: await deflate(text) };
+})));
+const reason = async (bytes, opts) => { const t = Date.now(); try { await X.read(bytes, opts); return ['read', Date.now() - t]; } catch (e) { return [e.message, Date.now() - t]; } };
+const bombXml = '<worksheet><sheetData>' + ' '.repeat(4 * 1024 * 1024) + '</sheetData></worksheet>';
+const bomb = await build(sheetFiles(bombXml));
+ok('a 4 MB expansion is a small file (the bomb shape)', bomb.length < 40000, bomb.length);
+eq('declared sizes over the budget: refused before inflating', (await reason(bomb, { bytes: 1024 * 1024 }))[0], 'too-big');
+const liar = await build(sheetFiles(bombXml), true);
+eq('sizes that lie: the stream is cut at the budget', (await reason(liar, { bytes: 1024 * 1024 }))[0], 'too-big');
+let [why, ms] = await reason(await build(sheetFiles('<worksheet><sheetData><row r="300000000"><c r="A300000000" t="inlineStr"><is><t>x</t></is></c></row></sheetData></worksheet>')));
+ok('row 300 000 000 is refused in well under a second', why === 'too-many-rows' && ms < 1000, [why, ms]);
+[why, ms] = await reason(await build(sheetFiles('<worksheet><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Nom</t></is></c><c r="XFD1" t="inlineStr"><is><t>far</t></is></c></row><row r="1048576" s="3"/></sheetData></worksheet>')));
+const tidy = await X.read(await build(sheetFiles('<worksheet><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Nom</t></is></c><c r="XFD1" t="inlineStr"><is><t>far</t></is></c></row><row r="1048576" s="3"/></sheetData></worksheet>')));
+eq('an empty formatted last row and a far column are dropped, not allocated', tidy.rows, [['Nom']]);
+eq('the default budget is 30 MB, 5 000 rows, 64 columns', [X.LIMITS.bytes, X.LIMITS.rows, X.LIMITS.cols], [30 * 1024 * 1024, 5001, 64]);
 
 /* ── import analysis ──────────────────────────────────────────────────── */
 const existing = [
@@ -283,6 +338,59 @@ eq('a field outside the grid is refused', [r.status, r.body.error], [400, 'unkno
 r = await post({ kind: 'boutique', merchant: 'santos-store', rows: [{ id: 'p1', set: { price: 1 } }, { id: 'p1', set: { price: 2 } }] });
 eq('the same row twice is refused', r.body.error, 'duplicate-row');
 
+r = await post({ kind: 'boutique', merchant: 'santos-store', rows: [{ id: 'p1', set: { price: '1,234' }, was: { price: 319 } }] });
+eq('three decimals on money are refused by the server too', [r.status, r.body.issues && r.body.issues[0].code], [422, 'too-many-decimals']);
+
+/* Employees and managers work at the till; bulk edits are the owner's. */
+const empCookie = async (staffId) => employeeCookie(await employeeToken(AUTH_SECRET, { merchant: 'santos-store', staffId })).split(';')[0];
+db.prepare(`INSERT OR REPLACE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES ('santos-store', 'team', ?, 1, ?)`).run(JSON.stringify({ members: [{ id: 'emp-1', name: 'Caissière', role: 'cashier' }, { id: 'emp-2', name: 'Gérant', role: 'manager' }] }), now);
+const revBefore = row('santos-store').rev;
+for (const [who, cookie] of [['an employee', await empCookie('emp-1')], ['a manager', await empCookie('emp-2')], ['a manager at a paired till', (await empCookie('emp-2')) + '; ' + till]]) {
+  r = await post({ kind: 'boutique', merchant: 'santos-store', rows: [{ id: 'p1', set: { price: 1 }, was: { price: 319 } }] }, cookie);
+  eq(who + ' cannot bulk edit', r.status, 401);
+}
+eq('…and nothing was written', row('santos-store').rev, revBefore);
+
+/* A sale lands between the route's read and its write: the compare-and-swap
+   loses, the route reads again and writes on top of the sale. */
+let race = null;
+const realPrepare = env.DB.prepare;
+env.DB.prepare = (q) => {
+  const st = realPrepare(q);
+  if (!race || !/^SELECT data, rev FROM catalogs/.test(q)) return st;
+  return { bind(...p) { const b = st.bind(...p); return { ...b, async first() { const got = await b.first(); const fn = race; race = null; if (fn) fn(); return got; } }; } };
+};
+race = () => {
+  const cur = row('santos-store');
+  const v3 = vari(cur.data, 'v3'); v3.base = 1; v3.stock = 1; v3.baseAt = Date.now(); v3.metaAt = Date.now();
+  prod(cur.data, 'p2').name = 'Veste lin (dernière)'; prod(cur.data, 'p2').metaAt = Date.now();
+  put('santos-store', cur.data, cur.rev + 1);
+};
+const revRace = row('santos-store').rev;
+r = await post({ kind: 'boutique', merchant: 'santos-store', rows: [{ id: 'p3', set: { price: 165 }, was: { price: 150 } }] });
+saved = row('santos-store').data;
+eq('the write that lost the race retries and lands', [r.status, r.body.rev, prod(saved, 'p3').priceMAD], [200, revRace + 2, 165]);
+eq('…on top of the sale and the other edit, both kept', [vari(saved, 'v3').stock, prod(saved, 'p2').name], [1, 'Veste lin (dernière)']);
+env.DB.prepare = realPrepare;
+
+/* A split catalogue (over 1.5 MB: products and variants in catalog_parts). */
+shop('big-shop', 'acc-s', 'boutique');
+const big = { v: 1, seq: 1, removed: {}, moves: [], categories: [{ id: 'c1', name: 'Tout', color: 'atlas', order: 0, metaAt: T0 }], products: [], variants: [] };
+for (let i = 0; i < 4200; i++) {
+  big.products.push({ id: 'b' + i, name: 'Article ' + i + ' ' + 'x'.repeat(100), categoryId: 'c1', priceMAD: 100 + i, cost: 50, sku: 'B' + i, metaAt: T0, createdAt: T0 });
+  big.variants.push({ id: 'bv' + i, productId: 'b' + i, colorId: 'noir', size: 'U', base: 3, baseAt: T0, stock: 3, metaAt: T0, barcodes: [{ code: String(2000000000000 + i), type: 'ean13', primary: true, at: T0 }] });
+}
+const packed = packCatalog(big);
+db.prepare('INSERT INTO catalogs (merchant,data,rev,updated_ts) VALUES (?,?,?,?)').run('big-shop', '{}', 1, now);
+await runCatalogWrite(env.DB, 'big-shop', packed, env.DB.prepare('UPDATE catalogs SET data = ?, rev = ? WHERE merchant = ?').bind(packed.head, 2, 'big-shop'), false);
+ok('the fixture is really split', packed.parts.length > 1, packed.parts.length);
+r = await post({ kind: 'boutique', merchant: 'big-shop', rows: [{ id: 'b2400', set: { price: 999 }, was: { price: 2500 } }, { id: 'b7', set: { name: 'Article sept' }, was: { name: big.products[7].name } }] });
+const bigRow = await loadParts(env.DB, 'big-shop', db.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').get('big-shop'));
+const bigDoc = JSON.parse(bigRow.data);
+eq('a split catalogue is edited in place', [r.status, r.body.updated, bigRow.split, bigRow.rev], [200, 2, true, 3]);
+eq('…every article and variant still there, the edits in', [bigDoc.products.length, bigDoc.variants.length, prod(bigDoc, 'b2400').priceMAD, prod(bigDoc, 'b7').name, prod(bigDoc, 'b4199').priceMAD], [4200, 4200, 999, 'Article sept', 4299]);
+eq('…and only the current generation of parts remains', db.prepare('SELECT COUNT(DISTINCT gen) AS n FROM catalog_parts WHERE merchant = ?').get('big-shop').n, 1);
+
 /* The carte of a restaurant. */
 const menu = { cats: [{ id: 'cat1', name: 'Tajines', sub: [] }, { id: 'cat2', name: 'Boissons', sub: [] }],
   items: [{ id: 'it1', name: 'Tajine kefta', price: 65, catId: 'cat1', avail: true }, { id: 'it2', name: 'Thé', price: 12, catId: 'cat2', avail: true },
@@ -292,7 +400,13 @@ r = await post({ kind: 'menu', merchant: 'cafe-riad', rows: [{ id: 'it1', set: {
 eq('another merchant cannot write this carte', r.status, 401);
 r = await post({ kind: 'menu', merchant: 'cafe-riad', rows: [{ id: 'it3', set: { price: 70 } }] }, cafe);
 eq('an archived dish is not in the grid', r.body.issues && r.body.issues[0].code, 'not-found');
+let menuWrites = 0;
+const prepMenu = env.DB.prepare;
+env.DB.prepare = (q) => { if (/^UPDATE menus/.test(q)) menuWrites++; return prepMenu(q); };
 r = await post({ kind: 'menu', merchant: 'cafe-riad', rows: [{ id: 'it1', set: { price: 68.5, sellable: false }, was: { price: 65, sellable: true } }, { id: 'it2', set: { category: 'cat1' }, was: { category: 'cat2' } }] }, cafe);
+env.DB.prepare = prepMenu;
+eq('one carte save is exactly one write', menuWrites, 1);
+eq('…and answers with the carte it wrote, for the dashboard to adopt', [r.body.menu && r.body.menu.items.find((i) => i.id === 'it1').price, r.body.merchant], [68.5, 'cafe-riad']);
 const mrow = db.prepare('SELECT data, updated_ts FROM menus WHERE merchant = ?').get('cafe-riad');
 const m2 = JSON.parse(mrow.data);
 eq('the carte is re-priced, paused and moved', [r.status, r.body.updated, m2.items[0].price, m2.items[0].avail, m2.items[1].catId], [200, 2, 68.5, false, 'cat1']);
@@ -303,6 +417,106 @@ r = await post({ kind: 'menu', merchant: 'cafe-riad', rows: [{ id: 'it1', set: {
 eq('a carte has no barcode column', r.body.error, 'unknown-field');
 r = await post({ kind: 'boutique', merchant: 'cafe-riad', rows: [{ id: 'it1', set: { price: 1 } }] }, cafe);
 eq('a restaurant has no boutique catalogue to patch', r.status, 409);
+
+/* ── the browser side, for real, in a sandbox ─────────────────────────── */
+/* The real menu store (assets/menu-catalog.js and its parts) and the real
+   assets/pages-pro/catalog-bulk/source.js run together. A store that tells its
+   subscribers about every set() is what makes a republish visible here: the
+   old path (re-applying the saved values through updateItem) published the
+   whole carte again from the old revision. */
+const require = createRequire(import.meta.url);
+const menuSource = require('./menu-catalog-test-source.cjs').runtimeSource();
+const bulkSource = fs.readFileSync(path.join(ROOT, 'assets/pages-pro/catalog-bulk/source.js'), 'utf8');
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+function browser({ batchAnswer, priceLists } = {}) {
+  const CAFE = { id: 'v-cf', name: 'Amira Café', slug: 'amira-cafe', type: 'restaurant', subtype: 'cafe' };
+  const server = { seq: 4, langs: ['fr', 'ar', 'en'], kitchenId: '', stations: [], cats: [{ id: 'cat_1', name: 'Boissons', sub: [] }],
+    items: [{ id: 'it_1', name: 'Café', price: 10, catId: 'cat_1', avail: true }, { id: 'it_2', name: 'Thé', price: 12, catId: 'cat_1', avail: true }] };
+  const w = { calls: [], mem: Object.create(null), handlers: [], order: [] };
+  const subs = [];
+  const store = { define() { return {
+    get(vid) { const k = vid || CAFE.id; return w.mem[k] || (w.mem[k] = { seq: 0, cats: [], items: [], stations: [], kitchenId: '' }); },
+    set(data, vid) { const k = vid || CAFE.id; w.mem[k] = data; subs.forEach((fn) => fn(k)); return data; },
+    update(fn, vid) { const k = vid || CAFE.id; const d = this.get(k); const n = fn(d); return this.set(n === undefined ? d : n, k); },
+    subscribe(fn) { subs.push(fn); return () => {}; },
+    loadExample() {}, clear() {}, isEmpty(vid) { const d = this.get(vid); return !(d.items || []).length; }, hasData(vid) { return !this.isEmpty(vid); },
+  }; } };
+  const fetchStub = (url, init) => {
+    const u = String(url), method = (init && init.method) || 'GET';
+    let body = null; try { body = init && init.body ? JSON.parse(init.body) : null; } catch (_) {}
+    w.calls.push({ url: u, method, body }); w.order.push(method + ' ' + u.split('?')[0]);
+    if (method === 'GET' && u.startsWith('/api/menu')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ merchant: 'amira-cafe', menu: server, updatedTs: 1234 }) });
+    if (u === '/api/catalog/batch') { const a = batchAnswer(body); return Promise.resolve({ ok: a.status === 200, status: a.status, json: () => Promise.resolve(a.body) }); }
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, updatedTs: 9999 }) });
+  };
+  const win = {
+    KiwiEnv: { isReal: () => true }, KiwiI18n: { getLang: () => 'fr' },
+    KiwiConfig: { features: {}, type: 'cafe', loaded: true, storeSlug: () => 'amira-cafe' },
+    KiwiVenue: { isCustom: () => true, getCurrentVenueData: () => CAFE, getVenueData: () => CAFE, slugOf: () => 'amira-cafe', subscribe() {}, showMenu() {}, refreshMenu() {} },
+    KiwiOrderProPanel: { enabled: () => true },
+    Kiwi: { handlers: {}, appPage() {}, toast() {} },
+    KiwiBulkRules: B, KiwiStore: store,
+    KiwiPriceLists: priceLists,
+    addEventListener(evt, fn) { w.handlers.push({ evt, fn }); },
+    dispatchEvent(e) { w.handlers.filter((h) => h.evt === e.type).forEach((h) => h.fn(e)); return true; },
+  };
+  const doc = { readyState: 'loading', documentElement: { lang: 'fr', getAttribute: () => 'fr' }, head: { appendChild() {} },
+    body: { classList: { contains: () => false, add() {}, remove() {} }, appendChild() {} }, getElementById: () => null, querySelector: () => null, querySelectorAll: () => [],
+    createElement: () => ({ style: {}, classList: { add() {}, remove() {} }, setAttribute() {}, appendChild() {}, remove() {} }), addEventListener() {}, dispatchEvent() {} };
+  class CustomEvent { constructor(type, init) { this.type = type; this.detail = init && init.detail; } }
+  const ctx = { window: win, document: doc, fetch: fetchStub, console: { warn() {}, log() {}, error() {} }, CustomEvent,
+    setTimeout, clearTimeout, setInterval, clearInterval, Promise, Date, Math, JSON, String, Number, Object, Array, RegExp, Intl, Map, Set };
+  win.window = win; win.document = doc; win.fetch = fetchStub; win.setTimeout = setTimeout; win.CustomEvent = CustomEvent;
+  vm.createContext(ctx);
+  vm.runInContext(menuSource, ctx, { filename: 'menu-catalog.js' });
+  w.handlers.filter((h) => h.evt === 'load').forEach((h) => h.fn());
+  vm.runInContext(bulkSource, ctx, { filename: 'source.js' });
+  w.win = win; w.server = server;
+  w.posts = (p) => w.calls.filter((c) => c.method === 'POST' && c.url.startsWith(p));
+  return w;
+}
+const written = (body) => ({ ...JSON.parse(JSON.stringify(body)) });
+{
+  /* Control: the old path, one updateItem on a read carte, publishes. If this
+     fails the harness can no longer see a republish and the next block proves nothing. */
+  const w = browser({ batchAnswer: () => ({ status: 500, body: {} }) });
+  await sleep(1400);
+  w.win.KiwiMenuStore.updateItem('it_1', { price: 11 });
+  await sleep(1100);
+  eq('control: a plain edit publishes the carte once, from revision 1234', w.posts('/api/menu').map((c) => c.body.expectedUpdatedTs), [1234]);
+}
+{
+  const w = browser({ batchAnswer: (body) => {
+    const menu = written(w.server); menu.items[0].price = body.rows[0].set.price;
+    return { status: 200, body: { ok: true, merchant: 'amira-cafe', updatedTs: 5000, updated: 1, unchanged: 0, menu } };
+  } });
+  await sleep(1400);
+  const res = await w.win.KiwiBulkSource.save('menu', [{ id: 'it_1', set: { price: 12.5 }, was: { price: 10 } }], []);
+  await sleep(1100);
+  eq('one carte save from the sheet is ONE network write', [res.ok, w.posts('/api/catalog/batch').length, w.posts('/api/menu').length], [true, 1, 0]);
+  eq('…the store already shows the saved price', w.mem['v-cf'].items.find((i) => i.id === 'it_1').price, 12.5);
+  w.win.KiwiMenuStore.updateItem('it_2', { price: 13 });
+  await sleep(1100);
+  eq('…and the next edit publishes from the new revision, not a stale one', w.posts('/api/menu').map((c) => c.body.expectedUpdatedTs), [5000]);
+}
+{
+  /* Price lists leave only after the batch is written, never before a refusal. */
+  const setCalls = [];
+  const lists = { list: async () => [], prices: async () => new Map(), setPrices: async (rows) => { setCalls.push(rows); } };
+  let answer = { status: 409, body: { error: 'conflict', conflicts: [{ id: 'it_1', field: 'price', current: 11 }] } };
+  const w = browser({ batchAnswer: () => answer, priceLists: lists });
+  await sleep(1400);
+  let res = await w.win.KiwiBulkSource.save('menu', [{ id: 'it_1', set: { price: 12 }, was: { price: 10 } }], [{ listId: 'pl-a', itemId: 'it_1', price: 9.5 }]);
+  eq('a refused batch leaves the price lists untouched', [res.ok, !!res.conflicts, setCalls.length], [false, true, 0]);
+  answer = { status: 422, body: { error: 'invalid', issues: [{ id: 'it_1', field: 'price', code: 'too-many-decimals' }] } };
+  res = await w.win.KiwiBulkSource.save('menu', [{ id: 'it_1', set: { price: '1,234' }, was: { price: 10 } }], [{ listId: 'pl-a', itemId: 'it_1', price: 9.5 }]);
+  eq('…an invalid one too', [res.ok, setCalls.length], [false, 0]);
+  answer = { status: 200, body: { ok: true, merchant: 'amira-cafe', updatedTs: 6000, updated: 1, unchanged: 0, menu: w.server } };
+  w.order.length = 0;
+  res = await w.win.KiwiBulkSource.save('menu', [{ id: 'it_1', set: { price: 12 }, was: { price: 10 } }], [{ listId: 'pl-a', itemId: 'it_1', price: 9.5 }]);
+  eq('a written batch is followed by its price lists, in centimes', [res.ok, res.lists, setCalls[0]], [true, 1, [{ itemKey: 'it_1', listId: 'pl-a', price: 950 }]]);
+  ok('…the batch went first', w.order[0] === 'POST /api/catalog/batch', w.order);
+}
 
 console.log(`catalog-bulk: ${passed} passed, ${fails} failed`);
 if (fails) process.exit(1);

@@ -1102,6 +1102,31 @@
       }
       if (!applyingServer[vid || '·']) schedulePublish(vid);
     });
+    /* Le tableur du catalogue (assets/pages-pro/catalog-bulk/source.js) écrit
+     * la carte par POST /api/catalog/batch, puis remet ici la carte que le
+     * serveur vient d'enregistrer, avec sa révision. On l'adopte SANS la
+     * republier : la republier depuis l'ancienne révision coûtait trois
+     * écritures (le lot, une publication refusée en stale-menu, puis la
+     * publication fusionnée) et deux instantanés d'historique. Une modification
+     * locale encore en attente est fusionnée sur cette nouvelle base, comme
+     * après une relecture. Seule la carte DU magasin affiché est acceptée. */
+    window.addEventListener('kiwi:menu-adopt', function (e) {
+      const d = e && e.detail;
+      if (!d || !d.menu || !isRealSession()) return;
+      const slug = storeSlug();
+      if (!slug || d.merchant !== slug) return;
+      const c = cloudFor(slug);
+      if (c.updatedTs && !(+d.updatedTs > c.updatedTs)) return;   // une révision plus récente est déjà là
+      const vid = (window.KiwiVenue?.getCurrentVenueData?.() || {}).id;
+      const theirs = menuSnapshot(d.menu);
+      const waiting = pendingPublishes.get(c);
+      c.updatedTs = +d.updatedTs; c.base = theirs; c.read = true;
+      if (!c.merchant) c.merchant = slug;
+      if (waiting && waiting.base) {
+        const merged = KiwiMenuMerge.mergeMenu(waiting.base, store.get(vid), theirs);
+        adoptServerMenu(merged.value, vid); pendingPublish(c, vid, merged.value);
+      } else adoptServerMenu(d.menu, vid);
+    });
     /* Un changement d'horaires doit repartir vers la page client tout de suite :
      * un commerçant qui déclare sa fermeture de l'Aïd le matin ne doit pas voir
      * des commandes arriver l'après-midi parce que la publication attendait la

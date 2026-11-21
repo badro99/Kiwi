@@ -6,7 +6,7 @@
   if (document.currentScript?.dataset.startup === 'menu') {
     if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');
     const menuScripts = [
-      'assets/menu-catalog/state.js?v=17',
+      'assets/menu-catalog/state.js?v=18',
       'assets/menu-catalog/modifiers.js?v=5',
       'assets/menu-catalog/item-list.js?v=5',
       'assets/menu-catalog/formulas.js?v=3',
@@ -20,7 +20,7 @@
   }
   const scripts = [
     'assets/pages-pro-office.js?v=29',
-    'assets/pages-pro.js?v=2234',
+    'assets/pages-pro.js?v=2235',
     'assets/pages-pro-boutique.js?v=55',
     'assets/boutique-stock-correct.js?v=4',
     'assets/boutique-categories-view.js?v=3',

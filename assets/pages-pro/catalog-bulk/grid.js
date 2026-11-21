@@ -150,7 +150,8 @@
         if (inRange(r, j)) cls.push('in');
         if (r === act.r && j === act.c) cls.push('act');
         const tip = err ? (o.message ? o.message(err) : err) : (flags[row.id] && flags[row.id][c.key]) || '';
-        h += `<div class="${cls.join(' ')}" role="gridcell" aria-colindex="${j + 2}" data-r="${r}" data-c="${j}"${r === act.r && j === act.c ? ' aria-selected="true" id="cbg-act"' : ''}${tip ? ` data-tip="${esc(tip)}"` : ''}>${display(row, c)}</div>`;
+        const isAct = r === act.r && j === act.c;
+        h += `<div class="${cls.join(' ')}" role="gridcell" aria-colindex="${j + 2}" data-r="${r}" data-c="${j}"${isAct ? ' aria-selected="true" id="cbg-act"' : ''}${isAct && tip && o.describedBy ? ` aria-describedby="${esc(o.describedBy)}"` : ''}${tip ? ` data-tip="${esc(tip)}"` : ''}>${display(row, c)}</div>`;
       });
       return h;
     }
@@ -188,6 +189,25 @@
       allBox.className = 'cbg-box' + (n && n === view.length ? ' on' : n ? ' part' : '');
       root.setAttribute('aria-rowcount', String(view.length + 1));
       root.setAttribute('aria-activedescendant', 'cbg-act');
+      cursor();
+    }
+    /* What is wrong with the active cell, said outside the tooltip too: the
+       page shows it in its footer (and the cell points to it through
+       aria-describedby), so a keyboard or touch user reads it without hovering. */
+    let lastCursor = null;
+    function cursor() {
+      if (!o.onCursor) return;
+      let text = '', label = '';
+      if (view.length) {
+        const row = rowAt(act.r), c = cols[act.c];
+        const err = o.validate ? o.validate(row, c.key, value(row.id, c.key)) : '';
+        text = err ? (o.message ? o.message(err) : err) : (flags[row.id] && flags[row.id][c.key]) || '';
+        label = c.label;
+      }
+      const key = label + '\u0000' + text;
+      if (key === lastCursor) return;
+      lastCursor = key;
+      o.onCursor({ label, text, error: !!text });
     }
     function paint() { render(true); }
     scroller.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(false); }); }, { passive: true });

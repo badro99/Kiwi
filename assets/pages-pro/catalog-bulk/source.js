@@ -13,9 +13,8 @@
  * Saving, in order of preference:
  *   1. a real store: ONE call to POST /api/catalog/batch (validated, tenant-
  *      safe, all or nothing). On success the local copy is brought level: the
- *      boutique re-reads its server copy (sync), the carte applies the same
- *      values through its own store, whose publish then finds the server
- *      already holding them.
+ *      boutique re-reads its server copy (sync), the carte adopts the copy and
+ *      revision the route sends back, without publishing it again.
  *   2. the server unreachable (offline, 5xx): the same values go into the local
  *      store, which keeps them and mirrors them up when the network returns, as
  *      every other catalogue edit does. Said to the merchant, never hidden.
@@ -146,11 +145,33 @@
     catch (_) { return { ok: false, count: 0 }; }
   }
 
+  /* After a successful write, the carte's own store takes the server's copy
+     and revision as its new base WITHOUT publishing (state.js listens for
+     `kiwi:menu-adopt`). Republishing from the old revision cost three writes:
+     the batch, a publish refused as stale-menu, then the merged publish. */
+  function adoptMenu(body, patches) {
+    if (body && body.menu && typeof CustomEvent === 'function') {
+      try { window.dispatchEvent(new CustomEvent('kiwi:menu-adopt', { detail: { merchant: body.merchant, updatedTs: body.updatedTs, menu: body.menu } })); } catch (_) {}
+    }
+    /* A store that refused it (another store on screen, an older server
+       without the carte in its answer) still shows the saved values. */
+    const now = new Map((menuRows() || { rows: [] }).rows.map((r) => [r.id, r]));
+    const behind = patches.filter((p) => { const r = now.get(p.id); return r && Object.keys(p.set).some((f) => !RULES().sameValue(f, r[f], p.set[f])); });
+    if (behind.length) applyLocalMenu(behind);
+  }
+
+  /* One save, all or nothing: the catalogue rows go first, and the price-list
+     cells only once those are written. A refused batch (409, 422, no rights)
+     therefore leaves the price lists untouched too. */
   async function save(kind, patches, listChanges) {
-    const lists = await savePriceLists(listChanges || []);
-    if (!lists.ok) return { ok: false, error: 'price-lists' };   // nothing else leaves: the sheet keeps every edit
-    if (!patches.length) return { ok: true, updated: 0, unchanged: 0, lists: lists.count };
-    if (!cloud(kind)) { applyLocal(kind, patches); return { ok: true, updated: patches.length, local: true, lists: lists.count }; }
+    listChanges = listChanges || [];
+    const done = async (out) => {
+      if (!listChanges.length) return out;
+      const lists = await savePriceLists(listChanges);
+      return Object.assign(out, lists.ok ? { lists: lists.count } : { lists: 0, listsFailed: true });
+    };
+    if (!patches.length) return done({ ok: true, updated: 0, unchanged: 0 });
+    if (!cloud(kind)) { applyLocal(kind, patches); return done({ ok: true, updated: patches.length, local: true }); }
     let res, body = null;
     try {
       res = await fetch('/api/catalog/batch', {
@@ -168,8 +189,8 @@
         const now = new Map((boutiqueRows() || { rows: [] }).rows.map((r) => [r.id, r]));
         const behind = patches.filter((p) => { const r = now.get(p.id); return r && Object.keys(p.set).some((f) => !RULES().sameValue(f, r[f], p.set[f])); });
         if (behind.length) applyLocal('boutique', behind);
-      } else applyLocal('menu', patches);
-      return { ok: true, updated: body.updated, unchanged: body.unchanged, lists: lists.count };
+      } else adoptMenu(body, patches);
+      return done({ ok: true, updated: body.updated, unchanged: body.unchanged });
     }
     if (res && res.status === 409 && body && body.error === 'conflict') return { ok: false, conflicts: body.conflicts || [] };
     /* Articles created on this device and not yet mirrored up are unknown to
@@ -177,13 +198,13 @@
        does too, instead of failing on a row the merchant can see. */
     const unsynced = res && ((res.status === 422 && body && body.issues && body.issues.length && body.issues.every((i) => i.code === 'not-found'))
       || (res.status === 409 && body && (body.error === 'catalog-missing' || body.error === 'menu-missing')));
-    if (unsynced) { applyLocal(kind, patches); return { ok: true, updated: patches.length, local: true, lists: lists.count }; }
+    if (unsynced) { applyLocal(kind, patches); return done({ ok: true, updated: patches.length, local: true }); }
     if (res && res.status === 422 && body && body.issues) return { ok: false, issues: body.issues };
     if (res && (res.status === 401 || res.status === 403)) return { ok: false, error: 'unauthorized' };
     if (res && res.status < 500 && res.status !== 0 && body && body.error && body.error !== 'unmigrated') return { ok: false, error: body.error };
     /* Unreachable: the edit is kept on this device and leaves with the next sync. */
     applyLocal(kind, patches);
-    return { ok: true, updated: patches.length, local: true, offline: true, lists: lists.count };
+    return done({ ok: true, updated: patches.length, local: true, offline: true });
   }
 
   /* The boutique CSV export, unchanged (assets/boutique-catalog.js · exportCsv):

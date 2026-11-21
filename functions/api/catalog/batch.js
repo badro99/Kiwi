@@ -254,8 +254,11 @@ async function saveMenu(env, merchant, rows) {
     const out = applyMenu(menu, rows);
     if (out.issues.length) return json({ error: 'invalid', issues: out.issues.slice(0, 200), count: out.issues.length }, 422);
     if (out.conflicts.length) return json({ error: 'conflict', conflicts: out.conflicts.slice(0, 500), updatedTs: ts }, 409);
-    if (!out.changed) return json({ ok: true, merchant, updatedTs: ts, updated: 0, unchanged: out.unchanged });
-    const text = JSON.stringify(sanitizeMenu(menu));
+    /* The carte goes back with its revision: the dashboard adopts it as its
+       new base instead of republishing from the old one (one save, one write). */
+    if (!out.changed) return json({ ok: true, merchant, updatedTs: ts, updated: 0, unchanged: out.unchanged, menu });
+    const saved = sanitizeMenu(menu);
+    const text = JSON.stringify(saved);
     await keepHistory(env, 'menu', merchant, 'menu');
     const updatedTs = Math.max(Date.now(), ts + 1);
     let result;
@@ -264,7 +267,7 @@ async function saveMenu(env, merchant, rows) {
         .bind(text, updatedTs, merchant, ts).run();
     } catch (_) { return json({ error: 'write-failed' }, 500); }
     if (result && result.meta && Number(result.meta.changes) === 1) {
-      return json({ ok: true, merchant, updatedTs, updated: out.changed, unchanged: out.unchanged });
+      return json({ ok: true, merchant, updatedTs, updated: out.changed, unchanged: out.unchanged, menu: saved });
     }
   }
   return json({ error: 'busy' }, 409);

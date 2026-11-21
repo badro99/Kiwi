@@ -33,6 +33,9 @@
 
   const cents = (n) => Math.round(Number(n) * 100);
   const fromCents = (c) => Math.round(c) / 100;
+  /* True when n holds no more than two decimals (spreadsheet float noise such
+     as 19.990000000000002 still counts as two). */
+  const centsExact = (n) => Math.abs(Number(n) * 100 - Math.round(Number(n) * 100)) < 1e-6;
 
   /* A number as people type it in Morocco: "1 234,50", "1.234,50", "12.5",
      "89 MAD", "٨٩". '' and null mean "empty" (null); anything else that does
@@ -80,37 +83,89 @@
     return fromCents(q * s);
   }
 
+  /* Shelf price endings: ,90 and ,99 on the dirham, or a price ending in 9
+     (19, 29 … 129). Chosen up, down or to the nearest like a step. */
+  const ENDINGS = { '90': { unit: 100, off: 90 }, '99': { unit: 100, off: 99 }, '9': { unit: 1000, off: 900 } };
+  function endTo(value, ending, mode) {
+    const e = ENDINGS[ending];
+    if (!e) return fromCents(cents(value));
+    const c = cents(value);
+    let q = mode === 'up' ? Math.ceil((c - e.off) / e.unit) : mode === 'down' ? Math.floor((c - e.off) / e.unit) : Math.floor((c - e.off + e.unit / 2) / e.unit);
+    if (q < 0) q = 0;
+    return fromCents(q * e.unit + e.off);
+  }
+  const shape = (value, rule, mode) => (rule && ENDINGS[rule.ending] ? endTo(value, rule.ending, mode) : roundTo(value, rule && rule.step, mode));
+
+  /* Below this margin a row is flagged in the preview, as the grid colours it. */
+  const LOW_MARGIN = 15;
+
   /* One item through a re-price rule.
-     rule = { basis: 'price'|'cost', op: 'pct'|'amt'|'set', value, step, mode } */
+     rule = { basis: 'price'|'cost', op: 'pct'|'amt'|'set', value, step, mode,
+              ending: ''|'90'|'99'|'9', minMargin: percent | 0 }
+     With a minimum margin, a price that would fall under it is lifted to the
+     lowest price that keeps it (rounded up), and the row says so. Without one,
+     a price at or under cost, or under LOW_MARGIN, is flagged, never hidden. */
   function repriceOne(item, rule) {
     const old = Number(item && item.price) || 0;
+    const cost = Number(item && item.cost) || 0;
     const op = rule && rule.op;
     const v = Number(rule && rule.value);
     if (!Number.isFinite(v)) return { old, next: old, skip: 'bad-value' };
     let next;
     if (op === 'set') next = cents(v);
     else {
-      const base = rule.basis === 'cost' ? Number(item && item.cost) : old;
+      const base = rule.basis === 'cost' ? cost : old;
       if (!(base > 0)) return { old, next: old, skip: 'no-basis' };
       const b = cents(base);
       next = op === 'amt' ? b + cents(v) : Math.round(b * (100 + v) / 100);
     }
-    next = roundTo(fromCents(next), rule.step, rule.mode);
+    next = shape(fromCents(next), rule, rule && rule.mode);
+    let lifted = false;
+    const mm = Number(rule && rule.minMargin) || 0;
+    if (mm > 0 && mm < 100 && cost > 0) {
+      const floor = fromCents(Math.ceil(cents(cost) * 100 / (100 - mm)));
+      if (cents(next) < cents(floor)) { next = shape(floor, rule, 'up'); lifted = true; }
+    }
     if (!(next > 0)) return { old, next: old, skip: 'zero' };
     if (next > LIMITS.price) return { old, next: old, skip: 'too-high' };
     if (cents(next) === cents(old)) return { old, next, skip: 'same' };
-    return { old, next };
+    const m = margin(next, cost);
+    const flag = cost > 0 && cents(next) <= cents(cost) ? 'below-cost' : m != null && m < LOW_MARGIN ? 'low-margin' : '';
+    return { old, next, margin: m, flag, lifted };
   }
 
   function reprice(items, rule) {
     const rows = [];
     const skipped = { 'no-basis': 0, zero: 0, same: 0, 'too-high': 0, 'bad-value': 0 };
+    const flagged = { 'below-cost': 0, 'low-margin': 0, lifted: 0 };
     (items || []).forEach((it) => {
       const r = repriceOne(it, rule);
       if (r.skip) { skipped[r.skip] = (skipped[r.skip] || 0) + 1; return; }
-      rows.push({ id: it.id, name: it.name, old: r.old, next: r.next, delta: fromCents(cents(r.next) - cents(r.old)) });
+      if (r.flag) flagged[r.flag]++;
+      if (r.lifted) flagged.lifted++;
+      rows.push({ id: it.id, name: it.name, old: r.old, next: r.next, delta: fromCents(cents(r.next) - cents(r.old)), cost: Number(it.cost) || 0, margin: r.margin, flag: r.flag, lifted: r.lifted });
     });
-    return { rows, skipped };
+    return { rows, skipped, flagged };
+  }
+
+  /* Changes worth a second look before they are saved: a price moved by 90 %
+     or more (a typo such as 1,234 for 1 234 is the usual cause), and a price
+     at or under its cost. [{ id, code: 'big-change'|'below-cost', old, next, cost }] */
+  function riskyChanges(patches, rows) {
+    const byId = new Map((rows || []).map((r) => [r.id, r]));
+    const out = [];
+    (patches || []).forEach((p) => {
+      const r = byId.get(p.id) || {};
+      const set = p.set || {};
+      if (!('price' in set) && !('cost' in set)) return;
+      const old = Number(r.price) || 0;
+      const next = parseNumber('price' in set ? set.price : r.price);
+      const cost = parseNumber('cost' in set ? set.cost : r.cost);
+      if (!(typeof next === 'number' && Number.isFinite(next))) return;
+      if ('price' in set && old > 0 && Math.abs(next - old) / old >= 0.9) out.push({ id: p.id, code: 'big-change', old, next, cost: cost || 0 });
+      else if (cost > 0 && cents(next) <= cents(cost)) out.push({ id: p.id, code: 'below-cost', old, next, cost });
+    });
+    return out;
   }
 
   /* Gross margin on the selling price, in percent, one decimal. */
@@ -172,6 +227,9 @@
       if (Number.isNaN(n)) return { error: 'not-a-number' };
       if (n < 0) return { error: 'negative' };
       if (n > LIMITS[field]) return { error: 'too-high' };
+      /* Never rounded in silence: « 1,234 » typed for 1 234 MAD used to be
+         stored as 1,23. A third decimal is refused, and the cell says why. */
+      if (!centsExact(n)) return { error: 'too-many-decimals' };
       return { value: fromCents(cents(n)) };
     }
     if (field === 'lowStock') {
@@ -237,6 +295,33 @@
       if (rows.length && (!best || rows[0].length > best[0].length)) best = rows;
     });
     return best || [];
+  }
+
+  /* ── Export safety ──────────────────────────────────────────────────────
+   * A text cell that starts with = + - @ (or a tab / return) is run as a
+   * formula by Excel and LibreOffice when a CSV is opened: an article named
+   * « =HYPERLINK(…) » would become a live link in the owner's spreadsheet.
+   * Such a cell leaves with a leading apostrophe, which spreadsheets show as
+   * text, and the importer takes the apostrophe off again (restoreCell).
+   * Plain numbers, negative ones included, are left alone. */
+  const FORMULA = /^[=+\-@\t\r]/;
+  const PLAIN_NUMBER = /^-?\d+(?:[.,]\d+)?$/;
+  function safeCell(v) {
+    if (v == null) return '';
+    if (typeof v !== 'string') return String(v);
+    return FORMULA.test(v) && !PLAIN_NUMBER.test(v.trim()) ? "'" + v : v;
+  }
+  function restoreCell(v) {
+    return typeof v === 'string' && /^'[=+\-@\t\r]/.test(v) ? v.slice(1) : v;
+  }
+  /* The same, over a CSV someone else wrote (the boutique's own export): read
+     with its own delimiter, neutralised, written back with that delimiter. */
+  function safeCsv(text) {
+    const t = String(text || '').replace(/^\uFEFF/, '');
+    let d = ',', width = -1;
+    [',', ';', '\t'].forEach((x) => { const r = parseDelimited(t, x)[0] || []; if (r.length > width) { width = r.length; d = x; } });
+    const quote = (c) => (c.indexOf(d) !== -1 || /["\r\n]/.test(c) || c !== c.trim() ? '"' + c.replace(/"/g, '""') + '"' : c);
+    return parseDelimited(t, d).map((r) => r.map((c) => quote(safeCell(c))).join(d)).join('\r\n');
   }
 
   /* ── Import ─────────────────────────────────────────────────────────────
@@ -366,8 +451,8 @@
 
   const api = {
     LIMITS, FIELDS, MAX_ROWS,
-    parseNumber, parseBool, roundTo, repriceOne, reprice, margin, sameValue, diff, checkValue,
-    parseTsv, toTsv, parseCsv, normKey, mapHeader, analyseImport, revalidate, checkDuplicates, countStatus,
+    parseNumber, parseBool, roundTo, endTo, ENDINGS, LOW_MARGIN, centsExact, repriceOne, reprice, riskyChanges, margin, sameValue, diff, checkValue,
+    parseTsv, toTsv, parseCsv, safeCell, restoreCell, safeCsv, normKey, mapHeader, analyseImport, revalidate, checkDuplicates, countStatus,
   };
   root.KiwiBulkRules = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window);

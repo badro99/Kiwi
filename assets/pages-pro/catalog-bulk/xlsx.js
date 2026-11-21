@@ -21,6 +21,15 @@
   const enc = new TextEncoder();
   const dec = new TextDecoder('utf-8');
 
+  /* A workbook is untrusted input. Its zip can claim a tiny size and inflate
+     to gigabytes, and its cells can claim row 300 000 000: either one freezes
+     the tab. So the reader trusts nothing it is told. The declared sizes are
+     summed before anything inflates, every stream is counted while it runs
+     and cancelled past its budget, and rows and columns past the catalogue's
+     own limits stop the read (or are dropped when they are empty, which is
+     how Excel stores a formatted but unused row 1 048 576). */
+  const LIMITS = { bytes: 30 * 1024 * 1024, rows: 5001, cols: 64 };
+
   /* ── zip: reading ─────────────────────────────────────────────────────── */
   const u16 = (b, o) => b[o] | (b[o + 1] << 8);
   const u32 = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;
@@ -36,30 +45,49 @@
     const out = new Map();
     for (let n = 0; n < count; n++) {
       if (u32(b, p) !== 0x02014b50) throw new Error('bad-zip');
-      const method = u16(b, p + 10), size = u32(b, p + 20), nameLen = u16(b, p + 28);
+      const method = u16(b, p + 10), size = u32(b, p + 20), full = u32(b, p + 24), nameLen = u16(b, p + 28);
       const extraLen = u16(b, p + 30), commentLen = u16(b, p + 32), local = u32(b, p + 42);
       const name = dec.decode(b.subarray(p + 46, p + 46 + nameLen));
-      out.set(name.replace(/^\/+/, ''), { method, size, local });
+      out.set(name.replace(/^\/+/, ''), { method, size, full, local });
       p += 46 + nameLen + extraLen + commentLen;
     }
     return out;
   }
 
-  async function inflate(bytes) {
+  /* Inflate with a budget: the declared size (plus a little slack) or what
+     is left of the whole read's budget, whichever is smaller. Past it the
+     stream is cancelled at once, so a bomb costs one chunk, not the tab. */
+  async function inflate(bytes, cap) {
     if (typeof DecompressionStream !== 'function') throw new Error('no-deflate');
-    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-    return new Uint8Array(await new Response(stream).arrayBuffer());
+    const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
+    const chunks = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.length;
+      if (total > cap) { try { await reader.cancel(); } catch (_) {} throw new Error('too-big'); }
+      chunks.push(value);
+    }
+    const out = new Uint8Array(total);
+    let o = 0;
+    for (const c of chunks) { out.set(c, o); o += c.length; }
+    return out;
   }
 
-  async function entry(b, dir, name) {
+  async function entry(b, dir, name, budget) {
     const e = dir.get(name);
     if (!e) return null;
     if (u32(b, e.local) !== 0x04034b50) throw new Error('bad-zip');
     const start = e.local + 30 + u16(b, e.local + 26) + u16(b, e.local + 28);
     const raw = b.subarray(start, start + e.size);
-    if (e.method === 0) return dec.decode(raw);
-    if (e.method === 8) return dec.decode(await inflate(raw));
-    throw new Error('zip-method');
+    let out;
+    if (e.method === 0) out = raw;
+    else if (e.method === 8) out = await inflate(raw, Math.min(budget.left, e.full + 1024));
+    else throw new Error('zip-method');
+    budget.left -= out.length;
+    if (budget.left < 0) throw new Error('too-big');
+    return dec.decode(out);
   }
 
   /* ── XML, just enough ─────────────────────────────────────────────────── */
@@ -91,24 +119,29 @@
     return n - 1;
   }
 
-  async function read(input) {
+  async function read(input, opts) {
+    const lim = Object.assign({}, LIMITS, opts || {});
     const b = input instanceof Uint8Array ? input : new Uint8Array(input);
     const dir = directory(b);
-    const wb = await entry(b, dir, 'xl/workbook.xml');
+    let declared = 0;
+    for (const e of dir.values()) declared += e.full;
+    if (declared > lim.bytes) throw new Error('too-big');
+    const budget = { left: lim.bytes };
+    const wb = await entry(b, dir, 'xl/workbook.xml', budget);
     if (!wb) throw new Error('not-xlsx');
     const first = /<(?:\w+:)?sheet\b[^>]*>/.exec(wb);
     const sheetName = first ? attr(first[0], 'name') || '' : '';
     const rid = first ? (attr(first[0], 'r:id') || attr(first[0], 'id')) : null;
     let path = 'xl/worksheets/sheet1.xml';
-    const rels = await entry(b, dir, 'xl/_rels/workbook.xml.rels');
+    const rels = await entry(b, dir, 'xl/_rels/workbook.xml.rels', budget);
     if (rels && rid) {
       const rel = (rels.match(/<(?:\w+:)?Relationship\b[^>]*>/g) || []).find((t) => attr(t, 'Id') === rid);
       const target = rel && attr(rel, 'Target');
       if (target) path = target.startsWith('/') ? target.slice(1) : 'xl/' + target.replace(/^\.\//, '');
     }
-    const sst = await entry(b, dir, 'xl/sharedStrings.xml');
+    const sst = await entry(b, dir, 'xl/sharedStrings.xml', budget);
     const strings = sst ? (sst.match(/<(?:\w+:)?si\b[\s\S]*?<\/(?:\w+:)?si>|<(?:\w+:)?si\s*\/>/g) || []).map(runs) : [];
-    const xml = await entry(b, dir, path);
+    const xml = await entry(b, dir, path, budget);
     if (xml == null) throw new Error('no-sheet');
     const rows = [];
     const rowRe = /<(?:\w+:)?row\b([^>]*)>([\s\S]*?)<\/(?:\w+:)?row>|<(?:\w+:)?row\b([^>]*)\/>/g;
@@ -116,9 +149,10 @@
     while ((rm = rowRe.exec(xml))) {
       const rAttr = rm[1] != null ? rm[1] : rm[3];
       const rn = parseInt(attr(' ' + rAttr, 'r') || '', 10);
-      const ri = Number.isFinite(rn) ? rn - 1 : next;
+      const ri = Number.isFinite(rn) && rn > 0 ? rn - 1 : next;
       next = ri + 1;
       const row = [];
+      let filled = false;
       const cellRe = /<(?:\w+:)?c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/(?:\w+:)?c>)/g;
       let cm, col = 0;
       while ((cm = cellRe.exec(rm[2] || ''))) {
@@ -126,6 +160,7 @@
         const ref = attr(a, 'r');
         const ci = ref ? colIndex(ref) : col;
         col = ci + 1;
+        if (ci < 0 || ci >= lim.cols) continue;   // past the template's columns: never a catalogue field
         const t = attr(a, 't') || 'n';
         const inner = cm[2] || '';
         const v = /<(?:\w+:)?v>([\s\S]*?)<\/(?:\w+:)?v>/.exec(inner);
@@ -136,11 +171,17 @@
         else if (t === 'b') value = v ? (v[1].trim() === '1') : '';
         else if (v) { const n = Number(v[1]); value = Number.isFinite(n) ? n : unxml(v[1]); }
         row[ci] = value;
+        if (value !== '') filled = true;
+      }
+      if (ri >= lim.rows) {
+        if (filled) throw new Error('too-many-rows');
+        continue;   // a formatted, empty row far down the sheet
       }
       for (let i = 0; i < row.length; i++) if (row[i] === undefined) row[i] = '';
       rows[ri] = row;
     }
     for (let i = 0; i < rows.length; i++) if (!rows[i]) rows[i] = [];
+    while (rows.length && !rows[rows.length - 1].some((v) => v !== '')) rows.pop();
     return { sheet: sheetName, rows };
   }
 
@@ -240,5 +281,5 @@
     return zip(files.map(([name, text]) => ({ name, data: enc.encode(text) })));
   }
 
-  root.KiwiXlsx = { read, write, _zip: zip, _crc32: crc32, _colName: colName };
+  root.KiwiXlsx = { read, write, LIMITS, _zip: zip, _crc32: crc32, _colName: colName };
 })(typeof globalThis !== 'undefined' ? globalThis : window);

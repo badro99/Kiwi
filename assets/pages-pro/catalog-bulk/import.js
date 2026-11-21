@@ -56,10 +56,14 @@
 
   async function readFile(file) {
     const buf = new Uint8Array(await file.arrayBuffer());
-    if (buf[0] === 0x50 && buf[1] === 0x4b) return (await window.KiwiXlsx.read(buf)).rows;
+    const R = window.KiwiBulkRules;
+    if (buf[0] === 0x50 && buf[1] === 0x4b) return (await window.KiwiXlsx.read(buf)).rows.map((r) => r.map(R.restoreCell));
     let text = new TextDecoder('utf-8').decode(buf);
     if (text.indexOf('�') !== -1) { try { text = new TextDecoder('windows-1252').decode(buf); } catch (_) {} }
-    return window.KiwiBulkRules.parseCsv(text);
+    const rows = R.parseCsv(text);
+    while (rows.length && !rows[rows.length - 1].some((v) => String(v).trim() !== '')) rows.pop();
+    if (rows.length > R.MAX_ROWS + 1) throw new Error('too-many-rows');
+    return rows.map((r) => (r.length > 64 ? r.slice(0, 64) : r).map(R.restoreCell));   // same column cap as the .xlsx reader; « '=… » back to « =… »
   }
 
   function open(ctx) {
@@ -103,7 +107,13 @@
     async function take(file) {
       if (file.size > MAX_BYTES) return stepOne(L('Fichier trop lourd : 3 Mo maximum.', 'File too large: 3 MB max.', 'الملف تقيل بزاف: 3 ميغا على الأكثر.'));
       try { table = await readFile(file); }
-      catch (e) { return stepOne(e && e.message === 'no-deflate' ? L('Ce navigateur ne sait pas ouvrir un .xlsx : enregistrez-le en CSV.', 'This browser cannot open an .xlsx: save it as CSV.', 'هاد المتصفح ما كايحلّش .xlsx: سجّلو CSV.') : L('Fichier illisible. Enregistrez-le en .xlsx ou .csv.', 'Unreadable file. Save it as .xlsx or .csv.', 'الملف ما كايتقراش. سجّلو .xlsx ولا .csv.')); }
+      catch (e) {
+        const why = e && e.message;
+        return stepOne(why === 'no-deflate' ? L('Ce navigateur ne sait pas ouvrir un .xlsx : enregistrez-le en CSV.', 'This browser cannot open an .xlsx: save it as CSV.', 'هاد المتصفح ما كايحلّش .xlsx: سجّلو CSV.')
+          : why === 'too-big' ? L('Ce classeur se décompresse en plus de 30 Mo : gardez seulement la feuille du catalogue.', 'This workbook expands past 30 MB: keep only the catalogue sheet.', 'هاد الملف كايكبر فوق 30 ميغا ملّي كايتفتح: خلّي غير ورقة المنتجات.')
+          : why === 'too-many-rows' ? L('Plus de 5 000 lignes : importez le catalogue en plusieurs fichiers.', 'More than 5,000 rows: import the catalogue in several files.', 'كثر من 5000 سطر: دخّل المنتجات على بزاف ديال الملفات.')
+          : L('Fichier illisible. Enregistrez-le en .xlsx ou .csv.', 'Unreadable file. Save it as .xlsx or .csv.', 'الملف ما كايتقراش. سجّلو .xlsx ولا .csv.'));
+      }
       fileLabel = file.name;
       analyse();
       if (!an) return;
