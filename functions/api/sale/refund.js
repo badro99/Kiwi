@@ -18,6 +18,7 @@ import { addBusinessDays, businessBoundary, businessDate, merchantCutoff, mercha
 /* La règle du partage argent / avoirs vit dans un seul fichier, que la caisse
    Maison lit aussi pour annoncer le remboursement avant l'accord du responsable. */
 import RefundSplit from '../../../assets/refund-split.js';
+import { decide, permissionDenied } from '../_permissions.js';
 
 const MAX_AMOUNT_CENTS = 20000000;
 function cleanId(value, max = 80) {
@@ -100,9 +101,15 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
   if (!proof || proof.merchant !== merchant || proof.refundId !== refundId
       || proof.originalSaleId !== originalSaleId || Number(proof.amountCents) !== amountCents
       || ((requestedMethod || proof.refundMethod) && proof.refundMethod !== requestedMethod)
-      || !proof.staffId || !proof.staffName || !employeeRoleOpensDashboard(proof.staffRole)) {
+      || !proof.staffId || !proof.staffName) {
     return json({ error: 'manager-required' }, 403);
   }
+  /* Relu ici et pas seulement à la frappe du code : un droit retiré entre-temps
+     ne laisse pas passer une approbation encore valable dix minutes. */
+  const allowed = await decide(env, merchant, { name: proof.staffName, role: proof.staffRole }, 'sales.refund',
+    employeeRoleOpensDashboard(proof.staffRole));
+  if (allowed.unavailable) return json({ error: 'permissions-unavailable' }, 503);
+  if (!allowed.ok) return allowed.configured ? permissionDenied('sales.refund') : json({ error: 'manager-required' }, 403);
   const actorId = cleanId(proof.staffId, 96);
   const actor = String(proof.staffName).trim().slice(0, 80);
   /* The till may name the original sale under another id than the one the

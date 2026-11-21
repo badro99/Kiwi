@@ -18,7 +18,7 @@ import { settleCoveredOrders } from './_visit-cover.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { validateRetailTenders, retailTenderMethod } from './_retail-tenders.js';
 import { claimRetailBalance, confirmRetailBalance } from './_retail-balances.js';
-import { fitBasket, basketMismatch, clockFlags, recordSaleFlag } from './_sale-truth.js';
+import { fitBasket, basketMismatch, clockFlags, recordSaleFlag, flagDiscountPermission } from './_sale-truth.js';
 import { stampSale } from './_sale-stamp.js';
 import { saveDeliveryCard, cleanDeliveryCard } from './_delivery-card.js';
 import { markStockHeld } from './_delivery-stock.js';
@@ -897,7 +897,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
         JSON.stringify(discountFlag), Date.now(), merchant, id).run();
     } catch (_) { /* the sale stands; the flag is best effort */ }
   }
-
+  if (!stored && hasDiscount) await flagDiscountPermission(env, merchant, id, discountActorId, grossAmountCents, discountAmountCents); // remise au-delà du seuil sans le droit : inscrite, jamais refusée (_permissions.js)
   const tipError = await persistTip(id);
   if (tipError) return tipError;
 

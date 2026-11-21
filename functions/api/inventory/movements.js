@@ -5,7 +5,8 @@ import { movementMilli } from '../_rules-recipe-units.js';
 // GET  ?merchant=slug&summary=1       → solde courant par article/lieu
 // POST { merchant, movements:[...] }  → écriture idempotente, jamais d'UPDATE
 
-import { json, entitledMerchant, readManagerStockProof, stockProofScope } from '../../auth/_lib.js';
+import { json, entitledMerchant, readManagerStockProof, stockProofScope, employeeRoleOpensDashboard } from '../../auth/_lib.js';
+import { decide, sessionMay, permissionDenied } from '../_permissions.js';
 import { tenantFor } from '../_private.js';
 import { resolveInventoryUnitScope, scopeSql } from './_unit-scope.js';
 
@@ -338,6 +339,14 @@ export async function onRequestPost({ request, env }) {
     let mayAdjust = false;
     try { mayAdjust = (await entitledMerchant(request, env, merchant)) === merchant; }
     catch (_) { mayAdjust = false; }
+    /* La session d'un gérant (code à lui) passe par ses droits ; celle du patron
+       et l'opérateur passent comme avant. */
+    if (mayAdjust) {
+      const may = await sessionMay(request, env, merchant, 'stock.adjust', true);
+      if (may.unavailable) return json({ error: 'permissions-unavailable' }, 503);
+      if (!may.ok && !body.approval) return permissionDenied('stock.adjust', { error: 'reason-forbidden' });
+      mayAdjust = may.ok;
+    }
     /* Le comptoir n'est pas pour autant condamné au tableau de bord : un
      * responsable peut autoriser CES mouvements-là en frappant son code, que
      * /api/pin/verify vérifie avant de délivrer une capacité signée. Elle porte
@@ -348,6 +357,10 @@ export async function onRequestPost({ request, env }) {
       const proof = await readManagerStockProof(body && body.approval, env.AUTH_SECRET, merchant);
       const covers = proof && proof.scope === stockProofScope(discretionary.map((m) => m.id));
       if (!covers) return json({ error: 'reason-forbidden' }, 403);
+      const ruling = await decide(env, merchant, { name: proof.staffName, role: proof.staffRole }, 'stock.adjust',
+        employeeRoleOpensDashboard(proof.staffRole));
+      if (ruling.unavailable) return json({ error: 'permissions-unavailable' }, 503);
+      if (!ruling.ok) return permissionDenied('stock.adjust', { error: 'reason-forbidden' });
       const who = String(proof.staffName || proof.staffId || '').slice(0, 100);
       discretionary.forEach((m) => { m.actor = who; });
     }

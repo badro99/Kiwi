@@ -8,10 +8,18 @@
 import { isTillFor } from '../auth/_lib.js';
 import { sessionTierAtLeast } from '../auth/_session-tier.js';
 import { expensesReader } from './expenses/_owner.js';
+import { sessionMay } from './_permissions.js';
 
-export function storeEditorTier(request, env, feature) {
+/* Les droits par personne (functions/api/_permissions.js) ne peuvent ici que
+ * RESTREINDRE : le document `team` porte les codes, et qui l'écrit le lit en
+ * entier. Un gérant à qui le patron retire « Gérer l'équipe » ne le tient plus ;
+ * personne sous le palier gérant ne le gagne par un droit. */
+export async function storeEditorTier(request, env, feature) {
   if (feature === 'reservations') return true;
-  return sessionTierAtLeast(request, env, 'manager');
+  const tierOk = await sessionTierAtLeast(request, env, 'manager');
+  if (!tierOk || feature !== 'team') return tierOk;
+  const may = await sessionMay(request, env, '', 'team.manage', true);
+  return !!may.ok;
 }
 
 /* L'argent et la paie : sous le palier gérant, la session ne les lit ni ne les
@@ -26,6 +34,10 @@ export async function docBelowTier(request, env, merchant, feature) {
      employé, gérant compris (functions/api/expenses/_owner.js). */
   if (feature === 'expenses') return !(await expensesReader(request, env, merchant));
   if (!MANAGER_DOCS.has(feature)) return false;
-  if (await sessionTierAtLeast(request, env, 'manager')) return false;
+  if (await sessionTierAtLeast(request, env, 'manager')) {
+    if (feature !== 'payroll') return false;
+    const may = await sessionMay(request, env, merchant, 'team.payroll', true);
+    return !may.ok;
+  }
   try { return !(await isTillFor(request, env, merchant)); } catch (_) { return true; }
 }

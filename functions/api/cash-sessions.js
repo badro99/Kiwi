@@ -3,6 +3,7 @@ import {
   entitledMerchant, isTillFor, isTerminalFor, json, readCookie,
   TERMINAL_COOKIE, terminalToken, terminalCookie, tillEpoch
 } from '../auth/_lib.js';
+import { flagUnauthorized } from './_permissions.js';
 
 const EVENT_TYPES = new Set(['open', 'movement', 'handover', 'close']);
 const MOVEMENT_KINDS = new Set(['in', 'out', 'no-sale']);
@@ -253,6 +254,13 @@ export async function onRequestPost({ request, env }) {
          movement_reason, actor_id, counterparty_actor_id, opened_ts, occurred_ts)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .bind(...eventBinds).run();
+    }
+    /* Des espèces sorties ou entrées sans le droit « Entrées et sorties
+       d'espèces » : le tiroir a déjà bougé, on garde l'écriture (le compte du
+       soir en dépend) et on l'inscrit au journal des droits du patron. */
+    if (eventType === 'movement') {
+      await flagUnauthorized(env, merchant, { id: actorId }, movementKind === 'no-sale' ? 'sales.drawer' : 'money.cash', id,
+        { movementKind, amountCents: movementAmount, reason: movementReason });
     }
     const response = json({ ok: true, id }, 201);
     if (bootstrapTerminal) {

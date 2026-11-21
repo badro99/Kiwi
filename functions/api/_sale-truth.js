@@ -9,6 +9,10 @@
 // the operator console reads those rows (functions/api/admin/_workspace.js).
 
 import { businessDate, merchantCutoff, merchantZone } from './_business-day.js';
+/* La remise au-delà du seuil libre, sans le droit : inscrite au journal des
+   droits, jamais refusée (functions/api/_permissions.js). Ré-exportée ici pour
+   que /api/sale la lise avec ses autres vérités. */
+export { flagDiscountPermission } from './_permissions.js';
 
 /* The `lines` column is a TEXT, but the dashboard and the assistant parse it on
  * every poll: a basket is bounded. */

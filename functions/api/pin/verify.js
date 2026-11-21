@@ -14,6 +14,7 @@ import {
 } from '../../auth/_lib.js';
 import { recordSessionTier } from '../../auth/_session-tier.js';
 import { tillSellerProof } from '../_seller.js';
+import { decide, Catalog } from '../_permissions.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -44,7 +45,15 @@ export async function onRequestPost(context) {
 
   let approval = '';
   const action = body && body.action;
-  if (merchant && action && action.kind === 'refund' && employeeRoleOpensDashboard(verified.staff.role)) {
+  /* Qui peut valider : la règle d'avant (un rôle du tableau de bord) tant que
+     la boutique n'a pas configuré ses droits, puis le droit de la personne
+     (functions/api/_permissions.js › decide). Un caissier à qui le patron a
+     donné « Rembourser » valide donc avec son propre code ; un gérant à qui il
+     l'a retiré ne le peut plus. */
+  const kindPerm = merchant && action && Catalog.ACTION_PERM[String(action.kind || '')];
+  const ruling = kindPerm ? await decide(env, merchant, verified.staff, kindPerm, employeeRoleOpensDashboard(verified.staff.role)) : null;
+  if (ruling && ruling.unavailable) return json({ error: 'permissions-unavailable' }, 503);
+  if (merchant && action && action.kind === 'refund' && ruling.ok) {
     approval = await managerRefundProof(env.AUTH_SECRET, {
       merchant, staffId: verified.staff.id, staffName: verified.staff.name, staffRole: verified.staff.role,
       refundId: action.refundId, originalSaleId: action.originalSaleId, amountCents: action.amountCents,
@@ -55,8 +64,7 @@ export async function onRequestPost(context) {
   /* Un mouvement de stock discrétionnaire déclaré au comptoir : la capacité est
    * liée aux identifiants exacts des mouvements, donc elle n'autorise pas une
    * autre sortie que celle qu'on vient de montrer au responsable. */
-  if (!approval && merchant && action && action.kind === 'inventory'
-      && employeeRoleOpensDashboard(verified.staff.role)) {
+  if (!approval && merchant && action && action.kind === 'inventory' && ruling.ok) {
     approval = await managerStockProof(env.AUTH_SECRET, {
       merchant, staffId: verified.staff.id, staffName: verified.staff.name,
       staffRole: verified.staff.role, movementIds: action.movementIds,
@@ -86,6 +94,9 @@ export async function onRequestPost(context) {
     /* Commissions vendeurs : la preuve que CETTE personne tient la caisse ; /api/sale en tire le vendeur. */
     ...(merchant && employeeRoleOpensTill(verified.staff.role) ? { sellerProof: await tillSellerProof(env.AUTH_SECRET, merchant, verified.staff) } : {}),
     ...(approval ? { approval } : {}),
+    /* La caisse sait si CE code couvre l'acte demandé (aucun code dedans). */
+    ...(ruling ? { permission: { id: kindPerm, granted: !!ruling.ok, configured: !!ruling.configured } } : {}),
+    ...(merchant && ruling && ruling.configured ? { permits: ruling.perms } : {}),
     ...(verified.merchant ? { merchant: verified.merchant } : {}),
   });
 }

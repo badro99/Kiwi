@@ -12,6 +12,7 @@ import { reopenServiceTable, serviceTableExists, tableKey, tableAliases } from '
 import { creditsIssuedCents, ensureCreditEvents, refundsIssuedCents } from '../_store-credit-ledger.js';
 import { ensureCollectionSchema } from '../receivables.js';
 import { voidSaleLoyalty } from '../clients.js';
+import { decide, sessionMay, permissionDenied } from '../_permissions.js';
 
 /* Une vente déjà remboursée, ou transformée en avoir, ne s'annule plus : le
  * remboursement est une ligne négative qui reste dans le journal, l'annulation
@@ -297,6 +298,11 @@ export async function onRequestPost({ request, env }) {
     if ((await entitledMerchant(request, env, merchant)) !== merchant) {
       return json({ error: 'forbidden-dashboard' }, 403);
     }
+    /* Un gérant qui a déverrouillé le tableau de bord avec son code n'annule
+       que si ses droits le permettent (functions/api/_permissions.js). */
+    const may = await sessionMay(request, env, merchant, 'sales.cancel', true);
+    if (may.unavailable) return json({ error: 'permissions-unavailable' }, 503);
+    if (!may.ok) return permissionDenied('sales.cancel');
     const op = await operatorActor(request, env);
     actor = String((op && op.label) || 'propriétaire').slice(0, 80);
     actorId = await dashboardActorId(request, env);
@@ -309,7 +315,10 @@ export async function onRequestPost({ request, env }) {
       return json({ error: verified.error }, verified.status);
     }
     const staff = verified.staff;
-    if (!isManagerRole(staff.role)) return json({ error: 'manager-required' }, 403);
+    const perm = body.reopen ? 'sales.reopen' : 'sales.cancel';
+    const ruling = await decide(env, merchant, staff, perm, isManagerRole(staff.role));
+    if (ruling.unavailable) return json({ error: 'permissions-unavailable' }, 503);
+    if (!ruling.ok) return ruling.configured ? permissionDenied(perm, { error: 'manager-required' }) : json({ error: 'manager-required' }, 403);
     actor = String(staff.name || staff.role || 'Manager').slice(0, 80);
     actorId = staff.id ? `staff:${String(staff.id).slice(0, 80)}` : '';
     actorRole = String(staff.role || '').slice(0, 80);
