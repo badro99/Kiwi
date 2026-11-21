@@ -309,7 +309,7 @@ window.KiwiPosDispatch.createEpicerieCarnet = function (ctx) {
 
   /* Carnet du patron (assets/credit-book/till-credit.js) : plafond avant la
      vente, « paiera le … » après. Chargé à la première vente à crédit. */
-  const creditTill = () => import('../credit-book/till-credit.js?v=4').catch(() => null);
+  const creditTill = () => import('../credit-book/till-credit.js?v=5').catch(() => null);
   /* Un double appui pendant la question au serveur n'ouvre ni deux codes ni
      deux paniers sur l'ardoise : un seul passage à la fois. */
   let charging = false;

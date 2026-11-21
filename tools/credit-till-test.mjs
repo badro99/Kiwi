@@ -53,7 +53,7 @@ head.appendChild = function (c) {
   return c;
 };
 const headFind = (pred) => head.children.find(pred) || null;
-globalThis.document = { body, head, activeElement: null, createElement: (t) => new El(t), getElementById: () => null,
+globalThis.document = { body, head, activeElement: null, createElement: (t) => new El(t), createTextNode: (t) => Object.assign(new El('#text'), { textContent: String(t) }), getElementById: () => null,
   get scripts() { return head.children.filter((c) => c.tagName === 'SCRIPT'); },
   querySelector: (sel) => (/^link/.test(sel) ? headFind((c) => c.tagName === 'LINK' && /kit\/tokens-2027\.css/.test(c.href || ''))
     : /^meta/.test(sel) ? headFind((c) => c.tagName === 'META' && c.name === 'kiwi-sprite') : null) };
@@ -130,6 +130,10 @@ const sheets = () => body.children.filter((c) => c.tagName === 'K-SHEET' || c.cl
   assert.ok(sheet && sheet.tagName === 'K-SHEET', 'the approval opens in a kit sheet');
   const pad = sheet.children.find((c) => c.tagName === 'K-PIN-PAD');
   assert.ok(pad, 'with the kit code pad, not a password field');
+  const warn = sheet.children.find((c) => c.className === 'kc-credit-warn');
+  assert.equal(warn.children.filter((c) => c.tagName === 'BDI')[0].textContent, 'TEST KIWI', 'the customer name is isolated');
+  assert.equal(warn.children.filter((c) => c.tagName === 'BDI').length, 4, 'name and three amounts each in a <bdi>, so Arabic keeps its full stop in place');
+  assert.equal(warn.children[warn.children.length - 1].textContent.trim().endsWith('.'), true);
   const digits = String(1000 + Math.floor(Math.random() * 9000));
   await pad.onsubmit(digits);
   assert.equal(pad.answers.length, 1);
