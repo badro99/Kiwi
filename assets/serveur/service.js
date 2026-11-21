@@ -1615,10 +1615,12 @@
       if (confirmBtn) confirmBtn.disabled = true;
 
       if (!SV_DEMO) {
+        const voidKey = tableId + '|' + (line.canonicalUid || line.uid), voidIds = confirmVoidLine.ids || (confirmVoidLine.ids = new Map());   // « annuler 1 » est un delta : rejoué, rien de plus
+        if (!voidIds.has(voidKey)) voidIds.set(voidKey, 'voi-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12));
         try {
           const data = await postServiceCancellation({
               merchant: svSlug(),
-              voidLine: {
+              voidLine: { requestId: voidIds.get(voidKey),
                 table: tableId,
                 ...(line.orderId ? { orderId: line.orderId } : {}),
                 lineId: line.canonicalUid || line.uid || line.id,
@@ -1628,6 +1630,7 @@
                 actor: activeRole.fullName || activeRole.name || 'Serveur'
               }
           });
+          voidIds.delete(voidKey);
           if (data.alertSent) {
             line.voidPending = true;
             toast(`Annulation demandée · attente de la cuisine · ${line.name}`);

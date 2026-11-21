@@ -100,8 +100,8 @@ export async function voidLine(ctx) {
      * registered caisse; whole-table cancellation remains separately guarded
      * by a short-lived operator proof above. */
     if (immediate && !pinActor && !pairedTill) return json({ error: 'till-required' }, 403);
-    const requestId = String(b.voidLine.requestId || '');
-    if (immediate && !/^voi-[a-zA-Z0-9-]{16,80}$/.test(requestId)) return json({ error: 'void-request-id-required' }, 400);
+    const requestId = /^voi-[a-zA-Z0-9-]{16,80}$/.test(String(b.voidLine.requestId || '')) ? String(b.voidLine.requestId) : '';
+    if (immediate && !requestId) return json({ error: 'void-request-id-required' }, 400);
     const table = normTable(b.voidLine.table);
     const lineId = String(b.voidLine.lineId || b.voidLine.itemId || b.voidLine.id || '').trim();
     const fallbackItemId = String(b.voidLine.itemId || '').trim();
@@ -112,14 +112,17 @@ export async function voidLine(ctx) {
       || b.voidLine.actor || (employee && employeeName(employee.member)) || 'Serveur').trim().slice(0, 40);
 
     if (!lineId) return json({ error: 'line-id-required' }, 400);
-    if (immediate) {
+    /* Le téléphone donne aussi son identifiant (« annuler 1 » est un delta) :
+     * rejouée après un délai, l'annulation d'un plat non commencé retirait une
+     * seconde unité. Le même identifiant rend la première réponse. */
+    if (requestId) {
       const replay = await env.DB.prepare(
-        `SELECT o.id, o.table_no, o.lines, o.total FROM kitchen_voids v
+        `SELECT v.status, o.id, o.table_no, o.lines, o.total FROM kitchen_voids v
          JOIN orders o ON o.id = v.order_id AND o.merchant = v.merchant
-         WHERE v.id = ? AND v.merchant = ? AND v.status = 'approved'`
+         WHERE v.id = ? AND v.merchant = ?` + (immediate ? ` AND v.status = 'approved'` : '')
       ).bind(requestId, merchant).first();
-      if (replay) return json({ ok: true, directVoid: true, replayed: true,
-        orderId: replay.id, table: replay.table_no, total: replay.total, remainingLines: storedOrderLines(replay) });
+      if (replay) return json({ ok: true, replayed: true, orderId: replay.id, table: replay.table_no, total: replay.total,
+        remainingLines: storedOrderLines(replay), ...(replay.status === 'approved' ? { directVoid: true } : { tier: 2, alertSent: true }) });
     }
 
     // Trouver la commande active
@@ -212,7 +215,7 @@ export async function voidLine(ctx) {
       // Audit and bill change share a transaction and the same revision guard.
       // A racing payment or cancellation must leave both untouched.
       for (const [index, affLine] of affectedLines.entries()) {
-        const vId = immediate ? (index ? requestId + '-' + index : requestId) : 'voi-' + crypto.randomUUID();
+        const vId = requestId ? (index ? requestId + '-' + index : requestId) : 'voi-' + crypto.randomUUID();
         if (!index) voidId = vId;
         statements.push(statement(env,
             `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
@@ -254,7 +257,7 @@ export async function voidLine(ctx) {
         total: newTotal,
       });
     } else {
-      return pendingVoidResponse(await dispatchPendingVoid(targetOrder, affectedLines, lines, qtyToVoid, isWaste, actor, reason));
+      return pendingVoidResponse(await dispatchPendingVoid(targetOrder, affectedLines, lines, qtyToVoid, isWaste, actor, reason, requestId.slice(4)));
     }
   }
   return null;
@@ -347,6 +350,9 @@ export async function editLine(ctx) {
         return pendingVoidResponse(await dispatchPendingVoid(order, affected, all, Math.abs(qtyDelta), isWaste, actor, reason, requestId));
       }
       if (qtyDelta <= 0) return json({ ok: true, noop: true });
+      /* Une app d'avant le requestId ne sait pas rejouer : son « + » sur un plat accepté compterait deux
+       * fois au premier délai. Refusé (« Ajout refusé ») ; le plat s'ajoute par la carte et « Lancer ». */
+      if (!requestId) return json({ error: 'update-required', reason: 'accepted-add-needs-request-id' }, 409);
       if (seenTs && seenTs !== Number(order.updated_ts)) return json({ error: 'order-changed', retry: true, orderId: order.id }, 409);
       const newLine = { ...line, uid: 'ln-' + crypto.randomUUID().slice(0, 8), qty: qtyDelta,
         stationAccepted: false, stationReady: false, voidAlert: null, ...(requestId ? { editReq: requestId } : {}) };

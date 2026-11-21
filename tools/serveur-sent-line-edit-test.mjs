@@ -121,5 +121,26 @@ check(m3.status === 409 && m3.data.error === 'pending-kitchen-approval' && voids
 const m4 = await post({ editLine: { ...minus, qty: 1 } });
 check(m4.status === 200 && m4.data.replayed === true && lineOf('ln2').qty === 1, `rejoué après la validation cuisine : réponse rejouée, le msemen restant n’est pas annulé (${m4.status})`);
 
+/* Une app d'avant le requestId : son « + » sur un plat accepté est refusé (update-required), le plat
+ * passe par la carte et « Lancer ». Le même « + » avec un identifiant passe. */
+const cafeQty = () => JSON.parse(order().lines).filter((l) => l.id === 'it_cafe').reduce((n, l) => n + l.qty, 0);
+const legacyBefore = order().total, cafesBefore = cafeQty();
+const legacy = await post({ editLine: { table: '4', orderId: id, lineId: 'ln3', qty: 2, actor: 'Salma Test' } });
+check(legacy.status === 409 && legacy.data.error === 'update-required' && order().total === legacyBefore, `« + » sans identifiant sur un plat accepté : refusé, update-required, l’addition ne bouge pas (${legacy.status} ${legacy.data && legacy.data.error})`);
+const withId = await post({ editLine: { table: '4', orderId: id, lineId: 'ln3', qty: 2, actor: 'Salma Test', requestId: 'edl-banc-plus-0003', seenTs: seen() } });
+check(withId.status === 200 && withId.data.action === 'appended' && cafeQty() === cafesBefore + 1, `le même « + » avec un identifiant ajoute le café (${withId.status} ${withId.data && (withId.data.error || withId.data.action)})`);
+
+/* « Annuler 1 » sur un plat pas encore commencé (2 msemen), réponse perdue puis rejouée : une seule unité retirée. */
+const second = await post({ create: true, mode: 'table', table: '4', ref: 'sv-banc-2', server: 'Salma Test', expectedSession: opened.data.session,
+  lines: [line('ln9', 'it_msemen', 'Msemen miel', 2, 14)] });
+check(second.status === 200 && second.data.ok, `un second bon : 2 msemen (${second.status})`);
+const ln9 = () => sql.prepare("SELECT lines FROM orders WHERE merchant = ? AND table_no = '4' AND paid_ts IS NULL").all(merchant)
+  .flatMap((o) => JSON.parse(o.lines)).find((l) => l.uid === 'ln9');
+const cancel = { table: '4', lineId: 'ln9', qty: 1, reason: 'client_change', isWaste: 0, actor: 'Salma Test', requestId: 'voi-banc-cancel-000001' };
+const c1 = await post({ voidLine: cancel });
+const c2 = await post({ voidLine: cancel });
+check(c1.status === 200 && c1.data.directVoid && c2.status === 200 && c2.data.replayed === true, `annulation rejouée : la première réponse revient (${c1.status}/${c2.status} ${c2.data && c2.data.error || ''})`);
+check(ln9() && ln9().qty === 1, `une seule unité retirée : il reste 1 msemen (${ln9() && ln9().qty})`);
+
 f.close();
 console.log(`serveur-sent-line-edit-test: ${checks} checks passed`);

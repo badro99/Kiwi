@@ -765,11 +765,11 @@ if (!serveurGroupedDeltaMatch || !confirmVoidLineMatch || !changeOrderQtyMatch) 
 }
 
 // ── 7B. Server-Side Void Cascade Extraction (queue.js) ──────────────────────
-const dispatchPendingVoidMatch = queueSource.match(/async function dispatchPendingVoid\(targetOrder, targetLines, lines, qtyToVoid, isWaste, actor, reason\) \{[\s\S]*?\n  \}/);
+const dispatchPendingVoidMatch = queueSource.match(/async function dispatchPendingVoid\(targetOrder, targetLines, lines, qtyToVoid, isWaste, actor, reason(?:, requestId)?\) \{[\s\S]*?\n  \}/);
 /* La réponse d'une annulation en attente (409 sur conflit, 503 sur écriture
    échouée) est rendue par ce petit assistant, levé de la même source. */
 const pendingVoidResponseMatch = queueSource.match(/function pendingVoidResponse\(r\) \{[\s\S]*?\n  \}/);
-const voidLineServerBlockMatch = queueSource.match(/if \(b && b\.voidLine && typeof b\.voidLine === 'object'\) \{[\s\S]*?dispatchPendingVoid\(targetOrder, affectedLines, lines, qtyToVoid, isWaste, actor, reason\)\);[\s\S]*?\n  \}/);
+const voidLineServerBlockMatch = queueSource.match(/if \(b && b\.voidLine && typeof b\.voidLine === 'object'\) \{[\s\S]*?dispatchPendingVoid\(targetOrder, affectedLines, lines, qtyToVoid, isWaste, actor, reason(?:, requestId(?:\.slice\(4\))?)?\)\);[\s\S]*?\n  \}/);
 
 if (!dispatchPendingVoidMatch || !voidLineServerBlockMatch || !pendingVoidResponseMatch) {
   ok(false, 'dispatchPendingVoid or voidLine block missing in queue.js');
