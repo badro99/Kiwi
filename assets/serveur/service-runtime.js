@@ -1692,7 +1692,7 @@
 
         if (!SV_DEMO) {
           try {
-            const res = await fetch('/api/order/queue', {
+            const res = await svFetchJson('/api/order/queue', {
               method: 'POST', credentials: 'same-origin', cache: 'no-store',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -1707,7 +1707,7 @@
                 }
               })
             });
-            const data = await res.json().catch(() => null);
+            const data = res.data;
             if (!res.ok || (data && !data.ok)) {
               toast(`Modification refusée · ${svErrLabel(data && data.error)}`);
               return;
@@ -1720,7 +1720,7 @@
             }
             toast(`${line.name} modifié (${newQty}×)`);
           } catch (err) {
-            toast(`Erreur réseau : ${err.message || ''}`);
+            toast(err && err.timeout ? employeePick('Pas de réponse du serveur, réessayez', 'No answer from the server, try again', 'لا رد من الخادم، أعد المحاولة') : employeePick('Pas de réseau, réessayez', 'No network, try again', 'لا توجد شبكة، أعد المحاولة'));
             return;
           }
         }
@@ -1734,7 +1734,7 @@
         const targetQty = line.qty + delta;
         if (!SV_DEMO) {
           try {
-            const res = await fetch('/api/order/queue', {
+            const res = await svFetchJson('/api/order/queue', {
               method: 'POST', credentials: 'same-origin', cache: 'no-store',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -1748,7 +1748,7 @@
                 }
               })
             });
-            const data = await res.json().catch(() => null);
+            const data = res.data;
             if (!res.ok || (data && !data.ok)) {
               toast(`Ajout refusé · ${svErrLabel(data && data.error)}`);
               return;
@@ -1769,7 +1769,7 @@
               return;
             }
           } catch (err) {
-            toast(`Erreur réseau : ${err.message || ''}`);
+            toast(err && err.timeout ? employeePick('Pas de réponse du serveur, réessayez', 'No answer from the server, try again', 'لا رد من الخادم، أعد المحاولة') : employeePick('Pas de réseau, réessayez', 'No network, try again', 'لا توجد شبكة، أعد المحاولة'));
             return;
           }
         }
@@ -1804,12 +1804,12 @@
       if (confirm) confirm.disabled = true;
       if (!SV_DEMO) {
         try {
-          const response = await fetch('/api/order/queue', {
+          const response = await svFetchJson('/api/order/queue', {   // délai réel : « Installer » ne reste jamais grisé
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ merchant: svSlug(), openTable: id, covers: newTableCovers }),
           });
-          const saved = await response.json().catch(() => null);
+          const saved = response.data;
           if (!response.ok || !saved || !saved.ok || !saved.session) throw new Error('open-failed');
           serviceTableSessions.set(id, String(saved.session));
           serviceTableSessionRevisions.set(id, Number(saved.revision) || 0);
@@ -1902,7 +1902,7 @@
             expectedRevision: serviceTableSessionRevisions.get(from) || 0 };
         }
         try {
-          const res = await fetch('/api/order/queue', {
+          const res = await svFetchJson('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1913,7 +1913,7 @@
                 expectedRevision: intent.expectedRevision }
             })
           });
-          const data = await res.json().catch(() => null);
+          const data = res.data;
           if (!res.ok || !data || !data.ok) {
             if (res.status >= 400 && res.status < 500) delete confirmTransferTable.pendingIntent;
             throw new Error((data && data.error) || 'transfer-failed');
@@ -1922,7 +1922,7 @@
           serviceTableSessionRevisions.set(to, Number(data.revision) || (serviceTableSessionRevisions.get(from) || 0));
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
-          toast(`Déplacement impossible : ${err.message === 'table-kitchen-locked' ? 'commande déjà envoyée en cuisine' : (err.message || 'erreur réseau')}`, 4800);
+          toast(`Déplacement impossible : ${err.message === 'table-kitchen-locked' ? 'commande déjà envoyée en cuisine' : svErrLabel(err.message)}`, 4800);
           return;
         }
       }
@@ -2031,7 +2031,7 @@
             expectedRevision: serviceTableSessionRevisions.get(source) || 0 };
         }
         try {
-          const res = await fetch('/api/order/queue', {
+          const res = await svFetchJson('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2042,7 +2042,7 @@
                 expectedRevision: intent.expectedRevision }
             })
           });
-          const data = await res.json().catch(() => null);
+          const data = res.data;
           if (!res.ok || !data || !data.ok) {
             if (res.status >= 400 && res.status < 500) delete confirmMergeTable.pendingIntent;
             throw new Error((data && data.error) || 'merge-failed');
@@ -2051,7 +2051,7 @@
           merged = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
-          toast(`Fusion impossible : ${err.message === 'table-kitchen-locked' ? 'commande déjà envoyée en cuisine' : (err.message || 'erreur réseau')}`, 4800);
+          toast(`Fusion impossible : ${err.message === 'table-kitchen-locked' ? 'commande déjà envoyée en cuisine' : svErrLabel(err.message)}`, 4800);
           return;
         }
       }

@@ -2278,7 +2278,7 @@
       if (!orderId || !slug) { toast('Commande introuvable'); return; }
       accBtn.disabled = true;
       accBtn.textContent = 'Envoi…';
-      fetch('/api/order/queue', {
+      svFetchJson('/api/order/queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -2290,7 +2290,7 @@
           server: (activeRole && (activeRole.fullName || activeRole.name)) || '',
         }),
       })
-        .then((r) => r.json().catch(() => null).then((j) => ({ ok: r.ok, j })))
+        .then((r) => ({ ok: r.ok, j: r.data }))
         .then(({ ok, j }) => {
           if (!ok || !j || j.ok !== true) throw new Error((j && j.error) || 'refus');
           const cached = serviceCanonicalOrders.get(orderId);
@@ -2336,7 +2336,7 @@
       const line = (tableOrders[activeTableId] || []).find(l => l.uid === inp.dataset.noteUid);
       if (line && line.sentQty > 0 && !SV_DEMO) {
         try {
-          const res = await fetch('/api/order/queue', {
+          const res = await svFetchJson('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2349,7 +2349,7 @@
               }
             })
           });
-          const data = await res.json().catch(() => null);
+          const data = res.data;
           if (!res.ok || (data && !data.ok)) {
             if (data && data.reason === 'accepted') {
               toast('Plat déjà en cuisine · parlez au chef ou annulez');
