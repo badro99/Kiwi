@@ -379,6 +379,7 @@
     if (!w || !w.catalog) return false;
     const comp = w.catalog.compat();
     if (!comp) return false;
+    if (window.KiwiTillPriceList) window.KiwiTillPriceList.apply(comp.P);   // tarif du ticket (gros, jomla) : la copie, jamais le catalogue
     const weighed = {};
     const pend = weighPending();
     w.values('weighed').forEach((r) => { if (r.status < 1 && r.values.product) weighed[r.values.product] = r.values.unit === 'l' ? 'l' : 'kg'; });
@@ -420,6 +421,7 @@
     realBound = true;
     try { w.subscribe(() => repaintReal()); } catch (_) {}
     try { w.catalog.subscribe(() => repaintReal()); } catch (_) {}
+    try { if (window.KiwiTillPriceList) window.KiwiTillPriceList.subscribe(() => repaintReal()); } catch (_) {}
   }
 
   /* ═══════════════════════ ROOT / MOUNT ═══════════════════════ */
@@ -734,7 +736,7 @@
       <div class="ep-tk-head">
         <div><span class="ep-tk-title">Ticket</span> <span class="ep-tk-num">· ${t.num}</span></div>
         ${t.lines.length ? `<button class="ep-tk-reset" id="ep-tk-reset">Vider</button>` : ''}
-      </div>
+      </div>${pvReal() && window.KiwiTillPriceList ? window.KiwiTillPriceList.chipHtml() : ''}
       <div class="ep-tk-lines" id="ep-tk-lines">
         ${t.lines.length ? t.lines.map((ln, i) => lineRow(ln, i)).join('') : `
           <div class="ep-tk-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
@@ -1108,7 +1110,10 @@
   /* → l'entrée journalisée, ou null (démo, rien pris, panne). */
   function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) return window.KiwiPosSale.record('epicerie', { total, method, label, ref, lines }) || null;
+      /* Le tarif du ticket (et l'accord du responsable) suit la vente ; le ticket suivant repart au principal. */
+      const pl = window.KiwiTillPriceList, out = window.KiwiPosSale ? window.KiwiPosSale.record('epicerie', { total, method, label, ref, lines, ...(pl ? pl.saleFields() : {}) }) || null : null;
+      if (pl) pl.reset();
+      return out;
     } catch (_) {}
     return null;
   }

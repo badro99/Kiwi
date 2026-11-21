@@ -646,6 +646,7 @@ var SHELL = [
   '/assets/pos-epicerie.css?v=40',
   '/assets/pos-epicerie.js?v=40',
   '/assets/pos-epicerie/carnet.js?v=15',
+  '/assets/till-price-list.js?v=1',
   '/assets/pos-pharmacie.css?v=9',
   '/assets/pos-pharmacie.js?v=9',
   '/assets/pos-librairie.css?v=18',

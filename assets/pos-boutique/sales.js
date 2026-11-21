@@ -386,7 +386,7 @@ import { photoImg } from '../retail-photos.js?v=5';
         ${!t.num && t.numError ? '<button class="bq-tk-retry" id="bq-tk-retry">Réessayer</button>' : ''}
         ${t.lines.length ? '<button class="bq-tk-reset" id="bq-tk-reset">Vider</button>' : ''}
       </div>
-      <div class="bq-tk-meta">${clientRow(t)}${rewardRow(t)}</div>
+      <div class="bq-tk-meta">${clientRow(t)}${window.KiwiTillPriceList ? window.KiwiTillPriceList.chipHtml() : ''}${rewardRow(t)}</div>
       <div class="bq-tk-lines" id="bq-tk-lines">
         ${t.lines.length ? t.lines.map((ln, i) => lineRow(ln, i)).join('') + pairRow(t) : `
           <div class="bq-tk-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">

@@ -20,6 +20,8 @@ function receiptPrinterReady(KP) {
 function receiptDocInput(opts, parts, cashier) {
   return {
     ref: opts.ref || '',
+    /* Le tarif quand ce n'est pas le principal (« Tarif · Gros ») : la cliente lit pourquoi ses prix diffèrent du rayon. */
+    label: (opts.priceList && opts.priceList.label) || '',
     ts: (opts.sale && opts.sale.at) || Date.now(),
     cashier,
     lines: (opts.lines || []).map((l) => ({ qty: l.qty, name: l.name, total: l.amount, ref: l.ref, barcode: l.barcode })),

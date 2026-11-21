@@ -26,7 +26,7 @@ const ticketOwner = {
     line.qty = +line.qty + delta;
     if (line.qty <= 0) ticket.lines.splice(index, 1);
   },
-  setCustomer(ticket, client) { ticket.client = client; },
+  setCustomer(ticket, client) { ticket.client = client; try { window.KiwiTillPriceList?.onCustomer(client); } catch (_) {} },   // le tarif de la fiche (gros) suit la cliente
   applyDiscount(ticket, approval) { ticket.remiseAuth = approval; },
   /* La remise de TICKET (peau 2027, bouton « Remise » du pied) descend sur
      chaque ligne : le pourcentage vit déjà là, et ticketTotals l'y additionne.
