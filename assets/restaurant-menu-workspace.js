@@ -109,7 +109,7 @@
     root.hidden=false;
     const itemCountStr = d.items.length === 1 ? `1 ${ui('article')}` : `${d.items.length} ${ui('articles')}`;
     const catCountStr = d.cats.length === 1 ? `1 ${ui('section')}` : `${d.cats.length} ${ui('sections')}`;
-    const html=`<div class="mi-head"><div><div class="mi-title">${esc(ui('title'))}</div><div class="mi-sub">${itemCountStr} · ${catCountStr} · ${esc(v.name||'')}</div></div><div class="mi-head-acts"><button class="btn-slim" data-action="rmw-menu-scan">${esc(ui('scanMenu'))}</button><button data-activation=write class="btn-slim" data-action="mx-import">${esc(ui('importExcel'))}</button></div></div><div class="mi-filters"><div class="mi-pill-row">${tabs()}</div>${tabPicker()}</div><div class="mi-panel" data-rmw-panel>${panel()}</div>`;
+    const html=`<div class="mi-head"><div><div class="mi-title">${esc(ui('title'))}</div><div class="mi-sub">${itemCountStr} · ${catCountStr} · ${esc(v.name||'')}</div></div><div class="mi-head-acts"><button class="btn-slim" data-action="rmw-menu-scan">${esc(ui('scanMenu'))}</button><button data-activation=write class="btn-slim" data-action="catalog-grid" data-arg="menu">${esc(ui('spreadsheet'))}</button><button data-activation=write class="btn-slim" data-action="mx-import">${esc(ui('importExcel'))}</button></div></div><div class="mi-filters"><div class="mi-pill-row">${tabs()}</div>${tabPicker()}</div><div class="mi-panel" data-rmw-panel>${panel()}</div>`;
     if(window.KiwiCatalogUI)window.KiwiCatalogUI.replace(root,html);else root.innerHTML=html;
     /* Fresh nodes: the pre-swap rows captured above are detached by the
        replacement, so re-query after painting. */
@@ -1373,7 +1373,7 @@ const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI
       costOf(item){const hit=recipeCostResolver([{item}]).of({item});if(hit)return hit;try{return window.KiwiCost?.of?.({kind:'menu',id:item.id,name:item.name})||null;}catch(_){return null;}}
     }};
     if(!S()){setTimeout(boot,50);return;}
-    if(!storeBound){storeBound=true;const refresh=()=>{if(document.body.classList.contains('page-menu')&&isRestaurant())render();};S().subscribe(refresh);S().subscribe(scheduleAutoTranslate);window.KiwiSales?.subscribe?.(refresh);window.KiwiRestaurantRecipes?.subscribe?.(refresh);window.KiwiHours?.subscribe?.(refresh);window.KiwiVenue?.subscribe?.(()=>{hoursPeriod=null;if(document.body.classList.contains('page-menu')&&isRestaurant())show();});try{window.addEventListener('kiwi:langchange',()=>{if(document.body.classList.contains('page-menu')&&isRestaurant())render();});}catch(_){}}
+    if(!storeBound){storeBound=true;const refresh=()=>{if(document.body.classList.contains('page-menu')&&!document.querySelector('.cgp')&&isRestaurant())render();};S().subscribe(refresh);S().subscribe(scheduleAutoTranslate);window.KiwiSales?.subscribe?.(refresh);window.KiwiRestaurantRecipes?.subscribe?.(refresh);window.KiwiHours?.subscribe?.(refresh);window.KiwiVenue?.subscribe?.(()=>{hoursPeriod=null;if(document.body.classList.contains('page-menu')&&isRestaurant())show();});try{window.addEventListener('kiwi:langchange',()=>{if(document.body.classList.contains('page-menu')&&!document.querySelector('.cgp')&&isRestaurant())render();});}catch(_){}}
     if(document.body.classList.contains('page-menu')&&isRestaurant())show();
   }
   /* The legacy menu initializes at DOMContentLoaded. Waiting for window.load

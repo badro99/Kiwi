@@ -1772,7 +1772,7 @@ section('Whole-project regressions');
     'catalog-parts-test.mjs', 'price-lists-test.mjs',   // tarifs (gros, en ligne, factures) ; un catalogue plus grand qu'une ligne D1 (La Maison en Vogue, 3 039 articles)
     /* Deux comptoirs, un stock : fusion, suppression, comptage et repli du
        journal contre un modèle de ce que la boutique a fait. */
-    'catalog-merge-properties-test.mjs', 'catalog-family-test.mjs', 'catalog-family-id-test.mjs', 'stock-transfers-test.mjs', 'stock-transfers-browser-test.mjs', 'delivery-ship-from-test.mjs', 'z-delivery-collections-test.mjs', 'operator-served-figures-test.mjs', 'operator-pairing-shadow-test.mjs', // + catalogue partagé, transferts, « Envoyé de », argent des livreurs à part
+    'catalog-merge-properties-test.mjs', 'catalog-family-test.mjs', 'catalog-bulk-test.mjs', 'catalog-family-id-test.mjs', 'stock-transfers-test.mjs', 'stock-transfers-browser-test.mjs', 'delivery-ship-from-test.mjs', 'z-delivery-collections-test.mjs', 'operator-served-figures-test.mjs', 'operator-pairing-shadow-test.mjs', // + catalogue partagé, transferts, « Envoyé de », argent des livreurs à part
     /* Deux appareils, une fiche : chaque champ garde sa dernière édition, un
        même champ changé des deux côtés est soumis au commerçant. */
     'catalog-field-merge-test.mjs',

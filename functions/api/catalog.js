@@ -169,6 +169,13 @@ function sanitize(raw) {
       ownership: p && p.ownership === 'consignment' ? 'consignment' : 'outright',
       consignor: str(p && p.consignor, 120),
       sku: str(p && p.sku, 48),
+      /* Le seuil d'alerte de stock bas, le stock cible et le fournisseur :
+         assets/boutique-catalog.js les écrit depuis toujours, mais ils
+         n'étaient pas dans cette liste, donc ils disparaissaient au premier
+         aller-retour serveur (le tableur du catalogue les édite). */
+      supplierId: str(p && p.supplierId, 80),
+      parLevel: num(p && p.parLevel, 1e6),
+      reorderLevel: num(p && p.reorderLevel, 1e6),
       // Médias : des URLs (/api/media/…), jamais des octets.
       photo: str(p && p.photo, 300),
       video: str(p && p.video, 300),
@@ -375,6 +382,9 @@ async function applyStockAction(env, merchant, body, waitUntil) {
  * executes the exact sanitizer and reservation arithmetic instead of copying
  * their business rules into a fake implementation. */
 export const __test = { sanitize, materialize, stockMutation, compactForWrite };
+/* Le tableur du catalogue (functions/api/catalog/batch.js) relit et réécrit le
+ * document avec CE nettoyeur, jamais une copie. */
+export { sanitize as sanitizeCatalog };
 
 const empty = (d) => !d || !(d.products && d.products.length) && !(d.variants && d.variants.length);
 /* Articles que le serveur porte et que l'envoi omet SANS les avoir supprimés

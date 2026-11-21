@@ -380,38 +380,8 @@ handlers['menu-add'] = () => {
   }));
 };
 
-handlers['menu-mass'] = () => {
-  wireDismiss(modal({
-    tag: 'ÉDITION GROUPÉE',
-    title: 'Modifier toute une catégorie',
-    desc: 'Affecte tous les items sélectionnés en une opération.',
-    width: 540,
-    body: `
-      <div class="kf-group"><label class="kf-label">Catégorie</label>
-        <select class="kf-input"><option>Entrées (8)</option><option selected>Tajines (9)</option><option>Couscous (5)</option><option>Desserts (8)</option><option>Boissons (18)</option></select>
-      </div>
-      <div class="kf-group"><label class="kf-label">Action</label>
-        <select class="kf-input">
-          <option>Augmenter les prix de…</option>
-          <option>Diminuer les prix de…</option>
-          <option>Marquer la catégorie 86 (rupture)</option>
-          <option>Activer disponibilité midi uniquement</option>
-          <option>Cacher de la carte client</option>
-        </select>
-      </div>
-      <div class="kf-group"><label class="kf-label">Pourcentage</label>
-        <div style="display:flex; gap:6px;">
-          ${['+ 2 %', '+ 5 %', '+ 8 %', '+ 10 %', 'autre'].map((p, i) => `<button class="kb ${i===1?'atlas':'ghost'}" style="flex:1; justify-content:center;">${p}</button>`).join('')}
-        </div>
-      </div>
-      <div class="kf-help">9 items recevront +5 % · panier moyen estimé : 165 MAD (vs 158 MAD aujourd'hui).</div>
-    `,
-    foot: `
-      <button class="kb ghost" data-dismiss>Annuler</button>
-      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('9 tajines ré-tarifés (+5 %)',{type:'success',desc:'Sync en cours · prochaine commande à 16:42.'})">Appliquer</button>
-    `
-  }));
-};
+/* 'menu-mass' lives in assets/pages-pro/catalog-bulk/page.js: the real bulk re-price
+ * (LAZY_SECTIONS below). The modal that stood here only showed a toast. */
 
 handlers['menu-schedule'] = () => {
   wireDismiss(modal({
@@ -740,6 +710,7 @@ handlers['menu-publish'] = () => {
     { url: 'assets/pages-pro/cost-variance.js?v=9', handlers: ["costvar-open", "costvar-mount", "costvar-period", "costvar-scope", "costvar-retry", "costvar-go", "costvar-item", "costvar-wa", "costvar-csv", "costvar-target"] },
     { url: 'assets/pages-pro/reports-hub.js?v=2', dependencies: ['assets/pages-pro/reports-views.js?v=4', 'assets/pages-pro/reports-demo.js?v=3'], handlers: ["nav-reports", "reports-sites", "rp-tab", "rp-range", "rp-custom", "rp-page", "rp-refresh", "rp-csv", "rp-print", "rp-open"] },
     { url: 'assets/pages-pro/price-lists.js?v=7', handlers: ["nav-pricelists", "pl-tab", "pl-open", "pl-back", "pl-new", "pl-rename-main", "pl-save-meta", "pl-save-prices", "pl-derive", "pl-remove", "pl-item", "pl-client-add", "pl-client-del"] },
+    { url: 'assets/pages-pro/catalog-bulk/page.js?v=10', dependencies: ['assets/pages-pro/catalog-bulk/rules.js?v=5', 'assets/pages-pro/catalog-bulk/xlsx.js?v=2', 'assets/pages-pro/catalog-bulk/grid.js?v=4', 'assets/pages-pro/catalog-bulk/source.js?v=4', 'assets/pages-pro/catalog-bulk/reprice.js?v=5', 'assets/pages-pro/catalog-bulk/import.js?v=3'], handlers: ["catalog-grid", "menu-mass", "cg-back", "cg-filter", "cg-save", "cg-discard", "cg-undo-save", "cg-bulk-edit", "cg-unselect", "cg-reprice", "cg-import", "cg-export"] },
     { url: 'assets/pages-pro/restaurant-stations.js?v=2', handlers: ["nav-menu", "nav-kds", "menu-stations-manage", "menu-station-create", "menu-cat-add", "menu-cat-edit", "menu-opt-add", "menu-promote", "menu-add", "menu-schedule", "menu-publish", "kds-bump", "kds-recall", "kds-86", "kds-fullscreen", "kds-reassign", "kds-print-summary"] },
   ];
   LAZY_SECTIONS.forEach(entry => {
