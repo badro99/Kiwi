@@ -40,10 +40,11 @@ const ownerGuard = "  /* Un code à intitulé de propriétaire (« Propriétaire
 ok(route.split(ownerGuard).length === 2, 'the owner-title filter sits once in the route');
 /* A third (21 Nov, team permissions): a code that brings a new identity to
  * life outside the owner's session starts with no rights until the owner
- * reviews it. One import, one line before the publish call, one after it;
+ * reviews it (or is refused: a homonym of an owner-titled member, a hold that
+ * cannot be written). One import, one line before the publish call, one after it;
  * staff-permissions-test runs it against the real route. */
 const holdImport = "import { codeHolds } from './_permissions.js';\n";
-const holdBefore = "    const holdCodes = await codeHolds(request, env, merchant, body); // un code qui fait naître une identité hors du patron : retenu (_permissions.js)\n";
+const holdBefore = "    const holdCodes = await codeHolds(request, env, merchant, body); if (holdCodes instanceof Response) return holdCodes; // hors du patron : homonyme d'un propriétaire refusé, identité nouvelle retenue AVANT publication, fermé en cas de doute (_permissions.js)\n";
 const holdAfter = "    if (holdCodes) await holdCodes();\n";
 ok(route.split(holdImport).length === 2 && route.split(holdBefore).length === 2 && route.split(holdAfter).length === 2, 'the code hold sits once in the route, with its import');
 const routeBase = route.replace(tierImport, '').replace(tierGuard, '').replace(ownerGuard, '').replace(holdImport, '').replace(holdBefore, '').replace(holdAfter, '');

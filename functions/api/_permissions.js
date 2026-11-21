@@ -128,9 +128,11 @@ export async function rosterFor(env, merchant) {
 export async function subjectFor(env, merchant, staff) {
   const name = String((staff && staff.name) || '').trim().slice(0, 80);
   const role = String((staff && staff.role) || '').trim().slice(0, 60);
-  let members = [];
-  try { members = await teamMembers(env, merchant); } catch (_) { members = []; }
-  return matchMember(members, name, role) || { key: 'name:' + nameKey(name), name, role };
+  const members = await teamMembers(env, merchant);   // une base muette remonte : l'appelant refuse (fermé)
+  /* Le rôle reste celui du CODE prouvé (staff_pins) : une fiche homonyme ne
+     prête jamais son intitulé, et surtout pas « Propriétaire ». */
+  const hit = matchMember(members, name, role);
+  return hit ? { ...hit, role: role || hit.role, memberRole: hit.role } : { key: 'name:' + nameKey(name), name, role };
 }
 function matchMember(members, name, role) {
   const k = nameKey(name);
@@ -175,17 +177,19 @@ export async function loadState(env, merchant) {
 }
 
 /* Les droits effectifs d'une personne dans un état déjà lu.
- *   · intitulé de propriétaire (« Propriétaire », « Direction »…) : ce code
- *     ouvre le compte comme le propriétaire (faceAccessTier), donc TOUS les
- *     droits, et l'écran le dit ; seul le propriétaire pose ces intitulés
- *     (teamEditRefusal, /api/config) ;
  *   · personne retenue (held) : ajoutée ou retitrée par une autre session que
- *     celle du propriétaire, AUCUN droit tant qu'il ne l'a pas revue ;
+ *     celle du propriétaire, AUCUN droit tant qu'il ne l'a pas revue. Jugé
+ *     AVANT l'intitulé : une retenue ne se contourne pas par un titre ;
+ *   · intitulé de propriétaire (« Propriétaire », « Direction »…) porté par le
+ *     CODE prouvé lui-même (subject.role = rôle de staff_pins, jamais celui
+ *     d'une fiche trouvée par le nom) : ce code ouvre le compte comme le
+ *     propriétaire (faceAccessTier), donc TOUS les droits ; seul le
+ *     propriétaire pose ces intitulés (teamEditRefusal, /api/config) ;
  *   · sinon : son rôle, plus ses ajouts, moins ses retraits. */
 export function permsIn(state, subject) {
-  if (Catalog.ownerTitle(subject.role)) return { preset: Catalog.ACCOUNT_OWNER, perms: Catalog.ALL.slice(), grants: [], denies: [], ownerAccess: true };
   const row = state.rows.get(subject.key);
   if (row && row.heldTs) return { preset: Catalog.PRESET_IDS.includes(row.preset) ? row.preset : Catalog.presetForRole(subject.role), perms: [], grants: [], denies: [], held: true };
+  if (Catalog.ownerTitle(subject.role)) return { preset: Catalog.ACCOUNT_OWNER, perms: Catalog.ALL.slice(), grants: [], denies: [], ownerAccess: true };
   const preset = (row && Catalog.PRESET_IDS.includes(row.preset)) ? row.preset : Catalog.presetForRole(subject.role);
   return { preset, perms: Catalog.effective(preset, row && row.grants, row && row.denies, state.presets),
     grants: (row && row.grants) || [], denies: (row && row.denies) || [] };
@@ -194,7 +198,8 @@ export function permsIn(state, subject) {
 /* { ok, perms, subject } | { unavailable } pour une identité prouvée. */
 export async function permissionsFor(env, merchant, staff) {
   if (!env || !env.DB || !merchant || !staff) return { unavailable: true };
-  const [state, subject] = await Promise.all([loadState(env, merchant), subjectFor(env, merchant, staff)]);
+  let state, subject;
+  try { [state, subject] = await Promise.all([loadState(env, merchant), subjectFor(env, merchant, staff)]); } catch (_) { return { unavailable: true }; }
   if (state.unavailable) return { unavailable: true };
   return { ok: true, subject, state, ...permsIn(state, subject) };
 }
@@ -356,8 +361,11 @@ export async function docWriteGuard(request, env, merchant, feature, before, aft
     if (denied) return denied;
   }
   if (feature === 'team') {
-    try { plan = await teamPlan(request, env, merchant, before, after); } catch (_) { plan = null; }
-    if (plan && plan.length) pendingWrites.set(request, plan);
+    /* Fermé en cas de doute : sans plan, ou sans retenue écrite, pas d'écriture. */
+    try { plan = await teamPlan(request, env, merchant, before, after); } catch (_) { return permissionUnavailable(); }
+    if (plan === UNAVAILABLE) return permissionUnavailable();
+    if (plan && plan.holds.length && !(await runAll(env, plan.holds))) return permissionUnavailable();
+    if (plan && plan.journal.length) pendingWrites.set(request, plan.journal);
   }
   return null;
 }
@@ -452,9 +460,14 @@ function journalStmt(env, merchant, actor, subject, label, change, ts) {
 }
 /* Le plan d'un document Équipe qui change : journal pour tous, retenue pour
    les fiches ajoutées ou retitrées hors de la session du propriétaire. */
+const UNAVAILABLE = Symbol('unavailable');
+async function runAll(env, stmts) {
+  try { if (typeof env.DB.batch === 'function') await env.DB.batch(stmts); else for (const st of stmts) await st.run(); return true; } catch (_) { return false; }
+}
 async function teamPlan(request, env, merchant, before, after) {
   const state = await loadState(env, merchant);
-  if (state.unavailable || state.missing) return null;
+  if (state.unavailable) return UNAVAILABLE;
+  if (state.missing) return null;
   const old = new Map(membersOf(before || {}).map((m) => [m.key, m]));
   const next = membersOf(after || {});
   const added = next.filter((m) => !old.has(m.key));
@@ -464,55 +477,68 @@ async function teamPlan(request, env, merchant, before, after) {
   const actor = await sessionActor(request, env);
   const ts = Date.now();
   const hold = state.configured && !actor.owner;
-  const stmts = [];
+  const stmts = [], holds = [];
   for (const m of added) {
-    if (hold && !Catalog.ownerTitle(m.role)) stmts.push(holdStmt(env, merchant, m, actor, ts));
+    if (hold && !Catalog.ownerTitle(m.role)) holds.push(holdStmt(env, merchant, m, actor, ts));
     stmts.push(journalStmt(env, merchant, actor, 'staff:' + m.key, m.name, { kind: 'team-added', role: m.role, held: hold }, ts));
   }
   for (const m of retitled) {
-    if (hold && !Catalog.ownerTitle(m.role)) stmts.push(holdStmt(env, merchant, m, actor, ts));
+    if (hold && !Catalog.ownerTitle(m.role)) holds.push(holdStmt(env, merchant, m, actor, ts));
     stmts.push(journalStmt(env, merchant, actor, 'staff:' + m.key, m.name, { kind: 'team-retitled', from: old.get(m.key).role, role: m.role, held: hold }, ts));
   }
   for (const m of removed) stmts.push(journalStmt(env, merchant, actor, 'staff:' + m.key, m.name, { kind: 'team-removed', role: m.role }, ts));
-  return stmts;
+  return { holds, journal: stmts };
 }
 const pendingWrites = new WeakMap();
-/* Appelé par /api/store APRÈS une écriture réussie : le plan ne s'applique qu'à
-   ce qui a vraiment été écrit (une écriture refusée ou périmée n'en laisse rien). */
+/* Appelé par /api/store APRÈS une écriture réussie : le JOURNAL ne dit que ce
+   qui a vraiment été écrit. Les retenues, elles, sont posées AVANT l'écriture
+   (docWriteGuard) : une écriture ratée laisse au pire une retenue de trop. */
 export async function afterDocWrite(request, env) {
   const stmts = pendingWrites.get(request);
   pendingWrites.delete(request);
   if (!stmts || !stmts.length || !env || !env.DB) return;
   try { if (typeof env.DB.batch === 'function') await env.DB.batch(stmts); else for (const st of stmts) await st.run(); } catch (_) {}
 }
-/* /api/config, avant de publier des codes : ceux qui font naître une identité
-   (nom inconnu des codes, ou même nom sous un autre intitulé) hors de la session
-   du propriétaire seront retenus. Rend la suite à appeler APRÈS la publication. */
+/* /api/config, avant de publier des codes. Après l'activation, hors de la
+   session du propriétaire :
+   · un code au nom d'une personne à intitulé de propriétaire (fiche Équipe ou
+     code déjà en base) est refusé (409) : un homonyme ne se glisse pas dans
+     ses pas ;
+   · un code qui fait naître une identité (nom inconnu des codes, ou même nom
+     sous un autre intitulé) est retenu AVANT la publication ; si la retenue
+     ne s'écrit pas, rien n'est publié (503).
+   Rend null, une Response de refus, ou la suite (journal) à appeler APRÈS. */
 export async function codeHolds(request, env, merchant, body) {
   if (!env || !env.DB || !merchant || !Array.isArray(body && body.pins)) return null;
   const state = await loadState(env, merchant);
-  if (state.unavailable || state.missing || !state.configured) return null;
+  if (state.unavailable) return permissionUnavailable();
+  if (state.missing || !state.configured) return null;
   const actor = await sessionActor(request, env);
   if (actor.owner) return null;
-  let before = [];
-  try { before = (await env.DB.prepare('SELECT name, role FROM staff_pins WHERE merchant = ?').bind(merchant).all()).results || []; }
-  catch (_) { return null; }
+  let before = [], members = [];
+  try {
+    before = (await env.DB.prepare('SELECT name, role FROM staff_pins WHERE merchant = ?').bind(merchant).all()).results || [];
+    members = await teamMembers(env, merchant);
+  } catch (_) { return permissionUnavailable(); }
+  const ownerNames = new Set([...before, ...members].filter((r) => Catalog.ownerTitle(r.role)).map((r) => nameKey(r.name)).filter(Boolean));
+  const homonym = body.pins.find((p) => p && typeof p === 'object' && !Catalog.ownerTitle(p.role) && ownerNames.has(nameKey(p.name)));
+  if (homonym) return json({ error: 'owner-name', name: String(homonym.name || '').slice(0, 60) }, 409);
   const had = new Map(before.map((r) => [nameKey(r.name), Catalog.normRole(r.role)]));
   const fresh = body.pins.filter((p) => p && typeof p === 'object' && String(p.name || '').trim()
     && !Catalog.ownerTitle(p.role) && had.get(nameKey(p.name)) !== Catalog.normRole(String(p.role || '').trim().slice(0, 24) || 'staff'));
   if (!fresh.length) return null;
-  return async () => {
-    const ts = Date.now(), stmts = [];
-    for (const p of fresh.slice(0, 60)) {
-      const role = String(p.role || '').trim().slice(0, 24) || 'staff';
-      const subject = await subjectFor(env, merchant, { name: String(p.name).trim().slice(0, 60), role });
-      stmts.push(holdStmt(env, merchant, { ...subject, role }, actor, ts));
-      const from = had.get(nameKey(p.name));
-      stmts.push(journalStmt(env, merchant, actor, 'staff:' + subject.key, subject.name,
-        { kind: from ? 'code-retitled' : 'code-added', role, ...(from ? { from } : {}), held: true }, ts));
-    }
-    try { if (typeof env.DB.batch === 'function') await env.DB.batch(stmts); else for (const st of stmts) await st.run(); } catch (_) {}
-  };
+  const ts = Date.now(), holds = [], journal = [];
+  for (const p of fresh.slice(0, 60)) {
+    const role = String(p.role || '').trim().slice(0, 24) || 'staff';
+    let subject;
+    try { subject = await subjectFor(env, merchant, { name: String(p.name).trim().slice(0, 60), role }); } catch (_) { return permissionUnavailable(); }
+    holds.push(holdStmt(env, merchant, { ...subject, role }, actor, ts));
+    const from = had.get(nameKey(p.name));
+    journal.push(journalStmt(env, merchant, actor, 'staff:' + subject.key, subject.name,
+      { kind: from ? 'code-retitled' : 'code-added', role, ...(from ? { from } : {}), held: true }, ts));
+  }
+  if (!(await runAll(env, holds))) return permissionUnavailable();
+  return async () => { await runAll(env, journal); };
 }
 
 /* ── LES FAITS DÉJÀ ACCOMPLIS ────────────────────────────────────────────────

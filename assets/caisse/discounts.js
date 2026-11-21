@@ -117,7 +117,7 @@
       const cut = remiseCutPreview();
       if (cut <= 0) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Choisis une remise')); return; }
 
-      window.KiwiAuthAct?.(targetKind === 'pct' ? { kind: 'discount', key: 'act.discount.pct', args: { pct: `${targetValue}\u202f%` }, pct: Number(targetValue) } : { kind: 'discount', key: 'act.discount.amount', args: { amount: fmtMAD(cut) } });
+      window.KiwiAuthAct?.(targetKind === 'pct' ? { kind: 'discount', key: 'act.discount.pct', args: { pct: `${targetValue}\u202f%` }, pct: Number(targetValue) } : { kind: 'discount', key: 'act.discount.amount', args: { amount: fmtMAD(cut) }, amountCents: Math.round(cut * 100) });
       requireManager("Remise sur l'addition", () => {
         if (target === 'vrap') {
           const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);

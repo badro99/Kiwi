@@ -465,6 +465,12 @@ console.log('■ Remise, espèces, tiroir, clôture sans le droit');
   const d = flags().filter((r) => r.c.permission === 'sales.discount');
   prove('sales.discount', d.length === 2 && d[0].c.ref === 'sale-d2' && d[0].subject_label === 'Lina Saidi' && d[0].c.percent === 30 && d[1].c.ref === 'sale-d4',
     '5 % sous le seuil passe ; 30 % par Lina est inscrit ; validé à 30 % par Sara, rien ; un accord pour 10 % ne couvre pas 40 %');
+  /* Remise en montant : l'accord dit le montant, et la remise doit tenir dedans. */
+  await disc('sale-a1', { actProof: await saraAct({ kind: 'discount', amountCents: 1000 }) }, 4000);
+  await disc('sale-a2', { actProof: await saraAct({ kind: 'discount' }) }, 4000);
+  await disc('sale-a3', { actProof: await saraAct({ kind: 'discount', amountCents: 5000 }) }, 4000);
+  const am = flags().filter((r) => ['sale-a1', 'sale-a2', 'sale-a3'].includes(r.c.ref)).map((r) => r.c.ref).sort().join(',');
+  check(am === 'sale-a1,sale-a2', 'remise en montant : un accord de 10 MAD ne couvre pas 40 MAD, un accord sans montant ni % ne couvre rien, 50 MAD couvre 40 : ' + am);
   const week = await state(w);
   check(week.unauthorizedWeek === flags().length, 'l’écran compte les faits sans le droit de la semaine');
 }
@@ -515,6 +521,58 @@ console.log('■ Le journal nomme le code');
     'une écriture faite par le code « Propriétaire » de Nadia est inscrite à son nom, pas « propriétaire »');
   await post(w, cookieOwner, { action: 'settings', freeDiscountPct: 12 });
   check(audit(w).at(-1).actor === 'account:acc-droits' && audit(w).at(-1).actor_label === 'compte du propriétaire', 'celle du compte lui-même reste « compte du propriétaire »');
+}
+
+/* ── 9d · Revue de sécurité : homonymes, retenue fermée ─────────────────── */
+console.log('■ Un homonyme ne prend pas l’accès propriétaire ; une retenue qui ne s’écrit pas bloque');
+{
+  const w = world();
+  await activate(w);
+  const doc = () => w.sql.prepare('SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = ?').get(SHOP, 'team');
+  /* Une fiche « Propriétaire » posée par le patron, puis un code homonyme publié par Sara. */
+  const t0 = JSON.parse(doc().data);
+  t0.members.push({ id: 'm-boss', firstName: 'Karim', lastName: 'Patron', function: 'Propriétaire' });
+  w.sql.prepare('UPDATE store_docs SET data = ? WHERE merchant = ? AND feature = ?').run(JSON.stringify(t0), SHOP, 'team');   // comme si le patron l'avait posée
+  const viaName = await perms.permissionsFor(w.env, SHOP, { id: 'pin-x', name: 'Karim Patron', role: 'Gérant' });
+  check(viaName.ok && !viaName.ownerAccess && viaName.perms.length < Catalog.ALL.length, 'un code « Karim Patron · Gérant » ne prend pas l’intitulé de la fiche homonyme : pas d’accès propriétaire');
+  const base = [{ name: 'Lina Saidi', role: 'Caissière', pin: CODES.caisse }, { name: 'Hind Amrani', role: 'Responsable', pin: CODES.hind }];
+  const publish = (pins) => config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie: cookieManager, body: { merchant: SHOP, name: 'Café Droits', pins } }) });
+  for (const name of ['Karim Patron', 'Nadia Patron']) {
+    const r = await publish([{ name, role: 'Gérant', pin: '7751' }, ...base]);
+    check(r.status === 409 && (await r.json()).error === 'owner-name', `Sara ne publie pas de code au nom de ${name} (intitulé propriétaire) : 409`);
+  }
+  check(!(await (await pinVerify(w, '7751', { kind: 'refund', refundId: 'rf-h', originalSaleId: 'sale-1', amountCents: 100, refundMethod: 'cash' })).json()).ok, 'et ce code n’existe pas');
+  const st = await perms.loadState(w.env, SHOP);
+  st.rows.set('m-boss', { preset: 'manager', grants: [], denies: [], heldTs: Date.now() });
+  check(perms.permsIn(st, { key: 'm-boss', name: 'Karim Patron', role: 'Propriétaire' }).held === true, 'une retenue passe AVANT l’intitulé propriétaire');
+  /* La retenue ne s'écrit pas : la fiche et le code ne passent pas. */
+  const realBatch = w.env.DB.batch;
+  w.env.DB.batch = async (stmts) => { throw new Error('d1 en panne'); };
+  const t1 = JSON.parse(doc().data);
+  t1.members.push({ id: 'm-x', firstName: 'Nouveau', lastName: 'Gérant', function: 'Gérant' });
+  const revBefore = doc().rev;
+  const failTeam = await store.onRequestPost({ env: w.env, request: req('/api/store', { method: 'POST', cookie: cookieManager, body: { merchant: SHOP, feature: 'team', baseRev: revBefore, data: t1 } }) });
+  check(failTeam.status === 503 && doc().rev === revBefore && !JSON.parse(doc().data).members.some((m) => m.id === 'm-x'), 'retenue impossible : la fiche n’est pas écrite (503)');
+  const failPin = await publish([{ name: 'Joker Deux', role: 'Gérant', pin: '7752' }, ...base]);
+  check(failPin.status === 503 && !(await (await pinVerify(w, '7752', {})).json()).ok, 'retenue impossible : le code n’est pas publié (503)');
+  w.env.DB.batch = realBatch;
+  /* Le plan ne se construit pas : la DERNIÈRE lecture des droits avant l'écriture
+     (celle de teamPlan) casse. Le rang se mesure sur une écriture qui réussit. */
+  const sabotage = (world_, nth) => { const real = world_.env.DB.prepare; let n = 0;
+    world_.env.DB.prepare = (q) => { if (/FROM staff_permission_settings/.test(q) && ++n === nth) throw new Error('d1 en panne'); return real.call(world_.env.DB, q); };
+    return () => { world_.env.DB.prepare = real; return n; }; };
+  const addOne = (world_, id) => { const d = world_.sql.prepare('SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = ?').get(SHOP, 'team');
+    const t = JSON.parse(d.data); t.members.push({ id, firstName: 'Autre', lastName: 'Gérant', function: 'Gérant' });
+    return store.onRequestPost({ env: world_.env, request: req('/api/store', { method: 'POST', cookie: cookieManager, body: { merchant: SHOP, feature: 'team', baseRev: d.rev, data: t } }) }); };
+  const probe = world();
+  await activate(probe);
+  const count = sabotage(probe, 0);
+  check((await addOne(probe, 'm-z')).status === 200, 'banc : la même écriture passe quand la base répond');
+  const reads = count();
+  const restore = sabotage(w, reads);
+  const failPlan = await addOne(w, 'm-y');
+  restore();
+  check(failPlan.status === 503 && !JSON.parse(doc().data).members.some((m) => m.id === 'm-y'), 'plan impossible : la fiche n’est pas écrite (503)');
 }
 
 /* ── 10 · Tables 0028 absentes : la règle d'avant, sans 503 ─────────────── */

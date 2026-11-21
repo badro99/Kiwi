@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=343';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=239';
-import { offerRegister } from './inventory.js?v=239';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=344';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=240';
+import { offerRegister } from './inventory.js?v=240';
 import { ticketOwner } from './ticket-owner.js?v=5';
 import { ticketRemise } from './ticket-remise.js?v=5';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
@@ -747,7 +747,7 @@ import { photoImg } from '../retail-photos.js?v=5';
       };
       if (sheet.agreed > 0 && !state.ticket.remiseAuth) {
         const cut = Math.round((shBase - sheet.agreed) * 100) / 100;
-        openApprove(0, go, { mode: sheet.bmode, value: sheet.bmode === 'price' ? sheet.agreed : cut, label: `${tr('Prix convenu')} ${fmtMAD(sheet.agreed)}`, cut: fmtMAD(cut) });
+        openApprove(0, go, { mode: sheet.bmode, value: sheet.bmode === 'price' ? sheet.agreed : cut, label: `${tr('Prix convenu')} ${fmtMAD(sheet.agreed)}`, cut: fmtMAD(cut), cents: Math.round(cut * 100) * Math.max(1, Number(sheet.qty) || 1) });
         return;
       }
       go();
@@ -777,7 +777,7 @@ import { photoImg } from '../retail-photos.js?v=5';
   function openApprove(pct, onOk, auth) {
     const what = auth ? auth.label : `−${pct} %`;
     if (pvReal() && typeof window.requireManager === 'function') {
-      if (window.KiwiAuthAct) window.KiwiAuthAct(auth ? { kind: 'discount', key: 'act.discount.amount', args: { amount: auth.cut } } : { kind: 'discount', key: 'act.discount.pct', args: { pct: `${pct}\u202f%` }, pct: Number(pct) });
+      if (window.KiwiAuthAct) window.KiwiAuthAct(auth ? { kind: 'discount', key: 'act.discount.amount', args: { amount: auth.cut }, amountCents: auth.cents } : { kind: 'discount', key: 'act.discount.pct', args: { pct: `${pct}\u202f%` }, pct: Number(pct) });
       window.requireManager(`Remise ${what} sur le ticket ${state.ticket.num || 'en cours'}`, () => {
         let mgr = null;
         try { mgr = window.KiwiCaissePairing?.lastManager?.() || null; } catch (_) {}

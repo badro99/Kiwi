@@ -22,7 +22,7 @@ export async function flagSaleDiscount(env, merchant, saleId, body, at, grossCen
   if (!(gross > 0 && off > 0)) return false;
   const proofs = { actProof: body && typeof body.actProof === 'string' ? body.actProof : '',
     sellerProof: body && body.seller && typeof body.seller.proof === 'string' ? body.seller.proof : '' };
-  const proven = await provenActor(env, merchant, proofs, { kind: 'discount', pct: Math.round((off / gross) * 1000) / 10, at, ref: saleId });
+  const proven = await provenActor(env, merchant, proofs, { kind: 'discount', pct: Math.round((off / gross) * 1000) / 10, amountCents: Math.round(off), at, ref: saleId });
   return flagDiscountPermission(env, merchant, saleId, proven, gross, off, claimed);
 }
 

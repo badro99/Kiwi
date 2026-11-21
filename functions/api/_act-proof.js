@@ -92,7 +92,13 @@ export async function consumeActProof(env, merchant, token, fact, received = Dat
   if (body.move && fact.move && body.move !== fact.move) return null;
   /* Des espèces : la preuve dit le montant montré au responsable, le fait ne peut pas le dépasser. */
   if (fact.kind === 'cash' && !(Number.isFinite(body.amountCents) && Number(fact.amountCents) <= body.amountCents)) return null;
-  if (Number.isFinite(fact.pct) && Number.isFinite(body.pct) && fact.pct > body.pct + 0.5) return null;
+  /* Une remise : la preuve dit le pourcentage OU le montant accordé, et le fait doit tenir dedans.
+     Sans l'un ni l'autre, des deux côtés, elle ne couvre rien. */
+  if (fact.kind === 'discount') {
+    const byPct = Number.isFinite(body.pct) && Number.isFinite(Number(fact.pct)) && Number(fact.pct) <= body.pct + 0.5;
+    const byAmount = Number.isFinite(body.amountCents) && Number.isFinite(Number(fact.amountCents)) && Number(fact.amountCents) <= body.amountCents;
+    if (!(Number.isFinite(body.pct) ? byPct : byAmount)) return null;
+  }
   /* L'heure déclarée doit tomber dans la vie de la preuve (elle ne la prolonge pas : la réception décide ci-dessus). */
   if (Number.isFinite(fact.at) && (fact.at < body.iat - 60000 || fact.at > body.exp + 60000)) return null;
   const ref = String(fact.ref).slice(0, 96);
