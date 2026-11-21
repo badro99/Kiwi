@@ -3564,11 +3564,6 @@
   .mi-subchip:hover { border-color: var(--atlas); color: var(--atlas); }
   .mi-subchip.on { background: var(--atlas); border-color: var(--atlas); color: #fff; }
   .mi-subchip.add { border-style: dashed; display: inline-flex; align-items: center; gap: 5px; }
-  .mi-classify-list { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
-  .mi-classify-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 10px; border: 1px solid var(--n-200); border-radius: 10px; transition: opacity 200ms, border-color 200ms; }
-  .mi-classify-row select { width: 190px; flex: none; }
-  .mi-classify-row.done { opacity: 0.45; border-color: var(--atlas); }
-  .mi-classify-name { font-size: 13px; font-weight: 550; color: var(--ink); }
 
   /* ── Tab 1 · item cards (still drawn by other surfaces) ─────────────── */
   .mi-card { background: var(--surface); border: 1px solid var(--n-200); border-radius: 12px; padding: 14px 15px; cursor: pointer; transition: border-color 140ms, transform 140ms, box-shadow 140ms, opacity 280ms; display: flex; flex-direction: column; }

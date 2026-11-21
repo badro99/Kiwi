@@ -472,8 +472,8 @@
     "sha": "2f2e29a063408cdf"
   },
   "assets/dashboard-shell.css": {
-    "v": "13",
-    "sha": "2b37c3b287fd4457"
+    "v": "14",
+    "sha": "4daeff34e0c99d81"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "2",
@@ -1524,8 +1524,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "265",
-    "sha": "5d12fa724d19719d"
+    "v": "266",
+    "sha": "8c5ea2a9bb353ca6"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2120,16 +2120,16 @@
     "sha": "28d06df4ffa421b5"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "139",
-    "sha": "6fc603b7691bc20d"
+    "v": "140",
+    "sha": "73773abfe8fa2eb9"
   },
   "assets/restaurant-menu/recipes.js": {
     "v": "10",
     "sha": "8e9397cc4cba0e00"
   },
   "assets/restaurant-menu/strings.js": {
-    "v": "22",
-    "sha": "d9a38df3bd8ed953"
+    "v": "23",
+    "sha": "b6f4bb63c8f161a7"
   },
   "assets/restaurant-menu/styles.js": {
     "v": "12",

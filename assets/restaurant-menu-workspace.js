@@ -156,7 +156,6 @@
     let h=chip('',ui('allWithCount', { n: all.length }),!subFilter)+subs.map(s=>chip(s.id,`${esc(t(s.name))} · ${all.filter(x=>x.subId===s.id).length}`,subFilter===s.id)).join('');
     if(subs.length&&none)h+=chip('__none',ui('uncategorizedWithCount', { n: none }),subFilter==='__none');
     h+=`<button data-activation=write class="mi-subchip add" data-action="rmw-sub-add" data-arg="${filter}">${esc(ui('addSubCat'))}</button>`;
-    if(subs.length&&none)h+=`<button class="mi-subchip add" data-action="rmw-classify" data-arg="${filter}">${ic('edit')} ${esc(ui('classifyCount', { n: none, s: none > 1 ? 's' : '' }))}</button>`;
     if(subFilter&&subFilter!=='__none'&&subs.some(s=>s.id===subFilter)){
       h+=`<button class="mi-subchip add" data-action="rmw-sub-rename" data-arg="${filter}::${subFilter}">${ic('edit')} ${esc(ui('rename'))}</button><button data-activation=write class="mi-subchip add danger" data-action="rmw-sub-delete" data-arg="${filter}::${subFilter}">${ic('trash')} ${esc(ui('delete'))}</button>`;
     }
@@ -210,17 +209,6 @@
       ${x.archived?`<button type="button" class="rmw-restore" data-rmw-command="restore" data-arg="${esc(x.id)}" aria-label="${esc(ui('restore'))}: ${esc(name)}" title="${esc(ui('restore'))}"><span class="rmw-ico" style="--i:url(assets/icons/material/unarchive.svg)" aria-hidden="true"></span></button>`:`<button type="button" class="rmw-avail" role="switch" aria-checked="${!off}" data-rmw-command="avail" data-arg="${esc(x.id)}" aria-label="${esc(ui('availableToggle',{name}))}"><span></span></button>`}
       <button type="button" class="catalog-more rmw-row-more" data-rmw-command="actions" data-arg="${esc(x.id)}" aria-label="${esc(catalogText('itemActions','Actions de l’article'))}: ${esc(name)}">${catalogIcon('more_vert')}</button>
     </div>`;
-  }
-  function openClassify(cid){
-    const subs=subsOf(cid);
-    if(!subs.length){toast(ui('createSubFirstToast'),ui('useAddSubHelp'),'info');return;}
-    const pending=D().items.filter(x=>x.catId===cid&&!x.subId);
-    if(!pending.length){toast(ui('allClassifiedToast'),ui('noUnclassifiedItems'),'info');return;}
-    const opts=subs.map(s=>`<option value="${s.id}">${esc(t(s.name))}</option>`).join('');
-    const helpPending = pending.length > 1 ? `${pending.length} ${ui('articlesWithoutSub')}` : `1 ${ui('articleWithoutSub')}`;
-    const m=modal({tag:ui('classifyTag'),title:`${esc(ui('classifyTitle'))} · ${esc(t(cat(cid)?.name)||'')}`,width:560,body:`<div class="kf-help" style="margin-bottom:10px;">${helpPending}. ${esc(ui('classifyInstantSaveNotice'))}</div><div class="mi-classify-list" tabindex="0" role="region" aria-label="${esc(ui('classifyTitle'))}">${pending.map(x=>`<div class="mi-classify-row" data-mcr="${x.id}"><span class="mi-classify-name">${esc(t(x.name))}</span><select class="kf-input" aria-label="${esc(ui('sectionLabel'))}: ${esc(t(x.name))}" data-rmw-classify-sub="${x.id}"><option value="">· ${esc(ui('chooseSelectPlaceholder'))} ·</option>${opts}</select></div>`).join('')}</div>`,foot:`<button class="eq-cta-gradient" data-done>${esc(ui('doneBtn'))}</button>`});
-    m.el.addEventListener('change',e=>{const sel=e.target.closest('[data-rmw-classify-sub]');if(!sel||!sel.value)return;S().updateItem(sel.dataset.rmwClassifySub,{subId:sel.value});sel.closest('[data-mcr]')?.classList.add('done');});
-    $('[data-done]',m.el).onclick=()=>{m.close();render();};
   }
   function groupCard(g){
     const used=D().items.filter(x=>(x.opts||[]).includes(g.id)).length;
@@ -1236,7 +1224,6 @@ table.rmw-i18n td.st-manual input{border-inline-start:3px solid var(--atlas)}
     H['rmw-sub-add']=(_e,cid)=>ask(ui('newSubcategoryTitle'),ui('subNamePlaceholder'),'',v=>{S().addSubcategory(cid||filter,v);subFilter=null;});
     H['rmw-sub-rename']=(_e,arg)=>{const[cid,sid]=String(arg||'').split('::'),s=(cat(cid)?.sub||[]).find(x=>x.id===sid);if(s)ask(ui('renameSubcategoryTitle'),ui('newNameLabel'),s.name,v=>S().renameSubcategory(cid,sid,v));};
     H['rmw-sub-delete']=(_e,arg)=>{const[cid,sid]=String(arg||'').split('::'),s=(cat(cid)?.sub||[]).find(x=>x.id===sid),n=D().items.filter(x=>x.catId===cid&&x.subId===sid).length;if(s)confirm(ui('deleteSubcategoryConfirm', { name: s.name }),()=>{S().deleteSubcategory(cid,sid);subFilter=null;},ui('deleteSubcategoryDesc', { n }));};
-    H['rmw-classify']=(_e,cid)=>openClassify(cid||filter);
     H['rmw-cat-add']=()=>openCategory(null);
     H['rmw-cat-edit']=(_e,id)=>{const c=cat(id);if(c)openCategory(c);};
     H['rmw-cat-delete']=(_e,id)=>{const c=cat(id),n=D().items.filter(x=>x.catId===id).length;if(c)confirm(ui('deleteCategoryConfirm', { name: c.name }),()=>{S().deleteCategory(id);filter='all';subFilter=null;},ui('deleteCategoryDesc', { n }));};
