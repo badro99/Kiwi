@@ -113,6 +113,43 @@ const guarded = B.reprice([{ id: 'a', name: 'A', price: 8, cost: 7 }], { basis: 
 eq('a minimum margin lifts the price to keep it (rounded up)', [guarded.rows[0].next, guarded.rows[0].lifted, guarded.rows[0].flag], [9, true, '']);
 eq('a thin margin is flagged', B.reprice([{ id: 'a', name: 'A', price: 10, cost: 9 }], { basis: 'price', op: 'amt', value: 0.5, step: 0, mode: 'nearest' }).rows[0].flag, 'low-margin');
 
+/* ── rounding never works against the operation (cafés: 3 to 15 MAD) ─── */
+const cafe3 = [{ id: 'e', name: 'Eau', price: 4 }, { id: 't', name: 'Thé', price: 15 }, { id: 'j', name: 'Tajine', price: 70 }];
+const run = (value, ending, mode) => {
+  const out = B.reprice(cafe3, { basis: 'price', op: 'pct', value, step: ending ? 0 : 1, ending, mode });
+  return out.rows.map((r) => r.id + ':' + r.next + (r.flag ? '!' + r.flag : '')).concat(Object.entries(out.skipped).filter(([, n]) => n).map(([k, n]) => k + '×' + n)).join(' ');
+};
+eq('+5 %, ends in 9, nearest: up the scale, flagged when it overshoots (never 70 → 69, never 4 → 9)', run(5, '9', 'nearest'), 'e:4.9!over-rounded t:19!over-rounded j:79!over-rounded');
+eq('+5 %, ends in 9, up', run(5, '9', 'up'), 'e:4.9!over-rounded t:19!over-rounded j:79!over-rounded');
+eq('+5 %, ends in 9, down: every row would fall, so none moves', run(5, '9', 'down'), 'against×3');
+eq('+5 %, ,90 nearest', run(5, '90', 'nearest'), 'e:4.9!over-rounded t:15.9 j:73.9');
+eq('+5 %, ,90 down', run(5, '90', 'down'), 'j:72.9 against×2');
+eq('+5 %, ,99 nearest', run(5, '99', 'nearest'), 'e:4.99!over-rounded t:15.99 j:73.99');
+eq('+5 %, ,99 down', run(5, '99', 'down'), 'j:72.99 against×2');
+eq('+5 %, 1 MAD nearest', run(5, '', 'nearest'), 't:16 j:74 same×1');
+eq('+5 %, 1 MAD up', run(5, '', 'up'), 'e:5!over-rounded t:16 j:74');
+eq('−5 %, ends in 9, nearest: 15 goes to 9, not up to 19', run(-5, '9', 'nearest'), 'e:3.9 t:9!over-rounded j:69');
+eq('−5 %, ends in 9, up', run(-5, '9', 'up'), 'e:3.9 j:69 against×1');
+eq('−5 %, ends in 9, down', run(-5, '9', 'down'), 'e:2.9!over-rounded t:9!over-rounded j:59!over-rounded');
+eq('−5 %, ,90 nearest', run(-5, '90', 'nearest'), 'e:3.9 t:13.9 j:66.9');
+eq('−5 %, ,90 up', run(-5, '90', 'up'), 'e:3.9 t:14.9 j:66.9');
+eq('−5 %, ,99 nearest', run(-5, '99', 'nearest'), 'e:3.99 t:13.99 j:66.99');
+eq('−5 %, 1 MAD down', run(-5, '', 'down'), 'e:3!over-rounded t:14 j:66');
+eq('an ending finer than nothing: under 1 MAD the row is skipped and counted', B.reprice([{ id: 'x', name: 'Sucre', price: 0.5 }], { basis: 'price', op: 'pct', value: 10, ending: '90', mode: 'nearest' }).skipped['too-small'], 1);
+eq('the preview knows what rounding did', (({ requested, delta, rounded }) => [requested, delta, rounded])(B.reprice(cafe3, { basis: 'price', op: 'pct', value: 5, ending: '9', mode: 'nearest' }).rows[2]), [3.5, 9, true]);
+{
+  let wrong = 0, unflagged = 0, n = 0;
+  for (let p = 1; p <= 400; p += 0.75) for (const value of [-30, -10, -5, -2, 2, 5, 10, 30]) for (const ending of ['', '9', '90', '99']) for (const mode of ['nearest', 'up', 'down']) for (const step of [0.5, 1, 5, 10]) {
+    if (ending && step !== 1) continue;
+    const res = B.repriceOne({ price: p }, { basis: 'price', op: 'pct', value, step, ending, mode });
+    if (res.skip) continue;
+    n++;
+    if (Math.sign(res.next - p) !== Math.sign(value)) wrong++;
+    if (Math.abs(res.next - p) > 2 * Math.abs(res.requested) + 1e-9 && res.flag !== 'over-rounded') unflagged++;
+  }
+  eq(`over ${n} prices × rules: none moves against the operation, every overshoot is flagged`, [wrong, unflagged], [0, 0]);
+}
+
 /* ── CSV formulas never reach a spreadsheet live ──────────────────────── */
 eq('formula-like text is neutralised, numbers are not', [B.safeCell('=HYPERLINK("x")'), B.safeCell('@cmd'), B.safeCell('+33'), B.safeCell('-20% promo'), B.safeCell(-5), B.safeCell('-5'), B.safeCell('Thé')], ["'=HYPERLINK(\"x\")", "'@cmd", "'+33", "'-20% promo", '-5', '-5', 'Thé']);
 eq('a CSV written by someone else is neutralised with its own delimiter', B.safeCsv('nom;prix\n=1+1;12,5\n'), "nom;prix\r\n'=1+1;12,5");
@@ -417,6 +454,15 @@ r = await post({ kind: 'menu', merchant: 'cafe-riad', rows: [{ id: 'it1', set: {
 eq('a carte has no barcode column', r.body.error, 'unknown-field');
 r = await post({ kind: 'boutique', merchant: 'cafe-riad', rows: [{ id: 'it1', set: { price: 1 } }] }, cafe);
 eq('a restaurant has no boutique catalogue to patch', r.status, 409);
+
+/* ── the old importer takes the export's apostrophe off too ───────────── */
+{
+  const win = {}; const box = { window: win, document: { addEventListener() {}, querySelector: () => null, createElement: () => ({ style: {} }) }, console, setTimeout, clearTimeout };
+  win.window = win; vm.createContext(box);
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/catalog-import.js'), 'utf8'), box, { filename: 'catalog-import.js' });
+  const parsed = win.KiwiCatalogImport.parse(B.safeCsv('produit;prix\n=HYPERLINK("x");12\n-20% robe;8\nl\'atelier;5\n'));
+  eq('both import paths agree: « \'=… » comes back as « =… », an apostrophe inside a word stays', parsed.rows.map((r) => r[0]), ['=HYPERLINK("x")', '-20% robe', "l'atelier"]);
+}
 
 /* ── the browser side, for real, in a sandbox ─────────────────────────── */
 /* The real menu store (assets/menu-catalog.js and its parts) and the real

@@ -412,14 +412,15 @@
 
   /* A price moved by 90 % or more, or set at or under its cost, is asked
      about once before it leaves: « 1,234 » typed for 1 234 MAD is the usual
-     cause. Undo and the re-price (whose preview already showed every row) skip it. */
-  async function confirmRisky(patches) {
-    const risky = R().riskyChanges(patches, S.data.rows);
+     cause. Undo skips it; the re-price (whose preview showed every row) only
+     asks about the rows its rounding over-moved or put under cost. */
+  async function confirmRisky(risky) {
     if (!risky.length) return true;
     const name = (id) => (S.grid.value(id, 'name') || '');
     const MAD = L(' MAD', ' MAD', ' درهم');
-    const why = (x) => (x.code === 'big-change'
-      ? L('écart de ', 'change of ', 'فرق ديال ') + '\u2066' + (x.next >= x.old ? '+' : '') + fmtNum((x.next - x.old) / x.old * 100, 0) + ' %\u2069'
+    const sg = (n, d) => '\u2066' + (n > 0 ? '+' : '') + fmtNum(n, d) + '\u2069';
+    const why = (x) => (x.code === 'big-change' ? L('écart de ', 'change of ', 'فرق ديال ') + sg((x.next - x.old) / x.old * 100, 0) + ' %'
+      : x.code === 'over-rounded' ? L('arrondi : ', 'rounded: ', 'التقريب: ') + sg(x.next - x.old, 2) + L(' sur ', ' for ', ' على ') + sg(x.requested, 2) + L(' demandés', ' asked', ' مطلوبين')
       : L('au prix d’achat ou dessous (', 'at or under cost (', 'فثمن الشراء ولا تحتو (') + fmtNum(x.cost, 2) + MAD + ')');
     const list = risky.slice(0, 50).map((x) => `<li><span>${esc(name(x.id))}<br><span class="why">${esc(why(x))}</span></span><span class="n">${esc('\u2066' + fmtNum(x.old, 2) + ' → ' + fmtNum(x.next, 2) + '\u2069' + MAD)}</span></li>`).join('');
     return ask({
@@ -445,7 +446,8 @@
       return false;
     }
     if (!c.patches.length && !c.lists.length) return false;
-    if (!opts.isUndo && !opts.reviewed && !(await confirmRisky(c.patches))) { S.grid.focus(); return false; }
+    const risky = opts.isUndo ? [] : opts.reviewed ? (opts.risky || []) : R().riskyChanges(c.patches, S.data.rows);
+    if (risky.length && !(await confirmRisky(risky))) { S.grid.focus(); return false; }
     S.busy = true; status();
     const res = await window.KiwiBulkSource.save(S.kind, c.patches, c.lists.map(({ listId, itemId, price }) => ({ listId, itemId, price })));
     S.busy = false;

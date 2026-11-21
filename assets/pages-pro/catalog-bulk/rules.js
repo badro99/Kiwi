@@ -102,6 +102,14 @@
   /* One item through a re-price rule.
      rule = { basis: 'price'|'cost', op: 'pct'|'amt'|'set', value, step, mode,
               ending: ''|'90'|'99'|'9', minMargin: percent | 0 }
+     Rounding never works against the operation: an increase never rounds to
+     below the old price, a decrease never above it. « Au plus proche » that
+     would cross back picks the step on the requested side; an explicit up or
+     down that would cross back skips the row ('against'). An ending coarser
+     than the price itself (« finir par 9 » on a 4 MAD water) falls back to
+     ,90, or skips the row ('too-small') under 1 MAD. A row whose real change
+     is more than twice the one asked is flagged 'over-rounded', and the
+     dialog asks about it before saving.
      With a minimum margin, a price that would fall under it is lifted to the
      lowest price that keeps it (rounded up), and the row says so. Without one,
      a price at or under cost, or under LOW_MARGIN, is flagged, never hidden. */
@@ -111,39 +119,56 @@
     const op = rule && rule.op;
     const v = Number(rule && rule.value);
     if (!Number.isFinite(v)) return { old, next: old, skip: 'bad-value' };
-    let next;
-    if (op === 'set') next = cents(v);
+    let raw;
+    if (op === 'set') raw = cents(v);
     else {
       const base = rule.basis === 'cost' ? cost : old;
       if (!(base > 0)) return { old, next: old, skip: 'no-basis' };
       const b = cents(base);
-      next = op === 'amt' ? b + cents(v) : Math.round(b * (100 + v) / 100);
+      raw = op === 'amt' ? b + cents(v) : Math.round(b * (100 + v) / 100);
     }
-    next = shape(fromCents(next), rule, rule && rule.mode);
+    if (!(raw > 0)) return { old, next: old, skip: 'zero' };
+    let ending = ENDINGS[rule && rule.ending] ? rule.ending : '';
+    if (ending && raw < ENDINGS[ending].unit) {
+      ending = raw >= ENDINGS['90'].unit ? '90' : '';
+      if (!ending) return { old, next: old, skip: 'too-small' };
+    }
+    const r = Object.assign({}, rule, { ending });
+    const oc = cents(old);
+    const dir = Math.sign(raw - oc);
+    const mode = (rule && rule.mode) || 'nearest';
+    let next = shape(fromCents(raw), r, mode);
+    if (dir && Math.sign(cents(next) - oc) === -dir) {
+      if (mode !== 'nearest') return { old, next: old, skip: 'against' };
+      next = shape(fromCents(raw), r, dir > 0 ? 'up' : 'down');
+    }
     let lifted = false;
     const mm = Number(rule && rule.minMargin) || 0;
     if (mm > 0 && mm < 100 && cost > 0) {
       const floor = fromCents(Math.ceil(cents(cost) * 100 / (100 - mm)));
-      if (cents(next) < cents(floor)) { next = shape(floor, rule, 'up'); lifted = true; }
+      if (cents(next) < cents(floor)) { next = shape(floor, r, 'up'); lifted = true; }
     }
     if (!(next > 0)) return { old, next: old, skip: 'zero' };
     if (next > LIMITS.price) return { old, next: old, skip: 'too-high' };
-    if (cents(next) === cents(old)) return { old, next, skip: 'same' };
+    if (cents(next) === oc) return { old, next, skip: 'same' };
+    const asked = raw - oc, got = cents(next) - oc;
+    const over = !lifted && asked !== 0 && Math.abs(got) > 2 * Math.abs(asked);
     const m = margin(next, cost);
-    const flag = cost > 0 && cents(next) <= cents(cost) ? 'below-cost' : m != null && m < LOW_MARGIN ? 'low-margin' : '';
-    return { old, next, margin: m, flag, lifted };
+    const flag = cost > 0 && cents(next) <= cents(cost) ? 'below-cost' : over ? 'over-rounded' : m != null && m < LOW_MARGIN ? 'low-margin' : '';
+    return { old, next, margin: m, flag, lifted, requested: fromCents(asked), rounded: cents(next) !== raw };
   }
 
   function reprice(items, rule) {
     const rows = [];
-    const skipped = { 'no-basis': 0, zero: 0, same: 0, 'too-high': 0, 'bad-value': 0 };
-    const flagged = { 'below-cost': 0, 'low-margin': 0, lifted: 0 };
+    const skipped = { 'no-basis': 0, zero: 0, same: 0, 'too-high': 0, 'bad-value': 0, against: 0, 'too-small': 0 };
+    const flagged = { 'below-cost': 0, 'over-rounded': 0, 'low-margin': 0, lifted: 0 };
     (items || []).forEach((it) => {
       const r = repriceOne(it, rule);
       if (r.skip) { skipped[r.skip] = (skipped[r.skip] || 0) + 1; return; }
       if (r.flag) flagged[r.flag]++;
       if (r.lifted) flagged.lifted++;
-      rows.push({ id: it.id, name: it.name, old: r.old, next: r.next, delta: fromCents(cents(r.next) - cents(r.old)), cost: Number(it.cost) || 0, margin: r.margin, flag: r.flag, lifted: r.lifted });
+      rows.push({ id: it.id, name: it.name, old: r.old, next: r.next, delta: fromCents(cents(r.next) - cents(r.old)), cost: Number(it.cost) || 0,
+        margin: r.margin, flag: r.flag, lifted: r.lifted, requested: r.requested, rounded: r.rounded });
     });
     return { rows, skipped, flagged };
   }

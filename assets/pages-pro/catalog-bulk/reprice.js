@@ -45,6 +45,9 @@
 .cbr-prev .flag{display:block;font-size:11px;color:var(--danger,#C94A3A);margin-top:2px}
 .cbr-prev .flag.ok{color:var(--atlas,#0B6E4F)}
 .cbr-sum .bad{color:var(--danger,#C94A3A)}
+.cbr [data-cat-wrap][hidden]{display:none}
+.cbr-prev .rnd{display:block;font-size:11px;color:var(--n-500,#6b7570);margin-top:2px}
+.cbr-prev .rnd.bad{color:var(--danger,#C94A3A)}
 .cbr-empty{padding:18px;text-align:center;color:var(--n-500,#6b7570);font-size:13px}
 @media (max-width:560px){.cbr-two{grid-template-columns:1fr}}
 `;
@@ -70,7 +73,7 @@
     const view = () => `<div class="cbr">
         <div class="cbr-row"><span>${esc(L('Articles', 'Items', 'المنتجات'))}</span>
           ${seg('scope', [['category', L('Une catégorie', 'A category', 'فئة وحدة')], ['selection', L('Sélection', 'Selection', 'المختارين') + ' (' + fmtNum(ctx.selected.length, 0) + ')'], ['all', L('Tout', 'Everything', 'كلشي') + ' (' + fmtNum(ctx.items.length, 0) + ')']])}
-          <select class="cbr-in" data-cat>${ctx.categories.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
+          <div data-cat-wrap><select class="cbr-in" data-cat>${ctx.categories.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></div>
         </div>
         ${ctx.hasCost ? `<div class="cbr-row"><span>${esc(L('Calculer à partir de', 'Calculate from', 'نحسبو من'))}</span>${seg('basis', [['price', L('Prix de vente actuel', 'Current selling price', 'ثمن البيع الحالي')], ['cost', L('Prix d’achat', 'Cost', 'ثمن الشراء')]])}</div>` : ''}
         <div class="cbr-two">
@@ -107,7 +110,7 @@
     const el = m.el;
     const q = (s) => el.querySelector(s);
     let result = { rows: [], skipped: {}, flagged: {} };
-    const WARN = { true: 'warn', false: '' }, DIR = { true: 'up', false: 'down' };
+    const WARN = { true: 'warn', false: '' }, DIR = { true: 'up', false: 'down' }, BAD = { true: 'bad', false: '' };
 
     function items() {
       if (st.scope === 'selection') { const set = new Set(ctx.selected); return ctx.items.filter((i) => set.has(i.id)); }
@@ -131,10 +134,13 @@
         sk.same ? plural(sk.same, L('{n} déjà à ce prix', '{n} already at that price', '{n} فنفس الثمن'), L('{n} déjà à ce prix', '{n} already at that price', '{n} فنفس الثمن')) : '',
         sk.zero ? plural(sk.zero, L('{n} tomberait à zéro', '{n} would fall to zero', '{n} غادي يطيح لصفر'), L('{n} tomberaient à zéro', '{n} would fall to zero', '{n} غادي يطيحو لصفر')) : '',
         sk['too-high'] ? plural(sk['too-high'], L('{n} trop élevé', '{n} too high', '{n} غالي بزاف'), L('{n} trop élevés', '{n} too high', '{n} غاليين بزاف')) : '',
+        sk.against ? plural(sk.against, L('{n} que l’arrondi ferait aller à contresens', '{n} the rounding would move the wrong way', '{n} التقريب غادي يرجّعو بالعكس'), L('{n} que l’arrondi ferait aller à contresens', '{n} the rounding would move the wrong way', '{n} التقريب غادي يرجّعهم بالعكس')) : '',
+        sk['too-small'] ? plural(sk['too-small'], L('{n} sous 1 MAD, trop petit pour cette fin', '{n} under 1 MAD, too small for that ending', '{n} تحت 1 درهم، صغير على هاد النهاية'), L('{n} sous 1 MAD, trop petits pour cette fin', '{n} under 1 MAD, too small for that ending', '{n} تحت 1 درهم، صغار على هاد النهاية')) : '',
       ].filter(Boolean);
       const total = rows.reduce((s, r) => s + r.delta, 0);
       const warn = [
         fl['below-cost'] ? plural(fl['below-cost'], L('{n} au prix d’achat ou dessous', '{n} at or under cost', '{n} فثمن الشراء ولا تحتو'), L('{n} au prix d’achat ou dessous', '{n} at or under cost', '{n} فثمن الشراء ولا تحتو')) : '',
+        fl['over-rounded'] ? plural(fl['over-rounded'], L('{n} que l’arrondi fait bouger plus du double', '{n} moved over twice the change by rounding', '{n} التقريب حرّكو كثر من الضعف'), L('{n} que l’arrondi fait bouger plus du double', '{n} moved over twice the change by rounding', '{n} التقريب حرّكهم كثر من الضعف')) : '',
         fl['low-margin'] ? plural(fl['low-margin'], L('{n} sous 15 % de marge', '{n} under 15 % margin', '{n} تحت 15 % ديال الهامش'), L('{n} sous 15 % de marge', '{n} under 15 % margin', '{n} تحت 15 % ديال الهامش')) : '',
       ].filter(Boolean);
       q('[data-sum]').innerHTML = sk['bad-value'] ? esc(L('Entrez une valeur.', 'Enter a value.', 'دخّل قيمة.'))
@@ -144,9 +150,11 @@
           + (fl.lifted ? ' · ' + esc(plural(fl.lifted, L('{n} relevé à la marge minimale', '{n} lifted to the minimum margin', '{n} طلع للهامش الأدنى'), L('{n} relevés à la marge minimale', '{n} lifted to the minimum margin', '{n} طلعو للهامش الأدنى'))) : '')
           + (skips.length ? ' · ' + esc(L('ignorés : ', 'skipped: ', 'متخطّين: ') + skips.join(', ')) : '');
       const FLAG = { 'below-cost': L('au prix d’achat ou dessous', 'at or under cost', 'فثمن الشراء ولا تحتو'), 'low-margin': L('marge sous 15 %', 'margin under 15 %', 'الهامش تحت 15 %') };
-      const cell = (r) => esc(r.name) + (r.flag ? `<span class="flag">${esc(FLAG[r.flag])}</span>` : r.lifted ? `<span class="flag ok">${esc(L('relevé à la marge minimale', 'lifted to the minimum margin', 'طلع للهامش الأدنى'))}</span>` : '');
+      /* What rounding did, said on the row: « arrondi : +4,00 sur +3,50 demandés ». */
+      const rnd = (r) => (r.rounded && !r.lifted ? `<span class="rnd ${BAD[r.flag === 'over-rounded']}">${esc(L('arrondi : ', 'rounded: ', 'التقريب: ') + signed(r.delta) + L(' sur ', ' for ', ' على ') + signed(r.requested) + L(' demandés', ' asked', ' مطلوبين'))}</span>` : '');
+      const cell = (r) => esc(r.name) + (FLAG[r.flag] ? `<span class="flag">${esc(FLAG[r.flag])}</span>` : r.lifted ? `<span class="flag ok">${esc(L('relevé à la marge minimale', 'lifted to the minimum margin', 'طلع للهامش الأدنى'))}</span>` : '') + rnd(r);
       q('[data-prev]').innerHTML = rows.length
-        ? `<table><thead><tr><th>${esc(L('Article', 'Item', 'المنتج'))}</th><th class="n">${esc(L('Avant', 'Before', 'قبل'))}</th><th class="n">${esc(L('Après', 'After', 'من بعد'))}</th><th class="n">${esc(L('Écart', 'Change', 'الفرق'))}</th>${ctx.hasCost ? `<th class="n">${esc(L('Marge', 'Margin', 'الهامش'))}</th>` : ''}</tr></thead><tbody>${rows.slice(0, 400).map((r) => `<tr class="${WARN[!!r.flag]}"><td>${cell(r)}</td><td class="n old">${fmtNum(r.old, 2)}</td><td class="n">${fmtNum(r.next, 2)}</td><td class="n ${DIR[r.delta > 0]}">${signed(r.delta)}</td>${ctx.hasCost ? `<td class="n">${r.margin == null ? '·' : '\u2066' + fmtNum(r.margin, 1) + ' %\u2069'}</td>` : ''}</tr>`).join('')}</tbody></table>`
+        ? `<table><thead><tr><th>${esc(L('Article', 'Item', 'المنتج'))}</th><th class="n">${esc(L('Avant', 'Before', 'قبل'))}</th><th class="n">${esc(L('Après', 'After', 'من بعد'))}</th><th class="n">${esc(L('Écart', 'Change', 'الفرق'))}</th>${ctx.hasCost ? `<th class="n">${esc(L('Marge', 'Margin', 'الهامش'))}</th>` : ''}</tr></thead><tbody>${rows.slice(0, 400).map((r) => `<tr class="${WARN[r.flag === 'below-cost' || r.flag === 'over-rounded']}"><td>${cell(r)}</td><td class="n old">${fmtNum(r.old, 2)}</td><td class="n">${fmtNum(r.next, 2)}</td><td class="n ${DIR[r.delta > 0]}">${signed(r.delta)}</td>${ctx.hasCost ? `<td class="n">${r.margin == null ? '·' : '\u2066' + fmtNum(r.margin, 1) + ' %\u2069'}</td>` : ''}</tr>`).join('')}</tbody></table>`
           + (rows.length > 400 ? `<div class="cbr-empty">${esc(L('… et ', '… and ', '… و ') + fmtNum(rows.length - 400, 0) + L(' de plus', ' more', ' آخرين'))}</div>` : '')
         : `<div class="cbr-empty">${esc(L('Aucun prix ne change avec ces réglages.', 'No price changes with these settings.', 'حتى ثمن ما كايتبدّل بهاد الإعدادات.'))}</div>`;
       const apply = q('[data-apply]');
@@ -160,7 +168,9 @@
         x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on));
         if (g.dataset.seg === 'scope') x.disabled = !!off[x.dataset.k];
       }));
-      q('[data-cat]').hidden = st.scope !== 'category';
+      /* The wrapper goes, not only the native select: the dashboard draws its
+         own control beside a <select> (kiwi-select), which stayed on screen. */
+      q('[data-cat-wrap]').hidden = st.scope !== 'category';
     }
     el.querySelectorAll('[data-seg]').forEach((g) => g.addEventListener('click', (e) => {
       const b = e.target.closest('[data-k]'); if (!b || b.disabled) return;
@@ -180,7 +190,10 @@
       if (!rows.length) return;
       m.close();
       ctx.put(rows.map((r) => ({ id: r.id, key: 'price', value: r.next })));
-      await ctx.save({ reviewed: true });   // every new price, flags included, was just on screen
+      /* Every new price was just on screen; the rows the rounding pushed past
+         twice the change, or under cost, are asked about once more. */
+      await ctx.save({ reviewed: true, risky: rows.filter((r) => r.flag === 'over-rounded' || r.flag === 'below-cost')
+        .map((r) => ({ id: r.id, code: r.flag, old: r.old, next: r.next, cost: r.cost, requested: r.requested })) });
     });
     paintSegs();
     refresh();

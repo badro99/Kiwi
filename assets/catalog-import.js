@@ -138,7 +138,10 @@
     let best = null;
     [',', ';', '\t'].forEach((d) => {
       const rows = parseWith(text, d)
-        .map((r) => r.map((c) => String(c).trim()))
+        /* A CSV exported by Kiwi neutralises formula-like text with a
+           leading apostrophe (« '=… », assets/pages-pro/catalog-bulk/rules.js
+           safeCell); it is taken off here, as the spreadsheet importer does. */
+        .map((r) => r.map((c) => String(c).trim().replace(/^'(?=[=+\-@])/, '')))
         .filter((r) => r.some((c) => c !== ''));
       if (!rows.length) return;
       if (!best || rows[0].length > best.rows[0].length) best = { rows, delim: d };
