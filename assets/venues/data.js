@@ -304,6 +304,7 @@
         { nav: 'returns',    label: 'Retours & échanges',  i18n: 'sidebar.boutique.returns',                 icon: ICONS.returns },
         { nav: 'sold',       label: 'Vendus',              i18n: 'sidebar.boutique.sold',                    icon: ICONS.sold },
         { nav: 'weborders',  label: 'Boutique en ligne',   i18n: 'sidebar.boutique.weborders',               icon: ICONS.truck },
+        { nav: 'pricelists', label: 'Tarifs',              i18n: 'sidebar.boutique.pricelists',              icon: ICONS.promos },
       ],
     },
     spa: {
