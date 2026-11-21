@@ -565,9 +565,20 @@
     /* ── le paiement ── */
     var pay = [];
     if (Array.isArray(sale.pay) && sale.pay.length) {
-      pay = sale.pay.slice(0, 6).map(function (p) {
-        return { label: methodLabel(p && (p.label || p.method || p.m), T), amount: Math.abs(num(p && p.amount)) };
+      /* Un mode, une ligne. Une vente réglée en deux fois en espèces (50 puis
+         150) imprimait deux lignes « Espèces », que la cliente lit comme deux
+         paiements (Santos, ticket 36577). Les parts d'un même libellé
+         s'additionnent, en centimes ; deux avoirs différents gardent chacun
+         leur ligne parce que leur libellé porte leur code. */
+      var byLabel = {};
+      sale.pay.forEach(function (p) {
+        var label = methodLabel(p && (p.label || p.method || p.m), T);
+        var cents = Math.round(Math.abs(num(p && p.amount)) * 100);
+        if (byLabel[label]) { byLabel[label].cents += cents; return; }
+        byLabel[label] = { label: label, cents: cents };
+        pay.push(byLabel[label]);
       });
+      pay = pay.slice(0, 6).map(function (p) { return { label: p.label, amount: p.cents / 100 }; });
     } else if (sale.method) {
       pay = [{ label: methodLabel(sale.method, T), amount: total + tip }];
     }
