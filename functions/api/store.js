@@ -969,7 +969,7 @@ export async function onRequestPost(context) {
   if (feature === 'verticalops') {
     try {
       bookSaved = await commitBook(env, merchant, mine, legacyBook(clean.value) || [], {
-        now,
+        now, defer: typeof context.waitUntil === 'function' ? (job) => context.waitUntil(job) : null,
         /* Les carnets pas encore déménagés vivent encore dans verticalops : la
          * garde cherche dans les deux. */
         guard: async (next, cur, bookText) => (await foreignCopy(env, { table: 'store', merchant, feature: BOOK_FEATURE, next, current: cur, text: bookText }))

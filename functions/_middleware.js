@@ -67,7 +67,7 @@ export const TILL_PATHS = new Set([
   '/api/cash-sessions', '/api/z-reconciliation', '/api/ticket-sequence',
   '/api/store-credits', '/api/receivables', '/api/retail-balances', '/api/invoice',
   '/api/pin/verify', '/api/pair/state', '/api/pairs', '/api/print/bridges',
-  '/api/hotel/room-charges', '/api/sister-stock', '/api/price-lists/snapshot',
+  '/api/hotel/room-charges', '/api/sister-stock', '/api/price-lists/snapshot', '/api/credit/till',
 ]);
 function tillStoreOf(request, url) {
   const saved = readCookie(request, TILL_STORE_COOKIE) || '';

@@ -1,5 +1,10 @@
 {
   "api/_client-audit.js : repli de schéma": 1,
+  "api/_credit-accounts.js : no such table: credit_accounts": 5,
+  "api/_credit-accounts.js : no such table: credit_events": 2,
+  "api/_credit-accounts.js : no such table: credit_settings": 2,
+  "api/_credit-audit.js : no such table: credit_accounts": 3,
+  "api/_credit-audit.js : no such table: credit_events": 4,
   "api/_invoice-series.js : repli de schéma": 1,
   "api/_ledger.js : no such table: money_ledger": 7,
   "api/_price-list-sale.js : no such column: price_list_id": 1,

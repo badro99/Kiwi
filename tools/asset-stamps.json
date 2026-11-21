@@ -439,6 +439,10 @@
     "v": "19",
     "sha": "5d37133013eff834"
   },
+  "assets/credit-book/till-credit.js": {
+    "v": "4",
+    "sha": "856c649d1e178d05"
+  },
   "assets/credit-history-page.js": {
     "v": "3",
     "sha": "2d7b6732612470e0"
@@ -840,8 +844,8 @@
     "sha": "079d2785b601cc2e"
   },
   "assets/i18n.js": {
-    "v": "62",
-    "sha": "bb31c3944e1f9de2"
+    "v": "63",
+    "sha": "44fd1465549cca32"
   },
   "assets/icons/material/sprite.access.svg": {
     "v": "1",
@@ -1496,8 +1500,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2243",
-    "sha": "635d5d02a805cebc"
+    "v": "2244",
+    "sha": "01dd71c089a57928"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1538,6 +1542,10 @@
   "assets/pages-pro/cost-variance.js": {
     "v": "9",
     "sha": "6e4da2c4b270491c"
+  },
+  "assets/pages-pro/credit-book.js": {
+    "v": "3",
+    "sha": "c69d876c1fab3401"
   },
   "assets/pages-pro/price-lists.js": {
     "v": "7",
@@ -1584,8 +1592,8 @@
     "sha": "a042b4c42a697836"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "286",
-    "sha": "c139dc34f69d2948"
+    "v": "287",
+    "sha": "e373cf5e7e664c33"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1848,8 +1856,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "477",
-    "sha": "573864db7581a07d"
+    "v": "479",
+    "sha": "03fc946666b908f9"
   },
   "assets/pos-epicerie.css": {
     "v": "43",
@@ -1860,8 +1868,8 @@
     "sha": "a1c3d8ef41a9a0fe"
   },
   "assets/pos-epicerie/carnet.js": {
-    "v": "15",
-    "sha": "e37db7a8a31e8e08"
+    "v": "21",
+    "sha": "ff8244f528f0f6c3"
   },
   "assets/pos-fastfood.css": {
     "v": "15",
@@ -1920,12 +1928,12 @@
     "sha": "3b1ecc2cbfa231cd"
   },
   "assets/pos-maison.css": {
-    "v": "230",
+    "v": "232",
     "sha": "e7ebbfb89dedcc5c"
   },
   "assets/pos-maison.js": {
-    "v": "230",
-    "sha": "d3e1edd61fce92e7"
+    "v": "232",
+    "sha": "cd254ebd45e46f1e"
   },
   "assets/pos-maison/avoir-sheet.js": {
     "v": "9",
@@ -1940,8 +1948,8 @@
     "sha": "64bf43e6710c5268"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "145",
-    "sha": "818cfe43e6444d9d"
+    "v": "147",
+    "sha": "eb207890b302c35f"
   },
   "assets/pos-maison/client-fiche.js": {
     "v": "1",
@@ -1968,8 +1976,8 @@
     "sha": "feb0865a7163d8c9"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "145",
-    "sha": "2dd05b10d856dc92"
+    "v": "147",
+    "sha": "d9fd0350c3698ffd"
   },
   "assets/pos-maison/kit-2027.js": {
     "v": "14",
@@ -1980,8 +1988,8 @@
     "sha": "f505c28b4b344afc"
   },
   "assets/pos-maison/sales.js": {
-    "v": "145",
-    "sha": "becfba27a7f1d22e"
+    "v": "147",
+    "sha": "2528842eef56057d"
   },
   "assets/pos-maison/ticket-remise.js": {
     "v": "3",
@@ -2488,8 +2496,8 @@
     "sha": "6ed04cbae9dd23e3"
   },
   "assets/trade-workspaces.js": {
-    "v": "21",
-    "sha": "4fb07bde29ce8005"
+    "v": "23",
+    "sha": "59996f70b82e1358"
   },
   "assets/trades.js": {
     "v": "9",
@@ -2520,8 +2528,8 @@
     "sha": "01ac5a209b43df7e"
   },
   "assets/venues/data.js": {
-    "v": "6",
-    "sha": "ed2c1c1260c2cbd5"
+    "v": "7",
+    "sha": "1a9a92a9836116e7"
   },
   "assets/venues/helpers.js": {
     "v": "10",
