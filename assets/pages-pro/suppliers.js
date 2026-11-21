@@ -42,11 +42,12 @@
   const idem = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
   const slug = () => { try { return (window.KiwiStore && window.KiwiStore.slugFor && window.KiwiStore.slugFor()) || ''; } catch (_) { return ''; } };
   /* Rôles (dashboard.html › ROLE GATE) : le grand livre est au patron ; le
-     classement, que le Stock montrait déjà au gérant et à l'employé de stock,
-     reste ouvert à eux. La réception n'entre ni dans l'un ni dans l'autre. */
+     classement (marges, donc prix d'achat) au patron et au gérant, comme
+     /api/suppliers/ranking le vérifie au palier de la session. Un employé ou
+     la réception n'ouvrent rien ici. */
   const role = () => String(window.__kiwiRole || 'owner');
   const ledgerOk = () => role() === 'owner';
-  const rankOk = () => role() !== 'reception';
+  const rankOk = () => role() === 'owner' || role() === 'manager';
   const isReal = () => {
     try { if (window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom()) return true; } catch (_) {}
     try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) { return false; }
@@ -378,7 +379,7 @@
     const pill = (k, label) => `<button type="button" class="${S.sort === k ? 'on' : ''}" data-lens-item data-action="sup-sort" data-arg="${k}">${esc(label)}</button>`;
     return `<div class="sp-bar">
         <label class="sp-search">${icon('search')}<input type="search" data-sp-q value="${esc(S.q)}" placeholder="${esc(L('Chercher un fournisseur, un téléphone, un ICE', 'Search a supplier, phone or ICE', 'قلّب على مورد، تيليفون ولا ICE'))}" aria-label="${esc(L('Chercher', 'Search', 'بحث'))}"></label>
-        <div class="sp-pills" data-lens-demo role="group" aria-label="${esc(L('Trier', 'Sort', 'ترتيب'))}">${pill('owe', L('Je dois le plus', 'I owe most', 'اللي كنسالو كثر'))}${pill('late', L('En retard', 'Overdue', 'متأخر'))}${pill('recent', L('Récents', 'Recent', 'الأحدث'))}${pill('name', L('Nom', 'Name', 'الاسم'))}</div>
+        <div class="sp-pills" data-lens-demo role="group" aria-label="${esc(L('Trier', 'Sort', 'ترتيب'))}">${pill('owe', L('Je dois le plus', 'I owe most', 'اللي عليا ليه كثر'))}${pill('late', L('En retard', 'Overdue', 'متأخر'))}${pill('recent', L('Récents', 'Recent', 'الأحدث'))}${pill('name', L('Nom', 'Name', 'الاسم'))}</div>
         <button type="button" class="kb ghost sp-btn" data-action="sup-cashbook">${icon('wallet')}${esc(L('Livre de caisse', 'Cash book', 'دفتر الصندوق'))}</button>
         <button type="button" class="kb atlas sp-btn" data-action="sup-new">${icon('add')}${esc(L('Nouveau fournisseur', 'New supplier', 'مورد جديد'))}</button>
       </div>
@@ -423,12 +424,18 @@
   }
 
   function ownerOnlyCard() {
-    return `<div class="sp-card sp-empty">${icon('lock')}<p><b style="font-weight:600">${esc(L('Réservé au propriétaire', 'Owner only', 'خاص بمول المحل'))}</b></p><p class="sp-hint">${esc(L('Ce que le commerce doit à ses fournisseurs et les réceptions à approuver ne s\'ouvrent qu\'avec le code du propriétaire. Le classement reste ouvert.', 'What the shop owes its suppliers and the receipts to approve open only with the owner\'s code. The ranking stays open.', 'شنو كيسال المحل للموردين والاستلامات اللي خاصها الموافقة كيتحلّو غير بالكود ديال مول المحل. الترتيب بقى مفتوح.'))}</p></div>`;
+    return `<div class="sp-card sp-empty">${icon('lock')}<p><b style="font-weight:600">${esc(L('Réservé au propriétaire', 'Owner only', 'خاص بمول المحل'))}</b></p><p class="sp-hint">${esc(L('Ce que le commerce doit à ses fournisseurs et les réceptions à approuver ne s\'ouvrent qu\'avec le code du propriétaire. Le classement reste ouvert.', 'What the shop owes its suppliers and the receipts to approve open only with the owner\'s code. The ranking stays open.', 'شنو باقي على المحل للموردين والاستلامات اللي خاصها الموافقة كيتحلّو غير بالكود ديال مول المحل. الترتيب بقى مفتوح.'))}</p></div>`;
+  }
+
+  /* Un rôle qui n'ouvre aucun onglet : une seule carte, sans rangée d'onglets. */
+  function closedCard() {
+    return `<div class="sp-card sp-empty">${icon('lock')}<p><b style="font-weight:600">${esc(L('Fournisseurs : réservé au propriétaire et au gérant', 'Suppliers: owner and manager only', 'الموردون: خاص بمول المحل والمسيّر'))}</b></p><p class="sp-hint">${esc(L('Les soldes, les réceptions à approuver et le classement des fournisseurs ne s\'ouvrent pas avec ce code.', 'Balances, receipts to approve and the supplier ranking do not open with this code.', 'الحسابات، الاستلامات اللي خاصها الموافقة وترتيب الموردين ما كيتحلّوش بهاد الكود.'))}</p></div>`;
   }
 
   function listBody() {
     const d = S.list;
-    if (d && d.denied) return `<div class="sp-wrap">${tabsHtml()}${S.tab === 'rank' && rankOk() ? rankTab() : ownerOnlyCard()}</div>`;
+    if (d && d.denied && !rankOk()) return `<div class="sp-wrap">${closedCard()}</div>`;
+    if (d && d.denied) return `<div class="sp-wrap">${tabsHtml()}${S.tab === 'rank' ? rankTab() : ownerOnlyCard()}</div>`;
     if (!d) return `<div class="sp-card sp-empty">${esc(L('Chargement des fournisseurs…', 'Loading suppliers…', 'كنجيبو الموردين…'))}</div>`;
     if (d.migrated === false) return `<div class="sp-wrap">${tabsHtml()}${S.tab === 'rank' ? rankTab() : `<div class="sp-card sp-empty">${icon('sync')}<p><b style="font-weight:600">${esc(L('Mise à jour en cours', 'Update in progress', 'التحديث جاري'))}</b></p><p class="sp-hint">${esc(L('Les soldes fournisseurs arrivent sur ce compte. Vos bons de commande et réceptions continuent de marcher comme avant.', 'Supplier balances are coming to this account. Purchase orders and receipts keep working as before.', 'حسابات الموردين غادي توصل لهاد الحساب قريب. أوامر الشراء والاستلام خدامين بحال ديما.'))}</p></div>`}</div>`;
     const t = d.totals || {};
@@ -436,7 +443,7 @@
     const body = S.tab === 'rank' ? rankTab() : S.tab === 'inbox' ? inboxTab(d) : oweTab(d);
     return `<div class="sp-wrap">
       <div class="sp-card"><div class="sp-kpis">
-        <div class="sp-kpi"><div class="k">${esc(L('Vous devez à vos fournisseurs', 'You owe your suppliers', 'اللي كتسال للموردين'))}</div><div class="v ${t.weOweCents ? 'owe' : 'ok'}">${esc(mad(t.weOweCents))}</div></div>
+        <div class="sp-kpi"><div class="k">${esc(L('Vous devez à vos fournisseurs', 'You owe your suppliers', 'عليك للموردين'))}</div><div class="v ${t.weOweCents ? 'owe' : 'ok'}">${esc(mad(t.weOweCents))}</div></div>
         <div class="sp-kpi"><div class="k">${esc(L('Dont en retard', 'Of which overdue', 'منها متأخر'))}</div><div class="v ${a.overdueCents ? 'late' : 'ok'}">${esc(mad(a.overdueCents))}</div></div>
         <div class="sp-kpi"><div class="k">${esc(L('Avances chez eux', 'Advances with them', 'تسبيقات عندهم'))}</div><div class="v">${esc(mad(t.theyOweCents))}</div></div>
       </div>${ageBar(a)}</div>
@@ -451,9 +458,9 @@
     let body = '', sub = '';
     if (S.view === 'supplier') { body = detailBody(); sub = S.detail ? S.detail.supplier.name : ''; }
     else if (S.view === 'cashbook') { body = cashBody(); sub = L('Livre de caisse', 'Cash book', 'دفتر الصندوق'); }
-    else if (!ledgerOk()) { body = listBody(); sub = L('Qui mérite la prochaine commande', 'Who deserves the next order', 'شكون يستاهل الطلبية الجاية'); }
+    else if (!ledgerOk()) { body = listBody(); sub = rankOk() ? L('Qui mérite la prochaine commande', 'Who deserves the next order', 'شكون يستاهل الطلبية الجاية') : ''; }
     else { body = listBody(); sub = L('Ce que vous devez, à qui, depuis quand, et qui mérite la prochaine commande', 'What you owe, to whom, since when, and who deserves the next order', 'شنو عليك، لمن، من إمتى، وشكون يستاهل الطلبية الجاية'); }
-    if (!isReal()) sub += ' · ' + L('démo', 'demo', 'تجريبي');
+    if (!isReal()) sub = (sub ? sub + ' · ' : '') + L('démo', 'demo', 'تجريبي');
     const r = K.appPage('fournisseurs', { title, subtitle: sub, body });
     const root = r && r.el ? r.el : document.querySelector('.dash-genpage');
     const q = root && root.querySelector && root.querySelector('[data-sp-q]');

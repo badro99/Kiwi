@@ -61,6 +61,9 @@
  *     termsFor(partyId) → jours de crédit du tiers : une dette est « pas
  *     encore échue » jusqu'à sa date + ce délai, « en retard » après.
  *   ageBuckets(rows, partyType, today, { termsFor }) : la même chose, pure.
+ *   settleDebts(rows, partyType) → [{ date, po, exp, amount, left, paid, returned }] :
+ *     la règle de règlement (sortie liée d'abord sur sa dette, puis les plus
+ *     anciennes), partagée par l'ancienneté et le reste par bon.
  *   owedView(partyType, balanceCents) → { who:'merchant'|'party'|'none', cents }
  *
  * Idempotence : (merchant, idem_key) est unique. Une requête rejouée (réseau
@@ -383,8 +386,40 @@ export async function partyStatement(env, merchant, partyType, partyId, opts) {
 export const AGE_KEYS = ['0-30', '31-60', '61-90', '90+'];
 export function ageIndex(days) { return days <= 30 ? 0 : days <= 60 ? 1 : days <= 90 ? 2 : 3; }
 
-export function ageBuckets(rows, partyType, today, opts) {
+/* Le règlement des dettes d'UN tiers, la règle unique de l'ancienneté et du
+ * reste par bon : une sortie liée (purchase_order_id, expense_id) règle d'abord
+ * la dette qui porte le même lien (un bon payé, une dépense payée avec elle) ;
+ * tout le reste solde les dettes les plus anciennes en premier.
+ *   rows : lignes VIVANTES d'un tiers (snake_case de D1 ou camelCase).
+ *   → [{ date, po, exp, amount, left, paid, returned }] dans l'ordre des dates. */
+export function settleDebts(rows, partyType) {
   const debtDir = partyType === 'customer' ? 'out' : 'in';
+  const pick = (r, a, b) => String((r[a] != null ? r[a] : r[b]) || '');
+  const list = (rows || []).slice().sort((a, b) => String(a.entry_date || a.date).localeCompare(String(b.entry_date || b.date))
+    || (Number(a.created_at || a.createdAt) - Number(b.created_at || b.createdAt)));
+  const debts = [], byLink = new Map();
+  for (const r of list) {
+    if (String(r.direction) !== debtDir) continue;
+    const amount = Number(r.amount_cents != null ? r.amount_cents : r.amountCents) || 0;
+    const d = { date: String(r.entry_date || r.date), po: pick(r, 'purchase_order_id', 'purchaseOrderId'), exp: pick(r, 'expense_id', 'expenseId'), amount, left: amount, paid: 0, returned: 0 };
+    debts.push(d);
+    for (const k of [d.po && 'po:' + d.po, d.exp && 'exp:' + d.exp]) if (k) { if (!byLink.has(k)) byLink.set(k, []); byLink.get(k).push(d); }
+  }
+  const take = (d, cents, kind) => { const u = Math.min(d.left, cents); d.left -= u; if (kind === 'return') d.returned += u; else d.paid += u; return u; };
+  const pool = [];
+  for (const r of list) {
+    if (String(r.direction) === debtDir) continue;
+    const kind = String(r.kind || '');
+    let rest = Number(r.amount_cents != null ? r.amount_cents : r.amountCents) || 0;
+    const po = pick(r, 'purchase_order_id', 'purchaseOrderId'), exp = pick(r, 'expense_id', 'expenseId');
+    for (const k of [po && 'po:' + po, exp && 'exp:' + exp]) for (const d of (k && byLink.get(k)) || []) rest -= take(d, rest, kind);
+    if (rest > 0) pool.push({ cents: rest, kind });
+  }
+  for (const c of pool) for (const d of debts) { if (!c.cents) break; c.cents -= take(d, c.cents, c.kind); }
+  return debts;
+}
+
+export function ageBuckets(rows, partyType, today, opts) {
   const termsFor = opts && typeof opts.termsFor === 'function' ? opts.termsFor : () => 0;
   const ref = Date.parse((validYmd(today) ? today : todayYmd()) + 'T00:00:00Z');
   const byParty = new Map();
@@ -397,19 +432,8 @@ export function ageBuckets(rows, partyType, today, opts) {
   let oldest = 0, notDue = 0, overdue = 0, oldestOverdue = 0;
   for (const [pid, list] of byParty) {
     const terms = Math.max(0, Math.round(Number(termsFor(pid)) || 0));
-    /* Tri stable : à date et instant égaux, l'ordre de lecture (rowid) tient. */
-    list.sort((a, b) => String(a.entry_date || a.date).localeCompare(String(b.entry_date || b.date)) || (Number(a.created_at || a.createdAt) - Number(b.created_at || b.createdAt)));
-    const debts = [];
-    let credit = 0;
-    for (const r of list) {
-      const amount = Number(r.amount_cents != null ? r.amount_cents : r.amountCents) || 0;
-      const dir = String(r.direction);
-      if (dir === debtDir) debts.push({ date: String(r.entry_date || r.date), left: amount });
-      else credit += amount;
-    }
-    for (const d of debts) {
-      const used = Math.min(d.left, credit);
-      d.left -= used; credit -= used;
+    /* Tri stable dans settleDebts : à date et instant égaux, l'ordre de lecture (rowid) tient. */
+    for (const d of settleDebts(list, partyType)) {
       if (d.left <= 0) continue;
       const days = Math.max(0, Math.floor((ref - Date.parse(d.date + 'T00:00:00Z')) / DAY));
       cents[ageIndex(days)] += d.left;
@@ -431,7 +455,7 @@ export async function ledgerAgeing(env, merchant, partyType, partyId, opts) {
   try {
     const one = partyId != null && partyId !== '';
     const rows = await env.DB.prepare(
-      `SELECT party_id, entry_date, created_at, direction, amount_cents FROM money_ledger
+      `SELECT party_id, entry_date, created_at, direction, kind, amount_cents, purchase_order_id, expense_id FROM money_ledger
         WHERE merchant = ? AND party_type = ?${one ? ' AND party_id = ?' : ''} AND ${LIVE}
         ORDER BY party_id, entry_date, created_at, rowid LIMIT 20000`
     ).bind(...(one ? [merchant, partyType, clean(partyId, 80)] : [merchant, partyType])).all();

@@ -561,6 +561,15 @@ const opsPost = async (cookie, id, action, payload, extra) => {
   assert.equal(age.overdueCents, 2500, 'a: 51 days old is 21 days late; b: no terms, late');
   assert.equal(age.oldestOverdueDays, 21);
   assert.equal(L.ageBuckets(rows, 'supplier', '2026-11-21').overdueCents, 3500, 'without terms every debt is due');
+  /* Une dépense payée avec elle-même ne reste jamais due : sa sortie règle sa dette d'abord. */
+  const exp = [
+    { party_id: 'c', entry_date: '2026-09-01', direction: 'in', kind: 'bill', amount_cents: 1000, created_at: 1 },
+    { party_id: 'c', entry_date: '2026-11-20', direction: 'in', kind: 'expense', amount_cents: 500, expense_id: 'e1', created_at: 2 },
+    { party_id: 'c', entry_date: '2026-11-20', direction: 'out', kind: 'expense-payment', amount_cents: 500, expense_id: 'e1', created_at: 3 },
+  ];
+  const ea = L.ageBuckets(exp, 'supplier', '2026-11-21');
+  assert.deepEqual(ea.buckets.map((b) => b.cents), [0, 0, 1000, 0], 'the old bill stays 81 days old; the paid expense is not due');
+  assert.equal(L.settleDebts(exp, 'supplier').find((d) => d.exp === 'e1').left, 0);
   const sup = await call(statementRoute.onRequestGet, `/api/suppliers/statement?merchant=${SHOP}&id=sup-derb-1`, owner);
   assert.ok(typeof sup.data.ageing.notDueCents === 'number' && typeof sup.data.ageing.overdueCents === 'number');
   ok('ageing by due date: terms_days splits not-yet-due from overdue');
@@ -653,9 +662,24 @@ const opsPost = async (cookie, id, action, payload, extra) => {
   assert.ok(tier.first.includes('Réservé au propriétaire'), 'a 403 reads as owner-only');
   assert.deepEqual(tier.toasts(), [], 'no error toast on a tier refusal');
   assert.ok(tier.rank.includes('data-sr-board'));
-  const desk = await run('reception', list);
-  assert.ok(desk.rank.includes('Réservé au propriétaire') && !desk.rank.includes('data-sr-board'), 'reception sees neither tab');
-  ok('page by role: owner gets the ledger, manager the ranking and an owner-only notice, a 403 never shows as an error');
+  for (const closed of ['reception', 'staff']) {
+    const desk = await run(closed, list);
+    for (const view of [desk.first, desk.owe, desk.rank]) {
+      assert.ok(view.includes('réservé au propriétaire et au gérant') && !view.includes('data-sr-board') && !view.includes('sp-tabs') && !view.includes('reste ouvert'), closed + ': one closed card, no tab row, no ranking');
+    }
+    assert.equal(desk.calls.length, 0, closed + ' never calls the server');
+  }
+  /* Le serveur aussi : un code d'employé (palier réception) ne lit pas le classement. */
+  const { onRequestGet: rankingGet } = await importFresh('functions/api/suppliers/ranking.js');
+  const SID_DESK = 'f'.repeat(32);
+  db.prepare('INSERT INTO session_tiers (sid, account_id, tier, staff_id, updated_ts) VALUES (?, ?, ?, ?, ?)').run(SID_DESK, 'acc-1', 'reception', 'm1', now);
+  const deskCookie = sessionCookie(await makeSession('acc-1', SECRET, 0, SID_DESK));
+  const refused = await rankingGet({ env, request: req(`/api/suppliers/ranking?merchant=${SHOP}`, deskCookie) });
+  assert.equal(refused.status, 403, 'a staff session is refused the ranking');
+  assert.equal((await refused.json()).error, 'manager-required');
+  const allowed = await rankingGet({ env, request: req(`/api/suppliers/ranking?merchant=${SHOP}`, ownerAsManager) });
+  assert.equal(allowed.status, 200, 'a manager session reads the ranking');
+  ok('page by role: owner gets the ledger, manager the ranking and an owner-only notice, staff and reception one closed card; the ranking route refuses a staff session');
 }
 
 if (process.exitCode) process.exit(process.exitCode);

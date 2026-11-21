@@ -26,7 +26,7 @@
  *     fournisseur : commandé, % reçu, % payé, reste dû, taux de retour, panier.
  */
 import { readDoc, mutateDoc } from './_doc-cas.js';
-import { ledgerEntryStatement, ledgerReady, relinkStatements, partyBalance, LIVE } from './_ledger.js';
+import { ledgerEntryStatement, ledgerReady, relinkStatements, partyBalance, settleDebts, LIVE } from './_ledger.js';
 
 const ID = /^[A-Za-z0-9_-]{3,80}$/;
 const clean = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n);
@@ -333,43 +333,29 @@ export async function orderBalances(env, merchant, supplierId) {
   let lines = [];
   try {
     const got = await env.DB.prepare(
-      `SELECT direction, kind, amount_cents, purchase_order_id, status FROM money_ledger
+      `SELECT entry_date, created_at, direction, kind, amount_cents, purchase_order_id, expense_id, status FROM money_ledger
         WHERE merchant = ? AND party_type = 'supplier' AND party_id = ? AND archived = 0 AND deleted_ts IS NULL AND internal = 0
         ORDER BY entry_date, created_at, rowid LIMIT 20000`
     ).bind(merchant, supplierId).all();
     lines = (got && got.results) || [];
   } catch (_) { lines = []; }
-  const debts = [], byPo = new Map(), paid = new Map(), pendingIn = new Map();
-  const add = (map, k, v) => map.set(k, (map.get(k) || 0) + v);
+  const pendingIn = new Map(), byPo = new Map();
   for (const r of lines) {
-    const po = String(r.purchase_order_id || ''), cents = Number(r.amount_cents) || 0;
-    if (r.status === 'pending') { if (po && r.direction === 'in') add(pendingIn, po, cents); continue; }
-    if (r.status !== 'posted' || r.direction !== 'in') continue;
-    const d = { po, left: cents };
-    debts.push(d);
-    if (po) { if (!byPo.has(po)) byPo.set(po, []); byPo.get(po).push(d); }
-  }
-  let pool = 0;
-  for (const r of lines) {
-    if (r.status !== 'posted' || r.direction !== 'out') continue;
     const po = String(r.purchase_order_id || '');
-    let rest = Number(r.amount_cents) || 0;
-    for (const d of (po && byPo.get(po)) || []) { const u = Math.min(d.left, rest); d.left -= u; rest -= u; }
-    if (r.kind !== 'return') add(paid, po, (Number(r.amount_cents) || 0) - rest);
-    pool += rest;
+    if (r.status === 'pending' && po && r.direction === 'in') pendingIn.set(po, (pendingIn.get(po) || 0) + (Number(r.amount_cents) || 0));
   }
-  for (const d of debts) {
-    if (!pool) break;
-    const u = Math.min(d.left, pool);
-    d.left -= u; pool -= u;
-    if (d.po) add(paid, d.po, u);
+  /* La règle de l'ancienneté (_ledger.js › settleDebts), sur les lignes vivantes. */
+  for (const d of settleDebts(lines.filter((r) => r.status === 'posted'), 'supplier')) {
+    if (!d.po) continue;
+    const acc = byPo.get(d.po) || { owed: 0, due: 0, paid: 0 };
+    acc.owed += d.amount; acc.due += d.left; acc.paid += d.paid;
+    byPo.set(d.po, acc);
   }
   return rows.map((r) => {
     const id = String(r.id);
     const received = Math.max(0, (Number(r.received) || 0) - (Number(r.returned) || 0));
-    const owed = (byPo.get(id) || []).length;
-    const due = (byPo.get(id) || []).reduce((sum, d) => sum + d.left, 0);
-    const paidCents = paid.get(id) || 0, pendingCents = pendingIn.get(id) || 0;
+    const acc = byPo.get(id) || { owed: 0, due: 0, paid: 0 };
+    const owed = acc.owed, due = acc.due, paidCents = acc.paid, pendingCents = pendingIn.get(id) || 0;
     return { id, number: String(r.number), status: String(r.status), totalCents: Number(r.total_cents) || 0,
       receivedCents: received, paidCents, dueCents: due, pendingCents,
       payState: !received ? 'none' : !owed && pendingCents ? 'pending' : due === 0 ? 'paid' : paidCents > 0 ? 'partial' : 'unpaid',

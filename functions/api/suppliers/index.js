@@ -36,7 +36,7 @@ export async function onRequestGet({ request, env }) {
   let ledgerRows = [];
   try {
     const got = await env.DB.prepare(
-      `SELECT party_id, entry_date, created_at, direction, amount_cents FROM money_ledger
+      `SELECT party_id, entry_date, created_at, direction, kind, amount_cents, purchase_order_id, expense_id FROM money_ledger
         WHERE merchant = ? AND party_type = 'supplier' AND ${LIVE} ORDER BY party_id, entry_date, created_at, rowid LIMIT 20000`
     ).bind(merchant).all();
     ledgerRows = (got && got.results) || [];

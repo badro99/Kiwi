@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { fixture } from './server-money-fixture.mjs';
 import { onRequestGet as rankingRoute, rankSuppliers, withPrevious } from '../functions/api/suppliers/ranking.js';
-import { makeSession, SESS_COOKIE } from '../functions/auth/_lib.js';
+import { makeSession, SESS_COOKIE, operatorToken, operatorIdToken } from '../functions/auth/_lib.js';
 
 const DAY = 86400000, now = Date.UTC(2026, 10, 20, 12);
 const products = [
@@ -114,6 +114,17 @@ assert.equal(ok.body.suppliers.find((s) => s.id === 'sup_nord').revenue, 250, 'l
 assert.equal(ok.body.suppliers.find((s) => s.id === 'sup_nord').prevRank, 1, 'la route donne la place d\'avant');
 assert.equal(ok.body.salesRead, 3, 'salesRead compte les ventes de la période');
 assert.equal((await get(`merchant=${f.merchant}`, '')).status, 403, 'sans session : refusé');
+/* Le palier de la session : le gérant lit le classement, la réception (code
+   d'un employé) non ; un opérateur oui. Le tableau de bord ne décide pas seul. */
+const tierCookie = async (sid, tier) => {
+  f.sql.prepare('INSERT INTO session_tiers (sid, account_id, tier, staff_id, updated_ts) VALUES (?, ?, ?, ?, ?)').run(sid, 'money-owner', tier, 'st-' + tier, t);
+  return `${SESS_COOKIE}=${await makeSession('money-owner', f.env.AUTH_SECRET, 0, sid)}`;
+};
+assert.equal((await get(`merchant=${f.merchant}&days=30`, await tierCookie('d'.repeat(32), 'manager'))).status, 200, 'un gérant lit le classement');
+const staff = await get(`merchant=${f.merchant}&days=30`, await tierCookie('e'.repeat(32), 'reception'));
+assert.deepEqual([staff.status, staff.body.error, staff.body.suppliers], [403, 'manager-required', undefined], 'un code d\'employé ne lit ni marges ni prix d\'achat');
+const op = `kiwi_op=${await operatorToken(f.env.AUTH_SECRET)}; kiwi_op_id=${await operatorIdToken(f.env.AUTH_SECRET, 'money-operator')}`;
+assert.equal((await get(`merchant=${f.merchant}&days=30`, op)).status, 200, 'un opérateur reste admis');
 const foreign = await get('merchant=nobody-else', owner);
 assert.notEqual(foreign.body.merchant, 'nobody-else', 'une boutique qui n\'est pas la sienne n\'est jamais lue : le slug revient à la sienne');
 f.close();
