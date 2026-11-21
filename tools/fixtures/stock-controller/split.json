@@ -378,6 +378,22 @@
     {
       "before": "    'assets/stock/catalog.js?v=11',\n",
       "after": "    'assets/stock/catalog.js?v=11',\n    'assets/stock/suppliers.js?v=1',\n"
+    },
+    {
+      "before": "      rsStaff: 'Repas équipe', rsOther: 'Autre perte', rsLoss: 'Perte', rsReversal: 'Annulation',\n",
+      "after": "      rsStaff: 'Repas équipe', rsVol: 'Vol', optVol: 'Vol', rsOther: 'Autre perte', rsLoss: 'Perte', rsReversal: 'Annulation',\n"
+    },
+    {
+      "before": "      rsStaff: 'Staff meal', rsOther: 'Other loss', rsLoss: 'Loss', rsReversal: 'Cancellation',\n",
+      "after": "      rsStaff: 'Staff meal', rsVol: 'Theft', optVol: 'Theft', rsOther: 'Other loss', rsLoss: 'Loss', rsReversal: 'Cancellation',\n"
+    },
+    {
+      "before": "      rsStaff: 'وجبة الفريق', rsOther: 'خسارة أخرى', rsLoss: 'خسارة', rsReversal: 'إلغاء',\n",
+      "after": "      rsStaff: 'وجبة الفريق', rsVol: 'سرقة', optVol: 'سرقة', rsOther: 'خسارة أخرى', rsLoss: 'خسارة', rsReversal: 'إلغاء',\n"
+    },
+    {
+      "before": "'repas-equipe': 'rsStaff', 'staff-meal': 'rsStaff', autre: 'rsOther' }[code];\n",
+      "after": "'repas-equipe': 'rsStaff', 'staff-meal': 'rsStaff', vol: 'rsVol', theft: 'rsVol', autre: 'rsOther' }[code];\n"
     }
   ],
   "legacyBoundaries": {
@@ -494,6 +510,16 @@
       {
         "before": "      } else {\n        // Image scan / photo — repli sur la table pour l'instant (Commit 1)\n        setTimeout(() => {\n          stage.innerHTML = renderRealReceiptReview({ supplier: null });\n          wireScanReview();\n        }, 800);\n",
         "after": "      } else {\n        try { await readPhoto(await S.stockPhoto.stPhotoDataUrl(file)); } catch (e) {\n          /* Dire pourquoi : un format que le navigateur n'ouvre pas, une photo que le modèle n'a pas lue, ou le service indisponible. */\n          const why = e && (e.name === 'EncodingError' || /^heif-/.test(e.message || '')) ? 'mScanPhotoFormat' : e && e.message === 'unparsed' ? 'mScanPhotoUnread' : 'mScanFailFallback';\n          window.Kiwi.toast?.(t(why), { type: 'warn' });\n          stage.innerHTML = renderRealReceiptReview({ supplier: null }); wireScanReview();\n        }\n"
+      }
+    ],
+    "assets/stock/loss.js": [
+      {
+        "before": "            ${reasonPill('repas-equipe', ct('rsStaff'))}\n",
+        "after": "            ${reasonPill('repas-equipe', ct('rsStaff'))}\n            ${reasonPill('vol', ct('rsVol'))}\n"
+      },
+      {
+        "before": "              <option value=\"repas-equipe\"${prefillReason === 'repas-equipe' ? ' selected' : ''}>${esc(ct('optStaff'))}</option>\n",
+        "after": "              <option value=\"repas-equipe\"${prefillReason === 'repas-equipe' ? ' selected' : ''}>${esc(ct('optStaff'))}</option>\n              <option value=\"vol\"${prefillReason === 'vol' ? ' selected' : ''}>${esc(ct('optVol'))}</option>\n"
       }
     ]
   }

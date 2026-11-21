@@ -435,8 +435,8 @@ export async function onRequestPost({ request, env }) {
           ).bind(
             movId, merchant, itemId, variantId, locationId, qtyMilli,
             unitCostCents, countId, lineNote, reviewerName,
-            nowMs, merchant, JSON.stringify(Object.assign({ countId, unitId: row.store_id || '', lineKey: line.key || itemId },
-              lossReason(line.reason) ? { lossReason: lossReason(line.reason) } : {})), nowMs
+            nowMs, merchant, JSON.stringify({ countId, unitId: row.store_id || '', lineKey: line.key || itemId,
+              ...(lossReason(line.reason) ? { lossReason: lossReason(line.reason) } : {}) }), nowMs
           )
         );
       }

@@ -672,8 +672,8 @@
     "sha": "5a6eafc66ee443ba"
   },
   "assets/finance.js": {
-    "v": "18",
-    "sha": "f36190cafcd39223"
+    "v": "20",
+    "sha": "d7a44661e303297d"
   },
   "assets/floorplan-core.js": {
     "v": "2061",
@@ -1500,8 +1500,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2244",
-    "sha": "01dd71c089a57928"
+    "v": "2245",
+    "sha": "8c82a89686235915"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1540,8 +1540,8 @@
     "sha": "710fafda2b7f14c7"
   },
   "assets/pages-pro/cost-variance.js": {
-    "v": "9",
-    "sha": "6e4da2c4b270491c"
+    "v": "11",
+    "sha": "63874888a89fda5c"
   },
   "assets/pages-pro/credit-book.js": {
     "v": "3",
@@ -1592,8 +1592,8 @@
     "sha": "a042b4c42a697836"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "287",
-    "sha": "e373cf5e7e664c33"
+    "v": "288",
+    "sha": "55cc419acd36da30"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

@@ -8,8 +8,10 @@
  * mouvements et ses inventaires ; le résumé part en brouillon WhatsApp
  * (wa.me, rien à payer) ou en CSV.
  *
- * Monté par assets/finance.js dans un `[data-costvar-slot]` (onglet « Coût
- * réel » d'Analyse du menu, bas de la page Marges ailleurs), chargé au premier
+ * Monté par assets/finance.js dans un `[data-costvar-slot]` (au bas de l'onglet
+ * Coût d'Analyse du menu, ou de sa vue d'ensemble quand cet onglet n'existe
+ * pas ; jamais dans Ventes, qui ne parle que d'argent encaissé ; bas de la
+ * page Marges ailleurs), ou en page à part par costvar-open, chargé au premier
  * usage par LAZY_SECTIONS (assets/pages-pro.js). Une session de démonstration
  * voit un exemple ; un vrai commerçant ne voit que ses chiffres, ou ce qui
  * manque pour les calculer.
@@ -340,7 +342,7 @@
     try { return (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug()) || (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && (window.KiwiVenue.getCurrentVenueData() || {}).slug) || ''; } catch (_) { return ''; }
   }
   const keyOf = (m) => [m, S.days, S.scope].join('|');
-  const toast = (msg, type) => { try { window.Kiwi.toast(msg, { type: type || 'info' }); } catch (_) {} };
+  const toast = (msg, opts) => { try { window.Kiwi.toast(msg, Object.assign({ type: 'info' }, opts)); } catch (_) {} };
 
   async function load(m) {
     const key = keyOf(m);
@@ -363,9 +365,9 @@
   /* ── Dessin ───────────────────────────────────────────────────────────── */
   function css() {
     if (document.getElementById('cv-css')) return;
-    const st = document.createElement('style');
-    st.id = 'cv-css';
-    st.textContent = `
+    const style = document.createElement('style');
+    style.id = 'cv-css';
+    style.textContent = `
 .cv{display:grid;gap:16px;margin-top:16px;min-width:0}
 .cv-head{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
 .cv-title{font-size:17px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
@@ -441,7 +443,7 @@
 .cv-skel.sm{height:120px}
 @keyframes cvSk{0%{background-position:100% 0}100%{background-position:-100% 0}}
 @media (prefers-reduced-motion:reduce){.cv-skel{animation:none}}`;
-    document.head.appendChild(st);
+    document.head.appendChild(style);
   }
 
   function dayLabel(ts, zone, time) {
@@ -772,7 +774,7 @@
 
   handlers['costvar-mount'] = (slot, opts) => mount(slot && slot.nodeType === 1 ? slot : null, opts || {});
   /* Le panneau en page à part (lien direct, recherche) : même contenu que
-     l'onglet « Coût réel » d'Analyse du menu et le bas de Marges. */
+     le bas de l'onglet Coût d'Analyse du menu et le bas de Marges. */
   handlers['costvar-open'] = () => {
     const c = t();
     if (!window.Kiwi.appPage) return;
@@ -803,7 +805,7 @@
     const go = el && el.dataset && el.dataset.go;
     const list = (GO[trade()] || {})[go] || [];
     const name = list.find((n) => typeof handlers[n] === 'function');
-    if (name) handlers[name](el); else toast(t().goMissing, 'warn');
+    if (name) handlers[name](el); else toast(t().goMissing, { type: 'warn' });
   };
   handlers['costvar-item'] = (el) => { openItem(el).catch(() => {}); };
   handlers['costvar-wa'] = () => {
@@ -829,7 +831,7 @@
     const clear = !!(el.dataset && el.dataset.clear);
     const raw = clear ? null : String(input && input.value || '').replace(',', '.').trim();
     const value = clear || raw === '' ? null : Number(raw);
-    if (value !== null && !(value >= 1 && value <= 99)) { toast(c.targetBad, 'warn'); if (input) input.focus(); return; }
+    if (value !== null && !(value >= 1 && value <= 99)) { toast(c.targetBad, { type: 'warn' }); if (input) input.focus(); return; }
     const m = merchant();
     if (!m) return;
     el.disabled = true;
@@ -837,12 +839,12 @@
       const r = await fetch('/api/cost-variance', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ merchant: m, action: 'target', minMarginPct: value }) });
       if (!r.ok) throw new Error('target');
-      toast(c.targetSaved, 'success');
+      toast(c.targetSaved, { type: 'success' });
       [...cache.keys()].forEach((k) => { if (k.startsWith(m + '|')) cache.delete(k); });
       remount();
     } catch (_) {
       el.disabled = false;
-      toast(c.targetFail, 'error');
+      toast(c.targetFail, { type: 'error' });
     }
   };
 
