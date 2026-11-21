@@ -1,6 +1,6 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=224';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=139';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=139';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=225';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=140';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=140';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
@@ -21,8 +21,16 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
       (c && digits.length >= 2 && c.phone.replace(/\D/g, '').includes(digits));
   }
 
-  function renderEchanges() {
+  /* Chaque toucher (cocher une pièce, choisir un motif, changer la quantité)
+     redessine toute la page : le conteneur qui défile était remplacé et la
+     vendeuse remontait en haut, loin de la pièce qu'elle venait de toucher
+     (Vogue, 21 nov. 2026). On garde la position ; seul un changement de jour
+     repart du haut. */
+  const RET_SCROLLERS = ['.mz-ret', '.mz-ret-scroll'];
+  function renderEchanges(opts) {
     const panel = $('[data-mz-panel="echanges"]', root);
+    const keepScroll = opts && opts.top ? RET_SCROLLERS.map(() => 0)
+      : RET_SCROLLERS.map((sel) => { const el = $(sel, panel); return el ? el.scrollTop : 0; });
     const q = state.retQuery;
     /* Une vente sortie des livres ne se retourne pas : elle n'a plus eu lieu, sa
        marchandise est déjà revenue en stock, et l'échanger créerait un avoir
@@ -63,6 +71,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
             : `<div class="mz-empty">Scannez le ticket de la cliente, ou tapez son numéro de téléphone.</div>`)}
         </div></div>
       </div>`;
+    RET_SCROLLERS.forEach((sel, i) => { const el = $(sel, panel); if (el && keepScroll[i]) el.scrollTop = keepScroll[i]; });
     $('#mz-ret-q', panel).oninput = (e) => {
       state.retQuery = e.target.value;
       renderEchanges(); icons();
@@ -71,11 +80,11 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
     $('#mz-ret-date', panel).onchange = (e) => {
       state.retDate = String(e.target.value || todayKey);
       state.ret = null;
-      renderEchanges(); icons();
+      renderEchanges({ top: true }); icons();
     };
     panel.onclick = (e) => {
       const dayB = e.target.closest('[data-mz-ret-day]');
-      if (dayB) { state.retDate = dayB.dataset.mzRetDay; state.ret = null; renderEchanges(); icons(); return; }
+      if (dayB) { state.retDate = dayB.dataset.mzRetDay; state.ret = null; renderEchanges({ top: true }); icons(); return; }
       const avB = e.target.closest('[data-mz-av]');
       if (avB) { openVoucher(AVOIRS.find((a) => a.code === avB.dataset.mzAv), { mode: 'view' }); return; }
       const qtyB = e.target.closest('[data-mz-ret-qty]');
