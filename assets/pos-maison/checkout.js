@@ -1,6 +1,7 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=227';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=142';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=142';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=228';
+import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=143';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=143';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
@@ -386,33 +387,13 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
     renderEchanges(); icons();
   }
 
-  /* Plusieurs pièces rendues d'un même ticket : l'échange les prend une à une,
-     dans l'ordre du ticket, chacune avec son remplacement et son règlement. Le
-     chemin d'une pièce reste celui qui existait (stock, avoir, encaissement) ;
-     on ne fait que l'enchaîner. Une ligne rendue en 2 exemplaires compte 2. */
-  function exchangeQueue(ret, sale) {
-    const q = [];
-    Array.from(ret.picks).sort((a, b) => a - b).forEach((i) => {
-      const n = pickedQty(ret, i, sale.lines[i]);
-      for (let k = 0; k < n; k++) q.push(i);
-    });
-    return q;
-  }
-  function nextExchange(ex) {
-    const rest = (ex && ex.queue) || [];
-    return rest.length ? Object.assign({}, ex, { idx: rest[0], queue: rest.slice(1), step: (ex.step || 1) + 1 }) : null;
-  }
-  const exchStartToast = (sale, n) => (n > 1
-    ? `Échange ${sale.id}, ${n} pièces, choisissez le remplacement de la première`
-    : `Échange ${sale.id}, choisissez l'article de remplacement dans la grille`);
-
   function doExchange() {
     const ret = state.ret;
     if (!ret || !ret.picks.size) return;
     const sale = findSale(ret.saleId);
     if (!sale) return;
     if (sale.kind === 'acompte') { toast('Retour suspendu sur un acompte'); return; }
-    const queue = exchangeQueue(ret, sale);
+    const queue = exchangeQueue(ret.picks, (i) => pickedQty(ret, i, sale.lines[i]));
     if (!queue.length) return;
     /* Le motif choisi sur la fiche de retour suit l'échange jusqu'au registre :
        sans lui, tout échange y était classé « Echange », c'est-à-dire rien —
@@ -421,7 +402,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
     state.exchange = { saleId: ret.saleId, idx: queue[0], qty: 1, motif: ret.motif || '', queue: queue.slice(1), step: 1, total: queue.length };
     state.ret = null;
     switchView('vente');
-    toast(exchStartToast(sale, queue.length));
+    toast(exchStartToast(sale.id, queue.length));
   }
 
   async function doAvoir() {

@@ -1,6 +1,7 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=238';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=238';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=342';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=240';
+import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=240';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=344';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=5';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
@@ -11,6 +12,10 @@ import { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=13'
 import { bqDeliveryCard } from './delivery-card.js?v=10';
 import { receiptPrinterReady, receiptDocInput, waReceiptTotals } from './receipt-doc.js?v=2';
 const M = globalThis.KiwiMoney;
+/* L'échange groupé (essai Amira Boutique) se charge à part : il importe la
+   caisse, la caisse ne l'importe pas, pour ne pas allonger le cycle. */
+let CX = null;
+import('./exch-combined.js?v=2').then((m) => { CX = m; }).catch(() => {});
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */
@@ -236,33 +241,15 @@ const M = globalThis.KiwiMoney;
     renderEchanges(); icons();
   }
 
-  /* Plusieurs pièces rendues d'un même ticket : l'échange les prend une à une,
-     dans l'ordre du ticket, chacune avec son remplacement et son règlement. Le
-     chemin d'une pièce reste celui qui existait (stock, avoir, encaissement) ;
-     on ne fait que l'enchaîner. Une ligne rendue en 2 exemplaires compte 2. */
-  function exchangeQueue(ret, sale) {
-    const q = [];
-    Array.from(ret.picks).sort((a, b) => a - b).forEach((i) => {
-      const n = pickedQty(ret, i, sale.lines[i]);
-      for (let k = 0; k < n; k++) q.push(i);
-    });
-    return q;
-  }
-  function nextExchange(ex) {
-    const rest = (ex && ex.queue) || [];
-    return rest.length ? Object.assign({}, ex, { idx: rest[0], queue: rest.slice(1), step: (ex.step || 1) + 1 }) : null;
-  }
-  const exchStartToast = (sale, n) => (n > 1
-    ? `Échange ${sale.id}, ${n} pièces, choisissez le remplacement de la première`
-    : `Échange ${sale.id}, choisissez l'article de remplacement dans la grille`);
-
   function doExchange() {
     const ret = state.ret;
     if (!ret || !ret.picks.size) return;
     const sale = findSale(ret.saleId);
     if (!sale) return;
     if (sale.kind === 'acompte') { toast('Retour suspendu sur un acompte'); return; }
-    const queue = exchangeQueue(ret, sale);
+    /* Essai Amira Boutique : un seul écran, un seul total (exch-combined.js). */
+    if (CX && CX.combinedOn()) { CX.startCombined(ret, sale, (i) => pickedQty(ret, i, sale.lines[i])); return; }
+    const queue = exchangeQueue(ret.picks, (i) => pickedQty(ret, i, sale.lines[i]));
     if (!queue.length) return;
     /* Le motif choisi sur la fiche de retour suit l'échange jusqu'au registre :
        sans lui, tout échange y était classé « Echange », c'est-à-dire rien —
@@ -270,7 +257,7 @@ const M = globalThis.KiwiMoney;
        pourquoi la pièce était revenue. */
     ticketOwner.startReturn(state, { saleId: ret.saleId, idx: queue[0], qty: 1, motif: ret.motif || '', queue: queue.slice(1), step: 1, total: queue.length });
     switchView('vente');
-    toast(exchStartToast(sale, queue.length));
+    toast(exchStartToast(sale.id, queue.length));
   }
 
   async function doAvoir() {
@@ -420,6 +407,7 @@ const M = globalThis.KiwiMoney;
   function openExchSummary(newPid, newSize, newColor) {
     const ex = state.exchange;
     if (!ex) return;
+    if (ex.combined) { if (CX) CX.addCombinedPick(newPid, newSize, newColor); return; }
     const sale = findSale(ex.saleId);
     const ln = sale.lines[ex.idx];
     /* L'article RENDU peut ne plus être au catalogue (le journal couvre la
@@ -1926,4 +1914,4 @@ const M = globalThis.KiwiMoney;
     if (!intake.open) { intake.open = true; intakeReset(); }
     intakeTake(raw);
   }
-export { armScanCapture, bqReal, catDB, disarmScanCapture, fmtNum, injectInvCss, installWedgeScanner, invScanHandle, lineAvailableQty, lineReturnedQty, normScan, openExchSummary, openPay, openScannerTest, openVoucher, renderAcomptes, renderEchanges, renderNet, syncNetworkState, toggleOffline };
+export { armScanCapture, bqReal, catDB, disarmScanCapture, fmtNum, injectInvCss, installWedgeScanner, invScanHandle, lineAvailableQty, lineReturnedQty, markLineReturned, normScan, openExchSummary, openPay, openScannerTest, openVoucher, paidAmount, renderAcomptes, renderEchanges, renderNet, syncNetworkState, toggleOffline };
