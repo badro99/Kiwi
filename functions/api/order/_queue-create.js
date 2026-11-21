@@ -148,8 +148,8 @@ export async function createFloorTicket(ctx) {
     try {
       row = await env.DB.prepare(
         `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
-                             created_ts, updated_ts, server_name, menu_rev, priced_ts, client_ref, session_id)
-         SELECT ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, ?, ?, ?
+                             created_ts, updated_ts, server_name, menu_rev, priced_ts, client_ref, session_id, channel)
+         SELECT ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, ?, ?, ?, 'serveur'
          WHERE ? IS NULL OR EXISTS (SELECT 1 FROM table_sessions
            WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')
          RETURNING number`

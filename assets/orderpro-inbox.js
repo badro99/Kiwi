@@ -579,6 +579,8 @@
         // Une commande sur table déjà réglée ou dont la session est close est achevée
         if (o.mode === 'table') {
           if (o.paid && (status === 'accepted' || status === 'pending')) return false;
+          // Prise par un serveur : elle vit sur le plan de salle, pas ici (Browse, 21 nov.)
+          if (o.staff) return false;
           if (o.session && closedSet[String(o.session)]) return false;
         }
         return true;

@@ -187,7 +187,11 @@ export async function pollQueue({ env, url, merchant, role, service }) {
       total: r.total, lines, status: r.status,
       // Absent (base pas encore migrée) ⇒ 'kiwi' : une commande sans canal est
       // une commande du relais d'origine, c'est ce qu'elle a toujours été.
-      channel: r.channel || 'kiwi',
+      /* `serveur` = envoyée par l'application serveur. Elle reste `kiwi` pour
+       * tout le reste (réf. « HO-16 », fusion sur la table à la caisse) ;
+       * `staff` la tient hors de la liste « Commandes en ligne ». */
+      channel: r.channel && r.channel !== 'serveur' ? r.channel : 'kiwi',
+      ...(r.channel === 'serveur' ? { staff: true } : {}),
       ref: r.ext_ref || '',
       customer,
       session: r.session_id || '',

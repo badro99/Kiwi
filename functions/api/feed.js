@@ -556,7 +556,8 @@ export async function onRequestGet({ request, env }) {
      * their source. Takeaway receipts are self-identifying in their frozen
      * label. This enriches old rows without rewriting financial history. */
     const storedChannel = String(sale.channel || '').toLowerCase();
-    const orderChannel = String(order && order.channel || '').toLowerCase();
+    const rawOrderChannel = String(order && order.channel || '').toLowerCase();
+    const orderChannel = rawOrderChannel === 'serveur' ? '' : rawOrderChannel; // as before the tag existed
     const saleLabel = String(sale.label || '').toLowerCase();
     sale.channel = storedChannel || (visit
       ? (orderChannel === 'terrace' ? 'terrace' : 'dining')
