@@ -13,6 +13,18 @@
 // La preuve vaut un service (16 h), plus trois jours pour une vente restée dans
 // la file hors ligne. Jamais un code : seulement l'identité que le vérificateur
 // a rendue.
+//
+// · Un commerce où une seule caissière encaisse pour plusieurs vendeurs
+//   (kiwi-admin « Vendeur choisi à l'encaissement », features.sellerPicker, avec
+//   sellerCommissions) : la caisse envoie `body.seller.member`, l'id d'une fiche
+//   Équipe choisie à l'encaissement. Choix du propriétaire, en connaissance de
+//   cause : c'est la caissière qui désigne le vendeur. Le serveur n'accepte
+//   qu'une fiche active de CE commerce et prend le nom sur la fiche, jamais dans
+//   la requête. Dans ce mode, une vente sans vendeur choisi reste sans vendeur :
+//   la preuve de la caissière est ignorée, sinon chaque ticket oublié lui
+//   reviendrait.
+
+import { memberName } from './_commissions.js';
 
 const enc = new TextEncoder();
 const SHIFT_MS = 16 * 3600000;
@@ -67,11 +79,39 @@ export async function readTillSellerProof(token, secret, merchant, now = Date.no
   return name ? { id: String(body.id).slice(0, 96), name } : null;
 }
 
-export async function sellerOf(employee, body, secret, merchant, now = Date.now()) {
+/* Les fiches Équipe actives du commerce, réduites à l'id, au nom et au taux. */
+export async function readTeamMembers(env, merchant) {
+  try {
+    const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'").bind(merchant).first();
+    const doc = JSON.parse((row && row.data) || '{}');
+    const removed = new Set((Array.isArray(doc.removed) ? doc.removed : []).map((r) => String((r && r.id) || '')).filter(Boolean));
+    return (Array.isArray(doc.members) ? doc.members : []).slice(0, 500)
+      .filter((m) => m && typeof m === 'object' && !removed.has(String(m.id || '')))
+      .map((m) => ({ id: String(m.id || ''), firstName: m.firstName, lastName: m.lastName, name: m.name, commissionRate: m.commissionRate, deleted: m.deleted === true }));
+  } catch (_) { return []; }
+}
+
+export async function sellerFeatures(env, merchant) {
+  try {
+    const row = await env.DB.prepare('SELECT features FROM merchant_config WHERE merchant = ?').bind(merchant).first();
+    const f = JSON.parse((row && row.features) || '{}') || {};
+    return { commissions: f.sellerCommissions === true, picker: f.sellerCommissions === true && f.sellerPicker === true };
+  } catch (_) { return { commissions: false, picker: false }; }
+}
+
+export async function sellerOf(employee, body, env, merchant, now = Date.now()) {
   if (employee && employee.session && employee.session.staffId) {
     return { id: String(employee.session.staffId).slice(0, 96), name: '' };
   }
   const s = body && body.seller;
-  if (!s || typeof s !== 'object' || typeof s.proof !== 'string') return null;
-  try { return await readTillSellerProof(s.proof, secret, merchant, now); } catch (_) { return null; }
+  if (!s || typeof s !== 'object' || !env) return null;
+  try {
+    if ((await sellerFeatures(env, merchant)).picker) {
+      const id = typeof s.member === 'string' ? s.member.slice(0, 96) : '';
+      const m = id ? (await readTeamMembers(env, merchant)).find((x) => x.id === id && !x.deleted) : null;
+      const name = m ? cleanSellerName(memberName(m)) : '';
+      return m && name ? { id, name } : null;
+    }
+    return typeof s.proof === 'string' ? await readTillSellerProof(s.proof, env.AUTH_SECRET, merchant, now) : null;
+  } catch (_) { return null; }
 }

@@ -16,6 +16,8 @@ import { makeSession, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/a
 import { businessBoundary, businessDate } from '../functions/api/_business-day.js';
 import { sellerCommissionsOn } from '../assets/planning/seller-commissions.js';
 import { sellerDayOn, sellerDayRows } from '../assets/pos-boutique/seller-day.js';
+import { sellerPickOn, sellerStripHtml, loadSellers, cachedSellers } from '../assets/pos-boutique/seller-pick.js';
+import * as sellersRoute from '../functions/api/sellers.js';
 
 let controls = 0;
 const check = (label, value, detail) => { assert.ok(value, label + (detail ? '\n    ' + detail : '')); controls++; console.log('  ✓ ' + label); };
@@ -64,21 +66,21 @@ check('name keys fold accents, case and spaces', nameKey('  Aïcha   BENALI ') =
 console.log('■ 2. Attribution');
 const KEY = 'seller-proof-test-secret';
 const proof = await tillSellerProof(KEY, 'shop-a', { id: 'pin-1', name: ' Salma  Idrissi ' });
-check('a till sale carries the person /api/pin/verify signed for', JSON.stringify(await sellerOf(null, { seller: { proof } }, KEY, 'shop-a')) === JSON.stringify({ id: 'pin-1', name: 'Salma Idrissi' }));
-check('a name typed into the request is ignored: no proof, no seller', await sellerOf(null, { seller: { id: 'pin-1', name: 'Salma Idrissi' } }, KEY, 'shop-a') === null);
+check('a till sale carries the person /api/pin/verify signed for', JSON.stringify(await sellerOf(null, { seller: { proof } }, { AUTH_SECRET: KEY }, 'shop-a')) === JSON.stringify({ id: 'pin-1', name: 'Salma Idrissi' }));
+check('a name typed into the request is ignored: no proof, no seller', await sellerOf(null, { seller: { id: 'pin-1', name: 'Salma Idrissi' } }, { AUTH_SECRET: KEY }, 'shop-a') === null);
 const [payload, sig] = proof.split('.');
 const forged = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(payload, 'base64url').toString()), name: 'Rania Tazi' })).toString('base64url') + '.' + sig;
-check('a proof whose name was edited is refused', await sellerOf(null, { seller: { proof: forged } }, KEY, 'shop-a') === null);
-check('a proof from another store or another key is refused', await sellerOf(null, { seller: { proof } }, KEY, 'shop-b') === null && await sellerOf(null, { seller: { proof } }, 'other-key', 'shop-a') === null);
+check('a proof whose name was edited is refused', await sellerOf(null, { seller: { proof: forged } }, { AUTH_SECRET: KEY }, 'shop-a') === null);
+check('a proof from another store or another key is refused', await sellerOf(null, { seller: { proof } }, { AUTH_SECRET: KEY }, 'shop-b') === null && await sellerOf(null, { seller: { proof } }, { AUTH_SECRET: 'other-key' }, 'shop-a') === null);
 check('a proof lives one shift plus three days of offline queue, then expires', await readTillSellerProof(proof, KEY, 'shop-a', Date.now() + 80 * 3600000) && !(await readTillSellerProof(proof, KEY, 'shop-a', Date.now() + 90 * 3600000)));
-check('the employee app wins over anything the body says', (await sellerOf({ session: { staffId: 'm-9' } }, { seller: { proof } }, KEY, 'shop-a')).id === 'm-9');
+check('the employee app wins over anything the body says', (await sellerOf({ session: { staffId: 'm-9' } }, { seller: { proof } }, { AUTH_SECRET: KEY }, 'shop-a')).id === 'm-9');
 check('no proof is signed without a person', await tillSellerProof(KEY, 'shop-a', { id: 'x', name: '  ' }) === '' && await tillSellerProof(KEY, 'shop-a', null) === '');
 
 /* ── 3. La base : la vente garde son vendeur, la route rend la période ─────── */
 console.log('■ 3. Route');
 const SECRET = 'seller-commissions-test-secret';
 const M = 'synthetic-boutique';
-function world(features) {
+function world(features, team = members) {
   const db = new DatabaseSync(':memory:');
   db.exec(read('schema.sql'));
   const prepare = (query) => {
@@ -94,7 +96,7 @@ function world(features) {
   const DB = { prepare, batch: async (list) => { db.exec('BEGIN IMMEDIATE'); try { const out = []; for (const s of list) out.push(await s.run()); db.exec('COMMIT'); return out; } catch (e) { db.exec('ROLLBACK'); throw e; } } };
   db.prepare('INSERT INTO accounts (id,email,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?)').run('acc-owner', 'owner@example.invalid', 'Synthetic', 's', 'h', 1);
   db.prepare('INSERT INTO merchant_config (merchant, features, name, account_id, type, updated_ts) VALUES (?,?,?,?,?,?)').run(M, JSON.stringify(features), 'Synthetic', 'acc-owner', 'boutique', 1);
-  db.prepare("INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'team', ?, 1, 1)").run(M, JSON.stringify({ members, removed: [{ id: 'm-gone' }] }));
+  db.prepare("INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'team', ?, 1, 1)").run(M, JSON.stringify({ members: team, removed: [{ id: 'm-gone' }] }));
   return { db, env: { DB, AUTH_SECRET: SECRET } };
 }
 const w = world({ sellerCommissions: true });
@@ -104,8 +106,8 @@ const zone = 'Africa/Casablanca';
 const day = businessDate(Date.now(), 5, zone);
 const at = businessBoundary(day, 5, zone) + 3 * 3600000;
 const proofFor = (id, name) => tillSellerProof(SECRET, M, { id, name });
-async function pay(id, cents, seller) {
-  const res = await sale.onRequestPost({ env: w.env, request: new Request('https://kiwi.test/api/sale', { method: 'POST',
+async function pay(id, cents, seller, env = w.env) {
+  const res = await sale.onRequestPost({ env, request: new Request('https://kiwi.test/api/sale', { method: 'POST',
     headers: { 'Content-Type': 'application/json', Cookie: till },
     body: JSON.stringify({ merchant: M, id, amount: cents / 100, amountCents: cents, method: 'cash', label: 'Caftan', ref: id, ts: at, channel: 'counter',
       lines: [{ n: 'Caftan', q: 1, t: cents / 100 }], ...(seller ? { seller } : {}) }) }) });
@@ -171,5 +173,56 @@ check('/api/pin/verify signs the proof for a till role, the pairing keeps it on 
   && /who\.sellerProof = String\(reply\.body\.sellerProof\)/.test(read('assets/kit/pin-flow.js')));
 const saleSrc = read('functions/api/sale.js');
 check('every sales INSERT path writes the seller columns', (saleSrc.match(/\.\.\.sellerVals/g) || []).length === 3 && (saleSrc.match(/sellerCols/g) || []).length >= 4 && !/sellerId\b/.test(saleSrc));
+
+/* ── 5. Vendeur choisi à l'encaissement (features.sellerPicker) ───────────── */
+console.log('■ 5. Vendeur choisi à l’encaissement');
+const team5 = [...members, { id: 'm-gone', firstName: 'Parti', lastName: 'Avant', commissionRate: 4 }, { id: 'm-del', firstName: 'Effacé', lastName: 'Aussi', commissionRate: 4, deleted: true }];
+const p5 = world({ sellerCommissions: true, sellerPicker: true }, team5);
+const seller5 = (id) => p5.db.prepare('SELECT seller_id, seller_name FROM sales WHERE id = ?').get(id);
+check('a picked team member is stored by id, with the name from the Team file', await pay('p-1', 80000, { member: 'm-1' }, p5.env) === 200
+  && seller5('p-1').seller_id === 'm-1' && seller5('p-1').seller_name === 'Salma Idrissi');
+await pay('p-2', 9000, { member: 'm-2', name: 'Quelqu’un d’autre' }, p5.env);
+check('a name sent with the pick is ignored', seller5('p-2').seller_name === 'Rania Tazi');
+await pay('p-3', 9000, { member: 'm-nobody' }, p5.env);
+await pay('p-4', 9000, { member: 'm-gone' }, p5.env);
+await pay('p-5', 9000, { member: 'm-del' }, p5.env);
+check('an unknown, removed or deleted member is never credited', [seller5('p-3'), seller5('p-4'), seller5('p-5')].every((x) => x.seller_name === null && x.seller_id === null));
+await pay('p-6', 9000, { proof: await proofFor('pin-a', 'Salma Idrissi') }, p5.env);
+check('in picker mode the cashier’s own proof credits nobody: unpicked stays unattributed', seller5('p-6').seller_name === null);
+await pay('p-7', 9000, { member: 'm-1' }, w.env);
+check('without the picker option a member id in the body is ignored', w.db.prepare('SELECT seller_name FROM sales WHERE id = ?').get('p-7').seller_name === null);
+const p5off = world({ sellerPicker: true }, team5);
+await pay('p-8', 9000, { member: 'm-1' }, p5off.env);
+check('the picker needs « Commissions vendeurs » on too', p5off.db.prepare('SELECT seller_name FROM sales WHERE id = ?').get('p-8').seller_name === null);
+const rep5 = await (await ask(owner, day, day, p5.env)).json();
+check('the commissions report counts a picked sale on its member', rep5.sellers.find((x) => x.memberId === 'm-1').netCents === 80000);
+const roster = (cookie, env = p5.env) => sellersRoute.onRequestGet({ env, request: new Request(`https://kiwi.test/api/sellers?merchant=${M}`, { headers: { Cookie: cookie } }) });
+const r5 = await roster(till), b5 = await r5.json();
+check('the paired till reads the sellers: rated, active members only, by name', r5.status === 200 && b5.sellers.map((x) => x.name).join('|') === 'Nour Alami|Rania Tazi|Salma Idrissi', JSON.stringify(b5));
+check('the list carries an id and a name, never a rate or a code', b5.sellers.every((x) => Object.keys(x).join() === 'id,name'));
+check('the owner reads it too; no cookie reads nothing', (await roster(owner)).status === 200 && (await roster('')).status === 403);
+check('the list answers feature-off unless both options are on', (await roster(till, w.env)).status === 403 && (await roster(till, p5off.env)).status === 403);
+
+const docSkin = (skin) => ({ documentElement: { getAttribute: (k) => (k === 'data-skin-2027' ? skin : null) } });
+const both = { features: { sellerCommissions: true, sellerPicker: true } };
+check('the till picker needs both options and the 2027 till', sellerPickOn(docSkin('till'), both) && !sellerPickOn(docSkin(null), both)
+  && !sellerPickOn(docSkin('till'), { features: { sellerCommissions: true } }) && !sellerPickOn(docSkin('till'), { features: { sellerPicker: true } }));
+const escHtml = (v) => String(v).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const strip = sellerStripHtml([{ id: 'm-1', name: 'Salma' }, { id: 'm-2', name: '<b>Rania</b>' }], { id: 'm-2' }, escHtml);
+check('the strip is one row of chips, the picked one marked, names escaped', (strip.match(/data-bq-seller=/g) || []).length === 2
+  && /aria-checked="true" data-bq-seller="m-2"/.test(strip) && !/<b>Rania/.test(strip) && /class="bq-split bq-seller" role="radiogroup"/.test(strip));
+check('no sellers, no strip (nothing to tap, nothing drawn)', sellerStripHtml([], null, escHtml) === '');
+const mem = new Map(), storage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)) };
+const got = await loadSellers('shop-x', { storage, fetchImpl: async () => ({ ok: true, json: async () => ({ sellers: [{ id: 'a', name: 'Amal' }, { id: 7, name: 'bad' }] }) }) });
+check('the list is cleaned and kept per store for the offline till', got.length === 1 && JSON.parse(mem.get('kiwiSellers@shop-x'))[0].name === 'Amal');
+const again = await loadSellers('shop-x', { storage, now: Date.now() + 10 * 60000, fetchImpl: async () => { throw new Error('offline'); } });
+check('offline, the last list stays', again.length === 1 && cachedSellers('shop-x', storage)[0].id === 'a');
+
+const b5src = read('assets/pos-boutique.js');
+check('picker mode sends only the picked member id, and no proof when nobody was picked', /if \(!IS_DEMO && sellerPickOn\(\)\) \{ if \(t\.seller && t\.seller\.id\) payload\.seller = \{ member: t\.seller\.id \}; \}\s*\/\/[^\n]*\n\s*else if \(typeof sellerProof === 'string' && sellerProof\) payload\.seller = \{ proof: sellerProof \};/.test(b5src)
+  && /afterMethods: \(el\) => mountSellerPick\(el, t, \{ slug: merchantSlug\(\), esc \}\)/.test(b5src));
+check('the payment sheet calls the hook after drawing its methods', /icons\(\); closeBtns\(\); if \(opts\.afterMethods\) opts\.afterMethods\(el\);/.test(read('assets/pos-boutique/checkout.js')));
+check('the queue forwards the member id, the server takes the name', /body\.seller = \{ member: entry\.seller\.member\.slice\(0, 96\) \};/.test(read('assets/live-link/queue-store.js')));
+check('kiwi-admin offers « Vendeur choisi à l’encaissement », off by default', /key:'sellerPicker', label:'Vendeur choisi à l’encaissement', off:true/.test(read('kiwi-admin.html')));
 
 console.log(`\nseller-commissions-test · ${controls} contrôles`);

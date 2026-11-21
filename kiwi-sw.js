@@ -52,7 +52,7 @@ var SHELL = [
   '/assets/team/styles.js?v=5',
   '/assets/team/access-rules.js?v=8',
   '/assets/hotel-economat-transport.js?v=30',
-  '/assets/pos-boutique/drawer.js?v=152',
+  '/assets/pos-boutique/drawer.js?v=153',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=26',
@@ -368,9 +368,9 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=18',
   '/assets/operations-ui.js?v=33',
-  '/assets/live-link/queue-store.js?v=27',
+  '/assets/live-link/queue-store.js?v=28',
   '/assets/live-link/sale-identity.js?v=4',
-  '/assets/live-link.js?v=134',
+  '/assets/live-link.js?v=135',
   '/assets/expenses/index.js?v=4',
   '/assets/expenses/engine.js?v=3',
   '/assets/expenses/strings.js?v=2',
@@ -446,7 +446,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=39',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=155',
+  '/assets/caisse-lang.js?v=156',
   '/assets/venue-store.js?v=6',
   '/assets/discount-policy.js?v=4',
   '/assets/merchant-policies.js?v=4',
@@ -527,7 +527,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=37',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=36',
-  '/assets/pos-dispatch.js?v=466',
+  '/assets/pos-dispatch.js?v=467',
   '/assets/retail-scan.css?v=11',
   '/assets/retail-balances.css?v=5',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -598,8 +598,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=338',
-  '/assets/pos-boutique/sales.js?v=234',
+  '/assets/pos-boutique.css?v=339',
+  '/assets/pos-boutique/sales.js?v=235',
   '/assets/retail-photos.js?v=5',
   '/assets/retail-icon-picker.js?v=4',
   '/assets/pos-boutique/ticket-owner.js?v=5',
@@ -620,10 +620,11 @@ var SHELL = [
   '/assets/pos-maison/inv-moves.js?v=3',
   '/assets/pos-boutique/kit-2027.js?v=23',
   '/assets/pos-boutique/seller-day.js?v=2',
-  '/assets/pos-boutique/checkout.js?v=234',
-  '/assets/pos-boutique/inventory.js?v=234',
+  '/assets/pos-boutique/seller-pick.js?v=1',
+  '/assets/pos-boutique/checkout.js?v=235',
+  '/assets/pos-boutique/inventory.js?v=235',
   '/assets/pos-boutique/sister-stock.js?v=1',
-  '/assets/pos-boutique.js?v=338',
+  '/assets/pos-boutique.js?v=339',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

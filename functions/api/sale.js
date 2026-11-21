@@ -763,7 +763,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
   const signed = await writtenBy(request, env, merchant);
   // Seul un id de visite que le serveur a réellement remplacé perd l'auteur qui certifie ;
   // une vente envoyée sans id reste à l'appareil qui l'a écrite (sinon une caisse se soustrairait au Z).
-  const seller = await sellerOf(employee, b, env.AUTH_SECRET, merchant);   // qui a vendu (_seller.js) : l'employé en service, sinon la preuve signée de la caisse
+  const seller = await sellerOf(employee, b, env, merchant);   // qui a vendu (_seller.js) : l'employé en service, sinon la preuve signée de la caisse
   const sellerCols = seller ? ['seller_id', ...(seller.name ? ['seller_name'] : [])] : [], sellerVals = seller ? [seller.id || null, ...(seller.name ? [seller.name] : [])] : [];
   const author = signed && signed.startsWith('till:') && isLegacyVisitId && id !== requestedId ? signed + '#rekeyed' : signed;
   if (hasDiscount) {

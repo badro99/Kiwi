@@ -18,6 +18,7 @@ import { json, entitledMerchant } from '../auth/_lib.js';
 import { legacyBucketFor } from './_sales-scope.js';
 import { businessBoundary, businessDate, addBusinessDays, merchantZone, merchantCutoff } from './_business-day.js';
 import { commissionsReport } from './_commissions.js';
+import { readTeamMembers } from './_seller.js';
 
 export const MAX_SPAN_DAYS = 400;
 const DAY_RX = /^\d{4}-\d{2}-\d{2}$/;
@@ -27,17 +28,6 @@ function validDay(d) {
   if (!DAY_RX.test(d)) return false;
   const t = Date.parse(d + 'T00:00:00Z');
   return Number.isFinite(t) && new Date(t).toISOString().slice(0, 10) === d;
-}
-
-async function readTeam(env, merchant) {
-  try {
-    const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'").bind(merchant).first();
-    const doc = JSON.parse((row && row.data) || '{}');
-    const removed = new Set((Array.isArray(doc.removed) ? doc.removed : []).map((r) => String((r && r.id) || '')).filter(Boolean));
-    return (Array.isArray(doc.members) ? doc.members : []).slice(0, 500)
-      .filter((m) => m && typeof m === 'object' && !removed.has(String(m.id || '')))
-      .map((m) => ({ id: String(m.id || ''), firstName: m.firstName, lastName: m.lastName, name: m.name, commissionRate: m.commissionRate }));
-  } catch (_) { return []; }
 }
 
 async function featureOn(env, merchant) {
@@ -100,7 +90,7 @@ export async function onRequestGet({ request, env }) {
     /* Une base d'avant les colonnes vendeur : il n'y a rien à attribuer. */
     return json({ merchant, from: fromDay, to: toDay, error: 'db', sellers: [] }, 503);
   }
-  const members = await readTeam(env, merchant);
+  const members = await readTeamMembers(env, merchant);
   const report = commissionsReport({
     sales: (sales && sales.results) || [],
     refunds: (refunds && refunds.results) || [],
