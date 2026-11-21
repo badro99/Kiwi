@@ -89,40 +89,24 @@
     return (name || 'Ce code') + ' n’a pas le droit de ' + say(perm) + '. Un responsable peut valider avec son code.';
   }
 
-  /* Le dernier acte annoncé au pavé, lu à l'ouverture qui le suit. */
-  var lastAct = null;
-  function currentPerm() {
-    var a = lastAct && Date.now() - lastAct.at < 1000 ? lastAct.act : null;
-    lastAct = null;
-    return a ? ACT_PERM[String(a.kind || '')] || '' : '';
-  }
-  function wrapPads() {
-    if (window.__kiwiStaffPermsWrapped) return;
-    var act = window.KiwiAuthAct, till = window.requireTillOperator, mgr = window.requireManager;
-    if (typeof act !== 'function' || typeof till !== 'function' || typeof mgr !== 'function') return;
-    window.__kiwiStaffPermsWrapped = true;
-    window.KiwiAuthAct = function (a) { lastAct = a ? { act: a, at: Date.now() } : null; return act.apply(this, arguments); };
-    /* requireTillOperator est une déclaration globale de caisse/settings.js : la
-       remplacer ici change ce que chaque appel résout. */
-    window.requireTillOperator = function (label, onApprove, opts) {
-      var perm = currentPerm(), doc = read();
-      if (!perm || !doc || !doc.configured) return till.apply(this, arguments);
-      var o = Object.assign({}, opts || {}), before = o.validate;
-      o.validate = function (who) {
-        if (can(perm, who) === false) return refusal(who, perm);
-        return typeof before === 'function' ? before(who) : null;
-      };
-      return till.call(this, label, onApprove, o);
+  /* Appelé par caisse/settings.js › openAuthorization avec l'acte annoncé
+     (KiwiAuthAct). null = rien à changer ; { done } = acte autorisé sans pavé ;
+     sinon le contexte et les options à donner au pavé. */
+  function forAct(act, access, onApprove, authContext, opts) {
+    var perm = act ? ACT_PERM[String(act.kind || '')] || '' : '';
+    var doc = read();
+    if (!perm || !doc || !doc.configured) return null;
+    if (access !== 'till' && SELF_SERVE[perm] && can(perm) === true && typeof onApprove === 'function') {
+      var s = window.KiwiStaff || {};
+      onApprove({ id: s.id, name: s.name, role: s.role, viaPermission: perm });
+      return { done: true };
+    }
+    var o = Object.assign({}, opts || {}), before = o.validate;
+    o.validate = function (who) {
+      if (can(perm, who) === false) return refusal(who, perm);
+      return typeof before === 'function' ? before(who) : null;
     };
-    window.requireManager = function (label, onApprove, authContext, opts) {
-      var perm = currentPerm();
-      if (perm && SELF_SERVE[perm] && can(perm) === true && typeof onApprove === 'function') {
-        var s = window.KiwiStaff || {};
-        return onApprove({ id: s.id, name: s.name, role: s.role, viaPermission: perm });
-      }
-      var ctx = authContext || (perm && PERM_KIND[perm] ? { kind: PERM_KIND[perm] } : authContext);
-      return mgr.call(this, label, onApprove, ctx, opts);
-    };
+    return { authContext: authContext || (access === 'till' ? authContext : { kind: PERM_KIND[perm] }), opts: o };
   }
 
   /* data-perm : cadenas et demande d'accord. */
@@ -157,17 +141,21 @@
     document.head.appendChild(st);
   }
 
+  /* Le pavé (caisse/settings.js) nous joint par l'espace de l'appairage, qu'il
+     lit déjà : la caisse ne gagne pas un global de plus à surveiller. */
+  function attach() {
+    try { if (window.KiwiCaissePairing && !window.KiwiCaissePairing.permsForAct) window.KiwiCaissePairing.permsForAct = forAct; } catch (_) {}
+  }
+  attach();
   function boot() {
-    css(); wrapPads(); apply(); sync();
+    attach(); css(); apply(); sync();
     document.addEventListener('click', onClick, true);
-    document.addEventListener('kiwi-staff', function () { wrapPads(); apply(); });
+    document.addEventListener('kiwi-staff', apply);
     window.addEventListener('online', sync);
     setInterval(sync, REFRESH_MS);
-    /* caisse-app.js pose ses pavés après nous : on réessaie jusqu'à les trouver. */
-    var tries = 0, t = setInterval(function () { wrapPads(); if (window.__kiwiStaffPermsWrapped || ++tries > 40) clearInterval(t); }, 250);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
-  window.KiwiStaffPerms = { can: can, sync: sync, apply: apply, read: read };
+  window.KiwiStaffPerms = { can: can, sync: sync, apply: apply, read: read, forAct: forAct };
 })();

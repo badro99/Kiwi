@@ -77,6 +77,7 @@
         </div>
         <div class="eq-head-acts">
           ${showEmployeeApp ? `<button class="btn-slim" type="button" data-action="kt-employee-app">${svgIcon(IC.users, 13)}<span>${esc(employeeAppLabel)}</span></button>` : ''}
+          <button class="btn-slim" type="button" data-action="nav-permissions">${svgIcon(IC.users, 13)}<span>${esc(trLang() === 'ar' ? 'الحقوق' : trLang() === 'en' ? 'Permissions' : 'Droits')}</span></button>
           <button data-activation=money class="btn-slim" type="button" data-action="kt-export-csv">${svgIcon(IC.download, 13)}<span>${esc(T.exportCsv)}</span></button>
           <button data-activation=write class="btn-slim primary" type="button" data-action="kt-add-member">${svgIcon(IC.plus, 13)}<span>${esc(T.addMember)}</span></button>
         </div>

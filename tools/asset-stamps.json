@@ -336,8 +336,8 @@
     "sha": "272a79dab736404e"
   },
   "assets/caisse/settings.js": {
-    "v": "2",
-    "sha": "fe6e853d5f9756af"
+    "v": "4",
+    "sha": "af426fd85f9c0ff9"
   },
   "assets/caisse/shift.js": {
     "v": "4",
@@ -1476,8 +1476,8 @@
     "sha": "43b37e0dc10e9a43"
   },
   "assets/pages-pro-office.js": {
-    "v": "29",
-    "sha": "3b6156a302575d8f"
+    "v": "30",
+    "sha": "019b0b381221ac8c"
   },
   "assets/pages-pro-spa-starter.js": {
     "v": "8",
@@ -1488,8 +1488,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2229",
-    "sha": "34e2452443a5f74c"
+    "v": "2230",
+    "sha": "2347083624e19f53"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1515,6 +1515,10 @@
     "v": "2",
     "sha": "d527709a3bdeb87e"
   },
+  "assets/pages-pro/staff-permissions.js": {
+    "v": "1",
+    "sha": "05629e39b25fe203"
+  },
   "assets/pages.js": {
     "v": "14",
     "sha": "91ea1202399b8d4c"
@@ -1524,8 +1528,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "269",
-    "sha": "6014f9f943203d0e"
+    "v": "270",
+    "sha": "ab97710352115af2"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2244,8 +2248,8 @@
     "sha": "b5ec8044f1b088eb"
   },
   "assets/staff-perms-till.js": {
-    "v": "2",
-    "sha": "e9a69934eddc06cc"
+    "v": "4",
+    "sha": "3c0676f4a4eb4677"
   },
   "assets/staff-roles.js": {
     "v": "3",
@@ -2320,8 +2324,8 @@
     "sha": "3e72c82b3a82c76b"
   },
   "assets/team.js": {
-    "v": "362",
-    "sha": "e87cbf97e745e102"
+    "v": "363",
+    "sha": "2044c099f487cf5b"
   },
   "assets/team/access-rules.js": {
     "v": "8",
@@ -2348,8 +2352,8 @@
     "sha": "e675f6efde29d098"
   },
   "assets/team/roster-list.js": {
-    "v": "6",
-    "sha": "f8d4f03e16d05978"
+    "v": "7",
+    "sha": "e0a98a84eb915882"
   },
   "assets/team/styles.js": {
     "v": "5",

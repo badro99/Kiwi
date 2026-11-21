@@ -80,6 +80,13 @@
     function openAuthorization(actionLabel, onApprove, access, authContext, opts) {
       const act = nextAuthAct && Date.now() - nextAuthAct.at < 1000 ? nextAuthAct.act : null;
       nextAuthAct = null;
+      /* Droits par personne (assets/staff-perms-till.js) : l'acte dit quel droit il
+         coûte. Un code sans ce droit est refusé sur le pavé ; la personne en poste
+         qui a reçu le droit (tiroir, espèces, clôture) n'a pas à appeler un
+         responsable. Rien ne change tant que le patron n'a pas configuré ses droits. */
+      const ruled = window.KiwiCaissePairing?.permsForAct?.(act, access, onApprove, authContext, opts);
+      if (ruled && ruled.done) return;
+      if (ruled) { authContext = ruled.authContext; opts = ruled.opts; }
       /* kiwiSkin2027:till · the approval on the kit's pad (assets/kit/till-pin.js).
          Every approval, at both levels, joins the authorization log with the
          identity, the verdict and, for a verdict read from a row, provenAt. */

@@ -86,4 +86,39 @@ console.log('■ Hors ligne');
   check(await P.authorizeManager('4103', { kind: 'drawer' }) === false, 'hors ligne, le cache ne rejoue pas l’accord : la règle du rôle refuse la caissière');
 }
 
+console.log('■ staff-perms-till.js › le pavé connaît le droit de l’acte');
+{
+  const src = fs.readFileSync(new URL('../assets/staff-perms-till.js', import.meta.url), 'utf8');
+  const store = new Map();
+  const doc = { configured: true, freeDiscountPct: 10, ts: 1, staff: [{ k: 'lina saidi', perms: ['sales.drawer'] }, { k: 'sara alaoui', perms: ['money.cash', 'sales.drawer'] }] };
+  store.set('kiwiPerms:v1:droits-fixture', JSON.stringify(doc));
+  const ctx = {
+    console, JSON, Object, Array, String, Number, Math, Date, Promise, setInterval: () => 0,
+    localStorage: { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) },
+    document: { readyState: 'complete', documentElement: { lang: 'fr' }, head: { appendChild() {} }, getElementById: () => null,
+      createElement: () => ({}), querySelectorAll: () => [], addEventListener() {} },
+    fetch: () => new Promise(() => {}),
+  };
+  ctx.window = ctx;
+  ctx.addEventListener = () => {};
+  ctx.KiwiCaissePairing = { pairedVenue: () => ({ merchant: 'droits-fixture' }) };
+  ctx.KiwiStaff = { id: 'pin-lina', name: 'Lina Saidi', role: 'Caissière' };
+  vm.runInNewContext(src, ctx, { filename: 'assets/staff-perms-till.js' });
+  const forAct = ctx.KiwiCaissePairing.permsForAct;
+  check(typeof forAct === 'function', 'le module se branche sur l’espace de l’appairage, que le pavé lit déjà');
+  const out = forAct({ kind: 'cash_out' }, 'till', () => {}, null, {});
+  check(out && typeof out.opts.validate === 'function', 'sortie d’espèces : le pavé reçoit un juge du droit');
+  check(/Lina Saidi.*sortir ou entrer des espèces/.test(out.opts.validate({ name: 'Lina Saidi' })), 'le code de Lina (sans le droit) est refusé, avec son nom et l’acte');
+  check(out.opts.validate({ name: 'Sara Alaoui' }) === null, 'celui de Sara (avec le droit) passe et devient l’auteur');
+  check(out.opts.validate({ name: 'Sara Alaoui', offline: true, permission: { id: 'money.cash', granted: false, configured: true } }) === null,
+    'un verdict hors ligne n’est jamais lu : la copie de l’équipe tranche');
+  let approved = null;
+  const self = forAct({ kind: 'open_drawer' }, 'manager', (who) => { approved = who; }, null, {});
+  check(self && self.done && approved && approved.viaPermission === 'sales.drawer', 'Lina a le droit au tiroir : pas de pavé responsable pour elle');
+  const refund = forAct({ kind: 'refund' }, 'manager', () => { throw new Error('jamais sans pavé'); }, { kind: 'refund', refundId: 'r' }, {});
+  check(refund && !refund.done && refund.authContext.kind === 'refund', 'un remboursement passe toujours par le pavé (preuve signée liée à la commande)');
+  store.set('kiwiPerms:v1:droits-fixture', JSON.stringify({ ...doc, configured: false }));
+  check(forAct({ kind: 'cash_out' }, 'till', () => {}, null, {}) === null, 'boutique non configurée : le pavé ne change rien');
+}
+
 console.log(`\nstaff-permissions-till-test · ${checks} vérifications`);

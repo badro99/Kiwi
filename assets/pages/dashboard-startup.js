@@ -19,8 +19,8 @@
     return;
   }
   const scripts = [
-    'assets/pages-pro-office.js?v=29',
-    'assets/pages-pro.js?v=2229',
+    'assets/pages-pro-office.js?v=30',
+    'assets/pages-pro.js?v=2230',
     'assets/pages-pro-boutique.js?v=53',
     'assets/boutique-stock-correct.js?v=4',
     'assets/boutique-categories-view.js?v=3',
@@ -53,7 +53,7 @@
     'assets/catalog-workspace.js?v=7',
     'assets/planning-core.js?v=15',
     'assets/team/catalog.js?v=2',
-    'assets/team.js?v=362',
+    'assets/team.js?v=363',
     'assets/team/profile-ui.js?v=23',
     'assets/team-hours.js?v=32',
     'assets/cancellation-history.js?v=3',
