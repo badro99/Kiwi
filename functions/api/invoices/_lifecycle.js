@@ -3,6 +3,7 @@ import { iceProblem, ICE_DETAIL } from '../_ice.js';
 import { PREFIXES, allocateNumber } from '../_invoice-series.js';
 import { fail, str, parseJson, validDay, addDays, changesOf, clientKeyOf, keyedId, DOC_TYPES, QUOTE_VALID_DAYS } from './_shared.js';
 import { computeTotals, normCustomer, normLines, normDay, normTerms, normMethod } from './_tax.js';
+import { invoicePriceList } from '../_price-lists.js';
 import { todayFor, getRow, sumsFor, balanceOf, displayStatus, presentFull, insertStatement, draftRow, CREDITED_SQL, remainingCredit, loadIssuedInvoice, sellerSnapshot } from './_documents.js';
 // Contrat interne : reçoit ctx authentifié et body déjà parsé ; valide et écrit les brouillons et émissions, retourne la Response existante ou lève Fail. Ne lit pas la requête et ne décide pas des droits.
 
@@ -39,6 +40,8 @@ async function save(ctx, body) {
   const exemption = has('exemptionMention') ? str(body.exemptionMention, 300) : (base.exemption_mention || '');
   const internalNote = has('internalNote') ? str(body.internalNote, 1000) : (base.internal_note || '');
   const reason = type === 'credit_note' && has('reason') ? str(body.reason, 300) : (base.reason || '');
+  /* Le tarif du document : celui qu'on choisit, sinon celui de la fiche client à la création. */
+  const priceListId = await invoicePriceList({ DB: ctx.db }, ctx.merchant, body, base, customer, fail);
 
   if (existing) {
     const locked = existing.type === 'quote' ? existing.status === 'invoiced' : existing.status !== 'draft';
@@ -99,7 +102,7 @@ async function save(ctx, body) {
       ...(keyedDraft ? { id: keyedDraft } : {}),
       type, issue_date: issue, due_date: dueDate, terms_days: termsDays, valid_until: valid,
       customer: JSON.stringify(customer), lines: JSON.stringify(lines), totals: JSON.stringify(totals), ttc_cents: totals.ttcCents,
-      payment_method: paymentMethod, note, exemption_mention: exemption, internal_note: internalNote,
+      payment_method: paymentMethod, note, exemption_mention: exemption, internal_note: internalNote, price_list_id: priceListId,
     });
     try { await insertStatement(ctx, d).run(); }
     catch (error) {
@@ -112,11 +115,11 @@ async function save(ctx, body) {
 
   const res = await ctx.db.prepare(
     `UPDATE invoice_docs SET issue_date = ?, due_date = ?, terms_days = ?, valid_until = ?, customer = ?, lines = ?, totals = ?,
-            ttc_cents = ?, payment_method = ?, note = ?, exemption_mention = ?, internal_note = ?, reason = ?, updated_ts = ?
+            ttc_cents = ?, payment_method = ?, note = ?, exemption_mention = ?, internal_note = ?, reason = ?, price_list_id = ?, updated_ts = ?
       WHERE id = ? AND merchant = ?
         AND (status = 'draft' OR (type = 'quote' AND status IN ('sent', 'accepted', 'rejected')))`
   ).bind(issue, dueDate, termsDays, valid, JSON.stringify(customer), JSON.stringify(lines), JSON.stringify(totals),
-    totals.ttcCents, paymentMethod, note, exemption, internalNote, reason, now, existing.id, ctx.merchant).run();
+    totals.ttcCents, paymentMethod, note, exemption, internalNote, reason, priceListId, now, existing.id, ctx.merchant).run();
   if (!changesOf(res)) throw fail(409, 'locked', 'Document émis : seule la note interne se modifie.');
   return json({ ok: true, doc: await presentFull(ctx, await getRow(ctx, existing.id)) });
 }

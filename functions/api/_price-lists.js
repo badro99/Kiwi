@@ -288,3 +288,25 @@ export async function runBatches(db, statements, size) {
     else for (const s of chunk) await s.run();
   }
 }
+
+/* ── LES FACTURES ET DEVIS ─────────────────────────────────────────────────
+ * Le tarif d'un document : `priceListId` du corps s'il est donné (null ou
+ * 'main' = principal), sinon, à la CRÉATION seulement, le tarif par défaut de
+ * la fiche client (`customer.clientId`), sinon ce que le document avait déjà.
+ * Un tarif inconnu du magasin est refusé, jamais deviné. `fail` est celui de
+ * invoices/_shared.js (lève une erreur que la route sait rendre). */
+export async function invoicePriceList(env, merchant, body, base, customer, fail) {
+  const had = base && base.price_list_id ? String(base.price_list_id) : null;
+  if (body && body.priceListId !== undefined) {
+    const id = body.priceListId == null || body.priceListId === '' ? MAIN_ID : str(body.priceListId, 64);
+    if (id === MAIN_ID) return null;
+    const list = await findList(env, merchant, id);
+    if (!list) throw fail(400, 'unknown-price-list', 'Tarif inconnu.');
+    return list.id;
+  }
+  if (base && base.id) return had;
+  const fromClient = await clientDefault(env, merchant, customer && customer.clientId);
+  if (!fromClient) return null;
+  const list = await findList(env, merchant, fromClient).catch(() => null);
+  return list ? list.id : null;
+}
