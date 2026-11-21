@@ -1524,8 +1524,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "264",
-    "sha": "f6255463b00141fe"
+    "v": "265",
+    "sha": "5d12fa724d19719d"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2120,16 +2120,16 @@
     "sha": "28d06df4ffa421b5"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "138",
-    "sha": "640c64f4cfe953a6"
+    "v": "139",
+    "sha": "6fc603b7691bc20d"
   },
   "assets/restaurant-menu/recipes.js": {
     "v": "10",
     "sha": "8e9397cc4cba0e00"
   },
   "assets/restaurant-menu/strings.js": {
-    "v": "21",
-    "sha": "bca475c657c3623d"
+    "v": "22",
+    "sha": "d9a38df3bd8ed953"
   },
   "assets/restaurant-menu/styles.js": {
     "v": "12",

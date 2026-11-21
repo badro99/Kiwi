@@ -823,6 +823,9 @@
   function openItem(x){
     const d=D();if(!d.cats.length){openCategory(null);return;}
     let photo=x?.photo||'',video=x?.video||'';
+    /* La sous-catégorie se choisit ici, sur la fiche, et seulement parmi celles de la section choisie. */
+    const cat0=x?.catId||(d.cats.some(c=>c.id===filter)?filter:d.cats[0].id),sub0=x?x.subId:(cat0===filter&&subFilter!=='__none'?subFilter:null);
+    const subsOf=cid=>(d.cats.find(c=>c.id===cid)?.sub||[]),subOpts=(cid,sel)=>subsOf(cid).length?`<option value="">${esc(ui('withoutSubcat'))}</option>`+subsOf(cid).map(s=>`<option value="${s.id}"${s.id===sel?' selected':''}>${esc(t(s.name))}</option>`).join(''):`<option value="">${esc(ui('noSubInSection'))}</option>`;
     const availableItems=(d.items||[]).filter(it=>(!x||it.id!==x.id)&&!it.archived);
     const archivedItems=(d.items||[]).filter(it=>it&&it.archived&&(!x||it.id!==x.id));
     const formulaTemplates=[...(d.formulaTemplates||[]).filter(t=>t?.formula?.slots?.length).map(t=>({id:'template:'+t.id,name:t.name,formula:t.formula})),...(d.items||[]).filter(it=>it.formula?.slots?.length).map(it=>({id:'item:'+it.id,name:`${t(it.name)}`,formula:it.formula}))];
@@ -851,7 +854,8 @@
           <div class="rmw-it-grid">
             <label class="rmw-it-f"><span>${esc(ui('nameLabel'))}</span><input class="rmw-rx-in" data-name value="${esc(x?.name||'')}" autocomplete="off"/><em class="rmw-it-err" data-name-err hidden>${esc(ui('itNameRequired'))}</em></label>
             <label class="rmw-it-f"><span>${esc(ui('itPrice'))}</span><span class="rmw-rx-suffix"><input class="rmw-rx-in" type="number" min="0" step="0.01" inputmode="decimal" data-price value="${+x?.price||0}"/><i>MAD</i></span></label>
-            <label class="rmw-it-f rmw-it-full"><span>${esc(ui('sectionLabel'))}</span><select class="rmw-rx-unit" data-cat data-kiwi-native-select>${d.cats.map(c=>`<option value="${c.id}"${x?.catId===c.id?' selected':''}>${esc(t(c.name))}</option>`).join('')}</select></label>
+            <label class="rmw-it-f rmw-it-full"><span>${esc(ui('sectionLabel'))}</span><select class="rmw-rx-unit" data-cat data-kiwi-native-select>${d.cats.map(c=>`<option value="${c.id}"${cat0===c.id?' selected':''}>${esc(t(c.name))}</option>`).join('')}</select></label>
+            <label class="rmw-it-f rmw-it-full"><span>${esc(ui('subcatLabel'))}</span><select class="rmw-rx-unit" data-sub data-kiwi-native-select${subsOf(cat0).length?'':' disabled'}>${subOpts(cat0,sub0)}</select></label>
             <label class="rmw-it-f rmw-it-full"><span>${esc(ui('descLabel'))}</span><textarea class="rmw-rx-in" data-desc rows="3" placeholder="${esc(ui('itDescPh'))}">${esc(x?.desc||'')}</textarea></label>
           </div>
         </section>
@@ -925,6 +929,8 @@
     $('[data-cancel]',m.el).onclick=m.close;
     /* The server can replace the whole carte under an open editor (foreign-document 409, state.js): the item is gone, and Save would close the sheet and announce « Carte mise à jour » over nothing. Close it, say why, and park the focus on the page's search field instead of <body>. */
     if(x){const off=S().subscribe(()=>{if(!m.el.isConnected){off();return;}if(item(x.id))return;off();m.close();render();requestAnimationFrame(()=>{/* the sync warning toast is queued next and a toast replaces the one before it: speak after it */window.Kiwi?.toast?.(ui('itGoneTitle'),{desc:ui('itGone'),type:'warn',force:true});const f=$('[data-rmw-search]')||$('[data-action="rmw-item-add"]');if(f)f.focus();});});}
+    const catSel=$('[data-cat]',m.el),subSel=$('[data-sub]',m.el);
+    catSel.addEventListener('change',()=>{subSel.innerHTML=subOpts(catSel.value,null);subSel.disabled=!subsOf(catSel.value).length;});
     const nameInput=$('[data-name]',m.el),nameErr=$('[data-name-err]',m.el);
     nameInput.addEventListener('input',()=>{if(nameInput.value.trim()){nameErr.hidden=true;nameInput.removeAttribute('aria-invalid');}});
     const saveItem=(onSuccess)=>{
@@ -933,7 +939,7 @@
       if(!name){nameErr.hidden=false;nameInput.setAttribute('aria-invalid','true');nameInput.focus();return;}
       if(isFormulaCb.checked){const bad=formulaSlots.findIndex(slotProblem);if(bad>=0){if(expandedFormulaSlot!==bad){expandedFormulaSlot=bad;renderSlots();}const problem=showSlotError(bad);const target=problem.fields.length?$(`[data-slot-min="${bad}"]`,slotsWrap):($(`[data-rmw-picker-toggle="${bad}"]`,slotsWrap)||$('[data-f-save-and-create]',slotsWrap)||$(`[data-slot-label="${bad}"]`,slotsWrap));target?.scrollIntoView?.({block:'center'});target?.focus();return;}}
       const validSlots=isFormulaCb.checked?formulaSlots.filter(s=>(s.label||'').trim()||(s.choices&&s.choices.length)).map(s=>({id:s.id||'sl_'+Math.random().toString(36).slice(2,6),label:s.label||ui('itDefaultStep'),min:s.min!=null?s.min:1,max:s.max!=null?s.max:1,choices:(s.choices||[]).map(c=>({itemId:c.itemId,extra:window.KiwiMenuRules.nonnegative(c.extra)}))})):[];
-      const p={name,price:+$('[data-price]',m.el).value||0,catId:$('[data-cat]',m.el).value,desc:$('[data-desc]',m.el).value,avail:!!$('[data-avail]',m.el).checked,formulaOnly:!$('[data-standalone]',m.el).checked,showPhotoInFormulas:!!$('[data-formula-choice-photo]',m.el)?.checked,archived:!!x?.archived,photo,video,opts:$$('[data-opt]:checked',m.el).map(e=>e.dataset.opt),formula:validSlots.length?{slots:validSlots}:null};
+      const p={name,price:+$('[data-price]',m.el).value||0,catId:catSel.value,subId:subSel.value||null,desc:$('[data-desc]',m.el).value,avail:!!$('[data-avail]',m.el).checked,formulaOnly:!$('[data-standalone]',m.el).checked,showPhotoInFormulas:!!$('[data-formula-choice-photo]',m.el)?.checked,archived:!!x?.archived,photo,video,opts:$$('[data-opt]:checked',m.el).map(e=>e.dataset.opt),formula:validSlots.length?{slots:validSlots}:null};
       x?S().updateItem(x.id,p):S().addItem(p);m.close();render();toast(ui('itSaved'),name);
       if(typeof onSuccess==='function')onSuccess();
     };
