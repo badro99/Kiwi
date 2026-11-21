@@ -58,17 +58,21 @@ export function withoutBook(doc) {
 }
 
 const asDoc = (carnet) => ({ verticals: { epicerie: { data: { carnet } } } });
-const entryKey = (c, h) => String(c.id) + ':' + (h.id || JSON.stringify([h.type, h.amt, h.at, h.label]));
+/* La clé d'une écriture de l'ardoise : la seule, partagée par l'union et par
+   le regard sur le plafond (_credit-audit.js), jamais tronquée. */
+export const entryKey = (c, h) => String(c.id) + ':' + (h.id || JSON.stringify([h.type, h.amt, h.at, h.label]));
 
 // Add the entries of `incoming` that `stored` lacks. Stored entries are never
 // touched. Customer fields (name, phone, limit) follow the incoming copy only
 // when that copy holds every stored entry of the customer: a device that has
 // not yet seen another device's entries does not overwrite its edits either.
-// Returns { carnet, edited } where `edited` names an entry the incoming copy
-// changed in place (refused by the caller, as before).
+// Returns { carnet, edited, appended } where `edited` names an entry the
+// incoming copy changed in place (refused by the caller, as before) and
+// `appended` lists exactly the entries this union added: { clientId, key, entry }.
 export function unionBook(stored, incoming) {
   const out = clone(Array.isArray(stored) ? stored : []);
   const byId = new Map(out.filter((c) => c && c.id != null).map((c) => [String(c.id), c]));
+  const appended = [];
   for (const c of Array.isArray(incoming) ? incoming : []) {
     if (!c || c.id == null) continue;
     const have = byId.get(String(c.id));
@@ -77,6 +81,7 @@ export function unionBook(stored, incoming) {
       delete copy.creditAlerts; delete copy.creditAlertsMore;
       out.push(copy);
       byId.set(String(c.id), copy);
+      for (const h of Array.isArray(copy.hist) ? copy.hist : []) if (h) appended.push({ clientId: String(c.id), key: entryKey(copy, h), entry: h });
       continue;
     }
     const known = new Map((have.hist || []).map((h) => [entryKey(have, h), h]));
@@ -93,11 +98,13 @@ export function unionBook(stored, incoming) {
     for (const h of c.hist || []) {
       const key = entryKey(c, h);
       if (known.has(key)) continue;
-      (have.hist || (have.hist = [])).push(clone(h));
+      const added = clone(h);
+      (have.hist || (have.hist = [])).push(added);
       known.set(key, h);
+      appended.push({ clientId: String(c.id), key, entry: added });
     }
   }
-  return { carnet: out, edited: null };
+  return { carnet: out, edited: null, appended };
 }
 
 // The stored book: the creditbook row when it exists, else the legacy copy.
@@ -156,7 +163,7 @@ export async function commitBook(env, merchant, legacyDoc, incoming, { guard, ke
     }
     if (Number(written && written.meta && written.meta.changes) === 1) {
       /* Une dette au-delà d'un plafond, sans accord : le carnet du patron le montre. */
-      await auditCarnetWrite(env.DB, merchant, book.carnet, merged.carnet, now);
+      await auditCarnetWrite(env.DB, merchant, merged.appended, merged.carnet, now);
       return { ok: true, exists: true, carnet: merged.carnet, rev: book.exists ? book.rev + 1 : 1, changed: true, creditConflicts };
     }
   }

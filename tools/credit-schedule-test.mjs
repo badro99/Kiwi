@@ -17,7 +17,7 @@ import { fixture } from './server-money-fixture.mjs';
 import { makeSession, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 import * as plan from '../functions/api/_credit-plan.js';
 import { settled } from '../functions/api/_credit-accounts.js';
-import { commitBook } from '../functions/api/_credit-book-store.js';
+import { commitBook, unionBook } from '../functions/api/_credit-book-store.js';
 import * as book from '../functions/api/credit/book.js';
 import * as tillRoute from '../functions/api/credit/till.js';
 
@@ -342,6 +342,44 @@ ok('promise date from the till: one row, idempotent');
   assert.ok(flag, 'an on-account note past the limit is flagged on the server');
   assert.equal(JSON.parse(flag.detail).afterCents, 55000, '150 still owed on the first note + 400');
   ok('limit-unapproved: a debt past the limit without approval is logged and badged (carnet and boutique), approvals used once');
+}
+
+/* ── 4b'. le regard sur le plafond audite exactement ce que l'union ajoute ── */
+{
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+  const at = iso(0);
+  const long = 'x'.repeat(80);
+  const audit = { id: 'k-audit', name: 'TEST KIWI Audit', phone: '', hist: [{ id: long + '-old', type: 'debt', label: 'Courses', amt: 50, at }] };
+  carnet.push(audit);
+  writeBook(carnet);
+  r = await call(book, 'POST', owner, { action: 'limit', source: 'carnet', customer: 'k-audit', limitCents: 10000 });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const flags = () => sql.prepare("SELECT id, amount_cents FROM credit_events WHERE merchant = ? AND kind = 'limit-unapproved' AND customer_key = 'k-audit' ORDER BY rowid").all(merchant);
+  /* Un identifiant de plus de 80 caractères qui partage son début avec un
+     autre : l'ancienne clé tronquée le croyait déjà vu, la vente passait. */
+  audit.hist.push({ id: long + '-new', type: 'debt', label: 'Courses', amt: 60, at });
+  let u = unionBook(JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'creditbook'").get(merchant).data).carnet, clone(carnet));
+  assert.deepEqual(u.appended.map((a) => a.entry.id), [long + '-new'], 'the union reports exactly the entry it appends');
+  await commitBook(env, merchant, null, clone(carnet));
+  assert.equal(flags().length, 1, 'a long id sharing a prefix is audited: 110 MAD against a 100 MAD limit');
+  assert.equal(flags()[0].amount_cents, 6000);
+  /* Deux dettes, même type, même montant, même instant, identifiants différents. */
+  audit.hist.push({ id: 'twin-0001', type: 'debt', label: 'Courses', amt: 10, at }, { id: 'twin-0002', type: 'debt', label: 'Courses', amt: 10, at });
+  await commitBook(env, merchant, null, clone(carnet));
+  assert.equal(flags().length, 2);
+  assert.equal(flags()[1].amount_cents, 2000, 'both twins are appended and both are counted');
+  /* Sans identifiant, deux écritures qui ne diffèrent que par le libellé :
+     l'union les ajoute toutes deux, l'audit aussi. */
+  audit.hist.push({ type: 'debt', label: 'Pain', amt: 5, at }, { type: 'debt', label: 'Lait', amt: 5, at });
+  await commitBook(env, merchant, null, clone(carnet));
+  assert.equal(flags().length, 3);
+  assert.equal(flags()[2].amount_cents, 1000, 'entries the old key confused are flagged');
+  assert.ok(flags().every((x) => /^unapproved-[0-9a-f]{40}$/.test(x.id)), 'event ids come from a SHA-256 of the full key, not a slice');
+  await commitBook(env, merchant, null, clone(carnet));
+  assert.equal(flags().length, 3, 'a resent book appends nothing and flags nothing');
+  carnet.pop();
+  writeBook(carnet);
+  ok('limit audit follows the union exactly: long ids sharing a prefix, twins, label-only differences, hashed event ids');
 }
 
 /* ── 4c. une écriture perdue relit ce que le client a versé ── */

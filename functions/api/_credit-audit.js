@@ -19,7 +19,15 @@ export const APPROVAL_WINDOW_MS = 2 * 3600000;
 const entryCents = (h) => Math.round((Number(h && h.amt) || 0) * 100);
 const owedOf = (c) => (Array.isArray(c && c.hist) ? c.hist : [])
   .reduce((n, h) => n + (h && h.type === 'debt' ? entryCents(h) : -entryCents(h)), 0);
-const entryId = (h) => String(h.id || [h.type, h.amt, h.at].join('|')).slice(0, 80);
+
+/* Un identifiant d'événement tiré d'une clé entière : SHA-256 en hexadécimal,
+ * raccourci APRÈS le hachage. Deux clés qui partagent un début ne se
+ * confondent jamais. */
+export async function keyHash(text) {
+  const bytes = new TextEncoder().encode(String(text));
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return [...digest].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 40);
+}
 
 async function limitOf(db, merchant, source, key) {
   const row = await db.prepare('SELECT limit_cents FROM credit_accounts WHERE merchant = ? AND source = ? AND customer_key = ?')
@@ -28,54 +36,60 @@ async function limitOf(db, merchant, source, key) {
 }
 
 /* Une dette `addCents` vient de laisser le client à `owedAfterCents`. `ref`
- * nomme cette dette, la même à chaque renvoi. Rend 'approved', 'unapproved'
- * ou null (sous le plafond, pas de plafond, base indisponible). */
+ * nomme cette dette entière (la même à chaque renvoi) ; seul son hachage est
+ * écrit. Rend 'approved', 'unapproved' ou null (sous le plafond, pas de
+ * plafond, base indisponible). */
 export async function auditCreditDebt(db, merchant, { source, key, addCents, owedAfterCents, ref, limitCents }, now = Date.now()) {
   try {
     const limit = limitCents !== undefined ? limitCents : await limitOf(db, merchant, source, key);
     if (limit == null || !(owedAfterCents > limit) || !(addCents > 0)) return null;
-    const tag = String(ref || '').slice(0, 120);
+    const tag = await keyHash(source + '|' + key + '|' + String(ref));
     const approvals = (await db.prepare(`SELECT id, amount_cents FROM credit_events WHERE merchant = ? AND source = ? AND customer_key = ?
       AND kind = 'limit-override' AND ts >= ? ORDER BY ts ASC LIMIT 20`).bind(merchant, source, key, now - APPROVAL_WINDOW_MS).all()).results || [];
     for (const a of approvals) {
       if (Number(a.amount_cents) < addCents) continue;
-      const useId = ('use-' + a.id).slice(0, 160);
+      const useId = 'use-' + await keyHash(String(a.id));
       await db.prepare(`INSERT OR IGNORE INTO credit_events (merchant, id, source, customer_key, kind, amount_cents, actor, detail, ts)
         VALUES (?, ?, ?, ?, 'limit-used', ?, '', ?, ?)`).bind(merchant, useId, source, key, addCents, tag, now).run();
       const used = await db.prepare('SELECT detail FROM credit_events WHERE merchant = ? AND id = ?').bind(merchant, useId).first();
       if (used && used.detail === tag) return 'approved';
     }
     await db.prepare(`INSERT OR IGNORE INTO credit_events (merchant, id, source, customer_key, kind, amount_cents, actor, detail, ts)
-      VALUES (?, ?, ?, ?, 'limit-unapproved', ?, '', ?, ?)`).bind(merchant, ('unapproved-' + source + '-' + tag).slice(0, 160), source, key,
-      addCents, JSON.stringify({ afterCents: owedAfterCents, limitCents: limit, ref: tag }).slice(0, 300), now).run();
+      VALUES (?, ?, ?, ?, 'limit-unapproved', ?, '', ?, ?)`).bind(merchant, 'unapproved-' + tag, source, key,
+      addCents, JSON.stringify({ afterCents: owedAfterCents, limitCents: limit, ref: tag }), now).run();
     return 'unapproved';
   } catch (_) { return null; }
 }
 
-/* L'ardoise vient d'être écrite : chaque client qui y gagne une dette et qui a
- * un plafond est regardé. `before` et `after` sont les carnets avant et après. */
-export async function auditCarnetWrite(db, merchant, before, after, now = Date.now()) {
+/* L'ardoise vient d'être écrite. `appended` est EXACTEMENT ce que l'union a
+ * ajouté (_credit-book-store.js unionBook : { clientId, key, entry }) : rien
+ * n'est redéduit ici. Une écriture refusée pour un client (dette sur une
+ * avance) a été retirée du carnet écrit `after` : elle ne compte pas. */
+export async function auditCarnetWrite(db, merchant, appended, after, now = Date.now()) {
   try {
+    const fresh = (Array.isArray(appended) ? appended : []).filter((a) => a && a.entry && a.entry.type === 'debt' && entryCents(a.entry) > 0);
+    if (!fresh.length) return [];
     const limits = new Map(((await db.prepare(`SELECT customer_key, limit_cents FROM credit_accounts
       WHERE merchant = ? AND source = 'carnet' AND limit_cents IS NOT NULL`).bind(merchant).all()).results || [])
       .map((r) => [String(r.customer_key), Number(r.limit_cents)]));
     if (!limits.size) return [];
-    const old = new Map((Array.isArray(before) ? before : []).filter((c) => c && c.id != null)
-      .map((c) => [String(c.id), new Set((c.hist || []).map(entryId))]));
+    const byId = new Map((Array.isArray(after) ? after : []).filter((c) => c && c.id != null).map((c) => [String(c.id), c]));
+    const groups = new Map();
+    for (const a of fresh) {
+      const c = byId.get(a.clientId);
+      if (!c || !limits.has(a.clientId) || !(c.hist || []).includes(a.entry)) continue;
+      (groups.get(a.clientId) || groups.set(a.clientId, []).get(a.clientId)).push(a);
+    }
     const out = [];
-    for (const c of Array.isArray(after) ? after : []) {
-      if (!c || c.id == null || !limits.has(String(c.id))) continue;
-      const seen = old.get(String(c.id)) || new Set();
-      const fresh = (c.hist || []).filter((h) => h && h.type === 'debt' && entryCents(h) > 0 && !seen.has(entryId(h)));
-      if (!fresh.length) continue;
-      const verdict = await auditCreditDebt(db, merchant, { source: 'carnet', key: String(c.id), limitCents: limits.get(String(c.id)),
-        addCents: fresh.reduce((n, h) => n + entryCents(h), 0), owedAfterCents: owedOf(c), ref: String(c.id) + ':' + entryId(fresh[fresh.length - 1]) }, now);
-      if (verdict) out.push({ key: String(c.id), verdict });
+    for (const [clientId, list] of groups) {
+      const verdict = await auditCreditDebt(db, merchant, { source: 'carnet', key: clientId, limitCents: limits.get(clientId),
+        addCents: list.reduce((n, a) => n + entryCents(a.entry), 0), owedAfterCents: owedOf(byId.get(clientId)),
+        ref: list.map((a) => a.key).join('\n') }, now);
+      if (verdict) out.push({ key: clientId, verdict });
     }
     return out;
   } catch (_) { return []; }
 }
-
 /* Une note « compte client » vient de s'ouvrir (rien encaissé, tout est dû). */
 export async function auditRetailOnAccount(db, merchant, customerId, balanceId, totalCents, now = Date.now()) {
   try {
