@@ -7,6 +7,11 @@
  * attache des fiches clients à un tarif (le grossiste paie le prix de gros
  * sans que la caissière y pense) et montre, article par article, tous ses prix.
  *
+ * Avant de recalculer un tarif, l'écran dit combien d'articles changeraient
+ * et combien passeraient sous leur prix d'achat ; chaque prix montre sa marge
+ * sur le prix d'achat du catalogue. L'onglet Ventes dit ce que chaque tarif a
+ * vendu et quelles ventes le serveur a signalées (tarif sans code responsable).
+ *
  * Tout passe par window.KiwiPriceListsApi (assets/price-lists.js) et le
  * serveur (functions/api/price-lists/) ; les articles viennent du catalogue
  * partagé (KiwiBoutiqueCatalog), les fiches du carnet (KiwiClients). Un
@@ -23,11 +28,20 @@
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const num = (n, d) => window.KiwiNumber?.format(n, { minimumFractionDigits: d, maximumFractionDigits: d }) ?? (+n).toFixed(d);
   const mad = (cents) => (cents == null ? '·' : num(cents / 100, cents % 100 ? 2 : 0) + ' MAD');
+  /* Un montant tapé : chiffres, au plus deux décimales (« 12,5 », « 12.50 »). Trois
+     décimales ou plus, un signe, une lettre : invalide, jamais arrondi en silence. */
   const toCents = (raw) => {
     const s = String(raw == null ? '' : raw).replace(/\s/g, '').replace(',', '.');
     if (s === '') return null;
+    if (!/^\d+(\.\d{1,2})?$/.test(s)) return undefined;
     const n = Number(s);
-    return Number.isFinite(n) && n >= 0 && n <= 1e7 ? Math.round(n * 100) : undefined;
+    return n <= 1e7 ? Math.round(n * 100) : undefined;
+  };
+  /* Marge sur le prix d'achat : « 32 % », ou « sous le coût ». Rien sans prix d'achat. */
+  const marginHtml = (cents, costCents) => {
+    if (cents == null || !(costCents > 0)) return '';
+    if (cents < costCents) return `<div class="pl-fb pl-under">${esc(L('sous le prix d’achat', 'below cost', 'تحت ثمن الشراء'))}</div>`;
+    return cents > 0 ? `<div class="pl-fb">${esc(L('marge', 'margin', 'الهامش'))} ${esc(num(Math.round((cents - costCents) * 100 / cents), 0))} %</div>` : '';
   };
   const inputMad = (cents) => (cents == null ? '' : String(cents / 100).replace('.', ','));
   const API = () => window.KiwiPriceListsApi;
@@ -58,9 +72,9 @@
     ['delivery', () => L('Livraison', 'Delivery apps', 'تطبيقات التوصيل')],
   ];
   const STEPS = [[0, () => L('Sans arrondi', 'No rounding', 'بلا تقريب')], [50, () => '0,50 MAD'], [100, () => '1 MAD'], [500, () => '5 MAD']];
-  const TABS = ['lists', 'items', 'clients'];
+  const TABS = ['lists', 'items', 'clients', 'sales'];
 
-  const state = { tab: 'lists', lists: [], loaded: false, error: '', open: null, prices: null, draft: {}, query: '', item: '', itemData: null, clients: [], clientQuery: '' };
+  const state = { tab: 'lists', lists: [], loaded: false, error: '', open: null, prices: null, draft: {}, invalid: new Set(), query: '', item: '', itemData: null, clients: [], clientQuery: '', sales: null };
 
   /* Material Symbols, Outlined 400 (assets/icons/material/). */
   const ICON = {
@@ -107,6 +121,9 @@
 .pl-table input{width:110px;font:inherit;font-size:14px;text-align:end;padding:6px 8px;border-radius:8px;border:1px solid var(--line,rgba(10,15,13,.16));background:#FDFCF9;font-variant-numeric:tabular-nums}
 .pl-table input.dirty{border-color:var(--atlas,#0B6E4F);box-shadow:0 0 0 2px rgba(11,110,79,.15)}
 .pl-table .pl-fb{font-size:12px;color:var(--ink-3,#5d6662)}
+.pl-under{color:var(--danger,#C94A3A);font-weight:500}
+.pl-table input[aria-invalid=true]{border-color:var(--danger,#C94A3A)}
+.pl-plan{display:grid;gap:8px}.pl-plan b{font-weight:600;font-variant-numeric:tabular-nums}
 .pl-wrap{overflow-x:auto;border:1px solid var(--line,rgba(10,15,13,.12));border-radius:14px;background:var(--paper,#F7F5F0)}
 .pl-empty{padding:28px;text-align:center;color:var(--ink-3,#5d6662);font-size:14px}
 .pl-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -121,7 +138,10 @@
     const C = CAT();
     try { return C ? C.listProducts().filter((p) => p && !p.archived) : []; } catch (_) { return []; }
   };
-  const listName = (id) => (state.lists.find((l) => l.id === id) || {}).name || '';
+  /* Le principal non renommé se dit dans la langue de l'écran. */
+  const nm = (l) => (l && l.isMain && (l.defaultName || !l.name) ? L('Prix principal', 'Main price', 'الثمن الأساسي') : String((l && l.name) || ''));
+  const listName = (id) => nm(state.lists.find((l) => l.id === id)) || (id === 'main' ? L('Prix principal', 'Main price', 'الثمن الأساسي') : '');
+  const costOf = (p) => (Number(p && p.cost) > 0 ? Math.round(Number(p.cost) * 100) : null);
 
   async function loadLists() {
     try { state.lists = await API().lists(); state.error = ''; }
@@ -139,7 +159,7 @@
       : `<span>${esc(num(l.priced || 0, 0))} ${esc(L('prix posés', 'prices set', 'ثمن محدد'))}</span><span>${esc(num(l.clients || 0, 0))} ${esc(L('clients', 'customers', 'زبناء'))}</span>`;
     return `<article class="pl-card">
       ${l.isMain ? `<span class="pl-main">${esc(L('Tarif principal', 'Main price list', 'التسعيرة الأساسية'))}</span>` : ''}
-      <h3>${ic('sell')}${esc(l.name)}${l.shared ? ` <span class="pl-pill off">${esc(L('partagé', 'shared', 'مشترك'))}</span>` : ''}</h3>
+      <h3>${ic('sell')}${esc(nm(l))}${l.shared ? ` <span class="pl-pill off">${esc(L('partagé', 'shared', 'مشترك'))}</span>` : ''}</h3>
       <div class="pl-pills">${pills}</div>
       <div class="pl-stats">${stats}</div>
       <div class="pl-acts">${l.isMain
@@ -167,20 +187,17 @@
     const priced = state.prices || new Map();
     const body = !CAT() ? `<div class="pl-empty">${esc(L('Le catalogue n’est pas chargé sur cet appareil.', 'The catalogue is not loaded on this device.', 'الكتالوج غير محمّل على هذا الجهاز.'))}</div>`
       : !rows.length ? `<div class="pl-empty">${esc(L('Aucun article ne correspond.', 'No item matches.', 'لا توجد سلعة مطابقة.'))}</div>`
-        : `<table class="pl-table"><thead><tr><th>${esc(L('Article', 'Item', 'السلعة'))}</th><th class="n">${esc(L('Prix principal', 'Main price', 'الثمن الأساسي'))}</th><th class="n">${esc(l.name)}</th></tr></thead><tbody>${rows.map((p) => {
-          const main = Math.round((+p.priceMAD || 0) * 100);
+        : `<table class="pl-table"><thead><tr><th>${esc(L('Article', 'Item', 'السلعة'))}</th><th class="n">${esc(L('Prix d’achat', 'Cost', 'ثمن الشراء'))}</th><th class="n">${esc(L('Prix principal', 'Main price', 'الثمن الأساسي'))}</th><th class="n">${esc(l.name)}</th></tr></thead><tbody>${rows.map((p) => {
+          const main = Math.round((+p.priceMAD || 0) * 100), cost = costOf(p);
           const own = Object.prototype.hasOwnProperty.call(state.draft, p.id) ? state.draft[p.id] : priced.get(p.id);
           const dirty = Object.prototype.hasOwnProperty.call(state.draft, p.id);
-          return `<tr><td>${esc(p.name)}</td><td class="n">${esc(mad(main))}</td><td class="n"><input inputmode="decimal" data-pl-price="${esc(p.id)}" class="${dirty ? 'dirty' : ''}" value="${esc(inputMad(own))}" placeholder="${esc(inputMad(main))}" aria-label="${esc(l.name + ' · ' + p.name)}">${own == null ? `<div class="pl-fb">${esc(L('principal', 'main', 'أساسي'))}</div>` : ''}</td></tr>`;
+          return `<tr><td>${esc(p.name)}</td><td class="n">${esc(cost == null ? '·' : mad(cost))}</td><td class="n">${esc(mad(main))}${marginHtml(main, cost)}</td><td class="n"><input inputmode="decimal" data-pl-price="${esc(p.id)}" class="${dirty ? 'dirty' : ''}" value="${esc(inputMad(own))}" placeholder="${esc(inputMad(main))}" aria-label="${esc(l.name + ' · ' + p.name)}"><div data-pl-note="${esc(p.id)}">${own == null ? `<div class="pl-fb">${esc(L('principal', 'main', 'أساسي'))}</div>` : (own === 0 ? `<div class="pl-fb">${esc(L('offert', 'free', 'مجاني'))}</div>` : marginHtml(own, cost))}</div></td></tr>`;
         }).join('')}</tbody></table>`;
     const checks = CHANNELS.map(([id, label]) => `<label><input type="checkbox" data-pl-chan="${id}"${l.channels.includes(id) ? ' checked' : ''}> ${esc(label())}</label>`).join('');
-    const compareOpts = [['', L('Aucun', 'None', 'بلا')], ...state.lists.filter((x) => x.id !== l.id).map((x) => [x.id, x.name])]
-      .map(([id, n]) => `<option value="${esc(id)}"${(l.compareListId || '') === id ? ' selected' : ''}>${esc(n)}</option>`).join('');
     const dirtyN = Object.keys(state.draft).length;
     return `<div class="pl-head"><button class="kb ghost" data-action="pl-back">${ic('back')}${esc(L('Tous les tarifs', 'All price lists', 'كل التسعيرات'))}</button><h2>${esc(l.name)}</h2></div>
       <div class="pl-card pl-form">
-        <div class="pl-row2"><label>${esc(L('Nom', 'Name', 'الاسم'))}<input type="text" data-pl-name maxlength="60" value="${esc(l.name)}"></label>
-        <label>${esc(L('Prix barré en ligne (« avant »)', 'Online compare-at price (“before”)', 'الثمن المشطوب في المتجر («قبل»)'))}<select data-pl-compare>${compareOpts}</select></label></div>
+        <label>${esc(L('Nom', 'Name', 'الاسم'))}<input type="text" data-pl-name maxlength="60" value="${esc(l.name)}"></label>
         <div><div class="pl-hint">${esc(L('Où ce tarif s’applique', 'Where this list applies', 'أين تُطبّق هذه التسعيرة'))}</div><div class="pl-checks">${checks}</div></div>
         <div class="pl-acts"><button class="kb atlas" data-action="pl-save-meta" data-arg="${esc(l.id)}">${esc(L('Enregistrer', 'Save', 'حفظ'))}</button>
         <button class="kb ghost" data-action="pl-remove" data-arg="${esc(l.id)}">${ic('del')}${esc(L('Retirer ce tarif', 'Remove this list', 'حذف هذه التسعيرة'))}</button></div>
@@ -190,11 +207,11 @@
         <div class="pl-row2"><label>${esc(L('Variation (%)', 'Change (%)', 'التغيير (%)'))}<input type="number" step="0.5" data-pl-pct value="-10"></label>
         <label>${esc(L('Arrondi', 'Rounding', 'التقريب'))}<select data-pl-step>${STEPS.map(([v, t]) => `<option value="${v}"${v === 100 ? ' selected' : ''}>${esc(t())}</option>`).join('')}</select></label></div>
         <p class="pl-hint" data-pl-example></p>
-        <div class="pl-acts"><button class="kb ghost" data-action="pl-derive" data-arg="${esc(l.id)}">${esc(L('Appliquer à tout le tarif', 'Apply to the whole list', 'تطبيق على كل التسعيرة'))}</button></div>
+        <div class="pl-acts"><button class="kb ghost" data-action="pl-derive" data-arg="${esc(l.id)}">${esc(L('Voir l’effet, puis appliquer', 'Preview, then apply', 'معاينة ثم تطبيق'))}</button></div>
       </div>
       <div class="pl-bar"><input class="pl-search" type="search" data-pl-search placeholder="${esc(L('Chercher un article', 'Search an item', 'ابحث عن سلعة'))}" value="${esc(state.query)}">
         <div class="pl-acts"><span class="pl-hint">${esc(L('Vide = prix principal', 'Empty = main price', 'فارغ = الثمن الأساسي'))}</span>
-        <button class="kb atlas" data-action="pl-save-prices" data-arg="${esc(l.id)}"${dirtyN ? '' : ' disabled'}>${esc(dirtyN ? L(`Enregistrer ${dirtyN} prix`, `Save ${dirtyN} prices`, `حفظ ${dirtyN} ثمن`) : L('Aucun changement', 'No changes', 'لا تغيير'))}</button></div></div>
+        <button class="kb atlas" data-action="pl-save-prices" data-arg="${esc(l.id)}"${dirtyN && !state.invalid.size ? '' : ' disabled'}>${esc(saveLabel())}</button></div></div>
       <div class="pl-wrap">${body}</div>`;
   }
 
@@ -204,7 +221,7 @@
     const hits = q ? prods.filter((p) => String(p.name || '').toLowerCase().includes(q)).slice(0, 12) : [];
     const pick = hits.map((p) => `<button class="kb ghost" data-action="pl-item" data-arg="${esc(p.id)}">${esc(p.name)}</button>`).join('');
     const d = state.itemData;
-    const table = d ? `<div class="pl-wrap"><table class="pl-table"><thead><tr><th>${esc(L('Tarif', 'Price list', 'التسعيرة'))}</th><th>${esc(L('Canaux', 'Channels', 'القنوات'))}</th><th class="n">${esc(L('Prix', 'Price', 'الثمن'))}</th></tr></thead><tbody>${d.lists.map((x) => `<tr><td>${esc(x.name)}</td><td>${x.isMain ? '' : (x.channels || []).map((c) => `<span class="pl-pill">${esc(chanLabel(c))}</span>`).join(' ')}</td><td class="n">${esc(mad(x.cents))}${!x.isMain && x.source === 'main' ? `<div class="pl-fb">${esc(L('repli sur le principal', 'falls back to main', 'يرجع للأساسي'))}</div>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '';
+    const table = d ? `<div class="pl-wrap"><table class="pl-table"><thead><tr><th>${esc(L('Tarif', 'Price list', 'التسعيرة'))}</th><th>${esc(L('Canaux', 'Channels', 'القنوات'))}</th><th class="n">${esc(L('Prix', 'Price', 'الثمن'))}</th></tr></thead><tbody>${d.lists.map((x) => `<tr><td>${esc(listName(x.id) || x.name)}</td><td>${x.isMain ? '' : (x.channels || []).map((c) => `<span class="pl-pill">${esc(chanLabel(c))}</span>`).join(' ')}</td><td class="n">${esc(mad(x.cents))}${!x.isMain && x.source === 'main' ? `<div class="pl-fb">${esc(L('repli sur le principal', 'falls back to main', 'يرجع للأساسي'))}</div>` : ''}${marginHtml(x.cents, d.item.costCents)}</td></tr>`).join('')}</tbody></table></div>` : '';
     return `<div class="pl-bar"><input class="pl-search" type="search" data-pl-search placeholder="${esc(L('Chercher un article pour voir tous ses prix', 'Search an item to see all its prices', 'ابحث عن سلعة لترى كل أثمانها'))}" value="${esc(state.query)}"></div>
       ${pick ? `<div class="pl-acts">${pick}</div>` : ''}
       ${d ? `<div class="pl-head"><h2>${esc(d.item.name || d.item.itemKey)}</h2></div>${table}` : `<p class="pl-sub">${esc(L('Chaque tarif, son prix pour cet article, et d’où il vient.', 'Every list, its price for this item, and where it comes from.', 'كل تسعيرة، ثمنها لهذه السلعة، ومن أين يأتي.'))}</p>`}`;
@@ -224,22 +241,51 @@
     const q = state.clientQuery.trim().toLowerCase();
     const assigned = new Set(state.clients.map((r) => r.clientId));
     const hits = q ? all.filter((c) => !assigned.has(c.id) && (String(c.name || '').toLowerCase().includes(q) || String(c.phone || '').replace(/\s/g, '').includes(q.replace(/\s/g, '')))).slice(0, 8) : [];
-    const sel = `<select data-pl-client-list>${choices.map((l) => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('')}</select>`;
-    return `<p class="pl-sub">${esc(L('Un client attaché à un tarif le reçoit tout seul : à la caisse dès qu’on l’ajoute au ticket, et sur ses factures.', 'A customer attached to a list gets it automatically: at the till as soon as they are added to the ticket, and on their invoices.', 'الزبون المرتبط بتسعيرة يحصل عليها تلقائياً: في الصندوق بمجرد إضافته إلى التذكرة، وفي فواتيره.'))}</p>
+    const sel = `<select data-pl-client-list>${choices.map((l) => `<option value="${esc(l.id)}">${esc(nm(l))}</option>`).join('')}</select>`;
+    return `<p class="pl-sub">${esc(L('Un client attaché à un tarif le reçoit à la caisse dès qu’on l’ajoute au ticket (avec le code d’un responsable si le tarif baisse les prix), et sur ses factures.', 'A customer attached to a list gets it at the till as soon as they are added to the ticket (with a manager code when the list lowers prices), and on their invoices.', 'الزبون المرتبط بتسعيرة يحصل عليها في الصندوق بمجرد إضافته إلى التذكرة (برمز المسؤول إذا كانت التسعيرة تخفض الأثمان)، وفي فواتيره.'))}</p>
       <div class="pl-card pl-form"><div class="pl-row2"><label>${esc(L('Client', 'Customer', 'الزبون'))}<input type="text" data-pl-client-q value="${esc(state.clientQuery)}" placeholder="${esc(L('Nom ou téléphone', 'Name or phone', 'الاسم أو الهاتف'))}"></label><label>${esc(L('Tarif', 'Price list', 'التسعيرة'))}${sel}</label></div>
       ${hits.length ? `<div class="pl-acts">${hits.map((c) => `<button class="kb ghost" data-action="pl-client-add" data-arg="${esc(c.id)}">${ic('add')}${esc(c.name || c.phone || c.id)}</button>`).join('')}</div>` : (q ? `<p class="pl-hint">${esc(L('Aucune fiche ne correspond dans le carnet.', 'No record matches in the customer book.', 'لا توجد بطاقة مطابقة في الدفتر.'))}</p>` : '')}</div>
       <div class="pl-wrap">${rows ? `<table class="pl-table"><thead><tr><th>${esc(L('Client', 'Customer', 'الزبون'))}</th><th>${esc(L('Téléphone', 'Phone', 'الهاتف'))}</th><th>${esc(L('Tarif', 'Price list', 'التسعيرة'))}</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="pl-empty">${esc(L('Aucun client n’a encore de tarif.', 'No customer has a price list yet.', 'لا يوجد زبون له تسعيرة بعد.'))}</div>`}</div>`;
   }
 
+  /* Ce que chaque tarif a vendu, et les ventes que le serveur a signalées. */
+  function salesBody() {
+    const d = state.sales;
+    if (!d) return `<p class="pl-sub">${esc(L('Chargement des ventes…', 'Loading sales…', 'جارٍ تحميل المبيعات…'))}</p>`;
+    if (d.error) return `<p class="pl-sub">${esc(L('Ventes indisponibles pour le moment.', 'Sales are unavailable right now.', 'المبيعات غير متاحة حالياً.'))}</p>`;
+    const reason = (r) => ({
+      'no-approval': L('sans code responsable', 'no manager code', 'دون رمز المسؤول'),
+      'customer-default-no-approval': L('fiche client, sans code responsable', 'customer record, no manager code', 'بطاقة زبون، دون رمز المسؤول'),
+      'approval-invalid': L('accord expiré ou faux', 'expired or invalid approval', 'موافقة منتهية أو غير صالحة'),
+      'unknown-list': L('tarif inconnu', 'unknown list', 'تسعيرة غير معروفة'),
+    })[r] || r;
+    const when = (ts) => { try { return new Date(ts).toLocaleString(window.KiwiI18n?.getLang?.() === 'ar' ? 'ar-MA' : window.KiwiI18n?.getLang?.() === 'en' ? 'en-GB' : 'fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', numberingSystem: 'latn' }); } catch (_) { return ''; } };
+    const lists = d.lists.length
+      ? `<table class="pl-table"><thead><tr><th>${esc(L('Tarif', 'Price list', 'التسعيرة'))}</th><th class="n">${esc(L('Ventes', 'Sales', 'المبيعات'))}</th><th class="n">${esc(L('Montant', 'Amount', 'المبلغ'))}</th><th class="n">${esc(L('Signalées', 'Flagged', 'مُبلَّغ عنها'))}</th></tr></thead><tbody>${d.lists.map((r) => `<tr><td>${esc(listName(r.listId) || r.name)}</td><td class="n">${esc(num(r.sales, 0))}</td><td class="n">${esc(mad(r.amountCents))}</td><td class="n">${r.flagged ? `<span class="pl-under">${esc(num(r.flagged, 0))}</span>` : '0'}</td></tr>`).join('')}</tbody></table>`
+      : `<div class="pl-empty">${esc(L('Aucune vente à un autre tarif que le principal sur 30 jours.', 'No sale at a list other than main in 30 days.', 'لا مبيعات بتسعيرة غير الأساسية خلال 30 يوماً.'))}</div>`;
+    const flags = d.flags.length
+      ? `<table class="pl-table"><thead><tr><th>${esc(L('Ticket', 'Ticket', 'التذكرة'))}</th><th>${esc(L('Tarif', 'Price list', 'التسعيرة'))}</th><th>${esc(L('Pourquoi', 'Why', 'السبب'))}</th><th class="n">${esc(L('Montant', 'Amount', 'المبلغ'))}</th><th class="n">${esc(L('Quand', 'When', 'متى'))}</th></tr></thead><tbody>${d.flags.map((f) => `<tr><td>${esc(f.ref || f.saleId.slice(-8))}</td><td>${esc(listName(f.listId) || f.listId)}</td><td>${esc(reason(f.reason))}</td><td class="n">${esc(mad(f.amountCents))}</td><td class="n">${esc(when(f.saleTs))}</td></tr>`).join('')}</tbody></table>`
+      : `<div class="pl-empty">${esc(L('Aucune vente signalée : chaque tarif a eu son code responsable.', 'No flagged sale: every list had its manager code.', 'لا مبيعات مُبلَّغ عنها: كل تسعيرة كان لها رمز المسؤول.'))}</div>`;
+    return `<p class="pl-sub">${esc(L('30 derniers jours. Une vente signalée est comptée : elle dit seulement qu’un tarif a été appliqué sans le code d’un responsable.', 'Last 30 days. A flagged sale is counted: it only says a list was applied without a manager code.', 'آخر 30 يوماً. البيع المُبلَّغ عنه محسوب: يعني فقط أن تسعيرة طُبّقت دون رمز المسؤول.'))}</p>
+      <div class="pl-wrap">${lists}</div>
+      <div class="pl-head"><h2>${esc(L('Ventes signalées', 'Flagged sales', 'مبيعات مُبلَّغ عنها'))}</h2></div>
+      <div class="pl-wrap">${flags}</div>`;
+  }
+  function saveLabel() {
+    const n = Object.keys(state.draft).length;
+    if (state.invalid.size) return L('Prix invalide : deux décimales au plus', 'Invalid price: two decimals at most', 'ثمن غير صالح: رقمان عشريان على الأكثر');
+    return n ? L(`Enregistrer ${n} prix`, `Save ${n} prices`, `حفظ ${n} ثمن`) : L('Aucun changement', 'No changes', 'لا تغيير');
+  }
+
   function render() {
     css();
     const tab = (key, label) => `<button type="button" data-lens-item class="${state.tab === key ? 'on' : ''}" data-action="pl-tab" data-arg="${key}" aria-pressed="${state.tab === key}">${esc(label)}</button>`;
-    const main = state.tab === 'items' ? itemsBody() : state.tab === 'clients' ? clientsBody() : (state.open ? detailBody() : listsBody());
+    const main = state.tab === 'items' ? itemsBody() : state.tab === 'clients' ? clientsBody() : state.tab === 'sales' ? salesBody() : (state.open ? detailBody() : listsBody());
     window.Kiwi.appPage('pricelists', {
       title: L('Tarifs', 'Price lists', 'التسعيرات'),
       subtitle: L('Détail, gros, en ligne, factures : un prix par canal et par client', 'Retail, wholesale, online, invoices: one price per channel and per customer', 'التقسيط، الجملة، المتجر، الفواتير: ثمن لكل قناة ولكل زبون'),
       body: `<div class="pl-page" data-pl-page>
-        <div class="pl-bar"><div class="pl-seg" data-lens-demo>${tab('lists', L('Tarifs', 'Lists', 'التسعيرات'))}${tab('items', L('Par article', 'By item', 'حسب السلعة'))}${tab('clients', L('Clients', 'Customers', 'الزبناء'))}</div>
+        <div class="pl-bar"><div class="pl-seg" data-lens-demo>${tab('lists', L('Tarifs', 'Lists', 'التسعيرات'))}${tab('items', L('Par article', 'By item', 'حسب السلعة'))}${tab('clients', L('Clients', 'Customers', 'الزبناء'))}${tab('sales', L('Ventes', 'Sales', 'المبيعات'))}</div>
         ${state.tab === 'lists' && !state.open ? `<button class="kb atlas" data-action="pl-new">${ic('add')}${esc(L('Nouveau tarif', 'New price list', 'تسعيرة جديدة'))}</button>` : ''}</div>
         ${main}</div>`,
     });
@@ -253,14 +299,20 @@
     page.querySelectorAll('[data-pl-price]').forEach((inp) => inp.addEventListener('input', () => {
       const id = inp.getAttribute('data-pl-price');
       const v = toCents(inp.value);
-      if (v === undefined) { inp.setAttribute('aria-invalid', 'true'); return; }
-      inp.removeAttribute('aria-invalid');
-      const was = (state.prices || new Map()).get(id);
-      if ((v == null && was == null) || v === was) delete state.draft[id]; else state.draft[id] = v;
+      /* Une saisie invalide ne garde AUCUN ancien brouillon : Enregistrer est bloqué tant qu'elle reste. */
+      if (v === undefined) { inp.setAttribute('aria-invalid', 'true'); state.invalid.add(id); delete state.draft[id]; }
+      else {
+        inp.removeAttribute('aria-invalid'); state.invalid.delete(id);
+        const was = (state.prices || new Map()).get(id);
+        if ((v == null && was == null) || v === was) delete state.draft[id]; else state.draft[id] = v;
+      }
       inp.classList.toggle('dirty', Object.prototype.hasOwnProperty.call(state.draft, id));
+      const note = page.querySelector(`[data-pl-note="${CSS.escape(id)}"]`), p = products().find((x) => x.id === id);
+      const shown = v === undefined ? null : (v == null ? (state.prices || new Map()).get(id) : v);
+      if (note) note.innerHTML = v === undefined ? '' : shown == null ? `<div class="pl-fb">${esc(L('principal', 'main', 'أساسي'))}</div>` : shown === 0 ? `<div class="pl-fb">${esc(L('offert', 'free', 'مجاني'))}</div>` : marginHtml(shown, costOf(p));
       const btn = page.querySelector('[data-action="pl-save-prices"]');
       const n = Object.keys(state.draft).length;
-      if (btn) { btn.disabled = !n; btn.textContent = n ? L(`Enregistrer ${n} prix`, `Save ${n} prices`, `حفظ ${n} ثمن`) : L('Aucun changement', 'No changes', 'لا تغيير'); }
+      if (btn) { btn.disabled = !n || state.invalid.size > 0; btn.textContent = saveLabel(); }
     }));
     const search = page.querySelector('[data-pl-search]');
     if (search) search.addEventListener('input', () => {
@@ -283,8 +335,8 @@
       if (!ex) return;
       const p = Number(String(pct.value).replace(',', '.')), s = Number(step.value) || 0;
       if (!Number.isFinite(p)) { ex.textContent = ''; return; }
-      const raw = Math.round(10000 * (10000 + Math.round(p * 100)) / 10000);
-      const out = s > 0 ? Math.round(raw / s) * s : raw;
+      const raw = Math.max(1, Math.round(10000 * (10000 + Math.round(p * 100)) / 10000));
+      const out = s > 0 && Math.round(raw / s) * s > 0 ? Math.round(raw / s) * s : raw;   // comme le serveur : jamais 0
       ex.textContent = L(`Exemple : un article à 100 MAD passe à ${mad(Math.max(0, out))}.`, `Example: an item at 100 MAD becomes ${mad(Math.max(0, out))}.`, `مثال: سلعة بـ100 درهم تصبح بـ${mad(Math.max(0, out))}.`);
     };
     if (pct && step) { pct.addEventListener('input', example); step.addEventListener('change', example); example(); }
@@ -297,12 +349,14 @@
       forbidden: L('Seul le patron ou un gérant modifie les tarifs.', 'Only the owner or a manager changes price lists.', 'فقط صاحب المحل أو المسيّر يغيّر التسعيرات.'),
       'too-many-lists': L('Trop de tarifs : retirez-en un d’abord.', 'Too many lists: remove one first.', 'تسعيرات كثيرة: احذف واحدة أولاً.'),
       offline: L('Pas de connexion. Rien n’a été enregistré.', 'No connection. Nothing was saved.', 'لا يوجد اتصال. لم يُحفظ شيء.'),
+      'zero-price': L('Un prix à 0 MAD doit être confirmé comme offert.', 'A 0 MAD price must be confirmed as free.', 'ثمن 0 درهم يجب تأكيده كمجاني.'),
+      'bad-price': L('Prix invalide : deux décimales au plus.', 'Invalid price: two decimals at most.', 'ثمن غير صالح: رقمان عشريان على الأكثر.'),
     })[code] || L('Impossible pour le moment. Rien n’a été enregistré.', 'Not possible right now. Nothing was saved.', 'غير ممكن حالياً. لم يُحفظ شيء.');
   }
   const failToast = (e) => toast(errorText(e && e.code), { type: 'error' });
 
   async function openList(id) {
-    state.open = id; state.draft = {}; state.query = ''; state.prices = null;
+    state.open = id; state.draft = {}; state.invalid = new Set(); state.query = ''; state.prices = null;
     render();
     try {
       const rows = await API().listPrices(id);
@@ -327,20 +381,21 @@
   handlers['pl-tab'] = async (el, arg) => {
     const k = argOf(el, arg);
     if (Object.keys(state.draft).length && !window.confirm(L('Quitter sans enregistrer les prix ?', 'Leave without saving the prices?', 'المغادرة دون حفظ الأثمان؟'))) return;
-    state.tab = TABS.includes(k) ? k : 'lists'; state.open = null; state.draft = {}; state.query = ''; state.itemData = null;
+    state.tab = TABS.includes(k) ? k : 'lists'; state.open = null; state.draft = {}; state.invalid = new Set(); state.query = ''; state.itemData = null;
     if (state.tab === 'clients') { render(); await loadClients(); }
+    if (state.tab === 'sales') { state.sales = null; render(); try { state.sales = await API().sales(30); } catch (_) { state.sales = { error: true }; } }
     render();
   };
   handlers['pl-open'] = (el, arg) => openList(argOf(el, arg));
   handlers['pl-back'] = () => {
     if (Object.keys(state.draft).length && !window.confirm(L('Quitter sans enregistrer les prix ?', 'Leave without saving the prices?', 'المغادرة دون حفظ الأثمان؟'))) return;
-    state.open = null; state.draft = {}; state.query = '';
+    state.open = null; state.draft = {}; state.invalid = new Set(); state.query = '';
     render();
   };
 
   handlers['pl-new'] = () => {
     const bases = [['main', L('Le prix principal', 'The main price', 'الثمن الأساسي')], ['empty', L('Vide (tout reste au principal)', 'Empty (everything stays at main)', 'فارغة (كل شيء يبقى بالأساسي)')],
-      ...state.lists.filter((l) => !l.isMain).map((l) => [l.id, L('Copie de ', 'Copy of ', 'نسخة من ') + l.name])];
+      ...state.lists.filter((l) => !l.isMain).map((l) => [l.id, L('Copie de ', 'Copy of ', 'نسخة من ') + nm(l)])];
     const m = modal({
       title: L('Nouveau tarif', 'New price list', 'تسعيرة جديدة'),
       body: `<div class="pl-form">
@@ -375,7 +430,7 @@
   };
 
   handlers['pl-rename-main'] = async () => {
-    const cur = (state.lists.find((l) => l.isMain) || {}).name || '';
+    const cur = nm(state.lists.find((l) => l.isMain));
     const name = window.prompt(L('Nom du tarif principal', 'Main price list name', 'اسم التسعيرة الأساسية'), cur);
     if (name == null || !name.trim()) return;
     try { await API().update('main', { name: name.trim() }); await loadLists(); render(); } catch (e) { failToast(e); }
@@ -388,7 +443,6 @@
     const patch = {
       name: page.querySelector('[data-pl-name]').value.trim(),
       channels: CHANNELS.map(([c]) => c).filter((c) => page.querySelector(`[data-pl-chan="${c}"]`).checked),
-      compareListId: page.querySelector('[data-pl-compare]').value || null,
     };
     try {
       await API().update(id, patch);
@@ -399,8 +453,15 @@
 
   handlers['pl-save-prices'] = async (el, arg) => {
     const id = argOf(el, arg);
+    if (state.invalid.size) { failToast({ code: 'bad-price' }); return; }
     const rows = Object.keys(state.draft).map((itemKey) => ({ itemKey, listId: id, price: state.draft[itemKey] }));
     if (!rows.length) return;
+    /* 0 MAD : le patron confirme que l'article est offert ; sinon rien ne part. */
+    const zero = rows.filter((r) => r.price === 0);
+    if (zero.length) {
+      if (!window.confirm(L(`${zero.length} article(s) à 0 MAD : les offrir dans ce tarif ?`, `${zero.length} item(s) at 0 MAD: give them away in this list?`, `${zero.length} سلعة بـ0 درهم: تقديمها مجاناً في هذه التسعيرة؟`))) return;
+      zero.forEach((r) => { r.free = true; });
+    }
     const btn = el && el.closest ? el : null;
     if (btn) btn.disabled = true;
     try {
@@ -418,12 +479,32 @@
     const pct = Number(String(page.querySelector('[data-pl-pct]').value || '0').replace(',', '.'));
     const step = Number(page.querySelector('[data-pl-step]').value) || 0;
     if (!Number.isFinite(pct)) return;
-    if (!window.confirm(L(`Remplacer tous les prix de ce tarif par le principal ${pct >= 0 ? '+' : ''}${pct} % ?`, `Replace every price in this list with main ${pct >= 0 ? '+' : ''}${pct} %?`, `استبدال كل أثمان هذه التسعيرة بالأساسي ${pct >= 0 ? '+' : ''}${pct}٪؟`))) return;
-    try {
-      const out = await API().derive(id, pct, step);
-      toast(L('Tarif recalculé', 'List recalculated', 'تمت إعادة حساب التسعيرة'), { type: 'success', desc: L(`${out.written} prix.`, `${out.written} prices.`, `${out.written} ثمن.`) });
-      await loadLists(); await openList(id);
-    } catch (e) { failToast(e); }
+    /* D'abord l'effet, calculé par le serveur sans rien écrire ; ensuite seulement l'écriture. */
+    let plan;
+    try { plan = await API().derive(id, pct, step, undefined, true); } catch (e) { failToast(e); return; }
+    const sign = `${pct >= 0 ? '+' : ''}${pct} %`;
+    const samples = (plan.samples || []).map((x) => `<tr><td>${esc(x.name || x.itemKey)}</td><td class="n">${esc(mad(x.before))}</td><td class="n">${esc(mad(x.cents))}${x.belowCost ? marginHtml(x.cents, x.costCents) : ''}</td></tr>`).join('');
+    const m = modal({
+      title: L('Recalculer le tarif', 'Recalculate the list', 'إعادة حساب التسعيرة') + ' · ' + sign,
+      body: `<div class="pl-plan">
+        <p class="pl-sub">${esc(L(`${plan.changed} article(s) sur ${plan.total} changeraient de prix.`, `${plan.changed} of ${plan.total} item(s) would change price.`, `${plan.changed} من ${plan.total} سلعة سيتغير ثمنها.`))}</p>
+        ${plan.belowCost ? `<p class="pl-sub"><span class="pl-under">${esc(L(`${plan.belowCost} passeraient sous leur prix d’achat.`, `${plan.belowCost} would fall below their cost.`, `${plan.belowCost} ستنزل تحت ثمن شرائها.`))}</span></p>` : `<p class="pl-sub">${esc(L('Aucun article ne passe sous son prix d’achat.', 'No item falls below its cost.', 'لا سلعة تنزل تحت ثمن شرائها.'))}</p>`}
+        ${samples ? `<div class="pl-wrap"><table class="pl-table"><thead><tr><th>${esc(L('Article', 'Item', 'السلعة'))}</th><th class="n">${esc(L('Avant', 'Before', 'قبل'))}</th><th class="n">${esc(L('Après', 'After', 'بعد'))}</th></tr></thead><tbody>${samples}</tbody></table></div>` : ''}
+        <p class="pl-hint">${esc(L('Les prix posés à la main dans ce tarif seront remplacés.', 'Prices set by hand in this list will be replaced.', 'الأثمان المحددة يدوياً في هذه التسعيرة سيتم استبدالها.'))}</p></div>`,
+      foot: `<button class="kb ghost" data-dismiss>${esc(L('Annuler', 'Cancel', 'إلغاء'))}</button><button class="kb atlas" data-pl-derive-go${plan.changed ? '' : ' disabled'}>${esc(L(`Appliquer à ${plan.changed} article(s)`, `Apply to ${plan.changed} item(s)`, `تطبيق على ${plan.changed} سلعة`))}</button>`,
+    });
+    if (!m || !m.el) return;
+    m.el.addEventListener('click', async (e) => {
+      const go = e.target.closest('[data-pl-derive-go]');
+      if (!go) return;
+      go.disabled = true;
+      try {
+        const out = await API().derive(id, pct, step);
+        try { m.close(); } catch (_) {}
+        toast(L('Tarif recalculé', 'List recalculated', 'تمت إعادة حساب التسعيرة'), { type: 'success', desc: L(`${out.written} prix.`, `${out.written} prices.`, `${out.written} ثمن.`) });
+        await loadLists(); await openList(id);
+      } catch (err) { go.disabled = false; failToast(err); }
+    });
   };
 
   handlers['pl-remove'] = (el, arg) => {
@@ -432,9 +513,9 @@
     if (!l) return;
     const others = state.lists.filter((x) => x.id !== id);
     const m = modal({
-      title: L('Retirer le tarif', 'Remove the price list', 'حذف التسعيرة') + ' · ' + l.name,
-      body: `<div class="pl-form"><p class="pl-sub">${esc(L('Les clients de ce tarif et le prix barré en ligne passent au tarif de remplacement. Les ventes passées gardent leur tarif.', 'Customers on this list and the online compare-at price move to the replacement. Past sales keep their list.', 'زبناء هذه التسعيرة والثمن المشطوب ينتقلون إلى التسعيرة البديلة. المبيعات السابقة تحتفظ بتسعيرتها.'))}</p>
-        <label>${esc(L('Remplacer par', 'Replace with', 'استبدال بـ'))}<select data-r>${others.map((x) => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></label></div>`,
+      title: L('Retirer le tarif', 'Remove the price list', 'حذف التسعيرة') + ' · ' + nm(l),
+      body: `<div class="pl-form"><p class="pl-sub">${esc(L('Les clients de ce tarif passent au tarif de remplacement. Les ventes, factures et devis passés gardent leur tarif : le tarif est alors archivé, pas effacé.', 'Customers on this list move to the replacement. Past sales, invoices and quotes keep their list: the list is then archived, not erased.', 'زبناء هذه التسعيرة ينتقلون إلى التسعيرة البديلة. المبيعات والفواتير وعروض الأثمان السابقة تحتفظ بتسعيرتها: تُؤرشف التسعيرة ولا تُحذف.'))}</p>
+        <label>${esc(L('Remplacer par', 'Replace with', 'استبدال بـ'))}<select data-r>${others.map((x) => `<option value="${esc(x.id)}">${esc(nm(x))}</option>`).join('')}</select></label></div>`,
       foot: `<button class="kb ghost" data-dismiss>${esc(L('Annuler', 'Cancel', 'إلغاء'))}</button><button class="kb atlas" data-pl-confirm>${esc(L('Retirer', 'Remove', 'حذف'))}</button>`,
     });
     if (!m || !m.el) return;

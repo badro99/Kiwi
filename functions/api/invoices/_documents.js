@@ -109,13 +109,15 @@ const COLS = ['id', 'merchant', 'type', 'status', 'number', 'seq', 'issue_date',
 /* INSERT d'un brouillon. Avec `guard` ({sql, params}), la ligne n'est insérée que
  * si la condition tient, dans la même transaction que ce qui la précède. */
 function insertStatement(ctx, d, guard) {
-  const values = COLS.map((c) => (d[c] === undefined ? null : d[c]));
-  const marks = COLS.map(() => '?').join(', ');
+  // Sans tarif, la colonne n'est pas écrite : une base encore à 0027 enregistre la facture.
+  const cols = COLS.filter((c) => c !== 'price_list_id' || d[c] != null);
+  const values = cols.map((c) => (d[c] === undefined ? null : d[c]));
+  const marks = cols.map(() => '?').join(', ');
   if (guard) {
-    return ctx.db.prepare(`INSERT INTO invoice_docs (${COLS.join(', ')}) SELECT ${marks} WHERE ${guard.sql}`)
+    return ctx.db.prepare(`INSERT INTO invoice_docs (${cols.join(', ')}) SELECT ${marks} WHERE ${guard.sql}`)
       .bind(...values, ...(guard.params || []));
   }
-  return ctx.db.prepare(`INSERT INTO invoice_docs (${COLS.join(', ')}) VALUES (${marks})`).bind(...values);
+  return ctx.db.prepare(`INSERT INTO invoice_docs (${cols.join(', ')}) VALUES (${marks})`).bind(...values);
 }
 
 function draftRow(ctx, fields) {

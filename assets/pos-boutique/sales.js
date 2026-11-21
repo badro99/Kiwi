@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=346'; import { tillPriceList as tpl } from './price-list.js?v=2';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=242';
-import { offerRegister } from './inventory.js?v=242';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=347'; import { tillPriceList as tpl } from './price-list.js?v=3';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=243';
+import { offerRegister } from './inventory.js?v=243';
 import { ticketOwner } from './ticket-owner.js?v=7';
 import { ticketRemise } from './ticket-remise.js?v=5';
 import { agreedUnit, maxPct } from './bargain.js?v=3';

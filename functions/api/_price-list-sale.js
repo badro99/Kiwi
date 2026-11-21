@@ -7,8 +7,9 @@
 // heures à compter de l'accord. Le code ne quitte jamais D1 et n'entre jamais
 // dans la file hors ligne ; la preuve, oui, et elle seule.
 //
-// Sans preuve, un tarif reste permis quand c'est celui de la fiche client
-// attachée à la vente (price_list_clients) : le patron l'a déjà décidé.
+// La fiche client attachée ne suffit pas : la caisse demande aussi le code
+// quand une fiche fait passer le ticket à un tarif plus bas. Une vente au tarif
+// d'une fiche sans preuve est signalée « customer-default-no-approval ».
 //
 // Comme pour la remise hors réglage (sale.js › discount-policy), une vente
 // encaissée n'est JAMAIS refusée pour ça : l'argent est déjà dans le tiroir.
@@ -81,12 +82,17 @@ export async function stampPriceList(env, merchant, saleId, body) {
     const list = await findList(env, merchant, listId, { archived: true });
     const sale = await env.DB.prepare('SELECT amount_cents, method, ref, ts FROM sales WHERE merchant = ? AND id = ?').bind(merchant, saleId).first();
     const ts = sale ? Number(sale.ts) : Date.now();
+    // La fiche client n'est pas une autorisation : n'importe quelle caissière peut
+    // attacher la fiche d'un grossiste. Seule la preuve signée d'un code
+    // responsable compte ; sans elle, la vente est signalée (jamais refusée).
+    const viaClient = (await clientDefault(env, merchant, body.clientId)) === listId;
     if (!list) verdict = { code: 'unknown-list' };
-    else if ((await clientDefault(env, merchant, body.clientId)) === listId) verdict = null;
     else if (await readPriceListProof(body.priceListApproval, env.AUTH_SECRET, merchant, listId, ts)) verdict = null;
-    else verdict = { code: body.priceListApproval ? 'approval-invalid' : 'no-approval' };
+    else if (body.priceListApproval) verdict = { code: 'approval-invalid' };
+    else verdict = { code: viaClient ? 'customer-default-no-approval' : 'no-approval' };
     if (!verdict || !sale) return;
-    const note = (list ? 'Tarif « ' + list.name + ' »' : 'Tarif inconnu') + (verdict.code === 'unknown-list' ? ' introuvable' : ' sans accord responsable');
+    const note = (list ? 'Tarif « ' + list.name + ' »' : 'Tarif inconnu')
+      + (verdict.code === 'unknown-list' ? ' introuvable' : viaClient ? ' (fiche client) sans code responsable' : ' sans code responsable');
     await env.DB.prepare(
       `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id, amount, amount_cents, method, ref, sale_ts, impact, ts)
        SELECT ?, ?, 'price-list-policy', ?, ?, '', '', ?, ?, ?, ?, ?, ?, ?

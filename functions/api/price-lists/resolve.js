@@ -2,7 +2,9 @@
 //
 //   { merchant, listId?, clientId?, channel?, items: [{ itemKey, variantKey?, qty? }] }
 //   → { ok, list: { id, name, isMain }, why, lines: [{ itemKey, variantKey, qty,
-//        unitCents, mainCents, source, compareCents?, totalCents }], totalCents }
+//        unitCents, mainCents, source, totalCents }], totalCents }
+//   Un prix par article : `variantKey` est renvoyé tel quel, la déclinaison
+//   a le prix de son article.
 //
 // Le tarif : celui qu'on nomme, sinon celui de la fiche client, sinon celui du
 // canal, sinon le principal (`why` dit lequel). Un article sans prix dans le

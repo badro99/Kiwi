@@ -1,20 +1,21 @@
 // /api/price-lists — les tarifs d'un magasin (functions/api/_price-lists.js).
 //
 //   GET  ?merchant=…[&archived=1]
-//        → { ok, lists: [{ id, name, isMain, channels, sites, compareListId,
+//        → { ok, lists: [{ id, name, isMain, defaultName?, channels, sites,
 //             archived, sort, shared, priced, clients }] }
 //        Lecture : patron, opérateur, caisse appairée (tenantFor).
 //
 //   POST { merchant, action, … }   patron ou gérant (canManage), magasin actif
-//     create  { name, channels, sites, base: 'main'|'empty'|<listId>, pct, step, compareListId }
+//     create  { name, channels, sites, base: 'main'|'empty'|<listId>, pct, step }
 //             base 'main' (défaut) recopie le prix principal de chaque article,
 //             ± pct, arrondi au pas (centimes : 50, 100, 500…).
-//     update  { id, name?, channels?, sites?, compareListId?, sort? }
+//     update  { id, name?, channels?, sites?, sort? }
 //             id 'main' : seul le nom affiché change.
 //     archive { id, replacement? } · delete { id, replacement? }
-//             Les fiches clients et les prix barrés qui visaient ce tarif passent
-//             au remplaçant (le principal par défaut). Un tarif déjà porté par
-//             une vente n'est jamais effacé : il est archivé, son nom reste lisible.
+//             Les fiches clients qui visaient ce tarif passent au remplaçant (le
+//             principal par défaut). Un tarif déjà porté par une vente, une
+//             facture ou un devis n'est jamais effacé : il est archivé, son nom
+//             reste lisible.
 //     reorder { ids: [...] }
 import { json, isOperator } from '../../auth/_lib.js';
 import { sessionTierAtLeast } from '../../auth/_session-tier.js';
@@ -75,13 +76,11 @@ export async function onRequestPost({ request, env }) {
       source = await findList(env, merchant, base);
       if (!source) return json({ error: 'unknown-base' }, 400);
     }
-    const compare = b.compareListId == null || b.compareListId === '' ? null : str(b.compareListId, 64);
-    if (compare && compare !== MAIN_ID && !(await findList(env, merchant, compare))) return json({ error: 'unknown-compare' }, 400);
     const id = newListId();
-    await env.DB.prepare(`INSERT INTO price_lists (merchant, id, name, is_main, channels, sites, compare_list_id, archived, sort, created_ts, updated_ts)
-      VALUES (?, ?, ?, 0, ?, ?, ?, 0, ?, ?, ?)`)
+    await env.DB.prepare(`INSERT INTO price_lists (merchant, id, name, is_main, channels, sites, archived, sort, created_ts, updated_ts)
+      VALUES (?, ?, ?, 0, ?, ?, 0, ?, ?, ?)`)
       .bind(merchant, id, name, JSON.stringify(cleanChannels(b.channels)), JSON.stringify(cleanSites(b.sites, merchant)),
-        compare, own.length + 1, now, now).run();
+        own.length + 1, now, now).run();
     let seeded = 0;
     if (base !== 'empty') {
       const main = await mainPrices(env, merchant);
@@ -90,8 +89,10 @@ export async function onRequestPost({ request, env }) {
       for (const [key, p] of main) {
         if (p.archived) continue;
         const start = from ? (from.get(key + '|') ?? p.cents) : p.cents;
-        rows.push(env.DB.prepare('INSERT OR REPLACE INTO item_prices (merchant, list_id, item_key, variant_key, price_cents, updated_ts) VALUES (?, ?, ?, \'\', ?, ?)')
-          .bind(merchant, id, key, derivePrice(start, pct, step), now));
+        const cents = derivePrice(start, pct, step);
+        if (!(cents > 0)) continue;   // jamais d'article offert par recopie : il retombe sur le principal
+        rows.push(env.DB.prepare('INSERT OR REPLACE INTO item_prices (merchant, list_id, item_key, variant_key, price_cents, free, updated_ts) VALUES (?, ?, ?, \'\', ?, 0, ?)')
+          .bind(merchant, id, key, cents, now));
       }
       await runBatches(env.DB, rows);
       seeded = rows.length;
@@ -122,12 +123,6 @@ export async function onRequestPost({ request, env }) {
     }
     if (b.channels != null) { sets.push('channels = ?'); vals.push(JSON.stringify(cleanChannels(b.channels))); }
     if (b.sites != null) { sets.push('sites = ?'); vals.push(JSON.stringify(cleanSites(b.sites, merchant))); }
-    if (b.compareListId !== undefined) {
-      const compare = b.compareListId == null || b.compareListId === '' ? null : str(b.compareListId, 64);
-      if (compare === id) return json({ error: 'bad-compare' }, 400);
-      if (compare && compare !== MAIN_ID && !(await findList(env, merchant, compare))) return json({ error: 'unknown-compare' }, 400);
-      sets.push('compare_list_id = ?'); vals.push(compare);
-    }
     if (b.sort != null) { sets.push('sort = ?'); vals.push(Math.max(0, Math.min(999, Math.round(Number(b.sort) || 0)))); }
     if (b.archived === false) { sets.push('archived = 0'); }
     if (!sets.length) return json({ error: 'nothing-to-change' }, 400);
@@ -148,11 +143,13 @@ export async function onRequestPost({ request, env }) {
       replacement === MAIN_ID
         ? env.DB.prepare('DELETE FROM price_list_clients WHERE merchant = ? AND list_id = ?').bind(merchant, id)
         : env.DB.prepare('UPDATE price_list_clients SET list_id = ?, updated_ts = ? WHERE merchant = ? AND list_id = ?').bind(replacement, now, merchant, id),
-      env.DB.prepare('UPDATE price_lists SET compare_list_id = ?, updated_ts = ? WHERE merchant = ? AND compare_list_id = ?')
-        .bind(replacement === MAIN_ID ? MAIN_ID : replacement, now, merchant, id),
     ];
+    // Une vente OU une facture/devis qui cite ce tarif : on archive, on ne supprime pas.
     let used = null;
-    try { used = await env.DB.prepare('SELECT 1 AS x FROM sales WHERE merchant = ? AND price_list_id = ? LIMIT 1').bind(merchant, id).first(); } catch (_) { used = { x: 1 }; }
+    try {
+      used = await env.DB.prepare('SELECT 1 AS x FROM sales WHERE merchant = ? AND price_list_id = ? LIMIT 1').bind(merchant, id).first()
+        || await env.DB.prepare('SELECT 1 AS x FROM invoice_docs WHERE merchant = ? AND price_list_id = ? LIMIT 1').bind(merchant, id).first();
+    } catch (_) { used = { x: 1 }; }
     const hard = action === 'delete' && !used;
     if (hard) {
       stmts.push(env.DB.prepare('DELETE FROM item_prices WHERE merchant = ? AND list_id = ?').bind(merchant, id));

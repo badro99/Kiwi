@@ -10,8 +10,9 @@
  *   setPrices(rows)   → Promise<{ ok, written, removed }>
  *                       rows : [{ itemKey, listId, price }] — `price` en CENTIMES
  *                       entiers, comme prices() ; null retire le prix (l'article
- *                       retombe sur le principal). Les lignes 'main' s'écrivent
- *                       dans le catalogue (KiwiBoutiqueCatalog.updateProduct), les
+ *                       retombe sur le principal). 0 n'est accepté qu'avec
+ *                       `free: true` (offert exprès), sinon zero-price. Les
+ *                       lignes 'main' s'écrivent dans le catalogue (KiwiBoutiqueCatalog.updateProduct), les
  *                       autres en un seul appel serveur, tout ou rien.
  *
  * window.KiwiPriceListsApi — le reste, pour l'écran Tarifs et les factures :
@@ -47,7 +48,7 @@
   var q = encodeURIComponent;
 
   function list() {
-    return call('').then(function (j) { return (j.lists || []).map(function (l) { return { id: l.id, name: l.name, isMain: !!l.isMain }; }); });
+    return call('').then(function (j) { return (j.lists || []).map(function (l) { return { id: l.id, name: window.KiwiPriceListsApi.nameOf(l), isMain: !!l.isMain }; }); });
   }
   function prices(listId) {
     return call('/prices?list=' + q(listId)).then(function (j) {
@@ -60,7 +61,9 @@
     var all = Array.isArray(rows) ? rows : [];
     var main = all.filter(function (r) { return r && r.listId === 'main'; });
     var other = all.filter(function (r) { return r && r.listId !== 'main'; }).map(function (r) {
-      return { listId: r.listId, itemKey: r.itemKey, variantKey: r.variantKey || '', price: r.price == null ? null : Math.round(Number(r.price)) };
+      var row = { listId: r.listId, itemKey: r.itemKey, variantKey: r.variantKey || '', price: r.price == null ? null : Math.round(Number(r.price)) };
+      if (r.free === true) row.free = true;   // 0 MAD n'est accepté qu'offert exprès (sinon zero-price)
+      return row;
     });
     var done = { ok: true, written: 0, removed: 0 };
     if (main.length) {
@@ -87,12 +90,15 @@
     archive: function (id, replacement) { return call('', { action: 'archive', id: id, replacement: replacement || 'main' }); },
     remove: function (id, replacement) { return call('', { action: 'delete', id: id, replacement: replacement || 'main' }); },
     reorder: function (ids) { return call('', { action: 'reorder', ids: ids }); },
-    derive: function (listId, pct, step, items) { return call('/prices', { action: 'derive', listId: listId, pct: pct, step: step, items: items }); },
+    derive: function (listId, pct, step, items, preview) { return call('/prices', { action: 'derive', listId: listId, pct: pct, step: step, items: items, preview: !!preview }); },
     listPrices: function (listId) { return call('/prices?list=' + q(listId)).then(function (j) { return j.prices || []; }); },
     itemPrices: function (itemKey) { return call('/prices?item=' + q(itemKey)); },
     clients: function (listId) { return call('/clients' + (listId ? '?list=' + q(listId) : '')).then(function (j) { return j.clients || []; }); },
     assignClient: function (clientId, listId) { return call('/clients', { clientId: clientId, listId: listId || null }); },
     resolve: function (spec) { return call('/resolve', spec || {}); },
+    sales: function (days) { return call('/sales?days=' + q(days || 30)); },
+    /* Le principal non renommé, dans la langue de l'écran. */
+    nameOf: function (l) { return l && l.isMain && (l.defaultName || !l.name) ? L('Prix principal', 'Main price', 'الثمن الأساسي') : String((l && l.name) || ''); },
   };
 
   /* ── FACTURES ET DEVIS : des articles du catalogue au prix d'un tarif ──────
@@ -100,9 +106,12 @@
    * touché : cette carte se pose à côté de ses lignes. On choisit un tarif (par
    * défaut celui de la fiche client choisie), on cherche un article, et la
    * ligne arrive au prix que le SERVEUR résout (/api/price-lists/resolve,
-   * canal factures), converti en HT avec le taux de TVA de la ligne. Le tarif
-   * de la fiche client est aussi écrit sur le document par le serveur à sa
-   * création (functions/api/_price-lists.js › invoicePriceList). */
+   * canal factures), converti en HT avec le taux de TVA de la ligne. Le choix
+   * part avec le document : le sélecteur porte data-f="pricelist", que
+   * composerPayload (assets/invoicing/composer.js) envoie en `priceListId`.
+   * « Selon la fiche client » (valeur vide) n'envoie rien : le serveur garde le
+   * tarif du document, ou à la création celui de la fiche
+   * (functions/api/_price-lists.js › invoicePriceList). */
   function L(fr, en, ar) { var l = window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang(); return l === 'en' ? en : l === 'ar' ? ar : fr; }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   var invLists = null;
@@ -127,7 +136,9 @@
     var compose = card.closest('[data-inv-compose]');
     var sel = card.querySelector('[data-plinv-list]');
     if (!compose || !sel) return;
-    window.KiwiPriceListsApi.resolve({ listId: sel.value, channel: 'invoices', items: [{ itemKey: itemKey, qty: 1 }] }).then(function (j) {
+    var spec = { channel: 'invoices', items: [{ itemKey: itemKey, qty: 1 }] };
+    if (sel.value) spec.listId = sel.value; else if (card.getAttribute('data-plinv-client')) spec.clientId = card.getAttribute('data-plinv-client');
+    window.KiwiPriceListsApi.resolve(spec).then(function (j) {
       var line = j.lines && j.lines[0];
       if (!line || line.unitCents == null) throw new Error('unknown');
       var rows = compose.querySelectorAll('.inv-line-row');
@@ -152,6 +163,7 @@
       try { window.Kiwi.toast(L('Prix introuvable pour cet article', 'No price found for this item', 'لا يوجد ثمن لهذه السلعة'), { type: 'error' }); } catch (_) {}
     });
   }
+  function autoOption() { return '<option value="">' + esc(L('Selon la fiche client', 'As on the customer record', 'حسب بطاقة الزبون')) + '</option>'; }
   function paintCard(card) {
     var q = (card.querySelector('[data-plinv-q]').value || '').trim().toLowerCase();
     var out = card.querySelector('[data-plinv-hits]');
@@ -173,14 +185,16 @@
     card.className = 'inv-form-card';
     card.setAttribute('data-plinv', '');
     card.innerHTML = '<h4 class="inv-section-title">' + esc(L('Articles du catalogue', 'Catalogue items', 'سلع الكتالوج')) + '</h4><div class="inv-fields">'
-      + '<div class="inv-field"><label>' + esc(L('Tarif', 'Price list', 'التسعيرة')) + '</label><select data-plinv-list><option value="main">' + esc(L('Prix principal', 'Main price', 'الثمن الأساسي')) + '</option></select></div>'
+      + '<div class="inv-field"><label>' + esc(L('Tarif', 'Price list', 'التسعيرة')) + '</label><select data-plinv-list data-f="pricelist">' + autoOption() + '</select></div>'
       + '<div class="inv-field"><label>' + esc(L('Ajouter un article', 'Add an item', 'إضافة سلعة')) + '</label><input data-plinv-q type="search" autocomplete="off"></div>'
       + '<div class="inv-field wide" data-plinv-hits></div></div>';
     card.querySelector('[data-plinv-q]').placeholder = L('Nom ou référence', 'Name or reference', 'الاسم أو المرجع');
     section.parentNode.insertBefore(card, section);
     invoiceLists().then(function (ls) {
       var sel = card.querySelector('[data-plinv-list]');
-      sel.innerHTML = ls.map(function (l) { return '<option value="' + esc(l.id) + '">' + esc(l.name) + '</option>'; }).join('');
+      var was = sel.value;
+      sel.innerHTML = autoOption() + ls.map(function (l) { return '<option value="' + esc(l.id) + '">' + esc(window.KiwiPriceListsApi.nameOf(l)) + '</option>'; }).join('');
+      if (was && sel.querySelector('option[value="' + was + '"]')) sel.value = was;
     }).catch(function () { /* hors ligne : le principal seul */ });
     card.querySelector('[data-plinv-q]').addEventListener('input', function () { paintCard(card); });
     card.addEventListener('click', function (e) {
@@ -191,9 +205,10 @@
     if (pick) pick.addEventListener('change', function () {
       var row = book()[Number(pick.value)];
       if (!row || !row.id) return;
+      card.setAttribute('data-plinv-client', String(row.id));
       call('/clients?client=' + q(row.id)).then(function (j) {
         var hit = (j.clients || [])[0], sel = card.querySelector('[data-plinv-list]');
-        if (sel) sel.value = hit && sel.querySelector('option[value="' + hit.listId + '"]') ? hit.listId : 'main';
+        if (sel) sel.value = hit && sel.querySelector('option[value="' + hit.listId + '"]') ? hit.listId : '';
       }).catch(function () {});
     });
   }

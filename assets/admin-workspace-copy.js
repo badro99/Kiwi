@@ -144,6 +144,8 @@
     "Remise hors réglage encaissée": {"fr": "Remise hors réglage encaissée", "en": "Discount outside settings collected", "ar": "تحصيل خصم خارج الإعدادات"},
     "Montant encaissé en désaccord avec son panier": {"fr": "Montant encaissé en désaccord avec son panier", "en": "Amount collected disagrees with its basket", "ar": "المبلغ المحصل لا يطابق سلة الشراء"},
     "Horloge de la caisse décalée": {"fr": "Horloge de la caisse décalée", "en": "Till clock is off", "ar": "ساعة الصندوق غير مضبوطة"},
+    "Tarif appliqué sans code responsable": {"fr": "Tarif appliqué sans code responsable", "en": "Price list applied without a manager code", "ar": "تسعيرة طُبّقت دون رمز المسؤول"},
+    ". La vente est comptée ; demander qui a choisi ce tarif à la caisse (gros, fiche client).": {"fr": ". La vente est comptée ; demander qui a choisi ce tarif à la caisse (gros, fiche client).", "en": ". The sale is counted; ask who chose this price list at the till (wholesale, customer record).", "ar": ". البيع محسوب؛ اسأل من اختار هذه التسعيرة في الصندوق (الجملة، بطاقة الزبون)."},
     ". La vente est comptée ; vérifier la caisse concernée (panier, heure de l’appareil).": {"fr": ". La vente est comptée ; vérifier la caisse concernée (panier, heure de l’appareil).", "en": ". The sale is counted; check the till involved (basket, device clock).", "ar": ". البيع محسوب؛ تحقق من الصندوق المعني (السلة، ساعة الجهاز)."},
     "Ventes signalées par le serveur · 14 j": {"fr": "Ventes signalées par le serveur · 14 j", "en": "Sales flagged by the server · 14 d", "ar": "مبيعات أشار إليها الخادم · 14 ي"},
     "Ticket": {"fr": "Ticket", "en": "Receipt", "ar": "الوصل"},

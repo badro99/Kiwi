@@ -5,9 +5,11 @@
 // tarifs qui la concernent (canal `till`, plus le principal), de leurs prix et
 // des tarifs par défaut des fiches clients, et la garde en local.
 //
-//   → { ok, at, lists: [{ id, name, isMain, channels }],
-//       prices: { <listId>: { <itemKey>: cents, '<itemKey>|<variant>': cents } },
+//   → { ok, at, lists: [{ id, name, isMain, channels, defaultName? }],
+//       prices: { <listId>: { <itemKey>: cents } },
+//       free: { <listId>: [<itemKey>…] }   les seuls prix à 0 acceptés (offerts exprès),
 //       clients: { <clientId>: <listId> } }
+//   `defaultName` : le principal n'a pas été renommé, la caisse le dit dans sa langue.
 //
 // Lecture : caisse appairée, patron, opérateur (tenantFor). Aucun code, aucun
 // montant de vente : des prix publics du magasin.
@@ -24,12 +26,14 @@ export async function onRequestGet({ request, env }) {
   let lists;
   try { lists = await visibleLists(env, merchant); } catch (_) { return json({ ok: true, at: Date.now(), lists: [], prices: {}, clients: {}, degraded: true }); }
   const usable = lists.filter((l) => l.isMain || l.channels.includes(channel));
-  const prices = {};
+  const prices = {}, free = {};
   for (const l of usable) {
     if (l.isMain) continue;
     const map = {};
-    for (const [k, cents] of await listPrices(env, l)) map[k.endsWith('|') ? k.slice(0, -1) : k] = cents;
+    const got = await listPrices(env, l);
+    for (const [k, cents] of got) map[k.slice(0, -1)] = cents;
     prices[l.id] = map;
+    if (got.free.size) free[l.id] = [...got.free];
   }
   const clients = {};
   try {
@@ -38,5 +42,5 @@ export async function onRequestGet({ request, env }) {
     for (const r of rs) if (ids.has(r.list_id)) clients[r.client_id] = r.list_id;
   } catch (_) { /* pas de défauts clients */ }
   return json({ ok: true, at: Date.now(), merchant,
-    lists: usable.map((l) => ({ id: l.id, name: l.name, isMain: l.isMain, channels: l.channels })), prices, clients });
+    lists: usable.map((l) => ({ id: l.id, name: l.name, isMain: l.isMain, channels: l.channels, ...(l.defaultName ? { defaultName: true } : {}) })), prices, free, clients });
 }

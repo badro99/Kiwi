@@ -34,8 +34,6 @@ export function liveShop(catalog, published) {
       return {
         id: str(p.id, 40), name: str(p.name, 120), categoryId: str(p.categoryId, 40) || null,
         priceMAD: Math.max(0, Math.min(1e7, Number(p.priceMAD) || 0)),
-        /* The struck-through « before » price of an online price list (shop/_lib.js). */
-        ...(Number(p.compareMAD) > Number(p.priceMAD) ? { compareMAD: Math.min(1e7, Number(p.compareMAD)) } : {}),
         ...(str(p.marque, 60) ? { marque: str(p.marque, 60) } : {}),
         photo: media(p.photo) || media(was.photo), video: media(p.video) || media(was.video),
         ...(typeof p.online === 'boolean' ? { online: p.online } : {}),

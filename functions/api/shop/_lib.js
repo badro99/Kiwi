@@ -55,9 +55,9 @@ export async function commerceEnabled(env, merchant) {
 }
 
 /* The merchant's catalogue as the server knows it, stock materialised, priced
- * for the shop: a price list bound to the `online` channel replaces priceMAD
- * and may add compareMAD (the struck-through price). The page (shop/catalog)
- * and the order check (checkLines) both read this, so they always agree. */
+ * for the shop: a price list bound to the `online` channel replaces priceMAD.
+ * The page (shop/catalog) and the order check (checkLines) both read this, so
+ * they always agree. */
 export async function readCatalog(env, merchant) {
   const row = await loadParts(env.DB, merchant, await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first());
   if (!row || !row.data) return null;

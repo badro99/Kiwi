@@ -52,7 +52,11 @@ export function cleanSites(raw, selfSlug) {
 /* ── L'ARITHMÉTIQUE ────────────────────────────────────────────────────────
  * Un tarif dérivé du principal : ± un pourcentage, arrondi au pas le plus
  * proche (0,50 · 1 · 5 MAD). Tout en centimes entiers ; le pourcentage garde
- * deux décimales. Jamais négatif, jamais au-delà de la borne du catalogue. */
+ * deux décimales. Jamais négatif, jamais au-delà de la borne du catalogue.
+ * Un article payant ne devient JAMAIS gratuit par arrondi : quand le pas
+ * ramènerait le prix à 0 (un article à 0,40 MAD arrondi au dirham), le prix
+ * calculé garde ses centimes, et au moins un centime. Seul le patron rend un
+ * article gratuit, explicitement (`free`). */
 export function roundToStep(cents, step) {
   const c = Math.max(0, Math.round(Number(cents) || 0));
   const s = Math.round(Number(step) || 0);
@@ -61,8 +65,12 @@ export function roundToStep(cents, step) {
 }
 export function derivePrice(mainCents, pct, step) {
   const p = Math.round((Number(pct) || 0) * 100);          // centièmes de pour cent
-  const raw = Math.round(Math.max(0, Number(mainCents) || 0) * (10000 + p) / 10000);
-  return roundToStep(raw, step);
+  const main = Math.max(0, Math.round(Number(mainCents) || 0));
+  const raw = Math.round(main * (10000 + p) / 10000);
+  if (!(main > 0)) return 0;
+  const floor = Math.min(MAX_PRICE_CENTS, Math.max(1, raw));
+  const rounded = roundToStep(floor, step);
+  return rounded > 0 ? rounded : floor;
 }
 export function cleanPct(v) {
   const n = Number(v);
@@ -79,6 +87,8 @@ export function cleanPrice(v) {
   if (!Number.isSafeInteger(n) || n < 0 || n > MAX_PRICE_CENTS) return undefined;
   return n;
 }
+/* Un nom de tarif principal par défaut, que l'écran traduit (FR/EN/AR). */
+export const MAIN_DEFAULT_NAME = 'Prix principal';
 
 /* ── LE CATALOGUE : le prix principal ─────────────────────────────────────── */
 export async function readCatalogDoc(env, merchant) {
@@ -95,7 +105,9 @@ export async function mainPrices(env, merchant, catalog) {
   const out = new Map();
   for (const p of (doc && doc.products) || []) {
     if (!p || !p.id) continue;
-    const entry = { cents: Math.round((Number(p.priceMAD) || 0) * 100), name: p.name || '', archived: !!p.archived, categoryId: p.categoryId || null };
+    const cost = Number(p.cost);
+    const entry = { cents: Math.round((Number(p.priceMAD) || 0) * 100), name: p.name || '', archived: !!p.archived, categoryId: p.categoryId || null,
+      costCents: cost > 0 ? Math.round(cost * 100) : null };
     out.set(p.id, entry);
     if (p.legacyId && !out.has(p.legacyId)) out.set(p.legacyId, entry);
   }
@@ -108,15 +120,15 @@ function shapeList(row, viewer) {
   return {
     id: String(row.id), name: String(row.name || ''), isMain: Number(row.is_main) === 1,
     channels: cleanChannels(parse(row.channels, [])), sites: Array.isArray(parse(row.sites, [])) ? parse(row.sites, []) : [],
-    compareListId: row.compare_list_id || null, archived: Number(row.archived) === 1,
+    archived: Number(row.archived) === 1,
     sort: Number(row.sort) || 0, createdTs: Number(row.created_ts) || 0, updatedTs: Number(row.updated_ts) || 0,
     owner, shared: owner !== viewer,
   };
 }
 export function virtualMain(row) {
   return {
-    id: MAIN_ID, name: row && row.name ? String(row.name) : 'Prix principal', isMain: true,
-    channels: CHANNELS.slice(), sites: [], compareListId: null, archived: false, sort: -1,
+    id: MAIN_ID, name: row && row.name ? String(row.name) : MAIN_DEFAULT_NAME, isMain: true, defaultName: !(row && row.name),
+    channels: CHANNELS.slice(), sites: [], archived: false, sort: -1,
     createdTs: 0, updatedTs: row ? Number(row.updated_ts) || 0 : 0, owner: row ? String(row.merchant) : '', shared: false,
   };
 }
@@ -152,13 +164,22 @@ export async function findList(env, merchant, id, opts) {
   return lists.find((l) => l.id === id) || null;
 }
 
-/* Les prix d'un tarif : Map `item|variant` → centimes. */
+/* Les prix d'un tarif : Map `item|` → centimes (un prix par article, comme le
+ * catalogue ; aucune ligne de déclinaison n'est lue). Un prix à 0 n'existe que
+ * posé exprès (`free`) : sinon il est ignoré et l'article retombe sur le
+ * principal. `out.free` liste les articles offerts exprès. */
 export async function listPrices(env, list) {
   const out = new Map();
+  out.free = new Set();
   if (!list || list.isMain) return out;
-  const rs = ((await env.DB.prepare('SELECT item_key, variant_key, price_cents FROM item_prices WHERE merchant = ? AND list_id = ?')
+  const rs = ((await env.DB.prepare("SELECT item_key, price_cents, free FROM item_prices WHERE merchant = ? AND list_id = ? AND variant_key = ''")
     .bind(list.owner, list.id).all()).results) || [];
-  for (const r of rs) out.set(r.item_key + '|' + (r.variant_key || ''), Number(r.price_cents));
+  for (const r of rs) {
+    const cents = Number(r.price_cents);
+    if (!(cents > 0) && Number(r.free) !== 1) continue;
+    out.set(r.item_key + '|', cents);
+    if (!(cents > 0)) out.free.add(r.item_key);
+  }
   return out;
 }
 
@@ -194,12 +215,11 @@ export async function pickList(env, merchant, want) {
   return { list: main, why: 'main' };
 }
 
-/* Le prix d'une ligne : (article, déclinaison) → (article) → principal. */
-export function priceOf(main, prices, itemKey, variantKey) {
+/* Le prix d'une ligne : (article) → principal. Une déclinaison (taille,
+ * couleur) a le prix de son article, au comptoir comme au catalogue. */
+export function priceOf(main, prices, itemKey) {
   const base = main.get(itemKey);
   const mainCents = base ? base.cents : null;
-  const v = variantKey ? prices.get(itemKey + '|' + variantKey) : undefined;
-  if (v != null) return { cents: v, mainCents, source: 'list' };
   const i = prices.get(itemKey + '|');
   if (i != null) return { cents: i, mainCents, source: 'list' };
   return { cents: mainCents, mainCents, source: mainCents == null ? 'unknown' : 'main' };
@@ -212,21 +232,12 @@ export async function resolveCart(env, merchant, want, items) {
   if (!pick.list) return { error: 'unknown-list' };
   const main = await mainPrices(env, merchant);
   const prices = await listPrices(env, pick.list);
-  let compare = null;
-  if (pick.list.compareListId) {
-    const cl = pick.list.compareListId === MAIN_ID ? { isMain: true } : await findList(env, merchant, pick.list.compareListId);
-    if (cl) compare = { list: cl, prices: await listPrices(env, cl) };
-  }
   let totalCents = 0;
   const lines = (Array.isArray(items) ? items : []).slice(0, 500).map((it) => {
     const itemKey = str(it && it.itemKey, 80), variantKey = str(it && it.variantKey, 80);
     const qty = Math.max(0, Math.min(1e6, Number(it && it.qty) || 1));
-    const p = priceOf(main, prices, itemKey, variantKey);
+    const p = priceOf(main, prices, itemKey);
     const line = { itemKey, variantKey, qty, unitCents: p.cents, mainCents: p.mainCents, source: p.source };
-    if (compare) {
-      const c = compare.list.isMain ? p.mainCents : priceOf(main, compare.prices, itemKey, variantKey).cents;
-      if (c != null && p.cents != null && c > p.cents) line.compareCents = c;
-    }
     if (p.cents != null) { line.totalCents = Math.round(p.cents * qty); totalCents += line.totalCents; }
     return line;
   });
@@ -235,29 +246,21 @@ export async function resolveCart(env, merchant, want, items) {
 
 /* ── LE CANAL EN LIGNE ─────────────────────────────────────────────────────
  * La boutique en ligne lit le catalogue via shop/_lib.js › readCatalog. Un
- * tarif lié au canal `online` y remplace le prix ; son `compareListId`
- * donne le prix barré. Le document est modifié en place, avant que la page ET
- * le contrôle des commandes ne le lisent : les deux voient le même prix. */
+ * tarif lié au canal `online` y remplace le prix. Le document est modifié en
+ * place, avant que la page ET le contrôle des commandes ne le lisent : les
+ * deux voient le même prix. (Pas de prix barré : la vitrine, projet
+ * kiwi-storefronts, n'en affiche pas ; un champ que personne ne montre
+ * n'est pas servi.) */
 export async function applyOnlinePrices(env, merchant, catalog) {
   if (!catalog || !Array.isArray(catalog.products)) return catalog;
   let pick;
   try { pick = await pickList(env, merchant, { channel: 'online' }); } catch (_) { return catalog; }
   if (!pick || !pick.list || pick.list.isMain) return catalog;
   const prices = await listPrices(env, pick.list).catch(() => new Map());
-  let compare = null;
-  if (pick.list.compareListId === MAIN_ID) compare = 'main';
-  else if (pick.list.compareListId) {
-    const cl = await findList(env, merchant, pick.list.compareListId).catch(() => null);
-    if (cl) compare = await listPrices(env, cl).catch(() => null);
-  }
   for (const p of catalog.products) {
     if (!p || !p.id) continue;
-    const mainCents = Math.round((Number(p.priceMAD) || 0) * 100);
     const own = prices.get(p.id + '|');
-    const cents = own != null ? own : mainCents;
-    const before = compare === 'main' ? mainCents : (compare && compare.get(p.id + '|'));
-    p.priceMAD = cents / 100;
-    if (before != null && before > cents) p.compareMAD = before / 100;
+    if (own != null) p.priceMAD = own / 100;   // 0 seulement offert exprès (listPrices)
   }
   catalog.priceList = { id: pick.list.id, name: pick.list.name };
   return catalog;
@@ -300,12 +303,14 @@ export async function invoicePriceList(env, merchant, body, base, customer, fail
   if (body && body.priceListId !== undefined) {
     const id = body.priceListId == null || body.priceListId === '' ? MAIN_ID : str(body.priceListId, 64);
     if (id === MAIN_ID) return null;
-    const list = await findList(env, merchant, id);
+    let list;
+    try { list = await findList(env, merchant, id); }
+    catch (_) { return null; }   // tables des tarifs absentes (base à 0027) : la facture s'enregistre sans tarif
     if (!list) throw fail(400, 'unknown-price-list', 'Tarif inconnu.');
     return list.id;
   }
   if (base && base.id) return had;
-  const fromClient = await clientDefault(env, merchant, customer && customer.clientId);
+  const fromClient = await clientDefault(env, merchant, customer && customer.clientId).catch(() => null);
   if (!fromClient) return null;
   const list = await findList(env, merchant, fromClient).catch(() => null);
   return list ? list.id : null;

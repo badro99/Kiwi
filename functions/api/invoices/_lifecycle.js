@@ -113,13 +113,15 @@ async function save(ctx, body) {
     return json({ ok: true, doc: await presentFull(ctx, await getRow(ctx, d.id)) });
   }
 
+  // Le tarif ne s'écrit que si la colonne existe (ligne lue) ou s'il y a un tarif : une base à 0027 enregistre.
+  const listCol = priceListId != null || 'price_list_id' in existing;
   const res = await ctx.db.prepare(
     `UPDATE invoice_docs SET issue_date = ?, due_date = ?, terms_days = ?, valid_until = ?, customer = ?, lines = ?, totals = ?,
-            ttc_cents = ?, payment_method = ?, note = ?, exemption_mention = ?, internal_note = ?, reason = ?, price_list_id = ?, updated_ts = ?
+            ttc_cents = ?, payment_method = ?, note = ?, exemption_mention = ?, internal_note = ?, reason = ?,${listCol ? ' price_list_id = ?,' : ''} updated_ts = ?
       WHERE id = ? AND merchant = ?
         AND (status = 'draft' OR (type = 'quote' AND status IN ('sent', 'accepted', 'rejected')))`
   ).bind(issue, dueDate, termsDays, valid, JSON.stringify(customer), JSON.stringify(lines), JSON.stringify(totals),
-    totals.ttcCents, paymentMethod, note, exemption, internalNote, reason, priceListId, now, existing.id, ctx.merchant).run();
+    totals.ttcCents, paymentMethod, note, exemption, internalNote, reason, ...(listCol ? [priceListId] : []), now, existing.id, ctx.merchant).run();
   if (!changesOf(res)) throw fail(409, 'locked', 'Document émis : seule la note interne se modifie.');
   return json({ ok: true, doc: await presentFull(ctx, await getRow(ctx, existing.id)) });
 }

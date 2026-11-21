@@ -1,4 +1,4 @@
 {
-  "description": "SHA-256 of the appPage options rendered by the Price lists page (assets/pages-pro/price-lists.js) on first open, before any list is read: no merchant, default French locale. Sealed 21 November 2026 when the page was born lazy.",
-  "sha": "1d5a8c657513f79594deacafb97f6f1e30204edc7f750c5d651542a7dd561d7a"
+  "description": "SHA-256 of the appPage options rendered by the Price lists page (assets/pages-pro/price-lists.js) on first open, before any list is read: no merchant, default French locale. Sealed 21 November 2026 when the page was born lazy; resealed the same day for the Sales tab (sales per price list, flagged sales).",
+  "sha": "d19ef0abc6865477f3d738bb4d85e61724e2c36bb90fd44bc9557b30285fba75"
 }

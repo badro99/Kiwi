@@ -2697,7 +2697,6 @@ CREATE TABLE IF NOT EXISTS price_lists (
   is_main         INTEGER NOT NULL DEFAULT 0,
   channels        TEXT NOT NULL DEFAULT '[]',
   sites           TEXT NOT NULL DEFAULT '[]',
-  compare_list_id TEXT,                         -- en ligne : le prix barré (« avant »)
   archived        INTEGER NOT NULL DEFAULT 0,
   sort            INTEGER NOT NULL DEFAULT 0,
   created_ts      INTEGER NOT NULL,
@@ -2712,8 +2711,10 @@ CREATE TABLE IF NOT EXISTS item_prices (
   item_key     TEXT NOT NULL,
   variant_key  TEXT NOT NULL DEFAULT '',
   price_cents  INTEGER NOT NULL,
+  free         INTEGER NOT NULL DEFAULT 0,   -- 1 : offert exprès par le patron (seul cas d'un prix à 0)
   updated_ts   INTEGER NOT NULL,
-  PRIMARY KEY (merchant, list_id, item_key, variant_key)
+  PRIMARY KEY (merchant, list_id, item_key, variant_key),
+  CHECK (price_cents > 0 OR free = 1)
 );
 CREATE INDEX IF NOT EXISTS idx_item_prices_item ON item_prices (merchant, item_key);
 -- Le tarif par défaut d'une fiche client (clients.id) : appliqué tout seul à la
