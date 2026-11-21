@@ -1,8 +1,9 @@
 // GET  /api/suppliers?merchant=<slug>[&archived=1]
 //   La liste des fournisseurs, chacun avec son solde (positif = nous lui
 //   devons) et l'ancienneté de ce que nous devons (0–30, 31–60, 61–90, 90+ j),
-//   plus les totaux de la page. Importe au passage les fournisseurs du
-//   document `procurement` (functions/api/_suppliers.js › syncProcurement).
+//   plus les totaux de la page et le nombre de lignes en attente d'accord.
+//   Importe au passage l'identité des fournisseurs du document `procurement`
+//   (functions/api/_suppliers.js › syncProcurement), jamais de montant.
 // POST /api/suppliers  { merchant, action: 'create'|'update'|'archive'|'restore', id?, supplier:{…} }
 //   Crée ou modifie une fiche. Archiver la sort des listes, jamais du grand
 //   livre : son relevé reste lisible.
@@ -10,7 +11,7 @@
 // Patron et opérateur Kiwi seulement (./_access.js).
 import { json } from '../../auth/_lib.js';
 import { ledgerActor, readBody } from './_access.js';
-import { partyBalances, ageBuckets, todayYmd, LIVE } from '../_ledger.js';
+import { partyBalances, ageBuckets, todayYmd, LIVE, pendingEntries } from '../_ledger.js';
 import { listSuppliers, supplierView, createSupplier, updateSupplier, syncProcurement } from '../_suppliers.js';
 
 export async function onRequestGet({ request, env }) {
@@ -39,6 +40,8 @@ export async function onRequestGet({ request, env }) {
     if (!byParty.has(k)) byParty.set(k, []);
     byParty.get(k).push(r);
   }
+  const pendingBy = new Map();
+  for (const p of await pendingEntries(env, merchant, 'supplier', null)) pendingBy.set(p.partyId, (pendingBy.get(p.partyId) || 0) + 1);
   const listed = new Set(rows.map((s) => String(s.id)));
   let weOwe = 0, theyOwe = 0;
   const suppliers = rows.map((row) => {
@@ -46,11 +49,11 @@ export async function onRequestGet({ request, env }) {
     const b = balances.get(v.id) || { balanceCents: 0, inCents: 0, outCents: 0, count: 0, lastDate: '' };
     if (b.balanceCents > 0) weOwe += b.balanceCents; else theyOwe -= b.balanceCents;
     return { ...v, balanceCents: b.balanceCents, inCents: b.inCents, outCents: b.outCents, lines: b.count,
-      lastDate: b.lastDate, ageing: ageBuckets(byParty.get(v.id) || [], 'supplier', today) };
+      lastDate: b.lastDate, pending: pendingBy.get(v.id) || 0, ageing: ageBuckets(byParty.get(v.id) || [], 'supplier', today) };
   });
   return json({
     ok: true, merchant, today, suppliers,
-    totals: { weOweCents: weOwe, theyOweCents: theyOwe, count: suppliers.length,
+    totals: { weOweCents: weOwe, theyOweCents: theyOwe, count: suppliers.length, pending: suppliers.reduce((n, s) => n + s.pending, 0),
       ageing: ageBuckets(ledgerRows.filter((r) => listed.has(String(r.party_id))), 'supplier', today) },
     imported: sync && !sync.skipped ? { suppliers: sync.imported, lines: sync.posted } : null,
   });

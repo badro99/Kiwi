@@ -4,12 +4,13 @@
 // solde courant après elle, le solde (positif = nous lui devons),
 // l'ancienneté de ce que nous devons et son tableau (commandé, % reçu, % payé,
 // reste dû, taux de retour, panier moyen). De quoi imprimer, exporter en CSV
-// ou envoyer par WhatsApp sans autre appel.
+// ou envoyer par WhatsApp sans autre appel. `pending` : les réceptions et
+// retours saisis par un employé, hors soldes jusqu'à l'accord du patron.
 //
 // Patron et opérateur Kiwi seulement (./_access.js).
 import { json } from '../../auth/_lib.js';
 import { ledgerActor } from './_access.js';
-import { partyStatement, partyBalance, ledgerAgeing, owedView, todayYmd } from '../_ledger.js';
+import { partyStatement, partyBalance, ledgerAgeing, owedView, todayYmd, pendingEntries } from '../_ledger.js';
 import { getSupplier, supplierView, supplierScorecard } from '../_suppliers.js';
 
 export async function onRequestGet({ request, env }) {
@@ -20,13 +21,14 @@ export async function onRequestGet({ request, env }) {
   const row = await getSupplier(env, merchant, url.searchParams.get('id'));
   if (!row) return json({ error: 'not-found' }, 404);
   const today = todayYmd();
-  const [statement, balance, ageing, scorecard] = await Promise.all([
+  const [statement, balance, ageing, scorecard, pending] = await Promise.all([
     partyStatement(env, merchant, 'supplier', row.id, {
       from: url.searchParams.get('from') || '', to: url.searchParams.get('to') || '', limit: url.searchParams.get('limit'),
     }),
     partyBalance(env, merchant, 'supplier', row.id),
     ledgerAgeing(env, merchant, 'supplier', row.id, { today }),
     supplierScorecard(env, merchant, row.id),
+    pendingEntries(env, merchant, 'supplier', row.id),
   ]);
   let orders = [];
   try {
@@ -38,5 +40,5 @@ export async function onRequestGet({ request, env }) {
       totalCents: Number(o.total_cents) || 0, expectedDate: o.expected_date || '', createdAt: Number(o.created_ts) || 0 }));
   } catch (_) { orders = []; }
   return json({ ok: true, merchant, today, supplier: supplierView(row), balance, owed: owedView('supplier', balance.balanceCents),
-    statement, ageing, scorecard, orders });
+    statement, ageing, scorecard, orders, pending });
 }

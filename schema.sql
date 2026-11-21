@@ -2707,7 +2707,7 @@ CREATE INDEX IF NOT EXISTS idx_suppliers_name ON suppliers (merchant, archived, 
 -- Une ligne = un mouvement d'argent ou de valeur entre le commerçant et un
 -- tiers, vu du commerçant : `in` = il a reçu (marchandise, espèces), `out` =
 -- il a donné (paiement, marchandise à crédit). Solde d'un tiers = Σ in − Σ out
--- sur les lignes vivantes (archived = 0, deleted_ts NULL, internal = 0) :
+-- sur les lignes vivantes (archived = 0, deleted_ts NULL, internal = 0, status = 'posted') :
 -- positif = le commerçant doit au tiers, négatif = le tiers doit au commerçant.
 CREATE TABLE IF NOT EXISTS money_ledger (
   id                TEXT PRIMARY KEY,
@@ -2728,6 +2728,9 @@ CREATE TABLE IF NOT EXISTS money_ledger (
   cheque_id         TEXT,
   archived          INTEGER NOT NULL DEFAULT 0,
   internal          INTEGER NOT NULL DEFAULT 0,
+  -- 'posted' compte dans les soldes ; 'pending' attend l'accord du patron
+  -- (réception de bon saisie par un employé), hors soldes jusque-là.
+  status            TEXT NOT NULL DEFAULT 'posted' CHECK (status IN ('posted', 'pending')),
   deleted_ts        INTEGER,
   created_by        TEXT NOT NULL DEFAULT '',
   created_at        INTEGER NOT NULL
@@ -2737,9 +2740,9 @@ CREATE INDEX IF NOT EXISTS idx_money_ledger_party ON money_ledger (merchant, par
 CREATE INDEX IF NOT EXISTS idx_money_ledger_po ON money_ledger (merchant, purchase_order_id);
 CREATE INDEX IF NOT EXISTS idx_money_ledger_expense ON money_ledger (merchant, expense_id);
 
--- Où en est l'import du document `procurement` pour un commerçant : la
--- révision déjà lue, et l'instant où le grand livre a démarré (les bons de
--- réception plus anciens ne deviennent pas des dettes rétroactives).
+-- Où en est l'import (identité des fournisseurs seulement, jamais de montant)
+-- du document `procurement` pour un commerçant : la révision déjà lue, et
+-- l'instant où le grand livre a démarré pour lui.
 CREATE TABLE IF NOT EXISTS supplier_ledger_state (
   merchant         TEXT PRIMARY KEY,
   started_ts       INTEGER NOT NULL,

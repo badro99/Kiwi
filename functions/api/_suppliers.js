@@ -5,21 +5,23 @@
  * aussi. Trois orthographes de « Distrib Frais » faisaient trois fournisseurs
  * et aucun solde. Désormais la table est la source de vérité, et :
  *
- *   · syncProcurement() importe les fournisseurs du document `procurement`
- *     avec LEUR id (les bons, réceptions et fiches article qui les citent
- *     restent justes), à chaque nouvelle révision du document, sans écraser
- *     une fiche D1 plus récente. Les bons de réception (BR-) et retours (RF-)
- *     écrits APRÈS le démarrage du grand livre deviennent des lignes : la
- *     réception = ce que nous devons (in), le retour = ce qu'il nous reprend
- *     (out). Les plus anciens ne deviennent pas des dettes rétroactives : ils
- *     ont presque toujours été payés hors de Kiwi.
+ *   · syncProcurement() importe l'IDENTITÉ des fournisseurs du document
+ *     `procurement` avec LEUR id (les bons, réceptions et fiches article qui
+ *     les citent restent justes), une seule fois par fiche : une fiche D1 n'est
+ *     jamais réécrite depuis le document, et le document n'écrit JAMAIS dans
+ *     le grand livre. Il est modifiable par un gérant ou une caisse appairée :
+ *     un montant qui en viendrait serait une dette que n'importe qui peut
+ *     inventer. Les montants ne viennent que des bons de commande D1 et des
+ *     saisies du patron. Les horodatages du document (ceux du client) ne
+ *     servent à rien ici : la fiche prend l'heure du serveur.
  *   · resolvePoSupplier() relie un bon de commande à sa fiche (id donné, sinon
- *     nom connu, sinon fiche créée) : le texte libre s'arrête là.
+ *     nom connu, sinon fiche créée, mais seulement pour le patron ou un
+ *     opérateur : un employé ne relie qu'à une fiche existante).
  *   · supplierScorecard() agrège en SQL ce qu'Inyad appelle le tableau du
  *     fournisseur : commandé, % reçu, % payé, reste dû, taux de retour, panier.
  */
 import { readDoc, mutateDoc } from './_doc-cas.js';
-import { postLedgerEntry, partyBalance, todayYmd } from './_ledger.js';
+import { postLedgerEntry, partyBalance, LIVE } from './_ledger.js';
 
 const ID = /^[A-Za-z0-9_-]{3,80}$/;
 const clean = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n);
@@ -150,88 +152,52 @@ export async function updateSupplier(env, merchant, id, patch) {
   } catch (_) { return { ok: false, error: 'unmigrated' }; }
 }
 
-/* ── Import du document `procurement` ─────────────────────────────────── */
-async function ledgerState(env, merchant) {
-  const at = Date.now();
-  await env.DB.prepare('INSERT OR IGNORE INTO supplier_ledger_state (merchant, started_ts, procurement_rev, updated_ts) VALUES (?, ?, 0, ?)')
-    .bind(merchant, at, at).run();
-  return env.DB.prepare('SELECT started_ts, procurement_rev FROM supplier_ledger_state WHERE merchant = ?').bind(merchant).first();
-}
-
-export function receiptCents(lines) {
-  return (Array.isArray(lines) ? lines : []).reduce((sum, l) => {
-    const qty = Number(l && l.qty), cost = Number(l && l.unitCost);
-    return sum + (qty > 0 && cost > 0 ? Math.round(qty * cost * 100) : 0);
-  }, 0);
-}
-
-function ymdOf(ts) {
-  const n = Number(ts);
-  return Number.isFinite(n) && n > 0 ? new Date(n).toISOString().slice(0, 10) : todayYmd();
-}
-
+/* ── Import du document `procurement` (identité seulement) ──────────── */
 export async function syncProcurement(env, merchant, opts) {
   const out = { imported: 0, posted: 0, skipped: true };
   if (!env || !env.DB) return out;
   let state;
-  try { state = await ledgerState(env, merchant); } catch (_) { return out; }
+  try {
+    const at = Date.now();
+    await env.DB.prepare('INSERT OR IGNORE INTO supplier_ledger_state (merchant, started_ts, procurement_rev, updated_ts) VALUES (?, ?, 0, ?)')
+      .bind(merchant, at, at).run();
+    state = await env.DB.prepare('SELECT procurement_rev FROM supplier_ledger_state WHERE merchant = ?').bind(merchant).first();
+  } catch (_) { return out; }
   if (!state) return out;
   const doc = await readDoc(env, merchant, 'procurement', null);
   if (!doc.data || (!(opts && opts.force) && doc.rev <= Number(state.procurement_rev || 0))) return out;
   out.skipped = false;
-  const d = doc.data;
-  const suppliers = (Array.isArray(d.suppliers) ? d.suppliers : []).filter((s) => s && ID.test(String(s.id || '')) && clean(s.name, 120));
-  const statements = suppliers.slice(0, 1000).map((s) => {
-    const updated = Number(s.updatedAt || s.createdAt) || Date.now();
+  const at = Date.now();
+  const suppliers = (Array.isArray(doc.data.suppliers) ? doc.data.suppliers : [])
+    .filter((s) => s && ID.test(String(s.id || '')) && clean(s.name, 120)).slice(0, 1000);
+  /* INSERT OR IGNORE : une fiche déjà connue en D1 ne bouge pas, quoi que
+     dise le document. Une fiche nouvelle arrive active, à l'heure du serveur. */
+  const statements = suppliers.map((s) => {
     const f = cleanSupplier({ name: s.name, phone: s.phone, email: s.email, address: s.address, notes: s.notes, ice: s.taxId }, false);
-    /* Une fiche D1 plus récente que la copie du document ne recule pas. */
     return env.DB.prepare(
-      `INSERT INTO suppliers (merchant, id, name, phone, email, ice, rib, bank, address, notes, terms_days, archived, source, created_ts, updated_ts)
-       VALUES (?, ?, ?, ?, ?, ?, '', '', ?, ?, 0, ?, 'procurement', ?, ?)
-       ON CONFLICT (merchant, id) DO UPDATE SET name = excluded.name, phone = excluded.phone, email = excluded.email,
-         ice = CASE WHEN excluded.ice = '' THEN suppliers.ice ELSE excluded.ice END, address = excluded.address,
-         notes = excluded.notes, archived = excluded.archived, updated_ts = excluded.updated_ts
-       WHERE excluded.updated_ts > suppliers.updated_ts`
-    ).bind(merchant, String(s.id), f.name, f.phone, f.email, f.ice, f.address, f.notes, s.active === false ? 1 : 0,
-      Number(s.createdAt) || updated, updated);
+      `INSERT OR IGNORE INTO suppliers (merchant, id, name, phone, email, ice, rib, bank, address, notes, terms_days, archived, source, created_ts, updated_ts)
+       VALUES (?, ?, ?, ?, ?, ?, '', '', ?, ?, 0, 0, 'procurement', ?, ?)`
+    ).bind(merchant, String(s.id), f.name, f.phone, f.email, f.ice, f.address, f.notes, at, at);
   });
-  try { if (statements.length) await env.DB.batch(statements); out.imported = statements.length; } catch (_) { return out; }
-
-  const known = new Set(suppliers.map((s) => String(s.id)));
-  const started = Number(state.started_ts) || Date.now();
-  const fresh = (r) => r && known.has(String(r.supplierId || '')) && Number(r.createdAt) >= started;
-  for (const r of (Array.isArray(d.receipts) ? d.receipts : []).filter(fresh).slice(0, 500)) {
-    const cents = receiptCents(r.lines);
-    if (!cents) continue;
-    const res = await postLedgerEntry(env, merchant, {
-      idemKey: 'proc-receipt:' + String(r.id).slice(0, 100), amountCents: cents, direction: 'in', partyType: 'supplier',
-      partyId: String(r.supplierId), date: ymdOf(r.receivedAt || r.createdAt), kind: 'purchase', method: 'other',
-      note: ['Réception', r.number, r.externalRef].filter(Boolean).join(' · '), createdBy: clean(r.receivedBy, 100),
-    });
-    if (res.ok && !res.duplicate) out.posted++;
-  }
-  for (const r of (Array.isArray(d.returns) ? d.returns : []).filter(fresh).slice(0, 500)) {
-    const cents = receiptCents(r.lines);
-    if (!cents) continue;
-    const res = await postLedgerEntry(env, merchant, {
-      idemKey: 'proc-return:' + String(r.id).slice(0, 100), amountCents: cents, direction: 'out', partyType: 'supplier',
-      partyId: String(r.supplierId), date: ymdOf(r.returnedAt || r.createdAt), kind: 'return', method: 'other',
-      note: ['Retour', r.number, r.externalRef].filter(Boolean).join(' · '),
-    });
-    if (res.ok && !res.duplicate) out.posted++;
-  }
+  try {
+    if (statements.length) {
+      const res = await env.DB.batch(statements);
+      out.imported = (res || []).reduce((sum, r) => sum + (Number(r && r.meta && r.meta.changes) || 0), 0);
+    }
+  } catch (_) { return out; }
   try {
     await env.DB.prepare('UPDATE supplier_ledger_state SET procurement_rev = ?, updated_ts = ? WHERE merchant = ? AND procurement_rev < ?')
-      .bind(doc.rev, Date.now(), merchant, doc.rev).run();
-  } catch (_) { /* on relira la même révision, sans doublon : les clés sont idempotentes */ }
+      .bind(doc.rev, at, merchant, doc.rev).run();
+  } catch (_) { /* relu à la prochaine révision, sans effet : INSERT OR IGNORE */ }
   return out;
 }
 
 /* ── Bons de commande ─────────────────────────────────────────────────── */
 /* La fiche d'un bon : l'id donné (doit exister), sinon le nom déjà connu,
  * sinon une fiche créée à ce nom. Rend { id, name } ou { error }. */
-export async function resolvePoSupplier(env, merchant, payload) {
+export async function resolvePoSupplier(env, merchant, payload, opts) {
   const p = payload || {};
+  const mayCreate = !!(opts && opts.mayCreate);
   const wanted = clean(p.supplierId, 80);
   try {
     if (wanted) {
@@ -243,6 +209,7 @@ export async function resolvePoSupplier(env, merchant, payload) {
     if (!name) return { error: 'supplier-required' };
     const hit = await findSupplierByName(env, merchant, name);
     if (hit) return { id: hit.id, name: hit.name };
+    if (!mayCreate) return { id: '', name };
     const made = await createSupplier(env, merchant, { name }, { source: 'purchase-order' });
     return made.ok ? { id: made.supplier.id, name: made.supplier.name } : { id: '', name };
   } catch (_) {
@@ -254,7 +221,9 @@ export async function resolvePoSupplier(env, merchant, payload) {
 /* Écrit dans le grand livre ce qu'un mouvement de bon change à la dette :
  * une réception = ce que nous devons (in), un retour = ce qu'il nous reprend
  * (out). La clé est l'id de la commande opérationnelle, unique par geste. Un
- * bon d'avant les fiches est relié à la volée par son nom. */
+ * bon d'avant les fiches est relié à la volée par son nom (fiche existante).
+ * `move.pending` : la ligne attend l'accord du patron (saisie d'un employé),
+ * hors soldes jusqu'à approveLedgerEntry. */
 export async function postPurchaseMovement(env, merchant, order, move) {
   if (!order || !move || !(Number(move.cents) > 0)) return { ok: false, error: 'nothing' };
   let supplierId = clean(order.supplier_id, 80);
@@ -273,6 +242,7 @@ export async function postPurchaseMovement(env, merchant, order, move) {
     amountCents: Number(move.cents), direction: receive ? 'in' : 'out', partyType: 'supplier', partyId: supplierId,
     kind: receive ? 'purchase' : 'return', method: 'other', purchaseOrderId: order.id,
     note: `${receive ? 'Réception' : 'Retour'} ${clean(order.number, 40)}`, createdBy: clean(move.by, 100),
+    pending: !!move.pending,
   });
 }
 
@@ -297,7 +267,7 @@ export async function supplierScorecard(env, merchant, supplierId) {
       `SELECT COALESCE(SUM(CASE WHEN direction = 'in' AND kind IN ('purchase', 'bill', 'expense', 'opening') THEN amount_cents ELSE 0 END), 0) AS purchased,
               COALESCE(SUM(CASE WHEN direction = 'out' AND kind IN ('payment', 'expense-payment') THEN amount_cents ELSE 0 END), 0) AS paid,
               COALESCE(SUM(CASE WHEN direction = 'out' AND kind = 'return' THEN amount_cents ELSE 0 END), 0) AS returned
-         FROM money_ledger WHERE merchant = ? AND party_type = 'supplier' AND party_id = ? AND archived = 0 AND deleted_ts IS NULL AND internal = 0`
+         FROM money_ledger WHERE merchant = ? AND party_type = 'supplier' AND party_id = ? AND ${LIVE}`
     ).bind(merchant, supplierId).first();
   } catch (_) { led = null; }
   const bal = await partyBalance(env, merchant, 'supplier', supplierId);

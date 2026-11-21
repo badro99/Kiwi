@@ -7,14 +7,18 @@
 //   `po` = le numéro d'un bon de commande de CE fournisseur : le paiement lui
 //   est rattaché (purchase_order_id).
 // POST /api/suppliers/entry { merchant, action: 'archive', id }
-//   Annule une ligne (archivée, hors soldes, gardée pour l'audit).
+//   Annule une ligne (archivée, hors soldes, gardée pour l'audit). Sur une
+//   ligne en attente, c'est le refus.
+// POST /api/suppliers/entry { merchant, action: 'approve', id }
+//   Le patron approuve une réception ou un retour saisi par un employé : la
+//   ligne en attente entre dans les soldes.
 //
 // `idemKey` vient du navigateur, une par geste : un double clic ou une requête
 // rejouée retombe sur la même ligne (functions/api/_ledger.js).
 // Patron et opérateur Kiwi seulement (./_access.js).
 import { json } from '../../auth/_lib.js';
 import { ledgerActor, readBody, centsFrom } from './_access.js';
-import { postLedgerEntry, archiveLedgerEntry, partyBalance } from '../_ledger.js';
+import { postLedgerEntry, archiveLedgerEntry, approveLedgerEntry, partyBalance } from '../_ledger.js';
 import { getSupplier } from '../_suppliers.js';
 
 const TYPES = {
@@ -32,13 +36,15 @@ export async function onRequestPost({ request, env }) {
   const actor = await ledgerActor(request, env, merchant, { write: true });
   if (!actor) return json({ error: 'owner-required' }, 403);
 
-  if (body.action === 'archive') {
+  if (body.action === 'archive' || body.action === 'approve') {
     /* Seule une ligne de fournisseur s'annule ici : le carnet client et le
        livre de caisse ont leurs propres portes. */
     let row = null;
     try { row = await env.DB.prepare("SELECT party_type FROM money_ledger WHERE merchant = ? AND id = ?").bind(merchant, String(body.id || '').slice(0, 64)).first(); } catch (_) { row = null; }
     if (!row || row.party_type !== 'supplier') return json({ error: 'not-found' }, 404);
-    const res = await archiveLedgerEntry(env, merchant, body.id, { by: actor.name });
+    const res = body.action === 'approve'
+      ? await approveLedgerEntry(env, merchant, body.id, { by: actor.name })
+      : await archiveLedgerEntry(env, merchant, body.id, { by: actor.name });
     return res.ok ? json({ ok: true, entry: res.entry }) : json({ error: res.error }, res.error === 'not-found' ? 404 : 503);
   }
 

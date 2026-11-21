@@ -953,6 +953,11 @@ function movement(payload) {
   return { moves };
 }
 
+/* Le patron ou un opérateur : eux seuls créent une fiche fournisseur et voient
+   leurs réceptions entrer directement dans les soldes. Celles d'un employé
+   (gérant, magasinier) attendent l'accord du patron (_ledger.js, pending). */
+function trustedBuyer(row) { return row.actor_kind === 'owner' || row.actor_kind === 'operator'; }
+
 async function procurement(env, row, payload) {
   await ensurePurchase(env);
   const merchant = row.merchant;
@@ -960,7 +965,7 @@ async function procurement(env, row, payload) {
 
   if (row.action === 'create-po') {
     /* La fiche fournisseur (table suppliers) : id donné, nom connu, sinon créée. */
-    const linked = await resolvePoSupplier(env, merchant, payload);
+    const linked = await resolvePoSupplier(env, merchant, payload, { mayCreate: trustedBuyer(row) });
     if (linked.error) return fail(linked.error);
     const supplier = clean(linked.name, 160);
     if (!supplier) return fail('supplier-required');
@@ -1063,7 +1068,7 @@ async function procurement(env, row, payload) {
     ).bind(status, invoiced != null ? invoiced : 0, now(), merchant, number));
     await env.DB.batch(statements);
     /* Ce qui entre en stock, nous le devons : la ligne du grand livre suit (_ledger.js). */
-    const owed = await postPurchaseMovement(env, merchant, order, { kind: 'receive', cents: invoiced != null ? invoiced : receivedCents, commandId: row.id, by: row.requested_by });
+    const owed = await postPurchaseMovement(env, merchant, order, { kind: 'receive', cents: invoiced != null ? invoiced : receivedCents, commandId: row.id, by: row.requested_by, pending: !trustedBuyer(row) });
     return update(env, row, 'completed', 'kiwi-procurement', {
       number, status, receivedCents, receivedUnits, outstandingUnits: outstanding,
       matched: invoiced != null, lines: read.moves.length, ledgerEntry: owed.ok ? owed.entry.id : '',
@@ -1101,7 +1106,7 @@ async function procurement(env, row, payload) {
     'UPDATE purchase_orders SET updated_ts = ? WHERE merchant = ? AND number = ?'
   ).bind(now(), merchant, number));
   await env.DB.batch(statements);
-  await postPurchaseMovement(env, merchant, order, { kind: 'return', cents: creditCents, commandId: row.id, by: row.requested_by });
+  await postPurchaseMovement(env, merchant, order, { kind: 'return', cents: creditCents, commandId: row.id, by: row.requested_by, pending: !trustedBuyer(row) });
   return update(env, row, 'completed', 'kiwi-procurement', {
     number, status: clean(order.status, 20), creditCents, returnedUnits,
     heldUnits, lines: read.moves.length,
@@ -2471,6 +2476,7 @@ export async function onRequestPost({ request, env }) {
     payload: payloadJson, result: null,
     requested_by: clean(actor.name, 100) || clean(body.requestedBy, 100),
     attempt_count: 0, last_error: '', created_ts: at, updated_ts: at,
+    actor_kind: actor.kind,
   };
   try {
     await env.DB.prepare(

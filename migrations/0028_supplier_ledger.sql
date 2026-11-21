@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS money_ledger (
   cheque_id         TEXT,
   archived          INTEGER NOT NULL DEFAULT 0,
   internal          INTEGER NOT NULL DEFAULT 0,
+  -- 'posted' compte dans les soldes ; 'pending' attend l'accord du patron
+  -- (réception de bon saisie par un employé), hors soldes jusque-là.
+  status            TEXT NOT NULL DEFAULT 'posted' CHECK (status IN ('posted', 'pending')),
   deleted_ts        INTEGER,
   created_by        TEXT NOT NULL DEFAULT '',
   created_at        INTEGER NOT NULL

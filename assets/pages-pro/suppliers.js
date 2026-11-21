@@ -257,7 +257,7 @@
       ? `<span class="sp-chip late">${esc(L('plus ancien', 'oldest', 'الأقدم'))} ${esc(String(s.ageing.oldestDays))} ${esc(L('j', 'd', 'يوم'))}</span>` : '';
     return `<div class="sp-row" data-action="sup-open" data-arg="${esc(s.id)}" role="button" tabindex="0">
       <div><div class="n">${esc(s.name)}</div><div class="m">${s.phone ? `<span>${esc(s.phone)}</span>` : ''}${s.lastDate ? `<span>${esc(L('dernier mouvement', 'last entry', 'آخر حركة'))} ${esc(dmy(s.lastDate))}</span>` : `<span>${esc(L('aucun mouvement', 'no entries yet', 'حتى حركة'))}</span>`}</div></div>
-      <div class="r">${owedChip(s.balanceCents)}${late}</div></div>`;
+      <div class="r">${owedChip(s.balanceCents)}${late}${s.pending ? `<span class="sp-chip late">${esc(String(s.pending))} ${esc(L('en attente', 'pending', 'فالانتظار'))}</span>` : ''}</div></div>`;
   }
 
   function listBody() {
@@ -271,7 +271,7 @@
         <div class="sp-kpi"><div class="k">${esc(L('Vous devez à vos fournisseurs', 'You owe your suppliers', 'عليك للموردين'))}</div><div class="v ${t.weOweCents ? 'owe' : 'ok'}">${esc(mad(t.weOweCents))}</div></div>
         <div class="sp-kpi"><div class="k">${esc(L('Avances chez eux', 'Advances with them', 'تسبيقات عندهم'))}</div><div class="v">${esc(mad(t.theyOweCents))}</div></div>
         <div class="sp-kpi"><div class="k">${esc(L('Fournisseurs', 'Suppliers', 'الموردون'))}</div><div class="v">${esc(String(t.count || 0))}</div></div>
-      </div>${ageBar(t.ageing)}</div>
+      </div>${ageBar(t.ageing)}${t.pending ? `<p class="sp-hint" style="margin-top:10px">${esc(String(t.pending))} ${esc(L("réception(s) saisie(s) par l'équipe attendent votre accord avant d'entrer dans les soldes.", 'receipt(s) entered by your team await your approval before they count.', 'استلام(ات) دخّلها الفريق كتسنّى الموافقة ديالك قبل ما تحسب.'))}</p>` : ''}</div>
       <div class="sp-bar">
         <label class="sp-search">${ic('search')}<input type="search" data-sp-q value="${esc(S.q)}" placeholder="${esc(L('Chercher un fournisseur, un téléphone, un ICE', 'Search a supplier, phone or ICE', 'قلّب على مورد، تيليفون ولا ICE'))}" aria-label="${esc(L('Chercher', 'Search', 'بحث'))}"></label>
         <div class="sp-pills" data-lens-demo role="group" aria-label="${esc(L('Trier', 'Sort', 'ترتيب'))}">${pill('owe', L('Je dois le plus', 'I owe most', 'اللي عليا ليه كثر'))}${pill('recent', L('Récents', 'Recent', 'الأحدث'))}${pill('name', L('Nom', 'Name', 'الاسم'))}</div>
@@ -340,6 +340,11 @@
         <td class="num">${l.inCents ? esc(mad(l.inCents)) : ''}</td><td class="num">${l.outCents ? esc(mad(l.outCents)) : ''}</td><td class="num">${esc(mad(l.runningCents))}</td>
         <td>${['payment', 'bill', 'opening'].includes(l.kind) ? `<button type="button" class="sp-void" data-action="sup-void" data-arg="${esc(l.id)}">${esc(L('Annuler', 'Void', 'إلغاء'))}</button>` : ''}</td></tr>`).join('')}
       </tbody></table></div>` : `<p class="sp-hint">${esc(L('Aucun mouvement. Une réception de bon de commande, une facture ou un paiement apparaîtra ici.', 'No entries yet. A received purchase order, a bill or a payment will show here.', 'حتى حركة. السلعة اللي توصلات، الفواتير والأداءات غادي يبانو هنا.'))}</p>`;
+    const pend = d.pending || [];
+    const pendHtml = pend.length ? `<div class="sp-card"><h3 class="sp-h3">${esc(String(pend.length))} ${esc(L('en attente de votre accord', 'awaiting your approval', 'كتسنّى الموافقة ديالك'))}</h3>
+      <p class="sp-hint" style="margin-bottom:8px">${esc(L("Saisi par l'équipe. Hors du solde tant que vous n'approuvez pas.", 'Entered by your team. Not in the balance until you approve.', 'دخّلو الفريق. ما كيدخلش فالرصيد حتى توافق.'))}</p>
+      ${pend.map((l) => `<div class="sp-po"><span>${esc(dmy(l.date))} · ${esc(kindLabel(l.kind))} · <b style="font-weight:600">${l.direction === 'in' ? '+' : '-'}${esc(mad(l.amountCents))}</b>${l.note ? `<small style="display:block;color:var(--n-500,#667)">${esc(l.note)}${l.createdBy ? ' · ' + esc(l.createdBy) : ''}</small>` : ''}</span>
+        <span style="display:inline-flex;gap:10px"><button type="button" class="sp-link" data-action="sup-approve" data-arg="${esc(l.id)}">${esc(L('Approuver', 'Approve', 'وافق'))}</button><button type="button" class="sp-void" data-action="sup-void" data-arg="${esc(l.id)}">${esc(L('Refuser', 'Reject', 'رفض'))}</button></span></div>`).join('')}</div>` : '';
     const orders = (d.orders || []).filter((o) => o.status !== 'cancelled' && o.status !== 'draft');
     const ordersHtml = orders.length ? `<div class="sp-card"><h3 class="sp-h3">${esc(L('Bons de commande', 'Purchase orders', 'أوامر الشراء'))}</h3>${orders.map((o) => `<div class="sp-po"><span><b style="font-weight:600">${esc(o.number)}</b> · ${esc(mad(o.totalCents))}</span>
       ${o.status === 'received' || o.status === 'partial' ? `<button type="button" class="sp-link" data-action="sup-pay-po" data-arg="${esc(s.id + '|' + o.number + '|' + o.totalCents)}">${ic('pay')}${esc(L('Payer ce bon', 'Pay this order', 'خلّص هاد الأمر'))}</button>` : `<span class="sp-chip ok">${esc(L('en attente', 'pending', 'فالانتظار'))}</span>`}</div>`).join('')}</div>` : '';
@@ -355,6 +360,7 @@
           <button type="button" class="kb ghost sp-btn" data-action="sup-edit" data-arg="${esc(s.id)}">${ic('edit')}${esc(L('Modifier', 'Edit', 'تعديل'))}</button>
           <button type="button" class="kb ghost sp-btn" data-action="sup-archive" data-arg="${esc(s.id)}">${ic('archive')}${esc(L('Archiver', 'Archive', 'أرشفة'))}</button>
         </div></div>
+      ${pendHtml}
       <div class="sp-grid">
         <div class="sp-card"><h3 class="sp-h3">${esc(L('Relevé', 'Statement', 'كشف الحساب'))}</h3>${table}</div>
         <div class="sp-wrap">
@@ -649,6 +655,13 @@ table{width:100%;border-collapse:collapse;margin-top:18px;font-variant-numeric:t
       if (!isReal()) DEMO.void(id);
       else await api(cash ? '/api/cashbook' : '/api/suppliers/entry', { action: 'archive', id });
       K.toast(L('Ligne annulée', 'Entry voided', 'تلغى السطر'), { type: 'success' });
+      refreshDetail();
+    } catch (e) { K.toast(errText(e.code), { type: 'warning' }); }
+  };
+  H['sup-approve'] = async (_el, id) => {
+    try {
+      if (isReal()) await api('/api/suppliers/entry', { action: 'approve', id: String(id || '') });
+      K.toast(L('Ligne approuvée', 'Entry approved', 'توافق على السطر'), { type: 'success' });
       refreshDetail();
     } catch (e) { K.toast(errText(e.code), { type: 'warning' }); }
   };

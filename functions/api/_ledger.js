@@ -8,7 +8,9 @@
  *   direction 'out' = le commerçant a DONNÉ quelque chose au tiers
  *                     (paiement, marchandise vendue à crédit, retour rendu).
  * Solde d'un tiers = Σ in − Σ out sur les lignes vivantes
- * (archived = 0, deleted_ts IS NULL, internal = 0).
+ * (archived = 0, deleted_ts IS NULL, internal = 0, status = 'posted').
+ * Une ligne `pending` (réception de bon saisie par un employé) attend que le
+ * patron l'approuve : elle ne compte nulle part avant (approveLedgerEntry).
  *   solde > 0  → le commerçant DOIT ce montant au tiers ;
  *   solde < 0  → le tiers DOIT ce montant au commerçant.
  * D'où, à l'écran :
@@ -27,13 +29,15 @@
  *               sauf cashbook), date 'YYYY-MM-DD' (défaut : aujourd'hui UTC),
  *               kind (KINDS), method (METHODS), note, attachmentRef,
  *               saleId, purchaseOrderId, expenseId, chequeId,
- *               internal (bool), createdBy }
+ *               internal (bool), pending (bool), createdBy }
  *     → { ok:true, duplicate:false|true, entry }  (rejeu de la même clé =
  *       duplicate:true, aucune seconde ligne)
  *     → { ok:false, error } : 'bad-merchant' | 'bad-idem' | 'bad-amount' |
  *       'bad-direction' | 'bad-party' | 'bad-date' | 'idempotency-conflict'
  *       (même clé, autre montant/sens/tiers) | 'no-db' | 'unmigrated'
  *   archiveLedgerEntry(env, merchant, id, { by }) → { ok, entry } | { ok:false, error }
+ *   approveLedgerEntry(env, merchant, id, { by }) → { ok, entry } (pending → posted)
+ *   pendingEntries(env, merchant, partyType, partyId|null) → [entry] (en attente, non archivées)
  *   archiveLedgerWhere(env, merchant, { expenseId | purchaseOrderId }) → { ok, archived }
  *   partyBalance(env, merchant, partyType, partyId)
  *     → { balanceCents, inCents, outCents, count }
@@ -55,7 +59,7 @@ export const DIRECTIONS = new Set(['in', 'out']);
 export const PARTY_TYPES = new Set(['customer', 'supplier', 'cashbook']);
 export const METHODS = ['cash', 'card', 'transfer', 'cheque', 'other'];
 export const KINDS = ['purchase', 'payment', 'bill', 'return', 'expense', 'expense-payment', 'sale-credit', 'repayment', 'opening', 'adjustment', 'manual'];
-export const LIVE = 'archived = 0 AND deleted_ts IS NULL AND internal = 0';
+export const LIVE = "archived = 0 AND deleted_ts IS NULL AND internal = 0 AND status = 'posted'";
 
 const SLUG = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const IDEM = /^[A-Za-z0-9:._@-]{1,128}$/;
@@ -95,6 +99,7 @@ export function entryView(row) {
     saleId: row.sale_id || null, purchaseOrderId: row.purchase_order_id || null,
     expenseId: row.expense_id || null, chequeId: row.cheque_id || null,
     archived: Number(row.archived) === 1 || row.deleted_ts != null, internal: Number(row.internal) === 1,
+    pending: String(row.status || 'posted') === 'pending',
     createdBy: String(row.created_by || ''), createdAt: Number(row.created_at) || 0,
   };
 }
@@ -124,7 +129,7 @@ export function normalizeEntry(merchant, entry, now = Date.now()) {
     note: clean(e.note, 280), attachment_ref: clean(e.attachmentRef, 200),
     sale_id: link(e.saleId), purchase_order_id: link(e.purchaseOrderId),
     expense_id: link(e.expenseId), cheque_id: link(e.chequeId),
-    internal: e.internal ? 1 : 0, created_by: clean(e.createdBy, 100), created_at: now,
+    internal: e.internal ? 1 : 0, status: e.pending ? 'pending' : 'posted', created_by: clean(e.createdBy, 100), created_at: now,
   } };
 }
 
@@ -138,11 +143,11 @@ export async function postLedgerEntry(env, merchant, entry) {
       `INSERT OR IGNORE INTO money_ledger
         (id, merchant, idem_key, entry_date, amount_cents, direction, party_type, party_id, kind, method,
          note, attachment_ref, sale_id, purchase_order_id, expense_id, cheque_id, archived, internal,
-         deleted_ts, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, NULL, ?, ?)`
+         status, deleted_ts, created_by, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NULL, ?, ?)`
     ).bind(r.id, r.merchant, r.idem_key, r.entry_date, r.amount_cents, r.direction, r.party_type, r.party_id,
       r.kind, r.method, r.note, r.attachment_ref, r.sale_id, r.purchase_order_id, r.expense_id, r.cheque_id,
-      r.internal, r.created_by, r.created_at).run();
+      r.internal, r.status, r.created_by, r.created_at).run();
     if (Number(res && res.meta && res.meta.changes) > 0) return { ok: true, duplicate: false, entry: entryView({ ...r, archived: 0, deleted_ts: null }) };
     const prior = await env.DB.prepare('SELECT * FROM money_ledger WHERE merchant = ? AND idem_key = ?')
       .bind(r.merchant, r.idem_key).first();
@@ -173,6 +178,35 @@ export async function archiveLedgerEntry(env, merchant, id, opts) {
     }
     return { ok: true, entry: entryView(row) };
   } catch (_) { return { ok: false, error: 'unmigrated' }; }
+}
+
+/* Le patron approuve une ligne en attente : elle entre dans les soldes. */
+export async function approveLedgerEntry(env, merchant, id, opts) {
+  if (!env || !env.DB) return { ok: false, error: 'no-db' };
+  const key = clean(id, 64);
+  try {
+    const row = await env.DB.prepare('SELECT * FROM money_ledger WHERE merchant = ? AND id = ?').bind(merchant, key).first();
+    if (!row || Number(row.archived) === 1) return { ok: false, error: 'not-found' };
+    if (row.status === 'pending') {
+      const by = clean(opts && opts.by, 100);
+      await env.DB.prepare("UPDATE money_ledger SET status = 'posted', note = CASE WHEN ? = '' THEN note ELSE substr(note || ' · approuvé par ' || ?, 1, 280) END WHERE merchant = ? AND id = ? AND status = 'pending'")
+        .bind(by, by, merchant, key).run();
+      row.status = 'posted';
+    }
+    return { ok: true, entry: entryView(row) };
+  } catch (_) { return { ok: false, error: 'unmigrated' }; }
+}
+
+export async function pendingEntries(env, merchant, partyType, partyId) {
+  if (!env || !env.DB || !PARTY_TYPES.has(partyType)) return [];
+  const one = partyId != null && partyId !== '';
+  try {
+    const rows = await env.DB.prepare(
+      `SELECT * FROM money_ledger WHERE merchant = ? AND party_type = ?${one ? ' AND party_id = ?' : ''}
+          AND status = 'pending' AND archived = 0 AND deleted_ts IS NULL ORDER BY entry_date, created_at LIMIT 500`
+    ).bind(...(one ? [merchant, partyType, clean(partyId, 80)] : [merchant, partyType])).all();
+    return ((rows && rows.results) || []).map(entryView);
+  } catch (_) { return []; }
 }
 
 /* Archive toutes les lignes vivantes d'une dépense ou d'un bon : une dépense
