@@ -55,7 +55,7 @@ for (const mode of ['fetch', 'body']) {
   {
     const h = harness(mode), nodes = { '#service-client-search': { value: '0600000000', disabled: false }, '#service-client-list': {} };
     Object.assign(h.c, { $: s => nodes[s], liveEmployeeState: { merchant: 'test' }, serviceClientRows: [], employeeTranslation: x => x });
-    h.run(read('assets/request-deadline.mjs').replace('export ', '') + '\n' + declaration(read('assets/serveur/payments.js'), 'renderServiceClients').replace("import('../request-deadline.mjs')", 'Promise.resolve({ deadlineFetch })'));
+    h.run(read('assets/request-deadline.mjs').replace('export ', '') + '\n' + declaration(read('assets/serveur/payments.js'), 'renderServiceClients').replace(/import\('\.\.\/request-deadline\.mjs(?:\?v=\d+)?'\)/, 'Promise.resolve({ deadlineFetch })'));
     h.run('renderServiceClients()'); await h.tick();
     assert.equal(nodes['#service-client-list'].textContent, 'Carnet indisponible.');
     assert.equal(nodes['#service-client-search'].disabled, false);

@@ -18,6 +18,8 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/request-deadline.mjs?v=1',
+  '/assets/serveur/reopened-bill.mjs?v=1',
   '/assets/pos-maison/cash-moves.js?v=5',
   '/assets/pos-maison/drawer.js?v=2',
   '/assets/pos-maison/avoir-sheet.js?v=9',
@@ -175,7 +177,7 @@ var SHELL = [
   '/assets/serveur-shell.css?v=11',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
   '/assets/serveur/payment-support.js?v=9',
-  '/assets/serveur/service.js?v=48',
+  '/assets/serveur/service.js?v=49',
   '/assets/serveur-app.js?v=33',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,

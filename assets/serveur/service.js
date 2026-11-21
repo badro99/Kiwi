@@ -105,7 +105,7 @@
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
       if (!merchant || SV_DEMO || !id) return;
       try {
-        const response = await (await import('../request-deadline.mjs')).deadlineFetch('/api/service/events', {
+        const response = await (await import('../request-deadline.mjs?v=1')).deadlineFetch('/api/service/events', {
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2797,7 +2797,7 @@
       $('#pc-client-label').textContent = client ? `${client.name} · ${Number(client.points) || 0} pts` : 'Client & fidélité';
     }
 
-    function renderServiceClients() { var fetchDeadline = async (url, options, _readBody, controller) => (await import('../request-deadline.mjs')).deadlineFetch(url, options, 12000, controller); if (renderServiceClients.controller) renderServiceClients.controller.abort(); const controller = renderServiceClients.controller = new AbortController();
+    function renderServiceClients() { var fetchDeadline = async (url, options, _readBody, controller) => (await import('../request-deadline.mjs?v=1')).deadlineFetch(url, options, 12000, controller); if (renderServiceClients.controller) renderServiceClients.controller.abort(); const controller = renderServiceClients.controller = new AbortController();
       const q = String($('#service-client-search').value || '').trim();
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
       serviceClientRows = [];
@@ -3161,7 +3161,7 @@ cashModal.addEventListener('click', (e) => {
       const payCtl = (typeof AbortController === 'function') ? new AbortController() : null;
       const payTimer = null;
       try {
-        const response = await (await import('../request-deadline.mjs')).deadlineFetch('/api/sale', {
+        const response = await (await import('../request-deadline.mjs?v=1')).deadlineFetch('/api/sale', {
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
           signal: payCtl ? payCtl.signal : undefined,
@@ -3193,7 +3193,7 @@ cashModal.addEventListener('click', (e) => {
         /* Table rouverte sous une autre visite : rien n'est écrit, l'ancienne note est jetée
            (assets/serveur/reopened-bill.mjs). Visite soldée : rien à encaisser. */
         else if (err.reopened) {
-          try { (await import('./reopened-bill.mjs')).dropReopenedBill(id, method || 'card'); }
+          try { (await import('./reopened-bill.mjs?v=1')).dropReopenedBill(id, method || 'card'); }
           catch (_) { keepServiceBillOpen(id, {}); try { pollServiceSync(); } catch (__) {} }
         }
         else if (err.message === 'visit-already-settled') { toast(employeePick(`Table ${id} · déjà réglée, rien à encaisser`, `Table ${id} · already settled, nothing to collect`, `الطاولة ${id} · سبق دفعها، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }
@@ -3819,7 +3819,7 @@ cashModal.addEventListener('click', (e) => {
           /* Délai réel (15 s) : l'identifiant de la part est stable, une
              relance après délai rejoue la même vente, jamais une seconde. */
 
-          const response = await (await import('../request-deadline.mjs')).deadlineFetch('/api/sale', {
+          const response = await (await import('../request-deadline.mjs?v=1')).deadlineFetch('/api/sale', {
             ...(payCtl ? { signal: payCtl.signal } : {}),
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
@@ -3859,7 +3859,7 @@ cashModal.addEventListener('click', (e) => {
         /* Table rouverte sous une autre visite : rien n'est écrit, l'ancienne note est jetée
            (assets/serveur/reopened-bill.mjs). Visite soldée : rien à encaisser. */
         else if (err.reopened && tableId) {
-          try { (await import('./reopened-bill.mjs')).dropReopenedBill(tableId, payMethod); }
+          try { (await import('./reopened-bill.mjs?v=1')).dropReopenedBill(tableId, payMethod); }
           catch (_) { keepServiceBillOpen(tableId, {}); try { pollServiceSync(); } catch (__) {} }
         }
         else if (err.message === 'visit-already-settled') { toast(employeePick(`Table ${tableId || ''} · déjà réglée, rien à encaisser`, `Table ${tableId || ''} · already settled, nothing to collect`, `الطاولة ${tableId || ''} · سبق دفعها، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }

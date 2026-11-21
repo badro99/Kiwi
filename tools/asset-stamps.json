@@ -2135,6 +2135,10 @@
     "v": "11",
     "sha": "1653d14db2a8be7b"
   },
+  "assets/request-deadline.mjs": {
+    "v": "1",
+    "sha": "d2157a1d393c41bc"
+  },
   "assets/reservations.css": {
     "v": "11",
     "sha": "4fd568c0b955146b"
@@ -2231,9 +2235,13 @@
     "v": "9",
     "sha": "35eb41b159c67704"
   },
+  "assets/serveur/reopened-bill.mjs": {
+    "v": "1",
+    "sha": "5911048d786d702a"
+  },
   "assets/serveur/service.js": {
-    "v": "48",
-    "sha": "da9e312a36f0f7e0"
+    "v": "49",
+    "sha": "3c3d0a948879701e"
   },
   "assets/service-requests.js": {
     "v": "2",

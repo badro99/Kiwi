@@ -43,7 +43,7 @@ entries.forEach(({ base, rev }) => {
 const visited = new Set(), moduleUrls = new Set();
 function moduleClosure(file) {
   if (visited.has(file)) return; visited.add(file);
-  for (const m of read(file).matchAll(/(?:(?:from|import)\s+|import\s*\(\s*)'(\.\.?\/[^']+\.js\?v=[0-9]+)'/g)) {
+  for (const m of read(file).matchAll(/(?:(?:from|import)\s+|import\s*\(\s*)'(\.\.?\/[^']+\.m?js\?v=[0-9]+)'/g)) {
     const url = path.posix.normalize(path.posix.join(path.posix.dirname(file), m[1]));
     ok(url + ' is pre-cached', sw.includes("'/" + url + "'"));
     moduleUrls.add('/' + url);
@@ -54,6 +54,8 @@ function moduleClosure(file) {
 entries.forEach(({base}) => moduleClosure('assets/' + base + '.js'));
 // Live Link is a module in every shell: its imports must be precached at the stamp it imports.
 moduleClosure('assets/live-link.js');
+// L'app serveur importe à la demande (request-deadline, reopened-bill) : précachés à l'estampille importée.
+moduleClosure('assets/serveur/service.js');
 moduleClosure('assets/tickets.js'); moduleClosure('assets/clients-directory.js');
 moduleClosure('assets/hotel-economat-requests.js');
 moduleClosure('assets/invoicing.js'); moduleClosure('assets/pages-pro-office.js');

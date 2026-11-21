@@ -105,7 +105,7 @@
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
       if (!merchant || SV_DEMO || !id) return;
       try {
-        const response = await (await import('../request-deadline.mjs')).deadlineFetch('/api/service/events', {
+        const response = await (await import('../request-deadline.mjs?v=1')).deadlineFetch('/api/service/events', {
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

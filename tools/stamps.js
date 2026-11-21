@@ -69,7 +69,9 @@ function dispatchRevs() {
    ferait voir au scanner assets/kiwi-favicon-new.svg, déjà estampillé à ?v=3
    dans la caisse et ?v=2 dans la salle, et le seul moyen de les accorder avec
    bump-stamp réécrirait ~25 pages sans rapport. */
-const ASSET_EXT = '(?:js|css|woff2)';
+/* `mjs` : les modules que le paquet du serveur importe à la demande
+   (import('./reopened-bill.mjs?v=N')), précachés dans la liste SHELL. */
+const ASSET_EXT = '(?:m?js|css|woff2)';
 const ASSET_PATH = `assets\\/(?:[A-Za-z0-9._/-]+?\\.${ASSET_EXT}|icons\\/material\\/sprite\\.[a-z0-9]+\\.svg)`;
 const SHELL_RE = () => new RegExp(`(${ASSET_PATH})\\?v=([0-9]+)`, 'g');
 const SW_RE = () => new RegExp(`'\\/(${ASSET_PATH})\\?v=([0-9]+)'`, 'g');
@@ -161,6 +163,30 @@ function cssRefs() {
     }
   }
   return refs;
+}
+
+/* LE PAQUET DE L'APP SERVEUR et ses modules chargés à la demande.
+   assets/serveur/service.js est livré tel quel : la concaténation de ses
+   parties (tools/fixtures/serveur/split.json › parts). Ses import() de
+   modules locaux sont des sites d'estampille, comme ceux des modules ES de la
+   caisse : un module changé sans estampille nouvelle serait servi depuis le
+   cache, l'ancien code exécuté sans un mot. Le paquet est le site ; ses
+   parties suivent (bump-stamp les réécrit ensemble). */
+const SERVEUR_BUNDLE = 'assets/serveur/service.js';
+const SERVEUR_IMPORT_RE = () => /import\s*\(\s*'(\.\.?\/[^'?]+\.m?js)(?:\?v=([0-9]+))?'\s*\)/g;
+function serveurBundleParts() {
+  const map = 'tools/fixtures/serveur/split.json';
+  if (!exists(map)) return [];
+  try { return JSON.parse(read(map)).parts || []; } catch (_) { return []; }
+}
+/* Les import() du paquet : [{ asset, written, stamp|null }]. */
+function serveurImports() {
+  if (!exists(SERVEUR_BUNDLE)) return [];
+  return [...read(SERVEUR_BUNDLE).matchAll(SERVEUR_IMPORT_RE())].map((m) => ({
+    asset: path.posix.normalize(path.posix.join(path.posix.dirname(SERVEUR_BUNDLE), m[1])),
+    written: m[1],
+    stamp: m[2] || null,
+  }));
 }
 
 /* Toutes les estampilles trouvables, indexées par chemin d'asset.
@@ -269,6 +295,10 @@ function scan() {
     }
   }
 
+  for (const imp of serveurImports()) {
+    if (imp.stamp) note(imp.asset, imp.stamp, { file: SERVEUR_BUNDLE, kind: 'module', stamp: imp.stamp });
+  }
+
   const revs = dispatchRevs();
   for (const [base, rev] of Object.entries(revs)) {
     for (const ext of ['js', 'css']) {
@@ -302,6 +332,7 @@ function referenceFiles(asset) {
   if (exists('assets/onboarding.js') && read('assets/onboarding.js').includes(asset + '?v=')) files.push('assets/onboarding.js');
   if (exists('assets/hotel-economat.js') && read('assets/hotel-economat.js').includes(asset + '?v=')) files.push('assets/hotel-economat.js');
   if (exists('assets/pressing-ops.js') && read('assets/pressing-ops.js').includes(asset + '?v=')) files.push('assets/pressing-ops.js');
+  if (serveurImports().some((imp) => imp.asset === asset)) files.push(SERVEUR_BUNDLE);
   if (exists(SW) && read(SW).includes(`/${asset}`)) files.push(SW);
   return files;
 }
@@ -335,4 +366,4 @@ function writeManifest(m) {
   fs.writeFileSync(manifestPath(), JSON.stringify(m, null, 2) + '\n');
 }
 
-module.exports = { ROOT, SW, DISPATCH, MANIFEST, BUNDLE, read, exists, sha, shellDocs, fontPages, resetFontPages, cssFiles, cssRefs, cssReferences, dispatchRevs, scan, referenceFiles, readManifest, buildManifest, writeManifest };
+module.exports = { ROOT, SW, DISPATCH, MANIFEST, BUNDLE, SERVEUR_BUNDLE, serveurBundleParts, serveurImports, read, exists, sha, shellDocs, fontPages, resetFontPages, cssFiles, cssRefs, cssReferences, dispatchRevs, scan, referenceFiles, readManifest, buildManifest, writeManifest };
