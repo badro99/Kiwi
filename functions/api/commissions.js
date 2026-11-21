@@ -16,7 +16,7 @@
 
 import { json, entitledMerchant } from '../auth/_lib.js';
 import { legacyBucketFor } from './_sales-scope.js';
-import { businessBoundary, addBusinessDays, merchantZone, merchantCutoff } from './_business-day.js';
+import { businessBoundary, businessDate, addBusinessDays, merchantZone, merchantCutoff } from './_business-day.js';
 import { commissionsReport } from './_commissions.js';
 
 export const MAX_SPAN_DAYS = 400;
@@ -57,9 +57,19 @@ export async function onRequestGet({ request, env }) {
   if (span > MAX_SPAN_DAYS) return json({ error: 'range-too-long', maxDays: MAX_SPAN_DAYS }, 400);
   if (!env || !env.DB) return json({ merchant: '', sellers: [], unattributed: null, totals: null });
 
-  /* La caisse appairée lit sa propre journée pour la clôture (une journée, pas plus). */
-  const merchant = await entitledMerchant(request, env, asked)
-    || (span === 1 ? await entitledMerchant(request, env, asked, { allowTill: true }) : '');
+  /* La caisse appairée lit la journée qu'elle clôture, rien d'autre : la journée
+     d'activité en cours, ou la veille pour une clôture passée la coupure. Le jour
+     est calculé ici, jamais pris à la caisse, pour qu'elle ne remonte pas le
+     passé jour par jour. */
+  let merchant = await entitledMerchant(request, env, asked);
+  if (!merchant && span === 1) {
+    const till = await entitledMerchant(request, env, asked, { allowTill: true });
+    if (till) {
+      const [z, c] = await Promise.all([merchantZone(env, till), merchantCutoff(env, till)]);
+      const today = businessDate(Date.now(), c, z);
+      if (fromDay === today || fromDay === addBusinessDays(today, -1)) merchant = till;
+    }
+  }
   if (!merchant) return json({ merchant: '', sellers: [] }, 403);
   /* Une option posée par commerce dans kiwi-admin (« Commissions vendeurs »),
      éteinte tant qu'elle ne vaut pas explicitement true. */

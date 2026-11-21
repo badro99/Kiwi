@@ -132,6 +132,10 @@ check('nothing credential-shaped leaves the route', !/pinCode|password|"pin"/.te
 check('the paired till reads its own single day (day close)', (await ask(till)).status === 200);
 const weekFrom = new Date(Date.parse(day + 'T00:00:00Z') - 6 * 86400000).toISOString().slice(0, 10);
 check('the paired till cannot read a longer period', (await ask(till, weekFrom, day)).status === 403);
+check('the paired till cannot walk back through past days one at a time', (await ask(till, weekFrom, weekFrom)).status === 403);
+const yesterday = new Date(Date.parse(day + 'T00:00:00Z') - 86400000).toISOString().slice(0, 10);
+check('the paired till may read yesterday, for a close past the cutoff', (await ask(till, yesterday, yesterday)).status === 200);
+check('the owner still reads any past day', (await ask(owner, weekFrom, weekFrom)).status === 200);
 check('no cookie, no figures', (await ask('')).status === 403);
 check('a malformed or reversed range is refused', (await ask(owner, '2026-13-01', day)).status === 400 && (await ask(owner, day, weekFrom)).status === 400);
 const off = world({});
