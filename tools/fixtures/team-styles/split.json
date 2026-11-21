@@ -1,7 +1,7 @@
 {
-  "sha256": "fd7eca1909a819f6197f271e70b816d665109e43c1a20097442aed9f966b131c",
-  "start": 55525,
-  "end": 76764,
+  "sha256": "0044325a905ad8ac30faf17f71b87370a383b2a33cb3207f1185547de19f6e50",
+  "start": 56037,
+  "end": 77276,
   "relay": "  const { PAGE_CSS } = window.KiwiTeamParts.styles;",
   "prefix": "/* Team page and member modal styles, shared by the team entry. */\n(function () {\n  'use strict';\n  window.KiwiTeamParts ||= {};\n",
   "suffix": "\n  window.KiwiTeamParts.styles = Object.freeze({ PAGE_CSS });\n})();\n",

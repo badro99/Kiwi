@@ -735,6 +735,10 @@
     "v": "7",
     "sha": "29803657f951ca07"
   },
+  "assets/home-top-sellers.js": {
+    "v": "3",
+    "sha": "0e1218c2bee6befa"
+  },
   "assets/hotel-channels.js": {
     "v": "4",
     "sha": "7a25a26319e794aa"
@@ -1392,8 +1396,8 @@
     "sha": "bfb67d0993b644f5"
   },
   "assets/oppo-cards.js": {
-    "v": "9",
-    "sha": "0da0c2ffcca1475f"
+    "v": "12",
+    "sha": "b8ce394a4fe2edcd"
   },
   "assets/order-qr.js": {
     "v": "6",
@@ -1528,8 +1532,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "269",
-    "sha": "6014f9f943203d0e"
+    "v": "274",
+    "sha": "3e2d619c01949a9e"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1592,12 +1596,12 @@
     "sha": "1803c6a453438f4f"
   },
   "assets/planning/payroll-view.js": {
-    "v": "17",
-    "sha": "307f2956b5155420"
+    "v": "22",
+    "sha": "aef9f44c8fa465e8"
   },
   "assets/planning/seller-commissions.js": {
-    "v": "1",
-    "sha": "5602977f0d836923"
+    "v": "3",
+    "sha": "05c57d527fe5f4fc"
   },
   "assets/planning/shift-editor.js": {
     "v": "5",
@@ -2320,12 +2324,12 @@
     "sha": "3cb977732d0c9fb3"
   },
   "assets/team-hours.js": {
-    "v": "32",
-    "sha": "3e72c82b3a82c76b"
+    "v": "37",
+    "sha": "ddc60a309ab48638"
   },
   "assets/team.js": {
-    "v": "362",
-    "sha": "e87cbf97e745e102"
+    "v": "363",
+    "sha": "9a134e7dc1bcc314"
   },
   "assets/team/access-rules.js": {
     "v": "8",
@@ -2356,8 +2360,8 @@
     "sha": "f8d4f03e16d05978"
   },
   "assets/team/styles.js": {
-    "v": "5",
-    "sha": "b8c91be73fccc740"
+    "v": "6",
+    "sha": "2663352f1dc71346"
   },
   "assets/team/venue-scope.js": {
     "v": "6",

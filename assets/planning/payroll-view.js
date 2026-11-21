@@ -3,19 +3,21 @@
  * Reads window: KiwiConfig, KiwiVenue, __kiwiRole, __kiwiTeamV2. Mutable UI state is private to this factory. */
 export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correctionsHtml, dateLocale, deferredMark, esc, fmtHours, fmtMad, fmtPay, getHours, getMembers, handlers, hourlyPayFor, initials, jobName, live, memberFullName, pad, payCents, payrollFigures, periodNavigatorHtml, periodPillsHtml, render, renderPlanningPane, saveCustomTeams, shiftHours, svgIcon, t, teamKey, toISO, trLang }) {
   let payTab = 'planning';
-  /* Onglet « Commissions » (assets/planning/seller-commissions.js) : seulement
-     avec l'option « Commissions vendeurs » du commerce (kiwi-admin) ET le kit
-     2027 du tableau de bord. Le module se charge à la première ouverture. */
+  /* Onglet « Commissions » de la page Équipe (assets/planning/seller-commissions.js,
+     rendu par renderCommissionsPane, appelé par team.js) : seulement avec
+     l'option « Commissions vendeurs » du commerce (kiwi-admin) ET le kit 2027
+     du tableau de bord, pour le propriétaire. Le module se charge à la première
+     ouverture ; il vivait sous Paie & planning, il est passé dans Équipe. */
   const commissionsOn = () => window.KiwiConfig?.features?.sellerCommissions === true
-    && document.documentElement.getAttribute('data-skin-2027') === 'dashboard';
+    && document.documentElement.getAttribute('data-skin-2027') === 'dashboard' && payrollAccess() === 'full';
   const commissionsWait = { pane: () => '<div class="eq-section kt-com-state" data-kt-commissions="loading"></div>', forget() {},
     tabLabel: () => ({ fr: 'Commissions', en: 'Commissions', ar: 'العمولات' })[trLang()] || 'Commissions' };
   let commissions = null;
   function commissionsView() {
     if (commissions) return commissions;
     commissions = commissionsWait;
-    import('./seller-commissions.js?v=1').then((m) => {
-      commissions = m.createSellerCommissions({ esc, fmtPay, trLang, render, slug: () => Kiwi?.__teamProfileCore?.teamSlug?.() || '' });
+    import('./seller-commissions.js?v=3').then((m) => {
+      commissions = m.createSellerCommissions({ esc, fmtPay, trLang, render, slug: () => Kiwi?.__teamProfileCore?.teamSlug?.() || '', members: () => getMembers(teamKey(window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' })), saveMembers: saveCustomTeams, initials, avatarColors: AVATAR_COLORS, memberName: memberFullName, roleName: jobName, toast: (msg) => Kiwi?.toast?.(msg, { type: 'success' }), pickerMode: () => window.KiwiConfig?.features?.sellerPicker === true });
       render();
     }).catch(() => { commissions = null; });
     return commissions;
@@ -131,8 +133,7 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
   }
 
   handlers['kt-paytab'] = (_el, kind) => {
-    if (kind !== 'planning' && kind !== 'hours' && !(kind === 'commissions' && commissionsOn())) return;
-    if (kind === 'commissions') commissionsView().forget();   // rouvrir l'onglet relit les ventes
+    if (kind !== 'planning' && kind !== 'hours') return;
     payTab = kind;
     render();
   };
@@ -311,17 +312,23 @@ export function createPayrollView({ AVATAR_COLORS, IC, Kiwi, buildPeriod, correc
             <button class="btn-slim" type="button" data-action="generate-payslips">${esc(({ fr:'Relevés de toute l’équipe', en:'Statements for all employees', ar:'كشوف جميع الموظفين' })[trLang()])}</button>
             <button class="eq-pill${payTab === 'planning' ? ' on' : ''}" type="button" data-action="kt-paytab" data-arg="planning">${esc(T.tabPlanning)}</button>
             <button class="eq-pill${payTab === 'hours' ? ' on' : ''}" type="button" data-action="kt-paytab" data-arg="hours">${esc(T.tabRealised)}</button>
-            ${commissionsOn() ? `<button class="eq-pill${payTab === 'commissions' ? ' on' : ''}" type="button" data-action="kt-paytab" data-arg="commissions">${esc(commissionsView().tabLabel())}</button>` : ''}
           </div>
         </div>
-        ${payTab === 'commissions' && commissionsOn()
-          ? commissionsView().pane(period)
-          : payTab === 'planning'
+        ${payTab === 'planning'
             ? renderPlanningPane(T, venue, venueType, members, { showCosts: true })
             : renderHoursPane(T, venue, venueType, members)}
       </div>`;
   }
 
+  /* Équipe › Commissions : la période (les mêmes pastilles que Paie), puis le classement. */
+  function renderCommissionsPane(T) {
+    const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
+    return `<div class="dash-equipe"><div class="eq-filters"><div class="eq-pill-row">${periodPillsHtml(T)}</div></div>
+      ${periodNavigatorHtml(T, period)}${commissionsView().pane(period)}</div>`;
+  }
 
-  return Object.freeze({ renderHoursPane, updateHourTotals, payTiles, payrollAccess, renderPayrollBody });
+  function commissionsLabel() { return commissionsView().tabLabel(); }
+  function forgetCommissions() { commissionsView().forget(); }   // rouvrir l'onglet relit les ventes
+
+  return Object.freeze({ renderHoursPane, updateHourTotals, payTiles, payrollAccess, renderPayrollBody, renderCommissionsPane, commissionsOn, commissionsLabel, forgetCommissions });
 }

@@ -134,14 +134,6 @@
     .dash-equipe .kt-hbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
     .dash-equipe .kt-hbar-right { display: inline-flex; gap: 6px; flex-wrap: wrap; }
     .dash-equipe .kt-h-tablewrap { border: 1px solid var(--n-200); border-radius: 12px; overflow-x: auto; background: var(--surface); }
-    .dash-equipe .kt-com-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-    .dash-equipe .kt-com-table th { background: var(--paper-soft); padding: 11px 12px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.10em; color: var(--n-500); font-weight: 500; text-align: start; text-transform: uppercase; border-bottom: 1px solid var(--n-200); }
-    .dash-equipe .kt-com-table td { padding: 11px 12px; border-bottom: 1px solid var(--n-100); color: var(--ink); }
-    .dash-equipe .kt-com-table tr:last-child td { border-bottom: 0; }
-    .dash-equipe .kt-com-table .kt-com-n { text-align: end; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .dash-equipe .kt-com-unset { color: var(--n-500); font-weight: 400; }
-    .dash-equipe .kt-com-state { color: var(--n-500); font-size: 13px; line-height: 1.55; }
-    .dash-equipe .kt-com-hint { margin: 10px 2px 0; color: var(--n-500); font-size: 12px; }
     .dash-equipe .kt-h-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
     .dash-equipe .kt-h-table thead th { background: var(--paper-soft); padding: 11px 9px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.10em; color: var(--n-500); font-weight: 500; text-align: start; text-transform: uppercase; border-bottom: 1px solid var(--n-200); position: sticky; top: 0; }
     .dash-equipe .kt-h-table .kt-day-head { text-align: center; min-width: 54px; }

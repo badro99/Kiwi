@@ -1,4 +1,4 @@
-import {} from './team/styles.js?v=5';
+import {} from './team/styles.js?v=6';
 import {} from './team/access-rules.js?v=8';
 import {} from './team/member-state.js?v=16';
 import {} from './team/venue-scope.js?v=6';
@@ -766,7 +766,7 @@ import {} from './team/roster-list.js?v=6';
     root.innerHTML = `
       ${renderHeader(T, venue, members)}
       ${renderTabs(T)}
-      ${activeTab === 'profiles' ? renderProfilesPane(T, venue, venueType, members) : renderHoursPane(T, venue, venueType, members)}
+      ${activeTab === 'commissions' && teamHours.commissionsOn?.() ? teamHours.renderCommissionsPane(T) : activeTab === 'profiles' ? renderProfilesPane(T, venue, venueType, members) : renderHoursPane(T, venue, venueType, members)}
     `;
     /* Re-bind the live search field after each render. */
     const sb = root.querySelector('[data-kt-search]');
@@ -791,6 +791,7 @@ import {} from './team/roster-list.js?v=6';
         <div class="eq-pill-row">
           <button data-activation=write class="eq-pill${activeTab === 'profiles' ? ' on' : ''}" type="button" data-action="kt-tab" data-arg="profiles">${esc(T.tabProfiles)}</button>
           <button data-activation=write class="eq-pill${activeTab === 'hours'    ? ' on' : ''}" type="button" data-action="kt-tab" data-arg="hours">${esc(T.tabHours)}</button>
+          ${teamHours.commissionsOn?.() ? `<button class="eq-pill${activeTab === 'commissions' ? ' on' : ''}" type="button" data-action="kt-tab" data-arg="commissions">${esc(teamHours.commissionsLabel())}</button>` : ''}
         </div>
       </div>
     `;
@@ -818,6 +819,7 @@ import {} from './team/roster-list.js?v=6';
 
   /* ═══════════════ DELEGATED HANDLERS ═══════════════ */
   handlers['kt-tab'] = (_el, kind) => {
+    if (kind === 'commissions' && teamHours.commissionsOn?.()) { teamHours.forgetCommissions(); activeTab = kind; render(); return; }   // Équipe › Commissions (planning/seller-commissions.js)
     if (kind === 'profiles' || kind === 'hours') {
       activeTab = kind; rosterList.setActiveTab(kind);
       render();
