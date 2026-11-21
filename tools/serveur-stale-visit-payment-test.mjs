@@ -96,5 +96,12 @@ visit('tsx-owner-at-the-till-07', '10');
 r = await pay(owner, { id: 'own-till-pay-7', table: '10', session: 'tsx-owner-at-the-till-07', amount: 28, amountCents: 2800, ref: 'T10', label: 'T10' });
 check(r.status === 200 && r.body.ok && salesById('own-till-pay-7') === 1, `patron à la caisse : la vente d'une visite qu'il vient de clore passe (${r.status} ${r.body.error || ''})`);
 
+/* 8 · la table a déjà une nouvelle visite ouverte : le téléphone règle la note qu'il affiche avec
+ * l'identifiant de la visite d'avant (pas encore relu) ; ce n'est pas un second encaissement. */
+visit('tsx-previous-settled-08', '11');
+visit('tsx-new-visit-open-0008', '11', { closed: false, paid: [false] });
+r = await pay(waiter, { id: 'emp-pay-new-8', table: '11', session: 'tsx-previous-settled-08', amount: 28, amountCents: 2800, ref: 'ST-105', label: 'ST-105' });
+check(!(r.status === 409 && r.body.error === 'visit-already-settled'), `nouvelle visite ouverte sur la table : pas refusée comme « déjà réglée » (${r.status} ${r.body.error || ''})`);
+
 f.close();
 console.log(`serveur-stale-visit-payment-test: ${checks} checks passed`);

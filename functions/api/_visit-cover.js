@@ -93,8 +93,17 @@ export async function staleVisitPayment(env, merchant, session, table) {
          FROM orders WHERE merchant = ? AND session_id = ? AND status <> 'rejected'`
     ).bind(merchant, session.id).first();
   } catch (_) { return { status: 503, body: { error: 'visit-order-lookup-unavailable' } }; }
-  if (tally && Number(tally.paid) > 0 && !Number(tally.unpaid)) {
-    return { status: 409, body: { error: 'visit-already-settled', table: table || '' } };
+  if (!(tally && Number(tally.paid) > 0 && !Number(tally.unpaid))) return null;
+  /* Une nouvelle visite déjà ouverte sur la même table : le téléphone règle la note qu'il affiche
+     (la nouvelle) avec un identifiant de visite pas encore relu. /api/sale la rattache à la
+     table ouverte, comme avant ; refuser ici bloquait l'encaissement d'une vraie note. */
+  if (table) {
+    let current = null;
+    try {
+      current = await env.DB.prepare("SELECT id FROM table_sessions WHERE merchant = ? AND table_no = ? AND status = 'open' AND id <> ? LIMIT 1")
+        .bind(merchant, table, session.id).first();
+    } catch (_) { return { status: 503, body: { error: 'visit-order-lookup-unavailable' } }; }
+    if (current && current.id) return null;
   }
-  return null;
+  return { status: 409, body: { error: 'visit-already-settled', table: table || '' } };
 }
