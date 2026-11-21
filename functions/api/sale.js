@@ -613,6 +613,10 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     stored = true;
   }
   if (!stored && (employee || b.surface === 'serveur') && requestedSession) { const refused = await staleVisitPayment(env, merchant, serviceSession, employeeTable); if (refused) return json(refused.body, refused.status); }
+  /* Une part dont le partage a un reçu sur UNE AUTRE visite (feuille d'un téléphone resté sur l'ancienne note) ne solde jamais la nouvelle visite ; un rejeu déjà écrit (stored) ne passe pas ici. */
+  let reopenLink = false, otherVisit = null; // reopenLink : la caisse a annulé une part de CE flux et l'a rouverte sur CETTE visite (sale_audit « reopen ») ; ce partage-là enjambe deux visites.
+  if (splitFlowId && effectiveSessionId) try { reopenLink = !!(await env.DB.prepare("SELECT 1 FROM sale_audit WHERE merchant = ? AND action = 'reopen' AND json_extract(impact, '$.splitFlowId') = ? AND json_extract(impact, '$.sessionId') = ? LIMIT 1").bind(merchant, splitFlowId, effectiveSessionId).first()); if (!stored && !reopenLink) otherVisit = await env.DB.prepare('SELECT session_id FROM sales WHERE merchant = ? AND split_flow_id = ? AND void_ts IS NULL AND session_id IS NOT NULL AND session_id <> ? LIMIT 1').bind(merchant, splitFlowId, effectiveSessionId).first(); } catch (_) { return json({ error: 'split-receipts-unavailable' }, 503); }
+  if (otherVisit) return json({ error: 'split-flow-other-visit', table: employeeTable || '', reopened: true, openSession: effectiveSessionId }, 409);
 
   /* SAME SETTLEMENT, DIFFERENT ID. The id above is derived from the table
      visit when the till names a table without a session, so a replay after
@@ -967,12 +971,10 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
   if (split) {
     if (splitFlowId) {
       try {
-        const receipts = await env.DB.prepare(
-          'SELECT id FROM sales WHERE merchant = ? AND split_flow_id = ? AND void_ts IS NULL'
-        ).bind(merchant, splitFlowId).all();
+        const receipts = await env.DB.prepare(`SELECT id FROM sales WHERE merchant = ? AND split_flow_id = ? AND void_ts IS NULL${effectiveSessionId && !reopenLink ? ' AND session_id = ?' : ''}`).bind(merchant, splitFlowId, ...(effectiveSessionId && !reopenLink ? [effectiveSessionId] : [])).all();
         splitComplete = new Set((receipts.results || []).map(row => row.id)).size === split.count;
       } catch (_) { return json({ error: 'split-receipts-unavailable' }, 503); }
-    } else if (splitIds.length) {
+    } else if (splitIds.length) { // ci-dessus : seules les parts de CETTE visite complètent son partage.
       // Distinct, deterministic rows preserve each tender and make retries safe.
       // Closing depends on durable receipts, never on a client's pre-fetch count.
       try {
@@ -1004,7 +1006,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
   }
   let billOpen = null;
   if (serviceSession && serviceSession.id && splitComplete) {
-    billOpen = await settleCoveredOrders(env, merchant, serviceSession.id, now);
+    billOpen = await settleCoveredOrders(env, merchant, serviceSession.id, now, { phone: !!(employee || b.surface === 'serveur') });
   }
   if (serviceSession && serviceSession.id && splitComplete && !billOpen) {
     const settledTable = employeeTable || String(serviceSession.table_no || '');

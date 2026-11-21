@@ -11,7 +11,10 @@ import { tableAliases } from './service/events.js';
  * the money must land exactly on one of their boundaries (to the centime):
  * a device's clock is not trusted to say which course came after the bill,
  * the amounts are. Any other shortfall settles as it always has. */
-export async function settleCoveredOrders(env, merchant, sessionId, now) {
+/* `phone` : un paiement du téléphone du serveur qui ne couvre même pas la première commande de la
+ * visite ne la solde jamais (une note relue de travers, une part d'une autre visite) : la table
+ * reste ouverte avec ce qu'elle doit. La caisse garde sa règle (une remise non classée solde). */
+export async function settleCoveredOrders(env, merchant, sessionId, now, { phone = false } = {}) {
   try {
     const money = await env.DB.prepare(
       `SELECT COALESCE(SUM(COALESCE(gross_amount_cents, amount_cents)), 0) AS paid FROM sales
@@ -28,6 +31,7 @@ export async function settleCoveredOrders(env, merchant, sessionId, now) {
     if (paid + 1 >= bill) return null;
     let covered = 0, k = 0;
     while (k < orders.length && covered + (Number(orders[k].cents) || 0) <= paid + 1) covered += Number(orders[k++].cents) || 0;
+    if (!k && phone && paid > 0) return { remainingCents: bill - paid, settledOrders: [], owedOrders: orders.length };
     if (!k || k >= orders.length || Math.abs(covered - paid) > 1) return null;
     const ids = orders.slice(0, k).map(o => o.id);
     await env.DB.prepare(

@@ -15,7 +15,9 @@
  *   · téléphone, visite close mais un ticket encore dû ⇒ pas refusé ici ;
  *   · la caisse appairée, visite close ⇒ sa règle reste (elle écrit sa vente) ;
  *   · une autre boutique ne voit rien de la visite (409 jamais par erreur) ;
- *   · table rouverte sous une autre visite (alias compris) ⇒ 409 qui la nomme, rien sur l'ancienne. */
+ *   · table rouverte sous une autre visite (alias compris) ⇒ 409 qui la nomme, rien sur l'ancienne ;
+ *   · une part d'un partage d'une autre visite ⇒ 409 split-flow-other-visit, la nouvelle reste due ;
+ *   · un paiement du téléphone sous la première commande ne solde pas la visite. */
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -124,6 +126,45 @@ check(r.status === 409 && r.body.reopened === true && r.body.openSession === 'ts
 check(salesById('emp-pay-stale-1') === 0, 'rappel : la table 4 soldée sans nouvelle visite a été refusée plus haut');
 r = await pay(waiter, { id: 'emp-pay-stale-10', table: '4', session: 'tsx-settled-at-till-0001', amount: 28, amountCents: 2800, ref: 'ST-107', label: 'ST-107' });
 check(r.status === 409 && !r.body.reopened && !r.body.openSession, `sans nouvelle visite, le refus ne nomme aucune visite ouverte (${r.status})`);
+
+/* 11 · la sonde du juge (round 3) : un partage d'une visite soldée ne solde jamais la nouvelle.
+ * Visite A, 28,00 ; le téléphone partage en deux et encaisse la part 1 (14,00) ; la caisse prend
+ * les 14,00 restants et clôt A. Une nouvelle tablée ouvre B, 56,00. Le téléphone, resté sur la
+ * feuille de partage de A, envoie la part 2 contre A : refusée (B nommée). Avant, sa relance contre
+ * B (même identifiant, même flux) comptait les DEUX visites, déclarait le partage complet et
+ * soldait les 56,00 de B avec 14,00. */
+const orderOn = (session, id, table, cents) => sql.prepare("INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, created_ts, updated_ts, session_id) VALUES (?, ?, 300, 'table', ?, ?, '[]', 'served', ?, ?, ?)")
+  .run(id, merchant, table, cents / 100, now - 1700e3, now - 60e3, session);
+const openVisit = (id, table) => sql.prepare("INSERT INTO table_sessions (id, merchant, mode, table_no, status, opened_ts, seen_ts) VALUES (?, ?, 'table', ?, 'open', ?, ?)").run(id, merchant, table, now - 1800e3, now - 60e3);
+const flow = 'flow-probe-round3-0011';
+const part = (index, session, extra = {}) => pay(waiter, { id: 'emp-split-11-' + index, table: '13', session, amount: 14, amountCents: 1400, ref: 'ST-108 · Part ' + (index + 1), label: 'Part ' + (index + 1), split: { index, count: 2, flowId: flow }, ...extra });
+openVisit('tsx-probe-visit-a-0011', '13'); orderOn('tsx-probe-visit-a-0011', 'probe-a-o1', '13', 2800);
+r = await part(0, 'tsx-probe-visit-a-0011');
+check(r.status === 200 && r.body.ok, `part 1 sur A encaissée (${r.status} ${r.body.error || ''})`);
+r = await pay(till, { id: 'till-probe-11', table: '13', session: 'tsx-probe-visit-a-0011', amount: 14, amountCents: 1400, ref: 'T13', label: 'T13' });
+const visitA = sql.prepare('SELECT status FROM table_sessions WHERE id = ?').get('tsx-probe-visit-a-0011');
+check(r.status === 200 && visitA.status === 'closed', `la caisse prend les 14,00 restants et clôt A (${r.status} ${visitA.status})`);
+openVisit('tsx-probe-visit-b-0011', '13'); orderOn('tsx-probe-visit-b-0011', 'probe-b-o1', '13', 5600);
+r = await part(1, 'tsx-probe-visit-a-0011');
+check(r.status === 409 && r.body.reopened === true && r.body.openSession === 'tsx-probe-visit-b-0011', `la part 2 envoyée contre A : refusée, B nommée (${r.status} ${r.body.error || ''})`);
+r = await part(1, 'tsx-probe-visit-b-0011');
+const visitB = sql.prepare('SELECT status FROM table_sessions WHERE id = ?').get('tsx-probe-visit-b-0011');
+const owedB = sql.prepare("SELECT COUNT(*) AS n FROM orders WHERE session_id = ? AND paid_ts IS NULL").get('tsx-probe-visit-b-0011').n;
+check(r.status === 409 && r.body.error === 'split-flow-other-visit', `sa relance contre B, même flux : refusée split-flow-other-visit (${r.status} ${r.body.error || ''})`);
+check(visitB.status === 'open' && owedB === 1 && salesOn('tsx-probe-visit-b-0011') === 0 && salesById('emp-split-11-1') === 0, `B reste ouverte, ses 56,00 dus, aucune vente écrite (${visitB.status}, ${owedB} dû)`);
+r = await part(0, 'tsx-probe-visit-a-0011');
+check(r.status === 200 && r.body.ok && salesById('emp-split-11-0') === 1, `le rejeu de la part 1 déjà écrite reste accepté, une ligne (${r.status} ${r.body.error || ''})`);
+
+/* 12 · un paiement du téléphone qui ne couvre même pas la première commande ne solde pas la visite ;
+ * la caisse garde sa règle (une remise qu'elle n'a pas classée solde comme avant). */
+openVisit('tsx-short-phone-000012', '14'); orderOn('tsx-short-phone-000012', 'short-p-o1', '14', 5600);
+r = await pay(waiter, { id: 'emp-short-12', table: '14', session: 'tsx-short-phone-000012', amount: 14, amountCents: 1400, ref: 'ST-109', label: 'ST-109' });
+const shortVisit = sql.prepare('SELECT status FROM table_sessions WHERE id = ?').get('tsx-short-phone-000012');
+check(r.status === 200 && r.body.billOpen === true && r.body.remainingCents === 4200 && shortVisit.status === 'open', `téléphone, 14,00 sur une commande de 56,00 : vente gardée, table ouverte, reste 42,00 (${r.status} ${r.body.remainingCents} ${shortVisit.status})`);
+openVisit('tsx-short-till-0000012', '15'); orderOn('tsx-short-till-0000012', 'short-t-o1', '15', 5600);
+r = await pay(till, { id: 'till-short-12', table: '15', session: 'tsx-short-till-0000012', amount: 14, amountCents: 1400, ref: 'T15', label: 'T15' });
+const tillVisit = sql.prepare('SELECT status FROM table_sessions WHERE id = ?').get('tsx-short-till-0000012');
+check(r.status === 200 && !r.body.billOpen && tillVisit.status === 'closed', `la caisse, même montant : sa règle reste, la visite se solde (${r.status} ${tillVisit.status})`);
 
 f.close();
 console.log(`serveur-stale-visit-payment-test: ${checks} checks passed`);
