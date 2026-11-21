@@ -21,25 +21,28 @@
   const lang = () => { try { return window.KiwiI18n.getLang() || 'fr'; } catch (_) { return 'fr'; } };
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const locale = () => (lang() === 'en' ? 'en-GB' : lang() === 'ar' ? 'ar-MA' : 'fr-FR');
-  const fmt = (n, d) => {
-    try { return window.KiwiNumber.format(n, { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }); } catch (_) {}
-    return (Math.round(n * Math.pow(10, d || 0)) / Math.pow(10, d || 0)).toFixed(d || 0);
+  const fmt = (n, d, min) => {
+    const o = { minimumFractionDigits: min != null ? min : (d || 0), maximumFractionDigits: d || 0 };
+    try { return window.KiwiNumber.format(n, o); } catch (_) {}
+    try { return new Intl.NumberFormat(locale(), o).format(n); } catch (_) { return Number(n).toFixed(d || 0); }
   };
+  /* Un montant reste « −450 MAD » dans une phrase arabe : isolé de gauche à
+     droite (U+2066 … U+2069), le signe ne passe pas derrière la devise. */
+  const iso = (x) => '\u2066' + x + '\u2069';
   /* Centimes → « 1 234,50 MAD » ; les entiers sans décimales. */
   const mad = (cents, signed) => {
     if (cents == null) return '·';
     const v = Math.round(cents) / 100;
     const s = fmt(Math.abs(v), Number.isInteger(v) ? 0 : 2) + ' MAD';
-    if (v < 0) return '−' + s;
-    return (signed && v > 0 ? '+' : '') + s;
+    return iso(v < 0 ? '−' + s : (signed && v > 0 ? '+' : '') + s);
   };
   const qty = (q, signed) => {
     if (q == null) return '·';
     const a = Math.abs(q);
-    const s = fmt(a, Number.isInteger(Math.round(a * 1000) / 1000) ? 0 : (a < 10 ? 2 : 1));
-    return q < 0 ? '−' + s : (signed && q > 0 ? '+' + s : s);
+    const s = fmt(a, a < 10 ? 2 : 1, 0);
+    return iso(q < 0 ? '−' + s : (signed && q > 0 ? '+' + s : s));
   };
-  const pct = (p) => (p == null ? '·' : fmt(p, 1) + ' %');
+  const pct = (p) => (p == null ? '·' : iso(fmt(p, 1) + ' %'));
 
   const STR = {
     fr: {

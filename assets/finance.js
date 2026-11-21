@@ -1132,7 +1132,7 @@
      premier usage) : /api/cost-variance pour un vrai commerçant, un exemple
      en démonstration. Plus jamais le « réel = théorique × 1,04 ». */
   const mountVariance = (root, v) => {
-    const slot = root.querySelector('[data-costvar-slot]');
+    const slot = root && root.querySelector ? root.querySelector('[data-costvar-slot]') : null;
     if (!slot) return;
     try { const r = window.Kiwi.handlers['costvar-mount'](slot, { real: finShowReal(v) }); if (r && r.catch) r.catch(() => {}); } catch (_) {}
   };

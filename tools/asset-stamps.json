@@ -664,8 +664,8 @@
     "sha": "5a6eafc66ee443ba"
   },
   "assets/finance.js": {
-    "v": "16",
-    "sha": "d7dc10936e5be376"
+    "v": "17",
+    "sha": "fe254716d578bbf8"
   },
   "assets/floorplan-core.js": {
     "v": "2061",
@@ -1488,8 +1488,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2231",
-    "sha": "b51d0663f8199bf2"
+    "v": "2232",
+    "sha": "530d42ef30f095b7"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1500,8 +1500,8 @@
     "sha": "7abe777e8ea9c4fb"
   },
   "assets/pages-pro/cost-variance.js": {
-    "v": "2",
-    "sha": "d38097d80860fcf1"
+    "v": "3",
+    "sha": "b5168ccf354c50d1"
   },
   "assets/pages-pro/restaurant-stations.js": {
     "v": "2",
@@ -1528,8 +1528,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "272",
-    "sha": "cb34e5aa99baea97"
+    "v": "274",
+    "sha": "e1beb0b5575a4d22"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2444,12 +2444,12 @@
     "sha": "d6306e52e72f7a69"
   },
   "assets/venues.js": {
-    "v": "79",
-    "sha": "2520485a2a3623fe"
+    "v": "80",
+    "sha": "d1a57d0eb2a5723e"
   },
   "assets/venues/data.js": {
-    "v": "6",
-    "sha": "5c8298b8b17c3ac7"
+    "v": "7",
+    "sha": "c62dabb90b2af89a"
   },
   "assets/venues/helpers.js": {
     "v": "10",

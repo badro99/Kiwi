@@ -1461,7 +1461,7 @@
     return { MENU, MI_STATION_STATE, miStations };
   };
   (window.__kiwiVenueParts = window.__kiwiVenueParts || {}).recipes = function (__deps) {
-    const { EQ_MONTH_WEEKS, MENU, REAL_VENUES, STAFF, isRealMerchant } = __deps;
+    const { EQ_MONTH_WEEKS, MENU, REAL_VENUES, STAFF } = __deps;
 /* <<split:recipes>> */
 
 
@@ -1967,13 +1967,7 @@
     return { qty: +qty.toFixed(3), costMAD: +costMAD.toFixed(2), unit };
   }
 
-  /* Un vrai commerçant n'a jamais « réel = théorique × 1,04 » : sa
-   * consommation réelle se mesure entre deux inventaires, par
-   * /api/cost-variance (assets/pages-pro/cost-variance.js). Ce moteur
-   * d'exemple ne la devine pas : sans mesure, rien (null). */
-  const recReal = () => { try { return !!(isRealMerchant && isRealMerchant()); } catch (_) { return false; } };
   function recActualConsumption(invItemId, venueKey) {
-    if (recReal()) return { qty: null, costMAD: null, unit: '', measured: false };
     const arr = INVENTORY[venueKey] || [];
     const item = arr.find(i => i.id === invItemId);
     if (!item) {
@@ -1992,7 +1986,6 @@
   function recComputeVariance(invItemId, venueKey) {
     const theoretical = recTheoreticalConsumption(invItemId, venueKey);
     const actual      = recActualConsumption(invItemId, venueKey);
-    if (actual.qty == null) return { theoretical, actual, deltaAbsolute: null, deltaPct: null, costImpact: null, severity: 'unknown' };
     const deltaAbs    = actual.qty - theoretical.qty;
     const deltaPct    = theoretical.qty > 0 ? (deltaAbs / theoretical.qty) * 100 : 0;
     const ref         = recResolveIngredient(invItemId);
@@ -2010,7 +2003,6 @@
   }
 
   function recVarianceByRecipe(menuItemId) {
-    if (recReal()) return null;
     const found = recFindMenuItem(menuItemId);
     if (!found) return null;
     const { item, venue } = found;
