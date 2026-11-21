@@ -3186,6 +3186,8 @@ cashModal.addEventListener('click', (e) => {
           if ((method || 'card') === 'card') toast(employeePick(`Table ${id} · paiement non confirmé, ne repassez pas la carte, réessayez`, `Table ${id} · payment not confirmed, do not run the card again, just retry`, `الطاولة ${id} · لم يتأكد الدفع، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط`), 6000);
           else toast(employeePick(`Table ${id} · paiement non confirmé, réessayez`, `Table ${id} · payment not confirmed, try again`, `الطاولة ${id} · لم يتأكد الدفع، أعد المحاولة`), 6000);
         } else if (err && !err.refused) toast(SV_PAY_OFFLINE_MSG, 6000);
+        /* La caisse l'a déjà soldée : rien à encaisser, la synchro libère la table. */
+        else if (err.message === 'visit-already-settled') { toast(employeePick(`Table ${id} · déjà réglée à la caisse, rien à encaisser`, `Table ${id} · already paid at the till, nothing to collect`, `الطاولة ${id} · مدفوعة في الصندوق، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }
         else if (err.message === 'server-payments-off') toast(employeePick(`Table ${id} · l'encaissement se fait à la caisse`, `Table ${id} · payment is taken at the till`, `الطاولة ${id} · الدفع يتم في الصندوق`), 5200); else toast(employeePick(`Table ${id} · paiement non enregistré, réessayez`, `Table ${id} · payment not saved, try again`, `الطاولة ${id} · لم يُسجَّل الدفع، أعد المحاولة`), 5200);
         return false;
       } finally {
@@ -3845,6 +3847,7 @@ cashModal.addEventListener('click', (e) => {
           if (payMethod === 'card') toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, ne repassez pas la carte, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not confirmed, do not run the card again, just retry`, `الطاولة ${tableId || ''} · لم يتأكد الجزء ${partIdx + 1}، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط`), 6000);
           else toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not confirmed, try again`, `الطاولة ${tableId || ''} · لم يتأكد الجزء ${partIdx + 1}، أعد المحاولة`), 6000);
         } else if (err && !err.refused) toast(employeePick("Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.", 'No network. The payment is not recorded, try again when the network is back.', 'لا توجد شبكة. لم يُسجَّل الدفع، أعد المحاولة عند عودة الشبكة.'), 6000);
+        else if (err.message === 'visit-already-settled') { toast(employeePick(`Table ${tableId || ''} · déjà réglée à la caisse, rien à encaisser`, `Table ${tableId || ''} · already paid at the till, nothing to collect`, `الطاولة ${tableId || ''} · مدفوعة في الصندوق، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }
         else toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non enregistrée, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not saved, try again`, `الطاولة ${tableId || ''} · لم يُسجَّل الجزء ${partIdx + 1}، أعد المحاولة`), 5200);
         return false;
       } finally {

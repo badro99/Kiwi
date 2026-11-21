@@ -70,3 +70,30 @@ export async function visitCredits(env, merchant, sessionIds) {
     return null;
   }
 }
+
+/* A VISIT ALREADY SETTLED, PAID AGAIN FROM A STALE PHONE. The till settles a
+ * table: its sale closes the visit and stamps every ticket paid. A waiter
+ * phone that has not re-read since still shows the bill and takes
+ * « Encaisser ». The visit is closed, so /api/sale's open-visit checks never
+ * ran, and the phone's sale id is its own: the same bill entered the books
+ * twice (tools/shared-table-two-devices-browser-test.mjs, « défaut connu »).
+ * A closed visit whose tickets are all paid has nothing left to collect.
+ * Called for a waiter phone naming its visit only: the till keeps its rule
+ * (« a closed visit must still be allowed to write its sale », its own close
+ * can arrive first), and a replay of a sale already stored never gets here.
+ * Returns { status, body } to refuse, or null. */
+export async function staleVisitPayment(env, merchant, session, table) {
+  if (!session || !session.id || session.status === 'open') return null;
+  let tally = null;
+  try {
+    tally = await env.DB.prepare(
+      `SELECT SUM(CASE WHEN paid_ts IS NULL THEN 1 ELSE 0 END) AS unpaid,
+              SUM(CASE WHEN paid_ts IS NOT NULL THEN 1 ELSE 0 END) AS paid
+         FROM orders WHERE merchant = ? AND session_id = ? AND status <> 'rejected'`
+    ).bind(merchant, session.id).first();
+  } catch (_) { return { status: 503, body: { error: 'visit-order-lookup-unavailable' } }; }
+  if (tally && Number(tally.paid) > 0 && !Number(tally.unpaid)) {
+    return { status: 409, body: { error: 'visit-already-settled', table: table || '' } };
+  }
+  return null;
+}

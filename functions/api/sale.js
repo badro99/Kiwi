@@ -14,7 +14,7 @@ import { settleServiceTable, serviceVisitGuard, tableKey, tableAliases, publishR
 import { quarantineGuard } from './_quarantine-guard.js';
 import { tillRecheck } from './_till-recheck.js';
 import { poke } from './_live.js';
-import { settleCoveredOrders } from './_visit-cover.js';
+import { settleCoveredOrders, staleVisitPayment } from './_visit-cover.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { validateRetailTenders, retailTenderMethod } from './_retail-tenders.js';
 import { claimRetailBalance, confirmRetailBalance } from './_retail-balances.js';
@@ -593,11 +593,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     preflightError = err;
   }
   if (preflightError) {
-    return json({
-      error: 'db-verification-failed',
-      detail: safeDetail('sale', preflightError),
-      id,
-    }, 503);
+    return json({ error: 'db-verification-failed', detail: safeDetail('sale', preflightError), id }, 503);
   }
   if (existing && existing.id) {
     const existingCents = existing.amount_cents != null
@@ -616,6 +612,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     }
     stored = true;
   }
+  if (!stored && employee && requestedSession) { const refused = await staleVisitPayment(env, merchant, serviceSession, employeeTable); if (refused) return json(refused.body, refused.status); }
 
   /* SAME SETTLEMENT, DIFFERENT ID. The id above is derived from the table
      visit when the till names a table without a session, so a replay after
