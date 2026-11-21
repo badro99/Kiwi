@@ -78,4 +78,38 @@ await down({ env });
 ok(used('*global*') > fallbackCost, 'un délai dépassé garde sa réservation (prudence inchangée)');
 budgets.delete(env);
 
+/* ── 4 · passerelle « kiwi » absente : l'appel va au modèle directement ─────
+ * Du 19 au 21 nov. 2026 toute l'IA de production répondait « 2001: Please
+ * configure AI Gateway in the Cloudflare dashboard » : la passerelle n'existait
+ * plus, aucun modèle n'était atteint. Un refus de la passerelle (limite,
+ * autorisation) n'est jamais contourné ; seule son absence l'est. */
+const { runAiWithGateway, _resetGatewayMemo } = await load('_run.js');
+db.exec('DELETE FROM ai_usage_kind'); _resetGatewayMemo();
+let sent = [];
+env.AI = { async run(model, payload, opts) {
+  sent.push(opts && opts.gateway ? 'gateway' : 'direct');
+  if (opts && opts.gateway) throw new Error('2001: Please configure AI Gateway in the Cloudflare dashboard');
+  return { response: '{"ok":true}', usage: { prompt_tokens: 1000, completion_tokens: 300 } };
+} };
+const direct = budgetRoute(async ({ env }) => {
+  assert.equal(await quotaOk(env, 'boutique', 'visioninspect', 150, { models: [M.GEMMA_VISION], maxTokens: 700 }), true);
+  await runAiWithGateway(env, M.GEMMA_VISION, { messages: [], max_tokens: 700 });
+  return Response.json({ ok: true });
+}, 'visioninspect');
+ok((await direct({ env })).status === 200, 'passerelle absente : le modèle répond quand même');
+ok(sent.join() === 'gateway,direct', 'un essai par la passerelle, puis le modèle directement');
+const settled = Math.ceil((1000 * .1 + 300 * .3) / 11);
+ok(used('boutique') === settled, `une seule réservation, réglée au coût réel (${settled}) : ${used('boutique')}`);
+sent = [];
+await direct({ env });
+ok(sent.join() === 'direct', 'la même instance ne repasse pas par la passerelle absente pendant 10 min');
+_resetGatewayMemo(); sent = [];
+env.AI = { async run(model, payload, opts) {
+  sent.push(opts && opts.gateway ? 'gateway' : 'direct');
+  throw Object.assign(new Error('Gateway rate limit exceeded'), { status: 429 });
+} };
+try { await runAiWithGateway(env, M.GEMMA_VISION, { messages: [] }); } catch (_) {}
+ok(sent.join() === 'gateway', 'un refus de la passerelle (limite) n’est jamais contourné par un appel direct');
+budgets.delete(env);
+
 console.log(`✓ ai-retired-model · ${passed} contrôles : aucune route sur Qwen retiré, DeepSeek sans réflexion, un refus « retiré » ne mange pas le budget`);
