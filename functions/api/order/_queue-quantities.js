@@ -292,7 +292,13 @@ export async function editLine(ctx) {
     let lines = [];
     try { lines = JSON.parse(targetOrder.lines) || []; } catch (_) { lines = []; }
 
-    const targetLine = lines.find(l => String(l.id) === lineId || String(l.uid) === lineId || String(l.name) === lineId);
+    /* The phone names a sent line by its uid (two lines may carry the same
+       dish), older callers by dish id or name. One rule for every lookup
+       below: the drafts used `l.id || l.uid`, never matched a uid, and the
+       « − » / « + » / note of every sent dish crashed (500). */
+    const pickLine = (list) => list.find(l => l && l.uid != null && String(l.uid) === lineId)
+      || list.find(l => l && String(l.id) === lineId) || list.find(l => l && String(l.name) === lineId);
+    const targetLine = pickLine(lines);
     if (!targetLine) return json({ error: 'line-not-on-order' }, 404);
 
     const oldQty = Number(targetLine.qty) || 0;
@@ -349,7 +355,7 @@ export async function editLine(ctx) {
 
     // ── Branche pré-acceptation avec CAS sur updated_ts ─────────────────────
     let draftLines = lines.map(l => ({ ...l }));
-    let draftLine = draftLines.find(l => String(l.id || l.uid) === lineId || String(l.name) === lineId);
+    let draftLine = draftLines[lines.indexOf(targetLine)];
     if (newQty === 0) {
       draftLines = draftLines.filter(l => !affectedLines.some(al => (al.uid && al.uid === l.uid) || al === l));
     } else {
@@ -374,7 +380,7 @@ export async function editLine(ctx) {
 
       let freshLines = [];
       try { freshLines = JSON.parse(freshOrder.lines) || []; } catch (_) {}
-      const freshLine = freshLines.find(l => String(l.id || l.uid) === lineId || String(l.name) === lineId);
+      const freshLine = pickLine(freshLines);
       if (!freshLine) return json({ error: 'line-not-on-order' }, 404);
 
       const freshAffected = isFormula

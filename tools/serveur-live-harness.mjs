@@ -117,7 +117,10 @@ export async function harness({ menu = DEFAULT_MENU, plan = DEFAULT_PLAN, browse
           await Promise.allSettled(pending);
           calls.push({ who, method: r.method(), path: url.pathname, status: res.status, body: post ? body.slice(0, 200) : undefined, sent: post ? r.postData() : undefined });
           r.respond({ status: res.status, contentType: 'application/json', body }).catch(() => {});
-        }).catch((e) => r.respond({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: String(e && e.message) }) }).catch(() => {}));
+        }).catch((e) => {
+          calls.push({ who, method: r.method(), path: url.pathname, status: 500, body: 'THROWN ' + String(e && e.stack || e).slice(0, 400), sent: post ? r.postData() : undefined });
+          r.respond({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: String(e && e.message) }) }).catch(() => {});
+        });
       };
       const hold = holds.get(key);
       if (hold) hold.push(run); else run();
