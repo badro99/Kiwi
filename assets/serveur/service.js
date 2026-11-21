@@ -88,7 +88,7 @@
                une seconde vérité vivante. */
           } }),
         });
-        const data = response.data;
+        const data = response.data; if (data && Array.isArray(data.events)) { loadServiceHistory(); data.events.forEach((e) => { if (e && e.id) serviceEventSeen.add(e.id); }); }   // son propre geste ne revient pas en avis
         return {
           ok: !!(response.ok && data && data.ok),
           error: response.ok ? (data && data.error) : ('state-' + response.status),
@@ -105,7 +105,7 @@
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
       if (!merchant || SV_DEMO || !id) return;
       try {
-        const response = await (await import('../request-deadline.mjs')).deadlineFetch('/api/service/events', {
+        const response = await (await import('../request-deadline.mjs?v=1')).deadlineFetch('/api/service/events', {
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -136,10 +136,10 @@
       if (currentTab !== 'notifications') serviceUnread++;
       try { renderNotifications(); } catch (_) {}
       updateNotificationBadge();
-      toast(body ? `${title} · ${body}` : title, 4200);
+      toast(body ? `${employeeTranslation(title)} · ${employeeTranslation(body)}` : title, 4200);
       try {
         if (window.Notification && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
-          new Notification(title, { body: body || '', tag: 'kiwi-service-' + title + '-' + body });
+          new Notification(employeeTranslation(title), { body: body ? employeeTranslation(body) : '', tag: 'kiwi-service-' + title + '-' + body });   // la langue du serveur, comme l'avis
         }
       } catch (_) {}
     }
@@ -235,7 +235,7 @@
          append items. This also removes any old fabricated snapshot that was
          already stored in service-events but has no KDS/order counterpart. */
       Object.keys(tables).forEach((table) => reconcileCanonicalServiceBill(table));
-      try { renderAll(); } catch (_) {}
+      svWhenIdle('all', () => { try { renderAll(); } catch (_) {} });   // repeint sous le doigt, la table ou le plat touché était perdu
     }
 
     function reconcileCanonicalServiceBill(table) {
@@ -386,7 +386,7 @@
         };
         if (messages[event.status]) serviceNotify(`Table ${id}`, messages[event.status], { table: id, type: event.status, id: event.id, ts: event.ts });
       });
-      try { renderAll(); } catch (_) {}
+      svWhenIdle('all', () => { try { renderAll(); } catch (_) {} });
     }
 
     function pollServiceSync() {
@@ -429,7 +429,7 @@
       }).then((res) => {
         if (res === SV_POLL_SKIP) return;
         ingestServiceOrders(res.orders);
-        svSyncMark(!!(res.events && res.events.ok && res.orders && res.orders.ok));
+        const synced = !!(res.events && res.events.ok && res.orders && res.orders.ok); svSyncMark(synced); if (synced) { try { svDrainPendingBatches(); } catch (_) {} }
       }).catch(() => { svSyncMark(false); });
       servicePlanTick++;
       /* Team, schedule and floor assignments share this six-second live loop.
@@ -532,7 +532,7 @@
     function svDrainPendingBatches() {
       if (SV_DEMO || svBrowseMode()) return;
       const now = Date.now();
-      if (now - svDrainAt < 4000) return;
+      if (now - svDrainAt < 4000) { if (!svDrainTimer) svDrainTimer = setTimeout(() => { svDrainTimer = 0; try { svDrainPendingBatches(); } catch (_) {} }, 4001 - (now - svDrainAt)); return; }
       svDrainAt = now;
       const prefix = 'kiwi:service-pending-v1:';
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug() || 'store';
@@ -547,13 +547,13 @@
       } catch (_) { return; }
       ids.forEach((id) => {
         const pending = svReadPending(id);
-        if (!pending) return;
+        if (!pending || svSendFlights.has(id)) return; // un « Lancer » en vol finit seul
         /* Un lot très ancien n'est plus une commande en cours : le rejouer
            enverrait en cuisine des plats d'un service terminé. On le laisse
            visible plutôt que de l'imprimer. */
         if (Date.now() - Number(pending.createdAt || 0) > SV_DRAFT_TTL) return;
         try {
-          svSendOrderBatch(id).then((r) => {
+          svSendOrder(id).then((r) => {
             if (r && r.ok && !r.nothing) toast('Commande en attente envoyée · cuisine', 'ok');
           }).catch(() => {});
         } catch (_) {}
@@ -1615,10 +1615,12 @@
       if (confirmBtn) confirmBtn.disabled = true;
 
       if (!SV_DEMO) {
+        const voidKey = tableId + '|' + (line.canonicalUid || line.uid), voidIds = confirmVoidLine.ids || (confirmVoidLine.ids = new Map());   // « annuler 1 » est un delta : rejoué, rien de plus
+        if (!voidIds.has(voidKey)) voidIds.set(voidKey, 'voi-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12));
         try {
           const data = await postServiceCancellation({
               merchant: svSlug(),
-              voidLine: {
+              voidLine: { requestId: voidIds.get(voidKey),
                 table: tableId,
                 ...(line.orderId ? { orderId: line.orderId } : {}),
                 lineId: line.canonicalUid || line.uid || line.id,
@@ -1628,6 +1630,7 @@
                 actor: activeRole.fullName || activeRole.name || 'Serveur'
               }
           });
+          voidIds.delete(voidKey);
           if (data.alertSent) {
             line.voidPending = true;
             toast(`Annulation demandée · attente de la cuisine · ${line.name}`);
@@ -1682,47 +1685,51 @@
         return;
       }
 
-      // Sent line modification
+      /* Plat envoyé. Sur un plat accepté, « + » et « − » sont des deltas : un
+         geste rejoué après un délai comptait deux fois. Chaque geste garde son
+         identifiant tant qu'il n'a pas de réponse (le serveur rend la première)
+         et dit l'état lu de la commande ; sans réponse, la table est relue. */
+      const pending = changeOrderQty.pending || (changeOrderQty.pending = new Map());
+      const send = async (qty, extra) => {
+        const key = flightKey + '|' + qty, seen = serviceCanonicalOrders.get(line.orderId), kept = pending.get(key);   // déjà visible à la relecture : geste fait, le suivant est neuf
+        const done = kept && [...serviceCanonicalOrders.values()].some(o => (o.lines || []).some(l => l && (l.editReq === kept || (l.voidAlert && l.voidAlert.requestId === kept))));
+        const requestId = (!done && kept) || 'edl-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+        pending.set(key, requestId);
+        try {
+          const res = await svFetchJson('/api/order/queue', { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ merchant: svSlug(), editLine: { table: tableId, ...(line.orderId ? { orderId: line.orderId } : {}), lineId: line.canonicalUid || line.uid || line.id,
+              qty, requestId, ...(seen && seen.updated_ts ? { seenTs: seen.updated_ts } : {}), ...extra, actor: activeRole.fullName || activeRole.name || 'Serveur' } }) });
+          pending.delete(key);
+          if (seen && res.data && res.data.updatedTs) seen.updated_ts = res.data.updatedTs;
+          if (res.data && res.data.error === 'order-changed') { pollServiceSync(); toast(employeePick('La commande a changé · vérifiez la table', 'The order changed · check the table', 'تغيّر الطلب · تحقق من الطاولة')); return null; }
+          return res;
+        } catch (err) {
+          pollServiceSync();
+          toast(err && err.timeout ? employeePick('Pas de réponse · vérifiez la table avant de réessayer', 'No answer · check the table before trying again', 'لا رد · تحقق من الطاولة قبل إعادة المحاولة') : employeePick('Pas de réseau · vérifiez la table avant de réessayer', 'No network · check the table before trying again', 'لا توجد شبكة · تحقق من الطاولة قبل إعادة المحاولة'));
+          return null;
+        }
+      };
       if (delta < 0) {
         const newQty = line.qty + delta;
         if (newQty <= 0) {
           openVoidReasonModal(tableId, line);
           return;
         }
-
         if (!SV_DEMO) {
-          try {
-            const res = await fetch('/api/order/queue', {
-              method: 'POST', credentials: 'same-origin', cache: 'no-store',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                merchant: svSlug(),
-                editLine: {
-                  table: tableId,
-                  ...(line.orderId ? { orderId: line.orderId } : {}),
-                  lineId: line.canonicalUid || line.uid || line.id,
-                  qty: newQty,
-                  isWaste: 0,
-                  actor: activeRole.fullName || activeRole.name || 'Serveur'
-                }
-              })
-            });
-            const data = await res.json().catch(() => null);
-            if (!res.ok || (data && !data.ok)) {
-              toast(`Modification refusée · ${svErrLabel(data && data.error)}`);
-              return;
-            }
-            if (data.alertSent || data.tier === 2) {
-              line.voidPending = true;
-              toast(`Réduction demandée · attente de la cuisine · ${line.name}`);
-              renderTableDetail();
-              return;
-            }
-            toast(`${line.name} modifié (${newQty}×)`);
-          } catch (err) {
-            toast(`Erreur réseau : ${err.message || ''}`);
+          const res = await send(newQty, { isWaste: 0 });
+          if (!res) return;
+          const data = res.data;
+          if (!res.ok || (data && !data.ok)) {
+            toast(`Modification refusée · ${svErrLabel(data && data.error)}`);
             return;
           }
+          if (data.alertSent || data.tier === 2) {
+            line.voidPending = true;
+            toast(`Réduction demandée · attente de la cuisine · ${line.name}`);
+            renderTableDetail();
+            return;
+          }
+          toast(`${line.name} modifié (${newQty}×)`);
         }
         line.qty = newQty;
         line.sentQty = Math.min(line.sentQty, line.qty);
@@ -1733,43 +1740,27 @@
       if (delta > 0) {
         const targetQty = line.qty + delta;
         if (!SV_DEMO) {
-          try {
-            const res = await fetch('/api/order/queue', {
-              method: 'POST', credentials: 'same-origin', cache: 'no-store',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                merchant: svSlug(),
-                editLine: {
-                  table: tableId,
-                  ...(line.orderId ? { orderId: line.orderId } : {}),
-                  lineId: line.canonicalUid || line.uid || line.id,
-                  qty: targetQty,
-                  actor: activeRole.fullName || activeRole.name || 'Serveur'
-                }
-              })
+          const res = await send(targetQty, {});
+          if (!res) return;
+          const data = res.data;
+          if (!res.ok || (data && !data.ok)) {
+            toast(`Ajout refusé · ${svErrLabel(data && data.error)}`);
+            return;
+          }
+          if (data.action === 'appended' && data.appendedLine) {
+            if (data.replayed && (tableOrders[tableId] || []).some(l => l.uid === data.appendedLine.uid || l.canonicalUid === data.appendedLine.uid)) return;
+            tableOrders[tableId].push({
+              uid: data.appendedLine.uid || newLineUid(),
+              id: line.id,
+              name: line.name,
+              price: line.price,
+              qty: data.appendedLine.qty || delta,
+              opts: line.opts || [],
+              note: '',
+              sentQty: 0,
             });
-            const data = await res.json().catch(() => null);
-            if (!res.ok || (data && !data.ok)) {
-              toast(`Ajout refusé · ${svErrLabel(data && data.error)}`);
-              return;
-            }
-            if (data.action === 'appended' && data.appendedLine) {
-              tableOrders[tableId].push({
-                uid: data.appendedLine.uid || newLineUid(),
-                id: line.id,
-                name: line.name,
-                price: line.price,
-                qty: data.appendedLine.qty || delta,
-                opts: line.opts || [],
-                note: '',
-                sentQty: 0,
-              });
-              toast(`+1 ${line.name} ajouté`);
-              renderTableDetail();
-              return;
-            }
-          } catch (err) {
-            toast(`Erreur réseau : ${err.message || ''}`);
+            toast(`+1 ${line.name} ajouté`);
+            renderTableDetail();
             return;
           }
         }
@@ -1804,12 +1795,12 @@
       if (confirm) confirm.disabled = true;
       if (!SV_DEMO) {
         try {
-          const response = await fetch('/api/order/queue', {
+          const response = await svFetchJson('/api/order/queue', {   // délai réel : « Installer » ne reste jamais grisé
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ merchant: svSlug(), openTable: id, covers: newTableCovers }),
           });
-          const saved = await response.json().catch(() => null);
+          const saved = response.data;
           if (!response.ok || !saved || !saved.ok || !saved.session) throw new Error('open-failed');
           serviceTableSessions.set(id, String(saved.session));
           serviceTableSessionRevisions.set(id, Number(saved.revision) || 0);
@@ -1902,7 +1893,7 @@
             expectedRevision: serviceTableSessionRevisions.get(from) || 0 };
         }
         try {
-          const res = await fetch('/api/order/queue', {
+          const res = await svFetchJson('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1913,7 +1904,7 @@
                 expectedRevision: intent.expectedRevision }
             })
           });
-          const data = await res.json().catch(() => null);
+          const data = res.data;
           if (!res.ok || !data || !data.ok) {
             if (res.status >= 400 && res.status < 500) delete confirmTransferTable.pendingIntent;
             throw new Error((data && data.error) || 'transfer-failed');
@@ -1922,7 +1913,7 @@
           serviceTableSessionRevisions.set(to, Number(data.revision) || (serviceTableSessionRevisions.get(from) || 0));
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
-          toast(`Déplacement impossible : ${err.message === 'table-kitchen-locked' ? 'commande déjà envoyée en cuisine' : (err.message || 'erreur réseau')}`, 4800);
+          toast(`Déplacement impossible : ${err.message === 'table-kitchen-locked' ? 'commande déjà envoyée en cuisine' : svErrLabel(err.message)}`, 4800);
           return;
         }
       }
@@ -1941,6 +1932,10 @@
         tableSplits.set(to, tableSplits.get(from));
         tableSplits.delete(from);
       }
+      /* Le « Lancer » resté sans réponse suit la table : laissé sous l'ancien numéro, il repartait vers la
+         table vide au retour du réseau, et la nouvelle table renvoyait les mêmes plats sous une autre référence. */
+      const movedBatch = svReadPending(from);
+      if (movedBatch) { svForgetPending(from); svWritePending(to, movedBatch); }
       // L'acompte suit la visite déplacée, comme son partage.
       if (serviceVisitCredit.has(from)) serviceVisitCredit.set(to, serviceVisitCredit.get(from));
       else serviceVisitCredit.delete(to);
@@ -2019,6 +2014,9 @@
       const sourceT = tables[source];
       const targetT = tables[target];
       if (!sourceT || !targetT) return;
+      if (svReadPending(source) && svReadPending(target)) {   // deux « Lancer » sans réponse : un seul lot survivrait à la fusion
+        if (confirmBtn) confirmBtn.disabled = false;
+        return void toast(employeePick('Fusion impossible · attendez la confirmation du Lancer', 'Cannot merge · wait for the Send to be confirmed', 'تعذّر الدمج · انتظر تأكيد الإرسال'), 4800); }
 
       let merged = null;
       if (!SV_DEMO) {
@@ -2031,7 +2029,7 @@
             expectedRevision: serviceTableSessionRevisions.get(source) || 0 };
         }
         try {
-          const res = await fetch('/api/order/queue', {
+          const res = await svFetchJson('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2042,7 +2040,7 @@
                 expectedRevision: intent.expectedRevision }
             })
           });
-          const data = await res.json().catch(() => null);
+          const data = res.data;
           if (!res.ok || !data || !data.ok) {
             if (res.status >= 400 && res.status < 500) delete confirmMergeTable.pendingIntent;
             throw new Error((data && data.error) || 'merge-failed');
@@ -2051,7 +2049,7 @@
           merged = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
-          toast(`Fusion impossible : ${err.message === 'table-kitchen-locked' ? 'commande déjà envoyée en cuisine' : (err.message || 'erreur réseau')}`, 4800);
+          toast(`Fusion impossible : ${err.message === 'table-kitchen-locked' ? 'commande déjà envoyée en cuisine' : svErrLabel(err.message)}`, 4800);
           return;
         }
       }
@@ -2066,6 +2064,8 @@
         dirtyOrders.delete(source);
         dirtyOrders.add(target);
       }
+      const mergedBatch = svReadPending(source);   // même règle qu'au déplacement (deux lots en attente : fusion refusée plus haut)
+      if (mergedBatch) { svForgetPending(source); svWritePending(target, mergedBatch); }
 
       /* Ce qui a déjà été payé sur l'une ou l'autre table suit la visite
          fusionnée : on facture le reste que le serveur vient de calculer, et
@@ -2781,6 +2781,8 @@
       try { reconcileCanonicalServiceBill(tableId); } catch (_) {}
       if (currentTab === 'tables') renderTables();
       if (activeTableId === tableId) renderTableDetail();
+      // Sans reste nommé (paiement refusé, table rouverte) : l'appelant dit lui-même ce qui s'est passé.
+      if (saved.remainingCents == null) return;
       const rest = Math.max(0, Number(saved.remainingCents) || 0) / 100;
       toast(employeePick( `Table ${tableId} · reste ${fmtMADcents(rest)} : une commande est arrivée pendant l'encaissement`, `Table ${tableId} · ${fmtMADcents(rest)} left: an order arrived during payment`, `الطاولة ${tableId} · المتبقي ${fmtMADcents(rest)} : وصل طلب أثناء الدفع`), 6500);
     }
@@ -2795,7 +2797,7 @@
       $('#pc-client-label').textContent = client ? `${client.name} · ${Number(client.points) || 0} pts` : 'Client & fidélité';
     }
 
-    function renderServiceClients() { var fetchDeadline = async (url, options, _readBody, controller) => (await import('../request-deadline.mjs')).deadlineFetch(url, options, 12000, controller); if (renderServiceClients.controller) renderServiceClients.controller.abort(); const controller = renderServiceClients.controller = new AbortController();
+    function renderServiceClients() { var fetchDeadline = async (url, options, _readBody, controller) => (await import('../request-deadline.mjs?v=1')).deadlineFetch(url, options, 12000, controller); if (renderServiceClients.controller) renderServiceClients.controller.abort(); const controller = renderServiceClients.controller = new AbortController();
       const q = String($('#service-client-search').value || '').trim();
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
       serviceClientRows = [];
@@ -3159,12 +3161,12 @@ cashModal.addEventListener('click', (e) => {
       const payCtl = (typeof AbortController === 'function') ? new AbortController() : null;
       const payTimer = null;
       try {
-        const response = await (await import('../request-deadline.mjs')).deadlineFetch('/api/sale', {
+        const response = await (await import('../request-deadline.mjs?v=1')).deadlineFetch('/api/sale', {
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
           signal: payCtl ? payCtl.signal : undefined,
           body: JSON.stringify({
-            id: paymentId, merchant, table: id, session, amount: paidAmount,
+            id: paymentId, merchant, table: id, session, surface: 'serveur', amount: paidAmount,
             amountCents: Math.round(paidAmount * 100),
             method: method || 'card', ts: Date.now(),
             label: orderRef,
@@ -3172,7 +3174,7 @@ cashModal.addEventListener('click', (e) => {
           }),
         }, SV_PAY_TIMEOUT_MS);
         saved = await response.json().catch(() => null);
-        if (!response.ok || !saved || !saved.ok) throw Object.assign(new Error((saved && saved.error) || ('http-' + response.status)), { refused: true });
+        if (!response.ok || !saved || !saved.ok) throw Object.assign(new Error((saved && saved.error) || ('http-' + response.status)), { refused: true, reopened: !!(saved && saved.reopened) });
       } catch (err) {
         t.status = previousStatus === 'ka-tkhdam' ? 'bgha-ykhlass' : previousStatus;
         employeePaymentsInFlight.delete(id);
@@ -3186,6 +3188,21 @@ cashModal.addEventListener('click', (e) => {
           if ((method || 'card') === 'card') toast(employeePick(`Table ${id} · paiement non confirmé, ne repassez pas la carte, réessayez`, `Table ${id} · payment not confirmed, do not run the card again, just retry`, `الطاولة ${id} · لم يتأكد الدفع، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط`), 6000);
           else toast(employeePick(`Table ${id} · paiement non confirmé, réessayez`, `Table ${id} · payment not confirmed, try again`, `الطاولة ${id} · لم يتأكد الدفع، أعد المحاولة`), 6000);
         } else if (err && !err.refused) toast(SV_PAY_OFFLINE_MSG, 6000);
+        /* Déjà soldée (la caisse, un autre téléphone, ou une note rouverte sous une autre visite) : rien
+           à encaisser ici, la salle est relue. Le message ne nomme pas qui l'a réglée, il ne le sait pas. */
+        /* Table rouverte sous une autre visite : rien n'est écrit, l'ancienne note est jetée
+           (assets/serveur/reopened-bill.mjs). Visite soldée : rien à encaisser. */
+        else if (err.reopened) {
+          try { (await import('./reopened-bill.mjs?v=1')).dropReopenedBill(id, method || 'card'); }
+          catch (_) {
+            /* Module injoignable (hors ligne, cache vidé) : le même ménage que dropReopenedBill. Sans lui, la relecture
+               ajoutait les lignes de l'ancienne visite à la nouvelle note (64,00 au lieu de 50,00). */
+            keepServiceBillOpen(id, {}); serviceTableSessions.delete(id); delete tableOrders[id]; for (let i = 0; i < 12; i++) employeePaymentRefForget(id + ':split:' + i);
+            serviceCanonicalOrders.forEach((o, k) => { if (o && String(o.table) === String(id)) serviceCanonicalOrders.delete(k); }); if (splitState.tableId === id) { splitState.flow = null; closeSplitModal({ skipRevert: true }); }
+            toast(employeePick(`Table ${id} · la note a changé. Vérifiez le total et le ticket du terminal avant de réessayer`, `Table ${id} · the bill changed. Check the total and the terminal slip before retrying`, `الطاولة ${id} · تغيّرت الفاتورة. تحقّق من المجموع ومن وصل الجهاز قبل إعادة المحاولة`), 9000); try { pollServiceSync(); } catch (__) {}
+          }
+        }
+        else if (err.message === 'visit-already-settled') { toast(employeePick(`Table ${id} · déjà réglée, rien à encaisser`, `Table ${id} · already settled, nothing to collect`, `الطاولة ${id} · سبق دفعها، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }
         else if (err.message === 'server-payments-off') toast(employeePick(`Table ${id} · l'encaissement se fait à la caisse`, `Table ${id} · payment is taken at the till`, `الطاولة ${id} · الدفع يتم في الصندوق`), 5200); else toast(employeePick(`Table ${id} · paiement non enregistré, réessayez`, `Table ${id} · payment not saved, try again`, `الطاولة ${id} · لم يُسجَّل الدفع، أعد المحاولة`), 5200);
         return false;
       } finally {
@@ -3808,7 +3825,7 @@ cashModal.addEventListener('click', (e) => {
           /* Délai réel (15 s) : l'identifiant de la part est stable, une
              relance après délai rejoue la même vente, jamais une seconde. */
 
-          const response = await (await import('../request-deadline.mjs')).deadlineFetch('/api/sale', {
+          const response = await (await import('../request-deadline.mjs?v=1')).deadlineFetch('/api/sale', {
             ...(payCtl ? { signal: payCtl.signal } : {}),
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
@@ -3816,7 +3833,7 @@ cashModal.addEventListener('click', (e) => {
               id: partPaymentId,
               merchant,
               table: tableId,
-              session,
+              session, surface: 'serveur',
               split: { index: partIdx, count: flow.parts.length, flowId: flow.id },
               amount: p.amountCents / 100,
               amountCents: p.amountCents,
@@ -3836,7 +3853,7 @@ cashModal.addEventListener('click', (e) => {
           saved = await response.json().catch(() => null);
           if (!response.ok || !saved || !saved.ok) {
             const refused = new Error((saved && saved.error) || ('http-' + response.status));
-            refused.refused = true;
+            refused.refused = true; refused.reopened = !!(saved && saved.reopened);
             throw refused;
           }
         }
@@ -3845,6 +3862,18 @@ cashModal.addEventListener('click', (e) => {
           if (payMethod === 'card') toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, ne repassez pas la carte, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not confirmed, do not run the card again, just retry`, `الطاولة ${tableId || ''} · لم يتأكد الجزء ${partIdx + 1}، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط`), 6000);
           else toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not confirmed, try again`, `الطاولة ${tableId || ''} · لم يتأكد الجزء ${partIdx + 1}، أعد المحاولة`), 6000);
         } else if (err && !err.refused) toast(employeePick("Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.", 'No network. The payment is not recorded, try again when the network is back.', 'لا توجد شبكة. لم يُسجَّل الدفع، أعد المحاولة عند عودة الشبكة.'), 6000);
+        /* Table rouverte sous une autre visite : rien n'est écrit, l'ancienne note est jetée
+           (assets/serveur/reopened-bill.mjs). Visite soldée : rien à encaisser. */
+        else if (err.reopened && tableId) {
+          try { (await import('./reopened-bill.mjs?v=1')).dropReopenedBill(tableId, payMethod); }
+          catch (_) {
+            // Module injoignable : le même ménage que dropReopenedBill (voir markTablePaid).
+            keepServiceBillOpen(tableId, {}); serviceTableSessions.delete(tableId); delete tableOrders[tableId]; for (let i = 0; i < 12; i++) employeePaymentRefForget(tableId + ':split:' + i);
+            serviceCanonicalOrders.forEach((o, k) => { if (o && String(o.table) === String(tableId)) serviceCanonicalOrders.delete(k); }); if (splitState.tableId === tableId) { splitState.flow = null; closeSplitModal({ skipRevert: true }); }
+            toast(employeePick(`Table ${tableId} · la note a changé. Vérifiez le total et le ticket du terminal avant de réessayer`, `Table ${tableId} · the bill changed. Check the total and the terminal slip before retrying`, `الطاولة ${tableId} · تغيّرت الفاتورة. تحقّق من المجموع ومن وصل الجهاز قبل إعادة المحاولة`), 9000); try { pollServiceSync(); } catch (__) {}
+          }
+        }
+        else if (err.message === 'visit-already-settled') { toast(employeePick(`Table ${tableId || ''} · déjà réglée, rien à encaisser`, `Table ${tableId || ''} · already settled, nothing to collect`, `الطاولة ${tableId || ''} · سبق دفعها، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }
         else toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non enregistrée, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not saved, try again`, `الطاولة ${tableId || ''} · لم يُسجَّل الجزء ${partIdx + 1}، أعد المحاولة`), 5200);
         return false;
       } finally {

@@ -308,6 +308,7 @@ const postUpRes = await postQueue({
     orderId: 'ord-edit-1',
     lineId: 'item-edit-tajine',
     qty: 4, // from base 3 to 4 (delta = +1)
+    requestId: 'edl-kvp-qty-up-0001', // a delta on an accepted dish must be replayable (update-required without it)
   },
 }, employeeCookie);
 check('Post-accept qty-up returns tier 1 appended', postUpRes.status === 200 && postUpRes.data.ok === true && postUpRes.data.tier === 1 && postUpRes.data.action === 'appended');

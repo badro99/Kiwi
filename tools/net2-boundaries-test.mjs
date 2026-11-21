@@ -95,7 +95,7 @@ await test('39 native sheet independently releases lost host callbacks and lifec
 await test('42 table lock bounds fetch and body through common owner',async()=>{
   for(const body of [false,true]) {
     const deadline=vm.runInNewContext(deadlineSource+';deadlineFetch',{fetch:async()=>body?{ok:true,json:hung}:hung(),AbortController,setTimeout:fast,clearTimeout});
-    const source=split.declaration(read('assets/serveur/service-runtime.js'),'setTableLock').replace(/import\('..\/request-deadline.mjs'\)/g,'loadDeadline()');
+    const source=split.declaration(read('assets/serveur/service-runtime.js'),'setTableLock').replace(/import\('..\/request-deadline.mjs(?:\?v=\d+)?'\)/g,'loadDeadline()');
     const fn=vm.runInNewContext(source+';setTableLock',{liveEmployeeState:{merchant:'m'},SV_DEMO:false,activeRole:{name:'a'},loadDeadline:async()=>({deadlineFetch:deadline})});
     assert.equal((await fn('1','acquire')).error,'timeout');
   }
@@ -104,7 +104,7 @@ await test('43 client lookup uses common transport and settles hung headers and 
   for(const body of [false,true]) {
     const deadline=vm.runInNewContext(deadlineSource+';deadlineFetch',{fetch:async()=>body?{ok:true,json:hung}:hung(),AbortController,setTimeout:fast,clearTimeout});
     let sharedCalls=0; const list={},search={value:'0612345678'};
-    const source=split.declaration(read('assets/serveur/payments.js'),'renderServiceClients').replace(/import\('..\/request-deadline.mjs'\)/g,'loadDeadline()');
+    const source=split.declaration(read('assets/serveur/payments.js'),'renderServiceClients').replace(/import\('..\/request-deadline.mjs(?:\?v=\d+)?'\)/g,'loadDeadline()');
     const fn=vm.runInNewContext(source+';renderServiceClients',{AbortController,$:id=>id.includes('search')?search:list,liveEmployeeState:{merchant:'m'},employeeTranslation:s=>s,fetch:hung,setTimeout:fast,clearTimeout,loadDeadline:async()=>{sharedCalls++;return {deadlineFetch:deadline};}});
     fn();await new Promise(resolve=>setTimeout(resolve,15));assert.equal(list.textContent,'Carnet indisponible.');assert.equal(sharedCalls,1);
   }

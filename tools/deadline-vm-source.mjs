@@ -3,7 +3,7 @@ import fs from 'node:fs';
 export function deadlineVmSource(source) {
   const helper = fs.readFileSync(new URL('../assets/request-deadline.mjs', import.meta.url), 'utf8').replace('export ', '');
   return 'var __deadlineNet = (() => {\n' + helper + '\nreturn {deadlineFetch}; })();\n' +
-    source.replace(/import\('[^']*request-deadline.mjs'\)/g, 'Promise.resolve(__deadlineNet)');
+    source.replace(/import\('[^']*request-deadline\.mjs(?:\?v=\d+)?'\)/g, 'Promise.resolve(__deadlineNet)');
 }
 // Supply native browser capabilities omitted by older synchronous-fetch mocks;
 // explicit test clocks and controllers always win.

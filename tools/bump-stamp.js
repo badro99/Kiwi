@@ -67,9 +67,31 @@ function replaceIn(rel, asset, next, origin = rel) {
     if (path.posix.normalize(path.posix.join(path.posix.dirname(origin), written)) !== asset) return all;
     hits++; return prefix + written + '?v=' + next + quote;
   });
+  /* Le paquet de l'app serveur : ses import('./module.mjs') relatifs, estampillés
+     ou pas encore (première estampille), et ceux de ses parties, résolus depuis
+     le dossier du paquet livré (tools/stamps.js › serveurImports). */
+  if (origin === S.SERVEUR_BUNDLE) {
+    after = after.replace(/(import\s*\(\s*')(\.\.?\/[^'?]+\.m?js)(?:\?v=[0-9]+)?(')/g, (all, open, written, close) => {
+      if (path.posix.normalize(path.posix.join(path.posix.dirname(origin), written)) !== asset) return all;
+      hits++; return open + written + '?v=' + next + close;
+    });
+  }
   if (after === before) return 0;
   write(rel, after);
   touched.add(rel);
+  if (rel === S.SERVEUR_BUNDLE) {
+    /* Ses parties portent les mêmes import() : elles suivent, et la preuve de
+       découpe (tools/fixtures/serveur) est re-scellée, sans quoi
+       serveur-split-test rougit au premier bump d'un module. */
+    let partHits = 0;
+    for (const part of S.serveurBundleParts()) partHits += replaceIn(part, asset, next, rel);
+    const reseal = path.join(S.ROOT, 'tools/reseal-serveur-split.mjs');
+    if (partHits && fs.existsSync(reseal)) {
+      const r = require('child_process').spawnSync(process.execPath, [reseal], { cwd: S.ROOT, encoding: 'utf8' });
+      if (r.status !== 0) throw new Error('reseal-serveur-split a échoué : ' + (r.stderr || r.stdout));
+      touched.add('tools/fixtures/serveur/split.json'); touched.add('tools/fixtures/serveur/original.js.gz');
+    }
+  }
   // Concatenated parts resolve imports from the delivered bundle's directory.
   if (rel === 'assets/live-link.js') {
     const mapFile = path.join(S.ROOT, 'tools/fixtures/live-link/split.json');
@@ -215,7 +237,7 @@ function bumpSwGeneration() {
 if (PRECACHE) {
   let sw = S.read(S.SW);
   for (const asset of targets) {
-    if (!S.exists(asset) || !/^assets\/[A-Za-z0-9._/-]+\.js$/.test(asset)) throw new Error('Invalid precache asset: ' + asset);
+    if (!S.exists(asset) || !/^assets\/[A-Za-z0-9._/-]+\.m?js$/.test(asset)) throw new Error('Invalid precache asset: ' + asset);
     if (!/\b(?:const|var|let) SHELL\s*=\s*\[/.test(sw)) throw new Error('Missing SHELL precache list');
     if (!sw.includes("'/" + asset + "'") && !sw.includes("'/" + asset + '?v=')) {
       sw = sw.replace(/(\b(?:const|var|let) SHELL\s*=\s*\[)/, "$1\n  '/" + asset + "',");

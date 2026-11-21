@@ -608,8 +608,8 @@
     "sha": "2654ce3c6c5ece96"
   },
   "assets/employee-pwa.js": {
-    "v": "2",
-    "sha": "c82a630e4de03b99"
+    "v": "5",
+    "sha": "46a70d543488e721"
   },
   "assets/employee-trade-shell.css": {
     "v": "4",
@@ -2203,6 +2203,10 @@
     "v": "11",
     "sha": "1653d14db2a8be7b"
   },
+  "assets/request-deadline.mjs": {
+    "v": "1",
+    "sha": "d2157a1d393c41bc"
+  },
   "assets/reservations.css": {
     "v": "11",
     "sha": "4fd568c0b955146b"
@@ -2284,24 +2288,28 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "30",
-    "sha": "dcc57bd39943dfd4"
+    "v": "34",
+    "sha": "0f6d469156d1e5f2"
   },
   "assets/serveur-lang.js": {
-    "v": "17",
-    "sha": "25c1448ed81f846d"
+    "v": "18",
+    "sha": "eabb02d6c61a8bea"
   },
   "assets/serveur-shell.css": {
-    "v": "8",
-    "sha": "ca9f976c2786c1a3"
+    "v": "11",
+    "sha": "912e7ccd5bd7d056"
   },
   "assets/serveur/payment-support.js": {
     "v": "9",
     "sha": "35eb41b159c67704"
   },
+  "assets/serveur/reopened-bill.mjs": {
+    "v": "1",
+    "sha": "5911048d786d702a"
+  },
   "assets/serveur/service.js": {
-    "v": "34",
-    "sha": "f087ce8952cb8cdb"
+    "v": "51",
+    "sha": "f2d40e9d3e44c064"
   },
   "assets/service-requests.js": {
     "v": "2",

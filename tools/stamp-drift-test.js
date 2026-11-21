@@ -114,6 +114,16 @@ for (const asset of scanned.keys()) {
   ok(`${asset} est couvert par le manifeste`, Object.prototype.hasOwnProperty.call(manifest, asset));
 }
 
+/* 4 · un import() du paquet de l'app serveur sans estampille : le module est
+   chargé à la demande, le cache le sert sous l'URL nue, et un contenu changé
+   ne serait vu par aucune des règles ci-dessus (il n'a pas de site). */
+for (const imp of S.serveurImports()) {
+  ok(`${S.SERVEUR_BUNDLE} importe ${imp.written} avec une estampille`, !!imp.stamp);
+  if (!imp.stamp) {
+    failed[failed.length - 1] = `${S.SERVEUR_BUNDLE} importe '${imp.written}' sans ?v= — un changement de ${imp.asset} ne serait jamais vu · \`node tools/bump-stamp.js --precache ${imp.asset}\``;
+  }
+}
+
 if (failed.length) {
   failed.forEach((l) => console.error('  ✗ ' + l));
   process.exit(1);

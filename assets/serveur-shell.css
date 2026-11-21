@@ -427,6 +427,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       box-shadow: var(--shadow-3);
       position: relative;
       overflow: hidden;
+      /* La fiche de table attend hors champ à droite (translateX 100 %) : avec
+         `hidden`, un focus ou un clic pendant sa glissade faisait défiler .app
+         de toute sa largeur, et l'écran du serveur partait de côté. `clip`
+         coupe pareil mais ne défile jamais. */
+      overflow: clip;
     }
 
     /* Mobile: fill viewport, no frame */
@@ -2385,6 +2390,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       transition: all var(--dur-fast) var(--spring);
     }
     .profil-clockout:active { transform: scale(0.98); background: rgba(184,82,69,0.18); }
+    /* « Installer l'app » (assets/employee-pwa.js), posé au-dessus de « Pointer le départ ». */
+    .profil-install {
+      width: 100%; height: 48px; margin: 0 0 12px;
+      background: var(--btn-primary-bg); color: var(--btn-primary-ink);
+      border-radius: var(--r-lg);
+      font-size: var(--t-body-lg-size, 15px); font-weight: 600;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
     .profil-clockout svg { width: 18px; height: 18px; }
     .profil-pause {
       width: 100%; height: 52px; margin-bottom: 10px;
@@ -3724,7 +3737,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       letter-spacing: -0.005em;
       box-shadow: var(--shadow-2), var(--rim);
       animation: toast-in var(--dur-base) var(--spring);
-      pointer-events: all;
+      /* Un avis se lit, il ne se touche pas. Il s'affiche juste au-dessus des
+         onglets, là où vivent « Voir la commande », « Lancer » et
+         « Encaisser » : en `all`, il avalait le toucher du serveur pendant
+         ses 2 à 6 secondes de vie. */
+      pointer-events: none;
       text-align: center;
       max-width: 100%;
       backdrop-filter: blur(12px);

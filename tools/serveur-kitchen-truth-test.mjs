@@ -103,7 +103,7 @@ function grab(src, startRe, label) {
     serviceMineTables: new Set(), servicePausedTables: new Set(), serviceTableSessions: new Map(),
     serviceTableSessionRevisions: new Map(), serviceVisitCredit: new Map(), serviceStateVersion: new Map(),
     serviceReopenedBills: new Map(), serviceTableId: id => id,
-    reconcileCanonicalServiceBill() {}, renderAll() {}, Date: { now: () => 3600000 },
+    reconcileCanonicalServiceBill() {}, renderAll() {}, svWhenIdle: (_key, fn) => fn(), Date: { now: () => 3600000 },
   });
   vm.runInContext(grab(serveur, /function ingestServiceOrders\(data\)/, 'ingestServiceOrders'), c);
   c.ingestServiceOrders({ ok: true, sessions: [{ id: 's1', mode: 'table', table: 'T1', opened_ts: 60000 }] });

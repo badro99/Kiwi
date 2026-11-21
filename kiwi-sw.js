@@ -18,6 +18,8 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/request-deadline.mjs?v=1',
+  '/assets/serveur/reopened-bill.mjs?v=1',
   '/assets/pos-maison/cash-moves.js?v=5',
   '/assets/pos-maison/drawer.js?v=2',
   '/assets/pos-maison/avoir-sheet.js?v=9',
@@ -172,11 +174,11 @@ var SHELL = [
      dans la coquille · en silence, puisque install() avale l'échec. Et c'est
      bien /kiwi-serveur que l'application ouvre partout ailleurs. */
   '/kiwi-serveur',
-  '/assets/serveur-shell.css?v=8',
+  '/assets/serveur-shell.css?v=11',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
   '/assets/serveur/payment-support.js?v=9',
-  '/assets/serveur/service.js?v=34',
-  '/assets/serveur-app.js?v=30',
+  '/assets/serveur/service.js?v=51',
+  '/assets/serveur-app.js?v=34',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -424,7 +426,7 @@ var SHELL = [
   '/assets/caisse-link.js?v=23',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
-  '/assets/serveur-lang.js?v=17',
+  '/assets/serveur-lang.js?v=18',
   '/assets/idle-lock.js?v=2',
   '/assets/caisse-hardware.js?v=16',
   '/assets/live-socket.js?v=5',

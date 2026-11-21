@@ -10,11 +10,12 @@
 import { safeDetail } from './_safe-detail.js';
 import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, storeOwner, tillVerification, readEmployee } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
-import { settleServiceTable, serviceVisitGuard, tableKey, tableAliases, publishReceiptPrint } from './service/events.js';
+import { settleServiceTable, serviceVisitGuard, tableKey, publishReceiptPrint } from './service/events.js';
 import { quarantineGuard } from './_quarantine-guard.js';
 import { tillRecheck } from './_till-recheck.js';
 import { poke } from './_live.js';
-import { settleCoveredOrders } from './_visit-cover.js';
+import { settleCoveredOrders, staleVisitPayment, paymentVisit } from './_visit-cover.js';
+import { splitVisitCheck, splitPartsPaid } from './_split-visit.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { validateRetailTenders, retailTenderMethod } from './_retail-tenders.js';
 import { claimRetailBalance, confirmRetailBalance } from './_retail-balances.js';
@@ -83,10 +84,6 @@ async function claimRestaurantBill(env, merchant, sessionId, number, day, id) {
     WHERE merchant = ? AND session_id = ? AND order_number = ? AND business_day = ?`)
     .bind(merchant, sessionId, number, day).first();
 }
-
-/* See the visit lookup in onRequestPost: tolerance between a payment's device
-   timestamp and the server time its table visit was opened. */
-const VISIT_BIND_SKEW_MS = 2 * 60 * 1000;
 
 const MAX_AMOUNT_CENTS = 20000000; // 200,000 MAD in centimes
 const DISCOUNT_REASONS = new Set(['commercial', 'loyal-customer', 'kitchen-error', 'other']);
@@ -290,6 +287,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     ? String(split.flowId) : '';
 
   let serviceSession = null;
+  const phonePayment = !!(employee || b.surface === 'serveur');
   let visitLinkWarning = '';
   const paymentTsForVisit = (() => {
     const t = Number(b && b.ts);
@@ -297,24 +295,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
   })();
   if (requestedSession || employeeTable) {
     try {
-      serviceSession = requestedSession
-        ? await env.DB.prepare(
-            `SELECT id, table_no, status, opened_ts, closed_ts FROM table_sessions
-              WHERE id = ? AND merchant = ? AND mode = 'table' LIMIT 1`
-          ).bind(requestedSession, merchant).first()
-        /* The visit a payment settles cannot have been opened AFTER the
-           payment. A till replays its offline queue later — sometimes the next
-           evening — and "the table's open visit" is by then a NEW party. Binding
-           to it gave the replay a new idempotency id (a second ledger row: 320
-           MAD at Restaurant MixMax on 11–12 Sep 2026) and could close the new
-           party's table with an old payment. Two minutes absorb the till
-           opening the visit at payment time and ordinary clock drift. */
-        : await env.DB.prepare(
-            `SELECT id, table_no, status, opened_ts, closed_ts FROM table_sessions
-              WHERE merchant = ? AND table_no IN (${tableAliases(employeeTable).map(() => '?').join(',')}) AND mode = 'table' AND status = 'open'
-                AND opened_ts <= ?
-              ORDER BY opened_ts DESC LIMIT 1`
-          ).bind(merchant, ...tableAliases(employeeTable), paymentTsForVisit + VISIT_BIND_SKEW_MS).first();
+      serviceSession = await paymentVisit(env, merchant, { requestedSession, table: employeeTable, paymentTs: paymentTsForVisit });
     } catch (_) { return json({ error: 'visit-lookup-unavailable' }, 503); }
     if (requestedSession && (!serviceSession || !serviceSession.id)) {
       visitLinkWarning ||= 'table-session-missing';
@@ -616,6 +597,16 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     }
     stored = true;
   }
+  /* The waiter app (an employee, or the owner using it) paying from a stale
+     screen: a visit already settled, or a split part paid on another visit,
+     is refused and nothing is written (functions/api/_visit-cover.js,
+     functions/api/_split-visit.js). A replay of a stored sale is never refused. */
+  if (!stored && phonePayment && requestedSession) {
+    const refused = await staleVisitPayment(env, merchant, serviceSession, employeeTable);
+    if (refused) return json(refused.body, refused.status);
+  }
+  const splitVisit = await splitVisitCheck(env, merchant, { splitFlowId, sessionId: effectiveSessionId, stored, table: employeeTable });
+  if (splitVisit.refusal) return json(splitVisit.refusal.body, splitVisit.refusal.status);
 
   /* SAME SETTLEMENT, DIFFERENT ID. The id above is derived from the table
      visit when the till names a table without a session, so a replay after
@@ -970,10 +961,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
   if (split) {
     if (splitFlowId) {
       try {
-        const receipts = await env.DB.prepare(
-          'SELECT id FROM sales WHERE merchant = ? AND split_flow_id = ? AND void_ts IS NULL'
-        ).bind(merchant, splitFlowId).all();
-        splitComplete = new Set((receipts.results || []).map(row => row.id)).size === split.count;
+        splitComplete = await splitPartsPaid(env, merchant, { splitFlowId, sessionId: effectiveSessionId, spansVisits: splitVisit.spansVisits }) === split.count;
       } catch (_) { return json({ error: 'split-receipts-unavailable' }, 503); }
     } else if (splitIds.length) {
       // Distinct, deterministic rows preserve each tender and make retries safe.
@@ -1007,7 +995,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
   }
   let billOpen = null;
   if (serviceSession && serviceSession.id && splitComplete) {
-    billOpen = await settleCoveredOrders(env, merchant, serviceSession.id, now);
+    billOpen = await settleCoveredOrders(env, merchant, serviceSession.id, now, { phone: phonePayment });
   }
   if (serviceSession && serviceSession.id && splitComplete && !billOpen) {
     const settledTable = employeeTable || String(serviceSession.table_no || '');

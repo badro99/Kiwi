@@ -326,12 +326,10 @@ try {
     const stale = await waiter.evaluate(() => markTablePaid('4', 'cash'));
     await sleep(500);
     const extra = server_.sales().length - salesBeforeStale;
-    if (extra > 0 || stale === true) {
-      /* DÉFAUT CONNU, décision du propriétaire : /api/sale accepte l'encaissement d'une visite que la caisse vient de solder, parce que la caisse écrit sa vente et ferme la visite en parallèle (« une visite close doit pouvoir écrire sa vente », functions/api/sale.js). Deux appareils qui soldent la même addition avec deux identifiants de vente la comptent deux fois. Le test le dit sans échouer ; il passe au vert dès que le serveur refuse. */
-      console.log(`  ! connu : un téléphone resté sur l'ancienne image a encaissé la table déjà soldée (${server_.sales().map((x) => mad(x.amount_cents)).join(' + ')}) : addition comptée deux fois`);
-    } else {
-      check(true, 'le téléphone ne peut pas encaisser une seconde fois la table déjà payée : tient maintenant, passer ce contrôle en strict');
-    }
+    /* Ancien défaut connu : /api/sale laissait le téléphone solder une visite que la caisse venait de clore, tickets payés, avec son propre identifiant de vente : l'addition comptée deux fois. Le serveur refuse maintenant (409 visit-already-settled, functions/api/_visit-cover.js) et le téléphone le dit. */
+    check(extra === 0 && stale !== true, `le téléphone ne peut pas encaisser une seconde fois la table déjà payée (${server_.sales().map((x) => mad(x.amount_cents)).join(' + ')})`);
+    check(calls.some((c) => c.who === 'serveur' && c.path === '/api/sale' && c.status === 409 && /visit-already-settled/.test(c.body || '')), 'le serveur le refuse : visite déjà réglée (409)');
+    check(await waiter.evaluate(() => [...document.querySelectorAll('#toast-stack .toast')].some((x) => /déjà réglée, rien à encaisser/.test(x.textContent))), 'le téléphone dit « déjà réglée », pas « réessayez »');
     check(server_.sales()[0].amount_cents === 5200, 'la vente de la caisse reste de 52,00 au centime');
     check(server_.openSessions().length === 0 && server_.tickets().every((o) => !!o.paid_ts), 'et la table reste soldée, aucun ticket ne redevient dû');
     t.step('les deux écrans voient la table libre');

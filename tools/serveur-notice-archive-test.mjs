@@ -41,7 +41,7 @@ function sandbox(key = 'kiwi-service-notifications:amira-cafe:sara') {
     window: {}, document: { visibilityState: 'visible' }, employeeLanguage: 'fr',
     serviceNotifications: [], serviceEventSeen: new Set(), serviceHistoryKey: key,
     currentTab: 'tables', serviceUnread: 0, tables: {},
-    loadServiceHistory() {}, updateNotificationBadge() {}, toast() {},
+    loadServiceHistory() {}, updateNotificationBadge() {}, toast() {}, employeeTranslation: (text) => text,
     $: (sel) => (sel === '#notification-list' ? list : null),
     esc: (s) => String(s), notificationIcon: () => 'bell', notificationOrigin: () => 'Salle',
     notificationRelativeTime: () => 'maintenant', serviceTableId: (v) => v, setTab() {}, openTableDetail() {},

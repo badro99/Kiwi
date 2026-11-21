@@ -609,7 +609,7 @@
          une sous-catégorie ou une option par son libellé canonique. */
       try { if (window.KiwiMenuI18n) window.KiwiMenuI18n.index({ cats, items: allItems, opts: Array.isArray(d.opts) ? d.opts : [] }); } catch (_) {}
       if (!catLabels[activeCat]) activeCat = 'all';
-      try { renderCatPills(); renderMenu(); } catch (_) {}
+      svWhenIdle('carte', () => { try { renderCatPills(); renderMenu(); } catch (_) {} });   // jamais sous le doigt : le plat touché serait perdu
       return true;
     }
     function svRebuildCarte() {
@@ -679,11 +679,13 @@
             svCarteState = j.unreachable ? 'error' : 'empty';
             return false;
           }
-          try { localStorage.setItem(SV_CARTE_MIRROR + slug, JSON.stringify(m)); } catch (_) {}
+          const text = JSON.stringify(m);   // la même carte qu'au dernier tour : rien à refaire ni à repeindre
+          if (text === svCarteText && svCarteState === 'ok' && menuItems.length) return true;
+          try { localStorage.setItem(SV_CARTE_MIRROR + slug, text); } catch (_) {}
           /* Paint from the response itself. The mirror is a best-effort offline
              copy, never a prerequisite for showing today's catalogue. */
           const shown = svApplyCarte(m);
-          svCarteState = shown ? 'ok' : 'empty';
+          svCarteState = shown ? 'ok' : 'empty'; svCarteText = shown ? text : '';
           return shown;
         })
         .catch(() => { svCarteState = 'error'; return false; })
@@ -702,7 +704,7 @@
     }
     const SV_CARTE_FRESH_MS = 10000;
     const SV_CARTE_TIMEOUT_MS = 10000;
-    let svCarteFlight = null, svCarteAt = 0, svCarteSlug = '';
+    let svCarteFlight = null, svCarteAt = 0, svCarteSlug = '', svCarteText = '';
     let svCarteState = 'idle';      // idle | loading | ok | empty | error
     /* Retour à l'écran, appairage : on veut la carte du moment, pas celle
        d'il y a dix secondes. Une lecture déjà en vol est partagée. */
@@ -1162,20 +1164,20 @@
     /* Background refreshes wait for the waiter's hand. A poll or the minute
        tick rebuilt the menu or the table sheet mid-tap: the button under the
        finger vanished before its click, and a kitchen note lost focus and
-       closed the keyboard. A rebuild now waits until no finger is down, no
-       field is focused and the last touch is 900 ms old. */
+       closed the keyboard. A rebuild waits until no finger is down, no field it
+       would replace is focused (a note holds the table sheet, never the floor) and the last touch is 900 ms old. */
     let svTouching = false, svLastTouch = 0;
     ['pointerdown', 'pointerup', 'pointercancel'].forEach((type) => {
       document.addEventListener(type, () => { svTouching = type === 'pointerdown'; svLastTouch = Date.now(); }, true);
     });
-    function svUserBusy() {
+    function svUserBusy(key) {
       const a = document.activeElement;
-      if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
+      if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.closest(key === 'detail' ? '#screen-table' : '#screen-main')) return true;
       return svTouching || Date.now() - svLastTouch < 900;
     }
     const svDeferred = {};
     function svWhenIdle(key, fn) {
-      if (!svUserBusy()) { clearTimeout(svDeferred[key]); delete svDeferred[key]; fn(); return; }
+      if (!svUserBusy(key)) { clearTimeout(svDeferred[key]); delete svDeferred[key]; fn(); return; }
       if (svDeferred[key]) return;
       svDeferred[key] = setTimeout(() => { delete svDeferred[key]; svWhenIdle(key, fn); }, 700);
     }
@@ -1786,10 +1788,10 @@
      * tablette qui se recharge au mauvais moment laissait donc une commande en
      * suspens que personne ne savait en suspens.
      *
-     * On les vide au démarrage, et dès que le réseau revient. `svSendOrderBatch`
+     * On les vide au démarrage, au retour du réseau et après chaque synchro réussie. `svSendOrder`
      * repart du lot stocké avec sa référence d'origine : c'est la même
      * commande, pas une seconde. */
-    let svDrainAt = 0;
+    let svDrainAt = 0, svDrainTimer = 0; // fenêtre de 4 s, et le vidage reporté à sa fin
 
 
     window.addEventListener('online', () => { try { svDrainPendingBatches(); } catch (_) {} });
@@ -2276,7 +2278,7 @@
       if (!orderId || !slug) { toast('Commande introuvable'); return; }
       accBtn.disabled = true;
       accBtn.textContent = 'Envoi…';
-      fetch('/api/order/queue', {
+      svFetchJson('/api/order/queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -2288,7 +2290,7 @@
           server: (activeRole && (activeRole.fullName || activeRole.name)) || '',
         }),
       })
-        .then((r) => r.json().catch(() => null).then((j) => ({ ok: r.ok, j })))
+        .then((r) => ({ ok: r.ok, j: r.data }))
         .then(({ ok, j }) => {
           if (!ok || !j || j.ok !== true) throw new Error((j && j.error) || 'refus');
           const cached = serviceCanonicalOrders.get(orderId);
@@ -2334,7 +2336,7 @@
       const line = (tableOrders[activeTableId] || []).find(l => l.uid === inp.dataset.noteUid);
       if (line && line.sentQty > 0 && !SV_DEMO) {
         try {
-          const res = await fetch('/api/order/queue', {
+          const res = await svFetchJson('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2347,7 +2349,7 @@
               }
             })
           });
-          const data = await res.json().catch(() => null);
+          const data = res.data;
           if (!res.ok || (data && !data.ok)) {
             if (data && data.reason === 'accepted') {
               toast('Plat déjà en cuisine · parlez au chef ou annulez');

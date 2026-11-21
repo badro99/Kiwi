@@ -354,5 +354,46 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
+/* App serveur : ses import() de modules (request-deadline, reopened-bill) sont des
+   sites d'estampille. Le paquet livré (service.js) et ses parties bougent ensemble,
+   le module entre dans SHELL, et un module changé sans estampille fait rougir le gate. */
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-stamp-serveur-'));
+  try {
+    fixture(dir);
+    const w = (rel, src) => { fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true }); fs.writeFileSync(path.join(dir, rel), src); };
+    const parts = ['assets/serveur/service-runtime.js', 'assets/serveur/payments.js'];
+    w(parts[0], "function poll() { return import('../request-deadline.mjs'); }\n");
+    w(parts[1], "async function refused() { try { (await import('./reopened-bill.mjs')).dropReopenedBill('4', 'card'); } catch (_) {} }\n");
+    const bundle = () => parts.map((p) => rd(dir, p)).join('');
+    w('assets/serveur/service.js', bundle());
+    w('assets/serveur/reopened-bill.mjs', 'export function dropReopenedBill() {}\n');
+    w('assets/request-deadline.mjs', 'export async function deadlineFetch() {}\n');
+    w('tools/fixtures/serveur/split.json', JSON.stringify({ parts: [...parts, 'assets/serveur/shift-report.js'] }));
+    w('assets/serveur/shift-report.js', '');
+    w('assets/serveur/service.js', bundle());
+    fs.appendFileSync(path.join(dir, 'kiwi-serveur.html'), '<script src="assets/serveur/service.js?v=4"></script>\n');
+    w('kiwi-sw.js', rd(dir, 'kiwi-sw.js').replace('var SHELL = [', "var SHELL = ['/assets/serveur/service.js?v=4',"));
+    const drift = () => spawnSync(process.execPath, [path.join(dir, 'tools/stamp-drift-test.js')], { env: env(dir), encoding: 'utf8' });
+    ok(run(dir, ['--sync']).status === 0, 'serveur : manifeste scellé');
+    const bare = drift();
+    ok(bare.status !== 0 && /importe '\.\/reopened-bill\.mjs' sans \?v=/.test(bare.stderr), 'serveur : un import() sans estampille fait rougir le gate');
+    ok(run(dir, ['--precache', 'assets/serveur/reopened-bill.mjs', 'assets/request-deadline.mjs']).status === 0, 'serveur : première estampille et précache des deux modules');
+    ok(rd(dir, 'assets/serveur/service.js').includes("import('./reopened-bill.mjs?v=1')") && rd(dir, 'assets/serveur/service.js').includes("import('../request-deadline.mjs?v=1')"), 'serveur : les import() du paquet portent ?v=1');
+    ok(rd(dir, 'assets/serveur/payments.js').includes("import('./reopened-bill.mjs?v=1')") && rd(dir, 'assets/serveur/service-runtime.js').includes("import('../request-deadline.mjs?v=1')"), 'serveur : ses parties aussi');
+    ok(rd(dir, 'assets/serveur/service.js') === bundle(), 'serveur : le paquet reste la concaténation de ses parties');
+    ok(rd(dir, 'kiwi-sw.js').includes("'/assets/serveur/reopened-bill.mjs?v=1'") && rd(dir, 'kiwi-sw.js').includes("'/assets/request-deadline.mjs?v=1'"), 'serveur : les deux modules entrent dans SHELL');
+    ok(rd(dir, 'kiwi-serveur.html').includes('assets/serveur/service.js?v=5'), 'serveur : le paquet réécrit monte d’une estampille (cascade)');
+    ok(drift().status === 0, 'serveur : gate vert après la première estampille');
+    fs.appendFileSync(path.join(dir, 'assets/serveur/reopened-bill.mjs'), '// changed\n');
+    const stale = drift();
+    ok(stale.status !== 0 && /reopened-bill\.mjs a changé de contenu en gardant \?v=1/.test(stale.stderr), 'serveur : un module changé sans estampille fait rougir le gate');
+    ok(run(dir, ['assets/serveur/reopened-bill.mjs']).status === 0, 'serveur : bump du module');
+    ok(rd(dir, 'assets/serveur/payments.js').includes("import('./reopened-bill.mjs?v=2')") && rd(dir, 'assets/serveur/service.js') === bundle(), 'serveur : paquet et partie à ?v=2, toujours concaténés');
+    ok(rd(dir, 'kiwi-sw.js').includes("'/assets/serveur/reopened-bill.mjs?v=2'") && rd(dir, 'kiwi-serveur.html').includes('assets/serveur/service.js?v=6'), 'serveur : SHELL et coquille suivent');
+    ok(drift().status === 0, 'serveur : gate vert après le bump');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
 console.log(`\n${failures.length ? '✗' : '✓'} ${passed} passed · ${failures.length} failed`);
 if (failures.length) { failures.forEach((f) => console.log(`  ✗ ${f}`)); process.exit(1); }

@@ -56,6 +56,8 @@
       try { reconcileCanonicalServiceBill(tableId); } catch (_) {}
       if (currentTab === 'tables') renderTables();
       if (activeTableId === tableId) renderTableDetail();
+      // Sans reste nommé (paiement refusé, table rouverte) : l'appelant dit lui-même ce qui s'est passé.
+      if (saved.remainingCents == null) return;
       const rest = Math.max(0, Number(saved.remainingCents) || 0) / 100;
       toast(employeePick( `Table ${tableId} · reste ${fmtMADcents(rest)} : une commande est arrivée pendant l'encaissement`, `Table ${tableId} · ${fmtMADcents(rest)} left: an order arrived during payment`, `الطاولة ${tableId} · المتبقي ${fmtMADcents(rest)} : وصل طلب أثناء الدفع`), 6500);
     }
@@ -70,7 +72,7 @@
       $('#pc-client-label').textContent = client ? `${client.name} · ${Number(client.points) || 0} pts` : 'Client & fidélité';
     }
 
-    function renderServiceClients() { var fetchDeadline = async (url, options, _readBody, controller) => (await import('../request-deadline.mjs')).deadlineFetch(url, options, 12000, controller); if (renderServiceClients.controller) renderServiceClients.controller.abort(); const controller = renderServiceClients.controller = new AbortController();
+    function renderServiceClients() { var fetchDeadline = async (url, options, _readBody, controller) => (await import('../request-deadline.mjs?v=1')).deadlineFetch(url, options, 12000, controller); if (renderServiceClients.controller) renderServiceClients.controller.abort(); const controller = renderServiceClients.controller = new AbortController();
       const q = String($('#service-client-search').value || '').trim();
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
       serviceClientRows = [];
@@ -434,12 +436,12 @@ cashModal.addEventListener('click', (e) => {
       const payCtl = (typeof AbortController === 'function') ? new AbortController() : null;
       const payTimer = null;
       try {
-        const response = await (await import('../request-deadline.mjs')).deadlineFetch('/api/sale', {
+        const response = await (await import('../request-deadline.mjs?v=1')).deadlineFetch('/api/sale', {
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
           signal: payCtl ? payCtl.signal : undefined,
           body: JSON.stringify({
-            id: paymentId, merchant, table: id, session, amount: paidAmount,
+            id: paymentId, merchant, table: id, session, surface: 'serveur', amount: paidAmount,
             amountCents: Math.round(paidAmount * 100),
             method: method || 'card', ts: Date.now(),
             label: orderRef,
@@ -447,7 +449,7 @@ cashModal.addEventListener('click', (e) => {
           }),
         }, SV_PAY_TIMEOUT_MS);
         saved = await response.json().catch(() => null);
-        if (!response.ok || !saved || !saved.ok) throw Object.assign(new Error((saved && saved.error) || ('http-' + response.status)), { refused: true });
+        if (!response.ok || !saved || !saved.ok) throw Object.assign(new Error((saved && saved.error) || ('http-' + response.status)), { refused: true, reopened: !!(saved && saved.reopened) });
       } catch (err) {
         t.status = previousStatus === 'ka-tkhdam' ? 'bgha-ykhlass' : previousStatus;
         employeePaymentsInFlight.delete(id);
@@ -461,6 +463,21 @@ cashModal.addEventListener('click', (e) => {
           if ((method || 'card') === 'card') toast(employeePick(`Table ${id} · paiement non confirmé, ne repassez pas la carte, réessayez`, `Table ${id} · payment not confirmed, do not run the card again, just retry`, `الطاولة ${id} · لم يتأكد الدفع، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط`), 6000);
           else toast(employeePick(`Table ${id} · paiement non confirmé, réessayez`, `Table ${id} · payment not confirmed, try again`, `الطاولة ${id} · لم يتأكد الدفع، أعد المحاولة`), 6000);
         } else if (err && !err.refused) toast(SV_PAY_OFFLINE_MSG, 6000);
+        /* Déjà soldée (la caisse, un autre téléphone, ou une note rouverte sous une autre visite) : rien
+           à encaisser ici, la salle est relue. Le message ne nomme pas qui l'a réglée, il ne le sait pas. */
+        /* Table rouverte sous une autre visite : rien n'est écrit, l'ancienne note est jetée
+           (assets/serveur/reopened-bill.mjs). Visite soldée : rien à encaisser. */
+        else if (err.reopened) {
+          try { (await import('./reopened-bill.mjs?v=1')).dropReopenedBill(id, method || 'card'); }
+          catch (_) {
+            /* Module injoignable (hors ligne, cache vidé) : le même ménage que dropReopenedBill. Sans lui, la relecture
+               ajoutait les lignes de l'ancienne visite à la nouvelle note (64,00 au lieu de 50,00). */
+            keepServiceBillOpen(id, {}); serviceTableSessions.delete(id); delete tableOrders[id]; for (let i = 0; i < 12; i++) employeePaymentRefForget(id + ':split:' + i);
+            serviceCanonicalOrders.forEach((o, k) => { if (o && String(o.table) === String(id)) serviceCanonicalOrders.delete(k); }); if (splitState.tableId === id) { splitState.flow = null; closeSplitModal({ skipRevert: true }); }
+            toast(employeePick(`Table ${id} · la note a changé. Vérifiez le total et le ticket du terminal avant de réessayer`, `Table ${id} · the bill changed. Check the total and the terminal slip before retrying`, `الطاولة ${id} · تغيّرت الفاتورة. تحقّق من المجموع ومن وصل الجهاز قبل إعادة المحاولة`), 9000); try { pollServiceSync(); } catch (__) {}
+          }
+        }
+        else if (err.message === 'visit-already-settled') { toast(employeePick(`Table ${id} · déjà réglée, rien à encaisser`, `Table ${id} · already settled, nothing to collect`, `الطاولة ${id} · سبق دفعها، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }
         else if (err.message === 'server-payments-off') toast(employeePick(`Table ${id} · l'encaissement se fait à la caisse`, `Table ${id} · payment is taken at the till`, `الطاولة ${id} · الدفع يتم في الصندوق`), 5200); else toast(employeePick(`Table ${id} · paiement non enregistré, réessayez`, `Table ${id} · payment not saved, try again`, `الطاولة ${id} · لم يُسجَّل الدفع، أعد المحاولة`), 5200);
         return false;
       } finally {
@@ -1083,7 +1100,7 @@ cashModal.addEventListener('click', (e) => {
           /* Délai réel (15 s) : l'identifiant de la part est stable, une
              relance après délai rejoue la même vente, jamais une seconde. */
 
-          const response = await (await import('../request-deadline.mjs')).deadlineFetch('/api/sale', {
+          const response = await (await import('../request-deadline.mjs?v=1')).deadlineFetch('/api/sale', {
             ...(payCtl ? { signal: payCtl.signal } : {}),
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
@@ -1091,7 +1108,7 @@ cashModal.addEventListener('click', (e) => {
               id: partPaymentId,
               merchant,
               table: tableId,
-              session,
+              session, surface: 'serveur',
               split: { index: partIdx, count: flow.parts.length, flowId: flow.id },
               amount: p.amountCents / 100,
               amountCents: p.amountCents,
@@ -1111,7 +1128,7 @@ cashModal.addEventListener('click', (e) => {
           saved = await response.json().catch(() => null);
           if (!response.ok || !saved || !saved.ok) {
             const refused = new Error((saved && saved.error) || ('http-' + response.status));
-            refused.refused = true;
+            refused.refused = true; refused.reopened = !!(saved && saved.reopened);
             throw refused;
           }
         }
@@ -1120,6 +1137,18 @@ cashModal.addEventListener('click', (e) => {
           if (payMethod === 'card') toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, ne repassez pas la carte, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not confirmed, do not run the card again, just retry`, `الطاولة ${tableId || ''} · لم يتأكد الجزء ${partIdx + 1}، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط`), 6000);
           else toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not confirmed, try again`, `الطاولة ${tableId || ''} · لم يتأكد الجزء ${partIdx + 1}، أعد المحاولة`), 6000);
         } else if (err && !err.refused) toast(employeePick("Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.", 'No network. The payment is not recorded, try again when the network is back.', 'لا توجد شبكة. لم يُسجَّل الدفع، أعد المحاولة عند عودة الشبكة.'), 6000);
+        /* Table rouverte sous une autre visite : rien n'est écrit, l'ancienne note est jetée
+           (assets/serveur/reopened-bill.mjs). Visite soldée : rien à encaisser. */
+        else if (err.reopened && tableId) {
+          try { (await import('./reopened-bill.mjs?v=1')).dropReopenedBill(tableId, payMethod); }
+          catch (_) {
+            // Module injoignable : le même ménage que dropReopenedBill (voir markTablePaid).
+            keepServiceBillOpen(tableId, {}); serviceTableSessions.delete(tableId); delete tableOrders[tableId]; for (let i = 0; i < 12; i++) employeePaymentRefForget(tableId + ':split:' + i);
+            serviceCanonicalOrders.forEach((o, k) => { if (o && String(o.table) === String(tableId)) serviceCanonicalOrders.delete(k); }); if (splitState.tableId === tableId) { splitState.flow = null; closeSplitModal({ skipRevert: true }); }
+            toast(employeePick(`Table ${tableId} · la note a changé. Vérifiez le total et le ticket du terminal avant de réessayer`, `Table ${tableId} · the bill changed. Check the total and the terminal slip before retrying`, `الطاولة ${tableId} · تغيّرت الفاتورة. تحقّق من المجموع ومن وصل الجهاز قبل إعادة المحاولة`), 9000); try { pollServiceSync(); } catch (__) {}
+          }
+        }
+        else if (err.message === 'visit-already-settled') { toast(employeePick(`Table ${tableId || ''} · déjà réglée, rien à encaisser`, `Table ${tableId || ''} · already settled, nothing to collect`, `الطاولة ${tableId || ''} · سبق دفعها، لا شيء للتحصيل`), 5200); try { pollServiceSync(); } catch (_) {} }
         else toast(employeePick(`Table ${tableId || ''} · part ${partIdx + 1} non enregistrée, réessayez`, `Table ${tableId || ''} · share ${partIdx + 1} not saved, try again`, `الطاولة ${tableId || ''} · لم يُسجَّل الجزء ${partIdx + 1}، أعد المحاولة`), 5200);
         return false;
       } finally {
