@@ -8,10 +8,11 @@
 // binding is missing the endpoint fails soft (503) so the app never breaks.
 
 import { safeDetail } from './_safe-detail.js';
-import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, TILL_COOKIE, storeOwner, tillVerification, readEmployee } from '../auth/_lib.js';
+import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, storeOwner, tillVerification, readEmployee } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
 import { settleServiceTable, serviceVisitGuard, tableKey, tableAliases, publishReceiptPrint } from './service/events.js';
 import { quarantineGuard } from './_quarantine-guard.js';
+import { tillRecheck } from './_till-recheck.js';
 import { poke } from './_live.js';
 import { settleCoveredOrders } from './_visit-cover.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
@@ -218,7 +219,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
    * `allowEmployee` is deliberately backed by activeServiceEmployee(): the
    * signed employee cookie alone is not enough, and an off-shift waiter still
    * cannot write money into the ledger. */
-  const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
+  let merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
   if (!merchant) {
     /* Un refus et une panne ne se disent pas de la même façon. La caisse lit un
      * 403 comme « cet appareil n'est plus la caisse de ce magasin » : elle
@@ -227,11 +228,9 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
      * dépairage — c'est une indisponibilité, elle doit se dire 503, et le
      * comptoir la retente tout seul. La vente reste en file dans les deux cas,
      * mais seul le 503 se répare sans que personne ne touche à la tablette. */
-    if (readCookie(request, TILL_COOKIE)) {
-      const till = await tillVerification(request, env, asked);
-      if (till && till.unavailable) return json({ error: 'auth-verification-unavailable' }, 503);
-    }
-    return json({ error: 'forbidden-merchant' }, 403);
+    const again = await tillRecheck(request, env, asked);
+    if (again.response) return again.response;
+    if (!(merchant = again.merchant)) return json({ error: 'forbidden-merchant' }, 403);
   }
 
   /* A waiter payment names its table. That turns this endpoint from a generic

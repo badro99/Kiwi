@@ -7,6 +7,7 @@ import { ensureCollectionSchema } from '../receivables.js';
 import {
   entitledMerchant, employeeRoleOpensDashboard, readManagerRefundProof, json,
 } from '../../auth/_lib.js';
+import { tillRecheck } from '../_till-recheck.js';
 import { storeSuspended, storeSubscriptionPending } from '../_private.js';
 import { quarantineGuard } from '../_quarantine-guard.js';
 import { poke } from '../_live.js';
@@ -79,7 +80,12 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
   if (!Number.isFinite(amountCents) || amountCents <= 0 || amountCents > MAX_AMOUNT_CENTS) {
     return json({ error: 'bad-amount' }, 400);
   }
-  const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
+  let merchant = await entitledMerchant(request, env, asked, { allowTill: true });
+  if (!merchant) {   // comme /api/sale : un millésime illisible un instant n'est pas un dépairage
+    const again = await tillRecheck(request, env, asked);
+    if (again.response) return again.response;
+    merchant = again.merchant;
+  }
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
   if (await storeSuspended(env, merchant)) return json({ error: 'store-suspended', merchant }, 423);
   if (await storeSubscriptionPending(env, merchant)) return json({ error: 'subscription-required', merchant }, 402);
