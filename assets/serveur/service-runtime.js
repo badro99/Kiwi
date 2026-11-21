@@ -139,7 +139,7 @@
       toast(body ? `${employeeTranslation(title)} · ${employeeTranslation(body)}` : title, 4200);
       try {
         if (window.Notification && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
-          new Notification(title, { body: body || '', tag: 'kiwi-service-' + title + '-' + body });
+          new Notification(employeeTranslation(title), { body: body ? employeeTranslation(body) : '', tag: 'kiwi-service-' + title + '-' + body });   // la langue du serveur, comme l'avis
         }
       } catch (_) {}
     }

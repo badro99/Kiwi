@@ -33,10 +33,9 @@ try {
     // coverage: surface=employee locale=ar viewport=phone
     const page = await h.openWaiter(t, { lang: 'ar' });
     t.step('le serveur ouvre la table 4');
-    await page.click('.table-card[data-table="4"]');
+    await h.tap(page, '.table-card[data-table="4"]');
     await page.waitForSelector('#nt-confirm', { visible: true });
-    await h.sleep(400);
-    await page.click('#nt-confirm');
+    await h.tap(page, '#nt-confirm');
     await page.waitForFunction(() => document.getElementById('screen-table')?.classList.contains('is-active'), { timeout: 10000 });
     for (let i = 0; i < 3; i++) { await page.evaluate(() => pollServiceSync()); await h.sleep(1200); }
     const echoes = await page.evaluate(() => serviceNotifications.filter((n) => n.table === '4').map((n) => n.body));
@@ -57,15 +56,26 @@ try {
     const notice = (await toasts(page)).find((x) => /الفاتورة|Addition/.test(x)) || '';
     check(/الطاولة 4/.test(notice) && /طُلبت الفاتورة/.test(notice) && !LATIN.test(notice), `l’avis venu de la caisse est en arabe (« ${notice} »)`);
 
+    t.step('téléphone en poche : la notification du système, dans la même langue');
+    const system = await page.evaluate(() => {
+      const shown = [];
+      const real = { N: window.Notification, vis: Object.getOwnPropertyDescriptor(Document.prototype, 'visibilityState') };
+      window.Notification = function (title, opts) { shown.push({ title, body: opts && opts.body }); };
+      window.Notification.permission = 'granted';
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+      try { serviceNotify('Table 4', 'Addition demandée', { table: '4', id: 'notice-system-language-test' }); }
+      finally { window.Notification = real.N; delete document.visibilityState; }
+      return shown[0] || null;
+    });
+    check(system && /الطاولة 4/.test(system.title) && system.body === 'طُلبت الفاتورة', `la notification du système est en arabe (${JSON.stringify(system)})`);
+
     t.step('un latte avec options');
-    await page.click('[data-action="take-order"]');
+    await h.tap(page, '[data-action="take-order"]');
     await page.waitForSelector('.menu-item[data-menu-id="it_latte"]', { visible: true, timeout: 15000 });
-    await h.sleep(300);
-    await page.click('.menu-item[data-menu-id="it_latte"]');
+    await h.tap(page, '.menu-item[data-menu-id="it_latte"]');
     await page.waitForSelector('#opt-modal.is-open .opt-pill[data-opt-val="Avoine"]', { visible: true, timeout: 5000 });
-    await h.sleep(300);
-    await page.click('.opt-pill[data-opt-val="Avoine"]');
-    await page.click('#opt-confirm');
+    await h.tap(page, '.opt-pill[data-opt-val="Avoine"]');
+    await h.tap(page, '#opt-confirm');
     await h.sleep(300);
     const added = (await toasts(page)).find((x) => /Latte|لاتيه/.test(x)) || '';
     check(/أُضيف/.test(added) && !/ajouté/.test(added), `« Latte ajouté · Avoine » est dit en arabe (« ${added} »)`);
