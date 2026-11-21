@@ -66,6 +66,7 @@
     search: 'M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z',
     back: 'm313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z',
     bill: 'M240-80q-50 0-85-35t-35-85v-120h120v-560l60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60v680q0 50-35 85t-85 35H240Zm480-80q17 0 28.5-11.5T760-200v-560H320v440h360v120q0 17 11.5 28.5T720-160ZM360-600v-80h240v80H360Zm0 120v-80h240v80H360Zm320-120q-17 0-28.5-11.5T640-640q0-17 11.5-28.5T680-680q17 0 28.5 11.5T720-640q0 17-11.5 28.5T680-600Zm0 120q-17 0-28.5-11.5T640-520q0-17 11.5-28.5T680-560q17 0 28.5 11.5T720-520q0 17-11.5 28.5T680-480ZM240-160h360v-80H200v40q0 17 11.5 28.5T240-160Zm-40 0v-80 80Z',
+    payments: 'M560-440q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35ZM280-320q-33 0-56.5-23.5T200-400v-320q0-33 23.5-56.5T280-800h560q33 0 56.5 23.5T920-720v320q0 33-23.5 56.5T840-320H280Zm80-80h400q0-33 23.5-56.5T840-480v-160q-33 0-56.5-23.5T760-720H360q0 33-23.5 56.5T280-640v160q33 0 56.5 23.5T360-400Zm440 240H120q-33 0-56.5-23.5T40-240v-440h80v440h680v80ZM280-400v-320 320Z',
     wallet: 'M200-200v-560 560Zm0 80q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v100h-80v-100H200v560h560v-100h80v100q0 33-23.5 56.5T760-120H200Zm320-160q-33 0-56.5-23.5T440-360v-240q0-33 23.5-56.5T520-680h280q33 0 56.5 23.5T880-600v240q0 33-23.5 56.5T800-280H520Zm280-80v-240H520v240h280Zm-117.5-77.5Q700-455 700-480t-17.5-42.5Q665-540 640-540t-42.5 17.5Q580-505 580-480t17.5 42.5Q615-420 640-420t42.5-17.5Z',
     call: 'M798-120q-125 0-247-54.5T329-329Q229-429 174.5-551T120-798q0-18 12-30t30-12h162q14 0 25 9.5t13 22.5l26 140q2 16-1 27t-11 19l-97 98q20 37 47.5 71.5T387-386q31 31 65 57.5t72 48.5l94-94q9-9 23.5-13.5T670-390l138 28q14 4 23 14.5t9 23.5v162q0 18-12 30t-30 12ZM241-600l66-66-17-94h-89q5 41 14 81t26 79Zm358 358q39 17 79.5 27t81.5 13v-88l-94-19-67 67ZM241-600Zm358 358Z',
     done: 'm382-354 339-339q12-12 28-12t28 12q12 12 12 28.5T777-636L410-268q-12 12-28 12t-28-12L182-440q-12-12-11.5-28.5T183-497q12-12 28.5-12t28.5 12l142 143Z',
@@ -90,14 +91,14 @@
       payment: LX(g, 'Paiement', 'Payment', 'أداء'), return: LX(g, 'Retour', 'Return', 'إرجاع'),
       expense: LX(g, 'Dépense', 'Expense', 'مصروف'), 'expense-payment': LX(g, 'Réglé à la dépense', 'Paid with the expense', 'تخلّص مع المصروف'),
       opening: LX(g, "Dette d'avant Kiwi", 'Balance before Kiwi', 'دين قبل Kiwi'), manual: LX(g, 'Mouvement', 'Entry', 'حركة'),
-      adjustment: LX(g, 'Ajustement', 'Adjustment', 'تسوية'),
+      adjustment: LX(g, 'Ajustement', 'Adjustment', 'تسوية'), 'cheque-rejected': LX(g, 'Chèque revenu impayé', 'Cheque bounced', 'شيك رجع بلا رصيد'),
     }[k] || k);
   };
   /* Le libellé d'une ligne : son genre, son bon ou sa référence, son moyen. */
   const lineLabel = (l, lg) => [kindLabel(l.kind, lg), l.poNumber || l.ref || '', l.kind === 'payment' && l.method && l.method !== 'other' ? methodLabel(l.method, lg) : ''].filter(Boolean).join(' · ');
   /* Vu du fournisseur (relevé qu'on lui envoie) : livré / payé / repris. */
   const theirSide = (l, lg) => (l.direction === 'in'
-    ? (l.kind === 'opening' ? LX(lg, 'Solde d\'avant', 'Earlier balance', 'رصيد سابق') : LX(lg, 'Livré par vous', 'Delivered by you', 'سلّمتوه لينا'))
+    ? (l.kind === 'opening' ? LX(lg, 'Solde d\'avant', 'Earlier balance', 'رصيد سابق') : l.kind === 'cheque-rejected' ? LX(lg, 'Notre chèque revenu impayé', 'Our cheque bounced', 'الشيك ديالنا رجع بلا رصيد') : LX(lg, 'Livré par vous', 'Delivered by you', 'سلّمتوه لينا'))
     : l.kind === 'return' ? LX(lg, 'Rendu chez vous', 'Returned to you', 'رجّعناه ليكم') : LX(lg, 'Payé par nous', 'Paid by us', 'خلّصناكم'));
   const AGE = () => [['0-30', L('0 à 30 j', '0 to 30 d', '0 إلى 30 يوم')], ['31-60', L('31 à 60 j', '31 to 60 d', '31 إلى 60 يوم')], ['61-90', L('61 à 90 j', '61 to 90 d', '61 إلى 90 يوم')], ['90+', L('plus de 90 j', 'over 90 d', 'أكثر من 90 يوم')]];
   const daysTxt = (n) => L(pl(n, `${n} jour`, `${n} jours`), pl(n, `${n} day`, `${n} days`), arPl(n, 'يوم واحد', 'جوج أيام', `${n} أيام`, `${n} يوم`));
@@ -380,6 +381,7 @@
     return `<div class="sp-bar">
         <label class="sp-search">${icon('search')}<input type="search" data-sp-q value="${esc(S.q)}" placeholder="${esc(L('Chercher un fournisseur, un téléphone, un ICE', 'Search a supplier, phone or ICE', 'قلّب على مورد، تيليفون ولا ICE'))}" aria-label="${esc(L('Chercher', 'Search', 'بحث'))}"></label>
         <div class="sp-pills" data-lens-demo role="group" aria-label="${esc(L('Trier', 'Sort', 'ترتيب'))}">${pill('owe', L('Je dois le plus', 'I owe most', 'اللي عليا ليه كثر'))}${pill('late', L('En retard', 'Overdue', 'متأخر'))}${pill('recent', L('Récents', 'Recent', 'الأحدث'))}${pill('name', L('Nom', 'Name', 'الاسم'))}</div>
+        <button type="button" class="kb ghost sp-btn" data-action="nav-cheques">${icon('payments')}${esc(L('Chèques et effets', 'Cheques and bills', 'الشيكات والكمبيالات'))}</button>
         <button type="button" class="kb ghost sp-btn" data-action="sup-cashbook">${icon('wallet')}${esc(L('Livre de caisse', 'Cash book', 'دفتر الصندوق'))}</button>
         <button type="button" class="kb atlas sp-btn" data-action="sup-new">${icon('add')}${esc(L('Nouveau fournisseur', 'New supplier', 'مورد جديد'))}</button>
       </div>
