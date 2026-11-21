@@ -161,6 +161,8 @@
       apply.disabled = !rows.length;
       apply.textContent = rows.length ? plural(rows.length, L('Appliquer et enregistrer {n} prix', 'Apply and save {n} price', 'طبّق وسجّل {n} ثمن'), L('Appliquer et enregistrer {n} prix', 'Apply and save {n} prices', 'طبّق وسجّل {n} أثمنة')) : L('Appliquer', 'Apply', 'طبّق');
       q('[data-quick]').hidden = !st.op.startsWith('pct');
+      /* A typed price is kept as typed: rounding and ending do not apply to it. */
+      q('[data-step]').disabled = q('[data-mode]').disabled = st.op === 'set';
     }
     function paintSegs() {
       el.querySelectorAll('[data-seg]').forEach((g) => g.querySelectorAll('[data-k]').forEach((x) => {

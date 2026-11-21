@@ -455,6 +455,39 @@ eq('a carte has no barcode column', r.body.error, 'unknown-field');
 r = await post({ kind: 'boutique', merchant: 'cafe-riad', rows: [{ id: 'it1', set: { price: 1 } }] }, cafe);
 eq('a restaurant has no boutique catalogue to patch', r.status, 409);
 
+/* ── « Fixer à … MAD » is the typed price, never rounded or given an ending ─ */
+{
+  const cafe4 = [{ id: 'e', price: 4 }, { id: 't', price: 15 }, { id: 'j', price: 70 }, { id: 'n', price: 19 }];
+  for (const [ending, step, mode] of [['9', 0, 'nearest'], ['90', 0, 'up'], ['99', 0, 'down'], ['', 5, 'up'], ['', 10, 'down']]) {
+    const out = B.reprice(cafe4, { basis: 'price', op: 'set', value: 12, step, ending, mode });
+    eq(`set to 12 MAD with ${ending ? 'ending ' + ending : 'step ' + step} ${mode}: every row is 12,00, none flagged`, out.rows.map((r) => [r.id, r.next, r.flag]), [['e', 12, ''], ['t', 12, ''], ['j', 12, ''], ['n', 12, '']]);
+  }
+  eq('set to 12,35 keeps its centimes', B.repriceOne({ price: 4 }, { basis: 'price', op: 'set', value: 12.35, step: 1, ending: '9', mode: 'up' }).next, 12.35);
+}
+
+/* ── « Revoir les prix » does not drop the warning ───────────────────────── */
+{
+  /* The re-price flagged Eau (4 → 4,90, over-rounded) and Tajine (under cost);
+     the merchant chose « Revoir » and later presses a plain « Enregistrer ». */
+  const rows = [{ id: 'e', price: 4, cost: 0 }, { id: 't', price: 15, cost: 0 }, { id: 'j', price: 70, cost: 80 }];
+  const held = new Map([
+    ['e', { id: 'e', code: 'over-rounded', old: 4, next: 4.9, requested: 0.2 }],
+    ['j', { id: 'j', code: 'below-cost', old: 70, next: 73.9, cost: 80 }],
+  ]);
+  const plain = [{ id: 'e', set: { price: 4.9 } }, { id: 't', set: { price: 15.9 } }, { id: 'j', set: { price: 73.9 } }];
+  const all = B.riskyChanges(plain, rows).concat(B.heldRisky(plain, rows, held));
+  eq('plain save after « Revoir »: the over-rounded row is asked about again, the under-cost row once', all.map((x) => x.id + ':' + x.code).sort(), ['e:over-rounded', 'j:below-cost']);
+  eq('a cell typed over since the re-price is judged as a normal edit', B.heldRisky([{ id: 'e', set: { price: '5' } }], rows, held), []);
+  eq('a price typed with a comma still matches what the rounding gave', B.heldRisky([{ id: 'e', set: { price: '4,90' } }], rows, held).map((x) => x.code), ['over-rounded']);
+  eq('nothing held, nothing added', B.heldRisky(plain, rows, null), []);
+  /* The page wires it: the declined re-price save keeps the map and flags the
+     cells, the plain save adds heldRisky, a successful save forgets it. */
+  const page = fs.readFileSync(path.join(ROOT, 'assets/pages-pro/catalog-bulk/page.js'), 'utf8');
+  ok('page: a plain save adds the held re-price warnings', /riskyChanges\(c\.patches, S\.data\.rows\)\.concat\(stillRisky\(c\.patches\)\)/.test(page));
+  ok('page: « Revoir » flags the re-priced cells', /S\.repriceRisky\.forEach\(\(x\) => \{ flags\[x\.id\] = \{ price: why\(x\) \}; \}\)/.test(page));
+  ok('page: a successful save forgets them', /if \(res\.ok\) \{\s*S\.repriceRisky = null;/.test(page));
+}
+
 /* ── the old importer takes the export's apostrophe off too ───────────── */
 {
   const win = {}; const box = { window: win, document: { addEventListener() {}, querySelector: () => null, createElement: () => ({ style: {} }) }, console, setTimeout, clearTimeout };

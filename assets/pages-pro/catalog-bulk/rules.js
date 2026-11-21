@@ -128,12 +128,14 @@
       raw = op === 'amt' ? b + cents(v) : Math.round(b * (100 + v) / 100);
     }
     if (!(raw > 0)) return { old, next: old, skip: 'zero' };
-    let ending = ENDINGS[rule && rule.ending] ? rule.ending : '';
+    /* « Fixer à 12 MAD » means 12,00: no ending, no shelf step on a typed price. */
+    const fixed = op === 'set';
+    let ending = !fixed && ENDINGS[rule && rule.ending] ? rule.ending : '';
     if (ending && raw < ENDINGS[ending].unit) {
       ending = raw >= ENDINGS['90'].unit ? '90' : '';
       if (!ending) return { old, next: old, skip: 'too-small' };
     }
-    const r = Object.assign({}, rule, { ending });
+    const r = Object.assign({}, rule, { ending }, fixed ? { step: 0 } : {});
     const oc = cents(old);
     const dir = Math.sign(raw - oc);
     const mode = (rule && rule.mode) || 'nearest';
@@ -191,6 +193,22 @@
       else if (cost > 0 && cents(next) <= cents(cost)) out.push({ id: p.id, code: 'below-cost', old, next, cost });
     });
     return out;
+  }
+
+  /* The re-price warnings a merchant sent back with « Revoir les prix »
+     (held: id → warning) still apply to a plain save, for every cell that
+     still holds the price the rounding gave it. A cell typed over since is
+     judged like any other edit, and one riskyChanges already names is not
+     named twice. */
+  function heldRisky(patches, rows, held) {
+    if (!held || !held.size) return [];
+    const seen = new Set(riskyChanges(patches, rows).map((x) => x.id));
+    return (patches || []).filter((p) => {
+      const x = held.get(p.id);
+      if (!x || seen.has(p.id) || !p.set || !('price' in p.set)) return false;
+      const v = parseNumber(p.set.price);
+      return typeof v === 'number' && Number.isFinite(v) && cents(v) === cents(x.next);
+    }).map((p) => held.get(p.id));
   }
 
   /* Gross margin on the selling price, in percent, one decimal. */
@@ -476,7 +494,7 @@
 
   const api = {
     LIMITS, FIELDS, MAX_ROWS,
-    parseNumber, parseBool, roundTo, endTo, ENDINGS, LOW_MARGIN, centsExact, repriceOne, reprice, riskyChanges, margin, sameValue, diff, checkValue,
+    parseNumber, parseBool, roundTo, endTo, ENDINGS, LOW_MARGIN, centsExact, repriceOne, reprice, riskyChanges, heldRisky, margin, sameValue, diff, checkValue,
     parseTsv, toTsv, parseCsv, safeCell, restoreCell, safeCsv, normKey, mapHeader, analyseImport, revalidate, checkDuplicates, countStatus,
   };
   root.KiwiBulkRules = api;

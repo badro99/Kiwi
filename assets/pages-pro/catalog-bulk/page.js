@@ -414,14 +414,14 @@
      about once before it leaves: « 1,234 » typed for 1 234 MAD is the usual
      cause. Undo skips it; the re-price (whose preview showed every row) only
      asks about the rows its rounding over-moved or put under cost. */
+  const sg = (n, d) => '\u2066' + (n > 0 ? '+' : '') + fmtNum(n, d) + '\u2069';
+  const why = (x) => (x.code === 'big-change' ? L('écart de ', 'change of ', 'فرق ديال ') + sg((x.next - x.old) / x.old * 100, 0) + ' %'
+    : x.code === 'over-rounded' ? L('arrondi : ', 'rounded: ', 'التقريب: ') + sg(x.next - x.old, 2) + L(' sur ', ' for ', ' على ') + sg(x.requested, 2) + L(' demandés', ' asked', ' مطلوبين')
+    : L('au prix d’achat ou dessous (', 'at or under cost (', 'فثمن الشراء ولا تحتو (') + fmtNum(x.cost, 2) + L(' MAD', ' MAD', ' درهم') + ')');
   async function confirmRisky(risky) {
     if (!risky.length) return true;
     const name = (id) => (S.grid.value(id, 'name') || '');
     const MAD = L(' MAD', ' MAD', ' درهم');
-    const sg = (n, d) => '\u2066' + (n > 0 ? '+' : '') + fmtNum(n, d) + '\u2069';
-    const why = (x) => (x.code === 'big-change' ? L('écart de ', 'change of ', 'فرق ديال ') + sg((x.next - x.old) / x.old * 100, 0) + ' %'
-      : x.code === 'over-rounded' ? L('arrondi : ', 'rounded: ', 'التقريب: ') + sg(x.next - x.old, 2) + L(' sur ', ' for ', ' على ') + sg(x.requested, 2) + L(' demandés', ' asked', ' مطلوبين')
-      : L('au prix d’achat ou dessous (', 'at or under cost (', 'فثمن الشراء ولا تحتو (') + fmtNum(x.cost, 2) + MAD + ')');
     const list = risky.slice(0, 50).map((x) => `<li><span>${esc(name(x.id))}<br><span class="why">${esc(why(x))}</span></span><span class="n">${esc('\u2066' + fmtNum(x.old, 2) + ' → ' + fmtNum(x.next, 2) + '\u2069' + MAD)}</span></li>`).join('');
     return ask({
       title: plural(risky.length, L('{n} prix à vérifier', '{n} price to check', '{n} ثمن خاص تشوفو'), L('{n} prix à vérifier', '{n} prices to check', '{n} أثمنة خاص تشوفهم')),
@@ -434,6 +434,9 @@
   /* ── save ─────────────────────────────────────────────────────────────── */
   /* opts: { patches, lists } to send a given set (the undo), { isUndo },
      { reviewed } when the merchant has just seen every new value (re-price). */
+  /* A re-price row the merchant sent back to review is still asked about at
+     save, as long as its cell still holds the price the rounding gave it. */
+  const stillRisky = (patches) => R().heldRisky(patches, S.data.rows, S.repriceRisky);
   async function save(opts) {
     opts = opts || {};
     if (!S || S.busy) return false;
@@ -446,12 +449,23 @@
       return false;
     }
     if (!c.patches.length && !c.lists.length) return false;
-    const risky = opts.isUndo ? [] : opts.reviewed ? (opts.risky || []) : R().riskyChanges(c.patches, S.data.rows);
-    if (risky.length && !(await confirmRisky(risky))) { S.grid.focus(); return false; }
+    if (opts.reviewed) S.repriceRisky = new Map((opts.risky || []).map((x) => [x.id, x]));
+    const risky = opts.isUndo ? [] : opts.reviewed ? (opts.risky || []) : R().riskyChanges(c.patches, S.data.rows).concat(stillRisky(c.patches));
+    if (risky.length && !(await confirmRisky(risky))) {
+      /* « Revoir les prix » leaves the re-priced cells in the sheet: they keep
+         their warning, on the cell and for the next plain « Enregistrer ». */
+      if (opts.reviewed && S.repriceRisky.size) {
+        const flags = Object.create(null);
+        S.repriceRisky.forEach((x) => { flags[x.id] = { price: why(x) }; });
+        S.grid.setFlags(flags);
+      }
+      S.grid.focus(); return false;
+    }
     S.busy = true; status();
     const res = await window.KiwiBulkSource.save(S.kind, c.patches, c.lists.map(({ listId, itemId, price }) => ({ listId, itemId, price })));
     S.busy = false;
     if (res.ok) {
+      S.repriceRisky = null;
       /* The undo record holds both halves of the save: catalogue rows and
          price-list cells, each with the value it replaced. */
       const listsSaved = c.lists.length && !res.listsFailed ? c.lists : [];
