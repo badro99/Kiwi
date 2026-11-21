@@ -291,20 +291,27 @@ console.log('■ Un gérant ne se fait pas propriétaire');
   /* La même table des intitulés pour la publication et pour les droits. */
   const { accountOwnerRole } = await imp('functions/api/_staff-publication.js');
   const variants = ['Propriétaire', 'proprietaire', '  OWNER ', 'Patronne', 'PATRON', 'Direction', 'Manager-Owner', 'propriétaire ', 'Gérant', 'Manager', 'Caissière', 'Directeur', 'Responsable'];
-  check(variants.every((v) => accountOwnerRole(v) === Catalog.ownerTitle(v)), 'publication et droits disent la même chose de chaque intitulé : ' + variants.map((v) => v.trim() + '=' + Catalog.ownerTitle(v)).join(' '));
+  const auth = await imp('functions/auth/_lib.js');
+  check(variants.every((v) => accountOwnerRole(v) === Catalog.reservedTitle(v)), 'publication et filtre : la même table des intitulés réservés au patron');
+  check(variants.every((v) => Catalog.ownerTitle(v) === (auth.faceAccessTier(v) === 'owner') && (!Catalog.ownerTitle(v) || auth.employeeRoleOpensDashboard(v))),
+    'UNE liste d’intitulés propriétaire : accès complet aux droits = palier du patron au tableau de bord : ' + variants.map((v) => v.trim() + '=' + Catalog.ownerTitle(v)).join(' '));
+  check(Catalog.reservedTitle('Patronne') && !Catalog.ownerTitle('Patronne') && Catalog.presetForRole('Patronne') === 'manager',
+    '« Patronne » : réservé au patron (personne d’autre ne le pose), mais n’ouvre que le rôle Manager, comme au tableau de bord');
   for (const role of ['Propriétaire', 'Patronne', '  OWNER ']) {
     const r = await config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie: cookieManager,
       body: { merchant: SHOP, name: 'Café Droits', pins: [{ name: 'Xavier Test', role, pin: '7741' }, { name: 'Lina Saidi', role: 'Caissière', pin: CODES.caisse }] } }) });
     check(r.status === 403 && (await r.json()).error === 'owner-title', `Sara publie « Xavier Test · ${role.trim()} » : 403`);
   }
   check(!w.sql.prepare("SELECT 1 FROM staff_pins WHERE merchant = ? AND name = 'Xavier Test'").get(SHOP), 'aucun de ces codes n’existe');
-  /* La page Équipe d'un gérant republie la patronne telle quelle : admis, inchangé. */
-  const same = await config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie: cookieManager,
-    body: { merchant: SHOP, name: 'Café Droits', pins: [{ name: 'Nadia Patron', role: 'Propriétaire', pin: CODES.owner }, { name: 'Lina Saidi', role: 'Caissière', pin: CODES.caisse }] } }) });
-  check(same.status === 200 && (await (await pinVerify(w, CODES.owner, {})).json()).staff.role === 'Propriétaire', 'la ligne propriétaire republiée telle quelle par un gérant passe, inchangée');
-  const recode = await config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie: cookieManager,
-    body: { merchant: SHOP, name: 'Café Droits', pins: [{ name: 'Nadia Patron', role: 'Propriétaire', pin: '7749' }, { name: 'Lina Saidi', role: 'Caissière', pin: CODES.caisse }] } }) });
-  check(recode.status === 403, 'mais recoder la patronne : 403');
+  /* L'oracle fermé : la ligne de la patronne renvoyée par un gérant, avec le BON code ou
+     un FAUX, reçoit exactement la même réponse ; son code n'est jamais lu, la ligne en base ne bouge pas. */
+  const asOwnerRow = (pin) => config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie: cookieManager,
+    body: { merchant: SHOP, name: 'Café Droits', pins: [{ name: 'Nadia Patron', role: 'Propriétaire', pin }, { name: 'Lina Saidi', role: 'Caissière', pin: CODES.caisse }] } }) });
+  const right = await asOwnerRow(CODES.owner), wrong = await asOwnerRow('7749');
+  const [rb, wb] = [await right.text(), await wrong.text()];
+  check(right.status === wrong.status && rb === wb, `bon code et faux code : même statut (${right.status}), même corps, rien à deviner`);
+  check((await (await pinVerify(w, CODES.owner, {})).json()).staff.role === 'Propriétaire' && !(await (await pinVerify(w, '7749', {})).json()).ok,
+    'le code de la patronne n’a pas bougé, et le faux n’existe pas');
 }
 
 /* ── 6 · Au comptoir : approbations ─────────────────────────────────────── */
@@ -619,10 +626,11 @@ console.log('■ Code changé : retenue, journal, revue');
   const r = await publish(base('7761'));
   const lina = await person(w, 'm-lina');
   const st = await state(w);
-  /* (La republication donne de nouveaux identifiants aux codes : la session de Sara n'a plus de nom à dire, elle reste « une session ».) */
-  check(r.status === 200 && lina.held === true && lina.perms.length === 0 && lina.heldBy.kind === 'session',
-    'Sara change le code de Lina : Lina est retenue, par une session qui n’est pas le patron : ' + JSON.stringify(lina.heldBy));
-  check(st.audit.some((a) => a.change.kind === 'code-changed' && a.subject === 'staff:m-lina' && a.actor.kind === 'session'), 'le journal dit « code changé », et par quel genre d’auteur');
+  /* Sara a republié son propre code tel quel : il garde son identifiant, sa session garde son nom. */
+  check(w.sql.prepare("SELECT id FROM staff_pins WHERE merchant = ? AND name = 'Sara Alaoui'").get(SHOP).id === 'pin-sara', 'un code republié tel quel garde son identifiant');
+  check(r.status === 200 && lina.held === true && lina.perms.length === 0 && lina.heldBy.kind === 'session' && lina.heldBy.name === 'Sara Alaoui' && lina.heldBy.reason === 'code',
+    'Sara change le code de Lina : Lina est retenue, « code changé par Sara Alaoui », même après deux publications : ' + JSON.stringify(lina.heldBy));
+  check(st.audit.some((a) => a.change.kind === 'code-changed' && a.subject === 'staff:m-lina' && a.actor.name === 'Sara Alaoui'), 'le journal dit « code changé », par Sara');
   check(st.heldCount === 1, 'l’écran compte une personne à revoir');
   const refund = { kind: 'refund', refundId: 'rf-c', originalSaleId: 'sale-1', amountCents: 1000, refundMethod: 'cash' };
   check(!(await (await pinVerify(w, '7761', refund)).json()).approval, 'et le nouveau code ne porte aucun droit avant la revue');

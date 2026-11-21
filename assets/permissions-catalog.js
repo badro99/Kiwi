@@ -165,10 +165,19 @@
     try { s = s.normalize('NFD').replace(/[̀-ͯ]/g, ''); } catch (_) {}
     return s.replace(/[’`´]/g, "'").replace(/\s+/g, ' ').slice(0, 60);
   }
-  /* Les intitulés de propriétaire : ils n'ouvrent rien de plus qu'un Manager
-     ici, et seul le propriétaire peut les poser (functions/api/_permissions.js
-     › teamEditRefusal, functions/api/config.js). */
-  var OWNER_TITLES = { proprietaire: 1, owner: 1, patron: 1, patronne: 1, direction: 1, proprietary: 1, 'manager-owner': 1 };
+  /* LA liste des intitulés de propriétaire, une seule pour tout Kiwi : un code
+     qui la porte ouvre le tableau de bord au palier du patron
+     (functions/auth/_lib.js › faceAccessTier, employeeRoleOpensDashboard la
+     lisent ici) et a donc tous les droits (accès propriétaire complet). */
+  var OWNER_TITLE_LIST = ['proprietaire', 'owner', 'patron', 'direction'];
+  var OWNER_TITLES = {};
+  OWNER_TITLE_LIST.forEach(function (t) { OWNER_TITLES[t] = 1; });
+  /* Les intitulés RÉSERVÉS au propriétaire : les siens, plus ceux qui leur
+     ressemblent. Seul le propriétaire peut les poser (functions/api/_permissions.js
+     › teamEditRefusal, codeHolds ; functions/api/config.js). Un intitulé
+     réservé qui n'est pas dans la liste ci-dessus n'ouvre rien de plus qu'un Manager. */
+  var RESERVED_TITLES = { patronne: 1, proprietary: 1, 'manager-owner': 1 };
+  OWNER_TITLE_LIST.forEach(function (t) { RESERVED_TITLES[t] = 1; });
   var MANAGER_ROLES = { manager: 1, management: 1, gerant: 1, gerante: 1, admin: 1, administrateur: 1,
     responsable: 1, superviseur: 1, superviseuse: 1, directeur: 1, directrice: 1 };
   var STOCK_ROLES = { stock: 1, magasinier: 1, magasiniere: 1, econome: 1, economat: 1, 'gestionnaire de stock': 1, 'responsable stock': 1 };
@@ -180,11 +189,12 @@
   var SERVER_WORDS = { serveur: 1, serveuse: 1, server: 1, service: 1, salle: 1, kitchen: 1, cuisinier: 1, employee: 1, employe: 1 };
 
   function ownerTitle(role) { return !!OWNER_TITLES[normRole(role)]; }
+  function reservedTitle(role) { return !!RESERVED_TITLES[normRole(role)]; }
   /* Le rôle par défaut proposé pour un intitulé de poste libre. Jamais
      « propriétaire » : un titre ne prouve rien. */
   function presetForRole(role) {
     var r = normRole(role);
-    if (OWNER_TITLES[r] || MANAGER_ROLES[r] || /(?:^|[- ])manager$/.test(r)) return 'manager';
+    if (RESERVED_TITLES[r] || MANAGER_ROLES[r] || /(?:^|[- ])manager$/.test(r)) return 'manager';
     if (STOCK_ROLES[r]) return 'stock';
     if (TILL_ROLES[r]) return 'cashier';
     return 'server';
@@ -337,7 +347,7 @@
     GROUPS: GROUPS, ALL: ALL, BY_ID: BY_ID, PRESET_IDS: PRESET_IDS, PRESET_LABEL: PRESET_LABEL, ACCOUNT_OWNER: ACCOUNT_OWNER,
     DEFAULT_PRESETS: DEFAULT_PRESETS, DEFAULT_FREE_DISCOUNT_PCT: DEFAULT_FREE_DISCOUNT_PCT, ACTION_PERM: ACTION_PERM,
     TILL_APPROVED: TILL_APPROVED, VIEWS: VIEWS,
-    normRole: normRole, ownerTitle: ownerTitle, presetForRole: presetForRole, cleanList: cleanList, presetPerms: presetPerms,
+    OWNER_TITLE_LIST: OWNER_TITLE_LIST.slice(), normRole: normRole, ownerTitle: ownerTitle, reservedTitle: reservedTitle, presetForRole: presetForRole, cleanList: cleanList, presetPerms: presetPerms,
     effective: effective, overridesFor: overridesFor, label: label, checkLabel: checkLabel, summary: summary,
     legacyRule: legacyRule, fromLegacy: fromLegacy,
   };

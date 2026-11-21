@@ -68,12 +68,20 @@ const sharedGuard = "  const sharedCode = sharedCodeHolders(body.pins);\n"
   + "  if (sharedCode.length) return json({ error: 'duplicate-staff-code', members: sharedCode }, 409);\n";
 const moved = mod.slice(fnAt + head.length, mod.length - tail.length);
 ok(moved.split(sharedGuard).length === 2, 'the shared-code refusal sits once in the publish function');
-const inner = moved.replace(sharedGuard, '');
+/* A deliberate change (21 Nov, team permissions): an unchanged code keeps its
+ * id across a publication, so a dashboard session opened with it keeps its name.
+ * One call before the batch and the id expression are set aside;
+ * staff-permissions-test runs it. */
+const keepCall = "  await keepUnchangedIds(env, merchant, clean);\n";
+const keepBindNow = ".bind(p.keepId || 'pin-' + crypto.randomUUID(), merchant,";
+const keepBindThen = ".bind('pin-' + crypto.randomUUID(), merchant,";
+ok(moved.split(keepCall).length === 2 && moved.split(keepBindNow).length === 2 && mod.includes('async function keepUnchangedIds(env, merchant, clean) {'), 'unchanged codes keep their id, once');
+const inner = moved.replace(sharedGuard, '').replace(keepCall, '').replace(keepBindNow, keepBindThen);
 /* A deliberate change since the move (21 Nov): accountOwnerRole reads the one
  * shared table of owner titles (assets/permissions-catalog.js), so publish,
  * route filter and permission evaluator agree. The rebuild puts the old body
  * back; staff-permissions-test holds the agreement on a table of variants. */
-const ownerRoleNow = "function accountOwnerRole(value) {\n  return Catalog.ownerTitle(value);   // une seule table des intitulés propriétaire : publication, filtre et droits (assets/permissions-catalog.js)\n}\n";
+const ownerRoleNow = "function accountOwnerRole(value) {\n  return Catalog.reservedTitle(value);   // les intitulés réservés au patron, une seule table pour publication, filtre et droits (assets/permissions-catalog.js)\n}\n";
 const ownerRoleThen = "function accountOwnerRole(value) {\n  let role = String(value || '').trim().toLowerCase();\n"
   + "  try { role = role.normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''); } catch (_) {}\n"
   + "  return new Set(['owner', 'proprietaire', 'direction', 'patron']).has(role);\n}\n";

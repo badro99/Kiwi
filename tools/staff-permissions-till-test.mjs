@@ -124,6 +124,19 @@ console.log('■ staff-perms-till.js › le pavé connaît le droit de l’acte'
   check(self && !self.done && self.authContext.kind === 'drawer' && self.opts.validate({ name: 'Lina Saidi' }) === null,
     'Lina a le droit au tiroir : le pavé lui demande SON code (la preuve du geste), pas celui d’un responsable');
   check(self.opts.hint === 'Confirmez avec votre code : ce geste est inscrit à votre nom.', 'et lui dit pourquoi');
+  /* Hors ligne : espèces et clôture ne bloquent pas la caisse, le journal les inscrira au retour. */
+  let online = true;
+  ctx.navigator = { get onLine() { return online; } };
+  online = false;
+  let offWho = null;
+  const offClose = forAct({ kind: 'close_till' }, 'manager', (who) => { offWho = who; }, null, {});
+  const offCash = forAct({ kind: 'cash_out', amountCents: 2000, move: 'out' }, 'till', () => {}, null, {});
+  const offDisc = forAct({ kind: 'discount', pct: 30 }, 'manager', () => {}, null, {});
+  check(offClose && offClose.done && offClose.offline && offWho.name === 'Lina Saidi' && offCash && offCash.done && !P.permsProofs().actProof,
+    'hors ligne : Lina clôture et sort des espèces sans pavé, sans preuve de geste (le journal du patron les inscrira à la synchro)');
+  check(offDisc && !offDisc.done, 'hors ligne, la remise au-delà du seuil garde le pavé');
+  online = true;
+  ctx.navigator = undefined;
   const refund = forAct({ kind: 'refund' }, 'manager', () => { throw new Error('jamais sans pavé'); }, { kind: 'refund', refundId: 'r' }, {});
   check(refund && !refund.done && refund.authContext.kind === 'refund', 'un remboursement passe toujours par le pavé (preuve signée liée à la commande)');
   store.set('kiwiPerms:v1:droits-fixture', JSON.stringify({ ...doc, configured: false }));

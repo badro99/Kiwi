@@ -36,6 +36,13 @@
      juge (espèces, tiroir, clôture, remise : seule la preuve du GESTE couvre,
      functions/api/_permissions.js › flagUnauthorized). Elle tape alors SON code. */
   var SELF_SERVE = { 'sales.void-sent': 1 };
+  /* Hors ligne, le serveur ne peut signer aucune preuve : espèces et clôture ne
+     bloquent jamais la caisse (CLAUDE.md §2, fail-soft). La personne en poste
+     fait le geste ; au retour du réseau le fait part avec sa preuve de poste et
+     le journal du patron l'inscrit (« sans code », ou « sans le droit » si elle
+     ne l'a pas). Remise et tiroir sans vente gardent le pavé : ils attendent. */
+  var OFFLINE_SELF = { 'money.cash': 1, 'money.close-day': 1 };
+  function offline() { try { return window.navigator && window.navigator.onLine === false; } catch (_) { return false; } }
   /* Arabe : darija, comme le catalogue (assets/permissions-catalog.js › can). */
   var LABEL = {
     'money.cash': ['sortir ou entrer des espèces', 'move cash in or out', 'يدخّل ولا يخرّج الفلوس من الكاشة'],
@@ -155,6 +162,12 @@
     var perm = act ? ACT_PERM[String(act.kind || '')] || '' : '';
     var doc = read();
     if (!perm || !doc || !doc.configured) return null;
+    if (OFFLINE_SELF[perm] && offline() && typeof onApprove === 'function') {
+      var o0 = window.KiwiStaff || {};
+      lastApproval = { proof: '', at: Date.now() };
+      onApprove({ id: o0.id, name: o0.name, role: o0.role, viaPermission: perm, offline: true });
+      return { done: true, offline: true };
+    }
     if (access !== 'till' && SELF_SERVE[perm] && can(perm) === true && typeof onApprove === 'function') {
       var s = window.KiwiStaff || {};
       lastApproval = { proof: '', at: Date.now() };   // la personne en poste : sa sellerProof suffit

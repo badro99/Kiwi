@@ -26,10 +26,27 @@ const VALID_PIN = /^\d{4}$/;
 const MAX_ROSTER = 200;
 
 function accountOwnerRole(value) {
-  return Catalog.ownerTitle(value);   // une seule table des intitulés propriétaire : publication, filtre et droits (assets/permissions-catalog.js)
+  return Catalog.reservedTitle(value);   // les intitulés réservés au patron, une seule table pour publication, filtre et droits (assets/permissions-catalog.js)
 }
 
 export { accountOwnerRole };
+
+/* Un code republié tel quel (même nom, même intitulé, même code) garde son
+ * identifiant : une session de tableau de bord ouverte par ce code (session_tiers
+ * › staff_id) garde ainsi son nom après une publication de la page Équipe. La
+ * comparaison reste dans SQL, comme l'insertion ci-dessous : seul un
+ * identifiant remonte, jamais un code. Une base muette : un nouvel identifiant,
+ * comme avant. */
+async function keepUnchangedIds(env, merchant, clean) {
+  for (const p of clean) {
+    p.keepId = '';
+    try {
+      const prev = await env.DB.prepare('SELECT id FROM staff_pins WHERE merchant = ? AND name = ? AND role = ? AND pin IN ('
+        + p.candidates.map(() => '?').join(',') + ') LIMIT 1').bind(merchant, p.name, p.role, ...p.candidates).first();
+      if (prev && prev.id) p.keepId = String(prev.id);
+    } catch (_) { p.keepId = ''; }
+  }
+}
 
 /* Deux personnes, un même code : la boucle de publication gardait la première
  * et sautait la seconde sans un mot, puis la route répondait ok. La seconde
@@ -89,6 +106,7 @@ export async function publishStaffCredentials(env, merchant, body) {
     p.storedCode = await hashStaffCode(env, merchant, p.code);
     p.candidates = [...await pinHashes(env, merchant, p.code), p.code];
   }
+  await keepUnchangedIds(env, merchant, clean);
   const base = Date.now();
   let tillPins = clean.filter((p) => employeeRoleOpensTill(p.role));
   /* LE PATRON NE FIGURE PAS DANS LE ROSTER D'ÉQUIPE. La page Équipe
@@ -127,7 +145,7 @@ export async function publishStaffCredentials(env, merchant, body) {
       stmts.push(env.DB.prepare(
         'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) SELECT ?,?,?,?,?,? '
         + 'WHERE NOT EXISTS (SELECT 1 FROM staff_pins WHERE merchant = ? AND pin IN (' + p.candidates.map(() => '?').join(',') + '))'
-      ).bind('pin-' + crypto.randomUUID(), merchant, p.storedCode, p.name, p.role, base + i, merchant, ...p.candidates));
+      ).bind(p.keepId || 'pin-' + crypto.randomUUID(), merchant, p.storedCode, p.name, p.role, base + i, merchant, ...p.candidates));
     });
     /* Le code conservé du patron gagne : une ligne d'équipe qui porterait les
      * mêmes quatre chiffres créerait un doublon dont le rôle dépendrait de

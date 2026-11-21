@@ -166,7 +166,7 @@
   const names = (ids) => (ids || []).map(permLabel).join(', ');
   const presetsOf = () => (state.data && state.data.presets) || C().DEFAULT_PRESETS;
   const ro = () => !!(state.data && state.data.readOnly);
-  const btn = (action, argv, text, ghost, extra) => `<button type="button" class="kb${ghost ? ' ghost' : ''}" data-action="${action}"${argv != null ? ` data-arg="${esc(argv)}"` : ''}${extra || ''}>${esc(text)}</button>`;
+  const btn = (action, argv, text, ghost, extra) => `<button type="button" class="kb${ghost ? ' ghost' : ' primary'}" data-action="${action}"${argv != null ? ` data-arg="${esc(argv)}"` : ''}${extra || ''}>${esc(text)}</button>`;
   const changes = (added, removed) => [
     added && added.length ? `<span class="pm-plus">+ ${esc(names(added))}</span>` : '',
     removed && removed.length ? `<span class="pm-minus">− ${esc(names(removed))}</span>` : '',
@@ -186,9 +186,16 @@
     if (k === 'operator') return n ? L(`${n} · Kiwi`, `${n} · Kiwi`, `${n} · Kiwi`) : L('opérateur Kiwi', 'Kiwi operator', 'مسيّر Kiwi');
     return n || L('une session de l’équipe', 'a team session', 'جلسة ديال الفريق');
   };
-  const heldNote = (s) => L(`Ajouté, retitré ou recodé par ${actorText(s.heldBy)} : aucun droit tant que vous ne l’avez pas revu. « Revoir » lui rend ses droits, ou choisissez son rôle puis Enregistrer.`,
-    `Added, retitled or recoded by ${actorText(s.heldBy)}: no permissions until you review them. “Review” gives them back, or pick a role, then Save.`,
-    `زادو، بدّل ليه السمية ولا الكود (دارها ${actorText(s.heldBy)}): حتى حق حتى تراجعو نتا. «راجع» كترجّع ليه الحقوق ديالو، ولا ختار الدور ديالو ومن بعد سجّل.`);
+  /* Pourquoi la personne est retenue, et par qui : « code changé par Sara Alaoui ». */
+  const heldWhy = (s) => {
+    const by = actorText(s.heldBy), r = s.heldBy && s.heldBy.reason;
+    if (r === 'code') return L(`code changé par ${by}`, `code changed by ${by}`, `${by} بدّل ليه الكود`);
+    if (r === 'retitled') return L(`intitulé changé par ${by}`, `title changed by ${by}`, `${by} بدّل ليه السمية`);
+    return L(`ajouté par ${by}`, `added by ${by}`, `${by} زادو`);
+  };
+  const heldNote = (s) => L(`${heldWhy(s)[0].toUpperCase() + heldWhy(s).slice(1)} : aucun droit tant que vous ne l’avez pas revu. « Revoir » lui rend ses droits, ou choisissez son rôle puis Enregistrer.`,
+    `${heldWhy(s)[0].toUpperCase() + heldWhy(s).slice(1)}: no permissions until you review them. “Review” gives them back, or pick a role, then Save.`,
+    `${heldWhy(s)}: حتى حق حتى تراجعو نتا. «راجع» كترجّع ليه الحقوق ديالو، ولا ختار الدور ديالو ومن بعد سجّل.`);
   const personNote = (s) => s.ownerAccess ? `<p class="pm-note">${esc(ownerAccessNote())}</p>` : s.held ? `<p class="pm-note">${esc(heldNote(s))}</p>` : '';
   const cans = (ids) => ids.map((id) => C().BY_ID[id] && C().BY_ID[id].can[lang()]).filter(Boolean).join(', ');
 
@@ -304,7 +311,13 @@
       return `<div class="pm-card pm-alert">${head}<p class="pm-sum">${esc(L('Ajoutées, retitrées ou recodées par quelqu’un d’autre que vous : elles n’ont aucun droit en attendant.', 'Added, retitled or recoded by someone other than you: they have no permissions meanwhile.', 'زادهم، بدّل ليهم السمية ولا الكود شي واحد آخر من غيرك: ما عندهم حتى حق دابا.'))}</p>
         <div class="pm-line">${btn('pm-review-open', null, L('Revoir', 'Review', 'راجع'))}</div></div>`;
     }
-    const rows = held.map((s) => `<div class="pm-row"><span><strong>${esc(s.name)}</strong><span class="pm-muted">${esc((s.role || '') + ' · ' + L('par', 'by', 'دارها') + ' ' + actorText(s.heldBy))}</span><span class="pm-muted">${esc(C().summary(s.heldPerms || [], s.name, lang()))}</span></span></div>`).join('');
+    const rows = held.map((s) => {
+      /* Une ligne : le rôle, puis ce qui diffère de ce rôle (+ ajouts, − retraits). */
+      const base = C().presetPerms(s.preset, presetsOf()), got = s.heldPerms || [];
+      const d = diff(base, got);
+      const line = `${esc(L('Rôle', 'Role', 'الدور') + ' ' + presetLabel(s.preset))}${d.added.length || d.removed.length ? ' · ' + changes(d.added, d.removed) : ' · ' + esc(L('sans écart', 'no difference', 'بلا فرق'))}`;
+      return `<div class="pm-row"><span><strong>${esc(s.name)}</strong><span class="pm-muted">${esc((s.role || '') + ' · ' + heldWhy(s))}</span><span class="pm-muted">${line}</span><span class="pm-muted">${esc(C().summary(got, s.name, lang()))}</span></span></div>`;
+    }).join('');
     return `<div class="pm-card pm-alert">${head}<p class="pm-sum">${esc(L('Chacune retrouve les droits ci-dessous. Pour en changer, fermez et réglez la personne.', 'Each person gets the permissions below. To change them, close and set the person.', 'كل واحد كيرجع ليه الحقوق اللي لتحت. باش تبدّلها، سدّ وعدّل الشخص.'))}</p>
       <div class="pm-list">${rows}</div><div class="pm-line">${btn('pm-review', null, L('Confirmer la revue', 'Confirm the review', 'أكّد المراجعة'))}${btn('pm-review-open', 'close', L('Fermer', 'Close', 'سدّ'), true)}</div></div>`;
   }

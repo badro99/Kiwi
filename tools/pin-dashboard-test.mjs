@@ -48,7 +48,7 @@ const extract = (src, re, what) => {
 // ── 1. employeeRoleOpensDashboard — exécutée, avec sa normalisation ─────────
 const normSrc = extract(lib, /function normEmployeeRole\(value\) \{[\s\S]*?\n\}/, 'normEmployeeRole');
 const dashSrc = extract(lib, /export function employeeRoleOpensDashboard\(value\) \{[\s\S]*?\n\}/, 'employeeRoleOpensDashboard');
-const opensDash = new Function(normSrc + '\n' + dashSrc + '; return employeeRoleOpensDashboard;')();
+const opensDash = new Function('Catalog', normSrc + '\n' + dashSrc + '; return employeeRoleOpensDashboard;')(createRequire(import.meta.url)(path.join(ROOT, 'assets/permissions-catalog.js')));   // la liste partagée des intitulés de propriétaire
 ok(opensDash('Propriétaire') === true && opensDash('owner') === true && opensDash('PATRON') === true && opensDash('direction') === true, 'propriétaire / owner / patron / direction ouvrent le dashboard');
 ok(opensDash('Manager') === true && opensDash('gérant') === true && opensDash('management') === true && opensDash('admin') === true, 'manager / gérant / management / admin ouvrent le dashboard (vue restreinte)');
 ok(opensDash('Caissier') === false && opensDash('caissière') === false && opensDash('cashier') === false, 'un caissier n\'ouvre JAMAIS le dashboard');

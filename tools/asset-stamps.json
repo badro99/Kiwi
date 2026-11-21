@@ -1488,8 +1488,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2235",
-    "sha": "399457b18ba84684"
+    "v": "2236",
+    "sha": "a991f23925fdf529"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1516,8 +1516,8 @@
     "sha": "d527709a3bdeb87e"
   },
   "assets/pages-pro/staff-permissions.js": {
-    "v": "6",
-    "sha": "9d4de709d261c5c5"
+    "v": "7",
+    "sha": "788b764a0854590d"
   },
   "assets/pages.js": {
     "v": "14",
@@ -1528,8 +1528,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "275",
-    "sha": "f691ad43d4d691de"
+    "v": "276",
+    "sha": "d3a12f8a6d5bb248"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1552,8 +1552,8 @@
     "sha": "6de061c7ee12b006"
   },
   "assets/permissions-catalog.js": {
-    "v": "3",
-    "sha": "0e939b42ad7c2e6c"
+    "v": "4",
+    "sha": "a20709a432d0b704"
   },
   "assets/persistence-notices.js": {
     "v": "2",
@@ -2252,8 +2252,8 @@
     "sha": "b5ec8044f1b088eb"
   },
   "assets/staff-perms-till.js": {
-    "v": "9",
-    "sha": "76d20556dd78615e"
+    "v": "10",
+    "sha": "9a70d3523bd96e5d"
   },
   "assets/staff-roles.js": {
     "v": "3",

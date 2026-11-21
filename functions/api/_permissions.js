@@ -387,7 +387,7 @@ export async function teamEditRefusal(request, env, merchant, before, after) {
   for (const m of (Array.isArray(after && after.members) ? after.members : [])) {
     if (!m || typeof m !== 'object' || m.deleted) continue;
     const prev = old.get(String(m.id || ''));
-    const titled = memberTitles(m).filter((t) => Catalog.ownerTitle(t));
+    const titled = memberTitles(m).filter((t) => Catalog.reservedTitle(t));
     if (titled.some((t) => !prev || !memberTitles(prev).includes(t))) {
       return json({ error: 'owner-title-reserved', member: memberName(m),
         message: 'Seul le propriétaire peut donner un intitulé de propriétaire.' }, 403);
@@ -447,10 +447,16 @@ export function actorView(id, label) {
   const kind = String(id || '').split(':')[0];
   return { kind: ACTOR_KINDS.includes(kind) ? kind : 'session', name: String(label || '').slice(0, 80) };
 }
-const heldByOf = (actor) => (String(actor.id || '').split(':')[0] + ':' + String(actor.label || '')).slice(0, 80);
+/* held_by : « raison|genre:nom » (added | retitled | code), pour que l'écran dise
+   « code changé par Sara Alaoui » dans la langue de celui qui lit. */
+const HOLD_REASONS = ['added', 'retitled', 'code'];
+const heldByOf = (actor, reason) => ((HOLD_REASONS.includes(reason) ? reason : 'added') + '|' + String(actor.id || '').split(':')[0] + ':' + String(actor.label || '')).slice(0, 80);
 export function heldByView(text) {
-  const raw = String(text || ''), at = raw.indexOf(':');
-  return at < 0 ? { kind: 'session', name: raw } : actorView(raw.slice(0, at), raw.slice(at + 1));
+  let raw = String(text || ''), reason = 'added';
+  const bar = raw.indexOf('|');
+  if (bar > 0 && HOLD_REASONS.includes(raw.slice(0, bar))) { reason = raw.slice(0, bar); raw = raw.slice(bar + 1); }
+  const at = raw.indexOf(':');
+  return { ...(at < 0 ? { kind: 'session', name: raw } : actorView(raw.slice(0, at), raw.slice(at + 1))), reason };
 }
 
 /* ── LES IDENTITÉS NOUVELLES ─────────────────────────────────────────────────
@@ -461,7 +467,7 @@ export function heldByView(text) {
  * droits). Sans cela, un gérant privé de « Rembourser » se publierait un second
  * code « Sara Deux · Gérant ». Chaque changement d'Équipe va aussi au journal,
  * à côté des changements de droits. */
-function holdStmt(env, merchant, subject, actor, ts) {
+function holdStmt(env, merchant, subject, actor, ts, reason) {
   /* Une personne nouvelle part de son rôle, sans surcharge ; une personne qui
      a déjà ses droits les GARDE en réserve : la retenue ne les efface pas, la
      revue du propriétaire (« Revoir », ou un enregistrement) les rend tels quels. */
@@ -471,7 +477,7 @@ function holdStmt(env, merchant, subject, actor, ts) {
      VALUES (?, ?, ?, '[]', '[]', ?, ?, ?, ?, ?)
      ON CONFLICT(merchant, staff_key) DO UPDATE SET held_ts = excluded.held_ts, held_by = excluded.held_by`
   ).bind(merchant, String(subject.key).slice(0, 120), preset, String(subject.name || '').slice(0, 80),
-    ts, actor.id.slice(0, 120), ts, heldByOf(actor));
+    ts, actor.id.slice(0, 120), ts, heldByOf(actor, reason));
 }
 function journalStmt(env, merchant, actor, subject, label, change, ts) {
   return env.DB.prepare(
@@ -499,11 +505,11 @@ async function teamPlan(request, env, merchant, before, after) {
   const hold = state.configured && !actor.owner;
   const stmts = [], holds = [];
   for (const m of added) {
-    if (hold && !Catalog.ownerTitle(m.role)) holds.push(holdStmt(env, merchant, m, actor, ts));
+    if (hold && !Catalog.reservedTitle(m.role)) holds.push(holdStmt(env, merchant, m, actor, ts, 'added'));
     stmts.push(journalStmt(env, merchant, actor, 'staff:' + m.key, m.name, { kind: 'team-added', role: m.role, held: hold }, ts));
   }
   for (const m of retitled) {
-    if (hold && !Catalog.ownerTitle(m.role)) holds.push(holdStmt(env, merchant, m, actor, ts));
+    if (hold && !Catalog.reservedTitle(m.role)) holds.push(holdStmt(env, merchant, m, actor, ts, 'retitled'));
     stmts.push(journalStmt(env, merchant, actor, 'staff:' + m.key, m.name, { kind: 'team-retitled', from: old.get(m.key).role, role: m.role, held: hold }, ts));
   }
   for (const m of removed) stmts.push(journalStmt(env, merchant, actor, 'staff:' + m.key, m.name, { kind: 'team-removed', role: m.role }, ts));
@@ -530,28 +536,24 @@ export async function afterDocWrite(request, env) {
    Rend null, une Response de refus, ou la suite (journal) à appeler APRÈS. */
 export async function codeHolds(request, env, merchant, body, ownerTitled) {
   if (!env || !env.DB || !merchant || !Array.isArray(body && body.pins)) return null;
-  /* Sous le palier du patron, une ligne à intitulé de propriétaire (la table
-     partagée, Catalog.ownerTitle) n'est admise que si elle est INCHANGÉE (même
-     nom, même code, déjà propriétaire en base) : la page Équipe republie ses
-     collègues telles quelles. Neuve ou recodée : refusée, rien n'est écrit. */
-  const titled = [...(Array.isArray(ownerTitled) ? ownerTitled : []), ...body.pins.filter((p) => p && Catalog.ownerTitle(p.role))];
-  if (titled.length) {
-    if (!(await sessionTierAtLeast(request, env, 'owner'))) {
-      for (const p of titled.slice(0, 60)) {
-        const code = String(p.code || p.pin || '').trim();
-        let marks;
-        try { marks = [...await pinHashes(env, merchant, code), code]; } catch (_) { return json({ error: 'owner-title', name: String(p.name || '').slice(0, 60) }, 403); }
-        let rows;
-        try {
-          rows = (await env.DB.prepare('SELECT name, role FROM staff_pins WHERE merchant = ? AND pin IN (' + marks.map(() => '?').join(',') + ')')
-            .bind(merchant, ...marks).all()).results || [];
-        } catch (_) { return permissionUnavailable(); }
-        if (!rows.some((r) => nameKey(r.name) === nameKey(p.name) && Catalog.ownerTitle(r.role))) {
-          return json({ error: 'owner-title', name: String(p.name || '').slice(0, 60) }, 403);
-        }
-      }
-      body.pins = body.pins.filter((p) => !(p && Catalog.ownerTitle(p.role)));
-    }
+  /* Sous le palier du patron, une ligne à intitulé RÉSERVÉ au propriétaire
+     (Catalog.reservedTitle) : son CODE n'est jamais lu ni comparé, pour que la
+     réponse ne dise rien de lui (sinon un gérant devinerait le code du patron
+     en dix mille essais, hors des vérificateurs limités de functions/auth/_lib.js).
+     · le nom d'une ligne réservée déjà en base : la ligne est ignorée telle
+       quelle, quel que soit le code envoyé (la page Équipe republie ses
+       collègues) ; la ligne en base ne bouge pas ;
+     · un autre nom : refusé (403), rien n'est écrit.
+     La décision ne dépend que du nom et de l'intitulé, jamais du code. */
+  const titled = [...(Array.isArray(ownerTitled) ? ownerTitled : []), ...body.pins.filter((p) => p && Catalog.reservedTitle(p.role))];
+  if (titled.length && !(await sessionTierAtLeast(request, env, 'owner'))) {
+    let rows;
+    try { rows = (await env.DB.prepare('SELECT name, role FROM staff_pins WHERE merchant = ?').bind(merchant).all()).results || []; }
+    catch (_) { return permissionUnavailable(); }
+    const reservedNames = new Set(rows.filter((r) => Catalog.reservedTitle(r.role)).map((r) => nameKey(r.name)));
+    const stranger = titled.find((p) => !reservedNames.has(nameKey(p.name)));
+    if (stranger) return json({ error: 'owner-title', name: String(stranger.name || '').slice(0, 60) }, 403);
+    body.pins = body.pins.filter((p) => !(p && Catalog.reservedTitle(p.role)));
   }
   const state = await loadState(env, merchant);
   if (state.unavailable) return permissionUnavailable();
@@ -563,11 +565,11 @@ export async function codeHolds(request, env, merchant, body, ownerTitled) {
     before = (await env.DB.prepare('SELECT name, role FROM staff_pins WHERE merchant = ?').bind(merchant).all()).results || [];
     members = await teamMembers(env, merchant);
   } catch (_) { return permissionUnavailable(); }
-  const ownerNames = new Set([...before, ...members].filter((r) => Catalog.ownerTitle(r.role)).map((r) => nameKey(r.name)).filter(Boolean));
-  const homonym = body.pins.find((p) => p && typeof p === 'object' && !Catalog.ownerTitle(p.role) && ownerNames.has(nameKey(p.name)));
+  const ownerNames = new Set([...before, ...members].filter((r) => Catalog.reservedTitle(r.role)).map((r) => nameKey(r.name)).filter(Boolean));
+  const homonym = body.pins.find((p) => p && typeof p === 'object' && !Catalog.reservedTitle(p.role) && ownerNames.has(nameKey(p.name)));
   if (homonym) return json({ error: 'owner-name', name: String(homonym.name || '').slice(0, 60) }, 409);
   const had = new Map(before.map((r) => [nameKey(r.name), Catalog.normRole(r.role)]));
-  const candidates = body.pins.filter((p) => p && typeof p === 'object' && String(p.name || '').trim() && !Catalog.ownerTitle(p.role)).slice(0, 60);
+  const candidates = body.pins.filter((p) => p && typeof p === 'object' && String(p.name || '').trim() && !Catalog.reservedTitle(p.role)).slice(0, 60);
   const fresh = [], changed = new Set();
   for (const p of candidates) {
     const role = Catalog.normRole(String(p.role || '').trim().slice(0, 24) || 'staff');
@@ -593,8 +595,8 @@ export async function codeHolds(request, env, merchant, body, ownerTitled) {
     const role = String(p.role || '').trim().slice(0, 24) || 'staff';
     let subject;
     try { subject = await subjectFor(env, merchant, { name: String(p.name).trim().slice(0, 60), role }); } catch (_) { return permissionUnavailable(); }
-    holds.push(holdStmt(env, merchant, { ...subject, role }, actor, ts));
     const from = had.get(nameKey(p.name));
+    holds.push(holdStmt(env, merchant, { ...subject, role }, actor, ts, changed.has(p) ? 'code' : from ? 'retitled' : 'added'));
     journal.push(journalStmt(env, merchant, actor, 'staff:' + subject.key, subject.name,
       changed.has(p) ? { kind: 'code-changed', role, held: true }
         : { kind: from ? 'code-retitled' : 'code-added', role, ...(from ? { from } : {}), held: true }, ts));
