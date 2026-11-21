@@ -88,7 +88,7 @@
                une seconde vérité vivante. */
           } }),
         });
-        const data = response.data;
+        const data = response.data; if (data && Array.isArray(data.events)) { loadServiceHistory(); data.events.forEach((e) => { if (e && e.id) serviceEventSeen.add(e.id); }); }   // son propre geste ne revient pas en avis
         return {
           ok: !!(response.ok && data && data.ok),
           error: response.ok ? (data && data.error) : ('state-' + response.status),
@@ -136,7 +136,7 @@
       if (currentTab !== 'notifications') serviceUnread++;
       try { renderNotifications(); } catch (_) {}
       updateNotificationBadge();
-      toast(body ? `${title} · ${body}` : title, 4200);
+      toast(body ? `${employeeTranslation(title)} · ${employeeTranslation(body)}` : title, 4200);
       try {
         if (window.Notification && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
           new Notification(title, { body: body || '', tag: 'kiwi-service-' + title + '-' + body });
