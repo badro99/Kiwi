@@ -2371,7 +2371,7 @@ section('Whole-project regressions');
     'lock-caisse-handoff-test.mjs',
     'till-role-parity-test.mjs',
     'operator-roster-route-test.mjs',
-    'ozon-express-test.mjs', 'delivery-fee-city-test.mjs', 'expenses-engine-test.mjs', 'expenses-api-test.mjs', 'expenses-switch-test.mjs', 'expenses-browser-test.mjs', 'ozon-exchange-test.mjs', 'ozon-exchange-browser-test.mjs', 'label-picker-browser-test.mjs',
+    'ozon-express-test.mjs', 'credit-schedule-test.mjs', 'delivery-fee-city-test.mjs', 'expenses-engine-test.mjs', 'expenses-api-test.mjs', 'expenses-switch-test.mjs', 'expenses-browser-test.mjs', 'ozon-exchange-test.mjs', 'ozon-exchange-browser-test.mjs', 'label-picker-browser-test.mjs',
     'lock-greeting-truth-test.mjs',
     'check-guard-test.mjs',
     'check-verdict-test.mjs',

@@ -258,9 +258,11 @@ export async function customerDetail(env, merchant, source, key, now = Date.now(
   try { acct = await readAccount(env, merchant, source, key); } catch (e) { if (!missingTable(e)) throw e; }
   if (!debtor && !acct) return null;
   if (acct) acct = await reconcile(env, merchant, acct, debtor, now);
-  const events = await env.DB.prepare(`SELECT kind, amount_cents, actor, detail, ts FROM credit_events
-    WHERE merchant = ? AND source = ? AND customer_key = ? ORDER BY ts DESC LIMIT 40`).bind(merchant, source, key).all()
-    .then((r) => r.results || [], () => []);
+  let events = [];
+  try {
+    events = (await env.DB.prepare(`SELECT kind, amount_cents, actor, detail, ts FROM credit_events
+      WHERE merchant = ? AND source = ? AND customer_key = ? ORDER BY ts DESC LIMIT 40`).bind(merchant, source, key).all()).results || [];
+  } catch (_) { events = []; }
   const card = present(debtor, acct, today);
   return {
     today, customer: card,
