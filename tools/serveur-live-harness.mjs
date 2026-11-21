@@ -122,11 +122,23 @@ export async function harness({ menu = DEFAULT_MENU, plan = DEFAULT_PLAN, browse
           r.respond({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: String(e && e.message) }) }).catch(() => {});
         });
       };
+      if (drops.some((fn) => fn(key, post ? r.postData() || '' : ''))) {
+        calls.push({ who, method: r.method(), path: url.pathname, status: 0, body: 'DROPPED', sent: post ? r.postData() : undefined });
+        return void r.abort('failed');
+      }
       const hold = holds.get(key);
       if (hold) hold.push(run); else run();
     });
   }
   const hold = (key) => { if (!holds.has(key)) holds.set(key, []); };
+  /* `tap` : un doigt tape ce qu'il voit, une fois l'élément immobile (une feuille qui glisse encore est
+     hors champ) ; un nœud que le plan vient de repeindre se retape un instant plus tard. */
+  const still = (page, sel) => page.waitForFunction((q) => new Promise((done) => { const at = () => JSON.stringify(document.querySelector(q)?.getBoundingClientRect());
+    const a = at(); requestAnimationFrame(() => requestAnimationFrame(() => done(a === at()))); }), { timeout: 10000, polling: 'raf' }, sel);
+  const tap = async (page, sel) => { for (let i = 0; ; i++) { try { await page.waitForSelector(sel, { visible: true, timeout: 10000 }); await still(page, sel); await page.click(sel); return; } catch (e) { if (i >= 4) throw e; await sleep(150); } } };
+  /* `drop` : la requête n'arrive jamais (paquet perdu) ; rend de quoi lever la panne. */
+  const drops = [];
+  const drop = (fn) => { drops.push(fn); return () => { const i = drops.indexOf(fn); if (i >= 0) drops.splice(i, 1); }; };
   const release = (key) => { const q = holds.get(key) || []; holds.delete(key); q.forEach((fn) => fn()); };
 
   let ownBrowser = false;
@@ -203,5 +215,5 @@ export async function harness({ menu = DEFAULT_MENU, plan = DEFAULT_PLAN, browse
     server.close();
     f.close();
   }
-  return { f, sql, env, merchant, base, browser, calls, hold, release, openWaiter, openTill, db, sleep, until, close, waiterCookie, tillCookie };
+  return { f, sql, env, merchant, base, browser, calls, hold, release, drop, tap, still, openWaiter, openTill, db, sleep, until, close, waiterCookie, tillCookie };
 }

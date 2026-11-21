@@ -10,7 +10,7 @@ export function voidDispatch(env, merchant, now) {
     if (r && r.conflict) { const status = r.conflict; delete r.conflict; return json(r, status); }
     return json(r);
   }
-  async function dispatchPendingVoid(targetOrder, targetLines, lines, qtyToVoid, isWaste, actor, reason) {
+  async function dispatchPendingVoid(targetOrder, targetLines, lines, qtyToVoid, isWaste, actor, reason, requestId) {
     const list = Array.isArray(targetLines) ? targetLines : [targetLines];
     /* La quantité annulée est CELLE QUE L'APPELANT DEMANDE — le delta d'une
      * réduction (3 → 2 annule 1), jamais la ligne entière. Sur une formule,
@@ -31,8 +31,11 @@ export function voidDispatch(env, merchant, now) {
     const guard = 'id = ? AND merchant = ? AND updated_ts = ? AND lines = ?';
     const guardArgs = [targetOrder.id, merchant, targetOrder.updated_ts, targetOrder.lines];
     const statements = [];
-    for (const tl of list) {
-      const voidId = 'voi-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
+    for (const [index, tl] of list.entries()) {
+      /* Un téléphone qui rejoue son « − » donne le même identifiant : l'alerte
+       * en porte la trace (editLine le retrouve et rend la première réponse). */
+      const voidId = requestId ? 'voi-' + requestId + (index ? '-' + index : '')
+        : 'voi-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
       if (!primaryVoidId) primaryVoidId = voidId;
       const lineQty = Math.max(1, Math.round(Number(tl.qty) || 1));
       const voidQty = tl === primary ? Math.min(askedQty, lineQty) : Math.max(1, Math.min(lineQty, Math.round(lineQty * ratio)));
@@ -43,6 +46,7 @@ export function voidDispatch(env, merchant, now) {
         actor: actor,
         isWaste: isWaste ? 1 : 0,
         ts: now,
+        ...(requestId && tl === primary ? { requestId } : {}),
       };
       statements.push(statement(env,
         `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
@@ -273,6 +277,8 @@ export async function editLine(ctx) {
     const actor = String(b.editLine.actor || (employee && employeeName(employee.member)) || 'Serveur').trim().slice(0, 40);
     const isWaste = b.editLine.isWaste ? 1 : 0;
     const reason = String(b.editLine.reason || 'edit_reduction').trim();
+    const requestId = /^[A-Za-z0-9-]{12,80}$/.test(String(b.editLine.requestId || '')) ? String(b.editLine.requestId) : '';
+    const seenTs = Number(b.editLine.seenTs) || 0;
 
     if (!lineId) return json({ error: 'line-id-required' }, 400);
 
@@ -291,6 +297,16 @@ export async function editLine(ctx) {
 
     let lines = [];
     try { lines = JSON.parse(targetOrder.lines) || []; } catch (_) { lines = []; }
+
+    /* Le même geste rejoué : la première réponse, rien de plus. */
+    if (requestId) {
+      const added = lines.find(l => l && l.editReq === requestId);
+      const asked = lines.find(l => l && l.voidAlert && l.voidAlert.requestId === requestId)
+        || (!added && await env.DB.prepare('SELECT id FROM kitchen_voids WHERE id = ? AND merchant = ?').bind('voi-' + requestId, merchant).first());
+      if (added || asked) return json({ ok: true, replayed: true, orderId: targetOrder.id, table: targetOrder.table_no,
+        ...(added ? { tier: 1, action: 'appended', appendedLine: added } : { tier: 2, action: 'alert_dispatched', alertSent: true }),
+        remainingLines: lines, total: targetOrder.total });
+    }
 
     /* The phone names a sent line by its uid (two lines may carry the same
        dish), older callers by dish id or name. One rule for every lookup
@@ -315,43 +331,36 @@ export async function editLine(ctx) {
 
     const isCooking = affectedLines.some(l => l.stationAccepted === true);
 
-    // ── Branche post-acceptation ───────────────────────────────────────────
-    if (isCooking) {
-      if (noteChanged) {
-        return json({ ok: false, error: 'accepted-cannot-edit-note', reason: 'accepted', tier: 2 }, 409);
-      }
+    /* ── Plat déjà accepté : « − » demande l'annulation, « + » ajoute le delta ──
+     * Ces deux gestes sont des deltas, pas une quantité visée : rejoués après un
+     * délai dépassé, ils comptaient deux fois (un café facturé deux fois de
+     * plus, deux annulations pour un seul msemen). Le téléphone envoie
+     * `requestId` (gardé tant que le geste n'a pas eu de réponse) et `seenTs`,
+     * l'état de la commande qu'il a lu : un identifiant déjà traité rend la
+     * première réponse ; un « + » sur une commande qui a bougé depuis est
+     * refusé (order-changed) ; un « − » sur une annulation en attente aussi.
+     * Chaque écriture est gardée par updated_ts et lines. */
+    const acceptedEdit = async (order, all, line, affected) => {
+      if (noteChanged) return json({ ok: false, error: 'accepted-cannot-edit-note', reason: 'accepted', tier: 2 }, 409);
       if (qtyDelta < 0) {
-        return pendingVoidResponse(await dispatchPendingVoid(targetOrder, affectedLines, lines, Math.abs(qtyDelta), isWaste, actor, reason));
+        if (affected.some(l => l.voidAlert)) return json({ error: 'pending-kitchen-approval', orderId: order.id }, 409);
+        return pendingVoidResponse(await dispatchPendingVoid(order, affected, all, Math.abs(qtyDelta), isWaste, actor, reason, requestId));
       }
-      if (qtyDelta > 0) {
-        const newLine = {
-          ...targetLine,
-          uid: 'ln-' + crypto.randomUUID().slice(0, 8),
-          qty: qtyDelta,
-          stationAccepted: false,
-          stationReady: false,
-          voidAlert: null,
-        };
-        lines.push(newLine);
-        const newTotal = lines.reduce((s, l) => s + ((Number(l.unitPrice ?? l.price) || 0) * (Number(l.qty) || 0)), 0);
-        const nextTs = Math.max(now, (Number(targetOrder.updated_ts) || 0) + 1);
-        await env.DB.prepare(
-          `UPDATE orders SET lines = ?, total = ?, updated_ts = ? WHERE id = ? AND merchant = ?`
-        ).bind(JSON.stringify(lines), newTotal, nextTs, targetOrder.id, merchant).run();
-
-        return json({
-          ok: true,
-          tier: 1,
-          action: 'appended',
-          orderId: targetOrder.id,
-          table: targetOrder.table_no,
-          appendedLine: newLine,
-          remainingLines: lines,
-          total: newTotal,
-        });
-      }
-      return json({ ok: true, noop: true });
-    }
+      if (qtyDelta <= 0) return json({ ok: true, noop: true });
+      if (seenTs && seenTs !== Number(order.updated_ts)) return json({ error: 'order-changed', retry: true, orderId: order.id }, 409);
+      const newLine = { ...line, uid: 'ln-' + crypto.randomUUID().slice(0, 8), qty: qtyDelta,
+        stationAccepted: false, stationReady: false, voidAlert: null, ...(requestId ? { editReq: requestId } : {}) };
+      const next = [...all, newLine];
+      const total = next.reduce((s, l) => s + ((Number(l.unitPrice ?? l.price) || 0) * (Number(l.qty) || 0)), 0);
+      const updatedTs = Math.max(now, (Number(order.updated_ts) || 0) + 1);
+      const written = await env.DB.prepare(
+        `UPDATE orders SET lines = ?, total = ?, updated_ts = ? WHERE id = ? AND merchant = ? AND paid_ts IS NULL AND updated_ts = ? AND lines = ?`
+      ).bind(JSON.stringify(next), total, updatedTs, order.id, merchant, order.updated_ts, order.lines).run();
+      if (!Number(written?.meta?.changes)) return json({ error: 'concurrent-update', retry: true }, 409);
+      return json({ ok: true, tier: 1, action: 'appended', orderId: order.id, table: order.table_no,
+        appendedLine: newLine, remainingLines: next, total, updatedTs });
+    };
+    if (isCooking) return acceptedEdit(targetOrder, lines, targetLine, affectedLines);
 
     // ── Branche pré-acceptation avec CAS sur updated_ts ─────────────────────
     let draftLines = lines.map(l => ({ ...l }));
@@ -388,36 +397,7 @@ export async function editLine(ctx) {
         : [freshLine];
       const freshCooking = freshAffected.some(l => l.stationAccepted === true);
 
-      if (freshCooking) {
-        if (noteChanged) {
-          return json({ ok: false, error: 'accepted-cannot-edit-note', reason: 'accepted', tier: 2 }, 409);
-        }
-        if (qtyDelta < 0) {
-          return pendingVoidResponse(await dispatchPendingVoid(freshOrder, freshAffected, freshLines, Math.abs(qtyDelta), isWaste, actor, reason));
-        }
-        if (qtyDelta > 0) {
-          const newLine = {
-            ...freshLine,
-            uid: 'ln-' + crypto.randomUUID().slice(0, 8),
-            qty: qtyDelta,
-            stationAccepted: false,
-            stationReady: false,
-            voidAlert: null,
-          };
-          freshLines.push(newLine);
-          const freshTotal = freshLines.reduce((s, l) => s + ((Number(l.unitPrice ?? l.price) || 0) * (Number(l.qty) || 0)), 0);
-          const freshNextTs = Math.max(now, (Number(freshOrder.updated_ts) || 0) + 1);
-          await env.DB.prepare(
-            `UPDATE orders SET lines = ?, total = ?, updated_ts = ? WHERE id = ? AND merchant = ?`
-          ).bind(JSON.stringify(freshLines), freshTotal, freshNextTs, freshOrder.id, merchant).run();
-
-          return json({
-            ok: true, tier: 1, action: 'appended', orderId: freshOrder.id, table: freshOrder.table_no,
-            appendedLine: newLine, remainingLines: freshLines, total: freshTotal,
-          });
-        }
-        return json({ ok: true, noop: true });
-      }
+      if (freshCooking) return acceptedEdit(freshOrder, freshLines, freshLine, freshAffected);
 
       // Toujours non accepté : appliquer la mutation fraîchement
       if (newQty === 0) {
@@ -428,9 +408,10 @@ export async function editLine(ctx) {
       }
       const freshTotal = freshLines.reduce((s, l) => s + ((Number(l.unitPrice ?? l.price) || 0) * (Number(l.qty) || 0)), 0);
       const freshNextTs = Math.max(now, (Number(freshOrder.updated_ts) || 0) + 1);
-      await env.DB.prepare(
-        `UPDATE orders SET lines = ?, total = ?, updated_ts = ? WHERE id = ? AND merchant = ?`
-      ).bind(JSON.stringify(freshLines), freshTotal, freshNextTs, freshOrder.id, merchant).run();
+      const freshWrite = await env.DB.prepare(
+        `UPDATE orders SET lines = ?, total = ?, updated_ts = ? WHERE id = ? AND merchant = ? AND updated_ts = ?`
+      ).bind(JSON.stringify(freshLines), freshTotal, freshNextTs, freshOrder.id, merchant, freshOrder.updated_ts).run();
+      if (!Number(freshWrite?.meta?.changes)) return json({ error: 'concurrent-update', retry: true }, 409);
 
       return json({
         ok: true, tier: 1, action: 'mutated', orderId: freshOrder.id, table: freshOrder.table_no,

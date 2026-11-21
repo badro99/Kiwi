@@ -1682,47 +1682,50 @@
         return;
       }
 
-      // Sent line modification
+      /* Plat envoyé. Sur un plat accepté, « + » et « − » sont des deltas : un
+         geste rejoué après un délai comptait deux fois. Chaque geste garde son
+         identifiant tant qu'il n'a pas de réponse (le serveur rend la première)
+         et dit l'état lu de la commande ; sans réponse, la table est relue. */
+      const pending = changeOrderQty.pending || (changeOrderQty.pending = new Map());
+      const send = async (qty, extra) => {
+        const key = flightKey + '|' + qty, seen = serviceCanonicalOrders.get(line.orderId);
+        const requestId = pending.get(key) || 'edl-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+        pending.set(key, requestId);
+        try {
+          const res = await svFetchJson('/api/order/queue', { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ merchant: svSlug(), editLine: { table: tableId, ...(line.orderId ? { orderId: line.orderId } : {}), lineId: line.canonicalUid || line.uid || line.id,
+              qty, requestId, ...(seen && seen.updated_ts ? { seenTs: seen.updated_ts } : {}), ...extra, actor: activeRole.fullName || activeRole.name || 'Serveur' } }) });
+          pending.delete(key);
+          if (seen && res.data && res.data.updatedTs) seen.updated_ts = res.data.updatedTs;
+          if (res.data && res.data.error === 'order-changed') { pollServiceSync(); toast(employeePick('La commande a changé · vérifiez la table', 'The order changed · check the table', 'تغيّر الطلب · تحقق من الطاولة')); return null; }
+          return res;
+        } catch (err) {
+          pollServiceSync();
+          toast(err && err.timeout ? employeePick('Pas de réponse · vérifiez la table avant de réessayer', 'No answer · check the table before trying again', 'لا رد · تحقق من الطاولة قبل إعادة المحاولة') : employeePick('Pas de réseau · vérifiez la table avant de réessayer', 'No network · check the table before trying again', 'لا توجد شبكة · تحقق من الطاولة قبل إعادة المحاولة'));
+          return null;
+        }
+      };
       if (delta < 0) {
         const newQty = line.qty + delta;
         if (newQty <= 0) {
           openVoidReasonModal(tableId, line);
           return;
         }
-
         if (!SV_DEMO) {
-          try {
-            const res = await svFetchJson('/api/order/queue', {
-              method: 'POST', credentials: 'same-origin', cache: 'no-store',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                merchant: svSlug(),
-                editLine: {
-                  table: tableId,
-                  ...(line.orderId ? { orderId: line.orderId } : {}),
-                  lineId: line.canonicalUid || line.uid || line.id,
-                  qty: newQty,
-                  isWaste: 0,
-                  actor: activeRole.fullName || activeRole.name || 'Serveur'
-                }
-              })
-            });
-            const data = res.data;
-            if (!res.ok || (data && !data.ok)) {
-              toast(`Modification refusée · ${svErrLabel(data && data.error)}`);
-              return;
-            }
-            if (data.alertSent || data.tier === 2) {
-              line.voidPending = true;
-              toast(`Réduction demandée · attente de la cuisine · ${line.name}`);
-              renderTableDetail();
-              return;
-            }
-            toast(`${line.name} modifié (${newQty}×)`);
-          } catch (err) {
-            toast(err && err.timeout ? employeePick('Pas de réponse du serveur, réessayez', 'No answer from the server, try again', 'لا رد من الخادم، أعد المحاولة') : employeePick('Pas de réseau, réessayez', 'No network, try again', 'لا توجد شبكة، أعد المحاولة'));
+          const res = await send(newQty, { isWaste: 0 });
+          if (!res) return;
+          const data = res.data;
+          if (!res.ok || (data && !data.ok)) {
+            toast(`Modification refusée · ${svErrLabel(data && data.error)}`);
             return;
           }
+          if (data.alertSent || data.tier === 2) {
+            line.voidPending = true;
+            toast(`Réduction demandée · attente de la cuisine · ${line.name}`);
+            renderTableDetail();
+            return;
+          }
+          toast(`${line.name} modifié (${newQty}×)`);
         }
         line.qty = newQty;
         line.sentQty = Math.min(line.sentQty, line.qty);
@@ -1733,43 +1736,27 @@
       if (delta > 0) {
         const targetQty = line.qty + delta;
         if (!SV_DEMO) {
-          try {
-            const res = await svFetchJson('/api/order/queue', {
-              method: 'POST', credentials: 'same-origin', cache: 'no-store',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                merchant: svSlug(),
-                editLine: {
-                  table: tableId,
-                  ...(line.orderId ? { orderId: line.orderId } : {}),
-                  lineId: line.canonicalUid || line.uid || line.id,
-                  qty: targetQty,
-                  actor: activeRole.fullName || activeRole.name || 'Serveur'
-                }
-              })
+          const res = await send(targetQty, {});
+          if (!res) return;
+          const data = res.data;
+          if (!res.ok || (data && !data.ok)) {
+            toast(`Ajout refusé · ${svErrLabel(data && data.error)}`);
+            return;
+          }
+          if (data.action === 'appended' && data.appendedLine) {
+            if (data.replayed && (tableOrders[tableId] || []).some(l => l.uid === data.appendedLine.uid || l.canonicalUid === data.appendedLine.uid)) return;
+            tableOrders[tableId].push({
+              uid: data.appendedLine.uid || newLineUid(),
+              id: line.id,
+              name: line.name,
+              price: line.price,
+              qty: data.appendedLine.qty || delta,
+              opts: line.opts || [],
+              note: '',
+              sentQty: 0,
             });
-            const data = res.data;
-            if (!res.ok || (data && !data.ok)) {
-              toast(`Ajout refusé · ${svErrLabel(data && data.error)}`);
-              return;
-            }
-            if (data.action === 'appended' && data.appendedLine) {
-              tableOrders[tableId].push({
-                uid: data.appendedLine.uid || newLineUid(),
-                id: line.id,
-                name: line.name,
-                price: line.price,
-                qty: data.appendedLine.qty || delta,
-                opts: line.opts || [],
-                note: '',
-                sentQty: 0,
-              });
-              toast(`+1 ${line.name} ajouté`);
-              renderTableDetail();
-              return;
-            }
-          } catch (err) {
-            toast(err && err.timeout ? employeePick('Pas de réponse du serveur, réessayez', 'No answer from the server, try again', 'لا رد من الخادم، أعد المحاولة') : employeePick('Pas de réseau, réessayez', 'No network, try again', 'لا توجد شبكة، أعد المحاولة'));
+            toast(`+1 ${line.name} ajouté`);
+            renderTableDetail();
             return;
           }
         }

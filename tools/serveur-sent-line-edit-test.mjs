@@ -87,5 +87,39 @@ check(lineOf('ln3').note === 'sans sucre' && lineOf('ln3').qty === 1, 'le café 
 r = await post({ editLine: { table: '4', orderId: id, lineId: 'ln-absent', qty: 1 } });
 check(r.status === 404 && r.data && r.data.error === 'line-not-on-order', `uid inconnu : 404 line-not-on-order (${r.status})`);
 
+/* Plats acceptés en cuisine : « + » et « − » sont des deltas. Le téléphone
+ * dont la réponse se perd (12 s) rejoue le même geste avec le même
+ * requestId : la première réponse revient, rien n'est compté deux fois. */
+const accept = (uids) => { const o = order(); const ls = JSON.parse(o.lines).map((l) => uids.includes(l.uid) ? { ...l, stationAccepted: true } : l);
+  sql.prepare('UPDATE orders SET lines = ?, status = ?, updated_ts = updated_ts + 1 WHERE id = ?').run(JSON.stringify(ls), 'accepted', o.id); };
+const seen = () => sql.prepare('SELECT updated_ts FROM orders WHERE id = ?').get(id).updated_ts;
+accept(['ln2', 'ln3']);
+const before = order().total;
+const plus = { table: '4', orderId: id, lineId: 'ln3', qty: 2, actor: 'Salma Test', requestId: 'edl-banc-plus-0001', seenTs: seen() };
+const p1 = await post({ editLine: plus });
+const p2 = await post({ editLine: plus });
+check(p1.status === 200 && p1.data.action === 'appended' && p2.status === 200 && p2.data.replayed === true, `« + » sur un café accepté, rejoué : la première réponse revient (${p1.status}/${p2.status} ${p2.data && (p2.data.error || '')})`);
+check(order().total === before + 12, `un seul café de plus sur l’addition (${before} → ${order().total}, attendu ${before + 12})`);
+check(JSON.parse(order().lines).filter((l) => l.name === 'Café noir').length === 2, 'une seule ligne ajoutée pour le delta');
+const stale = await post({ editLine: { ...plus, requestId: 'edl-banc-plus-0002' } });
+check(stale.status === 409 && stale.data.error === 'order-changed', `un nouveau « + » sur l’image d’avant est refusé : order-changed (${stale.status} ${stale.data && stale.data.error})`);
+check(order().total === before + 12, 'l’addition ne bouge pas');
+
+const minus = { table: '4', orderId: id, lineId: 'ln2', qty: 1, isWaste: 0, actor: 'Salma Test', requestId: 'edl-banc-minus-0001', seenTs: seen() };
+const m1 = await post({ editLine: minus });
+const m2 = await post({ editLine: minus });
+const voids = () => sql.prepare("SELECT id, qty FROM kitchen_voids WHERE merchant = ? AND status = 'pending'").all(merchant);
+check(m1.status === 200 && m1.data.alertSent && m2.status === 200 && m2.data.replayed === true, `« − » sur 2 msemen « bien chaud » acceptés, rejoué : une seule demande (${m1.status}/${m2.status})`);
+check(voids().length === 1 && voids()[0].qty === 1, `une seule annulation en attente, pour 1 msemen (${JSON.stringify(voids())})`);
+const m3 = await post({ editLine: { ...minus, requestId: 'edl-banc-minus-0002' } });
+check(m3.status === 409 && m3.data.error === 'pending-kitchen-approval' && voids().length === 1, `un second « − » pendant l’attente : refusé, toujours une seule annulation (${m3.status} ${m3.data && m3.data.error})`);
+
+/* La cuisine valide l'annulation ; la réponse perdue arrive enfin à se rejouer. */
+{ const o = order(); const ls = JSON.parse(o.lines).map((l) => l.uid === 'ln2' ? { ...l, qty: 1, voidAlert: null } : l);
+  sql.prepare('UPDATE orders SET lines = ?, updated_ts = updated_ts + 1 WHERE id = ?').run(JSON.stringify(ls), o.id);
+  sql.prepare("UPDATE kitchen_voids SET status = 'approved' WHERE id = 'voi-edl-banc-minus-0001'").run(); }
+const m4 = await post({ editLine: { ...minus, qty: 1 } });
+check(m4.status === 200 && m4.data.replayed === true && lineOf('ln2').qty === 1, `rejoué après la validation cuisine : réponse rejouée, le msemen restant n’est pas annulé (${m4.status})`);
+
 f.close();
 console.log(`serveur-sent-line-edit-test: ${checks} checks passed`);

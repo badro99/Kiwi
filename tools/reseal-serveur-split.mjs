@@ -57,8 +57,10 @@ function mapper(file) {
   };
 }
 
-const map = JSON.parse(read(MAP));
-const oldOriginal = gunzipSync(fs.readFileSync(ARCHIVE)).toString();
+/* Toujours depuis la carte et l'archive de HEAD : l'outil se relance sans risque (une
+   seconde passe sur une carte déjà recalculée décalait tout une seconde fois). */
+const map = JSON.parse(atHead(MAP));
+const oldOriginal = gunzipSync(execFileSync('git', ['show', 'HEAD:' + ARCHIVE], { maxBuffer: 64 << 20 })).toString();
 if (hash(oldOriginal) !== map.sha256) throw new Error('archive et carte ne concordent pas déjà dans HEAD');
 
 /* 1. Les fragments découpés à l'octet suivent leur fichier. */
