@@ -198,9 +198,10 @@ function scan() {
     if (r.stamp) note(r.key, r.stamp, { file: r.file, kind: 'css', stamp: r.stamp, written: r.written });
   }
 
-  // Literal first-use URLs in pages-pro's lazy registry (also cascade-bumped).
+  // Literal first-use URLs in pages-pro's lazy registry (also cascade-bumped),
+  // the shared permission catalog included (a dependency of the permissions page).
   if (exists('assets/pages-pro.js')) {
-    for (const m of read('assets/pages-pro.js').matchAll(/'(assets\/(?:pages-pro|pages)\/[^']+\.js)\?v=([0-9]+)'/g)) {
+    for (const m of read('assets/pages-pro.js').matchAll(/'(assets\/(?:(?:pages-pro|pages)\/[^']+|permissions-catalog)\.js)\?v=([0-9]+)'/g)) {
       note(m[1], m[2], { file: 'assets/pages-pro.js', kind: 'lazy', stamp: m[2] });
     }
   }

@@ -37,17 +37,23 @@ const ownerGuard = "  /* Un code à intitulé de propriétaire (« Propriétaire
   + "   * pas). Sinon un gérant se donnerait le palier du patron. */\n"
   + "  if (Array.isArray(body && body.pins) && !(await sessionTierAtLeast(request, env, 'owner'))) {\n"
   + "    body.pins = body.pins.filter((p) => !(p && accountOwnerRole(String(p.role || '').trim().slice(0, 24))));\n  }\n";
-ok(route.split(ownerGuard).length === 2, 'the owner-title filter sits once in the route');
+/* Since 21 Nov the filtered rows are kept aside for codeHolds (an unchanged
+ * owner row is ignored, a new or recoded one refused): one declaration before
+ * the guard, one line inside it. */
+const ownerKeep = "  let ownerTitled = [];   // les lignes écartées, que codeHolds juge : inchangées, ignorées ; neuves ou recodées, refusées (403)\n";
+const ownerKeepLine = "    ownerTitled = body.pins.filter((p) => p && accountOwnerRole(String(p.role || '').trim().slice(0, 24)));\n";
+const routeNow = route.replace(ownerKeep, '').replace(ownerKeepLine, '');
+ok(route.split(ownerKeep).length === 2 && route.split(ownerKeepLine).length === 2 && routeNow.split(ownerGuard).length === 2, 'the owner-title filter sits once in the route, its rows kept for codeHolds');
 /* A third (21 Nov, team permissions): a code that brings a new identity to
  * life outside the owner's session starts with no rights until the owner
  * reviews it (or is refused: a homonym of an owner-titled member, a hold that
  * cannot be written). One import, one line before the publish call, one after it;
  * staff-permissions-test runs it against the real route. */
 const holdImport = "import { codeHolds } from './_permissions.js';\n";
-const holdBefore = "    const holdCodes = await codeHolds(request, env, merchant, body); if (holdCodes instanceof Response) return holdCodes; // hors du patron : homonyme d'un propriétaire refusé, identité nouvelle retenue AVANT publication, fermé en cas de doute (_permissions.js)\n";
+const holdBefore = "    const holdCodes = await codeHolds(request, env, merchant, body, ownerTitled); if (holdCodes instanceof Response) return holdCodes; // hors du patron : homonyme d'un propriétaire refusé, identité nouvelle retenue AVANT publication, fermé en cas de doute (_permissions.js)\n";
 const holdAfter = "    if (holdCodes) await holdCodes();\n";
 ok(route.split(holdImport).length === 2 && route.split(holdBefore).length === 2 && route.split(holdAfter).length === 2, 'the code hold sits once in the route, with its import');
-const routeBase = route.replace(tierImport, '').replace(tierGuard, '').replace(ownerGuard, '').replace(holdImport, '').replace(holdBefore, '').replace(holdAfter, '');
+const routeBase = routeNow.replace(tierImport, '').replace(tierGuard, '').replace(ownerGuard, '').replace(holdImport, '').replace(holdBefore, '').replace(holdAfter, '');
 
 /* The function body, moved two spaces left, with `result` its own local. */
 const head = 'export async function publishStaffCredentials(env, merchant, body) {\n  const result = {};\n';
@@ -63,7 +69,17 @@ const sharedGuard = "  const sharedCode = sharedCodeHolders(body.pins);\n"
 const moved = mod.slice(fnAt + head.length, mod.length - tail.length);
 ok(moved.split(sharedGuard).length === 2, 'the shared-code refusal sits once in the publish function');
 const inner = moved.replace(sharedGuard, '');
-const helpers = mod.slice(mod.indexOf('const VALID_PIN'), mod.indexOf('\n}\n', mod.indexOf('function accountOwnerRole(')) + 3);
+/* A deliberate change since the move (21 Nov): accountOwnerRole reads the one
+ * shared table of owner titles (assets/permissions-catalog.js), so publish,
+ * route filter and permission evaluator agree. The rebuild puts the old body
+ * back; staff-permissions-test holds the agreement on a table of variants. */
+const ownerRoleNow = "function accountOwnerRole(value) {\n  return Catalog.ownerTitle(value);   // une seule table des intitulés propriétaire : publication, filtre et droits (assets/permissions-catalog.js)\n}\n";
+const ownerRoleThen = "function accountOwnerRole(value) {\n  let role = String(value || '').trim().toLowerCase();\n"
+  + "  try { role = role.normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''); } catch (_) {}\n"
+  + "  return new Set(['owner', 'proprietaire', 'direction', 'patron']).has(role);\n}\n";
+ok(mod.split(ownerRoleNow).length === 2 && mod.startsWith("import Catalog from '../../assets/permissions-catalog.js';\n"), 'the owner-title test reads the shared catalog, once');
+const helpers = mod.replace(ownerRoleNow, ownerRoleThen).slice(mod.replace(ownerRoleNow, ownerRoleThen).indexOf('const VALID_PIN'),
+  mod.replace(ownerRoleNow, ownerRoleThen).indexOf('\n}\n', mod.replace(ownerRoleNow, ownerRoleThen).indexOf('function accountOwnerRole(')) + 3);
 
 const call = "  if (Array.isArray(body && body.pins)) {\n    const published = await publishStaffCredentials(env, merchant, body);\n"
   + "    if (published instanceof Response) return published;\n    Object.assign(result, published);\n  }";

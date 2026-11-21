@@ -1,3 +1,4 @@
+import Catalog from '../../assets/permissions-catalog.js';
 import { codeDocument, hashStaffCode, pinHashes, sealMerchantStaff } from '../auth/_staff-codes.js';
 import { canonicalCode, normalizeMember } from './_rules-staff-credential.js';
 // Staff credential publication: the one place a staff code list becomes
@@ -25,9 +26,7 @@ const VALID_PIN = /^\d{4}$/;
 const MAX_ROSTER = 200;
 
 function accountOwnerRole(value) {
-  let role = String(value || '').trim().toLowerCase();
-  try { role = role.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
-  return new Set(['owner', 'proprietaire', 'direction', 'patron']).has(role);
+  return Catalog.ownerTitle(value);   // une seule table des intitulés propriétaire : publication, filtre et droits (assets/permissions-catalog.js)
 }
 
 export { accountOwnerRole };

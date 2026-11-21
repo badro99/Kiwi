@@ -13,6 +13,7 @@
  *
  * Discipline : contrôles exécutés = code EXTRAIT des fichiers livrés.
  * ═══════════════════════════════════════════════════════════════════════════ */
+import { createRequire } from 'node:module';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -63,7 +64,9 @@ ok(/limitFail\(request, env, 'pin:account', identity\)/.test(vapSrc), 'le limite
 
 // ── 3. POST /api/config pins — le roster d'équipe ne tue pas le patron ───────
 const ownerRoleSrc = extract(staffPub, /function accountOwnerRole\(value\) \{[\s\S]*?\n\}/, 'accountOwnerRole');
-const ownerRole = new Function(ownerRoleSrc + '; return accountOwnerRole;')();
+/* accountOwnerRole lit la table partagée des intitulés (assets/permissions-catalog.js) : on la lui donne. */
+const SharedCatalog = createRequire(import.meta.url)(path.join(ROOT, 'assets/permissions-catalog.js'));
+const ownerRole = new Function('Catalog', ownerRoleSrc + '; return accountOwnerRole;')(SharedCatalog);
 ok(ownerRole('Propriétaire') === true && ownerRole('owner') === true && ownerRole('direction') === true, 'accountOwnerRole reconnaît les orthographes du patron (accents compris)');
 ok(ownerRole('manager') === false && ownerRole('Caissier') === false, 'manager et caissier ne sont pas le patron — leurs lignes suivent le roster d\'équipe');
 

@@ -428,7 +428,9 @@ export async function onRequestPost(context) {
    * de la liste sont ignorées, et celles déjà en base restent telles quelles
    * (_staff-publication.js garde les codes propriétaire d'une liste qui n'en a
    * pas). Sinon un gérant se donnerait le palier du patron. */
+  let ownerTitled = [];   // les lignes écartées, que codeHolds juge : inchangées, ignorées ; neuves ou recodées, refusées (403)
   if (Array.isArray(body && body.pins) && !(await sessionTierAtLeast(request, env, 'owner'))) {
+    ownerTitled = body.pins.filter((p) => p && accountOwnerRole(String(p.role || '').trim().slice(0, 24)));
     body.pins = body.pins.filter((p) => !(p && accountOwnerRole(String(p.role || '').trim().slice(0, 24))));
   }
 
@@ -583,7 +585,7 @@ export async function onRequestPost(context) {
 
   // ── PINs (only when the client actually sent a list) ───────────────────────
   if (Array.isArray(body && body.pins)) {
-    const holdCodes = await codeHolds(request, env, merchant, body); if (holdCodes instanceof Response) return holdCodes; // hors du patron : homonyme d'un propriétaire refusé, identité nouvelle retenue AVANT publication, fermé en cas de doute (_permissions.js)
+    const holdCodes = await codeHolds(request, env, merchant, body, ownerTitled); if (holdCodes instanceof Response) return holdCodes; // hors du patron : homonyme d'un propriétaire refusé, identité nouvelle retenue AVANT publication, fermé en cas de doute (_permissions.js)
     const published = await publishStaffCredentials(env, merchant, body);
     if (published instanceof Response) return published;
     Object.assign(result, published);

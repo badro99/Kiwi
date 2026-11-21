@@ -92,8 +92,10 @@ export async function onRequestPost(context) {
     staff: verified.staff,
     ...(faceMark ? { faceMark } : {}),
     ...(merchant && employeeRoleOpensTill(verified.staff.role) ? { actorProof: await tillActorProof(env.AUTH_SECRET, merchant, verified.staff) } : {}),
-    /* Commissions vendeurs : la preuve que CETTE personne tient la caisse ; /api/sale en tire le vendeur. */
-    ...(merchant && employeeRoleOpensTill(verified.staff.role) ? { sellerProof: await tillSellerProof(env.AUTH_SECRET, merchant, verified.staff) } : {}),
+    /* Commissions vendeurs : la preuve que CETTE personne tient la caisse ; /api/sale en tire le vendeur.
+       Seulement quand le code OUVRE la caisse (sans acte) : un accord donné au
+       pavé pour un geste ne fait pas de son auteur la personne en poste. */
+    ...(merchant && !action && employeeRoleOpensTill(verified.staff.role) ? { sellerProof: await tillSellerProof(env.AUTH_SECRET, merchant, verified.staff) } : {}),
     ...(approval ? { approval } : {}),
     /* Espèces, tiroir, clôture, remise : la preuve de CE geste (acte, montant,
        sens), valable pour un seul fait (functions/api/_act-proof.js). */

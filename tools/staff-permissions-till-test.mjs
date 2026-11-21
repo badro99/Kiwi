@@ -120,10 +120,10 @@ console.log('■ staff-perms-till.js › le pavé connaît le droit de l’acte'
   check(P.permsProofs().actProof === 'act-sara' && !('actorProof' in P.permsProofs()), 'après l’accord de Sara, le mouvement part avec la preuve de CE geste, pas la preuve d’identité générique');
   check(out.opts.validate({ name: 'Sara Alaoui', offline: true, permission: { id: 'money.cash', granted: false, configured: true } }) === null,
     'un verdict hors ligne n’est jamais lu : la copie de l’équipe tranche');
-  let approved = null;
-  const self = forAct({ kind: 'open_drawer' }, 'manager', (who) => { approved = who; }, null, {});
-  check(self && self.done && approved && approved.viaPermission === 'sales.drawer', 'Lina a le droit au tiroir : pas de pavé responsable pour elle');
-  check(!('actProof' in P.permsProofs()), 'et ce geste-là ne réutilise pas la preuve de Sara : c’est Lina, prouvée par sa propre preuve');
+  const self = forAct({ kind: 'open_drawer' }, 'manager', () => {}, null, {});
+  check(self && !self.done && self.authContext.kind === 'drawer' && self.opts.validate({ name: 'Lina Saidi' }) === null,
+    'Lina a le droit au tiroir : le pavé lui demande SON code (la preuve du geste), pas celui d’un responsable');
+  check(self.opts.hint === 'Confirmez avec votre code : ce geste est inscrit à votre nom.', 'et lui dit pourquoi');
   const refund = forAct({ kind: 'refund' }, 'manager', () => { throw new Error('jamais sans pavé'); }, { kind: 'refund', refundId: 'r' }, {});
   check(refund && !refund.done && refund.authContext.kind === 'refund', 'un remboursement passe toujours par le pavé (preuve signée liée à la commande)');
   store.set('kiwiPerms:v1:droits-fixture', JSON.stringify({ ...doc, configured: false }));

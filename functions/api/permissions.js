@@ -21,13 +21,14 @@
 //                  navigateur donneraient, personne par personne ; n'écrit rien
 //   import-legacy  { legacy, accept: [key] }   reprend ces personnes-là, seules
 //   legacy-dismiss                             ne rien reprendre, ne plus demander
+//   review-held    { keys }                    lève la retenue des personnes revues
 //   undo           { id }                      défait une ligne du journal
 // Les changements de droits exigent l'activation : enregistrer un réglage ne
 // l'allume jamais en passant. Chaque écriture ajoute sa ligne au journal, dans
 // le même lot D1, avec l'état d'avant (c'est ce qu'`undo` remet).
 import { json, entitledMerchant } from '../auth/_lib.js';
 import {
-  Catalog, rosterFor, loadState, permsIn, permissionEditor, sessionPerson, legacyPerms,
+  Catalog, rosterFor, loadState, permsIn, permissionEditor, sessionPerson, legacyPerms, actorView, heldByView,
 } from './_permissions.js';
 
 const MAX_LEGACY = 20000;
@@ -43,7 +44,9 @@ async function publicState(env, merchant, full) {
     /* `today` : ce que la personne fait aujourd'hui, règle d'avant. */
     const before = legacyPerms(m.role);
     return { key: m.key, name: m.name, role: m.role, defaultPreset: m.defaultPreset, ownerTitle: m.ownerTitle, ownerAccess: !!eff.ownerAccess,
-      held: !!eff.held, heldBy: eff.held && row ? row.heldBy : '', preset: eff.preset,
+      held: !!eff.held, heldBy: eff.held && row ? heldByView(row.heldBy) : null, preset: eff.preset,
+      /* Ce que « Revoir » lui rendrait : ses réglages gardés en réserve. */
+      ...(eff.held && row ? { heldPerms: Catalog.effective(row.preset, row.grants, row.denies, state.presets) } : {}),
       grants: eff.grants, denies: eff.denies, perms: eff.perms, custom: !!row, updatedTs: row ? row.updatedTs : 0,
       today: before.perms, todayPartial: before.partial, proposed: Catalog.presetPerms(m.defaultPreset, state.presets) };
   });
@@ -51,6 +54,7 @@ async function publicState(env, merchant, full) {
   Catalog.PRESET_IDS.forEach((id) => { presets[id] = Catalog.presetPerms(id, state.presets); });
   return { roster, state, body: { ok: true, merchant, configured: state.configured, activatedTs: state.activatedTs,
     missingTables: !!state.missing, freeDiscountPct: state.freeDiscountPct, presets, staff,
+    ...(full ? { heldCount: staff.filter((s) => s.held).length } : {}),
     ...(full ? { customPresets: Object.keys(state.presets), legacyImported: !!state.legacyImportedTs } : {}) } };
 }
 
@@ -74,13 +78,13 @@ export async function onRequestGet({ request, env }) {
   if (!out.state.missing) {
     try {
       audit = ((await env.DB.prepare(
-        `SELECT id, ts, actor_label, subject, subject_label, change FROM staff_permission_audit
+        `SELECT id, ts, actor, actor_label, subject, subject_label, change FROM staff_permission_audit
           WHERE merchant = ? ORDER BY ts DESC, id DESC LIMIT 200`
       ).bind(merchant).all()).results || []).map((r) => {
         let change = {};
         try { change = JSON.parse(r.change) || {}; } catch (_) {}
         const { before, ...shown } = change;   // l'état d'avant sert à `undo`, l'écran n'en a pas besoin
-        return { id: Number(r.id) || 0, ts: Number(r.ts) || 0, actor: String(r.actor_label || ''), subject: String(r.subject || ''),
+        return { id: Number(r.id) || 0, ts: Number(r.ts) || 0, actor: actorView(r.actor, r.actor_label), subject: String(r.subject || ''),
           subjectLabel: String(r.subject_label || ''), change: shown, undoable: !!before };
       });
     } catch (_) { audit = []; }
@@ -320,6 +324,23 @@ async function writePermissions({ request, env }) {
     if (action === 'legacy-dismiss' || !imported) stmts.push(auditStmt(env, merchant, actor, 'settings', '', { kind: 'legacy-dismissed' }, ts));
     await commit(env, stmts);
     return json({ ok: true, imported });
+  }
+
+  /* « Revoir » : le propriétaire lève la retenue des personnes qu'il a vues
+     (aperçu à l'écran) ; chacune retrouve ses réglages gardés en réserve. */
+  if (action === 'review-held') {
+    const keys = Array.isArray(body.keys) ? body.keys.slice(0, 200).map((k) => clip(k, 120)) : [];
+    const people = keys.map((k) => byKey.get(k)).filter((m) => m && state.rows.get(m.key) && state.rows.get(m.key).heldTs);
+    if (!people.length) return json({ error: 'nothing-held' }, 409);
+    for (const m of people) {
+      const row = state.rows.get(m.key);
+      stmts.push(env.DB.prepare('UPDATE staff_permissions SET held_ts = 0, held_by = \'\', updated_ts = ?, updated_by = ? WHERE merchant = ? AND staff_key = ? AND held_ts = ?')
+        .bind(ts, clip(actor.id, 120), merchant, m.key, row.heldTs));
+      stmts.push(auditStmt(env, merchant, actor, 'staff:' + m.key, m.name, { kind: 'review', preset: row.preset,
+        perms: Catalog.effective(row.preset, row.grants, row.denies, state.presets), heldBy: row.heldBy }, ts));
+    }
+    await commit(env, stmts);
+    return json({ ok: true, reviewed: people.map((m) => m.key) });
   }
 
   if (action === 'undo') {

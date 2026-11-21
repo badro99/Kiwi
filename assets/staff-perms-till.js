@@ -32,8 +32,10 @@
   var PERM_KIND = { 'money.cash': 'cash', 'sales.drawer': 'drawer', 'money.close-day': 'close-day', 'sales.refund': 'refund',
     'stock.adjust': 'inventory', 'sales.void-sent': 'void-sent', 'sales.discount': 'discount', 'sales.price': 'price', 'sales.cancel': 'cancel' };
   /* Ce que la personne en poste peut faire elle-même sans pavé : rien qui
-     demande une preuve signée liée à la commande (remboursement, stock). */
-  var SELF_SERVE = { 'money.cash': 1, 'sales.drawer': 1, 'money.close-day': 1, 'sales.void-sent': 1, 'sales.discount': 1 };
+     demande une preuve signée (remboursement, stock) ni rien que le journal
+     juge (espèces, tiroir, clôture, remise : seule la preuve du GESTE couvre,
+     functions/api/_permissions.js › flagUnauthorized). Elle tape alors SON code. */
+  var SELF_SERVE = { 'sales.void-sent': 1 };
   /* Arabe : darija, comme le catalogue (assets/permissions-catalog.js › can). */
   var LABEL = {
     'money.cash': ['sortir ou entrer des espèces', 'move cash in or out', 'يدخّل ولا يخرّج الفلوس من الكاشة'],
@@ -129,6 +131,11 @@
   function needHint(perm) {
     var s = window.KiwiStaff || {}, l = String(lang()).slice(0, 2), name = String(s.name || '').trim();
     if (name && can(perm) === false) return refusal(s, perm);
+    if (name && can(perm) === true) {
+      if (l === 'en') return 'Confirm with your code: this is recorded in your name.';
+      if (l === 'ar') return 'أكّد بالكود ديالك: هاد الحركة كتتسجّل باسمك.';
+      return 'Confirmez avec votre code : ce geste est inscrit à votre nom.';
+    }
     if (l === 'en') return 'Needs the right to ' + say(perm) + '. ' + canValidate(perm, name);
     if (l === 'ar') return 'خاص الحق باش ' + say(perm) + '. ' + canValidate(perm, name);
     return 'Il faut le droit de ' + say(perm) + '. ' + canValidate(perm, name);

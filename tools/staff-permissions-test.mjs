@@ -287,7 +287,24 @@ console.log('■ Un gérant ne se fait pas propriétaire');
   const cfgRes = await config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie: cookieManager,
     body: { merchant: SHOP, name: 'Café Droits', pins: [{ name: 'Sara Alaoui', role: 'Propriétaire', pin: '7731' }, { name: 'Lina Saidi', role: 'Caissière', pin: '7732' }] } }) });
   const owners = w.sql.prepare("SELECT name FROM staff_pins WHERE merchant = ? AND role = 'Propriétaire'").all(SHOP).map((r) => r.name);
-  check(cfgRes.status === 200 && JSON.stringify(owners) === '["Nadia Patron"]', '/api/config : le code « Propriétaire » que Sara se publie est ignoré, celui du patron reste');
+  check(cfgRes.status === 403 && (await cfgRes.json()).error === 'owner-title' && JSON.stringify(owners) === '["Nadia Patron"]', '/api/config : le code « Propriétaire » que Sara se publie est REFUSÉ (403), rien n’est écrit, celui du patron reste');
+  /* La même table des intitulés pour la publication et pour les droits. */
+  const { accountOwnerRole } = await imp('functions/api/_staff-publication.js');
+  const variants = ['Propriétaire', 'proprietaire', '  OWNER ', 'Patronne', 'PATRON', 'Direction', 'Manager-Owner', 'propriétaire ', 'Gérant', 'Manager', 'Caissière', 'Directeur', 'Responsable'];
+  check(variants.every((v) => accountOwnerRole(v) === Catalog.ownerTitle(v)), 'publication et droits disent la même chose de chaque intitulé : ' + variants.map((v) => v.trim() + '=' + Catalog.ownerTitle(v)).join(' '));
+  for (const role of ['Propriétaire', 'Patronne', '  OWNER ']) {
+    const r = await config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie: cookieManager,
+      body: { merchant: SHOP, name: 'Café Droits', pins: [{ name: 'Xavier Test', role, pin: '7741' }, { name: 'Lina Saidi', role: 'Caissière', pin: CODES.caisse }] } }) });
+    check(r.status === 403 && (await r.json()).error === 'owner-title', `Sara publie « Xavier Test · ${role.trim()} » : 403`);
+  }
+  check(!w.sql.prepare("SELECT 1 FROM staff_pins WHERE merchant = ? AND name = 'Xavier Test'").get(SHOP), 'aucun de ces codes n’existe');
+  /* La page Équipe d'un gérant republie la patronne telle quelle : admis, inchangé. */
+  const same = await config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie: cookieManager,
+    body: { merchant: SHOP, name: 'Café Droits', pins: [{ name: 'Nadia Patron', role: 'Propriétaire', pin: CODES.owner }, { name: 'Lina Saidi', role: 'Caissière', pin: CODES.caisse }] } }) });
+  check(same.status === 200 && (await (await pinVerify(w, CODES.owner, {})).json()).staff.role === 'Propriétaire', 'la ligne propriétaire republiée telle quelle par un gérant passe, inchangée');
+  const recode = await config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie: cookieManager,
+    body: { merchant: SHOP, name: 'Café Droits', pins: [{ name: 'Nadia Patron', role: 'Propriétaire', pin: '7749' }, { name: 'Lina Saidi', role: 'Caissière', pin: CODES.caisse }] } }) });
+  check(recode.status === 403, 'mais recoder la patronne : 403');
 }
 
 /* ── 6 · Au comptoir : approbations ─────────────────────────────────────── */
@@ -431,6 +448,17 @@ console.log('■ Remise, espèces, tiroir, clôture sans le droit');
   await ev('ev-2', 'movement', { ...out, actorId: 'pin-sara', sellerProof: linaSeller });
   const f2 = flags().filter((r) => r.c.ref === 'ev-2');
   prove('money.cash', f2.length === 1 && f2[0].subject_label === 'Lina Saidi', 'la preuve dit Lina : inscrit une fois, à son nom, quoi que la caisse déclare');
+  /* La preuve de la personne en poste NOMME, elle ne couvre pas : Sara a le droit,
+     mais sans code pour CE geste, ses 9 000 MAD sont inscrits « sans code ». */
+  const saraSeller = await tillSellerProof(SECRET, SHOP, { id: 'pin-sara', name: 'Sara Alaoui' });
+  await ev('ev-big', 'movement', { movementKind: 'out', movementAmountCents: 900000, movementReason: 'x', actorId: 'pin-sara', sellerProof: saraSeller });
+  await ev('ev-big2', 'movement', { movementKind: 'out', movementAmountCents: 2000, movementReason: 'x', actorId: 'pin-sara', sellerProof: saraSeller });
+  const big = flags().filter((r) => r.c.ref === 'ev-big' || r.c.ref === 'ev-big2');
+  check(big.length === 2 && big.every((r) => r.subject_label === 'Sara Alaoui' && r.c.noCode === true), 'deux sorties sous la preuve de poste de Sara : inscrites, « sans code », pas couvertes');
+  const unlock = await (await pinVerify(w, CODES.manager)).json();
+  const approve = await (await pinVerify(w, CODES.manager, { kind: 'cash', amountCents: 2000, move: 'out' })).json();
+  check(typeof unlock.sellerProof === 'string' && unlock.sellerProof && !approve.sellerProof && typeof approve.actProof === 'string',
+    'la preuve de poste ne sort qu’à l’ouverture de la caisse (sans acte), jamais d’un accord donné au pavé');
   const ok = await saraAct({ kind: 'cash', amountCents: 2000, move: 'out' });
   await ev('ev-3', 'movement', { ...out, actorId: 'pin-lina', actProof: ok, sellerProof: linaSeller });
   check(!flags().some((r) => r.c.ref === 'ev-3'), 'Sara a validé CE geste sur le pavé (sa preuve : espèces, 20 MAD, sortie) : rien n’est inscrit');
@@ -517,10 +545,13 @@ console.log('■ Le journal nomme le code');
   const s = await person(w, 'm-lina');
   const res = await post(w, cookieNadia, { action: 'save-staff', key: 'm-lina', preset: s.preset, perms: [...s.perms, 'sales.refund'] });
   const last = audit(w).at(-1);
-  check(res.status === 200 && last.actor === 'code:pin-nadia' && last.actor_label === 'Nadia Patron · code propriétaire',
-    'une écriture faite par le code « Propriétaire » de Nadia est inscrite à son nom, pas « propriétaire »');
+  const shown = (await state(w)).audit[0].actor;
+  check(res.status === 200 && last.actor === 'code:pin-nadia' && last.actor_label === 'Nadia Patron' && shown.kind === 'code' && shown.name === 'Nadia Patron',
+    'une écriture faite par le code « Propriétaire » de Nadia est inscrite à son nom, pas « propriétaire » : ' + JSON.stringify(shown));
   await post(w, cookieOwner, { action: 'settings', freeDiscountPct: 12 });
-  check(audit(w).at(-1).actor === 'account:acc-droits' && audit(w).at(-1).actor_label === 'compte du propriétaire', 'celle du compte lui-même reste « compte du propriétaire »');
+  const acc = (await state(w)).audit[0].actor;
+  check(audit(w).at(-1).actor === 'account:acc-droits' && acc.kind === 'account' && acc.name === '', 'celle du compte lui-même : un auteur typé, sans phrase (l’écran la dit dans sa langue)');
+  check(!audit(w).some((r) => /propriétaire|session /.test(r.actor_label)), 'aucune phrase française rangée comme auteur');
 }
 
 /* ── 9d · Revue de sécurité : homonymes, retenue fermée ─────────────────── */
@@ -573,6 +604,35 @@ console.log('■ Un homonyme ne prend pas l’accès propriétaire ; une retenue
   const failPlan = await addOne(w, 'm-y');
   restore();
   check(failPlan.status === 503 && !JSON.parse(doc().data).members.some((m) => m.id === 'm-y'), 'plan impossible : la fiche n’est pas écrite (503)');
+}
+
+/* ── 9e · Un code changé par un gérant, et la revue du patron ──────────── */
+console.log('■ Code changé : retenue, journal, revue');
+{
+  const w = world();
+  await activate(w);
+  const lina0 = await person(w, 'm-lina');
+  const base = (linaCode) => [{ name: 'Lina Saidi', role: 'Caissière', pin: linaCode }, { name: 'Hind Amrani', role: 'Responsable', pin: CODES.hind },
+    { name: 'Sara Alaoui', role: 'Manager', pin: CODES.manager }];
+  const publish = (pins) => config.onRequestPost({ env: w.env, request: req('/api/config', { method: 'POST', cookie: cookieManager, body: { merchant: SHOP, name: 'Café Droits', pins } }) });
+  check((await publish(base(CODES.caisse))).status === 200 && !(await person(w, 'm-lina')).held, 'la page Équipe republie les mêmes codes : personne n’est retenu');
+  const r = await publish(base('7761'));
+  const lina = await person(w, 'm-lina');
+  const st = await state(w);
+  /* (La republication donne de nouveaux identifiants aux codes : la session de Sara n'a plus de nom à dire, elle reste « une session ».) */
+  check(r.status === 200 && lina.held === true && lina.perms.length === 0 && lina.heldBy.kind === 'session',
+    'Sara change le code de Lina : Lina est retenue, par une session qui n’est pas le patron : ' + JSON.stringify(lina.heldBy));
+  check(st.audit.some((a) => a.change.kind === 'code-changed' && a.subject === 'staff:m-lina' && a.actor.kind === 'session'), 'le journal dit « code changé », et par quel genre d’auteur');
+  check(st.heldCount === 1, 'l’écran compte une personne à revoir');
+  const refund = { kind: 'refund', refundId: 'rf-c', originalSaleId: 'sale-1', amountCents: 1000, refundMethod: 'cash' };
+  check(!(await (await pinVerify(w, '7761', refund)).json()).approval, 'et le nouveau code ne porte aucun droit avant la revue');
+  check(JSON.stringify(lina.heldPerms) === JSON.stringify(lina0.perms), 'l’aperçu de la revue montre ses droits d’avant, gardés en réserve');
+  const rev = await post(w, cookieOwner, { action: 'review-held', keys: ['m-lina'] });
+  const after = await person(w, 'm-lina');
+  check(rev.status === 200 && after.held === false && JSON.stringify(after.perms) === JSON.stringify(lina0.perms), '« Revoir » : Lina retrouve exactement ses droits');
+  check((await state(w)).audit[0].change.kind === 'review', 'la revue est au journal');
+  check((await post(w, cookieManager, { action: 'review-held', keys: ['m-lina'] })).status === 403, 'seul le patron revoit');
+  check((await post(w, cookieOwner, { action: 'review-held', keys: ['m-lina'] })).status === 409, 'rien à revoir deux fois');
 }
 
 /* ── 10 · Tables 0028 absentes : la règle d'avant, sans 503 ─────────────── */

@@ -27,7 +27,7 @@
   "api/permissions.js : no such table: staff_permission_audit": 4,
   "api/permissions.js : no such table: staff_permission_presets": 4,
   "api/permissions.js : no such table: staff_permission_settings": 6,
-  "api/permissions.js : no such table: staff_permissions": 2,
+  "api/permissions.js : no such table: staff_permissions": 3,
   "api/print/_relay.js : repli de schéma": 1,
   "api/push/morning.js : repli de schéma": 1,
   "api/push/register.js : repli de schéma": 4,

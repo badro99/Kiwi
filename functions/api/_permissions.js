@@ -31,10 +31,11 @@ import {
   json, readSession, readCookie, SESS_COOKIE, operatorActor, isOperator, teamRemovedIds,
   employeeRoleOpensDashboard, faceAccessTier,
 } from '../auth/_lib.js';
-import { sessionTier } from '../auth/_session-tier.js';
+import { sessionTier, sessionTierAtLeast } from '../auth/_session-tier.js';
 import { isMissingTable } from './print/_relay.js';
 import { readTillSellerProof } from './_seller.js';
 import { consumeActProof } from './_act-proof.js';
+import { pinHashes } from '../auth/_staff-codes.js';
 
 export { Catalog };
 
@@ -413,26 +414,43 @@ export async function permissionEditor(request, env) {
   try {
     if (await isOperator(request, env)) {
       const op = await operatorActor(request, env);
-      return { ok: true, id: 'operator:' + String(op.id || '').slice(0, 80), label: String(op.label || 'opérateur').slice(0, 80) };
+      return { ok: true, id: 'operator:' + String(op.id || '').slice(0, 80), label: String(op.label || '').slice(0, 80) };
     }
   } catch (_) { /* fall through */ }
   const who = await sessionPerson(request, env);
   if (who && who.unavailable) return { ok: false, unavailable: true };
-  if (who && who.owner && who.code) return { ok: true, id: 'code:' + who.code.id, label: (who.code.name || 'code') + ' · code propriétaire' };
-  if (who && who.owner) return { ok: true, id: 'account:' + String(who.aid).slice(0, 80), label: 'compte du propriétaire' };
+  /* Le journal garde QUI (un identifiant typé et un nom), jamais une phrase :
+     l'écran la compose dans la langue de celui qui lit (actorView). */
+  if (who && who.owner && who.code) return { ok: true, id: 'code:' + who.code.id, label: String(who.code.name || '').slice(0, 80) };
+  if (who && who.owner) return { ok: true, id: 'account:' + String(who.aid).slice(0, 80), label: '' };
   return { ok: false };
 }
 
 /* Qui écrit, pour le journal, quel que soit son palier. */
 async function sessionActor(request, env) {
   try {
-    if (await isOperator(request, env)) { const op = await operatorActor(request, env); return { owner: true, id: 'operator:' + String(op.id || '').slice(0, 80), label: String(op.label || 'opérateur').slice(0, 80) }; }
+    if (await isOperator(request, env)) { const op = await operatorActor(request, env); return { owner: true, id: 'operator:' + String(op.id || '').slice(0, 80), label: String(op.label || '').slice(0, 80) }; }
   } catch (_) {}
   const editor = await permissionEditor(request, env);
   if (editor.ok) return { owner: true, id: editor.id, label: editor.label };
   const who = await sessionPerson(request, env);
-  if (who && who.staff) return { owner: false, id: 'session:' + nameKey(who.staff.name), label: who.staff.name || 'session' };
-  return { owner: false, id: 'session', label: who && who.tier ? 'session ' + who.tier : 'session' };
+  if (who && who.staff) return { owner: false, id: 'session:' + nameKey(who.staff.name), label: String(who.staff.name || '').slice(0, 80) };
+  return { owner: false, id: 'session:' + String((who && who.tier) || ''), label: '' };
+}
+
+/* Un auteur du journal tel que l'écran le reçoit : { kind, name }. kind ∈
+   account (le compte), code (un code « Propriétaire »), operator, session
+   (un tableau de bord déverrouillé par un code d'équipe), staff (une personne
+   de l'équipe, faits sans le droit). Aucune phrase : la langue est au client. */
+const ACTOR_KINDS = ['account', 'code', 'operator', 'session', 'staff'];
+export function actorView(id, label) {
+  const kind = String(id || '').split(':')[0];
+  return { kind: ACTOR_KINDS.includes(kind) ? kind : 'session', name: String(label || '').slice(0, 80) };
+}
+const heldByOf = (actor) => (String(actor.id || '').split(':')[0] + ':' + String(actor.label || '')).slice(0, 80);
+export function heldByView(text) {
+  const raw = String(text || ''), at = raw.indexOf(':');
+  return at < 0 ? { kind: 'session', name: raw } : actorView(raw.slice(0, at), raw.slice(at + 1));
 }
 
 /* ── LES IDENTITÉS NOUVELLES ─────────────────────────────────────────────────
@@ -444,14 +462,16 @@ async function sessionActor(request, env) {
  * code « Sara Deux · Gérant ». Chaque changement d'Équipe va aussi au journal,
  * à côté des changements de droits. */
 function holdStmt(env, merchant, subject, actor, ts) {
+  /* Une personne nouvelle part de son rôle, sans surcharge ; une personne qui
+     a déjà ses droits les GARDE en réserve : la retenue ne les efface pas, la
+     revue du propriétaire (« Revoir », ou un enregistrement) les rend tels quels. */
   const preset = Catalog.presetForRole(subject.role);
   return env.DB.prepare(
     `INSERT INTO staff_permissions (merchant, staff_key, preset, grants, denies, name, updated_ts, updated_by, held_ts, held_by)
-     VALUES (?, ?, ?, '[]', ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(merchant, staff_key) DO UPDATE SET preset = excluded.preset, grants = '[]', denies = excluded.denies,
-       name = excluded.name, updated_ts = excluded.updated_ts, updated_by = excluded.updated_by, held_ts = excluded.held_ts, held_by = excluded.held_by`
-  ).bind(merchant, String(subject.key).slice(0, 120), preset, JSON.stringify(Catalog.presetPerms(preset)), String(subject.name || '').slice(0, 80),
-    ts, actor.id.slice(0, 120), ts, actor.label.slice(0, 80));
+     VALUES (?, ?, ?, '[]', '[]', ?, ?, ?, ?, ?)
+     ON CONFLICT(merchant, staff_key) DO UPDATE SET held_ts = excluded.held_ts, held_by = excluded.held_by`
+  ).bind(merchant, String(subject.key).slice(0, 120), preset, String(subject.name || '').slice(0, 80),
+    ts, actor.id.slice(0, 120), ts, heldByOf(actor));
 }
 function journalStmt(env, merchant, actor, subject, label, change, ts) {
   return env.DB.prepare(
@@ -508,8 +528,31 @@ export async function afterDocWrite(request, env) {
      sous un autre intitulé) est retenu AVANT la publication ; si la retenue
      ne s'écrit pas, rien n'est publié (503).
    Rend null, une Response de refus, ou la suite (journal) à appeler APRÈS. */
-export async function codeHolds(request, env, merchant, body) {
+export async function codeHolds(request, env, merchant, body, ownerTitled) {
   if (!env || !env.DB || !merchant || !Array.isArray(body && body.pins)) return null;
+  /* Sous le palier du patron, une ligne à intitulé de propriétaire (la table
+     partagée, Catalog.ownerTitle) n'est admise que si elle est INCHANGÉE (même
+     nom, même code, déjà propriétaire en base) : la page Équipe republie ses
+     collègues telles quelles. Neuve ou recodée : refusée, rien n'est écrit. */
+  const titled = [...(Array.isArray(ownerTitled) ? ownerTitled : []), ...body.pins.filter((p) => p && Catalog.ownerTitle(p.role))];
+  if (titled.length) {
+    if (!(await sessionTierAtLeast(request, env, 'owner'))) {
+      for (const p of titled.slice(0, 60)) {
+        const code = String(p.code || p.pin || '').trim();
+        let marks;
+        try { marks = [...await pinHashes(env, merchant, code), code]; } catch (_) { return json({ error: 'owner-title', name: String(p.name || '').slice(0, 60) }, 403); }
+        let rows;
+        try {
+          rows = (await env.DB.prepare('SELECT name, role FROM staff_pins WHERE merchant = ? AND pin IN (' + marks.map(() => '?').join(',') + ')')
+            .bind(merchant, ...marks).all()).results || [];
+        } catch (_) { return permissionUnavailable(); }
+        if (!rows.some((r) => nameKey(r.name) === nameKey(p.name) && Catalog.ownerTitle(r.role))) {
+          return json({ error: 'owner-title', name: String(p.name || '').slice(0, 60) }, 403);
+        }
+      }
+      body.pins = body.pins.filter((p) => !(p && Catalog.ownerTitle(p.role)));
+    }
+  }
   const state = await loadState(env, merchant);
   if (state.unavailable) return permissionUnavailable();
   if (state.missing || !state.configured) return null;
@@ -524,18 +567,37 @@ export async function codeHolds(request, env, merchant, body) {
   const homonym = body.pins.find((p) => p && typeof p === 'object' && !Catalog.ownerTitle(p.role) && ownerNames.has(nameKey(p.name)));
   if (homonym) return json({ error: 'owner-name', name: String(homonym.name || '').slice(0, 60) }, 409);
   const had = new Map(before.map((r) => [nameKey(r.name), Catalog.normRole(r.role)]));
-  const fresh = body.pins.filter((p) => p && typeof p === 'object' && String(p.name || '').trim()
-    && !Catalog.ownerTitle(p.role) && had.get(nameKey(p.name)) !== Catalog.normRole(String(p.role || '').trim().slice(0, 24) || 'staff'));
+  const candidates = body.pins.filter((p) => p && typeof p === 'object' && String(p.name || '').trim() && !Catalog.ownerTitle(p.role)).slice(0, 60);
+  const fresh = [], changed = new Set();
+  for (const p of candidates) {
+    const role = Catalog.normRole(String(p.role || '').trim().slice(0, 24) || 'staff');
+    if (had.get(nameKey(p.name)) !== role) { fresh.push(p); continue; }
+    /* Même nom, même intitulé : le CODE a-t-il changé ? La comparaison reste
+       dans SQL (empreintes de staff_pins, comme la publication) : aucun code ne
+       remonte, seuls des identifiants. Un code changé par un autre que le
+       patron : retenue jusqu'à sa revue, et « code changé » au journal. */
+    const code = String(p.code || p.pin || '').trim();
+    let marks;
+    try { marks = [...await pinHashes(env, merchant, code), code]; } catch (_) { continue; }   // code invalide : la publication l'écarte
+    let same = false;
+    try {
+      const rows = (await env.DB.prepare('SELECT name FROM staff_pins WHERE merchant = ? AND pin IN (' + marks.map(() => '?').join(',') + ')')
+        .bind(merchant, ...marks).all()).results || [];
+      same = rows.some((r) => nameKey(r.name) === nameKey(p.name));
+    } catch (_) { same = false; }   // illisible : traité comme changé (fermé)
+    if (!same) { fresh.push(p); changed.add(p); }
+  }
   if (!fresh.length) return null;
   const ts = Date.now(), holds = [], journal = [];
-  for (const p of fresh.slice(0, 60)) {
+  for (const p of fresh) {
     const role = String(p.role || '').trim().slice(0, 24) || 'staff';
     let subject;
     try { subject = await subjectFor(env, merchant, { name: String(p.name).trim().slice(0, 60), role }); } catch (_) { return permissionUnavailable(); }
     holds.push(holdStmt(env, merchant, { ...subject, role }, actor, ts));
     const from = had.get(nameKey(p.name));
     journal.push(journalStmt(env, merchant, actor, 'staff:' + subject.key, subject.name,
-      { kind: from ? 'code-retitled' : 'code-added', role, ...(from ? { from } : {}), held: true }, ts));
+      changed.has(p) ? { kind: 'code-changed', role, held: true }
+        : { kind: from ? 'code-retitled' : 'code-added', role, ...(from ? { from } : {}), held: true }, ts));
   }
   if (!(await runAll(env, holds))) return permissionUnavailable();
   return async () => { await runAll(env, journal); };
@@ -589,7 +651,12 @@ export async function flagUnauthorized(env, merchant, proven, perm, ref, detail)
       if (pin) {
         const who = { name: String(pin.name || proven.name || ''), role: String(pin.role || '') };
         const subj = await subjectFor(env, merchant, who);
-        if (permsIn(state, subj).perms.includes(perm)) return false;
+        /* Seule la preuve du GESTE couvre. La preuve de la personne en poste
+           (sellerProof) nomme l'auteur, mais ne vaut pas accord : sans code
+           pour CE geste, le fait est inscrit, « sans code » s'il avait le droit. */
+        const has = permsIn(state, subj).perms.includes(perm);
+        if (has && proven.via === 'act') return false;
+        if (has) detail = { ...(detail || {}), noCode: true };
         subject = subj;
       }
     }
