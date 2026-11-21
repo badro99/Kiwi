@@ -906,15 +906,13 @@ async function writePurchaseOrder(env, order, lines) {
     const seq = Number((top && top.taken) || 0) + 1;
     const number = `BC-${order.year}-${String(seq).padStart(6, '0')}`;
     try {
-      /* Sans la colonne supplier_id (migration 0028 pas passée), le bon s'écrit comme avant. */
-      const linkCol = order.legacy ? '' : ', supplier_id';
       await env.DB.prepare(
         `INSERT INTO purchase_orders
          (id, merchant, seq, number, supplier, status, currency, expected_date,
-          total_cents, invoiced_cents, command_id, created_ts, updated_ts${linkCol})
-         VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, 0, ?, ?, ?${linkCol ? ', ?' : ''})`
+          total_cents, invoiced_cents, command_id, created_ts, updated_ts, supplier_id)
+         VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, 0, ?, ?, ?, ?)`
       ).bind(order.id, order.merchant, seq, number, order.supplier, order.currency,
-        order.expectedDate, order.totalCents, order.id, now(), now(), ...(linkCol ? [order.supplierId || ''] : [])).run();
+        order.expectedDate, order.totalCents, order.id, now(), now(), order.supplierId || '').run();
       for (let i = 0; i < lines.length; i += 1) {
         await env.DB.prepare(
           `INSERT INTO purchase_order_lines
@@ -925,9 +923,7 @@ async function writePurchaseOrder(env, order, lines) {
           lines[i].unit, lines[i].qty, lines[i].unitCents, now()).run();
       }
       return { seq, number };
-    } catch (error) { /* rang pris entre-temps — on recommence sur le suivant */
-      if (!order.legacy && /supplier_id/.test(String(error && error.message))) order.legacy = true;
-    }
+    } catch (_) { /* rang pris entre-temps — on recommence sur le suivant */ }
   }
   return null;
 }

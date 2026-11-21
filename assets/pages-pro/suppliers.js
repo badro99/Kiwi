@@ -47,7 +47,7 @@
     wallet: 'M200-200v-560 560Zm0 80q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v100h-80v-100H200v560h560v-100h80v100q0 33-23.5 56.5T760-120H200Zm320-160q-33 0-56.5-23.5T440-360v-240q0-33 23.5-56.5T520-680h280q33 0 56.5 23.5T880-600v240q0 33-23.5 56.5T800-280H520Zm280-80v-240H520v240h280Zm-117.5-77.5Q700-455 700-480t-17.5-42.5Q665-540 640-540t-42.5 17.5Q580-505 580-480t17.5 42.5Q615-420 640-420t42.5-17.5Z',
     call: 'M798-120q-125 0-247-54.5T329-329Q229-429 174.5-551T120-798q0-18 12-30t30-12h162q14 0 25 9.5t13 22.5l26 140q2 16-1 27t-11 19l-97 98q20 37 47.5 71.5T387-386q31 31 65 57.5t72 48.5l94-94q9-9 23.5-13.5T670-390l138 28q14 4 23 14.5t9 23.5v162q0 18-12 30t-30 12ZM241-600l66-66-17-94h-89q5 41 14 81t26 79Zm358 358q39 17 79.5 27t81.5 13v-88l-94-19-67 67ZM241-600Zm358 358Z',
   };
-  const ic = (k) => `<svg class="sp-i" viewBox="0 -960 960 960" aria-hidden="true" fill="currentColor"><path d="${P[k]}"/></svg>`;
+  const icon = (k) => `<svg class="sp-i" viewBox="0 -960 960 960" aria-hidden="true" fill="currentColor"><path d="${P[k]}"/></svg>`;
 
   const METHODS = ['cash', 'transfer', 'cheque', 'card', 'other'];
   const methodLabel = (m) => ({
@@ -73,9 +73,9 @@
 
   function css() {
     if (document.getElementById('sp-css')) return;
-    const s = document.createElement('style');
-    s.id = 'sp-css';
-    s.textContent = `
+    const style = document.createElement('style');
+    style.id = 'sp-css';
+    style.textContent = `
 .sp-i{width:18px;height:18px;flex:none}
 .sp-wrap{display:grid;gap:14px}
 .sp-card{border:1px solid var(--n-200,rgba(10,15,13,.12));border-radius:var(--r-xl,18px);background:var(--paper-elev,var(--paper,#F7F5F0));padding:18px;min-width:0}
@@ -151,7 +151,7 @@
 .sp-foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 @media(max-width:560px){.sp-form .two{grid-template-columns:1fr}.sp-big{font-size:26px}}
 `;
-    document.head.appendChild(s);
+    document.head.appendChild(style);
   }
 
   /* ── Démo : des fournisseurs d'exemple, en mémoire seulement ───────── */
@@ -222,7 +222,7 @@
     if (!r.ok || !j || j.error) { const e = new Error((j && j.error) || 'http-' + r.status); e.code = (j && j.error) || 'http-' + r.status; throw e; }
     return j;
   }
-  function errText(code) {
+  function tr(code) {
     return ({
       'owner-required': L('Réservé au propriétaire du commerce.', 'Owner only.', 'خاص بمول المحل.'),
       'bad-amount': L('Montant invalide.', 'Invalid amount.', 'المبلغ غير صحيح.'),
@@ -273,12 +273,12 @@
         <div class="sp-kpi"><div class="k">${esc(L('Fournisseurs', 'Suppliers', 'الموردون'))}</div><div class="v">${esc(String(t.count || 0))}</div></div>
       </div>${ageBar(t.ageing)}${t.pending ? `<p class="sp-hint" style="margin-top:10px">${esc(String(t.pending))} ${esc(L("réception(s) saisie(s) par l'équipe attendent votre accord avant d'entrer dans les soldes.", 'receipt(s) entered by your team await your approval before they count.', 'استلام(ات) دخّلها الفريق كتسنّى الموافقة ديالك قبل ما تحسب.'))}</p>` : ''}</div>
       <div class="sp-bar">
-        <label class="sp-search">${ic('search')}<input type="search" data-sp-q value="${esc(S.q)}" placeholder="${esc(L('Chercher un fournisseur, un téléphone, un ICE', 'Search a supplier, phone or ICE', 'قلّب على مورد، تيليفون ولا ICE'))}" aria-label="${esc(L('Chercher', 'Search', 'بحث'))}"></label>
+        <label class="sp-search">${icon('search')}<input type="search" data-sp-q value="${esc(S.q)}" placeholder="${esc(L('Chercher un fournisseur, un téléphone, un ICE', 'Search a supplier, phone or ICE', 'قلّب على مورد، تيليفون ولا ICE'))}" aria-label="${esc(L('Chercher', 'Search', 'بحث'))}"></label>
         <div class="sp-pills" data-lens-demo role="group" aria-label="${esc(L('Trier', 'Sort', 'ترتيب'))}">${pill('owe', L('Je dois le plus', 'I owe most', 'اللي عليا ليه كثر'))}${pill('recent', L('Récents', 'Recent', 'الأحدث'))}${pill('name', L('Nom', 'Name', 'الاسم'))}</div>
-        <button type="button" class="kb ghost sp-btn" data-action="sup-cashbook">${ic('wallet')}${esc(L('Livre de caisse', 'Cash book', 'دفتر الصندوق'))}</button>
-        <button type="button" class="kb atlas sp-btn" data-action="sup-new">${ic('add')}${esc(L('Nouveau fournisseur', 'New supplier', 'مورد جديد'))}</button>
+        <button type="button" class="kb ghost sp-btn" data-action="sup-cashbook">${icon('wallet')}${esc(L('Livre de caisse', 'Cash book', 'دفتر الصندوق'))}</button>
+        <button type="button" class="kb atlas sp-btn" data-action="sup-new">${icon('add')}${esc(L('Nouveau fournisseur', 'New supplier', 'مورد جديد'))}</button>
       </div>
-      <div class="sp-card">${rows.length ? `<div class="sp-list">${rows.map(rowHtml).join('')}</div>` : `<div class="sp-empty">${ic('truck')}<p>${esc((d.suppliers || []).length
+      <div class="sp-card">${rows.length ? `<div class="sp-list">${rows.map(rowHtml).join('')}</div>` : `<div class="sp-empty">${icon('truck')}<p>${esc((d.suppliers || []).length
         ? L('Aucun fournisseur ne correspond.', 'No supplier matches.', 'حتى مورد ما كيطابق.')
         : L('Ajoutez votre premier fournisseur : chaque réception de bon de commande inscrira ce que vous lui devez, chaque paiement le réduira.', 'Add your first supplier: every received purchase order records what you owe, every payment reduces it.', 'زيد أول مورد: كل سلعة توصلات كتتسجل عليك، وكل أداء كينقص منها.'))}</p></div>`}</div>
     </div>`;
@@ -300,14 +300,14 @@
       const host = root.querySelector('.sp-list') || root.querySelector('.sp-empty');
       const card = host && host.closest('.sp-card');
       const rows = sorted((S.list && S.list.suppliers) || []);
-      if (card) card.innerHTML = rows.length ? `<div class="sp-list">${rows.map(rowHtml).join('')}</div>` : `<div class="sp-empty">${ic('truck')}<p>${esc(L('Aucun fournisseur ne correspond.', 'No supplier matches.', 'حتى مورد ما كيطابق.'))}</p></div>`;
+      if (card) card.innerHTML = rows.length ? `<div class="sp-list">${rows.map(rowHtml).join('')}</div>` : `<div class="sp-empty">${icon('truck')}<p>${esc(L('Aucun fournisseur ne correspond.', 'No supplier matches.', 'حتى مورد ما كيطابق.'))}</p></div>`;
     });
   }
 
   async function loadList() {
     if (!isReal()) { S.list = DEMO.list(); return; }
     try { S.list = await api('/api/suppliers'); }
-    catch (e) { S.list = { suppliers: [], totals: {} }; K.toast(errText(e.code), { type: 'warning' }); }
+    catch (e) { S.list = { suppliers: [], totals: {} }; K.toast(tr(e.code), { type: 'warning' }); }
   }
 
   async function showList() {
@@ -331,7 +331,7 @@
     const big = b > 0 ? `<div class="k">${esc(L('Vous lui devez', 'You owe', 'باقي عليك ليه'))}</div><div class="sp-big owe">${esc(mad(b))}</div>`
       : b < 0 ? `<div class="k">${esc(L('Il vous doit (avance)', 'Owes you (advance)', 'باقي عليه ليك (تسبيق)'))}</div><div class="sp-big adv">${esc(mad(-b))}</div>`
         : `<div class="k">${esc(L('Solde', 'Balance', 'الرصيد'))}</div><div class="sp-big">${esc(L('À jour', 'Settled', 'مخلّص'))}</div>`;
-    const meta = [s.phone ? `<span>${ic('call')}${esc(s.phone)}</span>` : '', s.ice ? `<span>ICE ${esc(s.ice)}</span>` : '', s.rib ? `<span>RIB ${esc(s.rib)}</span>` : '',
+    const meta = [s.phone ? `<span>${icon('call')}${esc(s.phone)}</span>` : '', s.ice ? `<span>ICE ${esc(s.ice)}</span>` : '', s.rib ? `<span>RIB ${esc(s.rib)}</span>` : '',
       s.termsDays ? `<span>${esc(L('Paiement à', 'Terms', 'أجل الأداء'))} ${esc(String(s.termsDays))} ${esc(L('j', 'd', 'يوم'))}</span>` : ''].join('');
     const table = lines.length ? `<div class="sp-scroll"><table class="sp-table"><thead><tr><th>${esc(L('Date', 'Date', 'التاريخ'))}</th><th>${esc(L('Libellé', 'Description', 'البيان'))}</th>
       <th class="num">${esc(L('Reçu de lui', 'Received', 'توصلت منو'))}</th><th class="num">${esc(L('Payé', 'Paid', 'خلّصت'))}</th><th class="num">${esc(L('Je dois', 'I owe', 'باقي عليا'))}</th><th></th></tr></thead><tbody>
@@ -347,18 +347,18 @@
         <span style="display:inline-flex;gap:10px"><button type="button" class="sp-link" data-action="sup-approve" data-arg="${esc(l.id)}">${esc(L('Approuver', 'Approve', 'وافق'))}</button><button type="button" class="sp-void" data-action="sup-void" data-arg="${esc(l.id)}">${esc(L('Refuser', 'Reject', 'رفض'))}</button></span></div>`).join('')}</div>` : '';
     const orders = (d.orders || []).filter((o) => o.status !== 'cancelled' && o.status !== 'draft');
     const ordersHtml = orders.length ? `<div class="sp-card"><h3 class="sp-h3">${esc(L('Bons de commande', 'Purchase orders', 'أوامر الشراء'))}</h3>${orders.map((o) => `<div class="sp-po"><span><b style="font-weight:600">${esc(o.number)}</b> · ${esc(mad(o.totalCents))}</span>
-      ${o.status === 'received' || o.status === 'partial' ? `<button type="button" class="sp-link" data-action="sup-pay-po" data-arg="${esc(s.id + '|' + o.number + '|' + o.totalCents)}">${ic('pay')}${esc(L('Payer ce bon', 'Pay this order', 'خلّص هاد الأمر'))}</button>` : `<span class="sp-chip ok">${esc(L('en attente', 'pending', 'فالانتظار'))}</span>`}</div>`).join('')}</div>` : '';
+      ${o.status === 'received' || o.status === 'partial' ? `<button type="button" class="sp-link" data-action="sup-pay-po" data-arg="${esc(s.id + '|' + o.number + '|' + o.totalCents)}">${icon('pay')}${esc(L('Payer ce bon', 'Pay this order', 'خلّص هاد الأمر'))}</button>` : `<span class="sp-chip ok">${esc(L('en attente', 'pending', 'فالانتظار'))}</span>`}</div>`).join('')}</div>` : '';
     return `<div class="sp-wrap">
-      <div><button type="button" class="sp-link" data-action="sup-back">${ic('back')}${esc(L('Tous les fournisseurs', 'All suppliers', 'جميع الموردين'))}</button></div>
+      <div><button type="button" class="sp-link" data-action="sup-back">${icon('back')}${esc(L('Tous les fournisseurs', 'All suppliers', 'جميع الموردين'))}</button></div>
       <div class="sp-card"><div class="sp-head"><div><h2>${esc(s.name)}</h2><div class="sp-meta">${meta}</div></div><div>${big}</div></div>
         <div class="sp-acts">
-          <button type="button" class="kb atlas sp-btn" data-action="sup-pay" data-arg="${esc(s.id)}">${ic('pay')}${esc(L('Enregistrer un paiement', 'Record a payment', 'سجّل أداء'))}</button>
-          <button type="button" class="kb ghost sp-btn" data-action="sup-bill" data-arg="${esc(s.id)}">${ic('bill')}${esc(L('Ajouter une facture', 'Add a bill', 'زيد فاتورة'))}</button>
-          <button type="button" class="kb ghost sp-btn" data-action="sup-wa" data-arg="${esc(s.id)}">${ic('chat')}${esc(L('Relevé WhatsApp', 'WhatsApp statement', 'الكشف فواتساب'))}</button>
-          <button type="button" class="kb ghost sp-btn" data-action="sup-print" data-arg="${esc(s.id)}">${ic('print')}${esc(L('Imprimer', 'Print', 'طبع'))}</button>
-          <button type="button" class="kb ghost sp-btn" data-action="sup-csv" data-arg="${esc(s.id)}">${ic('csv')}CSV</button>
-          <button type="button" class="kb ghost sp-btn" data-action="sup-edit" data-arg="${esc(s.id)}">${ic('edit')}${esc(L('Modifier', 'Edit', 'تعديل'))}</button>
-          <button type="button" class="kb ghost sp-btn" data-action="sup-archive" data-arg="${esc(s.id)}">${ic('archive')}${esc(L('Archiver', 'Archive', 'أرشفة'))}</button>
+          <button type="button" class="kb atlas sp-btn" data-action="sup-pay" data-arg="${esc(s.id)}">${icon('pay')}${esc(L('Enregistrer un paiement', 'Record a payment', 'سجّل أداء'))}</button>
+          <button type="button" class="kb ghost sp-btn" data-action="sup-bill" data-arg="${esc(s.id)}">${icon('bill')}${esc(L('Ajouter une facture', 'Add a bill', 'زيد فاتورة'))}</button>
+          <button type="button" class="kb ghost sp-btn" data-action="sup-wa" data-arg="${esc(s.id)}">${icon('chat')}${esc(L('Relevé WhatsApp', 'WhatsApp statement', 'الكشف فواتساب'))}</button>
+          <button type="button" class="kb ghost sp-btn" data-action="sup-print" data-arg="${esc(s.id)}">${icon('print')}${esc(L('Imprimer', 'Print', 'طبع'))}</button>
+          <button type="button" class="kb ghost sp-btn" data-action="sup-csv" data-arg="${esc(s.id)}">${icon('csv')}CSV</button>
+          <button type="button" class="kb ghost sp-btn" data-action="sup-edit" data-arg="${esc(s.id)}">${icon('edit')}${esc(L('Modifier', 'Edit', 'تعديل'))}</button>
+          <button type="button" class="kb ghost sp-btn" data-action="sup-archive" data-arg="${esc(s.id)}">${icon('archive')}${esc(L('Archiver', 'Archive', 'أرشفة'))}</button>
         </div></div>
       ${pendHtml}
       <div class="sp-grid">
@@ -381,7 +381,7 @@
   async function loadDetail(id) {
     if (!isReal()) { S.detail = DEMO.statement(id); return !!S.detail; }
     try { S.detail = await api('/api/suppliers/statement?id=' + encodeURIComponent(id)); return true; }
-    catch (e) { K.toast(errText(e.code), { type: 'warning' }); return false; }
+    catch (e) { K.toast(tr(e.code), { type: 'warning' }); return false; }
   }
 
   async function openSupplier(id) {
@@ -411,7 +411,7 @@
   function moneyModal(opts) {
     const o = opts || {};
     const key = idem();
-    let method = o.method || 'cash';
+    let method = o.method || METHODS[0];
     const owed = Number(o.owedCents) || 0;
     const m = K.modal({
       tag: o.tag || '', title: o.title, width: 480,
@@ -436,12 +436,12 @@
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const cents = readAmount(form.amount.value);
-      if (!(cents > 0)) { K.toast(errText('bad-amount'), { type: 'warning' }); return; }
+      if (!(cents > 0)) { K.toast(tr('bad-amount'), { type: 'warning' }); return; }
       const btn = form.querySelector('[type=submit]'); btn.disabled = true;
       try {
         await o.save({ cents, method, date: form.date.value || todayYmd(), note: form.note.value.trim(), opening: !!(form.opening && form.opening.checked), idemKey: key });
         m.close();
-      } catch (err) { btn.disabled = false; K.toast(errText(err && err.code), { type: 'warning' }); }
+      } catch (err) { btn.disabled = false; K.toast(tr(err && err.code), { type: 'warning' }); }
     });
     return m;
   }
@@ -493,14 +493,25 @@
   function supplierModal(row) {
     const s = row || {};
     const f = (name, label, attrs) => `<label>${esc(label)}<input name="${name}" value="${esc(s[name] == null ? '' : s[name])}" ${attrs || ''}></label>`;
+    /* Champs montés avant la fenêtre : la fenêtre ne lit que des libellés traduits. */
+    const fld = {
+      name: f('name', L('Nom', 'Name', 'الاسم'), 'maxlength="120" required'),
+      phone: f('phone', L('Téléphone (WhatsApp)', 'Phone (WhatsApp)', 'التيليفون (واتساب)'), 'inputmode="tel" maxlength="40"'),
+      email: f('email', L('E-mail', 'Email', 'الإيميل'), 'type="email" maxlength="120"'),
+      ice: f('ice', 'ICE', 'inputmode="numeric" maxlength="30"'),
+      terms: f('termsDays', L('Paiement à (jours)', 'Payment terms (days)', 'أجل الأداء (أيام)'), 'inputmode="numeric" maxlength="3"'),
+      bank: f('bank', L('Banque', 'Bank', 'البنك'), 'maxlength="80"'),
+      rib: f('rib', 'RIB', 'inputmode="numeric" maxlength="40"'),
+      address: f('address', L('Adresse', 'Address', 'العنوان'), 'maxlength="240"'),
+    };
     const m = K.modal({
       title: row ? L('Modifier le fournisseur', 'Edit supplier', 'تعديل المورد') : L('Nouveau fournisseur', 'New supplier', 'مورد جديد'), width: 520,
       body: `<form class="sp-form" data-sp-sup novalidate>
-        ${f('name', L('Nom', 'Name', 'الاسم'), 'maxlength="120" required')}
-        <div class="two">${f('phone', L('Téléphone (WhatsApp)', 'Phone (WhatsApp)', 'التيليفون (واتساب)'), 'inputmode="tel" maxlength="40"')}${f('email', 'E-mail', 'type="email" maxlength="120"')}</div>
-        <div class="two">${f('ice', 'ICE', 'inputmode="numeric" maxlength="30"')}${f('termsDays', L('Paiement à (jours)', 'Payment terms (days)', 'أجل الأداء (أيام)'), 'inputmode="numeric" maxlength="3"')}</div>
-        <div class="two">${f('bank', L('Banque', 'Bank', 'البنك'), 'maxlength="80"')}${f('rib', 'RIB', 'inputmode="numeric" maxlength="40"')}</div>
-        ${f('address', L('Adresse', 'Address', 'العنوان'), 'maxlength="240"')}
+        ${fld.name}
+        <div class="two">${fld.phone}${fld.email}</div>
+        <div class="two">${fld.ice}${fld.terms}</div>
+        <div class="two">${fld.bank}${fld.rib}</div>
+        ${fld.address}
         <label>${esc(L('Notes', 'Notes', 'ملاحظات'))}<textarea name="notes" rows="2" maxlength="500">${esc(s.notes || '')}</textarea></label>
         <div class="sp-foot"><button type="button" class="kb ghost" data-dismiss>${esc(L('Annuler', 'Cancel', 'إلغاء'))}</button><button type="submit" class="kb atlas">${esc(L('Enregistrer', 'Save', 'سجّل'))}</button></div>
       </form>`,
@@ -510,7 +521,7 @@
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const v = {}; ['name', 'phone', 'email', 'ice', 'bank', 'rib', 'address', 'notes', 'termsDays'].forEach((k) => { v[k] = form[k].value.trim(); });
-      if (!v.name) { K.toast(errText('name-required'), { type: 'warning' }); return; }
+      if (!v.name) { K.toast(tr('name-required'), { type: 'warning' }); return; }
       v.termsDays = Math.max(0, Math.min(365, parseInt(v.termsDays, 10) || 0));
       const btn = form.querySelector('[type=submit]'); btn.disabled = true;
       try {
@@ -521,7 +532,7 @@
         K.toast(L('Fournisseur enregistré', 'Supplier saved', 'تسجّل المورد'), { type: 'success' });
         S.list = null;
         if (saved && saved.id) openSupplier(saved.id); else showList();
-      } catch (err) { btn.disabled = false; K.toast(errText(err && err.code), { type: 'warning' }); }
+      } catch (err) { btn.disabled = false; K.toast(tr(err && err.code), { type: 'warning' }); }
     });
     setTimeout(() => { try { form.name.focus(); } catch (_) {} }, 60);
   }
@@ -599,17 +610,17 @@ table{width:100%;border-collapse:collapse;margin-top:18px;font-variant-numeric:t
   /* ── Livre de caisse ───────────────────────────────────────────────── */
   async function loadCash() {
     if (!isReal()) { S.cash = DEMO.cash(); return; }
-    try { S.cash = await api('/api/cashbook'); } catch (e) { S.cash = { balance: { balanceCents: 0 }, statement: { lines: [] } }; K.toast(errText(e.code), { type: 'warning' }); }
+    try { S.cash = await api('/api/cashbook'); } catch (e) { S.cash = { balance: { balanceCents: 0 }, statement: { lines: [] } }; K.toast(tr(e.code), { type: 'warning' }); }
   }
   function cashBody() {
     const c = S.cash;
     if (!c) return `<div class="sp-card sp-empty">${esc(L('Chargement…', 'Loading…', 'كنجيبو…'))}</div>`;
     const lines = (c.statement && c.statement.lines) || [];
     return `<div class="sp-wrap">
-      <div><button type="button" class="sp-link" data-action="sup-back">${ic('back')}${esc(L('Tous les fournisseurs', 'All suppliers', 'جميع الموردين'))}</button></div>
+      <div><button type="button" class="sp-link" data-action="sup-back">${icon('back')}${esc(L('Tous les fournisseurs', 'All suppliers', 'جميع الموردين'))}</button></div>
       <div class="sp-card"><div class="sp-head"><div><div class="k" style="font-size:12px;color:var(--n-500,#667)">${esc(L('Solde du livre de caisse', 'Cash book balance', 'رصيد دفتر الصندوق'))}</div><div class="sp-big">${esc(mad(c.balance && c.balance.balanceCents))}</div>
         <p class="sp-hint">${esc(L("Ce que vous notez vous-même : apports, retraits, frais payés de votre poche. Les ventes de la caisse n'y sont pas recopiées.", 'What you note yourself: contributions, withdrawals, costs paid out of pocket. Till sales are not copied here.', 'اللي كتسجل بيدك: دخول وخروج الفلوس من جيبك. مبيعات الكاسة ما كتتنسخش هنا.'))}</p></div>
-        <div class="sp-acts" style="margin-top:0"><button type="button" class="kb atlas sp-btn" data-action="sup-cash-add" data-arg="in">${ic('add')}${esc(L('Entrée', 'Money in', 'دخول'))}</button><button type="button" class="kb ghost sp-btn" data-action="sup-cash-add" data-arg="out">${ic('pay')}${esc(L('Sortie', 'Money out', 'خروج'))}</button></div></div></div>
+        <div class="sp-acts" style="margin-top:0"><button type="button" class="kb atlas sp-btn" data-action="sup-cash-add" data-arg="in">${icon('add')}${esc(L('Entrée', 'Money in', 'دخول'))}</button><button type="button" class="kb ghost sp-btn" data-action="sup-cash-add" data-arg="out">${icon('pay')}${esc(L('Sortie', 'Money out', 'خروج'))}</button></div></div></div>
       <div class="sp-card">${lines.length ? `<div class="sp-scroll"><table class="sp-table"><thead><tr><th>${esc(L('Date', 'Date', 'التاريخ'))}</th><th>${esc(L('Libellé', 'Description', 'البيان'))}</th><th class="num">${esc(L('Entrée', 'In', 'دخول'))}</th><th class="num">${esc(L('Sortie', 'Out', 'خروج'))}</th><th class="num">${esc(L('Solde', 'Balance', 'الرصيد'))}</th><th></th></tr></thead><tbody>
         ${lines.map((l) => `<tr><td>${esc(dmy(l.date))}</td><td class="lbl">${esc(l.note || methodLabel(l.method))}<small>${esc(methodLabel(l.method))}</small></td><td class="num">${l.inCents ? esc(mad(l.inCents)) : ''}</td><td class="num">${l.outCents ? esc(mad(l.outCents)) : ''}</td><td class="num">${esc(mad(l.runningCents))}</td>
           <td><button type="button" class="sp-void" data-action="sup-void" data-arg="${esc('cash:' + l.id)}">${esc(L('Annuler', 'Void', 'إلغاء'))}</button></td></tr>`).join('')}</tbody></table></div>`
@@ -640,7 +651,7 @@ table{width:100%;border-collapse:collapse;margin-top:18px;font-variant-numeric:t
       else await api('/api/suppliers', { action: 'archive', id });
       K.toast(L('Fournisseur archivé', 'Supplier archived', 'تأرشف المورد'), { type: 'success' });
       S.list = null; showList();
-    } catch (e) { K.toast(errText(e.code), { type: 'warning' }); }
+    } catch (e) { K.toast(tr(e.code), { type: 'warning' }); }
   };
   H['sup-pay'] = (_el, id) => payModal(String(id || ''));
   H['sup-pay-po'] = (_el, arg) => {
@@ -656,14 +667,14 @@ table{width:100%;border-collapse:collapse;margin-top:18px;font-variant-numeric:t
       else await api(cash ? '/api/cashbook' : '/api/suppliers/entry', { action: 'archive', id });
       K.toast(L('Ligne annulée', 'Entry voided', 'تلغى السطر'), { type: 'success' });
       refreshDetail();
-    } catch (e) { K.toast(errText(e.code), { type: 'warning' }); }
+    } catch (e) { K.toast(tr(e.code), { type: 'warning' }); }
   };
   H['sup-approve'] = async (_el, id) => {
     try {
       if (isReal()) await api('/api/suppliers/entry', { action: 'approve', id: String(id || '') });
       K.toast(L('Ligne approuvée', 'Entry approved', 'توافق على السطر'), { type: 'success' });
       refreshDetail();
-    } catch (e) { K.toast(errText(e.code), { type: 'warning' }); }
+    } catch (e) { K.toast(tr(e.code), { type: 'warning' }); }
   };
   /* Pour la page Dépenses : les cinq fournisseurs à qui l'on doit le plus. */
   H['sup-owed'] = async () => {
