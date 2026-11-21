@@ -148,7 +148,9 @@ sqlite.prepare('INSERT INTO merchant_config (merchant, account_id, name, type, s
 {
   const liveSrc = read('assets/live-link.js');
   ok('live-link force retry preserves the in-flight sender lock',
-    liveSrc.includes('if (flushing || !navigator.onLine) return Promise.resolve(outboxStatus);') && !liveSrc.includes('if (force) {\n      flushing = false;'));
+    /* A live sender's lock is never stolen, a forced retry included; only a
+       send stalled past FLUSH_STALE_MS is taken back (outbox-stale-lock-test). */
+    liveSrc.includes('if (flushing && !(flushStartedAt && Date.now() - flushStartedAt > FLUSH_STALE_MS)) return Promise.resolve(outboxStatus);') && !liveSrc.includes('if (force) {\n      flushing = false;'));
   ok('live-link flushOutbox uses AbortController timeout on fetch',
     liveSrc.includes('new AbortController()') && liveSrc.includes('controller.abort()'));
   ok('active outbox delivery avoids fragile keepalive and has an idempotent XHR fallback',

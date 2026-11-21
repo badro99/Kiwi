@@ -26,6 +26,31 @@
 /* <</queue:state:5>> */
 /* <<queue:state:6>> */
   var flushStartedAt = 0;
+  /* Browse, 21 nov. : quatre ventes de table parties 22 à 47 minutes après
+     l'encaissement, toutes au rechargement de la page. Une étape d'envoi qui ne
+     répond jamais (IndexedDB, requête) gardait `flushing` pour toujours, et
+     chaque déclencheur repartait sans rien envoyer. Passé FLUSH_STALE_MS (plus
+     que les deux essais réseau de 12 s et leurs écritures), le déclencheur
+     suivant reprend le verrou ; `flushGen` empêche l'envoi abandonné, s'il
+     répond enfin, de rendre un verrou qui n'est plus le sien. Le serveur
+     dédoublonne par identifiant stable : renvoyer est sans risque. */
+  var flushGen = 0, FLUSH_STALE_MS = 45000;
+  function takeFlushLock() {
+    if (flushing && flushStartedAt && Date.now() - flushStartedAt > FLUSH_STALE_MS) {
+      flushing = false;
+      lastSyncError = 'flush-stalled';
+    }
+    if (flushing) return 0;
+    flushing = true;
+    flushStartedAt = Date.now();
+    return ++flushGen;
+  }
+  function releaseFlushLock(gen) {
+    if (gen !== flushGen) return false;
+    flushing = false;
+    flushStartedAt = 0;
+    return true;
+  }
 /* <</queue:state:6>> */
 /* <<queue:state:7>> */
   var lastSyncStatus = 0, lastSyncError = '';
@@ -268,7 +293,8 @@ function initOutbox() {
 /* <</queue:initOutbox>> */
 /* <<queue:flushLegacyQueue>> */
 function flushLegacyQueue() {
-    if (flushing || (typeof navigator !== 'undefined' && navigator.onLine === false)) return Promise.resolve(queueStatus());
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.resolve(queueStatus());
+    if (flushing && !(flushStartedAt && Date.now() - flushStartedAt > FLUSH_STALE_MS)) return Promise.resolve(queueStatus());
     if (authRetryMerchant === ctx.merchant() && authRetryAt > Date.now()) { ctx.scheduleRecovery(); return Promise.resolve(queueStatus()); }
     var q = qRead();
     if (!q.length) return Promise.resolve(queueStatus());
@@ -283,11 +309,12 @@ function flushLegacyQueue() {
       if (q.some(function (x) { return x && !x._blocked && x.merchant === active; })) ctx.scheduleRecovery();
       queueSignal(); return Promise.resolve(queueStatus());
     }
-    flushing = true;
+    var gen = takeFlushLock();
+    if (!gen) return Promise.resolve(queueStatus());
     var attemptedAt = Date.now();
     return new Promise(function (resolve) {
       function done(settled, blocked, status, pending, error, serverId) {
-        flushing = false;
+        releaseFlushLock(gen);
         lastSyncStatus = status || 0;
         lastSyncError = settled ? '' : (error || (pending ? 'settlement-pending' : (status ? 'HTTP ' + status : 'server-unreachable')));
         if ((status === 401 || status === 403) && !ctx.refundApprovalRefused(body, status, error)) { authRetryAt = Date.now() + 60000; authRetryMerchant = body.merchant; ctx.recoverTillProof(status, lastSyncError); }
@@ -362,18 +389,19 @@ function flushLegacyQueue() {
 /* <</queue:flushLegacyQueue>> */
 /* <<queue:flushOutbox>> */
 function flushOutbox(force) {
-    // A retry can advance due work, never steal an in-flight sender's lock.
-    if (flushing || !navigator.onLine) return Promise.resolve(outboxStatus);
+    // A retry can advance due work, never steal a LIVE sender's lock (a
+    // stalled one is taken back by takeFlushLock).
+    if (!navigator.onLine) return Promise.resolve(outboxStatus);
+    if (flushing && !(flushStartedAt && Date.now() - flushStartedAt > FLUSH_STALE_MS)) return Promise.resolve(outboxStatus);
     if (authRetryMerchant === ctx.merchant() && authRetryAt > Date.now()) { ctx.scheduleRecovery(); return Promise.resolve(outboxStatus); }
     var O = window.KiwiOffline;
     var active = ctx.merchant();
     if (!O || !active) { queueSignal(); return Promise.resolve(outboxStatus); }
-    flushing = true;
-    flushStartedAt = Date.now();
+    var gen = takeFlushLock();
+    if (!gen) return Promise.resolve(outboxStatus);
     return O.claim(OUTBOX_CHANNEL, active, { force: !!force }).then(function (row) {
       if (!row) {
-        flushing = false;
-        flushStartedAt = 0;
+        if (!releaseFlushLock(gen)) return outboxStatus;
         return refreshOutboxStatus().then(function (state) {
           if (state && state.pending > 0) ctx.scheduleRecovery();
           return state;
@@ -388,9 +416,9 @@ function flushOutbox(force) {
         var action = ok
           ? ack(row.id, row.leaseToken)
           : O.reject(row.id, row.leaseToken, { permanent: permanent, status: status, error: error });
+        var mine = false;
         return action.then(function () {
-          flushing = false;
-          flushStartedAt = 0;
+          mine = releaseFlushLock(gen);
           if (ok) { ctx.moneySignal(body, 'accepted', status, serverId); ctx.pingLocal(); }
           else {
             ctx.moneySignal(body, permanent ? 'blocked' : 'retry', status);
@@ -399,7 +427,8 @@ function flushOutbox(force) {
           }
           return refreshOutboxStatus();
         }).then(function (state) {
-          if (state && state.pending > 0 && navigator.onLine) return flushOutbox(false);
+          // An abandoned sender reports, but the live one keeps the queue.
+          if (mine && state && state.pending > 0 && navigator.onLine) return flushOutbox(false);
           return state;
         });
       }
@@ -420,8 +449,7 @@ function flushOutbox(force) {
         return settle(false, false, 0, errMsg);
       });
     }).catch(function () {
-      flushing = false;
-      flushStartedAt = 0;
+      if (!releaseFlushLock(gen)) return outboxStatus;
       lastSyncStatus = 0;
       lastSyncError = 'storage-error';
       outboxStatus.storageError = true;
