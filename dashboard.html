@@ -280,7 +280,8 @@
         <span data-i18n="dash.sidebar.expenses">Dépenses</span>
       </a>
       <!-- Fournisseurs · soldes, relevés, paiements (assets/pages-pro/suppliers.js,
-           grand livre functions/api/_ledger.js). Réservé au propriétaire. -->
+           grand livre functions/api/_ledger.js). Le module garde chaque onglet : le
+           grand livre au patron, le classement au gérant et au stock aussi. -->
       <a href="#" data-nav="fournisseurs" data-feature="fournisseurs">
         <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M155-195q-35-35-35-85H40v-440q0-33 23.5-56.5T120-800h560v160h120l120 160v200h-80q0 50-35 85t-85 35q-50 0-85-35t-35-85H360q0 50-35 85t-85 35q-50 0-85-35Zm113.5-56.5Q280-263 280-280t-11.5-28.5Q257-320 240-320t-28.5 11.5Q200-297 200-280t11.5 28.5Q223-240 240-240t28.5-11.5ZM120-360h32q17-18 39-29t49-11q27 0 49 11t39 29h272v-360H120v360Zm628.5 108.5Q760-263 760-280t-11.5-28.5Q737-320 720-320t-28.5 11.5Q680-297 680-280t11.5 28.5Q703-240 720-240t28.5-11.5ZM680-440h170l-90-120h-80v120ZM360-540Z"/></svg>
         <span data-i18n="dash.sidebar.suppliers">Fournisseurs</span>
@@ -1266,7 +1267,7 @@
 
 <script src="assets/clients-directory.js?v=49" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=21" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=279" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=281" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1293,7 +1294,7 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=279"></script>
+<script src="assets/pages/dashboard-startup.js?v=281"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=17">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
 <script src="assets/pages/dashboard-loader.js?v=109" defer fetchpriority="low"></script>
@@ -1343,7 +1344,6 @@
    * cost and realised-pay view for that role. Staff cannot enter at all. */
   wrap('nav-payroll', ['owner', 'manager']);
   ['nav-depenses', 'nav-promos', 'nav-expenses'].forEach((key) => wrap(key, ['owner']));
-  wrap('nav-fournisseurs', ['owner']);
   /* Staff-only exclusions: the badge that cannot see Équipe cannot see the
    * team's contracts or the compliance file either. */
   if ((window.__kiwiRole || 'owner') === 'staff') ['nav-equipe', 'nav-conformite'].forEach((key) => wrap(key, ['owner', 'manager']));

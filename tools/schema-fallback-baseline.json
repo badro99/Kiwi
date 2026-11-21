@@ -3,7 +3,7 @@
   "api/_invoice-series.js : repli de schéma": 1,
   "api/_ledger.js : no such table: money_ledger": 7,
   "api/_quarantine-guard.js : repli de schéma": 1,
-  "api/_suppliers.js : no such column: o.supplier_id": 1,
+  "api/_suppliers.js : no such column: o.supplier_id": 2,
   "api/_suppliers.js : no such column: supplier_id": 3,
   "api/_suppliers.js : no such table: money_ledger": 2,
   "api/_suppliers.js : no such table: supplier_ledger_state": 3,

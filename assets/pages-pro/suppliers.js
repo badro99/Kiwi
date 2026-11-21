@@ -41,6 +41,12 @@
   const dmy = (ymd) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || '')); return m ? `${m[3]}/${m[2]}/${m[1]}` : String(ymd || ''); };
   const idem = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
   const slug = () => { try { return (window.KiwiStore && window.KiwiStore.slugFor && window.KiwiStore.slugFor()) || ''; } catch (_) { return ''; } };
+  /* Rôles (dashboard.html › ROLE GATE) : le grand livre est au patron ; le
+     classement, que le Stock montrait déjà au gérant et à l'employé de stock,
+     reste ouvert à eux. La réception n'entre ni dans l'un ni dans l'autre. */
+  const role = () => String(window.__kiwiRole || 'owner');
+  const ledgerOk = () => role() === 'owner';
+  const rankOk = () => role() !== 'reception';
   const isReal = () => {
     try { if (window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom()) return true; } catch (_) {}
     try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) { return false; }
@@ -64,6 +70,7 @@
     done: 'm382-354 339-339q12-12 28-12t28 12q12 12 12 28.5T777-636L410-268q-12 12-28 12t-28-12L182-440q-12-12-11.5-28.5T183-497q12-12 28.5-12t28.5 12l142 143Z',
     link: 'M440-280H280q-83 0-141.5-58.5T80-480q0-83 58.5-141.5T280-680h160v80H280q-50 0-85 35t-35 85q0 50 35 85t85 35h160v80ZM320-440v-80h320v80H320Zm200 160v-80h160q50 0 85-35t35-85q0-50-35-85t-85-35H520v-80h160q83 0 141.5 58.5T880-480q0 83-58.5 141.5T680-280H520Z',
     sync: 'M160-160v-80h110l-16-14q-52-46-73-105t-21-119q0-111 66.5-197.5T400-790v84q-72 26-116 88.5T240-478q0 45 17 87.5t53 78.5l10 10v-98h80v240H160Zm400-10v-84q72-26 116-88.5T720-482q0-45-17-87.5T650-648l-10-10v98h-80v-240h240v80H690l16 14q49 49 71.5 106.5T800-482q0 111-66.5 197.5T560-170Z',
+    lock: 'M240-80q-33 0-56.5-23.5T160-160v-400q0-33 23.5-56.5T240-640h40v-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h40q33 0 56.5 23.5T800-560v400q0 33-23.5 56.5T720-80H240Zm0-80h480v-400H240v400Zm296.5-143.5Q560-327 560-360t-23.5-56.5Q513-440 480-440t-56.5 23.5Q400-393 400-360t23.5 56.5Q447-280 480-280t56.5-23.5ZM360-640h240v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85v80ZM240-160v-400 400Z',
   };
   const icon = (k, cls) => `<svg class="sp-i${cls ? ' ' + cls : ''}" viewBox="0 -960 960 960" aria-hidden="true" fill="currentColor"><path d="${P[k]}"/></svg>`;
 
@@ -71,7 +78,7 @@
   const methodLabel = (m, lg) => {
     const g = lg || lang();
     return ({
-      cash: LX(g, 'Espèces', 'Cash', 'نقدًا'), transfer: LX(g, 'Virement', 'Transfer', 'تحويل'), cheque: LX(g, 'Chèque', 'Cheque', 'شيك'),
+      cash: LX(g, 'Espèces', 'Cash', 'كاش'), transfer: LX(g, 'Virement', 'Transfer', 'تحويل'), cheque: LX(g, 'Chèque', 'Cheque', 'شيك'),
       card: LX(g, 'Carte', 'Card', 'بطاقة'), other: LX(g, 'Autre', 'Other', 'أخرى'),
     }[m] || m);
   };
@@ -92,13 +99,13 @@
     ? (l.kind === 'opening' ? LX(lg, 'Solde d\'avant', 'Earlier balance', 'رصيد سابق') : LX(lg, 'Livré par vous', 'Delivered by you', 'سلّمتوه لينا'))
     : l.kind === 'return' ? LX(lg, 'Rendu chez vous', 'Returned to you', 'رجّعناه ليكم') : LX(lg, 'Payé par nous', 'Paid by us', 'خلّصناكم'));
   const AGE = () => [['0-30', L('0 à 30 j', '0 to 30 d', '0 إلى 30 يوم')], ['31-60', L('31 à 60 j', '31 to 60 d', '31 إلى 60 يوم')], ['61-90', L('61 à 90 j', '61 to 90 d', '61 إلى 90 يوم')], ['90+', L('plus de 90 j', 'over 90 d', 'أكثر من 90 يوم')]];
-  const daysTxt = (n) => L(pl(n, `${n} jour`, `${n} jours`), pl(n, `${n} day`, `${n} days`), arPl(n, 'يوم واحد', 'يومان', `${n} أيام`, `${n} يوم`));
+  const daysTxt = (n) => L(pl(n, `${n} jour`, `${n} jours`), pl(n, `${n} day`, `${n} days`), arPl(n, 'يوم واحد', 'جوج أيام', `${n} أيام`, `${n} يوم`));
 
   /* Qui doit à qui, en mots. Solde > 0 : nous devons au fournisseur. */
   function owedChip(balance) {
     const b = Number(balance) || 0;
     if (b > 0) return `<span class="sp-chip owe">${esc(L('Vous devez', 'You owe', 'باقي عليك'))} ${esc(mad(b))}</span>`;
-    if (b < 0) return `<span class="sp-chip adv">${esc(L('Il vous doit', 'Owes you', 'باقي عليه لك'))} ${esc(mad(-b))}</span>`;
+    if (b < 0) return `<span class="sp-chip adv">${esc(L('Il vous doit', 'Owes you', 'باقي عليه ليك'))} ${esc(mad(-b))}</span>`;
     return `<span class="sp-chip ok">${esc(L('À jour', 'Settled', 'مخلّص'))}</span>`;
   }
 
@@ -119,10 +126,10 @@
 .sp-kpi .v.late{color:var(--warn-ink,#8A6210)}
 .sp-age{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--n-100,rgba(10,15,13,.06));margin-top:12px;gap:2px}
 .sp-age i{display:block;height:100%}
-.sp-age .a0,.sp-legend .a0{background:var(--atlas,#0B6E4F)}
-.sp-age .a1,.sp-legend .a1{background:var(--warning,#D99A2B)}
-.sp-age .a2,.sp-legend .a2{background:color-mix(in srgb,var(--warning,#D99A2B) 35%,var(--danger,#C94A3A))}
-.sp-age .a3,.sp-legend .a3{background:var(--riad,#053B2C)}
+.sp-age .sp-a0,.sp-legend .sp-a0{background:var(--atlas,#0B6E4F)}
+.sp-age .sp-a1,.sp-legend .sp-a1{background:var(--warning,#D99A2B)}
+.sp-age .sp-a2,.sp-legend .sp-a2{background:color-mix(in srgb,var(--warning,#D99A2B) 50%,var(--danger,#C94A3A))}
+.sp-age .sp-a3,.sp-legend .sp-a3{background:var(--danger,#C94A3A)}
 .sp-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px;font-size:12.5px;color:var(--n-600,#3a4440)}
 .sp-legend span{display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
 .sp-legend b{width:10px;height:10px;border-radius:3px;display:inline-block;font-weight:400}
@@ -133,10 +140,10 @@
 .sp-search input{flex:1;border:0;background:transparent;font:inherit;color:var(--ink,#0A0F0D);outline:none;min-width:0}
 .sp-pills{display:inline-flex;gap:4px;padding:4px;border-radius:12px;background:var(--n-100,rgba(10,15,13,.06));flex-wrap:wrap}
 .sp-pills button{border:0;background:transparent;font:inherit;font-size:13px;padding:6px 12px;border-radius:9px;color:var(--n-600,#3a4440);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-.sp-pills button.on{color:var(--paper,#F7F5F0)}
+.sp-pills button.on{color:var(--ink,#0A0F0D);font-weight:500}
 .sp-tabs{display:flex;gap:4px;padding:4px;border-radius:14px;background:var(--n-100,rgba(10,15,13,.06));width:max-content;max-width:100%;overflow-x:auto}
 .sp-tabs button{border:0;background:transparent;font:inherit;font-size:14px;padding:8px 16px;border-radius:10px;color:var(--n-600,#3a4440);cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
-.sp-tabs button.on{color:var(--paper,#F7F5F0)}
+.sp-tabs button.on{color:var(--ink,#0A0F0D);font-weight:500}
 .sp-tabs .n{font-size:11.5px;min-width:18px;padding:0 5px;border-radius:999px;background:var(--danger,#C94A3A);color:var(--paper,#F7F5F0);font-variant-numeric:tabular-nums}
 .sp-btn{display:inline-flex;align-items:center;gap:6px}
 .sp-list{display:grid}
@@ -153,7 +160,7 @@
 .sp-chip.late{background:var(--warn-soft,#FFF4DD);color:var(--warn-ink,#8A6210)}
 .sp-chip.paid{background:color-mix(in srgb,var(--atlas,#0B6E4F) 11%,transparent);color:var(--atlas,#0B6E4F)}
 .sp-empty{text-align:center;padding:36px 12px;color:var(--n-600,#3a4440)}
-.sp-empty .sp-i{width:36px;height:36px;color:var(--atlas,#0B6E4F)}
+.sp-empty .sp-i{width:36px;height:36px;color:var(--atlas,#0B6E4F);display:block;margin:0 auto 6px}
 .sp-head{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between}
 .sp-head h2{margin:0;font-size:20px;font-weight:600}
 .sp-meta{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:6px;font-size:13px;color:var(--n-600,#3a4440)}
@@ -195,9 +202,9 @@
 .sp-form input.sp-amt{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
 .sp-seg{display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;border-radius:12px;background:var(--n-100,rgba(10,15,13,.06))}
 .sp-seg button{border:0;background:transparent;color:var(--n-600,#3a4440);font:inherit;font-size:13px;padding:7px 12px;border-radius:9px;cursor:pointer}
-.sp-seg button.on{color:var(--paper,#F7F5F0)}
-/* La lentille liquide peint la pastille ; sans elle (pas encore attachée), le choix reste lisible. */
-.sp-tabs:not([data-kw-lens]) button.on,.sp-pills:not([data-kw-lens]) button.on,.sp-seg:not([data-kw-lens]) button.on{background:var(--atlas,#0B6E4F)}
+.sp-seg button.on{color:var(--ink,#0A0F0D);font-weight:500}
+/* La lentille liquide peint une pastille claire sous un texte encre ; sans elle (pas encore attachée), une pastille de surface. */
+.sp-tabs:not([data-kw-lens]) button.on,.sp-pills:not([data-kw-lens]) button.on,.sp-seg:not([data-kw-lens]) button.on{background:var(--surface,#FDFCF9);box-shadow:0 1px 2px rgba(10,15,13,.08)}
 .sp-hint{font-size:12.5px;color:var(--n-500,#667);margin:0}
 .sp-foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .sp-rank{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}
@@ -228,25 +235,25 @@
       const sup = (id, name, phone, ice, terms) => ({ id, name, phone, email: '', ice, rib: '', bank: '', address: 'Casablanca', notes: '', termsDays: terms, archived: false });
       const l = (sid, n, dir, cents, kind, method, ref, extra) => ({ id: 'd' + Math.random().toString(36).slice(2, 9), partyId: sid, date: day(n), direction: dir, amountCents: cents, kind, method, ref: ref || '', poNumber: /^BC-/.test(ref || '') ? ref : '', note: '', createdAt: Date.now() - n * 86400000, ...(extra || {}) });
       seeded = {
-        suppliers: [sup('demo-atlas', 'Atlas Coffee Roasters', '0661234567', '001525487000045', 30), sup('demo-frais', 'Distrib Frais SARL', '0522445566', '002201145000077', 15),
-          sup('demo-lait', 'Laiterie Centrale', '0600112233', '', 7), sup('demo-emb', 'Emballages du Souss', '0528221100', '001889201000012', 60)],
+        suppliers: [sup('sup_fassi', 'Atelier Fassi Couture', '0661234567', '001525487000045', 30), sup('sup_babouche', 'Maâlem Babouches Fès', '0522445566', '002201145000077', 15),
+          sup('sup_takchita', 'Dar Takchita Rabat', '0600112233', '', 7), sup('sup_soie', 'Soie & Perles Tétouan', '0528221100', '001889201000012', 60)],
         lines: [
-          l('demo-atlas', 95, 'in', 860000, 'purchase', 'other', 'BC-2026-000012'), l('demo-atlas', 70, 'out', 500000, 'payment', 'transfer', ''),
-          l('demo-atlas', 40, 'in', 640000, 'purchase', 'other', 'BC-2026-000019'), l('demo-atlas', 12, 'in', 420000, 'purchase', 'other', 'BC-2026-000024'),
-          l('demo-frais', 25, 'in', 312000, 'purchase', 'other', 'BL-4471'), l('demo-frais', 20, 'out', 312000, 'payment', 'cash', ''),
-          l('demo-frais', 6, 'in', 188000, 'purchase', 'other', 'BL-4502'),
-          l('demo-lait', 3, 'in', 96000, 'bill', 'other', 'F-47'), l('demo-lait', 1, 'out', 120000, 'payment', 'cash', ''),
-          l('demo-emb', 130, 'in', 245000, 'opening', 'other', ''),
+          l('sup_fassi', 95, 'in', 860000, 'purchase', 'other', 'BC-2026-000012'), l('sup_fassi', 70, 'out', 500000, 'payment', 'transfer', ''),
+          l('sup_fassi', 40, 'in', 640000, 'purchase', 'other', 'BC-2026-000019'), l('sup_fassi', 12, 'in', 420000, 'purchase', 'other', 'BC-2026-000024'),
+          l('sup_babouche', 25, 'in', 312000, 'purchase', 'other', 'BL-4471'), l('sup_babouche', 20, 'out', 312000, 'payment', 'cash', ''),
+          l('sup_babouche', 6, 'in', 188000, 'purchase', 'other', 'BL-4502'),
+          l('sup_takchita', 3, 'in', 96000, 'bill', 'other', 'F-47'), l('sup_takchita', 1, 'out', 120000, 'payment', 'cash', ''),
+          l('sup_soie', 130, 'in', 245000, 'opening', 'other', ''),
         ],
-        pending: [l('demo-frais', 1, 'in', 54000, 'purchase', 'other', 'BC-2026-000031', { pending: true, createdBy: 'Yassine' })],
-        unlinked: [{ party: 'po:BC-2026-000033', number: 'BC-2026-000033', supplierName: 'Grossiste du Derb', netCents: 76000, count: 1, firstDate: day(2), by: 'Yassine' }],
-        orders: { 'demo-atlas': [
+        pending: [l('sup_babouche', 1, 'in', 54000, 'purchase', 'other', 'BC-2026-000031', { pending: true, createdBy: 'Yassine' })],
+        unlinked: [{ party: 'po:BC-2026-000033', number: 'BC-2026-000033', supplierName: 'Brodeuse du Derb', netCents: 76000, count: 1, firstDate: day(2), by: 'Yassine' }],
+        orders: { 'sup_fassi': [
           { id: 'o24', number: 'BC-2026-000024', status: 'partial', totalCents: 700000, receivedCents: 420000, paidCents: 0, dueCents: 420000, payState: 'unpaid' },
           { id: 'o19', number: 'BC-2026-000019', status: 'received', totalCents: 640000, receivedCents: 640000, paidCents: 0, dueCents: 640000, payState: 'unpaid' },
           { id: 'o12', number: 'BC-2026-000012', status: 'received', totalCents: 860000, receivedCents: 860000, paidCents: 500000, dueCents: 360000, payState: 'partial' }] },
         cash: [l('main', 4, 'in', 500000, 'manual', 'cash', ''), l('main', 2, 'out', 80000, 'manual', 'cash', '')],
       };
-      seeded.cash[0].note = L('Apport du patron', "Owner's contribution", 'مساهمة المول');
+      seeded.cash[0].note = L('Apport du patron', "Owner's contribution", 'مساهمة مول المحل');
       seeded.cash[1].note = L('Réparation frigo', 'Fridge repair', 'إصلاح الثلاجة');
       return seeded;
     }
@@ -319,7 +326,7 @@
       'name-required': L('Le nom est obligatoire.', 'Name is required.', 'الاسم ضروري.'),
       'supplier-archived': L('Ce fournisseur est archivé : restaurez-le pour lui payer ou ajouter une facture.', 'This supplier is archived: restore it to pay or add a bill.', 'هاد المورد مؤرشف: رجّعو باش تخلّصو ولا تزيد فاتورة.'),
       'attach-required': L("Rattachez d'abord cette réception à une fiche.", 'Attach this receipt to a supplier first.', 'ربط هاد الاستلام بمورد قبل.'),
-      unmigrated: L('Mise à jour en cours : le grand livre des fournisseurs arrive sur ce compte.', 'Update in progress: the supplier ledger is coming to this account.', 'التحديث فطور الخدمة: دفتر الموردين جاي لهاد الحساب.'),
+      unmigrated: L('Mise à jour en cours : le grand livre des fournisseurs arrive sur ce compte.', 'Update in progress: the supplier ledger is coming to this account.', 'التحديث جاري: دفتر الموردين غادي يوصل لهاد الحساب قريب.'),
     }[code]) || L('Impossible pour le moment. Réessayez.', 'Not possible right now. Try again.', 'ما تقدرش دابا. عاود من بعد.');
   }
 
@@ -330,13 +337,13 @@
     const total = (ageing && ageing.totalCents) || 0;
     const buckets = (ageing && ageing.buckets) || [];
     const labels = AGE();
-    const bar = total ? buckets.map((b, i) => b.cents ? `<i class="a${i}" style="width:${(b.cents / total) * 100}%"></i>` : '').join('') : '';
+    const bar = total ? buckets.map((b, i) => b.cents ? `<i class="sp-a${i}" style="width:${(b.cents / total) * 100}%"></i>` : '').join('') : '';
     const due = ageing && (ageing.overdueCents || ageing.notDueCents) ? `<div class="sp-due">
       ${ageing.overdueCents ? `<span class="sp-chip late">${esc(L('En retard', 'Overdue', 'متأخر'))} ${esc(mad(ageing.overdueCents))}</span>` : ''}
       ${ageing.notDueCents ? `<span class="sp-chip ok">${esc(L('Pas encore échu', 'Not yet due', 'مازال ما حلّ أجلو'))} ${esc(mad(ageing.notDueCents))}</span>` : ''}
       ${ageing.oldestOverdueDays ? `<span class="sp-hint">${esc(L('le plus ancien retard :', 'longest overdue:', 'أقدم تأخير:'))} ${esc(daysTxt(ageing.oldestOverdueDays))}</span>` : ''}</div>` : '';
-    return `<div class="sp-age" role="img" aria-label="${esc(L('Ancienneté de ce que vous devez', 'Age of what you owe', 'قدم الديون'))}">${bar}</div>
-      <div class="sp-legend">${buckets.map((b, i) => `<span><b class="a${i}"></b>${esc(labels[i][1])} · ${esc(mad(b.cents))}</span>`).join('')}</div>${due}`;
+    return `<div class="sp-age" role="img" aria-label="${esc(L('Ancienneté de ce que vous devez', 'Age of what you owe', 'قِدم الديون'))}">${bar}</div>
+      <div class="sp-legend">${buckets.map((b, i) => `<span><b class="sp-a${i}"></b>${esc(labels[i][1])} · ${esc(mad(b.cents))}</span>`).join('')}</div>${due}`;
   }
 
   function sorted(list) {
@@ -354,7 +361,7 @@
     const late = s.balanceCents > 0 && a.overdueCents ? `<span class="sp-chip late">${esc(L('en retard', 'overdue', 'متأخر'))} ${esc(mad(a.overdueCents))}</span>` : '';
     const pend = s.pending ? `<span class="sp-chip late">${esc(L(pl(s.pending, '1 réception en attente', `${s.pending} réceptions en attente`), pl(s.pending, '1 receipt pending', `${s.pending} receipts pending`), arPl(s.pending, 'استلام واحد فالانتظار', 'جوج استلامات فالانتظار', `${s.pending} استلامات فالانتظار`, `${s.pending} استلام فالانتظار`)))}</span>` : '';
     return `<div class="sp-row" data-action="sup-open" data-arg="${esc(s.id)}" role="button" tabindex="0">
-      <div><div class="n">${esc(s.name)}</div><div class="m">${s.phone ? `<span dir="ltr">${esc(s.phone)}</span>` : ''}${s.lastDate ? `<span>${esc(L('dernier mouvement', 'last entry', 'آخر حركة'))} ${esc(dmy(s.lastDate))}</span>` : `<span>${esc(L('aucun mouvement', 'no entries yet', 'حتى حركة'))}</span>`}${s.termsDays ? `<span>${esc(L('paiement à', 'terms', 'الأجل'))} ${esc(daysTxt(s.termsDays))}</span>` : ''}</div></div>
+      <div><div class="n">${esc(s.name)}</div><div class="m">${s.phone ? `<span dir="ltr">${esc(s.phone)}</span>` : ''}${s.lastDate ? `<span>${esc(L('dernier mouvement', 'last entry', 'آخر حركة'))} ${esc(dmy(s.lastDate))}</span>` : `<span>${esc(L('aucun mouvement', 'no entries yet', 'ما كاين حتى حركة'))}</span>`}${s.termsDays ? `<span>${esc(L('paiement à', 'terms', 'الأجل'))} ${esc(daysTxt(s.termsDays))}</span>` : ''}</div></div>
       <div class="r">${owedChip(s.balanceCents)}${late}${pend}</div></div>`;
   }
 
@@ -371,7 +378,7 @@
     const pill = (k, label) => `<button type="button" class="${S.sort === k ? 'on' : ''}" data-lens-item data-action="sup-sort" data-arg="${k}">${esc(label)}</button>`;
     return `<div class="sp-bar">
         <label class="sp-search">${icon('search')}<input type="search" data-sp-q value="${esc(S.q)}" placeholder="${esc(L('Chercher un fournisseur, un téléphone, un ICE', 'Search a supplier, phone or ICE', 'قلّب على مورد، تيليفون ولا ICE'))}" aria-label="${esc(L('Chercher', 'Search', 'بحث'))}"></label>
-        <div class="sp-pills" data-lens-demo role="group" aria-label="${esc(L('Trier', 'Sort', 'ترتيب'))}">${pill('owe', L('Je dois le plus', 'I owe most', 'اللي عليا ليه كثر'))}${pill('late', L('En retard', 'Overdue', 'متأخر'))}${pill('recent', L('Récents', 'Recent', 'الأحدث'))}${pill('name', L('Nom', 'Name', 'الاسم'))}</div>
+        <div class="sp-pills" data-lens-demo role="group" aria-label="${esc(L('Trier', 'Sort', 'ترتيب'))}">${pill('owe', L('Je dois le plus', 'I owe most', 'اللي كنسالو كثر'))}${pill('late', L('En retard', 'Overdue', 'متأخر'))}${pill('recent', L('Récents', 'Recent', 'الأحدث'))}${pill('name', L('Nom', 'Name', 'الاسم'))}</div>
         <button type="button" class="kb ghost sp-btn" data-action="sup-cashbook">${icon('wallet')}${esc(L('Livre de caisse', 'Cash book', 'دفتر الصندوق'))}</button>
         <button type="button" class="kb atlas sp-btn" data-action="sup-new">${icon('add')}${esc(L('Nouveau fournisseur', 'New supplier', 'مورد جديد'))}</button>
       </div>
@@ -415,16 +422,21 @@
       <div class="st-section sr-board" data-sr-board></div>`;
   }
 
+  function ownerOnlyCard() {
+    return `<div class="sp-card sp-empty">${icon('lock')}<p><b style="font-weight:600">${esc(L('Réservé au propriétaire', 'Owner only', 'خاص بمول المحل'))}</b></p><p class="sp-hint">${esc(L('Ce que le commerce doit à ses fournisseurs et les réceptions à approuver ne s\'ouvrent qu\'avec le code du propriétaire. Le classement reste ouvert.', 'What the shop owes its suppliers and the receipts to approve open only with the owner\'s code. The ranking stays open.', 'شنو كيسال المحل للموردين والاستلامات اللي خاصها الموافقة كيتحلّو غير بالكود ديال مول المحل. الترتيب بقى مفتوح.'))}</p></div>`;
+  }
+
   function listBody() {
     const d = S.list;
+    if (d && d.denied) return `<div class="sp-wrap">${tabsHtml()}${S.tab === 'rank' && rankOk() ? rankTab() : ownerOnlyCard()}</div>`;
     if (!d) return `<div class="sp-card sp-empty">${esc(L('Chargement des fournisseurs…', 'Loading suppliers…', 'كنجيبو الموردين…'))}</div>`;
-    if (d.migrated === false) return `<div class="sp-wrap">${tabsHtml()}${S.tab === 'rank' ? rankTab() : `<div class="sp-card sp-empty">${icon('sync')}<p><b style="font-weight:600">${esc(L('Mise à jour en cours', 'Update in progress', 'التحديث فطور الخدمة'))}</b></p><p class="sp-hint">${esc(L('Les soldes fournisseurs arrivent sur ce compte. Vos bons de commande et réceptions continuent de marcher comme avant.', 'Supplier balances are coming to this account. Purchase orders and receipts keep working as before.', 'حسابات الموردين جاية لهاد الحساب. أوامر الشراء والاستلام خدامين بحال قبل.'))}</p></div>`}</div>`;
+    if (d.migrated === false) return `<div class="sp-wrap">${tabsHtml()}${S.tab === 'rank' ? rankTab() : `<div class="sp-card sp-empty">${icon('sync')}<p><b style="font-weight:600">${esc(L('Mise à jour en cours', 'Update in progress', 'التحديث جاري'))}</b></p><p class="sp-hint">${esc(L('Les soldes fournisseurs arrivent sur ce compte. Vos bons de commande et réceptions continuent de marcher comme avant.', 'Supplier balances are coming to this account. Purchase orders and receipts keep working as before.', 'حسابات الموردين غادي توصل لهاد الحساب قريب. أوامر الشراء والاستلام خدامين بحال ديما.'))}</p></div>`}</div>`;
     const t = d.totals || {};
     const a = t.ageing || {};
     const body = S.tab === 'rank' ? rankTab() : S.tab === 'inbox' ? inboxTab(d) : oweTab(d);
     return `<div class="sp-wrap">
       <div class="sp-card"><div class="sp-kpis">
-        <div class="sp-kpi"><div class="k">${esc(L('Vous devez à vos fournisseurs', 'You owe your suppliers', 'عليك للموردين'))}</div><div class="v ${t.weOweCents ? 'owe' : 'ok'}">${esc(mad(t.weOweCents))}</div></div>
+        <div class="sp-kpi"><div class="k">${esc(L('Vous devez à vos fournisseurs', 'You owe your suppliers', 'اللي كتسال للموردين'))}</div><div class="v ${t.weOweCents ? 'owe' : 'ok'}">${esc(mad(t.weOweCents))}</div></div>
         <div class="sp-kpi"><div class="k">${esc(L('Dont en retard', 'Of which overdue', 'منها متأخر'))}</div><div class="v ${a.overdueCents ? 'late' : 'ok'}">${esc(mad(a.overdueCents))}</div></div>
         <div class="sp-kpi"><div class="k">${esc(L('Avances chez eux', 'Advances with them', 'تسبيقات عندهم'))}</div><div class="v">${esc(mad(t.theyOweCents))}</div></div>
       </div>${ageBar(a)}</div>
@@ -439,6 +451,7 @@
     let body = '', sub = '';
     if (S.view === 'supplier') { body = detailBody(); sub = S.detail ? S.detail.supplier.name : ''; }
     else if (S.view === 'cashbook') { body = cashBody(); sub = L('Livre de caisse', 'Cash book', 'دفتر الصندوق'); }
+    else if (!ledgerOk()) { body = listBody(); sub = L('Qui mérite la prochaine commande', 'Who deserves the next order', 'شكون يستاهل الطلبية الجاية'); }
     else { body = listBody(); sub = L('Ce que vous devez, à qui, depuis quand, et qui mérite la prochaine commande', 'What you owe, to whom, since when, and who deserves the next order', 'شنو عليك، لمن، من إمتى، وشكون يستاهل الطلبية الجاية'); }
     if (!isReal()) sub += ' · ' + L('démo', 'demo', 'تجريبي');
     const r = K.appPage('fournisseurs', { title, subtitle: sub, body });
@@ -462,13 +475,18 @@
   }
 
   async function loadList() {
+    if (!ledgerOk()) { S.list = { denied: true }; return; }
     if (!isReal()) { S.list = DEMO.list(); return; }
     try { S.list = await api('/api/suppliers'); }
-    catch (e) { S.list = { suppliers: [], totals: {}, inbox: [], unlinked: [], migrated: e.code === 'unmigrated' ? false : undefined }; if (e.code !== 'unmigrated') K.toast(tr(e.code), { type: 'warning' }); }
+    catch (e) {
+      /* Le serveur juge la session (palier) : un refus dit « réservé », jamais une erreur. */
+      if (e.code === 'owner-required' || e.code === 'http-403') { S.list = { denied: true }; return; }
+      S.list = { suppliers: [], totals: {}, inbox: [], unlinked: [], migrated: e.code === 'unmigrated' ? false : undefined }; if (e.code !== 'unmigrated') K.toast(tr(e.code), { type: 'warning' }); }
   }
 
   async function showList(tab) {
     if (tab) S.tab = ['owe', 'rank', 'inbox'].includes(tab) ? tab : 'owe';
+    else if (!ledgerOk()) S.tab = 'rank';
     S.view = 'list'; S.id = ''; S.detail = null;
     if (!S.list) paint();
     await loadList();
@@ -482,13 +500,14 @@
   }
   const payStateChip = (o) => ({
     paid: `<span class="sp-chip paid">${esc(L('Payé', 'Paid', 'مخلّص'))}</span>`,
-    partial: `<span class="sp-chip late">${esc(L('Payé en partie', 'Partly paid', 'مخلّص شوية'))}</span>`,
+    partial: `<span class="sp-chip late">${esc(L('Payé en partie', 'Partly paid', 'مخلّص جزء منو'))}</span>`,
     unpaid: `<span class="sp-chip owe">${esc(L('À payer', 'To pay', 'للأداء'))}</span>`,
+    pending: `<span class="sp-chip late">${esc(L('Réception à approuver', 'Receipt to approve', 'استلام كيتسنى الموافقة'))}</span>`,
   }[o.payState] || `<span class="sp-chip ok">${esc(L('Pas encore reçu', 'Not received yet', 'مازال ما توصل'))}</span>`);
 
   function statementHtml(st, canVoid) {
     const lines = (st && st.lines) || [];
-    if (!lines.length && !(st && st.openingCents)) return `<p class="sp-hint">${esc(L('Aucun mouvement. Une réception de bon de commande, une facture ou un paiement apparaîtra ici.', 'No entries yet. A received purchase order, a bill or a payment will show here.', 'حتى حركة. السلعة اللي توصلات، الفواتير والأداءات غادي يبانو هنا.'))}</p>`;
+    if (!lines.length && !(st && st.openingCents)) return `<p class="sp-hint">${esc(L('Aucun mouvement. Une réception de bon de commande, une facture ou un paiement apparaîtra ici.', 'No entries yet. A received purchase order, a bill or a payment will show here.', 'ما كاين حتى حركة. السلعة اللي توصلتي بها، الفواتير والأداءات غادي يبانو هنا.'))}</p>`;
     const voidBtn = (l) => canVoid && ['payment', 'bill', 'opening'].includes(l.kind) ? `<button type="button" class="sp-void" data-action="sup-void" data-arg="${esc(l.id)}">${esc(L('Annuler', 'Void', 'إلغاء'))}</button>` : '';
     const sub = (l) => String(l.note || '');
     const table = `<div class="sp-tablewrap"><table class="sp-table"><thead><tr><th>${esc(L('Date', 'Date', 'التاريخ'))}</th><th>${esc(L('Libellé', 'Description', 'البيان'))}</th>
@@ -544,7 +563,7 @@
           <div class="sp-card"><h3 class="sp-h3">${esc(L('Depuis quand je dois', 'How old is what I owe', 'من إمتى عليا هاد الدين'))}</h3>${ageBar(a)}</div>
           ${ordersHtml}
           <div class="sp-card"><h3 class="sp-h3">${esc(L('Tableau du fournisseur', 'Supplier scorecard', 'بطاقة المورد'))}</h3><div class="sp-score">
-            <div><div class="k">${esc(L('Commandé', 'Ordered', 'المطلوب'))}</div><div class="v">${esc(mad(sc.orderedCents || sc.purchasedCents))}</div><div class="k">${esc(L(pl(sc.orderCount || 0, '1 bon', `${sc.orderCount || 0} bons`), pl(sc.orderCount || 0, '1 order', `${sc.orderCount || 0} orders`), arPl(sc.orderCount || 0, 'أمر واحد', 'جوج أوامر', `${sc.orderCount || 0} أوامر`, `${sc.orderCount || 0} أمر`)))}</div></div>
+            <div><div class="k">${esc(L('Commandé', 'Ordered', 'اللي طلبتي'))}</div><div class="v">${esc(mad(sc.orderedCents || sc.purchasedCents))}</div><div class="k">${esc(L(pl(sc.orderCount || 0, '1 bon', `${sc.orderCount || 0} bons`), pl(sc.orderCount || 0, '1 order', `${sc.orderCount || 0} orders`), arPl(sc.orderCount || 0, 'أمر واحد', 'جوج أوامر', `${sc.orderCount || 0} أوامر`, `${sc.orderCount || 0} أمر`)))}</div></div>
             <div><div class="k">${esc(L('Panier moyen', 'Average order', 'متوسط الطلب'))}</div><div class="v">${esc(mad(sc.averageOrderCents))}</div></div>
             ${pctLine(L('Reçu', 'Received', 'توصلت'), sc.receivedPct, sc.notReceivedCents ? L('reste à recevoir', 'still to receive', 'باقي ما وصل') + ' ' + mad(sc.notReceivedCents) : '')}
             ${pctLine(L('Payé', 'Paid', 'تخلّص'), sc.paidPct, sc.unpaidCents ? L('reste dû', 'still owed', 'باقي عليك') + ' ' + mad(sc.unpaidCents) : '')}
@@ -570,7 +589,7 @@
         <div><div>${esc(place)}</div><span class="sp-verdict ${esc(b.tone)}">${esc(b.label)}</span><p class="sp-hint" style="margin-top:6px">${esc(b.say)}</p></div></div>
       <div class="sp-acts" style="margin-top:10px"><button type="button" class="kb ghost sp-btn" data-action="sup-rank-open" data-arg="${esc(id)}">${icon('truck')}${esc(b.reorder > 0
         ? L(pl(b.reorder, 'Préparer la commande · 1 pièce', `Préparer la commande · ${b.reorder} pièces`), pl(b.reorder, 'Prepare the order · 1 piece', `Prepare the order · ${b.reorder} pieces`), arPl(b.reorder, 'حضّر الطلبية · قطعة وحدة', 'حضّر الطلبية · جوج قطع', `حضّر الطلبية · ${b.reorder} قطع`, `حضّر الطلبية · ${b.reorder} قطعة`))
-        : L('Voir le détail du score', 'See the score detail', 'شوف تفاصيل النقطة'))}</button></div>`;
+        : L('Voir le détail du score', 'See the score detail', 'شوف تفاصيل التنقيط'))}</button></div>`;
     host.hidden = false;
   }
 
@@ -883,12 +902,19 @@ ${st.openingCents ? `<tr><td></td><td>${esc(LX(lg, 'Solde reporté', 'Brought fo
         ${lines.map((l) => `<tr><td>${esc(dmy(l.date))}</td><td class="lbl">${esc(l.note || methodLabel(l.method))}<small>${esc(methodLabel(l.method))}</small></td><td class="num">${l.inCents ? esc(mad(l.inCents)) : ''}</td><td class="num">${l.outCents ? esc(mad(l.outCents)) : ''}</td><td class="num">${esc(mad(l.runningCents))}</td>
           <td><button type="button" class="sp-void" data-action="sup-void" data-arg="${esc('cash:' + l.id)}">${esc(L('Annuler', 'Void', 'إلغاء'))}</button></td></tr>`).join('')}</tbody></table></div>
         <div class="sp-st">${lines.slice().reverse().map((l) => `<div class="sp-st-row"><div>${esc(l.note || methodLabel(l.method))}<small>${esc(dmy(l.date))} · ${esc(methodLabel(l.method))}</small></div><div><div class="amt">${l.direction === 'in' ? '+' : '−'}${esc(mad(l.amountCents))}</div><div class="run">${esc(mad(l.runningCents))}</div></div></div>`).join('')}</div>`
-        : `<p class="sp-hint">${esc(L('Aucun mouvement pour le moment.', 'No entries yet.', 'حتى حركة دابا.'))}</p>`}</div></div>`;
+        : `<p class="sp-hint">${esc(L('Aucun mouvement pour le moment.', 'No entries yet.', 'ما كاين حتى حركة دابا.'))}</p>`}</div></div>`;
+  }
+
+  /* Le grand livre est au patron : un autre rôle reçoit « réservé », pas un appel au serveur. */
+  function denied(quiet) {
+    if (ledgerOk()) return false;
+    if (!quiet) K.toast(L('Réservé au propriétaire', 'Owner only', 'خاص بمول المحل'), { type: 'info' });
+    return true;
   }
 
   /* ── Handlers (enregistrés d'un coup : LAZY_SECTIONS les compte) ───── */
-  handlers['nav-fournisseurs'] = (_el, tab) => { S.list = null; showList(typeof tab === 'string' ? tab : S.tab); };
-  handlers['sup-open'] = (_el, id) => openSupplier(String(id || ''));
+  handlers['nav-fournisseurs'] = (_el, tab) => { S.list = null; showList(typeof tab === 'string' ? tab : ledgerOk() ? S.tab : 'rank'); };
+  handlers['sup-open'] = (_el, id) => denied() || openSupplier(String(id || ''));
   handlers['sup-back'] = () => showList();
   handlers['sup-tab'] = (_el, k) => {
     S.tab = ['owe', 'rank', 'inbox'].includes(k) ? k : 'owe';
@@ -901,9 +927,9 @@ ${st.openingCents ? `<tr><td></td><td>${esc(LX(lg, 'Solde reporté', 'Brought fo
     const card = document.querySelector('.dash-genpage .sp-list');
     if (card) card.innerHTML = sorted((S.list && S.list.suppliers) || []).map(rowHtml).join('');
   };
-  handlers['sup-new'] = () => supplierModal(null);
-  handlers['sup-edit'] = async (_el, id) => { if (await ensureDetail(String(id || ''))) supplierModal(S.detail.supplier); };
-  handlers['sup-archive'] = async (_el, id) => {
+  handlers['sup-new'] = () => denied() || supplierModal(null);
+  handlers['sup-edit'] = async (_el, id) => { if (denied()) return; if (await ensureDetail(String(id || ''))) supplierModal(S.detail.supplier); };
+  handlers['sup-archive'] = async (_el, id) => { if (denied()) return;
     id = String(id || '');
     const b = S.detail && S.detail.balance ? S.detail.balance.balanceCents : 0;
     const msg = b ? L('Ce fournisseur a encore un solde. Il sortira de la liste, son relevé reste consultable.', 'This supplier still has a balance. It leaves the list, its statement stays readable.', 'هاد المورد باقي عندو رصيد. غادي يخرج من اللائحة والكشف ديالو يبقى.')
@@ -916,7 +942,7 @@ ${st.openingCents ? `<tr><td></td><td>${esc(LX(lg, 'Solde reporté', 'Brought fo
       S.list = null; showList();
     } catch (e) { K.toast(tr(e.code), { type: 'warning' }); }
   };
-  handlers['sup-restore'] = async (_el, id) => {
+  handlers['sup-restore'] = async (_el, id) => { if (denied()) return;
     id = String(id || '');
     try {
       if (!isReal()) DEMO.edit(id, { archived: false });
@@ -925,23 +951,23 @@ ${st.openingCents ? `<tr><td></td><td>${esc(LX(lg, 'Solde reporté', 'Brought fo
       refreshDetail();
     } catch (e) { K.toast(tr(e.code), { type: 'warning' }); }
   };
-  handlers['sup-pay'] = (_el, id) => payModal(String(id || ''));
-  handlers['sup-pay-po'] = (_el, arg) => {
+  handlers['sup-pay'] = (_el, id) => denied() || payModal(String(id || ''));
+  handlers['sup-pay-po'] = (_el, arg) => { if (denied()) return;
     const [id, po, cents] = String(arg || '').split('|');
     payModal(id, { po: po || '', cents: Number(cents) || 0 });
   };
-  handlers['sup-bill'] = (_el, id) => billModal(String(id || ''));
-  handlers['sup-void'] = async (_el, arg) => {
+  handlers['sup-bill'] = (_el, id) => denied() || billModal(String(id || ''));
+  handlers['sup-void'] = async (_el, arg) => { if (denied()) return;
     const raw = String(arg || ''), cash = raw.startsWith('cash:'), id = cash ? raw.slice(5) : raw;
     if (!window.confirm(L('Annuler cette ligne ? Elle sort du solde et reste dans l\'historique.', 'Void this entry? It leaves the balance and stays in the history.', 'نلغيو هاد السطر؟ غادي يخرج من الرصيد ويبقى فالتاريخ.'))) return;
     try {
       if (!isReal()) DEMO.void(id);
       else await api(cash ? '/api/cashbook' : '/api/suppliers/entry', { action: 'archive', id });
-      K.toast(L('Ligne annulée', 'Entry voided', 'تلغى السطر'), { type: 'success' });
+      K.toast(L('Ligne annulée', 'Entry voided', 'السطر تلغى'), { type: 'success' });
       refreshDetail();
     } catch (e) { K.toast(tr(e.code), { type: 'warning' }); }
   };
-  handlers['sup-approve'] = async (_el, id) => {
+  handlers['sup-approve'] = async (_el, id) => { if (denied()) return;
     try {
       if (!isReal()) DEMO.approve(String(id || ''));
       else await api('/api/suppliers/entry', { action: 'approve', id: String(id || '') });
@@ -949,7 +975,7 @@ ${st.openingCents ? `<tr><td></td><td>${esc(LX(lg, 'Solde reporté', 'Brought fo
       refreshDetail();
     } catch (e) { K.toast(tr(e.code), { type: 'warning' }); }
   };
-  handlers['sup-approve-all'] = async (_el, sid) => {
+  handlers['sup-approve-all'] = async (_el, sid) => { if (denied()) return;
     const one = typeof sid === 'string' && sid ? sid : '';
     try {
       let n = 0;
@@ -959,7 +985,7 @@ ${st.openingCents ? `<tr><td></td><td>${esc(LX(lg, 'Solde reporté', 'Brought fo
       refreshDetail();
     } catch (e) { K.toast(tr(e.code), { type: 'warning' }); }
   };
-  handlers['sup-attach'] = async (el, number) => {
+  handlers['sup-attach'] = async (el, number) => { if (denied()) return;
     const box = el && el.closest ? el.closest('[data-sp-attach]') : null;
     const sel = box && box.querySelector('select');
     let sid = sel ? sel.value : '';
@@ -984,7 +1010,10 @@ ${st.openingCents ? `<tr><td></td><td>${esc(LX(lg, 'Solde reporté', 'Brought fo
     const ops = window.KiwiOperations;
     if (!ops || !ops.create) { K.toast(tr(''), { type: 'warning' }); return null; }
     try {
-      const res = await ops.create('procurement', 'create-po', { supplierId: o.supplierId, supplier: o.name, lines: o.lines });
+      /* Le patron relie le bon à la fiche (créée au besoin) ; un gérant le passe
+         au nom du fournisseur : relié s'il a déjà une fiche, sinon le patron le
+         rattache (réceptions sans fiche). */
+      const res = await ops.create('procurement', 'create-po', ledgerOk() ? { supplierId: o.supplierId, supplier: o.name, lines: o.lines } : { supplier: o.name, lines: o.lines });
       const cmd = (res && res.command) || {};
       if (res && (res.offline || res.queued)) { K.toast(L('Hors ligne : le bon partira au retour du réseau.', 'Offline: the order will be sent when the network is back.', 'بلا ريزو: الأمر غادي يمشي ملي يرجع الريزو.'), { type: 'info' }); return null; }
       if (cmd.lastError || !cmd.result || !cmd.result.number) { K.toast(tr(cmd.lastError), { type: 'warning' }); return null; }
@@ -992,15 +1021,15 @@ ${st.openingCents ? `<tr><td></td><td>${esc(LX(lg, 'Solde reporté', 'Brought fo
       return { number: cmd.result.number };
     } catch (e) { K.toast(tr(e && e.code), { type: 'warning' }); return null; }
   };
-  handlers['sup-statement'] = (_el, id) => statementModal(String(id || ''));
+  handlers['sup-statement'] = (_el, id) => denied() || statementModal(String(id || ''));
   /* Pour la page Dépenses : les cinq fournisseurs à qui l'on doit le plus. */
-  handlers['sup-owed'] = async () => {
+  handlers['sup-owed'] = async () => { if (denied(true)) return [];
     if (!isReal()) return [];
     const j = await api('/api/suppliers');
     return ((j && j.suppliers) || []).filter((x) => x.balanceCents > 0).sort((a, b) => b.balanceCents - a.balanceCents).slice(0, 5);
   };
-  handlers['sup-cashbook'] = async () => { S.view = 'cashbook'; S.cash = null; paint(); await loadCash(); if (S.view === 'cashbook') paint(); };
-  handlers['sup-cash-add'] = (_el, dir) => {
+  handlers['sup-cashbook'] = async () => { if (denied()) return; S.view = 'cashbook'; S.cash = null; paint(); await loadCash(); if (S.view === 'cashbook') paint(); };
+  handlers['sup-cash-add'] = (_el, dir) => { if (denied()) return;
     const out = dir === 'out';
     moneyModal({
       mode: out ? 'cash-out' : 'cash-in', title: out ? L("Sortie d'argent", 'Money out', 'خروج الفلوس') : L("Entrée d'argent", 'Money in', 'دخول الفلوس'), cta: L('Enregistrer', 'Save', 'سجّل'),

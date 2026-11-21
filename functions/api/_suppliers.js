@@ -313,29 +313,68 @@ export async function attachUnlinked(env, merchant, number, supplierId, by) {
   } catch (_) { return { ok: false, error: 'unmigrated' }; }
 }
 
-/* Par bon d'un fournisseur : reçu (net des retours), payé sur ce bon, reste. */
+/* Par bon d'un fournisseur : reçu (net des retours), payé, reste, avec la
+ * règle de l'ancienneté (ageBuckets) : un paiement rattaché à un bon le
+ * règle d'abord ; tout le reste (paiement général, avance, surplus) solde les
+ * dettes les plus anciennes en premier, bons et factures confondus. Ainsi la
+ * somme des « reste » des bons et des factures est le solde du fournisseur.
+ * Une réception d'employé pas encore approuvée n'est pas due : `pending`. */
 export async function orderBalances(env, merchant, supplierId) {
-  const out = [];
+  let rows = [];
   try {
-    const rows = await env.DB.prepare(
+    const got = await env.DB.prepare(
       `SELECT o.id, o.number, o.status, o.total_cents, o.created_ts, o.expected_date,
               COALESCE((SELECT SUM(l.received_qty * l.unit_cents) FROM purchase_order_lines l WHERE l.merchant = o.merchant AND l.number = o.number), 0) AS received,
-              COALESCE((SELECT SUM(l.returned_qty * l.unit_cents) FROM purchase_order_lines l WHERE l.merchant = o.merchant AND l.number = o.number), 0) AS returned,
-              COALESCE((SELECT SUM(m.amount_cents) FROM money_ledger m WHERE m.merchant = o.merchant AND m.purchase_order_id = o.id
-                         AND m.party_type = 'supplier' AND m.direction = 'out' AND m.kind = 'payment' AND m.archived = 0 AND m.deleted_ts IS NULL AND m.internal = 0 AND m.status = 'posted'), 0) AS paid
+              COALESCE((SELECT SUM(l.returned_qty * l.unit_cents) FROM purchase_order_lines l WHERE l.merchant = o.merchant AND l.number = o.number), 0) AS returned
          FROM purchase_orders o WHERE o.merchant = ? AND o.supplier_id = ? ORDER BY o.created_ts DESC LIMIT 20`
     ).bind(merchant, supplierId).all();
-    for (const r of (rows && rows.results) || []) {
-      const received = Math.max(0, (Number(r.received) || 0) - (Number(r.returned) || 0));
-      const paid = Number(r.paid) || 0;
-      const due = Math.max(0, received - paid);
-      out.push({ id: String(r.id), number: String(r.number), status: String(r.status), totalCents: Number(r.total_cents) || 0,
-        receivedCents: received, paidCents: paid, dueCents: due,
-        payState: !received ? 'none' : due === 0 ? 'paid' : paid > 0 ? 'partial' : 'unpaid',
-        createdAt: Number(r.created_ts) || 0, expectedDate: String(r.expected_date || '') });
-    }
-  } catch (_) { /* base d'avant 0028 : pas de lien bon ↔ fiche */ }
-  return out;
+    rows = (got && got.results) || [];
+  } catch (_) { return []; /* base d'avant 0028 : pas de lien bon ↔ fiche */ }
+  let lines = [];
+  try {
+    const got = await env.DB.prepare(
+      `SELECT direction, kind, amount_cents, purchase_order_id, status FROM money_ledger
+        WHERE merchant = ? AND party_type = 'supplier' AND party_id = ? AND archived = 0 AND deleted_ts IS NULL AND internal = 0
+        ORDER BY entry_date, created_at, rowid LIMIT 20000`
+    ).bind(merchant, supplierId).all();
+    lines = (got && got.results) || [];
+  } catch (_) { lines = []; }
+  const debts = [], byPo = new Map(), paid = new Map(), pendingIn = new Map();
+  const add = (map, k, v) => map.set(k, (map.get(k) || 0) + v);
+  for (const r of lines) {
+    const po = String(r.purchase_order_id || ''), cents = Number(r.amount_cents) || 0;
+    if (r.status === 'pending') { if (po && r.direction === 'in') add(pendingIn, po, cents); continue; }
+    if (r.status !== 'posted' || r.direction !== 'in') continue;
+    const d = { po, left: cents };
+    debts.push(d);
+    if (po) { if (!byPo.has(po)) byPo.set(po, []); byPo.get(po).push(d); }
+  }
+  let pool = 0;
+  for (const r of lines) {
+    if (r.status !== 'posted' || r.direction !== 'out') continue;
+    const po = String(r.purchase_order_id || '');
+    let rest = Number(r.amount_cents) || 0;
+    for (const d of (po && byPo.get(po)) || []) { const u = Math.min(d.left, rest); d.left -= u; rest -= u; }
+    if (r.kind !== 'return') add(paid, po, (Number(r.amount_cents) || 0) - rest);
+    pool += rest;
+  }
+  for (const d of debts) {
+    if (!pool) break;
+    const u = Math.min(d.left, pool);
+    d.left -= u; pool -= u;
+    if (d.po) add(paid, d.po, u);
+  }
+  return rows.map((r) => {
+    const id = String(r.id);
+    const received = Math.max(0, (Number(r.received) || 0) - (Number(r.returned) || 0));
+    const owed = (byPo.get(id) || []).length;
+    const due = (byPo.get(id) || []).reduce((sum, d) => sum + d.left, 0);
+    const paidCents = paid.get(id) || 0, pendingCents = pendingIn.get(id) || 0;
+    return { id, number: String(r.number), status: String(r.status), totalCents: Number(r.total_cents) || 0,
+      receivedCents: received, paidCents, dueCents: due, pendingCents,
+      payState: !received ? 'none' : !owed && pendingCents ? 'pending' : due === 0 ? 'paid' : paidCents > 0 ? 'partial' : 'unpaid',
+      createdAt: Number(r.created_ts) || 0, expectedDate: String(r.expected_date || '') };
+  });
 }
 
 /* ── Tableau du fournisseur ───────────────────────────────────────────── */

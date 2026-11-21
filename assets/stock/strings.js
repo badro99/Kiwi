@@ -778,7 +778,7 @@
       stOk: 'في المخزون', stLow: 'منخفض', stOut: 'نفد',
       tblFoot: (n, val, ok, low, out) => `${n} منتج · القيمة الإجمالية: ${val} · ${ok} OK · ${low} منخفض · ${out} نفد`,
       varTip: (used, theo, cost) => `مستخدم ${used} مقابل ${theo} نظري (وصفات). التأثير: ${cost}.`,
-      supTitle: 'الموردون', supRankT: 'ترتيب الموردين وحساباتهم', supRankS: 'شكون يستاهل الطلبية الجاية، وشحال عليك لكل واحد: كلشي فصفحة الموردين.', supRankCta: 'حلّ الترتيب',
+      supTitle: 'الموردون', supRankT: 'ترتيب الموردين وحساباتهم', supRankS: 'من يستحق الطلبية القادمة، وكم تدين لكل مورد: كل ذلك في صفحة الموردين.', supRankCta: 'افتح الترتيب',
       supSub: (n) => `${n} موردًا نشطًا`,
       supStatActive: 'الموردون النشطون', supStatSpend: 'الإنفاق هذا الشهر', supStatPriceTrend: 'متوسط تغير الأسعار',
       colSupCat: 'الفئة', colSupSpend: 'الإنفاق / شهر', colSupPrice: 'آخر سعر',

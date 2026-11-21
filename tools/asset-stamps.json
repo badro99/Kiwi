@@ -1496,8 +1496,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2238",
-    "sha": "7a51fe5aa573c5ed"
+    "v": "2240",
+    "sha": "db97236abab302bc"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1524,8 +1524,8 @@
     "sha": "d527709a3bdeb87e"
   },
   "assets/pages-pro/suppliers.js": {
-    "v": "8",
-    "sha": "dd74c50d86512912"
+    "v": "10",
+    "sha": "b0944dc795e71bbd"
   },
   "assets/pages.js": {
     "v": "14",
@@ -1536,8 +1536,8 @@
     "sha": "ec3117f68fa55fbf"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "279",
-    "sha": "e9a2a07372619667"
+    "v": "281",
+    "sha": "7d9d61e2914470e7"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2316,8 +2316,8 @@
     "sha": "ad3af92eb31669f1"
   },
   "assets/stock/strings.js": {
-    "v": "24",
-    "sha": "d7cd02554da781ec"
+    "v": "25",
+    "sha": "e642f5952d132275"
   },
   "assets/stock/suppliers.js": {
     "v": "4",

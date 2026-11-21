@@ -517,6 +517,38 @@ const opsPost = async (cookie, id, action, payload, extra) => {
   ok('archived supplier refuses payments; per-PO received, paid, due and state; lines carry poNumber');
 }
 
+/* ── 15b · un paiement sans bon solde les bons les plus anciens d'abord ── */
+{
+  await call(listRoute.onRequestPost, '/api/suppliers', owner, { merchant: SHOP, action: 'create', id: 'sup-alloc-1', supplier: { name: 'Grossiste Allocation' } });
+  const receive = async (tag, unitPrice) => {
+    const made = await opsPost(owner, `op:po-${tag}-0001`, 'create-po', { supplierId: 'sup-alloc-1', lines: [{ sku: 'ALLOC', qty: 1, unitPrice }] });
+    const number = made.data.command.result.number;
+    await opsPost(owner, `op:po-${tag}-0002`, 'submit-po', { po: number }, { confirmed: true });
+    await opsPost(owner, `op:po-${tag}-0003`, 'receive-po', { po: number, lines: [{ sku: 'ALLOC', qty: 1 }] });
+    return number;
+  };
+  const first = await receive('alla', 1000);
+  await call(entryRoute.onRequestPost, '/api/suppliers/entry', owner, { merchant: SHOP, supplierId: 'sup-alloc-1', type: 'payment', amountCents: 30000, idemKey: 'alloc-pay-0001' });
+  let st = await call(statementRoute.onRequestGet, `/api/suppliers/statement?merchant=${SHOP}&id=sup-alloc-1`, owner);
+  let a = st.data.orders.find((x) => x.number === first);
+  assert.equal(st.data.balance.balanceCents, 70000, 'judge probe: 1 000 received, 300 paid without a PO');
+  assert.deepEqual([a.paidCents, a.dueCents, a.payState], [30000, 70000, 'partial'], 'the general payment reaches the PO');
+  const second = await receive('allb', 500);
+  await call(entryRoute.onRequestPost, '/api/suppliers/entry', owner, { merchant: SHOP, supplierId: 'sup-alloc-1', type: 'payment', amountCents: 80000, idemKey: 'alloc-pay-0002' });
+  st = await call(statementRoute.onRequestGet, `/api/suppliers/statement?merchant=${SHOP}&id=sup-alloc-1`, owner);
+  a = st.data.orders.find((x) => x.number === first);
+  const b = st.data.orders.find((x) => x.number === second);
+  assert.deepEqual([a.dueCents, a.payState], [0, 'paid'], 'oldest PO settled first');
+  assert.deepEqual([b.paidCents, b.dueCents, b.payState], [10000, 40000, 'partial'], 'the surplus moves to the next PO');
+  assert.equal(st.data.orders.reduce((sum, o) => sum + o.dueCents, 0), st.data.balance.balanceCents, 'per-PO remaining adds up to the balance');
+  /* A payment named on the newer PO pays that PO first, whatever its age. */
+  await call(entryRoute.onRequestPost, '/api/suppliers/entry', owner, { merchant: SHOP, supplierId: 'sup-alloc-1', type: 'payment', amountCents: 40000, po: second, idemKey: 'alloc-pay-0003' });
+  st = await call(statementRoute.onRequestGet, `/api/suppliers/statement?merchant=${SHOP}&id=sup-alloc-1`, owner);
+  assert.deepEqual(st.data.orders.map((o) => o.dueCents), [0, 0]);
+  assert.equal(st.data.balance.balanceCents, 0);
+  ok('per-PO due: unlinked payments settle the oldest POs first and the dues add up to the balance');
+}
+
 /* ── 16 · ancienneté par échéance (délai de paiement de la fiche) ─────── */
 {
   const rows = [
@@ -574,6 +606,56 @@ const opsPost = async (cookie, id, action, payload, extra) => {
   assert.equal(listOld.status, 200);
   assert.equal(lo.migrated, false, 'the screen shows "update in progress", not an error');
   ok('pre-0028 base: create/submit/receive PO still work, ledger reports unmigrated, list says migrated:false');
+}
+
+/* ── 18 · la page, par rôle : grand livre au patron, classement ouvert ── */
+{
+  const vm = await import('node:vm');
+  const { readFileSync } = await import('node:fs');
+  const page = readFileSync(path.join(ROOT, 'assets/pages-pro/suppliers.js'), 'utf8');
+  const run = async (role, answer) => {
+    const outs = [], H = {}, calls = [];
+    const node = () => ({ innerHTML: '', dataset: {}, style: {}, classList: { toggle() {} }, querySelector: () => null, querySelectorAll: () => [], addEventListener() {}, closest: () => null });
+    vm.runInNewContext(page, {
+      window: { __kiwiRole: role, KiwiEnv: { isReal: () => true }, KiwiStore: { slugFor: () => SHOP }, KiwiI18n: { getLang: () => 'fr' },
+        Kiwi: { handlers: H, appPage: (_n, o) => { outs.push(['page', o.body]); return { el: node() }; }, modal: () => ({ el: node(), close() {} }), toast: (m) => outs.push(['toast', m]) } },
+      fetch: async (url) => { calls.push(String(url)); return { ok: answer.status === 200, status: answer.status, json: async () => answer.body }; },
+      document: { body: { classList: { contains: () => false } }, getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], createElement: () => node(), head: { appendChild() {} } },
+      setTimeout() {}, Date, Math, JSON, Promise, encodeURIComponent,
+    });
+    const settle = async () => { for (let i = 0; i < 4; i++) await new Promise((r) => setImmediate(r)); };
+    const body = () => outs.filter((o) => o[0] === 'page').pop()[1];
+    H['nav-fournisseurs'](); await settle();
+    const first = body();
+    H['sup-tab'](null, 'owe'); const owe = body();
+    H['sup-tab'](null, 'inbox'); const inbox = body();
+    H['sup-tab'](null, 'rank'); const rank = body();
+    return { first, owe, inbox, rank, calls, toasts: () => outs.filter((o) => o[0] === 'toast').map((o) => o[1]), H };
+  };
+  const list = { status: 200, body: { ok: true, migrated: true, suppliers: [{ id: 's1', name: 'Atelier Fès', balanceCents: 70000, ageing: {} }], inbox: [], unlinked: [], totals: { weOweCents: 70000, ageing: {} } } };
+  const owner = await run('owner', list);
+  assert.ok(owner.first.includes('Atelier Fès') && owner.first.includes('Vous devez à vos fournisseurs'), 'the owner opens on the ledger');
+  assert.ok(owner.rank.includes('data-sr-board'), 'the owner has the ranking tab');
+  assert.equal(owner.calls.filter((u) => u.startsWith('/api/suppliers')).length, 1);
+
+  const manager = await run('manager', list);
+  assert.ok(manager.first.includes('data-sr-board'), 'a manager lands on the ranking');
+  assert.equal(manager.calls.length, 0, 'a manager never asks the server for the ledger');
+  for (const tab of [manager.owe, manager.inbox]) {
+    assert.ok(tab.includes('Réservé au propriétaire') && !tab.includes('Atelier Fès') && !tab.includes('Vous devez à vos fournisseurs'), 'ledger tabs say owner-only to a manager');
+  }
+  manager.H['sup-pay'](null, 's1');
+  assert.deepEqual(manager.toasts(), ['Réservé au propriétaire'], 'ledger actions answer owner-only, never an API error');
+  assert.equal((await manager.H['sup-owed']()).length, 0, 'the expenses page gets no supplier list for a manager');
+
+  /* Un patron dont la session est au palier gérant : le serveur refuse, l'écran dit « réservé ». */
+  const tier = await run('owner', { status: 403, body: { error: 'owner-required' } });
+  assert.ok(tier.first.includes('Réservé au propriétaire'), 'a 403 reads as owner-only');
+  assert.deepEqual(tier.toasts(), [], 'no error toast on a tier refusal');
+  assert.ok(tier.rank.includes('data-sr-board'));
+  const desk = await run('reception', list);
+  assert.ok(desk.rank.includes('Réservé au propriétaire') && !desk.rank.includes('data-sr-board'), 'reception sees neither tab');
+  ok('page by role: owner gets the ledger, manager the ranking and an owner-only notice, a 403 never shows as an error');
 }
 
 if (process.exitCode) process.exit(process.exitCode);
