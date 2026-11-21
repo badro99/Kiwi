@@ -17,14 +17,21 @@
     return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
       || window.navigator.standalone === true;
   }
+  /* Le bouton vit dans le profil, juste au-dessus de « Pointer le départ ».
+     Flottant en bas à droite au-dessus de tout (z 9998), il couvrait les gestes
+     du service : « Annuler toute la table », « Voir la commande », le bouton
+     d'une feuille, un avis, la dernière carte de table d'un petit écran ; le
+     toucher du serveur ouvrait la consigne d'installation. Une page sans profil
+     garde l'ancien bouton flottant. */
   function show() {
     if (!authenticated || standalone() || document.getElementById('kiwi-employee-install')) return;
     var b = document.createElement('button');
+    var anchor = document.getElementById('profil-clockout');
     b.id = 'kiwi-employee-install'; b.type = 'button';
     b.textContent = say('Installer l’app', 'Install the app', 'تثبيت التطبيق');
-    b.style.cssText = 'position:fixed;right:16px;bottom:82px;z-index:9998;padding:12px 17px;' +
-      'border:0;border-radius:12px;background:#0B6E4F;color:#F7F5F0;font:700 14px/1 "Inter Tight",system-ui;' +
-      'box-shadow:0 8px 24px -8px rgba(11,110,79,.55);cursor:pointer';
+    b.style.cssText = (anchor ? 'display:flex;width:100%;height:48px;margin:0 0 12px;align-items:center;justify-content:center;'
+      : 'position:fixed;right:16px;bottom:82px;z-index:9998;padding:12px 17px;box-shadow:0 8px 24px -8px rgba(11,110,79,.55);') +
+      'border:0;border-radius:12px;background:#0B6E4F;color:#F7F5F0;font:700 14px/1 "Inter Tight",system-ui;cursor:pointer';
     b.addEventListener('click', function () {
       if (deferred) {
         deferred.prompt();
@@ -40,30 +47,7 @@
               'In the browser menu, choose “Install app” or “Add to Home screen”.',
               'من قائمة المتصفح، اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».'));
     });
-    document.body.appendChild(b);
-    fit();
-  }
-  /* Le bouton flotte en bas à droite, au-dessus de tout (z 9998). Sur la
-     fiche d'une table, sur la carte et sous une feuille ouverte, il couvrait
-     « Annuler toute la table », « Voir la commande » ou un bouton de la
-     feuille, et le toucher du serveur ouvrait la consigne d'installation. Il
-     ne se montre que sur le plan de salle et le profil, sans feuille ouverte. */
-  function fit() {
-    var b = document.getElementById('kiwi-employee-install');
-    if (!b) return;
-    var tab = document.querySelector('#screen-main.is-active .tab.is-active');
-    var name = tab && tab.getAttribute('data-tab');
-    var hide = !(name === 'tables' || name === 'profil') || !!document.querySelector('.modal-veil.is-open');
-    if (b.hidden !== hide) b.hidden = hide;   // une écriture identique relancerait l'observateur à chaque image
-  }
-  var queued = false;
-  function soon() {
-    if (queued) return;
-    queued = true;
-    requestAnimationFrame(function () { queued = false; fit(); });
-  }
-  if (window.MutationObserver) {
-    new MutationObserver(soon).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['class', 'hidden'] });
+    if (anchor) anchor.parentNode.insertBefore(b, anchor); else document.body.appendChild(b);
   }
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault(); deferred = e; show();
