@@ -26,7 +26,7 @@ assert.ok(targets.size >= 4, 'les cibles de l’assistant sont lues');
 
 /* Scripts du tableau de bord, plus les sections chargées au premier usage. */
 const scripts = [...shell.matchAll(/<script[^>]+src="(assets\/[^"?]+)/g)].map((m) => m[1]);
-const lazy = fs.readdirSync(path.join(root, 'assets/pages-pro')).map((f) => 'assets/pages-pro/' + f);
+const lazy = fs.readdirSync(path.join(root, 'assets/pages-pro'), { recursive: true }).filter((f) => String(f).endsWith('.js')).map((f) => 'assets/pages-pro/' + f);   // sous-dossiers compris (catalog-bulk/)
 const code = [...scripts, ...lazy].filter((f) => fs.existsSync(path.join(root, f))).map(read).join('\n');
 /* handlers['x'] = …, h['x'] = …, ou une entrée « 'x': () => » d'une table d'actions. */
 const defined = (name) => new RegExp(`\\[['"]${name}['"]\\]\\s*=(?!=)|['"]${name}['"]\\s*:\\s*(?:async\\s*)?(?:\\(|function\\b|[a-zA-Z_$][\\w$]*\\s*=>)`).test(code);
