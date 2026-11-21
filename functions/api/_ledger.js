@@ -27,16 +27,27 @@
  *     entry = { idemKey*, amountCents*, direction* 'in'|'out',
  *               partyType* 'customer'|'supplier'|'cashbook', partyId (requis
  *               sauf cashbook), date 'YYYY-MM-DD' (défaut : aujourd'hui UTC),
- *               kind (KINDS), method (METHODS), note, attachmentRef,
- *               saleId, purchaseOrderId, expenseId, chequeId,
+ *               kind (KINDS), method (METHODS), note (saisie de
+ *               l'utilisateur, jamais un libellé du serveur), ref (référence
+ *               structurée : n° de bon, de facture ; l'écran la met en mots),
+ *               attachmentRef, saleId, purchaseOrderId, expenseId, chequeId,
  *               internal (bool), pending (bool), createdBy }
  *     → { ok:true, duplicate:false|true, entry }  (rejeu de la même clé =
  *       duplicate:true, aucune seconde ligne)
  *     → { ok:false, error } : 'bad-merchant' | 'bad-idem' | 'bad-amount' |
  *       'bad-direction' | 'bad-party' | 'bad-date' | 'idempotency-conflict'
  *       (même clé, autre montant/sens/tiers) | 'no-db' | 'unmigrated'
+ *   ledgerEntryStatement(env, merchant, entry)
+ *     → { ok:true, statement, row } | { ok:false, error } : la même écriture,
+ *       préparée mais PAS exécutée, à mettre dans le DB.batch() de l'écriture
+ *       métier qui la cause (réception de bon : stock et dette ensemble ou
+ *       rien). INSERT OR IGNORE : un rejeu de la clé ne casse pas le lot.
+ *   ledgerReady(env) → bool : la table existe (migration 0028 passée).
  *   archiveLedgerEntry(env, merchant, id, { by }) → { ok, entry } | { ok:false, error }
  *   approveLedgerEntry(env, merchant, id, { by }) → { ok, entry } (pending → posted)
+ *   approvePending(env, merchant, partyType, partyId|null, { by }) → { ok, approved }
+ *   relinkParty(env, merchant, partyType, fromId, toId, { approve, by }) → { ok, moved }
+ *     (les lignes vivantes d'un tiers provisoire passent à un vrai tiers)
  *   pendingEntries(env, merchant, partyType, partyId|null) → [entry] (en attente, non archivées)
  *   archiveLedgerWhere(env, merchant, { expenseId | purchaseOrderId }) → { ok, archived }
  *   partyBalance(env, merchant, partyType, partyId)
@@ -44,9 +55,12 @@
  *   partyBalances(env, merchant, partyType) → Map(partyId → { balanceCents, inCents, outCents, count, lastDate })
  *   partyStatement(env, merchant, partyType, partyId, { from, to, limit })
  *     → { openingCents, closingCents, lines:[{ …, runningCents }], truncated }
- *   ledgerAgeing(env, merchant, partyType, partyId|null, { today })
- *     → { totalCents, buckets:[{ key:'0-30'|'31-60'|'61-90'|'90+', cents }], oldestDays }
- *   ageBuckets(rows, partyType, today) : la même chose, pure (testée seule).
+ *   ledgerAgeing(env, merchant, partyType, partyId|null, { today, termsFor })
+ *     → { totalCents, buckets:[{ key:'0-30'|'31-60'|'61-90'|'90+', cents }], oldestDays,
+ *         notDueCents, overdueCents, oldestOverdueDays }
+ *     termsFor(partyId) → jours de crédit du tiers : une dette est « pas
+ *     encore échue » jusqu'à sa date + ce délai, « en retard » après.
+ *   ageBuckets(rows, partyType, today, { termsFor }) : la même chose, pure.
  *   owedView(partyType, balanceCents) → { who:'merchant'|'party'|'none', cents }
  *
  * Idempotence : (merchant, idem_key) est unique. Une requête rejouée (réseau
@@ -95,12 +109,13 @@ export function entryView(row) {
     direction: String(row.direction), inCents: row.direction === 'in' ? amount : 0, outCents: row.direction === 'out' ? amount : 0,
     partyType: String(row.party_type), partyId: String(row.party_id || ''),
     kind: String(row.kind || 'manual'), method: String(row.method || 'other'),
-    note: String(row.note || ''), attachmentRef: String(row.attachment_ref || ''),
+    note: String(row.note || ''), ref: String(row.ref || ''), attachmentRef: String(row.attachment_ref || ''),
     saleId: row.sale_id || null, purchaseOrderId: row.purchase_order_id || null,
     expenseId: row.expense_id || null, chequeId: row.cheque_id || null,
     archived: Number(row.archived) === 1 || row.deleted_ts != null, internal: Number(row.internal) === 1,
     pending: String(row.status || 'posted') === 'pending',
-    createdBy: String(row.created_by || ''), createdAt: Number(row.created_at) || 0,
+    createdBy: String(row.created_by || ''), approvedBy: String(row.approved_by || ''), voidedBy: String(row.voided_by || ''),
+    createdAt: Number(row.created_at) || 0,
   };
 }
 
@@ -126,28 +141,42 @@ export function normalizeEntry(merchant, entry, now = Date.now()) {
   return { row: {
     id: randomId(), merchant, idem_key: idem, entry_date: date, amount_cents: amount, direction,
     party_type: partyType, party_id: partyId, kind, method,
-    note: clean(e.note, 280), attachment_ref: clean(e.attachmentRef, 200),
+    note: clean(e.note, 280), ref: clean(e.ref, 60), attachment_ref: clean(e.attachmentRef, 200),
     sale_id: link(e.saleId), purchase_order_id: link(e.purchaseOrderId),
     expense_id: link(e.expenseId), cheque_id: link(e.chequeId),
     internal: e.internal ? 1 : 0, status: e.pending ? 'pending' : 'posted', created_by: clean(e.createdBy, 100), created_at: now,
   } };
 }
 
-export async function postLedgerEntry(env, merchant, entry) {
+const INSERT_SQL = `INSERT OR IGNORE INTO money_ledger
+  (id, merchant, idem_key, entry_date, amount_cents, direction, party_type, party_id, kind, method,
+   note, ref, attachment_ref, sale_id, purchase_order_id, expense_id, cheque_id, archived, internal,
+   status, deleted_ts, created_by, created_at)
+ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NULL, ?, ?)`;
+
+export function ledgerEntryStatement(env, merchant, entry) {
   if (!env || !env.DB) return { ok: false, error: 'no-db' };
   const read = normalizeEntry(merchant, entry);
   if (read.error) return { ok: false, error: read.error };
   const r = read.row;
+  const statement = env.DB.prepare(INSERT_SQL).bind(r.id, r.merchant, r.idem_key, r.entry_date, r.amount_cents, r.direction,
+    r.party_type, r.party_id, r.kind, r.method, r.note, r.ref, r.attachment_ref, r.sale_id, r.purchase_order_id,
+    r.expense_id, r.cheque_id, r.internal, r.status, r.created_by, r.created_at);
+  return { ok: true, statement, row: r };
+}
+
+/* La table existe-t-elle ? (une base d'avant 0028 répond non, sans erreur). */
+export async function ledgerReady(env) {
+  if (!env || !env.DB) return false;
+  try { await env.DB.prepare('SELECT 1 FROM money_ledger LIMIT 1').all(); return true; } catch (_) { return false; }
+}
+
+export async function postLedgerEntry(env, merchant, entry) {
+  const built = ledgerEntryStatement(env, merchant, entry);
+  if (!built.ok) return built;
+  const r = built.row;
   try {
-    const res = await env.DB.prepare(
-      `INSERT OR IGNORE INTO money_ledger
-        (id, merchant, idem_key, entry_date, amount_cents, direction, party_type, party_id, kind, method,
-         note, attachment_ref, sale_id, purchase_order_id, expense_id, cheque_id, archived, internal,
-         status, deleted_ts, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NULL, ?, ?)`
-    ).bind(r.id, r.merchant, r.idem_key, r.entry_date, r.amount_cents, r.direction, r.party_type, r.party_id,
-      r.kind, r.method, r.note, r.attachment_ref, r.sale_id, r.purchase_order_id, r.expense_id, r.cheque_id,
-      r.internal, r.status, r.created_by, r.created_at).run();
+    const res = await built.statement.run();
     if (Number(res && res.meta && res.meta.changes) > 0) return { ok: true, duplicate: false, entry: entryView({ ...r, archived: 0, deleted_ts: null }) };
     const prior = await env.DB.prepare('SELECT * FROM money_ledger WHERE merchant = ? AND idem_key = ?')
       .bind(r.merchant, r.idem_key).first();
@@ -171,10 +200,8 @@ export async function archiveLedgerEntry(env, merchant, id, opts) {
     if (!row) return { ok: false, error: 'not-found' };
     if (Number(row.archived) !== 1) {
       const by = clean(opts && opts.by, 100);
-      await env.DB.prepare(
-        "UPDATE money_ledger SET archived = 1, note = CASE WHEN ? = '' THEN note ELSE substr(note || ' · annulé par ' || ?, 1, 280) END WHERE merchant = ? AND id = ?"
-      ).bind(by, by, merchant, key).run();
-      row.archived = 1;
+      await env.DB.prepare('UPDATE money_ledger SET archived = 1, voided_by = ? WHERE merchant = ? AND id = ?').bind(by, merchant, key).run();
+      row.archived = 1; row.voided_by = by;
     }
     return { ok: true, entry: entryView(row) };
   } catch (_) { return { ok: false, error: 'unmigrated' }; }
@@ -189,11 +216,49 @@ export async function approveLedgerEntry(env, merchant, id, opts) {
     if (!row || Number(row.archived) === 1) return { ok: false, error: 'not-found' };
     if (row.status === 'pending') {
       const by = clean(opts && opts.by, 100);
-      await env.DB.prepare("UPDATE money_ledger SET status = 'posted', note = CASE WHEN ? = '' THEN note ELSE substr(note || ' · approuvé par ' || ?, 1, 280) END WHERE merchant = ? AND id = ? AND status = 'pending'")
-        .bind(by, by, merchant, key).run();
-      row.status = 'posted';
+      await env.DB.prepare("UPDATE money_ledger SET status = 'posted', approved_by = ? WHERE merchant = ? AND id = ? AND status = 'pending'")
+        .bind(by, merchant, key).run();
+      row.status = 'posted'; row.approved_by = by;
     }
     return { ok: true, entry: entryView(row) };
+  } catch (_) { return { ok: false, error: 'unmigrated' }; }
+}
+
+/* Tout approuver d'un coup (un tiers, ou tous ceux d'un type). Un tiers
+ * provisoire (« po:<n° de bon> », réception sans fiche) n'est jamais approuvé
+ * ainsi : il doit d'abord être rattaché à une fiche (relinkParty). */
+export async function approvePending(env, merchant, partyType, partyId, opts) {
+  if (!env || !env.DB) return { ok: false, error: 'no-db' };
+  if (!PARTY_TYPES.has(partyType)) return { ok: false, error: 'bad-party' };
+  const one = partyId != null && partyId !== '';
+  const by = clean(opts && opts.by, 100);
+  try {
+    const res = await env.DB.prepare(
+      `UPDATE money_ledger SET status = 'posted', approved_by = ?
+        WHERE merchant = ? AND party_type = ?${one ? ' AND party_id = ?' : " AND party_id NOT LIKE 'po:%'"}
+          AND status = 'pending' AND archived = 0 AND deleted_ts IS NULL`
+    ).bind(...(one ? [by, merchant, partyType, clean(partyId, 80)] : [by, merchant, partyType])).run();
+    return { ok: true, approved: Number(res && res.meta && res.meta.changes) || 0 };
+  } catch (_) { return { ok: false, error: 'unmigrated' }; }
+}
+
+/* Les lignes vivantes d'un tiers passent à un autre (même type). `approve` :
+ * celles en attente entrent dans les soldes du même geste. */
+export function relinkStatements(env, merchant, partyType, fromId, toId, opts) {
+  const by = clean(opts && opts.by, 100);
+  const approve = !!(opts && opts.approve);
+  return [env.DB.prepare(
+    `UPDATE money_ledger SET party_id = ?${approve ? ", status = 'posted', approved_by = CASE WHEN status = 'pending' THEN ? ELSE approved_by END" : ''}
+      WHERE merchant = ? AND party_type = ? AND party_id = ? AND archived = 0 AND deleted_ts IS NULL`
+  ).bind(...(approve ? [clean(toId, 80), by] : [clean(toId, 80)]), merchant, partyType, clean(fromId, 80))];
+}
+
+export async function relinkParty(env, merchant, partyType, fromId, toId, opts) {
+  if (!env || !env.DB) return { ok: false, error: 'no-db' };
+  if (!PARTY_TYPES.has(partyType) || !clean(fromId, 80) || !clean(toId, 80)) return { ok: false, error: 'bad-party' };
+  try {
+    const res = await env.DB.batch(relinkStatements(env, merchant, partyType, fromId, toId, opts));
+    return { ok: true, moved: Number(res && res[0] && res[0].meta && res[0].meta.changes) || 0 };
   } catch (_) { return { ok: false, error: 'unmigrated' }; }
 }
 
@@ -318,8 +383,9 @@ export async function partyStatement(env, merchant, partyType, partyId, opts) {
 export const AGE_KEYS = ['0-30', '31-60', '61-90', '90+'];
 export function ageIndex(days) { return days <= 30 ? 0 : days <= 60 ? 1 : days <= 90 ? 2 : 3; }
 
-export function ageBuckets(rows, partyType, today) {
+export function ageBuckets(rows, partyType, today, opts) {
   const debtDir = partyType === 'customer' ? 'out' : 'in';
+  const termsFor = opts && typeof opts.termsFor === 'function' ? opts.termsFor : () => 0;
   const ref = Date.parse((validYmd(today) ? today : todayYmd()) + 'T00:00:00Z');
   const byParty = new Map();
   for (const r of rows || []) {
@@ -328,8 +394,9 @@ export function ageBuckets(rows, partyType, today) {
     byParty.get(pid).push(r);
   }
   const cents = [0, 0, 0, 0];
-  let oldest = 0;
-  for (const list of byParty.values()) {
+  let oldest = 0, notDue = 0, overdue = 0, oldestOverdue = 0;
+  for (const [pid, list] of byParty) {
+    const terms = Math.max(0, Math.round(Number(termsFor(pid)) || 0));
     /* Tri stable : à date et instant égaux, l'ordre de lecture (rowid) tient. */
     list.sort((a, b) => String(a.entry_date || a.date).localeCompare(String(b.entry_date || b.date)) || (Number(a.created_at || a.createdAt) - Number(b.created_at || b.createdAt)));
     const debts = [];
@@ -347,18 +414,20 @@ export function ageBuckets(rows, partyType, today) {
       const days = Math.max(0, Math.floor((ref - Date.parse(d.date + 'T00:00:00Z')) / DAY));
       cents[ageIndex(days)] += d.left;
       if (days > oldest) oldest = days;
+      /* Échue le lendemain de sa date + délai : le jour même, elle est encore à temps. */
+      if (days > terms) { overdue += d.left; oldestOverdue = Math.max(oldestOverdue, days - terms); } else notDue += d.left;
     }
   }
   return {
     totalCents: cents.reduce((a, b) => a + b, 0),
     buckets: AGE_KEYS.map((key, i) => ({ key, cents: cents[i] })),
-    oldestDays: oldest,
+    oldestDays: oldest, notDueCents: notDue, overdueCents: overdue, oldestOverdueDays: oldestOverdue,
   };
 }
 
 export async function ledgerAgeing(env, merchant, partyType, partyId, opts) {
   const today = opts && opts.today;
-  if (!env || !env.DB || !PARTY_TYPES.has(partyType)) return ageBuckets([], partyType, today);
+  if (!env || !env.DB || !PARTY_TYPES.has(partyType)) return ageBuckets([], partyType, today, opts);
   try {
     const one = partyId != null && partyId !== '';
     const rows = await env.DB.prepare(
@@ -366,8 +435,8 @@ export async function ledgerAgeing(env, merchant, partyType, partyId, opts) {
         WHERE merchant = ? AND party_type = ?${one ? ' AND party_id = ?' : ''} AND ${LIVE}
         ORDER BY party_id, entry_date, created_at, rowid LIMIT 20000`
     ).bind(...(one ? [merchant, partyType, clean(partyId, 80)] : [merchant, partyType])).all();
-    return ageBuckets((rows && rows.results) || [], partyType, today);
-  } catch (_) { return ageBuckets([], partyType, today); }
+    return ageBuckets((rows && rows.results) || [], partyType, today, opts);
+  } catch (_) { return ageBuckets([], partyType, today, opts); }
 }
 
 /* Qui doit à qui, pour l'affichage : `merchant` = le commerçant doit, `party`

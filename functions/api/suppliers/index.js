@@ -2,6 +2,12 @@
 //   La liste des fournisseurs, chacun avec son solde (positif = nous lui
 //   devons) et l'ancienneté de ce que nous devons (0–30, 31–60, 61–90, 90+ j),
 //   plus les totaux de la page et le nombre de lignes en attente d'accord.
+//   L'ancienneté tient compte du délai de paiement de chaque fiche
+//   (terms_days) : `notDueCents` n'est pas encore échu, `overdueCents` l'est.
+//   `inbox` : toutes les lignes en attente (réceptions et retours saisis par
+//   l'équipe), et `unlinked` : les réceptions d'un bon sans fiche, à rattacher.
+//   `migrated:false` : la base n'a pas encore 0028 (l'écran dit « mise à jour
+//   en cours » au lieu d'une erreur).
 //   Importe au passage l'identité des fournisseurs du document `procurement`
 //   (functions/api/_suppliers.js › syncProcurement), jamais de montant.
 // POST /api/suppliers  { merchant, action: 'create'|'update'|'archive'|'restore', id?, supplier:{…} }
@@ -11,8 +17,8 @@
 // Patron et opérateur Kiwi seulement (./_access.js).
 import { json } from '../../auth/_lib.js';
 import { ledgerActor, readBody } from './_access.js';
-import { partyBalances, ageBuckets, todayYmd, LIVE, pendingEntries } from '../_ledger.js';
-import { listSuppliers, supplierView, createSupplier, updateSupplier, syncProcurement } from '../_suppliers.js';
+import { partyBalances, ageBuckets, todayYmd, LIVE, pendingEntries, ledgerReady } from '../_ledger.js';
+import { listSuppliers, supplierView, createSupplier, updateSupplier, syncProcurement, unlinkedReceipts } from '../_suppliers.js';
 
 export async function onRequestGet({ request, env }) {
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
@@ -20,6 +26,7 @@ export async function onRequestGet({ request, env }) {
   const merchant = String(url.searchParams.get('merchant') || '').slice(0, 64);
   if (!(await ledgerActor(request, env, merchant))) return json({ error: 'owner-required' }, 403);
   const today = todayYmd();
+  if (!(await ledgerReady(env))) return json({ ok: true, merchant, today, migrated: false, suppliers: [], totals: {}, inbox: [], unlinked: [] });
   let sync = null;
   try { sync = await syncProcurement(env, merchant); } catch (_) { sync = null; }
   const [rows, balances] = await Promise.all([
@@ -41,21 +48,27 @@ export async function onRequestGet({ request, env }) {
     byParty.get(k).push(r);
   }
   const pendingBy = new Map();
-  for (const p of await pendingEntries(env, merchant, 'supplier', null)) pendingBy.set(p.partyId, (pendingBy.get(p.partyId) || 0) + 1);
+  const pend = await pendingEntries(env, merchant, 'supplier', null);
+  for (const p of pend) pendingBy.set(p.partyId, (pendingBy.get(p.partyId) || 0) + 1);
   const listed = new Set(rows.map((s) => String(s.id)));
+  const terms = new Map(rows.map((r) => [String(r.id), Number(r.terms_days) || 0]));
+  const termsFor = (id) => terms.get(String(id)) || 0;
+  const names = new Map(rows.map((r) => [String(r.id), String(r.name || '')]));
   let weOwe = 0, theyOwe = 0;
   const suppliers = rows.map((row) => {
     const v = supplierView(row);
     const b = balances.get(v.id) || { balanceCents: 0, inCents: 0, outCents: 0, count: 0, lastDate: '' };
     if (b.balanceCents > 0) weOwe += b.balanceCents; else theyOwe -= b.balanceCents;
     return { ...v, balanceCents: b.balanceCents, inCents: b.inCents, outCents: b.outCents, lines: b.count,
-      lastDate: b.lastDate, pending: pendingBy.get(v.id) || 0, ageing: ageBuckets(byParty.get(v.id) || [], 'supplier', today) };
+      lastDate: b.lastDate, pending: pendingBy.get(v.id) || 0, ageing: ageBuckets(byParty.get(v.id) || [], 'supplier', today, { termsFor }) };
   });
+  const unlinked = await unlinkedReceipts(env, merchant);
+  const inbox = pend.filter((p) => !p.partyId.startsWith('po:')).map((p) => ({ ...p, supplierName: names.get(p.partyId) || '' }));
   return json({
-    ok: true, merchant, today, suppliers,
-    totals: { weOweCents: weOwe, theyOweCents: theyOwe, count: suppliers.length, pending: suppliers.reduce((n, s) => n + s.pending, 0),
-      ageing: ageBuckets(ledgerRows.filter((r) => listed.has(String(r.party_id))), 'supplier', today) },
-    imported: sync && !sync.skipped ? { suppliers: sync.imported, lines: sync.posted } : null,
+    ok: true, merchant, today, migrated: true, suppliers, inbox, unlinked,
+    totals: { weOweCents: weOwe, theyOweCents: theyOwe, count: suppliers.length, pending: inbox.length, unlinked: unlinked.length,
+      ageing: ageBuckets(ledgerRows.filter((r) => listed.has(String(r.party_id))), 'supplier', today, { termsFor }) },
+    imported: sync && !sync.skipped ? { suppliers: sync.imported } : null,
   });
 }
 

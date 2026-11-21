@@ -14,6 +14,9 @@
 // dont le fournisseur n'est plus connu, retire ses lignes. Un nom qu'aucune
 // fiche ne porte ne crée pas de fournisseur : « Marjane » sur un ticket de
 // courses n'en est pas un tant que le patron ne l'a pas décidé.
+// Une dépense supprimée puis réenregistrée à la MÊME version (annuler une
+// suppression) retrouve ses lignes : elles sont désarchivées, pas comptées
+// comme un rejeu déjà vivant.
 //
 // Patron et opérateur Kiwi seulement (./_access.js).
 import { json } from '../../auth/_lib.js';
@@ -61,10 +64,15 @@ export async function onRequestPost({ request, env }) {
     const base = { amountCents: cents, partyType: 'supplier', partyId: supplier.id, expenseId,
       date: validYmd(body.date) ? body.date : '', method: body.method, createdBy: actor.name };
     const note = String(body.note || '').slice(0, 200);
-    const bill = await postLedgerEntry(env, merchant, { ...base, idemKey: `expense:${expenseId}:${version}:bill`, direction: 'in', kind: 'expense', note: note || 'Dépense' });
-    const paid = await postLedgerEntry(env, merchant, { ...base, idemKey: `expense:${expenseId}:${version}:paid`, direction: 'out', kind: 'expense-payment', note: 'Réglé à la dépense' });
+    const bill = await postLedgerEntry(env, merchant, { ...base, idemKey: `expense:${expenseId}:${version}:bill`, direction: 'in', kind: 'expense', note });
+    const paid = await postLedgerEntry(env, merchant, { ...base, idemKey: `expense:${expenseId}:${version}:paid`, direction: 'out', kind: 'expense-payment' });
     if (!bill.ok || !paid.ok) return json({ error: bill.error || paid.error }, bill.error === 'idempotency-conflict' || paid.error === 'idempotency-conflict' ? 409 : 400);
     keep.push(`expense:${expenseId}:${version}:bill`, `expense:${expenseId}:${version}:paid`);
+    /* Un rejeu sur une clé archivée (suppression annulée) la remet en vie. */
+    const revive = [bill, paid].filter((r) => r.duplicate && r.entry && r.entry.archived).map((r) => r.entry.id);
+    if (revive.length) {
+      await env.DB.batch(revive.map((id) => env.DB.prepare("UPDATE money_ledger SET archived = 0, voided_by = '' WHERE merchant = ? AND id = ? AND deleted_ts IS NULL").bind(merchant, id)));
+    }
   }
   const stale = live.filter((r) => !keep.includes(String(r.idem_key))).map((r) => String(r.id));
   if (stale.length) {

@@ -395,5 +395,186 @@ const opsPost = async (cookie, id, action, payload, extra) => {
   ok('cash book: in/out, replay-safe, running balance, cannot touch supplier lines');
 }
 
+/* ── 11 · le tableau du patron rouvert par un code gérant n'est pas le patron ── */
+{
+  const made = await opsPost(ownerAsManager, 'op:po-mgr-00001', 'create-po', { supplier: 'Grossiste Inconnu Mgr', lines: [{ sku: 'RIZ', qty: 10, unitPrice: 100 }] });
+  assert.equal(made.status, 200, JSON.stringify(made.data));
+  assert.equal(made.data.command.result.supplierId, '', 'a manager-tier session cannot create a supplier card');
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM suppliers WHERE merchant = ? AND name = 'Grossiste Inconnu Mgr'").get(SHOP).n, 0);
+  const linked = await opsPost(ownerAsManager, 'op:po-mgr-00002', 'create-po', { supplier: 'Distrib Frais SARL', lines: [{ sku: 'SEL', qty: 10, unitPrice: 100 }] });
+  const number = linked.data.command.result.number;
+  await opsPost(ownerAsManager, 'op:po-mgr-00003', 'submit-po', { po: number }, { confirmed: true });
+  const before = (await L.partyBalance(env, SHOP, 'supplier', 'sup-atlas-1')).balanceCents;
+  const recv = await opsPost(ownerAsManager, 'op:po-mgr-00004', 'receive-po', { po: number, lines: [{ sku: 'SEL', qty: 10 }] });
+  assert.equal(recv.data.command.status, 'completed', JSON.stringify(recv.data));
+  assert.equal(recv.data.command.result.ledgerStatus, 'pending', 'the 1 000 MAD receipt waits for the owner');
+  assert.equal((await L.partyBalance(env, SHOP, 'supplier', 'sup-atlas-1')).balanceCents, before, 'a manager receipt does not move the balance');
+  const line = db.prepare("SELECT status, created_by FROM money_ledger WHERE merchant = ? AND idem_key = 'po-receive:op:po-mgr-00004'").get(SHOP);
+  assert.deepEqual([line.status, line.created_by], ['pending', 'Gérant'], 'signed by the manager, never as the owner');
+  /* The real owner session (owner tier) still posts directly. */
+  const own = await opsPost(owner, 'op:po-own-00001', 'create-po', { supplier: 'Distrib Frais SARL', lines: [{ sku: 'THE', qty: 1, unitPrice: 50 }] });
+  await opsPost(owner, 'op:po-own-00002', 'submit-po', { po: own.data.command.result.number }, { confirmed: true });
+  const ownRecv = await opsPost(owner, 'op:po-own-00003', 'receive-po', { po: own.data.command.result.number, lines: [{ sku: 'THE', qty: 1 }] });
+  assert.equal(ownRecv.data.command.result.ledgerStatus, 'posted');
+  assert.equal((await L.partyBalance(env, SHOP, 'supplier', 'sup-atlas-1')).balanceCents, before + 5000);
+  ok('manager-unlocked owner session: no supplier card, receipt pending and signed Gérant; the owner tier posts');
+}
+
+/* ── 12 · réception sans fiche : rien ne se perd, le patron rattache ─── */
+{
+  const made = await opsPost(storekeeperAtTill, 'op:po-unl-00001', 'create-po', { supplier: 'Nouveau Grossiste Derb', lines: [{ sku: 'HUILE', qty: 20, unitPrice: 50 }] });
+  const number = made.data.command.result.number;
+  assert.equal(made.data.command.result.supplierId, '');
+  await opsPost(storekeeperAtTill, 'op:po-unl-00002', 'submit-po', { po: number }, { confirmed: true });
+  const recv = await opsPost(storekeeperAtTill, 'op:po-unl-00003', 'receive-po', { po: number, lines: [{ sku: 'HUILE', qty: 20 }] });
+  assert.equal(recv.data.command.result.ledgerStatus, 'unlinked', 'the receipt is kept, not dropped');
+  const row = db.prepare("SELECT party_id, status, ref, note FROM money_ledger WHERE merchant = ? AND idem_key = 'po-receive:op:po-unl-00003'").get(SHOP);
+  assert.deepEqual([row.party_id, row.status, row.ref, row.note], ['po:' + number, 'pending', number, ''], 'held under po:<number>, structured ref, no server copy');
+  const list = await call(listRoute.onRequestGet, `/api/suppliers?merchant=${SHOP}`, owner);
+  const u = list.data.unlinked.find((x) => x.number === number);
+  assert.ok(u && u.netCents === 100000 && u.supplierName === 'Nouveau Grossiste Derb', JSON.stringify(list.data.unlinked));
+  assert.ok(list.data.totals.unlinked >= 1);
+  assert.ok(!list.data.inbox.some((x) => x.partyId.startsWith('po:')), 'unlinked receipts are not in the approve-all inbox');
+  const single = await call(entryRoute.onRequestPost, '/api/suppliers/entry', owner, { merchant: SHOP, action: 'approve', id: db.prepare("SELECT id FROM money_ledger WHERE idem_key = 'po-receive:op:po-unl-00003'").get().id });
+  assert.equal(single.status, 409, 'it must be attached, not approved alone');
+  assert.equal((await call(entryRoute.onRequestPost, '/api/suppliers/entry', manager, { merchant: SHOP, action: 'attach', po: number, supplierId: 'sup-atlas-1' })).status, 403);
+  const card = await call(listRoute.onRequestPost, '/api/suppliers', owner, { merchant: SHOP, action: 'create', id: 'sup-derb-1', supplier: { name: 'Grossiste Derb' } });
+  assert.equal(card.status, 200);
+  const att = await call(entryRoute.onRequestPost, '/api/suppliers/entry', owner, { merchant: SHOP, action: 'attach', po: number, supplierId: 'sup-derb-1' });
+  assert.equal(att.status, 200, JSON.stringify(att.data));
+  assert.equal(att.data.balance.balanceCents, 100000, 'attached and approved in one step: we owe 1 000');
+  assert.equal(db.prepare('SELECT supplier_id FROM purchase_orders WHERE merchant = ? AND number = ?').get(SHOP, number).supplier_id, 'sup-derb-1', 'the PO is linked');
+  assert.equal((await call(listRoute.onRequestGet, `/api/suppliers?merchant=${SHOP}`, owner)).data.unlinked.filter((x) => x.number === number).length, 0);
+  /* A later return on that PO lands on the card (still pending: staff). */
+  const ret = await opsPost(storekeeperAtTill, 'op:po-unl-00004', 'supplier-return', { po: number, lines: [{ sku: 'HUILE', qty: 2 }] }, { confirmed: true });
+  assert.equal(ret.data.command.result.ledgerStatus, 'pending');
+  const all = await call(entryRoute.onRequestPost, '/api/suppliers/entry', owner, { merchant: SHOP, action: 'approve-all', supplierId: 'sup-derb-1' });
+  assert.equal(all.data.approved, 1);
+  assert.equal((await L.partyBalance(env, SHOP, 'supplier', 'sup-derb-1')).balanceCents, 90000);
+  ok('staff receipt with no card: held under po:<n>, listed as unlinked, attached + approved in one step; approve-all');
+}
+
+/* ── 13 · tout ou rien : la dette et le stock dans le même lot ────────── */
+{
+  const made = await opsPost(owner, 'op:po-atom-0001', 'create-po', { supplier: 'Distrib Frais SARL', lines: [{ sku: 'ATOM', qty: 3, unitPrice: 259 }] });
+  const number = made.data.command.result.number;
+  await opsPost(owner, 'op:po-atom-0002', 'submit-po', { po: number }, { confirmed: true });
+  db.exec("CREATE TRIGGER t_ledger_boom BEFORE INSERT ON money_ledger WHEN NEW.amount_cents = 77700 BEGIN SELECT RAISE(ABORT, 'ledger down'); END");
+  const bal = (await L.partyBalance(env, SHOP, 'supplier', 'sup-atlas-1')).balanceCents;
+  let failed = false;
+  try {
+    const r = await opsPost(owner, 'op:po-atom-0003', 'receive-po', { po: number, lines: [{ sku: 'ATOM', qty: 3 }] });
+    failed = r.status >= 400 || r.data.command.status !== 'completed';
+  } catch (_) { failed = true; }
+  db.exec('DROP TRIGGER t_ledger_boom');
+  assert.ok(failed, 'a ledger failure never reports a completed receipt');
+  assert.equal(db.prepare("SELECT received_qty FROM purchase_order_lines WHERE merchant = ? AND number = ? AND sku = 'ATOM'").get(SHOP, number).received_qty, 0, 'stock rolled back with the ledger');
+  assert.equal(db.prepare("SELECT status FROM purchase_orders WHERE merchant = ? AND number = ?").get(SHOP, number).status, 'submitted');
+  assert.equal((await L.partyBalance(env, SHOP, 'supplier', 'sup-atlas-1')).balanceCents, bal);
+  const retry = await opsPost(owner, 'op:po-atom-0004', 'receive-po', { po: number, lines: [{ sku: 'ATOM', qty: 3 }] });
+  assert.equal(retry.data.command.status, 'completed');
+  assert.equal((await L.partyBalance(env, SHOP, 'supplier', 'sup-atlas-1')).balanceCents, bal + 77700, 'a clean retry posts stock and debt together');
+  ok('atomic receipt: stock, PO status and supplier debt commit together or not at all');
+}
+
+/* ── 14 · dépense supprimée puis réenregistrée à la même version ──────── */
+{
+  const base = { merchant: SHOP, expenseId: 'xp_undo01', supplierId: 'sup-atlas-1', amountCents: 4000, date: '2026-11-20', method: 'cash', version: 700 };
+  const live = () => db.prepare("SELECT COUNT(*) AS n FROM money_ledger WHERE merchant = ? AND expense_id = 'xp_undo01' AND archived = 0").get(SHOP).n;
+  await call(expenseRoute.onRequestPost, '/api/suppliers/expense', owner, base);
+  assert.equal(live(), 2);
+  await call(expenseRoute.onRequestPost, '/api/suppliers/expense', owner, { ...base, deleted: true });
+  assert.equal(live(), 0);
+  const back = await call(expenseRoute.onRequestPost, '/api/suppliers/expense', owner, base);
+  assert.ok(back.data.linked);
+  assert.equal(live(), 2, 'linked:true now means the lines are live again');
+  assert.equal(db.prepare("SELECT note FROM money_ledger WHERE expense_id = 'xp_undo01' AND kind = 'expense-payment'").get().note, '', 'no server-written French note');
+  ok('expense: delete then re-save at the same version revives its lines');
+}
+
+/* ── 15 · paiements : fiche archivée refusée, reste à payer par bon ───── */
+{
+  await call(listRoute.onRequestPost, '/api/suppliers', owner, { merchant: SHOP, action: 'create', id: 'sup-arch-1', supplier: { name: 'Ancien Fournisseur' } });
+  await call(entryRoute.onRequestPost, '/api/suppliers/entry', owner, { merchant: SHOP, supplierId: 'sup-arch-1', type: 'bill', amountCents: 5000, idemKey: 'arch-bill-0001' });
+  await call(listRoute.onRequestPost, '/api/suppliers', owner, { merchant: SHOP, action: 'archive', id: 'sup-arch-1' });
+  const pay = await call(entryRoute.onRequestPost, '/api/suppliers/entry', owner, { merchant: SHOP, supplierId: 'sup-arch-1', type: 'payment', amountCents: 5000, idemKey: 'arch-pay-00001' });
+  assert.equal(pay.status, 409);
+  assert.equal(pay.data.error, 'supplier-archived');
+  /* Partial PO: ordered 10, received 4; paid 100 on it → 60 + the rest due. */
+  const made = await opsPost(owner, 'op:po-part-0001', 'create-po', { supplierId: 'sup-derb-1', lines: [{ sku: 'PART', qty: 10, unitPrice: 40 }] });
+  const number = made.data.command.result.number;
+  await opsPost(owner, 'op:po-part-0002', 'submit-po', { po: number }, { confirmed: true });
+  await opsPost(owner, 'op:po-part-0003', 'receive-po', { po: number, lines: [{ sku: 'PART', qty: 4 }] });
+  let st = await call(statementRoute.onRequestGet, `/api/suppliers/statement?merchant=${SHOP}&id=sup-derb-1`, owner);
+  let o = st.data.orders.find((x) => x.number === number);
+  assert.deepEqual([o.receivedCents, o.paidCents, o.dueCents, o.payState], [16000, 0, 16000, 'unpaid'], 'a partial PO is due for what was received, not its total');
+  await call(entryRoute.onRequestPost, '/api/suppliers/entry', owner, { merchant: SHOP, supplierId: 'sup-derb-1', type: 'payment', amountCents: 10000, po: number, idemKey: 'part-pay-00001' });
+  st = await call(statementRoute.onRequestGet, `/api/suppliers/statement?merchant=${SHOP}&id=sup-derb-1`, owner);
+  o = st.data.orders.find((x) => x.number === number);
+  assert.deepEqual([o.paidCents, o.dueCents, o.payState], [10000, 6000, 'partial']);
+  const rcv = st.data.statement.lines.find((l) => l.kind === 'purchase' && l.poNumber === number);
+  assert.ok(rcv && rcv.note === '' && rcv.ref === number, 'statement lines carry the PO number, not French copy');
+  ok('archived supplier refuses payments; per-PO received, paid, due and state; lines carry poNumber');
+}
+
+/* ── 16 · ancienneté par échéance (délai de paiement de la fiche) ─────── */
+{
+  const rows = [
+    { party_id: 'a', entry_date: '2026-11-01', direction: 'in', amount_cents: 1000, created_at: 1 },
+    { party_id: 'a', entry_date: '2026-10-01', direction: 'in', amount_cents: 2000, created_at: 1 },
+    { party_id: 'b', entry_date: '2026-11-15', direction: 'in', amount_cents: 500, created_at: 1 },
+  ];
+  const age = L.ageBuckets(rows, 'supplier', '2026-11-21', { termsFor: (id) => (id === 'a' ? 30 : 0) });
+  assert.equal(age.notDueCents, 1000, 'a: 20 days old with 30 days of terms is not due yet');
+  assert.equal(age.overdueCents, 2500, 'a: 51 days old is 21 days late; b: no terms, late');
+  assert.equal(age.oldestOverdueDays, 21);
+  assert.equal(L.ageBuckets(rows, 'supplier', '2026-11-21').overdueCents, 3500, 'without terms every debt is due');
+  const sup = await call(statementRoute.onRequestGet, `/api/suppliers/statement?merchant=${SHOP}&id=sup-derb-1`, owner);
+  assert.ok(typeof sup.data.ageing.notDueCents === 'number' && typeof sup.data.ageing.overdueCents === 'number');
+  ok('ageing by due date: terms_days splits not-yet-due from overdue');
+}
+
+/* ── 17 · base d'avant 0028 : les bons marchent, le grand livre attend ── */
+{
+  const { listMigrations, MIGRATIONS_DIR } = await importFresh('tools/d1-migrations.mjs');
+  const { readFileSync } = await import('node:fs');
+  const old = new DatabaseSync(':memory:');
+  for (const f of listMigrations().filter((x) => Number(x.slice(0, 4)) <= 27)) old.exec(readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8'));
+  old.prepare(`INSERT INTO accounts (id, email, business, salt, hash, created_ts, status) VALUES ('acc-1', 'o@atlas.ma', 'Atlas Bench', 's', 'h', ?, 'active')`).run(now);
+  old.prepare(`INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, status, updated_ts) VALUES (?, '{}', 'pro', 'boutique', 'acc-1', 'Atlas Bench', 'active', ?)`).run(SHOP, now);
+  const OD1 = {
+    prepare(sql) {
+      const params = [];
+      const st = {
+        bind(...a) { params.push(...a); return st; },
+        async run() { const r = old.prepare(sql).run(...params); return { success: true, meta: { changes: Number(r.changes) } }; },
+        async first() { const r = old.prepare(sql).get(...params); return r === undefined ? null : r; },
+        async all() { return { results: old.prepare(sql).all(...params) }; },
+      };
+      return st;
+    },
+    async batch(list) { old.exec('BEGIN IMMEDIATE'); try { const out = []; for (const x of list) out.push(await x.run()); old.exec('COMMIT'); return out; } catch (e) { old.exec('ROLLBACK'); throw e; } },
+  };
+  const oenv = { DB: OD1, AUTH_SECRET: SECRET };
+  const opsOld = async (id, action, payload, extra) => {
+    const r = await ops.onRequestPost({ request: new Request('https://k/api/operations', { method: 'POST', headers: { Cookie: owner, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: SHOP, id, idempotencyKey: id, domain: 'procurement', action, payload, ...(extra || {}) }) }), env: oenv });
+    return { status: r.status, data: await r.json() };
+  };
+  const made = await opsOld('op:old-po-0001', 'create-po', { supplier: 'Distrib Frais', lines: [{ sku: 'OLD', qty: 2, unitPrice: 10 }] });
+  assert.equal(made.status, 200, JSON.stringify(made.data));
+  assert.equal(made.data.command.status, 'draft', 'a PO is written without supplier_id on a 0027 base');
+  const number = made.data.command.result.number;
+  await opsOld('op:old-po-0002', 'submit-po', { po: number }, { confirmed: true });
+  const recv = await opsOld('op:old-po-0003', 'receive-po', { po: number, lines: [{ sku: 'OLD', qty: 2 }] });
+  assert.equal(recv.data.command.status, 'completed', JSON.stringify(recv.data));
+  assert.equal(recv.data.command.result.ledgerStatus, 'unmigrated', 'stock is received, the ledger says it is waiting');
+  const listOld = await listRoute.onRequestGet({ request: req(`/api/suppliers?merchant=${SHOP}`, owner), env: oenv });
+  const lo = await listOld.json();
+  assert.equal(listOld.status, 200);
+  assert.equal(lo.migrated, false, 'the screen shows "update in progress", not an error');
+  ok('pre-0028 base: create/submit/receive PO still work, ledger reports unmigrated, list says migrated:false');
+}
+
 if (process.exitCode) process.exit(process.exitCode);
 console.log(`  ✓ supplier ledger (${n} groups)`);

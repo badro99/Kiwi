@@ -2721,6 +2721,9 @@ CREATE TABLE IF NOT EXISTS money_ledger (
   kind              TEXT NOT NULL DEFAULT 'manual',
   method            TEXT NOT NULL DEFAULT 'other',
   note              TEXT NOT NULL DEFAULT '',
+  -- Référence structurée (n° de bon, de facture) : l'écran la met en mots
+  -- dans la langue du lecteur ; le serveur n'écrit jamais de libellé.
+  ref               TEXT NOT NULL DEFAULT '',
   attachment_ref    TEXT NOT NULL DEFAULT '',
   sale_id           TEXT,
   purchase_order_id TEXT,
@@ -2733,6 +2736,8 @@ CREATE TABLE IF NOT EXISTS money_ledger (
   status            TEXT NOT NULL DEFAULT 'posted' CHECK (status IN ('posted', 'pending')),
   deleted_ts        INTEGER,
   created_by        TEXT NOT NULL DEFAULT '',
+  approved_by       TEXT NOT NULL DEFAULT '',
+  voided_by         TEXT NOT NULL DEFAULT '',
   created_at        INTEGER NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_money_ledger_idem ON money_ledger (merchant, idem_key);

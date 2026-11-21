@@ -11,7 +11,8 @@ import {
   activeEmployee, isTillFor, storeOwner, slugMerchant, accountSlug,
 } from '../auth/_lib.js';
 import { tenantFor } from './_private.js';
-import { resolvePoSupplier, postPurchaseMovement } from './_suppliers.js';
+import { resolvePoSupplier, purchaseMovementPlan } from './_suppliers.js';
+import { sessionTierAtLeast } from '../auth/_session-tier.js';
 
 const ACTIONS = {
   notification: new Set(['send-email', 'send-whatsapp', 'send-sms', 'send-receipt', 'send-reminder', 'send-link', 'set-preferences']),
@@ -906,13 +907,15 @@ async function writePurchaseOrder(env, order, lines) {
     const seq = Number((top && top.taken) || 0) + 1;
     const number = `BC-${order.year}-${String(seq).padStart(6, '0')}`;
     try {
+      /* Sans la colonne supplier_id (base d'avant 0028), le bon s'écrit comme avant. */
+      const linkCol = order.legacy ? '' : ', supplier_id';
       await env.DB.prepare(
         `INSERT INTO purchase_orders
          (id, merchant, seq, number, supplier, status, currency, expected_date,
-          total_cents, invoiced_cents, command_id, created_ts, updated_ts, supplier_id)
-         VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, 0, ?, ?, ?, ?)`
+          total_cents, invoiced_cents, command_id, created_ts, updated_ts${linkCol})
+         VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, 0, ?, ?, ?${linkCol ? ', ?' : ''})`
       ).bind(order.id, order.merchant, seq, number, order.supplier, order.currency,
-        order.expectedDate, order.totalCents, order.id, now(), now(), order.supplierId || '').run();
+        order.expectedDate, order.totalCents, order.id, now(), now(), ...(linkCol ? [order.supplierId || ''] : [])).run();
       for (let i = 0; i < lines.length; i += 1) {
         await env.DB.prepare(
           `INSERT INTO purchase_order_lines
@@ -923,7 +926,9 @@ async function writePurchaseOrder(env, order, lines) {
           lines[i].unit, lines[i].qty, lines[i].unitCents, now()).run();
       }
       return { seq, number };
-    } catch (_) { /* rang pris entre-temps — on recommence sur le suivant */ }
+    } catch (error) { /* rang pris entre-temps — on recommence sur le suivant */
+      if (!order.legacy && /supplier_id/.test(String(error && error.message))) order.legacy = true;
+    }
   }
   return null;
 }
@@ -952,10 +957,11 @@ function movement(payload) {
 async function procurement(env, row, payload) {
   await ensurePurchase(env);
   const merchant = row.merchant;
-  /* Le patron ou un opérateur : eux seuls créent une fiche fournisseur et voient
-     leurs réceptions entrer directement dans les soldes. Celles d'un employé
-     (gérant, magasinier) attendent l'accord du patron (_ledger.js, pending). */
-  const trusted = row.actor_kind === 'owner' || row.actor_kind === 'operator';
+  /* Le patron (session au palier propriétaire) ou un opérateur : eux seuls
+     créent une fiche fournisseur et voient leurs réceptions entrer directement
+     dans les soldes. Un gérant, même sur le tableau de bord du patron ouvert
+     par son code, et un employé attendent l'accord du patron (pending). */
+  const trusted = row.actor_trusted === true;
   const fail = (reason) => update(env, row, 'failed', 'kiwi-procurement', {}, reason);
 
   if (row.action === 'create-po') {
@@ -1061,12 +1067,14 @@ async function procurement(env, row, payload) {
     statements.push(env.DB.prepare(
       'UPDATE purchase_orders SET status = ?, invoiced_cents = invoiced_cents + ?, updated_ts = ? WHERE merchant = ? AND number = ?'
     ).bind(status, invoiced != null ? invoiced : 0, now(), merchant, number));
-    await env.DB.batch(statements);
-    /* Ce qui entre en stock, nous le devons : la ligne du grand livre suit (_ledger.js). */
-    const owed = await postPurchaseMovement(env, merchant, order, { kind: 'receive', cents: invoiced != null ? invoiced : receivedCents, commandId: row.id, by: row.requested_by, pending: !trusted });
+    /* Ce qui entre en stock, nous le devons : la ligne du grand livre part dans
+       le MÊME lot que le stock (tout ou rien), jamais après. */
+    const owed = await purchaseMovementPlan(env, merchant, order, { kind: 'receive', cents: invoiced != null ? invoiced : receivedCents, commandId: row.id, by: row.requested_by, trusted });
+    await env.DB.batch([...statements, ...owed.statements]);
     return update(env, row, 'completed', 'kiwi-procurement', {
       number, status, receivedCents, receivedUnits, outstandingUnits: outstanding,
-      matched: invoiced != null, lines: read.moves.length, ledgerEntry: owed.ok ? owed.entry.id : '',
+      matched: invoiced != null, lines: read.moves.length,
+      ledgerEntry: owed.entryId || '', ledgerStatus: owed.status, supplierId: owed.status === 'unlinked' ? '' : owed.partyId || '',
     }, '');
   }
 
@@ -1100,11 +1108,11 @@ async function procurement(env, row, payload) {
   statements.push(env.DB.prepare(
     'UPDATE purchase_orders SET updated_ts = ? WHERE merchant = ? AND number = ?'
   ).bind(now(), merchant, number));
-  await env.DB.batch(statements);
-  await postPurchaseMovement(env, merchant, order, { kind: 'return', cents: creditCents, commandId: row.id, by: row.requested_by, pending: !trusted });
+  const credit = await purchaseMovementPlan(env, merchant, order, { kind: 'return', cents: creditCents, commandId: row.id, by: row.requested_by, trusted });
+  await env.DB.batch([...statements, ...credit.statements]);
   return update(env, row, 'completed', 'kiwi-procurement', {
     number, status: clean(order.status, 20), creditCents, returnedUnits,
-    heldUnits, lines: read.moves.length,
+    heldUnits, lines: read.moves.length, ledgerEntry: credit.entryId || '', ledgerStatus: credit.status,
   }, '');
 }
 
@@ -2469,10 +2477,13 @@ export async function onRequestPost({ request, env }) {
        lui-même n'est pas une piste d'audit.  Le libellé client ne sert que
        lorsque rien de mieux n'a pu être prouvé. */
     payload: payloadJson, result: null,
-    requested_by: clean(actor.name, 100) || clean(body.requestedBy, 100),
     attempt_count: 0, last_error: '', created_ts: at, updated_ts: at,
     actor_kind: actor.kind,
+    /* Une session du compte ouverte par un code gérant n'est pas le patron :
+       elle signe « Gérant » et ne vaut pas accord du patron (procurement). */
+    actor_trusted: actor.kind === 'operator' || (actor.kind === 'owner' && await sessionTierAtLeast(request, env, 'owner').catch(() => false)),
   };
+  row.requested_by = (actor.kind === 'owner' && !row.actor_trusted ? 'Gérant' : clean(actor.name, 100)) || clean(body.requestedBy, 100);
   try {
     await env.DB.prepare(
       `INSERT INTO operational_commands

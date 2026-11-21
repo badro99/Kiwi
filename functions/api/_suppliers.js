@@ -17,11 +17,16 @@
  *   · resolvePoSupplier() relie un bon de commande à sa fiche (id donné, sinon
  *     nom connu, sinon fiche créée, mais seulement pour le patron ou un
  *     opérateur : un employé ne relie qu'à une fiche existante).
+ *   · purchaseMovementPlan() prépare la ligne du grand livre d'une réception
+ *     ou d'un retour, pour le MÊME DB.batch que le stock (tout ou rien). Un
+ *     bon sans fiche reçu par un employé n'est jamais perdu : sa ligne attend,
+ *     sous le tiers provisoire « po:<n° du bon> », que le patron la rattache
+ *     à une fiche (attachUnlinked : bon relié et lignes approuvées ensemble).
  *   · supplierScorecard() agrège en SQL ce qu'Inyad appelle le tableau du
  *     fournisseur : commandé, % reçu, % payé, reste dû, taux de retour, panier.
  */
 import { readDoc, mutateDoc } from './_doc-cas.js';
-import { postLedgerEntry, partyBalance, LIVE } from './_ledger.js';
+import { ledgerEntryStatement, ledgerReady, relinkStatements, partyBalance, LIVE } from './_ledger.js';
 
 const ID = /^[A-Za-z0-9_-]{3,80}$/;
 const clean = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n);
@@ -193,19 +198,25 @@ export async function syncProcurement(env, merchant, opts) {
 }
 
 /* ── Bons de commande ─────────────────────────────────────────────────── */
-/* La fiche d'un bon : l'id donné (doit exister), sinon le nom déjà connu,
- * sinon une fiche créée à ce nom. Rend { id, name } ou { error }. */
+/* La fiche d'un bon : l'id donné, sinon le nom déjà connu, sinon une fiche
+ * créée à ce nom (patron ou opérateur seulement). Un id inconnu, venu du
+ * classement (ids du document procurement pas encore importés), devient une
+ * fiche à cet id pour le patron ; pour un employé, c'est une erreur.
+ * Rend { id, name } ou { error }. */
 export async function resolvePoSupplier(env, merchant, payload, opts) {
   const p = payload || {};
   const mayCreate = !!(opts && opts.mayCreate);
   const wanted = clean(p.supplierId, 80);
+  const name = clean(p.supplier, 120);
   try {
     if (wanted) {
       const row = await getSupplier(env, merchant, wanted);
-      if (!row || Number(row.archived) === 1) return { error: 'supplier-not-found' };
-      return { id: row.id, name: row.name };
+      if (row && Number(row.archived) === 1) return { error: 'supplier-archived' };
+      if (row) return { id: row.id, name: row.name };
+      if (!mayCreate || !name || !ID.test(wanted)) return { error: 'supplier-not-found' };
+      const made = await createSupplier(env, merchant, { id: wanted, name }, { source: 'purchase-order' });
+      return made.ok ? { id: made.supplier.id, name: made.supplier.name } : { error: 'supplier-not-found' };
     }
-    const name = clean(p.supplier, 120);
     if (!name) return { error: 'supplier-required' };
     const hit = await findSupplierByName(env, merchant, name);
     if (hit) return { id: hit.id, name: hit.name };
@@ -218,32 +229,113 @@ export async function resolvePoSupplier(env, merchant, payload, opts) {
   }
 }
 
-/* Écrit dans le grand livre ce qu'un mouvement de bon change à la dette :
+/* Le tiers provisoire d'un bon sans fiche. */
+export const unlinkedParty = (number) => 'po:' + clean(number, 60);
+
+/* Ce qu'un mouvement de bon change à la dette, PRÉPARÉ pour le lot du stock :
  * une réception = ce que nous devons (in), un retour = ce qu'il nous reprend
- * (out). La clé est l'id de la commande opérationnelle, unique par geste. Un
- * bon d'avant les fiches est relié à la volée par son nom (fiche existante).
- * `move.pending` : la ligne attend l'accord du patron (saisie d'un employé),
- * hors soldes jusqu'à approveLedgerEntry. */
-export async function postPurchaseMovement(env, merchant, order, move) {
-  if (!order || !move || !(Number(move.cents) > 0)) return { ok: false, error: 'nothing' };
-  let supplierId = clean(order.supplier_id, 80);
-  try {
-    if (!supplierId) {
-      const hit = await findSupplierByName(env, merchant, order.supplier);
-      if (!hit) return { ok: false, error: 'no-supplier' };
-      supplierId = hit.id;
-      await env.DB.prepare("UPDATE purchase_orders SET supplier_id = ? WHERE merchant = ? AND id = ? AND supplier_id = ''")
-        .bind(supplierId, merchant, order.id).run();
+ * (out). La clé est l'id de la commande opérationnelle, unique par geste.
+ *   → { status: 'posted'|'pending'|'unlinked', partyId, statements: [..] }
+ *   → { status: 'unmigrated' } (base d'avant 0028 : le stock passe seul)
+ *   → { status: 'none' } (rien à écrire)
+ * Un bon d'avant les fiches se relie à la volée par son nom ; sinon le patron
+ * crée la fiche (`trusted`), et un employé laisse la ligne sous « po:<n°> ». */
+export async function purchaseMovementPlan(env, merchant, order, move) {
+  if (!order || !move || !(Number(move.cents) > 0)) return { status: 'none', statements: [] };
+  if (!(await ledgerReady(env))) return { status: 'unmigrated', statements: [] };
+  const statements = [];
+  let partyId = clean(order.supplier_id, 80);
+  let unlinked = false;
+  if (!partyId) {
+    let hit = await findSupplierByName(env, merchant, order.supplier);
+    if (!hit && move.trusted && clean(order.supplier, 120)) {
+      const made = await createSupplier(env, merchant, { name: order.supplier }, { source: 'purchase-order' });
+      hit = made.ok ? made.supplier : null;
     }
-  } catch (_) { return { ok: false, error: 'unmigrated' }; }
+    if (hit) {
+      partyId = hit.id;
+      statements.push(env.DB.prepare("UPDATE purchase_orders SET supplier_id = ? WHERE merchant = ? AND id = ? AND supplier_id = ''")
+        .bind(partyId, merchant, order.id));
+    } else {
+      partyId = unlinkedParty(order.number);
+      unlinked = true;
+    }
+  }
   const receive = move.kind === 'receive';
-  return postLedgerEntry(env, merchant, {
+  const pending = unlinked || !move.trusted;
+  const built = ledgerEntryStatement(env, merchant, {
     idemKey: `po-${receive ? 'receive' : 'return'}:${clean(move.commandId, 110)}`,
-    amountCents: Number(move.cents), direction: receive ? 'in' : 'out', partyType: 'supplier', partyId: supplierId,
-    kind: receive ? 'purchase' : 'return', method: 'other', purchaseOrderId: order.id,
-    note: `${receive ? 'Réception' : 'Retour'} ${clean(order.number, 40)}`, createdBy: clean(move.by, 100),
-    pending: !!move.pending,
+    amountCents: Number(move.cents), direction: receive ? 'in' : 'out', partyType: 'supplier', partyId,
+    kind: receive ? 'purchase' : 'return', method: 'other', purchaseOrderId: order.id, ref: clean(order.number, 40),
+    createdBy: clean(move.by, 100), pending,
   });
+  if (!built.ok) return { status: 'unmigrated', statements: [] };
+  statements.push(built.statement);
+  return { status: unlinked ? 'unlinked' : pending ? 'pending' : 'posted', partyId, entryId: built.row.id, statements };
+}
+
+/* Les réceptions sans fiche, par bon : ce qui attend d'être rattaché. */
+export async function unlinkedReceipts(env, merchant) {
+  try {
+    const rows = await env.DB.prepare(
+      `SELECT m.party_id AS party, MIN(m.entry_date) AS first_date, COUNT(*) AS n,
+              COALESCE(SUM(CASE WHEN m.direction = 'in' THEN m.amount_cents ELSE -m.amount_cents END), 0) AS net,
+              MAX(o.number) AS number, MAX(o.supplier) AS supplier, MAX(m.created_by) AS by
+         FROM money_ledger m LEFT JOIN purchase_orders o ON o.merchant = m.merchant AND o.id = m.purchase_order_id
+        WHERE m.merchant = ? AND m.party_type = 'supplier' AND m.party_id LIKE 'po:%' AND m.archived = 0 AND m.deleted_ts IS NULL
+        GROUP BY m.party_id ORDER BY first_date LIMIT 200`
+    ).bind(merchant).all();
+    return ((rows && rows.results) || []).map((r) => ({
+      party: String(r.party), number: String(r.number || String(r.party).slice(3)), supplierName: String(r.supplier || ''),
+      netCents: Number(r.net) || 0, count: Number(r.n) || 0, firstDate: String(r.first_date || ''), by: String(r.by || ''),
+    }));
+  } catch (_) { return []; }
+}
+
+/* Le patron rattache un bon sans fiche à une fiche : le bon prend la fiche,
+ * ses lignes passent sur elle et entrent dans le solde, dans un seul lot. */
+export async function attachUnlinked(env, merchant, number, supplierId, by) {
+  const sup = await getSupplier(env, merchant, supplierId);
+  if (!sup) return { ok: false, error: 'supplier-not-found' };
+  if (Number(sup.archived) === 1) return { ok: false, error: 'supplier-archived' };
+  const num = clean(number, 60);
+  let order = null;
+  try { order = await env.DB.prepare('SELECT id, supplier_id FROM purchase_orders WHERE merchant = ? AND number = ?').bind(merchant, num).first(); } catch (_) { order = null; }
+  if (!order) return { ok: false, error: 'po-not-found' };
+  if (order.supplier_id && order.supplier_id !== sup.id) return { ok: false, error: 'po-linked' };
+  try {
+    const res = await env.DB.batch([
+      env.DB.prepare('UPDATE purchase_orders SET supplier_id = ?, supplier = ?, updated_ts = ? WHERE merchant = ? AND id = ?')
+        .bind(sup.id, sup.name, Date.now(), merchant, order.id),
+      ...relinkStatements(env, merchant, 'supplier', unlinkedParty(num), sup.id, { approve: true, by }),
+    ]);
+    return { ok: true, supplierId: sup.id, moved: Number(res && res[1] && res[1].meta && res[1].meta.changes) || 0 };
+  } catch (_) { return { ok: false, error: 'unmigrated' }; }
+}
+
+/* Par bon d'un fournisseur : reçu (net des retours), payé sur ce bon, reste. */
+export async function orderBalances(env, merchant, supplierId) {
+  const out = [];
+  try {
+    const rows = await env.DB.prepare(
+      `SELECT o.id, o.number, o.status, o.total_cents, o.created_ts, o.expected_date,
+              COALESCE((SELECT SUM(l.received_qty * l.unit_cents) FROM purchase_order_lines l WHERE l.merchant = o.merchant AND l.number = o.number), 0) AS received,
+              COALESCE((SELECT SUM(l.returned_qty * l.unit_cents) FROM purchase_order_lines l WHERE l.merchant = o.merchant AND l.number = o.number), 0) AS returned,
+              COALESCE((SELECT SUM(m.amount_cents) FROM money_ledger m WHERE m.merchant = o.merchant AND m.purchase_order_id = o.id
+                         AND m.party_type = 'supplier' AND m.direction = 'out' AND m.kind = 'payment' AND m.archived = 0 AND m.deleted_ts IS NULL AND m.internal = 0 AND m.status = 'posted'), 0) AS paid
+         FROM purchase_orders o WHERE o.merchant = ? AND o.supplier_id = ? ORDER BY o.created_ts DESC LIMIT 20`
+    ).bind(merchant, supplierId).all();
+    for (const r of (rows && rows.results) || []) {
+      const received = Math.max(0, (Number(r.received) || 0) - (Number(r.returned) || 0));
+      const paid = Number(r.paid) || 0;
+      const due = Math.max(0, received - paid);
+      out.push({ id: String(r.id), number: String(r.number), status: String(r.status), totalCents: Number(r.total_cents) || 0,
+        receivedCents: received, paidCents: paid, dueCents: due,
+        payState: !received ? 'none' : due === 0 ? 'paid' : paid > 0 ? 'partial' : 'unpaid',
+        createdAt: Number(r.created_ts) || 0, expectedDate: String(r.expected_date || '') });
+    }
+  } catch (_) { /* base d'avant 0028 : pas de lien bon ↔ fiche */ }
+  return out;
 }
 
 /* ── Tableau du fournisseur ───────────────────────────────────────────── */
