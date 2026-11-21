@@ -541,7 +541,10 @@ function mzKitScanBar(bar, o) {
     if (!r) return;
     input.value = '';
     close();
-    try { input.focus(); } catch (_) {}
+    /* Une ligne choisie ouvre la fiche (o.pick) : le champ lâche le focus pour
+       que le clavier de la tablette se range, il couvrait la fiche. La
+       douchette n'en a pas besoin, l'écouteur global la lit sans focus. */
+    try { if (typeof o.pick === 'function') input.blur(); else input.focus(); } catch (_) {}
     /* o.pick (barre de vente) : une ligne CHOISIE ouvre la fiche de l'article,
        déclinaison cochée, comme un toucher dans la grille (remise, échange).
        Seule la douchette (Entrée sans ligne désignée) ajoute directement. */
