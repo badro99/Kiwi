@@ -21,7 +21,11 @@
     if (!row) {
       row = { id: String(input.id), customerId: String(input.customerId), ticketRef: String(input.ticketRef),
         totalCents: cents(input.totalCents), paidCents: cents(input.basePaidCents), pendingCents: 0,
-        createdTs: Date.now(), receipts: [] };
+        createdTs: Date.now(), receipts: [],
+        /* L'avance (pièce gardée jusqu'à une date) ou le compte client ; le
+           serveur fait foi, cette copie sert hors ligne (retail-avance.js). */
+        kind: String(input.kind || ''), expiresAt: Math.max(0, Number(input.expiresAt) || 0),
+        lines: Array.isArray(input.lines) ? input.lines.slice(0, 40) : [] };
       rows.unshift(row);
     } else if (row.customerId !== input.customerId || row.ticketRef !== input.ticketRef
       || row.totalCents !== cents(input.totalCents)) return null;
@@ -197,7 +201,9 @@
         const line = el('label', 'krb-note' + (locked ? ' is-locked' : ''));
         const box = document.createElement('input'); box.type = 'checkbox'; box.disabled = locked; box.checked = !locked;
         const text = el('span', 'krb-note-text');
-        text.append(el('strong', '', row.ticketRef), el('small', '', [day(row.createdTs), tr(`Total ${mad(row.totalCents)} MAD`), tr(`Payé ${mad(cents(row.paidCents) + cents(row.pendingCents))} MAD`)].filter(Boolean).join(' · ')));
+        const held = row.kind === 'avance' && Number(row.expiresAt) > 0
+          ? (Number(row.expiresAt) <= Date.now() ? tr('Avance expirée le') : tr('Pièce gardée jusqu’au')) + ' ' + day(row.expiresAt) : '';
+        text.append(el('strong', '', row.ticketRef), el('small', '', [day(row.createdTs), tr(`Total ${mad(row.totalCents)} MAD`), tr(`Payé ${mad(cents(row.paidCents) + cents(row.pendingCents))} MAD`), held].filter(Boolean).join(' · ')));
         const side = el('span', 'krb-note-side'); const left = el('span', 'krb-note-due', tr(`Reste ${mad(due(row))} MAD`));
         const cover = el('small', 'krb-note-cover', locked ? tr('Synchronisation en attente') : '');
         side.append(left, cover); line.append(box, text, side); target.appendChild(line);

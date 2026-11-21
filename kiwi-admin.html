@@ -1301,6 +1301,10 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
         hint:'Éteint par défaut. Ajoute l’onglet « Coût simple » dans Analyse du menu : une calculatrice de coût par plat (prix d’achat, rendement, emballages, portions), réservée au propriétaire. Ne touche pas au stock. Éteint après usage : les fiches restent lisibles, rien n’est effacé.' },
     ],
     boutique: [
+      { key:'retailAvance', label:'Avance (la cliente verse une partie, la pièce est gardée)',
+        hint:'Allumé par défaut. À l’encaissement, la caissière peut prendre une partie du prix et garder la pièce au nom de la cliente jusqu’à une date (Reçu · Validité des bons, au tableau de bord). Passée cette date, l’Inventaire de la caisse propose « Avances expirées » : chaque pièce est scannée pour revenir en stock, et l’argent versé devient un avoir sur la fiche de la cliente. Coupé, le bouton d’avance disparaît de la caisse ; les avances déjà ouvertes restent dans Acomptes.' },
+      { key:'retailCredit', label:'Crédit client (tout le ticket sur le compte)', off:true, onFor:['maison'],
+        hint:'Éteint par défaut en boutique, allumé par défaut en maison. À l’encaissement, « Compte client » met le ticket entier sur la fiche de la cliente, sans rien encaisser ; elle règle plus tard depuis Acomptes, et l’argent compte le jour où il est reçu. Avance et crédit peuvent être allumés ensemble.' },
       { key:'skin2027', label:'Caisse · design 2027', off:true,
         hint:'Éteint par défaut. La caisse boutique ou maison prend le design 2027 sur chaque appareil appairé à ce magasin : écran de code, fond d’ouverture, rail, ticket et recherche. Rien ne change dans les ventes ni le stock. Se coupe ici à tout moment, appliqué au prochain chargement.' },
       { key:'sellerCommissions', label:'Commissions vendeurs', off:true,
@@ -3012,10 +3016,13 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   document.getElementById('biz-trial-start').addEventListener('change',refreshTrialEnd);
   document.getElementById('biz-trial-days').addEventListener('change',refreshTrialEnd);
 
-  function featState(feats, mod){
+  function featState(feats, mod, type){
     var explicit = Object.prototype.hasOwnProperty.call(feats, mod.key);
     // Module standard : clé absente ⇒ ALLUMÉ. Option payante (mod.off) : l'inverse.
-    var on = mod.off ? feats[mod.key] === true : feats[mod.key] !== false;
+    // `onFor` : métiers où une option éteinte par défaut est déjà allumée
+    // (le crédit client de la Maison, assets/retail-avance.js › retailModes).
+    var offByDefault = mod.off && !((mod.onFor || []).indexOf(type) >= 0);
+    var on = offByDefault ? feats[mod.key] === true : feats[mod.key] !== false;
     return { on:on, explicit:explicit };
   }
 
@@ -3034,7 +3041,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
       if (!grp.items.length) return;
       wrap.appendChild(h('p', { class:'sub featgrp' }, grp.title));
       grp.items.forEach(function(mod){
-        var st = featState(feats, mod);
+        var st = featState(feats, mod, selected.type);
         var pill = h('span', { class:'fst' + (st.on ? ' on' : '') }, st.on ? 'Activé' : 'Désactivé');
         var sw = h('button', { class:'sw', role:'switch', disabled:SENIOR === false,
           'aria-checked': st.on ? 'true':'false', 'aria-label':mod.label });

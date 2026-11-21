@@ -1,8 +1,9 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=145';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch, openClientModal } from './pos-maison/sales.js?v=147';
+import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=3';
 import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=18';
 import { tillNow } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=1';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=145';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=145';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=147';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=147';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=10'; import { mzLivraisons } from './pos-maison/delivery.js?v=28';
 import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=14'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=5'; import { mzSettle } from './pos-maison/catalog-settle.js?v=1'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
 import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
@@ -458,6 +459,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
       return 'Ce ticket n’est pas encore synchronisé, ou il a déjà été remboursé jusqu’à son montant disponible.';
     }
     if (code === 'manager-cancelled') return 'Autorisation du responsable annulée. Rien n’a été remis en stock.';
+    if (code === 'holder-cancelled') return 'Aucune cliente choisie. Rien n’a été émis ni remis en stock.';
     if (code === 'manager-required') return 'L’accord d’un responsable est nécessaire pour émettre un avoir. Rien n’a été remis en stock.';
     return 'Connexion au registre des avoirs impossible. Rien n’a été remis en stock.';
   }
@@ -1885,6 +1887,11 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
   }
 
   async function issueAvoir(amount, cliente, motif, fromSaleId, context) {
+    if (!cliente) {
+      const picked = await askAvoirHolder(openClientModal, amount);   // cliente de passage : lui ouvrir une fiche ? (retail-avance.js)
+      if (picked === undefined) { const error = new Error('holder-cancelled'); error.code = 'holder-cancelled'; throw error; }
+      cliente = picked;
+    }
     if (!IS_DEMO) {
       if (context && context.originalSale) fromSaleId = await ensureOriginalSale(context.originalSale);
       const requestId = (context && context.requestId) || creditIntent('credit-issue');
@@ -1893,7 +1900,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
         action: 'issue', id: requestId, originalSaleId: fromSaleId, approval,
         originalRef: context && context.originalRef, amountCents: Math.round(amount * 100),
         customerId: cliente && cliente.id, customerName: cliente && cliente.name,
-        reason: motif, expiresAt: Date.now() + 182 * 24 * 3600 * 1000,
+        reason: motif, ...avoirExpiryBody(),   /* Reçu · Validité des bons, au tableau de bord ; vide = sans limite */
         resellable: !context || context.resellable !== false,
         lines: context && context.lines,
       });
@@ -1910,7 +1917,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
       holderId: cliente ? cliente.id : null,
       holderName: cliente ? cliente.name : 'Porteur du bon',
       motif, at: new Date(),
-      until: new Date(Date.now() + 182 * 24 * 3600 * 1000),
+      until: localAvoirUntil(),
       from: fromSaleId || null,
     };
     AVOIRS.unshift(av);
@@ -1977,9 +1984,14 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
         if (isAcompte && (!c || !c.id || !window.KiwiRetailBalances || tot.consigned > 0)) {
           toast(onAccount ? 'Compte client : cliente requise, hors articles en dépôt-vente' : 'Acompte : cliente requise, hors articles en dépôt-vente'); return { error: 'acompte-not-eligible' };
         }
+        /* L'avance garde la pièce jusqu'à une date (Reçu · Validité des bons),
+           puis se scanne et se remet en stock (Inventaire › Avances expirées). */
+        const avanceUntil = isAcompte && !onAccount ? avanceExpiresAt() : 0;
+        const held = isAcompte && !onAccount ? heldLines(t.lines.map((ln) => ({ ...ln,
+          name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article' })), (ln) => ln.barcode || (P[ln.pid] && P[ln.pid].barcode) || '') : [];
         const rewardUsed = !!(t.reward && c && c.id && t.reward.clientId === c.id);
         const sale = {
-          id: t.num, syncId: t.syncId || newSaleId(), tenderVersion: 2, at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: isAcompte ? 'acompte' : 'vente', onAccount: onAccount || undefined,
+          id: t.num, syncId: t.syncId || newSaleId(), tenderVersion: 2, at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: isAcompte ? 'acompte' : 'vente', onAccount: onAccount || undefined, avanceUntil: avanceUntil || undefined,
           /* Référence provisoire émise hors ligne : le journal doit le dire, la
              vente elle-même est complète et synchronisable. */
           offlineRef: isOfflineRef(t.num) || undefined,
@@ -2018,7 +2030,8 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
         if (isAcompte) {
           const savedBalance = window.KiwiRetailBalances.record(merchantSlug(), {
             id: balanceId, customerId: c.id, ticketRef: sale.id,
-            totalCents: Math.round(total * 100), receipt: onAccount ? undefined : {
+            totalCents: Math.round(total * 100), kind: onAccount ? 'credit' : 'avance', expiresAt: avanceUntil, lines: held,
+            receipt: onAccount ? undefined : {
               id: sale.syncId, amountCents: Math.round(receivedNow * 100),
               method: bqPaymentMethod(parts), ts: +sale.at,
             },
@@ -2102,6 +2115,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
             if (isAcompte) payload.retailBalance = {
               id: balanceId, customerId: c.id, ticketRef: sale.id,
               totalCents: Math.round(total * 100), stage: 'open',
+              ...(onAccount ? {} : { kind: 'avance', expiresAt: avanceUntil, lines: held }),
             };
             if (cashIn <= 0 && creditIn > 0 && basket.length) {
               payload.settlementKind = 'store-credit';

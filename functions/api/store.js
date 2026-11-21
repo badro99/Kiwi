@@ -214,7 +214,7 @@ const FEATURES = {
    * On ne relâche la borne QUE pour cette fonctionnalité-là : partout ailleurs
    * une chaîne de 500 ko est une anomalie, ici c'est le format normal d'une
    * image. `max` reste le vrai plafond du document. */
-  receipt:      { keys: ['look', 'show', 'msg', 'print', 'vat'],    max: 700000, maxStr: 500000 },
+  receipt:      { keys: ['look', 'show', 'msg', 'print', 'vat', 'validity'],    max: 700000, maxStr: 500000 },
   terminals:    { keys: ['list'],                                  max: 200000 },
   appointments: { keys: ['list'],                                  max: 400000 },
   practitioners:{ keys: ['list'],                                  max: 200000 },

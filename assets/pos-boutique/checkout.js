@@ -1,7 +1,7 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=242';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=244';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=242';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=346';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=244';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=348';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=5';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
@@ -11,11 +11,12 @@ import '../money-cents.js?v=7';
 import { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=13';
 import { bqDeliveryCard } from './delivery-card.js?v=10';
 import { receiptPrinterReady, receiptDocInput, waReceiptTotals } from './receipt-doc.js?v=2';
+import { retailModes, heldUntilText, accountOptionHtml, accountStep } from '../retail-avance.js?v=3';
 const M = globalThis.KiwiMoney;
 /* L'échange groupé (essai Amira Boutique) se charge à part : il importe la
    caisse, la caisse ne l'importe pas, pour ne pas allonger le cycle. */
 let CX = null;
-import('./exch-combined.js?v=4').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=6').then((m) => { CX = m; }).catch(() => {});
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */
@@ -357,7 +358,7 @@ import('./exch-combined.js?v=4').then((m) => { CX = m; }).catch(() => {});
       <div class="row"><span>Motif</span><span>${esc(av.motif)}</span></div>
       ${av.from ? `<div class="row"><span>Vente d'origine</span><span>${esc(av.from)}</span></div>` : ''}
       <div class="row"><span>Émis le</span><span>${fmtDayY(av.at)}</span></div>
-      <div class="row b"><span>VALABLE JUSQU'AU</span><span>${fmtValidUntil(av.until)}</span></div>
+      <div class="row b"><span>${new Date(av.until).getFullYear() >= 2900 ? 'VALIDITÉ' : 'VALABLE JUSQU\'AU'}</span><span>${fmtValidUntil(av.until)}</span></div>
       <hr>
       <div class="c">${window.KiwiBarcode && window.KiwiBarcode.svg ? window.KiwiBarcode.svg(av.code, { format: 'code128', height: 40, showText: false }) : barcode(av.code + '-MM', 26)}</div>
       <div class="bq-avoir-code">${av.code} · ${esc((bqName('Maison Mansour') || 'Boutique').toUpperCase())}</div>
@@ -885,7 +886,7 @@ import('./exch-combined.js?v=4').then((m) => { CX = m; }).catch(() => {});
         <div class="modal-amount size-md">${fmtMAD(due())}</div>
         ${appliedBanner()}
         ${due() > 0.01 ? splitBar() : ''}
-        ${settled.length === 1 && due() > 0.009 && opts.customerId
+        ${settled.length === 1 && due() > 0.009 && opts.customerId && retailModes('boutique').avance
           && ['espèces','carte','virement','chèque'].includes(settled[0].m)
           ? `<button class="bq-btn secondary" id="bq-save-acompte">${tr("checkout.acompte.recu.garder", "Acompte reçu · garder")} ${fmtMAD(due())} ${tr("checkout.a.regler", "à régler")}</button>` : ''}
         <div class="bq-pay-opts">
@@ -914,6 +915,7 @@ import('./exch-combined.js?v=4').then((m) => { CX = m; }).catch(() => {});
             <span class="l"><b>${tr("checkout.livraison", "Livraison")}</b><span>${tr("checkout.vente.enregistree.paiement.a.recevoir.du.transporteur", "Vente enregistrée, paiement à recevoir du transporteur")}</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
+          ${accountOptionHtml(opts.allowAccount && retailModes('boutique').credit && !settled.length && !avoirPart, opts.customerId, fmtMAD(due()), 'bq')}
           ${avoirPart ? '' : avs.length ? `
           <button class="bq-pay-opt" data-bq-m="avoir">
             <span class="ic"><i data-lucide="ticket"></i></span>
@@ -960,6 +962,7 @@ import('./exch-combined.js?v=4').then((m) => { CX = m; }).catch(() => {});
              et son plafond propre (le solde du bon). */
           $$('[data-bq-m]', el).forEach((b) => {
             const a = $('.amt', b); if (!a) return;
+            if (b.dataset.bqM === 'compte') return;   /* le compte prend toujours le ticket entier */
             if (/^avoir/.test(b.dataset.bqM)) {
               const bal = (ownAvoirs()[0] || {}).balance;
               if (bal != null) a.textContent = '−' + fmtMAD(Math.min(bal, portion()));
@@ -994,6 +997,7 @@ import('./exch-combined.js?v=4').then((m) => { CX = m; }).catch(() => {});
               done: (card) => settle({ m: 'livraison', amount, card }) });
           }
           else if (m === 'avoir') stepAvoir();
+          else if (m === 'compte') stepAccount();
           else toast(tr("checkout.aucun.avoir.actif.emettez.en.un.depuis.echanges.avoirs", "Aucun avoir actif, émettez-en un depuis Échanges & avoirs"));
         };
       });
@@ -1173,19 +1177,24 @@ import('./exch-combined.js?v=4').then((m) => { CX = m; }).catch(() => {});
       $('#bq-external-ok', el).onclick = () => settle({ m: cheque ? 'chèque' : 'virement', amount });
     };
 
+    const stepAccount = () => accountStep(el, { cls: 'bq', customerId: opts.customerId, busy: settled.length || avoirPart, who: clById(opts.customerId), ref: opts.ref,   // « Compte client » (retail-avance.js)
+      amountText: fmtMAD(opts.amount), esc, toast, after: () => { icons(); closeBtns(); }, back: stepMethods, ok: () => { void commit('account'); } });
+
     /* Pendant une attente de l'écriture (contrôle fidélité, avoir au registre) la
        fenêtre ne se ferme pas et checkout() ne relance rien : state.payCommitting. */
     const holding = async (p) => { state.payCommitting = true; try { return await p; } finally { state.payCommitting = false; } };
     const commit = async (partial) => {
       if (committed) return;
-      if (partial && (!opts.customerId || settled.length !== 1 || avoirPart
+      const onAccount = partial === 'account';
+      if (onAccount && (!opts.customerId || settled.length || avoirPart || !retailModes('boutique').credit)) return;
+      if (partial && !onAccount && (!opts.customerId || settled.length !== 1 || avoirPart
           || !['espèces','carte','virement','chèque'].includes(settled[0].m))) {
         toast(tr("checkout.acompte.une.cliente.et.un.seul.reglement.sont.requis", "Acompte : une cliente et un seul règlement sont requis")); return;
       }
       committed = true;
       if (opts.beforePaid && !await holding(opts.beforePaid())) { committed = false; return; }
-      const parts = (avoirPart ? [avoirPart] : []).concat(settled);
-      const paidNow = M.toMad(M.sumCents(parts.map((part) => +part.amount || 0)));
+      const parts = onAccount ? [{ m: 'compte', amount: opts.amount }] : (avoirPart ? [avoirPart] : []).concat(settled);
+      const paidNow = onAccount ? 0 : M.toMad(M.sumCents(parts.map((part) => +part.amount || 0)));
       const avp = parts.find((x) => x.m === 'avoir');
       if (avp) {
         const av = AVOIRS.find((a) => a.code === avp.code);
@@ -1224,15 +1233,17 @@ import('./exch-combined.js?v=4').then((m) => { CX = m; }).catch(() => {});
           return;
         }
       }
-      const res = opts.onPaid(parts, { partial: !!partial, paidNow }) || {};
+      const res = opts.onPaid(parts, { partial: !!partial, paidNow, onAccount }) || {};
       if (res.error) { committed = false; stepMethods(); return; }
       if (res.sale) opts.sale = res.sale;
       if (partial || opts.balanceExisting) {
+        const held = !onAccount && res.sale ? heldUntilText(res.sale.avanceUntil) : '';   // l'avance : pièce gardée jusqu'au…
         opts.acompte = { total: opts.balanceTotal || opts.amount,
           paid: (opts.balancePaid || 0) + paidNow,
-          remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow) };
+          remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow),
+          untilText: held };
         opts.amount = paidNow;
-        opts.title = partial ? tr("checkout.acompte", "Acompte") : tr("checkout.solde.de.l.acompte", "Solde de l’acompte");
+        opts.title = onAccount ? tr('Compte client') : partial ? tr("checkout.acompte", "Acompte") : tr("checkout.solde.de.l.acompte", "Solde de l’acompte");
       }
       if (res.delivery || parts.some((x) => x.m === 'livraison')) stepSuccess(parts, res);
       else {

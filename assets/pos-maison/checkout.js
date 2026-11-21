@@ -1,13 +1,14 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=230';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=232';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=145';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=145';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=147';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=147';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
 import { mzDeliveryCard } from './delivery.js?v=28';
 import { mzKickForCash } from './drawer.js?v=2';
 import { mzAvoirSheet, codeKey } from './avoir-sheet.js?v=9';
+import { retailModes, heldUntilText } from '../retail-avance.js?v=3';
 const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);   /* « Compte client » et l'acompte, dans la langue de la caisse */
 
 
@@ -536,7 +537,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
       <div class="row"><span>Motif</span><span>${esc(av.motif)}</span></div>
       ${av.from ? `<div class="row"><span>Vente d'origine</span><span>${esc(av.from)}</span></div>` : ''}
       <div class="row"><span>Émis le</span><span>${fmtDayY(av.at)}</span></div>
-      <div class="row b"><span>VALABLE JUSQU'AU</span><span>${fmtValidUntil(av.until)}</span></div>
+      <div class="row b"><span>${new Date(av.until).getFullYear() >= 2900 ? 'VALIDITÉ' : 'VALABLE JUSQU\'AU'}</span><span>${fmtValidUntil(av.until)}</span></div>
       <hr>
       <div class="c">${window.KiwiBarcode && window.KiwiBarcode.svg ? window.KiwiBarcode.svg(av.code, { format: 'code128', height: 40, showText: false }) : barcode(av.code + '-MM', 26)}</div>
       <div class="mz-avoir-code">${av.code} · ${esc((bqName('Maison Mansour') || 'Boutique').toUpperCase())}</div>
@@ -1054,7 +1055,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
         <div class="modal-amount size-md">${fmtMAD(due())}</div>
         ${appliedBanner()}
         ${due() > 0.01 ? splitBar() : ''}
-        ${settled.length === 1 && due() > 0.009 && opts.customerId
+        ${settled.length === 1 && due() > 0.009 && opts.customerId && retailModes('maison').avance
           && ['espèces','carte','virement','chèque'].includes(settled[0].m)
           ? `<button class="mz-btn secondary" id="mz-save-acompte">Acompte reçu · garder ${fmtMAD(due())} à régler</button>` : ''}
         <div class="mz-pay-opts">
@@ -1083,7 +1084,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
             <span class="l"><b>Livraison</b><span>Vente enregistrée, paiement à recevoir du transporteur</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
-          ${opts.allowAccount && !settled.length && !avoirPart ? `
+          ${opts.allowAccount && retailModes('maison').credit && !settled.length && !avoirPart ? `
           <button class="mz-pay-opt" data-mz-m="compte">
             <span class="ic"><img src="assets/icons/material/account_balance_wallet.svg" alt=""></span>
             <span class="l"><b>Compte client</b><span>${opts.customerId ? 'Tout le ticket à régler plus tard, suivi dans Acomptes' : 'Choisir d’abord la cliente sur le ticket'}</span></span>
@@ -1321,7 +1322,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
     const commit = async (partial) => {
       if (committed) return;
       const onAccount = partial === 'account';
-      if (onAccount && (!opts.customerId || settled.length || avoirPart)) return;
+      if (onAccount && (!opts.customerId || settled.length || avoirPart || !retailModes('maison').credit)) return;
       if (partial && !onAccount && (!opts.customerId || settled.length !== 1 || avoirPart
           || !['espèces','carte','virement','chèque'].includes(settled[0].m))) {
         toast('Acompte : une cliente et un seul règlement sont requis'); return;
@@ -1374,9 +1375,11 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
       if (res.sale) opts.sale = res.sale;
       mzKickForCash(parts, toast);   /* des espèces encaissées : le tiroir s'ouvre pour la monnaie (drawer.js) */
       if (partial || opts.balanceExisting) {
+        const held = !onAccount && res.sale ? heldUntilText(res.sale.avanceUntil) : '';   // l'avance : pièce gardée jusqu'au…
         opts.acompte = { total: opts.balanceTotal || opts.amount,
           paid: (opts.balancePaid || 0) + paidNow,
-          remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow) };
+          remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow),
+          untilText: held };
         opts.amount = paidNow;
         opts.title = onAccount ? mt('Compte client') : partial ? mt('Acompte') : mt('Solde de l’acompte');
       }

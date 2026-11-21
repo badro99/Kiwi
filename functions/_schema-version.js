@@ -1,9 +1,11 @@
-// Production minimum: migration 0027 (catalog parts). 0020 to 0023 (client
+// Production minimum: migration 0028 (avances: kind, expiry, held pieces and
+// closure on retail_balances, applied to prod 21 Nov 2026 before this code).
+// Before it: migration 0027 (catalog parts). 0020 to 0023 (client
 // spend in centimes, sale client_id, pay statements, trusted clock) and 0024 to
 // 0027 (directory, session tiers, Glovo, catalog parts; prod ledger checked
 // 20 Nov 2026, 0027_catalog_parts.sql applied) must be
 // applied by the owner before this code deploys; below it every route answers 503.
-export const MINIMUM_SCHEMA_VERSION = 27;
+export const MINIMUM_SCHEMA_VERSION = 28;
 // The migrations whose columns and tables this code reads. They were applied by
 // hand, so the highest number alone proves nothing: a ledger that holds 0023 but
 // lacks 0021 still lacks sales.client_id. Every one of them must be recorded.
