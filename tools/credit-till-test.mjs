@@ -22,7 +22,7 @@ const ok = (name) => { n++; console.log('  ✓ ' + name); };
 class El {
   constructor(tag) { this.tagName = String(tag).toUpperCase(); this.children = []; this.attrs = {}; this.listeners = {}; this.q = {}; this.style = {}; this.dataset = {}; this.className = ''; this.innerHTML = ''; this.textContent = ''; this.answers = []; }
   setAttribute(k, v) { this.attrs[k] = String(v); }
-  getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; }
+  getAttribute(k) { return k === 'src' && this.src ? this.src : k in this.attrs ? this.attrs[k] : null; }
   removeAttribute(k) { delete this.attrs[k]; }
   appendChild(c) { this.children.push(c); c.parent = this; return c; }
   remove() { if (this.parent) this.parent.children = this.parent.children.filter((x) => x !== this); this.parent = null; }
@@ -36,9 +36,29 @@ class El {
 const body = new El('body'), head = new El('head');
 const store = new Map();
 globalThis.window = globalThis;
-globalThis.document = { body, head, activeElement: null, createElement: (t) => new El(t), getElementById: () => null };
+/* Le kit : défini d'office (caisse 2027), ou chargé à la demande (caisse
+   classique) : une balise <script> de pin.js ou overlays.js le définit. */
+const defined = new Set(['k-pin-pad', 'k-sheet']);
+const loadedScripts = [];
+head.appendChild = function (c) {
+  El.prototype.appendChild.call(this, c);
+  if (c.tagName === 'SCRIPT') {
+    loadedScripts.push(c.src);
+    setTimeout(() => {
+      if (/kit\/overlays\.js/.test(c.src)) defined.add('k-sheet');
+      if (/kit\/pin\.js/.test(c.src)) defined.add('k-pin-pad');
+      c.onload && c.onload();
+    }, 0);
+  }
+  return c;
+};
+const headFind = (pred) => head.children.find(pred) || null;
+globalThis.document = { body, head, activeElement: null, createElement: (t) => new El(t), getElementById: () => null,
+  get scripts() { return head.children.filter((c) => c.tagName === 'SCRIPT'); },
+  querySelector: (sel) => (/^link/.test(sel) ? headFind((c) => c.tagName === 'LINK' && /kit\/tokens-2027\.css/.test(c.href || ''))
+    : /^meta/.test(sel) ? headFind((c) => c.tagName === 'META' && c.name === 'kiwi-sprite') : null) };
 globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
-globalThis.customElements = { get: (name) => (name === 'k-pin-pad' || name === 'k-sheet' ? class {} : undefined) };
+globalThis.customElements = { get: (name) => (defined.has(name) ? class {} : undefined) };
 globalThis.CustomEvent = class { constructor(type) { this.type = type; } };
 store.set('kiwiPairedVenue', JSON.stringify({ merchant: 'till-fixture' }));
 
@@ -126,19 +146,62 @@ const sheets = () => body.children.filter((c) => c.tagName === 'K-SHEET' || c.cl
   ok('manager approval through <k-pin-pad>: refused code cleared, approved closes, code sent only to /api/credit/till');
 }
 
-/* ── 4. les deux caisses gardent leur garde ── */
+/* ── 3b. la caisse classique, sans la peau 2027 : le kit se charge à la demande ── */
 {
+  defined.clear();
+  calls.length = 0;
+  answer = (url, b) => (b && b.action === 'check' ? { status: 200, body: { ok: true, over: true, limited: true, afterCents: 15000, limitCents: 10000 } }
+    : { status: 200, body: { ok: true, over: true, approved: true, approvedBy: { name: 'TEST KIWI Manager', role: 'Manager' } } });
+  const gate = C.creditGate({ merchant: 'till-fixture', source: 'carnet', customer: 'k1', name: 'TEST KIWI', amountCents: 5000 });
+  for (let i = 0; i < 30 && !sheets().length; i++) await new Promise((r) => setTimeout(r, 0));
+  const pad = sheets()[0] && sheets()[0].children.find((c) => c.tagName === 'K-PIN-PAD');
+  assert.ok(pad, 'the classic till loads the kit pad on demand instead of refusing the sale');
+  assert.deepEqual(loadedScripts.map((x) => x.split('?')[0]), ['assets/kit/strings/kit.fr.js', 'assets/kit/strings/kit.en.js', 'assets/kit/strings/kit.ar.js',
+    'assets/kit/strings.js', 'assets/kit/format.js', 'assets/kit/core.js', 'assets/kit/overlays.js', 'assets/kit/pin.js'], 'the kit files, in the 2027 shell order');
+  assert.ok(head.children.some((c) => c.tagName === 'LINK' && /tokens-2027\.css/.test(c.href)), 'with the --k-* tokens');
+  await pad.onsubmit(String(1000 + Math.floor(Math.random() * 9000)));
+  assert.equal((await gate).ok, true, 'and the manager approves the over-limit sale');
+  const again = await C.ensureKit();
+  assert.equal(again, true);
+  assert.equal(loadedScripts.length, 8, 'loaded once');
+  ok('classic till: the kit pad and sheet load on demand, the over-limit approval works');
+}
+
+/* ── 4. « Compte client » de la Maison : accountCheckout ── */
+{
+  calls.length = 0;
+  answer = (url, b) => (b && b.action === 'check' ? { status: 200, body: { ok: true, over: false, limited: false } } : { status: 503, body: {} });
+  const btn = { disabled: false };
+  let commits = 0;
+  const commit = async () => { commits++; await new Promise((r) => setTimeout(r, 5)); return true; };
+  const credit = { merchant: 'till-fixture', source: 'client', customer: 'c2', name: 'TEST KIWI', amountCents: 4000 };
+  const first = C.accountCheckout(btn, credit, commit);
+  const second = await C.accountCheckout(btn, credit, commit);
+  assert.equal(second, false, 'a second tap does nothing');
+  assert.equal(await first, true);
+  assert.equal(commits, 1, 'one sale written');
+  assert.equal(calls.filter((c) => c.body && c.body.action === 'check').length, 1, 'one limit question');
+  assert.equal(sheets().length, 1, 'one « will pay on » sheet');
+  assert.equal(btn.disabled, true, 'the button stays off once the sale is written');
+  sheets()[0].dispatchEvent({ type: 'kc-dismiss' });
+  const off = { disabled: false };
+  answer = (url, b) => ({ status: 200, body: { ok: true, over: true, limited: true, afterCents: 15000, limitCents: 10000 } });
+  defined.delete('k-pin-pad');
+  const refusedKit = C.accountCheckout(off, credit, commit);
+  for (let i = 0; i < 30 && !sheets().length; i++) await new Promise((r) => setTimeout(r, 0));
+  sheets()[0].dispatchEvent({ type: 'kiwi:action', detail: { action: 'k.sheet.close' } });
+  assert.equal(await refusedKit, false);
+  assert.equal(off.disabled, false, 'a cancelled approval gives the button back');
+  assert.equal(commits, 1);
   const src = fs.readFileSync(path.join(ROOT, 'assets/credit-book/till-credit.js'), 'utf8');
   assert.equal(/type="password"/.test(src), false, 'no hand-made password field left in the till module');
   const maison = fs.readFileSync(path.join(ROOT, 'assets/pos-maison/checkout.js'), 'utf8');
-  const tap = maison.slice(maison.indexOf("$('#mz-account-ok', el).onclick"), maison.indexOf("const commit = async (partial)"));
-  assert.match(tap, /if \(btn\.disabled \|\| committed\) return; btn\.disabled = true;/, 'Maison « Compte client »: a second tap returns before any code or promise');
-  assert.match(tap, /finally \{ if \(!committed\) btn\.disabled = false; \}/);
+  assert.match(maison, /\$\('#mz-account-ok', el\)\.onclick = \(e\) => \{ const btn = e\.currentTarget; import\('\.\.\/credit-book\/till-credit\.js\?v=\d+'\)\.then\(\(C\) => C\.accountCheckout\(btn,/, 'Maison hands its « Compte client » tap to accountCheckout');
   const epicerie = fs.readFileSync(path.join(ROOT, 'assets/pos-epicerie/carnet.js'), 'utf8');
   const charge = epicerie.slice(epicerie.indexOf('async function chargeOnCredit('), epicerie.indexOf('/* ═══', epicerie.indexOf('async function chargeOnCredit(')));
   assert.match(charge, /\|\| charging\) return;\s*charging = true;/);
   assert.match(charge, /finally \{ charging = false; \}/, 'épicerie: one credit sale at a time');
-  ok('Maison and épicerie guard the credit tap themselves');
+  ok('Maison « Compte client » through accountCheckout: one sale, one question, one sheet; épicerie keeps its own guard');
 }
 
 /* ── 5. l'épicerie atteint le carnet du patron depuis le menu ── */

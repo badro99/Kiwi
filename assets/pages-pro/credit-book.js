@@ -108,7 +108,8 @@
 .cb-who button:focus-visible{outline:2px solid var(--atlas,#0B6E4F);outline-offset:3px;border-radius:4px}
 .cb-meta{font-size:12.5px;color:var(--ink-3,#667);margin-top:2px;display:flex;flex-wrap:wrap;gap:4px 10px}
 .cb-amt{text-align:end;font-variant-numeric:tabular-nums}
-.cb-amt b{display:block;font-size:17px;font-weight:600}
+.cb-amt b{display:block;font-size:17px;font-weight:600;white-space:nowrap}
+.cb-amt small{white-space:nowrap}
 .cb-amt small{font-size:12px;color:var(--ink-3,#667)}
 .cb-late{color:var(--danger,#C94A3A)}
 .cb-pill{display:inline-flex;align-items:center;gap:4px;min-height:22px;padding:0 8px;border-radius:999px;font-size:12px;background:var(--surface-2,rgba(10,15,13,.06));color:var(--ink-2,#3a4440)}
@@ -145,19 +146,40 @@
   }
 
   /* ── le carnet d'exemple (démo seulement) ── */
+  /* Le carnet d'exemple suit les règles du serveur (functions/api/_credit-accounts.js
+     present) : une échéance compte à sa date, une dette sans échéance compte
+     depuis l'achat plus le délai de 30 jours. « En retard » et « À relancer »
+     disent donc la même chose. */
   function demoBook() {
     const today = localDay(Date.now());
-    const c = (key, name, phone, owed, daysLate, dueCents, buckets, extra) => ({ source: 'carnet', key, name, phone, owedCents: owed, scheduledCents: dueCents, unscheduledCents: owed - dueCents,
-      limitCents: null, lang: '', remindedTs: 0, rev: 1, hasSchedule: dueCents > 0, lastPayTs: Date.now() - 6 * DAY, daysLate, buckets: Object.assign({ notDue: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90p: 0 }, buckets),
-      nextDue: '', dueCents: daysLate >= 0 && dueCents ? dueCents : 0, dueDate: daysLate >= 0 && dueCents ? plusDays(today, -Math.max(0, daysLate)) : '', pending: dueCents ? [{ id: key + '-r1', amountCents: dueCents, originalCents: dueCents, dueDate: plusDays(today, -Math.max(0, daysLate)), note: '', origin: 'till' }] : [], ...extra });
+    const TERM = 30;
+    const bucketOf = (late) => (late <= 0 ? 'notDue' : late <= 30 ? 'd1_30' : late <= 60 ? 'd31_60' : late <= 90 ? 'd61_90' : 'd90p');
+    /* rows : [montant, jours avant l'échéance (négatif : passée)] ; loose : [montant, jours depuis l'achat]. */
+    const c = (key, name, phone, rows, loose, extra) => {
+      const buckets = { notDue: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90p: 0 };
+      let daysLate = 0, dueCents = 0, nextDue = '';
+      const dues = [];
+      const add = (amount, due) => {
+        const late = daysBetween(due, today);
+        buckets[bucketOf(late)] += amount;
+        daysLate = Math.max(daysLate, late);
+        if (late >= 0) { dueCents += amount; dues.push(due); } else if (!nextDue || due < nextDue) nextDue = due;
+      };
+      const pending = rows.map(([amount, inDays], i) => ({ id: key + '-r' + i, amountCents: amount, originalCents: amount, dueDate: plusDays(today, inDays), note: '', origin: i ? 'owner' : 'till' }));
+      pending.forEach((r) => add(r.amountCents, r.dueDate));
+      loose.forEach(([amount, ago]) => add(amount, plusDays(plusDays(today, -ago), TERM)));
+      const scheduled = rows.reduce((n, [a]) => n + a, 0), unscheduled = loose.reduce((n, [a]) => n + a, 0);
+      return { source: 'carnet', key, name, phone, owedCents: scheduled + unscheduled, scheduledCents: scheduled, unscheduledCents: unscheduled,
+        limitCents: null, lang: '', remindedTs: 0, remindedDay: '', rev: 1, hasSchedule: rows.length > 0, lastPayTs: Date.now() - 6 * DAY,
+        daysLate, buckets, nextDue, dueCents, dueDate: dues.sort()[0] || '', unapproved: 0, pending, ...extra };
+    };
     const customers = [
-      c('d-rkia', 'Mme Rkia', '0661442187', 17400, 4, 12000, { d1_30: 17400 }, { lang: 'darija', limitCents: 30000 }),
-      c('d-driss', 'Hajj Driss', '0670331209', 9800, 0, 9800, { notDue: 9800 }, { lang: 'ar' }),
-      c('d-cafe', 'Café Rif', '0539940321', 208000, 38, 100000, { d31_60: 100000, d1_30: 108000 }, { limitCents: 150000, unapproved: 1 }),
-      c('d-mustapha', 'Mustapha (menuisier)', '0662784533', 10300, 8, 0, { d1_30: 10300 }, {}),
-      c('d-fatiha', 'Fatiha', '', 2700, -3, 0, { notDue: 2700 }, {}),
+      c('d-rkia', 'Mme Rkia', '0661442187', [[12000, -4], [5400, 26]], [], { lang: 'darija', limitCents: 30000 }),
+      c('d-driss', 'Hajj Driss', '0670331209', [[9800, 0]], [], { lang: 'ar' }),
+      c('d-cafe', 'Café Rif', '0539940321', [[100000, -38]], [[108000, 41]], { limitCents: 150000, unapproved: 1 }),
+      c('d-mustapha', 'Mustapha (menuisier)', '0662784533', [], [[10300, 38]], {}),
+      c('d-fatiha', 'Fatiha', '', [], [[2700, 6]], {}),
     ];
-    customers[0].pending.push({ id: 'd-rkia-r2', amountCents: 5400, originalCents: 5400, dueDate: plusDays(today, 26), note: '', origin: 'owner' });
     const summary = { owedCents: 0, debtors: customers.length, buckets: { notDue: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90p: 0 }, dueToday: 0, dueTodayCents: 0, overLimit: 0, unapproved: 0 };
     for (const x of customers) {
       summary.owedCents += x.owedCents;
@@ -166,7 +188,7 @@
       if (x.limitCents != null && x.owedCents > x.limitCents) summary.overLimit++;
       if (x.unapproved) summary.unapproved++;
     }
-    return { today, termDays: 30, summary, customers };
+    return { today, termDays: TERM, summary, customers };
   }
 
   async function api(method, query, body) {
@@ -264,6 +286,15 @@
       <div class="cb-age" role="img" aria-label="${esc(BUCKETS.map(([k, t]) => t() + ' ' + mad(s.buckets[k])).join(', '))}">${BUCKETS.map(([k]) => s.buckets[k] > 0 ? `<span class="cb-b-${k}" style="width:${(s.buckets[k] / total * 100).toFixed(2)}%"></span>` : '').join('')}</div>
       <div class="cb-legend">${BUCKETS.map(([k, t]) => `<div><i class="cb-b-${k}"></i>${esc(t())}<b>${esc(mad(s.buckets[k]))}</b></div>`).join('')}</div></section>`;
   }
+  /* Un vrai pluriel, dans les trois langues (l'arabe accorde le nom au nombre). */
+  function unapprovedLine(n) {
+    const ar = n === 1 ? 'تجاوز زبون واحد' : n === 2 ? 'تجاوز زبونان' : `تجاوز ${n} ${n % 100 >= 3 && n % 100 <= 10 ? 'زبائن' : 'زبونًا'}`;
+    return L(n === 1 ? '1 client est passé au-delà de son plafond sans l’accord d’un responsable, ces 30 derniers jours.'
+      : `${n} clients sont passés au-delà de leur plafond sans l’accord d’un responsable, ces 30 derniers jours.`,
+    n === 1 ? '1 customer went past their limit without a manager’s approval in the last 30 days.'
+      : `${n} customers went past their limit without a manager’s approval in the last 30 days.`,
+    `${ar} السقف دون موافقة مسؤول خلال الثلاثين يومًا الأخيرة.`);
+  }
   function termCard(b) {
     const ledger = (() => { try { return !!window.KiwiTradeWorkspaces?.config?.('credit'); } catch (_) { return false; } })();
     return `<section class="cb-card"><h3>${esc(L('Dette sans échéance', 'Debt without a date', 'دين بلا موعد'))}</h3>
@@ -306,7 +337,7 @@
         </div>
         <div class="cb-bar"><div class="cb-seg" data-lens-demo role="group" aria-label="${esc(L('Sections du carnet', 'Credit book sections', 'أقسام الدفتر'))}">${tab('due', L('À relancer', 'To remind', 'للتذكير') + (s.dueToday ? ' (' + s.dueToday + ')' : ''))}${tab('all', L('Tous les débiteurs', 'All debtors', 'كل المدينين'))}</div>
           <button type="button" class="cb-btn" data-action="credit-refresh">${esc(L('Actualiser', 'Refresh', 'تحديث'))}</button></div>
-        ${s.unapproved ? `<div class="cb-card"><p class="cb-note cb-late">${esc(L(`${s.unapproved} client(s) passé(s) au-delà du plafond sans l’accord d’un responsable, ces 30 derniers jours.`, `${s.unapproved} customer(s) went past the limit without a manager’s approval in the last 30 days.`, `عدد الزبائن الذين تجاوزوا السقف دون موافقة مسؤول خلال 30 يومًا الأخيرة: ${s.unapproved}.`))}</p></div>` : ''}
+        ${s.unapproved ? `<div class="cb-card"><p class="cb-note cb-late">${esc(unapprovedLine(s.unapproved))}</p></div>` : ''}
         ${main}
         ${ageingCard(s)}
         ${termCard(b)}`;

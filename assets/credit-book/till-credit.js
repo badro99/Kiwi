@@ -128,9 +128,52 @@ function sheet(html) {
  * le passe à onsubmit, la caisse l'envoie au serveur qui le compare
  * (verifyStaffPin), et le pavé est vidé à chaque réponse. Sans le kit chargé,
  * pas d'accord possible : la vente à crédit est refusée. */
-function askManager({ merchant, base, text }) {
+/* La caisse classique (sans la peau 2027) ne charge pas le kit : le pavé et
+ * la feuille se chargent à la demande, les fichiers que la caisse 2027 écrit
+ * dans sa tête (mêmes adresses, déjà dans le cache hors ligne de kiwi-sw.js),
+ * dans le même ordre. tokens-2027.css ne déclare que des --k-* : rien de la
+ * caisse classique ne change. */
+const KIT_SCRIPTS = ['assets/kit/strings/kit.fr.js?v=2', 'assets/kit/strings/kit.en.js?v=2', 'assets/kit/strings/kit.ar.js?v=2',
+  'assets/kit/strings.js?v=2', 'assets/kit/format.js?v=3', 'assets/kit/core.js?v=2', 'assets/kit/overlays.js?v=3', 'assets/kit/pin.js?v=6'];
+const KIT_TOKENS = 'assets/kit/tokens-2027.css?v=2';
+const KIT_SPRITE = 'assets/icons/material/sprite.till.svg?v=17';
+const kitReady = () => !!(window.customElements && customElements.get('k-pin-pad') && customElements.get('k-sheet'));
+let kitLoading = null;
+export function ensureKit() {
+  if (kitReady()) return Promise.resolve(true);
+  if (!window.customElements || typeof document === 'undefined') return Promise.resolve(false);
+  if (!kitLoading) {
+    kitLoading = (async () => {
+      if (!document.querySelector('link[href*="kit/tokens-2027.css"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet'; link.href = KIT_TOKENS;
+        document.head.appendChild(link);
+      }
+      if (!document.querySelector('meta[name="kiwi-sprite"]')) {
+        const meta = document.createElement('meta');
+        meta.name = 'kiwi-sprite'; meta.content = KIT_SPRITE;
+        document.head.appendChild(meta);
+      }
+      for (const src of KIT_SCRIPTS) {
+        const file = src.split('?')[0];
+        if ([...document.scripts].some((el) => (el.getAttribute('src') || '').split('?')[0].replace(/^\//, '') === file)) continue;
+        await new Promise((ok, fail) => {
+          const el = document.createElement('script');
+          el.src = src; el.async = false;
+          el.onload = ok; el.onerror = fail;
+          document.head.appendChild(el);
+        });
+      }
+      return kitReady();
+    })().catch(() => false).then((ready) => { if (!ready) kitLoading = null; return ready; });
+  }
+  return kitLoading;
+}
+
+async function askManager({ merchant, base, text }) {
+  const ready = await ensureKit();
   return new Promise((resolve) => {
-    if (!window.customElements || !customElements.get('k-pin-pad') || !customElements.get('k-sheet')) { resolve(null); return; }
+    if (!ready) { resolve(null); return; }
     ensureCss();
     const sheetEl = document.createElement('k-sheet');
     const pad = document.createElement('k-pin-pad');
@@ -208,6 +251,22 @@ async function gateOnce({ merchant = tillMerchant(), source, customer, name = ''
   if (!approved) { toast(tr('Vente à crédit non enregistrée'), ''); return { ok: false, reason: 'cancelled' }; }
   if (approved.approvedBy) toast(tr('Accordé par {n}', { n: approved.approvedBy.name || '' }), '');
   return { ok: true, approvedBy: approved.approvedBy || null };
+}
+
+/* « Compte client » de la caisse Maison : plafond, puis la note, puis la date
+ * promise. `commit()` écrit la vente et rend true quand elle est écrite. Un
+ * second appui pendant ce temps ne fait rien : le bouton reste désactivé
+ * jusqu'au bout, et pour de bon une fois la vente écrite. */
+export async function accountCheckout(btn, credit, commit) {
+  if (!btn || btn.disabled) return false;
+  btn.disabled = true;
+  let done = false;
+  try {
+    if (!credit.demo && !(await creditGate(credit)).ok) return false;
+    done = !!(await commit());
+    if (done) promiseAfterSale({ ...credit, merchant: credit.demo ? '' : credit.merchant });
+    return done;
+  } finally { if (!done) btn.disabled = false; }
 }
 
 /* ── « paiera le … » ── */
