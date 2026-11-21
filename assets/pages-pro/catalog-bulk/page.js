@@ -43,7 +43,15 @@
     'bad-barcode': () => L('Pas d’espace dans un code-barres', 'No spaces in a barcode', 'الباركود ما فيهش فراغات'),
     'not-found': () => L('Article introuvable, rechargez la page', 'Item not found, reload the page', 'المنتج ما كاينش، عاود حمّل الصفحة'),
     'too-many-decimals': () => L('Deux décimales au plus (1 234 s’écrit sans virgule)', 'Two decimals at most (write 1234 without a comma)', 'جوج أرقام من بعد الفاصلة على الأكثر (1234 كاتكتب بلا فاصلة)'),
+    'zero-price': () => L('0 MAD refusé comme offert : tapez un prix, ou videz la cellule pour reprendre le prix principal', '0 MAD refused as free: type a price, or empty the cell to fall back on the main price', '0 درهم ما تقبلش بحال هدية: كتب ثمن، ولا خوي الخانة باش يرجع الثمن الرئيسي'),
   };
+  /* Why the price lists refused a save, said on each cell it concerns. */
+  const listWhy = (code) => (code === 'zero-price' ? L('Tarif refusé : 0 MAD sans « offert »', 'Price list refused it: 0 MAD not marked free', 'التعريفة رفضاتو: 0 درهم بلا « هدية »')
+    : code === 'offline' ? L('Hors ligne : ce prix de tarif n’est pas enregistré, réessayez', 'Offline: this list price is not saved, try again', 'بلا أنترنيت: هاد الثمن ما تسجّلش، عاود جرّب')
+    : code === 'forbidden' || code === 'unauthorized' ? L('Seul le propriétaire peut modifier les tarifs', 'Only the owner can change price lists', 'غير مول المحل اللي يقدر يبدّل التعريفات')
+    : code === 'unknown-list' || code === 'not-found' ? L('Ce tarif n’existe plus, rechargez la page', 'This price list no longer exists, reload the page', 'هاد التعريفة ما بقاتش، عاود حمّل الصفحة')
+    : code === 'bad-price' ? L('Prix refusé par le tarif', 'Price refused by the price list', 'التعريفة رفضات هاد الثمن')
+    : L('Tarif non enregistré (', 'List price not saved (', 'الثمن ما تسجّلش (') + code + ')');
   const message = (code) => (MSG[code] ? MSG[code]() : code);
 
   let S = null;   // the open sheet: { kind, data, grid, filter, query, cat, lastSave, busy }
@@ -192,6 +200,7 @@
       const n = R().parseNumber(v);
       if (n == null || Number.isNaN(n)) return 'not-a-number';
       if (n < 0) return 'negative';
+      if (n === 0 && S.zeroRefused && S.zeroRefused.has(row.id + '|' + key)) return 'zero-price';
       return R().centsExact(n) ? '' : 'too-many-decimals';
     }
     if (key === 'barcode' && row.multi) return '';
@@ -212,6 +221,11 @@
   function changes() {
     const g = S.grid, edits = g.edits();
     const fields = S.data.fields;
+    /* A 0 refused as « offert » stays an error only while the cell still says 0. */
+    if (S.zeroRefused) S.zeroRefused.forEach((cell) => {
+      const [id, k] = cell.split('|'); const e = edits[id];
+      if (!e || !(k in e) || R().parseNumber(e[k]) !== 0) S.zeroRefused.delete(cell);
+    });
     const patches = R().diff(S.data.rows, edits, fields);
     const lists = [];
     Object.keys(edits).forEach((id) => Object.keys(edits[id]).forEach((k) => {
@@ -313,7 +327,7 @@
     if (S && S.grid) S.grid.destroy();
     const data = await window.KiwiBulkSource.load(kind);
     if (!data) { toast(L('Catalogue indisponible', 'Catalogue unavailable', 'الكتالوج ما متوفرش'), { type: 'error' }); return; }
-    S = { kind, data, grid: null, filter: 'all', query: '', cat: '', lastSave: (S && S.kind === kind && S.lastSave) || null, busy: false, shown: null, venue: venueKey(kind) };
+    S = { kind, data, grid: null, filter: 'all', query: '', cat: '', lastSave: (S && S.kind === kind && S.lastSave) || null, busy: false, shown: null, venue: venueKey(kind), zeroRefused: new Set() };
     const KV = window.KiwiVenue;
     const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
     const where = data.cloud ? L('enregistré pour tous vos appareils', 'saved for all your devices', 'كايتسجّل لجميع الأجهزة ديالك')
@@ -363,7 +377,9 @@
       label: L('Tableur du catalogue', 'Catalogue spreadsheet', 'جدول المنتجات'),
       emptyText: L('Aucun article ne correspond.', 'No item matches.', 'حتى منتج ما كايطابق.'),
       parse, validate, message, same: (k, a, b) => (k.startsWith('pl:') ? (a == null ? '' : a) === (b == null ? '' : b) : R().sameValue(k, a, b)),
-      onChange: status, onSelect: selBar,
+      /* Typing in a cell again (even 0 again) takes back a « non » to « offert »:
+         the next save asks once more. */
+      onChange: (applied) => { if (applied && S.zeroRefused) applied.forEach((a) => S.zeroRefused.delete(a.id + '|' + a.key)); status(); }, onSelect: selBar,
       describedBy: 'cgp-err',
       onCursor(info) {
         const box = document.querySelector('[data-cgp-err]'); if (!box) return;
@@ -418,6 +434,17 @@
   const why = (x) => (x.code === 'big-change' ? L('écart de ', 'change of ', 'فرق ديال ') + sg((x.next - x.old) / x.old * 100, 0) + ' %'
     : x.code === 'over-rounded' ? L('arrondi : ', 'rounded: ', 'التقريب: ') + sg(x.next - x.old, 2) + L(' sur ', ' for ', ' على ') + sg(x.requested, 2) + L(' demandés', ' asked', ' مطلوبين')
     : L('au prix d’achat ou dessous (', 'at or under cost (', 'فثمن الشراء ولا تحتو (') + fmtNum(x.cost, 2) + L(' MAD', ' MAD', ' درهم') + ')');
+  const listName = (id) => ((S.data.lists || []).find((l) => l.id === id) || { name: id }).name;
+  async function confirmFree(zeros) {
+    const list = zeros.slice(0, 50).map((x) => `<li><span>${esc(S.grid.value(x.itemId, 'name') || x.itemId)}</span><span class="n">${esc(listName(x.listId))}</span></li>`).join('');
+    return ask({
+      title: L('0 MAD = offert ?', '0 MAD = free?', '0 درهم = هدية؟'),
+      desc: plural(zeros.length, L('{n} prix de tarif est à 0. Le client ne paiera rien pour cet article dans ce tarif.', '{n} list price is 0. The customer will pay nothing for that item on that list.', '{n} ثمن فالتعريفة فيه 0. الكليان ما غادي يخلّص والو على هاد المنتج فهاد التعريفة.'),
+        L('{n} prix de tarif sont à 0. Le client ne paiera rien pour ces articles dans ces tarifs.', '{n} list prices are 0. The customer will pay nothing for those items on those lists.', '{n} أثمنة فالتعريفة فيهم 0. الكليان ما غادي يخلّص والو على هاد المنتجات فهاد التعريفات.')),
+      body: `<div class="cgp-ask"><ul>${list}</ul></div>`,
+      ok: L('Oui, offert', 'Yes, free', 'إيه، هدية'), cancel: L('Non, je corrige', 'No, I’ll fix it', 'لا، غادي نصحّح'),
+    });
+  }
   async function confirmRisky(risky) {
     if (!risky.length) return true;
     const name = (id) => (S.grid.value(id, 'name') || '');
@@ -449,6 +476,16 @@
       return false;
     }
     if (!c.patches.length && !c.lists.length) return false;
+    /* A 0 in a price list is a choice: « offert », asked once per save. The
+       undo restores what was there, a free 0 included, without asking. */
+    const zeros = c.lists.filter((x) => x.price != null && x.price !== '' && R().parseNumber(x.price) === 0);
+    if (zeros.length && !opts.isUndo && !(await confirmFree(zeros))) {
+      zeros.forEach((x) => S.zeroRefused.add(x.itemId + '|pl:' + x.listId));
+      S.filter = 'errors'; markSeg(); applyFilter(); status();
+      S.grid.focus();
+      return false;
+    }
+    zeros.forEach((x) => { x.free = true; });
     if (opts.reviewed) S.repriceRisky = new Map((opts.risky || []).map((x) => [x.id, x]));
     const risky = opts.isUndo ? [] : opts.reviewed ? (opts.risky || []) : R().riskyChanges(c.patches, S.data.rows).concat(stillRisky(c.patches));
     if (risky.length && !(await confirmRisky(risky))) {
@@ -462,7 +499,7 @@
       S.grid.focus(); return false;
     }
     S.busy = true; status();
-    const res = await window.KiwiBulkSource.save(S.kind, c.patches, c.lists.map(({ listId, itemId, price }) => ({ listId, itemId, price })));
+    const res = await window.KiwiBulkSource.save(S.kind, c.patches, c.lists.map(({ listId, itemId, price, free }) => (free ? { listId, itemId, price, free } : { listId, itemId, price })));
     S.busy = false;
     if (res.ok) {
       S.repriceRisky = null;
@@ -477,8 +514,17 @@
           : res.local ? L('Enregistré sur cet appareil.', 'Saved on this device.', 'تسجّل فهاد الجهاز.')
           : L('La caisse et la boutique en ligne voient déjà les nouvelles valeurs.', 'The till and online shop already see the new values.', 'الكاسة والمتجر الإلكتروني كايشوفو القيم الجداد دابا.'),
       });
-      if (res.listsFailed) toast(L('Les tarifs n’ont pas pu être enregistrés', 'The price lists could not be saved', 'ما قدرناش نسجّلو التعريفات'), { type: 'warn', desc: L('Le reste est enregistré. Les cellules des tarifs restent modifiées à l’écran : réessayez.', 'Everything else is saved. The price-list cells stay edited on screen: try again.', 'الباقي تسجّل. خانات التعريفات باقيين مبدّلين فالشاشة: عاود جرّب.') });
       await reload();
+      if (res.listsFailed) {
+        /* The price lists write all or nothing: every list cell of this save
+           stays edited and says why, on the cell and in the footer. */
+        const why = listWhy(res.listsError || 'unavailable'), flags = Object.create(null);
+        c.lists.forEach((x) => { (flags[x.itemId] = flags[x.itemId] || {})['pl:' + x.listId] = why; });
+        S.grid.setFlags(flags);
+        const names = [...new Set(c.lists.map((x) => S.grid.value(x.itemId, 'name') || x.itemId))];
+        toast(plural(c.lists.length, L('{n} prix de tarif non enregistré', '{n} list price not saved', '{n} ثمن ديال التعريفة ما تسجّلش'), L('{n} prix de tarif non enregistrés', '{n} list prices not saved', '{n} أثمنة ديال التعريفة ما تسجّلوش')), { type: 'warn',
+          desc: why + ' · ' + names.slice(0, 4).join(', ') + (names.length > 4 ? '…' : '') + '. ' + L('Le reste est enregistré, ces cellules sont soulignées.', 'Everything else is saved; those cells are underlined.', 'الباقي تسجّل، هاد الخانات تحتهم خط.') });
+      }
       return true;
     }
     if (res.conflicts) {

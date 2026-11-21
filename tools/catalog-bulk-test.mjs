@@ -597,5 +597,37 @@ const written = (body) => ({ ...JSON.parse(JSON.stringify(body)) });
   ok('…the batch went first', w.order[0] === 'POST /api/catalog/batch', w.order);
 }
 
+{
+  /* 0 MAD in a price list: the lists refuse it unless it is marked « offert »
+     (feat/inyad-pricelists, zero-price). The sheet asks first, then sends
+     free: true; a refusal comes back with its code, never as a bare failure. */
+  const setCalls = [];
+  const fail = (code) => { const e = new Error(code); e.code = code; return e; };
+  const lists = { list: async () => [], prices: async () => new Map(), setPrices: async (rows) => {
+    setCalls.push(rows);
+    if (rows.some((r) => r.price === 0 && r.free !== true)) throw fail('zero-price');
+    return { ok: true, written: rows.length, removed: 0 };
+  } };
+  const ok200 = { status: 200, body: { ok: true, merchant: 'amira-cafe', updatedTs: 7000, updated: 0, unchanged: 0, menu: null } };
+  const w = browser({ batchAnswer: () => ok200, priceLists: lists });
+  await sleep(1400);
+  let res = await w.win.KiwiBulkSource.save('menu', [], [{ listId: 'pl-a', itemId: 'it_1', price: 0, free: true }, { listId: 'pl-a', itemId: 'it_2', price: 8 }]);
+  eq('a confirmed « offert » 0 leaves with free: true, the other row without it', [res.ok, res.lists, setCalls[0]], [true, 2, [{ itemKey: 'it_1', listId: 'pl-a', price: 0, free: true }, { itemKey: 'it_2', listId: 'pl-a', price: 800 }]]);
+  res = await w.win.KiwiBulkSource.save('menu', [], [{ listId: 'pl-a', itemId: 'it_1', price: '0' }]);
+  eq('an unconfirmed 0 is refused, and the refusal says why', [res.ok, res.listsFailed, res.listsError, setCalls[1]], [true, true, 'zero-price', [{ itemKey: 'it_1', listId: 'pl-a', price: 0 }]]);
+  res = await w.win.KiwiBulkSource.save('menu', [], [{ listId: 'pl-a', itemId: 'it_1', price: 9, free: true }]);
+  eq('free is only ever sent with a 0', setCalls[2], [{ itemKey: 'it_1', listId: 'pl-a', price: 900 }]);
+  /* The page: asks « 0 MAD = offert ? » before the save, a « non » makes the
+     cell an error with its reason, and a failed list write flags every list
+     cell of that save with the reason instead of one generic toast. */
+  const page = fs.readFileSync(path.join(ROOT, 'assets/pages-pro/catalog-bulk/page.js'), 'utf8');
+  ok('page: a 0 in a list asks before saving and sends free', /zeros\.length && !opts\.isUndo && !\(await confirmFree\(zeros\)\)/.test(page) && /zeros\.forEach\(\(x\) => \{ x\.free = true; \}\)/.test(page));
+  ok('page: « non » turns the cell into a zero-price error shown in the footer', /S\.zeroRefused\.add\(/.test(page) && /n === 0 && S\.zeroRefused && S\.zeroRefused\.has\(row\.id \+ '\|' \+ key\)\) return 'zero-price'/.test(page) && /'zero-price': \(\) => L\('0 MAD refusé comme offert/.test(page));
+  ok('page: a list failure flags each list cell with its reason', /c\.lists\.forEach\(\(x\) => \{ \(flags\[x\.itemId\] = flags\[x\.itemId\] \|\| \{\}\)\['pl:' \+ x\.listId\] = why; \}\)/.test(page) && /listWhy\(res\.listsError/.test(page));
+  ok('page: the old generic price-list toast is gone', !page.includes('Les tarifs n’ont pas pu être enregistrés'));
+  const grid = fs.readFileSync(path.join(ROOT, 'assets/pages-pro/catalog-bulk/grid.js'), 'utf8');
+  ok('typing in a refused cell again (even 0) takes the « non » back, so the next save asks again', /o\.onChange\(applied\)/.test(grid) && /applied\.forEach\(\(a\) => S\.zeroRefused\.delete\(a\.id \+ '\|' \+ a\.key\)\)/.test(page));
+}
+
 console.log(`catalog-bulk: ${passed} passed, ${fails} failed`);
 if (fails) process.exit(1);

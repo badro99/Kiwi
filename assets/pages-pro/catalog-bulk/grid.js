@@ -12,7 +12,7 @@
  * the original rows, a validator and a parser; it keeps the EDITS apart from
  * the originals, so "what changed" is always a diff and never a guess.
  *
- *   const g = KiwiBulkGrid.create(host, { columns, rows, parse, validate, label, onChange });
+ *   const g = KiwiBulkGrid.create(host, { columns, rows, parse, validate, label, onChange(applied?) });
  *   g.edits() · g.value(id, key) · g.setValues([{id, key, value}]) · g.reset(rows)
  *   g.setFilter(ids|null) · g.checked() · g.setFlags(map) · g.undo() · g.focus()
  */
@@ -121,7 +121,7 @@
       if (applied.length && gesture !== false) undoStack.push(applied);
       if (undoStack.length > 200) undoStack.shift();
       paint();
-      if (o.onChange) o.onChange();
+      if (o.onChange) o.onChange(applied);
       return applied.length;
     }
 

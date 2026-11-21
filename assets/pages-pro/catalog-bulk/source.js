@@ -71,7 +71,7 @@
 
   /* Price lists (assets/price-lists.js, the « Tarifs » feature): its contract
      with this sheet is list() → [{ id, name, isMain }], prices(listId) →
-     Map<itemKey, cents>, setPrices([{ itemKey, listId, price: cents | null }]).
+     Map<itemKey, cents>, setPrices([{ itemKey, listId, price: cents | null, free? }]).
      Prices cross that boundary in integer centimes; the sheet shows MAD.
      Read defensively all the same: an array of rows is accepted too. */
   async function priceLists(rows) {
@@ -140,9 +140,14 @@
     const PL = window.KiwiPriceLists;
     if (!listChanges.length) return { ok: true, count: 0 };
     if (!PL || typeof PL.setPrices !== 'function') return { ok: false, count: 0 };
-    const rows = listChanges.map((x) => ({ itemKey: x.itemId, listId: x.listId, price: x.price == null || x.price === '' ? null : Math.round(Number(x.price) * 100) }));
+    /* 0 MAD reaches the price lists only as « offert » (free: true), which the
+       sheet asked the merchant about first; any other 0 is refused there. */
+    const rows = listChanges.map((x) => {
+      const price = x.price == null || x.price === '' ? null : Math.round(Number(x.price) * 100);
+      return price === 0 && x.free === true ? { itemKey: x.itemId, listId: x.listId, price, free: true } : { itemKey: x.itemId, listId: x.listId, price };
+    });
     try { await PL.setPrices(rows); return { ok: true, count: listChanges.length }; }
-    catch (_) { return { ok: false, count: 0 }; }
+    catch (e) { return { ok: false, count: 0, code: (e && e.code) || 'unavailable' }; }
   }
 
   /* After a successful write, the carte's own store takes the server's copy
@@ -168,7 +173,7 @@
     const done = async (out) => {
       if (!listChanges.length) return out;
       const lists = await savePriceLists(listChanges);
-      return Object.assign(out, lists.ok ? { lists: lists.count } : { lists: 0, listsFailed: true });
+      return Object.assign(out, lists.ok ? { lists: lists.count } : { lists: 0, listsFailed: true, listsError: lists.code });
     };
     if (!patches.length) return done({ ok: true, updated: 0, unchanged: 0 });
     if (!cloud(kind)) { applyLocal(kind, patches); return done({ ok: true, updated: patches.length, local: true }); }
