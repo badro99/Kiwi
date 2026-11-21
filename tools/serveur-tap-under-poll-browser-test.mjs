@@ -96,3 +96,5 @@ try {
   await h.close();
 }
 console.log(`\nserveur-tap-under-poll-browser-test: ${checks} checks passed`);
+// Un scénario rouge (S.run) doit sortir en rouge : sinon le gate le compte vert.
+process.exit(await S.finish({ exit: false }));
