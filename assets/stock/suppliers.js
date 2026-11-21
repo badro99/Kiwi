@@ -29,7 +29,7 @@ window.KiwiStockInternal.install('suppliers', (S) => {
       how: 'Comment le score est calculé', howBody: 'Sur 100 points : 40 pour les ventes (comparées au meilleur fournisseur), 30 pour la marge (pleine à 60 %), 20 pour l’écoulement du stock, 10 pour peu de retours. Sans prix d’achat, la marge compte pour moitié.',
       profile: 'Fiche fournisseur', viewProfile: 'Voir la fiche', sparkCap: (d) => `Ventes · ${d}`,
       orderT: 'Préparer une commande', orderSub: 'Quantité proposée : ce qui s’est vendu sur la période, moins ce qui reste en stock.',
-      orderQty: 'À commander', orderTotal: (n) => `Total · ${n} pièce${n > 1 ? 's' : ''}`, costEst: (v) => `≈ ${v} au prix d’achat`, piece: (n) => `${n} pièce${n > 1 ? 's' : ''}`, orderNone: 'Rien à réassortir : le stock couvre les ventes de la période.', orderCopy: 'Copier la commande', orderDone: 'Commande copiée', orderCopied: 'Commande copiée : collez-la dans WhatsApp ou un e-mail au fournisseur.',
+      orderQty: 'À commander', orderTotal: (n) => `Total · ${n} pièce${n > 1 ? 's' : ''}`, costEst: (v) => `≈ ${v} au prix d’achat`, piece: (n) => `${n} pièce${n > 1 ? 's' : ''}`, orderNone: 'Rien à réassortir : le stock couvre les ventes de la période.', orderCopy: 'Copier la commande', orderPo: 'Créer le bon de commande', orderPoDone: (n) => `Bon ${n} créé en brouillon : envoyez-le depuis Commandes fournisseurs.`, orderDone: 'Commande copiée', orderCopied: 'Commande copiée : collez-la dans WhatsApp ou un e-mail au fournisseur.',
       orderText: (name, lines) => `Bonjour ${name},\nVoici notre commande :\n${lines.join('\n')}\nMerci de nous confirmer les délais.`,
       table: 'Le classement complet', products: 'Articles', best: 'Meilleur', sleeping: 'Dort',
       noProducts: 'Aucun article rattaché à ce fournisseur.', curve: 'Ventes sur la période', why: 'D’où vient le score',
@@ -66,7 +66,7 @@ window.KiwiStockInternal.install('suppliers', (S) => {
       how: 'How the score works', howBody: 'Out of 100 points: 40 for sales (against the best supplier), 30 for margin (full at 60%), 20 for stock sell-through, 10 for few returns. Without cost prices, margin counts for half.',
       profile: 'Supplier profile', viewProfile: 'View profile', sparkCap: (d) => `Sales · ${d}`,
       orderT: 'Prepare an order', orderSub: 'Suggested quantity: what sold over the period, minus what is left in stock.',
-      orderQty: 'To order', orderTotal: (n) => `Total · ${n} piece${n > 1 ? 's' : ''}`, costEst: (v) => `≈ ${v} at cost price`, piece: (n) => `${n} piece${n > 1 ? 's' : ''}`, orderNone: 'Nothing to restock: stock covers the period’s sales.', orderCopy: 'Copy the order', orderDone: 'Order copied', orderCopied: 'Order copied: paste it into WhatsApp or an e-mail to the supplier.',
+      orderQty: 'To order', orderTotal: (n) => `Total · ${n} piece${n > 1 ? 's' : ''}`, costEst: (v) => `≈ ${v} at cost price`, piece: (n) => `${n} piece${n > 1 ? 's' : ''}`, orderNone: 'Nothing to restock: stock covers the period’s sales.', orderCopy: 'Copy the order', orderPo: 'Create the purchase order', orderPoDone: (n) => `Order ${n} created as a draft: send it from Purchase orders.`, orderDone: 'Order copied', orderCopied: 'Order copied: paste it into WhatsApp or an e-mail to the supplier.',
       orderText: (name, lines) => `Hello ${name},\nHere is our order:\n${lines.join('\n')}\nPlease confirm the lead time.`,
       table: 'Full ranking', products: 'Products', best: 'Best', sleeping: 'Idle',
       noProducts: 'No products linked to this supplier.', curve: 'Sales over the period', why: 'Where the score comes from',
@@ -103,7 +103,7 @@ window.KiwiStockInternal.install('suppliers', (S) => {
       how: 'كيف تُحسب النقطة', howBody: 'من 100 نقطة: 40 للمبيعات (مقارنة بأفضل مورد)، 30 للهامش (كاملة عند 60٪)، 20 لتصريف المخزون، 10 لقلة المرتجعات. بلا ثمن شراء، يُحسب الهامش بالنصف.',
       profile: 'ملف المورد', viewProfile: 'عرض الملف', sparkCap: (d) => `المبيعات · ${d}`,
       orderT: 'تحضير طلبية', orderSub: 'الكمية المقترحة: ما بيع خلال الفترة ناقص ما تبقى في المخزون.',
-      orderQty: 'للطلب', orderTotal: (n) => `المجموع · ${n} قطعة`, costEst: (v) => `≈ ${v} بثمن الشراء`, piece: (n) => `${n} قطعة`, orderNone: 'لا شيء لإعادة التزويد: المخزون يغطي مبيعات الفترة.', orderCopy: 'انسخ الطلبية', orderDone: 'نُسخت الطلبية', orderCopied: 'نُسخت الطلبية: الصقها في واتساب أو في بريد إلى المورد.',
+      orderQty: 'للطلب', orderTotal: (n) => `المجموع · ${n} قطعة`, costEst: (v) => `≈ ${v} بثمن الشراء`, piece: (n) => `${n} قطعة`, orderNone: 'لا شيء لإعادة التزويد: المخزون يغطي مبيعات الفترة.', orderCopy: 'انسخ الطلبية', orderPo: 'أنشئ أمر الشراء', orderPoDone: (n) => `تم إنشاء الأمر ${n} كمسودة: أرسله من أوامر الشراء.`, orderDone: 'نُسخت الطلبية', orderCopied: 'نُسخت الطلبية: الصقها في واتساب أو في بريد إلى المورد.',
       orderText: (name, lines) => `السلام عليكم ${name}،\nهذه طلبيتنا:\n${lines.join('\n')}\nالمرجو تأكيد آجال التسليم.`,
       table: 'الترتيب الكامل', products: 'السلع', best: 'الأفضل', sleeping: 'راكدة',
       noProducts: 'لا سلعة مرتبطة بهذا المورد.', curve: 'المبيعات خلال الفترة', why: 'من أين تأتي النقطة',
@@ -527,7 +527,7 @@ window.KiwiStockInternal.install('suppliers', (S) => {
       ${rows ? `<div><h4 class="sr-h4">${esc(T.orderT)}</h4><p class="sr-order-sub">${esc(want.some((q) => q > 0) ? T.orderSub : T.orderNone)}</p>
         <div class="sr-scroll"><table class="sr-table"><thead><tr><th>${esc(T.products)}</th><th>${esc(T.units)}</th><th>${esc(T.revenue)}</th><th>${esc(T.margin)}</th><th>${esc(T.stock)}</th><th>${esc(T.returns)}</th><th class="sr-qty">${esc(T.orderQty)}</th></tr></thead>
         <tbody>${rows}</tbody><tfoot><tr><td colspan="6"><span data-sr-total></span> <span class="sr-cost" data-sr-cost></span></td><td></td></tr></tfoot></table></div></div>
-        <div class="sr-sticky"><button type="button" class="st-btn primary" data-sr-copy>${icon('receipt_long')}<span>${esc(T.orderCopy)}</span></button></div>` : `<p>${esc(T.noProducts)}</p>`}
+        <div class="sr-sticky"><button type="button" class="st-btn" data-sr-copy>${icon('receipt_long')}<span>${esc(T.orderCopy)}</span></button><button type="button" class="st-btn primary" data-activation="write" data-sr-po>${icon('note_add')}<span>${esc(T.orderPo)}</span></button></div>` : `<p>${esc(T.noProducts)}</p>`}
     </div>`;
   }
   /* Préparer une commande : Kiwi ne l'envoie pas au fournisseur, il la rédige
@@ -553,6 +553,25 @@ window.KiwiStockInternal.install('suppliers', (S) => {
     };
     root.addEventListener('input', (e) => { if (e.target.matches('[data-sr-qty]')) total(); });
     total();
+    /* Le bon de commande réel : create-po avec l'id de la fiche (la page
+       Fournisseurs le crée, assets/pages-pro/suppliers.js › sup-make-po). */
+    const po = root.querySelector('[data-sr-po]');
+    if (po) {
+      root.addEventListener('input', () => { po.disabled = !total(); });
+      po.disabled = !total();
+      po.addEventListener('click', async () => {
+        const lines = inputs().map((el) => {
+          const q = Math.max(0, parseInt(el.value, 10) || 0), it = s.products[+el.dataset.srQty];
+          return q && it ? { sku: String(it.id), itemId: String(it.id), label: String(it.name || ''), qty: q, unitPrice: it.cost > 0 ? it.cost : 0 } : null;
+        }).filter(Boolean);
+        const make = window.Kiwi && window.Kiwi.handlers && window.Kiwi.handlers['sup-make-po'];
+        if (!lines.length || !make) return;
+        po.disabled = true;
+        const made = await make(null, { supplierId: s.id, name: s.name || '', lines });
+        if (made && made.number) { window.Kiwi?.toast?.(T.orderPoDone(made.number), { type: 'success' }); root.closest('.kiwi-modal-overlay, .kiwi-modal')?.querySelector('[data-dismiss]')?.click(); }
+        else po.disabled = false;
+      });
+    }
     if (!btn) return;
     btn.addEventListener('click', async () => {
       const lines = inputs().map((el) => {
@@ -677,11 +696,30 @@ window.KiwiStockInternal.install('suppliers', (S) => {
     new MutationObserver(() => { if (!queued) { queued = true; requestAnimationFrame(scan); } }).observe(document.body, { childList: true, subtree: true });
   }
 
-  /* Le menu Outils du stock mène au tableau, dans l'onglet Fournisseurs. */
+  /* Une seule destination : la page Fournisseurs, onglet Classement (le
+     tableau y est monté par ce module). Le menu Outils et l'onglet du stock y
+     mènent. */
   async function open() {
     const H = window.Kiwi && window.Kiwi.handlers;
+    if (H && H['nav-fournisseurs']) return H['nav-fournisseurs'](null, 'rank');
     if (H && H['stock-tab']) H['stock-tab']({ dataset: { tab: 'suppliers' } });
-    requestAnimationFrame(() => { scan(); const b = document.querySelector('[data-sr-board]'); if (b && b.scrollIntoView) b.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  }
+  /* Pour la fiche fournisseur (grand livre) : score, rang, verdict, à
+     réassortir. Mêmes ids que le document procurement et la table suppliers. */
+  async function brief(id) {
+    const data = await fetchRanking(days);
+    const list = (data && data.suppliers) || [];
+    const s = list.find((x) => x.id === id);
+    if (!s) return null;
+    last = data;
+    const v = verdict(s);
+    return { score: Math.round(s.score || 0), rank: s.rank, of: list.length, tone: v.tone, label: v.label, say: v.say,
+      reorder: suggestions(s).reduce((a, q) => a + q, 0), demo: !!data.demo };
+  }
+  const H0 = window.Kiwi && window.Kiwi.handlers;
+  if (H0) {
+    H0['sr-brief'] = (_el, id) => brief(String(id || ''));
+    H0['sr-profile'] = async (_el, id) => { if (!last || !(last.suppliers || []).some((x) => x.id === id)) await brief(String(id || '')); openProfile(String(id || '')); };
   }
 
   return { open, mount, openTag, verdict };

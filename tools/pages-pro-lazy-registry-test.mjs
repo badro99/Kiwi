@@ -22,6 +22,8 @@ const REFERENCES = {
   'assets/pages-pro/cost-variance.js': ['costvar-open', 'tools/pages-pro-cost-variance-reference.json'],
   /* Born lazy (price lists, 21 November 2026): its reference is its own first render. */
   'assets/pages-pro/price-lists.js': ['nav-pricelists', 'tools/pages-pro-price-lists-reference.json'],
+  /* Born lazy (Fournisseurs, 21 November 2026): its reference is its own first render. */
+  'assets/pages-pro/suppliers.js': ['nav-fournisseurs', 'tools/pages-pro-suppliers-reference.json'],
 };
 const entries = [...registry.matchAll(/url: '([^']+)', handlers: (\[[^\]]+\])/g)];
 assert.ok(entries.length >= 1, 'registry lists its chunks');

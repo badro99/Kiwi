@@ -186,5 +186,17 @@
   "price_list_clients": [
     {"merchant": "upgrade-synth-1", "client_id": "client-synth-1", "list_id": "pl-synth-1", "updated_ts": 157},
     {"merchant": "upgrade-synth-2", "client_id": "client-synth-2", "list_id": "pl-synth-2", "updated_ts": 158}
+  ],
+  "suppliers": [
+    {"merchant": "upgrade-synth-1", "id": "fixture-id-1", "name": "fixture-name-1", "phone": "fixture-phone-1", "email": "fixture-email-1", "ice": "fixture-ice-1", "rib": "fixture-rib-1", "bank": "fixture-bank-1", "address": "fixture-address-1", "notes": "fixture-notes-1", "terms_days": 137, "archived": 0, "source": "fixture-source-1", "created_ts": 137, "updated_ts": 137},
+    {"merchant": "upgrade-synth-2", "id": "fixture-id-2", "name": "fixture-name-2", "phone": "fixture-phone-2", "email": "fixture-email-2", "ice": "fixture-ice-2", "rib": "fixture-rib-2", "bank": "fixture-bank-2", "address": "fixture-address-2", "notes": "fixture-notes-2", "terms_days": 274, "archived": 1, "source": "fixture-source-2", "created_ts": 274, "updated_ts": 274}
+  ],
+  "money_ledger": [
+    {"id": "fixture-id-1", "merchant": "upgrade-synth-1", "idem_key": "fixture-idem_key-1", "entry_date": "fixture-entry_date-1", "amount_cents": 137, "direction": "in", "party_type": "supplier", "party_id": "fixture-party_id-1", "kind": "fixture-kind-1", "method": "fixture-method-1", "note": "fixture-note-1", "ref": "fixture-ref-1", "attachment_ref": "fixture-attachment_ref-1", "sale_id": "fixture-sale_id-1", "purchase_order_id": "fixture-purchase_order_id-1", "expense_id": "fixture-expense_id-1", "cheque_id": "fixture-cheque_id-1", "archived": 0, "internal": 0, "status": "posted", "deleted_ts": 137, "created_by": "fixture-created_by-1", "approved_by": "fixture-approved_by-1", "voided_by": "fixture-voided_by-1", "created_at": 137},
+    {"id": "fixture-id-2", "merchant": "upgrade-synth-2", "idem_key": "fixture-idem_key-2", "entry_date": "fixture-entry_date-2", "amount_cents": 274, "direction": "out", "party_type": "cashbook", "party_id": "fixture-party_id-2", "kind": "fixture-kind-2", "method": "fixture-method-2", "note": "fixture-note-2", "ref": "fixture-ref-2", "attachment_ref": "fixture-attachment_ref-2", "sale_id": "fixture-sale_id-2", "purchase_order_id": "fixture-purchase_order_id-2", "expense_id": "fixture-expense_id-2", "cheque_id": "fixture-cheque_id-2", "archived": 1, "internal": 1, "status": "pending", "deleted_ts": 274, "created_by": "fixture-created_by-2", "approved_by": "fixture-approved_by-2", "voided_by": "fixture-voided_by-2", "created_at": 274}
+  ],
+  "supplier_ledger_state": [
+    {"merchant": "upgrade-synth-1", "started_ts": 137, "procurement_rev": 137, "updated_ts": 137},
+    {"merchant": "upgrade-synth-2", "started_ts": 274, "procurement_rev": 274, "updated_ts": 274}
   ]
 }

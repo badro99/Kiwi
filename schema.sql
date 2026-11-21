@@ -1839,7 +1839,9 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
   invoiced_cents INTEGER NOT NULL DEFAULT 0,
   command_id TEXT NOT NULL DEFAULT '',
   created_ts INTEGER NOT NULL,
-  updated_ts INTEGER NOT NULL
+  updated_ts INTEGER NOT NULL,
+  -- suppliers.id (0030). `supplier` reste le nom imprimé sur le bon, pour l'histoire.
+  supplier_id TEXT NOT NULL DEFAULT ''
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_po_number ON purchase_orders (merchant, number);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_po_seq ON purchase_orders (merchant, seq);
@@ -2748,3 +2750,76 @@ CREATE TABLE IF NOT EXISTS price_list_clients (
   PRIMARY KEY (merchant, client_id)
 );
 CREATE INDEX IF NOT EXISTS idx_price_list_clients_list ON price_list_clients (merchant, list_id);
+-- Fournisseurs et grand livre d'argent signé (0030, functions/api/_ledger.js).
+-- `suppliers` est la source de vérité des fournisseurs ; ceux du document
+-- `procurement` y sont importés avec le même id (functions/api/_suppliers.js).
+CREATE TABLE IF NOT EXISTS suppliers (
+  merchant     TEXT NOT NULL,
+  id           TEXT NOT NULL,
+  name         TEXT NOT NULL,
+  phone        TEXT NOT NULL DEFAULT '',
+  email        TEXT NOT NULL DEFAULT '',
+  ice          TEXT NOT NULL DEFAULT '',
+  rib          TEXT NOT NULL DEFAULT '',
+  bank         TEXT NOT NULL DEFAULT '',
+  address      TEXT NOT NULL DEFAULT '',
+  notes        TEXT NOT NULL DEFAULT '',
+  terms_days   INTEGER NOT NULL DEFAULT 0,
+  archived     INTEGER NOT NULL DEFAULT 0,
+  source       TEXT NOT NULL DEFAULT '',
+  created_ts   INTEGER NOT NULL,
+  updated_ts   INTEGER NOT NULL,
+  PRIMARY KEY (merchant, id)
+);
+CREATE INDEX IF NOT EXISTS idx_suppliers_name ON suppliers (merchant, archived, name);
+
+-- Une ligne = un mouvement d'argent ou de valeur entre le commerçant et un
+-- tiers, vu du commerçant : `in` = il a reçu (marchandise, espèces), `out` =
+-- il a donné (paiement, marchandise à crédit). Solde d'un tiers = Σ in − Σ out
+-- sur les lignes vivantes (archived = 0, deleted_ts NULL, internal = 0, status = 'posted') :
+-- positif = le commerçant doit au tiers, négatif = le tiers doit au commerçant.
+CREATE TABLE IF NOT EXISTS money_ledger (
+  id                TEXT PRIMARY KEY,
+  merchant          TEXT NOT NULL,
+  idem_key          TEXT NOT NULL,
+  entry_date        TEXT NOT NULL,
+  amount_cents      INTEGER NOT NULL CHECK (amount_cents > 0),
+  direction         TEXT NOT NULL CHECK (direction IN ('in', 'out')),
+  party_type        TEXT NOT NULL CHECK (party_type IN ('customer', 'supplier', 'cashbook')),
+  party_id          TEXT NOT NULL DEFAULT '',
+  kind              TEXT NOT NULL DEFAULT 'manual',
+  method            TEXT NOT NULL DEFAULT 'other',
+  note              TEXT NOT NULL DEFAULT '',
+  -- Référence structurée (n° de bon, de facture) : l'écran la met en mots
+  -- dans la langue du lecteur ; le serveur n'écrit jamais de libellé.
+  ref               TEXT NOT NULL DEFAULT '',
+  attachment_ref    TEXT NOT NULL DEFAULT '',
+  sale_id           TEXT,
+  purchase_order_id TEXT,
+  expense_id        TEXT,
+  cheque_id         TEXT,
+  archived          INTEGER NOT NULL DEFAULT 0,
+  internal          INTEGER NOT NULL DEFAULT 0,
+  -- 'posted' compte dans les soldes ; 'pending' attend l'accord du patron
+  -- (réception de bon saisie par un employé), hors soldes jusque-là.
+  status            TEXT NOT NULL DEFAULT 'posted' CHECK (status IN ('posted', 'pending')),
+  deleted_ts        INTEGER,
+  created_by        TEXT NOT NULL DEFAULT '',
+  approved_by       TEXT NOT NULL DEFAULT '',
+  voided_by         TEXT NOT NULL DEFAULT '',
+  created_at        INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_money_ledger_idem ON money_ledger (merchant, idem_key);
+CREATE INDEX IF NOT EXISTS idx_money_ledger_party ON money_ledger (merchant, party_type, party_id, entry_date);
+CREATE INDEX IF NOT EXISTS idx_money_ledger_po ON money_ledger (merchant, purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_money_ledger_expense ON money_ledger (merchant, expense_id);
+
+-- Où en est l'import (identité des fournisseurs seulement, jamais de montant)
+-- du document `procurement` pour un commerçant : la révision déjà lue, et
+-- l'instant où le grand livre a démarré pour lui.
+CREATE TABLE IF NOT EXISTS supplier_ledger_state (
+  merchant         TEXT PRIMARY KEY,
+  started_ts       INTEGER NOT NULL,
+  procurement_rev  INTEGER NOT NULL DEFAULT 0,
+  updated_ts       INTEGER NOT NULL
+);

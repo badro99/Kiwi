@@ -14,9 +14,11 @@
 // procurement.receipts[].lines[].itemId). Un article sans l'un ni l'autre est
 // compté à part (`untagged`) pour que la boutique le range.
 //
-// Aucune écriture. Lecture réservée au propriétaire et aux opérateurs : les
-// marges ne sont pas affaire de caisse.
-import { entitledMerchant } from '../../auth/_lib.js';
+// Aucune écriture. Lecture réservée au patron, au gérant et aux opérateurs :
+// les marges (donc les prix d'achat) ne sont pas affaire de caisse. Le palier
+// de la session (code prouvé, auth/_session-tier.js) le décide, pas l'écran.
+import { entitledMerchant, isOperator } from '../../auth/_lib.js';
+import { sessionTierAtLeast } from '../../auth/_session-tier.js';
 import { loadParts } from '../_catalog-parts.js';
 import { readDoc } from '../_doc-cas.js';
 
@@ -163,6 +165,13 @@ export async function onRequestGet({ request, env }) {
   const asked = String(url.searchParams.get('merchant') || '').slice(0, 64);
   const merchant = asked && await entitledMerchant(request, env, asked);
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+  let operator = false;
+  try { operator = await isOperator(request, env); } catch (_) { operator = false; }
+  if (!operator) {
+    let tier = false;
+    try { tier = await sessionTierAtLeast(request, env, 'manager'); } catch (_) { tier = false; }
+    if (!tier) return json({ error: 'manager-required' }, 403);
+  }
   const days = Math.max(7, Math.min(365, parseInt(url.searchParams.get('days'), 10) || 30));
   const now = Date.now();
   let catalog = {};
