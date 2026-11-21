@@ -408,6 +408,53 @@ eq('détail : les inventaires, le plus récent d’abord', (DI.counts || []).sli
 eq('détail : un autre compte, 403', (await get(`merchant=${SHOP}&${RANGE}&item=poulet`, stranger)).status, 403);
 eq('détail : la caisse, 403', (await get(`merchant=${SHOP}&${RANGE}&item=poulet`, till)).status, 403);
 
+/* ── 8. Export CSV : pas de formule venue d'un nom saisi ─────────────────── */
+{
+  const vm = await import('node:vm');
+  const blobs = [];
+  const el = () => ({ click() {}, remove() {}, style: {} });
+  const window = { Kiwi: { handlers: {}, toast() {} }, KiwiI18n: { getLang: () => 'fr' }, KiwiCloudDoc: { currentSlug: () => 'resto-cv' } };
+  const rows = [
+    { itemId: 'a', name: '=HYPERLINK("http://x","clic")', unit: 'kg', status: 'ok', opening: 1, supply: 0, closing: 2, actualUse: -1, theoretical: 0, waste: 0, gap: -1, gapCents: -2500 },
+    { itemId: 'b', name: '+1+1', unit: '@u', status: 'ok', opening: 1, supply: 0, closing: 0, actualUse: 1, theoretical: 0, waste: 0, gap: 1, gapCents: 900 },
+    { itemId: 'c', name: '-2+3', unit: '\tkg', status: 'ok', opening: 1, supply: 0, closing: 0, actualUse: 1, theoretical: 1, waste: 0, gap: 0, gapCents: 0 },
+    { itemId: 'd', name: '\rcmd', unit: '', status: 'no-count', theoreticalInRange: 2 },
+    { itemId: 'e', name: 'Poulet, fermier', unit: 'kg', status: 'ok', opening: 1, supply: 0, closing: 1, actualUse: 0, theoretical: 0, waste: 0, gap: 0, gapCents: 0 },
+  ];
+  const payload = { merchant: 'resto-cv', scope: 'all', storeCount: 2, canEdit: true, range: { fromDay: '2026-11-10', toDay: '2026-11-16', from: T(10, 5), to: T(17, 5) },
+    total: { ratios: {}, target: null, leakCents: 0, netGapCents: 0 },
+    sites: [{ merchant: 'resto-cv', name: '@Centre', ratios: {}, coverage: {}, losses: [], variance: { rows, countsFound: true, windows: [] } }] };
+  const ctx = {
+    window, navigator: { onLine: true }, console, setTimeout: () => 0,
+    localStorage: { getItem: () => null, setItem() {} },
+    document: { getElementById: () => ({}), createElement: el, querySelector: () => null, body: { appendChild() {} }, head: { appendChild() {} } },
+    fetch: async () => ({ ok: true, status: 200, json: async () => payload }),
+    Blob: class { constructor(parts) { blobs.push(parts.join('')); } },
+    URL: { createObjectURL: () => 'blob:x', revokeObjectURL() {} },
+    Intl,
+  };
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/pages-pro/cost-variance.js'), 'utf8'), ctx);
+  const H = window.Kiwi.handlers;
+  H['costvar-scope']({ dataset: { scope: 'all' } });
+  H['costvar-mount']({ nodeType: 1, isConnected: true, innerHTML: '' }, { real: true });
+  await new Promise((r) => setImmediate(r)); await new Promise((r) => setImmediate(r));
+  H['costvar-csv']();
+  const csv = (blobs[0] || '').replace(/^﻿/, '').split('\r\n');
+  const parse = (line) => { const out = []; let cur = '', q = false; for (let i = 0; i < line.length; i++) { const ch = line[i];
+    if (q) { if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; }
+    else if (ch === '"') q = true; else if (ch === ',') { out.push(cur); cur = ''; } else cur += ch; } out.push(cur); return out; };
+  const body = csv.slice(1).map(parse);
+  const byName = (prefix) => body.find((r) => r[0].startsWith(prefix)) || [];
+  ok('CSV : une ligne par matière', body.length === 5, csv);
+  eq('CSV : « =HYPERLINK… » part en texte (apostrophe), jamais en formule', byName("'=HYPERLINK")[0], '\'=HYPERLINK("http://x","clic")');
+  eq('CSV : + - @ tabulation retour chariot neutralisés en tête', [byName("'+1")[0], byName("'+1")[1], byName("'-2")[0], byName("'-2")[1], byName("'\r")[0]], ["'+1+1", "'@u", "'-2+3", "'\tkg", "'\rcmd"]);
+  eq('CSV : le nom du magasin aussi', byName("'=HYPERLINK")[2], "'@Centre");
+  eq('CSV : un écart négatif reste un nombre (pas d’apostrophe)', [byName("'=HYPERLINK")[7], byName("'=HYPERLINK")[10], byName("'=HYPERLINK")[11]], ['-1', '-1', '-25.00']);
+  eq('CSV : une virgule dans un nom reste dans sa cellule', byName('Poulet')[0], 'Poulet, fermier');
+  ok('CSV : aucune cellule ne commence par un déclencheur de formule', body.every((r) => r.slice(0, 4).every((x) => !/^[=+\-@\t\r]/.test(x))), body);
+}
+
 /* L'index qui garde les sommes sur la période. */
 const plan = sqlite.prepare(`EXPLAIN QUERY PLAN SELECT SUM(qty_milli) FROM inventory_movements WHERE merchant = ? AND occurred_ts >= ? AND occurred_ts < ?`).all(SHOP, 1, 2);
 ok('les sommes du registre passent par l’index (merchant, occurred_ts)', plan.some((r) => /idx_inventory_movements_merchant_time/.test(r.detail)), plan);

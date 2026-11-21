@@ -724,11 +724,16 @@
   }
   function csvText() {
     const c = t();
-    const cell = (v) => { const s = v == null ? '' : String(v); return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-    const num = (v) => (v == null ? '' : String(v));
-    const rows = rowsOf(last.data).map((r) => [r.name, r.unit || '', r.site || '', statusOf(r) || 'ok', num(r.opening), num(r.supply), num(r.closing),
+    const quote = (s) => (/[",;\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s);
+    /* Un nom saisi par le commerçant ou l'équipe (matière, magasin) qui
+       commence par = + - @, une tabulation ou un retour chariot deviendrait
+       une formule dans Excel : il part précédé d'une apostrophe. Seulement
+       les colonnes de texte ; un nombre (un écart négatif) reste un nombre. */
+    const text = (v) => { const s = v == null ? '' : String(v); return quote(/^[=+\-@\t\r]/.test(s) ? "'" + s : s); };
+    const num = (v) => (v == null || !Number.isFinite(Number(v)) ? '' : String(Number(v)));
+    const rows = rowsOf(last.data).map((r) => [text(r.name), text(r.unit || ''), text(r.site || ''), text(statusOf(r) || 'ok'), num(r.opening), num(r.supply), num(r.closing),
       num(r.actualUse), num(r.theoretical != null ? r.theoretical : r.theoreticalInRange), num(r.waste), num(r.gap), r.gapCents == null ? '' : (r.gapCents / 100).toFixed(2)]);
-    return '\uFEFF' + [c.csvCols, ...rows].map((r) => r.map(cell).join(',')).join('\r\n');
+    return '\uFEFF' + [c.csvCols.map(text), ...rows].map((r) => r.join(',')).join('\r\n');
   }
 
   H['costvar-mount'] = (slot, opts) => mount(slot && slot.nodeType === 1 ? slot : null, opts || {});
