@@ -174,8 +174,9 @@
     card.setAttribute('data-plinv', '');
     card.innerHTML = '<h4 class="inv-section-title">' + esc(L('Articles du catalogue', 'Catalogue items', 'سلع الكتالوج')) + '</h4><div class="inv-fields">'
       + '<div class="inv-field"><label>' + esc(L('Tarif', 'Price list', 'التسعيرة')) + '</label><select data-plinv-list><option value="main">' + esc(L('Prix principal', 'Main price', 'الثمن الأساسي')) + '</option></select></div>'
-      + '<div class="inv-field"><label>' + esc(L('Ajouter un article', 'Add an item', 'إضافة سلعة')) + '</label><input data-plinv-q type="search" autocomplete="off" placeholder="' + esc(L('Nom ou référence', 'Name or reference', 'الاسم أو المرجع')) + '"></div>'
+      + '<div class="inv-field"><label>' + esc(L('Ajouter un article', 'Add an item', 'إضافة سلعة')) + '</label><input data-plinv-q type="search" autocomplete="off"></div>'
       + '<div class="inv-field wide" data-plinv-hits></div></div>';
+    card.querySelector('[data-plinv-q]').placeholder = L('Nom ou référence', 'Name or reference', 'الاسم أو المرجع');
     section.parentNode.insertBefore(card, section);
     invoiceLists().then(function (ls) {
       var sel = card.querySelector('[data-plinv-list]');

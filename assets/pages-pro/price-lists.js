@@ -56,9 +56,9 @@
 
   function css() {
     if (document.getElementById('pl-css')) return;
-    const s = document.createElement('style');
-    s.id = 'pl-css';
-    s.textContent = `
+    const style = document.createElement('style');
+    style.id = 'pl-css';
+    style.textContent = `
 .pl-page{display:grid;gap:16px}
 .pl-i{width:18px;height:18px;flex:none}
 .pl-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
@@ -96,7 +96,7 @@
 .pl-head h2{margin:0;font-size:20px;font-weight:600}
 @media(max-width:640px){.pl-table input{width:84px}}
 `;
-    document.head.appendChild(s);
+    document.head.appendChild(style);
   }
 
   const chanLabel = (k) => (CHANNELS.find(([id]) => id === k) || [k, () => k])[1]();
@@ -344,7 +344,7 @@
         channels: CHANNELS.map(([id]) => id).filter((id) => f(`[data-c="${id}"]`).checked),
         pct: Number(String(f('[data-p]').value || '0').replace(',', '.')) || 0, step: Number(f('[data-s]').value) || 0,
       };
-      if (!spec.name) { toast(errorText('name-required'), { type: 'error' }); return; }
+      if (!spec.name) { failToast({ code: 'name-required' }); return; }
       go.disabled = true;
       try {
         const out = await API().create(spec);

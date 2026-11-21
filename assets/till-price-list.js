@@ -160,9 +160,9 @@
   /* ── le bouton du ticket et la feuille de choix ── */
   function css() {
     if (document.getElementById('tpl-css')) return;
-    var s = document.createElement('style');
-    s.id = 'tpl-css';
-    s.textContent = '.tpl-chip{display:inline-flex;align-items:center;gap:6px;margin:6px 0 0;padding:5px 10px;border-radius:999px;border:1px solid var(--line,rgba(10,15,13,.14));background:transparent;color:var(--ink,#0A0F0D);font:500 12.5px/1.2 "Inter Tight",system-ui,sans-serif;cursor:pointer}'
+    var style = document.createElement('style');
+    style.id = 'tpl-css';
+    style.textContent = '.tpl-chip{display:inline-flex;align-items:center;gap:6px;margin:6px 0 0;padding:5px 10px;border-radius:999px;border:1px solid var(--line,rgba(10,15,13,.14));background:transparent;color:var(--ink,#0A0F0D);font:500 12.5px/1.2 "Inter Tight",system-ui,sans-serif;cursor:pointer}'
       + '.tpl-chip.is-on{border-color:var(--atlas,#0B6E4F);background:rgba(11,110,79,.08);color:var(--riad,#053B2C)}'
       + '.tpl-chip svg{width:15px;height:15px;fill:currentColor;flex:none}'
       + '.tpl-chip small{color:var(--ink-3,#5d6662);font-weight:400}'
@@ -172,7 +172,7 @@
       + '.tpl-opt{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin:0 0 8px;padding:12px 14px;border-radius:12px;border:1px solid var(--line,rgba(10,15,13,.12));background:transparent;color:inherit;font:500 14px/1.3 inherit;text-align:start;cursor:pointer}'
       + '.tpl-opt.is-on{border-color:var(--atlas,#0B6E4F);background:rgba(11,110,79,.08)}.tpl-opt small{font-weight:400;color:var(--ink-3,#5d6662)}'
       + '.tpl-close{margin-top:6px;width:100%;padding:11px;border-radius:12px;border:0;background:rgba(10,15,13,.06);color:inherit;font:500 14px inherit;cursor:pointer}';
-    document.head.appendChild(s);
+    document.head.appendChild(style);
   }
   var ICON = 'M856-390 570-104q-12 12-27 18t-30 6q-15 0-30-6t-27-18L103-457q-11-11-17-25.5T80-513v-287q0-33 23.5-56.5T160-880h287q16 0 31 6.5t26 17.5l352 353q12 12 17.5 27t5.5 30q0 15-5.5 29.5T856-390ZM513-160l286-286-353-354H160v286l353 354ZM260-640q25 0 42.5-17.5T320-700q0-25-17.5-42.5T260-760q-25 0-42.5 17.5T200-700q0 25 17.5 42.5T260-640Zm220 160Z';
   /* `clientId` (facultatif) : la fiche du ticket qu'on dessine. Le ticket se
