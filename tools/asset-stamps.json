@@ -892,8 +892,8 @@
     "sha": "a69c85ba97ce274b"
   },
   "assets/interactive/handlers.js": {
-    "v": "3",
-    "sha": "71e78d1307422032"
+    "v": "5",
+    "sha": "d247dc9e9bd7df64"
   },
   "assets/interactive/helpers.js": {
     "v": "1",
@@ -1504,8 +1504,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2248",
-    "sha": "7cd13a655e8c87a3"
+    "v": "2249",
+    "sha": "8ea16ca56787078d"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1544,8 +1544,8 @@
     "sha": "710fafda2b7f14c7"
   },
   "assets/pages-pro/cheques.js": {
-    "v": "2",
-    "sha": "9886c959105c3d0c"
+    "v": "3",
+    "sha": "1023f5d4ebc7fb06"
   },
   "assets/pages-pro/cost-variance.js": {
     "v": "11",
@@ -1600,8 +1600,8 @@
     "sha": "a042b4c42a697836"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "291",
-    "sha": "81e05af6bfa59de2"
+    "v": "292",
+    "sha": "5455648868da8637"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

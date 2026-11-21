@@ -891,9 +891,11 @@ tfoot td{font-weight:600;border-bottom:0;border-top:2px solid #0A0F0D}.head{disp
   handlers['nav-cheques'] = (_el, filter) => {
     if (typeof filter === 'string' && FILTERS().some((f) => f[0] === filter)) S.filter = filter;
     if (typeof filter === 'string' && filter.startsWith('party:')) { S.party = filter.slice(6); S.filter = 'all'; }
+    const open = typeof filter === 'string' && filter.startsWith('cheque:') ? filter.slice(7) : '';
+    if (open) S.filter = 'all';
     S.data = null;
     paint();
-    return reload();
+    return reload().then(() => { if (open && canOpen()) openDetail(open); });
   };
   handlers['chq-filter'] = (_el, k) => {
     if (k === 'clear') { S.party = ''; S.from = ''; S.to = ''; S.q = ''; paint(); return; }

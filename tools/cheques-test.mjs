@@ -610,6 +610,10 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
   assert.match(dir, /import\('\.\/client-cheques\.js\?v=\d+'\)\.then\(function \(lib\) \{ return lib\.mountClientCheques\(/, 'the client card loads it');
   const page = fs.readFileSync(path.join(ROOT, 'assets/pages-pro/cheques.js'), 'utf8');
   assert.match(page, /filter\.startsWith\('party:'\)/, 'the portfolio opens filtered on that customer');
+  /* Une vente annulée au tableau de bord dont le chèque est encore en main : le serveur le nomme, l'écran propose d'aller l'annuler. */
+  const hd = fs.readFileSync(path.join(ROOT, 'assets/interactive/handlers.js'), 'utf8');
+  assert.match(hd, /const cq = Array\.isArray\(payload && payload\.cheques\)/); assert.match(hd, /b\.dataset\.arg = 'cheque:' \+ id/);
+  assert.match(page, /filter\.startsWith\('cheque:'\)/);
   ok('client card: cheques in hand and bounced (owed on the account), link to the filtered portfolio, nothing for a cashier or an empty book');
 }
 
