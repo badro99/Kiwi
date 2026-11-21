@@ -324,16 +324,15 @@ export async function onRequestGet({ request, env }) {
   const from = businessBoundary(span.fromDay, cutoff, zone);
   const to = Math.min(businessBoundary(addBusinessDays(span.toDay, 1), cutoff, zone), Date.now() + 1);
 
-  let sites = [{ merchant, name: '' }];
   const wantAll = url.searchParams.get('scope') === 'all';
-  if (wantAll) {
-    const owned = await ownedStores(request, env, merchant);
-    const list = (owned.stores || []).filter((s) => s && s.merchant);
-    /* Le magasin demandé reste dans la liste même si le registre ne le
-     * connaît pas encore : il a déjà passé la porte ci-dessus. */
-    if (!list.some((s) => s.merchant === merchant)) list.unshift({ merchant, name: '' });
-    sites = list.slice(0, MAX_SITES);
-  }
+  /* Les magasins du compte : la liste du sélecteur, et le périmètre de
+   * « tous les établissements ». Le magasin demandé y reste même si le
+   * registre ne le connaît pas encore : il a déjà passé la porte ci-dessus. */
+  let owned = [];
+  try { owned = ((await ownedStores(request, env, merchant)).stores || []).filter((s) => s && s.merchant); } catch (_) { owned = []; }
+  if (!owned.some((s) => s.merchant === merchant)) owned.unshift({ merchant, name: '' });
+  owned = owned.slice(0, MAX_SITES);
+  let sites = wantAll ? owned : owned.filter((s) => s.merchant === merchant);
   try {
     const nameRows = await all(env, `SELECT merchant, name FROM merchant_config WHERE merchant IN (${sites.map(() => '?').join(',')})`, ...sites.map((s) => s.merchant));
     const byMerchant = new Map(nameRows.map((r) => [r.merchant, r.name]));
@@ -349,7 +348,7 @@ export async function onRequestGet({ request, env }) {
       netGapCents: reports.reduce((a, r) => a + r.variance.netGapCents, 0),
     } : null;
     return json({
-      merchant, scope: wantAll ? 'all' : 'site',
+      merchant, scope: wantAll ? 'all' : 'site', storeCount: owned.length,
       range: { fromDay: span.fromDay, toDay: span.toDay, days: span.days, from, to, cutoff, zone },
       sites: reports, total, generatedAt: Date.now(),
     }, 200, noStore);

@@ -100,6 +100,7 @@ window.KiwiStockInternal.install('loss', (S) => {
             ${reasonPill('avarie', ct('rsAvarieShort'))}
             ${reasonPill('offert', ct('rsOffert'))}
             ${reasonPill('repas-equipe', ct('rsStaff'))}
+            ${reasonPill('vol', ct('rsVol'))}
           </div>
         </div>
 
@@ -240,6 +241,7 @@ window.KiwiStockInternal.install('loss', (S) => {
               <option value="avarie"${prefillReason === 'avarie' ? ' selected' : ''}>${esc(ct('optAvarie'))}</option>
               <option value="offert"${prefillReason === 'offert' ? ' selected' : ''}>${esc(ct('optOffert'))}</option>
               <option value="repas-equipe"${prefillReason === 'repas-equipe' ? ' selected' : ''}>${esc(ct('optStaff'))}</option>
+              <option value="vol"${prefillReason === 'vol' ? ' selected' : ''}>${esc(ct('optVol'))}</option>
               <option value="autre"${prefillReason === 'autre' ? ' selected' : ''}>${esc(ct('optOther'))}</option>
             </select>
           </div>

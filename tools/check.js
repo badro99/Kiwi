@@ -2357,9 +2357,7 @@ section('Whole-project regressions');
     'service-trades-truth-test.mjs',
     'specialty-retail-truth-test.mjs',
     'menu-sales-test.mjs',
-    'foodcost-api-test.mjs',
-    /* Coût théorique et réel : ratios clés, écart signé par matière, journées de caisse, magasins. */
-    'cost-variance-test.mjs',
+    'foodcost-api-test.mjs', 'cost-variance-test.mjs',
     'simple-food-cost-export-test.mjs', 'simple-food-cost-test.mjs', 'net-scope-test.mjs', 'net-recovery-test.mjs',
     'simple-food-cost-split-test.mjs',
     'simple-food-cost-browser-test.mjs',

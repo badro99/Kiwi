@@ -664,8 +664,8 @@
     "sha": "5a6eafc66ee443ba"
   },
   "assets/finance.js": {
-    "v": "14",
-    "sha": "1b89e9b34cd03ac6"
+    "v": "16",
+    "sha": "d7dc10936e5be376"
   },
   "assets/floorplan-core.js": {
     "v": "2061",
@@ -1488,8 +1488,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2229",
-    "sha": "34e2452443a5f74c"
+    "v": "2231",
+    "sha": "b51d0663f8199bf2"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1498,6 +1498,10 @@
   "assets/pages-pro/boutique-web-orders.js": {
     "v": "13",
     "sha": "7abe777e8ea9c4fb"
+  },
+  "assets/pages-pro/cost-variance.js": {
+    "v": "2",
+    "sha": "d38097d80860fcf1"
   },
   "assets/pages-pro/restaurant-stations.js": {
     "v": "2",
@@ -1524,8 +1528,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "269",
-    "sha": "6014f9f943203d0e"
+    "v": "272",
+    "sha": "cb34e5aa99baea97"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1836,8 +1840,8 @@
     "sha": "61c8a0e97b8138cf"
   },
   "assets/pos-inventory-count.js": {
-    "v": "20",
-    "sha": "736a6733129d47c9"
+    "v": "21",
+    "sha": "2282fe09c6e16b8b"
   },
   "assets/pos-librairie.css": {
     "v": "18",
@@ -2256,8 +2260,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "138",
-    "sha": "21f755b0066f3392"
+    "v": "139",
+    "sha": "8748527a41d010a6"
   },
   "assets/stock/alerts.js": {
     "v": "6",
@@ -2276,8 +2280,8 @@
     "sha": "78f5cead650ee8ac"
   },
   "assets/stock/loss.js": {
-    "v": "3",
-    "sha": "7c882bb82dfde408"
+    "v": "4",
+    "sha": "d39ebb905af8d0d7"
   },
   "assets/stock/movements.js": {
     "v": "3",
@@ -2440,12 +2444,12 @@
     "sha": "d6306e52e72f7a69"
   },
   "assets/venues.js": {
-    "v": "78",
-    "sha": "d1a57d0eb2a5723e"
+    "v": "79",
+    "sha": "2520485a2a3623fe"
   },
   "assets/venues/data.js": {
-    "v": "4",
-    "sha": "c62dabb90b2af89a"
+    "v": "6",
+    "sha": "5c8298b8b17c3ac7"
   },
   "assets/venues/helpers.js": {
     "v": "10",
