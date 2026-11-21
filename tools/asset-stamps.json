@@ -1532,8 +1532,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "274",
-    "sha": "3e2d619c01949a9e"
+    "v": "275",
+    "sha": "69d72bec2e096e30"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2268,8 +2268,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "138",
-    "sha": "21f755b0066f3392"
+    "v": "139",
+    "sha": "40391b0001952324"
   },
   "assets/stock/alerts.js": {
     "v": "6",
@@ -2304,8 +2304,8 @@
     "sha": "ac383672fe16c958"
   },
   "assets/stock/purchasing.js": {
-    "v": "8",
-    "sha": "face8317a3ee53af"
+    "v": "9",
+    "sha": "acc7358eaa9e5635"
   },
   "assets/stock/state.js": {
     "v": "13",
@@ -2316,8 +2316,8 @@
     "sha": "e8e116e60a84d222"
   },
   "assets/stock/suppliers.js": {
-    "v": "2",
-    "sha": "bcdcfc104d5d2270"
+    "v": "3",
+    "sha": "18f15509652d9ab3"
   },
   "assets/store-templates.js": {
     "v": "4",

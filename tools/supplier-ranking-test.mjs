@@ -4,7 +4,7 @@
 // livre local, partiel), le catalogue et les bons de réception.
 import assert from 'node:assert/strict';
 import { fixture } from './server-money-fixture.mjs';
-import { onRequestGet as rankingRoute, rankSuppliers } from '../functions/api/suppliers/ranking.js';
+import { onRequestGet as rankingRoute, rankSuppliers, withPrevious } from '../functions/api/suppliers/ranking.js';
 import { makeSession, SESS_COOKIE } from '../functions/auth/_lib.js';
 
 const DAY = 86400000, now = Date.UTC(2026, 10, 20, 12);
@@ -27,7 +27,7 @@ const sales = [
   { ts: now - 2 * DAY, ref: 'A1', lines: [line('prod_1', 2, 1000, 'Trench beige M'), line('prod_3', 3, 600, 'Jean droit 38')] },
   { ts: now - 3 * DAY, ref: 'A2', lines: [line('prod_3', 5, 1000, 'Jean droit 40'), line('prod_5', 1, 50)] },
   { ts: now - 4 * DAY, ref: 'A3', lines: [line('prod_4', 1, 250, 'Pull col roulé L')] },
-  { ts: now - 60 * DAY, ref: 'OLD', lines: [line('prod_4', 50, 12500)] },   // hors période
+  { ts: now - 45 * DAY, ref: 'OLD', lines: [line('prod_4', 50, 12500)] },   // hors période
 ];
 const returns = [{ saleRef: 'A1', kind: 'avoir', ts: now - DAY, items: [{ name: 'Trench beige', size: 'M', qty: 1, amount: 500 }] }];
 
@@ -43,7 +43,7 @@ assert.equal(by.sup_denim.units, 8);
 assert.equal(by.sup_denim.margin, 1600 - 8 * 90, 'marge = CA moins coût d\'achat × quantité');
 assert.equal(by.sup_atlas.revenue, 1000);
 assert.equal(by.sup_atlas.margin, 1000 - 2 * 280);
-assert.equal(by.sup_nord.revenue, 250, 'la vente d\'il y a 60 jours ne compte pas');
+assert.equal(by.sup_nord.revenue, 250, 'la vente d\'il y a 45 jours ne compte pas');
 assert.equal(by.sup_nord.marginRate, null, 'sans prix d\'achat, la marge reste inconnue, jamais 100 %');
 // Écoulement : vendu / (vendu + en stock).
 assert.equal(by.sup_denim.sellThrough, 8 / (8 + 2));
@@ -55,10 +55,32 @@ assert.equal(by.sup_denim.returnedUnits, 0);
 // Articles dormants : du stock, aucune vente sur la période.
 assert.equal(by.sup_atlas.deadProducts, 1, 'le manteau rayé n\'a rien vendu');
 assert.equal(by.sup_atlas.top.id, 'prod_1');
+// Le prix d'achat de chaque article part avec lui : la fiche estime le coût d'une commande.
+assert.equal(by.sup_atlas.products.find((p) => p.id === 'prod_1').cost, 280);
+assert.equal(by.sup_nord.products[0].cost, null, 'sans prix d\'achat, aucun coût inventé');
 // Classement : Denim Casa (CA, marge, écoulement, zéro retour) passe devant.
 assert.deepEqual(out.suppliers.map((s) => s.id), ['sup_denim', 'sup_atlas', 'sup_nord']);
 assert.deepEqual(out.suppliers.map((s) => s.rank), [1, 2, 3]);
 assert.ok(out.suppliers.every((s) => s.score >= 0 && s.score <= 100));
+// Le score s'explique : ses quatre parts font le score, chacune sous son plafond.
+out.suppliers.forEach((s) => {
+  const p = s.parts;
+  assert.ok(p.sales <= 40 && p.margin <= 30 && p.sell <= 20 && p.returns <= 10, 'chaque part reste sous son plafond');
+  assert.ok(Math.abs(p.sales + p.margin + p.sell + p.returns - s.score) <= 0.6, `les parts de ${s.id} font son score`);
+});
+assert.equal(by.sup_nord.parts.margin, 15, 'sans prix d\'achat, la marge compte pour moitié');
+// La courbe : douze tranches de la période, qui somment les ventes.
+out.suppliers.forEach((s) => {
+  assert.equal(s.series.length, 12);
+  assert.ok(Math.abs(s.series.reduce((a, b) => a + b, 0) - s.revenue) < 0.01, `la courbe de ${s.id} somme ses ventes`);
+});
+assert.ok(by.sup_denim.series[11] > 0 && by.sup_denim.series[0] === 0, 'les ventes récentes tombent dans les dernières tranches');
+// La place d'avant : la même durée juste avant. Nord Tricot vendait seul il y a 45 jours.
+const before = rankSuppliers({ products, variants, suppliers, receipts, sales, returns, days: 30, now: now - 30 * DAY });
+const withPrev = withPrevious(rankSuppliers({ products, variants, suppliers, receipts, sales, returns, days: 30, now }), before);
+const prevBy = Object.fromEntries(withPrev.suppliers.map((s) => [s.id, s]));
+assert.equal(prevBy.sup_nord.prevRank, 1, 'Nord Tricot était premier sur la période d\'avant');
+assert.equal(prevBy.sup_denim.prevRank, null, 'qui ne vendait rien n\'avait pas de place');
 // Ce qui n'a pas de fournisseur est compté à part, pour qu'on le range.
 assert.equal(out.untagged.products, 1);
 assert.equal(out.untagged.revenue, 50);
@@ -88,6 +110,9 @@ const ok = await get(`merchant=${f.merchant}&days=30`, owner);
 assert.equal(ok.status, 200);
 assert.deepEqual(ok.body.suppliers.map((s) => s.id), ['sup_denim', 'sup_atlas', 'sup_nord']);
 assert.equal(ok.body.suppliers.find((s) => s.id === 'sup_atlas').revenue, 1000, 'la vente annulée et l\'autre boutique ne comptent pas');
+assert.equal(ok.body.suppliers.find((s) => s.id === 'sup_nord').revenue, 250, 'la route lit deux périodes mais n\'en compte qu\'une');
+assert.equal(ok.body.suppliers.find((s) => s.id === 'sup_nord').prevRank, 1, 'la route donne la place d\'avant');
+assert.equal(ok.body.salesRead, 3, 'salesRead compte les ventes de la période');
 assert.equal((await get(`merchant=${f.merchant}`, '')).status, 403, 'sans session : refusé');
 const foreign = await get('merchant=nobody-else', owner);
 assert.notEqual(foreign.body.merchant, 'nobody-else', 'une boutique qui n\'est pas la sienne n\'est jamais lue : le slug revient à la sienne');

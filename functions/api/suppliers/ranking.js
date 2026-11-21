@@ -36,13 +36,21 @@ const tsOf = (r) => num(r && (r.receivedAt || r.createdAt || r.ts));
  * (plafonné à 60 %), 20 % l'écoulement du stock, 10 % l'absence de retours
  * (25 % de pièces rendues = zéro). Sans prix d'achat, la marge compte pour
  * moitié : ni récompensée ni punie, et l'écran dit qu'elle manque. */
-function score(s, maxRevenue) {
+function scoreParts(s, maxRevenue) {
   const rev = maxRevenue > 0 ? s.revenue / maxRevenue : 0;
   const margin = s.marginRate == null ? 0.5 : Math.max(0, Math.min(s.marginRate, 0.6)) / 0.6;
   const st = s.sellThrough == null ? 0 : s.sellThrough;
   const ret = s.returnRate == null ? 1 : 1 - Math.min(s.returnRate * 4, 1);
-  return Math.round(100 * (0.4 * rev + 0.3 * margin + 0.2 * st + 0.1 * ret));
+  /* Les points de chaque critère, pour que l'écran montre d'où vient le score. */
+  return { sales: 40 * rev, margin: 30 * margin, sell: 20 * st, returns: 10 * ret };
 }
+function score(s, maxRevenue) {
+  const p = scoreParts(s, maxRevenue);
+  return Math.round(p.sales + p.margin + p.sell + p.returns);
+}
+
+/* La courbe des ventes d'un fournisseur : la période coupée en SERIES tranches égales. */
+const SERIES = 12;
 
 export function rankSuppliers({ products, variants, suppliers, receipts, sales, returns, days, now }) {
   const from = now - days * DAY;
@@ -77,7 +85,9 @@ export function rankSuppliers({ products, variants, suppliers, receipts, sales, 
   });
 
   const perProduct = new Map();
-  const stat = (id) => { if (!perProduct.has(id)) perProduct.set(id, { units: 0, revenue: 0, returned: 0 }); return perProduct.get(id); };
+  const stat = (id) => { if (!perProduct.has(id)) perProduct.set(id, { units: 0, revenue: 0, returned: 0, series: new Array(SERIES).fill(0) }); return perProduct.get(id); };
+  const span = Math.max(1, now - from);
+  const bucket = (ts) => Math.min(SERIES - 1, Math.max(0, Math.floor(((ts - from) / span) * SERIES)));
   arr(sales).forEach((s) => {
     if (!s || num(s.ts) < from || num(s.ts) > now) return;
     arr(s.lines).forEach((l) => {
@@ -86,6 +96,7 @@ export function rankSuppliers({ products, variants, suppliers, receipts, sales, 
       const st = stat(id);
       st.units += Math.max(0, num(l.q));
       st.revenue += num(l.t);
+      st.series[bucket(num(s.ts))] += num(l.t);
     });
   });
   arr(returns).forEach((r) => {
@@ -107,13 +118,15 @@ export function rankSuppliers({ products, variants, suppliers, receipts, sales, 
 
   const list = [...bySupplier.values()].map((s) => {
     let units = 0, revenue = 0, cost = 0, costKnown = true, returned = 0, inStock = 0, stockValue = 0, dead = 0;
+    const series = new Array(SERIES).fill(0);
     const rows = s.productIds.map((id) => {
-      const p = prodById.get(id), st = perProduct.get(id) || { units: 0, revenue: 0, returned: 0 };
+      const p = prodById.get(id), st = perProduct.get(id) || { units: 0, revenue: 0, returned: 0, series: null };
+      if (st.series) st.series.forEach((v, k) => { series[k] += v; });
       const unitCost = num(p.cost), left = stock.get(id) || 0;
       units += st.units; revenue += st.revenue; returned += st.returned; inStock += left;
       if (unitCost > 0) { cost += unitCost * st.units; stockValue += unitCost * left; } else if (st.units > 0) costKnown = false;
       if (left > 0 && st.units === 0) dead += 1;
-      return { id, name: String(p.name || ''), units: st.units, revenue: money(st.revenue), stock: left, returned: st.returned,
+      return { id, name: String(p.name || ''), units: st.units, revenue: money(st.revenue), stock: left, returned: st.returned, cost: unitCost > 0 ? unitCost : null,
         margin: unitCost > 0 ? money(st.revenue - unitCost * st.units) : null };
     }).sort((a, b) => b.revenue - a.revenue || b.units - a.units || a.name.localeCompare(b.name));
     const margin = costKnown && revenue > 0 ? money(revenue - cost) : null;
@@ -124,13 +137,21 @@ export function rankSuppliers({ products, variants, suppliers, receipts, sales, 
       sellThrough: units + inStock > 0 ? units / (units + inStock) : null,
       stock: inStock, stockValue: money(stockValue),
       returnedUnits: returned, returnRate: units > 0 ? returned / units : null,
+      series: series.map(money),
       deadProducts: dead, top: rows.length && rows[0].units > 0 ? { id: rows[0].id, name: rows[0].name } : null,
       // Filled once every supplier is known (score needs the best revenue, rank the sorted list).
       score: /** @type {number|null} */ (null), rank: 0,
+      parts: /** @type {{sales:number,margin:number,sell:number,returns:number}|null} */ (null),
+      prevRank: /** @type {number|null} */ (null), prevScore: /** @type {number|null} */ (null),
     };
   });
   const maxRevenue = Math.max(0, ...list.map((s) => s.revenue));
-  list.forEach((s) => { s.score = s.productCount ? score(s, maxRevenue) : null; });
+  list.forEach((s) => {
+    if (!s.productCount) return;
+    const p = scoreParts(s, maxRevenue);
+    s.parts = { sales: Math.round(p.sales * 10) / 10, margin: Math.round(p.margin * 10) / 10, sell: Math.round(p.sell * 10) / 10, returns: Math.round(p.returns * 10) / 10 };
+    s.score = score(s, maxRevenue);
+  });
   list.sort((a, b) => (b.score == null ? -1 : b.score) - (a.score == null ? -1 : a.score) || b.revenue - a.revenue || a.name.localeCompare(b.name));
   list.forEach((s, i) => { s.rank = i + 1; });
   return { suppliers: list, untagged, period: { days, from, to: now } };
@@ -154,13 +175,32 @@ export async function onRequestGet({ request, env }) {
   let sales = [];
   try {
     const rs = await env.DB.prepare(`SELECT ts, lines FROM sales WHERE merchant = ? AND ts >= ? AND void_ts IS NULL
-      AND lines IS NOT NULL ORDER BY ts DESC LIMIT ${MAX_SALES}`).bind(merchant, now - days * DAY).all();
+      AND lines IS NOT NULL ORDER BY ts DESC LIMIT ${MAX_SALES}`).bind(merchant, now - 2 * days * DAY).all();
     sales = ((rs && rs.results) || []).map((r) => { let lines = []; try { lines = JSON.parse(r.lines); } catch (_) { lines = []; } return { ts: Number(r.ts), lines }; });
   } catch (_) { sales = []; }
-  const out = rankSuppliers({
+  const input = {
     products: catalog.products, variants: catalog.variants,
     suppliers: procurement.suppliers, receipts: procurement.receipts,
-    sales, returns: returnsDoc.list, days, now,
+    sales, returns: returnsDoc.list, days,
+  };
+  const out = rankSuppliers({ ...input, now });
+  withPrevious(out, rankSuppliers({ ...input, now: now - days * DAY }));
+  const current = sales.filter((s) => s.ts >= now - days * DAY).length;
+  return json({ merchant, ...out, salesRead: current, truncated: sales.length >= MAX_SALES });
+}
+
+/* La place qu'avait chaque fournisseur sur la période d'avant, de même durée.
+ * Approché : le stock d'avant n'est pas connu, l'écoulement d'avant se lit sur
+ * le stock d'aujourd'hui. Un fournisseur qui ne vendait rien n'a pas de place. */
+export function withPrevious(out, prev) {
+  const before = new Map(prev.suppliers.filter((s) => s.revenue > 0).map((s) => [s.id, s]));
+  let rank = 0;
+  const ranks = new Map();
+  prev.suppliers.forEach((s) => { if (before.has(s.id)) ranks.set(s.id, ++rank); });
+  out.suppliers.forEach((s) => {
+    const p = before.get(s.id);
+    s.prevRank = p ? ranks.get(s.id) : null;
+    s.prevScore = p ? p.score : null;
   });
-  return json({ merchant, ...out, salesRead: sales.length, truncated: sales.length >= MAX_SALES });
+  return out;
 }
