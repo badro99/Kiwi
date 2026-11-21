@@ -19,6 +19,7 @@
  *   · base sans 0029 : lecture calme (migrated:false), écriture 503. */
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -440,6 +441,68 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
   assert.deepEqual(dates, dates.slice().sort(), 'sorted by due date, then deposit, then reception');
   assert.ok(list.data.summary && list.data.ageing && Array.isArray(list.data.suppliers) && list.data.suppliers.some((s) => s.id === 'sup-fassi'));
   ok('deposit slip (number, total, per-cheque refusal, replay safe, bank), edits with history, detail with timeline, allowed moves and linked ticket, filters and due-date order');
+}
+
+/* ── 6b · la caisse : la fenêtre « Chèque reçu », la file hors ligne ── */
+{
+  const store = new Map();
+  globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k), key: (i) => [...store.keys()][i] ?? null, get length() { return store.size; } };
+  let online = false, posts = 0;
+  globalThis.fetch = async (url, init) => {
+    posts++;
+    if (!online) throw new TypeError('offline');
+    const r = await listRoute.onRequestPost({ request: new Request('https://k' + url, { method: 'POST', headers: { Cookie: till, 'Content-Type': 'application/json', 'CF-Connecting-IP': '10.0.0.9' }, body: init.body }), env });
+    return r;
+  };
+  const S = await importFresh('assets/pos-boutique/cheque-sheet.js');
+  assert.match(S.chequeFields(), /data-cq-f="number"/);
+  const form = (vals) => ({ querySelector: (sel) => { const k = /data-cq-f="(\w+)"/.exec(sel)[1]; return { value: vals[k] || '' }; } });
+  const toasts = [];
+  const sale = { id: 'T-0042', syncId: 'sale-till-0042' };
+  const cash = { m: 'espèces', amount: 100 };
+  const part = S.chequeHold(form({ number: '7700991', due: '2026-12-20', drawerBank: 'CIH Bank', drawer: '' }), { m: 'chèque', amount: 1234.5 });
+  const plain = S.chequeHold(form({}), { m: 'chèque', amount: 80 });
+  /* Démo : rien ne part. */
+  S.chequeRecord([part], sale, { slug: SHOP, demo: true, client: 'Leila', toast: (m) => toasts.push(m) });
+  assert.equal(posts, 0, 'a demo till sends nothing');
+  /* Hors ligne : gardé dans la file de la boutique, rien de perdu. */
+  S.chequeRecord([cash, part, plain], sale, { slug: SHOP, client: 'Leila Amrani', by: 'Saad', toast: (m) => toasts.push(m) });
+  await S.chequeFlush(SHOP);
+  const box = JSON.parse(store.get('kiwiChqOutbox:' + SHOP));
+  assert.equal(box.length, 2, 'two cheque parts queued, the cash part ignored');
+  assert.deepEqual(box.map((x) => x.body.idemKey), ['till:sale-till-0042:1', 'till:sale-till-0042:2'], 'idempotency key = ticket + place of the payment');
+  /* Le même ticket rejoué ne double pas la file. */
+  S.chequeRecord([cash, part, plain], sale, { slug: SHOP, client: 'Leila Amrani', by: 'Saad' });
+  await S.chequeFlush(SHOP);
+  assert.equal(JSON.parse(store.get('kiwiChqOutbox:' + SHOP)).length, 2);
+  /* Le réseau revient : les deux arrivent au portefeuille, reliés au ticket, signés par la caisse. */
+  online = true;
+  assert.equal(await S.chequeFlush(SHOP), 2);
+  assert.equal(store.has('kiwiChqOutbox:' + SHOP), false, 'the queue empties once the server answers');
+  const got = (await call(listRoute.onRequestGet, `/api/cheques?merchant=${SHOP}&q=7700991`, owner)).data.cheques;
+  assert.equal(got.length, 1);
+  assert.equal(got[0].amountCents, 123450); assert.equal(got[0].dueDate, '2026-12-20'); assert.equal(got[0].drawerBank, 'CIH Bank');
+  assert.equal(got[0].partyName, 'Leila Amrani'); assert.equal(got[0].source, 'till'); assert.equal(got[0].createdBy, 'Caisse · Saad');
+  const links = db.prepare("SELECT link_id FROM cheque_links WHERE merchant = ? AND cheque_id = ? AND link_type = 'sale'").all(SHOP, got[0].id).map((r) => r.link_id);
+  assert.deepEqual(links, ['sale-till-0042'], 'linked to the sale');
+  /* Renvoyé encore (file restaurée par erreur) : le serveur répond doublon, un seul chèque. */
+  const before = db.prepare('SELECT COUNT(*) AS n FROM cheques WHERE merchant = ?').get(SHOP).n;
+  store.set('kiwiChqOutbox:' + SHOP, JSON.stringify(box));
+  await S.chequeFlush(SHOP);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM cheques WHERE merchant = ?').get(SHOP).n, before, 'a replayed queue writes nothing twice');
+  assert.equal(store.has('kiwiChqOutbox:' + SHOP), false);
+  /* Une caisse appairée ailleurs (403) garde la file au lieu de la perdre. */
+  store.set('kiwiChqOutbox:' + OTHER, JSON.stringify([{ at: Date.now(), body: { ...box[0].body, merchant: OTHER, idemKey: 'till:x:9' } }]));
+  await S.chequeFlush(OTHER);
+  assert.equal(JSON.parse(store.get('kiwiChqOutbox:' + OTHER)).length, 1, '403 keeps the cheque queued');
+  store.delete('kiwiChqOutbox:' + OTHER);
+  /* L'encaissement boutique le branche : champs dans « Chèque reçu », détails tenus, puis enregistrés après la vente. */
+  const co = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique/checkout.js'), 'utf8');
+  assert.match(co, /import\('\.\/cheque-sheet\.js\?v=\d+'\)/);
+  assert.match(co, /cheque && CQ \? CQ\.chequeFields\(\)/);
+  assert.match(co, /CQ\.chequeHold\(el, \{ m: 'chèque', amount \}\)/);
+  assert.match(co, /if \(res\.sale\) opts\.sale = res\.sale;\n\s*if \(CQ && res\.sale\) CQ\.chequeRecord\(parts, res\.sale/);
+  ok('till: cheque sheet fields, demo sends nothing, offline queue per shop, idempotent per ticket, lands in the portfolio linked to the sale, 403 keeps the queue, wired into the boutique checkout');
 }
 
 /* ── 7 · base sans 0029 : calme en lecture, 503 en écriture ────────── */

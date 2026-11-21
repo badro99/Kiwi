@@ -43,6 +43,8 @@ function world(vertical) {
     sizesOf:()=>['TU'],merchantSlug:()=> 'test-shop',rayonOf:()=>'',lineDeal:ln=>({price:ln.promoPrice}),
     depotOn:()=>false,artOf:()=>'',colorDot:()=>'',colorLabel:()=>'',saleClient:()=>({id:'customer',name:'Test'}),
     findSale:id=>c.SALES.find(s=>s.id===id),newSaleId:()=> 'new-sale',
+    // The cheque sheet is a lazy module (pos-boutique/cheque-sheet.js, tools/cheques-test.mjs): absent here, a cheque settles as before.
+    CQ:null,
     // The recipient form of a delivery part is a browser edge: it submits a
     // filled card at once, and the real done() → settle() books the money.
     bqDeliveryCard:(el,o)=>o.done({...DELIVERY_CARD}),mzDeliveryCard:(el,o)=>o.done({...DELIVERY_CARD},{}),
