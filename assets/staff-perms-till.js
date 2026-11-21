@@ -147,15 +147,20 @@
     try { if (window.KiwiCaissePairing && !window.KiwiCaissePairing.permsForAct) window.KiwiCaissePairing.permsForAct = forAct; } catch (_) {}
   }
   attach();
+  /* Jamais bloquant : un document réduit (banc, page sans DOM complet) ne doit rien casser. */
   function boot() {
-    attach(); css(); apply(); sync();
-    document.addEventListener('click', onClick, true);
-    document.addEventListener('kiwi-staff', apply);
-    window.addEventListener('online', sync);
-    setInterval(sync, REFRESH_MS);
+    try {
+      attach(); css(); apply(); sync();
+      document.addEventListener('click', onClick, true);
+      document.addEventListener('kiwi-staff', apply);
+      window.addEventListener('online', sync);
+      var timer = setInterval(sync, REFRESH_MS);
+      if (timer && typeof timer.unref === 'function') timer.unref();
+    } catch (_) {}
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
-
-  window.KiwiStaffPerms = { can: can, sync: sync, apply: apply, read: read, forAct: forAct };
+  try {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+    else boot();
+    window.KiwiStaffPerms = { can: can, sync: sync, apply: apply, read: read, forAct: forAct };
+  } catch (_) {}
 })();
