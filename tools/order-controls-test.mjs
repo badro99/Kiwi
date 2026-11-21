@@ -52,7 +52,7 @@ assert(alternate.includes('function addModal() { catalogDashboardOnly(); return;
 assert(boutique.includes('bqi-dashboard-only'), 'boutique caisse must show dashboard-owned catalogue copy');
 assert(boutique.includes('function catalogDashboardOnly()'), 'boutique caisse catalogue guard is missing');
 // Locked unless the operator switch « Gestion complète de l'inventaire sur la caisse » is on (Santos, 29 Oct).
-assert(/function openNewProduct\(\)\s*\{\s*if \(!tillInventoryAllowed\(\)\) \{\s*catalogDashboardOnly\(\);\s*return;/.test(boutique), 'boutique caisse new-product path must be locked');
+assert(/function openNewProduct\((?:scanned)?\)\s*\{\s*if \(!tillInventoryAllowed\(\)\) \{\s*catalogDashboardOnly\(\);\s*return;/.test(boutique), 'boutique caisse new-product path must be locked');
 assert(/function openEditProduct\(pid\)\s*\{\s*if \(!tillInventoryAllowed\(\)\) \{\s*catalogDashboardOnly\(\);\s*return;/.test(boutique), 'boutique caisse edit-product path must be locked');
 // Un produit = une couleur (propriétaire, 29 oct.) : la fiche ne propose plus de changer la couleur d'une taille.
 assert(!boutique.includes('data-vcolor="${v.id}"'), 'boutique caisse no longer exposes a per-size colour edit');
