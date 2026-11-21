@@ -1,12 +1,12 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=339';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=235';
-import { offerRegister } from './inventory.js?v=235';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=340';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=236';
+import { offerRegister } from './inventory.js?v=236';
 import { ticketOwner } from './ticket-owner.js?v=5';
 import { ticketRemise } from './ticket-remise.js?v=5';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
 import { mountBargain } from './bargain-ui.js?v=3';
-import { bqKitTicketFoot } from './kit-2027.js?v=23';
-import { sellSearch } from './search.js?v=17';
+import { bqKitTicketFoot } from './kit-2027.js?v=24';
+import { sellSearch } from './search.js?v=18';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=5';
 
@@ -311,14 +311,15 @@ import { photoImg } from '../retail-photos.js?v=5';
     slot.innerHTML = `
       <div class="bq-exch-note">
         <i data-lucide="arrow-left-right"></i>
-        <span class="l">Échange <b>${sale.id}</b>, retour <b>${esc((P[ln.pid] && P[ln.pid].name) || ln.name || 'Article')} · ${esc(ln.size)}</b> (${fmtMAD(ln.unit)}).
+        <span class="l">Échange <b>${sale.id}</b>${state.exchange.total > 1 ? `, pièce <b>${state.exchange.step} sur ${state.exchange.total}</b>` : ''}, retour <b>${esc((P[ln.pid] && P[ln.pid].name) || ln.name || 'Article')} · ${esc(ln.size)}</b> (${fmtMAD(ln.unit)}).
         Touchez l'article de remplacement dans la grille.</span>
         <button class="bq-exch-cancel" id="bq-exch-cancel">Annuler l'échange</button>
       </div>`;
     $('#bq-exch-cancel', slot).onclick = () => {
+      const partly = (state.exchange.step || 1) > 1;
       state.exchange = null;
       renderExchNote();
-      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Échange annulé, rien n\'a bougé'));
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(partly ? 'Échange arrêté, les pièces déjà échangées restent enregistrées' : 'Échange annulé, rien n\'a bougé'));
       icons();
     };
     icons();
@@ -576,18 +577,16 @@ import { photoImg } from '../retail-photos.js?v=5';
   function openSheet(pid, opts) {
     window.KiwiDiscountPolicy?.refresh?.(); // the owner may have changed the allowed percentages
     const p = P[pid];
-    /* Taille unique, une seule couleur : rien à choisir, la fiche ne faisait que
-       ralentir. Le toucher pose une pièce ; un second toucher en ajoute une. */
-    if (!(opts && opts.exchange) && sizesOf(p).length === 1 && (p.colors || []).length <= 1) {
-      addToTicket(pid, { size: sizesOf(p)[0], color: p.colors[0], qty: 1, remise: 0 });
-      return;
-    }
     Object.assign(sheet, {
       pid,
       size: null, color: p.colors[0], qty: 1, remise: 0, agreed: 0, bmode: 'pct', btext: '', bok: true,
       exchange: !!(opts && opts.exchange),
     });
-    sheet.size = defaultSize(p);
+    /* Ouverte depuis la recherche ou la douchette : la déclinaison trouvée est
+       déjà cochée, la vendeuse n'a plus qu'à confirmer (ou poser sa remise). */
+    const want = opts && [opts.color, opts.alt].find((k) => k && p.colors.includes(k));
+    if (want) sheet.color = want;
+    sheet.size = (opts && opts.size && sizesOf(p).includes(opts.size) && availableStock(p.id, opts.size, sheet.color) > 0) ? opts.size : defaultSize(p);
     renderSheet();
     openVeil('#bq-sheet-veil');
     icons();
@@ -833,6 +832,7 @@ import { photoImg } from '../retail-photos.js?v=5';
   const wireSellSearch = (bar, input) => sellSearch(bar, input, bqKitSkin(), {
     commit: commitEan, money: fmtMAD, esc, icons, artOf,
     open: (pid) => openSheet(pid, state.exchange ? { exchange: true } : null),
+    pick: (r) => openSheet(r.pid, { exchange: !!state.exchange, size: r.size, color: r.colorId || r.color, alt: r.color }),
     catalog: () => ({ P, BY_EAN, promoFor, shelf, stockOf, availableStock, colorLabel }),
   });
 
@@ -1501,6 +1501,9 @@ import { photoImg } from '../retail-photos.js?v=5';
       toast(`${p.name} · ${colorLabel(color)}${size ? ' · ' + size : ''}, épuisé`, undefined, 'warn');
       return;
     }
+    /* Pendant un échange, l'article scanné est le REMPLACEMENT : il ouvrait une
+       vente ordinaire et l'échange restait en plan. */
+    if (state.exchange) { openSheet(pid, { exchange: true, size, color }); return; }
     addToTicket(pid, { size, color, qty: 1, remise: 0 }, { quiet: true });
     /* A scanned item added to the bill is an Adjust, on the frame the line is added (design 2027, §20.3). */
     try { if (window.KiwiHaptics) window.KiwiHaptics.play('Adjust', window.KiwiHaptics.gid('scan-add')); } catch (_) {}

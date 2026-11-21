@@ -3,7 +3,7 @@ import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan 
 import { invSetModal, offerRegister } from './inventory.js?v=140';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=5';
-import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=11';
+import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=12';
 import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
 import { mzPageGrid } from './grid-pager.js?v=1'; import { mzOpenFiche } from './client-fiche.js?v=1';
 import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsEmpty } from './client-view.js?v=1';
@@ -390,14 +390,15 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     slot.innerHTML = `
       <div class="mz-exch-note">
         <i data-lucide="arrow-left-right"></i>
-        <span class="l">Échange <b>${sale.id}</b>, retour <b>${esc((P[ln.pid] && P[ln.pid].name) || ln.name || 'Article')} · ${esc(ln.size)}</b> (${fmtMAD(ln.unit)}).
+        <span class="l">Échange <b>${sale.id}</b>${state.exchange.total > 1 ? `, pièce <b>${state.exchange.step} sur ${state.exchange.total}</b>` : ''}, retour <b>${esc((P[ln.pid] && P[ln.pid].name) || ln.name || 'Article')} · ${esc(ln.size)}</b> (${fmtMAD(ln.unit)}).
         Touchez l'article de remplacement dans la grille.</span>
         <button class="mz-exch-cancel" id="mz-exch-cancel">Annuler l'échange</button>
       </div>`;
     $('#mz-exch-cancel', slot).onclick = () => {
+      const partly = (state.exchange.step || 1) > 1;
       state.exchange = null;
       renderExchNote();
-      toast('Échange annulé, rien n\'a bougé');
+      toast(partly ? 'Échange arrêté, les pièces déjà échangées restent enregistrées' : 'Échange annulé, rien n\'a bougé');
       icons();
     };
     icons();
@@ -553,6 +554,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
   const wireSellSearch = (bar, input) => mzSellSearch(bar, input, mzSkinOn(), {
     commit: commitEan, money: fmtMAD, esc, icons, artOf,
     open: (pid) => openSheet(pid, state.exchange ? { exchange: true } : null),
+    pick: (r) => openSheet(r.pid, { exchange: !!state.exchange, size: r.size, color: r.colorId || r.color, alt: r.color }),
     catalog: () => ({ P, BY_EAN, promoFor, shelf, stockOf, colorLabel, availableStock: (pid, size) => (P[pid] && P[pid].sizes && P[pid].sizes[size]) || 0 }),
   });
 
@@ -753,19 +755,17 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
   function openSheet(pid, opts) {
     window.KiwiDiscountPolicy?.refresh?.(); // the owner may have changed the allowed percentages
     const p = P[pid];
-    /* Taille unique, une seule couleur, vendu tel quel : rien à choisir, la fiche
-       ne faisait que ralentir. Un service garde sa fiche (complet ou à la pièce). */
-    if (!(opts && opts.exchange) && p.format !== 'service' && sizesOf(p).length === 1 && (p.colors || []).length <= 1) {
-      addToTicket(pid, { size: sizesOf(p)[0], color: p.colors[0], qty: 1, remise: 0, format: p.format || 'piece', marque: p.marque, motif: p.motif, fragile: p.fragile });
-      return;
-    }
     Object.assign(sheet, {
       pid,
       size: null, color: p.colors[0], qty: 1, remise: 0,
       exchange: !!(opts && opts.exchange),
       format: p.format || 'piece',
     });
-    sheet.size = defaultSize(p);
+    /* Ouverte depuis la recherche ou la douchette : la déclinaison trouvée est
+       déjà cochée, la vendeuse n'a plus qu'à confirmer (ou poser sa remise). */
+    const want = opts && [opts.color, opts.alt].find((k) => k && p.colors.includes(k));
+    if (want) sheet.color = want;
+    sheet.size = (opts && opts.size && (p.sizes[opts.size] || 0) > 0) ? opts.size : defaultSize(p);
     renderSheet();
     openVeil('#mz-sheet-veil');
     icons();
@@ -2423,6 +2423,9 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
       return;
     }
     const color = (hit && hit.colorFamily && p.colors.includes(hit.colorFamily)) ? hit.colorFamily : p.colors[0];
+    /* Pendant un échange, l'article scanné est le REMPLACEMENT : il ouvrait une
+       vente ordinaire et l'échange restait en plan. */
+    if (state.exchange) { openSheet(pid, { exchange: true, size, color }); return; }
     addToTicket(pid, { size, color, qty: 1, remise: 0 }, { quiet: true });
     /* A scanned item added to the bill is an Adjust, on the frame the line is added (design 2027, §20.3). */
     try { if (window.KiwiHaptics) window.KiwiHaptics.play('Adjust', window.KiwiHaptics.gid('scan-add')); } catch (_) {}

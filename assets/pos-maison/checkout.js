@@ -225,7 +225,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
         </div>
         ${refundPreviewHTML(s, ret, selVal)}
         <div class="mz-ret-actions">
-          <button class="mz-btn secondary" data-mz-do-exch><i data-lucide="arrow-left-right"></i>Échanger la pièce</button>
+          <button class="mz-btn secondary" data-mz-do-exch><i data-lucide="arrow-left-right"></i>${sel.size > 1 || Array.from(sel).some((i) => pickedQty(ret, i, s.lines[i]) > 1) ? 'Échanger les pièces' : 'Échanger la pièce'}</button>
           <button class="mz-btn secondary" data-mz-do-refund ${state.retBusy ? 'disabled aria-busy="true"' : ''}><i data-lucide="credit-card"></i>Rembourser sur le moyen d’origine · ${fmtMAD(selVal)}</button>
           <button class="mz-btn primary" data-mz-do-avoir ${state.retBusy ? 'disabled aria-busy="true"' : ''}><i data-lucide="ticket"></i>${state.retBusy ? 'Émission en cours…' : `Émettre un avoir · ${fmtMAD(selVal)}`}</button>
         </div>
@@ -386,24 +386,42 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
     renderEchanges(); icons();
   }
 
+  /* Plusieurs pièces rendues d'un même ticket : l'échange les prend une à une,
+     dans l'ordre du ticket, chacune avec son remplacement et son règlement. Le
+     chemin d'une pièce reste celui qui existait (stock, avoir, encaissement) ;
+     on ne fait que l'enchaîner. Une ligne rendue en 2 exemplaires compte 2. */
+  function exchangeQueue(ret, sale) {
+    const q = [];
+    Array.from(ret.picks).sort((a, b) => a - b).forEach((i) => {
+      const n = pickedQty(ret, i, sale.lines[i]);
+      for (let k = 0; k < n; k++) q.push(i);
+    });
+    return q;
+  }
+  function nextExchange(ex) {
+    const rest = (ex && ex.queue) || [];
+    return rest.length ? Object.assign({}, ex, { idx: rest[0], queue: rest.slice(1), step: (ex.step || 1) + 1 }) : null;
+  }
+  const exchStartToast = (sale, n) => (n > 1
+    ? `Échange ${sale.id}, ${n} pièces, choisissez le remplacement de la première`
+    : `Échange ${sale.id}, choisissez l'article de remplacement dans la grille`);
+
   function doExchange() {
     const ret = state.ret;
-    if (!ret) return;
-    if (ret.picks.size !== 1) { toast('L\'échange se fait pièce par pièce, gardez une seule ligne cochée'); return; }
-    const idx = ret.picks.values().next().value;
+    if (!ret || !ret.picks.size) return;
     const sale = findSale(ret.saleId);
-    if (sale?.kind === 'acompte') { toast('Retour suspendu sur un acompte'); return; }
-    const ln = sale.lines[idx];
-    const qty = pickedQty(ret, idx, ln);
-    if (qty !== 1) { toast('L\'échange se fait une pièce à la fois, choisissez la quantité 1'); return; }
+    if (!sale) return;
+    if (sale.kind === 'acompte') { toast('Retour suspendu sur un acompte'); return; }
+    const queue = exchangeQueue(ret, sale);
+    if (!queue.length) return;
     /* Le motif choisi sur la fiche de retour suit l'échange jusqu'au registre :
        sans lui, tout échange y était classé « Echange », c'est-à-dire rien —
        la colonne motif répétait la colonne type et le registre ne disait plus
        pourquoi la pièce était revenue. */
-    state.exchange = { saleId: ret.saleId, idx, qty: 1, motif: ret.motif || '' };
+    state.exchange = { saleId: ret.saleId, idx: queue[0], qty: 1, motif: ret.motif || '', queue: queue.slice(1), step: 1, total: queue.length };
     state.ret = null;
     switchView('vente');
-    toast(`Échange ${sale.id}, choisissez l'article de remplacement dans la grille`);
+    toast(exchStartToast(sale, queue.length));
   }
 
   async function doAvoir() {
@@ -635,7 +653,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
          la pièce emportée sort, et le registre le raconte dans les deux sens. */
       persistStock(ln.pid, ln.size, ln.color, back, { ref: sale.num || sale.id, why: 'retour' });
       persistStock(newPid, newSize, newColor, -held, { ref: sale.num || sale.id, why: 'vente' });
-      state.exchange = null;
+      state.exchange = nextExchange(ex);   // la pièce suivante, s'il en reste
       persistDay();
       queueIfOffline(`Échange ${sale.id}`);
       renderExchNote(); renderGrid(); renderBadges();

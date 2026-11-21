@@ -1,4 +1,4 @@
-import { bqKitScanBar, bqKitSellScroll } from './kit-2027.js?v=23';
+import { bqKitScanBar, bqKitSellScroll } from './kit-2027.js?v=24';
 /* La recherche de la barre de vente (peau 2027). Un code se lit de gauche à
  * droite : on répond par PRÉFIXE de code-barres d'abord, puis par fragment,
  * puis par nom d'article (sans accents ni casse). Chaque code est une
@@ -34,6 +34,7 @@ export function searchArticles(raw, d, limit, opts) {
       price: pr ? pr.price : shelf(p.price), was: pr ? pr.was : 0,
       stock: hit && hit.size ? availableStock(pid, hit.size, color || p.colors[0]) : stockOf(p),   // ce qui reste, ticket déduit
       art: p.art, artPicked: !!p.artPicked, colors: p.colors, photo: p.photo || '',
+      size: (hit && hit.size) || '', color: color || '', colorId: (hit && hit.colorId) || '',
     });
   };
   if (/^[0-9]+$/.test(q)) {
@@ -65,7 +66,7 @@ export function sellSearch(bar, input, on, d) {
   if (!bar || !input || !on) return false;
   bqKitSellScroll(bar.parentNode);   // recherche + rayons défilent avec la grille
   return bqKitScanBar(bar, {
-    input, commit: d.commit, open: d.open, money: d.money, esc: d.esc, icons: d.icons,
+    input, commit: d.commit, open: d.open, pick: d.pick, money: d.money, esc: d.esc, icons: d.icons,
     search: (q) => searchArticles(q, d.catalog(), 0, { variants: true }),
     visual: (r) => (r.photo ? '<img class="bq-product-photo" src="' + d.esc(r.photo) + '" alt="" loading="lazy" />' : d.artOf(r)),
   });

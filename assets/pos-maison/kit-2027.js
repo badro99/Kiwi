@@ -542,7 +542,11 @@ function mzKitScanBar(bar, o) {
     input.value = '';
     close();
     try { input.focus(); } catch (_) {}
-    if (r.ean) o.commit(r.ean); else o.open(r.pid);
+    /* o.pick (barre de vente) : une ligne CHOISIE ouvre la fiche de l'article,
+       déclinaison cochée, comme un toucher dans la grille (remise, échange).
+       Seule la douchette (Entrée sans ligne désignée) ajoute directement. */
+    if (typeof o.pick === 'function') o.pick(r);
+    else if (r.ean) o.commit(r.ean); else o.open(r.pid);
   };
 
   /* Une frappe humaine voit la liste « tout de suite » (moins d'une image) ;
@@ -635,6 +639,7 @@ function mzSearchArticles(raw, d, limit, opts) {
       price: pr ? pr.price : shelf(p.price), was: pr ? pr.was : 0,
       stock: hit && hit.size ? availableStock(pid, hit.size, color || p.colors[0]) : stockOf(p),   // ce qui reste, ticket déduit
       art: p.art, artPicked: !!p.artPicked, colors: p.colors, photo: p.photo || '',
+      size: (hit && hit.size) || '', color: color || '', colorId: (hit && hit.colorId) || '',
     });
   };
   if (/^[0-9]+$/.test(q)) {
@@ -666,7 +671,7 @@ function mzSellSearch(bar, input, on, d) {
   if (!bar || !input || !on) return false;
   mzKitSellScroll(bar.parentNode);   // recherche + rayons défilent avec la grille
   return mzKitScanBar(bar, {
-    input, commit: d.commit, open: d.open, money: d.money, esc: d.esc, icons: d.icons,
+    input, commit: d.commit, open: d.open, pick: d.pick, money: d.money, esc: d.esc, icons: d.icons,
     search: (q) => mzSearchArticles(q, d.catalog(), 0, { variants: true }),
     visual: (r) => (r.photo ? '<img class="mz-product-photo" src="' + d.esc(r.photo) + '" alt="" loading="lazy" />' : d.artOf(r)),
   });

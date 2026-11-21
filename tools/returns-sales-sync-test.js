@@ -25,7 +25,7 @@ const checks = [
   ['les échanges sont eux aussi journalisés', /recordReturn\(sale, \[ex\.idx\], paidUnit\(sale, ln\)/.test(src)],
   ['une ligne multiple conserve le nombre exact de pièces retournées', /function lineReturnedQty\(ln\)[\s\S]*ln\.returnedQty/.test(src)],
   ['la quantité retournée est choisissable sans dépasser le solde vendu', /data-bq-ret-qty=[\s\S]*Math\.min\(lineAvailableQty/.test(src)],
-  ['un échange autorise une seule pièce issue d’une ligne multiple', /const qty = pickedQty\(ret, idx, ln\)[\s\S]*(?:state\.exchange = |ticketOwner\.startReturn\(state, )\{ saleId: ret\.saleId, idx, qty: 1[,}]/.test(src)],
+  ['un échange déplace une pièce à la fois, les autres pièces cochées attendent leur tour', /function exchangeQueue\(ret, sale\)[\s\S]*pickedQty\(ret, i, sale\.lines\[i\]\)[\s\S]*(?:state\.exchange = |ticketOwner\.startReturn\(state, )\{ saleId: ret\.saleId, idx: queue\[0\], qty: 1,/.test(src) && /state\.exchange = nextExchange\(ex\)/.test(src)],
   ['le motif choisi suit l’échange jusqu’au registre', /(?:state\.exchange = |ticketOwner\.startReturn\(state, )\{[^}]*motif: ret\.motif/.test(src) && /recordReturn\(sale, \[ex\.idx\], paidUnit\(sale, ln\), ex\.motif \|\| 'Non précisé', 'echange'/.test(src)],
   ['l’avoir utilise la quantité choisie et non toute la ligne', /const quantities = new Map\(idxs\.map[\s\S]*paidAmount\(sale, sale\.lines\[i\], quantities\.get\(i\)/.test(src)],
   ['seules les pièces réellement rendues reviennent au stock', /const restored = persistStock\(ln\.pid, ln\.size, ln\.color, qty,[\s\S]*markLineReturned\(ln, qty, restored/.test(src)],

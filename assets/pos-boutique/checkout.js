@@ -1,6 +1,6 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=235';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=235';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=339';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=236';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=236';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=340';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=5';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
@@ -210,7 +210,7 @@ const M = globalThis.KiwiMoney;
           ${MOTIFS.map((m) => `<button class="bq-chip ${ret.motif === m ? 'on' : ''}" data-bq-motif="${esc(m)}">${esc(m)}</button>`).join('')}
         </div>
         <div class="bq-ret-actions">
-          <button class="bq-btn secondary" data-bq-do-exch><i data-lucide="arrow-left-right"></i>Échanger la pièce</button>
+          <button class="bq-btn secondary" data-bq-do-exch><i data-lucide="arrow-left-right"></i>${sel.size > 1 || Array.from(sel).some((i) => pickedQty(ret, i, s.lines[i]) > 1) ? 'Échanger les pièces' : 'Échanger la pièce'}</button>
           <button class="bq-btn primary" data-bq-do-avoir><i data-lucide="ticket"></i>Émettre un avoir · ${fmtMAD(selVal)}</button>
         </div>
       </div>` : ''}
@@ -236,23 +236,41 @@ const M = globalThis.KiwiMoney;
     renderEchanges(); icons();
   }
 
+  /* Plusieurs pièces rendues d'un même ticket : l'échange les prend une à une,
+     dans l'ordre du ticket, chacune avec son remplacement et son règlement. Le
+     chemin d'une pièce reste celui qui existait (stock, avoir, encaissement) ;
+     on ne fait que l'enchaîner. Une ligne rendue en 2 exemplaires compte 2. */
+  function exchangeQueue(ret, sale) {
+    const q = [];
+    Array.from(ret.picks).sort((a, b) => a - b).forEach((i) => {
+      const n = pickedQty(ret, i, sale.lines[i]);
+      for (let k = 0; k < n; k++) q.push(i);
+    });
+    return q;
+  }
+  function nextExchange(ex) {
+    const rest = (ex && ex.queue) || [];
+    return rest.length ? Object.assign({}, ex, { idx: rest[0], queue: rest.slice(1), step: (ex.step || 1) + 1 }) : null;
+  }
+  const exchStartToast = (sale, n) => (n > 1
+    ? `Échange ${sale.id}, ${n} pièces, choisissez le remplacement de la première`
+    : `Échange ${sale.id}, choisissez l'article de remplacement dans la grille`);
+
   function doExchange() {
     const ret = state.ret;
-    if (!ret) return;
-    if (ret.picks.size !== 1) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('L\'échange se fait pièce par pièce, gardez une seule ligne cochée')); return; }
-    const idx = ret.picks.values().next().value;
+    if (!ret || !ret.picks.size) return;
     const sale = findSale(ret.saleId);
-    if (sale?.kind === 'acompte') { toast('Retour suspendu sur un acompte'); return; }
-    const ln = sale.lines[idx];
-    const qty = pickedQty(ret, idx, ln);
-    if (qty !== 1) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('L\'échange se fait une pièce à la fois, choisissez la quantité 1')); return; }
+    if (!sale) return;
+    if (sale.kind === 'acompte') { toast('Retour suspendu sur un acompte'); return; }
+    const queue = exchangeQueue(ret, sale);
+    if (!queue.length) return;
     /* Le motif choisi sur la fiche de retour suit l'échange jusqu'au registre :
        sans lui, tout échange y était classé « Echange », c'est-à-dire rien —
        la colonne motif répétait la colonne type et le registre ne disait plus
        pourquoi la pièce était revenue. */
-    ticketOwner.startReturn(state, { saleId: ret.saleId, idx, qty: 1, motif: ret.motif || '' });
+    ticketOwner.startReturn(state, { saleId: ret.saleId, idx: queue[0], qty: 1, motif: ret.motif || '', queue: queue.slice(1), step: 1, total: queue.length });
     switchView('vente');
-    toast(`Échange ${sale.id}, choisissez l'article de remplacement dans la grille`);
+    toast(exchStartToast(sale, queue.length));
   }
 
   async function doAvoir() {
@@ -475,7 +493,7 @@ const M = globalThis.KiwiMoney;
       stockAdd(ln.pid, ln.size, 1);
       markLineReturned(ln, 1, `échangée → ${newP.name} · ${newSize}`);
       recordReturn(sale, [ex.idx], paidUnit(sale, ln), ex.motif || 'Non précisé', 'echange', '', new Map([[ex.idx, 1]]));
-      state.exchange = null;
+      state.exchange = nextExchange(ex);   // la pièce suivante, s'il en reste
       persistDay();
       queueIfOffline(`Échange · ${sale.id}`);
       renderExchNote(); renderGrid(); renderBadges();

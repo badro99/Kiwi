@@ -512,7 +512,11 @@ function bqKitScanBar(bar, o) {
     input.value = '';
     close();
     try { input.focus(); } catch (_) {}
-    if (r.ean) o.commit(r.ean); else o.open(r.pid);
+    /* o.pick (barre de vente) : une ligne CHOISIE ouvre la fiche de l'article,
+       déclinaison cochée, comme un toucher dans la grille (remise, échange).
+       Seule la douchette (Entrée sans ligne désignée) ajoute directement. */
+    if (typeof o.pick === 'function') o.pick(r);
+    else if (r.ean) o.commit(r.ean); else o.open(r.pid);
   };
 
   /* Une frappe humaine voit la liste « tout de suite » (moins d'une image) ;
