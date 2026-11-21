@@ -56,8 +56,10 @@ try {
       await page.evaluate(() => document.getElementById('kiwi-employee-install').scrollIntoView({ block: 'center' }));
       await h.still(page, '#kiwi-employee-install');
       const inProfile = await page.evaluate(() => { const b = document.getElementById('kiwi-employee-install'); const tabs = document.querySelector('.bottom-tabs')?.getBoundingClientRect(); const r = b.getBoundingClientRect();
-        return { inside: !!b.closest('.tab-profil'), fixed: getComputedStyle(b).position === 'fixed', beforeClockout: b.nextElementSibling?.id === 'profil-clockout', clear: !tabs || r.bottom <= tabs.top || r.top >= tabs.bottom }; });
-      check(inProfile.inside && !inProfile.fixed && inProfile.beforeClockout, `profil : un bouton du profil, au-dessus de « Pointer le départ » (${JSON.stringify(inProfile)})`);
+        const probe = document.createElement('div'); probe.style.background = 'var(--btn-primary-bg)'; b.parentNode.appendChild(probe);
+        const token = getComputedStyle(probe).backgroundColor === getComputedStyle(b).backgroundColor && !b.getAttribute('style'); probe.remove();
+        return { inside: !!b.closest('.tab-profil'), fixed: getComputedStyle(b).position === 'fixed', beforeClockout: b.nextElementSibling?.id === 'profil-clockout', token, clear: !tabs || r.bottom <= tabs.top || r.top >= tabs.bottom }; });
+      check(inProfile.inside && !inProfile.fixed && inProfile.beforeClockout && inProfile.token, `profil : un bouton du profil, au-dessus de « Pointer le départ », aux couleurs du bouton principal (${JSON.stringify(inProfile)})`);
       check(await shown(page) && inProfile.clear, 'il se voit sans couvrir la barre d’onglets');
       check(page.errors.length === 0, 'aucune erreur de script' + (page.errors.length ? ' : ' + page.errors.join(' | ') : ''));
     });

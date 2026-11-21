@@ -172,7 +172,7 @@ var SHELL = [
      dans la coquille · en silence, puisque install() avale l'échec. Et c'est
      bien /kiwi-serveur que l'application ouvre partout ailleurs. */
   '/kiwi-serveur',
-  '/assets/serveur-shell.css?v=10',
+  '/assets/serveur-shell.css?v=11',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
   '/assets/serveur/payment-support.js?v=9',
   '/assets/serveur/service.js?v=45',

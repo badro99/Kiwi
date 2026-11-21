@@ -29,9 +29,11 @@
     var anchor = document.getElementById('profil-clockout');
     b.id = 'kiwi-employee-install'; b.type = 'button';
     b.textContent = say('Installer l’app', 'Install the app', 'تثبيت التطبيق');
-    b.style.cssText = (anchor ? 'display:flex;width:100%;height:48px;margin:0 0 12px;align-items:center;justify-content:center;'
-      : 'position:fixed;right:16px;bottom:82px;z-index:9998;padding:12px 17px;box-shadow:0 8px 24px -8px rgba(11,110,79,.55);') +
-      'border:0;border-radius:12px;background:#0B6E4F;color:#F7F5F0;font:700 14px/1 "Inter Tight",system-ui;cursor:pointer';
+    /* Dans le profil, le bouton prend la feuille de style de l'app (.profil-install : le couple
+       --btn-primary-bg / --btn-primary-ink, Atlas le jour). Hors profil, l'ancien bouton flottant. */
+    if (anchor) b.className = 'profil-install';
+    else b.style.cssText = 'position:fixed;right:16px;bottom:82px;z-index:9998;padding:12px 17px;box-shadow:0 8px 24px -8px rgba(11,110,79,.55);' +
+      'border:0;border-radius:12px;background:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0);font:600 14px/1 "Inter Tight",system-ui;cursor:pointer';
     b.addEventListener('click', function () {
       if (deferred) {
         deferred.prompt();
