@@ -410,6 +410,11 @@ put(`INSERT OR REPLACE INTO table_sessions (id,merchant,mode,table_no,status,ope
      VALUES (?,?,?,?,?,?,?)`, 'sess-payment-table-1', merchant, 'table', '1', 'open', now - 3600000, now);
 put(`UPDATE orders SET session_id=? WHERE merchant=? AND table_no='1' AND paid_ts IS NULL`,
   'sess-payment-table-1', merchant);
+/* Le serveur encaisse la note de la visite, toutes ses commandes : un paiement du téléphone sous la
+   note ne solde plus la visite (functions/api/_visit-cover.js, settleCoveredOrders `phone`). La scène
+   payait 180 sans rapport avec les commandes rattachées ci-dessus. */
+const visitBill = db.prepare("SELECT SUM(total) AS t FROM orders WHERE merchant=? AND session_id='sess-payment-table-1' AND status <> 'rejected'").get(merchant).t;
+Object.assign(employeePayment, { amount: visitBill, lines: [{ name: 'Tajine', qty: 2, total: visitBill, cat: 'Plats' }] });
 request = new Request('https://kiwi.test/api/sale', {
   method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' },
   body: JSON.stringify({ merchant, ...employeePayment }),
@@ -433,10 +438,10 @@ ok(settledSession.status === 'closed'
    identifiant, et une seule ligne existe pour cette addition. */
 const firstPaymentId = paid.body && paid.body.id;
 paid = await employeeSale(saraCookie, employeePayment);
-const savedPayments = db.prepare("SELECT id, amount, lines FROM sales WHERE merchant=? AND amount=180 AND lines LIKE '%Tajine%'").all(merchant);
+const savedPayments = db.prepare("SELECT id, amount, lines FROM sales WHERE merchant=? AND amount=? AND lines LIKE '%Tajine%'").all(merchant, visitBill);
 const savedLines = JSON.parse(savedPayments[0] && savedPayments[0].lines || '[]');
 ok(paid.response.status === 200 && !!firstPaymentId && paid.body.id === firstPaymentId
-  && savedPayments.length === 1 && savedPayments[0].id === firstPaymentId && savedPayments[0].amount === 180
+  && savedPayments.length === 1 && savedPayments[0].id === firstPaymentId && savedPayments[0].amount === visitBill
   && savedLines[0].n === 'Tajine' && savedLines[0].q === 2,
   "un retry Wi-Fi du paiement reste unique et conserve les articles pour l'historique");
 

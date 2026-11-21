@@ -17,7 +17,7 @@
  *   · une autre boutique ne voit rien de la visite (409 jamais par erreur) ;
  *   · table rouverte sous une autre visite (alias compris) ⇒ 409 qui la nomme, rien sur l'ancienne ;
  *   · une part d'un partage d'une autre visite ⇒ 409 split-flow-other-visit, la nouvelle reste due ;
- *   · un paiement du téléphone sous la première commande ne solde pas la visite. */
+ *   · un paiement du téléphone sous la note (même entre deux totaux de commandes) ne solde pas la visite. */
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -165,6 +165,30 @@ openVisit('tsx-short-till-0000012', '15'); orderOn('tsx-short-till-0000012', 'sh
 r = await pay(till, { id: 'till-short-12', table: '15', session: 'tsx-short-till-0000012', amount: 14, amountCents: 1400, ref: 'T15', label: 'T15' });
 const tillVisit = sql.prepare('SELECT status FROM table_sessions WHERE id = ?').get('tsx-short-till-0000012');
 check(r.status === 200 && !r.body.billOpen && tillVisit.status === 'closed', `la caisse, même montant : sa règle reste, la visite se solde (${r.status} ${tillVisit.status})`);
+
+/* 13 · juge, round 4 : une note périmée qui tombe ENTRE deux totaux de commandes. Commandes de 28,00
+ * et 40,00 (la seconde a grandi après un « + » accepté) ; le téléphone encaisse les 56,00 qu'il avait
+ * lus. Avant : 200, visite close, 0 dû, 12,00 jamais encaissés. Maintenant la visite reste ouverte, la
+ * commande de 28,00 (couverte en entier) est soldée, celle de 40,00 reste due, et la réponse nomme le
+ * reste. La caisse, même montant : sa règle reste (une remise non classée solde la table). */
+function twoOrders(session, table) {
+  openVisit(session, table);
+  sql.prepare("INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, created_ts, updated_ts, session_id) VALUES (?, ?, 301, 'table', ?, 28, '[]', 'served', ?, ?, ?)")
+    .run(session + '-o1', merchant, table, now - 1700e3, now - 60e3, session);
+  sql.prepare("INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, created_ts, updated_ts, session_id) VALUES (?, ?, 302, 'table', ?, 40, '[]', 'accepted', ?, ?, ?)")
+    .run(session + '-o2', merchant, table, now - 1600e3, now - 60e3, session);
+}
+twoOrders('tsx-between-totals-0013', '16');
+r = await pay(waiter, { id: 'emp-between-13', table: '16', session: 'tsx-between-totals-0013', amount: 56, amountCents: 5600, ref: 'ST-110', label: 'ST-110' });
+const between = sql.prepare('SELECT status FROM table_sessions WHERE id = ?').get('tsx-between-totals-0013').status;
+const owed13 = sql.prepare('SELECT id FROM orders WHERE session_id = ? AND paid_ts IS NULL').all('tsx-between-totals-0013').map((o) => o.id);
+check(r.status === 200 && r.body.billOpen === true && r.body.remainingCents === 1200, `téléphone, 56,00 sur 28 + 40 : vente gardée, reste 12,00 nommé (${r.status} ${r.body.remainingCents})`);
+check(between === 'open' && owed13.length === 1 && owed13[0] === 'tsx-between-totals-0013-o2', `la visite reste ouverte, la commande de 40,00 reste due (${between}, ${owed13.join(',')})`);
+r = await pay(waiter, { id: 'emp-between-13b', table: '16', session: 'tsx-between-totals-0013', amount: 12, amountCents: 1200, ref: 'ST-110', label: 'ST-110' });
+check(r.status === 200 && !r.body.billOpen && sql.prepare('SELECT status FROM table_sessions WHERE id = ?').get('tsx-between-totals-0013').status === 'closed', `les 12,00 restants encaissés : la visite se solde (${r.status})`);
+twoOrders('tsx-between-till-000013', '17');
+r = await pay(till, { id: 'till-between-13', table: '17', session: 'tsx-between-till-000013', amount: 56, amountCents: 5600, ref: 'T17', label: 'T17' });
+check(r.status === 200 && !r.body.billOpen && sql.prepare('SELECT status FROM table_sessions WHERE id = ?').get('tsx-between-till-000013').status === 'closed', `la caisse, même montant : sa règle reste, la visite se solde (${r.status})`);
 
 f.close();
 console.log(`serveur-stale-visit-payment-test: ${checks} checks passed`);
