@@ -17,6 +17,7 @@ import { GEMMA_VISION, QWEN, GLM_LEGACY, GPT_OSS, DEEPSEEK_FLASH, WHISPER, WHISP
 export const FREE_DAILY_NEURONS = 10000;
 export const INPUT_TOKEN_ALLOWANCE = 4096;
 export const budgets = new WeakMap();
+const RETIRED = /deprecated|no such model|model (?:was )?not found|unknown model/i;
 // DeepSeek V4.1 Flash: Workers AI pricing page, 2026-11-18.
 const RATES = new Map([[GEMMA_VISION, [.1, .3]], [DEEPSEEK_FLASH, [.3, 1.2]],
   [CLEF, [.24, 0]], [QWEN, [.051, .335]], [GLM_LEGACY, [.35, .75]], [GPT_OSS, [.35, .75]],
@@ -84,7 +85,16 @@ export async function meteredAttempt(env, model, payload, run) {
       else if (!(await reserveNeurons(env, budget.merchant, budget.day, amount - pending))) throw new Error('neuron quota');
     } else if (!(await reserveNeurons(env, budget.merchant, budget.day, amount))) throw new Error('neuron quota');
     let result;
-    try { result = await run(); } catch (error) { error.aiInference = true; throw error; }
+    try { result = await run(); } catch (error) {
+      error.aiInference = true;
+      /* Un modèle retiré ou inconnu refuse avant toute inférence : Cloudflare
+         ne facture rien, la réservation est rendue. Le 21 nov. 2026, Qwen retiré
+         (410) gardait 288 neurones par appel et a bloqué l'assistant photo. */
+      if (RETIRED.test(String(error && error.message || error))) {
+        try { await adjustNeurons(env, budget.merchant, budget.day, -amount); } catch (_) {}
+      }
+      throw error;
+    }
     const usage = result?.usage || result?.result?.usage;
     const input = usage?.prompt_tokens ?? usage?.input_tokens;
     const output = usage?.completion_tokens ?? usage?.output_tokens;

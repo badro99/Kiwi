@@ -1,5 +1,5 @@
 import { budgetRoute } from './_budget-route.js';
-import { QWEN as FALLBACK_MODEL, GPT_OSS as MODEL } from './_models.js';
+import { GEMMA_VISION as FALLBACK_MODEL, GPT_OSS as MODEL } from './_models.js';  // Qwen retiré le 20 nov. 2026 (_models.js)
 export { FALLBACK_MODEL, MODEL };
 // /api/ai/ask — le modèle de secours, côté serveur, pour les appareils qui ne
 // peuvent PAS faire tourner l'assistant local.

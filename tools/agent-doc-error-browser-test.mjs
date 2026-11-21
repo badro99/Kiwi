@@ -17,11 +17,19 @@ async function click(page, selector) {
   const el = await page.waitForSelector(selector, { visible: true, timeout: 20000 });
   await el.scrollIntoView(); await el.click();
 }
+/* 21 nov. 2026, le soir : un plafond du jour (429) affichait « [object Object] » :
+   son message arrive en trois langues, l'écran doit en lire une. */
+const QUOTA = { ok: false, error: 'quota', kind: 'visioninspect', cap: 150,
+  message: { fr: 'Limite du jour atteinte pour Kiwi AI. Réessayez demain.', en: 'Daily Kiwi AI limit reached. Try again tomorrow.', ar: 'تم بلوغ الحد اليومي لـ Kiwi AI. حاول غدًا.' } };
+const CASES = [
+  ['a failed photo analysis names the server reason, as an error', 502, { ok: false, error: 'model-failed', message: REASON }, 'HTTP 502', REASON],
+  ['a daily limit reads as a sentence in the page language, not an object', 429, QUOTA, 'HTTP 429', QUOTA.message.fr],
+];
 try {
-  await h.S.run('a failed photo analysis names the server reason, as an error · fr · phone', async (t) => {
+  for (const [name, status, body, code, reason] of CASES) await h.S.run(name + ' · fr · phone', async (t) => {
     // coverage: surface=dashboard locale=fr viewport=phone
     const { ctx, page } = await demoPage(h, 'fr', 'phone', {}, {
-      'POST /api/ai/vision-inspect': () => ({ status: 502, body: { ok: false, error: 'model-failed', message: REASON } }),
+      'POST /api/ai/vision-inspect': () => ({ status, body }),
     });
     t.defer(() => ctx.close()); t.watch(page);
     t.step('open the demo dashboard and its assistant');
@@ -41,9 +49,10 @@ try {
     await page.waitForSelector('.fa-drawer .kv-attach-preview', { visible: true });
     await click(page, '.fa-drawer [data-fa-send]');
     t.step('the thread and the toast both report the failure');
-    await page.waitForFunction(() => /HTTP 502/.test(document.querySelector('.fa-drawer')?.textContent || ''), { timeout: 15000 });
+    await page.waitForFunction((c) => (document.querySelector('.fa-drawer')?.textContent || '').includes(c), { timeout: 15000 }, code);
     const thread = await page.$eval('.fa-drawer', (el) => el.textContent);
-    assert.ok(thread.includes(REASON), 'the bubble keeps the reason the server gave: ' + thread.slice(-200));
+    assert.ok(thread.includes(reason), 'the bubble keeps the reason the server gave: ' + thread.slice(-200));
+    assert.ok(!thread.includes('[object Object]'), 'no object printed as text');
     await page.waitForSelector('.kiwi-toast', { timeout: 5000 });
     const toast = await page.$eval('.kiwi-toast', (el) => ({ cls: el.className, role: el.getAttribute('role') }));
     assert.ok(!/\bsuccess\b/.test(toast.cls), 'an error is not announced under the success tick: ' + toast.cls);

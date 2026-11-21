@@ -1,5 +1,5 @@
 import { meteredAttempt } from './_neurons.js';
-import { GEMMA_PREFIX, QWEN } from './_models.js';
+import { GEMMA_PREFIX, QWEN, DEEPSEEK_FLASH } from './_models.js';
 
 /* Gemma 4 et Qwen 3 ignorent reasoning_effort 'low' : sur le vrai prompt de
  * menu-rank, les deux passaient leurs 1200 tokens à réfléchir et ne rendaient
@@ -12,6 +12,11 @@ export function thinkingOff(model, payload) {
   if (!payload || typeof payload !== 'object') return payload;
   if (String(model).startsWith(GEMMA_PREFIX)) {
     return { ...payload, chat_template_kwargs: { ...(payload.chat_template_kwargs || {}), enable_thinking: false } };
+  }
+  /* DeepSeek V4.1 Flash réfléchit par défaut et peut épuiser max_tokens avant
+     le JSON (invoice.js, 20 nov.) : chat_template_kwargs.thinking=false. */
+  if (model === DEEPSEEK_FLASH) {
+    return { ...payload, chat_template_kwargs: { ...(payload.chat_template_kwargs || {}), thinking: false } };
   }
   if (model !== QWEN) return payload;
   const tag = (s) => (s.endsWith(NO_THINK) ? s : s + NO_THINK);

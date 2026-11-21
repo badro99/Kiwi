@@ -562,7 +562,10 @@
       /* Le serveur dit pourquoi (quota du jour, photo trop lourde, modèle qui
          n'a pas répondu) : l'écran garde sa raison au lieu d'un « HTTP 502 » nu. */
       return res.json().catch(function () { return null; }).then(function (b) {
-        var why = b && (b.message || b.error);
+        /* Le message d'un plafond arrive en trois langues ({fr, en, ar}, _quota.js) :
+           on lit la langue affichée, jamais l'objet entier (« [object Object] »). */
+        var m = b && b.message, l = (document.documentElement.lang || 'fr').slice(0, 2);
+        var why = b && ((typeof m === 'string' && m) || (m && typeof m === 'object' && (m[l] || m.fr || m.en)) || b.error);
         throw new Error('HTTP ' + res.status + (why ? ' · ' + String(why).slice(0, 120) : ''));
       });
     })

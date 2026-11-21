@@ -78,7 +78,8 @@ for (const [kind, count, maxTokens, actualModel] of [['menutranslate', 15, 4000,
   }, kind);
   for (let i = 0; i < count; i++) assert.equal((await typical({ env })).status, 200);
 }
-assert.equal(used(), 15 * 14 + 40 * 53, '15 translations plus 40 typical text calls share one merchant day');
+// Gemma 4 traduit depuis le retrait de Qwen (20 nov. 2026) : 18 neurones réglés par appel, 14 avec Qwen.
+assert.equal(used(), 15 * 18 + 40 * 53, '15 translations plus 40 typical text calls share one merchant day');
 reset(); await begin();
 env.AI = { async run() { return { usage: { prompt_tokens: 0, completion_tokens: 0 } }; } };
 await runAiWithGateway(env, model, { max_tokens: 700 });
