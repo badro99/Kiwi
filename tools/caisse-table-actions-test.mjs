@@ -25,8 +25,9 @@ ok(/uid: l\.uid[\s\S]{0,180}sent: !!l\.sent/.test(caisse), 'bill projection pres
 ok(/data-table-void/.test(caisse) && /cancelCaisseLineImmediately\(selectedId, line\)/.test(caisse), 'sent bill line exposes the audited one-tap kitchen cancellation');
 const oneTapCancel = caisse.slice(caisse.indexOf('async function cancelCaisseLineImmediately('),
   caisse.indexOf('    /* ---- table order management ---- */'));
-ok(oneTapCancel.includes("reason: 'item_cancelled'") && !oneTapCancel.includes('requireTillOperator'),
-  'one-item cancellation asks for neither reason nor PIN');
+ok(oneTapCancel.includes("reason: 'item_cancelled'") && /requireManager\(`Annuler \$\{line\.name\}/.test(oneTapCancel)
+  && /actorProof: scope\.who\.actorProof/.test(oneTapCancel) && !/actor: 'Caisse'/.test(oneTapCancel),
+  'one-item cancellation asks for no reason but a manager code, and is written under that person\'s name (Browse, 21 nov. 2026)');
 ok(/const sent = sendTableToKitchen\(tableId\);[\s\S]{0,700}if \(selectedId === tableId\) renderRightPanel\(tableId\);/.test(caisse),
   'sending to kitchen immediately rerenders the bill with sent-item cancellation controls');
 ok(/or-item-void-btn[\s\S]{0,180}data-review-action="void"/.test(caisse)

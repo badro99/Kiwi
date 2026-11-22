@@ -22,9 +22,10 @@
     }
 
     /* One tap on a sent line removes one unit from the unpaid bill and records
-       an approved kitchen void. The paired till is the authorization: unlike
-       a whole-table cancellation, this frequent correction has no PIN or
-       reason dialog. The amount changes only after the server confirms it. */
+       an approved kitchen void, ONCE A MANAGER CODE HAS APPROVED IT (Browse,
+       21 nov. 2026 : « il faut verrouiller et suivre les annulations »). The
+       void is written under that person's name (actorProof), never « Caisse »,
+       and the server refuses a till void without it. Server confirms first. */
     /* UN PLAT ANNULÉ APRÈS SON ENVOI. L'écran cuisine reçoit l'annulation ;
        une cuisine qui travaille au papier n'a que le bon déjà imprimé, et
        continue de préparer le plat. Le chemin de l'envoi (file durable, un
@@ -56,6 +57,7 @@
         toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Annulation impossible · caisse non appairée, article conservé'));
         return;
       }
+      if (slug && !(scope.who && scope.who.actorProof)) { requireManager(`Annuler ${line.name} · déjà envoyé en cuisine`, actor => cancelCaisseLineImmediately(tableId, line, Object.assign({}, scope, { who: actor })), null, { needsServer: true }); return; }
       currentOrder().patchLine(line, { ["voidBusy"]: true });
       toast(`Annulation de ${line.name}…`);
 
@@ -66,7 +68,7 @@
           const owner = tableId && canonicalOrdersForTable(tableId).find(entry =>
             (entry.order.relayLines || []).some(item => item.uid === line.uid));
           const data = await postCaisseCancellation({
-              merchant: slug,
+              merchant: slug, actorProof: scope.who.actorProof,
               voidLine: {
                 /* Une commande à emporter n'a pas de table : elle se désigne
                  * par son identifiant de file, que `voidLine` accepte déjà
@@ -80,7 +82,7 @@
                 qty: 1,
                 reason: 'item_cancelled',
                 isWaste: 0,
-                actor: 'Caisse'
+                actor: scope.who.name || 'Caisse'
               }
           });
           if (data && data.alertSent) {
@@ -106,12 +108,13 @@
           printKitchenVoid(tableId, line, voidRequestId, scope, qtyBefore);
           if (scope.cart) currentOrder().replaceCart(reconcile(cart));
           else currentOrder().replaceTable(tableId, reconcile(tableOrders[tableId]));
+          shift.cancels = (Number(shift.cancels) || 0) + 1;   // la ligne « Annulations » du Z (jamais comptée avant le 21 nov. 2026)
           try { persistShift(); } catch (_) {}
           currentOrder().patchLine(line, {}, ["cancelRequestId"]);
           toast(`${line.name} annulé en cuisine`);
           return;
         } catch (err) {
-          toast(`Article conservé · ${err.message || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('annulation non transmise')} · touchez − pour réessayer`);
+          toast(`Article conservé · ${(err.message === 'operator-proof-required' ? 'code manager requis, rechargez la caisse' : err.message) || (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('annulation non transmise')} · touchez − pour réessayer`);
           return;
         } finally {
           currentOrder().patchLine(line, { ["voidBusy"]: false });

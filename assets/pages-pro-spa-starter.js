@@ -1210,13 +1210,15 @@
       const label = v.kind === 'takeout-handover' ? T({ fr: 'Commande remise au client', en: 'Order handed to customer', ar: 'سُلِّم الطلب إلى العميل' })
         : v.kind === 'closure' ? T({ fr: 'Table fermée / remise à zéro', en: 'Table closed / reset', ar: 'إغلاق / إعادة ضبط الطاولة' })
         : v.kind === 'order-cancel' ? T({ fr: 'Commande annulée', en: 'Order cancelled', ar: 'طلب ملغى' })
+        : v.kind === 'item-void' ? T({ fr: 'Article annulé après envoi en cuisine', en: 'Item cancelled after kitchen send', ar: 'صنف أُلغي بعد إرساله إلى المطبخ' })
         : v.kind === 'restore' ? T({ fr: 'Vente rétablie', en: 'Sale restored', ar: 'استعادة البيع' }) : T({ fr: 'Vente annulée', en: 'Sale voided', ar: 'بيع ملغى' });
       const who = v.actor || v.actorId || T({ fr: 'Identité non enregistrée', en: 'Identity not recorded', ar: 'الهوية غير مسجلة' });
-      const cashNote = ['closure', 'takeout-handover', 'order-cancel'].includes(v.kind) ? T({ fr: 'Sans mouvement d’argent', en: 'No cash movement', ar: 'بدون حركة مالية' }) : T({ fr: 'Correction de vente, pas un remboursement', en: 'Sale correction, not a refund', ar: 'تصحيح بيع، وليس استردادًا' });
+      const cashNote = ['closure', 'takeout-handover', 'order-cancel', 'item-void'].includes(v.kind) ? T({ fr: 'Sans mouvement d’argent', en: 'No cash movement', ar: 'بدون حركة مالية' }) : T({ fr: 'Correction de vente, pas un remboursement', en: 'Sale correction, not a refund', ar: 'تصحيح بيع، وليس استردادًا' });
       const source = v.source === 'caisse' ? T({ fr: 'Caisse', en: 'Till', ar: 'الصندوق' }) : v.source || '';
       const orderValue = ['closure', 'takeout-handover'].includes(v.kind) ? v.orderAmountCents : v.amountCents;
       const refs = ['closure', 'takeout-handover'].includes(v.kind)
         ? (v.kind === 'takeout-handover' ? `${T({ fr: 'Commande', en: 'Order', ar: 'الطلب' })} ${(v.orders || []).map(o => '#' + o.number).join(', ')}` : `${T({ fr: 'Table', en: 'Table', ar: 'طاولة' })} ${v.tableNo || '?'} · ${(v.orders || []).map(o => '#' + o.number).join(', ')}`)
+        : v.kind === 'item-void' ? (v.tableNo ? `${T({ fr: 'Table', en: 'Table', ar: 'طاولة' })} ${v.tableNo}` : T({ fr: 'À emporter', en: 'Takeaway', ar: 'للأخذ' })) + (v.note === 'pending' ? ' · ' + T({ fr: 'en attente de la cuisine', en: 'awaiting the kitchen', ar: 'بانتظار المطبخ' }) : '')
         : v.ref || v.originalRef || v.saleId;
       return `<div class="rtx-activity-row"><span class="rtx-t">${escS(when)}</span><div><div class="rtx-identity"><span class="rtx-activity-tag">${escS(label)}</span><strong>${escS(refs)}</strong></div><div class="rtx-source">${escS(who)}${source ? ' · ' + escS(source) : ''}</div><details class="rtx-detail"><summary>${escS(T({ fr: 'Voir les détails', en: 'View details', ar: 'عرض التفاصيل' }))}</summary><p>${escS(detail)}</p><p>${escS(v.reason || '')} · ${escS(d.toLocaleString(lang))}</p><p>${escS(v.sessionId || v.saleId || '')}</p>${v.detailsTruncated ? `<p>${escS(T({ fr: 'Détail partiel (250 commandes maximum)', en: 'Partial detail (250 orders maximum)', ar: 'تفاصيل جزئية (250 طلبًا كحد أقصى)' }))}</p>` : ''}</details></div><div class="rtx-activity-value">${fmt(orderValue / 100)} MAD<small>${escS(cashNote)}</small></div></div>`;
     }).join('');

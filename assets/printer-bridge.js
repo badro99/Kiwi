@@ -29,7 +29,7 @@
   'use strict';
 
   /* printer-transport:0 */
-  var transports = window.__kiwiPrinterTransports({ getConfig: getConfig, setConfig: setConfig, currentMerchantKey: currentMerchantKey, ls: ls, set: set, fallbackNotice: fallbackNotice, noteBridgeState: noteBridgeState });
+  var transports = window.__kiwiPrinterTransports({ getConfig: getConfig, setConfig: setConfig, currentMerchantKey: currentMerchantKey, ls: ls, set: set, fallbackNotice: fallbackNotice, noteBridgeState: noteBridgeState, getStationConfig: getStationConfig });
   var bridgeBase = transports.bridgeBase;
   var withTimeout = transports.withTimeout;
   var bridgeHeaders = transports.bridgeHeaders;
@@ -684,7 +684,7 @@
     R('Espèces encaissées', '+ ' + money(cash.sales));
     if (cash.tips) R('Pourboires espèces', '+ ' + money(cash.tips));
     (cash.movements || []).forEach(function (m) {
-      R('  ' + (m.reason || (m.type === 'in' ? 'Entrée' : 'Sortie')),
+      R('  ' + (m.ts ? new Date(m.ts).toTimeString().slice(0, 5) + ' ' : '') + (m.reason || (m.type === 'in' ? 'Entrée' : 'Sortie')) + (m.who ? ' · ' + m.who : ''),
         (m.type === 'in' ? '+ ' : '- ') + money(m.amount));
     });
     R('ATTENDU EN CAISSE', money(cash.expected), 'kpr-b');

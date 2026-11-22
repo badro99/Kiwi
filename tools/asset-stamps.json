@@ -212,16 +212,16 @@
     "sha": "20476101ff223f1f"
   },
   "assets/caisse-floor.js": {
-    "v": "23",
-    "sha": "3207239ccc060037"
+    "v": "24",
+    "sha": "94c4ffc245086efd"
   },
   "assets/caisse-hardware.js": {
     "v": "16",
     "sha": "690e7d77e134c697"
   },
   "assets/caisse-kitchen.js": {
-    "v": "30",
-    "sha": "2aec622ff3447940"
+    "v": "31",
+    "sha": "af731124f6a82009"
   },
   "assets/caisse-lang.js": {
     "v": "160",
@@ -536,8 +536,8 @@
     "sha": "8e57c57850d5aadf"
   },
   "assets/day-report.js": {
-    "v": "59",
-    "sha": "e8fd025c07708022"
+    "v": "60",
+    "sha": "33ce77634a3b5064"
   },
   "assets/delivery-collect.js": {
     "v": "4",
@@ -628,8 +628,8 @@
     "sha": "43d0c87422fc61c2"
   },
   "assets/escpos.js": {
-    "v": "22",
-    "sha": "b2f4ab256040d977"
+    "v": "23",
+    "sha": "b2b2ce45dc538cb0"
   },
   "assets/exchange-queue.js": {
     "v": "1",
@@ -1492,8 +1492,8 @@
     "sha": "3b6156a302575d8f"
   },
   "assets/pages-pro-spa-starter.js": {
-    "v": "8",
-    "sha": "b187bc063b0ef380"
+    "v": "9",
+    "sha": "59f404d62ea9664d"
   },
   "assets/pages-pro.css": {
     "v": "6",
@@ -1536,8 +1536,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "283",
-    "sha": "66544ca115d8c517"
+    "v": "284",
+    "sha": "f3da793432c02d28"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2076,8 +2076,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "95",
-    "sha": "1bebc3df036202c5"
+    "v": "96",
+    "sha": "98fa8fd8127799ce"
   },
   "assets/printer/pairing-lang.js": {
     "v": "23",
@@ -2088,8 +2088,8 @@
     "sha": "3c1535225b44d40e"
   },
   "assets/printer/transports.js": {
-    "v": "14",
-    "sha": "1bdc6504997588db"
+    "v": "15",
+    "sha": "12fe4a6ad1f86ead"
   },
   "assets/procurement.js": {
     "v": "6",

@@ -9,6 +9,7 @@
   var set = core.set;
   var fallbackNotice = core.fallbackNotice;
   var noteBridgeState = core.noteBridgeState;
+  var getStationConfig = core.getStationConfig;
   /* transport-part:0 */
   /* The bridge's own port. 9110 is the default, but on a Windows till it is not
    * guaranteed free · and the bridge exits when the port is taken, which on
@@ -544,28 +545,104 @@
    * to twelve seconds: cuisine behind bar behind pass could therefore start
    * printing 30–40 seconds after the caisse receipt. Monitoring remains useful
    * for a concrete printer failure, but it must be a background concern. */
-  function watchRelayJob(id, qs, bytesLength) {
+  /* UNE IMPRIMANTE QUI NE RÉPOND PLUS DOIT SE VOIR (Browse, 21 nov. 2026).
+   * L'imprimante de caisse s'est éteinte en plein service : pendant trois heures,
+   * 26 tickets (dont les Z) sont restés en file puis ont expiré, et la caisse n'a
+   * rien dit. Deux raisons : la surveillance s'arrêtait au bout de 12 s, alors
+   * qu'une imprimante injoignable laisse le travail « en file » (le serveur le
+   * repropose toutes les 10 s pendant 10 min) ; et le message appelait frReason,
+   * qui n'existe que dans la fenêtre de réglages, donc plantait sans rien montrer.
+   * Désormais chaque travail est suivi jusqu'au bout, et une bannière qui RESTE
+   * nomme l'imprimante, dit combien de tickets attendent ou sont perdus, et
+   * propose « Réessayer » pour ceux que le serveur a abandonnés. Elle s'efface
+   * seule dès qu'un ticket sort de nouveau sur cette imprimante. */
+  var relayAlerts = {};
+  function relayWhy(reason) {
+    var r = String(reason || '');
+    if (/timeout|ETIMEDOUT|EHOSTUNREACH|ECONNREFUSED|ENETUNREACH|unreachable|connect/i.test(r)) return 'injoignable sur le réseau';
+    if (r === 'expired') return 'délai de 10 min dépassé';
+    return r || 'erreur inconnue';
+  }
+  function relayPrinterLabel(t) {
+    var where = (t && (t.ip || t.osPrinter)) || '?';
+    try {
+      var cfg = typeof getStationConfig === 'function' ? getStationConfig() : null;
+      var prof = cfg && (cfg.profiles || []).filter(function (x) { return x && t && ((t.ip && x.ip === t.ip) || (t.osPrinter && x.osPrinter === t.osPrinter)); })[0];
+      return (prof && prof.name ? 'Imprimante ' + prof.name : 'Imprimante') + ' (' + where + ')';
+    } catch (_) { return 'Imprimante (' + where + ')'; }
+  }
+  function relayAlertPaint(key) {
+    var a = relayAlerts[key];
+    if (!a) return;
+    if (!a.waiting.length && !a.lost.length && !a.bridge) { try { a.el && a.el.remove(); } catch (_) {} delete relayAlerts[key]; return; }
+    try {
+      if (!a.el || !a.el.isConnected) {
+        a.el = document.createElement('div');
+        a.el.setAttribute('role', 'alert');
+        a.el.className = 'kiwi-printer-alert';
+        a.el.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99999;max-width:min(640px,calc(100vw - 32px));'
+          + 'display:flex;gap:12px;align-items:center;background:var(--ink,#0A0F0D);color:var(--paper,#F7F5F0);padding:12px 14px;'
+          + 'border-radius:12px;border-left:6px solid var(--danger,#B44338);box-shadow:0 8px 28px rgba(0,0,0,.35);font-size:14px;line-height:1.35;';
+        a.el.innerHTML = '<span data-msg style="flex:1"></span><button type="button" data-retry style="display:none;font:inherit;font-weight:600;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);border:0;border-radius:8px;padding:8px 12px;cursor:pointer">Réessayer</button>'
+          + '<button type="button" data-close aria-label="Fermer" style="font:inherit;background:transparent;color:inherit;border:0;padding:4px 6px;cursor:pointer;font-size:18px">×</button>';
+        a.el.querySelector('[data-close]').onclick = function () { a.waiting = []; a.lost = []; a.bridge = false; relayAlertPaint(key); };
+        a.el.querySelector('[data-retry]').onclick = function () {
+          var again = a.lost.splice(0);
+          relayAlertPaint(key);
+          again.forEach(function (j) { relayEnqueue(j.bytes, j.target, j.kind); });
+        };
+        document.body.appendChild(a.el);
+      }
+      var msg = a.label + (a.bridge && !a.waiting.length && !a.lost.length
+        ? ' · le pont d\u2019impression ne récupère plus les tickets. Vérifiez que la tablette du pont est allumée, connectée au Wi-Fi et l\u2019application ouverte.'
+        : ' ne répond pas (' + a.why + '). Vérifiez qu\u2019elle est allumée, branchée au réseau et qu\u2019il reste du papier.');
+      if (a.waiting.length) msg += ' ' + a.waiting.length + (a.waiting.length > 1 ? ' tickets attendent, ils sortiront' : ' ticket attend, il sortira') + ' dès son retour (10 min au plus).';
+      if (a.lost.length) msg += ' ' + a.lost.length + (a.lost.length > 1 ? ' tickets non imprimés.' : ' ticket non imprimé.');
+      a.el.querySelector('[data-msg]').textContent = msg;
+      a.el.querySelector('[data-retry]').style.display = a.lost.length ? '' : 'none';
+    } catch (_) {}
+  }
+  function relayAlertFor(t) {
+    var key = JSON.stringify(t || {});
+    return relayAlerts[key] || (relayAlerts[key] = { key: key, label: relayPrinterLabel(t), why: '', waiting: [], lost: [], bridge: false, el: null });
+  }
+  function relayAlertDrop(list, id) { var i = list.indexOf(id); if (i >= 0) list.splice(i, 1); }
+  /* Observe an accepted relay job without holding the local durable queue.
+   * The server owns that job for ten minutes once POST /jobs succeeds, so the
+   * watch runs in the background until the job is done, failed or expired. */
+  function watchRelayJob(id, qs, bytesLength, target, bytes, kind) {
     var started = Date.now();
+    var a = target ? relayAlertFor(target) : null;
     (function tick() {
       relayFetch('/jobs' + (qs ? qs + '&' : '?') + 'id=' + encodeURIComponent(id), { method: 'GET' }, 5000).then(function (st) {
         var job = st.j && st.j.ok && st.j.job;
         if (job && job.status === 'done') {
           try { window.dispatchEvent(new CustomEvent('kiwi:printer-relay-status', { detail: { ok: true, id: id, bytes: job.bytes || bytesLength } })); } catch (_) {}
+          if (a) { a.waiting = []; a.bridge = false; relayAlertPaint(a.key); }   // l'imprimante répond de nouveau
           return;
         }
         if (job && (job.status === 'failed' || job.status === 'expired')) {
           var reason = job.error || job.status;
           try { window.dispatchEvent(new CustomEvent('kiwi:printer-relay-status', { detail: { ok: false, id: id, reason: reason } })); } catch (_) {}
-          fallbackNotice('Impression distante échouée · ' + frReason(reason));
+          if (a) { relayAlertDrop(a.waiting, id); a.why = relayWhy(reason); if (bytes) a.lost.push({ bytes: bytes, target: target, kind: kind }); relayAlertPaint(a.key); }
+          else fallbackNotice('Impression distante échouée · ' + relayWhy(reason));
           return;
         }
         if (job && job.status === 'uncertain') {
           var uncertainReason = job.error || 'output-unknown-ack-timeout';
           try { window.dispatchEvent(new CustomEvent('kiwi:printer-relay-status', { detail: { ok: false, uncertain: true, id: id, reason: uncertainReason } })); } catch (_) {}
-          fallbackNotice('Impression distante incertaine · ' + frReason(uncertainReason));
+          fallbackNotice('Impression incertaine · vérifiez que le ticket est bien sorti');
+          if (a) { relayAlertDrop(a.waiting, id); relayAlertPaint(a.key); }
           return;
         }
-        if (Date.now() - started <= 12000) setTimeout(tick, 700);
+        if (a && job && job.status === 'queued' && job.error && a.waiting.indexOf(id) < 0) {
+          a.why = relayWhy(job.error); a.waiting.push(id); relayAlertPaint(a.key);   // le pont a essayé : l'imprimante ne répond pas
+        } else if (a && job && job.status === 'queued' && !job.claimed_ts && Date.now() - started > 25000 && !a.bridge) {
+          a.bridge = true; relayAlertPaint(a.key);   // personne n'a réclamé le ticket : le pont est éteint
+        }
+        var age = Date.now() - started;
+        if (age <= 11 * 60000) { var h = setTimeout(tick, age < 15000 ? 1500 : 5000); if (h && h.unref) h.unref(); }   // unref : un test Node ne reste pas ouvert 11 min
+        else if (a) { relayAlertDrop(a.waiting, id); relayAlertPaint(a.key); }
       });
     })();
   }
@@ -600,7 +677,7 @@
         return { ok: false, reason: why };
       }
       var id = r.j.id;
-      watchRelayJob(id, qs, bytes.length);
+      watchRelayJob(id, qs, bytes.length, t, bytes, kind);
       return { ok: true, via: 'relay', queued: true, id: id };
     });
   }

@@ -747,13 +747,17 @@ const immediateBody = { merchant: MERCHANT, actorProof: proof, voidLine: {
   immediate: true, requestId: 'voi-test-immediate-0001', reason: 'client_change · erreur client', actor: 'Spoofed' } };
 const unpaired = await postQueue({ ...immediateBody, actorProof: undefined }, employeeCookie);
 check('Immediate item cancellation still requires the paired caisse', unpaired.status === 403);
-const immediateResult = await postQueue({ ...immediateBody, actorProof: undefined }, tillCookie);
-check('Paired caisse cancels a cooking item immediately, without a PIN or kitchen approval', immediateResult.status === 200
+/* Verrouillée (Browse, 21 nov. 2026) : la caisse appairée seule ne suffit plus. */
+const unproved = await postQueue({ ...immediateBody, actorProof: undefined }, tillCookie);
+check('A paired caisse without a person\'s code cannot cancel a sent item', unproved.status === 403
+  && unproved.data.error === 'operator-proof-required');
+const immediateResult = await postQueue(immediateBody, tillCookie);
+check('Paired caisse cancels a cooking item immediately with a code, without kitchen approval', immediateResult.status === 200
   && immediateResult.data.directVoid && !immediateResult.data.alertSent && immediateResult.data.total === 50);
 check('Only the selected UID loses a unit', immediateResult.data.remainingLines?.every(l => l.qty === 1));
-check('PIN-free item cancellation records the paired caisse identity',
-  db._db.prepare('SELECT actor FROM kitchen_voids WHERE id=?').get(immediateBody.voidLine.requestId)?.actor === 'Caisse');
-const repeatImmediate = await postQueue({ ...immediateBody, actorProof: undefined }, tillCookie);
+check('Item cancellation records the person who gave the code, never « Caisse » nor the name the browser sent',
+  db._db.prepare('SELECT actor FROM kitchen_voids WHERE id=?').get(immediateBody.voidLine.requestId)?.actor === 'Test cashier');
+const repeatImmediate = await postQueue(immediateBody, tillCookie);
 check('Lost-response retry does not cancel another unit', repeatImmediate.data.replayed && repeatImmediate.data.total === 50);
 const staleUid = await postQueue({ ...immediateBody, voidLine: { ...immediateBody.voidLine,
   requestId: 'voi-test-stale-uid-0001', lineId: 'uid-missing' } }, tillCookie);

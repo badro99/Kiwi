@@ -91,11 +91,11 @@ export async function voidLine(ctx) {
     // remains informed through the audited void, but cannot indefinitely
     // block the guest's bill. Service-phone requests retain the two-tier flow.
     const immediate = b.voidLine.immediate === true;
-    /* A paired caisse may remove one unpaid item without asking for a PIN on
-     * every tap. The till credential still proves that this is the store's
-     * registered caisse; whole-table cancellation remains separately guarded
-     * by a short-lived operator proof above. */
-    if (immediate && !pinActor && !pairedTill) return json({ error: 'till-required' }, 403);
+    /* A till void used to need only the paired caisse. It now needs a person's
+     * short-lived operator proof, like a whole-table cancellation above. */
+    /* Verrouillée (Browse, 21 nov. 2026) : la caisse appairée ne suffit plus, il faut
+     * le code d'une personne (actorProof), dont le nom part dans kitchen_voids. */
+    if (immediate && !pinActor) return json({ error: pairedTill ? 'operator-proof-required' : 'till-required' }, 403);
     const requestId = String(b.voidLine.requestId || '');
     if (immediate && !/^voi-[a-zA-Z0-9-]{16,80}$/.test(requestId)) return json({ error: 'void-request-id-required' }, 400);
     const table = normTable(b.voidLine.table);
