@@ -37,9 +37,10 @@ const LOGOUT_D = 'M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h2
 
 /* The composer, lifted out of the controller and run for real. */
 const composerSrc = ctl.slice(ctl.indexOf('  const GREET_T = {'), ctl.indexOf('  function isNativeShell()'));
-const sandbox = { store: () => null, document: { documentElement: { lang: 'fr' } }, out: null };
+const mem = new Map();
+const sandbox = { store: (k) => (mem.has(k) ? mem.get(k) : null), localStorage: { setItem: (k, v) => mem.set(k, String(v)) }, document: { documentElement: { lang: 'fr' } }, out: null };
 vm.createContext(sandbox);
-try { vm.runInContext(composerSrc + '\nout = { GREET_T, daySlot, helloText, wishText, firstName };', sandbox); } catch (_) {}
+try { vm.runInContext(composerSrc + '\nout = { GREET_T, daySlot, helloText, wishText, firstName, businessDay, greetedToday, markGreeted, byeText, BYE_T };', sandbox); } catch (_) {}
 const G = sandbox.out || {};
 const at = (h, m = 0) => new Date(2026, 9, 12, h, m);
 
@@ -118,11 +119,50 @@ ok('EN/AR dash.day are sentences, not « good day? »', () => {
 });
 
 console.log('greeting · timing and motion');
-ok('the greeting ends by 1.9 s and is gone at 2.5 s', () => {
-  const u = ctl.slice(ctl.indexOf('  function unlock() {'), ctl.indexOf('  /* ── Skip control'));
-  assert.match(u, /\}, 1900\);/);
-  assert.match(u, /\}, 2500\);/);
-  assert.ok(!/\}, 2600\);|\}, 3200\);/.test(u), 'old 2.6 s / 3.2 s timeline');
+ok('the greeting ends by 1.25 s and is gone at 1.65 s (it was 1.9 s / 2.5 s)', () => {
+  const u = ctl.slice(ctl.indexOf('  function unlock() {'), ctl.indexOf('  function showApp() {'));
+  assert.match(u, /\}, 1250\);/);
+  assert.match(u, /\}, 1650\);/);
+  assert.ok(!/\}, 1900\);|\}, 2500\);|\}, 2600\);|\}, 3200\);/.test(u), 'an old, slower timeline');
+});
+ok('once a day: the first unlock of the business day is greeted, every later one goes straight in', () => {
+  const u = ctl.slice(ctl.indexOf('  function unlock() {'), ctl.indexOf('  function showApp() {'));
+  assert.match(u, /if \(!isDemoSession\(\) && greetedToday\(greetName\)\) \{ enterQuietly\(\); return; \}/);
+  assert.match(u, /if \(!isDemoSession\(\)\) markGreeted\(greetName\);/);
+  mem.clear(); mem.set('kiwiAccountKey', 'Elham-Brand');
+  const morning = new Date(2026, 10, 22, 9, 0), evening = new Date(2026, 10, 22, 23, 30), lateNight = new Date(2026, 10, 23, 1, 10), next = new Date(2026, 10, 23, 8, 0);
+  assert.equal(G.greetedToday('Elham B', morning), false);
+  G.markGreeted('Elham B', morning);
+  assert.equal(G.greetedToday('Elham', evening), true, 'same person, later the same day');
+  assert.equal(G.greetedToday('Elham', lateNight), true, '01:10 still belongs to the 5 h business day');
+  assert.equal(G.greetedToday('Elham', next), false, 'a new business day greets again');
+  assert.equal(G.greetedToday('Salma', evening), false, 'another person on the same device is greeted');
+  mem.set('kiwiAccountKey', 'other-shop');
+  assert.equal(G.greetedToday('Elham', evening), false, 'another account is greeted');
+  assert.equal(G.businessDay(new Date(2026, 10, 23, 4, 59)), '2026-11-22');
+  assert.equal(G.businessDay(new Date(2026, 10, 23, 5, 0)), '2026-11-23');
+});
+ok('the once-a-day memory stays small (12 people at most)', () => {
+  mem.clear();
+  for (let i = 0; i < 30; i++) { mem.set('kiwiAccountKey', 'shop-' + i); G.markGreeted('Amira', new Date(2026, 10, 22, 9)); }
+  assert.equal(Object.keys(JSON.parse(mem.get('kiwiGreetedDay'))).length, 12);
+  assert.equal(G.greetedToday('Amira', new Date(2026, 10, 22, 10)), true, 'the latest one is kept');
+});
+ok('the quiet entry dissolves the lock in under half a second, with no words', () => {
+  const q = ctl.slice(ctl.indexOf('  function enterQuietly() {'), ctl.indexOf('  /* ── Goodbye'));
+  assert.match(q, /\}, 200\);/); assert.match(q, /\}, 480\);/);
+  assert.ok(!/renderGreeting|is-visible/.test(q));
+});
+ok('signing out says goodbye in the greeting\'s voice, by the clock, in FR / EN / AR', () => {
+  assert.deepEqual(JSON.parse(JSON.stringify(G.byeText('Elham Brand', 'fr', new Date(2026, 10, 22, 23, 50)))), { bye: 'À bientôt Elham,', wish: 'bonne nuit.' });
+  assert.equal(G.byeText('', 'fr', new Date(2026, 10, 22, 19)).bye, 'À bientôt,');
+  assert.equal(G.byeText('Elham', 'en', new Date(2026, 10, 22, 9)).wish, 'have a great day.');
+  assert.equal(G.byeText('إلهام', 'ar', new Date(2026, 10, 22, 20)).bye, 'إلى اللقاء إلهام،');
+  assert.ok(!/—/.test(JSON.stringify(G.BYE_T)));
+  const g = ctl.slice(ctl.indexOf('  /* ── Goodbye'), ctl.indexOf('  /* ── Skip control'));
+  assert.match(g, /closest\('a\[href="\/auth\/logout"\]'\)/);
+  assert.match(g, /if \(e\.button \|\| e\.metaKey \|\| e\.ctrlKey \|\| e\.shiftKey \|\| e\.altKey\) return;/, 'a new-tab click is left alone');
+  assert.match(g, /window\.location\.href = '\/auth\/logout'; \}, reduceMotion \? 650 : 1100\);/);
 });
 ok('any key (not a bare modifier) skips the greeting once the door is open', () => {
   assert.match(ctl, /if \(unlocked && !done && greet\.classList\.contains\('is-visible'\)\) \{/);
@@ -181,7 +221,7 @@ ok('a failed code restores the help line in the language it was showing', () => 
 });
 ok('the phone tab bar is gone while the gate owns the screen', () => {
   assert.match(html, /html\.kiwi-gate-up \.kw-tabbar \{ display: none !important; \}/);
-  for (const where of ['function skipToApp()', '  function unlock() {', '  function unlockOnboard() {']) {
+  for (const where of ['function skipToApp()', '  function showApp() {', '  function unlockOnboard() {']) {
     const body = ctl.slice(ctl.indexOf(where), ctl.indexOf('\n  }\n', ctl.indexOf(where)));
     assert.match(body, /gate\(false\)/, where);
   }

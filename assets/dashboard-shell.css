@@ -1688,7 +1688,7 @@
     background: linear-gradient(160deg, #F8F7F3 0%, #F1EFE8 55%, #ECEAE3 100%);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 720ms cubic-bezier(0.32, 0.72, 0, 1); }
+    transition: opacity 360ms cubic-bezier(0.32, 0.72, 0, 1); }
   .kiwi-greet::before {
     /* Subtle ambient blobs behind the text */
     content: ""; position: absolute; inset: 0; z-index: 0;
@@ -1704,7 +1704,7 @@
     text-align: center;
     transform: translateY(28px) scale(0.97);
     opacity: 0;
-    transition: transform 800ms cubic-bezier(0.32, 0.72, 0, 1), opacity 800ms ease;
+    transition: transform 460ms cubic-bezier(0.32, 0.72, 0, 1), opacity 460ms ease;
   }
   .kiwi-greet.is-visible .kiwi-greet-inner {
     transform: translateY(0) scale(1);
@@ -1729,9 +1729,11 @@
     display: inline-block;
     white-space: nowrap;
     clip-path: inset(-0.25em 100% -0.25em -0.1em);
-    transition: clip-path 720ms cubic-bezier(0.32, 0.72, 0, 1);
+    transition: clip-path 420ms cubic-bezier(0.32, 0.72, 0, 1);
   }
   [dir="rtl"] .kiwi-greet h1 .em-clip { clip-path: inset(-0.25em -0.1em -0.25em 100%); }
+  /* The goodbye has no wipe: it is already said when it appears. */
+  .kiwi-bye h1 em { display: inline-block; white-space: nowrap; }
   .kiwi-greet h1 .em-clip.is-revealed,
   [dir="rtl"] .kiwi-greet h1 .em-clip.is-revealed { clip-path: inset(-0.25em -0.1em -0.25em -0.1em); }
 
@@ -1741,8 +1743,8 @@
     transform: scale(0.95) translateY(16px);
   }
   .app {
-    transition: opacity 720ms cubic-bezier(0.32, 0.72, 0, 1),
-                transform 720ms cubic-bezier(0.32, 0.72, 0, 1);
+    transition: opacity 420ms cubic-bezier(0.32, 0.72, 0, 1),
+                transform 420ms cubic-bezier(0.32, 0.72, 0, 1);
     transform-origin: top center; }
   .kw-bar-hidden { opacity: 0; }
   .demo-bar {

@@ -78,7 +78,7 @@
      per-vertical component CSS above, which is how it replaces four different
      stat-card implementations without editing four stylesheets. -->
 <link rel="stylesheet" href="assets/genpage.css?v=5" />
-<link rel="stylesheet" href="assets/dashboard-shell.css?v=14" />
+<link rel="stylesheet" href="assets/dashboard-shell.css?v=15" />
 <link rel="stylesheet" href="assets/mobile.css?v=13" />
 <link rel="stylesheet" href="assets/dashboard-native.css?v=3" />
 <link rel="stylesheet" href="assets/kiwi-select.css?v=3" />
@@ -1152,7 +1152,7 @@
      assets/idle-lock.js pour pourquoi ce n'est pas un simple minuteur. -->
 <script defer src="assets/idle-lock.js?v=2"></script>
 <!-- Global operator access · long-press any Kiwi logo to open the console. -->
-<script defer src="assets/operator-access.js?v=1"></script>
+<script defer src="assets/operator-access.js?v=2"></script>
 <script src="assets/kit/motion.js?v=1" defer></script>
 <script src="assets/kit/lens.js?v=1" defer></script>
 <script src="assets/liquid-lens.js?v=11" defer></script>
@@ -1733,6 +1733,38 @@
     return T.hello[daySlot(date)] + (n ? ' ' + n : '') + T.comma;
   }
   function wishText(lang, date) { return GREET_T[lang || greetLang()].wish[daySlot(date)]; }
+  /* Once a day. The hello belongs to the first unlock of the business day (the
+     till's 5 h day, so a 01:00 close is still « today »); every later unlock goes
+     straight in. Per account and per person, on this device. A demo replays. */
+  const GREETED = 'kiwiGreetedDay';
+  function businessDay(date) {
+    const d = new Date((date || new Date()).getTime() - 5 * 3600 * 1000);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  const greetKey = (name) => String(store('kiwiAccountKey') || '').trim().toLowerCase() + '|' + firstName(name).toLowerCase();
+  function greetedToday(name, date) {
+    try { return JSON.parse(store(GREETED) || '{}')[greetKey(name)] === businessDay(date); } catch (_) { return false; }
+  }
+  function markGreeted(name, date) {
+    try {
+      const seen = JSON.parse(store(GREETED) || '{}');
+      delete seen[greetKey(name)];
+      seen[greetKey(name)] = businessDay(date);
+      const keys = Object.keys(seen);
+      keys.slice(0, Math.max(0, keys.length - 12)).forEach((k) => { delete seen[k]; });
+      localStorage.setItem(GREETED, JSON.stringify(seen));
+    } catch (_) {}
+  }
+  /* The goodbye, when the owner signs out: same voice, same clock. */
+  const BYE_T = {
+    fr: { bye: 'À bientôt', wish: ['bonne journée.', 'bon après-midi.', 'bonne soirée.', 'bonne nuit.'] },
+    en: { bye: 'See you soon', wish: ['have a great day.', 'have a great afternoon.', 'have a great evening.', 'good night.'] },
+    ar: { bye: 'إلى اللقاء', wish: ['يوماً موفقاً.', 'بقية يوم موفقة.', 'أمسية سعيدة.', 'تصبح على خير.'] },
+  };
+  function byeText(name, lang, date) {
+    const l = lang || greetLang(), n = firstName(name);
+    return { bye: BYE_T[l].bye + (n ? ' ' + n : '') + GREET_T[l].comma, wish: BYE_T[l].wish[daySlot(date)] };
+  }
   function isNativeShell() {
     try { return document.documentElement.classList.contains('kiwi-native') || !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); }
     catch (_) { return false; }
@@ -2184,47 +2216,95 @@
       setTimeout(() => c.classList.add('is-success'), i * 50);
     });
 
-    /* The whole greeting is under two seconds and any key or click ends it:
-     * a merchant opens this dashboard many times a day.
-     *   300 ms  cells settled · the lock fades, the greeting comes up
-     *   600 ms  the wish wipes in (at once under reduced motion)
-     *   650 ms  lock gone
-     *  1900 ms  the greeting fades as the dashboard dives in
-     *  2500 ms  greeting gone · the dashboard is announced ready */
+    /* Once a day, then straight in: the second unlock of the business day
+     * skips the hello (the lock just dissolves into the dashboard).
+     * The hello itself is about a second and any key or click ends it:
+     *   180 ms  cells settled · the lock fades, the greeting comes up
+     *   360 ms  the wish wipes in (at once under reduced motion)
+     *   420 ms  lock gone
+     *  1250 ms  the greeting fades as the dashboard comes in
+     *  1650 ms  greeting gone · the dashboard is announced ready */
+    const greetName = greetState.who || accountName();
+    if (!isDemoSession() && greetedToday(greetName)) { enterQuietly(); return; }
+    if (!isDemoSession()) markGreeted(greetName);
     setTimeout(() => {
       renderGreeting();
       lock.classList.add('is-unlocking');
       greet.classList.add('is-visible');
       greet.setAttribute('aria-hidden', 'false');
       if (reduceMotion && emClip) emClip.classList.add('is-revealed');
-    }, 300);
+    }, 180);
 
-    setTimeout(() => { if (emClip) emClip.classList.add('is-revealed'); }, 600);
+    setTimeout(() => { if (emClip) emClip.classList.add('is-revealed'); }, 360);
 
     setTimeout(() => {
       if (lock.parentNode) lock.remove();
       document.documentElement.style.overflow = '';
-    }, 650);
+    }, 420);
 
     setTimeout(() => {
       greet.classList.remove('is-visible');
       greet.setAttribute('aria-hidden', 'true');
-      if (app)     app.classList.remove('kw-app-hidden');
-      if (demoBar) demoBar.classList.remove('kw-bar-hidden');
-      enterCards();
-      gate(false);
-      if (window.__kiwiMarketingTease && window.KiwiMarketingTease) {
-        setTimeout(() => {
-          try { window.KiwiMarketingTease.play(); } catch (_) {}
-        }, 700);
-      }
-    }, 1900);
+      showApp();
+    }, 1250);
 
     setTimeout(() => {
       if (greet.parentNode) greet.remove();
       announceDashboardReady();
-    }, 2500);
+    }, 1650);
   }
+  function showApp() {
+    if (app)     app.classList.remove('kw-app-hidden');
+    if (demoBar) demoBar.classList.remove('kw-bar-hidden');
+    enterCards();
+    gate(false);
+    if (window.__kiwiMarketingTease && window.KiwiMarketingTease) {
+      setTimeout(() => {
+        try { window.KiwiMarketingTease.play(); } catch (_) {}
+      }, 700);
+    }
+  }
+  /* Already greeted today: no words, the door opens onto the dashboard. */
+  function enterQuietly() {
+    done = true;
+    setTimeout(() => {
+      lock.classList.add('is-unlocking');
+      document.documentElement.style.overflow = '';
+      showApp();
+    }, 200);
+    setTimeout(() => {
+      if (lock.parentNode) lock.remove();
+      if (greet.parentNode) greet.remove();
+      announceDashboardReady();
+    }, 480);
+  }
+
+  /* ── Goodbye ─────────────────────────────────────────────────────────
+   * « Se déconnecter » from an open dashboard ends on a short goodbye in the
+   * greeting's voice, then leaves. A modified click (new tab) is left alone.
+   * A browser closing its tab shows nothing: no page can paint after that. */
+  document.addEventListener('click', (e) => {
+    const a = e.target && e.target.closest ? e.target.closest('a[href="/auth/logout"]') : null;
+    if (!a || !(unlocked || done) || lock.isConnected || e.defaultPrevented) return;
+    if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    const words = byeText(greetState.who || accountName(), greetLang(), new Date());
+    const bye = document.createElement('div');
+    bye.className = 'kiwi-greet kiwi-bye';
+    bye.setAttribute('role', 'status');
+    const inner = document.createElement('div');
+    inner.className = 'kiwi-greet-inner';
+    const h = document.createElement('h1');
+    const em = document.createElement('em');
+    em.textContent = words.wish;
+    h.append(words.bye + ' ', em);
+    inner.appendChild(h);
+    bye.appendChild(inner);
+    document.body.appendChild(bye);
+    gate(true);
+    requestAnimationFrame(() => requestAnimationFrame(() => bye.classList.add('is-visible')));
+    setTimeout(() => { window.location.href = '/auth/logout'; }, reduceMotion ? 650 : 1100);
+  }, true);
 
   /* ── Skip control ──────────────────────────────────────────────────
    * Repeat viewers · and anyone reloading during a working session ·
