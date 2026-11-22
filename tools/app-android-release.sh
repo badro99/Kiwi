@@ -26,7 +26,9 @@ if [ -n "$(git -C "$ROOT" status --porcelain --untracked-files=normal)" ]; then
 fi
 export JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@21}
 export ANDROID_HOME=${ANDROID_HOME:-"$HOME/Library/Android/sdk"}
-OUT=${KIWI_RELEASE_OUT:-"$ROOT/app/android/build/releases"}
+# Not under app/android/build: `gradlew clean` deletes that whole folder
+# (rootProject.buildDir) halfway through the run. out/ is gitignored.
+OUT=${KIWI_RELEASE_OUT:-"$ROOT/app/android/out/releases"}
 mkdir -p "$OUT"
 OUT=$(cd "$OUT" && pwd)
 RUN=$(mktemp -d "$OUT/release-$CODE-XXXXXX")

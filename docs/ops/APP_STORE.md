@@ -71,7 +71,7 @@ fiche est le nom de la personne jusqu'au transfert.
    sauvegarder hors machine (fichier + mot de passe), activer **Play App Signing**
    (clé générée par Google). Construire avec
    `KIWI_VERSION_CODE=1 sh tools/app-android-release.sh` → l'AAB signé et vérifié
-   dans `app/android/build/releases/release-1-…/`.
+   dans `app/android/out/releases/release-1-…/`.
 4. Piste **test interne** d'abord (tablette Android de Browse), puis **test fermé**
    avec au moins 12 testeurs inscrits pendant 14 jours d'affilée, puis demande
    d'accès à la production. Chaque nouvel envoi prend le `versionCode` suivant.
