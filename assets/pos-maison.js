@@ -1,9 +1,9 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch, openClientModal } from './pos-maison/sales.js?v=153';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch, openClientModal } from './pos-maison/sales.js?v=154';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=4';
 import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=18';
 import { tillNow } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=1';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=153';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=153';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=154';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=154';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=10'; import { mzLivraisons } from './pos-maison/delivery.js?v=28';
 import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=14'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=5'; import { mzSettle } from './pos-maison/catalog-settle.js?v=1'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
 import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
@@ -1519,7 +1519,6 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
           <button class="mz-nav-it on" data-mz-view="vente"><i data-lucide="shopping-bag"></i><span>Vente</span><b class="mz-nav-badge" id="mz-badge-vente"></b></button>
           <button class="mz-nav-it" data-mz-view="mouvements"><i data-lucide="history"></i><span>Mouvements de stock</span></button>
           <button class="mz-nav-it" data-mz-view="casse"><i data-lucide="shield-alert"></i><span>Déclarer Casse</span></button>
-          <button class="mz-nav-it" data-mz-view="scan"><i data-lucide="scan-line"></i><span>Scan</span><b class="mz-nav-badge" id="mz-badge-scan"></b></button>
           <button class="mz-nav-it" data-mz-view="inventaire"><i data-lucide="package"></i><span>Inventaire</span><b class="mz-nav-badge" id="mz-badge-inv"></b></button>
           <button class="mz-nav-it" data-mz-view="fournisseurs"><i data-lucide="truck"></i><span>Fournisseurs</span></button>
           <button class="mz-nav-it" data-mz-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="mz-nav-badge" id="mz-badge-ret"></b></button>
@@ -1565,7 +1564,6 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
         </section>
         <section class="mz-view" data-mz-panel="mouvements"></section>
         <section class="mz-view" data-mz-panel="casse"></section>
-        <section class="mz-view" data-mz-panel="scan"></section>
         <section class="mz-view" data-mz-panel="inventaire"></section>
         <section class="mz-view" data-mz-panel="fournisseurs"></section>
         <section class="mz-view" data-mz-panel="echanges"></section>
@@ -1822,7 +1820,6 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
     if (view === 'vente') { renderCats(); renderTicket(); renderGrid(); renderExchNote(); }
     if (view === 'mouvements') renderMovements();
     if (view === 'casse') renderCasse();
-    if (view === 'scan') renderScan();
     if (view === 'inventaire') renderInventaire();
     if (view === 'fournisseurs') renderSuppliers();
     if (view === 'echanges') renderEchanges(opts);
@@ -1844,7 +1841,6 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
       el.style.display = n ? '' : 'none';
     };
     set('#mz-badge-vente', items);
-    set('#mz-badge-scan', state.scanLog.length);
     set('#mz-badge-ret', avs);
     set('#mz-badge-cl', (window.KiwiClients && KiwiClients.count && KiwiClients.count()) || CLIENTES.length);
     const invBadge = $('#mz-badge-inv', root);

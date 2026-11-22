@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=253';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=171';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=253';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=253';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=254';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=172';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=254';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=254';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=6';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=1';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=4';
@@ -1416,7 +1416,6 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
         </div>
         <nav class="bq-nav" id="bq-nav">
           <button class="bq-nav-it on" data-bq-view="vente"><i data-lucide="shopping-bag"></i><span>Vente</span><b class="bq-nav-badge" id="bq-badge-vente"></b></button>
-          <button class="bq-nav-it" data-bq-view="scan"><i data-lucide="scan-line"></i><span>Scan</span><b class="bq-nav-badge" id="bq-badge-scan"></b></button>
           <button class="bq-nav-it" data-bq-view="inventaire"><i data-lucide="package"></i><span>Inventaire</span><b class="bq-nav-badge" id="bq-badge-inv"></b></button>
           <button class="bq-nav-it" data-bq-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="bq-nav-badge" id="bq-badge-ret"></b></button>
           <button class="bq-nav-it" data-bq-view="vendus"><i data-lucide="chart-no-axes-column-increasing"></i><span>Vendus</span></button>
@@ -1458,7 +1457,6 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
           </div>
           <aside class="bq-ticket" id="bq-ticket"></aside>
         </section>
-        <section class="bq-view" data-bq-panel="scan"></section>
         <section class="bq-view" data-bq-panel="inventaire"></section>
         <section class="bq-view" data-bq-panel="echanges"></section>
         <section class="bq-view" data-bq-panel="vendus"></section>
@@ -1727,7 +1725,6 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   }
   function renderView(view) {
     if (view === 'vente') { renderTicket(); renderGrid(); renderExchNote(); }
-    if (view === 'scan') renderScan();
     if (view === 'inventaire') renderInventaire();
     if (view === 'echanges') {
       renderEchanges();
@@ -1750,7 +1747,6 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       el.style.display = n ? '' : 'none';
     };
     set('#bq-badge-vente', items);
-    set('#bq-badge-scan', state.scanLog.length);
     set('#bq-badge-ret', avs);
     set('#bq-badge-cl', 0);   // le carnet n'est pas une alerte : son total ne ferait que grandir
     const invBadge = $('#bq-badge-inv', root);

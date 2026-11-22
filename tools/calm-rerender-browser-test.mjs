@@ -99,7 +99,7 @@ try {
   });
   /* Le même repeint de fond (catalogue tiré toutes les 20 s, promos, retour
      au premier plan) reconstruisait aussi le champ où la caissière tapait :
-     code-barres à moitié saisi effacé au Scanner, clavier de l'iPad refermé
+     code-barres à moitié saisi effacé à l'Inventaire, clavier de l'iPad refermé
      en pleine recherche aux Échanges. Il attend qu'elle quitte le champ. */
   await h.S.run('boutique till · a background repaint waits while the cashier types · fr · tablet', async (t) => {
     const { page } = await openTill(h, t, 'caisse-boutique', 'fr', 'tablet');
@@ -113,8 +113,8 @@ try {
       await sleep(600);
       return page.$eval(sel, (e) => ({ same: e.__typed === true, focused: document.activeElement === e, value: e.value }));
     };
-    t.step('Scanner: a half-typed barcode survives a repaint');
-    assert.deepEqual(await typeIn('scan', '61234'), { same: true, focused: true, value: '61234' });
+    t.step('Inventaire: a half-typed barcode survives a repaint');
+    assert.deepEqual(await typeIn('inventaire', '61234'), { same: true, focused: true, value: '61234' });
     t.step('Échanges: the search keeps its field and its keyboard');
     assert.deepEqual(await typeIn('echanges', 'Sal'), { same: true, focused: true, value: 'Sal' });
     t.step('once she leaves the field, the held repaint runs');
@@ -124,9 +124,9 @@ try {
   });
   await h.S.run('maison till · a background repaint waits while the cashier types · fr · tablet', async (t) => {
     const { page } = await openTill(h, t, 'caisse-maison', 'fr', 'tablet');
-    await page.evaluate(() => document.querySelector('[data-mz-view="scan"]').click());
+    await page.evaluate(() => document.querySelector('[data-mz-view="inventaire"]').click());
     await sleep(900);
-    const sel = '[data-mz-panel="scan"] input:not([type=checkbox]):not([type=radio])';
+    const sel = '[data-mz-panel="inventaire"] input:not([type=checkbox]):not([type=radio])';
     await page.$eval(sel, (e) => { e.__typed = true; e.value = ''; e.focus(); });
     await page.keyboard.type('61234');
     await page.evaluate(() => window.KiwiPosDispatch.repaint());
