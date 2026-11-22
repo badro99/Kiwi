@@ -782,14 +782,14 @@
        caissier en haut à chaque toucher. On garde la position, et la tuile
        touchée reçoit .just pour que la peau 2027 la fasse sauter. */
     const optQ = (v) => (globalThis.CSS && CSS.escape) ? CSS.escape(String(v)) : String(v).replace(/["\\]/g, '\\$&');
-    function repaintOpt(paint, tapped) {
+    const repaintOpt = (paint, tapped) => {
       const sc = optVeil && optVeil.querySelector('.opt-groups');
       const top = sc ? sc.scrollTop : 0;
       paint();
       const next = optVeil && optVeil.querySelector('.opt-groups');
       if (next) next.scrollTop = top;
       if (tapped) { const b = optVeil.querySelector(tapped); if (b) b.classList.add('just'); }
-    }
+    };
     function openOptSheet(item, groups, onChosen) {
       if (!optVeil) {
         optVeil = document.createElement('div');
