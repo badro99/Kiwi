@@ -113,6 +113,12 @@ check(/kiwi_sess=;/.test(stillOpen.res.headers.get('Set-Cookie') || ''), 'and th
 const quiet = await gate('/api/me', { cookie: both });
 check(!quiet.passed && !quiet.body.includes('account-revoked'), 'an owner-only API refuses without the wipe signal');
 check(/kiwi_sess=;/.test(quiet.res.headers.get('Set-Cookie') || ''), 'and still clears the dead session cookie');
+/* Browse, 22 Nov 2026: the owner session on the counter tablet died at 16:36.
+ * Sales kept flowing and the bridge re-paired (/api/print/bridges is a till
+ * path), but POST /api/print/jobs was not, so every ticket was refused and the
+ * caisse fell back to the PDF dialog for the rest of the evening. */
+check((await gate('/api/print/jobs?merchant=till-shop', { method: 'POST', cookie: both })).passed, 'the till still drops its tickets on the print relay');
+check((await gate('/api/print/jobs?merchant=till-shop&id=pj_0123456789abcdef', { cookie: both })).passed, 'and follows them to the printer');
 const ownerOnly = await gate('/api/me', { cookie: cookies([[SESS_COOKIE, deadSession]]) });
 check(ownerOnly.body.includes('account-revoked'), 'a browser that is not a till still gets the revocation signal');
 

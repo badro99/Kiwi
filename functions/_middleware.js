@@ -66,7 +66,7 @@ export const TILL_PATHS = new Set([
   '/api/live/socket', '/api/inventory/movements', '/api/inventory/counts',
   '/api/cash-sessions', '/api/z-reconciliation', '/api/ticket-sequence',
   '/api/store-credits', '/api/receivables', '/api/retail-balances', '/api/invoice',
-  '/api/pin/verify', '/api/pair/state', '/api/pairs', '/api/print/bridges',
+  '/api/pin/verify', '/api/pair/state', '/api/pairs', '/api/print/bridges', '/api/print/jobs',
   '/api/hotel/room-charges', '/api/sister-stock', '/api/bestsellers',
 ]);
 function tillStoreOf(request, url) {
