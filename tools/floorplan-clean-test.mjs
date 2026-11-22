@@ -22,6 +22,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { cleanFloorplan } = await import(pathToFileURL(path.join(ROOT, 'functions/api/_rules-floorplan-clean.js')).href);
+const { cleanStoredFloorplan } = await import(pathToFileURL(path.join(ROOT, 'functions/api/_floorplan-field-edits.js')).href);
 const { onRequestPost: storePost } = await import(pathToFileURL(path.join(ROOT, 'functions/api/store.js')).href);
 const { tillToken, DEMO_MERCHANTS } = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 
@@ -129,6 +130,62 @@ CREATE TABLE store_docs (merchant TEXT, feature TEXT, data TEXT, rev INTEGER, up
   const attrs = [...stored.zones, ...stored.tables, ...stored.objects].flatMap((o) => [o.id, o.zone, o.color, o.server, ...(o.servers || [])]);
   assert.ok(attrs.every((v) => v == null || !markup.test(String(v))), 'la base ne garde aucun id ni couleur porteur de balisage');
   assert.equal(stored.zones[0].name, 'Terrasse "sud"', 'les noms restent ceux du commerçant');
+}
+
+/* Browse, 21 nov. 2026 : la règle passait aussi sur `fieldEdits`, le registre
+ * de assets/field-merge.js, dont les clés sont des chemins JSON. Chaque
+ * guillemet devenait typographique, la fusion ne retrouvait plus aucune heure
+ * d'édition, et deux appareils en désaccord se départageaient sur une
+ * empreinte : une copie vieille de deux jours a remis dix tables à leur ancienne
+ * place sans que personne ne touche au plan. */
+{
+  const ctx = vm.createContext({});
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/field-merge.js'), 'utf8'), ctx);
+  const FM = ctx.KiwiFieldMerge;
+  const plan = (xs) => ({ v: 2, epoch: 1, zones: [{ id: 'z1', name: 'Salle' }],
+    tables: xs.map((x, i) => ({ id: 'tbl_' + i, num: String(i + 1), zone: 'z1', x, y: 10 * i, shape: 'round', status: 'free' })) });
+  const base = JSON.parse(JSON.stringify(FM.floorStamp(plan(Array.from({ length: 30 }, (_, i) => 100 + i)), {})));
+  const roundTrip = (doc) => cleanStoredFloorplan(JSON.parse(JSON.stringify(doc)));
+  // La copie du navigateur (lecture) tord encore les clés : la fusion doit les lire quand même.
+  const readByOldRule = (doc) => cleanFloorplan(JSON.parse(JSON.stringify(doc)));
+
+  const xs = (doc) => Object.fromEntries(doc.tables.map((t) => [t.id, t.x]));
+  const kept = roundTrip(base);
+  assert.equal(JSON.stringify(kept.fieldEdits), JSON.stringify(base.fieldEdits), 'le registre de fusion traverse la règle octet pour octet');
+  assert.ok(kept.fieldEdits.fields.every((r) => !/[“”]/.test(r[0])), 'aucune clé de chemin ne prend de guillemet typographique');
+
+  // Un plan enregistré sous l'ancienne règle guérit : à l'écriture (serveur) comme à la lecture (fusion).
+  const bent = JSON.parse(JSON.stringify(base));
+  bent.fieldEdits.fields.forEach((r) => { r[0] = r[0].replace(/"/g, '”'); });
+  assert.equal(JSON.stringify(roundTrip(bent).fieldEdits.fields), JSON.stringify(base.fieldEdits.fields), 'le serveur redresse les clés tordues');
+
+  // La copie d'un appareil resté sur le plan d'avant perd sur CHAQUE table, pas à pile ou face.
+  const stale = JSON.parse(JSON.stringify(FM.floorStamp(plan(Array.from({ length: 30 }, (_, i) => 900 + i)), base)));
+  const fresh = JSON.parse(JSON.stringify(FM.floorStamp(plan(Array.from({ length: 30 }, (_, i) => 500 + i)), stale)));
+  for (const [label, a, b] of [['propre', fresh, stale], ['tordu', bend(fresh), bend(stale)]]) {
+    const one = FM.floorMerge(roundTrip(a), roundTrip(b)), two = FM.floorMerge(roundTrip(b), roundTrip(a));
+    assert.deepEqual(xs(one), xs(fresh), `${label} : la version la plus récente garde toutes ses tables`);
+    assert.deepEqual(xs(two), xs(fresh), `${label} : quel que soit l'appareil qui fusionne`);
+  }
+  // Même un registre tordu lu tel quel (une caisse pas encore rechargée) est compris par la fusion.
+  const raw = FM.floorMerge(readByOldRule(stale), readByOldRule(fresh));
+  assert.ok(readByOldRule(fresh).fieldEdits.fields.every((r) => !r[0].includes('"')), 'la règle partagée tord bien les clés à la lecture (ce que la fusion doit absorber)');
+  assert.deepEqual(xs(raw), xs(fresh), 'la fusion lit les clés tordues par la copie du navigateur, sans passer par le serveur');
+
+  // Le registre reste une donnée sûre : pas de balisage dans un chemin, un id ni une version.
+  const evil = JSON.parse(JSON.stringify(base));
+  evil.fieldEdits.fields.push([JSON.stringify(['tables', { id: 't1' + BAD }, 'x']), 5, 'v' + BAD, ['s' + BAD], false, 1]);
+  evil.fieldEdits.fields.push(['["tables",{"id":"t1' + BAD + '"},"x"]', 5, 'v', [], false]);
+  evil.fieldEdits.fields.push(['["<script>"]', 5, 'v', [], false]);
+  evil.fieldEdits.fields.push(['pas du json', 5, 'v', [], false]);
+  evil.fieldEdits.conflicts = [{ field: '["tables",{"id":"t1"},"name"]', kept: 'k' + BAD, discarded: 'd', value: BAD }];
+  const safe = roundTrip(evil).fieldEdits;
+  assert.equal(safe.fields.length, base.fieldEdits.fields.length + 1, 'un chemin qui n’est pas un chemin de plan est retiré');
+  const hostileRow = safe.fields.find((r) => r[0].includes('t1_'));
+  assert.deepEqual(JSON.parse(hostileRow[0])[1], { id: ('t1' + BAD).replace(/[^A-Za-z0-9_.:-]/g, '_') }, 'l’id du chemin suit la règle des ids');
+  assert.ok(![hostileRow[2], ...hostileRow[3]].some((v) => markup.test(v)), 'version et vues sont ramenées aux caractères d’un id');
+  assert.ok(!markup.test(safe.conflicts[0].kept) && !markup.test(String(safe.conflicts[0].value)), 'le journal des conflits ne porte pas de balisage');
+  function bend(doc) { const d = JSON.parse(JSON.stringify(doc)); d.fieldEdits.fields.forEach((r) => { r[0] = r[0].replace(/"/g, '”'); }); return d; }
 }
 
 console.log('✓ floorplan-clean-test : ids et couleurs du plan nettoyés par la règle, le serveur et le navigateur ; un plan ordinaire inchangé');

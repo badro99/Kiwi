@@ -1272,7 +1272,7 @@
            le rayon — et `cost` sert à prévenir le commerçant quand une remise
            ferait passer un article sous son prix d'achat. Sans eux, la règle
            « avant » ne viserait rien et l'alerte à perte serait muette. */
-        createdAt: p.createdAt || 0, cost: p.cost || 0,
+        createdAt: p.createdAt || 0, cost: p.cost || 0, supplierId: p.supplierId || '',
       };
       P[p.id] = item;
       // Alias the seed's legacy id (e.g. 'caftan_ete') so the caisse's demo

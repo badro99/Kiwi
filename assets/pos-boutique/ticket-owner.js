@@ -27,6 +27,7 @@ const ticketOwner = {
     if (line.qty <= 0) ticket.lines.splice(index, 1);
   },
   setCustomer(ticket, client) { ticket.client = client; },
+  setSeller(ticket, seller) { ticket.seller = seller; },
   applyDiscount(ticket, approval) { ticket.remiseAuth = approval; },
   /* La remise de TICKET (peau 2027, bouton « Remise » du pied) descend sur
      chaque ligne : le pourcentage vit déjà là, et ticketTotals l'y additionne.

@@ -8,7 +8,7 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import retailSource from './pos-retail-test-source.cjs';
-import { cleanRun, kindOf, findProducts, plan, apply } from '../assets/agent-size-run.mjs';
+import { cleanRun, kindOf, findProducts, plan, apply, readRun } from '../assets/agent-size-run.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let passed = 0;
@@ -16,6 +16,28 @@ const ok = (value, message) => { if (!value) { console.error('  ✗ ' + message)
 const eq = (actual, expected, message) => ok(JSON.stringify(actual) === JSON.stringify(expected),
   `${message} : attendu ${JSON.stringify(expected)}, obtenu ${JSON.stringify(actual)}`);
 
+/* 22 nov. 2026, vraie lecture du modèle sur une étiquette « SIZE: 36-41 · 12 PRS »
+ * sans quantité par taille : il a rendu UNE ligne « 36-41 × 12 ». Reçue telle
+ * quelle, elle créait une taille « 36-41 » de 12 paires. Une plage devient ses
+ * tailles, sans quantité inventée : le commerçant les tape. */
+eq(readRun([{ size: '36-41', qty: 12 }]), { rows: [], sizes: ['36', '37', '38', '39', '40', '41'] }, 'une plage de pointures devient ses tailles, quantités à saisir');
+eq(readRun([{ size: '36 à 41', qty: 12 }]).sizes, ['36', '37', '38', '39', '40', '41'], 'plage écrite « à »');
+eq(readRun([{ size: '38 to 40', qty: 6 }]).sizes, ['38', '39', '40'], 'plage écrite « to »');
+eq(readRun([{ size: 'S-XL', qty: 10 }]).sizes, ['S', 'M', 'L', 'XL'], 'plage de tailles en lettres');
+eq(readRun([{ size: '36', qty: 1 }, { size: '37', qty: 2 }]), { rows: [{ size: '36', qty: 1 }, { size: '37', qty: 2 }], sizes: [] }, 'un assortiment normal ne change pas');
+eq(readRun([{ size: '41-36', qty: 3 }]).sizes, [], 'une plage à l\'envers n\'est pas devinée');
+eq(readRun([{ size: '1-90', qty: 3 }]).sizes, [], 'une plage démesurée n\'est pas dépliée');
+eq(readRun([]), { rows: [], sizes: [] }, 'rien lu, rien inventé');
+eq(readRun([], ['36', '37', '36', '']), { rows: [], sizes: ['36', '37'] }, 'lecture incertaine : les tailles seules, sans quantité');
+eq(readRun([{ size: '38', qty: 2 }], ['36']), { rows: [{ size: '38', qty: 2 }], sizes: [] }, 'un assortiment lu passe avant les tailles seules');
+/* Même jour : « SIZE: ASSORTED · QTY 24 » lu comme une taille « ASSORTED » de 24. */
+for (const word of ['ASSORTED', 'Assorti', 'assortis', 'MIXED', 'Mix', 'ASST', 'Varié', 'Divers'])
+  eq(readRun([{ size: word, qty: 24 }]), { rows: [], sizes: [] }, `« ${word} » n'est pas une taille : tailles à saisir`);
+eq(readRun([{ size: 'TU', qty: 5 }]).rows, [{ size: 'TU', qty: 5 }], 'taille unique reste une taille');
+
+/* Les quatre scripts du catalogue, lus une fois ; chaque boutique les exécute. */
+const CATALOG_SCRIPTS = ['assets/barcode.js', 'assets/color-palette.js', 'assets/boutique-catalog-parts.js', 'assets/boutique-catalog.js']
+  .map((rel) => retailSource(fs.readFileSync(path.join(ROOT, rel), 'utf8')));
 function shop() {
   const store = new Map();
   const localStorage = {
@@ -32,8 +54,7 @@ function shop() {
     navigator: { userAgent: 'node' }, setTimeout, clearTimeout, fetch: () => Promise.reject(new Error('offline test')),
   };
   window.window = window;
-  for (const rel of ['assets/barcode.js', 'assets/color-palette.js', 'assets/boutique-catalog-parts.js', 'assets/boutique-catalog.js']) {
-    const src = retailSource(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
+  for (const src of CATALOG_SCRIPTS) {
     new Function('window', 'document', 'localStorage', 'CustomEvent', 'navigator', 'setTimeout', 'clearTimeout', 'fetch', 'self', 'console', src)(
       window, document, localStorage, window.CustomEvent, window.navigator, setTimeout, clearTimeout, window.fetch, window, console);
   }
@@ -125,7 +146,7 @@ eq([kindOf(RUN), kindOf([{ size: 'M', qty: 1 }, { size: 'L', qty: 1 }]), kindOf(
  * passés (le service worker le sert d'abord). Le sceau ci-dessous rend l'oubli
  * rouge : montez « ?v= » dans agent-voice.js, puis recopiez ici v et sha. */
 {
-  const SEALED = { v: 1, sha: '453b5b1dce2ac344' };
+  const SEALED = { v: 4, sha: '796aad509743937c' };
   const sha = crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT, 'assets/agent-size-run.mjs'))).digest('hex').slice(0, 16);
   const asked = /agent-size-run\.mjs\?v=(\d+)/.exec(fs.readFileSync(path.join(ROOT, 'assets/agent-voice.js'), 'utf8'));
   eq(asked && Number(asked[1]), SEALED.v, 'agent-voice.js charge la version scellée du module');

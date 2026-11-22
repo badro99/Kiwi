@@ -1,13 +1,14 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=234';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=245';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=149';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=149';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=158';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=158';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
 import { mzDeliveryCard } from './delivery.js?v=28';
 import { mzKickForCash } from './drawer.js?v=2';
 import { mzAvoirSheet, codeKey } from './avoir-sheet.js?v=9';
+import { retailModes, heldUntilText, avanceOptionHtml, avanceStep, dropOffMethods } from '../retail-avance.js?v=4';
 const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);   /* « Compte client » et l'acompte, dans la langue de la caisse */
 /* Un chèque reçu rejoint le portefeuille, comme en boutique (même module) ; absent, il s'encaisse comme avant. */
 let CQ = null;
@@ -539,7 +540,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
       <div class="row"><span>Motif</span><span>${esc(av.motif)}</span></div>
       ${av.from ? `<div class="row"><span>Vente d'origine</span><span>${esc(av.from)}</span></div>` : ''}
       <div class="row"><span>Émis le</span><span>${fmtDayY(av.at)}</span></div>
-      <div class="row b"><span>VALABLE JUSQU'AU</span><span>${fmtValidUntil(av.until)}</span></div>
+      <div class="row b"><span>${new Date(av.until).getFullYear() >= 2900 ? 'VALIDITÉ' : 'VALABLE JUSQU\'AU'}</span><span>${fmtValidUntil(av.until)}</span></div>
       <hr>
       <div class="c">${window.KiwiBarcode && window.KiwiBarcode.svg ? window.KiwiBarcode.svg(av.code, { format: 'code128', height: 40, showText: false }) : barcode(av.code + '-MM', 26)}</div>
       <div class="mz-avoir-code">${av.code} · ${esc((bqName('Maison Mansour') || 'Boutique').toUpperCase())}</div>
@@ -984,6 +985,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
     const ownAvoirs = () => opts.customerId
       ? activeAvoirs().filter((a) => a.holderId === opts.customerId) : [];
     let avoirPart = null;                   /* { m:'avoir', amount, code } */
+    let avanceFlow = false;                 /* le règlement en cours est le versement d'une avance */
     const settled = [];                     /* les règlements déjà posés */
     let committed = false;                  /* double tap must never book twice */
     const creditCommitId = creditIntent('credit-redeem');
@@ -1048,7 +1050,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
       <p class="mz-split-note"${portion() < due() ? '' : ' hidden'}>Cette part : ${fmtMAD(portion())} · restera ${fmtMAD(r2(due() - portion()))}</p>`;
 
     const stepMethods = () => {
-      const avs = ownAvoirs();
+      const avs = ownAvoirs(); avanceFlow = false;
       const remAvoirs = remainingAvoirs();
       el.innerHTML = `
         <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -1057,7 +1059,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
         <div class="modal-amount size-md">${fmtMAD(due())}</div>
         ${appliedBanner()}
         ${due() > 0.01 ? splitBar() : ''}
-        ${settled.length === 1 && due() > 0.009 && opts.customerId
+        ${settled.length === 1 && due() > 0.009 && opts.customerId && retailModes('maison').avance
           && ['espèces','carte','virement','chèque'].includes(settled[0].m)
           ? `<button class="mz-btn secondary" id="mz-save-acompte">Acompte reçu · garder ${fmtMAD(due())} à régler</button>` : ''}
         <div class="mz-pay-opts">
@@ -1071,6 +1073,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
             <span class="l"><b>Carte</b><span>Lecteur partenaire, paiement sur votre terminal</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
+          ${avanceOptionHtml(opts.allowAccount !== undefined && !opts.balanceExisting && retailModes('maison').avance && !settled.length && !avoirPart && due() > 0.009, opts.customerId, 'mz')}
           <button class="mz-pay-opt" data-mz-m="virement">
             <span class="ic"><img src="assets/icons/material/account_balance.svg" alt=""></span>
             <span class="l"><b>Virement / Versement</b><span>Confirmer uniquement après réception en banque</span></span>
@@ -1086,7 +1089,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
             <span class="l"><b>Livraison</b><span>Vente enregistrée, paiement à recevoir du transporteur</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
-          ${opts.allowAccount && !settled.length && !avoirPart ? `
+          ${opts.allowAccount && retailModes('maison').credit && !settled.length && !avoirPart ? `
           <button class="mz-pay-opt" data-mz-m="compte">
             <span class="ic"><img src="assets/icons/material/account_balance_wallet.svg" alt=""></span>
             <span class="l"><b>Compte client</b><span>${opts.customerId ? 'Tout le ticket à régler plus tard, suivi dans Acomptes' : 'Choisir d’abord la cliente sur le ticket'}</span></span>
@@ -1103,7 +1106,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
             <span class="l"><b>Code d’avoir</b><span>${avs.length ? 'Tous les bons de cette cliente sont déjà posés · scanner ou saisir un autre code' : 'Scanner ou saisir le code du bon'}</span></span>
           </button>`}
         </div>`;
-      icons(); closeBtns();
+      dropOffMethods(el, 'maison', 'mz'); icons(); closeBtns();
       const saveAcompte = $('#mz-save-acompte', el);
       if (saveAcompte) saveAcompte.onclick = () => { void commit(true); };
       const inp = $('#mz-split-in', el);
@@ -1167,6 +1170,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
           }
           else if (m === 'avoir') stepAvoir();
           else if (m === 'compte') stepAccount();
+          else if (m === 'avance') stepAvance();
           else toast('Aucun avoir actif, émettez-en un depuis Échanges & avoirs');
         };
       });
@@ -1178,6 +1182,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
     const settle = (part) => {
       settled.push(part);
       share = 1; custom = 0;
+      if (avanceFlow && due() > 0.009) { void commit(true); return; }   /* l'avance : ce versement, la pièce gardée */
       if (opts.balanceExisting) void commit(due() > 0.009);
       else if (due() > 0.009) { toast(`Reste ${fmtMAD(due())} à régler`); stepMethods(); }
       else commit();
@@ -1304,6 +1309,9 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
     /* Le compte client : rien n'est encaissé, le ticket entier devient une note
        ouverte au nom de la cliente (la même que les acomptes). On le confirme
        sur un écran à part : c'est une dette, pas un moyen de paiement. */
+    const stepAvance = () => avanceStep(el, { cls: 'mz', trade: 'maison', customerId: opts.customerId, busy: settled.length || avoirPart, who: clById(opts.customerId), due: due(), fmt: fmtMAD, esc, toast: (msg) => toast(msg),
+      after: () => { icons(); closeBtns(); }, back: stepMethods,
+      pay: (m, amount) => { avanceFlow = true; if (m === 'especes') stepCash(amount); else if (m === 'carte') stepCard(amount); else stepExternal(m, amount); } });
     const stepAccount = () => {
       if (!opts.customerId) { toast(mt('Compte client'), mt('Choisissez d’abord la cliente sur le ticket.')); return; }
       if (settled.length || avoirPart) { toast(mt('Compte client'), mt('Le ticket entier passe sur le compte, sans autre règlement.')); return; }
@@ -1327,7 +1335,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
     const commit = async (partial) => {
       if (committed) return;
       const onAccount = partial === 'account';
-      if (onAccount && (!opts.customerId || settled.length || avoirPart)) return;
+      if (onAccount && (!opts.customerId || settled.length || avoirPart || !retailModes('maison').credit)) return;
       if (partial && !onAccount && (!opts.customerId || settled.length !== 1 || avoirPart
           || !['espèces','carte','virement','chèque'].includes(settled[0].m))) {
         toast('Acompte : une cliente et un seul règlement sont requis'); return;
@@ -1381,9 +1389,11 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
       if (CQ && res.sale) { const cid = opts.customerId || res.sale.clientId || ''; CQ.chequeRecord(parts, res.sales || [res.sale], { slug: merchantSlug(), by: STAFF.caissiere.name, client: (clById(cid) || {}).name || '', clientId: cid, demo: IS_DEMO, toast }); }
       mzKickForCash(parts, toast);   /* des espèces encaissées : le tiroir s'ouvre pour la monnaie (drawer.js) */
       if (partial || opts.balanceExisting) {
+        const held = !onAccount && res.sale ? heldUntilText(res.sale.avanceUntil) : '';   // l'avance : pièce gardée jusqu'au…
         opts.acompte = { total: opts.balanceTotal || opts.amount,
           paid: (opts.balancePaid || 0) + paidNow,
-          remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow) };
+          remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow),
+          untilText: held };
         opts.amount = paidNow;
         opts.title = onAccount ? mt('Compte client') : partial ? mt('Acompte') : mt('Solde de l’acompte');
       }

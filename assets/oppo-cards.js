@@ -287,7 +287,7 @@
   function loadTopSellers() {
     if (topSellers || window.KiwiConfig?.features?.sellerCommissions !== true) return;
     topSellers = true;
-    import('./home-top-sellers.js?v=3').catch(() => { topSellers = false; });
+    import('./home-top-sellers.js?v=4').catch(() => { topSellers = false; });
   }
   document.addEventListener('kiwi-config', loadTopSellers);
   setTimeout(loadTopSellers, 0);

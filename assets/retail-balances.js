@@ -21,7 +21,11 @@
     if (!row) {
       row = { id: String(input.id), customerId: String(input.customerId), ticketRef: String(input.ticketRef),
         totalCents: cents(input.totalCents), paidCents: cents(input.basePaidCents), pendingCents: 0,
-        createdTs: Date.now(), receipts: [] };
+        createdTs: Date.now(), receipts: [],
+        /* L'avance (pièce gardée jusqu'à une date) ou le compte client ; le
+           serveur fait foi, cette copie sert hors ligne (retail-avance.js). */
+        kind: String(input.kind || ''), expiresAt: Math.max(0, Number(input.expiresAt) || 0),
+        lines: Array.isArray(input.lines) ? input.lines.slice(0, 40) : [] };
       rows.unshift(row);
     } else if (row.customerId !== input.customerId || row.ticketRef !== input.ticketRef
       || row.totalCents !== cents(input.totalCents)) return null;
@@ -68,8 +72,13 @@
       // Cross-device totals and local outbox payments are disjoint by receipt
       // ID, not by amount: another till can have taken money simultaneously.
       if (saved && Array.isArray(row.receiptIds)) {
-        const known = new Set(row.receiptIds);
-        const unsynced = (saved.receipts || []).filter(item => !known.has(item.id))
+        /* The server files a till receipt under its sale's server id, « sale-ref-<hash>-<last 32> »
+           (assets/live-link.js › stableId), not the till's « sale-<uuid> ». Matching on the raw id
+           counted an avance's first payment twice, and the note vanished from Acomptes and the
+           client card (Amira Boutique, 21 nov. 2026). Same tail, same receipt, as the server reads it. */
+        const tail = (id) => { const t = String(id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(-32); return t.length >= 16 ? t : String(id || ''); };
+        const known = new Set(row.receiptIds.flatMap(id => [String(id), tail(id)]));
+        const unsynced = (saved.receipts || []).filter(item => !known.has(String(item.id)) && !known.has(tail(item.id)))
           .reduce((sum, item) => sum + cents(item.amountCents), 0);
         merged.set(row.id, { ...row, pendingCents: cents(row.pendingCents) + unsynced });
       } else if (saved && cents(saved.paidCents) > cents(row.paidCents) + cents(row.pendingCents)) {
@@ -135,9 +144,23 @@
     const node = document.createElement(tag); if (className) node.className = className;
     if (text != null) node.textContent = text; return node;
   }
+  /* La fiche cliente du carnet (assets/client-money.js) ouvre Acomptes sur
+     une cliente : elle pose son id ici puis touche l'entrée du rail. L'écran
+     le reprend au prochain rendu, dans les 5 secondes, une seule fois. */
+  let focusFor = '', focusTs = 0;
+  function focus(customerId) { focusFor = String(customerId || ''); focusTs = Date.now(); }
+  function takeFocus() { const id = Date.now() - focusTs < 5000 ? focusFor : ''; focusFor = ''; return id; }
+  /* La caisse repeint ses écrans d'elle-même (catalogue tiré toutes les 20 s,
+     promos, retour au premier plan), et chaque repeinte rappelle render().
+     Reconstruire la page renvoyait la caissière sur la liste au milieu d'un
+     encaissement. Un panneau déjà monté pour le même commerce garde donc sa
+     page : render() n'y fait que relire les notes, et la cliente ouverte, la
+     recherche, les cases et le montant tapé restent. */
   async function render(panel, opts) {
     if (!panel) return;
-    const tr = opts.tr || (text => text);
+    const live = panel.__krb;
+    if (live && live.merchant === opts.merchant && live.root.isConnected && panel.contains(live.root)) return live.refresh(opts);
+    const tr = text => (opts.tr ? opts.tr(text) : text);
     const name = id => (opts.customerName ? opts.customerName(id) : id) || id;
     panel.innerHTML = `<div class="kiwi-retail-balances"><header class="krb-head">
       <span class="krb-eyebrow">PAIEMENTS ÉCHELONNÉS</span><h1>Acomptes</h1>
@@ -150,14 +173,26 @@
     const target = panel.querySelector('[data-retail-balance-list]');
     const search = panel.querySelector('.krb-search');
     let generation = 0, groups = [];
+    let pick = null; // la cliente ouverte : { customerId, sig, unchecked, typedCents }
+    panel.__krb = { merchant: opts.merchant, root: panel.querySelector('.kiwi-retail-balances'), refresh: next => { opts = next; return refresh(); } };
     function note(className, text) { const p = el('p', className, text); p.role = 'status'; return p; }
     async function refresh() {
       const current = ++generation;
       const { rows, status } = await listWithStatus(opts.merchant, '');
       if (current !== generation || !panel.isConnected) return;
       groups = groupByCustomer(rows);
-      if (opts.customerId) { const open = groups.find(group => group.customerId === opts.customerId); opts.customerId = ''; if (open) { detail(open); return; } }
-      list(status);
+      const want = opts.customerId || takeFocus(); opts.customerId = '';
+      const reopen = want || (pick && pick.customerId);
+      const open = reopen && groups.find(group => group.customerId === reopen);
+      if (open) {
+        if (want && (!pick || pick.customerId !== want)) pick = null;
+        if (!pick || pick.sig !== signature(open)) detail(open);
+        return;
+      }
+      pick = null; list(status);
+    }
+    function signature(group) {
+      return group.rows.map(row => [row.id, due(row), cents(row.pendingCents), row.expiresAt || 0].join(':')).join('|');
     }
     function list(status) {
       if (search) search.hidden = false;
@@ -182,11 +217,18 @@
       if (search) search.hidden = true;
       const payable = group.rows.filter(row => !(cents(row.pendingCents) > 0) && due(row) > 0);
       const owed = payable.reduce((sum, row) => sum + due(row), 0);
-      const checked = new Set(payable.map(row => row.id));
-      let amount = owed;
+      if (!pick || pick.customerId !== group.customerId) pick = { customerId: group.customerId, unchecked: new Set(), typedCents: null };
+      pick.sig = signature(group);
+      const state = pick;
+      const checked = new Set(payable.map(row => row.id).filter(id => !state.unchecked.has(id)));
+      let amount = payable.filter(row => checked.has(row.id)).reduce((sum, row) => sum + due(row), 0);
+      if (state.typedCents != null) {
+        amount = Math.min(state.typedCents, owed);
+        checked.clear(); allocate(payable, amount).forEach(item => checked.add(item.row.id));
+      }
       target.replaceChildren();
       const back = el('button', 'krb-back', tr('Toutes les clientes')); back.type = 'button';
-      back.addEventListener('click', () => { generation++; list(); });
+      back.addEventListener('click', () => { generation++; pick = null; list(); });
       const head = el('div', 'krb-client');
       head.append(el('strong', '', name(group.customerId)), el('span', 'krb-amount', tr(`Reste ${mad(group.dueCents)} MAD`)),
         el('p', '', tr('Cochez les notes qu’elle règle, ou tapez le montant qu’elle donne : il couvre d’abord les plus anciennes.')));
@@ -197,14 +239,17 @@
         const line = el('label', 'krb-note' + (locked ? ' is-locked' : ''));
         const box = document.createElement('input'); box.type = 'checkbox'; box.disabled = locked; box.checked = !locked;
         const text = el('span', 'krb-note-text');
-        text.append(el('strong', '', row.ticketRef), el('small', '', [day(row.createdTs), tr(`Total ${mad(row.totalCents)} MAD`), tr(`Payé ${mad(cents(row.paidCents) + cents(row.pendingCents))} MAD`)].filter(Boolean).join(' · ')));
+        const held = row.kind === 'avance' && Number(row.expiresAt) > 0
+          ? (Number(row.expiresAt) <= Date.now() ? tr('Avance expirée le') : tr('Pièce gardée jusqu’au')) + ' ' + day(row.expiresAt) : '';
+        text.append(el('strong', '', row.ticketRef), el('small', '', [day(row.createdTs), tr(`Total ${mad(row.totalCents)} MAD`), tr(`Payé ${mad(cents(row.paidCents) + cents(row.pendingCents))} MAD`), held].filter(Boolean).join(' · ')));
         const side = el('span', 'krb-note-side'); const left = el('span', 'krb-note-due', tr(`Reste ${mad(due(row))} MAD`));
         const cover = el('small', 'krb-note-cover', locked ? tr('Synchronisation en attente') : '');
         side.append(left, cover); line.append(box, text, side); target.appendChild(line);
         if (!locked) {
           lines.set(row.id, { box, cover, row });
           box.addEventListener('change', () => {
-            if (box.checked) checked.add(row.id); else checked.delete(row.id);
+            if (box.checked) { checked.add(row.id); state.unchecked.delete(row.id); } else { checked.delete(row.id); state.unchecked.add(row.id); }
+            state.typedCents = null;
             amount = payable.filter(item => checked.has(item.id)).reduce((sum, item) => sum + due(item), 0);
             field.value = mad(amount); paint();
           });
@@ -219,10 +264,11 @@
       pay.append(label, hint, go); target.appendChild(pay);
       field.addEventListener('input', () => {
         const typed = Math.round(Number(String(field.value).replace(',', '.').replace(/[^\d.]/g, '')) * 100) || 0;
-        amount = Math.min(typed, owed);
+        amount = Math.min(typed, owed); state.typedCents = typed;
         hint.textContent = typed > owed ? tr(`Elle ne doit que ${mad(owed)} MAD`) : '';
         const covered = new Set(allocate(payable, amount).map(item => item.row.id));
         checked.clear(); covered.forEach(id => checked.add(id));
+        state.unchecked = new Set(payable.map(row => row.id).filter(id => !covered.has(id)));
         paint();
       });
       function plan() { return allocate(payable.filter(row => checked.has(row.id)), amount); }
@@ -247,5 +293,5 @@
     input.addEventListener('input', () => list());
     await refresh();
   }
-  window.KiwiRetailBalances = Object.freeze({ read, record, list, listWithStatus, due, render, groupByCustomer, allocate, sliceTender });
+  window.KiwiRetailBalances = Object.freeze({ read, record, list, listWithStatus, due, render, groupByCustomer, allocate, sliceTender, focus });
 })();

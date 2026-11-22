@@ -11,6 +11,10 @@
     {
       "before": "          <input class=\"kob-field\" data-f=\"city\" type=\"text\" value=\"${esc(S.city)}\" maxlength=\"30\" placeholder=\"${tr({ fr: 'Ex. Rabat', en: 'e.g. Rabat', ar: 'مثال: الرباط' })}\"/>\n",
       "after": "          <input class=\"kob-field\" data-f=\"city\" aria-label=\"${tr({ fr: 'Ville principale', en: 'Main city', ar: 'المدينة الرئيسية' })}\" type=\"text\" value=\"${esc(S.city)}\" maxlength=\"30\" placeholder=\"${tr({ fr: 'Ex. Rabat', en: 'e.g. Rabat', ar: 'مثال: الرباط' })}\"/>\n"
+    },
+    {
+      "before": "        e.preventDefault();\n        import('./request-deadline.mjs').then(({ deadlineFetch }) => deadlineFetch('/auth/logout', { redirect: 'manual', credentials: 'same-origin' }))\n          .then(() => { location.href = '/dashboard'; })\n          .catch(() => { location.href = signin.getAttribute('href'); });\n        return;\n",
+      "after": "        e.preventDefault();\n        /* Kiwi Pro (22 Nov 2026): no server behind « /dashboard » in the app.\n           Capacitor serves it as the launcher, which read the remembered role\n           and sent a signed-out tester straight back here: white, then these\n           questions again, never the sign-in. The app has its own way out. */\n        const app = !!(window.KiwiApiBase && window.KiwiApiBase.native);\n        if (app && typeof window.KiwiNativeHostAction === 'function') { window.KiwiNativeHostAction({ action: 'sign-out' }); return; }\n        const toSignin = () => { try { localStorage.removeItem('kiwiAppRole'); } catch (_) {} location.replace('index.html?setup=1'); };\n        import('./request-deadline.mjs').then(({ deadlineFetch }) => deadlineFetch('/auth/logout', { redirect: 'manual', credentials: 'same-origin' }))\n          .then(() => { if (app) toSignin(); else location.href = '/dashboard'; })\n          .catch(() => { if (app) toSignin(); else location.href = signin.getAttribute('href'); });\n        return;\n"
     }
   ],
   "assets/stock/catalog.js": [

@@ -112,6 +112,12 @@ check('the Android release script gates the commit, signs from outside the repo 
   androidReleaseScript.includes('security find-generic-password -s kiwi-android-upload') && androidReleaseScript.includes('.kiwi-signing/') &&
   androidReleaseScript.includes('jarsigner" -verify') && androidReleaseScript.includes('npm ci') &&
   !/storePassword\s*=|-storepass|PASS=['"][^$]/.test(androidReleaseScript));
+/* 22 Nov 2026, first Play bundle: `gradlew clean` deletes app/android/build
+ * (rootProject.buildDir), and the release folder lived inside it, so every
+ * run built and signed the bundle, then failed to copy it. */
+check('the Android release folder survives gradle clean',
+  /OUT=\$\{KIWI_RELEASE_OUT:-"\$ROOT\/app\/android\/out\/releases"\}/.test(androidReleaseScript) &&
+  !androidReleaseScript.includes('app/android/build/releases') && read('app/android/.gitignore').split('\n').includes('out/'));
 check('the store pack exists with listing, privacy labels, review notes and demo account',
   storeDoc.includes('## 3. Fiche App Store Connect') && storeDoc.includes('## 4. App Privacy') && storeDoc.includes('## 5. Notes pour la revue') && storeDoc.includes('## 2. Compte démo'));
 check('the dashboard offers in-app account deletion (App Store 5.1.1 v)',

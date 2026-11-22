@@ -1,21 +1,22 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=246';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=263';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=246';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=350';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=263';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=369';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
-import { ticketOwner } from './ticket-owner.js?v=7';
+import { ticketOwner } from './ticket-owner.js?v=8';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
 import { paidCents } from './paid-share.js?v=2';
 import { tillNow, tillDate } from './till-clock.js?v=2';
 import '../money-cents.js?v=7';
 import { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=13';
 import { bqDeliveryCard } from './delivery-card.js?v=10';
-import { receiptPrinterReady, receiptDocInput, waReceiptTotals } from './receipt-doc.js?v=3';
+import { receiptPrinterReady, receiptDocInput, waReceiptTotals } from './receipt-doc.js?v=4';
+import { retailModes, heldUntilText, accountOptionHtml, accountStep, avanceOptionHtml, avanceStep, dropOffMethods } from '../retail-avance.js?v=4';
 const M = globalThis.KiwiMoney;
 /* L'échange groupé (essai Amira Boutique) se charge à part : il importe la
    caisse, la caisse ne l'importe pas, pour ne pas allonger le cycle. */
 let CX = null;
-import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=25').then((m) => { CX = m; }).catch(() => {});
 /* Un chèque reçu rejoint le portefeuille (cheque-sheet.js) ; absent, le chèque s'encaisse comme avant. */
 let CQ = null;
 import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
@@ -360,7 +361,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
       <div class="row"><span>Motif</span><span>${esc(av.motif)}</span></div>
       ${av.from ? `<div class="row"><span>Vente d'origine</span><span>${esc(av.from)}</span></div>` : ''}
       <div class="row"><span>Émis le</span><span>${fmtDayY(av.at)}</span></div>
-      <div class="row b"><span>VALABLE JUSQU'AU</span><span>${fmtValidUntil(av.until)}</span></div>
+      <div class="row b"><span>${new Date(av.until).getFullYear() >= 2900 ? 'VALIDITÉ' : 'VALABLE JUSQU\'AU'}</span><span>${fmtValidUntil(av.until)}</span></div>
       <hr>
       <div class="c">${window.KiwiBarcode && window.KiwiBarcode.svg ? window.KiwiBarcode.svg(av.code, { format: 'code128', height: 40, showText: false }) : barcode(av.code + '-MM', 26)}</div>
       <div class="bq-avoir-code">${av.code} · ${esc((bqName('Maison Mansour') || 'Boutique').toUpperCase())}</div>
@@ -802,7 +803,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
   function openPay(opts) {
     // Translation is optional: payment always has its French copy locally.
     const tr = (key, fr, vars) => {
-      let text = fr;
+      let text = fr == null ? String(key) : fr;   // sans texte français, la clé : jamais undefined.replace (Compte client figé, 21 nov. 2026)
       try {
         const layer = globalThis.window?.KiwiCaisseStrings;
         const value = layer?.say(key, fr, vars);
@@ -818,7 +819,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
     const el = $('#bq-paym', root);
     const ownAvoirs = () => opts.customerId
       ? activeAvoirs().filter((a) => a.holderId === opts.customerId) : [];
-    let avoirPart = null;                   /* { m:'avoir', amount, code } */
+    let avoirPart = null, avanceFlow = false;   /* { m:'avoir', amount, code } ; avanceFlow : ce règlement est le versement d'une avance */
     const creditCommitId = creditIntent('credit-redeem');   /* une consommation, rejouable sans double débit */
     const settled = [];                     /* les règlements déjà posés */
     let committed = false;                  /* double tap must never book twice */
@@ -880,7 +881,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
       <p class="bq-split-note"${portion() < due() ? '' : ' hidden'}>${tr("checkout.cette.part", "Cette part :")} ${fmtMAD(portion())} ${tr("checkout.restera", "· restera")} ${fmtMAD(r2(due() - portion()))}</p>`;
 
     const stepMethods = () => {
-      const avs = ownAvoirs();
+      const avs = ownAvoirs(); avanceFlow = false;
       el.innerHTML = `
         <button class="bq-modal-x" data-bq-close aria-label="${tr("checkout.fermer", "Fermer")}"><i data-lucide="x"></i></button>
         <h3 class="modal-title">${esc(titleText())}</h3>
@@ -888,7 +889,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
         <div class="modal-amount size-md">${fmtMAD(due())}</div>
         ${appliedBanner()}
         ${due() > 0.01 ? splitBar() : ''}
-        ${settled.length === 1 && due() > 0.009 && opts.customerId
+        ${settled.length === 1 && due() > 0.009 && opts.customerId && retailModes('boutique').avance
           && ['espèces','carte','virement','chèque'].includes(settled[0].m)
           ? `<button class="bq-btn secondary" id="bq-save-acompte">${tr("checkout.acompte.recu.garder", "Acompte reçu · garder")} ${fmtMAD(due())} ${tr("checkout.a.regler", "à régler")}</button>` : ''}
         <div class="bq-pay-opts">
@@ -901,7 +902,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
             <span class="ic"><i data-lucide="credit-card"></i></span>
             <span class="l"><b>${tr("checkout.carte", "Carte")}</b><span>${tr("checkout.terminal.de.la.banque.montant.a.saisir.dessus", "Terminal de la banque, montant à saisir dessus")}</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
-          </button>
+          </button>${avanceOptionHtml(opts.allowAccount !== undefined && !opts.balanceExisting && retailModes('boutique').avance && !settled.length && !avoirPart && due() > 0.009, opts.customerId, 'bq')}
           <button class="bq-pay-opt" data-bq-m="virement">
             <span class="ic"><img src="assets/icons/material/account_balance.svg" alt=""></span>
             <span class="l"><b>${tr("checkout.virement.versement", "Virement / Versement")}</b><span>${tr("checkout.confirmer.uniquement.apres.reception.en.banque", "Confirmer uniquement après réception en banque")}</span></span>
@@ -917,6 +918,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
             <span class="l"><b>${tr("checkout.livraison", "Livraison")}</b><span>${tr("checkout.vente.enregistree.paiement.a.recevoir.du.transporteur", "Vente enregistrée, paiement à recevoir du transporteur")}</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
+          ${accountOptionHtml(opts.allowAccount && retailModes('boutique').credit && !settled.length && !avoirPart, opts.customerId, fmtMAD(due()), 'bq')}
           ${avoirPart ? '' : avs.length ? `
           <button class="bq-pay-opt" data-bq-m="avoir">
             <span class="ic"><i data-lucide="ticket"></i></span>
@@ -928,7 +930,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
             <span class="l"><b>${tr("checkout.code.d.avoir", "Code d’avoir")}</b><span>${tr("checkout.scanner.ou.saisir.le.code.du.bon", "Scanner ou saisir le code du bon")}</span></span>
           </button>`}
         </div>`;
-      icons(); closeBtns(); if (opts.afterMethods) opts.afterMethods(el);   // « Vendu par » (pos-boutique/seller-pick.js)
+      dropOffMethods(el, 'boutique', 'bq'); icons(); closeBtns(); if (opts.afterMethods) opts.afterMethods(el);   // « Vendu par » (pos-boutique/seller-pick.js)
       const saveAcompte = $('#bq-save-acompte', el);
       if (saveAcompte) saveAcompte.onclick = () => commit(true);
       const inp = $('#bq-split-in', el);
@@ -963,6 +965,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
              et son plafond propre (le solde du bon). */
           $$('[data-bq-m]', el).forEach((b) => {
             const a = $('.amt', b); if (!a) return;
+            if (b.dataset.bqM === 'compte') return;   /* le compte prend toujours le ticket entier */
             if (/^avoir/.test(b.dataset.bqM)) {
               const bal = (ownAvoirs()[0] || {}).balance;
               if (bal != null) a.textContent = '−' + fmtMAD(Math.min(bal, portion()));
@@ -997,6 +1000,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
               done: (card) => settle({ m: 'livraison', amount, card }) });
           }
           else if (m === 'avoir') stepAvoir();
+          else if (m === 'compte') stepAccount(); else if (m === 'avance') stepAvance();
           else toast(tr("checkout.aucun.avoir.actif.emettez.en.un.depuis.echanges.avoirs", "Aucun avoir actif, émettez-en un depuis Échanges & avoirs"));
         };
       });
@@ -1007,7 +1011,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
        les partages à trois ou quatre. */
     const settle = (part) => {
       settled.push(part);
-      share = 1; custom = 0;
+      share = 1; custom = 0; if (avanceFlow && due() > 0.009) { void commit(true); return; }   /* l'avance : ce versement, la pièce gardée */
       if (opts.balanceExisting) commit(due() > 0.009);
       else if (due() > 0.009) { toast(`${tr("checkout.remaining", "Reste")} ${fmtMAD(due())} ${tr("checkout.a.regler", "à régler")}`); stepMethods(); }
       else commit();
@@ -1178,19 +1182,25 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
       $('#bq-external-ok', el).onclick = () => settle(cheque && CQ ? CQ.chequeHold(el, { m: 'chèque', amount }) : { m: cheque ? 'chèque' : 'virement', amount });
     };
 
+    const stepAvance = () => avanceStep(el, { cls: 'bq', trade: 'boutique', customerId: opts.customerId, busy: settled.length || avoirPart, who: clById(opts.customerId), due: due(), fmt: fmtMAD, esc, toast, after: () => { icons(); closeBtns(); }, back: stepMethods, pay: (m, a) => { avanceFlow = true; if (m === 'especes') stepCash(a); else if (m === 'carte') stepCard(a); else stepExternal(m, a); } });   // « Avance » (retail-avance.js)
+    const stepAccount = () => accountStep(el, { cls: 'bq', customerId: opts.customerId, busy: settled.length || avoirPart, who: clById(opts.customerId), ref: opts.ref,   // « Compte client » (retail-avance.js)
+      amountText: fmtMAD(opts.amount), esc, toast, after: () => { icons(); closeBtns(); }, back: stepMethods, ok: () => { void commit('account'); } });
+
     /* Pendant une attente de l'écriture (contrôle fidélité, avoir au registre) la
        fenêtre ne se ferme pas et checkout() ne relance rien : state.payCommitting. */
     const holding = async (p) => { state.payCommitting = true; try { return await p; } finally { state.payCommitting = false; } };
     const commit = async (partial) => {
       if (committed) return;
-      if (partial && (!opts.customerId || settled.length !== 1 || avoirPart
+      const onAccount = partial === 'account';
+      if (onAccount && (!opts.customerId || settled.length || avoirPart || !retailModes('boutique').credit)) return;
+      if (partial && !onAccount && (!opts.customerId || settled.length !== 1 || avoirPart
           || !['espèces','carte','virement','chèque'].includes(settled[0].m))) {
         toast(tr("checkout.acompte.une.cliente.et.un.seul.reglement.sont.requis", "Acompte : une cliente et un seul règlement sont requis")); return;
       }
       committed = true;
       if (opts.beforePaid && !await holding(opts.beforePaid())) { committed = false; return; }
-      const parts = (avoirPart ? [avoirPart] : []).concat(settled);
-      const paidNow = M.toMad(M.sumCents(parts.map((part) => +part.amount || 0)));
+      const parts = onAccount ? [{ m: 'compte', amount: opts.amount }] : (avoirPart ? [avoirPart] : []).concat(settled);
+      const paidNow = onAccount ? 0 : M.toMad(M.sumCents(parts.map((part) => +part.amount || 0)));
       const avp = parts.find((x) => x.m === 'avoir');
       if (avp) {
         const av = AVOIRS.find((a) => a.code === avp.code);
@@ -1229,16 +1239,18 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
           return;
         }
       }
-      const res = opts.onPaid(parts, { partial: !!partial, paidNow }) || {};
+      const res = opts.onPaid(parts, { partial: !!partial, paidNow, onAccount }) || {};
       if (res.error) { committed = false; stepMethods(); return; }
       if (res.sale) opts.sale = res.sale;
       if (CQ && res.sale) { const cid = opts.customerId || res.sale.clientId || ''; CQ.chequeRecord(parts, res.sales || [res.sale], { slug: merchantSlug(), by: STAFF.caissiere.name, client: (clById(cid) || {}).name || '', clientId: cid, demo: IS_DEMO, toast }); }
       if (partial || opts.balanceExisting) {
+        const held = !onAccount && res.sale ? heldUntilText(res.sale.avanceUntil) : '';   // l'avance : pièce gardée jusqu'au…
         opts.acompte = { total: opts.balanceTotal || opts.amount,
           paid: (opts.balancePaid || 0) + paidNow,
-          remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow) };
+          remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow),
+          untilText: held };
         opts.amount = paidNow;
-        opts.title = partial ? tr("checkout.acompte", "Acompte") : tr("checkout.solde.de.l.acompte", "Solde de l’acompte");
+        opts.title = onAccount ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Compte client') : partial ? tr("checkout.acompte", "Acompte") : tr("checkout.solde.de.l.acompte", "Solde de l’acompte");
       }
       if (res.delivery || parts.some((x) => x.m === 'livraison')) stepSuccess(parts, res);
       else {

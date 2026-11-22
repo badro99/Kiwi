@@ -35,9 +35,13 @@ function world(vertical) {
   class Clock extends Date { constructor(...args){super(...(args.length?args:[TS]));} static now(){return TS;} }
   const c=vm.createContext({console,Date:Clock,Math,Number,String,Array,Object,Map,Set,JSON,Promise,KiwiMoney,M:KiwiMoney,
     root:{},$, $$,setTimeout:fn=>{timers.push(fn);return 1;},clearTimeout:no,
+    /* assets/retail-avance.js : les imports partagés de l'encaissement (modes de God mode, Avance, Compte client) */
+    retailModes:()=>({avance:true,credit:false,virement:true,cheque:true,livraison:true}),heldUntilText:()=>'',accountOptionHtml:()=>'',avanceOptionHtml:()=>'',dropOffMethods:no,
     localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,String(v))},navigator:{onLine:false},
     SALES:[],AVOIRS:[],P:{},state:{},STAFF:{caissiere:{name:'Test'}},bqOutstandingCents:0,
     renderEchanges:no,icons:no,openVeil:no,closeVeil:no,toast:no,persistDay:no,persistAvoirs:no,bqSaveProvisional:no,renderAll:no,
+    // « Vendu par » (pos-boutique/seller-pick.js) : option éteinte, caisse hors design 2027.
+    bqKitSkin:()=>false,sellerPickOn:()=>false,mountSellerPick:no,
     creditIntent:()=> 'test-intent',IS_DEMO:true,activeAvoirs:()=>c.AVOIRS.filter(a=>a.balance>0),avoirExpired:()=>false,
     mt:s=>s,printReceiptNow:(...args)=>events.push(['print',...args]),fmtMAD:n=>String(n),fmtDayY:()=>'',fmtValidUntil:()=>'',esc:s=>String(s??''),
     sizesOf:()=>['TU'],merchantSlug:()=> 'test-shop',rayonOf:()=>'',lineDeal:ln=>({price:ln.promoPrice}),

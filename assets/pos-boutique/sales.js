@@ -1,16 +1,17 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN } from '../pos-boutique.js?v=350'; import { tillPriceList as tpl } from './price-list.js?v=3';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=246';
-import { offerRegister } from './inventory.js?v=246';
-import { ticketOwner } from './ticket-owner.js?v=7';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=369'; import { tillPriceList as tpl } from './price-list.js?v=3';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=263';
+import { offerRegister } from './inventory.js?v=263';
+import { ticketOwner } from './ticket-owner.js?v=8';
 import { ticketRemise } from './ticket-remise.js?v=5';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
 import { mountBargain } from './bargain-ui.js?v=3';
 import { bqKitTicketFoot } from './kit-2027.js?v=26';
 import { sellSearch } from './search.js?v=20';
 import '../money-cents.js?v=7';
-import { photoImg } from '../retail-photos.js?v=5';
+import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
+import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=4';
 let CX = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=25').then((m) => { CX = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -48,7 +49,7 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
     return m ? new Date(+m[1], +m[2] - 1, +m[3], 12) : new Date(t - 5 * 3600000 - 1);
   };
-  const fmtValidUntil = (until) => fmtDayY(creditLastDay(until));
+  const fmtValidUntil = (until) => isNoExpiry(until) ? tr('sans date limite') : fmtDayY(creditLastDay(until));   // Validité des bons vide : l'an 2999
   const fmtHM  = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   const MIN = 60 * 1000;
 
@@ -215,7 +216,7 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
 
   /* ═══════════════════════ VENTE — grille par rayon ═══════════════════════ */
   function renderCats() {
-    const all = RAYONS.reduce((s, r) => s + r.items.length, 0);
+    const all = RAYONS.reduce((s, r) => s + r.items.length, 0), best = bestItems(merchantSlug(), RAYONS, (p) => stockOf(p) > 0, () => { if ($('#bq-cats', root)) { renderCats(); renderGrid(); icons(); } });   /* en tête après la 1re semaine de ventes (retail-bestsellers.js) */
     /* « C'est en promo ? » est LA question du comptoir un jour de soldes, et
        jusqu'ici la caissière n'avait aucun moyen d'y répondre autrement qu'en
        parcourant la grille à l'œil. Le filtre n'apparaît que s'il a quelque
@@ -224,9 +225,9 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
     /* La dernière promotion vient de s'arrêter pendant qu'on regardait ce
        filtre : sans ce repli, l'onglet disparaît et la grille reste vide sans
        qu'aucun bouton ne soit sélectionné — la caisse a l'air cassée. */
-    if (state.rayon === '_promo' && !promoN) state.rayon = 'tous';
+    if (state.rayon === '_promo' && !promoN) state.rayon = 'tous'; bestOpen(state, merchantSlug(), best);
     $('#bq-cats', root).innerHTML =
-      `<button class="bq-cat ${state.rayon === 'tous' ? 'on' : ''}" data-bq-cat="tous">Tous <span class="bq-cat-ct">${all}</span></button>` +
+      (best ? `<button class="bq-cat is-best ${state.rayon === '_best' ? 'on' : ''}" data-bq-cat="_best">${esc(tr(BEST_LABEL))} <span class="bq-cat-ct">${best.length}</span></button>` : '') + `<button class="bq-cat ${state.rayon === 'tous' ? 'on' : ''}" data-bq-cat="tous">Tous <span class="bq-cat-ct">${all}</span></button>` +
       (promoN ? `<button class="bq-cat is-promo ${state.rayon === '_promo' ? 'on' : ''}" data-bq-cat="_promo">En promo <span class="bq-cat-ct">${promoN}</span></button>` : '') +
       RAYONS.map((r) =>
         `<button class="bq-cat ${state.rayon === r.id ? 'on' : ''}" data-bq-cat="${r.id}">${esc(r.label)} <span class="bq-cat-ct">${r.items.length}</span></button>`
@@ -234,7 +235,7 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
     $('#bq-cats', root).onclick = (e) => {
       const b = e.target.closest('[data-bq-cat]');
       if (!b) return;
-      state.rayon = b.dataset.bqCat;
+      state.rayon = b.dataset.bqCat; bestTouched(merchantSlug());
       renderCats(); renderGrid(); icons();
     };
   }
@@ -264,7 +265,7 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
       const ids = promoedIds();
       rayons = RAYONS.map((r) => ({ ...r, items: r.items.filter((it) => ids.has(it.id)) })).filter((r) => r.items.length);
     } else {
-      rayons = state.rayon === 'tous' ? RAYONS : RAYONS.filter((r) => r.id === state.rayon);
+      rayons = state.rayon === '_best' ? [{ id: '_best', label: tr(BEST_LABEL), items: bestItems(merchantSlug(), RAYONS, (p) => stockOf(p) > 0) || [] }] : state.rayon === 'tous' ? RAYONS : RAYONS.filter((r) => r.id === state.rayon);
     }
     let i = 0;
     const wrap = $('#bq-gridwrap', root);
@@ -873,8 +874,10 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
     return mine.length ? { balance: mine.reduce((t, a) => t + (Number(a.balance) || 0), 0), count: mine.length } : null;
   }
 
-  function openClientModal() {
-    const el = $('#bq-clientm', root);
+  function openClientModal(opts) {   // `holder` (retail-avance.js › askAvoirHolder) : le choix dit à qui l'avoir est inscrit, pas qui est sur le ticket
+    const holder = opts && typeof opts.onPick === 'function' ? opts : null, el = $('#bq-clientm', root), veil = $('#bq-client-veil', root);
+    if (veil) veil.style.zIndex = holder ? '2147482000' : '';   /* au-dessus de l'échange ouvert ; pickHolder(undefined) = fermée sans choix, rien n'est émis */
+    let settledHolder = false; const pickHolder = (c) => { if (settledHolder) return; settledHolder = true; if (veil) veil.style.zIndex = ''; closeVeil('#bq-client-veil'); if (c === undefined) { if (holder.onCancel) holder.onCancel(); } else holder.onPick(c); };
     let mode = 'search';
     if (window.KiwiClients && KiwiClients.pull) {
       KiwiClients.pull((changed) => {
@@ -896,8 +899,8 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
       const phonePrefill = isDigits ? (q || '').trim() : '';
       el.innerHTML = `
         <button class="bq-modal-x" data-bq-close aria-label="${esc(tr("Fermer"))}"><i data-lucide="x"></i></button>
-        <h3 class="modal-title">${esc(tr("Cliente"))}</h3>
-        <p class="modal-subtle">${esc(tr("Rechercher par nom ou par numéro de téléphone."))}</p>
+        <h3 class="modal-title">${esc(tr(holder ? "À qui inscrire l’avoir ?" : "Cliente"))}</h3>
+        <p class="modal-subtle">${esc(tr(holder ? "Une fiche garde l’avoir au nom de la cliente, même si elle perd son bon. Rechercher par nom ou téléphone, ou créer sa fiche." : "Rechercher par nom ou par numéro de téléphone."))}</p>
         <div class="bq-phone-in"><i data-lucide="search"></i>
           <input id="bq-cl-q" type="text" enterkeyhint="search" autocorrect="off" autocapitalize="words" placeholder="${esc(tr("Nom ou 06…"))}" value="${esc(q || '')}" autocomplete="off" />
         </div>
@@ -917,7 +920,7 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
           </div>
           <button class="bq-cl-new" id="bq-cl-new"><i data-lucide="user-plus"></i>${esc(tr("Nouvelle cliente"))}${q && !hits.length ? ` · « ${esc(q)} »` : ''}</button>
           <div class="bq-sheet-foot" style="margin-top:10px;">
-            <button class="bq-btn ghost" id="bq-cl-guest">${esc(tr("Cliente de passage, sans fiche"))}</button>
+            <button class="bq-btn ghost" id="bq-cl-guest">${esc(tr(holder ? "Continuer sans fiche (bon au porteur)" : "Cliente de passage, sans fiche"))}</button>
           </div>` : `
           <div class="bq-cl-form">
             <input class="bq-in" id="bq-cl-name" placeholder="${esc(tr("Nom et prénom"))}" value="${esc(namePrefill)}" />
@@ -928,11 +931,12 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
             </div>
           </div>`}`;
       $('#bq-cl-q', el).oninput = (e) => { render(e.target.value); icons(); const i = $('#bq-cl-q', el); i.focus(); moveCaretEnd(i); };
-      $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-client-veil'); });
+      $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => (holder ? pickHolder(undefined) : closeVeil('#bq-client-veil')); });
       $$('[data-bq-cl]', el).forEach((b) => {
         b.onclick = () => {
           const c = clById(b.dataset.bqCl);
           if (!c) return;
+          if (holder) { pickHolder(c); return; }
           ticketOwner.setCustomer(state.ticket, c.id);
           closeVeil('#bq-client-veil');
           const tt = [c.taille ? tr('taille') + ' ' + c.taille : '', c.points + ' ' + tr('pts')].filter(Boolean).join(', ');
@@ -943,7 +947,7 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
       const newBtn = $('#bq-cl-new', el);
       if (newBtn) newBtn.onclick = () => { mode = 'create'; render(q); icons(); };
       const guest = $('#bq-cl-guest', el);
-      if (guest) guest.onclick = () => {
+      if (guest) guest.onclick = () => { if (holder) { pickHolder(null); return; }   // « sans fiche » : bon au porteur
         ticketOwner.setCustomer(state.ticket, 'passage');
         closeVeil('#bq-client-veil');
         renderTicket(); icons();
@@ -964,6 +968,7 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
           const c = { id: cid, name, phone: tel, points: 0, taille: '', achats: 0, spent: 0, prefs: [], history: [] };
           CLIENTES.unshift(c); CL[cid] = c;
         }
+        if (holder) { queueIfOffline('Fiche cliente'); toast(tr('Fiche créée, {name}').replace('{name}', name)); pickHolder(clById(cid) || { id: cid, name, phone: tel }); return; }
         ticketOwner.setCustomer(state.ticket, cid);
         closeVeil('#bq-client-veil');
         queueIfOffline('Fiche cliente');
@@ -1072,7 +1077,7 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
       </div>
       ${(c.prefs || []).length ? `<div class="bq-fnotes">${c.prefs.map((p) => `<div class="bq-fnote"><i data-lucide="heart"></i>${esc(p)}</div>`).join('')}</div>` : ''}
       ${av ? `<button class="bq-favoir" id="bq-fiche-av"><i data-lucide="ticket"></i>Avoir actif <b>${av.code}</b> · ${fmtMAD(av.balance)}, utilisable en caisse<span class="see">Voir</span></button>` : ''}
-      <div class="bq-f-lbl" style="margin-bottom:6px;">Historique</div>
+      <div id="bq-fiche-notes"></div><div class="bq-f-lbl" style="margin-bottom:6px;">Historique</div>
       <div class="bq-fhist">
         ${hist.length ? hist.map((h) => `<div class="bq-fhist-row"><span class="when">${esc(h.when)}${h.method ? `<small style="display:block;">${esc(h.method)}</small>` : ''}</span><span class="what">${esc(h.what)}${h.ref ? `<small style="display:block;">Ticket ${esc(h.ref)}</small>` : ''}</span><span class="amt">${fmtMAD(h.amt)}</span></div>`).join('') : '<div class="bq-empty">Aucun achat enregistré.</div>'}
       </div>
@@ -1085,6 +1090,7 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
     $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-fiche-veil'); });
     const avB = $('#bq-fiche-av', el);
     if (avB) avB.onclick = () => { closeVeil('#bq-fiche-veil'); openVoucher(av, { mode: 'view' }); };
+    paintClientNotes($('#bq-fiche-notes', el), _bqKey, c.id, { esc, fmtMAD, cls: 'bq' });   // avances et compte client
     $('#bq-fiche-sell', el).onclick = () => {
       ticketOwner.setCustomer(state.ticket, c.id);
       closeVeil('#bq-fiche-veil');
@@ -1568,4 +1574,4 @@ import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
       lookupScan(code);
     }, 620);
   }
-export { tr, $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, iconPickerHtml, icons, isDemoStore, lens, lookupScan, moveCaretEnd, openCamScan, pad2, wireSellSearch, rayonOf, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderTicket, shelf, useKiwiCl, variantColor, variantSource, wireIconPicker };
+export { tr, $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, clById, clientList, colorDot, colorLabel, commitEan, esc, openClientModal, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, iconPickerHtml, icons, isDemoStore, lens, lookupScan, moveCaretEnd, openCamScan, pad2, wireSellSearch, rayonOf, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderTicket, shelf, useKiwiCl, variantColor, variantSource, wireIconPicker };

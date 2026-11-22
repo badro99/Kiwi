@@ -24,8 +24,9 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import * as SPLIT from './boutique-size-split.js?v=4';
-import * as CODES from './boutique-size-codes.js?v=3';
-import * as COLORS from './boutique-size-colors.js?v=6';
+import * as CODES from './boutique-size-codes.js?v=4';
+const plainWord = (x) => String(x == null ? '' : x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+import * as COLORS from './boutique-size-colors.js?v=7';
 
 export const ONE_COLOR = 'unique';
 const GRID = {
@@ -57,6 +58,7 @@ const T = {
     newCode: 'Code créé à l’enregistrement', noCode: 'Aucun code', reg: 'Code existant', del: 'Supprimer',
     out: 'Épuisée', empty: 'Aucune taille pour l’instant.',
     colors: 'Couleurs', addColor: 'Couleur', addColors: 'Plusieurs couleurs ?', noColor: 'Sans couleur', removeColor: (c) => `Retirer ${c}`,
+    shopColors: 'Vos couleurs', findColor: 'Chercher : 05, fuchsia…', families: 'Familles', exact: 'Couleur exacte', exactName: 'Nom, ex. 05 Fuchsia', exactHex: 'Teinte', exactAdd: 'Ajouter', exactNone: 'Aucune couleur trouvée',
     stockCol: 'En stock', after: (a, b) => `${a} → ${b} en stock`,
     dropAsk: (c) => `Retirer ${c} et ses tailles ?`, dropOk: 'Retirer', cancel: 'Annuler', dropTip: (c) => `Retirer ${c} (épuisée)`,
     codeKey: 'Codes-barres : après le 2, deux chiffres pour la couleur ; avant le dernier, deux pour la taille. Le milieu est celui de l’article.',
@@ -81,6 +83,7 @@ const T = {
     newCode: 'Code created on save', noCode: 'No code', reg: 'Existing code', del: 'Delete',
     out: 'Sold out', empty: 'No sizes yet.',
     colors: 'Colours', addColor: 'Colour', addColors: 'Several colours?', noColor: 'No colour', removeColor: (c) => `Remove ${c}`,
+    shopColors: 'Your colours', findColor: 'Search: 05, fuchsia…', families: 'Families', exact: 'Exact colour', exactName: 'Name, e.g. 05 Fuchsia', exactHex: 'Shade', exactAdd: 'Add', exactNone: 'No colour found',
     stockCol: 'In stock', after: (a, b) => `${a} → ${b} in stock`,
     dropAsk: (c) => `Remove ${c} and its sizes?`, dropOk: 'Remove', cancel: 'Cancel', dropTip: (c) => `Remove ${c} (sold out)`,
     codeKey: 'Barcodes: after the 2, two digits for the colour; before the last, two for the size. The middle is the item’s.',
@@ -105,6 +108,7 @@ const T = {
     newCode: 'يُنشأ الرمز عند الحفظ', noCode: 'بلا رمز', reg: 'رمز موجود', del: 'حذف',
     out: 'نفد', empty: 'لا مقاسات بعد.',
     colors: 'الألوان', addColor: 'لون', addColors: 'عدة ألوان؟', noColor: 'بلا لون', removeColor: (c) => `إزالة ${c}`,
+    shopColors: 'ألوانك', findColor: 'ابحث: 05، فوشيا…', families: 'العائلات', exact: 'لون بالضبط', exactName: 'الاسم، مثلا 05 فوشيا', exactHex: 'الدرجة', exactAdd: 'أضف', exactNone: 'لا يوجد لون بهذا الاسم',
     stockCol: 'في المخزون', after: (a, b) => `${a} ← ${b} في المخزون`,
     dropAsk: (c) => `إزالة ${c} ومقاساته؟`, dropOk: 'إزالة', cancel: 'إلغاء', dropTip: (c) => `إزالة ${c} (نفد)`,
     codeKey: 'الرموز الشريطية: بعد الرقم 2، رقمان للون؛ وقبل الأخير، رقمان للمقاس. الوسط خاص بالمنتج.',
@@ -318,9 +322,27 @@ export function mount(host, o) {
   let cols = null;
   let cellList = [];
   let carry = null;   // { values, quick } : ce qui était tapé, repris après un ajout de couleur
+  let palOpen = false; // la palette reste ouverte d'un choix à l'autre
   /* La répartition rapide et les couleurs s'allument par commerçant (option
      « boutiqueSizeColors » de la console). Éteinte : l'écran d'avant, à l'identique. */
   const rich = !ro && sizeColorsOn();
+
+  /* « + Couleur » : les nuances du magasin (son nuancier et celles déjà au
+     catalogue), cherchables par numéro ou par nom ; les familles ; et une
+     couleur exacte à créer (teinte + nom), qui rejoint le nuancier. */
+  const palHtml = () => {
+    const t = words(o.lang);
+    const dotOf = (c) => `<span class="kbc-dot" style="--dot:${esc(c.hex)}"></span>`;
+    const shop = COLORS.shopColors(cat).filter((c) => !cols.some((k) => k.id === c.id));
+    const fams = pal.filter((c) => !COLORS.hasFamily(cols, c));
+    return `${shop.length ? `<div class="kbc-sec"><span class="kbc-l">${esc(t.shopColors)}</span>${shop.length > 12 ? `<input type="search" class="kbc-find" data-kbc-find autocomplete="off" placeholder="${esc(t.findColor)}" aria-label="${esc(t.findColor)}" />` : ''}
+      <div class="kbc-list" data-kbc-list>${shop.map((c) => `<button type="button" class="kbc-sw" data-kbc-exact="${esc(c.id)}" data-label="${esc(c.label)}">${dotOf(c)}${esc(c.label)}</button>`).join('')}<span class="kbc-none" data-kbc-none hidden>${esc(t.exactNone)}</span></div></div>` : ''}
+      ${fams.length ? `<div class="kbc-sec"><span class="kbc-l">${esc(t.families)}</span><div class="kbc-list">${fams.map((c) => `<button type="button" class="kbc-sw" data-kbc-pick="${esc(c.id)}">${dotOf(c)}${esc(COLORS.labelOf(c, o.lang))}</button>`).join('')}</div></div>` : ''}
+      <div class="kbc-sec"><span class="kbc-l">${esc(t.exact)}</span><div class="kbc-new">
+        <input type="color" value="#C93A6E" data-kbc-hex aria-label="${esc(t.exactHex)}" />
+        <input type="text" class="kbc-name" data-kbc-name maxlength="40" autocomplete="off" placeholder="${esc(t.exactName)}" aria-label="${esc(t.exactName)}" />
+        <button type="button" class="kbs-btn" data-kbc-make>${esc(t.exactAdd)}</button></div></div>`;
+  };
 
   const draw = () => {
     const d = cat.getProduct(pid);
@@ -402,8 +424,8 @@ export function mount(host, o) {
     const soldOut = (k) => !creating && used(k) && shown.every((r) => r.col !== k || !r.variant || !(+r.variant.stock > 0));
     const colorsHtml = !rich ? '' : `<div class="kbc" data-kbc>
       <div class="kbc-row"><span class="kbc-l">${esc(t.colors)}</span>${cols.filter((c) => !c.unique).map((c) => `<span class="kbc-chip">${dot(c)}${esc(c.label)}${!used(c.key) ? `<button type="button" data-kbc-del="${esc(c.key)}" aria-label="${esc(t.removeColor(c.label))}">${CLOSE_SVG}</button>` : soldOut(c.key) ? `<button type="button" data-kbc-drop="${esc(c.key)}" data-label="${esc(c.label)}" aria-label="${esc(t.dropTip(c.label))}" title="${esc(t.dropTip(c.label))}">${CLOSE_SVG}</button>` : ''}</span>`).join('')}
-        <button type="button" class="kbc-add" data-kbc-add aria-expanded="false">${PLUS_SVG}<span>${esc(cols.every((c) => c.unique) ? t.addColors : t.addColor)}</span></button></div>
-      <div class="kbc-pal" data-kbc-pal hidden>${pal.filter((c) => !cols.some((k) => k.id === c.id || k.family === c.id)).map((c) => `<button type="button" class="kbc-sw" data-kbc-pick="${esc(c.id)}">${dot(COLORS.columnOf(c, o.lang))}${esc(COLORS.labelOf(c, o.lang))}</button>`).join('')}</div>
+        <button type="button" class="kbc-add" data-kbc-add aria-expanded="${palOpen ? 'true' : 'false'}">${PLUS_SVG}<span>${esc(cols.every((c) => c.unique) ? t.addColors : t.addColor)}</span></button></div>
+      <div class="kbc-pal" data-kbc-pal${palOpen ? '' : ' hidden'}>${palHtml()}</div>
     </div>`;
     const printable = printCount();
     const rec = lastReceipt(pid);
@@ -432,6 +454,12 @@ export function mount(host, o) {
     const back = carry; carry = null;
     if (back) host.querySelectorAll('[data-kbs-in]').forEach((i) => { const v = back.values[i.getAttribute('data-kbs-in')]; if (v) i.value = v; });
     wire();
+    /* Une seule case à la création (taille unique, une couleur) : les pièces y
+       sont déjà, « Enregistrer » suffit ; « + Couleur » les répartit. */
+    if (creating && rich && !back && cellList.length === 1) {
+      const only = host.querySelector('[data-kbs-in]');
+      if (only) { only.value = String(target); only.dispatchEvent(new Event('input', { bubbles: true })); }
+    }
     if (splitOn) {
       SPLIT.mountSplit(host.querySelector('[data-kbs-split]'), {
         root: host, target, lang: o.lang,
@@ -456,7 +484,7 @@ export function mount(host, o) {
     carry = { values, quick: quick || '' };
   };
   function addColors(fams, quick) {
-    const fresh = fams.filter((c) => !cols.some((k) => k.id === c.id || k.family === c.id)).map((c) => COLORS.columnOf(c, o.lang));
+    const fresh = fams.filter((c) => (c.exact ? !cols.some((k) => k.id === c.id) : !COLORS.hasFamily(cols, c))).map((c) => (c.exact ? c : COLORS.columnOf(c, o.lang)));
     if (!fresh.length) return;
     const d = cat.getProduct(pid);
     const neutralUsed = d && d.variants.some((v) => String(v.colorId || COLORS.UNIQUE) === COLORS.UNIQUE);
@@ -566,7 +594,7 @@ export function mount(host, o) {
         }
         if (!v) return;
         const fam = rich ? (() => { const c = cols.find((k) => k.key === r.col); return !c || c.unique ? 'unique' : (c.family || c.id); })() : '';
-        if (!o.primary(v) && cat.generateBarcode(v.id, plan ? plan.code(fam, r.size) : undefined)) codes++;
+        if (!o.primary(v) && cat.generateBarcode(v.id, plan ? plan.code(fam, r.size, v.colorId) : undefined)) codes++;
         got[v.id] = (got[v.id] || 0) + n;
       });
     };
@@ -614,8 +642,38 @@ export function mount(host, o) {
     if (pa) pa.addEventListener('click', () => printPlan(true));
     const add = host.querySelector('[data-kbc-add]');
     const palEl = host.querySelector('[data-kbc-pal]');
-    if (add && palEl) add.addEventListener('click', () => { palEl.hidden = !palEl.hidden; add.setAttribute('aria-expanded', String(!palEl.hidden)); if (!palEl.hidden) { const f = palEl.querySelector('button'); if (f) f.focus(); } });
+    if (add && palEl) add.addEventListener('click', () => { palEl.hidden = !palEl.hidden; palOpen = !palEl.hidden; add.setAttribute('aria-expanded', String(!palEl.hidden)); if (!palEl.hidden) { const f = palEl.querySelector('button'); if (f) f.focus(); } });
     host.querySelectorAll('[data-kbc-pick]').forEach((b) => b.addEventListener('click', () => { const c = pal.find((x) => x.id === b.getAttribute('data-kbc-pick')); if (c) addColors([c], ''); }));
+    host.querySelectorAll('[data-kbc-exact]').forEach((b) => b.addEventListener('click', () => {
+      addColors([COLORS.exactColumn(cat, { id: b.getAttribute('data-kbc-exact'), label: b.dataset.label })], '');
+    }));
+    const find = host.querySelector('[data-kbc-find]');
+    if (find) find.addEventListener('input', () => {
+      const q = plainWord(find.value);
+      let n = 0;
+      host.querySelectorAll('[data-kbc-exact]').forEach((b) => {
+        const words = plainWord(b.dataset.label).split(/\s+/);
+        /* « 05 » ou « 5 » : la nuance 05, pas la 105. */
+        const hit = !q || (/^\d+$/.test(q) ? (/^\d+$/.test(words[0]) && (words[0].startsWith(q) || +words[0] === +q))
+          : words.some((w) => w.startsWith(q)) || plainWord(b.dataset.label).includes(q));
+        b.hidden = !hit; if (hit) n++;
+      });
+      const none = host.querySelector('[data-kbc-none]'); if (none) none.hidden = n > 0;
+    });
+    const make = host.querySelector('[data-kbc-make]');
+    if (make) {
+      const nameEl = host.querySelector('[data-kbc-name]');
+      const go = () => {
+        const hexEl = host.querySelector('[data-kbc-hex]');
+        const id = COLORS.exactId(hexEl && hexEl.value);
+        if (!id) return;
+        const col = COLORS.exactColumn(cat, { id, label: nameEl && nameEl.value });
+        COLORS.rememberColor(col);
+        addColors([col], '');
+      };
+      make.addEventListener('click', go);
+      if (nameEl) nameEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+    }
     host.querySelectorAll('[data-kbc-del]').forEach((b) => b.addEventListener('click', () => removeColor(b.getAttribute('data-kbc-del'))));
     /* Retirer une couleur épuisée : deux touches, la seconde efface ses tailles. */
     host.querySelectorAll('[data-kbc-drop]').forEach((b) => b.addEventListener('click', () => {
@@ -845,9 +903,14 @@ export function wireTotal(root, lang) {
    tout le stock et son code. Rend { product, needsGrid }. */
 export function createProduct(cat, data, total, existing) {
   let p = null, kept = false;
+  /* Couleurs allumées : un article en taille unique passe aussi par l'écran
+     des couleurs, ses pièces prêtes à répartir entre ses nuances (Elham Brand,
+     22 nov. 2026 : six châles tombaient en « Sans couleur » avant qu'elle ait
+     pu choisir). Un code fournisseur déjà collé, lui, se pose tout de suite. */
+  const split = sizeColorsOn() && !existing && total > 0;
   const run = () => {
     p = cat.addProduct(data);
-    if (p && !hasGrid(p.kind)) {
+    if (p && !hasGrid(p.kind) && !split) {
       const ev = cat.ensureVariant({ productId: p.id, colorId: ONE_COLOR, size: 'TU', stock: total });
       if (!ev || !ev.variant) return;
       /* Le code déjà collé sur l'article : on le garde, rien à réimprimer. */
@@ -856,7 +919,7 @@ export function createProduct(cat, data, total, existing) {
     }
   };
   if (cat.batch) cat.batch(run); else run();
-  return { product: p, needsGrid: !!(p && hasGrid(p.kind)), kept };
+  return { product: p, needsGrid: !!(p && (hasGrid(p.kind) || split)), kept };
 }
 
 /* Le code-barres à la création, identique à la caisse et au tableau de bord :

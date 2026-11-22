@@ -818,7 +818,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
         ts: (m.time instanceof Date) ? m.time.getTime() : num(m.ts || m.time),
         type: m.type === 'out' ? 'out' : 'in',
         amount: Math.abs(num(m.amount)),
-        reason: String(m.reason || ''),
+        reason: String(m.reason || ''), who: String(m.actorName || '').slice(0, 40),
       };
     }).filter(function (m) { return m.amount > 0 && m.ts >= b.from && m.ts < b.to; });
     var movesIn = 0, movesOut = 0;
@@ -925,7 +925,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
           ts: (h.time instanceof Date) ? h.time.getTime() : num(h.ts || h.time),
           from: String(h.fromName || h.from || ''),
           to: String(h.toName || h.to || ''),
-          ecart: num(h.ecart),
+          ecart: num(h.ecart), cardGap: h.cardGap == null ? null : num(h.cardGap),
         };
       }),
       closedCount: 0,

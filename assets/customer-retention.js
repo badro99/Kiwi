@@ -254,7 +254,7 @@
   }
   var store = window.KiwiStore.define('retention', {
     blank: function () { return { settings: null, offers: null, sends: [] }; },
-    cloud: true,
+    cloud: true, serverWins: true, // un vieux cache ne réimpose plus l'ancien rythme (cloud-doc.js › serverWins, comme la fidélité)
     isEmpty: function (d) { return !d || (!d.settings && !d.offers && !(d.sends || []).length); },
   });
   function readDoc() {

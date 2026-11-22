@@ -41,7 +41,7 @@ export async function onRequestGet({ request, env }) {
     p.forEach((r) => priced.set(r.list_id, Number(r.n)));
     const c = ((await env.DB.prepare('SELECT list_id, COUNT(*) AS n FROM price_list_clients WHERE merchant = ? GROUP BY list_id').bind(merchant).all()).results) || [];
     c.forEach((r) => clients.set(r.list_id, Number(r.n)));
-  } catch (_) { pending = !(await tablesReady(env)); /* compteurs facultatifs ; sans les tables de 0029, l'écran dit « mise à jour en attente » */ }
+  } catch (_) { pending = !(await tablesReady(env)); /* compteurs facultatifs ; sans les tables de 0030, l'écran dit « mise à jour en attente » */ }
   return json({ ok: true, merchant, lists: lists.map((l) => ({ ...l, priced: priced.get(l.id) || 0, clients: clients.get(l.id) || 0 })), ...(pending ? { degraded: true } : {}) });
 }
 

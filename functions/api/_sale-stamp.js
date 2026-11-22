@@ -6,7 +6,7 @@
 // moves the customer or the arrival time. Best effort: a failure here never
 // un-books the money, the sale stands as written.
 //
-// The price list the till applied (migration 0029, `price_list_id`) is stamped
+// The price list the till applied (migration 0030, `price_list_id`) is stamped
 // by _price-list-sale.js, which also checks who chose it.
 
 import { stampPriceList } from './_price-list-sale.js';

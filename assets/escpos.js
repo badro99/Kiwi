@@ -567,7 +567,7 @@
     b.line(row('Espèces encaissées', '+ ' + money(cash.sales), paper));
     if (cash.tips) b.line(row('Pourboires espèces', '+ ' + money(cash.tips), paper));
     (cash.movements || []).forEach(function (m) {
-      b.line(row('  ' + (m.reason || (m.type === 'in' ? 'Entrée' : 'Sortie')),
+      b.line(row('  ' + (m.ts ? new Date(m.ts).toTimeString().slice(0, 5) + ' ' : '') + (m.reason || (m.type === 'in' ? 'Entrée' : 'Sortie')) + (m.who ? ' · ' + m.who : ''),
         (m.type === 'in' ? '+ ' : '- ') + money(m.amount), paper));
     });
     b.bold(true).line(row('ATTENDU EN CAISSE', money(cash.expected), paper)).bold(false);

@@ -210,6 +210,7 @@
         second: '',          /* '' | fr | en | ar — le ticket bilingue */
         density: 'normal',   /* compact | normal | airy */
       },
+      validity: { avoirDays: null, avanceDays: null },   // jours de vie d'un avoir / d'une avance ; null = sans limite
       updatedAt: 0,
     };
   }
@@ -257,6 +258,10 @@
     o.print.density = ['compact', 'normal', 'airy'].indexOf(P.density) >= 0 ? P.density : 'normal';
     /* Un ticket bilingue dans la même langue deux fois n'est pas bilingue. */
     if (o.print.second && o.print.second === o.print.lang) o.print.second = '';
+
+    /* Validité des bons : un entier de 1 à 3650 jours ; vide, 0 ou illisible = sans limite. */
+    var VD = d.validity || {}, days = function (x) { var n = x === '' || x == null || typeof x === 'boolean' ? NaN : Math.round(Number(x)); return n >= 1 ? Math.min(3650, n) : null; };
+    o.validity = { avoirDays: days(VD.avoirDays), avanceDays: days(VD.avanceDays) };
 
     o.updatedAt = num(d.updatedAt);
     return o;
@@ -601,7 +606,8 @@
       customer: customerBlock(sale, cfg),
       acompte: sale.acompte && Number(sale.acompte.total) > 0
         ? { total: Math.abs(num(sale.acompte.total)), paid: Math.abs(num(sale.acompte.paid)),
-            remaining: Math.abs(num(sale.acompte.remaining)) } : null,
+            remaining: Math.abs(num(sale.acompte.remaining)),
+            until: sale.acompte.untilText ? str(sale.acompte.untilText, 40) : '' } : null,
       refund: refund ? { of: str(sale.of, 40), reason: str(sale.reason, 80) } : null,
       foot: {
         thanks: cfg.msg.thanks,
@@ -819,9 +825,9 @@
 
   /* Le bon d'avoir : ses propres mots, à part du dictionnaire du reçu. */
   var VOUCHER = {
-    fr: { title: 'BON D\'AVOIR', issuedFor: 'Émis pour', left: 'solde restant', code: 'Code', client: 'Cliente', reason: 'Motif', origin: 'Vente d\'origine', issued: 'Émis le', until: 'Valable jusqu\'au', use: 'Utilisable en caisse, en une ou plusieurs fois.', noCash: 'Ni repris, ni remboursé en espèces.' },
-    en: { title: 'STORE CREDIT', issuedFor: 'Issued for', left: 'balance left', code: 'Code', client: 'Customer', reason: 'Reason', origin: 'Original sale', issued: 'Issued', until: 'Valid until', use: 'Use it at the till, in one or several purchases.', noCash: 'Not exchangeable or refundable for cash.' },
-    ar: { title: 'سند رصيد', issuedFor: 'صدر بمبلغ', left: 'الرصيد المتبقي', code: 'الرمز', client: 'الزبونة', reason: 'السبب', origin: 'البيع الأصلي', issued: 'تاريخ الإصدار', until: 'صالح حتى', use: 'يُستعمل في الصندوق، مرة واحدة أو عدة مرات.', noCash: 'لا يُسترجع ولا يُصرف نقداً.' },
+    fr: { title: 'BON D\'AVOIR', issuedFor: 'Émis pour', left: 'solde restant', code: 'Code', client: 'Cliente', reason: 'Motif', origin: 'Vente d\'origine', issued: 'Émis le', until: 'Valable jusqu\'au', validity: 'Validité', noLimit: 'Sans date limite', use: 'Utilisable en caisse, en une ou plusieurs fois.', noCash: 'Ni repris, ni remboursé en espèces.' },
+    en: { title: 'STORE CREDIT', issuedFor: 'Issued for', left: 'balance left', code: 'Code', client: 'Customer', reason: 'Reason', origin: 'Original sale', issued: 'Issued', until: 'Valid until', validity: 'Validity', noLimit: 'No expiry date', use: 'Use it at the till, in one or several purchases.', noCash: 'Not exchangeable or refundable for cash.' },
+    ar: { title: 'سند رصيد', issuedFor: 'صدر بمبلغ', left: 'الرصيد المتبقي', code: 'الرمز', client: 'الزبونة', reason: 'السبب', origin: 'البيع الأصلي', issued: 'تاريخ الإصدار', until: 'صالح حتى', validity: 'الصلاحية', noLimit: 'بدون تاريخ انتهاء', use: 'يُستعمل في الصندوق، مرة واحدة أو عدة مرات.', noCash: 'لا يُسترجع ولا يُصرف نقداً.' },
   };
 
   /* Un bon d'avoir sort du même papier que le reçu : l'enseigne, le logo, les
@@ -843,7 +849,9 @@
       var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
       return m ? new Date(+m[1], +m[2] - 1, +m[3], 12) : new Date(t - 5 * 3600000 - 1);
     };
-    var at = new Date(v.at || Date.now()), until = v.until ? lastDay(+new Date(v.until)) : null;
+    /* Sans date limite (Validité des bons vide) : échéance en l'an 2999 au registre. */
+    var forever = !!v.until && new Date(v.until).getFullYear() >= 2900;
+    var at = new Date(v.at || Date.now()), until = v.until && !forever ? lastDay(+new Date(v.until)) : null;
     var day = function (d) { return d && !isNaN(d.getTime()) ? pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear() : ''; };
     var balance = Math.abs(num(v.balance != null ? v.balance : v.amount));
     var amount = Math.abs(num(v.amount != null ? v.amount : balance));
@@ -851,7 +859,8 @@
     doc.voucher = {
       V: V, code: str(v.code, 40), balance: balance, amount: amount,
       holder: str(v.holderName, 60), reason: str(v.motif, 80), origin: str(v.from, 40),
-      issued: day(at), until: v.untilText ? str(v.untilText, 40) : day(until),
+      issued: day(at), until: forever ? V.noLimit : v.untilText ? str(v.untilText, 40) : day(until),
+      untilLabel: forever ? V.validity : V.until,
     };
     return doc;
   }
@@ -937,7 +946,7 @@
       if (vo.reason) row(V.reason, vo.reason);
       if (vo.origin) row(V.origin, vo.origin);
       if (vo.issued) row(V.issued, vo.issued);
-      if (vo.until) row(V.until, vo.until, true);
+      if (vo.until) row(vo.untilLabel || V.until, vo.until, true);
       rule();
       /* Le code lui-même, en Code 128 : le champ « Scanner ou saisir AV-… » de
          l'encaissement le reçoit tel quel d'une douchette. */
@@ -993,7 +1002,9 @@
     /* — le panier — */
     rule();
     doc.lines.forEach(function (l) {
-      row(l.qty + '× ' + l.name, moneyMAD(l.total, doc));
+      var left = l.qty + '× ' + l.name, right = moneyMAD(l.total, doc), room = cols - 3 - right.length, cut = left.lastIndexOf(' · '), tail = cut > 0 ? left.slice(cut + 3) : '', w;
+      if (left.length > room && room > 8) { w = tail && tail.length <= room ? wrapText(left.slice(0, cut), cols - 2).concat(tail) : wrapText(left, room); left = w.pop(); w.forEach(function (x) { b.line(' ' + x); }); }   // trop long : à la ligne, pas coupé ; la teinte reste entière près du prix
+      row(left, right);
       if (l.unit) b.line('    ' + money(l.unit, doc) + ' × ' + l.qty);
       if (l.ref) b.line('    ' + T.ref + ' ' + l.ref);
       if (l.barcode) b.line('    ' + l.barcode);
@@ -1022,6 +1033,7 @@
       row('Total de la note', moneyMAD(doc.acompte.total, doc));
       row('Payé à ce jour', moneyMAD(doc.acompte.paid, doc));
       row('Reste à régler', moneyMAD(doc.acompte.remaining, doc), true);
+      if (doc.acompte.until && doc.acompte.remaining > 0) row('Pièce gardée jusqu’au', doc.acompte.until);
     }
     if (doc.cash) { row(T.received, moneyMAD(doc.cash.received, doc)); row(T.change, moneyMAD(doc.cash.change, doc)); }
 
@@ -1115,7 +1127,7 @@
       if (vh.reason) R(VH.reason, vh.reason);
       if (vh.origin) Rh(VH.origin, code(vh.origin));
       if (vh.issued) Rh(VH.issued, code(vh.issued));
-      if (vh.until) Rh(VH.until, code(vh.until), 'kr-total');
+      if (vh.until) Rh(vh.untilLabel || VH.until, code(vh.until), 'kr-total');
       out.push('<div class="kr-rule"></div>');
       var KB = window.KiwiBarcode;
       if (vh.code && KB && KB.svg) Ph('kr-c', KB.svg(vh.code, { format: 'code128', height: 48 }));
@@ -1167,7 +1179,9 @@
 
     out.push('<div class="kr-rule"></div>');
     doc.lines.forEach(function (l) {
-      out.push('<div class="kr-r kr-item"><span>' + esc(l.qty + '× ' + l.name) + '</span><span>' + esc(moneyMAD(l.total, doc)) + '</span></div>');
+      var nm = esc(l.qty + '× ' + l.name), cut = nm.lastIndexOf(' · ');   // la teinte ne se coupe pas : « 05 / Fuchsia » ne se lit plus
+      if (cut > 0) nm = nm.slice(0, cut) + ' <span style="white-space:nowrap">' + nm.slice(cut + 1) + '</span>';
+      out.push('<div class="kr-r kr-item"><span>' + nm + '</span><span>' + esc(moneyMAD(l.total, doc)) + '</span></div>');
       var sub = [];
       if (l.unit) sub.push(code(money(l.unit, doc) + ' × ' + l.qty));
       if (l.ref) sub.push(esc(T.ref) + ' ' + code(l.ref));
@@ -1190,6 +1204,7 @@
       R('Total de la note', moneyMAD(doc.acompte.total, doc));
       R('Payé à ce jour', moneyMAD(doc.acompte.paid, doc));
       R('Reste à régler', moneyMAD(doc.acompte.remaining, doc), 'kr-total');
+      if (doc.acompte.until && doc.acompte.remaining > 0) R('Pièce gardée jusqu’au', doc.acompte.until);
     }
     if (doc.cash) { R(T.received, moneyMAD(doc.cash.received, doc)); R(T.change, moneyMAD(doc.cash.change, doc)); }
 
@@ -1301,6 +1316,7 @@
       out.push(row('Total de la note', moneyMAD(doc.acompte.total, doc)));
       out.push(row('Payé à ce jour', moneyMAD(doc.acompte.paid, doc)));
       out.push(row('Reste à régler', moneyMAD(doc.acompte.remaining, doc)));
+      if (doc.acompte.until && doc.acompte.remaining > 0) out.push(row('Pièce gardée jusqu’au', doc.acompte.until));
     }
     /* Reçu / Rendu. Le thermique (escpos) et l'écran (html) les portaient déjà ;
        cette sortie-ci les oubliait, et c'est elle qui part à l'imprimante

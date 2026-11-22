@@ -1,10 +1,11 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch } from './pos-maison/sales.js?v=149';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch, openClientModal } from './pos-maison/sales.js?v=158';
+import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=4';
 import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=18';
-import { tillNow } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=2';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=149';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=149';
+import { tillNow } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=3';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=158';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=158';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=10'; import { mzLivraisons } from './pos-maison/delivery.js?v=28';
-import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=14'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=5'; import { mzSettle } from './pos-maison/catalog-settle.js?v=1'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
+import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=14'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=5'; import { mzSettle } from './pos-maison/catalog-settle.js?v=1'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1'; import { cardCheckHtml, cardCheckWire, cardCheckValue } from './pos-boutique/card-check.js?v=1';
 import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
 
   'use strict';
@@ -458,6 +459,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
       return 'Ce ticket n’est pas encore synchronisé, ou il a déjà été remboursé jusqu’à son montant disponible.';
     }
     if (code === 'manager-cancelled') return 'Autorisation du responsable annulée. Rien n’a été remis en stock.';
+    if (code === 'holder-cancelled') return 'Aucune cliente choisie. Rien n’a été émis ni remis en stock.';
     if (code === 'manager-required') return 'L’accord d’un responsable est nécessaire pour émettre un avoir. Rien n’a été remis en stock.';
     return 'Connexion au registre des avoirs impossible. Rien n’a été remis en stock.';
   }
@@ -519,7 +521,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
       itemId: line.pid || '', variantId: line.variantId || [line.pid || '', line.size || '', line.color || ''].join(':'),
       name: line.name || (P[line.pid] && P[line.pid].name) || 'Article retiré du catalogue',
       qty: Math.max(1, Number(line.qty) || 1), total: lineTotals[i],
-      cat: line.category || rayonOf(line.pid) || '', unit: 'piece', kind: 'product',
+      cat: line.category || rayonOf(line.pid) || '', unit: 'piece', kind: 'product', supplierId: (P[line.pid] && P[line.pid].supplierId) || '',
     })));
     const payload = {
       id: sale.serverId || sale.syncId || sale.id,
@@ -1517,7 +1519,6 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
           <button class="mz-nav-it on" data-mz-view="vente"><i data-lucide="shopping-bag"></i><span>Vente</span><b class="mz-nav-badge" id="mz-badge-vente"></b></button>
           <button class="mz-nav-it" data-mz-view="mouvements"><i data-lucide="history"></i><span>Mouvements de stock</span></button>
           <button class="mz-nav-it" data-mz-view="casse"><i data-lucide="shield-alert"></i><span>Déclarer Casse</span></button>
-          <button class="mz-nav-it" data-mz-view="scan"><i data-lucide="scan-line"></i><span>Scan</span><b class="mz-nav-badge" id="mz-badge-scan"></b></button>
           <button class="mz-nav-it" data-mz-view="inventaire"><i data-lucide="package"></i><span>Inventaire</span><b class="mz-nav-badge" id="mz-badge-inv"></b></button>
           <button class="mz-nav-it" data-mz-view="fournisseurs"><i data-lucide="truck"></i><span>Fournisseurs</span></button>
           <button class="mz-nav-it" data-mz-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="mz-nav-badge" id="mz-badge-ret"></b></button>
@@ -1563,7 +1564,6 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
         </section>
         <section class="mz-view" data-mz-panel="mouvements"></section>
         <section class="mz-view" data-mz-panel="casse"></section>
-        <section class="mz-view" data-mz-panel="scan"></section>
         <section class="mz-view" data-mz-panel="inventaire"></section>
         <section class="mz-view" data-mz-panel="fournisseurs"></section>
         <section class="mz-view" data-mz-panel="echanges"></section>
@@ -1672,7 +1672,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
                quelque chose à montrer, donc il apparaît et disparaît AVEC les
                promotions. Le laisser hors du repeint, c'était un onglet qui ne
                s'affichait qu'au prochain changement de rayon. */
-            try { renderCats(); renderView(state.view); renderBadges(); icons(); } catch (_) {}
+            repaintCalm($(`[data-mz-panel="${state.view}"]`, root), () => { renderCats(); renderView(state.view); renderBadges(); icons(); });
           });
         }
       }
@@ -1782,7 +1782,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
      * milliers d'articles la caisse ralentissait scan après scan, exactement là où
      * elle doit rester vive. On redessine une fois, à la fermeture. */
     if (intake.open) return;
-    try { renderCats(); renderView(state.view); renderBadges(); icons(); } catch (e) {}
+    repaintCalm($(`[data-mz-panel="${state.view}"]`, root), () => { renderCats(); renderView(state.view); renderBadges(); icons(); });
   }
 
   function onShow() {
@@ -1792,8 +1792,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
     const today = $('#mz-today', root);
     if (today) today.textContent = headSubVente();
     renderBadges();
-    renderView(state.view);
-    icons();
+    repaintCalm($(`[data-mz-panel="${state.view}"]`, root), () => { renderView(state.view); icons(); });
   }
 
   function openVeil(id) { const v = $(id, root); v.classList.add('is-open'); return v; }
@@ -1821,7 +1820,6 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
     if (view === 'vente') { renderCats(); renderTicket(); renderGrid(); renderExchNote(); }
     if (view === 'mouvements') renderMovements();
     if (view === 'casse') renderCasse();
-    if (view === 'scan') renderScan();
     if (view === 'inventaire') renderInventaire();
     if (view === 'fournisseurs') renderSuppliers();
     if (view === 'echanges') renderEchanges(opts);
@@ -1843,7 +1841,6 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
       el.style.display = n ? '' : 'none';
     };
     set('#mz-badge-vente', items);
-    set('#mz-badge-scan', state.scanLog.length);
     set('#mz-badge-ret', avs);
     set('#mz-badge-cl', (window.KiwiClients && KiwiClients.count && KiwiClients.count()) || CLIENTES.length);
     const invBadge = $('#mz-badge-inv', root);
@@ -1885,6 +1882,11 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
   }
 
   async function issueAvoir(amount, cliente, motif, fromSaleId, context) {
+    if (!cliente) {
+      const picked = await askAvoirHolder(openClientModal, amount);   // cliente de passage : lui ouvrir une fiche ? (retail-avance.js)
+      if (picked === undefined) { const error = new Error('holder-cancelled'); error.code = 'holder-cancelled'; throw error; }
+      cliente = picked;
+    }
     if (!IS_DEMO) {
       if (context && context.originalSale) fromSaleId = await ensureOriginalSale(context.originalSale);
       const requestId = (context && context.requestId) || creditIntent('credit-issue');
@@ -1893,7 +1895,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
         action: 'issue', id: requestId, originalSaleId: fromSaleId, approval,
         originalRef: context && context.originalRef, amountCents: Math.round(amount * 100),
         customerId: cliente && cliente.id, customerName: cliente && cliente.name,
-        reason: motif, expiresAt: Date.now() + 182 * 24 * 3600 * 1000,
+        reason: motif, ...avoirExpiryBody(),   /* Reçu · Validité des bons, au tableau de bord ; vide = sans limite */
         resellable: !context || context.resellable !== false,
         lines: context && context.lines,
       });
@@ -1910,7 +1912,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
       holderId: cliente ? cliente.id : null,
       holderName: cliente ? cliente.name : 'Porteur du bon',
       motif, at: new Date(),
-      until: new Date(Date.now() + 182 * 24 * 3600 * 1000),
+      until: localAvoirUntil(),
       from: fromSaleId || null,
     };
     AVOIRS.unshift(av);
@@ -1977,9 +1979,14 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
         if (isAcompte && (!c || !c.id || !window.KiwiRetailBalances || tot.consigned > 0)) {
           toast(onAccount ? 'Compte client : cliente requise, hors articles en dépôt-vente' : 'Acompte : cliente requise, hors articles en dépôt-vente'); return { error: 'acompte-not-eligible' };
         }
+        /* L'avance garde la pièce jusqu'à une date (Reçu · Validité des bons),
+           puis se scanne et se remet en stock (Inventaire › Avances expirées). */
+        const avanceUntil = isAcompte && !onAccount ? avanceExpiresAt() : 0;
+        const held = isAcompte && !onAccount ? heldLines(t.lines.map((ln) => ({ ...ln,
+          name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article' })), (ln) => ln.barcode || (P[ln.pid] && P[ln.pid].barcode) || '') : [];
         const rewardUsed = !!(t.reward && c && c.id && t.reward.clientId === c.id);
         const sale = {
-          id: t.num, syncId: t.syncId || newSaleId(), tenderVersion: 2, at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: isAcompte ? 'acompte' : 'vente', onAccount: onAccount || undefined,
+          id: t.num, syncId: t.syncId || newSaleId(), tenderVersion: 2, at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: isAcompte ? 'acompte' : 'vente', onAccount: onAccount || undefined, avanceUntil: avanceUntil || undefined,
           /* Référence provisoire émise hors ligne : le journal doit le dire, la
              vente elle-même est complète et synchronisable. */
           offlineRef: isOfflineRef(t.num) || undefined,
@@ -2018,7 +2025,8 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
         if (isAcompte) {
           const savedBalance = window.KiwiRetailBalances.record(merchantSlug(), {
             id: balanceId, customerId: c.id, ticketRef: sale.id,
-            totalCents: Math.round(total * 100), receipt: onAccount ? undefined : {
+            totalCents: Math.round(total * 100), kind: onAccount ? 'credit' : 'avance', expiresAt: avanceUntil, lines: held,
+            receipt: onAccount ? undefined : {
               id: sale.syncId, amountCents: Math.round(receivedNow * 100),
               method: bqPaymentMethod(parts), ts: +sale.at,
             },
@@ -2074,7 +2082,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
               total: lineTotals[i],
               cat: rayonOf(ln.pid) || '',
               unit: 'piece',
-              kind: 'product',
+              kind: 'product', supplierId: (P[ln.pid] && P[ln.pid].supplierId) || '',
             })));
             /* Réglée entièrement en avoir : aucun argent n'entre, mais la
                marchandise sort. On le DIT, avec le montant d'avoir consommé,
@@ -2102,6 +2110,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
             if (isAcompte) payload.retailBalance = {
               id: balanceId, customerId: c.id, ticketRef: sale.id,
               totalCents: Math.round(total * 100), stage: 'open',
+              ...(onAccount ? {} : { kind: 'avance', expiresAt: avanceUntil, lines: held }),
             };
             if (cashIn <= 0 && creditIn > 0 && basket.length) {
               payload.settlementKind = 'store-credit';
@@ -2383,7 +2392,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
          clôture et disparaît du Z imprimé — le seul document qui reste. */
       avoirs: { issued: t.avoirIssued, issuedCount: t.avoirIssuedN, used: t.avoirUsed, usedCount: t.avoirUsedN },
       acomptes: { received: t.acompteReceived, outstanding: t.outstanding },
-      countedCash: only === 'delivery' ? null : counted,
+      countedCash: only === 'delivery' ? null : counted, terminalCardTotal: only === 'delivery' ? null : bqCardZ,
     };
   }
   /* La journée commerciale EN COURS, comme closeRegister() côté restaurant.
@@ -2573,6 +2582,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
     /* God Mode regarde la caisse sans ouvrir de poste : session opérateur prouvée par /api/me pour CE magasin (caisse-pairing.js). */
     try { const o = sessionStorage.getItem('kiwi:tillOperator:v1'); const pv = pvPaired(); if (o && pv && pv.merchant === o) return; } catch (_) {}
     if (document.getElementById('mz-clockin')) return;
+    document.dispatchEvent(new CustomEvent('kiwi:till-opening', { detail: { slug: merchantSlug() } }));   /* ce que la dernière clôture a laissé à vérifier */
     const pv = pvPaired() || {};
     const who = ((STAFF.caissiere && STAFF.caissiere.name) || '').trim().split(/\s+/)[0] || 'Caissier';
     const role = (STAFF.caissiere && STAFF.caissiere.role) || 'Caissier';
@@ -2715,7 +2725,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
   }
 
   /* ── la clôture ── */
-  let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null, bqClosedPair = null;
+  let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null, bqClosedPair = null, bqCardZ = null;   /* bqCardZ : le total carte recopié du Z du TPE, null = non vérifié (pos-boutique/card-check.js) */
   function bqFmtDur(min) {
     if (min < 60) return `${min} mn`;
     return `${Math.floor(min / 60)}h${pad2(min % 60)}`;
@@ -2753,6 +2763,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
     const pv = pvPaired() || {};
     const DR = window.KiwiDayReport;
     const V = DR ? DR.vocab() : { items: 'articles', cats: 'rayons', cat: 'rayon' };
+    bqCardZ = null; const cardKiwi = (() => { try { const c = bqBuildReport(null, null)?.methods?.card; return Number.isFinite(c) ? c : t.card; } catch (_) { return t.card; } })();   /* le chiffre que le rapport comparera au TPE */
 
     const rows = [
       ['Service ouvert à', fmtHM(openedAt), false, ''],
@@ -2827,6 +2838,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
             <span>Écart</span><span class="mono" id="bqclo-ecart">·</span>
           </div>
         </div>
+        ${cardCheckHtml(cardKiwi, fmtMAD)}
         <div class="clo-highlight">
           <div class="clo-highlight-icon"><i data-lucide="shopping-bag"></i></div>
           <div class="clo-highlight-text">${hlText}</div>
@@ -2840,12 +2852,12 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
     v.classList.add('is-open');
     icons();
 
-    v.querySelector('#bqclo-count').addEventListener('input', bqUpdateEcart);
+    v.querySelector('#bqclo-count').addEventListener('input', bqUpdateEcart); cardCheckWire(v, cardKiwi, fmtMAD);
     v.querySelector('#bqclo-continue').onclick = () => v.classList.remove('is-open');
     /* Imprimer AVANT de fermer — un tirage avec le comptage saisi à l'instant,
        aucune écriture (même contrat que #clo-print côté restaurant). */
     v.querySelector('#bqclo-print').onclick = () => {
-      const raw = v.querySelector('#bqclo-count').value;
+      const raw = v.querySelector('#bqclo-count').value; bqCardZ = cardCheckValue(v);
       const pair = zPair(bqBuildReport, raw === '' || raw == null ? null : parseFloat(raw), 0, null);
       if (!pair) { toast('Rapport indisponible'); return; }
       zPrintPair(bqPrintReport, pair, 'AVANT CLÔTURE');
@@ -2859,7 +2871,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
   function bqCloseRegister() {
     const v = bqCloVeil;
     const raw = v ? v.querySelector('#bqclo-count').value : '';
-    const counted = (raw === '' || raw == null) ? null : parseFloat(raw);
+    const counted = (raw === '' || raw == null) ? null : parseFloat(raw); bqCardZ = cardCheckValue(v);
     if (v) v.classList.remove('is-open');
     let report = null, reportSaved = false;
     try {
@@ -2890,6 +2902,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
       countedCents: bqCents(countedCash),
       gapCents: bqCents(countedCash) - bqCents(bqCloExpected),
     });
+    document.dispatchEvent(new CustomEvent('kiwi:till-closed', { detail: { slug: merchantSlug(), day: report && report.day, closedAt: report && report.closedAt, expectedCents: bqCents(bqCloExpected), countedCents: bqCents(countedCash), gapCents: bqCents(countedCash) - bqCents(bqCloExpected), by: (STAFF.caissiere && STAFF.caissiere.name) || '' } }));   /* l'écart attend l'ouverture suivante (22 nov. 2026) */
     bqZQueue(true); const pair = zPair(bqBuildReport, counted, report && report.closedAt, report);   /* les deux tickets du Z, avant d'effacer le poste */
     bqShift = null;
     bqShiftPersist();

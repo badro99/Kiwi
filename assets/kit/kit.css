@@ -463,6 +463,12 @@ html[data-k-till-more] .sidebar > .mode-selector { position: absolute; pointer-e
    that palette is the host's and not the kit's to know. */
 html[data-k-till-more] .sidebar > k-sidebar { display: block; margin-block-end: 4px; }
 html:not([data-k-till-more]) .sidebar > k-sidebar { display: none; }
+/* A till popover (the cashier menu, Plus overflow, sync) is anchored to the
+   rail and must sit above every page drawn beside it: the customer book (940),
+   its card (945), the OrderPro inbox (941) and the Plus panel (949, 950). At
+   900 it opened behind Clients, cut at the rail's edge (owner, 2026-11-22).
+   Sheets (1000) stay above it. The host style outranks the kit's :host rule. */
+k-popover { z-index: 960; }
 #kit-more-scrim {
   position: fixed;
   inset: 0;

@@ -1,11 +1,11 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=234';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=149';
-import { invSetModal, offerRegister } from './inventory.js?v=149';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=245';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=158';
+import { invSetModal, offerRegister } from './inventory.js?v=158';
 import '../money-cents.js?v=7';
-import { photoImg } from '../retail-photos.js?v=5';
+import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=14';
 import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
-import { mzPageGrid } from './grid-pager.js?v=1'; import { mzOpenFiche } from './client-fiche.js?v=1';
+import { mzPageGrid } from './grid-pager.js?v=1'; import { mzOpenFiche } from './client-fiche.js?v=4';
 import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsEmpty } from './client-view.js?v=1';
 
 
@@ -48,7 +48,9 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
     return m ? new Date(+m[1], +m[2] - 1, +m[3], 12) : new Date(t - 5 * 3600000 - 1);
   };
-  const fmtValidUntil = (until) => fmtDayY(creditLastDay(until));
+  /* Un avoir sans date limite (Reçu · Validité des bons vide) porte l'an 2999. */
+  const fmtValidUntil = (until) => new Date(until).getFullYear() >= 2900
+    ? (globalThis.window?.KiwiCaisseLang || { tr: (s) => s }).tr('sans date limite') : fmtDayY(creditLastDay(until));
   const fmtHM  = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   const MIN = 60 * 1000;
 
@@ -229,13 +231,13 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
   }
 
   function renderCats() {
-    const all = SHELF().reduce((s, r) => s + r.items.length, 0);
+    const all = SHELF().reduce((s, r) => s + r.items.length, 0), best = bestItems(merchantSlug(), SHELF(), null, () => { if ($('#mz-cats', root)) { renderCats(); renderGrid(); icons(); } });   /* en tête après la 1re semaine de ventes (retail-bestsellers.js) */
     const promoN = promoedIds().size;
     const fragileN = countFragileItems();
     const outN = soldOutCount();
     const marques = listAllDistinctMarques();
     const motifs = listAllDistinctMotifs();
-    const axis = state.filterAxis || 'rayons';
+    const axis = state.filterAxis || 'rayons'; bestOpen(state, merchantSlug(), best);
 
     const axisRow = `
       <div class="mz-filter-axis">
@@ -251,7 +253,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     if (axis === 'rayons') {
       chipsRow = `
         <div class="mz-cats-row">
-          <button class="mz-cat ${state.rayon === 'tous' ? 'on' : ''}" data-mz-cat="tous">Tous <span class="mz-cat-ct">${all}</span></button>
+          ${best ? `<button class="mz-cat is-best ${state.rayon === '_best' ? 'on' : ''}" data-mz-cat="_best">${esc(tr(BEST_LABEL))} <span class="mz-cat-ct">${best.length}</span></button>` : ''}<button class="mz-cat ${state.rayon === 'tous' ? 'on' : ''}" data-mz-cat="tous">Tous <span class="mz-cat-ct">${all}</span></button>
           ${SHELF().map((r) => `<button class="mz-cat ${state.rayon === r.id ? 'on' : ''}" data-mz-cat="${r.id}">${esc(r.label)} <span class="mz-cat-ct">${r.items.length}</span></button>`).join('')}
         </div>`;
     } else if (axis === 'marques') {
@@ -297,7 +299,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
       }
       const catB = e.target.closest('[data-mz-cat]');
       if (catB) {
-        state.rayon = catB.dataset.mzCat || catB.dataset.mzCat;
+        state.rayon = catB.dataset.mzCat || catB.dataset.mzCat; bestTouched(merchantSlug());
         renderCats(); renderGrid(); icons();
         return;
       }
@@ -353,7 +355,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
         rayons = SHELF().map((r) => ({ ...r, items: r.items.filter((it) => it.motif === state.selectedMotif) })).filter((r) => r.items.length);
       }
     } else {
-      rayons = state.rayon === 'tous' ? SHELF() : SHELF().filter((r) => r.id === state.rayon);
+      rayons = state.rayon === '_best' ? [{ id: '_best', label: tr(BEST_LABEL), items: bestItems(merchantSlug(), SHELF(), null) || [] }] : state.rayon === 'tous' ? SHELF() : SHELF().filter((r) => r.id === state.rayon);
     }
 
     /* Par pages (grid-pager.js) : 562 tuiles d'un coup figeaient la caisse après le code. */
@@ -1048,8 +1050,12 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     return activeAvoirs().find((a) => a.holderId === c.id) || null;
   }
 
-  function openClientModal() {
-    const el = $('#mz-clientm', root);
+  /* `holder` (retail-avance.js › askAvoirHolder) : le choix dit à qui l'avoir est inscrit, pas qui est sur le ticket. */
+  function openClientModal(opts) {
+    const holder = opts && typeof opts.onPick === 'function' ? opts : null, el = $('#mz-clientm', root), veil = $('#mz-client-veil', root);
+    if (veil) veil.style.zIndex = holder ? '2147482000' : '';   /* au-dessus du retour ouvert */
+    let settledHolder = false;   /* pickHolder(undefined) = fermée sans choix : rien n'est émis */
+    const pickHolder = (c) => { if (settledHolder) return; settledHolder = true; if (veil) veil.style.zIndex = ''; closeVeil('#mz-client-veil'); if (c === undefined) { if (holder.onCancel) holder.onCancel(); } else holder.onPick(c); };
     let mode = 'search';
     if (window.KiwiClients && KiwiClients.pull) {
       KiwiClients.pull((changed) => {
@@ -1071,8 +1077,8 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
       const phonePrefill = isDigits ? (q || '').trim() : '';
       el.innerHTML = `
         <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-icon="close"></i></button>
-        <h3 class="modal-title">Cliente</h3>
-        <p class="modal-subtle">Rechercher par nom ou par numéro de téléphone.</p>
+        <h3 class="modal-title">${holder ? 'À qui inscrire l’avoir ?' : 'Cliente'}</h3>
+        <p class="modal-subtle">${holder ? 'Une fiche garde l’avoir au nom de la cliente, même si elle perd son bon. Rechercher par nom ou téléphone, ou créer sa fiche.' : 'Rechercher par nom ou par numéro de téléphone.'}</p>
         <div class="mz-phone-in"><i data-lucide="search"></i>
           <input id="mz-cl-q" type="text" enterkeyhint="search" autocorrect="off" autocapitalize="words" placeholder="Nom ou 06…" value="${esc(q || '')}" autocomplete="off" />
         </div>
@@ -1092,7 +1098,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
           </div>
           <button class="mz-cl-new" id="mz-cl-new"><i data-lucide="user-plus"></i>Nouvelle cliente${q && !hits.length ? ` · « ${esc(q)} »` : ''}</button>
           <div class="mz-sheet-foot" style="margin-top:10px;">
-            <button class="mz-btn ghost" id="mz-cl-guest">Cliente de passage, sans fiche</button>
+            <button class="mz-btn ghost" id="mz-cl-guest">${holder ? 'Continuer sans fiche (bon au porteur)' : 'Cliente de passage, sans fiche'}</button>
           </div>` : `
           <div class="mz-cl-form">
             <input class="mz-in" id="mz-cl-name" placeholder="Nom et prénom" value="${esc(namePrefill)}" />
@@ -1103,11 +1109,12 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
             </div>
           </div>`}`;
       $('#mz-cl-q', el).oninput = (e) => { render(e.target.value); icons(); const i = $('#mz-cl-q', el); i.focus(); moveCaretEnd(i); };
-      $$('[data-mz-close]', el).forEach((b) => { b.onclick = () => closeVeil('#mz-client-veil'); });
+      $$('[data-mz-close]', el).forEach((b) => { b.onclick = () => (holder ? pickHolder(undefined) : closeVeil('#mz-client-veil')); });
       $$('[data-mz-cl]', el).forEach((b) => {
         b.onclick = () => {
           const c = clById(b.dataset.mzCl);
           if (!c) return;
+          if (holder) { pickHolder(c); return; }
           state.ticket.client = c.id;
           closeVeil('#mz-client-veil');
           const tt = [c.taille ? 'taille ' + c.taille : '', c.points + ' pts'].filter(Boolean).join(', ');
@@ -1119,6 +1126,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
       if (newBtn) newBtn.onclick = () => { mode = 'create'; render(q); icons(); };
       const guest = $('#mz-cl-guest', el);
       if (guest) guest.onclick = () => {
+        if (holder) { pickHolder(null); return; }
         state.ticket.client = 'passage';
         closeVeil('#mz-client-veil');
         renderTicket(); icons();
@@ -1139,6 +1147,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
           const c = { id: cid, name, phone: tel, points: 0, taille: '', achats: 0, spent: 0, prefs: [], history: [] };
           CLIENTES.unshift(c); CL[cid] = c;
         }
+        if (holder) { queueIfOffline('Fiche cliente'); toast(`Fiche créée, ${name}`); pickHolder(clById(cid) || { id: cid, name, phone: tel }); return; }
         state.ticket.client = cid;
         closeVeil('#mz-client-veil');
         queueIfOffline('Fiche cliente');
@@ -2484,4 +2493,4 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
       lookupScan(code);
     }, 620);
   }
-export { wireSellSearch, $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, canHoldStock, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, holdStock, iconPickerHtml, icons, isDemoStore, lens, lookupScan, looseOf, moveCaretEnd, openCamScan, pad2, printDeliveryNoteNow, rayonOf, releaseStock, renderCasse, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderSuppliers, renderTicket, shelf, updateRegistryContribution, useKiwiCl, variantColor, wireIconPicker };
+export { wireSellSearch, $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, canHoldStock, clById, clientList, colorDot, colorLabel, commitEan, esc, openClientModal, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, holdStock, iconPickerHtml, icons, isDemoStore, lens, lookupScan, looseOf, moveCaretEnd, openCamScan, pad2, printDeliveryNoteNow, rayonOf, releaseStock, renderCasse, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderSuppliers, renderTicket, shelf, updateRegistryContribution, useKiwiCl, variantColor, wireIconPicker };

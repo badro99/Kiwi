@@ -16,7 +16,7 @@ import { makeSession, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/a
 import { businessBoundary, businessDate } from '../functions/api/_business-day.js';
 import { sellerCommissionsOn, commissionBoard, createSellerCommissions } from '../assets/planning/seller-commissions.js';
 import { sellerDayOn, sellerDayRows } from '../assets/pos-boutique/seller-day.js';
-import { sellerPickOn, sellerStripHtml, loadSellers, cachedSellers } from '../assets/pos-boutique/seller-pick.js';
+import { sellerPickOn, sellerStripHtml, loadSellers, cachedSellers, mountSellerPick } from '../assets/pos-boutique/seller-pick.js';
 import { topSellersOn, periodDays, rankSellers, topSellersHtml } from '../assets/home-top-sellers.js';
 import * as sellersRoute from '../functions/api/sellers.js';
 
@@ -153,24 +153,28 @@ console.log('■ 4. Portes');
 const docWith = (skin) => ({ documentElement: { getAttribute: (k) => (k === 'data-skin-2027' ? skin : null) } });
 const on = { features: { sellerCommissions: true } }, offCfg = { features: {} };
 check('dashboard tab: option on AND the 2027 dashboard kit', sellerCommissionsOn(docWith('dashboard'), on) && !sellerCommissionsOn(docWith(null), on) && !sellerCommissionsOn(docWith('dashboard'), offCfg));
-check('till day close: option on AND the 2027 till', sellerDayOn(docWith('till'), on) && !sellerDayOn(docWith(null), on) && !sellerDayOn(docWith('till'), offCfg) && !sellerDayOn(docWith('dashboard'), on));
+check('till day close: option on AND the 2027 till flag from bqKitSkin()', sellerDayOn(true, on) && !sellerDayOn(false, on) && !sellerDayOn(true, offCfg) && !sellerDayOn('till', on));
 const rows = sellerDayRows({ sellers: [{ name: 'Salma Idrissi', tickets: 2, netCents: 100000, commissionCents: 5000 }, { name: 'Aïcha', tickets: 1, netCents: 2000, commissionCents: null }, { name: 'Nour', tickets: 0, netCents: 0, commissionCents: 0 }], unattributed: { netCents: 3000 } }, (v) => v.toFixed(2) + ' MAD');
 check('the day close lists who sold, their commission or « à définir », and the rest', rows.length === 3 && /2 tickets/.test(rows[0][0]) && /commission 50\.00/.test(rows[0][1]) && /à définir/.test(rows[1][1]) && rows[2][0] === 'Sans vendeur identifié');
 const admin = read('kiwi-admin.html');
-check('kiwi-admin offers « Commissions vendeurs » under Boutique, off by default', /boutique:\s*\[[\s\S]*key:'sellerCommissions', label:'Commissions vendeurs', off:true/.test(admin));
+check('kiwi-admin offers « Commissions vendeurs » and « Vendeur choisi à l’encaissement » under Boutique, both off by default', /boutique:\s*\[[\s\S]*key:'sellerCommissions', label:'Commissions vendeurs', off:true/.test(admin)
+  && /key:'sellerPicker', label:'Vendeur choisi à l’encaissement', off:true/.test(admin));
 const profile = read('assets/team/profile-ui.js');
-check('the Team rate field exists only when the option is on', /sellerCommissions !== true \? '' : edField\(T, 'commissionRate'/.test(profile));
 const rules = read('assets/team/access-rules.js');
-check('saving a member with the field hidden keeps their rate', /data\.commissionRate == null\s*\?[^:]*prev && prev\.commissionRate/.test(rules));
+check('the Team rate field exists only when the option is on, and saving with it hidden keeps the rate', /sellerCommissions !== true \? '' : edField\(T, 'commissionRate'/.test(profile)
+  && /data\.commissionRate == null\s*\?[^:]*prev && prev\.commissionRate/.test(rules));
 const payroll = read('assets/planning/payroll-view.js'), teamCore = read('assets/team.js');
 check('the Commissions tab lives in Équipe, behind the same two gates', /const commissionsOn = \(\) => window\.KiwiConfig\?\.features\?\.sellerCommissions === true\s*&& document\.documentElement\.getAttribute\('data-skin-2027'\) === 'dashboard'/.test(payroll)
   && /teamHours\.commissionsOn\?\.\(\) \? `<button[^`]*data-arg="commissions"/.test(teamCore) && /activeTab === 'commissions' && teamHours\.commissionsOn\?\.\(\) \? teamHours\.renderCommissionsPane\(T\)/.test(teamCore)
-  && /kind === 'commissions' && teamHours\.commissionsOn\?\.\(\)/.test(teamCore));
-check('Paie & planning no longer carries a Commissions tab', !/data-arg="commissions"/.test(payroll) && !/payTab === 'commissions'/.test(payroll));
+  && /kind === 'commissions' && teamHours\.commissionsOn\?\.\(\)/.test(teamCore)
+  && /=== 'dashboard' && payrollAccess\(\) === 'full';/.test(payroll)   // le propriétaire : un gérant (accès planning) ne le voit pas
+  && !/data-arg="commissions"/.test(payroll) && !/payTab === 'commissions'/.test(payroll));   // Paie & planning ne le porte plus
 const boutique = read('assets/pos-boutique.js');
-check('the till sends the signed proof of who unlocked it, never a name', /const sellerProof = !IS_DEMO && window\.KiwiStaff && window\.KiwiStaff\.sellerProof;/.test(boutique) && /if \(typeof sellerProof === 'string' && sellerProof\) payload\.seller = \{ proof: sellerProof \};/.test(boutique));
-check('the queue forwards only the proof to /api/sale', /body\.seller = \{ proof: entry\.seller\.proof\.slice\(0, 2048\) \};/.test(read('assets/live-link/queue-store.js')));
-check('/api/pin/verify signs the proof for a till role, the pairing keeps it on KiwiStaff', /sellerProof: await tillSellerProof\(env\.AUTH_SECRET, merchant, verified\.staff\)/.test(read('functions/api/pin/verify.js'))
+const queue = read('assets/live-link/queue-store.js');
+check('the proof chain: /api/pin/verify signs who unlocked a till role, the pairing keeps it on KiwiStaff, the till sends it (never a name), the queue forwards the proof or the picked member id only',
+  /const sellerProof = !IS_DEMO && window\.KiwiStaff && window\.KiwiStaff\.sellerProof;/.test(boutique) && /if \(typeof sellerProof === 'string' && sellerProof\) payload\.seller = \{ proof: sellerProof \};/.test(boutique)
+  && /body\.seller = \{ proof: entry\.seller\.proof\.slice\(0, 2048\) \};/.test(queue) && /body\.seller = \{ member: entry\.seller\.member\.slice\(0, 96\) \};/.test(queue)
+  && /sellerProof: await tillSellerProof\(env\.AUTH_SECRET, merchant, verified\.staff\)/.test(read('functions/api/pin/verify.js'))
   && /s\.sellerProof = p\.sellerProof/.test(read('assets/caisse-pairing.js')) && (read('assets/caisse-pairing.js').match(/d\.sellerProof \? \{ sellerProof/g) || []).length === 2
   && /who\.sellerProof = String\(reply\.body\.sellerProof\)/.test(read('assets/kit/pin-flow.js')));
 const saleSrc = read('functions/api/sale.js');
@@ -205,10 +209,9 @@ check('the list carries an id and a name, never a rate or a code', b5.sellers.ev
 check('the owner reads it too; no cookie reads nothing', (await roster(owner)).status === 200 && (await roster('')).status === 403);
 check('the list answers feature-off unless both options are on', (await roster(till, w.env)).status === 403 && (await roster(till, p5off.env)).status === 403);
 
-const docSkin = (skin) => ({ documentElement: { getAttribute: (k) => (k === 'data-skin-2027' ? skin : null) } });
 const both = { features: { sellerCommissions: true, sellerPicker: true } };
-check('the till picker needs both options and the 2027 till', sellerPickOn(docSkin('till'), both) && !sellerPickOn(docSkin(null), both)
-  && !sellerPickOn(docSkin('till'), { features: { sellerCommissions: true } }) && !sellerPickOn(docSkin('till'), { features: { sellerPicker: true } }));
+check('the till picker needs both options and the 2027 till', sellerPickOn(true, both) && !sellerPickOn(false, both) && !sellerPickOn('till', both)
+  && !sellerPickOn(true, { features: { sellerCommissions: true } }) && !sellerPickOn(true, { features: { sellerPicker: true } }));
 const escHtml = (v) => String(v).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const strip = sellerStripHtml([{ id: 'm-1', name: 'Salma' }, { id: 'm-2', name: '<b>Rania</b>' }], { id: 'm-2' }, escHtml);
 check('the strip is one row of chips, the picked one marked, names escaped', (strip.match(/data-bq-seller=/g) || []).length === 2
@@ -216,16 +219,35 @@ check('the strip is one row of chips, the picked one marked, names escaped', (st
 check('no sellers, no strip (nothing to tap, nothing drawn)', sellerStripHtml([], null, escHtml) === '');
 const mem = new Map(), storage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)) };
 const got = await loadSellers('shop-x', { storage, fetchImpl: async () => ({ ok: true, json: async () => ({ sellers: [{ id: 'a', name: 'Amal' }, { id: 7, name: 'bad' }] }) }) });
-check('the list is cleaned and kept per store for the offline till', got.length === 1 && JSON.parse(mem.get('kiwiSellers@shop-x'))[0].name === 'Amal');
+check('the list is cleaned and kept per store for the offline till', got.length === 1 && got[0].name === 'Amal' && storage.getItem('kiwiSellers@shop-x') === '[{"id":"a","name":"Amal"}]');
 const again = await loadSellers('shop-x', { storage, now: Date.now() + 10 * 60000, fetchImpl: async () => { throw new Error('offline'); } });
 check('offline, the last list stays', again.length === 1 && cachedSellers('shop-x', storage)[0].id === 'a');
+/* La rangée sur une fiche de paiement simulée : elle lit le ticket et n'écrit que par pick (ticket-owner.js). */
+const picks = [];
+let stripDrawn = '', onTap = null;
+const stripEl = { remove() { stripDrawn = ''; }, addEventListener: (_t, fn) => { onTap = fn; }, querySelectorAll: () => [] };
+const payEl = { isConnected: true, querySelector: (sel) => (sel === '.bq-pay-opts' ? { insertAdjacentHTML: (_w, h) => { stripDrawn = h; } } : sel === '.bq-seller' && stripDrawn ? stripEl : null) };
+const tk = Object.freeze({ seller: { id: 'gone', name: 'Ancien' } });
+let current = tk.seller;
+const tkView = { get seller() { return current; } };
+const tap = (id) => onTap({ target: { closest: () => ({ getAttribute: () => id }) } });
+const hadWindow = 'window' in globalThis, prevWindow = globalThis.window;
+globalThis.window = { KiwiConfig: both };   // the till's options, as /api/config sets them
+mountSellerPick(payEl, tkView, { slug: 'shop-x', esc: escHtml, skin: true, pick: (s) => { picks.push(s); current = s; } });
+const dropped = picks[0] === null && /data-bq-seller="a"/.test(stripDrawn);
+tap('a'); const picked = current && current.id === 'a' && current.name === 'Amal';
+tap('a');
+check('the payment sheet draws the strip; a seller who left the team is dropped, a tap picks, the same tap clears, all through pick', dropped && picked && current === null && picks.length === 3);
+let touched = false;
+mountSellerPick({ isConnected: true, querySelector: () => { touched = true; return null; } }, tkView, { slug: 'shop-x', esc: escHtml, skin: false, pick: () => { touched = true; } });
+mountSellerPick({ isConnected: true, querySelector: () => { touched = true; return null; } }, tkView, { slug: 'shop-x', esc: escHtml, skin: true });
+check('no 2027 till, or no owner to write the ticket: nothing is drawn', !touched);
+if (hadWindow) globalThis.window = prevWindow; else delete globalThis.window;
 
 const b5src = read('assets/pos-boutique.js');
-check('picker mode sends only the picked member id, and no proof when nobody was picked', /if \(!IS_DEMO && sellerPickOn\(\)\) \{ if \(t\.seller && t\.seller\.id\) payload\.seller = \{ member: t\.seller\.id \}; \}\s*\/\/[^\n]*\n\s*else if \(typeof sellerProof === 'string' && sellerProof\) payload\.seller = \{ proof: sellerProof \};/.test(b5src)
-  && /afterMethods: \(el\) => mountSellerPick\(el, t, \{ slug: merchantSlug\(\), esc \}\)/.test(b5src));
-check('the payment sheet calls the hook after drawing its methods', /icons\(\); closeBtns\(\); if \(opts\.afterMethods\) opts\.afterMethods\(el\);/.test(read('assets/pos-boutique/checkout.js')));
-check('the queue forwards the member id, the server takes the name', /body\.seller = \{ member: entry\.seller\.member\.slice\(0, 96\) \};/.test(read('assets/live-link/queue-store.js')));
-check('kiwi-admin offers « Vendeur choisi à l’encaissement », off by default', /key:'sellerPicker', label:'Vendeur choisi à l’encaissement', off:true/.test(read('kiwi-admin.html')));
+check('picker mode sends only the picked member id, and no proof when nobody was picked; the sheet hook gets the 2027 flag and the ticket owner', /if \(!IS_DEMO && sellerPickOn\(bqKitSkin\(\)\)\) \{ if \(t\.seller && t\.seller\.id\) payload\.seller = \{ member: t\.seller\.id \}; \}\s*\/\/[^\n]*\n\s*else if \(typeof sellerProof === 'string' && sellerProof\) payload\.seller = \{ proof: sellerProof \};/.test(b5src)
+  && /afterMethods: \(el\) => mountSellerPick\(el, t, \{ slug: merchantSlug\(\), esc, skin: bqKitSkin\(\), pick: \(seller\) => ticketOwner\.setSeller\(t, seller\) \}\)/.test(b5src)
+  && /icons\(\); closeBtns\(\); if \(opts\.afterMethods\) opts\.afterMethods\(el\);/.test(read('assets/pos-boutique/checkout.js')));
 
 /* ── 6. L'onglet du propriétaire : taux tapés sur place, mise en place ────── */
 console.log('■ 6. Onglet Commissions');
@@ -263,8 +285,10 @@ const v6 = view(async () => ({ ok: true, json: async () => rep6 }));
 check('the tab first says it is working', /data-kt-commissions="loading"/.test(v6.pane(period6)));
 await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0));
 const html6 = v6.pane(period6);
-check('then the board: total due, who sold, the math on each line', /data-kt-commissions="ok"/.test(html6) && /60\.00/.test(html6) && /6 % de 1000\.00/.test(html6) && /Donnez un taux/.test(html6));
-check('the headline sums only rated sellers and names the missing rates', /sur 1000\.00\u00a0MAD de ventes attribuées à 1 vendeur,/.test(html6) && /2 vendeurs · 350\.00\u00a0MAD pas encore comptés : taux manquant/.test(html6));
+check('then the board: each seller’s sales are the big figure, the commission under it, « Donnez un taux » when there is no rate', /data-kt-commissions="ok"/.test(html6)
+  && /<b>1000\.00\sMAD<\/b><span>commission 60\.00\u00a0MAD · 6 %<\/span>/.test(html6) && /<b>300\.00\sMAD<\/b><label class="is-unset"[^>]*>Donnez un taux/.test(html6) && /<span>Ventes<\/span><\/li>/.test(html6));
+check('the headline is what the sellers brought in; the commissions to pay come second, and missing rates are named', /Ventes des vendeurs · du 16\/11 au 22\/11/.test(html6) && /kt-com-big">1350\.00<small>MAD/.test(html6) && /vendus par 3 vendeurs, remboursements déduits/.test(html6)
+  && /60\.00\u00a0MAD de commissions à verser à 1 vendeur/.test(html6) && /2 vendeurs · 350\.00\u00a0MAD pas encore comptés : taux manquant/.test(html6));
 check('« Donnez un taux » is a label that focuses that seller’s box', /<label class="is-unset" for="kt-com-r-b">Donnez un taux<\/label>/.test(html6) && /id="kt-com-r-b"/.test(html6));
 check('every team member’s rate is a box typed in place, labelled for screen readers', (html6.match(/data-kt-com-rate="/g) || []).length === 4 && /aria-label="Taux de commission de Rania Tazi"/.test(html6));
 check('the tab explains how sales reach a seller in this store (picker mode)', /la caissière touche le nom du vendeur/.test(html6));
@@ -281,8 +305,7 @@ check('no store (demo) and no rate: the three-step setup with the team, never an
 const failed = view(async () => ({ ok: false }));
 failed.pane(period6); await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0));
 check('a failed load offers to try again on the same tab', /data-kt-commissions="error"[\s\S]*data-arg="commissions"/.test(failed.pane(period6)));
-check('the Commissions tab is the owner’s: managers (planning access) never see it', /=== 'dashboard' && payrollAccess\(\) === 'full';/.test(read('assets/planning/payroll-view.js')));
-check('no em dash in the tab’s copy', !/—/.test(read('assets/planning/seller-commissions.js')));
+check('no em dash in anything the tab draws', ![html6, demo, failed.pane(period6)].some((h) => h.includes('\u2014')));
 
 
 /* ── 7. Accueil : « Meilleurs vendeurs » ──────────────────────────────────── */
@@ -312,7 +335,7 @@ const hh = topSellersHtml({ sellers: [
   unattributed: { tickets: 2, netCents: 7000 } }, { lang: 'fr', period: 'Aujourd’hui' });
 check('a podium of three, the rest in a list, names escaped', (hh.match(/class="tsl-p is-/g) || []).length === 3 && (hh.match(/class="tsl-row"/g) || []).length === 1
   && /Salma &lt;b&gt;/.test(hh) && !/Salma <b>/.test(hh) && /En tête/.test(hh));
-check('the header says the period and the commissions due; a missing rate reads « taux à définir », never 0', /Aujourd’hui · 68\.00\u00a0MAD de commissions/.test(hh) && /taux à définir/.test(hh) && /commission 45\.00\u00a0MAD/.test(hh));
+check('the header says the period and what the sellers sold; a missing rate reads « taux à définir », never 0', /Aujourd’hui · 1700\.00\u00a0MAD vendus/.test(hh) && /taux à définir/.test(hh) && /commission 45\.00\u00a0MAD/.test(hh));
 check('sales with no seller are counted apart, under the podium', /2 tickets · 70\.00\u00a0MAD sans vendeur/.test(hh));
 check('one tap opens Équipe › Commissions', /data-action="home-commissions"/.test(hh) && /H\['nav-equipe'\]\(\)[\s\S]{0,120}H\['kt-tab'\]\(null, 'commissions'\)/.test(read('assets/home-top-sellers.js')));
 const emptyH = topSellersHtml({ sellers: [{ name: 'Idle', tickets: 0, netCents: 0 }] }, { lang: 'en', period: 'Today' });

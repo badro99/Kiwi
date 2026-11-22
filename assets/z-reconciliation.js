@@ -1,4 +1,4 @@
-/* Two modules ship here, both loaded wherever the day report is built: the continuous day snapshot comparison, then (below) the day report's VAT by rate (KiwiDayReportVat).
+/* Three modules ship here, all loaded wherever the day report is built: the continuous day snapshot comparison, then (below) the day report's VAT by rate (KiwiDayReportVat).
    Continuous day snapshot comparison. Full local receipts remain in the
    durable Z job so missing IDs can replay through the normal sale endpoint. */
 (function () {
@@ -667,4 +667,162 @@
 
   /* Rangé sur KiwiDayReportVat, l'interface que le rapport lit déjà dans ce fichier. */
   window.KiwiDayReportVat.sale = { figures: figures, apply: apply, html: html, csvRows: csvRows };
+})();
+
+/* LE MOT POUR L'OUVERTURE SUIVANTE · window.KiwiCloseFollowUp
+ * ---------------------------------------------------------------------------
+ * Owner, 22 Nov 2026 : « il faut laisser fermer, et le lendemain prévenir ».
+ * Ce soir-là, chez browse, la caisse avait refusé trois clôtures de suite :
+ * une fois parce que le comptage différait (le motif était exigé), trois fois
+ * parce que le rapprochement Z ne s'écrivait pas. La caissière tournait en
+ * rond pendant que le service, lui, était fini.
+ *
+ * Désormais une clôture se termine toujours, et ce qui cloche (un écart
+ * au-delà de la ligne verte de la feuille, 5 MAD ; un Z non protégé) est
+ * gardé ici, par commerce, jusqu'à ce que quelqu'un l'ait vu à l'ouverture
+ * suivante. Le tableau de bord du propriétaire a son propre signal (la règle
+ * cash-gap du briefing, lue sur l'événement de clôture) : ce mot-ci est celui
+ * de la caisse, pour l'équipe qui rouvre.
+ *
+ * Les caisses ne l'appellent pas : elles l'annoncent, sur document.
+ *   'kiwi:till-closed'  detail { slug, day, closedAt, expectedCents,
+ *        countedCents, gapCents, reason, zIssue, zReason, by }  → record()
+ *   'kiwi:till-opening' detail { slug }                           → remind()
+ * Exposé aussi, pour les tests et la console :
+ *   pending(slug)      → les clôtures non vues, la plus récente d'abord
+ *   acknowledge(slug)  → « Vu »
+ *   text(rec, lang)    → { title, lines[], seen } en fr / en / ar
+ *   remind(slug)       → affiche la carte si quelque chose attend (true/false)
+ */
+(function () {
+  'use strict';
+  var KEY = 'kiwi:closeFollowUp:';
+  var GAP_CENTS = 500;   // la ligne verte de la feuille de clôture : ±5 MAD
+  var KEEP = 7;          // une semaine de clôtures non vues, pas plus
+  var TEXT = {
+    fr: {
+      title: 'Dernière clôture à vérifier', titleMany: '{n} clôtures à vérifier',
+      short: 'Il manquait {n} dans la caisse.', over: 'Il y avait {n} de trop dans la caisse.',
+      reason: 'Motif donné : {r}.', noReason: 'Aucun motif donné.',
+      z: 'Le rapprochement Z n’a pas pu être sécurisé sur cet appareil. Les ventes restent dans la file d’envoi et le tableau de bord les compare.',
+      when: 'Clôture du {d}', by: ' par {b}', seen: 'Vu',
+      reasons: { counting: 'erreur de comptage', change: 'erreur de rendu de monnaie', unrecorded: 'mouvement de caisse non saisi', other: 'autre' },
+    },
+    en: {
+      title: 'Last close to check', titleMany: '{n} closes to check',
+      short: 'The drawer was {n} short.', over: 'The drawer had {n} too much.',
+      reason: 'Reason given: {r}.', noReason: 'No reason given.',
+      z: 'The Z reconciliation could not be secured on this device. The sales are still in the send queue, and the dashboard compares them.',
+      when: 'Close of {d}', by: ' by {b}', seen: 'Got it',
+      reasons: { counting: 'counting error', change: 'wrong change given', unrecorded: 'cash movement not recorded', other: 'other' },
+    },
+    ar: {
+      title: 'آخر إغلاق يحتاج مراجعة', titleMany: '{n} عمليات إغلاق تحتاج مراجعة',
+      short: 'كان ينقص الصندوق {n}.', over: 'كان في الصندوق {n} زائدة.',
+      reason: 'السبب المذكور: {r}.', noReason: 'لم يُذكر أي سبب.',
+      z: 'تعذّر تأمين مطابقة تقرير Z على هذا الجهاز. المبيعات ما زالت في قائمة الإرسال، ولوحة التحكم تقارنها.',
+      when: 'إغلاق يوم {d}', by: '، قام به {b}', seen: 'اطّلعت',
+      reasons: { counting: 'خطأ في العدّ', change: 'خطأ في إرجاع الباقي', unrecorded: 'حركة صندوق لم تُسجَّل', other: 'سبب آخر' },
+    },
+  };
+  var LOCALE = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA' };
+
+  function read(slug) {
+    try { var rows = JSON.parse(localStorage.getItem(KEY + slug) || '[]'); return Array.isArray(rows) ? rows : []; }
+    catch (_) { return []; }
+  }
+  function write(slug, rows) {
+    try { if (rows.length) localStorage.setItem(KEY + slug, JSON.stringify(rows)); else localStorage.removeItem(KEY + slug); } catch (_) {}
+  }
+  function problem(o) { return Math.abs(Number(o.gapCents) || 0) > GAP_CENTS || !!o.zIssue; }
+
+  function record(o) {
+    if (!o || !o.slug || !problem(o)) return false;
+    var row = {
+      day: String(o.day || ''), closedAt: Number(o.closedAt) || Date.now(),
+      expectedCents: Number.isFinite(Number(o.expectedCents)) ? Number(o.expectedCents) : null,
+      countedCents: Number.isFinite(Number(o.countedCents)) ? Number(o.countedCents) : null,
+      gapCents: Math.round(Number(o.gapCents) || 0), reason: o.reason ? String(o.reason).slice(0, 16) : null,
+      zIssue: o.zIssue ? String(o.zIssue).slice(0, 16) : null, zReason: o.zReason ? String(o.zReason).slice(0, 32) : null,
+      by: String(o.by || '').slice(0, 60),
+    };
+    var rows = read(o.slug).filter(function (r) { return r && r.closedAt !== row.closedAt; });
+    rows.unshift(row);
+    write(o.slug, rows.slice(0, KEEP));
+    return true;
+  }
+  function pending(slug) {
+    if (!slug) return [];
+    return read(slug).filter(function (r) { return r && problem(r); })
+      .sort(function (a, b) { return (b.closedAt || 0) - (a.closedAt || 0); });
+  }
+  function acknowledge(slug) { if (slug) write(slug, []); }
+
+  function lang(want) {
+    var l = want;
+    if (!l) { try { l = localStorage.getItem('kiwiCaisseLang'); } catch (_) {} }   /* la clé de caisse-lang.js */
+    return TEXT[l] ? l : 'fr';
+  }
+  function money(cents, l) {
+    var n = Math.abs(Number(cents) || 0) / 100;
+    var s;
+    try { s = new Intl.NumberFormat(l === 'fr' ? 'fr-FR' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n); }
+    catch (_) { s = n.toFixed(2); }
+    s = s + ' MAD';
+    return l === 'ar' ? '\u2066' + s + '\u2069' : s;   /* le montant reste lisible dans la phrase arabe */
+  }
+  function dayLabel(day, l) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || ''))) return String(day || '');
+    try { return new Date(day + 'T12:00:00Z').toLocaleDateString(LOCALE[l], { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }); }
+    catch (_) { return day; }
+  }
+  function text(rec, want, count) {
+    var l = lang(want), T = TEXT[l], lines = [];
+    var gap = Number(rec.gapCents) || 0;
+    if (Math.abs(gap) > GAP_CENTS) {
+      lines.push((gap < 0 ? T.short : T.over).replace('{n}', money(gap, l)));
+      lines.push(rec.reason ? T.reason.replace('{r}', T.reasons[rec.reason] || T.reasons.other) : T.noReason);
+    }
+    if (rec.zIssue) lines.push(T.z);
+    var when = T.when.replace('{d}', dayLabel(rec.day, l)) + (rec.by ? T.by.replace('{b}', rec.by) : '') + '.';
+    lines.unshift(when);
+    return { title: count > 1 ? T.titleMany.replace('{n}', String(count)) : T.title, lines: lines, seen: T.seen, dir: l === 'ar' ? 'rtl' : 'ltr' };
+  }
+
+  var CSS = '.kcf{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:100000;width:min(520px,calc(100vw - 32px));'
+    + 'box-sizing:border-box;padding:16px 18px;border-radius:16px;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);'
+    + 'box-shadow:0 12px 32px rgba(10,15,13,.18),inset 0 0 0 1px rgba(10,15,13,.08);font:400 15px/1.45 "Inter Tight",system-ui,sans-serif}'
+    + '.kcf h2{margin:0 0 6px;font:600 16px/1.3 "Inter Tight",system-ui,sans-serif;display:flex;align-items:center;gap:8px}'
+    + '.kcf h2 img{width:20px;height:20px}.kcf p{margin:0 0 4px}.kcf p.kcf-when{color:rgba(10,15,13,.62);font-size:13px}'
+    + '.kcf button{margin-top:10px;min-height:44px;padding:0 20px;border:0;border-radius:12px;background:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0);font:600 15px "Inter Tight",system-ui,sans-serif;cursor:pointer}'
+    + '.kcf[dir=rtl]{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}';
+  function remind(slug, opts) {
+    if (typeof document === 'undefined' || !document.body) return false;
+    var list = pending(slug);
+    var old = document.getElementById('kiwi-close-followup');
+    if (old) old.remove();
+    if (!list.length) return false;
+    if (!document.getElementById('kiwi-close-followup-css')) {
+      var st = document.createElement('style'); st.id = 'kiwi-close-followup-css'; st.textContent = CSS; document.head.appendChild(st);
+    }
+    var m = text(list[0], opts && opts.lang, list.length);
+    var card = document.createElement('section');
+    card.id = 'kiwi-close-followup'; card.className = 'kcf'; card.setAttribute('role', 'alert'); card.dir = m.dir;
+    var h = document.createElement('h2');
+    var icon = document.createElement('img'); icon.src = 'assets/icons/material/warning.svg'; icon.alt = '';
+    h.append(icon, document.createTextNode(m.title));
+    card.appendChild(h);
+    m.lines.forEach(function (line, i) { var p = document.createElement('p'); if (!i) p.className = 'kcf-when'; p.textContent = line; card.appendChild(p); });
+    var ok = document.createElement('button'); ok.type = 'button'; ok.textContent = m.seen;
+    ok.addEventListener('click', function () { acknowledge(slug); card.remove(); });
+    card.appendChild(ok);
+    document.body.appendChild(card);
+    return true;
+  }
+
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('kiwi:till-closed', function (e) { try { record(e.detail); } catch (_) {} });
+    document.addEventListener('kiwi:till-opening', function (e) { try { remind(e.detail && e.detail.slug); } catch (_) {} });
+  }
+  window.KiwiCloseFollowUp = Object.freeze({ record: record, pending: pending, acknowledge: acknowledge, text: text, remind: remind });
 })();

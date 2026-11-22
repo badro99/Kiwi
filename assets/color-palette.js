@@ -162,7 +162,11 @@
 
   /* Tokens scanned inside a compound value ("bleu nuit" → bleu). Ordered so a
      longer, more specific token wins before its substring can match. */
-  const TOKENS = Object.keys(ALIASES)
+  /* « clair » seul veut dire transparent ; dans « Rose clair », « Bleu clair »,
+     c'est la clarté de la teinte, jamais la famille (22 nov. 2026 : dix
+     nuances du nuancier d'Elham Brand tombaient en « Transparent »). */
+  const MODIFIERS = new Set(['clair']);
+  const TOKENS = Object.keys(ALIASES).filter((k) => !MODIFIERS.has(k))
     .concat(FAMILIES.map((f) => f.id))
     .sort((a, b) => b.length - a.length);
 

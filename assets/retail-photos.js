@@ -41,6 +41,14 @@ const WORDS = {
   mdamma: 'mdamma|mdama|ceinture caftan|ceinture doree',
   foulard: 'foulard|carre soie|bandana|sebniya|sabniya',
   chale: 'chale|etole|pashmina|shawl',
+  /* Les châles d'une boutique de voiles (Elham Brand, 22 novembre 2026) : la
+     matière dit la photo. Deux mots chacun, pour qu'une « Robe organza » reste
+     une robe et qu'un « Caftan jawhara » reste un caftan. */
+  chale_dentelle: 'chale dentelle|lycra dentelle|chale lace|shawl lace',
+  chale_jawhara: 'chale jawhara|lycra jawhara|chale bijou',
+  chale_degrade: 'chale degrade|lycra degrade|chale ombre|shawl ombre',
+  chale_organza: 'chale organza|organza brode|shawl organza',
+  chale_lame: 'chale lame|lame strass|chale strass|chale doumaa',
   broche: 'broche|brooch|epingle|bijou',
   babouche: 'babouche|belgha|balgha|bolgha|بلغة',
   babouche_brodee: 'babouche brodee|babouche femme',

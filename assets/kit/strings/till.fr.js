@@ -238,7 +238,7 @@
   "count.same_as_last": "Dernier fond · {amount}",
   "count.same_as_last_a11y": "Dernier fond · {amount}, reprendre le fond de la dernière ouverture",
   "count.open": "Ouvrir la caisse",
-  "count.reason": "Pourquoi le comptage diffère-t-il ?",
+  "count.reason": "Motif de l’écart, si vous le connaissez",
   "count.reason.counting": "Erreur de comptage",
   "count.reason.change": "Erreur de rendu de monnaie",
   "count.reason.unrecorded": "Mouvement de caisse non saisi",

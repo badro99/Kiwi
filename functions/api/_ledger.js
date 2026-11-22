@@ -1,5 +1,5 @@
 /* Grand livre d'argent signé : clients, fournisseurs et livre de caisse dans
- * UNE table (`money_ledger`, schema.sql, migration 0030).
+ * UNE table (`money_ledger`, schema.sql, migration 0031).
  *
  * ── Convention de signe (à ne pas changer : d'autres modules la lisent) ──────
  * Chaque ligne est vue DU COMMERÇANT.
@@ -42,7 +42,7 @@
  *       préparée mais PAS exécutée, à mettre dans le DB.batch() de l'écriture
  *       métier qui la cause (réception de bon : stock et dette ensemble ou
  *       rien). INSERT OR IGNORE : un rejeu de la clé ne casse pas le lot.
- *   ledgerReady(env) → bool : la table existe (migration 0030 passée).
+ *   ledgerReady(env) → bool : la table existe (migration 0031 passée).
  *   archiveLedgerEntry(env, merchant, id, { by }) → { ok, entry } | { ok:false, error }
  *   approveLedgerEntry(env, merchant, id, { by }) → { ok, entry } (pending → posted)
  *   approvePending(env, merchant, partyType, partyId|null, { by }) → { ok, approved }
@@ -168,7 +168,7 @@ export function ledgerEntryStatement(env, merchant, entry) {
   return { ok: true, statement, row: r };
 }
 
-/* La table existe-t-elle ? (une base d'avant 0030 répond non, sans erreur). */
+/* La table existe-t-elle ? (une base d'avant 0031 répond non, sans erreur). */
 export async function ledgerReady(env) {
   if (!env || !env.DB) return false;
   try { await env.DB.prepare('SELECT 1 FROM money_ledger LIMIT 1').all(); return true; } catch (_) { return false; }

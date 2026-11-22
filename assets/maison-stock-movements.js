@@ -170,11 +170,15 @@
    * qu'une ligne, côté navigateur comme côté D1. */
   function ledgerId(moveId) { return 'mz-' + String(moveId || '').slice(0, 70); }
 
+  /* Un produit créé sans couleur (l'écran des tailles, boutique-sizes.js)
+   * porte la couleur neutre « unique », rangée sous le libellé « Gris ». La
+   * caisse et les étiquettes la taisent ; l'historique l'écrivait (« TU · Gris »,
+   * Elham Brand, 22 novembre 2026). Il la tait aussi. */
   function variantLabel(v) {
     if (!v) return '';
     var bits = [];
     if (v.size) bits.push(String(v.size));
-    if (v.colorLabel) bits.push(String(v.colorLabel));
+    if (v.colorLabel && String(v.colorId || '') !== 'unique') bits.push(String(v.colorLabel));
     return bits.join(' · ');
   }
 

@@ -248,6 +248,87 @@ ok(/^20\d{11}$/.test(clash.oc), 'a product created before the switch-over keeps 
 ok(clash.ca !== clash.cb && clash.read.join(' ') === '01/04 12/04', 'beige M and brown M · two readable codes of their own (01 and 12), nothing shared', JSON.stringify(clash));
 await close();
 
+/* ── F : exact shades (Elham Brand, 22 Nov 2026 : « they can choose exact
+   colors ») · two pinks of a 105-shade chart, each its own column and code ── */
+const SIX = 'TEST KIWI Châle nuances';
+await create(SIX, 4);
+await click('[data-kbc-add]');
+const makeShade = async (hex, name) => {
+  await page.$eval('[data-kbc-hex]', (i, x) => { i.value = x; i.dispatchEvent(new Event('input', { bubbles: true })); }, hex);
+  await type('[data-kbc-name]', name);
+  await click('[data-kbc-make]');
+};
+await makeShade('#e56ea0', '05 Fuchsia');
+ok(await page.$eval('[data-kbc-pal]', (p) => !p.hidden), 'F · the palette stays open after a pick, for the next shade');
+await makeShade('#f9d9e0', '01 Rose clair');
+const heads = await page.$$eval('table.kbm thead th', (all) => all.map((th) => th.textContent.trim()));
+ok(heads.some((x) => /05 Fuchsia/.test(x)) && heads.some((x) => /01 Rose clair/.test(x)), 'F · two exact pinks · two columns with their own names', JSON.stringify(heads));
+if (process.env.KIWI_SHOT) await page.screenshot({ path: process.env.KIWI_SHOT, fullPage: false });
+await page.evaluate(() => ['custom-e56ea0', 'custom-f9d9e0'].forEach((k) => {
+  const i = document.querySelector(`[data-kbs-col="${k}"]`);
+  i.value = '2'; i.dispatchEvent(new Event('input', { bubbles: true }));
+}));
+await click('[data-kbs-save]');
+await sleep(500);
+const shades = await page.evaluate((name) => {
+  const cat = window.KiwiBoutiqueCatalog;
+  const p = cat.listProducts({ q: name }).find((x) => x.name === name);
+  return cat.getProduct(p.id).variants.map((v) => ({ id: v.colorId, label: v.colorLabel, code: cat.primaryBarcode(v) }));
+}, SIX);
+const fu = shades.find((x) => x.id === 'custom-e56ea0') || {};
+const rc = shades.find((x) => x.id === 'custom-f9d9e0') || {};
+ok(fu.label === '05 Fuchsia' && rc.label === '01 Rose clair', 'F · saved with their exact names, never folded into « Rose »', JSON.stringify(shades));
+ok(/^221\d{10}$/.test(fu.code || '') && /^221\d{10}$/.test(rc.code || '') && fu.code !== rc.code && fu.code.slice(3, 10) !== rc.code.slice(3, 10),
+  'F · same pink digits (21), two item numbers · two barcodes that never clash', JSON.stringify([fu.code, rc.code]));
+await close();
+const SEPT = 'TEST KIWI Châle suivant';
+await create(SEPT, 2);
+await click('[data-kbc-add]');
+const mine = await page.$$eval('[data-kbc-exact]', (all) => all.map((b) => b.dataset.label));
+ok(mine.includes('05 Fuchsia') && mine.includes('01 Rose clair'), 'F · the next product offers « Vos couleurs » with both shades', JSON.stringify(mine));
+await click('[data-kbc-exact="custom-e56ea0"]');
+ok((await page.$$eval('table.kbm thead th, .kbc-chip', (all) => all.map((x) => x.textContent))).some((x) => /05 Fuchsia/.test(x)), 'F · one tap adds the shade');
+await close();
+/* G · a one-size shawl (Elham Brand, 22 Nov 2026): the pieces wait on the
+   colour screen instead of falling into « Sans couleur » at once. */
+const HUIT = 'TEST KIWI Châle uni';
+await page.evaluate(() => {   // 105 shades already in the catalogue, like Elham's chart (an unpaired demo till has no shared chart)
+  const cat = window.KiwiBoutiqueCatalog;
+  const p = cat.addProduct({ name: 'TEST KIWI Nuancier', priceMAD: 100, kind: 'tu' });
+  for (let i = 1; i <= 105; i++) {
+    const hex = i === 5 ? 'e56ea0' : i === 1 ? 'f9d9e0' : (0x100000 + i * 997).toString(16).slice(-6);
+    const nm = String(i).padStart(2, '0') + (i === 5 ? ' Fuchsia' : i === 1 ? ' Rose clair' : ' Nuance ' + i);
+    cat.ensureVariant({ productId: p.id, colorId: 'custom-' + hex, size: 'TU', stock: 0, colorLabel: nm, colorHex: '#' + hex.toUpperCase() });
+  }
+});
+await click('#bqi-new');
+await type('[data-bqx-name]', HUIT);
+await type('[data-bqi-price]', '180');
+await page.$eval('input[name="bqx-pf-kind"][value="tu"]', (r) => r.click());
+await type('[data-kbs-total]', '5');
+await click('#bqi-n-save');
+await page.waitForSelector('[data-kbs-in]', { visible: true, timeout: 8000 });
+await sleep(300);
+ok(await sizesOf(HUIT) === '', 'G · one size, colours on · nothing stocked yet, the screen asks where the 5 pieces go', await sizesOf(HUIT));
+ok(JSON.stringify(await boxes()) === '["5"]', 'G · a single box already holds the 5 pieces (Enregistrer is enough for one colour)', JSON.stringify(await boxes()));
+await click('[data-kbc-add]');
+await type('[data-kbc-find]', '05');
+const found = await page.$$eval('[data-kbc-exact]', (all) => all.filter((b) => !b.hidden).map((b) => b.dataset.label));
+ok(found.length >= 1 && found.every((l) => /^05 /.test(l)), 'G · searching « 05 » finds shade 05 only, never 105', JSON.stringify(found));
+await click('[data-kbc-exact="custom-e56ea0"]');
+await page.$eval('[data-kbc-find]', (i) => { i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); });
+await click('[data-kbc-exact="custom-f9d9e0"]');
+await page.evaluate(() => [['custom-e56ea0', '3'], ['custom-f9d9e0', '2']].forEach(([k, n]) => {
+  const i = document.querySelector(`[data-kbs-col="${k}"]`);
+  i.value = n; i.dispatchEvent(new Event('input', { bubbles: true }));
+}));
+await click('[data-kbs-save]');
+await sleep(500);
+const uni = await page.evaluate((name) => { const cat = window.KiwiBoutiqueCatalog; const p = cat.listProducts({ q: name }).find((x) => x.name === name); return cat.getProduct(p.id).variants.map((v) => v.colorId + ':' + v.stock).sort().join(' '); }, HUIT);
+ok(uni === 'custom-e56ea0:3 custom-f9d9e0:2', 'G · saved as two shades, no « Sans couleur » left behind', uni);
+await close();
+await page.evaluate((names) => { const cat = window.KiwiBoutiqueCatalog; names.forEach((nm) => { const p = cat.listProducts({ q: nm }).find((x) => x.name === nm); if (p && cat.deleteProduct) cat.deleteProduct(p.id); }); }, [SIX, SEPT, HUIT, 'TEST KIWI Nuancier']);
+
 ok(errors.length === 0, 'no page error', errors.slice(0, 3).join(' | '));
 await h.close?.();
 console.log(`\nboutique-size-split-browser: ${n} passed, ${bad} failed`);

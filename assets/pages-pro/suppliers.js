@@ -11,7 +11,7 @@
  *     approuver d'un geste) et réceptions d'un bon sans fiche, à rattacher.
  *
  * Données réelles : /api/suppliers (liste, soldes, ancienneté, en attente,
- * sans fiche ; `migrated:false` tant que la base n'a pas 0030 : « mise à jour
+ * sans fiche ; `migrated:false` tant que la base n'a pas 0031 : « mise à jour
  * en cours »), /api/suppliers/statement (relevé sur une période avec report,
  * bons et reste à payer par bon, tableau du fournisseur), /api/suppliers/entry
  * (paiement, facture, dette d'avant Kiwi, annulation, accord, rattachement),

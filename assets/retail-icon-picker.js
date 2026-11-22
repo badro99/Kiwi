@@ -13,7 +13,7 @@
    Branché par une ligne de assets/pages-pro-boutique.js (import dynamique : le
    fichier est plafonné, la fonctionnalité vit ici). L'état part avec la fiche
    par `root.__kiwiTillPhoto = { art, artPicked }`, que _bqxPfRead recopie. */
-import { PHOTO_KEYS, keyForName, photoKey, photoFile, photoSrc, nameTokens, wordsOf } from './retail-photos.js?v=5';
+import { PHOTO_KEYS, keyForName, photoKey, photoFile, photoSrc, nameTokens, wordsOf } from './retail-photos.js?v=8';
 
 /* [fr, en, ar] pour chaque pièce. */
 const NAMES = {
@@ -43,7 +43,8 @@ const NAMES = {
   chaussettes: ['Chaussettes', 'Socks', 'جوارب'],
   chapeau: ['Chapeau', 'Hat', 'قبعة'], casquette: ['Casquette', 'Cap', 'كاسكيط'], bonnet: ['Bonnet', 'Beanie', 'طاقية'], tarbouche: ['Tarbouche', 'Fez', 'طربوش'],
   ceinture: ['Ceinture', 'Belt', 'حزام'], mdamma: ['Mdamma', 'Mdamma belt', 'مضمة'], cravate: ['Cravate', 'Tie', 'ربطة عنق'],
-  echarpe: ['Écharpe', 'Scarf', 'وشاح'], foulard: ['Foulard', 'Silk scarf', 'فولار'], chale: ['Châle', 'Shawl', 'شال'], gants: ['Gants', 'Gloves', 'قفازات'],
+  echarpe: ['Écharpe', 'Scarf', 'وشاح'], foulard: ['Foulard', 'Silk scarf', 'فولار'], chale: ['Châle', 'Shawl', 'شال'], chale_dentelle: ['Châle dentelle', 'Lace shawl', 'شال دونتيل'], chale_jawhara: ['Châle strass', 'Rhinestone shawl', 'شال جوهرة'],
+  chale_degrade: ['Châle dégradé', 'Ombré shawl', 'شال ديكرادي'], chale_organza: ['Châle organza', 'Organza shawl', 'شال أورغانزا'], chale_lame: ['Châle lamé', 'Lamé shawl', 'شال لامي'], gants: ['Gants', 'Gloves', 'قفازات'],
   lunettes: ['Lunettes', 'Glasses', 'نظارات'], montre: ['Montre', 'Watch', 'ساعة'], bracelet: ['Bracelet', 'Bracelet', 'سوار'], bague: ['Bague', 'Ring', 'خاتم'],
   collier: ['Collier', 'Necklace', 'قلادة'], boucles: ["Boucles d'oreilles", 'Earrings', 'أقراط'], broche: ['Broche', 'Brooch', 'بروش'],
   khlala: ['Khlala', 'Berber fibula', 'خلالة'], parfum: ['Parfum', 'Perfume', 'عطر'],
@@ -213,7 +214,7 @@ const GROUPS = [
   ['modest', ['Mode pudique et bain', 'Modest and swimwear', 'اللباس المحتشم والسباحة'], ['abaya', 'hijab', 'burkini', 'maillot', 'khimar', 'bikini']],
   ['shoes', ['Chaussures', 'Shoes', 'الأحذية'], ['chaussures', 'basket', 'botte', 'sandale', 'babouche', 'babouche_brodee', 'cherbil', 'babouche_enfant', 'chaussettes', 'mocassin', 'derby', 'escarpin', 'ballerine', 'mule', 'espadrille', 'tong', 'claquette', 'bottine', 'sabot', 'running', 'compensee', 'chausson', 'chaussure_bebe']],
   ['head', ['Couvre-chef', 'Headwear', 'أغطية الرأس'], ['chapeau', 'casquette', 'bonnet', 'tarbouche']],
-  ['acc', ['Accessoires et bijoux', 'Accessories and jewellery', 'الإكسسوارات والمجوهرات'], ['ceinture', 'mdamma', 'cravate', 'echarpe', 'foulard', 'chale', 'gants',
+  ['acc', ['Accessoires et bijoux', 'Accessories and jewellery', 'الإكسسوارات والمجوهرات'], ['ceinture', 'mdamma', 'cravate', 'echarpe', 'foulard', 'chale', 'chale_dentelle', 'chale_jawhara', 'chale_degrade', 'chale_organza', 'chale_lame', 'gants',
     'lunettes', 'montre', 'bracelet', 'bague', 'collier', 'boucles', 'broche', 'khlala', 'parfum', 'noeud_papillon', 'bretelles', 'boutons_manchette', 'pochette_costume', 'pendentif', 'chouchou', 'barrette', 'collants', 'porte_cles']],
   ['bags', ['Sacs', 'Bags', 'الحقائب'], ['sac_main', 'sac', 'sac_dos', 'cabas', 'panier', 'pochette', 'portefeuille', 'valise', 'parapluie', 'sac_banane', 'sac_bandouliere', 'cartable', 'porte_cartes', 'porte_documents', 'sac_sport']],
   ['candle', ["Bougies et parfum d'intérieur", 'Candles and home fragrance', 'الشموع والعطور المنزلية'], ['bougie', 'diffuseur', 'diffuseur_voiture', 'coffret', 'eteignoir', 'coupe_meche', 'cloche', 'bougeoir', 'bkhour', 'photophore', 'chauffe_plat', 'encens', 'mijmar']],

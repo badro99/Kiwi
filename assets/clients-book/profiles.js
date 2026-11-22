@@ -191,7 +191,7 @@
     }
     return false;
   }
-  var SEG_TABS = [['all', 'Tous'], ['reg', 'Réguliers'], ['vip', 'VIP'], ['new', 'Nouveaux'], ['win', 'Dormants']];
+  var SEG_TABS = [['all', 'Tous'], ['reg', 'Réguliers'], ['vip', 'VIP'], ['new', 'Nouveaux'], ['win', 'Dormants'], ['avance', 'Avance en cours'], ['credit', 'Crédit en cours']];   // les deux derniers : notes ouvertes (client-money.js › noteKindsByClient), boutique et maison seulement
   function lastSeenTxt(c) {
     var d = KC.daysSince(c.lastSeen);
     if (d === Infinity) return '·';
@@ -214,8 +214,8 @@
   }
   function renderSegs(all) {
     var host = document.getElementById('kcb-segs'); if (!host) return;
-    var counts = { all: all.length, reg: 0, vip: 0, new: 0, win: 0 };
-    all.forEach(function (c) { counts[KC.segment(c)]++; });
+    var counts = { all: all.length, reg: 0, vip: 0, new: 0, win: 0, avance: 0, credit: 0 }, notes = state.notes || { avance: {}, credit: {} }, retail = !!document.querySelector('[data-bq-view="acomptes"], [data-mz-view="acomptes"]');
+    all.forEach(function (c) { counts[KC.segment(c)]++; if (notes.avance[c.id] > 0) counts.avance++; if (notes.credit[c.id] > 0) counts.credit++; });
     if (!host.querySelector('.kx-tab')) {
       host.innerHTML = SEG_TABS.map(function (t) {
         return '<button type="button" class="kx-tab" role="tab" data-seg="' + t[0] + '"><span>' + t[1] + '</span><b></b></button>';
@@ -228,7 +228,7 @@
     }
     Array.prototype.forEach.call(host.querySelectorAll('.kx-tab'), function (b) {
       var k = b.getAttribute('data-seg');
-      b.querySelector('b').textContent = counts[k];
+      b.querySelector('b').textContent = counts[k]; b.style.display = (k === 'avance' || k === 'credit') && !retail ? 'none' : '';
       var on = (state.seg || 'all') === k;
       b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false');
     });
@@ -248,8 +248,8 @@
     var all = KC.list().sort(function (a, b) { return (b.lastSeen || 0) - (a.lastSeen || 0); });
     renderStrip(all, cfg);
     renderSegs(all);
-    var seg = state.seg || 'all';
-    var rows = all.filter(function (c) { return matches(c, state.q) && (seg === 'all' || KC.segment(c) === seg); });
+    var seg = state.seg || 'all'; if (!(Date.now() - (state.notesAt || 0) < 20000)) { state.notesAt = Date.now(); import('./client-money.js?v=2').then(function (m) { return m.noteKindsByClient(creditMerchant()); }).then(function (n) { if (n) { state.notes = n; renderList(); } }).catch(function () {}); }
+    var rows = all.filter(function (c) { return matches(c, state.q) && (seg === 'all' || KC.segment(c) === seg || (state.notes && state.notes[seg] && state.notes[seg][c.id] > 0)); });
     if (!rows.length) {
       var qTrim = (state.q || '').trim();
       var isDigits = qTrim.replace(/\D/g, '').length > qTrim.replace(/\d/g, '').trim().length;
@@ -277,7 +277,7 @@
         return '<div class="kcb-row" data-id="' + esc(c.id) + '" tabindex="0" role="button">' +
           '<div class="kcb-who"><div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
             '<div style="min-width:0"><div class="kcb-nm" title="' + esc(c.name || '') + '">' + esc(c.name || 'Sans nom') +
-              (credits[c.id] ? '<span class="kcb-credit">avoir ' + fmt(credits[c.id]) + ' MAD</span>' : '') + '</div>' +
+              (credits[c.id] ? '<span class="kcb-credit">avoir ' + fmt(credits[c.id]) + ' MAD</span>' : '') + (state.notes && state.notes.avance[c.id] ? '<span class="kcb-credit" style="background:color-mix(in srgb,#B7791F 16%,transparent);color:#8A5A12">avance ' + fmt(state.notes.avance[c.id] / 100) + ' MAD</span>' : '') + (state.notes && state.notes.credit[c.id] ? '<span class="kcb-credit" style="background:color-mix(in srgb,#C0492F 14%,transparent);color:#9A3A25">doit ' + fmt(state.notes.credit[c.id] / 100) + ' MAD</span>' : '') + '</div>' +
             '<div class="kcb-ph">' + esc(c.phone || '·') + '</div></div></div>' +
           '<div class="kcb-c-seg"><span class="kcb-seg ' + s + '">' + SEG_LBL[s] + '</span></div>' +
           '<div class="kcb-c-visits r kcb-num">' + (c.visits || 0) + '</div>' +
@@ -552,7 +552,7 @@
       /* La phrase fixe dans son propre nœud : la récompense qui suit est le texte
          du commerçant, elle doit traverser telle quelle. */
       (rewardReady ? '<div class="kcb-reward">' + ICON.gift + '<span>Récompense prête</span> · ' + esc((rw && rw.label) || (cfg.model === 'amount' ? cfg.amount.reward : (cfg.model === 'product' ? cfg.product.reward : cfg.visit.reward)) || '1 offert') + (cost ? '<span class="cost">' + esc(cost) + '</span>' : '') + '</div>' : '') +
-      attachBlock +
+      attachBlock + '<div id="kcb-money"></div>' +   // l'argent en cours, chaque ligne mène où il se règle (client-money.js)
       noteBlock +
       '<div class="kcb-stat"><div class="kcb-progtxt">' + progTxt + '</div>' +
         '<div class="kcb-progwrap" role="progressbar" aria-label="' + esc(tr('Fidélité')) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(prog * 100) + '"><div class="kcb-progbar" style="width:' + Math.round(prog * 100) + '%"></div></div></div>' +
@@ -581,7 +581,7 @@
       var button = e.target.closest('[data-history-page]');
       if (button && !button.disabled) this.innerHTML = renderHistory(Number(button.dataset.historyPage));
     };
-    loadClientCredits(c.id, sh.querySelector('#kcb-credit-history'));
+    loadClientCredits(c.id, sh.querySelector('#kcb-credit-history')); import('./client-money.js?v=2').then(function (m) { m.paintClientMoney(sh.querySelector('#kcb-money'), { customerId: c.id, merchant: creditMerchant(), esc: esc, fmt: fmt, toast: toast, avoirHost: sh.querySelector('#kcb-credit-history'), close: function () { closeSheet(); close(); }, spend: target ? function () { if (target.current() !== c.id) target.attach(c); } : null }); }).catch(function () {});
     sh.querySelector('#kcb-d-close').onclick = closeSheet;
     sh.querySelector('#kcb-d-back').onclick = closeSheet;
     sh.querySelector('#kcb-edit').onclick = function () { openForm(c); };

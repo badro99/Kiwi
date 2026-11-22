@@ -52,9 +52,18 @@ export async function onRequestGet({ request, env }) {
         SELECT 'order:' || o.id, 'order-cancel', o.cancel_ts, o.id, '', o.cancel_actor_name, o.cancel_actor_id,
           'order-cancelled', '', CAST(o.number AS TEXT), '', '', ROUND(o.total * 100), o.lines, o.session_id, o.table_no, 'caisse'
         FROM orders o WHERE o.merchant = ? AND o.status = 'rejected' AND o.cancel_ts >= ? AND o.cancel_ts < ?
+        UNION ALL
+        -- Un article annulé APRÈS son envoi en cuisine (kitchen_voids), avec la
+        -- personne qui l'a annulé. Sans cette branche, le patron ne voyait aucune
+        -- annulation d'article (Browse, 21 nov. 2026 : « on doit avoir de la visibilité »).
+        SELECT 'void:' || v.id, 'item-void', v.created_ts, v.order_id, v.status, v.actor, '',
+          v.reason, '', '', '', '', ROUND(v.qty * v.price * 100),
+          json_array(json_object('n', v.item_name, 'q', v.qty, 't', v.qty * v.price)), '', v.table_no, ''
+        FROM kitchen_voids v WHERE v.merchant = ? AND v.status IN ('approved', 'pending')
+          AND v.created_ts >= ? AND v.created_ts < ?
       ) WHERE ts < ? OR (ts = ? AND eventId < ?)
       ORDER BY ts DESC, eventId DESC LIMIT 101
-    `).bind(merchant, from, to, merchant, from, to, merchant, from, to, before, before, beforeId).all();
+    `).bind(merchant, from, to, merchant, from, to, merchant, from, to, merchant, from, to, before, before, beforeId).all();
     const rows = rs.results || [];
     const page = rows.slice(0, 100);
     const sessions = page.filter(r => r.kind === 'closure' || r.kind === 'takeout-handover').map(r => r.sessionId);

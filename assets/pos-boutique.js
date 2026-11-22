@@ -1,12 +1,13 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=246';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=164';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=246';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=246';
-import { ticketOwner } from './pos-boutique/ticket-owner.js?v=7';
-import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=2';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=263';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=181';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=263';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=263';
+import { ticketOwner } from './pos-boutique/ticket-owner.js?v=8';
+import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=3';
+import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=4';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
-import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=5'; import { tillPriceList as tpl } from './pos-boutique/price-list.js?v=3';
-import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=26'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=2'; import { mountSellerPick, sellerPickOn } from './pos-boutique/seller-pick.js?v=1';
+import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=7'; import { tillPriceList as tpl } from './pos-boutique/price-list.js?v=3';
+import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=26'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=3'; import { cardCheckHtml, cardCheckWire, cardCheckValue } from './pos-boutique/card-check.js?v=1'; import { mountSellerPick, sellerPickOn } from './pos-boutique/seller-pick.js?v=2';
 import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zDrawerCash, zDrawerMoves, zDrawerRows, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=10'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=23'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11'; import { bqTransfers } from './pos-boutique/transfers.js?v=7';
 
   'use strict';
@@ -473,6 +474,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       return 'Ce ticket n’est pas encore synchronisé, ou il a déjà été remboursé jusqu’à son montant disponible.';
     }
     if (code === 'manager-cancelled') return 'Autorisation du responsable annulée. Rien n’a été remis en stock.';
+    if (code === 'holder-cancelled') return 'Aucune cliente choisie. Rien n’a été émis ni remis en stock.';
     if (code === 'manager-required') return 'L’accord d’un responsable est nécessaire pour émettre un avoir. Rien n’a été remis en stock.';
     return 'Connexion au registre des avoirs impossible. Rien n’a été remis en stock.';
   }
@@ -495,7 +497,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   function originalSalePayload(sale) {
     if (!sale) return null;
     const parts = Array.isArray(sale.parts) ? sale.parts : [];
-    const received = parts.filter((part) => part && part.m !== 'avoir' && part.m !== 'livraison' && (+part.amount || 0) > 0);
+    const received = parts.filter((part) => part && part.m !== 'avoir' && part.m !== 'livraison' && part.m !== 'compte' && (+part.amount || 0) > 0);
     const methods = received.map((part) => part.m);
     const method = sale.tenderVersion === 2 ? bqPaymentMethod(parts)
       : (methods.includes('carte') ? 'card' : (methods.includes('espèces') ? 'cash' : 'wallet'));
@@ -509,7 +511,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       itemId: line.pid || '', variantId: [line.pid || '', line.size || '', line.color || ''].join(':'),
       name: line.name || (P[line.pid] && P[line.pid].name) || 'Article retiré du catalogue',
       qty: Math.max(1, Number(line.qty) || 1), total: lineTotals[i],
-      cat: rayonOf(line.pid) || '', unit: 'piece', kind: 'product',
+      cat: rayonOf(line.pid) || '', unit: 'piece', kind: 'product', supplierId: (P[line.pid] && P[line.pid].supplierId) || '',
     })));
     const payload = {
       id: sale.serverId || sale.syncId || sale.id,
@@ -1414,7 +1416,6 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
         </div>
         <nav class="bq-nav" id="bq-nav">
           <button class="bq-nav-it on" data-bq-view="vente"><i data-lucide="shopping-bag"></i><span>Vente</span><b class="bq-nav-badge" id="bq-badge-vente"></b></button>
-          <button class="bq-nav-it" data-bq-view="scan"><i data-lucide="scan-line"></i><span>Scan</span><b class="bq-nav-badge" id="bq-badge-scan"></b></button>
           <button class="bq-nav-it" data-bq-view="inventaire"><i data-lucide="package"></i><span>Inventaire</span><b class="bq-nav-badge" id="bq-badge-inv"></b></button>
           <button class="bq-nav-it" data-bq-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="bq-nav-badge" id="bq-badge-ret"></b></button>
           <button class="bq-nav-it" data-bq-view="vendus"><i data-lucide="chart-no-axes-column-increasing"></i><span>Vendus</span></button>
@@ -1456,7 +1457,6 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
           </div>
           <aside class="bq-ticket" id="bq-ticket"></aside>
         </section>
-        <section class="bq-view" data-bq-panel="scan"></section>
         <section class="bq-view" data-bq-panel="inventaire"></section>
         <section class="bq-view" data-bq-panel="echanges"></section>
         <section class="bq-view" data-bq-panel="vendus"></section>
@@ -1573,7 +1573,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
                quelque chose à montrer, donc il apparaît et disparaît AVEC les
                promotions. Le laisser hors du repeint, c'était un onglet qui ne
                s'affichait qu'au prochain changement de rayon. */
-            try { renderCats(); renderView(state.view); renderBadges(); icons(); } catch (_) {}
+            repaintCalm(viewPanel(), () => { renderCats(); renderView(state.view); renderBadges(); icons(); });
           });
         }
       }
@@ -1697,8 +1697,9 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
      * milliers d'articles la caisse ralentissait scan après scan, exactement là où
      * elle doit rester vive. On redessine une fois, à la fermeture. */
     if (intake.open) return;
-    try { renderCats(); renderView(state.view); renderBadges(); icons(); } catch (e) {}
+    repaintCalm(viewPanel(), () => { renderCats(); renderView(state.view); renderBadges(); icons(); });
   }
+  const viewPanel = () => $(`[data-bq-panel="${state.view}"]`, root);
 
   function onShow() {
     if (!root) return;
@@ -1707,8 +1708,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     const today = $('#bq-today', root);
     if (today) today.textContent = headSubVente();
     renderBadges();
-    renderView(state.view);
-    icons();
+    repaintCalm(viewPanel(), () => { renderView(state.view); icons(); });
   }
 
   function openVeil(id) { const v = $(id, root); v.classList.add('is-open'); return v; }
@@ -1726,7 +1726,6 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   }
   function renderView(view) {
     if (view === 'vente') { renderTicket(); renderGrid(); renderExchNote(); }
-    if (view === 'scan') renderScan();
     if (view === 'inventaire') renderInventaire();
     if (view === 'echanges') {
       renderEchanges();
@@ -1749,7 +1748,6 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       el.style.display = n ? '' : 'none';
     };
     set('#bq-badge-vente', items);
-    set('#bq-badge-scan', state.scanLog.length);
     set('#bq-badge-ret', avs);
     set('#bq-badge-cl', 0);   // le carnet n'est pas une alerte : son total ne ferait que grandir
     const invBadge = $('#bq-badge-inv', root);
@@ -1780,6 +1778,11 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   }
 
   async function issueAvoir(amount, cliente, motif, fromSaleId, context) {
+    if (!cliente) {
+      const picked = await askAvoirHolder(openClientModal, amount);   // cliente de passage : lui ouvrir une fiche ? (retail-avance.js)
+      if (picked === undefined) { const error = new Error('holder-cancelled'); error.code = 'holder-cancelled'; throw error; }
+      cliente = picked;
+    }
     if (!IS_DEMO) {
       if (context && context.originalSale) fromSaleId = await ensureOriginalSale(context.originalSale);
       const requestId = (context && context.requestId) || creditIntent('credit-issue');
@@ -1788,7 +1791,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
         action: 'issue', id: requestId, originalSaleId: fromSaleId, approval,
         originalRef: context && context.originalRef, amountCents: Math.round(amount * 100),
         customerId: cliente && cliente.id, customerName: cliente && cliente.name,
-        reason: motif, expiresAt: Date.now() + 182 * 24 * 3600 * 1000,
+        reason: motif, ...avoirExpiryBody(),   /* Reçu · Validité des bons, au tableau de bord ; vide = sans limite */
         resellable: !context || context.resellable !== false,
         lines: context && context.lines,
       });
@@ -1805,7 +1808,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       holderId: cliente ? cliente.id : null,
       holderName: cliente ? cliente.name : 'Porteur du bon',
       motif, at: new Date(),
-      until: new Date(Date.now() + 182 * 24 * 3600 * 1000),
+      until: localAvoirUntil(),
       from: fromSaleId || null,
     };
     AVOIRS.unshift(av);
@@ -1868,14 +1871,15 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       amount: total,
       customerId: c ? c.id : null, priceList: frozen.priceList,
       beforePaid: () => window.KiwiLoyaltyReserve.create({ isDemo: IS_DEMO, ticket: t, ticketOwner, client: c, render: renderTicket, close: () => { state.checkoutBusy = false; closeVeil('#bq-pay-veil'); } }).confirm(),
-      title: 'Encaissement', afterMethods: (el) => mountSellerPick(el, t, { slug: merchantSlug(), esc }),   // « Vendu par » : option « Vendeur choisi à l'encaissement »
+      allowAccount: !!window.KiwiRetailBalances,   /* « Compte client » si God mode l'allume (retail-avance.js › retailModes) */
+      title: 'Encaissement', afterMethods: (el) => mountSellerPick(el, t, { slug: merchantSlug(), esc, skin: bqKitSkin(), pick: (seller) => ticketOwner.setSeller(t, seller) }),   // « Vendu par » : option « Vendeur choisi à l'encaissement »
       subtitle: `${frozen.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
       // Real ticket contents, so the printed receipt itemises the sale instead
       // of showing a single lump sum.
       ref: frozen.num,
       lines: frozen.lines.map((ln) => ({
         qty: ln.qty,
-        name: ln.name + (ln.size ? ' ' + ln.size : ''),
+        name: [ln.name + (ln.size ? ' ' + ln.size : ''), ln.color ? colorLabel(ln.color).split(' · ')[0] : ''].filter(Boolean).join(' · '),   // la teinte (« 05 Fuchsia », sans sa moitié arabe que la thermique dessinerait en image) : deux châles du même modèle ne s'impriment plus pareil
         amount: ln.unit * ln.qty,
         ref: ln.pid,
         barcode: ln.barcode,
@@ -1906,15 +1910,20 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       onPaid: (parts, paymentContext) => {
         state.checkoutBusy = false;
         const isAcompte = !!(paymentContext && paymentContext.partial);
+        const onAccount = !!(paymentContext && paymentContext.onAccount);
         const receivedNow = isAcompte ? paymentContext.paidNow : total;
         if (isAcompte && (!c || !c.id || !window.KiwiRetailBalances)) {
           toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Attachez une cliente avant de prendre un acompte')); return { error: 'customer-required' };
         }
+        /* L'avance garde la pièce jusqu'à une date (Reçu · Validité des bons),
+           puis se scanne et se remet en stock (Inventaire › Avances expirées). */
+        const avanceUntil = isAcompte && !onAccount ? avanceExpiresAt() : 0;
+        const held = isAcompte && !onAccount ? heldLines(frozen.lines, (ln) => ln.barcode) : [];
         // Récompense fidélité effectivement portée sur ce ticket (attachée à cette
         // cliente) — on la débite des points APRÈS avoir enregistré l'achat.
         const rewardUsed = !!(frozen.reward && c && c.id && frozen.reward.clientId === c.id);
         const sale = {
-          id: frozen.num, syncId: frozen.syncId, tenderVersion: 2, at: new Date((window.KiwiLive?.now || Date.now)()), deviceTs: Date.now(), clientId: frozen.clientId, by: STAFF.caissiere.name, kind: isAcompte ? 'acompte' : 'vente',
+          id: frozen.num, syncId: frozen.syncId, tenderVersion: 2, at: new Date((window.KiwiLive?.now || Date.now)()), deviceTs: Date.now(), clientId: frozen.clientId, by: STAFF.caissiere.name, kind: isAcompte ? 'acompte' : 'vente', onAccount: onAccount || undefined, avanceUntil: avanceUntil || undefined,
           ...(frozen.priceList && !frozen.priceList.isMain ? { priceListId: frozen.priceList.id, priceListName: frozen.priceList.name } : {}),
           methods: parts.map((x) => x.m).join(' + '),
           /* Les parts de règlement, figées : c'est elles qui rendent le tiroir
@@ -1944,7 +1953,8 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
         if (isAcompte) {
           const savedBalance = window.KiwiRetailBalances.record(merchantSlug(), {
             id: balanceId, customerId: c.id, ticketRef: sale.id,
-            totalCents: Math.round(total * 100), receipt: {
+            totalCents: Math.round(total * 100), kind: onAccount ? 'credit' : 'avance', expiresAt: avanceUntil, lines: held,
+            receipt: onAccount ? undefined : {
               id: sale.syncId, amountCents: Math.round(receivedNow * 100),
               method: bqPaymentMethod(parts), ts: +sale.at,
             },
@@ -1966,7 +1976,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
         // wrapped so a mirror failure can never break the sale.
         try {
           if (window.KiwiLive && window.KiwiLive.isOn()) {
-            const received = (parts || []).filter((x) => x && x.m !== 'avoir' && x.m !== 'livraison' && (+x.amount || 0) > 0);
+            const received = (parts || []).filter((x) => x && x.m !== 'avoir' && x.m !== 'livraison' && x.m !== 'compte' && (+x.amount || 0) > 0);
             const receivedMethods = received.map((x) => x.m);
             const method = bqPaymentMethod(parts);
             const first = frozen.lines[0];
@@ -1999,16 +2009,16 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
               total: lineTotals[i],
               cat: ln.rayon,
               unit: 'piece',
-              kind: 'product',
+              kind: 'product', supplierId: (P[ln.pid] && P[ln.pid].supplierId) || '',
             })));
             const payload = {
               id: sale.syncId,
               amount: cashIn,
               method: method,
-              paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(receivedNow * 100),
+              paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round((onAccount ? total : receivedNow) * 100),
               discountPercents: [...new Set(frozen.lines.map(ln => Number(ln.remise)).filter(n => n > 0))], agreedMaxPercent: Math.max(0, ...frozen.lines.filter(ln => ln.agreed > 0).map(ln => { const b = ln.promo && +ln.promo.price > 0 ? +ln.promo.price : +ln.price; return b > 0 ? Math.ceil((b - ln.unit) / b * 100 - 1e-9) : 0; })) || undefined,
               channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter', deliveryCard: ((parts || []).find((x) => x && x.m === 'livraison' && x.card) || {}).card, stockHeld: sale.stockHeld === true,
-              label: isAcompte ? 'Acompte · ' + label : label,
+              label: onAccount ? 'Compte client · ' + label : isAcompte ? 'Acompte · ' + label : label,
               ref: sale.id,
               time: sale.at, deviceTs: sale.deviceTs,
               lines: basket,
@@ -2017,13 +2027,15 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
             if (sale.clientId) payload.clientId = sale.clientId;
             if (frozen.priceList) Object.assign(payload, frozen.priceList.fields);   // tarif + accord responsable, relus par /api/sale
             const sellerProof = !IS_DEMO && window.KiwiStaff && window.KiwiStaff.sellerProof;   // commissions vendeurs : la preuve signée de qui a saisi son code, jamais un nom
-            if (!IS_DEMO && sellerPickOn()) { if (t.seller && t.seller.id) payload.seller = { member: t.seller.id }; }   // vendeur choisi à l'encaissement : rien de choisi, personne de crédité
+            if (!IS_DEMO && sellerPickOn(bqKitSkin())) { if (t.seller && t.seller.id) payload.seller = { member: t.seller.id }; }   // vendeur choisi à l'encaissement : rien de choisi, personne de crédité
             else if (typeof sellerProof === 'string' && sellerProof) payload.seller = { proof: sellerProof };
             if (isAcompte) payload.retailBalance = {
               id: balanceId, customerId: c.id, ticketRef: sale.id,
               totalCents: Math.round(total * 100), stage: 'open',
+              ...(onAccount ? {} : { kind: 'avance', expiresAt: avanceUntil, lines: held }),
             };
-            if (cashIn <= 0 && (parts || []).some(x => x.m === 'livraison')) payload.settlementKind = 'receivable';
+            if (onAccount) payload.settlementKind = 'receivable';
+            else if (cashIn <= 0 && (parts || []).some(x => x.m === 'livraison')) payload.settlementKind = 'receivable';
             else if (cashIn <= 0 && (parts || []).some(x => x.m === 'avoir')) {
               payload.settlementKind = 'store-credit';
               payload.creditAmountCents = Math.round((parts || []).filter(x => x.m === 'avoir')
@@ -2183,7 +2195,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
      jamais de l'argent qui rentre : il consomme une dette déjà comptée. */
   function bqMoneyParts(s) {
     if (Array.isArray(s.parts) && s.parts.length) {
-      return s.parts.filter((p) => p && p.m !== 'avoir' && +p.amount > 0)
+      return s.parts.filter((p) => p && p.m !== 'avoir' && p.m !== 'compte' && +p.amount > 0)
         .map((p) => ({ m: p.m, amount: +p.amount }));
     }
     const names = String(s.methods || '').split(' + ').filter((m) => m && m !== 'avoir');
@@ -2191,7 +2203,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     const amount = s.remote && Number.isFinite(s.received) ? s.received : +s.total;
     return names.length && amount > 0 && !(s.remote && names[0] === 'livraison') ? [{ m: names[0], amount }] : [];
   }
-  const BQ_SRV_METHOD = { 'espèces': 'cash', 'carte': 'card', 'virement': 'transfer', 'chèque': 'cheque', 'avoir': 'credit', 'livraison': 'delivery' };
+  const BQ_SRV_METHOD = { 'espèces': 'cash', 'carte': 'card', 'virement': 'transfer', 'chèque': 'cheque', 'avoir': 'credit', 'livraison': 'delivery', 'compte': 'compte' };
   function bqPaymentParts(parts) {
     const by = new Map();   // le serveur refuse plus de huit lignes (_retail-tenders.js) : les parts d'un même mode s'additionnent
     (parts || []).filter((part) => part && +part.amount > 0).forEach((part) => { const m = BQ_SRV_METHOD[part.m] || 'wallet'; by.set(m, (by.get(m) || 0) + Math.round((+part.amount || 0) * 100)); });
@@ -2200,7 +2212,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   function bqPaymentMethod(parts) {
     const methods = bqPaymentParts(parts);
     if (methods.length === 1) return methods[0].method;
-    if (methods.some((part) => part.method !== 'credit' && part.method !== 'delivery')) return 'split';
+    if (methods.some((part) => part.method !== 'credit' && part.method !== 'delivery' && part.method !== 'compte')) return 'split';
     return methods.some((part) => part.method === 'delivery') ? 'delivery' : 'credit';
   }
 
@@ -2314,7 +2326,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
          clôture et disparaît du Z imprimé — le seul document qui reste. */
       avoirs: { issued: t.avoirIssued, issuedCount: t.avoirIssuedN, used: t.avoirUsed, usedCount: t.avoirUsedN },
       acomptes: { received: t.acompteReceived, outstanding: t.outstanding },
-      countedCash: only === 'delivery' ? null : counted,
+      countedCash: only === 'delivery' ? null : counted, terminalCardTotal: only === 'delivery' ? null : bqCardZ,
     };
   }
   /* La journée commerciale d'un service est celle de son OUVERTURE (même règle
@@ -2409,7 +2421,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       /* La part du dépôt-vente (Maison) n'est pas la recette du commerce :
          postSale() la retire, la comparaison aussi. */
       const received = parts.reduce((sum, p) => sum
-        + (p && p.m !== 'avoir' && p.m !== 'livraison' && (+p.amount || 0) > 0 ? +p.amount : 0), 0);
+        + (p && p.m !== 'avoir' && p.m !== 'livraison' && p.m !== 'compte' && (+p.amount || 0) > 0 ? +p.amount : 0), 0);
       const cents = Math.round(Math.max(0, received - (+s.consigned || 0)) * 100);
       if (!(cents > 0)) return;
       out.push({ id, origin: true, time: new Date(s.at), amount: cents / 100, method: bqPaymentMethod(parts), kind: 'vente' });
@@ -2503,6 +2515,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   }
   function bqShowOpenScreen() { if (tillOperatorView()) return;   // God Mode regarde la caisse, sans ouvrir de poste (drawer.js)
     if (document.getElementById('bq-clockin')) return;
+    document.dispatchEvent(new CustomEvent('kiwi:till-opening', { detail: { slug: merchantSlug() } }));   /* ce que la dernière clôture a laissé à vérifier */
     const pv = pvPaired() || {};
     const who = ((STAFF.caissiere && STAFF.caissiere.name) || '').trim().split(/\s+/)[0] || 'Caissier';
     const role = (STAFF.caissiere && STAFF.caissiere.role) || 'Caissier';
@@ -2642,7 +2655,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   }
 
   /* ── la clôture ── */
-  let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null, bqClosedPair = null;
+  let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null, bqClosedPair = null, bqCardZ = null;   /* bqCardZ : le total carte recopié du Z du TPE, null = non vérifié (card-check.js) */
   function bqUpdateEcart() {
     const v = bqCloVeil; if (!v) return;
     const line = v.querySelector('#bqclo-ecart-line'), out = v.querySelector('#bqclo-ecart'), inp = v.querySelector('#bqclo-count');
@@ -2676,6 +2689,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     const pv = pvPaired() || {};
     const DR = window.KiwiDayReport;
     const V = DR ? DR.vocab() : { items: 'articles', cats: 'rayons', cat: 'rayon' };
+    bqCardZ = null; const cardKiwi = (() => { try { const c = bqBuildReport(null, null)?.methods?.card; return Number.isFinite(c) ? c : t.card; } catch (_) { return t.card; } })();   /* le chiffre que le rapport comparera au TPE */
 
     const rows = [
       ['Service ouvert à', fmtHM(openedAt), false, ''],
@@ -2750,6 +2764,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
             <span>Écart</span><span class="mono" id="bqclo-ecart">·</span>
           </div>
         </div>
+        ${cardCheckHtml(cardKiwi, fmtMAD)}
         <div class="clo-highlight">
           <div class="clo-highlight-icon"><i data-lucide="shopping-bag"></i></div>
           <div class="clo-highlight-text">${hlText}</div>
@@ -2763,14 +2778,14 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       </div>`;
     v.classList.add('is-open');
     icons();
-    void mountSellerDay(v.querySelector('#bqclo-sellers'), { slug: merchantSlug, day: retDayKey(tillNow()), esc, fmtMAD });   // design 2027 + option « Commissions vendeurs » seulement
+    void mountSellerDay(v.querySelector('#bqclo-sellers'), { slug: merchantSlug, day: retDayKey(tillNow()), esc, fmtMAD, skin: bqKitSkin() });   // design 2027 + option « Commissions vendeurs » seulement
 
-    v.querySelector('#bqclo-count').addEventListener('input', bqUpdateEcart);
+    v.querySelector('#bqclo-count').addEventListener('input', bqUpdateEcart); cardCheckWire(v, cardKiwi, fmtMAD);
     v.querySelector('#bqclo-continue').onclick = () => v.classList.remove('is-open');
     /* Imprimer AVANT de fermer — un tirage avec le comptage saisi à l'instant,
        aucune écriture (même contrat que #clo-print côté restaurant). */
     v.querySelector('#bqclo-print').onclick = () => {
-      const raw = v.querySelector('#bqclo-count').value;
+      const raw = v.querySelector('#bqclo-count').value; bqCardZ = cardCheckValue(v);
       const pair = zPair(bqBuildReport, raw === '' || raw == null ? null : parseFloat(raw), 0, null);
       if (!pair) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport indisponible')); return; }
       zPrintPair(bqPrintReport, pair, 'AVANT CLÔTURE');
@@ -2784,7 +2799,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   function bqCloseRegister() {
     const v = bqCloVeil;
     const raw = v ? v.querySelector('#bqclo-count').value : '';
-    const counted = (raw === '' || raw == null) ? null : parseFloat(raw);
+    const counted = (raw === '' || raw == null) ? null : parseFloat(raw); bqCardZ = cardCheckValue(v);
     if (v) v.classList.remove('is-open');
     let report = null, reportSaved = false;
     try {
@@ -2813,6 +2828,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       countedCents: bqCents(countedCash),
       gapCents: bqCents(countedCash) - bqCents(bqCloExpected),
     });
+    document.dispatchEvent(new CustomEvent('kiwi:till-closed', { detail: { slug: merchantSlug(), day: report && report.day, closedAt: report && report.closedAt, expectedCents: bqCents(bqCloExpected), countedCents: bqCents(countedCash), gapCents: bqCents(countedCash) - bqCents(bqCloExpected), by: (STAFF.caissiere && STAFF.caissiere.name) || '' } }));   /* l'écart attend l'ouverture suivante (22 nov. 2026) */
     bqZQueue(true); const pair = zPair(bqBuildReport, counted, report.closedAt, report);   /* les deux tickets du Z, avant d'effacer le poste */
     bqShift = null;
     bqShiftPersist();

@@ -215,4 +215,68 @@ win.KiwiLang.get = () => 'fr';
   assert.ok(!/Fiabilité/.test(none.innerHTML), 'absent confidence is not invented on screen');
 }
 
+// 7. Propriétaire, 22 nov. 2026 (« fix this, I am getting mad ») : une étiquette de
+//    carton lue sans assortiment montrait les boutons inventés par le modèle
+//    (« Add this assortment to stock », « Record as stock reception ») qui
+//    répondaient tous « Cette action n’est pas disponible ici ». Un bouton que cet
+//    écran ne sait pas exécuter ne s'affiche plus, et l'étiquette garde sa
+//    réception de stock, tailles à saisir.
+{
+  delete win.Kiwi.handlers['stock-scan-invoice'];
+  const thread = fakeEl('div');
+  const card = KV.renderResult({
+    docType: 'boutique_product', categoryLabel: 'Product label', title: 'Article 1986-10 · Khaki · 12 PRS', confidence: 0.98,
+    entities: { reference: '1986-10', color: 'KHAKI', packQty: 12, sizeRun: [] },
+    suggestedActions: [
+      { id: 'a1', type: 'product-add', label: 'Add this assortment to stock', primary: true },
+      { id: 'a2', type: 'stock-receive', label: 'Record as stock reception' },
+    ],
+  }, thread, () => {});
+  assert.ok(!/data-kv-action/.test(card.innerHTML), 'carton label: no button this screen cannot run');
+  assert.ok(/data-kv-size-run/.test(card.innerHTML), 'carton label without sizes: the stock reception still mounts, sizes to type');
+
+  win.Kiwi.handlers['stock-scan-invoice'] = () => {};
+  const inv = KV.renderResult({
+    docType: 'invoice', confidence: 0.9, entities: { supplier: 'Centrale', totalMad: 10 },
+    suggestedActions: [
+      { id: 'b1', type: 'stock-receive', label: 'Recevoir', primary: true },
+      { id: 'b2', type: 'floorplan-apply', label: 'Créer ces tables' },
+      { id: 'b3', type: 'generic-action', label: 'Faire quelque chose' },
+    ],
+  }, thread, () => {});
+  const shown = [...inv.innerHTML.matchAll(/data-kv-action="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(shown, ['stock-receive'], 'only actions with a live handler are offered');
+  delete win.Kiwi.handlers['stock-scan-invoice'];
+}
+
+// 8. Le même jour, en anglais : la carte affichait « Fiabilité », « Fournisseur »,
+//    « Montant Total » en dur. Les libellés suivent la langue de l'écran.
+{
+  const thread = fakeEl('div');
+  const reading = { docType: 'invoice', confidence: 0.9, entities: { supplier: 'Centrale', date: '2026-11-22', invoiceNumber: 'F-1',
+    totalMad: 10, tablesCount: 3, items: Array.from({ length: 12 }, (_, i) => ({ name: 'A' + i, qty: 1, total: 1 })) }, suggestedActions: [] };
+  for (const [lang, want] of [['en', /Confidence 90[\s\S]*Analysis complete[\s\S]*Supplier[\s\S]*Total amount/], ['ar', /درجة الثقة[\s\S]*اكتمل التحليل[\s\S]*المورّد[\s\S]*المبلغ الإجمالي/]]) {
+    win.KiwiLang.get = () => lang;
+    const html = KV.renderResult(reading, thread, () => {}).innerHTML;
+    assert.ok(!/Fiabilité|Fournisseur|Montant Total|N° Pièce|Tables détectées|Lignes d’articles|autres lignes|Analyse terminée/.test(html), `${lang}: no French label left on the card`);
+    assert.match(html, want, `${lang}: the card labels are in ${lang}`);
+  }
+  win.KiwiLang.get = () => 'fr';
+  assert.match(KV.renderResult(reading, thread, () => {}).innerHTML, /Fiabilité 90[\s\S]*Analyse terminée[\s\S]*Fournisseur/, 'fr keeps its labels');
+}
+
+// 9. Le même jour, vraie lecture : sur « SIZE: 36-41 · 12 PRS » le modèle a inventé
+//    une paire par taille (6 ≠ 12), la lecture est « à vérifier ». Pour une
+//    étiquette de carton, la carte garde la réception, quantités à saisir ;
+//    une facture incertaine reste sans rien.
+{
+  const thread = fakeEl('div');
+  const label = KV.renderResult({ reviewNeeded: true, docType: 'boutique_product', summary: 'Étiquette 1986-10',
+    entities: { reference: '1986-10', color: 'KHAKI', packQty: 12, sizeRun: [{ size: '36', qty: 1 }, { size: '41', qty: 1 }] } }, thread, () => {});
+  assert.ok(/data-kv-size-run/.test(label.innerHTML), 'uncertain carton label: the reception stays, quantities to type');
+  assert.ok(!/data-kv-action/.test(label.innerHTML), 'uncertain carton label: no model button');
+  const bill = KV.renderResult({ reviewNeeded: true, docType: 'invoice', entities: { supplier: 'X', totalMad: 5 } }, thread, () => {});
+  assert.ok(!/data-kv-size-run|data-kv-action/.test(bill.innerHTML), 'uncertain invoice: nothing to run');
+}
+
 console.log(`agent-vision-test: ${controls.length} controls + confidence cases + review-needed + action outcomes passed`);

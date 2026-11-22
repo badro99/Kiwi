@@ -636,4 +636,59 @@ console.log('--- Test 9: Signed Handover Gap Reconciles Final Z ---');
     'Final drawer expectation carries the signed shortage instead of blaming the incoming cashier');
 }
 
+console.log('--- Test 10: Handover Compares the Card Terminal (TPE) With Kiwi ---');
+{
+  /* Propriétaire, 22 nov. 2026 : la passation compare aussi la carte, pas
+     seulement le tiroir. Le TPE cumule depuis son dernier Z (le début de la
+     journée), donc Kiwi compare la carte de toute la journée, pas du poste. */
+  const openTime = new Date('2026-09-07T10:00:00Z');
+  const journal = [
+    { id: 'c1', time: new Date('2026-09-07T10:10:00Z'), amount: 120, method: 'card' },
+    { id: 'k1', time: new Date('2026-09-07T10:20:00Z'), amount: 100, method: 'cash' },
+    { id: 'c2', time: new Date('2026-09-07T11:10:00Z'), amount: 250, method: 'card' },
+  ];
+  const env = createCaisseEnvironment({
+    openingFloat: 500, posteOpeningFloat: 500, shiftOpenedAt: openTime,
+    posteOpenedAt: new Date('2026-09-07T11:00:00Z'), journal,
+  });
+  env.renderHandoverCount(false);
+  ok(env.handoverState.cardKiwi === 370, 'Kiwi card total covers the whole day (120 + 250), not only the poste');
+  ok(/Total carte Kiwi/.test(env.$('#ho-card').innerHTML) && /370/.test(env.$('#ho-card').innerHTML),
+    'The handover shows Kiwi card total next to a terminal field');
+  ok(env.$('#ho-card-ecart-val').textContent === 'À saisir', 'Nothing typed: the result waits');
+
+  env.$('#ho-card-z').value = '370';
+  env.updateHandoverCard();
+  ok(/Rapproché/.test(env.$('#ho-card-ecart-val').textContent) && env.$('#ho-card-ecart').classList.contains('is-ok'),
+    'Terminal = Kiwi: matched');
+  env.$('#ho-card-z').value = '400,5';
+  env.updateHandoverCard();
+  ok(/^Terminal \+ /.test(env.$('#ho-card-ecart-val').textContent) && env.$('#ho-card-ecart').classList.contains('is-off'),
+    'Terminal above Kiwi: the gap names the terminal');
+
+  env.$('#ho-count').value = '600';
+  env.updateHandoverEcart();
+  env.handoverState.incoming = { id: 'nora', name: 'Nora B.', role: 'Responsable' };
+  env.$('#ho-verify').value = '600';
+  env.updateHandoverVerdict();
+  ok(env.confirmHandover({ id: 'nora', name: 'Nora B.', actorProof: 'proof-nora' }) === true, 'The card check never blocks the handover');
+  const rec = env.handovers[0];
+  ok(rec.cardKiwi === 370 && rec.cardTerminal === 400.5 && rec.cardGap === 30.5,
+    'The handover record keeps Kiwi card, terminal card and the gap, to the centime');
+  ok(/Total carte du terminal/.test(env.$('#ho-slip').innerHTML), 'The handover slip prints the card comparison');
+
+  const env2 = createCaisseEnvironment({ openingFloat: 500, posteOpeningFloat: 500, shiftOpenedAt: openTime, posteOpenedAt: openTime, journal });
+  env2.renderHandoverCount(false);
+  env2.$('#ho-count').value = '600'; env2.updateHandoverEcart();
+  env2.handoverState.incoming = { id: 'nora', name: 'Nora B.', role: 'Responsable' };
+  env2.$('#ho-verify').value = '600'; env2.updateHandoverVerdict();
+  env2.confirmHandover({ id: 'nora', name: 'Nora B.', actorProof: 'proof-nora' });
+  ok(env2.handovers[0].cardTerminal === null && env2.handovers[0].cardGap === null
+    && !/Total carte du terminal/.test(env2.$('#ho-slip').innerHTML),
+    'Terminal left empty: unverified, no card lines on the slip');
+
+  const dr = fs.readFileSync(path.join(ROOT, 'assets/day-report.js'), 'utf8');
+  ok(/ecart: num\(h\.ecart\), cardGap:/.test(dr), 'The day report keeps each handover card gap');
+}
+
 console.log(`\ncaisse-accounting-handover-test: ${controls} controls passed`);

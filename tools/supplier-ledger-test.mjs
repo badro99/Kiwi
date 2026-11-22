@@ -575,12 +575,12 @@ const opsPost = async (cookie, id, action, payload, extra) => {
   ok('ageing by due date: terms_days splits not-yet-due from overdue');
 }
 
-/* ── 17 · base d'avant 0030 : les bons marchent, le grand livre attend ── */
+/* ── 17 · base d'avant 0031 : les bons marchent, le grand livre attend ── */
 {
   const { listMigrations, MIGRATIONS_DIR } = await importFresh('tools/d1-migrations.mjs');
   const { readFileSync } = await import('node:fs');
   const old = new DatabaseSync(':memory:');
-  for (const f of listMigrations().filter((x) => Number(x.slice(0, 4)) <= 27)) old.exec(readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8'));
+  for (const f of listMigrations().filter((x) => Number(x.slice(0, 4)) <= 28)) old.exec(readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8'));
   old.prepare(`INSERT INTO accounts (id, email, business, salt, hash, created_ts, status) VALUES ('acc-1', 'o@atlas.ma', 'Atlas Bench', 's', 'h', ?, 'active')`).run(now);
   old.prepare(`INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, status, updated_ts) VALUES (?, '{}', 'pro', 'boutique', 'acc-1', 'Atlas Bench', 'active', ?)`).run(SHOP, now);
   const OD1 = {
@@ -614,7 +614,7 @@ const opsPost = async (cookie, id, action, payload, extra) => {
   const lo = await listOld.json();
   assert.equal(listOld.status, 200);
   assert.equal(lo.migrated, false, 'the screen shows "update in progress", not an error');
-  ok('pre-0030 base: create/submit/receive PO still work, ledger reports unmigrated, list says migrated:false');
+  ok('pre-0031 base: create/submit/receive PO still work, ledger reports unmigrated, list says migrated:false');
 }
 
 /* ── 18 · la page, par rôle : grand livre au patron, classement ouvert ── */

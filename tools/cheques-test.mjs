@@ -16,7 +16,7 @@
  *   · cloisonnement et rôles : patron, opérateur, gérant (reçus seulement),
  *     caisse (enregistrer un reçu seulement), réception, employé, autre
  *     commerçant, anonyme, magasin suspendu ;
- *   · base sans 0032 : lecture calme (migrated:false), écriture 503. */
+ *   · base sans 0033 : lecture calme (migrated:false), écriture 503. */
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
@@ -758,7 +758,7 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
   ok('client card: cheques in hand and bounced (owed on the account), link to the filtered portfolio, nothing for a cashier or an empty book');
 }
 
-/* ── 7 · base sans 0032 : calme en lecture, 503 en écriture ────────── */
+/* ── 7 · base sans 0033 : calme en lecture, 503 en écriture ────────── */
 {
   const old = new DatabaseSync(':memory:');
   applySchema(old);
@@ -773,7 +773,7 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
   assert.equal((await call(moveRoute.onRequestPost, '/api/cheques/move', owner, { merchant: SHOP, id: 'chq_000000000000000000', to: 'deposited', requestId: key('old') }, oldEnv)).status, 503);
   assert.equal((await call(detailRoute.onRequestGet, `/api/cheques/detail?merchant=${SHOP}&id=chq_000000000000000000`, owner, null, oldEnv)).status, 503);
   assert.equal(await C.chequesReady(oldEnv), false);
-  ok('missing 0032: GET answers migrated:false with an empty list, writes answer 503 unmigrated');
+  ok('missing 0033: GET answers migrated:false with an empty list, writes answer 503 unmigrated');
 }
 
 console.log(`\n${n} groups green (cheque portfolio).`);

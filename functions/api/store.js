@@ -1,6 +1,6 @@
 import { codeDocument } from '../auth/_staff-codes.js';
 import { canonicalCode, normalizeMember } from './_rules-staff-credential.js';
-import { cleanFloorplan } from './_rules-floorplan-clean.js';
+import { cleanStoredFloorplan } from './_floorplan-field-edits.js';
 import { cleanBriefingSettings } from './_briefing-settings.js';
 import { refundCreditBook } from './_credit-book-refund.js';
 import { BOOK_FEATURE, commitBook, getVerticalOps, legacyBook, readBook, withBook, withoutBook } from './_credit-book-store.js';
@@ -114,7 +114,7 @@ const FEATURES = {
   team:         { keys: ['members', 'hours', 'shifts'],            max: 600000 },
   attendance:   { keys: ['entries'],                               max: 600000 },
     fidelity:     { keys: ['model', 'visit', 'amount', 'product'],   max: 120000 }, // 2 000 linked ids (~40 bytes each) fit
-  discountpolicy: { keys: ['percentages'], max: 2000 }, policies: { keys: ['returnWindowDays', 'pressingB2bPercent'], max: 2000 }, // policies : fenêtre de retour + remise B2B pressing, le propriétaire écrit
+  discountpolicy: { keys: ['percentages'], max: 2000 }, policies: { keys: ['returnWindowDays', 'pressingB2bPercent'], max: 2000 }, colorchart: { keys: ['list'], max: 60000 }, // policies : fenêtre de retour + remise B2B pressing, le propriétaire écrit ; colorchart : le nuancier exact d'une boutique (boutique-size-colors.js)
   /* Les réglages de CAISSE des métiers de bouche autres que le restaurant
    * (pizzeria, traiteur, boulangerie) : frais de livraison par zone, supplément
    * moitié-moitié, tarif des extras d'un devis, échéancier par défaut, prix des
@@ -214,7 +214,7 @@ const FEATURES = {
    * On ne relâche la borne QUE pour cette fonctionnalité-là : partout ailleurs
    * une chaîne de 500 ko est une anomalie, ici c'est le format normal d'une
    * image. `max` reste le vrai plafond du document. */
-  receipt:      { keys: ['look', 'show', 'msg', 'print', 'vat'],    max: 700000, maxStr: 500000 },
+  receipt:      { keys: ['look', 'show', 'msg', 'print', 'vat', 'validity'],    max: 700000, maxStr: 500000 },
   terminals:    { keys: ['list'],                                  max: 200000 },
   appointments: { keys: ['list'],                                  max: 400000 },
   practitioners:{ keys: ['list'],                                  max: 200000 },
@@ -888,7 +888,7 @@ export async function onRequestPost(context) {
   /* Le plan de salle s'écrit aussi depuis une caisse appairée et se lit en HTML
    * chez le propriétaire : ids et couleurs ramenés à ce qu'un attribut peut
    * porter sans danger (functions/api/_rules-floorplan-clean.js). */
-  if (feature === 'floorplan') cleanFloorplan(raw);
+  if (feature === 'floorplan') cleanStoredFloorplan(raw);
   const clean = bounded(feature === 'guestpage' ? cleanGuestDoc(raw)
     : feature === STOREFRONT_FEATURE ? cleanStorefront(raw, Date.now()) : raw, FEATURES[feature].maxStr);
   // Refus plutôt que troncature : voir la note de `bounded`. Le client garde sa

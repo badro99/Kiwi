@@ -271,7 +271,7 @@ export async function applyOnlinePrices(env, merchant, catalog) {
  * patron déverrouillé par un gérant, ou un opérateur Kiwi nommé. Jamais une
  * caisse appairée ni un employé. La lecture, elle, suit tenantFor (la caisse
  * en a besoin pour vendre). */
-/* Les tables de 0029 sont-elles là ? Avant que le patron n'applique la
+/* Les tables de 0030 sont-elles là ? Avant que le patron n'applique la
  * migration, une écriture répond « pending-migration » (503) au lieu d'une
  * erreur 500 : l'écran Tarifs le dit en clair. */
 export async function tablesReady(env) {

@@ -235,12 +235,14 @@
     var unit = String(l.unit ?? l.u ?? '').slice(0, 24);
     var kind = String(l.kind ?? l.kd ?? '').slice(0, 24);
     var recipe = String(l.recipeVersionId ?? l.recipe_version_id ?? l.r ?? '').slice(0, 80);
+    var supplier = String(l.supplierId ?? l.sp ?? '').trim().slice(0, 80);
     if (cat) o.cat = cat;
     if (itemId) o.itemId = itemId;
     if (variantId) o.variantId = variantId;
     if (unit) o.unit = unit;
     if (kind) o.kind = kind;
     if (recipe) o.recipeVersionId = recipe;
+    if (supplier) o.supplierId = supplier;
     var cost = +(l.unitCost ?? l.unit_cost ?? l.k);
     if (Number.isFinite(cost) && cost >= 0 && cost <= 10000000) o.unitCost = Math.round(cost * 100) / 100;
     var rawOptions = l.options ?? l.optionDeltas ?? l.option_deltas ?? l.o;

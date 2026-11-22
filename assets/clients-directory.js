@@ -30,7 +30,7 @@
       search: 'Rechercher un nom, téléphone ou email…', export: 'Exporter (CSV)', campaign: 'Campagne', program: 'Programme de fidélité', retention: 'Fidélisation', newClient: '+ Nouveau client',
       total: 'clients', withEmail: 'avec email', withPhone: 'avec téléphone', consented: 'contactables',
       seg: { all: 'Tous', owes: 'Doivent un solde', avoir: 'Avoir en cours', once: '1 seul achat', reg: 'Réguliers', vip: 'VIP', new: 'Nouveaux', win: 'Dormants' },
-      sortBy: 'Trier', sorts: { spend: 'Plus dépensé', recent: 'Passage récent', visits: 'Plus d’achats', owes: 'Plus gros solde dû', name: 'Nom A → Z' }, owesTag: 'doit', avoirTag: 'avoir',
+      sortBy: 'Trier', sorts: { spend: 'Plus dépensé', recent: 'Passage récent', visits: 'Plus d’achats', owes: 'Plus gros solde dû', name: 'Nom A → Z' }, owesTag: 'doit', avoirTag: 'avoir', owesRow: 'Reste à régler', avoirRow: 'Avoir en cours',
       th: { name: 'Client', phone: 'Téléphone', email: 'Email', city: 'Ville', visits: 'Visites', spend: 'Dépensé', points: 'Points', seg: 'Segment', last: 'Dernière visite' },
       tag: { reg: 'Régulier', vip: 'VIP', new: 'Nouveau', win: 'Dormant' }, none: '·', empty: 'Aucun client · créez la première fiche avec « Nouveau client ».',
       ago: function (d) { return d == null ? '·' : d === 0 ? "aujourd'hui" : 'il y a ' + d + ' j'; }, close: 'Fermer',
@@ -43,7 +43,7 @@
     en: { auditCancel: 'Cancel', auditProgress: 'Events loaded', auditLimit: 'History too large. Contact your manager for a complete export.', auditPartial: 'Partial export saved ({n} events). Export again to get the rest.', mergeUncertain: 'Merge result unconfirmed. Refresh the profiles before retrying.', merge: 'Merge', mergePick: 'Profile to merge into this one', mergeConfirm: 'Confirm merge', mergeExplain: 'Visits and spend will be added, counting each identified purchase once. Points and stamps will be combined, notes concatenated and tags united. This profile keeps its contact details unless empty. Credit instruments will move to this profile with their balances and expiry dates preserved. The old ID will keep working. This operation cannot be undone.', mergeError: 'Merge unavailable. Check your owner or manager access and retry.', mergeDone: 'Profiles merged', title: 'Customers', sub: 'The full book · contacts, loyalty and consent.',
       search: 'Search name, phone or email…', export: 'Export (CSV)', campaign: 'Campaign', program: 'Loyalty program', retention: 'Retention', newClient: '+ New customer', total: 'customers', withEmail: 'with email', withPhone: 'with phone', consented: 'contactable',
       seg: { all: 'All', owes: 'Owe a balance', avoir: 'Store credit', once: 'One purchase', reg: 'Regulars', vip: 'VIP', new: 'New', win: 'Dormant' },
-      sortBy: 'Sort', sorts: { spend: 'Top spend', recent: 'Most recent', visits: 'Most purchases', owes: 'Largest balance due', name: 'Name A → Z' }, owesTag: 'owes', avoirTag: 'credit',
+      sortBy: 'Sort', sorts: { spend: 'Top spend', recent: 'Most recent', visits: 'Most purchases', owes: 'Largest balance due', name: 'Name A → Z' }, owesTag: 'owes', avoirTag: 'credit', owesRow: 'Balance due', avoirRow: 'Store credit',
       th: { name: 'Customer', phone: 'Phone', email: 'Email', city: 'City', visits: 'Visits', spend: 'Spent', points: 'Points', seg: 'Segment', last: 'Last visit' },
       tag: { reg: 'Regular', vip: 'VIP', new: 'New', win: 'Dormant' }, none: '·', empty: 'No customers yet · create the first record with “New customer”.',
       ago: function (d) { return d == null ? '·' : d === 0 ? 'today' : d + 'd ago'; }, close: 'Close',
@@ -56,7 +56,7 @@
     ar: { auditCancel: 'إلغاء', auditProgress: 'الأحداث المحملة', auditLimit: 'السجل كبير جداً. اتصل بالمسؤول للحصول على تصدير كامل.', auditPartial: 'تم حفظ تصدير جزئي ({n} حدثاً). أعد التصدير للحصول على الباقي.', mergeUncertain: 'نتيجة الدمج غير مؤكدة. حدّث الملفات قبل إعادة المحاولة.', merge: 'دمج', mergePick: 'الملف المراد دمجه في هذا الملف', mergeConfirm: 'تأكيد الدمج', mergeExplain: 'ستجمع الزيارات والمبالغ مع احتساب كل عملية شراء محددة مرة واحدة. ستجمع النقاط والأختام والملاحظات والوسوم. يحتفظ هذا الملف ببيانات الاتصال إلا إذا كانت فارغة. ستنقل قسائم الرصيد إلى هذا الملف مع الاحتفاظ بأرصدتها وتواريخ صلاحيتها. سيستمر المعرف القديم في العمل. لا يمكن التراجع عن هذه العملية.', mergeError: 'تعذر الدمج. تحقق من صلاحيات المالك أو المدير وأعد المحاولة.', mergeDone: 'تم دمج الملفين', title: 'العملاء', sub: 'الدفتر الكامل · جهات الاتصال والوفاء والموافقة.',
       search: 'ابحث بالاسم أو الهاتف أو البريد…', export: 'تصدير (CSV)', campaign: 'حملة', program: 'برنامج الوفاء', retention: 'الاحتفاظ', newClient: '+ عميل جديد', total: 'عميل', withEmail: 'ببريد', withPhone: 'بهاتف', consented: 'قابلون للتواصل',
       seg: { all: 'الكل', owes: 'عليهم باقي', avoir: 'لديهم رصيد', once: 'شراء واحد', reg: 'دائمون', vip: 'كبار', new: 'جدد', win: 'خاملون' },
-      sortBy: 'ترتيب', sorts: { spend: 'الأكثر إنفاقًا', recent: 'آخر زيارة', visits: 'الأكثر شراءً', owes: 'أكبر باقٍ مستحق', name: 'الاسم أ → ي' }, owesTag: 'عليه', avoirTag: 'رصيد',
+      sortBy: 'ترتيب', sorts: { spend: 'الأكثر إنفاقًا', recent: 'آخر زيارة', visits: 'الأكثر شراءً', owes: 'أكبر باقٍ مستحق', name: 'الاسم أ → ي' }, owesTag: 'عليه', avoirTag: 'رصيد', owesRow: 'باقٍ مستحق', avoirRow: 'رصيد متاح',
       th: { name: 'العميل', phone: 'الهاتف', email: 'البريد', city: 'المدينة', visits: 'الزيارات', spend: 'الإنفاق', points: 'النقاط', seg: 'الفئة', last: 'آخر زيارة' },
       tag: { reg: 'دائم', vip: 'كبير', new: 'جديد', win: 'خامل' }, none: '·', empty: 'لا يوجد عملاء بعد · أنشئ أول بطاقة بزر «عميل جديد».',
       ago: function (d) { return d == null ? '·' : d === 0 ? 'اليوم' : 'منذ ' + d + ' ي'; }, close: 'إغلاق',
@@ -477,7 +477,7 @@
       // (calling it would flash the home page in between).
       if (e.target.closest('#cd-campaign')) { if (campaignsEnabled() && window.Kiwi.handlers && Kiwi.handlers['growth-crm']) Kiwi.handlers['growth-crm'](); return; }
       var tr = e.target.closest('[data-cd-id]');
-      if (tr) { openDetail(all.filter(function (c) { return c.id === tr.getAttribute('data-cd-id'); })[0], T); }
+      if (tr) { openDetail(all.filter(function (c) { return c.id === tr.getAttribute('data-cd-id'); })[0], T, moneyOf); }
     });
 
     // Ticket #0004 · dashboard-native creation: reception has no till, so the
@@ -520,7 +520,7 @@
         var consent = !!m.el.querySelector('#cdn-consent').checked;
         if (phone) {
           var dupe = KiwiClients.findByPhone(phone);
-          if (dupe) { m.close(); openDetail(all.filter(function (c) { return c.id === dupe.id; })[0] || dupe, T); Kiwi.toast && Kiwi.toast(F.alreadyExists, { type: 'info' }); return; }
+          if (dupe) { m.close(); openDetail(all.filter(function (c) { return c.id === dupe.id; })[0] || dupe, T, moneyOf); Kiwi.toast && Kiwi.toast(F.alreadyExists, { type: 'info' }); return; }
         }
         var rec = KiwiClients.upsert({
           id: '', name: name, phone: phone, email: val('#cdn-email'), city: val('#cdn-city'),
@@ -616,10 +616,11 @@
     finally { modal.close(); }
   }
 
-  function openDetail(c, T) {
+  function openDetail(c, T, moneyOf) {
     if (!c || !window.Kiwi.modal) return;
     function row(k, v) { return v ? '<div class="cd-drow"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>' : ''; }
     var consent = [c.consent ? T.consentWa : '', c.consentEmail ? T.consentEmail : ''].filter(Boolean).join(' · ') || T.none;
+    var owes = moneyOf ? moneyOf(c, 'owes') : 0, avoir = moneyOf ? moneyOf(c, 'avoir') : 0;
     var hotel = hospitalityMode();
     var H = HOTEL[lang()] || HOTEL.fr;
     var h = c.hospitality || {};
@@ -631,10 +632,10 @@
     var payment = function (value) {
       var key = String(value || '').toLowerCase();
       var labels = lang() === 'ar'
-        ? { cash: 'نقداً', 'espèces': 'نقداً', card: 'بطاقة', carte: 'بطاقة', wallet: 'محفظة', delivery: 'عند التسليم', livraison: 'عند التسليم' }
+        ? { cash: 'نقداً', 'espèces': 'نقداً', card: 'بطاقة', carte: 'بطاقة', wallet: 'محفظة', delivery: 'عند التسليم', livraison: 'عند التسليم', compte: 'على الحساب' }
         : lang() === 'en'
-          ? { cash: 'Cash', 'espèces': 'Cash', card: 'Card', carte: 'Card', wallet: 'Wallet', delivery: 'Pay on delivery', livraison: 'Pay on delivery' }
-          : { cash: 'Espèces', 'espèces': 'Espèces', card: 'Carte', carte: 'Carte', wallet: 'Portefeuille', delivery: 'Livraison', livraison: 'Livraison' };
+          ? { cash: 'Cash', 'espèces': 'Cash', card: 'Card', carte: 'Card', wallet: 'Wallet', delivery: 'Pay on delivery', livraison: 'Pay on delivery', compte: 'On account' }
+          : { cash: 'Espèces', 'espèces': 'Espèces', card: 'Carte', carte: 'Carte', wallet: 'Portefeuille', delivery: 'Livraison', livraison: 'Livraison', compte: 'Compte client' };
       return labels[key] || value || T.unknownPayment;
     };
     var purchaseHistory = (Array.isArray(c.history) ? c.history : []).slice().sort(function (a, b) {
@@ -684,6 +685,11 @@
       hospitalityRows +
       '<div class="cd-drow"><span class="k">' + T.th.visits + ' · ' + T.th.spend + '</span><span class="v">' + (c.visits || 0) + ' · ' + fmt(c.spend) + ' MAD</span></div>' +
       '<div class="cd-drow"><span class="k">' + T.th.points + ' · ' + T.th.seg + '</span><span class="v">' + fmt(c.points) + ' · ' + SEG_LBL(T, c.seg) + '</span></div>' +
+      /* Le compte client et l'avoir, lus sur le serveur comme les puces de la
+         liste : une vente « Compte client » s'inscrit à 0 MAD dans l'historique
+         (rien n'est encaissé), la fiche doit donc dire ce qui reste dû. */
+      (owes > 0 ? row(T.owesRow, fmt(owes / 100) + ' ' + T.currency) : '') +
+      (avoir > 0 ? row(T.avoirRow, fmt(avoir / 100) + ' ' + T.currency) : '') +
       (refused ? '<div class="cd-drow" data-i18n="clients.rewardRefused">' + esc(refusalText) + '</div>' : '') +
       row(T.notes, c.notes) +
       '<div class="cd-drow"><span class="k">' + T.consent + '</span><span class="v">' + esc(consent) + '</span></div>' +

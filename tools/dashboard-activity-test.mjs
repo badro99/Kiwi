@@ -115,6 +115,25 @@ check('refund audit links the counter-entry to the original receipt with exact c
   const r = events.find(e => e.kind === 'refund');
   assert.equal(r.refundId, 'refund1'); assert.equal(r.originalRef, 'Ticket 4'); assert.equal(r.amountCents, 1225);
 });
+/* Les articles annulés après envoi en cuisine (kitchen_voids) entrent dans le journal,
+ * avec la personne, la table et la valeur ; une annulation refusée par la cuisine et
+ * celle d'un autre commerce restent dehors (Browse, 21 nov. 2026). */
+{
+  const kv = db.prepare(`INSERT INTO kitchen_voids(id,merchant,order_id,table_no,item_id,item_name,qty,price,reason,is_waste,actor,status,created_ts) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+  kv.run('voi-kv-1', merchant, 'order19', '7', 'burger', 'Le Gourmand', 1, 89, 'item_cancelled', 0, 'Sara', 'approved', now + 1000);
+  kv.run('voi-kv-2', merchant, 'order19', '7', 'tea', 'Moroccan tea', 2, 15, 'client_change', 0, 'Houssam', 'pending', now + 1001);
+  kv.run('voi-kv-3', merchant, 'order19', '7', 'tea', 'Refusé', 1, 15, 'client_change', 0, 'Houssam', 'rejected', now + 1002);
+  kv.run('voi-kv-4', 'another-merchant', 'x', '1', 'x', 'Ailleurs', 1, 999, 'x', 0, 'X', 'approved', now + 1003);
+  const got = (await (await get()).json()).events.filter(e => e.kind === 'item-void');
+  check('item cancellations after kitchen send are listed with person, table and value', () => {
+    assert.deepEqual(got.map(e => e.eventId), ['void:voi-kv-2', 'void:voi-kv-1']);
+    const g = got.find(e => e.eventId === 'void:voi-kv-1');
+    assert.equal(g.actor, 'Sara'); assert.equal(g.tableNo, '7'); assert.equal(g.amountCents, 8900);
+    assert.equal(g.lines[0].name, 'Le Gourmand'); assert.equal(g.lines[0].qty, 1);
+    assert.equal(got[0].note, 'pending'); assert.equal(got[0].amountCents, 3000);
+  });
+  db.prepare("DELETE FROM kitchen_voids WHERE id LIKE 'voi-kv-%'").run();
+}
 db.prepare(`INSERT INTO orders(id,merchant,number,mode,total,lines,status,created_ts,updated_ts) VALUES ('ord-cancel-fixture',?,20,'takeout',15,'[]','pending',?,?)`).run(merchant, now, now);
 const reject = proof => onRequestPost({ env, request: new Request('https://kiwi.test/api/order/queue', {
   method: 'POST', headers: { Cookie: till, 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant, id: 'ord-cancel-fixture', status: 'rejected', actorProof: proof, actor: 'Spoof' }) }) });

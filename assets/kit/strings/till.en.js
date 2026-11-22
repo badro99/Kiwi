@@ -238,7 +238,7 @@
   "count.same_as_last": "Last float · {amount}",
   "count.same_as_last_a11y": "Last float · {amount}, use the same opening float as last time",
   "count.open": "Open the till",
-  "count.reason": "Why is the count different?",
+  "count.reason": "Reason for the difference, if you know it",
   "count.reason.counting": "Counting error",
   "count.reason.change": "Change given wrong",
   "count.reason.unrecorded": "Cash movement not recorded",

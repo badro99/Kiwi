@@ -163,7 +163,17 @@ CREATE INDEX IF NOT EXISTS delivery_collections_sale ON delivery_collections (me
 CREATE TABLE IF NOT EXISTS retail_balances (
   merchant TEXT NOT NULL, id TEXT NOT NULL, customer_id TEXT NOT NULL,
   ticket_ref TEXT NOT NULL, total_cents INTEGER NOT NULL CHECK(total_cents > 0),
-  created_ts INTEGER NOT NULL, PRIMARY KEY (merchant, id)
+  created_ts INTEGER NOT NULL,
+  -- 0028 · L'avance (acompte) : 'avance' quand la cliente a versé une partie
+  -- pour qu'on lui garde la pièce, 'credit' quand tout le ticket part sur son
+  -- compte. Vide = note ouverte avant 0028, jamais expirée d'office.
+  kind TEXT NOT NULL DEFAULT '',
+  expires_ts INTEGER,            -- fin de l'avance (réglage « Validité d'une avance ») ; NULL = sans limite
+  lines TEXT,                    -- les pièces gardées, JSON [{pid,size,color,qty,name,barcode}]
+  closed_ts INTEGER,             -- avance expirée : pièces scannées, remises en stock
+  close_reason TEXT,             -- 'avance-expired'
+  close_credit_code TEXT,        -- l'avoir né de l'argent versé
+  PRIMARY KEY (merchant, id)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS retail_balances_ticket ON retail_balances(merchant, ticket_ref);
 CREATE INDEX IF NOT EXISTS retail_balances_customer ON retail_balances(merchant, customer_id, created_ts DESC);

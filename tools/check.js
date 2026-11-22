@@ -731,7 +731,7 @@ for (const test of [
   'device-timezone-test.mjs',
   /* Une caisse appairée s'ouvre sur sa propre preuve, sans le mot de passe du
      patron : page et API de la caisse seulement, jamais le tableau de bord. */
-  'till-gate-test.mjs', 'sister-stock-test.mjs',
+  'till-gate-test.mjs', 'sister-stock-test.mjs', 'bestsellers-test.mjs', 'boutique-card-check-test.mjs',
   'staff-skin-test.mjs', 'staff-skin-operator-test.mjs',
   'skin-cloak-test.mjs',
   /* La peau 2027 de la boutique est de la PEINTURE : aucune branche dans le JS
@@ -1798,7 +1798,7 @@ section('Whole-project regressions');
     'boutique-operator-entry-browser-test.mjs', 'caisse-operator-entry-browser-test.mjs', 'caisse-operator-reload-browser-test.mjs',
     'till-inventory-access-test.mjs',
     /* Un carton réparti sur ses tailles en un geste : comme les ventes de la boutique, égal, saisie rapide « M3 L5 XL2 », le reste sur la dernière taille (propriétaire, 29 oct.). */
-    'boutique-size-split-test.mjs',
+    'boutique-size-split-test.mjs', 'boutique-exact-colors-test.mjs',
     'boutique-size-split-browser-test.mjs',
     /* Après une réception, les étiquettes ne sortent que pour les nouvelles pièces, même fiche rouverte (Santos, 31 oct.). */
     'boutique-label-receipt-test.mjs',
@@ -2144,7 +2144,7 @@ section('Whole-project regressions');
     'retail-acompte-browser-test.mjs',
     'z-refund-total-coherence-test.mjs',
     'caisse-boot-restore-guard-test.mjs',
-    'close-register-durability-test.mjs',
+    'close-register-durability-test.mjs', 'close-followup-test.mjs', 'close-followup-browser-test.mjs',
     'kitchen-ticket-wrap-test.mjs',
     'escpos-arabic-browser-test.mjs',
     'escpos-unsupported-test.mjs',
@@ -2249,7 +2249,7 @@ section('Whole-project regressions');
     'menu-promos-test.mjs',
     'menu-promos-server-test.mjs',
     'menu-promos-browser-test.mjs',
-    'menu-promos-properties-test.mjs', 'formula-extra-drink-browser-test.mjs', 'serveur-toast-tap-browser-test.mjs', 'serveur-tap-under-poll-browser-test.mjs', 'serveur-stale-visit-payment-test.mjs', 'serveur-sent-line-edit-test.mjs', 'serveur-install-button-browser-test.mjs', 'serveur-hung-request-browser-test.mjs', 'serveur-notice-language-browser-test.mjs', 'serveur-move-pending-browser-test.mjs', 'serveur-reopened-payment-browser-test.mjs', 'serveur-merge-pending-browser-test.mjs', 'serveur-accepted-edit-retry-browser-test.mjs', 'waiter-orders-off-inbox-test.mjs', 'empty-visit-release-test.mjs', 'empty-visit-till-browser-test.mjs', 'outbox-stale-lock-test.mjs', 'till-verify-hiccup-test.mjs', 'stuck-guard-test.mjs', 'vision-size-run-test.mjs', 'agent-size-run-test.mjs', 'agent-size-run-browser-test.mjs', 'agent-doc-error-browser-test.mjs', 'ai-retired-model-test.mjs',
+    'menu-promos-properties-test.mjs', 'formula-extra-drink-browser-test.mjs', 'waiter-orders-off-inbox-test.mjs', 'empty-visit-release-test.mjs', 'empty-visit-till-browser-test.mjs', 'outbox-stale-lock-test.mjs', 'till-verify-hiccup-test.mjs', 'stuck-guard-test.mjs', 'vision-size-run-test.mjs', 'agent-size-run-test.mjs', 'agent-size-run-browser-test.mjs', 'agent-doc-error-browser-test.mjs', 'ai-retired-model-test.mjs', 'inventory-scan-browser-test.mjs', 'calm-rerender-browser-test.mjs', 'serveur-toast-tap-browser-test.mjs', 'serveur-tap-under-poll-browser-test.mjs', 'serveur-stale-visit-payment-test.mjs', 'serveur-sent-line-edit-test.mjs', 'serveur-install-button-browser-test.mjs', 'serveur-hung-request-browser-test.mjs', 'serveur-notice-language-browser-test.mjs', 'serveur-move-pending-browser-test.mjs', 'serveur-reopened-payment-browser-test.mjs', 'serveur-merge-pending-browser-test.mjs', 'serveur-accepted-edit-retry-browser-test.mjs',
     'caisse-pay-subtitle-test.mjs',
     /* Le fil d'Ariane du tableau de bord : une seule peinture (Kiwi.breadcrumb),
        « Home » / « الرئيسية » sur chaque page, et un changement de langue page
@@ -2267,6 +2267,7 @@ section('Whole-project regressions');
     'pin-lockout-truth-test.mjs',
     'boutique-product-form-test.mjs',
     'stock-movement-modal-test.mjs',
+    'stock-movement-neutral-colour-test.mjs',
     'stock-item-form-test.mjs',
     'boutique-product-sheet-test.mjs',
     'boutique-inventory-i18n-test.mjs',
@@ -2286,7 +2287,7 @@ section('Whole-project regressions');
     'lane-c-labels-test.mjs',
     'onboarding-data-test.mjs',
     'onboarding-r21-test.mjs',
-    'onboarding-split-test.mjs',
+    'onboarding-split-test.mjs', 'app-signin-exit-browser-test.mjs',
     'onboarding-session-test.mjs',
     'onboarding-alignment-properties-test.mjs',
     'onboarding-sequence-properties-test.mjs',
@@ -2369,7 +2370,7 @@ section('Whole-project regressions');
     'caisse-frozen-cost-test.mjs',
     'lock-caisse-link-test.mjs',
     'lock-caisse-handoff-test.mjs',
-    'till-role-parity-test.mjs',
+    'till-role-parity-test.mjs', 'commis-floor-test.mjs',
     'operator-roster-route-test.mjs',
     'ozon-express-test.mjs', 'credit-schedule-test.mjs', 'credit-till-test.mjs', 'credit-till-classic-browser-test.mjs', 'delivery-fee-city-test.mjs', 'expenses-engine-test.mjs', 'expenses-api-test.mjs', 'supplier-ledger-test.mjs', 'cheques-test.mjs', 'cheques-phone-browser-test.mjs', 'expenses-switch-test.mjs', 'expenses-browser-test.mjs', 'ozon-exchange-test.mjs', 'ozon-exchange-browser-test.mjs', 'label-picker-browser-test.mjs',
     'lock-greeting-truth-test.mjs',
@@ -2424,7 +2425,7 @@ section('Whole-project regressions');
     'err-reporter-silence-test.mjs',
     'depenses-demo-gate-test.mjs',
     'invoice-receipt-test.mjs', 'r16-invoice-export-test.mjs', 'cx17-ui-test.mjs', 'r16-pairing-notices-test.mjs', 'r16-catalog-quantity-paths-test.mjs', 'r16-settings-modifiers-browser-test.mjs',
-    'receipt-logo-print-test.mjs', 'receipt-ref-counter-test.mjs',
+    'receipt-logo-print-test.mjs', 'receipt-ref-counter-test.mjs', 'receipt-line-shade-test.mjs', 'search-pill-test.mjs',
     'receipt-voucher-print-test.mjs',
     'receipt-pay-lines-test.mjs',
     'formula-receipt-pricing-test.mjs',

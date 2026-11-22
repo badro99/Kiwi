@@ -53,9 +53,9 @@ const AUTH_SECRET = 'price-lists-secret-0123456789abcdef';
 const now = Date.now();
 const db = new DatabaseSync(':memory:');
 db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
-/* La production n'a pas encore 0028 : une base faite des migrations jusqu'à 0027. */
+/* La production n'a pas encore 0030 : une base faite des migrations jusqu'à 0028 (son minimum). */
 const db27 = new DatabaseSync(':memory:');
-for (const f of listMigrations().filter((n) => Number(n.slice(0, 4)) <= 27)) db27.exec(fs.readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8'));
+for (const f of listMigrations().filter((n) => Number(n.slice(0, 4)) <= 28)) db27.exec(fs.readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8'));
 const seed = (d) => {
   const account = (id, business) => d.prepare(`INSERT INTO accounts (id,email,business,salt,hash,created_ts,status) VALUES (?,?,?,'s','h',?,'active')`).run(id, id + '@x.test', business, now);
   const shop = (merchant, acc, features = {}) => d.prepare(

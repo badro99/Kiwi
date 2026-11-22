@@ -706,11 +706,11 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
 #op-config-panel input, #operators input[type="password"], #mail-editor input[type="email"] { unicode-bidi:plaintext; }
 </style>
 <link rel="stylesheet" href="assets/admin-workspace.css?v=5" />
-<script src="assets/kit/haptics.js?v=7"></script>
+<script src="assets/kit/haptics.js?v=9"></script>
 <script src="assets/admin-api.js?v=10"></script>
 <script src="assets/admin-policy.js?v=5"></script>
-<script src="assets/admin-workspace-copy.js?v=4" defer></script>
-<script src="assets/admin-workspace.js?v=45" defer></script>
+<script src="assets/admin-workspace-copy.js?v=5" defer></script>
+<script src="assets/admin-workspace.js?v=46" defer></script>
   <link rel="stylesheet" href="/assets/origin-move.css?v=1&r=3">
 </head>
 <body class="operator-workspace" data-workspace="today">
@@ -1052,8 +1052,8 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
-  <script src="assets/admin-legacy.js?v=14"></script>
-  <script src="assets/staff-roles.js?v=3"></script>
+  <script src="assets/admin-legacy.js?v=15"></script>
+  <script src="assets/staff-roles.js?v=4"></script>
   <!-- The brand's one selection motion, for the établissement switcher. Self-
        contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
        does not load the pills still switch, just without the travelling lens. -->
@@ -1301,10 +1301,17 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
         hint:'Éteint par défaut. Ajoute l’onglet « Coût simple » dans Analyse du menu : une calculatrice de coût par plat (prix d’achat, rendement, emballages, portions), réservée au propriétaire. Ne touche pas au stock. Éteint après usage : les fiches restent lisibles, rien n’est effacé.' },
     ],
     boutique: [
+      { key:'payVirement', label:'Paiement · Virement / Versement', group:'pay', hint:'Espèces et carte sont toujours proposées et ne se coupent pas. Ce mode s’ajoute à l’encaissement de la caisse. Allumé pour les magasins existants, éteint pour un nouveau magasin. Coupé, le bouton disparaît de l’encaissement au prochain chargement ; les ventes passées ne changent pas.' },
+      { key:'payCheque', label:'Paiement · Chèque', group:'pay', hint:'Allumé pour les magasins existants, éteint pour un nouveau magasin. Coupé, « Chèque » disparaît de l’encaissement et de l’avance.' },
+      { key:'payLivraison', label:'Paiement · Livraison (à recevoir du transporteur)', group:'pay', hint:'Allumé pour les magasins existants, éteint pour un nouveau magasin. Coupé, la vente à livrer disparaît de l’encaissement ; les livraisons déjà enregistrées restent dans Livraisons.' },
+      { key:'retailAvance', label:'Avance (la cliente verse une partie, la pièce est gardée)', group:'pay',
+        hint:'Allumé par défaut. À l’encaissement, la caissière peut prendre une partie du prix et garder la pièce au nom de la cliente jusqu’à une date (Reçu · Validité des bons, au tableau de bord). Passée cette date, l’Inventaire de la caisse propose « Avances expirées » : chaque pièce est scannée pour revenir en stock, et l’argent versé devient un avoir sur la fiche de la cliente. Coupé, le bouton d’avance disparaît de la caisse ; les avances déjà ouvertes restent dans Acomptes.' },
+      { key:'retailCredit', label:'Crédit client (tout le ticket sur le compte)', off:true, onFor:['maison'], group:'pay',
+        hint:'Éteint par défaut en boutique, allumé par défaut en maison. À l’encaissement, « Compte client » met le ticket entier sur la fiche de la cliente, sans rien encaisser ; elle règle plus tard depuis Acomptes, et l’argent compte le jour où il est reçu. Avance et crédit peuvent être allumés ensemble.' },
       { key:'skin2027', label:'Caisse · design 2027', off:true,
         hint:'Éteint par défaut. La caisse boutique ou maison prend le design 2027 sur chaque appareil appairé à ce magasin : écran de code, fond d’ouverture, rail, ticket et recherche. Rien ne change dans les ventes ni le stock. Se coupe ici à tout moment, appliqué au prochain chargement.' },
       { key:'sellerCommissions', label:'Commissions vendeurs', off:true,
-        hint:'Éteint par défaut. Le propriétaire saisit un taux de commission sur la fiche Équipe de chaque vendeur ; la clôture de la caisse montre les ventes et la commission de chacun (caisse en design 2027 seulement), et Paie & planning ajoute un onglet « Commissions » (tableau de bord en design 2027 seulement). Chaque vente est attribuée à qui a saisi son code sur la caisse. Éteint après usage : rien n’est effacé.' },
+        hint:'Éteint par défaut. Le propriétaire saisit un taux de commission sur la fiche Équipe de chaque vendeur ; la clôture de la caisse montre les ventes et la commission de chacun (caisse en design 2027 seulement), et Équipe ajoute un onglet « Commissions », avec le classement « Meilleurs vendeurs » sur l’accueil (tableau de bord en design 2027 seulement). Chaque vente est attribuée à qui a saisi son code sur la caisse. Éteint après usage : rien n’est effacé.' },
       { key:'sellerPicker', label:'Vendeur choisi à l’encaissement', off:true,
         hint:'Éteint par défaut, et sans effet tant que « Commissions vendeurs » est éteint. Pour un magasin où une seule caissière encaisse pour plusieurs vendeurs : à l’encaissement, elle touche le nom du vendeur (les fiches Équipe qui ont un taux de commission). La vente lui est attribuée, et une vente sans vendeur choisi reste « sans vendeur », jamais créditée à la caissière. Caisse en design 2027 seulement.' },
       { key:'depotvente', label:'Catégories A / B', off:true,
@@ -1360,8 +1367,8 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
         items:(VERTICAL_MODULES[base] || VERTICAL_MODULES.restaurant) },
       { title:'Caisse · Modes de service', items:CAISSE_MODES },
       { title:'Caisse · Actions rapides & Tiroir', items:CAISSE_ACTIONS },
-      // Bande vide ⇒ non affichée (renderFeatures saute les groupes sans item).
-      { title:'Options à la demande', items:(OPTIN_MODULES[base] || []) },
+      { title:'Caisse · Moyens de paiement (espèces et carte toujours)', items:(OPTIN_MODULES[base] || []).filter(function(m){ return m.group === 'pay'; }) },   // bande vide ⇒ non affichée (renderFeatures saute les groupes sans item)
+      { title:'Options à la demande', items:(OPTIN_MODULES[base] || []).filter(function(m){ return m.group !== 'pay'; }) },
       { title:'Options payantes (Add-ons)', items:ADDON_MODULES }
     ];
   }
@@ -3012,10 +3019,13 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   document.getElementById('biz-trial-start').addEventListener('change',refreshTrialEnd);
   document.getElementById('biz-trial-days').addEventListener('change',refreshTrialEnd);
 
-  function featState(feats, mod){
+  function featState(feats, mod, type){
     var explicit = Object.prototype.hasOwnProperty.call(feats, mod.key);
     // Module standard : clé absente ⇒ ALLUMÉ. Option payante (mod.off) : l'inverse.
-    var on = mod.off ? feats[mod.key] === true : feats[mod.key] !== false;
+    // `onFor` : métiers où une option éteinte par défaut est déjà allumée
+    // (le crédit client de la Maison, assets/retail-avance.js › retailModes).
+    var offByDefault = mod.off && !((mod.onFor || []).indexOf(type) >= 0);
+    var on = offByDefault ? feats[mod.key] === true : feats[mod.key] !== false;
     return { on:on, explicit:explicit };
   }
 
@@ -3034,7 +3044,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
       if (!grp.items.length) return;
       wrap.appendChild(h('p', { class:'sub featgrp' }, grp.title));
       grp.items.forEach(function(mod){
-        var st = featState(feats, mod);
+        var st = featState(feats, mod, selected.type);
         var pill = h('span', { class:'fst' + (st.on ? ' on' : '') }, st.on ? 'Activé' : 'Désactivé');
         var sw = h('button', { class:'sw', role:'switch', disabled:SENIOR === false,
           'aria-checked': st.on ? 'true':'false', 'aria-label':mod.label });

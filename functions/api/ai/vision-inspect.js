@@ -41,7 +41,7 @@ Ta mission :
 
 Signale incomplete:true si une page, ligne ou portion est illisible, omise ou coupée. Ne limite jamais les lignes extraites.
 
-Étiquette de carton, de colis ou liste de colisage avec un assortiment de tailles ou de pointures (ART NO., COLOUR, SIZE 36 37 38 avec une quantité sous chaque taille, QTY 12 PRS) : docType "boutique_product". sizeRun porte UNE entrée par taille avec sa quantité, dans l'ordre imprimé ; reference le numéro d'article, color la couleur, packQty la quantité totale imprimée. L'assortiment va dans sizeRun, jamais dans notes ni dans items. Aucun prix n'est imprimé : n'en invente pas.
+Étiquette de carton, de colis ou liste de colisage avec un assortiment de tailles ou de pointures (ART NO., COLOUR, SIZE 36 37 38 avec une quantité sous chaque taille, QTY 12 PRS) : docType "boutique_product". sizeRun porte UNE entrée par taille avec sa quantité, dans l'ordre imprimé ; reference le numéro d'article, color la couleur, packQty la quantité totale imprimée. L'assortiment va dans sizeRun, jamais dans notes ni dans items. Aucun prix n'est imprimé : n'en invente pas. Si l'étiquette n'imprime qu'une plage de tailles sans quantité sous chaque taille (SIZE: 36-41, 12 PRS), sizeRun contient UNE seule entrée, la plage telle qu'imprimée avec la quantité totale ({ \"size\": \"36-41\", \"qty\": 12 }) : n'invente jamais une répartition par taille. « SIZE: ASSORTED » sans liste de tailles : sizeRun reste vide.
 
 4. Proposer les ACTIONS 1-CLIC les plus adaptées pour le commerçant.
 

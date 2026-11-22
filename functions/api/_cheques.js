@@ -1,5 +1,5 @@
 /* Portefeuille de chèques et d'effets (lettres de change normalisées, LCN).
- * Tables : cheques, cheque_links, cheque_history (schema.sql, migration 0032).
+ * Tables : cheques, cheque_links, cheque_history (schema.sql, migration 0033).
  * Routes : functions/api/cheques/*. Écran : assets/pages-pro/cheques.js.
  * Caisse : assets/pos-boutique/cheque-sheet.js.
  *

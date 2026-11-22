@@ -592,5 +592,12 @@
     ["zellige", "a single square Moroccan zellige tile with a green and white geometric pattern"],
     ["boule_deco", "a set of three decorative woven rattan balls"],
     ["boite_epices", "a round wooden spice box with small compartments of colourful spices"]
+  ],
+  "e1": [
+    ["chale_dentelle", "a stretch lycra shawl with a wide scalloped lace border, draped as a hijab on an invisible head, dusty rose"],
+    ["chale_jawhara", "a lycra shawl scattered with small sparkling rhinestones, draped as a hijab on an invisible head, dusty rose"],
+    ["chale_degrade", "a lycra shawl in an ombre gradient from pale pink to deep plum, draped as a hijab on an invisible head"],
+    ["chale_organza", "a sheer champagne organza shawl with delicate floral embroidery, draped as a hijab on an invisible head"],
+    ["chale_lame", "a shimmering silver-champagne lame shawl with a border of teardrop rhinestone appliques, draped as a hijab on an invisible head"]
   ]
 }

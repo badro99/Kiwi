@@ -673,11 +673,13 @@ function postSale(entry) {
           var u = String(l.unit || '').slice(0, 24);
           var kd = String(l.kind || '').slice(0, 24);
           var r = String(l.recipeVersionId || l.recipe_version_id || '').slice(0, 80);
+          var sp = String(l.supplierId || l.sp || '').trim().slice(0, 80);
           if (i) o.i = i;
           if (v) o.v = v;
           if (u) o.u = u;
           if (kd) o.kd = kd;
           if (r) o.r = r;
+          if (sp) o.sp = sp;
           if (Array.isArray(l.formulaChoices)) {
             var formulaChoices = l.formulaChoices.slice(0, 30).map(function (choice) {
               return {

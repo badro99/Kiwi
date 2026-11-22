@@ -6,12 +6,13 @@
  *
  * Seulement quand le commerce a l'option « Commissions vendeurs »
  * (features.sellerCommissions, kiwi-admin) ET que la caisse tourne en design
- * 2027 (data-skin-2027="till"). Sinon rien n'est dessiné ni demandé. */
+ * 2027. Le drapeau se lit dans pos-boutique.js (bqKitSkin, la seule branche
+ * 2027 permise à la boutique) et arrive ici en `skin`. Sinon rien n'est
+ * dessiné ni demandé. */
 
-export function sellerDayOn(doc = globalThis.document, cfg = globalThis.window?.KiwiConfig) {
+export function sellerDayOn(skin, cfg = globalThis.window?.KiwiConfig) {
   try {
-    return cfg?.features?.sellerCommissions === true
-      && doc?.documentElement?.getAttribute('data-skin-2027') === 'till';
+    return skin === true && cfg?.features?.sellerCommissions === true;
   } catch (_) { return false; }
 }
 
@@ -30,8 +31,8 @@ export function sellerDayRows(data, fmtMAD) {
 }
 
 /* host : l'élément vide posé dans la carte de clôture. */
-export function mountSellerDay(host, { slug, day, esc, fmtMAD, fetchImpl } = {}) {
-  if (!host || !sellerDayOn()) return Promise.resolve(false);
+export function mountSellerDay(host, { slug, day, esc, fmtMAD, fetchImpl, skin } = {}) {
+  if (!host || !sellerDayOn(skin)) return Promise.resolve(false);
   const merchant = String((typeof slug === 'function' ? slug() : slug) || '');
   if (!merchant || !/^\d{4}-\d{2}-\d{2}$/.test(String(day || ''))) return Promise.resolve(false);
   const box = (inner) => `<div class="clo-drawer-box" data-bq-sellers><div class="clo-drawer-title">${esc(tr('Ventes par vendeur'))}</div>${inner}</div>`;

@@ -34,12 +34,12 @@ const stock = (page) => page.evaluate(() => {
 });
 try {
   await h.S.run('a carton label fills the size grid of a stock reception · fr · phone', async (t) => {
-    // coverage: surface=dashboard locale=fr viewport=phone
     const { ctx, page } = await demoPage(h, 'fr', 'phone', {
       kiwiCustomVenues: JSON.stringify([venue]), kiwiVenue: venue.id, kiwiOnboarded: '1',
     }, { 'POST /api/ai/vision-inspect': () => ({ status: 200, body: { ok: true, data: READING } }) });
     t.defer(() => ctx.close()); t.watch(page);
     t.step('open the demo boutique dashboard and its assistant');
+    // coverage: surface=dashboard locale=fr viewport=phone
     await page.goto(h.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
     await sleep(1500);
     const explore = await page.evaluateHandle(() => [...document.querySelectorAll('button,a')]
@@ -105,5 +105,94 @@ try {
       sizes: { 36: 2, 37: 4, 38: 6, 39: 6, 40: 4, 41: 2 } }, 'the size grid is in stock');
     await page.waitForSelector('.kiwi-toast', { timeout: 5000 });
     assert.match(await page.$eval('.kiwi-toast', (el) => el.textContent), /24 pièces reçues/, 'the toast confirms what was received');
+  });
+  /* Owner, 22 Nov 2026: the same label read WITHOUT its size run (the model put
+     the sizes in its summary) showed two invented buttons that both answered
+     « This action is not available here ». The card keeps the stock reception,
+     with the sizes to type. */
+  await h.S.run('a label read without its sizes still receives stock, sizes typed · fr · phone', async (t) => {
+    const BARE = { ...READING, summary: 'Étiquette 1986-10 KHAKI, 12 paires de 36 à 41.',
+      entities: { ...READING.entities, sizeRun: [] },
+      suggestedActions: [{ id: 'a1', type: 'product-add', label: 'Add this assortment to stock', primary: true },
+        { id: 'a2', type: 'stock-receive', label: 'Record as stock reception' }] };
+    const { ctx, page } = await demoPage(h, 'fr', 'phone', {
+      kiwiCustomVenues: JSON.stringify([venue]), kiwiVenue: venue.id, kiwiOnboarded: '1',
+    }, { 'POST /api/ai/vision-inspect': () => ({ status: 200, body: { ok: true, data: BARE } }) });
+    t.defer(() => ctx.close()); t.watch(page);
+    t.step('open the assistant and send the photo');
+    // coverage: surface=dashboard locale=fr viewport=phone
+    await page.goto(h.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
+    await sleep(1500);
+    const explore = await page.evaluateHandle(() => [...document.querySelectorAll('button,a')]
+      .find((el) => /Explorer la d|Explore the d|استكشف/.test(el.textContent)) || null);
+    if (explore.asElement()) await explore.asElement().click();
+    await explore.dispose(); await page.keyboard.press('Escape');
+    await click(page, '.kw-tab[data-kw-tab="ai"]');
+    await page.waitForSelector('.fa-drawer .kv-attach', { visible: true });
+    const choosing = page.waitForFileChooser();
+    await click(page, '.fa-drawer .kv-attach');
+    await (await choosing).accept([png]);
+    await click(page, '.fa-drawer [data-fa-send]');
+    await page.waitForSelector('.fa-drawer [data-ksr-open]', { visible: true, timeout: 15000 });
+    assert.equal(await page.$('.fa-drawer [data-kv-action]'), null, 'no button that can only say « not available here »');
+    assert.match(await page.$eval('.fa-drawer .kv-size-run', (el) => el.textContent), /à saisir/, 'the card says the sizes are to type');
+
+    t.step('type the sizes: the grid appears, quantities to fill');
+    await click(page, '.fa-drawer [data-ksr-open]');
+    await page.waitForSelector('[data-ksr-sizes]', { visible: true, timeout: 8000 });
+    await page.type('[data-ksr-sizes]', '36 37 38 39 40 41');
+    await page.waitForFunction(() => document.querySelectorAll('[data-ksr-qty]').length === 6, { timeout: 5000 });
+    for (const [size, qty] of RUN) await page.type(`[data-ksr-qty="${size}"]`, String(qty));
+    await page.waitForFunction(() => /Total reçu : 12 pièces/.test(document.querySelector('[data-ksr-sum]')?.textContent || ''), { timeout: 5000 });
+
+    t.step('price, confirm: the six sizes are in stock');
+    await page.type('[data-ksr-price]', '450');
+    await click(page, '[data-ksr-confirm]');
+    await page.waitForFunction(() => !document.querySelector('[data-ksr-confirm]'), { timeout: 8000 });
+    assert.deepEqual(await stock(page), { name: '1986-10 Khaki', price: 450, kind: 'pointure',
+      sizes: { 36: 1, 37: 2, 38: 3, 39: 3, 40: 2, 41: 1 } }, 'the typed size grid is in stock');
+  });
+  /* Same day, the real model on a label that prints only « SIZE: 36-41 · 12 PRS »:
+     one row « 36-41 × 12 ». The range becomes its six sizes, quantities to type. */
+  await h.S.run('a printed size range becomes its sizes, quantities typed · fr · phone', async (t) => {
+    const RANGE = { ...READING, entities: { ...READING.entities, sizeRun: [{ size: '36-41', qty: 12 }] },
+      suggestedActions: [{ id: 'a1', type: 'product-add', label: 'Add this product', primary: true }] };
+    const { ctx, page } = await demoPage(h, 'fr', 'phone', {
+      kiwiCustomVenues: JSON.stringify([venue]), kiwiVenue: venue.id, kiwiOnboarded: '1',
+    }, { 'POST /api/ai/vision-inspect': () => ({ status: 200, body: { ok: true, data: RANGE } }) });
+    t.defer(() => ctx.close()); t.watch(page);
+    t.step('send the photo: the card lists the range, quantities to enter');
+    // coverage: surface=dashboard locale=fr viewport=phone
+    await page.goto(h.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
+    await sleep(1500);
+    const explore = await page.evaluateHandle(() => [...document.querySelectorAll('button,a')]
+      .find((el) => /Explorer la d|Explore the d|استكشف/.test(el.textContent)) || null);
+    if (explore.asElement()) await explore.asElement().click();
+    await explore.dispose(); await page.keyboard.press('Escape');
+    await click(page, '.kw-tab[data-kw-tab="ai"]');
+    await page.waitForSelector('.fa-drawer .kv-attach', { visible: true });
+    const choosing = page.waitForFileChooser();
+    await click(page, '.fa-drawer .kv-attach');
+    await (await choosing).accept([png]);
+    await click(page, '.fa-drawer [data-fa-send]');
+    await page.waitForSelector('.fa-drawer [data-ksr-open]', { visible: true, timeout: 15000 });
+    const text = await page.$eval('.fa-drawer .kv-size-run', (el) => el.textContent);
+    assert.match(text, /12 pièces · quantités à saisir/, 'the card keeps the total and asks for quantities: ' + text);
+    assert.match(text, /36 37 38 39 40 41/, 'the six sizes of the range are listed');
+    assert.equal(await page.$('.fa-drawer [data-ksr-size="36-41"]'), null, 'no size called « 36-41 »');
+
+    t.step('the reception has the six sizes, empty, and receives what is typed');
+    await click(page, '.fa-drawer [data-ksr-open]');
+    await page.waitForSelector('[data-ksr-confirm]', { visible: true, timeout: 8000 });
+    assert.deepEqual(await page.$$eval('[data-ksr-qty]', (els) => els.map((i) => [i.getAttribute('data-ksr-qty'), i.value])),
+      RUN.map(([size]) => [size, '']), 'six sizes, no invented quantity');
+    assert.equal(await page.$eval('[data-ksr-msg]', (el) => el.textContent), '', 'no error before anything is typed');
+    for (const [size, qty] of RUN) await page.type(`[data-ksr-qty="${size}"]`, String(qty));
+    await page.waitForFunction(() => /Total reçu : 12 pièces/.test(document.querySelector('[data-ksr-sum]')?.textContent || ''), { timeout: 5000 });
+    await page.type('[data-ksr-price]', '450');
+    await click(page, '[data-ksr-confirm]');
+    await page.waitForFunction(() => !document.querySelector('[data-ksr-confirm]'), { timeout: 8000 });
+    assert.deepEqual(await stock(page), { name: '1986-10 Khaki', price: 450, kind: 'pointure',
+      sizes: { 36: 1, 37: 2, 38: 3, 39: 3, 40: 2, 41: 1 } }, 'six sizes in stock, none called 36-41');
   });
 } finally { await rm(temp, { recursive: true, force: true }); await h.close(); await h.S.finish(); }

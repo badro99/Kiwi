@@ -83,7 +83,7 @@ async function issueAuthority(request, env, merchant, { approval, requestId, ori
 
 const HISTORY_KEEP = 100;
 
-function view(row, events = []) {
+export function view(row, events = []) {
   return {
     id: clean(row.id, 96), code: clean(row.code, 40), customerId: clean(row.customer_id, 96),
     customerName: clean(row.customer_name, 120), originalSaleId: clean(row.original_sale_id, 96),
@@ -116,7 +116,23 @@ function eventView(row) {
    (Crockford : ni I, ni L, ni O, ni U), et la recherche plie les sosies des
    anciens, si bien qu'un bon déjà imprimé se retrouve aussi. */
 const CODE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-function generatedCode() {
+/* Un avoir « sans date limite » (réglage Reçu · Validité des bons laissé vide) :
+   une échéance lointaine plutôt qu'un NULL, pour que chaque lecture « active »
+   (expires_ts >= maintenant) reste la même requête. Les caisses lisent l'an
+   2900 et plus comme « sans date limite ». */
+export const NO_EXPIRY_TS = Date.UTC(2999, 11, 31);
+const MAX_VALIDITY_DAYS = 3650;
+/* L'échéance d'un avoir : jusqu'à la bascule (05:00) du lendemain du jour J
+   dans le fuseau du magasin. `noExpiry` l'emporte ; sinon 1 jour à 10 ans,
+   182 jours quand la caisse ne dit rien (caisses d'avant le réglage). */
+export async function creditExpiry(env, merchant, at, body) {
+  if (body && body.noExpiry === true) return NO_EXPIRY_TS;
+  const requested = Math.min(at + MAX_VALIDITY_DAYS * 86400000, Math.max(at + 86400000, Number(body && body.expiresAt) || at + 182 * 86400000));
+  const [cutoff, zone] = await Promise.all([merchantCutoff(env, merchant), merchantZone(env, merchant)]);
+  return businessBoundary(addBusinessDays(businessDate(requested, cutoff, zone), 1), cutoff, zone);
+}
+
+export function generatedCode() {
   const bytes = new Uint8Array(14);
   crypto.getRandomValues(bytes);
   return `AV-${Array.from(bytes, (b) => CODE_ALPHABET[b & 31]).join('')}`;
@@ -231,9 +247,7 @@ export async function onRequestPost({ request, env }) {
        commerciale J du magasin, donc jusqu'à la bascule (05:00 par défaut) du
        lendemain dans le fuseau du magasin, et non jusqu'à l'instant arbitraire
        (heure de la caisse + 182 jours) que le client a envoyé. */
-    const requested = Math.min(at + 730 * 86400000, Math.max(at + 86400000, Number(body && body.expiresAt) || at + 182 * 86400000));
-    const [cutoff, zone] = await Promise.all([merchantCutoff(env, merchant), merchantZone(env, merchant)]);
-    const expiresAt = businessBoundary(addBusinessDays(businessDate(requested, cutoff, zone), 1), cutoff, zone);
+    const expiresAt = await creditExpiry(env, merchant, at, body);
     for (let attempt = 0; attempt < 4; attempt += 1) {
       const code = generatedCode();
       await env.DB.batch([

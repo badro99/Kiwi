@@ -777,6 +777,19 @@
 
     
     function closeOptSheet() { if (optVeil) { optVeil.classList.remove('is-open'); optVeil.onclick = null; } }
+    /* Un choix repeint toute la feuille : la liste des questions gardait
+       alors son défilement à zéro, et un supplément tout en bas renvoyait le
+       caissier en haut à chaque toucher. On garde la position, et la tuile
+       touchée reçoit .just pour que la peau 2027 la fasse sauter. */
+    const optQ = (v) => (globalThis.CSS && CSS.escape) ? CSS.escape(String(v)) : String(v).replace(/["\\]/g, '\\$&');
+    const repaintOpt = (paint, tapped) => {
+      const sc = optVeil && optVeil.querySelector('.opt-groups');
+      const top = sc ? sc.scrollTop : 0;
+      paint();
+      const next = optVeil && optVeil.querySelector('.opt-groups');
+      if (next) next.scrollTop = top;
+      if (tapped) { const b = optVeil.querySelector(tapped); if (b) b.classList.add('just'); }
+    };
     function openOptSheet(item, groups, onChosen) {
       if (!optVeil) {
         optVeil = document.createElement('div');
@@ -827,7 +840,7 @@
              deviendrait impossible à laisser vide une fois effleuré. */
           if (g.kind === 'many') { if (at >= 0) cur.splice(at, 1); else cur.push(cid); }
           else picked[gid] = (at >= 0) ? [] : [cid];
-          paint(); return;
+          repaintOpt(paint, `[data-og="${optQ(gid)}"][data-oc="${optQ(cid)}"]`); return;
         }
         if (e.target === optVeil || e.target.closest('[data-opt-cancel]')) { closeOptSheet(); return; }
         if (e.target.closest('[data-opt-ok]')) {
@@ -959,9 +972,9 @@
       }
       optVeil.onclick = e => {
         const b=e.target.closest('[data-fchoice]');
-        if (b) { const s=slots.find(x=>String(x.id)===b.dataset.fslot), a=picked[s.id], i=+b.dataset.fchoice, at=a.indexOf(i), max=Math.max(+s.min||0,+s.max||1); if(at>=0)a.splice(at,1); else if(max===1){a.splice(0,a.length,i);} else if(a.length<max)a.push(i); paint(); return; }
+        if (b) { const s=slots.find(x=>String(x.id)===b.dataset.fslot), a=picked[s.id], i=+b.dataset.fchoice, at=a.indexOf(i), max=Math.max(+s.min||0,+s.max||1); if(at>=0)a.splice(at,1); else if(max===1){a.splice(0,a.length,i);} else if(a.length<max)a.push(i); repaintOpt(paint, `[data-fslot="${optQ(s.id)}"][data-fchoice="${i}"]`); return; }
         const ob=e.target.closest('[data-oc]');
-        if(ob){const g=groups.find(x=>String(x.id)===ob.dataset.og);if(!g)return;const a=optPicked[g.id],id=ob.dataset.oc,at=a.indexOf(id);if(g.kind==='many'){if(at>=0)a.splice(at,1);else a.push(id);}else optPicked[g.id]=at>=0?[]:[id];paint();return;}
+        if(ob){const g=groups.find(x=>String(x.id)===ob.dataset.og);if(!g)return;const a=optPicked[g.id],id=ob.dataset.oc,at=a.indexOf(id);if(g.kind==='many'){if(at>=0)a.splice(at,1);else a.push(id);}else optPicked[g.id]=at>=0?[]:[id];repaintOpt(paint, `[data-og="${optQ(g.id)}"][data-oc="${optQ(id)}"]`);return;}
         if(e.target===optVeil||e.target.closest('[data-opt-cancel]')){closeOptSheet();return;}
         if(e.target.closest('[data-formula-ok]')) { const group=buildCaisseFormulaGroup(item,slots,groups,picked,optPicked,choiceItem,initial); closeOptSheet(); onChosen(group.parent,group.parts); }
       };

@@ -3,7 +3,7 @@
 //   réception), cartes de synthèse, ancienneté des chèques en main (en retard
 //   1-30 / 31-60 / 61-90 / 90+ jours, à venir par mois sur six mois), « à
 //   remettre cette semaine », pastille par client. `migrated:false` tant que
-//   la base n'a pas 0032 : l'écran dit « mise à jour en cours », rien ne casse.
+//   la base n'a pas 0033 : l'écran dit « mise à jour en cours », rien ne casse.
 //   Patron, opérateur ; gérant pour les chèques reçus seulement (./_access.js).
 // POST /api/cheques { merchant, idemKey, kind: cheque|lcn, direction: received|issued,
 //                     amount | amountCents, number, bank, drawerName, drawerBank,

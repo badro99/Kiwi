@@ -123,6 +123,13 @@ await S.run('sur la démo, une livraison s’encaisse au retour du livreur', asy
   assert(/^5\s?900$/.test(pre.replace(/[  ]/g, ' ')), `the amount starts at what is owed (${pre})`);
   await page.$eval('.kdc-form input', (e) => { e.value = ''; });
   await page.type('.kdc-form input', '2000');
+  /* La caisse repeint l'écran d'elle-même (catalogue, promos, retour au
+     premier plan) : le formulaire ouvert et le montant tapé restent. */
+  t.step('a till repaint keeps the open form and the typed amount');
+  await page.evaluate(() => window.KiwiPosDispatch.repaint());
+  await sleep(900);
+  const kept = await page.$eval('.kdc-form input', (e) => e.value).catch(() => '(form gone)');
+  assert(kept === '2000', `the amount typed survives a repaint (${kept})`);
   await tap(page, '.kdc-ok');
   await page.waitForFunction(() => /Reste 3/.test((document.querySelector('.kdc-card .kdc-due') || {}).textContent || ''), { timeout: 5000 });
   const part = await headMad(page);

@@ -189,6 +189,10 @@ ok(foldedCode('av-1lI0o') === 'AV-11100', 'folding maps I and L to 1 and O to 0,
     renderBadges() {}, refreshOps() {}, queueIfOffline() {}, stockAdd() {}, persistStock: () => true,
     recordReturn() {}, useKiwiCl: () => false, barcode: () => '',
     KiwiReceipt: paper.c.KiwiReceipt, toast: message => messages.push(message),
+    /* Cliente de passage : la caisse propose une fiche (retail-avance.js › askAvoirHolder) ;
+       ici on garde le bon au porteur, sans réglage de validité. */
+    openClientModal: null, askAvoirHolder: async () => null,
+    avoirExpiryBody: () => ({}), localAvoirUntil: () => new Date(Date.now() + 182 * 86400000),
   });
   c.$ = selector => selector === '#bq-avoirmm' ? w.exchange : w.$(selector);
   load(c, 'assets/pos-boutique.js', ['creditFromServer', 'creditRequest', 'stableCreditIssueId',

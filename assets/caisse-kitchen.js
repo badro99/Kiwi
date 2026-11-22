@@ -404,7 +404,7 @@
        session that must be closed. */
     function cancelOpenTable(id, who = null) {
       if (!id || tableSentCount(id) > 0) return false;
-      if (!who) { window.KiwiAuthAct?.({ kind: 'cancel_table', key: 'act.cancel_table', args: { table: id } }); requireTillOperator(`Annuler la table ${id}`, actor => cancelOpenTable(id, actor)); return false; }
+      if (!who && ((tableOrders[id] || []).length || phonePending.has(tableKey(id)) || canonicalOrdersForTable(id).length)) { window.KiwiAuthAct?.({ kind: 'cancel_table', key: 'act.cancel_table', args: { table: id } }); requireTillOperator(`Annuler la table ${id}`, actor => cancelOpenTable(id, actor)); return false; } who = who || {};   // table vide (rien saisi, aucune commande) : libérée sans code, rien à protéger (Browse, 21 nov. 2026)
       currentOrder().removeTable(id);
       tableSplits.delete(id);
       const t = tables[id];
@@ -447,7 +447,7 @@
       /* Pas de table sous la main ? On sort quand même. Refuser ici était le
          cœur du blocage : la dernière issue ne faisait rien. */
       if (selectedId) {
-        if (!who || !who.name) {
+        if ((!who || !who.name) && ((tableOrders[selectedId] || []).length || phonePending.has(tableKey(selectedId)) || canonicalOrdersForTable(selectedId).length)) {   // une table vide se rend sans code
           const target = selectedId;
           window.KiwiAuthAct?.({ kind: 'cancel_table', key: 'act.cancel_table', args: { table: target } });
           requireTillOperator(`Annuler la table ${target}`, actor => { if (selectedId === target) cancelNewOrder(actor); });
@@ -462,7 +462,7 @@
         /* La table est rendue sans encaissement. Sans ça, le téléphone resterait
            « assis » à une table redevenue libre et pourrait continuer à commander
            · le trou exact que la session existe pour boucher. */
-        releasePhoneTable(selectedId, 'caisse', true, who.actorProof || '');
+        releasePhoneTable(selectedId, 'caisse', true, (who && who.actorProof) || '');
         // Restore original covers (2 by default if we changed it)
         refreshTableNode(selectedId);
         selectedId = null;

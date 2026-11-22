@@ -26,7 +26,8 @@ export function ficheModel({ client = {}, raw = null, owed = [], avoirs = [], no
   const notes = (owed || []).filter((b) => b && String(b.customerId || '') === id && dueOf(b) > 0)
     .sort((a, b) => (+a.createdTs || 0) - (+b.createdTs || 0) || String(a.ticketRef).localeCompare(String(b.ticketRef)))
     .map((b) => ({ id: b.id, ref: String(b.ticketRef || ''), ts: +b.createdTs || 0, totalCents: cents(b.totalCents),
-      paidCents: cents(b.paidCents) + cents(b.pendingCents), dueCents: dueOf(b) }));
+      paidCents: cents(b.paidCents) + cents(b.pendingCents), dueCents: dueOf(b),
+      kind: String(b.kind || ''), expiresAt: Number(b.expiresAt) || 0, lines: Array.isArray(b.lines) ? b.lines : [] }));
   const live = (avoirs || []).filter((a) => a && a.holderId === id && (+a.balance || 0) > 0 && !(a.until && +new Date(a.until) < now));
   const spent = +client.spent || 0, achats = +client.achats || 0;
   return {
@@ -108,12 +109,13 @@ function oweHtml(m, k) {
   return `<div class="mz-fowe" id="mz-fiche-owe">
     <div class="mz-fowe-head"><span>${icon('payments')} ${tr('Doit')} <b>${fmtMAD(m.owedCents / 100)}</b> · ${m.notes.length} ${m.notes.length > 1 ? tr('notes') : tr('note')}</span>
       <button class="mz-btn primary" id="mz-fiche-settle" type="button">${tr('Encaisser')}</button></div>
-    ${m.notes.map((n) => `<div class="mz-fowe-row"><span>${tr('Ticket')} <b>${esc(n.ref)}</b><small style="display:block;">${dayLabel(n.ts)} · ${tr('total')} ${fmtMAD(n.totalCents / 100)} · ${tr('payé')} ${fmtMAD(n.paidCents / 100)}</small></span><span class="amt">${fmtMAD(n.dueCents / 100)}</span></div>`).join('')}
+    ${m.notes.map((n) => `<div class="mz-fowe-row"><span>${tr('Ticket')} <b>${esc(n.ref)}</b><small style="display:block;">${dayLabel(n.ts)} · ${tr('total')} ${fmtMAD(n.totalCents / 100)} · ${tr('payé')} ${fmtMAD(n.paidCents / 100)}${n.kind ? ' · ' + esc(noteDetail(n)) : ''}</small></span><span class="amt">${fmtMAD(n.dueCents / 100)}</span></div>`).join('')}
   </div>`;
 }
 
 /* Les notes ouvertes de la boutique : le journal de la caisse tout de suite,
    puis serveur + journal (KiwiRetailBalances, comme l'écran Acomptes). */
+import { noteDetail } from '../retail-avance.js?v=4';   /* avance ou compte, pièce gardée jusqu'au… */
 const balances = () => globalThis.window?.KiwiRetailBalances || null;
 const owedCache = (slug) => { const R = balances(); return R ? R.read(slug) : []; };
 const owedFresh = (slug) => { const R = balances(); return R ? R.list(slug) : null; };

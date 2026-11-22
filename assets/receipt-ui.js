@@ -49,6 +49,9 @@
       gIdentity: 'Identité & mentions légales', gLook: 'Apparence du reçu',
       gSale: 'Informations affichées par vente', gMsg: 'Messages & politiques',
       gPrint: "Format d'impression",
+      gValid: 'Validité des bons', avoirDays: "Avoir · valable (jours)", avanceDays: 'Avance · pièce gardée (jours)',
+      daysPh: 'Vide = sans limite',
+      validNote: "Imprimé sur le bon d'avoir et sur le ticket d'avance (caisses Boutique et Maison). Une avance expirée se remet en stock en scannant ses pièces depuis l'inventaire, et l'argent versé devient un avoir. Vide : sans date limite.",
       editBiz: 'Modifier la fiche', sourceNote: 'Ces informations viennent de la fiche de l’établissement. Elles ne se saisissent qu’une fois, ici elles s’affichent.',
       missingHead: 'À compléter pour un reçu conforme',
       missingBody: 'Ces mentions n’apparaîtront pas sur le ticket tant qu’elles sont vides · un reçu n’affiche jamais un tiret à la place d’une mention légale.',
@@ -88,6 +91,9 @@
       title: 'Sales receipt', sub: 'The ticket you hand your customers · printed, reprinted, refunded and displayed',
       gIdentity: 'Identity & legal details', gLook: 'Receipt appearance',
       gSale: 'Shown for each sale', gMsg: 'Messages & policies', gPrint: 'Printer format',
+      gValid: 'Voucher validity', avoirDays: 'Store credit · valid (days)', avanceDays: 'Deposit · item held (days)',
+      daysPh: 'Empty = no limit',
+      validNote: 'Printed on the store credit voucher and on the deposit ticket (Boutique and Maison tills). An expired deposit goes back to stock by scanning its items from the inventory, and the money paid becomes store credit. Empty: no expiry date.',
       editBiz: 'Edit business', sourceNote: 'This comes from the business profile. Entered once there, only shown here.',
       missingHead: 'To complete for a compliant receipt',
       missingBody: 'These will not appear on the ticket while they are empty · a receipt never prints a dash in place of a legal detail.',
@@ -127,6 +133,9 @@
       title: 'وصل الصندوق', sub: 'الوصل الذي يتسلمه زبناؤكم · طبعاً وإعادة طبع واسترجاعاً وعرضاً',
       gIdentity: 'الهوية والبيانات القانونية', gLook: 'مظهر الوصل',
       gSale: 'ما يظهر في كل عملية', gMsg: 'الرسائل والسياسات', gPrint: 'صيغة الطباعة',
+      gValid: 'صلاحية السندات', avoirDays: 'سند الرصيد · صالح (أيام)', avanceDays: 'التسبيق · القطعة محجوزة (أيام)',
+      daysPh: 'فارغ = بدون حد',
+      validNote: 'تُطبع على سند الرصيد وعلى وصل التسبيق (صناديق البوتيك والدار). التسبيق المنتهي يعود إلى المخزون بمسح قطعه من صفحة المخزون، ويصبح المبلغ المدفوع سند رصيد. فارغ: بدون تاريخ انتهاء.',
       editBiz: 'تعديل المؤسسة', sourceNote: 'هذه المعلومات من بطاقة المؤسسة. تُدخل مرة واحدة هناك، وتُعرض هنا فقط.',
       missingHead: 'ينقص لإتمام وصل مطابق',
       missingBody: 'لن تظهر على الوصل ما دامت فارغة · الوصل لا يطبع شرطة مكان بيان قانوني.',
@@ -365,6 +374,19 @@
         '<div class="kr-2">' + field(L.whatsapp, 'msg.whatsapp', cfg.msg.whatsapp, L.whatsappPh) +
         select(L.qr, 'msg.qr', cfg.msg.qr, [['none', L.qrNone], ['web', L.qrWeb], ['whatsapp', L.qrWa], ['custom', L.qrCustom]]) + '</div>' +
         (cfg.msg.qr === 'custom' ? field(' ', 'msg.qrText', cfg.msg.qrText, L.qrTextPh) : '') +
+        '</div></div>';
+
+      /* 4 bis · validité des bons (avoir, avance) */
+      var VAL = cfg.validity || {};
+      function daysField(label, key, val) {
+        return '<label class="kr-f"><span class="kr-l">' + esc(label) + '</span>' +
+          '<input class="kr-i" data-k="' + esc(key) + '" type="number" min="1" max="3650" step="1" inputmode="numeric" placeholder="' +
+          esc(L.daysPh) + '" value="' + (val == null ? '' : esc(String(val))) + '"/></label>';
+      }
+      h += '<div class="kr-g"><div class="kr-g-h">' + esc(L.gValid) + '</div><div class="kr-card">' +
+        '<div class="kr-2">' + daysField(L.avoirDays, 'validity.avoirDays', VAL.avoirDays) +
+        daysField(L.avanceDays, 'validity.avanceDays', VAL.avanceDays) + '</div>' +
+        '<p class="kr-note">' + esc(L.validNote) + '</p>' +
         '</div></div>';
 
       /* 5 · format d'impression */

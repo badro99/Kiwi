@@ -57,6 +57,13 @@ const NEW_STORE_FEATURES = {
   depenses: false,
   orderpro: false,
   commerce: false,
+  /* Caisse boutique et maison : un nouveau magasin encaisse en espèces et par
+     carte ; virement, chèque, livraison et avance s'allument dans God mode
+     (assets/retail-avance.js › retailModes). Sans effet pour un restaurant. */
+  payVirement: false,
+  payCheque: false,
+  payLivraison: false,
+  retailAvance: false,
 };
 
 /* La date à partir de laquelle un COMPTE est « nouveau ».

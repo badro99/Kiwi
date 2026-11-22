@@ -175,7 +175,7 @@
 
   function listsBody() {
     if (!state.loaded) return `<p class="pl-sub">${esc(L('Chargement des tarifs…', 'Loading price lists…', 'جارٍ تحميل التسعيرات…'))}</p>`;
-    /* Base pas encore migrée (0029) : le dire, au lieu d'un écran vide et d'un échec à l'enregistrement. */
+    /* Base pas encore migrée (0030) : le dire, au lieu d'un écran vide et d'un échec à l'enregistrement. */
     if (state.lists.pending) return `<div class="pl-empty" data-pl-pending>${esc(errorText('pending-migration'))}</div>`;
     if (state.error) return `<p class="pl-sub">${esc(L('Tarifs indisponibles pour le moment. Rien n’a changé ; réessayez dans un instant.', 'Price lists are unavailable right now. Nothing changed; try again in a moment.', 'التسعيرات غير متاحة حالياً. لم يتغير شيء؛ أعد المحاولة بعد قليل.'))}</p>`;
     const intro = state.lists.length < 2
