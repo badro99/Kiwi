@@ -289,7 +289,45 @@ ok(mine.includes('05 Fuchsia') && mine.includes('01 Rose clair'), 'F · the next
 await click('[data-kbc-exact="custom-e56ea0"]');
 ok((await page.$$eval('table.kbm thead th, .kbc-chip', (all) => all.map((x) => x.textContent))).some((x) => /05 Fuchsia/.test(x)), 'F · one tap adds the shade');
 await close();
-await page.evaluate((names) => { const cat = window.KiwiBoutiqueCatalog; names.forEach((nm) => { const p = cat.listProducts({ q: nm }).find((x) => x.name === nm); if (p && cat.deleteProduct) cat.deleteProduct(p.id); }); }, [SIX, SEPT]);
+/* G · a one-size shawl (Elham Brand, 22 Nov 2026): the pieces wait on the
+   colour screen instead of falling into « Sans couleur » at once. */
+const HUIT = 'TEST KIWI Châle uni';
+await page.evaluate(() => {   // 105 shades already in the catalogue, like Elham's chart (an unpaired demo till has no shared chart)
+  const cat = window.KiwiBoutiqueCatalog;
+  const p = cat.addProduct({ name: 'TEST KIWI Nuancier', priceMAD: 100, kind: 'tu' });
+  for (let i = 1; i <= 105; i++) {
+    const hex = i === 5 ? 'e56ea0' : i === 1 ? 'f9d9e0' : (0x100000 + i * 997).toString(16).slice(-6);
+    const nm = String(i).padStart(2, '0') + (i === 5 ? ' Fuchsia' : i === 1 ? ' Rose clair' : ' Nuance ' + i);
+    cat.ensureVariant({ productId: p.id, colorId: 'custom-' + hex, size: 'TU', stock: 0, colorLabel: nm, colorHex: '#' + hex.toUpperCase() });
+  }
+});
+await click('#bqi-new');
+await type('[data-bqx-name]', HUIT);
+await type('[data-bqi-price]', '180');
+await page.$eval('input[name="bqx-pf-kind"][value="tu"]', (r) => r.click());
+await type('[data-kbs-total]', '5');
+await click('#bqi-n-save');
+await page.waitForSelector('[data-kbs-in]', { visible: true, timeout: 8000 });
+await sleep(300);
+ok(await sizesOf(HUIT) === '', 'G · one size, colours on · nothing stocked yet, the screen asks where the 5 pieces go', await sizesOf(HUIT));
+ok(JSON.stringify(await boxes()) === '["5"]', 'G · a single box already holds the 5 pieces (Enregistrer is enough for one colour)', JSON.stringify(await boxes()));
+await click('[data-kbc-add]');
+await type('[data-kbc-find]', '05');
+const found = await page.$$eval('[data-kbc-exact]', (all) => all.filter((b) => !b.hidden).map((b) => b.dataset.label));
+ok(found.length >= 1 && found.every((l) => /^05 /.test(l)), 'G · searching « 05 » finds shade 05 only, never 105', JSON.stringify(found));
+await click('[data-kbc-exact="custom-e56ea0"]');
+await page.$eval('[data-kbc-find]', (i) => { i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); });
+await click('[data-kbc-exact="custom-f9d9e0"]');
+await page.evaluate(() => [['custom-e56ea0', '3'], ['custom-f9d9e0', '2']].forEach(([k, n]) => {
+  const i = document.querySelector(`[data-kbs-col="${k}"]`);
+  i.value = n; i.dispatchEvent(new Event('input', { bubbles: true }));
+}));
+await click('[data-kbs-save]');
+await sleep(500);
+const uni = await page.evaluate((name) => { const cat = window.KiwiBoutiqueCatalog; const p = cat.listProducts({ q: name }).find((x) => x.name === name); return cat.getProduct(p.id).variants.map((v) => v.colorId + ':' + v.stock).sort().join(' '); }, HUIT);
+ok(uni === 'custom-e56ea0:3 custom-f9d9e0:2', 'G · saved as two shades, no « Sans couleur » left behind', uni);
+await close();
+await page.evaluate((names) => { const cat = window.KiwiBoutiqueCatalog; names.forEach((nm) => { const p = cat.listProducts({ q: nm }).find((x) => x.name === nm); if (p && cat.deleteProduct) cat.deleteProduct(p.id); }); }, [SIX, SEPT, HUIT, 'TEST KIWI Nuancier']);
 
 ok(errors.length === 0, 'no page error', errors.slice(0, 3).join(' | '));
 await h.close?.();

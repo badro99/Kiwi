@@ -454,6 +454,12 @@ export function mount(host, o) {
     const back = carry; carry = null;
     if (back) host.querySelectorAll('[data-kbs-in]').forEach((i) => { const v = back.values[i.getAttribute('data-kbs-in')]; if (v) i.value = v; });
     wire();
+    /* Une seule case à la création (taille unique, une couleur) : les pièces y
+       sont déjà, « Enregistrer » suffit ; « + Couleur » les répartit. */
+    if (creating && rich && !back && cellList.length === 1) {
+      const only = host.querySelector('[data-kbs-in]');
+      if (only) { only.value = String(target); only.dispatchEvent(new Event('input', { bubbles: true })); }
+    }
     if (splitOn) {
       SPLIT.mountSplit(host.querySelector('[data-kbs-split]'), {
         root: host, target, lang: o.lang,
@@ -646,7 +652,10 @@ export function mount(host, o) {
       const q = plainWord(find.value);
       let n = 0;
       host.querySelectorAll('[data-kbc-exact]').forEach((b) => {
-        const hit = !q || plainWord(b.dataset.label).split(/\s+/).some((w) => w.startsWith(q)) || plainWord(b.dataset.label).includes(q);
+        const words = plainWord(b.dataset.label).split(/\s+/);
+        /* « 05 » ou « 5 » : la nuance 05, pas la 105. */
+        const hit = !q || (/^\d+$/.test(q) ? (/^\d+$/.test(words[0]) && (words[0].startsWith(q) || +words[0] === +q))
+          : words.some((w) => w.startsWith(q)) || plainWord(b.dataset.label).includes(q));
         b.hidden = !hit; if (hit) n++;
       });
       const none = host.querySelector('[data-kbc-none]'); if (none) none.hidden = n > 0;
@@ -894,9 +903,14 @@ export function wireTotal(root, lang) {
    tout le stock et son code. Rend { product, needsGrid }. */
 export function createProduct(cat, data, total, existing) {
   let p = null, kept = false;
+  /* Couleurs allumées : un article en taille unique passe aussi par l'écran
+     des couleurs, ses pièces prêtes à répartir entre ses nuances (Elham Brand,
+     22 nov. 2026 : six châles tombaient en « Sans couleur » avant qu'elle ait
+     pu choisir). Un code fournisseur déjà collé, lui, se pose tout de suite. */
+  const split = sizeColorsOn() && !existing && total > 0;
   const run = () => {
     p = cat.addProduct(data);
-    if (p && !hasGrid(p.kind)) {
+    if (p && !hasGrid(p.kind) && !split) {
       const ev = cat.ensureVariant({ productId: p.id, colorId: ONE_COLOR, size: 'TU', stock: total });
       if (!ev || !ev.variant) return;
       /* Le code déjà collé sur l'article : on le garde, rien à réimprimer. */
@@ -905,7 +919,7 @@ export function createProduct(cat, data, total, existing) {
     }
   };
   if (cat.batch) cat.batch(run); else run();
-  return { product: p, needsGrid: !!(p && hasGrid(p.kind)), kept };
+  return { product: p, needsGrid: !!(p && (hasGrid(p.kind) || split)), kept };
 }
 
 /* Le code-barres à la création, identique à la caisse et au tableau de bord :
