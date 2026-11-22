@@ -185,7 +185,7 @@
       var self = this, R = this.shadowRoot;
       this.__sel = null;
       K.tap(R, '[data-line]', function (el, e, g) {
-        if (e.target.closest && e.target.closest('.ex')) return;
+        if (e.target.closest && e.target.closest('.ex, .qs')) return;
         var id = el.getAttribute('data-line');
         self.__sel = self.__sel === id ? null : id;
         self.render();
@@ -227,14 +227,20 @@
           var open = self.__sel === l.id && !paying;
           var ex = '';
           if (open) {
-            ex = '<div class="ex">' + C.stepper.render({ id: l.id, value: l.qty, min: 0, label: l.name }) +
-              '<div class="acts">' +
+            ex = '<div class="ex"><div class="acts">' +
               (b.plain ? '' : C.button.render({ label: t('bill.edit_options'), size: 'S', id: 'eo-' + l.id, attrs: ' data-w="edit-options"' })) +
               C.button.render({ label: t(l.sent ? 'bill.void' : 'bill.remove'), variant: 'tonal-danger', size: 'S', id: 'rm-' + l.id, attrs: ' data-w="' + (l.sent ? 'void' : 'remove') + '"' }) +
               '</div></div>';
           }
           return '<li class="ln' + (open ? ' on' : '') + '" data-line="' + esc(l.id) + '"' + (paying ? ' aria-disabled="true"' : '') + ' tabindex="0" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-            '<div class="r"><span class="qt k-callout k-num">' + esc(l.qty) + '×</span>' +
+            /* − qty + on the line itself, so a second Shakshuka is one tap
+               (owner, 22 Nov 2026). Same Adjust path as the stepper: below
+               the sent quantity a minus voids, below 1 it removes. */
+            '<div class="r">' + (paying ? '<span class="qt k-callout k-num">' + esc(l.qty) + '×</span>'
+              : '<span class="qs" data-st="' + esc(l.id) + '" role="group" aria-label="' + esc(l.name) + '">' +
+                '<button type="button" class="qb" data-st-dir="-1" aria-label="' + esc(t('stepper.decrease', { label: l.name })) + '">' + icon('remove', 20) + '</button>' +
+                '<span class="qt qn k-callout k-num">' + esc(l.qty) + '</span>' +
+                '<button type="button" class="qb" data-st-dir="1" aria-label="' + esc(t('stepper.increase', { label: l.name })) + '">' + icon('add', 20) + '</button></span>') +
             '<span class="nm"><span class="k-body">' + esc(l.name) + '</span>' +
             (l.mods || []).map(function (m) { return '<span class="k-foot k-ink2 md">' + esc(m) + '</span>'; }).join('') + '</span>' +
             '<span class="k-body k-num pr" data-k-part>' + numHtml(money(l.price)) + '</span></div>' + ex + '</li>';
@@ -270,12 +276,18 @@
       '.bd{flex:1;overflow-y:auto;padding-inline:24px}' +
       '.gh{margin:16px 0 4px;font-weight:var(--k-fw-footnote-strong)}.gh.ns{color:var(--k-accent-ink)}' +
       '.ls{list-style:none;margin:0;padding:0}' +
-      '.ln{min-height:56px;padding-block:8px;box-shadow:inset 0 -1px 0 var(--k-line);border-radius:var(--k-r-1)}' +
+      '.ln{min-height:56px;padding-block:8px;display:flex;flex-direction:column;justify-content:center;box-shadow:inset 0 -1px 0 var(--k-line);border-radius:var(--k-r-1)}' +
       '.ln.on{background-color:var(--k-select)}' +
       '.ln:focus-visible{box-shadow:inset 0 0 0 var(--k-focus-w) var(--k-focus)}' +
       '.r{display:flex;align-items:flex-start;gap:8px}.qt{width:32px;flex:none;font-weight:var(--k-fw-callout-strong)}' +
       '.nm{flex:1;min-width:0;display:flex;flex-direction:column;overflow-wrap:anywhere}.pr{flex:none}' +
-      '.ex{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 0 4px 40px}.acts{display:flex;gap:8px;flex-wrap:wrap}' +
+      '.ex{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 0 4px}.acts{display:flex;gap:8px;flex-wrap:wrap}' +
+      '.qs{display:inline-flex;align-items:center;gap:2px;flex:none;margin-block:-6px}' +
+      '.qs .qn{width:auto;min-width:26px;text-align:center}' +
+      '.qb{position:relative;width:32px;height:32px;border:0;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;' +
+        'background-color:var(--k-surface-2);color:var(--k-ink-1);cursor:pointer;font:inherit;transition:background-color var(--k-dur-2) var(--k-glide)}' +
+      '.qb::after{content:"";position:absolute;inset:-6px}.qb:active{background-color:var(--k-surface-3);transition-duration:var(--k-dur-1)}' +
+      '.qb:focus-visible{outline:var(--k-focus-w) solid var(--k-focus);outline-offset:1px}' +
       '.paying .ln{color:var(--k-ink-3)}' +
       '.em{padding-block:48px;text-align:center}.em p{margin:4px 0}' +
       '.sk{display:flex;flex-direction:column;gap:12px;padding-block:16px}.sk span{height:40px;border-radius:var(--k-r-1)}' +

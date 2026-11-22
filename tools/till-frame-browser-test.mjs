@@ -159,18 +159,16 @@ try {
     check(same && badge === '2', 'a second tap moves the badge to 2 on the same tile node');
     check(await page.evaluate(() => cart.length === 1 && cart[0].qty === 2), 'the shipped cart counts 2');
 
-    /* Open the line, then its stepper's minus, twice. */
+    /* The line's own minus (− qty + sits on every row, 22 Nov), twice;
+       the row stays closed: the steppers are not a tap on the line. */
     const minus = async () => page.evaluate(() => {
       const R = document.querySelector('k-bill').shadowRoot;
-      const ln = R.querySelector('[data-line]');
-      if (ln.getAttribute('aria-expanded') !== 'true') ln.click();
-      return true;
-    }).then(() => sleep(150)).then(() => page.evaluate(() => {
+      R.querySelector('[data-line] .qs [data-st-dir="-1"]').click();
+    });
+    check(await page.evaluate(() => {
       const R = document.querySelector('k-bill').shadowRoot;
-      const btns = [...R.querySelectorAll('.ex button')];
-      const dec = btns.find((b) => /moins|minus|decrease|−|-/i.test((b.getAttribute('aria-label') || '') + b.textContent)) || btns[0];
-      dec.click();
-    }));
+      return !!R.querySelector('[data-line] .qs [data-st-dir="1"]') && R.querySelector('[data-line] .qs .qn').textContent.trim() === '2';
+    }), 'each bill line carries its own − 2 + without opening it');
     await minus();
     await sleep(250);
     check(await page.evaluate(() => cart.length === 1 && cart[0].qty === 1), 'the line\'s stepper takes it back to 1');
