@@ -34,8 +34,9 @@ import {
   json, activeAccountSession, slugMerchant, accountSlug, isOperator, isTillFor,
   employeeRoleOpensTill,
 } from '../auth/_lib.js';
-import { publishStaffCredentials, accountOwnerRole } from './_staff-publication.js';
+import { publishStaffCredentials, accountOwnerRole, codesToRedo } from './_staff-publication.js';
 import { sessionTierAtLeast } from '../auth/_session-tier.js';
+import { codeHolds } from './_permissions.js';
 
 /* ── Ce qu'un établissement TOUT NEUF reçoit ────────────────────────────────
  * Quatre modules qui ne servent qu'à une partie des clients : un snack de quartier
@@ -428,6 +429,17 @@ export async function onRequestPost(context) {
   if (Array.isArray(body && body.pins) && !(await sessionTierAtLeast(request, env, 'manager'))) {
     return json({ error: 'tier', need: 'manager' }, 403);
   }
+  /* Un code à intitulé de propriétaire (« Propriétaire », « Direction »…) ouvre
+   * le tableau de bord au palier du patron (faceAccessTier). Sous ce palier, une
+   * session ne peut ni en créer, ni en renommer, ni en recoder un : ces lignes
+   * de la liste sont ignorées, et celles déjà en base restent telles quelles
+   * (_staff-publication.js garde les codes propriétaire d'une liste qui n'en a
+   * pas). Sinon un gérant se donnerait le palier du patron. */
+  let ownerTitled = [];   // les lignes écartées, que codeHolds juge : inchangées, ignorées ; neuves ou recodées, refusées (403)
+  if (Array.isArray(body && body.pins) && !(await sessionTierAtLeast(request, env, 'owner'))) {
+    ownerTitled = body.pins.filter((p) => p && accountOwnerRole(String(p.role || '').trim().slice(0, 24)));
+    body.pins = body.pins.filter((p) => !(p && accountOwnerRole(String(p.role || '').trim().slice(0, 24))));
+  }
 
   // Which of this account's stores is being synced?
   /** @type {import('../../types/tenant').MerchantInput} */
@@ -580,9 +592,16 @@ export async function onRequestPost(context) {
 
   // ── PINs (only when the client actually sent a list) ───────────────────────
   if (Array.isArray(body && body.pins)) {
+    const holdCodes = await codeHolds(request, env, merchant, body, ownerTitled); if (holdCodes instanceof Response) return holdCodes; // hors du patron : homonyme d'un propriétaire refusé, identité nouvelle retenue AVANT publication, fermé en cas de doute (_permissions.js)
+    const ownerTier = await sessionTierAtLeast(request, env, 'owner');
+    body.replaceOwner = body.replaceOwner === true && ownerTier;   // « remplacer le propriétaire » : le patron seul (le wizard)
     const published = await publishStaffCredentials(env, merchant, body);
     if (published instanceof Response) return published;
     Object.assign(result, published);
+    if (holdCodes) await holdCodes();
+    /* Au patron seul : qui a reçu un code déjà pris (ligne scellée morte). Un
+       gérant reçoit la même réponse, collision ou non (staff-permissions-test 9f). */
+    if (ownerTier) { const redo = await codesToRedo(env, merchant); if (redo.length) result.codesToRedo = redo; }
   }
 
   // ── Business type (only when sent) — upsert without disturbing features/plan ─

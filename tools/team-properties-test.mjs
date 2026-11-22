@@ -79,7 +79,10 @@ function expected(list) {
   for (const e of list) { if (!/^\d{4}$/.test(e.code) || seen.has(e.code)) continue; seen.add(e.code); clean.push(e); }
   const tillRows = clean.filter((e) => auth.employeeRoleOpensTill(e.p.role) && e.code !== OWNER_CODE);
   const pins = new Map([[OWNER_CODE, 'Patron'], ...tillRows.map((e) => [e.code, e.p.firstName + ' ' + e.p.lastName])]);
-  return { pins, logins: clean.filter((e) => e.p.email) };
+  /* A till line on the owner's code is still written, sealed dead: the save
+     must not tell whoever published it that the code is taken. */
+  const dead = clean.filter((e) => auth.employeeRoleOpensTill(e.p.role) && e.code === OWNER_CODE).length;
+  return { pins, dead, logins: clean.filter((e) => e.p.email) };
 }
 /* Two different people on one valid code: the server refuses the whole save
  * (409 duplicate-staff-code) and changes nothing, instead of silently dropping
@@ -119,7 +122,7 @@ try {
       const r = await publish(list); assert.equal(r.status, 200, JSON.stringify(r.body));
       const want = expected(list);
       const rows = sql.prepare('SELECT pin, name FROM staff_pins WHERE merchant = ?').all(merchant);
-      assert.equal(rows.length, want.pins.size);
+      assert.equal(rows.length, want.pins.size + want.dead);
       for (const code of CODES.filter((c) => /^\d{4}$/.test(c))) assert.equal(await staffFor(code), want.pins.get(code) || null);
     }
   }));

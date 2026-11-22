@@ -1052,7 +1052,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
-  <script src="assets/admin-legacy.js?v=15"></script>
+  <script src="assets/admin-legacy.js?v=16"></script>
   <script src="assets/staff-roles.js?v=4"></script>
   <!-- The brand's one selection motion, for the établissement switcher. Self-
        contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
@@ -1616,8 +1616,8 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
       if (LIVE) return api('/attendance-link?merchant=' + encodeURIComponent(merchant));
       return { ok:true, merchant:merchant, link:location.origin + '/kiwi-serveur?pointage=demo-' + encodeURIComponent(merchant) };
     },
-    async addPin(merchant, pin, name, role){
-      if (LIVE) { return (await api('/pins', { method:'POST', body:JSON.stringify({ merchant:merchant, pin:pin, name:name, role:role }) })).pin; }
+    async addPin(merchant, pin, name, role, replaceOwner){
+      if (LIVE) { return (await api('/pins', { method:'POST', body:JSON.stringify({ merchant:merchant, pin:pin, name:name, role:role, replaceOwner:replaceOwner === true }) })).pin; }
       var m = mock(); (m.pins[merchant] = m.pins[merchant] || []);
       if (m.pins[merchant].some(function(p){ return p.pin === pin; })) { var e=new Error('dupe'); e.body={error:'pin-exists'}; throw e; }
       var rec = { id:'mk'+Date.now(), pin:pin, name:name, role:role }; m.pins[merchant].push(rec); saveMock(m); return rec;
@@ -3694,7 +3694,17 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
     if (submit.disabled) return;
     submit.disabled = true;
     try {
-      await store.addPin(selected.merchant, pin, name, role);
+      /* Un nouveau code propriétaire alors qu'il en existe un : le remplacer
+         (le patron a changé de nom et de code) ou l'ajouter à côté (un associé).
+         Remplacer retire les autres lignes propriétaire, dans le même lot, au
+         journal (functions/api/admin/pins.js › replaceOwner). */
+      var ownerish = function(r){ return /propri|owner|patron|direction/i.test(String(r || '')); };
+      var replaceOwner = false;
+      if (ownerish(role)) {
+        var current = []; try { current = await store.pins(selected.merchant) || []; } catch(_) {}
+        if (current.some(function(p){ return ownerish(p.role); })) replaceOwner = window.confirm(window.KiwiAdminI18n.text('Remplacer le code propriétaire actuel ? OK : l’ancien ne fonctionnera plus. Annuler : les deux restent.'));
+      }
+      await store.addPin(selected.merchant, pin, name, role, replaceOwner);
       document.getElementById('pin-new').value = ''; document.getElementById('pin-name').value = '';
       renderPins();
     } catch(e){ err.textContent = (e.body && e.body.error === 'pin-exists') ? window.KiwiAdminI18n.text('Ce PIN existe déjà.') : refused(e); } finally { submit.disabled = false; }

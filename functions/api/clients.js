@@ -47,6 +47,7 @@ import { phoneKey } from './_phone.js';
 import { readsIdentityDocuments, withoutDocumentNumber, keepStoredDocument } from './_client-identity.js';
 import { mayMergeClients, mergeClients } from './_client-merge.js';
 import { spendCentsOf, toCents } from './_spend-cents.js';
+import { sessionGuard } from './_permissions.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const int = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
@@ -488,6 +489,7 @@ export async function onRequestPost(context) {
     if (employee) merchant = employee.merchant;
   }
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  { const denied = await sessionGuard(request, env, merchant, 'customers.edit'); if (denied) return denied; } // droits par personne (_permissions.js), sur CE merchant
   const state = body && body.merge ? await storeOperationalState(env, merchant) : null;
   const operational = state ? state.ok && !state.pending && !state.suspended
     : await tenantFor(request, env, merchant, { strict: true }) === merchant;
@@ -643,6 +645,7 @@ export async function onRequestDelete(context) {
   // le voisin de palier. Voir tenantFor › strict.
   const merchant = await tenantFor(request, env, url.searchParams.get('merchant'), { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  { const denied = await sessionGuard(request, env, merchant, 'customers.delete'); if (denied) return denied; } // droits par personne (_permissions.js), sur CE merchant
 
   const id = str(url.searchParams.get('id'), 64);
   if (!id) return json({ error: 'no-id' }, 400);

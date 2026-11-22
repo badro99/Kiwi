@@ -331,6 +331,68 @@ CREATE TABLE IF NOT EXISTS session_tiers (
   updated_ts INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_session_tiers_updated ON session_tiers (updated_ts);
+
+-- Droits de l'équipe, par personne (functions/api/_permissions.js,
+-- assets/permissions-catalog.js). `staff_key` est l'identifiant du membre dans
+-- le document `team` (stable), sinon « name:<nom normalisé> ». Aucun code ici.
+-- Rien ne s'applique avant l'activation par le propriétaire
+-- (staff_permission_settings.activated_ts) : chaque route garde sa règle d'avant.
+CREATE TABLE IF NOT EXISTS staff_permissions (
+  merchant   TEXT NOT NULL,
+  staff_key  TEXT NOT NULL,
+  preset     TEXT NOT NULL,
+  grants     TEXT NOT NULL DEFAULT '[]',
+  denies     TEXT NOT NULL DEFAULT '[]',
+  name       TEXT NOT NULL DEFAULT '',
+  updated_ts INTEGER NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT '',
+  held_ts    INTEGER NOT NULL DEFAULT 0,
+  held_by    TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (merchant, staff_key)
+);
+-- Les rôles par défaut modifiés par le propriétaire.
+CREATE TABLE IF NOT EXISTS staff_permission_presets (
+  merchant   TEXT NOT NULL,
+  preset     TEXT NOT NULL,
+  perms      TEXT NOT NULL DEFAULT '[]',
+  updated_ts INTEGER NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (merchant, preset)
+);
+-- Activation, seuil de remise libre et reprise des anciens réglages du navigateur.
+CREATE TABLE IF NOT EXISTS staff_permission_settings (
+  merchant           TEXT PRIMARY KEY,
+  free_discount_pct  INTEGER NOT NULL DEFAULT 10,
+  legacy_doc         TEXT,
+  legacy_imported_ts INTEGER,
+  activated_ts       INTEGER NOT NULL DEFAULT 0,
+  activated_by       TEXT NOT NULL DEFAULT '',
+  updated_ts         INTEGER NOT NULL,
+  updated_by         TEXT NOT NULL DEFAULT ''
+);
+-- Journal : qui a changé quoi, quand. Lu par le propriétaire seul.
+CREATE TABLE IF NOT EXISTS staff_permission_audit (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  merchant      TEXT NOT NULL,
+  ts            INTEGER NOT NULL,
+  actor         TEXT NOT NULL,
+  actor_label   TEXT NOT NULL DEFAULT '',
+  subject       TEXT NOT NULL,
+  subject_label TEXT NOT NULL DEFAULT '',
+  change        TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_staff_permission_audit ON staff_permission_audit (merchant, ts);
+-- La preuve d'un geste (espèces, tiroir, clôture, remise) ne couvre qu'un fait :
+-- la première route qui la consomme y attache sa référence (functions/api/_act-proof.js).
+CREATE TABLE IF NOT EXISTS staff_permission_proofs (
+  merchant TEXT NOT NULL,
+  jti      TEXT NOT NULL,
+  kind     TEXT NOT NULL,
+  ref      TEXT NOT NULL,
+  staff_id TEXT NOT NULL DEFAULT '',
+  used_ts  INTEGER NOT NULL,
+  PRIMARY KEY (merchant, jti)
+);
 -- Base déjà déployée : `node tools/d1-schema.mjs` dit ce qui manque.
 -- The site gate (functions/_middleware.js → accountActive) revokes a live
 -- session as soon as its account row is missing (deleted) or status='suspended'.

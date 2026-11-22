@@ -181,7 +181,14 @@ const cases = {
     assert.equal((await response.json()).error, 'too-many-new-codes');
   },
   async ownerRoster(f) { await f.pin(); assert.equal((await f.call(roster, f.operator, { merchant, pins: [{ code, role: 'staff', name: 'Employee' }] })).status, 409); },
-  async ownerPublication(f) { await f.pin(); await publishStaffCredentials(f.env, merchant, { pins: [{ code, role: 'staff', name: 'Employee' }] }); assert.equal(f.db.prepare('SELECT COUNT(*) n FROM staff_pins').get().n, 1); assert.equal(f.db.prepare('SELECT role FROM staff_pins').get().role, 'owner'); },
+  async ownerPublication(f) {
+    await f.pin(); await publishStaffCredentials(f.env, merchant, { pins: [{ code, role: 'staff', name: 'Employee' }] });
+    /* La ligne en collision est écrite comme une autre (pas d'oracle du code pris), mais scellée morte : le code n'ouvre que le patron. */
+    const taken = new Set([code, ...await pinHashes(f.env, merchant, code), ...await pinHashes(f.old, merchant, code)]);
+    const opens = f.db.prepare('SELECT role, pin FROM staff_pins').all().filter((row) => taken.has(row.pin));
+    assert.deepEqual(opens.map((row) => row.role), ['owner']);
+    assert.equal(f.db.prepare("SELECT COUNT(*) n FROM staff_pins WHERE name = 'Employee'").get().n, 1);
+  },
   async corrupt(f) {
     for (const feature of ['team', 'employee-access']) {
       const doc = await codeDocument(f.env, merchant, feature, { members: f.members }, true); doc.members[0].pinCode = 'e1$broken'; f.putDoc(feature, doc);

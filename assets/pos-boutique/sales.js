@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=369'; import { tillPriceList as tpl } from './price-list.js?v=3';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=263';
-import { offerRegister } from './inventory.js?v=263';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=370'; import { tillPriceList as tpl } from './price-list.js?v=3';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=264';
+import { offerRegister } from './inventory.js?v=264';
 import { ticketOwner } from './ticket-owner.js?v=8';
 import { ticketRemise } from './ticket-remise.js?v=5';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
@@ -11,7 +11,7 @@ import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=4';
 let CX = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=25').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=26').then((m) => { CX = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -751,7 +751,7 @@ import('./exch-combined.js?v=25').then((m) => { CX = m; }).catch(() => {});
       };
       if (sheet.agreed > 0 && !state.ticket.remiseAuth) {
         const cut = Math.round((shBase - sheet.agreed) * 100) / 100;
-        openApprove(0, go, { mode: sheet.bmode, value: sheet.bmode === 'price' ? sheet.agreed : cut, label: `${tr('Prix convenu')} ${fmtMAD(sheet.agreed)}`, cut: fmtMAD(cut) });
+        openApprove(0, go, { mode: sheet.bmode, value: sheet.bmode === 'price' ? sheet.agreed : cut, label: `${tr('Prix convenu')} ${fmtMAD(sheet.agreed)}`, cut: fmtMAD(cut), cents: Math.round(cut * 100) * Math.max(1, Number(sheet.qty) || 1) });
         return;
       }
       go();
@@ -764,8 +764,10 @@ import('./exch-combined.js?v=25').then((m) => { CX = m; }).catch(() => {});
      journal » — et seul un booléen partait dans la vente : impossible, trois jours
      plus tard, de dire qui avait accordé les 20 % ni combien avaient été lâchés.
      On garde le nom (jamais le code), l'heure et le pourcentage demandé. */
-  function markRemiseAuth(pct, by, role, auth) {
-    ticketOwner.applyDiscount(state.ticket, { pct: auth ? null : pct, mode: auth ? auth.mode : 'pct', value: auth ? auth.value : pct, by: by || '', role: role || '', at: new Date().toISOString() });
+  /* proof : la preuve du geste signée pour le responsable qui a validé (pin/verify ›
+     actProof), pour que le serveur juge l'auteur prouvé de la remise, pas un nom. */
+  function markRemiseAuth(pct, by, role, auth, proof) {
+    ticketOwner.applyDiscount(state.ticket, { pct: auth ? null : pct, mode: auth ? auth.mode : 'pct', value: auth ? auth.value : pct, by: by || '', role: role || '', at: new Date().toISOString(), ...(proof ? { proof: String(proof) } : {}) });
   }
 
   /* Sur une boutique RÉELLE, la remise passe par le vrai code responsable — le
@@ -779,11 +781,11 @@ import('./exch-combined.js?v=25').then((m) => { CX = m; }).catch(() => {});
   function openApprove(pct, onOk, auth) {
     const what = auth ? auth.label : `−${pct} %`;
     if (pvReal() && typeof window.requireManager === 'function') {
-      if (window.KiwiAuthAct) window.KiwiAuthAct(auth ? { kind: 'discount', key: 'act.discount.amount', args: { amount: auth.cut } } : { kind: 'discount', key: 'act.discount.pct', args: { pct: `${pct}\u202f%` } });
+      if (window.KiwiAuthAct) window.KiwiAuthAct(auth ? { kind: 'discount', key: 'act.discount.amount', args: { amount: auth.cut }, amountCents: auth.cents } : { kind: 'discount', key: 'act.discount.pct', args: { pct: `${pct}\u202f%` }, pct: Number(pct) });
       window.requireManager(`Remise ${what} sur le ticket ${state.ticket.num || 'en cours'}`, () => {
         let mgr = null;
         try { mgr = window.KiwiCaissePairing?.lastManager?.() || null; } catch (_) {}
-        markRemiseAuth(pct, mgr && mgr.name, mgr && mgr.role, auth);
+        markRemiseAuth(pct, mgr && mgr.name, mgr && mgr.role, auth, mgr && mgr.actProof);
         toast(mgr && mgr.name ? `Remise ${what}, accord ${mgr.name}` : `Remise ${what} autorisée`);
         onOk();
       });

@@ -28,6 +28,7 @@
  * comptoir le lit de toute façon. */
 import { readSession, readCookie, SESS_COOKIE, json } from './_lib.js';
 import { isMissingTable } from '../api/print/_relay.js';
+import { routePermission, sessionPerson, decide, askedMerchant, permissionDenied } from '../api/_permissions.js';
 
 const RANK = { reception: 1, manager: 2, owner: 3 };
 const SID_RE = /^[0-9a-f]{32}$/;
@@ -150,7 +151,38 @@ export function routeMinTier(rawPath) {
 
 /* Appelée par le middleware pour une requête /api que la session du compte vient
  * de faire passer. null = continuer ; sinon la réponse de refus. */
+/* Les droits par personne passent AVANT le palier (functions/api/_permissions.js
+ * › ROUTE_PERMS) : pour une session déverrouillée par le code d'une personne
+ * retrouvée, dans une boutique dont le patron a configuré les droits, c'est
+ * son droit qui ouvre ou ferme la route. Sinon : undefined, le palier décide. */
+async function permissionBlock(request, env, path) {
+  let clean = String(path || '');
+  try { clean = new URL(decodeURIComponent(clean).replace(/\/{2,}/g, '/'), 'https://kiwi.invalid').pathname; } catch (_) {}
+  const perm = routePermission(clean.toLowerCase().replace(/\/+$/, ''), request.method);
+  if (!perm) return undefined;
+  const who = await sessionPerson(request, env);
+  if (!who || who.owner) return undefined;
+  if (who.unavailable) return json({ error: 'tier-unavailable' }, 503);
+  if (!who.staff) return undefined;
+  /* Toujours la boutique de la personne, lue en base. Un merchant nommé par la
+     requête (adresse ou corps) qui n'est pas le sien est un refus, jamais un
+     repli sur la règle d'avant : nommer une boutique sans configuration ne
+     doit rien ouvrir. Les routes relisent le corps elles-mêmes (sessionGuard). */
+  const store = who.staff.merchant;
+  let asked = askedMerchant(request);
+  if (!asked && request.method !== 'GET' && request.method !== 'HEAD') {
+    try { const b = await request.clone().json(); asked = String((b && b.merchant) || '').slice(0, 64); } catch (_) { asked = ''; }
+  }
+  if (!store || (asked && asked !== store)) return permissionDenied(perm);
+  const ruling = await decide(env, store, who.staff, perm, false);
+  if (ruling.unavailable) return json({ error: 'permissions-unavailable' }, 503);
+  if (!ruling.configured) return undefined;   // SA boutique n'a rien configuré : le palier décide
+  return ruling.ok ? null : permissionDenied(perm);
+}
+
 export async function tierBlock(request, env, path) {
+  const ruled = await permissionBlock(request, env, path);
+  if (ruled !== undefined) return ruled;
   const need = routeMinTier(path);
   if (!need) return null;
   const st = await sessionTier(request, env);

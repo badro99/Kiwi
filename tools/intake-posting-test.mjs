@@ -53,6 +53,8 @@ const movementsRt = new Function('movementMilli',
   'const json = (body, status) => ({ status: status || 200, body });\n' +
   'const tenantFor = async (req, env, asked) => (asked ? String(asked) : null);\n' +
   'const entitledMerchant = async (req, env, merchant) => merchant;\n' +
+  /* Droits de l'équipe (functions/api/_permissions.js) : la session simulée est celle du patron. */
+  'const sessionMay = async () => ({ ok: true, owner: true }); const decide = async () => ({ ok: true }); const permissionDenied = (permission, extra) => json({ ...(extra || {}), error: \'permission-denied\', permission }, 403); const employeeRoleOpensDashboard = () => true;\n' +
   'const resolveInventoryUnitScope = async () => ({ scoped: false, allowed: true, permitsMovementLocation: () => true, effectiveMovementLocation: (loc) => loc || \'principal\', storageLocations: () => [], projectLocation: (l) => l, metadata: () => ({}) });\n' +
   'const scopeSql = () => ({ clause: \'\', values: [] });\n' +
   movementsSrc

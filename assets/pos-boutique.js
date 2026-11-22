@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=263';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=181';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=263';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=263';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=264';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=182';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=264';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=264';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=8';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=3';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=4';
@@ -2028,7 +2028,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
             if (frozen.priceList) Object.assign(payload, frozen.priceList.fields);   // tarif + accord responsable, relus par /api/sale
             const sellerProof = !IS_DEMO && window.KiwiStaff && window.KiwiStaff.sellerProof;   // commissions vendeurs : la preuve signée de qui a saisi son code, jamais un nom
             if (!IS_DEMO && sellerPickOn(bqKitSkin())) { if (t.seller && t.seller.id) payload.seller = { member: t.seller.id }; }   // vendeur choisi à l'encaissement : rien de choisi, personne de crédité
-            else if (typeof sellerProof === 'string' && sellerProof) payload.seller = { proof: sellerProof };
+            else if (typeof sellerProof === 'string' && sellerProof) payload.seller = { proof: sellerProof }; if (!IS_DEMO && frozen.remiseAuth && typeof frozen.remiseAuth.proof === 'string' && frozen.remiseAuth.proof) payload.actProof = frozen.remiseAuth.proof;   // qui a validé la remise (droits de l'équipe)
             if (isAcompte) payload.retailBalance = {
               id: balanceId, customerId: c.id, ticketRef: sale.id,
               totalCents: Math.round(total * 100), stage: 'open',

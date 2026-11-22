@@ -19,7 +19,7 @@ import { splitVisitCheck, splitPartsPaid } from './_split-visit.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { validateRetailTenders, retailTenderMethod } from './_retail-tenders.js';
 import { claimRetailBalance, confirmRetailBalance } from './_retail-balances.js';
-import { fitBasket, basketMismatch, clockFlags, recordSaleFlag, stampSupplier } from './_sale-truth.js';
+import { fitBasket, basketMismatch, clockFlags, recordSaleFlag, stampSupplier, flagSaleDiscount } from './_sale-truth.js';
 import { stampSale } from './_sale-stamp.js';
 import { saveDeliveryCard, cleanDeliveryCard } from './_delivery-card.js';
 import { markStockHeld } from './_delivery-stock.js';
@@ -888,7 +888,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
         JSON.stringify(discountFlag), Date.now(), merchant, id).run();
     } catch (_) { /* the sale stands; the flag is best effort */ }
   }
-
+  if (!stored && hasDiscount) await flagSaleDiscount(env, merchant, id, b, ts, grossAmountCents, discountAmountCents, discountActorId); // remise au-delà du seuil sans le droit : inscrite, auteur prouvé seulement (_sale-truth.js)
   const tipError = await persistTip(id);
   if (tipError) return tipError;
 

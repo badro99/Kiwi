@@ -1,3 +1,4 @@
+import { sessionGuard } from './_permissions.js';
 import { resolveClientId } from './clients.js';
 // /api/store-credits — server-authoritative Maison store-credit ledger.
 //
@@ -213,6 +214,7 @@ export async function onRequestPost({ request, env }) {
   const delta = signedAmount(body && body.deltaCents);
   if (!requestId || !['issue', 'redeem', 'redeem-batch', 'cancel', 'adjust'].includes(action)) return json({ error: 'invalid-request' }, 400);
   if ((action === 'cancel' || action === 'adjust') && !await mayCancelCredit(request, env, merchant)) return json({ error: 'manager-required' }, 403);
+  if (action === 'cancel' || action === 'adjust') { const denied = await sessionGuard(request, env, merchant, 'customers.balance'); if (denied) return denied; } // droits par personne (_permissions.js)
   if (action === 'adjust' ? !delta : (action !== 'cancel' && action !== 'redeem-batch' && !cents)) return json({ error: 'bad-amount' }, 400);
   const eventId = `${requestId}:${action}`;
   const at = now();

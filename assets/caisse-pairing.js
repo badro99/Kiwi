@@ -1145,7 +1145,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ merchant: merchant, pin: code, ...(action ? { action: action } : {}) }),
-    })
+    }).then(function (r) { lastFailed = false; return r; }, function (e) { lastFailed = true; throw e; })   // le pavé classique aussi dit si le réseau a lâché (assets/staff-perms-till.js › offline)
       .then(function (r) {
         try { if (window.KiwiTrustedClock) window.KiwiTrustedClock.observe(r); } catch (_) {}
         if (r && r.status === 429) {
@@ -1165,7 +1165,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
       })
       .then(function (d) {
         if (!(d && d.ok && d.staff)) return null;
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.actProof ? { actProof: String(d.actProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
         /* The server said yes: unlock now, refresh the offline verifier behind. */
         rememberOfflinePin(merchant, code, staff);
         return staff;
@@ -1175,12 +1175,12 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
         return verifyOfflinePin(merchant, code);
       });
   }
-  /* The 2027 pad's request (assets/kit/pin-flow.js): the server's answer as
-     it came, status and body, so every row of §10.2's response table can be
-     told apart. A proven code refreshes its salted row, as verifyCode does.
-     `lastFailed` remembers that the till's last request threw, which is
-     how the needs-connection state is known when a pad opens. */
+  /* The 2027 pad's request (assets/kit/pin-flow.js): the server's answer as it came, status and body, so
+     every row of §10.2's response table can be told apart. A proven code refreshes its salted row, as verifyCode
+     does. `lastFailed`: the till's last request threw (the needs-connection state when a pad opens; cash and close
+     then count as offline, assets/staff-perms-till.js). The browser's 'online' event clears it. */
   var lastFailed = false;
+  try { window.addEventListener('online', function () { lastFailed = false; }); } catch (_) {}
   function verifyReply(code, action) {
     var venue = activeVenue();
     var merchant = (venue && venue.merchant) || '';
@@ -1193,7 +1193,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
       lastFailed = reply.kind !== 'answer';
       var d = reply.body;
       if (reply.kind === 'answer' && reply.status === 200 && d && d.ok && d.staff) {
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.actProof ? { actProof: String(d.actProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
         return rememberOfflinePin(merchant, code, staff).then(function () { return reply; }, function () { return reply; });
       }
       if (reply.kind === 'answer' && (reply.status === 401 || reply.status === 403)) return verifyOfflinePin(merchant, code, true).then(function (gone) {
@@ -1206,9 +1206,9 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
   function noteApproval(who, level) {
     if (!who) return;
     var id = String(who.id || '').slice(0, 80), role = String(who.role || '').trim();
-    lastOperator = { id: id, name: String(who.name || '').trim() || 'Caissier', role: role, actorProof: who.actorProof || '', verdict: who.verdict || 'online', provenAt: who.provenAt || null };
+    lastOperator = { id: id, name: String(who.name || '').trim() || 'Caissier', role: role, actorProof: who.actorProof || '', actProof: who.actProof || '', verdict: who.verdict || 'online', provenAt: who.provenAt || null };
     if (level === 'manager') {
-      lastManager = { id: id, name: String(who.name || '').trim() || 'Responsable', role: role, approval: String(who.approval || ''), verdict: who.verdict || 'online', provenAt: who.provenAt || null };
+      lastManager = { id: id, name: String(who.name || '').trim() || 'Responsable', role: role, approval: String(who.approval || ''), actorProof: who.actorProof || '', actProof: who.actProof || '', verdict: who.verdict || 'online', provenAt: who.provenAt || null };
       lastOperator = lastManager;
     }
   }
@@ -1234,9 +1234,9 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
     authorizeTill: function (code, opts) {
       var roles = window.KiwiRoles;
       if (!roles || typeof roles.opensTill !== 'function') return Promise.resolve(false);
-      return verifyCode(code, undefined, opts && opts.needsServer ? { needsServer: true } : undefined).then(function (who) {
+      return verifyCode(code, opts && opts.action ? opts.action : undefined, opts && opts.needsServer ? { needsServer: true } : undefined).then(function (who) { // opts.action : l'acte du pavé, le serveur signe la preuve de CE geste
         if (!who || !roles.opensTill(who.role || '')) return false;
-        lastOperator = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Caissier', role: String(who.role || '').trim(), actorProof: who.actorProof || '' };
+        lastOperator = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Caissier', role: String(who.role || '').trim(), actorProof: who.actorProof || '', actProof: who.actProof || '' };
         return true;
       });
     },
@@ -1244,13 +1244,13 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
       return verifyCode(code, action).then(function (who) {
         if (who && who.offline && (window.KiwiTrustedClock || Date).now() - who.provenAt >= 24 * 60 * 60 * 1000) return false;
         var role = String((who && who.role) || '').toLowerCase();
-        if (!who || !/owner|propri|manager|g[eé]rant|responsable|admin/.test(role)) return false;
+        var want = ({ refund: 'sales.refund', inventory: 'stock.adjust', cancel: 'sales.cancel', reopen: 'sales.reopen', discount: 'sales.discount', drawer: 'sales.drawer', cash: 'money.cash', price: 'sales.price', 'close-day': 'money.close-day', 'void-sent': 'sales.void-sent' })[String((action && action.kind) || '')] || '', ruled = !!(who && want && !who.offline && who.permission && who.permission.configured && who.permission.id === want); if (!who || (ruled ? !who.permission.granted : !/owner|propri|manager|g[eé]rant|responsable|admin/.test(role))) return false;   // le verdict du serveur ne vaut que pour CET acte, en ligne (pin/verify.js) ; sinon la règle du rôle
         /* Une autorisation qui ne dit pas QUI a autorisé ne vaut rien le jour où
          * on la relit : le code prouve une personne, on garde donc son nom
          * (jamais le code) pour que la surface qui a demandé l'accord puisse
          * l'écrire dans sa vente. */
         if (action && action.kind === 'refund' && !who.approval) return false;
-        lastManager = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Responsable', role: String(who.role || '').trim(), approval: String(who.approval || '') };
+        lastManager = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Responsable', role: String(who.role || '').trim(), approval: String(who.approval || ''), actorProof: String(who.actorProof || ''), actProof: String(who.actProof || '') };
         lastOperator = lastManager;
         return true;
       });

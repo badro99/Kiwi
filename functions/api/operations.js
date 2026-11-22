@@ -907,7 +907,7 @@ async function writePurchaseOrder(env, order, lines) {
     const seq = Number((top && top.taken) || 0) + 1;
     const number = `BC-${order.year}-${String(seq).padStart(6, '0')}`;
     try {
-      /* Sans la colonne supplier_id (base d'avant 0028), le bon s'écrit comme avant. */
+      /* Sans la colonne supplier_id (base d'avant 0031), le bon s'écrit comme avant. */
       const linkCol = order.legacy ? '' : ', supplier_id';
       await env.DB.prepare(
         `INSERT INTO purchase_orders

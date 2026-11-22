@@ -165,6 +165,19 @@ console.log('\npins · codes d’équipe, accès et refus');
   ok('retrait par corps JSON : la ligne part', (await del(cookies.op, { body: { id } })).status === 200 && count() === 0);
   const gone = f.sql.prepare("SELECT * FROM account_audit WHERE action = 'staff-pin-delete'").all();
   ok('la trace du retrait nomme l’opérateur et la personne, jamais le code', gone.length === 1 && gone[0].actor_id === 'money-operator' && gone[0].prev === 'Salarié' && !JSON.stringify(f.sql.prepare('SELECT * FROM account_audit').all()).includes('4821'));
+  /* Remplacer le propriétaire (juge 6) : un patron qui change de nom et de code ne garde pas l'ancien ouvert. */
+  const ownerRows = () => f.sql.prepare("SELECT name FROM staff_pins WHERE role = 'proprietaire' ORDER BY created_ts").all().map((r) => r.name);
+  await pins(cookies.op, { ...payload, pin: '5101', name: 'Nadia Patron', role: 'proprietaire' });
+  await pins(cookies.op, { ...payload, pin: '5102', name: 'Associé', role: 'proprietaire' });
+  ok('sans le signal, un second code propriétaire s’ajoute à côté (un associé)', ownerRows().length === 2);
+  const swap = await rest(await pins(cookies.op, { ...payload, pin: '5103', name: 'Nadia', role: 'proprietaire', replaceOwner: true }));
+  ok('replaceOwner : le nouveau code patron remplace les autres lignes propriétaire, dans le même lot', swap.status === 200 && swap.body.replaced === 2 && ownerRows().join() === 'Nadia', JSON.stringify(swap.body));
+  const swapped = f.sql.prepare("SELECT * FROM account_audit WHERE action = 'staff-pin-delete' AND reason = 'owner-replaced'").all();
+  ok('chaque ligne remplacée laisse sa trace, jamais un code', swapped.length === 2 && !/510[123]/.test(JSON.stringify(f.sql.prepare('SELECT * FROM account_audit').all())));
+  const notOwner = await rest(await pins(cookies.op, { ...payload, pin: '5104', name: 'Karim', role: 'caisse', replaceOwner: true }));
+  ok('le signal sur un rôle d’équipe ne retire rien', notOwner.status === 200 && !notOwner.body.replaced && ownerRows().join() === 'Nadia');
+  const taken = await rest(await pins(cookies.op, { ...payload, pin: '5104', name: 'Nadia 2', role: 'proprietaire', replaceOwner: true }));
+  ok('un code déjà pris : refusé (409), le patron en place reste', taken.status === 409 && ownerRows().join() === 'Nadia');
   f.close();
 }
 

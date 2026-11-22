@@ -201,7 +201,7 @@
       }
       const finalReason = (cmReason === 'Autre') ? customVal : (cmReason || 'Autre');
 
-      window.KiwiAuthAct?.(cmType === 'in' ? { kind: 'cash_in', key: 'act.cash_in', args: { amount: fmtMAD(amount) } } : { kind: 'cash_out', key: 'act.cash_out', args: { amount: fmtMAD(amount) } });
+      window.KiwiAuthAct?.(cmType === 'in' ? { kind: 'cash_in', key: 'act.cash_in', args: { amount: fmtMAD(amount) }, amountCents: Math.round(amount * 100), move: 'in' } : { kind: 'cash_out', key: 'act.cash_out', args: { amount: fmtMAD(amount) }, amountCents: Math.round(amount * 100), move: 'out' });   // montant et sens : la preuve du geste les porte (functions/api/_act-proof.js)
       requireTillOperator(`${cmType === 'in' ? 'Entrée' : 'Sortie'} de caisse · ${fmtMAD(amount)}`, (actor) => {
         const actorId = String((actor && actor.id) || cashActorId()).slice(0, 96);
         const actorName = String((actor && actor.name) || (currentCashier && currentCashier.name) || 'Caissier').slice(0, 80);

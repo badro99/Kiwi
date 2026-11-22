@@ -123,7 +123,7 @@ export async function onRequestPost(context) {
     }
   }
 
-  const published = await publishStaffCredentials(env, merchant, { ...body, pins });
+  const published = await publishStaffCredentials(env, merchant, { ...body, pins, replaceOwner: false });   // jamais de ligne propriétaire d'ici
   if (published instanceof Response) return published;
 
   try {

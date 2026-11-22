@@ -1855,24 +1855,10 @@ handlers['nav-equipe'] = () => {
     },
   ];
 
-  /* ─── Permissions matrix (5 roles × 6 capabilities) ─── */
-  const CAPS = ['Encaisser', 'Remboursement', 'Annulation ticket', 'Voir rapports', 'Modifier menu', 'Gérer équipe'];
-  const PERMS = [
-    { role: 'Propriétaire', kind: 'admin',   perms: [1,1,1,1,1,1] },
-    { role: 'Manager',      kind: 'manager', perms: [1,1,1,1,1,1] },
-    { role: 'Serveur',      kind: 'server',  perms: [1,0,1,0,0,0] },
-    { role: 'Cuisine',      kind: 'kitchen', perms: [0,0,0,0,0,0] },
-    { role: 'Caissier',     kind: 'cashier', perms: [1,0,1,1,0,0] },
-  ];
-
-  /* ─── Journal PIN — sensitive actions audit ─── */
-  const PIN_LOG = [
-    ['14:02', 'Fatima Khalki',  'Annulation ticket #4128',                              'ok'],
-    ['13:48', 'Sofia Belkadi',  'Tentative remboursement refusée · niveau insuffisant',  'ref'],
-    ['12:30', 'Hamid Jelloul',  'Ouverture caisse',                                      'ok'],
-    ['Hier 22:55', 'Youssef Amrani', 'Échec PIN ×3 · réinitialisé par manager',         'pend'],
-    ['Hier 21:12', 'Karim Berrada',  'Remboursement validé · 240 MAD',                   'ok'],
-  ];
+  /* Les droits de l'équipe vivent dans leur propre écran, vérifié par le
+     serveur (assets/pages-pro/staff-permissions.js, /api/permissions). La
+     matrice de démonstration et le faux journal PIN qui étaient ici sont
+     retirés : un commerçant réel les lisait comme ses propres réglages. */
 
   /* ─── Open the drawer with a host div, then render into it ─── */
   let host;
@@ -2082,58 +2068,13 @@ handlers['nav-equipe'] = () => {
         }).join('')}
       </div>
 
-      <!-- Permissions matrix, 2-col grid of role cards -->
-      <div style="margin-bottom:14px;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
-          <div>
-            <h4 style="margin:0; font-size:14.5px; letter-spacing:-0.01em;">Matrice de permissions</h4>
-            <div style="font-size:11.5px; color:var(--n-500); margin-top:3px;">5 rôles · 6 capacités · modifiable par le propriétaire</div>
-          </div>
-          <button data-activation=write class="kb ghost" data-action="edit-perms" style="padding:6px 11px; font-size:11.5px;">Modifier les rôles</button>
+      <!-- Droits de l'équipe : l'écran réel (staff-permissions.js) -->
+      <div style="background:var(--surface); border:1px solid var(--n-200); border-radius:14px; padding:16px 18px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
+        <div>
+          <h4 style="margin:0; font-size:14.5px; letter-spacing:-0.01em;">${(window.KiwiI18n?.getLang?.() === 'en' ? 'Team permissions' : window.KiwiI18n?.getLang?.() === 'ar' ? 'حقوق الفريق' : 'Droits de l’équipe')}</h4>
+          <div style="font-size:11.5px; color:var(--n-500); margin-top:3px;">${(window.KiwiI18n?.getLang?.() === 'en' ? 'Who can refund, cancel, touch stock and money. Change log.' : window.KiwiI18n?.getLang?.() === 'ar' ? 'شكون يقدر يرجّع، يلغي، يقيس السلعة والفلوس. سجل التبديلات.' : 'Qui peut rembourser, annuler, toucher au stock et à l’argent. Journal des changements.')}</div>
         </div>
-        <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
-          ${PERMS.map(r => {
-            const active = r.perms.filter(Boolean).length;
-            const roleC = ROLE_COLOR[r.kind] || 'var(--atlas)';
-            return `
-              <div style="background:var(--surface); border:1px solid var(--n-200); border-radius:12px; padding:14px 16px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                  <div style="display:flex; align-items:center; gap:9px;">
-                    <i style="width:9px; height:9px; border-radius:50%; background:${roleC};"></i>
-                    <b style="font-size:13.5px; letter-spacing:-0.005em;">${r.role}</b>
-                  </div>
-                  <span class="mono" style="font-size:11px; color:var(--n-500); background:var(--paper-soft); padding:2px 7px; border-radius:5px;">${active} / ${CAPS.length}</span>
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
-                  ${CAPS.map((c, i) => `
-                    <div style="display:flex; align-items:center; gap:6px; font-size:11.5px; color:${r.perms[i] ? 'var(--ink)' : 'var(--n-400)'};">
-                      ${r.perms[i]
-                        ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${roleC}" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>`
-                        : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M6 18L18 6"/></svg>`
-                      }
-                      ${c}
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-
-      <!-- Journal PIN -->
-      <div style="background:var(--surface); border:1px solid var(--n-200); border-radius:14px; padding:16px 18px;">
-        <div style="margin-bottom:10px;">
-          <h4 style="margin:0; font-size:14.5px; letter-spacing:-0.01em;">Journal PIN &amp; actions sensibles</h4>
-          <div style="font-size:11.5px; color:var(--n-500); margin-top:3px;">Annulations · remboursements · ouvertures de caisse · échecs de saisie</div>
-        </div>
-        ${PIN_LOG.map(([t, who, ev, st]) => `
-          <div style="display:grid; grid-template-columns:90px 1fr auto; gap:14px; align-items:center; padding:10px 0; border-top:1px solid var(--n-200); font-size:12.5px;">
-            <div class="mono" style="font-size:11px; color:var(--n-500);">${t}</div>
-            <div><b>${who}</b><div style="font-size:11px; color:var(--n-500); margin-top:2px;">${ev}</div></div>
-            <span class="chip ${st}">${st === 'ok' ? 'OK' : st === 'pend' ? 'Réinit.' : 'Refusé'}</span>
-          </div>
-        `).join('')}
+        <button class="kb ghost" data-action="nav-permissions" style="padding:6px 11px; font-size:11.5px;">${(window.KiwiI18n?.getLang?.() === 'en' ? 'Manage permissions' : window.KiwiI18n?.getLang?.() === 'ar' ? 'تسيير الحقوق' : 'Gérer les droits')}</button>
       </div>
     `;
   }
@@ -2350,7 +2291,7 @@ handlers['nav-equipe'] = () => {
   };
 
   if (!handlers['member-detail']) handlers['member-detail'] = (el) => toast(`Profil de ${el?.dataset?.arg || 'l\'employé'}`, { type: 'info', desc: 'Pointage · revenus · pourboires · historique disciplinaire.' });
-  if (!handlers['edit-perms'])    handlers['edit-perms']    = () => toast('Éditeur de permissions', { type: 'info', desc: 'Cochez/décochez les capacités par rôle · changement appliqué immédiatement.' });
+  if (!handlers['edit-perms'])    handlers['edit-perms']    = (...a) => handlers['nav-permissions']?.(...a);
 };
 
 /* ═══════════════════ PAIE & PLANNING ═══════════════════ */

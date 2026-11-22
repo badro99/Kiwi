@@ -19,8 +19,8 @@
     return;
   }
   const scripts = [
-    'assets/pages-pro-office.js?v=29',
-    'assets/pages-pro.js?v=2252',
+    'assets/pages-pro-office.js?v=30',
+    'assets/pages-pro.js?v=2253',
     'assets/pages-pro-boutique.js?v=62',
     'assets/inventory-scan.js?v=1',
     'assets/boutique-stock-correct.js?v=4',
@@ -54,11 +54,11 @@
     'assets/catalog-workspace.js?v=7',
     'assets/planning-core.js?v=15',
     'assets/team/catalog.js?v=2',
-    'assets/team.js?v=363',
+    'assets/team.js?v=364',
     'assets/team/profile-ui.js?v=23',
     'assets/team-hours.js?v=38',
     'assets/cancellation-history.js?v=3',
-    'assets/cash-sessions.js?v=15',
+    'assets/cash-sessions.js?v=18',
     'assets/weather.js?v=1',
     'assets/briefing-rules.js?v=7',
     'assets/briefing-persistence.js?v=23',

@@ -52,9 +52,14 @@ export async function hashStaffCode(env, merchant, code) {
 export async function needsStaffRecovery(env, pin) {
   return /^k2\$/.test(pin) && !pin.startsWith('k2$' + await keyTag(staffKeys(env)[0]) + '$');
 }
+/* Une ligne d'équipe publiée sur un code déjà pris (functions/api/_staff-publication.js
+ * › insertStaffRow) : empreinte morte, « $! » puis du hasard, qu'aucun code ne
+ * reproduit (b64url n'a pas de « ! »). Rien à recouvrer : elle reste telle quelle. */
+export const isDeadStaffCode = (pin) => typeof pin === 'string' && /^k2\$[^$]*\$!/.test(pin);
 // Exhaustive recovery belongs only to the bounded operator backfill, never login.
 export async function rotateStaffRow(env, row, start = 0, budget = 250) {
   if (valid(row.pin)) return hashStaffCode(env, row.merchant, row.pin);
+  if (isDeadStaffCode(row.pin)) return row.pin;
   if (!/^k2\$/.test(row.pin)) throw new Error('invalid-staff-code');
   if (!await needsStaffRecovery(env, row.pin)) return row.pin;
   const signers = [];

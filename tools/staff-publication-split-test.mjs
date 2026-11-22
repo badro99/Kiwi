@@ -26,7 +26,44 @@ const tierGuard = "  /* Les codes de l'équipe ne changent pas depuis un tableau
   + "  if (Array.isArray(body && body.pins) && !(await sessionTierAtLeast(request, env, 'manager'))) {\n"
   + "    return json({ error: 'tier', need: 'manager' }, 403);\n  }\n";
 ok(route.split(tierImport).length === 2 && route.split(tierGuard).length === 2, 'the tier refusal sits once in the route, with its import');
-const routeBase = route.replace(tierImport, '').replace(tierGuard, '');
+/* A second one (21 Nov, team permissions): below the owner tier, a code titled
+ * like the owner is dropped from the list, so a manager cannot publish one for
+ * herself. staff-permissions-test runs it against the real route. */
+const ownerGuard = "  /* Un code à intitulé de propriétaire (« Propriétaire », « Direction »…) ouvre\n"
+  + "   * le tableau de bord au palier du patron (faceAccessTier). Sous ce palier, une\n"
+  + "   * session ne peut ni en créer, ni en renommer, ni en recoder un : ces lignes\n"
+  + "   * de la liste sont ignorées, et celles déjà en base restent telles quelles\n"
+  + "   * (_staff-publication.js garde les codes propriétaire d'une liste qui n'en a\n"
+  + "   * pas). Sinon un gérant se donnerait le palier du patron. */\n"
+  + "  if (Array.isArray(body && body.pins) && !(await sessionTierAtLeast(request, env, 'owner'))) {\n"
+  + "    body.pins = body.pins.filter((p) => !(p && accountOwnerRole(String(p.role || '').trim().slice(0, 24))));\n  }\n";
+/* Since 21 Nov the filtered rows are kept aside for codeHolds (an unchanged
+ * owner row is ignored, a new or recoded one refused): one declaration before
+ * the guard, one line inside it. */
+const ownerKeep = "  let ownerTitled = [];   // les lignes écartées, que codeHolds juge : inchangées, ignorées ; neuves ou recodées, refusées (403)\n";
+const ownerKeepLine = "    ownerTitled = body.pins.filter((p) => p && accountOwnerRole(String(p.role || '').trim().slice(0, 24)));\n";
+const routeNow = route.replace(ownerKeep, '').replace(ownerKeepLine, '');
+ok(route.split(ownerKeep).length === 2 && route.split(ownerKeepLine).length === 2 && routeNow.split(ownerGuard).length === 2, 'the owner-title filter sits once in the route, its rows kept for codeHolds');
+/* A third (21 Nov, team permissions): a code that brings a new identity to
+ * life outside the owner's session starts with no rights until the owner
+ * reviews it (or is refused: a homonym of an owner-titled member, a hold that
+ * cannot be written). One import, one line before the publish call, one after it;
+ * staff-permissions-test runs it against the real route. */
+const holdImport = "import { codeHolds } from './_permissions.js';\n";
+const holdBefore = "    const holdCodes = await codeHolds(request, env, merchant, body, ownerTitled); if (holdCodes instanceof Response) return holdCodes; // hors du patron : homonyme d'un propriétaire refusé, identité nouvelle retenue AVANT publication, fermé en cas de doute (_permissions.js)\n";
+const holdAfter = "    if (holdCodes) await holdCodes();\n";
+ok(route.split(holdImport).length === 2 && route.split(holdBefore).length === 2 && route.split(holdAfter).length === 2, 'the code hold sits once in the route, with its import');
+/* A fourth (21 Nov, judge round 6): only the owner's tier may ask to replace
+ * the owner rows (the wizard), and only the owner's tier is told which person
+ * got a code that was already taken. Two lines before the publish call, three
+ * after the hold; a manager's reply stays as it was (staff-permissions-test 9f, 9g). */
+const ownerTierBefore = "    const ownerTier = await sessionTierAtLeast(request, env, 'owner');\n"
+  + "    body.replaceOwner = body.replaceOwner === true && ownerTier;   // « remplacer le propriétaire » : le patron seul (le wizard)\n";
+const redoAfter = "    /* Au patron seul : qui a reçu un code déjà pris (ligne scellée morte). Un\n       gérant reçoit la même réponse, collision ou non (staff-permissions-test 9f). */\n"
+  + "    if (ownerTier) { const redo = await codesToRedo(env, merchant); if (redo.length) result.codesToRedo = redo; }\n";
+ok(route.split(ownerTierBefore).length === 2 && route.split(redoAfter).length === 2, 'the owner-only replace signal and redo list sit once in the route');
+const routeBase = routeNow.replace(tierImport, '').replace(tierGuard, '').replace(ownerGuard, '').replace(holdImport, '').replace(holdBefore, '').replace(holdAfter, '')
+  .replace(ownerTierBefore, '').replace(redoAfter, '');
 
 /* The function body, moved two spaces left, with `result` its own local. */
 const head = 'export async function publishStaffCredentials(env, merchant, body) {\n  const result = {};\n';
@@ -41,15 +78,44 @@ const sharedGuard = "  const sharedCode = sharedCodeHolders(body.pins);\n"
   + "  if (sharedCode.length) return json({ error: 'duplicate-staff-code', members: sharedCode }, 409);\n";
 const moved = mod.slice(fnAt + head.length, mod.length - tail.length);
 ok(moved.split(sharedGuard).length === 2, 'the shared-code refusal sits once in the publish function');
-const inner = moved.replace(sharedGuard, '');
-const helpers = mod.slice(mod.indexOf('const VALID_PIN'), mod.indexOf('\n}\n', mod.indexOf('function accountOwnerRole(')) + 3);
+/* A deliberate change (21 Nov, team permissions): an unchanged code keeps its
+ * id across a publication, so a dashboard session opened with it keeps its name.
+ * One call before the batch and the id expression are set aside;
+ * staff-permissions-test runs it. */
+const keepCall = "  await keepUnchangedIds(env, merchant, clean);\n";
+const keepBindNow = ".bind(p.keepId || 'pin-' + crypto.randomUUID(), merchant,";
+const keepBindThen = ".bind('pin-' + crypto.randomUUID(), merchant,";
+ok(moved.split(keepCall).length === 2 && mod.split(keepBindNow).length === 2 && mod.includes('async function keepUnchangedIds(env, merchant, clean) {'), 'unchanged codes keep their id, once');
+/* Two more (21 Nov, judge round 5): owner rows are kept by NAME, so a team
+ * list with a « Direction » employee no longer deletes the owner's code; and a
+ * team row is always written (a code already taken gets a dead seal in SQL),
+ * so a collision with the owner's code looks like any other row. Each new
+ * call stands where the old block stood; staff-permissions-test runs both. */
+const ownerKeepNow = "  const keepIds = await ownerRowsToKeep(env, merchant, tillPins, body.replaceOwner);\n  if (keepIds === null) return json({ error: 'staff-unavailable' }, 503);\n";
+const ownerKeepThen = "  const incomingHasOwner = tillPins.some((p) => accountOwnerRole(p.role));\n  const keepIds = [];\n  if (!incomingHasOwner) {\n    try {\n      const existing = await env.DB.prepare(\n        'SELECT id, role FROM staff_pins WHERE merchant = ?'\n      ).bind(merchant).all();\n      await sealMerchantStaff(env, merchant);\n      for (const row of existing.results || []) {\n        if (accountOwnerRole(row.role)) keepIds.push(String(row.id));\n      }\n    } catch (_) { return json({ error: 'staff-unavailable' }, 503); }\n  }\n";
+const insertNow = "      stmts.push(insertStaffRow(env, merchant, p, base + i));";
+const insertThen = "      stmts.push(env.DB.prepare(\n        'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) SELECT ?,?,?,?,?,? '\n        + 'WHERE NOT EXISTS (SELECT 1 FROM staff_pins WHERE merchant = ? AND pin IN (' + p.candidates.map(() => '?').join(',') + '))'\n      ).bind(p.keepId || 'pin-' + crypto.randomUUID(), merchant, p.storedCode, p.name, p.role, base + i, merchant, ...p.candidates));";
+ok(moved.split(ownerKeepNow).length === 2 && moved.split(insertNow).length === 2
+  && mod.includes('async function ownerRowsToKeep(env, merchant, tillPins, replaceOwner) {') && mod.includes('function insertStaffRow(env, merchant, p, ts) {'), 'owner rows kept by name, team rows always written, once each');
+const inner = moved.replace(sharedGuard, '').replace(keepCall, '').replace(ownerKeepNow, ownerKeepThen).replace(insertNow, insertThen.replace(keepBindNow, keepBindThen));
+/* A deliberate change since the move (21 Nov): accountOwnerRole reads the one
+ * shared table of owner titles (assets/permissions-catalog.js), so publish,
+ * route filter and permission evaluator agree. The rebuild puts the old body
+ * back; staff-permissions-test holds the agreement on a table of variants. */
+const ownerRoleNow = "function accountOwnerRole(value) {\n  return Catalog.ownerTitle(value);   // les intitulés propriétaire, la liste unique du palier et des droits (assets/permissions-catalog.js)\n}\n";
+const ownerRoleThen = "function accountOwnerRole(value) {\n  let role = String(value || '').trim().toLowerCase();\n"
+  + "  try { role = role.normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''); } catch (_) {}\n"
+  + "  return new Set(['owner', 'proprietaire', 'direction', 'patron']).has(role);\n}\n";
+ok(mod.split(ownerRoleNow).length === 2 && mod.startsWith("import Catalog from '../../assets/permissions-catalog.js';\n"), 'the owner-title test reads the shared catalog, once');
+const helpers = mod.replace(ownerRoleNow, ownerRoleThen).slice(mod.replace(ownerRoleNow, ownerRoleThen).indexOf('const VALID_PIN'),
+  mod.replace(ownerRoleNow, ownerRoleThen).indexOf('\n}\n', mod.replace(ownerRoleNow, ownerRoleThen).indexOf('function accountOwnerRole(')) + 3);
 
 const call = "  if (Array.isArray(body && body.pins)) {\n    const published = await publishStaffCredentials(env, merchant, body);\n"
   + "    if (published instanceof Response) return published;\n    Object.assign(result, published);\n  }";
 ok(routeBase.split(call).length === 2, 'the route publishes staff codes through exactly one call');
 let rebuilt = routeBase.replace(call, () => '  if (Array.isArray(body && body.pins)) {\n'
   + inner.split('\n').map((l) => (l ? '  ' + l : l)).join('\n') + '\n  }');
-rebuilt = rebuilt.replace("import { publishStaffCredentials, accountOwnerRole } from './_staff-publication.js';\n",
+rebuilt = rebuilt.replace("import { publishStaffCredentials, accountOwnerRole, codesToRedo } from './_staff-publication.js';\n",
   "import { authFingerprint, authSentinel, planEmployeeAuth, writeEmployeeAuth, authMoved } from './_employee-auth.js';\n\n" + helpers);
 rebuilt = rebuilt.replace('  json, activeAccountSession, slugMerchant, accountSlug, isOperator, isTillFor,',
   '  json, activeAccountSession, slugMerchant, accountSlug, teamRemovedIds, isOperator, isTillFor,');
@@ -57,7 +123,7 @@ ok(rebuilt === original, 'route + module rebuild the original config.js byte for
 
 /* Contract: the module exports the publish function and the owner-role test, nothing else. */
 const exported = [...mod.matchAll(/^export (?:async )?(?:function|const) (\w+)|^export \{ ([^}]+) \}/gm)].map((m) => (m[1] || m[2]).trim()).sort();
-ok(JSON.stringify(exported) === JSON.stringify(['accountOwnerRole', 'publishStaffCredentials']), 'module exports only its contract: ' + exported.join(', '));
+ok(JSON.stringify(exported) === JSON.stringify(['accountOwnerRole', 'codesToRedo', 'publishStaffCredentials']), 'module exports only its contract: ' + exported.join(', '));
 const teamUses = [...mod.matchAll(/teamRow(?:\.\w+)?/g)].map((m) => m[0]).sort().join(',');
 ok((mod.match(/feature = 'team'/g) || []).length === 1 && teamUses === 'teamRow,teamRow,teamRow.data,teamRow.data'
   && /removedIds = teamRemovedIds\(JSON\.parse\(teamRow\.data\)\)/.test(mod), 'the team document is read once, for its tombstones only: ' + teamUses);

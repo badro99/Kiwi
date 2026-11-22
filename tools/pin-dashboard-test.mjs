@@ -13,6 +13,7 @@
  *
  * Discipline : contrôles exécutés = code EXTRAIT des fichiers livrés.
  * ═══════════════════════════════════════════════════════════════════════════ */
+import { createRequire } from 'node:module';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -47,7 +48,7 @@ const extract = (src, re, what) => {
 // ── 1. employeeRoleOpensDashboard — exécutée, avec sa normalisation ─────────
 const normSrc = extract(lib, /function normEmployeeRole\(value\) \{[\s\S]*?\n\}/, 'normEmployeeRole');
 const dashSrc = extract(lib, /export function employeeRoleOpensDashboard\(value\) \{[\s\S]*?\n\}/, 'employeeRoleOpensDashboard');
-const opensDash = new Function(normSrc + '\n' + dashSrc + '; return employeeRoleOpensDashboard;')();
+const opensDash = new Function('Catalog', normSrc + '\n' + dashSrc + '; return employeeRoleOpensDashboard;')(createRequire(import.meta.url)(path.join(ROOT, 'assets/permissions-catalog.js')));   // la liste partagée des intitulés de propriétaire
 ok(opensDash('Propriétaire') === true && opensDash('owner') === true && opensDash('PATRON') === true && opensDash('direction') === true, 'propriétaire / owner / patron / direction ouvrent le dashboard');
 ok(opensDash('Manager') === true && opensDash('gérant') === true && opensDash('management') === true && opensDash('admin') === true, 'manager / gérant / management / admin ouvrent le dashboard (vue restreinte)');
 ok(opensDash('Caissier') === false && opensDash('caissière') === false && opensDash('cashier') === false, 'un caissier n\'ouvre JAMAIS le dashboard');
@@ -63,12 +64,15 @@ ok(/limitFail\(request, env, 'pin:account', identity\)/.test(vapSrc), 'le limite
 
 // ── 3. POST /api/config pins — le roster d'équipe ne tue pas le patron ───────
 const ownerRoleSrc = extract(staffPub, /function accountOwnerRole\(value\) \{[\s\S]*?\n\}/, 'accountOwnerRole');
-const ownerRole = new Function(ownerRoleSrc + '; return accountOwnerRole;')();
+/* accountOwnerRole lit la table partagée des intitulés (assets/permissions-catalog.js) : on la lui donne. */
+const SharedCatalog = createRequire(import.meta.url)(path.join(ROOT, 'assets/permissions-catalog.js'));
+const ownerRole = new Function('Catalog', ownerRoleSrc + '; return accountOwnerRole;')(SharedCatalog);
 ok(ownerRole('Propriétaire') === true && ownerRole('owner') === true && ownerRole('direction') === true, 'accountOwnerRole reconnaît les orthographes du patron (accents compris)');
 ok(ownerRole('manager') === false && ownerRole('Caissier') === false, 'manager et caissier ne sont pas le patron — leurs lignes suivent le roster d\'équipe');
 
 const pinsBlock = staffPub.slice(staffPub.indexOf('export async function publishStaffCredentials('));
-ok(pinsBlock.includes('const incomingHasOwner = tillPins.some((p) => accountOwnerRole(p.role))'), 'la liste entrante est inspectée : porte-t-elle un propriétaire ?');
+ok(pinsBlock.includes('const keepIds = await ownerRowsToKeep(env, merchant, tillPins);') && /filter\(\(row\) => accountOwnerRole\(row\.role\) && !incoming\.has\(Catalog\.normRole\(row\.name\)\)\)/.test(staffPub),
+  'la liste entrante est inspectée : une ligne propriétaire n’est remplacée que par une ligne au MÊME nom (une « Direction » d’équipe n’efface plus le patron)');
 ok(/DELETE FROM staff_pins WHERE merchant = \? AND id NOT IN \(/.test(pinsBlock), 'sans propriétaire entrant, les lignes propriétaire existantes sont PRÉSERVÉES');
 ok(/AND EXISTS \(SELECT 1 FROM staff_pins k WHERE k\.id IN/.test(pinsBlock), 'le code conservé du patron gagne sur un doublon d\'équipe — comparaison en SQL, jamais en JS');
 ok(!/SELECT id, pin|SELECT pin/.test(pinsBlock), 'la préservation ne projette JAMAIS la colonne pin vers JavaScript');

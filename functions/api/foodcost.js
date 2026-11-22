@@ -36,6 +36,7 @@
 import {
   json, entitledMerchant, activeAccountSession, isOperator, operatorActor, maskEmail,
 } from '../auth/_lib.js';
+import { sessionGuard } from './_permissions.js';
 
 const MAX_SHEETS = 300;
 const MAX_LINES = 80;
@@ -198,6 +199,7 @@ export async function onRequestPost(context) {
   const merchant = str(body && body.merchant, 64);
   const actor = await foodCostActor(request, env, merchant);
   if (!actor) return json({ error: 'forbidden' }, 403, noStore);
+  { const denied = await sessionGuard(request, env, merchant, 'reports.margins'); if (denied) return denied; } // droits par personne (_permissions.js), sur CE merchant
   const state = await storeState(env, merchant);
   if (!state.enabled) return json({ error: 'disabled' }, 403, noStore);
   if (state.suspended) return json({ error: 'suspended' }, 403, noStore);

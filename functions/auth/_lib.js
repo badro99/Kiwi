@@ -3,6 +3,7 @@ import { deadlineFetch } from '../../assets/request-deadline.mjs';
 import { codeDocument, matchingStaffCodes, accountStaffCodes, hashStaffCode } from './_staff-codes.js';
 import { canonicalCode } from '../api/_rules-staff-credential.js';
 import { hmacKey } from './_crypto.js';
+import Catalog from '../../assets/permissions-catalog.js';   // LA liste des intitulés de propriétaire (OWNER_TITLE_LIST)
 // Kiwi — shared auth helpers for the account gate (Cloudflare Pages Functions).
 //
 // Runs on the Workers runtime and uses only Web Crypto + platform globals
@@ -246,9 +247,10 @@ export async function tillActorProof(secret, merchant, staff) {
 }
 /**
  * @param {import('../../types/tenant').MerchantInput} merchant
+ * @param {number} [now] the moment the proof must have been valid (a fact a till recorded offline)
  * @returns {Promise<import('../../types/tenant').TillActor | null>}
  */
-export async function readTillActorProof(token, secret, merchant) {
+export async function readTillActorProof(token, secret, merchant, now = Date.now()) {
   if (!secret || typeof token !== 'string' || token.length > 2048 || !token.includes('.')) return null;
   const [payload, signature] = token.split('.');
   const expected = await hmacHex(secret, 'kiwi-till-actor-v1:' + payload);
@@ -256,7 +258,7 @@ export async function readTillActorProof(token, secret, merchant) {
   try {
     const body = JSON.parse(new TextDecoder().decode(b64urlToBytes(payload)));
     // Trust boundary: signature, merchant match, identity and expiry checked here.
-    return body.merchant === merchant && body.id && Number.isFinite(body.exp) && body.exp > Date.now() ? /** @type {import('../../types/tenant').TillActor} */ (body) : null;
+    return body.merchant === merchant && body.id && Number.isFinite(body.exp) && body.exp > now ? /** @type {import('../../types/tenant').TillActor} */ (body) : null;
   } catch (_) { return null; }
 }
 
@@ -1547,7 +1549,7 @@ export function employeeRoleOpensTill(value) {
 export function employeeRoleOpensDashboard(value) {
   const role = normEmployeeRole(value);
   return new Set([
-    'proprietaire', 'owner', 'patron', 'direction',
+    ...Catalog.OWNER_TITLE_LIST,   // une seule liste pour le palier, Face ID et les droits (assets/permissions-catalog.js)
     'manager', 'management', 'gerant', 'gerante', 'admin',
   ]).has(role);
 }
@@ -1563,7 +1565,7 @@ export function employeeRoleOpensDashboard(value) {
  *   · le code d'une caissière n'y entre pas : le changer ne touche personne.
  * La marque n'est DÉLIVRÉE que par POST /api/pin/verify, avec un code prouvé, au
  * palier de ce code ; /api/pin/face ne fait que la confirmer. */
-const FACE_OWNER_ROLES = new Set(['proprietaire', 'owner', 'patron', 'direction']);
+const FACE_OWNER_ROLES = new Set(Catalog.OWNER_TITLE_LIST);   // la même liste que les droits : « Accès propriétaire complet » = palier du patron
 const FACE_MANAGER_ROLES = new Set(['manager', 'management', 'gerant', 'gerante', 'admin']);
 export function faceAccessTier(role) {
   if (!employeeRoleOpensDashboard(role)) return '';

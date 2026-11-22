@@ -41,6 +41,7 @@ import { tenantFor, storeSubscriptionPending } from './_private.js';
 import { enqueueStockChanges, flushShopifyOutbox } from './shopify/_lib.js';
 import { catalogFamily, idTagFor, seedFromFamily, syncFamily } from './_catalog-family.js';
 import { loadParts, packCatalog, runCatalogWrite } from './_catalog-parts.js';
+import { sessionGuard } from './_permissions.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const num = (v, max) => Math.max(0, Math.min(max, Number(v) || 0));
@@ -456,6 +457,7 @@ export async function onRequestPost(context) {
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   if (body && body.stockAction) return applyStockAction(env, merchant, body, waitUntil);
+  { const denied = await sessionGuard(request, env, merchant, 'catalog.edit'); if (denied) return denied; } // droits par personne (_permissions.js), sur CE merchant
 
   const raw = (body && body.data) || null;
 
@@ -527,6 +529,19 @@ export async function onRequestPost(context) {
     try { mine = sanitize(JSON.parse(current.data)); } catch (_) { mine = null; }
     const lost = omitted(mine, data);
     if (lost) return json({ error: 'items-omitted', count: lost, rev: serverRev, data: mine }, 409);
+  }
+
+  /* Le prix d'un article qui existe déjà : il faut « Changer le prix d'un
+     article existant » en plus de catalog.edit (droits par personne,
+     functions/api/_permissions.js). Un article neuf porte son premier prix. */
+  if (serverRev && current && current.data) {
+    let old = null;
+    try { old = sanitize(JSON.parse(current.data)); } catch (_) { old = null; }
+    const was = new Map(((old && old.products) || []).map((p) => [p.id, Math.round(Number(p.priceMAD || 0) * 100)]));
+    if (data.products.some((p) => was.has(p.id) && was.get(p.id) !== Math.round(Number(p.priceMAD || 0) * 100))) {
+      const denied = await sessionGuard(request, env, merchant, 'catalog.price');
+      if (denied) return denied;
+    }
   }
 
   const rev = serverRev + 1;

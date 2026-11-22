@@ -3,6 +3,7 @@ import {
   entitledMerchant, isTillFor, isTerminalFor, json, readCookie,
   TERMINAL_COOKIE, terminalToken, terminalCookie, tillEpoch
 } from '../auth/_lib.js';
+import { flagUnauthorized, provenActor } from './_permissions.js';
 
 const EVENT_TYPES = new Set(['open', 'movement', 'handover', 'close']);
 const MOVEMENT_KINDS = new Set(['in', 'out', 'no-sale']);
@@ -253,6 +254,18 @@ export async function onRequestPost({ request, env }) {
          movement_reason, actor_id, counterparty_actor_id, opened_ts, occurred_ts)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .bind(...eventBinds).run();
+    }
+    /* Des espèces sorties ou entrées, le tiroir ouvert sans vente, la journée
+       clôturée, sans le droit : le tiroir a déjà bougé, on garde l'écriture (le
+       compte du soir en dépend) et on l'inscrit au journal des droits du patron.
+       L'auteur jugé est celui de la preuve signée (`actProof` du geste, ou
+       `sellerProof` de la personne en poste), jamais `actorId`, que la caisse
+       déclare (functions/api/_permissions.js, _act-proof.js). */
+    if (eventType === 'movement' || eventType === 'close') {
+      const proven = await provenActor(env, merchant, { actProof: body.actProof, sellerProof: body.sellerProof },
+        { kind: eventType === 'close' ? 'close-day' : movementKind === 'no-sale' ? 'drawer' : 'cash', move: movementKind, amountCents: movementAmount, at: occurredAt, ref: id });
+      await flagUnauthorized(env, merchant, proven, eventType === 'close' ? 'money.close-day' : movementKind === 'no-sale' ? 'sales.drawer' : 'money.cash', id,
+        eventType === 'close' ? { claimed: actorId, gapCents: gapFinal } : { movementKind, amountCents: movementAmount, reason: movementReason, claimed: actorId });
     }
     const response = json({ ok: true, id }, 201);
     if (bootstrapTerminal) {

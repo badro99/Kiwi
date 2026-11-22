@@ -20,9 +20,9 @@
     authorizeTill: function (code, opts) {
       var roles = window.KiwiRoles;
       if (!roles || typeof roles.opensTill !== 'function') return Promise.resolve(false);
-      return verifyCode(code, undefined, opts && opts.needsServer ? { needsServer: true } : undefined).then(function (who) {
+      return verifyCode(code, opts && opts.action ? opts.action : undefined, opts && opts.needsServer ? { needsServer: true } : undefined).then(function (who) { // opts.action : l'acte du pavé, le serveur signe la preuve de CE geste
         if (!who || !roles.opensTill(who.role || '')) return false;
-        lastOperator = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Caissier', role: String(who.role || '').trim(), actorProof: who.actorProof || '' };
+        lastOperator = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Caissier', role: String(who.role || '').trim(), actorProof: who.actorProof || '', actProof: who.actProof || '' };
         return true;
       });
     },
@@ -30,13 +30,13 @@
       return verifyCode(code, action).then(function (who) {
         if (who && who.offline && (window.KiwiTrustedClock || Date).now() - who.provenAt >= 24 * 60 * 60 * 1000) return false;
         var role = String((who && who.role) || '').toLowerCase();
-        if (!who || !/owner|propri|manager|g[eé]rant|responsable|admin/.test(role)) return false;
+        var want = ({ refund: 'sales.refund', inventory: 'stock.adjust', cancel: 'sales.cancel', reopen: 'sales.reopen', discount: 'sales.discount', drawer: 'sales.drawer', cash: 'money.cash', price: 'sales.price', 'close-day': 'money.close-day', 'void-sent': 'sales.void-sent' })[String((action && action.kind) || '')] || '', ruled = !!(who && want && !who.offline && who.permission && who.permission.configured && who.permission.id === want); if (!who || (ruled ? !who.permission.granted : !/owner|propri|manager|g[eé]rant|responsable|admin/.test(role))) return false;   // le verdict du serveur ne vaut que pour CET acte, en ligne (pin/verify.js) ; sinon la règle du rôle
         /* Une autorisation qui ne dit pas QUI a autorisé ne vaut rien le jour où
          * on la relit : le code prouve une personne, on garde donc son nom
          * (jamais le code) pour que la surface qui a demandé l'accord puisse
          * l'écrire dans sa vente. */
         if (action && action.kind === 'refund' && !who.approval) return false;
-        lastManager = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Responsable', role: String(who.role || '').trim(), approval: String(who.approval || '') };
+        lastManager = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Responsable', role: String(who.role || '').trim(), approval: String(who.approval || ''), actorProof: String(who.actorProof || ''), actProof: String(who.actProof || '') };
         lastOperator = lastManager;
         return true;
       });
