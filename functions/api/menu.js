@@ -732,6 +732,10 @@ export async function onRequestPost(context) {
     }
   } catch (_) { return json({ error: 'write-failed' }, 500); }
 
+  /* Une carte de restaurant liée à Glovo : prix et dispo changés partent en lot, après la réponse. */
+  if (!shop && env.GLOVO_TOKEN && context.waitUntil) {
+    context.waitUntil(import('./channel/glovo/_glovo-menu.js').then((m) => m.syncGlovoItems(env, merchant)).catch(() => {}));
+  }
   return shop
     ? json({ ok: true, merchant, products: data.products.length, variants: data.variants.length, updatedTs })
     : json({ ok: true, merchant, items: data.items.length, cats: data.cats.length, updatedTs });

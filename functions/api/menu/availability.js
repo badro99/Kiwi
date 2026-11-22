@@ -15,7 +15,8 @@ import { sanitizeMenu } from '../menu.js';
 
 const clean = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
 
   let body;
@@ -68,6 +69,10 @@ export async function onRequestPost({ request, env }) {
       ).bind(JSON.stringify(data), updatedTs, merchant, +row.updated_ts || 0).run();
     } catch (_) { return json({ error: 'write-failed' }, 500); }
     if (result && result.meta && result.meta.changes === 1) {
+      /* Épuisé à la caisse → indisponible chez Glovo (et l'inverse), après la réponse. */
+      if (env.GLOVO_TOKEN && context.waitUntil) {
+        context.waitUntil(import('../channel/glovo/_glovo-menu.js').then((m) => m.syncGlovoItems(env, merchant)).catch(() => {}));
+      }
       return json({ ok: true, merchant, itemId, available: body.available, until, updatedTs });
     }
   }
