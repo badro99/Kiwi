@@ -156,7 +156,7 @@ export function accountStep(el, s) {
   if (s.busy) { s.toast(tr('Compte client'), tr('Le ticket entier passe sur le compte, sans autre règlement.')); return; }
   const c = s.cls;
   el.innerHTML = `
-    <button class="${c}-modal-x" data-${c}-close aria-label="${tr('Fermer')}"><i data-lucide="x"></i></button>
+    <button class="${c}-modal-x" data-${c}-close aria-label="${tr('Fermer')}"><i data-icon="close"></i></button>
     <h3 class="modal-title">${tr('Mettre sur le compte client')}</h3>
     <p class="modal-subtle">${s.who ? s.esc(s.who.name) : tr('Cliente')} · ${s.esc(s.ref || '')}</p>
     <div class="modal-amount size-md">${s.amountText}</div>
@@ -187,11 +187,11 @@ export function avanceStep(el, s) {
   const c = s.cls, m = retailModes(s.trade), until = heldUntilText(avanceExpiresAt());
   const methods = [['especes', 'Espèces'], ['carte', 'Carte'], m.virement && ['virement', 'Virement / Versement'], m.cheque && ['cheque', 'Chèque']].filter(Boolean);
   el.innerHTML = `
-    <button class="${c}-modal-x" data-${c}-close aria-label="${tr('Fermer')}"><i data-lucide="x"></i></button>
+    <button class="${c}-modal-x" data-${c}-close aria-label="${tr('Fermer')}"><i data-icon="close"></i></button>
     <h3 class="modal-title">${tr('Avance')}</h3>
     <p class="modal-subtle">${s.who ? s.esc(s.who.name) : tr('Cliente')} · ${tr('Total')} ${s.fmt(s.due)}</p>
     <label class="modal-subtle" for="${c}-avance-in" style="display:block;margin-top:14px;">${tr('Montant versé aujourd’hui')}</label>
-    <input class="${c}-in mono" id="${c}-avance-in" type="number" inputmode="decimal" min="1" step="1" placeholder="MAD" autocomplete="off" style="width:100%;box-sizing:border-box;font-size:22px;margin:6px 0;" />
+    <input class="${c}-in mono" id="${c}-avance-in" type="number" inputmode="decimal" min="1" step="1" placeholder="${s.fmt(0)}" autocomplete="off" style="width:100%;box-sizing:border-box;font-size:22px;margin:6px 0;" />
     <p class="modal-subtle" data-avance-note>${until ? `${tr('Pièce gardée jusqu’au')} ${until}` : tr('Pièce gardée sans date limite')}</p>
     <div class="${c}-pay-opts" style="margin-top:12px;">${methods.map(([k, l]) => `
       <button class="${c}-pay-opt" data-avance-m="${k}"><span class="l"><b>${tr(l)}</b></span><span class="amt" data-avance-amt></span></button>`).join('')}

@@ -48,7 +48,17 @@ export function scan(source, filename = 'fixture.js') {
     if (ts.isStringLiteralLike(n)) return words(n.text, html);
     // In HTML, read the template whole (each ${…} as \u0001): a ${…} inside a tag
     // (« <i style="--c:${c}"> ») must not leave half a tag to read as words.
-    if (ts.isTemplateExpression(n) && html) return words([n.head.text, ...n.templateSpans.map(s => s.literal.text)].join('\u0001'), html) || n.templateSpans.some(s => raw(s.expression, html, seen));
+    // A ${…} that sits inside a tag (« class="${on ? 'is-done' : ''}" », « ${busy ? 'disabled' : ''} ») is an
+    // attribute, not copy, unless it fills a title, aria-label or placeholder.
+    if (ts.isTemplateExpression(n) && html) {
+      let before = n.head.text;
+      const inTag = n.templateSpans.map((s) => {
+        const tag = before.lastIndexOf('<') > before.lastIndexOf('>') && !/(?:title|aria-label|placeholder)\s*=\s*["']?[^"'<>]*$/i.test(before);
+        before += '\u0001' + s.literal.text;
+        return tag;
+      });
+      return words([n.head.text, ...n.templateSpans.map(s => s.literal.text)].join('\u0001'), html) || n.templateSpans.some((s, i) => !inTag[i] && raw(s.expression, html, seen));
+    }
     if (ts.isTemplateExpression(n)) return words(n.head.text, html) || n.templateSpans.some(s => words(s.literal.text, html) || raw(s.expression, html, seen));
     if (ts.isIdentifier(n)) {
       if (seen.has(n.text)) return false;
@@ -82,7 +92,8 @@ export function scan(source, filename = 'fixture.js') {
       const method = name(n.expression);
       if (method === 'setAttribute' && ts.isStringLiteralLike(n.arguments[0] || {}) && /^(title|aria-label|placeholder)$/.test(n.arguments[0].text)) args = [n.arguments[1]];
       else if (method === 'insertAdjacentHTML') { args = [n.arguments[1]]; html = true; }
-      else if (/^(?:toast|modal|drawer|alert|confirm|showToast|showModal|openModal)$/.test(method)) { args = [...n.arguments]; html = true; }
+      // A toast's level (« warn », « danger ») is a style code, never words a person reads.
+      else if (/^(?:toast|modal|drawer|alert|confirm|showToast|showModal|openModal)$/.test(method)) { args = n.arguments.filter(a => !(ts.isStringLiteral(a) && /^(?:ok|info|warn|warning|danger|error|success)$/.test(a.text))); html = true; }
     }
     if (args.some(a => raw(a, html))) hits.push(tree.getLineAndCharacterOfPosition(n.getStart(tree)).line + 1);
     // Server gate HTML has no DOM assignment. Inspect its literal skeleton as well.

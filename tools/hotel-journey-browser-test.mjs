@@ -314,6 +314,13 @@ for (const locale of LOCALES.filter(l => l === 'fr')) for (const [device, width,
       // the one found is the one on top, then click it.
       let el, box, hit;
       for (let attempt = 0; attempt < 8; attempt++) {
+        // Right after a reload the dashboard restores its route through a nav link click,
+        // which closes a menu opened in the meantime: open it again before looking.
+        if (selector.startsWith('[data-nav=') && width <= 860 && !await page.evaluate(() => document.body.classList.contains('kw-menu-open'))) {
+          await page.click('[data-kw-tab="menu"]');
+          await page.waitForFunction(() => document.body.classList.contains('kw-menu-open'));
+          await new Promise(r => setTimeout(r, 500));
+        }
         el = await page.waitForSelector(selector, { visible: true });
         await el.evaluate(e => e.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' })).catch(() => {});
         box = await el.boundingBox().catch(() => null);

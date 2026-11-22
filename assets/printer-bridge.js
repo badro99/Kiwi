@@ -29,7 +29,7 @@
   'use strict';
 
   /* printer-transport:0 */
-  var transports = window.__kiwiPrinterTransports({ getConfig: getConfig, setConfig: setConfig, currentMerchantKey: currentMerchantKey, ls: ls, set: set, fallbackNotice: fallbackNotice, noteBridgeState: noteBridgeState, getStationConfig: getStationConfig });
+  var transports = window.__kiwiPrinterTransports({ getConfig: getConfig, setConfig: setConfig, currentMerchantKey: currentMerchantKey, ls: ls, set: set, fallbackNotice: fallbackNotice, noteBridgeState: noteBridgeState, getStationConfig: getStationConfig, say: say });
   var bridgeBase = transports.bridgeBase;
   var withTimeout = transports.withTimeout;
   var bridgeHeaders = transports.bridgeHeaders;
@@ -1018,7 +1018,7 @@
     if (langLoad) return langLoad;
     langLoad = new Promise(function (resolve) {
       var script = document.createElement('script');
-      script.src = '/assets/printer/pairing-lang.js?v=23';
+      script.src = '/assets/printer/pairing-lang.js?v=25';
       script.onload = function () { resolve(); };
       script.onerror = function () { langLoad = null; script.remove(); resolve(); };
       document.head.appendChild(script);

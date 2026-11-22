@@ -602,7 +602,7 @@ try {
     const touch = async (host, sel) => { const c = await centre(host, sel); if (!c) return null; await page.mouse.click(c.x, c.y); await sleep(450); return c; };
     for (const [w, h] of [[390, 844], [844, 390], [667, 375]]) {
       const tag = `${w}x${h}`, side = w > h;
-      await page.setViewport({ width: w, height: h, hasTouch: true });
+      await page.setViewport({ width: w, height: h, hasTouch: true, isMobile: true });   // a phone: its screen is this size (637a793e2 keeps the rail on small tablets)
       await sleep(500);
       if (await page.evaluate(() => document.querySelector('#vrap-builder').hidden)) {
         check(await touch(null, '#vrap-new-order'), `${tag}: a new takeaway order is started`);

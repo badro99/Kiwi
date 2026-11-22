@@ -249,6 +249,11 @@ function scan() {
   }
 
   // Interface imprimante, chargée à la demande et préchauffée au repos.
+  // The kit core loads its repaint calming by URL (no extra <script> tag in the capped shells).
+  if (exists('assets/kit/haptics.js')) {
+    for (const m of read('assets/kit/haptics.js').matchAll(SHELL_RE()))
+      note(m[1], m[2], { file: 'assets/kit/haptics.js', kind: 'lazy', stamp: m[2] });
+  }
   if (exists('assets/printer-bridge.js')) {
     for (const m of read('assets/printer-bridge.js').matchAll(SHELL_RE()))
       note(m[1], m[2], { file: 'assets/printer-bridge.js', kind: 'lazy', stamp: m[2] });
@@ -330,6 +335,7 @@ function referenceFiles(asset) {
   if (exists('assets/dashboard-extra.js') && read('assets/dashboard-extra.js').includes(asset + '?v=')) files.push('assets/dashboard-extra.js');
   if (exists('assets/stock.js') && read('assets/stock.js').includes(asset + '?v=')) files.push('assets/stock.js');
   if (exists('assets/printer-bridge.js') && read('assets/printer-bridge.js').includes(asset + '?v=')) files.push('assets/printer-bridge.js');
+  if (exists('assets/kit/haptics.js') && read('assets/kit/haptics.js').includes(asset + '?v=')) files.push('assets/kit/haptics.js');
   if (exists('assets/onboarding.js') && read('assets/onboarding.js').includes(asset + '?v=')) files.push('assets/onboarding.js');
   if (exists('assets/hotel-economat.js') && read('assets/hotel-economat.js').includes(asset + '?v=')) files.push('assets/hotel-economat.js');
   if (exists('assets/pressing-ops.js') && read('assets/pressing-ops.js').includes(asset + '?v=')) files.push('assets/pressing-ops.js');

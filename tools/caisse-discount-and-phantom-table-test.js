@@ -68,11 +68,11 @@ ok('markPaid deletes discount immediately and forces release',
   /tableSettlement\(\)\.project\(t, \{\}, \['discount'\]\);/.test(CAISSE_SRC));
 
 ok('cancelNewOrder deletes discount and forces release',
-  /function cancelNewOrder\(who = null\) \{[\s\S]{0,3000}releasePhoneTable\(selectedId, 'caisse', true, who.actorProof \|\| ''\);/.test(CAISSE_SRC) &&
+  /function cancelNewOrder\(who = null\) \{[\s\S]{0,3000}releasePhoneTable\(selectedId, 'caisse', true, \(who && who\.actorProof\) \|\| ''\);/.test(CAISSE_SRC) &&
   /tableSettlement\(\)\.project\(t, \{\}, \['discount'\]\);/.test(CAISSE_SRC));
 
 ok('cancelOpenTable deletes discount and forces release',
-  /function cancelOpenTable\(id, who = null\) \{[\s\S]{0,600}tableSettlement\(\)\.project\(t, \{\}, \['discount'\]\);[\s\S]{0,600}releasePhoneTable\(id, 'caisse', true, who.actorProof \|\| ''\);/.test(CAISSE_SRC));
+  /function cancelOpenTable\(id, who = null\) \{[\s\S]{0,1400}tableSettlement\(\)\.project\(t, \{\}, \['discount'\]\);[\s\S]{0,600}releasePhoneTable\(id, 'caisse', true, who.actorProof \|\| ''\);/.test(CAISSE_SRC));
 
 ok('confirmNewTable clears any lingering discount on table',
   /function confirmNewTable\(\) \{[\s\S]{0,600}tableSettlement\(\)\.project\(t, \{\}, \['discount'\]\);/.test(CAISSE_SRC));

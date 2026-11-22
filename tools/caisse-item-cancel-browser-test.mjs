@@ -9,7 +9,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { DatabaseSync } from 'node:sqlite';
 import { onRequestPost } from '../functions/api/order/queue.js';
-import { tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
+import { tillToken, TILL_COOKIE, tillActorProof } from '../functions/auth/_lib.js';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const require = createRequire(import.meta.url);
@@ -33,6 +33,9 @@ const DB = {
   async batch(statements) { raw.exec('BEGIN'); try { const results = statements.map(s => s.run()); raw.exec('COMMIT'); return results; } catch (e) { raw.exec('ROLLBACK'); throw e; } },
 };
 const cookie = `${TILL_COOKIE}=${await tillToken(SECRET, MERCHANT)}`;
+/* Since 21 Nov 2026 the paired till alone no longer cancels a sent item: the
+   person types their code (requireManager) and the server records their name. */
+const CASHIER = { id: 'test-cashier', name: 'Test cashier', role: 'Caissier', actorProof: await tillActorProof(SECRET, MERCHANT, { id: 'test-cashier', name: 'Test cashier', role: 'Caissier' }) };
 let failNext = false, delayNext = 0, holdNext = null, requests = 0;
 const server = http.createServer(async (req, res) => {
   if (req.url === '/api/order/queue') {
@@ -58,7 +61,10 @@ const server = http.createServer(async (req, res) => {
       const storeIsReal = () => true;
       const canonicalOrdersForTable = () => [];
       const toast = msg => { window.lastToast = msg; };
+      window.codeAsks = 0;
+      const requireManager = (label, done) => { window.codeAsks++; done(${JSON.stringify(CASHIER)}); };
       const renderMenu = () => {};
+      const shift = { cancels: 0 };   // le Z compte les annulations (21 nov. 2026)
       const persistShift = () => localStorage.setItem('test-bill', JSON.stringify(tableOrders));
       const renderCart = () => $('#bill').textContent = JSON.stringify(cart);
       const renderRightPanel = id => $('#bill').textContent = JSON.stringify(tableOrders[id]);
@@ -98,7 +104,7 @@ try {
     await page.click('#open');
     await page.waitForFunction(() => window.lastToast?.includes('Article conservé'));
     ok((await page.evaluate(() => window.bill()))[0].qty === 3, `${table ? 'table' : 'takeaway'}: failed write preserves the item`);
-    ok(!(await page.$('#manager-modal')), 'one-tap item cancellation opens no PIN dialog');
+    ok(await page.evaluate(() => window.codeAsks > 0), 'a sent item is cancelled only after a staff code');
 
     /* The reply is HELD until the test lets it go, not delayed by a fixed
        400 ms: on a loaded machine a real click takes longer than that, the
@@ -117,7 +123,8 @@ try {
     ok(requests === before + 1, 'double tap sends one cancellation');
     ok(raw.prepare('SELECT total FROM orders WHERE id=?').get(orderId).total === 75, 'real API persists the correct unpaid balance');
     const audit = raw.prepare('SELECT actor, reason FROM kitchen_voids WHERE order_id=?').get(orderId);
-    ok(audit?.actor === 'Caisse' && audit?.reason === 'item_cancelled', 'audit records the paired caisse and item correction');
+    ok(await page.evaluate(() => shift.cancels > 0), 'the cancellation is counted for the Z report');
+    ok(audit?.actor === 'Test cashier' && audit?.reason === 'item_cancelled', 'audit records the person who gave the code, never « Caisse »');
   }
   ok(errors.length === 0, 'no browser runtime errors: ' + errors.join(', '));
 
@@ -131,5 +138,5 @@ try {
   ok((await page.evaluate(() => window.bill()))[0].qty === 1
     && raw.prepare("SELECT total FROM orders WHERE id='ord-browser-1'").get().total === 50,
     'retry confirms the committed cancellation without subtracting twice');
-  console.log(`\n✓ ${controls} rendered one-tap item-cancellation checks passed (table + takeaway).`);
+  console.log(`\n✓ ${controls} rendered item-cancellation checks passed (table + takeaway).`);
 } finally { await browser.close(); await new Promise(r => server.close(r)); raw.close(); }

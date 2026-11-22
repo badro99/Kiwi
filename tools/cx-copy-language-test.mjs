@@ -56,7 +56,7 @@ for (const locale of ['fr', 'en', 'ar']) {
  await test('customer search and creation ' + locale, () => {
    const el = { innerHTML: '' }, nodes = new Map();
    const ctx = vm.createContext({ window: {}, root: {}, tr, esc: String, clienteHits: () => [], icons() {}, openVeil() {},
-     $: id => id === '#bq-clientm' ? el : (nodes.has(id) ? nodes.get(id) : (nodes.set(id, {}), nodes.get(id))), $$: () => [] });
+     $: id => id === '#bq-clientm' ? el : (nodes.has(id) ? nodes.get(id) : (nodes.set(id, { style: {} }), nodes.get(id))), $$: () => [] });   // le voile de la fiche monte au-dessus d'un échange ouvert (style.zIndex)
    vm.runInContext(fn('assets/pos-boutique/sales.js', 'openClientModal'), ctx); ctx.openClientModal();
    assert.ok(el.innerHTML.includes(tr('Rechercher par nom ou par numéro de téléphone.')));
    nodes.get('#bq-cl-new').onclick();

@@ -386,7 +386,7 @@ if (DatabaseSync) {
   ok(/reason === 'bridge-unreachable'\) \{ bridgePort = 0; return viaRelayOrFail/.test(pb), 'C2 · un pont local disparu bascule aussi sur le relais');
   ok(/credentials: 'same-origin'/.test(pb) && /RELAY_API = '\/api\/print'/.test(pb), 'C2 · le relais est appelé même origine avec le cookie de caisse');
   ok(/relayProbe: relayProbe, relayEnqueue: relayEnqueue, relayPairCode: relayPairCode, relayRevoke: relayRevoke/.test(pb), 'C2 · KiwiPrinter expose le relais');
-  ok(/watchRelayJob\(id, qs, bytes\.length\);\s*return \{ ok: true, via: 'relay', queued: true, id: id \}/.test(pb), 'C2 · un dépôt accepté libère la file locale sans attendre l’acquittement');
+  ok(/watchRelayJob\(id, qs, bytes\.length(?:, [\w]+)*\);\s*return \{ ok: true, via: 'relay', queued: true, id: id \}/.test(pb), 'C2 · un dépôt accepté libère la file locale sans attendre l’acquittement');
   ok(/id="kpr-relay-pair"/.test(pb) && /id="kpr-relay-pair-local"/.test(pb) && /\/kiwi\/relay\/pair/.test(pb), 'C2 · le modal propose « Associer un pont » et l’association directe du pont local');
   ok(/r === 'relay-offline'/.test(pb), 'C2 · frReason explique relay-offline');
 

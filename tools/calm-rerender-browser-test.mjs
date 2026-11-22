@@ -29,6 +29,7 @@ try {
       .panel { display: none; } .panel.on { display: block; }
     </style><div id="list"></div><div id="p1" class="panel on"><div id="in1"></div></div><div id="p2" class="panel"><div id="in2"></div></div>`);
     await page.addScriptTag({ path: 'assets/kit/haptics.js' });
+    await page.addScriptTag({ path: 'assets/kit/calm-repaint.js' });   // haptics.js loads it by URL; a bare page has none
     const rows = (names) => names.map((n) => `<div class="row">${n}</div>`).join('');
     const running = (sel) => page.evaluate(`(${RUNNING})(${JSON.stringify(sel)})`);
 

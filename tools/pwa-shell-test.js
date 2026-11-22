@@ -89,7 +89,7 @@ const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-c
   .map(read).join('\n');
 /* Files a shell script loads only when needed (the iPhone barcode decoder,
    fetched by retail-scan.js when the camera opens) keep their stamp there. */
-const onDemand = ['assets/hotel-economat.js', 'assets/reservations.js', 'assets/retail-scan.js', 'assets/pressing-ops.js', 'assets/stock.js', 'assets/printer-bridge.js', 'assets/pages-pro.js', 'assets/pages/dashboard-loader.js', 'assets/pages/dashboard-startup.js', 'assets/daterange/renderers.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js', 'assets/orderpro-page.js', 'assets/pages-pro-boutique.js'].map(read).join('\n');
+const onDemand = ['assets/hotel-economat.js', 'assets/reservations.js', 'assets/retail-scan.js', 'assets/pressing-ops.js', 'assets/stock.js', 'assets/printer-bridge.js', 'assets/pages-pro.js', 'assets/pages/dashboard-loader.js', 'assets/pages/dashboard-startup.js', 'assets/daterange/renderers.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js', 'assets/orderpro-page.js', 'assets/pages-pro-boutique.js', 'assets/kit/haptics.js'].map(read).join('\n');
 // Public booking modules share their import URL with the offline shell.
 for (const m of read('assets/booking.js').matchAll(/import\('(\/assets\/booking-[a-z]+\.js\?v=\d+)'\)/g)) {
   ok(m[1] + ' is pre-cached', shell.includes(m[1]));
@@ -105,6 +105,10 @@ for (const m of read('assets/stock.js').matchAll(/'(assets\/stock\/[^']+\.js\?v=
 }
 // Every first-use table prerequisite is available before the first offline open.
 for (const m of read('assets/pages-pro.js').matchAll(/'(assets\/pages\/[^']+\.js\?v=\d+)'/g)) {
+  ok(m[1] + ' is pre-cached', shell.includes('/' + m[1]));
+}
+// Le calme au repeint, chargé par le noyau du kit, est là hors ligne dès le premier repeint.
+for (const m of read('assets/kit/haptics.js').matchAll(/'(assets\/kit\/[^']+\.js\?v=\d+)'/g)) {
   ok(m[1] + ' is pre-cached', shell.includes('/' + m[1]));
 }
 // L’interface imprimante doit aussi être disponible à froid hors ligne.

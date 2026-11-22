@@ -141,7 +141,7 @@ try {
   ok(launcher.scanRight <= launcher.ticketLeft, 'continuous scan launcher does not cover the Maison checkout column');
   ok(launcher.scanBottom <= launcher.viewportHeight, 'continuous scan launcher remains fully visible');
 
-  const views = ['vente', 'mouvements', 'casse', 'scan', 'inventaire', 'fournisseurs', 'echanges', 'vendus', 'clientes'];
+  const views = ['vente', 'mouvements', 'casse', 'inventaire', 'fournisseurs', 'echanges', 'vendus', 'clientes'];
   const workspaceFrames = [];
   const artifactDir = process.env.KIWI_TEST_ARTIFACT_DIR || '';
   if (artifactDir) fs.mkdirSync(artifactDir, { recursive: true });

@@ -2,6 +2,7 @@
 import coreTestSource from './core-test-source.cjs';
 import retailSource from './pos-retail-test-source.cjs';
 import fs from 'node:fs';
+import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fitBasket, basketCents } from '../functions/api/_sale-truth.js';
@@ -160,7 +161,16 @@ ok('blank supplier is omitted, not stored empty', !('sp' in blank[0]));
 }
 
 const live = read('assets/live-link.js');
-ok('offline queue keeps the supplier', /if \(sp\) o\.sp = sp/.test(live + read('assets/live-link/queue-store.js')));
+/* The offline queue's real line mapper and the shared journal's real cleanLine,
+ * lifted out of their modules and run: what a sale line keeps is behaviour. */
+const queueSrc = fs.readFileSync(path.join(root, 'assets/live-link/queue-store.js'), 'utf8');
+const qFrom = queueSrc.indexOf('.map(function (l) {', queueSrc.indexOf('boundedLines.slice(0, 40)')) + 5;
+const qTo = queueSrc.indexOf('return o;\n        })', qFrom) + 'return o;\n        }'.length;
+const queueLine = vm.runInNewContext('(' + queueSrc.slice(qFrom, qTo) + ')');
+const journalSrc = fs.readFileSync(path.join(root, 'assets/pos-sale.js'), 'utf8');
+const jFrom = journalSrc.indexOf('  function foldedLine(line)');
+const journalLine = vm.runInNewContext(journalSrc.slice(jFrom, journalSrc.indexOf('\n  /* A settled caisse sale', jFrom)) + ';cleanLine', { localStorage: { getItem: () => null } });
+const queued = queueLine({ name: 'Caftan', qty: 1, total: 450, itemId: 'p-caftan', baseName: 'Caftan brodé', supplierId: ' sup_atlas ' });
 const feed = read('functions/api/feed.js');
 const config = read('functions/api/config.js');
 const storeApi = read('functions/api/store.js');
@@ -168,8 +178,8 @@ const pressing = read('assets/pressing-caisse.js');
 const costs = read('assets/cost.js');
 const venues = read('assets/venues.js');
 const consumption = read('assets/inventory-consumption.js');
-ok('offline queue keeps stable item identity', /if \(i\) o\.i = i/.test(live));
-ok('offline queue keeps base menu name snapshot', /if \(baseName\) o\.bn = baseName/.test(live));
+ok('offline queue keeps stable item identity', queued.i === 'p-caftan');
+ok('offline queue keeps base menu name snapshot', queued.bn === 'Caftan brodé');
 ok('feed expands v2 identity for consumers', /itemId: \(l && l\.i\)/.test(feed));
 ok('feed expands base menu name for the Z report', /baseName: \(l && l\.bn\)/.test(feed));
 ok('real config returns the server plan', /return json\(\{ features, pins, [\s\S]*?plan[\s\S]*?suspended/.test(config));
@@ -204,9 +214,11 @@ ok('boutique basket keeps stable identity and variants',
   /itemId: ln\.pid/.test(read('assets/pos-boutique.js')) && /variantId: \[ln\.pid, ln\.size/.test(read('assets/pos-boutique.js')));
 
 ok('till product map carries the supplier', /supplierId: p\.supplierId \|\| ''/.test(read('assets/boutique-catalog.js')));
-ok('boutique lines stamp the supplier at sale time', (read('assets/pos-boutique.js').match(/supplierId: \(P\[(ln|line)\.pid\] && P\[(ln|line)\.pid\]\.supplierId\) \|\| ''/g) || []).length === 2);
-ok('maison lines stamp the supplier at sale time', (read('assets/pos-maison.js').match(/supplierId: \(P\[(ln|line)\.pid\] && P\[(ln|line)\.pid\]\.supplierId\) \|\| ''/g) || []).length === 2);
-ok('shared journal keeps the supplier', /if \(supplier\) o\.supplierId = supplier/.test(read('assets/pos-sale.js')));
+ok('boutique and maison lines stamp the supplier at sale time', ['boutique', 'maison'].every((v) => (read(`assets/pos-${v}.js`).match(/supplierId: \(P\[(ln|line)\.pid\] && P\[(ln|line)\.pid\]\.supplierId\) \|\| ''/g) || []).length === 2));
+ok('offline queue keeps the supplier, trimmed', queued.sp === 'sup_atlas');
+ok('offline queue drops a blank supplier', !('sp' in queueLine({ name: 'X', qty: 1, total: 1, supplierId: '  ' })));
+ok('shared journal keeps the supplier', journalLine({ name: 'Caftan', qty: 1, total: 450, supplierId: 'sup_atlas' }).supplierId === 'sup_atlas'
+  && journalLine({ name: 'X', qty: 1, total: 1, sp: 'sup_b' }).supplierId === 'sup_b');
 
 if (process.exitCode) process.exit(process.exitCode);
 console.log(`  ✓ sale-line v2 (${pass} controls: legacy compatibility, stable truth, offline transport, every caisse producer)`);

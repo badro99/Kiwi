@@ -58,7 +58,11 @@ try {
     screen = await click(screen, /Confirmer/);
     assert.ok(screen.includes('Acompte reçu · garder'), 'cash part exposes durable open-bill choice'); checks++;
     screen = await click(screen, /Acompte reçu · garder/);
-    assert.ok(screen.includes('6 ventes · 5 850 MAD'), 'only 300 received is added to day takings: ' + screen.slice(0,700)); checks++;
+    /* Read the header line itself: the screen summary is cut short, and the toasts of
+       the payment (rest due, printer, drawer) now come before it. */
+    const takings = text(await call('ui_assert', { selector: '#bq-today, #mz-today', condition: 'text_contains',
+      expected: '6 ventes · 5 850 MAD', description: `${scenario}: only the 300 received is added to day takings`, timeoutMs: 15000 }));
+    assert.ok(takings.startsWith('PASS:'), `${scenario}: only 300 received is added to day takings: ${takings}`); checks++;
     screen = await click(screen, /button Acomptes$/);
     assert.ok(screen.includes(`Reste ${due}.00 MAD`), 'visible outstanding amount'); checks++;
     screen = await click(screen, new RegExp(`Reste ${due}\\.00 MAD`));

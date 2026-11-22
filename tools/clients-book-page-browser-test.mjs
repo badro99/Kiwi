@@ -89,7 +89,7 @@ try {
     credit: document.querySelector('.kcb-row[data-id="d2"] .kcb-credit')?.textContent || '',
   }));
   ok(layout.title === 'Clients' && layout.kpis === 4 && layout.cols, '#102 page has a title, four KPIs and a column header');
-  ok(layout.tabs === 5 && layout.on === 'all', '#102 segment tabs start on « Tous »');
+  ok(layout.tabs === 7 && layout.on === 'all', '#102 segment tabs start on « Tous » (7 since « Avance en cours » and « Crédit en cours »)');
   ok(layout.kpiLabelPx <= 11, '#102 KPI labels use the 10px uppercase scale of Vendus');
   /* Sans programme choisi, une vente ne crédite aucun point : l'en-tête disait
      quand même « 1 pt / MAD · palier 100 » (2026-10-19, 0 pt après 250 MAD). */

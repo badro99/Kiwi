@@ -803,7 +803,7 @@
     if (old) old.remove();
     if (!list.length) return false;
     if (!document.getElementById('kiwi-close-followup-css')) {
-      var st = document.createElement('style'); st.id = 'kiwi-close-followup-css'; st.textContent = CSS; document.head.appendChild(st);
+      var styleEl = document.createElement('style'); styleEl.id = 'kiwi-close-followup-css'; styleEl.textContent = CSS; document.head.appendChild(styleEl);
     }
     var m = text(list[0], opts && opts.lang, list.length);
     var card = document.createElement('section');

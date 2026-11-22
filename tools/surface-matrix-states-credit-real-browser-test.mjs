@@ -62,7 +62,8 @@ try {
           assert.equal(body.customerId, 'matrix-client');
           const credit = { id: body.id, code: 'AV-MATRIX', amountCents: body.amountCents, balanceCents: body.amountCents,
             customerId: body.customerId, customerName: body.customerName, originalSaleId: body.originalSaleId, originalRef: body.originalRef,
-            createdAt: Date.now(), expiresAt: body.expiresAt, status: 'active' };
+            // Like functions/api/store-credits.js: « sans limite » is stored as 31 Dec 2999, never as no date.
+            createdAt: Date.now(), expiresAt: body.noExpiry === true ? Date.UTC(2999, 11, 31) : body.expiresAt, status: 'active' };
           credits.push(credit); return { body: { credit } };
         },
       };

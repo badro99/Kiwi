@@ -571,6 +571,10 @@
       return (prof && prof.name ? 'Imprimante ' + prof.name : 'Imprimante') + ' (' + where + ')';
     } catch (_) { return 'Imprimante (' + where + ')'; }
   }
+  /* The alert speaks the page's language: the bridge's say() (till dictionary, else the printer's own). */
+  function tr(text) { return typeof core.say === 'function' ? core.say(text) : text; }
+  function fillIn(text, vars) { return Object.keys(vars).reduce(function (out, k) { return out.split('{' + k + '}').join(String(vars[k])); }, text); }
+  function esc(text) { return String(text).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function relayAlertPaint(key) {
     var a = relayAlerts[key];
     if (!a) return;
@@ -583,8 +587,8 @@
         a.el.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99999;max-width:min(640px,calc(100vw - 32px));'
           + 'display:flex;gap:12px;align-items:center;background:var(--ink,#0A0F0D);color:var(--paper,#F7F5F0);padding:12px 14px;'
           + 'border-radius:12px;border-left:6px solid var(--danger,#B44338);box-shadow:0 8px 28px rgba(0,0,0,.35);font-size:14px;line-height:1.35;';
-        a.el.innerHTML = '<span data-msg style="flex:1"></span><button type="button" data-retry style="display:none;font:inherit;font-weight:600;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);border:0;border-radius:8px;padding:8px 12px;cursor:pointer">Réessayer</button>'
-          + '<button type="button" data-close aria-label="Fermer" style="font:inherit;background:transparent;color:inherit;border:0;padding:4px 6px;cursor:pointer;font-size:18px">×</button>';
+        a.el.innerHTML = `<span data-msg style="flex:1"></span><button type="button" data-retry style="display:none;font:inherit;font-weight:600;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);border:0;border-radius:8px;padding:8px 12px;cursor:pointer">${esc(tr('Réessayer'))}</button>`
+          + `<button type="button" data-close aria-label="${esc(tr('Fermer'))}" style="font:inherit;background:transparent;color:inherit;border:0;padding:4px 6px;cursor:pointer;font-size:18px">×</button>`;
         a.el.querySelector('[data-close]').onclick = function () { a.waiting = []; a.lost = []; a.bridge = false; relayAlertPaint(key); };
         a.el.querySelector('[data-retry]').onclick = function () {
           var again = a.lost.splice(0);
@@ -593,11 +597,11 @@
         };
         document.body.appendChild(a.el);
       }
-      var msg = a.label + (a.bridge && !a.waiting.length && !a.lost.length
-        ? ' · le pont d\u2019impression ne récupère plus les tickets. Vérifiez que la tablette du pont est allumée, connectée au Wi-Fi et l\u2019application ouverte.'
-        : ' ne répond pas (' + a.why + '). Vérifiez qu\u2019elle est allumée, branchée au réseau et qu\u2019il reste du papier.');
-      if (a.waiting.length) msg += ' ' + a.waiting.length + (a.waiting.length > 1 ? ' tickets attendent, ils sortiront' : ' ticket attend, il sortira') + ' dès son retour (10 min au plus).';
-      if (a.lost.length) msg += ' ' + a.lost.length + (a.lost.length > 1 ? ' tickets non imprimés.' : ' ticket non imprimé.');
+      var msg = a.bridge && !a.waiting.length && !a.lost.length
+        ? a.label + ' · ' + tr('le pont d\u2019impression ne récupère plus les tickets. Vérifiez que la tablette du pont est allumée, connectée au Wi-Fi et l\u2019application ouverte.')
+        : fillIn(tr('{label} ne répond pas ({why}). Vérifiez qu\u2019elle est allumée, branchée au réseau et qu\u2019il reste du papier.'), { label: a.label, why: a.why });
+      if (a.waiting.length) msg += ' ' + fillIn(tr(a.waiting.length > 1 ? '{n} tickets attendent, ils sortiront dès son retour (10 min au plus).' : '{n} ticket attend, il sortira dès son retour (10 min au plus).'), { n: a.waiting.length });
+      if (a.lost.length) msg += ' ' + fillIn(tr(a.lost.length > 1 ? '{n} tickets non imprimés.' : '{n} ticket non imprimé.'), { n: a.lost.length });
       a.el.querySelector('[data-msg]').textContent = msg;
       a.el.querySelector('[data-retry]').style.display = a.lost.length ? '' : 'none';
     } catch (_) {}

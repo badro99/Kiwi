@@ -8,6 +8,7 @@
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,7 +17,7 @@ const mov = readFileSync(path.join(ROOT, 'assets/maison-stock-movements.js'), 'u
 const sizes = readFileSync(path.join(ROOT, 'assets/boutique-sizes.js'), 'utf8');
 const start = mov.indexOf('function variantLabel(v) {');
 const body = mov.slice(start, mov.indexOf('\n  }', start) + 4);
-const variantLabel = new Function(`${body}; return variantLabel;`)();
+const variantLabel = vm.runInNewContext(`${body}; variantLabel`);
 
 let failed = 0;
 function ok(label, fn) {

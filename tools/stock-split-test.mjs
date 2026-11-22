@@ -80,8 +80,10 @@ const LATER_EDITS = [
   ["<option value=\"repas-equipe\"${prefillReason === 'repas-equipe' ? ' selected' : ''}>${esc(ct('optStaff'))}</option>\n",
    "<option value=\"repas-equipe\"${prefillReason === 'repas-equipe' ? ' selected' : ''}>${esc(ct('optStaff'))}</option>\n              <option value=\"vol\"${prefillReason === 'vol' ? ' selected' : ''}>${esc(ct('optVol'))}</option>\n"],
 ];
+/* Garde de la liste elle-même (pas une assertion sur le code livré) : une ancre
+ * absente ou double rendrait la copie de référence fausse sans le dire. */
 const reviewed = LATER_EDITS.reduce((src, [before, after]) => {
-  assert.equal(src.split(before).length, 2, 'retouche revue, ancre unique : ' + before.slice(0, 40));
+  if (src.split(before).length !== 2) throw new Error('retouche revue, ancre non unique : ' + before.slice(0, 40));
   return src.replace(before, () => after);
 }, original);
 const baseline = reviewed.replace(seam, expose + seam);

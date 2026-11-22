@@ -751,7 +751,8 @@ check('Immediate item cancellation still requires the paired caisse', unpaired.s
 /* Verrouillée (Browse, 21 nov. 2026) : la caisse appairée seule ne suffit plus. */
 const unproved = await postQueue({ ...immediateBody, actorProof: undefined }, tillCookie);
 check('A paired caisse without a person\'s code cannot cancel a sent item', unproved.status === 403
-  && unproved.data.error === 'operator-proof-required');
+  && unproved.data.error === 'operator-proof-required'
+  && !db._db.prepare('SELECT id FROM kitchen_voids WHERE id=?').get(immediateBody.voidLine.requestId));
 const immediateResult = await postQueue(immediateBody, tillCookie);
 check('Paired caisse cancels a cooking item immediately with a code, without kitchen approval', immediateResult.status === 200
   && immediateResult.data.directVoid && !immediateResult.data.alertSent && immediateResult.data.total === 50);

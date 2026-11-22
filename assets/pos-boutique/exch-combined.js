@@ -16,14 +16,73 @@
  * l'avoir est émis AVANT que le stock bouge, la valeur reprise est ce que la
  * cliente a payé (paid-share), et chaque pièce rendue revient au stock par son
  * propre mouvement. */
-import { $, $$, esc, fmtMAD, icons, artOf, colorDot, colorLabel, renderExchNote, renderGrid, rayonOf } from './sales.js?v=264';
-import { state, root, P, toast, findSale, saleClient, openVeil, closeVeil, issueAvoir, stableCreditIssueId, creditErrorDetail, recordReturn, refreshOps, persistStock, stockAdd, persistDay, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, merchantSlug, lineUnit, SALES, switchView } from '../pos-boutique.js?v=370';
-import { openPay, openVoucher, paidAmount, markLineReturned } from './checkout.js?v=264';
+import { $, $$, esc, fmtMAD, icons, artOf, colorDot, colorLabel, renderExchNote, renderGrid, rayonOf } from './sales.js?v=265';
+import { state, root, P, toast, findSale, saleClient, openVeil, closeVeil, issueAvoir, stableCreditIssueId, creditErrorDetail, recordReturn, refreshOps, persistStock, stockAdd, persistDay, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, merchantSlug, lineUnit, SALES, switchView } from '../pos-boutique.js?v=371';
+import { openPay, openVoucher, paidAmount, markLineReturned } from './checkout.js?v=265';
 import { ticketOwner } from './ticket-owner.js?v=8';
 import { tillDate } from './till-clock.js?v=2';
 const M = globalThis.KiwiMoney;
 
+/* L'écran d'échange en EN et AR : FR -> [EN, AR], trous {x} remplis par tr(clé, valeurs). */
+const PHRASES = {
+  'Échange {id}, {n} pièce rendue, choisissez les articles qui partent': ['Exchange {id}, {n} item returned, choose the items going out', 'استبدال {id}، قطعة واحدة مُرجعة، اختر المنتجات التي ستخرج'],
+  'Échange {id}, {n} pièces rendues, choisissez les articles qui partent': ['Exchange {id}, {n} items returned, choose the items going out', 'استبدال {id}، {n} قطع مُرجعة، اختر المنتجات التي ستخرج'],
+  'Échange <b>{id}</b>, {n} pièce rendue ({amt}).': ['Exchange <b>{id}</b>, {n} item returned ({amt}).', 'استبدال <b>{id}</b>، قطعة واحدة مُرجعة ({amt}).'],
+  'Échange <b>{id}</b>, {n} pièces rendues ({amt}).': ['Exchange <b>{id}</b>, {n} items returned ({amt}).', 'استبدال <b>{id}</b>، {n} قطع مُرجعة ({amt}).'],
+  '{k} article choisi': ['{k} item chosen', 'منتج واحد مختار'],
+  '{k} articles choisis': ['{k} items chosen', '{k} منتجات مختارة'],
+  'touchez-en un autre ou ouvrez l\'échange.': ['tap another or open the exchange.', 'المس منتجاً آخر أو افتح الاستبدال.'],
+  'Touchez les articles qui partent, un par un.': ['Tap the items going out, one by one.', 'المس المنتجات التي ستخرج، واحداً تلو الآخر.'],
+  'Voir l\'échange': ['View exchange', 'عرض الاستبدال'],
+  'Annuler l\'échange': ['Cancel exchange', 'إلغاء الاستبدال'],
+  'Échange annulé, rien n\'a bougé': ['Exchange cancelled, nothing changed', 'أُلغي الاستبدال، لم يتغيّر شيء'],
+  'Article retiré du catalogue': ['Item removed from the catalogue', 'منتج حُذف من الكتالوج'],
+  'retour': ['return', 'إرجاع'],
+  'part': ['going out', 'يخرج'],
+  'payé avec −{r} %': ['paid with −{r} %', 'دُفع بخصم {r} %'],
+  'Retirer': ['Remove', 'إزالة'],
+  'Fermer': ['Close', 'إغلاق'],
+  'Échange, {id}': ['Exchange, {id}', 'استبدال، {id}'],
+  'Client non renseigné': ['Customer not entered', 'زبون غير مُسجّل'],
+  'Cliente de passage': ['Walk-in customer', 'زبون عابر'],
+  'les pièces rendues repartent en stock': ['returned items go back into stock', 'القطع المُرجعة تعود إلى المخزون'],
+  'Rendu': ['Returned', 'مُرجع'],
+  'Part avec la cliente': ['Leaves with the customer', 'يخرج مع الزبون'],
+  'Aucun article choisi pour l\'instant.': ['No item chosen yet.', 'لم يُختر أي منتج بعد.'],
+  'Ajouter un article': ['Add an item', 'إضافة منتج'],
+  'Choisissez au moins un article': ['Choose at least one item', 'اختر منتجاً واحداً على الأقل'],
+  'Différence à encaisser': ['Difference to collect', 'الفرق المطلوب تحصيله'],
+  'Différence en faveur de la cliente, part en avoir': ['Difference in the customer\'s favour, issued as a credit note', 'الفرق لصالح الزبون، يُصدر كسند رصيد'],
+  'Aucun écart, échange direct': ['No difference, straight exchange', 'لا فرق، استبدال مباشر'],
+  'Retour': ['Back', 'رجوع'],
+  'Encaisser {amt}': ['Collect {amt}', 'تحصيل {amt}'],
+  'Échanger + avoir {amt}': ['Exchange + credit note {amt}', 'استبدال + سند رصيد {amt}'],
+  'Confirmer l\'échange': ['Confirm exchange', 'تأكيد الاستبدال'],
+  'Touchez l\'article suivant dans la grille ou cherchez-le': ['Tap the next item in the grid or search for it', 'المس المنتج التالي في الشبكة أو ابحث عنه'],
+  'Échange suspendu': ['Exchange on hold', 'الاستبدال معلّق'],
+  'Impossible de réserver les articles choisis.': ['The chosen items could not be reserved.', 'تعذّر حجز المنتجات المختارة.'],
+  'Échange enregistré, retour à rapprocher': ['Exchange saved, return to reconcile', 'سُجّل الاستبدال، الإرجاع بحاجة إلى مطابقة'],
+  'Une variante d’origine a été supprimée du catalogue.': ['An original variant was deleted from the catalogue.', 'حُذف أحد الأصناف الأصلية من الكتالوج.'],
+  'Numéro de ticket indisponible': ['Ticket number unavailable', 'رقم التذكرة غير متاح'],
+  'Reconnectez cette caisse pour réserver sa prochaine série.': ['Reconnect this till to reserve its next series.', 'أعد ربط هذا الصندوق لحجز سلسلته التالية.'],
+  'Avoir non émis': ['Credit note not issued', 'لم يُصدر سند الرصيد'],
+  'Avoir émis, échange à régulariser': ['Credit note issued, exchange to settle', 'صدر سند الرصيد، الاستبدال بحاجة إلى تسوية'],
+  '{code} existe mais un article choisi est devenu indisponible.': ['{code} exists but a chosen item became unavailable.', '{code} موجود لكن أحد المنتجات المختارة لم يعد متاحاً.'],
+  'Échange {id} enregistré, aucun écart': ['Exchange {id} saved, no difference', 'سُجّل الاستبدال {id}، لا فرق'],
+};
+const tr = (s, vars) => {
+  const C = globalThis.window?.KiwiCaisseLang;
+  let lang = 'fr';
+  try { lang = (C && C.get && C.get()) || 'fr'; } catch (_) { lang = 'fr'; }
+  const own = PHRASES[s];
+  let out = own && (lang === 'en' || lang === 'ar') ? own[lang === 'en' ? 0 : 1] : (C && typeof C.tr === 'function' ? C.tr(s) : s);
+  if (vars) for (const k of Object.keys(vars)) out = out.split('{' + k + '}').join(String(vars[k]));
+  return out;
+};
+
 const TRIAL = ['amira-boutique'];
+/* La couleur de la différence : en faveur de la cliente, nulle, à encaisser. */
+const DIFF_CLASS = ['neg', 'zero', 'pos'];
 
 /* L'essai est-il allumé sur cette caisse ? */
 export function combinedOn() {
@@ -38,7 +97,7 @@ export function startCombined(ret, sale, qtyOf) {
   ticketOwner.startReturn(state, { saleId: ret.saleId, combined: true, returns, picks: [], motif: ret.motif || '' });
   switchView('vente');
   const n = returns.reduce((t, r) => t + r.qty, 0);
-  toast(`Échange ${sale.id}, ${n} pièce${n > 1 ? 's' : ''} rendue${n > 1 ? 's' : ''}, choisissez les articles qui partent`);
+  toast(tr(n > 1 ? 'Échange {id}, {n} pièces rendues, choisissez les articles qui partent' : 'Échange {id}, {n} pièce rendue, choisissez les articles qui partent', { id: sale.id, n }));
 }
 
 function returnedValue(sale, ex) {
@@ -54,20 +113,22 @@ export function combinedNote(slot) {
   const sale = findSale(ex.saleId);
   const n = ex.returns.reduce((t, r) => t + r.qty, 0);
   const k = ex.picks.length;
+  const lead = tr(n > 1 ? 'Échange <b>{id}</b>, {n} pièces rendues ({amt}).' : 'Échange <b>{id}</b>, {n} pièce rendue ({amt}).', { id: esc(sale.id), n, amt: fmtMAD(M.toMad(returnedValue(sale, ex))) });
+  const next = k ? `<b>${tr(k > 1 ? '{k} articles choisis' : '{k} article choisi', { k })}</b>, ${tr('touchez-en un autre ou ouvrez l\'échange.')}` : tr('Touchez les articles qui partent, un par un.');
   slot.innerHTML = `
     <div class="bq-exch-note">
-      <i data-lucide="arrow-left-right"></i>
-      <span class="l">Échange <b>${esc(sale.id)}</b>, ${n} pièce${n > 1 ? 's' : ''} rendue${n > 1 ? 's' : ''} (${fmtMAD(M.toMad(returnedValue(sale, ex)))}).
-      ${k ? `<b>${k} article${k > 1 ? 's' : ''} choisi${k > 1 ? 's' : ''}</b>, touchez-en un autre ou ouvrez l'échange.` : 'Touchez les articles qui partent, un par un.'}</span>
-      ${k ? '<button class="bq-exch-cancel" id="bq-cx-open">Voir l\'échange</button>' : ''}
-      <button class="bq-exch-cancel" id="bq-exch-cancel">Annuler l'échange</button>
+      <i data-icon="sync_alt"></i>
+      <span class="l">${lead}
+      ${next}</span>
+      ${k ? `<button class="bq-exch-cancel" id="bq-cx-open">${tr('Voir l\'échange')}</button>` : ''}
+      <button class="bq-exch-cancel" id="bq-exch-cancel">${tr('Annuler l\'échange')}</button>
     </div>`;
   const open = $('#bq-cx-open', slot);
   if (open) open.onclick = () => openCombined();
   $('#bq-exch-cancel', slot).onclick = () => {
     state.exchange = null;
     renderExchNote();
-    toast('Échange annulé, rien n\'a bougé');
+    toast(tr('Échange annulé, rien n\'a bougé'));
     icons();
   };
   icons();
@@ -97,10 +158,10 @@ export function openCombined() {
   const el = $('#bq-exchm', root);
   const retRows = ex.returns.map((r) => {
     const ln = sale.lines[r.idx];
-    const p = P[ln.pid] || { name: ln.name || 'Article retiré du catalogue', art: '' };
+    const p = P[ln.pid] || { name: ln.name || tr('Article retiré du catalogue'), art: '' };
     return `<div class="bq-exch-row is-ret">
         <span class="bq-line-art">${artOf(p)}</span>
-        <span class="mid"><b>${esc(p.name)}${r.qty > 1 ? ` × ${r.qty}` : ''}</b><span>retour · ${esc(ln.size)} · ${colorDot(ln.color)} ${esc(colorLabel(ln.color))}${ln.remise ? ` · payé avec −${ln.remise} %` : ''}</span></span>
+        <span class="mid"><b>${esc(p.name)}${r.qty > 1 ? ` × ${r.qty}` : ''}</b><span>${tr('retour')} · ${esc(ln.size)} · ${colorDot(ln.color)} ${esc(colorLabel(ln.color))}${ln.remise ? ` · ${tr('payé avec −{r} %', { r: ln.remise })}` : ''}</span></span>
         <span class="amt">−${fmtMAD(paidAmount(sale, ln, r.qty))}</span>
       </div>`;
   }).join('');
@@ -108,43 +169,43 @@ export function openCombined() {
     const p = P[pk.pid];
     return `<div class="bq-exch-row is-new">
         <span class="bq-line-art">${artOf(p)}</span>
-        <span class="mid"><b>${esc(p.name)}</b><span>part · ${esc(pk.size)} · ${colorDot(pk.color)} ${esc(colorLabel(pk.color))} · <button type="button" class="bq-cx-del" data-bq-cx-del="${i}">Retirer</button></span></span>
+        <span class="mid"><b>${esc(p.name)}</b><span>${tr('part')} · ${esc(pk.size)} · ${colorDot(pk.color)} ${esc(colorLabel(pk.color))} · <button type="button" class="bq-cx-del" data-bq-cx-del="${i}">${tr('Retirer')}</button></span></span>
         <span class="amt">+${fmtMAD(lineUnit({ pid: pk.pid, remise: 0 }))}</span>
       </div>`;
   }).join('');
   el.innerHTML = `
-    <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
-    <h3 class="modal-title">Échange, ${esc(sale.id)}</h3>
-    <p class="modal-subtle">${c ? esc(c.name) : (sale.remote && !sale.clientId ? 'Client non renseigné' : 'Cliente de passage')} · les pièces rendues repartent en stock</p>
-    <div class="bq-cx-lbl">Rendu</div>
+    <button class="bq-modal-x" data-bq-close aria-label="${tr('Fermer')}"><i data-icon="close"></i></button>
+    <h3 class="modal-title">${tr('Échange, {id}', { id: esc(sale.id) })}</h3>
+    <p class="modal-subtle">${c ? esc(c.name) : (sale.remote && !sale.clientId ? tr('Client non renseigné') : tr('Cliente de passage'))} · ${tr('les pièces rendues repartent en stock')}</p>
+    <div class="bq-cx-lbl">${tr('Rendu')}</div>
     ${retRows}
-    <div class="bq-cx-lbl">Part avec la cliente</div>
-    ${newRows || '<p class="modal-subtle bq-cx-empty">Aucun article choisi pour l\'instant.</p>'}
-    <button type="button" class="bq-btn secondary bq-cx-add" id="bq-cx-add"><i data-lucide="plus"></i>Ajouter un article</button>
-    <div class="bq-exch-diff ${none ? 'zero' : diffCents > 0 ? 'pos' : diffCents < 0 ? 'neg' : 'zero'}">
-      <span>${none ? 'Choisissez au moins un article' : diffCents > 0 ? 'Différence à encaisser' : diffCents < 0 ? 'Différence en faveur de la cliente, part en avoir' : 'Aucun écart, échange direct'}</span>
-      <span class="amt">${none || diffCents === 0 ? '0 MAD' : fmtMAD(Math.abs(diff))}</span>
+    <div class="bq-cx-lbl">${tr('Part avec la cliente')}</div>
+    ${newRows || `<p class="modal-subtle bq-cx-empty">${tr('Aucun article choisi pour l\'instant.')}</p>`}
+    <button type="button" class="bq-btn secondary bq-cx-add" id="bq-cx-add"><i data-icon="add"></i>${tr('Ajouter un article')}</button>
+    <div class="bq-exch-diff ${DIFF_CLASS[none ? 1 : Math.sign(diffCents) + 1]}">
+      <span>${tr(none ? 'Choisissez au moins un article' : diffCents > 0 ? 'Différence à encaisser' : diffCents < 0 ? 'Différence en faveur de la cliente, part en avoir' : 'Aucun écart, échange direct')}</span>
+      <span class="amt">${fmtMAD(none ? 0 : Math.abs(diff))}</span>
     </div>
     <div class="bq-sheet-foot">
-      <button class="bq-btn secondary" data-bq-close>Retour</button>
+      <button class="bq-btn secondary" data-bq-close>${tr('Retour')}</button>
       ${diffCents > 0
-        ? `<button class="bq-btn primary" id="bq-exch-go" ${none ? 'disabled' : ''}><i data-lucide="banknote"></i>Encaisser ${fmtMAD(diff)}</button>`
+        ? `<button class="bq-btn primary" id="bq-exch-go" ${none ? 'disabled' : ''}><i data-icon="payments"></i>${tr('Encaisser {amt}', { amt: fmtMAD(diff) })}</button>`
         : diffCents < 0
-          ? `<button class="bq-btn primary" id="bq-exch-go" ${none ? 'disabled' : ''}><i data-lucide="ticket"></i>Échanger + avoir ${fmtMAD(-diff)}</button>`
-          : `<button class="bq-btn primary" id="bq-exch-go" ${none ? 'disabled' : ''}><i data-lucide="check"></i>Confirmer l'échange</button>`}
+          ? `<button class="bq-btn primary" id="bq-exch-go" ${none ? 'disabled' : ''}><i data-icon="confirmation_number"></i>${tr('Échanger + avoir {amt}', { amt: fmtMAD(-diff) })}</button>`
+          : `<button class="bq-btn primary" id="bq-exch-go" ${none ? 'disabled' : ''}><i data-icon="check"></i>${tr('Confirmer l\'échange')}</button>`}
     </div>`;
   if (!$('#bq-cx-style', document)) {
-    const st = document.createElement('style');
-    st.id = 'bq-cx-style';
-    st.textContent = '.bq-cx-lbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3,#6b6b6b);margin:12px 0 6px}'
+    const styleEl = document.createElement('style');
+    styleEl.id = 'bq-cx-style';
+    styleEl.textContent = '.bq-cx-lbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3,#6b6b6b);margin:12px 0 6px}'
       + '.bq-cx-del{border:0;background:none;padding:0;font:inherit;color:var(--atlas,#0B6E4F);text-decoration:underline;cursor:pointer}'
       + '.bq-cx-add{margin:10px 0 4px;width:100%;justify-content:center}.bq-cx-empty{margin:4px 0}';
-    document.head.appendChild(st);
+    document.head.appendChild(styleEl);
   }
   openVeil('#bq-exch-veil');
   icons();
   $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-exch-veil'); });
-  $('#bq-cx-add', el).onclick = () => { closeVeil('#bq-exch-veil'); toast('Touchez l\'article suivant dans la grille ou cherchez-le'); };
+  $('#bq-cx-add', el).onclick = () => { closeVeil('#bq-exch-veil'); toast(tr('Touchez l\'article suivant dans la grille ou cherchez-le')); };
   $$('[data-bq-cx-del]', el).forEach((b) => {
     b.onclick = () => { ex.picks.splice(+b.dataset.bqCxDel, 1); renderExchNote(); openCombined(); };
   });
@@ -190,7 +251,7 @@ function settle(sale, ex, diffCents, el) {
   const refused = (reservation) => {
     if (go) go.disabled = false;
     if (reservation.issue) showStockIssue(reservation.issue);
-    else toast('Échange suspendu', 6000, 'warn', 'Impossible de réserver les articles choisis.');
+    else toast(tr('Échange suspendu'), 6000, 'warn', tr('Impossible de réserver les articles choisis.'));
   };
 
   let applied = false;
@@ -222,7 +283,7 @@ function settle(sale, ex, diffCents, el) {
     persistDay();
     queueIfOffline(`Échange · ${sale.id}`);
     renderExchNote(); renderGrid(); renderBadges();
-    if (lost) toast('Échange enregistré, retour à rapprocher', 6000, 'warn', 'Une variante d’origine a été supprimée du catalogue.');
+    if (lost) toast(tr('Échange enregistré, retour à rapprocher'), 6000, 'warn', tr('Une variante d’origine a été supprimée du catalogue.'));
     return true;
   };
 
@@ -291,7 +352,7 @@ function settle(sale, ex, diffCents, el) {
       });
     })).catch(() => {
       if (go) go.disabled = false;
-      toast('Numéro de ticket indisponible', 6000, 'warn', 'Reconnectez cette caisse pour réserver sa prochaine série.');
+      toast(tr('Numéro de ticket indisponible'), 6000, 'warn', tr('Reconnectez cette caisse pour réserver sa prochaine série.'));
     });
   } else if (diffCents < 0) {
     reserve().then(async (reservation) => {
@@ -312,12 +373,12 @@ function settle(sale, ex, diffCents, el) {
       } catch (error) {
         if (reservation.ok && cat && cat.releaseSale) cat.releaseSale(stockRef);
         if (go) go.disabled = false;
-        toast('Avoir non émis', 6000, 'danger', creditErrorDetail(error));
+        toast(tr('Avoir non émis'), 6000, 'danger', creditErrorDetail(error));
         return;
       }
       closeVeil('#bq-exch-veil');
       if (!apply(!!reservation.ok)) {
-        toast('Avoir émis, échange à régulariser', 6000, 'warn', `${av.code} existe mais un article choisi est devenu indisponible.`);
+        toast(tr('Avoir émis, échange à régulariser'), 6000, 'warn', tr('{code} existe mais un article choisi est devenu indisponible.', { code: av.code }));
         refreshOps(); openVoucher(av, { mode: 'fresh' });
         return;
       }
@@ -329,7 +390,7 @@ function settle(sale, ex, diffCents, el) {
       closeVeil('#bq-exch-veil');
       if (!apply(!!reservation.ok)) return;
       refreshOps();
-      toast(`Échange ${sale.id} enregistré, aucun écart`);
+      toast(tr('Échange {id} enregistré, aucun écart', { id: sale.id }));
     });
   }
 }

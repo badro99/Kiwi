@@ -18,6 +18,7 @@ function harness(extra = {}) {
   const window = target('w');
   const ctx = vm.createContext({ window, document, console, URL, Date, Promise, AbortController, CustomEvent: class { constructor(type) { this.type = type; } },
     setTimeout(fn, ms) { timers.set(++id, { fn, at: now + ms }); return id; }, clearTimeout(i) { timers.delete(i); },
+    setInterval(fn, ms) { const i = ++id, arm = () => timers.set(i, { fn: () => { arm(); fn(); }, at: now + ms }); arm(); return i; }, clearInterval(i) { timers.delete(i); },
     ...extra });
   const settle = async () => { for (let i = 0; i < 60; i++) await Promise.resolve(); };
   return { ctx, window, document, timers, count: () => calls, hit: () => { calls++; }, settle,
@@ -83,7 +84,7 @@ async function pacing(name, h, start, { cap = 120000, first = true, quietCap = 6
   await pacing('till void feed', h, () => h.ctx.watchVoids());
 }
 {
-  const h = harness({ POLL_MS: 6000, state: { orders: {}, sessions: [], closedSessions: [], expired: [] }, merchant: () => 'test', chip() {} });
+  const h = harness({ POLL_MS: 6000, state: { orders: {}, sessions: [], closedSessions: [], expired: [] }, merchant: () => 'test', chip() {}, orderProOn: () => false });   // la marque « absente » (onglet caché) n'est pas la relève mesurée ici
   h.ctx.pull = async () => { h.hit(); return 0; };
   const src = read('assets/orderpro-inbox.js');
   h.run(src.slice(src.indexOf('  /* Request pacing:'), src.indexOf("  if (document.readyState", src.indexOf('  /* Request pacing:'))));

@@ -123,12 +123,13 @@
       }
       const keep = preserve && $('#ho-card-z') ? $('#ho-card-z').value : '';
       handoverState.cardKiwi = handoverCardKiwi();
-      box.innerHTML = `<div class="rm-section-label">Rapprochement carte</div>`
-        + `<div class="ho-recon"><div class="ho-recon-line is-total"><span>Total carte Kiwi</span><span class="mono">${fmtMAD(handoverState.cardKiwi)}</span></div></div>`
-        + `<div class="cash-input-row" style="margin-bottom:6px;"><label class="cash-input-label" for="ho-card-z">Total carte du terminal</label>`
+      const tr = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
+      box.innerHTML = `<div class="rm-section-label">${tr('Rapprochement carte')}</div>`
+        + `<div class="ho-recon"><div class="ho-recon-line is-total"><span>${tr('Total carte Kiwi')}</span><span class="mono">${fmtMAD(handoverState.cardKiwi)}</span></div></div>`
+        + `<div class="cash-input-row" style="margin-bottom:6px;"><label class="cash-input-label" for="ho-card-z">${tr('Total carte du terminal')}</label>`
         + `<input class="cash-input mono" id="ho-card-z" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0" /></div>`
-        + `<p class="modal-subtle">Imprimez les totaux du terminal sans faire le Z, puis recopiez le total carte.</p>`
-        + `<div class="ho-ecart" id="ho-card-ecart"><span>Résultat</span><span class="mono" id="ho-card-ecart-val">À saisir</span></div>`;
+        + `<p class="modal-subtle">${tr('Imprimez les totaux du terminal sans faire le Z, puis recopiez le total carte.')}</p>`
+        + `<div class="ho-ecart" id="ho-card-ecart"><span>${tr('Résultat')}</span><span class="mono" id="ho-card-ecart-val">${tr('À saisir')}</span></div>`;
       box.oninput = updateHandoverCard;
       const inp = $('#ho-card-z');
       if (inp) inp.value = keep;
@@ -137,20 +138,21 @@
     function updateHandoverCard() {
       const box = $('#ho-card-ecart'), out = $('#ho-card-ecart-val'), inp = $('#ho-card-z');
       if (!box || !out) return;
+      const tr = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
       box.classList.remove('is-ok', 'is-off');
       handoverState.cardTerminal = null;
       const raw = String(inp ? inp.value : '').trim().replace(',', '.');
-      if (!raw) { out.textContent = 'À saisir'; return; }
+      if (!raw) { out.textContent = tr('À saisir'); return; }
       const n = Number(raw);
       if (!Number.isFinite(n) || n < 0 || Math.abs(n * 100 - Math.round(n * 100)) > 1e-6) {
-        out.textContent = 'Montant invalide';
+        out.textContent = tr('Montant invalide');
         box.classList.add('is-off');
         return;
       }
       handoverState.cardTerminal = money(n);
       const gap = major(minor(n) - minor(handoverState.cardKiwi));
-      if (gap === 0) { out.textContent = 'Rapproché · ' + fmtMAD(0); box.classList.add('is-ok'); return; }
-      out.textContent = (gap > 0 ? 'Terminal + ' : 'Kiwi + ') + fmtMAD(Math.abs(gap));
+      if (gap === 0) { out.textContent = tr('Rapproché') + ' · ' + fmtMAD(0); box.classList.add('is-ok'); return; }
+      out.textContent = tr((gap > 0 ? 'Terminal + ' : 'Kiwi + ') + fmtMAD(Math.abs(gap)));
       box.classList.add('is-off');
     }
 

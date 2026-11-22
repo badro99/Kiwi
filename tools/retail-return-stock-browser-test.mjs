@@ -58,6 +58,9 @@ try {
     await button(page, 'Échanges & avoirs');
     await button(page, kind === 'maison' ? 'Service 18 pièces Fès' : 'Caftan Fassi');
     await button(page, 'Émettre un avoir');
+    // Cliente de passage : la caisse demande à qui inscrire l'avoir (21 nov. 2026) ; bon au porteur, comme avant.
+    await page.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.getClientRects().length && b.innerText.includes('bon au porteur')), { timeout: 5000 });
+    await button(page, 'bon au porteur');
     await page.waitForFunction(n => window.KiwiMaisonStock.list().length > n, {}, sold.rows.length);
     const returned = await snapshot(page);
     assert.equal(returned.stock, sold.stock + 1, `${kind}: one returned piece restores stock`); checks++;

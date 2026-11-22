@@ -140,7 +140,7 @@ export function paintClientMoney(slot, k) {
     } else if (t && t.closest('[data-kcm-spend]')) {
       k.spend(); k.close();
       const sale = globalThis.document?.querySelector(SALE_DOOR); if (sale) sale.click();
-      if (k.toast) k.toast('Cliente sur la vente', 'Son avoir se propose à l’encaissement.');   // le toast du carnet traduit lui-même
+      if (k.toast) k.toast(tr('Cliente sur la vente'), tr('Son avoir se propose à l’encaissement.'));
     }
   };
 }

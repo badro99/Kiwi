@@ -48,6 +48,13 @@ function fixture(dir) {
 }
 const env = (dir) => ({ ...process.env, KIWI_STAMPS_ROOT: dir });
 const run = (dir, args) => spawnSync(process.execPath, [path.join(dir, 'tools/bump-stamp.js'), ...args], { env: env(dir), encoding: 'utf8' });
+/* Où vit chaque estampille, selon le scanner de l'outil lui-même (tools/stamps.js),
+   exécuté sur le dossier : { asset: { stamps: ['1'], files: ['kiwi-sw.js', …] } }. */
+const stampsAt = (dir) => {
+  const r = spawnSync(process.execPath, ['-e', "const s = require('./tools/stamps.js'); const o = {}; for (const [a, e] of s.scan()) o[a] = { stamps: [...e.stamps].sort(), files: [...new Set(e.sites.map((x) => x.file))].sort() }; process.stdout.write(JSON.stringify(o));"], { cwd: dir, env: env(dir), encoding: 'utf8' });
+  if (r.status !== 0) throw new Error('stamps.scan : ' + r.stderr);
+  return JSON.parse(r.stdout);
+};
 const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
 
 /* A · --sw : génération + estampilles des bootstraps, d'un coup */
@@ -379,18 +386,20 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
     const bare = drift();
     ok(bare.status !== 0 && /importe '\.\/reopened-bill\.mjs' sans \?v=/.test(bare.stderr), 'serveur : un import() sans estampille fait rougir le gate');
     ok(run(dir, ['--precache', 'assets/serveur/reopened-bill.mjs', 'assets/request-deadline.mjs']).status === 0, 'serveur : première estampille et précache des deux modules');
-    ok(rd(dir, 'assets/serveur/service.js').includes("import('./reopened-bill.mjs?v=1')") && rd(dir, 'assets/serveur/service.js').includes("import('../request-deadline.mjs?v=1')"), 'serveur : les import() du paquet portent ?v=1');
-    ok(rd(dir, 'assets/serveur/payments.js').includes("import('./reopened-bill.mjs?v=1')") && rd(dir, 'assets/serveur/service-runtime.js').includes("import('../request-deadline.mjs?v=1')"), 'serveur : ses parties aussi');
-    ok(rd(dir, 'assets/serveur/service.js') === bundle(), 'serveur : le paquet reste la concaténation de ses parties');
-    ok(rd(dir, 'kiwi-sw.js').includes("'/assets/serveur/reopened-bill.mjs?v=1'") && rd(dir, 'kiwi-sw.js').includes("'/assets/request-deadline.mjs?v=1'"), 'serveur : les deux modules entrent dans SHELL');
-    ok(rd(dir, 'kiwi-serveur.html').includes('assets/serveur/service.js?v=5'), 'serveur : le paquet réécrit monte d’une estampille (cascade)');
+    const RB = 'assets/serveur/reopened-bill.mjs', RD = 'assets/request-deadline.mjs', SV = 'assets/serveur/service.js';
+    const first = stampsAt(dir);
+    ok(first[RB].stamps.join() === '1' && first[RD].stamps.join() === '1' && first[RB].files.includes(SV) && first[RD].files.includes(SV), 'serveur : les import() du paquet portent ?v=1');
+    ok(rd(dir, SV) === bundle(), 'serveur : le paquet reste la concaténation de ses parties, qui portent donc les mêmes import() estampillés');
+    ok(first[RB].files.includes('kiwi-sw.js') && first[RD].files.includes('kiwi-sw.js'), 'serveur : les deux modules entrent dans SHELL, à la même estampille');
+    ok(first[SV].stamps.join() === '5' && first[SV].files.includes('kiwi-serveur.html'), 'serveur : le paquet réécrit monte d’une estampille (cascade)');
     ok(drift().status === 0, 'serveur : gate vert après la première estampille');
     fs.appendFileSync(path.join(dir, 'assets/serveur/reopened-bill.mjs'), '// changed\n');
     const stale = drift();
     ok(stale.status !== 0 && /reopened-bill\.mjs a changé de contenu en gardant \?v=1/.test(stale.stderr), 'serveur : un module changé sans estampille fait rougir le gate');
     ok(run(dir, ['assets/serveur/reopened-bill.mjs']).status === 0, 'serveur : bump du module');
     ok(rd(dir, 'assets/serveur/payments.js').includes("import('./reopened-bill.mjs?v=2')") && rd(dir, 'assets/serveur/service.js') === bundle(), 'serveur : paquet et partie à ?v=2, toujours concaténés');
-    ok(rd(dir, 'kiwi-sw.js').includes("'/assets/serveur/reopened-bill.mjs?v=2'") && rd(dir, 'kiwi-serveur.html').includes('assets/serveur/service.js?v=6'), 'serveur : SHELL et coquille suivent');
+    const second = stampsAt(dir);
+    ok(second[RB].stamps.join() === '2' && second[RB].files.includes('kiwi-sw.js') && second[SV].stamps.join() === '6' && second[SV].files.includes('kiwi-serveur.html'), 'serveur : SHELL et coquille suivent');
     ok(drift().status === 0, 'serveur : gate vert après le bump');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }

@@ -210,8 +210,27 @@ function draftSandbox(storageBehaviour = {}) {
   ok(sent.length === 3, 'un lot dont le « Lancer » est encore en vol n\'est pas renvoyé en même temps');
 
   const poll = SERVEUR.slice(SERVEUR.indexOf('function pollServiceSync()'), SERVEUR.indexOf('function svSyncMark('));
-  ok(/svSyncMark\(synced\);[^\n]*svDrainPendingBatches\(\)/.test(poll),
-    'une synchro réussie vide aussi les lots : le réseau répond, c\'est le moment');
+  /* Exécuté : un tour de synchro dont les deux lectures répondent vide aussi les
+   * lots (le réseau répond, c'est le moment) ; un tour raté ne les touche pas. */
+  const seen = [];
+  let ordersOk = true;
+  const pbox = {
+    SV_DEMO: false, shiftStart: 1, liveEmployeeState: { merchant: 'santos' }, svSlug: () => 'santos',
+    activeRole: { restricted: false }, window: {}, svFetchCarte() {}, SV_POLL_TIMEOUT_MS: 1,
+    serviceEventSince: 0, serviceOrderSince: 0, servicePlanTick: 0, SV_POLL_SKIP: {}, encodeURIComponent,
+    svFetchJson: () => Promise.resolve({ ok: true, data: { ok: true } }), ingestServiceEvents() {},
+    pollServiceOrders: () => Promise.resolve({ ok: ordersOk }), ingestServiceOrders() {},
+    svSyncMark: (v) => seen.push('mark:' + v), svDrainPendingBatches: () => seen.push('drain'),
+  };
+  vm.createContext(pbox);
+  vm.runInContext(poll + '\nglobalThis.poll = pollServiceSync;', pbox, { filename: 'poll.js' });
+  pbox.poll();
+  await new Promise((r) => setTimeout(r, 0));
+  ok(seen.join() === 'mark:true,drain', 'une synchro réussie vide aussi les lots : le réseau répond, c\'est le moment');
+  seen.length = 0; ordersOk = false;
+  pbox.poll();
+  await new Promise((r) => setTimeout(r, 0));
+  ok(seen.join() === 'mark:false', 'une synchro ratée le dit et ne relance pas les lots');
 }
 
 /* ═══ 2 · le numéro provisoire, exécuté ═══════════════════════════════════ */

@@ -65,7 +65,7 @@ async function open(tr, { width, height, lang = 'fr', theme = 'light' }) {
   const page = tr.watch(await ctx.newPage());
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  const phone = width < 768;
+  const phone = Math.min(width, height) < 500;   // a phone on its side too (844 x 390): its screen, not only its window
   await page.setViewport({ width, height, isMobile: phone, hasTouch: phone, deviceScaleFactor: 1 });
   await page.setBypassServiceWorker(true);
   await page.setRequestInterception(true);

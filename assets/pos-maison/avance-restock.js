@@ -4,10 +4,11 @@
  * possède : son catalogue (le code scanné → la pièce), sa remise en stock
  * (releaseStock sait rendre une pièce vendue au détail au dépareillé,
  * persistStock écrit la ligne du journal), son registre d'avoirs et son bon. */
-import { openAvanceRestock, expiredAvances, retailModes } from '../retail-avance.js?v=4';
-import { merchantSlug, persistStock, AVOIRS, persistAvoirs, renderBadges, creditFromServer, toast, root } from '../pos-maison.js?v=247';
-import { clById, openCamScan, esc, releaseStock } from './sales.js?v=160';
-import { catDB, normScan, armScanCapture, disarmScanCapture, openVoucher } from './checkout.js?v=160';
+import { openAvanceRestock, expiredAvances, retailModes } from '../retail-avance.js?v=6';
+import { merchantSlug, persistStock, AVOIRS, persistAvoirs, renderBadges, creditFromServer, toast, root } from '../pos-maison.js?v=248';
+import { clById, openCamScan, esc, releaseStock } from './sales.js?v=161';
+import { catDB, normScan, armScanCapture, disarmScanCapture, openVoucher } from './checkout.js?v=161';
+const tr = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
 
 function deps(refresh) {
   return {
@@ -43,12 +44,12 @@ export function mountAvanceButton(panel, refresh) {
   if (!tools || !R || !retailModes('maison').avance || tools.querySelector('#mzi-avances')) return;
   const button = document.createElement('button');
   button.className = 'mz-btn'; button.id = 'mzi-avances'; button.type = 'button';
-  button.innerHTML = `<i data-icon="event_busy"></i><span>${esc('Avances expirées')}</span>`;
+  button.innerHTML = `<i data-icon="event_busy"></i><span>${esc(tr('Avances expirées'))}</span>`;
   button.onclick = () => { void openAvanceRestock(deps(refresh)); };
   tools.appendChild(button);
   R.listWithStatus(merchantSlug(), '').then(({ rows }) => {
     const n = expiredAvances(rows, R).length;
     const label = button.querySelector('span');
-    if (label && n) label.textContent = `Avances expirées · ${n}`;
+    if (label && n) label.textContent = `${tr('Avances expirées')} · ${n}`;
   }).catch(() => {});
 }

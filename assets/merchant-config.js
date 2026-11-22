@@ -312,8 +312,7 @@
         : Promise.resolve('');
       return why.then(function (code) {
         if (code === 'plan-limit-exceeded' && window.Kiwi && window.Kiwi.toast) {
-          var L = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
-          window.Kiwi.toast({ fr: "Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", en: 'Your plan covers one business. Kiwi Ultra covers as many as you need.', ar: 'باقتك تشمل مؤسسة واحدة. Kiwi Ultra تشمل عددا غير محدود.' }[L] || "Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", 6000);
+          window.Kiwi.toast(tr({ fr: "Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", en: 'Your plan covers one business. Kiwi Ultra covers as many as you need.', ar: 'باقتك تشمل مؤسسة واحدة. Kiwi Ultra تشمل عددا غير محدود.' }), 6000);
         }
         var ok = !!(r && r.ok);
         if (!ok && opts.throwOnError) throw Object.assign(new Error('store-create-failed'), { status: r && r.status || 0, code: code || '' });
@@ -353,10 +352,14 @@
   function redoToast(d) {
     var names = d && Array.isArray(d.codesToRedo) ? d.codesToRedo.slice(0, 3).join(', ') : '';
     if (!names || !window.Kiwi || !window.Kiwi.toast) return;
-    var L = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
-    window.Kiwi.toast({ fr: 'Code à refaire pour ' + names + ' : ce code est déjà celui d’un propriétaire, il n’ouvre pas la caisse. Donnez-lui un nouveau code.',
+    window.Kiwi.toast(tr({ fr: 'Code à refaire pour ' + names + ' : ce code est déjà celui d’un propriétaire, il n’ouvre pas la caisse. Donnez-lui un nouveau code.',
       en: 'Code to redo for ' + names + ': this code already belongs to an owner, so it does not open the till. Give them a new code.',
-      ar: 'الكود خاصو يتعاود لـ' + names + ': هاد الكود ديال مول المحل، ما كيحلّش الكاشة. عطيه كود جديد.' }[L] || 'Code à refaire pour ' + names + '.', 9000);
+      ar: 'الكود خاصو يتعاود لـ' + names + ': هاد الكود ديال مول المحل، ما كيحلّش الكاشة. عطيه كود جديد.' }), 9000);
+  }
+  /* Message déjà écrit dans les trois langues : la langue de l'interface, sinon le français. */
+  function tr(byLang) {
+    var L = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
+    return byLang[L] || byLang.fr;
   }
   function syncPins(pins) {
     if (!Array.isArray(pins)) return Promise.resolve(false);

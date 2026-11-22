@@ -51,7 +51,7 @@ const ok = (name) => { n++; console.log('✓ ' + name); };
   const optin = grab(admin, 'var OPTIN_MODULES = {');
   const types = [...optin.matchAll(/^\s{4}([a-z_]+): \[/gm)].map((m) => m[1]);
   const missing = types.filter((t) => {
-    const list = optin.slice(optin.indexOf(t + ': ['), optin.indexOf('],', optin.indexOf(t + ': [')));
+    const list = optin.slice(optin.indexOf(t + ': ['), optin.indexOf('\n    ],', optin.indexOf(t + ': [')));   // la fin de la liste, pas un « onFor:['maison'], » à l'intérieur
     return !/key:'expenses', label:'Dépenses[^']*', off:true/.test(list);
   });
   assert.ok(types.length >= 2 && missing.length === 0, 'opt-in entry missing for ' + missing.join(',') + ' of ' + types.join(','));

@@ -341,6 +341,7 @@
       "Échec d’impression": "Print failed",
       "Étiquette": "Label",
       "à jour": "up to date",
+      "à régler": "due",
       "étiquette": "label",
       "étiquettes": "labels"
     },
@@ -670,6 +671,7 @@
       "Échec d’impression": "فشلت الطباعة",
       "Étiquette": "الملصق",
       "à jour": "مسدَّد",
+      "à régler": "مستحق",
       "étiquette": "ملصق",
       "étiquettes": "ملصقات"
     }

@@ -11,7 +11,7 @@
     },
     "ai-routes-test.mjs": {
       "text": 26,
-      "total": 64
+      "total": 70
     },
     "amira-integration-test.mjs": {
       "text": 16,
@@ -31,7 +31,7 @@
     },
     "app-bundle-test.mjs": {
       "text": 30,
-      "total": 66
+      "total": 70
     },
     "audit-remediation-inventory-loyalty-test.mjs": {
       "text": 31,
@@ -83,7 +83,7 @@
     },
     "briefing-properties-test.mjs": {
       "text": 29,
-      "total": 76
+      "total": 85
     },
     "browser-trace-test.mjs": {
       "text": 10,
@@ -91,7 +91,7 @@
     },
     "bump-stamp-test.mjs": {
       "text": 39,
-      "total": 87
+      "total": 102
     },
     "business-day-default-test.mjs": {
       "text": 13,
@@ -165,10 +165,6 @@
       "text": 31,
       "total": 72
     },
-    "catalog-workspace-test.mjs": {
-      "text": 5,
-      "total": 5
-    },
     "channel-percentage-test.mjs": {
       "text": 11,
       "total": 56
@@ -219,7 +215,7 @@
     },
     "credit-book-test.mjs": {
       "text": 65,
-      "total": 175
+      "total": 187
     },
     "critical-flow-test.mjs": {
       "text": 17,
@@ -227,7 +223,7 @@
     },
     "customer-retention-test.mjs": {
       "text": 25,
-      "total": 115
+      "total": 128
     },
     "d1-schema-test.mjs": {
       "text": 11,
@@ -247,7 +243,7 @@
     },
     "dashboard-pin-vault-test.mjs": {
       "text": 37,
-      "total": 77
+      "total": 91
     },
     "dashboard-truth-test.mjs": {
       "text": 29,
@@ -255,7 +251,7 @@
     },
     "dayreport-properties-test.mjs": {
       "text": 18,
-      "total": 45
+      "total": 47
     },
     "depenses-demo-gate-test.mjs": {
       "text": 11,
@@ -267,7 +263,7 @@
     },
     "employee-live-test.mjs": {
       "text": 59,
-      "total": 150
+      "total": 161
     },
     "employee-timezone-test.mjs": {
       "text": 16,
@@ -279,7 +275,7 @@
     },
     "entitlements-test.mjs": {
       "text": 23,
-      "total": 27
+      "total": 29
     },
     "face-unlock-test.mjs": {
       "text": 16,
@@ -338,8 +334,8 @@
       "total": 10
     },
     "hotel-commercial-test.mjs": {
-      "text": 108,
-      "total": 165
+      "text": 107,
+      "total": 176
     },
     "hotel-direct-booking-browser-test.mjs": {
       "text": 132,
@@ -379,7 +375,7 @@
     },
     "hotel-stays-group-browser-test.mjs": {
       "text": 124,
-      "total": 188
+      "total": 200
     },
     "hotel-stays-group-test.mjs": {
       "text": 25,
@@ -411,11 +407,11 @@
     },
     "invoices-v2-test.mjs": {
       "text": 98,
-      "total": 172
+      "total": 175
     },
     "invoicing-v2-browser-test.mjs": {
       "text": 29,
-      "total": 111
+      "total": 114
     },
     "kds-course-following-browser-test.mjs": {
       "text": 13,
@@ -451,7 +447,7 @@
     },
     "kitchen-void-protocol-test.mjs": {
       "text": 58,
-      "total": 94
+      "total": 95
     },
     "kpi-ledger-test.js": {
       "text": 20,
@@ -479,7 +475,7 @@
     },
     "lock-greeting-truth-test.mjs": {
       "text": 77,
-      "total": 114
+      "total": 132
     },
     "maison-client-history-test.mjs": {
       "text": 7,
@@ -495,7 +491,7 @@
     },
     "material-icons-test.mjs": {
       "text": 14,
-      "total": 33
+      "total": 36
     },
     "menu-catalog-boundary-test.mjs": {
       "text": 14,
@@ -507,7 +503,7 @@
     },
     "menu-i18n-test.mjs": {
       "text": 54,
-      "total": 80
+      "total": 85
     },
     "menu-nutrition-test.mjs": {
       "text": 36,
@@ -583,7 +579,7 @@
     },
     "native-workspace-ux-test.mjs": {
       "text": 12,
-      "total": 45
+      "total": 50
     },
     "net-wave-p-test.mjs": {
       "text": 23,
@@ -723,7 +719,7 @@
     },
     "pos-reprint-test.js": {
       "text": 25,
-      "total": 50
+      "total": 55
     },
     "pos-truth-a-test.mjs": {
       "text": 26,
@@ -743,7 +739,7 @@
     },
     "pressing-truth-test.mjs": {
       "text": 25,
-      "total": 68
+      "total": 70
     },
     "pressing-workspace-test.js": {
       "text": 59,
@@ -791,7 +787,7 @@
     },
     "promotions-store-contract-test.mjs": {
       "text": 15,
-      "total": 52
+      "total": 54
     },
     "ramadan-test.js": {
       "text": 11,
@@ -823,7 +819,7 @@
     },
     "retail-acompte-browser-test.mjs": {
       "text": 9,
-      "total": 13
+      "total": 14
     },
     "retail-scan-test.mjs": {
       "text": 29,
@@ -843,7 +839,7 @@
     },
     "sale-line-v2-test.mjs": {
       "text": 15,
-      "total": 28
+      "total": 38
     },
     "sales-reconcile-test.mjs": {
       "text": 18,
@@ -883,7 +879,7 @@
     },
     "service-draft-durability-test.mjs": {
       "text": 21,
-      "total": 47
+      "total": 55
     },
     "service-settlement-test.mjs": {
       "text": 23,
@@ -899,11 +895,11 @@
     },
     "shared-pricing-parity-test.mjs": {
       "text": 10,
-      "total": 25
+      "total": 29
     },
     "shopify-connector-test.mjs": {
       "text": 65,
-      "total": 146
+      "total": 155
     },
     "simple-food-cost-browser-test.mjs": {
       "text": 10,
@@ -935,7 +931,7 @@
     },
     "stock-count-history-language-test.mjs": {
       "text": 46,
-      "total": 95
+      "total": 96
     },
     "stock-item-form-test.mjs": {
       "text": 25,
@@ -975,7 +971,7 @@
     },
     "support-triage-test.mjs": {
       "text": 50,
-      "total": 99
+      "total": 103
     },
     "table-refresh-test.js": {
       "text": 6,
@@ -1004,10 +1000,6 @@
     "team-added-toast-test.mjs": {
       "text": 7,
       "total": 8
-    },
-    "team-codes-at-rest-test.mjs": {
-      "text": 26,
-      "total": 96
     },
     "team-job-names-test.mjs": {
       "text": 14,

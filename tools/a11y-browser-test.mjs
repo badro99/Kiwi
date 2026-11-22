@@ -615,7 +615,7 @@ await S.run('coût simple · fr, en, ar', async (t) => {
    les boutons prenaient Tab. Menu, addition et encaissement, au bureau, sur
    un téléphone en arabe sombre et sur un téléphone couché. */
 const till2027Storage = (lang) => ({ 'kiwiSkin2027:till': '1', kiwiCaisseLang: lang, ...(lang === 'ar' ? { kiwiCaisseTheme: 'dark' } : {}) });
-const till2027Size = (width, height) => ({ width, height, mobile: width < 500, pin: false });
+const till2027Size = (width, height) => ({ width, height, mobile: Math.min(width, height) < 500, pin: false });   // a phone on its side is still a phone screen
 async function till2027(t, page) {
   const states = [await audit(t, page)];
   t.step('open the service');

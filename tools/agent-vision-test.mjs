@@ -47,8 +47,8 @@ const controls = [
   // ── le câblage : la coquille et le HTML s'accordent ───────────────────
   ['dashboard loads the vision layer with a stamp', /assets\/agent-voice\.js\?v=\d+/.test(dashboard)],
   ['the offline shell precaches the same stamped URL', (() => {
-    const m = dashboard.match(/assets\/agent-voice\.js\?v=(\d+)/);
-    return !!m && sw.includes(`'/assets/agent-voice.js?v=${m[1]}'`);
+    const stamp = dashboard.match(/assets\/agent-voice\.js\?v=(\d+)/);
+    return !!stamp && sw.includes(`'/assets/agent-voice.js?v=${stamp[1]}'`);
   })()],
 ];
 

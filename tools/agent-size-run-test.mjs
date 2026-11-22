@@ -8,7 +8,7 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import retailSource from './pos-retail-test-source.cjs';
-import { cleanRun, kindOf, findProducts, plan, apply, readRun } from '../assets/agent-size-run.mjs';
+import { cleanRun, kindOf, findProducts, plan, apply, readRun as sizesOfLabel } from '../assets/agent-size-run.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let passed = 0;
@@ -20,20 +20,20 @@ const eq = (actual, expected, message) => ok(JSON.stringify(actual) === JSON.str
  * sans quantité par taille : il a rendu UNE ligne « 36-41 × 12 ». Reçue telle
  * quelle, elle créait une taille « 36-41 » de 12 paires. Une plage devient ses
  * tailles, sans quantité inventée : le commerçant les tape. */
-eq(readRun([{ size: '36-41', qty: 12 }]), { rows: [], sizes: ['36', '37', '38', '39', '40', '41'] }, 'une plage de pointures devient ses tailles, quantités à saisir');
-eq(readRun([{ size: '36 à 41', qty: 12 }]).sizes, ['36', '37', '38', '39', '40', '41'], 'plage écrite « à »');
-eq(readRun([{ size: '38 to 40', qty: 6 }]).sizes, ['38', '39', '40'], 'plage écrite « to »');
-eq(readRun([{ size: 'S-XL', qty: 10 }]).sizes, ['S', 'M', 'L', 'XL'], 'plage de tailles en lettres');
-eq(readRun([{ size: '36', qty: 1 }, { size: '37', qty: 2 }]), { rows: [{ size: '36', qty: 1 }, { size: '37', qty: 2 }], sizes: [] }, 'un assortiment normal ne change pas');
-eq(readRun([{ size: '41-36', qty: 3 }]).sizes, [], 'une plage à l\'envers n\'est pas devinée');
-eq(readRun([{ size: '1-90', qty: 3 }]).sizes, [], 'une plage démesurée n\'est pas dépliée');
-eq(readRun([]), { rows: [], sizes: [] }, 'rien lu, rien inventé');
-eq(readRun([], ['36', '37', '36', '']), { rows: [], sizes: ['36', '37'] }, 'lecture incertaine : les tailles seules, sans quantité');
-eq(readRun([{ size: '38', qty: 2 }], ['36']), { rows: [{ size: '38', qty: 2 }], sizes: [] }, 'un assortiment lu passe avant les tailles seules');
+eq(sizesOfLabel([{ size: '36-41', qty: 12 }]), { rows: [], sizes: ['36', '37', '38', '39', '40', '41'] }, 'une plage de pointures devient ses tailles, quantités à saisir');
+eq(sizesOfLabel([{ size: '36 à 41', qty: 12 }]).sizes, ['36', '37', '38', '39', '40', '41'], 'plage écrite « à »');
+eq(sizesOfLabel([{ size: '38 to 40', qty: 6 }]).sizes, ['38', '39', '40'], 'plage écrite « to »');
+eq(sizesOfLabel([{ size: 'S-XL', qty: 10 }]).sizes, ['S', 'M', 'L', 'XL'], 'plage de tailles en lettres');
+eq(sizesOfLabel([{ size: '36', qty: 1 }, { size: '37', qty: 2 }]), { rows: [{ size: '36', qty: 1 }, { size: '37', qty: 2 }], sizes: [] }, 'un assortiment normal ne change pas');
+eq(sizesOfLabel([{ size: '41-36', qty: 3 }]).sizes, [], 'une plage à l\'envers n\'est pas devinée');
+eq(sizesOfLabel([{ size: '1-90', qty: 3 }]).sizes, [], 'une plage démesurée n\'est pas dépliée');
+eq(sizesOfLabel([]), { rows: [], sizes: [] }, 'rien lu, rien inventé');
+eq(sizesOfLabel([], ['36', '37', '36', '']), { rows: [], sizes: ['36', '37'] }, 'lecture incertaine : les tailles seules, sans quantité');
+eq(sizesOfLabel([{ size: '38', qty: 2 }], ['36']), { rows: [{ size: '38', qty: 2 }], sizes: [] }, 'un assortiment lu passe avant les tailles seules');
 /* Même jour : « SIZE: ASSORTED · QTY 24 » lu comme une taille « ASSORTED » de 24. */
 for (const word of ['ASSORTED', 'Assorti', 'assortis', 'MIXED', 'Mix', 'ASST', 'Varié', 'Divers'])
-  eq(readRun([{ size: word, qty: 24 }]), { rows: [], sizes: [] }, `« ${word} » n'est pas une taille : tailles à saisir`);
-eq(readRun([{ size: 'TU', qty: 5 }]).rows, [{ size: 'TU', qty: 5 }], 'taille unique reste une taille');
+  eq(sizesOfLabel([{ size: word, qty: 24 }]), { rows: [], sizes: [] }, `« ${word} » n'est pas une taille : tailles à saisir`);
+eq(sizesOfLabel([{ size: 'TU', qty: 5 }]).rows, [{ size: 'TU', qty: 5 }], 'taille unique reste une taille');
 
 /* Les quatre scripts du catalogue, lus une fois ; chaque boutique les exécute. */
 const CATALOG_SCRIPTS = ['assets/barcode.js', 'assets/color-palette.js', 'assets/boutique-catalog-parts.js', 'assets/boutique-catalog.js']

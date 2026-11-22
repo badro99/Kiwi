@@ -1673,7 +1673,7 @@ Keys are grouped by bundle (§9.3). `{…}` are ICU arguments; amounts, percenta
 | `count.same_as_last` (chip; accessible name `count.same_as_last_a11y`) | Last float · {amount} | Dernier fond · {amount} | آخر رصيد · {amount} |
 | `count.same_as_last_a11y` | Last float · {amount}, use the same opening float as last time | Dernier fond · {amount}, reprendre le fond de la dernière ouverture | آخر رصيد · {amount}، استعمل رصيد الافتتاح السابق نفسه |
 | `count.open` | Open the till | Ouvrir la caisse | افتح الصندوق |
-| `count.reason` | Why is the count different? | Pourquoi le comptage diffère-t-il ? | لماذا يختلف العدّ؟ |
+| `count.reason` | Reason for the difference, if you know it | Motif de l’écart, si vous le connaissez | سبب الفرق إن كنت تعرفه |
 | `count.reason.counting` | Counting error | Erreur de comptage | خطأ في العدّ |
 | `count.reason.change` | Change given wrong | Erreur de rendu de monnaie | خطأ في إرجاع الباقي |
 | `count.reason.unrecorded` | Cash movement not recorded | Mouvement de caisse non saisi | حركة نقدية غير مسجّلة |

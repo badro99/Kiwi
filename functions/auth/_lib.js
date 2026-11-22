@@ -1,4 +1,6 @@
 import { employeeRoleOpensReceptionView } from './_reception.js';
+import { employeeWorksFloor } from './_floor.js';
+export { employeeWorksFloor };
 import { deadlineFetch } from '../../assets/request-deadline.mjs';
 import { codeDocument, matchingStaffCodes, accountStaffCodes, hashStaffCode } from './_staff-codes.js';
 import { canonicalCode } from '../api/_rules-staff-credential.js';
@@ -1621,19 +1623,7 @@ export async function faceMarkState(request, env, access) {
   return { status: 'ok', mark };
 }
 
-/* Who works the floor, from the team sheet's job title (else department).
- * « Commis » is a helper whose post is its department: a commis of the Bar or
- * the Salle serves tables, a kitchen commis does not (Browse, 22 Nov 2026).
- * Mirror: assets/staff-roles.js › isService, held by tools/commis-floor-test.mjs. */
-const FLOOR_ROLES = new Set([
-  'serveur', 'chef de rang', "maitre d'hotel", 'sommelier', 'barman',
-  "hote d'accueil", 'salle', 'service', 'manager', 'proprietaire',
-]);
-export function employeeWorksFloor(fn, department) {
-  const role = normEmployeeRole(fn || department);
-  if (role === 'commis') return ['bar', 'salle', 'service', 'barman', 'serveur'].includes(normEmployeeRole(department));
-  return FLOOR_ROLES.has(role);
-}
+/* employeeWorksFloor (who serves tables) lives in ./_floor.js. */
 
 /* Only an employee who works service AND currently has an open attendance
  * entry may use the operational order/event channels. Kitchen, dishwasher and
