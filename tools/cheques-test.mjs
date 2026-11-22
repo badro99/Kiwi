@@ -83,7 +83,7 @@ db.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, ts, r
 const addSale = (id, cents, extra) => db.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, ts, ref, void_ts) VALUES (?, ?, ?, ?, 'cheque', ?, ?, ?)`)
   .run(id, (extra && extra.merchant) || SHOP, Math.round(cents / 100), cents, now, 'T-' + id, (extra && extra.void) ? now : null);
 const addClient = (id, name, merchant = SHOP) => db.prepare(`INSERT INTO clients (merchant, id, name, phone) VALUES (?, ?, ?, '0612345678')`).run(merchant, id, name);
-for (const [id, name] of [['cl-hajar', 'Hajar Bennani'], ['cl-youssef', 'Youssef Alami'], ['cl-karim', 'Karim Tazi'], ['cl-nord', 'Société Nord'], ['cl-rachid', 'Rachid Idrissi'], ['cl-leila', 'Leila Amrani'], ['cl-autre', 'Autre Cliente']]) addClient(id, name);
+for (const [id, name] of [['cl-hajar', 'Hajar Bennani'], ['cl-youssef', 'Youssef Alami'], ['cl-karim', 'Karim Tazi'], ['cl-nord', 'Société Nord'], ['cl-rachid', 'Rachid Idrissi'], ['cl-leila', 'Leila Amrani'], ['cl-autre', 'Autre Cliente'], ['cl-sans', 'Sans Vente'], ['cl-void', 'Ticket Annulé'], ['cl-split', 'Trois Tickets'], ['cl-twice', 'Deux Fois']]) addClient(id, name);
 addClient('cl-ailleurs', 'Cliente ailleurs', OTHER);
 /* Le flux des ventes d'un chèque (lignes « Chèque impayé » et retours) et la note au compte de la cliente. */
 const flow = (chequeId) => db.prepare("SELECT COALESCE(SUM(amount_cents), 0) AS n FROM sales WHERE merchant = ? AND id = ?").get(SHOP, 'chqbounce-' + chequeId.replace(/^chq_/, '')).n;
@@ -142,7 +142,12 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
       for (const to of ALL) {
         const id = await fresh();
         const r = await move(id, to);
-        if (C.TRANSITIONS[dir][status].includes(to)) {
+        if (C.TRANSITIONS[dir][status].includes(to) && to === 'cancelled' && dir === 'received' && ['rejected', 'in_litigation'].includes(status)) {
+          /* Permis seulement sans dette : celui-ci n'a pas de ticket annulé, sa dette reste ouverte. */
+          assert.equal(r.status, 409, `${dir} ${status} → cancelled with an open debt is refused`);
+          assert.equal(r.data.error, 'debt-open');
+          legal++;
+        } else if (C.TRANSITIONS[dir][status].includes(to)) {
           assert.equal(r.status, 200, `${dir} ${status} → ${to} is legal: ${JSON.stringify(r.data)}`);
           assert.equal(r.data.cheque.status, to);
           legal++;
@@ -255,9 +260,17 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
   const k2 = flowRows().filter((r) => r.id.startsWith('chqback-') && r.amount_cents === 15000);
   assert.deepEqual(k2.map((r) => r.method), ['cash'], 'only the rest (150,00) comes back, in cash');
 
+  /* Un chèque du tableau de bord sans vente dans Kiwi : son rejet n'ouvre aucune
+     dette au carnet sans l'accord du patron (onAccount) ; la dette reste visible sur le chèque. */
+  const c3a = await create({ amountCents: 25000, partyId: 'cl-sans' });
+  await move(c3a.data.cheque.id, 'deposited'); await move(c3a.data.cheque.id, 'rejected');
+  assert.equal(await owed('cl-sans'), 0, 'no sale, no explicit ok: nothing enters the credit book');
+  assert.equal(note(c3a.data.cheque.id), undefined);
+  assert.equal(db.prepare('SELECT debt_open FROM cheques WHERE merchant = ? AND id = ?').get(SHOP, c3a.data.cheque.id).debt_open, 1, 'the debt stays visible on the cheque');
+
   /* Contentieux puis virement : la dette reste, rien de plus n'est écrit au contentieux. */
   const c3 = await create({ amountCents: 1500001, partyId: 'cl-nord' });
-  await move(c3.data.cheque.id, 'deposited'); await move(c3.data.cheque.id, 'rejected'); await move(c3.data.cheque.id, 'in_litigation');
+  await move(c3.data.cheque.id, 'deposited'); await move(c3.data.cheque.id, 'rejected', { onAccount: true }); await move(c3.data.cheque.id, 'in_litigation');
   assert.equal(await owed('cl-nord'), 1500001, 'litigation keeps the debt');
   assert.equal(flowRows().filter((r) => Math.abs(r.amount_cents) === 1500001).length, 0, 'a dashboard cheque without a sale never counted: nothing to take back');
   await move(c3.data.cheque.id, 'replaced', { method: 'transfer' });
@@ -344,6 +357,93 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
   }
   assert.equal((await create({ amount: '1 250,50' })).data.cheque.amountCents, 125050, 'amount typed in dirhams with a comma');
   ok('money in centimes: collection writes nothing; a bounced customer cheque goes to the credit book (note on the client card, seen by the till) and takes its sale back out of the flow once; re-presentation and second rejection unchanged; collection, till receipts and replacement close it at X, never 2X; litigation; no card → note on linking, follows the card, locked once paid at the till; amount locked on sale-linked cheques; voided sale flagged; issued cheque = supplier payment (reject, re-present, debit, cancel before/after rejection)');
+}
+
+/* ── 3b · un ticket annulé et son chèque rejeté, dans les deux ordres ── */
+{
+  const cancelRoute = await importFresh('functions/api/sale/cancel.js');
+  const summaryRoute = await importFresh('functions/api/sales-summary.js');
+  const voidSale = (id) => call(cancelRoute.onRequestPost, '/api/sale/cancel', owner, { merchant: SHOP, id, source: 'dashboard', reason: 'test' });
+  const live = (id) => db.prepare('SELECT amount_cents FROM sales WHERE merchant = ? AND id = ? AND void_ts IS NULL').get(SHOP, 'chqbounce-' + id.replace(/^chq_/, ''));
+  const debtOpen = (id) => db.prepare('SELECT debt_open FROM cheques WHERE merchant = ? AND id = ?').get(SHOP, id).debt_open;
+
+  /* Rejet, PUIS le ticket est annulé : la ligne « Chèque impayé » et la note partent, le chèque peut s'annuler. */
+  addSale('sale-v1', 50000);
+  const a = (await create({ amountCents: 50000, partyId: 'cl-void', saleIds: ['sale-v1'] })).data.cheque.id;
+  await move(a, 'deposited'); await move(a, 'rejected');
+  assert.equal(await owed('cl-void'), 50000); assert.equal(flow(a), -50000);
+  const v = await voidSale('sale-v1');
+  assert.equal(v.status, 200, JSON.stringify(v.data));
+  assert.equal(live(a), undefined, 'bounce then void: the « Chèque impayé » line no longer counts');
+  assert.equal(await owed('cl-void'), 0, 'bounce then void: the customer owes nothing for a voided sale');
+  assert.equal(note(a), undefined, 'the note leaves the account (nothing was paid on it)');
+  assert.equal(debtOpen(a), 0);
+  assert.equal((await move(a, 'cancelled')).status, 200, 'the cheque with no debt left can be cancelled');
+  const vAgain = await voidSale('sale-v1');
+  assert.equal(vAgain.status, 409, 'a replayed void changes nothing');
+
+  /* Le ticket est annulé, PUIS le chèque rejeté : aucune dette, aucune ligne. */
+  addSale('sale-v2', 30000);
+  const b = (await create({ amountCents: 30000, partyId: 'cl-void', saleIds: ['sale-v2'] })).data.cheque.id;
+  await move(b, 'deposited');
+  assert.equal((await voidSale('sale-v2')).status, 200);
+  await move(b, 'rejected');
+  assert.equal(await owed('cl-void'), 0, 'void then bounce: no 300 MAD debt for a voided ticket');
+  assert.equal(note(b), undefined); assert.equal(flow(b), 0, 'and nothing taken out of the flow');
+  assert.equal(debtOpen(b), 0);
+
+  /* Un chèque pour trois tickets, un seul annulé : le rejet ne reprend que les deux vivants. */
+  addSale('sale-s1', 10000); addSale('sale-s2', 20000); addSale('sale-s3', 30000);
+  const sp = (await create({ amountCents: 60000, partyId: 'cl-split', saleIds: ['sale-s1', 'sale-s2', 'sale-s3'] })).data.cheque.id;
+  await move(sp, 'deposited');
+  assert.equal((await voidSale('sale-s2')).status, 200);
+  await move(sp, 'rejected');
+  assert.equal(flow(sp), -40000, 'partial void: only the live tickets (100 + 300) leave the flow');
+  assert.equal(await owed('cl-split'), 40000, 'and only they are owed');
+  /* …puis un deuxième ticket annulé après le rejet : la ligne et la note baissent de sa part. */
+  assert.equal((await voidSale('sale-s3')).status, 200);
+  assert.equal(flow(sp), -10000, 'a later void gives back its own share of the bounce line');
+  assert.equal(await owed('cl-split'), 10000);
+  assert.equal(debtOpen(sp), 1, 'one ticket is still owed');
+
+  /* Payé en entier à la caisse : présenter ou encaisser le chèque est refusé (elle paierait deux fois). */
+  addSale('sale-t', 20000);
+  const t = (await create({ amountCents: 20000, partyId: 'cl-twice', saleIds: ['sale-t'] })).data.cheque.id;
+  await move(t, 'deposited'); await move(t, 'rejected');
+  addSale('pay-t', 20000);
+  db.prepare(`INSERT INTO retail_balance_receipts (merchant, balance_id, sale_id, amount_cents, method, status, created_ts) VALUES (?, ?, 'pay-t', 20000, 'cash', 'posted', ?)`).run(SHOP, note(t).id, now);
+  const dep = await move(t, 'deposited');
+  assert.equal(dep.status, 409); assert.equal(dep.data.error, 'paid-at-till', 'paid at the till: re-depositing the cheque is refused');
+  assert.equal((await move(t, 'replaced', { method: 'till' })).status, 200, '« réglé à la caisse » closes it');
+  assert.equal(flowRows().filter((r) => r.id.startsWith('chqback-') && r.amount_cents === 20000).length, 0, 'nothing comes back twice');
+
+  /* Le résumé des ventes : un chèque rejeté puis encaissé n'est ni deux ventes, ni un remboursement. */
+  const own = 'cheque-summary-bench';
+  db.prepare(`INSERT INTO accounts (id, email, business, salt, hash, created_ts, status) VALUES ('acc-s', 's@cheque.ma', 'Summary', 's', 'h', ?, 'active')`).run(now);
+  db.prepare(`INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, status, updated_ts) VALUES (?, '{}', 'pro', 'boutique', 'acc-s', 'Summary', 'active', ?)`).run(own, now);
+  const ins = db.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, ts, ref, channel) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+  ins.run('plain-1', own, 1000, 100000, 'cheque', now - 3000, 'T-1', null);
+  ins.run('chqbounce-x1', own, -1000, -100000, 'cheque', now - 2000, 'CHQ', 'cheque');
+  ins.run('chqback-x1', own, 1000, 100000, 'cheque', now - 1000, 'CHQ', 'cheque');
+  const sumCookie = sessionCookie(await makeSession('acc-s', SECRET));
+  const r = await call(summaryRoute.onRequestGet, `/api/sales-summary?merchant=${own}&from=${now - 86400000}&to=${now + 60000}`, sumCookie);
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  const days = r.data.days.filter((d) => d.count || d.refundCount || d.chequeAdjustCents);
+  const tot = (k) => days.reduce((n, d) => n + (d[k] || 0), 0);
+  assert.equal(tot('cents'), 100000, 'gross: the sale once, not 2 000 MAD');
+  assert.equal(tot('count'), 1, 'one ticket, not two');
+  assert.equal(tot('refundCount'), 0); assert.equal(tot('refundCents'), 0, 'no refund');
+  assert.equal(tot('chequeAdjustCents'), 0, 'bounce − collection = 0: revenue stays the sale');
+  const after = summaryRoute.summarize([{ id: 'p', ts: now, amount_cents: 100000, method: 'cheque' }, { id: 'chqbounce-y', ts: now + 1, amount_cents: -100000, method: 'cheque' }], now - 1, now + 10, 5, 'Africa/Casablanca');
+  const d0 = after.days.find((d) => d.count);
+  assert.deepEqual([d0.cents, d0.count, d0.refundCount, d0.chequeAdjustCents, d0.chequeAdjust.cheque], [100000, 1, 0, -100000, -100000], 'bounced, not yet paid: the sale stays one ticket, the money that never came is the adjustment');
+  const atSale = summaryRoute.summarize([{ id: 'p', ts: now, amount_cents: 100000, method: 'cheque' }, { id: 'chqbounce-y', ts: now + 1, amount_cents: -100000, method: 'cheque' }], now - 1, now + 10, 5, 'Africa/Casablanca', true);
+  assert.equal(atSale.days.find((d) => d.count).chequeAdjustCents, 0, 'revenue at sale: the sale already counted everything');
+
+  /* Le prénom d'un membre d'une AUTRE boutique ne signe pas un geste ici. */
+  const access = fs.readFileSync(path.join(ROOT, 'functions/api/cheques/_access.js'), 'utf8');
+  assert.match(access, /FROM staff_pins WHERE merchant = \? AND id = \?/, 'staffName is scoped to the merchant');
+  ok('voids and bounces in both orders: bounce then void clears the line and the note, void then bounce opens nothing, a partly voided cheque takes back only live shares (and a later void its share), paid at the till blocks re-deposit, the sales summary counts a bounced-then-collected sale once with no refund; no-sale dashboard cheque needs onAccount; staff names merchant-scoped');
 }
 
 /* ── 4 · ancienneté, cette semaine, pastille, jour civil ───────────── */

@@ -77,7 +77,7 @@
   /* La table des passages, recopiée du serveur pour la démo seulement : en vrai,
      chaque chèque arrive avec `allowed`, calculé par functions/api/_cheques.js. */
   const DEMO_TRANSITIONS = {
-    received: { received: ['deposited', 'replaced', 'cancelled'], deposited: ['collected', 'rejected', 'received'], rejected: ['deposited', 'in_litigation', 'replaced'], in_litigation: ['deposited', 'replaced'] },
+    received: { received: ['deposited', 'replaced', 'cancelled'], deposited: ['collected', 'rejected', 'received'], rejected: ['deposited', 'in_litigation', 'replaced', 'cancelled'], in_litigation: ['deposited', 'replaced', 'cancelled'] },
     issued: { issued: ['debited', 'rejected', 'cancelled'], rejected: ['issued', 'replaced'] },
   };
   const BANKS = ['Attijariwafa bank', 'Bank of Africa (BMCE)', 'Banque Populaire', 'CIH Bank', 'Société Générale Maroc', 'Crédit du Maroc', 'BMCI', 'Crédit Agricole du Maroc', 'Al Barid Bank', 'CFG Bank', 'Bank Assafa', 'Umnia Bank', 'Al Akhdar Bank', 'Arab Bank'];
@@ -164,6 +164,8 @@
   /* Ce qu'un passage fera à l'argent, dit avant de confirmer (mêmes règles que le serveur). */
   function impactText(c, to) {
     const name = who(c), amt = mad(c.amountCents), rec = c.direction === 'received';
+    if (to === 'rejected' && rec && !c.debtOpen && c.saleVoided) return L('Les tickets que ce chèque payait ont été annulés : rien n\'est dû, rien ne bouge aux ventes.', 'The tickets this cheque paid were voided: nothing is owed, sales do not move.', 'التيكيات اللي كان كيخلّص هاد الشيك تلغاو: حتى حاجة ما مسالة، والمبيعات ما كتتحركش.');
+    if (to === 'rejected' && rec && !c.debtOpen && !c.linkedSales) return L(`Ce chèque ne paie aucune vente enregistrée dans Kiwi : rien ne bouge aux ventes. La dette n'entre au compte de ${name} que si vous le cochez.`, `This cheque pays no sale recorded in Kiwi: sales do not move. The debt only goes on ${name}'s account if you tick it.`, `هاد الشيك ما كيخلّص حتى بيعة مسجّلة ف Kiwi: المبيعات ما كتتحركش. الدين ما كيدخلش للحساب ديال ${name} حتى تعلّم عليه.`);
     if (to === 'rejected') return c.debtOpen ? L('Déjà rejeté une fois : la dette reste comptée une seule fois.', 'Already bounced once: the debt stays counted once.', 'رجع قبل: الدين كيبقى محسوب مرة وحدة.')
       : rec ? L(`${name} vous devra de nouveau ${amt}.`, `${name} will owe you ${amt} again.`, `${name} غادي يرجع عليه ${amt}.`)
         : L(`Vous devrez de nouveau ${amt} à ${name}.`, `You will owe ${name} ${amt} again.`, `غادي يرجع عليك ${amt} ل${name}.`);
@@ -272,6 +274,8 @@
 .cq-form{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
 .cq-form input,.cq-form select{width:100%;box-sizing:border-box}
 .cq-form label{display:grid;gap:6px;font-size:12.5px;color:var(--n-600,#3a4440)}
+.cq-form label.cq-check{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--ink,#0A0F0D);min-height:44px}
+.cq-form label.cq-check input{width:20px;height:20px;accent-color:var(--atlas,#0B6E4F);flex:none}
 .cq-form input,.cq-form textarea,.cq-form select{font:inherit;font-size:14px;padding:10px 12px;border-radius:10px;border:1px solid var(--n-200,rgba(10,15,13,.14));background:var(--surface,#FDFCF9);color:var(--ink,#0A0F0D);min-width:0}
 .cq-form .two{display:grid;gap:12px;grid-template-columns:1fr 1fr}
 .cq-form input.cq-amt{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -324,12 +328,13 @@
         return { ok: true, demo: true, migrated: true, today: T(), cheques: all, ...derive(all, T()), suppliers: [{ id: 'sup_fassi', name: 'Atelier Fassi Couture' }, { id: 'sup_babouche', name: 'Maâlem Babouches Fès' }] };
       },
       detail(id) { const c = seed().find((x) => x.id === id); return c ? { ok: true, cheque: view(c), history: c.history.slice(), sales: [], ledger: [], client: c.clientId ? { id: c.clientId, name: c.partyName, phone: '' } : null } : null; },
-      move(id, to, date, reason, method) {
+      move(id, to, date, reason, method, onAccount) {
         const c = seed().find((x) => x.id === id);
         if (!c || !allowed(c).includes(to)) { const e = new Error('illegal-transition'); e.code = 'illegal-transition'; throw e; }
+        if ((to === 'deposited' || to === 'collected') && c.direction === 'received' && c.debtOpen && c.debt && c.debt.paidCents > 0) { const e = new Error('paid-at-till'); e.code = 'paid-at-till'; throw e; }
         if (to === 'cancelled' && c.direction === 'received' && c.debtOpen) { const e = new Error('debt-open'); e.code = 'debt-open'; throw e; }
         c.history.push({ action: 'move', from: c.status, to, date, actor: L('Vous', 'You', 'نتا'), reason: reason || (to === 'replaced' ? methodLabel(method) : '') });
-        if (to === 'rejected') { c.debtOpen = true; if (c.clientId) c.debt = { onAccount: true, totalCents: c.amountCents, paidCents: 0, remainingCents: c.amountCents }; }
+        if (to === 'rejected') { c.debtOpen = true; if (c.clientId && (c.linkedSales || onAccount)) c.debt = { onAccount: true, totalCents: c.amountCents, paidCents: 0, remainingCents: c.amountCents }; }
         if (['collected', 'debited', 'replaced'].includes(to)) { c.debtOpen = false; c.debt = null; }
         if (to === 'deposited') c.depositDate = date;
         if (to === 'received') { c.depositDate = ''; c.depositSlip = ''; }
@@ -404,6 +409,7 @@
       'supplier-not-found': L('Choisissez une fiche fournisseur.', 'Pick a supplier card.', 'ختار بطاقة المورد.'),
       'supplier-required': L('Choisissez une fiche fournisseur.', 'Pick a supplier card.', 'ختار بطاقة المورد.'),
       'supplier-owner-only': L('Rattacher un chèque à un fournisseur est réservé au propriétaire.', 'Linking a cheque to a supplier is for the owner only.', 'ربط الشيك بمورد خاص بمول المحل.'),
+      'paid-at-till': L('La cliente a déjà payé à la caisse : présenter ou encaisser ce chèque la ferait payer deux fois. Réglez le reste à la caisse ou « Réglé autrement ».', 'The customer already paid at the till: depositing or collecting this cheque would make her pay twice. Settle the rest at the till or with "Paid another way".', 'الكليانة خلّصات فالكاسة: إلا دفعتي هاد الشيك غادي تخلّص جوج مرات. خلّص الباقي فالكاسة ولا «تخلّص بطريقة أخرى».'),
       'balance-open': L('La cliente n\'a pas tout réglé à la caisse : choisissez comment le reste a été payé.', 'The customer has not paid everything at the till: pick how the rest was paid.', 'الكليانة ما خلّصاتش كلشي فالكاسة: ختار كيفاش تخلّص الباقي.'),
       'client-not-found': L('Cette fiche cliente n\'existe plus. Choisissez-en une autre.', 'This customer card no longer exists. Pick another.', 'هاد البطاقة ديال الكليان ما بقاتش. ختار وحدة أخرى.'),
       'supplier-archived': L('Ce fournisseur est archivé.', 'This supplier is archived.', 'هاد المورد مؤرشف.'),
@@ -647,11 +653,14 @@
     const requestId = idem();
     const tillOk = c.direction === DIRS[0] && c.debtOpen && c.debt && c.debt.onAccount && c.debt.remainingCents === 0;
     let method = (tillOk ? RECEIVED_METHODS : REPLACE_METHODS)[0];
+    /* Un chèque sans vente dans Kiwi n'a rien compté : sa dette n'entre au compte que sur demande. */
+    const askAccount = to === 'rejected' && c.direction === DIRS[0] && !c.debtOpen && c.clientId && !c.linkedSales;
     const m = K.modal({
       tag: `${who(c)} · ${mad(c.amountCents)}`, title: actionLabel(c, to), width: 460,
       body: `<form class="cq-form" data-cq-move novalidate>
         <div class="cq-note ${noteTone(to)}">${esc(impactText(c, to))}</div>
         ${to === 'replaced' ? `<div><div style="font-size:12.5px;color:var(--n-600,#3a4440);margin-bottom:6px">${esc(L('Payé comment ?', 'Paid how?', 'خلّص بأشمن طريقة؟'))}</div>${segHtml(method, methodItems(tillOk), SEG.methods)}</div>` : ''}
+        ${askAccount ? `<label class="cq-check"><input type="checkbox" name="onAccount"> ${esc(L(`Ajouter ${mad(c.amountCents)} au compte de ${who(c)}`, `Add ${mad(c.amountCents)} to ${who(c)}'s account`, `زيد ${mad(c.amountCents)} للحساب ديال ${who(c)}`))}</label>` : ''}
         <label>${esc(L('Date', 'Date', 'التاريخ'))}<input type="date" name="date" value="${esc(todayYmd())}" max="${esc(todayYmd())}" min="${esc(c.receptionDate)}"></label>
         <label>${esc(to === 'rejected' ? L('Motif du rejet', 'Reason it bounced', 'علاش رجع') : L('Note', 'Note', 'ملاحظة'))}<input name="reason" maxlength="200" placeholder="${esc(to === 'rejected' ? L('Provision insuffisante, signature…', 'Insufficient funds, signature…', 'ما كاينش الرصيد، التوقيع…') : '')}"></label>
         <div class="cq-foot"><button type="button" class="kb ghost" data-dismiss>${esc(L('Annuler', 'Cancel', 'رجوع'))}</button><button type="submit" class="kb ${confirmTone(to)}">${esc(L('Confirmer', 'Confirm', 'أكّد'))}</button></div>
@@ -664,8 +673,8 @@
       const btn = form.querySelector('[type=submit]'); btn.disabled = true;
       const date = form.date.value || todayYmd(), reason = form.reason.value.trim();
       try {
-        if (isReal()) await api('/api/cheques/move', { id: c.id, to, requestId, date, reason, method: to === 'replaced' ? method : undefined });
-        else DEMO.move(c.id, to, date, reason, method);
+        if (isReal()) await api('/api/cheques/move', { id: c.id, to, requestId, date, reason, method: to === 'replaced' ? method : undefined, onAccount: askAccount && form.onAccount ? form.onAccount.checked : undefined });
+        else DEMO.move(c.id, to, date, reason, method, !!(askAccount && form.onAccount && form.onAccount.checked));
         m.close();
         K.toast(statusLabel(to, c.direction) + ' · ' + mad(c.amountCents), { type: 'success' });
         await reload();

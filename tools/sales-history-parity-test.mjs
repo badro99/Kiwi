@@ -28,17 +28,22 @@ for (let day = 0; day < 40; day++) {
   for (const [i, method] of ['cash', 'card', 'tap', 'credit', 'livraison', 'mystery'].entries()) {
     rows.push({ ts: boundary(day) + (i + 1) * 3600000, amount: -2.345, amount_cents: i % 2 ? -123 - day : null, method });
   }
+  /* Le portefeuille de chèques : un rejet (« Chèque impayé ») et son retour, ni vente ni remboursement. */
+  if (day % 5 === 0) {
+    rows.push({ id: 'chqbounce-d' + day, ts: boundary(day) + 9.5 * 3600000, amount: -50, amount_cents: -5000 - day, method: 'cheque' });
+    rows.push({ id: 'chqback-d' + day, ts: boundary(day) + 10.5 * 3600000, amount: 30, amount_cents: 3000 + day, method: day % 10 ? 'cash' : 'cheque' });
+  }
 }
 // Match the feed projection: authoritative cents, legacy rounding, and validated parts.
 function dashboardEntry(row) {
   let parsed = JSON.parse(row.payment_parts || 'null');
   parsed = Array.isArray(parsed) ? parsed.slice(0, 8).map(p => ({ method: String(p?.method || '').slice(0, 16), amountCents: Math.round(Number(p?.amountCents)) }))
     .filter(p => /^[a-z-]{1,16}$/.test(p.method) && Number.isSafeInteger(p.amountCents) && p.amountCents > 0) : null;
-  return { ts: row.ts, amount: Math.abs(saleCents(row)) / 100, method: row.method, paymentParts: parsed };
+  return { ...(row.id ? { saleId: row.id } : {}), ts: row.ts, amount: Math.abs(saleCents(row)) / 100, method: row.method, paymentParts: parsed };
 }
 const sales = rows.filter(r => saleCents(r) > 0).map(dashboardEntry);
 const refunds = rows.filter(r => saleCents(r) < 0).map(dashboardEntry);
-assert.equal(sales.length, 480);
+assert.equal(sales.length, 488);
 assert.ok(sales.some(s => hourOf(s.ts) < 5));
 const summary = summarize(rows, boundary(0), boundary(40), cutoff, zone);
 assert.equal(summary.days.length, 40);
@@ -55,6 +60,13 @@ for (const [start, length] of [[0, 1], [13, 1], [3, 7], [7, 30], [0, 40]]) {
 for (const [from, to] of [[boundary(0) + 1, boundary(7)], [boundary(0), boundary(7) - 1]]) {
   assert.throws(() => math.statsFromSummary(summary.days, summary.splits, from, to), /straddles/);
   assert.throws(() => math.hoursFromSummary(summary.days, from, to), /straddles/);
+}
+{
+  /* Rejet puis retour en espèces : un ticket, aucun remboursement, le chiffre = la vente − ce qui n'est pas revenu. */
+  const sale = { ts: 10, amount: 100, method: 'cheque' }, bounce = { saleId: 'chqbounce-a', ts: 11, amount: 100, method: 'cheque' }, back = { saleId: 'chqback-a', ts: 12, amount: 60, method: 'cash' };
+  equalFields(math.statsFromSales([sale, back], [bounce], 0, 20), { revenue: 60, gross: 100, refunds: 0, collected: 60, receivable: 0, count: 1, basket: 60, card: 0, cash: 60 }, 'bounced cheque, 60 back in cash');
+  const day = summarize([{ id: 's', ts: 10, amount_cents: 10000, method: 'cheque' }, { id: 'chqbounce-a', ts: 11, amount_cents: -10000, method: 'cheque' }, { id: 'chqback-a', ts: 12, amount_cents: 6000, method: 'cash' }], 0, 20, cutoff, zone);
+  equalFields(math.statsFromSummary(day.days, day.splits, day.days[0].from, day.days[0].to), math.statsFromSales([sale, back], [bounce], day.days[0].from, day.days[0].to), 'cheque adjust parity');
 }
 equalFields(math.statsFromSales([], [], 0, Infinity), { revenue: 0, gross: 0, refunds: 0, collected: 0, receivable: 0, count: 0, basket: 0, card: 0, cash: 0 }, 'empty');
 // Local ledgers keep fractional MAD as-is; only the server feed rounds them.
@@ -73,4 +85,4 @@ math.statsFromSummary(summary.days, summary.splits, boundary(0), boundary(40));
 math.hoursFromSales(sales, boundary(0), boundary(40), hourOf);
 math.hoursFromSummary(summary.days, boundary(0), boundary(40));
 assert.equal(JSON.stringify({ sales, refunds, summary }), before, 'inputs remain unchanged');
-console.log('PASS sales history parity: 480 sales, 240 refunds, 40 Casablanca business days, 5 windows, partial-day rejection');
+console.log('PASS sales history parity: 480 sales, 240 refunds, 16 bounced-cheque lines, 40 Casablanca business days, 5 windows, partial-day rejection');

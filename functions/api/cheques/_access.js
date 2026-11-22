@@ -35,7 +35,8 @@ async function activeStore(env, merchant) {
 async function staffName(env, merchant, staffId) {
   if (!staffId) return '';
   try {
-    const row = await env.DB.prepare('SELECT name FROM staff_pins WHERE id = ?').bind(String(staffId)).first();
+    /* La fiche de CE commerçant seulement : un id d'une autre boutique ne prête pas son prénom. */
+    const row = await env.DB.prepare('SELECT name FROM staff_pins WHERE merchant = ? AND id = ?').bind(String(merchant), String(staffId)).first();
     const n = String((row && row.name) || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 40);
     return n ? ' · ' + n : '';
   } catch (_) { return ''; }

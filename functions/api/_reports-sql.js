@@ -37,7 +37,11 @@ const ARR = (x) => `CASE WHEN json_valid(${x}) AND json_type(${x}) = 'array' THE
    valeur vient de sale_audit (note = id du remboursement), qui garde le
    montant rendu, avoir compris, et la vente d'origine (`orig`). `c` est alors
    négatif : moins ce qui a été rendu. Un tel ticket n'est jamais compté comme
-   une vente. */
+   une vente.
+
+   Les lignes du portefeuille de chèques (« Chèque impayé » chqbounce-, et son
+   retour chqback-, functions/api/_cheque-debt.js) ne sont ni une vente ni un
+   remboursement : elles restent hors des rapports de vente. */
 export function baseCte(scope) {
   const args = [];
   const siteCase = [];
@@ -65,6 +69,7 @@ export function baseCte(scope) {
       CASE merchant ${siteCase.join(' ')} END AS site
     FROM sales
     WHERE merchant IN (${all.map(() => '?').join(', ')}) AND ts >= ${int(min)} AND ts < ${int(max)} AND void_ts IS NULL
+      AND id NOT LIKE 'chqbounce-%' AND id NOT LIKE 'chqback-%'
   ), x AS (
     SELECT r.*, CASE WHEN b < 0 OR COALESCE(channel, '') = 'refund' THEN 1 ELSE 0 END AS rf, CASE ${pd} END AS pd FROM r
   ), s AS (

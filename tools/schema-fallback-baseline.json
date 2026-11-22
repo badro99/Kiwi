@@ -1,5 +1,5 @@
 {
-  "api/_cheque-debt.js : no such table: cheque_links": 1,
+  "api/_cheque-debt.js : no such table: cheque_links": 2,
   "api/_cheques.js : no such table: cheque_history": 11,
   "api/_cheques.js : no such table: cheque_links": 1,
   "api/_cheques.js : no such table: cheques": 5,

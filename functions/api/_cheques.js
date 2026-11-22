@@ -81,7 +81,7 @@
 import { normalizeEntry, validYmd } from './_ledger.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { getSupplier } from './_suppliers.js';
-import { annotateCheques, clientOf, customerDebtStatements, debtNote, openNoteStatement, planCustomerDebt, salesOf } from './_cheque-debt.js';
+import { annotateCheques, clientOf, customerDebtStatements, debtNote, openNoteStatement, owedFor, planCustomerDebt, salesOf } from './_cheque-debt.js';
 
 export const KINDS = ['cheque', 'lcn'];
 export const DIRECTIONS = ['received', 'issued'];
@@ -89,8 +89,9 @@ export const TRANSITIONS = Object.freeze({
   received: Object.freeze({
     received: ['deposited', 'replaced', 'cancelled'],
     deposited: ['collected', 'rejected', 'received'],
-    rejected: ['deposited', 'in_litigation', 'replaced'],
-    in_litigation: ['deposited', 'replaced'],
+    /* Annuler un chèque rejeté : seulement quand il ne porte plus de dette (ses tickets ont été annulés). */
+    rejected: ['deposited', 'in_litigation', 'replaced', 'cancelled'],
+    in_litigation: ['deposited', 'replaced', 'cancelled'],
     collected: [], replaced: [], cancelled: [],
   }),
   issued: Object.freeze({
@@ -340,7 +341,7 @@ function moveStatements(env, merchant, c, to, p) {
     .bind(merchant, histId, requestId, to, date, reason, slip ? 'slip:' + slip : (to === 'replaced' && (eff.entry || eff.customer) ? 'method:' + (eff.entry ? eff.entry.method : eff.method) : ''), actor, now,
       merchant, c.id, Number(c.version), c.status)];
   const sets = ['status = ?', 'version = version + 1', 'debt_open = ?', 'updated_at = ?'];
-  const vals = [to, eff.debtOpen, now];
+  const vals = [to, debt && debt.debtOpen === 0 ? 0 : eff.debtOpen, now];
   if (to === 'deposited') { sets.push('deposit_date = ?', 'deposit_slip = ?', 'settle_date = NULL'); vals.push(date, slip || ''); }
   if (to === 'received') { sets.push('deposit_date = NULL', "deposit_slip = ''"); }
   if (['collected', 'debited', 'replaced', 'rejected', 'in_litigation', 'cancelled'].includes(to)) { sets.push('settle_date = ?'); vals.push(date); }
@@ -397,8 +398,13 @@ export async function moveCheque(env, merchant, id, body, ctx) {
   if (input.error) return { ok: false, error: input.error, status: input.error === 'debt-open' ? 409 : 400, allowed: allowedNext(c.direction, c.status) };
   const p = { histId: rid('chh'), requestId, date: input.date, reason: clean(b.reason, 280), actor: clean(ctx.actor, 100), now: Date.now(), method: String(b.method || '') };
   const eff = moneyEffect(c, to, { method: p.method });
+  /* La cliente a commencé à payer à la caisse : présenter ou encaisser le chèque la ferait payer deux fois. */
+  if (c.direction === 'received' && Number(c.debt_open) === 1 && (to === 'deposited' || to === 'collected')) {
+    const note = await debtNote(env, merchant, c.id);
+    if (note && note.paidCents > 0) return { ok: false, error: 'paid-at-till', status: 409, paidCents: note.paidCents, remainingCents: note.remainingCents, allowed: allowedNext(c.direction, c.status) };
+  }
   if (eff.customer) {
-    p.debt = await planCustomerDebt(env, merchant, c, eff.customer, eff.method);
+    p.debt = await planCustomerDebt(env, merchant, c, eff.customer, eff.method, { onAccount: b.onAccount === true });
     if (p.debt && p.debt.error) return { ok: false, error: p.debt.error, status: 409, remainingCents: p.debt.remaining, allowed: allowedNext(c.direction, c.status) };
   }
   const plan = moveStatements(env, merchant, c, to, p);
@@ -528,7 +534,9 @@ export async function editCheque(env, merchant, id, body, ctx) {
       if (c.direction === 'received' && ptype !== 'supplier' && String(c.party_type || '') !== 'supplier' && Number(c.debt_open) === 1) {
         const note = await debtNote(env, merchant, c.id);
         if (note && note.receipts > 0) return { ok: false, error: 'party-locked', status: 409 };
-        stmtsAfter.push({ note, clientId });
+        /* Une note ne naît que pour ce qui est dû : la part des tickets vivants, ou, sans ticket, sur demande explicite. */
+        const owed = note || !clientId ? 0 : (await owedFor(env, merchant, c, b.onAccount === true)).owed;
+        stmtsAfter.push({ note, clientId, owed });
       }
       /* L'argent déjà écrit pour ce chèque suit son tiers : depuis un tiers
          provisoire (« cheque:<id> »), toutes ses lignes partent vers le client ;
@@ -563,7 +571,7 @@ export async function editCheque(env, merchant, id, body, ctx) {
         .bind(s.clientId, merchant, s.note.id, merchant, histId));
       else if (s.note) stmts.push(env.DB.prepare(`DELETE FROM retail_balances WHERE merchant = ? AND id = ? AND EXISTS (SELECT 1 FROM cheque_history WHERE merchant = ? AND id = ?)
           AND NOT EXISTS (SELECT 1 FROM retail_balance_receipts r WHERE r.merchant = ? AND r.balance_id = ?)`).bind(merchant, s.note.id, merchant, histId, merchant, s.note.id));
-      else if (s.clientId) stmts.push(openNoteStatement(env, merchant, { ...c, party_id: s.clientId }, s.clientId, now, histId));
+      else if (s.clientId && s.owed > 0) stmts.push(openNoteStatement(env, merchant, { ...c, party_id: s.clientId }, s.clientId, now, histId, s.owed));
     }
     if (s.relink) stmts.push(env.DB.prepare(`UPDATE money_ledger SET party_id = ?
         WHERE merchant = ? AND party_type = 'customer' AND party_id = ? AND cheque_id = ? AND EXISTS (SELECT 1 FROM cheque_history WHERE merchant = ? AND id = ?)`)
