@@ -1484,8 +1484,8 @@
     "sha": "d8150ae77563aa16"
   },
   "assets/pages-pro-boutique.js": {
-    "v": "57",
-    "sha": "1b51baa5c5333f80"
+    "v": "59",
+    "sha": "c04b6301333f6be4"
   },
   "assets/pages-pro-office.js": {
     "v": "29",
@@ -1536,8 +1536,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "281",
-    "sha": "e0ecc202a356c7cf"
+    "v": "283",
+    "sha": "66544ca115d8c517"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -1656,16 +1656,16 @@
     "sha": "bee5b88b8cabff28"
   },
   "assets/pos-boutique.css": {
-    "v": "360",
+    "v": "362",
     "sha": "1ab96bb59018670a"
   },
   "assets/pos-boutique.js": {
-    "v": "360",
-    "sha": "9f70b1178d3aca05"
+    "v": "362",
+    "sha": "6f66d61cde537f08"
   },
   "assets/pos-boutique/avance-restock.js": {
-    "v": "13",
-    "sha": "88d431ef26b7ef4e"
+    "v": "15",
+    "sha": "00e3c187aaad0b6b"
   },
   "assets/pos-boutique/bargain-ui.js": {
     "v": "3",
@@ -1680,20 +1680,20 @@
     "sha": "5535ae9593814503"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "254",
-    "sha": "79fa022e5d506a63"
+    "v": "256",
+    "sha": "97df609c5b4a1ed8"
   },
   "assets/pos-boutique/delivery-card.js": {
     "v": "10",
     "sha": "c1c7e9fb01688344"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "172",
-    "sha": "4955226afa81de51"
+    "v": "174",
+    "sha": "c51d94f100e866ff"
   },
   "assets/pos-boutique/exch-combined.js": {
-    "v": "16",
-    "sha": "793babc1303c4eb3"
+    "v": "18",
+    "sha": "7db2bc5411542489"
   },
   "assets/pos-boutique/exchange.js": {
     "v": "6",
@@ -1708,8 +1708,8 @@
     "sha": "3bf3273561b9c4f7"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "254",
-    "sha": "a8e134aab052e3db"
+    "v": "256",
+    "sha": "a694053029bb060b"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "26",
@@ -1752,8 +1752,8 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "254",
-    "sha": "3c881cac4a9db228"
+    "v": "256",
+    "sha": "914b5fe3ae5e55d6"
   },
   "assets/pos-boutique/search.js": {
     "v": "20",
@@ -1804,8 +1804,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "488",
-    "sha": "1df24f4f96f68cdb"
+    "v": "490",
+    "sha": "c89cd41f99e09324"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -1860,8 +1860,8 @@
     "sha": "61c8a0e97b8138cf"
   },
   "assets/pos-inventory-count.js": {
-    "v": "21",
-    "sha": "3ad921a2cdd72093"
+    "v": "22",
+    "sha": "d32b6164f5e17724"
   },
   "assets/pos-librairie.css": {
     "v": "18",
@@ -1876,16 +1876,16 @@
     "sha": "3b1ecc2cbfa231cd"
   },
   "assets/pos-maison.css": {
-    "v": "241",
+    "v": "242",
     "sha": "395c4e8545c0bf32"
   },
   "assets/pos-maison.js": {
-    "v": "241",
-    "sha": "2c531fc995d263cd"
+    "v": "242",
+    "sha": "1e68be619b47751d"
   },
   "assets/pos-maison/avance-restock.js": {
-    "v": "10",
-    "sha": "bdaee69a08bafe6c"
+    "v": "11",
+    "sha": "c9b0051dce17944c"
   },
   "assets/pos-maison/avoir-sheet.js": {
     "v": "9",
@@ -1900,8 +1900,8 @@
     "sha": "64bf43e6710c5268"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "154",
-    "sha": "3e42c5deaa7b7bf5"
+    "v": "155",
+    "sha": "2ba772992da7a663"
   },
   "assets/pos-maison/client-fiche.js": {
     "v": "4",
@@ -1928,8 +1928,8 @@
     "sha": "feb0865a7163d8c9"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "154",
-    "sha": "5fedca768c21756f"
+    "v": "155",
+    "sha": "68cc9c3b086b8f7b"
   },
   "assets/pos-maison/kit-2027.js": {
     "v": "14",
@@ -1940,8 +1940,8 @@
     "sha": "f505c28b4b344afc"
   },
   "assets/pos-maison/sales.js": {
-    "v": "154",
-    "sha": "5e245f3c3229badf"
+    "v": "155",
+    "sha": "304f3ea3bc0134c0"
   },
   "assets/pos-maison/ticket-remise.js": {
     "v": "3",
@@ -2200,12 +2200,12 @@
     "sha": "d0c74e49e537aea8"
   },
   "assets/retail-icon-picker.js": {
-    "v": "6",
-    "sha": "2258d4bc3bdf1248"
+    "v": "8",
+    "sha": "7a17066aa4f3b341"
   },
   "assets/retail-photos.js": {
-    "v": "6",
-    "sha": "67553355f6b0381a"
+    "v": "8",
+    "sha": "7aff6baa82e72d8d"
   },
   "assets/retail-sale-hold.js": {
     "v": "8",

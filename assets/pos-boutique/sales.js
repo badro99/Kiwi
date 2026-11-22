@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=360';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=254';
-import { offerRegister } from './inventory.js?v=254';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=362';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=256';
+import { offerRegister } from './inventory.js?v=256';
 import { ticketOwner } from './ticket-owner.js?v=6';
 import { ticketRemise } from './ticket-remise.js?v=5';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
@@ -8,10 +8,10 @@ import { mountBargain } from './bargain-ui.js?v=3';
 import { bqKitTicketFoot } from './kit-2027.js?v=26';
 import { sellSearch } from './search.js?v=20';
 import '../money-cents.js?v=7';
-import { photoImg } from '../retail-photos.js?v=6'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
+import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=4';
 let CX = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=16').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=18').then((m) => { CX = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */

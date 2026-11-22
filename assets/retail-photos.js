@@ -65,7 +65,6 @@ const WORDS = {
   /* ── Mode pudique, bain ── */
   abaya: 'abaya|abaya femme|عباية',
   hijab: 'hijab|voile|turban femme|حجاب',
-  hijab_jersey: 'hijab jersey|jersey hijab|hijab brillant|chale jersey',
   burkini: 'burkini|burqini|maillot couvrant|maillot integral|maillot islamique|بوركيني',
   tunique: 'tunique|tunic',
   kimono: 'kimono',

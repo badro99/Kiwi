@@ -13,7 +13,7 @@
    Branché par une ligne de assets/pages-pro-boutique.js (import dynamique : le
    fichier est plafonné, la fonctionnalité vit ici). L'état part avec la fiche
    par `root.__kiwiTillPhoto = { art, artPicked }`, que _bqxPfRead recopie. */
-import { PHOTO_KEYS, keyForName, photoKey, photoFile, photoSrc, nameTokens, wordsOf } from './retail-photos.js?v=6';
+import { PHOTO_KEYS, keyForName, photoKey, photoFile, photoSrc, nameTokens, wordsOf } from './retail-photos.js?v=8';
 
 /* [fr, en, ar] pour chaque pièce. */
 const NAMES = {
@@ -35,7 +35,7 @@ const NAMES = {
   djellaba_enfant: ['Djellaba enfant', "Children's djellaba", 'جلابة أطفال'], gandoura: ['Gandoura', 'Gandoura', 'قندورة'],
   jabador: ['Jabador', 'Jabador', 'جابادور'], selham: ['Selham', 'Burnous', 'سلهام'], gilet_brode: ['Gilet brodé', 'Embroidered waistcoat', 'بدعية'],
   chech: ['Chèche', 'Chèche turban', 'شاش'], melhfa: ['Melhfa', 'Melhfa', 'ملحفة'],
-  abaya: ['Abaya', 'Abaya', 'عباية'], hijab: ['Hijab', 'Hijab', 'حجاب'], hijab_jersey: ['Hijab jersey', 'Jersey hijab', 'حجاب جيرسي'], burkini: ['Burkini', 'Burkini', 'بوركيني'],
+  abaya: ['Abaya', 'Abaya', 'عباية'], hijab: ['Hijab', 'Hijab', 'حجاب'], burkini: ['Burkini', 'Burkini', 'بوركيني'],
   maillot: ['Maillot de bain', 'Swimsuit', 'لباس سباحة'],
   chaussures: ['Chaussures', 'Shoes', 'أحذية'], basket: ['Baskets', 'Sneakers', 'حذاء رياضي'], botte: ['Bottes', 'Boots', 'بوط'],
   sandale: ['Sandales', 'Sandals', 'صندل'], babouche: ['Babouches', 'Babouches', 'بلغة'], babouche_brodee: ['Babouches brodées', 'Embroidered babouches', 'بلغة مطرزة'],
@@ -211,7 +211,7 @@ const GROUPS = [
   ['kids', ['Enfant et bébé', 'Kids and baby', 'الأطفال والرضع'], ['body_bebe', 'grenouillere', 'ensemble_enfant', 'robe_fille']],
   ['trad', ['Traditionnel', 'Traditional', 'اللباس التقليدي'], ['caftan', 'caftan_perle', 'caftan_jawhara', 'caftan_ete', 'caftan_velours', 'caftan_enfant',
     'takchita', 'takchita_mariage', 'djellaba', 'djellaba_femme', 'djellaba_enfant', 'gandoura', 'jabador', 'selham', 'gilet_brode', 'chech', 'melhfa']],
-  ['modest', ['Mode pudique et bain', 'Modest and swimwear', 'اللباس المحتشم والسباحة'], ['abaya', 'hijab', 'hijab_jersey', 'burkini', 'maillot', 'khimar', 'bikini']],
+  ['modest', ['Mode pudique et bain', 'Modest and swimwear', 'اللباس المحتشم والسباحة'], ['abaya', 'hijab', 'burkini', 'maillot', 'khimar', 'bikini']],
   ['shoes', ['Chaussures', 'Shoes', 'الأحذية'], ['chaussures', 'basket', 'botte', 'sandale', 'babouche', 'babouche_brodee', 'cherbil', 'babouche_enfant', 'chaussettes', 'mocassin', 'derby', 'escarpin', 'ballerine', 'mule', 'espadrille', 'tong', 'claquette', 'bottine', 'sabot', 'running', 'compensee', 'chausson', 'chaussure_bebe']],
   ['head', ['Couvre-chef', 'Headwear', 'أغطية الرأس'], ['chapeau', 'casquette', 'bonnet', 'tarbouche']],
   ['acc', ['Accessoires et bijoux', 'Accessories and jewellery', 'الإكسسوارات والمجوهرات'], ['ceinture', 'mdamma', 'cravate', 'echarpe', 'foulard', 'chale', 'chale_dentelle', 'chale_jawhara', 'chale_degrade', 'chale_organza', 'chale_lame', 'gants',
