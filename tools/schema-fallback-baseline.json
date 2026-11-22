@@ -6,6 +6,7 @@
   "api/admin/_workspace.js : repli de schéma": 1,
   "api/admin/account.js : repli de schéma": 1,
   "api/admin/config.js : repli de schéma": 2,
+  "api/admin/glovo-stores.js : no such column: marketplace": 1,
   "api/admin/sales.js : repli de schéma": 1,
   "api/ai/_quota.js : repli de schéma": 1,
   "api/cash-sessions.js : repli de schéma": 2,
