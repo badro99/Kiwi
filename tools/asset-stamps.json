@@ -1660,16 +1660,16 @@
     "sha": "bee5b88b8cabff28"
   },
   "assets/pos-boutique.css": {
-    "v": "366",
+    "v": "367",
     "sha": "1ab96bb59018670a"
   },
   "assets/pos-boutique.js": {
-    "v": "366",
-    "sha": "6e920e3e60f13cc8"
+    "v": "367",
+    "sha": "d30fe6d686425bcd"
   },
   "assets/pos-boutique/avance-restock.js": {
-    "v": "19",
-    "sha": "1380dae8d98586cc"
+    "v": "20",
+    "sha": "5cc5b29799971523"
   },
   "assets/pos-boutique/bargain-ui.js": {
     "v": "3",
@@ -1688,20 +1688,20 @@
     "sha": "ed17a4acad2cb58c"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "260",
-    "sha": "8b44f5600b5390c7"
+    "v": "261",
+    "sha": "bdeb3f492892ec42"
   },
   "assets/pos-boutique/delivery-card.js": {
     "v": "10",
     "sha": "c1c7e9fb01688344"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "178",
-    "sha": "8904d80f908731b3"
+    "v": "179",
+    "sha": "05f6041cf5e8871b"
   },
   "assets/pos-boutique/exch-combined.js": {
-    "v": "22",
-    "sha": "ab4cf053e239b2c1"
+    "v": "23",
+    "sha": "b3bec496894ed4cd"
   },
   "assets/pos-boutique/exchange.js": {
     "v": "6",
@@ -1716,8 +1716,8 @@
     "sha": "3bf3273561b9c4f7"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "260",
-    "sha": "5326452fce2ce040"
+    "v": "261",
+    "sha": "cfc6139b33cb24b6"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "26",
@@ -1760,8 +1760,8 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "260",
-    "sha": "f978c379355d7da6"
+    "v": "261",
+    "sha": "53894e59b5fcde48"
   },
   "assets/pos-boutique/search.js": {
     "v": "20",
@@ -1812,8 +1812,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "494",
-    "sha": "590b7650c38a2be7"
+    "v": "495",
+    "sha": "d14bf94094f6137c"
   },
   "assets/pos-epicerie.css": {
     "v": "40",
@@ -2140,8 +2140,8 @@
     "sha": "1f4a2677c0859a8f"
   },
   "assets/receipt.js": {
-    "v": "31",
-    "sha": "207dc5f74afd6ea9"
+    "v": "33",
+    "sha": "cfe614d804e8ee44"
   },
   "assets/reception-view.js": {
     "v": "3",

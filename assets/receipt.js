@@ -1002,7 +1002,9 @@
     /* — le panier — */
     rule();
     doc.lines.forEach(function (l) {
-      row(l.qty + '× ' + l.name, moneyMAD(l.total, doc));
+      var left = l.qty + '× ' + l.name, right = moneyMAD(l.total, doc), room = cols - 3 - right.length, cut = left.lastIndexOf(' · '), tail = cut > 0 ? left.slice(cut + 3) : '', w;
+      if (left.length > room && room > 8) { w = tail && tail.length <= room ? wrapText(left.slice(0, cut), cols - 2).concat(tail) : wrapText(left, room); left = w.pop(); w.forEach(function (x) { b.line(' ' + x); }); }   // trop long : à la ligne, pas coupé ; la teinte reste entière près du prix
+      row(left, right);
       if (l.unit) b.line('    ' + money(l.unit, doc) + ' × ' + l.qty);
       if (l.ref) b.line('    ' + T.ref + ' ' + l.ref);
       if (l.barcode) b.line('    ' + l.barcode);
@@ -1177,7 +1179,9 @@
 
     out.push('<div class="kr-rule"></div>');
     doc.lines.forEach(function (l) {
-      out.push('<div class="kr-r kr-item"><span>' + esc(l.qty + '× ' + l.name) + '</span><span>' + esc(moneyMAD(l.total, doc)) + '</span></div>');
+      var nm = esc(l.qty + '× ' + l.name), cut = nm.lastIndexOf(' · ');   // la teinte ne se coupe pas : « 05 / Fuchsia » ne se lit plus
+      if (cut > 0) nm = nm.slice(0, cut) + ' <span style="white-space:nowrap">' + nm.slice(cut + 1) + '</span>';
+      out.push('<div class="kr-r kr-item"><span>' + nm + '</span><span>' + esc(moneyMAD(l.total, doc)) + '</span></div>');
       var sub = [];
       if (l.unit) sub.push(code(money(l.unit, doc) + ' × ' + l.qty));
       if (l.ref) sub.push(esc(T.ref) + ' ' + code(l.ref));
