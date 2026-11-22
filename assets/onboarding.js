@@ -649,9 +649,16 @@
         // first, then go straight to the gate: one tap instead of three. The
         // href stays a real link, so this still works if the fetch fails.
         e.preventDefault();
+        /* Kiwi Pro (22 Nov 2026): no server behind « /dashboard » in the app.
+           Capacitor serves it as the launcher, which read the remembered role
+           and sent a signed-out tester straight back here: white, then these
+           questions again, never the sign-in. The app has its own way out. */
+        const app = !!(window.KiwiApiBase && window.KiwiApiBase.native);
+        if (app && typeof window.KiwiNativeHostAction === 'function') { window.KiwiNativeHostAction({ action: 'sign-out' }); return; }
+        const toSignin = () => { try { localStorage.removeItem('kiwiAppRole'); } catch (_) {} location.replace('index.html?setup=1'); };
         import('./request-deadline.mjs').then(({ deadlineFetch }) => deadlineFetch('/auth/logout', { redirect: 'manual', credentials: 'same-origin' }))
-          .then(() => { location.href = '/dashboard'; })
-          .catch(() => { location.href = signin.getAttribute('href'); });
+          .then(() => { if (app) toSignin(); else location.href = '/dashboard'; })
+          .catch(() => { if (app) toSignin(); else location.href = signin.getAttribute('href'); });
         return;
       }
       if (e.target.closest('[data-finish]')) { finish(); return; }

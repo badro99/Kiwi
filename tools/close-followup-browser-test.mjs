@@ -13,23 +13,6 @@
  * On a paired (real) restaurant till, offline: count 100 MAD over, pick no
  * reason, let the Z write fail. The close must complete; after the reload the
  * opening shows the gap and the Z, and « Vu » clears it. */
-/* close-open-tables-browser-test · a till close never wipes a table that still owes money.
- *
- *   node tools/close-open-tables-browser-test.mjs
- *
- * Production, 14 October: at a real restaurant, table 2 had four orders sent
- * to the kitchen (131 MAD), never cashed, and the register was closed that
- * evening. The close cleared the saved shift and the bill with it, the server
- * stopped returning those orders after six hours, and the next day table 2
- * looked seated and empty; the cashier reset it. 131 MAD of food left the
- * books with no payment and no void, and nobody was told.
- *
- * On the demo till, by real clicks: open a free table, send two dishes, open
- * « Fin de service », type the drawer and the card Z, press « Fermer la
- * caisse ». The close must stop, name the table and its amount, keep the
- * shift; then, with « Fermer quand même » ticked, go through. The service is
- * opened by doOpenService() (the opening screen is not under test). No code
- * is typed. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';

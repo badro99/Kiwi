@@ -2286,7 +2286,7 @@ section('Whole-project regressions');
     'lane-c-labels-test.mjs',
     'onboarding-data-test.mjs',
     'onboarding-r21-test.mjs',
-    'onboarding-split-test.mjs',
+    'onboarding-split-test.mjs', 'app-signin-exit-browser-test.mjs',
     'onboarding-session-test.mjs',
     'onboarding-alignment-properties-test.mjs',
     'onboarding-sequence-properties-test.mjs',
