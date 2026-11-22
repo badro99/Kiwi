@@ -788,10 +788,11 @@
       return 'kiwi:service-pending-v1:' + merchant + ':' + operator + ':' + String(id);
     }
     function svReadPending(id) {
-      if (svPendingBatches.has(id)) return svPendingBatches.get(id);
-      let pending = null;
-      try { pending = JSON.parse(localStorage.getItem(svPendingKey(id)) || 'null'); } catch (_) {}
+      let pending = svPendingBatches.get(id) || null;
+      if (!pending) try { pending = JSON.parse(localStorage.getItem(svPendingKey(id)) || 'null'); } catch (_) {}
       if (!pending || !pending.ref || !Array.isArray(pending.lines) || !pending.lines.length) return null;
+      /* Browse, 22 nov. : un lot de la veille, refusé, rejoué tel quel à chaque « Lancer » de la table 3. Passé 12 h, l'écran fait foi. */
+      if (Date.now() - Number(pending.createdAt || 0) > SV_DRAFT_TTL) { svForgetPending(id); return null; }
       svPendingBatches.set(id, pending);
       svPendingRef.set(id, pending.ref);
       return pending;
@@ -888,7 +889,7 @@
        croire que c'est parti. */
     const SV_SEND_MSG = {
       'menu-not-published': 'carte non publiée · à publier depuis le tableau de bord',
-      'menu-changed':       'carte modifiée · un plat n\'est plus disponible',
+      'menu-changed':       'refusée par la carte, à corriger',
       'forbidden-merchant': 'tablette non appairée à ce commerce',
       'table-required':     'table introuvable',
       'empty-order':        'rien à envoyer',
@@ -1072,7 +1073,8 @@
             if (!remaining) return result;
             return svSendOrderBatch(tableId).then((nextResult) => nextResult.ok ? result : nextResult);
           }
-          return { ok: false, error: (j && j.error) || ('http-' + status) };
+          if (status === 400 || (status === 409 && !(j && j.retry))) svForgetPending(tableId);   // refus définitif : rien n'est écrit, et ce lot figé échouerait pareil à chaque « Lancer » ; le prochain envoi part de l'écran, le toast nomme le plat
+          return { ok: false, error: (j && j.error) || ('http-' + status), names: ['unknown', 'unavailable', 'invalidOptions', 'archived', 'formulaOnly'].flatMap((k) => (j && Array.isArray(j[k]) ? j[k] : [])).filter(Boolean) };
         })
         /* Délai dépassé : le serveur a peut-être reçu le lot. Le lot garde sa
            référence, un nouvel essai sera reconnu comme le même envoi. */
@@ -2122,7 +2124,7 @@
                sur la table, voit pourquoi, et peut relancer. */
             btn.disabled = false;
             renderTableDetail();
-            toast(`Table ${sentId} · ${SV_SEND_MSG[res.error] || 'envoi impossible'}`, 4200);
+            toast(`Table ${sentId} · ${SV_SEND_MSG[res.error] || 'envoi impossible'}${res.names && res.names.length ? ' : ' + [...new Set(res.names)].join(', ') : ''}`, res.names && res.names.length ? 6000 : 4200);
           }
         });
       } else if (action === 'ask-bill') {
