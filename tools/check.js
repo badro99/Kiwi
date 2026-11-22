@@ -2370,7 +2370,7 @@ section('Whole-project regressions');
     'caisse-frozen-cost-test.mjs',
     'lock-caisse-link-test.mjs',
     'lock-caisse-handoff-test.mjs',
-    'till-role-parity-test.mjs',
+    'till-role-parity-test.mjs', 'commis-floor-test.mjs',
     'operator-roster-route-test.mjs',
     'ozon-express-test.mjs', 'delivery-fee-city-test.mjs', 'expenses-engine-test.mjs', 'expenses-api-test.mjs', 'expenses-switch-test.mjs', 'expenses-browser-test.mjs', 'ozon-exchange-test.mjs', 'ozon-exchange-browser-test.mjs', 'label-picker-browser-test.mjs',
     'lock-greeting-truth-test.mjs',

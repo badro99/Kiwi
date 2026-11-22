@@ -163,7 +163,7 @@
       const days = [previousDay, currentDay], currentConfigured = members.some((m) => Object.prototype.hasOwnProperty.call(shifts[m.id] || {}, currentDay));
       const floor = members.filter((m) => {
         const role = m.role || m.function || m.department || '';
-        return window.KiwiRoles?.isService ? window.KiwiRoles.isService(role) : /serveur|service|salle|rang|ma[iî]tre|barista|barman|accueil|h[oô]te|manager|propri[eé]taire|staff|[eé]quipier/i.test(role);
+        return window.KiwiRoles?.isService ? window.KiwiRoles.isService(role, m.department) : /serveur|service|salle|rang|ma[iî]tre|barista|barman|accueil|h[oô]te|manager|propri[eé]taire|staff|[eé]quipier/i.test(role);
       });
       const covered = floor.filter((m) => days.some((day) => {
         const shift = normShift((shifts[m.id] || {})[day]);

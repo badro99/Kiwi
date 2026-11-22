@@ -90,7 +90,7 @@ var SHELL = [
   '/assets/daterange/revenue.js?v=5',
   '/assets/daterange/kpi.js?v=26',
   '/assets/daterange/hero.js?v=16',
-  '/assets/team/roster-list.js?v=6',
+  '/assets/team/roster-list.js?v=7',
   '/assets/team/invitations.js?v=9',
   '/assets/team/venue-scope.js?v=6',
   '/assets/team/member-state.js?v=16',
@@ -180,7 +180,7 @@ var SHELL = [
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
   '/assets/serveur/payment-support.js?v=9',
   '/assets/serveur/service.js?v=34',
-  '/assets/serveur-app.js?v=31',
+  '/assets/serveur-app.js?v=32',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -235,7 +235,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=32',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
-  '/assets/pages/dashboard-startup.js?v=286',
+  '/assets/pages/dashboard-startup.js?v=287',
   '/assets/pages/dashboard-loader.js?v=107',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -410,7 +410,7 @@ var SHELL = [
   '/assets/merchant-config.js?v=289',
   '/assets/entitlements.css?v=8',
   '/assets/entitlements-v2.js?v=6',
-  '/assets/staff-roles.js?v=3',
+  '/assets/staff-roles.js?v=4',
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
@@ -502,7 +502,7 @@ var SHELL = [
   '/assets/team/catalog.js?v=2',
   '/assets/team/merge.js?v=2',
   '/assets/field-merge.js?v=10',
-  '/assets/team.js?v=363',
+  '/assets/team.js?v=364',
   '/assets/team/profile-ui.js?v=23',
   '/assets/team-hours.js?v=38',
   '/assets/menu-i18n.js?v=8',

@@ -1542,7 +1542,7 @@
           });
         }
         const R = window.KiwiRoles;
-        const floor = R ? R.isService(raw) : /serveur|service|salle|manager|propri/i.test(raw);
+        const floor = R ? R.isService(raw, emp.department) : /serveur|service|salle|manager|propri/i.test(raw);
         const base = floor ? ROLES.serveur : ROLES.plongeur;
         return Object.assign({}, base, {
           id: emp.id || base.id,

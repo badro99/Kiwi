@@ -84,7 +84,7 @@
     responsable:'manager', 'responsable rayon':'manager', directeur:'proprietaire', directrice:'proprietaire',
     caissier:'caisse', caissiere:'caisse', cashier:'caisse',
     'sous-chef':'chef', 'sous chef':'chef', cuisine:'cuisinier', plonge:'plongeur',
-    salle:'serveur', bar:'barman', comptoir:'barista', sommelier:'serveur',
+    salle:'serveur', service:'serveur', bar:'barman', comptoir:'barista', sommelier:'serveur',
     patisserie:'patissier', 'aide-patissier':'patissier', fournil:'boulanger',
     'preparateur en pharmacie':'preparateur', preparation:'preparateur',
     vente:'vendeur', vendeuse:'vendeur', stock:'magasinier', rayons:'rayon', vitrine:'merch',
@@ -152,9 +152,15 @@
    * holders open the full app today. Taking access away from someone who has it
    * is the worse failure — the console assigns a known role and that person is
    * then judged correctly. */
-  function isService(raw) {
+  /* « Commis » est un aide, en cuisine, au bar ou en salle : c'est son
+   * département qui dit où (Browse, 22 nov. 2026 : Fatima, commis au Bar, ne
+   * pouvait pas ouvrir de tables). Un commis de Bar ou de Salle sert ; un commis
+   * de Cuisine, ou sans département connu, reste hors salle. Miroir serveur :
+   * functions/auth/_lib.js › employeeWorksFloor. */
+  function isService(raw, department) {
     var id = idOf(raw);
     if (!id) return true;
+    if (id === 'commis' && department) { var d = idOf(department); return !!(d && SERVICE_SET[d]); }
     return !!SERVICE_SET[id];
   }
 
