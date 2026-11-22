@@ -1928,7 +1928,7 @@ section('Whole-project regressions');
     'employee-properties-test.mjs',
     'employee-split-test.mjs',
     'orderpro-properties-test.mjs',
-    'channel-properties-test.mjs', 'glovo-channel-test.mjs',
+    'channel-properties-test.mjs', 'glovo-channel-test.mjs', 'glovo-full-test.mjs',
     'known-issues-test.mjs',
     'support-urgency-benchmark-test.mjs',
     'operational-glossary-test.mjs',
