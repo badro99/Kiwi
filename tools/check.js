@@ -1798,7 +1798,7 @@ section('Whole-project regressions');
     'boutique-operator-entry-browser-test.mjs', 'caisse-operator-entry-browser-test.mjs', 'caisse-operator-reload-browser-test.mjs',
     'till-inventory-access-test.mjs',
     /* Un carton réparti sur ses tailles en un geste : comme les ventes de la boutique, égal, saisie rapide « M3 L5 XL2 », le reste sur la dernière taille (propriétaire, 29 oct.). */
-    'boutique-size-split-test.mjs',
+    'boutique-size-split-test.mjs', 'boutique-exact-colors-test.mjs',
     'boutique-size-split-browser-test.mjs',
     /* Après une réception, les étiquettes ne sortent que pour les nouvelles pièces, même fiche rouverte (Santos, 31 oct.). */
     'boutique-label-receipt-test.mjs',

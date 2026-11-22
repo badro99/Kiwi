@@ -98,6 +98,12 @@ export function planner(cat, pid, sizes) {
   const others = new Set();
   const sizeCode = {};
   let own = '';
+  /* Deux nuances d'une même famille (« 05 Fuchsia », « 01 Rose clair ») ont le
+     même code couleur : la seconde prend un autre numéro d'article, libre dans
+     tout le catalogue, pour que chaque nuance ait son code. */
+  const colorItem = {};
+  const ccItems = {};
+  const ownItems = new Set();
   const listed = (cat.listProducts ? cat.listProducts({ includeArchived: true }) : []) || [];
   listed.forEach((p) => {
     const d = cat.getProduct(p.id);
@@ -105,7 +111,14 @@ export function planner(cat, pid, sizes) {
     d.variants.forEach((v) => (v.barcodes || []).forEach((b) => {
       const x = parts(b.code);
       if (!x) return;
-      if (p.id === pid) { own = own || x[2]; if (!sizeCode[String(v.size)]) sizeCode[String(v.size)] = x[3]; }
+      if (p.id === pid) {
+        own = own || x[2];
+        if (!sizeCode[String(v.size)]) sizeCode[String(v.size)] = x[3];
+        const cid = String(v.colorId || 'unique');
+        if (!colorItem[cid]) colorItem[cid] = x[2];
+        (ccItems[x[1]] || (ccItems[x[1]] = new Set())).add(x[2]);
+        ownItems.add(x[2]);
+      }
       else others.add(x[2]);
     }));
   });
@@ -127,6 +140,24 @@ export function planner(cat, pid, sizes) {
   return {
     item,
     sizeOf,
-    code: (family, size) => (item ? compose(colorCode(family), item, sizeOf(size)) : ''),
+    /* `colorId` : la nuance exacte de la case. Sans lui, l'ancien code (un
+       numéro d'article par produit). */
+    code: (family, size, colorId) => {
+      if (!item) return '';
+      const cc = colorCode(family);
+      if (!colorId) return compose(cc, item, sizeOf(size));
+      const cid = String(colorId);
+      let it = colorItem[cid];
+      if (!it) {
+        const taken = ccItems[cc] || new Set();
+        if (!taken.has(item)) it = item;
+        for (let salt = 1; !it && salt < 1000; salt++) { const c = itemNumber(pid, 'c' + salt); if (!others.has(c) && !ownItems.has(c)) it = c; }
+        if (!it) return '';
+        colorItem[cid] = it;
+        (ccItems[cc] || (ccItems[cc] = new Set())).add(it);
+        ownItems.add(it);
+      }
+      return compose(cc, it, sizeOf(size));
+    },
   };
 }

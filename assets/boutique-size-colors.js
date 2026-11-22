@@ -52,6 +52,105 @@ export function detect(name, pal) {
   return null;
 }
 
+/* ── Les couleurs exactes ─────────────────────────────────────────────────
+   Une boutique de foulards a dix roses. La famille reste pour les rapports et
+   les filtres, mais la colonne porte la nuance exacte : un id « custom-<hex> »
+   (celui de KiwiColors), son nom à elle (« 05 Fuchsia ») et sa teinte. Le
+   magasin garde ses nuances dans un nuancier partagé (document « colorchart »,
+   le même sur le dashboard et la caisse), en plus de celles déjà au catalogue. */
+export const isExact = (id) => /^custom-[0-9a-f]{6}$/i.test(String(id || ''));
+export function exactId(hex) {
+  const h = String(hex || '').trim().replace(/^#/, '').toLowerCase();
+  return /^[0-9a-f]{6}$/.test(h) ? 'custom-' + h : '';
+}
+const hexOf = (id) => '#' + String(id).slice(7).toUpperCase();
+function isLight(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return (Math.max(r, g, b) + Math.min(r, g, b)) / 510 > 0.78;
+}
+function familyOfExact(cat, id, label, hex) {
+  try { if (cat && cat.colorFamily) { const f = cat.colorFamily({ colorId: id, colorLabel: label, colorHex: hex }); if (f) return String(f); } } catch (_) {}
+  try { const K = typeof window !== 'undefined' && window.KiwiColors; if (K && K.familyId) return String(K.familyId(id, label, hex) || ''); } catch (_) {}
+  return '';
+}
+export function exactColumn(cat, c) {
+  const id = String(c.id || exactId(c.hex)).toLowerCase();
+  const hex = hexOf(id);
+  const label = String(c.label || '').trim().replace(/\s+/g, ' ').slice(0, 40) || hex;
+  return { key: id, id, family: familyOfExact(cat, id, label, hex), label, hex, light: isLight(hex), unique: false, exact: true };
+}
+
+let chartStore = null;
+const listOf = (d) => (d && Array.isArray(d.list) ? d.list.filter((c) => c && isExact(c.id)) : []);
+function unionList(first, then) {
+  const out = []; const seen = new Set();
+  listOf({ list: first }).concat(listOf({ list: then })).forEach((c) => {
+    const id = String(c.id).toLowerCase();
+    if (seen.has(id)) return;
+    seen.add(id);
+    out.push({ id, label: String(c.label || '').slice(0, 40), hex: hexOf(id) });
+  });
+  return out.slice(0, 400);
+}
+function chartHandle() {
+  if (chartStore) return chartStore;
+  const S = typeof window !== 'undefined' && window.KiwiStore;
+  if (!S || !S.define) return null;
+  chartStore = S.define('colorchart', {
+    blank: () => ({ list: [] }), cloud: true,
+    isEmpty: (d) => !listOf(d).length,
+    /* Deux appareils ont chacun ajouté une nuance : on garde les deux, dans
+       l'ordre du serveur (celui du nuancier du magasin). */
+    merge: (ours, server) => ({ list: unionList(server && server.list, ours && ours.list) }),
+  });
+  return chartStore;
+}
+export function chartList() {
+  try { const h = chartHandle(); return h ? listOf(h.get()) : []; } catch (_) { return []; }
+}
+/* Une nuance créée à la main rejoint le nuancier, pour la retrouver ensuite. */
+export function rememberColor(c) {
+  try {
+    const h = chartHandle();
+    if (!h || !c || !isExact(c.id)) return;
+    const d = h.get();
+    if (listOf(d).some((x) => x.id.toLowerCase() === c.id.toLowerCase())) return;
+    h.set({ list: unionList(listOf(d), [{ id: c.id, label: c.label }]) });
+  } catch (_) {}
+}
+export function saveChart(list) {
+  const h = chartHandle();
+  if (!h) return null;
+  return h.set({ list: unionList(list, []) });
+}
+/* Les nuances du magasin : le nuancier, puis celles déjà portées par un
+   article (archivés compris), sans doublon. */
+export function shopColors(cat) {
+  const out = unionList(chartList(), []);
+  const seen = new Set(out.map((c) => c.id));
+  const extra = [];
+  try {
+    const listed = (cat && cat.listProducts ? cat.listProducts({ includeArchived: true }) : []) || [];
+    listed.forEach((p) => {
+      const d = cat.getProduct(p.id);
+      (d ? d.variants : []).forEach((v) => {
+        const id = String(v.colorId || '').toLowerCase();
+        if (!isExact(id) || seen.has(id)) return;
+        seen.add(id);
+        extra.push({ id, label: String(v.colorLabel || '').slice(0, 40) || hexOf(id), hex: hexOf(id) });
+      });
+    });
+  } catch (_) {}
+  extra.sort((a, b) => a.label.localeCompare(b.label, 'fr', { numeric: true }));
+  return out.concat(extra);
+}
+/* Une famille du nuancier est-elle déjà là ? Une nuance exacte ne la cache
+   pas : « Rose » reste proposé à côté de « 05 Fuchsia ». */
+export const hasFamily = (cols, c) => cols.some((k) => k.id === c.id || (!k.exact && k.family === c.id));
+
 export const uniqueColumn = () => ({ key: UNIQUE, id: UNIQUE, family: '', label: '', hex: '', light: false, unique: true });
 export function columnOf(c, lang) {
   return { key: c.id, id: c.id, family: c.id, label: labelOf(c, lang), hex: c.hex, light: !!c.light, unique: false };
@@ -70,6 +169,7 @@ export function columns(cat, pid, lang, pal) {
     let fam = '';
     try { fam = cat.colorFamily ? String(cat.colorFamily(v) || '') : ''; } catch (_) {}
     const f = pal.find((c) => c.id === (fam || id));
+    if (isExact(id)) { out.push(exactColumn(cat, { id, label: v.colorLabel })); return; }
     out.push({ key: id, id, family: fam || id, label: String(v.colorLabel || (f && labelOf(f, lang)) || id), hex: String(v.colorHex || (f && f.hex) || ''), light: !!(f && f.light), unique: false });
   });
   if (out.length) return out;
@@ -107,7 +207,10 @@ export function parseColored(text, sizes, cols, pal, parse) {
   if (partialColor) { toks.pop(); out.pending = true; }
   const segs = [{ color: null, toks: [] }];
   toks.forEach((x) => { const c = colorWord(x, pal); if (c) segs.push({ color: c, toks: [] }); else segs[segs.length - 1].toks.push(x); });
-  const colFor = (c) => cols.find((k) => k.id === c.id || k.family === c.id);
+  /* Le mot « rose » : la colonne Rose, sinon la seule nuance rose s'il n'y en
+     a qu'une ; plusieurs roses exacts, on ouvre la colonne de la famille. */
+  const colFor = (c) => cols.find((k) => k.id === c.id) || cols.find((k) => !k.exact && k.family === c.id)
+    || (cols.filter((k) => k.family === c.id).length === 1 ? cols.find((k) => k.family === c.id) : null);
   for (const seg of segs) {
     if (!seg.color && !seg.toks.length) continue;
     let targets;
@@ -143,7 +246,16 @@ export function css() {
 .kbc-dot { width: 14px; height: 14px; flex: none; border-radius: 50%; background: var(--dot, #ccc); box-shadow: inset 0 0 0 1px rgba(10, 15, 13, .14); }
 .kbc-add { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px; border: 1px dashed color-mix(in srgb, var(--atlas, #0B6E4F) 55%, transparent); border-radius: 999px; background: none; color: var(--atlas, #0B6E4F); font: 600 12.5px var(--sans, inherit); cursor: pointer; }
 .kbc-add svg { width: 15px; height: 15px; fill: currentColor; }
-.kbc-pal { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 1px solid var(--kbs-line, #E2DED4); border-radius: 12px; background: var(--kbs-field, #fff); }
+.kbc-pal { display: grid; gap: 10px; padding: 10px; border: 1px solid var(--kbs-line, #E2DED4); border-radius: 12px; background: var(--kbs-field, #fff); }
+.kbc-sec { display: grid; gap: 6px; }
+.kbc-list { display: flex; flex-wrap: wrap; gap: 4px; max-height: 196px; overflow-y: auto; }
+.kbc-list .kbc-sw[hidden], .kbc-none[hidden] { display: none; }
+.kbc-none { font: 500 12.5px var(--sans, inherit); color: var(--n-500, #77807B); padding: 6px 2px; }
+.kbc-find, .kbc-name { box-sizing: border-box; min-height: 38px; padding: 8px 10px; border: 1px solid var(--kbs-line, #E2DED4); border-radius: 9px; background: var(--kbs-field, #fff); color: var(--ink, #0A0F0D); font: 500 13px var(--sans, inherit); }
+.kbc-find { width: 100%; }
+.kbc-new { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.kbc-new input[type="color"] { width: 46px; height: 38px; padding: 2px; border: 1px solid var(--kbs-line, #E2DED4); border-radius: 9px; background: transparent; cursor: pointer; }
+.kbc-name { flex: 1 1 160px; min-width: 0; }
 .kbc-pal[hidden] { display: none; }
 .kbc-sw { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 6px; border: 1px solid transparent; border-radius: 999px; background: none; font: 500 12.5px var(--sans, inherit); color: var(--ink, #0A0F0D); cursor: pointer; }
 .kbc-sw:hover { border-color: var(--atlas, #0B6E4F); }
