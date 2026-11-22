@@ -11,12 +11,6 @@ export function partnerWebhookOpen(method, path) {
    * Order Pro n'est pas activé. Chemin EXACT : rien sous /api/channel/ d'autre
    * n'est ouvert, et la gestion des clés reste derrière la porte normale. */
   if (method === 'POST' && path === '/api/channel/order') return true;
-  /* Les deux webhooks de l'API Partners de Glovo (functions/api/channel/glovo/).
-   * Pas de cookie chez Glovo non plus : le handler vérifie lui-même le jeton
-   * partagé GLOVO_TOKEN et répond 503 tant qu'il n'est pas configuré. Chemins
-   * EXACTS ; la liaison des magasins (/api/admin/glovo-stores) reste derrière la
-   * porte normale. */
-  if (method === 'POST' && (path === '/api/channel/glovo/dispatched' || path === '/api/channel/glovo/cancelled')) return true;
   /* La réception native de Shopify. Même raisonnement, une exception près : son
    * chemin PORTE l'identifiant du lien, donc il ne peut pas être exact. Le
    * préfixe est aussi étroit que possible — POST seulement, un seul segment
@@ -28,5 +22,15 @@ export function partnerWebhookOpen(method, path) {
    * signature HMAC que le handler vérifie lui-même, et il refuse tout tant que
    * le commerçant n'a pas enregistré la clé de signature de sa boutique. */
   if (method === 'POST' && /^\/api\/channel\/shopify\/[A-Za-z0-9-]{6,64}$/.test(path)) return true;
+  /* Les trois webhooks de l'API Partners de Glovo (functions/api/channel/glovo/).
+   * Pas de cookie chez Glovo non plus : le handler vérifie lui-même le jeton
+   * partagé GLOVO_TOKEN et répond 503 tant qu'il n'est pas configuré. Chemins
+   * EXACTS ; la liaison des magasins (/api/admin/glovo-stores) reste derrière la
+   * porte normale. */
+  if (method === 'POST' && (path === '/api/channel/glovo/dispatched' || path === '/api/channel/glovo/picked_up'
+    || path === '/api/channel/glovo/cancelled')) return true;
+  /* La carte que Glovo vient lire après un envoi (menuUrl) : GET, chemin exact,
+   * même jeton partagé (en « Bearer »), vérifié par le handler. */
+  if (method === 'GET' && path === '/api/channel/glovo/menu-feed') return true;
   return false;
 }

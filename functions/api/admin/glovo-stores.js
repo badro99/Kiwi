@@ -1,7 +1,8 @@
 // /api/admin/glovo-stores — quelle adresse Glovo est quel commerçant.
 //   GET    ?merchant=slug (facultatif) → { stores:[…], recent:[…], merchants:[{merchant,name}] }
 //   POST   { storeId, merchant, prepMinutes?, status? } → crée ou modifie la liaison
-//   PATCH  { storeId, status?: 'active'|'paused', prepMinutes? } → pause, reprise, délai
+//   PATCH  { storeId, status?: 'active'|'paused', prepMinutes?, marketplace? } → pause, reprise, délai,
+//          livraison par Glovo ou par le magasin (Marketplace, migration 0035)
 //   DELETE { storeId }                                  → retire la liaison
 // Opérateurs seulement, et une écriture venue d'une autre origine est refusée
 // (guard). Le store_id est l'« external id » que Kiwi donne à Glovo pour chaque
@@ -24,13 +25,15 @@ export async function onRequestGet(context) {
   const merchant = String(new URL(request.url).searchParams.get('merchant') || '').trim().toLowerCase().slice(0, 80);
   try {
     const where = merchant ? ' WHERE merchant = ?' : '';
+    /* g.* : la fiche montre aussi ce que 0035 ajoute (Marketplace, fermeture, carte,
+       lot, dernière erreur de l'API) quand la base l'a, sans casser avant. */
     const stores = await env.DB.prepare(
-      'SELECT g.store_id, g.merchant, m.name, g.prep_minutes, g.status, g.created_ts, g.updated_ts, g.last_ts, g.last_err'
+      'SELECT g.*, m.name'
       + ' FROM glovo_stores g LEFT JOIN merchant_config m ON m.merchant = g.merchant'
       + (merchant ? ' WHERE g.merchant = ?' : '') + ' ORDER BY g.merchant, g.store_id LIMIT 200'
     ).bind(...(merchant ? [merchant] : [])).all();
     const recent = await env.DB.prepare(
-      'SELECT order_id, store_id, merchant, order_code, created_ts, cancelled_ts, cancel_reason, last_call, last_call_ts, last_call_err FROM glovo_orders'
+      'SELECT * FROM glovo_orders'
       + where + ' ORDER BY created_ts DESC LIMIT 50'
     ).bind(...(merchant ? [merchant] : [])).all();
     const merchants = await env.DB.prepare(
@@ -73,9 +76,14 @@ export async function onRequestPatch(context) {
     if (!row) return json({ error: 'not-found' }, 404);
     const status = b.status || row.status;
     const prep = b.prepMinutes == null ? row.prep_minutes : Math.min(120, Math.max(1, Math.round(Number(b.prepMinutes) || 15)));
+    if (b.marketplace != null) {
+      try {
+        await env.DB.prepare('UPDATE glovo_stores SET marketplace = ? WHERE store_id = ?').bind(b.marketplace ? 1 : 0, row.store_id).run();
+      } catch (_) { return json({ error: 'not-migrated', hint: 'migrations/0035_glovo_full.sql' }, 503); }
+    }
     await env.DB.prepare('UPDATE glovo_stores SET status = ?, prep_minutes = ?, updated_ts = ? WHERE store_id = ?')
       .bind(status, prep, Date.now(), row.store_id).run();
-    return json({ ok: true, storeId: row.store_id, merchant: row.merchant, prepMinutes: prep, status });
+    return json({ ok: true, storeId: row.store_id, merchant: row.merchant, prepMinutes: prep, status, marketplace: b.marketplace == null ? undefined : !!b.marketplace });
   } catch (_) {
     return json(NOT_MIGRATED, 503);
   }

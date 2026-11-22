@@ -100,6 +100,18 @@ await t('pause puis reprise, le webhook suit', async () => {
   assert.equal((await onRequestPatch(req('PATCH', { storeId: 'absent', status: 'paused' }))).status, 404);
 });
 
+await t('livreurs du magasin (Marketplace) : la fiche le montre, le webhook le lit, et la fiche porte la carte et la fermeture', async () => {
+  const r = await call(await onRequestPatch(req('PATCH', { storeId: 'glovo-pizza-1', marketplace: true })));
+  assert.equal(r.status, 200); assert.equal(r.body.marketplace, true);
+  assert.equal(Number((await storeFor(env, 'glovo-pizza-1')).marketplace), 1);
+  sql.prepare("UPDATE glovo_stores SET menu_status = 'SUCCESS', closing_until = '2099-01-01T00:00:00+00:00', api_err = 'HTTP 503' WHERE store_id = 'glovo-pizza-1'").run();
+  const row = (await call(await onRequestGet(req('GET')))).body.stores.find((x) => x.store_id === 'glovo-pizza-1');
+  assert.deepEqual([row.marketplace, row.menu_status, row.closing_until, row.api_err], [1, 'SUCCESS', '2099-01-01T00:00:00+00:00', 'HTTP 503']);
+  assert.equal((await call(await onRequestPatch(req('PATCH', { storeId: 'glovo-pizza-1', marketplace: false })))).body.marketplace, false);
+  assert.equal(Number((await storeFor(env, 'glovo-pizza-1')).marketplace), 0);
+  assert.equal((await onRequestPatch(req('PATCH', { storeId: 'glovo-pizza-1', marketplace: true }, { cookie: ownerCookie }))).status, 403, 'operators only');
+});
+
 await t('retirer un magasin', async () => {
   assert.equal((await onRequestDelete(req('DELETE', { storeId: 'glovo-pizza-1' }))).status, 200);
   assert.equal(await storeFor(env, 'glovo-pizza-1'), null);

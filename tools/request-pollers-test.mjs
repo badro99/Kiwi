@@ -98,6 +98,15 @@ async function pacing(name, h, start, { cap = 120000, first = true, quietCap = 6
 
 }
 {
+  /* Glovo à la caisse (22 nov. 2026) : l'état Glovo de la caisse se relit une
+     fois par minute au calme, se tait onglet caché et reprend au retour. */
+  const h = harness({ state: { orders: {} }, merchant: () => 'test', orderProOn: () => true, paint() {}, clockTime: () => '', esc: String });
+  h.ctx.fetch = async () => { h.hit(); return { ok: true, json: async () => ({ ok: true, stores: [{ storeId: 'g-1' }], orders: [] }) }; };
+  const src = read('assets/orderpro-inbox.js');
+  h.run(src.slice(src.indexOf('  /* ── Glovo à la caisse'), src.indexOf('  (function glvCss()')));
+  await pacing('Glovo till state', h, () => h.ctx.glvLoad(), { cap: 60000 });
+}
+{
   /* Pasta Corner, 17 nov. : le poste hub d'impression cuisine ne ralentit pas
      sur un comptoir calme ni derrière le verrou, sinon la commande du
      téléphone serveur attend minutes avant de sortir en cuisine. */

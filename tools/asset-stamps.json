@@ -20,8 +20,8 @@
     "sha": "2ca67dbaad608f76"
   },
   "assets/admin-glovo.js": {
-    "v": "1",
-    "sha": "fcb1b49c67af7322"
+    "v": "3",
+    "sha": "fddb9eb286e8dc9a"
   },
   "assets/admin-legacy.js": {
     "v": "16",
@@ -382,6 +382,10 @@
   "assets/catalog-workspace.js": {
     "v": "7",
     "sha": "144dc5d7370517f7"
+  },
+  "assets/channel-glovo.js": {
+    "v": "1",
+    "sha": "3100c8611fdcc881"
   },
   "assets/channel-health.js": {
     "v": "12",
@@ -1144,8 +1148,8 @@
     "sha": "4ec2e9cb41453799"
   },
   "assets/kit/till-online.js": {
-    "v": "2",
-    "sha": "72e0c148f4aafc5d"
+    "v": "4",
+    "sha": "985cfb00c46d39be"
   },
   "assets/kit/till-pin.js": {
     "v": "11",
@@ -1436,8 +1440,8 @@
     "sha": "3cd3b01271f8b903"
   },
   "assets/orderpro-inbox.js": {
-    "v": "43",
-    "sha": "6cd0932f91262685"
+    "v": "46",
+    "sha": "cdc4600b7da99586"
   },
   "assets/orderpro-menu.js": {
     "v": "8",
@@ -1608,8 +1612,8 @@
     "sha": "91ea1202399b8d4c"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "111",
-    "sha": "91a1f8dcba56b035"
+    "v": "112",
+    "sha": "f818479fca9f9897"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "296",

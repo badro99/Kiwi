@@ -163,6 +163,14 @@
     {"order_id": "fixture-order_id-1", "store_id": "fixture-store_id-1", "merchant": "upgrade-synth-1", "kiwi_order_id": "fixture-kiwi_order_id-1", "order_code": "fixture-order_code-1", "pickup": 137, "created_ts": 137, "cancelled_ts": 137, "cancel_reason": "fixture-cancel_reason-1", "last_call": "fixture-last_call-1", "last_call_ts": 137, "last_call_err": "fixture-last_call_err-1"},
     {"order_id": "fixture-order_id-2", "store_id": "fixture-store_id-2", "merchant": "upgrade-synth-2", "kiwi_order_id": "fixture-kiwi_order_id-2", "order_code": "fixture-order_code-2", "pickup": 274, "created_ts": 274, "cancelled_ts": 274, "cancel_reason": "fixture-cancel_reason-2", "last_call": "fixture-last_call-2", "last_call_ts": 274, "last_call_err": "fixture-last_call_err-2"}
   ],
+  "glovo_menu_state": [
+    {"store_id": "fixture-store_id-1", "kind": "product", "item_id": "fixture-item_id-1", "price_cents": 137, "available": 1, "updated_ts": 137},
+    {"store_id": "fixture-store_id-2", "kind": "attribute", "item_id": "fixture-item_id-2", "price_cents": 274, "available": 0, "updated_ts": 274}
+  ],
+  "glovo_rate": [
+    {"store_id": "fixture-store_id-1", "minute": 137, "n": 1},
+    {"store_id": "fixture-store_id-2", "minute": 274, "n": 2}
+  ],
   "catalog_parts": [
     {"merchant": "upgrade-synth-1", "gen": "fixture-gen-1", "part": 137, "data": "fixture-data-1"},
     {"merchant": "upgrade-synth-2", "gen": "fixture-gen-2", "part": 274, "data": "fixture-data-2"}

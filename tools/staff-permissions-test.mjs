@@ -188,7 +188,7 @@ console.log('■ Activation');
   const body = await state(w);
   check(body.configured === false && body.missingTables === false && body.staff.every((s) => Array.isArray(s.today) && Array.isArray(s.proposed)),
     'avant activation : l’écran montre, par personne, ses droits d’aujourd’hui et le rôle proposé');
-  check(!/9911|9912|9913|9914|secret-banc|6201|6202|6203|6205|pinCode|password|"pin"/.test(JSON.stringify(body)), 'aucun code, aucun mot de passe dans la réponse');
+  check(!/(^|[^0-9A-Za-z])(9911|9912|9913|9914|6201|6202|6203|6205)(?![0-9A-Za-z])|secret-banc|pinCode|password|"pin"/.test(JSON.stringify(body)), 'aucun code, aucun mot de passe dans la réponse');
   const keys = body.staff.map((s) => s.key);
   check(keys.includes('m-sara') && keys.includes('name:nadia patron') && !keys.includes('m-gone'), 'l’équipe = membres d’Équipe + codes sans membre ; un membre retiré n’y est pas');
   check((await post(w, cookieOwner, { action: 'save-staff', key: 'm-lina', preset: 'cashier', perms: [] })).status === 409
@@ -356,7 +356,7 @@ console.log('■ Approbations au comptoir (/api/pin/verify)');
   prove('stock.adjust', m.status === 403 && (await m.json()).permission === 'stock.adjust', '/api/inventory/movements relit le droit : perte refusée');
   const drawer = await (await pinVerify(w, CODES.caisse, { kind: 'drawer' })).json();
   check(drawer.permission.id === 'sales.drawer' && drawer.permission.granted === false && !drawer.approval, 'le verdict ne vaut que pour le droit demandé');
-  check(!/6201|6202|6203|9911/.test(JSON.stringify([after, mgrAfter, drawer])), 'la réponse ne contient aucun code');
+  check(!/(^|[^0-9A-Za-z])(6201|6202|6203|9911)(?![0-9A-Za-z])/.test(JSON.stringify([after, mgrAfter, drawer])), 'la réponse ne contient aucun code');   // valeur entière : un jeton ou un id au hasard peut contenir ces chiffres
 }
 
 /* ── 7 · Annulation et réouverture ──────────────────────────────────────── */

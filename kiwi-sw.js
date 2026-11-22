@@ -138,6 +138,7 @@ var SHELL = [
   '/assets/growth-crm.js?v=7',
   '/assets/channel-health.js?v=12',
   '/assets/channel-link.js?v=202608272327',
+  '/assets/channel-glovo.js?v=1',
   '/assets/marketing-suite-tease.js?v=1',
   '/assets/reception-view.js?v=3',
   '/assets/pages-pro.js?v=2253',
@@ -239,7 +240,7 @@ var SHELL = [
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
   '/assets/pages/dashboard-startup.js?v=296',
-  '/assets/pages/dashboard-loader.js?v=111',
+  '/assets/pages/dashboard-loader.js?v=112',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
   '/assets/hotel/groups.js?v=7',
@@ -527,7 +528,7 @@ var SHELL = [
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=10',
   '/assets/orderpro-panel.js?v=5',
-  '/assets/orderpro-inbox.js?v=43',
+  '/assets/orderpro-inbox.js?v=46',
   '/assets/service-requests.js?v=2',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
@@ -600,7 +601,7 @@ var SHELL = [
   '/assets/kit/till.js?v=34',
   '/assets/kit/till-frame.js?v=15',
   '/assets/kit/till-attendance.js?v=1',
-  '/assets/kit/till-online.js?v=2',
+  '/assets/kit/till-online.js?v=4',
   '/assets/kit/till-z.js?v=1',
   '/assets/retail-scan.js?v=12',
   '/assets/caisse-dna.css?v=10',

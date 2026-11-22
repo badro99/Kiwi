@@ -45,6 +45,23 @@
     noMerchant: ['Commerçant introuvable.', 'Merchant not found.', 'التاجر غير موجود.'],
     notReady: ['Glovo : la migration 0026 n’est pas appliquée.', 'Glovo: migration 0026 is not applied.', 'Glovo: الترحيل 0026 غير مطبق.'],
     refused: ['Action refusée · {e}', 'Action refused · {e}', 'رُفض الإجراء · {e}'],
+    delivery: ['Livraison', 'Delivery', 'التوصيل'],
+    byGlovo: ['Coursiers Glovo', 'Glovo couriers', 'موصّلو Glovo'],
+    byStore: ['Livreurs du magasin (Marketplace)', 'Store riders (Marketplace)', 'موصّلو المتجر (Marketplace)'],
+    setGlovo: ['Passer en coursiers Glovo', 'Switch to Glovo couriers', 'التحويل إلى موصّلي Glovo'],
+    setStore: ['Passer en livreurs du magasin', 'Switch to store riders', 'التحويل إلى موصّلي المتجر'],
+    closedUntil: ['Fermé jusqu’à {t}', 'Closed until {t}', 'مغلق إلى {t}'],
+    openNow: ['Ouvert', 'Open', 'مفتوح'],
+    stateLbl: ['État', 'Status', 'الحالة'],
+    menuState: ['Carte chez Glovo', 'Menu on Glovo', 'القائمة على Glovo'],
+    bulkState: ['Dernier lot dispo et prix', 'Last availability and price batch', 'آخر دفعة توفّر وأسعار'],
+    uploads: ['{n}/5 envois aujourd’hui', '{n}/5 uploads today', '{n}/5 إرسالات اليوم'],
+    apiErr: ['Dernière erreur de l’API Glovo', 'Last Glovo API error', 'آخر خطأ من واجهة Glovo'],
+    never: ['jamais envoyée', 'never sent', 'لم تُرسل'],
+    picked: ['récupérée', 'picked up', 'استُلمت'],
+    out: ['partie', 'out', 'خرجت'],
+    delivered: ['livrée', 'delivered', 'وصلت'],
+    need0035: ['Ces informations arrivent avec la migration 0035.', 'This needs migration 0035.', 'هذه المعلومات تحتاج الترحيل 0035.'],
   };
   var LANGS = ['fr', 'en', 'ar'];
   function lang() { var l = String(document.documentElement.lang || '').slice(0, 2); return LANGS.indexOf(l) >= 0 ? l : 'fr'; }
@@ -63,7 +80,7 @@
     if (code === 'store-taken') return tr('taken', { m: body.merchant || '' });
     if (code === 'bad-store-id') return tr('badStore');
     if (code === 'merchant-not-found' || code === 'bad-merchant') return tr('noMerchant');
-    if (code === 'not-migrated') return tr('notReady');
+    if (code === 'not-migrated') return body.hint && /0035/.test(body.hint) ? tr('need0035') : tr('notReady');
     return tr('refused', { e: code });
   }
   function nameOf(slug) { var m = state.merchants.find(function (x) { return x.merchant === slug; }); return (m && m.name) || slug; }
@@ -114,6 +131,8 @@
     if (action === 'pause') patch.status = 'paused';
     else if (action === 'resume') patch.status = 'active';
     else if (action === 'prep') patch.prepMinutes = Number(val('editPrep')) || s.prep_minutes;
+    else if (action === 'market-on') patch.marketplace = true;
+    else if (action === 'market-off') patch.marketplace = false;
     else return;
     return req('/api/admin/glovo-stores', { method: 'PATCH', body: JSON.stringify(patch) })
       .then(function () { tell(tr('saved') + ' · ' + s.store_id); return load(); })
@@ -129,7 +148,7 @@
       + '<label><span class="ks-label">' + esc(tr('storeId')) + '</span><input data-kg-f="storeId" maxlength="64" autocomplete="off" spellcheck="false"></label>'
       + '<label><span class="ks-label">' + esc(tr('prep')) + '</span><input data-kg-f="prep" type="number" min="1" max="120" value="15"></label>'
       + '<button class="ks-btn primary" data-kg-add>' + esc(tr('add')) + '</button></div>'
-      + '<div class="ks-meta">' + esc(tr('webhooks')) + ' · <code>' + esc(location.origin + '/api/channel/glovo/dispatched') + '</code> · <code>' + esc(location.origin + '/api/channel/glovo/cancelled') + '</code></div>'
+      + '<div class="ks-meta">' + esc(tr('webhooks')) + ' · ' + ['dispatched', 'picked_up', 'cancelled'].map(function (h) { return '<code>' + esc(location.origin + '/api/channel/glovo/' + h) + '</code>'; }).join(' · ') + '</div>'
       + '</div></div>';
   }
   function row(s) {
@@ -138,7 +157,8 @@
   function field(key, html) { return '<div><span class="ks-label">' + esc(tr(key)) + '</span><div>' + (html || '·') + '</div></div>'; }
   function detail(s) {
     var orders = state.recent.filter(function (o) { return o.store_id === s.store_id; }).slice(0, 10).map(function (o) {
-      return '<li>' + esc(dt(o.created_ts)) + ' · ' + esc(o.order_code || o.order_id) + (o.cancelled_ts ? ' · ' + esc(tr('cancelled')) : '') + (o.last_call_err ? ' · ' + esc(o.last_call_err) : '') + '</li>';
+      var steps = [o.picked_up_ts ? tr('picked') : '', o.out_ts ? tr('out') : '', o.delivered_ts ? tr('delivered') : ''].filter(Boolean).join(', ');
+      return '<li>' + esc(dt(o.created_ts)) + ' · ' + esc(o.order_code || o.order_id) + (steps ? ' · ' + esc(steps) : '') + (o.cancelled_ts ? ' · ' + esc(tr('cancelled')) : '') + (o.last_call_err ? ' · ' + esc(o.last_call_err) : '') + '</li>';
     }).join('');
     var b = function (a, key, primary) { return '<button class="ks-btn' + (primary ? ' primary' : '') + '" data-kg-act="' + a + '">' + esc(tr(key)) + '</button>'; };
     return '<div class="ks-detail"><h3>' + esc(s.name || nameOf(s.merchant)) + '</h3><div class="ks-meta">' + esc(s.merchant) + ' · ' + esc(tr(s.status === 'paused' ? 'paused' : 'active')) + '</div>'
@@ -147,8 +167,22 @@
       + '<label><span class="ks-label">' + esc(tr('prep')) + '</span><input data-kg-f="editPrep" type="number" min="1" max="120" value="' + esc(s.prep_minutes) + '"></label>'
       + '<div class="ks-actions">' + b('prep', 'save') + '</div>'
       + (s.last_err ? field('lastErr', esc(s.last_err)) : '')
+      + glovoFull(s, b)
       + (orders ? '<div class="ks-msg"><small>' + esc(tr('recent')) + '</small><ul>' + orders + '</ul></div>' : '')
       + '</div></div>';
+  }
+  /* Ce que la migration 0035 ajoute à la fiche : livraison, fermeture, carte, lot, erreur d'API. */
+  function glovoFull(s, b) {
+    if (s.marketplace === undefined) return '<div class="ks-meta">' + esc(tr('need0035')) + '</div>';
+    var market = Number(s.marketplace) === 1;
+    var shut = s.closing_until && Date.parse(s.closing_until) > Date.now();
+    var today = new Date().toISOString().slice(0, 10);
+    return '<div class="ks-form-row">' + field('delivery', esc(tr(market ? 'byStore' : 'byGlovo')))
+      + field('stateLbl', esc(shut ? tr('closedUntil', { t: dt(Date.parse(s.closing_until)) }) : tr('openNow'))) + '</div>'
+      + '<div class="ks-actions">' + (market ? b('market-off', 'setGlovo') : b('market-on', 'setStore')) + '</div>'
+      + '<div class="ks-form-row">' + field('menuState', esc(s.menu_status ? s.menu_status + ' · ' + dt(s.menu_ts) : tr('never')) + '<br><small>' + esc(tr('uploads', { n: s.menu_day === today ? Number(s.menu_count) || 0 : 0 })) + '</small>')
+      + field('bulkState', esc(s.bulk_status ? s.bulk_status + ' · ' + dt(s.bulk_ts) : '·')) + '</div>'
+      + (s.api_err ? field('apiErr', esc(s.api_err) + ' <small>' + esc(dt(s.api_err_ts)) + '</small>') : '');
   }
   function render() {
     if (!root) return;
