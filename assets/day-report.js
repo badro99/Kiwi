@@ -925,7 +925,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
           ts: (h.time instanceof Date) ? h.time.getTime() : num(h.ts || h.time),
           from: String(h.fromName || h.from || ''),
           to: String(h.toName || h.to || ''),
-          ecart: num(h.ecart),
+          ecart: num(h.ecart), cardGap: h.cardGap == null ? null : num(h.cardGap),
         };
       }),
       closedCount: 0,

@@ -96,6 +96,62 @@
         if (inp) inp.value = '';
       }
       updateHandoverEcart();
+      renderHandoverCard(preserveCount);
+    }
+
+    /* Le terminal de paiement à la passation (propriétaire, 22 nov. 2026),
+       comme à la clôture : le caissier sortant recopie le total carte du TPE
+       et Kiwi le compare au sien. Le TPE cumule depuis son dernier Z, donc
+       depuis le début de la journée : Kiwi compare la carte de la JOURNÉE
+       (même chiffre que la clôture, rapport prévisualisé), pas du seul poste.
+       Facultatif, comme à la boutique : vide, la passation passe et le bon ne
+       dit rien de la carte. Le bloc est dessiné ici, sous l'écart du tiroir. */
+    function handoverCardKiwi() {
+      let rep = null;
+      try { if (typeof buildDayReport === 'function') rep = buildDayReport(null, 0); } catch (_) {}
+      const c = rep && rep.methods ? Number(rep.methods.card) : NaN;   /* Number(null) vaut 0 : sans rapport, on retombe sur le journal */
+      return money(Number.isFinite(c) ? c : rollupLedger().card);
+    }
+    function renderHandoverCard(preserve) {
+      let box = $('#ho-card');
+      if (!box) {
+        const anchor = $('#ho-ecart');
+        if (!anchor || !anchor.insertAdjacentElement) return;
+        box = document.createElement('div');
+        box.id = 'ho-card';
+        anchor.insertAdjacentElement('afterend', box);
+      }
+      const keep = preserve && $('#ho-card-z') ? $('#ho-card-z').value : '';
+      handoverState.cardKiwi = handoverCardKiwi();
+      box.innerHTML = `<div class="rm-section-label">Rapprochement carte</div>`
+        + `<div class="ho-recon"><div class="ho-recon-line is-total"><span>Total carte Kiwi</span><span class="mono">${fmtMAD(handoverState.cardKiwi)}</span></div></div>`
+        + `<div class="cash-input-row" style="margin-bottom:6px;"><label class="cash-input-label" for="ho-card-z">Total carte du terminal</label>`
+        + `<input class="cash-input mono" id="ho-card-z" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0" /></div>`
+        + `<p class="modal-subtle">Imprimez les totaux du terminal sans faire le Z, puis recopiez le total carte.</p>`
+        + `<div class="ho-ecart" id="ho-card-ecart"><span>Résultat</span><span class="mono" id="ho-card-ecart-val">À saisir</span></div>`;
+      box.oninput = updateHandoverCard;
+      const inp = $('#ho-card-z');
+      if (inp) inp.value = keep;
+      updateHandoverCard();
+    }
+    function updateHandoverCard() {
+      const box = $('#ho-card-ecart'), out = $('#ho-card-ecart-val'), inp = $('#ho-card-z');
+      if (!box || !out) return;
+      box.classList.remove('is-ok', 'is-off');
+      handoverState.cardTerminal = null;
+      const raw = String(inp ? inp.value : '').trim().replace(',', '.');
+      if (!raw) { out.textContent = 'À saisir'; return; }
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 0 || Math.abs(n * 100 - Math.round(n * 100)) > 1e-6) {
+        out.textContent = 'Montant invalide';
+        box.classList.add('is-off');
+        return;
+      }
+      handoverState.cardTerminal = money(n);
+      const gap = major(minor(n) - minor(handoverState.cardKiwi));
+      if (gap === 0) { out.textContent = 'Rapproché · ' + fmtMAD(0); box.classList.add('is-ok'); return; }
+      out.textContent = (gap > 0 ? 'Terminal + ' : 'Kiwi + ') + fmtMAD(Math.abs(gap));
+      box.classList.add('is-off');
     }
 
     function updateHandoverEcart() {
@@ -186,6 +242,10 @@
         + `<div class="ho-slip-row"><span class="k">Espèces comptées</span><span class="v mono">${fmtMAD(rec.counted)}</span></div>`
         + `<div class="ho-slip-ecart ${ecartCls}"><span>Écart constaté</span><span class="mono">${fmtEcart(rec.ecart)}</span></div>`
         + `<div class="ho-slip-row" style="margin-top:8px;"><span class="k">Caisse transmise</span><span class="v mono">${fmtMAD(rec.counted)}</span></div>`
+        + (rec.cardTerminal == null ? '' :
+            `<div class="ho-slip-row" style="margin-top:8px;"><span class="k">Total carte Kiwi</span><span class="v mono">${fmtMAD(rec.cardKiwi)}</span></div>`
+          + `<div class="ho-slip-row"><span class="k">Total carte du terminal</span><span class="v mono">${fmtMAD(rec.cardTerminal)}</span></div>`
+          + `<div class="ho-slip-ecart ${rec.cardGap === 0 ? 'is-ok' : 'is-off'}"><span>Résultat</span><span class="mono">${rec.cardGap === 0 ? 'Rapproché' : (rec.cardGap > 0 ? 'Terminal + ' : 'Kiwi + ') + fmtMAD(Math.abs(rec.cardGap))}</span></div>`)
         + `<div class="ho-slip-sign">`
         +   `<div class="ho-slip-sign-col"><div class="ho-slip-sign-name">${rec.fromName}</div><div class="ho-slip-sign-role">Caissier sortant</div></div>`
         +   `<div class="ho-slip-sign-col"><div class="ho-slip-sign-name">${rec.toName}</div><div class="ho-slip-sign-role">Caissier entrant</div></div>`
@@ -241,6 +301,7 @@
       const freshExpected = major(minor(posteOpeningFloat) + r.cashC + r.cashTipsC + r.movesInC - r.movesOutC);
       handoverState.expected = freshExpected;
       const ecart = major(minor(handoverState.counted) - minor(freshExpected));
+      const cardKiwi = handoverCardKiwi(), cardTerminal = handoverState.cardTerminal == null ? null : handoverState.cardTerminal;
       const rec = {
         id: 'ho-' + Date.now(),
         time: now,
@@ -252,6 +313,7 @@
         ecart: ecart,
         confirmedById: (who && who.id) || inc.id,
         confirmedByName: (who && who.name) || inc.name,
+        cardKiwi, cardTerminal, cardGap: cardTerminal == null ? null : major(minor(cardTerminal) - minor(cardKiwi)),
       };
       handovers.push(rec);
       emitCashSession({

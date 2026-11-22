@@ -224,8 +224,8 @@
     "sha": "af731124f6a82009"
   },
   "assets/caisse-lang.js": {
-    "v": "160",
-    "sha": "7a0b916073ce66b3"
+    "v": "161",
+    "sha": "d9f1b30964478684"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -308,8 +308,8 @@
     "sha": "4b4eb898d4ed76f1"
   },
   "assets/caisse/handover.js": {
-    "v": "2",
-    "sha": "060942ccc2061e90"
+    "v": "3",
+    "sha": "11333ae028f300c6"
   },
   "assets/caisse/held-sales.js": {
     "v": "5",
@@ -540,8 +540,8 @@
     "sha": "8e57c57850d5aadf"
   },
   "assets/day-report.js": {
-    "v": "60",
-    "sha": "33ce77634a3b5064"
+    "v": "61",
+    "sha": "64db5efb268e0f97"
   },
   "assets/delivery-collect.js": {
     "v": "4",
@@ -1540,8 +1540,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "289",
-    "sha": "f07bea4a56b2eb91"
+    "v": "290",
+    "sha": "9dbc8b8559efb9ec"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

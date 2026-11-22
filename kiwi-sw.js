@@ -165,7 +165,7 @@ var SHELL = [
   '/assets/caisse/held-sales.js?v=5',
   '/assets/caisse/discounts.js?v=4',
   '/assets/caisse/returns.js?v=2',
-  '/assets/caisse/handover.js?v=2',
+  '/assets/caisse/handover.js?v=3',
   '/assets/caisse/inventory.js?v=10',
   '/assets/caisse/offline.js?v=10',
   '/assets/caisse-app.js?v=51',
@@ -235,7 +235,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=32',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
-  '/assets/pages/dashboard-startup.js?v=289',
+  '/assets/pages/dashboard-startup.js?v=290',
   '/assets/pages/dashboard-loader.js?v=107',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -389,7 +389,7 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=60',
+  '/assets/day-report.js?v=61',
   '/assets/report.js?v=11',
   '/assets/day-report-dash.js?v=53',
   '/assets/day-report-export.js?v=30',
@@ -452,7 +452,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=39',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=160',
+  '/assets/caisse-lang.js?v=161',
   '/assets/venue-store.js?v=7',
   '/assets/discount-policy.js?v=4',
   '/assets/merchant-policies.js?v=4',
