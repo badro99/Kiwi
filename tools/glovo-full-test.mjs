@@ -40,6 +40,8 @@ const menuRoute = await imp('functions/api/channel/glovo/menu.js');
 const feedRoute = await imp('functions/api/channel/glovo/menu-feed.js');
 const pickedRoute = await imp('functions/api/channel/glovo/picked_up.js');
 const availRoute = await imp('functions/api/menu/availability.js');
+const dispatchedRoute = await imp('functions/api/channel/glovo/dispatched.js');
+const MIG = await imp('tools/d1-migrations.mjs');
 const { makeSession, sessionCookie, tillToken, TILL_COOKIE } = await imp('functions/auth/_lib.js');
 
 const SECRET = 'glovo-full-bench-secret-0123456789';
@@ -51,7 +53,7 @@ const NOW = Date.now();
 /* ── D1 sur node:sqlite, schéma de production ─────────────────────────────── */
 const sql = new DatabaseSync(':memory:');
 sql.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
-const DB = {
+const d1 = (sql) => ({
   prepare(query) {
     const st = sql.prepare(query);
     const bound = (args = []) => ({
@@ -69,7 +71,8 @@ const DB = {
     sql.exec('BEGIN IMMEDIATE');
     try { const out = list.map((s) => s._sync()); sql.exec('COMMIT'); return out; } catch (e) { sql.exec('ROLLBACK'); throw e; }
   },
-};
+});
+const DB = d1(sql);
 const env = { DB, AUTH_SECRET: SECRET, GLOVO_TOKEN: TOKEN, GLOVO_API_BASE: 'https://stageapi.glovoapp.com' };
 
 sql.prepare('INSERT INTO accounts (id,email,business,salt,hash,created_ts,status) VALUES (?,?,?,?,?,?,?)').run('acc-g', 'o@glovo-banc.invalid', 'Resto', 's', 'h', NOW, 'active');
@@ -428,6 +431,35 @@ await ok('fail-soft: without GLOVO_TOKEN nothing calls Glovo, the webhooks answe
   const g = await call(tillRoute.onRequestGet, '/api/channel/glovo/till?merchant=' + SHOP, till, null, bare);
   assert.equal(g.status, 200); assert.equal(g.data.configured, false);
   assert.equal(calls.length, 0);
+});
+
+
+await ok('before migration 0029 (production today): a Glovo order still lands, accept and ready still reach Glovo, the new screens say migration-needed instead of failing', async () => {
+  const old = new DatabaseSync(':memory:');
+  for (const f of MIG.listMigrations().filter((f) => Number(f.slice(0, 4)) <= 28)) old.exec(fs.readFileSync(path.join(MIG.MIGRATIONS_DIR, f), 'utf8'));
+  old.prepare('INSERT INTO accounts (id,email,business,salt,hash,created_ts,status) VALUES (?,?,?,?,?,?,?)').run('acc-g', 'o@glovo-banc.invalid', 'Resto', 's', 'h', NOW, 'active');
+  old.prepare(`INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, status, updated_ts) VALUES (?, '{"orderpro":true}', 'pro', 'restaurant', 'acc-g', 'Resto', 'active', ?)`).run(SHOP, NOW);
+  old.prepare(`INSERT INTO glovo_stores (store_id, merchant, prep_minutes, status, created_ts, updated_ts) VALUES ('resto-courier', ?, 15, 'active', ?, ?)`).run(SHOP, NOW, NOW);
+  const oenv = { DB: d1(old), AUTH_SECRET: SECRET, GLOVO_TOKEN: TOKEN, GLOVO_API_BASE: 'https://stageapi.glovoapp.com' };
+  reset();
+  const later = [];
+  const r = await dispatchedRoute.onRequestPost({ env: oenv, waitUntil: (p) => later.push(p), request: new Request('https://kiwi-os.com/api/channel/glovo/dispatched', {
+    method: 'POST', headers: { Authorization: TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, ORDER, { order_id: 7001 })) }) });
+  await Promise.all(later);
+  assert.equal(r.status, 200, 'the live webhook keeps working');
+  const kiwiId = old.prepare("SELECT kiwi_order_id FROM glovo_orders WHERE order_id = '7001'").get().kiwi_order_id;
+  assert.equal(calls.length, 0, 'no batch is attempted on the old schema');
+  for (const [status, route] of [['accepted', 'accept'], ['ready', 'ready_for_pickup']]) {
+    reset([{ status: 204 }]);
+    const n = await G.notifyGlovo(oenv, SHOP, kiwiId, status, NOW, deps);
+    assert.equal(n.route, route);
+    assert.equal(calls[0].url, 'https://stageapi.glovoapp.com/api/v0/integrations/orders/7001/' + route, route + ' reaches Glovo without glovo_rate');
+  }
+  const g = await call(tillRoute.onRequestGet, '/api/channel/glovo/till?merchant=' + SHOP, till, null, oenv);
+  assert.equal(g.status, 200); assert.equal(g.data.migrated, false); assert.deepEqual(g.data.orders, []);
+  reset();
+  const push = await call(menuRoute.onRequestPost, '/api/channel/glovo/menu', owner, { merchant: SHOP, action: 'push', storeId: 'resto-courier' }, oenv);
+  assert.equal(push.data.error, 'migration-needed'); assert.equal(calls.length, 0);
 });
 
 console.log(`glovo-full: ${passed} passed`);

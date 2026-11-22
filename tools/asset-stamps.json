@@ -383,6 +383,10 @@
     "v": "7",
     "sha": "144dc5d7370517f7"
   },
+  "assets/channel-glovo.js": {
+    "v": "1",
+    "sha": "3100c8611fdcc881"
+  },
   "assets/channel-health.js": {
     "v": "12",
     "sha": "5d0ac3b27d347a62"
@@ -1136,8 +1140,8 @@
     "sha": "4ec2e9cb41453799"
   },
   "assets/kit/till-online.js": {
-    "v": "2",
-    "sha": "72e0c148f4aafc5d"
+    "v": "3",
+    "sha": "985cfb00c46d39be"
   },
   "assets/kit/till-pin.js": {
     "v": "9",
@@ -1428,8 +1432,8 @@
     "sha": "3cd3b01271f8b903"
   },
   "assets/orderpro-inbox.js": {
-    "v": "43",
-    "sha": "6cd0932f91262685"
+    "v": "44",
+    "sha": "7a735cc56e1559b9"
   },
   "assets/orderpro-menu.js": {
     "v": "8",

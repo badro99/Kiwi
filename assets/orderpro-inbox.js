@@ -741,7 +741,7 @@
       '<div class="kop-top"><span class="kop-num">' + orderRef(o) + '</span>' +
       where + serverHtml + src + timeHtml +
       '<span class="kop-total">' + fmt(o.total) + ' MAD</span></div>' +
-      lines + custHtml(o) + acts + '</div>';
+      lines + custHtml(o) + glovoHtml(o) + acts + '</div>';
   }
 
   function paint() {
@@ -751,10 +751,10 @@
     if (!body) return;
     var pending = list('pending'), cooking = list('accepted'), ready = list('ready');
     if (!pending.length && !cooking.length && !ready.length) {
-      body.innerHTML = '<div class="kop-empty">Aucune commande pour le moment.<br>Les commandes passées depuis le téléphone d\'un client arrivent ici.</div>';
+      body.innerHTML = glovoBar() + '<div class="kop-empty">Aucune commande pour le moment.<br>Les commandes passées depuis le téléphone d\'un client arrivent ici.</div>';
       return;
     }
-    body.innerHTML =
+    body.innerHTML = glovoBar() +
       (pending.length ? '<div class="kop-sec">À accepter</div>' + pending.map(cardHtml).join('') : '') +
       (cooking.length ? '<div class="kop-sec">En cuisine</div>' + cooking.map(cardHtml).join('') : '') +
       (ready.length ? '<div class="kop-sec">Prêtes</div>' + ready.map(cardHtml).join('') : '');
@@ -947,6 +947,7 @@
   function start() {
     chip();
     wakeInbox();
+    setTimeout(glvLoad, 1500);
   }
   document.addEventListener('visibilitychange', wakeInbox);
   /* Onglet caché (YouTube sur la tablette…) : la relève s'arrête, donc le
@@ -1005,6 +1006,219 @@
     closeSession(e.detail);
   });
 
+  /* ── Glovo à la caisse (22 nov. 2026) ──────────────────────────────────────
+   * Ce que Glovo sait d'une commande et que la caisse doit voir ou dire : le
+   * coursier l'a récupérée (webhook picked_up), l'heure où il est attendu, « prête
+   * dans 5/10/15 min » (adjust_preparation_time, coursiers Glovo seulement), et,
+   * pour une adresse Marketplace (vos livreurs), « Livrée » une fois partie. Plus
+   * la fermeture temporaire de l'adresse, qui demande le code d'un responsable :
+   * le serveur le vérifie (functions/api/channel/glovo/till.js), la caisse ne
+   * compare rien et ne garde pas le code.
+   * Une seule source : GET /api/channel/glovo/till. La carte classique (cardHtml)
+   * et la carte 2027 (assets/kit/till-online.js) appellent glovoHtml / glovoBar.
+   * Un magasin sans adresse Glovo ne demande qu'une fois toutes les 10 minutes. */
+  var GLV = { merchant: '', stores: [], orders: {}, sig: '', timer: null, busy: {}, note: {} };
+  var GLV_T = {
+    fr: { open: 'Glovo ouvert', closed: 'Glovo fermé jusqu’à {t}', close: 'Fermer', reopen: 'Rouvrir Glovo',
+      picked: 'Récupérée par le coursier · {t}', expected: 'Coursier attendu · {t}', ready: 'Prête dans',
+      road: 'En livraison · vos livreurs', left: 'partie à {t}', delivered: 'Livrée',
+      code: 'Code d’un responsable', why: 'Fermer ou rouvrir Glovo demande le code d’un responsable.',
+      ok: 'Valider', cancel: 'Annuler', sent: 'Envoyé à Glovo', badCode: 'Code incorrect.',
+      notManager: 'Ce code n’est pas celui d’un responsable.', slow: 'Trop d’essais. Réessayez dans un instant.',
+      glovo: 'Glovo n’a pas confirmé. Réessayez.', off: 'Glovo n’est pas encore activé pour Kiwi.', taken: 'Le coursier l’a déjà récupérée.' },
+    en: { open: 'Glovo open', closed: 'Glovo closed until {t}', close: 'Close', reopen: 'Reopen Glovo',
+      picked: 'Picked up by the courier · {t}', expected: 'Courier expected · {t}', ready: 'Ready in',
+      road: 'Out for delivery · your riders', left: 'left at {t}', delivered: 'Delivered',
+      code: 'Manager code', why: 'Closing or reopening Glovo needs a manager code.',
+      ok: 'Confirm', cancel: 'Cancel', sent: 'Sent to Glovo', badCode: 'Wrong code.',
+      notManager: 'This code is not a manager’s.', slow: 'Too many tries. Try again in a moment.',
+      glovo: 'Glovo did not confirm. Try again.', off: 'Glovo is not switched on for Kiwi yet.', taken: 'The courier already has it.' },
+    ar: { open: 'Glovo مفتوح', closed: 'Glovo مغلق إلى {t}', close: 'أغلق', reopen: 'افتح Glovo من جديد',
+      picked: 'أخذها الموصّل · {t}', expected: 'الموصّل يصل · {t}', ready: 'جاهزة بعد',
+      road: 'في الطريق · مع موصّليكم', left: 'خرجت {t}', delivered: 'وصلت',
+      code: 'رمز المسؤول', why: 'إغلاق Glovo أو فتحه من جديد يحتاج رمز مسؤول.',
+      ok: 'تأكيد', cancel: 'إلغاء', sent: 'وصل الطلب إلى Glovo', badCode: 'الرمز غير صحيح.',
+      notManager: 'هذا الرمز ليس لمسؤول.', slow: 'محاولات كثيرة. حاول بعد لحظة.',
+      glovo: 'Glovo لم يؤكد. حاول مرة أخرى.', off: 'Glovo غير مفعّل بعد مع Kiwi.', taken: 'الموصّل أخذها من قبل.' },
+  };
+  function glvT() {
+    var l = String((document.documentElement && document.documentElement.lang) || '').slice(0, 2);
+    return GLV_T[l] || GLV_T.fr;
+  }
+  function glvAt(iso) { var t = Date.parse(iso || ''); return isFinite(t) ? clockTime(t) : ''; }
+  function glvBtn(kind, key, label, extra, cls) {
+    return '<button type="button" class="kgl-btn' + (cls ? ' ' + cls : '') + '" data-kgl="' + kind + '" data-kgl-key="' + esc(key) + '"' +
+      (extra || '') + (GLV.busy[kind + ':' + key] ? ' disabled aria-busy="true"' : '') + '>' + esc(label) + '</button>';
+  }
+  function glvNote(key) {
+    var n = GLV.note[key];
+    return n && n.until > Date.now() ? '<span class="kgl-note' + (n.bad ? ' is-bad' : '') + '" role="status">' + esc(n.text) + '</span>' : '';
+  }
+  function glovoHtml(o) {
+    var g = o && GLV.orders[o.id];
+    if (!g || g.cancelled) return '';
+    var T = glvT(), info = [], acts = '';
+    if (g.pickedUpTs) info.push(T.picked.replace('{t}', clockTime(g.pickedUpTs)));
+    else if (!g.marketplace && !g.pickup) {
+      if (g.pickupAt) info.push(T.expected.replace('{t}', glvAt(g.pickupAt)));
+      if (o.status === 'accepted') {
+        acts = '<span class="kgl-lbl">' + esc(T.ready) + '</span>' + [5, 10, 15].map(function (n) {
+          return glvBtn('prep', o.id, n + ' min', ' data-kgl-min="' + n + '"');
+        }).join('');
+      }
+    }
+    var note = glvNote('o:' + o.id);
+    if (!info.length && !acts && !note) return '';
+    return '<div class="kgl">' + (info.length ? '<span class="kgl-info">' + esc(info.join(' · ')) + '</span>' : '') +
+      (acts ? '<span class="kgl-acts">' + acts + '</span>' : '') + note + '</div>';
+  }
+  function glovoBar() {
+    if (!GLV.stores.length) return '';
+    var T = glvT(), many = GLV.stores.length > 1;
+    var rows = GLV.stores.map(function (st) {
+      var closed = !!st.closingUntil;
+      var acts = closed ? glvBtn('reopen', st.storeId, T.reopen)
+        : '<span class="kgl-lbl">' + esc(T.close) + '</span>' + [[30, '30 min'], [60, '1 h'], [180, '3 h']].map(function (d) {
+          return glvBtn('close', st.storeId, d[1], ' data-kgl-min="' + d[0] + '"');
+        }).join('');
+      return '<div class="kgl-store' + (closed ? ' is-closed' : '') + '"><span class="kgl-dot" aria-hidden="true"></span>' +
+        '<b>' + esc(closed ? T.closed.replace('{t}', glvAt(st.closingUntil)) : T.open) + '</b>' +
+        (many ? '<code>' + esc(st.storeId) + '</code>' : '') + '<span class="kgl-acts">' + acts + '</span>' + glvNote('s:' + st.storeId) + '</div>';
+    });
+    var road = Object.keys(GLV.orders).map(function (k) { return GLV.orders[k]; })
+      .filter(function (g) { return g.marketplace && g.outTs && !g.deliveredTs && !g.cancelled; });
+    var roadHtml = road.length ? '<div class="kgl-road"><div class="kgl-h">' + esc(T.road) + '</div>' + road.map(function (g) {
+      var o = state.orders[g.kiwiOrderId];
+      return '<div class="kgl-row"><span>' + esc(o ? orderRef(o) : (g.code || g.kiwiOrderId)) + ' · ' + esc(T.left.replace('{t}', clockTime(g.outTs))) + '</span>' +
+        glvBtn('delivered', g.kiwiOrderId, T.delivered, '', 'is-go') + glvNote('o:' + g.kiwiOrderId) + '</div>';
+    }).join('') + '</div>' : '';
+    return '<div class="kgl-bar">' + rows.join('') + roadHtml + '</div>';
+  }
+  function glvSchedule(ms) {
+    clearTimeout(GLV.timer);
+    GLV.timer = setTimeout(glvLoad, window.KiwiPoll?.delay(ms) ?? ms);
+  }
+  function glvRepaint() { var sig = JSON.stringify([GLV.stores, GLV.orders, GLV.busy, GLV.note]); if (sig !== GLV.sig) { GLV.sig = sig; paint(); } }
+  function glvLoad() {
+    var m = merchant();
+    if (!m || !orderProOn()) { glvSchedule(120000); return; }
+    if (m !== GLV.merchant) { GLV.merchant = m; GLV.stores = []; GLV.orders = {}; GLV.busy = {}; GLV.note = {}; }
+    if (document.hidden) return;
+    fetch('/api/channel/glovo/till?merchant=' + encodeURIComponent(m), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !j.ok || merchant() !== m) return;
+        GLV.stores = Array.isArray(j.stores) ? j.stores : [];
+        GLV.orders = {};
+        (Array.isArray(j.orders) ? j.orders : []).forEach(function (g) { if (g && g.kiwiOrderId) GLV.orders[g.kiwiOrderId] = g; });
+        glvRepaint();
+      })
+      .catch(function () {})
+      .then(function () {
+        var live = Object.keys(GLV.orders).some(function (k) { var g = GLV.orders[k]; return !g.cancelled && !g.deliveredTs && !(g.pickedUpTs && !g.marketplace); });
+        glvSchedule(!GLV.stores.length ? 600000 : live ? 20000 : 60000);
+      });
+  }
+  function glvSay(key, text, bad) { GLV.note[key] = { text: text, bad: !!bad, until: Date.now() + 6000 }; glvRepaint(); setTimeout(glvRepaint, 6100); }
+  function glvError(j) {
+    var T = glvT(), e = String((j && j.error) || '');
+    if (e === 'pin-invalid' || e === 'invalid-pin' || e === 'bad-pin') return T.badCode;
+    if (e === 'manager-required') return T.notManager;
+    if (e === 'rate-limited' || e === 'rate-local' || e === 'too-many') return T.slow;
+    if (e === 'not-configured') return T.off;
+    if (e === 'already-picked-up') return T.taken;
+    return T.glovo;
+  }
+  function glvPost(key, body) {
+    var m = merchant();
+    if (!m) return;
+    var noteKey = (key.indexOf('close:') === 0 || key.indexOf('reopen:') === 0 ? 's:' : 'o:') + key.slice(key.indexOf(':') + 1);
+    GLV.busy[key] = true; glvRepaint();
+    body.merchant = m;
+    fetch('/api/channel/glovo/till', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok && j && j.ok, j: j }; }); })
+      .catch(function () { return { ok: false, j: {} }; })
+      .then(function (out) {
+        delete GLV.busy[key];
+        glvSay(noteKey, out.ok ? glvT().sent : glvError(out.j), !out.ok);
+        glvLoad();
+      });
+    body.pin = '';
+  }
+  /* Le code d'un responsable, pour fermer ou rouvrir. Il part au serveur dans
+   * la requête et nulle part ailleurs : champ masqué, vidé à la fermeture. */
+  function glvAskCode(go) {
+    var T = glvT(), old = document.getElementById('kgl-code');
+    if (old) old.remove();
+    var wrap = document.createElement('div');
+    wrap.id = 'kgl-code'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-labelledby', 'kgl-code-t');
+    wrap.innerHTML = '<form class="kgl-dlg"><b id="kgl-code-t">' + esc(T.code) + '</b><p>' + esc(T.why) + '</p>' +
+      '<input type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="' + esc(T.code) + '">' +
+      '<div class="kgl-dlg-a"><button type="button" class="kgl-btn" data-kgl-x>' + esc(T.cancel) + '</button>' +
+      '<button type="submit" class="kgl-btn is-go">' + esc(T.ok) + '</button></div></form>';
+    document.body.appendChild(wrap);
+    var input = wrap.querySelector('input'), form = wrap.querySelector('form');
+    function done() { input.value = ''; wrap.remove(); document.removeEventListener('keydown', onKey, true); }
+    function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); done(); } }
+    document.addEventListener('keydown', onKey, true);
+    wrap.addEventListener('click', function (e) { if (e.target === wrap || (e.target.closest && e.target.closest('[data-kgl-x]'))) done(); });
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var pin = String(input.value || '').replace(/\D/g, '');
+      if (pin.length < 4) { input.focus(); return; }
+      done(); go(pin);
+    });
+    setTimeout(function () { input.focus(); }, 0);
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('button[data-kgl]') : null;
+    if (!b || b.disabled) return;
+    var kind = b.getAttribute('data-kgl'), key = b.getAttribute('data-kgl-key') || '', min = Number(b.getAttribute('data-kgl-min')) || 0;
+    if (GLV.busy[kind + ':' + key]) return;
+    if (kind === 'prep') glvPost('prep:' + key, { action: 'prep', orderId: key, minutes: min });
+    else if (kind === 'delivered') glvPost('delivered:' + key, { action: 'delivered', orderId: key });
+    else if (kind === 'close') glvAskCode(function (pin) { glvPost('close:' + key, { action: 'close', storeId: key, minutes: min, pin: pin }); });
+    else if (kind === 'reopen') glvAskCode(function (pin) { glvPost('reopen:' + key, { action: 'reopen', storeId: key, pin: pin }); });
+  });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && GLV.merchant) glvLoad(); });
+  (function glvCss() {
+    var s = document.createElement('style');
+    s.textContent = [
+      '.kgl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:9px;padding:8px 10px;border-radius:10px;',
+      'background:color-mix(in srgb,var(--atlas,#0B6E4F) 7%,transparent);font-size:.84rem;line-height:1.35;}',
+      '.kgl-info{font-weight:600;}',
+      '.kgl-acts{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;}',
+      '.kgl-lbl{font-size:.8rem;opacity:.72;}',
+      '.kgl-btn{min-height:40px;padding:0 12px;border-radius:9px;border:1px solid color-mix(in srgb,currentColor 18%,transparent);',
+      'background:var(--surface,#F7F5F0);color:inherit;font:600 .86rem/1 inherit;cursor:pointer;touch-action:manipulation;}',
+      '.kgl-btn.is-go{background:var(--atlas,#0B6E4F);border-color:transparent;color:var(--paper,#F7F5F0);}',
+      '.kgl-btn[disabled]{opacity:.55;cursor:default;}',
+      '.kgl-btn:focus-visible{outline:2px solid var(--atlas,#0B6E4F);outline-offset:2px;}',
+      '.kgl-note{flex-basis:100%;font-size:.8rem;font-weight:600;color:var(--atlas,#0B6E4F);}',
+      '.kgl-note.is-bad{color:var(--danger,#B0402F);}',
+      '.kgl-bar{display:flex;flex-direction:column;gap:8px;margin:0 0 14px;padding:10px 12px;border-radius:12px;',
+      'border:1px solid color-mix(in srgb,var(--atlas,#0B6E4F) 22%,transparent);background:color-mix(in srgb,var(--atlas,#0B6E4F) 4%,transparent);}',
+      '.kgl-store,.kgl-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;}',
+      '.kgl-store b{font-size:.92rem;}',
+      '.kgl-store code{font:500 .74rem "JetBrains Mono",ui-monospace,monospace;opacity:.7;}',
+      '.kgl-store .kgl-acts,.kgl-row .kgl-btn{margin-inline-start:auto;}',
+      '.kgl-dot{width:9px;height:9px;border-radius:50%;background:var(--atlas,#0B6E4F);flex:0 0 auto;}',
+      '.kgl-store.is-closed .kgl-dot{background:var(--danger,#B0402F);}',
+      '.kgl-road{display:flex;flex-direction:column;gap:6px;padding-top:8px;border-top:1px dashed color-mix(in srgb,currentColor 16%,transparent);}',
+      '.kgl-h{font-size:.74rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.7;}',
+      '#kgl-code{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:rgba(10,15,13,.42);padding:16px;}',
+      '.kgl-dlg{width:min(360px,100%);display:flex;flex-direction:column;gap:10px;padding:20px;border-radius:16px;',
+      'background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);box-shadow:0 18px 48px rgba(10,15,13,.28);font-family:"Inter Tight",Inter,system-ui,sans-serif;}',
+      '.kgl-dlg b{font-size:1.05rem;}',
+      '.kgl-dlg p{margin:0;font-size:.88rem;opacity:.75;line-height:1.45;}',
+      '.kgl-dlg input{min-height:52px;padding:0 14px;border-radius:12px;border:1px solid rgba(10,15,13,.18);font:600 1.4rem/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.3em;text-align:center;background:#FFFDFA;color:inherit;}',
+      '.kgl-dlg input:focus-visible{outline:2px solid var(--atlas,#0B6E4F);outline-offset:2px;}',
+      '.kgl-dlg-a{display:flex;gap:8px;justify-content:flex-end;}',
+      '.kgl-dlg-a .kgl-btn{min-height:44px;padding:0 16px;}',
+    ].join('');
+    (document.head || document.documentElement).appendChild(s);
+  })();
+
   window.KiwiOrderInbox = {
     open: open, close: close, refresh: pull,
     orders: function () { return state.orders; },
@@ -1020,5 +1234,7 @@
       return { pending: list('pending'), accepted: list('accepted'), ready: list('ready') };
     },
     ref: orderRef,
+    glovoHtml: glovoHtml,
+    glovoBar: glovoBar,
   };
 })();

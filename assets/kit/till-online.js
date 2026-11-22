@@ -74,19 +74,22 @@
       '<p class="k-title k-num k-oc__tt">' + esc(money(Number(o.total) || 0)) + '</p>' +
       (lines ? '<p class="k-body k-oc__ln">' + lines + '</p>' : '') +
       (cust ? '<p class="k-foot k-ink2 k-oc__cu">' + cust + '</p>' : '') +
+      (I && I.glovoHtml ? I.glovoHtml(o) : '') +
       '<div class="k-oc__ac">' + acts.join('') + '</div></article>';
   }
 
   function paint() {
     if (!box) return;
-    var g = groups();
+    var g = groups(), I = inbox();
+    /* Glovo : ouvert ou fermé, et les commandes Marketplace en route (orderpro-inbox.js). */
+    var bar = (I && I.glovoBar) ? I.glovoBar() : '';
     var parts = [['pending', 'online.to_accept'], ['accepted', 'online.in_kitchen'], ['ready', 'online.ready']]
       .filter(function (p) { return (g[p[0]] || []).length; });
-    var html = parts.length ? '<h2 class="k-heading k-on__hd">' + esc(t('online.section')) + '</h2>' + parts.map(function (p) {
+    var html = bar + (parts.length ? '<h2 class="k-heading k-on__hd">' + esc(t('online.section')) + '</h2>' + parts.map(function (p) {
       var list = g[p[0]];
       return '<section class="k-on__gp"><p class="k-foot k-on__gh">' + esc(t(p[1], { n: list.length })) + '</p>' +
         list.map(function (o) { return card(o, p[0]); }).join('') + '</section>';
-    }).join('') : '';
+    }).join('') : '');
     var s = html + JSON.stringify(busy);
     if (s !== sig) { sig = s; box.innerHTML = html; box.hidden = !html; }
     if (api && typeof api.onPaint === 'function') api.onPaint();
