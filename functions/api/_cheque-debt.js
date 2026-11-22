@@ -75,9 +75,11 @@ export async function sharesOf(env, merchant, c) {
     rows = (rs && rs.results) || [];
   } catch (_) { rows = []; }
   out.linked = rows.length;
+  out.unresolved = 0;
   let left = Math.max(0, Number(c.amount_cents) || 0);
   for (const r of rows) {
-    if (r.sale == null) continue;
+    /* Un ticket lié pas encore arrivé (caisse hors ligne) : rien à reprendre au flux, mais rien d'effacé non plus. */
+    if (r.sale == null) { out.unresolved++; continue; }
     const share = Math.min(left, partOf(r));
     left -= share;
     const live = r.void_ts == null;
@@ -127,6 +129,8 @@ export function openNoteStatement(env, merchant, c, clientId, now, histId, cents
    vivants ; sans ticket, rien, sauf accord explicite du patron (onAccount). */
 export async function owedFor(env, merchant, c, onAccount) {
   const sh = await sharesOf(env, merchant, c);
+  /* Un lien vers un ticket encore inconnu : la dette reste entière, moins les parts annulées (jamais effacée par défaut). */
+  if (sh.unresolved > 0) return { linked: sh.linked, owed: Math.max(0, Number(c.amount_cents) - sh.voidedShare), counted: sh.liveShare };
   if (sh.linked > 0) return { linked: sh.linked, owed: sh.liveShare, counted: sh.liveShare };
   return { linked: 0, owed: onAccount === true ? Number(c.amount_cents) : 0, counted: 0 };
 }
@@ -197,8 +201,8 @@ export async function planSaleVoid(env, merchant, saleId) {
     const counted = bounce ? Math.max(0, -Number(bounce.amount_cents) || 0) : 0;
     const give = Math.min(mine.share, counted || mine.share);
     const leftOwed = Math.max(0, sh.liveShare - mine.share), paid = note ? note.paidCents : 0;
-    plans.push({ cheque: c, share: mine.share, bounce: bounce ? { id: String(bounce.id), next: counted - Math.min(counted, mine.share) } : null,
-      note, noteNext: note ? Math.max(0, note.totalCents - give) : 0, debtOpen: leftOwed > paid ? 1 : 0 });
+    plans.push({ cheque: c, share: mine.share, give: bounce ? Math.min(counted, mine.share) : 0, noteGive: give,
+      bounce: bounce ? { id: String(bounce.id) } : null, note, debtOpen: leftOwed > paid || sh.unresolved > 0 ? 1 : 0 });
   }
   return plans;
 }
@@ -213,18 +217,30 @@ export function saleVoidStatements(env, merchant, plans, ctx) {
         SELECT ?, ?, id, ?, 'edit', status, status, ?, ?, 'sale-void', NULL, ?, ? FROM cheques WHERE merchant = ? AND id = ? AND ${voided}`)
       .bind(merchant, histId, ('void:' + saleId + ':' + c.id).slice(0, 120), new Date(now).toISOString().slice(0, 10), why, String(actor || '').slice(0, 100), now,
         merchant, c.id, merchant, String(saleId), voidTs));
-    if (p.bounce) {
-      if (p.bounce.next <= 0) out.push(env.DB.prepare(`UPDATE sales SET void_ts = ?, void_reason = 'ticket-annule', void_note = '' WHERE merchant = ? AND id = ? AND void_ts IS NULL AND ${ifHist}`)
+    /* Écritures RELATIVES (ce ticket rend sa part) : deux annulations
+       simultanées sur le même chèque s'additionnent, aucune n'écrase l'autre. */
+    if (p.bounce && p.give > 0) {
+      out.push(env.DB.prepare(`UPDATE sales SET amount_cents = MIN(0, amount_cents + ?), amount = ROUND(MIN(0, amount_cents + ?) / 100.0),
+          payment_parts = json_array(json_object('method', 'cheque', 'amountCents', MIN(0, amount_cents + ?)))
+         WHERE merchant = ? AND id = ? AND void_ts IS NULL AND ${ifHist}`)
+        .bind(p.give, p.give, p.give, merchant, p.bounce.id, merchant, histId));
+      out.push(env.DB.prepare(`UPDATE sales SET void_ts = ?, void_reason = 'ticket-annule', void_note = '' WHERE merchant = ? AND id = ? AND void_ts IS NULL AND amount_cents >= 0 AND ${ifHist}`)
         .bind(now, merchant, p.bounce.id, merchant, histId));
-      else out.push(env.DB.prepare(`UPDATE sales SET amount_cents = ?, amount = ?, payment_parts = ? WHERE merchant = ? AND id = ? AND void_ts IS NULL AND ${ifHist}`)
-        .bind(-p.bounce.next, -Math.round(p.bounce.next / 100), JSON.stringify([{ method: 'cheque', amountCents: -p.bounce.next }]), merchant, p.bounce.id, merchant, histId));
     }
-    if (p.note) {
-      if (p.noteNext <= p.note.paidCents) out.push(...closeNote(env, merchant, p.note, histId));
-      else out.push(env.DB.prepare(`UPDATE retail_balances SET total_cents = ? WHERE merchant = ? AND id = ? AND ${ifHist}`).bind(p.noteNext, merchant, p.note.id, merchant, histId));
+    if (p.note && p.noteGive > 0) {
+      const paidSql = `COALESCE((SELECT SUM(r.amount_cents) FROM retail_balance_receipts r LEFT JOIN sales s ON s.merchant = r.merchant AND s.id = r.sale_id
+          WHERE r.merchant = retail_balances.merchant AND r.balance_id = retail_balances.id AND (r.status = 'pending' OR (s.id IS NOT NULL AND s.void_ts IS NULL))), 0)`;
+      /* Rien payé dessus et plus rien dû : la note quitte le compte (une note vaut toujours plus de 0). */
+      out.push(env.DB.prepare(`DELETE FROM retail_balances WHERE merchant = ? AND id = ? AND total_cents - ? <= 0 AND ${ifHist}
+          AND NOT EXISTS (SELECT 1 FROM retail_balance_receipts r WHERE r.merchant = ? AND r.balance_id = ?)`)
+        .bind(merchant, p.note.id, p.noteGive, merchant, histId, merchant, p.note.id));
+      /* Sinon elle descend de la part rendue, jamais sous ce que la caisse a reçu. */
+      out.push(env.DB.prepare(`UPDATE retail_balances SET total_cents = MAX(${paidSql}, total_cents - ?)
+          WHERE merchant = ? AND id = ? AND MAX(${paidSql}, total_cents - ?) > 0 AND ${ifHist}`)
+        .bind(p.noteGive, merchant, p.note.id, p.noteGive, merchant, histId));
     }
-    if (!p.debtOpen) out.push(env.DB.prepare(`UPDATE cheques SET debt_open = 0, version = version + 1, updated_at = ? WHERE merchant = ? AND id = ? AND ${ifHist}`)
-      .bind(now, merchant, c.id, merchant, histId));
+    if (!p.debtOpen) out.push(env.DB.prepare(`UPDATE cheques SET debt_open = 0, version = version + 1, updated_at = ? WHERE merchant = ? AND id = ? AND version = ? AND ${ifHist}`)
+      .bind(now, merchant, c.id, Number(c.version), merchant, histId));
   }
   return out;
 }

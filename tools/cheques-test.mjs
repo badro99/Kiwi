@@ -58,7 +58,7 @@ function makeEnv(db) {
       /* Une transaction, comme D1 : tout ou rien, instructions dans l'ordre. */
       db.exec('BEGIN IMMEDIATE');
       try { const out = []; for (const s of list) { const r = s.__run(); out.push({ success: true, meta: { changes: Number(r.changes) } }); } db.exec('COMMIT'); return out; }
-      catch (e) { db.exec('ROLLBACK'); throw e; }
+      catch (e) { db.exec('ROLLBACK'); if (process.env.DBG) console.error('batch:', e.message); throw e; }
     },
   };
   return { DB: D1, AUTH_SECRET: SECRET };
@@ -439,6 +439,34 @@ const histCount = (chequeId) => db.prepare('SELECT COUNT(*) AS n FROM cheque_his
   assert.deepEqual([d0.cents, d0.count, d0.refundCount, d0.chequeAdjustCents, d0.chequeAdjust.cheque], [100000, 1, 0, -100000, -100000], 'bounced, not yet paid: the sale stays one ticket, the money that never came is the adjustment');
   const atSale = summaryRoute.summarize([{ id: 'p', ts: now, amount_cents: 100000, method: 'cheque' }, { id: 'chqbounce-y', ts: now + 1, amount_cents: -100000, method: 'cheque' }], now - 1, now + 10, 5, 'Africa/Casablanca', true);
   assert.equal(atSale.days.find((d) => d.count).chequeAdjustCents, 0, 'revenue at sale: the sale already counted everything');
+
+  /* Deux annulations planifiées en même temps sur le même chèque : écritures relatives, aucune n'écrase l'autre. */
+  const D = await importFresh('functions/api/_cheque-debt.js');
+  addSale('sale-r1', 15000); addSale('sale-r2', 25000); addSale('sale-r3', 10000);
+  const rc = (await create({ amountCents: 50000, partyId: 'cl-split', saleIds: ['sale-r1', 'sale-r2', 'sale-r3'] })).data.cheque.id;
+  await move(rc, 'deposited'); await move(rc, 'rejected');
+  assert.equal(flow(rc), -50000);
+  const owedBefore = await owed('cl-split');
+  const t1 = now + 101, t2 = now + 102;
+  const [p1, p2] = [await D.planSaleVoid(env, SHOP, 'sale-r1'), await D.planSaleVoid(env, SHOP, 'sale-r2')];
+  for (const [sid, ts, plans] of [['sale-r1', t1, p1], ['sale-r2', t2, p2]]) {
+    await env.DB.batch([env.DB.prepare('UPDATE sales SET void_ts = ? WHERE merchant = ? AND id = ? AND void_ts IS NULL').bind(ts, SHOP, sid),
+      ...D.saleVoidStatements(env, SHOP, plans, { saleId: sid, voidTs: ts, now: ts, actor: 'test', ref: sid })]);
+  }
+  assert.equal(flow(rc), -10000, 'two concurrent voids both give back their share (150 + 250), none overwrites the other');
+  assert.equal(await owed('cl-split'), owedBefore - 40000);
+
+  /* Un ticket lié encore inconnu (caisse hors ligne) : le rejet n'efface pas la dette. */
+  const un = (await create({ amountCents: 18000, partyId: 'cl-sans' })).data.cheque.id;
+  db.prepare(`INSERT INTO cheque_links (merchant, cheque_id, link_type, link_id, amount_cents, created_at) VALUES (?, ?, 'sale', 'sale-not-yet-synced', 18000, ?)`).run(SHOP, un, now);
+  await move(un, 'deposited'); await move(un, 'rejected');
+  assert.equal(note(un).total_cents, 18000, 'an unsynced linked ticket keeps the whole debt on the account');
+  assert.equal(flow(un), 0, 'and takes nothing out of a flow it never entered');
+
+  /* Les préfixes du portefeuille sont réservés : une vente ou un remboursement de caisse ne peut pas les porter. */
+  for (const f of ['functions/api/sale.js', 'functions/api/sale/refund.js']) {
+    assert.match(fs.readFileSync(path.join(ROOT, f), 'utf8'), /\^chq\(\?:bounce\|back\)-\/i\.test\([a-zA-Z]+\)\) return json\(\{ error: 'reserved-id' \}, 400\)/, f + ' refuses reserved cheque ids');
+  }
 
   /* Le prénom d'un membre d'une AUTRE boutique ne signe pas un geste ici. */
   const access = fs.readFileSync(path.join(ROOT, 'functions/api/cheques/_access.js'), 'utf8');
