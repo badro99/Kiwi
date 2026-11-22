@@ -31,6 +31,21 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 const Catalog = createRequire(import.meta.url)(path.join(ROOT, 'assets/permissions-catalog.js'));
+/* L'HORLOGE DU BANC (juge 6 : rouge une fois sur six sous charge). Le banc
+ * juge des faits datés (jour commercial à 5 h, semaine du journal, fenêtre
+ * d'une minute entre un fait et la preuve de son geste) : il ne lit plus
+ * l'horloge murale. Un mercredi midi fixe, qui avance au rythme monotone de
+ * performance.now() : aucune frontière de jour ni de semaine pendant le
+ * banc, aucun saut d'horloge système, et les durées restent réelles. Posée
+ * avant d'importer les routes, qui la lisent comme le reste. */
+{
+  const RealDate = Date, origin = RealDate.UTC(2026, 10, 18, 12, 0, 0), p0 = performance.now();
+  const benchNow = () => origin + Math.floor(performance.now() - p0);
+  globalThis.Date = class BenchDate extends RealDate {
+    constructor(...args) { if (args.length) super(...args); else super(benchNow()); }
+    static now() { return benchNow(); }
+  };
+}
 const route = await imp('functions/api/permissions.js');
 const verify = await imp('functions/api/pin/verify.js');
 const cancel = await imp('functions/api/sale/cancel.js');
@@ -443,7 +458,7 @@ console.log('■ Remise, espèces, tiroir, clôture sans le droit');
   const genericActor = await tillActorProof(SECRET, SHOP, sara);
   let terminal = '';
   const ev = (id, eventType, extra) => cash.onRequestPost({ env: w.env, request: req('/api/cash-sessions', { method: 'POST', cookie: cookieTill + terminal,
-    body: { merchant: SHOP, terminalId: 'term-banc-1', sessionId: 'shift-1', id, eventType, openedAt: now - 1000, occurredAt: now, ...extra } }) });
+    body: { merchant: SHOP, terminalId: 'term-banc-1', sessionId: 'shift-1', id, eventType, openedAt: now - 1000, occurredAt: Date.now(), ...extra } }) });   // daté à l'envoi : la preuve du geste, frappée juste avant, l'encadre toujours (±1 min)
   const open = await ev('ev-open', 'open', { expectedCents: 10000, actorId: 'pin-lina' });
   terminal = '; ' + String(open.headers.get('Set-Cookie') || '').split(';')[0];
   const flags = () => audit(w).map((r) => ({ ...r, c: JSON.parse(r.change) })).filter((r) => r.c.kind === 'unauthorized');
