@@ -384,6 +384,7 @@
       actionFailed: 'L’action n’a pas abouti. Réessayez.',
       unavailable: 'Cette action n’est pas disponible ici.',
       reviewTag: 'À vérifier',
+      kSupplier: 'Fournisseur', kDate: 'Date', kDoc: 'N° pièce', kTotal: 'Montant total', kTpe: 'Total TPE', kTables: 'Tables détectées', kTablesN: ' tables', kItems: 'Lignes d’articles détectées', kMore: ' autres lignes…', kConf: 'Fiabilité ', kDone: 'Analyse terminée',
       reviewTitle: 'Lecture incertaine',
       reviewSub: 'Kiwi n’a pas pu lire ce document de façon fiable. Rien n’a été enregistré : vérifiez-le à la main.',
       error: 'Erreur lors de l’analyse du document.',
@@ -398,6 +399,7 @@
       actionFailed: 'The action did not go through. Try again.',
       unavailable: 'This action is not available here.',
       reviewTag: 'Needs review',
+      kSupplier: 'Supplier', kDate: 'Date', kDoc: 'Document no.', kTotal: 'Total amount', kTpe: 'Card terminal total', kTables: 'Tables found', kTablesN: ' tables', kItems: 'Item lines found', kMore: ' more lines…', kConf: 'Confidence ', kDone: 'Analysis complete',
       reviewTitle: 'Uncertain reading',
       reviewSub: 'Kiwi could not read this document reliably. Nothing was recorded: check it by hand.',
       error: 'Error during document analysis.',
@@ -412,6 +414,7 @@
       actionFailed: 'لم يكتمل الإجراء. أعد المحاولة.',
       unavailable: 'هذا الإجراء غير متاح هنا.',
       reviewTag: 'للمراجعة',
+      kSupplier: 'المورّد', kDate: 'التاريخ', kDoc: 'رقم الوثيقة', kTotal: 'المبلغ الإجمالي', kTpe: 'مجموع جهاز الدفع', kTables: 'الطاولات المكتشفة', kTablesN: ' طاولات', kItems: 'سطور السلع المكتشفة', kMore: ' سطور أخرى…', kConf: 'درجة الثقة ', kDone: 'اكتمل التحليل',
       reviewTitle: 'قراءة غير مؤكدة',
       reviewSub: 'لم يتمكن Kiwi من قراءة هذا المستند بشكل موثوق. لم يُسجَّل أي شيء: تحقق منه يدوياً.',
       error: 'حدث خطأ أثناء تحليل المستند.',
@@ -587,6 +590,9 @@
     });
   }
 
+  /* L'étiquette de carton (agent-size-run.mjs) porte son propre « ?v= » scellé. */
+  var SIZE_RUN = './agent-size-run.mjs?v=4';
+
   /* ── Rendu de la carte de résultat avec boutons d'action ──────────────── */
   function renderVisionResult(data, thread, scrollDown) {
     if (!thread) return;
@@ -594,6 +600,8 @@
     /* Lecture illisible côté serveur : une carte « à vérifier », sans fiabilité
        ni bouton d'action. Le texte brut du modèle n'est qu'une donnée (esc). */
     if (data && data.reviewNeeded) {
+      /* Une étiquette de carton incertaine garde sa réception, sans quantité (22 nov. 2026). */
+      var re = data.entities || {}, carton = data.docType === 'boutique_product' && (re.reference || re.packQty > 0);
       var rv = document.createElement('div');
       rv.className = 'fa-msg agent kv-msg-result kv-msg-review';
       rv.innerHTML =
@@ -602,8 +610,10 @@
           '<div class="kv-res-title">' + esc(T().reviewTitle) + '</div>' +
           '<div class="kv-res-summary">' + esc(T().reviewSub) + '</div>' +
           (data.summary ? '<div class="kv-res-raw">' + esc(data.summary) + '</div>' : '') +
+          (carton ? '<div class="kv-size-run" data-kv-size-run></div>' : '') +
         '</div>';
       thread.appendChild(rv);
+      if (carton) import(SIZE_RUN).then(function (m) { m.mountUncertain(rv.querySelector('[data-kv-size-run]'), re); scrollDown(); }).catch(function () {});
       scrollDown();
       return rv;
     }
@@ -612,17 +622,17 @@
     var ent = data.entities || {};
 
     var detailsHtml = '';
-    if (ent.supplier) detailsHtml += '<div class="kv-card-kv"><span>Fournisseur</span><b>' + esc(ent.supplier) + '</b></div>';
-    if (ent.date) detailsHtml += '<div class="kv-card-kv"><span>Date</span><b>' + esc(ent.date) + '</b></div>';
-    if (ent.invoiceNumber) detailsHtml += '<div class="kv-card-kv"><span>N° Pièce</span><b>' + esc(ent.invoiceNumber) + '</b></div>';
-    if (ent.totalMad > 0) detailsHtml += '<div class="kv-card-kv hl"><span>Montant Total</span><b class="kv-price">' + (window.KiwiNumber?.format(ent.totalMad, {}) ?? ent.totalMad.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD</b></div>';
-    if (ent.tpeTotal > 0) detailsHtml += '<div class="kv-card-kv hl"><span>Total TPE</span><b class="kv-price">' + (window.KiwiNumber?.format(ent.tpeTotal, {}) ?? ent.tpeTotal.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD (' + esc(ent.tpeCount) + ' tx)</b></div>';
-    if (ent.tablesCount > 0) detailsHtml += '<div class="kv-card-kv"><span>Tables détectées</span><b>' + esc(ent.tablesCount) + ' tables</b></div>';
+    if (ent.supplier) detailsHtml += '<div class="kv-card-kv"><span>' + esc(T().kSupplier) + '</span><b>' + esc(ent.supplier) + '</b></div>';
+    if (ent.date) detailsHtml += '<div class="kv-card-kv"><span>' + esc(T().kDate) + '</span><b>' + esc(ent.date) + '</b></div>';
+    if (ent.invoiceNumber) detailsHtml += '<div class="kv-card-kv"><span>' + esc(T().kDoc) + '</span><b>' + esc(ent.invoiceNumber) + '</b></div>';
+    if (ent.totalMad > 0) detailsHtml += '<div class="kv-card-kv hl"><span>' + esc(T().kTotal) + '</span><b class="kv-price">' + (window.KiwiNumber?.format(ent.totalMad, {}) ?? ent.totalMad.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD</b></div>';
+    if (ent.tpeTotal > 0) detailsHtml += '<div class="kv-card-kv hl"><span>' + esc(T().kTpe) + '</span><b class="kv-price">' + (window.KiwiNumber?.format(ent.tpeTotal, {}) ?? ent.tpeTotal.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD (' + esc(ent.tpeCount) + ' tx)</b></div>';
+    if (ent.tablesCount > 0) detailsHtml += '<div class="kv-card-kv"><span>' + esc(T().kTables) + '</span><b>' + esc(ent.tablesCount) + esc(T().kTablesN) + '</b></div>';
 
     var itemsHtml = '';
     if (ent.items && ent.items.length) {
       itemsHtml = '<div class="kv-card-items">' +
-        '<div class="kv-items-title">Lignes d’articles détectées (' + ent.items.length + ')</div>' +
+        '<div class="kv-items-title">' + esc(T().kItems) + ' (' + ent.items.length + ')</div>' +
         '<div class="kv-items-table">' +
           ent.items.slice(0, 10).map(function (it) {
             return '<div class="kv-item-row">' +
@@ -631,7 +641,7 @@
               '<span class="tot">' + (it.total ? esc(it.total) + ' MAD' : '') + '</span>' +
             '</div>';
           }).join('') +
-          (ent.items.length > 10 ? '<div class="kv-item-more">+' + (ent.items.length - 10) + ' autres lignes…</div>' : '') +
+          (ent.items.length > 10 ? '<div class="kv-item-more">+' + (ent.items.length - 10) + esc(T().kMore) + '</div>' : '') +
         '</div>' +
       '</div>';
     }
@@ -679,9 +689,9 @@
           '<span class="kv-res-tag ' + badgeClass + '">' + esc(data.categoryLabel || 'Document') + '</span>' +
           /* La fiabilité est celle que le modèle a donnée : 0 reste 0, absente on ne l'affiche pas. */
           (typeof data.confidence === 'number' && isFinite(data.confidence)
-            ? '<span class="kv-res-conf">Fiabilité ' + Math.round(data.confidence * 100) + ' %</span>' : '') +
+            ? '<span class="kv-res-conf">' + esc(T().kConf) + Math.round(data.confidence * 100) + ' %</span>' : '') +
         '</div>' +
-        '<div class="kv-res-title">' + esc(data.title || 'Analyse terminée') + '</div>' +
+        '<div class="kv-res-title">' + esc(data.title || T().kDone) + '</div>' +
         '<div class="kv-res-summary">' + esc(data.summary || '') + '</div>' +
         (detailsHtml ? '<div class="kv-res-grid">' + detailsHtml + '</div>' : '') +
         itemsHtml +
@@ -691,7 +701,7 @@
     thread.appendChild(msg);
     scrollDown();
     var result = msg;
-    if (sizeRun) import('./agent-size-run.mjs?v=2').then(function (m) { m.mount(msg.querySelector('[data-kv-size-run]'), ent); scrollDown(); }).catch(function () {});
+    if (sizeRun) import(SIZE_RUN).then(function (m) { m.mount(msg.querySelector('[data-kv-size-run]'), ent); scrollDown(); }).catch(function () {});
 
     /* Câblage des boutons d'actions */
     msg.querySelectorAll('[data-kv-action]').forEach(function (btn) {

@@ -1175,7 +1175,7 @@
 
 <script src="assets/agent/ui.js?v=3" defer></script>
 <script src="assets/agent.js?v=44" defer fetchpriority="low"></script>
-<script src="assets/agent-voice.js?v=18" defer fetchpriority="low"></script>
+<script src="assets/agent-voice.js?v=19" defer fetchpriority="low"></script>
 <script src="assets/accounting.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/pages.js?v=14" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
@@ -1960,6 +1960,8 @@
     /* Don't steal focus while the user Tabs to / rests on the Skip
      * button · otherwise it is unreachable from the keyboard. */
     if (e.key === 'Tab' || document.activeElement === skipBtn) return;
+    /* A field typed in outside the lock (a window over a lock left hidden) keeps its keys. */
+    const t = e.target; if (t && t !== pinInput && !lock.contains(t) && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
     /* Keep keystrokes flowing into the input even if it loses focus. */
     if (document.activeElement !== pinInput) pinInput.focus();
   });
