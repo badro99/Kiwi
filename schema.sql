@@ -662,9 +662,46 @@ CREATE TABLE IF NOT EXISTS glovo_stores (
   created_ts   INTEGER NOT NULL,
   updated_ts   INTEGER NOT NULL,
   last_ts      INTEGER,            -- dernière commande reçue
-  last_err     TEXT                -- dernier refus, lisible sans les logs
+  last_err     TEXT,               -- dernier refus, lisible sans les logs
+  marketplace  INTEGER NOT NULL DEFAULT 0,  -- 1 = le magasin livre lui-même (Marketplace)
+  closing_until TEXT,              -- fermeture temporaire demandée par Kiwi (ISO), NULL = ouvert
+  closing_ts   INTEGER,            -- quand cette fermeture a été demandée
+  menu_tx      TEXT,               -- dernier envoi du menu : transaction Glovo
+  menu_status  TEXT,               -- 'PROCESSING' | 'SUCCESS' | 'FETCH_MENU_INVALID_PAYLOAD' | … | 'refused'
+  menu_ts      INTEGER,
+  menu_detail  TEXT,               -- erreurs lisibles (JSON court)
+  menu_day     TEXT,               -- jour UTC des envois comptés (Glovo : 5 envois du menu par jour)
+  menu_count   INTEGER NOT NULL DEFAULT 0,
+  bulk_tx      TEXT,               -- dernière mise à jour en lot (dispo, prix)
+  bulk_status  TEXT,               -- 'SUCCESS' | 'PROCESSING' | 'PARTIALLY_PROCESSED' | … | 'refused'
+  bulk_ts      INTEGER,
+  bulk_detail  TEXT,
+  api_err      TEXT,               -- dernier refus de l'API Glovo (429, 503…), lisible par l'opérateur
+  api_err_ts   INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_glovo_stores_merchant ON glovo_stores (merchant);
+
+-- Ce que Glovo sait déjà de la carte, article par article : la mise à jour en
+-- lot n'envoie que ce qui a changé depuis (dispo, prix). kind = 'product' |
+-- 'attribute' ; price_cents en centimes, envoyé à Glovo en dirhams.
+CREATE TABLE IF NOT EXISTS glovo_menu_state (
+  store_id    TEXT NOT NULL,
+  kind        TEXT NOT NULL,
+  item_id     TEXT NOT NULL,
+  price_cents INTEGER NOT NULL,
+  available   INTEGER NOT NULL,
+  updated_ts  INTEGER NOT NULL,
+  PRIMARY KEY (store_id, kind, item_id)
+);
+
+-- La limite de Glovo : 120 appels par minute et par adresse de magasin, tous
+-- appels confondus. Un compteur par minute ; Kiwi s'arrête avant.
+CREATE TABLE IF NOT EXISTS glovo_rate (
+  store_id TEXT NOT NULL,
+  minute   INTEGER NOT NULL,       -- floor(ms / 60000)
+  n        INTEGER NOT NULL,
+  PRIMARY KEY (store_id, minute)
+);
 
 -- Une commande Glovo ↔ son ticket Kiwi. La clé primaire est l'order_id de
 -- Glovo : leurs relances (jusqu'à 3) retombent sur la même ligne, jamais sur un
@@ -682,9 +719,14 @@ CREATE TABLE IF NOT EXISTS glovo_orders (
   cancel_reason TEXT,
   last_call     TEXT,              -- 'accept' | 'ready_for_pickup' | 'customer_picked_up'
   last_call_ts  INTEGER,
-  last_call_err TEXT
+  last_call_err TEXT,
+  picked_up_ts  INTEGER,           -- webhook « Order Picked Up » : le coursier Glovo l'a prise
+  out_ts        INTEGER,           -- Marketplace : partie avec le livreur du magasin
+  delivered_ts  INTEGER,           -- Marketplace : livrée (annoncée à Glovo)
+  pickup_at     TEXT               -- heure de retrait annoncée (acceptation ou ajustement), ISO UTC
 );
 CREATE INDEX IF NOT EXISTS idx_glovo_orders_kiwi ON glovo_orders (kiwi_order_id);
+CREATE INDEX IF NOT EXISTS idx_glovo_orders_merchant ON glovo_orders (merchant, created_ts);
 
 -- ── SHOPIFY · connecteur d'inventaire invisible ───────────────────────────
 -- Le commerçant autorise Kiwi depuis Intégrations ; aucun jeton Shopify ne
