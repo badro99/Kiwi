@@ -109,21 +109,67 @@ function attrName(a) {
   const q = cents(a.quantity);
   return (q > 1 ? q + '× ' : '') + str(a.name, 60);
 }
+/* Glovo date ses heures en heure LOCALE du magasin (« yyyy-MM-dd HH:mm:ss »)
+ * et donne l'écart à part (utc_offset_minutes) : on rend un instant UTC. */
+export function glovoLocalToIso(local, offsetMinutes) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(String(local || '').trim());
+  if (!m) return null;
+  const off = Number(offsetMinutes);
+  const t = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) - (Number.isFinite(off) ? off : 0) * 60000;
+  return Number.isFinite(t) ? new Date(t).toISOString().replace(/\.\d{3}Z$/, 'Z') : null;
+}
+const kg = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? String(Math.round(n * 1000) / 1000).replace('.', ',') : ''; };
+/* Ce que la préparation doit savoir d'une ligne, au-delà du nom : le poids
+ * (produits au poids, avec la fourchette que Glovo accepte), l'emballage, la
+ * remise de la ligne, et que faire si le produit manque. */
+function lineFacts(x) {
+  const bits = [];
+  const disc = cents(x.discount);
+  if (disc > 0) bits.push('remise −' + (disc / 100).toFixed(2) + ' MAD');
+  if (kg(x.weight)) {
+    const unit = str(x.pricing_type, 12);
+    const range = kg(x.min_weight) && kg(x.max_weight) ? ' (' + kg(x.min_weight) + ' à ' + kg(x.max_weight) + ')' : '';
+    bits.push('poids ' + kg(x.weight) + (unit ? ' ' + unit : '') + range);
+  }
+  const pk = x.packaging && typeof x.packaging === 'object' ? x.packaging : null;
+  if (pk) {
+    if (cents(pk.price) > 0) bits.push('emballage +' + (cents(pk.price) / 100).toFixed(2) + ' MAD');
+    if (pk.is_returnable) bits.push('emballage consigné');
+  }
+  const us = x.unavailability_strategy && typeof x.unavailability_strategy === 'object' ? x.unavailability_strategy : null;
+  const alts = us && Array.isArray(us.alternative_products) ? us.alternative_products.filter((a) => a && a.id) : [];
+  const altRef = (a) => str((Array.isArray(a.eans) && a.eans[0]) || a.id, 32);
+  const ifMissing = !us ? ''
+    : us.action === 'REMOVE' ? 'Si manquant : retirer'
+    : us.action === 'REPLACE_WITH_CUSTOMER_SELECTION' && alts.length ? 'Si manquant : remplacer par le choix du client (' + altRef(alts[0]) + ')'
+    : us.action === 'REPLACE_WITH_BEST_MATCH' && alts.length ? 'Si manquant : remplacer par ' + alts.slice(0, 3).map(altRef).join(', ') + (alts.length > 3 ? '…' : '')
+    : '';
+  return { bits, note: ifMissing, packagingCents: pk ? Math.max(0, cents(pk.price)) : 0 };
+}
 
 export function mapGlovoOrder(p, opts) {
+  let packagingCents = 0;
   const products = Array.isArray(p && p.products) ? p.products.filter((x) => x && x.name) : [];
   const lines = products.slice(0, MAX_LINES).map((x) => {
     const subs = (Array.isArray(x.sub_products) ? x.sub_products : []).filter((s) => s && s.name).slice(0, 12);
     const unit = cents(x.price) + attrCents(x.attributes)
       + subs.reduce((s, sp) => s + (cents(sp.price) + attrCents(sp.attributes)) * Math.max(1, cents(sp.quantity) || 1), 0);
-    const options = attrList(x.attributes).map(attrName).concat(subs.map((sp) => {
+    const facts = lineFacts(x);
+    /* Les faits de la ligne passent avant les options : une option tronquée
+     * se devine, un poids ou une remise tronqués non. */
+    const options = facts.bits.concat(attrList(x.attributes).map(attrName), subs.map((sp) => {
       const inner = attrList(sp.attributes).map(attrName);
       return (cents(sp.quantity) > 1 ? cents(sp.quantity) + '× ' : '') + str(sp.name, 60) + (inner.length ? ' (' + inner.join(', ') + ')' : '');
     }));
+    const qty = Math.min(99, Math.max(1, cents(x.quantity) || 1));
+    packagingCents += facts.packagingCents * qty;
     return {
       id: str(x.id, 40), name: str(x.name, 80),
-      qty: Math.min(99, Math.max(1, cents(x.quantity) || 1)),
-      unitPrice: mad(unit), options: str(options.join(' · '), 200), note: '',
+      qty,
+      unitPrice: mad(unit), options: str(options.join(' · '), 240), note: str(facts.note, 160),
+      /* L'identifiant de CETTE sélection chez Glovo : celui qu'une modification
+       * de commande (replace_products) devra citer. */
+      ...(str(x.purchased_product_id, 64) ? { glovoPid: str(x.purchased_product_id, 64) } : {}),
     };
   });
 
@@ -149,9 +195,17 @@ export function mapGlovoOrder(p, opts) {
   ].filter(Boolean);
   const feeCents = fees.reduce((t, f) => t + Math.round(f.unitPrice * 100), 0);
   const totalCents = productsCents + feeCents;
-  const productLineCents = lines.reduce((t, l) => t + Math.round(l.unitPrice * 100) * l.qty, 0);
-  lines.push(...fees);
+  let productLineCents = lines.reduce((t, l) => t + Math.round(l.unitPrice * 100) * l.qty, 0);
   const partnerDiscount = has(p && p.partner_discounts_products) ? Math.max(0, cents(p.partner_discounts_products)) : 0;
+  /* L'emballage payant : quand c'est exactement ce que les produits seuls
+   * n'expliquent pas, il devient une ligne (comptée dans les produits, le
+   * total ne bouge pas). Sinon il reste écrit sur sa ligne et l'écart, s'il y
+   * en a un, reste visible plus bas. */
+  if (packagingCents > 0 && productsCents - productLineCents + partnerDiscount === packagingCents) {
+    lines.push({ id: 'glovo-packaging', name: 'Emballage', qty: 1, unitPrice: mad(packagingCents), options: '', note: '', fee: true });
+    productLineCents += packagingCents;
+  }
+  lines.push(...fees);
 
   const c = (p && p.customer) || {};
   const phone = str(c.phone_number, 32);
@@ -165,16 +219,29 @@ export function mapGlovoOrder(p, opts) {
   ].filter(Boolean);
   const adjustment = totalCents - productLineCents - feeCents;
   const money = (v) => (v / 100).toFixed(2) + ' MAD';
+  const currency = str(p && p.currency, 8).toUpperCase();
+  const inv = c.invoicing_details && typeof c.invoicing_details === 'object' ? c.invoicing_details : null;
+  const invoice = inv && (str(inv.company_name, 80) || str(inv.tax_id, 32))
+    ? { company: str(inv.company_name, 80), taxId: str(inv.tax_id, 32), address: str(inv.company_address, 160) } : null;
+  const courier = p && p.courier && typeof p.courier === 'object' ? p.courier : {};
+  const courierPhone = str(courier.phone_number, 32);
+  const bundled = Array.isArray(p && p.bundled_orders) ? p.bundled_orders.map((x) => str(x, 64)).filter(Boolean).slice(0, 10) : [];
+  const others = bundled.filter((x) => x !== str(p && p.order_id, 64));
+  const voucherCents = has(p && p.meal_voucher_amount) ? cents(p.meal_voucher_amount) : 0;
   /* L'argent d'abord (une note tronquée ne perd jamais un montant), le texte libre ensuite. */
   const notes = [
+    currency && currency !== 'MAD' ? 'Devise ' + currency + ' (montants à vérifier)' : '',
     p && p.pick_up_code ? 'Code retrait ' + str(p.pick_up_code, 12) : '',
     marketplace && has(p && p.total_customer_to_pay) ? 'Client paie ' + money(cents(p.total_customer_to_pay)) : '',
     marketplace && has(p && p.customer_cash_payment_amount) ? 'Espèces remises ' + money(cents(p.customer_cash_payment_amount)) : '',
     p && p.payment_method === 'CASH' ? (marketplace ? 'Paiement en espèces au livreur du magasin' : 'Coursier paie en espèces') : '',
+    voucherCents > 0 ? 'Titre-restaurant ' + money(voucherCents) + (str(p.meal_voucher_provider, 30) ? ' (' + str(p.meal_voucher_provider, 30) + ')' : '') : '',
     adjustment && adjustment === -partnerDiscount ? 'Remise du magasin ' + money(adjustment)
       : (adjustment ? 'Ajustement canal: ' + (adjustment / 100).toFixed(2) + ' MAD (Écart Glovo, à vérifier)' : ''),
     marketplace && has(p && p.service_fee) && cents(p.service_fee) > 0 ? 'Frais de service Glovo ' + money(cents(p.service_fee)) + ' (hors ticket)' : '',
+    invoice ? 'Facture demandée : ' + [invoice.company, invoice.taxId ? 'ICE/IF ' + invoice.taxId : '', invoice.address].filter(Boolean).join(', ') : '',
     str(p && p.allergy_info, 160) ? 'Allergie : ' + str(p.allergy_info, 160) : '',
+    /* Le coursier et les commandes groupées vivent sur la carte de la caisse (glovo.*), pas dans la note. */
     p && p.cutlery_requested ? 'Couverts' : '',
     str(p && p.loyalty_card, 40) ? 'Carte fidélité ' + str(p.loyalty_card, 40) : '',
     str(p && p.voucher_code, 40) ? 'Bon ' + str(p.voucher_code, 40) : '',
@@ -190,7 +257,7 @@ export function mapGlovoOrder(p, opts) {
       name: str(c.name, 80),
       phone: /^n\/?a$/i.test(phone) ? '' : phone,
       address: str(addressBits.join(', '), 240),
-      note: str(notes.join(' · '), 400),
+      note: str(notes.join(' · '), 600),
       channelAdjustmentCents: adjustment,
       glovo: {
         marketplace,
@@ -202,6 +269,19 @@ export function mapGlovoOrder(p, opts) {
         cutlery: !!(p && p.cutlery_requested),
         loyaltyCard: str(p && p.loyalty_card, 40),
         voucher: str(p && p.voucher_code, 40),
+        currency: currency || 'MAD',
+        orderTime: glovoLocalToIso(p && p.order_time, p && p.utc_offset_minutes),
+        courierEta: glovoLocalToIso(p && p.estimated_pickup_time, p && p.utc_offset_minutes),
+        courier: str(courier.name, 40) || courierPhone ? { name: str(courier.name, 40), phone: /^n\/?a$/i.test(courierPhone) ? '' : courierPhone } : null,
+        bundled: others,
+        invoice,
+        customerHash: str(c.hash, 64),
+        packagingCents,
+        /* La part financée par Glovo ne touche pas le commerçant : notée, hors ticket. */
+        glovoDiscountCents: has(p && p.glovo_discounts_products) ? cents(p.glovo_discounts_products) : null,
+        discountedTotalCents: has(p && p.discounted_products_total) ? cents(p.discounted_products_total) : null,
+        mealVoucherCents: voucherCents || null,
+        mealVoucherProvider: str(p && p.meal_voucher_provider, 30),
       },
     },
   };

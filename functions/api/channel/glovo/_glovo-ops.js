@@ -40,11 +40,25 @@ export async function openGlovoOrders(env, merchant, now = Date.now()) {
   try {
     const rs = await env.DB.prepare(
       `SELECT g.order_id, g.kiwi_order_id, g.order_code, g.store_id, g.pickup, g.created_ts, g.cancelled_ts,
-              g.picked_up_ts, g.out_ts, g.delivered_ts, g.pickup_at, g.last_call, g.last_call_err, s.marketplace
+              g.picked_up_ts, g.out_ts, g.delivered_ts, g.pickup_at, g.last_call, g.last_call_err, s.marketplace,
+              o.customer
          FROM glovo_orders g JOIN glovo_stores s ON s.store_id = g.store_id
+         LEFT JOIN orders o ON o.id = g.kiwi_order_id
         WHERE g.merchant = ? AND g.created_ts >= ? ORDER BY g.created_ts DESC LIMIT 80`
     ).bind(String(merchant), now - 12 * 3600000).all();
+    /* Ce que Glovo a dit du coursier à la réception de la commande (heure
+     * prévue d'arrivée, nom, téléphone, commandes groupées), relu du ticket. */
+    const courierOf = (raw) => {
+      let g = null;
+      try { g = (JSON.parse(raw || '{}') || {}).glovo || null; } catch (_) {}
+      return {
+        courierEta: (g && typeof g.courierEta === 'string' && g.courierEta) || null,
+        courier: g && g.courier && typeof g.courier === 'object' ? { name: String(g.courier.name || ''), phone: String(g.courier.phone || '') } : null,
+        bundled: g && Array.isArray(g.bundled) ? g.bundled.length : 0,
+      };
+    };
     return ((rs && rs.results) || []).map((r) => ({
+      ...courierOf(r.customer),
       kiwiOrderId: String(r.kiwi_order_id), code: String(r.order_code || ''), storeId: String(r.store_id),
       pickup: Number(r.pickup) === 1, marketplace: Number(r.marketplace) === 1,
       cancelled: r.cancelled_ts != null, pickedUpTs: r.picked_up_ts == null ? null : Number(r.picked_up_ts),

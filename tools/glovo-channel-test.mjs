@@ -123,7 +123,9 @@ await ok('translation: the customer is the client, never the courier; « N/A » 
   assert.match(m.customer.note, /I am allergic to tomato/);
   assert.match(m.customer.note, /Make sure there is no meat/);
   assert.match(m.customer.note, /433/);
-  assert.doesNotMatch(JSON.stringify(m.customer), /Flash/);
+  const { glovo, ...who } = m.customer;
+  assert.doesNotMatch(JSON.stringify(who), /Flash/, 'the courier is never the customer (name, phone, address, note)');
+  assert.equal(glovo.courier.name, 'Flash', 'the courier has his own place, read by the till card');
 });
 await ok('translation: a combo lists its sub-products, their paid extras count in the price', () => {
   const m = mapGlovoOrder(Object.assign({}, SAMPLE, { products: [{ id: 'pd3', name: 'Burger Combo!', price: 10000, quantity: 1,

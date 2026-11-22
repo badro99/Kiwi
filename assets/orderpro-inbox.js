@@ -1019,21 +1019,21 @@
   var GLV = { merchant: '', stores: [], orders: {}, sig: '', timer: null, busy: {}, note: {} };
   var GLV_T = {
     fr: { open: 'Glovo ouvert', closed: 'Glovo fermé jusqu’à {t}', close: 'Fermer', reopen: 'Rouvrir Glovo',
-      picked: 'Récupérée par le coursier · {t}', expected: 'Coursier attendu · {t}', ready: 'Prête dans',
+      picked: 'Récupérée par le coursier · {t}', expected: 'Coursier attendu · {t}', due: 'Promise pour {t}', courier: 'Coursier {n}', bundle: 'Groupée avec {n} autre(s)', ready: 'Prête dans',
       road: 'En livraison · vos livreurs', left: 'partie à {t}', delivered: 'Livrée',
       code: 'Code d’un responsable', why: 'Fermer ou rouvrir Glovo demande le code d’un responsable.',
       ok: 'Valider', cancel: 'Annuler', sent: 'Envoyé à Glovo', badCode: 'Code incorrect.',
       notManager: 'Ce code n’est pas celui d’un responsable.', slow: 'Trop d’essais. Réessayez dans un instant.',
       glovo: 'Glovo n’a pas confirmé. Réessayez.', off: 'Glovo n’est pas encore activé pour Kiwi.', taken: 'Le coursier l’a déjà récupérée.' },
     en: { open: 'Glovo open', closed: 'Glovo closed until {t}', close: 'Close', reopen: 'Reopen Glovo',
-      picked: 'Picked up by the courier · {t}', expected: 'Courier expected · {t}', ready: 'Ready in',
+      picked: 'Picked up by the courier · {t}', expected: 'Courier expected · {t}', due: 'Promised for {t}', courier: 'Courier {n}', bundle: 'Bundled with {n} other(s)', ready: 'Ready in',
       road: 'Out for delivery · your riders', left: 'left at {t}', delivered: 'Delivered',
       code: 'Manager code', why: 'Closing or reopening Glovo needs a manager code.',
       ok: 'Confirm', cancel: 'Cancel', sent: 'Sent to Glovo', badCode: 'Wrong code.',
       notManager: 'This code is not a manager’s.', slow: 'Too many tries. Try again in a moment.',
       glovo: 'Glovo did not confirm. Try again.', off: 'Glovo is not switched on for Kiwi yet.', taken: 'The courier already has it.' },
     ar: { open: 'Glovo مفتوح', closed: 'Glovo مغلق إلى {t}', close: 'أغلق', reopen: 'افتح Glovo من جديد',
-      picked: 'أخذها الموصّل · {t}', expected: 'الموصّل يصل · {t}', ready: 'جاهزة بعد',
+      picked: 'أخذها الموصّل · {t}', expected: 'الموصّل يصل · {t}', due: 'موعدها {t}', courier: 'الموصّل {n}', bundle: 'مجمّعة مع {n} أخرى', ready: 'جاهزة بعد',
       road: 'في الطريق · مع موصّليكم', left: 'خرجت {t}', delivered: 'وصلت',
       code: 'رمز المسؤول', why: 'إغلاق Glovo أو فتحه من جديد يحتاج رمز مسؤول.',
       ok: 'تأكيد', cancel: 'إلغاء', sent: 'وصل الطلب إلى Glovo', badCode: 'الرمز غير صحيح.',
@@ -1059,7 +1059,12 @@
     var T = glvT(), info = [], acts = '';
     if (g.pickedUpTs) info.push(T.picked.replace('{t}', clockTime(g.pickedUpTs)));
     else if (!g.marketplace && !g.pickup) {
-      if (g.pickupAt) info.push(T.expected.replace('{t}', glvAt(g.pickupAt)));
+      /* Deux heures différentes : celle que Glovo prévoit pour le coursier, et
+       * celle que la caisse a promise en acceptant (« Prête dans »). */
+      if (g.courierEta) info.push(T.expected.replace('{t}', glvAt(g.courierEta)));
+      if (g.pickupAt) info.push(T.due.replace('{t}', glvAt(g.pickupAt)));
+      if (g.courier && g.courier.name) info.push(T.courier.replace('{n}', g.courier.name));
+      if (g.bundled) info.push(T.bundle.replace('{n}', g.bundled));
       if (o.status === 'accepted') {
         acts = '<span class="kgl-lbl">' + esc(T.ready) + '</span>' + [5, 10, 15].map(function (n) {
           return glvBtn('prep', o.id, n + ' min', ' data-kgl-min="' + n + '"');
@@ -1068,6 +1073,8 @@
     }
     var note = glvNote('o:' + o.id);
     if (!info.length && !acts && !note) return '';
+    var tel = !g.pickedUpTs && g.courier && /^\+?[0-9 ]{6,20}$/.test(g.courier.phone || '') ? g.courier.phone.replace(/ /g, '') : '';
+    if (tel) acts = '<a class="kgl-btn" href="tel:' + esc(tel) + '">' + esc(tel) + '</a>' + acts;
     return '<div class="kgl">' + (info.length ? '<span class="kgl-info">' + esc(info.join(' · ')) + '</span>' : '') +
       (acts ? '<span class="kgl-acts">' + acts + '</span>' : '') + note + '</div>';
   }
@@ -1204,6 +1211,7 @@
       'background:var(--surface,#F7F5F0);color:inherit;font:600 .86rem/1 inherit;cursor:pointer;touch-action:manipulation;}',
       '.kgl-btn.is-go{background:var(--atlas,#0B6E4F);border-color:transparent;color:var(--paper,#F7F5F0);}',
       '.kgl-btn[disabled]{opacity:.55;cursor:default;}',
+      'a.kgl-btn{display:inline-flex;align-items:center;text-decoration:none;color:inherit;font-variant-numeric:tabular-nums;direction:ltr;}',
       '.kgl-btn:focus-visible{outline:2px solid var(--atlas,#0B6E4F);outline-offset:2px;}',
       '.kgl-note{flex-basis:100%;font-size:.8rem;font-weight:600;color:var(--atlas,#0B6E4F);}',
       '.kgl-note.is-bad{color:var(--danger,#B0402F);}',

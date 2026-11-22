@@ -181,6 +181,64 @@ await ok('order: Marketplace adds delivery and minimum-basket lines, notes what 
   assert.equal(lineCents(m) + m.customer.channelAdjustmentCents, Math.round(m.total * 100), 'lines + adjustment = total, to the centime');
 });
 
+await ok('order: the rest of Glovo\'s Order model reaches the till: courier and his ETA in UTC, weight with its range, line discount, packaging, what to do if a product is missing, bundled orders, invoice request, meal voucher', async () => {
+  const p = Object.assign({}, ORDER, {
+    order_time: '2026-11-22 20:10:00', estimated_pickup_time: '2026-11-22 20:35:00', utc_offset_minutes: '60',
+    courier: { name: 'Youssef', phone_number: '+212611223344' }, bundled_orders: ['98765', '98766'],
+    meal_voucher_provider: 'Edenred', meal_voucher_amount: 1000, glovo_discounts_products: 200, discounted_products_total: 1330,
+    customer: { name: 'Waleed', phone_number: 'N/A', hash: '11111111-2222-3333-4444-555555555555',
+      invoicing_details: { company_name: 'Atlas Bench SARL', company_address: '12 rue Ibn Batouta, Tanger', tax_id: '001234567000089' } },
+    products: [
+      { id: 'burger1', purchased_product_id: 'A1', name: 'Burger', price: 1000, quantity: 2, discount: 1550,
+        attributes: [{ id: 'g1.c1', name: 'Extra meat', price: 300, quantity: 1 }],
+        unavailability_strategy: { action: 'REMOVE' } },
+      { id: 'tomates', purchased_product_id: 'A2', name: 'Tomates', price: 480, quantity: 1, weight: 1.2, min_weight: 1.1, max_weight: 1.3, pricing_type: 'Kg',
+        packaging: { type: 'bag', price: 0, is_eco: true, is_returnable: true },
+        unavailability_strategy: { action: 'REPLACE_WITH_BEST_MATCH', alternative_products: [{ id: 'tom2', eans: ['8410020402104'] }, { id: 'tom3' }] } },
+    ],
+  });
+  const m = G.mapGlovoOrder(p, { marketplace: false });
+  const [burger, tomates] = m.lines;
+  assert.equal(burger.glovoPid, 'A1', 'the purchased_product_id a later order modification must quote');
+  assert.match(burger.options, /^remise −15\.50 MAD/, 'the line discount comes first, before options');
+  assert.equal(burger.note, 'Si manquant : retirer');
+  assert.match(tomates.options, /poids 1,2 Kg \(1,1 à 1,3\)/); assert.match(tomates.options, /emballage consigné/);
+  assert.equal(tomates.note, 'Si manquant : remplacer par 8410020402104, tom3');
+  const g = m.customer.glovo;
+  assert.equal(g.courierEta, '2026-11-22T19:35:00Z', 'local time minus utc_offset_minutes');
+  assert.equal(g.orderTime, '2026-11-22T19:10:00Z');
+  assert.deepEqual(g.courier, { name: 'Youssef', phone: '+212611223344' });
+  assert.deepEqual(g.bundled, ['98766'], 'the order itself is not counted among the bundled ones');
+  assert.deepEqual(g.invoice, { company: 'Atlas Bench SARL', taxId: '001234567000089', address: '12 rue Ibn Batouta, Tanger' });
+  assert.equal(g.customerHash, '11111111-2222-3333-4444-555555555555');
+  assert.equal(g.glovoDiscountCents, 200); assert.equal(g.discountedTotalCents, 1330);
+  assert.equal(g.mealVoucherCents, 1000); assert.equal(g.currency, 'MAD');
+  assert.equal(m.customer.phone, '', 'the anonymised N/A is not a phone number');
+  assert.match(m.customer.note, /Facture demandée : Atlas Bench SARL, ICE\/IF 001234567000089, 12 rue Ibn Batouta, Tanger/);
+  assert.match(m.customer.note, /Titre-restaurant 10\.00 MAD \(Edenred\)/);
+  assert.doesNotMatch(m.customer.note, /Youssef|\+212611223344/, 'courier and bundle live on the till card, not in the ticket note');
+  assert.equal(m.total, 16.55, 'none of these change what the shop bills: Glovo-funded discount and voucher stay off the ticket');
+  const foreign = G.mapGlovoOrder(Object.assign({}, ORDER, { currency: 'EUR' }), {});
+  assert.match(foreign.customer.note, /^Devise EUR/, 'a currency other than MAD is said first');
+  assert.equal(G.glovoLocalToIso('2026-11-22 20:35:00', undefined), '2026-11-22T20:35:00Z', 'no offset sent: read as UTC (Morocco is UTC+0)');
+  assert.equal(G.glovoLocalToIso('demain', 0), null);
+});
+
+await ok('order: paid packaging that is exactly what the products do not explain becomes its own line, total unchanged; otherwise it stays written on its line and the gap stays visible', async () => {
+  const harira = { id: 'soupe', name: 'Harira', price: 1000, quantity: 2, packaging: { type: 'bowl', price: 50, is_eco: false, is_returnable: false } };
+  const base = Object.assign({}, ORDER, { products: [harira], partner_discounts_products: 0 });
+  const m = G.mapGlovoOrder(Object.assign({}, base, { partner_discounted_products_total: 2100 }), {});
+  assert.deepEqual(m.lines.map((l) => [l.name, l.qty, l.unitPrice]), [['Harira', 2, 10], ['Emballage', 1, 1], ['Sac', 1, 1.25]]);
+  assert.equal(m.total, 22.25); assert.equal(m.customer.channelAdjustmentCents, 0);
+  assert.doesNotMatch(m.customer.note, /Écart Glovo/);
+  assert.match(m.lines[0].options, /emballage \+0\.50 MAD/);
+  const n = G.mapGlovoOrder(Object.assign({}, base, { partner_discounted_products_total: 2000 }), {});
+  assert.ok(!n.lines.some((l) => l.name === 'Emballage'), 'Glovo did not bill the packaging: no line');
+  assert.equal(n.customer.channelAdjustmentCents, 0);
+  const odd = G.mapGlovoOrder(Object.assign({}, base, { partner_discounted_products_total: 2170 }), {});
+  assert.ok(!odd.lines.some((l) => l.name === 'Emballage')); assert.match(odd.customer.note, /Écart Glovo/);
+});
+
 /* ── 3 · le cycle d'une commande ──────────────────────────────────────────── */
 const link = (orderId, storeId, kiwiId, pickup = 0) => {
   sql.prepare(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, created_ts, updated_ts, channel) VALUES (?, ?, 1, ?, '', 10, '[]', 'accepted', ?, ?, 'glovo')`)
@@ -271,8 +329,14 @@ await ok('webhook picked_up: Glovo\'s token only, stamps the order once, answers
 
 /* ── 4 · la caisse et le tableau de bord ─────────────────────────────────── */
 await ok('till: the paired till sees its stores and Glovo orders; another shop and an anonymous caller see nothing', async () => {
+  sql.prepare('UPDATE orders SET customer = ? WHERE id = ?').run(JSON.stringify({ name: 'W F', glovo: {
+    courierEta: '2026-11-22T19:35:00Z', courier: { name: 'Youssef', phone: '+212611223344' }, bundled: ['98766'] } }), 'ord-courier');
   const r = await call(tillRoute.onRequestGet, '/api/channel/glovo/till?merchant=' + SHOP, till);
   assert.equal(r.status, 200);
+  const c = r.data.orders.find((x) => x.kiwiOrderId === 'ord-courier');
+  assert.equal(c.courierEta, '2026-11-22T19:35:00Z', 'Glovo\'s courier ETA, read back from the ticket');
+  assert.deepEqual(c.courier, { name: 'Youssef', phone: '+212611223344' }); assert.equal(c.bundled, 1);
+  assert.equal(r.data.orders.find((x) => x.kiwiOrderId === 'ord-market').courier, null, 'an order without courier data says so');
   assert.deepEqual(r.data.stores.map((s) => [s.storeId, s.marketplace]), [['resto-courier', false], ['resto-market', true]]);
   const o = r.data.orders.find((x) => x.kiwiOrderId === 'ord-market');
   assert.ok(o.deliveredTs && o.outTs && o.marketplace);
