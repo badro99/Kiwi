@@ -122,4 +122,16 @@ try {
     await sleep(900);
     assert.equal(await page.$eval('[data-bq-panel="echanges"] input:not([type=checkbox]):not([type=radio])', (e) => e.__typed === true), false, 'the screen was redrawn after the field was left');
   });
+  await h.S.run('maison till · a background repaint waits while the cashier types · fr · tablet', async (t) => {
+    const { page } = await openTill(h, t, 'caisse-maison', 'fr', 'tablet');
+    await page.evaluate(() => document.querySelector('[data-mz-view="scan"]').click());
+    await sleep(900);
+    const sel = '[data-mz-panel="scan"] input:not([type=checkbox]):not([type=radio])';
+    await page.$eval(sel, (e) => { e.__typed = true; e.value = ''; e.focus(); });
+    await page.keyboard.type('61234');
+    await page.evaluate(() => window.KiwiPosDispatch.repaint());
+    await sleep(600);
+    assert.deepEqual(await page.$eval(sel, (e) => ({ same: e.__typed === true, focused: document.activeElement === e, value: e.value })),
+      { same: true, focused: true, value: '61234' }, 'a half-typed barcode survives a repaint');
+  });
 } finally { await h.close(); await h.S.finish(); }

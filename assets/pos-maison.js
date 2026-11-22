@@ -1,9 +1,9 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch, openClientModal } from './pos-maison/sales.js?v=152';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch, openClientModal } from './pos-maison/sales.js?v=153';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=4';
 import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=18';
-import { tillNow } from './pos-boutique/till-clock.js?v=2'; import { settleBalances } from './retail-settle.js?v=1';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=152';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=152';
+import { tillNow } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=1';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=153';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=153';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=10'; import { mzLivraisons } from './pos-maison/delivery.js?v=28';
 import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=14'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=5'; import { mzSettle } from './pos-maison/catalog-settle.js?v=1'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
 import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
@@ -1674,7 +1674,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
                quelque chose à montrer, donc il apparaît et disparaît AVEC les
                promotions. Le laisser hors du repeint, c'était un onglet qui ne
                s'affichait qu'au prochain changement de rayon. */
-            try { renderCats(); renderView(state.view); renderBadges(); icons(); } catch (_) {}
+            repaintCalm($(`[data-mz-panel="${state.view}"]`, root), () => { renderCats(); renderView(state.view); renderBadges(); icons(); });
           });
         }
       }
@@ -1784,7 +1784,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
      * milliers d'articles la caisse ralentissait scan après scan, exactement là où
      * elle doit rester vive. On redessine une fois, à la fermeture. */
     if (intake.open) return;
-    try { renderCats(); renderView(state.view); renderBadges(); icons(); } catch (e) {}
+    repaintCalm($(`[data-mz-panel="${state.view}"]`, root), () => { renderCats(); renderView(state.view); renderBadges(); icons(); });
   }
 
   function onShow() {
@@ -1794,8 +1794,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
     const today = $('#mz-today', root);
     if (today) today.textContent = headSubVente();
     renderBadges();
-    renderView(state.view);
-    icons();
+    repaintCalm($(`[data-mz-panel="${state.view}"]`, root), () => { renderView(state.view); icons(); });
   }
 
   function openVeil(id) { const v = $(id, root); v.classList.add('is-open'); return v; }
