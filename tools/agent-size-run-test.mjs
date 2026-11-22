@@ -127,7 +127,7 @@ eq([kindOf(RUN), kindOf([{ size: 'M', qty: 1 }, { size: 'L', qty: 1 }]), kindOf(
  * passés (le service worker le sert d'abord). Le sceau ci-dessous rend l'oubli
  * rouge : montez « ?v= » dans agent-voice.js, puis recopiez ici v et sha. */
 {
-  const SEALED = { v: 1, sha: '453b5b1dce2ac344' };
+  const SEALED = { v: 2, sha: '387d6ebece8d33aa' };
   const sha = crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT, 'assets/agent-size-run.mjs'))).digest('hex').slice(0, 16);
   const asked = /agent-size-run\.mjs\?v=(\d+)/.exec(fs.readFileSync(path.join(ROOT, 'assets/agent-voice.js'), 'utf8'));
   eq(asked && Number(asked[1]), SEALED.v, 'agent-voice.js charge la version scellée du module');

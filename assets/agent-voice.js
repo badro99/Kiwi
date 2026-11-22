@@ -640,6 +640,10 @@
        (agent-size-run.mjs, chargé à la demande). Les actions du modèle ne
        savent pas remplir une grille : elles cèdent la place. */
     var sizeRun = Array.isArray(ent.sizeRun) && ent.sizeRun.length > 0;
+    /* Une étiquette lue sans son assortiment (le modèle a mis les tailles dans
+       le résumé) garde sa réception de stock : la grille s'ouvre vide, tailles
+       à saisir (agent-size-run.mjs). Ses boutons inventés ne s'affichent pas. */
+    if (!sizeRun && data.docType === 'boutique_product' && (ent.reference || ent.packQty > 0)) sizeRun = true;
     if (sizeRun) itemsHtml = '<div class="kv-size-run" data-kv-size-run></div>';
 
     var actionsHtml = '';
@@ -651,6 +655,12 @@
       else if (data.docType === 'floorplan') actions = [{ id: 'floor-app', type: 'floorplan-apply', label: 'Créer ces tables', primary: true }];
     }
 
+    /* Un bouton que cet écran ne sait pas exécuter ne s'affiche pas (propriétaire,
+       22 nov. 2026) : il ne pouvait que répondre « pas disponible ici ». */
+    actions = actions.filter(function (act) {
+      var name = act && ACTION_HANDLERS[act.type], H = window.Kiwi && window.Kiwi.handlers;
+      return !!(name && H && typeof H[name] === 'function');
+    });
     if (actions.length) {
       actionsHtml = '<div class="kv-card-actions">' +
         actions.map(function (act) {
@@ -681,7 +691,7 @@
     thread.appendChild(msg);
     scrollDown();
     var result = msg;
-    if (sizeRun) import('./agent-size-run.mjs?v=1').then(function (m) { m.mount(msg.querySelector('[data-kv-size-run]'), ent); scrollDown(); }).catch(function () {});
+    if (sizeRun) import('./agent-size-run.mjs?v=2').then(function (m) { m.mount(msg.querySelector('[data-kv-size-run]'), ent); scrollDown(); }).catch(function () {});
 
     /* Câblage des boutons d'actions */
     msg.querySelectorAll('[data-kv-action]').forEach(function (btn) {

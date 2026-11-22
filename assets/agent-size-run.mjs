@@ -147,7 +147,7 @@ function lang() {
 }
 const WORDS = {
   fr: {
-    run: 'Assortiment de tailles', pieces: (n) => n + (n > 1 ? ' pièces' : ' pièce'), ref: 'Réf.', prepare: 'Préparer la réception en stock',
+    run: 'Assortiment de tailles', toType: 'tailles à saisir', sizes: 'Tailles du carton, séparées par un espace', pieces: (n) => n + (n > 1 ? ' pièces' : ' pièce'), ref: 'Réf.', prepare: 'Préparer la réception en stock',
     noShop: 'La réception en stock se fait depuis un magasin boutique.',
     title: 'Réception de stock', tag: 'Carton', where: 'Magasin : ',
     product: 'Article', create: 'Nouvel article', name: 'Nom de l’article', price: 'Prix de vente (MAD)', cost: 'Coût d’achat (MAD), facultatif',
@@ -163,7 +163,7 @@ const WORDS = {
     },
   },
   en: {
-    run: 'Size run', pieces: (n) => n + (n > 1 ? ' pieces' : ' piece'), ref: 'Ref.', prepare: 'Prepare the stock reception',
+    run: 'Size run', toType: 'sizes to enter', sizes: 'Carton sizes, separated by spaces', pieces: (n) => n + (n > 1 ? ' pieces' : ' piece'), ref: 'Ref.', prepare: 'Prepare the stock reception',
     noShop: 'Stock reception is done from a boutique shop.',
     title: 'Stock reception', tag: 'Carton', where: 'Shop: ',
     product: 'Item', create: 'New item', name: 'Item name', price: 'Selling price (MAD)', cost: 'Cost price (MAD), optional',
@@ -179,7 +179,7 @@ const WORDS = {
     },
   },
   ar: {
-    run: 'توزيع المقاسات', pieces: (n) => arN(n, 'قطعة واحدة', 'قطعتان', 'قطع', 'قطعة'), ref: 'المرجع', prepare: 'تجهيز استلام المخزون',
+    run: 'توزيع المقاسات', toType: 'المقاسات للإدخال', sizes: 'مقاسات الكرتون، مفصولة بمسافة', pieces: (n) => arN(n, 'قطعة واحدة', 'قطعتان', 'قطع', 'قطعة'), ref: 'المرجع', prepare: 'تجهيز استلام المخزون',
     noShop: 'استلام المخزون يتم من متجر بوتيك.',
     title: 'استلام المخزون', tag: 'كرتون', where: 'المتجر: ',
     product: 'الصنف', create: 'صنف جديد', name: 'اسم الصنف', price: 'سعر البيع (درهم)', cost: 'سعر الشراء (درهم)، اختياري',
@@ -241,16 +241,18 @@ export function mount(el, ent) {
   if (!el) return;
   const w = W();
   const rows = cleanRun(ent && ent.sizeRun);
-  if (!rows.length) return;
+  /* Lue sans assortiment (22 nov. 2026), l'étiquette garde sa réception :
+     la grille s'ouvre vide et les tailles se tapent dans la fenêtre. */
+  if (!rows.length && !(ent && (ent.reference || ent.packQty > 0))) return;
   const total = rows.reduce((sum, r) => sum + r.qty, 0);
   const head = [ent.reference ? w.ref + ' ' + ent.reference : '', ent.color || ''].filter(Boolean).join(' · ');
   const cat = isShop() ? window.KiwiBoutiqueCatalog : null;
   el.innerHTML =
     '<div class="kv-card-items">' +
-      '<div class="kv-items-title">' + esc(w.run) + ' · ' + esc(w.pieces(total)) + (head ? ' · ' + esc(head) : '') + '</div>' +
-      '<div class="kv-items-table">' + rows.map((r) =>
+      '<div class="kv-items-title">' + esc(w.run) + ' · ' + esc(rows.length ? w.pieces(total) : w.toType) + (head ? ' · ' + esc(head) : '') + '</div>' +
+      (rows.length ? '<div class="kv-items-table">' + rows.map((r) =>
         '<div class="kv-item-row" data-ksr-size="' + esc(r.size) + '"><span class="name">' + esc(r.size) + '</span><span class="qty">×' + r.qty + '</span><span class="tot"></span></div>').join('') +
-      '</div>' +
+      '</div>' : '') +
     '</div>' +
     (cat
       ? '<div class="kv-card-actions"><button type="button" class="kv-act-btn primary" data-ksr-open>' + esc(w.prepare) + '</button></div>'
@@ -266,7 +268,12 @@ export function open(ent) {
   const toast = (msg, type) => { try { if (window.Kiwi && window.Kiwi.toast) window.Kiwi.toast(msg, { type, force: true }); } catch (_) {} };
   if (!cat || !window.Kiwi || !window.Kiwi.modal) { toast(w.err.catalog, 'danger'); return null; }
   ensureCss();
-  const rows = cleanRun(ent && ent.sizeRun);
+  let rows = cleanRun(ent && ent.sizeRun);
+  const manual = !rows.length;
+  const rowHtml = (r) =>
+    '<label class="ksr-row" data-ksr-row="' + esc(r.size) + '"><b>' + esc(r.size) + '</b>' +
+    '<input class="ksr-in" data-ksr-qty="' + esc(r.size) + '" inputmode="numeric" autocomplete="off" maxlength="5" value="' + esc(r.qty) + '" aria-label="' + esc(w.size + ' ' + r.size) + '">' +
+    '<span class="ksr-then" data-ksr-then></span></label>';
   const found = findProducts(cat, ent && ent.reference);
   const label = String((ent && ent.color) || '').trim();
   const shown = label && label === label.toUpperCase() ? label.charAt(0) + label.slice(1).toLowerCase() : label;
@@ -302,12 +309,10 @@ export function open(ent) {
           '</div>' +
         '</div>' +
         '<label class="ksr-f">' + esc(w.color) + '<input class="ksr-in" data-ksr-color maxlength="40" value="' + esc(shown) + '"></label>' +
+        (manual ? '<label class="ksr-f">' + esc(w.sizes) + '<input class="ksr-in" data-ksr-sizes maxlength="200" autocomplete="off" placeholder="36 37 38 39 40 41"></label>' : '') +
         '<div class="ksr-grid">' +
           '<div class="ksr-row ksr-head"><span>' + esc(w.size) + '</span><span>' + esc(w.qty) + '</span><span class="ksr-then">' + esc(w.now) + ' → ' + esc(w.after) + '</span></div>' +
-          rows.map((r) =>
-            '<label class="ksr-row" data-ksr-row="' + esc(r.size) + '"><b>' + esc(r.size) + '</b>' +
-            '<input class="ksr-in" data-ksr-qty="' + esc(r.size) + '" inputmode="numeric" autocomplete="off" maxlength="5" value="' + r.qty + '" aria-label="' + esc(w.size + ' ' + r.size) + '">' +
-            '<span class="ksr-then" data-ksr-then></span></label>').join('') +
+          '<div class="ksr-grid" data-ksr-rows>' + rows.map(rowHtml).join('') + '</div>' +
         '</div>' +
         '<div class="ksr-msg" data-ksr-msg role="alert"></div>' +
         '<p class="ksr-note">' + esc(w.nothing) + '</p>' +
@@ -346,6 +351,15 @@ export function open(ent) {
     box.value = String(Math.min(500, Math.max(1, (n >= 1 ? n : 1) + Number(b.getAttribute('data-ksr-step')))));
     paint('');
   }));
+  /* Les tailles tapées font la grille ; une quantité déjà saisie suit sa taille. */
+  const sizesBox = q('[data-ksr-sizes]');
+  if (sizesBox) sizesBox.addEventListener('input', () => {
+    const typed = {};
+    el.querySelectorAll('[data-ksr-qty]').forEach((box) => { typed[box.getAttribute('data-ksr-qty')] = box.value; });
+    const sizes = [...new Set(sizesBox.value.split(/[\s,;/]+/).map((x) => x.trim().slice(0, 12)).filter(Boolean))].slice(0, 40);
+    rows = sizes.map((size) => ({ size, qty: typed[size] == null ? '' : typed[size] }));
+    q('[data-ksr-rows]').innerHTML = rows.map(rowHtml).join('');
+  });
   el.addEventListener('input', () => paint(''));
   el.addEventListener('change', () => paint(''));
   q('[data-ksr-confirm]').addEventListener('click', () => {

@@ -215,4 +215,38 @@ win.KiwiLang.get = () => 'fr';
   assert.ok(!/Fiabilité/.test(none.innerHTML), 'absent confidence is not invented on screen');
 }
 
+// 7. Propriétaire, 22 nov. 2026 (« fix this, I am getting mad ») : une étiquette de
+//    carton lue sans assortiment montrait les boutons inventés par le modèle
+//    (« Add this assortment to stock », « Record as stock reception ») qui
+//    répondaient tous « Cette action n’est pas disponible ici ». Un bouton que cet
+//    écran ne sait pas exécuter ne s'affiche plus, et l'étiquette garde sa
+//    réception de stock, tailles à saisir.
+{
+  delete win.Kiwi.handlers['stock-scan-invoice'];
+  const thread = fakeEl('div');
+  const card = KV.renderResult({
+    docType: 'boutique_product', categoryLabel: 'Product label', title: 'Article 1986-10 · Khaki · 12 PRS', confidence: 0.98,
+    entities: { reference: '1986-10', color: 'KHAKI', packQty: 12, sizeRun: [] },
+    suggestedActions: [
+      { id: 'a1', type: 'product-add', label: 'Add this assortment to stock', primary: true },
+      { id: 'a2', type: 'stock-receive', label: 'Record as stock reception' },
+    ],
+  }, thread, () => {});
+  assert.ok(!/data-kv-action/.test(card.innerHTML), 'carton label: no button this screen cannot run');
+  assert.ok(/data-kv-size-run/.test(card.innerHTML), 'carton label without sizes: the stock reception still mounts, sizes to type');
+
+  win.Kiwi.handlers['stock-scan-invoice'] = () => {};
+  const inv = KV.renderResult({
+    docType: 'invoice', confidence: 0.9, entities: { supplier: 'Centrale', totalMad: 10 },
+    suggestedActions: [
+      { id: 'b1', type: 'stock-receive', label: 'Recevoir', primary: true },
+      { id: 'b2', type: 'floorplan-apply', label: 'Créer ces tables' },
+      { id: 'b3', type: 'generic-action', label: 'Faire quelque chose' },
+    ],
+  }, thread, () => {});
+  const shown = [...inv.innerHTML.matchAll(/data-kv-action="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(shown, ['stock-receive'], 'only actions with a live handler are offered');
+  delete win.Kiwi.handlers['stock-scan-invoice'];
+}
+
 console.log(`agent-vision-test: ${controls.length} controls + confidence cases + review-needed + action outcomes passed`);
