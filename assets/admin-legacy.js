@@ -77,6 +77,7 @@
     "Il faut un code opérateur personnel pour ce geste.": ["A personal operator code is required for this action.", "يلزم رمز مشغّل شخصي لهذا الإجراء."],
     "PIN à 4 chiffres.": ["Enter a four-digit PIN.", "أدخل رمزا من أربعة أرقام."],
     "Ce PIN existe déjà.": ["This PIN already exists.", "هذا الرمز موجود بالفعل."],
+    "Remplacer le code propriétaire actuel ? OK : l’ancien ne fonctionnera plus. Annuler : les deux restent.": ["Replace the current owner code? OK: the old one stops working. Cancel: both stay.", "استبدال رمز المالك الحالي؟ موافق: يتوقف الرمز القديم. إلغاء: يبقى الرمزان."],
     "Échec de l’ajout.": ["Add failed. Your input is preserved. Try again.", "تعذرت الإضافة. تم الاحتفاظ بإدخالك. أعد المحاولة."],
     "Échec de l’enregistrement.": ["Save failed. Your input is preserved. Try again.", "تعذر الحفظ. تم الاحتفاظ بإدخالك. أعد المحاولة."],
     "Code trop court (10 caractères min.). Ce code ouvre les données de TOUS les commerçants.": ["Code too short (minimum 10 characters). This code opens ALL merchants’ data.", "الرمز قصير جدا (10 أحرف على الأقل). يفتح هذا الرمز بيانات جميع التجار."],

@@ -151,6 +151,7 @@ console.log('■ staff-perms-till.js › le pavé connaît le droit de l’acte'
     const verify = pairing.slice(pairing.indexOf('function verifyCode('), pairing.indexOf('function verifyReply('));
     check(/fetchDeadline\('\/api\/pin\/verify'[\s\S]*?\.then\(function \(r\) \{ lastFailed = false; return r; \}, function \(e\) \{ lastFailed = true; throw e; \}\)/.test(verify),
       'le pavé classique note lui aussi une vérification restée sans réponse (lastRequestFailed)');
+    check(/window\.addEventListener\('online', function \(\) \{ lastFailed = false; \}\)/.test(pairing), 'le réseau revenu (événement online) efface l’échec : la caisse repasse en ligne');
   }
   ctx.navigator = undefined;
   const refund = forAct({ kind: 'refund' }, 'manager', () => { throw new Error('jamais sans pavé'); }, { kind: 'refund', refundId: 'r' }, {});

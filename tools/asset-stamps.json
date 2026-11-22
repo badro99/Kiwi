@@ -24,8 +24,8 @@
     "sha": "fcb1b49c67af7322"
   },
   "assets/admin-legacy.js": {
-    "v": "14",
-    "sha": "8611f8ea6a7a0f6f"
+    "v": "15",
+    "sha": "059370d5580800fa"
   },
   "assets/admin-origin-devices.js": {
     "v": "1",
@@ -248,8 +248,8 @@
     "sha": "4ed3cd5cbce10a75"
   },
   "assets/caisse-pairing.js": {
-    "v": "84",
-    "sha": "fd0b560f3d51f75e"
+    "v": "85",
+    "sha": "61c88f4ae1e7fe52"
   },
   "assets/caisse-pairs.js": {
     "v": "4",
@@ -1328,8 +1328,8 @@
     "sha": "723108537bee278a"
   },
   "assets/merchant-config.js": {
-    "v": "289",
-    "sha": "f8a4cb6bce1b3ea1"
+    "v": "290",
+    "sha": "6d0d504b15bf5645"
   },
   "assets/merchant-health.css": {
     "v": "3",
@@ -1488,8 +1488,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2237",
-    "sha": "1b945fe067c68a7e"
+    "v": "2238",
+    "sha": "f4195d0290412a78"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1516,8 +1516,8 @@
     "sha": "d527709a3bdeb87e"
   },
   "assets/pages-pro/staff-permissions.js": {
-    "v": "8",
-    "sha": "ac404b923987bf43"
+    "v": "9",
+    "sha": "18f40daa7167325f"
   },
   "assets/pages.js": {
     "v": "14",
@@ -1528,8 +1528,8 @@
     "sha": "088c42752ac8f89e"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "277",
-    "sha": "519188ae583d19ae"
+    "v": "278",
+    "sha": "29ef7f8a68a96327"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

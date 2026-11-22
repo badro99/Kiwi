@@ -16,8 +16,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ merchant: merchant, pin: code, ...(action ? { action: action } : {}) }),
-    })
-      .then(function (r) { lastFailed = false; return r; }, function (e) { lastFailed = true; throw e; })   // le pavé classique aussi dit si le réseau a lâché (assets/staff-perms-till.js › offline)
+    }).then(function (r) { lastFailed = false; return r; }, function (e) { lastFailed = true; throw e; })   // le pavé classique aussi dit si le réseau a lâché (assets/staff-perms-till.js › offline)
       .then(function (r) {
         try { if (window.KiwiTrustedClock) window.KiwiTrustedClock.observe(r); } catch (_) {}
         if (r && r.status === 429) {
@@ -47,12 +46,12 @@
         return verifyOfflinePin(merchant, code);
       });
   }
-  /* The 2027 pad's request (assets/kit/pin-flow.js): the server's answer as
-     it came, status and body, so every row of §10.2's response table can be
-     told apart. A proven code refreshes its salted row, as verifyCode does.
-     `lastFailed` remembers that the till's last request threw, which is
-     how the needs-connection state is known when a pad opens. */
+  /* The 2027 pad's request (assets/kit/pin-flow.js): the server's answer as it came, status and body, so
+     every row of §10.2's response table can be told apart. A proven code refreshes its salted row, as verifyCode
+     does. `lastFailed`: the till's last request threw (the needs-connection state when a pad opens; cash and close
+     then count as offline, assets/staff-perms-till.js). The browser's 'online' event clears it. */
   var lastFailed = false;
+  try { window.addEventListener('online', function () { lastFailed = false; }); } catch (_) {}
   function verifyReply(code, action) {
     var venue = activeVenue();
     var merchant = (venue && venue.merchant) || '';

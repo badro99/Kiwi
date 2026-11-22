@@ -23,16 +23,35 @@
 //   legacy-dismiss                             ne rien reprendre, ne plus demander
 //   review-held    { keys }                    lève la retenue des personnes revues
 //   undo           { id }                      défait une ligne du journal
+//   owner-row-remove { id }                    retire un code propriétaire en trop
+//                  (un patron qui a changé de nom garde sinon l'ancien) ; jamais
+//                  le dernier, jamais celui qui a ouvert cette session
+// Le GET du patron dit aussi, sans code ni empreinte : `codeRedo` pour une
+// personne dont la ligne de caisse est scellée morte (son code était déjà pris,
+// functions/api/_staff-publication.js) et `ownerCodes` quand plusieurs lignes
+// propriétaire existent. La vue d'un gérant ou d'une caisse n'en porte rien.
 // Les changements de droits exigent l'activation : enregistrer un réglage ne
 // l'allume jamais en passant. Chaque écriture ajoute sa ligne au journal, dans
 // le même lot D1, avec l'état d'avant (c'est ce qu'`undo` remet).
 import { json, entitledMerchant } from '../auth/_lib.js';
 import {
-  Catalog, rosterFor, loadState, permsIn, permissionEditor, sessionPerson, legacyPerms, actorView, heldByView,
+  Catalog, rosterFor, loadState, permsIn, permissionEditor, sessionPerson, legacyPerms, actorView, heldByView, nameKey,
 } from './_permissions.js';
 
 const MAX_LEGACY = 20000;
 const clip = (v, n) => String(v == null ? '' : v).slice(0, n);
+
+/* Les lignes de caisse vues par le patron : qui a un code mort, quelles lignes
+   sont propriétaire. Ni code ni empreinte ne sortent d'ici : un drapeau SQL. */
+async function codeView(env, merchant) {
+  try {
+    const rows = (await env.DB.prepare(
+      "SELECT id, name, role, CASE WHEN pin LIKE 'k2$%' AND instr(pin, '$!') > 0 THEN 1 ELSE 0 END AS dead FROM staff_pins WHERE merchant = ? ORDER BY created_ts"
+    ).bind(merchant).all()).results || [];
+    return { dead: new Set(rows.filter((r) => Number(r.dead)).map((r) => nameKey(r.name))),
+      owners: rows.filter((r) => Catalog.ownerTitle(r.role)).map((r) => ({ id: clip(r.id, 120), name: clip(r.name, 80), role: clip(r.role, 60) })) };
+  } catch (_) { return null; }
+}
 
 async function publicState(env, merchant, full) {
   const [roster, state] = await Promise.all([rosterFor(env, merchant), loadState(env, merchant)]);
@@ -92,6 +111,11 @@ export async function onRequestGet({ request, env }) {
        `undo` qui la nomme. */
     const undone = new Set(audit.filter((a) => a.change.kind === 'undo').map((a) => Number(a.change.of)));
     audit.forEach((a) => { if (undone.has(a.id)) { a.undoable = false; a.undone = true; } });
+  }
+  const codes = await codeView(env, merchant);
+  if (codes) {
+    out.body.staff.forEach((st) => { if (codes.dead.has(nameKey(st.name))) st.codeRedo = true; });
+    if (codes.owners.length > 1) out.body.ownerCodes = codes.owners.map((o) => ({ ...o, self: editor.id === 'code:' + o.id }));
   }
   const week = Date.now() - 7 * 86400000;
   const unauthorizedWeek = audit.filter((a) => a.change && a.change.kind === 'unauthorized' && a.ts >= week).length;
@@ -176,6 +200,8 @@ async function writePermissions({ request, env }) {
   const actor = await permissionEditor(request, env);
   if (actor.unavailable) return json({ error: 'permissions-unavailable' }, 503);
   if (!actor.ok) return json({ error: 'owner-required' }, 403);
+
+  if (clip(body.action, 24) === 'owner-row-remove') return removeOwnerRow(env, merchant, actor, clip(body.id, 120));
 
   const out = await publicState(env, merchant, true);
   if (!out) return json({ error: 'permissions-unavailable' }, 503);
@@ -394,4 +420,28 @@ async function writePermissions({ request, env }) {
   }
 
   return json({ error: 'bad-action' }, 400);
+}
+
+/* Un code propriétaire en trop (le patron a changé de nom et de code : l'ancien
+   restait ouvert, et aucun écran ne l'enlevait). Le patron ou un opérateur
+   l'enlève ; jamais la dernière ligne propriétaire (la base le revérifie dans
+   la suppression même), jamais le code qui a ouvert cette session. */
+async function removeOwnerRow(env, merchant, actor, id) {
+  const codes = await codeView(env, merchant);
+  if (!codes) return json({ error: 'permissions-unavailable' }, 503);
+  const row = codes.owners.find((o) => o.id === id);
+  if (!row) return json({ error: 'unknown-owner-code' }, 404);
+  if (actor.id === 'code:' + id) return json({ error: 'own-code' }, 409);
+  if (codes.owners.length < 2) return json({ error: 'last-owner-code' }, 409);
+  const others = codes.owners.filter((o) => o.id !== id).map((o) => o.id);
+  const del = env.DB.prepare('DELETE FROM staff_pins WHERE merchant = ? AND id = ? AND EXISTS (SELECT 1 FROM staff_pins WHERE merchant = ? AND id IN ('
+    + others.map(() => '?').join(',') + '))').bind(merchant, id, merchant, ...others);
+  const ts = Date.now();
+  try {
+    await commit(env, [del, auditStmt(env, merchant, actor, 'staff:name:' + nameKey(row.name), row.name, { kind: 'owner-code-removed', role: row.role }, ts)]);
+  } catch (_) {
+    /* Journal absent (0028 pas appliquée) : la suppression seule, elle reste due. */
+    try { await del.run(); } catch (__) { return json({ error: 'write-unavailable' }, 503); }
+  }
+  return json({ ok: true, removed: id });
 }

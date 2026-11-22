@@ -128,6 +128,8 @@
       if (!quiet) {
         const msg = j.error === 'owner-required' ? L('Seul le propriétaire change les droits.', 'Only the owner changes permissions.', 'غير مول المحل اللي يقدر يبدّل الحقوق.')
           : j.error === 'already-undone' ? L('Ce changement a déjà été défait.', 'This change was already undone.', 'هاد التبديل ترجع من قبل.')
+            : j.error === 'own-code' ? L('Ce code a ouvert votre session : il reste.', 'This code opened your session: it stays.', 'هاد الكود هو اللي حلّ الجلسة ديالك: كيبقى.')
+              : j.error === 'last-owner-code' ? L('C’est le dernier code propriétaire : il reste.', 'This is the last owner code: it stays.', 'هادا آخر كود ديال مول المحل: كيبقى.')
             : L('Enregistrement impossible. Réessayez.', 'Could not save. Try again.', 'ما تسجّلش. عاود.');
         toast(msg, { type: 'error' });
       }
@@ -196,6 +198,11 @@
   const heldNote = (s) => L(`${heldWhy(s)[0].toUpperCase() + heldWhy(s).slice(1)} : aucun droit tant que vous ne l’avez pas revu. « Revoir » lui rend ses droits, ou choisissez son rôle puis Enregistrer.`,
     `${heldWhy(s)[0].toUpperCase() + heldWhy(s).slice(1)}: no permissions until you review them. “Review” gives them back, or pick a role, then Save.`,
     `${heldWhy(s)}: حتى حق حتى تراجعو نتا. «راجع» كترجّع ليه الحقوق ديالو، ولا ختار الدور ديالو ومن بعد سجّل.`);
+  /* Code déjà pris à la publication : la ligne de caisse est scellée morte (le patron seul le voit). */
+  const redoNote = (s) => L(`Code à refaire : le code donné à ${s.name} est déjà celui d’un propriétaire, il ne lui ouvre pas la caisse. Donnez-lui un nouveau code dans Équipe.`,
+    `Code to redo: the code given to ${s.name} already belongs to an owner, so it does not open the till for them. Give them a new code in Team.`,
+    `الكود خاصو يتعاود: الكود اللي تعطى لـ${s.name} راه ديال مول المحل، ما كيحلّش ليه الكاشة. عطيه كود جديد فالفريق.`);
+  const redoTag = (s) => s.codeRedo ? `<span class="pm-chk">${esc(L('Code à refaire', 'Code to redo', 'الكود خاصو يتعاود'))}</span>` : '';
   const personNote = (s) => s.ownerAccess ? `<p class="pm-note">${esc(ownerAccessNote())}</p>` : s.held ? `<p class="pm-note">${esc(heldNote(s))}</p>` : '';
   const cans = (ids) => ids.map((id) => C().BY_ID[id] && C().BY_ID[id].can[lang()]).filter(Boolean).join(', ');
 
@@ -235,7 +242,7 @@
         dd.removed.length ? L(` ne pourrait plus ${cans(dd.removed)}`, ` could no longer ${cans(dd.removed)}`, ` ما بقاش يقدر ${cans(dd.removed)}`) : '',
         L('. Garder ses droits d’aujourd’hui ne change rien.', '. Keeping today’s permissions changes nothing.', '. إلا خلّيتي الحقوق ديال اليوم، والو ما كيتبدّل.'),
       ].join(''))}</p>` : '';
-      return `<div class="pm-card"><div class="pm-head"><div><strong>${esc(s.name)}</strong><span class="pm-muted">${esc(s.role || '')}</span></div></div>
+      return `<div class="pm-card"><div class="pm-head"><div><strong>${esc(s.name)}</strong><span class="pm-muted">${esc(s.role || '')}</span>${redoTag(s)}</div></div>
         <p class="pm-sum">${esc(Cat.summary(today, s.name, lang()))}</p>${partial}${plain}${delta}
         <div class="pm-line"><select class="pm-sel" data-pm-choice="${esc(s.key)}" aria-label="${esc(s.name)}">${opts}</select></div></div>`;
     }).join('');
@@ -283,7 +290,7 @@
         const n = g.perms.filter((p) => dr.perms.includes(p.id)).length;
         return `<td><button type="button" class="pm-cell ${n === g.perms.length ? 'full' : n ? 'part' : ''}" data-action="pm-expand" data-arg="${g.id}" title="${esc(g[lang()])}">${n}/${g.perms.length}</button></td>`;
       }).join('');
-      return `<tr class="${dirty(s) ? 'pm-dirty' : ''}${state.open === s.key ? ' on' : ''}"><td class="pm-who"><button type="button" class="pm-name" data-action="pm-open" data-arg="${esc(s.key)}" aria-expanded="${state.open === s.key}">${esc(s.name)}</button><span class="pm-muted">${esc(s.role || '')}</span>${s.held ? `<span class="pm-chk">${esc(L('À revoir', 'To review', 'خاصو مراجعة'))}</span>` : ''}</td><td>${s.ownerAccess ? ownerBadge() : presetSelect(s, dr)}</td>${cells}<td>${saveActs(s)}</td></tr>`;
+      return `<tr class="${dirty(s) ? 'pm-dirty' : ''}${state.open === s.key ? ' on' : ''}"><td class="pm-who"><button type="button" class="pm-name" data-action="pm-open" data-arg="${esc(s.key)}" aria-expanded="${state.open === s.key}">${esc(s.name)}</button><span class="pm-muted">${esc(s.role || '')}</span>${s.held ? `<span class="pm-chk">${esc(L('À revoir', 'To review', 'خاصو مراجعة'))}</span>` : ''}${redoTag(s)}</td><td>${s.ownerAccess ? ownerBadge() : presetSelect(s, dr)}</td>${cells}<td>${saveActs(s)}</td></tr>`;
     }).join('');
     const none = esc(L('Personne ne correspond.', 'Nobody matches.', 'حتى واحد ما كيطابق.'));
     const table = `<div class="pm-scroll"><table class="pm-grid"><thead><tr><th class="pm-who">${esc(L('Personne', 'Person', 'الشخص'))}</th><th>${esc(L('Rôle', 'Role', 'الدور'))}</th>${head}<th></th></tr>${sub}</thead>
@@ -291,7 +298,7 @@
     /* Téléphone : une carte par personne, la phrase en clair d'abord. */
     const cards = `<div class="pm-cards">${rows.map((s) => {
       const dr = draftOf(s);
-      return `<div class="pm-card"><div class="pm-head"><div><strong>${esc(s.name)}</strong><span class="pm-muted">${esc(s.role || '')}</span></div></div>
+      return `<div class="pm-card"><div class="pm-head"><div><strong>${esc(s.name)}</strong><span class="pm-muted">${esc(s.role || '')}</span>${redoTag(s)}</div></div>
         <p class="pm-sum">${esc(Cat.summary(dr.perms, s.name, lang()))}</p>${state.open === s.key ? '' : personNote(s)}<div class="pm-line">${s.ownerAccess ? ownerBadge() : presetSelect(s, dr)}</div>
         <div class="pm-line">${btn('pm-open', s.key, state.open === s.key ? L('Fermer le détail', 'Hide details', 'سدّ التفاصيل') : L('Droit par droit', 'Permission by permission', 'حق بحق'), true, ` aria-expanded="${state.open === s.key}"`)}${saveActs(s)}</div>
         ${state.open === s.key ? personDetail(s) : ''}</div>`;
@@ -301,6 +308,25 @@
       <p class="pm-sum">${esc(Cat.summary(draftOf(openOne).perms, openOne.name, lang()))}</p>${personDetail(openOne)}</section>` : '';
     return `${legacyView()}${reviewView()}<div class="pm-bar"><input class="pm-search" type="search" data-pm-search value="${esc(state.q)}" placeholder="${esc(L('Chercher une personne ou un rôle', 'Search a person or a role', 'قلّب على شي واحد ولا شي دور'))}" aria-label="${esc(L('Chercher', 'Search', 'قلّب'))}">
       <span class="pm-muted">${esc(L('Touchez un nom pour voir ses droits un par un.', 'Tap a name to see the permissions one by one.', 'ضغط على سمية باش تشوف الحقوق وحدة بوحدة.'))}</span></div>${table}${cards}${panel}`;
+  }
+  /* Au patron : les codes morts à refaire, et les codes propriétaire en trop
+     (un ancien nom garde sinon son ancien code ouvert). Ni code ni empreinte. */
+  function codesView() {
+    const d = state.data;
+    if (!d || ro()) return '';
+    const redo = (d.staff || []).filter((s) => s.codeRedo);
+    const owners = Array.isArray(d.ownerCodes) ? d.ownerCodes : [];
+    let out = '';
+    if (redo.length) {
+      out += `<div class="pm-card pm-alert"><div class="pm-head"><h3>${esc(L('Code à refaire', 'Code to redo', 'الكود خاصو يتعاود'))}<span class="pm-count">${redo.length}</span></h3></div>${redo.map((s) => `<p class="pm-sum">${esc(redoNote(s))}</p>`).join('')}</div>`;
+    }
+    if (owners.length > 1) {
+      const line = (o) => `<div class="pm-line"><span><strong>${esc(o.name)}</strong> <span class="pm-muted">${esc(o.role)}</span></span>${o.self
+        ? `<span class="pm-muted">${esc(L('Ce code a ouvert cette session.', 'This code opened this session.', 'هاد الكود هو اللي حلّ هاد الجلسة.'))}</span>`
+        : btn('pm-owner-remove', o.id, state.confirmOwner === o.id ? L('Confirmer : retirer ce code', 'Confirm: remove this code', 'أكّد: حيّد هاد الكود') : L('Retirer ce code', 'Remove this code', 'حيّد هاد الكود'), state.confirmOwner !== o.id)}</div>`;
+      out += `<div class="pm-card"><div class="pm-head"><h3>${esc(L('Codes propriétaire', 'Owner codes', 'الكودات ديال مول المحل'))}</h3></div><p class="pm-sum">${esc(L('Plusieurs codes ouvrent la caisse comme propriétaire. Retirez celui qui ne sert plus : un ancien nom, un code qui a circulé.', 'Several codes open the till as owner. Remove the one no longer in use: an old name, a code that got around.', 'بزاف ديال الكودات كيحلّو الكاشة بحال مول المحل. حيّد اللي ما بقاش خدام: سمية قديمة ولا كود اللي ولّا معروف.'))}</p>${owners.map(line).join('')}</div>`;
+    }
+    return out;
   }
   /* Les personnes retenues : un aperçu de ce que « Revoir » leur rend, puis une confirmation. */
   function reviewView() {
@@ -371,6 +397,7 @@
         : esc(L(`Fiche ajoutée · ${a.subjectLabel || ''} · ${c.role || ''}`, `Staff card added · ${a.subjectLabel || ''} · ${c.role || ''}`, `تزادت بطاقة · ${a.subjectLabel || ''} · ${c.role || ''}`))) + heldTail;
       if (c.kind === 'team-retitled' || c.kind === 'code-retitled') return `${who} · ${esc(c.from || '')} → ${title}` + heldTail;
       if (c.kind === 'code-changed') return esc(L(`Code changé · ${a.subjectLabel || ''}`, `Code changed · ${a.subjectLabel || ''}`, `تبدّل الكود · ${a.subjectLabel || ''}`)) + heldTail;
+      if (c.kind === 'owner-code-removed') return esc(L(`Code propriétaire retiré · ${a.subjectLabel || ''}`, `Owner code removed · ${a.subjectLabel || ''}`, `تحيّد كود مول المحل · ${a.subjectLabel || ''}`));
       if (c.kind === 'review') return esc(L(`${a.subjectLabel || ''} · revu, droits rendus`, `${a.subjectLabel || ''} · reviewed, permissions given back`, `${a.subjectLabel || ''} · تراجع، الحقوق رجعات`));
       if (c.kind === 'team-removed') return esc(L(`Fiche retirée · ${a.subjectLabel || ''}`, `Staff card removed · ${a.subjectLabel || ''}`, `تحيّدات بطاقة · ${a.subjectLabel || ''}`));
       if (c.kind === 'activated') return esc(L(`Droits activés · remise libre ${c.freeDiscountPct} %`, `Permissions switched on · free discount ${c.freeDiscountPct} %`, `الحقوق تشعّلو · التخفيض الحر ${c.freeDiscountPct} %`));
@@ -402,14 +429,14 @@
     } else if (state.data.missingTables) {
       main = `<p class="pm-note warn">${esc(L('Les droits ne sont pas encore installés sur le serveur. En attendant, rien ne change : chaque geste garde sa règle d’avant.', 'Permissions are not installed on the server yet. Meanwhile nothing changes: every action keeps its previous rule.', 'الحقوق مازال ما تزادو فالسيرفور. حتى لداك الساعة والو ما كيتبدّل: كل حركة باقة بالقاعدة القديمة.'))}</p>`;
     } else if (!state.data.configured) {
-      main = activationView();
+      main = codesView() + activationView();
     } else {
       const d = state.data;
       const tab = (k, label) => `<button type="button" data-lens-item class="${state.tab === k ? 'on' : ''}" data-action="pm-tab" data-arg="${k}" aria-pressed="${state.tab === k}">${label}</button>`;
       const flagged = !ro() && d.unauthorizedWeek ? `<span class="pm-count">${esc(d.unauthorizedWeek)}</span>` : '';
       const note = ro() ? `<p class="pm-note">${esc(L('Lecture seule : seul le propriétaire change les droits.', 'Read only: only the owner changes permissions.', 'غير للقراءة: غير مول المحل اللي يبدّل الحقوق.'))}</p>` : '';
       const toReview = !ro() && d.heldCount ? `<span class="pm-count">${esc(d.heldCount)}</span>` : '';
-      main = `<div class="pm-bar"><div class="pm-tabs" data-lens-demo>${tab('team', esc(L('Équipe', 'Team', 'الفريق')) + toReview)}${tab('roles', esc(L('Rôles par défaut', 'Default roles', 'الأدوار')))}${tab('journal', esc(L('Journal', 'Log', 'الجورنال')) + flagged)}</div></div>${note}${state.tab === 'roles' ? rolesTab() : state.tab === 'journal' ? journalTab() : teamTab()}`;
+      main = `<div class="pm-bar"><div class="pm-tabs" data-lens-demo>${tab('team', esc(L('Équipe', 'Team', 'الفريق')) + toReview)}${tab('roles', esc(L('Rôles par défaut', 'Default roles', 'الأدوار')))}${tab('journal', esc(L('Journal', 'Log', 'الجورنال')) + flagged)}</div></div>${note}${codesView()}${state.tab === 'roles' ? rolesTab() : state.tab === 'journal' ? journalTab() : teamTab()}`;
     }
     window.Kiwi.appPage('permissions', {
       title: L('Droits de l’équipe', 'Team permissions', 'الحقوق ديال الفريق'),
@@ -534,6 +561,13 @@
     if (!keys.length) return null;
     state.reviewOpen = false;
     return act({ action: 'review-held', keys }, L('Revue faite : droits rendus', 'Reviewed: permissions given back', 'تراجعات: الحقوق رجعات'));
+  };
+  handlers['pm-owner-remove'] = (el, a) => {
+    const id = arg(el, a);
+    if (!id) return null;
+    if (state.confirmOwner !== id) { state.confirmOwner = id; render(); return null; }
+    state.confirmOwner = '';
+    return act({ action: 'owner-row-remove', id }, L('Code propriétaire retiré', 'Owner code removed', 'تحيّد الكود ديال مول المحل'));
   };
   handlers['pm-undo'] = (el, a) => {
     const id = Number(arg(el, a));

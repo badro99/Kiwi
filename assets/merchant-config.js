@@ -297,7 +297,13 @@
     if (slug) { payload.merchant = slug; payload.name = name; }
     if (opts.type) payload.type = String(opts.type);
     if (opts.city) payload.city = String(opts.city).trim().slice(0, 120);
-    if (Array.isArray(opts.pins)) payload.pins = opts.pins;
+    if (Array.isArray(opts.pins)) {
+      payload.pins = opts.pins;
+      /* L'assistant pose le code du patron : il REMPLACE l'ancien (nom et code
+       * changés ensemble), au lieu de le laisser ouvert à côté. Le serveur ne
+       * l'accepte que de la session du propriétaire (functions/api/config.js). */
+      if (opts.pins.some(function (p) { return p && p.role === 'owner'; })) payload.replaceOwner = true;
+    }
     return postRaw(payload).then(function (r) {
       /* Un refus de forfait n'est pas un problème de connexion : son code suit
        * l'erreur jusqu'à l'assistant, qui l'explique au lieu de « Reconnectez-vous ». */
@@ -342,6 +348,16 @@
     try { var v = window.KiwiVenue && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData(); return !!(v && v.id === 'scoped'); }
     catch (_) { return false; }
   }
+  /* Au patron seul (functions/api/config.js › codesToRedo) : une personne a reçu
+   * un code déjà pris, sa ligne de caisse ne s'ouvre pas. On le dit, avec son nom. */
+  function redoToast(d) {
+    var names = d && Array.isArray(d.codesToRedo) ? d.codesToRedo.slice(0, 3).join(', ') : '';
+    if (!names || !window.Kiwi || !window.Kiwi.toast) return;
+    var L = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
+    window.Kiwi.toast({ fr: 'Code à refaire pour ' + names + ' : ce code est déjà celui d’un propriétaire, il n’ouvre pas la caisse. Donnez-lui un nouveau code.',
+      en: 'Code to redo for ' + names + ': this code already belongs to an owner, so it does not open the till. Give them a new code.',
+      ar: 'الكود خاصو يتعاود لـ' + names + ': هاد الكود ديال مول المحل، ما كيحلّش الكاشة. عطيه كود جديد.' }[L] || 'Code à refaire pour ' + names + '.', 9000);
+  }
   function syncPins(pins) {
     if (!Array.isArray(pins)) return Promise.resolve(false);
     var send;
@@ -355,7 +371,7 @@
       });
     } else send = post({ pins: pins });
     return send.then(function (r) {
-      if (r && r.ok) { cfg.loaded = true; try { return r.json().then(function (d) { if (d && Array.isArray(d.pins)) cfg.pins = d.pins; return true; }).catch(function () { return true; }); } catch (_) { return true; } }
+      if (r && r.ok) { cfg.loaded = true; try { return r.json().then(function (d) { if (d && Array.isArray(d.pins)) cfg.pins = d.pins; redoToast(d); return true; }).catch(function () { return true; }); } catch (_) { return true; } }
       return false;
     }).catch(function () { return false; });
   }

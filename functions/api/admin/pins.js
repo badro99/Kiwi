@@ -3,11 +3,16 @@ import { hashStaffCode, pinHashes } from '../../auth/_staff-codes.js';
 //
 //   GET    ?merchant=slug            → { pins: [{id,name,role}] }
 //   POST   {merchant,pin,name,role}  → add (4-digit, unique per merchant)
+//          + replaceOwner:true, for an owner-titled role only: the new owner
+//          code REPLACES the merchant's other owner rows, in the same batch,
+//          only if it was written (a patron who changed name and code after a
+//          leak does not keep the old code alive). Each removed row is journaled.
 //   DELETE ?id=pin-…  (or {id})      → remove one
 //
 // Staff codes are credentials. Operators manage replacements without reading codes.
 
 import { isOperator, isSeniorOperator, json, limitCheck, limitFail, operatorActor } from '../../auth/_lib.js';
+import Catalog from '../../../assets/permissions-catalog.js';
 
 /* Le journal d'un geste sur un code d'équipe. Il nomme l'opérateur (session
  * opérateur, jamais un code), l'établissement, le geste et l'heure ; il ne porte
@@ -78,6 +83,14 @@ export async function onRequestPost(context) {
   /* L'unicité se décide DANS l'insertion : un SELECT puis un INSERT laissaient
    * deux ajouts simultanés du même code passer tous les deux. Le relevé ne
    * s'écrit que si la ligne existe bien (même batch, même transaction). */
+  let stale = [];
+  if (body.replaceOwner === true && Catalog.ownerTitle(role)) {
+    try {
+      const rows = await context.env.DB.prepare('SELECT id, role FROM staff_pins WHERE merchant = ?').bind(merchant).all();
+      stale = (rows.results || []).filter((r) => Catalog.ownerTitle(r.role)).map((r) => String(r.id));
+    } catch (_) { return json({ error: 'pin-storage-unavailable' }, 503); }
+  }
+  const staleMarks = stale.map(() => '?').join(',');
   let created = 0;
   try {
     const results = await context.env.DB.batch([
@@ -88,6 +101,14 @@ export async function onRequestPost(context) {
       context.env.DB.prepare(`${AUDIT_INSERT} SELECT '', ?, 'staff-pin-create', '', ?, '', ?, ?, ?, ?
         WHERE EXISTS (SELECT 1 FROM staff_pins WHERE id = ?)`)
         .bind(merchant, name, actor.label, actor.id, JSON.stringify({ id, role }), ts, id),
+      ...(stale.length ? [
+        context.env.DB.prepare(`${AUDIT_INSERT}
+          SELECT '', merchant, 'staff-pin-delete', name, '', 'owner-replaced', ?, ?, json_object('id', id, 'role', role), ?
+            FROM staff_pins WHERE merchant = ? AND id IN (${staleMarks}) AND EXISTS (SELECT 1 FROM staff_pins WHERE id = ?)`)
+          .bind(actor.label, actor.id, ts, merchant, ...stale, id),
+        context.env.DB.prepare(`DELETE FROM staff_pins WHERE merchant = ? AND id IN (${staleMarks}) AND EXISTS (SELECT 1 FROM staff_pins WHERE id = ?)`)
+          .bind(merchant, ...stale, id),
+      ] : []),
     ]);
     created = Number(results && results[0] && results[0].meta && results[0].meta.changes) || 0;
   } catch (_) { return json({ error: 'pin-storage-unavailable' }, 503); }
@@ -101,7 +122,7 @@ export async function onRequestPost(context) {
     } catch (_) { /* le refus tient sans sa trace ; le compteur, lui, est passé */ }
     return json({ error: 'pin-exists' }, 409);
   }
-  return json({ ok: true, pin: { id, name, role } });
+  return json({ ok: true, pin: { id, name, role }, ...(stale.length ? { replaced: stale.length } : {}) });
 }
 
 export async function onRequestDelete(context) {

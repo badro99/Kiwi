@@ -646,6 +646,64 @@ console.log('■ Le code du patron ne s’efface pas, une collision ne se devine
   check((await (await pinVerify(w, '7803', {})).json()).staff.name === 'Nadia Patron', 'et le code du patron reste à lui seul : la ligne en collision porte un sceau mort');
 }
 
+/* ── 9g · Juge 6 : le patron apprend le code mort ; remplacer ou retirer un code propriétaire ── */
+console.log('■ Code à refaire, code propriétaire remplacé ou retiré');
+{
+  const w = world();
+  await activate(w);
+  const publishAs = (cookie, pins, extra = {}, at = w) => config.onRequestPost({ env: at.env, request: req('/api/config', { method: 'POST', cookie, body: { merchant: SHOP, name: 'Café Droits', pins, ...extra } }) });
+  const team = [{ name: 'Lina Saidi', role: 'Caissière', pin: CODES.caisse }, { name: 'Sara Alaoui', role: 'Manager', pin: CODES.manager }];
+  const verifies = async (at, code) => { const j = await (await pinVerify(at, code, {})).json(); return j.ok ? j.staff.name : null; };
+  /* Le gérant : rien ne change pour lui, collision ou non. */
+  const mgr = await publishAs(cookieManager, [...team, { name: 'Probe X', role: 'Caissière', pin: CODES.owner }]);
+  const mgrBody = await mgr.json(), mgrView = await (await get(w, cookieManager)).json();
+  check(mgr.status === 200 && !('codesToRedo' in mgrBody) && !JSON.stringify(mgrView).includes('codeRedo') && !('ownerCodes' in mgrView),
+    'gérant : ni sa réponse ni sa vue des droits ne disent qu’un code est mort');
+  /* Le patron : sa réponse et son écran Droits nomment la personne, jamais le code. */
+  const own = await publishAs(cookieOwner, [...team, { name: 'Karim Idrissi', role: 'Caissier', pin: CODES.owner }]);
+  const ownBody = await own.json();
+  check(own.status === 200 && JSON.stringify(ownBody.codesToRedo) === '["Karim Idrissi"]' && !JSON.stringify(ownBody).includes(CODES.owner),
+    'patron : la réponse nomme Karim (code à refaire), sans le code');
+  const ownView = await (await get(w, cookieOwner)).json();
+  check(ownView.staff.filter((st) => st.codeRedo).map((st) => st.name).join() === 'Karim Idrissi' && await verifies(w, CODES.owner) === 'Nadia Patron',
+    'patron : l’écran Droits marque Karim seul « code à refaire » ; le code n’ouvre que Nadia');
+  const fixed = await publishAs(cookieOwner, [...team, { name: 'Karim Idrissi', role: 'Caissier', pin: '7811' }]);
+  check(fixed.status === 200 && !('codesToRedo' in await fixed.json()) && !(await (await get(w, cookieOwner)).json()).staff.some((st) => st.codeRedo)
+    && await verifies(w, '7811') === 'Karim Idrissi', 'un nouveau code pour Karim : il ouvre la caisse, plus rien à refaire');
+  /* Un employé « Direction » publié par le patron, sans le signal : le code du patron reste, l'écran Droits montre les deux et retire le vieux. */
+  const renamed = await publishAs(cookieOwner, [...team, { name: 'Nadia', role: 'Direction', pin: '7812' }]);
+  const view2 = await (await get(w, cookieOwner)).json();
+  check(renamed.status === 200 && await verifies(w, CODES.owner) === 'Nadia Patron' && Array.isArray(view2.ownerCodes) && view2.ownerCodes.length === 2
+    && !/6201|7812|k2\$/.test(JSON.stringify(view2.ownerCodes)), 'sans le signal, les deux codes propriétaire restent ; l’écran Droits les liste, sans code ni empreinte');
+  const old = view2.ownerCodes.find((o) => o.name === 'Nadia Patron');
+  const selfView = await (await get(w, cookieNadia)).json();
+  check(selfView.ownerCodes.find((o) => o.id === old.id).self === true && (await post(w, cookieNadia, { action: 'owner-row-remove', id: old.id })).status === 409,
+    'la session ouverte par ce code ne le retire pas (own-code)');
+  check((await post(w, cookieManager, { action: 'owner-row-remove', id: old.id })).status === 403 && await verifies(w, CODES.owner) === 'Nadia Patron',
+    'un gérant ne retire pas un code propriétaire');
+  const gone = await post(w, cookieOwner, { action: 'owner-row-remove', id: old.id });
+  check(gone.status === 200 && await verifies(w, CODES.owner) === null && await verifies(w, '7812') === 'Nadia',
+    'le patron retire l’ancien code : il n’ouvre plus rien, le nouveau marche');
+  const view3 = await (await get(w, cookieOwner)).json();
+  const lastId = w.sql.prepare('SELECT id FROM staff_pins WHERE merchant = ? AND name = ?').get(SHOP, 'Nadia').id;
+  check(!('ownerCodes' in view3) && (await post(w, cookieOwner, { action: 'owner-row-remove', id: lastId })).status === 409 && await verifies(w, '7812') === 'Nadia',
+    'jamais le dernier code propriétaire');
+  check(view3.audit.some((a) => a.change.kind === 'owner-code-removed' && a.subjectLabel === 'Nadia Patron') && !/6201|7812/.test(JSON.stringify(view3.audit)),
+    'le retrait entre au journal, sans code');
+  /* Le signal « remplacer le propriétaire » (le wizard), au patron seul. */
+  const w2 = world();
+  await activate(w2);
+  const noOwnerRow = await publishAs(cookieOwner, team, { replaceOwner: true }, w2);
+  check(noOwnerRow.status === 200 && await verifies(w2, CODES.owner) === 'Nadia Patron', 'le signal sans ligne propriétaire ne retire rien : le compte garde son code de patron');
+  const direction = await publishAs(cookieOwner, [...team, { name: 'Driss Alami', role: 'Direction', pin: '7823' }], {}, w2);
+  check(direction.status === 200 && await verifies(w2, CODES.owner) === 'Nadia Patron', 'un employé « Direction » publié par le patron sans le signal n’efface pas le code du patron');
+  const byManager = await publishAs(cookieManager, [...team, { name: 'Nadia Patron', role: 'Propriétaire', pin: '7821' }], { replaceOwner: true }, w2);
+  check(await verifies(w2, CODES.owner) === 'Nadia Patron' && await verifies(w2, '7821') === null, 'un gérant qui envoie le signal ne remplace rien (' + byManager.status + ')');
+  const wizard = await publishAs(cookieOwner, [...team, { name: 'Nadia B.', role: 'Propriétaire', pin: '7822' }], { replaceOwner: true }, w2);
+  check(wizard.status === 200 && await verifies(w2, CODES.owner) === null && await verifies(w2, '7822') === 'Nadia B.' && await verifies(w2, '7823') === null,
+    'le wizard du patron, nom et code changés : tous les anciens codes propriétaire partent, le nouveau ouvre');
+}
+
 /* ── 9e · Un code changé par un gérant, et la revue du patron ──────────── */
 console.log('■ Code changé : retenue, journal, revue');
 {
