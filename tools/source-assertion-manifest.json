@@ -65,6 +65,7 @@
     "ai-single-model-test.mjs": "All Workers AI model literals belong to the shared constant module."
   },
   "style": {
+    "search-pill-test.mjs": "layout, contrast or copy in CSS/markup",
     "admin-crm-layout-test.mjs": "layout, contrast or copy in CSS/markup",
     "boutique-rtl-css-test.mjs": "layout, contrast or copy in CSS/markup",
     "rtl-css-lint-test.mjs": "layout, contrast or copy in CSS/markup",
