@@ -14,7 +14,7 @@ const whole = fs.readFileSync(new URL('../assets/z-reconciliation.js', import.me
 const at = whole.indexOf("/* LE MOT POUR L'OUVERTURE SUIVANTE");
 assert.ok(at > 0, 'the close follow-up ships at the end of z-reconciliation.js');
 const source = whole.slice(at);
-function load() {
+function bootModule() {
   const store = new Map();
   const window = {};
   const listeners = {};
@@ -27,7 +27,7 @@ function load() {
   return { F: window.KiwiCloseFollowUp, store, listeners };
 }
 
-const { F, listeners } = load();
+const { F, listeners } = bootModule();
 assert.ok(F && typeof F.record === 'function', 'the module exposes KiwiCloseFollowUp');
 assert.doesNotMatch(source, /KiwiCaisseLang|KiwiLive|KiwiDayReport/, 'it reads no other module: the tills announce, it listens');
 
