@@ -2267,6 +2267,7 @@ section('Whole-project regressions');
     'pin-lockout-truth-test.mjs',
     'boutique-product-form-test.mjs',
     'stock-movement-modal-test.mjs',
+    'stock-movement-neutral-colour-test.mjs',
     'stock-item-form-test.mjs',
     'boutique-product-sheet-test.mjs',
     'boutique-inventory-i18n-test.mjs',
