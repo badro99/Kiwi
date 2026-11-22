@@ -1,11 +1,11 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch, openClientModal } from './pos-maison/sales.js?v=156';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch, openClientModal } from './pos-maison/sales.js?v=157';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=4';
 import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=18';
 import { tillNow } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=1';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=156';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=156';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=157';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=157';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=10'; import { mzLivraisons } from './pos-maison/delivery.js?v=28';
-import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=14'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=5'; import { mzSettle } from './pos-maison/catalog-settle.js?v=1'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
+import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=14'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=5'; import { mzSettle } from './pos-maison/catalog-settle.js?v=1'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1'; import { cardCheckHtml, cardCheckWire, cardCheckValue } from './pos-boutique/card-check.js?v=1';
 import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
 
   'use strict';
@@ -2392,7 +2392,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
          clôture et disparaît du Z imprimé — le seul document qui reste. */
       avoirs: { issued: t.avoirIssued, issuedCount: t.avoirIssuedN, used: t.avoirUsed, usedCount: t.avoirUsedN },
       acomptes: { received: t.acompteReceived, outstanding: t.outstanding },
-      countedCash: only === 'delivery' ? null : counted,
+      countedCash: only === 'delivery' ? null : counted, terminalCardTotal: only === 'delivery' ? null : bqCardZ,
     };
   }
   /* La journée commerciale EN COURS, comme closeRegister() côté restaurant.
@@ -2725,7 +2725,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
   }
 
   /* ── la clôture ── */
-  let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null, bqClosedPair = null;
+  let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null, bqClosedPair = null, bqCardZ = null;   /* bqCardZ : le total carte recopié du Z du TPE, null = non vérifié (pos-boutique/card-check.js) */
   function bqFmtDur(min) {
     if (min < 60) return `${min} mn`;
     return `${Math.floor(min / 60)}h${pad2(min % 60)}`;
@@ -2763,6 +2763,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
     const pv = pvPaired() || {};
     const DR = window.KiwiDayReport;
     const V = DR ? DR.vocab() : { items: 'articles', cats: 'rayons', cat: 'rayon' };
+    bqCardZ = null; const cardKiwi = (() => { try { const c = bqBuildReport(null, null)?.methods?.card; return Number.isFinite(c) ? c : t.card; } catch (_) { return t.card; } })();   /* le chiffre que le rapport comparera au TPE */
 
     const rows = [
       ['Service ouvert à', fmtHM(openedAt), false, ''],
@@ -2837,6 +2838,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
             <span>Écart</span><span class="mono" id="bqclo-ecart">·</span>
           </div>
         </div>
+        ${cardCheckHtml(cardKiwi, fmtMAD)}
         <div class="clo-highlight">
           <div class="clo-highlight-icon"><i data-lucide="shopping-bag"></i></div>
           <div class="clo-highlight-text">${hlText}</div>
@@ -2850,12 +2852,12 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
     v.classList.add('is-open');
     icons();
 
-    v.querySelector('#bqclo-count').addEventListener('input', bqUpdateEcart);
+    v.querySelector('#bqclo-count').addEventListener('input', bqUpdateEcart); cardCheckWire(v, cardKiwi, fmtMAD);
     v.querySelector('#bqclo-continue').onclick = () => v.classList.remove('is-open');
     /* Imprimer AVANT de fermer — un tirage avec le comptage saisi à l'instant,
        aucune écriture (même contrat que #clo-print côté restaurant). */
     v.querySelector('#bqclo-print').onclick = () => {
-      const raw = v.querySelector('#bqclo-count').value;
+      const raw = v.querySelector('#bqclo-count').value; bqCardZ = cardCheckValue(v);
       const pair = zPair(bqBuildReport, raw === '' || raw == null ? null : parseFloat(raw), 0, null);
       if (!pair) { toast('Rapport indisponible'); return; }
       zPrintPair(bqPrintReport, pair, 'AVANT CLÔTURE');
@@ -2869,7 +2871,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
   function bqCloseRegister() {
     const v = bqCloVeil;
     const raw = v ? v.querySelector('#bqclo-count').value : '';
-    const counted = (raw === '' || raw == null) ? null : parseFloat(raw);
+    const counted = (raw === '' || raw == null) ? null : parseFloat(raw); bqCardZ = cardCheckValue(v);
     if (v) v.classList.remove('is-open');
     let report = null, reportSaved = false;
     try {

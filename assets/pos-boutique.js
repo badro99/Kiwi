@@ -1,13 +1,13 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=259';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=177';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=259';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=259';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=260';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=178';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=260';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=260';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=6';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=1';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=4';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=4';
-import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=26'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=3'; import { mountSellerPick, sellerPickOn } from './pos-boutique/seller-pick.js?v=2';
+import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=26'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=3'; import { cardCheckHtml, cardCheckWire, cardCheckValue } from './pos-boutique/card-check.js?v=1'; import { mountSellerPick, sellerPickOn } from './pos-boutique/seller-pick.js?v=2';
 import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zDrawerCash, zDrawerMoves, zDrawerRows, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=10'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=23'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11'; import { bqTransfers } from './pos-boutique/transfers.js?v=7';
 
   'use strict';
@@ -2322,7 +2322,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
          clôture et disparaît du Z imprimé — le seul document qui reste. */
       avoirs: { issued: t.avoirIssued, issuedCount: t.avoirIssuedN, used: t.avoirUsed, usedCount: t.avoirUsedN },
       acomptes: { received: t.acompteReceived, outstanding: t.outstanding },
-      countedCash: only === 'delivery' ? null : counted,
+      countedCash: only === 'delivery' ? null : counted, terminalCardTotal: only === 'delivery' ? null : bqCardZ,
     };
   }
   /* La journée commerciale d'un service est celle de son OUVERTURE (même règle
@@ -2651,7 +2651,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   }
 
   /* ── la clôture ── */
-  let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null, bqClosedPair = null;
+  let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null, bqClosedPair = null, bqCardZ = null;   /* bqCardZ : le total carte recopié du Z du TPE, null = non vérifié (card-check.js) */
   function bqUpdateEcart() {
     const v = bqCloVeil; if (!v) return;
     const line = v.querySelector('#bqclo-ecart-line'), out = v.querySelector('#bqclo-ecart'), inp = v.querySelector('#bqclo-count');
@@ -2685,6 +2685,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     const pv = pvPaired() || {};
     const DR = window.KiwiDayReport;
     const V = DR ? DR.vocab() : { items: 'articles', cats: 'rayons', cat: 'rayon' };
+    bqCardZ = null; const cardKiwi = (() => { try { const c = bqBuildReport(null, null)?.methods?.card; return Number.isFinite(c) ? c : t.card; } catch (_) { return t.card; } })();   /* le chiffre que le rapport comparera au TPE */
 
     const rows = [
       ['Service ouvert à', fmtHM(openedAt), false, ''],
@@ -2759,6 +2760,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
             <span>Écart</span><span class="mono" id="bqclo-ecart">·</span>
           </div>
         </div>
+        ${cardCheckHtml(cardKiwi, fmtMAD)}
         <div class="clo-highlight">
           <div class="clo-highlight-icon"><i data-lucide="shopping-bag"></i></div>
           <div class="clo-highlight-text">${hlText}</div>
@@ -2774,12 +2776,12 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     icons();
     void mountSellerDay(v.querySelector('#bqclo-sellers'), { slug: merchantSlug, day: retDayKey(tillNow()), esc, fmtMAD, skin: bqKitSkin() });   // design 2027 + option « Commissions vendeurs » seulement
 
-    v.querySelector('#bqclo-count').addEventListener('input', bqUpdateEcart);
+    v.querySelector('#bqclo-count').addEventListener('input', bqUpdateEcart); cardCheckWire(v, cardKiwi, fmtMAD);
     v.querySelector('#bqclo-continue').onclick = () => v.classList.remove('is-open');
     /* Imprimer AVANT de fermer — un tirage avec le comptage saisi à l'instant,
        aucune écriture (même contrat que #clo-print côté restaurant). */
     v.querySelector('#bqclo-print').onclick = () => {
-      const raw = v.querySelector('#bqclo-count').value;
+      const raw = v.querySelector('#bqclo-count').value; bqCardZ = cardCheckValue(v);
       const pair = zPair(bqBuildReport, raw === '' || raw == null ? null : parseFloat(raw), 0, null);
       if (!pair) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapport indisponible')); return; }
       zPrintPair(bqPrintReport, pair, 'AVANT CLÔTURE');
@@ -2793,7 +2795,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   function bqCloseRegister() {
     const v = bqCloVeil;
     const raw = v ? v.querySelector('#bqclo-count').value : '';
-    const counted = (raw === '' || raw == null) ? null : parseFloat(raw);
+    const counted = (raw === '' || raw == null) ? null : parseFloat(raw); bqCardZ = cardCheckValue(v);
     if (v) v.classList.remove('is-open');
     let report = null, reportSaved = false;
     try {
