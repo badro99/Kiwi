@@ -3429,7 +3429,7 @@ function _bqxPfWire(b, p) {
   photoInput.addEventListener('change', (e) => { upload(e.target.files && e.target.files[0], 'photo'); e.target.value = ''; });
   videoInput.addEventListener('change', (e) => { upload(e.target.files && e.target.files[0], 'video'); e.target.value = ''; });
 
-  if (_bqxSzMod) { _bqxSzMod.wireTotal(b, _bqxPfLang()); if (_bqxSzMod.wireCode) _bqxSzMod.wireCode(b, CAT(), _bqxPfLang()); } _bqxWireAb(b); import(new URL('assets/retail-icon-picker.js?v=5', document.baseURI).href).then((m) => m.mountTillPhoto(b, p, { lang: _bqxPfLang(), trade: _bqxCopy().trade, media: () => !!(_bqxPhoto || _bqxVideo) })).catch(() => {});   // la photo de la caisse
+  if (_bqxSzMod) { _bqxSzMod.wireTotal(b, _bqxPfLang()); if (_bqxSzMod.wireCode) _bqxSzMod.wireCode(b, CAT(), _bqxPfLang()); } _bqxWireAb(b); import(new URL('assets/retail-icon-picker.js?v=6', document.baseURI).href).then((m) => m.mountTillPhoto(b, p, { lang: _bqxPfLang(), trade: _bqxCopy().trade, media: () => !!(_bqxPhoto || _bqxVideo) })).catch(() => {});   // la photo de la caisse
   paintMedia();
   paintGap();
 }

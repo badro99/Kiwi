@@ -275,7 +275,7 @@
   function kitPhotos() {
     if (photoMod || photoAsked) return;
     photoAsked = true;
-    import('/assets/retail-photos.js?v=5').then((m) => {
+    import('/assets/retail-photos.js?v=6').then((m) => {
       photoMod = m;
       if (countState.isOpen && countState.step !== 'submitted' && kitOn()) renderModal();
     }).catch(() => {});

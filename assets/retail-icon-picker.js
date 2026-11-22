@@ -13,7 +13,7 @@
    Branché par une ligne de assets/pages-pro-boutique.js (import dynamique : le
    fichier est plafonné, la fonctionnalité vit ici). L'état part avec la fiche
    par `root.__kiwiTillPhoto = { art, artPicked }`, que _bqxPfRead recopie. */
-import { PHOTO_KEYS, keyForName, photoKey, photoFile, photoSrc, nameTokens, wordsOf } from './retail-photos.js?v=5';
+import { PHOTO_KEYS, keyForName, photoKey, photoFile, photoSrc, nameTokens, wordsOf } from './retail-photos.js?v=6';
 
 /* [fr, en, ar] pour chaque pièce. */
 const NAMES = {
