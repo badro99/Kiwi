@@ -947,7 +947,6 @@
   function start() {
     chip();
     wakeInbox();
-    setTimeout(glvLoad, 1500);
   }
   document.addEventListener('visibilitychange', wakeInbox);
   /* Onglet caché (YouTube sur la tablette…) : la relève s'arrête, donc le
@@ -1104,6 +1103,8 @@
     if (!m || !orderProOn()) { glvSchedule(120000); return; }
     if (m !== GLV.merchant) { GLV.merchant = m; GLV.stores = []; GLV.orders = {}; GLV.busy = {}; GLV.note = {}; }
     if (document.hidden) return;
+    if (GLV.inflight) { GLV.again = true; return; }
+    GLV.inflight = true;
     fetch('/api/channel/glovo/till?merchant=' + encodeURIComponent(m), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
@@ -1115,6 +1116,8 @@
       })
       .catch(function () {})
       .then(function () {
+        GLV.inflight = false;
+        if (GLV.again) { GLV.again = false; glvLoad(); return; }
         var live = Object.keys(GLV.orders).some(function (k) { var g = GLV.orders[k]; return !g.cancelled && !g.deliveredTs && !(g.pickedUpTs && !g.marketplace); });
         glvSchedule(!GLV.stores.length ? 600000 : live ? 20000 : 60000);
       });
@@ -1152,12 +1155,15 @@
     if (old) old.remove();
     var wrap = document.createElement('div');
     wrap.id = 'kgl-code'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-labelledby', 'kgl-code-t');
-    wrap.innerHTML = '<form class="kgl-dlg"><b id="kgl-code-t">' + esc(T.code) + '</b><p>' + esc(T.why) + '</p>' +
-      '<input type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="' + esc(T.code) + '">' +
-      '<div class="kgl-dlg-a"><button type="button" class="kgl-btn" data-kgl-x>' + esc(T.cancel) + '</button>' +
-      '<button type="submit" class="kgl-btn is-go">' + esc(T.ok) + '</button></div></form>';
+    var node = function (tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+    var form = node('form', 'kgl-dlg'), title = node('b', null, T.code), input = node('input'), row = node('div', 'kgl-dlg-a');
+    var no = node('button', 'kgl-btn', T.cancel), yes = node('button', 'kgl-btn is-go', T.ok);
+    title.id = 'kgl-code-t'; no.type = 'button'; no.setAttribute('data-kgl-x', ''); yes.type = 'submit';
+    input.type = 'password'; input.inputMode = 'numeric'; input.autocomplete = 'off'; input.maxLength = 8; input.setAttribute('aria-label', T.code);
+    row.appendChild(no); row.appendChild(yes);
+    form.appendChild(title); form.appendChild(node('p', null, T.why)); form.appendChild(input); form.appendChild(row);
+    wrap.appendChild(form);
     document.body.appendChild(wrap);
-    var input = wrap.querySelector('input'), form = wrap.querySelector('form');
     function done() { input.value = ''; wrap.remove(); document.removeEventListener('keydown', onKey, true); }
     function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); done(); } }
     document.addEventListener('keydown', onKey, true);
@@ -1180,7 +1186,12 @@
     else if (kind === 'close') glvAskCode(function (pin) { glvPost('close:' + key, { action: 'close', storeId: key, minutes: min, pin: pin }); });
     else if (kind === 'reopen') glvAskCode(function (pin) { glvPost('reopen:' + key, { action: 'reopen', storeId: key, pin: pin }); });
   });
-  document.addEventListener('visibilitychange', function () { if (!document.hidden && GLV.merchant) glvLoad(); });
+  function glvWake() { if (!document.hidden && GLV.merchant) glvLoad(); }
+  document.addEventListener('visibilitychange', glvWake);
+  document.addEventListener('kiwi:request-wake', glvWake);
+  window.addEventListener('focus', glvWake);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { glvSchedule(1500); });
+  else glvSchedule(1500);
   (function glvCss() {
     var s = document.createElement('style');
     s.textContent = [

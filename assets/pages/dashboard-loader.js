@@ -35,6 +35,8 @@
     directory: { dependencies: [], scripts: ['assets/directory-optin.js?v=2'] },
     /* « Dépenses » (interrupteur par commerçant) : un module ES, ouvert au premier clic. */
     expenses: { dependencies: [], scripts: ['assets/expenses/index.js?v=4'], module: true },
+    /* Intégrations → Glovo : le panneau du patron (adresses, carte, fermeture), au premier clic. */
+    glovo: { dependencies: [], scripts: ['assets/channel-glovo.js?v=1'] },
   });
   const pending = new Map(), scripts = new Map(), ready = new Set();
   function script(url, module) {
@@ -77,6 +79,14 @@
     event.preventDefault();
     event.stopImmediatePropagation();
     load('lock').then(() => { if (a.isConnected) a.click(); }, () => { location.href = a.href; });
+  }, true);
+  window.addEventListener('click', event => {
+    if (ready.has('glovo')) return;
+    const card = event.target.closest?.('[data-action="integration-connect"][data-channel="glovo"]');
+    if (!card) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    load('glovo').then(() => { if (card.isConnected) card.click(); }, unavailable);
   }, true);
   let replaying = false;
   function firstUse(event, target, activate) {

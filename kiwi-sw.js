@@ -237,7 +237,7 @@ var SHELL = [
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
   '/assets/pages/dashboard-startup.js?v=290',
-  '/assets/pages/dashboard-loader.js?v=107',
+  '/assets/pages/dashboard-loader.js?v=108',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
   '/assets/hotel/groups.js?v=7',
@@ -522,7 +522,7 @@ var SHELL = [
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=10',
   '/assets/orderpro-panel.js?v=5',
-  '/assets/orderpro-inbox.js?v=44',
+  '/assets/orderpro-inbox.js?v=45',
   '/assets/service-requests.js?v=2',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
