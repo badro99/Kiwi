@@ -12,6 +12,7 @@ import { reopenServiceTable, serviceTableExists, tableKey, tableAliases } from '
 import { creditsIssuedCents, ensureCreditEvents, refundsIssuedCents } from '../_store-credit-ledger.js';
 import { ensureCollectionSchema } from '../receivables.js';
 import { voidSaleLoyalty } from '../clients.js';
+import { planSaleVoid, saleVoidStatements } from '../_cheque-debt.js';
 
 /* Une vente déjà remboursée, ou transformée en avoir, ne s'annule plus : le
  * remboursement est une ligne négative qui reste dans le journal, l'annulation
@@ -181,12 +182,14 @@ async function voidAndReopen(env, body, merchant, id, sale, actor, actorId, acto
         ...(withCents ? [saleAmountCents] : []), sale.method || '', sale.ref || '', saleTime,
         action === 'reopen' ? auditImpact : impact, ts);
   }
+  const chequeFix = saleVoidStatements(env, merchant, await planSaleVoid(env, merchant, id).catch(() => []),
+    { saleId: id, voidTs: ts, now: ts, actor, ref: sale.ref || '' });
   try {
     let result;
     try { result = await env.DB.batch([...(insertVisit ? [insertVisit] : []), update,
-      audit(true, 'void', 'changes() = 1'), audit(true, 'reopen', 'changes() = 1')]); }
+      audit(true, 'void', 'changes() = 1'), audit(true, 'reopen', 'changes() = 1'), ...chequeFix]); }
     catch (_) { result = await env.DB.batch([...(insertVisit ? [insertVisit] : []), update,
-      audit(false, 'void', 'changes() = 1'), audit(false, 'reopen', 'changes() = 1')]); }
+      audit(false, 'void', 'changes() = 1'), audit(false, 'reopen', 'changes() = 1'), ...chequeFix]); }
     const changed = Number(result?.[insertVisit ? 1 : 0]?.meta?.changes || 0);
     if (!changed) return json({ error: 'table-occupied', message: 'table occupée · rouvrir sur une autre table', table: target }, 409);
   } catch (error) {
@@ -414,9 +417,14 @@ export async function onRequestPost({ request, env }) {
     ).bind(merchant, id, 'void', reason, '', actor, actorId, legacyAmount,
            sale.method || '', sale.ref || '', Number(sale.ts) || 0, impact, ts);
 
+    /* Un chèque rejeté payait ce ticket : sa part revient dans le même lot que
+       l'annulation (ligne « Chèque impayé » et note de la cliente réduites ou
+       fermées), conditionnée à CETTE annulation (_cheque-debt.js › planSaleVoid). */
+    const chequeFix = saleVoidStatements(env, merchant, await planSaleVoid(env, merchant, id).catch(() => []),
+      { saleId: id, voidTs: ts, now: ts, actor, ref: sale.ref || '' });
     let result;
-    try { result = await env.DB.batch([update, auditWithCents]); }
-    catch (_) { result = await env.DB.batch([update, auditLegacy]); }
+    try { result = await env.DB.batch([update, auditWithCents, ...chequeFix]); }
+    catch (_) { result = await env.DB.batch([update, auditLegacy, ...chequeFix]); }
     const changes = Number(result?.[0]?.meta?.changes ?? result?.[0]?.changes ?? 0);
     if (!changes) {
       /* Perdu contre une annulation concurrente, ou contre un remboursement
@@ -444,6 +452,15 @@ export async function onRequestPost({ request, env }) {
     } catch (_) { /* history unavailable: keep the successful void response */ }
   }
 
+  /* Un chèque encore en portefeuille payait ce ticket : le serveur le nomme pour
+     que l'écran propose de l'annuler (le portefeuille le marque « ticket annulé »). */
+  let cheques = [];
+  try {
+    const rs = await env.DB.prepare(`SELECT c.id, c.number, c.amount_cents FROM cheque_links l JOIN cheques c ON c.merchant = l.merchant AND c.id = l.cheque_id
+       WHERE l.merchant = ? AND l.link_type = 'sale' AND l.link_id = ? AND c.status = 'received'`).bind(merchant, id).all();
+    cheques = ((rs && rs.results) || []).map((c) => ({ id: String(c.id), number: String(c.number || ''), amountCents: Number(c.amount_cents) || 0 }));
+  } catch (_) { cheques = []; }
+
   return json({ ok: true, id, ref: sale.ref || '', amount: saleAmount, amountCents: saleAmountCents,
-                actor, actor_id: actorId, source, ts });
+                actor, actor_id: actorId, source, ts, ...(cheques.length ? { cheques } : {}) });
 }

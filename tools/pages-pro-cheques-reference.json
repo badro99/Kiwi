@@ -1,0 +1,4 @@
+{
+  "description": "SHA-256 of the appPage options rendered by the Chèques et effets page (assets/pages-pro/cheques.js) on first open, before any cheque is read: no merchant (demo), default French locale, owner role, loading card. Sealed 21 November 2026 when the page was born lazy.",
+  "sha": "2ac4efffc2735c929434eb6fdfb43412bede78ab946ed6f7bdf60d8cc6e32509"
+}

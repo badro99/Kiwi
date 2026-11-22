@@ -77,6 +77,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
   const reason = String((body && body.reason) || 'refund').trim().slice(0, 80);
   const refundRef = String((body && body.ref) || '').trim().slice(0, 40);
   if (!asked || !refundId || !originalSaleId) return json({ error: 'missing-fields' }, 400);
+  if (/^chq(?:bounce|back)-/i.test(refundId)) return json({ error: 'reserved-id' }, 400);
   if (!Number.isFinite(amountCents) || amountCents <= 0 || amountCents > MAX_AMOUNT_CENTS) {
     return json({ error: 'bad-amount' }, 400);
   }

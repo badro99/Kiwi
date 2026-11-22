@@ -25,6 +25,8 @@ const REFERENCES = {
   /* Born lazy (Fournisseurs, 21 November 2026): its reference is its own first render. */
   'assets/pages-pro/suppliers.js': ['nav-fournisseurs', 'tools/pages-pro-suppliers-reference.json'],
   'assets/pages-pro/credit-book.js': ['nav-credit', 'tools/pages-pro-credit-book-reference.json'],
+  /* Born lazy (Chèques et effets, 21 November 2026): its reference is its own first render. */
+  'assets/pages-pro/cheques.js': ['nav-cheques', 'tools/pages-pro-cheques-reference.json'],
 };
 const entries = [...registry.matchAll(/url: '([^']+)', handlers: (\[[^\]]+\])/g)];
 assert.ok(entries.length >= 1, 'registry lists its chunks');

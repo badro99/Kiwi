@@ -75,7 +75,7 @@
 export const DIRECTIONS = new Set(['in', 'out']);
 export const PARTY_TYPES = new Set(['customer', 'supplier', 'cashbook']);
 export const METHODS = ['cash', 'card', 'transfer', 'cheque', 'other'];
-export const KINDS = ['purchase', 'payment', 'bill', 'return', 'expense', 'expense-payment', 'sale-credit', 'repayment', 'opening', 'adjustment', 'manual'];
+export const KINDS = ['purchase', 'payment', 'bill', 'return', 'expense', 'expense-payment', 'sale-credit', 'repayment', 'opening', 'adjustment', 'manual', 'cheque-rejected'];
 export const LIVE = "archived = 0 AND deleted_ts IS NULL AND internal = 0 AND status = 'posted'";
 
 const SLUG = /^[a-z0-9][a-z0-9_-]{0,63}$/;

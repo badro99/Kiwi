@@ -702,6 +702,11 @@
       var card = m.el.querySelector('.kiwi-modal');
       if (card && !card.querySelector('.cd-grabber')) { var grab = document.createElement('div'); grab.className = 'cd-grabber'; grab.setAttribute('aria-hidden', 'true'); card.insertBefore(grab, card.firstChild); }
     }
+    /* Ses chèques (en main, impayés) : patron et gérant, vrai compte seulement. */
+    if (isRealTenant() && window.KiwiClients && KiwiClients.bookId) {
+      var cqHost = m.el.querySelector('.cd-drow') && m.el.querySelector('.cd-drow').parentNode;
+      import('./client-cheques.js?v=1').then(function (lib) { return lib.mountClientCheques(cqHost, { merchant: KiwiClients.bookId(), clientId: c.id, lang: lang(), close: m.close }); }).catch(function () {});
+    }
     m.el.addEventListener('click', function (e) { if (e.target.closest('[data-client-audit]')) { downloadAudit(c, T); return; } if (e.target.closest('[data-client-merge]')) { m.close(); openMerge(c, T); return; } if (e.target.closest('[data-close]')) m.close(); });
   }
 })();

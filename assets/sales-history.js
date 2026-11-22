@@ -45,11 +45,28 @@
     // while attributing its received part to the actual tender(s).
     return parts.map(part => ({ key: tenderBucket(part.method), amount: amount * +part.amountCents / received }));
   }
-  function statsFromSales(sales, refundEntries, from, to) {
+  /* Les lignes du portefeuille de chèques (« Chèque impayé » chqbounce-, son
+     retour chqback-, functions/api/_cheque-debt.js) : ni une vente, ni un
+     ticket, ni un remboursement. À l'argent reçu, elles bougent le chiffre et
+     l'encaissé (rejet puis encaissement = la vente une fois) ; à la vente, la
+     vente a déjà tout compté. Même règle que functions/api/sales-summary.js. */
+  const isChequeAdjust = (e) => /^chq(?:bounce|back)-/.test(String((e && (e.saleId || e.id)) || ''));
+  function applyChequeAdjust(acc, method, signed) {
+    if (atSale() || !signed) return;
+    acc.revenue += signed;
+    const tender = tenderBucket(method);
+    if (tender) acc.collected += signed;
+    if (tender === 'cash') acc.cash += signed;
+    if (tender === 'card' || tender === 'tap') acc.card += signed;
+  }
+  function statsFromSales(sales, refundEntries, from, to, adjust) {
     let revenue = 0, gross = 0, refunds = 0, collected = 0, receivable = 0, count = 0, card = 0, cash = 0;
+    const adj = [];
+    (adjust || []).forEach((e) => adj.push(e));
     sales.forEach((e) => {
       const ts = +e.ts || 0;
       if (ts < from || ts >= to) return;
+      if (isChequeAdjust(e)) { adj.push({ method: e.method, signed: Math.abs(+e.amount || 0) }); return; }
       if (atSale() && isSettlement(e)) return;
       const amt = saleValue(e);
       revenue += amt; gross += amt; count++;
@@ -65,6 +82,7 @@
     refundEntries.forEach((e) => {
       const ts = +e.ts || 0;
       if (ts < from || ts >= to) return;
+      if (isChequeAdjust(e)) { adj.push({ method: e.method, signed: -Math.abs(+e.amount || 0) }); return; }
       const amt = Math.abs(+e.amount || 0);
       // À la vente, un retour en avoir baisse le chiffre ; « Taux retour » le lit déjà au registre des avoirs.
       revenue -= Math.abs(+e.amount || 0); if (!(atSale() && tenderBucket(e.method) === null)) refunds += amt;
@@ -74,6 +92,9 @@
       if (tender === 'cash') cash -= amt;
       if (tender === 'card' || tender === 'tap') card -= amt;
     });
+    const acc = { revenue, collected, cash, card };
+    adj.forEach((a) => applyChequeAdjust(acc, a.method, a.signed));
+    ({ revenue, collected, cash, card } = acc);
     return { revenue, gross, refunds, collected, receivable, count, basket: count ? revenue / count : 0, card, cash };
   }
   // A summary bucket must be wholly inside or outside the requested window.
@@ -87,21 +108,22 @@
   function statsFromSummary(days, splits, from, to) {
     const selected = windowDays(days, from, to);
     // Bucket entries reuse the raw primitive for method and refund semantics.
-    const sales = [], refunds = [];
+    const sales = [], refunds = [], adjust = [];
     let count = 0;
     selected.forEach(day => {
       count += day.count;
       Object.entries(day.methods).forEach(([method, value]) => sales.push({ ts: day.from, method, amount: value.cents / 100 }));
       Object.entries(day.refunds).forEach(([method, cents]) => refunds.push({ ts: day.from, method, amount: cents / 100 }));
+      Object.entries(day.chequeAdjust || {}).forEach(([method, cents]) => adjust.push({ method, signed: Number(cents) / 100 || 0 }));
     });
-    const result = statsFromSales(sales, refunds, from, to);
+    const result = statsFromSales(sales, refunds, from, to, adjust);
     result.count = count;
     result.basket = count ? result.revenue / count : 0;
     // Whole-sale attribution excludes split rows, which need proportional parts.
     const whole = selected.flatMap(day => Object.entries(day.whole).map(([method, cents]) => ({ ts: day.from, method, amount: cents / 100 })));
     const splitRows = splits.filter(row => selected.some(day => row.ts >= day.from && row.ts < day.to))
       .map(row => ({ ts: row.ts, method: row.method, amount: row.cents / 100, paymentParts: row.parts }));
-    const tenders = statsFromSales(whole.concat(splitRows), refunds, from, to);
+    const tenders = statsFromSales(whole.concat(splitRows), refunds, from, to, adjust);
     result.card = tenders.card;
     result.cash = tenders.cash;
     return result;
@@ -111,7 +133,7 @@
     const hours = {};
     sales.forEach(entry => {
       const ts = +entry.ts || 0, amount = Math.max(0, +entry.amount || 0);
-      if (ts < from || ts >= to || !amount) return;
+      if (ts < from || ts >= to || !amount || isChequeAdjust(entry)) return;
       const hour = hourOf(ts);
       hours[hour] = (hours[hour] || 0) + amount;
     });
@@ -124,7 +146,7 @@
     }));
     return hours;
   }
-  window.KiwiSalesMath = Object.freeze({ tenderBucket, tenderAmounts, RECEIVABLE_METHODS, atSale, isSettlement, saleValue,
+  window.KiwiSalesMath = Object.freeze({ tenderBucket, tenderAmounts, RECEIVABLE_METHODS, atSale, isSettlement, saleValue, isChequeAdjust,
     statsFromSales, statsFromSummary, hoursFromSales, hoursFromSummary });
 })();
 
@@ -670,7 +692,7 @@
         const local = window.KiwiSalesMath.statsFromSales(sales, refunds, day, bounds.to);
         const remote = window.KiwiSalesMath.statsFromSummary([bucket], summary.splits, day, bounds.to);
         if (Math.round(local.gross * 100) !== bucket.cents || local.count !== remote.count || Math.round(local.gross * 100) !== Math.round(remote.gross * 100) ||
-            Math.round(local.refunds * 100) !== Math.round(remote.refunds * 100) || refunds.filter(r => r.ts >= day && r.ts < bounds.to).length !== bucket.refundCount) return skip('summary-mismatch:' + bucket.day);
+            Math.round(local.refunds * 100) !== Math.round(remote.refunds * 100) || refunds.filter(r => r.ts >= day && r.ts < bounds.to && !window.KiwiSalesMath.isChequeAdjust(r)).length !== bucket.refundCount) return skip('summary-mismatch:' + bucket.day);
         const channelRows = Object.values(bucket.channels);
         if (channelRows.some(c => !Number.isSafeInteger(c.count) || c.count < 0 || !Number.isSafeInteger(c.cents) || c.cents < 0) ||
             channelRows.reduce((n, c) => n + c.count, 0) !== bucket.count || channelRows.reduce((n, c) => n + c.cents, 0) !== bucket.cents) return skip('summary-channels-mismatch:' + bucket.day);

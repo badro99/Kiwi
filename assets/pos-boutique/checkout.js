@@ -1,7 +1,7 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=244';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=246';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=244';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=348';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=246';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=350';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=7';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
@@ -15,7 +15,10 @@ const M = globalThis.KiwiMoney;
 /* L'échange groupé (essai Amira Boutique) se charge à part : il importe la
    caisse, la caisse ne l'importe pas, pour ne pas allonger le cycle. */
 let CX = null;
-import('./exch-combined.js?v=6').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=8').then((m) => { CX = m; }).catch(() => {});
+/* Un chèque reçu rejoint le portefeuille (cheque-sheet.js) ; absent, le chèque s'encaisse comme avant. */
+let CQ = null;
+import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */
@@ -1164,13 +1167,15 @@ import('./exch-combined.js?v=6').then((m) => { CX = m; }).catch(() => {});
         <button class="bq-modal-x" data-bq-close aria-label="${tr("checkout.fermer", "Fermer")}">×</button>
         <h3 class="modal-title">${label} · ${fmtMAD(amount)}</h3>
         <p class="modal-subtle">${cheque ? tr("checkout.le.cheque.a.t.il.ete.remis.au.comptoir", "Le chèque a-t-il été remis au comptoir ?") : tr("checkout.les.fonds.sont.ils.visibles.sur.le.compte.bancaire", "Les fonds sont-ils visibles sur le compte bancaire ?")} ${tr("checkout.aucun.montant.ne.sera.attendu.dans.le.tiroir", "Aucun montant ne sera attendu dans le tiroir.")}</p>
+        ${cheque && CQ ? CQ.chequeFields() : ''}
         <div class="bq-sheet-foot">
           <button class="bq-btn secondary" id="bq-external-back">${tr("checkout.retour", "Retour")}</button>
           <button class="cash-confirm" id="bq-external-ok">${cheque ? tr("checkout.cheque.recu", "Chèque reçu") : tr("checkout.versement.recu", "Versement reçu")} ${tr("checkout.confirmer", "· confirmer")}</button>
         </div>`;
       closeBtns();
+      if (cheque && CQ) CQ.chequeFocus(el);
       $('#bq-external-back', el).onclick = stepMethods;
-      $('#bq-external-ok', el).onclick = () => settle({ m: cheque ? 'chèque' : 'virement', amount });
+      $('#bq-external-ok', el).onclick = () => settle(cheque && CQ ? CQ.chequeHold(el, { m: 'chèque', amount }) : { m: cheque ? 'chèque' : 'virement', amount });
     };
 
     /* Pendant une attente de l'écriture (contrôle fidélité, avoir au registre) la
@@ -1227,6 +1232,7 @@ import('./exch-combined.js?v=6').then((m) => { CX = m; }).catch(() => {});
       const res = opts.onPaid(parts, { partial: !!partial, paidNow }) || {};
       if (res.error) { committed = false; stepMethods(); return; }
       if (res.sale) opts.sale = res.sale;
+      if (CQ && res.sale) { const cid = opts.customerId || res.sale.clientId || ''; CQ.chequeRecord(parts, res.sales || [res.sale], { slug: merchantSlug(), by: STAFF.caissiere.name, client: (clById(cid) || {}).name || '', clientId: cid, demo: IS_DEMO, toast }); }
       if (partial || opts.balanceExisting) {
         opts.acompte = { total: opts.balanceTotal || opts.amount,
           paid: (opts.balancePaid || 0) + paidNow,

@@ -18,7 +18,10 @@ import { DateTimeFormat } from './_zone-law.js';
 //     refundCount, refundCents,                       // negative rows, as positive amounts
 //     refunds: { <method>: cents },
 //     tipCents,                                       // tips entered at payment (outside cents)
-//     channels: { <channel>: { count, cents } } }     // positive sales by recorded channel ('' = none)
+//     channels: { <channel>: { count, cents } },      // positive sales by recorded channel ('' = none)
+//     chequeAdjustCents,                              // bounced-cheque lines (chqbounce-/chqback-), signed: never a
+//     chequeAdjust: { <method>: cents } }             // sale, a ticket or a refund, but money that left or came back
+//                                                     // (revenue = cents - refundCents + chequeAdjustCents; 0 at sale)
 // plus `splits`: the split-tender sales as compact rows ({ ts, cents, method,
 // parts }), because sharing one sale across tenders uses the dashboard's own
 // tender rules and the server must not keep a second copy of them.
@@ -28,6 +31,7 @@ import { DateTimeFormat } from './_zone-law.js';
 // so a day here equals the same day computed from the feed.
 
 import { json, entitledMerchant } from '../auth/_lib.js';
+import { isChequeAdjustId } from './_cheque-debt.js';
 import { legacyBucketFor } from './_sales-scope.js';
 import { businessDate, businessBoundary, addBusinessDays, merchantZone, merchantCutoff } from './_business-day.js';
 
@@ -72,7 +76,7 @@ export function summarize(rows, from, to, cutoff, zone, atSale = false) {
       /* A day the window only partly covers reports the part it counted. */
       day: d, from: Math.max(start, from), to: Math.min(businessBoundary(addBusinessDays(d, 1), cutoff, zone), to),
       count: 0, cents: 0, methods: {}, whole: {}, hours: {}, refundCount: 0, refundCents: 0, refunds: {},
-      tipCents: 0, channels: {},
+      tipCents: 0, channels: {}, chequeAdjustCents: 0, chequeAdjust: {},
     });
   }
   const splits = [];
@@ -82,6 +86,17 @@ export function summarize(rows, from, to, cutoff, zone, atSale = false) {
     const bucket = days.get(businessDate(ts, cutoff, zone));
     if (!bucket) continue;
     if (atSale && /^Règlement acompte/.test(String(row.label || ''))) continue;
+    /* Un chèque rejeté puis réglé : ses lignes d'ajustement ne sont ni une vente ni un remboursement. */
+    /* À l'argent reçu, elles bougent le chiffre (rejet puis encaissement = la
+       vente une fois) ; à la vente, la vente a déjà tout compté. */
+    if (isChequeAdjustId(row.id)) {
+      if (!atSale) {
+        const adj = saleCents(row), m = String(row.method || '');
+        bucket.chequeAdjustCents += adj;
+        bucket.chequeAdjust[m] = (bucket.chequeAdjust[m] || 0) + adj;
+      }
+      continue;
+    }
     const cents = atSale && saleCents(row) >= 0
       ? Math.max(saleCents(row), (validParts(row.payment_parts) || []).reduce((n, p) => n + p.amountCents, 0))
       : saleCents(row);
@@ -110,11 +125,11 @@ export function summarize(rows, from, to, cutoff, zone, atSale = false) {
 
 async function readRows(env, merchant, legacy, from, to) {
   const shapes = [
-    'SELECT ts, amount, amount_cents, method, payment_parts, tip_cents, channel, label FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL',
+    'SELECT id, ts, amount, amount_cents, method, payment_parts, tip_cents, channel, label FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL',
     /* Older schemas: no tip column, no tender split column, or no centimes / void columns. */
-    'SELECT ts, amount, amount_cents, method, payment_parts, channel FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL',
-    'SELECT ts, amount, amount_cents, method FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL',
-    'SELECT ts, amount, method FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ?',
+    'SELECT id, ts, amount, amount_cents, method, payment_parts, channel FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL',
+    'SELECT id, ts, amount, amount_cents, method FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL',
+    'SELECT id, ts, amount, method FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ?',
   ];
   let lastError = null;
   for (const sql of shapes) {

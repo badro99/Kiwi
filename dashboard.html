@@ -293,6 +293,12 @@
         <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M155-195q-35-35-35-85H40v-440q0-33 23.5-56.5T120-800h560v160h120l120 160v200h-80q0 50-35 85t-85 35q-50 0-85-35t-35-85H360q0 50-35 85t-85 35q-50 0-85-35Zm113.5-56.5Q280-263 280-280t-11.5-28.5Q257-320 240-320t-28.5 11.5Q200-297 200-280t11.5 28.5Q223-240 240-240t28.5-11.5ZM120-360h32q17-18 39-29t49-11q27 0 49 11t39 29h272v-360H120v360Zm628.5 108.5Q760-263 760-280t-11.5-28.5Q737-320 720-320t-28.5 11.5Q680-297 680-280t11.5 28.5Q703-240 720-240t28.5-11.5ZM680-440h170l-90-120h-80v120ZM360-540Z"/></svg>
         <span data-i18n="dash.sidebar.suppliers">Fournisseurs</span>
       </a>
+      <!-- Chèques et effets (21 nov. 2026) : le portefeuille, lazy (assets/pages-pro/cheques.js),
+           patron et gérant ; le module ferme la page aux autres rôles. -->
+      <a href="#" data-nav="cheques" data-feature="cheques">
+        <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M560-440q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35ZM280-320q-33 0-56.5-23.5T200-400v-320q0-33 23.5-56.5T280-800h560q33 0 56.5 23.5T920-720v320q0 33-23.5 56.5T840-320H280Zm80-80h400q0-33 23.5-56.5T840-480v-160q-33 0-56.5-23.5T760-720H360q0 33-23.5 56.5T280-640v160q33 0 56.5 23.5T360-400Zm440 240H120q-33 0-56.5-23.5T40-240v-440h80v440h680v80ZM280-400v-320 320Z"/></svg>
+        <span data-i18n="dash.sidebar.cheques">Chèques et effets</span>
+      </a>
       <a href="#" data-action="clients-directory" data-feature="crm">
         <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M0-240v-63q0-43 44-70t116-27q13 0 25 .5t23 2.5q-14 21-21 44t-7 48v65H0Zm240 0v-65q0-32 17.5-58.5T307-410q32-20 76.5-30t96.5-10q53 0 97.5 10t76.5 30q32 20 49 46.5t17 58.5v65H240Zm540 0v-65q0-26-6.5-49T754-397q11-2 22.5-2.5t23.5-.5q72 0 116 26.5t44 70.5v63H780Zm-455-80h311q-10-20-55.5-35T480-370q-55 0-100.5 15T325-320ZM160-440q-33 0-56.5-23.5T80-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T160-440Zm640 0q-33 0-56.5-23.5T720-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T800-440Zm-320-40q-50 0-85-35t-35-85q0-51 35-85.5t85-34.5q51 0 85.5 34.5T600-600q0 50-34.5 85T480-480Z"/></svg>
         <span data-i18n="dash.sidebar.crm">Clients</span>
@@ -1067,7 +1073,7 @@
 <script src="assets/err-reporter.js?v=2" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js?v=11" defer></script>
-<script src="assets/i18n.js?v=63" defer></script>
+<script src="assets/i18n.js?v=64" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
@@ -1080,7 +1086,7 @@
 <script src="assets/material-icons.js?v=7" defer></script>
 <script src="assets/plan-catalog.js?v=1" defer></script>
 <script src="assets/interactive/helpers.js?v=1" defer></script>
-<script src="assets/interactive/handlers.js?v=3" defer></script>
+<script src="assets/interactive/handlers.js?v=5" defer></script>
 <script src="assets/interactive.js?v=73" defer></script>
 <script src="assets/view-link.js?v=2" defer></script>
 <script src="assets/loyalty-product-links.js?v=15" defer></script>
@@ -1127,7 +1133,7 @@
 <script src="assets/pressing-catalog.js?v=10" defer></script>
 <script src="assets/pressing-dashboard.js?v=33" defer></script>
 <script src="assets/demoClock.js?v=5" defer></script>
-<script src="assets/sales-history.js?v=17" defer></script>
+<script src="assets/sales-history.js?v=18" defer></script>
 <script src="assets/daterange/renderers.js?v=52"></script>
 <script src="assets/dateRange.js?v=157" defer></script>
 <script src="assets/mobile-nav.js?v=9" defer></script>
@@ -1273,9 +1279,9 @@
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
 
 
-<script src="assets/clients-directory.js?v=49" defer fetchpriority="low"></script>
+<script src="assets/clients-directory.js?v=50" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=21" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=289" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=293" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1302,7 +1308,7 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=289"></script>
+<script src="assets/pages/dashboard-startup.js?v=293"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=17">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
 <script src="assets/pages/dashboard-loader.js?v=110" defer fetchpriority="low"></script>

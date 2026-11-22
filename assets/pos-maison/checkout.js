@@ -1,7 +1,7 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=233';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=234';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=148';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=148';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=149';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=149';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
@@ -9,6 +9,9 @@ import { mzDeliveryCard } from './delivery.js?v=28';
 import { mzKickForCash } from './drawer.js?v=2';
 import { mzAvoirSheet, codeKey } from './avoir-sheet.js?v=9';
 const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);   /* « Compte client » et l'acompte, dans la langue de la caisse */
+/* Un chèque reçu rejoint le portefeuille, comme en boutique (même module) ; absent, il s'encaisse comme avant. */
+let CQ = null;
+import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */
@@ -1287,13 +1290,15 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
         <button class="mz-modal-x" data-mz-close aria-label="Fermer">×</button>
         <h3 class="modal-title">${label} · ${fmtMAD(amount)}</h3>
         <p class="modal-subtle">${cheque ? 'Le chèque a-t-il été remis au comptoir ?' : 'Les fonds sont-ils visibles sur le compte bancaire ?'} Aucun montant ne sera attendu dans le tiroir.</p>
+        ${cheque && CQ ? CQ.chequeFields() : ''}
         <div class="mz-sheet-foot">
           <button class="mz-btn secondary" id="mz-external-back">Retour</button>
           <button class="cash-confirm" id="mz-external-ok">${cheque ? 'Chèque reçu' : 'Versement reçu'} · confirmer</button>
         </div>`;
       closeBtns();
       $('#mz-external-back', el).onclick = stepMethods;
-      $('#mz-external-ok', el).onclick = () => settle({ m: cheque ? 'chèque' : 'virement', amount });
+      if (cheque && CQ) CQ.chequeFocus(el);
+      $('#mz-external-ok', el).onclick = () => settle(cheque && CQ ? CQ.chequeHold(el, { m: 'chèque', amount }) : { m: cheque ? 'chèque' : 'virement', amount });
     };
 
     /* Le compte client : rien n'est encaissé, le ticket entier devient une note
@@ -1373,6 +1378,7 @@ const mt = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
       const res = opts.onPaid(parts, { partial: !!partial, paidNow, onAccount }) || {};
       if (res.error) { committed = false; stepMethods(); return; }
       if (res.sale) opts.sale = res.sale;
+      if (CQ && res.sale) { const cid = opts.customerId || res.sale.clientId || ''; CQ.chequeRecord(parts, res.sales || [res.sale], { slug: merchantSlug(), by: STAFF.caissiere.name, client: (clById(cid) || {}).name || '', clientId: cid, demo: IS_DEMO, toast }); }
       mzKickForCash(parts, toast);   /* des espèces encaissées : le tiroir s'ouvre pour la monnaie (drawer.js) */
       if (partial || opts.balanceExisting) {
         opts.acompte = { total: opts.balanceTotal || opts.amount,

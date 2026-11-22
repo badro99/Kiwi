@@ -1802,8 +1802,14 @@
             const payload = await r.json().catch(() => ({}));
             if (!r.ok || !payload.ok) throw new Error(payload.error || 'cancel-failed');
             return payload;
-          }).then(() => {
+          }).then((payload) => {
             toast(L.cancelled, { type: 'success' });
+            /* Un chèque payait ce ticket et il est encore en portefeuille : le proposer à l'annulation (chèques et effets). */
+            const cq = Array.isArray(payload && payload.cheques) ? payload.cheques : [];
+            const go = (id) => { const b = document.createElement('button'); b.hidden = true; b.dataset.action = 'nav-cheques'; b.dataset.arg = 'cheque:' + id; document.body.appendChild(b); b.click(); b.remove(); };
+            if (cq.length) setTimeout(() => toast(tr({ fr: 'Un chèque payait ce ticket', en: 'A cheque paid this ticket', ar: 'شيك كان كيخلّص هاد التيكي' }), { type: 'warning', duration: 12000,
+              desc: tr({ fr: 'Il est encore en portefeuille. Rendu à la cliente ? Annulez-le aussi.', en: 'It is still in hand. Handed back? Cancel it too.', ar: 'باقي فاليد. رجّعتيه للكليان؟ ألغيه حتى هو.' }),
+              action: { label: tr({ fr: 'Voir le chèque', en: 'See the cheque', ar: 'شوف الشيك' }), onClick: () => go(String(cq[0].id)) } }), 400);
             document.querySelector('.kiwi-drawer-backdrop .kiwi-drawer-close')?.click();
             const targetRef = String(o.ref || o.receiptNo || o.saleId || '').trim();
             document.dispatchEvent(new CustomEvent('kiwi-sales-voided', { detail: { refs: [targetRef], merchant } }));
