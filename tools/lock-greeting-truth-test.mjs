@@ -121,14 +121,15 @@ ok('EN/AR dash.day are sentences, not « good day? »', () => {
 console.log('greeting · timing and motion');
 ok('the greeting ends by 1.25 s and is gone at 1.65 s (it was 1.9 s / 2.5 s)', () => {
   const u = ctl.slice(ctl.indexOf('  function unlock() {'), ctl.indexOf('  function showApp() {'));
-  assert.match(u, /\}, 1250\);/);
-  assert.match(u, /\}, 1650\);/);
-  assert.ok(!/\}, 1900\);|\}, 2500\);|\}, 2600\);|\}, 3200\);/.test(u), 'an old, slower timeline');
+  assert.ok(/\}, 1250\);/.test(u) && /\}, 1650\);/.test(u) && !/\}, 1900\);|\}, 2500\);|\}, 2600\);|\}, 3200\);/.test(u), 'the 1.25 s / 1.65 s timeline, not an old, slower one');
 });
-ok('once a day: the first unlock of the business day is greeted, every later one goes straight in', () => {
+ok('once a day: the first unlock of the business day is greeted, every later one goes straight in, in under half a second, with no words', () => {
   const u = ctl.slice(ctl.indexOf('  function unlock() {'), ctl.indexOf('  function showApp() {'));
-  assert.match(u, /if \(!isDemoSession\(\) && greetedToday\(greetName\)\) \{ enterQuietly\(\); return; \}/);
-  assert.match(u, /if \(!isDemoSession\(\)\) markGreeted\(greetName\);/);
+  const q = ctl.slice(ctl.indexOf('  function enterQuietly() {'), ctl.indexOf('  /* ── Goodbye'));
+  assert.ok(/if \(!isDemoSession\(\) && greetedToday\(greetName\)\) \{ enterQuietly\(\); return; \}/.test(u)
+    && /if \(!isDemoSession\(\)\) markGreeted\(greetName\);/.test(u)
+    && /\}, 200\);/.test(q) && /\}, 480\);/.test(q) && !/renderGreeting|is-visible/.test(q),
+    'unlock() asks greetedToday() first, and the quiet entry opens at 200 / 480 ms without the greeting');
   mem.clear(); mem.set('kiwiAccountKey', 'Elham-Brand');
   const morning = new Date(2026, 10, 22, 9, 0), evening = new Date(2026, 10, 22, 23, 30), lateNight = new Date(2026, 10, 23, 1, 10), next = new Date(2026, 10, 23, 8, 0);
   assert.equal(G.greetedToday('Elham B', morning), false);
@@ -148,11 +149,6 @@ ok('the once-a-day memory stays small (12 people at most)', () => {
   assert.equal(Object.keys(JSON.parse(mem.get('kiwiGreetedDay'))).length, 12);
   assert.equal(G.greetedToday('Amira', new Date(2026, 10, 22, 10)), true, 'the latest one is kept');
 });
-ok('the quiet entry dissolves the lock in under half a second, with no words', () => {
-  const q = ctl.slice(ctl.indexOf('  function enterQuietly() {'), ctl.indexOf('  /* ── Goodbye'));
-  assert.match(q, /\}, 200\);/); assert.match(q, /\}, 480\);/);
-  assert.ok(!/renderGreeting|is-visible/.test(q));
-});
 ok('signing out says goodbye in the greeting\'s voice, by the clock, in FR / EN / AR', () => {
   assert.deepEqual(JSON.parse(JSON.stringify(G.byeText('Elham Brand', 'fr', new Date(2026, 10, 22, 23, 50)))), { bye: 'À bientôt Elham,', wish: 'bonne nuit.' });
   assert.equal(G.byeText('', 'fr', new Date(2026, 10, 22, 19)).bye, 'À bientôt,');
@@ -160,9 +156,10 @@ ok('signing out says goodbye in the greeting\'s voice, by the clock, in FR / EN 
   assert.equal(G.byeText('إلهام', 'ar', new Date(2026, 10, 22, 20)).bye, 'إلى اللقاء إلهام،');
   assert.ok(!/—/.test(JSON.stringify(G.BYE_T)));
   const g = ctl.slice(ctl.indexOf('  /* ── Goodbye'), ctl.indexOf('  /* ── Skip control'));
-  assert.match(g, /closest\('a\[href="\/auth\/logout"\]'\)/);
-  assert.match(g, /if \(e\.button \|\| e\.metaKey \|\| e\.ctrlKey \|\| e\.shiftKey \|\| e\.altKey\) return;/, 'a new-tab click is left alone');
-  assert.match(g, /window\.location\.href = '\/auth\/logout'; \}, reduceMotion \? 650 : 1100\);/);
+  assert.ok(/closest\('a\[href="\/auth\/logout"\]'\)/.test(g)
+    && /if \(e\.button \|\| e\.metaKey \|\| e\.ctrlKey \|\| e\.shiftKey \|\| e\.altKey\) return;/.test(g)
+    && /window\.location\.href = '\/auth\/logout'; \}, reduceMotion \? 650 : 1100\);/.test(g),
+    'the logout link is caught (a new-tab click is left alone) and leaves after 1.1 s');
 });
 ok('any key (not a bare modifier) skips the greeting once the door is open', () => {
   assert.match(ctl, /if \(unlocked && !done && greet\.classList\.contains\('is-visible'\)\) \{/);
