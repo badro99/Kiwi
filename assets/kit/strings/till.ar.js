@@ -238,7 +238,7 @@
   "count.same_as_last": "آخر رصيد · {amount}",
   "count.same_as_last_a11y": "آخر رصيد · {amount}، استعمل رصيد الافتتاح السابق نفسه",
   "count.open": "افتح الصندوق",
-  "count.reason": "لماذا يختلف العدّ؟",
+  "count.reason": "سبب الفرق إن كنت تعرفه",
   "count.reason.counting": "خطأ في العدّ",
   "count.reason.change": "خطأ في إرجاع الباقي",
   "count.reason.unrecorded": "حركة نقدية غير مسجّلة",

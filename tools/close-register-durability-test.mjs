@@ -12,7 +12,7 @@ const closeSource = caisseTestSource.declarations('openTableBills','renderOpenTa
 const provisionalSource = caisseTestSource.declarations('lastProvisional','saveProvisional');
 
 async function exercise(persist, opts = {}) {
-  const calls = { cleared: 0, shown: 0, events: 0, finished: 0, toasts: [], sheetOpen: false, zJournal: null, timers: [] };
+  const calls = { cleared: 0, shown: 0, events: 0, finished: 0, toasts: [], sheetOpen: false, zJournal: null, timers: [], followUps: [] };
   const report = { day: '2026-09-14', store: { slug: 'fixture-cafe' }, closedAt: 99, sessionId: 'fixture-shift', cash: {} };
   const count = { value: '100', focus() {} };
   const cardZ = { value: '0', focus() {} };
@@ -31,6 +31,9 @@ async function exercise(persist, opts = {}) {
     journal: [{ id: 'paid', amount: 5, voided: false }, { id: 'cancelled', amount: 5, voided: true }],
     isReportableJournalEntry: (entry) => !entry.voided,
     storeIsReal: () => true,
+    /* The close announces itself on document; the follow-up listens (z-reconciliation.js). */
+    CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } },
+    document: { dispatchEvent: (e) => { if (e.type === 'kiwi:till-closed') calls.followUps.push(e.detail); return true; } },
     window: { KiwiZReconciliation: { queueClose: (_report, entries) => {
       calls.zJournal = entries;
       if (persist === 'z-hangs') return new Promise(() => {});
@@ -55,7 +58,7 @@ async function exercise(persist, opts = {}) {
   return { calls, ctx };
 }
 
-for (const failure of ['not-written', 'throws', 'z-fails']) {
+for (const failure of ['not-written', 'throws']) {
   const { calls, ctx } = await exercise(failure);
   assert.equal(calls.cleared, 0, `${failure}: shift remains on disk`);
   assert.equal(calls.events, 0, `${failure}: no false close ledger event`);
@@ -63,7 +66,21 @@ for (const failure of ['not-written', 'throws', 'z-fails']) {
   assert.equal(calls.sheetOpen, true, `${failure}: count sheet reopens`);
   assert.match(calls.toasts.join(' '), /poste conservé/, `${failure}: error is explicit`);
 }
+/* 22 Nov 2026, browse: three closes in a row refused on « Rapprochement Z non
+   protégé » while the day report had saved each time. The Z is a second copy
+   for the server's comparison (sales sit in Live Link's own outbox): when it
+   cannot be written, the close still completes, and the problem waits for
+   the next opening instead of locking the till. */
+const zFailed = await exercise('z-fails');
+assert.equal(zFailed.calls.events, 1, 'z-fails: the close is recorded');
+assert.equal(zFailed.calls.cleared, 1, 'z-fails: the shift ends');
+assert.equal(zFailed.ctx.isClosed(), true, 'z-fails: the till knows it is closed');
+assert.equal(zFailed.calls.shown, 1, 'z-fails: the post-close sheet opens');
+assert.equal(zFailed.calls.followUps.length, 1, 'z-fails: the problem is kept for the next opening');
+assert.equal(zFailed.calls.followUps[0].zIssue, 'unprotected', 'z-fails: it names the Z');
 const success = await exercise('saved');
+assert.equal(success.calls.followUps.length, 1, 'a close always leaves its summary for the next opening');
+assert.equal(success.calls.followUps[0].zIssue || null, null, 'a protected Z carries no Z issue');
 assert.deepEqual(success.calls.zJournal.map((entry) => entry.id), ['paid', 'cancelled'],
   'Z reconciliation receives void evidence even though the printed report excludes cancelled receipts');
 assert.equal(success.calls.cleared, 1, 'saved report permits shift cleanup');
@@ -84,8 +101,9 @@ provisionalContext.saveProvisional(true);
 assert.deepEqual(provisionalEntries.map((entry) => entry.id), ['paid', 'cancelled'],
   'provisional Z snapshot also receives void evidence from the full journal');
 
-/* #0164 · a stalled Z write is announced, then fails safely; a second tap is
-   told the close is running instead of being swallowed. */
+/* #0164 · a stalled Z write is announced, and a second tap is told the close
+   is running instead of being swallowed; after the timeout the close
+   completes (22 Nov 2026) instead of handing the till back. */
 const hung = await exercise('z-hangs', { beforeAwait: async (ctx, calls) => {
   const running = ctx.closeRegister();
   for (let i = 0; i < 6; i++) await Promise.resolve();
@@ -96,10 +114,10 @@ const hung = await exercise('z-hangs', { beforeAwait: async (ctx, calls) => {
   calls.timers.splice(0).forEach((fn) => fn());
   await running;
 } });
-assert.equal(hung.ctx.registerClosing, false, 'z-hangs: cashier can retry after the timeout');
-assert.equal(hung.calls.events, 0, 'z-hangs: no close event without a protected Z');
-assert.equal(hung.calls.cleared, 0, 'z-hangs: shift stays on disk');
-assert.equal(hung.calls.sheetOpen, true, 'z-hangs: count sheet reopens');
+assert.equal(hung.calls.events, 1, 'z-hangs: after the timeout the close is recorded');
+assert.equal(hung.calls.cleared, 1, 'z-hangs: the shift ends');
+assert.equal(hung.calls.sheetOpen, false, 'z-hangs: the count sheet is closed');
+assert.equal(hung.calls.followUps[0] && hung.calls.followUps[0].zIssue, 'unprotected', 'z-hangs: the stalled Z waits for the next opening');
 
 /* #0164 · once the close is recorded, a failing paper sheet still finishes
    the close, and any later attempt goes straight to finishClose(). */

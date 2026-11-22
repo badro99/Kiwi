@@ -91,6 +91,9 @@
           clockinEl.classList.add('is-visible');
           clockinEl.setAttribute('aria-hidden', 'false');
         }
+        /* Ce que la dernière clôture a laissé à vérifier (écart, Z) : dit ici,
+           à l'ouverture, au lieu d'avoir bloqué la clôture (22 nov. 2026). */
+        document.dispatchEvent(new CustomEvent('kiwi:till-opening', { detail: { slug: currentMerchantSlug() } }));
       }, 460);
 
       // t=940: PIN gone.

@@ -569,14 +569,10 @@
       const zQueued = !storeIsReal() ? { ok: true, demo: true } : await closeStepWithin(window.KiwiZReconciliation
         ? window.KiwiZReconciliation.queueClose(report, journal)
         : Promise.resolve({ ok: false, reason: 'module-unavailable' }), { ok: false, reason: 'timeout' });
-      if (!zQueued || !zQueued.ok) {
-        registerClosing = false;
-        setCloseBusy(false);
-        $('#cloture-modal').classList.add('is-open');
-        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Rapprochement Z non protégé · poste conservé. Vérifiez le stockage puis réessayez.'));
-        return;
-      }
-      if (zQueued.unqueuedCount || zQueued.unqueuedCents)
+      /* 22 Nov 2026 (browse) : un Z qui ne s'écrit pas ne retient plus la caisse ; les ventes
+         sont déjà dans la file de Live Link, et l'ouverture suivante le signale. */
+      const zIssue = (!zQueued || !zQueued.ok) ? 'unprotected' : null;
+      if (zQueued && zQueued.ok && (zQueued.unqueuedCount || zQueued.unqueuedCents))
         toast('Écart Z conservé · ' + zQueued.unqueuedCount + ' reçu(s) hors file · contactez le support');
 
       const closedAt = Date.now();
@@ -593,6 +589,9 @@
         ...(closeGapReason ? { gapReason: closeGapReason } : {}),
         actorId: cashActorId(), openedAt: shiftOpenedAt.getTime(), occurredAt: closedAt
       });
+      document.dispatchEvent(new CustomEvent('kiwi:till-closed', { detail: { slug: report.store?.slug || '', day: report.day,   /* pour l'ouverture suivante */
+        closedAt, expectedCents, countedCents, gapCents, reason: closeGapReason || null, zIssue, by: (currentCashier && currentCashier.name) || '',
+        zReason: zIssue ? String((zQueued && zQueued.reason) || 'unknown').slice(0, 32) : null } }));
 
       /* From here the close is recorded. Whatever happens next, the only way
          out is finishClose(): no path may leave this service on screen. */

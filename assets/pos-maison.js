@@ -1,9 +1,9 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch, openClientModal } from './pos-maison/sales.js?v=155';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch, openClientModal } from './pos-maison/sales.js?v=156';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=4';
 import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=18';
 import { tillNow } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=1';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=155';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=155';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=156';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=156';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=10'; import { mzLivraisons } from './pos-maison/delivery.js?v=28';
 import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=14'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=5'; import { mzSettle } from './pos-maison/catalog-settle.js?v=1'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
 import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
@@ -2582,6 +2582,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
     /* God Mode regarde la caisse sans ouvrir de poste : session opérateur prouvée par /api/me pour CE magasin (caisse-pairing.js). */
     try { const o = sessionStorage.getItem('kiwi:tillOperator:v1'); const pv = pvPaired(); if (o && pv && pv.merchant === o) return; } catch (_) {}
     if (document.getElementById('mz-clockin')) return;
+    document.dispatchEvent(new CustomEvent('kiwi:till-opening', { detail: { slug: merchantSlug() } }));   /* ce que la dernière clôture a laissé à vérifier */
     const pv = pvPaired() || {};
     const who = ((STAFF.caissiere && STAFF.caissiere.name) || '').trim().split(/\s+/)[0] || 'Caissier';
     const role = (STAFF.caissiere && STAFF.caissiere.role) || 'Caissier';
@@ -2899,6 +2900,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
       countedCents: bqCents(countedCash),
       gapCents: bqCents(countedCash) - bqCents(bqCloExpected),
     });
+    document.dispatchEvent(new CustomEvent('kiwi:till-closed', { detail: { slug: merchantSlug(), day: report && report.day, closedAt: report && report.closedAt, expectedCents: bqCents(bqCloExpected), countedCents: bqCents(countedCash), gapCents: bqCents(countedCash) - bqCents(bqCloExpected), by: (STAFF.caissiere && STAFF.caissiere.name) || '' } }));   /* l'écart attend l'ouverture suivante (22 nov. 2026) */
     bqZQueue(true); const pair = zPair(bqBuildReport, counted, report && report.closedAt, report);   /* les deux tickets du Z, avant d'effacer le poste */
     bqShift = null;
     bqShiftPersist();

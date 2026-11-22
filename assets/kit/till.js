@@ -556,7 +556,9 @@
      cashTips, cashIn, cashOut, lastFloat} .cardKiwi ──────────────────────────
      cardKiwi, when the host sets it on a close: after the cash, a second step
      asks the card total printed on the terminal's Z, beside Kiwi's own (owner,
-     2026-10-14). Outside tolerance a reason is required (GAP_REASONS). */
+     2026-10-14). Outside tolerance a reason is offered (GAP_REASONS), never
+     required: a gap must not stop a close (owner, 2026-11-22); the next
+     opening and the owner's briefing report it. */
   var GAP_REASONS = [['counting', 'count.reason.counting'], ['change', 'count.reason.change'], ['unrecorded', 'count.reason.unrecorded'], ['other', 'reason.other']];
   var NOTES = [200, 100, 50, 20], COINS = [10, 5, 2, 1, 0.5, 0.2, 0.1];
   var KCashCount = K.make({
@@ -639,7 +641,7 @@
     },
     diff: function () { return fromCents(cents(this.counted()) - cents(this.expected())); },
     tol: function () { return Number(this.str('tolerance', '20')) || 20; },
-    /* A close whose difference is beyond the tolerance needs its reason. */
+    /* A close whose difference is beyond the tolerance is offered a reason. */
     outside: function () { return this.str('mode', 'close') !== 'open' && this.__any && Math.abs(this.diff()) > this.tol(); },
     /* One Paid on the frame the close is committed; Commit for the opening
        float's local write (§15.3). */
@@ -677,9 +679,9 @@
         '<div class="sl ex"' + (this.__any ? '' : ' style="visibility:hidden"') + '><span class="k-body">' + th('count.expected') + '</span><span class="k-heading k-num" data-k-total>' + numHtml(money(this.expected())) + '</span></div>' +
         /* Counted is read against Expected, never added into it: no data-k-part. */
         (this.__any ? '<div class="sl"><span class="k-body k-ink2">' + th('count.counted') + '</span><span class="k-body k-num">' + numHtml(money(this.counted())) + '</span></div>' : '');
-      var outside = this.outside(), needReason = outside && !this.__reason;
-      var canCommit = this.__any && !needReason;
-      var why = !this.__any && !open ? t('count.close_hint') : (needReason ? t('count.reason_hint') : '');
+      var outside = this.outside();
+      var canCommit = this.__any;
+      var why = !this.__any && !open ? t('count.close_hint') : '';
       var reasons = outside ? '<div class="rs" data-reasons><p class="k-callout rq">' + th('count.reason') + '</p>' +
         C.chip.group({ options: GAP_REASONS.map(function (r) { return { value: r[0], label: t(r[1]) }; }), value: this.__reason, label: t('count.reason') }) + '</div>' : '';
       this.shadowRoot.innerHTML = '<div class="cc"><div class="col">' +

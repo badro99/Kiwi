@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=256';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=174';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=256';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=256';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=257';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=175';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=257';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=257';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=6';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=1';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=4';
@@ -2511,6 +2511,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   }
   function bqShowOpenScreen() { if (tillOperatorView()) return;   // God Mode regarde la caisse, sans ouvrir de poste (drawer.js)
     if (document.getElementById('bq-clockin')) return;
+    document.dispatchEvent(new CustomEvent('kiwi:till-opening', { detail: { slug: merchantSlug() } }));   /* ce que la dernière clôture a laissé à vérifier */
     const pv = pvPaired() || {};
     const who = ((STAFF.caissiere && STAFF.caissiere.name) || '').trim().split(/\s+/)[0] || 'Caissier';
     const role = (STAFF.caissiere && STAFF.caissiere.role) || 'Caissier';
@@ -2821,6 +2822,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       countedCents: bqCents(countedCash),
       gapCents: bqCents(countedCash) - bqCents(bqCloExpected),
     });
+    document.dispatchEvent(new CustomEvent('kiwi:till-closed', { detail: { slug: merchantSlug(), day: report && report.day, closedAt: report && report.closedAt, expectedCents: bqCents(bqCloExpected), countedCents: bqCents(countedCash), gapCents: bqCents(countedCash) - bqCents(bqCloExpected), by: (STAFF.caissiere && STAFF.caissiere.name) || '' } }));   /* l'écart attend l'ouverture suivante (22 nov. 2026) */
     bqZQueue(true); const pair = zPair(bqBuildReport, counted, report.closedAt, report);   /* les deux tickets du Z, avant d'effacer le poste */
     bqShift = null;
     bqShiftPersist();

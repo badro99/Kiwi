@@ -6,7 +6,9 @@
  *
  * What it holds:
  *   · <k-cash-count> alone: within the tolerance no reason is asked; beyond
- *     it the four reason chips show and Close waits for one;
+ *     it the four reason chips are offered, and Close never waits for one
+ *     (owner, 22 Nov 2026: a gap must not stop a close; the next opening
+ *     and the owner's briefing report it);
  *   · on the till, Close the till opens the kit's count sheet and the shipped
  *     sheet stays shut; the sheet's Expected is the shipped drawerExpected();
  *   · counted beyond tolerance: a reason, then the card step beside Kiwi's
@@ -90,7 +92,7 @@ try {
     return { within, beyond };
   });
   check(!alone.within.reasons && !alone.within.disabled, 'within the tolerance (+10.00 of ±20): no reason asked, Close ready');
-  check(alone.beyond.reasons === 4 && alone.beyond.disabled, 'beyond it (−25.00): four reason chips, and Close waits for one');
+  check(alone.beyond.reasons === 4 && !alone.beyond.disabled, 'beyond it (−25.00): four reason chips offered, and Close is ready without one');
 
   /* A cash sale, then Close the till. */
   await page.evaluate(() => { document.querySelector('.mode-pill[data-mode="vrap"]').click(); });
@@ -126,7 +128,7 @@ try {
   await tap('[data-kp-key="1"]');
   await sleep(200);
   const state = await page.evaluate(() => { const c = document.querySelector('k-sheet k-cash-count'); return { counted: c.counted(), diff: c.diff(), reasons: !!c.shadowRoot.querySelector('[data-reasons]'), disabled: c.shadowRoot.querySelector('[data-w="commit"]').disabled }; });
-  check(state.counted === 200 && state.reasons && state.disabled, `counted 200.00 against ${exp.kit}: the reason is asked and Close waits`);
+  check(state.counted === 200 && state.reasons && !state.disabled, `counted 200.00 against ${exp.kit}: a reason is offered and Close does not wait for it`);
   await tap('[data-reasons] [data-chip="counting"]');
   await sleep(150);
   check(await page.evaluate(() => !document.querySelector('k-sheet k-cash-count').shadowRoot.querySelector('[data-w="commit"]').disabled), 'a reason chosen: Close is ready');
