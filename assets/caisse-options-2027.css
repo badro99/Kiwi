@@ -1,0 +1,258 @@
+/* Kiwi · caisse-options-2027.css · la feuille « Options » / « Formule &
+   options » du restaurant sur la peau 2027 (propriétaire, 22 nov. 2026 : la
+   feuille sortait encore en carte de clôture noire au milieu de la caisse en
+   papier). Peinture seule : le balisage, les données et les gestes restent
+   ceux d'assets/caisse/catalogue.js (openOptSheet, openCaisseFormula).
+   Chargée seulement sous html[data-skin-2027="till"] (kiwi-caisse.html, le
+   bloc du kit).
+
+   Ce que la feuille dit, en un coup d'œil :
+   · le plat en grand, « Options » au-dessus en petit ;
+   · chaque question numérotée, et son numéro devient une coche quand elle a
+     sa réponse (:has, sans script) ;
+   · les choix en tuiles larges, le supplément aligné à droite, la tuile prise
+     en vert avec sa coche ; celle qu'on vient de toucher fait un petit saut ;
+   · le prix en direct dans le bouton, collé en bas, toujours visible ;
+   · fermer par le rond × en haut, comme le panneau Plus.
+
+   La feuille est repeinte entière à chaque toucher (innerHTML). L'entrée est
+   donc portée par le voile, qui reste le même nœud : une propriété déclarée
+   (--opt-in) s'anime sur lui et la carte en hérite, sans rejouer son entrée
+   à chaque choix. */
+
+@property --opt-in {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+
+html[data-skin-2027="till"] .opt-veil {
+  --opt-in: 1;
+  background-color: var(--k-scrim);
+  backdrop-filter: blur(6px) saturate(1.1);
+  -webkit-backdrop-filter: blur(6px) saturate(1.1);
+  padding: var(--k-space-6);
+  animation: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html[data-skin-2027="till"] .opt-veil.is-open { animation: k-opt-in 380ms cubic-bezier(0.34, 1.45, 0.5, 1) both; }
+}
+@keyframes k-opt-in {
+  from { --opt-in: 0; background-color: transparent; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+  to { --opt-in: 1; }
+}
+
+/* La carte : du papier, haute de tout ce qu'elle a à dire, le pied collé. */
+html[data-skin-2027="till"] .opt-veil .opt-card {
+  position: relative;
+  display: flex; flex-direction: column;
+  width: min(640px, 100%); max-width: none;
+  max-height: min(860px, calc(100dvh - 48px));
+  overflow: hidden;
+  padding: 0;
+  border: 0; border-radius: 28px;
+  background-color: var(--k-surface-1);
+  color: var(--k-ink-1);
+  box-shadow: 0 2px 6px rgba(10, 15, 13, .06), 0 24px 64px rgba(10, 15, 13, .18);
+  font-family: var(--k-font);
+  animation: none;
+  opacity: var(--opt-in);
+  transform: translateY(calc((1 - var(--opt-in)) * 28px)) scale(calc(.96 + var(--opt-in) * .04));
+}
+
+/* « Options » petit au-dessus, le plat en grand : l'ordre de lecture d'une
+   commande (« un Prépare ton plat, avec… »). */
+html[data-skin-2027="till"] .opt-veil .clo-title {
+  order: 0;
+  margin: 0; padding: 28px 88px 0 28px;
+  font-family: var(--k-font); font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote);
+  font-weight: var(--k-fw-footnote-strong); letter-spacing: .02em; text-transform: none;
+  color: var(--k-accent-ink);
+}
+html[data-skin-2027="till"] .opt-veil .clo-eyebrow {
+  order: 1;
+  margin: 4px 0 0; padding: 0 88px 0 28px;
+  font-size: var(--k-fs-display, 34px); line-height: var(--k-lh-display, 1.1);
+  font-weight: var(--k-fw-display, 600); letter-spacing: var(--k-track-display, -0.02em);
+  text-transform: none; color: var(--k-ink-1);
+  overflow-wrap: anywhere;
+}
+html[dir="rtl"][data-skin-2027="till"] .opt-veil .clo-title,
+html[dir="rtl"][data-skin-2027="till"] .opt-veil .clo-eyebrow { padding-inline: 28px 88px; }
+
+/* Fermer : « Annuler » devient le rond × du coin, son nom reste pour les
+   lecteurs d'écran. */
+html[data-skin-2027="till"] .opt-veil .clo-foot {
+  position: absolute; inset-block-start: 20px; inset-inline-end: 20px; margin: 0; padding: 0;
+}
+html[data-skin-2027="till"] .opt-veil .clo-foot [data-opt-cancel] {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;
+  background-color: var(--k-surface-2); color: var(--k-ink-1);
+  font-size: 0; cursor: pointer;
+  transition: background-color var(--k-dur-2) var(--k-glide), transform var(--k-dur-4) var(--k-spring);
+}
+html[data-skin-2027="till"] .opt-veil .clo-foot [data-opt-cancel]::before {
+  content: ''; width: 22px; height: 22px; background-color: currentColor;
+  -webkit-mask: url('icons/material/close.svg') center / contain no-repeat;
+  mask: url('icons/material/close.svg') center / contain no-repeat;
+}
+html[data-skin-2027="till"] .opt-veil .clo-foot [data-opt-cancel]:active { background-color: var(--k-surface-3); transform: scale(.94); }
+html[data-skin-2027="till"] .opt-veil .clo-foot [data-opt-cancel]:focus-visible { outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 2px; }
+
+/* Les questions : la seule partie qui défile. */
+html[data-skin-2027="till"] .opt-veil .opt-groups {
+  order: 2;
+  counter-reset: opt-step;
+  flex: 1 1 auto; min-height: 0; max-height: none;
+  margin: 20px 0 0; padding: 4px 28px 32px;
+  gap: 28px;
+  overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+}
+html[data-skin-2027="till"] .opt-veil .opt-g-h {
+  counter-increment: opt-step;
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 12px;
+  font-size: var(--k-fs-heading); line-height: var(--k-lh-heading);
+  font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading, 0);
+  text-transform: none; color: var(--k-ink-1);
+}
+/* Le numéro de la question, puis la coche quand elle a sa réponse. */
+html[data-skin-2027="till"] .opt-veil .opt-g-h::before {
+  content: counter(opt-step);
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--k-line-strong);
+  font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote-strong);
+  font-variant-numeric: tabular-nums; color: var(--k-ink-2);
+  transition: background-color var(--k-dur-3) var(--k-glide), box-shadow var(--k-dur-3) var(--k-glide), color var(--k-dur-3) var(--k-glide);
+}
+html[data-skin-2027="till"] .opt-veil .opt-g:has(.opt-c.on) .opt-g-h::before {
+  content: '';
+  background: var(--k-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath fill='%23FFFDFA' d='M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z'/%3E%3C/svg%3E") center / 18px 18px no-repeat;
+  box-shadow: none;
+}
+/* Une question facultative répondue : la coche sans le disque plein, pour ne
+   pas dire « fait » comme une question obligatoire. */
+html[data-skin-2027="till"] .opt-veil .opt-g:not(:has(.req)):has(.opt-c.on) .opt-g-h::before {
+  background-color: var(--k-accent-tint);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath fill='%230B6E4F' d='M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z'/%3E%3C/svg%3E");
+}
+/* « obligatoire », « 1–2 » : l'étiquette au bout de la ligne, discrète. */
+html[data-skin-2027="till"] .opt-veil .opt-g-h .req {
+  margin-inline-start: auto;
+  padding: 2px 10px; border: 0; border-radius: 999px;
+  background-color: var(--k-surface-2); color: var(--k-ink-2);
+  font-family: var(--k-font); font-style: normal; font-size: var(--k-fs-footnote);
+  font-weight: var(--k-fw-footnote); letter-spacing: 0; text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+html[data-skin-2027="till"] .opt-veil .opt-g:has(.opt-c.on) .opt-g-h .req { background-color: var(--k-accent-tint); color: var(--k-accent-ink); }
+
+/* Les choix : des tuiles qu'on vise sans regarder. */
+html[data-skin-2027="till"] .opt-veil .opt-g-c {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 10px;
+}
+html[data-skin-2027="till"] .opt-veil .opt-c {
+  position: relative;
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px;
+  min-height: 64px; padding: 10px 16px;
+  border: 0; border-radius: 16px;
+  background-color: var(--k-surface-2); color: var(--k-ink-1);
+  box-shadow: inset 0 0 0 1px transparent;
+  font-family: var(--k-font); font-size: var(--k-fs-body); line-height: 1.25;
+  font-weight: var(--k-fw-body); text-align: start;
+  cursor: pointer;
+  transition: background-color var(--k-dur-2) var(--k-glide), box-shadow var(--k-dur-2) var(--k-glide), transform var(--k-dur-4) var(--k-spring);
+}
+html[data-skin-2027="till"] .opt-veil .opt-c > span { min-width: 0; max-width: 100%; overflow-wrap: break-word; hyphens: auto; }
+html[data-skin-2027="till"] .opt-veil .opt-c b {
+  flex: none; font-family: var(--k-font); font-size: var(--k-fs-footnote);
+  font-weight: var(--k-fw-footnote); color: var(--k-ink-2); opacity: 1;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+@media (hover: hover) {
+  html[data-skin-2027="till"] .opt-veil .opt-c:hover { background-color: var(--k-surface-3); }
+}
+html[data-skin-2027="till"] .opt-veil .opt-c:active { transform: scale(.97); }
+html[data-skin-2027="till"] .opt-veil .opt-c:focus-visible { outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 2px; }
+/* Pris : vert pâle, bord vert, la coche au coin. */
+html[data-skin-2027="till"] .opt-veil .opt-c.on {
+  background-color: color-mix(in srgb, var(--k-accent) 14%, var(--k-surface-1));
+  color: var(--k-accent-ink);
+  box-shadow: inset 0 0 0 2px var(--k-accent);
+  font-weight: var(--k-fw-body-strong);
+  padding-inline-end: 44px;
+}
+html[data-skin-2027="till"] .opt-veil .opt-c.on b { color: var(--k-accent-ink); font-weight: var(--k-fw-footnote-strong); }
+html[data-skin-2027="till"] .opt-veil .opt-c.on::after {
+  content: ''; position: absolute; inset-inline-end: 12px; top: 50%;
+  width: 22px; height: 22px; margin-top: -11px; border-radius: 50%;
+  background: var(--k-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath fill='%23FFFDFA' d='M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+}
+/* La tuile qu'on vient de toucher (catalogue.js lui met .just après la
+   repeinte) : un petit saut, le ressort de la lentille. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-skin-2027="till"] .opt-veil .opt-c.on.just { animation: k-opt-pick 310ms cubic-bezier(0.34, 1.45, 0.5, 1) both; }
+  html[data-skin-2027="till"] .opt-veil .opt-c.on.just::after { animation: k-opt-tick 310ms cubic-bezier(0.34, 1.45, 0.5, 1) both; }
+}
+@keyframes k-opt-pick { 0% { transform: scale(.94); } 100% { transform: scale(1); } }
+@keyframes k-opt-tick { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+
+/* Le pied : ce qui manque, puis le bouton avec le prix, toujours en vue. */
+html[data-skin-2027="till"] .opt-veil .opt-miss {
+  order: 3;
+  display: flex; align-items: flex-start; gap: 10px;
+  margin: 0; padding: 14px 28px 0;
+  border-top: 1px solid var(--k-line);
+  font-size: var(--k-fs-body); line-height: var(--k-lh-body); font-weight: var(--k-fw-body-strong); color: var(--k-ink-1);
+}
+html[data-skin-2027="till"] .opt-veil .opt-miss::before {
+  content: ''; flex: none; width: 10px; height: 10px; border-radius: 50%; margin: calc((1lh - 10px) / 2) 4px 0;
+  background-color: var(--k-warning-solid, var(--k-warning));
+  box-shadow: 0 0 0 4px var(--k-warning-tint);
+}
+html[data-skin-2027="till"] .opt-veil .clo-actions {
+  order: 4;
+  margin: 0; padding: 14px 28px 24px;
+  border-top: 1px solid var(--k-line);
+}
+html[data-skin-2027="till"] .opt-veil .opt-miss + .clo-actions { border-top: 0; padding-top: 12px; }
+html[data-skin-2027="till"] .opt-veil .clo-actions .clo-btn.primary {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; min-height: 60px; padding: 0 24px;
+  border: 0; border-radius: 999px;
+  background: var(--k-accent); color: var(--k-on-accent);
+  font-family: var(--k-font); font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong);
+  font-variant-numeric: tabular-nums; letter-spacing: 0;
+  box-shadow: 0 8px 20px rgba(11, 110, 79, .22);
+  opacity: 1; cursor: pointer;
+  transition: background-color var(--k-dur-2) var(--k-glide), box-shadow var(--k-dur-3) var(--k-glide), transform var(--k-dur-4) var(--k-spring);
+}
+html[data-skin-2027="till"] .opt-veil .clo-actions .clo-btn.primary:active { background-color: var(--k-accent-pressed); transform: scale(.98); }
+html[data-skin-2027="till"] .opt-veil .clo-actions .clo-btn.primary:focus-visible { outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 3px; }
+/* En attente d'une réponse : gris plein, pas un vert fantôme. */
+html[data-skin-2027="till"] .opt-veil .clo-actions .clo-btn.primary[disabled] {
+  background: var(--k-accent); color: var(--k-on-accent); box-shadow: none; opacity: .38;
+}
+
+/* Téléphone : la feuille monte du bas, pleine largeur. */
+@media (max-width: 600px) {
+  html[data-skin-2027="till"] .opt-veil { align-items: flex-end; padding: 0; }
+  html[data-skin-2027="till"] .opt-veil .opt-card {
+    width: 100%; max-height: calc(100dvh - 24px);
+    border-radius: 28px 28px 0 0;
+    transform: translateY(calc((1 - var(--opt-in)) * 100%));
+  }
+  html[data-skin-2027="till"] .opt-veil .clo-title { padding-top: 24px; }
+  html[data-skin-2027="till"] .opt-veil .clo-eyebrow { font-size: var(--k-fs-title, 28px); }
+  html[data-skin-2027="till"] .opt-veil .opt-groups,
+  html[data-skin-2027="till"] .opt-veil .opt-miss { padding-inline: 20px; }
+  html[data-skin-2027="till"] .opt-veil .clo-actions { padding: 12px 20px calc(16px + env(safe-area-inset-bottom, 0px)); }
+  html[data-skin-2027="till"] .opt-veil .opt-g-c { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  html[data-skin-2027="till"] .opt-veil .opt-c { min-height: 58px; padding: 8px 14px; font-size: 15px; }
+  html[data-skin-2027="till"] .opt-veil .opt-c.on { padding-inline-end: 40px; }
+}
