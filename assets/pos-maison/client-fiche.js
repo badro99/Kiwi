@@ -227,8 +227,9 @@ export function mzOpenFiche(cid, k) {
  * Boutique réelle : k.book = KiwiClients, le même carnet que le tableau de
  * bord. Démo : la liste locale (k.CL, k.CLIENTES). */
 const attr = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-const field = (id, label, value, type = 'text', extra = '') =>
-  `<label>${tr(label)}<input class="mz-in" id="${id}" type="${type}" value="${attr(value)}" autocomplete="off"${extra} /></label>`;
+/* Un objet plutôt que des arguments : seul `label` est du texte lu (dynamic-i18n). */
+const field = ({ id, label, value, type = 'text', extra = '' }) =>
+  `<label>${label}<input class="mz-in" id="${id}" type="${type}" value="${attr(value)}" autocomplete="off"${extra} /></label>`;
 
 export function editFiche(cid, c, raw, k) {
   const { el, esc } = k;
@@ -238,11 +239,11 @@ export function editFiche(cid, c, raw, k) {
     <button class="mz-modal-x" data-mz-close aria-label="${tr('Fermer')}">${icon('close')}</button>
     <h3 class="modal-title">${tr('Modifier')} · ${esc(c.name)}</h3>
     <div class="mz-fedit">
-      ${field('mz-fe-name', 'Nom et prénom', c.name)}
-      <div class="two">${field('mz-fe-tel', 'Téléphone', c.phone, 'tel', ' inputmode="tel"')}${field('mz-fe-mail', 'Email', r.email, 'email', ' inputmode="email"')}</div>
-      <div class="two">${field('mz-fe-city', 'Ville', r.city)}${field('mz-fe-bday', 'Anniversaire', r.birthday, 'date')}</div>
-      ${field('mz-fe-addr', 'Adresse', r.address)}
-      ${field('mz-fe-notes', 'Notes', notes)}
+      ${field({ id: 'mz-fe-name', label: tr('Nom et prénom'), value: c.name })}
+      <div class="two">${field({ id: 'mz-fe-tel', label: tr('Téléphone'), value: c.phone, type: 'tel', extra: ' inputmode="tel"' })}${field({ id: 'mz-fe-mail', label: tr('Email'), value: r.email, type: 'email', extra: ' inputmode="email"' })}</div>
+      <div class="two">${field({ id: 'mz-fe-city', label: tr('Ville'), value: r.city })}${field({ id: 'mz-fe-bday', label: tr('Anniversaire'), value: r.birthday, type: 'date' })}</div>
+      ${field({ id: 'mz-fe-addr', label: tr('Adresse'), value: r.address })}
+      ${field({ id: 'mz-fe-notes', label: tr('Notes'), value: notes })}
     </div>
     <div class="mz-sheet-foot">
       <button class="mz-btn secondary" id="mz-fe-cancel" type="button">${tr('Annuler')}</button>

@@ -59,7 +59,7 @@ const CSS = '.mz-bargain{display:grid;gap:8px}'
   + '#mz-tkrem-foot[hidden]{display:none}';
 function ensureCss() {
   if (typeof document === 'undefined' || document.getElementById('mz-bargain-css')) return;
-  const s = document.createElement('style'); s.id = 'mz-bargain-css'; s.textContent = CSS; document.head.appendChild(s);
+  const styleEl = document.createElement('style'); styleEl.id = 'mz-bargain-css'; styleEl.textContent = CSS; document.head.appendChild(styleEl);
 }
 
 /* Le sélecteur de la fiche article (sales.js) : le prix d'UNE pièce, convenu

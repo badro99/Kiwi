@@ -24,8 +24,8 @@
     "sha": "fddb9eb286e8dc9a"
   },
   "assets/admin-legacy.js": {
-    "v": "17",
-    "sha": "c2366dcf8d4067e5"
+    "v": "18",
+    "sha": "30f0ff230c267164"
   },
   "assets/admin-origin-devices.js": {
     "v": "1",
@@ -236,8 +236,8 @@
     "sha": "af731124f6a82009"
   },
   "assets/caisse-lang.js": {
-    "v": "167",
-    "sha": "e9ae15c9adb29b3e"
+    "v": "168",
+    "sha": "6754d80399506dcd"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1924,8 +1924,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "519",
-    "sha": "6e179f7dcae87e72"
+    "v": "520",
+    "sha": "28e8a7de38e707f7"
   },
   "assets/pos-epicerie.css": {
     "v": "44",
@@ -1996,16 +1996,16 @@
     "sha": "3b1ecc2cbfa231cd"
   },
   "assets/pos-maison.css": {
-    "v": "263",
+    "v": "264",
     "sha": "395c4e8545c0bf32"
   },
   "assets/pos-maison.js": {
-    "v": "263",
-    "sha": "42f7604b593af35d"
+    "v": "264",
+    "sha": "ce33d76b19aa97eb"
   },
   "assets/pos-maison/avance-restock.js": {
-    "v": "32",
-    "sha": "94e32288b58844ed"
+    "v": "33",
+    "sha": "a2e31547f1cec886"
   },
   "assets/pos-maison/avoir-sheet.js": {
     "v": "9",
@@ -2020,12 +2020,12 @@
     "sha": "64bf43e6710c5268"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "176",
-    "sha": "1df4480728d921b7"
+    "v": "177",
+    "sha": "90b30be63b848682"
   },
   "assets/pos-maison/client-fiche.js": {
-    "v": "7",
-    "sha": "b12f794a3d6bec9a"
+    "v": "8",
+    "sha": "4a079985199ee1d7"
   },
   "assets/pos-maison/client-view.js": {
     "v": "1",
@@ -2044,12 +2044,12 @@
     "sha": "af6c63e77deac006"
   },
   "assets/pos-maison/gift-exchange-entry.js": {
-    "v": "7",
-    "sha": "f4be8670848a6412"
+    "v": "8",
+    "sha": "ffcef5569daef330"
   },
   "assets/pos-maison/gift-exchange.js": {
-    "v": "7",
-    "sha": "86dfae52fc8ffcd0"
+    "v": "8",
+    "sha": "ef5fc846b39ce0d3"
   },
   "assets/pos-maison/grid-pager.js": {
     "v": "1",
@@ -2060,8 +2060,8 @@
     "sha": "feb0865a7163d8c9"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "176",
-    "sha": "7c82e676321236ca"
+    "v": "177",
+    "sha": "3fc7dd2ff6f423b8"
   },
   "assets/pos-maison/kit-2027.js": {
     "v": "14",
@@ -2072,12 +2072,12 @@
     "sha": "f505c28b4b344afc"
   },
   "assets/pos-maison/sales.js": {
-    "v": "176",
-    "sha": "287962042151b7a3"
+    "v": "177",
+    "sha": "793a5f63db1cc3d6"
   },
   "assets/pos-maison/ticket-remise.js": {
-    "v": "7",
-    "sha": "e2ac382347ccd452"
+    "v": "8",
+    "sha": "eb24382afca0dad0"
   },
   "assets/pos-mobile.css": {
     "v": "10",

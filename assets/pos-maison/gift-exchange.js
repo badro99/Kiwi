@@ -7,9 +7,9 @@
  * la feuille de paiement habituelle. Marchandise contre marchandise : tant que
  * ce qui part vaut moins que ce qui revient, rien ne se règle (« il reste … à
  * choisir »). Aucun avoir ici : le serveur n'en émet que sur une vente connue. */
-import { P, root, toast, lineDeal, persistStock, persistDay, recordReturn, refreshOps, nextStandaloneTicketNumber, SALES, STAFF, newSaleId, bqPost, bqPaymentMethod, bqPaymentParts, bqSaveProvisional, queueIfOffline, headSubVente, renderBadges } from '../pos-maison.js?v=263';
-import { $, esc, fmtMAD, icons, artOf, holdStock, releaseStock, canHoldStock, renderGrid, rayonOf } from './sales.js?v=176';
-import { openPay } from './checkout.js?v=176';
+import { P, root, toast, lineDeal, persistStock, persistDay, recordReturn, refreshOps, nextStandaloneTicketNumber, SALES, STAFF, newSaleId, bqPost, bqPaymentMethod, bqPaymentParts, bqSaveProvisional, queueIfOffline, headSubVente, renderBadges } from '../pos-maison.js?v=264';
+import { $, esc, fmtMAD, icons, artOf, holdStock, releaseStock, canHoldStock, renderGrid, rayonOf } from './sales.js?v=177';
+import { openPay } from './checkout.js?v=177';
 import { searchProducts, exchangeTotals, allocateCents, phrase, tillLang } from './gift-exchange-core.js?v=2';
 
 const L = (fr, vars) => phrase(fr, tillLang(), vars);
@@ -23,9 +23,9 @@ const lines = (m) => Array.from(m.values());
 
 function css() {
   if (document.getElementById('mz-gx-css')) return;
-  const s = document.createElement('style');
-  s.id = 'mz-gx-css';
-  s.textContent = `
+  const styleEl = document.createElement('style');
+  styleEl.id = 'mz-gx-css';
+  styleEl.textContent = `
 .modal.mz-gx { width: min(880px, 94vw); max-height: 92vh; overflow: auto; display: block; height: auto; min-height: 0; }
 .mz-gx #mz-gx-diff { margin-top: 14px; }
 .mz-gx .mz-search { margin: 12px 0 8px; }
@@ -42,7 +42,7 @@ function css() {
 .mz-gx-qty { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .mz-gx-qty button { width: 32px; height: 32px; border-radius: 9px; background: var(--paper-soft, rgba(10,15,13,.05)); }
 @media (max-width: 720px) { .mz-gx-cols { grid-template-columns: 1fr; } }`;
-  document.head.appendChild(s);
+  document.head.appendChild(styleEl);
 }
 
 function veil() {
@@ -67,10 +67,10 @@ export function openGiftExchange() {
   const v = veil();
   const el = $('#mz-gxm', v);
   el.innerHTML = `
-    <button class="mz-modal-x" type="button" data-gx-close aria-label="${esc(L('Fermer'))}"><i data-lucide="x"></i></button>
+    <button class="mz-modal-x" type="button" data-gx-close aria-label="${esc(L('Fermer'))}"><i data-icon="close"></i></button>
     <h3 class="modal-title">${esc(L('Échange sans ticket'))}</h3>
     <p class="modal-subtle">${esc(L('Un cadeau rapporté sans ticket : ce qui revient en stock, ce qui part, et la différence.'))}</p>
-    <div class="mz-search"><i data-lucide="search"></i>
+    <div class="mz-search"><i data-icon="search"></i>
       <input id="mz-gx-q" type="search" autocomplete="off" spellcheck="false" placeholder="${esc(L('Référence ou nom de l’article'))}" /></div>
     <div class="mz-gx-results" id="mz-gx-results"></div>
     <div class="mz-gx-cols">
@@ -256,6 +256,6 @@ function settle() {
     });
   }).catch(() => {
     if (go) go.disabled = false;
-    toast(L('Numéro de ticket indisponible'), 5200, 'danger', 'Reconnectez cette caisse pour réserver sa prochaine série.');
+    toast(L('Numéro de ticket indisponible'), 5200, 'danger', L('Reconnectez cette caisse pour réserver sa prochaine série.'));
   });
 }
