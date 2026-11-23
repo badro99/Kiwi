@@ -264,8 +264,8 @@
     "sha": "15c8920816945d1b"
   },
   "assets/caisse-pairing.js": {
-    "v": "87",
-    "sha": "f9ebc9a41ad242af"
+    "v": "88",
+    "sha": "4115dc2ea16fbdff"
   },
   "assets/caisse-pairs.js": {
     "v": "4",
@@ -1628,12 +1628,12 @@
     "sha": "91ea1202399b8d4c"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "117",
+    "v": "118",
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "310",
-    "sha": "4fcc6fac383ba8b3"
+    "v": "311",
+    "sha": "defdb6e0d3fb2a02"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

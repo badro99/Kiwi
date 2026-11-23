@@ -78,6 +78,7 @@
     'assets/hotel-housekeeping.js?v=1',
     'assets/hotel/model.js?v=11',
     'assets/hotel.js?v=101',
+    'assets/agent-doc-followup.js?v=2',
   ];
   if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');
   const normalPriority = new Set(['assets/kiwi-select.js', 'assets/catalog-workspace.js', 'assets/staff-roles.js', 'assets/design-vexel-layout.js']);

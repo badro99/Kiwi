@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dash = readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
 const pad = readFileSync(path.join(ROOT, 'assets/caisse-pairing.js'), 'utf8');
-const lib = readFileSync(path.join(ROOT, 'functions/auth/_lib.js'), 'utf8');
+const lib = readFileSync(path.join(ROOT, 'functions/auth/_limiter.js'), 'utf8');
 
 let passed = 0, failed = 0;
 function ok(label, fn) {

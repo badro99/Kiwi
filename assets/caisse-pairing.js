@@ -982,9 +982,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
     verifyCode(code).then(function (who) {
       if (who) { acceptStaff(who); return; }
       if (lastVerify.status === 429) {
-        /* Le serveur ne bloque plus qu'une pause de secondes (PIN_COOLDOWN_MS) :
-           « 1 min » pour dix secondes faisait croire à un long blocage. */
-        var w = Math.max(0, Math.ceil(lastVerify.wait || 0));
+        var w = Math.max(0, Math.ceil(lastVerify.wait || 0)); // une pause de secondes (PIN_COOLDOWN_MS), pas « 1 min »
         refuse(w ? 'Trop d’essais. Réessayez dans ' + (w < 60 ? w + ' s.' : Math.ceil(w / 60) + ' min.') : 'Trop d’essais. Réessayez dans un instant.');
         return;
       }

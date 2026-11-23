@@ -7,7 +7,7 @@ import vm from 'node:vm';
 const read = (f) => fs.readFileSync(f, 'utf8');
 const codes = new Set();
 for (const f of ['functions/auth/signup.js', 'functions/auth/login.js']) for (const m of read(f).matchAll(/error: '([a-z_-]+)'/g)) codes.add(m[1]);
-const lib = read('functions/auth/_lib.js');
+const lib = read('functions/auth/_limiter.js');
 for (const code of ['too_many_attempts', 'rate-limit-unavailable']) { assert.ok(lib.includes(`error: '${code}'`), 'the limiter still answers ' + code); codes.add(code); }
 const page = read('functions/_middleware.js');
 const lines = [...page.matchAll(/^\s*errors: \{(.*)\}\s*$/gm)].map((m) => m[1]);
