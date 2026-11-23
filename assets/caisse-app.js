@@ -1102,7 +1102,7 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
             total: (document.getElementById('rp-total') ? document.getElementById('rp-total').textContent.trim() : '')
           };
           window.__lastTicket = _ticket;
-          printHardwareTicket(_ticket);
+          printPreBill(_ticket);
         }
         else if (a === 'reprint-bill') {
           /* Ce bouton rejouait window.__lastTicket · une variable de page. Elle

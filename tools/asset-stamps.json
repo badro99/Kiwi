@@ -208,8 +208,8 @@
     "sha": "5bc1033c2c48f7d7"
   },
   "assets/caisse-app.js": {
-    "v": "52",
-    "sha": "859505f249e91be5"
+    "v": "53",
+    "sha": "c7346465e208428a"
   },
   "assets/caisse-dna.css": {
     "v": "10",
@@ -344,8 +344,8 @@
     "sha": "4a996765a72dd167"
   },
   "assets/caisse/receipts.js": {
-    "v": "2",
-    "sha": "1c635d5f57c9673d"
+    "v": "5",
+    "sha": "38e2aabb227a9db1"
   },
   "assets/caisse/returns.js": {
     "v": "2",
@@ -2267,13 +2267,17 @@
     "v": "4",
     "sha": "3015d6f6bde9153c"
   },
+  "assets/receipt-prebill.js": {
+    "v": "3",
+    "sha": "b74099b9bbefa01d"
+  },
   "assets/receipt-ui.js": {
     "v": "3",
     "sha": "1f4a2677c0859a8f"
   },
   "assets/receipt.js": {
-    "v": "35",
-    "sha": "cdb11b16d86b9d1e"
+    "v": "36",
+    "sha": "a1a4490e0a8a9824"
   },
   "assets/reception-view.js": {
     "v": "3",

@@ -39,6 +39,24 @@
         else viaSystem();
       }, viaSystem);
     }
+    /* L'ADDITION, MISE EN PAGE. Le même en-tête que le reçu (logo, enseigne,
+     * adresse, téléphone), les lignes avec leurs quantités, le total à payer
+     * et un bandeau « CECI N'EST PAS UN REÇU » : assets/receipt-prebill.js,
+     * chargé au premier tirage. Sans lignes, l'ancienne
+     * addition reste le repli (printHardwareTicket). */
+    function printPreBill(ticket) {
+      const lines = (() => { try { return currentSaleLines(); } catch (_) { return []; } })();
+      if (!lines.length) { printHardwareTicket(ticket); return; }
+      const say = (k) => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(k));
+      const total = parseFloat(String((ticket && ticket.total) || '').replace(/[^\d.,-]/g, '').replace(',', '.'));
+      import(new URL('assets/receipt-prebill.js?v=3', document.baseURI).href)
+        .then((m) => m.printPreBill({ lines, total, opts: receiptOpts(), label: ticket && ticket.title }))
+        .then((r) => {
+          if (!r || !r.ok) { say('Impression échouée'); return; }
+          say(r.via === 'browser' ? 'Addition ouverte dans l\'impression système'
+            : r.via === 'pdf' ? 'Addition prête · imprimer ou partager le PDF' : 'Addition imprimée');
+        }, () => printHardwareTicket(ticket));
+    }
     /* Itemised lines for the receipt of the sale being tendered (non-split).
        Table → generateOrder; vente rapida → the cart. */
     /* La famille d'un plat, en clair ("Tajines", "Boissons"). Elle voyage avec

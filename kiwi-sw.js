@@ -18,6 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/receipt-prebill.js?v=3',
   '/assets/stock/sourcing.js?v=8',
   '/assets/till-categories.js?v=2',
   '/assets/retail-bestsellers.js?v=2',
@@ -157,7 +158,7 @@ var SHELL = [
   '/assets/caisse-accounting.js?v=37',
   '/assets/caisse-floor.js?v=24',
   '/assets/caisse-kitchen.js?v=31',
-  '/assets/caisse/receipts.js?v=2',
+  '/assets/caisse/receipts.js?v=5',
   '/assets/caisse/closing.js?v=2',
   '/assets/caisse/workflows-loader.js?v=3',
   '/assets/caisse/dish-words.js?v=1',
@@ -175,7 +176,7 @@ var SHELL = [
   '/assets/caisse/handover.js?v=5',
   '/assets/caisse/inventory.js?v=10',
   '/assets/caisse/offline.js?v=10',
-  '/assets/caisse-app.js?v=52',
+  '/assets/caisse-app.js?v=53',
   '/assets/caisse-loyalty-reward.js?v=7',
   '/assets/caisse-refresh.js?v=10',
   '/assets/till-auto-update.js?v=1',
@@ -414,7 +415,7 @@ var SHELL = [
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
-  '/assets/receipt.js?v=35', '/assets/receipt-gift.js?v=4',
+  '/assets/receipt.js?v=36', '/assets/receipt-gift.js?v=4',
   '/assets/receipt-ui.js?v=3',
   '/assets/invoice.js?v=28',
   '/assets/merchant-config.js?v=292',
