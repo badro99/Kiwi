@@ -39,6 +39,8 @@ const businessDate = () => '2026-01-01';
 const merchantCutoff = async () => 5;
 const merchantZone = async () => 'Africa/Casablanca';
 ${read('functions/api/_sale-truth.js').replace(/^import .*;$/gm, '').replace(/^export /gm, '')}
+// A shared bill's parts belong to one table visit (_split-visit.js), run for real; these baskets carry no split.
+${read('functions/api/_split-visit.js').replace(/^import .*;$/gm, '').replace(/^export /gm, '')}
 // The price-list stamp (_price-list-sale.js) has its own suite (price-lists-test); these baskets carry none.
 const stampPriceList = async () => {};
 ${read('functions/api/_sale-stamp.js').replace(/^import .*;$/gm, '').replace(/^export /gm, '')}
@@ -208,7 +210,7 @@ const verticals = [
 verticals.forEach((vertical) => {
   const source = read(`assets/pos-${vertical}.js`);
   ok(`${vertical} forwards line truth to the journal`,
-    new RegExp(`KiwiPosSale\\.record\\('${vertical}', \\{ total, method, label, ref, lines(?:, channel, received, change|, tipCents: Math[.]round\\(tip \\* 100\\))? \\}\\)`).test(source));
+    new RegExp(`KiwiPosSale\\.record\\('${vertical}', \\{ total, method, label, ref, lines(?:, channel, received, change|, tipCents: Math[.]round\\(tip \\* 100\\)|, \\.\\.\\.\\(pl \\? pl[.]saleFields\\(\\) : \\{\\}\\))? \\}\\)`).test(source));
 });
 ok('boutique basket keeps stable identity and variants',
   /itemId: ln\.pid/.test(read('assets/pos-boutique.js')) && /variantId: \[ln\.pid, ln\.size/.test(read('assets/pos-boutique.js')));

@@ -1334,13 +1334,13 @@ body.design-vexel :is(
  * pill (Dépenses, 22 Nov 2026). The input stays bare; the pill takes the focus
  * ring the bare input no longer shows. tools/search-pill-test.mjs keeps this
  * list in step with every `.x-search input { background: transparent }`. */
-body.design-vexel :is(.p-search, .xp-search, .bqcv-search, .bpd-search, .km-search, .cf-doc-search, .hx-room-search, .mx-formula-picker-search, .rx-search, .bq-search, .ep-carnet-search, .ep-search-in, .gy-pick-search, .gy-search, .kcnt-search, .lb-search, .mz-casse-search, .mz-search, .ph-search, .kx-rp-search, .sp-search, .tr-search, .px-catalog-search, .px-search, .rmw-formula-picker-search, .rmw-menu-search, .search-field, .jr-search, .rf-search, .kiwi-select-search, .kw-menu-search) input {
+body.design-vexel :is(.p-search, .xp-search, .bqcv-search, .bpd-search, .km-search, .cf-doc-search, .hx-room-search, .mx-formula-picker-search, .rx-search, .bq-search, .ep-carnet-search, .ep-search-in, .gy-pick-search, .gy-search, .kcnt-search, .lb-search, .mz-casse-search, .mz-search, .ph-search, .kx-rp-search, .sp-search, .tr-search, .px-catalog-search, .px-search, .rmw-formula-picker-search, .rmw-menu-search, .search-field, .jr-search, .rf-search, .kiwi-select-search, .kw-menu-search, .cq-search) input {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
   outline: 0;
 }
-body.design-vexel :is(.p-search, .xp-search, .bqcv-search, .bpd-search, .km-search, .cf-doc-search, .hx-room-search, .mx-formula-picker-search, .rx-search, .bq-search, .ep-carnet-search, .ep-search-in, .gy-pick-search, .gy-search, .kcnt-search, .lb-search, .mz-casse-search, .mz-search, .ph-search, .kx-rp-search, .sp-search, .tr-search, .px-catalog-search, .px-search, .rmw-formula-picker-search, .rmw-menu-search, .search-field, .jr-search, .rf-search, .kiwi-select-search, .kw-menu-search):focus-within {
+body.design-vexel :is(.p-search, .xp-search, .bqcv-search, .bpd-search, .km-search, .cf-doc-search, .hx-room-search, .mx-formula-picker-search, .rx-search, .bq-search, .ep-carnet-search, .ep-search-in, .gy-pick-search, .gy-search, .kcnt-search, .lb-search, .mz-casse-search, .mz-search, .ph-search, .kx-rp-search, .sp-search, .tr-search, .px-catalog-search, .px-search, .rmw-formula-picker-search, .rmw-menu-search, .search-field, .jr-search, .rf-search, .kiwi-select-search, .kw-menu-search, .cq-search):focus-within {
   border-color: var(--atlas);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas) 16%, transparent);
 }

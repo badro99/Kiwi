@@ -100,9 +100,9 @@ try {
         try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
       }, lang);
       page.setDefaultNavigationTimeout(60000);
+      tr.step('open the demo dashboard on a phone');
       // coverage: surface=dashboard locale=fr viewport=phone
       // coverage: surface=dashboard locale=ar viewport=phone
-      tr.step('open the demo dashboard on a phone');
       await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
       await sleep(1500);
       await page.keyboard.press('Escape');

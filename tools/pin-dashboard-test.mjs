@@ -71,8 +71,18 @@ ok(ownerRole('Propriétaire') === true && ownerRole('owner') === true && ownerRo
 ok(ownerRole('manager') === false && ownerRole('Caissier') === false, 'manager et caissier ne sont pas le patron — leurs lignes suivent le roster d\'équipe');
 
 const pinsBlock = staffPub.slice(staffPub.indexOf('export async function publishStaffCredentials('));
-ok(pinsBlock.includes('const keepIds = await ownerRowsToKeep(env, merchant, tillPins);') && /filter\(\(row\) => accountOwnerRole\(row\.role\) && !incoming\.has\(Catalog\.normRole\(row\.name\)\)\)/.test(staffPub),
+/* Exécuté : quelles lignes propriétaire survivent à une liste entrante. En base : le
+ * patron (Badr, propriétaire) et une « Direction » d'équipe (Amina). */
+const keepSrc = extract(staffPub, /async function ownerRowsToKeep\([^)]*\) \{[\s\S]*?\n\}/, 'ownerRowsToKeep');
+const ownerRowsToKeep = new Function('Catalog', 'accountOwnerRole', 'sealMerchantStaff', keepSrc + '; return ownerRowsToKeep;')(SharedCatalog, ownerRole, async () => {});
+const ownerDb = { DB: { prepare: () => ({ bind: () => ({ all: async () => ({ results: [
+  { id: 1, name: 'Badr', role: 'Propriétaire' }, { id: 2, name: 'Amina', role: 'direction' }, { id: 3, name: 'Sara', role: 'Caissier' },
+] }) }) }) } };
+const kept = (pins, replaceOwner) => ownerRowsToKeep(ownerDb, 'm', pins, replaceOwner).then((ids) => ids && ids.join());
+ok(await kept([{ name: 'Amina', role: 'direction' }]) === '1' && await kept([{ name: 'Badr', role: 'owner' }]) === '2',
   'la liste entrante est inspectée : une ligne propriétaire n’est remplacée que par une ligne au MÊME nom (une « Direction » d’équipe n’efface plus le patron)');
+ok(await kept([{ name: 'Badr B.', role: 'owner' }], true) === '' && await kept([{ name: 'Sara', role: 'Caissier' }], true) === '1,2',
+  'remplacer le propriétaire efface l’ancien code du patron, mais jamais sans patron dans la liste');
 ok(/DELETE FROM staff_pins WHERE merchant = \? AND id NOT IN \(/.test(pinsBlock), 'sans propriétaire entrant, les lignes propriétaire existantes sont PRÉSERVÉES');
 ok(/AND EXISTS \(SELECT 1 FROM staff_pins k WHERE k\.id IN/.test(pinsBlock), 'le code conservé du patron gagne sur un doublon d\'équipe — comparaison en SQL, jamais en JS');
 ok(!/SELECT id, pin|SELECT pin/.test(pinsBlock), 'la préservation ne projette JAMAIS la colonne pin vers JavaScript');
@@ -106,7 +116,7 @@ ok(gate.includes("Connectez-vous avec Kiwi pour configurer votre code d\\'acc"),
 ok(/if \(demosOn\(\) \|\| !helpEl \|\| pinInput\.value\) return;/.test(gate), 'jamais en démo, jamais par-dessus une saisie en cours');
 
 // ── 6. Verrou du nombre de contrôles ─────────────────────────────────────────
-const EXPECTED_COUNT = 27;
+const EXPECTED_COUNT = 28;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {

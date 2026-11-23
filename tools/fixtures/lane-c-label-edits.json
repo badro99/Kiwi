@@ -103,6 +103,18 @@
     {
       "before": "      mScanTitle: 'مسح فاتورة',",
       "after": "      mScanTitle: 'مسح وصل الاستلام أو الفاتورة',"
+    },
+    {
+      "before": "      supTitle: 'Fournisseurs',",
+      "after": "      supTitle: 'Fournisseurs', supRankT: 'Classement et soldes des fournisseurs', supRankS: 'Qui mérite la prochaine commande, et ce que vous devez à chacun : tout est réuni dans la page Fournisseurs.', supRankCta: 'Ouvrir le classement',"
+    },
+    {
+      "before": "      supTitle: 'Suppliers',",
+      "after": "      supTitle: 'Suppliers', supRankT: 'Supplier ranking and balances', supRankS: 'Who deserves the next order, and what you owe each one: it all lives on the Suppliers page.', supRankCta: 'Open the ranking',"
+    },
+    {
+      "before": "      supTitle: 'الموردون',",
+      "after": "      supTitle: 'الموردون', supRankT: 'ترتيب الموردين وحساباتهم', supRankS: 'من يستحق الطلبية القادمة، وكم تدين لكل مورد: كل ذلك في صفحة الموردين.', supRankCta: 'افتح الترتيب',"
     }
   ]
 }

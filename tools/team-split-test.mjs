@@ -56,6 +56,10 @@ function realm(source, lang) {
   vm.runInContext(source, context);
   return { context, root, modals, notices, events, venue };
 }
+/* Seule retouche revue depuis la découpe : le bouton « Droits » (assets/team/roster-list.js,
+ * 21 nov.) posé dans l'en-tête par une enveloppe, le fragment déplacé restant octet pour octet. */
+const withPermissions = (html, lang) => html.replace('<div class="eq-head-acts">', '<div class="eq-head-acts"><button class="btn-slim" type="button" data-action="nav-permissions"><i data-lucide="users" style="width:13px;height:13px" aria-hidden="true"></i><span>'
+  + ({ fr: 'Droits', en: 'Permissions', ar: 'الحقوق' })[lang] + '</span></button>');
 for (const lang of ['fr', 'en', 'ar']) {
   const before = realm(original + '\n' + hours, lang);
   const after = realm(catalog + '\n' + runtime, lang);
@@ -65,7 +69,7 @@ for (const lang of ['fr', 'en', 'ar']) {
   assert.deepEqual(after.events.filter(name => name !== 'kiwi:request-wake').sort(), [...before.events].sort());
   assert.equal(after.events.filter(name => name === 'kiwi:request-wake').length, 1, 'one push wake listener added by request pacing');
   for (const r of [before, after]) r.context.Kiwi.handlers['nav-equipe']();
-  assert.equal(hash(after.root.innerHTML), hash(before.root.innerHTML), 'roster markup ' + lang);
+  assert.equal(hash(after.root.innerHTML), hash(withPermissions(before.root.innerHTML, lang)), 'roster markup ' + lang);
   const id = after.context.__kiwiTeamV2.byVenue.boutique[0].id;
   for (const action of ['kt-add-member', 'kt-edit-member', 'kt-view-profile', 'kt-delete-member']) {
     before.context.Kiwi.handlers[action](null, id);
@@ -90,7 +94,7 @@ for (const lang of ['fr', 'en', 'ar']) {
   }
   // Let both complete transport chains drain before comparing rendered state.
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(hash(after.root.innerHTML), hash(before.root.innerHTML), 'live roster markup ' + lang);
+  assert.equal(hash(after.root.innerHTML), hash(withPermissions(before.root.innerHTML, lang)), 'live roster markup ' + lang);
   assert.equal(observed.at(-1)[1].merchant, 'split-test', 'poll pushes replacement live roster');
   after.context.Kiwi.handlers['kt-delete-member'](null, 'absent');
 
