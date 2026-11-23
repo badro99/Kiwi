@@ -54,7 +54,7 @@ const item = { id: 'p', retail: true };
   const set = vm.runInNewContext(decl + ';retailSetProductStock', { retailCatalog: () => C, Math, Number });
   assert.equal(set('p', 2.6, 'comptage'), false); assert.equal(C.variants[0].ledger, 4, 'nothing rounded, nothing written'); assert.equal(C.said.length, 1);
   assert.equal(set('p', 7, 'comptage'), true); assert.equal(C.variants[0].ledger, 7); }
-// Fiche « Inventaire boutique » du tableau de bord : 0 + écart, jamais « Rupture » seul.
+// Fiche « Inventaire boutique » du tableau de bord : le compte signé, −3 comme l'ancienne caisse (owner, 23/11/2026).
 { const src = read('assets/pages-pro-boutique.js');
   const dict = split.declaration(src, '_BQX_INV');
   const tag = split.declaration(src, '_bqxStockTag'), gapFn = split.declaration(src, '_bqxLedgerGap');
@@ -62,8 +62,7 @@ const item = { id: 'p', retail: true };
   const mkEnv = (lang) => ({ _esc: String, _bqxPfLang: () => lang, CAT: () => ({ listVariants: () => C.variants.map((v) => Object.defineProperty({ id: v.id, stock: v.stock }, 'ledgerStock', { value: v.ledger })) }), Math, Number });
   for (const lang of ['fr', 'en', 'ar']) {
     const f = vm.runInNewContext(dict + ';function _bqxInvT(){return _BQX_INV[_bqxPfLang()];}' + tag + ';' + gapFn + ';(p,s)=>_bqxStockTag(s,_bqxLedgerGap(p))', mkEnv(lang));
-    assert.match(f('p', 0), /bqx-stag low">0 · .*−3</, lang + ': negative ledger shows 0 and the gap');
-    assert.doesNotMatch(f('p', 0), /bqx-stag out/, lang);
+    assert.match(f('p', 0), /bqx-stag out">[^<]*−3/, lang + ': negative ledger reads −3 (owner, 23/11/2026)');
   }
   C.variants[1].ledger = 0;
   const f = vm.runInNewContext(dict + ';function _bqxInvT(){return _BQX_INV.fr;}' + tag + ';' + gapFn + ';(p,s)=>_bqxStockTag(s,_bqxLedgerGap(p))', mkEnv('fr'));

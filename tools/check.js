@@ -1761,7 +1761,7 @@ section('Whole-project regressions');
     'landing-claims-test.mjs',
     'void-stock-test.js',
     'caisse-stock-test.mjs',
-    'boutique-variant-stock-test.mjs',
+    'boutique-variant-stock-test.mjs', 'negative-stock-test.mjs',
     'boutique-rtl-css-test.mjs',
     'rtl-css-lint-test.mjs',
     'boutique-existing-barcode-test.mjs',

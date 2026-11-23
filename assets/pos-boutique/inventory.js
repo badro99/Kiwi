@@ -1,12 +1,12 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=385';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=279';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=386';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=280';
 import { openMoves } from './inv-moves.js?v=7';
-import * as SZ from '../boutique-sizes.js?v=27';
-import { openLabelPicker } from './label-picker.js?v=6';
+import * as SZ from '../boutique-sizes.js?v=29';
+import { openLabelPicker } from './label-picker.js?v=8';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=24';
-import { sisterStock } from './sister-stock.js?v=1'; import { invProducts, recountPill, gapLabel } from './oversell.js?v=3';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=279';
+import { sisterStock } from './sister-stock.js?v=1'; import { invProducts, recountPill, gapLabel } from './oversell.js?v=4';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=280';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -749,7 +749,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const ib = $('#bqi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const nb = $('#bqi-new', panel); if (nb) nb.onclick = () => openNewProduct();
     const mv = $('#bqi-moves', panel); if (mv) mv.onclick = () => openMoves({ setModal: invSetModal, esc, icons, catDB, toast });   // en lecture (inv-moves.js)
-    import('./avance-restock.js?v=38').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
+    import('./avance-restock.js?v=39').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
     const pills = $('#bqi-pills', panel);
     if (pills) pills.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { state.invFilter = b.dataset.f; renderInventaire(); } });
     panel.querySelectorAll('[data-inv-open]').forEach((el) => el.addEventListener('click', () => openInvProduct(el.getAttribute('data-inv-open'))));
@@ -762,13 +762,15 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const cat = catDB();
     const d = cat.getProduct(p.id);
     const nBc = d.variants.reduce((s, v) => s + ((v.barcodes && v.barcodes.length) ? 1 : 0), 0);
-    const cls = d.stock === 0 ? 'rupture' : (d.stock <= 5 ? 'bas' : '');
-    // Ruling 2026-11-04: the shelf shows 0, the ledger's negative shows as a gap to recount.
+    /* Owner, 23/11/2026 : le compte s'affiche signé, -1 comme l'ancienne caisse
+       (avant : 0 et « écart −N »). L'écart reste dit quand le total le cache. */
+    const shown = d.variants.reduce((s, v) => s + (Number(v.ledgerStock ?? v.stock) || 0), 0);
+    const cls = shown <= 0 ? 'rupture' : (shown <= 5 ? 'bas' : '');
     const gap = d.variants.reduce((n, v) => n + Math.min(0, Number(v.ledgerStock ?? v.stock) || 0), 0);
     return `<div class="bqi-row" data-inv-open="${p.id}">
       <span class="bqi-art">${artOf(p)}</span>
       <span class="bqi-info"><b>${esc(p.name)}</b><span>${d.category ? esc(d.category.name) : 'Divers'} · ${d.colors.length ? `${d.colors.length} coul. · ` : ''}${d.sizes.length} taille${d.sizes.length > 1 ? 's' : ''} · ${nBc}/${d.variants.length} codes-barres</span></span>
-      <span class="bqi-stock ${cls}">${d.stock}${gap < 0 ? ` · ${esc((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('stock à vérifier · écart'))} −${Math.abs(gap)}` : ''}</span>
+      <span class="bqi-stock ${cls}">${shown < 0 ? '−' + Math.abs(shown) : shown}${gap < 0 && shown >= 0 ? ` · ${esc((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('stock à vérifier · écart'))} −${Math.abs(gap)}` : ''}</span>
       <span class="bqi-price">${fmtMAD(p.priceMAD)}</span>
       <button class="bqi-mini" data-inv-print="${p.id}" title="Imprimer les étiquettes"><i data-lucide="printer"></i></button>
     </div>`;
@@ -798,7 +800,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
 
   /* La langue de la caisse, pour l'écran des tailles (boutique-sizes.js). */
   const szLang = () => { try { const l = globalThis.window?.KiwiCaisseLang?.get?.(); return l === 'en' || l === 'ar' ? l : 'fr'; } catch (_) { return 'fr'; } };
-  const invSub = (d) => `${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(d.product.priceMAD)} · ${d.stock} en stock`;
+  const invSub = (d) => { const n = d.variants.reduce((s, v) => s + (Number(v.ledgerStock ?? v.stock) || 0), 0); return `${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(d.product.priceMAD)} · ${n < 0 ? '−' + Math.abs(n) : n} en stock`; };
 
   /* La fiche d'un produit : ses tailles, leur stock, leur code-barres, et une
      case par taille pour ajouter les pièces reçues. `target` = la quantité

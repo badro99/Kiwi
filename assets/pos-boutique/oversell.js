@@ -57,3 +57,11 @@ export function gapLabel(cat, pid, esc) {
   const gap = gapOf(cat, pid);
   return gap < 0 ? ` · ${esc(tr('stock à vérifier · écart'))} −${Math.abs(gap)}` : '';
 }
+
+/* Le stock d'une ligne d'Inventaire, signé : −1 quand le total passe sous zéro,
+   comme l'ancienne caisse (owner, 23/11/2026) ; l'écart reste dit quand le total
+   le cache. `stock` est le total vendable (tailles à zéro ou plus). */
+export function stockLabel(cat, pid, stock, esc) {
+  const gap = gapOf(cat, pid), shown = (Number(stock) || 0) + gap;
+  return shown < 0 ? '−' + Math.abs(shown) : String(shown) + gapLabel(cat, pid, esc);
+}

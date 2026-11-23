@@ -585,18 +585,19 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
      Il repose le socle et rend caducs les mouvements d'avant. */
   function setAbsolute(v, n, why) {
     if (!v) return v;
-    var was = Math.max(0, +v.stock || 0);
-    v.base = Math.max(0, n | 0);
+    var was = Math.round(+(v.ledgerStock != null ? v.ledgerStock : v.stock) || 0);
+    v.base = n | 0;   // un compte peut être sous zéro : -1 se lit -1 (owner, 23/11/2026)
     v.baseAt = now();
-    v.stock = v.base;
+    Object.defineProperty(v, 'ledgerStock', { value: v.base, writable: true, configurable: true, enumerable: false });
+    v.stock = Math.max(0, v.base);
     /* Poser un état EST un mouvement, même si l'arithmétique du catalogue ne le
        range pas dans `moves` : quelqu'un a déclaré que le compte n'était pas le
        bon. Sans cette ligne, un comptage physique restait le seul geste capable
        de changer un stock sans rien raconter. */
-    if (v.stock !== was) {
+    if (v.base !== was) {
       journal({
         id: 'abs-' + v.id + '-' + v.baseAt, variant: v, at: v.baseAt,
-        delta: v.stock - was, before: was, after: v.stock, why: why || 'comptage',
+        delta: v.base - was, before: was, after: v.base, why: why || 'comptage',
       });
     }
     /* Les mouvements de cette déclinaison antérieurs au comptage ne servent

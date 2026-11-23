@@ -319,9 +319,11 @@
       if (fractionStock) {
         issues.push({ line, level: 'warn', code: 'stock-fraction', msg: tx('stock fractionnaire (« ' + rawStock + ' ») · refusé, la boutique compte en unités entières ; pour le poids, utilisez le module Épicerie ou Stock', 'fractional stock ("' + rawStock + '") · refused, the shop counts whole units; for weighed goods, use the Grocery or Stock module', 'مخزون كسري ("' + rawStock + '") · مرفوض، المتجر يعدّ وحدات كاملة؛ للمنتجات بالوزن استعمل وحدة البقالة أو المخزون') });
       }
-      const stockGiven = rawStock !== '' && !fractionStock && Number.isFinite(num(rawStock)) && num(rawStock) >= 0;
-      const stock = stockGiven ? intOr(rawStock, 0) : null;
-      if (rawStock !== '' && (!Number.isFinite(num(rawStock)) || num(rawStock) < 0)) {
+      /* Un compte sous zéro (-1 : une pièce vendue de plus que reçue) se garde
+         tel quel, comme l'ancienne caisse l'affiche (owner, 23/11/2026). */
+      const stockGiven = rawStock !== '' && !fractionStock && Number.isFinite(num(rawStock));
+      const stock = stockGiven ? Math.round(num(rawStock)) : null;
+      if (rawStock !== '' && !Number.isFinite(num(rawStock))) {
         issues.push({ line, level: 'warn', msg: tx('stock illisible (« ' + rawStock + ' ») · ignoré', 'unreadable stock ("' + rawStock + '") · ignored', 'مخزون غير مقروء ("' + rawStock + '") · تم تجاهله') });
       }
 

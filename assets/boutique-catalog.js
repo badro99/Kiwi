@@ -527,9 +527,9 @@
       colorFamily: n.family.id,
       colorLabel: n.displayLabel, colorHex: n.displayHex,
       size: String(size), stock: Math.max(0, stock | 0),
-      base: Math.max(0, stock | 0), baseAt: now(),
+      base: stock | 0, baseAt: now(),
       sku: '', barcodes: [], barcodeRemoved: {}, metaAt: now(),
-    };
+    }; Object.defineProperty(v, 'ledgerStock', { value: v.base, writable: true, configurable: true, enumerable: false });   // un compte sous zéro se lit tel quel
     if (n.source) {
       v.colorSource = n.source;
       const legacy = LEGACY_SHADES[v.colorId];

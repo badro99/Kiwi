@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=385'; import { tillPriceList as tpl } from './price-list.js?v=3';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=279';
-import { offerRegister } from './inventory.js?v=279';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=386'; import { tillPriceList as tpl } from './price-list.js?v=3';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=280';
+import { offerRegister } from './inventory.js?v=280';
 import { ticketOwner } from './ticket-owner.js?v=8';
 import { ticketRemise } from './ticket-remise.js?v=7';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
@@ -9,9 +9,9 @@ import { bqKitTicketFoot } from './kit-2027.js?v=26';
 import { sellSearch } from './search.js?v=20';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
-import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=6'; import { oversellOk } from './oversell.js?v=3';
+import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=6'; import { oversellOk } from './oversell.js?v=4';
 let CX_NOTE = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=41').then((m) => { CX_NOTE = m; }).catch(() => {});
+import('./exch-combined.js?v=42').then((m) => { CX_NOTE = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -241,8 +241,13 @@ import('./exch-combined.js?v=41').then((m) => { CX_NOTE = m; }).catch(() => {});
   }
 
   function cardFlag(p) {
-    const gap = (window.KiwiBoutiqueCatalog?.listVariants(p.id) || []).reduce((n, v) => n + Math.min(0, Number(v.ledgerStock ?? v.stock) || 0), 0);
-    if (gap < 0) return '<span class="bq-card-flag low">0 · ' + esc((window.KiwiCaisseLang?.tr('stock à vérifier · écart') || 'stock à vérifier · écart')) + ' −' + Math.abs(gap) + '</span>';
+    const vs = window.KiwiBoutiqueCatalog?.listVariants(p.id) || [];
+    const gap = vs.reduce((n, v) => n + Math.min(0, Number(v.ledgerStock ?? v.stock) || 0), 0);
+    const tr = (x) => (window.KiwiCaisseLang?.tr(x) || x);
+    /* Owner, 23/11/2026 : sous zéro, la carte dit −N comme l'ancienne caisse. */
+    const shown = vs.reduce((n, v) => n + (Number(v.ledgerStock ?? v.stock) || 0), 0);
+    if (shown < 0) return '<span class="bq-card-flag out">−' + Math.abs(shown) + ' ' + esc(tr('en stock')) + '</span>';
+    if (gap < 0) return '<span class="bq-card-flag low">' + esc(tr('stock à vérifier · écart')) + ' −' + Math.abs(gap) + '</span>';
     const st = stockOf(p);
     if (st === 0) return '<span class="bq-card-flag out">épuisé</span>';
     if (st <= 2) return '<span class="bq-card-flag low">stock bas</span>';

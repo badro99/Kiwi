@@ -13,6 +13,6 @@ export const gxLabel = () => phrase('Échange sans ticket', tillLang()).replace(
 if (typeof document !== 'undefined') {
   document.addEventListener('click', (e) => {
     if (!(e.target && e.target.closest && e.target.closest('[data-mz-gift-exch]'))) return;
-    import('./gift-exchange.js?v=6').then((m) => m.openGiftExchange()).catch(() => {});
+    import('./gift-exchange.js?v=7').then((m) => m.openGiftExchange()).catch(() => {});
   });
 }

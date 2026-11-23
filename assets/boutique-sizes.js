@@ -292,6 +292,11 @@ export function markReceiptPrinted(pid) { const r = lastReceipt(pid); if (r && !
 /* Étiquettes par taille : les pièces reçues (got) quand une réception est
    donnée, sinon le stock de chaque taille. La fiche et la ligne d'inventaire
    (pos-boutique/inventory.js) comptent avec cette même règle. */
+/* Le compte affiché est le compte signé : une taille vendue une fois de plus
+   que reçue lit -1, comme l'ancienne caisse (owner, 23/11/2026). La vente, elle,
+   la traite comme vide (v.stock reste à 0). */
+export const haveCount = (v) => (v ? Math.round(Number(v.ledgerStock ?? v.stock) || 0) : 0);
+const sgn = (k) => (k < 0 ? '−' + Math.abs(k) : k);
 export const labelCounts = (variants, got) => (variants || []).map((v) => [v, got ? (got[v.id] || 0) : Math.max(0, Math.floor(+v.stock || 0))]);
 /* « Imprimer N étiquettes », le nombre mis à part ; « · nouvelles pièces » pour une réception. */
 export function printLabelHtml(t, n, fresh) {
@@ -394,12 +399,12 @@ export function mount(host, o) {
     const anySmart = rich && shown.some((r) => r.variant && /<b>/.test(codeOf(r)));
     const rowsHtml = matrix ? '' : shown.map((r) => {
       const v = r.variant;
-      const stock = v ? Math.max(0, +v.stock || 0) : 0;
+      const stock = haveCount(v);
       const code = v ? o.primary(v) : '';
       const sizeLabel = r.size === 'TU' ? t.tu : r.size;
       const colorLine = r.multi && v ? `<small>${esc(v.colorLabel || '')}</small>` : '';
       const have = v
-        ? `<span class="kbs-have${stock ? '' : ' is-out'}" data-kbs-have="${esc(r.key)}" data-st="${stock}">${esc(stock ? t.have(stock) : t.out)}</span>`
+        ? `<span class="kbs-have${stock > 0 ? '' : ' is-out'}" data-kbs-have="${esc(r.key)}" data-st="${stock}">${esc(stock ? t.have(sgn(stock)) : t.out)}</span>`
         : '';
       const codeHtml = code
         ? `<span class="kbs-code">${o.barcodeSvg ? o.barcodeSvg(code) : ''}${rich ? codeOf(r) : `<code>${esc(code)}</code>`}${regOf(v)}</span>`
@@ -415,8 +420,8 @@ export function mount(host, o) {
       return `<tr><th scope="row">${esc(sl)}<span class="kbm-sd">${esc(plan ? plan.sizeOf(size) : '')}</span></th>${cols.map((c) => {
         const r = shown.find((x) => x.size === size && x.col === c.key);
         if (!r) return '<td></td>';
-        const st = r.variant ? Math.max(0, +r.variant.stock || 0) : 0;
-        return `<td>${field(r.key, c.key, `${t.add} · ${sl} · ${colName(c)}`, `${sl} · ${colName(c)}`)}${r.variant ? `<small class="${st ? '' : 'is-out'}" data-kbs-have="${esc(r.key)}" data-st="${st}">${esc(st ? t.have(st) : t.out)}</small>${codeOf(r)}${regOf(r.variant)}${delOf(r, sl + ' · ' + colName(c))}` : ''}</td>`;
+        const st = haveCount(r.variant);
+        return `<td>${field(r.key, c.key, `${t.add} · ${sl} · ${colName(c)}`, `${sl} · ${colName(c)}`)}${r.variant ? `<small class="${st > 0 ? '' : 'is-out'}" data-kbs-have="${esc(r.key)}" data-st="${st}">${esc(st ? t.have(sgn(st)) : t.out)}</small>${codeOf(r)}${regOf(r.variant)}${delOf(r, sl + ' · ' + colName(c))}` : ''}</td>`;
       }).join('')}</tr>`;
     }).join('')}</tbody></table>${anySmart ? `<p class="kbm-key">${esc(t.codeKey)}</p>` : ''}`;
     const used = (k) => shown.some((r) => r.col === k && r.variant);
@@ -435,7 +440,7 @@ export function mount(host, o) {
     const splitOn = rich && shown.length > 1;
     const page = () => `<div class="kbs${creating || ro ? '' : ' is-restock'}" data-kbs>
       <div class="kbs-top">
-        ${creating ? `<span>${esc(t.total)} <b>${target}</b></span>` : `<span>${esc(t.have(d.stock))}</span>`}
+        ${creating ? `<span>${esc(t.total)} <b>${target}</b></span>` : `<span>${esc(t.have(sgn((d.variants || []).reduce((n, v) => n + haveCount(v), 0))))}</span>`}
         ${!creating && rec && fresh ? `<span class="kbs-last">${esc(t.lastIn(fresh))}</span>` : ''}
         ${ro ? '' : '<span class="kbs-count" data-kbs-count aria-live="polite"></span>'}
       </div>
@@ -545,9 +550,9 @@ export function mount(host, o) {
       const st = +h.getAttribute('data-st') || 0;
       const r = i ? pieces(i.value) : { n: 0 };
       const up = !!(r.n > 0 && target <= 0);
-      h.textContent = up ? t.after(st, st + r.n) : st ? t.have(st) : t.out;
+      h.textContent = up ? t.after(sgn(st), sgn(st + r.n)) : st ? t.have(sgn(st)) : t.out;
       h.classList.toggle('is-up', up);
-      h.classList.toggle('is-out', !up && !st);
+      h.classList.toggle('is-out', !up && st <= 0);
     });
     const c = host.querySelector('[data-kbs-count]');
     const { sum } = read();

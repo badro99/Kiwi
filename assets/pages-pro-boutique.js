@@ -776,7 +776,11 @@ function _bqxLedgerGap(productId) {
 }
 function _bqxStockTag(stock, gap) {
   const t = _bqxInvT();
-  if (gap < 0) return `<span class="bqx-stag low">0 · ${_esc(t.gap(Math.abs(gap)))}</span>`;
+  /* Owner, 23/11/2026 : le compte se lit signé, −1 comme l'ancienne caisse
+     (stock = somme des tailles à zéro ou plus, gap = somme des tailles sous zéro). */
+  const shown = (Number(stock) || 0) + gap;
+  if (shown < 0) return `<span class="bqx-stag out">${_esc(t.inStock('−' + Math.abs(shown)))}</span>`;
+  if (gap < 0) return `<span class="bqx-stag low">${_esc(t.inStock(shown))} · ${_esc(t.gap(Math.abs(gap)))}</span>`;
   if (stock <= 0) return `<span class="bqx-stag out">${_esc(t.out)}</span>`;
   if (stock <= 5) return `<span class="bqx-stag low">${_esc(t.left(stock))}</span>`;
   return `<span class="bqx-stag">${_esc(t.inStock(stock))}</span>`;
@@ -1816,7 +1820,7 @@ function _bqxSheetSub(data) {
   return `${data.category ? data.category.name : t.noCat} · ${_bqxPrice(data.product.priceMAD)} ${t.cur} · ${_bqxPfFill(t.inStock, { n: data.stock })}`;
 }
 
-let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=27', document.baseURI).href).then((m) => (_bqxSzMod = m)));
+let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=29', document.baseURI).href).then((m) => (_bqxSzMod = m)));
 function _bqxOpenProduct(pid, target, drawerOnly) {
   const t = _bqxShT();
   const data = CAT().getProduct(pid);

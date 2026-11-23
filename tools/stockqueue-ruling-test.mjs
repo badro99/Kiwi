@@ -27,11 +27,11 @@ const materialize=split.declaration(read('assets/boutique-catalog-parts.js').sli
 vm.runInNewContext(materialize+';materialize', {baseOf:v=>v.base||0,baseAtOf:v=>v.baseAt||0})({variants:[ledger[0]],moves:[{vid:'v',at:2,d:-4}]});
 assert.equal(ledger[0].ledgerStock,-3); assert.equal(ledger[0].stock,0);
 const badge=vm.runInNewContext(card+';cardFlag', {stockOf:()=>-1,esc:String,window:{KiwiBoutiqueCatalog:{listVariants:()=>ledger},KiwiCaisseLang:{tr:s=>s}}})(product);
-assert.match(badge,/0 · stock à vérifier · écart −3/);
+assert.match(badge,/bq-card-flag out">−1 en stock</,'owner 23/11/2026: the card reads the signed total (−3 + 2)');
 assert.equal(ledger[0].ledgerStock,-3,'display never mutates ledger');
 const invRow=split.declaration(read('assets/pos-boutique/inventory.js'),'invRow');
 const row=vm.runInNewContext(invRow+';invRow',{catDB:()=>({getProduct:()=>({variants:ledger,stock:0,colors:[],sizes:['M'],category:null})}),artOf:()=>'',esc:String,fmtMAD:String,globalThis:{window:{KiwiCaisseLang:{tr:s=>s}}}})({id:'p',name:'Robe',priceMAD:100});
-assert.match(row,/class="bqi-stock rupture">0 · stock à vérifier · écart −3</,'till inventory row shows 0 and the gap');
+assert.match(row,/class="bqi-stock rupture">−1</,'owner 23/11/2026: the till inventory row reads the signed total');
 const source=read('assets/stock.js');
 for(const name of ['renderDenseItem','renderItemRow','renderItemCard']){
  const fn=split.declaration(source,name);
