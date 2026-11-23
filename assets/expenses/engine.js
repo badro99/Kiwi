@@ -37,27 +37,37 @@ const clampCents = (x) => Math.min(MAX_CENTS, Math.max(0, Math.round(num(x))));
    boissons avant l'énergie (« eau »). Le fournisseur sans précision vient en
    dernier, « autre » sinon. */
 const RULES = [
-  ['meat', /\b(poulets?|viandes?|beef|boeuf|kefta|kefte|dindes?|agneau|mouton|boucher\w*|lham|djaj|steak|hache|merguez|escalopes?)\b|دجاج|لحم/],
+  ['meat', /\b(poulets?|viandes?|beef|boeuf|kefta|kefte|dindes?|agneau|mouton|boucher\w*|lham|djaj|steak|hache|merguez|escalopes?|gezar|guezzar|gzar|jazzar|gambas?|gampas?|crevettes?|poissons?|calamars?|saumon|thon|fruits de mer|hout)\b|دجاج|لحم|جزار|حوت/],
   ['produce', /\b(legumes?|fruits?|khadar|khodra|khodar|tomates?|oignons?|pommes? de terre|salades?|menthe|citrons?|bananes?|poivrons?|carottes?|ail|persil|basilic|oranges?|piments?|herbes?)\b|خضر|فواك|بطاطس/],
-  ['hygiene', /\b(savons?|serviettes?|sachets?|poubelles?|javel|detergents?|nettoyage|papier|gants?|essuie\w*|eponges?|desinfectant|halfa)\b|منظف|صابون/],
+  ['hygiene', /\b(savons?|serviettes?|sachets?|poubelles?|javel+e?|detergents?|nettoyage|papier|gants?|essuie\w*|eponges?|desinfectant|halfa|sanicroix|sanecroi\w*|sanicroi\w*|hygiene)\b|منظف|صابون|جافيل/],
   ['packaging', /\b(emballages?|boites?|cartons?|barquettes?|gobelets?|aluminium|film|pots?)\b/],
-  ['drinks', /\b(coca|eau|eaux|boissons?|jus|sodas?|cafe|limonade|sprite|fanta)\b|مشروب/],
-  ['grocery', /\b(fromages?|mozzarella|farine|pates|riz|huile|lait|creme|beurre|oeufs?|sucre|sel|epices?|sauces?|parmesan|conserves?|epicerie|cheddar|bayedat|bid|helib|hlib|ziyet|zit|3atriya|atriya|moutarde|vinaigre|cacao|chocolat|levure|mayonnaise|ketchup)\b|بيض|حليب|زيت|عطرية/],
-  ['energy', /\b(gaz|gas|butane|electricite|lydec|redal|amendis|onee)\b|غاز|كهرباء/],
+  ['drinks', /\b(coca|eau|eaux|boissons?|jus|sodas?|cafe|coffee?|limonade|sprite|fanta|oulmes|sidi ali|the|atay)\b|مشروب|قهوة/],
+  ['grocery', /\b(fromages?|mozzarella|farine|pates|riz|huile|lait|creme|beurre|oeufs?|sucre|sel|epices?|sauces?|parmesan|conserves?|epicerie|cheddar|bayedat|bid|helib|hlib|ziyet|zit|3atriya|atriya|moutarde|vinaigre|cacao|chocolat|levure|mayonnaise|ketchup|ricott?a|mascarpone|mozza|pain|khobz|ferran|farran|epicerie)\b|بيض|حليب|زيت|عطرية|خبز|فرا+ن/],
+  ['energy', /\b(gaz|gas|butane|bota|bouta|electricite|lydec|redal|amendis|onee|energie)\b|غاز|كهرباء|بوطة|بوطا/],
   ['rent', /\b(loyer|loyers)\b|كراء/],
   ['repairs', /\b(reparations?|entretien|plombier|electricien|maintenance|ampoules?|depannage|technicien)\b|اصلاح/],
   ['transport', /\b(transport|taxi|livraisons?|livreurs?|livreuses?|livreure|carburant|essence|gasoil|parking)\b/],
-  ['staff', /\b(avances?|salaires?|personnel|primes?|extras?|femme de menage|menage)\b|اجرة|تسبيق/],
+  ['staff', /\b(avances?|salaires?|personnel|primes?|extras?|femme de menage|menage)\b|اجرة|تسبيق|موظف/],
   ['marketing', /\b(pub|publicite|flyers?|instagram|sponsor\w*|logo|impression|affiches?)\b/],
   ['equipment', /\b(materiel|machines?|frigo|four|ustensiles?|poeles?|casseroles?|couteaux|piles?|duracell)\b/],
   ['taxes', /\b(impots?|taxes?|timbres?|patente|cnss|frais bancaires?)\b|ضريبة/],
   ['supplier', /\b(achats?|fournisseurs?|courses|marjane?|carrefour|carfour|bim|metro)\b|شراء|مورد/],
 ];
 
-export function classifyReason(text) {
+/* Un prénom écrit à l'oreille : « Kaoutar » et « Kawtar », « Youssef » et
+   « Yousef » sont la même personne au tiroir. */
+const sound = (s) => fold(s).replace(/ou/g, 'w').replace(/(.)\1+/g, '$1').replace(/[^a-z\u0600-\u06ff]/g, '');
+
+/* opts.staff : les prénoms de l'équipe (/api/expenses/summary). Un motif qui
+   n'est rien d'autre et qui nomme quelqu'un de l'équipe (« Saad », « Kawtar
+   cuisine »), c'est une personne payée : en dernier, après tout achat
+   reconnaissable (« Saad poulet » reste de la viande). */
+export function classifyReason(text, opts) {
   const t = fold(text);
   if (!t.trim()) return 'other';
   for (const [cat, re] of RULES) if (re.test(t)) return cat;
+  const staff = new Set(((opts && opts.staff) || []).map(sound).filter((n) => n.length >= 3));
+  if (staff.size && t.split(/[^a-z0-9\u0600-\u06ff]+/).some((w) => staff.has(sound(w)))) return 'staff';
   return 'other';
 }
 
@@ -146,7 +156,12 @@ export function mergeDocs(mine, theirs) {
 
 const isoDay = (ts) => new Date(num(ts)).toISOString().slice(0, 10);
 
-export function cashOutRows(events, expenses) {
+export const isCategory = (c) => CATEGORIES.includes(c);
+
+/* opts.staff : les prénoms de l'équipe, pour deviner. Une sortie classée à la
+   caisse (movement_category, assets/till-categories.js) n'est pas devinée :
+   elle compte telle quelle et ne demande plus rien au patron. */
+export function cashOutRows(events, expenses, opts) {
   const completed = new Set(normalize({ list: expenses }).list.filter((r) => !r.deleted && r.cashEventId).map((r) => r.cashEventId));
   return (Array.isArray(events) ? events : []).filter((ev) => ev && ev.movement_kind === 'out'
     && num(ev.movement_amount_cents) > 0 && !notAnExpense(ev.movement_reason) && !completed.has(String(ev.id)))
@@ -154,7 +169,8 @@ export function cashOutRows(events, expenses) {
       id: 'cash:' + ev.id, cashEventId: String(ev.id),
       date: isDay(ev.day) ? ev.day : isoDay(ev.occurred_ts),
       amountCents: clampCents(ev.movement_amount_cents),
-      category: classifyReason(ev.movement_reason), guessed: true,
+      ...(isCategory(ev.movement_category) ? { category: ev.movement_category, picked: true }
+        : { category: classifyReason(ev.movement_reason, opts), guessed: true }),
       note: String(ev.movement_reason || ''), actorId: String(ev.actor_id || ''),
       source: 'till', method: 'cash', supplier: '',
     }));
@@ -181,7 +197,7 @@ function elapsed(month, today) {
   return Number(today.slice(8, 10)) / daysIn(month);
 }
 
-export function monthView({ month, today, expenses, cashOuts, salesDays, charges, salaries } = {}) {
+export function monthView({ month, today, expenses, cashOuts, salesDays, charges, salaries, staff } = {}) {
   if (!isMonth(month)) throw new Error('month');
   const inMonth = (d) => typeof d === 'string' && d.slice(0, 7) === month;
   /* Un même retrait complété deux fois (ancien identifiant aléatoire, deux
@@ -194,7 +210,7 @@ export function monthView({ month, today, expenses, cashOuts, salesDays, charges
   const live = normalize({ list: expenses }).list.filter((r) => !r.deleted && (!r.cashEventId || newest.get(r.cashEventId).id === r.id));
   const rows = [
     ...live.filter((r) => inMonth(r.date)),
-    ...cashOutRows(cashOuts, live).filter((r) => inMonth(r.date)),
+    ...cashOutRows(cashOuts, live, { staff }).filter((r) => inMonth(r.date)),
   ].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.updatedAt || 0) - (a.updatedAt || 0)));
 
   const inCents = (Array.isArray(salesDays) ? salesDays : []).filter((d) => d && inMonth(d.day))

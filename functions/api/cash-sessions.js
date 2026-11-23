@@ -4,6 +4,7 @@ import {
   TERMINAL_COOKIE, terminalToken, terminalCookie, tillEpoch
 } from '../auth/_lib.js';
 import { flagUnauthorized, provenActor } from './_permissions.js';
+import { CASH_CATEGORIES, hasCategoryColumn } from './_cash-category.js';
 
 const EVENT_TYPES = new Set(['open', 'movement', 'handover', 'close']);
 const MOVEMENT_KINDS = new Set(['in', 'out', 'no-sale']);
@@ -120,6 +121,9 @@ export async function onRequestPost({ request, env }) {
   const movementAmount = cents(body.movementAmountCents, false);
   const movementReason = body.movementReason == null ? '' : textValue(body.movementReason, 80);
   const gapReason = body.gapReason == null ? '' : String(body.gapReason);
+  /* A cash out's category, picked at the till: a sortie only, one of the
+     sixteen expense keys (./_cash-category.js). */
+  const movementCategory = body.movementCategory == null ? '' : String(body.movementCategory);
   const actorId = actor(body.actorId);
   const counterpartyActorId = body.counterpartyActorId == null ? '' : actor(body.counterpartyActorId);
   const openedAt = Number(body.openedAt);
@@ -131,7 +135,8 @@ export async function onRequestPost({ request, env }) {
     ? (!MOVEMENT_KINDS.has(movementKind) || movementAmount == null || !movementReason)
     : !!(movementKind || movementAmount != null || movementReason);
   const badGapReason = !!gapReason && (eventType !== 'close' || !GAP_REASONS.has(gapReason));
-  if (!id || !EVENT_TYPES.has(eventType) || !actorId || badMoney || badGap || badMovement || badGapReason
+  const badCategory = !!movementCategory && (eventType !== 'movement' || movementKind !== 'out' || !CASH_CATEGORIES.has(movementCategory));
+  if (!id || !EVENT_TYPES.has(eventType) || !actorId || badMoney || badGap || badMovement || badGapReason || badCategory
       || (eventType === 'handover' && !counterpartyActorId)
       || (eventType === 'close' && (expected == null || counted == null || gap == null))
       || !Number.isInteger(openedAt) || !Number.isInteger(occurredAt)
@@ -237,24 +242,20 @@ export async function onRequestPost({ request, env }) {
         }
       } catch (_) { /* the close stands; the Z keeps the reason */ }
     }
+    /* The category rides with the sortie in the same append (insert-only
+       ledger). A base without migration 0036 takes the sortie without it. */
+    const categoryColumn = !!movementCategory && await hasCategoryColumn(env);
+    const columns = ['id', 'merchant', 'session_id', 'terminal_id', 'event_type', 'expected_cents',
+      'counted_cents', 'gap_cents', 'movement_kind', 'movement_amount_cents',
+      'movement_reason', 'actor_id', 'counterparty_actor_id', 'opened_ts', 'occurred_ts'];
     const eventBinds = [id, merchant, sessionId, terminalId, eventType, expectedFinal, counted, gapFinal,
       movementKind || null, movementAmount, movementReason || null, actorId,
       counterpartyActorId || null, openedAt, occurredAt];
-    if (reasonColumn) {
-      await env.DB.prepare(`INSERT OR IGNORE INTO cash_session_events
-        (id, merchant, session_id, terminal_id, event_type, expected_cents,
-         counted_cents, gap_cents, movement_kind, movement_amount_cents,
-         movement_reason, actor_id, counterparty_actor_id, opened_ts, occurred_ts, gap_reason)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        .bind(...eventBinds, gapReason).run();
-    } else {
-      await env.DB.prepare(`INSERT OR IGNORE INTO cash_session_events
-        (id, merchant, session_id, terminal_id, event_type, expected_cents,
-         counted_cents, gap_cents, movement_kind, movement_amount_cents,
-         movement_reason, actor_id, counterparty_actor_id, opened_ts, occurred_ts)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        .bind(...eventBinds).run();
-    }
+    if (reasonColumn) { columns.push('gap_reason'); eventBinds.push(gapReason); }
+    if (categoryColumn) { columns.push('movement_category'); eventBinds.push(movementCategory); }
+    await env.DB.prepare(`INSERT OR IGNORE INTO cash_session_events (${columns.join(', ')})
+      VALUES (${columns.map(() => '?').join(', ')})`)
+      .bind(...eventBinds).run();
     /* Des espèces sorties ou entrées, le tiroir ouvert sans vente, la journée
        clôturée, sans le droit : le tiroir a déjà bougé, on garde l'écriture (le
        compte du soir en dépend) et on l'inscrit au journal des droits du patron.

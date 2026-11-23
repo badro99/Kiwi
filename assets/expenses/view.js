@@ -3,7 +3,7 @@
  * stockage, aucun réseau. Tout texte du commerçant (fournisseur, note, motif de
  * caisse) passe par esc(). Les chiffres portent data-cents : la vérité du
  * montant, lisible par les tests et par un lecteur d'écran via aria-label. */
-import { tr, lang } from './strings.js?v=2';
+import { tr, lang } from './strings.js?v=3';
 
 export const CAT_ICON = {
   meat: 'kebab_dining', produce: 'eco', grocery: 'local_grocery_store', drinks: 'local_drink',
@@ -125,9 +125,13 @@ function calloutHtml(rows) {
   const raw = rows.filter((r) => r.source === 'till' && r.guessed);
   if (!raw.length) return '';
   const head = raw.length === 1 ? tr('toComplete1') : tr('toCompleteN', { n: raw.length });
+  /* Ce que le motif a permis de classer se garde d'un geste ; « Divers »
+     reste à compléter à la main. */
+  const sure = raw.filter((r) => r.category !== 'other').length;
   return `<div class="xp-callout" role="status">${icon('point_of_sale')}
     <p><b>${esc(head)}</b>${esc(tr('toCompleteSub'))}</p>
-    <button type="button" class="xp-btn" data-xp-act="complete-first">${esc(tr('completeFirst'))}</button>
+    <span class="xp-callout-acts">${sure ? `<button type="button" class="xp-btn primary" data-xp-act="accept-guesses">${esc(sure === 1 ? tr('accept1') : tr('acceptN', { n: sure }))}</button>` : ''}
+    <button type="button" class="xp-btn" data-xp-act="complete-first">${esc(tr('completeFirst'))}</button></span>
   </div>`;
 }
 

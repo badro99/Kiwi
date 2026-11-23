@@ -1864,7 +1864,8 @@ CREATE TABLE IF NOT EXISTS cash_session_events (
   actor_id TEXT NOT NULL,
   counterparty_actor_id TEXT,
   opened_ts INTEGER NOT NULL,
-  occurred_ts INTEGER NOT NULL
+  occurred_ts INTEGER NOT NULL,
+  movement_category TEXT        -- a cash out's expense category, picked at the till (assets/till-categories.js); NULL = none picked
 );
 CREATE INDEX IF NOT EXISTS idx_cash_session_events_merchant_ts
   ON cash_session_events (merchant, occurred_ts);

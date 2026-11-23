@@ -18,11 +18,11 @@
  * Kiwi.handlers['nav-expenses'], rendu par Kiwi.appPage comme les autres
  * pages pleines. Logique pure dans engine.js, rendu dans view.js, fiche dans
  * sheet.js, mots dans strings.js, style dans style.js. */
-import * as E from './engine.js?v=3';
-import { tr } from './strings.js?v=2';
-import { pageHtml, emptyHtml, loadingHtml, listHtml } from './view.js?v=2';
-import { openSheet, shrinkPhoto } from './sheet.js?v=4';
-import { ensureStyle } from './style.js?v=1';
+import * as E from './engine.js?v=4';
+import { tr } from './strings.js?v=3';
+import { pageHtml, emptyHtml, loadingHtml, listHtml } from './view.js?v=3';
+import { openSheet, shrinkPhoto } from './sheet.js?v=5';
+import { ensureStyle } from './style.js?v=2';
 
 const ZONE = 'Africa/Casablanca';
 const CUTOFF_H = 5;
@@ -90,7 +90,7 @@ async function loadSummary(month) {
     if (!j || !j.ok) throw new Error('summary ' + r.status);
     if (j.zone) S.zone = j.zone;
     if (Number.isFinite(Number(j.cutoff))) S.cutoff = Number(j.cutoff);
-    S.summaries.set(month, { status: 'ok', data: { salesDays: j.salesDays || [], cashOuts: j.cashOuts || [] } });
+    S.summaries.set(month, { status: 'ok', data: { salesDays: j.salesDays || [], cashOuts: j.cashOuts || [], staff: j.staff || [] } });
   } catch (_) {
     const had = S.summaries.get(month);
     S.summaries.set(month, { status: 'error', data: had ? had.data : null });
@@ -115,7 +115,7 @@ function render(opts) {
   const data = sum.data || { salesDays: [], cashOuts: [] };
   const list = doc().list;
   const view = E.monthView({
-    month: S.month, today, expenses: list, cashOuts: data.cashOuts, salesDays: data.salesDays,
+    month: S.month, today, expenses: list, cashOuts: data.cashOuts, salesDays: data.salesDays, staff: data.staff,
     ...(S.month === today.slice(0, 7) ? fixedInputs() : {}),
   });
   S.view = view;
@@ -235,6 +235,31 @@ function openRow(id) {
   openSheet({ mode: 'edit', row: stored, today: businessToday(), suppliers: suppliers(), receiptUrl: stored.receiptKey ? receiptUrl(id) : '' }, callbacks);
 }
 
+/* « Garder les catégories devinées » : chaque retrait que le motif a classé
+   devient la même ligne que la fiche « Compléter » écrirait (identifiant tiré
+   du mouvement, engine.js › completionId), en une seule écriture du document.
+   « Divers » n'est pas une réponse : il reste à compléter. */
+function acceptGuesses() {
+  const raw = ((S.view && S.view.rows) || []).filter((r) => r.source === 'till' && r.guessed && r.category !== 'other');
+  if (!raw.length) return;
+  const d = doc();
+  const now = Date.now();
+  raw.forEach((r) => {
+    const id = E.completionId(r.cashEventId);
+    const prev = d.list.find((x) => x.id === id);
+    const row = {
+      id, date: r.date, amountCents: r.amountCents, category: r.category, method: 'cash', supplier: '',
+      note: r.note || '', vatCents: 0, source: 'till', cashEventId: r.cashEventId,
+      createdAt: prev && prev.createdAt ? prev.createdAt : now, updatedAt: E.nextStamp(prev && prev.updatedAt, now),
+    };
+    const i = d.list.findIndex((x) => x.id === id);
+    if (i >= 0) d.list[i] = row; else d.list.push(row);
+  });
+  getStore().set(d);
+  schedule();
+  try { window.Kiwi.toast(raw.length === 1 ? tr('accepted1') : tr('acceptedN', { n: raw.length }), { type: 'success' }); } catch (_) {}
+}
+
 function exportCsv() {
   const rows = (S.view && S.view.rows) || [];
   const blob = new Blob(['﻿' + E.toCsv(rows)], { type: 'text/csv;charset=utf-8' });
@@ -281,6 +306,8 @@ function bind(host) {
         if (f) f.click();
       } else if (act === 'csv') {
         exportCsv();
+      } else if (act === 'accept-guesses') {
+        acceptGuesses();
       } else if (act === 'complete-first') {
         const first = ((S.view && S.view.rows) || []).find((r) => r.source === 'till' && r.guessed);
         if (first) openRow(first.id);

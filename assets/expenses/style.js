@@ -49,6 +49,7 @@ const CSS = `
 .xp-callout{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--r-lg,16px);background:var(--warn-soft);color:var(--warn-ink);}
 .xp-callout p{margin:0;flex:1;font-size:13.5px;line-height:1.45;}
 .xp-callout p b{display:block;font-weight:600;font-size:14.5px;}
+.xp-callout-acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;}
 .xp-callout .xp-btn{background:var(--surface);color:var(--ink);border-color:transparent;height:36px;}
 .xp-aside{margin:0;font-size:13px;line-height:1.5;color:var(--xp-soft);display:flex;gap:8px;align-items:flex-start;}
 .xp-aside svg{width:16px;height:16px;fill:currentColor;flex:none;margin-top:2px;}

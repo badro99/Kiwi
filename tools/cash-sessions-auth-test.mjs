@@ -358,4 +358,43 @@ assert.equal(healed.status, 201, 'a base without the column still takes the clos
 assert.equal(db.prepare("SELECT gap_reason FROM cash_session_events WHERE id = 'cash-route-close-heal'").get().gap_reason, 'change',
   'and gets the column on first use, with the reason');
 
-console.log('✓ cash-sessions auth: operator queue held, paired route accepted, PIN actor preserved, gap reasons kept');
+/* A cash out's category, picked at the till (migration 0036): a sortie only,
+   one of the sixteen expense keys, stored in the same append. A base without
+   the column takes the sortie without it, never refuses it. */
+const tillCookie = `kiwi_till=${till}; kiwi_terminal=${terminal}`;
+const sortie = (id, extra) => validEvent({ id, sessionId: 'session-route-cat', eventType: 'movement', expectedCents: null,
+  movementKind: 'out', movementAmountCents: 16200, movementReason: 'Khadar', ...extra });
+const openCat = (id) => request(validEvent({ id, sessionId: 'session-route-cat' }), tillCookie);
+assert.equal((await postCashSession({ env, request: openCat('cash-route-open-cat') })).status, 201);
+const picked = await postCashSession({ env, request: request(sortie('cash-route-out-cat', { movementCategory: 'produce' }), tillCookie) });
+assert.equal(picked.status, 201, 'a sortie with a known category is taken');
+assert.equal(db.prepare("SELECT movement_category FROM cash_session_events WHERE id = 'cash-route-out-cat'").get().movement_category, 'produce',
+  'the category is stored beside the sortie');
+const plain = await postCashSession({ env, request: request(sortie('cash-route-out-plain'), tillCookie) });
+assert.equal(plain.status, 201, 'a sortie without a category is still taken (an older till)');
+assert.equal(db.prepare("SELECT movement_category FROM cash_session_events WHERE id = 'cash-route-out-plain'").get().movement_category, null);
+const unknownCat = await postCashSession({ env, request: request(sortie('cash-route-out-bad', { movementCategory: 'theft' }), tillCookie) });
+assert.equal(unknownCat.status, 422, 'a category outside the sixteen keys is refused');
+const catOnIn = await postCashSession({ env, request: request(sortie('cash-route-in-cat', { movementKind: 'in', movementCategory: 'produce' }), tillCookie) });
+assert.equal(catOnIn.status, 422, 'a category belongs to a sortie only');
+const catOnClose = await postCashSession({ env, request: request(validEvent({ id: 'cash-route-close-cat', eventType: 'close', countedCents: 50000, gapCents: 0, movementCategory: 'meat' }), tillCookie) });
+assert.equal(catOnClose.status, 422, 'a close carries no category');
+const lagging = new DatabaseSync(':memory:');
+lagging.exec(schema);
+lagging.exec('ALTER TABLE cash_session_events DROP COLUMN movement_category');
+lagging.prepare("INSERT INTO merchant_config (merchant, features, status, till_epoch, updated_ts) VALUES (?, '{}', 'active', 0, ?)").run(MERCHANT, Date.now());
+const laggingEnv = { AUTH_SECRET: SECRET, DB: { prepare(sql) {
+  const query = normalize(sql); let args = [];
+  const statement = { bind(...values) { args = values; return statement; },
+    async first() { return lagging.prepare(query).get(...args) || null; },
+    async all() { return { results: lagging.prepare(query).all(...args) }; },
+    async run() { const result = lagging.prepare(query).run(...args); return { meta: { changes: Number(result.changes) } }; } };
+  return statement;
+} } };
+assert.equal((await postCashSession({ env: laggingEnv, request: openCat('cash-route-open-lag') })).status, 201);
+const beforeMigration = await postCashSession({ env: laggingEnv, request: request(sortie('cash-route-out-lag', { movementCategory: 'meat' }), tillCookie) });
+assert.equal(beforeMigration.status, 201, 'a base without migration 0036 still takes the sortie');
+assert.equal(lagging.prepare("SELECT movement_reason FROM cash_session_events WHERE id = 'cash-route-out-lag'").get().movement_reason, 'Khadar',
+  'and keeps its readable reason, the category left for the expenses page to guess');
+
+console.log('✓ cash-sessions auth: operator queue held, paired route accepted, PIN actor preserved, gap reasons and sortie categories kept');

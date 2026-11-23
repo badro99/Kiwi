@@ -65,7 +65,8 @@ const { declarations } = createRequire(import.meta.url)('./caisse-test-source.cj
 const nodes = { '#cm-amount': { value: '12.50' }, '#cm-custom-input': { value: '   ', focus() {} } };
 let approve, gates = 0;
 const events = [];
-const ctx = vm.createContext({ $: id => nodes[id], money: n => Math.round(n * 100) / 100,
+const grid = { cats: null };   // renderCmReasons.cats : la grille des catégories une fois montée (assets/till-categories.js)
+const ctx = vm.createContext({ $: id => nodes[id], money: n => Math.round(n * 100) / 100, renderCmReasons: grid,
   cmReason: 'Autre', cmType: 'out', window: {}, toast() {}, fmtMAD: String,
   requireTillOperator: (_label, cb) => { gates++; approve = cb; }, cashMovements: [],
   emitCashSession: e => events.push(e), cashSessionId: () => 'session-fixture',
@@ -84,7 +85,30 @@ assert.equal(ctx.cashMovements[0].amount, 12.50);
 assert.equal(events[0].movementAmountCents, 1250, 'run: exact centimes reach cash ledger');
 assert.equal(events[0].expectedCents, 8750);
 assert.equal(events[0].actorId, 'operator-fixture');
+assert.equal('movementCategory' in events[0], false, 'run: no grid, no category on the ledger event');
 nodes['#cm-amount'].value = '0'; ctx.confirmCashMove();
 assert.equal(gates, 1, 'run: zero movement refused');
+
+/* La grille montée : une sortie sans catégorie ne va pas jusqu'au code ; avec,
+   la catégorie part avec le mouvement et le motif est ce que la grille rend. */
+const toasts = [];
+ctx.toast = (m) => toasts.push(m);
+nodes['#cm-amount'].value = '162';
+grid.cats = { read: () => ({ ok: false, error: 'needCat', message: 'Choisissez une catégorie' }) };
+ctx.confirmCashMove();
+assert.equal(gates, 1, 'run: a sortie with no category picked cannot reach authorization');
+assert.equal(toasts.at(-1), 'Choisissez une catégorie');
+grid.cats = { read: () => ({ ok: true, reason: 'Khadar', category: 'produce' }) };
+ctx.confirmCashMove();
+approve({ id: 'operator-fixture', name: 'Test' });
+assert.equal(events.at(-1).movementReason, 'Khadar');
+assert.equal(events.at(-1).movementCategory, 'produce', 'run: the picked category rides with the sortie');
+assert.equal(events.at(-1).movementAmountCents, 16200);
+ctx.cmType = 'in';
+ctx.cmReason = 'Appoint monnaie';
+ctx.confirmCashMove();
+approve({ id: 'operator-fixture', name: 'Test' });
+assert.equal(events.at(-1).movementReason, 'Appoint monnaie', 'run: an entrée ignores the grid');
+assert.equal('movementCategory' in events.at(-1), false);
 
 console.log('✓ cash-move-custom-reason-test passed');

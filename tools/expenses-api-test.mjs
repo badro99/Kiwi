@@ -216,4 +216,22 @@ const ok = (name) => { n++; console.log('✓ ' + name); };
   ok('receipt photos are removed with their expense, by the owner only');
 }
 
+/* La catégorie choisie à la caisse (migration 0036) et les prénoms de
+   l'équipe, pour deviner « Saad » : rien d'autre du document d'équipe. */
+{
+  const url = `https://k/api/expenses/summary?merchant=${SHOP}&month=2026-11`;
+  const before = await (await summary.onRequestGet({ request: req(url, owner), env })).json();
+  assert.deepEqual(before.staff, ['Saad', 'Mehdi'], 'first names of the team, in roster order');
+  assert.ok(before.cashOuts.every((c) => !('movement_category' in c)), 'a base without 0036 sends no category and still answers');
+  db.exec('ALTER TABLE cash_session_events ADD COLUMN movement_category TEXT');
+  db.prepare(`INSERT INTO cash_session_events (id, merchant, session_id, terminal_id, event_type, movement_kind, movement_amount_cents,
+    movement_reason, actor_id, occurred_ts, movement_category) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+    .run('c5', SHOP, 'sess', 'term', 'movement', 'out', 16200, 'Khadar', 'm1', T(6, 11), 'produce');
+  const after = await (await summary.onRequestGet({ request: req(url, owner), env })).json();
+  assert.equal(after.cashOuts.find((c) => c.id === 'c5').movement_category, 'produce', 'the till category reaches the page');
+  assert.ok(!('movement_category' in after.cashOuts.find((c) => c.id === 'c1')), 'an older sortie has none');
+  assert.ok(after.staff.every((x) => typeof x === 'string' && !/\d/.test(x)), 'names only');
+  ok('month summary: a sortie keeps the category picked at the till; the team is first names only');
+}
+
 console.log(n + ' groupes · expenses api');

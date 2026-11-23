@@ -108,7 +108,7 @@
       $$('#cm-type .cm-type-btn').forEach(b => {
         const s = b.querySelector('.cm-type-label');
         if (s && L[b.dataset.cmType]) s.textContent = L[b.dataset.cmType];
-      });
+      }); if (renderCmReasons.cats) renderCmReasons.cats.repaint();
     }
 
     function updateCmCustomVisibility() {
@@ -138,6 +138,8 @@
         `<button class="cm-reason${i === 0 ? ' is-active' : ''}" data-cm-reason="${r}">${r}</button>`
       ).join('');
       updateCmCustomVisibility();
+      /* Une sortie se classe à la caisse, même grille que Dépenses (assets/till-categories.js) ; sans le module (hors ligne, jamais chargé), les motifs d'avant. */
+      renderCmReasons.cats = null; if (cmType === 'out') (renderCmReasons.mod || (renderCmReasons.mod = import('./till-categories.js?v=2').catch(() => null))).then((m) => { if (m && cmType === 'out' && $('#cash-move-modal').classList.contains('is-open')) { renderCmReasons.cats = m.mountPicker($('#cm-reasons'), { idPrefix: 'cm' }); cmReason = ''; updateCmCustomVisibility(); } });
     }
     function renderCmList() {
       const list = $('#cm-list');
@@ -199,7 +201,9 @@
         if (customInput) customInput.focus();
         return;
       }
-      const finalReason = (cmReason === 'Autre') ? customVal : (cmReason || 'Autre');
+      const picked = cmType === 'out' && renderCmReasons.cats ? renderCmReasons.cats.read() : null;   // { ok, reason, category } de la grille
+      if (picked && !picked.ok) { toast(picked.message); return; }
+      const finalReason = picked ? picked.reason : (cmReason === 'Autre') ? customVal : (cmReason || 'Autre');
 
       window.KiwiAuthAct?.(cmType === 'in' ? { kind: 'cash_in', key: 'act.cash_in', args: { amount: fmtMAD(amount) }, amountCents: Math.round(amount * 100), move: 'in' } : { kind: 'cash_out', key: 'act.cash_out', args: { amount: fmtMAD(amount) }, amountCents: Math.round(amount * 100), move: 'out' });   // montant et sens : la preuve du geste les porte (functions/api/_act-proof.js)
       requireTillOperator(`${cmType === 'in' ? 'Entrée' : 'Sortie'} de caisse · ${fmtMAD(amount)}`, (actor) => {
@@ -213,7 +217,7 @@
         emitCashSession({
           sessionId: cashSessionId(), eventType: 'movement', expectedCents: Math.round(drawerExpected() * 100),
           countedCents: null, gapCents: null, movementKind: cmType,
-          movementAmountCents: Math.round(amount * 100), movementReason: finalReason,
+          movementAmountCents: Math.round(amount * 100), movementReason: finalReason, ...(picked && picked.category ? { movementCategory: picked.category } : {}),
           actorId: actorId, openedAt: shiftOpenedAt.getTime(), occurredAt: Date.now()
         });
         refreshOpenReconciliationModals();

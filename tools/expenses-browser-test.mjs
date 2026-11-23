@@ -113,7 +113,7 @@ const PNG_FILE = path.join(T.resultsDir, 'ticket.png');
 fs.mkdirSync(T.resultsDir, { recursive: true });
 fs.writeFileSync(PNG_FILE, png());
 
-async function bench(t, { cashOuts = [], salesDays = [], ocr = null, summaryDelay = 0 } = {}) {
+async function bench(t, { cashOuts = [], salesDays = [], ocr = null, summaryDelay = 0, staff = [] } = {}) {
   const ctx = await browser.createBrowserContext();
   t.defer(() => ctx.close());
   const page = t.watch(await ctx.newPage());
@@ -126,7 +126,7 @@ async function bench(t, { cashOuts = [], salesDays = [], ocr = null, summaryDela
     const u = r.url();
     if (u.startsWith(base + '/api/')) {
       page.calls.push({ url: u, method: r.method(), body: r.postData() || '' });
-      if (u.includes('/api/expenses/summary')) return void setTimeout(() => r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, month: MONTH, zone: 'Africa/Casablanca', cutoff: 5, salesDays, cashOuts }) }), summaryDelay);
+      if (u.includes('/api/expenses/summary')) return void setTimeout(() => r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, month: MONTH, zone: 'Africa/Casablanca', cutoff: 5, salesDays, cashOuts, staff }) }), summaryDelay);
       if (u.includes('/api/ai/expense-ocr')) return ocr ? r.respond(ocr) : r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
       if (u.includes('/api/expenses/receipt')) return r.respond({ status: 200, contentType: 'application/json', body: '{"ok":true,"key":"private/expenses/pasta-bench/x.jpg"}' });
       return r.respond({ status: 404, contentType: 'application/json', body: '{}' });
@@ -376,6 +376,29 @@ await T.run('dashboard · le module se charge dans la vraie coquille et montre l
   assert.ok(await page.$('.dash-genpage .xp-empty'), 'a store without expenses gets the first-use screen');
   assert.equal(await page.$('.dash-genpage [data-xp="out"]'), null);
   assert.deepEqual(errors.filter((m) => /expenses/i.test(m)), []);
+});
+
+/* Pasta Corner, 23 nov. 2026 : une sortie classée à la caisse (movement_category)
+   compte telle quelle ; ce que le motif a permis de deviner se garde d'un geste ;
+   « Divers » reste à compléter à la main. */
+await T.run('tillCategory · classée à la caisse, gardée d’un geste, Divers reste à compléter', async (t) => {
+  const picked = { ...ev('p1', 16200, 'Khadar'), movement_category: 'produce' };
+  const page = await bench(t, { cashOuts: [picked, ev('g1', 55400, 'Gezar'), ev('g2', 20000, 'Saad'), ev('g3', 44880, 'Zambu')], staff: ['saad'] });
+  const r = await rows(page);
+  const row = (id) => r.find((x) => x.id === 'cash:' + id);
+  assert.ok(row('p1') && !/catégorie devinée/.test(row('p1').text), 'picked at the till, not a guess: ' + JSON.stringify(row('p1')));
+  assert.ok(/catégorie devinée/.test(row('g1').text));
+  const callout = await page.$eval('.xp-callout', (el) => el.textContent.replace(/\s+/g, ' '));
+  assert.match(callout, /3 retraits de caisse à compléter/);
+  assert.match(callout, /Garder les 2 catégories devinées/, 'Gezar (meat) and Saad (staff); Zambu stays Divers');
+  await act(page, 'accept-guesses');
+  const w = await lastWrite(page);
+  assert.deepEqual(w.list.filter((x) => !x.deleted).map((x) => [x.id, x.category, x.amountCents, x.source, x.cashEventId]).sort(),
+    [['xpc_g1', 'meat', 55400, 'till', 'g1'], ['xpc_g2', 'staff', 20000, 'till', 'g2']]);
+  assert.equal(await cents(page, '[data-xp="out"]'), 16200 + 55400 + 20000 + 44880, 'kept rows replace their till rows, nothing counted twice');
+  assert.match(await page.$eval('.xp-callout', (el) => el.textContent.replace(/\s+/g, ' ')), /1 retrait de caisse à compléter/);
+  assert.equal(await page.$('[data-xp-act="accept-guesses"]'), null, 'Divers is never kept blindly');
+  assert.deepEqual(page.errors, []);
 });
 
 await T.finish();

@@ -13,6 +13,11 @@
  * comme côté restaurant. Le sens et les motifs sont ceux de la caisse
  * restaurant, mêmes mots, mêmes traductions (caisse-lang.js). */
 
+import { mountPicker } from '../till-categories.js?v=2';
+
+/* Une sortie se classe avec la grille de Dépenses (till-categories.js) : la
+   catégorie part avec le mouvement, le détail tapé reste le motif. L'entrée
+   garde ses motifs. */
 const REASONS = {
   out: ['Achat fournisseur', 'Dépôt banque', 'Avance personnel', 'Autre'],
   in: ['Appoint monnaie', 'Correction', 'Autre'],
@@ -55,7 +60,7 @@ export function openMzCashMove(ctx) {
     veil.setAttribute('aria-modal', 'true');
     document.body.appendChild(veil);
   }
-  let type = 'out', reason = REASONS.out[0];
+  let type = 'out', reason = REASONS.out[0], picker = null;
   const paint = () => {
     const list = mzMoves(ctx.shift()).slice().reverse();
     veil.innerHTML = `
@@ -91,18 +96,22 @@ export function openMzCashMove(ctx) {
       </div>`;
     veil.querySelectorAll('[data-mzcm-type]').forEach((b) => b.classList.toggle('is-active', b.dataset.mzcmType === type));
     veil.querySelectorAll('[data-mzcm-reason]').forEach((b) => b.classList.toggle('is-active', b.dataset.mzcmReason === reason));
-    const wrap = veil.querySelector('.cm-custom-wrap'); if (wrap) wrap.hidden = reason !== 'Autre';
+    picker = type === 'out' ? mountPicker(veil.querySelector('.cm-reasons'), { idPrefix: 'mzcm' }) : null;
+    const wrap = veil.querySelector('.cm-custom-wrap'); if (wrap) wrap.hidden = !!picker || reason !== 'Autre';
   };
   const close = () => veil.classList.remove('is-open');
   const confirm = () => {
     const amount = cents(parseFloat((veil.querySelector('#mzcm-amount') || {}).value)) / 100;
     if (!(amount > 0)) { ctx.toast(tr('Saisis un montant')); return; }
     const custom = String((veil.querySelector('#mzcm-custom') || {}).value || '').trim().slice(0, 80);
-    if (reason === 'Autre' && !custom) {
+    const picked = picker ? picker.read() : null;
+    if (picked && !picked.ok) { ctx.toast(picked.message); return; }
+    if (!picked && reason === 'Autre' && !custom) {
       ctx.toast(tr(type === 'in' ? "Précisez le motif de l'entrée" : 'Précisez le motif de la sortie'));
       return;
     }
-    const said = reason === 'Autre' ? custom : reason;
+    const said = picked ? picked.reason : reason === 'Autre' ? custom : reason;
+    const category = picked ? picked.category : '';
     /* Une sortie de caisse justifie un tiroir plus léger : sans code, quiconque
        devant une caisse ouverte pouvait couvrir un manque. Comme le restaurant
        (requireTillOperator), le mouvement n'existe qu'une fois approuvé, et il
@@ -112,9 +121,10 @@ export function openMzCashMove(ctx) {
       const s = ctx.shift();
       if (!s) { close(); return; }
       const move = { id: 'mzcm-' + Date.now(), ts: Date.now(), type, amount, reason: said, by: String((who && who.name) || ctx.actor() || '').slice(0, 80) };
+      if (category) move.category = category;
       s.moves = mzMoves(s).concat([move]);
       ctx.save();
-      try { ctx.emit(type, cents(amount), move.reason, who); } catch (_) {}
+      try { ctx.emit(type, cents(amount), move.reason, who, category); } catch (_) {}
       ctx.toast(`${tr(type === 'in' ? 'Entrée' : 'Sortie')} · ${ctx.fmt(amount)} · ${move.reason}`);
       close();
     });
@@ -163,7 +173,7 @@ export function mzCashMoveFor(t) {
       window.requireManager(label, go);
       return true;
     },
-    emit: (kind, amountCents, reason, who) => t.emit('movement', Object.assign({ movementKind: kind, movementAmountCents: amountCents, movementReason: reason, expectedCents: Math.round(expected() * 100) },
-      who && who.id ? { actorId: String(who.id).slice(0, 96) } : {})),
+    emit: (kind, amountCents, reason, who, category) => t.emit('movement', Object.assign({ movementKind: kind, movementAmountCents: amountCents, movementReason: reason, expectedCents: Math.round(expected() * 100) },
+      who && who.id ? { actorId: String(who.id).slice(0, 96) } : {}, category ? { movementCategory: category } : {})),
   });
 }
