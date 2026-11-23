@@ -2241,12 +2241,12 @@
 
     /* Once a day, then straight in: the second unlock of the business day
      * skips the hello (the lock just dissolves into the dashboard).
-     * The hello itself is about a second and any key or click ends it:
+     * The hello itself is under a second and any key or click ends it:
      *   180 ms  cells settled · the lock fades, the greeting comes up
      *   360 ms  the wish wipes in (at once under reduced motion)
      *   420 ms  lock gone
-     *  1250 ms  the greeting fades as the dashboard comes in
-     *  1650 ms  greeting gone · the dashboard is announced ready */
+     *   800 ms  the greeting fades as the dashboard comes in
+     *  1100 ms  greeting gone · the dashboard is announced ready */
     const greetName = greetState.who || accountName();
     if (!isDemoSession() && greetedToday(greetName)) { enterQuietly(); return; }
     if (!isDemoSession()) markGreeted(greetName);
@@ -2269,12 +2269,12 @@
       greet.classList.remove('is-visible');
       greet.setAttribute('aria-hidden', 'true');
       showApp();
-    }, 1250);
+    }, 800);
 
     setTimeout(() => {
       if (greet.parentNode) greet.remove();
       announceDashboardReady();
-    }, 1650);
+    }, 1100);
   }
   function showApp() {
     if (app)     app.classList.remove('kw-app-hidden');
@@ -2326,7 +2326,7 @@
     document.body.appendChild(bye);
     gate(true);
     requestAnimationFrame(() => requestAnimationFrame(() => bye.classList.add('is-visible')));
-    setTimeout(() => { window.location.href = '/auth/logout'; }, reduceMotion ? 650 : 1100);
+    setTimeout(() => { window.location.href = '/auth/logout'; }, reduceMotion ? 300 : 550);
   }, true);
 
   /* ── Skip control ──────────────────────────────────────────────────

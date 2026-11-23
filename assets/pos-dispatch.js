@@ -140,7 +140,7 @@
         display: block; width: auto; height: 28px;
         pointer-events: none; user-select: none; -webkit-user-drag: none;
       }
-      .vx-screen.is-entering { animation: vx-dive 640ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+      .vx-screen.is-entering { animation: vx-dive 300ms cubic-bezier(0.32, 0.72, 0, 1) both; }
       @keyframes vx-dive { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: scale(1); } }
       @media (prefers-reduced-motion: reduce) { .vx-screen.is-entering { animation: none !important; } }
       /* PIN-screen code legend (tap the foot note) */
@@ -254,7 +254,7 @@
     if (!entry) return;
     const pinScreen = document.getElementById('pin-screen');
     document.querySelectorAll('#pin-dots .pin-dot').forEach((d, i) =>
-      setTimeout(() => d.classList.add('is-success'), i * 70));
+      setTimeout(() => d.classList.add('is-success'), i * 40));
 
     const ready = ensureLoaded(entry).catch((err) => {
       /* module missing (not built yet / bad path): be honest, reset the PIN */
@@ -271,14 +271,14 @@
         if (pinScreen) pinScreen.classList.add('is-leaving');
         document.body.classList.add('is-pos', `is-pos-${entry.id}`, 'is-unlocked');
       }).catch(() => {});
-    }, 460);
+    }, 220);
 
     setTimeout(() => {
       ready.then(() => {
         if (pinScreen) pinScreen.style.display = 'none';
         entryFlash(apps[entry.id], () => show(entry.id));
       }).catch(() => {});
-    }, 940);
+    }, 380);
   }
 
   function pvPaired() {
@@ -296,7 +296,7 @@
     g.className = 'kiwi-greet';
     g.setAttribute('aria-hidden', 'true');
     const greet = spec.greet || {};
-    /* Real / paired store → the 2s unlock flash must not name a demo employee
+    /* Real / paired store → the unlock flash must not name a demo employee
        ("Bonjour Salma / Reda") or a demo venue ("Maison Mansour · …"). Show
        a neutral greeting, subtitled with the real store name when we have it.
        Local demo (unpaired localhost) keeps the full flavoured greeting.
@@ -309,6 +309,15 @@
     const real = !!p || (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
     const me = window.KiwiStaff || null;
     const who = me && (me.first || me.name);
+    /* Once per person and business day (5 h), like the dashboard: a vendeuse
+       unlocks the till dozens of times a day and a 2 s hello each time was
+       waiting, not welcome. Every later unlock goes straight to the till. */
+    const day = new Date(Date.now() - 5 * 3600e3), dayKey = day.getFullYear() + '-' + (day.getMonth() + 1) + '-' + day.getDate();
+    const seenKey = String((p && (p.merchant || p.slug)) || '') + '|' + String(who || '').toLowerCase();
+    let seen = {};
+    try { seen = JSON.parse(localStorage.getItem('kiwiTillGreetedDay') || '{}') || {}; } catch (_) {}
+    if (seen[seenKey] === dayKey) { done(); return; }
+    try { seen = { [seenKey]: dayKey, ...Object.fromEntries(Object.entries(seen).filter(([k, v]) => k !== seenKey && v === dayKey)) }; localStorage.setItem('kiwiTillGreetedDay', JSON.stringify(seen)); } catch (_) {}
     const line1 = who ? ('Bonjour ' + escGreet(who) + ',')
       : (real ? 'Bonjour,' : (greet.line1 || 'Bonjour,'));
     const sub   = real ? (p && p.name ? escGreet(p.name) : '') : (greet.sub || '');
@@ -318,8 +327,11 @@
     </div>`;
     document.body.appendChild(g);
     requestAnimationFrame(() => { g.classList.add('is-visible'); g.setAttribute('aria-hidden', 'false'); });
-    setTimeout(() => { g.classList.remove('is-visible'); done(); }, 2150);
-    setTimeout(() => g.remove(), 3000);
+    let gone = false;
+    const go = () => { if (gone) return; gone = true; g.classList.remove('is-visible'); done(); };
+    g.addEventListener('click', go);   // a tap skips it
+    setTimeout(go, 900);
+    setTimeout(() => g.remove(), 1300);
   }
 
   function show(id) {
@@ -371,7 +383,7 @@
     try { if (id !== 'boutique' && id !== 'maison' && window.KiwiPosSale && window.KiwiPosSale.activate) window.KiwiPosSale.activate(id); } catch (e) {}
     root.classList.add('is-on', 'is-entering');
     root.setAttribute('aria-hidden', 'false');
-    setTimeout(() => root.classList.remove('is-entering'), 700);
+    setTimeout(() => root.classList.remove('is-entering'), 340);
     if (window.lucide) try { window.lucide.createIcons(); } catch (e) {}
   }
 

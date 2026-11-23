@@ -119,9 +119,9 @@ ok('EN/AR dash.day are sentences, not « good day? »', () => {
 });
 
 console.log('greeting · timing and motion');
-ok('the greeting ends by 1.25 s and is gone at 1.65 s (it was 1.9 s / 2.5 s)', () => {
+ok('the greeting ends by 0.8 s and is gone at 1.1 s (it was 1.25 s / 1.65 s)', () => {
   const u = ctl.slice(ctl.indexOf('  function unlock() {'), ctl.indexOf('  function showApp() {'));
-  assert.ok(/\}, 1250\);/.test(u) && /\}, 1650\);/.test(u) && !/\}, 1900\);|\}, 2500\);|\}, 2600\);|\}, 3200\);/.test(u), 'the 1.25 s / 1.65 s timeline, not an old, slower one');
+  assert.ok(/\}, 800\);/.test(u) && /\}, 1100\);/.test(u) && !/\}, 1250\);|\}, 1650\);|\}, 1900\);|\}, 2500\);|\}, 2600\);|\}, 3200\);/.test(u), 'the 0.8 s / 1.1 s timeline, not an old, slower one');
 });
 ok('once a day: the first unlock of the business day is greeted, every later one goes straight in, in under half a second, with no words', () => {
   const u = ctl.slice(ctl.indexOf('  function unlock() {'), ctl.indexOf('  function showApp() {'));
@@ -158,7 +158,7 @@ ok('signing out says goodbye in the greeting\'s voice, by the clock, in FR / EN 
   const g = ctl.slice(ctl.indexOf('  /* ── Goodbye'), ctl.indexOf('  /* ── Skip control'));
   assert.ok(/closest\('a\[href="\/auth\/logout"\]'\)/.test(g)
     && /if \(e\.button \|\| e\.metaKey \|\| e\.ctrlKey \|\| e\.shiftKey \|\| e\.altKey\) return;/.test(g)
-    && /window\.location\.href = '\/auth\/logout'; \}, reduceMotion \? 650 : 1100\);/.test(g),
+    && /window\.location\.href = '\/auth\/logout'; \}, reduceMotion \? 300 : 550\);/.test(g),
     'the logout link is caught (a new-tab click is left alone) and leaves after 1.1 s');
 });
 ok('any key (not a bare modifier) skips the greeting once the door is open', () => {

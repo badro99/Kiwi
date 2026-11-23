@@ -3980,7 +3980,7 @@
       background: linear-gradient(160deg, #F8F7F3 0%, #F1EFE8 55%, #ECEAE3 100%);
       opacity: 0;
       pointer-events: none;
-      transition: opacity 720ms cubic-bezier(0.32, 0.72, 0, 1);
+      transition: opacity 280ms cubic-bezier(0.32, 0.72, 0, 1);
       will-change: opacity;
     }
     .kiwi-greet::before {
@@ -3997,7 +3997,7 @@
       text-align: center;
       transform: translateY(28px) scale(0.97);
       opacity: 0;
-      transition: transform 800ms cubic-bezier(0.32, 0.72, 0, 1), opacity 800ms ease;
+      transition: transform 360ms cubic-bezier(0.32, 0.72, 0, 1), opacity 360ms ease;
     }
     .kiwi-greet.is-visible .kiwi-greet-inner {
       transform: translateY(0) scale(1);
@@ -4022,7 +4022,7 @@
       max-width: 0;
       white-space: nowrap;
       vertical-align: top;
-      transition: max-width 960ms cubic-bezier(0.32, 0.72, 0, 1);
+      transition: max-width 420ms cubic-bezier(0.32, 0.72, 0, 1);
     }
     .kiwi-greet h1 .em-clip.is-revealed {
       max-width: var(--em-w, 700px);

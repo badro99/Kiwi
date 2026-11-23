@@ -124,7 +124,7 @@
          Résumé and Ventes par article. Unpaid orders remain outside it. */
       startEmployeeSaleJournalSync();
 
-      setTimeout(() => runEntrySequence(clockinEl), document.documentElement.classList.contains('kiwi-native') ? 0 : 540);
+      setTimeout(() => runEntrySequence(clockinEl), document.documentElement.classList.contains('kiwi-native') ? 0 : 280);
       if (document.documentElement.classList.contains('kiwi-native')) { try { persistShift(); } catch (_) {} }
       signalTillServiceReady();
     }
@@ -179,12 +179,10 @@
       }
       setTimeout(() => { if (clockinEl) clockinEl.style.display = 'none'; }, 520);
 
-      // t=1400: typewriter starts
-      setTimeout(() => emClip && emClip.classList.add('is-revealed', 'is-typing'), 1400);
-      // t=2400: caret drops
-      setTimeout(() => emClip && emClip.classList.remove('is-typing'), 2400);
+      // t=200: the wish wipes in at once · no typewriter, the till is waiting
+      setTimeout(() => emClip && emClip.classList.add('is-revealed'), 200);
 
-      // t=3200: greeting fades + shell dives in (iOS zoom + sidebar stagger)
+      // t=1000: greeting fades + shell dives in (iOS zoom + sidebar stagger)
       setTimeout(() => {
         if (greetEl) {
           greetEl.classList.remove('is-visible');
@@ -201,8 +199,8 @@
           if (shellEl)  shellEl.classList.remove('is-entering');
           if (topbarEl) topbarEl.classList.remove('is-entering');
         }, 760);
-      }, 3200);
+      }, 1000);
 
-      // t=4000: greeting removed
-      setTimeout(() => { if (greetEl && greetEl.parentNode) greetEl.remove(); }, 4000);
+      // t=1400: greeting removed
+      setTimeout(() => { if (greetEl && greetEl.parentNode) greetEl.remove(); }, 1400);
     }
