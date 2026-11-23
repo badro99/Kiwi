@@ -1681,13 +1681,10 @@ const LIMIT_STORE_MAX_FAILS = 16;
  * plafonne vers une centaine d'essais à l'heure, contre des milliers de
  * combinaisons), et un serveur qui se trompe attend quelques secondes. */
 const PIN_COOLDOWN_MS = [10000, 20000, 40000, 60000];
-/* …mais la pause courte n'est qu'un ralentisseur : un plafond sur 24 h par
- * boutique borne le total des essais. Passé 300 fautes dans la journée (un
- * service n'en fait pas le dixième), chaque faute rebloque 15 minutes. Le
- * total reste ainsi sous l'ancien régime (16 par quart d'heure, soit ~1 500
- * par jour). Revue sécurité du 23 Nov 2026. */
-const PIN_DAY_MAX_FAILS = 300;
-const PIN_DAY_WINDOW_MS = 24 * 60 * 60 * 1000;
+/* Pas de plafond journalier qui rebloquerait des minutes : décision du patron
+ * (23 Nov 2026, « no blocking »), prise après la revue sécurité qui le
+ * proposait. Le ralentisseur ci-dessus est la seule limite des codes du
+ * personnel, à la caisse comme au tableau de bord. */
 
 /* Un compteur rattaché à la CIBLE, pas seulement à la source. Sans lui, un
  * attaquant change d'adresse IP et repart à zéro sur le même compte ; avec lui,
@@ -1845,8 +1842,7 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
    * huit essais par quart d'heure restent larges pour un doigt qui glisse, et
    * au-delà la caisse ne fait qu'une pause de quelques secondes (PIN_COOLDOWN_MS). */
   // Attempt rate-limiting by scope: 'pin:<merchant>' keyed on proven identity (or IP if unauthenticated)
-  const blocked = await limitCheck(request, env, `pin:${merchant}`, identity)
-    || await limitCheck(request, env, `pin-day:${merchant}`, 'shop');
+  const blocked = await limitCheck(request, env, `pin:${merchant}`, identity);
   if (blocked) return { ok: false, response: blocked };
   /* Caisse appairée : second seau, plus serré, par appareil. Les fautes
    * d'un encaisseur ne verrouillent que son appareil, pas les autres caisses. */
@@ -1902,8 +1898,7 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   if (!staff) {
     const storeMax = tillScoped ? LIMIT_STORE_MAX_FAILS : LIMIT_MAX_FAILS;
     if (!await limitFail(request, env, `pin:${merchant}`, identity, storeMax, PIN_COOLDOWN_MS)
-        || (tillScoped && !await limitFail(request, env, deviceScope, deviceIdentity, LIMIT_MAX_FAILS, PIN_COOLDOWN_MS))
-        || !await limitFail(request, env, `pin-day:${merchant}`, 'shop', PIN_DAY_MAX_FAILS, null, PIN_DAY_WINDOW_MS)) {
+        || (tillScoped && !await limitFail(request, env, deviceScope, deviceIdentity, LIMIT_MAX_FAILS, PIN_COOLDOWN_MS))) {
       return { ok: false, response: rateLimitUnavailable() };
     }
     return { ok: false, error: 'bad-pin', status: 401 };
@@ -1971,7 +1966,7 @@ export async function verifyAccountPin(request, env, pin) {
     || rows.find((row) => employeeRoleOpensReceptionView(row.role)) || null;
 
   if (!staff) {
-    if (!await limitFail(request, env, 'pin:account', identity)) {
+    if (!await limitFail(request, env, 'pin:account', identity, LIMIT_MAX_FAILS, PIN_COOLDOWN_MS)) {
       return { ok: false, response: rateLimitUnavailable() };
     }
     /* « Ce compte a-t-il AU MOINS UN code, de n'importe quel rôle ? » La porte du

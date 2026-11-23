@@ -570,15 +570,20 @@ console.log('\n2 · Attempt Rate-Limiting on Verification');
     seen[0] <= 20 && seen[1] <= 40 && seen.every((w) => w > 0 && w <= 60) && seen[4] > 40);
   expire();
   check('once the pause is over the right code opens the till', (await post('1234')).status === 200);
-  /* Le ralentisseur ne suffit pas seul : 300 fautes par boutique et par jour,
-     puis le blocage long revient (revue sécurité, 23 Nov 2026). */
+  /* « No blocking » (owner, 23 Nov 2026) : même après des centaines de fautes,
+     la caisse ne fait jamais plus qu'une pause d'une minute. */
+  for (let i = 0; i < 40; i++) { expire(); await post('0000'); }
+  const late = await waitAfter();
+  check(`after 40 more typos the pause is still at most a minute (${late} s)`, late > 0 && late <= 60);
   sqlite.prepare('DELETE FROM pair_attempts').run();
-  await post('0000');
-  sqlite.prepare("UPDATE pair_attempts SET fails = 299 WHERE ip = 'pin-day:cafe-atlas|shop'").run();
-  await post('0000');
-  const day = sqlite.prepare("SELECT blocked_until FROM pair_attempts WHERE ip = 'pin-day:cafe-atlas|shop'").get();
-  check('past 300 wrong codes in a day the shop is locked long again (bounded guessing)', day && day.blocked_until - Date.now() > 14 * 60000);
-  check('…and that lock is enforced on the next code', (await post('1234')).status === 429);
+  /* Le code du tableau de bord (compte entier, {pin} seul) suit la même règle. */
+  const acct = (pin) => verifyPinPost({ request: new Request('https://kiwi.test/api/pin/verify', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: sessionCookie(ownerSessToken), 'CF-Connecting-IP': '10.6.0.5' }, body: JSON.stringify({ pin }) }), env });
+  for (let i = 0; i < 8; i++) await acct('0000');
+  const ar = await acct('0000');
+  const aw = ar.status === 429 ? (await ar.json()).retry_after : 0;
+  check(`the dashboard code pauses seconds too, never 15 minutes (${aw} s)`, aw > 0 && aw <= 10);
+  sqlite.prepare('DELETE FROM pair_attempts').run();
   sqlite.prepare('DELETE FROM pair_attempts').run();
   const req = new Request('https://kiwi.test/auth/login', { method: 'POST', headers: { 'CF-Connecting-IP': '10.6.0.9' } });
   for (let i = 0; i < 8; i++) await limitFail(req, env, 'login');
