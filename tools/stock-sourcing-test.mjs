@@ -24,7 +24,7 @@ const ok = (msg) => { n++; console.log('✓ ' + msg); };
 /* Les objets nés dans le contexte vm n'ont pas nos prototypes : on compare leur copie. */
 const eq = (actual, expected, msg) => assert.deepEqual(JSON.parse(JSON.stringify(actual)), expected, msg);
 
-function load(opts = {}) {
+function boot(opts = {}) {
   const S = {
     lang: () => opts.lang || 'fr',
     fmtMad: (v) => `${Math.round(v * 100) / 100} MAD`,
@@ -53,7 +53,7 @@ const mascapron = { id: 'masc-pot', name: 'mascapron', unit: 'unité', costPerUn
 const tomates = { id: 'tom', name: 'Tomates', unit: 'kg', costPerUnit: 0, supplier: 'Lakhlfi Fruit · tanger', suppliers: [] };
 
 {
-  const { api } = load();
+  const { api } = boot();
   assert.equal(api.familyKey(' Mascarponé  '), api.familyKey('mascarpone'), 'accents, case and spaces do not split a family');
   eq(api.baseQty({ unit: 'kg' }), { measure: 'mass', qty: 1000 });
   eq(api.baseQty({ unit: 'cl' }), { measure: 'volume', qty: 10 });
@@ -84,7 +84,7 @@ const tomates = { id: 'tom', name: 'Tomates', unit: 'kg', costPerUnit: 0, suppli
 }
 
 {
-  const { api } = load();
+  const { api } = boot();
   const day = (d) => Date.UTC(2026, 10, d);
   const rows = [
     { reason: 'receipt', unitCost: 92, occurredTs: day(20), note: 'Leader Fromaggi · casablanca · BL-12', meta: { supplierName: 'Leader Fromaggi · casablanca' } },
@@ -123,7 +123,7 @@ const tomates = { id: 'tom', name: 'Tomates', unit: 'kg', costPerUnit: 0, suppli
 
 {
   const sub = { id: 'masc-kg', suppliers: [{ id: 'c1', supplierName: 'Leader Fromaggi', rank: 1 }, { id: 'c2', supplierName: 'Atacadao', rank: 2 }, { id: 'c3', supplierName: 'Tanja', rank: 3 }] };
-  const { api, S } = load({ raw: { subcategories: [sub] } });
+  const { api, S } = boot({ raw: { subcategories: [sub] } });
   const pick = api.setPrincipal('masc-kg', 'c3');
   assert.equal(pick.supplierName, 'Tanja');
   eq(sub.suppliers.map((c) => [c.id, c.rank]), [['c3', 1], ['c1', 2], ['c2', 3]], 'the pick leads, the others keep their order');
@@ -139,7 +139,7 @@ const tomates = { id: 'tom', name: 'Tomates', unit: 'kg', costPerUnit: 0, suppli
 
 {
   const inv = [tomates, nascarpon, { id: 'x', name: 'Ail', unit: 'kg', costPerUnit: 30, suppliers: [] }, { ...mascapron, packSize: 500 }];
-  const { api } = load({ inv });
+  const { api } = boot({ inv });
   const row = (it) => `<tr class="st-row-in"><td>${it.name}</td></tr>`;
   const html = api.tableRows(inv, row);
   const order = [...html.matchAll(/<td(?: colspan="10")?>(.*?)<\/td>/g)].map((m) => m[1].replace(/<[^>]+>/g, ''));
@@ -157,7 +157,7 @@ const tomates = { id: 'tom', name: 'Tomates', unit: 'kg', costPerUnit: 0, suppli
 {
   const raw = { subcategories: [{ id: 'masc-kg', suppliers: nascarpon.suppliers }, { id: 'masc-pot', suppliers: mascapron.suppliers }] };
   const inv = [nascarpon, mascapron];
-  const { api } = load({ inv, raw });
+  const { api } = boot({ inv, raw });
   /* Le bloc que movements.js rend, figé par le contrat de découpe. */
   const legacy = `
       <div class="st-notice info"><button data-stock-swap-ranks data-item-id="masc-kg">x</button></div>
@@ -192,12 +192,12 @@ const tomates = { id: 'tom', name: 'Tomates', unit: 'kg', costPerUnit: 0, suppli
   const inv = [nascarpon, { ...mascapron, packSize: 500 }];
   const raw = { subcategories: [] };
   const twoCards = { ...nascarpon, suppliers: [...nascarpon.suppliers, { id: 'c-ft', supplierName: 'Fromagerie Tanja', defaultPrice: 84, rank: 2 }] };
-  const { api } = load({ inv: [twoCards, inv[1]], raw });
+  const { api } = boot({ inv: [twoCards, inv[1]], raw });
   const hint = api.orderHint(twoCards);
   assert.match(hint, /Moins cher pour cet article : Fromagerie Tanja, 84 MAD \/ kg \(votre principal : 96 MAD \/ kg\)/);
   assert.match(hint, /data-src-order-pick="Fromagerie Tanja"/);
   assert.match(hint, /Autre qualité : mascapron chez atacadao, 48 MAD le kilo contre 96 MAD le kilo/);
-  assert.equal(load({ inv: [inv[1], twoCards], raw }).api.orderHint(inv[1]), '', 'the cheapest quality with one supplier: nothing to suggest');
+  assert.equal(boot({ inv: [inv[1], twoCards], raw }).api.orderHint(inv[1]), '', 'the cheapest quality with one supplier: nothing to suggest');
   const options = [{ value: 'sup-1', textContent: 'Leader Fromaggi · casablanca' }, { value: 'sup-2', textContent: 'Fromagerie Tanja · tanger' }];
   const select = { value: 'sup-1', options };
   let changed = 0; let click = null;
@@ -215,7 +215,7 @@ const tomates = { id: 'tom', name: 'Tomates', unit: 'kg', costPerUnit: 0, suppli
   const bare = JSON.parse(JSON.stringify(raw));
   for (const sub of bare.subcategories || []) if (sub.id === inv[1].id) sub.suppliers = [];
   const noSup = Object.assign({}, inv[1], { supplier: '', suppliers: [] });
-  const bareHint = load({ inv: [twoCards, noSup], raw: bare }).api.orderHint(twoCards);
+  const bareHint = boot({ inv: [twoCards, noSup], raw: bare }).api.orderHint(twoCards);
   assert.doesNotMatch(bareHint, / chez ,/, 'a quality bought from nobody yet is not "chez" an empty name');
   assert.match(bareHint, /Autre qualité : mascapron, 48 MAD le kilo contre 96 MAD le kilo/);
   ok('the quick order names the cheaper supplier (one tap picks it) and the cheaper quality of the family');
@@ -225,7 +225,7 @@ const tomates = { id: 'tom', name: 'Tomates', unit: 'kg', costPerUnit: 0, suppli
   const field = (value) => ({ value });
   const scope = (fam, qty, unit) => ({ querySelector: () => ({ querySelector: (sel) => sel === '[data-src-family]' ? field(fam)
     : sel === '[data-src-pack-form]' ? field(qty) : field(unit) }) });
-  const { api } = load({ inv: [nascarpon] });
+  const { api } = boot({ inv: [nascarpon] });
   eq(api.readForm(scope('  Mascarpone   frais ', '0,5', 'kg')), { family: 'Mascarpone frais', packSize: 500, packMeasure: 'mass' });
   eq(api.readForm(scope('', '', 'g')), { family: '', packSize: null, packMeasure: 'mass' }, 'a cleared field clears the item');
   eq(api.readForm(scope('Lait', '1', 'L')), { family: 'Lait', packSize: 1000, packMeasure: 'volume' });
@@ -242,14 +242,14 @@ const tomates = { id: 'tom', name: 'Tomates', unit: 'kg', costPerUnit: 0, suppli
   const SRC_WORDS = /const WORDS = \{([^]*?)\n  \};/.exec(SRC)[1];
   const keys = [...SRC_WORDS.matchAll(/^\s{4}(\w+): \[/gm)].map((m) => m[1]);
   for (const l of ['fr', 'en', 'ar']) {
-    const { api } = load({ lang: l });
+    const { api } = boot({ lang: l });
     for (const k of keys) {
       const s = api.tr(k, null, l);
       assert.ok(s && s !== k, `${k} has a ${l} text`);
       assert.ok(!s.includes('—'), `${k} (${l}) carries no em dash`);
     }
   }
-  const { api } = load({ lang: 'ar', inv: [nascarpon, { ...mascapron, packSize: 500 }] });
+  const { api } = boot({ lang: 'ar', inv: [nascarpon, { ...mascapron, packSize: 500 }] });
   assert.match(api.tableRows([nascarpon, { ...mascapron, packSize: 500 }], (it) => `<tr class="st-row-in"><td>${it.name}</td></tr>`), /لكل كيلو/);
   ok('every phrase exists in French, English and Arabic, without em dashes');
 }

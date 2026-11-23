@@ -96,8 +96,8 @@ for (const real of [false, true]) {
   const LATER = new Set(['stock-supplier-ranking']);   // b0559b9f0, tools/supplier-ranking-test.mjs
   assert.deepEqual(Object.keys(after.context.Kiwi.handlers).filter(k => !LATER.has(k)), Object.keys(before.context.Kiwi.handlers));
   assert.equal(JSON.stringify(after.context.KiwiRestaurantStock.rows()), JSON.stringify(before.context.KiwiRestaurantStock.rows()), 'pont recettes disponible avant les parties');
-  /* Les huit parties de la découpe, plus photo.js (16d43fe1c, scan photo d'un BL) et suppliers.js (b0559b9f0, classement des fournisseurs). */
-  assert.equal(after.scripts.length, 10, 'les dix parties se préchargent au démarrage, un premier clic n’attend pas le réseau');
+  /* Les huit parties de la découpe, plus photo.js (16d43fe1c, scan photo d'un BL), suppliers.js (b0559b9f0, classement des fournisseurs) et sourcing.js (qualités et fournisseurs en concurrence, tools/stock-sourcing-test.mjs). */
+  assert.equal(after.scripts.length, 11, 'les onze parties se préchargent au démarrage, un premier clic n’attend pas le réseau');
   let scope;
   const install = after.context.KiwiStockInternal.install;
   after.context.KiwiStockInternal.install = (name, factory) => install(name, s => { scope = s; return factory(s); });
