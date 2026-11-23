@@ -158,6 +158,23 @@ await S.run('prix convenu, plancher, −MAD et ticket entier', async (t) => {
   await approveIfAsked(page);
   await page.waitForFunction(() => !document.querySelector('#bq-sheet-veil').classList.contains('is-open'), { timeout: 5000 });
   assert(Math.abs(await total(page) - t2 - under) < 0.005, `the piece sells under the floor at ${under} MAD`);
+
+  /* Le ticket entier sous son prix minimum (la photo du 23 Nov : 400 sous 448). */
+  t.step('ticket · Appliquer quand même');
+  const t3 = await total(page);
+  const low = Math.round(t3 * 0.3);
+  await click(page, '[data-bq-tk-act="remise"]');
+  await page.waitForSelector('#bq-tkrem-bargain', { visible: true, timeout: 5000 });
+  await click(page, '#bq-tkrem-bargain [data-bq-bmode="price"]');
+  await typeIn(page, '#bq-tkrem-bargain [data-bq-bval]', String(low));
+  const tkPv = await page.$eval('#bq-tkrem-bargain .bq-bargain-pv', (e) => e.textContent);
+  assert(/minimum/i.test(tkPv) && /→/.test(tkPv), `the whole-ticket sheet names the minimum and previews ${low} MAD (« ${tkPv} »)`);
+  const ap = await page.$eval('#bq-tkrem-apply', (b) => ({ dis: b.disabled, txt: b.textContent }));
+  assert(!ap.dis && /quand même/i.test(ap.txt), `below the minimum the button reads « Appliquer quand même » and works (« ${ap.txt} »)`);
+  await click(page, '#bq-tkrem-apply');
+  await approveIfAsked(page);
+  await sleep(400);
+  assert(Math.abs(await total(page) - low) < 0.005, `the whole ticket sells at ${low} MAD, under its minimum (was ${t3})`);
 });
 
 await S.finish();
