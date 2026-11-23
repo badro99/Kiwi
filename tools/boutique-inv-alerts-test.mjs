@@ -52,6 +52,8 @@ function inventoryHtml() {
     $: (q) => q.startsWith('[data-bq-panel') ? panel : null, root: {}, state: {},
     invPaint: (_, value) => { html = value; }, invSearch() {}, invCountAsks() {}, sisterStock() {},
     bqKitSkin() {}, pvReal: () => false, _bqKey: K, fmtMAD: String, esc: String, icons() {}, artOf() {}, tillInventoryAllowed: () => false,
+    /* pos-boutique/oversell.js : la liste sans filtre « À recompter », pas de pastille ni d'écart ici. */
+    invProducts: (cat, filter, q) => cat.listProducts({ categoryId: filter, q: q || '' }), recountPill: () => '', gapLabel: () => '',
   })();
   return html;
 }

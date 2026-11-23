@@ -17,7 +17,9 @@ class Statement {
   async run() {
     if (this.db.attempts && this.sql.startsWith('INSERT INTO pair_attempts')) {
       /* same arithmetic as limitFail's single upsert, for the stateful limiter case */
-      const [k, now, , win, , , , , , max, until] = this.args;
+      /* binds: k, now, now, win, now, win, now, now, win, max, now, max, step0..3 (the pause ladder) */
+      const [k, now, , win, , , , , , max, base, , step0] = this.args;
+      const until = base + step0;
       const row = this.db.attempts.get(k);
       if (!row || now - row.first_ts > win) this.db.attempts.set(k, { fails: 1, first_ts: now, blocked_until: null });
       else { row.fails++; if (row.fails >= max) row.blocked_until = until; }
