@@ -186,6 +186,11 @@ async function play(flow, on, vp) {
     await page.evaluate(() => doOpenService());
     await page.waitForFunction(() => document.body.classList.contains('is-unlocked'), { timeout: 20000 });
     await sleep(1000);
+    /* The demo seeds T7 « Réglée » and frees it 5 s after boot (caisse-app.js,
+       « Khlass-fade for T7 »). Since the greeting got shorter (80aabd227) the
+       flows reach the floor before that: wait for it, so both designs start
+       from the same floor and T7 opens. */
+    await page.waitForFunction(() => typeof tables === 'undefined' || !tables.T7 || tables.T7.status !== 'khlass', { timeout: 10000 }).catch(() => {});
     const j0 = await journalLen(page);
     const log = [];
     let failed = null;

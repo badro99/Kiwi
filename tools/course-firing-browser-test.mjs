@@ -82,7 +82,18 @@ const freeTable = (not) => page.evaluate((skip) => [...document.querySelectorAll
     && !(tableOrders[c.dataset.table] || []).length && !skip.includes(c.dataset.table))
   .map((c) => c.dataset.table)[0] || null, not || []);
 async function openTable(id) {
-  await page.click(`.cplan-tbl[data-table="${id}"]`);
+  /* Tap a point that belongs to THIS table: on the demo terrasse a neighbour
+     (T13) covers the middle of the long T12, and a centre click opened it. */
+  const at = await page.evaluate((id) => {
+    const c = document.querySelector(`.cplan-tbl[data-table="${id}"]`); const r = c.getBoundingClientRect();
+    for (const fy of [0.5, 0.25, 0.75, 0.1, 0.9]) for (const fx of [0.5, 0.25, 0.75]) {
+      const x = r.x + r.width * fx, y = r.y + r.height * fy, hit = document.elementFromPoint(x, y);
+      if (hit && hit.closest('.cplan-tbl') === c) return { x, y };
+    }
+    return null;
+  }, id);
+  assert.ok(at, `table ${id} has a point no other table covers`);
+  await page.mouse.click(at.x, at.y);
   await page.waitForSelector('#new-table-modal.is-open', { timeout: 10000 });
   await page.click('#new-table-modal.is-open button:not(#nt-cancel):not(#nt-confirm)');
   await page.click('#nt-confirm');

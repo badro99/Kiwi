@@ -224,8 +224,10 @@ await S.run('sur l’iPad, les − et + du ticket se touchent au doigt', async (
   await sleep(500);
   const r = await page.evaluate(() => ({ qty: document.querySelector('[data-bq-plus="0"]').previousElementSibling.textContent,
     toast: [...document.querySelectorAll('#toast-stack *, [role="status"]')].map((n) => n.textContent).join(' ') }));
-  /* The demo's first line is its last piece: the till answers « plus de stock ». */
-  assert(+r.qty === +before + 1 || /plus de stock/.test(r.toast), `the tap lands on + (${before} → ${r.qty}${/plus de stock/.test(r.toast) ? ', last piece already on the ticket' : ''})`);
+  /* The demo's first line is its last piece: the till answers « plus de stock »,
+     or since 23 Nov the oversell prompt « Touchez encore pour vendre quand même ». */
+  const last = /plus de stock|vendre quand même/.test(r.toast);
+  assert(+r.qty === +before + 1 || last, `the tap lands on + (${before} → ${r.qty}${last ? ', last piece already on the ticket' : ''})`);
 });
 
 await S.finish();
