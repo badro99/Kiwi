@@ -2,7 +2,7 @@ import { employeeRoleOpensReceptionView } from './_reception.js';
 import { employeeWorksFloor } from './_floor.js';
 export { employeeWorksFloor };
 import { deadlineFetch } from '../../assets/request-deadline.mjs';
-import { codeDocument, matchingStaffCodes, accountStaffCodes, hashStaffCode } from './_staff-codes.js';
+import { codeDocument, matchingStaffCodes, accountStaffCodes, hashStaffCode } from './_staff-codes.js'; import { keepDashboardDepartments } from './_dashboard-door.js';   // Manager · Caisse : la caisse, pas le tableau de bord
 import { canonicalCode } from '../api/_rules-staff-credential.js';
 import { hmacKey } from './_crypto.js';
 import Catalog from '../../assets/permissions-catalog.js';   // LA liste des intitulés de propriétaire (OWNER_TITLE_LIST)
@@ -1960,7 +1960,7 @@ export async function verifyAccountPin(request, env, pin) {
    * de n'importe quel employé déverrouillait la surface du patron. */
   let rows = [];
   try {
-    rows = await accountStaffCodes(env, sess.aid, accSlug, pin);
+    rows = await keepDashboardDepartments(env, await accountStaffCodes(env, sess.aid, accSlug, pin), pin);   // un gérant hors Management n'ouvre que la caisse (_dashboard-door.js)
   } catch (_) { return { ok: false, error: 'staff-unavailable', status: 503 }; }
   const staff = rows.find((row) => employeeRoleOpensDashboard(row.role))
     || rows.find((row) => employeeRoleOpensReceptionView(row.role)) || null;

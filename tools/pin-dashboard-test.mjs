@@ -116,8 +116,37 @@ ok(/serverRosterSize\(\) > 0 && !hasDashboardCode\(\)/.test(gate), 'le message n
 ok(gate.includes("Connectez-vous avec Kiwi pour configurer votre code d\\'acc"), 'le message dit le chemin : passer par Kiwi pour configurer le code');
 ok(/if \(demosOn\(\) \|\| !helpEl \|\| pinInput\.value\) return;/.test(gate), 'jamais en démo, jamais par-dessus une saisie en cours');
 
+// ── 5b. Le département : « Manager · Caisse » ouvre la caisse, pas le tableau de bord ──
+/* Exécuté sur le vrai module (functions/auth/_dashboard-door.js), codes scellés
+ * comme en production. Lignes de staff_pins telles que accountStaffCodes les rend. */
+const door = await import(path.join(ROOT, 'functions/auth/_dashboard-door.js'));
+const { codeDocument: sealDoc } = await import(path.join(ROOT, 'functions/auth/_staff-codes.js'));
+const doorEnv = { AUTH_SECRET: 'test-secret-door' };
+const teamDoc = await sealDoc(doorEnv, 'shop', 'team', { members: [
+  { id: 'm1', firstName: 'Sara', lastName: 'A', function: 'Manager', department: 'Caisse', pinCode: '1111' },
+  { id: 'm2', firstName: 'Omar', lastName: 'B', function: 'Manager', department: 'Management', pinCode: '2222' },
+  { id: 'm3', firstName: 'Nora', lastName: 'C', function: 'Manager', department: '', pinCode: '3333' },
+  { id: 'm4', firstName: 'Lina', lastName: 'D', function: 'Réceptionniste', department: 'Réception', pinCode: '4444' },
+  { id: 'm5', firstName: 'Yasmine', lastName: 'E', function: 'Manager', department: 'Vente', pinCode: '5555' },
+] }, true);
+doorEnv.DB = { prepare: () => ({ bind: (m) => ({ first: async () => (m === 'shop' ? { data: JSON.stringify(teamDoc) } : null) }) }) };
+const pass = async (row, pin) => (await door.keepDashboardDepartments(doorEnv, [{ merchant: 'shop', ...row }], pin)).length === 1;
+ok(!(await pass({ name: 'Sara A', role: 'Manager' }, '1111')) && !(await pass({ name: 'Yasmine E', role: 'Manager' }, '5555')),
+  'Manager · Caisse et Manager · Vente n\'ouvrent PAS le tableau de bord');
+ok(await pass({ name: 'Omar B', role: 'Manager' }, '2222') && await pass({ name: 'Nora C', role: 'Manager' }, '3333'),
+  'Manager · Management l\'ouvre, et une fiche sans département garde la règle d\'avant');
+ok(await pass({ name: 'Badr', role: 'Propriétaire' }, '9999') && await pass({ name: 'Lina D', role: 'Réceptionniste' }, '4444')
+  && await pass({ name: 'Inconnu', role: 'Manager' }, '8888'),
+  'le patron, la réception et un code sans fiche Équipe ne sont pas touchés');
+ok(!(await pass({ name: 'Sara A', role: 'Manager' }, '')) && !(await door.keepDashboardDepartments({ DB: { prepare: () => { throw new Error('down'); } } }, [{ merchant: 'shop', name: 'Omar B', role: 'Manager' }], '2222')).length,
+  'sans code lisible on retrouve la fiche par le nom ; une base illisible ferme la porte au gérant');
+ok(/rows = await keepDashboardDepartments\(env, await accountStaffCodes\(env, sess\.aid, accSlug, pin\), pin\)/.test(vapSrc),
+  'verifyAccountPin passe les candidats par le contrôle du département');
+ok(!/keepDashboardDepartments/.test(lib.slice(lib.indexOf('export async function verifyStaffPin'), lib.indexOf('export async function verifyAccountPin'))),
+  'la caisse (verifyStaffPin) ne regarde jamais le département : Manager · Caisse y garde ses accords');
+
 // ── 6. Verrou du nombre de contrôles ─────────────────────────────────────────
-const EXPECTED_COUNT = 28;
+const EXPECTED_COUNT = 34;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {
