@@ -26,7 +26,8 @@ export function claims(source, file) {
     if (!m) throw new Error(`${file}:${i + 1}: malformed coverage annotation`);
     let next = i + 1;
     while (/^\s*\/\/ coverage:/.test(lines[next] || '')) next++;
-    if (!/\bawait\s+.*\b(?:open|goto)\(/.test(lines[next] || '')) throw new Error(`${file}:${i + 1}: annotation must precede an awaited open/goto`);
+    // The next line opens the surface: open(), goto(), or a harness opener such as h.openWaiter().
+    if (!/\bawait\s+.*\b(?:open[A-Z]\w*|open|goto)\(/.test(lines[next] || '')) throw new Error(`${file}:${i + 1}: annotation must precede an awaited open/goto`);
     found.push({ surface: m[1], locale: m[2], viewport: m[3], line: i + 1, openLine: next + 1 });
   }
   return found;

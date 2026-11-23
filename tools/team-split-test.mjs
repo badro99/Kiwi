@@ -33,6 +33,10 @@ const hoursAt = graph.indexOf('src="assets/team-hours.js?');
 assert.ok(coreAt >= 0 && profileAt > coreAt && hoursAt > profileAt, 'team model precedes first-use profile and hours owners');
 for (const src of [catalog, core, part, hours]) new vm.Script(src);
 vm.runInNewContext(catalog + '\n' + core + '\n' + part, { window: {} });
+/* Seule retouche revue depuis la découpe : le bouton « Droits » (assets/team/roster-list.js,
+ * 21 nov.) posé dans l'en-tête par une enveloppe, le fragment déplacé restant octet pour octet. */
+const withPermissions = (html, lang) => html.replace('<div class="eq-head-acts">', '<div class="eq-head-acts"><button class="btn-slim" type="button" data-action="nav-permissions"><i data-lucide="users" style="width:13px;height:13px" aria-hidden="true"></i><span>'
+  + ({ fr: 'Droits', en: 'Permissions', ar: 'الحقوق' })[lang] + '</span></button>');
 function realm(source, lang) {
   const modals = [], notices = [], events = [], nodes = new Map();
   const classList = { add() {}, remove() {}, contains() { return false; }, toggle() {} };
@@ -56,10 +60,6 @@ function realm(source, lang) {
   vm.runInContext(source, context);
   return { context, root, modals, notices, events, venue };
 }
-/* Seule retouche revue depuis la découpe : le bouton « Droits » (assets/team/roster-list.js,
- * 21 nov.) posé dans l'en-tête par une enveloppe, le fragment déplacé restant octet pour octet. */
-const withPermissions = (html, lang) => html.replace('<div class="eq-head-acts">', '<div class="eq-head-acts"><button class="btn-slim" type="button" data-action="nav-permissions"><i data-lucide="users" style="width:13px;height:13px" aria-hidden="true"></i><span>'
-  + ({ fr: 'Droits', en: 'Permissions', ar: 'الحقوق' })[lang] + '</span></button>');
 for (const lang of ['fr', 'en', 'ar']) {
   const before = realm(original + '\n' + hours, lang);
   const after = realm(catalog + '\n' + runtime, lang);
