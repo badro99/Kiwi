@@ -688,14 +688,14 @@
     const matched = sameSize.filter((v) => String(v.colorId) === String(color) || String(famOf(v)) === String(color));
     if (delta < 0) {
       let remaining = -delta;
-      if (variantStock(pid, size, color) < remaining) return false;
-      batch(() => matched
-        .slice().sort((a, b) => (String(b.colorId) === String(color) ? 1 : 0) - (String(a.colorId) === String(color) ? 1 : 0))
-        .forEach((v) => {
-          if (!remaining) return;
-          const qty = Math.min(remaining, Math.max(0, +v.stock || 0));
-          if (qty) { adjustStock(v.id, -qty, opts.why || 'vente', { ref: opts.ref, actor: opts.actor }); remaining -= qty; }
-        }));
+      const order = matched.slice().sort((a, b) => (String(b.colorId) === String(color) ? 1 : 0) - (String(a.colorId) === String(color) ? 1 : 0));
+      if (variantStock(pid, size, color) < remaining && !(opts.oversell && order.length)) return false;
+      const out = (v, qty) => adjustStock(v.id, -qty, opts.why || 'vente', { ref: opts.ref, actor: opts.actor });
+      batch(() => {
+        order.forEach((v) => { const qty = Math.min(remaining, Math.max(0, +v.stock || 0)); if (qty) { out(v, qty); remaining -= qty; } });
+        /* Vente hors stock (pos-boutique/oversell.js) : le reste creuse la déclinaison exacte ; le registre garde le négatif, la fiche montre 0 et l'écart. */
+        if (remaining && opts.oversell) { out(order[0], remaining); remaining = 0; }
+      });
       return remaining === 0;
     }
     const v = matched[0];

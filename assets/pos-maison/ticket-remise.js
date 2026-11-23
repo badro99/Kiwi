@@ -13,7 +13,7 @@ const PHRASES = {
   'Remise sur le ticket': ['Receipt discount', 'خصم على التذكرة'],
   'Remise supprimée': ['Discount removed', 'تم حذف الخصم'],
   'Remise −{n} % sur le ticket': ['−{n} % off the receipt', 'خصم −{n} % على التذكرة'],
-  'S\'applique à tous les articles du ticket {n}. Accord gérante requis.': ['Applies to every item on receipt {n}. Manager approval required.', 'يُطبَّق على كل أصناف التذكرة {n}. يلزم إذن المسيّرة.'],
+  'S\'applique à tous les articles du ticket {n}.': ['Applies to every item on receipt {n}.', 'يُطبَّق على كل أصناف التذكرة {n}.'],
   'Sans': ['None', 'بدون'],
   'Fermer': ['Close', 'إغلاق'],
   'Pourcentage non autorisé': ['Percentage not allowed', 'نسبة غير مسموح بها'],
@@ -47,11 +47,11 @@ export function mzTicketRemise(d) {
   /* Le squelette d'abord, les mots ensuite, chacun par tr(), comme la boutique. */
   el.innerHTML = '<button class="mz-modal-x" data-mz-close><i data-icon="close"></i></button>'
     + '<h3 class="modal-title"></h3><p class="modal-subtle"></p><div class="mz-chips" id="mz-tkrem-chips">'
-    + [0, ...pcts].map((r) => '<button class="mz-chip ' + (cur === r ? 'on' : '') + '" data-mz-tkrem="' + r + '">' + (r === 0 ? esc(tr('Sans')) : '−' + r + ' %') + (r > 0 && !t.remiseAuth ? ' <i data-icon="lock"></i>' : '') + '</button>').join('')
+    + [0, ...pcts].map((r) => '<button class="mz-chip ' + (cur === r ? 'on' : '') + '" data-mz-tkrem="' + r + '">' + (r === 0 ? esc(tr('Sans')) : '−' + r + ' %') + '' + '</button>').join('')
     + '</div>';
   $('.mz-modal-x', el).setAttribute('aria-label', tr('Fermer'));
   $('.modal-title', el).textContent = tr('Remise sur le ticket');
-  $('.modal-subtle', el).textContent = tr('S\'applique à tous les articles du ticket {n}. Accord gérante requis.').replace('{n}', String(t.num || ''));
+  $('.modal-subtle', el).textContent = tr('S\'applique à tous les articles du ticket {n}.').replace('{n}', String(t.num || ''));
   openVeil('#mz-approve-veil');
   icons();
   $$('[data-mz-close]', el).forEach((b) => { b.onclick = () => closeVeil('#mz-approve-veil'); });

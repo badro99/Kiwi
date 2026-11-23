@@ -1,12 +1,12 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=373';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=267';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=374';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=268';
 import { openMoves } from './inv-moves.js?v=7';
 import * as SZ from '../boutique-sizes.js?v=27';
 import { openLabelPicker } from './label-picker.js?v=6';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=24';
-import { sisterStock } from './sister-stock.js?v=1';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=267';
+import { sisterStock } from './sister-stock.js?v=1'; import { invProducts, recountPill, gapLabel } from './oversell.js?v=2';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=268';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -703,7 +703,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const st = cat.stats();
     const cats = cat.listCategories();
     const filter = state.invFilter || 'all';
-    const products = cat.listProducts({ categoryId: filter, q: state.invQuery || '' });
+    const products = invProducts(cat, filter, state.invQuery);   // filtre « À recompter » : les articles vendus sous zéro
     invPaint(panel, `
       <div class="bqi">
         <header class="bq-head" style="padding:22px 22px 0;">
@@ -719,7 +719,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
           <button class="bq-btn" id="bqi-intake"><i data-lucide="scan-barcode"></i>Reprendre le stock</button>
         </div>
         <div class="bqi-pills" id="bqi-pills">
-          <button class="bqi-pill ${filter === 'all' ? 'on' : ''}" data-f="all">Tous · ${st.products}</button>
+          <button class="bqi-pill ${filter === 'all' ? 'on' : ''}" data-f="all">Tous · ${st.products}</button>${recountPill(cat, filter, 'bqi-pill')}
           ${cats.map((c) => `<button class="bqi-pill ${filter === c.id ? 'on' : ''}" data-f="${c.id}">${esc(c.name)} · ${cat.categoryCount(c.id)}</button>`).join('')}
         </div>
         <div class="bqi-kpis">
@@ -749,7 +749,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const ib = $('#bqi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const nb = $('#bqi-new', panel); if (nb) nb.onclick = () => openNewProduct();
     const mv = $('#bqi-moves', panel); if (mv) mv.onclick = () => openMoves({ setModal: invSetModal, esc, icons, catDB, toast });   // en lecture (inv-moves.js)
-    import('./avance-restock.js?v=26').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
+    import('./avance-restock.js?v=27').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
     const pills = $('#bqi-pills', panel);
     if (pills) pills.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { state.invFilter = b.dataset.f; renderInventaire(); } });
     panel.querySelectorAll('[data-inv-open]').forEach((el) => el.addEventListener('click', () => openInvProduct(el.getAttribute('data-inv-open'))));

@@ -1,11 +1,11 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=248';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=161';
-import { invSetModal, offerRegister } from './inventory.js?v=161';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=252';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=165';
+import { invSetModal, offerRegister } from './inventory.js?v=165';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=14';
-import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=3';
-import { mzPageGrid } from './grid-pager.js?v=1'; import { mzOpenFiche } from './client-fiche.js?v=6';
+import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=5';
+import { mzPageGrid } from './grid-pager.js?v=1'; import { mzOpenFiche } from './client-fiche.js?v=6'; import { oversellOk } from '../pos-boutique/oversell.js?v=2';
 import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsEmpty } from './client-view.js?v=1';
 
 
@@ -529,11 +529,10 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
       if (idx < 0) return;
       const ln = t.lines[idx];
       if (plus) {
-        const u = holdStock(ln.pid, ln.size, 1, ln.isPiece);
-        if (u === false) {
-          toast(`${P[ln.pid].name} · ${ln.size}, plus de stock, dernière pièce déjà sur le ticket`);
-          return;
-        }
+        let u = holdStock(ln.pid, ln.size, 1, ln.isPiece);   // hors stock : un second appui vend quand même (pos-boutique/oversell.js), le dépareillé reste compté
+        if (u === false && !sellsLoose(P[ln.pid], ln.isPiece)) u = oversellOk(`${ln.pid}|${ln.size}`, `${P[ln.pid].name} · ${ln.size}`, 0, toast) ? 1 : null;
+        if (u === false) toast(`${P[ln.pid].name} · ${ln.size}, plus de stock, dernière pièce déjà sur le ticket`);
+        if (u === false || u === null) return;
         ln.units = (ln.units || 0) + u;
         ln.qty++;
       } else {
@@ -717,11 +716,10 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     const format = cfg.format || p.format || 'piece';
     const customPrice = cfg.customPrice != null ? shelf(cfg.customPrice) : (isPiece ? pieceUnitPrice(p) : null);
 
-    const heldUnits = holdStock(pid, size, qty, isPiece);
-    if (heldUnits === false) {
-      toast(`${p.name} · ${size}, stock insuffisant`);
-      return false;
-    }
+    let heldUnits = holdStock(pid, size, qty, isPiece);
+    if (heldUnits === false && !sellsLoose(p, isPiece)) heldUnits = oversellOk(`${pid}|${size}`, `${p.name} · ${size}`, stockAvailable(pid, size, isPiece), toast, opts && opts.scanned) ? (stockAdd(pid, size, -qty), qty) : null;
+    if (heldUnits === false) toast(`${p.name} · ${size}, stock insuffisant`);
+    if (heldUnits === false || heldUnits === null) return false;
     const pr = promoForLine({ pid, isPiece, customPrice, servicePieces: p.servicePieces });
     const stamp = pr ? { price: pr.price, badge: pr.badge, name: pr.promo.name, id: pr.promo.id } : null;
     const same = state.ticket.lines.find((l) => l.pid === pid && l.size === size && l.color === color && l.remise === (cfg.remise || 0) && l.isPiece === isPiece && l.registryId === (cfg.registryId || null));
@@ -803,7 +801,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
         </span>
         <span class="mz-sheet-price">
           <span class="val" id="mz-sheet-total">${fmtMAD(unit * sheet.qty)}</span>
-          <span class="per ${sheet.remise ? 'rem' : ''}" id="mz-sheet-per">${sheet.remise ? `−${sheet.remise} % · accord gérante` : `${unit} MAD × ${sheet.qty}`}</span>
+          <span class="per ${sheet.remise ? 'rem' : ''}" id="mz-sheet-per">${sheet.remise ? `−${sheet.remise} %` : `${unit} MAD × ${sheet.qty}`}</span>
         </span>
       </div>
       ${shPromo ? `
@@ -841,7 +839,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
           ${sizesOf(p).map((s) => {
             const st = stockAvailable(p.id, s, sheetPiece);
             const usual = !sheet.exchange && c && p.kind === 'taille' && s === c.taille;
-            return `<button class="mz-seg-it ${s === sheet.size ? 'on' : ''}" data-lens-item data-mz-size="${esc(s)}" ${st === 0 ? 'disabled' : ''}>
+            return `<button class="mz-seg-it ${s === sheet.size ? 'on' : ''}" data-lens-item data-mz-size="${esc(s)}">
               ${usual ? '<span class="mz-seg-usual">habituelle</span>' : ''}${esc(s)}<small>${st === 0 ? 'épuisé' : `${st} ${sheetPiece ? 'pièce' + (st > 1 ? 's' : '') : 'en stock'}`}</small></button>`;
           }).join('')}
         </div>
@@ -865,9 +863,9 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
           </div>
         </div>
         <div class="mz-f">
-          <div class="mz-f-lbl">Remise <span class="opt">· accord gérante</span></div>
+          <div class="mz-f-lbl">Remise</div>
           <div class="mz-chips" id="mz-remise">
-            ${[0, ...(window.KiwiDiscountPolicy?.percentages(_bqKey) || [5, 10, 15, 20])].map((r) => `<button class="mz-chip ${sheet.remise === r ? 'on' : ''}" data-mz-rem="${r}">${r === 0 ? 'Sans' : `−${r} %`}${r > 0 && !state.ticket.remiseAuth ? ' <i data-lucide="lock"></i>' : ''}</button>`).join('')}
+            ${[0, ...(window.KiwiDiscountPolicy?.percentages(_bqKey) || [5, 10, 15, 20])].map((r) => `<button class="mz-chip ${sheet.remise === r ? 'on' : ''}" data-mz-rem="${r}">${r === 0 ? 'Sans' : `−${r} %`}</button>`).join('')}
           </div>
         </div>
       </div>`}
@@ -876,7 +874,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
         <button class="mz-btn secondary" data-mz-close>Annuler</button>
         ${sheet.exchange
           ? `<button class="mz-btn primary" id="mz-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="arrow-left-right"></i>Choisir cet article · ${fmtMAD(shBase)}</button>`
-          : `<button class="mz-btn primary" id="mz-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="plus"></i>Ajouter au ticket · <span id="mz-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></button>`}
+          : `<button class="mz-btn primary" id="mz-sheet-add"><i data-lucide="plus"></i>Ajouter au ticket · <span id="mz-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></button>`}
       </div>`;
 
     const refreshPrice = () => {
@@ -886,7 +884,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
       const bPrice = activePromo ? activePromo.price : (piece ? base : shelf(p.price));
       const u = shelf(bPrice * (100 - sheet.remise) / 100);
       $('#mz-sheet-total', el).textContent = fmtMAD(u * sheet.qty);
-      $('#mz-sheet-per', el).textContent = sheet.remise ? `−${sheet.remise} % · accord gérante` : `${u} MAD × ${sheet.qty}`;
+      $('#mz-sheet-per', el).textContent = sheet.remise ? `−${sheet.remise} %` : `${u} MAD × ${sheet.qty}`;
       $('#mz-sheet-per', el).classList.toggle('rem', !!sheet.remise);
       const cta = $('#mz-sheet-cta', el);
       if (cta) cta.textContent = fmtMAD(u * sheet.qty);
@@ -926,7 +924,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     if (qPlus) qPlus.onclick = () => {
       const piece = p.format === 'service' && sheet.format === 'piece';
       const maxQty = stockAvailable(p.id, sheet.size, piece);
-      if (sheet.qty >= maxQty) { toast(`${p.name} · ${sheet.size}, ${maxQty} en stock, pas plus`); return; }
+      if (piece && sheet.qty >= maxQty) { toast(`${p.name} · ${sheet.size}, ${maxQty} en stock, pas plus`); return; }   // une pièce entière se vend hors stock
       sheet.qty++; refreshPrice();
     };
     const remRow = $('#mz-remise', el);
@@ -977,50 +975,15 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     state.ticket.remiseAuth = { pct, by: by || '', role: role || '', at: new Date().toISOString(), ...(proof ? { proof: String(proof).slice(0, 2048) } : {}) };
   }
 
-  /* Sur une boutique RÉELLE, la remise passe par le vrai code responsable — le
-     même portier que le remboursement et la fermeture de caisse, validé contre la
-     liste du serveur. La liste d'équipe est neutralisée sur un vrai magasin
-     (« Vendeur 1 »), donc la rangée « Aicha approuve » n'y était plus qu'un
-     décor : un appui suffisait, sans code, sans nom. La démo locale garde sa
-     distribution nommée — elle n'a pas de portier à interroger. */
+  /* Une remise ne demande plus de code (propriétaire, 2026-11-23) : la vendeuse
+     en poste l'accorde d'un appui. Son nom et l'heure restent sur la vente, et
+     /api/sale juge toujours l'auteur par la preuve de poste (seller.proof) :
+     au-delà du taux libre, la remise est signalée au tableau de bord, jamais refusée. */
   function openApprove(pct, onOk) {
-    if (pvReal() && typeof window.requireManager === 'function') {
-      if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'discount', key: 'act.discount.pct', args: { pct: `${pct}\u202f%` }, pct: Number(pct) });
-      window.requireManager(`Remise −${pct} % sur le ticket ${state.ticket.num}`, () => {
-        let mgr = null;
-        try { mgr = window.KiwiCaissePairing?.lastManager?.() || null; } catch (_) {}
-        markRemiseAuth(pct, mgr && mgr.name, mgr && mgr.role, mgr && mgr.actProof);
-        toast(mgr && mgr.name ? `Remise −${pct} %, accord ${mgr.name}` : `Remise −${pct} % autorisée`);
-        onOk();
-      });
-      return;
-    }
-    const el = $('#mz-approvem', root);
-    el.innerHTML = `
-      <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-icon="close"></i></button>
-      <h3 class="modal-title">Remise −${pct} %</h3>
-      <p class="modal-subtle">Une remise s'applique avec l'accord de la gérante, qui valide ?</p>
-      <button class="mz-staff-row" id="mz-app-ok">
-        <span class="mz-staff-ava">${initials(STAFF.gerante.name)}</span>
-        <span class="l"><b>${esc(STAFF.gerante.name)}</b><span>${esc(STAFF.gerante.role)}, peut approuver</span></span>
-        <span class="ok">Approuver</span>
-      </button>
-      <button class="mz-staff-row is-no" id="mz-app-no">
-        <span class="mz-staff-ava">${initials(STAFF.conseil.name)}</span>
-        <span class="l"><b>${esc(STAFF.conseil.name)}</b><span>${esc(STAFF.conseil.role)}</span></span>
-        <span class="ok">Non habilitée</span>
-      </button>
-      <div class="mz-foot-note">L'accord vaut pour tout le ticket ${state.ticket.num}, tracé dans le journal.</div>`;
-    openVeil('#mz-approve-veil');
-    icons();
-    $$('[data-mz-close]', el).forEach((b) => { b.onclick = () => closeVeil('#mz-approve-veil'); });
-    $('#mz-app-ok', el).onclick = () => {
-      markRemiseAuth(pct, STAFF.gerante.name, STAFF.gerante.role);
-      closeVeil('#mz-approve-veil');
-      toast(`Remise −${pct} %, accord ${STAFF.gerante.name}`);
-      onOk();
-    };
-    $('#mz-app-no', el).onclick = () => toast(`${STAFF.conseil.name} n'est pas habilitée, seule la gérante approuve une remise`);
+    const me = (STAFF && STAFF.caissiere) || {};
+    markRemiseAuth(pct, me.name, me.role);
+    toast(`Remise −${pct} %`);
+    onOk();
   }
 
   /* ═══════════════════════ CLIENTE — phone & name search (modal du ticket) ═══════ */
@@ -2424,7 +2387,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     }
     const p = P[pid];
     const c = ticketClient();
-    let size = (hit && hit.size && (p.sizes[hit.size] || 0) > 0) ? hit.size
+    let size = (hit && hit.size && p.sizes[hit.size] != null) ? hit.size   // le code-barres scanné prouve la pièce, même à zéro
              : (c && p.kind === 'taille' && (p.sizes[c.taille] || 0) > 0) ? c.taille
              : firstFree(p);
     if (!size) {
@@ -2435,7 +2398,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     /* Pendant un échange, l'article scanné est le REMPLACEMENT : il ouvrait une
        vente ordinaire et l'échange restait en plan. */
     if (state.exchange) { openSheet(pid, { exchange: true, size, color }); return; }
-    addToTicket(pid, { size, color, qty: 1, remise: 0 }, { quiet: true });
+    addToTicket(pid, { size, color, qty: 1, remise: 0 }, { quiet: true, scanned: !!(hit && hit.size) });
     /* A scanned item added to the bill is an Adjust, on the frame the line is added (design 2027, §20.3). */
     try { if (window.KiwiHaptics) window.KiwiHaptics.play('Adjust', window.KiwiHaptics.gid('scan-add')); } catch (_) {}
     toast(`Bip, ${p.name} · ${size} sur le ticket (${fmtMAD(shelf(p.price))})`);

@@ -86,8 +86,9 @@ eq(C.variantStock(product.id, 'S', 'blanc'), 6,
 const pos = retailSource(fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8'));
 ok(pos.includes('availableStock(pid, cfg.size, cfg.color, state.ticket)'),
   'l’ajout au ticket vérifie couleur × taille');
-ok(pos.includes('const stockIssue = ticketStockIssue(t);'),
-  'le checkout revalide le stock avant le paiement');
+/* Vendre hors stock (2026-11-23) : la pièce au comptoir prouve que le compte est faux. */
+ok(!pos.includes('ticketStockIssue') && pos.includes("sale.id, 'vente', true)"),
+  'le paiement ne refuse plus une vente sur un compte faux ; la vente sort même sous zéro');
 ok(pos.includes('const st = availableStock(p.id, s, sheet.color);'),
   'les nombres du modal suivent la couleur sélectionnée');
 ok(!pos.includes('const st = p.sizes[s];'),
@@ -102,6 +103,17 @@ eq(C.receiveStock(whiteS.id, 1.5).ok, false, 'fractional receipt refused');
 eq(C.listVariants(product.id).find(v => v.id === whiteS.id).stock, beforeFraction, 'fractional receipt preserves stock');
 eq(C.adjustVariantStock(product.id, 'S', 'blanc', -1.5), false, 'fractional sale refused');
 eq(C.listVariants(product.id).find(v => v.id === whiteS.id).stock, beforeFraction, 'fractional sale preserves stock');
+
+/* Vente hors stock : sans le drapeau, une sortie au-delà du compte est refusée et ne bouge rien ;
+   avec lui (la vente encaissée), elle sort quand même, la fiche montre 0 et le registre l'écart. */
+C.setStock(whiteS.id, 1);
+eq(C.adjustVariantStock(product.id, 'S', 'blanc', -2), false, 'sortie au-delà du compte refusée sans drapeau');
+eq(C.listVariants(product.id).find(v => v.id === whiteS.id).stock, 1, 'refus sans effet');
+eq(C.adjustVariantStock(product.id, 'S', 'blanc', -2, { oversell: true, why: 'vente', ref: 'T-1' }), true, 'vente hors stock acceptée');
+const oversold = C.listVariants(product.id).find(v => v.id === whiteS.id);
+eq(oversold.stock, 0, 'la fiche montre 0');
+eq(oversold.ledgerStock, -1, 'le registre garde l’écart à recompter');
+C.setStock(whiteS.id, beforeFraction);
 
 for (const lang of ['fr', 'en', 'ar']) {
   let visible = '';

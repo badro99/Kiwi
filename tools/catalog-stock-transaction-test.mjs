@@ -81,9 +81,9 @@ ok(pos.includes('state.checkoutBusy = true;\n    beginPay();')
     && !pos.includes('Vérification du stock…')
     && !pos.includes('cat.reserveSale(frozen.syncId, reserveLines)'),
   'aucun aller-retour réseau ne peut bloquer l’ouverture du paiement');
-ok(pos.includes('stockCheck: () => ticketStockIssue({ lines: frozen.lines })')
-    && pos.includes("persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.id, 'vente')"),
-  'la variante exacte est revérifiée au paiement puis débitée avec la référence du ticket imprimé');
+ok(!pos.includes('stockCheck:')   // vendre hors stock (2026-11-23) : plus de refus au paiement
+    && pos.includes("persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.id, 'vente', true)"),
+  'la variante exacte est débitée avec la référence du ticket imprimé, même sous zéro');
 // Les réservations d'un encaissement vivent dans assets/boutique-catalog-parts.js.
 const client = ['assets/boutique-catalog-parts.js', 'assets/boutique-catalog.js']
   .map((f) => retailSource(fs.readFileSync(path.join(ROOT, f), 'utf8'))).join('\n');

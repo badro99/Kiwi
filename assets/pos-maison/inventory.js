@@ -1,9 +1,9 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=248';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=161';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=252';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=165';
 import { mzInvSearch, mzSkinOn } from './kit-2027.js?v=14';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=161';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=165';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
-import { openMoves } from './inv-moves.js?v=3';
+import { openMoves } from './inv-moves.js?v=3'; import { invProducts, recountPill, gapLabel } from '../pos-boutique/oversell.js?v=2';
 /* Les messages créés ici passent par la langue de la caisse (assets/caisse-lang.js). */
 const tr = (s) => (window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s);
 /* « ← Inventaire » en tête de Mouvements de stock et de Déclarer casse : leurs écrans se redessinent souvent, on écoute donc une fois, au document. */
@@ -862,7 +862,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
     const st = cat.stats();
     const cats = cat.listCategories();
     const filter = state.invFilter || 'all';
-    const products = cat.listProducts({ categoryId: filter, q: state.invQuery || '' });
+    const products = invProducts(cat, filter, state.invQuery);   // filtre « À recompter » : les articles vendus sous zéro
     mzInvPaint(panel, `
       <div class="bqi mz-page">
         <header class="mz-head">
@@ -877,7 +877,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
           ${catalogueAdminEnabled() ? '<button class="mz-btn" id="mzi-category"><i data-icon="folder_copy"></i>Catégories</button><button class="mz-btn primary" id="mzi-new"><i data-icon="add"></i>Nouvel article</button>' : `<span class="mzi-dashboard-only">${esc(tillInventoryRefusal())}</span>`}
         </div>
         <div class="mzi-pills" id="mzi-pills">
-          <button class="mzi-pill ${filter === 'all' ? 'on' : ''}" data-f="all">Tous · ${st.products}</button>
+          <button class="mzi-pill ${filter === 'all' ? 'on' : ''}" data-f="all">Tous · ${st.products}</button>${recountPill(cat, filter, 'mzi-pill')}
           ${cats.map((c) => `<button class="mzi-pill ${filter === c.id ? 'on' : ''}" data-f="${c.id}">${esc(c.name)} · ${cat.categoryCount(c.id)}</button>`).join('')}
         </div>
         <div class="mzi-kpis">
@@ -904,7 +904,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
     /* Mouvements et casse vivent DANS l'Inventaire (propriétaire, 2026-10-30) : plus de place à eux dans le rail. */
     const mvb = $('#mzi-moves', panel); if (mvb) mvb.onclick = () => openMoves({ setModal: invSetModal, esc, icons, catDB, toast, onNew: openMovementPicker });   // la fenêtre de la boutique (inv-moves.js)
     const csb = $('#mzi-casse', panel); if (csb) csb.onclick = () => switchView('casse');
-    const ib = $('#mzi-intake', panel); if (ib) ib.onclick = () => openIntake(); import('./avance-restock.js?v=17').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   /* avances expirées : chaque pièce scannée revient en stock */
+    const ib = $('#mzi-intake', panel); if (ib) ib.onclick = () => openIntake(); import('./avance-restock.js?v=21').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   /* avances expirées : chaque pièce scannée revient en stock */
     const nb = $('#mzi-new', panel); if (nb) nb.onclick = openNewProduct;
     const mb = $('#mzi-category', panel); if (mb) mb.onclick = openCategories;
     const pills = $('#mzi-pills', panel);
@@ -922,7 +922,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
     return `<div class="mzi-row" data-inv-open="${p.id}">
       <span class="mzi-art">${artOf(p)}</span>
       <span class="mzi-info"><b>${esc(p.name)}</b><span>${d.category ? esc(d.category.name) : 'Divers'} · ${d.colors.length} coul. · ${d.sizes.length} taille${d.sizes.length > 1 ? 's' : ''} · ${nBc}/${d.variants.length} codes-barres</span></span>
-      <span class="mzi-stock ${cls}">${d.stock}</span>
+      <span class="mzi-stock ${cls}">${d.stock}${gapLabel(cat, p.id, esc)}</span>
       <span class="mzi-price">${fmtMAD(shelf(p.priceMAD))}</span>
       <button class="mzi-mini" data-inv-print="${p.id}" title="Imprimer toutes les étiquettes"><i data-lucide="printer"></i></button>
     </div>`;

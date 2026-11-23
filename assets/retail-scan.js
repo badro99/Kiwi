@@ -164,9 +164,11 @@
   function cartQty() { return state.cart.reduce(function (s, l) { return s + (+l.qty || 0); }, 0); }
   function lineFor(hit) { return state.cart.find(function (l) { return l.variantId === hit.variant.id; }); }
   function addHit(hit, quiet) {
-    if (!hit || !(hit.stock > 0)) { if (!quiet) toast('Article en rupture, impossible de l’ajouter'); return false; }
+    if (!hit) return false;
     var line = lineFor(hit), qty = line ? +line.qty || 0 : 0;
-    if (qty >= hit.stock) { if (!quiet) toast('Stock atteint pour ' + hit.product.name); return false; }
+    /* Vendre hors stock (2026-11-23, pos-boutique/oversell.js) : la pièce scannée est
+       au comptoir, c'est le compte qui est faux. Elle se vend, l'écart reste à recompter. */
+    var over = qty >= hit.stock;
     if (line) {
       line.qty++;
       line.maxStock = hit.stock;
@@ -181,15 +183,14 @@
       });
     }
     saveSession(); renderCart();
-    if (!quiet) toast('Ajouté · ' + hit.product.name + ' · ' + fmt(hit.price));
+    if (!quiet) toast((over ? 'Hors stock, à recompter · ' : 'Ajouté · ') + hit.product.name + ' · ' + fmt(hit.price));
     return true;
   }
   function setQty(idx, qty) {
     var l = state.cart[idx]; if (!l) return;
     qty = Math.floor(+qty || 0);
     if (qty <= 0) state.cart.splice(idx, 1);
-    else if (qty <= (+l.maxStock || 0)) l.qty = qty;
-    else { toast('Stock limité à ' + l.maxStock + ' · ' + l.name); return; }
+    else l.qty = qty;   // au-delà du compte : vendu hors stock, à recompter
     saveSession(); renderCart();
   }
 

@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=267';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=185';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=267';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=267';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=268';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=186';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=268';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=268';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=8';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=3';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=6';
@@ -109,20 +109,6 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
   function firstFreeFor(p, color, ticket) {
     return sizesOf(p).find((size) => availableStock(p.id, size, color, ticket) > 0) || null;
   }
-  function ticketStockIssue(ticket) {
-    const seen = new Set();
-    for (const ln of ticket.lines || []) {
-      const id = canonicalPid(ln.pid);
-      const color = colorKey(ln.pid, ln.color);
-      const key = JSON.stringify([id, String(ln.size), color]);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const needed = ticketHeld(id, ln.size, color, ticket);
-      const onHand = variantStock(id, ln.size, color);
-      if (needed > onHand) return { pid: ln.pid, size: ln.size, color, needed, onHand };
-    }
-    return null;
-  }
   function showStockIssue(issue) {
     const p = P[issue.pid];
     const label = p ? p.name : 'Article';
@@ -147,7 +133,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
      de cette famille. Une SORTIE ne doit jamais emprunter le stock d'une autre
      couleur. Un retour sans couleur appariable remonte maintenant comme stock à
      rapprocher au lieu de créditer silencieusement une autre couleur. */
-  function persistStock(pid, size, color, delta, ref, why) {
+  function persistStock(pid, size, color, delta, ref, why, oversell) {   // oversell : une vente encaissée sort même sous zéro (pos-boutique/oversell.js)
     if (!delta || !pvReal()) return true;
     try {
       // Retail stock and its durable movement line are one operation. Without
@@ -158,7 +144,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       if (!cat || !cat.adjustVariantStock) return false;
       const id = canonicalPid(pid);
       return cat.adjustVariantStock(id, size, colorKey(pid, color), delta, {
-        ref: ref || '', why: why || (delta < 0 ? 'vente' : 'retour'),
+        ref: ref || '', why: why || (delta < 0 ? 'vente' : 'retour'), oversell: !!oversell,
         actor: STAFF && STAFF.caissiere ? STAFF.caissiere.name : '',
       });
     } catch (_) { return false; }
@@ -1826,12 +1812,8 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Vente suspendue'), 'La tablette ne peut plus sécuriser la file hors-ligne. Contactez le support avant de continuer.');
       return;
     }
-    /* Le ticket tient une réservation LOCALE, tandis que le catalogue peut être
-       corrigé depuis l'inventaire ou un autre onglet pendant qu'il reste ouvert.
-       On relit donc les vraies déclinaisons avant même de consommer un numéro de
-       ticket. Une taille disponible dans une autre couleur ne compte pas. */
-    const stockIssue = ticketStockIssue(t);
-    if (stockIssue) { showStockIssue(stockIssue); return; }
+    /* Plus de relecture du stock à l'encaissement (2026-11-23) : la pièce est au
+       comptoir, une vente ne se refuse plus pour un compte faux (pos-boutique/oversell.js). */
     /* A cart left open over New Year's midnight belongs to the new annual
        sequence at payment time. It has not been printed or committed yet, so
        replacing the number is safe and prevents a January sale from consuming
@@ -1897,12 +1879,6 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       promo: tot.promo ? { amount: tot.promo, label: promoLabelForTicket(t) } : null,
       discount: tot.remise + tot.reward,
       customer: c ? { name: c.name, phone: c.phone, points: c.points, loyalty: (frozen.reward && frozen.reward.clientId === frozen.clientId) ? frozen.reward.label : '' } : null,
-      /* Deuxième lecture juste avant que la caissière choisisse son premier mode
-         de paiement : elle couvre une correction de stock arrivée pendant que
-         la fenêtre d'encaissement était ouverte, sans jamais bloquer un paiement
-         déjà commencé. */
-      stockCheck: () => ticketStockIssue({ lines: frozen.lines }),
-      onStockError: showStockIssue,
       onCancel: () => {
         state.checkoutBusy = false;
       },
@@ -1969,7 +1945,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
         if (IS_DEMO) saleSeq++;
         // Les pièces vendues sortent du stock PARTAGÉ, sauf une livraison en Live (z-split.js › zHoldsStock).
         sale.stockHeld = zHoldsStock(parts, window.KiwiLive && window.KiwiLive.isOn());
-        if (!sale.stockHeld) sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.id, 'vente'));
+        if (!sale.stockHeld) sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.id, 'vente', true));
         // Mirror the sale to the owner/operator dashboard (Live Link) so the
         // boutique's real sales show up on the "En direct" feed + running total —
         // the main caisse does the same via recordSale(). No-op unless live is on;
