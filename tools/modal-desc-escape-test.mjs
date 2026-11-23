@@ -64,7 +64,7 @@ for (const raw of [
 ]) { assert.ok(!raw.test(vision), 'agent-vision : plus de concaténation brute ' + raw); controls++; }
 for (const safe of [
   'esc(ent.supplier)', 'esc(ent.date)', 'esc(ent.invoiceNumber)', 'esc(it.name)', 'esc(data.title ||', 'esc(data.summary ||',
-  'esc(data.categoryLabel ||', 'esc(filename)', 'esc(err.message ||', 'esc(dataUrl)', 'esc(act.label)', 'esc(act.type)',
+  'esc(data.categoryLabel ||', 'esc(filename)', 'esc(late || err.message ||', 'esc(dataUrl)', 'esc(act.label)', 'esc(act.type)',
 ]) has(vision, safe, 'agent-vision : ' + safe);
 
 console.log('modal-desc-escape-test: ' + controls + ' controls passed');
