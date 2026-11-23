@@ -85,7 +85,7 @@
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function clone(o) { try { return JSON.parse(JSON.stringify(o)); } catch (_) { return o; } }
   function str(v, max) { return String(v == null ? '' : v).trim().slice(0, max || 120); }
-  function num(v) { var n = +v; return isFinite(n) ? n : 0; }
+  function num(v) { var n = +v; return isFinite(n) ? n : 0; }  var ext = {};   // KiwiReceipt.ext : rendus posés par un autre fichier (doc.gift → receipt-gift.js, ce fichier étant à son plafond)
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -934,7 +934,7 @@
        celui du remboursement : ce papier ne doit pas pouvoir passer pour un
        ticket de vente. */
     if (doc.summary) b.feed(1).size(1, 2).line(doc.summary.title).size(1, 1);
-    if (doc.copy) b.line('·' + doc.copy + '·');
+    if (doc.copy) b.line('·' + doc.copy + '·');  if (doc.gift && ext.gift) return ext.gift.escpos(b, doc, { T: T, cols: cols, row: row, rule: rule, wrap: wrapText, credit: PLATFORM_CREDIT });
 
     if (doc.voucher) {
       var vo = doc.voucher, V = vo.V;
@@ -1114,7 +1114,7 @@
     if (refund) P('kr-banner', T.refund);
     if (doc.acompte) P('kr-banner', doc.acompte.remaining > 0 ? 'ACOMPTE' : 'SOLDE DE L’ACOMPTE');
     if (doc.summary) P('kr-banner', doc.summary.title);
-    if (doc.copy) P('kr-c kr-copy', '·' + doc.copy + '·');
+    if (doc.copy) P('kr-c kr-copy', '·' + doc.copy + '·');  if (doc.gift && ext.gift) return ext.gift.html(doc, out, { T: T, P: P, Rh: Rh, code: code, esc: esc, credit: PLATFORM_CREDIT });
 
     if (doc.voucher) {
       var vh = doc.voucher, VH = vh.V;
@@ -1286,7 +1286,7 @@
     if (doc.kind === 'refund') out.push(T.refund);
     if (doc.acompte) out.push(doc.acompte.remaining > 0 ? 'ACOMPTE' : 'SOLDE DE L’ACOMPTE');
     if (doc.summary) out.push(doc.summary.title);
-    if (doc.copy) out.push('·' + doc.copy + '·');
+    if (doc.copy) out.push('·' + doc.copy + '·');  if (doc.gift && ext.gift) return ext.gift.text(doc, out, { T: T, cols: cols, row: row });
     out.push(new Array(cols + 1).join('-'));
     if (doc.meta.ref) out.push(row(T.no, doc.meta.ref));
     out.push(row(doc.summary ? T.period : T.date, doc.meta.date + ' ' + doc.meta.time));
@@ -1672,7 +1672,7 @@
     /* numérotation */
     nextRef: nextRef,
     /* divers */
-    venueKey: venueKey, subscribe: subscribe, money: money, moneyMAD: moneyMAD,
+    venueKey: venueKey, subscribe: subscribe, money: money, moneyMAD: moneyMAD, ext: ext,
     /* '' quand la copie serveur est à jour ; sinon la raison du refus. Un reçu
        réglé qui ne quitte pas l'appareil est un reçu que la caisse n'imprimera
        jamais : l'éditeur doit pouvoir le dire. */

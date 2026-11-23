@@ -19,8 +19,8 @@
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
   '/assets/retail-bestsellers.js?v=2',
-  '/assets/pos-maison/avance-restock.js?v=23',
-  '/assets/pos-boutique/avance-restock.js?v=30',
+  '/assets/pos-maison/avance-restock.js?v=24',
+  '/assets/pos-boutique/avance-restock.js?v=34',
   '/assets/retail-avance.js?v=6',
   '/assets/request-deadline.mjs?v=1',
   '/assets/serveur/reopened-bill.mjs?v=1',
@@ -59,7 +59,7 @@ var SHELL = [
   '/assets/team/styles.js?v=6',
   '/assets/team/access-rules.js?v=8',
   '/assets/hotel-economat-transport.js?v=30',
-  '/assets/pos-boutique/drawer.js?v=189',
+  '/assets/pos-boutique/drawer.js?v=193',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=26',
@@ -410,7 +410,7 @@ var SHELL = [
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
-  '/assets/receipt.js?v=33',
+  '/assets/receipt.js?v=34', '/assets/receipt-gift.js?v=3',
   '/assets/receipt-ui.js?v=3',
   '/assets/invoice.js?v=28',
   '/assets/merchant-config.js?v=292',
@@ -542,7 +542,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=37',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=38',
-  '/assets/pos-dispatch.js?v=509',
+  '/assets/pos-dispatch.js?v=510',
   '/assets/retail-scan.css?v=11',
   '/assets/retail-balances.css?v=5',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -615,15 +615,15 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=377',
-  '/assets/pos-boutique/sales.js?v=271',
+  '/assets/pos-boutique.css?v=381',
+  '/assets/pos-boutique/sales.js?v=275',
   '/assets/retail-photos.js?v=8',
   '/assets/retail-icon-picker.js?v=8',
   '/assets/pos-boutique/ticket-owner.js?v=8',
   '/assets/pos-boutique/till-clock.js?v=2',
   '/assets/pos-boutique/old-sales.js?v=2',
   '/assets/pos-boutique/paid-share.js?v=2',
-  '/assets/pos-boutique/exch-combined.js?v=33',
+  '/assets/pos-boutique/exch-combined.js?v=37',
   '/assets/exchange-queue.js?v=1',
   '/assets/pos-boutique/ticket-number.js?v=7',
   '/assets/pos-boutique/receipt-doc.js?v=4',
@@ -642,12 +642,12 @@ var SHELL = [
   '/assets/pos-boutique/kit-2027.js?v=26',
   '/assets/pos-boutique/seller-day.js?v=3',
   '/assets/pos-boutique/card-check.js?v=1',
-  '/assets/pos-boutique/seller-pick.js?v=2',
+  '/assets/pos-boutique/seller-pick.js?v=2', '/assets/pos-boutique/gift-ticket.js?v=4',
   '/assets/pos-boutique/calm-typing.js?v=1',
-  '/assets/pos-boutique/checkout.js?v=271',
-  '/assets/pos-boutique/inventory.js?v=271',
+  '/assets/pos-boutique/checkout.js?v=275',
+  '/assets/pos-boutique/inventory.js?v=275',
   '/assets/pos-boutique/sister-stock.js?v=1',
-  '/assets/pos-boutique.js?v=377',
+  '/assets/pos-boutique.js?v=381',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -682,22 +682,22 @@ var SHELL = [
   '/assets/pos-gym.js?v=9',
   '/assets/pos-autre.css?v=9',
   '/assets/pos-autre.js?v=9',
-  '/assets/pos-maison.css?v=254',
-  '/assets/pos-maison/sales.js?v=167',
+  '/assets/pos-maison.css?v=255',
+  '/assets/pos-maison/sales.js?v=168',
   '/assets/pos-maison/ticket-remise.js?v=5',
   '/assets/pos-maison/client-view.js?v=1',
-  '/assets/pos-maison/checkout.js?v=167',
+  '/assets/pos-maison/checkout.js?v=168',
   '/assets/pos-maison/delivery.js?v=28',
   '/assets/refund-split.js?v=2',
-  '/assets/pos-maison/inventory.js?v=167',
-  '/assets/pos-maison.js?v=254',
+  '/assets/pos-maison/inventory.js?v=168',
+  '/assets/pos-maison.js?v=255',
   '/assets/caisse-pairing.js?v=86',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
-  '/assets/pos-reprint.js?v=22',
+  '/assets/pos-reprint.js?v=25',
   '/assets/pressing-caisse.js?v=131',
   '/assets/pressing-caisse.css?v=131',
   '/assets/material-icons.js?v=7',

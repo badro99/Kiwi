@@ -1,7 +1,7 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=254';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=255';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=167';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=167';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=168';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=168';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
@@ -1106,7 +1106,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
             <span class="l"><b>Code d’avoir</b><span>${avs.length ? 'Tous les bons de cette cliente sont déjà posés · scanner ou saisir un autre code' : 'Scanner ou saisir le code du bon'}</span></span>
           </button>`}
         </div>`;
-      dropOffMethods(el, 'maison', 'mz'); icons(); closeBtns();
+      dropOffMethods(el, 'maison', 'mz'); icons(); closeBtns(); if (opts.gift) opts.gift.chip(el);   // « Ticket cadeau » (pos-boutique/gift-ticket.js)
       const saveAcompte = $('#mz-save-acompte', el);
       if (saveAcompte) saveAcompte.onclick = () => { void commit(true); };
       const inp = $('#mz-split-in', el);
@@ -1397,7 +1397,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
         opts.amount = paidNow;
         opts.title = onAccount ? mt('Compte client') : partial ? mt('Acompte') : mt('Solde de l’acompte');
       }
-      if (res.delivery || parts.some((x) => x.m === 'livraison')) stepSuccess(parts, res);
+      if (opts.gift) opts.gift.print(opts); if (res.delivery || parts.some((x) => x.m === 'livraison')) stepSuccess(parts, res);
       else { closeVeil('#mz-pay-veil'); printReceiptNow(opts, parts); }
     };
 

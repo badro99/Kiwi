@@ -501,6 +501,27 @@
     });
   }
 
+  /* Le ticket cadeau (God mode › « Ticket cadeau », assets/receipt-gift.js) :
+   * le ticket de la vente, sans un seul prix. Boutique et maison seulement :
+   * leurs caisses importent receipt-gift.js (pos-boutique/gift-ticket.js, pos-maison.js).
+   * Comme le duplicata, rien n'est écrit : le seul effet est le papier. */
+  function giftApi() { var K = window.KiwiReceipt; return (K && K.ext && K.ext.gift) || null; }
+  function giftOk(vertical) {
+    var G = giftApi();
+    return (vertical === 'boutique' || vertical === 'maison') && !!G && G.enabled();
+  }
+  function giftPrint(entry) {
+    var K = window.KiwiReceipt, G = giftApi(), doc;
+    if (!G) return Promise.resolve(null);
+    try { doc = entry && entry.rc && K.fromSnapshot ? K.fromSnapshot(entry.rc) : K.build(docFrom(entry)); } catch (_) { doc = null; }
+    if (!doc) { toast(tr('Ticket introuvable')); return Promise.resolve(null); }
+    toast(tr('Impression du ticket cadeau…'));
+    return G.print(doc).then(
+      function (r) { toast(tr(r && r.ok ? 'Ticket cadeau imprimé' : "Impression échouée, le ticket n'est pas sorti")); return r; },
+      function () { toast(tr("Impression échouée, le ticket n'est pas sorti")); return null; }
+    );
+  }
+
   /* La boutique n'annule pas de vente : un retour passe par l'échange ou
      l'avoir. « Réimprimer » ressort un ticket, rien de plus. */
   function canCancel(vertical) { return String(vertical) !== 'boutique'; }
@@ -531,6 +552,7 @@
       ? '<button type="button" class="ma-btn" data-kx-rp-back>' + tr('Retour') + '</button>' + cancelBtn + reopenBtn
       : '<button type="button" class="ma-btn" data-kx-rp-back>' + tr('Retour') + '</button>'
         + '<button type="button" class="ma-btn" data-kx-rp-print>' + tr('Réimprimer') + '</button>'
+        + (giftOk(vertical) ? '<button type="button" class="ma-btn" data-kx-rp-gift>' + tr('Ticket cadeau') + '</button>' : '')
         + '<button type="button" class="ma-btn" data-kx-rp-invoice>' + tr('Facture PDF') + '</button>' + cancelBtn + reopenBtn;
     box.innerHTML = '<div class="kx-rp-head"><h3>' + esc(entry.label || entry.ref || tr('Ticket')) + '</h3>'
       + '<p>' + esc(dayLabel(entry.ts) + ' · ' + hm(entry.ts) + ' · ' + methodLabel(entry.method))
@@ -541,6 +563,8 @@
     box.querySelector('[data-kx-rp-back]').addEventListener('click', function () { open(vertical, { noFetch: true }); });
     var printBtn = box.querySelector('[data-kx-rp-print]');
     if (printBtn) printBtn.addEventListener('click', function () { close(); reprint(vertical, entry); });
+    var giftBtn = box.querySelector('[data-kx-rp-gift]');
+    if (giftBtn) giftBtn.addEventListener('click', function () { close(); giftPrint(entry); });
     var invBtn = box.querySelector('[data-kx-rp-invoice]');
     if (invBtn) {
       invBtn.addEventListener('click', function () {
@@ -780,6 +804,6 @@
 
   window.KiwiPosReprint = {
     mount: mount, open: open, openCancel: function (vertical) { return open(vertical, { mode: 'cancel' }); }, rows: rows, docFrom: docFrom,
-    reprint: reprint, printList: printList, provide: provide, cancelSale: cancelSale,
+    reprint: reprint, giftPrint: giftPrint, printList: printList, provide: provide, cancelSale: cancelSale,
   };
 })();
