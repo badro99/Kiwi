@@ -46,15 +46,28 @@
     isEmpty: (d) => !d || !d.items || (!Object.keys(d.items).length && !Object.keys(d.removed || {}).length),
   });
 
+  /* Coût simple : le propriétaire écrit lui-même le prix de la portion de
+   * l'ingrédient (`price`, en MAD, pour la recette entière). Une telle ligne
+   * n'appartient à aucun article : jamais liée au stock, jamais décomptée par
+   * la caisse, son prix est son coût. Vide = pas de prix saisi (jamais 0). */
+  const manualPrice = (v) => {
+    if (v == null || String(v).trim() === '') return null;
+    const n = Number(String(v).replace(',', '.'));
+    return Number.isFinite(n) && n >= 0 ? fine(n) : null;
+  };
+  const isManual = (line) => !!line && line.price != null;
   function normalizeIngredient(value) {
     if (typeof value === 'string') return { stockId: '', name: clean(value), qty: 0, unit: '' };
     const v = value || {};
-    return {
-      stockId: clean(v.stockId || v.invId),
+    const price = manualPrice(v.price);
+    const out = {
+      stockId: price == null ? clean(v.stockId || v.invId) : '',
       name: clean(v.name),
       qty: number(v.qty),
       unit: units()?.normalize?.(v.unit, '') || clean(v.unit),
     };
+    if (price != null) out.price = price;
+    return out;
   }
   /* Plafonds d'une fiche. normalizeRecipe lit des données déjà stockées et
    * garde ses bornes ; à l'enregistrement, dépasser est REFUSÉ (jamais coupé en
@@ -99,12 +112,17 @@
     } catch (_) { return []; }
   }
   function stockForRows(ingredient, rows) {
+    if (isManual(ingredient)) return null;   // prix saisi : aucun article, même homonyme
     return window.KiwiStockIdentity?.resolve?.(ingredient, rows)
       || rows.find((x) => ingredient.stockId && String(x.id) === ingredient.stockId)
       || rows.find((x) => norm(x.name) === norm(ingredient.name)) || null;
   }
   function stockFor(ingredient, id) { return stockForRows(ingredient, inventory(id)); }
   function ingredientInfo(ingredient, id) {
+    if (isManual(ingredient)) {
+      const u = units()?.normalize?.(ingredient.unit, '') || clean(ingredient.unit);
+      return { stock: null, cost: null, stockUnit: '', recipeUnit: u, quantityInStockUnit: null, lineCost: fine(ingredient.price), manual: true };
+    }
     const stock = stockFor(ingredient, id);
     const cost = stock && stock.costPerUnit != null && String(stock.costPerUnit).trim() !== '' && Number.isFinite(Number(stock.costPerUnit)) ? number(stock.costPerUnit) : null;
     const stockUnit = units()?.normalize?.(stock?.unit, '') || clean(stock?.unit);
@@ -160,11 +178,12 @@
     const known = infos.filter((x) => x.lineCost != null);
     const total = known.reduce((sum, x) => sum + x.lineCost, 0);
     const theoreticalCost = round(total / Math.max(1, r.portions));
-    const costComplete = !!infos.length && known.length === infos.length && infos.every((x) => number(x.line.qty) > 0);
+    const costComplete = !!infos.length && known.length === infos.length && infos.every((x) => x.manual || number(x.line.qty) > 0);
     const sold = salesFor(item?.id, item?.name || r.itemName, id, 7);
     /* One ingredient can feed several dishes. Attribute its physical usage to
      * this recipe by this recipe's theoretical share, never the whole sack. */
     const tracked = infos.map((x) => {
+      if (x.manual) return null;   // hors stock : rien d'observé, le coût reste celui de la fiche
       if (!x.stock || !(number(x.stock.usageThisWeek) > 0)) return null;
       const totalTheoretical = theoreticalUsage(x.stock.id, id, 7);
       if (!(totalTheoretical > 0)) return null;
@@ -206,6 +225,15 @@
       let complete = !!r.ingredients.length;
       r.ingredients.forEach((line, index) => {
         const info = ingredientInfo(line, vid);
+        if (info.manual) {
+          /* Prix saisi : un ingrédient propre à la recette, sans article. Une
+             ligne « 1 × son prix », sans `stock` : la caisse n'en sort rien. */
+          const mid = `recipe:${itemId}:${index}`, mpos = d.ingredients.findIndex((x) => String(x.id) === mid);
+          const ming = { id: mid, name: line.name, unit: '', useCost: info.lineCost, stockId: '', manual: true, at: Date.now() };
+          if (mpos >= 0) d.ingredients[mpos] = ming; else d.ingredients.push(ming);
+          lines.push({ ing: mid, qty: 1, stock: '', stockQty: null, stockUnit: '' });
+          return;
+        }
         /* An ingredient named without an explicit article still resolves to one
          * by name. Carry that article's id, or the stock movement it should
          * produce would land on an identifier no ledger knows. */
@@ -285,7 +313,9 @@
     if (tooLong(value)) return false;   // refusé, rien n'est écrit ni coupé
     const tomb = +(store.get(venue(id)).removed || {})[itemId] || 0;
     const normalized = normalizeRecipe({ ...value, itemId, updatedAt: Math.max(Date.now(), tomb + 1) }, itemId);
-    const next = window.KiwiStockIdentity?.bindRecipe?.(normalized, inventory(id)) || normalized;
+    const bound = window.KiwiStockIdentity?.bindRecipe?.(normalized, inventory(id)) || normalized;
+    /* Le rattachement par nom ne touche jamais une ligne à prix saisi. */
+    const next = { ...bound, ingredients: (bound.ingredients || []).map((l) => (isManual(l) ? { ...l, stockId: '' } : l)) };
     const result = store.update((d) => {
       d.items = d.items || {};
       d.items[itemId] = next;

@@ -215,6 +215,7 @@ textarea.rmw-rx-in{height:auto;min-height:92px;padding:10px 11px;line-height:1.5
 [dir="rtl"] .kiwi-backdrop.rmw-recipe-modal select.rmw-rx-unit{background-position:15px 50%,11px 50%!important}
 .rmw-rx-unit:focus{outline:0;border-color:var(--atlas);box-shadow:0 0 0 3px color-mix(in srgb,var(--atlas) 16%,transparent)}
 .rmw-rx-cost{height:38px;display:flex;align-items:center;justify-content:flex-end;font:600 13px var(--sans);font-variant-numeric:tabular-nums;color:var(--ink)}
+.rmw-rx-price .rmw-rx-in{width:100%;text-align:right;font-variant-numeric:tabular-nums}.rmw-rx-price small{display:none}
 .rmw-rx-del{width:32px;height:38px;display:grid;place-items:center;padding:0;border:0;border-radius:9px;background:transparent;color:var(--n-500);cursor:pointer}
 .rmw-rx-del svg,.rmw-rx-add svg{width:18px;height:18px}
 .rmw-rx-del:hover,.rmw-rx-del:focus-visible{outline:0;background:color-mix(in srgb,var(--danger,#b94b38) 10%,transparent);color:var(--danger,#b94b38)}
@@ -243,7 +244,7 @@ textarea.rmw-rx-in{height:auto;min-height:92px;padding:10px 11px;line-height:1.5
 .rmw-rx-side .rmw-nutri-head-acts .btn-slim{width:100%;justify-content:center}
 .rmw-rx-side .rmw-nutri-muted{font-size:11.5px;line-height:1.4}
 @media(max-width:900px){.rmw-rx{grid-template-columns:1fr}.rmw-rx-side{position:static;order:-1}.rmw-rx-draft{order:-2}}
-@media(max-width:620px){.rmw-rx-sec{padding:14px}.rmw-rx-sec-head{flex-direction:column}.rmw-rx-cols{display:none}.rmw-rx-row{grid-template-columns:minmax(0,1fr) 32px;gap:8px}.rmw-rx-name{grid-column:1}.rmw-rx-del{grid-column:2;grid-row:1}.rmw-rx-qty{grid-column:1}.rmw-rx-cost{grid-column:2;grid-row:2;justify-content:flex-end;font-size:12px;height:38px}.rmw-rx-notes{grid-template-columns:1fr}}
+@media(max-width:620px){.rmw-rx-row .rmw-rx-price{grid-column:1/-1;grid-row:auto}.rmw-rx-sec{padding:14px}.rmw-rx-sec-head{flex-direction:column}.rmw-rx-cols{display:none}.rmw-rx-row{grid-template-columns:minmax(0,1fr) 32px;gap:8px}.rmw-rx-name{grid-column:1}.rmw-rx-del{grid-column:2;grid-row:1}.rmw-rx-qty{grid-column:1}.rmw-rx-cost{grid-column:2;grid-row:2;justify-content:flex-end;font-size:12px;height:38px}.rmw-rx-notes{grid-template-columns:1fr}}
 `;document.head.appendChild(s);}
   function itemStyle(){if($('#rmw-item-css'))return;const s=document.createElement('style');s.id='rmw-item-css';s.textContent=`
 .rmw-item-workspace .kiwi-modal-head{transition:box-shadow 160ms}

@@ -10,8 +10,13 @@
     const api=window.KiwiRestaurantUnits,selected=api?.normalize?.(value,'')||'';
     return `<option value="">${esc(ui('rxChoose'))}</option>${(api?.list?.()||[]).map(unit=>`<option value="${esc(unit.id)}" title="${esc(unit.label)}"${unit.id===selected?' selected':''}>${esc(unit.family==='mass'||unit.family==='volume'?unit.id:unit.label)}</option>`).join('')}`;
   }
+  /* Coût simple allumé : chaque ligne prend un « prix de la portion » saisi à
+     la main, sans passer par Stock & Appro. Une ligne qui en porte déjà un le
+     garde lisible même si l'option est éteinte ensuite. */
+  const manualOn=()=>{try{return !!window.KiwiSimpleFoodCost?.available?.();}catch(_){return false;}};
+  const priceOf=(row)=>{const el=$('[data-ing-price]',row);if(!el)return null;const v=String(el.value).trim().replace(',','.');if(v==='')return null;const n=+v;return Number.isFinite(n)&&n>=0?n:null;};
   function recipeIngredientRow(line,idx){
-    const name=line?.name||'';
+    const name=line?.name||'',hasPrice=line?.price!=null,manual=manualOn()||hasPrice;
     return `<div class="rmw-rx-row" data-recipe-ing data-stock-id="${esc(line?.stockId||'')}">` +
       `<div class="rmw-rx-name">` +
       `<input class="rmw-rx-in" list="rmw-stock-ingredients" data-ing-name value="${esc(name)}" placeholder="${esc(ui('rxIngPh'))}" aria-label="${esc(ui('rxIngredient'))}"/>` +
@@ -22,7 +27,7 @@
       `<input class="rmw-rx-in" type="number" inputmode="decimal" min="0" step="0.001" data-ing-qty value="${+line?.qty||0}" placeholder="0" aria-label="${esc(ui('rxQty'))}"/>` +
       `<select class="rmw-rx-unit" data-ing-unit data-kiwi-native-select aria-label="${esc(ui('rxChoose'))}">${recipeUnitOptions(line?.unit)}</select>` +
       `</div>` +
-      `<div class="rmw-rx-cost" data-ing-cost>·</div>` +
+      (manual?`<div class="rmw-rx-cost rmw-rx-price"><input class="rmw-rx-in" type="number" inputmode="decimal" min="0" step="0.01" data-ing-price value="${hasPrice?esc(line.price):''}" placeholder="${esc(ui('rxManualPh'))}" aria-label="${esc(ui('rxManualCol'))}"/><small data-ing-cost></small></div>`:`<div class="rmw-rx-cost" data-ing-cost>·</div>`) +
       `<button data-activation=write class="rmw-rx-del" type="button" data-ing-delete aria-label="${esc(ui('rxRemove',{name:name||ui('rxIngredient')}))}">` +
       `<svg viewBox="0 -960 960 960" aria-hidden="true">` +
       `<path fill="currentColor" d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>` +
@@ -35,6 +40,8 @@
   function recipeLineInfo(row,api,inv){
     const units=window.KiwiRestaurantUnits,name=$('[data-ing-name]',row).value.trim(),qty=Math.max(0,+$('[data-ing-qty]',row).value||0),unit=units?.normalize?.($('[data-ing-unit]',row).value,'')||'';
     if(!name)return{empty:true};
+    const price=priceOf(row);
+    if(price!=null)return{name,state:'ok',cost:price,manual:true,meta:ui('rxManualMeta')};
     const hit=inv.find(s=>String(s.id)===row.dataset.stockId)||inv.find(s=>String(s.name).trim().toLowerCase()===name.toLowerCase());
     let info=null;
     try{
@@ -43,7 +50,7 @@
       info=null;
     }
     const stock=info?.stock||hit||null;
-    if(!stock)return{name,state:'unlinked',meta:ui('rxUnlinked')};
+    if(!stock)return{name,state:'unlinked',meta:ui($('[data-ing-price]',row)?'rxManualNeed':'rxUnlinked')};
     if(info?.cost==null)return{name,state:'noprice',meta:ui('rxNoPrice')};
     if(!(qty>0))return{name,state:'noqty',meta:ui('rxLinked',{price:cash(info.cost),unit:info.stockUnit||stock.unit||''})};
     if(info.quantityInStockUnit==null)return{name,state:'unit',meta:ui('rxUnitMismatch',{unit:info.stockUnit||stock.unit||''})};
@@ -112,7 +119,7 @@
       detail=ui('rxOkHint');
     }
     if(m.costComplete&&m.actualCost!=null){
-      const gap=Math.abs(m.variancePct||0),g=window.KiwiNumber?.format(gap,{maximumFractionDigits:0})??Math.round(gap);
+      const gap=Math.abs(m.variancePct||0),g=Math.round(gap);
       cls=gap>15?'gap':gap>5?'watch':'ok';
       title=ui(gap>15?'rxStatusGap':gap>5?'rxStatusWatch':'rxStatusOk');
       detail=ui(m.variancePct>0?'rxGapUp':'rxGapDown',{gap:g+' %'});
@@ -120,7 +127,7 @@
     const ht=vatIn?` <em>${esc(ui('rxHT'))}</em>`:'';
     const fc=mg?pct1(100-mg.pct):'·';
     return `<div class="rmw-rx-status ${cls}">` +
-      `<b>${esc(title)}</b>${detail?`<span>${esc(detail)}</span>`:''}${todo.length?`<button type="button" class="rmw-rx-link" data-nutrition-fix>${esc(ui('rxToStock'))}</button>`:''}</div>
+      `<b>${esc(title)}</b>${detail?`<span>${esc(detail)}</span>`:''}${todo.length&&!manualOn()?`<button type="button" class="rmw-rx-link" data-nutrition-fix>${esc(ui('rxToStock'))}</button>`:''}</div>
       <div class="rmw-rx-hero${cost==null?' partial':''}">` +
       `<span>${esc(ui('rxCostPortion'))}</span>` +
       `<b>${cost!=null?cash(cost):known>0?esc(ui('rxAtLeast',{amount:cash(known)})):'·'}</b>${cost==null&&known>0?`<small>${esc(ui('rxAtLeastSub'))}</small>`:''}</div>
@@ -147,6 +154,8 @@
   function recipeDraft(root,x,api){
     const inv=api.inventory(venue()),units=window.KiwiRestaurantUnits;
     return{itemName:x.name,portions:Math.max(1,+$('[data-portions]',root)?.value||1),prepMinutes:Math.max(0,+$('[data-minutes]',root)?.value||0),ingredients:$$('[data-recipe-ing]',root).map(row=>{
+        const price=priceOf(row);
+        if(price!=null)return{stockId:'',name:$('[data-ing-name]',row).value.trim(),qty:Math.max(0,+$('[data-ing-qty]',row).value||0),unit:units?.normalize?.($('[data-ing-unit]',row).value,'')||'',price};
         const name=$('[data-ing-name]',row).value.trim(),hit=inv.find(s=>String(s.id)===row.dataset.stockId)||inv.find(s=>String(s.name).trim().toLowerCase()===name.toLowerCase());
         return{stockId:hit?.id||'',name,qty:Math.max(0,+$('[data-ing-qty]',row).value||0),unit:units?.normalize?.($('[data-ing-unit]',row).value||hit?.unit,'')||''};
       }).filter(line=>line.name||line.stockId),steps:$('[data-steps]',root)?.value.split('\n').map(v=>v.trim()).filter(Boolean)||[],note:$('[data-note]',root)?.value||''};
@@ -184,7 +193,7 @@
         `<div class="rmw-rx-cols" aria-hidden="true">` +
         `<span>${esc(ui('rxIngredient'))}</span>` +
         `<span>${esc(ui('rxQty'))}</span>` +
-        `<span>${esc(ui('rxLineCost'))}</span>` +
+        `<span>${esc(ui(manualOn()?'rxManualCol':'rxLineCost'))}</span>` +
         `<span>` +
         `</span>` +
         `</div>` +
@@ -194,7 +203,7 @@
         `<path fill="currentColor" d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/>` +
         `</svg>` +
         `<span>${esc(ui('rxAdd'))}</span>` +
-        `</button>${inv.length?'':`<p class="rmw-rx-hint">${esc(ui('rxNoStock'))}</p>`}</section>` +
+        `</button>${manualOn()?`<p class="rmw-rx-hint">${esc(ui('rxManualHint'))}</p>`:inv.length?'':`<p class="rmw-rx-hint">${esc(ui('rxNoStock'))}</p>`}</section>` +
         `<section class="rmw-rx-sec">` +
         `<header class="rmw-rx-sec-head">` +
         `<div>` +
@@ -224,7 +233,7 @@
         const li=recipeLineInfo(row,api,inv),meta=$('[data-ing-meta]',row),costEl=$('[data-ing-cost]',row);
         row.dataset.state=li.empty?'':li.state;
         if(meta)meta.textContent=li.empty?'':li.meta;
-        if(costEl)costEl.textContent=li.cost!=null?cash(li.cost):'·';
+        if(costEl)costEl.textContent=li.manual?'':li.cost!=null?cash(li.cost):($('[data-ing-price]',row)?'':'·');
         return li;
       });
       $('[data-recipe-summary]',m.el).innerHTML=recipeSummary(x,recipeDraft(m.el,x,api),api,hideDraft,info);
@@ -266,8 +275,8 @@
     $('[data-cancel]',m.el).onclick=m.close;
     $('[data-save]',m.el).onclick=()=>{
       const draft=recipeDraft(m.el,x,api);
-      const refusal=!draft.ingredients.some(line=>line.qty>0)?['rxToastQtyT','rxToastQty']
-        :draft.ingredients.some(line=>!line.unit)?['rxToastUnitT','rxToastUnit']
+      const refusal=!draft.ingredients.some(line=>line.qty>0||line.price!=null)?['rxToastQtyT','rxToastQty']
+        :draft.ingredients.some(line=>!line.unit&&line.price==null)?['rxToastUnitT','rxToastUnit']
         :api.tooLong?.(draft)?['rxToastCapT','rxToastCap']:null;
       if(refusal){
         toast(ui(refusal[0]),ui(refusal[1]),'warn');
