@@ -120,4 +120,25 @@ const ok = (msg) => { n++; console.log('✓ ' + msg); };
   ok('a team first name is staff, but only when nothing else in the reason is recognisable');
 }
 
+{
+  /* Les identifiants que la caisse donne vraiment : tout un service partage le
+     même début. Coupés à 64, ils tombaient sur une seule ligne complétée. */
+  const shift = 'cash-term_8043f33912044901b30a36b169020056-shift-1795437095291';
+  const ids = Array.from({ length: 51 }, (_, i) => `${shift}-cm-${1795450000000 + i * 7919}`);
+  const done = ids.map(E.completionId);
+  assert.equal(new Set(done).size, 51, 'one completion row per withdrawal, never shared');
+  assert.ok(done.every((id) => id.length <= 64 && /^[A-Za-z0-9_-]{6,64}$/.test(id)), 'fits the receipt route: ' + done[0]);
+  assert.deepEqual(ids.map(E.completionId), done, 'the same on every device');
+  assert.equal(E.completionId('c9'), 'xpc_c9', 'a short id is unchanged, rows already completed keep matching');
+  const events = ids.slice(0, 3).map((id, i) => ({ id, movement_kind: 'out', movement_amount_cents: 1000 * (i + 1), movement_reason: 'Khadar', day: '2026-11-06' }));
+  const kept = events.map((e) => ({ id: E.completionId(e.id), date: e.day, amountCents: e.movement_amount_cents, category: 'produce', method: 'cash',
+    supplier: '', note: 'Khadar', vatCents: 0, source: 'till', cashEventId: e.id, createdAt: 1, updatedAt: 1 }));
+  const merged = E.mergeDocs({ list: kept }, { list: [] }).list;
+  assert.equal(merged.length, 3, 'three kept withdrawals of one shift stay three rows');
+  const v = E.monthView({ month: '2026-11', today: '2026-11-23', expenses: merged, cashOuts: events, salesDays: [] });
+  assert.equal(v.rows.filter((r) => r.guessed).length, 0, 'none left to complete');
+  assert.equal(v.outCents, 6000, 'each counted once');
+  ok('withdrawals of one shift get one completion row each (ids hashed past 64 signs, short ids unchanged)');
+}
+
 console.log(n + ' groupes · till categories');

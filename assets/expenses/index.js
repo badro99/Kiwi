@@ -18,10 +18,10 @@
  * Kiwi.handlers['nav-expenses'], rendu par Kiwi.appPage comme les autres
  * pages pleines. Logique pure dans engine.js, rendu dans view.js, fiche dans
  * sheet.js, mots dans strings.js, style dans style.js. */
-import * as E from './engine.js?v=4';
+import * as E from './engine.js?v=5';
 import { tr } from './strings.js?v=3';
 import { pageHtml, emptyHtml, loadingHtml, listHtml } from './view.js?v=3';
-import { openSheet, shrinkPhoto } from './sheet.js?v=5';
+import { openSheet, shrinkPhoto } from './sheet.js?v=6';
 import { ensureStyle } from './style.js?v=2';
 
 const ZONE = 'Africa/Casablanca';

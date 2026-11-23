@@ -34,7 +34,7 @@
     /* Paramètres → « Annuaire Kiwi »: the opt-in sheet, fetched on first open. */
     directory: { dependencies: [], scripts: ['assets/directory-optin.js?v=2'] },
     /* « Dépenses » (interrupteur par commerçant) : un module ES, ouvert au premier clic. */
-    expenses: { dependencies: [], scripts: ['assets/expenses/index.js?v=9'], module: true },
+    expenses: { dependencies: [], scripts: ['assets/expenses/index.js?v=10'], module: true },
     /* Intégrations → Glovo : le panneau du patron (adresses, carte, fermeture), au premier clic. */
     glovo: { dependencies: [], scripts: ['assets/channel-glovo.js?v=1'] },
   });

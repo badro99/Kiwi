@@ -136,8 +136,26 @@ export function nextStamp(prev, now = Date.now()) {
   return Math.max(num(now), num(prev) + 1);
 }
 
+/* Coupé à 64 signes, l'identifiant d'un retrait perdait ce qui le distingue :
+   la caisse les nomme « cash-term_<poste>-shift-<ouverture>-… », et tous les
+   retraits d'un même service tombaient sur la même ligne complétée (Pasta
+   Corner, 23 nov. : 51 gardés, 22 lignes). Trop long, il garde son début et
+   prend l'empreinte de l'identifiant entier : unique, et la même sur tous les
+   appareils. Court, il ne change pas (les lignes déjà complétées restent). */
+function print16(s) {
+  let a = 0x811c9dc5, b = 0x01000193 ^ 0x5bd1e995;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    a = Math.imul(a ^ c, 0x01000193) >>> 0;
+    b = Math.imul(b ^ c, 0x5bd1e995) >>> 0;
+    b = (b ^ (b >>> 15)) >>> 0;
+  }
+  return a.toString(16).padStart(8, '0') + b.toString(16).padStart(8, '0');
+}
 export function completionId(cashEventId) {
-  return ('xpc_' + String(cashEventId == null ? '' : cashEventId).replace(/[^A-Za-z0-9_-]/g, '_')).slice(0, 64);
+  const raw = String(cashEventId == null ? '' : cashEventId);
+  const clean = 'xpc_' + raw.replace(/[^A-Za-z0-9_-]/g, '_');
+  return clean.length <= 64 ? clean : clean.slice(0, 47) + '_' + print16(raw);
 }
 
 export function normalize(doc) {
