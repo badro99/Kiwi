@@ -105,7 +105,26 @@ async function runVisionInspect(env, dataUrl, promptText, locale) {
   return runVisionPair(env, MODEL, FALLBACK_MODEL, payload);
 }
 
-export function validateVisionData(raw) {
+/* Une facture fournisseur va au stock ET aux dépenses, un ticket aux dépenses
+ * (propriétaire, 23 nov. 2026 : le modèle ne proposait que le stock, et « add to
+ * expenses » tapé ensuite tombait sur une réponse générale sur les charges). Ces
+ * actions passent devant celles du modèle, dans la langue de l'écran. */
+const DOC_ACTIONS = { invoice: ['stock-receive', 'expense-add'], expense_receipt: ['expense-add'] };
+const DOC_ACTION_LABEL = {
+  fr: { 'stock-receive': 'Ajouter les articles au stock', 'expense-add': 'Ajouter aux dépenses' },
+  en: { 'stock-receive': 'Add the items to stock', 'expense-add': 'Add to expenses' },
+  ar: { 'stock-receive': 'أضف السلع إلى المخزون', 'expense-add': 'أضف إلى المصاريف' },
+};
+function withDocActions(docType, actions, locale) {
+  const need = DOC_ACTIONS[docType];
+  if (!need) return actions;
+  const words = DOC_ACTION_LABEL[locale] || DOC_ACTION_LABEL.fr;
+  const first = need.map((type, i) => actions.find((a) => a.type === type)
+    || { id: 'doc-' + type, type, label: words[type], primary: i === 0 && !actions.some((a) => a.primary) });
+  return first.concat(actions.filter((a) => !need.includes(a.type))).slice(0, 4);
+}
+
+export function validateVisionData(raw, locale = 'fr') {
   if (!raw || typeof raw !== 'object') return null;
   const docType = String(raw.docType || 'general_document').toLowerCase().trim();
   const validTypes = new Set(['invoice', 'expense_receipt', 'restaurant_menu', 'floorplan', 'tpe_slip', 'boutique_product', 'pressing_garment', 'general_document']);
@@ -213,7 +232,7 @@ export function validateVisionData(raw) {
       sizeRun,
       notes: String(entities.notes || '').slice(0, 300),
     },
-    suggestedActions: issues.length ? [] : suggestedActions,
+    suggestedActions: issues.length ? [] : withDocActions(safeDocType, suggestedActions, locale),
   };
 }
 
@@ -222,14 +241,14 @@ export function validateVisionData(raw) {
  * n'est PAS un document « traité avec succès » : elle revient marquée
  * « à vérifier », sans confiance inventée (null, jamais 0,8) et sans aucune
  * action 1-clic, pour que l'écran ne dise jamais « fait » sur une lecture ratée. */
-export function interpretVisionOutput(content) {
+export function interpretVisionOutput(content, locale = 'fr') {
   const text = typeof content === 'string' ? content : '';
   let parsed = null;
   try {
     const match = text.match(/\{[\s\S]*\}/);
     if (match) parsed = JSON.parse(match[0]);
   } catch (_) {}
-  const validated = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? validateVisionData(parsed) : null;
+  const validated = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? validateVisionData(parsed, locale) : null;
   if (validated) return { status: validated.reviewNeeded ? 'review-needed' : 'parsed', data: validated };
   return {
     status: 'review-needed',
@@ -250,7 +269,7 @@ export function interpretVisionOutput(content) {
  * les tests, qui simulent env.AI (aucun modèle réel n'est appelé). */
 export async function inspectImage(env, dataUrl, promptText, locale) {
   const { result, model } = await runVisionInspect(env, dataUrl, promptText, locale);
-  return { model, ...interpretVisionOutput(aiText(result)) };
+  return { model, ...interpretVisionOutput(aiText(result), locale) };
 }
 
 async function budgetHandler(context) {

@@ -3,7 +3,7 @@
  * stockage, aucun réseau. Tout texte du commerçant (fournisseur, note, motif de
  * caisse) passe par esc(). Les chiffres portent data-cents : la vérité du
  * montant, lisible par les tests et par un lecteur d'écran via aria-label. */
-import { tr, lang } from './strings.js?v=3';
+import { tr, lang } from './strings.js?v=4';
 
 export const CAT_ICON = {
   meat: 'kebab_dining', produce: 'eco', grocery: 'local_grocery_store', drinks: 'local_drink',

@@ -2172,7 +2172,7 @@ section('Whole-project regressions');
        et ses appels PowerShell doivent y démarrer. */
     'bridge-win7-test.mjs',
     'agent-voice-test.mjs',
-    'agent-vision-test.mjs',
+    'agent-vision-test.mjs', 'agent-doc-followup-test.mjs',
     'wave-o-truth-test.mjs',
     'briefing-test.mjs',
     'briefing-split-test.mjs', 'client-robustness-test.mjs', 'misc-rating-behavior-test.mjs',
@@ -2372,7 +2372,7 @@ section('Whole-project regressions');
     'lock-caisse-handoff-test.mjs',
     'till-role-parity-test.mjs', 'commis-floor-test.mjs',
     'operator-roster-route-test.mjs',
-    'ozon-express-test.mjs', 'credit-schedule-test.mjs', 'credit-till-test.mjs', 'credit-till-classic-browser-test.mjs', 'delivery-fee-city-test.mjs', 'expenses-engine-test.mjs', 'expenses-api-test.mjs', 'till-categories-test.mjs', 'supplier-ledger-test.mjs', 'cheques-test.mjs', 'cheques-phone-browser-test.mjs', 'expenses-switch-test.mjs', 'expenses-browser-test.mjs', 'ozon-exchange-test.mjs', 'ozon-exchange-browser-test.mjs', 'label-picker-browser-test.mjs',
+    'ozon-express-test.mjs', 'credit-schedule-test.mjs', 'credit-till-test.mjs', 'credit-till-classic-browser-test.mjs', 'delivery-fee-city-test.mjs', 'expenses-engine-test.mjs', 'expenses-api-test.mjs', 'till-categories-test.mjs', 'supplier-ledger-test.mjs', 'cheques-test.mjs', 'cheques-phone-browser-test.mjs', 'expenses-switch-test.mjs', 'expenses-browser-test.mjs', 'agent-doc-expense-browser-test.mjs', 'ozon-exchange-test.mjs', 'ozon-exchange-browser-test.mjs', 'label-picker-browser-test.mjs',
     'lock-greeting-truth-test.mjs',
     'check-guard-test.mjs',
     'check-verdict-test.mjs',

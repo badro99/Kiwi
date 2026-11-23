@@ -63,6 +63,27 @@ for (const [input, expected] of [[0, 0], ['0', 0], [0.4, 0.4], [1, 1], [7, 1], [
   assert.equal(conf(input), expected, `confidence ${JSON.stringify(input)} -> ${expected}`);
 }
 
+// Propriétaire, 23 nov. 2026 (facture Leader Formaggi, Pasta Corner) : le modèle ne
+// proposait que le stock, et « add to expenses » tapé ensuite tombait sur une réponse
+// générale sur les charges. Une facture fournisseur offre toujours les deux, dans la
+// langue de l'écran ; un ticket de dépense offre les dépenses ; une lecture douteuse rien.
+{
+  const types = (d) => d.suggestedActions.map((a) => a.type);
+  const inv = { docType: 'invoice', entities: { totalMad: 10 }, suggestedActions: [{ id: 'x', type: 'stock-receive', label: 'Recevoir', primary: true }] };
+  assert.deepEqual(types(validateVisionData(inv, 'en')), ['stock-receive', 'expense-add'], 'invoice: stock and expenses');
+  assert.equal(validateVisionData(inv, 'en').suggestedActions[1].label, 'Add to expenses');
+  assert.equal(validateVisionData(inv, 'ar').suggestedActions[1].label, 'أضف إلى المصاريف');
+  assert.equal(validateVisionData(inv).suggestedActions[1].label, 'Ajouter aux dépenses', 'French by default');
+  assert.equal(validateVisionData(inv, 'en').suggestedActions[0].label, 'Recevoir', "the model's own label is kept");
+  assert.deepEqual(types(validateVisionData({ docType: 'invoice', entities: { totalMad: 10 } }, 'fr')), ['stock-receive', 'expense-add'], 'no action proposed: both added');
+  const crowded = { docType: 'invoice', entities: { totalMad: 10 }, suggestedActions: ['a', 'b', 'c', 'd'].map((id) => ({ id, type: 'generic-action', label: id })) };
+  assert.deepEqual(types(validateVisionData(crowded, 'fr')).slice(0, 2), ['stock-receive', 'expense-add'], 'four model actions never push them out');
+  assert.equal(validateVisionData(crowded, 'fr').suggestedActions.length, 4);
+  assert.deepEqual(types(validateVisionData({ docType: 'expense_receipt', entities: { totalMad: 10 } }, 'fr')), ['expense-add'], 'receipt: expenses');
+  assert.deepEqual(types(validateVisionData({ docType: 'restaurant_menu', suggestedActions: [{ type: 'menu-import', label: 'M' }] }, 'fr')), ['menu-import'], 'a menu is left alone');
+  assert.deepEqual(validateVisionData({ ...inv, incomplete: true }, 'fr').suggestedActions, [], 'a doubtful reading offers nothing');
+}
+
 // ── Lecture illisible : « à vérifier », jamais un succès à 0,8 ───────────────
 // Le modèle est simulé (env.AI.run) : aucun appel réel, règle du coût zéro.
 const { inspectImage, interpretVisionOutput } = await import('../functions/api/ai/vision-inspect.js');

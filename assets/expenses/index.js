@@ -18,10 +18,10 @@
  * Kiwi.handlers['nav-expenses'], rendu par Kiwi.appPage comme les autres
  * pages pleines. Logique pure dans engine.js, rendu dans view.js, fiche dans
  * sheet.js, mots dans strings.js, style dans style.js. */
-import * as E from './engine.js?v=5';
-import { tr } from './strings.js?v=3';
-import { pageHtml, emptyHtml, loadingHtml, listHtml } from './view.js?v=3';
-import { openSheet, shrinkPhoto } from './sheet.js?v=6';
+import * as E from './engine.js?v=6';
+import { tr } from './strings.js?v=4';
+import { pageHtml, emptyHtml, loadingHtml, listHtml } from './view.js?v=4';
+import { openSheet, shrinkPhoto } from './sheet.js?v=7';
 import { ensureStyle } from './style.js?v=2';
 
 const ZONE = 'Africa/Casablanca';
@@ -354,10 +354,47 @@ function show() {
   loadSummary(S.month);
 }
 
+/* « Ajouter aux dépenses » sur une facture lue par l'assistant (agent-voice.js) :
+   la fiche s'ouvre préremplie, les champs lus marqués « à vérifier », la photo
+   jointe. Rien ne s'écrit sans « Enregistrer ». Rend { doneLabel } une fois
+   enregistrée, 'cancelled' si la fiche se ferme sans, { error } si la page
+   n'est pas permise. La même pièce déjà enregistrée s'ouvre au lieu d'un doublon. */
+function fromDocument(ent, extra) {
+  if ((window.__kiwiRole || 'owner') !== 'owner') return { error: tr('ownerOnly') };
+  try { if (window.KiwiConfig && window.KiwiConfig.off && window.KiwiConfig.off('expenses')) return { error: tr('docOff') }; } catch (_) {}
+  getStore();
+  const today = businessToday();
+  const p = E.docPrefill(ent, today);
+  const dup = E.docDuplicate(doc().list, ent);
+  if (dup) {
+    try { window.Kiwi.toast(tr('docAlready'), { type: 'info' }); } catch (_) {}
+    openSheet({ mode: 'edit', row: dup, today, suppliers: suppliers(), receiptUrl: dup.receiptKey ? receiptUrl(dup.id) : '' }, callbacks);
+    return { doneLabel: tr('docAdded') };
+  }
+  const photo = extra && /^data:image\/jpeg;base64,/.test(String(extra.photo || '')) ? extra.photo : '';
+  return new Promise((resolve) => {
+    let saved = false;
+    const sheet = openSheet({
+      mode: 'add', today, suppliers: suppliers(), photo,
+      row: { vatCents: p.vatCents, method: p.method, note: p.ref ? tr('docNote', { n: p.ref }) : '' },
+    }, { ...callbacks, onSave(row, x) { saved = true; callbacks.onSave(row, x); resolve({ doneLabel: tr('docAdded') }); } });
+    sheet.applyScan({ amount: p.amountCents / 100, supplier: p.supplier, date: p.date, category: p.category });
+    const el = sheet.el;
+    if (!el || !el.parentNode) return;
+    const mo = new MutationObserver(() => {
+      if (el.isConnected) return;
+      mo.disconnect();
+      if (!saved) resolve('cancelled');
+    });
+    mo.observe(el.parentNode, { childList: true });
+  });
+}
+
 function register() {
   const K = window.Kiwi;
   if (!K || !K.handlers) return false;
   K.handlers['nav-expenses'] = show;
+  K.handlers['expense-from-doc'] = fromDocument;
   return true;
 }
 if (!register()) document.addEventListener('DOMContentLoaded', register, { once: true });

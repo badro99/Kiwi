@@ -7,9 +7,9 @@
  * Ce que la lecture remplit est marqué « à vérifier » ; elle ne réécrit jamais
  * un champ que le patron a déjà tapé. Un ticket illisible ou un quota épuisé
  * laisse la fiche vide avec une phrase simple, et la photo reste jointe. */
-import { CATEGORIES, METHODS, classifyReason, parseAmount, completionId, nextStamp } from './engine.js?v=5';
-import { tr, lang } from './strings.js?v=3';
-import { CAT_ICON, esc, catLabel, dayLabel } from './view.js?v=3';
+import { CATEGORIES, METHODS, classifyReason, parseAmount, completionId, nextStamp } from './engine.js?v=6';
+import { tr, lang } from './strings.js?v=4';
+import { CAT_ICON, esc, catLabel, dayLabel } from './view.js?v=4';
 
 /* Les catégories de la lecture de tickets (functions/api/ai/expense-ocr.js). */
 export const OCR_CATEGORY = {
@@ -178,6 +178,7 @@ export function openSheet(opts, cb) {
   const note = $('[data-xp-scan-note]');
   return {
     close: () => dlg.close(),
+    el: root,
     /* Ce que la lecture a trouvé, posé là où le patron n'a encore rien écrit. */
     applyScan(data) {
       const d = data || {};

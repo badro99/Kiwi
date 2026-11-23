@@ -575,7 +575,7 @@
     .then(function (body) {
       if (typingMsg) typingMsg.remove();
       if (!body.ok || !body.data) throw new Error(body.error || 'Invalid response');
-      renderVisionResult(body.data, thread, scrollDown);
+      renderVisionResult(body.data, thread, scrollDown, dataUrl);
     })
     .catch(function (err) {
       if (typingMsg) typingMsg.remove();
@@ -594,7 +594,7 @@
   var SIZE_RUN = './agent-size-run.mjs?v=4';
 
   /* ── Rendu de la carte de résultat avec boutons d'action ──────────────── */
-  function renderVisionResult(data, thread, scrollDown) {
+  function renderVisionResult(data, thread, scrollDown, photo) {
     if (!thread) return;
 
     /* Lecture illisible côté serveur : une carte « à vérifier », sans fiabilité
@@ -659,7 +659,7 @@
     var actionsHtml = '';
     var actions = sizeRun ? [] : (data.suggestedActions || []);
     if (!actions.length && !sizeRun) {
-      if (data.docType === 'invoice') actions = [{ id: 'st-rec', type: 'stock-receive', label: 'Enregistrer la réception en stock', primary: true }];
+      if (data.docType === 'invoice') actions = [{ id: 'st-rec', type: 'stock-receive', label: 'Enregistrer la réception en stock', primary: true }, { id: 'exp-add', type: 'expense-add', label: 'Ajouter aux dépenses' }];
       else if (data.docType === 'expense_receipt') actions = [{ id: 'exp-add', type: 'expense-add', label: 'Ajouter aux dépenses', primary: true }];
       else if (data.docType === 'restaurant_menu') actions = [{ id: 'menu-imp', type: 'menu-import', label: 'Importer dans le catalogue', primary: true }];
       else if (data.docType === 'floorplan') actions = [{ id: 'floor-app', type: 'floorplan-apply', label: 'Créer ces tables', primary: true }];
@@ -698,6 +698,7 @@
         actionsHtml +
       '</div>';
 
+    msg.__kvPhoto = photo || '';
     thread.appendChild(msg);
     scrollDown();
     var result = msg;
@@ -711,7 +712,7 @@
         var payloadRaw = btn.getAttribute('data-kv-payload');
         var payload = {};
         try { payload = JSON.parse(decodeURIComponent(payloadRaw)); } catch (_) {}
-        handleActionResult(btn, actionType, payload);
+        handleActionResult(btn, actionType, payload, { photo: msg.__kvPhoto });
       });
     });
     return result;
@@ -725,7 +726,7 @@
      de toast « enregistré » quand rien n'a tourné. */
   var ACTION_HANDLERS = {
     'stock-receive': 'stock-scan-invoice',
-    'expense-add': 'depenses-new',
+    'expense-add': 'expense-from-doc',
     'menu-import': 'menu-import-open',
   };
 
@@ -762,7 +763,7 @@
     return false;
   }
 
-  function handleActionResult(btn, type, data) {
+  function handleActionResult(btn, type, data, extra) {
     if (btn.getAttribute('aria-busy') === 'true' || btn.classList.contains('done')) return Promise.resolve(false);
     var label = actionLabel(btn);
     var name = ACTION_HANDLERS[type];
@@ -777,13 +778,14 @@
     btn.innerHTML = SVG_SPIN + ' ' + esc(label);
 
     var run;
-    try { run = Promise.resolve(fn(data)); } catch (err) { run = Promise.reject(err); }
+    try { run = Promise.resolve(fn(data, extra || {})); } catch (err) { run = Promise.reject(err); }
     return run.then(function (out) {
       /* Un handler qui répond explicitement false a refusé : ce n'est pas fait. */
-      if (out === false) return actionFailed(btn, label, T().actionFailed);
+      if (out === false || (out && out.error)) return actionFailed(btn, label, (out && String(out.error)) || T().actionFailed);
       btn.removeAttribute('aria-busy');
+      if (out === 'cancelled') { btn.disabled = false; btn.innerHTML = esc(label); return false; } // fiche fermée sans enregistrer
       btn.disabled = true;
-      btn.innerHTML = SVG_CHECK + ' ' + esc(T().executed);
+      btn.innerHTML = SVG_CHECK + ' ' + esc((out && out.doneLabel) || T().executed);
       btn.classList.add('done');
       return true;
     }, function () {

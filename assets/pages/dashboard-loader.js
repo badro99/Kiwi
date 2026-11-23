@@ -34,7 +34,7 @@
     /* Paramètres → « Annuaire Kiwi »: the opt-in sheet, fetched on first open. */
     directory: { dependencies: [], scripts: ['assets/directory-optin.js?v=2'] },
     /* « Dépenses » (interrupteur par commerçant) : un module ES, ouvert au premier clic. */
-    expenses: { dependencies: [], scripts: ['assets/expenses/index.js?v=10'], module: true },
+    expenses: { dependencies: [], scripts: ['assets/expenses/index.js?v=11'], module: true },
     /* Intégrations → Glovo : le panneau du patron (adresses, carte, fermeture), au premier clic. */
     glovo: { dependencies: [], scripts: ['assets/channel-glovo.js?v=1'] },
   });
@@ -122,6 +122,17 @@
       }, unavailable);
     };
     H['nav-expenses'] = stub;
+  }
+  /* « Ajouter aux dépenses » sur une facture de l'assistant : même chargement. */
+  if (!H['expense-from-doc']) {
+    const stub = function () {
+      const self = this, args = arguments;
+      return load('expenses').then(() => {
+        if (H['expense-from-doc'] !== stub) return H['expense-from-doc'].apply(self, args);
+        return false;
+      }, () => false);
+    };
+    H['expense-from-doc'] = stub;
   }
   window.addEventListener('click', event => {
     if (replaying || ready.has('workspace')) return;

@@ -293,3 +293,30 @@ export function toCsv(rows) {
     r.source || 'manual', r.receiptKey ? 'yes' : 'no', r.note || '', r.id || '',
   ].map(csvCell).join(','))].join('\n');
 }
+
+/* Une facture ou un ticket lu par l'assistant (functions/api/ai/vision-inspect.js),
+   ramené à ce que la fiche sait préremplir. La lecture n'est qu'une proposition :
+   la fiche marque ces champs « à vérifier » et rien ne s'écrit sans « Enregistrer ».
+   Une date future ou non ISO n'est pas reprise ; un montant illisible vaut 0. */
+const DOC_METHOD = { especes: 'cash', carte: 'card', virement: 'transfer', cheque: 'cheque' };
+const docCents = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0; };
+export function docPrefill(ent, today) {
+  const e = ent && typeof ent === 'object' ? ent : {};
+  const date = isDay(e.date) && (!isDay(today) || e.date <= today) ? e.date : '';
+  return {
+    amountCents: docCents(e.totalMad), vatCents: docCents(e.taxMad),
+    supplier: String(e.supplier || '').trim().slice(0, 80), date,
+    ref: String(e.invoiceNumber || '').trim().slice(0, 60),
+    category: String(e.category || ''), method: DOC_METHOD[e.paymentMethod] || '',
+  };
+}
+/* La même pièce déjà enregistrée : même fournisseur et même montant, et le même
+   numéro dans la note (ponctuation ignorée) ; sans numéro, le même jour. */
+const bare = (s) => fold(s).replace(/[^a-z0-9]/g, '');
+export function docDuplicate(list, ent) {
+  const p = docPrefill(ent, '');
+  if (!Array.isArray(list) || !p.amountCents) return null;
+  const sup = bare(p.supplier), ref = bare(p.ref);
+  return list.find((r) => r && !r.deleted && r.amountCents === p.amountCents && bare(r.supplier) === sup
+    && (ref ? bare(r.note).includes(ref) : r.date === p.date)) || null;
+}

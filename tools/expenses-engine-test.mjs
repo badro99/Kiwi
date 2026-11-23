@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {
   parseAmount, completionId, nextStamp,
   CATEGORIES, classifyReason, isBankDeposit, notAnExpense, uncountedCashOuts, normalize, mergeDocs,
-  cashOutRows, monthView, toCsv,
+  cashOutRows, monthView, toCsv, docPrefill, docDuplicate,
 } from '../assets/expenses/engine.js';
 
 let n = 0;
@@ -190,6 +190,31 @@ ok('CSV export for the accountant, safe to open in a spreadsheet');
   assert.equal(mergeDocs({ list: [del] }, { list: [ahead] }).list[0].deleted, true);
   assert.equal(mergeDocs({ list: [ahead] }, { list: [del] }).list[0].deleted, true);
   ok('an edit made after seeing a row always beats that row, whatever the clocks say');
+}
+
+/* fromDocument · une facture lue par l'assistant (vision-inspect) préremplit la fiche,
+   et la même facture ne s'ajoute pas deux fois. Facture réelle de Pasta Corner, 6 nov. 2026. */
+{
+  const ent = { supplier: 'LEADER Formaggi', date: '2026-11-06', invoiceNumber: 'FA26/11-00117', totalMad: 5193.84, taxMad: 865.64, category: 'alimentation', paymentMethod: 'non_specifie' };
+  const p = docPrefill(ent, '2026-11-23');
+  assert.deepEqual(p, { amountCents: 519384, vatCents: 86564, supplier: 'LEADER Formaggi', date: '2026-11-06', ref: 'FA26/11-00117', category: 'alimentation', method: '' });
+  assert.equal(docPrefill({ ...ent, date: '2026-12-01' }, '2026-11-23').date, '', 'a date after today is not trusted');
+  assert.equal(docPrefill({ ...ent, date: '06/11/2026' }, '2026-11-23').date, '', 'only an ISO day is taken');
+  assert.equal(docPrefill({ ...ent, paymentMethod: 'especes' }, '2026-11-23').method, 'cash');
+  assert.equal(docPrefill({ ...ent, paymentMethod: 'virement' }, '2026-11-23').method, 'transfer');
+  assert.equal(docPrefill({ totalMad: 'abc', taxMad: -3 }, '2026-11-23').amountCents, 0);
+  assert.equal(docPrefill({ totalMad: 'abc', taxMad: -3 }, '2026-11-23').vatCents, 0);
+  assert.equal(docPrefill(null, '2026-11-23').supplier, '');
+  const saved = { id: 'xp_1', date: '2026-11-06', amountCents: 519384, supplier: 'Leader formaggi', note: 'Facture FA26/11-00117', category: 'grocery', updatedAt: 1 };
+  assert.equal(docDuplicate([saved], ent), saved, 'same supplier, amount and invoice number');
+  assert.equal(docDuplicate([{ ...saved, note: 'facture fa26 11 00117' }], ent)?.id, 'xp_1', 'invoice number matched without punctuation');
+  assert.equal(docDuplicate([{ ...saved, deleted: true }], ent), null, 'a deleted row is not a duplicate');
+  assert.equal(docDuplicate([{ ...saved, amountCents: 519300 }], ent), null, 'another amount is another expense');
+  assert.equal(docDuplicate([{ ...saved, note: 'Facture FA26/11-00118' }], ent), null, 'another invoice number is another expense');
+  assert.equal(docDuplicate([{ ...saved, note: '' }], { ...ent, invoiceNumber: '' })?.id, 'xp_1', 'no number: supplier, amount and day');
+  assert.equal(docDuplicate([{ ...saved, note: '', date: '2026-11-07' }], { ...ent, invoiceNumber: '' }), null);
+  assert.equal(docDuplicate(null, ent), null);
+  ok('an invoice read by the assistant prefills the sheet and is never added twice');
 }
 
 console.log(n + ' groupes · expenses engine');
