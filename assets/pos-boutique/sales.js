@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=382'; import { tillPriceList as tpl } from './price-list.js?v=3';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=276';
-import { offerRegister } from './inventory.js?v=276';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=383'; import { tillPriceList as tpl } from './price-list.js?v=3';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=277';
+import { offerRegister } from './inventory.js?v=277';
 import { ticketOwner } from './ticket-owner.js?v=8';
 import { ticketRemise } from './ticket-remise.js?v=7';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
@@ -11,7 +11,7 @@ import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=6'; import { oversellOk } from './oversell.js?v=2';
 let CX_NOTE = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=38').then((m) => { CX_NOTE = m; }).catch(() => {});
+import('./exch-combined.js?v=39').then((m) => { CX_NOTE = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -585,7 +585,7 @@ import('./exch-combined.js?v=38').then((m) => { CX_NOTE = m; }).catch(() => {});
        déjà cochée, la vendeuse n'a plus qu'à confirmer (ou poser sa remise). */
     const want = opts && [opts.color, opts.alt].find((k) => k && p.colors.includes(k));
     if (want) sheet.color = want;
-    sheet.size = (opts && opts.size && sizesOf(p).includes(opts.size) && availableStock(p.id, opts.size, sheet.color) > 0) ? opts.size : defaultSize(p);
+    sheet.size = (opts && opts.size && sizesOf(p).includes(opts.size) && (!sheet.exchange || availableStock(p.id, opts.size, sheet.color) > 0)) ? opts.size : defaultSize(p);   // vente : la taille cherchée reste, même à 0 (oversell.js)
     renderSheet();
     openVeil('#bq-sheet-veil');
     icons();
