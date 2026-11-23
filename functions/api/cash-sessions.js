@@ -4,7 +4,7 @@ import {
   TERMINAL_COOKIE, terminalToken, terminalCookie, tillEpoch
 } from '../auth/_lib.js';
 import { flagUnauthorized, provenActor } from './_permissions.js';
-import { CASH_CATEGORIES, hasCategoryColumn } from './_cash-category.js';
+import { CASH_CATEGORIES } from './_cash-category.js';
 
 const EVENT_TYPES = new Set(['open', 'movement', 'handover', 'close']);
 const MOVEMENT_KINDS = new Set(['in', 'out', 'no-sale']);
@@ -243,8 +243,8 @@ export async function onRequestPost({ request, env }) {
       } catch (_) { /* the close stands; the Z keeps the reason */ }
     }
     /* The category rides with the sortie in the same append (insert-only
-       ledger). A base without migration 0036 takes the sortie without it. */
-    const categoryColumn = !!movementCategory && await hasCategoryColumn(env);
+       ledger, migration 0036). */
+    const categoryColumn = !!movementCategory;
     const columns = ['id', 'merchant', 'session_id', 'terminal_id', 'event_type', 'expected_cents',
       'counted_cents', 'gap_cents', 'movement_kind', 'movement_amount_cents',
       'movement_reason', 'actor_id', 'counterparty_actor_id', 'opened_ts', 'occurred_ts'];

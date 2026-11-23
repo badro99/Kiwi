@@ -149,7 +149,7 @@ const FLOWS = [
   { name: 'drawer · cash in 100 MAD',
     steps: [MENU('^Mouvement caisse', '^Entrée ou sortie d.espèces'), { sel: '[data-cm-type="in"]' }, { sel: '[data-cm-add="100"]' }, { sel: '#cm-confirm' }, ...PAD] },
   { name: 'drawer · cash out 50 MAD',
-    steps: [MENU('^Mouvement caisse', '^Entrée ou sortie d.espèces'), { sel: '[data-cm-type="out"]' }, { sel: '[data-cm-add="50"]' }, { sel: '#cm-confirm' }, ...PAD] },
+    steps: [MENU('^Mouvement caisse', '^Entrée ou sortie d.espèces'), { sel: '[data-cm-type="out"]' }, { sel: '[data-cm-add="50"]' }, { sel: '[data-till-cat="produce"]' }, { sel: '#cm-confirm' }, ...PAD] },
   { name: 'kitchen · start a ticket, then mark it ready',
     steps: [{ off: [S('^Écran cuisine')], on: [S('^Cuisine')] }, S('^Commencer|^Accepter'), S('^Prête?$|^Marquer prêt|^✓ Prête')] },
   { name: 'kitchen · open the kitchen view and start the first new ticket',

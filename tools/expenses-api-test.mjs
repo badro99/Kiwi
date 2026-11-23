@@ -39,7 +39,7 @@ CREATE TABLE pair_attempts (ip TEXT PRIMARY KEY, fails INTEGER, first_ts INTEGER
 CREATE TABLE operators (id TEXT PRIMARY KEY, label TEXT, salt TEXT, hash TEXT, created_ts INTEGER);
 CREATE TABLE sales (id TEXT PRIMARY KEY, merchant TEXT, amount REAL, amount_cents INTEGER, method TEXT, ts INTEGER, void_ts INTEGER);
 CREATE TABLE session_tiers (sid TEXT PRIMARY KEY, account_id TEXT NOT NULL, tier TEXT NOT NULL, staff_id TEXT NOT NULL DEFAULT '', updated_ts INTEGER NOT NULL);
-CREATE TABLE cash_session_events (id TEXT PRIMARY KEY, merchant TEXT, session_id TEXT, terminal_id TEXT, event_type TEXT, movement_kind TEXT, movement_amount_cents INTEGER, movement_reason TEXT, actor_id TEXT, occurred_ts INTEGER);
+CREATE TABLE cash_session_events (id TEXT PRIMARY KEY, merchant TEXT, session_id TEXT, terminal_id TEXT, event_type TEXT, movement_kind TEXT, movement_amount_cents INTEGER, movement_reason TEXT, actor_id TEXT, occurred_ts INTEGER, movement_category TEXT);
 `);
 db.prepare(`INSERT INTO accounts VALUES ('acc-1','o@pasta.ma','Pasta Bench','s','h',?,'active',0)`).run(now);
 db.prepare(`INSERT INTO accounts VALUES ('acc-2','x@other.ma','Other Shop','s','h',?,'active',0)`).run(now);
@@ -64,7 +64,8 @@ sale.run('s4', SHOP, -15, -1500, 'cash', T(4, 13), null);
 sale.run('s5', SHOP, 30, 3000, 'cash', T(4, 13), null);
 sale.run('s6', SHOP, 99, 9900, 'cash', Date.UTC(2026, 9, 20, 12), null);
 sale.run('o1', 'other-shop', 500, 50000, 'cash', T(3, 12), null);
-const cash = db.prepare('INSERT INTO cash_session_events VALUES (?,?,?,?,?,?,?,?,?,?)');
+const cash = db.prepare(`INSERT INTO cash_session_events (id, merchant, session_id, terminal_id, event_type, movement_kind,
+  movement_amount_cents, movement_reason, actor_id, occurred_ts) VALUES (?,?,?,?,?,?,?,?,?,?)`);
 cash.run('c1', SHOP, 'sess', 'term', 'movement', 'out', 5000, 'Légumes', 'm1', T(3, 11));
 cash.run('c2', SHOP, 'sess', 'term', 'movement', 'in', 2000, 'Fond', 'm1', T(3, 11));
 cash.run('c3', SHOP, 'sess', 'term', 'close', null, null, null, 'm1', T(3, 23));
@@ -222,8 +223,7 @@ const ok = (name) => { n++; console.log('✓ ' + name); };
   const url = `https://k/api/expenses/summary?merchant=${SHOP}&month=2026-11`;
   const before = await (await summary.onRequestGet({ request: req(url, owner), env })).json();
   assert.deepEqual(before.staff, ['Saad', 'Mehdi'], 'first names of the team, in roster order');
-  assert.ok(before.cashOuts.every((c) => !('movement_category' in c)), 'a base without 0036 sends no category and still answers');
-  db.exec('ALTER TABLE cash_session_events ADD COLUMN movement_category TEXT');
+  assert.ok(before.cashOuts.every((c) => !('movement_category' in c)), 'a sortie typed without a tile sends no category');
   db.prepare(`INSERT INTO cash_session_events (id, merchant, session_id, terminal_id, event_type, movement_kind, movement_amount_cents,
     movement_reason, actor_id, occurred_ts, movement_category) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
     .run('c5', SHOP, 'sess', 'term', 'movement', 'out', 16200, 'Khadar', 'm1', T(6, 11), 'produce');
