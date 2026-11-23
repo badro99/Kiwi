@@ -9,6 +9,13 @@
       navigator.serviceWorker.register('/kiwi-sw.js?v=674').then(function (reg) {
         try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
+        /* La caisse se recharge seule sur la nouvelle version quand rien n'est
+           en cours (till-auto-update.js). Chargé d'ici : la coquille est figée
+           en nombre de balises <script> (file-size-ratchet). */
+        var au = document.createElement('script');
+        au.src = '/assets/till-auto-update.js?v=1';
+        au.defer = true;
+        document.head.appendChild(au);
       }).catch(function () {});
     });
   }

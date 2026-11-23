@@ -1847,7 +1847,7 @@ section('Whole-project regressions');
     'phone-test.mjs',
     'clients-sync-test.mjs', 'client-ledger-cents-test.mjs', 'clients-route-events-test.mjs',
     'pwa-shell-test.js',
-    'pwa-update-poll-test.mjs',
+    'pwa-update-poll-test.mjs', 'till-auto-update-test.mjs',
     /* stamp-drift couvre les assets deja estampilles. Celui-ci refuse qu'un
        shell charge silencieusement une URL nue absente du manifeste. */
     'asset-stamp-coverage-test.mjs',

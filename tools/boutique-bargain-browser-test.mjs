@@ -89,6 +89,14 @@ async function approveIfAsked(page) {
 await S.run('prix convenu, plancher, −MAD et ticket entier', async (t) => {
   const page = await till(t);
 
+  t.step('auto-update watcher');
+  /* Ce harnais bloque l'enregistrement du worker, dont caisse-pwa.js attend la
+     fin pour charger le module : on le pose à la main, sur la vraie page. */
+  const auSrc = await page.evaluate(() => [...document.scripts].map((x) => x.src).find((u) => /caisse-pwa\.js/.test(u)));
+  assert(!!auSrc, 'the caisse loads caisse-pwa.js, which loads till-auto-update.js');
+  await page.addScriptTag({ url: base + '/assets/till-auto-update.js?v=1' });
+  assert(await page.evaluate(() => typeof window.KiwiTillAutoUpdate.decide === 'function'), 'till-auto-update.js runs in the real caisse page');
+
   t.step('item sheet · Prix convenu');
   const t0 = await total(page); // la démo ouvre parfois sur un ticket déjà garni
   const base0 = await openCard(page, 0);
@@ -102,6 +110,8 @@ await S.run('prix convenu, plancher, −MAD et ticket entier', async (t) => {
   await page.waitForFunction(() => !document.querySelector('#bq-sheet-veil').classList.contains('is-open'), { timeout: 5000 });
   const got0 = await total(page);
   assert(Math.abs(got0 - t0 - agreed0) < 0.005, `the ticket total grows by the agreed ${agreed0} MAD (read ${got0}, was ${t0})`);
+  assert(await page.evaluate(() => window.KiwiPosDispatch.idle()) === false, 'with a piece on the ticket the till reports a sale in progress (no auto-reload)');
+  assert(await page.evaluate(() => window.KiwiTillAutoUpdate.state().tillIdle) === false, 'the watcher reads that from the till');
   assert(await page.$$eval('.bq-line', (ls) => ls.some((l) => /Prix convenu/.test(l.textContent) && l.querySelector('.bq-line-price .was'))), 'the agreed line is tagged and strikes the shelf price');
 
   t.step('item sheet · below the floor');

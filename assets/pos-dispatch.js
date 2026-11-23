@@ -32,6 +32,7 @@
  *              sub: 'Maison Mansour · ouverture boutique' },
  *     mount(rootEl) { ... },                // called ONCE, build the app here
  *     onShow() { ... },                     // optional · every re-unlock
+ *     idle() { ... },                       // optional · true when no sale is in progress
  *   });
  *
  * The dispatcher owns the PIN-screen choreography (dot success animation,
@@ -55,7 +56,7 @@
      * vertical ordinaire, en tête de liste, et non plus une branche codée en
      * dur dans kiwi-caisse.html. */
     '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '131', module: true, deps: [{ file: 'pressing-numbering', rev: '12' }], label: 'Pressing · Pressing Marshan' },
-    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '375', module: true, label: 'Boutique · Maison Mansour' },
+    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '377', module: true, label: 'Boutique · Maison Mansour' },
     '0003': { id: 'spa',         file: 'pos-spa',         rev: '19', label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '31', label: 'Hôtel / Riad' },
     '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '15', label: 'Fast-food · Snack Chamal' },
@@ -70,7 +71,7 @@
     '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '10', label: 'Coiffure · Salon Yasmine' },
     '0015': { id: 'gym',         file: 'pos-gym',         rev: '9', label: 'Salle de sport · Atlas Fitness' },
     '0016': { id: 'autre',       file: 'pos-autre',       rev: '9', label: 'Autre activité · caisse polyvalente' },
-    '0017': { id: 'maison',      file: 'pos-maison',      rev: '252', module: true, label: 'Maison · Vogue Home' },
+    '0017': { id: 'maison',      file: 'pos-maison',      rev: '253', module: true, label: 'Maison · Vogue Home' },
   };
 
   const apps = {};       /* id → registered spec */
@@ -437,8 +438,19 @@
     try { spec.onShow(); return true; } catch (e) { return false; }
   }
 
+  // Rien en cours dans le métier ouvert ? true / false, ou null quand le métier
+  // ne sait pas le dire (pas d'idle() dans sa fiche) : till-auto-update.js
+  // n'y recharge alors qu'après un long temps sans geste.
+  function idle() {
+    if (!current) return null;
+    const spec = apps[current];
+    if (!spec || typeof spec.idle !== 'function') return null;
+    try { return !!spec.idle(); } catch (e) { return false; }
+  }
+
   window.KiwiPosDispatch = {
     has: (pin) => !!REGISTRY[pin],
+    idle,
     unlock,
     unlockById,
     lock,

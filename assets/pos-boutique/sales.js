@@ -1,8 +1,8 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=375'; import { tillPriceList as tpl } from './price-list.js?v=3';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=269';
-import { offerRegister } from './inventory.js?v=269';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=377'; import { tillPriceList as tpl } from './price-list.js?v=3';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=271';
+import { offerRegister } from './inventory.js?v=271';
 import { ticketOwner } from './ticket-owner.js?v=8';
-import { ticketRemise } from './ticket-remise.js?v=6';
+import { ticketRemise } from './ticket-remise.js?v=7';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
 import { mountBargain } from './bargain-ui.js?v=4';
 import { bqKitTicketFoot } from './kit-2027.js?v=26';
@@ -11,7 +11,7 @@ import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=6'; import { oversellOk } from './oversell.js?v=2';
 let CX_NOTE = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=31').then((m) => { CX_NOTE = m; }).catch(() => {});
+import('./exch-combined.js?v=33').then((m) => { CX_NOTE = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -675,7 +675,7 @@ import('./exch-combined.js?v=31').then((m) => { CX_NOTE = m; }).catch(() => {});
         /* Sous le prix minimum : la vente reste possible (« Vendre quand même »),
            derrière l'accord gérante habituel ; le serveur l'inscrit au journal
            des remises hors politique (functions/api/sale.js › discount-policy). */
-        if (r.error === 'floor') { const f = agreedUnit(shBase, mode, value, 100); if (!f.error) r.forced = { after: f.unit, cut: f.cut }; }
+        if (r.error === 'floor') { const f = agreedUnit(shBase, mode, value, 100); return f.error ? r : { ...r, forced: { after: f.unit, cut: f.cut } }; }
         return r.error ? r : { after: r.unit, cut: r.cut };
       },
       onChange: (r, switched) => {

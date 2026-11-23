@@ -64,7 +64,7 @@ export function ticketRemise(d) {
            gérante ; chaque pièce garde au moins un centime. */
         if (r.error === 'floor') {
           const f = spreadTicket(rows, target, 99.99);
-          if (!f.error) r.forced = { after: target, cut: Math.round((T0 - target) * 100) / 100, assign: f.assign };
+          return f.error ? r : { ...r, forced: { after: target, cut: Math.round((T0 - target) * 100) / 100, assign: f.assign } };
         }
         return r.error ? r : { after: target, cut: Math.round((T0 - target) * 100) / 100, assign: r.assign };
       },

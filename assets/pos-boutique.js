@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=269';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=187';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=269';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=269';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=271';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=189';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=271';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=271';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=8';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=3';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=6';
@@ -2918,6 +2918,8 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     },
     mount,
     onShow,
+    /* till-auto-update.js ne recharge la caisse que si ceci répond vrai. */
+    idle: () => !(state.ticket && ((state.ticket.lines || []).length || (state.ticket.client && state.ticket.client !== 'passage'))) && !state.exchange && !state.ret,
   });
 
 export { AVOIRS, BY_EAN, CL, CLIENTES, IS_DEMO, P, RAYONS, RETAIN_DAYS, SALES, STAFF, _bqKey, activeAvoirs, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, availableStock, avoirExpired, bqKitSkin, bqMoney, bqPaymentMethod, bqPaymentParts, bqPost, bqSaveProvisional, checkout, closeVeil, colorKey, creditErrorDetail, creditFromServer, creditIntent, creditRequest, findSale, firstFree, firstFreeFor, firstName, freshTicket, headSubVente, initials, issueAvoir, linePromo, lineUnit, merchantSlug, newSaleId, nextStandaloneTicketNumber, openVeil, payExistingBalance, persistAvoirs, persistDay, persistStock, promoFor, pruneTicket, pvPaired, pvReal, queueIfOffline, rebuildCatalog, recordReturn, refreshOps, refreshRemoteAvoirs, renderAll, renderBadges, retDayKey, retShiftDay, root, saleClient, salesToday, syncReturnSales, showStockIssue, sizeWord, sizesOf, stableCreditIssueId, state, stockAdd, stockOf, switchView, ticketClient, ticketCount, ticketTotals, toast, variantStock, whenLabel };
