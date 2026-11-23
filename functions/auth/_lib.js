@@ -1764,6 +1764,63 @@ export async function limitClear(request, env, scope, identity = '') {
   try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(k).run(); return true; } catch (_) { return false; }
 }
 
+/* ── RÉSERVER L'ESSAI AVANT DE COMPARER LE CODE (codes du personnel) ──────
+ * Vérifier la pause, comparer, PUIS compter laissait une rafale de requêtes
+ * parallèles, lancée à la fin d'une pause, passer toute la vérification avant
+ * qu'une seule faute soit inscrite (revue sécurité du 23 Nov 2026). Ici une
+ * seule instruction SQLite compte l'essai ET refuse s'il tombe pendant une
+ * pause : l'essai est réservé avant la comparaison, la rafale est sérialisée
+ * par la base. Un bon code rend ensuite sa réservation (limitRelease) : le
+ * compteur ne retient que les fautes, et un code juste ne peut jamais effacer
+ * les fautes d'avant (l'alternance sept faux / un vrai reste comptée).
+ * Aucun blocage long : la pause est celle de l'échelle passée par l'appelant.
+ * Renvoie { ok:true, key, until } ou { ok:false, response } (429 ou 503). */
+export async function limitReserve(request, env, scope, identity = '', maxFails = LIMIT_MAX_FAILS, ladder = null) {
+  const k = limiterKey(request, scope, identity);
+  if (!k) return { ok: true, key: '', until: null };
+  if (!env || !env.DB) return { ok: false, response: rateLimitUnavailable() };
+  const now = Date.now();
+  const L = Array.isArray(ladder) && ladder.length ? ladder : [LIMIT_BLOCK_MS];
+  const steps = [0, 1, 2, 3].map((i) => L[Math.min(i, L.length - 1)]);
+  try {
+    const row = await env.DB.prepare(
+      `INSERT INTO pair_attempts (ip, fails, first_ts, blocked_until)
+         VALUES (?, 1, ?, CASE WHEN 1 >= ? THEN ? + ? ELSE NULL END)
+       ON CONFLICT(ip) DO UPDATE SET
+         fails = CASE WHEN ? - pair_attempts.first_ts > ? THEN 1 ELSE pair_attempts.fails + 1 END,
+         first_ts = CASE WHEN ? - pair_attempts.first_ts > ? THEN ? ELSE pair_attempts.first_ts END,
+         blocked_until = CASE
+           WHEN ? - pair_attempts.first_ts > ? THEN NULL
+           WHEN pair_attempts.fails + 1 >= ? THEN ? + CASE pair_attempts.fails + 1 - ?
+             WHEN 0 THEN ? WHEN 1 THEN ? WHEN 2 THEN ? ELSE ? END
+           ELSE NULL END
+       WHERE pair_attempts.blocked_until IS NULL OR pair_attempts.blocked_until <= ?
+       RETURNING blocked_until`
+    ).bind(k, now, maxFails, now, steps[0],
+           now, LIMIT_WINDOW_MS, now, LIMIT_WINDOW_MS, now,
+           now, LIMIT_WINDOW_MS, maxFails, now, maxFails, ...steps, now).first();
+    if (row) return { ok: true, key: k, until: row.blocked_until == null ? null : Number(row.blocked_until) };
+    /* Aucune ligne rendue : la pause en cours a refusé l'essai. */
+    const a = await env.DB.prepare('SELECT blocked_until FROM pair_attempts WHERE ip = ?').bind(k).first();
+    const wait = a && a.blocked_until ? Math.max(1, Math.ceil((a.blocked_until - now) / 1000)) : 1;
+    return { ok: false, response: json({ error: 'too_many_attempts', retry_after: wait }, 429) };
+  } catch (_) { return { ok: false, response: rateLimitUnavailable() }; }
+}
+
+/* Rend une réservation : le code était juste (ou la vérification n'a pas pu
+ * se faire). Retire l'essai compté et la pause qu'il aurait posée lui-même,
+ * jamais une pause posée par une autre faute. */
+export async function limitRelease(env, res) {
+  if (!res || !res.ok || !res.key || !env || !env.DB) return;
+  try {
+    await env.DB.prepare(
+      `UPDATE pair_attempts SET fails = MAX(fails - 1, 0),
+         blocked_until = CASE WHEN ? IS NOT NULL AND blocked_until = ? THEN NULL ELSE blocked_until END
+       WHERE ip = ?`
+    ).bind(res.until, res.until, res.key).run();
+  } catch (_) {}
+}
+
 export function rateLimitUnavailable() {
   return json({ error: 'rate-limit-unavailable' }, 503);
 }
@@ -1842,16 +1899,21 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
    * huit essais par quart d'heure restent larges pour un doigt qui glisse, et
    * au-delà la caisse ne fait qu'une pause de quelques secondes (PIN_COOLDOWN_MS). */
   // Attempt rate-limiting by scope: 'pin:<merchant>' keyed on proven identity (or IP if unauthenticated)
-  const blocked = await limitCheck(request, env, `pin:${merchant}`, identity);
-  if (blocked) return { ok: false, response: blocked };
   /* Caisse appairée : second seau, plus serré, par appareil. Les fautes
-   * d'un encaisseur ne verrouillent que son appareil, pas les autres caisses. */
+   * d'un encaisseur ne verrouillent que son appareil, pas les autres caisses.
+   * Chaque seau RÉSERVE l'essai avant la comparaison (limitReserve) : une
+   * rafale parallèle ne passe plus entre la vérification et le comptage. */
   const tillScoped = identity === `till:${merchant}`;
   const deviceScope = `pin-dev:${merchant}`;
+  const storeMax = tillScoped ? LIMIT_STORE_MAX_FAILS : LIMIT_MAX_FAILS;
+  const storeHold = await limitReserve(request, env, `pin:${merchant}`, identity, storeMax, PIN_COOLDOWN_MS);
+  if (!storeHold.ok) return { ok: false, response: storeHold.response };
+  let deviceHold = null;
   if (tillScoped) {
-    const deviceBlocked = await limitCheck(request, env, deviceScope, deviceIdentity);
-    if (deviceBlocked) return { ok: false, response: deviceBlocked };
+    deviceHold = await limitReserve(request, env, deviceScope, deviceIdentity, LIMIT_MAX_FAILS, PIN_COOLDOWN_MS);
+    if (!deviceHold.ok) { await limitRelease(env, storeHold); return { ok: false, response: deviceHold.response }; }
   }
+  const release = async () => { await limitRelease(env, storeHold); await limitRelease(env, deviceHold); };
 
   let staff;
   try {
@@ -1892,17 +1954,13 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
       }
     }
   } catch (_) {
+    await release();
     return { ok: false, error: 'staff-unavailable', status: 503 };
   }
 
-  if (!staff) {
-    const storeMax = tillScoped ? LIMIT_STORE_MAX_FAILS : LIMIT_MAX_FAILS;
-    if (!await limitFail(request, env, `pin:${merchant}`, identity, storeMax, PIN_COOLDOWN_MS)
-        || (tillScoped && !await limitFail(request, env, deviceScope, deviceIdentity, LIMIT_MAX_FAILS, PIN_COOLDOWN_MS))) {
-      return { ok: false, response: rateLimitUnavailable() };
-    }
-    return { ok: false, error: 'bad-pin', status: 401 };
-  }
+  /* Faute : l'essai réservé reste compté. Bon code : il rend sa réservation. */
+  if (!staff) return { ok: false, error: 'bad-pin', status: 401 };
+  await release();
 
   return {
     ok: true,
@@ -1950,8 +2008,9 @@ export async function verifyAccountPin(request, env, pin) {
   if (accSlug && await slugClaimedByOther(env, accSlug, sess.aid)) accSlug = '';
 
   const identity = `sess:${sess.aid}`;
-  const blocked = await limitCheck(request, env, 'pin:account', identity);
-  if (blocked) return { ok: false, response: blocked };
+  /* Essai réservé avant la comparaison (limitReserve), comme à la caisse. */
+  const hold = await limitReserve(request, env, 'pin:account', identity, LIMIT_MAX_FAILS, PIN_COOLDOWN_MS);
+  if (!hold.ok) return { ok: false, response: hold.response };
 
   /* Plusieurs personnes peuvent partager quatre chiffres (le patron d'une
    * boutique, la caissière d'une autre). On lit donc les CANDIDATS, puis on ne
@@ -1961,14 +2020,11 @@ export async function verifyAccountPin(request, env, pin) {
   let rows = [];
   try {
     rows = await keepDashboardDepartments(env, await accountStaffCodes(env, sess.aid, accSlug, pin), pin);   // un gérant hors Management n'ouvre que la caisse (_dashboard-door.js)
-  } catch (_) { return { ok: false, error: 'staff-unavailable', status: 503 }; }
+  } catch (_) { await limitRelease(env, hold); return { ok: false, error: 'staff-unavailable', status: 503 }; }
   const staff = rows.find((row) => employeeRoleOpensDashboard(row.role))
     || rows.find((row) => employeeRoleOpensReceptionView(row.role)) || null;
 
   if (!staff) {
-    if (!await limitFail(request, env, 'pin:account', identity, LIMIT_MAX_FAILS, PIN_COOLDOWN_MS)) {
-      return { ok: false, response: rateLimitUnavailable() };
-    }
     /* « Ce compte a-t-il AU MOINS UN code, de n'importe quel rôle ? » La porte du
      * dashboard laisse passer un compte qui n'en a aucun (il doit atteindre son
      * installation) ; elle le décidait d'après l'état du navigateur, que
@@ -1998,6 +2054,7 @@ export async function verifyAccountPin(request, env, pin) {
    * fermée en ne remettant plus rien à zéro. Le propriétaire qui réussit n'a, lui,
    * plus rien à deviner. */
   if (faceAccessTier(staff.role) === 'owner') await limitClear(request, env, 'pin:account', identity);
+  else await limitRelease(env, hold);
   return {
     ok: true,
     // Trust boundary: merchant comes from the account-scoped matched PIN row.

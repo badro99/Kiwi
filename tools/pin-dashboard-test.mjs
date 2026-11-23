@@ -61,7 +61,7 @@ const sealedLookup = fs.readFileSync(path.join(ROOT, 'functions/auth/_staff-code
 ok(/accountStaffCodes\(env, sess.aid, accSlug, pin\)/.test(vapSrc) && /delete row\.pin/.test(sealedLookup), 'le lookup scellé ne rend que l\'identité, jamais la colonne pin');
 ok(/LIMIT 10/.test(sealedLookup) && !/LIMIT 1`/.test(vapSrc), 'lecture des CANDIDATS (LIMIT 10) : un code partagé caissier/patron ne masque plus le patron');
 /* Pause courte (PIN_COOLDOWN_MS) depuis le 23 Nov 2026, « no blocking ». */
-ok(/limitFail\(request, env, 'pin:account', identity, LIMIT_MAX_FAILS, PIN_COOLDOWN_MS\)/.test(vapSrc), 'le limiteur de force brute est toujours en place (pause courte)');
+ok(/limitReserve\(request, env, 'pin:account', identity, LIMIT_MAX_FAILS, PIN_COOLDOWN_MS\)/.test(vapSrc), 'le limiteur de force brute est toujours en place (pause courte, essai réservé avant la comparaison)');
 
 // ── 3. POST /api/config pins — le roster d'équipe ne tue pas le patron ───────
 const ownerRoleSrc = extract(staffPub, /function accountOwnerRole\(value\) \{[\s\S]*?\n\}/, 'accountOwnerRole');

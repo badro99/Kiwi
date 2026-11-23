@@ -99,7 +99,7 @@ ok('le vérificateur par boutique existe', /export async function verifyStaffPin
 ok('le vérificateur par COMPTE existe (la porte du dashboard)',
   /export async function verifyAccountPin\(/.test(lib));
 ok('le vérificateur par compte est limité en tentatives',
-  /verifyAccountPin\([\s\S]*?limitCheck\(request, env, 'pin:account'/.test(lib));
+  /verifyAccountPin\([\s\S]*?limitReserve\(request, env, 'pin:account'/.test(lib));
 ok('le vérificateur par compte est dérivé de la session, pas d’un paramètre',
   /verifyAccountPin\(request, env, pin\)/.test(lib)
   && /verifyAccountPin\([\s\S]*?(?:activeAccountSession\(request, env\)|readSession\(readCookie\(request, SESS_COOKIE\))/.test(lib));

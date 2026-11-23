@@ -570,6 +570,23 @@ console.log('\n2 · Attempt Rate-Limiting on Verification');
     seen[0] <= 20 && seen[1] <= 40 && seen.every((w) => w > 0 && w <= 60) && seen[4] > 40);
   expire();
   check('once the pause is over the right code opens the till', (await post('1234')).status === 200);
+  /* Rafales parallèles (revue sécurité, 23 Nov 2026) : l'essai est réservé
+     avant la comparaison, une rafale ne passe plus entre vérifier et compter. */
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+  const fresh = await Promise.all(Array.from({ length: 20 }, () => post('0000')));
+  const compared = fresh.filter((r) => r.status === 401).length;
+  check(`20 parallel wrong codes on a fresh till: only the free 8 are compared (${compared})`, compared === 8);
+  expire();
+  const burst = await Promise.all(Array.from({ length: 20 }, () => post('0000')));
+  const through = burst.filter((r) => r.status === 401).length;
+  check(`20 parallel codes when a pause ends: exactly one gets through (${through})`, through === 1);
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+  for (let i = 0; i < 7; i++) await post('0000');
+  check('a right code still opens the till mid-count', (await post('1234')).status === 200);
+  await post('0000');
+  check('…but never wipes the typos before it (7 wrong + 1 right + 1 wrong = paused)', (await post('1234')).status === 429);
+  expire();
+  check('…and the right code works again once that pause is over', (await post('1234')).status === 200);
   /* « No blocking » (owner, 23 Nov 2026) : même après des centaines de fautes,
      la caisse ne fait jamais plus qu'une pause d'une minute. */
   for (let i = 0; i < 40; i++) { expire(); await post('0000'); }
