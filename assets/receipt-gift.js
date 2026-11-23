@@ -35,7 +35,16 @@
     },
   };
   var words = function (l) { return WORDS[l] || WORDS.fr; };
-  var ORN = '~  *  ~  *  ~  *  ~';
+  var GS = 0x1D;
+  /* Le titre se pose sur une bande noire pleine largeur (GS B, impression
+     inversée). Une imprimante qui ne connaît pas GS B l'ignore et garde un
+     titre gras, centré, sans rien de cassé. */
+  function band(s, cols) {
+    var pad = Math.max(0, cols - s.length), l = Math.floor(pad / 2);
+    return new Array(l + 1).join(' ') + s + new Array(pad - l + 1).join(' ');
+  }
+  function spaced(s) { return s.split('').join(' '); }
+  function qty(n) { var q = String(n); return (q.length < 2 ? ' ' + q : q) + '  '; }
   /* Material Symbols « redeem », tel qu'il est vendu dans assets/icons/material. */
   var REDEEM = 'M160-280v80h640v-80H160Zm0-440h88q-5-9-6.5-19t-1.5-21q0-50 35-85t85-35q30 0 55.5 15.5T460-826l20 26 20-26q18-24 44-39t56-15q50 0 85 35t35 85q0 11-1.5 21t-6.5 19h88q33 0 56.5 23.5T880-640v440q0 33-23.5 56.5T800-120H160q-33 0-56.5-23.5T80-200v-440q0-33 23.5-56.5T160-720Zm0 320h640v-240H596l84 114-64 46-136-184-136 184-64-46 82-114H160v240Zm228.5-331.5Q400-743 400-760t-11.5-28.5Q377-800 360-800t-28.5 11.5Q320-777 320-760t11.5 28.5Q343-720 360-720t28.5-11.5ZM600-720q17 0 28.5-11.5T640-760q0-17-11.5-28.5T600-800q-17 0-28.5 11.5T560-760q0 17 11.5 28.5T600-720Z';
 
@@ -65,20 +74,23 @@
   function escpos(b, doc, h) {
     var W = words(doc.lang), cols = h.cols;
     var wrapped = function (s) { h.wrap(s, cols).forEach(function (x) { b.line(x); }); };
-    b.feed(1).align('center').line(ORN);
-    b.size(1, 2).line('*  ' + W.title + '  *').size(1, 1);
-    b.line(W.hello).line(ORN);
+    var title = doc.lang === 'ar' ? W.title : spaced(W.title);
+    b.feed(1).align('center').bold(true).size(1, 2);
+    if (doc.lang === 'ar') b.line(title);   // tracé en image : l'impression inversée ne s'y applique pas
+    else b.raw([GS, 0x42, 1]).line(band(' ', cols)).line(band(title, cols)).line(band(' ', cols)).raw([GS, 0x42, 0]);
+    b.size(1, 1).bold(false).feedDots(14);
+    b.line(W.hello).feed(1);
     b.align('left'); h.rule();
     if (doc.meta.ref) h.row(h.T.no, doc.meta.ref);
     if (doc.meta.date) h.row(h.T.date, doc.meta.date + '  ' + doc.meta.time);
     h.rule();
     doc.lines.forEach(function (l) {
-      h.wrap(l.qty + '× ' + l.name, cols - 2).forEach(function (x) { b.line(' ' + x); });
-      if (l.barcode) b.line('    ' + l.barcode);
+      h.wrap(l.name, cols - 5).forEach(function (x, i) { b.line((i ? '    ' : qty(l.qty)) + x); });
+      if (l.barcode && l.barcode !== l.name) b.line('    ' + l.barcode);
     });
     h.rule();
     b.align('center').feed(1);
-    W.wish.forEach(wrapped);
+    W.wish.forEach(function (x, i) { if (i === W.wish.length - 1) { b.bold(true); wrapped(x); b.bold(false); } else wrapped(x); });
     b.feed(1); wrapped(W.swap);
     if (doc.foot.policy) wrapped(doc.foot.policy);
     if (doc.foot.social) b.line(doc.foot.social);
@@ -94,17 +106,15 @@
     var W = words(doc.lang), e = h.esc;
     var C = function (style, txt) { out.push('<div style="text-align:center;' + style + '">' + e(txt) + '</div>'); };
     out.push('<div class="kr-rule"></div>');
-    out.push('<div style="text-align:center;margin:3mm 0 1mm;"><svg viewBox="0 -960 960 960" width="30" height="30" fill="currentColor" aria-hidden="true" style="display:block;margin:0 auto;"><path d="' + REDEEM + '"/></svg></div>');
-    C('font-weight:700;font-size:15px;letter-spacing:.18em;', W.title);
-    C('font-size:12px;margin:1mm 0 2mm;', W.hello);
-    C('font-size:10px;letter-spacing:.2em;opacity:.6;', ORN);
+    out.push('<div style="margin:3mm 0 0;padding:3.2mm 2mm;background:#000;color:#fff;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><svg viewBox="0 -960 960 960" width="22" height="22" fill="currentColor" aria-hidden="true" style="display:block;margin:0 auto 1.4mm;"><path d="' + REDEEM + '"/></svg><div style="font-weight:700;font-size:15px;letter-spacing:.32em;padding-left:.32em;">' + e(W.title) + '</div></div>');
+    C('font-size:12px;margin:2.4mm 0 2.6mm;', W.hello);
     out.push('<div class="kr-rule"></div>');
     if (doc.meta.ref) h.Rh(h.T.no, h.code(doc.meta.ref));
     if (doc.meta.date) h.Rh(h.T.date, h.code(doc.meta.date + '  ' + doc.meta.time));
     out.push('<div class="kr-rule"></div>');
     doc.lines.forEach(function (l) {
-      out.push('<div class="kr-r kr-item"><span>' + e(l.qty + '× ' + l.name) + '</span><span></span></div>');
-      if (l.barcode) out.push('<div class="kr-sub">' + h.code(l.barcode) + '</div>');
+      out.push('<div class="kr-r kr-item"><span><b style="display:inline-block;min-width:6mm;">' + e(l.qty) + '</b>' + e(l.name) + '</span><span></span></div>');
+      if (l.barcode && l.barcode !== l.name) out.push('<div class="kr-sub">' + h.code(l.barcode) + '</div>');
     });
     out.push('<div class="kr-rule"></div>');
     W.wish.forEach(function (x, i) { C(i === W.wish.length - 1 ? 'font-weight:700;margin-top:1mm;' : '', x); });

@@ -11,7 +11,7 @@
  * · Le reçu normal sort toujours : le ticket cadeau s'y ajoute, il ne le
  *   remplace pas. Il se réimprime aussi depuis « Réimprimer » (pos-reprint.js). */
 
-import '../receipt-gift.js?v=3';
+import '../receipt-gift.js?v=4';
 // pose KiwiReceipt.ext.gift (la caisse est à son plafond de balises <script>)
 
 const tr = (s) => { try { return (globalThis.window?.KiwiCaisseLang || { tr: (x) => x }).tr(s); } catch (_) { return s; } };
