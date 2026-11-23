@@ -183,6 +183,10 @@
     "v": "27",
     "sha": "97b96355dbfaee20"
   },
+  "assets/boutique-sourcing.js": {
+    "v": "1",
+    "sha": "6abc2120c3724b12"
+  },
   "assets/boutique-stock-correct.js": {
     "v": "4",
     "sha": "75fc4494935af382"
@@ -1512,8 +1516,8 @@
     "sha": "d8150ae77563aa16"
   },
   "assets/pages-pro-boutique.js": {
-    "v": "62",
-    "sha": "2c357837a59822a9"
+    "v": "63",
+    "sha": "ac33bf84c4bc074b"
   },
   "assets/pages-pro-office.js": {
     "v": "30",
@@ -1628,8 +1632,8 @@
     "sha": "62a92327f7d6c196"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "307",
-    "sha": "a8b0a75965680922"
+    "v": "309",
+    "sha": "939976468d6ed51d"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2224,8 +2228,8 @@
     "sha": "436b76ed97f12a2e"
   },
   "assets/procurement.js": {
-    "v": "6",
-    "sha": "f4b750474d9876d8"
+    "v": "7",
+    "sha": "7b386dd7e2450d8f"
   },
   "assets/production-action-guard.js": {
     "v": "9",
@@ -2440,8 +2444,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "149",
-    "sha": "95562649a06a3a43"
+    "v": "150",
+    "sha": "316c476ba6014f5a"
   },
   "assets/stock/alerts.js": {
     "v": "6",
@@ -2480,8 +2484,8 @@
     "sha": "052213749865deb2"
   },
   "assets/stock/sourcing.js": {
-    "v": "6",
-    "sha": "e49937538c56a2b1"
+    "v": "7",
+    "sha": "99ec916b38e83df3"
   },
   "assets/stock/state.js": {
     "v": "13",

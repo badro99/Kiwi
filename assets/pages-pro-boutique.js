@@ -1806,10 +1806,11 @@ function _bqxProductBody(pid) {
         <button data-activation=write type="button" class="bqx-vr-act" data-action="bqx-prod-print" data-arg="${_esc(pid)}"${coded ? '' : ' disabled'}>${_bqxIc('print')}<span>${_esc(coded ? t.printAll(coded) : t.printNone)}</span></button>
       </div>` : ''}
     </div>
-    ${_bqxHistoryHtml(pid)}
+    ${_bqxSrcHtml(pid)}${_bqxHistoryHtml(pid)}
   </div>`;
 }
 
+const _bqxSrcHtml = (pid) => `<div data-bqs-slot="${_esc(pid)}"></div>`;   // fournisseurs en concurrence : assets/boutique-sourcing.js remplit la place
 function _bqxSheetSub(data) {
   const t = _bqxShT();
   return `${data.category ? data.category.name : t.noCat} · ${_bqxPrice(data.product.priceMAD)} ${t.cur} · ${_bqxPfFill(t.inStock, { n: data.stock })}`;
@@ -1824,7 +1825,7 @@ function _bqxOpenProduct(pid, target, drawerOnly) {
   _bqxShCss();
   const foot = `<button class="kb ghost" data-dismiss>${_esc(t.close)}</button><button class="kb ghost danger-text" data-action="bqx-prod-del" data-arg="${_esc(pid)}">${_bqxIc('trash-2')}${_esc(t.delete)}</button><button data-activation=write class="kb ghost" data-action="bqx-stock-fix" data-arg="${_esc(pid)}">${_bqxIc('tune')}${_esc(t.fixStock)}</button><button data-activation=write class="kb atlas" data-action="bqx-prod-edit" data-arg="${_esc(pid)}">${_bqxIc('edit')}${_esc(t.edit)}</button>`;
   if (!drawerOnly && _bqxCopy().trade === 'boutique') {   // boutique : au centre, sur ses tailles (assets/boutique-sizes.js, comme à la caisse) ; les autres métiers gardent le tiroir
-    _bqxSz().then((S) => { _bqxPfCss(); _bqxDrawerPid = pid; _bqxSzView = S.openDashboard({ modal, modalClass: 'bqx-pf-modal', foot, extraHtml: _bqxHistoryHtml(pid), heading: () => { const d = CAT().getProduct(pid); return d && [d.product.name, _bqxSheetSub(d)]; },
+    _bqxSz().then((S) => { _bqxPfCss(); _bqxDrawerPid = pid; _bqxSzView = S.openDashboard({ modal, modalClass: 'bqx-pf-modal', foot, extraHtml: _bqxSrcHtml(pid) + _bqxHistoryHtml(pid), heading: () => { const d = CAT().getProduct(pid); return d && [d.product.name, _bqxSheetSub(d)]; },
       onClose: (v) => { if (_bqxSzView === v) { _bqxSzView = null; _bqxDrawerPid = null; } if (_bqxOnInv()) _renderInventory(); },
       mount: { cat: CAT(), pid, lang: _bqxPfLang(), target, label: _bqxLabelFor, register: (vid) => handlers['bqx-var-reg'](null, vid), toast: (title, desc) => toast(title, { desc, type: 'success' }) } }); }).catch(() => _bqxOpenProduct(pid, 0, true)); return;
   }

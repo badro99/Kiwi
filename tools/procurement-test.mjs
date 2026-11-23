@@ -46,6 +46,12 @@ ok('remaining delivery closes PO as received', grn2.id && P.doc().orders[0].stat
 const bad = P.attachInvoice({ supplierId: supplier.id, orderId: po.id, receiptId: grn2.id, number: 'FA-8', lines: [{ itemId: 'flour', qty: 7, unit: 'kg', unitCost: 9 }] });
 ok('three-way match exposes price and quantity exceptions', bad.match && !bad.match.ok && bad.match.issues.some(x => x.type === 'price') && bad.match.issues.some(x => x.type === 'quantity'));
 ok('supplier message is generated from the actual PO lines', P.message(po.id).includes(po.number) && P.message(po.id).includes('Farine'));
+P.setQuote(supplier.id, 'prod-jean', 160.456);
+P.setQuote(supplier.id, 'prod-veste', 210);
+ok('a supplier quote is kept on its record, rounded to the centime', P.doc().suppliers.find(x => x.id === supplier.id).quotes['prod-jean'].price === 160.46);
+P.setQuote(supplier.id, 'prod-veste', 0);
+ok('a zero quote withdraws the offer, the others stay', !P.doc().suppliers.find(x => x.id === supplier.id).quotes['prod-veste'] && !!P.doc().suppliers.find(x => x.id === supplier.id).quotes['prod-jean']);
+ok('a quote for an unknown supplier writes nothing', P.setQuote('sup-nobody', 'prod-jean', 99) === null);
 
 if (process.exitCode) process.exit(process.exitCode);
 console.log(`  ✓ procurement (${pass} controls: Basic receipts and returns, Ultra PO lifecycle, ledger posting, three-way matching)`);

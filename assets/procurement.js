@@ -78,6 +78,25 @@
     return row;
   }
   function nextId(d, prefix) { d.seq = (+d.seq || 0) + 1; return id(prefix, d.seq); }
+  /* Le prix qu'un fournisseur annonce pour un article (boutique : un produit
+   * du catalogue). Rangé sur sa fiche, `quotes[itemId]`, pour mettre les
+   * fournisseurs d'un article en concurrence (assets/stock/sourcing.js). Un prix
+   * nul ou absent retire l'offre. 400 articles au plus par fiche. */
+  function setQuote(supplierId, itemId, price) {
+    supplierId = String(supplierId || ''); itemId = String(itemId || '').slice(0, 80);
+    var mad = Math.round(Math.max(0, +price || 0) * 100) / 100; var row = null;
+    if (!itemId) return null;
+    store.update(function (d) {
+      row = d.suppliers.find(function (s) { return s && s.id === supplierId; }) || null;
+      if (!row) return d;
+      var quotes = Object.assign({}, row.quotes && typeof row.quotes === 'object' ? row.quotes : {});
+      if (mad > 0) quotes[itemId] = { price: mad, at: Date.now() }; else delete quotes[itemId];
+      var keys = Object.keys(quotes);
+      if (keys.length > 400) keys.sort(function (a, b) { return +(quotes[a].at || 0) - +(quotes[b].at || 0); }).slice(0, keys.length - 400).forEach(function (k) { delete quotes[k]; });
+      row.quotes = quotes; row.updatedAt = Date.now(); return d;
+    });
+    return row;
+  }
   function createOrder(input) {
     if (!ultra()) return { error: 'ultra-required' };
     input = input || {}; var lines = (input.lines || []).map(cleanLine).filter(function (x) { return x.itemId && x.qty > 0; });
@@ -215,5 +234,5 @@
     return [`Bonjour ${s?.name || ''},`, `Commande ${o.number}`, ...o.lines.map(function (x) { return `• ${x.name || x.itemId} · ${x.qty} ${x.unit}`; }), o.expectedDate ? `Livraison souhaitée : ${o.expectedDate}` : '', 'Merci.'].filter(Boolean).join('\n');
   }
 
-  window.KiwiProcurement = { store: store, isUltra: ultra, addSupplier: addSupplier, updateSupplier: updateSupplier, createOrder: createOrder, markSent: markSent, cancelOrder: cancelOrder, receiveDirect: receiveDirect, receiveOrder: receiveOrder, returnToSupplier: returnToSupplier, attachInvoice: attachInvoice, matchInvoice: matchInvoice, message: message, doc: function () { return store.get(); } };
+  window.KiwiProcurement = { store: store, isUltra: ultra, addSupplier: addSupplier, updateSupplier: updateSupplier, setQuote: setQuote, createOrder: createOrder, markSent: markSent, cancelOrder: cancelOrder, receiveDirect: receiveDirect, receiveOrder: receiveOrder, returnToSupplier: returnToSupplier, attachInvoice: attachInvoice, matchInvoice: matchInvoice, message: message, doc: function () { return store.get(); } };
 })();

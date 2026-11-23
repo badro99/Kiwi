@@ -40,6 +40,7 @@ function boot(opts = {}) {
     KiwiStockInternal: { install: (name, factory) => { assert.equal(name, 'sourcing'); api = factory(S); } },
     KiwiInventory: { history: (id) => (opts.history || {})[id] || [] },
     Kiwi: { toast() {} },
+    KiwiBoutiqueSourcing: opts.boutique,
   };
   vm.runInNewContext(SRC, { window, Date, Math, Object, Array, String, Number, Set, Map, JSON });
   return { api, S };
@@ -252,6 +253,40 @@ const tomates = { id: 'tom', name: 'Tomates', unit: 'kg', costPerUnit: 0, suppli
   const { api } = boot({ lang: 'ar', inv: [nascarpon, { ...mascapron, packSize: 500 }] });
   assert.match(api.tableRows([nascarpon, { ...mascapron, packSize: 500 }], (it) => `<tr class="st-row-in"><td>${it.name}</td></tr>`), /لكل كيلو/);
   ok('every phrase exists in French, English and Arabic, without em dashes');
+}
+
+{
+  /* Boutique et autres métiers de détail : les offres, le principal et le
+     concurrent viennent du modèle de la fiche produit boutique
+     (assets/boutique-sourcing.js, tools/boutique-sourcing-test.mjs). */
+  const jean = { id: 'prod-jean', name: 'Jean droit', unit: 'pièce', retail: true, supplierId: 'sup-derb', costPerUnit: 180 };
+  const calls = [];
+  const boutique = {
+    offers: (it) => { calls.push(['offers', it.id]); return [
+      { id: 'sup-derb', name: 'Textiles Derb Omar', principal: true, quoted: 180, last: null, prev: null, n: 0, price: 180 },
+      { id: 'sup-fes', name: 'Atelier Fès', principal: false, quoted: 160, last: null, prev: null, n: 0, price: 160, cheapest: true },
+    ]; },
+    setPrincipal: (it, id) => { calls.push(['main', it.id, id]); return { id, name: 'Atelier Fès' }; },
+    openRival: (it, done) => { calls.push(['rival', it.id]); done(); },
+  };
+  const { api } = boot({ inv: [jean], boutique });
+  const html = api.detail(jean, '');
+  assert.match(html, /Atelier Fès est 11 % moins cher que votre fournisseur principal/);
+  assert.match(html, /data-src-principal="sup-fes"/);
+  assert.match(html, /data-src-add-rival data-item-id="prod-jean"/, 'a shop item opens the boutique dialog, not the restaurant one');
+  assert.doesNotMatch(html, /data-stock-add-backup-supplier/);
+  assert.match(api.orderHint(jean), /Moins cher pour cet article : Atelier Fès, 160 MAD \/ pièce \(votre principal : 180 MAD \/ pièce\)/);
+  const handlers = {};
+  const button = (attr, value) => ({ getAttribute: () => value, addEventListener: (_, fn) => { handlers[attr] = fn; } });
+  const scope = { querySelectorAll: (sel) => (sel === '[data-src-principal]' ? [button('main', 'sup-fes')] : sel === '[data-src-add-rival]' ? [button('rival')] : []) };
+  const reopened = [];
+  api.wireDetail(scope, jean, { reopen: (id) => reopened.push(id) });
+  handlers.main();
+  handlers.rival();
+  eq(calls.filter((c) => c[0] !== 'offers'), [['main', 'prod-jean', 'sup-fes'], ['rival', 'prod-jean']], 'the principal and the rival go through the boutique model');
+  eq(reopened, ['prod-jean', 'prod-jean'], 'the sheet reopens after each');
+  eq(boot({ inv: [jean] }).api.detail(jean, '').includes('data-src-principal'), false, 'without the boutique model, a shop item shows no offer rather than a wrong one');
+  ok('shop items on the stock page use the boutique model: offers, principal, rival');
 }
 
 console.log(n + ' groupes · stock sourcing');

@@ -21,7 +21,8 @@
   const scripts = [
     'assets/pages-pro-office.js?v=30',
     'assets/pages-pro.js?v=2254',
-    'assets/pages-pro-boutique.js?v=62',
+    'assets/pages-pro-boutique.js?v=63',
+    'assets/boutique-sourcing.js?v=1',
     'assets/inventory-scan.js?v=1',
     'assets/boutique-stock-correct.js?v=4',
     'assets/boutique-categories-view.js?v=3',
@@ -50,7 +51,7 @@
     'assets/day-report-refused.js?v=2',
     'assets/stock/strings.js?v=27',
     'assets/stock/state.js?v=13',
-    'assets/stock.js?v=149',
+    'assets/stock.js?v=150',
     'assets/catalog-workspace.js?v=7',
     'assets/planning-core.js?v=15',
     'assets/team/catalog.js?v=2',

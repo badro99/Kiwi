@@ -2456,7 +2456,7 @@
     'assets/stock/purchasing.js?v=13',
     'assets/stock/intake.js?v=23',
     'assets/stock/photo.js?v=2',
-    'assets/stock/sourcing.js?v=6',
+    'assets/stock/sourcing.js?v=7',
     'assets/stock/catalog.js?v=14',
     'assets/stock/suppliers.js?v=6',
   ];
