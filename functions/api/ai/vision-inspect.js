@@ -43,6 +43,8 @@ Signale incomplete:true si une page, ligne ou portion est illisible, omise ou co
 
 Étiquette de carton, de colis ou liste de colisage avec un assortiment de tailles ou de pointures (ART NO., COLOUR, SIZE 36 37 38 avec une quantité sous chaque taille, QTY 12 PRS) : docType "boutique_product". sizeRun porte UNE entrée par taille avec sa quantité, dans l'ordre imprimé ; reference le numéro d'article, color la couleur, packQty la quantité totale imprimée. L'assortiment va dans sizeRun, jamais dans notes ni dans items. Aucun prix n'est imprimé : n'en invente pas. Si l'étiquette n'imprime qu'une plage de tailles sans quantité sous chaque taille (SIZE: 36-41, 12 PRS), sizeRun contient UNE seule entrée, la plage telle qu'imprimée avec la quantité totale ({ \"size\": \"36-41\", \"qty\": 12 }) : n'invente jamais une répartition par taille. « SIZE: ASSORTED » sans liste de tailles : sizeRun reste vide.
 
+totalMad est le montant TTC à payer (taxes comprises), jamais le total HT ; taxMad est la TVA.
+
 4. Proposer les ACTIONS 1-CLIC les plus adaptées pour le commerçant.
 
 Réponds UNIQUEMENT avec un objet JSON valide structuré exactement ainsi :
@@ -201,10 +203,13 @@ export function validateVisionData(raw, locale = 'fr') {
     || (raw.suggestedActions || []).length > 4
     || (Array.isArray(raw.suggestedActions) && raw.suggestedActions.some(act => clipped(act?.id, 40) || clipped(act?.type, 40) || clipped(act?.label, 80)))) issues.push('truncated-fields');
   if (Array.isArray(entities.items) && items.length !== entities.items.length) issues.push('unreadable-lines');
+  let totalTtc = totalMad;
   if (['invoice', 'expense_receipt'].includes(safeDocType) && items.length && entities.totalMad != null) {
     const sum = Math.round(items.reduce((n, it) => n + it.total, 0) * 100);
     const total = Math.round(totalMad * 100);
     if (Math.abs(sum - total) > 1 && Math.abs(sum + Math.round(taxMad * 100) - total) > 1) issues.push('total-mismatch');
+    /* Le total HT (= les lignes) rendu comme total, avec une TVA lue : ce qui est dû est le TTC. */
+    else if (Math.abs(sum - total) <= 1 && taxMad > 0) totalTtc = Math.round((totalMad + taxMad) * 100) / 100;
   }
   return {
     ...(issues.length ? { reviewNeeded: true } : {}),
@@ -218,7 +223,7 @@ export function validateVisionData(raw, locale = 'fr') {
       supplier: String(entities.supplier || '').slice(0, 120),
       date: String(entities.date || '').slice(0, 20),
       invoiceNumber: String(entities.invoiceNumber || '').slice(0, 60),
-      totalMad,
+      totalMad: totalTtc,
       taxMad,
       category: String(entities.category || 'divers').slice(0, 40),
       paymentMethod: String(entities.paymentMethod || 'non_specifie').slice(0, 30),

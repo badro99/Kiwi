@@ -214,6 +214,14 @@ ok('CSV export for the accountant, safe to open in a spreadsheet');
   assert.equal(docDuplicate([{ ...saved, note: '' }], { ...ent, invoiceNumber: '' })?.id, 'xp_1', 'no number: supplier, amount and day');
   assert.equal(docDuplicate([{ ...saved, note: '', date: '2026-11-07' }], { ...ent, invoiceNumber: '' }), null);
   assert.equal(docDuplicate(null, ent), null);
+  /* 23 nov., deuxième lecture de la même facture : le modèle a rendu le total HT
+     (4 328,20, la somme des lignes) comme total. Avec une TVA lue, la fiche
+     propose ce qui est payé, TTC. Un total déjà TTC ne bouge pas. */
+  const ht = { ...ent, totalMad: 4328.2, items: [{ total: 3165.03 }, { total: 1026 }, { total: 137.17 }] };
+  assert.equal(docPrefill(ht, '2026-11-23').amountCents, 519384, 'HT total plus VAT');
+  assert.equal(docPrefill({ ...ht, totalMad: 5193.84 }, '2026-11-23').amountCents, 519384, 'TTC total kept');
+  assert.equal(docPrefill({ ...ht, taxMad: 0 }, '2026-11-23').amountCents, 432820, 'no VAT read: the total as read');
+  assert.equal(docDuplicate([saved], ht), saved, 'the HT reading of a saved invoice is the same invoice');
   ok('an invoice read by the assistant prefills the sheet and is never added twice');
 }
 

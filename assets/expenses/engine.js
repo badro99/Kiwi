@@ -303,8 +303,12 @@ const docCents = (v) => { const n = Number(v); return Number.isFinite(n) && n > 
 export function docPrefill(ent, today) {
   const e = ent && typeof ent === 'object' ? ent : {};
   const date = isDay(e.date) && (!isDay(today) || e.date <= today) ? e.date : '';
+  /* Le modèle rend parfois le total HT (= la somme des lignes) comme total :
+     avec une TVA lue, ce qui est payé est le TTC. */
+  const lines = Array.isArray(e.items) ? e.items.reduce((n, it) => n + docCents(it && it.total), 0) : 0;
+  const ht = lines > 0 && docCents(e.taxMad) > 0 && Math.abs(lines - docCents(e.totalMad)) <= 1;
   return {
-    amountCents: docCents(e.totalMad), vatCents: docCents(e.taxMad),
+    amountCents: docCents(e.totalMad) + (ht ? docCents(e.taxMad) : 0), vatCents: docCents(e.taxMad),
     supplier: String(e.supplier || '').trim().slice(0, 80), date,
     ref: String(e.invoiceNumber || '').trim().slice(0, 60),
     category: String(e.category || ''), method: DOC_METHOD[e.paymentMethod] || '',

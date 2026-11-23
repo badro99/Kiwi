@@ -33,7 +33,8 @@ const DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', ye
 const MODEL = {
   docType: 'invoice', categoryLabel: 'Facture fournisseur', title: 'Facture LEADER Formaggi · 5 193,84 MAD', confidence: 0.98,
   summary: 'Facture du fournisseur LEADER Formaggi.',
-  entities: { supplier: 'LEADER Formaggi', date: DAY, invoiceNumber: 'FA26/11-00117', totalMad: 5193.84, taxMad: 865.64,
+  /* Le total lu est le HT (4 328,20), comme la vraie lecture du 23 nov. : la fiche doit proposer le TTC. */
+  entities: { supplier: 'LEADER Formaggi', date: DAY, invoiceNumber: 'FA26/11-00117', totalMad: 4328.2, taxMad: 865.64,
     category: 'alimentation', paymentMethod: 'non_specifie',
     items: [{ name: 'PARMESAN L.S.M 1/32', qty: 22.77, unitPrice: 139, total: 3165.03 }, { name: 'MASCARPONE VIRGILIO 250GR', qty: 36, unitPrice: 28.5, total: 1026 }, { name: 'RICOTTA', qty: 2.365, unitPrice: 58, total: 137.17 }] },
   suggestedActions: [{ id: 'a1', type: 'stock-receive', label: 'Ajouter les articles au stock', primary: true }],
@@ -159,6 +160,9 @@ await T.run('prefilledSheet · « Ajouter aux dépenses » ouvre la fiche rempli
     cat: (form.querySelector('[data-cat][aria-pressed="true"]') || {}).dataset?.cat || '',
     photo: !form.querySelector('[data-xp-photo]').hidden,
   }));
+  /* Ouverte depuis l'assistant, la fiche a son style : avant, sans la page Dépenses
+     à l'écran, elle s'affichait brute (propriétaire, 23 nov., « look at this »). */
+  assert.equal(await page.$eval('.xp-picks', (el) => getComputedStyle(el).display), 'grid', 'the sheet is styled');
   assert.deepEqual(f, { amount: '5193,84', supplier: 'LEADER Formaggi', date: DAY, note: 'Facture FA26/11-00117', verify: ['amount', 'date', 'supplier'], cat: 'grocery', photo: true });
   assert.equal(await page.$eval('.kv-msg-result [data-kv-action="expense-add"]', (b) => b.getAttribute('aria-busy')), 'true', 'the button waits while the sheet is open');
   await page.click('.xp-sheet [data-dismiss]');

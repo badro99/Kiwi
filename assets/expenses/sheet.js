@@ -7,7 +7,7 @@
  * Ce que la lecture remplit est marqué « à vérifier » ; elle ne réécrit jamais
  * un champ que le patron a déjà tapé. Un ticket illisible ou un quota épuisé
  * laisse la fiche vide avec une phrase simple, et la photo reste jointe. */
-import { CATEGORIES, METHODS, classifyReason, parseAmount, completionId, nextStamp } from './engine.js?v=6';
+import { CATEGORIES, METHODS, classifyReason, parseAmount, completionId, nextStamp } from './engine.js?v=7';
 import { tr, lang } from './strings.js?v=4';
 import { CAT_ICON, esc, catLabel, dayLabel } from './view.js?v=4';
 

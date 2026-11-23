@@ -18,10 +18,10 @@
  * Kiwi.handlers['nav-expenses'], rendu par Kiwi.appPage comme les autres
  * pages pleines. Logique pure dans engine.js, rendu dans view.js, fiche dans
  * sheet.js, mots dans strings.js, style dans style.js. */
-import * as E from './engine.js?v=6';
+import * as E from './engine.js?v=7';
 import { tr } from './strings.js?v=4';
 import { pageHtml, emptyHtml, loadingHtml, listHtml } from './view.js?v=4';
-import { openSheet, shrinkPhoto } from './sheet.js?v=7';
+import { openSheet, shrinkPhoto } from './sheet.js?v=8';
 import { ensureStyle } from './style.js?v=2';
 
 const ZONE = 'Africa/Casablanca';
@@ -363,6 +363,7 @@ function fromDocument(ent, extra) {
   if ((window.__kiwiRole || 'owner') !== 'owner') return { error: tr('ownerOnly') };
   try { if (window.KiwiConfig && window.KiwiConfig.off && window.KiwiConfig.off('expenses')) return { error: tr('docOff') }; } catch (_) {}
   getStore();
+  ensureStyle();          // la fiche s'ouvre ici sans la page Dépenses, qui seule posait le style
   const today = businessToday();
   const p = E.docPrefill(ent, today);
   const dup = E.docDuplicate(doc().list, ent);

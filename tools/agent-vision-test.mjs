@@ -82,6 +82,12 @@ for (const [input, expected] of [[0, 0], ['0', 0], [0.4, 0.4], [1, 1], [7, 1], [
   assert.deepEqual(types(validateVisionData({ docType: 'expense_receipt', entities: { totalMad: 10 } }, 'fr')), ['expense-add'], 'receipt: expenses');
   assert.deepEqual(types(validateVisionData({ docType: 'restaurant_menu', suggestedActions: [{ type: 'menu-import', label: 'M' }] }, 'fr')), ['menu-import'], 'a menu is left alone');
   assert.deepEqual(validateVisionData({ ...inv, incomplete: true }, 'fr').suggestedActions, [], 'a doubtful reading offers nothing');
+  // Même jour, deuxième lecture : le total rendu était le HT (la somme des lignes). Avec une
+  // TVA lue, le total montré et repris est le TTC ; un total déjà TTC ne bouge pas.
+  const lines = [{ name: 'PARMESAN', qty: 1, total: 3165.03 }, { name: 'MASCARPONE', qty: 1, total: 1026 }, { name: 'RICOTTA', qty: 1, total: 137.17 }];
+  assert.equal(validateVisionData({ docType: 'invoice', entities: { totalMad: 4328.2, taxMad: 865.64, items: lines } }).entities.totalMad, 5193.84, 'HT total becomes TTC');
+  assert.equal(validateVisionData({ docType: 'invoice', entities: { totalMad: 5193.84, taxMad: 865.64, items: lines } }).entities.totalMad, 5193.84, 'TTC total kept');
+  assert.equal(validateVisionData({ docType: 'invoice', entities: { totalMad: 4328.2, taxMad: 0, items: lines } }).entities.totalMad, 4328.2, 'no VAT: as read');
 }
 
 // ── Lecture illisible : « à vérifier », jamais un succès à 0,8 ───────────────
