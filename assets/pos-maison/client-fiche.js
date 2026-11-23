@@ -59,7 +59,13 @@ const STYLE = `
 .mz-fowe-row .amt{font-family:var(--mono);font-weight:700;text-align:right}
 .mz-ftags{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
 .mz-ftag{font-size:11px;padding:3px 9px;border-radius:999px;background:var(--paper-soft,#f2f0ea);color:var(--ink-2)}
-.mz-fkpi{font-size:11.5px;color:var(--ink-3);margin:-2px 0 6px}`;
+.mz-fkpi{font-size:11.5px;color:var(--ink-3);margin:-2px 0 6px}
+.mz-fedit{display:grid;gap:10px;margin:14px 0 4px}
+.mz-fedit label{display:grid;gap:4px;font-size:11.5px;color:var(--ink-3)}
+.mz-fedit .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:560px){.mz-fedit .two{grid-template-columns:1fr}}
+.mz-fiche .mz-sheet-foot .mz-fdel{margin-right:auto;color:#a8321f}
+.mz-fedit + .mz-sheet-foot{justify-content:flex-end}`;
 function ensureStyle() {
   const d = globalThis.document;
   if (!d || d.getElementById('mz-fiche-style')) return;
@@ -182,7 +188,8 @@ export function mzOpenFiche(cid, k) {
     <div class="mz-f-lbl" style="margin:16px 0 6px;">${tr('Avoirs et remboursements')}</div>
     <div class="mz-fhist" id="mz-fiche-credits"><div class="mz-empty" style="padding:16px;">${tr('Chargement du registre…')}</div></div>
     <div class="mz-sheet-foot">
-      <button class="mz-btn secondary" data-mz-close>${tr('Fermer')}</button>
+      <button class="mz-btn ghost mz-fdel" id="mz-fiche-del" type="button">${icon('delete')}${tr('Supprimer')}</button>
+      <button class="mz-btn secondary" id="mz-fiche-edit" type="button">${icon('edit')}${tr('Modifier')}</button>
       <button class="mz-btn primary" id="mz-fiche-sell">${icon('shopping_bag')}${tr('Nouvelle vente pour elle')}</button>
     </div>`;
   k.openVeil('#mz-fiche-veil');
@@ -191,6 +198,10 @@ export function mzOpenFiche(cid, k) {
   const avB = el.querySelector('#mz-fiche-av');
   if (avB) avB.onclick = () => { k.closeVeil('#mz-fiche-veil'); k.openVoucher(av, { mode: 'view' }); };
   el.querySelector('#mz-fiche-sell').onclick = () => { k.closeVeil('#mz-fiche-veil'); k.onSell(c); };
+  /* Modifier et supprimer : toujours ouverts sur la caisse maison, sans code
+     ni droit d'inventaire (propriétaire, 23 nov. 2026). */
+  el.querySelector('#mz-fiche-edit').onclick = () => editFiche(cid, c, raw, k);
+  el.querySelector('#mz-fiche-del').onclick = () => deleteFiche(cid, c, k, m.owedCents, av);
   const wireSettle = () => {
     const b = el.querySelector('#mz-fiche-settle');
     if (b) b.onclick = () => { k.closeVeil('#mz-fiche-veil'); k.onSettle(cid); };
@@ -206,4 +217,87 @@ export function mzOpenFiche(cid, k) {
     wireSettle(); k.icons();
   }, () => {});
   void fillCredits(cid, el.querySelector('#mz-fiche-credits'), k);
+}
+
+/* ── Modifier / supprimer la fiche ────────────────────────────────────────────
+ * La caisse maison les ouvre à toute personne en poste : ni code de
+ * responsable, ni droit d'inventaire (propriétaire, 23 nov. 2026). Le serveur
+ * accepte l'écriture de la caisse appairée (functions/api/clients.js : les
+ * droits par personne ne visent que les sessions du tableau de bord).
+ * Boutique réelle : k.book = KiwiClients, le même carnet que le tableau de
+ * bord. Démo : la liste locale (k.CL, k.CLIENTES). */
+const attr = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+const field = (id, label, value, type = 'text', extra = '') =>
+  `<label>${tr(label)}<input class="mz-in" id="${id}" type="${type}" value="${attr(value)}" autocomplete="off"${extra} /></label>`;
+
+export function editFiche(cid, c, raw, k) {
+  const { el, esc } = k;
+  const r = raw || {};
+  const notes = k.book ? (r.notes || '') : ((c.prefs || [])[0] || '');
+  el.innerHTML = `
+    <button class="mz-modal-x" data-mz-close aria-label="${tr('Fermer')}">${icon('close')}</button>
+    <h3 class="modal-title">${tr('Modifier')} · ${esc(c.name)}</h3>
+    <div class="mz-fedit">
+      ${field('mz-fe-name', 'Nom et prénom', c.name)}
+      <div class="two">${field('mz-fe-tel', 'Téléphone', c.phone, 'tel', ' inputmode="tel"')}${field('mz-fe-mail', 'Email', r.email, 'email', ' inputmode="email"')}</div>
+      <div class="two">${field('mz-fe-city', 'Ville', r.city)}${field('mz-fe-bday', 'Anniversaire', r.birthday, 'date')}</div>
+      ${field('mz-fe-addr', 'Adresse', r.address)}
+      ${field('mz-fe-notes', 'Notes', notes)}
+    </div>
+    <div class="mz-sheet-foot">
+      <button class="mz-btn secondary" id="mz-fe-cancel" type="button">${tr('Annuler')}</button>
+      <button class="mz-btn primary" id="mz-fe-save" type="button">${icon('check')}${tr('Enregistrer')}</button>
+    </div>`;
+  k.icons();
+  const back = () => mzOpenFiche(cid, k);
+  k.$$('[data-mz-close]', el).forEach((b) => { b.onclick = () => k.closeVeil('#mz-fiche-veil'); });
+  el.querySelector('#mz-fe-cancel').onclick = back;
+  el.querySelector('#mz-fe-save').onclick = () => {
+    const v = (id) => String((el.querySelector('#' + id) || {}).value || '').trim();
+    const out = saveFiche(cid, { name: v('mz-fe-name'), phone: v('mz-fe-tel'), email: v('mz-fe-mail'), city: v('mz-fe-city'),
+      birthday: v('mz-fe-bday'), address: v('mz-fe-addr'), notes: v('mz-fe-notes') }, k);
+    if (out.error) { k.toast(out.error); return; }
+    k.toast(`${tr('Fiche enregistrée')} · ${out.name}`);
+    if (k.onChanged) k.onChanged(cid, false);
+    back();
+  };
+}
+
+/* L'écriture, sans DOM : { name } ou { error }. */
+export function saveFiche(cid, f, k) {
+  if (!f.name) return { error: tr('Le nom est requis pour la fiche') };
+  const P = globalThis.window?.KiwiPhone;
+  if (f.phone && P && typeof P.valid === 'function' && !P.valid(f.phone)) return { error: tr('Numéro invalide') };
+  if (k.book) {
+    const twin = f.phone && typeof k.book.findByPhone === 'function' ? k.book.findByPhone(f.phone) : null;
+    if (twin && twin.id !== cid) return { error: `${tr('Client déjà enregistré')} · ${twin.name || f.phone}` };
+    k.book.upsert({ id: cid, ...f });
+    return { name: f.name };
+  }
+  const c = k.CL && k.CL[cid];
+  if (!c) return { error: tr('Enregistrement impossible') };
+  Object.assign(c, { name: f.name, phone: f.phone, email: f.email, city: f.city, birthday: f.birthday, address: f.address, prefs: f.notes ? [f.notes] : [] });
+  return { name: f.name };
+}
+
+/* La suppression dit l'argent en cours (doit, avoir) avant de demander : les
+   notes et avoirs restent au registre, seule la fiche part. */
+export function deleteFiche(cid, c, k, owedCents, av) {
+  const money = [owedCents ? `${tr('doit')} ${k.fmtMAD(owedCents / 100)}` : '', av ? `${tr('Avoir actif')} ${k.fmtMAD(av.balance)}` : ''].filter(Boolean).join(' · ');
+  const msg = `${tr('Supprimer')} ${c.name} ?${money ? ` ${tr('Argent en cours')} : ${money}` : ''}`;
+  const L = globalThis.window?.KiwiCaisseLang;
+  const ask = L && typeof L.ask === 'function' ? L.ask(msg, { danger: true, confirm: tr('Supprimer') }) : Promise.resolve(globalThis.window?.confirm?.(msg));
+  return Promise.resolve(ask).then((yes) => {
+    if (!yes) return false;
+    if (k.book) k.book.remove(cid);
+    else if (k.CL) {
+      Reflect.deleteProperty(k.CL, cid);
+      const i = (k.CLIENTES || []).findIndex((x) => x && x.id === cid);
+      if (i >= 0) k.CLIENTES.splice(i, 1);
+    }
+    k.closeVeil('#mz-fiche-veil');
+    k.toast(tr('Client supprimé'));
+    if (k.onChanged) k.onChanged(cid, true);
+    return true;
+  });
 }

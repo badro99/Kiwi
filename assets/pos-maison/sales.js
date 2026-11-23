@@ -1,11 +1,11 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=253';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=166';
-import { invSetModal, offerRegister } from './inventory.js?v=166';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=254';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=167';
+import { invSetModal, offerRegister } from './inventory.js?v=167';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=14';
 import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=5';
-import { mzPageGrid } from './grid-pager.js?v=1'; import { mzOpenFiche } from './client-fiche.js?v=6'; import { oversellOk } from '../pos-boutique/oversell.js?v=2';
+import { mzPageGrid } from './grid-pager.js?v=1'; import { mzOpenFiche } from './client-fiche.js?v=7'; import { oversellOk } from '../pos-boutique/oversell.js?v=2';
 import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsEmpty } from './client-view.js?v=1';
 
 
@@ -1178,6 +1178,9 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     mzOpenFiche(cid, { merchant: merchantSlug(), el: $('#mz-fichem', root), clById, clAvoirOf, esc, fmtMAD, whenLabel, fmtValidUntil, initials, icons, openVeil, closeVeil, $$, openVoucher,
       SALES, P, AVOIRS, demo: IS_DEMO, creditRequest, creditFromServer, reward: clReward, avoirs: activeAvoirs,
       raw: (id) => (useKiwiCl() ? window.KiwiClients.get(id) : CL[id]) || null,
+      /* Modifier / supprimer (client-fiche.js) : sans code ni droit d'inventaire. */
+      toast, book: useKiwiCl() ? window.KiwiClients : null, CL, CLIENTES,
+      onChanged: (id, gone) => { if (gone && state.ticket.client === id) { state.ticket.client = null; renderTicket(); } renderClientes(); icons(); },
       onSettle: (id) => { state.acompteFor = id; switchView('acomptes'); },
       onSell: (c) => { state.ticket.client = c.id; switchView('vente'); toast(`${firstName(c.name)} au comptoir${c.taille ? `, taille ${c.taille} pré-sélectionnée` : ''}`); } });
   }
