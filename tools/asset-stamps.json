@@ -228,8 +228,8 @@
     "sha": "af731124f6a82009"
   },
   "assets/caisse-lang.js": {
-    "v": "164",
-    "sha": "eea4c12f060a7378"
+    "v": "165",
+    "sha": "711f8a228edeb187"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1748,20 +1748,20 @@
     "sha": "bee5b88b8cabff28"
   },
   "assets/pos-boutique.css": {
-    "v": "374",
+    "v": "375",
     "sha": "1ab96bb59018670a"
   },
   "assets/pos-boutique.js": {
-    "v": "374",
-    "sha": "e550dd885c90c0a6"
+    "v": "375",
+    "sha": "55e6024a5beaf2f0"
   },
   "assets/pos-boutique/avance-restock.js": {
-    "v": "27",
-    "sha": "d4835d4a8af7cd43"
+    "v": "28",
+    "sha": "04b557b08c1ef0c4"
   },
   "assets/pos-boutique/bargain-ui.js": {
-    "v": "3",
-    "sha": "cf708d7989bab0cc"
+    "v": "4",
+    "sha": "fa8f271a888667c4"
   },
   "assets/pos-boutique/bargain.js": {
     "v": "3",
@@ -1776,8 +1776,8 @@
     "sha": "ed17a4acad2cb58c"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "268",
-    "sha": "4f5b54dcfe53dd96"
+    "v": "269",
+    "sha": "de677f13011c89a8"
   },
   "assets/pos-boutique/cheque-sheet.js": {
     "v": "2",
@@ -1788,12 +1788,12 @@
     "sha": "c1c7e9fb01688344"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "186",
-    "sha": "f2e4d48ae385c77d"
+    "v": "187",
+    "sha": "ecd3265edfe29e67"
   },
   "assets/pos-boutique/exch-combined.js": {
-    "v": "30",
-    "sha": "7cb0ae7076f0751a"
+    "v": "31",
+    "sha": "b58e70508f38e50f"
   },
   "assets/pos-boutique/exchange.js": {
     "v": "6",
@@ -1808,8 +1808,8 @@
     "sha": "3bf3273561b9c4f7"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "268",
-    "sha": "a73523e8871ab9cd"
+    "v": "269",
+    "sha": "a837650740c4663f"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "26",
@@ -1860,8 +1860,8 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "268",
-    "sha": "2314c8b50f6b0069"
+    "v": "269",
+    "sha": "1a7f4172207eb15c"
   },
   "assets/pos-boutique/search.js": {
     "v": "20",
@@ -1888,8 +1888,8 @@
     "sha": "5e0aeb760ae6b4cf"
   },
   "assets/pos-boutique/ticket-remise.js": {
-    "v": "5",
-    "sha": "6a44324114e60ad4"
+    "v": "6",
+    "sha": "c4b3241b82b49411"
   },
   "assets/pos-boutique/till-clock.js": {
     "v": "2",
@@ -1912,8 +1912,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "503",
-    "sha": "f4bafa727e3b3821"
+    "v": "504",
+    "sha": "efb28c8e5e8ab8fa"
   },
   "assets/pos-epicerie.css": {
     "v": "44",

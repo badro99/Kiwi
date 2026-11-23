@@ -1,17 +1,17 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=374'; import { tillPriceList as tpl } from './price-list.js?v=3';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=268';
-import { offerRegister } from './inventory.js?v=268';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=375'; import { tillPriceList as tpl } from './price-list.js?v=3';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=269';
+import { offerRegister } from './inventory.js?v=269';
 import { ticketOwner } from './ticket-owner.js?v=8';
-import { ticketRemise } from './ticket-remise.js?v=5';
+import { ticketRemise } from './ticket-remise.js?v=6';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
-import { mountBargain } from './bargain-ui.js?v=3';
+import { mountBargain } from './bargain-ui.js?v=4';
 import { bqKitTicketFoot } from './kit-2027.js?v=26';
 import { sellSearch } from './search.js?v=20';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=6'; import { oversellOk } from './oversell.js?v=2';
 let CX_NOTE = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=30').then((m) => { CX_NOTE = m; }).catch(() => {});
+import('./exch-combined.js?v=31').then((m) => { CX_NOTE = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -562,7 +562,7 @@ import('./exch-combined.js?v=30').then((m) => { CX_NOTE = m; }).catch(() => {});
   }
 
   /* ═══════════════════════ VARIANT SHEET ═══════════════════════ */
-  const sheet = { pid: null, size: null, color: null, qty: 1, remise: 0, agreed: 0, bmode: 'pct', btext: '', bok: true, exchange: false };
+  const sheet = { pid: null, size: null, color: null, qty: 1, remise: 0, agreed: 0, bmode: 'pct', btext: '', bok: true, under: false, exchange: false };
   /* Le prix d'une pièce dans la fiche : convenu (bargain.js) ou pourcentage. */
   const sheetUnit = (base) => (sheet.agreed > 0 ? sheet.agreed : shelf(base * (100 - sheet.remise) / 100));
   const sheetPer = (u) => (sheet.agreed > 0 ? tr('Prix convenu') : sheet.remise ? `−${sheet.remise} %` : `${fmtMAD(u)} × ${sheet.qty}`);
@@ -578,7 +578,7 @@ import('./exch-combined.js?v=30').then((m) => { CX_NOTE = m; }).catch(() => {});
     const p = P[pid];
     Object.assign(sheet, {
       pid,
-      size: null, color: p.colors[0], qty: 1, remise: 0, agreed: 0, bmode: 'pct', btext: '', bok: true,
+      size: null, color: p.colors[0], qty: 1, remise: 0, agreed: 0, bmode: 'pct', btext: '', bok: true, under: false,
       exchange: !!(opts && opts.exchange),
     });
     /* Ouverte depuis la recherche ou la douchette : la déclinaison trouvée est
@@ -659,7 +659,7 @@ import('./exch-combined.js?v=30').then((m) => { CX_NOTE = m; }).catch(() => {});
         <button class="bq-btn secondary" data-bq-close>Annuler</button>
         ${sheet.exchange
           ? `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="arrow-left-right"></i><span class="bq-sheet-add-l">Choisir cet article · <span class="nb">${fmtMAD(shBase)}</span></span></button>`
-          : `<button class="bq-btn primary" id="bq-sheet-add" ${sheet.bok ? '' : 'disabled'}><i data-lucide="plus"></i><span class="bq-sheet-add-l">Ajouter au ticket · <span class="nb" id="bq-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></span></button>`}
+          : `<button class="bq-btn primary" id="bq-sheet-add" ${sheet.bok ? '' : 'disabled'}><i data-lucide="plus"></i><span class="bq-sheet-add-l"><span id="bq-sheet-add-t">${sheet.under ? esc(tr('Vendre quand même')) : 'Ajouter au ticket'}</span> · <span class="nb" id="bq-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></span></button>`}
       </div>`;
 
     /* Remise à la marocaine : % , prix convenu ou −MAD (bargain-ui.js). Les
@@ -670,12 +670,21 @@ import('./exch-combined.js?v=30').then((m) => { CX_NOTE = m; }).catch(() => {});
     if (bhost) mountBargain(bhost, {
       tr, fmt: fmtMAD, base: shBase, mode: sheet.bmode, text: sheet.btext,
       chipsHTML: `<div class="bq-chips" id="bq-remise">${[0, ...pctList].map((r) => `<button class="bq-chip ${sheet.remise === r ? 'on' : ''}" data-bq-rem="${r}">${r === 0 ? 'Sans' : `−${r} %`}</button>`).join('')}</div>`,
-      evaluate: (mode, value) => { const r = agreedUnit(shBase, mode, value, maxPct(pctList)); return r.error ? r : { after: r.unit, cut: r.cut }; },
+      evaluate: (mode, value) => {
+        const r = agreedUnit(shBase, mode, value, maxPct(pctList));
+        /* Sous le prix minimum : la vente reste possible (« Vendre quand même »),
+           derrière l'accord gérante habituel ; le serveur l'inscrit au journal
+           des remises hors politique (functions/api/sale.js › discount-policy). */
+        if (r.error === 'floor') { const f = agreedUnit(shBase, mode, value, 100); if (!f.error) r.forced = { after: f.unit, cut: f.cut }; }
+        return r.error ? r : { after: r.unit, cut: r.cut };
+      },
       onChange: (r, switched) => {
         sheet.bmode = r.mode; sheet.btext = r.text || '';
         if (switched) sheet.remise = 0;
-        sheet.agreed = r.ok ? r.res.after : 0;
-        sheet.bok = r.mode === 'pct' || r.ok || r.empty;
+        const forced = r.error === 'floor' && r.res && r.res.forced;
+        sheet.under = !!forced;
+        sheet.agreed = r.ok ? r.res.after : forced ? forced.after : 0;
+        sheet.bok = r.mode === 'pct' || r.ok || r.empty || sheet.under;
         if (switched) $$('[data-bq-rem]', el).forEach((x) => x.classList.toggle('on', +x.dataset.bqRem === 0));
         refreshPrice();
       },
@@ -687,6 +696,8 @@ import('./exch-combined.js?v=30').then((m) => { CX_NOTE = m; }).catch(() => {});
       $('#bq-sheet-per', el).classList.toggle('rem', !!(sheet.remise || sheet.agreed));
       const addB = $('#bq-sheet-add', el);
       if (addB && !sheet.exchange) addB.disabled = !sheet.bok;   // hors stock : addToTicket demande un second appui
+      const addT = $('#bq-sheet-add-t', el);
+      if (addT) addT.textContent = sheet.under ? tr('Vendre quand même') : tr('Ajouter au ticket');
       const cta = $('#bq-sheet-cta', el);
       if (cta) cta.textContent = fmtMAD(u * sheet.qty);
       const qv = $('#bq-qty-val', el);

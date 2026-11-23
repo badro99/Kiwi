@@ -49,6 +49,9 @@ export function mountBargain(host, o) {
     pv.classList.toggle('is-err', !!r.error);
     if (st.mode === 'pct') pv.textContent = '';
     else if (r.empty) pv.textContent = st.mode === 'price' ? tr('Tapez le prix convenu') : tr('Tapez les dirhams retirés');
+    /* Sous le plancher : si l'appelant sait quand même calculer le prix
+       (res.forced), on le montre, la vente reste possible avec l'accord gérante. */
+    else if (r.error === 'floor' && r.res.forced) pv.textContent = o.fmt(o.base) + ' → ' + o.fmt(r.res.forced.after) + ' · ' + tr('Sous le prix minimum') + ' ' + o.fmt(r.res.floor);
     else if (r.error === 'floor') pv.textContent = tr('Prix minimum') + ' ' + o.fmt(r.res.floor);
     else if (r.error === 'above') pv.textContent = tr('Doit rester sous le prix affiché');
     else if (r.error) pv.textContent = tr('Montant non valide');

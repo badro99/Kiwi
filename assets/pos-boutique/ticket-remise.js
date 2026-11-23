@@ -3,7 +3,7 @@
  * Rien n'est importé : sales.js passe ses propres fonctions, donc c'est SON
  * code qui tourne (openApprove, le rendu, le propriétaire du ticket). */
 import { spreadTicket, maxPct } from './bargain.js?v=3';
-import { mountBargain } from './bargain-ui.js?v=3';
+import { mountBargain } from './bargain-ui.js?v=4';
 
 export function ticketRemise(d) {
   const { state, root, $, $$, tr, icons, toast, clById, firstName, ticketOwner,
@@ -60,20 +60,30 @@ export function ticketRemise(d) {
         const target = mode === 'price' ? value : Math.round((T0 - value) * 100) / 100;
         if (!(target > 0)) return { error: 'floor', floor: spreadTicket(rows, 0.01, maxPct(pcts)).floor || 0 };
         const r = spreadTicket(rows, target, maxPct(pcts));
+        /* Sous le prix minimum : « Appliquer quand même », derrière l'accord
+           gérante ; chaque pièce garde au moins un centime. */
+        if (r.error === 'floor') {
+          const f = spreadTicket(rows, target, 99.99);
+          if (!f.error) r.forced = { after: target, cut: Math.round((T0 - target) * 100) / 100, assign: f.assign };
+        }
         return r.error ? r : { after: target, cut: Math.round((T0 - target) * 100) / 100, assign: r.assign };
       },
       onChange: (r) => {
         last = r;
         $('#bq-tkrem-foot', el).hidden = r.mode === 'pct';
         const btn = $('#bq-tkrem-apply', el);
-        btn.disabled = !r.ok;
-        btn.textContent = r.ok ? tr('Appliquer') + ' · ' + d.fmt(r.res.after) : tr('Appliquer');
+        const forced = r.error === 'floor' && r.res && r.res.forced;
+        btn.disabled = !r.ok && !forced;
+        btn.textContent = r.ok ? tr('Appliquer') + ' · ' + d.fmt(r.res.after)
+          : forced ? tr('Appliquer quand même') + ' · ' + d.fmt(forced.after) : tr('Appliquer');
       },
     });
     $('#bq-tkrem-apply', el).textContent = tr('Appliquer');
     $('#bq-tkrem-apply', el).onclick = () => {
-      const r = last;
-      if (!r || !r.ok) return;
+      const r0 = last;
+      const forced = r0 && r0.error === 'floor' && r0.res && r0.res.forced;
+      if (!r0 || (!r0.ok && !forced)) return;
+      const r = forced ? { ...r0, res: forced } : r0;
       const agree = () => {
         closeVeil('#bq-approve-veil');
         ticketOwner.agreeTicket(t, r.res.assign);

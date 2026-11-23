@@ -20,7 +20,7 @@ var CACHE = 'kiwi-app-v674';
 var SHELL = [
   '/assets/retail-bestsellers.js?v=2',
   '/assets/pos-maison/avance-restock.js?v=21',
-  '/assets/pos-boutique/avance-restock.js?v=27',
+  '/assets/pos-boutique/avance-restock.js?v=28',
   '/assets/retail-avance.js?v=6',
   '/assets/request-deadline.mjs?v=1',
   '/assets/serveur/reopened-bill.mjs?v=1',
@@ -33,7 +33,7 @@ var SHELL = [
   '/assets/pos-maison/sale-discount.js?v=1',
   '/assets/pos-boutique/oversell.js?v=2',
   '/assets/pos-boutique/transfers.js?v=7',
-  '/assets/pos-boutique/bargain-ui.js?v=3',
+  '/assets/pos-boutique/bargain-ui.js?v=4',
   '/assets/pos-boutique/bargain.js?v=3',
   '/assets/pos-boutique/me-menu.js?v=2',
   '/assets/hotel-economat-api.js?v=9',
@@ -59,7 +59,7 @@ var SHELL = [
   '/assets/team/styles.js?v=6',
   '/assets/team/access-rules.js?v=8',
   '/assets/hotel-economat-transport.js?v=30',
-  '/assets/pos-boutique/drawer.js?v=186',
+  '/assets/pos-boutique/drawer.js?v=187',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=26',
@@ -457,7 +457,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=39',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=164',
+  '/assets/caisse-lang.js?v=165',
   '/assets/venue-store.js?v=7',
   '/assets/discount-policy.js?v=4',
   '/assets/merchant-policies.js?v=4',
@@ -541,7 +541,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=37',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=38',
-  '/assets/pos-dispatch.js?v=503',
+  '/assets/pos-dispatch.js?v=504',
   '/assets/retail-scan.css?v=11',
   '/assets/retail-balances.css?v=5',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -614,15 +614,15 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=374',
-  '/assets/pos-boutique/sales.js?v=268',
+  '/assets/pos-boutique.css?v=375',
+  '/assets/pos-boutique/sales.js?v=269',
   '/assets/retail-photos.js?v=8',
   '/assets/retail-icon-picker.js?v=8',
   '/assets/pos-boutique/ticket-owner.js?v=8',
   '/assets/pos-boutique/till-clock.js?v=2',
   '/assets/pos-boutique/old-sales.js?v=2',
   '/assets/pos-boutique/paid-share.js?v=2',
-  '/assets/pos-boutique/exch-combined.js?v=30',
+  '/assets/pos-boutique/exch-combined.js?v=31',
   '/assets/exchange-queue.js?v=1',
   '/assets/pos-boutique/ticket-number.js?v=7',
   '/assets/pos-boutique/receipt-doc.js?v=4',
@@ -633,7 +633,7 @@ var SHELL = [
   '/assets/pos-boutique/exchange.js?v=6',
   '/assets/pos-boutique/label-picker.js?v=6',
   '/assets/pos-boutique/delivery-card.js?v=10',
-  '/assets/pos-boutique/ticket-remise.js?v=5',
+  '/assets/pos-boutique/ticket-remise.js?v=6',
   '/assets/pos-boutique/search.js?v=20',
   '/assets/pos-boutique/inv-tools.js?v=24',
   '/assets/pos-boutique/inv-moves.js?v=7',
@@ -643,10 +643,10 @@ var SHELL = [
   '/assets/pos-boutique/card-check.js?v=1',
   '/assets/pos-boutique/seller-pick.js?v=2',
   '/assets/pos-boutique/calm-typing.js?v=1',
-  '/assets/pos-boutique/checkout.js?v=268',
-  '/assets/pos-boutique/inventory.js?v=268',
+  '/assets/pos-boutique/checkout.js?v=269',
+  '/assets/pos-boutique/inventory.js?v=269',
   '/assets/pos-boutique/sister-stock.js?v=1',
-  '/assets/pos-boutique.js?v=374',
+  '/assets/pos-boutique.js?v=375',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

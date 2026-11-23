@@ -108,9 +108,13 @@ await S.run('prix convenu, plancher, −MAD et ticket entier', async (t) => {
   const base1 = await openCard(page, 1);
   await click(page, '#bq-bargain [data-bq-bmode="price"]');
   await typeIn(page, '#bq-bargain [data-bq-bval]', String(Math.floor(base1 * 0.5)));
-  assert(await page.$eval('#bq-sheet-add', (b) => b.disabled), 'below the floor, Ajouter is disabled');
+  /* Sous le plancher, la vente reste possible : « Vendre quand même »,
+     derrière l'accord gérante (owner, 23 Nov 2026). */
+  assert(!(await page.$eval('#bq-sheet-add', (b) => b.disabled)), 'below the floor, the add button stays usable');
+  const addT = await page.$eval('#bq-sheet-add-t', (e) => e.textContent);
+  assert(/quand même/i.test(addT), `below the floor, the button reads « Vendre quand même » (« ${addT} »)`);
   const fl = await page.$eval('#bq-bargain .bq-bargain-pv', (e) => e.textContent);
-  assert(/minimum/i.test(fl), `the till names the lowest price (« ${fl} »)`);
+  assert(/minimum/i.test(fl) && /→/.test(fl), `the till names the lowest price and previews the forced price (« ${fl} »)`);
 
   t.step('item sheet · −MAD');
   await click(page, '#bq-bargain [data-bq-bmode="amount"]');
@@ -133,6 +137,17 @@ await S.run('prix convenu, plancher, −MAD et ticket entier', async (t) => {
   await approveIfAsked(page);
   await sleep(400);
   assert(Math.abs(await total(page) - target) < 0.005, `the ticket total is exactly the agreed ${target} MAD (was ${before})`);
+
+  t.step('item sheet · Vendre quand même');
+  const t2 = await total(page);
+  const base2 = await openCard(page, 1);
+  const under = Math.floor(base2 * 0.5);
+  await click(page, '#bq-bargain [data-bq-bmode="price"]');
+  await typeIn(page, '#bq-bargain [data-bq-bval]', String(under));
+  await click(page, '#bq-sheet-add');
+  await approveIfAsked(page);
+  await page.waitForFunction(() => !document.querySelector('#bq-sheet-veil').classList.contains('is-open'), { timeout: 5000 });
+  assert(Math.abs(await total(page) - t2 - under) < 0.005, `the piece sells under the floor at ${under} MAD`);
 });
 
 await S.finish();
