@@ -105,11 +105,18 @@ export async function agreeIfGated(env, err, models) {
 /* Une lecture d'image : primaire, puis secours si le primaire échoue (hors refus
  * de politique/quota, jamais contournés — voir _payload-fallback.js). Chaque
  * modèle reçoit SA forme de requête. Renvoie { result, model } ou lève. */
-export async function runVisionPair(env, primary, fallback, payload) {
+/* 25 s par modèle pour la lecture de l'assistant (vision-inspect.js) : principal puis
+   secours tiennent sous la minute après laquelle Safari abandonne une requête
+   (« Load failed », Pasta Corner, 23 nov. 2026). tools/vision-timeout-test.mjs. */
+export const VISION_TIMEOUT_MS = 25000;
+
+export async function runVisionPair(env, primary, fallback, payload, opts = {}) {
+  const timeoutMs = opts.timeoutMs || 0;   // sans délai par défaut : un menu long peut prendre plus
   const attempt = () => runWithPayloadFallback(
     env,
     primary, payloadForModel(primary, payload),
     fallback, () => payloadForModel(fallback, payload),
+    { timeoutMs },
   );
   try { return await attempt(); }
   catch (e) {

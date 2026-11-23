@@ -273,7 +273,7 @@ var SHELL = [
   '/assets/agent-data.js?v=7',
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
-  '/assets/agent-voice.js?v=20',
+  '/assets/agent-voice.js?v=21',
   '/assets/agent-doc-followup.js?v=2',
   '/assets/i18n.js?v=65',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un

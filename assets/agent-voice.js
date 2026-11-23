@@ -582,7 +582,8 @@
       if (thread) {
         var errMsg = document.createElement('div');
         errMsg.className = 'fa-msg agent';
-        errMsg.innerHTML = '<div class="fa-bubble" style="color:var(--danger);">' + T().error + ' (' + esc(err.message || 'Échec réseau') + ')</div>';
+        var late = /^(Load failed|Failed to fetch|NetworkError)|model-timeout/i.test(String(err && err.message || '')) && ({ fr: 'pas de réponse à temps, réessayez', en: 'no answer in time, try again', ar: 'لم يصل الرد في الوقت، أعد المحاولة' })[getLang()]; // Safari « Load failed », délai dépassé : une phrase (23 nov. 2026)
+        errMsg.innerHTML = '<div class="fa-bubble" style="color:var(--danger);">' + T().error + ' (' + esc(late || err.message || 'Échec réseau') + ')</div>';
         thread.appendChild(errMsg);
         scrollDown();
       }

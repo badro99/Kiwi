@@ -11,7 +11,7 @@ import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk, quotaBody, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway } from './_run.js';
-import { runVisionPair } from './_vision.js';
+import { runVisionPair, VISION_TIMEOUT_MS } from './_vision.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
 
@@ -104,7 +104,7 @@ async function runVisionInspect(env, dataUrl, promptText, locale) {
     reasoning_effort: 'low',
   };
 
-  return runVisionPair(env, MODEL, FALLBACK_MODEL, payload);
+  return runVisionPair(env, MODEL, FALLBACK_MODEL, payload, { timeoutMs: VISION_TIMEOUT_MS });
 }
 
 /* Une facture fournisseur va au stock ET aux dépenses, un ticket aux dépenses

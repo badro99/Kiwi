@@ -2172,7 +2172,7 @@ section('Whole-project regressions');
        et ses appels PowerShell doivent y démarrer. */
     'bridge-win7-test.mjs',
     'agent-voice-test.mjs',
-    'agent-vision-test.mjs', 'agent-doc-followup-test.mjs',
+    'agent-vision-test.mjs', 'agent-doc-followup-test.mjs', 'vision-timeout-test.mjs',
     'wave-o-truth-test.mjs',
     'briefing-test.mjs',
     'briefing-split-test.mjs', 'client-robustness-test.mjs', 'misc-rating-behavior-test.mjs',
