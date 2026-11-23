@@ -1,10 +1,10 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=255';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=168';
-import { invSetModal, offerRegister } from './inventory.js?v=168';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=256';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=169';
+import { invSetModal, offerRegister } from './inventory.js?v=169';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=14';
-import { mzTicketRemise, mzTr as tr } from './ticket-remise.js?v=5';
+import { mzTicketRemise, mzItemBargain, mzTr as tr } from './ticket-remise.js?v=7';
 import { mzPageGrid } from './grid-pager.js?v=1'; import { mzOpenFiche } from './client-fiche.js?v=7'; import { oversellOk } from '../pos-boutique/oversell.js?v=2';
 import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsEmpty } from './client-view.js?v=1';
 
@@ -450,7 +450,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     return '';
   }
 
-  const openTicketRemise = () => mzTicketRemise({ state, root, $, $$, esc, icons, toast, openVeil, closeVeil, openApprove, renderTicket, renderGrid, renderBadges, policyKey: _bqKey });
+  const openTicketRemise = () => mzTicketRemise({ state, root, $, $$, esc, icons, toast, openVeil, closeVeil, openApprove, renderTicket, renderGrid, renderBadges, policyKey: _bqKey, fmt: fmtMAD, pieceBase: (ln) => lineUnit(Object.assign({}, ln, { remise: 0, agreed: 0 })) });
 
   function renderTicket() {
     const t = state.ticket;
@@ -533,8 +533,9 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
         if (u === false && !sellsLoose(P[ln.pid], ln.isPiece)) u = oversellOk(`${ln.pid}|${ln.size}`, `${P[ln.pid].name} · ${ln.size}`, 0, toast) ? 1 : null;
         if (u === false) toast(`${P[ln.pid].name} · ${ln.size}, plus de stock, dernière pièce déjà sur le ticket`);
         if (u === false || u === null) return;
-        ln.units = (ln.units || 0) + u;
-        ln.qty++;
+        /* Un prix convenu pour le ticket entier valait pour CES pièces : la pièce ajoutée part à son prix, sur sa propre ligne (comme la boutique). */
+        if (+ln.agreed > 0 && ln.agreedFrom === 'ticket') t.lines.splice(idx + 1, 0, Object.assign({}, ln, { qty: 1, units: u, remise: 0, agreed: 0, agreedFrom: '' }));
+        else { ln.units = (ln.units || 0) + u; ln.qty++; }
       } else {
         ln.units = (ln.units || 0) - releaseStock(ln.pid, ln.size, 1, ln.isPiece);
         ln.qty--;
@@ -578,11 +579,11 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
           ${(ln.fragile || p.fragile) ? '<span class="mz-line-fragile">Fragile</span>' : ''}
           ${ln.registryTitle ? `<span class="mz-line-reg">Liste : ${esc(ln.registryTitle)}</span>` : ''}
           ${pr ? `<span class="mz-line-promo" title="${esc(pr.name || 'Promotion')}"><i data-lucide="tag"></i>${esc(pr.badge)}</span>` : ''}
-          ${ln.remise ? `<span class="mz-line-rem">−${ln.remise} %</span>` : ''}
+          ${ln.remise ? `<span class="mz-line-rem">−${ln.remise} %</span>` : ''}${+ln.agreed > 0 ? `<span class="mz-line-rem">${esc(tr('Prix convenu'))}</span>` : ''}
         </span>
       </span>
       <span class="mz-line-right">
-        <span class="mz-line-price">${(ln.remise || pr) ? `<span class="was">${fmtMAD(origPrice * ln.qty)}</span>` : ''}${fmtMAD(u * ln.qty)}</span>
+        <span class="mz-line-price">${(ln.remise || +ln.agreed > 0 || pr) ? `<span class="was">${fmtMAD(origPrice * ln.qty)}</span>` : ''}${fmtMAD(u * ln.qty)}</span>
         <span class="mz-line-qty">
           <button data-mz-minus="${i}" aria-label="Retirer">−</button><b>${ln.qty}</b><button data-mz-plus="${i}" aria-label="Ajouter">+</button>
         </span>
@@ -722,14 +723,14 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     if (heldUnits === false || heldUnits === null) return false;
     const pr = promoForLine({ pid, isPiece, customPrice, servicePieces: p.servicePieces });
     const stamp = pr ? { price: pr.price, badge: pr.badge, name: pr.promo.name, id: pr.promo.id } : null;
-    const same = state.ticket.lines.find((l) => l.pid === pid && l.size === size && l.color === color && l.remise === (cfg.remise || 0) && l.isPiece === isPiece && l.registryId === (cfg.registryId || null));
+    const same = state.ticket.lines.find((l) => l.pid === pid && l.size === size && l.color === color && l.remise === (cfg.remise || 0) && (+l.agreed || 0) === (+cfg.agreed || 0) && l.isPiece === isPiece && l.registryId === (cfg.registryId || null));
     if (same) {
       same.qty += qty;
       same.units = (same.units || 0) + heldUnits;
       if (stamp && (!same.promo || stamp.price < same.promo.price)) same.promo = stamp;
     } else {
       state.ticket.lines.push({
-        pid, size, color, qty, remise: cfg.remise || 0, promo: stamp,
+        pid, size, color, qty, remise: cfg.remise || 0, promo: stamp, ...(+cfg.agreed > 0 ? { agreed: +cfg.agreed } : {}),
         /* `units` = ce que le CATALOGUE doit bouger au règlement ; `qty` = ce
            que la cliente emporte. Les deux diffèrent dès qu'on vend à la pièce. */
         units: heldUnits,
@@ -744,7 +745,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
   }
 
   /* ═══════════════════════ VARIANT SHEET ═══════════════════════ */
-  const sheet = { pid: null, size: null, color: null, qty: 1, remise: 0, exchange: false, format: 'piece' };
+  const sheet = { pid: null, size: null, color: null, qty: 1, remise: 0, agreed: 0, bmode: 'pct', btext: '', exchange: false, format: 'piece' };
 
   function defaultSize(p) {
     const c = ticketClient();
@@ -757,7 +758,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     const p = P[pid];
     Object.assign(sheet, {
       pid,
-      size: null, color: p.colors[0], qty: 1, remise: 0,
+      size: null, color: p.colors[0], qty: 1, remise: 0, agreed: 0, bmode: 'pct', btext: '', bok: true, under: false,
       exchange: !!(opts && opts.exchange),
       format: p.format || 'piece',
     });
@@ -781,7 +782,8 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     const servicePromo = promoForLine({ pid: sheet.pid, isPiece: false });
     let shBase = shPromo ? shPromo.price : shelf(p.price);
     if (sheetPiece && !shPromo) shBase = pieceBase;
-    const unit = shelf(shBase * (100 - sheet.remise) / 100);
+    const unit = sheet.agreed > 0 ? sheet.agreed : shelf(shBase * (100 - sheet.remise) / 100);
+    const sheetPer = (u) => (sheet.agreed > 0 ? esc(tr('Prix convenu')) : sheet.remise ? `−${sheet.remise} %` : `${u} MAD × ${sheet.qty}`);
     const canAdd = canHoldStock(sheet.pid, sheet.size, 1, sheetPiece);
     const el = $('#mz-sheetm', root);
     el.innerHTML = `
@@ -801,7 +803,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
         </span>
         <span class="mz-sheet-price">
           <span class="val" id="mz-sheet-total">${fmtMAD(unit * sheet.qty)}</span>
-          <span class="per ${sheet.remise ? 'rem' : ''}" id="mz-sheet-per">${sheet.remise ? `−${sheet.remise} %` : `${unit} MAD × ${sheet.qty}`}</span>
+          <span class="per ${(sheet.remise || sheet.agreed) ? 'rem' : ''}" id="mz-sheet-per">${sheetPer(unit)}</span>
         </span>
       </div>
       ${shPromo ? `
@@ -864,9 +866,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
         </div>
         <div class="mz-f">
           <div class="mz-f-lbl">Remise</div>
-          <div class="mz-chips" id="mz-remise">
-            ${[0, ...(window.KiwiDiscountPolicy?.percentages(_bqKey) || [5, 10, 15, 20])].map((r) => `<button class="mz-chip ${sheet.remise === r ? 'on' : ''}" data-mz-rem="${r}">${r === 0 ? 'Sans' : `−${r} %`}</button>`).join('')}
-          </div>
+          <div id="mz-bargain"></div>
         </div>
       </div>`}
 
@@ -874,18 +874,38 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
         <button class="mz-btn secondary" data-mz-close>Annuler</button>
         ${sheet.exchange
           ? `<button class="mz-btn primary" id="mz-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="arrow-left-right"></i>Choisir cet article · ${fmtMAD(shBase)}</button>`
-          : `<button class="mz-btn primary" id="mz-sheet-add"><i data-lucide="plus"></i>Ajouter au ticket · <span id="mz-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></button>`}
+          : `<button class="mz-btn primary" id="mz-sheet-add" ${sheet.bok === false ? 'disabled' : ''}><i data-lucide="plus"></i><span id="mz-sheet-add-t">${sheet.under ? esc(tr('Vendre quand même')) : 'Ajouter au ticket'}</span> · <span id="mz-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></button>`}
       </div>`;
 
+    /* Remise à la marocaine : % , prix convenu ou −MAD (ticket-remise.js, le
+       sélecteur de la boutique). Les pastilles gardent leur gestionnaire plus bas. */
+    const pctList = window.KiwiDiscountPolicy?.percentages(_bqKey) || [5, 10, 15, 20];
+    const bhost = $('#mz-bargain', el);
+    if (bhost) mzItemBargain(bhost, {
+      base: shBase, pcts: pctList, fmt: fmtMAD, mode: sheet.bmode, text: sheet.btext,
+      chipsHTML: `<div class="mz-chips" id="mz-remise">${[0, ...pctList].map((r) => `<button class="mz-chip ${sheet.remise === r ? 'on' : ''}" data-mz-rem="${r}">${r === 0 ? esc(tr('Sans')) : `−${r} %`}</button>`).join('')}</div>`,
+      onChange: (r, switched) => {
+        sheet.bmode = r.mode; sheet.btext = r.text || '';
+        if (switched) { sheet.remise = 0; $$('[data-mz-rem]', el).forEach((x) => x.classList.toggle('on', +x.dataset.mzRem === 0)); }
+        const forced = r.error === 'floor' && r.res && r.res.forced;
+        sheet.under = !!forced;
+        sheet.agreed = r.ok ? r.res.after : forced ? forced.after : 0;
+        sheet.bok = r.mode === 'pct' || r.ok || r.empty || sheet.under;
+        refreshPrice();
+      },
+    });
     const refreshPrice = () => {
+      const addB = $('#mz-sheet-add', el), addT = $('#mz-sheet-add-t', el);
+      if (addB && !sheet.exchange) addB.disabled = sheet.bok === false;
+      if (addT) addT.textContent = sheet.under ? tr('Vendre quand même') : 'Ajouter au ticket';
       const piece = p.format === 'service' && sheet.format === 'piece';
       const base = piece ? pieceUnitPrice(p) : null;
       const activePromo = promoForLine({ pid: sheet.pid, isPiece: piece, customPrice: base, servicePieces: p.servicePieces });
       const bPrice = activePromo ? activePromo.price : (piece ? base : shelf(p.price));
-      const u = shelf(bPrice * (100 - sheet.remise) / 100);
+      const u = sheet.agreed > 0 ? sheet.agreed : shelf(bPrice * (100 - sheet.remise) / 100);
       $('#mz-sheet-total', el).textContent = fmtMAD(u * sheet.qty);
-      $('#mz-sheet-per', el).textContent = sheet.remise ? `−${sheet.remise} %` : `${u} MAD × ${sheet.qty}`;
-      $('#mz-sheet-per', el).classList.toggle('rem', !!sheet.remise);
+      $('#mz-sheet-per', el).innerHTML = sheetPer(u);
+      $('#mz-sheet-per', el).classList.toggle('rem', !!(sheet.remise || sheet.agreed));
       const cta = $('#mz-sheet-cta', el);
       if (cta) cta.textContent = fmtMAD(u * sheet.qty);
       const qv = $('#mz-qty-val', el);
@@ -948,11 +968,13 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
       }
       const isPiece = (sheet.format === 'piece' && p.format === 'service');
       const piecePrice = isPiece ? pieceUnitPrice(p) : null;
-      if (addToTicket(sheet.pid, {
+      if (sheet.bok === false) return;
+      const go = () => { if (addToTicket(sheet.pid, {
         size: sheet.size,
         color: sheet.color,
         qty: sheet.qty,
-        remise: sheet.remise,
+        remise: sheet.agreed > 0 ? 0 : sheet.remise,
+        agreed: sheet.agreed,
         format: sheet.format,
         isPiece: isPiece,
         customPrice: piecePrice,
@@ -961,7 +983,10 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
         fragile: p.fragile,
       })) {
         closeVeil('#mz-sheet-veil');
-      }
+      } };
+      /* Le prix convenu se trace à l'ajout (qui, quand, quel mode, quel chiffre), pas à chaque chiffre tapé. */
+      if (sheet.agreed > 0) { const cut = Math.round((shBase - sheet.agreed) * 100) / 100; openApprove(0, go, { mode: sheet.bmode, value: sheet.bmode === 'price' ? sheet.agreed : cut, label: `${tr('Prix convenu')} ${fmtMAD(sheet.agreed)}` }); return; }
+      go();
     };
     icons();
   }
@@ -971,18 +996,18 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
      journal » — et seul un booléen partait dans la vente : impossible, trois jours
      plus tard, de dire qui avait accordé les 20 % ni combien avaient été lâchés.
      On garde le nom (jamais le code), l'heure et le pourcentage demandé. */
-  function markRemiseAuth(pct, by, role, proof) {   // proof : la preuve du geste signée par pin/verify (actProof), jamais le code
-    state.ticket.remiseAuth = { pct, by: by || '', role: role || '', at: new Date().toISOString(), ...(proof ? { proof: String(proof).slice(0, 2048) } : {}) };
+  function markRemiseAuth(pct, by, role, proof, ex) {   // proof : la preuve du geste signée par pin/verify (actProof), jamais le code ; ex : prix convenu ou −MAD (mode, value)
+    state.ticket.remiseAuth = { pct, by: by || '', role: role || '', at: new Date().toISOString(), ...(proof ? { proof: String(proof).slice(0, 2048) } : {}), ...(ex && ex.mode ? { mode: ex.mode, value: +ex.value || 0 } : {}) };
   }
 
   /* Une remise ne demande plus de code (propriétaire, 2026-11-23) : la vendeuse
      en poste l'accorde d'un appui. Son nom et l'heure restent sur la vente, et
      /api/sale juge toujours l'auteur par la preuve de poste (seller.proof) :
      au-delà du taux libre, la remise est signalée au tableau de bord, jamais refusée. */
-  function openApprove(pct, onOk) {
+  function openApprove(pct, onOk, ex) {
     const me = (STAFF && STAFF.caissiere) || {};
-    markRemiseAuth(pct, me.name, me.role);
-    toast(`Remise −${pct} %`);
+    markRemiseAuth(pct, me.name, me.role, '', ex);
+    toast(ex && ex.label ? ex.label : `Remise −${pct} %`);
     onOk();
   }
 

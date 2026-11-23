@@ -1,9 +1,9 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch, openClientModal } from './pos-maison/sales.js?v=168';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay, wireSellSearch, openClientModal } from './pos-maison/sales.js?v=169';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=6';
 import { rewardDiscount as loyaltyRewardDiscount } from './loyalty-rules.js?v=18'; import { giftTicket } from './pos-boutique/gift-ticket.js?v=4';   // ticket cadeau, à l'encaissement et dans Réimprimer (God mode › giftReceipt)
 import { tillNow } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=3';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=168';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=168';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=169';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=169';
 import { zIsDelivery, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals } from './pos-boutique/z-split.js?v=10'; import { mzLivraisons } from './pos-maison/delivery.js?v=28';
 import { mzKitRail, mzKitRailPaint, mzKitReady, mzKitFloat } from './pos-maison/kit-2027.js?v=14'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=5'; import { mzSettle } from './pos-maison/catalog-settle.js?v=1'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1'; import { cardCheckHtml, cardCheckWire, cardCheckValue } from './pos-boutique/card-check.js?v=1';
 import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsideWindow } from './pos-boutique/return-window.js?v=11';
@@ -1337,7 +1337,8 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
   }
   const linePromo = (ln) => lineDeal(ln).promo;
   const lineBase  = (ln) => lineDeal(ln).price;
-  const lineUnit  = (ln) => shelf(lineBase(ln) * (100 - ln.remise) / 100);
+  /* Un prix convenu (pos-maison/ticket-remise.js) est gardé tel quel, jamais au-dessus du prix du moment ; sinon le pourcentage. */
+  const lineUnit  = (ln) => (+ln.agreed > 0 ? Math.min(lineBase(ln), +ln.agreed) : shelf(lineBase(ln) * (100 - ln.remise) / 100));
   const lineTotal = (ln) => Math.round(lineUnit(ln) * 100) * ln.qty / 100;
   /* Remise fidélité au niveau du TICKET (distincte de la remise gérante par ligne).
      Attachée au client via clientId : si on détache/change la cliente, elle cesse
@@ -1994,13 +1995,13 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
           parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
           discount: bqMoney(tot.remise + tot.reward),
           remiseAuth: (t.remiseAuth && typeof t.remiseAuth === 'object')
-            ? { by: t.remiseAuth.by || '', role: t.remiseAuth.role || '', at: t.remiseAuth.at, pct: t.remiseAuth.pct, amount: bqMoney(tot.remise) }
+            ? { by: t.remiseAuth.by || '', role: t.remiseAuth.role || '', at: t.remiseAuth.at, pct: t.remiseAuth.pct, amount: bqMoney(tot.remise), ...(t.remiseAuth.mode ? { mode: t.remiseAuth.mode, value: t.remiseAuth.value } : {}) }
             : null,
           promoOff: bqMoney(tot.promo),
           giftWrap: !!t.giftWrap,
           delivery: t.delivery ? Object.assign({}, t.delivery) : null,
           lines: t.lines.map((ln) => ({
-            pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, promo: linePromo(ln),
+            pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, agreed: +ln.agreed > 0 ? +ln.agreed : null, promo: linePromo(ln),
             unit: lineUnit(ln), returned: false, note: '', format: ln.format, isPiece: ln.isPiece,
             marque: ln.marque, motif: ln.motif, fragile: ln.fragile, registryId: ln.registryId,
             name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article',
@@ -2098,7 +2099,7 @@ import { mzOpenDrawerNoSale } from './pos-maison/drawer.js?v=2'; import { outsid
               consignedAmountCents: Math.round(tot.consigned * 100),
               method: method,
               paymentParts: bqPaymentParts(parts),
-              discountPercents: [...new Set(t.lines.map(ln => Number(ln.remise)).filter(n => n > 0))],
+              discountPercents: [...new Set(t.lines.map(ln => Number(ln.remise)).filter(n => n > 0))], agreedMaxPercent: Math.max(0, ...t.lines.filter(ln => +ln.agreed > 0).map(ln => { const b = lineBase(ln); return b > 0 ? Math.min(100, Math.ceil((b - lineUnit(ln)) / b * 100 - 1e-9)) : 0; })) || undefined,
               channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter', deliveryCard: ((parts || []).find((x) => x && x.m === 'livraison' && x.card) || {}).card,
               label: onAccount ? 'Compte client · ' + label : isAcompte ? 'Acompte · ' + label : label,
               ref: sale.id,

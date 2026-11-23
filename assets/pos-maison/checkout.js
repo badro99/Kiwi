@@ -1,7 +1,7 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=255';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=256';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=168';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=168';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=169';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=169';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
@@ -608,7 +608,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
       <p class="modal-subtle">${c ? esc(c.name) : 'Cliente de passage'} · la pièce rendue repart en stock</p>
       <div class="mz-exch-row is-ret">
         <span class="mz-line-art">${artOf(oldP)}</span>
-        <span class="mid"><b>${esc(oldP.name)}</b><span>retour · ${esc(ln.size)} · ${colorDot(ln.color)} ${esc(colorLabel(ln.color))}${ln.remise ? ` · payé avec −${ln.remise} %` : ''}</span></span>
+        <span class="mid"><b>${esc(oldP.name)}</b><span>retour · ${esc(ln.size)} · ${colorDot(ln.color)} ${esc(colorLabel(ln.color))}${ln.remise ? ` · payé avec −${ln.remise} %` : ''}${+ln.agreed > 0 ? ' · prix convenu' : ''}</span></span>
         <span class="amt">−${fmtMAD(paidUnit(sale, ln))}</span>
       </div>
       <div class="mz-exch-row is-new">
