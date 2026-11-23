@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=371'; import { tillPriceList as tpl } from './price-list.js?v=3';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=265';
-import { offerRegister } from './inventory.js?v=265';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=373'; import { tillPriceList as tpl } from './price-list.js?v=3';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=267';
+import { offerRegister } from './inventory.js?v=267';
 import { ticketOwner } from './ticket-owner.js?v=8';
 import { ticketRemise } from './ticket-remise.js?v=5';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
@@ -11,7 +11,7 @@ import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=6';
 let CX_NOTE = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=27').then((m) => { CX_NOTE = m; }).catch(() => {});
+import('./exch-combined.js?v=29').then((m) => { CX_NOTE = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -764,9 +764,7 @@ import('./exch-combined.js?v=27').then((m) => { CX_NOTE = m; }).catch(() => {});
      journal » — et seul un booléen partait dans la vente : impossible, trois jours
      plus tard, de dire qui avait accordé les 20 % ni combien avaient été lâchés.
      On garde le nom (jamais le code), l'heure et le pourcentage demandé. */
-  /* proof : la preuve du geste signée pour le responsable qui a validé (pin/verify ›
-     actProof), pour que le serveur juge l'auteur prouvé de la remise, pas un nom. */
-  function markRemiseAuth(pct, by, role, auth, proof) {
+  function markRemiseAuth(pct, by, role, auth, proof /* preuve signée du responsable qui a validé (pin/verify › actProof) : le serveur juge l'auteur prouvé, pas un nom */) {
     ticketOwner.applyDiscount(state.ticket, { pct: auth ? null : pct, mode: auth ? auth.mode : 'pct', value: auth ? auth.value : pct, by: by || '', role: role || '', at: new Date().toISOString(), ...(proof ? { proof: String(proof) } : {}) });
   }
 

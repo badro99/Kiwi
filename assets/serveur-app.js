@@ -679,8 +679,7 @@
             svCarteState = j.unreachable ? 'error' : 'empty';
             return false;
           }
-          const text = JSON.stringify(m);   // la même carte qu'au dernier tour : rien à refaire ni à repeindre
-          if (text === svCarteText && svCarteState === 'ok' && menuItems.length) return true;
+          const text = JSON.stringify(m); if (text === svCarteText && svCarteState === 'ok' && menuItems.length) return true;   // la même carte qu'au dernier tour : rien à refaire ni à repeindre
           try { localStorage.setItem(SV_CARTE_MIRROR + slug, text); } catch (_) {}
           /* Paint from the response itself. The mirror is a best-effort offline
              copy, never a prerequisite for showing today's catalogue. */
@@ -1165,9 +1164,8 @@
     };
     /* Background refreshes wait for the waiter's hand. A poll or the minute
        tick rebuilt the menu or the table sheet mid-tap: the button under the
-       finger vanished before its click, and a kitchen note lost focus and
-       closed the keyboard. A rebuild waits until no finger is down, no field it
-       would replace is focused (a note holds the table sheet, never the floor) and the last touch is 900 ms old. */
+       finger vanished before its click, and a kitchen note lost focus and closed the keyboard. A rebuild waits until
+       no finger is down, no field it would replace is focused (a note holds the table sheet, never the floor) and the last touch is 900 ms old. */
     let svTouching = false, svLastTouch = 0;
     ['pointerdown', 'pointerup', 'pointercancel'].forEach((type) => {
       document.addEventListener(type, () => { svTouching = type === 'pointerdown'; svLastTouch = Date.now(); }, true);

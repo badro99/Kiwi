@@ -1065,7 +1065,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <script src="assets/admin-support-escalation.js?v=1" defer></script>
   <script src="assets/admin-demo-requests.js?v=5" defer></script>
   <script src="assets/admin-directory.js?v=2" defer></script>
-  <script src="assets/admin-glovo.js?v=3" defer></script>
+  <script src="assets/admin-glovo.js?v=3" defer></script><script src="assets/admin-owner-codes.js?v=1" defer></script>
 
 <script>
 (function(){
@@ -3694,17 +3694,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
     if (submit.disabled) return;
     submit.disabled = true;
     try {
-      /* Un nouveau code propriétaire alors qu'il en existe un : le remplacer
-         (le patron a changé de nom et de code) ou l'ajouter à côté (un associé).
-         Remplacer retire les autres lignes propriétaire, dans le même lot, au
-         journal (functions/api/admin/pins.js › replaceOwner). */
-      var ownerish = function(r){ return /propri|owner|patron|direction/i.test(String(r || '')); };
-      var replaceOwner = false;
-      if (ownerish(role)) {
-        var current = []; try { current = await store.pins(selected.merchant) || []; } catch(_) {}
-        if (current.some(function(p){ return ownerish(p.role); })) replaceOwner = window.confirm(window.KiwiAdminI18n.text('Remplacer le code propriétaire actuel ? OK : l’ancien ne fonctionnera plus. Annuler : les deux restent.'));
-      }
-      await store.addPin(selected.merchant, pin, name, role, replaceOwner);
+      await store.addPin(selected.merchant, pin, name, role, window.KiwiAdminOwnerCodes ? await window.KiwiAdminOwnerCodes.askReplace(store, selected.merchant, role) : false);
       document.getElementById('pin-new').value = ''; document.getElementById('pin-name').value = '';
       renderPins();
     } catch(e){ err.textContent = (e.body && e.body.error === 'pin-exists') ? window.KiwiAdminI18n.text('Ce PIN existe déjà.') : refused(e); } finally { submit.disabled = false; }

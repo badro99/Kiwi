@@ -90,7 +90,7 @@ check(/requireTillOperator\(`Confirmer la passation · code personnel de \$\{inc
 
 /* Le vérificateur : l'option est transmise et le repli hors ligne ne l'approuve pas. */
 check(/authorizeTill: function \(code, opts\)/.test(pairing)
-  && /verifyCode\(code, undefined, opts && opts\.needsServer \? \{ needsServer: true \} : undefined\)/.test(pairing),
+  && /verifyCode\(code, (?:undefined|opts && opts\.action \? opts\.action : undefined), opts && opts\.needsServer \? \{ needsServer: true \} : undefined\)/.test(pairing),
   'authorizeTill transmet needsServer au vérificateur');
 check(/if \(opts && opts\.needsServer\) \{ lastVerify\.offline = true; return null; \}\s*return verifyOfflinePin\(merchant, code\);/.test(pairing),
   'le repli hors ligne n\'approuve jamais un acte qui exige le serveur');

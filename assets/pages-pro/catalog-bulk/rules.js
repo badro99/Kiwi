@@ -498,4 +498,4 @@
     parseTsv, toTsv, parseCsv, safeCell, restoreCell, safeCsv, normKey, mapHeader, analyseImport, revalidate, checkDuplicates, countStatus,
   };
   root.KiwiBulkRules = api;
-})(typeof globalThis !== 'undefined' ? globalThis : window);
+})(/** @type {any} */ (globalThis));

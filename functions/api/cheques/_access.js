@@ -54,7 +54,7 @@ export async function chequeActor(request, env, merchant, opts) {
   let owned = '';
   try { owned = await ownerMerchant(request, env, merchant, write ? { strict: true } : undefined); } catch (_) { owned = ''; }
   if (owned === merchant) {
-    let st = { tier: null };
+    let st = /** @type {{ tier?: any, staffId?: any, unavailable?: boolean }} */ ({ tier: null });
     try { st = await sessionTier(request, env); } catch (_) { st = { unavailable: true }; }
     if (!st.unavailable) {
       if (st.tier === 'owner') return { kind: 'owner', only: '', name: 'Propriétaire' + await staffName(env, merchant, st.staffId) };

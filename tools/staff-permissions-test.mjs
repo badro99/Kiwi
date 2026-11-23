@@ -654,6 +654,10 @@ console.log('■ Le code du patron ne s’efface pas, une collision ne se devine
     return JSON.stringify([(cfg.pins || []).map((r) => r.name + '·' + r.role), (st.staff || []).map((r) => r.name)]);
   };
   const probe = (pin) => publishAs(cookieManager, [...team, { name: 'Probe X', role: 'Caissière', pin }]);
+  /* The roster sorts by created_ts and each publish rewrites the other rows at its own « now »: two
+     publishes in the same millisecond as the owner's republish could tie with his row, and the tie
+     order then moved with the clock, not with the collision. A real manager is never that fast. */
+  await new Promise((r) => setTimeout(r, 5));
   const hit = await probe('7803'), hitBody = await hit.text(), hitRoster = await roster();
   const miss = await probe('7804'), missBody = await miss.text(), missRoster = await roster();
   check(hit.status === miss.status && hitBody === missBody && hitRoster === missRoster && hitRoster.includes('Probe X·Caissière'),

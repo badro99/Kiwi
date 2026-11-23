@@ -20,7 +20,7 @@ var CACHE = 'kiwi-app-v674';
 var SHELL = [
   '/assets/retail-bestsellers.js?v=2',
   '/assets/pos-maison/avance-restock.js?v=17',
-  '/assets/pos-boutique/avance-restock.js?v=24',
+  '/assets/pos-boutique/avance-restock.js?v=26',
   '/assets/retail-avance.js?v=6',
   '/assets/request-deadline.mjs?v=1',
   '/assets/serveur/reopened-bill.mjs?v=1',
@@ -58,7 +58,7 @@ var SHELL = [
   '/assets/team/styles.js?v=6',
   '/assets/team/access-rules.js?v=8',
   '/assets/hotel-economat-transport.js?v=30',
-  '/assets/pos-boutique/drawer.js?v=183',
+  '/assets/pos-boutique/drawer.js?v=185',
   '/assets/till-inventory-access.js?v=1',
   '/assets/credit-history-page.js?v=3',
   '/assets/librairie-loyalty.js?v=26',
@@ -141,7 +141,7 @@ var SHELL = [
   '/assets/channel-glovo.js?v=1',
   '/assets/marketing-suite-tease.js?v=1',
   '/assets/reception-view.js?v=3',
-  '/assets/pages-pro.js?v=2253',
+  '/assets/pages-pro.js?v=2254',
   '/assets/pages-pro-spa-starter.js?v=9',
   '/assets/cash-sessions.js?v=18',
   '/assets/simple-food-cost.js?v=29',
@@ -184,7 +184,7 @@ var SHELL = [
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
   '/assets/serveur/payment-support.js?v=9',
   '/assets/serveur/service.js?v=52',
-  '/assets/serveur-app.js?v=35',
+  '/assets/serveur-app.js?v=36',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -239,7 +239,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=34',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
-  '/assets/pages/dashboard-startup.js?v=297',
+  '/assets/pages/dashboard-startup.js?v=298',
   '/assets/pages/dashboard-loader.js?v=112',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -540,7 +540,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=37',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=38',
-  '/assets/pos-dispatch.js?v=500',
+  '/assets/pos-dispatch.js?v=502',
   '/assets/retail-scan.css?v=11',
   '/assets/retail-balances.css?v=5',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -613,15 +613,15 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=371',
-  '/assets/pos-boutique/sales.js?v=265',
+  '/assets/pos-boutique.css?v=373',
+  '/assets/pos-boutique/sales.js?v=267',
   '/assets/retail-photos.js?v=8',
   '/assets/retail-icon-picker.js?v=8',
   '/assets/pos-boutique/ticket-owner.js?v=8',
   '/assets/pos-boutique/till-clock.js?v=2',
   '/assets/pos-boutique/old-sales.js?v=2',
   '/assets/pos-boutique/paid-share.js?v=2',
-  '/assets/pos-boutique/exch-combined.js?v=27',
+  '/assets/pos-boutique/exch-combined.js?v=29',
   '/assets/exchange-queue.js?v=1',
   '/assets/pos-boutique/ticket-number.js?v=7',
   '/assets/pos-boutique/receipt-doc.js?v=4',
@@ -642,10 +642,10 @@ var SHELL = [
   '/assets/pos-boutique/card-check.js?v=1',
   '/assets/pos-boutique/seller-pick.js?v=2',
   '/assets/pos-boutique/calm-typing.js?v=1',
-  '/assets/pos-boutique/checkout.js?v=265',
-  '/assets/pos-boutique/inventory.js?v=265',
+  '/assets/pos-boutique/checkout.js?v=267',
+  '/assets/pos-boutique/inventory.js?v=267',
   '/assets/pos-boutique/sister-stock.js?v=1',
-  '/assets/pos-boutique.js?v=371',
+  '/assets/pos-boutique.js?v=373',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

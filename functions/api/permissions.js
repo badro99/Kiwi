@@ -115,7 +115,7 @@ export async function onRequestGet({ request, env }) {
   const codes = await codeView(env, merchant);
   if (codes) {
     out.body.staff.forEach((st) => { if (codes.dead.has(nameKey(st.name))) st.codeRedo = true; });
-    if (codes.owners.length > 1) out.body.ownerCodes = codes.owners.map((o) => ({ ...o, self: editor.id === 'code:' + o.id }));
+    if (codes.owners.length > 1) /** @type {any} */ (out.body).ownerCodes = codes.owners.map((o) => ({ ...o, self: editor.id === 'code:' + o.id }));
   }
   const week = Date.now() - 7 * 86400000;
   const unauthorizedWeek = audit.filter((a) => a.change && a.change.kind === 'unauthorized' && a.ts >= week).length;

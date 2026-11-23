@@ -169,7 +169,7 @@ export async function findList(env, merchant, id, opts) {
  * posé exprès (`free`) : sinon il est ignoré et l'article retombe sur le
  * principal. `out.free` liste les articles offerts exprès. */
 export async function listPrices(env, list) {
-  const out = new Map();
+  const out = /** @type {Map<string, number> & { free: Set<string> }} */ (new Map());
   out.free = new Set();
   if (!list || list.isMain) return out;
   const rs = ((await env.DB.prepare("SELECT item_key, price_cents, free FROM item_prices WHERE merchant = ? AND list_id = ? AND variant_key = ''")

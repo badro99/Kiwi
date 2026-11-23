@@ -197,6 +197,8 @@ export function permsIn(state, subject) {
 }
 
 /* { ok, perms, subject } | { unavailable } pour une identité prouvée. */
+/** @typedef {{ ok?: boolean, unavailable?: boolean, subject?: any, state?: any, preset?: any, perms?: string[], grants?: any[], denies?: any[], held?: boolean, ownerAccess?: any }} PermissionsFor */
+/** @returns {Promise<PermissionsFor>} */
 export async function permissionsFor(env, merchant, staff) {
   if (!env || !env.DB || !merchant || !staff) return { unavailable: true };
   let state, subject;
@@ -234,6 +236,7 @@ export function permissionUnavailable() { return json({ error: 'permissions-unav
  *   { owner: true }       → le compte au palier propriétaire ;
  *   { tier, staff|null }  → un gérant ou une réception ;
  *   { unavailable: true } → base muette. */
+/** @returns {Promise<null | { unavailable?: boolean, owner?: boolean, tier?: any, staff?: any, aid?: any, code?: { id: string, name: string } }>} */
 export async function sessionPerson(request, env) {
   if (!env || !env.AUTH_SECRET || !env.DB) return null;
   let sess = null;

@@ -232,7 +232,7 @@ export async function run(env, base, list) {
   const out = [];
   for (const st of stmts) {
     try { const r = await st.all(); out.push((r && r.results) || []); }
-    catch (_) { const empty = []; empty.failed = true; out.push(empty); }
+    catch (_) { const empty = /** @type {any[] & { failed?: boolean }} */ ([]); empty.failed = true; out.push(empty); }
   }
   return out;
 }

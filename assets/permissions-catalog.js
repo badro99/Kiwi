@@ -31,7 +31,7 @@
  *
  * Pur : ni navigateur, ni base, ni horloge.
  * ═══════════════════════════════════════════════════════════════════════════ */
-(function (root, factory) {
+(function (/** @type {any} */ root, factory) {
   var api = factory();
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.KiwiPermCatalog = api;

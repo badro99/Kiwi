@@ -41,7 +41,7 @@ async function carnetBook(env, merchant) {
   let book = await readBook(env, merchant, null);
   if (!book.exists) {
     const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'verticalops'").bind(merchant).first();
-    book = { exists: false, carnet: legacyBook(row ? parse(row.data, null) : null) || [] };
+    book = { exists: false, rev: 0, carnet: legacyBook(row ? parse(row.data, null) : null) || [] };
   }
   return book.carnet;
 }

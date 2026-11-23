@@ -281,7 +281,7 @@ export function vatFor(ctx, [lines, rest], pd) {
       byRate.set(k, acc);
     }
   }
-  const rows = [...byRate.values()].sort((a, b) => (a.rate == null) - (b.rate == null) || a.rate - b.rate)
+  const rows = [...byRate.values()].sort((a, b) => Number(a.rate == null) - Number(b.rate == null) || a.rate - b.rate)
     .map((r) => (r.rate == null ? { rate: null, ht: null, vat: null, ttc: r.ttc } : r));
   const totals = rows.reduce((t, r) => {
     t.ttc += r.ttc;

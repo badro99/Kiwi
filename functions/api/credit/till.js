@@ -18,7 +18,7 @@ export async function onRequestGet({ request, env }) {
   const asked = String(new URL(request.url).searchParams.get('merchant') || '').slice(0, 64);
   const merchant = asked && await entitledMerchant(request, env, asked, { allowTill: true });
   if (!merchant || merchant !== asked) return json({ error: 'forbidden-merchant' }, 403);
-  try { return json({ ok: true, limits: await tillLimits(env, merchant) }, 200, noStore); } catch (e) { return fail(e); }
+  try { return json({ ok: true, limits: await tillLimits(env, merchant) }, 200, noStore); } catch (_) { return fail(); }
 }
 
 export async function onRequestPost({ request, env }) {
@@ -51,5 +51,5 @@ export async function onRequestPost({ request, env }) {
       return out.error ? json({ error: out.error }, out.status || 409) : json(out, 200, noStore);
     }
     return json({ error: 'bad-action' }, 400);
-  } catch (e) { return fail(e); }
+  } catch (_) { return fail(); }
 }

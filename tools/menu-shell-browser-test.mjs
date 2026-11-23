@@ -85,6 +85,16 @@ async function open(t, width) {
 async function tap(page, sel) {
   await page.waitForSelector(sel, { visible: true, timeout: 10000 });
   await page.$eval(sel, (e) => e.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' }));
+  /* A control inside a drawer that is still sliding in has not arrived yet: a
+     finger waits for it to stop moving, so wait until two frames agree. */
+  await page.waitForFunction((s) => new Promise((done) => {
+    const e = document.querySelector(s), a = e && e.getBoundingClientRect();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const b = e && e.getBoundingClientRect();
+      done(!!b && b.left === a.left && b.top === a.top && b.left >= 0 && b.right <= innerWidth);
+    }));
+  }), { timeout: 5000, polling: 100 }, sel).catch(() => {});
+  await page.$eval(sel, (e) => e.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' }));
   await sleep(150);
   const hit = await page.$eval(sel, (e) => {
     const r = e.getBoundingClientRect(), p = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);

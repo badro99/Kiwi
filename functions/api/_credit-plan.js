@@ -61,6 +61,7 @@ export function seedRows(owedCents, dueDate, now, id) {
 }
 
 /* Les lignes envoyées par un écran, nettoyées. `{ rows }` ou `{ error }`. */
+/** @param {any} input @param {{ now?: number, origin?: string, makeId?: () => string }} [opts] */
 export function cleanRows(input, { now = Date.now(), origin = 'owner', makeId } = {}) {
   if (!Array.isArray(input)) return { error: 'bad-schedule' };
   if (input.length > MAX_PENDING) return { error: 'schedule-too-long' };
