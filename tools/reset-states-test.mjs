@@ -215,7 +215,7 @@ try {
   {
     const { ctx, page, fetched } = await open({ flag: false });
     const v = await page.evaluate(() => ({ kit: document.documentElement.hasAttribute('data-skin-2027'), form: !!document.querySelector('#view form #fe') }));
-    check(!v.kit && v.form && !fetched.some((p) => p.startsWith('/assets/kit/') && p !== '/assets/kit/haptics.js' /* zone-law carrier, always loaded, draws nothing */), 'flag off: the shipped request form draws, and no kit file loads');
+    check(!v.kit && v.form && !fetched.some((p) => p.startsWith('/assets/kit/') && p !== '/assets/kit/haptics.js' && p !== '/assets/kit/calm-repaint.js' /* zone-law carrier and the calm-repaint it loads: always loaded, draw nothing */), 'flag off: the shipped request form draws, and no kit file loads');
     await ctx.close();
   }
 

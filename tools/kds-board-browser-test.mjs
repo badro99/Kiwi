@@ -111,7 +111,7 @@ async function route(r, kitFetched) {
   const url = new URL(u);
   // haptics.js also carries the zone law (KiwiZoneLaw) and loads with the flag
   // off on purpose; it draws nothing, so it is not a kit file for this check.
-  if (/^\/assets\/kit\//.test(url.pathname) && !/\/haptics\.js$/.test(url.pathname)) kitFetched.push(url.pathname);
+  if (/^\/assets\/kit\//.test(url.pathname) && !/\/(?:haptics|calm-repaint)\.js$/.test(url.pathname)) kitFetched.push(url.pathname);   // haptics and the calm-repaint it loads run on every page, flag or not, and draw nothing
   if (url.pathname === '/kiwi-sw.js') return r.respond({ status: 404, contentType: 'text/javascript', body: '' });
   if (!url.pathname.startsWith('/api/')) return r.continue();
   if (stationFixture && url.pathname === '/api/menu') return r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ name: 'TEST KIWI', menu: { stations: [{ id: 'bar', name: 'Bar' }, { id: 'cuisine', name: 'Cuisine' }] } }) });
