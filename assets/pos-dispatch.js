@@ -141,6 +141,20 @@
         pointer-events: none; user-select: none; -webkit-user-drag: none;
       }
       .vx-screen.is-entering { animation: vx-dive 300ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+      /* Between an accepted code and a painted till there must never be a bare
+         page: the lock is already gone and a blank sheet read as a cheap system
+         (owner, 2026-11-23). This sits under the till, carries the logo, and
+         only stays visible while a module is still loading. */
+      .vx-veil {
+        position: fixed; inset: 0; z-index: 89;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--paper, #F7F5F0); pointer-events: none;
+      }
+      html[data-skin-2027="till"] .vx-veil { background: var(--k-bg, var(--paper, #F7F5F0)); }
+      .vx-veil img { display: block; height: 44px; width: auto; user-select: none; -webkit-user-drag: none; }
+      .vx-veil .vx-veil-dark { display: none; }
+      html[data-theme="dark"] .vx-veil .vx-veil-light { display: none; }
+      html[data-theme="dark"] .vx-veil .vx-veil-dark { display: block; }
       @keyframes vx-dive { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: scale(1); } }
       @media (prefers-reduced-motion: reduce) { .vx-screen.is-entering { animation: none !important; } }
       /* PIN-screen code legend (tap the foot note) */
@@ -249,16 +263,32 @@
   }
 
   /* ---------- unlock / lock choreography (mirrors the pressing) ---------- */
+  function showVeil() {
+    if (document.getElementById('vx-veil')) return;
+    const v = document.createElement('div');
+    v.id = 'vx-veil'; v.className = 'vx-veil'; v.setAttribute('aria-hidden', 'true');
+    v.innerHTML = '<img class="vx-veil-light" src="assets/kiwi-newlogo.svg" alt="" draggable="false"><img class="vx-veil-dark" src="assets/kiwi-newlogo-inverse.svg" alt="" draggable="false">';
+    document.body.appendChild(v);
+  }
+  function dropVeil() { const v = document.getElementById('vx-veil'); if (v) v.remove(); }
+
   function unlock(pin) {
     const entry = REGISTRY[pin];
     if (!entry) return;
     const pinScreen = document.getElementById('pin-screen');
+    /* A paired till's lock (staff pad or the 2027 pad) is already hidden when
+       it calls us: no pad to fade out, so the till opens at once. Only the
+       demo pad still on screen keeps its 220 / 380 ms exit. */
+    const pinUp = !!(pinScreen && pinScreen.isConnected && getComputedStyle(pinScreen).display !== 'none');
+    const later = (fn, ms) => (pinUp ? setTimeout(fn, ms) : fn());
+    showVeil();
     document.querySelectorAll('#pin-dots .pin-dot').forEach((d, i) =>
       setTimeout(() => d.classList.add('is-success'), i * 40));
 
     const ready = ensureLoaded(entry).catch((err) => {
       /* module missing (not built yet / bad path): be honest, reset the PIN */
       setTimeout(() => {
+        dropVeil();
         toast(`${entry.label}, module indisponible (${err.message})`);
         if (typeof window.__kiwiPinReset === 'function') window.__kiwiPinReset();
         document.querySelectorAll('#pin-dots .pin-dot').forEach((d) => d.classList.remove('is-success'));
@@ -266,17 +296,17 @@
       return Promise.reject(err);
     });
 
-    setTimeout(() => {
+    later(() => {
       ready.then(() => {
-        if (pinScreen) pinScreen.classList.add('is-leaving');
+        if (pinScreen && pinUp) pinScreen.classList.add('is-leaving');
         document.body.classList.add('is-pos', `is-pos-${entry.id}`, 'is-unlocked');
       }).catch(() => {});
     }, 220);
 
-    setTimeout(() => {
+    later(() => {
       ready.then(() => {
         if (pinScreen) pinScreen.style.display = 'none';
-        entryFlash(apps[entry.id], () => show(entry.id));
+        entryFlash(apps[entry.id], (instant) => show(entry.id, instant));
       }).catch(() => {});
     }, 380);
   }
@@ -316,7 +346,7 @@
     const seenKey = String((p && (p.merchant || p.slug)) || '') + '|' + String(who || '').toLowerCase();
     let seen = {};
     try { seen = JSON.parse(localStorage.getItem('kiwiTillGreetedDay') || '{}') || {}; } catch (_) {}
-    if (seen[seenKey] === dayKey) { done(); return; }
+    if (seen[seenKey] === dayKey) { done(true); return; }
     try { seen = { [seenKey]: dayKey, ...Object.fromEntries(Object.entries(seen).filter(([k, v]) => k !== seenKey && v === dayKey)) }; localStorage.setItem('kiwiTillGreetedDay', JSON.stringify(seen)); } catch (_) {}
     const line1 = who ? ('Bonjour ' + escGreet(who) + ',')
       : (real ? 'Bonjour,' : (greet.line1 || 'Bonjour,'));
@@ -334,7 +364,7 @@
     setTimeout(() => g.remove(), 1300);
   }
 
-  function show(id) {
+  function show(id, instant) {
     const spec = apps[id];
     const root = rootFor(id);
     if (!mounted[id]) {
@@ -381,9 +411,14 @@
        was in exactly that position: it reads KiwiPosSale.refMatcher for
        returns, but settles into its own SALES/KiwiDayReport. */
     try { if (id !== 'boutique' && id !== 'maison' && window.KiwiPosSale && window.KiwiPosSale.activate) window.KiwiPosSale.activate(id); } catch (e) {}
-    root.classList.add('is-on', 'is-entering');
+    /* Already greeted today: the till is simply there, no fade from nothing. */
+    root.classList.add('is-on');
     root.setAttribute('aria-hidden', 'false');
-    setTimeout(() => root.classList.remove('is-entering'), 340);
+    if (instant) dropVeil();
+    else {
+      root.classList.add('is-entering');
+      setTimeout(() => { root.classList.remove('is-entering'); dropVeil(); }, 340);
+    }
     if (window.lucide) try { window.lucide.createIcons(); } catch (e) {}
   }
 
@@ -399,6 +434,7 @@
       current = null;
     }
     try { if (window.KiwiPosSale && window.KiwiPosSale.deactivate) window.KiwiPosSale.deactivate(); } catch (e) {}
+    dropVeil();
     document.body.classList.remove('is-pos', 'is-unlocked');
     if (typeof window.__kiwiPinReset === 'function') window.__kiwiPinReset();
     toast('Terminal verrouillé');
