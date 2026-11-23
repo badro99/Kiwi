@@ -14,6 +14,9 @@
  *     in_kitchen, ready (each drawn only when it holds orders);
  *   · the rail's Takeaway badge counts the orders to accept, aria-label
  *     till.nav.takeaway_a11y;
+ *   · a table order whose table is on the floor plan stays off the list (it
+ *     lives on its table) and lights the rail's Salle badge; a table the
+ *     plan does not know keeps its card, so the order is never lost;
  *   · arrival: online.arrived {n} toast, no haptic, no French toast;
  *   · Accept: POST with no outbox, the button busy until the answer, Commit
  *     (trigger server-ack) only when the ok lands within 600 ms;
@@ -151,7 +154,8 @@ try {
   /* Two arrive to accept, one in the kitchen, one ready. */
   await page.evaluate((list) => { window.__feed.orders = list; return window.KiwiOrderInbox.refresh(); }, [
     order('o-1', 11, 'pending'),
-    order('o-2', 12, 'pending', { mode: 'table', table: 4, total: 120 }),
+    order('o-2', 12, 'pending', { mode: 'table', table: 'Z9', total: 120 }),
+    order('o-7', 17, 'pending', { mode: 'table', table: 4, total: 202 }),
     order('o-3', 13, 'accepted'),
     order('o-4', 14, 'ready', { paid: true }),
   ]);
@@ -164,6 +168,8 @@ try {
       groups: [...box.querySelectorAll('.k-on__gh')].map((e) => e.textContent),
       cards: [...box.querySelectorAll('.k-oc')].map((c) => ({ id: c.dataset.order, acts: [...c.querySelectorAll('.k-oc__ac k-button')].map((b) => b.dataset.a) })),
       table: !!box.querySelector('.k-oc[data-order="o-2"] button[data-a="table"]'),
+      floorTable: !!box.querySelector('.k-oc[data-order="o-7"]'),
+      planHas4: window.KiwiCaisseKitchen.onFloor(4), planHasZ9: window.KiwiCaisseKitchen.onFloor('Z9'),
     };
   });
   check(!s.hidden && s.head === await t('online.section'), 'the section is headed online.section once there are orders');
@@ -173,16 +179,20 @@ try {
   check(acts['o-1'] === 'reject,accept,pay' && acts['o-3'] === 'cancel,ready,pay' && acts['o-4'] === 'cancel,served',
     `card actions by group (pending: ${acts['o-1']} · accepted: ${acts['o-3']} · ready, paid: ${acts['o-4']})`);
   check(s.table, 'a table order\'s place is a button to its table');
+  check(s.planHas4 && !s.planHasZ9 && !s.floorTable, 'a table order on the floor plan (table 4) is not in the Takeaway list; one on a table the plan does not know (Z9) keeps its card');
 
   const rail = await page.evaluate(() => {
     const it = document.querySelector('k-rail').shadowRoot.querySelector('[data-id="takeaway"]');
-    return { badge: it && it.querySelector('.bdw') ? it.querySelector('.bdw').textContent.trim() : '', label: it && it.getAttribute('aria-label') };
+    const fl = document.querySelector('k-rail').shadowRoot.querySelector('[data-id="floor"]');
+    return { badge: it && it.querySelector('.bdw') ? it.querySelector('.bdw').textContent.trim() : '', label: it && it.getAttribute('aria-label'),
+      floor: fl && fl.querySelector('.bdw') ? fl.querySelector('.bdw').textContent.trim() : '' };
   });
   check(rail.badge === '2' && rail.label === await t('till.nav.takeaway_a11y', { n: 2 }), `the rail's Takeaway badge counts the orders to accept (${rail.badge}, "${rail.label}")`);
+  check(rail.floor === '1', `the rail's Salle badge counts the table orders to accept on the plan (${rail.floor})`);
 
   let w = await page.evaluate(() => ({ toasts: window.__toasts.slice(), haptics: window.__haptics.slice(), french: window.__french.slice() }));
-  const arrived = await t('online.arrived', { n: 2 });
-  check(w.toasts.length === 1 && w.toasts[0].startsWith(arrived), `arrival: the online.arrived toast, n = 2 ("${w.toasts[0]}")`);
+  const arrived = await t('online.arrived', { n: 3 });
+  check(w.toasts.length === 1 && w.toasts[0].startsWith(arrived), `arrival: the online.arrived toast, n = 3 ("${w.toasts[0]}")`);
   check(w.haptics.length === 0 && w.french.length === 0, 'arrival: no haptic, and no French toast from the shipped inbox');
 
   const press = (id, a) => page.evaluate((oid, act) => {

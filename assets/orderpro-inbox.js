@@ -170,14 +170,14 @@
         if (j.ordersAvailable === false) return -1;
         if (merchant() !== m) return -1;   // le commerce a changé pendant la requête
         state.since = j.now || state.since;
-        var fresh = 0;
+        var fresh = 0, freshFloor = 0;
         var delta = j.orders || [];
         var cancelled = Array.isArray(j.cancelledTickets) ? j.cancelledTickets : [];
         cancelled.forEach(function (ticket) {
           if (ticket && ticket.id) delete state.orders[ticket.id];
         });
         delta.forEach(function (o) {
-          if (!state.seen[o.id] && o.status === 'pending') { fresh++; state.seen[o.id] = 1; }
+          if (!state.seen[o.id] && o.status === 'pending') { fresh++; if (onFloor(o)) freshFloor++; state.seen[o.id] = 1; }
           if (o.status === 'archived') delete state.orders[o.id];
           else state.orders[o.id] = o;
         });
@@ -193,7 +193,7 @@
           return Object.assign({}, ticket, { status: 'rejected' });
         });
         bridge(delta.concat(terminal));
-        if (fresh) announce(fresh);
+        if (fresh) announce(fresh, freshFloor === fresh);
         warnExpiring();
         warnDegraded(j.degraded);
         verifyCloses();
@@ -468,7 +468,7 @@
   }
 
   /* ── attention: a new order must not be missable on a busy counter ────── */
-  function announce(n) {
+  function announce(n, floorOnly) {
     var kit = kitOnline();
     var chip = document.getElementById('kop-chip');
     if (chip) { chip.classList.add('is-new'); setTimeout(function () { chip.classList.remove('is-new'); }, 6000); }
@@ -491,7 +491,7 @@
     } catch (_) {}
     /* The 2027 till draws the arrival itself: its toast, the Takeaway badge's
      * pop and ring (till-online.js). The tones above stay the same. */
-    if (kit) { try { window.KiwiTillOnline.arrived(n); } catch (_) {} return; }
+    if (kit) { try { window.KiwiTillOnline.arrived(n, floorOnly); } catch (_) {} return; }
     try {
       var stack = document.getElementById('toast-stack');
       if (stack) {
@@ -562,6 +562,18 @@
       }
     } catch (_) {}
   }
+
+  /* Une commande en ligne sur une table vit sur le plan de salle : pastille
+   * « à accepter » sur la table, lignes OrderPro dans son addition, accord et
+   * encaissement à la table (caisse-app.js ingest). La liste « Commandes en
+   * ligne » de l'onglet À emporter (caisse 2027) ne la montre donc pas
+   * (propriétaire, 23 nov. 2026 : « OP-8 · Table 4 » sous À emporter). Seule
+   * une table absente du plan y reste, pour que la commande ne se perde pas. */
+  function onFloor(o) {
+    if (!o || o.mode !== 'table' || o.table == null || o.table === '') return false;
+    try { var K = window.KiwiCaisseKitchen; return !!(K && typeof K.onFloor === 'function' && K.onFloor(o.table)); } catch (_) { return false; }
+  }
+  function away(o) { return !onFloor(o); }
 
   /* ── render ───────────────────────────────────────────────────────────── */
   function list(status) {
@@ -1250,7 +1262,12 @@
     // does, with the same order reference; nothing while Order Pro is off.
     groups: function () {
       if (!merchant() || !orderProOn()) return { pending: [], accepted: [], ready: [] };
-      return { pending: list('pending'), accepted: list('accepted'), ready: list('ready') };
+      return { pending: list('pending').filter(away), accepted: list('accepted').filter(away), ready: list('ready').filter(away) };
+    },
+    // Les commandes de tables à accepter, pour la pastille Salle du rail 2027.
+    floorPending: function () {
+      if (!merchant() || !orderProOn()) return 0;
+      return list('pending').filter(onFloor).length;
     },
     ref: orderRef,
     glovoHtml: glovoHtml,

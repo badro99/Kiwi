@@ -494,6 +494,7 @@
       const newTickets = (typeof kdsOrders !== 'undefined' ? kdsOrders : []).filter((o) => o && o.status === 'new').length;
       /* §18.3 : le badge À emporter compte les commandes en ligne à accepter. */
       const toAccept = window.KiwiTillOnline ? window.KiwiTillOnline.pending() : 0;
+      const tablesToAccept = window.KiwiTillOnline && window.KiwiTillOnline.floorPending ? window.KiwiTillOnline.floorPending() : 0;   /* commandes de tables : sur le plan */
       const items = [
         ['floor', 'table_restaurant', 'till.nav.floor', '.mode-pill[data-mode="salle"]'],
         ['takeaway', 'shopping_bag', 'till.nav.takeaway', '.mode-pill[data-mode="vrap"]'],
@@ -504,7 +505,7 @@
            pose dans la barre latérale livrée, la même que Plus · Fidélité. */
         ['clients', 'group', 'till.nav.clients', TILL_KIT_CLIENTS],
       ].filter((r) => tillKitLive(r[3])).map(([id, icon, key]) => {
-        const it = { id, icon, label: kkt(key), badge: id === 'kitchen' ? newTickets : id === 'takeaway' ? toAccept : 0 };
+        const it = { id, icon, label: kkt(key), badge: id === 'kitchen' ? newTickets : id === 'takeaway' ? toAccept : id === 'floor' ? tablesToAccept : 0 };
         if (id === 'takeaway' && toAccept) it.a11y = kkt('till.nav.takeaway_a11y', { n: toAccept });
         return it;
       });

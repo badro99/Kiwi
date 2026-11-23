@@ -16,6 +16,8 @@
  *   KiwiTillOnline.expiring(o, min)  the inbox's 20-minute warning, in the
  *                                   till's language
  *   KiwiTillOnline.pending()         orders to accept, for the rail
+ *   KiwiTillOnline.floorPending()    table orders to accept: they live on the
+ *                                   floor plan, not here (rail's Salle badge)
  *
  * orderpro-inbox.js keeps its poll, setStatus and the 20-minute warning: it
  * is the data source. Every action goes through its setStatus (POST
@@ -123,11 +125,11 @@
     }, function () { delete busy[id]; warn(0); paint(); });
   }
 
-  function arrived(n) {
+  function arrived(n, floor) {
     if (root.KiwiToast) root.KiwiToast.show({ message: t('online.arrived', { n: n }) + '. ' + t('online.arrived_sub'), icon: 'shopping_bag' });
     var rail = doc.querySelector('k-rail');
     if (!rail || !rail.shadowRoot) return;
-    var item = rail.shadowRoot.querySelector('[data-id="takeaway"]');
+    var item = rail.shadowRoot.querySelector('[data-id="' + (floor ? 'floor' : 'takeaway') + '"]');   /* des tables seulement : la Salle sonne */
     if (!item) return;
     var reduced = K.reduced && K.reduced();
     if (reduced) return;                                 /* no pop, no ring; the badge is simply there */
@@ -171,6 +173,7 @@
   root.KiwiTillOnline = {
     mount: mount, paint: paint, arrived: arrived, expiring: expiring,
     active: function () { return !!(box && box.isConnected); },
-    pending: function () { return (groups().pending || []).length; }
+    pending: function () { return (groups().pending || []).length; },
+    floorPending: function () { var I = inbox(); try { return I && I.floorPending ? I.floorPending() : 0; } catch (_) { return 0; } }
   };
 })(typeof window !== 'undefined' ? window : globalThis);

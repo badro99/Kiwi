@@ -3668,6 +3668,8 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
       },
       sessionOf: phoneSessionOf,
       serverFor: serverNameFor,
+      /* La table est au plan de salle : sa commande en ligne y vit (orderpro-inbox.js groups). */
+      onFloor: (table) => !!caisseTableId(table),
     };const KC_STORE = {
       toString() { return kcStoreKey(); },
       valueOf() { return kcStoreKey(); },

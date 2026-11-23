@@ -200,8 +200,8 @@
     "sha": "5bc1033c2c48f7d7"
   },
   "assets/caisse-app.js": {
-    "v": "51",
-    "sha": "0e19ca6b9fc54631"
+    "v": "52",
+    "sha": "859505f249e91be5"
   },
   "assets/caisse-dna.css": {
     "v": "10",
@@ -360,8 +360,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "22",
-    "sha": "ab1fe74ae1a1dc26"
+    "v": "23",
+    "sha": "4948555461a80b8c"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -1156,8 +1156,8 @@
     "sha": "4ec2e9cb41453799"
   },
   "assets/kit/till-online.js": {
-    "v": "4",
-    "sha": "985cfb00c46d39be"
+    "v": "5",
+    "sha": "4ef0d84750aeb8bf"
   },
   "assets/kit/till-pin.js": {
     "v": "11",
@@ -1448,8 +1448,8 @@
     "sha": "3cd3b01271f8b903"
   },
   "assets/orderpro-inbox.js": {
-    "v": "47",
-    "sha": "c3b96a4088f1473b"
+    "v": "48",
+    "sha": "673c2a3980556b42"
   },
   "assets/orderpro-menu.js": {
     "v": "8",
