@@ -12,7 +12,7 @@
  * L'Inventaire de la caisse regroupe ces articles sous « À recompter » ; un
  * comptage physique repose le socle et l'écart disparaît. */
 
-const ARM_MS = 4000;
+const ARM_MS = 15000;   // Mabs, 23 nov. : 4 s ne laissait pas le temps de lire l'avertissement puis de retoucher
 let armed = { key: '', at: 0 };
 const tr = (s) => { try { return (globalThis.window?.KiwiCaisseLang || { tr: (x) => x }).tr(s); } catch (_) { return s; } };
 
@@ -21,7 +21,7 @@ export function oversellOk(key, label, have, toast, scanned) {
   const now = Date.now();
   if (!scanned && (armed.key !== key || now - armed.at > ARM_MS)) {
     armed = { key, at: now };
-    toast(`${label}, ${tr('Kiwi compte')} ${Math.max(0, have | 0)} ${tr('en stock')}`, ARM_MS, 'warn', tr('Touchez encore pour vendre quand même'));
+    toast(`${label}, ${tr('Kiwi compte')} ${Math.max(0, have | 0)} ${tr('en stock')}`, 8000, 'warn', tr('Touchez encore pour vendre quand même'));
     return false;
   }
   armed = { key: '', at: 0 };
