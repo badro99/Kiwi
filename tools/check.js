@@ -1802,7 +1802,7 @@ section('Whole-project regressions');
     /* Après une réception, les étiquettes ne sortent que pour les nouvelles pièces, même fiche rouverte (Santos, 31 oct.). */
     'boutique-label-receipt-test.mjs',
     'maison-till-stock-journal-test.mjs',
-    'maison-ticket-offline-test.mjs', 'maison-counter-truth-test.mjs', 'maison-cash-moves-test.mjs', 'maison-drawer-test.mjs', 'maison-avoir-sheet-test.mjs', 'maison-grid-pager-test.mjs', 'maison-catalog-settle-test.mjs', 'maison-client-fiche-test.mjs', 'maison-sale-discount-test.mjs', 'boutique-sale-discount-test.mjs',
+    'maison-ticket-offline-test.mjs', 'maison-counter-truth-test.mjs', 'maison-cash-moves-test.mjs', 'maison-drawer-test.mjs', 'maison-avoir-sheet-test.mjs', 'gift-exchange-core-test.mjs', 'maison-grid-pager-test.mjs', 'maison-catalog-settle-test.mjs', 'maison-client-fiche-test.mjs', 'maison-sale-discount-test.mjs', 'boutique-sale-discount-test.mjs',
     'stock-costing-migration-test.mjs', 'stock-category-management-test.mjs',
     'pairing-resolver-test.mjs',
     /* pairing-resolver vérifie qui LIT l'appairage ; celui-ci vérifie qu'il n'y
@@ -1935,7 +1935,7 @@ section('Whole-project regressions');
     'split-edit-resilience-test.mjs',
     'pos-maison-split-browser-test.mjs',
     'maison-caisse-browser-test.mjs',
-    'maison-shelf-price-browser-test.mjs',
+    'maison-shelf-price-browser-test.mjs', 'maison-gift-exchange-browser-test.mjs',
     'maison-returns-business-day-test.mjs',
     'maison-dashboard-browser-test.mjs',
     'maison-movement-kpis-browser-test.mjs',
