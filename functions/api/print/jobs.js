@@ -106,19 +106,36 @@ export async function onRequestGet(context) {
           WHERE merchant = ? AND status = 'claimed' AND claimed_ts <= ?`)
           .bind(UNCERTAIN_OUTPUT, bridge.merchant, t - CLAIM_LEASE_MS),
       ]);
+      /* Une imprimante morte ne bloque pas les autres (Browse, 23 nov. 2026 :
+       * reçus en panne, tickets cuisine servis 7 à 10 min en retard). Un pont
+       * imprime en série et chaque essai vers une imprimante éteinte lui coûte
+       * jusqu'à 16 s ; une reprise (`error` posé) garde sa date de dépôt et
+       * passait donc devant tout ticket neuf, cinq par tour. Désormais : les
+       * tickets neufs d'abord, une seule reprise par tour, et pas de réveil
+       * vers une imprimante dont un ticket est en reprise. */
       const rs = await env.DB.prepare(
         `UPDATE print_jobs SET status = 'claimed', claimed_ts = ?, bridge_id = ?
-          WHERE id IN (SELECT id FROM print_jobs
-                        WHERE merchant = ? AND status = 'queued' AND expires_ts > ?
-                          AND (bridge_id IS NULL OR bridge_id = ?)
-                          AND (claimed_ts IS NULL OR claimed_ts <= ?)
-                          AND NOT EXISTS (SELECT 1 FROM json_each(target, '$._refused') WHERE value = ?)
-                        ORDER BY created_ts LIMIT ${CLAIM_BATCH})
-          RETURNING id, kind, target, data_b64`
+          WHERE id IN (SELECT id FROM (
+                        SELECT id, error, created_ts,
+                               ROW_NUMBER() OVER (PARTITION BY error IS NOT NULL ORDER BY created_ts) AS nth
+                          FROM print_jobs p
+                         WHERE merchant = ? AND status = 'queued' AND expires_ts > ?
+                           AND (bridge_id IS NULL OR bridge_id = ?)
+                           AND (claimed_ts IS NULL OR claimed_ts <= ?)
+                           AND NOT EXISTS (SELECT 1 FROM json_each(target, '$._refused') WHERE value = ?)
+                           AND NOT (kind = 'wake' AND EXISTS (SELECT 1 FROM print_jobs f
+                                     WHERE f.merchant = p.merchant AND f.status = 'queued' AND f.error IS NOT NULL
+                                       AND json_extract(f.target, '$.ip') = json_extract(p.target, '$.ip'))))
+                        WHERE error IS NULL OR nth = 1
+                        ORDER BY error IS NOT NULL, created_ts LIMIT ${CLAIM_BATCH})
+          RETURNING id, kind, target, data_b64, error, created_ts`
       ).bind(t, bridge.id, bridge.merchant, t, bridge.id, t, bridge.id).all();
-      const jobs = (rs.results || []).map((j) => ({
-        id: j.id, kind: j.kind || 'other', target: publicTarget(safeJsonParse(j.target, {})), dataB64: j.data_b64,
-      }));
+      // RETURNING ne garantit pas l'ordre : le pont imprime dans l'ordre reçu.
+      const jobs = (rs.results || [])
+        .sort((a, b) => (a.error == null ? 0 : 1) - (b.error == null ? 0 : 1) || Number(a.created_ts) - Number(b.created_ts))
+        .map((j) => ({
+          id: j.id, kind: j.kind || 'other', target: publicTarget(safeJsonParse(j.target, {})), dataB64: j.data_b64,
+        }));
       /* Every bridge calls here around the clock, so its idle rate is most
        * of the relay's cost. Stay at 1 s while the counter is printing (a job
        * in the last two minutes), then ease to 5 s. The Node and Rust bridges

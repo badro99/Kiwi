@@ -1686,7 +1686,7 @@ section('Whole-project regressions');
     'boutique-a11y-names-browser-test.mjs',
     'till-repair-lock-browser-test.mjs',
     'table-time-test.mjs',
-    'print-relay-idempotency-test.mjs',
+    'print-relay-idempotency-test.mjs', 'print-relay-dead-printer-test.mjs',
     'print-relay-properties-test.mjs',
     'print-pairing-recovery-test.mjs',
     'shared-rules-test.mjs', 'order-words-parity-test.mjs',
