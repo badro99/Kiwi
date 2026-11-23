@@ -607,6 +607,18 @@ console.log('\n2 · Attempt Rate-Limiting on Verification');
   const row = sqlite.prepare("SELECT blocked_until FROM pair_attempts WHERE ip = 'login|10.6.0.9'").get();
   check('account sign-in keeps its 15-minute lockout', row && row.blocked_until - Date.now() > 14 * 60000);
   sqlite.prepare('DELETE FROM pair_attempts').run();
+  /* Le département (6e9e96365, _dashboard-door.js) : Karim, « Manager · Caisse »
+     sur sa fiche Équipe, garde la caisse mais n'ouvre plus le tableau de bord.
+     Exécuté de bout en bout par la route, pas lu dans le source. */
+  const { codeDocument: seal } = await import('../functions/auth/_staff-codes.js');
+  sqlite.exec('CREATE TABLE IF NOT EXISTS store_docs (merchant TEXT NOT NULL, feature TEXT NOT NULL, data TEXT NOT NULL, rev INTEGER NOT NULL, updated_ts INTEGER NOT NULL, PRIMARY KEY (merchant, feature))');
+  const team = await seal(env, 'cafe-atlas', 'team', { members: [{ id: 'k1', firstName: 'Karim', lastName: 'B.', function: 'Manager', department: 'Caisse', pinCode: '1234' }] }, true);
+  sqlite.prepare("INSERT OR REPLACE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES ('cafe-atlas', 'team', ?, 1, ?)").run(JSON.stringify(team), Date.now());
+  check('Manager · Caisse: the dashboard code is refused (verifyAccountPin checks the department)', (await acct('1234')).status === 401);
+  check('…while the same code still opens the till (verifyStaffPin never reads the department)', (await post('1234')).status === 200);
+  sqlite.prepare("DELETE FROM store_docs WHERE merchant = 'cafe-atlas' AND feature = 'team'").run();
+  check('…and a sheet with no team document keeps the old rule (the code opens the dashboard)', (await acct('1234')).status === 200);
+  sqlite.prepare('DELETE FROM pair_attempts').run();
 }
 
 console.log('\n3 · Shared Verifier on Sale Cancellation (/api/sale/cancel)');

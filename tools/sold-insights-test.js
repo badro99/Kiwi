@@ -56,7 +56,23 @@ const venues = retailSource(coreTestSource.readFileSync(path.join(ROOT,'assets',
 const caisse = retailSource(coreTestSource.readFileSync(path.join(ROOT,'assets','pos-boutique.js'),'utf8'));
 ok('dashboard reads existing KiwiSales ledger', /KiwiSales\.list/.test(src));
 ok('cashier backfills authenticated store feed', /api\/feed\?merchant=/.test(src) && /credentials:'same-origin'/.test(src));
-ok('cashier skips sales voided in its local journal', /\.filter\(function \(s\) \{ return s && !s\.voided; \}\)/.test(src));
+{
+  /* Une vente sortie des livres reste dans le journal de la caisse, marquée
+     voided : le vrai panneau « Vendus » est rendu sur ce journal, sans elle. */
+  const journal = { s: [
+    { ref:'V1', ts:now-3000, amount:100, lines:[{name:'Chemise M',qty:1,total:100}] },
+    { ref:'V2', ts:now-4000, amount:300, voided:true, lines:[{name:'Jean 40',qty:1,total:300}] },
+  ] };
+  const tillWin = { ...window, addEventListener() {} };
+  const panel = { innerHTML:'', querySelectorAll(){ return []; }, querySelector(){ return null; } };
+  const tillCtx = { ...context, window:tillWin,
+    document:{ getElementById(){ return {}; }, documentElement:{ lang:'fr' } },
+    localStorage:{ getItem:(k) => (k === 'kiwi:bqDay' ? JSON.stringify(journal) : null) } };
+  vm.createContext(tillCtx);
+  vm.runInContext(retailSource(coreTestSource.readFileSync(path.join(ROOT,'assets','sold-insights.js'),'utf8')), tillCtx);
+  tillWin.KiwiSoldInsights.renderTill(panel);
+  ok('cashier skips sales voided in its local journal', panel.innerHTML.includes('Chemise') && !panel.innerHTML.includes('Jean'));
+}
 ok('cashier rejects a differently stamped local journal', /b\.m\s*&&\s*slug\(\)\s*&&\s*b\.m\s*!==\s*slug\(\)/.test(src));
 ok('dashboard nav sits after returns', /nav:\s*'returns'[\s\S]{0,300}nav:\s*'sold'/.test(venues));
 ok('cashier has Vendus panel', /data-bq-view="vendus"/.test(caisse) && /data-bq-panel="vendus"/.test(caisse));

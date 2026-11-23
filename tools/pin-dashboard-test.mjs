@@ -140,13 +140,11 @@ ok(await pass({ name: 'Badr', role: 'Propriétaire' }, '9999') && await pass({ n
   'le patron, la réception et un code sans fiche Équipe ne sont pas touchés');
 ok(!(await pass({ name: 'Sara A', role: 'Manager' }, '')) && !(await door.keepDashboardDepartments({ DB: { prepare: () => { throw new Error('down'); } } }, [{ merchant: 'shop', name: 'Omar B', role: 'Manager' }], '2222')).length,
   'sans code lisible on retrouve la fiche par le nom ; une base illisible ferme la porte au gérant');
-ok(/rows = await keepDashboardDepartments\(env, await accountStaffCodes\(env, sess\.aid, accSlug, pin\), pin\)/.test(vapSrc),
-  'verifyAccountPin passe les candidats par le contrôle du département');
-ok(!/keepDashboardDepartments/.test(lib.slice(lib.indexOf('export async function verifyStaffPin'), lib.indexOf('export async function verifyAccountPin'))),
-  'la caisse (verifyStaffPin) ne regarde jamais le département : Manager · Caisse y garde ses accords');
+// Que verifyAccountPin passe par ce contrôle et que verifyStaffPin l'ignore se joue
+// par la route dans tools/pin-hardening-test.mjs (« Manager · Caisse »), pas ici.
 
 // ── 6. Verrou du nombre de contrôles ─────────────────────────────────────────
-const EXPECTED_COUNT = 34;
+const EXPECTED_COUNT = 32;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {
