@@ -17,7 +17,7 @@ function receiptPrinterReady(KP) {
 
 /* Ce que KiwiReceipt.build reçoit pour une vente boutique. `cashier` est le nom
    de la caissière (STAFF.caissiere), lu par l'appelant. */
-function receiptDocInput(opts, parts, cashier) {
+function receiptDocInput(opts, parts, cashier, owed) {   /* owed : { merchant, clById } pour le « Total dû » (retail-balances.js › receiptCustomer) */
   return {
     ref: opts.ref || '',
     /* Le tarif quand ce n'est pas le principal (« Tarif · Gros ») : la cliente lit pourquoi ses prix diffèrent du rayon. */
@@ -30,7 +30,7 @@ function receiptDocInput(opts, parts, cashier) {
     discount: opts.discount,
     total: opts.amount,
     acompte: opts.acompte || null,
-    customer: opts.customer || null,
+    customer: (owed && globalThis.window?.KiwiRetailBalances?.receiptCustomer?.(opts, owed)) || opts.customer || null,
     pay: (parts || []).map((x) => ({ label: x.m === 'avoir' ? ('Avoir ' + (x.code || '')) : x.m, amount: x.amount })),
     /* Le « reçu » du ticket, c'est ce que la main du client a posé sur le
        comptoir — donc la PART espèces plus le rendu, pas le total de la

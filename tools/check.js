@@ -2426,7 +2426,7 @@ section('Whole-project regressions');
     'invoice-receipt-test.mjs', 'r16-invoice-export-test.mjs', 'cx17-ui-test.mjs', 'r16-pairing-notices-test.mjs', 'r16-catalog-quantity-paths-test.mjs', 'r16-settings-modifiers-browser-test.mjs',
     'receipt-logo-print-test.mjs', 'receipt-ref-counter-test.mjs', 'receipt-line-shade-test.mjs', 'search-pill-test.mjs',
     'receipt-voucher-print-test.mjs',
-    'receipt-pay-lines-test.mjs',
+    'receipt-pay-lines-test.mjs', 'receipt-owed-total-test.mjs',
     'formula-receipt-pricing-test.mjs',
     'sale-invoice-test.mjs',
     'invoice-server-truth-test.mjs',

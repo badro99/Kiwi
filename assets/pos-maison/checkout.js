@@ -1,7 +1,7 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=256';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=257';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=169';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=169';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=170';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=170';
 import '../refund-split.js?v=2';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
@@ -368,7 +368,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
         printReceiptNow({
           ref: `REM-${sale.id}`, title: 'Remboursement', amount,
           lines: idxs.map((i) => ({ qty: quantities.get(i), name: sale.lines[i].name || (P[sale.lines[i].pid] && P[sale.lines[i].pid].name) || 'Article', amount: paidAmount(sale, sale.lines[i], quantities.get(i)), ref: sale.lines[i].pid })),
-          customer: saleClient(sale) ? { name: saleClient(sale).name, phone: saleClient(sale).phone } : null,
+          customer: saleClient(sale) ? { id: sale.clientId, name: saleClient(sale).name, phone: saleClient(sale).phone } : null,
         }, done);
         toast('Remboursement enregistré', 4200, 'success', `${fmtMAD(amount)} · accord ${manager && manager.name ? manager.name : 'responsable'}`);
       } catch (error) {
@@ -886,7 +886,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
         discount: opts.discount,
         total: opts.amount,
         acompte: opts.acompte || null,
-        customer: opts.customer || null,
+        customer: (window.KiwiRetailBalances?.receiptCustomer?.(opts, { merchant: merchantSlug(), clById })) || opts.customer || null,   /* « Total dû » sous le nom (retail-balances.js) */
         pay: (parts || []).map((x) => ({ label: x.m === 'avoir' ? ('Avoir ' + (x.code || '')) : x.m === 'compte' ? 'Compte client' : x.m, amount: x.amount })),
         received: (function () {
           const c = (parts || []).find((x) => x.m === 'espèces' && x.rendu > 0);
@@ -981,7 +981,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
     });
   }
   function openPay(opts) {
-    const el = $('#mz-paym', root);
+    const el = $('#mz-paym', root); if (opts.customerId) window.KiwiRetailBalances?.warm?.(merchantSlug());   /* le « Total dû » du reçu lit le serveur à jour */
     const ownAvoirs = () => opts.customerId
       ? activeAvoirs().filter((a) => a.holderId === opts.customerId) : [];
     let avoirPart = null;                   /* { m:'avoir', amount, code } */

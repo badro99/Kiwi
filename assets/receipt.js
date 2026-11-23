@@ -782,7 +782,7 @@
     if (!cfg.show.customer) return null;
     var c = sale.customer;
     if (!c || (!c.name && !c.phone)) return null;
-    var o = { name: str(c.name, 60), phone: str(c.phone, 30) };
+    var o = { name: str(c.name, 60), phone: str(c.phone, 30), owed: num(c.owed) > 0 ? Math.round(num(c.owed) * 100) / 100 : 0 };   /* owed : tout ce que la cliente doit (boutique, maison), sous son nom */
     if (cfg.show.loyalty && (c.points != null || c.loyalty)) {
       o.loyalty = c.loyalty ? str(c.loyalty, 60) : null;
       if (c.points != null) o.points = Math.round(num(c.points));
@@ -817,9 +817,9 @@
 
   /* ═══════════════════ les mots ═══════════════════ */
   var DICT = {
-    fr: { __lang: 'fr', article: 'Article', receipt: 'REÇU', refund: 'REMBOURSEMENT', no: 'N°', date: 'Date', time: 'Heure', cashier: 'Caissier', terminal: 'Terminal', client: 'Client', points: 'Points', subtotal: 'Sous-total', discount: 'Remise', promo: 'Promotion', saved: 'Vous avez économisé', ht: 'Total HT', vat: 'TVA', total: 'TOTAL', totalRefund: 'TOTAL REMBOURSÉ', tip: 'Pourboire', paid: 'Payé', received: 'Reçu', change: 'Rendu', origin: 'Ticket d’origine', reason: 'Motif', thanks: 'Merci de votre visite', copy: 'DUPLICATA', report: 'RAPPORT DE VENTES', period: 'Période', count: 'Ventes', avg: 'Panier moyen', ref: 'Réf.', share: 'part', takeaway: 'À emporter' },
-    en: { __lang: 'en', article: 'Item', receipt: 'RECEIPT', refund: 'REFUND', no: 'No.', date: 'Date', time: 'Time', cashier: 'Cashier', terminal: 'Terminal', client: 'Customer', points: 'Points', subtotal: 'Subtotal', discount: 'Discount', promo: 'Promotion', saved: 'You saved', ht: 'Net', vat: 'VAT', total: 'TOTAL', totalRefund: 'TOTAL REFUNDED', tip: 'Tip', paid: 'Paid', received: 'Received', change: 'Change', origin: 'Original receipt', reason: 'Reason', thanks: 'Thank you for your visit', copy: 'DUPLICATE', report: 'SALES REPORT', period: 'Period', count: 'Sales', avg: 'Average basket', ref: 'Ref.', share: 'share', takeaway: 'Takeaway' },
-    ar: { __lang: 'ar', article: 'منتج', receipt: 'وصل', refund: 'استرجاع', no: 'رقم', date: 'التاريخ', time: 'الساعة', cashier: 'الصندوق', terminal: 'الجهاز', client: 'الزبون', points: 'نقاط', subtotal: 'المجموع الفرعي', discount: 'تخفيض', promo: 'عرض', saved: 'وفّرت', ht: 'المجموع دون ض.ق.م', vat: 'ض.ق.م', total: 'المجموع', totalRefund: 'المبلغ المسترجع', tip: 'إكرامية', paid: 'المدفوع', received: 'المستلم', change: 'الباقي', origin: 'الوصل الأصلي', reason: 'السبب', thanks: 'شكراً على زيارتكم', copy: 'نسخة', report: 'تقرير المبيعات', period: 'الفترة', count: 'عدد المبيعات', avg: 'معدل السلة', ref: 'مرجع', share: 'جزء', takeaway: 'للأخذ' },
+    fr: { __lang: 'fr', article: 'Article', receipt: 'REÇU', refund: 'REMBOURSEMENT', no: 'N°', date: 'Date', time: 'Heure', cashier: 'Caissier', terminal: 'Terminal', client: 'Client', owed: 'Total dû', points: 'Points', subtotal: 'Sous-total', discount: 'Remise', promo: 'Promotion', saved: 'Vous avez économisé', ht: 'Total HT', vat: 'TVA', total: 'TOTAL', totalRefund: 'TOTAL REMBOURSÉ', tip: 'Pourboire', paid: 'Payé', received: 'Reçu', change: 'Rendu', origin: 'Ticket d’origine', reason: 'Motif', thanks: 'Merci de votre visite', copy: 'DUPLICATA', report: 'RAPPORT DE VENTES', period: 'Période', count: 'Ventes', avg: 'Panier moyen', ref: 'Réf.', share: 'part', takeaway: 'À emporter' },
+    en: { __lang: 'en', article: 'Item', receipt: 'RECEIPT', refund: 'REFUND', no: 'No.', date: 'Date', time: 'Time', cashier: 'Cashier', terminal: 'Terminal', client: 'Customer', owed: 'Balance due', points: 'Points', subtotal: 'Subtotal', discount: 'Discount', promo: 'Promotion', saved: 'You saved', ht: 'Net', vat: 'VAT', total: 'TOTAL', totalRefund: 'TOTAL REFUNDED', tip: 'Tip', paid: 'Paid', received: 'Received', change: 'Change', origin: 'Original receipt', reason: 'Reason', thanks: 'Thank you for your visit', copy: 'DUPLICATE', report: 'SALES REPORT', period: 'Period', count: 'Sales', avg: 'Average basket', ref: 'Ref.', share: 'share', takeaway: 'Takeaway' },
+    ar: { __lang: 'ar', article: 'منتج', receipt: 'وصل', refund: 'استرجاع', no: 'رقم', date: 'التاريخ', time: 'الساعة', cashier: 'الصندوق', terminal: 'الجهاز', client: 'الزبون', owed: 'المبلغ المستحق', points: 'نقاط', subtotal: 'المجموع الفرعي', discount: 'تخفيض', promo: 'عرض', saved: 'وفّرت', ht: 'المجموع دون ض.ق.م', vat: 'ض.ق.م', total: 'المجموع', totalRefund: 'المبلغ المسترجع', tip: 'إكرامية', paid: 'المدفوع', received: 'المستلم', change: 'الباقي', origin: 'الوصل الأصلي', reason: 'السبب', thanks: 'شكراً على زيارتكم', copy: 'نسخة', report: 'تقرير المبيعات', period: 'الفترة', count: 'عدد المبيعات', avg: 'معدل السلة', ref: 'مرجع', share: 'جزء', takeaway: 'للأخذ' },
   };
   function dict(l) { return DICT[l] || DICT.fr; }
 
@@ -968,7 +968,7 @@
     if (doc.meta.cashier) row(T.cashier, doc.meta.cashier);
     if (doc.meta.terminal) row(T.terminal, doc.meta.terminal);
     if (doc.customer) {
-      row(T.client, doc.customer.name || doc.customer.phone);
+      row(T.client, doc.customer.name || doc.customer.phone); if (doc.customer.owed > 0) row('  ' + T.owed, moneyMAD(doc.customer.owed, doc));
       if (doc.customer.points != null) row('  ' + T.points, String(doc.customer.points));
       if (doc.customer.loyalty) b.line('  ' + doc.customer.loyalty);
     }
@@ -1145,7 +1145,7 @@
     if (doc.meta.cashier) R(T.cashier, doc.meta.cashier);
     if (doc.meta.terminal) R(T.terminal, doc.meta.terminal);
     if (doc.customer) {
-      R(T.client, doc.customer.name || doc.customer.phone);
+      R(T.client, doc.customer.name || doc.customer.phone); if (doc.customer.owed > 0) R(T.owed, moneyMAD(doc.customer.owed, doc), 'kr-owed');
       if (doc.customer.points != null) R(T.points, String(doc.customer.points));
       if (doc.customer.loyalty) P('kr-sm', doc.customer.loyalty);
     }
@@ -1250,7 +1250,7 @@
       '.kr-saved{text-align:center;font-weight:700;margin-top:2px;}',
       '.kr-welcome{margin-top:2mm;font-style:normal;}',
       '.kr-banner{text-align:center;font-weight:700;font-size:13px;letter-spacing:.08em;margin:2mm 0;padding:1mm 0;border:1px solid currentColor;}',
-      '.kr-copy{font-weight:700;margin-top:1mm;}',
+      '.kr-copy{font-weight:700;margin-top:1mm;}.kr-owed{font-weight:700;}',
       '.kr-rule{border-top:1px dashed #999;margin:2.4mm 0;}',
       '.kr-r{display:flex;justify-content:space-between;gap:3mm;}',
       '.kr-r>span:last-child{white-space:nowrap;}',

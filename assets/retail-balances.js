@@ -88,6 +88,7 @@
         merged.set(row.id, { ...row, paidCents: saved.paidCents });
       } else merged.set(row.id, row);
     });
+    if (merchant && status === 'ok') seen.set(String(merchant), { rows: [...merged.values()], settled, ts: Date.now() });
     const needle = String(query || '').toLowerCase();
     const rows = [...merged.values()].filter(row => due(row) > 0
       && (!needle || String(row.ticketRef).toLowerCase().includes(needle)
@@ -95,6 +96,42 @@
     return { rows, status };
   }
   async function list(merchant, query) { return (await listWithStatus(merchant, query)).rows; }
+  /* « Total dû » sous le nom de la cliente, sur le reçu boutique et maison
+     (propriétaire, 23 nov. 2026) : tout ce qu'elle doit, toutes notes
+     confondues, et rien quand elle ne doit rien. L'impression est synchrone :
+     la dernière lecture serveur (gardée ici, rafraîchie à l'ouverture de
+     l'encaissement par warm) plus le journal de cette caisse, qui porte déjà la
+     note du ticket qu'on imprime et le règlement qu'on vient de prendre. Une
+     note vue des deux côtés compte pour son plus petit reste ; une note que le
+     serveur dit terminée ne compte plus. */
+  const seen = new Map();
+  const SEEN_TTL = 6 * 3600 * 1000;
+  function owedBy(merchant, customerId) {
+    const id = String(customerId || ''); if (!merchant || !id) return 0;
+    const snap = seen.get(String(merchant));
+    const fresh = snap && Date.now() - snap.ts < SEEN_TTL ? snap : null;
+    const left = new Map();
+    (fresh ? fresh.rows : []).forEach(row => { if (String(row.customerId) === id) left.set(String(row.id), due(row)); });
+    read(merchant).forEach(row => {
+      if (!row || String(row.customerId) !== id || (fresh && fresh.settled.has(String(row.id)))) return;
+      const k = String(row.id);
+      left.set(k, left.has(k) ? Math.min(left.get(k), due(row)) : due(row));
+    });
+    return [...left.values()].reduce((sum, v) => sum + v, 0);
+  }
+  function warm(merchant) { if (merchant) listWithStatus(merchant, '').catch(() => {}); }
+  /* Le client du reçu, avec `owed` (MAD) quand il doit quelque chose. Un ticket
+     sans cliente affichée (différence d'échange) la reçoit si elle doit. */
+  function receiptCustomer(opts, d) {
+    const o = opts || {}, base = o.customer || null;
+    const id = String(o.customerId || (base && base.id) || (o.sale && o.sale.clientId) || '');
+    let owedCents = 0;
+    try { owedCents = id && d && d.merchant ? owedBy(d.merchant, id) : 0; } catch (_) { owedCents = 0; }
+    if (!(owedCents > 0)) return base;
+    const c = base || (d.clById && d.clById(id)) || null;
+    if (!c || (!c.name && !c.phone)) return base;
+    return Object.assign({}, base || { name: c.name, phone: c.phone }, { owed: owedCents / 100 });
+  }
   /* Acomptes par cliente (La Maison en Vogue, 20 nov. 2026). L'écran listait
      les notes une par une ; une cliente qui en a trois devait les payer trois
      fois. Les notes se regroupent par cliente, la plus ancienne d'abord, et un
@@ -296,5 +333,5 @@
     input.addEventListener('input', () => list());
     await refresh();
   }
-  window.KiwiRetailBalances = Object.freeze({ read, record, list, listWithStatus, due, render, groupByCustomer, allocate, sliceTender, focus });
+  window.KiwiRetailBalances = Object.freeze({ read, record, list, listWithStatus, due, render, groupByCustomer, allocate, sliceTender, focus, owedBy, warm, receiptCustomer });
 })();
