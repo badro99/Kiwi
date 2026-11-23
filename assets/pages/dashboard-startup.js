@@ -50,7 +50,7 @@
     'assets/day-report-refused.js?v=2',
     'assets/stock/strings.js?v=27',
     'assets/stock/state.js?v=13',
-    'assets/stock.js?v=142',
+    'assets/stock.js?v=149',
     'assets/catalog-workspace.js?v=7',
     'assets/planning-core.js?v=15',
     'assets/team/catalog.js?v=2',

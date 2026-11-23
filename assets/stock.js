@@ -1539,7 +1539,7 @@
   function renderItemTable(items) {
     if (items.length === 0) return `<div style="padding:24px; text-align:center; color:var(--n-500); font-size:13px;">${catalogLabel('noMatch','Aucun article ne correspond aux filtres.')}</div>`;
     return `
-      <div class="st-mobile-items"><label class="st-mobile-sort">${catalogLabel('sort','Trier')}<select data-stock-mobile-sort aria-label="${esc(catalogText('sort','Trier'))}">${[['name',t('colArticle')],['stock',t('colStock')],['value',t('colValue')],['status',t('colStatus')]].map(([id,label])=>`<option value="${id}"${stSortBy===id?' selected':''}>${esc(label)}</option>`).join('')}</select></label>${items.map(renderDenseItem).join('')}</div>
+      <div class="st-mobile-items"><label class="st-mobile-sort">${catalogLabel('sort','Trier')}<select data-stock-mobile-sort aria-label="${esc(catalogText('sort','Trier'))}">${[['name',t('colArticle')],['stock',t('colStock')],['value',t('colValue')],['status',t('colStatus')]].map(([id,label])=>`<option value="${id}"${stSortBy===id?' selected':''}>${esc(label)}</option>`).join('')}</select></label>${stockParts.sourcing ? stockParts.sourcing.denseRows(items, renderDenseItem) : items.map(renderDenseItem).join('')}</div>
       <div class="st-tbl-wrap st-desktop-items">
         <table class="st-tbl">
           <thead>
@@ -1557,7 +1557,7 @@
             </tr>
           </thead>
           <tbody>
-            ${items.length === 0 ? '<tr><td colspan="10" style="padding:44px 20px;text-align:center;"><div style="display:flex;flex-direction:column;align-items:center;"><div style="width:44px;height:44px;border-radius:12px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:12px;"><svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">' + esc(t('noMatch') || 'Aucun article ne correspond aux filtres.') + '</div></div></td></tr>' : items.map(renderItemRow).join('')}
+            ${items.length === 0 ? '<tr><td colspan="10" style="padding:44px 20px;text-align:center;"><div style="display:flex;flex-direction:column;align-items:center;"><div style="width:44px;height:44px;border-radius:12px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:12px;"><svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">' + esc(t('noMatch') || 'Aucun article ne correspond aux filtres.') + '</div></div></td></tr>' : (stockParts.sourcing ? stockParts.sourcing.tableRows(items, renderItemRow) : items.map(renderItemRow).join(''))}
           </tbody>
         </table>
       </div>
@@ -2333,6 +2333,7 @@
   const stockScope = {
     get stockMovements() { return stockParts.movements; },
     get stockPhoto() { return stockParts.photo; },
+    get stockSourcing() { return stockParts.sourcing; },
     stockState,
     /* Le commerce dont on lit les documents (God Mode compris) : KiwiCloudDoc reste l'affaire de stock.js. */
     stMerchantSlug() { try { return (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug()) || ''; } catch (_) { return ''; } },
@@ -2452,10 +2453,11 @@
     'assets/stock/alerts.js?v=6',
     'assets/stock/loss.js?v=5',
     'assets/stock/counts.js?v=12',
-    'assets/stock/purchasing.js?v=12',
+    'assets/stock/purchasing.js?v=13',
     'assets/stock/intake.js?v=23',
     'assets/stock/photo.js?v=2',
-    'assets/stock/catalog.js?v=11',
+    'assets/stock/sourcing.js?v=6',
+    'assets/stock/catalog.js?v=14',
     'assets/stock/suppliers.js?v=6',
   ];
   const stockLoads = new Map();

@@ -82,6 +82,8 @@ window.KiwiStockInternal.install('catalog', (S) => {
         if (newsupWrap) newsupWrap.style.display = 'none';
       }
     });
+    /* Aucun fournisseur encore : « Nouveau fournisseur » est déjà choisi, son nom se tape tout de suite. */
+    if (supSel?.value === '__new__' && newsupWrap) newsupWrap.style.display = '';
 
     scope?.querySelector('[data-stock-backup-save]')?.addEventListener('click', () => {
       let rawSup = '';
@@ -127,7 +129,9 @@ window.KiwiStockInternal.install('catalog', (S) => {
         rawDoc.subcategories.push(subcat);
       }
 
-      const cards = Array.isArray(subcat.suppliers) ? subcat.suppliers.slice() : [];
+      /* La liste enregistrée vit dans les surcharges : repartir de la sous-catégorie seule effaçait le concurrent ajouté juste avant. */
+      const savedCards = (stItemOverrides[itemId] || {}).suppliers;
+      const cards = (Array.isArray(savedCards) && savedCards.length ? savedCards : (Array.isArray(subcat.suppliers) ? subcat.suppliers : [])).map(c => Object.assign({}, c));
       if (!cards.length && it.supplier) {
         cards.push({
           id: 'sup-' + Date.now().toString(36) + '-main',
@@ -272,7 +276,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
               </div>`}
           </div>
         </div>
-        ${stShowReal() ? renderRealItemHistory(it) : `<div class="st-md-section">
+        ${stShowReal() ? (S.stockSourcing ? S.stockSourcing.detail(it, renderRealItemHistory(it)) : renderRealItemHistory(it)) : `<div class="st-md-section">
           <div class="st-md-section-t">${esc(t('mItPricesT'))}</div>
           <div class="st-md-list">
             ${[0.92, 0.95, 0.97, 1.0, 1.02].map((m, i) => `
@@ -328,6 +332,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
     scope?.querySelector('[data-stock-swap-ranks]')?.addEventListener('click', (e) => {
       swapSupplierRanks(e.currentTarget.dataset.itemId);
     });
+    S.stockSourcing?.wireDetail(scope, it, { reopen: (id) => { closeTopModal(); openItemDetail(id); } });
     scope?.querySelector('[data-stock-add-backup-supplier]')?.addEventListener('click', (e) => {
       const id = e.currentTarget.dataset.itemId;
       closeTopModal();
@@ -758,6 +763,7 @@ window.KiwiStockInternal.install('catalog', (S) => {
               <select class="st-if-in" data-stock-add-sup>${supOpts}</select>
               ${sups.length ? '' : `<span class="st-if-hint">${esc(t('itemNoSupplier'))}</span>`}
             </label>
+            ${S.stockSourcing && !retailCatalog() ? S.stockSourcing.formField(existing, getInv()) : ''}
           </section>
           <section class="st-if-sec">
             <h4>${esc(t('itemSecStock'))}</h4>
@@ -862,6 +868,8 @@ window.KiwiStockInternal.install('catalog', (S) => {
         const nutritionData = readNutrition(scope);
         const nutritionPatch = { nutrition: nutritionData.nutrition, gramsPerUnit: nutritionData.gramsPerUnit };
         if (nutritionData.allergens !== undefined) nutritionPatch.allergens = nutritionData.allergens;
+        /* La famille et le contenu d'une pièce (stock/sourcing.js) suivent les mêmes chemins que la nutrition. */
+        if (S.stockSourcing && !retailCatalog()) Object.assign(nutritionPatch, S.stockSourcing.readForm(scope));
 
         if (isEdit) {
           const before = currentStockFor(existing);

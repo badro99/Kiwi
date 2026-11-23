@@ -394,6 +394,22 @@
     {
       "before": "'repas-equipe': 'rsStaff', 'staff-meal': 'rsStaff', autre: 'rsOther' }[code];\n",
       "after": "'repas-equipe': 'rsStaff', 'staff-meal': 'rsStaff', vol: 'rsVol', theft: 'rsVol', autre: 'rsOther' }[code];\n"
+    },
+    {
+      "before": "    'assets/stock/photo.js?v=2',\n",
+      "after": "    'assets/stock/photo.js?v=2',\n    'assets/stock/sourcing.js?v=1',\n"
+    },
+    {
+      "before": "    get stockPhoto() { return stockParts.photo; },\n",
+      "after": "    get stockPhoto() { return stockParts.photo; },\n    get stockSourcing() { return stockParts.sourcing; },\n"
+    },
+    {
+      "before": "</select></label>${items.map(renderDenseItem).join('')}</div>",
+      "after": "</select></label>${stockParts.sourcing ? stockParts.sourcing.denseRows(items, renderDenseItem) : items.map(renderDenseItem).join('')}</div>"
+    },
+    {
+      "before": ": items.map(renderItemRow).join('')}\n          </tbody>",
+      "after": ": (stockParts.sourcing ? stockParts.sourcing.tableRows(items, renderItemRow) : items.map(renderItemRow).join(''))}\n          </tbody>"
     }
   ],
   "legacyBoundaries": {
@@ -412,7 +428,8 @@
         "stPageActive",
         "stUserCategories",
         "stUserItems",
-        "stockMovements"
+        "stockMovements",
+        "stockSourcing"
       ]
     },
     "assets/stock/intake.js": {
@@ -481,7 +498,8 @@
       ],
       "state": [
         "stPageActive",
-        "stUserSuppliers"
+        "stUserSuppliers",
+        "stockSourcing"
       ]
     }
   },
@@ -520,6 +538,32 @@
       {
         "before": "              <option value=\"repas-equipe\"${prefillReason === 'repas-equipe' ? ' selected' : ''}>${esc(ct('optStaff'))}</option>\n",
         "after": "              <option value=\"repas-equipe\"${prefillReason === 'repas-equipe' ? ' selected' : ''}>${esc(ct('optStaff'))}</option>\n              <option value=\"vol\"${prefillReason === 'vol' ? ' selected' : ''}>${esc(ct('optVol'))}</option>\n"
+      }
+    ],
+    "assets/stock/catalog.js": [
+      {
+        "before": "${stShowReal() ? renderRealItemHistory(it) : `<div class=\"st-md-section\">",
+        "after": "${stShowReal() ? (S.stockSourcing ? S.stockSourcing.detail(it, renderRealItemHistory(it)) : renderRealItemHistory(it)) : `<div class=\"st-md-section\">"
+      },
+      {
+        "before": "      swapSupplierRanks(e.currentTarget.dataset.itemId);\n    });\n",
+        "after": "      swapSupplierRanks(e.currentTarget.dataset.itemId);\n    });\n    S.stockSourcing?.wireDetail(scope, it, { reopen: (id) => { closeTopModal(); openItemDetail(id); } });\n"
+      },
+      {
+        "before": "              ${sups.length ? '' : `<span class=\"st-if-hint\">${esc(t('itemNoSupplier'))}</span>`}\n            </label>\n",
+        "after": "              ${sups.length ? '' : `<span class=\"st-if-hint\">${esc(t('itemNoSupplier'))}</span>`}\n            </label>\n            ${S.stockSourcing && !retailCatalog() ? S.stockSourcing.formField(existing, getInv()) : ''}\n"
+      },
+      {
+        "before": "        if (nutritionData.allergens !== undefined) nutritionPatch.allergens = nutritionData.allergens;\n",
+        "after": "        if (nutritionData.allergens !== undefined) nutritionPatch.allergens = nutritionData.allergens;\n        /* La famille et le contenu d'une pièce (stock/sourcing.js) suivent les mêmes chemins que la nutrition. */\n        if (S.stockSourcing && !retailCatalog()) Object.assign(nutritionPatch, S.stockSourcing.readForm(scope));\n"
+      },
+      {
+        "before": "        if (newsupWrap) newsupWrap.style.display = 'none';\n      }\n    });\n",
+        "after": "        if (newsupWrap) newsupWrap.style.display = 'none';\n      }\n    });\n    /* Aucun fournisseur encore : « Nouveau fournisseur » est déjà choisi, son nom se tape tout de suite. */\n    if (supSel?.value === '__new__' && newsupWrap) newsupWrap.style.display = '';\n"
+      },
+      {
+        "before": "      const cards = Array.isArray(subcat.suppliers) ? subcat.suppliers.slice() : [];\n",
+        "after": "      /* La liste enregistrée vit dans les surcharges : repartir de la sous-catégorie seule effaçait le concurrent ajouté juste avant. */\n      const savedCards = (stItemOverrides[itemId] || {}).suppliers;\n      const cards = (Array.isArray(savedCards) && savedCards.length ? savedCards : (Array.isArray(subcat.suppliers) ? subcat.suppliers : [])).map(c => Object.assign({}, c));\n"
       }
     ]
   }

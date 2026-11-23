@@ -449,6 +449,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
             ${sups.length ? `<select class="st-mb-input" data-stock-qo-sup>${supOptions}</select>` : `<input class="st-mb-input" type="text" value="${esc(L.noSupplier)}" disabled />`}
           </div>
         </div>
+        ${S.stockSourcing ? S.stockSourcing.orderHint(it) : ''}
         <div class="st-mb-field" style="margin-bottom:14px;">
           <label class="st-mb-label">${esc(t('mQoNote'))}</label>
           <textarea class="st-mb-textarea" placeholder="${esc(L.notePh)}" data-stock-qo-note></textarea>
@@ -476,6 +477,7 @@ window.KiwiStockInternal.install('purchasing', (S) => {
         if (how) how.textContent = wa ? L.howWa(s.name) : s ? L.howNoPhone(s.name) : L.howNoSupplier;
       };
       const recompute = () => { if (totalEl) totalEl.textContent = costLine(parseFloat(qty.value) || 0); };
+      S.stockSourcing?.wireOrder(m?.el || topBackdrop(), supSel, sync);
       document.querySelector('[data-stock-qo-dec]')?.addEventListener('click', () => { qty.value = Math.max(0.5, (parseFloat(qty.value) || 1) - 0.5); recompute(); });
       document.querySelector('[data-stock-qo-inc]')?.addEventListener('click', () => { qty.value = (parseFloat(qty.value) || 1) + 0.5; recompute(); });
       qty?.addEventListener('input', recompute);

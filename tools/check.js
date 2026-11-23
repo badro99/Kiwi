@@ -2268,6 +2268,7 @@ section('Whole-project regressions');
     'stock-movement-modal-test.mjs',
     'stock-movement-neutral-colour-test.mjs',
     'stock-item-form-test.mjs',
+    'stock-sourcing-test.mjs',
     'boutique-product-sheet-test.mjs',
     'boutique-inventory-i18n-test.mjs',
     'color-palette-language-test.mjs',

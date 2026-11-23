@@ -1624,8 +1624,8 @@
     "sha": "859c0ebb8194adca"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "299",
-    "sha": "0dc58c02b70cdee6"
+    "v": "307",
+    "sha": "a8b0a75965680922"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2436,16 +2436,16 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "142",
-    "sha": "6216fcd6781b6b69"
+    "v": "149",
+    "sha": "95562649a06a3a43"
   },
   "assets/stock/alerts.js": {
     "v": "6",
     "sha": "def3fb1145314040"
   },
   "assets/stock/catalog.js": {
-    "v": "11",
-    "sha": "055f2e81e1d72f20"
+    "v": "14",
+    "sha": "ac2bc15f79a1ed8d"
   },
   "assets/stock/counts.js": {
     "v": "12",
@@ -2472,8 +2472,12 @@
     "sha": "ac383672fe16c958"
   },
   "assets/stock/purchasing.js": {
-    "v": "12",
-    "sha": "87c94db8b0889c2f"
+    "v": "13",
+    "sha": "052213749865deb2"
+  },
+  "assets/stock/sourcing.js": {
+    "v": "6",
+    "sha": "e49937538c56a2b1"
   },
   "assets/stock/state.js": {
     "v": "13",

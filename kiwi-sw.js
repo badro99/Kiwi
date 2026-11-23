@@ -18,6 +18,7 @@
 'use strict';
 var CACHE = 'kiwi-app-v674';
 var SHELL = [
+  '/assets/stock/sourcing.js?v=6',
   '/assets/till-categories.js?v=2',
   '/assets/retail-bestsellers.js?v=2',
   '/assets/pos-maison/avance-restock.js?v=28',
@@ -242,7 +243,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=34',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2103',
-  '/assets/pages/dashboard-startup.js?v=299',
+  '/assets/pages/dashboard-startup.js?v=307',
   '/assets/pages/dashboard-loader.js?v=114',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -477,13 +478,13 @@ var SHELL = [
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=23',
   '/assets/stock/strings.js?v=27',
-  '/assets/stock.js?v=142',
+  '/assets/stock.js?v=149',
   '/assets/stock/loss.js?v=5',
   '/assets/stock/counts.js?v=12',
-  '/assets/stock/purchasing.js?v=12',
+  '/assets/stock/purchasing.js?v=13',
   '/assets/stock/intake.js?v=23',
   '/assets/stock/photo.js?v=2',
-  '/assets/stock/catalog.js?v=11',
+  '/assets/stock/catalog.js?v=14',
   '/assets/stock/suppliers.js?v=6',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
