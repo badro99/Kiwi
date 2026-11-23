@@ -1681,6 +1681,13 @@ const LIMIT_STORE_MAX_FAILS = 16;
  * plafonne vers une centaine d'essais à l'heure, contre des milliers de
  * combinaisons), et un serveur qui se trompe attend quelques secondes. */
 const PIN_COOLDOWN_MS = [10000, 20000, 40000, 60000];
+/* …mais la pause courte n'est qu'un ralentisseur : un plafond sur 24 h par
+ * boutique borne le total des essais. Passé 300 fautes dans la journée (un
+ * service n'en fait pas le dixième), chaque faute rebloque 15 minutes. Le
+ * total reste ainsi sous l'ancien régime (16 par quart d'heure, soit ~1 500
+ * par jour). Revue sécurité du 23 Nov 2026. */
+const PIN_DAY_MAX_FAILS = 300;
+const PIN_DAY_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /* Un compteur rattaché à la CIBLE, pas seulement à la source. Sans lui, un
  * attaquant change d'adresse IP et repart à zéro sur le même compte ; avec lui,
@@ -1722,7 +1729,7 @@ export async function limitCheck(request, env, scope, identity = '') {
 
 /* Un essai raté de plus. Fenêtre glissante par redémarrage : passé
    LIMIT_WINDOW_MS la ligne repart à 1, donc elle expire d'elle-même. */
-export async function limitFail(request, env, scope, identity = '', maxFails = LIMIT_MAX_FAILS, ladder = null) {
+export async function limitFail(request, env, scope, identity = '', maxFails = LIMIT_MAX_FAILS, ladder = null, windowMs = LIMIT_WINDOW_MS) {
   const k = limiterKey(request, scope, identity);
   if (!k) return true;
   if (!env || !env.DB) return false;
@@ -1744,8 +1751,8 @@ export async function limitFail(request, env, scope, identity = '', maxFails = L
            WHEN pair_attempts.fails + 1 >= ? THEN ? + CASE pair_attempts.fails + 1 - ?
              WHEN 0 THEN ? WHEN 1 THEN ? WHEN 2 THEN ? ELSE ? END
            ELSE pair_attempts.blocked_until END`
-    ).bind(k, now, now, LIMIT_WINDOW_MS, now, LIMIT_WINDOW_MS, now,
-           now, LIMIT_WINDOW_MS, maxFails, now, maxFails, ...steps).run();
+    ).bind(k, now, now, windowMs, now, windowMs, now,
+           now, windowMs, maxFails, now, maxFails, ...steps).run();
     const changes = Number(result && result.meta && result.meta.changes);
     return Number.isFinite(changes) ? changes > 0 : true;
   } catch (_) { return false; }
@@ -1838,7 +1845,8 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
    * huit essais par quart d'heure restent larges pour un doigt qui glisse, et
    * au-delà la caisse ne fait qu'une pause de quelques secondes (PIN_COOLDOWN_MS). */
   // Attempt rate-limiting by scope: 'pin:<merchant>' keyed on proven identity (or IP if unauthenticated)
-  const blocked = await limitCheck(request, env, `pin:${merchant}`, identity);
+  const blocked = await limitCheck(request, env, `pin:${merchant}`, identity)
+    || await limitCheck(request, env, `pin-day:${merchant}`, 'shop');
   if (blocked) return { ok: false, response: blocked };
   /* Caisse appairée : second seau, plus serré, par appareil. Les fautes
    * d'un encaisseur ne verrouillent que son appareil, pas les autres caisses. */
@@ -1894,7 +1902,8 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   if (!staff) {
     const storeMax = tillScoped ? LIMIT_STORE_MAX_FAILS : LIMIT_MAX_FAILS;
     if (!await limitFail(request, env, `pin:${merchant}`, identity, storeMax, PIN_COOLDOWN_MS)
-        || (tillScoped && !await limitFail(request, env, deviceScope, deviceIdentity, LIMIT_MAX_FAILS, PIN_COOLDOWN_MS))) {
+        || (tillScoped && !await limitFail(request, env, deviceScope, deviceIdentity, LIMIT_MAX_FAILS, PIN_COOLDOWN_MS))
+        || !await limitFail(request, env, `pin-day:${merchant}`, 'shop', PIN_DAY_MAX_FAILS, null, PIN_DAY_WINDOW_MS)) {
       return { ok: false, response: rateLimitUnavailable() };
     }
     return { ok: false, error: 'bad-pin', status: 401 };
@@ -1962,7 +1971,7 @@ export async function verifyAccountPin(request, env, pin) {
     || rows.find((row) => employeeRoleOpensReceptionView(row.role)) || null;
 
   if (!staff) {
-    if (!await limitFail(request, env, 'pin:account', identity, LIMIT_MAX_FAILS, PIN_COOLDOWN_MS)) {
+    if (!await limitFail(request, env, 'pin:account', identity)) {
       return { ok: false, response: rateLimitUnavailable() };
     }
     /* « Ce compte a-t-il AU MOINS UN code, de n'importe quel rôle ? » La porte du

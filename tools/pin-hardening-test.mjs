@@ -570,6 +570,15 @@ console.log('\n2 · Attempt Rate-Limiting on Verification');
     seen[0] <= 20 && seen[1] <= 40 && seen.every((w) => w > 0 && w <= 60) && seen[4] > 40);
   expire();
   check('once the pause is over the right code opens the till', (await post('1234')).status === 200);
+  /* Le ralentisseur ne suffit pas seul : 300 fautes par boutique et par jour,
+     puis le blocage long revient (revue sécurité, 23 Nov 2026). */
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+  await post('0000');
+  sqlite.prepare("UPDATE pair_attempts SET fails = 299 WHERE ip = 'pin-day:cafe-atlas|shop'").run();
+  await post('0000');
+  const day = sqlite.prepare("SELECT blocked_until FROM pair_attempts WHERE ip = 'pin-day:cafe-atlas|shop'").get();
+  check('past 300 wrong codes in a day the shop is locked long again (bounded guessing)', day && day.blocked_until - Date.now() > 14 * 60000);
+  check('…and that lock is enforced on the next code', (await post('1234')).status === 429);
   sqlite.prepare('DELETE FROM pair_attempts').run();
   const req = new Request('https://kiwi.test/auth/login', { method: 'POST', headers: { 'CF-Connecting-IP': '10.6.0.9' } });
   for (let i = 0; i < 8; i++) await limitFail(req, env, 'login');
