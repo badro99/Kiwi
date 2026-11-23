@@ -271,8 +271,10 @@
     verifyCode(code).then(function (who) {
       if (who) { acceptStaff(who); return; }
       if (lastVerify.status === 429) {
-        var mins = lastVerify.wait > 0 ? Math.max(1, Math.ceil(lastVerify.wait / 60)) : 0;
-        refuse(mins ? 'Trop d’essais. Réessayez dans ' + mins + ' min.' : 'Trop d’essais. Réessayez dans quelques minutes.');
+        /* Le serveur ne bloque plus qu'une pause de secondes (PIN_COOLDOWN_MS) :
+           « 1 min » pour dix secondes faisait croire à un long blocage. */
+        var w = Math.max(0, Math.ceil(lastVerify.wait || 0));
+        refuse(w ? 'Trop d’essais. Réessayez dans ' + (w < 60 ? w + ' s.' : Math.ceil(w / 60) + ' min.') : 'Trop d’essais. Réessayez dans un instant.');
         return;
       }
       if (offlineBudget.check(merchant)) { pinBuf = ''; renderPinDots(); return; }

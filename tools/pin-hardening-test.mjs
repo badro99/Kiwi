@@ -543,6 +543,41 @@ console.log('\n2 · Attempt Rate-Limiting on Verification');
   sqlite.prepare('DELETE FROM pair_attempts').run();
 }
 
+/* Pasta Corner, 23 Nov 2026 : huit fautes de serveurs fermaient la tablette
+ * quinze minutes en plein service. Une faute de code ne coûte plus qu'une
+ * pause courte qui monte (10, 20, 40, 60 s au plus), jamais un quart d'heure ;
+ * les autres portes (connexion, opérateur) gardent leurs quinze minutes. */
+{
+  const { tillDeviceToken, limitFail } = await import('../functions/auth/_lib.js');
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+  const post = async (pin) => verifyPinPost({
+    request: new Request('https://kiwi.test/api/pin/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: `kiwi_till=${await tillDeviceToken(AUTH_SECRET, 'cafe-atlas', 0, 'term_busy_floor_x')}`, 'CF-Connecting-IP': '10.6.0.1' },
+      body: JSON.stringify({ merchant: 'cafe-atlas', pin }),
+    }),
+    env,
+  });
+  const waitAfter = async () => { const r = await post('1234'); return r.status === 429 ? (await r.json()).retry_after : 0; };
+  /* « Attendre » la pause sans dormir : on la fait expirer en base. */
+  const expire = () => sqlite.prepare('UPDATE pair_attempts SET blocked_until = 1 WHERE blocked_until IS NOT NULL').run();
+  for (let i = 0; i < 8; i++) await post('0000');
+  const w1 = await waitAfter();
+  check(`after 8 typos the till pauses seconds, not minutes (${w1} s)`, w1 > 0 && w1 <= 10);
+  const seen = [];
+  for (let i = 0; i < 5; i++) { expire(); await post('0000'); seen.push(await waitAfter()); }
+  check(`each further typo raises the pause, capped at a minute (${seen.join(', ')} s)`,
+    seen[0] <= 20 && seen[1] <= 40 && seen.every((w) => w > 0 && w <= 60) && seen[4] > 40);
+  expire();
+  check('once the pause is over the right code opens the till', (await post('1234')).status === 200);
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+  const req = new Request('https://kiwi.test/auth/login', { method: 'POST', headers: { 'CF-Connecting-IP': '10.6.0.9' } });
+  for (let i = 0; i < 8; i++) await limitFail(req, env, 'login');
+  const row = sqlite.prepare("SELECT blocked_until FROM pair_attempts WHERE ip = 'login|10.6.0.9'").get();
+  check('account sign-in keeps its 15-minute lockout', row && row.blocked_until - Date.now() > 14 * 60000);
+  sqlite.prepare('DELETE FROM pair_attempts').run();
+}
+
 console.log('\n3 · Shared Verifier on Sale Cancellation (/api/sale/cancel)');
 
 {

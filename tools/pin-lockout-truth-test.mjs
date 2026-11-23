@@ -65,7 +65,8 @@ ok('the pad remembers a 429 and its wait, and says so instead of « Code incorre
   const refuseAt = pad.indexOf('if (lastVerify.status === 429) {');
   const wrongAt = pad.indexOf("'Code incorrect ou impossible à vérifier.'");
   assert.ok(refuseAt > 0 && wrongAt > refuseAt, 'lockout message comes first');
-  assert.match(pad, /refuse\(mins \? 'Trop d’essais\. Réessayez dans ' \+ mins \+ ' min\.' : 'Trop d’essais\. Réessayez dans quelques minutes\.'\);/);
+  /* La pause se compte en secondes depuis le 23 Nov 2026 (PIN_COOLDOWN_MS). */
+  assert.match(pad, /refuse\(w \? 'Trop d’essais\. Réessayez dans ' \+ \(w < 60 \? w \+ ' s\.' : Math\.ceil\(w \/ 60\) \+ ' min\.'\) : 'Trop d’essais\. Réessayez dans un instant\.'\);/);
 });
 ok('a lockout never counts as an approval (manager codes still fail closed)', () => {
   // the 429 branch resolves to null, which every caller of verifyCode treats as « no »
