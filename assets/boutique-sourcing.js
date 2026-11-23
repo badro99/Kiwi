@@ -15,9 +15,9 @@
  *     coût : le stock en rayon a été payé à l'ancien prix, et l'ancien principal
  *     reste en concurrence au prix qu'on lui connaît.
  *
- * Deux écrans lisent ce module : la fiche produit du tableau de bord boutique
- * (assets/pages-pro-boutique.js y laisse une place `data-bqs-slot`) et la fiche article du
- * stock pour les métiers de détail (assets/stock/sourcing.js, `offers`).
+ * La fiche produit du tableau de bord boutique (assets/pages-pro-boutique.js)
+ * charge ce module à sa première ouverture (import dynamique : aucune balise
+ * de plus au démarrage) et lui laisse une place, `data-bqs-slot`, qu'il remplit.
  * Rien ici n'écrit hors du catalogue boutique et du document d'achats.
  * Test : tools/boutique-sourcing-test.mjs. */
 (function () {

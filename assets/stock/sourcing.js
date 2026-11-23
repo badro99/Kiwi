@@ -15,10 +15,9 @@
  *   · le bon de commande rapide rappelle l'offre la moins chère et l'autre
  *     qualité de la famille.
  *
- * Boutique et autres métiers de détail : l'article vient du catalogue boutique
- * (`retail`), et ses offres, le choix du principal et l'ajout d'un concurrent
- * viennent d'assets/boutique-sourcing.js (KiwiBoutiqueSourcing), le même
- * modèle que la fiche produit boutique.
+ * Un article de détail (`retail`, catalogue boutique) garde sa fiche d'avant :
+ * ses fournisseurs se comparent sur la fiche produit boutique
+ * (assets/boutique-sourcing.js), pas avec les cartes du document de stock.
  *
  * Hors du contrat de découpe (tools/fixtures/stock-controller/split.json) :
  * catalog.js et purchasing.js l'appellent par S.stockSourcing, stock.js par
@@ -212,14 +211,12 @@ window.KiwiStockInternal.install('sourcing', (S) => {
   /* Un article sans carte fournisseur mais avec un fournisseur nommé (fiche
      remplie à la main) : ce fournisseur est son offre, au coût de l’article. */
   function offersOf(it) {
-    if (it && it.retail) return retail() ? retail().offers(it) : [];
+    if (it && it.retail) return [];
     const cards = cardsOf(it);
     const own = !cards.length && it.supplier ? [{ id: '', supplierName: String(it.supplier), defaultPrice: it.costPerUnit, rank: 1 }] : cards;
     return offersFor(own, historyOf(it));
   }
 
-  /* Détail : le modèle de la fiche produit boutique (assets/boutique-sourcing.js). */
-  const retail = () => window.KiwiBoutiqueSourcing || null;
   const priceOf = (it) => unitPrice(it, offersOf(it));
   function viewFor(it, all) { return familyView(membersOf(it, all), priceOf); }
   const baseWord = (u, l) => (UNIT_WORD[u] ? UNIT_WORD[u][l === 'en' ? 1 : l === 'ar' ? 2 : 0] : u);
@@ -358,7 +355,7 @@ html body:not(#kno) .st-md-list-row.st-src-row{display:flex;align-items:flex-sta
         ${advice}
         <div class="st-md-list">${offers.map((o) => offerRow(o, unit, l)).join('')}</div>
         ${lone}
-        <button data-activation=write class="st-btn small" type="button" ${it.retail ? 'data-src-add-rival' : 'data-stock-add-backup-supplier'} data-item-id="${esc(it.id)}" style="margin-top:8px;">
+        <button data-activation=write class="st-btn small" type="button" data-stock-add-backup-supplier data-item-id="${esc(it.id)}" style="margin-top:8px;">
           <span>${esc(tr('addRival', null, l))}</span>
         </button>
       </div>`;
@@ -395,6 +392,7 @@ html body:not(#kno) .st-md-list-row.st-src-row{display:flex;align-items:flex-sta
      movements.js (figé par le contrat de découpe) : on garde ses mouvements et
      on remplace sa liste de fournisseurs, qui ne comparait que les deux premiers. */
   function detail(it, legacy) {
+    if (it && it.retail) return String(legacy || '');
     ensureStyle();
     const l = lang();
     let rest = String(legacy || '');
@@ -411,14 +409,12 @@ html body:not(#kno) .st-md-list-row.st-src-row{display:flex;align-items:flex-sta
     const l = lang();
     scope.querySelectorAll('[data-src-principal]').forEach((b) => b.addEventListener('click', () => {
       const id = b.getAttribute('data-src-principal');
-      const got = it.retail ? (retail() && retail().setPrincipal(it, id)) : setPrincipal(it.id, id);
-      if (!got) return;
-      const who = got.supplierName || got.name;
-      try { window.Kiwi.toast(tr('mainDone', { s: String(who).split(' · ')[0], i: it.name }, l), { type: 'success' }); } catch (_) {}
+      const pick = setPrincipal(it.id, id);
+      if (!pick) return;
+      try { window.Kiwi.toast(tr('mainDone', { s: String(pick.supplierName).split(' · ')[0], i: it.name }, l), { type: 'success' }); } catch (_) {}
       hooks.reopen(it.id);
     }));
     scope.querySelectorAll('[data-src-open]').forEach((b) => b.addEventListener('click', () => hooks.reopen(b.getAttribute('data-src-open'))));
-    scope.querySelectorAll('[data-src-add-rival]').forEach((b) => b.addEventListener('click', () => { if (retail()) retail().openRival(it, () => hooks.reopen(it.id)); }));
     scope.querySelectorAll('[data-src-pack]').forEach((box) => {
       const save = () => {
         const qty = String(box.querySelector('[data-src-pack-qty]').value || '').replace(',', '.');
@@ -479,6 +475,7 @@ html body:not(#kno) .st-md-list-row.st-src-row{display:flex;align-items:flex-sta
 
   /* Le bon de commande rapide : l'offre la moins chère, l'autre qualité. */
   function orderHint(it) {
+    if (it && it.retail) return '';
     ensureStyle();
     const l = lang();
     const lines = [];

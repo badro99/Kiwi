@@ -1814,7 +1814,7 @@ function _bqxProductBody(pid) {
   </div>`;
 }
 
-const _bqxSrcHtml = (pid) => `<div data-bqs-slot="${_esc(pid)}"></div>`;   // fournisseurs en concurrence : assets/boutique-sourcing.js remplit la place
+const _bqxSrcHtml = (pid) => (import(new URL('assets/boutique-sourcing.js?v=3', document.baseURI).href).catch(() => {}), `<div data-bqs-slot="${_esc(pid)}"></div>`);   // fournisseurs en concurrence : assets/boutique-sourcing.js, chargé à la première fiche, remplit la place
 function _bqxSheetSub(data) {
   const t = _bqxShT();
   return `${data.category ? data.category.name : t.noCat} · ${_bqxPrice(data.product.priceMAD)} ${t.cur} · ${_bqxPfFill(t.inStock, { n: data.stock })}`;
