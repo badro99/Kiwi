@@ -48,7 +48,7 @@
      que le journal de CET appareil : une note ouverte sur une autre caisse peut manquer. */
   async function listWithStatus(merchant, query) {
     const local = read(merchant);
-    let remote = [], status = 'ok';
+    let remote = [], settled = new Set(), status = 'ok';
     if (!merchant) status = 'ok';
     else if (navigator.onLine === false) status = 'offline';
     else {
@@ -63,10 +63,13 @@
         else {
           const body = await response.json();
           if (!body || !Array.isArray(body.balances)) status = 'read-failed'; else remote = body.balances;
+          if (body && Array.isArray(body.settled)) settled = new Set(body.settled.map(String));
         }
       } catch (_) { status = 'read-failed'; /* The local journal is still readable during an outage or a stall. */ }
     }
-    const merged = new Map(local.map(row => [row.id, row]));
+    /* A note the server says has ended (closed or paid off, maybe on another
+       till) leaves this list; the local copy stays in storage untouched. */
+    const merged = new Map(local.filter(row => !settled.has(String(row.id))).map(row => [row.id, row]));
     remote.forEach(row => {
       const saved = merged.get(row.id);
       // Cross-device totals and local outbox payments are disjoint by receipt

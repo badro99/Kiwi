@@ -297,7 +297,9 @@
       if (typeof window.KiwiBoutiqueDemoDay === 'function') return window.KiwiBoutiqueDemoDay() || [];
       var b = JSON.parse(localStorage.getItem('kiwi:bqDay') || 'null');
       if (b && b.m && slug() && b.m !== slug()) return [];
-      return Array.isArray(b) ? b : (b && Array.isArray(b.s) ? b.s : []);
+      /* Une vente sortie des livres (God mode) reste dans le journal, marquée
+         `voided` : la caisse en a rendu le stock, « Vendus » ne la compte plus. */
+      return (Array.isArray(b) ? b : (b && Array.isArray(b.s) ? b.s : [])).filter(function (s) { return s && !s.voided; });
     } catch (_) { return []; }
   }
   var tillPanel = null;

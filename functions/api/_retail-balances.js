@@ -111,6 +111,26 @@ export async function confirmRetailBalance(db, merchant, saleId) {
     WHERE merchant = ? AND sale_id = ?`).bind(merchant, saleId).run();
 }
 
+/* The notes this store's server no longer holds open: closed (an avance that
+ * expired, a God mode clean-up) or paid off, possibly from another till. A
+ * till's offline journal keeps its own copy of every note it opened and never
+ * learnt that one had ended elsewhere, so « Acomptes » showed a debt the
+ * server had settled (Mabs Outfitters, 23 Nov 2026). The till hides the ids
+ * listed here; it never deletes its copy, so nothing is lost if one is wrong. */
+export async function readSettledBalanceIds(db, merchant, since) {
+  const rows = await db.prepare(`SELECT id FROM (SELECT b.id, b.closed_ts, b.total_cents, b.created_ts,
+    COALESCE(SUM(CASE WHEN r.status = 'posted' AND s.id IS NOT NULL AND s.void_ts IS NULL
+      THEN r.amount_cents ELSE 0 END),0) + COALESCE(SUM(CASE WHEN r.status = 'pending' THEN r.amount_cents ELSE 0 END),0) AS covered
+    FROM retail_balances b LEFT JOIN retail_balance_receipts r
+      ON r.merchant = b.merchant AND r.balance_id = b.id
+    LEFT JOIN sales s ON s.merchant = r.merchant AND s.id = r.sale_id
+    WHERE b.merchant = ? AND (b.created_ts >= ? OR b.closed_ts >= ?)
+    GROUP BY b.merchant, b.id)
+    WHERE closed_ts IS NOT NULL OR total_cents <= covered
+    ORDER BY created_ts DESC LIMIT 500`).bind(merchant, since, since).all();
+  return (rows.results || []).map(row => String(row.id));
+}
+
 export async function readRetailBalances(db, merchant, filter = '') {
   const where = filter ? `AND (b.ticket_ref LIKE ? OR b.customer_id = ? OR b.id = ?)` : '';
   const args = filter ? [merchant, `%${filter}%`, filter, filter] : [merchant];

@@ -1,5 +1,5 @@
 import { activeEmployee, entitledMerchant } from '../auth/_lib.js';
-import { expireAvance, readRetailBalances } from './_retail-balances.js';
+import { expireAvance, readRetailBalances, readSettledBalanceIds } from './_retail-balances.js';
 import { creditExpiry, generatedCode, view } from './store-credits.js';
 import { storeSubscriptionPending, storeSuspended } from './_private.js';
 import { poke } from './_live.js';
@@ -12,8 +12,11 @@ export async function onRequestGet({ request, env }) {
   if (!merchant) return Response.json({ error: 'forbidden-merchant' }, { status: 403 });
   const filter = String(url.searchParams.get('q') || '').trim().slice(0, 64);
   try {
-    return Response.json({ balances: await readRetailBalances(env.DB, merchant, filter) },
-      { headers: { 'Cache-Control': 'no-store' } });
+    const balances = await readRetailBalances(env.DB, merchant, filter);
+    /* Best effort: a till that gets no `settled` list keeps today's behaviour. */
+    let settled = [];
+    try { settled = await readSettledBalanceIds(env.DB, merchant, Date.now() - 120 * 86400000); } catch (_) {}
+    return Response.json({ balances, settled }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (_) { return Response.json({ error: 'retail-balance-unavailable' }, { status: 503 }); }
 }
 

@@ -56,6 +56,7 @@ const venues = retailSource(coreTestSource.readFileSync(path.join(ROOT,'assets',
 const caisse = retailSource(coreTestSource.readFileSync(path.join(ROOT,'assets','pos-boutique.js'),'utf8'));
 ok('dashboard reads existing KiwiSales ledger', /KiwiSales\.list/.test(src));
 ok('cashier backfills authenticated store feed', /api\/feed\?merchant=/.test(src) && /credentials:'same-origin'/.test(src));
+ok('cashier skips sales voided in its local journal', /\.filter\(function \(s\) \{ return s && !s\.voided; \}\)/.test(src));
 ok('cashier rejects a differently stamped local journal', /b\.m\s*&&\s*slug\(\)\s*&&\s*b\.m\s*!==\s*slug\(\)/.test(src));
 ok('dashboard nav sits after returns', /nav:\s*'returns'[\s\S]{0,300}nav:\s*'sold'/.test(venues));
 ok('cashier has Vendus panel', /data-bq-view="vendus"/.test(caisse) && /data-bq-panel="vendus"/.test(caisse));

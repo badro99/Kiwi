@@ -51,6 +51,12 @@ assert.equal(r.status, 'offline');
   const again = await window.KiwiRetailBalances.listWithStatus('shop', '');
   assert.equal(window.KiwiRetailBalances.due(again.rows[0]), 2000, 'le second versement, inconnu du serveur, reste en attente');
 }
+/* Mabs Outfitters, 23 nov. 2026 : une note fermée côté serveur (avance expirée, nettoyage God mode, soldée
+   sur une autre caisse) restait sur la caisse qui l'avait ouverte. Le serveur liste ces ids dans `settled`. */
+r = await boot({ fetch: async () => ({ ok: true, json: async () => ({ balances: [], settled: ['n1'] }) }) }).listWithStatus('shop', '');
+assert.equal(r.status, 'ok'); assert.equal(r.rows.length, 0, 'note réglée ailleurs : elle quitte Acomptes');
+r = await boot({ fetch: async () => ({ ok: true, json: async () => ({ balances: [], settled: ['autre'] }) }) }).listWithStatus('shop', '');
+assert.equal(r.rows.length, 1, 'une note locale que le serveur ne déclare pas réglée reste listée');
 // list() garde sa forme pour les appelants existants.
 const rows = await boot({ fetch: async () => { throw new Error('x'); } }).list('shop', '');
 assert.ok(Array.isArray(rows) && rows.length === 1);
