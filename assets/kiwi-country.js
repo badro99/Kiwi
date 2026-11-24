@@ -111,7 +111,7 @@
 
   /* Le ticket du pays : receipt.js l'appelle par KiwiReceipt.ext.country. */
   if (window.KiwiReceipt && window.KiwiReceipt.ext && !window.KiwiReceipt.ext.country) {
-    var rc = document.createElement('script'); rc.src = 'assets/receipt-country.js?v=1'; rc.async = true;
+    var rc = document.createElement('script'); rc.src = 'assets/receipt-country.js?v=2'; rc.async = true;
     (document.head || document.documentElement).appendChild(rc);
   }
 

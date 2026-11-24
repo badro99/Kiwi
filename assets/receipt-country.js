@@ -35,6 +35,9 @@
     },
     methods: function (l) { return l === 'es' ? ES_METHODS : null; },
     symbol: function () { var p = profile(); return (p && p.symbol) || 'MAD'; },
+    /* Le taux d'IVA d'un ticket que le commerçant n'a pas réglé : 21 % inclus en Espagne
+       (une factura simplificada dit son IVA). Ailleurs rien : le ticket marocain reste sans TVA par défaut. */
+    vatDefault: function () { var p = profile(); return p && p.code !== 'MA' && p.defaultVat ? p.defaultVat : 0; },
     taxId: function () { var p = profile(); return (p && p.taxId) || 'ICE'; },
     /* Le libellé du champ « ICE » des réglages : « NIF » pour un commerce espagnol. */
     taxLabel: function () { var p = profile(); if (!p || !p.taxId || p.taxId === 'ICE') return null; return { fr: p.taxId, en: p.taxId, ar: p.taxId }; },

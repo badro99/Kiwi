@@ -63,13 +63,16 @@ ok(es.appended.length === 0 || es.appended.every((u) => /receipt-country\.js/.te
 console.log('■ le ticket');
 let txt = es.R.text(es.R.build(sale));
 ok(/FACTURA SIMPLIFICADA/.test(txt) && /Efectivo/.test(txt) && /€/.test(txt) && !/MAD/.test(txt), 'un commerce espagnol imprime en espagnol et en euros', txt);
+const vat = es.R.build(sale).totals.vat;
+ok(vat && vat.rate === 21 && vat.ht === 27.17 && vat.tva === 5.71 && vat.included, 'IVA 21 % inclus par défaut : base 27,17 €, IVA 5,71 € sur 32,88 €', vat);
+ok(/IVA 21 %\s+5,71 €/.test(txt) && /Base imponible/.test(es.R.html(es.R.build(sale))), 'le ticket dit l’IVA, et la base imponible à l’écran et sur papier', txt);
 const bytes = Array.from(es.R.escpos(es.R.build(sale)));
 ok(bytes.includes(0x80), 'le ticket thermique porte « € » (0x80 en CP1252)');
 const ice = es.R.LEGAL_FIELDS.find((f) => f.k === 'ice');
 ok(ice.label.fr === 'NIF', 'le champ fiscal des réglages s’appelle NIF', ice.label);
 const ma = till(null);
 txt = ma.R.text(ma.R.build(sale));
-ok(!/FACTURA/.test(txt) && /Espèces/.test(txt) && /MAD/.test(txt) && !/€/.test(txt), 'un commerce marocain imprime comme avant (français, MAD, sans titre)', txt);
+ok(!/TVA/.test(txt) && !/FACTURA/.test(txt) && /Espèces/.test(txt) && /MAD/.test(txt) && !/€/.test(txt), 'un commerce marocain imprime comme avant (français, MAD, sans titre)', txt);
 ok(ma.R.LEGAL_FIELDS.find((f) => f.k === 'ice').label.fr === 'ICE', 'et son champ fiscal reste ICE');
 
 console.log('■ les URL écrites dans le code');

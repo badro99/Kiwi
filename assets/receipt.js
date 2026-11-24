@@ -192,7 +192,7 @@
        * affichée d'office est un chiffre inventé sur une pièce comptable. Le
        * propriétaire l'active et choisit son taux ; tant qu'il ne l'a pas fait,
        * le ticket montre un total, pas une ventilation. */
-      vat: { mode: 'none', rate: 20, included: true },
+      vat: (function () { var dv = ext.country && ext.country.vatDefault(); return { mode: dv ? 'rate' : 'none', rate: dv || 20, included: true }; })(),   // Espagne : IVA 21 % inclus (receipt-country.js)
       msg: {
         welcome: '',
         thanks: '',
@@ -237,9 +237,9 @@
     var SL = S.legal || {};
     Object.keys(o.show.legal).forEach(function (k) { if (SL[k] != null) o.show.legal[k] = !!SL[k]; });
 
-    o.vat.mode = (V.mode === 'rate') ? 'rate' : 'none';
+    var dv = ext.country && ext.country.vatDefault(); o.vat.mode = (V.mode === 'rate' || (V.mode == null && dv)) ? 'rate' : 'none';   // Espagne : IVA 21 % inclus par défaut (receipt-country.js)
     var r = num(V.rate);
-    o.vat.rate = (r > 0 && r <= 100) ? Math.round(r * 100) / 100 : 20;
+    o.vat.rate = (r > 0 && r <= 100) ? Math.round(r * 100) / 100 : (dv || 20);
     o.vat.included = V.included !== false;
 
     o.msg.welcome = str(M.welcome, 120);
