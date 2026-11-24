@@ -526,7 +526,10 @@ CREATE TABLE IF NOT EXISTS merchant_config (
   -- Fuseau et heure de bascule de la journée commerciale (functions/api/timezone.js,
   -- _business-day.js). Posées à l'exécution par timezone.js en production.
   timezone        TEXT,             -- IANA, ex. Africa/Casablanca ; NULL = défaut
-  business_cutoff INTEGER           -- heure de bascule 0–12 ; NULL = 05:00 historique
+  business_cutoff INTEGER,          -- heure de bascule 0–12 ; NULL = 05:00 historique
+  -- Pays d'exploitation (assets/country-catalog.js, réglé dans la console God Mode,
+  -- functions/api/admin/country.js) : devise, TVA/IVA, identifiant fiscal. NULL = Maroc.
+  country         TEXT
 );
 -- Base déjà déployée : `node tools/d1-schema.mjs` dit ce qui manque.
 -- Tant que city/mrr manquent, la console reste utilisable : /api/admin/overview

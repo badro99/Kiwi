@@ -37,6 +37,7 @@ import {
 import { publishStaffCredentials, accountOwnerRole, codesToRedo } from './_staff-publication.js';
 import { sessionTierAtLeast } from '../auth/_session-tier.js';
 import { codeHolds } from './_permissions.js';
+import { Countries, merchantCountry } from './_country.js';   // pays d'exploitation (owner, 24/11/2026)
 
 /* ── Ce qu'un établissement TOUT NEUF reçoit ────────────────────────────────
  * Quatre modules qui ne servent qu'à une partie des clients : un snack de quartier
@@ -370,7 +371,10 @@ export async function onRequestGet(context) {
    * the ledger counts on, resolved by the same rule as merchantZone() and
    * merchantCutoff() in _business-day.js: a store with no row gets 5 and
    * Africa/Casablanca, flagged as defaults. Additive: no existing field moves. */
+  /* Le pays d'exploitation : devise, TVA/IVA, identifiant fiscal (assets/country-catalog.js). Maroc par défaut. */
+  const country = await merchantCountry(env, merchant);
   return json({ features, pins, pinGateConfigured, type, plan, pollMode: mayReadPins ? await pollMode(env, merchant) : "live", planExplicit, suspended, timezone, businessCutoff,
+    country, countryProfile: Countries.profile(country),
     businessDay: {
       cutoff: businessCutoff === null ? DEFAULT_CUTOFF : businessCutoff,
       zone: timezone || DEFAULT_ZONE,

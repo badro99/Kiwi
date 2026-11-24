@@ -82,6 +82,10 @@ function makeDB() {
             const r = T.merchant_config.find((x) => x.merchant === a[0]);
             return r ? { status: r.status || 'active' } : null;
           }
+          if (q.startsWith('SELECT country FROM merchant_config')) {
+            const r = T.merchant_config.find((x) => x.merchant === a[0]);
+            return r ? { country: r.country || null } : null;
+          }
           if (q.startsWith('SELECT account_id FROM merchant_config')) {
             const r = T.merchant_config.find((x) => x.merchant === a[0]);
             return r ? { account_id: r.account_id } : null;
@@ -331,6 +335,18 @@ const ORDER = (over) => JSON.stringify(Object.assign({
   ok('…aucun ticket n\'a été créé pour elle', DB._t.orders.length === 3);
   ok('…et la raison est lisible par le commerçant',
     /devise EUR/.test(DB._t.channel_links.find((l) => l.id === linkId).last_err || ''));
+
+  /* ── 8 bis · le pays du commerce (owner, 24 nov. 2026 : Startoner, Espagne) ─ */
+  const home = DB._t.merchant_config.find((x) => x.merchant === DB._t.channel_links.find((l) => l.id === linkId).merchant);
+  home.country = 'ES';
+  const ordersBefore = DB._t.orders.length;
+  r = await signed(linkId, ORDER({ id: 1999, currency: 'EUR', total_price: '32.88' }));
+  ok('un commerce espagnol encaisse une commande en euros', r.status === 200 && r.body.ok === true && !r.body.issue, JSON.stringify(r.body));
+  ok('…un ticket est créé, centimes compris', DB._t.orders.length === ordersBefore + 1 && DB._t.orders[DB._t.orders.length - 1].total === 32.88, String(DB._t.orders.length));
+  r = await signed(linkId, ORDER({ id: 2000, currency: 'MAD', total_price: '240.00' }));
+  ok('…et c\'est une commande en dirhams qui devient l\'anomalie', r.status === 200 && r.body.issue === 'unsupported-currency' && r.body.currency === 'MAD', JSON.stringify(r.body));
+  ok('…avec une raison lisible', /devise MAD · ce commerce encaisse en EUR/.test(DB._t.channel_links.find((l) => l.id === linkId).last_err || ''));
+  delete home.country;
 
   /* ── 9 · la boutique déclarée ───────────────────────────────────────────── */
   const other = ORDER({ id: 1001 });

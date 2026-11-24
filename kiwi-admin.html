@@ -1065,7 +1065,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <script src="assets/admin-support-escalation.js?v=1" defer></script>
   <script src="assets/admin-demo-requests.js?v=5" defer></script>
   <script src="assets/admin-directory.js?v=2" defer></script>
-  <script src="assets/admin-glovo.js?v=3" defer></script><script src="assets/admin-owner-codes.js?v=1" defer></script><script src="assets/admin-pin-codes.js?v=2" defer></script>
+  <script src="assets/admin-glovo.js?v=3" defer></script><script src="assets/admin-owner-codes.js?v=1" defer></script><script src="assets/admin-pin-codes.js?v=2" defer></script><script src="assets/admin-country.js?v=1" defer></script>
 
 <script>
 (function(){
@@ -2849,7 +2849,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
     retry.onclick=saveType;
     row.appendChild(h('label', { class:'type-field' },
       h('span', { class:'type-lbl' }, 'Type d’activité'), sel));
-    row.appendChild(msg);row.appendChild(retry);
+    row.appendChild(msg);row.appendChild(retry); if (window.KiwiAdminCountry) window.KiwiAdminCountry.mount({ row:row, merchant:target.merchant, senior:SENIOR });   // pays d'exploitation (assets/admin-country.js)
   }
 
   /* Un module a un état, et cet état a une origine. Les deux se lisent :

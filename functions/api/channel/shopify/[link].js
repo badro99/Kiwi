@@ -45,6 +45,7 @@ import { enqueueInboundStock, flushInboundStock } from '../../shopify/_inbound-s
 import { reverseShopifyOrder } from '../../shopify/_order-reversal.js';
 import { saleMoveId } from '../../shopify/_move-ids.js';
 import { shopPermanentDomain, verifyWebhookHmac } from '../../shopify/_lib.js';
+import { Countries, merchantCountry } from '../../_country.js';   // la devise attendue suit le pays du commerce
 
 const MAX_LINES = 60;
 const MAX_TOTAL = 200000;          // 200 000 MAD — garde-fou, pas une règle
@@ -441,10 +442,13 @@ async function receiveWebhook(context) {
 
   /* La devise, avant tout le reste. Un ticket marocain affiche des dirhams ;
    * une commande en euros imprimée telle quelle ferait encaisser dix fois
-   * trop, et rien en aval ne le rattraperait. */
+   * trop, et rien en aval ne le rattraperait. La devise attendue est celle du
+   * pays du commerce (functions/api/_country.js) : l'euro pour un commerce
+   * espagnol, le dirham sinon. */
   const cur = str(o && (o.currency || o.presentment_currency), 8).toUpperCase();
-  if (cur && cur !== 'MAD') {
-    await mark(env, link.id, false, 'devise ' + cur + ' · seul le dirham est géré');
+  const home = Countries.currencyOf(await merchantCountry(env, String(link.merchant || '').toLowerCase()));
+  if (cur && cur !== home) {
+    await mark(env, link.id, false, 'devise ' + cur + ' · ce commerce encaisse en ' + home);
     await env.DB.prepare(`INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
       VALUES (?, ?, ?, 1, ?) ON CONFLICT(merchant, feature) DO NOTHING`)
       .bind(String(link.merchant || '').toLowerCase(), 'shopify-currency:' + str(o.id || o.name || deliveryId, 96),
