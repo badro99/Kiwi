@@ -9,8 +9,9 @@ import { tenantFor } from '../_private.js';
 import { replayShopifyOrders, readReplayProgress } from './_replay-orders.js';
 import {
   buildExactVariantMapping, connectionFor, enqueueStockChanges,
-  flushShopifyOutbox, listLocations, listShopifyVariants, registerWebhooks,
+  flushShopifyOutbox, listLocations, listShopifyVariants, registerWebhooks, removeWebhooks,
 } from './_lib.js';
+import { operatorActor } from '../../auth/_lib.js';
 
 const n = (v) => Math.max(0, Number(v) || 0);
 const clean = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
@@ -361,6 +362,30 @@ export async function onRequestPost({ request, env, waitUntil }) {
   const action = String(body && body.action || '');
 
   try {
+    /* Déconnecter : la boutique Shopify redevient libre pour un autre commerce Kiwi
+       (24 nov. 2026 : Startoner, reliée à Amira Boutique pour un essai, passe chez
+       CHICTRATEC SL). Les abonnements de Kiwi sont retirés chez Shopify, le lien
+       passe en pause (un webhook en retard est refusé), la connexion, ses liens de
+       variantes et ses écritures en attente disparaissent. Le catalogue Kiwi et les
+       ventes déjà enregistrées ne bougent pas. */
+    if (action === 'disconnect') {
+      const connection = await connectionFor(env, merchant);
+      if (!connection) return json({ error: 'shopify-not-connected' }, 404);
+      const linkId = String(connection.channel_link_id || '');
+      const hooks = await removeWebhooks(env, merchant, linkId);
+      const actor = await operatorActor(request, env).catch(() => ({ label: '', id: '' }));
+      const ts = Date.now();
+      await env.DB.batch([
+        env.DB.prepare(`INSERT INTO account_audit (account_id, merchant, action, prev, next, reason, actor, actor_id, detail, ts)
+          VALUES ('', ?, 'shopify-disconnect', ?, '', '', ?, ?, ?, ?)`).bind(merchant, String(connection.shop_domain || ''), actor.label || '', actor.id || '', JSON.stringify({ webhooksRemoved: hooks.removed, failures: hooks.failures.length }), ts),
+        env.DB.prepare(`UPDATE channel_links SET status = 'paused' WHERE id = ? AND merchant = ?`).bind(linkId, merchant),
+        env.DB.prepare('DELETE FROM shopify_variant_links WHERE merchant = ?').bind(merchant),
+        env.DB.prepare('DELETE FROM shopify_sync_outbox WHERE merchant = ?').bind(merchant),
+        env.DB.prepare('DELETE FROM shopify_connections WHERE merchant = ?').bind(merchant),
+      ]);
+      return json({ ok: true, action, shop: connection.shop_domain, webhooksRemoved: hooks.removed, webhookFailures: hooks.failures.length });
+    }
+
     if (action === 'select-location') {
       const locationId = String(body && body.locationId || '').slice(0, 160);
       const locations = await listLocations(env, merchant);

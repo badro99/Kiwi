@@ -124,7 +124,8 @@
       domain: 'Adresse de la boutique', domainPh: 'ma-boutique.myshopify.com', authorize: 'Continuer vers Shopify',
       legacy: 'Les commandes Shopify arrivent déjà par l’ancien webhook. Connectez aussi l’inventaire pour synchroniser le stock.',
       connected: 'Boutique autorisée', location: 'Emplacement Shopify', inspect: 'Vérifier les articles',
-      reauthorize: 'Réautoriser Shopify',
+      reauthorize: 'Réautoriser Shopify', disconnect: 'Déconnecter Shopify', off: 'Shopify déconnecté',
+      confirmOff: 'Déconnecter la boutique {shop} de ce commerce ? Les produits et les ventes déjà dans Kiwi restent. La boutique Shopify pourra ensuite être reliée à un autre commerce.',
       mapTitle: 'Correspondances exactes', matched: 'liées', byBarcode: 'par code-barres', bySku: 'par SKU',
       unmatched: 'sans correspondance', ambiguous: 'ambiguës', activate: 'Activer et aligner le stock',
       shopifyOnly: 'sur Shopify uniquement', importable: 'importables', importTitle: 'Importer vers Kiwi',
@@ -157,7 +158,8 @@
       domain: 'Store address', domainPh: 'my-store.myshopify.com', authorize: 'Continue to Shopify',
       legacy: 'Shopify orders already arrive through the legacy webhook. Connect inventory as well to synchronize stock.',
       connected: 'Authorized store', location: 'Shopify location', inspect: 'Check products',
-      reauthorize: 'Reauthorize Shopify',
+      reauthorize: 'Reauthorize Shopify', disconnect: 'Disconnect Shopify', off: 'Shopify disconnected',
+      confirmOff: 'Disconnect the shop {shop} from this business? Products and sales already in Kiwi stay. The Shopify shop can then be connected to another business.',
       mapTitle: 'Exact matches', matched: 'linked', byBarcode: 'by barcode', bySku: 'by SKU',
       unmatched: 'unmatched', ambiguous: 'ambiguous', activate: 'Activate and align inventory',
       shopifyOnly: 'Shopify only', importable: 'importable', importTitle: 'Import into Kiwi',
@@ -190,7 +192,8 @@
       domain: 'عنوان المتجر', domainPh: 'my-store.myshopify.com', authorize: 'المتابعة إلى Shopify',
       legacy: 'تصل طلبات Shopify عبر الربط القديم. اربط المخزون أيضًا لمزامنة الكميات.',
       connected: 'المتجر المصرح', location: 'موقع Shopify', inspect: 'فحص المنتجات',
-      reauthorize: 'إعادة تفويض Shopify',
+      reauthorize: 'إعادة تفويض Shopify', disconnect: 'فصل Shopify', off: 'تم فصل Shopify',
+      confirmOff: 'فصل متجر {shop} عن هذا المحل؟ المنتجات والمبيعات المسجلة في Kiwi تبقى كما هي، ويمكن بعدها ربط متجر Shopify بمحل آخر.',
       mapTitle: 'المطابقات الدقيقة', matched: 'مرتبطة', byBarcode: 'بالباركود', bySku: 'برمز SKU',
       unmatched: 'غير متطابقة', ambiguous: 'ملتبسة', activate: 'تفعيل ومطابقة المخزون',
       shopifyOnly: 'في Shopify فقط', importable: 'قابلة للاستيراد', importTitle: 'الاستيراد إلى Kiwi',
@@ -492,6 +495,10 @@
     var storeName = document.createElement('strong'); storeName.textContent = connection.shop;
     store.appendChild(storeLabel); store.appendChild(storeName); root.appendChild(store);
     root.appendChild(shopButton(s.reauthorize, function () { return authorizeShopify(connection.shop); }, true));
+    root.appendChild(shopButton(s.disconnect, function () {   // la boutique redevient libre pour un autre commerce (status.js › disconnect)
+      if (!window.confirm(s.confirmOff.replace('{shop}', connection.shop))) return null;
+      return shopApi('disconnect').then(function () { toast(s.off, { type: 'success' }); return loadShopify(root); });
+    }, true));
 
     var select = document.createElement('select'); select.className = 'chl-f-v chl-in shp-select';
     select.setAttribute('aria-label', s.location);

@@ -239,6 +239,29 @@ export async function registerWebhooks(env, merchant, linkId, request) {
 }
 
 
+/* Les abonnements de Kiwi chez Shopify qui pointent vers CE lien (et eux seuls :
+ * un autre abonnement de la boutique ne nous appartient pas). Au mieux : une
+ * boutique déjà désinstallée n'en a plus, et la déconnexion côté Kiwi doit passer
+ * quand même. Rend le nombre retiré et les échecs, jamais un jeton. */
+export async function removeWebhooks(env, merchant, linkId) {
+  const removed = [], failures = [];
+  if (!linkId) return { removed: 0, failures };
+  let nodes = [];
+  try {
+    const out = await shopifyGraphQL(env, merchant, `query KiwiHooks { webhookSubscriptions(first: 100) { nodes { id uri endpoint { __typename ... on WebhookHttpEndpoint { callbackUrl } } } } }`, {});
+    nodes = (out && out.data && out.data.webhookSubscriptions && out.data.webhookSubscriptions.nodes) || [];
+  } catch (e) { failures.push('list: ' + (e && e.message || e)); }
+  const ours = nodes.filter((h) => String(h.uri || (h.endpoint && h.endpoint.callbackUrl) || '').endsWith('/api/channel/shopify/' + linkId));
+  for (const h of ours) {
+    try {
+      const out = await shopifyGraphQL(env, merchant, `mutation KiwiUnhook($id: ID!) { webhookSubscriptionDelete(id: $id) { deletedWebhookSubscriptionId userErrors { field message } } }`, { id: h.id });
+      const errors = (out && out.data && out.data.webhookSubscriptionDelete && out.data.webhookSubscriptionDelete.userErrors) || [];
+      if (errors.length) failures.push(errors.map((x) => x.message).join(' · ')); else removed.push(h.id);
+    } catch (e) { failures.push(String(e && e.message || e)); }
+  }
+  return { removed: removed.length, failures };
+}
+
 export async function connectionFor(env, merchant) {
   return env.DB.prepare(
     `SELECT merchant, shop_domain, access_token_enc, refresh_token_enc,
