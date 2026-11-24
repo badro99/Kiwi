@@ -189,7 +189,7 @@ for (const f of ['assets/kitchen-print-queue.js', 'assets/food-production-print.
     const start = ws.indexOf(`    ${lang}: {`);
     const end = lang === 'fr' ? ws.indexOf('\n  };', start) : ws.indexOf('\n    },', start);
     const block = ws.slice(start, end);
-    const missing = [...used].filter((k) => !new RegExp(`^\\s*${k}:`, 'm').test(block));
+    const missing = [...used].filter((k) => !new RegExp(`(?:^|[\\s,{])${k}:`, 'm').test(block)); // une clé en début de ligne ou après une autre sur la même ligne
     assert(start > 0 && end > start && missing.length === 0, `UI_I18N.${lang} : clés ui() sans libellé → ${missing.join(', ') || 'aucune'}`);
   }
   assert(!/:has\(\.rmw-formula-builder/.test(ws) && !/1120px/.test(ws) && /\.rmw-item-workspace \.kiwi-modal[^{]*\{max-height:calc\(100vh - 24px\);display:grid/.test(ws), 'éditeur d’article : une seule largeur (680 px) pour tout article, formules comprises ; le corps défile dans une grille plafonnée à l’écran');

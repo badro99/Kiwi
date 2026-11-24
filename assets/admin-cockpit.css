@@ -1,6 +1,6 @@
 /* Console opérateur · le cockpit client 360 et ses mises en page étroites.
    Sorti du <style> de kiwi-admin.html tel quel (24 nov. 2026, plafond de taille) ;
-   la balise <link> suit le <style>, l'ordre de la cascade ne change pas. */
+   la balise <link> coupe le <style> à l'endroit exact d'où ce bloc vient : l'ordre de la cascade ne change pas. */
 /* Customer 360 cockpit. It is deliberately derived from the authoritative
    account roster: no invented lead score, no fake task count and no second
    source of truth. As richer CRM objects arrive, these same lanes can consume
@@ -64,45 +64,3 @@
 .client-table tbody tr.sel td{background:var(--sel)!important;border-color:rgba(11,110,79,.32)!important}
 .owner-row td{border:0;padding:14px 12px 4px;background:transparent!important}
 .owner-row .who{font-size:13px}.owner-row .mail{font-size:12px}
-tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!important}
-.merchant-title{font-weight:650;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.merchant-meta{display:flex;align-items:center;gap:6px;margin-top:5px;min-width:0;color:var(--muted);font-size:12px}
-.merchant-meta code{max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 11px/1.2 var(--mono);color:var(--muted)}
-.type-chip,.plan{border-radius:999px;padding:4px 8px;background:var(--sel);color:var(--atlas)}
-.city-chip{margin:0}
-.online{font-size:12px}.online .d{width:8px;height:8px}.online.live .d{box-shadow:0 0 0 4px rgba(11,110,79,.09)}
-.row-actions{align-items:center;gap:6px;white-space:nowrap}
-.row-actions>.mini.crm-primary{background:var(--riad);border-color:var(--riad);color:var(--on-accent);padding:9px 13px}
-.row-actions>.mini.crm-manage{color:var(--atlas);background:var(--sel);border-color:transparent;padding:9px 13px}
-.action-menu{position:relative}
-.action-menu summary{list-style:none;width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:18px;font-weight:700;color:var(--muted);background:var(--surface)}
-.action-menu summary::-webkit-details-marker{display:none}
-.action-menu[open] summary{border-color:var(--atlas);color:var(--atlas)}
-.action-pop{position:absolute;z-index:15;right:0;top:44px;width:218px;padding:7px;border:1px solid var(--line);border-radius:13px;background:var(--surface);box-shadow:0 22px 54px -24px rgba(5,59,44,.5)}
-.action-pop .mini{display:flex;width:100%;border:0;padding:10px 11px;justify-content:flex-start;background:transparent}
-.action-pop .mini:hover{background:var(--wash)}
-.action-pop .mini.danger{margin-top:4px;border-top:1px solid var(--line);border-radius:5px;color:var(--warn)}
-#manage{scroll-margin-top:92px;border:1px solid rgba(11,110,79,.3);box-shadow:0 24px 80px -52px rgba(5,59,44,.7)}
-#manage>.sec-head{position:sticky;top:72px;z-index:4;background:color-mix(in srgb,var(--surface) 95%,transparent);backdrop-filter:blur(16px)}
-#manage>.sec-head h2:before{content:"Dossier client";display:block;margin-bottom:3px;color:var(--atlas);font-size:11px;text-transform:uppercase;letter-spacing:.12em}
-.panel{padding:20px}.panel .grid2{gap:14px}.panel .grid2>div,.blk{padding:18px;border:1px solid var(--line);border-radius:15px;background:var(--wash-2)}
-.blk{margin-top:14px}.panel .grid2+.blk{margin-top:14px}
-.danger-zone{background:var(--warn-bg)!important;border-color:var(--warn-line)!important}
-#operators .panel{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start}
-#operators .hint,#operators .err{grid-column:1/-1}
-.op-list{min-width:0}
-
-@media(max-width:1080px){
-  .top-nav{display:none}.ov-body{grid-template-columns:1fr}.ov-body>.ov-split{grid-column:1;grid-row:auto;grid-template-columns:1fr 1fr}.crm-toolbar{width:100%;margin-left:0}.crm-directory>.sec-head{align-items:flex-start}.crm-directory .directory-title{width:100%}
-  .crm-cockpit{grid-template-columns:1fr}.crm-stream{grid-column:1}
-}
-@media(max-width:760px){
-  .top{padding:10px 14px;min-height:64px}.top-brand{min-width:0;flex:1}.top-brand img{width:56px}.top-title small{display:none}.top-actions button{font-size:0!important;padding:8px!important;width:38px;justify-content:center}.top-actions button:before{font-size:15px}.top-actions #support-console:before{content:"?"}.top-actions #demo-console:before{content:"D"}.top-actions #refresh:before{content:"↻"}.top-actions #quit:before{content:"↗"}
-  .wrap{padding:24px 14px 60px}.crm-hero{align-items:flex-start;flex-direction:column}.crm-time{display:none}.ov-grid{grid-template-columns:1fr 1fr;padding:0 12px 12px}.ov-card{min-height:130px;padding:15px}.ov-v{font-size:28px}.ov-body{padding:15px}.ov-body>.ov-split{grid-template-columns:1fr}
-  .crm-filter{width:100%;overflow-x:auto}.crm-filter button{flex:1;white-space:nowrap}.crm-sort,.cli-search,.cli-search input{width:100%}.crm-toolbar{gap:8px}
-  .crm-pipeline{grid-template-columns:1fr}.crm-lane{min-height:auto}.crm-stream{grid-template-columns:1fr}.crm-signal{border-left:0;border-top:1px solid var(--line)}.crm-signal:first-child{border-top:0}
-  .client-table th:nth-child(3),.client-table td:nth-child(3),.client-table th:nth-child(5),.client-table td:nth-child(5),.client-table th:nth-child(6),.client-table td:nth-child(6){display:none}
-  .row-actions>.mini.crm-primary{display:none}.action-pop{position:fixed;left:14px;right:14px;top:auto;bottom:14px;width:auto}
-  #manage>.sec-head{top:64px}.panel .grid2{grid-template-columns:1fr}#operators .panel{grid-template-columns:1fr}
-}
-@media(max-width:480px){.ov-grid{grid-template-columns:1fr}.crm-hero h2{font-size:38px}.top-title h1{font-size:14px}.badge{display:none}}

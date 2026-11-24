@@ -8,7 +8,7 @@ export const ASSETS = {
   "articleCss": "/assets/articles/article.css?v=13",
   "directoryCss": "/assets/directory/directory.css?v=74912581",
   "lens": "/assets/liquid-lens.js",
-  "trades": "/assets/trades.js?v=9",
+  "trades": "/assets/trades.js?v=10",
   "demoFunnel": "/assets/landing-demo-funnel.js?v=9",
   "articleJs": "/assets/articles/article.js?v=5"
 };

@@ -12,8 +12,8 @@
     "sha": "76456f2dc142f894"
   },
   "assets/admin-cockpit.css": {
-    "v": "1",
-    "sha": "9752f8fb147520a6"
+    "v": "2",
+    "sha": "9dedf7a00ddcf207"
   },
   "assets/admin-country.js": {
     "v": "2",
@@ -1664,8 +1664,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "325",
-    "sha": "b2dcb35d290067eb"
+    "v": "326",
+    "sha": "34cd644143da8505"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2360,8 +2360,8 @@
     "sha": "b4bf6bc37a61b76b"
   },
   "assets/restaurant-menu/strings.js": {
-    "v": "29",
-    "sha": "9225ec17d5432242"
+    "v": "31",
+    "sha": "056aa01d3ba5109b"
   },
   "assets/restaurant-menu/styles.js": {
     "v": "13",
