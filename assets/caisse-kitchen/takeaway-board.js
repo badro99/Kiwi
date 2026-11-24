@@ -18,7 +18,7 @@
       return o.items.map(i => `${i.q}× ${kdsEsc(i.n)}`).join(', ');
     }
     function vrapFinancialItems(o) {
-      return o && Array.isArray(o.billItems) && o.billItems.length ? o.billItems : ((o && o.items) || []);
+      return (o && Array.isArray(o.billItems) && o.billItems.length ? o.billItems : ((o && o.items) || [])).concat(typeof dlvFeeLines === 'function' ? dlvFeeLines(o) : []);   // + frais de livraison maison
     }
     /* ── Vente au comptoir ou commande à distance ? ────────────────────────
      * Une commande OrderPro est passée par un client ABSENT : il faut pouvoir
@@ -65,7 +65,7 @@
           /* Do not offer handover while the card still says "En préparation".
              That shortcut silently marked the order ready and served in one
              click, hiding the readiness step from every KDS-enabled merchant. */
-          action = readyBtn || `<button class="vrap-act" data-vrap-handover="${o.num}">${typeof dlvHandoverLabel === 'function' ? dlvHandoverLabel(o) : 'Remettre au client'}</button>`;
+          action = readyBtn || (o.delivery && typeof dlvHandoverLabel === 'function' ? `<button class="vrap-act" data-vrap-handover="${o.num}">${dlvHandoverLabel(o)}</button>` : `<button class="vrap-act" data-vrap-handover="${o.num}">Remettre au client</button>`);
         }
         /* Older paid counter sales can lack a served milestone. They need the
            same audited, non-financial escape hatch as phone orders; payment
@@ -405,7 +405,7 @@
       if (mode !== 'vrap') setMode('vrap');
       currentOrder().setEditing(num);
       currentOrder().setDiscount(null);
-      currentOrder().replaceCart(vrapFinancialItems(o).concat(typeof dlvFeeLines === 'function' ? dlvFeeLines(o) : []).map(i => {
+      currentOrder().replaceCart(vrapFinancialItems(o).map(i => {
         const m = menuLineFind(x => x.name === i.n);
         return {
           uid:   newLineUid(),

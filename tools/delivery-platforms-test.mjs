@@ -80,7 +80,7 @@ ok(/"revenue":281/.test(flat), 'a platform sale counts in revenue');
 ok(/"card":50\b/.test(flat) && /"cash":100\b/.test(flat), 'a platform sale is neither cash nor card');
 
 /* 6 ── lazy-load stamp */
-const dash = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8').match(/assets\/delivery\.js\?v=(\d+)/);
+const dash = fs.readFileSync(path.join(ROOT, 'assets/pages/dashboard-startup.js'), 'utf8').match(/assets\/delivery\.js\?v=(\d+)/);
 const till = fs.readFileSync(path.join(ROOT, 'assets/caisse/delivery.js'), 'utf8').match(/assets\/delivery\.js\?v=(\d+)/);
 ok(dash && till && dash[1] === till[1], 'caisse/delivery.js lazy-loads assets/delivery.js on the dashboard stamp (move both together)');
 

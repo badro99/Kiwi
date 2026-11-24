@@ -690,7 +690,7 @@
       /* Un identifiant orphelin · groupe supprimé au bureau pendant que la
          caisse tournait · est écarté ici. Demander un choix qui n'existe plus
          ouvrirait une fenêtre sans réponse possible, et bloquerait la vente. */
-      return (typeof dlvGroups === 'function' ? dlvGroups : (x) => x)(ids.map(id => lib.find(g => g && g.id === id)).filter(Boolean));
+      return ids.map(id => lib.find(g => g && g.id === id)).filter(Boolean).map(g => typeof dlvGroups === 'function' ? dlvGroups([g])[0] : g);
     }
     const optSig  = (opts) => (opts || []).map(o => o.c).join('|');
     const optText = (opts) => (opts || []).map(o => o.cn).join(' · ');

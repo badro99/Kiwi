@@ -24,7 +24,8 @@ const startupTags = [...emitted.matchAll(/<script (?:type="module" )?src="([^"]+
 // then the assistant's « ajoute aux dépenses » follow-up, moved off the shell's script tags, 23 Nov.
 // (The product sheet's competing suppliers, boutique-sourcing.js, left the list the same day:
 // the boutique product sheet imports it on first open.)
-assert.equal(startupTags.length, 59, 'startup providers retain one ordered deferred execution each');
+// then the delivery platforms (delivery.js: home split per platform, the menu's « Livraison » settings and price row), 24 Nov.
+assert.equal(startupTags.length, 60, 'startup providers retain one ordered deferred execution each');
 assert.match(emitted, /<script type="module" src="assets\/team\.js\?/, 'team entry imports its pieces as a parser-ordered module');
 for (const [, url, attributes] of startupTags) {
   assert.match(attributes, /\bdefer\b/);

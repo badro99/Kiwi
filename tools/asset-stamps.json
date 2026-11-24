@@ -244,8 +244,8 @@
     "sha": "690e7d77e134c697"
   },
   "assets/caisse-kitchen.js": {
-    "v": "33",
-    "sha": "bcb61ed6977850a2"
+    "v": "34",
+    "sha": "355f2593e8cbbafe"
   },
   "assets/caisse-lang.js": {
     "v": "168",
@@ -316,16 +316,16 @@
     "sha": "06474b0671fb9627"
   },
   "assets/caisse/catalogue.js": {
-    "v": "26",
-    "sha": "0832db5ec815621d"
+    "v": "27",
+    "sha": "988eacea21088563"
   },
   "assets/caisse/closing.js": {
     "v": "2",
     "sha": "d359ea22da75b2f0"
   },
   "assets/caisse/delivery.js": {
-    "v": "5",
-    "sha": "7449360efe5f8828"
+    "v": "7",
+    "sha": "541f74e9f1181ea5"
   },
   "assets/caisse/discounts.js": {
     "v": "7",
@@ -592,8 +592,8 @@
     "sha": "db5d8d9c547adb73"
   },
   "assets/delivery.js": {
-    "v": "4",
-    "sha": "79276164958ff5e5"
+    "v": "5",
+    "sha": "9621cbab6f009bb7"
   },
   "assets/demoClock.js": {
     "v": "5",
@@ -1656,8 +1656,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "321",
-    "sha": "9189d941a8de690b"
+    "v": "322",
+    "sha": "93426367c5f86150"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

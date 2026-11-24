@@ -128,7 +128,8 @@ function dlvKitchenLine(l) { return !l || l.kind !== 'fee'; }
 function dlvFeeLines(o) {
   const d = o && o.delivery, fee = d && +d.fee;
   if (!d || !(fee > 0)) return [];
-  const have = (o.billItems || []).some((i) => i && i.kind === 'fee');
+  const base = Array.isArray(o.billItems) && o.billItems.length ? o.billItems : (o.items || []);
+  const have = base.some((i) => i && i.kind === 'fee');
   return have ? [] : [{ n: dlvT('fee'), p: fee, q: 1, kind: 'fee' }];
 }
 function dlvMethod(method) { return dlvIsPlatform() ? 'platform' : method; }
@@ -415,7 +416,7 @@ function dlvBoot() {
 document.addEventListener('DOMContentLoaded', () => {
   if (dlvApi()) { dlvBoot(); return; }
   const s = document.createElement('script');
-  s.src = 'assets/delivery.js?v=4';
+  s.src = 'assets/delivery.js?v=5';
   s.onload = dlvBoot;
   document.head.appendChild(s);
 });

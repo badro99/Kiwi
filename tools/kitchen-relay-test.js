@@ -285,7 +285,9 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
   ok('une mesa envoyée en cuisine part sur le réseau',
     /function sendTableToKitchen[\s\S]{0,4200}?relayToKitchen\(order\)/.test(CAISSE));
   ok('une vente à emporter aussi',
-    /function createTakeawayKitchenOrder\(lines\)[\s\S]{0,1600}?relayToKitchen\(order\)/.test(CAISSE)
+    /* 2000 : la commande porte sa livraison (plateforme, numéro, frais) AVANT
+       d'être relayée, et ces lignes vivent entre les deux. */
+    /function createTakeawayKitchenOrder\(lines\)[\s\S]{0,2000}?relayToKitchen\(order\)/.test(CAISSE)
       && /function sendToKitchen\(\)[\s\S]{0,2400}?createTakeawayKitchenOrder\(cart\)/.test(CAISSE));
   const relayFn = (CAISSE.match(/function relayToKitchen\(order\)\s*\{[\s\S]{0,4200}?\n {4}\}/) || [''])[0];
   ok('le bon porte le poste de chaque ligne', /station: \(i\.stations && i\.stations\[0\]\)/.test(relayFn));

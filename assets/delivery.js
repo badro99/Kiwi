@@ -507,13 +507,18 @@
     });
     const tick = () => {
       homeSplit();
-      /* La rangée d'onglets du « Menu & modificateurs » (.catalog-rail), ou
-       * celle de l'ancienne carte (.mx-menu-tabs). Un bouton, pas un onglet :
-       * il ouvre le réglage sans quitter la page. */
-      const tabs = document.querySelector('.catalog-rail') || document.querySelector('.mx-menu-tabs');
-      if (tabs && !tabs.querySelector('[data-kdl-open]')) {
-        const cls = tabs.classList.contains('catalog-rail') ? 'mi-pill' : 'mx-menu-tab';
-        tabs.insertAdjacentHTML('beforeend', `<button class="${cls}" type="button" aria-haspopup="dialog" data-kdl-open data-activation=write>${logoHTML(HOUSE, 18)}<span>${esc(tr(S.tab))}</span></button>`);
+      /* « Livraison » se range avec les actions de la page (Scanner un menu,
+       * Tableur, Importer Excel) : c'est un réglage qui ouvre une fenêtre, pas
+       * un onglet, et la rangée d'onglets est un tablist où seul un onglet a sa
+       * place. L'ancienne carte (.mx-menu-tabs) garde son bouton. */
+      const scan = document.querySelector('.mi-head-acts [data-action="rmw-menu-scan"]');
+      const acts = scan && scan.parentElement;
+      if (acts && !acts.querySelector('[data-kdl-open]')) {
+        acts.insertAdjacentHTML('afterbegin', `<button class="btn-slim" type="button" aria-haspopup="dialog" data-kdl-open data-activation=write>${esc(tr(S.tab))}</button>`);
+      }
+      const old = !acts && document.querySelector('.mx-menu-tabs');
+      if (old && !old.querySelector('[data-kdl-open]')) {
+        old.insertAdjacentHTML('beforeend', `<button class="mx-menu-tab" type="button" aria-haspopup="dialog" data-kdl-open data-activation=write>${logoHTML(HOUSE, 18)}<span>${esc(tr(S.tab))}</span></button>`);
       }
       const plats = platforms().filter((p) => p.on);
       rmwPriceRow(plats);
