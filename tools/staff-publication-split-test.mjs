@@ -97,7 +97,12 @@ const insertNow = "      stmts.push(insertStaffRow(env, merchant, p, base + i));
 const insertThen = "      stmts.push(env.DB.prepare(\n        'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) SELECT ?,?,?,?,?,? '\n        + 'WHERE NOT EXISTS (SELECT 1 FROM staff_pins WHERE merchant = ? AND pin IN (' + p.candidates.map(() => '?').join(',') + '))'\n      ).bind(p.keepId || 'pin-' + crypto.randomUUID(), merchant, p.storedCode, p.name, p.role, base + i, merchant, ...p.candidates));";
 ok(moved.split(ownerKeepNow).length === 2 && moved.split(insertNow).length === 2
   && mod.includes('async function ownerRowsToKeep(env, merchant, tillPins, replaceOwner) {') && mod.includes('function insertStaffRow(env, merchant, p, ts) {'), 'owner rows kept by name, team rows always written, once each');
-const inner = moved.replace(sharedGuard, '').replace(keepCall, '').replace(ownerKeepNow, ownerKeepThen).replace(insertNow, insertThen.replace(keepBindNow, keepBindThen));
+/* A deliberate change (24 Nov, console code change): the console that changes ONE
+ * code passes keepRowIds so the codes typed in the console survive the republication.
+ * Those two lines are set aside; admin-pin-change-test runs it. */
+const keepRowsNow = "  /* La console qui change UN code (admin/_pin-change.js) garde aussi les lignes saisies en console, que l'\u00e9quipe ne conna\u00eet pas. */\n  if (Array.isArray(body.keepRowIds)) for (const id of body.keepRowIds.slice(0, MAX_ROSTER)) if (id && !keepIds.includes(String(id))) keepIds.push(String(id));\n";
+ok(moved.split(keepRowsNow).length === 2, 'console rows kept on a one-code change, once');
+const inner = moved.replace(sharedGuard, '').replace(keepRowsNow, '').replace(keepCall, '').replace(ownerKeepNow, ownerKeepThen).replace(insertNow, insertThen.replace(keepBindNow, keepBindThen));
 /* A deliberate change since the move (21 Nov): accountOwnerRole reads the one
  * shared table of owner titles (assets/permissions-catalog.js), so publish,
  * route filter and permission evaluator agree. The rebuild puts the old body

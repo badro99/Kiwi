@@ -168,6 +168,8 @@ export async function publishStaffCredentials(env, merchant, body) {
    * wizard d'onboarding, la console) les remplace comme avant. */
   const keepIds = await ownerRowsToKeep(env, merchant, tillPins, body.replaceOwner);
   if (keepIds === null) return json({ error: 'staff-unavailable' }, 503);
+  /* La console qui change UN code (admin/_pin-change.js) garde aussi les lignes saisies en console, que l'équipe ne connaît pas. */
+  if (Array.isArray(body.keepRowIds)) for (const id of body.keepRowIds.slice(0, MAX_ROSTER)) if (id && !keepIds.includes(String(id))) keepIds.push(String(id));
   /* Les révisions de connexion s'écrivent dans le lot (_employee-auth.js) ;
    * si une autre sauvegarde les a bougées entre notre lecture et notre lot,
    * le lot échoue entier et on recommence sur l'état neuf. */

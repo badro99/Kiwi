@@ -13,6 +13,7 @@ import { hashStaffCode, pinHashes } from '../../auth/_staff-codes.js';
 
 import { isOperator, isSeniorOperator, json, limitCheck, limitFail, operatorActor } from '../../auth/_lib.js';
 import Catalog from '../../../assets/permissions-catalog.js';
+import { changeCode, revealCodes } from './_pin-change.js';   // voir et changer un code de salarié (owner, 24/11/2026)
 
 /* Le journal d'un geste sur un code d'équipe. Il nomme l'opérateur (session
  * opérateur, jamais un code), l'établissement, le geste et l'heure ; il ne porte
@@ -53,10 +54,26 @@ export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const merchant = (url.searchParams.get('merchant') || '').trim();
   if (!merchant) return json({ error: 'merchant-required' }, 400);
+  if (url.searchParams.get('reveal') === '1') {
+    if (!(await isSeniorOperator(context.request, context.env))) return json({ error: 'operator-code-required' }, 403);
+    const all = await context.env.DB.prepare('SELECT id, name, role, pin FROM staff_pins WHERE merchant = ? ORDER BY created_ts').bind(merchant).all();
+    const pins = await revealCodes(context.env, merchant, all.results || []);
+    const actor = await operatorActor(context.request, context.env);
+    try {
+      await context.env.DB.prepare(`${AUDIT_INSERT} VALUES ('', ?, 'staff-pin-reveal', '', '', '', ?, ?, ?, ?)`)
+        .bind(merchant, actor.label, actor.id, JSON.stringify({ shown: pins.filter((p) => p.code).length }), Date.now()).run();
+    } catch (_) { return json({ error: 'pin-storage-unavailable' }, 503); }   // pas de code montré sans sa trace
+    return json({ pins });
+  }
   const rows = await context.env.DB.prepare(
     `SELECT id, name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts`
   ).bind(merchant).all();
   return json({ pins: rows.results || [] });
+}
+
+export async function onRequestPatch(context) {
+  const bad = await guard(context, true); if (bad) return bad;
+  return changeCode(context.request, context.env);
 }
 
 export async function onRequestPost(context) {
