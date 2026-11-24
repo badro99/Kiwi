@@ -29,8 +29,11 @@ const ok = (cond, msg, detail) => { if (cond) { n++; console.log('  ✓ ' + msg)
 
 const db = new DatabaseSync(':memory:');
 db.exec(fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
+// D1 counts the rows its triggers write in meta.changes (sales_change_insert adds one per sale);
+// node:sqlite's .changes does not, so the fixture reports what production reports.
+const total = () => db.prepare('SELECT total_changes() n').get().n;
 const DB = { prepare(sql) {
-  const st = db.prepare(sql), bind = (args) => ({ first: async () => st.get(...args) || null, all: async () => ({ results: st.all(...args) }), run: async () => ({ meta: { changes: st.run(...args).changes } }) });
+  const st = db.prepare(sql), bind = (args) => ({ first: async () => st.get(...args) || null, all: async () => ({ results: st.all(...args) }), run: async () => { const before = total(); st.run(...args); return { meta: { changes: total() - before } }; } });
   return { ...bind([]), bind: (...args) => bind(args) };
 }, async batch(stmts) { db.exec('BEGIN'); try { const out = []; for (const st of stmts) out.push(await st.run()); db.exec('COMMIT'); return out; } catch (e) { db.exec('ROLLBACK'); throw e; } } };
 const env = { DB, AUTH_SECRET: 'channel-sales-fixture-auth-secret' };

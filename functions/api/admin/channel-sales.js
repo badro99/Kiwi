@@ -68,15 +68,29 @@ export async function onRequestPost(context) {
   }
   const prefix = channel === 'shopify' ? 'shp' : channel;
   const name = channel === 'shopify' ? 'Shopify' : channel;
-  const stmts = good.map((o) => env.DB.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, label, ref, ts, lines, channel, received_ts, written_by)
+  const idOf = (o) => prefix + ':' + merchant + ':' + o.ref.replace(/[^A-Za-z0-9_-]/g, '');
+  /* Count from the books, not from meta.changes: D1 adds the rows the sales
+   * triggers write (sales_change_insert), so one sale reads as two changes. */
+  const countIn = async (ids) => {
+    let n = 0;
+    for (let i = 0; i < ids.length; i += 90) {
+      const part = ids.slice(i, i + 90);
+      const row = await env.DB.prepare(`SELECT COUNT(*) n FROM sales WHERE merchant = ? AND id IN (${part.map(() => '?').join(',')})`).bind(merchant, ...part).first();
+      n += Number((row && row.n) || 0);
+    }
+    return n;
+  };
+  const ids = good.map(idOf);
+  const stmts = good.map((o, i) => env.DB.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, label, ref, ts, lines, channel, received_ts, written_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`)
-    .bind(prefix + ':' + merchant + ':' + o.ref.replace(/[^A-Za-z0-9_-]/g, ''), merchant, Math.round(o.cents / 100), o.cents, o.method,
+    .bind(ids[i], merchant, Math.round(o.cents / 100), o.cents, o.method,
       (name + ' ' + o.ref).slice(0, 80), o.ref, o.ts, JSON.stringify(o.lines), channel, now, 'import:' + channel));
-  let inserted = 0;
+  let existing = 0, inserted = 0;
   try {
-    if (stmts.length) inserted = (await env.DB.batch(stmts)).reduce((sum, r) => sum + ((r && r.meta && r.meta.changes) || 0), 0);
+    existing = await countIn(ids);
+    if (stmts.length) await env.DB.batch(stmts);
+    inserted = (await countIn(ids)) - existing;
   } catch (_) { return json({ error: 'sales-unavailable' }, 503); }
-  const existing = good.length - inserted;
   const actor = await operatorActor(request, env);
   try {
     await env.DB.prepare(`INSERT INTO account_audit (account_id, merchant, action, prev, next, reason, actor, actor_id, detail, ts)
