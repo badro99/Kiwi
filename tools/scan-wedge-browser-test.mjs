@@ -107,6 +107,30 @@ async function scan(page, code, gap) {
   check(!!pick, `focus on « client », the scan lands on the ticket (${pick && pick.name})`);
   check((await modalOpen()) === 0, 'and its Enter did not press the focused button (no client picker opened)');
 
+  /* iPad, 24 nov. 2026 : douchette réglée AZERTY (Maj + chiffre) sur un iPad
+     en QWERTY ; Safari ne donne pas e.code, la caisse ne voit que « ^#(#(... ».
+     Le code doit se lire et l'article aller sur le ticket, pas ouvrir
+     « Code existant à enregistrer ». */
+  {
+    const US = { 1: '!', 2: '@', 3: '#', 4: '$', 5: '%', 6: '^', 7: '&', 8: '*', 9: '(', 0: ')' };
+    const c = await page.createCDPSession();
+    let t = Date.now() / 1000;
+    const before = (await lines()).length;
+    await page.focus('#bq-tk-client');
+    for (const d of pick.ean) {
+      const ch = US[d];
+      await c.send('Input.dispatchKeyEvent', { type: 'keyDown', key: ch, code: '', text: ch, unmodifiedText: ch, windowsVirtualKeyCode: 0, timestamp: t });
+      await c.send('Input.dispatchKeyEvent', { type: 'keyUp', key: ch, code: '', windowsVirtualKeyCode: 0, timestamp: t + 0.002 });
+      t += 0.008;
+    }
+    await c.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', text: '\r', windowsVirtualKeyCode: 13, timestamp: t });
+    await c.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, timestamp: t + 0.002 });
+    await c.detach(); await sleep(400);
+    const mangled = pick.ean.split('').map((d) => US[d]).join('');
+    check((await lines()).length === before + 1 || /Bip/.test(await lastToast()), `iPad: a QWERTY-shifted scan (${mangled}) is read as ${pick.ean} and sold, not offered for registration`);
+    check((await modalOpen()) === 0 && !(await page.evaluate(() => /Code existant/.test(document.body.innerText))), 'iPad: no « Code existant à enregistrer » window');
+  }
+
   await page.focus('#bq-tk-client');
   const n1 = (await lines()).length;
   await page.keyboard.type(pick.ean, { delay: 120 });

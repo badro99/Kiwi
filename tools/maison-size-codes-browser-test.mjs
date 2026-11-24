@@ -118,6 +118,12 @@ ok(shoe === '36 37 38 39 40 41 42 43 44 45', 'F · « Pointures » shows 36 to 4
 await page.type('#mzi-n-name', 'TEST KIWI Vide');
 await page.click('#mzi-n-save'); await sleep(400);
 ok(/au moins une taille/.test(await err()), 'D · an empty grid is refused', await err());
+/* iPad: douchette AZERTY, iPad en QWERTY, pas d'e.code → « ^#(... » ; la case doit recevoir les chiffres. */
+{ const US = { 1: '!', 2: '@', 3: '#', 4: '$', 5: '%', 6: '^', 7: '&', 8: '*', 9: '(', 0: ')' }; const c = await page.createCDPSession(); let t = Date.now() / 1000;
+  await page.evaluate(() => document.querySelectorAll('[data-mzs-code]')[0].focus());
+  for (const d of '3760000001045') { const ch = US[d]; await c.send('Input.dispatchKeyEvent', { type: 'keyDown', key: ch, code: '', text: ch, unmodifiedText: ch, timestamp: t }); await c.send('Input.dispatchKeyEvent', { type: 'keyUp', key: ch, code: '', timestamp: t + 0.002 }); t += 0.008; }
+  await c.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', text: '\r', windowsVirtualKeyCode: 13, timestamp: t }); await c.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, timestamp: t + 0.002 }); await c.detach(); await sleep(300);
+  ok((await codes())[0] === '3760000001045', 'iPad · a QWERTY-shifted scan (#&^))))))!)$%) lands as 3760000001045', JSON.stringify((await codes())[0])); }
 await kind('tu'); await sleep(200);
 ok(await page.$eval('#mzi-n-stock', (i) => i.offsetParent !== null) && (await codes()).length === 0, 'A · back to « Pièce unique »: the single line returns');
 

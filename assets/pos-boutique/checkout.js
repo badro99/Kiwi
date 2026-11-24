@@ -1,7 +1,7 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=283';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=285';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=283';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=389';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=285';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=391';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=8';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
@@ -14,7 +14,7 @@ import { receiptPrinterReady, receiptDocInput, waReceiptTotals } from './receipt
 import { retailModes, heldUntilText, accountOptionHtml, accountStep, avanceOptionHtml, avanceStep, dropOffMethods } from '../retail-avance.js?v=6';
 const M = globalThis.KiwiMoney;
 let CX = null, CQ = null;   /* chargés à part (ils importent la caisse, pas l'inverse) : l'échange groupé (essai Amira Boutique) et le chèque reçu, qui rejoint le portefeuille (cheque-sheet.js ; absent, il s'encaisse comme avant) */
-import('./exch-combined.js?v=45').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=47').then((m) => { CX = m; }).catch(() => {});
 import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
 
 
@@ -1675,12 +1675,12 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
      fixed, reversible substitution: the French unshifted number row. Only applied
      when the string is made ENTIRELY of those symbols and carries no digit at all,
      so a genuine alphanumeric code containing a "-" is never touched. */
-  const AZ_ROW = { '&': '1', 'é': '2', '"': '3', "'": '4', '(': '5', '-': '6', 'è': '7', '_': '8', 'ç': '9', 'à': '0' };
+  const AZ_ROW = { '&': '1', 'é': '2', '"': '3', "'": '4', '(': '5', '-': '6', 'è': '7', '_': '8', 'ç': '9', 'à': '0' }; const US_ROW = { '!': '1', '@': '2', '#': '3', '$': '4', '%': '5', '^': '6', '&': '7', '*': '8', '(': '9', ')': '0' }; /* L'inverse, vu sur iPad le 24 nov. 2026 : douchette réglée AZERTY (Maj + chiffre), iPad en clavier QWERTY, Safari sans e.code → « ^#(#(%##)*!$! » pour 6393953308141, et la caisse proposait d'enregistrer un « code existant » au lieu de vendre. Même règle : uniquement des symboles, aucun chiffre. */
   function normScan(raw) {
     const s = String(raw || '').trim();
     if (!s || /\d/.test(s)) return s;
-    if (!/^[&é"'(\-è_çà]+$/.test(s)) return s;
-    return s.replace(/./g, (ch) => AZ_ROW[ch] || ch);
+    if (/^[&é"'(\-è_çà]+$/.test(s)) return s.replace(/./g, (ch) => AZ_ROW[ch] || ch);
+    return /^[!@#$%^&*()]+$/.test(s) ? s.replace(/./g, (ch) => US_ROW[ch] || ch) : s;
   }
   function wedgeChar(e) {
     const c = e.code || '';

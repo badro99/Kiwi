@@ -1,8 +1,8 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=267';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=269';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=180';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=180';
-import '../refund-split.js?v=2'; import { gxLabel } from './gift-exchange-entry.js?v=11';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=182';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=182';
+import '../refund-split.js?v=2'; import { gxLabel } from './gift-exchange-entry.js?v=13';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
 import { mzDeliveryCard } from './delivery.js?v=28';
@@ -1796,12 +1796,12 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
      fixed, reversible substitution: the French unshifted number row. Only applied
      when the string is made ENTIRELY of those symbols and carries no digit at all,
      so a genuine alphanumeric code containing a "-" is never touched. */
-  const AZ_ROW = { '&': '1', 'é': '2', '"': '3', "'": '4', '(': '5', '-': '6', 'è': '7', '_': '8', 'ç': '9', 'à': '0' };
+  const AZ_ROW = { '&': '1', 'é': '2', '"': '3', "'": '4', '(': '5', '-': '6', 'è': '7', '_': '8', 'ç': '9', 'à': '0' }; const US_ROW = { '!': '1', '@': '2', '#': '3', '$': '4', '%': '5', '^': '6', '&': '7', '*': '8', '(': '9', ')': '0' }; /* L'inverse, vu sur iPad le 24 nov. 2026 : douchette réglée AZERTY (Maj + chiffre), iPad en clavier QWERTY, Safari sans e.code → « ^#(#(%##)*!$! » pour 6393953308141, et la caisse proposait d'enregistrer un « code existant » au lieu de vendre. Même règle : uniquement des symboles, aucun chiffre. */
   function normScan(raw) {
     const s = String(raw || '').trim();
     if (!s || /\d/.test(s)) return s;
-    if (!/^[&é"'(\-è_çà]+$/.test(s)) return s;
-    return s.replace(/./g, (ch) => AZ_ROW[ch] || ch);
+    if (/^[&é"'(\-è_çà]+$/.test(s)) return s.replace(/./g, (ch) => AZ_ROW[ch] || ch);
+    return /^[!@#$%^&*()]+$/.test(s) ? s.replace(/./g, (ch) => US_ROW[ch] || ch) : s;
   }
   function wedgeChar(e) {
     const c = e.code || '';

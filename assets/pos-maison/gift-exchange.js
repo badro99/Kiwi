@@ -7,9 +7,9 @@
  * la feuille de paiement habituelle. Marchandise contre marchandise : tant que
  * ce qui part vaut moins que ce qui revient, rien ne se règle (« il reste … à
  * choisir »). Aucun avoir ici : le serveur n'en émet que sur une vente connue. */
-import { P, root, toast, lineDeal, persistStock, persistDay, recordReturn, refreshOps, nextStandaloneTicketNumber, SALES, STAFF, newSaleId, bqPost, bqPaymentMethod, bqPaymentParts, bqSaveProvisional, queueIfOffline, headSubVente, renderBadges } from '../pos-maison.js?v=267';
-import { $, esc, fmtMAD, icons, artOf, holdStock, releaseStock, canHoldStock, renderGrid, rayonOf } from './sales.js?v=180';
-import { openPay } from './checkout.js?v=180';
+import { P, root, toast, lineDeal, persistStock, persistDay, recordReturn, refreshOps, nextStandaloneTicketNumber, SALES, STAFF, newSaleId, bqPost, bqPaymentMethod, bqPaymentParts, bqSaveProvisional, queueIfOffline, headSubVente, renderBadges } from '../pos-maison.js?v=269';
+import { $, esc, fmtMAD, icons, artOf, holdStock, releaseStock, canHoldStock, renderGrid, rayonOf } from './sales.js?v=182';
+import { openPay } from './checkout.js?v=182';
 import { searchProducts, exchangeTotals, allocateCents, phrase, tillLang } from './gift-exchange-core.js?v=2';
 
 const L = (fr, vars) => phrase(fr, tillLang(), vars);
