@@ -236,13 +236,20 @@
   }
   /* Chaque appel du panneau a un délai, en-têtes et corps : un réseau muet ne
      fige plus le panneau. Pas de repli sur un fetch nu si le module manque. */
+  /* Vue opérateur (?op=1&merchant=…) : le commerce à l'écran, dit à chaque requête
+     Shopify. Sans lui le serveur retombait sur la session du compte connecté : la
+     console ouverte sur CHICTRATEC SL montrait la connexion d'Amira Boutique et y
+     aurait importé (24 nov. 2026). Vide hors vue opérateur : rien ne change. */
+  function shopScope() {
+    try { var p = new URLSearchParams(location.search); return p.has('op') ? String(p.get('merchant') || '').slice(0, 64) : ''; } catch (_) { return ''; }
+  }
   function chFetch(url, init) {
     return import('./request-deadline.mjs').then(function (net) { return net.deadlineFetch(url, init || {}); });
   }
   function shopApi(action, extra) {
     return chFetch('/api/shopify/status', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(Object.assign({ action: action }, extra || {})),
+      body: JSON.stringify(Object.assign({ action: action }, shopScope() ? { merchant: shopScope() } : {}, extra || {})),
     }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'shopify'); return j; }); });
   }
 
@@ -261,7 +268,7 @@
   function authorizeShopify(shop) {
     return chFetch('/api/shopify/connect-direct', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ shop: shop }),
+      body: JSON.stringify(Object.assign({ shop: shop }, shopScope() ? { merchant: shopScope() } : {})),
     })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
       .catch(function () { return { ok: false, body: {} }; })
@@ -283,7 +290,7 @@
         }
         return chFetch('/api/shopify/connect', {
           method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ shop: shop }),
+          body: JSON.stringify(Object.assign({ shop: shop }, shopScope() ? { merchant: shopScope() } : {})),
         })
           .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.authorize) throw new Error(j.error || shopStr().invalid); return j; }); })
           .then(function (j) { window.location.assign(j.authorize); });
@@ -561,7 +568,7 @@
 
   function loadShopify(root) {
     root.classList.add('is-loading');
-    return chFetch('/api/shopify/status', { headers: { Accept: 'application/json' } })
+    return chFetch('/api/shopify/status' + (shopScope() ? '?merchant=' + encodeURIComponent(shopScope()) : ''), { headers: { Accept: 'application/json' } })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'shopify'); return j; }); })
       .then(function (j) { renderShopify(root, j); return j; })
       .finally(function () { root.classList.remove('is-loading'); });
