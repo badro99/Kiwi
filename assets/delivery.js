@@ -262,10 +262,12 @@
   const S = {
     title: { fr: 'Livraison', en: 'Delivery', ar: 'التوصيل' },
     tab: { fr: 'Livraison', en: 'Delivery', ar: 'التوصيل' },
-    lede: { fr: 'Allumez les plateformes avec lesquelles vous travaillez. La caisse propose alors « Livraison », avec les prix de chaque plateforme, et le rapport Z les compte chacune sous son nom.', en: 'Turn on the platforms you work with. The till then offers « Delivery » with each platform\'s prices, and the Z report counts each one under its own name.', ar: 'فعّل المنصات التي تعمل معها. يعرض الصندوق عندها « التوصيل » بأسعار كل منصة، ويحسب تقرير Z كل منصة باسمها.' },
+    lede: { fr: 'Allumez les plateformes avec lesquelles vous travaillez. La caisse propose alors «\u00a0Livraison\u00a0», avec les prix de chaque plateforme, et le rapport Z les compte chacune sous son nom.', en: 'Turn on the platforms you work with. The till then offers «\u00a0Delivery\u00a0» with each platform\'s prices, and the Z report counts each one under its own name.', ar: 'فعّل المنصات التي تعمل معها. يعرض الصندوق عندها «\u00a0التوصيل\u00a0» بأسعار كل منصة، ويحسب تقرير Z كل منصة باسمها.' },
     platforms: { fr: 'Plateformes', en: 'Platforms', ar: 'المنصات' },
     rate: { fr: 'Commission %', en: 'Commission %', ar: 'العمولة %' },
-    fee: { fr: 'Frais par commande', en: 'Fee per order', ar: 'رسوم لكل طلب' },
+    fee: { fr: 'Frais par commande (MAD)', en: 'Fee per order (MAD)', ar: 'رسوم لكل طلب (درهم)' },
+    fillLbl: { fr: 'Prix livraison depuis la salle', en: 'Delivery prices from dine-in', ar: 'أسعار التوصيل من أسعار القاعة' },
+    otherAdd: { fr: 'Ajouter une autre plateforme', en: 'Add another platform', ar: 'إضافة منصة أخرى' },
     other: { fr: 'Autre plateforme', en: 'Other platform', ar: 'منصة أخرى' },
     otherName: { fr: 'Nom de la plateforme', en: 'Platform name', ar: 'اسم المنصة' },
     add: { fr: 'Ajouter', en: 'Add', ar: 'إضافة' },
@@ -302,12 +304,19 @@
     const plats = platforms(d);
     const rowFor = (p) => {
       const c = commissionOf(p.id);
-      return `<div class="kdl-row" data-pid="${p.id}">
-        <label class="kdl-on"><input type="checkbox" data-kdl-on ${p.on ? 'checked' : ''}>${logoHTML(p.id, 32)}<b>${esc(p.name)}</b></label>
-        <label class="kdl-num"><span>${esc(tr(S.rate))}</span><input type="number" inputmode="decimal" min="0" max="60" step="0.1" data-kdl-rate value="${c.rate == null ? '' : c.rate}" placeholder="0"></label>
-        <label class="kdl-num"><span>${esc(tr(S.fee))}</span><input type="number" inputmode="decimal" min="0" step="0.5" data-kdl-fee value="${c.fee == null ? '' : c.fee}" placeholder="0"></label>
-        <div class="kdl-fill"><input type="number" inputmode="decimal" step="1" data-kdl-pct placeholder="+25 %" aria-label="${esc(tr(S.fill))} %"><button type="button" class="kb ghost xs" data-kdl-fill>${esc(tr(S.fill))}</button></div>
-        ${p.preset ? '' : `<button type="button" class="kb ghost xs kdl-del" data-kdl-del>${esc(tr(S.remove))}</button>`}
+      return `<div class="kdl-card${p.on ? ' is-on' : ''}" data-pid="${p.id}">
+        <div class="kdl-head">${logoHTML(p.id, 36)}<b>${esc(p.name)}</b>
+          ${p.preset ? '' : `<button type="button" class="kdl-link" data-kdl-del>${esc(tr(S.remove))}</button>`}
+          <button type="button" class="kdl-sw${p.on ? ' on' : ''}" role="switch" aria-checked="${p.on}" aria-label="${esc(p.name)}" data-kdl-on></button></div>
+        <div class="kdl-body">
+          <div class="kdl-grid">
+            <div><label class="kf-label">${esc(tr(S.rate))}</label><input class="kf-input" type="number" inputmode="decimal" min="0" max="60" step="0.1" data-kdl-rate value="${c.rate == null ? '' : c.rate}" placeholder="0"></div>
+            <div><label class="kf-label">${esc(tr(S.fee))}</label><input class="kf-input" type="number" inputmode="decimal" min="0" step="0.5" data-kdl-fee value="${c.fee == null ? '' : c.fee}" placeholder="0"></div>
+          </div>
+          <label class="kf-label">${esc(tr(S.fillLbl))}</label>
+          <div class="kdl-fill"><span class="kdl-pct"><input class="kf-input" type="number" inputmode="decimal" step="1" data-kdl-pct placeholder="25" aria-label="${esc(tr(S.fillLbl))}"><span class="kdl-pct-u">%</span></span><button type="button" class="kb ghost" data-kdl-fill>${esc(tr(S.fill))}</button></div>
+          <div class="kf-help">${esc(tr(S.fillP))}</div>
+        </div>
       </div>`;
     };
     // Les trois de série apparaissent toujours, allumées ou non.
@@ -320,17 +329,19 @@
       desc: esc(tr(S.lede)),
       body: `<div class="kdl-set">
         <div class="kdl-h">${esc(tr(S.platforms))}</div>
-        <div data-kdl-list>${shown.map(rowFor).join('')}</div>
-        <div class="kdl-add"><input type="text" maxlength="30" data-kdl-newname placeholder="${esc(tr(S.otherName))}"><button type="button" class="kb ghost xs" data-kdl-add>${esc(tr(S.add))}</button></div>
-        <p class="kdl-note">${esc(tr(S.fillP))}</p>
+        <div class="kdl-list" data-kdl-list>${shown.map(rowFor).join('')}</div>
+        <div class="kdl-add"><input class="kf-input" type="text" maxlength="30" data-kdl-newname placeholder="${esc(tr(S.otherName))}" aria-label="${esc(tr(S.otherAdd))}"><button type="button" class="kb ghost" data-kdl-add>${esc(tr(S.add))}</button></div>
         <div class="kdl-err" data-kdl-err hidden></div>
         <div class="kdl-h">${esc(tr(S.house))}</div>
-        <div class="kdl-row" data-house>
-          <label class="kdl-on"><input type="checkbox" data-kdl-house ${h.on ? 'checked' : ''}>${logoHTML(HOUSE, 32)}<b>${esc(tr(S.house))}</b></label>
-          <label class="kdl-num"><span>${esc(tr(S.houseFee))}</span><input type="number" inputmode="decimal" min="0" step="1" data-kdl-housefee value="${h.fee || ''}" placeholder="20"></label>
+        <div class="kdl-card${h.on ? ' is-on' : ''}" data-house>
+          <div class="kdl-head">${logoHTML(HOUSE, 36)}<b>${esc(tr(S.house))}</b>
+            <button type="button" class="kdl-sw${h.on ? ' on' : ''}" role="switch" aria-checked="${h.on}" aria-label="${esc(tr(S.house))}" data-kdl-house></button></div>
+          <div class="kdl-body">
+            <div class="kdl-grid"><div><label class="kf-label">${esc(tr(S.houseFee))}</label><input class="kf-input" type="number" inputmode="decimal" min="0" step="1" data-kdl-housefee value="${h.fee || ''}" placeholder="20"></div></div>
+            <div class="kf-help">${esc(tr(S.houseP))}</div>
+          </div>
         </div>
-        <p class="kdl-note">${esc(tr(S.houseP))}</p>
-        ${groups.length ? `<div class="kdl-h">${esc(tr(S.choices))}</div><p class="kdl-note">${esc(tr(S.choicesP))}</p><div class="kdl-choices" data-kdl-choices></div>` : ''}
+        ${groups.length ? `<div class="kdl-h">${esc(tr(S.choices))}</div><div class="kf-help">${esc(tr(S.choicesP))}</div><div class="kdl-choices" data-kdl-choices></div>` : ''}
       </div>`,
       foot: `<button class="kb ghost" type="button" data-dismiss>${esc(tr(S.cancel))}</button><button class="kb atlas" type="button" data-kdl-save>${esc(tr(S.save))}</button>`,
     });
@@ -338,24 +349,34 @@
     if (!root) return;
     styleSettings();
     const q = (s) => root.querySelector(s);
+    const isOn = (el) => !!el && el.getAttribute('aria-checked') === 'true';
     const pending = {};   // nouvelles plateformes, ajoutées avant d'enregistrer
     const removed = new Set();
 
     function paintChoices() {
       const box = q('[data-kdl-choices]');
       if (!box) return;
-      const on = [].slice.call(root.querySelectorAll('[data-pid]')).filter((r) => r.querySelector('[data-kdl-on]').checked).map((r) => r.getAttribute('data-pid'));
+      const on = [].slice.call(root.querySelectorAll('[data-pid]')).filter((r) => isOn(r.querySelector('[data-kdl-on]'))).map((r) => r.getAttribute('data-pid'));
       const cur = doc().choices;
       box.innerHTML = on.length ? `<table class="kdl-tbl"><thead><tr><th></th><th>${esc(lang() === 'fr' ? 'Salle' : lang() === 'ar' ? 'القاعة' : 'Dine-in')}</th>${on.map((pid) => `<th>${logoHTML(pid, 18)}</th>`).join('')}</tr></thead><tbody>`
         + groups.map((g) => g.choices.filter((ch) => num(ch.price)).map((ch) => `<tr><td>${esc(g.name)} · ${esc(ch.name)}</td><td class="kdl-base">${num(ch.price)}</td>${on.map((pid) => {
           const v = cur[ch.id] && cur[ch.id].by ? num(cur[ch.id].by[pid]) : null;
-          return `<td><input type="number" inputmode="decimal" min="0" step="0.5" data-kdl-choice="${esc(ch.id)}" data-p="${pid}" value="${v == null ? '' : v}" placeholder="${num(ch.price)}"></td>`;
+          return `<td><input type="number" inputmode="decimal" min="0" step="0.5" class="kf-input" data-kdl-choice="${esc(ch.id)}" data-p="${pid}" value="${v == null ? '' : v}" placeholder="${num(ch.price)}"></td>`;
         }).join('')}</tr>`).join('')).join('') + '</tbody></table>' : '';
     }
     paintChoices();
-    root.addEventListener('change', (e) => { if (e.target.matches('[data-kdl-on]')) paintChoices(); });
 
     root.addEventListener('click', (e) => {
+      const sw = e.target.closest('[data-kdl-on],[data-kdl-house]');
+      if (sw) {
+        const on = !isOn(sw);
+        sw.classList.toggle('on', on);
+        sw.setAttribute('aria-checked', String(on));
+        const card = sw.closest('.kdl-card');
+        if (card) card.classList.toggle('is-on', on);
+        if (sw.hasAttribute('data-kdl-on')) paintChoices();
+        return;
+      }
       const add = e.target.closest('[data-kdl-add]');
       if (add) {
         const inp = q('[data-kdl-newname]');
@@ -368,7 +389,7 @@
         pending[id] = { name, color };
         const tmp = { id, kind: 'platform', on: true, preset: false, name, color, logo: '' };
         // logoHTML lit le document : la nouvelle plateforme n'y est pas encore.
-        const html = rowFor(tmp).replace(/<span class="kdl-tile kdl-letter"[^>]*>[^<]*<\/span>/, `<span class="kdl-tile kdl-letter" style="width:32px;height:32px;border-radius:8px;background:${color};font-size:18px">${esc(name.charAt(0).toUpperCase())}</span>`);
+        const html = rowFor(tmp).replace(/<span class="kdl-tile kdl-letter"[^>]*>[^<]*<\/span>/, `<span class="kdl-tile kdl-letter" style="width:36px;height:36px;border-radius:9px;background:${color};font-size:20px">${esc(name.charAt(0).toUpperCase())}</span>`);
         q('[data-kdl-list]').insertAdjacentHTML('beforeend', html);
         inp.value = '';
         paintChoices();
@@ -400,7 +421,7 @@
       let bad = false;
       root.querySelectorAll('[data-pid]').forEach((row) => {
         const pid = row.getAttribute('data-pid');
-        const on = row.querySelector('[data-kdl-on]').checked;
+        const on = isOn(row.querySelector('[data-kdl-on]'));
         const prev = next.platforms[pid] || {};
         const entry = PRESETS[pid] ? { on } : { on, name: (pending[pid] || prev).name, color: (pending[pid] || prev).color };
         if (prev.on !== entry.on || !next.platforms[pid] || pending[pid]) next.platforms[pid] = Object.assign({}, entry, { at: now });
@@ -411,7 +432,7 @@
       });
       removed.forEach((pid) => { if (next.platforms[pid]) next.platforms[pid] = { deleted: true, on: false, at: now }; com[pid] = { rate: null, fee: null }; });
       if (bad) { err.textContent = tr(S.errRate); err.hidden = false; return false; }
-      const hOn = q('[data-kdl-house]').checked, hFee = num(q('[data-kdl-housefee]').value);
+      const hOn = isOn(q('[data-kdl-house]')), hFee = num(q('[data-kdl-housefee]').value);
       if (!!next.house.on !== hOn || num(next.house.fee) !== hFee) next.house = { on: hOn, fee: hFee, at: now };
       const ch = {};
       root.querySelectorAll('[data-kdl-choice]').forEach((inp) => {
@@ -433,17 +454,24 @@
     if (document.getElementById('kdl-set-css')) return;
     const s = document.createElement('style');
     s.id = 'kdl-set-css';
-    s.textContent = '.kdl-set{display:grid;gap:10px}.kdl-h{font-weight:600;font-size:14px;margin-top:6px}'
-      + '.kdl-row{display:grid;grid-template-columns:minmax(150px,1.4fr) 1fr 1fr minmax(150px,1.2fr) auto;gap:10px;align-items:end;padding:10px 0;border-bottom:1px solid var(--line,rgba(0,0,0,.1))}'
-      + '.kdl-row[data-house]{grid-template-columns:minmax(150px,1.4fr) 1fr}'
-      + '.kdl-on{display:flex;align-items:center;gap:10px;cursor:pointer}.kdl-on input{width:18px;height:18px}'
-      + '.kdl-num{display:grid;gap:4px;font-size:12px;color:var(--muted,inherit)}.kdl-num input,.kdl-fill input,.kdl-add input,.kdl-tbl input{width:100%;box-sizing:border-box}'
-      + '.kdl-fill{display:flex;gap:6px;align-items:center}.kdl-fill input{width:76px}'
-      + '.kdl-add{display:flex;gap:8px}.kdl-note{margin:0;font-size:12px;color:var(--muted,inherit)}.kdl-err{color:var(--danger,#B42318);font-size:13px}'
-      + '.kdl-tbl{width:100%;border-collapse:collapse;font-size:13px}.kdl-tbl td,.kdl-tbl th{padding:4px 6px;text-align:start}.kdl-tbl input{max-width:90px}.kdl-base{color:var(--muted,inherit)}'
+    s.textContent = '.kdl-set{display:grid;gap:12px}.kdl-h{font-size:13px;font-weight:600;color:var(--ink);margin-top:10px}'
+      + '.kdl-list{display:grid;gap:10px}'
+      + '.kdl-card{border:1px solid var(--n-200);border-radius:14px;background:var(--surface);transition:border-color 160ms}'
+      + '.kdl-card.is-on{border-color:color-mix(in srgb,var(--atlas) 40%,var(--n-200))}'
+      + '.kdl-head{display:flex;align-items:center;gap:12px;padding:12px 14px}.kdl-head>b{flex:1;min-width:0;font-size:15px;font-weight:600;color:var(--ink)}'
+      + '.kdl-body{display:none;gap:4px;padding:14px;border-top:1px solid var(--n-200)}.kdl-card.is-on .kdl-body{display:grid}'
+      + '.kdl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}'
+      + '.kdl-fill{display:flex;gap:8px;align-items:center}.kdl-pct{position:relative;flex:0 0 120px}.kdl-pct .kf-input{padding-inline-end:32px}'
+      + '.kdl-pct-u{position:absolute;inset-inline-end:13px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--n-500);pointer-events:none}'
+      + '.kdl-sw{width:34px;height:20px;border:0;padding:0;border-radius:999px;background:var(--n-300);position:relative;cursor:pointer;flex:0 0 auto;transition:background 160ms}'
+      + '.kdl-sw.on{background:var(--atlas)}.kdl-sw::after{content:"";position:absolute;top:2px;inset-inline-start:2px;width:16px;height:16px;border-radius:50%;background:var(--surface);transition:transform 160ms}'
+      + '.kdl-sw.on::after{transform:translateX(14px)}[dir="rtl"] .kdl-sw.on::after{transform:translateX(-14px)}.kdl-sw:focus-visible{outline:2px solid var(--atlas);outline-offset:2px}'
+      + '.kdl-link{background:none;border:0;padding:4px 6px;font:inherit;font-size:13px;color:var(--n-500);cursor:pointer}.kdl-link:hover{color:var(--ink)}'
+      + '.kdl-add{display:flex;gap:8px;align-items:center}.kdl-add .kf-input{flex:1}.kdl-err{color:var(--danger,#B42318);font-size:13px}'
+      + '.kdl-tbl{width:100%;border-collapse:collapse;font-size:13px}.kdl-tbl td,.kdl-tbl th{padding:5px 6px;text-align:start;font-weight:500}.kdl-tbl .kf-input{padding:7px 10px;max-width:96px}.kdl-base{color:var(--n-500)}'
       + '.kdl-prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}.kdl-prices label{display:grid;gap:4px;font-size:12px}.kdl-prices .kdl-lbl{display:flex;align-items:center;gap:6px}'
       + '.kdl-split{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;font-size:13px}.kdl-split-i{display:inline-flex;align-items:center;gap:6px}.kdl-split-i b{font-weight:600}.kdl-split-i span{font-variant-numeric:tabular-nums;opacity:.8}'
-      + '@media (max-width:640px){.kdl-row{grid-template-columns:1fr 1fr}.kdl-on,.kdl-fill{grid-column:1/-1}}';
+      + '@media (max-width:640px){.kdl-grid{grid-template-columns:1fr}.kdl-pct{flex:1}}';
     document.head.appendChild(s);
   }
 
