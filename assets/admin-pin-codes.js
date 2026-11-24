@@ -5,7 +5,8 @@
  * « Voir les codes » montre le code des personnes que la page Équipe connaît
  * (document chiffré que les opérateurs nommés lisent déjà). Un code saisi dans
  * la console n'existe qu'en empreinte : il se remplace, il ne se relit pas.
- * Le code du propriétaire ne s'affiche jamais ici.
+ * Le code du propriétaire ne s'affiche jamais ici ; il se remplace (« maybe they
+ * forget it some day », même jour).
  *
  * Serveur : functions/api/admin/_pin-change.js (GET ?reveal=1, PATCH).
  * kiwi-admin.html › renderPins appelle enhance() après avoir dessiné la liste ;
@@ -37,7 +38,6 @@
     var pair = COPY[s];
     return pair ? pair[i18n.lang === 'ar' ? 1 : 0] : i18n.text(s);
   }
-  var ownerish = function (role) { return /propri|owner|patron|direction/i.test(String(role || '')); };
   var shown = Object.create(null);   // merchant → { at, byId }
   var notice = Object.create(null);  // merchant → { text, bad } dit dans la barre au-dessus de la liste
   function style() {
@@ -127,7 +127,7 @@
         if (info.code) { dots.textContent = info.code; dots.setAttribute('data-pin-shown', ''); }
         else dots.title = info.hidden === 'owner' ? t('Le code du propriétaire ne s’affiche pas ici.') : t('Code saisi dans la console : il ne peut pas être affiché, seulement remplacé.');
       }
-      if (ownerish(p.role) || ctx.senior === false) return;
+      if (ctx.senior === false) return;   // le propriétaire aussi : son code se remplace, il ne s'affiche jamais
       var del = row.querySelector('button.danger');
       var change = el('button', { class: 'mini', type: 'button', 'data-pin-change': p.id, text: t('Changer'), onclick: function () { openChange(row, p, ctx); } });
       row.insertBefore(change, del || null);

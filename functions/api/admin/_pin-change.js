@@ -7,7 +7,7 @@
  * chiffré, dans le document `team`, que les opérateurs nommés lisent déjà
  * (docs/ops/STAFF_CODES.md). revealCodes() rapproche chaque ligne de caisse de
  * son membre par l'empreinte (exacte, jamais par le nom) et rend son code.
- * Jamais celui du propriétaire : ses codes gardent leur propre porte.
+ * Jamais celui du propriétaire : il se remplace (changeCode), il ne s'affiche pas.
  *
  * CHANGER. Une ligne qui appartient à un membre de l'équipe se change DANS le
  * document `team` (sinon le prochain enregistrement de la page Équipe
@@ -90,7 +90,10 @@ export async function changeCode(request, env) {
   try { row = await env.DB.prepare('SELECT id, name, role, pin FROM staff_pins WHERE id = ? AND merchant = ?').bind(id, merchant).first(); }
   catch (_) { return json({ error: 'pin-storage-unavailable' }, 503); }
   if (!row) return json({ error: 'pin-unknown' }, 404);
-  if (Catalog.ownerTitle(row.role)) return json({ error: 'owner-code' }, 403);
+  /* Le propriétaire aussi (owner, 24 nov. : « maybe they forget it some day ») : sa
+     ligne change en place, par le chemin console ci-dessous, jamais par l'équipe
+     (la republication ne touche pas aux lignes propriétaire). Son code ne s'affiche pas. */
+  const owner = !!Catalog.ownerTitle(row.role);
 
   const actor = await operatorActor(request, env);
   const limited = await limitCheck(request, env, DUPE_SCOPE, actor.id)
@@ -109,7 +112,7 @@ export async function changeCode(request, env) {
   let team;
   try { team = await readTeam(env, merchant); }
   catch (_) { return json({ error: 'staff-code-key-unavailable' }, 409); }
-  const mid = team ? (await memberByHash(env, merchant, team.doc)).get(String(row.pin || '')) : '';
+  const mid = team && !owner ? (await memberByHash(env, merchant, team.doc)).get(String(row.pin || '')) : '';
   const ts = Date.now();
   const journal = (viaTeam) => env.DB.prepare(`${AUDIT} VALUES ('', ?, 'staff-pin-change', ?, ?, '', ?, ?, ?, ?)`)
     .bind(merchant, row.name || '', row.name || '', actor.label, actor.id, JSON.stringify({ id, role: row.role, team: viaTeam }), ts);

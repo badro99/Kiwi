@@ -19,7 +19,7 @@
  *              the employee app logs in with it;
  *            - a console-only row: the till opens on the new code;
  *            - a code another person holds: 409, nothing moves;
- *            - an owner row: 403 (owner codes keep their own door);
+ *            - the owner's row: replaced from the console, never shown;
  *            - a bad code: 400; no named operator: 403;
  *            - the journal names the person, never the code.
  *   node tools/admin-pin-change-test.mjs
@@ -113,12 +113,25 @@ body = await res.json();
 ok(res.status === 200 && body.team === false, 'la ligne console change seule', body);
 ok((await holders('6802')).join() === 'Console' && (await holders(X)).length === 0, 'la caisse ouvre la ligne console sur le nouveau code, plus sur l’ancien');
 
+console.log('■ changer · le code du propriétaire');
+/* Owner, 24 Nov 2026 : « should also be possible to change the owner's, maybe
+   they forget it some day ». Il se remplace depuis la console, sans jamais
+   s'afficher ; la ligne reste celle du propriétaire (même id, même rôle). */
+res = await change({ env: f.env, request: f.req('PATCH', f.named, '', { merchant, id: 'pin-owner', pin: '7913' }) });
+body = await res.json();
+ok(res.status === 200 && body.ok && body.team === false, 'le code du propriétaire se change depuis la console', body);
+ok((await holders('7913')).join() === 'Patron' && (await holders(O)).length === 0, 'le nouveau code ouvre le propriétaire, l’ancien plus rien');
+const ownerRow = f.db.prepare("SELECT role FROM staff_pins WHERE id = 'pin-owner'").get();
+ok(ownerRow && ownerRow.role === 'Propriétaire', 'la ligne reste celle du propriétaire', ownerRow);
+const ownerAudit = f.audits().filter((a) => a.action === 'staff-pin-change' && a.next === 'Patron');
+ok(ownerAudit.length === 1 && !JSON.stringify(ownerAudit).includes('7913') && !JSON.stringify(ownerAudit).includes(O), 'le journal nomme le propriétaire, sans code', ownerAudit);
+res = await list({ env: f.env, request: f.req('GET', f.named, '?merchant=' + merchant + '&reveal=1') });
+ok(!((await res.json()).pins.find((p) => p.id === 'pin-owner') || {}).code, 'et son code ne s’affiche toujours pas');
+
 console.log('■ refus');
 const before = JSON.stringify(f.db.prepare('SELECT id, pin FROM staff_pins ORDER BY id').all());
 res = await change({ env: f.env, request: f.req('PATCH', f.named, '', { merchant, id: idOf('Badr'), pin: N }) });
 ok(res.status === 409 && (await res.json()).error === 'pin-exists', 'un code déjà pris : 409');
-res = await change({ env: f.env, request: f.req('PATCH', f.named, '', { merchant, id: 'pin-owner', pin: '7913' }) });
-ok(res.status === 403, 'une ligne propriétaire : 403', res.status);
 res = await change({ env: f.env, request: f.req('PATCH', f.named, '', { merchant, id: idOf('Badr'), pin: '12a4' }) });
 ok(res.status === 400, 'un code qui n’a pas quatre chiffres : 400', res.status);
 res = await change({ env: f.env, request: f.req('PATCH', f.plain, '', { merchant, id: idOf('Badr'), pin: '7913' }) });
