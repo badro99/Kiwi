@@ -50,9 +50,9 @@
   var LEAD = /^(\s*)MAD(\s+)(?=[a-zà-ÿ])/;
   /* Le moyen « wallet » s'affiche « Kiwi Wallet » ou « QR / Wallet », des mots
    * du Maroc. Un pays qui nomme le sien (l'Espagne : PayPal / Bizum) le voit. */
-  var WALLET = /\b(?:Kiwi Wallet|QR \/ Wallet)\b/g;
+  var WALLET = /\b(?:Kiwi Wallet|QR \/ Wallet)\b/gi;
   function walletLabel() { return profile().walletLabel || ''; }
-  function touches(text) { return !!text && (text.indexOf('MAD') >= 0 || (text.indexOf('Wallet') >= 0 && !!walletLabel())); }
+  function touches(text) { return !!text && (text.indexOf('MAD') >= 0 || (/wallet/i.test(text) && !!walletLabel())); }
   function rewrite(text, sym) {
     if (!touches(text)) return text;
     var w = walletLabel();

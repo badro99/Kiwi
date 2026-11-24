@@ -1200,8 +1200,8 @@
     "sha": "fc38c1c82aab4c41"
   },
   "assets/kiwi-country.js": {
-    "v": "4",
-    "sha": "0046596e1aec6d78"
+    "v": "5",
+    "sha": "11612511deeed35c"
   },
   "assets/kiwi-env.js": {
     "v": "11",
@@ -1384,8 +1384,8 @@
     "sha": "723108537bee278a"
   },
   "assets/merchant-config.js": {
-    "v": "299",
-    "sha": "3d53df10ea4e3926"
+    "v": "300",
+    "sha": "de912fd065df42d1"
   },
   "assets/merchant-health.css": {
     "v": "3",

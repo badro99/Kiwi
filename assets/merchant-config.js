@@ -110,7 +110,7 @@
   function loadCountry(p) {
     if (countryLoading || !p || !p.currency || p.currency === 'MAD') return;
     countryLoading = true;
-    var el = document.createElement('script'); el.src = 'assets/kiwi-country.js?v=4'; el.async = true;
+    var el = document.createElement('script'); el.src = 'assets/kiwi-country.js?v=5'; el.async = true;
     (document.head || document.documentElement).appendChild(el);
   }
   try { var cachedCountry = localStorage.getItem('kiwiCountry@' + cfg.slugNow()); if (cachedCountry) loadCountry(JSON.parse(cachedCountry)); } catch (_) {}

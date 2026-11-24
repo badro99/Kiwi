@@ -69,7 +69,7 @@ ok(rw('380 MAD/soir') === '380 €/soir' && rw('prix en MAD/kg') === 'prix en �
 ok(rw('T-shirt MAD MAX') === 'T-shirt MAD MAX' && rw('MADRID') === 'MADRID', 'un nom de produit ou une ville ne sont pas touchés', [rw('T-shirt MAD MAX'), rw('MADRID')]);
 ok(rw('MAD encaissé') === '€ encaissé' && rw('MAD collected') === '€ collected', 'une unité suivie de son mot (« MAD encaissé ») devient « € encaissé »', [rw('MAD encaissé'), rw('MAD collected')]);
 ok(rw('MAD MAX') === 'MAD MAX', 'un nom en capitales qui commence par MAD reste tel quel', rw('MAD MAX'));
-ok(rw('Kiwi Wallet') === 'PayPal / Bizum' && rw('QR / Wallet') === 'PayPal / Bizum' && rw('65 % en QR / Wallet') === '65 % en PayPal / Bizum', 'en Espagne le portefeuille se nomme PayPal / Bizum', [rw('Kiwi Wallet'), rw('QR / Wallet')]);
+ok(rw('Kiwi Wallet') === 'PayPal / Bizum' && rw('QR / Wallet') === 'PayPal / Bizum' && rw('65 % en QR / Wallet') === '65 % en PayPal / Bizum' && rw('sont en QR / wallet.') === 'sont en PayPal / Bizum.', 'en Espagne le portefeuille se nomme PayPal / Bizum', [rw('Kiwi Wallet'), rw('QR / Wallet')]);
 ok(rw('Carte bancaire') === 'Carte bancaire' && rw('Wallet') === 'Wallet', 'les autres moyens ne bougent pas', [rw('Carte bancaire'), rw('Wallet')]);
 ok(!Countries.profile('MA').walletLabel && Countries.profile('ES').walletLabel === 'PayPal / Bizum', 'le Maroc garde ses libellés, l’Espagne porte le sien');
 ok(es.appended.length === 0 || es.appended.every((u) => /receipt-country\.js/.test(u)), 'kiwi-country.js ne charge que le ticket du pays', es.appended);
