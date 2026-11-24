@@ -80,7 +80,7 @@
     if (!l) {
       try { l = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || ''; } catch (_) {}
     }
-    return (l === 'en' || l === 'ar') ? l : 'fr';
+    return (l === 'en' || l === 'ar') ? l : ((ext.country && ext.country.lang()) || 'fr');   // un commerce espagnol : ticket en espagnol (receipt-country.js)
   }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function clone(o) { try { return JSON.parse(JSON.stringify(o)); } catch (_) { return o; } }
@@ -134,7 +134,7 @@
     { k: 'address', label: { fr: 'Adresse', en: 'Address', ar: 'العنوان' }, important: true },
     { k: 'city', label: { fr: 'Ville', en: 'City', ar: 'المدينة' }, important: false },
     { k: 'phone', label: { fr: 'Téléphone', en: 'Phone', ar: 'الهاتف' }, important: true },
-    { k: 'ice', label: { fr: 'ICE', en: 'ICE', ar: 'ICE' }, important: true },
+    { k: 'ice', get label() { return (ext.country && ext.country.taxLabel()) || { fr: 'ICE', en: 'ICE', ar: 'ICE' }; }, important: true },   // « NIF » pour un commerce espagnol
     { k: 'fiscal', label: { fr: 'Identifiant fiscal (IF)', en: 'Tax ID (IF)', ar: 'الرقم الضريبي' }, important: true },
     { k: 'rc', label: { fr: 'Registre de commerce (RC)', en: 'Trade register (RC)', ar: 'السجل التجاري' }, important: true },
     { k: 'patente', label: { fr: 'Patente', en: 'Patente', ar: 'الباتنتا' }, important: true },
@@ -751,7 +751,7 @@
     [['ice', 'ICE'], ['fiscal', 'IF'], ['rc', 'RC'], ['patente', 'Patente'], ['cnss', 'CNSS']].forEach(function (p) {
       if (!cfg.show.legal[p[0]]) return;
       var v = biz.legal[p[0]];
-      if (v) o.legal.push(p[1] + ' ' + v);
+      if (v) o.legal.push((p[0] === 'ice' && ext.country ? ext.country.taxId() : p[1]) + ' ' + v);   // NIF en Espagne
     });
     return o;
   }
@@ -812,7 +812,7 @@
       .toLowerCase().replace(/[^a-z]/g, '');
     var map = { especes: 'cash', espece: 'cash', cash: 'cash', liquide: 'cash', carte: 'card', card: 'card', cb: 'card', tpe: 'card', tap: 'tap', qr: 'qr', virement: 'wallet', wallet: 'wallet', transfer: 'wallet', avoir: 'avoir', mixte: 'mixed', mixed: 'mixed' };
     var hit = map[k];
-    return hit ? (METHODS[T.__lang] || METHODS.fr)[hit] : str(m, 40);
+    return hit ? (METHODS[T.__lang] || (ext.country && ext.country.methods(T.__lang)) || METHODS.fr)[hit] : str(m, 40);
   }
 
   /* ═══════════════════ les mots ═══════════════════ */
@@ -821,7 +821,7 @@
     en: { __lang: 'en', article: 'Item', receipt: 'RECEIPT', refund: 'REFUND', no: 'No.', date: 'Date', time: 'Time', cashier: 'Cashier', terminal: 'Terminal', client: 'Customer', owed: 'Balance due', points: 'Points', subtotal: 'Subtotal', discount: 'Discount', promo: 'Promotion', saved: 'You saved', ht: 'Net', vat: 'VAT', total: 'TOTAL', totalRefund: 'TOTAL REFUNDED', tip: 'Tip', paid: 'Paid', received: 'Received', change: 'Change', origin: 'Original receipt', reason: 'Reason', thanks: 'Thank you for your visit', copy: 'DUPLICATE', report: 'SALES REPORT', period: 'Period', count: 'Sales', avg: 'Average basket', ref: 'Ref.', share: 'share', takeaway: 'Takeaway' },
     ar: { __lang: 'ar', article: 'منتج', receipt: 'وصل', refund: 'استرجاع', no: 'رقم', date: 'التاريخ', time: 'الساعة', cashier: 'الصندوق', terminal: 'الجهاز', client: 'الزبون', owed: 'المبلغ المستحق', points: 'نقاط', subtotal: 'المجموع الفرعي', discount: 'تخفيض', promo: 'عرض', saved: 'وفّرت', ht: 'المجموع دون ض.ق.م', vat: 'ض.ق.م', total: 'المجموع', totalRefund: 'المبلغ المسترجع', tip: 'إكرامية', paid: 'المدفوع', received: 'المستلم', change: 'الباقي', origin: 'الوصل الأصلي', reason: 'السبب', thanks: 'شكراً على زيارتكم', copy: 'نسخة', report: 'تقرير المبيعات', period: 'الفترة', count: 'عدد المبيعات', avg: 'معدل السلة', ref: 'مرجع', share: 'جزء', takeaway: 'للأخذ' },
   };
-  function dict(l) { return DICT[l] || DICT.fr; }
+  function dict(l) { return DICT[l] || (ext.country && ext.country.dict(l)) || DICT.fr; }
 
   /* Le bon d'avoir : ses propres mots, à part du dictionnaire du reçu. */
   var VOUCHER = {
@@ -895,7 +895,7 @@
     parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     return parts.join(',');
   }
-  function moneyMAD(n, doc) { return money(n, doc) + ' MAD'; }
+  function moneyMAD(n, doc) { return money(n, doc) + ' ' + ((ext.country && ext.country.symbol()) || 'MAD'); }   // la devise du pays du commerce
 
   /* ═══════════════════ SORTIE 1 · ESC/POS (thermique) ═══════════════════ */
   function escpos(doc, o) {
@@ -928,7 +928,7 @@
     doc.shop.contact.forEach(function (c) { b.line(c); });
     doc.shop.legal.forEach(function (l) { b.line(l); });
     if (doc.welcome) b.feed(1).line(doc.welcome);
-    if (refund) b.feed(1).size(2, 2).line(T.refund).size(1, 1);
+    if (refund) b.feed(1).size(2, 2).line(T.refund).size(1, 1); else if (T.__lang === 'es' && !doc.summary) b.feed(1).bold(true).line(T.receipt).bold(false);   // Espagne : « FACTURA SIMPLIFICADA »
     if (doc.acompte) b.feed(1).line(doc.acompte.remaining > 0 ? 'ACOMPTE' : 'SOLDE DE L’ACOMPTE');
     /* Le bandeau du récapitulatif. En gras et en grand, pour la même raison que
        celui du remboursement : ce papier ne doit pas pouvoir passer pour un
@@ -1111,7 +1111,7 @@
     doc.shop.contact.forEach(function (c) { P('kr-c kr-sm', c); });
     doc.shop.legal.forEach(function (l) { P('kr-c kr-xs', l); });
     if (doc.welcome) P('kr-c kr-welcome', doc.welcome);
-    if (refund) P('kr-banner', T.refund);
+    if (refund) P('kr-banner', T.refund); else if (T.__lang === 'es' && !doc.summary) P('kr-banner', T.receipt);
     if (doc.acompte) P('kr-banner', doc.acompte.remaining > 0 ? 'ACOMPTE' : 'SOLDE DE L’ACOMPTE');
     if (doc.summary) P('kr-banner', doc.summary.title);
     if (doc.copy) P('kr-c kr-copy', '·' + doc.copy + '·');  var X = doc.gift ? ext.gift : (doc.prebill ? ext.prebill : null); if (X) return X.html(doc, out, { T: T, P: P, Rh: Rh, code: code, esc: esc, credit: PLATFORM_CREDIT });
@@ -1283,7 +1283,7 @@
     if (doc.shop.legalName) out.push(doc.shop.legalName);
     doc.shop.contact.forEach(function (c) { out.push(c); });
     doc.shop.legal.forEach(function (l) { out.push(l); });
-    if (doc.kind === 'refund') out.push(T.refund);
+    if (doc.kind === 'refund') out.push(T.refund); else if (T.__lang === 'es' && !doc.summary) out.push(T.receipt);
     if (doc.acompte) out.push(doc.acompte.remaining > 0 ? 'ACOMPTE' : 'SOLDE DE L’ACOMPTE');
     if (doc.summary) out.push(doc.summary.title);
     if (doc.copy) out.push('·' + doc.copy + '·');  var X = doc.gift ? ext.gift : (doc.prebill ? ext.prebill : null); if (X) return X.text(doc, out, { T: T, cols: cols, row: row });

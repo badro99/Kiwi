@@ -35,6 +35,9 @@
     'ž': 0x9E, 'Ÿ': 0x9F,
   };
 
+  /* La devise du pays du commerce, posée par assets/kiwi-country.js (setCurrency) ; le dirham sans lui. « € » existe en CP1252 (0x80). */
+  var currency = 'MAD';
+  function cur() { return currency; }
   function encodeCp1252(str) {
     var out = [];
     str = String(str == null ? '' : str);
@@ -371,7 +374,7 @@
       if (o.title) b.bold(true).size(2, 2).line(fit(o.title, paper, 2)).size(1, 1).bold(false);
       if (o.sub) b.bold(true).line(fit(o.sub, paper)).bold(false);
       if (o.detail) b.line(fit(o.detail, paper));
-      if (o.price != null && o.price !== '') b.bold(true).size(2, 2).line(fit(String(o.price) + ' MAD', paper, 2)).size(1, 1).bold(false);
+      if (o.price != null && o.price !== '') b.bold(true).size(2, 2).line(fit(String(o.price) + ' ' + cur(), paper, 2)).size(1, 1).bold(false);
       if (!o.hideBarcode) b.barcode(o.code, { format: o.format || 'ean13', height: 32, module: 2 });
       if (o.footer) b.line(fit(o.footer, paper));
       b.feedDots(4).cutNow();
@@ -380,7 +383,7 @@
     if (o.title) b.bold(true).line(fit(o.title, paper)).bold(false);
     if (o.sub) b.line(fit(o.sub, paper));
     if (o.detail) b.line(fit(o.detail, paper));
-    if (o.price != null && o.price !== '') b.bold(true).size(1, 2).line(fit(String(o.price) + ' MAD', paper)).size(1, 1).bold(false);
+    if (o.price != null && o.price !== '') b.bold(true).size(1, 2).line(fit(String(o.price) + ' ' + cur(), paper)).size(1, 1).bold(false);
     if (!o.hideBarcode) b.feed(1).barcode(o.code, { format: o.format || 'ean13', height: 60 });
     if (o.footer) b.line(fit(o.footer, paper));
     b.feed(1).cut();
@@ -419,7 +422,7 @@
        ASCII space the printer supports. */
     var sourceFmt = o.fmt || function (n) { return String(Math.round(+n || 0)); };
     var f = function (n) { return String(sourceFmt(n)).replace(/[\s\u00A0\u202F]+/g, ' '); };
-    var money = function (n) { return f(n) + ' MAD'; };
+    var money = function (n) { return f(n) + ' ' + cur(); };
     var b = new Builder(paper).init();
 
     /* En-tête — l'identité du commerce et la journée décrite. */
@@ -636,6 +639,7 @@
 
   window.KiwiEscPos = {
     builder: function (paper) { return new Builder(paper); },
+    setCurrency: function (sym) { currency = String(sym || 'MAD').slice(0, 4); },
     needsRaster: needsRaster,
     /* Lignes que ce ticket n'a pas pu dessiner (arabe sans canvas) : 0 = tout
        le texte sortira lisible. */

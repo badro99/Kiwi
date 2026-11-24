@@ -103,6 +103,17 @@
      * page — et une caisse de comptoir reste ouverte des jours entiers. */
     reload: function () { return fetchConfig(); } };
   window.KiwiConfig = cfg;
+  cfg.slugNow = function () { return storeSlug() || merchant() || ''; };   // la clé du pays gardé hors ligne (kiwi-country.js)
+  /* Hors du Maroc seulement : la devise et le ticket du pays (assets/kiwi-country.js,
+     qui charge à son tour receipt-country.js). Un commerce marocain ne télécharge rien. */
+  var countryLoading = false;
+  function loadCountry(p) {
+    if (countryLoading || !p || !p.currency || p.currency === 'MAD') return;
+    countryLoading = true;
+    var el = document.createElement('script'); el.src = 'assets/kiwi-country.js?v=2'; el.async = true;
+    (document.head || document.documentElement).appendChild(el);
+  }
+  try { var cachedCountry = localStorage.getItem('kiwiCountry@' + cfg.slugNow()); if (cachedCountry) loadCountry(JSON.parse(cachedCountry)); } catch (_) {}
 
   /* Un module coupé par l'opérateur. `=== false` et rien d'autre : une clé
    * absente veut dire ALLUMÉ (c'est ce qui laisse les clients d'avant
@@ -657,6 +668,12 @@
         cfg.pins = Array.isArray(data.pins) ? data.pins : [];
         rememberPins(cfg.pins);
         cfg.type = data.type || '';
+        /* Le pays d'exploitation (assets/country-catalog.js, owner 24/11/2026) : la
+           devise des écrans et des tickets. Gardé par commerce, pour une caisse hors ligne. */
+        cfg.country = typeof data.country === 'string' ? data.country : 'MA';
+        cfg.countryProfile = data.countryProfile && typeof data.countryProfile === 'object' ? data.countryProfile : null;
+        try { if (cfg.countryProfile) localStorage.setItem('kiwiCountry@' + (storeSlug() || merchant() || ''), JSON.stringify(cfg.countryProfile)); } catch (_) {}
+        loadCountry(cfg.countryProfile);
         cfg.timezone = typeof data.timezone === 'string' ? data.timezone : '';
         cfg.businessCutoff = Number.isInteger(data.businessCutoff) ? data.businessCutoff : null;
         reportTillZone(data.timezone, data.businessCutoff);

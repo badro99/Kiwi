@@ -664,8 +664,8 @@
     "sha": "43d0c87422fc61c2"
   },
   "assets/escpos.js": {
-    "v": "23",
-    "sha": "b2b2ce45dc538cb0"
+    "v": "25",
+    "sha": "4dc605eb2688774a"
   },
   "assets/exchange-queue.js": {
     "v": "1",
@@ -1199,6 +1199,10 @@
     "v": "24",
     "sha": "fc38c1c82aab4c41"
   },
+  "assets/kiwi-country.js": {
+    "v": "2",
+    "sha": "d959bafa8d725080"
+  },
   "assets/kiwi-env.js": {
     "v": "11",
     "sha": "f3b17f7269cd068f"
@@ -1380,8 +1384,8 @@
     "sha": "723108537bee278a"
   },
   "assets/merchant-config.js": {
-    "v": "292",
-    "sha": "1cdbddc179d0db97"
+    "v": "296",
+    "sha": "c81eb3cc9f37a158"
   },
   "assets/merchant-health.css": {
     "v": "3",
@@ -2271,6 +2275,10 @@
     "v": "3",
     "sha": "e1f2ebd01eace9fc"
   },
+  "assets/receipt-country.js": {
+    "v": "1",
+    "sha": "495e57312a5dbd16"
+  },
   "assets/receipt-gift.js": {
     "v": "4",
     "sha": "3015d6f6bde9153c"
@@ -2284,8 +2292,8 @@
     "sha": "1f4a2677c0859a8f"
   },
   "assets/receipt.js": {
-    "v": "36",
-    "sha": "a1a4490e0a8a9824"
+    "v": "38",
+    "sha": "15c924b163dba702"
   },
   "assets/reception-view.js": {
     "v": "3",

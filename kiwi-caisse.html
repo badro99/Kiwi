@@ -113,7 +113,7 @@
   <script src="assets/caisse-motion.js?v=8" defer></script>
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
-  <script src="assets/escpos.js?v=23" defer></script>
+  <script src="assets/escpos.js?v=25" defer></script>
   <script src="assets/printer/transports.js?v=18" defer></script>
   <script src="assets/printer-bridge.js?v=98" defer></script>
   <script src="assets/caisse-hardware.js?v=16" defer></script>
@@ -397,7 +397,7 @@
        (receipt-ui.js) n'est PAS chargé ici : un réglage à deux endroits, ce sont
        deux vérités. Après venue-store.js, dont il tient sa fiche par
        établissement. -->
-  <script src="assets/receipt.js?v=36" defer></script>
+  <script src="assets/receipt.js?v=38" defer></script>
   <!-- Coûts privés + recettes : nécessaires pour transformer une vente de
        produit en sorties d'ingrédients sans exposer les prix d'achat. -->
   <script src="assets/cost.js?v=19" defer></script>
@@ -423,7 +423,7 @@
   <script src="assets/caisse-pairs.js?v=4" defer></script>
   <script src="assets/caisse-doctor.js?v=1" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
-  <script src="assets/merchant-config.js?v=292" defer></script>
+  <script src="assets/merchant-config.js?v=296" defer></script>
   <!-- « Rafraîchir » · un bouton commun à toutes les caisses (restaurant,
        pressing, et les seize métiers de pos-dispatch) : il redemande au serveur
        l'inventaire, les documents du magasin, les commandes en ligne et les
