@@ -418,7 +418,7 @@ var SHELL = [
   '/assets/receipt.js?v=39', '/assets/receipt-country.js?v=2', '/assets/receipt-gift.js?v=4',
   '/assets/receipt-ui.js?v=3',
   '/assets/invoice.js?v=28',
-  '/assets/merchant-config.js?v=298', '/assets/kiwi-country.js?v=4',
+  '/assets/merchant-config.js?v=299', '/assets/kiwi-country.js?v=4',
   '/assets/entitlements.css?v=8',
   '/assets/entitlements-v2.js?v=6',
   '/assets/staff-roles.js?v=4',
