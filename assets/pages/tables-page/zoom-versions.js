@@ -56,10 +56,13 @@ function pdsNewZoneId(state) {
   do { id = 'z' + Math.random().toString(36).slice(2, 8); } while (state.zones.some(z => z.id === id));
   return id;
 }
-/* The next number nobody uses yet: highest numeric + 1, skipping taken ones. */
+/* The lowest number nobody uses. Counting up from the highest one made an
+   owner who cleared the starter tables (1 to 17, spread over the salle and
+   the terrasse) start their own plan at 18; a hole a deleted table left is
+   filled first, and two tables never share a number. */
 function pdsNextNum(state) {
   const used = new Set(state.tables.map(t => String(t.num).trim().toLowerCase()));
-  let n = state.tables.reduce((m, t) => Math.max(m, parseInt(t.num, 10) || 0), 0) + 1;
+  let n = 1;
   while (used.has(String(n))) n += 1;
   return String(n);
 }

@@ -1947,7 +1947,7 @@ case 'add-table':
       pdsPush(state);
       const plane = pdsPlaneOf(state);
       const spot = pdsFreeSpot(state, cfg.w, cfg.h, plane);
-      const num = String(state.tables.length + 1);
+      const num = pdsNextNum(state);
       const newT = {
         id: newTableId(),
         zone: state.activeZone,
