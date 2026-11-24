@@ -200,6 +200,11 @@ html[data-theme="dark"] .kbs, body[data-vexel-mode="dark"] .kbs { --kbs-card: #1
 .kbs-code svg { height: 20px; width: auto; max-width: 120px; }
 .kbs-code code { font-family: var(--mono, 'JetBrains Mono', ui-monospace, monospace); font-size: 11.5px; color: var(--n-700, #3E4642); }
 .kbs-code .kbs-pending { color: var(--n-500, #77807B); }
+.kbs-bc { box-sizing: border-box; width: 100%; max-width: 240px; height: 38px; padding: 0 10px; border: 1px solid var(--kbs-line); border-radius: 10px; background: var(--kbs-field);
+  color: var(--ink, #0A0F0D); font: 500 13px var(--mono, 'JetBrains Mono', ui-monospace, monospace); }
+.kbs-bc:focus { outline: none; border-color: var(--atlas, #0B6E4F); box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas, #0B6E4F) 18%, transparent); }
+.kbs-bc[aria-invalid="true"] { border-color: var(--danger, #B42318); }
+.kbm .kbs-bc { display: block; max-width: none; height: 32px; margin-top: 6px; font-size: 12px; }
 .kbs-link { padding: 0; border: 0; background: none; color: var(--atlas, #0B6E4F); font: 600 11.5px var(--sans, inherit); cursor: pointer; }
 .kbs-link:hover { text-decoration: underline; }
 .kbs-del { justify-self: start; padding: 8px 0; margin: -8px 0; color: var(--danger, #B42318); font-weight: 500; }
@@ -275,6 +280,35 @@ const PRINT_SVG = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M64
    suivante repart de zéro. */
 const RKEY = 'kiwiLabelReceipt:';
 const RECEIPTS = {};
+
+/* Les codes du fournisseur, taille par taille. « Il a déjà un code » sur un
+   article en tailles : la répartition qui suit donne à chaque taille un champ
+   où la douchette écrit (ou où l'on tape), au lieu de « Code créé à
+   l'enregistrement ». Une taille laissée vide reçoit un code Kiwi. Le choix
+   passe du formulaire à la grille par readCode() → createProduct() → OWN. */
+const OWN = new Set();
+let pendingOwn = false;
+const OW = {
+  fr: { ph: 'Scannez ou tapez le code', hint: 'Scannez l’étiquette de chaque taille. Une taille laissée vide reçoit un code Kiwi.',
+    bad: (z) => `${z} : code illisible. Rescannez, ou tapez-le à la main.`, taken: (z, n) => `${z} : ce code est déjà porté par ${n}.`,
+    twice: (z) => `${z} : ce code est déjà donné à une autre taille.`, empty: (z) => `${z} : écrivez ses pièces, ou effacez son code.` },
+  en: { ph: 'Scan or type the code', hint: 'Scan each size’s label. A size left empty gets a Kiwi code.',
+    bad: (z) => `${z}: unreadable code. Scan again, or type it.`, taken: (z, n) => `${z}: this code already belongs to ${n}.`,
+    twice: (z) => `${z}: this code is already given to another size.`, empty: (z) => `${z}: enter its pieces, or clear its code.` },
+  ar: { ph: 'امسح الرمز أو اكتبه', hint: 'امسح ملصق كل مقاس. المقاس المتروك فارغاً يأخذ رمز Kiwi.',
+    bad: (z) => `${z}: رمز غير مقروء. أعد المسح أو اكتبه.`, taken: (z, n) => `${z}: هذا الرمز مستعمل لـ ${n}.`,
+    twice: (z) => `${z}: هذا الرمز معطى لمقاس آخر.`, empty: (z) => `${z}: اكتب عدد قطعه، أو امسح رمزه.` },
+};
+/* Le code tapé pour une taille : lisible, libre dans le magasin. */
+function judgeTyped(cat, raw) {
+  const KB = typeof window !== 'undefined' ? window.KiwiBarcode : null;
+  const code = String(raw || '').trim();
+  const val = KB && KB.validate ? KB.validate(code) : { ok: true, code };
+  if (!val.ok) return { bad: 'bad' };
+  const hit = cat && cat.findByBarcode ? cat.findByBarcode(val.code || code) : null;
+  if (hit) return { bad: 'taken', who: [hit.product && hit.product.name, hit.variant && hit.variant.size].filter(Boolean).join(' · ') };
+  return { code: val.code || code };
+}
 const storeReceipt = (pid, r) => { RECEIPTS[pid] = r; try { localStorage.setItem(RKEY + pid, JSON.stringify(r)); } catch (_) { /* mémoire seule */ } return r; };
 export function lastReceipt(pid) {
   if (!pid) return null;
@@ -331,6 +365,8 @@ export function mount(host, o) {
   /* La répartition rapide et les couleurs s'allument par commerçant (option
      « boutiqueSizeColors » de la console). Éteinte : l'écran d'avant, à l'identique. */
   const rich = !ro && sizeColorsOn();
+  const ow = OW[o.lang] || OW.fr;
+  const typing = () => target > 0 && !ro && (!!o.ownCodes || OWN.has(pid));
 
   /* « + Couleur » : les nuances du magasin (son nuancier et celles déjà au
      catalogue), cherchables par numéro ou par nom ; les familles ; et une
@@ -406,7 +442,9 @@ export function mount(host, o) {
       const have = v
         ? `<span class="kbs-have${stock > 0 ? '' : ' is-out'}" data-kbs-have="${esc(r.key)}" data-st="${stock}">${esc(stock ? t.have(sgn(stock)) : t.out)}</span>`
         : '';
-      const codeHtml = code
+      const codeHtml = !v && typing()
+        ? `<span class="kbs-code"><input class="kbs-bc" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="64" placeholder="${esc(ow.ph)}" data-kbs-bc="${esc(r.key)}" aria-label="${esc(ow.ph)} · ${esc(sizeLabel)}" /></span>`
+        : code
         ? `<span class="kbs-code">${o.barcodeSvg ? o.barcodeSvg(code) : ''}${rich ? codeOf(r) : `<code>${esc(code)}</code>`}${regOf(v)}</span>`
         : `<span class="kbs-code"><span class="kbs-pending">${esc(v ? t.noCode : t.newCode)}</span>${v && o.register ? `<button type="button" class="kbs-link" data-kbs-reg="${esc(v.id)}">${esc(t.reg)}</button>` : ''}</span>`;
       return `<li class="kbs-row" data-kbs-row="${esc(r.key)}">
@@ -421,7 +459,7 @@ export function mount(host, o) {
         const r = shown.find((x) => x.size === size && x.col === c.key);
         if (!r) return '<td></td>';
         const st = haveCount(r.variant);
-        return `<td>${field(r.key, c.key, `${t.add} · ${sl} · ${colName(c)}`, `${sl} · ${colName(c)}`)}${r.variant ? `<small class="${st > 0 ? '' : 'is-out'}" data-kbs-have="${esc(r.key)}" data-st="${st}">${esc(st ? t.have(sgn(st)) : t.out)}</small>${codeOf(r)}${regOf(r.variant)}${delOf(r, sl + ' · ' + colName(c))}` : ''}</td>`;
+        return `<td>${field(r.key, c.key, `${t.add} · ${sl} · ${colName(c)}`, `${sl} · ${colName(c)}`)}${!r.variant && typing() ? `<input class="kbs-bc" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="64" placeholder="${esc(ow.ph)}" data-kbs-bc="${esc(r.key)}" aria-label="${esc(ow.ph)} · ${esc(sl)} · ${esc(colName(c))}" />` : ''}${r.variant ? `<small class="${st > 0 ? '' : 'is-out'}" data-kbs-have="${esc(r.key)}" data-st="${st}">${esc(st ? t.have(sgn(st)) : t.out)}</small>${codeOf(r)}${regOf(r.variant)}${delOf(r, sl + ' · ' + colName(c))}` : ''}</td>`;
       }).join('')}</tr>`;
     }).join('')}</tbody></table>${anySmart ? `<p class="kbm-key">${esc(t.codeKey)}</p>` : ''}`;
     const used = (k) => shown.some((r) => r.col === k && r.variant);
@@ -448,6 +486,7 @@ export function mount(host, o) {
       ${matrix ? matrixHtml : shown.length ? `<div class="kbs-colhead" aria-hidden="true"><span>${esc(t.size)}</span><span>${creating ? '' : esc(t.stockCol)}</span><span>${ro ? '' : esc(creating ? t.add : t.addMore)}</span></div>
       <ul class="kbs-list">${rowsHtml}</ul>` : `<p class="kbs-msg">${esc(t.empty)}</p>`}
       ${splitOn ? '<div data-kbs-split></div>' : ''}
+      ${typing() ? `<p class="kbs-msg" data-kbs-bc-hint>${esc(ow.hint)}</p>` : ''}
       <p class="kbs-msg" data-kbs-msg>${creating && list.length > 1 ? esc(t.hintCreate) : ''}</p>
       <div class="kbs-acts">
         ${rec && allN && allN !== printable ? `<button type="button" class="kbs-btn" data-kbs-print-all>${esc(t.printAll(allN))}</button>` : ''}
@@ -458,6 +497,7 @@ export function mount(host, o) {
     host.innerHTML = page();
     const back = carry; carry = null;
     if (back) host.querySelectorAll('[data-kbs-in]').forEach((i) => { const v = back.values[i.getAttribute('data-kbs-in')]; if (v) i.value = v; });
+    if (back && back.codes) host.querySelectorAll('[data-kbs-bc]').forEach((i) => { const v = back.codes[i.getAttribute('data-kbs-bc')]; if (v) i.value = v; });
     wire();
     /* Une seule case à la création (taille unique, une couleur) : les pièces y
        sont déjà, « Enregistrer » suffit ; « + Couleur » les répartit. */
@@ -486,7 +526,9 @@ export function mount(host, o) {
   const keep = (quick) => {
     const values = {};
     host.querySelectorAll('[data-kbs-in]').forEach((i) => { if (String(i.value).trim()) values[i.getAttribute('data-kbs-in')] = i.value; });
-    carry = { values, quick: quick || '' };
+    const codes = {};
+    host.querySelectorAll('[data-kbs-bc]').forEach((i) => { if (String(i.value).trim()) codes[i.getAttribute('data-kbs-bc')] = i.value; });
+    carry = { values, codes, quick: quick || '' };
   };
   function addColors(fams, quick) {
     const fresh = fams.filter((c) => (c.exact ? !cols.some((k) => k.id === c.id) : !COLORS.hasFamily(cols, c))).map((c) => (c.exact ? c : COLORS.columnOf(c, o.lang)));
@@ -578,6 +620,9 @@ export function mount(host, o) {
     if (bad) { say(t.bad, true); return; }
     if (target > 0 && sum !== target) { say(t.mismatch(sum, target), true); return; }
     if (!sum) { say(t.none, true); return; }
+    const typed = readTyped(out);
+    if (!typed) return;
+    const scanned = typing();
     busy = true;
     const btn = host.querySelector('[data-kbs-save]');
     if (btn) { btn.disabled = true; btn.textContent = t.saving; }
@@ -599,13 +644,17 @@ export function mount(host, o) {
         }
         if (!v) return;
         const fam = rich ? (() => { const c = cols.find((k) => k.key === r.col); return !c || c.unique ? 'unique' : (c.family || c.id); })() : '';
-        if (!o.primary(v) && cat.generateBarcode(v.id, plan ? plan.code(fam, r.size, v.colorId) : undefined)) codes++;
+        const kept = !!(typed[key] && !o.primary(v) && (cat.attachBarcode(v.id, typed[key]) || {}).ok);
+        if (kept) codes++;
+        else if (!o.primary(v) && cat.generateBarcode(v.id, plan ? plan.code(fam, r.size, v.colorId) : undefined)) codes++;
         got[v.id] = (got[v.id] || 0) + n;
       });
     };
     if (cat.batch) cat.batch(run); else run();
     busy = false;
     target = 0;
+    OWN.delete(pid);
+    if (scanned && o.scan && o.scan.disarm) o.scan.disarm(onScan);
     noteReceipt(pid, got);
     draw();
     const total = Object.keys(got).reduce((s, k) => s + got[k], 0);
@@ -613,11 +662,68 @@ export function mount(host, o) {
     if (o.onSaved) o.onSaved({ received: got, codes });
   };
 
+  /* Les codes tapés, vérifiés avant d'écrire quoi que ce soit : { clé: code },
+     ou null après avoir marqué la case fautive. */
+  const sizeOf = (key) => { const r = cellList.find((x) => x.key === key); if (!r) return ''; const z = r.size === 'TU' ? t.tu : r.size; const c = cols && cols.length > 1 ? cols.find((k) => k.key === r.col) : null; return c ? `${z} · ${c.unique ? t.noColor : c.label}` : z; };
+  function readTyped(out) {
+    const res = {}, seen = {};
+    const ins = Array.from(host.querySelectorAll('[data-kbs-bc]'));
+    for (const inp of ins) {
+      const key = inp.getAttribute('data-kbs-bc'), raw = String(inp.value || '').trim();
+      inp.setAttribute('aria-invalid', 'false');
+      if (!raw) continue;
+      const fail = (msg) => { inp.setAttribute('aria-invalid', 'true'); inp.focus(); say(msg, true); return null; };
+      if (!out.some((x) => x.key === key)) return fail(ow.empty(sizeOf(key)));
+      const j = judgeTyped(cat, raw);
+      if (j.bad) return fail(j.bad === 'taken' ? ow.taken(sizeOf(key), j.who) : ow.bad(sizeOf(key)));
+      if (seen[j.code]) return fail(ow.twice(sizeOf(key)));
+      seen[j.code] = true; res[key] = j.code;
+    }
+    return res;
+  }
+  /* La douchette (caisse : o.scan) : le code va dans la case du code qui a le
+     curseur, sinon dans celle de la taille dont on tape les pièces, sinon dans
+     la première case vide ; puis le curseur passe à la suivante. */
+  function onScan(raw) {
+    const code = String(raw || '').trim();
+    if (!code || !host.isConnected) return;
+    const all = Array.from(host.querySelectorAll('[data-kbs-bc]'));
+    if (!all.length) return;
+    const a = document.activeElement;
+    let inp = a && a.hasAttribute && a.hasAttribute('data-kbs-bc') && host.contains(a) ? a : null;
+    /* Les chiffres de la rafale sont déjà tombés dans la case des pièces : elle
+       reprend ce qu'elle valait avant la rafale. */
+    if (a && a.hasAttribute && a.hasAttribute('data-kbs-in') && a._snap != null && a.value !== a._snap) { a.value = a._snap; a.dispatchEvent(new Event('input', { bubbles: true })); }
+    if (!inp && a && a.hasAttribute && a.hasAttribute('data-kbs-in')) inp = all.find((x) => x.getAttribute('data-kbs-bc') === a.getAttribute('data-kbs-in')) || null;
+    if (!inp) inp = all.find((x) => !String(x.value).trim()) || null;
+    if (!inp) return;
+    inp.value = code;
+    nextCode(inp, all);
+  }
+  function nextCode(inp, all) {
+    const raw = String(inp.value || '').trim();
+    const j = raw ? judgeTyped(cat, raw) : null;
+    inp.setAttribute('aria-invalid', j && j.bad ? 'true' : 'false');
+    if (j && j.bad) { say(j.bad === 'taken' ? ow.taken(sizeOf(inp.getAttribute('data-kbs-bc')), j.who) : ow.bad(sizeOf(inp.getAttribute('data-kbs-bc'))), true); inp.focus(); return; }
+    say('');
+    const i = all.indexOf(inp);
+    const next = all.slice(i + 1).find((x) => !String(x.value).trim());
+    if (next) next.focus(); else inp.blur();
+  }
+
   function wire() {
+    host.querySelectorAll('[data-kbs-bc]').forEach((inp, i, all) => {
+      inp.addEventListener('input', () => { inp.setAttribute('aria-invalid', 'false'); say(''); });
+      /* Une douchette finit par « Entrée » : on vérifie, on passe à la taille
+         suivante, jamais on n'enregistre. */
+      inp.addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; const done = e.defaultPrevented; e.preventDefault(); e.stopPropagation(); if (!done) nextCode(inp, Array.from(all)); });   // déjà pris par la douchette de la caisse : onScan
+    });
+    if (typing() && o.scan && o.scan.arm) o.scan.arm(onScan);
     host.querySelectorAll('[data-kbs-in]').forEach((inp, i, all) => {
       inp.addEventListener('input', () => { inp.value = inp.value.replace(/[^\d]/g, '').slice(0, 5); say(''); paintCount(); });
       inp.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter') return;
+        const now = Date.now(); if (now - (inp._kt || 0) > 120) inp._snap = inp.value; inp._kt = now;   // valeur d'avant une rafale de douchette
+        if (e.key !== 'Enter' || e.defaultPrevented) return;   // un scan pris par la caisse n'enregistre pas
         e.preventDefault();
         const next = all[i + 1];
         if (next) next.focus(); else save();
@@ -924,7 +1030,10 @@ export function createProduct(cat, data, total, existing) {
     }
   };
   if (cat.batch) cat.batch(run); else run();
-  return { product: p, needsGrid: !!(p && (hasGrid(p.kind) || split)), kept };
+  const needsGrid = !!(p && (hasGrid(p.kind) || split));
+  if (needsGrid && pendingOwn && !existing) OWN.add(p.id);
+  pendingOwn = false;
+  return { product: p, needsGrid, kept };
 }
 
 /* Le code-barres à la création, identique à la caisse et au tableau de bord :
@@ -935,19 +1044,19 @@ const BCF = {
   fr: { sec: 'Code-barres', gen: 'Générer un code Kiwi', genSub: 'Pour un article sans étiquette.',
     own: 'Il a déjà un code', ownSub: 'Étiquette du fournisseur, rien à réimprimer.',
     label: 'Code de l’article', ph: 'Scannez l’étiquette ou tapez le code', hint: 'La douchette écrit directement dans ce champ.',
-    grid: 'Chaque taille a son propre code. Après la répartition, touchez « Code existant » sur la taille et scannez son étiquette.',
+    grid: 'Chaque taille a son propre code : à l’écran suivant, chaque taille a sa case, scannez son étiquette.',
     empty: 'Scannez ou tapez le code de l’article.', bad: 'Code illisible. Rescannez, ou tapez-le à la main.',
     taken: (n) => `Ce code est déjà porté par ${n}.`, ok: 'Code lu, il sera gardé tel quel.' },
   en: { sec: 'Barcode', gen: 'Generate a Kiwi code', genSub: 'For an item with no label.',
     own: 'It already has one', ownSub: 'Supplier label, nothing to reprint.',
     label: 'Item code', ph: 'Scan the label or type the code', hint: 'The scanner types straight into this field.',
-    grid: 'Each size has its own code. After the split, tap “Existing code” on the size and scan its label.',
+    grid: 'Each size has its own code: on the next screen every size has its own field, scan its label there.',
     empty: 'Scan or type the item’s code.', bad: 'Unreadable code. Scan again, or type it.',
     taken: (n) => `This code already belongs to ${n}.`, ok: 'Code read, it will be kept as is.' },
   ar: { sec: 'الرمز الشريطي', gen: 'توليد رمز Kiwi', genSub: 'لسلعة بلا ملصق.',
     own: 'لديها رمز مسبقاً', ownSub: 'ملصق المورّد، لا حاجة لإعادة الطباعة.',
     label: 'رمز السلعة', ph: 'امسح الملصق أو اكتب الرمز', hint: 'يكتب الماسح مباشرة في هذا الحقل.',
-    grid: 'لكل مقاس رمزه الخاص. بعد التوزيع، اضغط « رمز موجود » على المقاس وامسح ملصقه.',
+    grid: 'لكل مقاس رمزه الخاص: في الشاشة التالية لكل مقاس خانته، امسح ملصقه فيها.',
     empty: 'امسح رمز السلعة أو اكتبه.', bad: 'رمز غير مقروء. أعد المسح أو اكتبه.',
     taken: (n) => `هذا الرمز مستعمل لـ ${n}.`, ok: 'تمت قراءة الرمز، وسيُحفظ كما هو.' },
 };
@@ -1016,6 +1125,7 @@ export function wireCode(root, cat, lang, onOwn) {
 export function readCode(root, cat, lang) {
   const inp = root && root.querySelector('[data-kbs-bc-in]');
   const own = root && ((root.querySelector('[data-kbs-bc]:checked') || {}).value === 'own');
+  pendingOwn = !!(inp && own && inp.style.display === 'none');   // en tailles : les codes se scannent dans la grille
   if (!inp || !own || inp.style.display === 'none') return { code: '' };
   const j = judgeCode(cat, inp.value);
   sayCode(root, lang, j);
