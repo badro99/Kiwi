@@ -76,7 +76,7 @@
         }
         entry.channel = tables[settlementTable] && tables[settlementTable].zone === 'terrasse' ? 'terrace' : 'dining';
       } else if (mode === 'vrap') {
-        entry.channel = 'takeaway';
+        entry.channel = 'takeaway'; if (typeof dlvSaleTag === 'function') dlvSaleTag(entry, vrapOrder);
         if (split && Number.isFinite(split.index)) {
           entry.id = entry.id + '-split-' + Number(split.index);
         }

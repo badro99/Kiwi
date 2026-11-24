@@ -21,7 +21,7 @@
     comptoir: 'counter', counter: 'counter',
     emporter: 'takeaway', takeaway: 'takeaway',
     retrait: 'pickup', pickup: 'pickup', clickcollect: 'pickup',
-    livraison: 'delivery', delivery: 'delivery', glovo: 'delivery', yassir: 'delivery',
+    livraison: 'delivery', delivery: 'delivery', glovo: 'delivery', yassir: 'delivery', kooul: 'delivery',
     boutique: 'store', store: 'store', cabine: 'cabin', cabin: 'cabin',
     domicile: 'home', home: 'home', produit: 'products', products: 'products',
     club: 'club', distance: 'remote', remote: 'remote', direct: 'direct',

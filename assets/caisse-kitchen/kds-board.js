@@ -99,7 +99,7 @@
       }));
       const chips = [];
       let source;
-      if (o.type === 'glovo' || o.type === 'yassir') source = { kind: 'delivery', label: (o.type === 'glovo' ? 'Glovo' : 'Yassir') + (o.code ? ' ' + o.code : '') };
+      if (o.delivery && typeof dlvSource === 'function') source = dlvSource(o); else if (o.type === 'glovo' || o.type === 'yassir') source = { kind: 'delivery', label: (o.type === 'glovo' ? 'Glovo' : 'Yassir') + (o.code ? ' ' + o.code : '') };
       else if (o.type === 'takeaway') source = { kind: 'takeaway', label: kkt('kds.source.takeaway') };
       else {
         source = { kind: 'table', label: kkt('kds.source.table', { table: String(o.table == null ? '' : o.table) }) };

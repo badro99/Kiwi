@@ -305,6 +305,19 @@ async function ensureFollowingTable(env) {
   // Schema owned by migrations 0001–0010.
 }
 
+/* `{ id, ref, name }` : l'identifiant est le canal de la vente (lettres), le
+ * numéro celui de la plateforme, le nom ce que la cuisine lit. */
+export function cleanDelivery(d) {
+  if (!d || typeof d !== 'object') return null;
+  const id = String(d.id || '').toLowerCase();
+  if (!/^[a-z]{2,24}$/.test(id)) return null;
+  return {
+    id,
+    ref: String(d.ref || '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 16),
+    name: String(d.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 30),
+  };
+}
+
 export async function createTicket(context, env, merchant, c, now) {
   const id = String(c.id || '').trim();
   if (!ORDER_ID.test(id)) return json({ error: 'bad-id' }, 400);
@@ -475,6 +488,17 @@ export async function createTicket(context, env, merchant, c, now) {
           WHERE merchant = ? AND table_no = ? AND cleared_ts IS NULL AND order_id <> ?`
       ).bind(now, merchant, table, id).run();
     } catch (_) { /* table absente : aucune annonce à éteindre */ }
+  }
+  /* Une commande de plateforme (Glovo, Yassir…) ou de livraison maison saisie
+   * au comptoir : la cuisine lit son nom et son numéro dans `customer`. Le canal
+   * reste « caisse » : jamais `glovo`, que les opérations de l'API Glovo
+   * renverraient à Glovo. Une base sans la colonne n'empêche pas le bon. */
+  const delivery = cleanDelivery(c.delivery);
+  if (delivery) {
+    try {
+      await env.DB.prepare('UPDATE orders SET customer = ? WHERE id = ? AND merchant = ?')
+        .bind(JSON.stringify({ delivery }), id, merchant).run();
+    } catch (_) { /* colonne absente : le bon part sans son badge */ }
   }
   deferCourse(context, recordOrderCourse(env, {
     merchant, orderId: id, orderNumber: (row && row.number) || 1,

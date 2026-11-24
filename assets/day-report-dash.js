@@ -147,11 +147,11 @@
     noSale:    { fr: 'aucune vente', en: 'no sales', ar: 'لا مبيعات' },
   };
   var METHODS = {
-    fr: { cash: 'Espèces', card: 'Carte', wallet: 'Wallet', transfer: 'Virement / Versement', cheque: 'Chèque', tap: 'Kiwi Tap', qr: 'QR', link: 'Lien', delivery: 'Livraison · à recevoir' },
-    en: { cash: 'Cash', card: 'Card', wallet: 'Wallet', transfer: 'Bank transfer', cheque: 'Cheque', tap: 'Kiwi Tap', qr: 'QR', link: 'Link', delivery: 'Delivery · receivable' },
-    ar: { cash: 'نقدًا', card: 'بطاقة', wallet: 'محفظة', transfer: 'تحويل بنكي', cheque: 'شيك', tap: 'Kiwi Tap', qr: 'QR', link: 'رابط', delivery: 'توصيل · مبلغ مستحق' },
+    fr: { cash: 'Espèces', card: 'Carte', wallet: 'Wallet', transfer: 'Virement / Versement', cheque: 'Chèque', tap: 'Kiwi Tap', qr: 'QR', link: 'Lien', delivery: 'Livraison · à recevoir' , glovo: 'Glovo', kooul: 'Kooul', yassir: 'Yassir' },
+    en: { cash: 'Cash', card: 'Card', wallet: 'Wallet', transfer: 'Bank transfer', cheque: 'Cheque', tap: 'Kiwi Tap', qr: 'QR', link: 'Link', delivery: 'Delivery · receivable' , glovo: 'Glovo', kooul: 'Kooul', yassir: 'Yassir' },
+    ar: { cash: 'نقدًا', card: 'بطاقة', wallet: 'محفظة', transfer: 'تحويل بنكي', cheque: 'شيك', tap: 'Kiwi Tap', qr: 'QR', link: 'رابط', delivery: 'توصيل · مبلغ مستحق' , glovo: 'Glovo', kooul: 'Kooul', yassir: 'Yassir' },
   };
-  function methodLabel(k) { return (METHODS[LANG()] || METHODS.fr)[k] || k; }
+  function methodLabel(k) { return (METHODS[LANG()] || METHODS.fr)[k] || ({ glovo: 'Glovo', kooul: 'Kooul', yassir: 'Yassir', livraison: 'Livraison maison' })[k] || (/^pf[a-z]+$/.test(k) ? k.charAt(2).toUpperCase() + k.slice(3) : k); }   // une plateforme de livraison : son nom (assets/delivery.js)
 
   var DAYS = {
     fr: ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'],

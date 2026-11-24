@@ -216,8 +216,8 @@
     "sha": "468f83916655c7d7"
   },
   "assets/caisse-accounting.js": {
-    "v": "37",
-    "sha": "5bc1033c2c48f7d7"
+    "v": "39",
+    "sha": "5fabfcc70cd2ac01"
   },
   "assets/caisse-app.js": {
     "v": "53",
@@ -244,8 +244,8 @@
     "sha": "690e7d77e134c697"
   },
   "assets/caisse-kitchen.js": {
-    "v": "31",
-    "sha": "af731124f6a82009"
+    "v": "33",
+    "sha": "bcb61ed6977850a2"
   },
   "assets/caisse-lang.js": {
     "v": "168",
@@ -316,12 +316,16 @@
     "sha": "06474b0671fb9627"
   },
   "assets/caisse/catalogue.js": {
-    "v": "25",
-    "sha": "6e4bf3dad70ac45d"
+    "v": "26",
+    "sha": "0832db5ec815621d"
   },
   "assets/caisse/closing.js": {
     "v": "2",
     "sha": "d359ea22da75b2f0"
+  },
+  "assets/caisse/delivery.js": {
+    "v": "2",
+    "sha": "6c676d51d2c7452f"
   },
   "assets/caisse/discounts.js": {
     "v": "7",
@@ -352,8 +356,8 @@
     "sha": "fc17e1de643f9b22"
   },
   "assets/caisse/payment.js": {
-    "v": "10",
-    "sha": "0afe105acdcfd3ca"
+    "v": "11",
+    "sha": "c27986a3a057f2a1"
   },
   "assets/caisse/receipts.js": {
     "v": "5",
@@ -380,8 +384,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "23",
-    "sha": "4948555461a80b8c"
+    "v": "25",
+    "sha": "8f48cb816b13de24"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -420,16 +424,16 @@
     "sha": "2c79f32e0dc9b521"
   },
   "assets/channel-sales.js": {
-    "v": "10",
-    "sha": "322f4faa841fb05b"
+    "v": "11",
+    "sha": "a5e239ed9cf0ea4c"
   },
   "assets/charges-engine.js": {
-    "v": "3",
-    "sha": "5dfc1e160fdb0b2a"
+    "v": "4",
+    "sha": "c2c79988e041f906"
   },
   "assets/charges.js": {
-    "v": "4",
-    "sha": "210f037121107f37"
+    "v": "5",
+    "sha": "ba9ed9eab1396579"
   },
   "assets/client-cheques.js": {
     "v": "1",
@@ -564,8 +568,8 @@
     "sha": "c280918a4865ae88"
   },
   "assets/day-report-dash.js": {
-    "v": "53",
-    "sha": "088588308b798a8f"
+    "v": "54",
+    "sha": "e74a5ab58d41809b"
   },
   "assets/day-report-export.js": {
     "v": "30",
@@ -576,8 +580,8 @@
     "sha": "8e57c57850d5aadf"
   },
   "assets/day-report.js": {
-    "v": "61",
-    "sha": "64db5efb268e0f97"
+    "v": "62",
+    "sha": "4bc03c32ef7f2284"
   },
   "assets/delivery-collect.js": {
     "v": "4",
@@ -586,6 +590,10 @@
   "assets/delivery-receivables.js": {
     "v": "2",
     "sha": "db5d8d9c547adb73"
+  },
+  "assets/delivery.js": {
+    "v": "1",
+    "sha": "d1d8c9f62716e73b"
   },
   "assets/demoClock.js": {
     "v": "5",
@@ -708,8 +716,8 @@
     "sha": "45d121cc3d7a2e7f"
   },
   "assets/finance.js": {
-    "v": "21",
-    "sha": "d7a44661e303297d"
+    "v": "22",
+    "sha": "cbe3f7170fe20eff"
   },
   "assets/floorplan-core.js": {
     "v": "2061",
@@ -1036,8 +1044,8 @@
     "sha": "ea6043cb8cb287db"
   },
   "assets/kit/kds.js": {
-    "v": "9",
-    "sha": "91fba1b73e21ba8a"
+    "v": "10",
+    "sha": "702be17d909a4dd6"
   },
   "assets/kit/kit.css": {
     "v": "71",
@@ -1172,8 +1180,8 @@
     "sha": "b7e1f27be387dc47"
   },
   "assets/kit/till-frame.js": {
-    "v": "15",
-    "sha": "4ec2e9cb41453799"
+    "v": "16",
+    "sha": "4bb4f245a64d8be2"
   },
   "assets/kit/till-online.js": {
     "v": "5",
@@ -1184,12 +1192,12 @@
     "sha": "08da4c725480ca9d"
   },
   "assets/kit/till-z.js": {
-    "v": "1",
-    "sha": "ffa99a7649222aa6"
+    "v": "2",
+    "sha": "7b0a46f98e56c876"
   },
   "assets/kit/till.js": {
-    "v": "34",
-    "sha": "f7a47e31729e6063"
+    "v": "35",
+    "sha": "56be9b5cbb09a21a"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",
@@ -1200,8 +1208,8 @@
     "sha": "ce1d2f1d743c1e39"
   },
   "assets/kitchen-relay.js": {
-    "v": "24",
-    "sha": "fc38c1c82aab4c41"
+    "v": "25",
+    "sha": "4d7d56ff3e477498"
   },
   "assets/kiwi-country.js": {
     "v": "5",
@@ -1648,8 +1656,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "319",
-    "sha": "bf64a0d689d0d88c"
+    "v": "320",
+    "sha": "75b0de8e21667054"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

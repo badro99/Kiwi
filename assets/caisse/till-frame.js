@@ -94,12 +94,12 @@
         const cat = String(m.cat || '');
         if (!byCat[cat]) { byCat[cat] = { id: cat || 'menu', title: catLabelL(m.cat) || '', items: [] }; secs.push(byCat[cat]); }
         byCat[cat].items.push({
-          id: String(m.id), name: menuName(m), price: m.price, soldOut: out, img: tillKitPhoto(m),
+          id: String(m.id), name: menuName(m), price: m.price, soldOut: out, img: tillKitPhoto(m), outLabel: m.dlvOff && typeof dlvOffLabel === 'function' ? dlvOffLabel() : '',
           options: !out && !!((m.formula && Array.isArray(m.formula.slots) && m.formula.slots.length) || itemOptGroups(m).length),
           qty: out ? 0 : source.filter(c => c.id === m.id).reduce((s, c) => s + c.qty, 0),
         });
       };
-      menuItems.filter(inView).forEach(m => put(m, false));
+      (typeof dlvList === 'function' ? dlvList(menuItems.filter(inView)) : menuItems.filter(inView)).forEach(m => put(m, !!m.dlvOff));
       soldOut.filter(inView).forEach(m => put(m, true));
       return secs;
     }
@@ -490,7 +490,7 @@
     }).filter((s) => s.items.length);
     function tillKitRail() {
       const kdsOpen = !!(typeof kdsEl !== 'undefined' && kdsEl && kdsEl.classList.contains('is-open'));
-      const value = tillKitClientsOpen() ? 'clients' : kdsOpen ? 'kitchen' : mode === 'vrap' ? 'takeaway' : mode === 'waitlist' ? 'waiting' : 'floor';
+      const value = tillKitClientsOpen() ? 'clients' : kdsOpen ? 'kitchen' : mode === 'vrap' ? (typeof dlvCur === 'function' && dlvCur() ? 'delivery' : 'takeaway') : mode === 'waitlist' ? 'waiting' : 'floor';
       const newTickets = (typeof kdsOrders !== 'undefined' ? kdsOrders : []).filter((o) => o && o.status === 'new').length;
       /* §18.3 : le badge À emporter compte les commandes en ligne à accepter. */
       const toAccept = window.KiwiTillOnline ? window.KiwiTillOnline.pending() : 0;
@@ -509,6 +509,8 @@
         if (id === 'takeaway' && toAccept) it.a11y = kkt('till.nav.takeaway_a11y', { n: toAccept });
         return it;
       });
+      const dlvRail = typeof dlvRailItem === 'function' ? dlvRailItem() : null;
+      if (dlvRail) items.splice(Math.max(0, items.findIndex((x) => x.id === 'takeaway') + 1), 0, dlvRail);
       items.push(tillKitMoreOpen
         ? { id: 'more', icon: 'close', label: kkt('till.nav.less') }
         : { id: 'more', icon: 'more_horiz', label: kkt('till.nav.more') });
@@ -690,6 +692,7 @@
       if (tillKitClientsOpen() && window.KiwiClientsBook) window.KiwiClientsBook.close();
       if (id === 'kitchen') { if (!kdsOpen) openKds(); tillKitPaint(); return; }
       if (kdsOpen) closeKds();
+      if (id === 'delivery' && typeof dlvOpen === 'function') { dlvOpen(); tillKitPaint(); return; }
       const pill = { floor: 'salle', takeaway: 'vrap', waiting: 'waitlist' }[id];
       const el = pill && tillKitLive('.mode-pill[data-mode="' + pill + '"]');
       if (el) el.click();
@@ -975,6 +978,7 @@
           sendToKitchen();
           return;
         case 'pay':
+          if (typeof dlvPay === 'function' && dlvPay()) return;
           tillKitOpenPay();
           return;
         case 'add-items': click('#rp-add-items'); return;

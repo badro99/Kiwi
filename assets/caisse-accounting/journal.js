@@ -51,7 +51,7 @@
                    a 20 MAD refund display 2 transactions and a 40 MAD average basket. */
                 if ((e.amount > 0 || e.kind === 'complimentary') && e.kind !== 'refund') txns++;
                 revenueC += minor(e.amount);
-                if (e.method === 'cash') cashC += minor(e.amount); else cardC += minor(e.amount);
+                if (e.method === 'cash') cashC += minor(e.amount); else if (e.method !== 'platform') cardC += minor(e.amount);   // une plateforme a encaissé : ni espèces ni carte
                 const tip = e.tip || 0;
                 tipsC += minor(tip);
                 if (e.method === 'cash') cashTipsC += minor(tip);

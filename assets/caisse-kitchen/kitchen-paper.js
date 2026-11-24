@@ -134,7 +134,7 @@
           payload: {
             title: ((options && options.voided) ? 'ANNULÉ · ' : order.course === 'suite' ? 'SUITE · ' : '') + String(names[sid] || 'Cuisine').toUpperCase(),
             station: sid,
-            table: tableLabel,
+            table: (typeof dlvTicketHead === 'function' && dlvTicketHead(order)) || tableLabel,
             order: order.opNum != null ? '#' + order.opNum : order.num != null ? '#' + order.num : '', time: time,
             items: byStation.get(sid),
             following: (!(options && options.voided) && Array.isArray(order.following) && order.following.length)
@@ -168,9 +168,9 @@
 
     /* À emporter / Table · push current items to the kitchen */
     function createTakeawayKitchenOrder(lines) {
-      const source = (Array.isArray(lines) ? lines : []).filter(l => l && l.qty > 0);
+      const source = (Array.isArray(lines) ? lines : []).filter(l => l && l.qty > 0 && (typeof dlvKitchenLine !== 'function' || dlvKitchenLine(l)));
       if (!source.length) return null;
-      const total = source.reduce((s, l) => s + l.price * l.qty, 0);
+      const total = source.reduce((s, l) => s + l.price * l.qty, 0) + (typeof dlvTag === 'function' ? +((dlvTag() || {}).fee || 0) : 0);   /* + les frais de la livraison maison, hors cuisine */
       const items = kitchenItemsFromLines(source);
       const order = {
         num: ++kdsOrderSeq, type: 'takeaway', status: 'new',
@@ -180,7 +180,7 @@
         opChannel: 'caisse',
         readyAt: null, items, relayLines: relayLinesFromCaisse(source), sentAt: new Date(),
         kitchenDispatchedAt: Date.now(),
-        paid: false, pickedUp: false, pickedUpAt: null, total,
+        paid: false, pickedUp: false, pickedUpAt: null, total, delivery: typeof dlvTag === 'function' ? dlvTag() : undefined,
       };
       kdsOrders.push(order);
       /* The client on the note follows it onto the board (sale-client.js). */

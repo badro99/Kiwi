@@ -390,7 +390,7 @@
         notCounted: 'non compté',
         handoverWord: 'Passation',
         reopenWord: 'Clôture n°',
-        methodLabels: { cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR' },
+        methodLabels: Object.assign({ cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR', platform: 'Plateforme' }, typeof dlvMethodLabels === 'function' ? dlvMethodLabels() : null),
         fmt: (n) => fmtMAD(n).replace(/\s*MAD\s*$/, ''),
       };
     }

@@ -149,24 +149,25 @@ var SHELL = [
   '/assets/pages-pro-spa-starter.js?v=9',
   '/assets/cash-sessions.js?v=18',
   '/assets/simple-food-cost.js?v=29',
-  '/assets/finance.js?v=21',
+  '/assets/finance.js?v=22',
   '/assets/conformite.js?v=8',
   '/dashboard.html',
   '/assets/dashboard-shell.css?v=15',
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
-  '/assets/caisse-accounting.js?v=37',
+  '/assets/caisse-accounting.js?v=39',
   '/assets/caisse-floor.js?v=24',
-  '/assets/caisse-kitchen.js?v=31',
+  '/assets/caisse-kitchen.js?v=33',
   '/assets/caisse/receipts.js?v=5',
   '/assets/caisse/closing.js?v=2',
+  '/assets/caisse/delivery.js?v=2',
   '/assets/caisse/workflows-loader.js?v=3',
   '/assets/caisse/dish-words.js?v=1',
-  '/assets/caisse/catalogue.js?v=25',
+  '/assets/caisse/catalogue.js?v=26',
   '/assets/staff-perms-till.js?v=11',
-  '/assets/caisse/till-frame.js?v=23',
+  '/assets/caisse/till-frame.js?v=25',
   '/assets/caisse/orders.js?v=2',
-  '/assets/caisse/payment.js?v=10',
+  '/assets/caisse/payment.js?v=11',
   '/assets/caisse/split-tender.js?v=10',
   '/assets/caisse/shift.js?v=5',
   '/assets/caisse/settings.js?v=3',
@@ -245,7 +246,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=34',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2104',
-  '/assets/pages/dashboard-startup.js?v=319',
+  '/assets/pages/dashboard-startup.js?v=320',
   '/assets/pages/dashboard-loader.js?v=118',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -395,14 +396,14 @@ var SHELL = [
   '/assets/expenses/sheet.js?v=8',
   '/assets/expenses/style.js?v=2',
   '/assets/queue-recovery.js?v=15',
-  '/assets/channel-sales.js?v=10',
+  '/assets/channel-sales.js?v=11',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=61',
+  '/assets/day-report.js?v=62',
   '/assets/report.js?v=11',
-  '/assets/day-report-dash.js?v=53',
+  '/assets/day-report-dash.js?v=54',
   '/assets/day-report-export.js?v=30',
   '/assets/month-report.js?v=18',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
@@ -494,8 +495,9 @@ var SHELL = [
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=19',
-  '/assets/charges-engine.js?v=3',
-  '/assets/charges.js?v=4',
+  '/assets/delivery.js?v=1',
+  '/assets/charges-engine.js?v=4',
+  '/assets/charges.js?v=5',
   '/assets/clients-store.js?v=71',
   '/assets/clients-book.js?v=78',
   '/assets/clients-directory.js?v=51',
@@ -540,7 +542,7 @@ var SHELL = [
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
-  '/assets/kitchen-relay.js?v=24',
+  '/assets/kitchen-relay.js?v=25',
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
@@ -596,7 +598,7 @@ var SHELL = [
   '/assets/kit/strings/kds.en.js?v=3',
   '/assets/kit/strings/kds.ar.js?v=3',
   '/assets/kit/controls/button.js?v=1',
-  '/assets/kit/kds.js?v=9',
+  '/assets/kit/kds.js?v=10',
   '/assets/kit/kds-board.js?v=2',
   /* and the till's menu and bill on the kit, behind kiwiSkin2027:till (stage 4). */
   '/assets/kit/controls/chip.js?v=1',
@@ -606,11 +608,11 @@ var SHELL = [
   '/assets/kit/elements.js?v=4',
   '/assets/kit/layout.js?v=1',
   '/assets/kit/nav.js?v=10',
-  '/assets/kit/till.js?v=34',
-  '/assets/kit/till-frame.js?v=15',
+  '/assets/kit/till.js?v=35',
+  '/assets/kit/till-frame.js?v=16',
   '/assets/kit/till-attendance.js?v=1',
   '/assets/kit/till-online.js?v=5',
-  '/assets/kit/till-z.js?v=1',
+  '/assets/kit/till-z.js?v=2',
   '/assets/retail-scan.js?v=14',
   '/assets/caisse-dna.css?v=10',
   '/assets/caisse-dna.js?v=3',

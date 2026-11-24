@@ -2245,7 +2245,7 @@ section('Whole-project regressions');
        qui l'applique dans priceOrder, puis la caisse, Serveur et l'onglet
        « Promotions » du tableau de bord, en vrais clics sur la démo. */
     'promo-rules-properties-test.mjs', 'wave-p-money-test.mjs',
-    'menu-promos-test.mjs',
+    'menu-promos-test.mjs', 'delivery-platforms-test.mjs',
     'menu-promos-server-test.mjs',
     'menu-promos-browser-test.mjs',
     'menu-promos-properties-test.mjs', 'formula-extra-drink-browser-test.mjs', 'waiter-orders-off-inbox-test.mjs', 'empty-visit-release-test.mjs', 'empty-visit-till-browser-test.mjs', 'outbox-stale-lock-test.mjs', 'till-verify-hiccup-test.mjs', 'stuck-guard-test.mjs', 'vision-size-run-test.mjs', 'agent-size-run-test.mjs', 'agent-size-run-browser-test.mjs', 'agent-doc-error-browser-test.mjs', 'ai-retired-model-test.mjs', 'inventory-scan-browser-test.mjs', 'calm-rerender-browser-test.mjs', 'serveur-toast-tap-browser-test.mjs', 'serveur-tap-under-poll-browser-test.mjs', 'serveur-stale-visit-payment-test.mjs', 'serveur-sent-line-edit-test.mjs', 'serveur-install-button-browser-test.mjs', 'serveur-hung-request-browser-test.mjs', 'serveur-notice-language-browser-test.mjs', 'serveur-move-pending-browser-test.mjs', 'serveur-reopened-payment-browser-test.mjs', 'serveur-merge-pending-browser-test.mjs', 'serveur-accepted-edit-retry-browser-test.mjs',

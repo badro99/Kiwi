@@ -93,7 +93,7 @@
     ticket: function (tk, compressed) {
       var lane = this.str('lane', 'new'), tone = this.tone(tk), act = ACTION[lane];
       var src = tk.source || {};
-      var srcIcon = src.kind === 'delivery' ? icon('two_wheeler', 24) : '';
+      var srcIcon = src.kind === 'delivery' ? (src.logo ? '<img src="' + esc(src.logo) + '" width="24" height="24" alt="" style="border-radius:6px;vertical-align:middle;margin-inline-end:6px">' : icon('two_wheeler', 24)) : '';
       var chips = (tk.chips || []).map(function (c) { return '<span class="src k-callout">' + esc(c) + '</span>'; }).join('');
       var items = tk.items || [];
       var body = '';

@@ -149,7 +149,7 @@ const FEATURES = {
   retailcredit: { keys: ['entries', 'seq'],                        max: 600000 },
   returns:      { keys: ['list'],                                  max: 400000 },
   rooms:        { keys: ['list', 'rooms'],                         max: 400000 },
-  kds:          { keys: ['stations', 'list'],                      max: 200000 },
+  kds:          { keys: ['stations', 'list'],                      max: 200000 }, delivery: { keys: ['platforms', 'house', 'prices', 'choices'], max: 400000 }, // livraison : prix par plateforme hors de la carte publique (assets/delivery.js)
   payroll:      { keys: ['periods', 'list'],                       max: 400000 },
   suppliers:    { keys: ['list'],                                  max: 200000 },
   procurement:  { keys: ['suppliers', 'orders', 'receipts', 'returns', 'invoices', 'seq'], max: 900000 },
@@ -478,7 +478,7 @@ function stripTeamCodes(doc) {
 function stripAgentActions() { return { items: [], versions: [] }; }
 function stripBriefing() { return { days: [] }; }
 function stripRetention() { return { settings: null, offers: null, sends: [] }; }
-function stripCharges() { return { lines: [], social: { rate: null }, commissions: { methods: {}, channels: {} } }; }
+function stripCharges() { return { lines: [], social: { rate: null }, commissions: { methods: {}, channels: {}, fees: {} } }; }
 /* Les fiches techniques du tableau de bord (assets/restaurant-recipes.js) :
  * grammages et rendements, le savoir-faire de la maison. Seul dashboard.html
  * charge ce module ; la caisse chiffre ses ventes par `costs` (KiwiCost.of),
@@ -576,9 +576,9 @@ export function ownBriefingDays(doc, merchant) {
  * pointage, paie, avoirs, retours, réservations restent bloqués. */
 const PENDING_SETUP_FEATURES = new Set([ // + horaires, fiche légale, ticket, relance : des réglages aussi (2026-11-19)
   'team', 'floorplan', 'services', 'rooms', HOTEL_UNITS_FEATURE, 'kds', 'foodtrade', 'discountpolicy', 'fidelity',
-  'recipes', 'costs', 'promotions', 'suppliers', 'hours', 'business', 'receipt', 'retention',
+  'recipes', 'costs', 'delivery', 'promotions', 'suppliers', 'hours', 'business', 'receipt', 'retention',
 ]);
-const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'monthreport', 'policies', 'foodtrade', 'guestpage', STOREFRONT_FEATURE]);
+const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'delivery', 'discountpolicy', 'monthreport', 'policies', 'foodtrade', 'guestpage', STOREFRONT_FEATURE]);
 
 /* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ? `entitledMerchant`
  * SANS `allowTill` : la session du compte, ou un opérateur nommé (pas une caisse,

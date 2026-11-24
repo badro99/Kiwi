@@ -633,7 +633,7 @@
         return;
       }
       const inView = (m) => activeCat === 'all' || (m.cat === activeCat && (!activeSub || m.subId === activeSub));
-      const items = activeCat === 'all' ? menuItems : menuItems.filter(inView);
+      const items = (typeof dlvList === 'function' ? dlvList : (x) => x)(activeCat === 'all' ? menuItems : menuItems.filter(inView));
       const soldOutTiles = soldOutAll.filter(inView).map(m => `
           <div class="menu-item is-86" data-86="${escTeam(String(m.id))}" data-cat="${m.cat}" style="--cat:${catColor[m.cat] || 'var(--forest)'}" role="button" tabindex="-1" aria-disabled="true">
             <span class="menu-item-86">Épuisé</span>
@@ -658,7 +658,7 @@
           `
           : `<span class="menu-item-add" aria-hidden="true">+</span>`;
         return `
-          <div class="menu-item ${qty > 0 ? 'is-in-cart' : ''}" data-menu-id="${m.id}" data-cat="${m.cat}" style="--cat:${catColor[m.cat] || 'var(--forest)'}"${qty > 0 ? '' : ' role="button" tabindex="0"' /* en panier, ses − et + portent le clavier : pas de bouton dans un bouton */}>
+          <div class="menu-item ${qty > 0 ? 'is-in-cart' : ''}${m.dlvOff ? ' is-dlv-off' : ''}" data-menu-id="${m.id}" data-cat="${m.cat}" style="--cat:${catColor[m.cat] || 'var(--forest)'}"${qty > 0 ? '' : ' role="button" tabindex="0"' /* en panier, ses − et + portent le clavier : pas de bouton dans un bouton */}>
             ${qty > 0 ? `<span class="menu-item-badge mono">${qty}</span>` : ''}
             <span class="menu-item-art">${menuArt(m.id, m.cat, m.name, m.subLabel, m.photo)}</span>
             <span class="menu-item-cat">${m.formula ? '<span class="menu-item-optflag">Formule</span> · ' : ''}${escTeam(subLabelL(m) || catLabelL(m.cat) || '')}</span>
@@ -690,7 +690,7 @@
       /* Un identifiant orphelin · groupe supprimé au bureau pendant que la
          caisse tournait · est écarté ici. Demander un choix qui n'existe plus
          ouvrirait une fenêtre sans réponse possible, et bloquerait la vente. */
-      return ids.map(id => lib.find(g => g && g.id === id)).filter(Boolean);
+      return (typeof dlvGroups === 'function' ? dlvGroups : (x) => x)(ids.map(id => lib.find(g => g && g.id === id)).filter(Boolean));
     }
     const optSig  = (opts) => (opts || []).map(o => o.c).join('|');
     const optText = (opts) => (opts || []).map(o => o.cn).join(' · ');
@@ -731,7 +731,7 @@
        prix d'happy hour payé à 19 h 10). Le serveur refait le calcul à l'envoi en cuisine (priceOrder), il fait foi. */
     function promoPrice(item, unit) {
       const P = window.KiwiMenuPromos, codes = codesHere(), all = (carteState.promos || []).concat(codes);
-      const hit = (P && all.length)
+      const hit = (P && all.length && !(typeof dlvNoPromo === 'function' && dlvNoPromo()))
         ? P.resolve(all, { itemId: item.id, catId: item.cat }, unit, Date.now(), codes.map(p => p.code)) : null;
       return hit ? { price: hit.price, promo: hit.promo } : { price: unit, promo: null };
     }
@@ -901,7 +901,7 @@
     function standaloneMenuItem(itemId) {
       const source = (carteState.formulaItems || []).find(m => String(m.id) === String(itemId)) || menuItems.find(m => String(m.id) === String(itemId));
       if (source && (source.archived || source.formulaOnly || source.avail === false)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Article non vendable individuellement')); return null; }
-      return menuItems.find(m => m.id === itemId) || null;
+      return (typeof dlvItem === 'function' ? dlvItem : (x) => x)(menuItems.find(m => m.id === itemId) || null);
     }
 
     function addToCart(itemId) {

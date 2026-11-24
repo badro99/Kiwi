@@ -51,6 +51,7 @@
         "KiwiConfig",
         "KiwiCost",
         "KiwiDayReport",
+        "KiwiDelivery",
         "KiwiDiscountPolicy",
         "KiwiEnv",
         "KiwiFloorCore",

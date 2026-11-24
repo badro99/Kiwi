@@ -6,7 +6,7 @@
       const set = (id, txt) => { const el = $(id); if (el) el.textContent = txt; };
       set('#stat-txns',          String(t.txns));
       set('#stat-txns-delta',    t.revenue > 0
-        ? `Carte ${cardPct}% · Cash ${100 - cardPct}%`
+        ? `Carte ${cardPct}% · Cash ${t.cash != null ? Math.round(t.cash / t.revenue * 100) : 100 - cardPct}%`   /* une plateforme n'est ni l'un ni l'autre */
         : 'Aucun encaissement');
       set('#stat-avg',           fmtMAD(t.txns > 0 ? t.revenue / t.txns : 0));
       set('#stat-tables',        String(shift.tablesPaid));

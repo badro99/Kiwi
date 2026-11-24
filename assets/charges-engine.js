@@ -59,7 +59,7 @@
     return out;
   }
 
-  function blank() { return { v: 1, lines: [], social: { rate: null }, commissions: { methods: {}, channels: {} }, updatedAt: 0 }; }
+  function blank() { return { v: 1, lines: [], social: { rate: null }, commissions: { methods: {}, channels: {}, fees: {} }, updatedAt: 0 }; }
 
   /* Un document venu d'ailleurs (serveur, autre appareil, ancienne version)
    * ramené à sa forme : toute valeur hors bornes est écartée, jamais
@@ -101,6 +101,14 @@
         if (v == null || v === '' || !(num(v) >= 0 && num(v) <= MAX_RATE)) return;
         out.commissions[k][String(key).toLowerCase().slice(0, 24)] = r2(num(v));
       });
+    });
+    /* Les frais fixes par commande d'une plateforme de livraison (MAD), à côté
+     * de son pourcentage (assets/delivery.js). */
+    const fees = d.commissions && d.commissions.fees;
+    if (fees && typeof fees === 'object') Object.keys(fees).forEach((key) => {
+      const v = fees[key];
+      if (v == null || v === '' || !(num(v) >= 0 && num(v) <= 1000)) return;
+      out.commissions.fees[String(key).toLowerCase().slice(0, 24)] = r2(num(v));
     });
     return out;
   }
@@ -165,7 +173,7 @@
     let method = 0;
     parts.forEach((p) => { method += p.amount * rateOf(c.methods, p.method) / 100; });
     const ch = channelKey(sale.channel);
-    const channel = OWN_CHANNELS[ch] ? 0 : amount * rateOf(c.channels, ch) / 100;
+    const channel = OWN_CHANNELS[ch] ? 0 : amount * rateOf(c.channels, ch) / 100 + rateOf(c.fees, ch);
     return { method, channel };
   }
   function commissionsFor(doc, sales) {
@@ -188,7 +196,7 @@
     const methods = new Set(), channels = new Set();
     (sales || []).forEach((s) => {
       const parts = Array.isArray(s.parts) && s.parts.length ? s.parts : [{ method: s.method }];
-      parts.forEach((p) => { const m = String(p && p.method || '').toLowerCase(); if (m && m !== 'cash' && m !== 'split' && m !== 'credit') methods.add(m); });
+      parts.forEach((p) => { const m = String(p && p.method || '').toLowerCase(); if (m && m !== 'cash' && m !== 'split' && m !== 'credit' && m !== 'platform') methods.add(m); });
       const ch = channelKey(s.channel);
       if (ch && !OWN_CHANNELS[ch]) channels.add(ch);
     });

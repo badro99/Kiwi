@@ -124,7 +124,7 @@
     function kdsTypeChip(o) {
       if (o.type === 'glovo')    return `<span class="kit-type glovo">Glovo · ${kdsEsc(o.code)}</span>`;
       if (o.type === 'yassir')   return `<span class="kit-type yassir">Yassir · ${kdsEsc(o.code)}</span>`;
-      if (o.type === 'takeaway') return `<span class="kit-type takeaway">À emporter</span>`;
+      if (o.type === 'takeaway') return o.delivery && typeof dlvBadge === 'function' ? `<span class="kit-type delivery">${dlvBadge(o)}</span>` : `<span class="kit-type takeaway">À emporter</span>`;
       /* Le serveur de la table, sur le ticket. La brigade avait la table mais
          jamais le nom, donc « c'est pour qui, la 7 ? » se criait à travers la
          cuisine à chaque service. L'affectation existe sur le plan de salle

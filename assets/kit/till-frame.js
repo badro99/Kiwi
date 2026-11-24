@@ -144,7 +144,7 @@
         id: s.id, title: s.title,
         items: (s.items || []).map(function (it) {
           next[it.id] = it.qty || 0;
-          return { id: it.id, name: it.name, price: it.price, options: !!it.options, soldOut: !!it.soldOut };
+          return { id: it.id, name: it.name, price: it.price, options: !!it.options, soldOut: !!it.soldOut, outLabel: it.outLabel ? String(it.outLabel) : '' };   /* outLabel : « Pas sur Glovo » à la place d'« Épuisé » */
         })
       };
     });

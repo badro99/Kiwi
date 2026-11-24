@@ -224,6 +224,7 @@
        is later dismissed. A reload/Escape after cash was accepted or the reader
        approved must never leave the order due and invite a second charge. */
     async function finalizeTender(method) {
+      if (typeof dlvMethod === 'function') method = dlvMethod(method);   /* une plateforme a encaissé (caisse/delivery.js) */
       /* The loyalty reward approves first (caisse-loyalty-reward.js). */
       const holds = [];
       document.dispatchEvent(new CustomEvent('kiwi:tender-gate', { detail: { method, hold: (p) => holds.push(p) } }));

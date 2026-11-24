@@ -86,7 +86,7 @@
      (or Sold out in its place), the count once it is on the bill, then that it
      has options. A voice user says what they read; a reader hears the count. */
   function tileLabel(it, qty) {
-    var parts = [it.name, it.soldOut ? t('menu.sold_out') : money(it.price)];
+    var parts = [it.name, it.soldOut ? (it.outLabel || t('menu.sold_out')) : money(it.price)];
     if (qty) parts.push(t('menu.on_bill', { n: qty }));
     if (it.options) parts.push(t('menu.has_options'));
     return parts.join(t('menu.label_sep') + ' ');
@@ -130,7 +130,7 @@
                  name says what it is (owner, 26 Oct 2026). */
               (it.img ? '<img class="ph" src="' + esc(it.img) + '" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">' : '') +
               '<span class="nm k-body-s">' + esc(it.name) + '</span> ' +
-              '<span class="pr k-callout k-num">' + esc(it.soldOut ? t('menu.sold_out') : price) + '</span> ' +
+              '<span class="pr k-callout k-num">' + esc(it.soldOut ? (it.outLabel || t('menu.sold_out')) : price) + '</span> ' +
               /* The count takes the options mark's corner once the dish is on
                  the bill: the name keeps its whole width (owner, 2026-10-24). */
               (it.qty ? '<span class="q k-foot-s k-num" aria-hidden="true">' + esc(it.qty) + '</span>' : it.options ? icon('tune', 20, 'op') : '') + '</button>';

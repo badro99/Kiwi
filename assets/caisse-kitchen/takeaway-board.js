@@ -8,7 +8,7 @@
       if (back) back.style.display = (v === 'builder' && mode === 'vrap') ? '' : 'none';
       const meta = $('.main-head[data-mode-section="vrap"] .vrap-meta');
       if (meta) meta.style.display = (v === 'builder') ? '' : 'none';
-      if (v === 'board') renderVrapBoard();
+      if (v === 'board') { if (typeof dlvEnd === 'function') dlvEnd(true); renderVrapBoard(); }
     }
     function vrapElapsed(o) {
       const min = Math.max(0, Math.floor((Date.now() - o.sentAt.getTime()) / 60000));
@@ -35,7 +35,7 @@
      * reste = ce comptoir. Une commande purement locale (pas encore de numéro
      * de file) est forcément du comptoir elle aussi. */
     function vrapIsCounterSale(o) {
-      if (!o) return false;
+      if (!o) return false; if (o.delivery) return false;   /* livraison : elle attend son livreur */
       if (o.opChannel) return o.opChannel !== 'kiwi';
       return o.opNum == null;
     }
@@ -65,7 +65,7 @@
           /* Do not offer handover while the card still says "En préparation".
              That shortcut silently marked the order ready and served in one
              click, hiding the readiness step from every KDS-enabled merchant. */
-          action = readyBtn || `<button class="vrap-act" data-vrap-handover="${o.num}">Remettre au client</button>`;
+          action = readyBtn || `<button class="vrap-act" data-vrap-handover="${o.num}">${typeof dlvHandoverLabel === 'function' ? dlvHandoverLabel(o) : 'Remettre au client'}</button>`;
         }
         /* Older paid counter sales can lack a served milestone. They need the
            same audited, non-financial escape hatch as phone orders; payment
@@ -80,7 +80,7 @@
             ${o.pickedUp ? 'Remise au client.' : 'En attente de remise. « Retirer du suivi » ne modifie ni le paiement ni les ventes.'}</div>` : '';
       return `<div class="vrap-order${ready ? ' is-ready' : ''}${o.paid ? ' is-paid' : ' is-open'}" data-vrap-num="${o.num}">
         <div class="vrap-order-head">
-          <span class="vrap-order-num">${ticketNo(o)}</span>
+          <span class="vrap-order-num">${ticketNo(o)}${o.delivery && typeof dlvBadge === 'function' ? dlvBadge(o) : ''}</span>
           <span class="vrap-order-time"><i data-lucide="clock"></i> ${vrapElapsed(o)}</span>
         </div>
         <div class="vrap-order-badges">
@@ -123,7 +123,7 @@
     function vrapHistoryRow(o) {
       const ts = vrapHandoverTimestamp(o.pickedUpTs);
       return `<div class="vrap-hrow">
-        <span class="vrap-hrow-num">${ticketNo(o)}</span>
+        <span class="vrap-hrow-num">${ticketNo(o)}${o.delivery && typeof dlvBadge === 'function' ? dlvBadge(o) : ''}</span>
         <span class="vrap-hrow-items">${vrapItemsLine(o)}</span>
         <span class="vrap-hrow-total">${fmtMAD(o.total)}</span>
         <span class="vrap-hrow-done"><i data-lucide="check"></i> ${ts ? 'Remise ' + kdsEsc(vrapHandoverTime(ts)) : 'Remise · heure inconnue'}</span>
@@ -405,7 +405,7 @@
       if (mode !== 'vrap') setMode('vrap');
       currentOrder().setEditing(num);
       currentOrder().setDiscount(null);
-      currentOrder().replaceCart(vrapFinancialItems(o).map(i => {
+      currentOrder().replaceCart(vrapFinancialItems(o).concat(typeof dlvFeeLines === 'function' ? dlvFeeLines(o) : []).map(i => {
         const m = menuLineFind(x => x.name === i.n);
         return {
           uid:   newLineUid(),

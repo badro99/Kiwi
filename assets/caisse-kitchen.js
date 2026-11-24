@@ -192,7 +192,7 @@
           mode: order.type === 'dineIn' ? 'table' : 'takeout',
           table: order.table || '',
           settledSessions: order.type === 'dineIn' ? settledVisitsFor(order.table) : undefined,
-          server: order.server || '',
+          server: order.server || '', delivery: order.delivery || undefined,
           course: order.course === 'suite' ? 'suite' : undefined,
           following: Array.isArray(order.following)
             ? order.following.map(i => ({ name: i.n, qty: i.q })) : undefined,
@@ -716,7 +716,7 @@
     function kdsTypeChip(o) {
       if (o.type === 'glovo')    return `<span class="kit-type glovo">Glovo · ${kdsEsc(o.code)}</span>`;
       if (o.type === 'yassir')   return `<span class="kit-type yassir">Yassir · ${kdsEsc(o.code)}</span>`;
-      if (o.type === 'takeaway') return `<span class="kit-type takeaway">À emporter</span>`;
+      if (o.type === 'takeaway') return o.delivery && typeof dlvBadge === 'function' ? `<span class="kit-type delivery">${dlvBadge(o)}</span>` : `<span class="kit-type takeaway">À emporter</span>`;
       /* Le serveur de la table, sur le ticket. La brigade avait la table mais
          jamais le nom, donc « c'est pour qui, la 7 ? » se criait à travers la
          cuisine à chaque service. L'affectation existe sur le plan de salle
@@ -943,7 +943,7 @@
       }));
       const chips = [];
       let source;
-      if (o.type === 'glovo' || o.type === 'yassir') source = { kind: 'delivery', label: (o.type === 'glovo' ? 'Glovo' : 'Yassir') + (o.code ? ' ' + o.code : '') };
+      if (o.delivery && typeof dlvSource === 'function') source = dlvSource(o); else if (o.type === 'glovo' || o.type === 'yassir') source = { kind: 'delivery', label: (o.type === 'glovo' ? 'Glovo' : 'Yassir') + (o.code ? ' ' + o.code : '') };
       else if (o.type === 'takeaway') source = { kind: 'takeaway', label: kkt('kds.source.takeaway') };
       else {
         source = { kind: 'table', label: kkt('kds.source.table', { table: String(o.table == null ? '' : o.table) }) };
@@ -1326,7 +1326,7 @@
           payload: {
             title: ((options && options.voided) ? 'ANNULÉ · ' : order.course === 'suite' ? 'SUITE · ' : '') + String(names[sid] || 'Cuisine').toUpperCase(),
             station: sid,
-            table: tableLabel,
+            table: (typeof dlvTicketHead === 'function' && dlvTicketHead(order)) || tableLabel,
             order: order.opNum != null ? '#' + order.opNum : order.num != null ? '#' + order.num : '', time: time,
             items: byStation.get(sid),
             following: (!(options && options.voided) && Array.isArray(order.following) && order.following.length)
@@ -1360,9 +1360,9 @@
 
     /* À emporter / Table · push current items to the kitchen */
     function createTakeawayKitchenOrder(lines) {
-      const source = (Array.isArray(lines) ? lines : []).filter(l => l && l.qty > 0);
+      const source = (Array.isArray(lines) ? lines : []).filter(l => l && l.qty > 0 && (typeof dlvKitchenLine !== 'function' || dlvKitchenLine(l)));
       if (!source.length) return null;
-      const total = source.reduce((s, l) => s + l.price * l.qty, 0);
+      const total = source.reduce((s, l) => s + l.price * l.qty, 0) + (typeof dlvTag === 'function' ? +((dlvTag() || {}).fee || 0) : 0);   /* + les frais de la livraison maison, hors cuisine */
       const items = kitchenItemsFromLines(source);
       const order = {
         num: ++kdsOrderSeq, type: 'takeaway', status: 'new',
@@ -1372,7 +1372,7 @@
         opChannel: 'caisse',
         readyAt: null, items, relayLines: relayLinesFromCaisse(source), sentAt: new Date(),
         kitchenDispatchedAt: Date.now(),
-        paid: false, pickedUp: false, pickedUpAt: null, total,
+        paid: false, pickedUp: false, pickedUpAt: null, total, delivery: typeof dlvTag === 'function' ? dlvTag() : undefined,
       };
       kdsOrders.push(order);
       /* The client on the note follows it onto the board (sale-client.js). */
@@ -1457,7 +1457,7 @@
       if (back) back.style.display = (v === 'builder' && mode === 'vrap') ? '' : 'none';
       const meta = $('.main-head[data-mode-section="vrap"] .vrap-meta');
       if (meta) meta.style.display = (v === 'builder') ? '' : 'none';
-      if (v === 'board') renderVrapBoard();
+      if (v === 'board') { if (typeof dlvEnd === 'function') dlvEnd(true); renderVrapBoard(); }
     }
     function vrapElapsed(o) {
       const min = Math.max(0, Math.floor((Date.now() - o.sentAt.getTime()) / 60000));
@@ -1484,7 +1484,7 @@
      * reste = ce comptoir. Une commande purement locale (pas encore de numéro
      * de file) est forcément du comptoir elle aussi. */
     function vrapIsCounterSale(o) {
-      if (!o) return false;
+      if (!o) return false; if (o.delivery) return false;   /* livraison : elle attend son livreur */
       if (o.opChannel) return o.opChannel !== 'kiwi';
       return o.opNum == null;
     }
@@ -1514,7 +1514,7 @@
           /* Do not offer handover while the card still says "En préparation".
              That shortcut silently marked the order ready and served in one
              click, hiding the readiness step from every KDS-enabled merchant. */
-          action = readyBtn || `<button class="vrap-act" data-vrap-handover="${o.num}">Remettre au client</button>`;
+          action = readyBtn || `<button class="vrap-act" data-vrap-handover="${o.num}">${typeof dlvHandoverLabel === 'function' ? dlvHandoverLabel(o) : 'Remettre au client'}</button>`;
         }
         /* Older paid counter sales can lack a served milestone. They need the
            same audited, non-financial escape hatch as phone orders; payment
@@ -1529,7 +1529,7 @@
             ${o.pickedUp ? 'Remise au client.' : 'En attente de remise. « Retirer du suivi » ne modifie ni le paiement ni les ventes.'}</div>` : '';
       return `<div class="vrap-order${ready ? ' is-ready' : ''}${o.paid ? ' is-paid' : ' is-open'}" data-vrap-num="${o.num}">
         <div class="vrap-order-head">
-          <span class="vrap-order-num">${ticketNo(o)}</span>
+          <span class="vrap-order-num">${ticketNo(o)}${o.delivery && typeof dlvBadge === 'function' ? dlvBadge(o) : ''}</span>
           <span class="vrap-order-time"><i data-lucide="clock"></i> ${vrapElapsed(o)}</span>
         </div>
         <div class="vrap-order-badges">
@@ -1572,7 +1572,7 @@
     function vrapHistoryRow(o) {
       const ts = vrapHandoverTimestamp(o.pickedUpTs);
       return `<div class="vrap-hrow">
-        <span class="vrap-hrow-num">${ticketNo(o)}</span>
+        <span class="vrap-hrow-num">${ticketNo(o)}${o.delivery && typeof dlvBadge === 'function' ? dlvBadge(o) : ''}</span>
         <span class="vrap-hrow-items">${vrapItemsLine(o)}</span>
         <span class="vrap-hrow-total">${fmtMAD(o.total)}</span>
         <span class="vrap-hrow-done"><i data-lucide="check"></i> ${ts ? 'Remise ' + kdsEsc(vrapHandoverTime(ts)) : 'Remise · heure inconnue'}</span>
@@ -1854,7 +1854,7 @@
       if (mode !== 'vrap') setMode('vrap');
       currentOrder().setEditing(num);
       currentOrder().setDiscount(null);
-      currentOrder().replaceCart(vrapFinancialItems(o).map(i => {
+      currentOrder().replaceCart(vrapFinancialItems(o).concat(typeof dlvFeeLines === 'function' ? dlvFeeLines(o) : []).map(i => {
         const m = menuLineFind(x => x.name === i.n);
         return {
           uid:   newLineUid(),

@@ -29,15 +29,24 @@
   var cents = function (n) { return Math.round((Number(n) || 0) * 100); };
 
   var METHOD = { cash: 'pay.cash', card: 'z.method.card', credit: 'z.method.account', delivery: 'z.method.account' };
+  /* Une plateforme de livraison (assets/delivery.js) a encaissé pour le
+     restaurant : elle a sa ligne à son nom (« Glovo : 4 000 MAD »), jamais
+     fondue dans la carte ni dans « autre ». Le rapport la range sous l'id du
+     canal ; une plateforme ajoutée par le patron s'écrit `pf` + son nom. */
+  var PLATFORM = { glovo: 'Glovo', kooul: 'Kooul', yassir: 'Yassir' };
+  var platformName = function (m) { return PLATFORM[m] || (/^pf[a-z]+$/.test(m) ? m.charAt(2).toUpperCase() + m.slice(3) : ''); };
   function methodRows(methods) {
-    var acc = {};
+    var acc = {}, own = [];
     Object.keys(methods || {}).forEach(function (m) {
+      var name = platformName(m);
+      if (name) { if (cents(methods[m])) own.push({ label: name, cents: cents(methods[m]) }); return; }
       var key = METHOD[m] || 'z.method.other';
       acc[key] = (acc[key] || 0) + cents(methods[m]);
     });
     return ['pay.cash', 'z.method.card', 'z.method.account', 'z.method.other']
       .filter(function (k) { return acc[k]; })
-      .map(function (k) { return { label: t(k), cents: acc[k] }; });
+      .map(function (k) { return { label: t(k), cents: acc[k] }; })
+      .concat(own.sort(function (a, b) { return b.cents - a.cents; }));
   }
 
   function row(label, value, cls) {

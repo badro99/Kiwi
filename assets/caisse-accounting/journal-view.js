@@ -25,7 +25,7 @@
         `<div class="rp-kpi${lead ? ' is-lead' : ''}"><div class="rp-kpi-l">${rpEsc(l)}</div>`
         + `<div class="rp-kpi-v">${rpEsc(v)}${sub ? `<small>${rpEsc(sub)}</small>` : ''}</div></div>`;
       const row = (l, v) => `<div class="rp-r"><span class="rp-r-l">${rpEsc(l)}</span><span class="rp-r-v">${rpEsc(v)}</span></div>`;
-      const M = { cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR', link: 'Lien' };
+      const M = { cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR', link: 'Lien', platform: 'Plateforme' };
 
       /* `gross` est le brut AVANT remboursements, `methods` les porte déjà en
          négatif : afficher l'un au-dessus des autres faisait dire à l'écran
@@ -156,7 +156,7 @@
         const isComplimentary = e.kind === 'complimentary' || e.settlementKind === 'complimentary' || e.method === 'complimentary';
         const icCls  = isRefund ? 'refund' : (isComplimentary ? 'complimentary' : e.method);
         const icon   = isRefund ? 'corner-up-left' : (isComplimentary ? 'gift' : (e.method === 'cash' ? 'banknote' : 'credit-card'));
-        const mLabel = isComplimentary ? 'Offerte' : ({ cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR' }[e.method] || 'Autre');
+        const mLabel = isComplimentary ? 'Offerte' : (e.method === 'platform' && typeof dlvLabel === 'function') ? dlvLabel(e) : ({ cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR' }[e.method] || 'Autre');
         const fresh  = e.id === lastSaleId ? ' jr-entry--fresh' : '';
         const amtTxt = isRefund
           ? '− ' + fmtMAD(Math.abs(e.amount))

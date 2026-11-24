@@ -926,7 +926,7 @@
       const row = (cls, label, v, p) => `<div class="fin-pnl-row ${cls}"><span class="fin-pnl-l">${label}</span><span class="fin-pnl-v">${v}</span><span class="fin-pnl-p">${p || ''}</span><span></span></div>`;
       const out = [];
       if (net.estimated && net.margin != null) out.push(row('fin-pnl-row-sub', `${esc(c.marginAll)} <small>· ${esc(c.estimated)}</small>`, cash(net.margin), ''));
-      if (net.commissions.total > 0) out.push(row('fin-pnl-row-sub', `− ${esc(c.commissions)}`, cash(net.commissions.total), ''));
+      if (net.commissions.total > 0) out.push(row('fin-pnl-row-sub', `− ${esc(c.commissions)}`, cash(net.commissions.total), '')); Object.keys(net.commissions.byKey || {}).filter((k) => k.indexOf('ch:') === 0 && net.commissions.byKey[k] > 0).forEach((k) => out.push(row('fin-pnl-row-sub', `<small>· ${esc(K.channelLabel ? K.channelLabel(k.slice(3)) : k.slice(3))}</small>`, cash(net.commissions.byKey[k]), '')));   /* chaque plateforme : sa commission et ses frais par commande */
       if (net.staff) out.push(row('fin-pnl-row-sub', `− ${esc(net.staff.socialSet ? c.staff : c.staffNoSocial)}`, cash(net.staff.total), ''));
       if (net.fixed.total > 0) out.push(row('fin-pnl-row-sub', `− ${esc(c.fixed(K.daysFor(finPeriod).length))}`, cash(net.fixed.total), ''));
       const netPct = net.net != null && net.salesHT > 0 ? (net.net / net.salesHT) * 100 : null;

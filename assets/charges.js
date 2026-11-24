@@ -269,8 +269,8 @@
   }
   const methodLabel = (m) => (S().method[m] || (m.charAt(0).toUpperCase() + m.slice(1)));
   const channelLabel = (c) => {
-    const known = { glovo: 'Glovo', yassir: 'Yassir', jumia: 'Jumia Food', shopify: 'Shopify', whatsapp: 'WhatsApp', uber: 'Uber Eats', deliveroo: 'Deliveroo', kaalix: 'Kaalix' };
-    return known[c] || (c.charAt(0).toUpperCase() + c.slice(1));
+    const known = { glovo: 'Glovo', yassir: 'Yassir', kooul: 'Kooul', livraison: 'Livraison maison', jumia: 'Jumia Food', shopify: 'Shopify', whatsapp: 'WhatsApp', uber: 'Uber Eats', deliveroo: 'Deliveroo', kaalix: 'Kaalix' };
+    return known[c] || (/^pf[a-z]+$/.test(c) ? c.charAt(2).toUpperCase() + c.slice(3) : c.charAt(0).toUpperCase() + c.slice(1));   // pf + nom : une plateforme ajoutée (assets/delivery.js)
   };
   const icon = (name, size) => {
     try { return window.KiwiIcon && window.KiwiIcon.svg ? window.KiwiIcon.svg(name, size || 18) : ''; } catch (_) { return ''; }
@@ -777,7 +777,7 @@
         const box = root.querySelector('[data-err-social]'); box.textContent = c.errRate; box.hidden = false;
         root.querySelector('[data-social]').setAttribute('aria-invalid', 'true');
       }
-      const commissions = { methods: Object.assign({}, next.commissions.methods), channels: Object.assign({}, next.commissions.channels) };
+      const commissions = { methods: Object.assign({}, next.commissions.methods), channels: Object.assign({}, next.commissions.channels), fees: Object.assign({}, next.commissions.fees) };
       root.querySelectorAll('[data-rate]').forEach((el) => {
         const kind = el.getAttribute('data-rate'), key = el.getAttribute('data-key');
         const v = parseNum(el.value);
@@ -811,7 +811,7 @@
   if (!bind()) document.addEventListener('DOMContentLoaded', bind, { once: true });
 
   window.KiwiCharges = {
-    doc, store, open, result, breakEven, monthly, configured, card, breakEvenCard, daysFor, today,
+    doc, store, open, result, breakEven, monthly, configured, card, breakEvenCard, daysFor, today, channelLabel,
     text: (k) => { const v = S()[k]; return typeof v === 'string' ? v : ''; },
     catLabel: (k) => S().cat[k] || S().cat.other,
     subscribe: (fn) => { subs.add(fn); return () => subs.delete(fn); },

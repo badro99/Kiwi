@@ -86,7 +86,7 @@
                    a 20 MAD refund display 2 transactions and a 40 MAD average basket. */
                 if ((e.amount > 0 || e.kind === 'complimentary') && e.kind !== 'refund') txns++;
                 revenueC += minor(e.amount);
-                if (e.method === 'cash') cashC += minor(e.amount); else cardC += minor(e.amount);
+                if (e.method === 'cash') cashC += minor(e.amount); else if (e.method !== 'platform') cardC += minor(e.amount);   // une plateforme a encaissé : ni espèces ni carte
                 const tip = e.tip || 0;
                 tipsC += minor(tip);
                 if (e.method === 'cash') cashTipsC += minor(tip);
@@ -733,7 +733,7 @@
         }
         entry.channel = tables[settlementTable] && tables[settlementTable].zone === 'terrasse' ? 'terrace' : 'dining';
       } else if (mode === 'vrap') {
-        entry.channel = 'takeaway';
+        entry.channel = 'takeaway'; if (typeof dlvSaleTag === 'function') dlvSaleTag(entry, vrapOrder);
         if (split && Number.isFinite(split.index)) {
           entry.id = entry.id + '-split-' + Number(split.index);
         }
@@ -1747,7 +1747,7 @@
       const set = (id, txt) => { const el = $(id); if (el) el.textContent = txt; };
       set('#stat-txns',          String(t.txns));
       set('#stat-txns-delta',    t.revenue > 0
-        ? `Carte ${cardPct}% · Cash ${100 - cardPct}%`
+        ? `Carte ${cardPct}% · Cash ${t.cash != null ? Math.round(t.cash / t.revenue * 100) : 100 - cardPct}%`   /* une plateforme n'est ni l'un ni l'autre */
         : 'Aucun encaissement');
       set('#stat-avg',           fmtMAD(t.txns > 0 ? t.revenue / t.txns : 0));
       set('#stat-tables',        String(shift.tablesPaid));
@@ -2337,7 +2337,7 @@
         notCounted: 'non compté',
         handoverWord: 'Passation',
         reopenWord: 'Clôture n°',
-        methodLabels: { cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR' },
+        methodLabels: Object.assign({ cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR', platform: 'Plateforme' }, typeof dlvMethodLabels === 'function' ? dlvMethodLabels() : null),
         fmt: (n) => fmtMAD(n).replace(/\s*MAD\s*$/, ''),
       };
     }
@@ -2577,7 +2577,7 @@
         `<div class="rp-kpi${lead ? ' is-lead' : ''}"><div class="rp-kpi-l">${rpEsc(l)}</div>`
         + `<div class="rp-kpi-v">${rpEsc(v)}${sub ? `<small>${rpEsc(sub)}</small>` : ''}</div></div>`;
       const row = (l, v) => `<div class="rp-r"><span class="rp-r-l">${rpEsc(l)}</span><span class="rp-r-v">${rpEsc(v)}</span></div>`;
-      const M = { cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR', link: 'Lien' };
+      const M = { cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR', link: 'Lien', platform: 'Plateforme' };
 
       /* `gross` est le brut AVANT remboursements, `methods` les porte déjà en
          négatif : afficher l'un au-dessus des autres faisait dire à l'écran
@@ -2708,7 +2708,7 @@
         const isComplimentary = e.kind === 'complimentary' || e.settlementKind === 'complimentary' || e.method === 'complimentary';
         const icCls  = isRefund ? 'refund' : (isComplimentary ? 'complimentary' : e.method);
         const icon   = isRefund ? 'corner-up-left' : (isComplimentary ? 'gift' : (e.method === 'cash' ? 'banknote' : 'credit-card'));
-        const mLabel = isComplimentary ? 'Offerte' : ({ cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR' }[e.method] || 'Autre');
+        const mLabel = isComplimentary ? 'Offerte' : (e.method === 'platform' && typeof dlvLabel === 'function') ? dlvLabel(e) : ({ cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR' }[e.method] || 'Autre');
         const fresh  = e.id === lastSaleId ? ' jr-entry--fresh' : '';
         const amtTxt = isRefund
           ? '− ' + fmtMAD(Math.abs(e.amount))
@@ -2876,7 +2876,7 @@
                    a 20 MAD refund display 2 transactions and a 40 MAD average basket. */
                 if ((e.amount > 0 || e.kind === 'complimentary') && e.kind !== 'refund') txns++;
                 revenueC += minor(e.amount);
-                if (e.method === 'cash') cashC += minor(e.amount); else cardC += minor(e.amount);
+                if (e.method === 'cash') cashC += minor(e.amount); else if (e.method !== 'platform') cardC += minor(e.amount);   // une plateforme a encaissé : ni espèces ni carte
                 const tip = e.tip || 0;
                 tipsC += minor(tip);
                 if (e.method === 'cash') cashTipsC += minor(tip);

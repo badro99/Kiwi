@@ -192,7 +192,7 @@
           mode: order.type === 'dineIn' ? 'table' : 'takeout',
           table: order.table || '',
           settledSessions: order.type === 'dineIn' ? settledVisitsFor(order.table) : undefined,
-          server: order.server || '',
+          server: order.server || '', delivery: order.delivery || undefined,
           course: order.course === 'suite' ? 'suite' : undefined,
           following: Array.isArray(order.following)
             ? order.following.map(i => ({ name: i.n, qty: i.q })) : undefined,
