@@ -387,7 +387,7 @@
       kSupplier: 'Fournisseur', kDate: 'Date', kDoc: 'N° pièce', kTotal: 'Montant total', kTpe: 'Total TPE', kTables: 'Tables détectées', kTablesN: ' tables', kItems: 'Lignes d’articles détectées', kMore: ' autres lignes…', kConf: 'Fiabilité ', kDone: 'Analyse terminée',
       reviewTitle: 'Lecture incertaine',
       reviewSub: 'Kiwi n’a pas pu lire ce document de façon fiable. Rien n’a été enregistré : vérifiez-le à la main.',
-      error: 'Erreur lors de l’analyse du document.',
+      error: 'Erreur lors de l’analyse du document.', unreadable: 'Ce navigateur n’ouvre pas ce fichier. Une photo HEIC : exportez-la en JPEG ou utilisez Safari.',
     },
     en: {
       btnTitle: 'Attach a photo or document (Invoice, Receipt, Menu, Floorplan, Item…)',
@@ -402,7 +402,7 @@
       kSupplier: 'Supplier', kDate: 'Date', kDoc: 'Document no.', kTotal: 'Total amount', kTpe: 'Card terminal total', kTables: 'Tables found', kTablesN: ' tables', kItems: 'Item lines found', kMore: ' more lines…', kConf: 'Confidence ', kDone: 'Analysis complete',
       reviewTitle: 'Uncertain reading',
       reviewSub: 'Kiwi could not read this document reliably. Nothing was recorded: check it by hand.',
-      error: 'Error during document analysis.',
+      error: 'Error during document analysis.', unreadable: 'This browser cannot open this file. A HEIC photo: export it as JPEG or use Safari.',
     },
     ar: {
       btnTitle: 'إرفاق صورة أو مستند (فاتورة، إيصال، قائمة، مخطط، منتج...)',
@@ -417,7 +417,7 @@
       kSupplier: 'المورّد', kDate: 'التاريخ', kDoc: 'رقم الوثيقة', kTotal: 'المبلغ الإجمالي', kTpe: 'مجموع جهاز الدفع', kTables: 'الطاولات المكتشفة', kTablesN: ' طاولات', kItems: 'سطور السلع المكتشفة', kMore: ' سطور أخرى…', kConf: 'درجة الثقة ', kDone: 'اكتمل التحليل',
       reviewTitle: 'قراءة غير مؤكدة',
       reviewSub: 'لم يتمكن Kiwi من قراءة هذا المستند بشكل موثوق. لم يُسجَّل أي شيء: تحقق منه يدوياً.',
-      error: 'حدث خطأ أثناء تحليل المستند.',
+      error: 'حدث خطأ أثناء تحليل المستند.', unreadable: 'هذا المتصفح لا يفتح هذا الملف. إن كانت صورة HEIC، صدّرها بصيغة JPEG أو استعمل Safari.',
     },
   };
   function T() { return LBL[getLang()] || LBL.fr; }
@@ -813,7 +813,7 @@
       if (!fileInput.files || !fileInput.files[0]) return;
       var file = fileInput.files[0];
       fileToDataUrl(file, function (err, dataUrl, name, type) {
-        if (err) { toast('Impossible de lire le fichier', true); return; }
+        if (err) { toast(T().unreadable, true); return; } // HEIC hors Safari : le navigateur ne la décode pas (24 nov. 2026)
         setAttachment(ctx.wrap, dataUrl, name, type);
       });
       fileInput.value = '';

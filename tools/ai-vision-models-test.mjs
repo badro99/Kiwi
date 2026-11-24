@@ -117,13 +117,21 @@ const VISION_ROUTES = [
   ['expense-ocr.js', 'VISION_MODEL', 'VISION_FALLBACK_MODEL'], ['product-scan.js', 'VISION_MODEL', 'VISION_FALLBACK_MODEL'],
   ['product-enhance.js', 'VISION_MODEL', 'VISION_FALLBACK_MODEL'], ['pressing-defect.js', 'VISION_MODEL', 'VISION_FALLBACK_MODEL'],
   ['recipe-suggest.js', 'VISION_MODEL', 'VISION_FALLBACK_MODEL'], ['tpe-reconcile.js', 'VISION_MODEL', 'VISION_FALLBACK_MODEL'],
-  ['vision-inspect.js', 'MODEL', 'FALLBACK_MODEL'], ['menu-import.js', 'VISION_MODEL', 'VISION_FALLBACK_MODEL'], ['salle-import.js', 'VISION_MODEL', 'VISION_FALLBACK_MODEL'],
+  ['menu-import.js', 'VISION_MODEL', 'VISION_FALLBACK_MODEL'], ['salle-import.js', 'VISION_MODEL', 'VISION_FALLBACK_MODEL'],
 ];
 for (const [file, primaryKey, fallbackKey] of VISION_ROUTES) {
   const mod = await imp(file);
   const src = fs.readFileSync(path.join(AI_DIR, file), 'utf8');
   ok(mod[primaryKey] === PRIMARY && mod[fallbackKey] === FALLBACK, `${file} : primaire Gemma 4 26B, secours DeepSeek V4.1 Flash`);
   ok(/runVisionPair\(/.test(src) && !/runWithFallback\(env, VISION_MODEL/.test(src) && !/runWithPayloadFallback\(/.test(src), `${file} : la lecture d'image passe par runVisionPair (forme de requête par modèle)`);
+}
+/* Le Copilote (vision-inspect) lit d'abord des documents : duo inversé, comme invoice.js. */
+{
+  const vi = await imp('vision-inspect.js');
+  const src = fs.readFileSync(path.join(AI_DIR, 'vision-inspect.js'), 'utf8');
+  ok(vi.MODEL === FALLBACK && vi.FALLBACK_MODEL === PRIMARY, 'vision-inspect.js : primaire DeepSeek V4.1 Flash (documents), secours Gemma 4 26B');
+  ok(/runVisionPair\(/.test(src) && !/runWithPayloadFallback\(/.test(src), 'vision-inspect.js : la lecture d\'image passe par runVisionPair (forme de requête par modèle)');
+  ok(/const MAX_TOKENS = (\d+);/.test(src) && Number(src.match(/const MAX_TOKENS = (\d+);/)[1]) >= 4000, 'vision-inspect.js : 4000 jetons de sortie au moins, une facture de 28 lignes ne coupe plus le JSON');
 }
 const routeSources = fs.readdirSync(AI_DIR).filter((f) => f.endsWith('.js')).map((f) => [f, fs.readFileSync(path.join(AI_DIR, f), 'utf8')]);
 const llamaLeft = routeSources.filter(([, s]) => /['"]@cf\/meta\/llama-3\.2-11b-vision-instruct['"]/.test(s)).map(([f]) => f);

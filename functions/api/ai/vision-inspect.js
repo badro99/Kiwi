@@ -1,5 +1,12 @@
 import { budgetRoute } from './_budget-route.js';
-import { VISION_PRIMARY as MODEL, VISION_FALLBACK as FALLBACK_MODEL } from './_models.js';
+/* Le Copilote lit surtout des factures et des tickets : le duo « document » de
+ * _models.js, comme /api/ai/invoice. Mesuré le 24 nov. 2026 sur une facture
+ * fournisseur de 28 lignes à 1600 px, prompt et réglages de cette route :
+ * Gemma 4 38 s (au-delà des 25 s de VISION_TIMEOUT_MS, donc perdu), DeepSeek
+ * V4.1 Flash 9,5 s, 28/28 lignes, TTC exact. C'est ce que Pasta Corner voyait en
+ * « Load failed » sur sa photo (23 nov.). Un menu ou une photo d'article simple
+ * reste lisible par les deux. */
+import { DOCUMENT_VISION_PRIMARY as MODEL, DOCUMENT_VISION_FALLBACK as FALLBACK_MODEL } from './_models.js';
 export { MODEL, FALLBACK_MODEL };
 // /api/ai/vision-inspect — Inspection visuelle et classification universelle de photos & documents.
 //
@@ -15,7 +22,9 @@ import { runVisionPair, VISION_TIMEOUT_MS } from './_vision.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
 
-const MAX_TOKENS = 1800;
+/* 1800 coupait le JSON d'une facture de 28 lignes (finish « length », réponse
+ * illisible) ; 4000 tient environ 70 lignes, et DeepSeek les écrit sous les 25 s. */
+const MAX_TOKENS = 4000;
 const TEMPERATURE = 0.1;
 const TOP_P = 0.9;
 const DAILY_CAP = DAILY_CAPS.visioninspect || 150;
