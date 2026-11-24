@@ -216,8 +216,8 @@
     "sha": "468f83916655c7d7"
   },
   "assets/caisse-accounting.js": {
-    "v": "39",
-    "sha": "5fabfcc70cd2ac01"
+    "v": "40",
+    "sha": "764a2f0d2c62fbc4"
   },
   "assets/caisse-app.js": {
     "v": "53",
@@ -248,8 +248,8 @@
     "sha": "355f2593e8cbbafe"
   },
   "assets/caisse-lang.js": {
-    "v": "169",
-    "sha": "3dc1ecab5e282f0e"
+    "v": "170",
+    "sha": "f8b12c6a946ac185"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -314,6 +314,10 @@
   "assets/caisse-strings.js": {
     "v": "4",
     "sha": "06474b0671fb9627"
+  },
+  "assets/caisse/cash-recovery.js": {
+    "v": "1",
+    "sha": "ad9f4d5ffc04a3f7"
   },
   "assets/caisse/catalogue.js": {
     "v": "27",
@@ -396,8 +400,8 @@
     "sha": "58d02bfb3a59c462"
   },
   "assets/cash-sessions.js": {
-    "v": "18",
-    "sha": "3cbc735df1676b44"
+    "v": "19",
+    "sha": "f4c864bf85b0fe5c"
   },
   "assets/catalog-import.js": {
     "v": "26",
@@ -1660,8 +1664,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "324",
-    "sha": "7365adc4058a4ea3"
+    "v": "325",
+    "sha": "b2dcb35d290067eb"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

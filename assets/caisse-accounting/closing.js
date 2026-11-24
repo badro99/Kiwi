@@ -35,9 +35,9 @@
         line.classList.add('is-off');
       }
     }
-    function openCloture() {
-      /* #0164 · a recorded close never reopens its own count sheet. */
+    function openCloture() {   /* #0164 · a recorded close never reopens its own count sheet. */
       if (registerClosed) { finishClose(); return; }
+      if (typeof recoverLostCashMovements === 'function') recoverLostCashMovements();   // une sortie gardée par le seul serveur (caisse/cash-recovery.js)
       if (tillKitOpenCount()) return;   // kiwiSkin2027:till, étape 4 (7)
       renderCloture(false);
       /* Dans la langue de la caisse AVANT de s'afficher : le balayage différé
@@ -535,7 +535,7 @@
         reconcileJournalSales();
         reconciliation = await closeStepWithin(syncSettledBusinessDay({ timeoutMs: 8000 }),
           { ok: false, complete: false, count: 0, reason: 'feed-timeout' });
-      } catch (_) {}
+      } catch (_) {} try { if (typeof recoverLostCashMovements === 'function') await closeStepWithin(recoverLostCashMovements(), 0); } catch (_) {}   // sorties perdues, avant de figer l'attendu
       try {
         report = buildDayReport(counted, Date.now());
         if (report && window.KiwiDayReport) {

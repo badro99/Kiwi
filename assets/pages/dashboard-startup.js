@@ -58,7 +58,7 @@
     'assets/team/profile-ui.js?v=23',
     'assets/team-hours.js?v=38',
     'assets/cancellation-history.js?v=3',
-    'assets/cash-sessions.js?v=18',
+    'assets/cash-sessions.js?v=19',
     'assets/weather.js?v=1',
     'assets/briefing-rules.js?v=7',
     'assets/briefing-persistence.js?v=23',

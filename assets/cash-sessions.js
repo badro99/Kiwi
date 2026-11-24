@@ -337,8 +337,62 @@
   setInterval(function () {
     if (paired() && !repairRequired && activePendingCount()) drainPending();
   }, 10000);
+  /* ── Les mouvements qu'une caisse a perdus (24 nov. 2026, Browse) ─────────
+   * Une sortie « Butane » de 120 MAD, arrivée au serveur, a disparu du service
+   * restauré après un plantage pendant la clôture ; la clôture suivante a
+   * attendu 120 MAD de trop. Les ventes se recousent depuis le serveur, les
+   * mouvements de tiroir non. recoverMovements rend ceux de CE service que le
+   * serveur ou la file d'envoi connaissent et que la caisse n'a plus. Un
+   * mouvement local apparie au plus un mouvement connu : même sens, même
+   * montant, à dix secondes près. Panne : une liste vide, jamais une erreur. */
+  function knownMovement(e, sessionId) {
+    if (!e) return null;
+    var session = e.session_id != null ? e.session_id : e.sessionId;
+    var type = e.event_type != null ? e.event_type : e.eventType;
+    if (String(session) !== String(sessionId) || type !== 'movement') return null;
+    var kind = String(e.movement_kind != null ? e.movement_kind : e.movementKind || '');
+    var cents = Number(e.movement_amount_cents != null ? e.movement_amount_cents : e.movementAmountCents);
+    var at = Number(e.occurred_ts != null ? e.occurred_ts : e.occurredAt);
+    if (!/^(in|out|no-sale)$/.test(kind) || !Number.isFinite(cents) || cents < 0 || !Number.isFinite(at)) return null;
+    return { kind: kind === 'in' ? 'in' : 'out', cents: Math.round(cents), at: at,
+      reason: String((e.movement_reason != null ? e.movement_reason : e.movementReason) || ''),
+      actorId: String((e.actor_id != null ? e.actor_id : e.actorId) || '') };
+  }
+  function sessionRows(sessionId) {
+    var slug = merchant();
+    var local = activeOutboxRows().concat(activePendingRows());
+    if (!real() || !slug || !sessionId) return Promise.resolve(local);
+    var url = '/api/cash-sessions?merchant=' + encodeURIComponent(slug) + '&terminalId=' + encodeURIComponent(terminalId())
+      + '&sessionId=' + encodeURIComponent(sessionId);
+    return import('./request-deadline.mjs').then(function (net) { return net.deadlineFetch(url, {
+      credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
+    }, 8000); }).then(function (response) { return response.json(); }).then(function (data) {
+      return (data && Array.isArray(data.events) ? data.events : []).concat(local);
+    }).catch(function () { return local; });
+  }
+  function recoverMovements(sessionId, localMovements) {
+    return sessionRows(sessionId).then(function (rows) {
+      var mine = (localMovements || []).map(function (m) {
+        var t = m && (m.time instanceof Date ? m.time.getTime() : new Date(m && m.time).getTime());
+        return m ? { kind: m.type === 'in' ? 'in' : 'out', cents: Math.round((Number(m.amount) || 0) * 100), at: t, used: false } : null;
+      }).filter(Boolean);
+      var seen = {}, lost = [];
+      rows.map(function (e) { return knownMovement(e, sessionId); }).filter(Boolean)
+        .sort(function (a, b) { return a.at - b.at; })
+        .forEach(function (k) {
+          var key = k.kind + ':' + k.cents + ':' + k.at;
+          if (seen[key]) return;   // la même écriture, au serveur et dans la file
+          seen[key] = true;
+          var twin = mine.find(function (m) { return !m.used && m.kind === k.kind && m.cents === k.cents && Math.abs(m.at - k.at) <= 10000; });
+          if (twin) { twin.used = true; return; }
+          lost.push({ id: 'cm-' + k.at, time: new Date(k.at), type: k.kind, amount: k.cents / 100,
+            reason: k.reason, actorId: k.actorId, recovered: true });
+        });
+      return lost;
+    }).catch(function () { return []; });
+  }
   window.KiwiCashSessions = {
-    emit: emit, refresh: refresh, recoveryCopies: recoveryCopies, list: function () { return events.slice(); },
+    emit: emit, refresh: refresh, recoveryCopies: recoveryCopies, recoverMovements: recoverMovements, list: function () { return events.slice(); },
     retry: function () { repairRequired = false; return drainPending(); },
     ready: function () { return ready; }, terminalId: terminalId,
     status: function () {
