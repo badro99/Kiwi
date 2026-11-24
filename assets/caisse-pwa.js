@@ -13,7 +13,7 @@
            en cours (till-auto-update.js). Chargé d'ici : la coquille est figée
            en nombre de balises <script> (file-size-ratchet). */
         var au = document.createElement('script');
-        au.src = '/assets/till-auto-update.js?v=1';
+        au.src = '/assets/till-auto-update.js?v=2';
         au.defer = true;
         document.head.appendChild(au);
       }).catch(function () {});

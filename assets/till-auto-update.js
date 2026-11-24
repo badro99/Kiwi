@@ -88,6 +88,22 @@
     };
   }
 
+  /* Ce rechargement n'est pas un verrouillage : la personne qui tenait la
+     caisse la retrouve ouverte, sans retaper son code (owner, 24 Nov 2026).
+     Jeton à usage unique lu par bootWithPin (assets/caisse-pairing). Rien n'est
+     posé si le pavé est déjà à l'écran : une caisse verrouillée le reste. */
+  function keepCashier() {
+    try {
+      var who = window.KiwiStaff;
+      var P = window.KiwiCaissePairing;
+      var v = P && typeof P.pairedVenue === 'function' ? P.pairedVenue() : null;
+      if (!who || !v || !v.merchant) return;
+      var pads = document.querySelectorAll('#cp-pin-screen, #pin-screen, #cp-screen, .k-till-lock');
+      for (var i = 0; i < pads.length; i++) if (visible(pads[i])) return;
+      sessionStorage.setItem('kiwiTillResume', JSON.stringify({ at: Date.now(), merchant: v.merchant, id: String(who.id || ''), name: String(who.name || '') }));
+    } catch (_) {}
+  }
+
   function tick() {
     var s = state();
     var why = decide(s);
@@ -103,6 +119,7 @@
     if (why !== 'reload') return why;
     try { sessionStorage.setItem(KEY, String(Date.now())); } catch (_) { return 'guard'; }
     try { sessionStorage.setItem('kiwiSwRefreshedAt', String(Date.now())); } catch (_) {}
+    keepCashier();
     window.location.reload();
     return why;
   }

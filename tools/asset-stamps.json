@@ -276,8 +276,8 @@
     "sha": "15c8920816945d1b"
   },
   "assets/caisse-pairing.js": {
-    "v": "88",
-    "sha": "4115dc2ea16fbdff"
+    "v": "89",
+    "sha": "93cfc163c828656f"
   },
   "assets/caisse-pairs.js": {
     "v": "4",
@@ -288,8 +288,8 @@
     "sha": "c5d918564f0e71b6"
   },
   "assets/caisse-pwa.js": {
-    "v": "632",
-    "sha": "f4a5cde7406e4788"
+    "v": "633",
+    "sha": "dbc961104ae7db82"
   },
   "assets/caisse-refresh.js": {
     "v": "10",
@@ -2608,8 +2608,8 @@
     "sha": "20808a05603f748d"
   },
   "assets/till-auto-update.js": {
-    "v": "1",
-    "sha": "f34f88eb92330d4a"
+    "v": "2",
+    "sha": "3b6f998bd8084958"
   },
   "assets/till-categories.js": {
     "v": "2",

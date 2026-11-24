@@ -179,7 +179,7 @@ var SHELL = [
   '/assets/caisse-app.js?v=53',
   '/assets/caisse-loyalty-reward.js?v=7',
   '/assets/caisse-refresh.js?v=10',
-  '/assets/till-auto-update.js?v=1',
+  '/assets/till-auto-update.js?v=2',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
      dans la coquille · en silence, puisque install() avale l'échec. Et c'est
@@ -377,7 +377,7 @@ var SHELL = [
   '/assets/caisse-screens.css?v=4',
   '/assets/pos-mobile.css?v=10',
   '/assets/caisse-motion.js?v=8',
-  '/assets/caisse-pwa.js?v=632',
+  '/assets/caisse-pwa.js?v=633',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=11',
   '/assets/platform-kernel.js?v=6',
@@ -696,7 +696,7 @@ var SHELL = [
   '/assets/refund-split.js?v=2',
   '/assets/pos-maison/inventory.js?v=178',
   '/assets/pos-maison.js?v=265',
-  '/assets/caisse-pairing.js?v=88',
+  '/assets/caisse-pairing.js?v=89',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

@@ -120,8 +120,8 @@
     });
   }
   function bootWithPin(venue) {
-    try { sessionStorage.removeItem('kiwi:tillOperator:v1'); } catch (_) {} askStaff(venue, function () { bootVertical(venue); });   // un vrai poste : plus de vue opérateur · none configured → fail-soft
-  }
+    var r = null; try { sessionStorage.removeItem('kiwi:tillOperator:v1'); r = JSON.parse(sessionStorage.getItem('kiwiTillResume') || 'null'); sessionStorage.removeItem('kiwiTillResume'); } catch (_) { r = null; } var w = window.KiwiStaff, age = r ? Date.now() - Number(r.at || 0) : -1; if (r && w && venue && venue.merchant && r.merchant === venue.merchant && age >= 0 && age < 120000 && String(w.id || '') === String(r.id || '') && String(w.name || '') === String(r.name || '')) { bootVertical(venue); return; }   // rechargement de mise à jour (till-auto-update.js keepCashier) : même magasin, même personne, 2 min, une fois ; pas un verrouillage (owner, 24 Nov 2026)
+    askStaff(venue, function () { bootVertical(venue); }); }   // un vrai poste : plus de vue opérateur · none configured → fail-soft
   /* God mode may inspect a selected store's till without borrowing an employee
    * PIN. Never trust ?op=1 or the hand-off by themselves: /api/me validates the
    * httpOnly named-operator session and confirms that it is scoped to THIS slug.
