@@ -295,6 +295,7 @@
     function openCashModal() {
       try { window.KiwiHardware && window.KiwiHardware.warmPrinter && window.KiwiHardware.warmPrinter(); } catch (_) {}
       cashPaymentCommitted = false;
+      try { paintPromoCode(); const cc = $('#cash-code'); if (cc) cc.hidden = cashAmountOverride != null; } catch (_) {} // « Code promo » aussi après Encaisser, pas sur une part de partage
       cashStepInput.hidden = false;
       cashStepInput.style.display = '';
       // Reset the tip so the figure opens on the base addition.
