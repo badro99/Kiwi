@@ -43,6 +43,7 @@ import { merchantZone } from '../../_business-day.js';
 import { __test as catalogFns } from '../../catalog.js';
 import { enqueueInboundStock, flushInboundStock } from '../../shopify/_inbound-stock.js';
 import { reverseShopifyOrder } from '../../shopify/_order-reversal.js';
+import { bookShopifySale, reverseShopifySale } from '../../shopify/_book-sale.js';
 import { saleMoveId } from '../../shopify/_move-ids.js';
 import { shopPermanentDomain, verifyWebhookHmac } from '../../shopify/_lib.js';
 import { Countries, merchantCountry } from '../../_country.js';   // la devise attendue suit le pays du commerce
@@ -428,6 +429,19 @@ async function receiveWebhook(context) {
       await mark(env, link.id, false, 'retour de stock non enregistré');
       return json({ error: 'reversal-not-persisted' }, 503);
     }
+    /* Hors Maroc, la commande payée est une vente (shopify/_book-sale.js) : son
+     * annulation ou son remboursement en retire le montant. Le retour de stock
+     * ci-dessus est idempotent, un 503 ici se rejoue sans rien doubler. */
+    if (await merchantCountry(env, String(link.merchant || '').toLowerCase()) !== Countries.DEFAULT) {
+      let money;
+      try { money = await reverseShopifySale(env, String(link.merchant || '').toLowerCase(), topic, o); }
+      catch (_) { money = { done: false }; }
+      if (!money.done) {
+        await mark(env, link.id, false, 'retour de vente non enregistré');
+        return json({ error: 'reversal-not-persisted' }, 503);
+      }
+      out.sale = money;
+    }
     await rememberWebhook(env, shop || known, deliveryId, topic);
     await mark(env, link.id, true);
     return json({ ok: true, ...out });
@@ -446,7 +460,8 @@ async function receiveWebhook(context) {
    * pays du commerce (functions/api/_country.js) : l'euro pour un commerce
    * espagnol, le dirham sinon. */
   const cur = str(o && (o.currency || o.presentment_currency), 8).toUpperCase();
-  const home = Countries.currencyOf(await merchantCountry(env, String(link.merchant || '').toLowerCase()));
+  const country = await merchantCountry(env, String(link.merchant || '').toLowerCase());
+  const home = Countries.currencyOf(country);
   if (cur && cur !== home) {
     await mark(env, link.id, false, 'devise ' + cur + ' · ce commerce encaisse en ' + home);
     await env.DB.prepare(`INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
@@ -455,6 +470,23 @@ async function receiveWebhook(context) {
         JSON.stringify({ code: 'unsupported-currency', currency: cur, orderRef: str(o.id || o.name, 96) }), Date.now()).run();
     await rememberWebhook(env, shop || known, deliveryId, topic);
     return json({ ok: true, issue: 'unsupported-currency', currency: cur });
+  }
+
+  /* Hors Maroc : pas de ticket en attente, la commande payée est une vente
+   * (shopify/_book-sale.js). Une commande pas encore payée attend orders/paid. */
+  if (country !== Countries.DEFAULT) {
+    const shopMerchant = String(link.merchant || '').toLowerCase();
+    const booked = await bookShopifySale(env, shopMerchant, o);
+    if (booked.error) {
+      await mark(env, link.id, false, 'commande illisible · ' + booked.error);
+      return json({ error: booked.error }, 400);
+    }
+    if (booked.booked) {
+      try { await persistStockWork(env, shopMerchant, o); }
+      catch (_) { return json({ error: 'stock-retry-not-persisted' }, 503); }
+    }
+    await mark(env, link.id, true);
+    return json({ ok: true, ...booked });
   }
 
   const t = translate(o);

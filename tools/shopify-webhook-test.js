@@ -342,7 +342,8 @@ const ORDER = (over) => JSON.stringify(Object.assign({
   const ordersBefore = DB._t.orders.length;
   r = await signed(linkId, ORDER({ id: 1999, currency: 'EUR', total_price: '32.88' }));
   ok('un commerce espagnol encaisse une commande en euros', r.status === 200 && r.body.ok === true && !r.body.issue, JSON.stringify(r.body));
-  ok('…un ticket est créé, centimes compris', DB._t.orders.length === ordersBefore + 1 && DB._t.orders[DB._t.orders.length - 1].total === 32.88, String(DB._t.orders.length));
+  /* Hors Maroc, plus de ticket : une commande payée devient une vente (tools/shopify-foreign-sales-test.mjs). Celle-ci n'est pas payée. */
+  ok('…sans ticket en attente, la vente attend le paiement', DB._t.orders.length === ordersBefore && r.body.waiting === 'payment', String(DB._t.orders.length) + ' ' + JSON.stringify(r.body));
   r = await signed(linkId, ORDER({ id: 2000, currency: 'MAD', total_price: '240.00' }));
   ok('…et c\'est une commande en dirhams qui devient l\'anomalie', r.status === 200 && r.body.issue === 'unsupported-currency' && r.body.currency === 'MAD', JSON.stringify(r.body));
   ok('…avec une raison lisible', /devise MAD · ce commerce encaisse en EUR/.test(DB._t.channel_links.find((l) => l.id === linkId).last_err || ''));

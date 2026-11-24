@@ -170,7 +170,7 @@ ok('une commande déjà annulée à la livraison ne crée ni ticket ni mouvement
 /* ── 6 · abonnements ───────────────────────────────────────────────────── */
 const lib = fs.readFileSync(path.join(ROOT, 'functions/api/shopify/_lib.js'), 'utf8');
 ok('l\'enregistrement des webhooks abonne aussi ORDERS_CANCELLED et REFUNDS_CREATE',
-  /\['ORDERS_CREATE', 'ORDERS_CANCELLED', 'REFUNDS_CREATE', 'INVENTORY_LEVELS_UPDATE', 'APP_UNINSTALLED'\]/.test(lib));
+  /\['ORDERS_CREATE', 'ORDERS_PAID', 'ORDERS_CANCELLED', 'REFUNDS_CREATE', 'INVENTORY_LEVELS_UPDATE', 'APP_UNINSTALLED'\]/.test(lib));
 const status = fs.readFileSync(path.join(ROOT, 'functions/api/shopify/status.js'), 'utf8');
 ok('une boutique déjà reliée peut enregistrer les nouveaux abonnements (action register-webhooks)', status.includes("action === 'register-webhooks'"));
 

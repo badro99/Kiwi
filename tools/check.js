@@ -803,7 +803,7 @@ for (const test of [
   /* Tout document /api/store s'écrit en compare-and-swap ; cloud-doc garde la révision par magasin. */
   'store-cas-test.mjs',
   /* Shopify « don d'identifiants » : les webhooks se vérifient avec le secret de l'app. */
-  'shopify-direct-webhook-test.mjs',
+  'shopify-direct-webhook-test.mjs', 'shopify-foreign-sales-test.mjs',
   'shopify-shop-domain-test.mjs',
   'shopify-replay-orders-test.mjs',
   // Les identifiants de mouvement Shopify n'ont qu'un constructeur, compatible avec les journaux stockés (note 13).

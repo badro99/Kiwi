@@ -72,7 +72,7 @@ ok(r.status === 401, 'un autre compte ne peut pas la déconnecter', r.status);
   ok(till.status === 403 && sql.prepare("SELECT COUNT(*) n FROM shopify_connections WHERE merchant = 'amira-test'").get().n === 1, 'une caisse appairée ne peut pas déconnecter Shopify (propriétaire ou opérateur nommé seulement)', till.status);
 }
 r = await call(statusPost, '/api/shopify/status', 'acc-a', { merchant: 'amira-test', action: 'disconnect' });
-ok(r.status === 200 && r.body.ok && r.body.webhooksRemoved === 5, 'déconnecter retire les cinq abonnements de Kiwi chez Shopify', r);
+ok(r.status === 200 && r.body.ok && r.body.webhooksRemoved === 6, 'déconnecter retire les six abonnements de Kiwi chez Shopify', r);
 ok(subs.length === 1 && subs[0].uri === 'https://ailleurs.example/hook', 'un abonnement qui n’est pas celui de ce commerce reste', subs);
 ok(!sql.prepare("SELECT 1 FROM shopify_connections WHERE merchant = 'amira-test'").get(), 'la connexion est supprimée');
 ok(!sql.prepare("SELECT 1 FROM shopify_variant_links WHERE merchant = 'amira-test'").get(), 'ses liens de variantes aussi');
