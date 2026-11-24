@@ -16,7 +16,7 @@
  */
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { makeSession, SESS_COOKIE, TILL_COOKIE, tillToken } from '../functions/auth/_lib.js';
+import { makeSession, SESS_COOKIE, TILL_COOKIE, tillToken, OP_COOKIE, operatorToken, operatorIdToken } from '../functions/auth/_lib.js';
 import { onRequestPost as connectDirect } from '../functions/api/shopify/connect-direct.js';
 import { onRequestPost as statusPost } from '../functions/api/shopify/status.js';
 
@@ -65,6 +65,10 @@ r = await call(statusPost, '/api/shopify/status', 'acc-c', { merchant: 'amira-te
 ok(r.status === 401, 'un autre compte ne peut pas la déconnecter', r.status);
 { // une caisse appairée lit et règle le canal, elle ne détache pas la boutique du commerce
   const till = await statusPost({ env, request: new Request('https://kiwi.test/api/shopify/status', { method: 'POST', headers: { 'Content-Type': 'application/json', cookie: TILL_COOKIE + '=' + await tillToken(env.AUTH_SECRET, 'amira-test', 0) }, body: JSON.stringify({ merchant: 'amira-test', action: 'disconnect' }) }), waitUntil() {} });
+  // un opérateur retiré de la table garde un cookie signé valide : il ne doit plus rien détacher
+  const ghost = `${TILL_COOKIE}=${await tillToken(env.AUTH_SECRET, 'amira-test', 0)}; ${OP_COOKIE}=${await operatorToken(env.AUTH_SECRET)}; kiwi_op_id=${await operatorIdToken(env.AUTH_SECRET, 'op-retire')}`;
+  const gone = await statusPost({ env, request: new Request('https://kiwi.test/api/shopify/status', { method: 'POST', headers: { 'Content-Type': 'application/json', cookie: ghost }, body: JSON.stringify({ merchant: 'amira-test', action: 'disconnect' }) }), waitUntil() {} });
+  ok(gone.status === 403 && sql.prepare("SELECT COUNT(*) n FROM shopify_connections WHERE merchant = 'amira-test'").get().n === 1, 'un opérateur retiré (cookie encore signé) ne peut pas déconnecter Shopify', gone.status);
   ok(till.status === 403 && sql.prepare("SELECT COUNT(*) n FROM shopify_connections WHERE merchant = 'amira-test'").get().n === 1, 'une caisse appairée ne peut pas déconnecter Shopify (propriétaire ou opérateur nommé seulement)', till.status);
 }
 r = await call(statusPost, '/api/shopify/status', 'acc-a', { merchant: 'amira-test', action: 'disconnect' });

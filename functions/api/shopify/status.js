@@ -11,7 +11,7 @@ import {
   buildExactVariantMapping, connectionFor, enqueueStockChanges,
   flushShopifyOutbox, listLocations, listShopifyVariants, registerWebhooks, removeWebhooks,
 } from './_lib.js';
-import { operatorActor } from '../../auth/_lib.js';
+import { operatorActor, namedOperatorId } from '../../auth/_lib.js';
 
 const n = (v) => Math.max(0, Number(v) || 0);
 const clean = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
@@ -371,8 +371,9 @@ export async function onRequestPost({ request, env, waitUntil }) {
     if (action === 'disconnect') {
       /* tenantFor accepte une caisse appairée : elle règle le canal, elle ne détache pas
          la boutique. Le propriétaire (sa session) ou un opérateur nommé seulement. */
-      const actor = await operatorActor(request, env).catch(() => ({ label: '', id: '' }));
-      if (!actor.id && (await ownerMerchant(request, env, merchant)) !== merchant) return json({ error: 'owner-only' }, 403);
+      const opId = await namedOperatorId(request, env).catch(() => null);   // un opérateur retiré de la table ne compte plus
+      if (!opId && (await ownerMerchant(request, env, merchant, { strict: true })) !== merchant) return json({ error: 'owner-only' }, 403);
+      const actor = opId ? await operatorActor(request, env).catch(() => ({ label: '', id: '' })) : { label: '', id: '' };
       const connection = await connectionFor(env, merchant);
       if (!connection) return json({ error: 'shopify-not-connected' }, 404);
       const linkId = String(connection.channel_link_id || '');
