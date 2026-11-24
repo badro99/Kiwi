@@ -324,8 +324,8 @@
     "sha": "d359ea22da75b2f0"
   },
   "assets/caisse/delivery.js": {
-    "v": "2",
-    "sha": "6c676d51d2c7452f"
+    "v": "3",
+    "sha": "01e8848607b41c77"
   },
   "assets/caisse/discounts.js": {
     "v": "7",
@@ -592,8 +592,8 @@
     "sha": "db5d8d9c547adb73"
   },
   "assets/delivery.js": {
-    "v": "1",
-    "sha": "d1d8c9f62716e73b"
+    "v": "2",
+    "sha": "e06ca983ffc491e3"
   },
   "assets/demoClock.js": {
     "v": "5",

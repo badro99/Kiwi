@@ -473,9 +473,13 @@
     });
     const tick = () => {
       homeSplit();
-      const tabs = document.querySelector('.mx-menu-tabs');
+      /* La rangée d'onglets du « Menu & modificateurs » (.catalog-rail), ou
+       * celle de l'ancienne carte (.mx-menu-tabs). Un bouton, pas un onglet :
+       * il ouvre le réglage sans quitter la page. */
+      const tabs = document.querySelector('.catalog-rail') || document.querySelector('.mx-menu-tabs');
       if (tabs && !tabs.querySelector('[data-kdl-open]')) {
-        tabs.insertAdjacentHTML('beforeend', `<button class="mx-menu-tab" type="button" data-kdl-open data-activation=write>${logoHTML(HOUSE, 18)}<span>${esc(tr(S.tab))}</span></button>`);
+        const cls = tabs.classList.contains('catalog-rail') ? 'mi-pill' : 'mx-menu-tab';
+        tabs.insertAdjacentHTML('beforeend', `<button class="${cls}" type="button" aria-haspopup="dialog" data-kdl-open data-activation=write>${logoHTML(HOUSE, 18)}<span>${esc(tr(S.tab))}</span></button>`);
       }
       const price = document.querySelector('.kiwi-modal [data-f-price]');
       const plats = platforms().filter((p) => p.on);
