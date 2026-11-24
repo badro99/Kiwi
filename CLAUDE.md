@@ -212,8 +212,20 @@ mandatory French coverage cell must be *reached*: `tools/coverage-probe.mjs` tur
 prove a failure is pre-existing by running it in a detached worktree at the untouched
 base before you chase it.
 
-**Three tiers, and the rule for using them (owner, 2026-10-23, for every
-session and every GPT job):**
+**Gates run only when the owner asks (owner, 2026-11-24, for every session and
+every GPT job; this overrides every tier rule below).** "We run 20+ full gates
+daily, which adds too much load on my Mac. We need to be smarter." So no
+`check.js` run of ANY tier (full, fast, `--changed`) unless the owner asks for
+one in the conversation. Instead, run only the test files your change touches
+or adds (`node tools/<name>-test.mjs`), plus the cheap guards it can break
+(`stamp-drift-test.js` after a stamp move, `d1-migrations-test.mjs` after a
+schema change, `fast-routes-test.mjs` after a route change,
+`file-size-ratchet-test.mjs` when a pinned file grew). Push after those pass;
+say in your report that no gate ran. When the owner asks for a gate, bundle
+everything pending into that one run. Never start a gate while another
+session's gate is running.
+
+**Three tiers, for when the owner asks for a gate (owner, 2026-10-23):**
 - **Between edits: `npm run check:changed`** (`node tools/check.js --changed`).
   It runs only the child tests your working tree can affect, plus every
   in-process check (syntax, data-action, i18n keys, secrets): seconds to a
@@ -230,8 +242,8 @@ session and every GPT job):**
 - **`npm run check:fast`** skips every browser suite (about 190 of ~900; a
   suite that reaches Chromium through a local harness such as
   `surface-matrix-lib.mjs` counts as one).
-- **Before a push, scale the check to the risk** (owner, 2026-10-24, replaces
-  "full gate before every push"):
+- **Which tier to ask for** (owner, 2026-10-24; since 2026-11-24 only once
+  the owner has asked for a gate):
   - **Full gate** (`npm test` / `npm run check:full`) for merges of several
     branches, and for anything touching money, auth, the database schema or
     the service worker / offline cache.
