@@ -160,7 +160,7 @@ var SHELL = [
   '/assets/caisse-kitchen.js?v=33',
   '/assets/caisse/receipts.js?v=5',
   '/assets/caisse/closing.js?v=2',
-  '/assets/caisse/delivery.js?v=4',
+  '/assets/caisse/delivery.js?v=5',
   '/assets/caisse/workflows-loader.js?v=3',
   '/assets/caisse/dish-words.js?v=1',
   '/assets/caisse/catalogue.js?v=26',
@@ -495,7 +495,7 @@ var SHELL = [
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=19',
-  '/assets/delivery.js?v=3',
+  '/assets/delivery.js?v=4',
   '/assets/charges-engine.js?v=4',
   '/assets/charges.js?v=5',
   '/assets/clients-store.js?v=71',

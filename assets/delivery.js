@@ -469,7 +469,7 @@
       + '.kdl-link{background:none;border:0;padding:4px 6px;font:inherit;font-size:13px;color:var(--n-500);cursor:pointer}.kdl-link:hover{color:var(--ink)}'
       + '.kdl-add{display:flex;gap:8px;align-items:center}.kdl-add .kf-input{flex:1}.kdl-err{color:var(--danger,#B42318);font-size:13px}'
       + '.kdl-tbl{width:100%;border-collapse:collapse;font-size:13px}.kdl-tbl td,.kdl-tbl th{padding:5px 6px;text-align:start;font-weight:500}.kdl-tbl .kf-input{padding:7px 10px;max-width:96px}.kdl-base{color:var(--n-500)}'
-      + '.kdl-prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}.kdl-prices label{display:grid;gap:4px;font-size:12px}.kdl-prices .kdl-lbl{display:flex;align-items:center;gap:6px}'
+      + '.kdl-prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.kdl-hint{font-size:11.5px;font-weight:400;color:var(--n-500)}.kdl-prices label{display:grid;gap:4px;font-size:12px}.kdl-prices .kdl-lbl{display:flex;align-items:center;gap:6px}'
       + '.kdl-split{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;font-size:13px}.kdl-split-i{display:inline-flex;align-items:center;gap:6px}.kdl-split-i b{font-weight:600}.kdl-split-i span{font-variant-numeric:tabular-nums;opacity:.8}'
       + '@media (max-width:640px){.kdl-grid{grid-template-columns:1fr}.kdl-pct{flex:1}}';
     document.head.appendChild(s);
@@ -485,11 +485,17 @@
     if (wireMenuPage.done || typeof MutationObserver === 'undefined' || !document.body) return;
     wireMenuPage.done = true;
     document.addEventListener('click', (e) => {
-      const ed = e.target.closest && e.target.closest('[data-action="mx-item-edit"]');
-      if (ed) editingId = ed.getAttribute('data-arg');
-      else if (e.target.closest && e.target.closest('[data-action="mx-item-add"]')) editingId = null;
-      const sv = e.target.closest && e.target.closest('[data-f-save]');
+      if (!e.target.closest) return;
+      /* Quel produit s'ouvre : le dernier clic sur une fiche qui porte son
+       * identifiant (carte, menu « … », bouton Modifier). « Nouvel article »
+       * repart de zéro. L'éditeur vérifie ensuite le nom avant d'y croire. */
+      const arg = e.target.closest('[data-arg]');
+      if (arg && menuItems().some((it) => String(it.id) === arg.getAttribute('data-arg'))) editingId = arg.getAttribute('data-arg');
+      if (e.target.closest('[data-action="mx-item-add"],[data-action="rmw-item-add"]')) editingId = null;
+      const sv = e.target.closest('[data-f-save]');
       if (sv) savePriceRow(sv.closest('.kiwi-modal'));
+      const rs = e.target.closest('.rmw-item-workspace [data-save]');
+      if (rs) savePriceRow(rs.closest('.rmw-item-workspace'));
       if (e.target.closest && e.target.closest('[data-kdl-open]')) openSettings();
     }, true);
     /* Une mutation de page en appelle cent : un passage par image suffit. */
@@ -509,8 +515,9 @@
         const cls = tabs.classList.contains('catalog-rail') ? 'mi-pill' : 'mx-menu-tab';
         tabs.insertAdjacentHTML('beforeend', `<button class="${cls}" type="button" aria-haspopup="dialog" data-kdl-open data-activation=write>${logoHTML(HOUSE, 18)}<span>${esc(tr(S.tab))}</span></button>`);
       }
-      const price = document.querySelector('.kiwi-modal [data-f-price]');
       const plats = platforms().filter((p) => p.on);
+      rmwPriceRow(plats);
+      const price = document.querySelector('.kiwi-modal [data-f-price]');
       if (price && plats.length && !document.querySelector('.kiwi-modal [data-kdl-prices]')) {
         const field = price.closest('.mx-field');
         if (!field) return;
@@ -523,6 +530,24 @@
       }
     };
     obs.observe(document.body, { childList: true, subtree: true });
+  }
+  /* L'éditeur d'article de « Menu & modificateurs » (restaurant-menu-workspace) :
+   * la ligne se pose sous Nom et Prix, avec les mêmes champs que le prix. */
+  function rmwPriceRow(plats) {
+    const root = document.querySelector('.rmw-item-workspace');
+    const price = root && root.querySelector('[data-price]');
+    if (!price || !plats.length || root.querySelector('[data-kdl-prices]')) return;
+    const field = price.closest('.rmw-it-f');
+    if (!field) return;
+    styleSettings();
+    const name = String((root.querySelector('[data-name]') || {}).value || '').trim();
+    const hit = editingId != null && menuItems().find((it) => String(it.id) === String(editingId));
+    // Une copie d'article porte un autre nom : ses prix ne sont pas ceux de l'original.
+    const id = hit && String(hit.name || '').trim() === name ? String(hit.id) : '';
+    field.insertAdjacentHTML('afterend', `<div class="rmw-it-f rmw-it-full" data-kdl-prices data-item="${esc(id)}"><span>${esc(tr(S.priceRow))}</span><div class="kdl-prices">${plats.map((p) => {
+      const v = id ? priceOf(id, p.id) : null;
+      return `<label class="rmw-it-f"><span class="kdl-lbl">${logoHTML(p.id, 18)}${esc(p.name)}</span><span class="rmw-rx-suffix"><input class="rmw-rx-in" type="number" min="0" step="0.5" inputmode="decimal" data-kdl-p="${p.id}" value="${v == null ? '' : v}" placeholder="${esc(tr(S.notSold))}"><i>MAD</i></span></label>`;
+    }).join('')}</div><small class="kdl-hint">${esc(tr(S.priceHint))}</small></div>`);
   }
   /* L'accueil du tableau de bord : l'anneau « Livraison » additionne toutes les
    * livraisons ; dessous, chaque option à son nom (« Glovo 4 000 MAD »), au
@@ -564,10 +589,10 @@
     /* Un produit neuf : son identifiant n'existe qu'APRÈS l'enregistrement de
      * la carte. On le cherche au tour suivant, le seul qui n'était pas là. */
     const before = new Set(menuItems().map((it) => String(it.id)));
-    const name = (modal.querySelector('[data-f-name]') || {}).value || '';
+    const name = String((modal.querySelector('[data-f-name],[data-name]') || {}).value || '').trim();
     setTimeout(() => {
       const fresh = menuItems().filter((it) => !before.has(String(it.id)));
-      const it = fresh.find((x) => x.name === name) || fresh[fresh.length - 1];
+      const it = fresh.find((x) => String(x.name || '').trim() === name) || fresh[fresh.length - 1];
       if (it) keepOff(it.id, by);
     }, 0);
   }
