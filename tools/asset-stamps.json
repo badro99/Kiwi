@@ -416,8 +416,8 @@
     "sha": "adc17758aae6763f"
   },
   "assets/channel-sales.js": {
-    "v": "9",
-    "sha": "2b0731c839f3ce54"
+    "v": "10",
+    "sha": "322f4faa841fb05b"
   },
   "assets/charges-engine.js": {
     "v": "3",
@@ -604,8 +604,8 @@
     "sha": "98582fcbb429a66c"
   },
   "assets/design-vexel-layout.js": {
-    "v": "2103",
-    "sha": "e5d63dda817f0cd8"
+    "v": "2104",
+    "sha": "52457354ae51ce01"
   },
   "assets/design-vexel.css": {
     "v": "2135",
@@ -1200,8 +1200,8 @@
     "sha": "fc38c1c82aab4c41"
   },
   "assets/kiwi-country.js": {
-    "v": "3",
-    "sha": "85a8e7c9fb6cbf1e"
+    "v": "4",
+    "sha": "0046596e1aec6d78"
   },
   "assets/kiwi-env.js": {
     "v": "11",
@@ -1384,8 +1384,8 @@
     "sha": "723108537bee278a"
   },
   "assets/merchant-config.js": {
-    "v": "297",
-    "sha": "914ae4ba15d09d56"
+    "v": "298",
+    "sha": "3d53df10ea4e3926"
   },
   "assets/merchant-health.css": {
     "v": "3",
@@ -1444,8 +1444,8 @@
     "sha": "88b1edebbe4c5e88"
   },
   "assets/oppo-cards.js": {
-    "v": "13",
-    "sha": "13685ba49ad6e0d4"
+    "v": "14",
+    "sha": "57001c82bbbc2552"
   },
   "assets/order-qr.js": {
     "v": "6",
@@ -1644,8 +1644,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "316",
-    "sha": "21085d8890cdeeaf"
+    "v": "317",
+    "sha": "ac9acefeef68b516"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2640,8 +2640,8 @@
     "sha": "59996f70b82e1358"
   },
   "assets/trades.js": {
-    "v": "9",
-    "sha": "0c4a16236723bff2"
+    "v": "10",
+    "sha": "3f0b370d3f60047e"
   },
   "assets/ux.css": {
     "v": "1",

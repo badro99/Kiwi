@@ -71,31 +71,47 @@ export async function onRequestPost(context) {
   const idOf = (o) => prefix + ':' + merchant + ':' + o.ref.replace(/[^A-Za-z0-9_-]/g, '');
   /* Count from the books, not from meta.changes: D1 adds the rows the sales
    * triggers write (sales_change_insert), so one sale reads as two changes. */
-  const countIn = async (ids) => {
-    let n = 0;
+  const author = 'import:' + channel;
+  const known = async (ids) => {
+    const out = new Map();
     for (let i = 0; i < ids.length; i += 90) {
       const part = ids.slice(i, i + 90);
-      const row = await env.DB.prepare(`SELECT COUNT(*) n FROM sales WHERE merchant = ? AND id IN (${part.map(() => '?').join(',')})`).bind(merchant, ...part).first();
-      n += Number((row && row.n) || 0);
+      const res = await env.DB.prepare(`SELECT id, lines, written_by FROM sales WHERE merchant = ? AND id IN (${part.map(() => '?').join(',')})`).bind(merchant, ...part).all();
+      for (const row of (res && res.results) || []) out.set(row.id, row);
     }
-    return n;
+    return out;
   };
   const ids = good.map(idOf);
-  const stmts = good.map((o, i) => env.DB.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, label, ref, ts, lines, channel, received_ts, written_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`)
-    .bind(ids[i], merchant, Math.round(o.cents / 100), o.cents, o.method,
-      (name + ' ' + o.ref).slice(0, 80), o.ref, o.ts, JSON.stringify(o.lines), channel, now, 'import:' + channel));
-  let existing = 0, inserted = 0;
+  let existing = 0, inserted = 0, refreshed = 0;
   try {
-    existing = await countIn(ids);
+    const before = await known(ids);
+    const stmts = [];
+    good.forEach((o, i) => {
+      const lines = JSON.stringify(o.lines), row = before.get(ids[i]);
+      /* Already in the books: a new import may refresh the detail of a sale it
+       * wrote itself (a shipping line taken out, a refunded item), never its
+       * amount, and never a sale someone else wrote. */
+      if (row) {
+        if (row.written_by === author && row.lines !== lines) {
+          stmts.push(env.DB.prepare('UPDATE sales SET lines = ? WHERE merchant = ? AND id = ? AND written_by = ?').bind(lines, merchant, ids[i], author));
+          refreshed++;
+        }
+        return;
+      }
+      stmts.push(env.DB.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, label, ref, ts, lines, channel, received_ts, written_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`)
+        .bind(ids[i], merchant, Math.round(o.cents / 100), o.cents, o.method,
+          (name + ' ' + o.ref).slice(0, 80), o.ref, o.ts, lines, channel, now, author));
+    });
+    existing = before.size;
     if (stmts.length) await env.DB.batch(stmts);
-    inserted = (await countIn(ids)) - existing;
+    inserted = (await known(ids)).size - existing;
   } catch (_) { return json({ error: 'sales-unavailable' }, 503); }
   const actor = await operatorActor(request, env);
   try {
     await env.DB.prepare(`INSERT INTO account_audit (account_id, merchant, action, prev, next, reason, actor, actor_id, detail, ts)
       VALUES ('', ?, 'channel-sales-import', '', ?, '', ?, ?, ?, ?)`)
-      .bind(merchant, channel, actor.label, actor.id, JSON.stringify({ channel, inserted, existing, refused: refused.length }), now).run();
+      .bind(merchant, channel, actor.label, actor.id, JSON.stringify({ channel, inserted, existing, refreshed, refused: refused.length }), now).run();
   } catch (_) { /* the sales are written; a missing trace line must not hide that */ }
-  return json({ ok: true, merchant, channel, inserted, existing, refused });
+  return json({ ok: true, merchant, channel, inserted, existing, refreshed, refused });
 }

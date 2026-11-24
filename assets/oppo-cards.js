@@ -111,6 +111,10 @@
       d: { fr: '« C\'était comment, mardi ? », votre activité, vos marges, vos heures creuses. En français, darija ou anglais.',
            en: '"How was Tuesday?", your sales, margins and quiet hours. In French, Darija or English.',
            ar: '«كيف كان الثلاثاء؟»، مبيعاتك وهوامشك وساعاتك الهادئة. بالفرنسية أو الدارجة أو الإنجليزية.' },
+      /* La darija ne dit rien à un commerce espagnol (CHICTRATEC SL, 24 nov. 2026). */
+      dc: { ES: { fr: '« C\'était comment, mardi ? », votre activité, vos marges, vos heures creuses. En français, espagnol ou anglais.',
+                  en: '"How was Tuesday?", your sales, margins and quiet hours. In French, Spanish or English.',
+                  ar: '«كيف كان الثلاثاء؟»، مبيعاتك وهوامشك وساعاتك الهادئة. بالفرنسية أو الإسبانية أو الإنجليزية.' } },
       cta: { fr: 'Essayer l\'agent', en: 'Try the agent', ar: 'جرّب المساعد' },
     },
     {
@@ -198,6 +202,9 @@
   })();
 
   /* ─── Render ─── */
+  function country() {
+    try { return document.documentElement.getAttribute('data-kiwi-country') || 'MA'; } catch (_) { return 'MA'; }
+  }
   function cardHtml(c, i) {
     return `
       <div class="oppo-card" style="--i:${i};" data-oppo-id="${c.id}">
@@ -205,7 +212,7 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
         <div class="oppo-t">${pick(c.t)}</div>
-        <div class="oppo-d">${pick(c.d)}</div>
+        <div class="oppo-d">${pick((c.dc && c.dc[country()]) || c.d)}</div>
         <button class="oppo-cta" data-action="${c.action}">${pick(c.cta)} →</button>
         <div class="oppo-art">${ART[c.art]}</div>
       </div>`;

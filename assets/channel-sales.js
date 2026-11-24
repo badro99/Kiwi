@@ -26,8 +26,16 @@
     domicile: 'home', home: 'home', produit: 'products', products: 'products',
     club: 'club', distance: 'remote', remote: 'remote', direct: 'direct',
     online: 'online', evenement: 'catering', catering: 'catering',
-    orderpro: 'orderpro', kiwi: 'orderpro'
+    orderpro: 'orderpro', kiwi: 'orderpro',
+    eshop: 'eshop', shopify: 'eshop', woocommerce: 'eshop', boutiqueenligne: 'eshop'
   };
+  /* Une commande de boutique en ligne (Shopify, reprise par
+   * /api/admin/channel-sales ou reçue par le webhook) n'est jamais un passage au
+   * comptoir : sans anneau « Boutique en ligne », elle reste non classée. */
+  var ONLINE_STORE = { eshop: 1, shopify: 1, woocommerce: 1, boutiqueenligne: 1 };
+  function onlineStore(sale) {
+    return !!(sale && (ONLINE_STORE[text(sale.channel)] || ONLINE_STORE[text(sale.salesChannel)] || ONLINE_STORE[text(sale.orderChannel)]));
+  }
 
   function allowed(key, ids) { return key && ids.indexOf(key) >= 0 ? key : ''; }
 
@@ -44,6 +52,8 @@
       var direct = DIRECT[text(candidates[i])] || text(candidates[i]);
       if (allowed(direct, ids)) return direct;
     }
+
+    if (onlineStore(sale)) return '';
 
     var label = text(sale.label || sale.orderRef || sale.ref);
     var tender = text(sale.method || sale.raw || sale.methods);
@@ -168,5 +178,20 @@
     return { amounts: out, total: total / 100, classified: classified / 100, unknown: Math.max(0, total - classified) / 100 };
   }
 
-  root.KiwiChannelSales = { key: key, breakdown: breakdown };
+  /* Les anneaux d'une boutique suivent ce qu'elle vend vraiment (CHICTRATEC SL,
+   * 24 nov. 2026 : comptoir et Shopify). « Boutique en ligne » s'ajoute après
+   * Comptoir dès qu'une vente en ligne est dans les livres ; hors du Maroc,
+   * « Chèque » s'en va (aucun commerce espagnol n'est réglé par chèque). Les
+   * autres métiers ne bougent pas. */
+  function rings(ids, rows, country) {
+    var out = Array.isArray(ids) ? ids.slice() : [];
+    var at = out.indexOf('counter');
+    if (at < 0 || out.indexOf('cheque') < 0) return out;
+    if (out.indexOf('eshop') < 0 && (Array.isArray(rows) ? rows : []).some(onlineStore)) out.splice(at + 1, 0, 'eshop');
+    var c = String(country || '').toUpperCase();
+    if (c && c !== 'MA') out = out.filter(function (id) { return id !== 'cheque'; });
+    return out;
+  }
+
+  root.KiwiChannelSales = { key: key, breakdown: breakdown, rings: rings };
 })(window);

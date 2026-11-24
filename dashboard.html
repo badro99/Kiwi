@@ -1082,7 +1082,7 @@
 <!-- Les métiers (assets/trades.js). AVANT tout le reste : venues.js construit
      sa table métier→famille à l'évaluation, et les trois assistants
      d'inscription construisent leur grille pareil. Aucun DOM, ~7 Ko. -->
-<script src="assets/trades.js?v=9" defer></script>
+<script src="assets/trades.js?v=10" defer></script>
 <script src="assets/material-icons.js?v=7" defer></script>
 <script src="assets/plan-catalog.js?v=1" defer></script>
 <script src="assets/interactive/helpers.js?v=1" defer></script>
@@ -1096,7 +1096,7 @@
 <script src="assets/invoice.js?v=28" defer></script>
 <script src="assets/invoicing.js?v=67" defer></script>
 <script src="assets/depenses.js?v=11" defer></script>
-<script src="assets/oppo-cards.js?v=13" defer></script>
+<script src="assets/oppo-cards.js?v=14" defer></script>
 <script src="assets/merchant-health.js?v=5" defer></script>
 <script src="assets/insights.js?v=3" defer></script>
 <script src="assets/qrcode.js?v=1" defer></script>
@@ -1154,10 +1154,10 @@
 <script defer src="assets/identity.js?v=13"></script>
 <link rel="modulepreload" href="assets/live-link/queue-store.js?v=30">
 <script type="module" defer src="assets/live-link.js?v=137"></script>
-<script defer src="assets/channel-sales.js?v=9"></script>
+<script defer src="assets/channel-sales.js?v=10"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
-<script defer src="assets/merchant-config.js?v=297"></script>
+<script defer src="assets/merchant-config.js?v=298"></script>
 <!-- Real logged-in identity · swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
   <link rel="stylesheet" href="assets/entitlements.css?v=8">
@@ -1281,7 +1281,7 @@
 
 <script src="assets/clients-directory.js?v=51" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=22" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=316" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=317" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1308,7 +1308,7 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=316"></script>
+<script src="assets/pages/dashboard-startup.js?v=317"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=17">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
 <script src="assets/pages/dashboard-loader.js?v=118" defer fetchpriority="low"></script>

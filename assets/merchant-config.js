@@ -110,7 +110,7 @@
   function loadCountry(p) {
     if (countryLoading || !p || !p.currency || p.currency === 'MAD') return;
     countryLoading = true;
-    var el = document.createElement('script'); el.src = 'assets/kiwi-country.js?v=3'; el.async = true;
+    var el = document.createElement('script'); el.src = 'assets/kiwi-country.js?v=4'; el.async = true;
     (document.head || document.documentElement).appendChild(el);
   }
   try { var cachedCountry = localStorage.getItem('kiwiCountry@' + cfg.slugNow()); if (cachedCountry) loadCountry(JSON.parse(cachedCountry)); } catch (_) {}
@@ -161,8 +161,16 @@
     if (key === 'expenses') return !(cfg.features && cfg.features.expenses === true);
     return key === 'weborders' && !(cfg.features && cfg.features.commerce === true);
   }
+  /* « Chèques et effets » tient le portefeuille marocain (LCN, banques du
+     Maroc) : un commerce d'un autre pays ne le voit pas (CHICTRATEC SL,
+     Espagne, 24 nov. 2026). Sans pays connu, rien ne change. */
+  function foreignOff(key) {
+    var c = cfg.countryProfile && cfg.countryProfile.code;
+    return key === 'cheques' && !!c && c !== 'MA';
+  }
   function featureOff(key) {
     if (key === 'reservations' || key === 'payroll') return false;
+    if (foreignOff(key)) return true;
     if (optInOff(key)) return true;
     if (cfg.features && cfg.features[key] === false) return true;
     var aliases = HANDLER_ALIASES[key];

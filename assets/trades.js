@@ -98,6 +98,7 @@
     remote:    { fr: 'À distance',            en: 'Remote',               ar: 'عن بُعد' },
     direct:    { fr: 'Réservation directe',   en: 'Direct booking',       ar: 'حجز مباشر' },
     online:    { fr: 'Réservation en ligne',  en: 'Online booking',       ar: 'حجز عبر الإنترنت' },
+    eshop:     { fr: 'Boutique en ligne',     en: 'Online store',         ar: 'المتجر الإلكتروني' },
     onsite:    { fr: 'Sur place',             en: 'On site',              ar: 'في المكان' },
     // Nom de marque : jamais traduit, dans aucune langue.
     orderpro:  { fr: 'OrderPro',              en: 'OrderPro',             ar: 'OrderPro' },

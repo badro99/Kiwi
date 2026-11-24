@@ -45,7 +45,7 @@ function harness({ scoped = false } = {}) {
     'function setTimeout(fn) { st.timers.push(fn); }',
     'function storeSlug() { return st.slug; } function merchant() { return st.merchant; } function isScoped() { return scoped; }',
     'function configUrl() { return "/api/config?merchant=" + st.slug; }',
-    'function rememberPins(p) { calls.pins.push(p); } function reportTillZone() {} function adoptTillCutoff() {}',
+    'function rememberPins(p) { calls.pins.push(p); } function reportTillZone() {} function adoptTillCutoff() {} function loadCountry() {}',
     'function applyFeatures() { calls.applyFeatures++; } function applyServerType() { calls.applyServerType.push(cfg.type); }',
     'const fetch = () => new Promise((res) => st.pending.push(res));',
     'var fetchSeq = 0, staleRetries = 0;',

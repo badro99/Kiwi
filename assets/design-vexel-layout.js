@@ -257,7 +257,17 @@
 
   function currentChannels() {
     var registry = window.KiwiTrades;
-    return registry && registry.channels ? registry.channels(activeTrade()) : [];
+    var list = registry && registry.channels ? registry.channels(activeTrade()) : [];
+    var truth = window.KiwiChannelSales;
+    if (!truth || !truth.rings || !realSession()) return list;
+    var rows = [], country = '';
+    try { rows = (window.KiwiSales && window.KiwiSales.list && window.KiwiSales.list(window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue())) || []; } catch (_) { rows = []; }
+    try { country = document.documentElement.getAttribute('data-kiwi-country') || ''; } catch (_) {}
+    var labels = (registry && registry.CHANNELS) || {}, l = lang();
+    return truth.rings(list.map(function (c) { return c.id; }), rows, country).map(function (id) {
+      var known = list.filter(function (c) { return c.id === id; })[0];
+      return known || { id: id, label: (labels[id] && (labels[id][l] || labels[id].fr)) || id };
+    });
   }
 
   /* Keep each establishment on its own operational surface. Universal cards

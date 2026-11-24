@@ -73,6 +73,18 @@ r = await post(named, { merchant: 'startoner-fixture', channel: 'shopify', order
 ok(r.status === 200 && r.body.inserted === 0 && r.body.existing === 2, 'renvoyer les mêmes commandes n’ajoute rien', r.body);
 ok(db.prepare("SELECT COUNT(*) n FROM sales WHERE merchant = 'startoner-fixture'").get().n === 2, 'toujours deux ventes');
 
+console.log('■ un nouvel import rafraîchit le détail, jamais le montant');
+const fixed = orders.map((o) => ({ ...o, totalCents: o.totalCents + 999, lines: o.lines.filter((l) => l.n !== 'Envío') }));
+r = await post(named, { merchant: 'startoner-fixture', channel: 'shopify', orders: fixed });
+const after = db.prepare("SELECT * FROM sales WHERE merchant = 'startoner-fixture' ORDER BY ts").all();
+ok(r.status === 200 && r.body.inserted === 0 && r.body.existing === 2 && r.body.refreshed === 1, 'une commande dont le détail a changé est rafraîchie', r.body);
+ok(JSON.parse(after[0].lines).length === 1 && JSON.parse(after[0].lines)[0].n.startsWith('Tóner'), 'la ligne de port a quitté le détail', after[0].lines);
+ok(after[0].amount_cents === 3288 && after[1].amount_cents === 1198, 'les montants déjà dans les livres ne bougent pas', after.map((s) => s.amount_cents));
+db.prepare("INSERT INTO sales (id, merchant, amount, amount_cents, method, label, ts, lines, written_by) VALUES ('shp:startoner-fixture:9000', 'startoner-fixture', 1, 100, 'cash', 'caisse', 1700000000000, '[]', 'till:dev')").run();
+r = await post(named, { merchant: 'startoner-fixture', channel: 'shopify', orders: [{ ref: '#9000', ts: Date.parse('2026-01-01'), totalCents: 100, method: 'card', lines: [{ n: 'Autre', q: 1, t: 1 }] }] });
+ok(db.prepare("SELECT lines FROM sales WHERE id = 'shp:startoner-fixture:9000'").get().lines === '[]' && r.body.refreshed === 0, 'une vente écrite par quelqu’un d’autre n’est jamais réécrite', r.body);
+db.prepare("DELETE FROM sales WHERE id = 'shp:startoner-fixture:9000'").run();
+
 console.log('■ refus ligne par ligne');
 r = await post(named, { merchant: 'startoner-fixture', channel: 'shopify', orders: [
   { ref: '', ts: Date.now(), totalCents: 100, method: 'card', lines: [] },
@@ -94,7 +106,7 @@ ok(moves === 0, 'aucun mouvement de stock', moves);
 
 console.log('■ la trace');
 const audit = db.prepare("SELECT action, actor, detail FROM account_audit WHERE merchant = 'startoner-fixture' AND action = 'channel-sales-import'").all();
-ok(audit.length === 3 && audit[0].actor === 'Fixture' && JSON.parse(audit[0].detail).inserted === 2, 'chaque import écrit qui et combien', audit);
+ok(audit.length === 5 && audit[0].actor === 'Fixture' && JSON.parse(audit[0].detail).inserted === 2, 'chaque import écrit qui et combien', audit);
 
 console.log(bad ? `✗ ${bad} échec(s), ${n} contrôles passés` : `✓ historique des ventes en ligne : ${n} contrôles`);
 process.exitCode = bad ? 1 : 0;

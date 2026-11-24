@@ -33,6 +33,8 @@
       currency: 'EUR', symbol: '€', decimals: 2, locale: 'es-ES', zone: 'Europe/Madrid',
       vatLabel: 'IVA', vat: [21, 10, 4, 0], defaultVat: 21,
       taxId: 'NIF', phone: '+34', receiptTitle: 'Factura simplificada',
+      // Le portefeuille (moyen « wallet ») : PayPal en ligne, Bizum au comptoir.
+      walletLabel: 'PayPal / Bizum',
     },
   };
   var DEFAULT = 'MA';

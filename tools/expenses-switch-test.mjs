@@ -34,6 +34,7 @@ const ok = (name) => { n++; console.log('✓ ' + name); };
   const make = (features) => new Function('cfg', [
     'var HANDLER_ALIASES = {};',
     grab(SRC, 'function optInOff('),
+    grab(SRC, 'function foreignOff('),
     grab(SRC, 'function featureOff('),
     'return featureOff;',
   ].join('\n'))({ features });

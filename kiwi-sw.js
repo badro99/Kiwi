@@ -244,8 +244,8 @@ var SHELL = [
   '/assets/food-trade-settings.js?v=2',
   '/assets/z-reconciliation.js?v=34',
   '/assets/design-2026.js?v=2',
-  '/assets/design-vexel-layout.js?v=2103',
-  '/assets/pages/dashboard-startup.js?v=316',
+  '/assets/design-vexel-layout.js?v=2104',
+  '/assets/pages/dashboard-startup.js?v=317',
   '/assets/pages/dashboard-loader.js?v=118',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -284,7 +284,7 @@ var SHELL = [
   /* Les métiers. Dans la coquille parce que venues.js et les assistants
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
-  '/assets/trades.js?v=9',
+  '/assets/trades.js?v=10',
   '/assets/plan-catalog.js?v=1',
   '/assets/interactive/helpers.js?v=1',
   '/assets/interactive/handlers.js?v=6',
@@ -366,7 +366,7 @@ var SHELL = [
   '/assets/floorplan-core.js?v=2061',
   // The Plan de salle's live-room poller (fail-soft without network).
   '/assets/floorplan-live.js?v=27',
-  '/assets/oppo-cards.js?v=13',
+  '/assets/oppo-cards.js?v=14',
   '/assets/home-top-sellers.js?v=4',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
@@ -395,7 +395,7 @@ var SHELL = [
   '/assets/expenses/sheet.js?v=8',
   '/assets/expenses/style.js?v=2',
   '/assets/queue-recovery.js?v=15',
-  '/assets/channel-sales.js?v=9',
+  '/assets/channel-sales.js?v=10',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
@@ -418,7 +418,7 @@ var SHELL = [
   '/assets/receipt.js?v=39', '/assets/receipt-country.js?v=2', '/assets/receipt-gift.js?v=4',
   '/assets/receipt-ui.js?v=3',
   '/assets/invoice.js?v=28',
-  '/assets/merchant-config.js?v=297', '/assets/kiwi-country.js?v=3',
+  '/assets/merchant-config.js?v=298', '/assets/kiwi-country.js?v=4',
   '/assets/entitlements.css?v=8',
   '/assets/entitlements-v2.js?v=6',
   '/assets/staff-roles.js?v=4',

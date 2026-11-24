@@ -50,6 +50,15 @@ function till(profile) {
 }
 const sale = { ref: '0001', lines: [{ qty: 2, name: 'Lote tinta HP 940XL compatible', total: 32.88 }], total: 32.88, pay: [{ label: 'espèces', amount: 32.88 }] };
 
+console.log('■ les mots du pays');
+const oppo = read('assets/oppo-cards.js');
+ok(/dc: \{ ES: \{ fr: '.*?espagnol ou anglais/.test(oppo) && /pick\(\(c\.dc && c\.dc\[country\(\)\]\) \|\| c\.d\)/.test(oppo), 'l’agent parle « français, espagnol ou anglais » à un commerce espagnol, pas darija');
+const mc = read('assets/merchant-config.js');
+const grab = (src, start) => { const i = src.indexOf(start); let d = 0; for (let k = src.indexOf('{', i); k < src.length; k++) { if (src[k] === '{') d++; else if (src[k] === '}' && --d === 0) return src.slice(i, k + 1); } return ''; };
+const gate = (cfg) => vm.runInNewContext(grab(mc, 'var HANDLER_ALIASES') + ';' + grab(mc, 'function optInOff') + grab(mc, 'function foreignOff') + grab(mc, 'function featureOff') + '; featureOff', { cfg });
+ok(gate({ features: {}, countryProfile: Countries.profile('ES') })('cheques') === true, '« Chèques et effets » (banques marocaines, LCN) quitte la barre d’un commerce espagnol');
+ok(gate({ features: {}, countryProfile: Countries.profile('MA') })('cheques') === false && gate({ features: {} })('cheques') === false, 'un commerce marocain, ou sans pays connu, le garde');
+ok(gate({ features: {}, countryProfile: Countries.profile('ES') })('crm') === false, 'les autres modules ne bougent pas');
 console.log('■ l’unité à l’écran');
 const es = till(Countries.profile('ES'));
 const rw = (s) => es.window.KiwiCurrency.rewrite(s, '€');
@@ -58,6 +67,11 @@ ok(rw('0MAD') === '0 €', 'un montant collé à son unité garde une espace in
 ok(rw('MAD') === '€' && rw('  MAD ') === '  € ', 'une cellule qui ne dit que « MAD » dit « € »');
 ok(rw('380 MAD/soir') === '380 €/soir' && rw('prix en MAD/kg') === 'prix en €/kg', '« MAD/… » devient « €/… »', [rw('380 MAD/soir'), rw('prix en MAD/kg')]);
 ok(rw('T-shirt MAD MAX') === 'T-shirt MAD MAX' && rw('MADRID') === 'MADRID', 'un nom de produit ou une ville ne sont pas touchés', [rw('T-shirt MAD MAX'), rw('MADRID')]);
+ok(rw('MAD encaissé') === '€ encaissé' && rw('MAD collected') === '€ collected', 'une unité suivie de son mot (« MAD encaissé ») devient « € encaissé »', [rw('MAD encaissé'), rw('MAD collected')]);
+ok(rw('MAD MAX') === 'MAD MAX', 'un nom en capitales qui commence par MAD reste tel quel', rw('MAD MAX'));
+ok(rw('Kiwi Wallet') === 'PayPal / Bizum' && rw('QR / Wallet') === 'PayPal / Bizum' && rw('65 % en QR / Wallet') === '65 % en PayPal / Bizum', 'en Espagne le portefeuille se nomme PayPal / Bizum', [rw('Kiwi Wallet'), rw('QR / Wallet')]);
+ok(rw('Carte bancaire') === 'Carte bancaire' && rw('Wallet') === 'Wallet', 'les autres moyens ne bougent pas', [rw('Carte bancaire'), rw('Wallet')]);
+ok(!Countries.profile('MA').walletLabel && Countries.profile('ES').walletLabel === 'PayPal / Bizum', 'le Maroc garde ses libellés, l’Espagne porte le sien');
 ok(es.appended.length === 0 || es.appended.every((u) => /receipt-country\.js/.test(u)), 'kiwi-country.js ne charge que le ticket du pays', es.appended);
 
 console.log('■ le ticket');
