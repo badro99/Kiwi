@@ -16,7 +16,7 @@
  */
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { makeSession, SESS_COOKIE } from '../functions/auth/_lib.js';
+import { makeSession, SESS_COOKIE, TILL_COOKIE, tillToken } from '../functions/auth/_lib.js';
 import { onRequestPost as connectDirect } from '../functions/api/shopify/connect-direct.js';
 import { onRequestPost as statusPost } from '../functions/api/shopify/status.js';
 
@@ -63,6 +63,10 @@ ok(r.status !== 200, 'tant qu’elle est reliée, un autre commerce ne peut pas 
 
 r = await call(statusPost, '/api/shopify/status', 'acc-c', { merchant: 'amira-test', action: 'disconnect' });
 ok(r.status === 401, 'un autre compte ne peut pas la déconnecter', r.status);
+{ // une caisse appairée lit et règle le canal, elle ne détache pas la boutique du commerce
+  const till = await statusPost({ env, request: new Request('https://kiwi.test/api/shopify/status', { method: 'POST', headers: { 'Content-Type': 'application/json', cookie: TILL_COOKIE + '=' + await tillToken(env.AUTH_SECRET, 'amira-test', 0) }, body: JSON.stringify({ merchant: 'amira-test', action: 'disconnect' }) }), waitUntil() {} });
+  ok(till.status === 403 && sql.prepare("SELECT COUNT(*) n FROM shopify_connections WHERE merchant = 'amira-test'").get().n === 1, 'une caisse appairée ne peut pas déconnecter Shopify (propriétaire ou opérateur nommé seulement)', till.status);
+}
 r = await call(statusPost, '/api/shopify/status', 'acc-a', { merchant: 'amira-test', action: 'disconnect' });
 ok(r.status === 200 && r.body.ok && r.body.webhooksRemoved === 5, 'déconnecter retire les cinq abonnements de Kiwi chez Shopify', r);
 ok(subs.length === 1 && subs[0].uri === 'https://ailleurs.example/hook', 'un abonnement qui n’est pas celui de ce commerce reste', subs);

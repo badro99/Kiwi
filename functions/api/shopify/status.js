@@ -5,7 +5,7 @@ import { __test as inboundStock } from '../channel/shopify/[link].js';
 // It exposes health and mapping metadata only; encrypted tokens stay server-side.
 
 import { json } from '../../auth/_lib.js';
-import { tenantFor } from '../_private.js';
+import { tenantFor, ownerMerchant } from '../_private.js';
 import { replayShopifyOrders, readReplayProgress } from './_replay-orders.js';
 import {
   buildExactVariantMapping, connectionFor, enqueueStockChanges,
@@ -369,11 +369,14 @@ export async function onRequestPost({ request, env, waitUntil }) {
        variantes et ses écritures en attente disparaissent. Le catalogue Kiwi et les
        ventes déjà enregistrées ne bougent pas. */
     if (action === 'disconnect') {
+      /* tenantFor accepte une caisse appairée : elle règle le canal, elle ne détache pas
+         la boutique. Le propriétaire (sa session) ou un opérateur nommé seulement. */
+      const actor = await operatorActor(request, env).catch(() => ({ label: '', id: '' }));
+      if (!actor.id && (await ownerMerchant(request, env, merchant)) !== merchant) return json({ error: 'owner-only' }, 403);
       const connection = await connectionFor(env, merchant);
       if (!connection) return json({ error: 'shopify-not-connected' }, 404);
       const linkId = String(connection.channel_link_id || '');
       const hooks = await removeWebhooks(env, merchant, linkId);
-      const actor = await operatorActor(request, env).catch(() => ({ label: '', id: '' }));
       const ts = Date.now();
       await env.DB.batch([
         env.DB.prepare(`INSERT INTO account_audit (account_id, merchant, action, prev, next, reason, actor, actor_id, detail, ts)
