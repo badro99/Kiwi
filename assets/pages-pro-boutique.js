@@ -435,9 +435,9 @@ function _bqxCopy(trade) {
       catPlaceholder: 'Ex. Caftans de mariée',
       defaultKind: 'taille',
       kindList: (_sel) => [
-        ['taille', 'Vêtement (tailles S-XL)'],
-        ['pointure', 'Chaussure (pointures)'],
-        ['tu', 'Taille unique'],
+        ['taille', 'Vêtement · tailles XXS à XXL'],
+        ['pointure', 'Chaussure · pointures 36 à 45'],
+        ['tu', 'Taille unique · sans taille'],
       ],
     };
   }

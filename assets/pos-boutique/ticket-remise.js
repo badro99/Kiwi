@@ -28,16 +28,22 @@ export function ticketRemise(d) {
      Le drapeau de peau ne se lit PAS ici : il appartient au fichier du métier
      (pos-boutique.js, bqKitSkin) et descend par import — boutique-2027-test
      l'exige, pour qu'une seule ligne au monde décide si la peau est là. */
-  function openTicketRemise() {
+  /* `only` : l'index d'UNE ligne. Un article scanné arrive au ticket sans
+     passer par la feuille (et ses remises) : il n'avait plus aucun moyen
+     d'être remisé (propriétaire, 2026-11-24). Le bouton « Remise » de la
+     ligne ouvre ce même choisisseur, limité à elle. */
+  function openTicketRemise(only) {
     const t = state.ticket;
     if (!t.lines.length) return;
+    const one = Number.isInteger(only) && t.lines[only] ? only : null;
+    const mine = one === null ? t.lines : [t.lines[one]];
     window.KiwiDiscountPolicy?.refresh?.(); // the owner may have lowered the allowed percentages
     const pcts = (window.KiwiDiscountPolicy?.percentages(d.bqKey()) || [5, 10, 15, 20]).filter((p) => p > 0);
-    const cur = t.lines.length && t.lines.every((l) => l.remise === t.lines[0].remise) ? (t.lines[0].remise || 0) : null;
-    const apply = (pct) => {
-      ticketOwner.discountAllLines(t, pct);
+    const cur = mine.every((l) => l.remise === mine[0].remise && !(l.agreed > 0)) ? (mine[0].remise || 0) : null;
+    const apply = (pct, quiet) => {
+      if (one === null) ticketOwner.discountAllLines(t, pct); else ticketOwner.discountLine(t, one, pct);
       renderTicket(); renderGrid(); renderBadges(); icons();
-      toast(pct ? tr('Remise') + ' −' + pct + ' %' : tr('Remise supprimée'));
+      if (!quiet) toast(pct ? tr('Remise') + ' −' + pct + ' %' : tr('Remise supprimée'));
     };
     const el = $('#bq-approvem', root);
     /* Le squelette d'abord, les mots ensuite, chacun par tr() : aucune
@@ -46,11 +52,11 @@ export function ticketRemise(d) {
       + '<h3 class="modal-title"></h3><div class="bq-bargain" id="bq-tkrem-bargain"></div>'
       + '<div class="bq-sheet-foot" id="bq-tkrem-foot" hidden><button class="bq-btn primary" id="bq-tkrem-apply" disabled></button></div>';
     $('.bq-modal-x', el).setAttribute('aria-label', tr('Fermer'));
-    $('.modal-title', el).textContent = tr('Remise');
+    $('.modal-title', el).textContent = one === null ? tr('Remise sur le ticket') : tr('Remise') + ' · ' + (d.nameOf ? d.nameOf(t.lines[one]) : '');
     /* « Kolchi b 500 » : le total convenu ou les dirhams retirés du ticket,
        répartis sur les pièces par spreadTicket (bargain.js), derrière le même
        accord gérante que le pourcentage. */
-    const rows = t.lines.map((ln, i) => ({ key: i, base: d.pieceBase(ln), qty: ln.qty }));
+    const rows = t.lines.map((ln, i) => ({ key: i, base: d.pieceBase(ln), qty: ln.qty })).filter((r) => one === null || r.key === one);
     const T0 = Math.round(rows.reduce((s, r) => s + Math.round(r.base * 100) * r.qty, 0)) / 100;
     let last = null;
     mountBargain($('#bq-tkrem-bargain', el), {
@@ -109,7 +115,7 @@ export function ticketRemise(d) {
       const pct = parseInt(b.dataset.bqTkrem, 10) || 0;
       /* Retirer la remise n'a jamais demandé d'accord ; l'accorder, si. */
       if (!pct || t.remiseAuth) { closeVeil('#bq-approve-veil'); apply(pct); return; }
-      openApprove(pct, () => { closeVeil('#bq-approve-veil'); apply(pct); });
+      openApprove(pct, () => { closeVeil('#bq-approve-veil'); apply(pct, true); });   // openApprove dit déjà « Remise −n % »
     };
   }
 

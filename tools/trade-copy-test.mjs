@@ -74,7 +74,8 @@ try {
 }
 
 /* 2. TRADE BOUTIQUE : chaîne de sortie identique à la version actuelle. */
-const ORIGINAL_BOUTIQUE_OUTPUT = '<option value="taille" selected>Vêtement (tailles S-XL)</option><option value="pointure" >Chaussure (pointures)</option><option value="tu" >Taille unique</option>';
+/* 2026-11-24 : libellés alignés sur la grille réelle (XXS à XXL, 36 à 45) ; « S-XL » mentait. */
+const ORIGINAL_BOUTIQUE_OUTPUT = '<option value="taille" selected>Vêtement · tailles XXS à XXL</option><option value="pointure" >Chaussure · pointures 36 à 45</option><option value="tu" >Taille unique · sans taille</option>';
 try {
   const { _kindOptions } = createEnv('boutique');
   const html = _kindOptions('taille');

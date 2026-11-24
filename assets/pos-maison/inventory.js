@@ -1,9 +1,9 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=269';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=182';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=273';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=186';
 import { mzInvSearch, mzSkinOn } from './kit-2027.js?v=14';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=182';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=186';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
-import { openMoves } from './inv-moves.js?v=3'; import * as SZG from './new-sizes.js?v=3'; import { invProducts, recountPill, gapLabel, stockLabel } from '../pos-boutique/oversell.js?v=4';
+import { openMoves } from './inv-moves.js?v=3'; import * as SZG from './new-sizes.js?v=4'; import * as UX from './inv-ux.js?v=4'; import { invProducts, recountPill, gapLabel, stockLabel } from '../pos-boutique/oversell.js?v=4';
 /* Les messages créés ici passent par la langue de la caisse (assets/caisse-lang.js). */
 const tr = (s) => (window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s);
 /* « ← Inventaire » en tête de Mouvements de stock et de Déclarer casse : leurs écrans se redessinent souvent, on écoute donc une fois, au document. */
@@ -869,7 +869,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
           <div><h1>Inventaire</h1><div class="mz-head-sub">Douchette + imprimante étiquettes · ${st.products} ${st.products > 1 ? 'produits' : 'produit'} · ${st.variants} ${st.variants > 1 ? 'variantes' : 'variante'}, base partagée avec le dashboard</div></div>
         </header>
         <div class="mzi-tools">
-          <div class="mzi-scan"><i data-lucide="scan-line"></i><input id="mzi-scan" placeholder="Scannez un article, ou tapez un code…" autocomplete="off" /></div>
+          <div class="mzi-scan"><i data-lucide="scan-line"></i><input id="mzi-scan" placeholder="Scanner ou chercher un article…" autocomplete="off" /></div>
           <button class="mz-btn primary" id="mzi-count" style="background:#059669;border-color:#047857;"><i data-lucide="clipboard-check"></i>Inventaire physique</button>
           <button class="mz-btn" id="mzi-moves"><i data-icon="history"></i>Mouvements de stock</button>
           <button class="mz-btn" id="mzi-casse"><i data-icon="gpp_maybe"></i>Déclarer casse</button>
@@ -904,7 +904,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
     /* Mouvements et casse vivent DANS l'Inventaire (propriétaire, 2026-10-30) : plus de place à eux dans le rail. */
     const mvb = $('#mzi-moves', panel); if (mvb) mvb.onclick = () => openMoves({ setModal: invSetModal, esc, icons, catDB, toast, onNew: openMovementPicker });   // la fenêtre de la boutique (inv-moves.js)
     const csb = $('#mzi-casse', panel); if (csb) csb.onclick = () => switchView('casse');
-    const ib = $('#mzi-intake', panel); if (ib) ib.onclick = () => openIntake(); import('./avance-restock.js?v=38').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   /* avances expirées : chaque pièce scannée revient en stock */
+    const ib = $('#mzi-intake', panel); if (ib) ib.onclick = () => openIntake(); import('./avance-restock.js?v=42').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   /* avances expirées : chaque pièce scannée revient en stock */
     const nb = $('#mzi-new', panel); if (nb) nb.onclick = openNewProduct;
     const mb = $('#mzi-category', panel); if (mb) mb.onclick = openCategories;
     const pills = $('#mzi-pills', panel);
@@ -921,7 +921,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
     const cls = d.stock === 0 ? 'rupture' : (d.stock <= 5 ? 'bas' : '');
     return `<div class="mzi-row" data-inv-open="${p.id}">
       <span class="mzi-art">${artOf(p)}</span>
-      <span class="mzi-info"><b>${esc(p.name)}</b><span>${d.category ? esc(d.category.name) : 'Divers'} · ${d.colors.length} coul. · ${d.sizes.length} taille${d.sizes.length > 1 ? 's' : ''} · ${nBc}/${d.variants.length} codes-barres</span></span>
+      <span class="mzi-info"><b>${esc(p.name)}</b><span>${d.category ? esc(d.category.name) : UX.UNCAT} · ${d.colors.length} coul. · ${d.sizes.length} taille${d.sizes.length > 1 ? 's' : ''} · ${nBc}/${d.variants.length} codes-barres</span></span>
       <span class="mzi-stock ${cls}">${stockLabel(cat, p.id, d.stock, esc)}</span>
       <span class="mzi-price">${fmtMAD(shelf(p.priceMAD))}</span>
       <button class="mzi-mini" data-inv-print="${p.id}" title="Imprimer toutes les étiquettes"><i data-lucide="printer"></i></button>
@@ -961,7 +961,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
       <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="mzi-modh">
         <span class="mzi-art">${artOf(p)}</span>
-        <div><h3>${esc(p.name)}</h3><span>${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(shelf(p.priceMAD))} · ${d.stock} en stock</span></div>
+        <div><h3>${esc(p.name)}</h3><span>${d.category ? esc(d.category.name) : UX.UNCAT} · ${fmtMAD(shelf(p.priceMAD))} · ${d.stock} en stock</span></div>
         ${catalogueAdminEnabled() ? `<button class="mz-btn secondary sm" data-inv-edit="${p.id}"><i data-lucide="pencil"></i>Modifier</button>` : '<span class="mzi-dashboard-only">Gestion complète désactivée</span>'}
       </div>
       <div class="mzi-vtable-wrap" tabindex="0" role="region" aria-label="${esc(p.name)}"><table class="mzi-vtable">
@@ -1071,14 +1071,14 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
       ? `<div class="mzi-bc">${window.KiwiBarcode.svg(primary.code, { height: 26, module: 1.1, showText: false })}<span class="mzi-code">${esc(primary.code)}<em class="${primary.type === 'imported' ? 'imp' : 'gen'}">${primary.type === 'imported' ? 'importé' : 'généré'}</em></span></div>`
       : '<span class="mzi-nocode">aucun code</span>';
     const genOrPrint = primary
-      ? `<button class="mzi-mini" data-vprint="${v.id}" title="Imprimer l'étiquette"><i data-lucide="printer"></i></button>`
-      : `<button class="mzi-mini" data-vgen="${v.id}" title="Générer un EAN-13"><i data-lucide="scan-line"></i></button>`;
+      ? `<button class="mzi-mini" data-vprint="${v.id}" title="Imprimer l'étiquette"><i data-lucide="printer"></i>Étiquette</button>`
+      : `<button class="mzi-mini" data-vgen="${v.id}" title="Générer un EAN-13"><i data-lucide="scan-line"></i>Créer un code</button>`;
     const shown = variantColor(v);
     return `<tr>
       <td>${catalogueAdminEnabled() ? `<button class="mzi-cbtn" data-vcolor="${v.id}">${colorDot(shown)} ${esc(shown.label)}</button>` : `<span class="mzi-cbtn is-locked" aria-disabled="true">${colorDot(shown)} ${esc(shown.label)}</span>`}${v.colorSource ? `<em class="mzi-csrc">${esc(v.colorSource)}</em>` : ''} · <b>${esc(v.size)}</b></td>
       <td><span class="mzi-stk-val" style="font-weight:700;padding:4px 8px;border-radius:6px;background:var(--n-100);">${v.stock}</span></td>
       <td>${bc}</td>
-      <td class="mzi-vact">${genOrPrint}<button class="mzi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button><button class="mzi-mini" data-vmove="${v.id}" title="Déclarer un mouvement de stock"><i data-lucide="arrow-left-right"></i></button>${catalogueAdminEnabled() ? `<button class="mzi-mini danger" data-vdelete="${v.id}" title="Supprimer la variante"><i data-lucide="trash-2"></i></button>` : '<span class="mzi-mini is-locked danger" aria-disabled="true"><i data-lucide="trash-2"></i></span>'}</td>
+      <td class="mzi-vact">${genOrPrint}<button class="mzi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i>Lier un code</button><button class="mzi-mini" data-vmove="${v.id}" title="Déclarer un mouvement de stock"><i data-lucide="arrow-left-right"></i>Mouvement</button>${catalogueAdminEnabled() ? `<button class="mzi-mini danger" data-vdelete="${v.id}" title="Supprimer la variante"><i data-lucide="trash-2"></i>Supprimer</button>` : '<span class="mzi-mini is-locked danger" aria-disabled="true"><i data-lucide="trash-2"></i>Supprimer</span>'}</td>
     </tr>`;
   }
 
@@ -1186,8 +1186,8 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
     const cat = catDB(); if (!cat) return;
     const preset = typeof scanned === 'string' ? normScan(scanned) : '';
     const html = `<button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-icon="close"></i></button><div class="mzi-modh"><div><h3>Nouvel article</h3><span>Produit, prix, coût, tailles et codes-barres.</span></div></div><div class="mzi-form mzi-new-form">
-      <div class="mzi-fg"><label>Photo</label><div class="mzi-photo mzi-auto"><div class="mzi-photo-preview" data-mzi-auto>${artOf({ name: '', art: 'tshirt' })}</div><div class="mzi-photo-copy"><b>Choisie automatiquement</b><div class="mzi-photo-status">Kiwi choisit l’image d’après le nom de l’article. Votre propre photo s’ajoute ensuite depuis Modifier.</div></div></div></div><div class="mzi-fg"><label for="mzi-n-name">Nom</label><input id="mzi-n-name" placeholder="Ex. Assiette plate en faïence 27 cm" autocomplete="off"></div><div class="mzi-frow"><div class="mzi-fg"><label for="mzi-n-cat">Catégorie</label><select id="mzi-n-cat">${catSelectOptions(state.invFilter !== 'all' ? state.invFilter : '')}</select></div><div class="mzi-fg"><label for="mzi-n-kind">Type</label><select id="mzi-n-kind">${kindSelectOptions('tu')}</select></div></div><div class="mzi-frow"><div class="mzi-fg"><label for="mzi-n-price">Prix de vente (MAD)</label><input id="mzi-n-price" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00"></div><div class="mzi-fg"><label for="mzi-n-cost">Coût d'achat (MAD)</label><input id="mzi-n-cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00"></div></div><div class="mzi-frow mzi-frow3"><div class="mzi-fg"><label for="mzi-n-stock">Stock initial</label><input id="mzi-n-stock" type="number" min="0" value="0" inputmode="numeric"></div><div class="mzi-fg"><label for="mzi-n-size">Format / taille</label><input id="mzi-n-size" value="TU"></div><div class="mzi-fg"><label for="mzi-n-barcode">Code-barres existant (facultatif)</label><input id="mzi-n-barcode" autocomplete="off" spellcheck="false" placeholder="Scannez ou tapez le code" value="${esc(preset)}"></div></div>${SZG.sizesHtml()}<div class="mzi-fg"><label for="mzi-n-brand">Marque / fournisseur</label><input id="mzi-n-brand"></div>${ownershipField(null, 'mzi-n')}</div><div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn primary" id="mzi-n-save">Créer l'article</button></div>`;
-    invSetModal(html, (el) => { const save=$('#mzi-n-save',el); const media={ busy: false, photo: '' }; armScanCapture((c)=>{ if(SZG.scan(el,normScan(c),cat)) return; const bi=$('#mzi-n-barcode',el); if(bi) bi.value=normScan(c); });   /* un article déjà étiqueté : la douchette écrit son code ici, pas sur le ticket */ wireOwnershipField(el, 'mzi-n'); SZG.wire(el, cat); $('#mzi-n-name',el).oninput=(e)=>{ $('[data-mzi-auto]',el).innerHTML=artOf({ name: e.target.value, art: 'tshirt' }); }; save.onclick = () => { if(media.busy)return; const name=$('#mzi-n-name',el).value.trim(); if(!name){toast('Le nom est requis');return;} const owner=readOwnershipField(el,'mzi-n'); if(!owner){toast('Choisissez la catégorie A ou B');return;} const grid=SZG.read(el,cat); if(grid&&grid.error)return; let p,v,bcRes=null,kept=0; cat.batch(()=>{p=cat.addProduct({name,categoryId:$('#mzi-n-cat',el).value||null,kind:$('#mzi-n-kind',el).value,priceMAD:bqMoney($('#mzi-n-price',el).value),cost:bqMoney($('#mzi-n-cost',el).value),marque:$('#mzi-n-brand',el).value.trim(),art:'tshirt',ownership:owner.ownership,consignor:owner.consignor,photo:media.photo});if(grid){grid.sizes.forEach((z)=>{const w=cat.addVariant({productId:p.id,colorId:'noir',size:z.size,stock:z.stock});if(w&&z.code&&(cat.attachBarcode(w.id,z.code)||{}).ok)kept++;});return;}v=cat.addVariant({productId:p.id,colorId:'noir',size:$('#mzi-n-size',el).value.trim()||'TU',stock:Math.max(0,parseInt($('#mzi-n-stock',el).value,10)||0)});const code=$('#mzi-n-barcode',el).value.trim();if(code)bcRes=cat.attachBarcode(v.id,code);}); disarmScanCapture(); rebuildCatalog(); if(grid) toast(tr(`Article créé · ${grid.sizes.length} taille${grid.sizes.length>1?'s':''}${kept?` · ${kept} code${kept>1?'s':''} fournisseur conservé${kept>1?'s':''}`:''}`)); else if(bcRes&&!bcRes.ok) toast(tr(bcRes.reason==='doublon'&&bcRes.owner?`Article créé · code déjà porté par ${bcRes.owner.product.name}, non enregistré`:'Article créé · code-barres illisible, non enregistré')); else toast(tr(bcRes?'Article créé · code fournisseur conservé':'Article créé')); openInvProduct(p.id); renderInventaire(); }; });
+      <div class="mzi-fg"><label>Photo</label><div class="mzi-photo mzi-auto"><div class="mzi-photo-preview" data-mzi-auto>${artOf({ name: '', art: 'tshirt' })}</div><div class="mzi-photo-copy"><b>Choisie automatiquement</b><div class="mzi-photo-status">Kiwi choisit l’image d’après le nom de l’article. Votre propre photo s’ajoute ensuite depuis Modifier.</div></div></div></div><div class="mzi-fg"><label for="mzi-n-name">Nom</label><input id="mzi-n-name" placeholder="Ex. Assiette plate en faïence 27 cm" autocomplete="off"></div><div class="mzi-frow"><div class="mzi-fg"><label for="mzi-n-cat">Catégorie</label><select id="mzi-n-cat">${catSelectOptions(state.invFilter !== 'all' ? state.invFilter : '')}</select></div><div class="mzi-fg"><label for="mzi-n-kind">Type</label><select id="mzi-n-kind">${kindSelectOptions('tu')}</select></div></div><div class="mzi-frow"><div class="mzi-fg"><label for="mzi-n-price">Prix de vente (MAD)</label><input id="mzi-n-price" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00"></div><div class="mzi-fg"><label for="mzi-n-cost">Coût d'achat (MAD)</label><input id="mzi-n-cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00"></div></div><div class="mzi-frow mzi-frow3"><div class="mzi-fg"><label for="mzi-n-stock">Stock initial</label><input id="mzi-n-stock" type="number" min="0" value="0" inputmode="numeric"></div><div class="mzi-fg"><label for="mzi-n-size">Format / taille</label><input id="mzi-n-size" value="TU"></div><div class="mzi-fg"><label for="mzi-n-barcode">Code-barres existant (facultatif)</label><input id="mzi-n-barcode" autocomplete="off" spellcheck="false" placeholder="Scannez ou tapez le code" value="${esc(preset)}"></div></div>${SZG.colorHtml()}${SZG.sizesHtml()}<div class="mzi-fg"><label for="mzi-n-brand">Marque / fournisseur</label><input id="mzi-n-brand"></div>${ownershipField(null, 'mzi-n')}</div><div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn primary" id="mzi-n-save">Créer l'article</button></div>`;
+    invSetModal(html, (el) => { const save=$('#mzi-n-save',el); const media={ busy: false, photo: '' }; armScanCapture((c)=>{ if(SZG.scan(el,normScan(c),cat)) return; const bi=$('#mzi-n-barcode',el); if(bi) bi.value=normScan(c); });   /* un article déjà étiqueté : la douchette écrit son code ici, pas sur le ticket */ wireOwnershipField(el, 'mzi-n'); SZG.wire(el, cat); $('#mzi-n-name',el).oninput=(e)=>{ $('[data-mzi-auto]',el).innerHTML=artOf({ name: e.target.value, art: 'tshirt' }); }; save.onclick = () => { if(media.busy)return; const name=$('#mzi-n-name',el).value.trim(); if(!name)return UX.fieldErr(el,'#mzi-n-name','Écrivez le nom de l’article.'); const owner=readOwnershipField(el,'mzi-n'); if(!owner)return UX.fieldErr(el,'input[name="mzi-n-ownership"]','Choisissez la catégorie A ou B.'); const grid=SZG.read(el,cat); if(grid&&grid.error)return; let p,v,bcRes=null,kept=0; cat.batch(()=>{p=cat.addProduct({name,categoryId:$('#mzi-n-cat',el).value||null,kind:$('#mzi-n-kind',el).value,priceMAD:bqMoney($('#mzi-n-price',el).value),cost:bqMoney($('#mzi-n-cost',el).value),marque:$('#mzi-n-brand',el).value.trim(),art:'tshirt',ownership:owner.ownership,consignor:owner.consignor,photo:media.photo});if(grid){grid.sizes.forEach((z)=>{const w=cat.addVariant({productId:p.id,colorId:SZG.color(el),size:z.size,stock:z.stock});if(w&&z.code&&(cat.attachBarcode(w.id,z.code)||{}).ok)kept++;});return;}v=cat.addVariant({productId:p.id,colorId:SZG.color(el),size:$('#mzi-n-size',el).value.trim()||'TU',stock:Math.max(0,parseInt($('#mzi-n-stock',el).value,10)||0)});const code=$('#mzi-n-barcode',el).value.trim();if(code)bcRes=cat.attachBarcode(v.id,code);}); disarmScanCapture(); rebuildCatalog(); if(grid) toast(tr(`Article créé · ${grid.sizes.length} taille${grid.sizes.length>1?'s':''}${kept?` · ${kept} code${kept>1?'s':''} fournisseur conservé${kept>1?'s':''}`:''}`)); else if(bcRes&&!bcRes.ok) toast(tr(bcRes.reason==='doublon'&&bcRes.owner?`Article créé · code déjà porté par ${bcRes.owner.product.name}, non enregistré`:'Article créé · code-barres illisible, non enregistré')); else toast(tr(bcRes?'Article créé · code fournisseur conservé':'Article créé')); openInvProduct(p.id); renderInventaire(); }; });
   }
 
   function openCategories() {
@@ -1350,7 +1350,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
       <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="mzi-modh"><div><h3>Ajouter une variante</h3><span>${esc(d.product.name)}, couleur × taille</span></div></div>
       <div class="mzi-form">
-        <div class="mzi-fg"><label>Couleur</label><div id="mzi-av-sw">${colorPicker('noir')}</div></div>
+        <div class="mzi-fg"><label>Couleur</label><div id="mzi-av-sw">${colorPicker((d.variants[0] && d.variants[0].colorId) || 'unique')}</div></div>
         <div class="mzi-frow">
           <div class="mzi-fg"><label>Taille</label><input id="mzi-av-size" list="mzi-av-sizes" value="${esc(presets[0] || 'TU')}" /><datalist id="mzi-av-sizes">${presets.map((s) => `<option value="${esc(s)}">`).join('')}</datalist></div>
           <div class="mzi-fg"><label>Stock initial</label><input id="mzi-av-stock" type="number" min="0" value="0" /></div>
@@ -1362,7 +1362,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid)); armScanCapture((c) => { $('#mzi-av-code', el).value = normScan(c); });
       $('#mzi-av-save', el).addEventListener('click', () => { const own = normScan($('#mzi-av-code', el).value.trim()), KB = window.KiwiBarcode, bad = own && KB && KB.validate && !KB.validate(own).ok, hit = own && cat.findByBarcode && cat.findByBarcode(own); if (bad || hit) { toast(bad ? 'Code illisible, scannez-le de nouveau' : `Déjà utilisé par ${(hit.product || {}).name || 'un autre article'}`); $('#mzi-av-code', el).focus(); return; }
         const k = KC();
-        const colorId = (k && k.value($('#mzi-av-sw', el))) || 'noir';
+        const colorId = (k && k.value($('#mzi-av-sw', el))) || (d.variants[0] && d.variants[0].colorId) || 'unique';   // sans pastille : la couleur de l'article (« Sans couleur » compris), plus « Noir » d'office
         const size = $('#mzi-av-size', el).value.trim() || 'TU';
         const stock = parseInt($('#mzi-av-stock', el).value, 10) || 0;
         const v = cat.addVariant({ productId: pid, colorId, size, stock });
@@ -1702,7 +1702,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
 
       const save = () => {
         const name = $('#bqx-name', el).value.trim();
-        if (!name) { toast('Le nom du produit est requis'); $('#bqx-name', el).focus(); return; }
+        if (!name) return UX.fieldErr(el, '#bqx-name', 'Écrivez le nom du produit.');
         const size = $('#bqx-size', el).value.trim() || 'TU';
         const qty = Math.max(0, parseInt($('#bqx-qty', el).value, 10) || 0);
         let catId = $('#bqx-cat', el).value || null;
@@ -1767,7 +1767,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
       </div>
       <div class="bqx-common">
         <span>Repris du produit</span>
-        <b>${esc(d.category ? d.category.name : 'Divers')} · ${fmtMAD(shelf(d.product.priceMAD))}${d.product.cost ? ' · coût ' + fmtMAD(d.product.cost) : ''}</b>
+        <b>${esc(d.category ? d.category.name : UX.UNCAT)} · ${fmtMAD(shelf(d.product.priceMAD))}${d.product.cost ? ' · coût ' + fmtMAD(d.product.cost) : ''}</b>
       </div>
       <div class="mzi-form bqx-form">
         <div class="mzi-fg"><label>Couleur</label><div id="bqx-sw">${colorPicker('noir')}</div></div>
@@ -1924,7 +1924,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
         <span class="mzi-art">${artOf(d.product)}</span>
         <div>
           <b>${esc(d.product.name)}</b>
-          <span>${esc(d.category ? d.category.name : 'Divers')} · ${fmtMAD(shelf(d.product.priceMAD))} · ${d.stock} en stock au total</span>
+          <span>${esc(d.category ? d.category.name : UX.UNCAT)} · ${fmtMAD(shelf(d.product.priceMAD))} · ${d.stock} en stock au total</span>
           <span class="bqx-thisvar"><i style="background:${v.colorHex}"></i>Ce code désigne <b>${esc(v.colorLabel)} · ${esc(v.size)}</b> · ${v.stock} en stock</span>
         </div>
       </div>
@@ -2128,7 +2128,7 @@ try { document.addEventListener('click', (e) => { const b = e.target && e.target
       $('#bqx-back', el).onclick = () => paintIntake();
       $('#bqx-fsave', el).onclick = () => {
         const name = $('#bqx-fname', el).value.trim();
-        if (!name) { toast('Le nom est requis'); return; }
+        if (!name) return UX.fieldErr(el, '#bqx-fname', 'Écrivez le nom du produit.');
         const patch = {
           name, categoryId: $('#bqx-fcat', el).value || null, kind: $('#bqx-fkind', el).value,
           priceMAD: bqMoney($('#bqx-fprice', el).value), cost: bqMoney($('#bqx-fcost', el).value),

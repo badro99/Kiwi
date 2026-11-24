@@ -34,6 +34,8 @@ const ticketOwner = {
      Rien de neuf dans le calcul, rien de neuf dans la vente envoyée — c'est le
      chemin de la remise par article, appliqué d'un geste. */
   discountAllLines(ticket, pct) { ticket.lines.forEach((line) => { line.remise = pct; delete line.agreed; delete line.agreedFrom; }); },
+  /* La même remise, sur UNE ligne (bouton « Remise » de la ligne : l'article scanné). */
+  discountLine(ticket, index, pct) { const line = ticket.lines[index]; if (!line) return; line.remise = pct; delete line.agreed; delete line.agreedFrom; },
   /* Remise à la marocaine (bargain.js) : le prix convenu d'une pièce, posé ou
      retiré sur une ligne ; il remplace le pourcentage de cette ligne. */
   agreeLine(ticket, index, agreed) {

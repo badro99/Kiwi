@@ -1725,7 +1725,7 @@
       "Choisissez une variante (ajoutez-en une d'abord)": ['Choose a variant (add one first)', 'اختر متغيرًا (أضف واحدًا أولًا)'],
       'Reprise terminée': ['Import finished', 'انتهى الاستيراد'],
       "Scan incomplet, rien n'a été enregistré": ['Incomplete scan, nothing was saved', 'مسح غير مكتمل، لم يُحفظ شيء'],
-      'Le nom du produit est requis': ['Product name is required', 'اسم المنتج مطلوب'],
+      'Le nom du produit est requis': ['Product name is required', 'اسم المنتج مطلوب'], 'Écrivez le nom du produit.': ['Type the product name.', 'اكتب اسم المنتج.'], 'Remise sur le ticket': ['Receipt discount', 'خصم على التذكرة'],
       'Déclinaison impossible': ['Cannot create variant', 'تعذّر إنشاء المتغير'],
       'Code refusé': ['Code refused', 'تم رفض الرمز'],
       'Fiche corrigée': ['Profile corrected', 'تم تصحيح الملف'],

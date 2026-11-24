@@ -23,6 +23,9 @@ const PHRASES = {
   'Remise −{n} % sur le ticket': ['−{n} % off the receipt', 'خصم −{n} % على التذكرة'],
   'S\'applique à tous les articles du ticket {n}.': ['Applies to every item on receipt {n}.', 'يُطبَّق على كل أصناف التذكرة {n}.'],
   'Sans': ['None', 'بدون'],
+  'Remise': ['Discount', 'خصم'],
+  'S\'applique à cet article seulement.': ['Applies to this item only.', 'يُطبَّق على هذا الصنف فقط.'],
+  'Remise −{n} % sur l’article': ['−{n} % off the item', 'خصم −{n} % على الصنف'],
   'Fermer': ['Close', 'إغلاق'],
   'Pourcentage non autorisé': ['Percentage not allowed', 'نسبة غير مسموح بها'],
   'en stock': ['in stock', 'في المخزون'],
@@ -56,9 +59,14 @@ const CSS = '.mz-bargain{display:grid;gap:8px}'
   + '.mz-bargain .bq-input:focus{border-color:var(--atlas)}'
   + '.mz-bargain .bq-bargain-pv{font-family:var(--mono);font-size:12px;color:var(--ink-2);min-height:16px}'
   + '.mz-bargain .bq-bargain-pv.is-err{color:var(--danger)}'
-  + '#mz-tkrem-foot[hidden]{display:none}';
-function ensureCss() {
-  if (typeof document === 'undefined' || document.getElementById('mz-bargain-css')) return;
+  + '#mz-tkrem-foot[hidden]{display:none}'
+  /* « Remise » d'UNE ligne du ticket (l'article scanné n'a pas de fiche). */
+  + '.mz-line-remb{display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:3px 9px 3px 7px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--ink-2);font:inherit;font-size:11px;font-weight:600;cursor:pointer}'
+  + '.mz-line-remb svg{width:14px;height:14px}'
+  + '.mz-line-remb.on{color:var(--atlas);background:rgba(11,110,79,.12);border-color:transparent}'
+  + '@media (pointer:coarse){.mz-line-remb{min-height:30px;padding-inline:11px}}';
+export function ensureCss() {
+  if (typeof document === 'undefined' || !document.head || document.getElementById('mz-bargain-css')) return;
   const styleEl = document.createElement('style'); styleEl.id = 'mz-bargain-css'; styleEl.textContent = CSS; document.head.appendChild(styleEl);
 }
 
@@ -98,13 +106,17 @@ export function mzTicketRemise(d) {
     renderTicket, renderGrid, renderBadges, policyKey, fmt, pieceBase } = d;
   const t = state.ticket;
   if (!t.lines.length) return;
+  /* d.only : l'index d'UNE ligne (bouton « Remise » de la ligne, l'article
+     scanné), propriétaire 2026-11-24 ; sinon tout le ticket. */
+  const one = Number.isInteger(d.only) && t.lines[d.only] ? d.only : null;
+  const mine = one === null ? t.lines : [t.lines[one]];
   window.KiwiDiscountPolicy?.refresh?.(); // the owner may have lowered the allowed percentages
   const pcts = (window.KiwiDiscountPolicy?.percentages(policyKey) || [5, 10, 15, 20]).filter((p) => p > 0);
-  const cur = t.lines.every((l) => l.remise === t.lines[0].remise && !l.agreed) ? (t.lines[0].remise || 0) : null;
-  const apply = (pct) => {
-    t.lines.forEach((ln) => { ln.remise = pct; ln.agreed = 0; ln.agreedFrom = ''; });
+  const cur = mine.every((l) => l.remise === mine[0].remise && !(+l.agreed > 0)) ? (mine[0].remise || 0) : null;
+  const apply = (pct, quiet) => {
+    mine.forEach((ln) => { ln.remise = pct; ln.agreed = 0; ln.agreedFrom = ''; });
     renderTicket(); renderGrid(); renderBadges(); icons();
-    toast(pct ? tr('Remise −{n} % sur le ticket').replace('{n}', String(pct)) : tr('Remise supprimée'));
+    if (!quiet) toast(pct ? tr(one === null ? 'Remise −{n} % sur le ticket' : 'Remise −{n} % sur l’article').replace('{n}', String(pct)) : tr('Remise supprimée'));
   };
   const el = $('#mz-approvem', root);
   /* Le squelette d'abord, les mots ensuite, chacun par tr(), comme la boutique. */
@@ -112,11 +124,11 @@ export function mzTicketRemise(d) {
     + '<h3 class="modal-title"></h3><p class="modal-subtle"></p><div id="mz-tkrem-bargain"></div>'
     + '<div class="mz-sheet-foot" id="mz-tkrem-foot" hidden><button class="mz-btn primary" id="mz-tkrem-apply" disabled></button></div>';
   $('.mz-modal-x', el).setAttribute('aria-label', tr('Fermer'));
-  $('.modal-title', el).textContent = tr('Remise sur le ticket');
-  $('.modal-subtle', el).textContent = tr('S\'applique à tous les articles du ticket {n}.').replace('{n}', String(t.num || ''));
+  $('.modal-title', el).textContent = one === null ? tr('Remise sur le ticket') : tr('Remise') + ' · ' + (d.nameOf ? d.nameOf(t.lines[one]) : '');
+  $('.modal-subtle', el).textContent = one === null ? tr('S\'applique à tous les articles du ticket {n}.').replace('{n}', String(t.num || '')) : tr('S\'applique à cet article seulement.');
   /* Le total convenu ou les dirhams retirés du ticket, répartis sur les pièces
      par spreadTicket (bargain.js de la boutique). */
-  const rows = t.lines.map((ln, i) => ({ key: i, base: pieceBase(ln), qty: ln.qty }));
+  const rows = t.lines.map((ln, i) => ({ key: i, base: pieceBase(ln), qty: ln.qty })).filter((r) => one === null || r.key === one);
   const T0 = Math.round(rows.reduce((s, r) => s + Math.round(r.base * 100) * r.qty, 0)) / 100;
   const off = (target) => Math.round((T0 - target) * 100) / 100;
   let last = null;
@@ -171,6 +183,6 @@ export function mzTicketRemise(d) {
     /* Retirer la remise n'a jamais demandé d'accord ; l'accorder, si. */
     closeVeil('#mz-approve-veil');
     if (!pct || t.remiseAuth) { apply(pct); return; }
-    openApprove(pct, () => { closeVeil('#mz-approve-veil'); apply(pct); });
+    openApprove(pct, () => { closeVeil('#mz-approve-veil'); apply(pct, true); });   // openApprove dit déjà « Remise −n % »
   };
 }

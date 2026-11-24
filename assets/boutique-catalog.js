@@ -94,7 +94,7 @@
     const fam = k ? k.normalize(id, srcLabel, srcHex)
       : (KC_FALLBACK.find((c) => c.id === id) || KC_FALLBACK[2]);
     const source = srcLabel && String(srcLabel).toLowerCase() !== String(fam.label).toLowerCase() ? srcLabel : '';
-    const isCustom = /^custom-[0-9a-f]{6}$/i.test(String(id || '')) && /^#[0-9a-f]{6}$/i.test(String(srcHex || ''));
+    const isCustom = /^custom-[0-9a-f]{6}$/i.test(String(id || '')) && /^#[0-9a-f]{6}$/i.test(String(srcHex || '')); if (String(id) === 'unique') return { family: fam, source: '', displayLabel: 'Sans couleur', displayHex: 'transparent', custom: false }; // 'unique' = pas de couleur (tailles boutique, « Sans couleur » maison) : jamais « Gris · S »
     return {
       family: fam, source,
       displayLabel: isCustom ? (srcLabel || `Couleur personnalisée ${String(srcHex).toUpperCase()}`) : fam.label,
@@ -1279,7 +1279,7 @@
       // sales-history / exchange data keeps resolving after the DB migration.
       if (p.legacyId && !P[p.legacyId]) P[p.legacyId] = item;
       let bucket = rayonById[p.categoryId];
-      if (!bucket) { if (!uncat) { uncat = { id: '_uncat', label: 'Divers', items: [] }; RAYONS.push(uncat); } bucket = uncat; }
+      if (!bucket) { if (!uncat) { uncat = { id: '_uncat', label: 'Sans catégorie', items: [] }; RAYONS.push(uncat); } bucket = uncat; }
       /* Le rayon « Divers » (id '_uncat') est un seau fabriqué ici : item.rayon garde
          l'id de catégorie d'origine (vide ou orphelin) pour ne pas changer ce que la
          vente enregistre. `uncat` dit au moteur de promotions que l'article y vit,

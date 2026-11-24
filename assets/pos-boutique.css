@@ -372,6 +372,12 @@
   padding: 1.5px 6px; border-radius: 999px;
 }
 .bq-line-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+/* « Remise » d'UNE ligne (l'article scanné n'a pas de feuille) et du ticket entier. */
+.bq-line-remb, .bq-tk-remb { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; padding: 3px 9px 3px 7px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font-size: 11px; font-weight: 600; cursor: pointer; }
+.bq-line-remb svg, .bq-tk-remb svg { width: 14px; height: 14px; }
+.bq-line-remb.on, .bq-tk-remb.on { color: var(--bq-warn); background: var(--bq-warn-bg); border-color: transparent; }
+.bq-tk-remb { width: 100%; justify-content: center; margin: 0 0 8px; padding: 8px; border-radius: 10px; font-size: 12px; }
+@media (pointer: coarse) { .bq-line-remb { min-height: 30px; padding-inline: 11px; } .bq-tk-remb { min-height: 40px; } }
 .bq-line-price { font-family: var(--mono); font-size: 12px; font-weight: 600; }
 .bq-line-price .was { font-size: 9.5px; color: var(--ink-4); text-decoration: line-through; font-weight: 500; margin-inline-end: 4px; }
 .bq-line-qty { display: inline-flex; align-items: center; gap: 7px; }

@@ -1,10 +1,10 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=269';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=182';
-import { invSetModal, offerRegister } from './inventory.js?v=182';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=273';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=186';
+import { invSetModal, offerRegister } from './inventory.js?v=186';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=14';
-import { mzTicketRemise, mzItemBargain, mzTr as tr } from './ticket-remise.js?v=8';
+import { mzTicketRemise, mzItemBargain, mzTr as tr, ensureCss as mzRemCss } from './ticket-remise.js?v=9';
 import { mzPageGrid } from './grid-pager.js?v=1'; import { mzOpenFiche } from './client-fiche.js?v=8'; import { oversellOk } from '../pos-boutique/oversell.js?v=4';
 import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsEmpty } from './client-view.js?v=1';
 
@@ -142,16 +142,23 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
   const KC = () => window.KiwiColors || null;
   const KC_MISS = { id: 'gris', label: 'Gris', hex: '#9AA0A6' };
   function colorOf(id) { const k = KC(); return (k && k.normalize(id)) || KC_MISS; }
-  function colorLabel(id) { return colorOf(id).label; }
+  /* La couleur neutre (« Sans couleur » du formulaire d'article, 'unique' de
+     l'écran boutique) : ni nommée ni dessinée au ticket, comme la boutique
+     (pos-boutique/sales.js, NO_COLOR) ; sinon le ticket dirait « S Gris ». */
+  const NO_COLOR = 'unique';
+  const noColor = (id) => String(id && typeof id === 'object' ? id.id : id) === NO_COLOR;
+  function colorLabel(id) { return noColor(id) ? '' : colorOf(id).label; }
   function colorHex(id) { return colorOf(id).hex; }
   // Une pastille non cliquable (ligne de ticket, retour, tableau) — même dessin
   // que dans le tableau de bord, nom porté par title/aria plutôt qu'écrit.
   function colorDot(id, size) {
+    if (noColor(id)) return '';
     const k = KC();
     if (k) return k.swatch(id, { size: size || 'sm' });
     return `<i class="kc-sw kc-sm" style="background-color:${KC_MISS.hex}" title="${KC_MISS.label}"></i>`;
   }
   function variantColor(v) {
+    if (noColor(v.colorId)) return { id: NO_COLOR, label: 'Sans couleur', hex: 'transparent' };
     const k = KC();
     return (k && k.display ? k.display(v.colorId, v.colorLabel, v.colorHex) : colorOf(v.colorFamily || v.colorId));
   }
@@ -450,7 +457,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     return '';
   }
 
-  const openTicketRemise = () => mzTicketRemise({ state, root, $, $$, esc, icons, toast, openVeil, closeVeil, openApprove, renderTicket, renderGrid, renderBadges, policyKey: _bqKey, fmt: fmtMAD, pieceBase: (ln) => lineUnit(Object.assign({}, ln, { remise: 0, agreed: 0 })) });
+  const openTicketRemise = (only) => mzTicketRemise({ only: Number.isInteger(only) ? only : undefined, nameOf: (ln) => (P[ln.pid] || {}).name || '', state, root, $, $$, esc, icons, toast, openVeil, closeVeil, openApprove, renderTicket, renderGrid, renderBadges, policyKey: _bqKey, fmt: fmtMAD, pieceBase: (ln) => lineUnit(Object.assign({}, ln, { remise: 0, agreed: 0 })) });
 
   function renderTicket() {
     const t = state.ticket;
@@ -520,9 +527,12 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
       renderTicket(); icons();
     };
     const remBtn = $('#mz-tk-remise', el);
-    if (remBtn) remBtn.onclick = openTicketRemise;
+    if (remBtn) remBtn.onclick = () => openTicketRemise();
     $('#mz-validate', el).onclick = checkout;
+    mzRemCss();
     $('#mz-tk-lines', el).onclick = (e) => {
+      const remLine = e.target.closest('[data-mz-rem-line]');
+      if (remLine) { openTicketRemise(+remLine.dataset.mzRemLine); return; }
       const minus = e.target.closest('[data-mz-minus]');
       const plus = e.target.closest('[data-mz-plus]');
       const idx = minus ? +minus.dataset.mzMinus : plus ? +plus.dataset.mzPlus : -1;
@@ -579,8 +589,8 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
           ${(ln.fragile || p.fragile) ? '<span class="mz-line-fragile">Fragile</span>' : ''}
           ${ln.registryTitle ? `<span class="mz-line-reg">Liste : ${esc(ln.registryTitle)}</span>` : ''}
           ${pr ? `<span class="mz-line-promo" title="${esc(pr.name || 'Promotion')}"><i data-lucide="tag"></i>${esc(pr.badge)}</span>` : ''}
-          ${ln.remise ? `<span class="mz-line-rem">−${ln.remise} %</span>` : ''}${+ln.agreed > 0 ? `<span class="mz-line-rem">${esc(tr('Prix convenu'))}</span>` : ''}
         </span>
+        <button type="button" class="mz-line-remb${(ln.remise || +ln.agreed > 0) ? ' on' : ''}" data-mz-rem-line="${i}"><i data-icon="percent"></i>${ln.remise ? `−${ln.remise} %` : +ln.agreed > 0 ? esc(tr('Prix convenu')) : esc(tr('Remise'))}</button>
       </span>
       <span class="mz-line-right">
         <span class="mz-line-price">${(ln.remise || +ln.agreed > 0 || pr) ? `<span class="was">${fmtMAD(origPrice * ln.qty)}</span>` : ''}${fmtMAD(u * ln.qty)}</span>
@@ -795,7 +805,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
           ${isConsignedProduct(p) ? `<div class="mz-f-hint"><span class="mz-consign-tag" title="Catégorie B">B</span> Catégorie B${p.consignor ? ` · ${esc(p.consignor)}` : ''}</div>` : ''}
           <h3>${esc(p.name)}</h3>
           <span class="sub">
-            ${esc((RAYONS.find((r) => r.id === p.rayon) || { label: 'Divers' }).label)}
+            ${esc((RAYONS.find((r) => r.id === p.rayon) || { label: 'Sans catégorie' }).label)}
             ${p.motif ? ` · Motif : <b>${esc(p.motif)}</b>` : ''}
             ${p.fragile ? ` · <span style="color:#B25E00;font-weight:700;">Fragile</span>` : ''}
             ${p.ean ? ` · ${esc(p.ean)}` : ''}

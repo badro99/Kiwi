@@ -56,6 +56,12 @@ const kind = (k) => page.evaluate((k) => { const s = document.querySelector('#mz
 
 const NAME = 'TEST KIWI Robe fournisseur';
 await page.click('#mzi-new'); await sleep(600);
+/* H · une erreur se dit sous le champ, pas en toast qui couvre les boutons. */
+await page.click('#mzi-n-save'); await sleep(400);
+ok(/nom/i.test(await page.$eval('#mzi-n-name', (i) => { const e = i.closest('.mzi-fg').querySelector('.kf-err'); return e && !e.hidden ? e.textContent : ''; }).catch(() => '')), 'H · an empty name is said under the field');
+ok(await page.$eval('#mzi-n-name', (i) => i.classList.contains('kf-err-in') && document.activeElement === i), 'H · the field is outlined and has the cursor');
+/* I · « Sans couleur » est choisi d'office ; une pastille le remplace, et revient. */
+ok(await page.$eval('[data-mzs-nocol]', (b) => b.classList.contains('on')), 'I · « Sans couleur » is selected by default');
 await page.type('#mzi-n-name', NAME);
 await page.type('#mzi-n-price', '450');
 await page.evaluate(() => { const r = document.querySelector('input[name$="own"][value="outright"], [data-own="outright"]'); if (r) r.click(); });
@@ -95,6 +101,9 @@ await page.click('#mzi-n-save'); await sleep(900);
 const saved = await productOf(NAME);
 ok(saved === 'L:1:- M:3:3760000001021 S:2:3760000001014', 'E · S, M and L created, the scanned codes kept, empty sizes not created', saved);
 await shot('4-saved');
+ok(await page.evaluate((name) => { const cat = window.KiwiBoutiqueCatalog; const p = cat.listProducts({ q: name }).find((x) => x.name === name); return cat.getProduct(p.id).variants.every((v) => v.colorId === 'unique'); }, NAME), 'I · saved without a colour: no more « Noir · S »');
+const acts = await page.$$eval('.mzi-vact', (cells) => cells[0] ? cells[0].textContent.replace(/\s+/g, ' ').trim() : '');
+ok(/Étiquette/.test(acts) && /Lier un code/.test(acts) && /Mouvement/.test(acts) && /Supprimer/.test(acts), 'J · the size row buttons carry their words', acts);
 
 await page.evaluate(() => { const b = [...document.querySelectorAll('[data-inv-addvar]')].find((x) => x.offsetParent); if (b) b.click(); }); await sleep(500);
 ok(!!(await page.$('#mzi-av-code')), 'G · « Ajouter une variante » has a field for the code already on the label');
@@ -108,11 +117,16 @@ await page.evaluate(() => { const i = document.querySelector('#mzi-av-code'); i.
 await scan('3760000001038');
 await page.click('#mzi-av-save'); await sleep(700);
 ok(/XL:2:3760000001038/.test(await productOf(NAME) || ''), 'G · XL added with the scanned code kept', await productOf(NAME));
+ok(await page.evaluate((name) => { const cat = window.KiwiBoutiqueCatalog; const p = cat.listProducts({ q: name }).find((x) => x.name === name); return cat.getProduct(p.id).variants.find((v) => v.size === 'XL').colorId === 'unique'; }, NAME), 'G · the new size takes the article\'s colour (none), not « Noir »');
 await shot('5-variant');
 await page.evaluate(() => { const b = [...document.querySelectorAll('[data-inv-x]')].find((x) => x.offsetParent); if (b) b.click(); }); await sleep(500);
 
 await page.click('#mzi-new'); await sleep(600);
 await kind('pointure'); await sleep(300);
+await page.evaluate(() => { const b = document.querySelector('[data-mzs-col] [data-kc-color="bleu"], [data-mzs-col] [data-kc-color]'); b && b.click(); }); await sleep(150);
+ok(await page.$eval('[data-mzs-nocol]', (b) => !b.classList.contains('on')), 'I · a swatch replaces « Sans couleur »');
+await page.click('[data-mzs-nocol]'); await sleep(150);
+ok(await page.evaluate(() => !document.querySelector('[data-mzs-col] [aria-checked="true"]') && document.querySelector('[data-mzs-nocol]').classList.contains('on')), 'I · « Sans couleur » clears the swatch again');
 const shoe = await page.$$eval('[data-mzs-row]', (a) => a.map((r) => r.getAttribute('data-mzs-row')).join(' '));
 ok(shoe === '36 37 38 39 40 41 42 43 44 45', 'F · « Pointures » shows 36 to 45', shoe);
 await page.type('#mzi-n-name', 'TEST KIWI Vide');

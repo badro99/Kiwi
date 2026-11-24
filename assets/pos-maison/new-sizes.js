@@ -69,6 +69,34 @@ export function sizesHtml() {
     <div class="mzs-err" data-mzs-err role="alert" hidden></div></div>`;
 }
 
+/* La couleur de l'article. Tout article neuf naissait « Noir » (colorId figé
+   dans inventory.js) : la fiche lisait « Noir · S » pour du linge blanc.
+   « Sans couleur » est choisi d'office (vaisselle, linge, déco) ; une pastille
+   le remplace. 'unique' est la couleur neutre déjà écrite par l'écran
+   boutique (boutique-sizes.js, ONE_COLOR) : ni dessinée, ni nommée. */
+export const NO_COLOR = 'unique';
+export function colorHtml() {
+  const k = typeof window !== 'undefined' ? window.KiwiColors : null;
+  const pick = k && k.picker ? k.picker('mzi-n-color', '', { size: 'lg', optional: true, label: 'Couleur', caption: false }) : '';
+  return `<div class="mzi-fg mzs-col"><label>Couleur</label><div class="mzs-col-row"><button type="button" class="mzs-nocol on" data-mzs-nocol aria-pressed="true">Sans couleur</button><div data-mzs-col>${pick}</div></div>
+    <div class="mzs-col-hint">Une pastille si l’article existe en plusieurs couleurs ; sinon laissez « Sans couleur ».</div></div>`;
+}
+export function color(el) {
+  const k = typeof window !== 'undefined' ? window.KiwiColors : null;
+  const box = el && el.querySelector('[data-mzs-col]');
+  return (k && k.value && box && k.value(box)) || NO_COLOR;
+}
+function wireColor(el) {
+  const none = el.querySelector('[data-mzs-nocol]'), box = el.querySelector('[data-mzs-col]');
+  if (!none || !box) return;
+  const setNone = (yes) => { none.classList.toggle('on', yes); none.setAttribute('aria-pressed', yes ? 'true' : 'false'); };
+  none.addEventListener('click', () => {
+    box.querySelectorAll('[aria-checked="true"]').forEach((b) => b.setAttribute('aria-checked', 'false'));
+    setNone(true);
+  });
+  box.addEventListener('kc:change', () => setNone(false));
+}
+
 const kindOf = (el) => ((el.querySelector('#mzi-n-kind') || {}).value || 'tu');
 const on = (el) => { const b = el.querySelector('[data-mzs]'); return !!(b && !b.hidden); };
 /* La ligne « Stock initial · Format / taille · Code-barres » de la pièce unique. */
@@ -162,6 +190,7 @@ export function wire(el, cat) {
   if (!sel) return;
   sel.addEventListener('change', () => paint(el, cat));
   paint(el, cat);
+  wireColor(el);
 }
 
 /* Un scan capté par la caisse : rend true s'il est pris par la grille. Il va

@@ -1,8 +1,8 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=391'; import { tillPriceList as tpl } from './price-list.js?v=3';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=285';
-import { offerRegister } from './inventory.js?v=285';
-import { ticketOwner } from './ticket-owner.js?v=8';
-import { ticketRemise } from './ticket-remise.js?v=7';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=393'; import { tillPriceList as tpl } from './price-list.js?v=3';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=286';
+import { offerRegister } from './inventory.js?v=286';
+import { ticketOwner } from './ticket-owner.js?v=9';
+import { ticketRemise } from './ticket-remise.js?v=8';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
 import { mountBargain } from './bargain-ui.js?v=4';
 import { bqKitTicketFoot } from './kit-2027.js?v=26';
@@ -11,7 +11,7 @@ import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=6'; import { oversellOk } from './oversell.js?v=4';
 let CX_NOTE = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=47').then((m) => { CX_NOTE = m; }).catch(() => {});
+import('./exch-combined.js?v=48').then((m) => { CX_NOTE = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -407,6 +407,7 @@ import('./exch-combined.js?v=47').then((m) => { CX_NOTE = m; }).catch(() => {});
           </div>`}
       </div>
       <div class="bq-tk-foot">
+        ${t.lines.length && !bqKitSkin() ? `<button type="button" class="bq-tk-remb${remise >= 0.5 ? ' on' : ''}" id="bq-tk-remise"><i data-icon="percent"></i>${remise >= 0.5 ? esc(tr('Remise')) + ' · −' + fmtMAD(remise) : esc(tr('Remise sur le ticket'))}</button>` : ''}
         <div class="bq-tk-tot">
           <span class="pcs"><i data-lucide="tag"></i> ${count} article${count > 1 ? 's' : ''}</span>
           ${promo ? `<span class="rem promo">Promotions · −${fmtMAD(promo)}</span>` : ''}
@@ -452,6 +453,7 @@ import('./exch-combined.js?v=47').then((m) => { CX_NOTE = m; }).catch(() => {});
       renderTicket(); icons();
     };
     $('#bq-validate', el).onclick = checkout;
+    const tkRem = $('#bq-tk-remise', el); if (tkRem) tkRem.onclick = () => openTicketRemise();
     if (!t.lines.length) { try { window.KiwiPairs && KiwiPairs.reset('ticket'); } catch (_) {} }
     $('#bq-tk-lines', el).onclick = (e) => {
       /* « Souvent avec… » : « + » ouvre la fiche de l'article, comme un toucher
@@ -460,6 +462,8 @@ import('./exch-combined.js?v=47').then((m) => { CX_NOTE = m; }).catch(() => {});
       if (pairAdd) { openSheet(pairAdd.dataset.bqPairAdd); return; }
       const pairNo = e.target.closest('[data-bq-pair-dismiss]');
       if (pairNo) { try { KiwiPairs.dismiss('ticket', pairNo.dataset.bqPairDismiss); } catch (_) {} renderTicket(); return; }
+      const remLine = e.target.closest('[data-bq-rem-line]');
+      if (remLine) { openTicketRemise(+remLine.dataset.bqRemLine); return; }
       const minus = e.target.closest('[data-bq-minus]');
       const plus = e.target.closest('[data-bq-plus]');
       const idx = minus ? +minus.dataset.bqMinus : plus ? +plus.dataset.bqPlus : -1;
@@ -505,8 +509,8 @@ import('./exch-combined.js?v=47').then((m) => { CX_NOTE = m; }).catch(() => {});
           ${colorDot(ln.color)}
           <span class="sz">${esc(ln.size)}</span> ${esc(colorLabel(ln.color))}
           ${pr ? `<span class="bq-line-promo" title="${esc(pr.name || 'Promotion')}"><i data-lucide="tag"></i>${esc(pr.badge)}</span>` : ''}
-          ${ln.remise ? `<span class="bq-line-rem">−${ln.remise} %</span>` : ''}${ln.agreed ? `<span class="bq-line-rem">${esc(tr('Prix convenu'))}</span>` : ''}
         </span>
+        <button type="button" class="bq-line-remb${(ln.remise || ln.agreed) ? ' on' : ''}" data-bq-rem-line="${i}"><i data-icon="percent"></i>${ln.remise ? `−${ln.remise} %` : ln.agreed ? esc(tr('Prix convenu')) : esc(tr('Remise'))}</button>
       </span>
       <span class="bq-line-right">
         <span class="bq-line-price">${(ln.remise || ln.agreed || pr) ? `<span class="was">${fmtMAD(shelf(p.price) * ln.qty)}</span>` : ''}${fmtMAD(u * ln.qty)}</span>
@@ -794,10 +798,10 @@ import('./exch-combined.js?v=47').then((m) => { CX_NOTE = m; }).catch(() => {});
   const remiseKit = () => ticketRemise({
     state, root, $, $$, tr, icons, toast, clById, firstName, ticketOwner, renderBadges,
     openVeil, closeVeil, bqKey: () => _bqKey, renderTicket, renderGrid, openApprove,
-    fmt: fmtMAD, pieceBase: (ln) => lineUnit(Object.assign({}, ln, { remise: 0, agreed: 0 })),
+    fmt: fmtMAD, pieceBase: (ln) => lineUnit(Object.assign({}, ln, { remise: 0, agreed: 0 })), nameOf: (ln) => (P[ln.pid] || {}).name || '',
   });
   const ticketClientLabel = (t) => remiseKit().ticketClientLabel(t);
-  const openTicketRemise = () => remiseKit().openTicketRemise();
+  const openTicketRemise = (only) => remiseKit().openTicketRemise(Number.isInteger(only) ? only : undefined);
 
   /* Peau 2027 : la barre de vente répond dès le premier chiffre tapé
      (search.js). sales.js ne fait que passer SES fonctions : la douchette
