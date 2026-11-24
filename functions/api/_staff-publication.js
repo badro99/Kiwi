@@ -117,7 +117,7 @@ function sharedCodeHolders(pins) {
   return [...holders.values()].filter((people) => people.size > 1).flatMap((people) => [...people.values()]);
 }
 
-export async function publishStaffCredentials(env, merchant, body) {
+export async function publishStaffCredentials(env, merchant, body, opts = {}) {
   const result = {};
   /* La liste s'arrêtait à vingt, sans un mot : le 21e membre et les suivants
    * perdaient leur code de caisse et leur accès à l'app employé au premier
@@ -169,7 +169,7 @@ export async function publishStaffCredentials(env, merchant, body) {
   const keepIds = await ownerRowsToKeep(env, merchant, tillPins, body.replaceOwner);
   if (keepIds === null) return json({ error: 'staff-unavailable' }, 503);
   /* La console qui change UN code (admin/_pin-change.js) garde aussi les lignes saisies en console, que l'équipe ne connaît pas. */
-  if (Array.isArray(body.keepRowIds)) for (const id of body.keepRowIds.slice(0, MAX_ROSTER)) if (id && !keepIds.includes(String(id))) keepIds.push(String(id));
+  if (Array.isArray(opts.keepRowIds)) for (const id of opts.keepRowIds.slice(0, MAX_ROSTER)) if (id && !keepIds.includes(String(id))) keepIds.push(String(id));   // jamais du corps : config.js et roster.js passent celui de la requête
   /* Les révisions de connexion s'écrivent dans le lot (_employee-auth.js) ;
    * si une autre sauvegarde les a bougées entre notre lecture et notre lot,
    * le lot échoue entier et on recommence sur l'état neuf. */
@@ -191,8 +191,8 @@ export async function publishStaffCredentials(env, merchant, body) {
     if (keepIds.length) {
       stmts.push(env.DB.prepare(
         'DELETE FROM staff_pins WHERE merchant = ? AND id NOT IN (' + keepMarks + ') '
-        + 'AND EXISTS (SELECT 1 FROM staff_pins k WHERE k.id IN (' + keepMarks + ') AND k.pin = staff_pins.pin)'
-      ).bind(merchant, ...keepIds, ...keepIds));
+        + 'AND EXISTS (SELECT 1 FROM staff_pins k WHERE k.merchant = ? AND k.id IN (' + keepMarks + ') AND k.pin = staff_pins.pin)'
+      ).bind(merchant, ...keepIds, merchant, ...keepIds));
     }
     // Keep a private, exact employee-login roster beside the cashier PINs.
     // Replacing it in the same D1 batch means a deleted employee loses access

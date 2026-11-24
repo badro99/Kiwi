@@ -66,7 +66,8 @@ const routeBase = routeNow.replace(tierImport, '').replace(tierGuard, '').replac
   .replace(ownerTierBefore, '').replace(redoAfter, '');
 
 /* The function body, moved two spaces left, with `result` its own local. */
-const head = 'export async function publishStaffCredentials(env, merchant, body) {\n  const result = {};\n';
+/* 24 Nov (security review): a fourth parameter, opts, that only the console passes; keepRowIds never comes from a request body. */
+const head = 'export async function publishStaffCredentials(env, merchant, body, opts = {}) {\n  const result = {};\n';
 const tail = '\n  return result;\n}\n';
 const fnAt = mod.indexOf(head);
 ok(fnAt > 0 && mod.endsWith(tail), 'module has one exported publish function');
@@ -100,9 +101,13 @@ ok(moved.split(ownerKeepNow).length === 2 && moved.split(insertNow).length === 2
 /* A deliberate change (24 Nov, console code change): the console that changes ONE
  * code passes keepRowIds so the codes typed in the console survive the republication.
  * Those two lines are set aside; admin-pin-change-test runs it. */
-const keepRowsNow = "  /* La console qui change UN code (admin/_pin-change.js) garde aussi les lignes saisies en console, que l'\u00e9quipe ne conna\u00eet pas. */\n  if (Array.isArray(body.keepRowIds)) for (const id of body.keepRowIds.slice(0, MAX_ROSTER)) if (id && !keepIds.includes(String(id))) keepIds.push(String(id));\n";
+const keepRowsNow = "  /* La console qui change UN code (admin/_pin-change.js) garde aussi les lignes saisies en console, que l'\u00e9quipe ne conna\u00eet pas. */\n  if (Array.isArray(opts.keepRowIds)) for (const id of opts.keepRowIds.slice(0, MAX_ROSTER)) if (id && !keepIds.includes(String(id))) keepIds.push(String(id));   // jamais du corps : config.js et roster.js passent celui de la requ\u00eate\n";
+/* Same day: the owner-code collision subquery reads only this merchant's kept rows. */
+const keepScopeNow = "+ 'AND EXISTS (SELECT 1 FROM staff_pins k WHERE k.merchant = ? AND k.id IN (' + keepMarks + ') AND k.pin = staff_pins.pin)'\n      ).bind(merchant, ...keepIds, merchant, ...keepIds));";
+const keepScopeThen = "+ 'AND EXISTS (SELECT 1 FROM staff_pins k WHERE k.id IN (' + keepMarks + ') AND k.pin = staff_pins.pin)'\n      ).bind(merchant, ...keepIds, ...keepIds));";
+ok(moved.split(keepScopeNow).length === 2, 'kept-row collision scoped to the merchant, once');
 ok(moved.split(keepRowsNow).length === 2, 'console rows kept on a one-code change, once');
-const inner = moved.replace(sharedGuard, '').replace(keepRowsNow, '').replace(keepCall, '').replace(ownerKeepNow, ownerKeepThen).replace(insertNow, insertThen.replace(keepBindNow, keepBindThen));
+const inner = moved.replace(keepScopeNow, keepScopeThen).replace(sharedGuard, '').replace(keepRowsNow, '').replace(keepCall, '').replace(ownerKeepNow, ownerKeepThen).replace(insertNow, insertThen.replace(keepBindNow, keepBindThen));
 /* A deliberate change since the move (21 Nov): accountOwnerRole reads the one
  * shared table of owner titles (assets/permissions-catalog.js), so publish,
  * route filter and permission evaluator agree. The rebuild puts the old body

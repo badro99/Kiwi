@@ -127,5 +127,14 @@ res = await change({ env: f.env, request: f.req('PATCH', f.named, '', { merchant
 ok(res.status === 404, 'une ligne inconnue : 404', res.status);
 ok(JSON.stringify(f.db.prepare('SELECT id, pin FROM staff_pins ORDER BY id').all()) === before, 'aucun refus ne touche aux codes');
 
+console.log('■ keepRowIds ne vient jamais du corps d’une requête');
+/* config.js et roster.js passent le corps reçu : une sauvegarde de l'équipe qui
+   y glisserait keepRowIds garderait une ligne que la liste retire (un salarié
+   parti garderait son code). Seule la console, par l'option à part, garde. */
+const teamNow2 = await codeDocument(f.env, merchant, 'team', JSON.parse(f.db.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'").get(merchant).data));
+const roster = teamNow2.members.map((m) => ({ memberId: m.id, code: m.pinCode, name: m.firstName, firstName: m.firstName, lastName: '', email: m.email, role: m.function }));
+const viaBody = await publishStaffCredentials(f.env, merchant, { pins: roster, keepRowIds: ['pin-console'] });
+ok(!(viaBody instanceof Response) && !f.rows().some((r) => r.id === 'pin-console'), 'un corps avec keepRowIds ne garde pas la ligne', f.rows().map((r) => r.id));
+
 console.log(bad ? `✗ ${bad} échec(s), ${n} contrôles passés` : `✓ console · voir et changer un code : ${n} contrôles`);
 process.exitCode = bad ? 1 : 0;

@@ -146,7 +146,7 @@ export async function changeCode(request, env) {
       const all = (await env.DB.prepare('SELECT id, role, pin FROM staff_pins WHERE merchant = ?').bind(merchant).all()).results || [];
       keepRowIds = all.filter((r) => !Catalog.ownerTitle(r.role) && !byHash.has(String(r.pin || ''))).map((r) => String(r.id));
     } catch (_) { return json({ error: 'pin-storage-unavailable' }, 503); }
-    const published = await publishStaffCredentials(env, merchant, { pins, replaceOwner: false, keepRowIds });
+    const published = await publishStaffCredentials(env, merchant, { pins, replaceOwner: false }, { keepRowIds });
     if (published instanceof Response) return published;   // le document porte déjà le code : le prochain enregistrement de l'équipe le republie
     try { await journal(true).run(); } catch (_) { /* le code tient sans sa trace */ }
     try { await poke(env, merchant, 'team'); } catch (_) {}
