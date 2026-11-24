@@ -1656,8 +1656,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "320",
-    "sha": "75b0de8e21667054"
+    "v": "321",
+    "sha": "9189d941a8de690b"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2456,8 +2456,8 @@
     "sha": "b08da8689e842159"
   },
   "assets/sold-insights.js": {
-    "v": "21",
-    "sha": "d58a8f8e646817a0"
+    "v": "22",
+    "sha": "c461c4285abda800"
   },
   "assets/staff-perms-till.js": {
     "v": "11",

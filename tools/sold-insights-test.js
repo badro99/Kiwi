@@ -50,6 +50,16 @@ const exact = window.KiwiSoldInsights.analyze(dated, { from:'2026-09-11', to:'20
 ok('exact calendar day includes the whole selected day', exact.tickets === 1 && exact.sales[0].ref === 'D2');
 const period = window.KiwiSoldInsights.analyze(dated, { from:'2026-09-10', to:'2026-09-11' });
 ok('calendar period includes both endpoints and excludes the next day', period.tickets === 2 && period.revenue === 300);
+{
+  /* « Aujourd'hui » est la journée d'activité, pas les dernières 24 h : à
+     17 h 29 il montrait encore la vente d'hier à 18 h 57. */
+  const mid = new Date(); mid.setHours(0, 0, 0, 0);
+  const todayOnly = window.KiwiSoldInsights.analyze([
+    { ref:'Y', ts:mid.getTime() - 60000, amount:200, lines:[{name:'Jean',qty:1,total:200}] },
+    { ref:'T', ts:Date.now() - 1, amount:100, lines:[{name:'Chemise',qty:1,total:100}] },
+  ], 1);
+  ok('Aujourd\'hui excludes yesterday evening', todayOnly.tickets === 1 && todayOnly.sales[0].ref === 'T');
+}
 
 const src = retailSource(coreTestSource.readFileSync(path.join(ROOT,'assets','sold-insights.js'),'utf8'));
 const venues = retailSource(coreTestSource.readFileSync(path.join(ROOT,'assets','venues.js'),'utf8'));

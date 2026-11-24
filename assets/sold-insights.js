@@ -88,7 +88,13 @@
         return { days:days, from:from, to:to, previousFrom:previousFrom, custom:{from:dateKey(first),to:dateKey(last)} };
       }
     }
+    /* « Aujourd'hui », « 7 jours », « 30 jours » : des journées d'activité
+       entières qui finissent aujourd'hui, comme le Z. C'était « les dernières
+       24 h » : à 17 h 29, Aujourd'hui montrait encore les ventes d'hier soir. */
     var count = Math.max(1, Math.round(Number(period) || 7));
+    var today = parseDateKey(businessToday()) || new Date();
+    var cal = bounds({ from: dateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate() - count + 1)), to: dateKey(today) });
+    if (cal && cal.custom) return { days:count, from:cal.from, to:Infinity, previousFrom:cal.previousFrom, custom:null };
     var now = Date.now(), start = now - count * DAY;
     return { days:count, from:start, to:Infinity, previousFrom:start-count*DAY, custom:null };
   }
