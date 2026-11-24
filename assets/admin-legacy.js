@@ -440,7 +440,10 @@
     "{value} codes": ["{value} codes", "{value} رموز"],
     "{value} établissement": ["{value} store", "{value} مؤسسة"],
     "{value} établissements": ["{value} stores", "{value} مؤسسات"],
-    "{value} MAD/mois": ["{value} MAD/month", "{value} درهم/شهر"]
+    "{value} MAD/mois": ["{value} MAD/month", "{value} درهم/شهر"],
+    "{value} MAD/an": ["{value} MAD/year", "{value} درهم/سنة"],
+    "En facturation annuelle, le montant saisi est le total par an.": ["With annual billing, the amount entered is the yearly total.", "في الفوترة السنوية، المبلغ المُدخل هو المجموع السنوي."],
+    "Abonnement annuel convenu en dirhams": ["Agreed yearly subscription in dirhams", "الاشتراك السنوي المتفق عليه بالدرهم"]
   };
   var requested = new URLSearchParams(location.search).get('lang');
   try { requested = requested || localStorage.getItem('kiwiLang'); } catch (_) {}

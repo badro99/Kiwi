@@ -1052,7 +1052,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
-  <script src="assets/admin-legacy.js?v=18"></script>
+  <script src="assets/admin-legacy.js?v=19"></script>
   <script src="assets/staff-roles.js?v=4"></script>
   <!-- The brand's one selection motion, for the établissement switcher. Self-
        contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
@@ -1437,6 +1437,11 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   var TIER_PRICE = { basic:150, plus:300, pro:399, ultra:1499 };
   var ANNUAL_PRICE = { basic:99, plus:249, pro:349 };
   var TIER_ORDER = ['basic','plus','pro','ultra','ultimate'];
+  /* Le montant convenu s'entend dans la périodicité de facturation : un client
+     annuel à 2 500 paie 2 500 MAD par an, pas par mois. Tout ce qui se lit
+     « par mois » (MRR, contributions) le ramène au mois, comme le serveur. */
+  function agreedMonthly(amount, cycle){ return cycle === 'annual' ? Math.round(amount / 12 * 100) / 100 : amount; }
+  function agreedUnit(cycle){ return cycle === 'annual' ? ' MAD/an' : ' MAD/mois'; }
   function hash32(s){
     var h = 2166136261;
     for (var i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
@@ -1470,7 +1475,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
     real.forEach(function(c){
       var plan = (c.plan || '').toLowerCase();
       var listed = TIER_PRICE[plan] || null;
-      var agreed = (c.mrr != null && +c.mrr > 0) ? +c.mrr : null;
+      var agreed = (c.mrr != null && +c.mrr > 0) ? agreedMonthly(+c.mrr, c.billing_cycle) : null;
       var priced = c.billing_cycle === 'annual' && ANNUAL_PRICE[plan] ? ANNUAL_PRICE[plan] : listed;
       var amount = agreed != null ? agreed : priced;
       var key = plan || '·';
@@ -2906,6 +2911,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
     trialStart.value = b.trialStart || '';
     trialEnd.value = b.trialEnd || '';
     syncLifecycleFields();
+    syncAgreedLabel();
 
     var noColumn = b.columns && b.columns.city === false;
     var readOnly = SENIOR === false;
@@ -2918,7 +2924,8 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
     var vCount = selected.account_venues || 1;
     var vText = vCount > 1 ? (' · ' + window.KiwiAdminI18n.text(vCount + ' établissements')) : '';
     state.textContent = (b.city
-      ? (b.city + (b.mrr != null ? ' · ' + window.KiwiAdminI18n.text(fmt(b.mrr) + ' MAD/mois') : ''))
+      ? (b.city + (b.mrr != null ? ' · ' + window.KiwiAdminI18n.text(fmt(b.mrr) + agreedUnit(b.billingCycle))
+          + (b.billingCycle === 'annual' && b.mrr > 0 ? ' · ' + window.KiwiAdminI18n.text('≈ ' + fmt(agreedMonthly(b.mrr, 'annual')) + ' MAD/mois') : '') : ''))
       : window.KiwiAdminI18n.text('ville non renseignée')) + vText;
     if (selected.requested_plan) state.textContent += ' · ' + window.KiwiAdminI18n.text('Offre demandée') + ' : ' + selected.requested_plan + (selected.requested_period ? ' · ' + window.KiwiAdminI18n.text(selected.requested_period === 'annual' ? 'Annuel' : 'Mensuel') : '') + ' · ' + window.KiwiAdminI18n.text('À confirmer');
 
@@ -2930,7 +2937,8 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
       hint.textContent = 'Compte multi-établissements (' + vCount + ' établissements actifs) sans offre explicite. Définir son offre pour formaliser son statut multi-sites.';
     } else if (listed){
       hint.textContent = 'La ville alimente le classement de la vue d’ensemble ; sans elle l’établissement y est compté « non situé », jamais rangé ailleurs. ' +
-        'Le montant est facultatif · laissé vide, le tarif du palier ' + planName(plan) + ' (' + fmt(listed) + ' MAD/mois) s’applique. Renseigné, il l’emporte : c’est là qu’on inscrit une remise.';
+        'Le montant est facultatif · laissé vide, le tarif du palier ' + planName(plan) + ' (' + fmt(listed) + ' MAD/mois) s’applique. Renseigné, il l’emporte : c’est là qu’on inscrit une remise.' +
+        (b.billingCycle === 'annual' ? ' ' + window.KiwiAdminI18n.text('En facturation annuelle, le montant saisi est le total par an.') : '');
     } else {
       hint.textContent = 'La ville alimente le classement de la vue d’ensemble ; sans elle l’établissement y est compté « non situé ». ' +
         (plan === 'ultimate'
@@ -2997,6 +3005,11 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
     } finally { if (selected === target) save.disabled = false; }
   }
 
+  function syncAgreedLabel(){
+    var annual = document.getElementById('biz-cycle').value === 'annual';
+    document.getElementById('biz-mrr').setAttribute('aria-label', window.KiwiAdminI18n.text(annual
+      ? 'Abonnement annuel convenu en dirhams' : 'Abonnement mensuel convenu en dirhams'));
+  }
   function syncLifecycleFields(){
     var trial=document.getElementById('biz-kind').value==='trial';
     ['biz-cycle-label','biz-sub-start-label','biz-sub-end-label'].forEach(function(id){document.getElementById(id).hidden=trial;});
@@ -3016,6 +3029,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   }
   document.getElementById('biz-sub-start').addEventListener('change',refreshSubscriptionEnd);
   document.getElementById('biz-cycle').addEventListener('change',refreshSubscriptionEnd);
+  document.getElementById('biz-cycle').addEventListener('change',syncAgreedLabel);
   document.getElementById('biz-trial-start').addEventListener('change',refreshTrialEnd);
   document.getElementById('biz-trial-days').addEventListener('change',refreshTrialEnd);
 

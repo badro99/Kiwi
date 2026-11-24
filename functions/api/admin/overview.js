@@ -214,7 +214,10 @@ export async function onRequestGet(context) {
       const suspended = s.status === 'suspended' ||
         (s.owner && s.owner.status === 'suspended');
       const plan = TIER_PRICE[s.plan] ? s.plan : (s.plan === 'ultimate' ? 'ultimate' : (s.plan || ''));
-      const agreed = Number.isFinite(s.mrr) && s.mrr > 0 ? s.mrr : null;
+      // Le montant convenu s'entend dans la périodicité de facturation : 2 500 en
+      // annuel, c'est 2 500 MAD par an, soit ≈ 208,33 MAD au MRR — jamais 2 500.
+      const agreed = Number.isFinite(s.mrr) && s.mrr > 0
+        ? (s.billing_cycle === 'annual' ? Math.round(s.mrr / 12 * 100) / 100 : s.mrr) : null;
       const listed = TIER_PRICE[plan] || null;
       // L'abonné annuel est compté à son tarif annuel mensualisé, pas au tarif mensuel.
       const priced = s.billing_cycle === 'annual' && ANNUAL_PRICE[plan] ? ANNUAL_PRICE[plan] : listed;
