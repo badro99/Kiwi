@@ -56,10 +56,10 @@ assert.ok(pinsSource, 'extracts the shipped PIN-list concurrency guard');
 const pinList = { children:[], appendChild(node){this.children.push(node);} };
 const pinAdd = {};
 const pinReads = [];
-const renderPins = new Function('document','clear','h','renderPinRoles','roleLabel','SENIOR','selected','store',
+const renderPins = new Function('document','clear','h','renderPinRoles','roleLabel','SENIOR','selected','store','window',
   `${pinsSource}; return renderPins;`)(
     {getElementById:id=>id==='pin-list'?pinList:pinAdd},clear,h,()=>{},String,true,selected,
-    {pins:()=>new Promise((resolve,reject)=>pinReads.push({resolve,reject}))});
+    {pins:()=>new Promise((resolve,reject)=>pinReads.push({resolve,reject}))}, {});
 const oldPins=renderPins(), newPins=renderPins();
 pinReads[1].resolve([{id:'qa-new',name:'Latest QA',role:'manager',pin:'0000'}]);
 pinReads[0].resolve([{id:'qa-old',name:'Old QA',role:'manager',pin:'0000'}]);

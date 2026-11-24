@@ -1,4 +1,6 @@
-// Production minimum: migration 0036 (cash_session_events.movement_category,
+// Production minimum: migration 0037 (merchant_config.country, the operating
+// country; prod ledger checked 24 Nov 2026: 0037_merchant_country.sql applied).
+// Before it: migration 0036 (cash_session_events.movement_category,
 // the category of a till sortie; prod ledger checked 23 Nov 2026: 0029 to 0036
 // applied 22 and 23 Nov). Before it: migration 0028 (avances: kind, expiry,
 // held pieces and closure on retail_balances), 0027 (catalog parts). 0020 to 0023 (client
@@ -6,7 +8,7 @@
 // 0027 (directory, session tiers, Glovo, catalog parts; prod ledger checked
 // 20 Nov 2026, 0027_catalog_parts.sql applied) must be
 // applied by the owner before this code deploys; below it every route answers 503.
-export const MINIMUM_SCHEMA_VERSION = 36;
+export const MINIMUM_SCHEMA_VERSION = 37;
 // The migrations whose columns and tables this code reads. They were applied by
 // hand, so the highest number alone proves nothing: a ledger that holds 0023 but
 // lacks 0021 still lacks sales.client_id. Every one of them must be recorded.

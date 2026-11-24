@@ -85,7 +85,7 @@ ok(await kept([{ name: 'Amina', role: 'direction' }]) === '1' && await kept([{ n
 ok(await kept([{ name: 'Badr B.', role: 'owner' }], true) === '' && await kept([{ name: 'Sara', role: 'Caissier' }], true) === '1,2',
   'remplacer le propriétaire efface l’ancien code du patron, mais jamais sans patron dans la liste');
 ok(/DELETE FROM staff_pins WHERE merchant = \? AND id NOT IN \(/.test(pinsBlock), 'sans propriétaire entrant, les lignes propriétaire existantes sont PRÉSERVÉES');
-ok(/AND EXISTS \(SELECT 1 FROM staff_pins k WHERE k\.id IN/.test(pinsBlock), 'le code conservé du patron gagne sur un doublon d\'équipe — comparaison en SQL, jamais en JS');
+ok(/AND EXISTS \(SELECT 1 FROM staff_pins k WHERE k\.merchant = \? AND k\.id IN/.test(pinsBlock), 'le code conservé du patron gagne sur un doublon d\'équipe — comparaison en SQL, jamais en JS, dans le seul magasin publié');
 ok(!/SELECT id, pin|SELECT pin/.test(pinsBlock), 'la préservation ne projette JAMAIS la colonne pin vers JavaScript');
 ok(pinsBlock.includes("env.DB.prepare('DELETE FROM staff_pins WHERE merchant = ?').bind(merchant)"), 'avec propriétaire entrant (onboarding, console), le remplacement intégral demeure');
 ok(/result\.pins = tillPins\.length \+ keepIds\.length/.test(pinsBlock), 'le compte renvoyé inclut les lignes préservées');

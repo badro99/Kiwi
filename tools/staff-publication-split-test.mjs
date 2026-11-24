@@ -62,7 +62,13 @@ const ownerTierBefore = "    const ownerTier = await sessionTierAtLeast(request,
 const redoAfter = "    /* Au patron seul : qui a reçu un code déjà pris (ligne scellée morte). Un\n       gérant reçoit la même réponse, collision ou non (staff-permissions-test 9f). */\n"
   + "    if (ownerTier) { const redo = await codesToRedo(env, merchant); if (redo.length) result.codesToRedo = redo; }\n";
 ok(route.split(ownerTierBefore).length === 2 && route.split(redoAfter).length === 2, 'the owner-only replace signal and redo list sit once in the route');
-const routeBase = routeNow.replace(tierImport, '').replace(tierGuard, '').replace(ownerGuard, '').replace(holdImport, '').replace(holdBefore, '').replace(holdAfter, '')
+/* A fifth (24 Nov, 39defe751): the operating country, read by the GET answer;
+ * nothing of it touches the moved publish code (country-of-operations-test holds it). */
+const countryImport = "import { Countries, merchantCountry } from './_country.js';   // pays d'exploitation (owner, 24/11/2026)\n";
+const countryRead = "  /* Le pays d'exploitation : devise, TVA/IVA, identifiant fiscal (assets/country-catalog.js). Maroc par défaut. */\n  const country = await merchantCountry(env, merchant);\n";
+const countryFields = "    country, countryProfile: Countries.profile(country),\n";
+ok([countryImport, countryRead, countryFields].every((s) => routeNow.split(s).length === 2), 'the operating country sits once in the route: import, read, two answer fields');
+const routeBase = routeNow.replace(countryImport, '').replace(countryRead, '').replace(countryFields, '').replace(tierImport, '').replace(tierGuard, '').replace(ownerGuard, '').replace(holdImport, '').replace(holdBefore, '').replace(holdAfter, '')
   .replace(ownerTierBefore, '').replace(redoAfter, '');
 
 /* The function body, moved two spaces left, with `result` its own local. */

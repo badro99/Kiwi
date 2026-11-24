@@ -11,9 +11,13 @@
     "v": "10",
     "sha": "76456f2dc142f894"
   },
-  "assets/admin-country.js": {
+  "assets/admin-cockpit.css": {
     "v": "1",
-    "sha": "f58b536cdaaaf2ce"
+    "sha": "9752f8fb147520a6"
+  },
+  "assets/admin-country.js": {
+    "v": "2",
+    "sha": "bae24de8e748d56e"
   },
   "assets/admin-demo-requests.js": {
     "v": "5",
@@ -412,8 +416,8 @@
     "sha": "5d0ac3b27d347a62"
   },
   "assets/channel-link.js": {
-    "v": "202608272329",
-    "sha": "adc17758aae6763f"
+    "v": "202608272330",
+    "sha": "2c79f32e0dc9b521"
   },
   "assets/channel-sales.js": {
     "v": "10",
@@ -1644,8 +1648,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "317",
-    "sha": "ac9acefeef68b516"
+    "v": "318",
+    "sha": "89ffc7ea3102f923"
   },
   "assets/pages/tables-data.js": {
     "v": "3",
@@ -2332,8 +2336,8 @@
     "sha": "b4bf6bc37a61b76b"
   },
   "assets/restaurant-menu/strings.js": {
-    "v": "28",
-    "sha": "056aa01d3ba5109b"
+    "v": "29",
+    "sha": "9225ec17d5432242"
   },
   "assets/restaurant-menu/styles.js": {
     "v": "13",

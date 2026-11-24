@@ -496,7 +496,7 @@
     store.appendChild(storeLabel); store.appendChild(storeName); root.appendChild(store);
     root.appendChild(shopButton(s.reauthorize, function () { return authorizeShopify(connection.shop); }, true));
     root.appendChild(shopButton(s.disconnect, function () {   // la boutique redevient libre pour un autre commerce (status.js › disconnect)
-      if (!window.confirm(s.confirmOff.replace('{shop}', connection.shop))) return null;
+      if (!window.confirm(s.confirmOff.replace(/\{shop\}/, connection.shop))) return null;
       return shopApi('disconnect').then(function () { toast(s.off, { type: 'success' }); return loadShopify(root); });
     }, true));
 

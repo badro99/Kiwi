@@ -11,6 +11,8 @@
 (function () {
   'use strict';
   var NAMES = { MA: 'Maroc', ES: 'Espagne' };
+  /* La console traduit ses phrases par leur texte français (KiwiAdminI18n.text). */
+  function text(fr) { var i18n = window.KiwiAdminI18n; return i18n && typeof i18n.text === 'function' ? i18n.text(fr) : fr; }
   var SUMMARY = {
     MA: 'Dirhams, TVA marocaine, ICE, heure de Casablanca.',
     ES: 'Euros, IVA 21 / 10 / 4 %, NIF, heure de Madrid. Les commandes Shopify en euros entrent dans les ventes.',
@@ -40,19 +42,19 @@
       sel.value = current;
       note.textContent = SUMMARY[current] || '';
       if (ctx.senior !== false) sel.removeAttribute('disabled');
-    } catch (_) { note.textContent = 'Pays indisponible. Réessayez.'; return; }
+    } catch (_) { note.textContent = text('Pays indisponible. Réessayez.'); return; }
     sel.addEventListener('change', async function () {
       var wanted = sel.value;
       sel.setAttribute('disabled', '');
-      note.textContent = 'Enregistrement…';
+      note.textContent = text('Enregistrement…');
       try {
         await window.KiwiAdminApi.request('/country', { method: 'POST', body: JSON.stringify({ merchant: ctx.merchant, country: wanted }) });
         current = wanted;
-        note.textContent = 'Pays : ' + NAMES[wanted] + '. ' + SUMMARY[wanted];
+        note.textContent = text('Pays : ' + NAMES[wanted] + '. ' + SUMMARY[wanted]);
       } catch (error) {
         sel.value = current;
         var code = error && error.body && error.body.error;
-        note.textContent = code === 'operator-code-required' ? 'Un code opérateur nommé est requis.' : 'Changement refusé. Réessayez.';
+        note.textContent = text(code === 'operator-code-required' ? 'Un code opérateur nommé est requis.' : 'Changement refusé. Réessayez.');
       }
       sel.removeAttribute('disabled');
     });

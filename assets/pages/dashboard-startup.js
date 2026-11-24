@@ -35,7 +35,7 @@
     'assets/food-trade-settings.js?v=2',
     'assets/menu-promos.js?v=28',
     'assets/menu-promos-dashboard.js?v=10',
-    'assets/restaurant-menu/strings.js?v=28',
+    'assets/restaurant-menu/strings.js?v=29',
     'assets/restaurant-menu/recipes.js?v=12',
     'assets/restaurant-menu/styles.js?v=13',
     'assets/restaurant-menu-workspace.js?v=144',

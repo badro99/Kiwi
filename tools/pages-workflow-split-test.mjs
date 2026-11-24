@@ -10,11 +10,28 @@ const map = JSON.parse(read('tools/fixtures/pages/tables.json'));
 const original = gunzipSync(fs.readFileSync('tools/fixtures/pages/original.js.gz')).toString();
 assert.equal(createHash('sha256').update(original).digest('hex'), map.originalSha);
 const boundary = original.indexOf('/* First-use sections.');
-assert.equal(reconstructed().slice(0, boundary), original.slice(0, boundary), 'all original table/menu/KDS bodies rebuild byte for byte');
+/* Deliberate changes since the move, put back before the byte comparison
+ * (24 Nov, 90778caf5): a new table takes the lowest free number. tables-number
+ * behaviour is held by the plan de salle suites. */
+const SINCE_MOVE = [
+  ['/* The lowest number nobody uses. Counting up from the highest one made an\n   owner who cleared the starter tables (1 to 17, spread over the salle and\n   the terrasse) start their own plan at 18; a hole a deleted table left is\n   filled first, and two tables never share a number. */',
+   '/* The next number nobody uses yet: highest numeric + 1, skipping taken ones. */'],
+  ['  let n = 1;\n', '  let n = state.tables.reduce((m, t) => Math.max(m, parseInt(t.num, 10) || 0), 0) + 1;\n'],
+  ];
+function asMovedSource(src) {
+  let out = SINCE_MOVE.reduce((acc, [now, then]) => { assert.equal(acc.split(now).length, 2, 'one deliberate change: ' + now.slice(0, 40)); return acc.replace(now, () => then); }, src);
+  /* « Ajouter une table » (case 'add-table') took pdsNextNum too; the wizard already did, and its copy comes first. */
+  const addNow = '      const num = pdsNextNum(state);\n      const newT = {', addThen = '      const num = String(state.tables.length + 1);\n      const newT = {';
+  assert.equal(out.split(addNow).length, 3, 'the wizard and « Ajouter une table » both take pdsNextNum');
+  const at = out.lastIndexOf(addNow);
+  return out.slice(0, at) + addThen + out.slice(at + addNow.length);
+}
+const asMoved = asMovedSource(reconstructed());
+assert.equal(asMoved.slice(0, boundary), original.slice(0, boundary), 'all original table/menu/KDS bodies rebuild byte for byte');
 const tableBody = original.slice(map.begin + map.pre.length, map.end);
 let expected = tableBody;
 for (const f of [...map.fragments].sort((a,b) => b.start - a.start)) expected = expected.slice(0,f.start) + f.replacement + expected.slice(f.end);
-assert.equal(reconstructed.tableOwnerSource(), map.prefix + map.binding + expected + map.suffix);
+assert.equal(asMovedSource(reconstructed.tableOwnerSource()), map.prefix + map.binding + expected + map.suffix);
 for (const [file,prefix,suffix] of [
   ['assets/pages/tables-data.js',map.dataPrefix,map.dataSuffix],
   ['assets/pages/tables-drawing.js',map.drawingPrefix,map.drawingSuffix],
