@@ -1,12 +1,12 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=388';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=282';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=389';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=283';
 import { openMoves } from './inv-moves.js?v=7';
 import * as SZ from '../boutique-sizes.js?v=30';
 import { openLabelPicker } from './label-picker.js?v=9';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=24';
 import { sisterStock } from './sister-stock.js?v=1'; import { invProducts, recountPill, gapLabel } from './oversell.js?v=4';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=282';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=283';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -749,7 +749,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const ib = $('#bqi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const nb = $('#bqi-new', panel); if (nb) nb.onclick = () => openNewProduct();
     const mv = $('#bqi-moves', panel); if (mv) mv.onclick = () => openMoves({ setModal: invSetModal, esc, icons, catDB, toast });   // en lecture (inv-moves.js)
-    import('./avance-restock.js?v=41').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
+    import('./avance-restock.js?v=42').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
     const pills = $('#bqi-pills', panel);
     if (pills) pills.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { state.invFilter = b.dataset.f; renderInventaire(); } });
     panel.querySelectorAll('[data-inv-open]').forEach((el) => el.addEventListener('click', () => openInvProduct(el.getAttribute('data-inv-open'))));
@@ -918,7 +918,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
           <div class="bqx-pf-card"><div class="bqx-pf-pn is-empty" data-bqi-pn>${esc(f.name)}</div><div class="bqx-pf-pm" data-bqi-pm>${esc(f.catNone)}</div><div class="bqx-pf-pp" data-bqi-pp hidden></div></div>
         </aside>
       </div></div>
-      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-x>${esc(f.cancel)}</button><button class="bq-btn" id="bqi-n-save">${esc(f.create)}</button></div>`;
+      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-x>${esc(f.cancel)}</button><button class="bq-btn primary" id="bqi-n-save">${esc(f.create)}</button></div>`;
     invSetModal(html, (el) => {
       const cat = catDB();
       SZ.formCss();
@@ -1005,7 +1005,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         </div>
         <div class="bqi-fg"><label>Icône du produit</label>${iconPickerHtml(p.art || 'tshirt')}</div>
       </div>
-      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn" id="bqi-e-save">Enregistrer</button></div>`;
+      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn primary" id="bqi-e-save">Enregistrer</button></div>`;
     invSetModal(html, (el) => {
       let icon = p.art || 'tshirt';
       wireIconPicker(el, (k) => { icon = k; });
@@ -1080,7 +1080,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         <div class="bqi-fg"><label>Couleur</label>${colorPicker(variantColor(v))}</div>
         <div class="bqi-fg"><label for="bqi-vc-note">Précision (facultatif)</label><input id="bqi-vc-note" maxlength="60" value="${esc(v.note || '')}" placeholder="Ex. rayé, délavé, motif · pour distinguer deux variantes de même couleur" /></div>
       </div>
-      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn" id="bqi-vc-save">Enregistrer</button></div>`;
+      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn primary" id="bqi-vc-save">Enregistrer</button></div>`;
     invSetModal(html, (el) => {
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
       $('#bqi-vc-save', el).addEventListener('click', () => {
@@ -1104,7 +1104,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         <div class="bqi-fg"><label for="bqi-reg-code">Code-barres</label><input id="bqi-reg-code" placeholder="Scannez ou tapez le code…" autocomplete="off" /></div>
         <div class="bqi-help">EAN-13, UPC ou tout code de l'ancien système. Aucune réimpression, le code est rattaché à cette variante.</div>
       </div>
-      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn" id="bqi-reg-save">Enregistrer le code</button></div>`;
+      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn primary" id="bqi-reg-save">Enregistrer le code</button></div>`;
     invSetModal(html, (el) => {
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
       const inp = $('#bqi-reg-code', el);
@@ -1146,7 +1146,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       </div>
       <div class="bqi-modfoot">${canCreate
         ? '<button class="bq-btn secondary" id="bqi-or-new"><i data-icon="add"></i>Créer un article avec ce code</button>'
-        : '<span class="bqi-dashboard-only">Créer l’article dans le tableau de bord</span>'}<button class="bq-btn" id="bqi-or-save" disabled>Rattacher le code</button></div>`;
+        : '<span class="bqi-dashboard-only">Créer l’article dans le tableau de bord</span>'}<button class="bq-btn primary" id="bqi-or-save" disabled>Rattacher le code</button></div>`;
     invSetModal(html, (el) => {
       const prodSel = $('#bqi-or-prod', el), varSel = $('#bqi-or-var', el);
       const saveBtn = $('#bqi-or-save', el);
@@ -1390,7 +1390,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
           <b>Même modèle que « ${esc(prev.product.name)} » ?</b>
           <span>Une autre taille ou couleur du même article : le nom, la catégorie et les prix sont repris, vous ne changez que la déclinaison.</span>
         </div>
-        <button class="bq-btn" id="bqx-chain">Ajouter une déclinaison</button>
+        <button class="bq-btn secondary" id="bqx-chain">Ajouter une déclinaison</button>
       </div>` : ''}
       ${bare ? `
       <div class="bqx-chain is-link">
@@ -1398,7 +1398,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
           <b>Cet article est déjà au catalogue, sans code-barres ?</b>
           <span>${bare} déclinaison${bare > 1 ? 's' : ''} attend${bare > 1 ? 'ent' : ''} son code · celles qui viennent du fichier fournisseur. Rattachez ce code au lieu de tout ressaisir.</span>
         </div>
-        <button class="bq-btn" id="bqx-link">Chercher l'article</button>
+        <button class="bq-btn secondary" id="bqx-link">Chercher l'article</button>
       </div>` : ''}
       <div class="bqi-form bqx-form">
         <div class="bqi-fg"><label for="bqx-name">Nom du produit</label><input id="bqx-name" placeholder="Ex. Jean Noir" autocomplete="off" /></div>
@@ -1422,7 +1422,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       </div>
       <div class="bqi-modfoot bqx-foot">
         <button class="bq-btn secondary" id="bqx-skip">Ignorer ce code</button>
-        <button class="bq-btn" id="bqx-save"><i data-lucide="check"></i>Enregistrer et scanner le suivant</button>
+        <button class="bq-btn primary" id="bqx-save"><i data-lucide="check"></i>Enregistrer et scanner le suivant</button>
       </div>`, (el) => {
       /* Le sélecteur de couleurs partagé (assets/color-palette.js) porte son propre
          état et sa navigation clavier : on lui DEMANDE sa valeur au moment
@@ -1519,7 +1519,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       </div>
       <div class="bqi-modfoot bqx-foot">
         <button class="bq-btn secondary" id="bqx-back">Créer un autre produit</button>
-        <button class="bq-btn" id="bqx-save"><i data-lucide="check"></i>Enregistrer et scanner le suivant</button>
+        <button class="bq-btn primary" id="bqx-save"><i data-lucide="check"></i>Enregistrer et scanner le suivant</button>
       </div>`, (el) => {
       /* Le sélecteur de couleurs partagé (assets/color-palette.js) porte son propre
          état et sa navigation clavier : on lui DEMANDE sa valeur au moment
@@ -1677,7 +1677,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
             <button class="bqi-mini" id="bqx-qminus" aria-label="Moins">−</button>
             <input id="bqx-rqty" type="number" min="1" step="1" inputmode="numeric" value="1" />
             <button class="bqi-mini" id="bqx-qplus" aria-label="Plus">+</button>
-            <button class="bq-btn" id="bqx-receive">Ajouter au stock</button>
+            <button class="bq-btn primary" id="bqx-receive">Ajouter au stock</button>
           </div>
         </div>
         <div class="bqx-act">
@@ -1752,7 +1752,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       </div>
       <div class="bqi-modfoot bqx-foot">
         <button class="bq-btn secondary" id="bqx-back">Retour</button>
-        <button class="bq-btn" id="bqx-save"><i data-lucide="check"></i>Ajouter la déclinaison</button>
+        <button class="bq-btn primary" id="bqx-save"><i data-lucide="check"></i>Ajouter la déclinaison</button>
       </div>`, (el) => {
       /* Le sélecteur de couleurs partagé (assets/color-palette.js) porte son propre
          état et sa navigation clavier : on lui DEMANDE sa valeur au moment
@@ -1840,7 +1840,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       </div>
       <div class="bqi-modfoot bqx-foot">
         <button class="bq-btn secondary" id="bqx-back">Retour</button>
-        <button class="bq-btn" id="bqx-fsave"><i data-lucide="check"></i>Enregistrer la correction</button>
+        <button class="bq-btn primary" id="bqx-fsave"><i data-lucide="check"></i>Enregistrer la correction</button>
       </div>`, (el) => {
       $('#bqx-back', el).onclick = () => paintIntake();
       $('#bqx-fsave', el).onclick = () => {
@@ -1884,7 +1884,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       </div>
       <div class="bqi-modfoot bqx-foot">
         <button class="bq-btn secondary" id="bqx-pno">Garder ${fmtMAD(p.priceMAD)}</button>
-        <button class="bq-btn" id="bqx-pyes"><i data-lucide="check"></i>Appliquer${who ? ' · ' + esc(who) : ''}</button>
+        <button class="bq-btn primary" id="bqx-pyes"><i data-lucide="check"></i>Appliquer${who ? ' · ' + esc(who) : ''}</button>
       </div>`, (el) => {
       $('#bqx-pno', el).onclick = () => intakeFix(p.id);
       $('#bqx-pyes', el).onclick = () => onOk();
