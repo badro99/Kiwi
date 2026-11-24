@@ -316,8 +316,8 @@
     "sha": "06474b0671fb9627"
   },
   "assets/caisse/catalogue.js": {
-    "v": "23",
-    "sha": "3b0c64009ced62c4"
+    "v": "24",
+    "sha": "dc267483531fe8a3"
   },
   "assets/caisse/closing.js": {
     "v": "2",
@@ -1372,12 +1372,12 @@
     "sha": "4bef6c0bce3d1800"
   },
   "assets/menu-promos-dashboard.js": {
-    "v": "10",
-    "sha": "fe8caa503b781d89"
+    "v": "11",
+    "sha": "90ab6f89c751eeba"
   },
   "assets/menu-promos.js": {
-    "v": "28",
-    "sha": "03524251e96185fb"
+    "v": "29",
+    "sha": "835b4c646f386c79"
   },
   "assets/menu-scan-reader.js": {
     "v": "9",
@@ -1648,8 +1648,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "318",
-    "sha": "89ffc7ea3102f923"
+    "v": "319",
+    "sha": "bf64a0d689d0d88c"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

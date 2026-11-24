@@ -297,7 +297,11 @@ function publicMenu(menu, nutritionEnabled) {
     }
     return item;
   };
+  /* A promotion with a code is the merchant's secret until a guest says it:
+   * never on the public carte, only through ?code= below. */
+  const promos = MenuPromos().forCodes(menu.promos);
   return Object.assign({}, menu, {
+    promos: promos.length ? promos : undefined,
     items: (menu.items || []).filter((it) => !it.archived && !it.formulaOnly).map(publicItem),
     formulaItems: (menu.items || []).filter((it) => !it.archived && it.formulaOnly).map(publicItem),
   });
@@ -534,6 +538,12 @@ export async function onRequestGet(context) {
     return json({ name, type, menu: null, shop: null, orderpro: false, menuLangs: false, menuNutrition: false, suspended: true });
   }
 
+  /* ?code=ÉTÉ10 · the till asks whether a promo code exists on this carte.
+   * Answers with that one promotion, or 404; the rest of the carte stays out. */
+  if (url.searchParams.has('code')) {
+    const hit = menu && MenuPromos().byCode(menu.promos, url.searchParams.get('code'), Date.now());
+    return hit ? json({ promo: hit }) : json({ error: 'code-unknown' }, 404);
+  }
   const [orderpro, menuLangs, menuNutrition, zone] = await Promise.all([
     orderProEnabled(env, merchant), menuLangsEnabled(env, merchant), menuNutritionEnabled(env, merchant),
     merchantZone(env, merchant),

@@ -732,9 +732,9 @@
        prix d'happy hour même payé à 19 h 10. Le serveur refait le même calcul
        à l'envoi en cuisine (priceOrder) ; c'est lui qui fait foi. */
     function promoPrice(item, unit) {
-      const P = window.KiwiMenuPromos;
-      const hit = (P && carteState.promos && carteState.promos.length)
-        ? P.resolve(carteState.promos, { itemId: item.id, catId: item.cat }, unit, Date.now()) : null;
+      const P = window.KiwiMenuPromos, codes = carteState.codePromos || [], all = (carteState.promos || []).concat(codes);
+      const hit = (P && all.length)
+        ? P.resolve(all, { itemId: item.id, catId: item.cat }, unit, Date.now(), codes.map(p => p.code)) : null;
       return hit ? { price: hit.price, promo: hit.promo } : { price: unit, promo: null };
     }
     /* Deux unités à deux prix différents ne s'empilent jamais sur une ligne. */
@@ -746,6 +746,39 @@
       if (!p) return '';
       return `<span class="rp-item-promo">${kdsEsc(p.badge || '')} · ${kdsEsc(p.name || '')}<s class="mono">${fmtMAD(p.before * l.qty)}</s></span>`;
     }
+
+    /* « Code promo » : une promotion à code ne s'applique jamais seule ; le serveur vérifie le code tapé (GET /api/menu?code=), il vaut pour CETTE note. */
+    const setCodePromos = (list, removed) => {
+      carteState.codePromos = list;
+      cart.forEach((l) => {
+        const item = !l.kind && (carteState.formulaItems || []).find(it => it.id === l.id);
+        if (!item) return;
+        const p = promoPrice(item, l.promo ? +l.promo.before : +l.price);
+        if (p.price < l.price || (l.promo && removed.indexOf(l.promo.id) >= 0)) currentOrder().patchLine(l, p.promo ? { price: p.price, promo: p.promo } : { price: p.price }, p.promo ? [] : ['promo']);
+      });
+      renderCart();
+    };
+    const applyPromoCode = (raw) => {
+      const P = window.KiwiMenuPromos, code = P ? P.normCode(raw) : '', slug = IS_DEMO ? '' : carteSlug();
+      if (!code) return;
+      if (!slug) { toast('Code promo · caisse non reliée'); return; }
+      fetch('/api/menu?merchant=' + encodeURIComponent(slug) + '&code=' + encodeURIComponent(code), { credentials: 'omit' }).then(r => (r.ok ? r.json() : null)).then((j) => {
+        const promo = j && j.promo && P.sanitize([j.promo])[0];
+        if (!promo) return toast('Code inconnu ou terminé · ' + code);
+        if (!P.isActive(promo, Date.now())) return toast('Code ' + code + ' · pas valable à cette heure');
+        setCodePromos((carteState.codePromos || []).filter(p => p.id !== promo.id).concat(promo), []);
+        toast('Code ' + code + ' appliqué · ' + promo.name);
+      }).catch(() => toast('Code promo · hors ligne, réessayez'));
+    };
+    const paintPromoCode = () => {
+      const pay = document.querySelector('.rp-pay'); if (pay && !$('#rp-code')) {
+        pay.insertAdjacentHTML('afterbegin', `<form class="rp-client rp-code" id="rp-code" style="cursor:text"><svg viewBox="0 -960 960 960" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M856-390 570-104q-12 12-27 18t-30 6q-15 0-30-6t-27-18L103-457q-11-11-17-25.5T80-513v-287q0-33 23.5-56.5T160-880h287q16 0 31 6.5t26 17.5l352 353q12 12 17.5 27t5.5 30q0 15-5.5 29.5T856-390ZM513-160l286-286-353-354H160v286l353 354ZM260-640q25 0 42.5-17.5T320-700q0-25-17.5-42.5T260-760q-25 0-42.5 17.5T200-700q0 25 17.5 42.5T260-640Zm220 160Z"/></svg><input id="rp-code-in" maxlength="24" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Code promo" aria-label="Code promo" style="flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;outline:0;text-transform:uppercase"><span id="rp-code-on" style="display:flex;gap:6px;flex-wrap:wrap"></span><button type="submit" style="border:0;background:transparent;color:var(--atlas);font:inherit;font-weight:600;cursor:pointer">Appliquer</button></form>`);
+        $('#rp-code').addEventListener('submit', (e) => { e.preventDefault(); const i = $('#rp-code-in'); applyPromoCode(i.value); i.value = ''; i.blur(); });
+        $('#rp-code').addEventListener('click', (e) => { const x = e.target.closest('[data-code-x]'); if (!x) return; e.preventDefault(); setCodePromos((carteState.codePromos || []).filter(p => p.id !== x.dataset.codeX), [x.dataset.codeX]); });
+      }
+      const on = $('#rp-code-on');
+      if (on) on.innerHTML = (carteState.codePromos || []).map(p => `<button type="button" data-code-x="${kdsEsc(p.id)}" aria-label="Retirer le code ${kdsEsc(p.code)}" style="border:0;border-radius:8px;padding:3px 8px;background:var(--atlas);color:var(--paper);font:inherit;font-weight:600;cursor:pointer">${kdsEsc(p.code)} ×</button>`).join('');
+    };
 
     function pushCartLine(item, opts) {
       nativeHapticLight();
@@ -1116,6 +1149,7 @@
       }
       currentOrder().replaceCart([]);
       currentOrder().setDiscount(null);
+      carteState.codePromos = [];
       renderMenu();
       renderCart();
       if (typeof renderVrapBoard === 'function') renderVrapBoard();
@@ -1171,6 +1205,7 @@
         return;
       }
 
+      paintPromoCode();
       const discAmt = vrapDiscountAmount(gross);
       const net = Math.max(0, gross - discAmt);
       const editing = vrapEditingNum != null;

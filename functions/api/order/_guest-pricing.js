@@ -155,7 +155,7 @@ export async function priceOrder(env, merchant, rawLines, opts = {}) {
         menuRev = menuRow.updated_ts || null;
         /* Re-sanitised on read: a row written before promotions existed has
          * none, and a promotion naming a deleted category simply drops out. */
-        try { promos = MenuPromos().sanitize(parsed && parsed.promos, parsed); } catch (_) { promos = []; }
+        try { promos = MenuPromos().forCodes(MenuPromos().sanitize(parsed && parsed.promos, parsed)); } catch (_) { promos = []; } /* a promo with a code waits for its code */
       } else {
         /* La forme BOUTIQUE. `priceMAD` au lieu de `price`, et la disponibilité
          * vient du stock : un article dont toutes les déclinaisons sont à zéro

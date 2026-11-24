@@ -43,6 +43,7 @@
       newTitle: 'Nouvelle promotion', editTitle: 'Modifier la promotion',
       name: 'Nom', namePh: 'Happy hour, L’heure du goûter…',
       kind: 'Réduction', percent: 'Pourcentage', amount: 'Montant en moins', fixed: 'Prix fixe',
+      code: 'Code promo', codeHint: 'facultatif', codePh: 'ETE10', codeNote: 'Avec un code, la promotion ne s’applique pas toute seule : la caisse l’ajoute à une note quand le client donne le code.', codeTag: 'Code {c}',
       value: 'Valeur', scope: 'S’applique à',
       formulaNote: 'Les formules gardent leur propre prix et ne sont jamais réduites.',
       when: 'Quand', daysLbl: 'Jours', daysHint: 'aucun jour choisi = tous les jours',
@@ -53,7 +54,7 @@
       preview: 'Active', clearWhen: 'Toujours active',
       cancel: 'Annuler', save: 'Enregistrer',
       errHours: 'Indiquez l’heure de début et l’heure de fin, ou aucune.', errSame: 'L’heure de fin doit différer de l’heure de début.', errDates: 'Le dernier jour ne peut pas précéder le premier.',
-      errName: 'Donnez un nom à la promotion.', errValue: 'Indiquez une réduction.', errScope: 'Choisissez au moins une catégorie, ou toute la carte.',
+      errCode: 'Ce code sert déjà à une autre promotion.', errName: 'Donnez un nom à la promotion.', errValue: 'Indiquez une réduction.', errScope: 'Choisissez au moins une catégorie, ou toute la carte.',
       saved: 'Promotion enregistrée', savedDesc: 'La caisse et l’appli Serveur l’appliquent dès la prochaine synchronisation.',
       deleted: 'Promotion supprimée',
       days: ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'],
@@ -73,6 +74,7 @@
       newTitle: 'New promotion', editTitle: 'Edit promotion',
       name: 'Name', namePh: 'Happy hour, Afternoon tea…',
       kind: 'Discount', percent: 'Percentage', amount: 'Amount off', fixed: 'Fixed price',
+      code: 'Promo code', codeHint: 'optional', codePh: 'SUMMER10', codeNote: 'With a code, the promotion never applies on its own: the till adds it to a bill when the guest gives the code.', codeTag: 'Code {c}',
       value: 'Value', scope: 'Applies to',
       formulaNote: 'Set menus keep their own price and are never discounted.',
       when: 'When', daysLbl: 'Days', daysHint: 'no day picked = every day',
@@ -83,7 +85,7 @@
       preview: 'Active', clearWhen: 'Always on',
       cancel: 'Cancel', save: 'Save',
       errHours: 'Enter both a start and an end time, or neither.', errSame: 'The end time must differ from the start time.', errDates: 'The last day cannot come before the first.',
-      errName: 'Give the promotion a name.', errValue: 'Enter a discount.', errScope: 'Pick at least one category, or the whole menu.',
+      errCode: 'Another promotion already uses this code.', errName: 'Give the promotion a name.', errValue: 'Enter a discount.', errScope: 'Pick at least one category, or the whole menu.',
       saved: 'Promotion saved', savedDesc: 'The till and the waiter app apply it from their next sync.',
       deleted: 'Promotion deleted',
       days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
@@ -103,6 +105,7 @@
       newTitle: 'عرض جديد', editTitle: 'تعديل العرض',
       name: 'الاسم', namePh: 'ساعة السعادة، وقت الشاي…',
       kind: 'التخفيض', percent: 'نسبة مئوية', amount: 'مبلغ مخصوم', fixed: 'سعر ثابت',
+      code: 'رمز العرض', codeHint: 'اختياري', codePh: 'SUMMER10', codeNote: 'مع رمز، لا يُطبَّق العرض تلقائياً: يضيفه الصندوق إلى الفاتورة عندما يعطي الزبون الرمز.', codeTag: 'رمز {c}',
       value: 'القيمة', scope: 'يُطبّق على',
       formulaNote: 'الوجبات المركّبة تحتفظ بسعرها ولا تُخفَّض أبداً.',
       when: 'متى', daysLbl: 'الأيام', daysHint: 'بدون اختيار = كل يوم',
@@ -113,7 +116,7 @@
       preview: 'نشط', clearWhen: 'نشط دائماً',
       cancel: 'إلغاء', save: 'حفظ',
       errHours: 'أدخل ساعة البداية وساعة النهاية، أو لا شيء.', errSame: 'يجب أن تختلف ساعة النهاية عن ساعة البداية.', errDates: 'لا يمكن أن يسبق اليوم الأخير اليوم الأول.',
-      errName: 'أعطِ العرض اسماً.', errValue: 'أدخل قيمة التخفيض.', errScope: 'اختر فئة واحدة على الأقل، أو القائمة كلها.',
+      errCode: 'هذا الرمز مستعمل في عرض آخر.', errName: 'أعطِ العرض اسماً.', errValue: 'أدخل قيمة التخفيض.', errScope: 'اختر فئة واحدة على الأقل، أو القائمة كلها.',
       saved: 'تم حفظ العرض', savedDesc: 'يطبّقه الصندوق وتطبيق النادل عند المزامنة التالية.',
       deleted: 'تم حذف العرض',
       days: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
@@ -156,7 +159,7 @@
     const st = P() ? P().status(p, Date.now()) : 'active';
     const pill = st === 'active' ? 'mode' : (st === 'ended' ? 'req' : 'opt');
     return `<div class="mi-group-card mp-card" data-mp-id="${esc(p.id)}">
-      <div class="mi-group-card-head"><span class="mi-group-card-name">${esc(p.name)}</span><span class="mi-group-card-pill mode">${esc(valueLabel(p))}</span><span class="mi-group-card-pill ${pill}" data-mp-status="${st}">${esc(tr(st))}</span></div>
+      <div class="mi-group-card-head"><span class="mi-group-card-name">${esc(p.name)}</span><span class="mi-group-card-pill mode">${esc(valueLabel(p))}</span>${p.code ? `<span class="mi-group-card-pill opt mono" data-mp-code>${esc(tr('codeTag', { c: p.code }))}</span>` : ''}<span class="mi-group-card-pill ${pill}" data-mp-status="${st}">${esc(tr(st))}</span></div>
       <div class="mi-group-card-scope">${esc(scopeLabel(p))}<br>${esc(windowLabel(p))}</div>
       <div class="mi-group-card-acts"><button data-activation=write type="button" class="btn-slim" data-mp-act="edit">${esc(tr('edit'))}</button><button type="button" class="btn-slim" data-mp-act="pause">${esc(tr(p.paused ? 'resume' : 'pause'))}</button><button data-activation=write type="button" class="btn-slim danger" data-mp-act="delete">${esc(tr('del'))}</button></div>
     </div>`;
@@ -195,6 +198,9 @@
         <div><label class="kf-label" for="mp-value">${esc(tr('value'))} <span data-mp-unit>${draft.kind === 'percent' ? '%' : 'MAD'}</span></label>
           <input class="kf-input" id="mp-value" data-mp-field="value" type="number" inputmode="decimal" min="0" step="${draft.kind === 'percent' ? 'any' : '0.01'}" value="${esc(draft.value)}"/></div>
       </div>
+      <label class="kf-label" for="mp-code">${esc(tr('code'))} <span class="mp-hint">· ${esc(tr('codeHint'))}</span></label>
+      <input class="kf-input mono" id="mp-code" data-mp-field="code" maxlength="24" autocapitalize="characters" spellcheck="false" placeholder="${esc(tr('codePh'))}" value="${esc(draft.code || '')}"/>
+      <p class="mp-note">${esc(tr('codeNote'))}</p>
       <div class="kf-label">${esc(tr('scope'))}</div>
       <div class="mi-subchips" data-mp-scopes>${scopeChips()}</div>
       <div class="mp-when">
@@ -261,6 +267,8 @@
     q('[data-mp-save]').onclick = () => {
       draft.name = q('[data-mp-field="name"]').value.trim();
       draft.value = Number(String(q('[data-mp-field="value"]').value).replace(',', '.'));
+      draft.code = P().normCode(q('[data-mp-field="code"]').value);
+      if (draft.code && list().some((x) => x.code === draft.code && x.id !== draft.id)) return fail('errCode');
       if (!draft.name) return fail('errName');
       if (!(draft.value > 0)) return fail('errValue');
       if (!draft.all && !draft.cats.length && !(draft.items && draft.items.length)) return fail('errScope');

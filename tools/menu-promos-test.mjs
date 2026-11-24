@@ -170,5 +170,35 @@ ok('two units at two prices never share a stack key', () => {
   assert.equal(P.stackKey(null), '');
 });
 
+console.log('■ menu promotions · promo code (like an online shop)');
+ok('a code is kept upper-case and clean; a promotion without one has no code field', () => {
+  assert.equal(happy({ code: ' été-10 !' }).code, 'ETE-10');
+  assert.equal(happy({ code: 'ete10' }).code, 'ETE10');
+  assert.equal('code' in happy(), false);
+});
+ok('a promotion with a code never applies on its own', () => {
+  const coded = happy({ code: 'ETE10' });
+  assert.equal(P.resolve([coded], drink, 30, FRI_18), null);
+  assert.equal(P.resolve([coded], drink, 30, FRI_18, ['WRONG']), null);
+  assert.equal(P.resolve([coded], drink, 30, FRI_18, ['ete10']).price, 24);
+});
+ok('the automatic promotions keep running next to a coded one; the lower price still wins', () => {
+  const auto = happy({ id: 'a', value: 10 }), coded = happy({ id: 'c', value: 50, code: 'MOITIE' });
+  assert.equal(P.resolve([auto, coded], drink, 30, FRI_18).price, 27);
+  assert.equal(P.resolve([auto, coded], drink, 30, FRI_18, ['MOITIE']).price, 15);
+});
+ok('forCodes hides coded promotions (public carte, waiter and guest pricing)', () => {
+  const list = [happy({ id: 'a' }), happy({ id: 'c', code: 'X1' })];
+  assert.deepEqual(P.forCodes(list).map((p) => p.id), ['a']);
+  assert.deepEqual(P.forCodes(list, ['x1']).map((p) => p.id), ['a', 'c']);
+});
+ok('byCode finds a live or upcoming code, never a paused or ended one', () => {
+  assert.equal(P.byCode([happy({ code: 'ETE10' })], 'ete10', FRI_18).id, 'hh');
+  assert.equal(P.byCode([happy({ code: 'ETE10' })], 'NOPE', FRI_18), null);
+  assert.equal(P.byCode([happy({ code: 'ETE10', paused: true })], 'ETE10', FRI_18), null);
+  assert.equal(P.byCode([happy({ code: 'ETE10', to: '2026-10-01' })], 'ETE10', FRI_18), null);
+  assert.equal(P.byCode([happy()], '', FRI_18), null);
+});
+
 console.log(`\nmenu-promos: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

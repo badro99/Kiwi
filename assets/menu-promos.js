@@ -78,7 +78,7 @@
       if (!all && !cats.length && !items.length) return null;
       seen.add(id);
       var days = common.days, start = common.start, end = common.end;
-      return {
+      var out = {
         id: id, name: name, kind: kind, value: value,
         all: all, cats: all ? [] : cats, items: all ? [] : items,
         from: DAY.test(p.from || '') ? p.from : '',
@@ -88,6 +88,8 @@
         paused: p.paused === true,
         createdAt: Math.max(0, Math.round(Number(p.createdAt) || 0)),
       };
+      if (normCode(p.code)) out.code = normCode(p.code);
+      return out;
     }).filter(Boolean).slice(0, MAX_PROMOS);
   }
 
@@ -105,6 +107,22 @@
       if (Array.isArray(p.items) && p.items.length > MAX_ITEMS) omitted.push({ id: ref.id, name: ref.name, reason: 'items-limit', limit: MAX_ITEMS });
     });
     return { ok: !omitted.length, omitted: omitted };
+  }
+
+  /* « Code promo », comme une boutique en ligne : une promotion qui porte un
+     code ne s'applique JAMAIS toute seule. Elle attend qu'on tape son code à la
+     caisse, pour CETTE note. La carte publique ne la montre pas
+     (functions/api/menu.js) ; GET /api/menu?merchant=…&code=… la rend une fois
+     le code vérifié par le serveur. */
+  function normCode(v) { return String(v == null ? '' : v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24); }
+  function forCodes(list, codes) {
+    var on = (Array.isArray(codes) ? codes : []).map(normCode);
+    return (Array.isArray(list) ? list : []).filter(function (p) { return p && (!p.code || on.indexOf(p.code) >= 0); });
+  }
+  function byCode(list, code, now) {
+    var c = normCode(code);
+    var hit = c && (Array.isArray(list) ? list : []).find(function (p) { return p && p.code === c; });
+    return hit && ['paused', 'ended'].indexOf(status(hit, now)) < 0 ? hit : null;
   }
 
   /* Is the promotion running at `now`? */
@@ -228,8 +246,8 @@
     return { toMin, money, down, normalize, inWindow, price, statusAt, lineDeal, lineUnit, appliesMenu, resolveMenu, stockOf, toTs, matches, choosePromotion };
   })();
   /* GENERATED SHARED KiwiPromotionPricing END */
-  function resolve(promos, line, unit, now) {
-    return KiwiPromotionPricing.resolveMenu(promos, line, unit, businessMoment(now), tillLocale());
+  function resolve(promos, line, unit, now, codes) {
+    return KiwiPromotionPricing.resolveMenu(forCodes(promos, codes), line, unit, businessMoment(now), tillLocale());
   }
 
   /* Same identity on both sides of a stack: two units at two different
@@ -240,6 +258,7 @@
     TZ: TZ, KINDS: KINDS.slice(), clock: rules.clock,
     sanitize: sanitize, audit: audit, isActive: isActive, status: status, resolve: resolve,
     badge: badge, businessMoment: businessMoment, stackKey: stackKey,
+    normCode: normCode, forCodes: forCodes, byCode: byCode,
   };
   root.KiwiMenuPromos = api;
 })(typeof window !== 'undefined' ? window : globalThis);
