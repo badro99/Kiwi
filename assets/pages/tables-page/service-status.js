@@ -216,6 +216,7 @@ function pdsRenderTable(t, state, T) {
   const showChairs = state.showChairs !== false;
   const chairs = showChairs ? pdsNoirChairs(g, g.seats, ring) : '';
   const numDisp = /^\d$/.test(String(t.num)) ? '0' + t.num : t.num;
+  const upSide = Math.abs(Math.round((t.rot || 0) / 90)) % 2 === 1;   // à 90° ou 270°, la couche droite échange largeur et hauteur
   const serverBadge = assignedServers.length
     ? `<span class="pds-tbl-servers" aria-hidden="true">${assignedServers.map(server => {
         const initials = server.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
@@ -274,6 +275,7 @@ function pdsRenderTable(t, state, T) {
       <svg class="pds-tbl-svg" viewBox="${-P} ${-P} ${g.w + P*2} ${g.h + P*2}" aria-hidden="true">
         ${chairs}${body}
       </svg>
+      <div class="pds-tbl-up" style="width:${upSide ? g.h + P*2 : g.w + P*2}px; height:${upSide ? g.w + P*2 : g.h + P*2}px; transform:translate(-50%, -50%) rotate(${-(t.rot || 0)}deg);">
       <div class="pds-tbl-face" style="color:${ink};">
         <span class="pds-sr">${pdsEsc(T.tableName || 'Table')} </span><span class="pds-tbl-num">${pdsEsc(numDisp)}</span>${cellRest.length ? `<span class="pds-sr">, ${pdsEsc(cellRest.join(', '))}</span>` : ''}
         ${g.seats ? `<span class="pds-tbl-covers" aria-hidden="true">${eff.covers && st !== 'free' ? `${eff.covers}/` : ''}${g.seats}p</span>` : ''}
@@ -283,6 +285,7 @@ function pdsRenderTable(t, state, T) {
       ${sinceChip}
       ${reservationChip}
       ${billChip}
+      </div>
       ${only ? pdsHandles(t, g, T) : ''}
     </div>
   `;

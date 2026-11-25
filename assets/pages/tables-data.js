@@ -1664,6 +1664,8 @@ const PDS_INLINE_CSS = `
     position:absolute; inset:0; width:100%; height:100%;
     display:block; overflow:visible; pointer-events:none;
   }
+  /* Le numéro et les pastilles restent droits (25 nov. 2026, Browse 1er étage : 9 tables sur 11 à 270°, numéros couchés) : seuls la table et ses chaises tournent. */
+  .pds-tbl-up { position:absolute; left:50%; top:50%; pointer-events:none; }
   .pds-tbl-face {
     position:absolute; inset:var(--pad, 0px);
     display:flex; flex-direction:column;
@@ -2324,7 +2326,7 @@ const PDS_INLINE_CSS = `
   .pds-tbl-heat { position:absolute; bottom:calc(var(--pad, 0px) - 24px); left:50%; transform:translateX(-50%);
     height:19px; padding:0 9px; border-radius:9.5px; display:inline-flex; align-items:center; white-space:nowrap; pointer-events:none; z-index:5;
     background:var(--atlas); color:#F7F5F0; font:600 10px/1 var(--font-ui, 'Inter Tight'), system-ui; font-variant-numeric:tabular-nums; }
-  .pds-bill-chip { position:absolute; top:calc(var(--pad, 0px) - 24px); right:calc(var(--pad, 0px) - 6px);
+  .pds-bill-chip { position:absolute; bottom:calc(var(--pad, 0px) - 24px); left:50%; transform:translateX(-50%); /* sous la table : en haut, « 26 min » le recouvrait */
     height:19px; padding:0 8px; border-radius:9.5px; display:inline-flex; align-items:center; white-space:nowrap; pointer-events:none; z-index:4;
     background:rgba(247,245,240,0.94); border:1px solid rgba(194,69,111,0.45); color:#A0335A;
     font:600 10px/1 var(--font-ui, 'Inter Tight'), system-ui; font-variant-numeric:tabular-nums; }
