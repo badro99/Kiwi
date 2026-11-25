@@ -236,8 +236,8 @@
     "sha": "20476101ff223f1f"
   },
   "assets/caisse-floor.js": {
-    "v": "24",
-    "sha": "94c4ffc245086efd"
+    "v": "26",
+    "sha": "0d52d21aa7efee8a"
   },
   "assets/caisse-hardware.js": {
     "v": "16",
@@ -248,8 +248,8 @@
     "sha": "355f2593e8cbbafe"
   },
   "assets/caisse-lang.js": {
-    "v": "173",
-    "sha": "15c71fdfa5b38b1b"
+    "v": "176",
+    "sha": "f3a3bdc580200b90"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -940,12 +940,12 @@
     "sha": "a69c85ba97ce274b"
   },
   "assets/interactive/handlers.js": {
-    "v": "6",
-    "sha": "d247dc9e9bd7df64"
+    "v": "9",
+    "sha": "f13ff56e1366034b"
   },
   "assets/interactive/helpers.js": {
-    "v": "1",
-    "sha": "dba3937b8684a6be"
+    "v": "3",
+    "sha": "35f296c19ca0ff54"
   },
   "assets/inventory-consumption.js": {
     "v": "18",
@@ -1547,6 +1547,14 @@
     "v": "1",
     "sha": "d8150ae77563aa16"
   },
+  "assets/owner-approval.js": {
+    "v": "1",
+    "sha": "932c8200ffce19f4"
+  },
+  "assets/owner-approvals.js": {
+    "v": "3",
+    "sha": "c90fdd830bfe634b"
+  },
   "assets/pages-pro-boutique.js": {
     "v": "67",
     "sha": "a804773dd3eafe17"
@@ -1664,8 +1672,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "334",
-    "sha": "187faf18de95db47"
+    "v": "335",
+    "sha": "11ff0d5b754e7ce3"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -2144,8 +2152,8 @@
     "sha": "e4f87f9b3e7a7628"
   },
   "assets/pos-reprint.js": {
-    "v": "25",
-    "sha": "28aca54b5efe8eb3"
+    "v": "27",
+    "sha": "77849380a66816c2"
   },
   "assets/pos-sale.js": {
     "v": "38",

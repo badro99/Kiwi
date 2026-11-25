@@ -7,7 +7,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const workflows = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/caisse-app/workflows.json'), 'utf8'));
-const LIVE = ['assets/caisse/dish-words.js', 'assets/caisse/table-settlement.js', 'assets/staff-perms-till.js', 'assets/caisse-accounting.js', 'assets/caisse-floor.js', 'assets/caisse-kitchen.js', ...workflows.files, 'assets/caisse/delivery.js', 'assets/caisse/cash-recovery.js', 'assets/caisse-app.js'];   // delivery.js : plateformes de livraison (24 nov.), hors découpe d'origine
+const LIVE = ['assets/caisse/dish-words.js', 'assets/caisse/table-settlement.js', 'assets/staff-perms-till.js', 'assets/owner-approval.js', 'assets/caisse-accounting.js', 'assets/caisse-floor.js', 'assets/caisse-kitchen.js', ...workflows.files, 'assets/caisse/delivery.js', 'assets/caisse/cash-recovery.js', 'assets/caisse-app.js'];   // delivery.js : plateformes de livraison (24 nov.), hors découpe d'origine
 const root = path.join(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const liveSource = () => LIVE.map(read).join('\n');

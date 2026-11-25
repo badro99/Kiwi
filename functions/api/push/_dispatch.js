@@ -86,6 +86,8 @@ export async function sendApns(env, token, message = {}) {
     const jwt = await apnsJwt(env);
     const payload = { aps: { alert: { title: String(message.title || 'Kiwi Pro'), body: String(message.body || '') }, sound: 'default' } };
     if (message.data && typeof message.data === 'object') Object.assign(payload, message.data, { aps: payload.aps });
+    /* Une catégorie (« KIWI_APPROVAL ») donne ses boutons à la notification (app/ios AppDelegate.swift). */
+    if (typeof message.category === 'string' && /^[A-Z_]{1,40}$/.test(message.category)) payload.aps.category = message.category;
     const res = await fetch(`${apnsHost(env)}/3/device/${token}`, {
       method: 'POST',
       headers: {

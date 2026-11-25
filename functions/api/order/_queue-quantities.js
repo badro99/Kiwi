@@ -81,7 +81,7 @@ export function voidDispatch(env, merchant, now) {
 }
 
 export async function voidLine(ctx) {
-  const { env, b, merchant, now, employee, pairedTill, pinActor } = ctx;
+  const { env, b, merchant, now, employee, pairedTill, pinActor, ownerApprovals } = ctx;
   const { pendingVoidResponse, dispatchPendingVoid } = voidDispatch(env, merchant, now);
   /* ── Annuler une ligne de commande en cuisine (Protocole à 2 niveaux) ───────
    * 1. Si le plat n'a pas encore été accepté par la brigade (stationAccepted falsy) :
@@ -170,6 +170,16 @@ export async function voidLine(ctx) {
       targetLine = legacy[0];
     }
     if (!targetLine) return json({ error: 'line-not-on-order' }, 404);
+    /* Une preuve au nom du patron (accord depuis son téléphone) ne couvre que
+       la ligne qu'il a vue : l'accord se relit ici contre CETTE ligne. */
+    /* Les outils viennent de la route (queue.js › ctx.ownerApprovals) ; sans eux,
+       la preuve du patron ne vaut rien (refus par défaut). */
+    let ownerApproval = null;
+    if (pinActor && pinActor.id === 'owner-approval') {
+      const A = ownerApprovals;
+      ownerApproval = A ? await A.approvedFor(env, merchant, String(b.voidLine.ownerApproval || ''), 'void-sent', A.voidRef(targetOrder.id, lineId)) : null;
+      if (!ownerApproval) return json({ error: 'owner-approval-invalid' }, 403);
+    }
 
     const isFormula = targetLine.kind === 'formula' && !!targetLine.formulaUid;
     const affectedLines = isFormula
@@ -242,6 +252,7 @@ export async function voidLine(ctx) {
       } catch (_) {
         return json({ error: 'item-cancellation-write-failed', retry: true }, 503);
       }
+      if (ownerApproval) await ownerApprovals.markUsed(env, merchant, ownerApproval.id, now);
 
       return json({
         ok: true,

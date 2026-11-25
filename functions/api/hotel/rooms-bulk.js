@@ -1,5 +1,6 @@
 // POST /api/hotel/rooms-bulk — atomic, tenant-scoped room metadata updates.
 import { json, activeAccountSession, activeEmployee, employeeRoleOpensDashboard, readTillActorProof } from '../../auth/_lib.js';
+import { OWNER_ACTOR_ID } from '../_owner-approvals.js';
 import { storeOwner } from '../_private.js';
 import { payloadHash, roomArray, roomCharacteristicCatalog, validateBulkChanges, validateRoomsDocument } from './_rooms.js';
 import { poke } from '../_live.js';
@@ -23,7 +24,7 @@ async function actorFor(request, env, merchant, pinProof) {
   if (!principal) return null;
   if (pinProof) {
     const proof = await readTillActorProof(pinProof, env.AUTH_SECRET, merchant);
-    if (proof) return { principal, authorizer: { id: String(proof.id).slice(0, 96), name: String(proof.name || 'Operator').slice(0, 120), role: String(proof.role || 'operator').slice(0, 80) } };
+    if (proof && proof.id !== OWNER_ACTOR_ID) return { principal, authorizer: { id: String(proof.id).slice(0, 96), name: String(proof.name || 'Operator').slice(0, 120), role: String(proof.role || 'operator').slice(0, 80) } };
     return { error: 'invalid-pin-proof' };
   }
   return { principal, authorizer: null };

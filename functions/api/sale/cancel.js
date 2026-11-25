@@ -14,6 +14,7 @@ import { ensureCollectionSchema } from '../receivables.js';
 import { voidSaleLoyalty } from '../clients.js';
 import { planSaleVoid, saleVoidStatements } from '../_cheque-debt.js';
 import { decide, sessionMay, permissionDenied } from '../_permissions.js';
+import { approvedFor, markUsed } from '../_owner-approvals.js';
 
 /* Une vente déjà remboursée, ou transformée en avoir, ne s'annule plus : le
  * remboursement est une ligne négative qui reste dans le journal, l'annulation
@@ -295,6 +296,7 @@ export async function onRequestPost({ request, env }) {
   let actorId = '';
   let actorRole = '';
   let reason = 'employee-cancel';
+  let approval = null;
   if (source === 'dashboard') {
     /* Dashboard cancellation is an owner/operator action, never a public
        browser write. entitledMerchant enforces the active account/tenant. */
@@ -311,6 +313,16 @@ export async function onRequestPost({ request, env }) {
     actorId = await dashboardActorId(request, env);
     actorRole = 'dashboard-owner';
     reason = 'dashboard-cancel';
+  } else if (body.ownerApproval) {
+    /* Le patron a accepté CETTE annulation depuis son téléphone
+       (functions/api/_owner-approvals.js) : pas de code, la caisse appairée
+       présente l'accord, relu ici contre la vente demandée. */
+    if (!(await isTillFor(request, env, merchant))) return json({ error: 'till-required' }, 403);
+    approval = await approvedFor(env, merchant, String(body.ownerApproval), 'cancel-sale', id);
+    if (!approval) return json({ error: 'owner-approval-invalid' }, 403);
+    actor = String(approval.decided_by || 'Propriétaire').slice(0, 80);
+    actorId = 'owner:approval';
+    actorRole = 'owner';
   } else {
     const verified = await verifyStaffPin(request, env, merchant, pin, { requireTill: true });
     if (!verified.ok) {
@@ -391,8 +403,15 @@ export async function onRequestPost({ request, env }) {
   });
   if (body.reopen) {
     if (source !== 'cashier') return json({ error: 'cashier-reopen-required' }, 403);
-    return voidAndReopen(env, body, merchant, id, sale, actor, actorId, actorRole, reason,
+    const reopened = await voidAndReopen(env, body, merchant, id, sale, actor, actorId, actorRole, reason,
       saleAmountCents, legacyAmount, impact);
+    /* La reprise peut demander un second essai (floorPending) : l'accord reste
+       valable tant que la note n'est pas rouverte. */
+    if (approval && reopened.status < 300) {
+      const done = await reopened.clone().json().catch(() => ({}));
+      if (done && done.ok && !done.floorPending) await markUsed(env, merchant, approval.id);
+    }
+    return reopened;
   }
   try {
     /* Money and its audit trail are one state transition. D1 batch() is the
@@ -470,6 +489,7 @@ export async function onRequestPost({ request, env }) {
     cheques = ((rs && rs.results) || []).map((c) => ({ id: String(c.id), number: String(c.number || ''), amountCents: Number(c.amount_cents) || 0 }));
   } catch (_) { cheques = []; }
 
+  if (approval) await markUsed(env, merchant, approval.id);
   return json({ ok: true, id, ref: sale.ref || '', amount: saleAmount, amountCents: saleAmountCents,
                 actor, actor_id: actorId, source, ts, ...(cheques.length ? { cheques } : {}) });
 }

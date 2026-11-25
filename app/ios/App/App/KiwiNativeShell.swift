@@ -14,6 +14,8 @@ private let kiwiAtlas = Color(red: 11 / 255, green: 110 / 255, blue: 79 / 255)
 extension Notification.Name {
     /// Posted by AppDelegate with userInfo["token"] (hex) on success, or an empty userInfo on failure.
     static let kiwiPushToken = Notification.Name("kiwi.push.token")
+    /// Posted by AppDelegate when the owner taps an approval notification (userInfo["id"]).
+    static let kiwiApprovalOpened = Notification.Name("kiwi.approval.opened")
 }
 
 // JSON is already a JavaScript expression. Keep its UTF-8 intact: atob() yields
@@ -223,6 +225,7 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
         self.tabWidthConstraint = tabWidthConstraint
 
         NotificationCenter.default.addObserver(self, selector: #selector(pushTokenArrived(_:)), name: .kiwiPushToken, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(approvalOpened(_:)), name: .kiwiApprovalOpened, object: nil)
 
         model.didChangeLayout = { [weak self] context in self?.apply(context) }
         apply(model.context)
@@ -344,6 +347,15 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
             }
         default:
             break
+        }
+    }
+
+    /// Accords du patron : la page relit ses demandes (assets/owner-approvals.js).
+    @objc private func approvalOpened(_ note: Notification) {
+        guard let id = note.userInfo?["id"] as? String,
+              id.range(of: "^apr-[0-9a-f]{24}$", options: .regularExpression) != nil else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            self?.bridgeEvaluate("window.KiwiOwnerApprovals&&window.KiwiOwnerApprovals.focus('\(id)')")
         }
     }
 

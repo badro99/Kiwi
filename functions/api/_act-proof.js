@@ -57,10 +57,13 @@ export function actTerms(action) {
   return out;
 }
 
-export async function tillActProof(secret, merchant, staff, action, now = Date.now()) {
+/* `fixedJti` : un accord du patron (_owner-approvals.js) peut se relire et
+   rendre plusieurs copies de sa preuve ; elles portent toutes le même jti, que
+   consumeActProof lie au premier fait : une seule sortie d'espèces la consomme. */
+export async function tillActProof(secret, merchant, staff, action, now = Date.now(), fixedJti = '') {
   const terms = actTerms(action);
   if (!secret || !merchant || !staff || !staff.id || !terms) return '';
-  const jti = b64url(crypto.getRandomValues(new Uint8Array(12)));
+  const jti = /^[A-Za-z0-9_-]{8,40}$/.test(String(fixedJti)) ? String(fixedJti) : b64url(crypto.getRandomValues(new Uint8Array(12)));
   const body = { v: 1, merchant: String(merchant), id: String(staff.id).slice(0, 96), name: String(staff.name || '').slice(0, 80),
     role: String(staff.role || '').slice(0, 40), ...terms, jti, iat: now, exp: now + ACT_LIFE_MS, late: ACT_LATE_MS };
   const payload = b64url(enc.encode(JSON.stringify(body)));

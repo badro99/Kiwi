@@ -492,6 +492,7 @@
       method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ merchant: m, id: entry.saleId, pin: String(pin || ''), source: 'cashier',
+        ...(opts && opts.ownerApproval ? { ownerApproval: String(opts.ownerApproval) } : {}),
         ...(opts && opts.reopen ? { reopen: true, reopenTable: opts.table, covers: opts.covers } : {}) }),
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
@@ -592,15 +593,28 @@
     else if (!entry.saleId) {
       cancel.disabled = true;
       cancel.title = tr('Synchronisation de la vente en cours');
-    } else cancel.addEventListener('click', function () { showPin(vertical, entry, false); });
+    } else cancel.addEventListener('click', function () { askOwner(vertical, entry, false); });
     var reopen = box.querySelector('[data-kx-rp-reopen]');
     if (reopen) {
       if (!entry.saleId) reopen.disabled = true;
-      else reopen.addEventListener('click', function () { showPin(vertical, entry, true); });
+      else reopen.addEventListener('click', function () { askOwner(vertical, entry, true); });
     }
   }
 
-  function showPin(vertical, entry, reopening) {
+  /* Accords du patron (assets/owner-approval.js) : quand il l'a demandé, son
+     téléphone accepte l'annulation ; sinon, ou sans réponse, le code manager. */
+  function askOwner(vertical, entry, reopening) {
+    var ask = { kind: 'cancel-sale', ref: String(entry.saleId || ''), handled: false,
+      label: (entry.label || entry.ref || tr('Ticket')) + ' · ' + methodLabel(entry.method),
+      amountCents: Math.round((Number(entry.total) || 0) * 100),
+      onApproved: function (grant) { showPin(vertical, entry, reopening, grant); },
+      onFallback: function () { showPin(vertical, entry, reopening); },
+      onCancel: function () { showTicket(vertical, entry); } };
+    try { document.dispatchEvent(new CustomEvent('kiwi-owner-approval', { detail: ask })); } catch (_) {}
+    if (!ask.handled) showPin(vertical, entry, reopening);
+  }
+
+  function showPin(vertical, entry, reopening, grant) {
     if (!canCancel(vertical)) return;
     var box = veil && veil.querySelector('.modal');
     if (!box) return;
@@ -617,8 +631,9 @@
     box.innerHTML = '<div class="kx-rp-head"><h3>' + tr(reopening ? 'Annuler et rouvrir la note' : 'Confirmer l’annulation') + '</h3>'
       + '<p>' + esc((entry.label || entry.ref || tr('Ticket')) + ' · ' + methodLabel(entry.method) + ' · ' + mad(entry.total))
       + '<br>' + tr('Ticket') + ' ' + esc(entry.saleId ? ticketNo(entry) : tr('identifiant indisponible'))
-      + '<br>' + tr('Entrez le code manager à 4 chiffres. Cette annulation sera journalisée avec votre nom, le ticket et le montant.') + '</p></div>'
-      + '<div class="kx-rp-pin"><input data-kx-rp-pin inputmode="numeric" maxlength="4" autocomplete="off" type="password">'
+      + '<br>' + (grant ? esc(tr('Accepté par {x}. Confirmez l’annulation.').replace('{x}', (grant.actor && grant.actor.name) || tr('le patron')))
+        : tr('Entrez le code manager à 4 chiffres. Cette annulation sera journalisée avec votre nom, le ticket et le montant.')) + '</p></div>'
+      + '<div class="kx-rp-pin">' + (grant ? '' : '<input data-kx-rp-pin inputmode="numeric" maxlength="4" autocomplete="off" type="password">')
       + (reopening ? '<p>' + tr('Table pour la note rouverte') + '</p><select data-kx-rp-table>'
         + tableOptions + '</select><p class="kx-rp-error" data-kx-rp-occupied>'
         + (free.indexOf(originalTable) < 0 ? tr('table occupée · rouvrir sur une autre table') : '') + '</p>' : '')
@@ -627,19 +642,20 @@
       + '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-confirm>'
       + tr(reopening ? 'Annuler et rouvrir' : 'Annuler définitivement') + '</button></div></div>';
     var input = box.querySelector('[data-kx-rp-pin]');
-    input.setAttribute('aria-label', tr('Code manager à 4 chiffres'));
+    if (input) input.setAttribute('aria-label', tr('Code manager à 4 chiffres'));
     var tableSelect = box.querySelector('[data-kx-rp-table]');
     if (tableSelect) tableSelect.setAttribute('aria-label', tr('Table pour la note rouverte'));
     var error = box.querySelector('[data-kx-rp-error]');
     var confirm = box.querySelector('[data-kx-rp-confirm]');
     box.querySelector('[data-kx-rp-back]').addEventListener('click', function () { showTicket(vertical, entry); });
     function submit() {
-      if (!/^\d{4}$/.test(input.value)) { error.textContent = tr('Entrez le code manager à 4 chiffres.'); return; }
+      if (!grant && !/^\d{4}$/.test(input.value)) { error.textContent = tr('Entrez le code manager à 4 chiffres.'); return; }
       var picked = reopening && box.querySelector('[data-kx-rp-table]');
       if (reopening && (!picked || !picked.value)) { error.textContent = tr('Choisissez une table libre.'); return; }
       confirm.disabled = true; error.textContent = '';
-      cancelSale(entry, input.value, reopening ? { reopen: true, table: picked.value,
-        covers: Number(entry.reopenSnapshot && entry.reopenSnapshot.covers) || 1 } : null).then(function (result) {
+      var how = grant ? { ownerApproval: grant.id } : {};
+      cancelSale(entry, grant ? '' : input.value, reopening ? Object.assign(how, { reopen: true, table: picked.value,
+        covers: Number(entry.reopenSnapshot && entry.reopenSnapshot.covers) || 1 }) : how).then(function (result) {
         if (reopening && result.floorPending) {
           confirm.disabled = false;
           error.textContent = tr('Vente annulée au serveur, mais la salle n’a pas confirmé la note rouverte. N’encaissez pas; réessayez la reprise.');
@@ -659,7 +675,8 @@
         } else toast(tr('Vente annulée · ' + (entry.ref || '') + ' · ' + mad(entry.total)));
       }).catch(function (err) {
         confirm.disabled = false;
-        error.textContent = tr(err && err.code === 'bad-pin' ? 'Code manager incorrect.'
+        error.textContent = tr(err && err.code === 'owner-approval-invalid' ? 'L’accord du patron a expiré. Refaites la demande.'
+          : err && err.code === 'bad-pin' ? 'Code manager incorrect.'
           : err && err.code === 'manager-required' ? 'Code manager requis. Un manager doit valider l’annulation.'
           : err && err.code === 'table-occupied' ? 'table occupée · rouvrir sur une autre table'
           : err && err.code === 'sale-not-current-business-day' ? 'Seules les ventes du jour peuvent rouvrir une note.'
@@ -671,8 +688,8 @@
       });
     }
     confirm.addEventListener('click', submit);
-    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
-    setTimeout(function () { try { input.focus(); } catch (_) {} }, 0);
+    if (input) input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+    setTimeout(function () { try { (input || confirm).focus(); } catch (_) {} }, 0);
   }
 
   function open(vertical, opts) {

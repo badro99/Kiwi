@@ -161,7 +161,7 @@ var SHELL = [
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
   '/assets/caisse-accounting.js?v=40',
-  '/assets/caisse-floor.js?v=24',
+  '/assets/caisse-floor.js?v=26',
   '/assets/caisse-kitchen.js?v=34',
   '/assets/caisse/receipts.js?v=5',
   '/assets/caisse/closing.js?v=2',
@@ -170,6 +170,7 @@ var SHELL = [
   '/assets/caisse/dish-words.js?v=1',
   '/assets/caisse/catalogue.js?v=27',
   '/assets/staff-perms-till.js?v=11',
+  '/assets/owner-approval.js?v=1',
   '/assets/caisse/till-frame.js?v=25',
   '/assets/caisse/orders.js?v=2',
   '/assets/caisse/payment.js?v=11',
@@ -251,7 +252,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=34',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2104',
-  '/assets/pages/dashboard-startup.js?v=334',
+  '/assets/pages/dashboard-startup.js?v=335',
   '/assets/pages/dashboard-loader.js?v=118',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -272,6 +273,7 @@ var SHELL = [
   '/assets/dashboard-native.css?v=3',
   '/assets/cloud-doc.js?v=21',
   '/assets/agent-action-center.js?v=4',
+  '/assets/owner-approvals.js?v=3',
   '/assets/cancellation-history.js?v=3',
   '/assets/weather.js?v=1',
   '/assets/briefing-rules.js?v=7',
@@ -292,8 +294,8 @@ var SHELL = [
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=10',
   '/assets/plan-catalog.js?v=1',
-  '/assets/interactive/helpers.js?v=1',
-  '/assets/interactive/handlers.js?v=6',
+  '/assets/interactive/helpers.js?v=3',
+  '/assets/interactive/handlers.js?v=9',
   '/assets/interactive.js?v=73',
   '/assets/view-link.js?v=2',
   '/assets/loyalty-product-links.js?v=15',
@@ -469,7 +471,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=39',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=173',
+  '/assets/caisse-lang.js?v=176',
   '/assets/venue-store.js?v=7',
   '/assets/discount-policy.js?v=4',
   '/assets/merchant-policies.js?v=4',
@@ -709,7 +711,7 @@ var SHELL = [
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
-  '/assets/pos-reprint.js?v=25',
+  '/assets/pos-reprint.js?v=27',
   '/assets/pressing-caisse.js?v=131',
   '/assets/pressing-caisse.css?v=131',
   '/assets/material-icons.js?v=7',

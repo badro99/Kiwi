@@ -23,6 +23,7 @@
     'assets/pages-pro.js?v=2258',
     'assets/pages-pro-boutique.js?v=67',
     'assets/inventory-scan.js?v=1',
+    'assets/owner-approvals.js?v=3',
     'assets/boutique-stock-correct.js?v=4',
     'assets/boutique-categories-view.js?v=3',
     'assets/pages-pro-spa-starter.js?v=9',

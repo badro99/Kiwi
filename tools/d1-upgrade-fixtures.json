@@ -250,5 +250,17 @@
   "staff_permission_proofs": [
     {"merchant": "upgrade-synth-1", "jti": "fixture-jti-1", "kind": "fixture-kind-1", "ref": "fixture-ref-1", "staff_id": "fixture-staff_id-1", "used_ts": 137},
     {"merchant": "upgrade-synth-2", "jti": "fixture-jti-2", "kind": "fixture-kind-2", "ref": "fixture-ref-2", "staff_id": "fixture-staff_id-2", "used_ts": 274}
+  ],
+  "owner_approvals": [
+    {"id": "apr-fixture-1", "merchant": "upgrade-synth-1", "kind": "cash-out", "ref": "fixture-ref-1", "label": "fixture-label-1", "amount_cents": 137, "requested_by": "fixture-requested_by-1", "requested_by_id": "fixture-requested_by_id-1", "terminal": "fixture-terminal-1", "status": "pending", "created_ts": 137, "decided_ts": 137, "decided_by": "fixture-decided_by-1", "granted_ts": 137, "used_ts": 137},
+    {"id": "apr-fixture-2", "merchant": "upgrade-synth-2", "kind": "cash-out", "ref": "fixture-ref-2", "label": "fixture-label-2", "amount_cents": 274, "requested_by": "fixture-requested_by-2", "requested_by_id": "fixture-requested_by_id-2", "terminal": "fixture-terminal-2", "status": "pending", "created_ts": 274, "decided_ts": 274, "decided_by": "fixture-decided_by-2", "granted_ts": 274, "used_ts": 274}
+  ],
+  "owner_approval_settings": [
+    {"merchant": "upgrade-synth-1", "cash_out": 1, "cancel": 1, "manager_fallback": 1, "min_cents": 137, "updated_ts": 137},
+    {"merchant": "upgrade-synth-2", "cash_out": 1, "cancel": 1, "manager_fallback": 1, "min_cents": 274, "updated_ts": 274}
+  ],
+  "owner_approval_devices": [
+    {"merchant": "upgrade-synth-1", "token": "fixture-token-1", "lang": "fr", "created_ts": 137},
+    {"merchant": "upgrade-synth-2", "token": "fixture-token-2", "lang": "fr", "created_ts": 274}
   ]
 }

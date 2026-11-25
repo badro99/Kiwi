@@ -57,7 +57,17 @@
         toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Annulation impossible · caisse non appairée, article conservé'));
         return;
       }
-      if (slug && !(scope.who && scope.who.actorProof)) { requireManager(`Annuler ${line.name} · déjà envoyé en cuisine`, actor => cancelCaisseLineImmediately(tableId, line, Object.assign({}, scope, { who: actor })), null, { needsServer: true }); return; }
+      if (slug && !(scope.who && scope.who.actorProof)) {
+        const viaManager = () => requireManager(`Annuler ${line.name} · déjà envoyé en cuisine`, actor => cancelCaisseLineImmediately(tableId, line, Object.assign({}, scope, { who: actor })), null, { needsServer: true });
+        /* Accords du patron (assets/owner-approval.js) : quand il l'a demandé, son
+           téléphone décide d'abord ; sans réponse, le code manager reprend la main. */
+        const ask = { kind: 'void-sent', ref: String(line.canonicalUid || line.uid || line.id || ''), label: `${qtyBefore} × ${line.name}`,
+          amountCents: Math.round((Number(line.price) || 0) * qtyBefore * 100), handled: false,
+          onApproved: grant => cancelCaisseLineImmediately(tableId, line, Object.assign({}, scope, { who: Object.assign({}, grant.actor, { ownerApproval: grant.id }) })), onFallback: viaManager };
+        try { document.dispatchEvent(new CustomEvent('kiwi-owner-approval', { detail: ask })); } catch (_) {}
+        if (!ask.handled) viaManager();
+        return;
+      }
       currentOrder().patchLine(line, { ["voidBusy"]: true });
       toast(`Annulation de ${line.name}…`);
 
@@ -82,7 +92,9 @@
                 qty: 1,
                 reason: 'item_cancelled',
                 isWaste: 0,
-                actor: scope.who.name || 'Caisse'
+                actor: scope.who.name || 'Caisse',
+                /* L'accord du patron couvre CETTE ligne seulement (_queue-quantities.js). */
+                ...(scope.who.ownerApproval ? { ownerApproval: scope.who.ownerApproval } : {})
               }
           });
           if (data && data.alertSent) {

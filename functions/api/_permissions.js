@@ -35,6 +35,7 @@ import { sessionTier, sessionTierAtLeast } from '../auth/_session-tier.js';
 import { isMissingTable } from './print/_relay.js';
 import { readTillSellerProof } from './_seller.js';
 import { consumeActProof } from './_act-proof.js';
+import { OWNER_ACTOR_ID } from './_owner-approvals.js';
 import { pinHashes } from '../auth/_staff-codes.js';
 
 export { Catalog };
@@ -647,6 +648,9 @@ export async function provenActor(env, merchant, proofs, fact) {
 export async function flagUnauthorized(env, merchant, proven, perm, ref, detail) {
   try {
     if (!env || !env.DB || !merchant || !ref) return false;
+    /* Un accord du patron depuis son téléphone (functions/api/_owner-approvals.js) :
+       la preuve du geste est signée en son nom, rien à inscrire. */
+    if (proven && proven.via === 'act' && proven.id === OWNER_ACTOR_ID) return false;
     const state = await loadState(env, merchant);
     if (state.unavailable || !state.configured) return false;
     let subject = null;

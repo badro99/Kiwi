@@ -3060,3 +3060,43 @@ CREATE TABLE IF NOT EXISTS cheque_history (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_cheque_history_request ON cheque_history (merchant, request_id);
 CREATE INDEX IF NOT EXISTS idx_cheque_history_cheque ON cheque_history (merchant, cheque_id, at);
+
+-- Accords du patron (functions/api/_owner-approvals.js, 25 nov. 2026). Une
+-- sortie d'espèces ou une annulation devient une demande que le patron accepte
+-- ou refuse depuis son téléphone ; rien ne bouge avant son accord, un refus
+-- reste au journal. La route crée aussi ces tables à la première utilisation.
+CREATE TABLE IF NOT EXISTS owner_approvals (
+  id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  kind TEXT NOT NULL,                     -- cash-out | void-sent | cancel-sale
+  ref TEXT NOT NULL DEFAULT '',           -- la vente ou la ligne visée
+  label TEXT NOT NULL DEFAULT '',
+  amount_cents INTEGER NOT NULL DEFAULT 0,
+  requested_by TEXT NOT NULL DEFAULT '',
+  requested_by_id TEXT NOT NULL DEFAULT '',
+  terminal TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending', -- pending | approved | granted | used | refused | withdrawn | expired
+  created_ts INTEGER NOT NULL,
+  decided_ts INTEGER,
+  decided_by TEXT NOT NULL DEFAULT '',
+  granted_ts INTEGER,
+  used_ts INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_owner_approvals_merchant ON owner_approvals (merchant, created_ts);
+CREATE TABLE IF NOT EXISTS owner_approval_settings (
+  merchant TEXT PRIMARY KEY,
+  cash_out INTEGER NOT NULL DEFAULT 0,
+  cancel INTEGER NOT NULL DEFAULT 0,
+  manager_fallback INTEGER NOT NULL DEFAULT 1,
+  min_cents INTEGER NOT NULL DEFAULT 0,
+  updated_ts INTEGER NOT NULL DEFAULT 0
+);
+-- Les téléphones du patron qui reçoivent les demandes : une table à part, car
+-- push_tokens ne garde qu'un rôle par jeton (le point du matin y vit déjà).
+CREATE TABLE IF NOT EXISTS owner_approval_devices (
+  merchant TEXT NOT NULL,
+  token TEXT NOT NULL,
+  lang TEXT NOT NULL DEFAULT '',
+  created_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, token)
+);

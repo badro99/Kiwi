@@ -56,6 +56,7 @@ import { cancelTable, transferTable, mergeTables } from './_queue-tables.js';
 import { createFloorTicket, createTicket } from './_queue-create.js';
 import { voidLine, editLine, ackVoid, recallTicket, stationCooking, stationReady } from './_queue-kitchen.js';
 import { closeVisit } from './_queue-payments.js';
+import { OWNER_ACTOR_ID, approvedFor, markUsed, voidRef } from '../_owner-approvals.js';
 import { archiveTakeout, advanceOrder } from './_queue-status.js';
 
 /* ── OÙ VIT CHAQUE GESTE ─────────────────────────────────────────────────────
@@ -300,6 +301,8 @@ export async function onRequestPost(context) {
   const pairedTill = await isTillFor(request, env, merchant);
   const pinActor = b.actorProof ? await readTillActorProof(b.actorProof, env.AUTH_SECRET, merchant) : null;
   if (b.actorProof && !pinActor) return json({ error: 'invalid-action-identity' }, 403);
+  /* Une preuve au nom du patron (_owner-approvals.js) n'annule qu'une ligne, celle qu'il a acceptée. */
+  if (pinActor && pinActor.id === OWNER_ACTOR_ID && !(b.voidLine && typeof b.voidLine === 'object')) return json({ error: 'owner-approval-invalid' }, 403);
 
   /* Seating is the beginning of the visit, not the first kitchen ticket.
    * Persist the visit as soon as the employee confirms the covers so caisse,
@@ -315,7 +318,10 @@ export async function onRequestPost(context) {
   /* Chaque geste rend sa réponse, ou null quand le corps ne le concerne pas.
    * L'ordre est celui d'origine et il compte : un corps qui porte deux gestes
    * est confié au premier de cette liste. */
-  const ctx = { context, request, env, b, merchant, now, employee, pairedTill, pinActor };
+  const ctx = { context, request, env, b, merchant, now, employee, pairedTill, pinActor, ownerApprovals: { approvedFor, markUsed, voidRef } };
+  /* La preuve au nom du patron ne passe QUE par l'annulation de ligne, avant
+     tout autre geste que le corps porterait (revue : cancelTable passait avant). */
+  if (pinActor && pinActor.id === OWNER_ACTOR_ID) return (await voidLine(ctx)) || json({ error: 'owner-approval-invalid' }, 403);
   const handled = await cancelTable(ctx)    // b.cancelTable
     || await createFloorTicket(ctx)         // b.create === true
     || await transferTable(ctx)             // b.transferTable
