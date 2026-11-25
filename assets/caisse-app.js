@@ -1105,24 +1105,11 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
           printPreBill(_ticket);
         }
         else if (a === 'reprint-bill') {
-          /* Ce bouton rejouait window.__lastTicket · une variable de page. Elle
-             ne survit ni au rechargement, ni à la mise à jour du service worker,
-             ni à l'onglet que iOS tue en arrière-plan. Après midi, le moment
-             exact où l'on réimprime, il répondait « Aucun ticket » sur une
-             caisse qui avait encaissé toute la matinée.
-             Le journal, lui, est écrit. On y prend la dernière vente et on
-             ressort SON ticket : même numéro, même heure, mention de duplicata.
-             Repli sur l'ancien chemin si le journal est vide mais qu'un ticket
-             vient d'être tiré dans cette page · un service qui vient d'ouvrir. */
-          const last = journal.slice().reverse().find((e) => e && e.kind !== 'refund' && e.amount > 0);
-          const doc = last ? receiptDocFor(last, { copy: true }) : null;
-          if (doc) {
-            toast(tr('Impression du reçu…'));
-            Promise.resolve(window.KiwiReceipt.print(doc)).then(
-              (r) => toast(tr(r && r.ok ? 'Duplicata imprimé' : 'Impression échouée')),
-              () => toast(tr('Impression échouée'))
-            );
-          }
+          /* « Réimprimer » ressortait toujours la DERNIÈRE vente, sans demander
+             laquelle (Browse, 25 nov. 2026 : le patron voulait le ticket d'une
+             autre table). Il ouvre maintenant le journal du jour : chaque vente
+             porte son icône imprimante, qui ressort SON ticket en duplicata. */
+          if (journal.some((e) => e && e.kind !== 'refund' && e.amount > 0)) { openJournal('journal'); toast(tr('Choisissez le ticket à réimprimer')); }
           else if (window.__lastTicket) printHardwareTicket(window.__lastTicket);
           else toast(tr('Aucun ticket à réimprimer'));
         }

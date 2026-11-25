@@ -39,6 +39,15 @@
   var resuming = null;
   var MAX_RECORDS = 120;
   var running = false;
+  /* Browse, 25 nov. 2026 : de 13:03 à la fin du service, aucun bon ni reçu de
+     la file n'est parti, alors que les tickets test et la réimpression directe
+     sortaient. Un appel d'impression qui ne rend jamais la main laisse
+     `running` à vrai, et la file entière attend derrière lui sans un mot. Au
+     bout de STUCK_MS, l'appel est abandonné et son bon repart en file : le
+     relais le dédoublonne par sa clé (clientRef « kq.<id> »), donc une
+     relance ne fait pas deux bons. Une réponse tardive est encore lue. */
+  var STUCK_MS = 45000;
+  var runningSince = 0, runningJob = null, runGen = 0;
   var timer = null;
   var lastSuccess = null;
   var lastError = '';
@@ -661,8 +670,16 @@
     record('completed', job, { via: result && result.via });
     emit();
   }
+  function releaseStuck() {
+    if (!running || !runningSince || Date.now() - runningSince < STUCK_MS) return false;
+    var job = runningJob;
+    running = false; runningSince = 0; runningJob = null; runGen += 1;
+    record('stuck-released', job, { error: 'print-call-hung' });
+    if (job) retry(job, 'print-call-hung');
+    return true;
+  }
   function flush() {
-    if (running) return Promise.resolve(status());
+    if (running && !releaseStuck()) return Promise.resolve(status());
     sweepStaleAwaits();
     var q = readQueue();
     /* Une autre caisse a pris l'impression pendant notre sommeil : ses bons
@@ -691,7 +708,8 @@
       else schedule();
       return Promise.resolve(status());
     }
-    running = true; emit();
+    running = true; runningSince = Date.now(); runningJob = job; emit();
+    var gen = ++runGen;
     record('printing', job);
     var station = job.station || (job.payload && job.payload.station) || '';
     /* Receipt jobs carry the canonical KiwiReceipt document (shop is a block,
@@ -708,7 +726,14 @@
           ? window.KiwiPrinter.printKitchen(job.payload, { station: station, clientRef: 'kq.' + job.id })
           : Promise.resolve({ ok: false, reason: 'printer-not-configured' }));
     return Promise.resolve(print).then(function (result) {
-      running = false;
+      if (gen !== runGen) {
+        /* Abandonné par releaseStuck : seule une réussite compte encore. */
+        record('late-answer', job, { error: result && result.reason, via: result && result.via });
+        if (result && result.ok && result.queued && result.id) parkAwaitingRelay(job, result.id);
+        else if (result && result.ok) complete(job, result);
+        return result || { ok: false };
+      }
+      running = false; runningSince = 0; runningJob = null;
       if (result && result.ok && result.queued && result.id) parkAwaitingRelay(job, result.id);
       else if (result && result.ok) complete(job, result);
       /* Délai dépassé APRÈS l'envoi : le pont a peut-être imprimé. On ne
@@ -719,7 +744,8 @@
       if (readQueue().length) setTimeout(flush, 120);
       return result || { ok: false };
     }, function (error) {
-      running = false;
+      if (gen !== runGen) return { ok: false, reason: 'late-error' };
+      running = false; runningSince = 0; runningJob = null;
       retry(job, error && error.message || 'print-failed');
       return { ok: false, reason: lastError };
     });
@@ -863,6 +889,19 @@
       return true;
     }).catch(function () { record('native-restore-failed', null, { error: 'ledger-read' }); return false; });
   }
+  /* L'état de la file, lisible depuis le serveur (assets/printer/print-diag.js) :
+     sans lui, une file arrêtée ne se voit qu'au comptoir. Aucun contenu de bon. */
+  function diag() {
+    var q = readQueue(), now = Date.now();
+    return {
+      hub: isHub(), running: running, runningFor: running && runningSince ? now - runningSince : 0,
+      printerReady: printerReady(), lastError: lastError, lastSuccess: lastSuccess, recoverable: readRecover().length,
+      jobs: q.slice(0, 12).map(function (j) {
+        return { id: String(j.id || '').slice(-48), type: j.type, station: String(j.station || '').slice(0, 24), age: now - Number(j.createdAt || now), tries: Number(j.attempts || 0), err: j.lastError || '', uncertain: !!j.uncertain, relay: !!j.relayId, remote: !!j.remote, wait: j.nextAt ? Number(j.nextAt) - now : 0 };
+      }),
+      log: records.slice(-25).map(function (r) { return [r.at, r.state, String(r.id || '').slice(-40), r.error, r.via]; }),
+    };
+  }
   function exportDiagnostics() {
     return JSON.stringify({ exportedAt: Date.now(), merchant: merchant(), status: status(), transitions: records.slice(-MAX_RECORDS) }, null, 2);
   }
@@ -974,12 +1013,15 @@
       var host = document.head || document.body;
       /* La copie serveur du routage par poste (assets/printer/station-backup.js) : restaurée si la caisse l'a perdue. */
       if (host && !document.getElementById('station-backup-script')) { var b = document.createElement('script'); b.id = 'station-backup-script'; b.src = '/assets/printer/station-backup.js?v=3'; b.defer = true; host.appendChild(b); }
+      /* L'état de la file part au serveur (document printdiag), pour qu'une file arrêtée se voie à distance. */
+      if (host && !document.getElementById('print-diag-script')) { var d = document.createElement('script'); d.id = 'print-diag-script'; d.src = '/assets/printer/print-diag.js?v=2'; d.defer = true; host.appendChild(d); }
       if (!host || document.getElementById('printer-health-script') || !document.getElementById('toast-stack')) return;
       var s = document.createElement('script'); s.id = 'printer-health-script'; s.src = '/assets/printer-health.js?v=3'; s.defer = true; host.appendChild(s);
     }, 12000);
     if (healthBoot && healthBoot.unref) healthBoot.unref();
   } catch (_) {}
   setInterval(renewHub, HUB_RENEW_MS);
+  setInterval(function () { if (releaseStuck()) flush(); }, 15000);
   /* Au réveil, reprendre le bail AVANT que le prochain sondage des commandes
      ne livre les bons arrivés pendant le sommeil. */
   function onWake() { try { if (!document.hidden) { renewHub(); emit(); flush(); pollSoon(); } } catch (_) {} }
@@ -993,7 +1035,7 @@
     enqueue: enqueue, flush: flush, retryNow: retryNow, status: status,
     enqueueReceipt: enqueueReceipt, exportDiagnostics: exportDiagnostics, recoveryCopies: recoveryCopies,
     isHub: isHub, setHub: setHub, pending: function () { return readQueue().length; },
-    reprintDropped: reprintDropped,
+    reprintDropped: reprintDropped, diag: diag,
     relayLabel: relayLabel, pollUnprinted: pollUnprinted, reprintUnprinted: reprintUnprinted,
     maxAge: MAX_AGE,
     /* Test seams: intentionally read-only outside the automated test harness. */

@@ -225,8 +225,8 @@ ok('la caisse qui accepte imprime localement sans exiger le bail du hub',
   /confirmAccepted\(order\)[^]*?localKitchenAction: true/.test(caisse));
 ok('une commande en attente devenue acceptée déclenche aussi son bon',
   /o\.status === 'accepted' && known\.status === 'held'[^]*?printKitchenTickets\(known/.test(caisse));
-ok('l’impression locale relaie d’abord l’ordre pour partager son identifiant idempotent',
-  /order\.canonicalNumberPromise\s*=\s*relayToKitchen\(order\);[^]*?order\.canonicalNumberPromise\.then\(\(\) => printKitchenTickets\(order, items\)\)/.test(caisse));
+ok('l’impression locale relaie d’abord l’ordre pour partager son identifiant idempotent, et imprime même si le numéro échoue',
+  /order\.canonicalNumberPromise\s*=\s*relayToKitchen\(order\);[^]*?order\.canonicalNumberPromise\.then\(\(\) => printKitchenTickets\(order, items\), \(\) => printKitchenTickets\(order, items\)\)/.test(caisse));
 ok('le réglage explique qu’un seul ordinateur doit être hub',
   /Activez cette option sur un seul ordinateur par établissement/.test(bridge));
 const stampMatch = caisse.match(/assets\/kitchen-print-queue\.js\?v=(\d+)/);
@@ -235,8 +235,8 @@ ok('la caisse et le service worker s’accordent sur l’estampille de la file d
   !!(stampMatch && sw.includes(`'/assets/kitchen-print-queue.js?v=${stampMatch[1]}'`)));
 ok('la persistance native écrit un registre app-support et importe le stockage web une fois',
   /ledgerRead/.test(source) && /ledgerWrite/.test(source) && /native-restored/.test(source));
-ok('la caisse route désormais les reçus vers la file partagée',
-  /enqueueReceipt\(entry\.id, doc, opts && opts\.copy \? 'manual-reprint' : 'original'\)/.test(caisse));
+ok('la caisse route les reçus vers la file partagée, et un duplicata demandé à la main sort directement',
+  /enqueueReceipt === 'function' && !\(opts && opts\.copy\)\) \{\s*const queued = queue\.enqueueReceipt\(entry\.id, doc, 'original'\)/.test(caisse));
 
 if (fail.length) {
   fail.forEach((line) => console.error('  ✗ ' + line));
