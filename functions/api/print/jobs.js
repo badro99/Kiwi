@@ -19,6 +19,7 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import { tenantFor } from '../_private.js';
+import { keepsAwake, keepAwakeProbe } from './_keep-awake.js';
 import {
   BRIDGE_ONLINE_MS, JOB_TTL_MS, EXPIRED_RETENTION_MS, MAX_DATA_B64, CLAIM_BATCH, randomHex,
   bridgeFromRequest, dbDown, relayJson, isMissingTable, safeJsonParse, now,
@@ -153,10 +154,13 @@ export async function onRequestGet(context) {
        * 1.0.4 it polled every second regardless). */
       let poll = 250;
       if (!jobs.length) {
-        const recent = await env.DB.prepare(
+        const recent = keepsAwake(bridge.merchant) || await env.DB.prepare(
           'SELECT 1 AS hit FROM print_jobs WHERE merchant = ? AND created_ts > ? LIMIT 1'
         ).bind(bridge.merchant, t - ACTIVE_WINDOW_MS).first();
         poll = recent ? ACTIVE_POLL_MS : IDLE_POLL_MS;
+        /* Browse : une imprimante restée muette une minute reçoit un probe (_keep-awake.js). */
+        const probe = await keepAwakeProbe(env, bridge.merchant, bridge.id, t).catch(() => null);
+        if (probe) jobs.push(probe);
       }
       return relayJson({ ok: true, merchant: bridge.merchant, jobs, poll }, 200, request);
     } catch (e) {

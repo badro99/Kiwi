@@ -230,7 +230,8 @@ function till2({ verdicts, depositAnswer, merchant = 'amira-cafe' }) {
 {
   /* Browse, 25 nov. 2026 : its printers fall asleep between tickets. The owner
    * asked not to save requests for this shop: every printer is probed (so woken)
-   * every minute, and one that stays silent is rechecked every minute. */
+   * every minute. One that stays silent keeps the 2-minute recheck: each try
+   * holds the bridge ~16 s, and the server retries it on its own back-off. */
   const t = till2({ verdicts: { '192.168.11.87': ['failed', 'failed', 'done'] }, merchant: 'browse' });
   assert.ok(t.intervals.length && t.intervals.every((ms) => ms <= 60000), 'the till looks at its printers at least once a minute');
   await settle();
@@ -242,8 +243,13 @@ function till2({ verdicts, depositAnswer, merchant = 'amira-cafe' }) {
   t.window.KiwiPrinterHealth.tick();
   await settle();
   const fresh = t.posts.slice(before);
-  assert.equal(fresh.length, 3, 'a minute later all three printers are probed again, the silent one included');
-  assert.ok(fresh.every((p) => p.kind === 'probe' && /^[A-Za-z0-9_:.-]{8,80}$/.test(p.clientRef)));
+  assert.equal(fresh.length, 2, 'a minute later the two answering printers are probed again');
+  assert.ok(fresh.every((p) => p.kind === 'probe' && p.target.ip !== '192.168.11.87' && /^[A-Za-z0-9_:.-]{8,80}$/.test(p.clientRef)));
+  assert.ok(t.nodes.has('caisse-printer-health'), 'the silent one is not hammered every minute');
+  await t.advance(60000);
+  t.window.KiwiPrinterHealth.tick();
+  await settle();
+  assert.ok(t.posts.slice(before + 2).some((p) => p.target.ip === '192.168.11.87'), 'it is rechecked at two minutes');
   assert.equal(t.nodes.has('caisse-printer-health'), false, 'the kitchen printer answered this time: the alert leaves');
 }
 {

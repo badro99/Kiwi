@@ -973,7 +973,7 @@
     var healthBoot = setTimeout(function () {
       var host = document.head || document.body;
       if (!host || document.getElementById('printer-health-script') || !document.getElementById('toast-stack')) return;
-      var s = document.createElement('script'); s.id = 'printer-health-script'; s.src = '/assets/printer-health.js?v=2'; s.defer = true; host.appendChild(s);
+      var s = document.createElement('script'); s.id = 'printer-health-script'; s.src = '/assets/printer-health.js?v=3'; s.defer = true; host.appendChild(s);
     }, 12000);
     if (healthBoot && healthBoot.unref) healthBoot.unref();
   } catch (_) {}

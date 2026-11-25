@@ -78,7 +78,7 @@ export async function workspace(env, merchant = '') {
       FROM operational_commands WHERE domain='quarantine' AND status IN ('pending','approving')${where} ORDER BY created_ts ASC LIMIT 201`,binds],
     receivables: () => deliveryReceivables(env, now, where, binds),
     bridges:[`SELECT id,merchant,name,platform,version,last_seen_ts FROM print_bridges WHERE revoked_ts IS NULL${where} ORDER BY last_seen_ts DESC LIMIT 201`, binds],
-    print:[`SELECT id,merchant,bridge_id,kind,status,created_ts,done_ts FROM print_jobs WHERE created_ts>=?${where} ORDER BY created_ts DESC LIMIT 201`, [now-86400000,...binds]],
+    print:[`SELECT id,merchant,bridge_id,kind,status,created_ts,done_ts FROM print_jobs WHERE created_ts>=? AND COALESCE(kind,'') NOT IN ('probe','wake')${where} ORDER BY created_ts DESC LIMIT 201`, [now-86400000,...binds]],
     errors:[`SELECT id,merchant,message,file,version,count,first_seen_ts,last_seen_ts FROM client_errors WHERE last_seen_ts>=?${where} ORDER BY last_seen_ts DESC LIMIT 201`,[now-7*86400000,...binds]],
     support:[`SELECT id,merchant,reference,summary,priority,status,assignee,created_ts,updated_ts FROM support_tickets WHERE status NOT IN ('closed','resolved')${where} ORDER BY updated_ts DESC LIMIT 201`,binds],
     integrations:[`SELECT id,merchant,status,attempt_count,domain,action,updated_ts FROM operational_commands WHERE domain!='quarantine' AND status NOT IN ('succeeded','completed','cancelled')${where} ORDER BY updated_ts DESC LIMIT 201`,binds],

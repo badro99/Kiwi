@@ -21,11 +21,12 @@
   var EVERY_MS = 30 * 60000, RECHECK_MS = 2 * 60000, CONFIRM_MS = 30000, WATCH_MS = 75000, POLL_MS = 2500, SNOOZE_MS = 30 * 60000;
   /* Browse, 25 nov. 2026 : ses imprimantes s'endorment entre deux bons. Le
    * patron demande de ne pas économiser les requêtes pour ce commerce : chaque
-   * imprimante y reçoit un probe (qui la réveille) toutes les minutes, et une
-   * imprimante muette y est revérifiée toutes les minutes. */
+   * imprimante y reçoit un probe (qui la réveille) toutes les minutes. Une
+   * imprimante muette garde 2 min : chaque essai retient le pont ~16 s, et le
+   * serveur la réessaie déjà de son côté (functions/api/print/_keep-awake.js). */
   var AWAKE = { browse: 60000 };
   function every() { return AWAKE[merchant()] || EVERY_MS; }
-  function recheck() { return AWAKE[merchant()] || RECHECK_MS; }
+  function recheck() { return RECHECK_MS; }
   var printers = {}, snoozedUntil = 0, manual = false;
 
   function tr(text) { return window.KiwiCaisseLang && window.KiwiCaisseLang.tr ? window.KiwiCaisseLang.tr(text) : text; }

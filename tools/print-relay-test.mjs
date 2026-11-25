@@ -182,7 +182,9 @@ if (DatabaseSync) {
     ok(r.j.poll === 250 && again.j.poll === 1000, 'A6 · pont actif : 250 ms avec du travail, 1 s juste après un ticket (reçu ' + r.j.poll + '/' + again.j.poll + ')');
     db.prepare('UPDATE print_jobs SET created_ts = created_ts - ? WHERE merchant = ?').run(3 * 60 * 1000, 'browse');
     const idle = await call(jobsRoute, 'GET', '/api/print/jobs', { bearer: token }, env);
-    ok(idle.status === 200 && idle.j.poll === 5000, 'A6 · pont au repos depuis 2 min : il revient toutes les 5 s (reçu ' + idle.j.poll + ')');
+    /* Browse garde 1 s même au repos (_keep-awake.js, 25 nov. 2026) ; le pas de 5 s des
+       autres commerces est tenu par print-keep-awake-test.mjs. */
+    ok(idle.status === 200 && idle.j.poll === 1000, 'A6 · pont de Browse au repos depuis 2 min : il garde 1 s, ce commerce ne veut pas d’économie (reçu ' + idle.j.poll + ')');
     db.prepare('UPDATE print_jobs SET created_ts = created_ts + ? WHERE merchant = ?').run(3 * 60 * 1000, 'browse');
     const st = await call(jobsRoute, 'GET', '/api/print/jobs?merchant=browse&id=' + jobId, { cookie: till }, env);
     ok(st.status === 200 && st.j.job.status === 'claimed', 'A6 · la caisse voit le ticket « claimed »');
