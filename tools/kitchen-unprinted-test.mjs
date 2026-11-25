@@ -57,10 +57,57 @@ serverJobs = [{ id: 'pj_abcdef01', kind: 'kitchen', status: 'expired', created_t
 await K.pollUnprinted();
 ok('le poste interroge la liste des tickets non imprimés', requests.length === 1 && all.some((u) => /\/api\/print\/jobs\?merchant=amira-cafe/.test(u)), all.join(' '));
 ok('le comptoir est averti avec la table', toasts.length === 1 && toasts[0].kind === 'warn' && /Table 7 · #12/.test(toasts[0].desc) && /non imprimé/.test(toasts[0].title), JSON.stringify(toasts));
-ok('l\'avertissement dit où réimprimer', /Réimprimez depuis les réglages Imprimante/.test(toasts[0].desc));
+ok('l\'avertissement dit où réimprimer', /Réimprimer » sur l’alerte/.test(toasts[0].desc), toasts[0].desc);
 ok('un événement porte le nombre de bons non imprimés', events.some((e) => e.type === 'kiwi:kitchen-print-unprinted' && e.detail.count === 1));
+events.length = 0;
 await K.pollUnprinted();
 ok('le même bon n\'est pas annoncé deux fois', toasts.length === 1);
+const still = events.filter((e) => e.type === 'kiwi:kitchen-print-unprinted').pop();
+ok('mais l\'alerte le garde : chaque sondage redit les bons encore non imprimés, avec leurs ids et tables',
+  still && still.detail.count === 1 && still.detail.ids[0] === 'pj_abcdef01' && still.detail.labels === 'Table 7 · #12', JSON.stringify(still && still.detail));
+
+/* La caisse se recharge (Browse, 25 nov.) : un nouveau poste, la même mémoire. L'alerte revient, sans re-sonner. */
+{
+  const ev2 = [], toasts2 = [], l2 = Object.create(null);
+  const ctx2 = { ...context, KiwiCaisseToast: (t) => toasts2.push(t), addEventListener(type, fn) { (l2[type] ||= []).push(fn); }, dispatchEvent(ev) { ev2.push(ev); } };
+  ctx2.window = ctx2;
+  vm.runInNewContext(deadlineVmSource(read('assets/kitchen-print-queue.js')), deadlineVmContext(ctx2), { filename: 'kitchen-print-queue.js' });
+  await ctx2.KiwiKitchenPrint.pollUnprinted();
+  const back = ev2.filter((e) => e.type === 'kiwi:kitchen-print-unprinted').pop();
+  ok('après un rechargement, le bon perdu est de nouveau signalé', back && back.detail.count === 1 && back.detail.labels === 'Table 7 · #12');
+  ok('…sans rejouer le toast', toasts2.length === 0);
+}
+
+/* « Réimprimer » sur l'alerte : une copie par bon via reprint-expired, la table suit la copie. */
+{
+  const posts = [];
+  const saved = context.fetch;
+  context.fetch = (url, init) => {
+    all.push(url);
+    if (init && init.method === 'POST') {
+      const body = JSON.parse(init.body); posts.push(body);
+      return Promise.resolve({ json: () => Promise.resolve({ ok: true, id: 'pj_copy0001' }) });
+    }
+    return Promise.resolve({ json: () => Promise.resolve({ ok: true, jobs: serverJobs }) });
+  };
+  serverJobs = [{ id: 'pj_abcdef01', kind: 'kitchen', status: 'expired' }];
+  const before = posts.length;
+  const first = K.reprintUnprinted(['pj_abcdef01']);
+  serverJobs = [];   // the server hides a source once its copy exists
+  const r = await first;
+  ok('Réimprimer dépose une copie du bon expiré', posts.length === before + 1 && posts[0].action === 'reprint-expired' && posts[0].id === 'pj_abcdef01', JSON.stringify(posts));
+  ok('et répond « envoyé »', r.ok && r.sent === 1 && r.failed === 0, JSON.stringify(r));
+  ok('la copie garde la table du bon', K.relayLabel('pj_copy0001') === 'Table 7 · #12', K.relayLabel('pj_copy0001'));
+  const after = events.filter((e) => e.type === 'kiwi:kitchen-print-unprinted').pop();
+  ok('la liste est relue tout de suite : plus rien en attente, l\'alerte peut partir', after && after.detail.count === 0);
+  context.fetch = (url, init) => (init && init.method === 'POST'
+    ? Promise.resolve({ json: () => Promise.resolve({ ok: false, error: 'relay-offline' }) })
+    : Promise.resolve({ json: () => Promise.resolve({ ok: true, jobs: [] }) }));
+  const off = await K.reprintUnprinted(['pj_abcdef01']);
+  ok('un pont hors ligne est dit comme tel', !off.ok && off.why === 'relay-offline', JSON.stringify(off));
+  ok('sans bon, rien n\'est envoyé', (await K.reprintUnprinted([])).sent === 0);
+  context.fetch = saved;
+}
 
 /* Plusieurs bons d'un coup : un seul message, le compte. Un ticket de caisse n'y entre pas. */
 serverJobs = [

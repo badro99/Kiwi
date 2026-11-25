@@ -902,17 +902,54 @@
     put(lKey(), JSON.stringify(memory));
   }
   function relayLabel(id) { var hit = json(lKey(), {})[String(id || '')]; return (hit && hit.l) || ''; }
+  /* Browse, 25 nov. 2026 : l'imprimante cuisine éteinte, un bon expire, le
+   * toast de 12 s passe, la caisse se recharge, et plus rien ne dit que la
+   * cuisine n'a jamais reçu la commande. Chaque sondage annonce donc TOUS les
+   * bons encore non imprimés (ids et tables), pas seulement les nouveaux :
+   * l'alerte de la caisse (caisse-print-recovery.js) reste tant qu'un bon
+   * attend, revient après un rechargement, et porte « Réimprimer ». Le toast,
+   * lui, ne sonne qu'une fois par bon. */
   function announceUnprinted(jobs) {
     var seen = json(sKey(), []);
-    var fresh = (jobs || []).filter(function (j) { return j && j.kind === 'kitchen' && seen.indexOf(j.id) < 0; });
+    var kitchen = (jobs || []).filter(function (j) { return j && j.kind === 'kitchen' && j.id; });
+    var fresh = kitchen.filter(function (j) { return seen.indexOf(j.id) < 0; });
+    var labelsOf = function (list) { return list.map(function (j) { return relayLabel(j.id); }).filter(Boolean).join(', '); };
+    try { window.dispatchEvent(new CustomEvent('kiwi:kitchen-print-unprinted', { detail: { count: kitchen.length, ids: kitchen.map(function (j) { return j.id; }), labels: labelsOf(kitchen) } })); } catch (_) {}
     if (!fresh.length) return [];
     put(sKey(), JSON.stringify(seen.concat(fresh.map(function (j) { return j.id; })).slice(-100)));
-    var names = fresh.map(function (j) { return relayLabel(j.id); }).filter(Boolean).join(', ');
+    var names = labelsOf(fresh);
     var title = fresh.length > 1 ? tr(fresh.length + ' bons de cuisine non imprimés') : tr('Bon de cuisine non imprimé');
-    var desc = (names ? names + ' · ' : '') + tr('Réimprimez depuis les réglages Imprimante.');
-    try { window.dispatchEvent(new CustomEvent('kiwi:kitchen-print-unprinted', { detail: { count: fresh.length, labels: names } })); } catch (_) {}
+    var desc = (names ? names + ' · ' : '') + tr('Touchez « Réimprimer » sur l’alerte.');
     try { if (window.KiwiCaisseToast) window.KiwiCaisseToast(title, 12000, 'warn', desc); } catch (_) {}
     return fresh;
+  }
+  /* « Réimprimer » de l'alerte : le serveur garde le bon 24 h et en dépose une
+   * copie (action reprint-expired, une copie par tentative, un double tap n'en
+   * fait qu'une). La copie hérite de la table du bon, pour qu'une nouvelle
+   * panne la nomme encore. relay-offline : le pont ne récupère plus rien, la
+   * copie expirerait en silence, le serveur refuse et on le dit. */
+  function reprintUnprinted(ids) {
+    var who = merchant();
+    var list = (ids || []).map(String).filter(Boolean);
+    if (!who || !list.length || typeof fetch !== 'function') return Promise.resolve({ ok: false, sent: 0, failed: list.length, why: 'unavailable' });
+    var sent = 0, failed = 0, why = '';
+    return import('./request-deadline.mjs').then(function (net) {
+      return Promise.all(list.map(function (id) {
+        return net.deadlineFetch('/api/print/jobs?merchant=' + encodeURIComponent(who), {
+          method: 'POST', credentials: 'same-origin', cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'reprint-expired', id: id }),
+        }, 10000).then(function (r) { return r.json(); }).then(function (j) {
+          if (j && j.ok) {
+            sent += 1;
+            var memory = json(lKey(), {});
+            if (j.id && memory[id]) { memory[j.id] = { l: memory[id].l, t: Date.now() }; put(lKey(), JSON.stringify(memory)); }
+          } else { failed += 1; why = (j && j.error) || why || 'refused'; }
+        }).catch(function () { failed += 1; why = why || 'network'; });
+      }));
+    }).catch(function () { failed = list.length - sent; why = why || 'network'; })
+      .then(function () { return pollUnprinted(); })
+      .then(function () { return { ok: failed === 0, sent: sent, failed: failed, why: why }; });
   }
   function pollUnprinted() {
     var who = merchant();
@@ -928,6 +965,8 @@
   var lastPollAt = 0;
   function pollSoon() { if (Date.now() - lastPollAt < 60000) return; lastPollAt = Date.now(); pollUnprinted(); }
   setInterval(pollUnprinted, UNPRINTED_EVERY_MS);
+  /* Après un rechargement, l'alerte revient sans attendre trois minutes. */
+  try { var bootPoll = setTimeout(pollUnprinted, 8000); if (bootPoll && bootPoll.unref) bootPoll.unref(); } catch (_) {}
   setInterval(renewHub, HUB_RENEW_MS);
   /* Au réveil, reprendre le bail AVANT que le prochain sondage des commandes
      ne livre les bons arrivés pendant le sommeil. */
@@ -943,7 +982,7 @@
     enqueueReceipt: enqueueReceipt, exportDiagnostics: exportDiagnostics, recoveryCopies: recoveryCopies,
     isHub: isHub, setHub: setHub, pending: function () { return readQueue().length; },
     reprintDropped: reprintDropped,
-    relayLabel: relayLabel, pollUnprinted: pollUnprinted,
+    relayLabel: relayLabel, pollUnprinted: pollUnprinted, reprintUnprinted: reprintUnprinted,
     maxAge: MAX_AGE,
     /* Test seams: intentionally read-only outside the automated test harness. */
     _readQueue: readQueue, _alreadyDone: alreadyDone, _remote: remote, _claimRemote: claimRemote,

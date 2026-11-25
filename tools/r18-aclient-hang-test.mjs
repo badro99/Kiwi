@@ -97,15 +97,17 @@ await test('print#1 · un reçu imprimé efface l\'entrée « tickets non imprim
   const listeners = {}, nodes = new Map();
   const stack = { appendChild(el) { nodes.set(el.id, el); } };
   const document = { body: stack, getElementById: (id) => (id === 'toast-stack' ? stack : nodes.get(id)),
-    createElement: () => ({ style: {}, addEventListener(name, fn) { this[name] = fn; }, remove() { nodes.delete(this.id); } }) };
+    createElement: () => { const parts = {}; return { style: {}, setAttribute() {}, addEventListener(name, fn) { this[name] = fn; },
+      querySelector: (sel) => parts[sel] || (parts[sel] = { style: {}, addEventListener() {} }), remove() { nodes.delete(this.id); } }; } };
   const window = { addEventListener: (name, fn) => { listeners[name] = fn; }, KiwiCaisseLang: { tr: (s) => 'tr:' + s }, KiwiPrinter: { openSetup() {} } };
   vm.runInNewContext(read('assets/caisse-print-recovery.js'), { window, document });
+  const label = () => nodes.get('caisse-print-recovery').querySelector('[data-view]');
   listeners['kiwi:receipt-print']({ detail: { ok: false } });
-  assert.equal(nodes.get('caisse-print-recovery').textContent, 'tr:Voir les tickets non imprimés (1)');
+  assert.equal(label().textContent, 'tr:Voir les tickets non imprimés (1)');
   listeners['kiwi:kitchen-print-unprinted']({ detail: { count: 2 } });
-  assert.equal(nodes.get('caisse-print-recovery').textContent, 'tr:Voir les tickets non imprimés (3)', 'le reçu et les bons du relais se comptent chacun');
+  assert.equal(label().textContent, 'tr:Voir les tickets non imprimés (3)', 'le reçu et les bons du relais se comptent chacun');
   listeners['kiwi:receipt-print']({ detail: { ok: true } });
-  assert.equal(nodes.get('caisse-print-recovery').textContent, 'tr:Voir les tickets non imprimés (2)', 'le reçu réimprimé sort du compte, pas les bons du relais');
+  assert.equal(label().textContent, 'tr:Voir les tickets non imprimés (2)', 'le reçu réimprimé sort du compte, pas les bons du relais');
   listeners['kiwi:kitchen-print-unprinted']({ detail: { count: 0 } });
   assert.equal(nodes.has('caisse-print-recovery'), false, 'plus rien à reprendre, plus d\'entrée');
 });
