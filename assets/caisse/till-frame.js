@@ -109,8 +109,13 @@
       if ((l.note || '').trim()) mods.push(l.note.trim());
       const sent = !!l.sent;
       return { id: String(l.uid || 'l' + i), qty: l.qty, name: lineName(l), mods,
-        price: l.total != null ? l.total : l.price * l.qty, sent, sentAt: '', sentQty: sent ? l.qty : 0 };
+        price: l.total != null ? l.total : l.price * l.qty, sent, sentAt: '', sentQty: sent ? l.qty : 0,
+        editOptions: !sent && tillKitCanEditOptions(l) };
     }
+    /* « Modifier les options » ne s'offre que sur un plat qui a des options :
+       sur les autres le bouton ne faisait rien (Jon's Burgers, 25 nov.). */
+    function tillKitEditItem(l) { return l && !l.kind ? menuItems.find(m => String(m.id) === String(l.id)) || null : null; }
+    function tillKitCanEditOptions(l) { const item = tillKitEditItem(l); return !!(item && itemOptGroups(item).length); }
     const tillKitDiscount = (d, amt) => amt > 0
       ? { label: d && d.reward && d.reward.label ? (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Récompense') + ' · ' + d.reward.label
         : d && d.kind === 'pct' ? `Remise ${d.value} %` : 'Remise', amount: -amt } : null;
@@ -986,6 +991,20 @@
         case 'discount': tillKitOpenDiscount(); return;
         case 'print': click('[data-action="print-bill"]'); return;
         case 'overflow': tillKitOpenOverflow(value && value.anchor); return;
+        case 'edit-options': {
+          /* Le bouton du kit n'avait pas de destination : rien ne s'ouvrait. La
+             feuille revient sur les choix de la ligne, et Valider réécrit cette
+             même ligne (prix, choix, repère de cuisine) sans en créer une autre. */
+          if (!line || line.sent || !tillKitCanEditOptions(line)) return;
+          const item = tillKitEditItem(line), groups = itemOptGroups(item);
+          openOptSheet(item, groups, (_item, chosen) => {
+            const priced = promoPrice(item, item.price + chosen.reduce((s, x) => s + (+x.p || 0), 0));
+            currentOrder().patchLine(line, Object.assign({ opts: chosen, optSig: optSig(chosen), price: priced.price },
+              priced.promo ? { promo: priced.promo } : null), priced.promo ? [] : ['promo']);
+            if (mode === 'vrap') renderCart(); else if (selectedId) { renderMenu(); renderOrderPanel(selectedId); }
+          }, line.opts);
+          return;
+        }
       }
     }
     function tillKitPaint() {

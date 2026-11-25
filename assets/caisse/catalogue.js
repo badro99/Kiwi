@@ -824,7 +824,7 @@
       if (next) next.scrollTop = top;
       if (tapped) { const b = optVeil.querySelector(tapped); if (b) b.classList.add('just'); }
     };
-    function openOptSheet(item, groups, onChosen) {
+    function openOptSheet(item, groups, onChosen, preset) {
       if (!optVeil) {
         optVeil = document.createElement('div');
         optVeil.className = 'cloture-veil opt-veil';
@@ -833,7 +833,7 @@
         document.body.appendChild(optVeil);
       }
       const picked = Object.create(null);
-      groups.forEach(g => { picked[g.id] = []; });
+      groups.forEach(g => { picked[g.id] = []; }); (preset || []).forEach(o => { const g = o && groups.find(x => x.id === o.g); if (g && g.choices.some(c => c.id === o.c) && picked[g.id].indexOf(o.c) < 0) picked[g.id].push(o.c); }); // « Modifier les options » : les choix de la ligne
 
       function paint() {
         const missing = groups.filter(g => g.required && !picked[g.id].length);
@@ -857,7 +857,7 @@
             ${missing.length ? `<div class="opt-miss">À choisir : ${missing.map(g => kdsEsc(g.name)).join(', ')}</div>` : ''}
             <div class="clo-actions">
               <button class="clo-btn primary" data-opt-ok ${missing.length ? 'disabled' : ''}>
-                <span>Ajouter · ${fmtMAD(item.price + extra)}</span>
+                <span>${preset ? 'Valider' : 'Ajouter'} · ${fmtMAD(item.price + extra)}</span>
               </button>
             </div>
             <div class="clo-foot"><button data-opt-cancel>Annuler</button></div>

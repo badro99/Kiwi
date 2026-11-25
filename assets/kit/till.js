@@ -176,7 +176,7 @@
 
   /* ── <k-bill state> .bill ──────────────────────────────────────────────────
      bill: { title, meta, lines:[{id, qty, name, mods:[], price, sent, sentAt,
-             sentQty}], discount:{label, amount}, service:{label, amount},
+             sentQty, editOptions}], discount:{label, amount}, service:{label, amount},
              total, sendOnPay, paying, plain }
      plain: a counter sale with no kitchen (the business-type tills, §18.3):
      one list without sent groups, no split, discount, print or overflow. */
@@ -228,7 +228,7 @@
           var ex = '';
           if (open) {
             ex = '<div class="ex"><div class="acts">' +
-              (b.plain ? '' : C.button.render({ label: t('bill.edit_options'), size: 'S', id: 'eo-' + l.id, attrs: ' data-w="edit-options"' })) +
+              (b.plain || !l.editOptions ? '' : C.button.render({ label: t('bill.edit_options'), size: 'S', id: 'eo-' + l.id, attrs: ' data-w="edit-options"' })) +
               C.button.render({ label: t(l.sent ? 'bill.void' : 'bill.remove'), variant: 'tonal-danger', size: 'S', id: 'rm-' + l.id, attrs: ' data-w="' + (l.sent ? 'void' : 'remove') + '"' }) +
               '</div></div>';
           }
