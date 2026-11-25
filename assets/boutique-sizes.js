@@ -51,6 +51,8 @@ const T = {
     mismatch: (a, b) => `Les tailles font ${a} pièce${a > 1 ? 's' : ''}, alors que la quantité totale est de ${b}. Corrigez les tailles pour enregistrer.`,
     force: (n) => `Enregistrer ${n} pièce${n > 1 ? 's' : ''} quand même`,
     none: 'Écrivez au moins une quantité.',
+    removed: (n) => `${n} pièce${n > 1 ? 's' : ''} à retirer`, removedDesc: (n) => `${n} retirée${n > 1 ? 's' : ''}`,
+    tooMany: 'On ne peut pas retirer plus que le stock de la taille.',
     bad: 'Un nombre entier de pièces, 0 ou plus.',
     hintCreate: 'Une taille laissée vide n’apparaît pas à la caisse.',
     save: 'Enregistrer', saving: 'Enregistrement…',
@@ -77,6 +79,8 @@ const T = {
     mismatch: (a, b) => `The sizes add up to ${a} piece${a > 1 ? 's' : ''}, but the total quantity is ${b}. Fix the sizes to save.`,
     force: (n) => `Save ${n} piece${n > 1 ? 's' : ''} anyway`,
     none: 'Enter at least one quantity.',
+    removed: (n) => `${n} piece${n > 1 ? 's' : ''} to remove`, removedDesc: (n) => `${n} removed`,
+    tooMany: 'You cannot remove more than the size has in stock.',
     bad: 'A whole number of pieces, 0 or more.',
     hintCreate: 'A size left empty does not show on the till.',
     save: 'Save', saving: 'Saving…',
@@ -103,6 +107,8 @@ const T = {
     mismatch: (a, b) => `مجموع المقاسات ${a} قطعة، والكمية الإجمالية ${b}. صحّح المقاسات للحفظ.`,
     force: (n) => `احفظ ${n} قطعة كما عددتها`,
     none: 'أدخل كمية واحدة على الأقل.',
+    removed: (n) => `${n} قطعة للسحب`, removedDesc: (n) => `سُحبت ${n}`,
+    tooMany: 'لا يمكن سحب أكثر من مخزون المقاس.',
     bad: 'عدد صحيح من القطع، 0 أو أكثر.',
     hintCreate: 'المقاس الفارغ لا يظهر في الصندوق.',
     save: 'حفظ', saving: 'جارٍ الحفظ…',
@@ -238,6 +244,9 @@ html[data-theme="dark"] .kbs, body[data-vexel-mode="dark"] .kbs { --kbs-card: #1
 .kbm .kbs-add::before { inset-inline-start: 9px; }
 .kbm .kbs-add .kbs-in { padding-inline-start: 20px; }
 .kbs-have.is-up, .kbs.is-restock .kbs-have.is-up, .kbm td small.is-up { color: var(--atlas, #0B6E4F); font-weight: 600; }
+.kbs-have.is-down, .kbs.is-restock .kbs-have.is-down, .kbm td small.is-down { color: var(--danger, #cb5238); font-weight: 600; }
+.kbs-add.is-minus::before { content: ''; }
+.kbs-add.is-minus .kbs-in { color: var(--danger, #cb5238); }
 .kbc-chip.is-ask { border-color: var(--danger, #cb5238); color: var(--danger, #cb5238); }
 .kbc-chip.is-ask button.kbc-ok { width: auto; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--danger, #cb5238); color: #fff; font: 600 12px var(--sans, inherit); }
 .kbs-in::placeholder { color: var(--n-400, #9AA09D); font-weight: 400; }
@@ -461,7 +470,7 @@ export function mount(host, o) {
     /* Réassort : la case dit « + » et reste vide, pour qu'on ne la lise pas
        comme le stock. À la création, c'est la quantité : « 0 » reste. */
     const field = (key, col, aria, label) => {
-      const i = `<input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="${creating ? '0' : ''}" data-kbs-in="${esc(key)}" data-kbs-col="${esc(col)}" aria-label="${esc(aria)}" />`;
+      const i = `<input class="kbs-in" type="text" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="${creating ? '0' : ''}" data-kbs-in="${esc(key)}" data-kbs-col="${esc(col)}" aria-label="${esc(aria)}" />`;
       const box = creating ? i : `<span class="kbs-add">${i}</span>`;
       /* Un − et un + d'une pièce, la même règle que les flèches du clavier
          (boutique-size-split.js) ; propriétaire, 18 nov. 2026. Le tableau
@@ -615,15 +624,31 @@ export function mount(host, o) {
   function printCount(all) { return labelPlan(all).reduce((s, [, n]) => s + n, 0); }
   const printHtml = (n, fresh) => printLabelHtml(t, n, fresh);
 
+  /* Réassort : le − descend sous zéro et retire du stock d'une taille qui en
+     a (propriétaire, 25 nov. : « que le moins puisse enlever l'ancien stock
+     aussi »), jamais plus que ce qu'elle a. À la création, rien à retirer. */
+  const room = (key) => {
+    if (target > 0) return 0;
+    const r = cellList.find((x) => x.key === key);
+    return r && r.variant ? Math.max(0, haveCount(r.variant)) : 0;
+  };
+  const signed = (inp) => {
+    const raw = String(inp.value == null ? '' : inp.value).trim();
+    const m = /^[-−](\d{1,5})$/.exec(raw);
+    if (!m) return pieces(raw);
+    const k = +m[1];
+    if (!k) return { n: 0, empty: true };
+    return k <= room(inp.getAttribute('data-kbs-in')) ? { n: -k } : { bad: true, over: true };
+  };
   const read = () => {
-    const out = []; let sum = 0; let bad = false;
+    const out = []; let sum = 0, pos = 0, neg = 0, bad = false, over = false;
     host.querySelectorAll('[data-kbs-in]').forEach((inp) => {
-      const r = pieces(inp.value);
+      const r = signed(inp);
       inp.setAttribute('aria-invalid', r.bad ? 'true' : 'false');
-      if (r.bad) { bad = true; return; }
-      if (r.n > 0) { out.push({ key: inp.getAttribute('data-kbs-in'), n: r.n }); sum += r.n; }
+      if (r.bad) { bad = true; if (r.over) over = true; return; }
+      if (r.n) { out.push({ key: inp.getAttribute('data-kbs-in'), n: r.n }); sum += r.n; if (r.n > 0) pos += r.n; else neg -= r.n; }
     });
-    return { out, sum, bad };
+    return { out, sum, bad, over, pos, neg };
   };
   const dirty = () => Array.from(host.querySelectorAll('[data-kbs-in]')).some((i) => String(i.value).trim() !== '');
 
@@ -647,17 +672,18 @@ export function mount(host, o) {
       const k = h.getAttribute('data-kbs-have');
       const i = host.querySelector(`[data-kbs-in="${CSS.escape(k)}"]`);
       const st = +h.getAttribute('data-st') || 0;
-      const r = i ? pieces(i.value) : { n: 0 };
-      const up = !!(r.n > 0 && target <= 0);
-      h.textContent = up ? t.after(sgn(st), sgn(st + r.n)) : st ? t.have(sgn(st)) : t.out;
+      const r = i ? signed(i) : { n: 0 };
+      const up = !!(r.n > 0 && target <= 0), down = !!(r.n < 0);
+      h.textContent = up || down ? t.after(sgn(st), sgn(st + r.n)) : st ? t.have(sgn(st)) : t.out;
       h.classList.toggle('is-up', up);
-      h.classList.toggle('is-out', !up && st <= 0);
+      h.classList.toggle('is-down', down);
+      h.classList.toggle('is-out', !up && !down && st <= 0);
     });
     const c = host.querySelector('[data-kbs-count]');
-    const { sum } = read();
+    const { sum, pos, neg } = read();
     if (c) {
-      c.textContent = target > 0 ? t.split(sum, target) : t.received(sum, host.querySelectorAll('[data-kbs-in]').length === 1);
-      c.classList.toggle('is-ok', target > 0 ? sum === target : sum > 0);
+      c.textContent = target > 0 ? t.split(sum, target) : neg ? [pos ? t.received(pos) : '', t.removed(neg)].filter(Boolean).join(' · ') : t.received(sum, host.querySelectorAll('[data-kbs-in]').length === 1);
+      c.classList.toggle('is-ok', target > 0 ? sum === target : pos > 0 || neg > 0);
       c.classList.toggle('is-over', target > 0 && sum > target);
     }
     const pb = host.querySelector('[data-kbs-print]');
@@ -688,10 +714,10 @@ export function mount(host, o) {
   };
   const save = (force) => {
     if (busy) return;
-    const { out, sum, bad } = read();
-    if (bad) { say(t.bad, true); return; }
+    const { out, sum, bad, over } = read();
+    if (bad) { say(over ? t.tooMany : t.bad, true); return; }
     if (target > 0 && sum !== target && force !== true) { say(t.mismatch(sum, target), true); offerForce(sum); return; }
-    if (!sum) { say(t.none, true); return; }
+    if (!out.length) { say(t.none, true); return; }
     const typed = readTyped(out);
     if (!typed) return;
     const scanned = typing();
@@ -700,13 +726,14 @@ export function mount(host, o) {
     if (btn) { btn.disabled = true; btn.textContent = t.saving; }
     const list = cellList;
     const got = {};
-    let codes = 0;
+    let codes = 0, removed = 0;
     const run = () => {
       const plan = rich ? CODES.planner(cat, pid, list.map((x) => x.size)) : null;
       out.forEach(({ key, n }) => {
         const r = list.find((x) => x.key === key);
         if (!r) return;
         let v = r.variant;
+        if (n < 0) { if (v && cat.adjustStock && cat.adjustStock(v.id, n, 'ajust')) removed -= n; return; }   // retirée du stock existant
         if (v) cat.receiveStock(v.id, n);
         else {
           const ev = cat.ensureVariant(Object.assign({ productId: pid, colorId: r.colorId, size: r.size, stock: n },
@@ -729,10 +756,10 @@ export function mount(host, o) {
     DRAFT.clearDraft(DKEY);
     OWN.delete(pid);
     if (scanned && o.scan && o.scan.disarm) o.scan.disarm(onScan);
-    noteReceipt(pid, got);
+    if (Object.keys(got).length) noteReceipt(pid, got);   // un retrait seul n'est pas une réception à étiqueter
     draw();
     const total = Object.keys(got).reduce((s, k) => s + got[k], 0);
-    if (o.toast) o.toast(t.saved, t.savedDesc(total, Object.keys(got).length));
+    if (o.toast) o.toast(t.saved, [total ? t.savedDesc(total, Object.keys(got).length) : '', removed ? t.removedDesc(removed) : ''].filter(Boolean).join(' · '));
     if (o.onSaved) o.onSaved({ received: got, codes });
   };
 
@@ -794,7 +821,7 @@ export function mount(host, o) {
     });
     if (typing() && o.scan && o.scan.arm) o.scan.arm(onScan);
     host.querySelectorAll('[data-kbs-in]').forEach((inp, i, all) => {
-      inp.addEventListener('input', () => { inp.value = inp.value.replace(/[^\d]/g, '').slice(0, 5); say(''); paintCount(); const f = host.querySelector('[data-kbs-force]'); if (f) f.remove(); });
+      inp.addEventListener('input', () => { const neg = room(inp.getAttribute('data-kbs-in')) > 0 && /^\s*[-−]/.test(inp.value); inp.value = (neg ? '-' : '') + inp.value.replace(/[^\d]/g, '').slice(0, 5); if (inp.parentElement) inp.parentElement.classList.toggle('is-minus', neg); say(''); paintCount(); const f = host.querySelector('[data-kbs-force]'); if (f) f.remove(); });
       inp.addEventListener('keydown', (e) => {
         const now = Date.now(); if (now - (inp._kt || 0) > 120) inp._snap = inp.value; inp._kt = now;   // valeur d'avant une rafale de douchette
         if (e.key !== 'Enter' || e.defaultPrevented) return;   // un scan pris par la caisse n'enregistre pas
@@ -806,8 +833,9 @@ export function mount(host, o) {
     host.querySelectorAll('[data-kbs-step]').forEach((b) => b.addEventListener('click', () => {
       const inp = host.querySelector(`[data-kbs-in="${CSS.escape(b.getAttribute('data-kbs-for'))}"]`);
       if (!inp) return;
-      const now = /^\d+$/.test(inp.value.trim()) ? +inp.value.trim() : 0;
-      const v = Math.max(0, Math.min(99999, now + Number(b.getAttribute('data-kbs-step'))));
+      const raw = inp.value.trim().replace('−', '-');
+      const now = /^-?\d+$/.test(raw) ? +raw : 0;
+      const v = Math.max(-room(inp.getAttribute('data-kbs-in')), Math.min(99999, now + Number(b.getAttribute('data-kbs-step'))));
       inp.value = v ? String(v) : '';
       inp.dispatchEvent(new Event('input', { bubbles: true }));
     }));
