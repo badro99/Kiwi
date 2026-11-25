@@ -2580,6 +2580,9 @@ const PDS_INLINE_CSS = `
   .pds-page .pds-stage-grid { grid-template-columns:232px minmax(0, 1fr) 272px; gap:16px; }
   @media (max-width: 1280px) { .pds-page .pds-stage-grid { grid-template-columns:228px minmax(0, 1fr) 260px; } }
   @media (max-width: 1100px) { .pds-page .pds-stage-grid { grid-template-columns:220px minmax(0, 1fr); } }
+  /* Le plan d'abord (propriétaire, 25 nov. 2026, Browse : une salle de 20 m sur 610 px) : jusqu'à 1600 px, « En ce moment » et la sélection passent sous le plan, côte à côte, et le plan prend leur largeur. */
+  @media (min-width: 1101px) and (max-width: 1600px) { .pds-page .pds-stage-grid { grid-template-columns:232px minmax(0, 1fr); }
+    .pds-page .pds-inspector { grid-column:2; position:static; max-height:none; min-height:0; overflow:visible; padding-right:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); align-items:start; } }
   .pds-page .pds-rail, .pds-page .pds-inspector {
     top:calc(var(--pds-top, 72px) + 12px); max-height:calc(100dvh - var(--pds-top, 72px) - 24px); gap:12px; padding-right:2px;
   }

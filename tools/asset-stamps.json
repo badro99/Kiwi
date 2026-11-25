@@ -520,8 +520,8 @@
     "sha": "2f2e29a063408cdf"
   },
   "assets/dashboard-shell.css": {
-    "v": "15",
-    "sha": "e6be9e9f2a1beca6"
+    "v": "16",
+    "sha": "2d051757e5fef3fc"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "2",
@@ -1304,8 +1304,8 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "137",
-    "sha": "8e8568dc6916bc43"
+    "v": "138",
+    "sha": "bfe3f8753776f0b9"
   },
   "assets/live-link/queue-store.js": {
     "v": "30",
@@ -1564,8 +1564,8 @@
     "sha": "41b935c8de4747fd"
   },
   "assets/pages-pro.js": {
-    "v": "2255",
-    "sha": "75fe862ecdb91f48"
+    "v": "2256",
+    "sha": "6aaf93e3da684515"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1664,12 +1664,12 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "330",
-    "sha": "a80a6486080a02d8"
+    "v": "331",
+    "sha": "6ab52814721477a7"
   },
   "assets/pages/tables-data.js": {
-    "v": "3",
-    "sha": "15a5c28733bc197b"
+    "v": "4",
+    "sha": "1f3161ab1745e485"
   },
   "assets/pages/tables-drawing.js": {
     "v": "3",

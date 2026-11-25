@@ -1304,7 +1304,7 @@ import {} from './live-link/sale-identity.js?v=4';
     paintSnapshot();
     try {
       var pt = parseFloat(getComputedStyle(document.body).paddingTop) || 0;
-      function fitBanner() { document.body.style.paddingTop = (pt + (bar.offsetHeight || 34)) + 'px'; }
+      function fitBanner() { var h = bar.offsetHeight || 34; document.body.style.paddingTop = (pt + h) + 'px'; document.documentElement.classList.add('kiwi-op-view'); document.documentElement.style.setProperty('--kiwi-op-h', h + 'px'); }   // dashboard-shell.css lowers the sticky top bar and sidebar by --kiwi-op-h
       fitBanner();
       if (window.ResizeObserver) new window.ResizeObserver(fitBanner).observe(bar);
     } catch (_) { console.warn("[live-link] fitBanner failed"); }
