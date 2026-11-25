@@ -1,5 +1,5 @@
 {
-  "sha256": "5a1ecf9dc598518e00b4a3bb2725151a18e5a4b835b1de359068e2a3b85f6166",
+  "sha256": "0649fa946c266c2969a0db6daf166f33ebb588d612ae0484a833f7ac5adcff24",
   "parts": [
     {
       "name": "session",
@@ -420,9 +420,9 @@
         {
           "name": "bootRestaurant",
           "start": 138270,
-          "end": 145590,
+          "end": 145883,
           "offset": 22432,
-          "length": 7320,
+          "length": 7613,
           "marker": "    // OrderPro menu: bootRestaurant is supplied by its private factory.\n"
         }
       ]

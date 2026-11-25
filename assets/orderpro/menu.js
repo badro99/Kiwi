@@ -481,7 +481,8 @@ KiwiOrderMenu.orderProParts.define('menu', ["$","$$","I18N","ICON_CLASS","MENU",
         names[String(it.id)] = { name: String(it.name || ''), desc: String(it.desc || '') };
         langs.forEach((l) => {
           const x = menuTr(it, l);
-          if (x) byLang[l][String(it.id)] = { name: String(x.name), desc: x.desc != null ? String(x.desc) : String(it.desc || '') };
+          /* Le nom d'un plat est un nom propre (« Le healthy » ne devient pas « Le santé » sur un téléphone en français) : seule une traduction écrite à la main par le patron le remplace ; la description, elle, se traduit. */
+          if (x) byLang[l][String(it.id)] = { name: (it.i18n && it.i18n[l] && it.i18n[l].m) ? String(x.name) : String(it.name || ''), desc: x.desc != null ? String(x.desc) : String(it.desc || '') };
         });
       }
 

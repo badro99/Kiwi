@@ -23,11 +23,13 @@
     for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
     return (h >>> 0).toString(36);
   }
+  /* m: 1, written by hand: a dish name only changes language when someone wrote
+     it out (orderpro/menu.js keeps a machine translation off the name). */
   function tr(name, desc, en, ar) {
     var h = hash(name, desc);
     return {
-      en: { name: en[0], desc: en[1], h: h },
-      ar: { name: ar[0], desc: ar[1], h: h }
+      en: { name: en[0], desc: en[1], h: h, m: 1 },
+      ar: { name: ar[0], desc: ar[1], h: h, m: 1 }
     };
   }
 

@@ -82,6 +82,7 @@ function menu(extra = {}) {
         },
       },
       { id: 'the', catId: 'boissons', price: 15, name: 'Thé à la menthe', desc: '' },
+      { id: 'cafe', catId: 'boissons', price: 12, name: 'Café noir', desc: '', i18n: { en: { name: 'Black coffee', h: menuHash('Café noir', ''), m: 1 } } },
     ],
   }, extra);
 }
@@ -244,14 +245,15 @@ try {
       return n.width > 0 && n.left >= 0 && (n.right <= p.left || n.top >= p.bottom);
     }, { timeout: 4000 }).then(() => true, () => false);
     check(nameClear, 'five language keys leave the store\'s name uncovered');
-    check(/Tayín de kefta/.test(await page.$eval('[data-card="tajine"] .dish-name', (e) => e.textContent)), 'the dish reads in Spanish');
+    check(/Tajine kefta/.test(await page.$eval('[data-card="tajine"] .dish-name', (e) => e.textContent)), 'the dish keeps the name the merchant wrote, never a machine translation');
     check((await page.$eval('.menu-tab[data-tab="all"]', (e) => e.textContent.trim())) === 'Todo', 'the UI reads in Spanish');
     check(await page.evaluate(() => t('gx_home') === I18N.en.gx_home && t('tab_all') === 'Todo'), 'a line Spanish lacks (the guest home) reads in English, not French');
     await page.tap('#lang-picker .lang-btn[data-lang="ar"]');
     check(await page.evaluate(() => document.documentElement.dir === 'rtl' && document.documentElement.lang === 'ar'), 'Arabic turns the page right to left');
     check(/Tajine kefta/.test(await page.$eval('[data-card="tajine"] .dish-name', (e) => e.textContent)), 'an untranslated language falls back to the merchant\'s own text');
     await page.tap('#lang-picker .lang-btn[data-lang="en"]');
-    check(/Kefta tagine/.test(await page.$eval('[data-card="tajine"] .dish-name', (e) => e.textContent)) && await page.evaluate(() => document.documentElement.dir === 'ltr'), 'English: the translation, left to right');
+    check(/Tajine kefta/.test(await page.$eval('[data-card="tajine"] .dish-name', (e) => e.textContent)) && await page.evaluate(() => document.documentElement.dir === 'ltr'), 'English: the name as written, left to right');
+    check(/Black coffee/.test(await page.$eval('[data-card="cafe"] .dish-name', (e) => e.textContent)), 'a name the merchant translated by hand does change');
     check(await page.evaluate(() => localStorage.getItem('orderProLang') === 'en'), 'the choice is saved');
     check(page.seen.includes('/assets/menu-i18n.js') && page.seen.includes('/assets/order-ui-langs.js') && !page.seen.includes('/assets/hours.js'), 'the language helpers load, the hours do not');
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
