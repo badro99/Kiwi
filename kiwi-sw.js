@@ -383,7 +383,7 @@ var SHELL = [
   '/assets/caisse-motion.js?v=8',
   '/assets/caisse-pwa.js?v=633',
   '/assets/vendor/dexie.min.js?v=1',
-  '/assets/offline-db.js?v=11',
+  '/assets/offline-db.js?v=12',
   '/assets/platform-kernel.js?v=6',
   '/assets/platform-ops.js?v=5',
   '/assets/platform-ops.css?v=1',
@@ -467,7 +467,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=39',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=171',
+  '/assets/caisse-lang.js?v=172',
   '/assets/venue-store.js?v=7',
   '/assets/discount-policy.js?v=4',
   '/assets/merchant-policies.js?v=4',
@@ -540,7 +540,7 @@ var SHELL = [
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=10',
   '/assets/orderpro-panel.js?v=5',
-  '/assets/orderpro-inbox.js?v=48',
+  '/assets/orderpro-inbox.js?v=49',
   '/assets/service-requests.js?v=2',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de

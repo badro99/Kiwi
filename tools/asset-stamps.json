@@ -248,8 +248,8 @@
     "sha": "355f2593e8cbbafe"
   },
   "assets/caisse-lang.js": {
-    "v": "171",
-    "sha": "cafadddf39b77fc4"
+    "v": "172",
+    "sha": "3d7487df188a5650"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1436,8 +1436,8 @@
     "sha": "db9b8876704b6157"
   },
   "assets/offline-db.js": {
-    "v": "11",
-    "sha": "ac1fc9442873ae3e"
+    "v": "12",
+    "sha": "2d017422f5f36839"
   },
   "assets/onboarding-data.js": {
     "v": "17",
@@ -1488,8 +1488,8 @@
     "sha": "3cd3b01271f8b903"
   },
   "assets/orderpro-inbox.js": {
-    "v": "48",
-    "sha": "673c2a3980556b42"
+    "v": "49",
+    "sha": "63d295ede469d616"
   },
   "assets/orderpro-menu.js": {
     "v": "8",

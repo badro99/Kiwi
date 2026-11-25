@@ -378,10 +378,22 @@
     }
     else return;
     var offline = window.KiwiOffline;
-    if (!offline) return closeStorageWarning();
+    /* La file locale refuse la fermeture (stockage de la tablette en panne) :
+     * on l'envoie quand même, tout de suite. Avant, elle n'était jamais
+     * envoyée, et la table restait ouverte côté serveur. */
+    function sendNow(err) {
+      reportCloseStore(err);
+      return fetch('/api/order/queue', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      }).then(function (response) {
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return typeof response.json === 'function' ? response.json().catch(function () { return null; }) : null;
+      }).then(function (answer) { warnOwed(body, answer); }).catch(closeStorageWarning);
+    }
+    if (!offline) return sendNow(new Error('KiwiOffline unavailable'));
     offline.enqueue(CLOSE_CHANNEL, m, body, { id: 'close:' + m + ':' + key })
-      .then(function () { return flushCloses(); })
-      .catch(closeStorageWarning);
+      .then(function () { return flushCloses(); }, sendNow);
   }
   /* Le serveur ne solde que ce que les tickets de la visite ont payé : une
    * commande arrivée pendant l'encaissement reste due (owedCents). La table
@@ -412,14 +424,30 @@
       setTimeout(function () { el.remove(); }, 12300);
     } catch (_) {}
   }
-  function closeStorageWarning() {
+  /* Le stockage local a refusé : on garde la vraie erreur (console d'erreurs,
+   * une fois toutes les 10 min), sans alerter le comptoir pour un problème
+   * qu'il ne peut pas régler et qui n'a rien empêché. */
+  var closeStoreReportedAt = 0;
+  function reportCloseStore(err) {
+    if (Date.now() - closeStoreReportedAt < 600000) return;
+    closeStoreReportedAt = Date.now();
+    try { if (window.KiwiReportError) window.KiwiReportError(err || new Error('outbox failed'), 'outbox:' + CLOSE_CHANNEL); } catch (_) {}
+  }
+  /* L'alerte n'existe plus que pour le cas qui compte : la fermeture n'a pu
+   * être ni gardée ni envoyée. Une seule à l'écran, en avertissement (plus la
+   * coche verte d'un succès), et elle s'efface. */
+  function closeStorageWarning(err) {
     try { window.dispatchEvent(new CustomEvent('kiwi:outbox', { detail: { type: 'storage-error', channel: CLOSE_CHANNEL } })); } catch (_) {}
+    reportCloseStore(err);
     try {
       var stack = document.getElementById('toast-stack');
-      if (stack) {
-        var el = document.createElement('div'); el.className = 'toast';
-        el.textContent = 'Fermeture de table non protégée · vérifiez le stockage de cette caisse';
+      if (stack && !document.getElementById('kop-close-warn')) {
+        var el = document.createElement('div'); el.className = 'toast is-warn'; el.id = 'kop-close-warn';
+        el.setAttribute('role', 'alert');
+        el.textContent = 'Fermeture de table non envoyée · vérifiez la connexion de cette caisse';
         stack.appendChild(el);
+        setTimeout(function () { el.classList.add('fade'); }, 12000);
+        setTimeout(function () { el.remove(); }, 12300);
       }
     } catch (_) {}
   }
@@ -440,7 +468,7 @@
       return Promise.all(rows.map(function (row) {
         return closeIsOpen(row.payload) ? null : offline.acknowledge(row.id);
       }));
-    }).then(function () { flushCloses(); }).catch(closeStorageWarning);
+    }).then(function () { flushCloses(); }).catch(reportCloseStore);
   }
   function flushCloses() {
     var m = merchant(), offline = window.KiwiOffline;
@@ -464,7 +492,7 @@
       }).catch(function (error) {
         return offline.reject(row.id, row.leaseToken, { error: String(error.message || error) });
       });
-    }).catch(closeStorageWarning).finally(function () { closeSending = false; });
+    }).catch(reportCloseStore).finally(function () { closeSending = false; });
   }
 
   /* ── attention: a new order must not be missable on a busy counter ────── */

@@ -711,7 +711,7 @@ for (const test of [
   'sale-id-collision-test.mjs',
   'caisse-payment-guards-test.mjs',
   'refund-split-identity-test.mjs',
-  'restaurant-visit-close-reload-test.mjs',
+  'restaurant-visit-close-reload-test.mjs', 'close-storage-fallback-test.mjs',
   'restaurant-sync-release-test.mjs',
   'z-reconciliation-test.mjs',
   'z-alert-truth-test.mjs',

@@ -88,6 +88,44 @@
   function ready() { return readyPromise; }
   function available() { return !!db && !openError; }
 
+  /* LA CONNEXION PERDUE SE REPREND (Browse, 25 nov. 2026). Une tablette qui
+   * dort, un navigateur qui recycle son processus IndexedDB : la base ouverte
+   * au chargement devient inutilisable (« Connection to Indexed Database
+   * server lost », DatabaseClosedError, transaction expirée) et chaque appel
+   * échouait jusqu'au prochain rechargement de la page. Au comptoir, cela
+   * donnait « Fermeture de table non protégée » à chaque sondage. On rouvre
+   * la base une fois et on rejoue l'opération : chacune est une transaction
+   * entière, idempotente par son id, donc rejouer est sûr. Une base qui n'a
+   * jamais pu s'ouvrir réessaie aussi, au plus toutes les 30 s. */
+  var LOST = /server lost|DatabaseClosed|InvalidState|connection is closing|UnknownError|TimeoutError|timed out|backing store|Database deleted/i;
+  var reopenedAt = 0;
+  function reopen() {
+    if (!db) return Promise.resolve(false);
+    reopenedAt = now();
+    try { db.close(); } catch (_) {}
+    readyPromise = db.open().then(function () { openError = null; return true; })
+      .catch(function (err) { openError = err || new Error('IndexedDB could not be opened'); return false; });
+    return readyPromise;
+  }
+  function guarded(run) {
+    function attempt() {
+      return ready().then(function (ok) {
+        if (!ok) throw openError || new Error('Offline database unavailable');
+        return run();
+      });
+    }
+    return attempt().catch(function (err) {
+      var text = String((err && err.name) || '') + ' ' + String((err && err.message) || err || '');
+      var neverOpened = !!db && openError && now() - reopenedAt > 30000;
+      if (!db || !(LOST.test(text) || neverOpened)) throw err;
+      return reopen().then(function (ok) {
+        if (!ok) throw err;
+        signal({ type: 'reconnected' });
+        return attempt();
+      });
+    });
+  }
+
   function enqueue(channel, tenant, payload, opts) {
     opts = opts || {};
     var scope;
@@ -96,8 +134,7 @@
     var id;
     try { id = assertId(opts.id || (payload && payload.id)); }
     catch (err) { return Promise.reject(err); }
-    return ready().then(function (ok) {
-      if (!ok) throw openError || new Error('Offline database unavailable');
+    return guarded(function () {
       return db.transaction('rw', db.outbox, function () {
         return db.outbox.get(id).then(function (existing) {
           if (existing) {
@@ -153,8 +190,7 @@
     var scope;
     try { scope = assertScope(tenant, channel); }
     catch (err) { return Promise.reject(err); }
-    return ready().then(function (ok) {
-      if (!ok) throw openError || new Error('Offline database unavailable');
+    return guarded(function () {
       return db.transaction('rw', db.outbox, function () {
         var at = now();
         return db.outbox.where('[tenant+channel]').equals([scope.tenant, scope.channel]).toArray().then(function (rows) {
@@ -182,8 +218,7 @@
 
   function acknowledge(id, leaseToken) {
     id = assertId(id);
-    return ready().then(function (ok) {
-      if (!ok) throw openError || new Error('Offline database unavailable');
+    return guarded(function () {
       return db.transaction('rw', db.outbox, function () {
         return db.outbox.get(id).then(function (row) {
           if (!row) return false;
@@ -200,8 +235,7 @@
   function reject(id, leaseToken, opts) {
     id = assertId(id);
     opts = opts || {};
-    return ready().then(function (ok) {
-      if (!ok) throw openError || new Error('Offline database unavailable');
+    return guarded(function () {
       return db.transaction('rw', db.outbox, function () {
         return db.outbox.get(id).then(function (row) {
           if (!row || leaseToken && row.leaseToken !== leaseToken) return false;
@@ -267,8 +301,7 @@
 
   function list(channel, tenant) {
     var scope = assertScope(tenant, channel);
-    return ready().then(function (ok) {
-      if (!ok) throw openError || new Error('Offline database unavailable');
+    return guarded(function () {
       return db.outbox.where('[tenant+channel]').equals([scope.tenant, scope.channel]).sortBy('createdAt');
     });
   }
