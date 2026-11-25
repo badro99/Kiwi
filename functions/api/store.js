@@ -108,7 +108,7 @@ const FEATURES = {
    * carte par GET /api/menu?mine=1, la ligne que la page client lit déjà. Deux
    * miroirs pour une même carte, c'est deux vérités qui divergent — ne câblez
    * pas `cloud` sur le menu. */
-  [PRINT_HUB_FEATURE]: { keys: ['hub'],                           max: 4000 },
+  [PRINT_HUB_FEATURE]: { keys: ['hub'],                           max: 4000 }, printstations: { keys: ['profiles', 'bindings'], max: 40000 },   // routage par poste (assets/printer/station-backup.js)
   menu:         { keys: ['cats', 'items'],                        max: 600000 },
   recipes:      { keys: ['items'],                                max: 600000 },
   team:         { keys: ['members', 'hours', 'shifts'],            max: 600000 },

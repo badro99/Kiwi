@@ -1212,8 +1212,8 @@
     "sha": "c9aa7ba3d485d350"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "41",
-    "sha": "e1e1f3398ad2aaa2"
+    "v": "42",
+    "sha": "250e968ea8342fdf"
   },
   "assets/kitchen-relay.js": {
     "v": "25",
@@ -2266,6 +2266,10 @@
   "assets/printer/pairing-ui.js": {
     "v": "17",
     "sha": "3c1535225b44d40e"
+  },
+  "assets/printer/station-backup.js": {
+    "v": "1",
+    "sha": "7e6d060f0543015d"
   },
   "assets/printer/transports.js": {
     "v": "18",
