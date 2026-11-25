@@ -186,11 +186,13 @@
       return { m: String(p && (p.method || p.m) || ''), c: p && p.amountCents != null ? Math.round(Number(p.amountCents)) || 0 : cts(p && p.amount) };
     });
   }
-  function moneySplit(source, span) {
+  function moneySplit(source, span, cat) {
     var inSpan = function (ts) { return ts >= span.from && ts < span.to; };
     var rows = (source || []).filter(function (r) { return r && !r.voided; });
-    var out = { till:0, courier:0, counter:0, pending:0, deliveries:0, brought:0 };
-    var back = {}, seen = {}, tickets = {};
+    var out = { till:0, courier:0, counter:0, pending:0, deliveries:0, brought:0, list:[] };
+    var back = {}, seen = {}, tickets = {}, basket = {}, collected = [];
+    /* Chaque ticket rejoint l'historique là où est son argent (voir body()). */
+    var linesOf = function (r) { try { return cat ? normalize(r, cat).lines : []; } catch (_) { return []; } };
     rows.forEach(function (r) {
       if (!isCollection(r)) return;
       var id = String(r.id || r.saleId || tsOf(r) + ':' + r.label);
@@ -199,7 +201,7 @@
       if (c <= 0) return;
       var ref = String(r.ref || r.receiptRef || '');
       if (ref) back[ref] = (back[ref] || 0) + c;
-      if (inSpan(tsOf(r))) { out.till += c; out.brought += c; }
+      if (inSpan(tsOf(r))) { out.till += c; out.brought += c; collected.push({ kind:'brought', ref:ref, ts:tsOf(r), cents:c, lines:linesOf(r) }); }
     });
     function take(r) {
       if (isCollection(r)) return;
@@ -214,15 +216,21 @@
         owed = r.lines.reduce(function (n, l) { return n + Math.max(0, cts(l && l.total)); }, 0);
       }
       tickets[ref] = 1;
+      var lines = linesOf(r); if (lines.length) basket[ref] = lines;
       if (!inSpan(tsOf(r))) return;
-      out.till += cash; if (cash > 0) out.counter++;
+      var ts = tsOf(r), goods = lines.reduce(function (n, l) { return n + cts(l.total); }, 0);
+      out.till += cash; if (cash > 0) { out.counter++; out.list.push({ kind:'till', ref:ref, ts:ts, cents:cash, lines:lines, mixed:owed > 0 }); }
       if (owed > 0) {
         var left = Math.max(0, owed - (back[ref] || 0));
-        out.deliveries++; out.courier += left; if (left > 0) out.pending++;
+        out.deliveries++; out.courier += left;
+        if (left > 0) { out.pending++; out.list.push({ kind:'courier', ref:ref, ts:ts, cents:left, owed:owed, lines:lines }); }
       }
+      if (cash <= 0 && owed <= 0 && goods > 0) out.list.push({ kind:'credit', ref:ref, ts:ts, cents:goods, lines:lines });
     }
     rows.filter(function (r) { return r.amountCents != null; }).forEach(take);
     rows.filter(function (r) { return r.amountCents == null; }).forEach(take);
+    collected.forEach(function (c) { if (!c.lines.length && basket[c.ref]) c.lines = basket[c.ref]; out.list.push(c); });
+    out.list.sort(function (x, y) { return y.ts - x.ts; });
     return out;
   }
   function analyze(source, period) {
@@ -272,7 +280,7 @@
     return {
       days: days, custom: span.custom, from: from, to: to, sales: sales.sort(function(a,b){return b.ts-a.ts;}), tickets: sales.length, units: units, revenue: revenue,
       products: prod, categories: Object.keys(categories).map(function(k){return categories[k];}).sort(function(a,b){return b.qty-a.qty;}),
-      pairs: pairRows, previousTickets: previous.length, catalogCount: cat.products.length, money: moneySplit(source, span),
+      pairs: pairRows, previousTickets: previous.length, catalogCount: cat.products.length, money: moneySplit(source, span, cat),
     };
   }
   function ensureStyle() {
@@ -285,6 +293,8 @@
     s.textContent += '.ksold .kx-kpi-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--n-200,#dedbd5);border:1px solid var(--n-200,#dedbd5);border-radius:18px;overflow:hidden;margin-bottom:18px;box-shadow:0 1px 2px rgba(10,15,13,.04),0 10px 26px -16px rgba(10,15,13,.1)}.ksold .kx-kpi{background:var(--surface,#fff);padding:15px 18px 16px;min-width:0}.ksold .kx-kpi .l{font:500 10px/1.3 var(--sans);letter-spacing:.075em;color:var(--n-500,#777);text-transform:uppercase}.ksold .kx-kpi .v{font:600 29px/1.02 var(--num,var(--sans));font-variant-numeric:tabular-nums;letter-spacing:-.032em;color:var(--ink,#111);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ksold .kx-kpi .v .u{font:500 12.5px/1.45 var(--sans);letter-spacing:0;color:var(--n-500,#777);margin-left:4px}.ksold .kx-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:54px 24px 56px;border:1px dashed var(--n-200,#dedbd5);border-radius:18px;background:var(--paper-soft,#f5f3ef)}.ksold .kx-empty .ico{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--surface,#fff);border:1px solid var(--n-200,#dedbd5);color:var(--atlas,#087a5b);margin-bottom:15px}.ksold .kx-empty .ico svg{display:block;width:22px;height:22px;fill:currentColor}.ksold .kx-empty h3{font:600 16.5px/1.3 var(--sans);letter-spacing:-.02em;color:var(--ink,#111);margin:0}.ksold .kx-empty p{font:400 13.5px/1.55 var(--sans);color:var(--n-500,#777);margin:8px 0 0;max-width:42ch}@media(max-width:760px){.ksold .kx-kpi-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:420px){.ksold .kx-kpi-strip{grid-template-columns:minmax(0,1fr)}}';
     /* La bande argent. Vert plein : en main. Rayures qui défilent : sur la route. */
     s.textContent += '.ksold .ksold-kpi3{grid-template-columns:repeat(3,minmax(0,1fr))}.ksold-money{border:1px solid var(--n-200,#dedbd5);background:var(--surface,#fff);border-radius:22px;padding:18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(10,15,13,.04),0 14px 34px -22px rgba(10,15,13,.18)}.ksold-money-top{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;margin:0 2px 14px}.ksold-money-top h2{margin:0;font:600 15px/1.2 var(--sans);letter-spacing:-.015em;color:var(--ink,#111)}.ksold-money-sum{display:flex;align-items:baseline;gap:7px;font:600 15px/1 var(--num,var(--sans));font-variant-numeric:tabular-nums;color:var(--n-500,#777)}.ksold-money-sum .t{color:var(--atlas,#0B6E4F)}.ksold-money-sum .c{color:var(--ink,#111)}.ksold-money-sum .op{font-weight:500;opacity:.7}.ksold-money-sum b{font-size:24px;letter-spacing:-.03em;color:var(--ink,#111)}.ksold-money-sum .u,.ksold-money .v .u{font:500 12px var(--sans);letter-spacing:0;opacity:.72;margin-left:4px}.ksold-money-bar{display:flex;gap:8px}.ksold-money-blk{position:relative;display:flex;gap:14px;align-items:flex-start;flex-basis:0;min-width:min(100%,250px);padding:16px 18px 17px;border-radius:18px;overflow:hidden}.ksold-money-blk.is-till{background:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0)}.ksold-money-blk.is-courier{color:var(--ink,#0A0F0D);background:linear-gradient(-45deg,color-mix(in srgb,var(--ink,#0A0F0D) 7%,transparent) 25%,transparent 25%,transparent 50%,color-mix(in srgb,var(--ink,#0A0F0D) 7%,transparent) 50%,color-mix(in srgb,var(--ink,#0A0F0D) 7%,transparent) 75%,transparent 75%) 0 0/30px 30px,var(--paper-soft,#efece6);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink,#0A0F0D) 16%,transparent);animation:ksoldRoad 2.4s linear infinite}.ksold-money-ico{flex:none;display:grid;place-items:center;width:52px;height:52px;border-radius:15px}.ksold-money-blk.is-till .ksold-money-ico{background:color-mix(in srgb,var(--paper,#F7F5F0) 16%,transparent)}.ksold-money-blk.is-courier .ksold-money-ico{background:var(--surface,#fff);box-shadow:0 1px 2px rgba(10,15,13,.08)}.ksold-money-ico svg{display:block;width:30px;height:30px;fill:currentColor}.ksold-money-blk.is-courier .ksold-money-ico svg{animation:ksoldRide 1.6s ease-in-out infinite}.ksold-money-txt{min-width:0}.ksold-money .k{font:600 14px/1.25 var(--sans)}.ksold-money .v{font:600 38px/1.04 var(--num,var(--sans));font-variant-numeric:tabular-nums;letter-spacing:-.035em;margin-top:6px;white-space:nowrap}.ksold-money .s{font:400 12.5px/1.45 var(--sans);opacity:.78;margin-top:5px}.ksold-money .s b{font-weight:600;font-variant-numeric:tabular-nums;opacity:1}.ksold-money.is-fresh .ksold-money-blk{animation:ksoldGrow .7s cubic-bezier(.34,1.45,.5,1) both}.ksold-money.is-fresh .ksold-money-blk.is-courier{animation:ksoldGrow .7s cubic-bezier(.34,1.45,.5,1) .14s both,ksoldRoad 2.4s linear .84s infinite}[dir=rtl] .ksold-money.is-fresh .ksold-money-blk{animation-name:ksoldGrowRtl}[dir=rtl] .ksold-money.is-fresh .ksold-money-blk.is-courier{animation-name:ksoldGrowRtl,ksoldRoad}@keyframes ksoldGrow{from{clip-path:inset(0 100% 0 0 round 18px)}to{clip-path:inset(0 0 0 0 round 18px)}}@keyframes ksoldGrowRtl{from{clip-path:inset(0 0 0 100% round 18px)}to{clip-path:inset(0 0 0 0 round 18px)}}@keyframes ksoldRoad{to{background-position:30px 0,0 0}}@keyframes ksoldRide{0%,100%{transform:translateX(-3px)}50%{transform:translateX(3px)}}@media(prefers-reduced-motion:reduce){.ksold-money .ksold-money-blk,.ksold-money .ksold-money-ico svg{animation:none!important}}@media(max-width:640px){.ksold-money-bar{flex-direction:column}.ksold-money-blk{flex:1 1 auto!important;min-width:0}.ksold-money .v{font-size:32px}}@media(max-width:420px){.ksold .ksold-kpi3{grid-template-columns:minmax(0,1fr)}}';
+    /* L'historique en deux colonnes, aux couleurs de la bande. */
+    s.textContent += '.ksold-hcols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}.ksold-hcols.one{grid-template-columns:1fr}.ksold-hcredit{margin-top:12px}.ksold-hgrp{border-radius:16px;border:1px solid var(--n-200,#e5e2dc);overflow:hidden;min-width:0;background:var(--surface,#fff)}.ksold-hhead{display:flex;align-items:center;gap:12px;padding:13px 14px}.ksold-hgrp.is-till .ksold-hhead{background:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0)}.ksold-hgrp.is-courier .ksold-hhead{color:var(--ink,#0A0F0D);background:linear-gradient(-45deg,color-mix(in srgb,var(--ink,#0A0F0D) 7%,transparent) 25%,transparent 25%,transparent 50%,color-mix(in srgb,var(--ink,#0A0F0D) 7%,transparent) 50%,color-mix(in srgb,var(--ink,#0A0F0D) 7%,transparent) 75%,transparent 75%) 0 0/30px 30px,var(--paper-soft,#efece6);border-bottom:1px solid color-mix(in srgb,var(--ink,#0A0F0D) 12%,transparent)}.ksold-hgrp.is-credit .ksold-hhead{background:var(--paper-soft,#f5f3ef);color:var(--ink,#111)}.ksold-hico{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:11px}.ksold-hgrp.is-till .ksold-hico{background:color-mix(in srgb,var(--paper,#F7F5F0) 16%,transparent)}.ksold-hgrp.is-courier .ksold-hico,.ksold-hgrp.is-credit .ksold-hico{background:var(--surface,#fff);box-shadow:0 1px 2px rgba(10,15,13,.08)}.ksold-hico svg{width:21px;height:21px;fill:currentColor;display:block}.ksold-htitle{flex:1;min-width:0}.ksold-htitle .k{font:600 14px/1.2 var(--sans)}.ksold-hhead .ksold-meta{color:inherit;opacity:.78;margin-top:2px}.ksold-hsum{font:600 21px/1 var(--num,var(--sans));font-variant-numeric:tabular-nums;letter-spacing:-.03em;white-space:nowrap}.ksold-hsum .u,.ksold-hamt .u{font:500 11px var(--sans);letter-spacing:0;opacity:.7;margin-left:3px}.ksold-hrow{position:relative;display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:12px;padding:12px 14px;border-top:1px solid var(--n-100,#eee)}.ksold-hhead+.ksold-hrow{border-top:0}.ksold-hrail{border-radius:4px;align-self:stretch}.ksold-hrow.is-till .ksold-hrail,.ksold-hrow.is-brought .ksold-hrail{background:var(--atlas,#0B6E4F)}.ksold-hrow.is-courier .ksold-hrail{background:repeating-linear-gradient(-45deg,color-mix(in srgb,var(--ink,#0A0F0D) 45%,transparent) 0 3px,transparent 3px 6px)}.ksold-hrow.is-credit .ksold-hrail{background:var(--n-200,#dedbd5)}.ksold-hmain{min-width:0}.ksold-hmain .ksold-name{line-height:1.45}.ksold-hmain .ksold-name bdi{display:inline-block;max-width:100%}.ksold-htag{display:inline-flex;align-items:center;gap:5px;margin-bottom:5px;padding:3px 8px 3px 6px;border-radius:999px;font:600 10.5px/1.2 var(--sans);color:var(--atlas,#0B6E4F);background:color-mix(in srgb,var(--atlas,#0B6E4F) 10%,transparent)}.ksold-htag svg{width:14px;height:14px;fill:currentColor}.ksold-hside{text-align:end}.ksold-hamt{font:600 15px/1.1 var(--num,var(--sans));font-variant-numeric:tabular-nums;letter-spacing:-.015em;white-space:nowrap}.ksold-hrow.is-till .ksold-hamt,.ksold-hrow.is-brought .ksold-hamt{color:var(--atlas,#0B6E4F)}.ksold-hsub{font:500 11px/1.3 var(--sans);color:var(--n-500,#777);margin-top:4px;white-space:nowrap}.ksold-hempty,.ksold-hmore{padding:14px;font:500 12.5px/1.4 var(--sans);color:var(--n-500,#777)}.ksold-hmore{border-top:1px solid var(--n-100,#eee);text-align:center}@media(max-width:760px){.ksold-hcols{grid-template-columns:1fr}}';
     document.head.appendChild(s);
   }
   function rangeLabel(range) {
@@ -357,6 +367,57 @@
       + '<p>' + L('Dès qu’un ticket est encaissé à la caisse avec ses produits, il apparaît ici : quantités, catégories, paniers associés et recommandations.', 'As soon as a receipt is rung up at the till with its products, it appears here: quantities, categories, related baskets and recommendations.', 'بمجرد تحصيل إيصال في الصندوق مع منتجاته، يظهر هنا: الكميات والفئات والسلال المرتبطة والتوصيات.') + '</p>'
       + '</div>';
   }
+  /* L'historique détaillé, rangé comme la bande du haut : à gauche (vert) ce
+   * qui est dans la caisse, à droite (rayé) ce qui est encore chez le livreur.
+   * Chaque colonne a le même total que son bloc. Un ticket payé en partie au
+   * comptoir et en partie à la livraison paraît des deux côtés, chacun avec sa
+   * part. Un encaissement du livreur paraît à gauche, avec le panier livré. */
+  var HIST_MAX = 40;
+  function locale() { var l = lang(); return l === 'ar' ? 'ar-MA' : l === 'en' ? 'en-GB' : 'fr-FR'; }
+  function history(a) {
+    var m = a.money, list = (m && m.list) || [];
+    if (!list.length) return '';
+    var mad = function (c) { return fmt(c / 100); };
+    var oneDay = !a.custom && a.days === 1;
+    var when = function (ts) { try { return new Date(ts).toLocaleString(locale(), oneDay ? { hour:'2-digit', minute:'2-digit' } : { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }); } catch (_) { return ''; } };
+    var ticket = function (ref) { return L('Ticket ', 'Receipt ', 'الإيصال ') + ref; };
+    var row = function (r) {
+      var goods = r.lines.length ? r.lines.map(function (l) { return '<bdi>' + l.qty + '× ' + esc(l.name) + '</bdi>'; }).join(' · ') : esc(L('Articles non détaillés', 'Items not itemised', 'أصناف غير مفصّلة'));
+      var meta = esc(ticket(r.ref)), tag = '', sub = '';
+      if (r.kind === 'brought') tag = L('Rapporté par le livreur', 'Brought back by the courier', 'أعاده عامل التوصيل');
+      if (r.kind === 'till' && r.mixed) meta += ' · ' + esc(L('le reste est chez le livreur', 'the rest is with the courier', 'الباقي عند عامل التوصيل'));
+      if (r.kind === 'courier') sub = r.owed > r.cents ? L('reste ' + mad(r.cents) + ' sur ' + mad(r.owed), mad(r.cents) + ' left of ' + mad(r.owed), 'الباقي ' + mad(r.cents) + ' من ' + mad(r.owed)) : L('à recevoir', 'to collect', 'للتحصيل');
+      if (r.kind === 'credit') sub = L('payé avec un avoir', 'paid with store credit', 'مدفوع برصيد دائن');
+      return '<div class="ksold-hrow is-' + r.kind + '"><i class="ksold-hrail" aria-hidden="true"></i><div class="ksold-hmain">'
+        + (tag ? '<span class="ksold-htag">' + ICON_RIDE + esc(tag) + '</span>' : '')
+        + '<div class="ksold-name">' + goods + '</div><div class="ksold-meta">' + meta + ' · ' + esc(when(r.ts)) + '</div></div>'
+        + '<div class="ksold-hside"><div class="ksold-hamt">' + mad(r.cents) + '<span class="u">MAD</span></div>' + (sub ? '<div class="ksold-hsub">' + esc(sub) + '</div>' : '') + '</div></div>';
+    };
+    var rows = function (items) {
+      var more = items.length - HIST_MAX;
+      return items.slice(0, HIST_MAX).map(row).join('') + (more > 0 ? '<div class="ksold-hmore">' + esc(L('+ ' + more + ' autre' + (more > 1 ? 's' : '') + ' ticket' + (more > 1 ? 's' : ''), '+ ' + more + ' more receipt' + (more > 1 ? 's' : ''), 'إيصالات أخرى: ' + more)) + '</div>' : '');
+    };
+    var group = function (kind, icon, title, count, total, items, empty) {
+      return '<div class="ksold-hgrp is-' + kind + '"><div class="ksold-hhead"><span class="ksold-hico">' + icon + '</span><div class="ksold-htitle"><div class="k">' + esc(title) + '</div><div class="ksold-meta">' + esc(count) + '</div></div>'
+        + '<div class="ksold-hsum">' + mad(total) + '<span class="u">MAD</span></div></div>'
+        + (items.length ? rows(items) : '<div class="ksold-hempty">' + esc(empty) + '</div>') + '</div>';
+    };
+    var tillItems = list.filter(function (r) { return r.kind === 'till' || r.kind === 'brought'; });
+    var courierItems = list.filter(function (r) { return r.kind === 'courier'; });
+    var creditItems = list.filter(function (r) { return r.kind === 'credit'; });
+    var n = tillItems.length, d = courierItems.length, c = creditItems.length;
+    var html = '<div class="ksold-hcols' + (m.deliveries ? '' : ' one') + '">'
+      + group('till', ICON_TILL, L('Dans la caisse', 'In the till', 'في الصندوق'),
+          L(n + ' ticket' + (n > 1 ? 's' : ''), n + (n > 1 ? ' receipts' : ' receipt'), 'الإيصالات: ' + n), m.till, tillItems,
+          L('Rien d’encaissé pour l’instant.', 'Nothing collected yet.', 'لم يُحصَّل شيء بعد.'))
+      + (m.deliveries ? group('courier', ICON_RIDE, L('Chez le livreur', 'With the courier', 'عند عامل التوصيل'),
+          L(d + ' livraison' + (d > 1 ? 's' : '') + ' pas encore payée' + (d > 1 ? 's' : ''), d + (d > 1 ? ' deliveries' : ' delivery') + ' not paid yet', 'طلبات توصيل لم تُدفع بعد: ' + d), m.courier, courierItems,
+          L('Le livreur a tout rapporté.', 'The courier has brought everything back.', 'أعاد عامل التوصيل كل شيء.')) : '')
+      + '</div>';
+    if (c) html += '<div class="ksold-hcols one ksold-hcredit">' + group('credit', ICON_WALLET, L('Payé avec un avoir', 'Paid with store credit', 'مدفوع برصيد دائن'),
+      L(c + ' ticket' + (c > 1 ? 's' : ''), c + (c > 1 ? ' receipts' : ' receipt'), 'الإيصالات: ' + c), creditItems.reduce(function (t, r) { return t + r.cents; }, 0), creditItems, '') + '</div>';
+    return html;
+  }
   function body(a, owner) {
     if (!a.sales.length) return '<div class="ksold-full">' + emptyState(a) + '</div>';
     var max = a.products[0] ? a.products[0].qty : 1;
@@ -365,14 +426,15 @@
     var pairRows = a.pairs.slice(0,8).map(function(p){return '<div class="ksold-row"><div><div class="ksold-name">'+esc(p.a)+' + '+esc(p.b)+'</div><div class="ksold-meta">'+L('Même ticket','Same receipt','نفس الإيصال')+'</div></div><div class="ksold-val">'+p.count+'×</div></div>';}).join('') || '<div class="ksold-note">'+L('Aucune association répétée pour l’instant.','No repeated pairings yet.','لا توجد ارتباطات متكررة حتى الآن.')+'</div>';
     var timeline = a.sales.slice(0,20).map(function(s){return '<div class="ksold-row"><div><div class="ksold-name">'+s.lines.map(function(l){return l.qty+'× '+esc(l.name);}).join(' · ')+'</div><div class="ksold-meta">'+esc(s.ref || L('Ticket','Receipt','إيصال'))+'</div></div><div><div class="ksold-val">'+fmt(s.lines.reduce(function(n,l){return n+l.total;},0))+' MAD</div><div class="ksold-time">'+new Date(s.ts).toLocaleString(document.documentElement.lang === 'ar' ? 'ar-MA' : document.documentElement.lang === 'en' ? 'en-GB' : 'fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</div></div></div>';}).join('');
     var ai = owner ? '<section class="ksold-card ksold-ai"><div class="ksold-ai-tag">✦ '+L('Kiwi AI · basé sur vos ventes','Kiwi AI · based on your sales','Kiwi AI · مبني على مبيعاتك')+'</div>'+recommendations(a).map(function(r){return '<div class="ksold-rec"><b>'+esc(r.title)+'</b><p>'+esc(r.text)+'</p></div>';}).join('')+'</section>' : '<section class="ksold-card"><h2>'+L('Produits vendus ensemble','Products sold together','منتجات بيعت معًا')+'</h2><div class="ksold-note">'+L('Associations constatées sur les tickets','Pairings seen on receipts','ارتباطات لوحظت في الإيصالات')+'</div>'+pairRows+'</section>';
-    return '<section class="ksold-card"><h2>'+L('Produits','Products','المنتجات')+'</h2><div class="ksold-note">'+L('Quantité, chiffre et dernière vente','Quantity, revenue and last sale','الكمية والإيراد وآخر بيع')+'</div>'+productRows+'</section>'+ai+'<section class="ksold-card"><h2>'+L('Catégories','Categories','الفئات')+'</h2><div class="ksold-note">'+L('Contribution par rayon','Contribution by department','المساهمة حسب القسم')+'</div>'+catRows+'</section>'+(owner?'<section class="ksold-card"><h2>'+L('Produits vendus ensemble','Products sold together','منتجات بيعت معًا')+'</h2><div class="ksold-note">'+L('Paniers réellement observés','Baskets actually observed','السلال المرصودة فعليًا')+'</div>'+pairRows+'</section>':'')+'<section class="ksold-card ksold-full"><h2>'+L('Historique détaillé','Detailed history','السجل التفصيلي')+'</h2><div class="ksold-note">'+L('Quand et dans quel panier chaque produit a été vendu','When and in which basket each product was sold','متى وفي أي سلة بيع كل منتج')+'</div>'+timeline+'</section>';
+    return '<section class="ksold-card"><h2>'+L('Produits','Products','المنتجات')+'</h2><div class="ksold-note">'+L('Quantité, chiffre et dernière vente','Quantity, revenue and last sale','الكمية والإيراد وآخر بيع')+'</div>'+productRows+'</section>'+ai+'<section class="ksold-card"><h2>'+L('Catégories','Categories','الفئات')+'</h2><div class="ksold-note">'+L('Contribution par rayon','Contribution by department','المساهمة حسب القسم')+'</div>'+catRows+'</section>'+(owner?'<section class="ksold-card"><h2>'+L('Produits vendus ensemble','Products sold together','منتجات بيعت معًا')+'</h2><div class="ksold-note">'+L('Paniers réellement observés','Baskets actually observed','السلال المرصودة فعليًا')+'</div>'+pairRows+'</section>':'')+(function(){var split=history(a);return '<section class="ksold-card ksold-full'+(split?' ksold-hist':'')+'"><h2>'+L('Historique détaillé','Detailed history','السجل التفصيلي')+'</h2><div class="ksold-note">'+(split?L('Chaque ticket est rangé là où se trouve son argent','Each receipt sits where its money is','كل إيصال في المكان الذي يوجد فيه ماله'):L('Quand et dans quel panier chaque produit a été vendu','When and in which basket each product was sold','متى وفي أي سلة بيع كل منتج'))+'</div>'+(split||timeline)+'</section>';})();
   }
   /* La bande « argent » : une barre, deux couleurs. Vert plein = l'argent que
    * vous avez en main. Rayé, qui défile = l'argent encore sur la route avec le
    * livreur. Dessous, les deux montants en grand et une phrase chacun. Icônes
-   * Material Symbols (point_of_sale, two_wheeler), copiées de assets/icons/material/. */
+   * Material Symbols (point_of_sale, two_wheeler, account_balance_wallet), copiées de assets/icons/material/. */
   var ICON_TILL = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm0-80h400v-80H280v80ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Zm260-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Z"/></svg>';
   var ICON_RIDE = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M160-200q-66 0-113-47T0-360q0-57 36.5-101t93.5-55l-28-24H0v-60h180l100 60 160-60h126l-62-80H400v-80h142l84 108 134-68v120h-92l70 92q15-6 30.5-9t31.5-3q66 0 113 47t47 113q0 66-47 113t-113 47q-66 0-113-47t-47-113q0-27 9.5-52.5T676-460l-20-24-136 204H400l-80-70q-5 63-51 106.5T160-200Zm0-80q33 0 56.5-23.5T240-360q0-33-23.5-56.5T160-440q-33 0-56.5 23.5T80-360q0 33 23.5 56.5T160-280Zm294-240-144 54 144-54h130-130Zm346 240q33 0 56.5-23.5T880-360q0-33-23.5-56.5T800-440q-33 0-56.5 23.5T720-360q0 33 23.5 56.5T800-280Zm-322-80 106-160H454l-144 54 120 106h48Z"/></svg>';
+  var ICON_WALLET = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M200-200v-560 560Zm0 80q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v100h-80v-100H200v560h560v-100h80v100q0 33-23.5 56.5T760-120H200Zm320-160q-33 0-56.5-23.5T440-360v-240q0-33 23.5-56.5T520-680h280q33 0 56.5 23.5T880-600v240q0 33-23.5 56.5T800-280H520Zm280-80v-240H520v240h280Zm-117.5-77.5Q700-455 700-480t-17.5-42.5Q665-540 640-540t-42.5 17.5Q580-505 580-480t17.5 42.5Q615-420 640-420t42.5-17.5Z"/></svg>';
   var lastMoney = '';
   function moneyBand(a) {
     var m = a.money; if (!m) return '';

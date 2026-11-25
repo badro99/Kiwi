@@ -131,4 +131,25 @@ const today = { from: '2026-11-25', to: '2026-11-25' };
   ok(/Dans la caisse/.test(none) && !/Chez le livreur/.test(none), 'sans livraison, un seul bloc : tout est dans la caisse');
 }
 
-console.log(`  ✓ Vendus · argent en deux (${checks} contrôles : Santos 25 nov. 4 100 en caisse + 6 050 chez le livreur, livreur qui rapporte, avoir, annulation, traductions)`);
+/* 6. L'historique détaillé range chaque ticket là où est son argent. */
+{
+  const S = load();
+  const collection = { id: 'col-1', ref: '39505', ts: H(21, 10), amount: 1000, amountCents: 100000, method: 'cash', channel: 'delivery', label: 'Livraison reçue · Pantalon classe +3 art.', lines: [] };
+  const credit = { id: 'x', ref: '50001', ts: H(12, 0), amount: 0, amountCents: 0, method: 'split', paymentParts: [{ method: 'store-credit', amountCents: 30000 }], lines: [line('Vist rey S', 1, 300)] };
+  const a = S.analyze(local.concat(server, [collection, credit]), today);
+  const sum = (k) => a.money.list.filter((r) => k.includes(r.kind)).reduce((n, r) => n + r.cents, 0);
+  ok(sum(['till', 'brought']) === a.money.till, 'la colonne « Dans la caisse » fait exactement le total du bloc vert');
+  ok(sum(['courier']) === a.money.courier, 'la colonne « Chez le livreur » fait exactement le total du bloc rayé');
+  const part = a.money.list.find((r) => r.kind === 'courier' && r.ref === '39505');
+  ok(part && part.cents === 80000 && part.owed === 180000, 'livraison payée en partie : reste 800 sur 1 800, toujours chez le livreur');
+  const back = a.money.list.find((r) => r.kind === 'brought');
+  ok(back && back.ref === '39505' && back.lines.length === 4, 'l’argent rapporté par le livreur arrive avec le panier livré, retrouvé sur le ticket d’origine');
+  ok(a.money.list.some((r) => r.kind === 'credit' && r.cents === 30000), 'une vente payée en avoir a sa ligne à part, ni caisse ni livreur');
+  ok(!a.money.list.some((r) => r.ref === '40003'), 'le ticket annulé n’est pas dans l’historique');
+  ok(a.money.list.every((r, i, l) => !i || l[i - 1].ts >= r.ts), 'du plus récent au plus ancien');
+  const html = paint(load('fr', { till: true, sales: [counter('7', Date.now() - 60000, 40000, 'cash', [line('Chemise', 1, 400)]), courier('8', Date.now() - 30000, 65000, [line('Manteau', 1, 650)])] }));
+  ok(/ksold-hgrp is-till/.test(html) && /ksold-hgrp is-courier/.test(html) && /Chaque ticket est rangé là où se trouve son argent/.test(html), 'deux colonnes : dans la caisse, chez le livreur');
+  ok(/<bdi>1× Manteau<\/bdi>/.test(html) && /à recevoir/.test(html), 'chaque article garde son ordre en arabe (bdi) ; la livraison dit « à recevoir »');
+}
+
+console.log(`  ✓ Vendus · argent en deux (${checks} contrôles : Santos 25 nov. 4 100 en caisse + 6 050 chez le livreur, livreur qui rapporte, avoir, annulation, langues, historique en deux colonnes)`);
