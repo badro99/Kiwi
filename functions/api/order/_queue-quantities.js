@@ -182,7 +182,9 @@ export async function voidLine(ctx) {
     }
     else if (immediate && pinActor && ownerApprovals && ownerApprovals.codeMayAct) {
       const lineCents = Math.round((Number(targetLine.unitPrice ?? targetLine.price) || 0) * Math.max(1, Number(targetLine.qty) || 1) * 100);
-      if (!(await ownerApprovals.codeMayAct(env, merchant, 'void-sent', lineCents))) return json({ error: 'owner-approval-required' }, 403);
+      const may = await ownerApprovals.codeMayAct(env, merchant, 'void-sent', lineCents);
+      if (may === null) return json({ error: 'approval-unavailable' }, 503);
+      if (!may) return json({ error: 'owner-approval-required' }, 403);
     }
 
     const isFormula = targetLine.kind === 'formula' && !!targetLine.formulaUid;

@@ -264,7 +264,9 @@ let saleApproval, lineApproval;
   ok('J5 sous le seuil, le code suffit', await LIB.codeMayAct(env, SHOP, 'cancel-sale', 20000));
   ok('J6 au seuil, il ne suffit plus', !(await LIB.codeMayAct(env, SHOP, 'cancel-sale', 50000)));
   const cancelSrc = fs.readFileSync(path.join(ROOT, 'functions/api/sale/cancel.js'), 'utf8');
-  ok('J7 l\'annulation de vente par code consulte la règle', /source === 'cashier' && !approval && !\(await codeMayAct\(env, merchant, 'cancel-sale', saleAmountCents\)\)/.test(cancelSrc));
+  ok('J7 l\'annulation de vente consulte la règle pour tout acteur sauf le patron au tableau de bord et un accord', /if \(!approval && !dashboardOwner\)/.test(cancelSrc) && /dashboardOwner = !!may\.owner \|\| !!op;/.test(cancelSrc));
+  const broken = { DB: { prepare() { throw new Error('d1 down'); } }, AUTH_SECRET: SECRET };
+  ok('J8 réglages illisibles : la règle ne laisse pas passer (null, 503 chez l\'appelant)', (await LIB.codeMayAct(broken, SHOP, 'cancel-sale', 5000)) === null);
 }
 
 /* ── I · le panneau du tableau de bord ── */

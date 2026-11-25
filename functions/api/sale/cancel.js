@@ -297,6 +297,7 @@ export async function onRequestPost({ request, env }) {
   let actorRole = '';
   let reason = 'employee-cancel';
   let approval = null;
+  let dashboardOwner = false;
   if (source === 'dashboard') {
     /* Dashboard cancellation is an owner/operator action, never a public
        browser write. entitledMerchant enforces the active account/tenant. */
@@ -310,6 +311,7 @@ export async function onRequestPost({ request, env }) {
     if (!may.ok) return permissionDenied('sales.cancel');
     const op = await operatorActor(request, env);
     actor = String((op && op.label) || 'propriétaire').slice(0, 80);
+    dashboardOwner = !!may.owner || !!op;
     actorId = await dashboardActorId(request, env);
     actorRole = 'dashboard-owner';
     reason = 'dashboard-cancel';
@@ -394,8 +396,12 @@ export async function onRequestPost({ request, env }) {
     : Math.round(Number(sale.amount || 0) * 100);
   const saleAmount = saleAmountCents / 100;
   const legacyAmount = Math.round(saleAmountCents / 100);
-  if (source === 'cashier' && !approval && !(await codeMayAct(env, merchant, 'cancel-sale', saleAmountCents))) {
-    return json({ error: 'owner-approval-required' }, 403);
+  /* Seuls le patron (ou l'opérateur Kiwi) au tableau de bord et un accord valide
+     échappent à la règle ; un gérant au tableau de bord y est soumis. */
+  if (!approval && !dashboardOwner) {
+    const may = await codeMayAct(env, merchant, 'cancel-sale', saleAmountCents);
+    if (may === null) return json({ error: 'approval-unavailable' }, 503);
+    if (!may) return json({ error: 'owner-approval-required' }, 403);
   }
 
   const ts = Date.now();

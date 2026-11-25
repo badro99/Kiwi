@@ -74,7 +74,7 @@ const ready = new WeakMap();
 export async function ensureApprovalTables(db) {
   if (!db) throw new Error('db-unavailable');
   if (ready.get(db)) return;
-  for (const sql of SCHEMA) await db.prepare(sql).run();
+  for (const sql of SCHEMA) await db.prepare(sql).bind().run();
   ready.set(db, true);
 }
 
@@ -110,11 +110,12 @@ export function needsApproval(settings, kind, amountCents) {
 
 /* Le serveur aussi tient la règle (revue de sécurité) : quand le patron exige
    son accord SANS repli, le code d'un responsable ne suffit plus pour une
-   annulation. Une base illisible laisse passer : on ne bloque pas un service
-   sur un incident de lecture, et le geste reste au journal avec son auteur. */
+   annulation. Réglages illisibles : null, l'appelant répond 503 plutôt que de
+   laisser passer (revue de sécurité de 690f1fa56) ; l'annulation écrit dans la
+   même base, elle aurait échoué de toute façon. */
 export async function codeMayAct(env, merchant, kind, amountCents) {
   let s;
-  try { s = await readSettings(env, merchant); } catch (_) { return true; }
+  try { s = await readSettings(env, merchant); } catch (_) { return null; }
   return !needsApproval(s, kind, amountCents) || s.managerFallback;
 }
 

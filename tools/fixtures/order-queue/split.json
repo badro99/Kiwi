@@ -222,13 +222,13 @@
   {
     "file": "functions/api/order/_queue-kitchen.js",
     "fixture": "_queue-kitchen.js.gz",
-    "sha256": "03d66c303feeb2c5b3bacc6733dd40c3b5967a67a69c679587d2d0c192ef66f6",
+    "sha256": "13a6485090f702e6bdd0ba26acd26926b1f98de174b71000d6ab5b63fb29a9b1",
     "prefix": "export { voidDispatch, voidLine, editLine, ackVoid } from './_queue-quantities.js';\nexport { recallTicket } from './_queue-recall.js';\nexport { stationCooking, stationReady } from './_queue-stations.js';\n",
     "segments": [
       {
         "file": "functions/api/order/_queue-quantities.js",
         "start": 580,
-        "end": 30742,
+        "end": 30840,
         "header": "import { json } from '../../auth/_lib.js';\nimport { normTable } from './_guest-tables.js';\nimport { storedOrderLines, atomicStatements, statement, employeeName } from './_queue-shared.js';\n// Contrat : ctx authentifié vers annulation, quantité ou accusé ; écrit uniquement les commandes et leurs lignes via les lots communs.\n",
         "footer": "",
         "marker": "/* Extraction privée : _queue-quantities */\n",
@@ -252,8 +252,8 @@
       },
       {
         "file": "functions/api/order/_queue-recall.js",
-        "start": 30742,
-        "end": 35371,
+        "start": 30840,
+        "end": 35469,
         "header": "import { json } from '../../auth/_lib.js';\nimport { operationId, atomicStatements, statement } from './_queue-shared.js';\n// Contrat : ctx, identifiant et état courant vers rappel explicite du bon ; aucune tarification convive.\n",
         "footer": "",
         "marker": "/* Extraction privée : _queue-recall */\n",
@@ -273,8 +273,8 @@
       },
       {
         "file": "functions/api/order/_queue-stations.js",
-        "start": 35371,
-        "end": 41151,
+        "start": 35469,
+        "end": 41249,
         "header": "import { json } from '../../auth/_lib.js';\nimport { recordOrderCourse } from './_course.js';\nimport { deferCourse } from './_queue-shared.js';\n// Contrat : ctx, identifiant et état courant vers avancement des postes ; aucune tarification convive.\n",
         "footer": "",
         "marker": "/* Extraction privée : _queue-stations */\n",
