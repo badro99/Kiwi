@@ -42,9 +42,9 @@ export const gridOf = (kind) => (GRID[kind] || ['TU']).slice();
 
 const T = {
   fr: {
-    total: 'Quantité totale', totalHint: 'Le nombre de pièces reçues. Vous les répartirez par taille juste après.',
-    totalHintTu: 'Le nombre de pièces en stock.',
-    totalErr: 'Indiquez un nombre entier de pièces, 1 ou plus.',
+    total: 'Quantité totale', totalHint: 'Le nombre de pièces reçues, à répartir par taille juste après. Vous ne savez pas ? Laissez vide, le stock se complète plus tard.',
+    totalHintTu: 'Le nombre de pièces en stock. Vous ne savez pas ? Laissez vide, le stock se complète plus tard.',
+    totalErr: 'Indiquez un nombre entier de pièces, ou laissez vide.',
     size: 'Taille', tu: 'Taille unique', have: (n) => `${n} en stock`, add: 'Pièces', addMore: 'À ajouter', stepUp: 'Ajouter une pièce', stepDown: 'Retirer une pièce',
     split: (a, b) => `${a} sur ${b} répartie${b > 1 ? 's' : ''}`,
     received: (n, one) => (n ? `${n} pièce${n > 1 ? 's' : ''} à ajouter` : one ? 'Écrivez le nombre de pièces reçues.' : 'Écrivez le nombre de pièces reçues à côté de chaque taille.'),
@@ -68,9 +68,9 @@ const T = {
     codeKey: 'Codes-barres : après le 2, deux chiffres pour la couleur ; avant le dernier, deux pour la taille. Le milieu est celui de l’article.',
   },
   en: {
-    total: 'Total quantity', totalHint: 'How many pieces came in. You split them by size right after.',
-    totalHintTu: 'How many pieces are in stock.',
-    totalErr: 'Enter a whole number of pieces, 1 or more.',
+    total: 'Total quantity', totalHint: 'How many pieces came in, split by size right after. Not sure? Leave it empty and add the stock later.',
+    totalHintTu: 'How many pieces are in stock. Not sure? Leave it empty and add the stock later.',
+    totalErr: 'Enter a whole number of pieces, or leave it empty.',
     size: 'Size', tu: 'One size', have: (n) => `${n} in stock`, add: 'Pieces', addMore: 'To add', stepUp: 'Add one piece', stepDown: 'Remove one piece',
     split: (a, b) => `${a} of ${b} assigned`,
     received: (n, one) => (n ? `${n} piece${n > 1 ? 's' : ''} to add` : one ? 'Write how many pieces came in.' : 'Write how many pieces came in next to each size.'),
@@ -94,9 +94,9 @@ const T = {
     codeKey: 'Barcodes: after the 2, two digits for the colour; before the last, two for the size. The middle is the item’s.',
   },
   ar: {
-    total: 'الكمية الإجمالية', totalHint: 'عدد القطع المستلمة. ستوزّعها حسب المقاس مباشرة بعد ذلك.',
-    totalHintTu: 'عدد القطع في المخزون.',
-    totalErr: 'أدخل عدداً صحيحاً من القطع، 1 أو أكثر.',
+    total: 'الكمية الإجمالية', totalHint: 'عدد القطع المستلمة، وتوزّعها حسب المقاس مباشرة بعد ذلك. لا تعرف العدد؟ اتركه فارغاً وأكمل المخزون لاحقاً.',
+    totalHintTu: 'عدد القطع في المخزون. لا تعرف العدد؟ اتركه فارغاً وأكمل المخزون لاحقاً.',
+    totalErr: 'أدخل عدداً صحيحاً من القطع، أو اتركه فارغاً.',
     size: 'المقاس', tu: 'مقاس واحد', have: (n) => `${n} في المخزون`, add: 'القطع', addMore: 'للإضافة', stepUp: 'إضافة قطعة', stepDown: 'إزالة قطعة',
     split: (a, b) => `${a} من ${b} موزّعة`,
     received: (n, one) => (n ? `${n} قطعة للإضافة` : one ? 'اكتب عدد القطع المستلمة.' : 'اكتب عدد القطع المستلمة بجانب كل مقاس.'),
@@ -1049,24 +1049,26 @@ export function totalFieldHtml(lang, kind) {
   return `<section class="bqx-pf-sec" data-kbs-total-sec>
     <h4>${esc(formWords(lang).secStock)}</h4>
     <label class="bqx-pf-f">
-      <span class="bqx-pf-l">${esc(t.total)}</span>
+      <span class="bqx-pf-l">${esc(t.total)}<span class="bqx-pf-tag">${esc(formWords(lang).optional)}</span></span>
       <input class="bqx-pf-in" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="24" data-kbs-total aria-describedby="kbs-total-err kbs-total-hint" />
       <span class="bqx-pf-err" id="kbs-total-err" data-kbs-total-err hidden>${esc(t.totalErr)}</span>
       <span class="bqx-pf-hint" id="kbs-total-hint" data-kbs-total-hint>${esc(hasGrid(kind) ? t.totalHint : t.totalHintTu)}</span>
     </label>
   </section>`;
 }
-/* Lit la quantité totale ; marque le champ en erreur et rend null si elle
-   manque ou n'est pas un entier ≥ 1. */
+/* Lit la quantité totale. Facultative (owner, 25 nov. 2026 : beaucoup ne
+   savent pas combien de pièces ils ont) : vide vaut 0, le produit se crée et
+   le stock se complète plus tard. Rend null, champ en erreur, seulement pour
+   un texte qui n'est pas un entier. */
 export function readTotal(root) {
   const inp = root && root.querySelector('[data-kbs-total]');
   if (!inp) return null;
   const r = pieces(inp.value);
-  const ok = !r.bad && !r.empty && r.n >= 1;
+  const ok = !r.bad;
   inp.setAttribute('aria-invalid', ok ? 'false' : 'true');
   const err = root.querySelector('[data-kbs-total-err]');
   if (err) err.hidden = ok;
-  return ok ? r.n : null;
+  return ok ? (r.n || 0) : null;
 }
 /* Le texte d'aide suit la déclinaison choisie. */
 export function wireTotal(root, lang) {
