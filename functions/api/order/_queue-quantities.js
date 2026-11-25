@@ -180,6 +180,10 @@ export async function voidLine(ctx) {
       ownerApproval = A ? await A.approvedFor(env, merchant, String(b.voidLine.ownerApproval || ''), 'void-sent', A.voidRef(targetOrder.id, lineId)) : null;
       if (!ownerApproval) return json({ error: 'owner-approval-invalid' }, 403);
     }
+    else if (immediate && pinActor && ownerApprovals && ownerApprovals.codeMayAct) {
+      const lineCents = Math.round((Number(targetLine.unitPrice ?? targetLine.price) || 0) * Math.max(1, Number(targetLine.qty) || 1) * 100);
+      if (!(await ownerApprovals.codeMayAct(env, merchant, 'void-sent', lineCents))) return json({ error: 'owner-approval-required' }, 403);
+    }
 
     const isFormula = targetLine.kind === 'formula' && !!targetLine.formulaUid;
     const affectedLines = isFormula

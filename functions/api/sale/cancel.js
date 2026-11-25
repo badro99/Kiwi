@@ -14,7 +14,7 @@ import { ensureCollectionSchema } from '../receivables.js';
 import { voidSaleLoyalty } from '../clients.js';
 import { planSaleVoid, saleVoidStatements } from '../_cheque-debt.js';
 import { decide, sessionMay, permissionDenied } from '../_permissions.js';
-import { approvedFor, markUsed } from '../_owner-approvals.js';
+import { approvedFor, markUsed, codeMayAct } from '../_owner-approvals.js';
 
 /* Une vente déjà remboursée, ou transformée en avoir, ne s'annule plus : le
  * remboursement est une ligne négative qui reste dans le journal, l'annulation
@@ -394,6 +394,9 @@ export async function onRequestPost({ request, env }) {
     : Math.round(Number(sale.amount || 0) * 100);
   const saleAmount = saleAmountCents / 100;
   const legacyAmount = Math.round(saleAmountCents / 100);
+  if (source === 'cashier' && !approval && !(await codeMayAct(env, merchant, 'cancel-sale', saleAmountCents))) {
+    return json({ error: 'owner-approval-required' }, 403);
+  }
 
   const ts = Date.now();
   const impact = JSON.stringify({

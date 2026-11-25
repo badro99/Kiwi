@@ -108,6 +108,16 @@ export function needsApproval(settings, kind, amountCents) {
   return !(settings.minCents > 0 && Number(amountCents) > 0 && Number(amountCents) < settings.minCents);
 }
 
+/* Le serveur aussi tient la règle (revue de sécurité) : quand le patron exige
+   son accord SANS repli, le code d'un responsable ne suffit plus pour une
+   annulation. Une base illisible laisse passer : on ne bloque pas un service
+   sur un incident de lecture, et le geste reste au journal avec son auteur. */
+export async function codeMayAct(env, merchant, kind, amountCents) {
+  let s;
+  try { s = await readSettings(env, merchant); } catch (_) { return true; }
+  return !needsApproval(s, kind, amountCents) || s.managerFallback;
+}
+
 export function cleanRequest(body) {
   const b = body && typeof body === 'object' ? body : {};
   const kind = String(b.kind || '');

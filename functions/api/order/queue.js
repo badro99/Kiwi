@@ -56,7 +56,7 @@ import { cancelTable, transferTable, mergeTables } from './_queue-tables.js';
 import { createFloorTicket, createTicket } from './_queue-create.js';
 import { voidLine, editLine, ackVoid, recallTicket, stationCooking, stationReady } from './_queue-kitchen.js';
 import { closeVisit } from './_queue-payments.js';
-import { OWNER_ACTOR_ID, approvedFor, markUsed, voidRef } from '../_owner-approvals.js';
+import { OWNER_ACTOR_ID, approvedFor, markUsed, voidRef, codeMayAct } from '../_owner-approvals.js';
 import { archiveTakeout, advanceOrder } from './_queue-status.js';
 
 /* ── OÙ VIT CHAQUE GESTE ─────────────────────────────────────────────────────
@@ -318,7 +318,7 @@ export async function onRequestPost(context) {
   /* Chaque geste rend sa réponse, ou null quand le corps ne le concerne pas.
    * L'ordre est celui d'origine et il compte : un corps qui porte deux gestes
    * est confié au premier de cette liste. */
-  const ctx = { context, request, env, b, merchant, now, employee, pairedTill, pinActor, ownerApprovals: { approvedFor, markUsed, voidRef } };
+  const ctx = { context, request, env, b, merchant, now, employee, pairedTill, pinActor, ownerApprovals: { approvedFor, markUsed, voidRef, codeMayAct } };
   /* La preuve au nom du patron ne passe QUE par l'annulation de ligne, avant
      tout autre geste que le corps porterait (revue : cancelTable passait avant). */
   if (pinActor && pinActor.id === OWNER_ACTOR_ID) return (await voidLine(ctx)) || json({ error: 'owner-approval-invalid' }, 403);

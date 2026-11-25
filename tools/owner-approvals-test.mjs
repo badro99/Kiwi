@@ -245,6 +245,28 @@ let saleApproval, lineApproval;
   ok('H11 le patron retire son téléphone', rm.status === 200 && !sqlite.prepare('SELECT 1 FROM owner_approval_devices').get());
 }
 
+/* ── J · sans repli, le serveur refuse le code d'un responsable (revue de sécurité) ── */
+{
+  await call(ownerCookie, { action: 'settings', settings: { cashOut: true, cancel: true, managerFallback: false, minCents: 0 } });
+  ok('J1 sans repli : une annulation par code est refusée', !(await LIB.codeMayAct(env, SHOP, 'cancel-sale', 5000)));
+  const managerProof = await AUTH.tillActorProof(SECRET, SHOP, { id: 'pin-m', name: 'Karim', role: 'manager' });
+  const manager = await AUTH.readTillActorProof(managerProof, SECRET, SHOP);
+  const tools = { approvedFor: LIB.approvedFor, markUsed: LIB.markUsed, voidRef: LIB.voidRef, codeMayAct: LIB.codeMayAct };
+  const vctx = (pinActor, requestId) => ({ env, b: { voidLine: { orderId: 'ord-1', table: '4', immediate: true, requestId, lineId: 'line-cafe', qty: 1 } },
+    merchant: SHOP, now: Date.now(), employee: null, pairedTill: true, pinActor, ownerApprovals: tools });
+  const refused = await QTY.voidLine(vctx(manager, 'voi-gggggggggggggggggggg'));
+  const rb = await refused.json();
+  ok('J3 ligne en cuisine : le code du responsable est refusé quand le patron exige son accord', refused.status === 403 && rb.error === 'owner-approval-required', JSON.stringify(rb));
+  await call(ownerCookie, { action: 'settings', settings: { cashOut: true, cancel: true, managerFallback: true, minCents: 0 } });
+  const allowed = await QTY.voidLine(vctx(manager, 'voi-hhhhhhhhhhhhhhhhhhhh'));
+  ok('J4 avec repli : le code du responsable annule comme avant', allowed.status === 200, String(allowed.status));
+  await call(ownerCookie, { action: 'settings', settings: { cashOut: false, cancel: true, managerFallback: false, minCents: 50000 } });
+  ok('J5 sous le seuil, le code suffit', await LIB.codeMayAct(env, SHOP, 'cancel-sale', 20000));
+  ok('J6 au seuil, il ne suffit plus', !(await LIB.codeMayAct(env, SHOP, 'cancel-sale', 50000)));
+  const cancelSrc = fs.readFileSync(path.join(ROOT, 'functions/api/sale/cancel.js'), 'utf8');
+  ok('J7 l\'annulation de vente par code consulte la règle', /source === 'cashier' && !approval && !\(await codeMayAct\(env, merchant, 'cancel-sale', saleAmountCents\)\)/.test(cancelSrc));
+}
+
 /* ── I · le panneau du tableau de bord ── */
 {
   const listeners = {};
