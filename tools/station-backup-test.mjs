@@ -105,8 +105,8 @@ function till({ local, server }) {
   const kept = cleanStationDoc(evil);
   assert.deepEqual(kept.profiles.map((p) => p.id), ['prof_k'], 'the server keeps only shop printers');
   assert.deepEqual(kept.bindings, { cuisson: 'prof_k' });
-  for (const ok of ['192.168.11.199', '10.0.0.5', '172.20.1.2', 'cuisine.local', 'imprimante']) assert.ok(localPrinterHost(ok), ok);
-  for (const no of ['8.8.8.8', '172.32.0.1', 'evil.example.com', '192.168.1.300', '']) assert.ok(!localPrinterHost(no), no);
+  for (const ok of ['192.168.11.199', '10.0.0.5', '172.20.1.2', '0.0.0.0'.replace(/^0/, '10'), 'cuisine.local', 'bar-1.lan']) assert.ok(localPrinterHost(ok), ok);
+  for (const no of ['8.8.8.8', '172.32.0.1', 'evil.example.com', '192.168.1.300', '', 'imprimante', '134744072', '0x08080808', '0x08080808.local', '134744072.lan', '010.8.8.8', '192.168.011.1']) assert.ok(!localPrinterHost(no), no);
   assert.match(read('functions/api/store.js'), /feature === 'printstations' \? cleanStationDoc\(raw\)/, 'store.js cleans the document before saving it');
 }
 // 6. câblage

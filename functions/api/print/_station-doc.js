@@ -3,20 +3,24 @@
  * commerce, qui l'appliquent quand le leur a disparu. Une caisse appairée peut
  * l'écrire : il ne doit donc porter que des imprimantes du magasin. Une
  * imprimante réseau est une adresse privée (10/8, 172.16/12, 192.168/16,
- * 169.254/16) ou un nom local (« imprimante », « cuisine.local », « bar.lan »),
+ * 169.254/16) ou un nom local (« cuisine.local », « bar.lan »),
  * jamais une adresse publique où partiraient les tickets. Le reste est borné. */
 export const STATION_TYPES = new Set(['ip', 'os', 'usb', 'bt']);
 const ID = /^[A-Za-z0-9_-]{1,60}$/;
 
 export function localPrinterHost(value) {
   const s = String(value || '').trim().toLowerCase();
-  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s);
+  /* Un octet sans zéro de tête : « 010 » se lit en octal (8) chez certains analyseurs. */
+  const m = /^(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})$/.exec(s);
   if (m) {
     const o = m.slice(1).map(Number);
     if (o.some((n) => n > 255)) return false;
     return o[0] === 10 || (o[0] === 172 && o[1] >= 16 && o[1] <= 31) || (o[0] === 192 && o[1] === 168) || (o[0] === 169 && o[1] === 254);
   }
-  return /^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?(\.(local|lan|home|internal))?$/.test(s);
+  /* Un nom : terminé par .local/.lan/.home/.internal, et dont aucune partie n'est un
+     nombre (« 134744072 », « 0x08080808 » se lisent comme une adresse publique). */
+  if (!/^([a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?\.)+(local|lan|home|internal)$/.test(s)) return false;
+  return s.split('.').every((label) => !/^(\d+|0x[0-9a-f]*)$/.test(label));
 }
 
 const text = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, '').slice(0, n);

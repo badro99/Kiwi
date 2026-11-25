@@ -973,7 +973,7 @@
     var healthBoot = setTimeout(function () {
       var host = document.head || document.body;
       /* La copie serveur du routage par poste (assets/printer/station-backup.js) : restaurée si la caisse l'a perdue. */
-      if (host && !document.getElementById('station-backup-script')) { var b = document.createElement('script'); b.id = 'station-backup-script'; b.src = '/assets/printer/station-backup.js?v=2'; b.defer = true; host.appendChild(b); }
+      if (host && !document.getElementById('station-backup-script')) { var b = document.createElement('script'); b.id = 'station-backup-script'; b.src = '/assets/printer/station-backup.js?v=3'; b.defer = true; host.appendChild(b); }
       if (!host || document.getElementById('printer-health-script') || !document.getElementById('toast-stack')) return;
       var s = document.createElement('script'); s.id = 'printer-health-script'; s.src = '/assets/printer-health.js?v=3'; s.defer = true; host.appendChild(s);
     }, 12000);

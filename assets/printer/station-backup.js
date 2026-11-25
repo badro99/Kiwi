@@ -36,13 +36,14 @@
   /* Comme le serveur (functions/api/print/_station-doc.js) : une imprimante réseau
      restaurée est une adresse privée ou un nom local, jamais une adresse publique. */
   function localHost(v) {
-    var s = String(v || '').trim().toLowerCase(), m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s);
+    var s = String(v || '').trim().toLowerCase(), m = /^(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})$/.exec(s);
     if (m) {
       var o = [+m[1], +m[2], +m[3], +m[4]];
       if (o.some(function (n) { return n > 255; })) return false;
       return o[0] === 10 || (o[0] === 172 && o[1] >= 16 && o[1] <= 31) || (o[0] === 192 && o[1] === 168) || (o[0] === 169 && o[1] === 254);
     }
-    return /^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?(\.(local|lan|home|internal))?$/.test(s);
+    if (!/^([a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?\.)+(local|lan|home|internal)$/.test(s)) return false;
+    return s.split('.').every(function (label) { return !/^(\d+|0x[0-9a-f]*)$/.test(label); });
   }
   function clean(cfg) {
     var c = cfg && typeof cfg === 'object' ? cfg : {};
