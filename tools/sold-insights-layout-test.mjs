@@ -50,7 +50,7 @@ try {
     };
   });
   assert.equal(desktop.stripDisplay, 'grid');
-  assert.equal(desktop.stripColumns, 4);
+  assert.equal(desktop.stripColumns, 3);
   assert.deepEqual(desktop.icon, [46, 46]);
   assert.deepEqual(desktop.svg, [22, 22]);
   assert.equal(desktop.pageWidth, 1440);

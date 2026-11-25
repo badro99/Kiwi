@@ -4,7 +4,15 @@
 (function () {
   'use strict';
 
-  var lang = function () { try { return (window.KiwiI18n && KiwiI18n.getLang && KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } };
+  /* Le tableau de bord donne sa langue par KiwiI18n. La caisse n'a pas ce
+     module : caisse-lang.js pose la langue choisie sur <html lang>, on la lit là.
+     Chaque phrase de cette page porte déjà son anglais et son arabe dans L(). */
+  var lang = function () {
+    try {
+      var l = (window.KiwiI18n && KiwiI18n.getLang && KiwiI18n.getLang()) || String(document.documentElement.getAttribute('lang') || '').slice(0, 2);
+      return l === 'en' || l === 'ar' ? l : 'fr';
+    } catch (_) { return 'fr'; }
+  };
   function L(fr, en, ar) { var l = lang(); return l === 'en' ? en : l === 'ar' ? ar : fr; }
   /* English / Arabic counted nouns (French stays inline where it was). */
   function enItems(n) { return n + (n === 1 ? ' item' : ' items'); }
@@ -155,11 +163,73 @@
     }).filter(function (l) { return l.name; }) : [];
     return { ts: ts, amount: Math.max(0, Number(raw && (raw.amount || raw.total)) || 0), ref: String(raw && (raw.ref || raw.id) || ''), lines: lines };
   }
+  /* ══════════ L'ARGENT : DANS LA CAISSE OU CHEZ LE LIVREUR ══════════════════
+   * Le chiffre « produits » additionnait le prix de tout ce qui était sorti du
+   * magasin. Une livraison payée à la réception y comptait plein pot alors que
+   * la caisse n'en avait pas encore vu un dirham : Santos, le 25 novembre,
+   * lisait 10 750 MAD pour 4 100 réellement encaissés et 6 050 chez le livreur.
+   * On sépare donc les deux, ticket par ticket :
+   *  · dans la caisse = ce qui a été payé au comptoir (espèces, carte, virement,
+   *    chèque ; ni l'avoir ni la part « livraison ») + ce que le livreur a
+   *    rapporté pendant la période (les ventes « Livraison reçue · … ») ;
+   *  · chez le livreur = la part « livraison » des tickets de la période, moins
+   *    ce qui en a déjà été rapporté.
+   * Un ticket connu du serveur ET du journal local compte une fois, avec les
+   * chiffres du serveur. Une vente annulée ne compte pas. */
+  var COURIER_M = /^(delivery|livraison)$/i, CREDIT_M = /^(avoir|credit|store-?credit)$/i;
+  function tsOf(raw) { return Number(raw && (raw.ts || raw.at)) || new Date(raw && raw.at || 0).getTime() || 0; }
+  function cts(v) { var n = Math.round(Number(v) * 100); return Number.isFinite(n) ? n : 0; }
+  function isCollection(raw) { return /^Livraison re[çc]ue/i.test(String(raw && raw.label || '')) && !COURIER_M.test(String(raw && raw.method || '')); }
+  function partsOf(raw) {
+    var list = Array.isArray(raw.paymentParts) ? raw.paymentParts : Array.isArray(raw.parts) ? raw.parts : null;
+    return list && list.map(function (p) {
+      return { m: String(p && (p.method || p.m) || ''), c: p && p.amountCents != null ? Math.round(Number(p.amountCents)) || 0 : cts(p && p.amount) };
+    });
+  }
+  function moneySplit(source, span) {
+    var inSpan = function (ts) { return ts >= span.from && ts < span.to; };
+    var rows = (source || []).filter(function (r) { return r && !r.voided; });
+    var out = { till:0, courier:0, counter:0, pending:0, deliveries:0, brought:0 };
+    var back = {}, seen = {}, tickets = {};
+    rows.forEach(function (r) {
+      if (!isCollection(r)) return;
+      var id = String(r.id || r.saleId || tsOf(r) + ':' + r.label);
+      if (seen[id]) return; seen[id] = 1;
+      var c = r.amountCents != null ? Math.round(Number(r.amountCents)) || 0 : cts(r.amount);
+      if (c <= 0) return;
+      var ref = String(r.ref || r.receiptRef || '');
+      if (ref) back[ref] = (back[ref] || 0) + c;
+      if (inSpan(tsOf(r))) { out.till += c; out.brought += c; }
+    });
+    function take(r) {
+      if (isCollection(r)) return;
+      var ref = String(r.ref || r.receiptRef || r.id || '');
+      if (!ref || tickets[ref]) return;
+      var parts = partsOf(r), owed = 0, cash = 0;
+      if (parts) parts.forEach(function (p) { if (COURIER_M.test(p.m)) owed += Math.max(0, p.c); else if (!CREDIT_M.test(p.m)) cash += p.c; });
+      if (r.amountCents != null) cash = Math.round(Number(r.amountCents)) || 0;
+      else if (!parts) cash = cts(r.amount != null ? r.amount : r.total);
+      if (cash < 0) return;                       /* un remboursement : cette page ne déduit pas les retours */
+      if (!owed && COURIER_M.test(String(r.method || '')) && Array.isArray(r.lines)) {
+        owed = r.lines.reduce(function (n, l) { return n + Math.max(0, cts(l && l.total)); }, 0);
+      }
+      tickets[ref] = 1;
+      if (!inSpan(tsOf(r))) return;
+      out.till += cash; if (cash > 0) out.counter++;
+      if (owed > 0) {
+        var left = Math.max(0, owed - (back[ref] || 0));
+        out.deliveries++; out.courier += left; if (left > 0) out.pending++;
+      }
+    }
+    rows.filter(function (r) { return r.amountCents != null; }).forEach(take);
+    rows.filter(function (r) { return r.amountCents == null; }).forEach(take);
+    return out;
+  }
   function analyze(source, period) {
     var cat = catalog();
     var span = bounds(period), days = span.days, from = span.from, to = span.to, previousFrom = span.previousFrom;
     var seen = {};
-    var all = (source || []).map(function (s) { return normalize(s, cat); }).filter(function (s) {
+    var all = (source || []).filter(function (s) { return s && !s.voided && !isCollection(s); }).map(function (s) { return normalize(s, cat); }).filter(function (s) {
       if (!s.ts || !s.lines.length) return false;
       var key = s.ref || [s.ts,s.amount,s.lines.map(function(l){return l.name+':'+l.qty;}).join('|')].join(':');
       if (seen[key]) return false; seen[key] = 1; return true;
@@ -202,7 +272,7 @@
     return {
       days: days, custom: span.custom, from: from, to: to, sales: sales.sort(function(a,b){return b.ts-a.ts;}), tickets: sales.length, units: units, revenue: revenue,
       products: prod, categories: Object.keys(categories).map(function(k){return categories[k];}).sort(function(a,b){return b.qty-a.qty;}),
-      pairs: pairRows, previousTickets: previous.length, catalogCount: cat.products.length,
+      pairs: pairRows, previousTickets: previous.length, catalogCount: cat.products.length, money: moneySplit(source, span),
     };
   }
   function ensureStyle() {
@@ -213,6 +283,8 @@
        primitives inside this component too, otherwise the figures collapse
        into plain text and the raw SVG expands across the whole caisse. */
     s.textContent += '.ksold .kx-kpi-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--n-200,#dedbd5);border:1px solid var(--n-200,#dedbd5);border-radius:18px;overflow:hidden;margin-bottom:18px;box-shadow:0 1px 2px rgba(10,15,13,.04),0 10px 26px -16px rgba(10,15,13,.1)}.ksold .kx-kpi{background:var(--surface,#fff);padding:15px 18px 16px;min-width:0}.ksold .kx-kpi .l{font:500 10px/1.3 var(--sans);letter-spacing:.075em;color:var(--n-500,#777);text-transform:uppercase}.ksold .kx-kpi .v{font:600 29px/1.02 var(--num,var(--sans));font-variant-numeric:tabular-nums;letter-spacing:-.032em;color:var(--ink,#111);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ksold .kx-kpi .v .u{font:500 12.5px/1.45 var(--sans);letter-spacing:0;color:var(--n-500,#777);margin-left:4px}.ksold .kx-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:54px 24px 56px;border:1px dashed var(--n-200,#dedbd5);border-radius:18px;background:var(--paper-soft,#f5f3ef)}.ksold .kx-empty .ico{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--surface,#fff);border:1px solid var(--n-200,#dedbd5);color:var(--atlas,#087a5b);margin-bottom:15px}.ksold .kx-empty .ico svg{display:block;width:22px;height:22px;fill:currentColor}.ksold .kx-empty h3{font:600 16.5px/1.3 var(--sans);letter-spacing:-.02em;color:var(--ink,#111);margin:0}.ksold .kx-empty p{font:400 13.5px/1.55 var(--sans);color:var(--n-500,#777);margin:8px 0 0;max-width:42ch}@media(max-width:760px){.ksold .kx-kpi-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:420px){.ksold .kx-kpi-strip{grid-template-columns:minmax(0,1fr)}}';
+    /* La bande argent. Vert plein : en main. Rayures qui défilent : sur la route. */
+    s.textContent += '.ksold .ksold-kpi3{grid-template-columns:repeat(3,minmax(0,1fr))}.ksold-money{border:1px solid var(--n-200,#dedbd5);background:var(--surface,#fff);border-radius:22px;padding:18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(10,15,13,.04),0 14px 34px -22px rgba(10,15,13,.18)}.ksold-money-top{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;margin:0 2px 14px}.ksold-money-top h2{margin:0;font:600 15px/1.2 var(--sans);letter-spacing:-.015em;color:var(--ink,#111)}.ksold-money-sum{display:flex;align-items:baseline;gap:7px;font:600 15px/1 var(--num,var(--sans));font-variant-numeric:tabular-nums;color:var(--n-500,#777)}.ksold-money-sum .t{color:var(--atlas,#0B6E4F)}.ksold-money-sum .c{color:var(--ink,#111)}.ksold-money-sum .op{font-weight:500;opacity:.7}.ksold-money-sum b{font-size:24px;letter-spacing:-.03em;color:var(--ink,#111)}.ksold-money-sum .u,.ksold-money .v .u{font:500 12px var(--sans);letter-spacing:0;opacity:.72;margin-left:4px}.ksold-money-bar{display:flex;gap:8px}.ksold-money-blk{position:relative;display:flex;gap:14px;align-items:flex-start;flex-basis:0;min-width:min(100%,250px);padding:16px 18px 17px;border-radius:18px;overflow:hidden}.ksold-money-blk.is-till{background:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0)}.ksold-money-blk.is-courier{color:var(--ink,#0A0F0D);background:linear-gradient(-45deg,color-mix(in srgb,var(--ink,#0A0F0D) 7%,transparent) 25%,transparent 25%,transparent 50%,color-mix(in srgb,var(--ink,#0A0F0D) 7%,transparent) 50%,color-mix(in srgb,var(--ink,#0A0F0D) 7%,transparent) 75%,transparent 75%) 0 0/30px 30px,var(--paper-soft,#efece6);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink,#0A0F0D) 16%,transparent);animation:ksoldRoad 2.4s linear infinite}.ksold-money-ico{flex:none;display:grid;place-items:center;width:52px;height:52px;border-radius:15px}.ksold-money-blk.is-till .ksold-money-ico{background:color-mix(in srgb,var(--paper,#F7F5F0) 16%,transparent)}.ksold-money-blk.is-courier .ksold-money-ico{background:var(--surface,#fff);box-shadow:0 1px 2px rgba(10,15,13,.08)}.ksold-money-ico svg{display:block;width:30px;height:30px;fill:currentColor}.ksold-money-blk.is-courier .ksold-money-ico svg{animation:ksoldRide 1.6s ease-in-out infinite}.ksold-money-txt{min-width:0}.ksold-money .k{font:600 14px/1.25 var(--sans)}.ksold-money .v{font:600 38px/1.04 var(--num,var(--sans));font-variant-numeric:tabular-nums;letter-spacing:-.035em;margin-top:6px;white-space:nowrap}.ksold-money .s{font:400 12.5px/1.45 var(--sans);opacity:.78;margin-top:5px}.ksold-money .s b{font-weight:600;font-variant-numeric:tabular-nums;opacity:1}.ksold-money.is-fresh .ksold-money-blk{animation:ksoldGrow .7s cubic-bezier(.34,1.45,.5,1) both}.ksold-money.is-fresh .ksold-money-blk.is-courier{animation:ksoldGrow .7s cubic-bezier(.34,1.45,.5,1) .14s both,ksoldRoad 2.4s linear .84s infinite}[dir=rtl] .ksold-money.is-fresh .ksold-money-blk{animation-name:ksoldGrowRtl}[dir=rtl] .ksold-money.is-fresh .ksold-money-blk.is-courier{animation-name:ksoldGrowRtl,ksoldRoad}@keyframes ksoldGrow{from{clip-path:inset(0 100% 0 0 round 18px)}to{clip-path:inset(0 0 0 0 round 18px)}}@keyframes ksoldGrowRtl{from{clip-path:inset(0 0 0 100% round 18px)}to{clip-path:inset(0 0 0 0 round 18px)}}@keyframes ksoldRoad{to{background-position:30px 0,0 0}}@keyframes ksoldRide{0%,100%{transform:translateX(-3px)}50%{transform:translateX(3px)}}@media(prefers-reduced-motion:reduce){.ksold-money .ksold-money-blk,.ksold-money .ksold-money-ico svg{animation:none!important}}@media(max-width:640px){.ksold-money-bar{flex-direction:column}.ksold-money-blk{flex:1 1 auto!important;min-width:0}.ksold-money .v{font-size:32px}}@media(max-width:420px){.ksold .ksold-kpi3{grid-template-columns:minmax(0,1fr)}}';
     document.head.appendChild(s);
   }
   function rangeLabel(range) {
@@ -295,8 +367,43 @@
     var ai = owner ? '<section class="ksold-card ksold-ai"><div class="ksold-ai-tag">✦ '+L('Kiwi AI · basé sur vos ventes','Kiwi AI · based on your sales','Kiwi AI · مبني على مبيعاتك')+'</div>'+recommendations(a).map(function(r){return '<div class="ksold-rec"><b>'+esc(r.title)+'</b><p>'+esc(r.text)+'</p></div>';}).join('')+'</section>' : '<section class="ksold-card"><h2>'+L('Produits vendus ensemble','Products sold together','منتجات بيعت معًا')+'</h2><div class="ksold-note">'+L('Associations constatées sur les tickets','Pairings seen on receipts','ارتباطات لوحظت في الإيصالات')+'</div>'+pairRows+'</section>';
     return '<section class="ksold-card"><h2>'+L('Produits','Products','المنتجات')+'</h2><div class="ksold-note">'+L('Quantité, chiffre et dernière vente','Quantity, revenue and last sale','الكمية والإيراد وآخر بيع')+'</div>'+productRows+'</section>'+ai+'<section class="ksold-card"><h2>'+L('Catégories','Categories','الفئات')+'</h2><div class="ksold-note">'+L('Contribution par rayon','Contribution by department','المساهمة حسب القسم')+'</div>'+catRows+'</section>'+(owner?'<section class="ksold-card"><h2>'+L('Produits vendus ensemble','Products sold together','منتجات بيعت معًا')+'</h2><div class="ksold-note">'+L('Paniers réellement observés','Baskets actually observed','السلال المرصودة فعليًا')+'</div>'+pairRows+'</section>':'')+'<section class="ksold-card ksold-full"><h2>'+L('Historique détaillé','Detailed history','السجل التفصيلي')+'</h2><div class="ksold-note">'+L('Quand et dans quel panier chaque produit a été vendu','When and in which basket each product was sold','متى وفي أي سلة بيع كل منتج')+'</div>'+timeline+'</section>';
   }
+  /* La bande « argent » : une barre, deux couleurs. Vert plein = l'argent que
+   * vous avez en main. Rayé, qui défile = l'argent encore sur la route avec le
+   * livreur. Dessous, les deux montants en grand et une phrase chacun. Icônes
+   * Material Symbols (point_of_sale, two_wheeler), copiées de assets/icons/material/. */
+  var ICON_TILL = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm0-80h400v-80H280v80ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Zm260-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Z"/></svg>';
+  var ICON_RIDE = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M160-200q-66 0-113-47T0-360q0-57 36.5-101t93.5-55l-28-24H0v-60h180l100 60 160-60h126l-62-80H400v-80h142l84 108 134-68v120h-92l70 92q15-6 30.5-9t31.5-3q66 0 113 47t47 113q0 66-47 113t-113 47q-66 0-113-47t-47-113q0-27 9.5-52.5T676-460l-20-24-136 204H400l-80-70q-5 63-51 106.5T160-200Zm0-80q33 0 56.5-23.5T240-360q0-33-23.5-56.5T160-440q-33 0-56.5 23.5T80-360q0 33 23.5 56.5T160-280Zm294-240-144 54 144-54h130-130Zm346 240q33 0 56.5-23.5T880-360q0-33-23.5-56.5T800-440q-33 0-56.5 23.5T720-360q0 33 23.5 56.5T800-280Zm-322-80 106-160H454l-144 54 120 106h48Z"/></svg>';
+  var lastMoney = '';
+  function moneyBand(a) {
+    var m = a.money; if (!m) return '';
+    var total = m.till + m.courier; if (total <= 0) return '';
+    var key = [a.from, m.till, m.courier].join(':'), fresh = key !== lastMoney; lastMoney = key;
+    var mad = function (c) { return fmt(c / 100); };
+    var n = m.counter, d = m.pending;
+    var tillNote = n ? L(n + ' vente' + (n > 1 ? 's' : '') + ' payée' + (n > 1 ? 's' : '') + ' au comptoir', n + (n > 1 ? ' sales' : ' sale') + ' paid at the counter', 'عدد البيوع المدفوعة في المحل: ' + n) : '';
+    var courierNote = d
+      ? L(d + ' livraison' + (d > 1 ? 's' : '') + ' pas encore payée' + (d > 1 ? 's' : ''), d + (d > 1 ? ' deliveries' : ' delivery') + ' not paid yet', 'طلبات توصيل لم تُدفع بعد: ' + d)
+      : L('Toutes les livraisons sont payées.', 'All deliveries are paid.', 'كل طلبات التوصيل مدفوعة.');
+    var block = function (cls, icon, title, cents, notes) {
+      return '<div class="ksold-money-blk ' + cls + '" style="flex-grow:' + Math.max(1, cents) + '">'
+        + '<span class="ksold-money-ico">' + icon + '</span><div class="ksold-money-txt">'
+        + '<div class="k">' + esc(title) + '</div><div class="v">' + mad(cents) + '<span class="u">MAD</span></div>'
+        + notes.filter(Boolean).map(function (x) { return '<div class="s">' + x + '</div>'; }).join('') + '</div></div>';
+    };
+    var sum = m.till > 0 && m.courier > 0
+      ? '<span class="t">' + mad(m.till) + '</span><span class="op">+</span><span class="c">' + mad(m.courier) + '</span><span class="op">=</span><b>' + mad(total) + '</b><span class="u">MAD</span>'
+      : '<b>' + mad(total) + '</b><span class="u">MAD</span>';
+    var today = !a.custom && a.days === 1;
+    var aria = L(mad(m.till) + ' MAD dans la caisse, ' + mad(m.courier) + ' MAD chez le livreur', mad(m.till) + ' MAD in the till, ' + mad(m.courier) + ' MAD with the courier', mad(m.till) + ' درهم في الصندوق، ' + mad(m.courier) + ' درهم عند عامل التوصيل');
+    return '<section class="ksold-money' + (fresh ? ' is-fresh' : '') + '">'
+      + '<div class="ksold-money-top"><h2>' + (today ? L('L’argent du jour', 'Today’s money', 'أموال اليوم') : L('L’argent de la période', 'Money for the period', 'أموال الفترة')) + '</h2><div class="ksold-money-sum">' + sum + '</div></div>'
+      + '<div class="ksold-money-bar" role="group" aria-label="' + esc(aria) + '">'
+      + block('is-till', ICON_TILL, L('Dans la caisse', 'In the till', 'في الصندوق'), m.till, [esc(tillNote), m.brought ? '<span>' + esc(L('Rapporté par le livreur', 'Brought back by the courier', 'أعاده عامل التوصيل')) + '</span> <b>' + mad(m.brought) + ' MAD</b>' : ''])
+      + (m.deliveries ? block('is-courier', ICON_RIDE, L('Chez le livreur', 'With the courier', 'عند عامل التوصيل'), m.courier, [esc(courierNote), d ? esc(L('Le livreur vous donne cet argent plus tard.', 'The courier gives you this money later.', 'يسلّمك عامل التوصيل هذا المال لاحقًا.')) : '']) : '')
+      + '</div></section>';
+  }
   function shell(a, owner, loading) {
-    return '<div class="ksold"><div class="ksold-head"><div>'+(owner?'':'<h1>'+L('Vendus','Sold','المباع')+'</h1>')+'<div class="ksold-sub">'+(owner?L('Période analysée','Period analysed','الفترة المحلَّلة'):L('Stock vendu, catégories et détail des tickets','Stock sold, categories and receipt details','المخزون المباع والفئات وتفاصيل الإيصالات'))+(loading?L(' · synchronisation…',' · syncing…',' · جارٍ المزامنة…'):'')+'</div></div><div class="ksold-days">'+dayControls(a.days,!owner,a.custom)+'</div></div>'+pickerMarkup(!owner)+'<div class="kx-kpi-strip"><div class="kx-kpi"><div class="l">'+L('Pièces vendues','Items sold','القطع المباعة')+'</div><div class="v">'+a.units+'</div></div><div class="kx-kpi"><div class="l">'+L('Produits actifs','Active products','المنتجات النشطة')+'</div><div class="v">'+a.products.length+'</div></div><div class="kx-kpi"><div class="l">'+L('Tickets analysés','Receipts analysed','الإيصالات المحلَّلة')+'</div><div class="v">'+a.tickets+'</div></div><div class="kx-kpi"><div class="l">'+L('Chiffre produits','Product revenue','إيراد المنتجات')+'</div><div class="v">'+fmt(a.revenue)+'<span class="u">MAD</span></div></div></div><div class="ksold-grid">'+body(a,owner)+'</div></div>';
+    return '<div class="ksold"><div class="ksold-head"><div>'+(owner?'':'<h1>'+L('Vendus','Sold','المباع')+'</h1>')+'<div class="ksold-sub">'+(owner?L('Période analysée','Period analysed','الفترة المحلَّلة'):L('Stock vendu, catégories et détail des tickets','Stock sold, categories and receipt details','المخزون المباع والفئات وتفاصيل الإيصالات'))+(loading?L(' · synchronisation…',' · syncing…',' · جارٍ المزامنة…'):'')+'</div></div><div class="ksold-days">'+dayControls(a.days,!owner,a.custom)+'</div></div>'+pickerMarkup(!owner)+(a.sales.length?moneyBand(a):'')+'<div class="kx-kpi-strip ksold-kpi3"><div class="kx-kpi"><div class="l">'+L('Pièces vendues','Items sold','القطع المباعة')+'</div><div class="v">'+a.units+'</div></div><div class="kx-kpi"><div class="l">'+L('Produits actifs','Active products','المنتجات النشطة')+'</div><div class="v">'+a.products.length+'</div></div><div class="kx-kpi"><div class="l">'+L('Tickets analysés','Receipts analysed','الإيصالات المحلَّلة')+'</div><div class="v">'+a.tickets+'</div></div></div><div class="ksold-grid">'+body(a,owner)+'</div></div>';
   }
   function localTill() {
     try {
@@ -362,6 +469,13 @@
       else if (document.querySelector('.ksold') && !document.querySelector('[data-bq-panel="vendus"].is-on')) renderDashboard();
     } catch (_) {}
   });
+  /* La caisse change de langue sans événement : elle réécrit <html lang>. On
+     redessine alors le panneau Vendus, sinon ses phrases restent dans l'ancienne. */
+  try {
+    if (typeof MutationObserver === 'function') new MutationObserver(function () {
+      if (tillPanel && document.contains(tillPanel) && tillPanel.querySelector('.ksold')) renderTillNoFetch(tillPanel);
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  } catch (_) {}
   window.KiwiSoldInsights = { analyze: analyze, renderTill: renderTill, renderDashboard: renderDashboard };
   window.addEventListener('load',function(){ installDashboard(); if(window.KiwiVenue&&KiwiVenue.subscribe)KiwiVenue.subscribe(installDashboard); if(window.KiwiSales&&KiwiSales.subscribe)KiwiSales.subscribe(function(){if(document.querySelector('.ksold')&&!document.querySelector('[data-bq-panel="vendus"].is-on'))renderDashboard();}); });
 })();

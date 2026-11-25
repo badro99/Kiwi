@@ -2104,7 +2104,7 @@ section('Whole-project regressions');
     'agent-mcp-remote-test.mjs',
     'kiwi-ui-qa-mcp-test.mjs',
     'sold-insights-test.js',
-    'sold-insights-layout-test.mjs',
+    'sold-insights-layout-test.mjs', 'sold-money-split-test.mjs',
     'table-refresh-test.js',
     'table-transfer-merge-test.mjs',
     'kitchen-void-protocol-test.mjs',
