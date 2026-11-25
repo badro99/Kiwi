@@ -319,6 +319,10 @@
     "v": "1",
     "sha": "ad9f4d5ffc04a3f7"
   },
+  "assets/caisse/cash-refund.js": {
+    "v": "1",
+    "sha": "f5fbe497fc9bc13c"
+  },
   "assets/caisse/catalogue.js": {
     "v": "28",
     "sha": "43d190c0756acb59"
@@ -352,8 +356,8 @@
     "sha": "39d6c322496451f2"
   },
   "assets/caisse/offline.js": {
-    "v": "10",
-    "sha": "16a0994413066cec"
+    "v": "11",
+    "sha": "4cb09c9193263841"
   },
   "assets/caisse/orders.js": {
     "v": "2",
