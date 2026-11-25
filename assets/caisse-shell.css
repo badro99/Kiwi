@@ -1957,7 +1957,7 @@
       font-size: 14px; font-weight: 600;
       transition: opacity 150ms ease, transform 150ms ease;
     }
-    .mlibre-add[disabled] { opacity: .35; cursor: not-allowed; }
+    .mlibre-add[disabled] { opacity: .35; cursor: not-allowed; } .mlibre-note { width: 100%; margin-top: 10px; height: 44px; padding: 0 12px; border-radius: var(--r-lg); border: 1px solid var(--line, rgba(10,15,13,.14)); background: var(--paper); color: var(--ink); font: inherit; font-size: 14px; }
     .mlibre-add:not([disabled]):hover { transform: translateY(-1px); }
     #pay-card.pay-icon { background: var(--ink); }
     /* Nuit : --ink devient clair et le blanc fixe de .pay-icon y tombait à

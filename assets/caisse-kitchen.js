@@ -38,7 +38,7 @@
           paperNote: parent ? [formulaTag, kitchenNote(l)].filter(Boolean).join(' · ') : kitchenNote(l),
           visuals: ownVisuals, kind: l.kind || '',
           formulaUid: l.formulaUid || '', formulaName: l.formulaName || '', slotLabel: l.slotLabel || '',
-          stations: [(l.station && kdsStations().some(s => s.id === l.station)) ? l.station : kdsStationFor(m)],
+          stations: l.id === 'libre' ? kdsStations().map(s => s.id) : [(l.station && kdsStations().some(s => s.id === l.station)) ? l.station : kdsStationFor(m)], // article libre : chaque poste (Browse, 25 nov. 2026)
         };
       });
     }
@@ -146,7 +146,7 @@
          allocation before freezing the paper document, otherwise the caisse
          can show local #64 while the server echo (and later reprints) use #3. */
       order.canonicalNumberPromise = relayToKitchen(order);
-      order.canonicalNumberPromise.then(() => printKitchenTickets(order, items), () => printKitchenTickets(order, items));   /* un numéro qui échoue n'efface pas le bon */
+      order.canonicalNumberPromise.then(() => printKitchenTickets(order, items));
       try { persistShift(); } catch (_) {}
       return order;
     }
@@ -1384,7 +1384,7 @@
          fire-and-forget call let local sequence #25 reach accounting while the
          same order became permanent #86 moments later. */
       order.canonicalNumberPromise = relayToKitchen(order);
-      order.canonicalNumberPromise.then(() => printKitchenTickets(order, items), () => printKitchenTickets(order, items));   /* un numéro qui échoue n'efface pas le bon */
+      order.canonicalNumberPromise.then(() => printKitchenTickets(order, items));
       try { persistShift(); } catch (_) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Journal caisse non enregistré · stockage local à vérifier, gardez cette page ouverte'), 6500); }
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
@@ -1697,7 +1697,7 @@
         return { q: c.qty, n: c.name, p: c.price, note: (c.note || '').trim(),
           kind: (orig && orig.kind) || c.kind || '', formulaUid: (orig && orig.formulaUid) || c.formulaUid || '',
           formulaChoices: Array.isArray(c.formulaChoices) ? c.formulaChoices.map(choice => ({ ...choice })) : [],
-          stations: orig ? orig.stations : [kdsStationFor(m)] };
+          stations: orig ? orig.stations : c.id === 'libre' ? kdsStations().map(s => s.id) : [kdsStationFor(m)] }; // article libre : chaque poste
       });
     }
 

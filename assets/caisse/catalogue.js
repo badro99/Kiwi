@@ -1017,19 +1017,19 @@
 
     /* Slice B · « Montant libre » : une ligne à prix ouvert ringée dans
        l'addition (vente rapide) ou sur la table en cours (prise de commande). */
-    function addOpenLine(amount) {
-      const amt = money(amount);
-      if (!(amt > 0)) return;
+    function addOpenLine(amount, comment) {
+      const amt = money(amount), note = String(comment || '').trim();
+      if (!(amt > 0) || !note) return;
       nativeHapticLight();
       if (mode === 'order' && selectedId) {
         currentOrder().append((currentOrder().replaceTable(selectedId, tableOrders[selectedId] || [])), {
-          uid: newLineUid(), id: 'libre', name: 'Article libre', price: amt, qty: 1, note: ''
+          uid: newLineUid(), id: 'libre', name: 'Article libre', price: amt, qty: 1, note
         });
         startTableTimer(selectedId);
         renderOrderPanel(selectedId);
       } else {
         currentOrder().append(cart, { uid: newLineUid(), id: 'libre', name: 'Article libre', price: amt,
-                    qty: 1, note: '', opts: [], optSig: '' });
+                    qty: 1, note, opts: [], optSig: '' });
         renderCart();
       }
       toast('Article libre · ' + fmtMAD(amt));

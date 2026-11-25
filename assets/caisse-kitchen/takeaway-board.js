@@ -248,7 +248,7 @@
         return { q: c.qty, n: c.name, p: c.price, note: (c.note || '').trim(),
           kind: (orig && orig.kind) || c.kind || '', formulaUid: (orig && orig.formulaUid) || c.formulaUid || '',
           formulaChoices: Array.isArray(c.formulaChoices) ? c.formulaChoices.map(choice => ({ ...choice })) : [],
-          stations: orig ? orig.stations : [kdsStationFor(m)] };
+          stations: orig ? orig.stations : c.id === 'libre' ? kdsStations().map(s => s.id) : [kdsStationFor(m)] }; // article libre : chaque poste
       });
     }
 

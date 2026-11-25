@@ -660,13 +660,16 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
       const mlPad = $('#mlibre-pad');
       const mlDisplay = $('#mlibre-display');
       const mlAdd = $('#mlibre-add');
+      const mlNote = $('#mlibre-note');
       if (!mlToggle || !mlPad) return;
       let buf = '';
       const val = () => parseFloat(buf.replace(',', '.')) || 0;
+      const note = () => (mlNote ? mlNote.value.trim() : '');
       function paint() {
         mlDisplay.textContent = buf ? buf.replace('.', ',') : '0';
-        mlAdd.disabled = !(val() > 0);
+        mlAdd.disabled = !(val() > 0 && note());
       }
+      if (mlNote) mlNote.addEventListener('input', paint);
       mlToggle.addEventListener('click', () => {
         const open = mlPad.hidden;
         mlPad.hidden = !open;
@@ -682,7 +685,7 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
         else if (buf.replace('.', '').length < 6) buf += k;
         paint();
       });
-      mlAdd.addEventListener('click', () => { addOpenLine(val()); buf = ''; paint(); });
+      mlAdd.addEventListener('click', () => { addOpenLine(val(), note()); buf = ''; if (mlNote) mlNote.value = ''; paint(); });
       paint();
     })();/* ── kiwiSkin2027:till · le menu et l'addition sur le kit ──────────────────
        (assets/kit/till-frame.js, étape 4 (1)). Drapeau éteint, le kit n'est pas

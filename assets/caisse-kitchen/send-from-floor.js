@@ -38,7 +38,7 @@
           paperNote: parent ? [formulaTag, kitchenNote(l)].filter(Boolean).join(' · ') : kitchenNote(l),
           visuals: ownVisuals, kind: l.kind || '',
           formulaUid: l.formulaUid || '', formulaName: l.formulaName || '', slotLabel: l.slotLabel || '',
-          stations: [(l.station && kdsStations().some(s => s.id === l.station)) ? l.station : kdsStationFor(m)],
+          stations: l.id === 'libre' ? kdsStations().map(s => s.id) : [(l.station && kdsStations().some(s => s.id === l.station)) ? l.station : kdsStationFor(m)], // article libre : chaque poste (Browse, 25 nov. 2026)
         };
       });
     }

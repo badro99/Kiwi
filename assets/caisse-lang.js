@@ -469,7 +469,7 @@
       'Prévenir le client que la commande est prête': 'Tell the customer the order is ready',
       'En attente de paiement': 'Awaiting payment', 'Reprendre le split': 'Resume the split', 'Partiel': 'Partial', 'reste {x}': '{x} left',
       // Caisse tablette : rail de gauche, en-tête du constructeur, statistiques du service.
-      '· vente au comptoir': '· counter sale', 'Commandes à emporter': 'Takeaway orders', 'Montant libre': 'Custom amount',
+      '· vente au comptoir': '· counter sale', 'Commandes à emporter': 'Takeaway orders', 'Montant libre': 'Custom amount', "Commentaire (obligatoire) : ce que c'est": 'Comment (required): what it is', "Commentaire de l'article libre (obligatoire)": 'Custom item comment (required)',
       'Salle': 'Floor', 'Attente': 'Waiting', 'Service depuis {x}': 'On shift since {x}',
       'catégorie': 'category', 'catégories': 'categories', 'Carte {n}%': 'Card {n}%',
       'Note cuisine, ex. bien chaud, sans oignon': 'Kitchen note, e.g. extra hot, no onion',
@@ -1130,7 +1130,7 @@
       'Retirer du suivi': 'إزالة من المتابعة', 'Remettre au client': 'تسليم إلى الزبون', 'Marquer prêt': 'وضع علامة جاهز',
       'Prévenir le client que la commande est prête': 'إخبار الزبون بأن الطلب جاهز',
       'En attente de paiement': 'في انتظار الدفع', 'Reprendre le split': 'استئناف التقسيم', 'Partiel': 'جزئي', 'reste {x}': 'المتبقي {x}',
-      '· vente au comptoir': '· بيع على الصندوق', 'Commandes à emporter': 'طلبات للأخذ', 'Montant libre': 'مبلغ حر',
+      '· vente au comptoir': '· بيع على الصندوق', 'Commandes à emporter': 'طلبات للأخذ', 'Montant libre': 'مبلغ حر', "Commentaire (obligatoire) : ce que c'est": 'تعليق (إلزامي): ما هو هذا', "Commentaire de l'article libre (obligatoire)": 'تعليق على المنتج الحر (إلزامي)',
       'Salle': 'القاعة', 'Attente': 'الانتظار', 'Service depuis {x}': 'في الخدمة منذ {x}',
       'catégorie': 'فئة', 'catégories': 'فئات', 'Carte {n}%': 'بطاقة {n}%',
       'Note cuisine, ex. bien chaud, sans oignon': 'ملاحظة للمطبخ، مثلاً ساخن جداً، بدون بصل',
