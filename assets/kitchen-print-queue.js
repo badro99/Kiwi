@@ -967,12 +967,13 @@
   setInterval(pollUnprinted, UNPRINTED_EVERY_MS);
   /* Après un rechargement, l'alerte revient sans attendre trois minutes. */
   try { var bootPoll = setTimeout(pollUnprinted, 8000); if (bootPoll && bootPoll.unref) bootPoll.unref(); } catch (_) {}
-  /* Les imprimantes du relais sont testées à l'ouverture puis toutes les 30 min (assets/printer-health.js,
+  /* Les imprimantes du relais sont testées à l'ouverture puis toutes les 30 min, chaque minute chez Browse (assets/printer-health.js,
      Browse, 25 nov. 2026) : chargé ici pour ne pas prendre de place de plus dans la page de la caisse. */
   try {
     var healthBoot = setTimeout(function () {
-      if (document.getElementById('printer-health-script') || !document.getElementById('toast-stack')) return;
-      var s = document.createElement('script'); s.id = 'printer-health-script'; s.src = '/assets/printer-health.js?v=1'; s.defer = true; document.head.appendChild(s);
+      var host = document.head || document.body;
+      if (!host || document.getElementById('printer-health-script') || !document.getElementById('toast-stack')) return;
+      var s = document.createElement('script'); s.id = 'printer-health-script'; s.src = '/assets/printer-health.js?v=2'; s.defer = true; host.appendChild(s);
     }, 12000);
     if (healthBoot && healthBoot.unref) healthBoot.unref();
   } catch (_) {}

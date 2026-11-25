@@ -117,9 +117,9 @@ function fakeEl(onRemove) {
     },
     remove() { if (onRemove) onRemove(this); } };
 }
-function till2({ verdicts, depositAnswer }) {
+function till2({ verdicts, depositAnswer, merchant = 'amira-cafe' }) {
   let clock = 1_800_000_000_000, seq = 0;
-  const timers = [], posts = [], nodes = new Map(), jobs = new Map();
+  const timers = [], posts = [], nodes = new Map(), jobs = new Map(), intervals = [];
   const stack = { appendChild(el) { nodes.set(el.id, el); } };
   const document = { hidden: false, body: stack, addEventListener() {}, getElementById: (id) => (id === 'toast-stack' ? stack : nodes.get(id)), createElement: () => fakeEl((el) => nodes.delete(el.id)) };
   const fetch = async (url, init) => {
@@ -139,7 +139,7 @@ function till2({ verdicts, depositAnswer }) {
   };
   const window = {
     KiwiCaisseLang: { tr: (s) => s },
-    KiwiKitchenRelay: { merchant: () => 'browse' },
+    KiwiKitchenRelay: { merchant: () => merchant },
     KiwiPrinter: {
       getStationConfig: () => ({ profiles: [{ id: 'a', name: 'Suivi', ip: '192.168.11.87', port: 9100 }, { id: 'b', name: 'Bar', ip: '192.168.11.100' }] }),
       getConfig: () => ({ ip: '192.168.11.199', port: 9100 }),
@@ -149,7 +149,7 @@ function till2({ verdicts, depositAnswer }) {
     window, document, fetch, Promise, JSON, String, Number, Math, Infinity, encodeURIComponent, Object,
     Date: { now: () => clock },
     setTimeout: (fn, ms) => { timers.push({ due: clock + ms, fn }); return timers.length; },
-    setInterval: () => 0,
+    setInterval: (fn, ms) => { intervals.push(ms); return 0; },
   });
   vm.runInContext(read('assets/printer-health.js'), context);
   async function advance(ms) {
@@ -162,7 +162,7 @@ function till2({ verdicts, depositAnswer }) {
     }
     await settle();
   }
-  return { window, posts, nodes, advance };
+  return { window, posts, nodes, advance, intervals };
 }
 
 {
@@ -227,7 +227,35 @@ function till2({ verdicts, depositAnswer }) {
   await t.advance(30000);
   assert.equal(t.nodes.has('caisse-printer-health'), false, 'a bridge refusing an unknown target says nothing about the printer');
 }
+{
+  /* Browse, 25 nov. 2026 : its printers fall asleep between tickets. The owner
+   * asked not to save requests for this shop: every printer is probed (so woken)
+   * every minute, and one that stays silent is rechecked every minute. */
+  const t = till2({ verdicts: { '192.168.11.87': ['failed', 'failed', 'done'] }, merchant: 'browse' });
+  assert.ok(t.intervals.length && t.intervals.every((ms) => ms <= 60000), 'the till looks at its printers at least once a minute');
+  await settle();
+  assert.equal(t.posts.length, 3);
+  await t.advance(30000);
+  assert.ok(t.nodes.has('caisse-printer-health'));
+  const before = t.posts.length;
+  await t.advance(60000);
+  t.window.KiwiPrinterHealth.tick();
+  await settle();
+  const fresh = t.posts.slice(before);
+  assert.equal(fresh.length, 3, 'a minute later all three printers are probed again, the silent one included');
+  assert.ok(fresh.every((p) => p.kind === 'probe' && /^[A-Za-z0-9_:.-]{8,80}$/.test(p.clientRef)));
+  assert.equal(t.nodes.has('caisse-printer-health'), false, 'the kitchen printer answered this time: the alert leaves');
+}
+{
+  /* Another shop keeps the quiet rhythm: nothing new within the half hour. */
+  const t = till2({ verdicts: {}, merchant: 'amira-cafe' });
+  await settle();
+  await t.advance(60000);
+  t.window.KiwiPrinterHealth.tick();
+  await settle();
+  assert.equal(t.posts.length, 3, 'thirty minutes between checks for everyone else');
+}
 const kq = read('assets/kitchen-print-queue.js');
 assert.match(kq, /\/assets\/printer-health\.js\?v=\d+/, 'the till loads the check without a new script slot');
 assert.match(read('kiwi-sw.js'), /\/assets\/printer-health\.js\?v=\d+/, 'and it is precached for offline starts');
-console.log('✓ till: an unreachable printer is named after two failures, a waking printer or a missing bridge says nothing, the alert clears itself');
+console.log('✓ till: an unreachable printer is named after two failures, a waking printer or a missing bridge says nothing, the alert clears itself; Browse is probed every minute');

@@ -4,7 +4,8 @@
  * premier bon après une longue pause (3 h la veille, toute la nuit ce matin). Le
  * bon de 12:21 a expiré sans sortir et personne ne l'a su avant la réclamation.
  *
- * À l'ouverture de la caisse, puis toutes les 30 min tant qu'elle est à l'écran,
+ * À l'ouverture de la caisse, puis toutes les 30 min tant qu'elle est à l'écran
+ * (toutes les minutes chez Browse, voir AWAKE),
  * chaque imprimante réseau des réglages reçoit un « probe » par le relais : le pont
  * ouvre vraiment la connexion et n'écrit que ESC @, qui n'imprime rien. Une
  * imprimante qui dort peut rater la première connexion, donc un échec est revérifié
@@ -18,6 +19,13 @@
   'use strict';
   if (window.KiwiPrinterHealth) return;
   var EVERY_MS = 30 * 60000, RECHECK_MS = 2 * 60000, CONFIRM_MS = 30000, WATCH_MS = 75000, POLL_MS = 2500, SNOOZE_MS = 30 * 60000;
+  /* Browse, 25 nov. 2026 : ses imprimantes s'endorment entre deux bons. Le
+   * patron demande de ne pas économiser les requêtes pour ce commerce : chaque
+   * imprimante y reçoit un probe (qui la réveille) toutes les minutes, et une
+   * imprimante muette y est revérifiée toutes les minutes. */
+  var AWAKE = { browse: 60000 };
+  function every() { return AWAKE[merchant()] || EVERY_MS; }
+  function recheck() { return AWAKE[merchant()] || RECHECK_MS; }
   var printers = {}, snoozedUntil = 0, manual = false;
 
   function tr(text) { return window.KiwiCaisseLang && window.KiwiCaisseLang.tr ? window.KiwiCaisseLang.tr(text) : text; }
@@ -86,7 +94,7 @@
     var st = printers[t.key] || (printers[t.key] = { down: false, checking: false, at: 0 });
     if (st.checking) return Promise.resolve(st.down);
     st.checking = true; st.at = Date.now(); paint();
-    var slot = what === 'manual' ? String(Date.now()) : String(Math.floor(Date.now() / (what === 'scheduled' ? EVERY_MS : what === 'confirm' ? CONFIRM_MS : RECHECK_MS)));
+    var slot = what === 'manual' ? String(Date.now()) : String(Math.floor(Date.now() / (what === 'scheduled' ? every() : what === 'confirm' ? CONFIRM_MS : recheck())));
     return probe(t, ref(t, what, slot)).then(function (verdict) {
       if (verdict === 'up') { st.checking = false; st.down = false; paint(); return false; }
       if (verdict !== 'down' || st.down || what === 'confirm' || what === 'manual') {
@@ -105,8 +113,8 @@
     if (hidden()) return;
     targets().forEach(function (t) {
       var st = printers[t.key], age = st ? Date.now() - st.at : Infinity;
-      if (st && st.down) { if (age >= RECHECK_MS) check(t, 'recheck'); }
-      else if (age >= EVERY_MS) check(t, 'scheduled');
+      if (st && st.down) { if (age >= recheck()) check(t, 'recheck'); }
+      else if (age >= every()) check(t, 'scheduled');
     });
   }
 
@@ -154,7 +162,7 @@
 
   if (window.KiwiCaisseLang && window.KiwiCaisseLang.subscribe) window.KiwiCaisseLang.subscribe(paint);
   try { document.addEventListener('visibilitychange', function () { if (!hidden()) tick(); }); } catch (_) {}
-  var every = setInterval(tick, RECHECK_MS); if (every && every.unref) every.unref();
+  var ticker = setInterval(tick, 60000); if (ticker && ticker.unref) ticker.unref();
   tick();
   window.KiwiPrinterHealth = { check: check, tick: tick, targets: targets, state: function () { return printers; } };
 })();
