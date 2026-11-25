@@ -478,6 +478,18 @@ let saleApproval, lineApproval;
   await call(ownerCookie, { action: 'settings', settings: { cashOut: false, cancel: true, managerFallback: true, minCents: 0 } });
   const fallback = await queue(tillCookie, { id: 'ord-mmm003', status: 'rejected', actorProof: managerProof });
   ok('M9 avec repli, le code d\'un responsable annule le bon comme avant', fallback.status === 200 && fallback.body.ok, JSON.stringify(fallback));
+  await call(ownerCookie, { action: 'settings', settings: { cashOut: false, cancel: true, managerFallback: false, minCents: 0 } });
+  /* La cuisine accepte le bon entre la lecture (encore « pending », donc libre) et l'écriture (revue de sécurité). */
+  order('ord-mmm004', 44, 'pending');
+  const racing = { ...env, DB: { ...DB, prepare(sql) {
+    const st = DB.prepare(sql);
+    if (!/SELECT id, status, number, table_no, session_id, lines, paid_ts/.test(sql)) return st;
+    const first = st.first;
+    return { ...st, bind(...v) { st.bind(...v); return this; }, async first() { const row = await first(); sqlite.prepare("UPDATE orders SET status = 'accepted' WHERE id = 'ord-mmm004'").run(); return row; } };
+  } } };
+  const raced = await QUEUE.onRequestPost({ request: req('/api/order/queue', tillCookie, { merchant: SHOP, id: 'ord-mmm004', status: 'rejected' }), env: racing, waitUntil() {} });
+  ok('M9b un bon accepté entre la lecture et l\'écriture n\'est pas annulé sans le patron', raced.status === 409
+    && sqlite.prepare("SELECT status FROM orders WHERE id = 'ord-mmm004'").get().status === 'accepted', String(raced.status));
   await call(ownerCookie, { action: 'settings', settings: { cashOut: false, cancel: false, managerFallback: false, minCents: 0 } });
   const askSrc = fs.readFileSync(path.join(ROOT, 'assets/owner-ask.js'), 'utf8');
   ok('M10 le module de la caisse renvoie un bon entier avec l\'accord à la racine du corps', askSrc.includes("body.status === 'rejected' && body.id") && askSrc.includes('body.ownerApproval = answer.id'));

@@ -165,8 +165,8 @@ export async function advanceOrder(ctx, id, status) {
       const update = statement(env,
         `UPDATE orders SET status = 'rejected', updated_ts = ?,
             cancel_actor_id = ?, cancel_actor_name = ?, cancel_ts = ?
-          WHERE id = ? AND merchant = ? AND status IN (${marks}) AND paid_ts IS NULL`,
-        now, pinActor?.id || employee?.member?.id || '', actor, now, id, merchant, ...from);
+          WHERE id = ? AND merchant = ? AND status = ? AND paid_ts IS NULL`,
+        now, pinActor?.id || employee?.member?.id || '', actor, now, id, merchant, current.status);   // l'état lu et jugé (règle du patron), pas un autre entre-temps
       const batch = await atomicStatements(env, [update, ...voidStatements]);
       const changed = Number(batch && batch[0] && batch[0].meta && batch[0].meta.changes) || 0;
       if (!changed) return json({ error: 'concurrent-update', retry: true }, 409);
