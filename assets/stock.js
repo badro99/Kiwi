@@ -674,7 +674,19 @@
     const filtered = base
       .filter(s => !stDeletedSups.has(s.id))
       .map(s => (stSupOverrides[s.id] ? { ...s, ...stSupOverrides[s.id] } : s));
-    return [...filtered, ...stUserSuppliers.filter(s => !stDeletedSups.has(s.id))];
+    const own = [...filtered, ...stUserSuppliers.filter(s => !stDeletedSups.has(s.id))];
+    /* A restaurant also enters suppliers in Approvisionnement; offer them
+       here too, once, so nobody types them twice (Jon's Burgers, 25 Nov). */
+    const key = (n) => String(n || '').trim().toLowerCase();
+    const seen = new Set(own.map((s) => key(s.name)));
+    const fromProcurement = (retailProcurementDoc().suppliers || [])
+      .filter((s) => s && s.active !== false && key(s.name) && !seen.has(key(s.name)) && !stDeletedSups.has(s.id) && seen.add(key(s.name)))
+      .map((s) => ({
+        id: s.id, name: s.name, location: s.address || '', category: s.categories || '',
+        contact: s.phone || '', deliverySchedule: (+s.leadDays || 0) ? `${+s.leadDays} j` : '·',
+        paymentTerms: s.paymentTerms || '·', rating: null, monthlySpend: 0, priceChangeLast30d: 0, procurement: true,
+      }));
+    return [...own, ...fromProcurement];
   }
   function allCategories() {
     const C = retailCatalog();

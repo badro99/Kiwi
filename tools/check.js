@@ -2557,7 +2557,7 @@ section('Whole-project regressions');
     'tickets-draft-test.mjs',
     'recipe-refund-feed-test.mjs',
     'retail-scan-test.mjs',
-    'retail-stock-source-test.mjs',
+    'retail-stock-source-test.mjs', 'restaurant-stock-suppliers-test.mjs',
     'service-requests-ui-test.mjs',
     'subscription-privacy-test.mjs',
     'takeout-confirmation-test.js',

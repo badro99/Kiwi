@@ -92,9 +92,13 @@ for (const tab of ['menu','recipes','nutrition','stations','alerts','nfc']) {
   for (const r of [before, after]) r.window.Kiwi.handlers['rmw-tab']({dataset:{tab}});
   assert.equal(after.root.innerHTML, before.root.innerHTML, tab + ' : HTML identique');
 }
+// Changement voulu depuis la découpe (25 nov., Jon's Burgers) : le choix vide
+// d'unité ne s'appelle plus « Unité », le nom d'une vraie unité.
+const intended = (html) => html.replace('<option value="">Unité</option>', '<option value="">Choisir…</option>');
 for (const name of ['recipeUnitOptions', 'recipeIngredientRow']) {
-  assert.equal(after.window.__menuProof[name]({name:'Poulet',qty:2,unit:'g'}), before.window.__menuProof[name]({name:'Poulet',qty:2,unit:'g'}), name);
+  assert.equal(after.window.__menuProof[name]({name:'Poulet',qty:2,unit:'g'}), intended(before.window.__menuProof[name]({name:'Poulet',qty:2,unit:'g'})), name);
 }
+assert.ok(after.window.__menuProof.recipeUnitOptions('g').includes('<option value="">Choisir…</option>'), 'le choix vide demande de choisir');
 for (const r of [before,after]) r.window.KiwiCost = {marginOf:()=>({pct:60,profit:12})};
 const api = {metrics:()=>({costComplete:true,theoreticalCost:8}), nutrition:()=>null};
 const draft = {portions:1,ingredients:[]};

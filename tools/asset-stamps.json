@@ -1664,8 +1664,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "333",
-    "sha": "0fc38e38e7d5c676"
+    "v": "334",
+    "sha": "187faf18de95db47"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -2364,12 +2364,12 @@
     "sha": "72dba3b7c6daa656"
   },
   "assets/restaurant-menu/recipes.js": {
-    "v": "12",
-    "sha": "b4bf6bc37a61b76b"
+    "v": "13",
+    "sha": "4bb735481988cc81"
   },
   "assets/restaurant-menu/strings.js": {
-    "v": "31",
-    "sha": "056aa01d3ba5109b"
+    "v": "32",
+    "sha": "05ef506161588186"
   },
   "assets/restaurant-menu/styles.js": {
     "v": "13",
@@ -2500,8 +2500,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "151",
-    "sha": "f3021678ff406d70"
+    "v": "152",
+    "sha": "d852960750345995"
   },
   "assets/stock/alerts.js": {
     "v": "6",

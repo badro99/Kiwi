@@ -23,6 +23,18 @@ assert.match(summary, /rxAtLeast/, 'an incomplete recipe shows « au moins », n
 assert.doesNotMatch(summary + open, /'(Prix de vente|Coût théorique|Marge théorique|À compléter|Recette enregistrée)'/, 'no hardcoded French in the editor');
 assert.match(row, /data-kiwi-native-select/, 'the compact unit select is not wrapped by the enhancer that truncated its label');
 assert.match(units, /unit\.family==='mass'\|\|unit\.family==='volume'\?unit\.id:unit\.label/, 'short unit labels (g, kg, ml) in the list');
+/* Jon's Burgers, 25 Nov 2026: the empty choice read « Unité », the same word
+ * as the real unit « Unité » (a piece), so a recipe looked complete and the save
+ * refused with « Unités manquantes ». The empty choice now asks to choose. */
+assert.match(units, /<option value="">\$\{esc\(ui\('rxUnitPh'\)\)\}<\/option>/, 'the empty unit choice has its own wording');
+{
+  const strings = fs.readFileSync(new URL('../assets/restaurant-menu/strings.js', import.meta.url), 'utf8');
+  const unitsSrc = fs.readFileSync(new URL('../assets/restaurant-units.js', import.meta.url), 'utf8');
+  const labels = new Set([...unitsSrc.matchAll(/label: '([^']+)'/g)].map((m) => m[1].toLowerCase()));
+  const ph = [...strings.matchAll(/rxUnitPh: '([^']+)'/g)].map((m) => m[1]);
+  assert.equal(ph.length, 3, 'the empty unit choice is worded in FR, EN and AR');
+  for (const p of ph) assert.ok(!labels.has(p.toLowerCase()) && p.toLowerCase() !== 'unité' && p.toLowerCase() !== 'unit', `« ${p} » cannot be read as a unit`);
+}
 assert.match(row, /data-ing-meta/, 'each line says how stock sees it (linked, no price, unit mismatch)');
 assert.match(row, /viewBox="0 -960 960 960"/, 'Material icon for the remove button');
 assert.doesNotMatch(js, /\.rmw-recipe-suffix b\{margin-left:-30px/, 'no suffix drawn over its field');
@@ -32,4 +44,4 @@ assert.match(open, /title:ui\('rxTitle',\{name:t\(x\.name\)\}\)/, 'the title is 
 const workspaceStamp = dashboard.match(/assets\/restaurant-menu-workspace\.js\?v=(\d+)/)?.[1];
 assert.ok(workspaceStamp, 'dashboard loads the recipe workspace with a cache stamp');
 assert.match(sw, new RegExp(`assets/restaurant-menu-workspace\\.js\\?v=${workspaceStamp}`), 'service worker uses the dashboard stamp');
-console.log('✓ restaurant recipe layout: 17 checks');
+console.log('✓ restaurant recipe layout: 19 checks');

@@ -8,7 +8,7 @@
      « Gramme (g) » était tronqué en « Gramme (... » dans une cellule étroite. */
   function recipeUnitOptions(value){
     const api=window.KiwiRestaurantUnits,selected=api?.normalize?.(value,'')||'';
-    return `<option value="">${esc(ui('rxChoose'))}</option>${(api?.list?.()||[]).map(unit=>`<option value="${esc(unit.id)}" title="${esc(unit.label)}"${unit.id===selected?' selected':''}>${esc(unit.family==='mass'||unit.family==='volume'?unit.id:unit.label)}</option>`).join('')}`;
+    return `<option value="">${esc(ui('rxUnitPh'))}</option>${(api?.list?.()||[]).map(unit=>`<option value="${esc(unit.id)}" title="${esc(unit.label)}"${unit.id===selected?' selected':''}>${esc(unit.family==='mass'||unit.family==='volume'?unit.id:unit.label)}</option>`).join('')}`;
   }
   /* Coût simple allumé : chaque ligne prend un « prix de la portion » saisi à
      la main, sans passer par Stock & Appro. Une ligne qui en porte déjà un le
