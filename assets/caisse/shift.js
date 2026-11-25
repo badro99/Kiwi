@@ -72,6 +72,16 @@
       try { proven = operatorCaisseRequested() && sessionStorage.getItem('kiwi:tillOperator:v1') === currentMerchantSlug(); } catch (_) {}
       if (proven) { enterShellDirectly(); return; }
 
+      /* Service déjà ouvert : « Changer de caissier » a reverrouillé la caisse.
+         Le code rend la caisse au nouveau caissier, sans rouvrir le service ;
+         l'écran d'ouverture est caché pour de bon depuis l'ouverture
+         (Jon's Burgers, 25 nov. 2026 : écran vide, touches sur le menu caché). */
+      if (shiftOpenedAt) {
+        $$('#pin-dots .pin-dot').forEach((d, i) => setTimeout(() => d.classList.add('is-success'), i * 70));
+        setTimeout(() => { pinScreen.classList.add('is-leaving'); enterShellDirectly(); }, 460);
+        return;
+      }
+
       if (operatorCaisseRequested()) {
         const notice = document.getElementById('operator-service-notice');
         if (notice) notice.hidden = false;
