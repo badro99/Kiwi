@@ -26,7 +26,10 @@
 import * as SPLIT from './boutique-size-split.js?v=4';
 import * as CODES from './boutique-size-codes.js?v=4';
 const plainWord = (x) => String(x == null ? '' : x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-import * as COLORS from './boutique-size-colors.js?v=7';
+import * as COLORS from './boutique-size-colors.js?v=8';
+import * as DRAFT from './boutique-drafts.js?v=2';
+/* Le formulaire « Nouveau produit » garde sa saisie (caisse et tableau de bord). */
+export const rememberForm = DRAFT.rememberForm;
 
 export const ONE_COLOR = 'unique';
 const GRID = {
@@ -46,6 +49,7 @@ const T = {
     split: (a, b) => `${a} sur ${b} répartie${b > 1 ? 's' : ''}`,
     received: (n, one) => (n ? `${n} pièce${n > 1 ? 's' : ''} à ajouter` : one ? 'Écrivez le nombre de pièces reçues.' : 'Écrivez le nombre de pièces reçues à côté de chaque taille.'),
     mismatch: (a, b) => `Les tailles font ${a} pièce${a > 1 ? 's' : ''}, alors que la quantité totale est de ${b}. Corrigez les tailles pour enregistrer.`,
+    force: (n) => `Enregistrer ${n} pièce${n > 1 ? 's' : ''} quand même`,
     none: 'Écrivez au moins une quantité.',
     bad: 'Un nombre entier de pièces, 0 ou plus.',
     hintCreate: 'Une taille laissée vide n’apparaît pas à la caisse.',
@@ -71,6 +75,7 @@ const T = {
     split: (a, b) => `${a} of ${b} assigned`,
     received: (n, one) => (n ? `${n} piece${n > 1 ? 's' : ''} to add` : one ? 'Write how many pieces came in.' : 'Write how many pieces came in next to each size.'),
     mismatch: (a, b) => `The sizes add up to ${a} piece${a > 1 ? 's' : ''}, but the total quantity is ${b}. Fix the sizes to save.`,
+    force: (n) => `Save ${n} piece${n > 1 ? 's' : ''} anyway`,
     none: 'Enter at least one quantity.',
     bad: 'A whole number of pieces, 0 or more.',
     hintCreate: 'A size left empty does not show on the till.',
@@ -96,6 +101,7 @@ const T = {
     split: (a, b) => `${a} من ${b} موزّعة`,
     received: (n, one) => (n ? `${n} قطعة للإضافة` : one ? 'اكتب عدد القطع المستلمة.' : 'اكتب عدد القطع المستلمة بجانب كل مقاس.'),
     mismatch: (a, b) => `مجموع المقاسات ${a} قطعة، والكمية الإجمالية ${b}. صحّح المقاسات للحفظ.`,
+    force: (n) => `احفظ ${n} قطعة كما عددتها`,
     none: 'أدخل كمية واحدة على الأقل.',
     bad: 'عدد صحيح من القطع، 0 أو أكثر.',
     hintCreate: 'المقاس الفارغ لا يظهر في الصندوق.',
@@ -365,6 +371,31 @@ export function mount(host, o) {
   /* La répartition rapide et les couleurs s'allument par commerçant (option
      « boutiqueSizeColors » de la console). Éteinte : l'écran d'avant, à l'identique. */
   const rich = !ro && sizeColorsOn();
+  /* Le brouillon de CE produit (boutique-drafts.js) : la quantité totale d'une
+     création pas encore répartie, les couleurs ajoutées, chaque nombre tapé.
+     Fermer la fenêtre par erreur ne perd plus le comptage (propriétaire, 25 nov.). */
+  const DKEY = 'sizes:' + pid;
+  const firstTarget = target;
+  let draftBack = false;
+  const saved = ro ? null : DRAFT.readDraft(DKEY);
+  if (saved && cat.getProduct(pid)) {
+    if (!target && saved.target > 0) target = Math.floor(saved.target);
+    if (rich && Array.isArray(saved.cols) && saved.cols.length && saved.cols.every((c) => c && typeof c.key === 'string')) cols = saved.cols;
+    const any = (m) => m && typeof m === 'object' && Object.keys(m).length > 0;
+    if (any(saved.values) || any(saved.codes) || saved.quick) carry = { values: saved.values || {}, codes: saved.codes || {}, quick: String(saved.quick || '') };
+    draftBack = !!carry || target !== firstTarget;
+  }
+  const persist = () => {
+    if (ro || busy) return;
+    const values = {}, codes = {};
+    host.querySelectorAll('[data-kbs-in]').forEach((i) => { if (String(i.value).trim()) values[i.getAttribute('data-kbs-in')] = i.value; });
+    host.querySelectorAll('[data-kbs-bc]').forEach((i) => { if (String(i.value).trim()) codes[i.getAttribute('data-kbs-bc')] = i.value; });
+    const qi = host.querySelector('[data-kbsp-quick]');
+    const quick = qi ? String(qi.value || '').trim() : '';
+    if (!target && !Object.keys(values).length && !Object.keys(codes).length && !quick) { DRAFT.clearDraft(DKEY); return; }
+    DRAFT.writeDraft(DKEY, { target, values, codes, quick, cols: rich ? cols : null });
+  };
+  host.addEventListener('input', persist);
   const ow = OW[o.lang] || OW.fr;
   const typing = () => target > 0 && !ro && (!!o.ownCodes || OWN.has(pid));
 
@@ -385,6 +416,7 @@ export function mount(host, o) {
         <button type="button" class="kbs-btn" data-kbc-make>${esc(t.exactAdd)}</button></div></div>`;
   };
 
+  let showNew = false;
   const draw = () => {
     const d = cat.getProduct(pid);
     if (!d) { host.innerHTML = ''; return; }
@@ -453,7 +485,7 @@ export function mount(host, o) {
         ${ro ? '<span></span>' : field(r.key, r.col || '', `${t.add} · ${sizeLabel}`, sizeLabel + (r.multi && v ? ' · ' + (v.colorLabel || '') : ''))}
       </li>`;
     }).join('');
-    const matrixHtml = !matrix ? '' : `<table class="kbm"><thead><tr><th></th>${cols.map((c) => `<th scope="col">${digDot(c)}${esc(colName(c))}<small data-kbm-tot="${esc(c.key)}"></small></th>`).join('')}</tr></thead><tbody>${sizeList.map((size) => {
+    const matrixHtml = !matrix ? '' : `<div class="kbm-scroll" data-kbm-scroll><table class="kbm"><thead><tr><th></th>${cols.map((c) => `<th scope="col">${digDot(c)}${esc(colName(c))}<small data-kbm-tot="${esc(c.key)}"></small></th>`).join('')}</tr></thead><tbody>${sizeList.map((size) => {
       const sl = size === 'TU' ? t.tu : size;
       return `<tr><th scope="row">${esc(sl)}<span class="kbm-sd">${esc(plan ? plan.sizeOf(size) : '')}</span></th>${cols.map((c) => {
         const r = shown.find((x) => x.size === size && x.col === c.key);
@@ -461,7 +493,7 @@ export function mount(host, o) {
         const st = haveCount(r.variant);
         return `<td>${field(r.key, c.key, `${t.add} · ${sl} · ${colName(c)}`, `${sl} · ${colName(c)}`)}${!r.variant && typing() ? `<input class="kbs-bc" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="64" placeholder="${esc(ow.ph)}" data-kbs-bc="${esc(r.key)}" aria-label="${esc(ow.ph)} · ${esc(sl)} · ${esc(colName(c))}" />` : ''}${r.variant ? `<small class="${st > 0 ? '' : 'is-out'}" data-kbs-have="${esc(r.key)}" data-st="${st}">${esc(st ? t.have(sgn(st)) : t.out)}</small>${codeOf(r)}${regOf(r.variant)}${delOf(r, sl + ' · ' + colName(c))}` : ''}</td>`;
       }).join('')}</tr>`;
-    }).join('')}</tbody></table>${anySmart ? `<p class="kbm-key">${esc(t.codeKey)}</p>` : ''}`;
+    }).join('')}</tbody></table></div>${anySmart ? `<p class="kbm-key">${esc(t.codeKey)}</p>` : ''}`;
     const used = (k) => shown.some((r) => r.col === k && r.variant);
     /* Une couleur épuisée qu'on ne recommandera pas : on peut la retirer. */
     const soldOut = (k) => !creating && used(k) && shown.every((r) => r.col !== k || !r.variant || !(+r.variant.stock > 0));
@@ -482,6 +514,7 @@ export function mount(host, o) {
         ${!creating && rec && fresh ? `<span class="kbs-last">${esc(t.lastIn(fresh))}</span>` : ''}
         ${ro ? '' : '<span class="kbs-count" data-kbs-count aria-live="polite"></span>'}
       </div>
+      ${draftBack ? DRAFT.noteHtml(o.lang) : ''}
       ${colorsHtml}
       ${matrix ? matrixHtml : shown.length ? `<div class="kbs-colhead" aria-hidden="true"><span>${esc(t.size)}</span><span>${creating ? '' : esc(t.stockCol)}</span><span>${ro ? '' : esc(creating ? t.add : t.addMore)}</span></div>
       <ul class="kbs-list">${rowsHtml}</ul>` : `<p class="kbs-msg">${esc(t.empty)}</p>`}
@@ -494,7 +527,17 @@ export function mount(host, o) {
         ${ro ? '' : `<button type="button" class="kbs-btn is-main" data-kbs-save>${esc(t.save)}</button>`}
       </div>
     </div>`;
+    /* Plus de quatre couleurs : la grille défile de côté ; un redessin garde
+       la position, une couleur ajoutée se montre (propriétaire, 25 nov.). */
+    const wasX = (host.querySelector('[data-kbm-scroll]') || {}).scrollLeft || 0;
     host.innerHTML = page();
+    const sc = host.querySelector('[data-kbm-scroll]');
+    if (sc) {
+      sc.scrollLeft = wasX;
+      const last = showNew && sc.querySelector('thead th:last-child');
+      if (last) sc.scrollLeft = (getComputedStyle(sc).direction === 'rtl' ? -1 : 1) * sc.scrollWidth;
+    }
+    showNew = false;
     const back = carry; carry = null;
     if (back) host.querySelectorAll('[data-kbs-in]').forEach((i) => { const v = back.values[i.getAttribute('data-kbs-in')]; if (v) i.value = v; });
     if (back && back.codes) host.querySelectorAll('[data-kbs-bc]').forEach((i) => { const v = back.codes[i.getAttribute('data-kbs-bc')]; if (v) i.value = v; });
@@ -518,6 +561,9 @@ export function mount(host, o) {
         quick: back && back.quick,
       });
     }
+    persist();
+    const note = host.querySelector('[data-kbd-clear]');
+    if (note) { DRAFT.draftCss(); note.addEventListener('click', () => { DRAFT.clearDraft(DKEY); draftBack = false; carry = null; cols = null; target = firstTarget; draw(); }); }
     if (back && back.quick) return;
     if (creating) { const first = host.querySelector(splitOn ? '[data-kbsp-quick]' : '[data-kbs-in]'); if (first) setTimeout(() => first.focus({ preventScroll: true }), 40); }
   };
@@ -537,6 +583,7 @@ export function mount(host, o) {
     const neutralUsed = d && d.variants.some((v) => String(v.colorId || COLORS.UNIQUE) === COLORS.UNIQUE);
     if (!neutralUsed) cols = cols.filter((c) => !c.unique);
     cols = cols.concat(fresh);
+    showNew = true;
     keep(quick);
     draw();
   }
@@ -614,11 +661,26 @@ export function mount(host, o) {
     if (pa) { pa.disabled = dirty(); pa.title = pa.disabled ? t.printDirty : ''; }
   };
 
-  const save = () => {
+  /* Le comptage ne tombe pas sur la quantité annoncée à la création : on peut
+     enregistrer ce qui a été compté (propriétaire, 25 nov. : « laisse-moi le
+     faire quand même »). Le bouton n'apparaît qu'après le refus. */
+  const offerForce = (sum) => {
+    const acts = host.querySelector('.kbs-acts');
+    if (!acts || !sum) return;
+    let b = acts.querySelector('[data-kbs-force]');
+    if (!b) {
+      b = document.createElement('button');
+      b.type = 'button'; b.className = 'kbs-btn'; b.setAttribute('data-kbs-force', '');
+      b.addEventListener('click', () => save(true));
+      acts.insertBefore(b, acts.querySelector('[data-kbs-save]'));
+    }
+    b.textContent = t.force(sum);
+  };
+  const save = (force) => {
     if (busy) return;
     const { out, sum, bad } = read();
     if (bad) { say(t.bad, true); return; }
-    if (target > 0 && sum !== target) { say(t.mismatch(sum, target), true); return; }
+    if (target > 0 && sum !== target && force !== true) { say(t.mismatch(sum, target), true); offerForce(sum); return; }
     if (!sum) { say(t.none, true); return; }
     const typed = readTyped(out);
     if (!typed) return;
@@ -653,6 +715,8 @@ export function mount(host, o) {
     if (cat.batch) cat.batch(run); else run();
     busy = false;
     target = 0;
+    draftBack = false;
+    DRAFT.clearDraft(DKEY);
     OWN.delete(pid);
     if (scanned && o.scan && o.scan.disarm) o.scan.disarm(onScan);
     noteReceipt(pid, got);
@@ -720,7 +784,7 @@ export function mount(host, o) {
     });
     if (typing() && o.scan && o.scan.arm) o.scan.arm(onScan);
     host.querySelectorAll('[data-kbs-in]').forEach((inp, i, all) => {
-      inp.addEventListener('input', () => { inp.value = inp.value.replace(/[^\d]/g, '').slice(0, 5); say(''); paintCount(); });
+      inp.addEventListener('input', () => { inp.value = inp.value.replace(/[^\d]/g, '').slice(0, 5); say(''); paintCount(); const f = host.querySelector('[data-kbs-force]'); if (f) f.remove(); });
       inp.addEventListener('keydown', (e) => {
         const now = Date.now(); if (now - (inp._kt || 0) > 120) inp._snap = inp.value; inp._kt = now;   // valeur d'avant une rafale de douchette
         if (e.key !== 'Enter' || e.defaultPrevented) return;   // un scan pris par la caisse n'enregistre pas

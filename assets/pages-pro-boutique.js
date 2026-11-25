@@ -1820,7 +1820,7 @@ function _bqxSheetSub(data) {
   return `${data.category ? data.category.name : t.noCat} · ${_bqxPrice(data.product.priceMAD)} ${t.cur} · ${_bqxPfFill(t.inStock, { n: data.stock })}`;
 }
 
-let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=30', document.baseURI).href).then((m) => (_bqxSzMod = m)));
+let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=32', document.baseURI).href).then((m) => (_bqxSzMod = m)));
 function _bqxOpenProduct(pid, target, drawerOnly) {
   const t = _bqxShT();
   const data = CAT().getProduct(pid);
@@ -3439,6 +3439,7 @@ function _bqxPfWire(b, p) {
   paintMedia();
   paintGap();
 }
+let _bqxPfDraft = null;
 function _bqxPfOpen(p) {
   if (!p && _bqxCopy().trade === 'boutique' && !_bqxSzMod && !_bqxPfOpen.tried) { _bqxPfOpen.tried = true; _bqxSz().catch(() => null).then(() => _bqxPfOpen(p)); return; } const t = _bqxPfT();   // boutique : « Quantité totale » vient de boutique-sizes.js
   _bqxCss();
@@ -3460,7 +3461,7 @@ function _bqxPfOpen(p) {
   const b = _bqxModal && _bqxModal.el;
   if (!b) return;
   b.classList.add('bqx-pf-modal');
-  _bqxPfWire(b, p);
+  _bqxPfWire(b, p); _bqxPfDraft = null; const _dTok = (_bqxPfOpen.n = (_bqxPfOpen.n || 0) + 1); if (!p) import(new URL('assets/boutique-drafts.js?v=2', document.baseURI).href).then((m) => { if (_dTok === _bqxPfOpen.n && b.isConnected) _bqxPfDraft = m.rememberForm(b, 'new-product:dash:' + (_bqxVenue() || 'local'), _bqxPfLang()); }).catch(() => {});   // fermée par erreur, la saisie revient (chaque boutique la sienne)
   if (!p) setTimeout(() => { const i = b.querySelector('[data-bqx-name]'); if (i) i.focus(); }, 60);
 }
 /* The open product form, not just the first backdrop on the page. */
@@ -3503,7 +3504,7 @@ handlers['bqx-new-save'] = () => {
     photo: _bqxPhoto,
     video: _bqxVideo,
   };
-  const made = S ? S.createProduct(CAT(), data, total, bc.code) : { product: CAT().addProduct(data) }, p = made.product;
+  const made = S ? S.createProduct(CAT(), data, total, bc.code) : { product: CAT().addProduct(data) }, p = made.product; if (p && _bqxPfDraft) _bqxPfDraft.clear();
   if (_bqxModal) _bqxModal.close();
   const t = _bqxPfT();
   toast(t.created, { desc: S ? (made.needsGrid ? t.createdBoutique : t.createdOne) : t.createdOther, type: 'success' });

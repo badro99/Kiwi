@@ -260,7 +260,9 @@ export function css() {
 .kbc-sw { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 6px; border: 1px solid transparent; border-radius: 999px; background: none; font: 500 12.5px var(--sans, inherit); color: var(--ink, #0A0F0D); cursor: pointer; }
 .kbc-sw:hover { border-color: var(--atlas, #0B6E4F); }
 .kbc-add:focus-visible, .kbc-sw:focus-visible, .kbc-chip button:focus-visible { outline: 2px solid var(--atlas, #0B6E4F); outline-offset: 2px; }
-.kbm { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--kbs-line, #E2DED4); border-radius: 14px; background: var(--kbs-card, #FBFAF6); overflow: hidden; }
+.kbm-scroll { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; border: 1px solid var(--kbs-line, #E2DED4); border-radius: 14px; background: var(--kbs-card, #FBFAF6); }
+.kbm { width: 100%; border-collapse: separate; border-spacing: 0; }
+.kbm th[scope="row"], .kbm thead th:first-child { position: sticky; inset-inline-start: 0; z-index: 1; background: var(--kbs-card, #FBFAF6); border-inline-end: 1px solid var(--kbs-line, #E2DED4); }
 .kbm th, .kbm td { padding: 8px 6px; border-bottom: 1px solid var(--kbs-line, #E2DED4); text-align: center; }
 .kbm tr:last-child td { border-bottom: 0; }
 .kbm thead th { font: 600 12.5px var(--sans, inherit); color: var(--ink, #0A0F0D); vertical-align: bottom; }

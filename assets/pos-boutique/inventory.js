@@ -1,12 +1,12 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=393';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=286';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=395';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=288';
 import { openMoves } from './inv-moves.js?v=7';
-import * as SZ from '../boutique-sizes.js?v=30';
-import { openLabelPicker } from './label-picker.js?v=9';
+import * as SZ from '../boutique-sizes.js?v=32';
+import { openLabelPicker } from './label-picker.js?v=11';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=24';
 import { sisterStock } from './sister-stock.js?v=1'; import { fieldErr } from '../field-error.js?v=2'; import { invProducts, recountPill, gapLabel } from './oversell.js?v=4';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=286';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=288';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -749,7 +749,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const ib = $('#bqi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const nb = $('#bqi-new', panel); if (nb) nb.onclick = () => openNewProduct();
     const mv = $('#bqi-moves', panel); if (mv) mv.onclick = () => openMoves({ setModal: invSetModal, esc, icons, catDB, toast });   // en lecture (inv-moves.js)
-    import('./avance-restock.js?v=45').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
+    import('./avance-restock.js?v=47').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
     const pills = $('#bqi-pills', panel);
     if (pills) pills.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { state.invFilter = b.dataset.f; renderInventaire(); } });
     panel.querySelectorAll('[data-inv-open]').forEach((el) => el.addEventListener('click', () => openInvProduct(el.getAttribute('data-inv-open'))));
@@ -944,6 +944,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       /* Un article déjà étiqueté : la douchette remplit le champ du code. */
       const onScan = (c) => SZ.putCode(el, cat, lang, normScan(c));
       SZ.wireCode(el, cat, lang, (on) => (on ? armScanCapture(onScan) : disarmScanCapture(onScan)));
+      const draft = SZ.rememberForm ? SZ.rememberForm(el, 'new-product:till', lang, { restore: !preset }) : null;   // fermée par erreur, la saisie revient (boutique-drafts.js)
       if (preset) {
         const tu = q('input[name="bqx-pf-kind"][value="tu"]'), own = q('[data-kbs-bc][value="own"]');
         if (tu) tu.checked = true;
@@ -974,6 +975,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         }, total, bc.code);
         if (!made.product) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Création impossible')); return; }
         disarmScanCapture();
+        if (draft) draft.clear();
         toast(`${name} ajouté à l'inventaire`, 3200, 'success', made.needsGrid ? 'Répartissez maintenant les pièces par taille.' : `${total} pièce${total > 1 ? 's' : ''} · ${made.kept ? 'code fournisseur conservé' : 'code-barres créé'}`);
         openInvProduct(made.product.id, made.needsGrid ? total : 0);
       };
