@@ -58,6 +58,8 @@ function world(vertical) {
     mzSaleDiscount:require('../assets/pos-maison/sale-discount.js').mzSaleDiscount,
     // The gift-ticket option of the payment sheet (pos-boutique/gift-ticket.js) is a browser edge, off here.
     giftTicket:()=>null,
+    // « La cliente paie » under an exchange difference (pos-boutique/exch-cut.js): a browser edge; tests drive its onPay.
+    mountExchCut:(host,o)=>{c.__exchCut=o;},
     retainDays:()=>7,windowDays:()=>7,outsideWindow:()=>false,ozonConnected:()=>false,ozonCities:()=>[],clById:id=>({id,name:'Test'}),
   });c.window=c;c.KiwiLive={saleIdFor:({id})=>id};
   // The real shared modules of the till (exports stripped), not stubs: the paid-share allocation and the till clock.

@@ -47,7 +47,7 @@ ok('without a receipt (or "whole stock"), each size prints its stock, never a ne
 ok('the sheet and the label picker of the till count with that one rule', () => {
   const src = fs.readFileSync(path.join(root, 'assets/boutique-sizes.js'), 'utf8');
   const pick = fs.readFileSync(path.join(root, 'assets/pos-boutique/label-picker.js'), 'utf8');
-  assert.match(src, /labelCounts\(d\.variants, rec && rec\.got\)/);
+  assert.match(src, /labelCounts\(colourOrder\(d\.variants, d\.product\.kind\), rec && rec\.got\)/);   // couleur par couleur (25 nov.)
   assert.match(pick, /SZ\.labelCounts\(ok\.map\(\(r\) => r\.v\), got\)/);
 });
 ok('the count on the button is set apart, and a receipt says "new pieces"', () => {

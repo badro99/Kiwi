@@ -337,6 +337,16 @@ export function markReceiptPrinted(pid) { const r = lastReceipt(pid); if (r && !
    la traite comme vide (v.stock reste à 0). */
 export const haveCount = (v) => (v ? Math.round(Number(v.ledgerStock ?? v.stock) || 0) : 0);
 const sgn = (k) => (k < 0 ? '−' + Math.abs(k) : k);
+/* Les étiquettes sortent couleur par couleur (propriétaire, 25 nov. 2026) :
+   on imprime une couleur, on colle ses tailles, puis la suivante. Les couleurs
+   dans l'ordre du catalogue, les tailles dans l'ordre de la grille. */
+export function colourOrder(variants, kind) {
+  const grid = gridOf(kind);
+  const rank = (s) => { const i = grid.indexOf(String(s)); return i < 0 ? 999 : i; };
+  const cols = [];
+  (variants || []).forEach((v) => { const k = String(v.colorId || ''); if (!cols.includes(k)) cols.push(k); });
+  return (variants || []).slice().sort((a, b) => cols.indexOf(String(a.colorId || '')) - cols.indexOf(String(b.colorId || '')) || rank(a.size) - rank(b.size));
+}
 export const labelCounts = (variants, got) => (variants || []).map((v) => [v, got ? (got[v.id] || 0) : Math.max(0, Math.floor(+v.stock || 0))]);
 /* « Imprimer N étiquettes », le nombre mis à part ; « · nouvelles pièces » pour une réception. */
 export function printLabelHtml(t, n, fresh) {
@@ -600,7 +610,7 @@ export function mount(host, o) {
     const d = cat.getProduct(pid);
     if (!d) return [];
     const rec = all ? null : lastReceipt(pid);
-    return labelCounts(d.variants, rec && rec.got).filter(([v, n]) => n > 0 && o.primary(v));
+    return labelCounts(colourOrder(d.variants, d.product.kind), rec && rec.got).filter(([v, n]) => n > 0 && o.primary(v));
   };
   function printCount(all) { return labelPlan(all).reduce((s, [, n]) => s + n, 0); }
   const printHtml = (n, fresh) => printLabelHtml(t, n, fresh);

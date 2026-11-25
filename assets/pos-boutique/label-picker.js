@@ -9,8 +9,12 @@
  *
  * Le contenu de l'étiquette (nom, prix, promo, code) reste celui de
  * labelForVariant() (pos-boutique/inventory.js) : rien n'est recalculé ici.
- * La réception est marquée imprimée dès qu'une étiquette part, comme avant. */
-import * as SZ from '../boutique-sizes.js?v=32';
+ * La réception est marquée imprimée dès qu'une étiquette part, comme avant.
+ *
+ * Couleur par couleur (propriétaire, 25 nov.) : les lignes et le tirage
+ * suivent boutique-sizes.js › colourOrder, et chaque couleur a son bouton
+ * « Imprimer cette couleur » qui laisse la fenêtre ouverte pour la suivante. */
+import * as SZ from '../boutique-sizes.js?v=33';
 
 const MAX = 999;
 const PHRASES = {
@@ -28,6 +32,8 @@ const PHRASES = {
   'Moins': ['Less', 'أقل'],
   'Plus': ['More', 'أكثر'],
   'Annuler': ['Cancel', 'إلغاء'],
+  'Imprimer cette couleur · {n}': ['Print this colour · {n}', 'اطبع هذا اللون · {n}'],
+  'Imprimée · {n}': ['Printed · {n}', 'طُبع · {n}'],
 };
 const tr = (s) => {
   const C = window.KiwiCaisseLang;
@@ -50,7 +56,7 @@ export function openLabelPicker(o) {
   css();
   const rec = SZ.lastReceipt(o.pid);
   const fresh = rec && !rec.printed ? rec.got : null;
-  const rows = (d.variants || []).map((v) => ({ v, label: o.label(o.pid, v) }));
+  const rows = SZ.colourOrder(d.variants || [], d.product && d.product.kind).map((v) => ({ v, label: o.label(o.pid, v) }));
   const ok = rows.filter((r) => r.label);
   /* La règle de la fiche (boutique-sizes.js › labelCounts) : les pièces
      reçues quand une réception attend, sinon le stock de chaque taille. */
@@ -85,7 +91,17 @@ export function openLabelPicker(o) {
       + '<input type="number" inputmode="numeric" min="0" max="' + MAX + '" data-blp-n="' + id + '" value="' + n + '" aria-label="' + esc(tr('Nombre d’étiquettes') + ' · ' + sizeWord(r.v)) + '">'
       + '<button type="button" data-blp-d="1" data-v="' + id + '" aria-label="' + esc(tr('Plus')) + '">+</button></span></div>';
   };
+  /* Une couleur à la fois : on l'imprime, on colle, la fenêtre reste ouverte pour la suivante. */
+  const printed = new Set();
+  const groupN = (g) => g.rows.reduce((n, r) => n + (r.label ? count.get(r.v.id) || 0 : 0), 0);
   const paintTotal = () => {
+    veil.querySelectorAll('[data-blp-cp]').forEach((b) => {
+      const g = groups.find((x) => x.key === b.dataset.blpCp);
+      const n = g ? groupN(g) : 0;
+      b.disabled = !n;
+      b.classList.toggle('is-done', printed.has(b.dataset.blpCp));
+      b.textContent = ui(printed.has(b.dataset.blpCp) ? 'Imprimée · {n}' : 'Imprimer cette couleur · {n}', { n });
+    });
     const n = total();
     const go = veil.querySelector('[data-blp-go]');
     go.disabled = !n;
@@ -104,7 +120,8 @@ export function openLabelPicker(o) {
     + '<button type="button" data-blp-preset="none">' + esc(tr('Aucune')) + '</button></div>'
     + '<div class="blp-list">' + (ok.length ? groups.map((g) => '<section class="blp-group">'
       + (g.name || groups.length > 1 ? '<div class="blp-gh"><b>' + esc(g.name) + '</b>'
-        + (g.rows.some((r) => r.label) ? '<button type="button" data-blp-col="' + esc(g.key) + '">' + esc(tr('Toute la couleur')) + '</button>' : '') + '</div>' : '')
+        + (g.rows.some((r) => r.label) ? '<span class="blp-gb"><button type="button" data-blp-col="' + esc(g.key) + '">' + esc(tr('Toute la couleur')) + '</button>'
+          + (groups.length > 1 ? '<button type="button" class="go" data-blp-cp="' + esc(g.key) + '"></button>' : '') + '</span>' : '') + '</div>' : '')
       + g.rows.map(row).join('') + '</section>').join('')
       : '<p class="blp-note">' + esc(tr('Aucune taille n’a de code-barres.')) + '</p>') + '</div>'
     + '<div class="blp-acts"><button type="button" class="blp-btn" data-blp-x>' + esc(tr('Annuler')) + '</button>'
@@ -124,6 +141,16 @@ export function openLabelPicker(o) {
     let b;
     if (e.target === veil || t('[data-blp-x]')) { done(); return; }
     if ((b = t('[data-blp-preset]'))) { preset(b.dataset.blpPreset); paintCounts(); return; }
+    if ((b = t('[data-blp-cp]'))) {
+      const g = groups.find((x) => x.key === b.dataset.blpCp);
+      const labels = [];
+      if (g) g.rows.forEach((r) => { if (r.label) for (let k = 0; k < (count.get(r.v.id) || 0); k++) labels.push(r.label); });
+      if (!labels.length) return;
+      o.print(labels);
+      if (fresh) SZ.markReceiptPrinted(o.pid);
+      printed.add(g.key);
+      paintTotal(); return;
+    }
     if ((b = t('[data-blp-col]'))) {
       const g = groups.find((x) => x.key === b.dataset.blpCol);
       if (g) g.rows.forEach((r) => { if (r.label) count.set(r.v.id, stockOf(r.v)); });
@@ -177,6 +204,10 @@ function css() {
     '.blp-gh{display:flex;align-items:center;justify-content:space-between;gap:10px;}',
     '.blp-gh b{font-size:14px;font-weight:600;}',
     '.blp-gh button{min-height:36px;font-size:13px;}',
+    '.blp-gb{display:inline-flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;}',
+    '.blp-gh button.go{background:var(--atlas,#0B6E4F);border-color:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0);font-weight:600;}',
+    '.blp-gh button.go.is-done{background:var(--paper-elev,#FFFDFA);border-color:var(--atlas,#0B6E4F);color:var(--atlas,#0B6E4F);}',
+    '.blp-gh button[disabled]{opacity:.45;cursor:default;}',
     '.blp-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;border:1px solid var(--line,#E2DDD2);border-radius:12px;background:var(--paper-elev,#FFFDFA);}',
     '.blp-row.is-off{opacity:.6;}',
     '.blp-size{display:flex;flex-direction:column;font-size:15px;font-weight:600;min-width:0;}',

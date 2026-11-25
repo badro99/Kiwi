@@ -15,7 +15,11 @@
  *     labels of that variant, nothing else, and marks the delivery printed;
  *   · « Tout le stock », « Toute la couleur » and the − / + steppers set the
  *     counts; nothing chosen, nothing to print; Escape closes without printing;
- *   · both print buttons of the till (inventory row, product sheet) open it. */
+ *   · both print buttons of the till (inventory row, product sheet) open it;
+ *   · owner, 25 Nov: labels come out colour by colour (sizes in grid order
+ *     inside each colour), even when the sizes were created first; each
+ *     colour has its own « Imprimer cette couleur » that prints only that
+ *     colour and leaves the window open for the next one. */
 import { suite } from './browser-trace.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -51,6 +55,16 @@ const harness = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><tit
   ];
   const cat = { getProduct: (pid) => pid === 'p-robe' ? { product: { id: 'p-robe', name: 'Robe' }, variants } : null };
   const label = (pid, v) => v.nocode ? null : { title: 'Robe', sub: v.colorLabel + ' · ' + v.size, code: 'C-' + v.id };
+  /* Created size by size, as a carton is entered: S noir, S gris, M noir… */
+  const pull = [
+    { id: 'p-s-noir', colorId: 'noir', colorLabel: 'Noir', size: 'S', stock: 1 },
+    { id: 'p-s-gris', colorId: 'gris', colorLabel: 'Gris', size: 'S', stock: 1 },
+    { id: 'p-l-noir', colorId: 'noir', colorLabel: 'Noir', size: 'L', stock: 1 },
+    { id: 'p-m-noir', colorId: 'noir', colorLabel: 'Noir', size: 'M', stock: 2 },
+    { id: 'p-m-gris', colorId: 'gris', colorLabel: 'Gris', size: 'M', stock: 1 },
+  ];
+  const pullCat = { getProduct: (pid) => pid === 'p-pull' ? { product: { id: 'p-pull', name: 'Pull', kind: 'taille' }, variants: pull } : null };
+  window.__openPull = () => openLabelPicker({ pid: 'p-pull', cat: pullCat, label, lang: 'fr', start: 'stock', print: (labels) => window.__printed.push(labels.map((l) => l.code)) });
   window.__open = (start) => openLabelPicker({ pid: 'p-robe', cat, label, lang: 'fr', start, print: (labels) => window.__printed.push(labels.map((l) => l.code)) });
   document.getElementById('opener').addEventListener('click', () => window.__open('rec'));
   window.__ready = true;
@@ -134,6 +148,36 @@ await tests.run('all stock, a whole colour, the steppers; Escape prints nothing'
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !document.querySelector('[data-blp]'));
   assert.deepEqual(await page.evaluate(() => window.__printed), []);
+});
+
+await tests.run('colour by colour: one run grouped by colour, or one colour at a time', async (t) => {
+  const ctx = await browser.createBrowserContext();
+  t.defer(() => ctx.close());
+  const page = t.watch(await ctx.newPage());
+  await page.setViewport({ width: 1180, height: 860 });
+  await page.goto(base + '/labels.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => window.__ready === true);
+  await page.evaluate(() => window.__openPull());
+  await page.waitForSelector('[data-blp] [role="dialog"]', { visible: true });
+  assert.deepEqual(await page.$$eval('[data-blp-n]', (xs) => xs.map((x) => x.dataset.blpN)),
+    ['p-s-noir', 'p-m-noir', 'p-l-noir', 'p-s-gris', 'p-m-gris'], 'rows: Noir S M L, then Gris S M');
+  await page.click('[data-blp-go]');
+  await page.waitForFunction(() => window.__printed.length === 1);
+  assert.deepEqual(await page.evaluate(() => window.__printed[0]),
+    ['C-p-s-noir', 'C-p-m-noir', 'C-p-m-noir', 'C-p-l-noir', 'C-p-s-gris', 'C-p-m-gris'], 'one run comes out colour by colour, sizes in order');
+  await page.evaluate(() => { window.__printed = []; window.__openPull(); });
+  await page.waitForSelector('[data-blp-cp="noir"]', { visible: true });
+  assert.equal(await page.$eval('[data-blp-cp="noir"]', (b) => b.textContent.trim()), 'Imprimer cette couleur · 4');
+  await page.click('[data-blp-cp="noir"]');
+  await page.waitForFunction(() => window.__printed.length === 1);
+  assert.deepEqual(await page.evaluate(() => window.__printed[0]), ['C-p-s-noir', 'C-p-m-noir', 'C-p-m-noir', 'C-p-l-noir'], 'only the black');
+  assert.ok(await page.$('[data-blp]'), 'the window stays open for the next colour');
+  assert.equal(await page.$eval('[data-blp-cp="noir"]', (b) => b.textContent.trim()), 'Imprimée · 4', 'the black says it is printed');
+  await page.click('[data-blp-cp="gris"]');
+  await page.waitForFunction(() => window.__printed.length === 2);
+  assert.deepEqual(await page.evaluate(() => window.__printed[1]), ['C-p-s-gris', 'C-p-m-gris'], 'then only the grey');
+  await page.click('[data-blp-x]');
+  await page.waitForFunction(() => !document.querySelector('[data-blp]'));
 });
 
 server.close();

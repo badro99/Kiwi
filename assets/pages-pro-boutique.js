@@ -1820,7 +1820,7 @@ function _bqxSheetSub(data) {
   return `${data.category ? data.category.name : t.noCat} · ${_bqxPrice(data.product.priceMAD)} ${t.cur} · ${_bqxPfFill(t.inStock, { n: data.stock })}`;
 }
 
-let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=32', document.baseURI).href).then((m) => (_bqxSzMod = m)));
+let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=33', document.baseURI).href).then((m) => (_bqxSzMod = m)));
 function _bqxOpenProduct(pid, target, drawerOnly) {
   const t = _bqxShT();
   const data = CAT().getProduct(pid);
@@ -2449,7 +2449,7 @@ handlers['bqx-prod-print'] = (_el, arg) => {
   const t = _bqxShT();
   const data = CAT().getProduct(arg);
   if (!data) return;
-  const labels = data.variants.map((v) => _bqxLabelFor(arg, v)).filter(Boolean);
+  const labels = (_bqxSzMod && _bqxSzMod.colourOrder ? _bqxSzMod.colourOrder(data.variants, data.product.kind) : data.variants).map((v) => _bqxLabelFor(arg, v)).filter(Boolean);   // couleur par couleur
   if (!labels.length) { toast(t.noCode, { desc: t.noCodeProd, type: 'warn' }); return; }
   _bqxAskCopies((copies) => { BC().printLabels(labels, { copies }); }, t.withCode(labels.length), labels.length);
 };

@@ -1,7 +1,7 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=288';
-import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=288';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=395';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=293';
+import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1'; import { mountExchCut } from './exch-cut.js?v=4'; import { mzSaleDiscount } from '../pos-maison/sale-discount.js?v=1';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=293';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=400';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=9';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
@@ -14,7 +14,7 @@ import { receiptPrinterReady, receiptDocInput, waReceiptTotals } from './receipt
 import { retailModes, heldUntilText, accountOptionHtml, accountStep, avanceOptionHtml, avanceStep, dropOffMethods } from '../retail-avance.js?v=6';
 const M = globalThis.KiwiMoney;
 let CX = null, CQ = null;   /* chargés à part (ils importent la caisse, pas l'inverse) : l'échange groupé (essai Amira Boutique) et le chèque reçu, qui rejoint le portefeuille (cheque-sheet.js ; absent, il s'encaisse comme avant) */
-import('./exch-combined.js?v=50').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=55').then((m) => { CX = m; }).catch(() => {});
 import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
 
 
@@ -439,7 +439,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
         <span>${diff > 0 ? 'Différence à encaisser' : diff < 0 ? 'Différence en faveur de la cliente, part en avoir' : 'Aucun écart, échange direct'}</span>
         <span class="amt">${diff === 0 ? '0 MAD' : fmtMAD(Math.abs(diff))}</span>
       </div>
-      <div class="bq-sheet-foot">
+      ${diff > 0 ? '<div class="bq-xc" data-bq-xc></div>' : ''}<div class="bq-sheet-foot">
         <button class="bq-btn secondary" data-bq-close>Retour</button>
         ${diff > 0
           ? `<button class="bq-btn primary" id="bq-exch-go"><i data-lucide="banknote"></i>Encaisser ${fmtMAD(diff)}</button>`
@@ -449,7 +449,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
       </div>`;
     openVeil('#bq-exch-veil');
     icons();
-    $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-exch-veil'); });
+    $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-exch-veil'); }); let pay = diff; mountExchCut($('[data-bq-xc]', el), { diff, fmt: fmtMAD, modal: el, onPay: (v) => { pay = v; } });   // « La cliente paie » (exch-cut.js)
 
     let applied = false;
     const stockRef = `exch-${newSaleId()}`;      // clé de réservation, jamais affichée
@@ -507,19 +507,19 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
             const reserved = !!reservation.ok;
             closeVeil('#bq-exch-veil');
             openPay({
-            amount: diff,
+            amount: pay,
             customerId: sale.clientId || null,
             title: 'Différence échange',
             subtitle: `${sale.id} · ${esc(oldP.name)} → ${esc(newP.name)}`,
             ref: exchangeNumber,
             lines: [{
               qty: 1,
-              name: `Différence échange · ${oldP.name} → ${newP.name}`,
-              amount: diff,
+              name: `Différence échange · ${oldP.name} → ${newP.name}${pay < diff ? ` · remise ${fmtMAD(M.toMad(M.toCents(diff) - M.toCents(pay)))}` : ''}`,
+              amount: pay,
               ref: newPid,
               barcode: newP.barcode || '',
             }],
-            subtotal: diff,
+            subtotal: pay,
             doneLabel: 'Terminer',
             waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
             onCancel: () => {
@@ -532,8 +532,8 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
                 id: exchangeNumber, syncId: newSaleId(), tenderVersion: 2, at: tillDate(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
                 methods: parts.map((x) => x.m).join(' + '),
                 parts: parts.map((x) => ({ m: x.m, amount: M.toMad(M.toCents(+x.amount || 0)) })),
-                lines: [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, returned: false, note: `différence échange ${sale.id}` }],
-                total: diff,
+                lines: [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: pay, returned: false, note: `différence échange ${sale.id}` }],
+                total: pay, ...(pay < diff ? { discount: M.toMad(M.toCents(diff) - M.toCents(pay)), remiseAuth: { by: moveActor, role: (STAFF.caissiere && STAFF.caissiere.role) || '', at: new Date().toISOString(), mode: 'mad', value: M.toMad(M.toCents(diff) - M.toCents(pay)), amount: M.toMad(M.toCents(diff) - M.toCents(pay)) } } : {}),   // la baisse = une remise de la vendeuse en poste
               };
               SALES.unshift(rec);
               persistDay();
@@ -552,20 +552,20 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
                     id: rec.syncId,
                     amount: cashIn,
                     method,
-                    paymentParts: bqPaymentParts(parts), ticketAmountCents: M.toCents(diff),
+                    paymentParts: bqPaymentParts(parts), ticketAmountCents: M.toCents(pay), ...(pay < diff ? mzSaleDiscount({ amountCents: M.toCents(cashIn), totalCents: M.toCents(pay), remiseCents: M.toCents(diff) - M.toCents(pay), actorId: '' }) || {} : {}),
                     ...(cashIn <= 0 ? { settlementKind: isDelivery ? 'receivable' : 'store-credit',
                       creditAmountCents: M.sumCents((parts || []).filter(x => x.m === 'avoir').map(x => +x.amount || 0)) } : {}),
                     channel: isDelivery ? 'delivery' : 'counter',
                     label: `Différence échange ${sale.id}`,
                     ref: rec.id,
                     time: rec.at,
-                    lines: [{ name: newP.name + (newSize ? ' ' + newSize : ''), qty: 1, total: diff, cat: rayonOf(newPid) || '' }],
+                    lines: [{ name: newP.name + (newSize ? ' ' + newSize : ''), qty: 1, total: pay, cat: rayonOf(newPid) || '' }],
                   });
                 }
               } catch (_) {}
               $('#bq-today', root).textContent = headSubVente();
               refreshOps();
-              return { ref: rec.id, sale: rec, line: `Échange ${sale.id} réglé, différence ${fmtMAD(diff)}` };
+              return { ref: rec.id, sale: rec, line: `Échange ${sale.id} réglé, différence ${fmtMAD(pay)}` };
             },
             });
           });
