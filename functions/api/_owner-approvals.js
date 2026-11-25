@@ -216,7 +216,16 @@ export async function ownerGate(env, merchant, { kind, ref, askRef, amountCents,
   if (approvalId) {
     const row = await approvedFor(env, merchant, approvalId, kind, ref);
     if (!row || Number(row.amount_cents) < cents) return { ok: false, status: 403, error: 'owner-approval-invalid' };
-    return { ok: true, approval: row };
+    /* Pris AVANT le geste, d'un seul coup : deux envois simultanés du même
+       accord, un seul passe (revue de sécurité). La route le rend si le geste
+       échoue ensuite (releaseApproval). */
+    let claimed;
+    try {
+      claimed = await env.DB.prepare("UPDATE owner_approvals SET status = 'used', used_ts = ? WHERE id = ? AND merchant = ? AND status = ?")
+        .bind(Date.now(), row.id, merchant, row.status).run();
+    } catch (_) { return { ok: false, status: 503, error: 'approval-unavailable' }; }
+    if (!claimed || !claimed.meta || claimed.meta.changes !== 1) return { ok: false, status: 403, error: 'owner-approval-invalid' };
+    return { ok: true, approval: { ...row, claimedFrom: row.status } };
   }
   let s;
   try { s = await readSettings(env, merchant); } catch (_) { return { ok: false, status: 503, error: 'approval-unavailable' }; }
@@ -299,6 +308,15 @@ export async function approvedFor(env, merchant, id, kind, ref, now = Date.now()
   if (row.status !== 'approved' && row.status !== 'granted') return null;
   if (now - Number(row.decided_ts || 0) > GRANT_LIFE_MS) return null;
   return row;
+}
+
+/* Le geste a échoué après que l'accord a été pris : il redevient utilisable. */
+export async function releaseApproval(env, merchant, approval) {
+  if (!approval || !approval.claimedFrom) return;
+  try {
+    await env.DB.prepare("UPDATE owner_approvals SET status = ?, used_ts = NULL WHERE id = ? AND merchant = ? AND status = 'used'")
+      .bind(approval.claimedFrom, approval.id, merchant).run();
+  } catch (_) { /* reste « utilisé » : le serveur redemande, rien ne passe sans accord */ }
 }
 
 export async function markUsed(env, merchant, id, now = Date.now()) {

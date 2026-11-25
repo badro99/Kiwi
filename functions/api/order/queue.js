@@ -56,7 +56,7 @@ import { cancelTable, transferTable, mergeTables } from './_queue-tables.js';
 import { createFloorTicket, createTicket } from './_queue-create.js';
 import { voidLine, editLine, ackVoid, recallTicket, stationCooking, stationReady } from './_queue-kitchen.js';
 import { closeVisit } from './_queue-payments.js';
-import { OWNER_ACTOR_ID, markUsed, voidRef, ownerGate, lineCents, tableVisitCents } from '../_owner-approvals.js';
+import { OWNER_ACTOR_ID, releaseApproval, voidRef, ownerGate, lineCents, tableVisitCents } from '../_owner-approvals.js';
 import { archiveTakeout, advanceOrder } from './_queue-status.js';
 
 /* ── OÙ VIT CHAQUE GESTE ─────────────────────────────────────────────────────
@@ -319,8 +319,9 @@ export async function onRequestPost(context) {
    * L'ordre est celui d'origine et il compte : un corps qui porte deux gestes
    * est confié au premier de cette liste. */
   const ctx = { context, request, env, b, merchant, now, employee, pairedTill, pinActor, ownerApprovals: { gate: ownerGate, voidRef, lineCents, tableVisitCents } };
-  /* Un accord du patron sert une fois : marqué utilisé dès que le geste a réussi. */
-  const settle = async (res) => { if (res && ctx.ownerApprovalUsed && res.status < 300) await markUsed(env, merchant, ctx.ownerApprovalUsed.id, now); return res; };
+  /* Un accord du patron sert une fois : ownerGate le prend avant le geste, et
+     il redevient utilisable si le geste échoue. */
+  const settle = async (res) => { if (ctx.ownerApprovalUsed && !(res && res.status < 300)) await releaseApproval(env, merchant, ctx.ownerApprovalUsed); return res; };
   /* La preuve au nom du patron ne passe QUE par l'annulation de ligne, avant
      tout autre geste que le corps porterait (revue : cancelTable passait avant). */
   if (pinActor && pinActor.id === OWNER_ACTOR_ID) return (await settle(await voidLine(ctx))) || json({ error: 'owner-approval-invalid' }, 403);

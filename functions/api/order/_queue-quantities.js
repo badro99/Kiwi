@@ -181,7 +181,7 @@ export async function voidLine(ctx) {
     if (ownerProof && (!A || !approvalId)) return json({ error: 'owner-approval-invalid' }, 403);
     if (A && A.gate) {
       const gate = await A.gate(env, merchant, { kind: 'void-sent', ref: A.voidRef(targetOrder.id, lineId), askRef: lineId,
-        amountCents: A.lineCents({ ...targetLine, qty: Math.min(qtyToVoid, Math.max(1, Number(targetLine.qty) || 1)) }), approvalId,
+        amountCents: A.lineCents(targetLine), approvalId,   // la ligne entière : annuler une unité à la fois ne passe pas sous le seuil
         viaCode: !!(immediate && pinActor && !ownerProof) });
       if (!gate.ok) return json({ error: gate.error, ...(gate.ask ? { ask: gate.ask } : {}) }, gate.status);
       if (gate.approval) ctx.ownerApprovalUsed = gate.approval;
@@ -356,7 +356,7 @@ export async function editLine(ctx) {
     /* « − » sur un plat envoyé est une annulation : même règle du patron que voidLine. */
     if (qtyDelta < 0 && ownerApprovals && ownerApprovals.gate) {
       const gate = await ownerApprovals.gate(env, merchant, { kind: 'void-sent', ref: ownerApprovals.voidRef(targetOrder.id, lineId), askRef: lineId,
-        amountCents: ownerApprovals.lineCents({ ...targetLine, qty: Math.abs(qtyDelta) }), approvalId: String(b.editLine.ownerApproval || ''), viaCode: false });
+        amountCents: ownerApprovals.lineCents(targetLine), approvalId: String(b.editLine.ownerApproval || ''), viaCode: false });
       if (!gate.ok) return json({ error: gate.error, ...(gate.ask ? { ask: gate.ask } : {}) }, gate.status);
       if (gate.approval) ctx.ownerApprovalUsed = gate.approval;
     }

@@ -178,7 +178,7 @@ let saleApproval, lineApproval;
   const queueSrc = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
   ok('E8b la preuve du patron court-circuite tous les autres gestes, avant cancelTable (revue Fable)', queueSrc.indexOf('return (await settle(await voidLine(ctx))) || json({ error: \'owner-approval-invalid\' }') > 0
     && queueSrc.indexOf('return (await settle(await voidLine(ctx)))') < queueSrc.indexOf('const handled = await cancelTable(ctx)'));
-  ok('E8c un accord se marque utilisé par la route, après un geste réussi', /if \(handled\) return settle\(handled\);/.test(queueSrc) && /res\.status < 300\) await markUsed/.test(queueSrc));
+  ok('E8c un accord se prend avant le geste et se rend si le geste échoue (revue de sécurité)', /if \(handled\) return settle\(handled\);/.test(queueSrc) && /!\(res && res\.status < 300\)\) await releaseApproval/.test(queueSrc));
   ok('E8 la file refuse la preuve du patron pour tout autre geste qu\'une ligne', /pinActor\.id === OWNER_ACTOR_ID && !\(b\.voidLine/.test(queueSrc));
   const hotelSrc = fs.readFileSync(path.join(ROOT, 'functions/api/hotel/rooms-bulk.js'), 'utf8');
   ok('E9 les chambres d\'hôtel refusent la preuve du patron', hotelSrc.includes('proof.id !== OWNER_ACTOR_ID'));
@@ -302,7 +302,7 @@ let saleApproval, lineApproval;
   const voidBody = (requestId, ownerApproval) => ({ voidLine: { orderId: 'ord-k', table: '7', requestId, lineId: 'line-k1', qty: 1, reason: 'client_change', ...(ownerApproval ? { ownerApproval } : {}) } });
   const v1 = await queue(waiterCookie, voidBody('voi-k1k1k1k1k1k1k1k1k1k1'));
   ok('K1 serveur : une ligne envoyée attend l\'accord, même avec le repli (un serveur n\'a pas de code)', v1.status === 403 && v1.body.error === 'owner-approval-required', JSON.stringify(v1));
-  ok('K2 la réponse dit quoi demander : CETTE ligne, pour l\'unité annulée', v1.body.ask && v1.body.ask.kind === 'void-sent' && v1.body.ask.ref === 'line-k1' && v1.body.ask.amountCents === 12000, JSON.stringify(v1.body.ask));
+  ok('K2 la réponse dit quoi demander : CETTE ligne, au prix de la ligne entière (une unité à la fois ne passe pas sous le seuil)', v1.body.ask && v1.body.ask.kind === 'void-sent' && v1.body.ask.ref === 'line-k1' && v1.body.ask.amountCents === 24000, JSON.stringify(v1.body.ask));
   const askV = await call(waiterCookie, { action: 'request', ...v1.body.ask, requestedBy: 'Le patron', requestedById: 'owner' });
   ok('K3 le serveur dépose la demande lui-même', askV.status === 201, JSON.stringify(askV));
   const rowV = sqlite.prepare('SELECT requested_by, requested_by_id, ref FROM owner_approvals WHERE id = ?').get(askV.body.approval.id);
@@ -324,12 +324,20 @@ let saleApproval, lineApproval;
 
   const minus = (requestId, ownerApproval) => ({ editLine: { orderId: 'ord-k', table: '7', lineId: 'line-k2', qty: 2, requestId, ...(ownerApproval ? { ownerApproval } : {}) } });
   const m1 = await queue(waiterCookie, minus('edt-k1k1k1k1k1k1k1k1'));
-  ok('K12 « − » sur un plat envoyé attend l\'accord, pour l\'unité retirée', m1.status === 403 && m1.body.ask && m1.body.ask.kind === 'void-sent' && m1.body.ask.amountCents === 1000, JSON.stringify(m1));
+  ok('K12 « − » sur un plat envoyé attend l\'accord, au prix de la ligne', m1.status === 403 && m1.body.ask && m1.body.ask.kind === 'void-sent' && m1.body.ask.amountCents === 3000, JSON.stringify(m1));
   const askM = await call(waiterCookie, { action: 'request', ...m1.body.ask });
   await approve(askM.body.approval.id);
   const m2 = await queue(waiterCookie, minus('edt-k2k2k2k2k2k2k2k2', askM.body.approval.id));
   ok('K13 avec l\'accord, le « − » passe', m2.status < 300, JSON.stringify(m2));
   ok('K14 et consomme l\'accord', statusOf(askM.body.approval.id) === 'used');
+  sqlite.prepare("UPDATE orders SET lines = ? WHERE id = 'ord-k'").run(JSON.stringify([{ uid: 'line-k2', id: 'p-the', name: 'Thé', unitPrice: 10, qty: 3 }]));
+  const askR = await call(waiterCookie, { action: 'request', kind: 'void-sent', ref: 'line-k2' });
+  await approve(askR.body.approval.id);
+  const race = await Promise.all([
+    queue(waiterCookie, { voidLine: { orderId: 'ord-k', table: '7', requestId: 'voi-r1r1r1r1r1r1r1r1r1r1', lineId: 'line-k2', qty: 1, reason: 'client_change', ownerApproval: askR.body.approval.id } }),
+    queue(waiterCookie, { voidLine: { orderId: 'ord-k', table: '7', requestId: 'voi-r2r2r2r2r2r2r2r2r2r2', lineId: 'line-k2', qty: 1, reason: 'client_change', ownerApproval: askR.body.approval.id } }),
+  ]);
+  ok('K14c deux envois simultanés du même accord : un seul passe (revue de sécurité)', race.filter((r) => r.status < 300).length === 1 && race.some((r) => r.status === 403 && r.body.error === 'owner-approval-invalid'), JSON.stringify(race.map((r) => [r.status, r.body && r.body.error])));
   const junk = await queue(waiterCookie, { editLine: { orderId: 'ord-k', table: '7', lineId: 'line-k2', qty: 'x', requestId: 'edt-k4k4k4k4k4k4k4k4' } });
   ok('K14b une quantité qui n\'est pas un nombre est refusée, elle ne passe pas sous la règle (revue Fable)', junk.status === 400 && junk.body.error === 'bad-qty', JSON.stringify(junk));
   const plus = await queue(waiterCookie, { editLine: { orderId: 'ord-k', table: '7', lineId: 'line-k2', qty: 3, requestId: 'edt-k3k3k3k3k3k3k3k3' } });
@@ -346,6 +354,10 @@ let saleApproval, lineApproval;
   ok('K18 un bon ajouté après l\'accord : l\'accord ne couvre plus la table', grown.status === 403 && grown.body.error === 'owner-approval-invalid', JSON.stringify(grown));
   const askC2 = await call(waiterCookie, { action: 'request', kind: 'cancel-table', ref: SESSION });
   await approve(askC2.body.approval.id);
+  sqlite.prepare("UPDATE orders SET status = 'cooking-x' WHERE id = 'ord-k2'").run();
+  const failed = await queue(waiterCookie, cancel(askC2.body.approval.id));
+  ok('K18b un geste qui échoue après la prise de l\'accord le rend utilisable', failed.status === 409 && statusOf(askC2.body.approval.id) === 'approved', JSON.stringify(failed) + ' ' + statusOf(askC2.body.approval.id));
+  sqlite.prepare("UPDATE orders SET status = 'accepted' WHERE id = 'ord-k2'").run();
   const c2 = await queue(waiterCookie, cancel(askC2.body.approval.id));
   ok('K19 avec l\'accord de la table entière, elle s\'annule', c2.status === 200 && c2.body.ok, JSON.stringify(c2));
   ok('K20 l\'accord est consommé', statusOf(askC2.body.approval.id) === 'used');
@@ -355,6 +367,7 @@ let saleApproval, lineApproval;
   sqlite.prepare("INSERT INTO table_sessions (id, merchant, mode, table_no, status, opened_ts, seen_ts) VALUES (?, ?, 'table', '7', 'open', ?, ?)").run(EMPTY, SHOP, now, now);
   const empty = await queue(waiterCookie, { cancelTable: { table: '7', expectedSession: EMPTY } });
   ok('K20b une table ouverte par erreur, sans bon, se libère sans sonner le patron (revue Fable)', empty.status === 200 && empty.body.ok, JSON.stringify(empty));
+  sqlite.prepare("UPDATE owner_approvals SET created_ts = created_ts - 120000 WHERE merchant = ? AND status <> 'pending'").run(SHOP);   // sous la limite de dix demandes par minute
   const w = await call(waiterCookie, { action: 'request', kind: 'void-sent', ref: 'line-tajine' });
   const tillWithdraw = await call(waiterCookie, { action: 'withdraw', id: lineApproval });
   ok('K21 un serveur ne retire pas la demande d\'un autre', tillWithdraw.status === 404, JSON.stringify(tillWithdraw));
@@ -421,7 +434,7 @@ let saleApproval, lineApproval;
   made.length = 0; calls.length = 0; hold = true;
   context.setTimeout = (f) => setTimeout(f, 1);   // l'attente rend la main, le temps d'appuyer sur Échap
   const pending = win.fetch('/api/order/queue', { method: 'POST', body: JSON.stringify({ merchant: SHOP, voidLine: { lineId: 'line-k1', qty: 1, requestId: 'x' } }) });
-  for (let i = 0; i < 50 && !made.length; i++) await new Promise((r) => setTimeout(r, 2));
+  for (let i = 0; i < 500 && !made.length; i++) await new Promise((r) => setTimeout(r, 4));
   made[0].listeners.cancel();
   const gone = await pending;
   const goneBody = await gone.json();
