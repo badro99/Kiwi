@@ -53,7 +53,7 @@ db.exec(read('migrations/legacy/2026-08-21-print-relay.sql'));
 db.exec(`CREATE TABLE IF NOT EXISTS pair_attempts (ip TEXT PRIMARY KEY, fails INTEGER NOT NULL, first_ts INTEGER NOT NULL, blocked_until INTEGER);`);
 db.exec(`CREATE TABLE IF NOT EXISTS merchant_config (merchant TEXT PRIMARY KEY, till_epoch INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'active');`);
 db.prepare('INSERT OR IGNORE INTO merchant_config (merchant, till_epoch, status) VALUES (?, 0, ?)').run('browse', 'active');
-const env = { DB: fakeD1(db), AUTH_SECRET };
+const env = { DB: fakeD1(db), AUTH_SECRET, PRINT_PROBES: 'on' };   // coupés en production (functions/api/print/jobs.js › probesOn)
 const till = 'kiwi_till=' + (await lib.tillToken(AUTH_SECRET, 'browse'));
 const pc = await call(bridgesRoute, 'POST', '/api/print/bridges?merchant=browse', { body: { action: 'pair-code' }, cookie: till }, env);
 const red = await call(bridgesRoute, 'POST', '/api/print/bridges', { body: { action: 'redeem', code: pc.j.code, name: 'samsung SM-X236B', platform: 'android', version: '1.0.5' }, ip: '10.0.0.' + randomInt(2, 250) }, env);
@@ -67,6 +67,13 @@ const poll = () => call(jobsRoute, 'GET', '/api/print/jobs', { bearer: token }, 
 const ack = (id, okFlag, error) => call(jobsRoute, 'POST', '/api/print/jobs', { bearer: token, body: { action: 'ack', id, ok: okFlag, bytes: okFlag ? 2 : 0, error } }, env);
 const status = (id) => call(jobsRoute, 'GET', '/api/print/jobs?merchant=browse&id=' + id, { cookie: till }, env);
 
+/* Coupés en production depuis l'incident Browse du 25 nov. : sans PRINT_PROBES=on, le dépôt est refusé et rien n'entre en file. */
+const envOff = { DB: env.DB, AUTH_SECRET };
+const off = await call(jobsRoute, 'POST', '/api/print/jobs?merchant=browse', { body: { target: KITCHEN, kind: 'probe', clientRef: 'probe:off' }, cookie: till }, envOff);
+assert.equal(off.j.ok, false); assert.equal(off.j.error, 'probes-off');
+assert.equal(db.prepare("SELECT COUNT(*) AS n FROM print_jobs WHERE kind = 'probe'").get().n, 0, 'probes off: nothing is queued for the bridge');
+const offPoll = await call(jobsRoute, 'GET', '/api/print/jobs', { bearer: token }, envOff);
+assert.ok(!(offPoll.j.jobs || []).some((j) => j.kind === 'probe'), 'probes off: the bridge poll adds none');
 const smuggled = Buffer.from('VOLE 500 MAD\n').toString('base64');
 const p1 = await deposit({ target: KITCHEN, kind: 'probe', dataB64: smuggled, clientRef: 'probe:192.168.11.87:9100:scheduled:1' });
 assert.equal(p1.status, 200);

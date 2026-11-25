@@ -53,7 +53,7 @@ db.exec(read('migrations/legacy/2026-08-21-print-relay.sql'));
 db.exec(`CREATE TABLE IF NOT EXISTS pair_attempts (ip TEXT PRIMARY KEY, fails INTEGER NOT NULL, first_ts INTEGER NOT NULL, blocked_until INTEGER);`);
 db.exec(`CREATE TABLE IF NOT EXISTS merchant_config (merchant TEXT PRIMARY KEY, till_epoch INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'active');`);
 for (const m of ['browse', 'amira-cafe']) db.prepare('INSERT OR IGNORE INTO merchant_config (merchant, till_epoch, status) VALUES (?, 0, ?)').run(m, 'active');
-const env = { DB: fakeD1(db), AUTH_SECRET };
+const env = { DB: fakeD1(db), AUTH_SECRET, PRINT_PROBES: 'on' };   // coupés en production (functions/api/print/jobs.js › probesOn)
 
 async function shop(merchant) {
   const till = 'kiwi_till=' + (await lib.tillToken(AUTH_SECRET, merchant));

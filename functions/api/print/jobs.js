@@ -36,6 +36,14 @@ const KINDS = ['receipt', 'kitchen', 'label', 'test', 'drawer', 'report', 'wake'
  * refus au lieu d'être repris, n'entre jamais dans la liste des tickets à
  * réimprimer et ne peut pas être réimprimé. */
 const PROBE_B64 = 'G0A=';
+/* ── COUPÉ (owner, 25 nov. 2026, 14:15) ──
+ * Incident Browse : plus aucun ticket déposé par les caisses depuis 13:03,
+ * routage par poste perdu, hub d'impression tombé. Les probes de la caisse
+ * (assets/printer-health.js) et ceux du serveur (_keep-awake.js) sont arrêtés
+ * le temps de trouver la cause : le dépôt d'un probe est refusé (la caisse lit
+ * « pas de verdict » et ne dit rien) et le tour vide du pont n'en ajoute plus.
+ * PRINT_PROBES=on (variable du projet Pages) les rallume sans déploiement de code. */
+export const probesOn = (env) => !!(env && env.PRINT_PROBES === 'on');
 
 /* L'identifiant dérive du commerce ET de la clé de l'appelant : deux commerces
    qui choisissent la même clé ne se marchent pas dessus, et la clé elle-même
@@ -159,7 +167,7 @@ export async function onRequestGet(context) {
         ).bind(bridge.merchant, t - ACTIVE_WINDOW_MS).first();
         poll = recent ? ACTIVE_POLL_MS : IDLE_POLL_MS;
         /* Browse : une imprimante restée muette une minute reçoit un probe (_keep-awake.js). */
-        const probe = await keepAwakeProbe(env, bridge.merchant, bridge.id, t).catch(() => null);
+        const probe = probesOn(env) ? await keepAwakeProbe(env, bridge.merchant, bridge.id, t).catch(() => null) : null;
         if (probe) jobs.push(probe);
       }
       return relayJson({ ok: true, merchant: bridge.merchant, jobs, poll }, 200, request);
@@ -367,6 +375,7 @@ export async function onRequestPost(context) {
   const target = cleanTarget(body.target);
   if (!target) return relayJson({ ok: false, error: 'target-required' }, 400, request);
   const kind = KINDS.indexOf(String(body.kind || '')) !== -1 ? String(body.kind) : 'other';
+  if (kind === 'probe' && !probesOn(env)) return relayJson({ ok: false, error: 'probes-off' }, 200, request);
   let dataB64 = kind === 'probe' ? PROBE_B64 : String(body.dataB64 || '');
   if (kind === 'wake' && !dataB64) dataB64 = 'EAE=';
   if (!dataB64) return relayJson({ ok: false, error: 'data-required' }, 400, request);
