@@ -920,9 +920,6 @@
           <td>${m.department ? `<span class="eq-venue-badge">${esc(jobName(m.department, 'dept'))}</span>` : '<span class="eq-cell-empty">·</span>'}</td>
           <td><span class="${contractCls}">${esc(m.contract ? contractLabel(T, m.contract) : '·')}</span></td>
           <td><div class="kt-chips">${langChips || '<span class="eq-cell-empty">·</span>'}</div></td>
-          <td>${(+m.baseSalary || 0) > 0 || (+m.hourlyRate || 0) > 0
-            ? `<div class="eq-salary-v">${(+m.baseSalary || 0) > 0 ? fmtMad(m.baseSalary) : '·'}</div><div class="eq-salary-sub">${(+m.hourlyRate || 0) > 0 ? (window.KiwiNumber?.format((+m.hourlyRate), {}) ?? (+m.hourlyRate).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD/h' : '·'}</div>`
-            : `<div class="eq-salary-v">·</div><div class="eq-salary-sub">${esc(T.salaryUnset)}</div>`}</td>
           <td>
             <div class="eq-actions">
               <button class="eq-icon-btn" type="button" data-action="kt-view-profile" data-arg="${esc(m.id)}" aria-label="${esc(T.viewProfile)}" title="${esc(T.viewProfile)}">${svgIcon(IC.eye, 14)}</button>
@@ -933,6 +930,7 @@
         </tr>
       `;
     }).join('');
+    /* Pas de colonne salaire : la liste se voit par-dessus l'épaule, le salaire reste dans la fiche de l'employé. */
     return `
       <div class="eq-table-wrap">
         <table class="eq-table">
@@ -943,7 +941,6 @@
               <th>${esc(T.colDepartment)}</th>
               <th>${esc(T.colContract)}</th>
               <th>${esc(T.colLanguages)}</th>
-              <th>${esc(T.colSalary)}</th>
               <th class="eq-num">${esc(T.colActions)}</th>
             </tr>
           </thead>

@@ -1672,8 +1672,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "335",
-    "sha": "11ff0d5b754e7ce3"
+    "v": "336",
+    "sha": "b44648c32099d1a3"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -2600,8 +2600,8 @@
     "sha": "5fa184b6eea75f72"
   },
   "assets/team/profile-ui.js": {
-    "v": "23",
-    "sha": "e675f6efde29d098"
+    "v": "24",
+    "sha": "819a83b8b4423e23"
   },
   "assets/team/roster-list.js": {
     "v": "9",

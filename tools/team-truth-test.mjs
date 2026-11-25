@@ -88,7 +88,7 @@ ok('le formulaire est branché : nouveau membre cohérent, et changement de post
   assert.ok(/e\.target\.matches\('\[data-kt-function\]'\)[\s\S]{0,400}deptForFunction\(e\.target\.value, depts\)[\s\S]{0,600}sel\.dispatchEvent\(new Event\('change'/.test(SRC), 'listener notifies the custom select');
 });
 
-ok('real roster renders unset salaries and honest attendance provenance in FR/EN/AR', () => {
+ok('real roster keeps salaries out of the list and honest attendance provenance in FR/EN/AR', () => {
   for (const locale of ['fr', 'en', 'ar']) {
     let api, state;
     const core = { handlers: {}, trLang: () => locale, onState: fn => { state = fn; }, install: value => { api = value; },
@@ -104,7 +104,7 @@ ok('real roster renders unset salaries and honest attendance provenance in FR/EN
     const T = api.t(), members = [{ id: 'a', firstName: 'Fixture', languages: [] }];
     state(true, { merchant: '', members: [] });
     let html = api.renderProfilesPane(T, { name: 'Shop' }, 'restaurant', members);
-    assert.ok(html.includes(T.salaryUnset), locale + ': missing salary has its translated explanation');
+    assert.ok(!html.includes(T.salaryUnset) && !html.includes(T.colSalary), locale + ': no salary column in the list, it lives on the employee card');
     assert.ok(html.includes(T.statPayrollNone), locale + ': missing payroll is explained');
     assert.ok(html.includes(T.statPresentHoursSub), locale + ': saved hours are not called live attendance');
     assert.ok(!html.includes('0 MAD/h') && !html.includes('>0 MAD<'));
@@ -113,7 +113,7 @@ ok('real roster renders unset salaries and honest attendance provenance in FR/EN
     assert.ok(html.includes(T.statPresentSub), locale + ': actual live attendance is labelled live');
     members[0].baseSalary = 3100;
     html = api.renderProfilesPane(T, { name: 'Shop' }, 'restaurant', members);
-    assert.ok(html.includes('3100 MAD'));
+    assert.equal(html.split('3100 MAD').length - 1, 1, locale + ': the salary shows once, in the payroll total, never on the row');
     assert.ok(!html.includes(T.salaryUnset) && !html.includes(T.statPayrollNone));
   }
 });
