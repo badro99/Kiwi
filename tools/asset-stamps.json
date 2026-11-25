@@ -32,8 +32,8 @@
     "sha": "fddb9eb286e8dc9a"
   },
   "assets/admin-legacy.js": {
-    "v": "19",
-    "sha": "baf1a4cade262154"
+    "v": "20",
+    "sha": "9cbe535b97c2bd07"
   },
   "assets/admin-origin-devices.js": {
     "v": "1",
@@ -1168,16 +1168,16 @@
     "sha": "ead331c2ad217c31"
   },
   "assets/kit/strings/till.ar.js": {
-    "v": "16",
-    "sha": "304b8dcc7afec609"
+    "v": "17",
+    "sha": "43a510e05f951421"
   },
   "assets/kit/strings/till.en.js": {
-    "v": "16",
-    "sha": "d794473daebd7358"
+    "v": "17",
+    "sha": "644cbaddc5f6218d"
   },
   "assets/kit/strings/till.fr.js": {
-    "v": "16",
-    "sha": "51326f1263eb6a1a"
+    "v": "17",
+    "sha": "1c8b2458cf792cbc"
   },
   "assets/kit/team-pin.js": {
     "v": "5",
@@ -1196,8 +1196,8 @@
     "sha": "4bb4f245a64d8be2"
   },
   "assets/kit/till-online.js": {
-    "v": "5",
-    "sha": "4ef0d84750aeb8bf"
+    "v": "6",
+    "sha": "81d25d350ab179eb"
   },
   "assets/kit/till-pin.js": {
     "v": "11",
@@ -1492,8 +1492,8 @@
     "sha": "3cd3b01271f8b903"
   },
   "assets/orderpro-inbox.js": {
-    "v": "49",
-    "sha": "63d295ede469d616"
+    "v": "50",
+    "sha": "618d6e9481b14749"
   },
   "assets/orderpro-menu.js": {
     "v": "8",
@@ -2460,8 +2460,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "36",
-    "sha": "e9274caf8fa89ed9"
+    "v": "37",
+    "sha": "e9fad241610dad0f"
   },
   "assets/serveur-lang.js": {
     "v": "19",
@@ -2480,8 +2480,8 @@
     "sha": "5911048d786d702a"
   },
   "assets/serveur/service.js": {
-    "v": "53",
-    "sha": "9ad6cb4650575457"
+    "v": "54",
+    "sha": "d62485d414b2dd8e"
   },
   "assets/service-requests.js": {
     "v": "5",

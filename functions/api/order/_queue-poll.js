@@ -100,11 +100,14 @@ export async function pollQueue({ env, url, merchant, role, service }) {
 
   /* A phone order nobody accepted is not a kitchen ticket forever. Test taps,
    * abandoned carts and customers who walked away used to return after every
-   * caisse refresh because `pending` had no terminal condition. */
+   * caisse refresh because `pending` had no terminal condition. A WAITER's
+   * order waiting for the till (features.serveurValidation) is a real table:
+   * it never expires on its own, the till accepts or refuses it. */
   try {
     await env.DB.prepare(
       `UPDATE orders SET status = 'rejected', updated_ts = ?
-        WHERE merchant = ? AND status = 'pending' AND created_ts < ?`
+        WHERE merchant = ? AND status = 'pending' AND created_ts < ?
+          AND COALESCE(channel, '') <> 'serveur'`
     ).bind(now, merchant, now - PENDING_TTL_MS).run();
   } catch (err) {
     console.error('[queue] Failed to auto-reject expired pending orders for merchant', merchant);

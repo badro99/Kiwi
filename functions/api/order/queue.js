@@ -53,7 +53,7 @@ import { merchantZone } from '../_business-day.js';
 import { visitCredits } from '../_visit-cover.js';
 import { ORDER_ID, MAX_LINES, displayMoney, employeeName, ensureServiceTableSession } from './_queue-shared.js';
 import { cancelTable, transferTable, mergeTables } from './_queue-tables.js';
-import { createFloorTicket, createTicket } from './_queue-create.js';
+import { createFloorTicket, createTicket, serveurValidationOn } from './_queue-create.js';
 import { voidLine, editLine, ackVoid, recallTicket, stationCooking, stationReady } from './_queue-kitchen.js';
 import { closeVisit } from './_queue-payments.js';
 import { OWNER_ACTOR_ID, releaseApproval, voidRef, ownerGate, lineCents, tableVisitCents } from '../_owner-approvals.js';
@@ -264,6 +264,14 @@ export async function onRequestPost(context) {
       } catch (_) {}
     }
     const validStatus = floorMayAcceptOrder(b, employeeStatusOrder, scope);
+    /* La commande d'un serveur, quand la caisse doit la valider, ne se valide
+     * qu'à la caisse : pas depuis le téléphone, pas par son propre serveur.
+     * Canal illisible : on refuse plutôt que de laisser passer. */
+    if (validStatus && await serveurValidationOn(env, merchant)) {
+      let channel = null;
+      try { channel = (await env.DB.prepare('SELECT channel FROM orders WHERE id = ? AND merchant = ?').bind(b.id.trim(), merchant).first() || {}).channel; } catch (_) { channel = 'serveur'; }
+      if (channel === 'serveur') return json({ error: 'till-validation-required' }, 403);
+    }
 
     /* `closeSession` n'était validé NULLE PART dans ce bloc, alors que le
      * gestionnaire le fait gagner sur `closeTable` à chaque branche — y compris

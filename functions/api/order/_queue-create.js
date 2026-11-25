@@ -11,6 +11,18 @@ import { deferCourse, ORDER_ID, storedOrderLines, MAX_LINES, ensureServiceTableS
 
 const MAX_TOTAL = 200000;          // 200 000 MAD — un garde-fou, pas une règle
 
+/* Commandes des serveurs validées à la caisse (kiwi-admin › Options à la
+ * demande, features.serveurValidation, éteint par défaut ; Browse, 25 nov.
+ * 2026). Allumé, la commande d'un serveur arrive « pending » : la caisse sonne,
+ * la valide ou la refuse, et rien ne part en cuisine avant. Une base illisible
+ * garde le comportement d'avant (la commande part), jamais une table bloquée. */
+export async function serveurValidationOn(env, merchant) {
+  try {
+    const row = await env.DB.prepare('SELECT features FROM merchant_config WHERE merchant = ?').bind(merchant).first();
+    return !!row && (JSON.parse(row.features || '{}') || {}).serveurValidation === true;
+  } catch (_) { return false; }
+}
+
 export async function createFloorTicket(ctx) {
   const { context, env, b, merchant, now } = ctx;
   /* ── La commande prise EN SALLE ────────────────────────────────────────────
@@ -136,6 +148,7 @@ export async function createFloorTicket(ctx) {
      * « Lancer ». Sans clé, la cuisine sortait deux fois le même plat. */
     const id = 'ord-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
     const linesJson = JSON.stringify(priced.lines);
+    const status = (await serveurValidationOn(env, merchant)) ? 'pending' : 'accepted';   // jamais une saisie : deux valeurs fixes
     let orderNumber;
     try { orderNumber = await nextOrderNumber(env, merchant, now); }
     catch (_) { return json({ error: 'number-allocation-failed' }, 503); }
@@ -149,7 +162,7 @@ export async function createFloorTicket(ctx) {
       row = await env.DB.prepare(
         `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
                              created_ts, updated_ts, server_name, menu_rev, priced_ts, client_ref, session_id, channel)
-         SELECT ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, ?, ?, ?, 'serveur'
+         SELECT ?, ?, ?, ?, ?, ?, ?, '${status}', ?, ?, ?, ?, ?, ?, ?, 'serveur'
          WHERE ? IS NULL OR EXISTS (SELECT 1 FROM table_sessions
            WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')
          RETURNING number`
@@ -179,7 +192,7 @@ export async function createFloorTicket(ctx) {
         row = await env.DB.prepare(
           `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
                                created_ts, updated_ts, session_id)
-           SELECT ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?, ?
+           SELECT ?, ?, ?, ?, ?, ?, ?, '${status}', ?, ?, ?
            WHERE ? IS NULL OR EXISTS (SELECT 1 FROM table_sessions
              WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')
            RETURNING number`
@@ -192,13 +205,13 @@ export async function createFloorTicket(ctx) {
     }
 
     if (!row) return json({ error: 'stale-table-visit', retry: true }, 409);
-    deferCourse(context, recordOrderCourse(env, {
+    if (status === 'accepted') deferCourse(context, recordOrderCourse(env, {
       merchant, orderId: id, orderNumber: (row && row.number) || 1,
       acceptedAt: now, sentAt: now,
     }));
     return json({
       ok: true, id, number: (row && row.number) || 1,
-      status: 'accepted', total, lines: priced.lines, session: serviceSession && serviceSession.id,
+      status, total, lines: priced.lines, session: serviceSession && serviceSession.id,
     });
   }
   return null;

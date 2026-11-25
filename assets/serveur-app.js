@@ -1068,7 +1068,7 @@
                 number: j.number, mode: 'table', channel: 'kiwi',
                 server: activeRole.fullName || activeRole.name || '',
               }),
-              replayed: !!j.replayed,
+              replayed: !!j.replayed, awaitingTill: j.status === 'pending',   // la caisse valide d'abord (features.serveurValidation)
             };
             const remaining = currentOrder.some((line) => Math.max(0, (+line.qty || 0) - (+line.sentQty || 0)) > 0);
             if (!remaining) return result;
@@ -2112,7 +2112,7 @@
             publishServiceTableState(sentId, tables[sentId].status, tables[sentId].covers, false);
             dirtyOrders.delete(sentId);
             returnToFloor();
-            const sentMsg = res.reference ? `${msg} · ticket ${res.reference}` : msg;
+            const base = res.awaitingTill ? employeeTranslation('Envoyée à la caisse · en attente de validation') : msg, sentMsg = res.reference ? `${base} · ticket ${res.reference}` : base;
             /* Envoi partiel : ce qui est parti est parti, mais le serveur doit
              * savoir que des lignes sont restées à quai. */
             toast(res.dropped > 0

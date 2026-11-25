@@ -196,8 +196,8 @@ var SHELL = [
   '/assets/serveur-shell.css?v=12',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
   '/assets/serveur/payment-support.js?v=9',
-  '/assets/serveur/service.js?v=53',
-  '/assets/serveur-app.js?v=36',
+  '/assets/serveur/service.js?v=54',
+  '/assets/serveur-app.js?v=37',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -545,7 +545,7 @@ var SHELL = [
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=10',
   '/assets/orderpro-panel.js?v=5',
-  '/assets/orderpro-inbox.js?v=49',
+  '/assets/orderpro-inbox.js?v=50',
   '/assets/service-requests.js?v=5',
   '/assets/owner-ask.js?v=3',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
@@ -577,9 +577,9 @@ var SHELL = [
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
-  '/assets/kit/strings/till.fr.js?v=16',
-  '/assets/kit/strings/till.en.js?v=16',
-  '/assets/kit/strings/till.ar.js?v=16',
+  '/assets/kit/strings/till.fr.js?v=17',
+  '/assets/kit/strings/till.en.js?v=17',
+  '/assets/kit/strings/till.ar.js?v=17',
   '/assets/kit/strings.js?v=2',
   '/assets/kit/format.js?v=3',
   '/assets/kit/business-day.js?v=4',
@@ -620,7 +620,7 @@ var SHELL = [
   '/assets/kit/till.js?v=36',
   '/assets/kit/till-frame.js?v=16',
   '/assets/kit/till-attendance.js?v=1',
-  '/assets/kit/till-online.js?v=5',
+  '/assets/kit/till-online.js?v=6',
   '/assets/kit/till-z.js?v=2',
   '/assets/retail-scan.js?v=14',
   '/assets/caisse-dna.css?v=10',

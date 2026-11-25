@@ -992,7 +992,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
-  <script src="assets/admin-legacy.js?v=19"></script>
+  <script src="assets/admin-legacy.js?v=20"></script>
   <script src="assets/staff-roles.js?v=4"></script>
   <!-- The brand's one selection motion, for the établissement switcher. Self-
        contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
@@ -1237,6 +1237,8 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
         hint:'Allumé par défaut. Pour les restaurants dont les serveurs prennent les commandes sur l’app serveur Kiwi et pointent avec le planning. Coupé, « Équipe » et « Code de pointage » disparaissent de la caisse, dans les deux designs. Appliqué au prochain chargement de la caisse.' },
       { key:'expenses', label:'Dépenses (registre du propriétaire)', off:true,
         hint:'Éteint par défaut. Ajoute « Dépenses » au tableau de bord du propriétaire : l’argent entré, l’argent sorti (dépenses saisies, tickets scannés et retraits de la caisse classés automatiquement) et ce qui reste ce mois-ci. Réservé au propriétaire : ni la caisse ni les employés ne le voient. Éteint après usage : rien n’est effacé.' },
+      { key:'serveurValidation', label:'Commandes des serveurs validées à la caisse', off:true,
+        hint:'Éteint par défaut. Allumé, une commande envoyée depuis le téléphone d’un serveur sonne à la caisse et y attend : la caisse la valide (elle part alors en cuisine et au bar) ou la refuse. Le serveur ne peut pas la valider lui-même, et elle n’expire jamais toute seule. Appliqué à la prochaine commande.' },
       { key:'simple_food_cost', label:'Coût simple (fiches de coût)', off:true,
         hint:'Éteint par défaut. Ajoute l’onglet « Coût simple » dans Analyse du menu : une calculatrice de coût par plat (prix d’achat, rendement, emballages, portions), réservée au propriétaire. Ne touche pas au stock. Éteint après usage : les fiches restent lisibles, rien n’est effacé.' },
     ],

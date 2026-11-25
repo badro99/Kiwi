@@ -1321,7 +1321,7 @@
        * pour qu'une autre paire de mains appuie au comptoir. Le bouton est
        * ici, sur la table concernée. Refuser reste au comptoir. */
       const pendingOrder = svPendingOrderFor(id);
-      const pendingBannerHtml = pendingOrder ? `
+      const pendingBannerHtml = pendingOrder && pendingOrder.channel === 'serveur' ? `<div class="td-pending-banner"><div class="td-pending-copy"><strong>Commande ${esc(serviceOrderRef(pendingOrder))} · En attente de la caisse</strong><span>Elle part en cuisine dès que la caisse la valide.</span></div></div>` : pendingOrder ? `
         <div class="td-pending-banner">
           <div class="td-pending-copy">
             <strong>Commande ${esc(serviceOrderRef(pendingOrder))} en attente</strong>

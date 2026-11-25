@@ -125,8 +125,9 @@
     }, function () { delete busy[id]; warn(0); paint(); });
   }
 
-  function arrived(n, floor) {
-    if (root.KiwiToast) root.KiwiToast.show({ message: t('online.arrived', { n: n }) + '. ' + t('online.arrived_sub'), icon: 'shopping_bag' });
+  function arrived(n, floor, waiter) {   /* waiter : nom du serveur (commande à valider), null pour un client */
+    var sub = waiter == null ? t('online.arrived_sub') : waiter ? t('online.waiter_sub', { who: waiter }) : t('online.waiter_sub_anon');
+    if (root.KiwiToast) root.KiwiToast.show({ message: t('online.arrived', { n: n }) + '. ' + sub, icon: 'shopping_bag' });
     var rail = doc.querySelector('k-rail');
     if (!rail || !rail.shadowRoot) return;
     var item = rail.shadowRoot.querySelector('[data-id="' + (floor ? 'floor' : 'takeaway') + '"]');   /* des tables seulement : la Salle sonne */
@@ -146,10 +147,10 @@
     }
   }
 
-  function expiring(o, min) {
+  function expiring(o, min, waiter) {
     var I = inbox();
     var ref = (I && I.ref) ? I.ref(o) : String(o.number || o.id);
-    if (root.KiwiToast) root.KiwiToast.show({ message: t('online.expiring', { order: ref, min: min }), icon: 'schedule' });
+    if (root.KiwiToast) root.KiwiToast.show({ message: waiter ? t('online.waiter_wait', { order: ref }) : t('online.expiring', { order: ref, min: min }), icon: 'schedule' });
   }
 
   function mount(b, a) {

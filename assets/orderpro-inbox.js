@@ -170,14 +170,14 @@
         if (j.ordersAvailable === false) return -1;
         if (merchant() !== m) return -1;   // le commerce a changé pendant la requête
         state.since = j.now || state.since;
-        var fresh = 0, freshFloor = 0;
+        var fresh = 0, freshFloor = 0, freshWaiter = 0, waiterName = '';
         var delta = j.orders || [];
         var cancelled = Array.isArray(j.cancelledTickets) ? j.cancelledTickets : [];
         cancelled.forEach(function (ticket) {
           if (ticket && ticket.id) delete state.orders[ticket.id];
         });
         delta.forEach(function (o) {
-          if (!state.seen[o.id] && o.status === 'pending') { fresh++; if (onFloor(o)) freshFloor++; state.seen[o.id] = 1; }
+          if (!state.seen[o.id] && o.status === 'pending') { fresh++; if (onFloor(o)) freshFloor++; if (o.channel === 'serveur') { freshWaiter++; waiterName = o.server || waiterName; } state.seen[o.id] = 1; }
           if (o.status === 'archived') delete state.orders[o.id];
           else state.orders[o.id] = o;
         });
@@ -193,7 +193,7 @@
           return Object.assign({}, ticket, { status: 'rejected' });
         });
         bridge(delta.concat(terminal));
-        if (fresh) announce(fresh, freshFloor === fresh);
+        if (fresh) announce(fresh, freshFloor === fresh, freshWaiter === fresh ? waiterName : null);
         warnExpiring();
         warnDegraded(j.degraded);
         verifyCloses();
@@ -496,7 +496,9 @@
   }
 
   /* ── attention: a new order must not be missable on a busy counter ────── */
-  function announce(n, floorOnly) {
+  /* `waiter` : le nom du serveur quand TOUTES les nouvelles commandes viennent
+   * d'un téléphone de serveur (features.serveurValidation) ; null sinon. */
+  function announce(n, floorOnly, waiter) {
     var kit = kitOnline();
     var chip = document.getElementById('kop-chip');
     if (chip) { chip.classList.add('is-new'); setTimeout(function () { chip.classList.remove('is-new'); }, 6000); }
@@ -519,13 +521,14 @@
     } catch (_) {}
     /* The 2027 till draws the arrival itself: its toast, the Takeaway badge's
      * pop and ring (till-online.js). The tones above stay the same. */
-    if (kit) { try { window.KiwiTillOnline.arrived(n, floorOnly); } catch (_) {} return; }
+    if (kit) { try { window.KiwiTillOnline.arrived(n, floorOnly, waiter); } catch (_) {} return; }
     try {
       var stack = document.getElementById('toast-stack');
       if (stack) {
         var el = document.createElement('div'); el.className = 'toast';
         el.innerHTML = '<div style="font-weight:600">' + n + ' nouvelle' + (n > 1 ? 's' : '') + ' commande' + (n > 1 ? 's' : '') + '</div>' +
-                       '<div style="opacity:.7;font-size:.85em;margin-top:2px">Depuis le téléphone d\'un client</div>';
+                       '<div style="opacity:.7;font-size:.85em;margin-top:2px">' + (waiter == null ? 'Depuis le téléphone d\'un client'
+                         : (waiter ? 'De ' + String(waiter).replace(/[<>&"]/g, '') : 'D\'un serveur') + ' · à valider à la caisse') + '</div>';
         stack.appendChild(el);
         setTimeout(function () { el.classList.add('fade'); }, 2600);
         setTimeout(function () { el.remove(); }, 2900);
@@ -551,14 +554,16 @@
         if (!(age > EXPIRY_WARN_MS)) return;
         state.expiryWarned[id] = 1;
         var left = Math.max(1, Math.round((30 * 60 * 1000 - age) / 60000));
-        if (kitOnline()) { try { window.KiwiTillOnline.expiring(o, left); } catch (_) {} return; }
+        var waiter = o.channel === 'serveur';   // n'expire pas : on rappelle qu'elle attend
+        if (kitOnline()) { try { window.KiwiTillOnline.expiring(o, left, waiter); } catch (_) {} return; }
         var label = (o.number != null ? 'N°' + o.number : 'commande') +
           (o.mode === 'table' && o.table ? ' · Table ' + o.table : ' · À emporter');
         try {
           var stack = document.getElementById('toast-stack');
           if (stack) {
             var el = document.createElement('div'); el.className = 'toast';
-            el.textContent = label + ' en attente depuis 20 min · expire dans ~' + left + ' min';
+            el.textContent = waiter ? label + ' · commande de ' + (o.server || 'serveur') + ' attend la validation depuis 20 min'
+              : label + ' en attente depuis 20 min · expire dans ~' + left + ' min';
             stack.appendChild(el);
             setTimeout(function () { el.classList.add('fade'); }, 5000);
             setTimeout(function () { el.remove(); }, 5300);
