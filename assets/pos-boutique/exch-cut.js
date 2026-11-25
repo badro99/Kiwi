@@ -20,6 +20,7 @@ const PHRASES = {
   'Remise accordée · {n}': ['Discount given · {n}', 'تخفيض ممنوح · {n}'],
   'Encaisser {n}': ['Collect {n}', 'تحصيل {n}'],
   'MAD': ['MAD', 'درهم'],
+  'Au-delà du maximum de {p} % : signalée au tableau de bord': ['Above the {p} % maximum: reported on the dashboard', 'فوق الحد الأقصى {p} ٪: يُبلَّغ عنها في لوحة التحكم'],
 };
 const tr = (s) => {
   const C = typeof window !== 'undefined' ? window.KiwiCaisseLang : null;
@@ -29,7 +30,7 @@ const tr = (s) => {
   if (own && (lang === 'en' || lang === 'ar')) return own[lang === 'en' ? 0 : 1];
   return C && typeof C.tr === 'function' ? C.tr(s) : s;
 };
-const ui = (key, n) => tr(key).split('{n}').join(String(n));
+const ui = (key, n, p) => tr(key).split('{n}').join(String(n)).split('{p}').join(String(p));
 const cents = (v) => Math.round((Number(v) || 0) * 100);
 
 /* Ce que la cliente paie, lu dans la case : null si la case ne baisse rien. */
@@ -55,8 +56,23 @@ export function cutFields({ diff, pay, base, real }) {
   return out;
 }
 
-/* host : l'emplacement sous la différence ; modal : la fiche d'échange. */
-export function mountExchCut(host, { diff, fmt, modal, onPay }) {
+/* Le plus haut taux du patron, s'il en a réglé un (KiwiDiscountPolicy) : sans
+   réglage, le serveur ne signale rien, la caisse ne prévient de rien. */
+function maxRate(venue) {
+  const P = typeof window !== 'undefined' ? window.KiwiDiscountPolicy : null;
+  try { return P && P.configured && P.configured(venue) ? Math.max(...P.percentages(venue)) : null; } catch (_) { return null; }
+}
+/* Au-delà de ce taux, la baisse passe quand même (règle du 23 nov.) ; la caisse
+   le dit avant l'encaissement, comme « Vendre quand même » sur une vente. */
+export function overRate(diff, pay, base, max) {
+  const off = cents(diff) - cents(pay), b = cents(base);
+  if (!(off > 0) || !(b > 0) || !(max > 0)) return false;
+  return Math.ceil(off / b * 100 - 1e-9) > max;
+}
+
+/* host : l'emplacement sous la différence ; modal : la fiche d'échange ;
+   base : le prix de la pièce de remplacement ; venue : la clé du magasin. */
+export function mountExchCut(host, { diff, fmt, modal, onPay, base, venue }) {
   if (!host || !(diff > 0)) return;
   css();
   const amt = modal && modal.querySelector('.bq-exch-diff .amt');
@@ -86,8 +102,11 @@ export function mountExchCut(host, { diff, fmt, modal, onPay }) {
       onPay(pay == null ? diff : pay);
       paint(pay == null ? diff : pay);
       inp.setAttribute('aria-invalid', typed && pay == null ? 'true' : 'false');
+      const max = pay != null ? maxRate(venue) : null;
+      const over = pay != null && overRate(diff, pay, base, max);
       msg.classList.toggle('is-bad', typed && pay == null);
-      msg.textContent = pay != null ? ui('Remise accordée · {n}', fmt((cents(diff) - cents(pay)) / 100)) : typed ? ui('Moins que {n}, sinon rien à baisser', fmt(diff)) : '';
+      msg.classList.toggle('is-warn', over);
+      msg.textContent = pay != null ? ui('Remise accordée · {n}', fmt((cents(diff) - cents(pay)) / 100)) + (over ? ' · ' + ui('Au-delà du maximum de {p} % : signalée au tableau de bord', '', max) : '') : typed ? ui('Moins que {n}, sinon rien à baisser', fmt(diff)) : '';
     });
     host.querySelector('[data-bq-xc-undo]').onclick = () => { onPay(diff); paint(diff); closed(); };
     inp.focus();
@@ -108,6 +127,7 @@ function css() {
     '.bq-xc-row input[aria-invalid="true"]{border-color:var(--danger,#cb5238);}',
     '.bq-xc-msg{flex-basis:100%;margin:0;font-size:13px;color:var(--atlas,#0B6E4F);min-height:0;}',
     '.bq-xc-msg.is-bad{color:var(--danger,#cb5238);}',
+    '.bq-xc-msg.is-warn{color:#8B5A00;font-weight:600;}',
     '.bq-xc-msg:empty{display:none;}',
     '.bq-xc-was{font-weight:500;opacity:.55;margin-inline-end:4px;}',
   ].join('\n');

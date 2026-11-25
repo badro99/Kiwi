@@ -9,6 +9,7 @@
  *   · typing an amount below the difference updates the shown difference and
  *     the « Encaisser » button, and says what was given;
  *   · a figure not below the difference is refused in words and changes nothing;
+ *   · a cut deeper than the owner's highest rate is said in amber, not blocked;
  *   · « Encaisser » opens the payment sheet on the lowered amount.
  * Money and records are held by tools/exchange-price-cut-test.mjs.
  *   node tools/exchange-price-cut-browser-test.mjs */
@@ -64,7 +65,20 @@ try {
     const goText = await page.$eval('#bq-exch-go', (b) => b.textContent.trim());
     assert.ok(/^Encaisser/.test(goText) && num(goText) === pay, 'the button reads Encaisser ' + pay + ': ' + goText);
     assert.match(await page.$eval('[data-bq-xc-msg]', (m) => m.textContent), /Remise accordée · 19/);
+    assert.equal(await page.$eval('[data-bq-xc-msg]', (m) => m.classList.contains('is-warn')), false, 'no owner limit set: no warning');
+
+    t.step('with an owner maximum of 5 %, a deep cut is said, not blocked');
+    await page.evaluate(() => { const P = window.KiwiDiscountPolicy; window.__policy = P; window.KiwiDiscountPolicy = { ...P, configured: () => true, percentages: () => [5] }; });
+    await page.click('[data-bq-xc-in]', { clickCount: 3 });
+    await page.type('[data-bq-xc-in]', String(Math.floor(diff / 2)));
+    assert.equal(await page.$eval('[data-bq-xc-msg]', (m) => m.classList.contains('is-warn')), true, 'the message turns to a warning');
+    assert.match(await page.$eval('[data-bq-xc-msg]', (m) => m.textContent), /Au-delà du maximum de 5 % : signalée au tableau de bord/);
+    assert.equal(await page.$eval('#bq-exch-go', (b) => b.disabled), false, 'Encaisser stays available');
     await page.screenshot({ path: process.env.KIWI_SHOT || '/dev/null' }).catch(() => {});
+    await page.click('[data-bq-xc-in]', { clickCount: 3 });
+    await page.type('[data-bq-xc-in]', String(pay));
+    assert.equal(await page.$eval('[data-bq-xc-msg]', (m) => m.classList.contains('is-warn')), false, 'a cut inside the maximum: no warning');
+    await page.evaluate(() => { window.KiwiDiscountPolicy = window.__policy; });
 
     t.step('Encaisser opens the payment on the lowered amount');
     await click('#bq-exch-go');

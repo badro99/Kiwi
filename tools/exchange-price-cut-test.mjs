@@ -18,7 +18,7 @@
  *   node tools/exchange-price-cut-test.mjs */
 import assert from 'node:assert/strict';
 import { world, load } from './retail-money-harness.cjs';
-import { cutPay, cutFields } from '../assets/pos-boutique/exch-cut.js';
+import { cutPay, cutFields, overRate } from '../assets/pos-boutique/exch-cut.js';
 
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
 let checks = 0;
@@ -110,6 +110,15 @@ await check('cutPay reads what the seller types and refuses what lowers nothing'
   assert.equal(cutPay(169, ' 150,5 '), 150.5);
   assert.equal(cutPay(169, '168.99'), 168.99);
   for (const bad of ['', '0', '169', '200', 'abc', '-5', '150,555']) assert.equal(cutPay(169, bad), null, JSON.stringify(bad));
+});
+
+await check('the till warns, without blocking, when the cut is deeper than the highest allowed rate', async () => {
+  assert.equal(overRate(169, 150, 350, 20), false, '19 off 350 is 5,4 %, inside a 20 % maximum');
+  assert.equal(overRate(169, 150, 350, 5), true, '6 % is above a 5 % maximum');
+  assert.equal(overRate(169, 100, 350, 20), false, '69 off 350 is 19,7 %, counted as 20 %: inside');
+  assert.equal(overRate(169, 99, 350, 20), false, '70 off 350 is exactly 20 %: inside');
+  assert.equal(overRate(169, 98, 350, 20), true, '71 off 350 is 20,3 %: above');
+  assert.equal(overRate(169, 150, 350, null), false, 'no rate set by the owner: no warning');
 });
 
 console.log(`\n${checks} exchange price cut checks passed`);
