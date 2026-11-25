@@ -97,7 +97,7 @@ await test('print#1 · un reçu imprimé efface l\'entrée « tickets non imprim
   const listeners = {}, nodes = new Map();
   const stack = { appendChild(el) { nodes.set(el.id, el); } };
   const document = { body: stack, getElementById: (id) => (id === 'toast-stack' ? stack : nodes.get(id)),
-    createElement: () => { const parts = {}; return { style: {}, setAttribute() {}, addEventListener(name, fn) { this[name] = fn; },
+    createElement: () => { const parts = {}; return { style: {}, setAttribute() {}, appendChild(c) { return c; }, addEventListener(name, fn) { this[name] = fn; },
       querySelector: (sel) => parts[sel] || (parts[sel] = { style: {}, addEventListener() {} }), remove() { nodes.delete(this.id); } }; } };
   const window = { addEventListener: (name, fn) => { listeners[name] = fn; }, KiwiCaisseLang: { tr: (s) => 'tr:' + s }, KiwiPrinter: { openSetup() {} } };
   vm.runInNewContext(read('assets/caisse-print-recovery.js'), { window, document });

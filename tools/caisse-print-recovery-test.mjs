@@ -7,6 +7,7 @@ function fakeEl(onRemove) {
   const parts = {};
   return { style: {}, attrs: {}, hidden: false, disabled: false, textContent: '',
     setAttribute(k, v) { this.attrs[k] = v; },
+    appendChild(child) { return child; },
     addEventListener(name, fn) { this[name] = fn; },
     querySelector(sel) { return parts[sel] || (parts[sel] = fakeEl()); },
     remove() { if (onRemove) onRemove(this); } };

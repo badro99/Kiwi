@@ -31,10 +31,20 @@
       entry.id = 'caisse-print-recovery'; entry.className = 'toast is-warn'; entry.style.pointerEvents = 'auto';
       entry.setAttribute('role', 'alert');
       var btn = 'font:inherit;font-size:12px;font-weight:650;border-radius:10px;padding:7px 11px;cursor:pointer;min-height:34px;';
-      entry.innerHTML = '<div class="toast-copy"><span class="toast-title" data-msg></span>'
-        + '<span class="toast-desc" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'
-        + '<button type="button" data-reprint style="' + btn + 'border:0;background:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0)"></button>'
-        + '<button type="button" data-view style="' + btn + 'border:1px solid rgba(10,15,13,.18);background:transparent;color:#0A0F0D"></button></span></div>';
+      var part = function (tag, attr, cls, css) {
+        var n = document.createElement(tag);
+        if (attr) n.setAttribute(attr, '');
+        if (cls) n.className = cls;
+        if (css) n.style.cssText = css;
+        if (tag === 'button') n.type = 'button';
+        return n;
+      };
+      var copy = part('div', '', 'toast-copy'), row = part('span', '', 'toast-desc', 'display:flex;flex-wrap:wrap;gap:8px;margin-top:8px');
+      row.appendChild(part('button', 'data-reprint', '', btn + 'border:0;background:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0)'));
+      row.appendChild(part('button', 'data-view', '', btn + 'border:1px solid rgba(10,15,13,.18);background:transparent;color:#0A0F0D'));
+      copy.appendChild(part('span', 'data-msg', 'toast-title'));
+      copy.appendChild(row);
+      entry.appendChild(copy);
       entry.querySelector('[data-reprint]').addEventListener('click', reprint);
       entry.querySelector('[data-view]').addEventListener('click', function () {
         if (window.KiwiPrinter) window.KiwiPrinter.openSetup({ kind: 'recovery' });

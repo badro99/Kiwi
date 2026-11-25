@@ -967,6 +967,15 @@
   setInterval(pollUnprinted, UNPRINTED_EVERY_MS);
   /* Après un rechargement, l'alerte revient sans attendre trois minutes. */
   try { var bootPoll = setTimeout(pollUnprinted, 8000); if (bootPoll && bootPoll.unref) bootPoll.unref(); } catch (_) {}
+  /* Les imprimantes du relais sont testées à l'ouverture puis toutes les 30 min (assets/printer-health.js,
+     Browse, 25 nov. 2026) : chargé ici pour ne pas prendre de place de plus dans la page de la caisse. */
+  try {
+    var healthBoot = setTimeout(function () {
+      if (document.getElementById('printer-health-script') || !document.getElementById('toast-stack')) return;
+      var s = document.createElement('script'); s.id = 'printer-health-script'; s.src = '/assets/printer-health.js?v=1'; s.defer = true; document.head.appendChild(s);
+    }, 12000);
+    if (healthBoot && healthBoot.unref) healthBoot.unref();
+  } catch (_) {}
   setInterval(renewHub, HUB_RENEW_MS);
   /* Au réveil, reprendre le bail AVANT que le prochain sondage des commandes
      ne livre les bons arrivés pendant le sommeil. */

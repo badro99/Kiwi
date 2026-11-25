@@ -24,7 +24,17 @@ import {
   bridgeFromRequest, dbDown, relayJson, isMissingTable, safeJsonParse, now,
 } from './_relay.js';
 
-const KINDS = ['receipt', 'kitchen', 'label', 'test', 'drawer', 'report', 'wake', 'other'];
+const KINDS = ['receipt', 'kitchen', 'label', 'test', 'drawer', 'report', 'wake', 'probe', 'other'];
+/* ── UNE IMPRIMANTE ÉTEINTE SE VOIT AVANT LA PREMIÈRE COMMANDE (Browse, 25 nov. 2026) ──
+ * L'imprimante cuisine ne répondait qu'au premier bon après une longue pause
+ * (3 h la veille, la nuit ce matin) : le bon de 12:21 a expiré sans sortir.
+ * Un « probe » est un vrai travail, donc le pont ouvre vraiment la connexion
+ * (un « wake » est acquitté sans preuve) ; il n'écrit que ESC @, qui
+ * réinitialise l'imprimante sans rien imprimer. Le contenu est imposé ici :
+ * un probe ne peut rien imprimer d'autre. Il vit une minute, échoue au premier
+ * refus au lieu d'être repris, n'entre jamais dans la liste des tickets à
+ * réimprimer et ne peut pas être réimprimé. */
+const PROBE_B64 = 'G0A=';
 
 /* L'identifiant dérive du commerce ET de la clé de l'appelant : deux commerces
    qui choisissent la même clé ne se marchent pas dessus, et la clé elle-même
@@ -167,7 +177,7 @@ export async function onRequestGet(context) {
        * uncertain by a lost acknowledgement. Each is offered for 24 h with its
        * state, so nothing ends silently (owner ruling, 26 October). */
       const rows = await env.DB.prepare(`SELECT id, kind, status, created_ts, expires_ts, target FROM print_jobs
-        WHERE merchant = ? AND status IN ${RECOVERABLE} AND expires_ts > ? ORDER BY created_ts DESC`).bind(merchant, t - EXPIRED_RETENTION_MS).all();
+        WHERE merchant = ? AND status IN ${RECOVERABLE} AND kind IS NOT 'probe' AND expires_ts > ? ORDER BY created_ts DESC`).bind(merchant, t - EXPIRED_RETENTION_MS).all();
       // A recovery owns its own lifecycle. Hide its source even for recoveries
       // created before this filter existed; an expired replacement remains recoverable.
       // A copy that was itself copied again (a later attempt of the same source)
@@ -276,10 +286,10 @@ export async function onRequestPost(context) {
         ).bind(error, id, bridge.merchant, bridge.id).run()
         : await env.DB.prepare(
           `UPDATE print_jobs
-              SET status = CASE WHEN expires_ts <= ? OR ? = 1 THEN 'failed' ELSE 'queued' END,
-                  done_ts = CASE WHEN expires_ts <= ? THEN ? ELSE NULL END,
-                  claimed_ts = CASE WHEN expires_ts <= ? OR ? = 1 THEN claimed_ts ELSE ? END,
-                  bridge_id = CASE WHEN expires_ts <= ? OR ? = 1 THEN bridge_id
+              SET status = CASE WHEN expires_ts <= ? OR ? = 1 OR kind = 'probe' THEN 'failed' ELSE 'queued' END,
+                  done_ts = CASE WHEN expires_ts <= ? OR kind = 'probe' THEN ? ELSE NULL END,
+                  claimed_ts = CASE WHEN expires_ts <= ? OR ? = 1 OR kind = 'probe' THEN claimed_ts ELSE ? END,
+                  bridge_id = CASE WHEN expires_ts <= ? OR ? = 1 OR kind = 'probe' THEN bridge_id
                                    WHEN json_extract(target, '$._pin') IS NULL THEN NULL
                                    ELSE bridge_id END,
                   bytes = 0, error = ?
@@ -301,7 +311,7 @@ export async function onRequestPost(context) {
   if (body.action === 'reprint-expired') {
     const sourceId = String(body.id || '').slice(0, 40);
     try {
-      const source = await env.DB.prepare(`SELECT * FROM print_jobs WHERE id = ? AND merchant = ? AND expires_ts > ?
+      const source = await env.DB.prepare(`SELECT * FROM print_jobs WHERE id = ? AND merchant = ? AND kind IS NOT 'probe' AND expires_ts > ?
           AND ((status IN ('queued', 'expired') AND expires_ts <= ?) OR status IN ('failed', 'uncertain'))`).bind(sourceId, merchant, t - EXPIRED_RETENTION_MS, t).first();
       if (!source) return relayJson({ ok: false, error: 'not-found' }, 404, request);
       /* One copy per ATTEMPT. A second tap within the same attempt lands on the
@@ -353,12 +363,12 @@ export async function onRequestPost(context) {
   const target = cleanTarget(body.target);
   if (!target) return relayJson({ ok: false, error: 'target-required' }, 400, request);
   const kind = KINDS.indexOf(String(body.kind || '')) !== -1 ? String(body.kind) : 'other';
-  let dataB64 = String(body.dataB64 || '');
+  let dataB64 = kind === 'probe' ? PROBE_B64 : String(body.dataB64 || '');
   if (kind === 'wake' && !dataB64) dataB64 = 'EAE=';
   if (!dataB64) return relayJson({ ok: false, error: 'data-required' }, 400, request);
   if (dataB64.length > MAX_DATA_B64) return relayJson({ ok: false, error: 'too-large' }, 413, request);
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(dataB64)) return relayJson({ ok: false, error: 'bad-base64' }, 400, request);
-  const ttl = kind === 'wake' ? 60000 : JOB_TTL_MS;
+  const ttl = kind === 'wake' || kind === 'probe' ? 60000 : JOB_TTL_MS;
   const bridgeId = /^pb_[0-9a-f]{16}$/.test(String(body.bridgeId || '')) ? String(body.bridgeId) : null;
   /* ── DEUX FOIS LE MÊME TICKET, PARCE QUE LA RÉPONSE S'EST PERDUE ──────────
    * La caisse dépose un ticket, le serveur le crée, et la réponse n'arrive

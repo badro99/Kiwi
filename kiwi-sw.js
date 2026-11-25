@@ -51,7 +51,8 @@ var SHELL = [
   '/assets/hotel-economat-outbox.js?v=24',
   '/assets/tickets-recovery.js?v=5',
   '/assets/clients-audit.js?v=8',
-  '/assets/caisse-print-recovery.js?v=9',
+  '/assets/caisse-print-recovery.js?v=10',
+  '/assets/printer-health.js?v=1',
   '/assets/loyalty-rules.js?v=18',
   '/assets/clients-store-vault.js?v=31',
   '/assets/caisse-strings.js?v=4',
@@ -450,7 +451,7 @@ var SHELL = [
   '/assets/live-socket.js?v=5',
   '/assets/escpos.js?v=25',
   '/assets/printer/transports.js?v=18',
-  '/assets/printer-bridge.js?v=99',
+  '/assets/printer-bridge.js?v=101',
   '/assets/printer/pairing-ui.js?v=17',
   '/assets/barcode.js?v=6',
   '/assets/scan-wedge.js?v=1',
@@ -467,7 +468,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=39',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=172',
+  '/assets/caisse-lang.js?v=173',
   '/assets/venue-store.js?v=7',
   '/assets/discount-policy.js?v=4',
   '/assets/merchant-policies.js?v=4',
@@ -549,7 +550,7 @@ var SHELL = [
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=38',
+  '/assets/kitchen-print-queue.js?v=39',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=38',
   '/assets/pos-dispatch.js?v=530',

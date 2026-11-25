@@ -248,8 +248,8 @@
     "sha": "355f2593e8cbbafe"
   },
   "assets/caisse-lang.js": {
-    "v": "172",
-    "sha": "3d7487df188a5650"
+    "v": "173",
+    "sha": "15c71fdfa5b38b1b"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -284,8 +284,8 @@
     "sha": "2b16f407897e2e9e"
   },
   "assets/caisse-print-recovery.js": {
-    "v": "9",
-    "sha": "f97187bffc5e4bf3"
+    "v": "10",
+    "sha": "d1aa4213b8852b77"
   },
   "assets/caisse-pwa.js": {
     "v": "633",
@@ -1212,8 +1212,8 @@
     "sha": "c9aa7ba3d485d350"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "38",
-    "sha": "b8f38fde5e457b99"
+    "v": "39",
+    "sha": "e73a82a07da3e8c6"
   },
   "assets/kitchen-relay.js": {
     "v": "25",
@@ -2252,8 +2252,12 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "99",
-    "sha": "2d1edd04f2f79ec4"
+    "v": "101",
+    "sha": "a81b99eaf48fff54"
+  },
+  "assets/printer-health.js": {
+    "v": "1",
+    "sha": "e2c93f233f95e7b1"
   },
   "assets/printer/pairing-lang.js": {
     "v": "25",
