@@ -95,7 +95,7 @@
 (function () {
   if (typeof document === 'undefined') return;
   const s = document.createElement('script');
-  s.src = 'assets/owner-ask.js?v=2';
+  s.src = 'assets/owner-ask.js?v=3';
   s.defer = true;
   document.head.appendChild(s);
 })();

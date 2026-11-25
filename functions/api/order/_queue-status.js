@@ -122,7 +122,7 @@ export async function advanceOrder(ctx, id, status) {
     let current = null;
     try {
       current = await env.DB.prepare(
-        'SELECT id, status, number, table_no, session_id, lines, paid_ts FROM orders WHERE id = ? AND merchant = ?'
+        'SELECT id, status, number, table_no, session_id, lines, paid_ts, total FROM orders WHERE id = ? AND merchant = ?'
       ).bind(id, merchant).first();
     } catch (_) { return json({ error: 'cancellation-read-failed' }, 503); }
     if (!current) return json({ error: 'not-found' }, 404);
@@ -131,6 +131,16 @@ export async function advanceOrder(ctx, id, status) {
     }
     if (!from.includes(current.status) || current.paid_ts != null) {
       return json({ error: 'bad-transition', status: current.status, number: current.number }, 409);
+    }
+    /* Un bon que la cuisine a déjà pris s'annule sous la règle du patron
+       (functions/api/_owner-approvals.js › ownerGate, par ctx.ownerApprovals),
+       comme une ligne ou une table : refuser une commande neuve reste libre. */
+    const A = ctx.ownerApprovals;
+    if (A && A.gate && ['accepted', 'ready', 'served'].includes(current.status)) {
+      const gate = await A.gate(env, merchant, { kind: 'cancel-order', ref: id, amountCents: Math.round((Number(current.total) || 0) * 100),
+        approvalId: String((b && b.ownerApproval) || ''), viaCode: !!(pinActor && pinActor.id !== 'owner-approval') });
+      if (!gate.ok) return json({ error: gate.error, ...(gate.ask ? { ask: gate.ask } : {}) }, gate.status);
+      if (gate.approval) ctx.ownerApprovalUsed = gate.approval;
     }
     let currentLines = [];
     try { currentLines = JSON.parse(current.lines) || []; } catch (_) {}

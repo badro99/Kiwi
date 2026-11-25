@@ -13,7 +13,8 @@
  *  G · une sortie d'espèces : preuve signée pour CE montant ;
  *  H · expiration ; téléphones du patron ;
  *  I · le panneau du tableau de bord se charge sans planter ;
- *  K · le téléphone du serveur : ligne envoyée, « − », table entière.
+ *  K · le téléphone du serveur : ligne envoyée, « − », table entière ;
+ *  M · un bon entier déjà pris par la cuisine, annulé à la caisse.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -442,6 +443,46 @@ let saleApproval, lineApproval;
   ok('L5c rien n\'est renvoyé à la file après un retrait', calls.filter((c) => c.url === '/api/order/queue').length === 1);
   const other = await win.fetch('/api/order/queue', { method: 'POST', body: JSON.stringify({ merchant: SHOP, closeTable: '7' }) });
   ok('L6 un refus sans geste connu passe tel quel', other.status === 403);
+}
+
+/* ── M · un bon entier que la cuisine a déjà pris (« Annuler le bon » à la caisse) ── */
+{
+  const QUEUE = await mod('functions/api/order/queue.js');
+  const queue = async (cookie, body) => {
+    const res = await QUEUE.onRequestPost({ request: req('/api/order/queue', cookie, { merchant: SHOP, ...body }), env, waitUntil() {} });
+    return { status: res.status, body: await res.json().catch(() => null) };
+  };
+  sqlite.prepare("UPDATE owner_approvals SET created_ts = created_ts - 120000 WHERE merchant = ?").run(SHOP);
+  await call(ownerCookie, { action: 'settings', settings: { cashOut: false, cancel: true, managerFallback: false, minCents: 0 } });
+  const order = (id, number, status) => sqlite.prepare("INSERT INTO orders (id, merchant, number, mode, table_no, lines, total, status, created_ts, updated_ts) VALUES (?, ?, ?, 'takeout', '', ?, 60, ?, ?, ?)")
+    .run(id, SHOP, number, JSON.stringify([{ uid: 'l-' + id, id: 'p-x', name: 'Sandwich', unitPrice: 30, qty: 2 }]), status, now - 1000, now - 1000);
+  order('ord-mmm001', 41, 'accepted'); order('ord-mmm002', 42, 'pending'); order('ord-mmm003', 43, 'ready');
+  const fresh = await queue(tillCookie, { id: 'ord-mmm002', status: 'rejected' });
+  ok('M1 refuser une commande neuve (pas encore en cuisine) reste libre', fresh.status === 200 && fresh.body.ok, JSON.stringify(fresh));
+  const r1 = await queue(tillCookie, { id: 'ord-mmm001', status: 'rejected' });
+  ok('M2 un bon accepté par la cuisine attend l\'accord du patron', r1.status === 403 && r1.body.error === 'owner-approval-required' && r1.body.ask && r1.body.ask.kind === 'cancel-order' && r1.body.ask.ref === 'ord-mmm001' && r1.body.ask.amountCents === 6000, JSON.stringify(r1));
+  const managerProof = await AUTH.tillActorProof(SECRET, SHOP, { id: 'pin-m', name: 'Karim', role: 'manager' });
+  const byCode = await queue(tillCookie, { id: 'ord-mmm001', status: 'rejected', actorProof: managerProof });
+  ok('M3 sans repli, le code d\'un responsable ne suffit pas', byCode.status === 403 && byCode.body.error === 'owner-approval-required', JSON.stringify(byCode));
+  const ask = await call(tillCookie, { action: 'request', ...r1.body.ask, amountCents: 1 });
+  ok('M4 le patron lit le bon et son montant relus au serveur', ask.status === 201 && ask.body.approval.amountCents === 6000 && /Bon n° 41/.test(ask.body.approval.label) && /emporter/.test(ask.body.approval.label), JSON.stringify(ask.body));
+  const waiterAsk = await call(`${AUTH.EMPLOYEE_COOKIE}=${await AUTH.employeeToken(SECRET, { staffId: 'emp-sara', merchant: SHOP })}`, { action: 'request', kind: 'cancel-order', ref: 'ord-mmm001' });
+  ok('M5 un serveur ne demande pas l\'annulation d\'un bon entier', waiterAsk.status === 403, JSON.stringify(waiterAsk));
+  await call(ownerCookie, { action: 'decide', id: ask.body.approval.id, verdict: 'approve' });
+  const wrong = await queue(tillCookie, { id: 'ord-mmm003', status: 'rejected', ownerApproval: ask.body.approval.id });
+  ok('M6 l\'accord du bon 41 n\'annule pas le bon 43', wrong.status === 403 && wrong.body.error === 'owner-approval-invalid', JSON.stringify(wrong));
+  ok('M6b et reste utilisable', sqlite.prepare('SELECT status FROM owner_approvals WHERE id = ?').get(ask.body.approval.id).status === 'approved');
+  const done = await queue(tillCookie, { id: 'ord-mmm001', status: 'rejected', ownerApproval: ask.body.approval.id });
+  ok('M7 avec l\'accord, le bon s\'annule', done.status === 200 && done.body.ok && done.body.status === 'rejected', JSON.stringify(done));
+  ok('M8 l\'accord est consommé', sqlite.prepare('SELECT status FROM owner_approvals WHERE id = ?').get(ask.body.approval.id).status === 'used');
+  await call(ownerCookie, { action: 'settings', settings: { cashOut: false, cancel: true, managerFallback: true, minCents: 0 } });
+  const fallback = await queue(tillCookie, { id: 'ord-mmm003', status: 'rejected', actorProof: managerProof });
+  ok('M9 avec repli, le code d\'un responsable annule le bon comme avant', fallback.status === 200 && fallback.body.ok, JSON.stringify(fallback));
+  await call(ownerCookie, { action: 'settings', settings: { cashOut: false, cancel: false, managerFallback: false, minCents: 0 } });
+  const askSrc = fs.readFileSync(path.join(ROOT, 'assets/owner-ask.js'), 'utf8');
+  ok('M10 le module de la caisse renvoie un bon entier avec l\'accord à la racine du corps', askSrc.includes("body.status === 'rejected' && body.id") && askSrc.includes('body.ownerApproval = answer.id'));
+  const panel = fs.readFileSync(path.join(ROOT, 'assets/owner-approvals.js'), 'utf8');
+  ok('M11 le panneau du patron nomme les annulations de table et de bon dans les trois langues', (panel.match(/'cancel-table':/g) || []).length === 3 && (panel.match(/'cancel-order':/g) || []).length === 3);
 }
 
 /* ── I · le panneau du tableau de bord ── */

@@ -20,7 +20,7 @@
 import { tillActorProof } from '../auth/_lib.js';
 import { tillActProof } from './_act-proof.js';
 
-export const KINDS = new Set(['cash-out', 'void-sent', 'cancel-sale', 'cancel-table']);
+export const KINDS = new Set(['cash-out', 'void-sent', 'cancel-sale', 'cancel-table', 'cancel-order']);
 /* Ce qu'un serveur peut demander depuis son téléphone : des annulations de salle. */
 export const EMPLOYEE_KINDS = new Set(['void-sent', 'cancel-table']);
 /* L'identifiant que portent les preuves d'un accord du patron. Aucun code
@@ -29,7 +29,7 @@ export const EMPLOYEE_KINDS = new Set(['void-sent', 'cancel-table']);
 export const OWNER_ACTOR_ID = 'owner-approval';
 /* Une sortie d'espèces peut attendre (la caisse continue de vendre) ; une
    annulation attend une minute à la caisse, la demande vit un peu plus. */
-const PENDING_LIFE = { 'cash-out': 30 * 60000, 'void-sent': 10 * 60000, 'cancel-sale': 10 * 60000, 'cancel-table': 10 * 60000 };
+const PENDING_LIFE = { 'cash-out': 30 * 60000, 'void-sent': 10 * 60000, 'cancel-sale': 10 * 60000, 'cancel-table': 10 * 60000, 'cancel-order': 10 * 60000 };
 /* Accepté, la caisse a ce temps pour le lire. Une réponse perdue se relit. */
 export const GRANT_LIFE_MS = 30 * 60000;
 const REMINT_MS = 2 * 60000;
@@ -157,6 +157,16 @@ export async function trustedRequest(env, merchant, req) {
     const cents = sale.amount_cents != null ? Number(sale.amount_cents) : Math.round(Number(sale.amount) * 100);
     const label = [String(sale.label || sale.ref || 'Ticket'), METHOD[sale.method] || String(sale.method || '')].filter(Boolean).join(' · ');
     return { ...req, amountCents: Number.isFinite(cents) && cents > 0 ? Math.round(cents) : 0, label: label.replace(/\s+/g, ' ').slice(0, 120) };
+  }
+  if (req.kind === 'cancel-order') {
+    /* Un bon entier que la cuisine a déjà pris (accepté, prêt, servi), pas encore payé. */
+    const order = await env.DB.prepare("SELECT number, mode, table_no, total, status, paid_ts FROM orders WHERE id = ? AND merchant = ?")
+      .bind(req.ref, merchant).first();
+    if (!order) return { error: 'order-not-found' };
+    if (order.paid_ts != null || !['accepted', 'ready', 'served'].includes(String(order.status))) return { error: 'already-void' };
+    const cents = Math.round((Number(order.total) || 0) * 100);
+    const where = order.mode === 'table' && order.table_no ? 'Table ' + order.table_no : 'À emporter';
+    return { ...req, amountCents: cents > 0 && cents <= 1e9 ? cents : 0, label: ('Bon n° ' + String(order.number || '') + ' · ' + where).slice(0, 120) };
   }
   if (req.kind === 'cancel-table') {
     /* La VISITE en cours (sa session), pas le numéro de table : une table
@@ -327,9 +337,9 @@ export async function markUsed(env, merchant, id, now = Date.now()) {
 }
 
 const WORDS = {
-  fr: { 'cash-out': 'Sortie de caisse', 'void-sent': 'Annulation en cuisine', 'cancel-sale': 'Annulation de vente', 'cancel-table': 'Annulation de table', asks: 'demande votre accord', till: 'La caisse' },
-  en: { 'cash-out': 'Cash out', 'void-sent': 'Kitchen cancellation', 'cancel-sale': 'Sale cancellation', 'cancel-table': 'Table cancellation', asks: 'asks for your approval', till: 'The till' },
-  ar: { 'cash-out': 'سحب نقدي', 'void-sent': 'إلغاء في المطبخ', 'cancel-sale': 'إلغاء بيع', 'cancel-table': 'إلغاء طاولة', asks: 'يطلب موافقتك', till: 'الصندوق' },
+  fr: { 'cash-out': 'Sortie de caisse', 'void-sent': 'Annulation en cuisine', 'cancel-sale': 'Annulation de vente', 'cancel-table': 'Annulation de table', 'cancel-order': 'Annulation de bon', asks: 'demande votre accord', till: 'La caisse' },
+  en: { 'cash-out': 'Cash out', 'void-sent': 'Kitchen cancellation', 'cancel-sale': 'Sale cancellation', 'cancel-table': 'Table cancellation', 'cancel-order': 'Ticket cancellation', asks: 'asks for your approval', till: 'The till' },
+  ar: { 'cash-out': 'سحب نقدي', 'void-sent': 'إلغاء في المطبخ', 'cancel-sale': 'إلغاء بيع', 'cancel-table': 'إلغاء طاولة', 'cancel-order': 'إلغاء طلب', asks: 'يطلب موافقتك', till: 'الصندوق' },
 };
 export function mad(cents) {
   const v = (Number(cents) || 0) / 100;

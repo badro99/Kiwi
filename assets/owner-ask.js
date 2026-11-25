@@ -23,15 +23,15 @@
     fr: { title: 'Accord du patron', wait: 'Demande envoyée sur le téléphone du patron. En attente de sa réponse.',
       withdraw: 'Retirer la demande', withdrawn: 'Demande retirée, rien n’a été annulé', refused: 'Refusé par le patron', expired: 'Demande expirée, rien n’a été annulé',
       failed: 'Demande non envoyée, rien n’a été annulé', ok: 'Accepté par le patron',
-      'void-sent': 'Annulation en cuisine', 'cancel-table': 'Annulation de table' },
+      'void-sent': 'Annulation en cuisine', 'cancel-table': 'Annulation de table', 'cancel-order': 'Annulation de bon' },
     en: { title: 'Owner approval', wait: 'Request sent to the owner’s phone. Waiting for an answer.',
       withdraw: 'Withdraw request', withdrawn: 'Request withdrawn, nothing was cancelled', refused: 'Refused by the owner', expired: 'Request expired, nothing was cancelled',
       failed: 'Request not sent, nothing was cancelled', ok: 'Approved by the owner',
-      'void-sent': 'Kitchen cancellation', 'cancel-table': 'Table cancellation' },
+      'void-sent': 'Kitchen cancellation', 'cancel-table': 'Table cancellation', 'cancel-order': 'Ticket cancellation' },
     ar: { title: 'موافقة صاحب المحل', wait: 'أُرسل الطلب إلى هاتف صاحب المحل. في انتظار رده.',
       withdraw: 'سحب الطلب', withdrawn: 'سُحب الطلب، لم يُلغَ شيء', refused: 'رفض صاحب المحل', expired: 'انتهت مدة الطلب، لم يُلغَ شيء',
       failed: 'لم يُرسل الطلب، لم يُلغَ شيء', ok: 'وافق صاحب المحل',
-      'void-sent': 'إلغاء في المطبخ', 'cancel-table': 'إلغاء طاولة' },
+      'void-sent': 'إلغاء في المطبخ', 'cancel-table': 'إلغاء طاولة', 'cancel-order': 'إلغاء طلب' },
   };
   let busy = false;
 
@@ -132,13 +132,15 @@
     let data = null, body = null;
     try { data = await res.clone().json(); body = JSON.parse(init.body); } catch (_) { return res; }
     if (!data || data.error !== 'owner-approval-required' || !data.ask || !body || !body.merchant) return res;
-    const slot = SLOTS.find((k) => body[k] && typeof body[k] === 'object');
-    if (!slot) return res;
+    /* Un bon entier (« Annuler le bon ») porte l'accord à la racine du corps. */
+    const slot = SLOTS.find((k) => body[k] && typeof body[k] === 'object') || (body.status === 'rejected' && body.id ? '' : null);
+    if (slot == null) return res;
     busy = true;
     try {
       const answer = await askOwner(String(body.merchant), data.ask);
       if (answer.refusal) return json({ error: answer.refusal, ownerApproval: 'refused' }, 403);
-      if (answer.id) body[slot] = Object.assign({}, body[slot], { ownerApproval: answer.id });
+      if (answer.id && slot) body[slot] = Object.assign({}, body[slot], { ownerApproval: answer.id });
+      else if (answer.id) body.ownerApproval = answer.id;
       const again = Object.assign({}, init, { body: JSON.stringify(body) });
       delete again.signal;   // le délai de l'appelant a couru pendant l'attente du patron
       return await nativeFetch(input, again);

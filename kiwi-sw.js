@@ -253,7 +253,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=34',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2104',
-  '/assets/pages/dashboard-startup.js?v=336',
+  '/assets/pages/dashboard-startup.js?v=337',
   '/assets/pages/dashboard-loader.js?v=118',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -274,7 +274,7 @@ var SHELL = [
   '/assets/dashboard-native.css?v=3',
   '/assets/cloud-doc.js?v=21',
   '/assets/agent-action-center.js?v=4',
-  '/assets/owner-approvals.js?v=3',
+  '/assets/owner-approvals.js?v=4',
   '/assets/cancellation-history.js?v=3',
   '/assets/weather.js?v=1',
   '/assets/briefing-rules.js?v=7',
@@ -546,8 +546,8 @@ var SHELL = [
   '/assets/orderpro-publish.js?v=10',
   '/assets/orderpro-panel.js?v=5',
   '/assets/orderpro-inbox.js?v=49',
-  '/assets/service-requests.js?v=4',
-  '/assets/owner-ask.js?v=2',
+  '/assets/service-requests.js?v=5',
+  '/assets/owner-ask.js?v=3',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */

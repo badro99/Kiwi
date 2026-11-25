@@ -368,5 +368,5 @@ export async function onRequestPost(context) {
     || await stationCooking(ctx, id, status)                  // cooking
     || await stationReady(ctx, id, status);                   // ready + station
   if (progressed) return progressed;
-  return advanceOrder(ctx, id, status);
+  return settle(await advanceOrder(ctx, id, status));   // un bon pris par la cuisine, annulé sous la règle du patron
 }

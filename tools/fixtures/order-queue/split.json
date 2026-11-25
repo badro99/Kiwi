@@ -118,7 +118,7 @@
   {
     "file": "functions/api/order/queue.js",
     "fixture": "queue.js.gz",
-    "sha256": "525936e3947bdfd0338046e05b5a19600418d9af3928bbbcee7e36b44bf51727",
+    "sha256": "2d1c849e8d5f436d96d608438f76251d7435d5f0a314d6413f91a7b8b9d3b8c7",
     "prefix": "import { pollQueue } from './_queue-poll.js';\nimport { serviceScope } from './_queue-service.js';\nimport { reopenedFloorBills } from './_queue-reopened.js';\nexport { reopenedFloorBills } from './_queue-reopened.js';\n",
     "segments": [
       {
