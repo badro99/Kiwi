@@ -258,3 +258,13 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
     find what re-sent a past day (the outbox or the `kiwi:z-manifest` copy)
     before closing A4.
 
+- **Build 58 uploaded and submitted** (`ec1256e6`, the commit Cloudflare Pages had
+  deployed, 25 November): version 1.0.2, "Upload succeeded" at 14:26 UTC,
+  processed into Kiwi Team, then attached to 1.0.2 and sent to App Review at
+  14:36 UTC with automatic release, all users at once (no phased release).
+  Ships the printer routing backup per station (`assets/printer/station-backup.js`,
+  store doc `printstations`) after the Browse incident of that day, and the
+  network printers checked at till opening. Built on the owner's word without
+  `node tools/check.js` (gate line removed from a scratch copy of
+  `tools/app-archive.sh`). What's New gained a printing line. Build 57
+  (`46a8ec99`) is in TestFlight only and has neither fix.
