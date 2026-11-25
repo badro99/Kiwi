@@ -163,7 +163,7 @@ var SHELL = [
   '/assets/caisse-kitchen.js?v=34',
   '/assets/caisse/receipts.js?v=5',
   '/assets/caisse/closing.js?v=2',
-  '/assets/caisse/delivery.js?v=7', '/assets/caisse/cash-recovery.js?v=1',
+  '/assets/caisse/delivery.js?v=11', '/assets/caisse/cash-recovery.js?v=1',
   '/assets/caisse/workflows-loader.js?v=3',
   '/assets/caisse/dish-words.js?v=1',
   '/assets/caisse/catalogue.js?v=27',
@@ -249,7 +249,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=34',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2104',
-  '/assets/pages/dashboard-startup.js?v=326',
+  '/assets/pages/dashboard-startup.js?v=330',
   '/assets/pages/dashboard-loader.js?v=118',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -498,7 +498,7 @@ var SHELL = [
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=19',
-  '/assets/delivery.js?v=5',
+  '/assets/delivery.js?v=9',
   '/assets/charges-engine.js?v=4',
   '/assets/charges.js?v=5',
   '/assets/clients-store.js?v=71',

@@ -328,8 +328,8 @@
     "sha": "d359ea22da75b2f0"
   },
   "assets/caisse/delivery.js": {
-    "v": "7",
-    "sha": "541f74e9f1181ea5"
+    "v": "11",
+    "sha": "32ab8906dcd2e0fb"
   },
   "assets/caisse/discounts.js": {
     "v": "7",
@@ -596,8 +596,8 @@
     "sha": "db5d8d9c547adb73"
   },
   "assets/delivery.js": {
-    "v": "5",
-    "sha": "9621cbab6f009bb7"
+    "v": "9",
+    "sha": "5355287b0d3c8fea"
   },
   "assets/demoClock.js": {
     "v": "5",
@@ -1664,8 +1664,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "326",
-    "sha": "34cd644143da8505"
+    "v": "330",
+    "sha": "a80a6486080a02d8"
   },
   "assets/pages/tables-data.js": {
     "v": "3",

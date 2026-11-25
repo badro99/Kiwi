@@ -297,9 +297,11 @@
     try { const d = window.KiwiMenuStore && window.KiwiMenuStore.data && window.KiwiMenuStore.data(); return (d && Array.isArray(d.opts)) ? d.opts : []; } catch (_) { return []; }
   }
 
-  function openSettings() {
+  /* `host` : l'onglet « Livraison » de Menu & modificateurs pose les mêmes
+   * cartes dans la page ; sans hôte, la fenêtre (accueil, ancienne carte). */
+  function openSettings(host) {
     const K = window.Kiwi;
-    if (!K || !K.modal) return;
+    if (!K || (!host && !K.modal)) return;
     const d = doc();
     const plats = platforms(d);
     const rowFor = (p) => {
@@ -324,10 +326,7 @@
       .concat(plats.filter((p) => !p.preset));
     const h = house(d);
     const groups = optGroups().filter((g) => g && Array.isArray(g.choices) && g.choices.some((ch) => num(ch.price)));
-    const m = K.modal({
-      tag: tr(S.title), title: tr(S.title), width: 640,
-      desc: esc(tr(S.lede)),
-      body: `<div class="kdl-set">
+    const body = `<div class="kdl-set">
         <div class="kdl-h">${esc(tr(S.platforms))}</div>
         <div class="kdl-list" data-kdl-list>${shown.map(rowFor).join('')}</div>
         <div class="kdl-add"><input class="kf-input" type="text" maxlength="30" data-kdl-newname placeholder="${esc(tr(S.otherName))}" aria-label="${esc(tr(S.otherAdd))}"><button type="button" class="kb ghost" data-kdl-add>${esc(tr(S.add))}</button></div>
@@ -342,9 +341,20 @@
           </div>
         </div>
         ${groups.length ? `<div class="kdl-h">${esc(tr(S.choices))}</div><div class="kf-help">${esc(tr(S.choicesP))}</div><div class="kdl-choices" data-kdl-choices></div>` : ''}
-      </div>`,
-      foot: `<button class="kb ghost" type="button" data-dismiss>${esc(tr(S.cancel))}</button><button class="kb atlas" type="button" data-kdl-save>${esc(tr(S.save))}</button>`,
-    });
+      </div>`;
+    const saveBtn = `<button class="kb atlas" type="button" data-kdl-save>${esc(tr(S.save))}</button>`;
+    let m;
+    if (host) {
+      host.innerHTML = `<div class="kdl-inline" data-kdl-inline><div class="kdl-intro"><div class="kdl-title">${esc(tr(S.title))}</div><p class="kdl-lede">${esc(tr(S.lede))}</p></div>${body}<div class="kdl-foot">${saveBtn}</div></div>`;
+      m = { el: host.firstElementChild, close() {} };
+    } else {
+      m = K.modal({
+        tag: tr(S.title), title: tr(S.title), width: 640,
+        desc: esc(tr(S.lede)),
+        body,
+        foot: `<button class="kb ghost" type="button" data-dismiss>${esc(tr(S.cancel))}</button>${saveBtn}`,
+      });
+    }
     const root = m.el || document.querySelector('.kiwi-backdrop:last-of-type');
     if (!root) return;
     styleSettings();
@@ -454,7 +464,9 @@
     if (document.getElementById('kdl-set-css')) return;
     const s = document.createElement('style');
     s.id = 'kdl-set-css';
-    s.textContent = '.kdl-set{display:grid;gap:12px}.kdl-h{font-size:13px;font-weight:600;color:var(--ink);margin-top:10px}'
+    s.textContent = '.kdl-inline{display:grid;gap:16px;max-width:720px}.kdl-title{font-size:17px;font-weight:600;color:var(--ink)}.kdl-lede{margin:4px 0 0;font-size:14px;line-height:1.5;color:var(--n-600)}'
+      + '.kdl-foot{position:sticky;bottom:0;display:flex;justify-content:flex-end;padding:12px 0;background:var(--paper);border-top:1px solid var(--n-200)}'
+      + '.kdl-set{display:grid;gap:12px}.kdl-h{font-size:13px;font-weight:600;color:var(--ink);margin-top:10px}'
       + '.kdl-list{display:grid;gap:10px}'
       + '.kdl-card{border:1px solid var(--n-200);border-radius:14px;background:var(--surface);transition:border-color 160ms}'
       + '.kdl-card.is-on{border-color:color-mix(in srgb,var(--atlas) 40%,var(--n-200))}'
@@ -463,8 +475,10 @@
       + '.kdl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}'
       + '.kdl-fill{display:flex;gap:8px;align-items:center}.kdl-pct{position:relative;flex:0 0 120px}.kdl-pct .kf-input{padding-inline-end:32px}'
       + '.kdl-pct-u{position:absolute;inset-inline-end:13px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--n-500);pointer-events:none}'
-      + '.kdl-sw{width:34px;height:20px;border:0;padding:0;border-radius:999px;background:var(--n-300);position:relative;cursor:pointer;flex:0 0 auto;transition:background 160ms}'
-      + '.kdl-sw.on{background:var(--atlas)}.kdl-sw::after{content:"";position:absolute;top:2px;inset-inline-start:2px;width:16px;height:16px;border-radius:50%;background:var(--surface);transition:transform 160ms}'
+      /* 44 px de cible (la carte l'impose à tout bouton), 34 × 20 de piste dessinée. */
+      + '.kdl-sw{width:44px;height:44px;min-width:44px;min-height:44px;margin:-8px -5px;border:0;padding:0;background:none;position:relative;cursor:pointer;flex:0 0 auto}'
+      + '.kdl-sw::before{content:"";position:absolute;top:12px;inset-inline-start:5px;width:34px;height:20px;border-radius:999px;background:var(--n-300);transition:background 160ms}'
+      + '.kdl-sw.on::before{background:var(--atlas)}.kdl-sw::after{content:"";position:absolute;top:14px;inset-inline-start:7px;width:16px;height:16px;border-radius:50%;background:var(--surface);transition:transform 160ms}'
       + '.kdl-sw.on::after{transform:translateX(14px)}[dir="rtl"] .kdl-sw.on::after{transform:translateX(-14px)}.kdl-sw:focus-visible{outline:2px solid var(--atlas);outline-offset:2px}'
       + '.kdl-link{background:none;border:0;padding:4px 6px;font:inherit;font-size:13px;color:var(--n-500);cursor:pointer}.kdl-link:hover{color:var(--ink)}'
       + '.kdl-add{display:flex;gap:8px;align-items:center}.kdl-add .kf-input{flex:1}.kdl-err{color:var(--danger,#B42318);font-size:13px}'
@@ -497,7 +511,30 @@
       const rs = e.target.closest('.rmw-item-workspace [data-save]');
       if (rs) savePriceRow(rs.closest('.rmw-item-workspace'));
       if (e.target.closest && e.target.closest('[data-kdl-open]')) openSettings();
+      // L'onglet « Livraison » s'ouvre ; tout autre onglet de la carte le referme.
+      if (e.target.closest('[data-kdl-tab]')) { tabOn = true; tabNode = null; tick(); }
+      else leaveTab(e);
     }, true);
+    /* La carte change d'onglet au relâcher (interactive.js), avant le clic :
+     * la sortie de « Livraison » écoute les deux. */
+    document.addEventListener('pointerup', (e) => { if (e.button === 0 && e.target.closest) leaveTab(e); }, true);
+    function leaveTab(e) {
+      if (!tabOn || !e.target.closest('[data-action="rmw-tab"],[data-pick]')) return;
+      tabOn = false; tabNode = null;
+      /* La carte ne repeint pas un HTML identique (KiwiCatalogUI.replace) et
+       * son geste passe avant celui-ci : si le panneau Livraison est encore
+       * là après son tour, on efface la mémoire et on relance l'onglet. */
+      const pick = e.target.closest('[data-tab],[data-pick]');
+      const key = pick && (pick.getAttribute('data-tab') || pick.getAttribute('data-pick'));
+      setTimeout(() => {
+        const r = document.querySelector('[data-menu-root]');
+        const H = window.Kiwi && window.Kiwi.handlers;
+        if (!r || !key || /^(performance|hours)$/.test(key) || !r.querySelector('[data-kdl-inline]') || !H || !H['rmw-tab']) return;
+        r.__catalogHTML = null;
+        H['rmw-tab']({ dataset: { tab: key } });
+      }, 0);
+    }
+    let tabOn = false, tabNode = null;
     /* Une mutation de page en appelle cent : un passage par image suffit. */
     let queued = false;
     const obs = new MutationObserver(() => {
@@ -507,15 +544,44 @@
     });
     const tick = () => {
       homeSplit();
-      /* « Livraison » se range avec les actions de la page (Scanner un menu,
-       * Tableur, Importer Excel) : c'est un réglage qui ouvre une fenêtre, pas
-       * un onglet, et la rangée d'onglets est un tablist où seul un onglet a sa
-       * place. L'ancienne carte (.mx-menu-tabs) garde son bouton. */
+      /* « Livraison » est un onglet de Menu & modificateurs, à côté de Tags NFC,
+       * pour chaque restaurant : un vrai role=tab (le rail est un tablist) dont
+       * le panneau porte les cartes des plateformes. Le rendu de la carte
+       * reconstruit la page à chaque vente : le panneau garde son nœud, donc ce
+       * qui est en cours de saisie. Sur téléphone le rail cède la place au
+       * sélecteur : le bouton d'en-tête prend le relais. */
+      const rail = document.querySelector('[data-menu-root] .mi-filters > .mi-pill-row');
+      if (rail && !rail.querySelector('[data-kdl-tab]')) {
+        const at = rail.querySelector('[data-tab="nfc"]');
+        const b = `<button class="mi-pill" type="button" role="tab" aria-selected="false" tabindex="-1" data-lens-item data-kdl-tab><img class="catalog-icon" draggable="false" src="assets/icons/material/local_shipping.svg" alt="" aria-hidden="true"><span>${esc(tr(S.tab))}</span></button>`;
+        if (at) at.insertAdjacentHTML('afterend', b); else rail.insertAdjacentHTML('beforeend', b);
+      }
+      const panel = rail && document.querySelector('[data-menu-root] [data-rmw-panel]');
+      if (rail && panel && tabOn) {
+        const mine = rail.querySelector('[data-kdl-tab]');
+        rail.querySelectorAll('[role="tab"]').forEach((b) => {
+          const on = b === mine;
+          if (b.classList.contains('on') !== on) b.classList.toggle('on', on);
+          if (b.getAttribute('aria-selected') !== String(on)) b.setAttribute('aria-selected', String(on));
+          if (b.getAttribute('tabindex') !== (on ? '0' : '-1')) b.setAttribute('tabindex', on ? '0' : '-1');
+        });
+        if (!mine.id) mine.id = 'kdl-tab';
+        if (panel.getAttribute('aria-labelledby') !== mine.id) panel.setAttribute('aria-labelledby', mine.id);
+        if (!panel.querySelector('[data-kdl-inline]')) {
+          styleSettings();
+          if (tabNode) { panel.textContent = ''; panel.appendChild(tabNode); } else { openSettings(panel); tabNode = panel.firstElementChild; }
+        }
+      } else if (rail && !tabOn) {
+        const mine = rail.querySelector('[data-kdl-tab].on');
+        if (mine) { mine.classList.remove('on'); mine.setAttribute('aria-selected', 'false'); }
+      }
       const scan = document.querySelector('.mi-head-acts [data-action="rmw-menu-scan"]');
       const acts = scan && scan.parentElement;
-      if (acts && !acts.querySelector('[data-kdl-open]')) {
+      const head = acts && acts.querySelector('[data-kdl-open]');
+      const railShown = !!(rail && rail.offsetParent);
+      if (acts && !head && !railShown) {
         acts.insertAdjacentHTML('afterbegin', `<button class="btn-slim" type="button" aria-haspopup="dialog" data-kdl-open data-activation=write>${esc(tr(S.tab))}</button>`);
-      }
+      } else if (head && railShown) head.remove();
       const old = !acts && document.querySelector('.mx-menu-tabs');
       if (old && !old.querySelector('[data-kdl-open]')) {
         old.insertAdjacentHTML('beforeend', `<button class="mx-menu-tab" type="button" aria-haspopup="dialog" data-kdl-open data-activation=write>${logoHTML(HOUSE, 18)}<span>${esc(tr(S.tab))}</span></button>`);
