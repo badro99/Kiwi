@@ -33,10 +33,25 @@
     } catch (_) {}
     return m && m !== 'unpaired' ? String(m) : '';
   }
+  /* Comme le serveur (functions/api/print/_station-doc.js) : une imprimante réseau
+     restaurée est une adresse privée ou un nom local, jamais une adresse publique. */
+  function localHost(v) {
+    var s = String(v || '').trim().toLowerCase(), m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s);
+    if (m) {
+      var o = [+m[1], +m[2], +m[3], +m[4]];
+      if (o.some(function (n) { return n > 255; })) return false;
+      return o[0] === 10 || (o[0] === 172 && o[1] >= 16 && o[1] <= 31) || (o[0] === 192 && o[1] === 168) || (o[0] === 169 && o[1] === 254);
+    }
+    return /^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?(\.(local|lan|home|internal))?$/.test(s);
+  }
   function clean(cfg) {
     var c = cfg && typeof cfg === 'object' ? cfg : {};
-    return { profiles: Array.isArray(c.profiles) ? c.profiles.slice(0, 40) : [],
-      bindings: c.bindings && typeof c.bindings === 'object' && !Array.isArray(c.bindings) ? c.bindings : {} };
+    var profiles = (Array.isArray(c.profiles) ? c.profiles.slice(0, 40) : []).filter(function (p) {
+      return p && typeof p === 'object' && /^[A-Za-z0-9_-]{1,60}$/.test(String(p.id || '')) && ['ip', 'os', 'usb', 'bt'].indexOf(p.type) >= 0 && (p.type !== 'ip' || localHost(p.ip));
+    });
+    var ids = profiles.map(function (p) { return String(p.id); }), raw = c.bindings && typeof c.bindings === 'object' && !Array.isArray(c.bindings) ? c.bindings : {}, bindings = {};
+    Object.keys(raw).forEach(function (k) { if (ids.indexOf(String(raw[k])) >= 0) bindings[k] = String(raw[k]); });
+    return { profiles: profiles, bindings: bindings };
   }
   function full(cfg) { return !!(cfg && cfg.profiles && cfg.profiles.length); }
   function toast(msg) {

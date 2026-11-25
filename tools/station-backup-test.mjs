@@ -93,7 +93,23 @@ function till({ local, server }) {
   assert.equal(t.posts.length, 1, 'the first boot seeds the server copy');
   assert.deepEqual(t.doc.data.bindings, ROUTING.bindings);
 }
-// 5. câblage
+// 5. une imprimante à une adresse publique n'est ni restaurée ni gardée par le serveur
+{
+  const evil = { profiles: ROUTING.profiles.concat([{ id: 'prof_x', name: 'Reçus', type: 'ip', ip: '203.0.113.7', port: 9100 }]), bindings: { cuisson: 'prof_k', caisse: 'prof_x' } };
+  const t = till({ local: undefined, server: evil });
+  t.boot(); await settle();
+  const got = t.printer.getStationConfig();
+  assert.deepEqual(got.profiles.map((p) => p.id), ['prof_k'], 'a public address is dropped before restore');
+  assert.deepEqual(got.bindings, { cuisson: 'prof_k' }, 'and the station that used it falls back to the default printer');
+  const { cleanStationDoc, localPrinterHost } = await import(new URL('../functions/api/print/_station-doc.js', import.meta.url).href);
+  const kept = cleanStationDoc(evil);
+  assert.deepEqual(kept.profiles.map((p) => p.id), ['prof_k'], 'the server keeps only shop printers');
+  assert.deepEqual(kept.bindings, { cuisson: 'prof_k' });
+  for (const ok of ['192.168.11.199', '10.0.0.5', '172.20.1.2', 'cuisine.local', 'imprimante']) assert.ok(localPrinterHost(ok), ok);
+  for (const no of ['8.8.8.8', '172.32.0.1', 'evil.example.com', '192.168.1.300', '']) assert.ok(!localPrinterHost(no), no);
+  assert.match(read('functions/api/store.js'), /feature === 'printstations' \? cleanStationDoc\(raw\)/, 'store.js cleans the document before saving it');
+}
+// 6. câblage
 {
   assert.match(read('assets/kitchen-print-queue.js'), /\/assets\/printer\/station-backup\.js\?v=\d+/, 'the till loads it without a new script tag');
   assert.match(read('kiwi-sw.js'), /'\/assets\/printer\/station-backup\.js\?v=\d+'/, 'precached for offline starts');

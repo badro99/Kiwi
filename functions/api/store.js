@@ -68,7 +68,7 @@ import { reservationOverlapConflict } from './hotel/_reservation-overlap.js';
 import { capBookings, BOOKING_CAP } from './_booking-cap.js';
 import { archiveFromSnapshot, isArchivable } from './_pressing-archive.js';
 import { preservePressingCancellations, validatePressingSnapshot } from './_pressing-snapshot.js';
-import { validateHubClaim } from './print/_hub-lease.js';
+import { validateHubClaim } from './print/_hub-lease.js'; import { cleanStationDoc } from './print/_station-doc.js';
 import { validateRoomsDocument } from './hotel/_rooms.js';
 /* Les fonctionnalités qui ont le droit d'exister ici, et ce qu'on sait de leur
  * forme. La liste est FERMÉE : sans elle, n'importe quel client authentifié
@@ -890,7 +890,7 @@ export async function onRequestPost(context) {
    * porter sans danger (functions/api/_rules-floorplan-clean.js). */
   if (feature === 'floorplan') cleanStoredFloorplan(raw);
   const clean = bounded(feature === 'guestpage' ? cleanGuestDoc(raw)
-    : feature === STOREFRONT_FEATURE ? cleanStorefront(raw, Date.now()) : raw, FEATURES[feature].maxStr);
+    : feature === STOREFRONT_FEATURE ? cleanStorefront(raw, Date.now()) : feature === 'printstations' ? cleanStationDoc(raw) : raw, FEATURES[feature].maxStr);
   // Refus plutôt que troncature : voir la note de `bounded`. Le client garde sa
   // copie locale — il ne perd rien, il n'a simplement pas de copie serveur.
   if (!clean.ok) return json({ error: 'too-large', why: clean.why }, 413);
