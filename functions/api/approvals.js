@@ -1,7 +1,9 @@
 /* /api/approvals · les accords du patron (functions/api/_owner-approvals.js).
  *
- * La caisse appairée DEMANDE et lit la réponse ; seul le patron (son compte,
- * au palier du propriétaire) décide, règle et inscrit ses téléphones.
+ * La caisse appairée DEMANDE et lit la réponse ; le téléphone d'un serveur en
+ * service aussi, pour ses annulations de salle (EMPLOYEE_KINDS) et ses seules
+ * demandes. Seul le patron (son compte, au palier du propriétaire) décide,
+ * règle et inscrit ses téléphones.
  *
  * GET  ?merchant=&settings=1   réglages (caisse ou patron)
  * GET  ?merchant=&id=          état d'une demande ; un accord rend sa preuve à la caisse
@@ -12,11 +14,11 @@
  * POST {action:'settings'}     le patron règle ce qui demande son accord
  * POST {action:'device'|'device-remove'}  ce téléphone reçoit (ou plus) les demandes
  */
-import { entitledMerchant, isTillFor, json } from '../auth/_lib.js';
+import { activeServiceEmployee, entitledMerchant, isTillFor, json } from '../auth/_lib.js';
 import { sessionPerson } from './_permissions.js';
 import { sendApnsToTokens } from './push/_dispatch.js';
 import {
-  APPROVAL_ID_RE, MAX_PENDING, MAX_PER_MINUTE, cleanRequest, cleanSettings, ensureApprovalTables, grantFor,
+  APPROVAL_ID_RE, EMPLOYEE_KINDS, MAX_PENDING, MAX_PER_MINUTE, cleanRequest, cleanSettings, ensureApprovalTables, grantFor,
   loadApproval, needsApproval, newApprovalId, publicRow, pushMessage, readSettings, trustedRequest,
 } from './_owner-approvals.js';
 
@@ -39,6 +41,16 @@ export async function ownerFor(request, env, merchant) {
 
 async function tillFor(request, env, merchant) {
   try { return !!merchant && await isTillFor(request, env, merchant); } catch (_) { return false; }
+}
+
+/* Un serveur en service : son nom et son identifiant viennent du serveur
+   (l'équipe et le pointage), jamais du corps de la requête. */
+async function waiterFor(request, env, merchant) {
+  let emp = null;
+  try { emp = merchant ? await activeServiceEmployee(request, env, merchant) : null; } catch (_) { return null; }
+  if (!emp || !emp.member || String(emp.merchant) !== merchant) return null;
+  const name = [emp.member.firstName, emp.member.lastName].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+  return { id: 'emp:' + String(emp.member.id || emp.session.staffId).slice(0, 80), name: (name || 'Serveur').slice(0, 60) };
 }
 
 async function pushOwner(env, merchant, row) {
@@ -64,7 +76,8 @@ export async function onRequestGet({ request, env }) {
   if (!merchant) return json({ error: 'merchant-required' }, 400);
   const till = await tillFor(request, env, merchant);
   const owner = till ? null : await ownerFor(request, env, merchant);
-  if (!till && !owner) return json({ error: 'forbidden' }, 403);
+  const waiter = till || owner ? null : await waiterFor(request, env, merchant);
+  if (!till && !owner && !waiter) return json({ error: 'forbidden' }, 403);
   try {
     await ensureApprovalTables(env.DB);
     if (url.searchParams.get('settings')) return json({ ok: true, settings: await readSettings(env, merchant) });
@@ -72,7 +85,7 @@ export async function onRequestGet({ request, env }) {
     if (id) {
       if (!APPROVAL_ID_RE.test(id)) return json({ error: 'bad-id' }, 400);
       const row = await loadApproval(env, merchant, id);
-      if (!row) return json({ error: 'not-found' }, 404);
+      if (!row || (waiter && row.requested_by_id !== waiter.id)) return json({ error: 'not-found' }, 404);
       const out = { ok: true, approval: publicRow(row) };
       if (till && (row.status === 'approved' || row.status === 'granted')) {
         const grant = await grantFor(env, merchant, row);
@@ -112,17 +125,26 @@ export async function onRequestPost({ request, env }) {
   } catch (_) { return json({ error: 'approvals-unavailable' }, 503); }
 
   if (action === 'request' || action === 'withdraw') {
-    if (!(await tillFor(request, env, merchant))) return json({ error: 'till-only' }, 403);
+    const till = await tillFor(request, env, merchant);
+    const waiter = till ? null : await waiterFor(request, env, merchant);
+    if (!till && !waiter) return json({ error: 'till-only' }, 403);
     if (action === 'withdraw') {
       const id = String(body.id || '');
       if (!APPROVAL_ID_RE.test(id)) return json({ error: 'bad-id' }, 400);
-      await env.DB.prepare("UPDATE owner_approvals SET status = 'withdrawn', decided_ts = ? WHERE id = ? AND merchant = ? AND status = 'pending'")
-        .bind(now, id, merchant).run();
+      const mine = waiter ? ' AND requested_by_id = ?' : '';
+      const args = waiter ? [now, id, merchant, waiter.id] : [now, id, merchant];
+      await env.DB.prepare("UPDATE owner_approvals SET status = 'withdrawn', decided_ts = ? WHERE id = ? AND merchant = ? AND status = 'pending'" + mine)
+        .bind(...args).run();
       const row = await loadApproval(env, merchant, id);
-      return row ? json({ ok: true, approval: publicRow(row) }) : json({ error: 'not-found' }, 404);
+      if (!row || (waiter && row.requested_by_id !== waiter.id)) return json({ error: 'not-found' }, 404);
+      return json({ ok: true, approval: publicRow(row) });
     }
     const asked = cleanRequest(body);
     if (!asked) return json({ error: 'bad-kind' }, 400);
+    if (waiter) {
+      if (!EMPLOYEE_KINDS.has(asked.kind)) return json({ error: 'till-only' }, 403);
+      asked.requestedBy = waiter.name; asked.requestedById = waiter.id; asked.terminal = '';
+    }
     const req = await trustedRequest(env, merchant, asked);
     if (req.error) return json({ error: req.error }, req.error === 'bad-ref' ? 400 : req.error === 'already-void' || req.error === 'ambiguous-line' ? 409 : 404);
     const settings = await readSettings(env, merchant);

@@ -232,7 +232,7 @@ function scan() {
     }
   }
 
-  for (const file of ['assets/pages/dashboard-startup.js', 'assets/daterange/renderers.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js', 'assets/operations-ui.js', 'assets/pressing-ops.js']) {
+  for (const file of ['assets/pages/dashboard-startup.js', 'assets/daterange/renderers.js', 'assets/dateRange.js', 'assets/agent.js', 'assets/booking.js', 'assets/operations-ui.js', 'assets/pressing-ops.js', 'assets/service-requests.js']) {
     if (exists(file)) for (const m of read(file).matchAll(SHELL_RE()))
       note(m[1], m[2], { file, kind: 'lazy', stamp: m[2] });
   }
@@ -345,6 +345,7 @@ function referenceFiles(asset) {
   if (exists('assets/onboarding.js') && read('assets/onboarding.js').includes(asset + '?v=')) files.push('assets/onboarding.js');
   if (exists('assets/hotel-economat.js') && read('assets/hotel-economat.js').includes(asset + '?v=')) files.push('assets/hotel-economat.js');
   if (exists('assets/pressing-ops.js') && read('assets/pressing-ops.js').includes(asset + '?v=')) files.push('assets/pressing-ops.js');
+  if (exists('assets/service-requests.js') && read('assets/service-requests.js').includes(asset + '?v=')) files.push('assets/service-requests.js');
   if (serveurImports().some((imp) => imp.asset === asset)) files.push(SERVEUR_BUNDLE);
   if (exists(SW) && read(SW).includes(`/${asset}`)) files.push(SW);
   return files;

@@ -783,6 +783,8 @@ if (!dispatchPendingVoidMatch || !voidLineServerBlockMatch || !pendingVoidRespon
     const employee = { member: 'Hamza' };
     const pairedTill = false;
     const pinActor = null;
+    const ownerApprovals = null;   // la règle du patron vient de la route (queue.js › ctx.ownerApprovals)
+    const ctx = {};
     const statement = (env, sql, ...args) => env.DB.prepare(sql).bind(...args);
     const atomicStatements = (_env, statements) => Promise.all(statements.map(s => s.run()));
     const employeeName = (m) => m;

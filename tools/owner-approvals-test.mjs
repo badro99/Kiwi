@@ -12,7 +12,8 @@
  *  F · une vente : l'accord s'utilise une fois ;
  *  G · une sortie d'espèces : preuve signée pour CE montant ;
  *  H · expiration ; téléphones du patron ;
- *  I · le panneau du tableau de bord se charge sans planter.
+ *  I · le panneau du tableau de bord se charge sans planter ;
+ *  K · le téléphone du serveur : ligne envoyée, « − », table entière.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -156,7 +157,9 @@ let saleApproval, lineApproval;
   const pinActor = await AUTH.readTillActorProof(g.body.grant.actorProof, SECRET, SHOP);
   ok('E2 la preuve se relit', pinActor && pinActor.id === LIB.OWNER_ACTOR_ID);
   const ctx = (voidLine) => ({ env, b: { voidLine }, merchant: SHOP, now: Date.now(), employee: null, pairedTill: true, pinActor,
-    ownerApprovals: { approvedFor: LIB.approvedFor, markUsed: LIB.markUsed, voidRef: LIB.voidRef } });
+    ownerApprovals: { gate: LIB.ownerGate, voidRef: LIB.voidRef, lineCents: LIB.lineCents, tableVisitCents: LIB.tableVisitCents } });
+  /* La route marque l'accord utilisé une fois le geste réussi (queue.js › settle). */
+  const settled = async (c) => { const res = await QTY.voidLine(c); if (res && res.status < 300 && c.ownerApprovalUsed) await LIB.markUsed(env, SHOP, c.ownerApprovalUsed.id); return res; };
   const bare = await QTY.voidLine({ ...ctx({ orderId: 'ord-1', table: '4', immediate: true, requestId: 'voi-ffffffffffffffffffff', lineId: 'line-tajine', qty: 1, ownerApproval: lineApproval }), ownerApprovals: undefined });
   ok('E2b sans les outils de la route, la preuve du patron est refusée', bare.status === 403);
   const wrong = await QTY.voidLine(ctx({ orderId: 'ord-1', table: '4', immediate: true, requestId: 'voi-aaaaaaaaaaaaaaaaaaaa', lineId: 'line-cafe', qty: 1, ownerApproval: lineApproval }));
@@ -166,15 +169,16 @@ let saleApproval, lineApproval;
   ok('E3b l\'accord ne sert pas sur une autre commande', otherOrder.status === 403);
   const none = await QTY.voidLine(ctx({ orderId: 'ord-1', table: '4', immediate: true, requestId: 'voi-bbbbbbbbbbbbbbbbbbbb', lineId: 'line-tajine', qty: 1 }));
   ok('E4 sans identifiant d\'accord, la preuve du patron ne vaut rien', none.status === 403);
-  const right = await QTY.voidLine(ctx({ orderId: 'ord-1', table: '4', immediate: true, requestId: 'voi-cccccccccccccccccccc', lineId: 'line-tajine', qty: 1, ownerApproval: lineApproval }));
+  const right = await settled(ctx({ orderId: 'ord-1', table: '4', immediate: true, requestId: 'voi-cccccccccccccccccccc', lineId: 'line-tajine', qty: 1, ownerApproval: lineApproval }));
   const rb = await right.json();
   ok('E5 la ligne acceptée s\'annule', right.status === 200 && rb.directVoid === true, JSON.stringify(rb));
   ok('E6 l\'accord est marqué utilisé', sqlite.prepare('SELECT status FROM owner_approvals WHERE id = ?').get(lineApproval).status === 'used');
-  const again = await QTY.voidLine(ctx({ orderId: 'ord-1', table: '4', immediate: true, requestId: 'voi-dddddddddddddddddddd', lineId: 'line-tajine', qty: 1, ownerApproval: lineApproval }));
+  const again = await settled(ctx({ orderId: 'ord-1', table: '4', immediate: true, requestId: 'voi-dddddddddddddddddddd', lineId: 'line-tajine', qty: 1, ownerApproval: lineApproval }));
   ok('E7 un accord utilisé ne resert pas', again.status === 403);
   const queueSrc = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
-  ok('E8b la preuve du patron court-circuite tous les autres gestes, avant cancelTable (revue Fable)', queueSrc.indexOf('return (await voidLine(ctx)) || json({ error: \'owner-approval-invalid\' }') > 0
-    && queueSrc.indexOf('return (await voidLine(ctx))') < queueSrc.indexOf('const handled = await cancelTable(ctx)'));
+  ok('E8b la preuve du patron court-circuite tous les autres gestes, avant cancelTable (revue Fable)', queueSrc.indexOf('return (await settle(await voidLine(ctx))) || json({ error: \'owner-approval-invalid\' }') > 0
+    && queueSrc.indexOf('return (await settle(await voidLine(ctx)))') < queueSrc.indexOf('const handled = await cancelTable(ctx)'));
+  ok('E8c un accord se marque utilisé par la route, après un geste réussi', /if \(handled\) return settle\(handled\);/.test(queueSrc) && /res\.status < 300\) await markUsed/.test(queueSrc));
   ok('E8 la file refuse la preuve du patron pour tout autre geste qu\'une ligne', /pinActor\.id === OWNER_ACTOR_ID && !\(b\.voidLine/.test(queueSrc));
   const hotelSrc = fs.readFileSync(path.join(ROOT, 'functions/api/hotel/rooms-bulk.js'), 'utf8');
   ok('E9 les chambres d\'hôtel refusent la preuve du patron', hotelSrc.includes('proof.id !== OWNER_ACTOR_ID'));
@@ -251,7 +255,7 @@ let saleApproval, lineApproval;
   ok('J1 sans repli : une annulation par code est refusée', !(await LIB.codeMayAct(env, SHOP, 'cancel-sale', 5000)));
   const managerProof = await AUTH.tillActorProof(SECRET, SHOP, { id: 'pin-m', name: 'Karim', role: 'manager' });
   const manager = await AUTH.readTillActorProof(managerProof, SECRET, SHOP);
-  const tools = { approvedFor: LIB.approvedFor, markUsed: LIB.markUsed, voidRef: LIB.voidRef, codeMayAct: LIB.codeMayAct };
+  const tools = { gate: LIB.ownerGate, voidRef: LIB.voidRef, lineCents: LIB.lineCents, tableVisitCents: LIB.tableVisitCents };
   const vctx = (pinActor, requestId) => ({ env, b: { voidLine: { orderId: 'ord-1', table: '4', immediate: true, requestId, lineId: 'line-cafe', qty: 1 } },
     merchant: SHOP, now: Date.now(), employee: null, pairedTill: true, pinActor, ownerApprovals: tools });
   const refused = await QTY.voidLine(vctx(manager, 'voi-gggggggggggggggggggg'));
@@ -267,6 +271,164 @@ let saleApproval, lineApproval;
   ok('J7 l\'annulation de vente consulte la règle pour tout acteur sauf le patron au tableau de bord et un accord', /if \(!approval && !dashboardOwner\)/.test(cancelSrc) && /dashboardOwner = !!may\.owner \|\| !!op;/.test(cancelSrc));
   const broken = { DB: { prepare() { throw new Error('d1 down'); } }, AUTH_SECRET: SECRET };
   ok('J8 réglages illisibles : la règle ne laisse pas passer (null, 503 chez l\'appelant)', (await LIB.codeMayAct(broken, SHOP, 'cancel-sale', 5000)) === null);
+}
+
+/* ── K · le téléphone du serveur et la table entière (« cover them too », 25 nov.) ──
+   Par les vraies routes : /api/order/queue refuse et dit quoi demander, le
+   serveur demande lui-même (son nom vient du serveur), le patron accepte, le
+   même geste repasse avec l'accord et le consomme. */
+{
+  const QUEUE = await mod('functions/api/order/queue.js');
+  const STAFF = 'emp-sara';
+  const member = { id: STAFF, firstName: 'Sara', lastName: 'Bennani', email: 'sara@shop.ma', function: 'Serveur', department: 'Salle', venueSlug: SHOP };
+  const doc = (feature, data) => sqlite.prepare('INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, ?)').run(SHOP, feature, JSON.stringify(data), now);
+  doc('employee-access', { members: [member] });
+  doc('attendance', { entries: [{ id: 'att-sara', memberId: STAFF, staffId: STAFF, name: 'Sara Bennani', inTs: now - 3600000, outTs: null, pauseTs: null }] });
+  doc('floorplan', { staff: [{ id: STAFF, name: 'Sara Bennani' }], tables: [{ id: 'T7', num: '7', servers: [STAFF] }] });
+  sqlite.prepare("UPDATE merchant_config SET features = ? WHERE merchant = ?").run(JSON.stringify({ orderpro: true }), SHOP);
+  const waiterCookie = `${AUTH.EMPLOYEE_COOKIE}=${await AUTH.employeeToken(SECRET, { staffId: STAFF, merchant: SHOP })}`;
+  const SESSION = 'tsx-' + 'k'.repeat(22);
+  sqlite.prepare("INSERT INTO table_sessions (id, merchant, mode, table_no, status, opened_ts, seen_ts) VALUES (?, ?, 'table', '7', 'open', ?, ?)").run(SESSION, SHOP, now - 600000, now - 600000);
+  const kLines = [{ uid: 'line-k1', id: 'p-pastilla', name: 'Pastilla', unitPrice: 120, qty: 2 }, { uid: 'line-k2', id: 'p-the', name: 'Thé', unitPrice: 10, qty: 3 }];
+  sqlite.prepare("INSERT INTO orders (id, merchant, number, mode, table_no, session_id, lines, total, status, created_ts, updated_ts) VALUES ('ord-k', ?, 30, 'table', '7', ?, ?, 270, 'accepted', ?, ?)").run(SHOP, SESSION, JSON.stringify(kLines), now - 300000, now - 300000);
+  await call(ownerCookie, { action: 'settings', settings: { cashOut: false, cancel: true, managerFallback: true, minCents: 0 } });
+  const queue = async (cookie, body) => {
+    const res = await QUEUE.onRequestPost({ request: req('/api/order/queue', cookie, { merchant: SHOP, ...body }), env, waitUntil() {} });
+    return { status: res.status, body: await res.json().catch(() => null) };
+  };
+  const approve = async (id) => (await call(ownerCookie, { action: 'decide', id, verdict: 'approve' })).status === 200;
+  const statusOf = (id) => sqlite.prepare('SELECT status FROM owner_approvals WHERE id = ?').get(id).status;
+
+  const voidBody = (requestId, ownerApproval) => ({ voidLine: { orderId: 'ord-k', table: '7', requestId, lineId: 'line-k1', qty: 1, reason: 'client_change', ...(ownerApproval ? { ownerApproval } : {}) } });
+  const v1 = await queue(waiterCookie, voidBody('voi-k1k1k1k1k1k1k1k1k1k1'));
+  ok('K1 serveur : une ligne envoyée attend l\'accord, même avec le repli (un serveur n\'a pas de code)', v1.status === 403 && v1.body.error === 'owner-approval-required', JSON.stringify(v1));
+  ok('K2 la réponse dit quoi demander : CETTE ligne, pour l\'unité annulée', v1.body.ask && v1.body.ask.kind === 'void-sent' && v1.body.ask.ref === 'line-k1' && v1.body.ask.amountCents === 12000, JSON.stringify(v1.body.ask));
+  const askV = await call(waiterCookie, { action: 'request', ...v1.body.ask, requestedBy: 'Le patron', requestedById: 'owner' });
+  ok('K3 le serveur dépose la demande lui-même', askV.status === 201, JSON.stringify(askV));
+  const rowV = sqlite.prepare('SELECT requested_by, requested_by_id, ref FROM owner_approvals WHERE id = ?').get(askV.body.approval.id);
+  ok('K4 son nom vient du serveur, pas du corps', rowV.requested_by === 'Sara Bennani' && rowV.requested_by_id === 'emp:' + STAFF && rowV.ref === 'ord-k|line-k1', JSON.stringify(rowV));
+  const cash = await call(waiterCookie, { action: 'request', kind: 'cash-out', amountCents: 5000 });
+  ok('K5 un serveur ne demande pas de sortie d\'espèces', cash.status === 403, JSON.stringify(cash));
+  const foreign = await read(waiterCookie, 'id=' + lineApproval);
+  ok('K6 un serveur ne lit que ses propres demandes', foreign.status === 404, JSON.stringify(foreign));
+  const list = await read(waiterCookie, 'list=1');
+  ok('K6b ni la liste du patron', list.status === 403);
+  ok('K7 le patron accepte', await approve(askV.body.approval.id));
+  const seen = await read(waiterCookie, 'id=' + askV.body.approval.id);
+  ok('K8 le serveur voit l\'accord, sans aucune preuve signée', seen.status === 200 && seen.body.approval.status === 'approved' && !seen.body.grant, JSON.stringify(seen.body));
+  const wrongLine = await queue(waiterCookie, { voidLine: { ...voidBody('voi-k2k2k2k2k2k2k2k2k2k2', askV.body.approval.id).voidLine, lineId: 'line-k2' } });
+  ok('K9 l\'accord de la pastilla n\'annule pas le thé', wrongLine.status === 403 && wrongLine.body.error === 'owner-approval-invalid', JSON.stringify(wrongLine));
+  const v2 = await queue(waiterCookie, voidBody('voi-k3k3k3k3k3k3k3k3k3k3', askV.body.approval.id));
+  ok('K10 le même geste repasse avec l\'accord', v2.status === 200 && v2.body.ok, JSON.stringify(v2));
+  ok('K11 et le consomme', statusOf(askV.body.approval.id) === 'used');
+
+  const minus = (requestId, ownerApproval) => ({ editLine: { orderId: 'ord-k', table: '7', lineId: 'line-k2', qty: 2, requestId, ...(ownerApproval ? { ownerApproval } : {}) } });
+  const m1 = await queue(waiterCookie, minus('edt-k1k1k1k1k1k1k1k1'));
+  ok('K12 « − » sur un plat envoyé attend l\'accord, pour l\'unité retirée', m1.status === 403 && m1.body.ask && m1.body.ask.kind === 'void-sent' && m1.body.ask.amountCents === 1000, JSON.stringify(m1));
+  const askM = await call(waiterCookie, { action: 'request', ...m1.body.ask });
+  await approve(askM.body.approval.id);
+  const m2 = await queue(waiterCookie, minus('edt-k2k2k2k2k2k2k2k2', askM.body.approval.id));
+  ok('K13 avec l\'accord, le « − » passe', m2.status < 300, JSON.stringify(m2));
+  ok('K14 et consomme l\'accord', statusOf(askM.body.approval.id) === 'used');
+  const junk = await queue(waiterCookie, { editLine: { orderId: 'ord-k', table: '7', lineId: 'line-k2', qty: 'x', requestId: 'edt-k4k4k4k4k4k4k4k4' } });
+  ok('K14b une quantité qui n\'est pas un nombre est refusée, elle ne passe pas sous la règle (revue Fable)', junk.status === 400 && junk.body.error === 'bad-qty', JSON.stringify(junk));
+  const plus = await queue(waiterCookie, { editLine: { orderId: 'ord-k', table: '7', lineId: 'line-k2', qty: 3, requestId: 'edt-k3k3k3k3k3k3k3k3' } });
+  ok('K15 « + » ne demande rien', plus.status < 300, JSON.stringify(plus));
+
+  const cancel = (ownerApproval) => ({ cancelTable: { table: '7', expectedSession: SESSION, ...(ownerApproval ? { ownerApproval } : {}) } });
+  const c1 = await queue(waiterCookie, cancel());
+  ok('K16 table entière : le serveur attend l\'accord', c1.status === 403 && c1.body.ask && c1.body.ask.kind === 'cancel-table' && c1.body.ask.ref === SESSION, JSON.stringify(c1));
+  const askC = await call(waiterCookie, { action: 'request', ...c1.body.ask, amountCents: 1 });
+  ok('K17 le patron lit la table et son montant relus au serveur', askC.status === 201 && /^Table 7/.test(askC.body.approval.label) && askC.body.approval.amountCents === c1.body.ask.amountCents && c1.body.ask.amountCents > 0, JSON.stringify(askC.body));
+  await approve(askC.body.approval.id);
+  sqlite.prepare("INSERT INTO orders (id, merchant, number, mode, table_no, session_id, lines, total, status, created_ts, updated_ts) VALUES ('ord-k2', ?, 31, 'table', '7', ?, ?, 400, 'accepted', ?, ?)").run(SHOP, SESSION, JSON.stringify([{ uid: 'line-k9', name: 'Méchoui', unitPrice: 400, qty: 1 }]), now - 1000, now - 1000);
+  const grown = await queue(waiterCookie, cancel(askC.body.approval.id));
+  ok('K18 un bon ajouté après l\'accord : l\'accord ne couvre plus la table', grown.status === 403 && grown.body.error === 'owner-approval-invalid', JSON.stringify(grown));
+  const askC2 = await call(waiterCookie, { action: 'request', kind: 'cancel-table', ref: SESSION });
+  await approve(askC2.body.approval.id);
+  const c2 = await queue(waiterCookie, cancel(askC2.body.approval.id));
+  ok('K19 avec l\'accord de la table entière, elle s\'annule', c2.status === 200 && c2.body.ok, JSON.stringify(c2));
+  ok('K20 l\'accord est consommé', statusOf(askC2.body.approval.id) === 'used');
+
+  await call(ownerCookie, { action: 'settings', settings: { cashOut: false, cancel: true, managerFallback: false, minCents: 0 } });
+  const EMPTY = 'tsx-' + 'e'.repeat(22);
+  sqlite.prepare("INSERT INTO table_sessions (id, merchant, mode, table_no, status, opened_ts, seen_ts) VALUES (?, ?, 'table', '7', 'open', ?, ?)").run(EMPTY, SHOP, now, now);
+  const empty = await queue(waiterCookie, { cancelTable: { table: '7', expectedSession: EMPTY } });
+  ok('K20b une table ouverte par erreur, sans bon, se libère sans sonner le patron (revue Fable)', empty.status === 200 && empty.body.ok, JSON.stringify(empty));
+  const w = await call(waiterCookie, { action: 'request', kind: 'void-sent', ref: 'line-tajine' });
+  const tillWithdraw = await call(waiterCookie, { action: 'withdraw', id: lineApproval });
+  ok('K21 un serveur ne retire pas la demande d\'un autre', tillWithdraw.status === 404, JSON.stringify(tillWithdraw));
+  const own = await call(waiterCookie, { action: 'withdraw', id: w.body.approval && w.body.approval.id });
+  ok('K22 il retire la sienne', own.status === 200 && own.body.approval.status === 'withdrawn', JSON.stringify({ w, own }));
+  await call(ownerCookie, { action: 'settings', settings: { cashOut: false, cancel: false, managerFallback: false, minCents: 0 } });
+  const off = await queue(waiterCookie, { voidLine: { orderId: 'ord-k2', table: '7', requestId: 'voi-k4k4k4k4k4k4k4k4k4k4', lineId: 'line-k9', qty: 1 } });
+  ok('K23 accords éteints : rien ne change pour le serveur', off.status !== 403 || off.body.error !== 'owner-approval-required', JSON.stringify(off));
+  const askSrc = fs.readFileSync(path.join(ROOT, 'assets/owner-ask.js'), 'utf8');
+  ok('K24 le téléphone renvoie le même geste avec l\'accord, sans réécrire de texte en HTML', askSrc.includes("'voidLine', 'editLine', 'cancelTable'") && askSrc.includes('ownerApproval: answer.id') && !/innerHTML\s*=\s*(?!['"])\S/.test(askSrc));
+  ok('K25 le module se charge sur la caisse et sur le téléphone du serveur', fs.readFileSync(path.join(ROOT, 'assets/service-requests.js'), 'utf8').includes('assets/owner-ask.js?v=')
+    && /assets\/service-requests\.js/.test(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')) && /assets\/service-requests\.js/.test(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')));
+}
+
+{
+  const callers = ['assets/serveur/service-runtime.js', 'assets/caisse-floor/cancellations.js'].map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8'));
+  ok('K26 un refus du patron arrivé après le délai de l\'appelant se lit comme un refus, pas « délai dépassé » (revue Fable)',
+    callers.every((src) => src.includes('ownerAnswer: !!data?.ownerApproval') && src.includes('controller.signal.aborted && !err.ownerAnswer')));
+}
+
+/* ── L · le module du téléphone, contre un serveur scripté ── */
+{
+  const node = () => ({ textContent: '', disabled: false, listeners: {}, setAttribute() {}, addEventListener(n, f) { this.listeners[n] = f; } });
+  const made = [];
+  const document = {
+    documentElement: { getAttribute: () => 'fr', classList: { contains: () => false } },
+    body: { appendChild() {} },
+    createElement() {
+      const el = { attrs: {}, children: [], listeners: {}, setAttribute(k, v) { this.attrs[k] = v; }, addEventListener(n, f) { this.listeners[n] = f; }, showModal() { this.open = true; }, close() { this.open = false; }, remove() {} };
+      Object.defineProperty(el, 'innerHTML', { set() { el.children = [node(), node(), node(), node(), node()]; } });
+      made.push(el);
+      return el;
+    },
+  };
+  const calls = [];
+  let step = 0, hold = false;
+  const reply = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  const server = async (input, init = {}) => {
+    const url = String(input), body = init.body ? JSON.parse(init.body) : null;
+    calls.push({ url, body, signal: init.signal });
+    if (url === '/api/order/queue') {
+      return body.voidLine && body.voidLine.ownerApproval === 'apr-' + '1'.repeat(24) ? reply({ ok: true, directVoid: true })
+        : reply({ error: 'owner-approval-required', ask: { kind: 'void-sent', ref: 'line-k1', amountCents: 12000 } }, 403);
+    }
+    if (url === '/api/approvals') return reply({ ok: true, approval: { id: 'apr-' + '1'.repeat(24), label: '1 × Pastilla', status: 'pending' } }, 201);
+    step++;
+    return reply({ ok: true, approval: { status: hold || step < 2 ? 'pending' : 'approved' } });
+  };
+  const win = { fetch: server };
+  const context = { window: win, document, location: { href: 'https://kiwi.test/kiwi-serveur.html' }, localStorage: { getItem: () => null },
+    setTimeout: (f) => { Promise.resolve().then(f); return 0; }, Response, URL, JSON, Object, Promise, Date, String, Number };
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets/owner-ask.js'), 'utf8'), context, { filename: 'assets/owner-ask.js' });
+  ok('L1 le module emballe fetch une seule fois', win.fetch !== server && win.fetch.kiwiOwnerAsk === true);
+  const controller = new AbortController();
+  const res = await win.fetch('/api/order/queue', { method: 'POST', signal: controller.signal, body: JSON.stringify({ merchant: SHOP, voidLine: { lineId: 'line-k1', qty: 1 } }) });
+  const out = await res.json();
+  ok('L2 l\'appelant reçoit la réponse du second envoi', res.status === 200 && out.directVoid === true, JSON.stringify(out));
+  const ask = calls.find((c) => c.url === '/api/approvals');
+  ok('L3 la demande porte ce que la file a dit de demander', ask && ask.body.action === 'request' && ask.body.kind === 'void-sent' && ask.body.ref === 'line-k1' && ask.body.amountCents === 12000, JSON.stringify(ask && ask.body));
+  const resend = calls.filter((c) => c.url === '/api/order/queue')[1];
+  ok('L4 le second envoi est le même geste avec l\'accord, sans le délai de l\'appelant', resend && resend.body.voidLine.lineId === 'line-k1' && resend.body.voidLine.ownerApproval === 'apr-' + '1'.repeat(24) && !resend.signal);
+  ok('L5 la feuille d\'attente s\'est ouverte puis fermée', made.length === 1 && made[0].children[3].textContent.length > 0);
+  step = -99;
+  made.length = 0; calls.length = 0; hold = true;
+  context.setTimeout = (f) => setTimeout(f, 1);   // l'attente rend la main, le temps d'appuyer sur Échap
+  const pending = win.fetch('/api/order/queue', { method: 'POST', body: JSON.stringify({ merchant: SHOP, voidLine: { lineId: 'line-k1', qty: 1, requestId: 'x' } }) });
+  for (let i = 0; i < 50 && !made.length; i++) await new Promise((r) => setTimeout(r, 2));
+  made[0].listeners.cancel();
+  const gone = await pending;
+  const goneBody = await gone.json();
+  ok('L5b Échap sur la feuille retire la demande et rend un refus lisible (revue Fable)', gone.status === 403 && goneBody.ownerApproval === 'refused' && calls.some((c) => c.url === '/api/approvals' && c.body && c.body.action === 'withdraw'), JSON.stringify(goneBody));
+  ok('L5c rien n\'est renvoyé à la file après un retrait', calls.filter((c) => c.url === '/api/order/queue').length === 1);
+  const other = await win.fetch('/api/order/queue', { method: 'POST', body: JSON.stringify({ merchant: SHOP, closeTable: '7' }) });
+  ok('L6 un refus sans geste connu passe tel quel', other.status === 403);
 }
 
 /* ── I · le panneau du tableau de bord ── */

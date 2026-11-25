@@ -20,14 +20,16 @@
 import { tillActorProof } from '../auth/_lib.js';
 import { tillActProof } from './_act-proof.js';
 
-export const KINDS = new Set(['cash-out', 'void-sent', 'cancel-sale']);
+export const KINDS = new Set(['cash-out', 'void-sent', 'cancel-sale', 'cancel-table']);
+/* Ce qu'un serveur peut demander depuis son téléphone : des annulations de salle. */
+export const EMPLOYEE_KINDS = new Set(['void-sent', 'cancel-table']);
 /* L'identifiant que portent les preuves d'un accord du patron. Aucun code
    d'équipe ne le porte (staff_pins) : _permissions.js › flagUnauthorized le
    reconnaît et n'inscrit pas une sortie acceptée comme « auteur non prouvé ». */
 export const OWNER_ACTOR_ID = 'owner-approval';
 /* Une sortie d'espèces peut attendre (la caisse continue de vendre) ; une
    annulation attend une minute à la caisse, la demande vit un peu plus. */
-const PENDING_LIFE = { 'cash-out': 30 * 60000, 'void-sent': 10 * 60000, 'cancel-sale': 10 * 60000 };
+const PENDING_LIFE = { 'cash-out': 30 * 60000, 'void-sent': 10 * 60000, 'cancel-sale': 10 * 60000, 'cancel-table': 10 * 60000 };
 /* Accepté, la caisse a ce temps pour le lire. Une réponse perdue se relit. */
 export const GRANT_LIFE_MS = 30 * 60000;
 const REMINT_MS = 2 * 60000;
@@ -156,6 +158,15 @@ export async function trustedRequest(env, merchant, req) {
     const label = [String(sale.label || sale.ref || 'Ticket'), METHOD[sale.method] || String(sale.method || '')].filter(Boolean).join(' · ');
     return { ...req, amountCents: Number.isFinite(cents) && cents > 0 ? Math.round(cents) : 0, label: label.replace(/\s+/g, ' ').slice(0, 120) };
   }
+  if (req.kind === 'cancel-table') {
+    /* La VISITE en cours (sa session), pas le numéro de table : une table
+       rendue puis réoccupée n'est plus couverte. */
+    const visit = await env.DB.prepare("SELECT table_no FROM table_sessions WHERE id = ? AND merchant = ? AND mode = 'table' AND status = 'open'")
+      .bind(req.ref, merchant).first();
+    if (!visit) return { error: 'visit-not-found' };
+    const sum = await tableVisitCents(env, merchant, req.ref);
+    return { ...req, amountCents: sum.cents, label: ('Table ' + String(visit.table_no || '') + ' · ' + sum.count + (sum.count > 1 ? ' bons' : ' bon')).slice(0, 120) };
+  }
   /* void-sent : la ligne d'une commande ouverte, trouvée comme _queue-quantities.js
      la trouvera (uid d'abord, identifiant produit seulement s'il est unique).
      Un uid vient de la caisse : présent dans deux commandes ouvertes, la demande
@@ -181,6 +192,37 @@ export async function trustedRequest(env, merchant, req) {
   const cents = Math.round(price * qty * 100);
   return { ...req, ref: voidRef(orderId, req.ref), amountCents: cents > 0 && cents <= 1e9 ? cents : 0,
     label: (qty + ' × ' + String(line.name || req.ref)).replace(/\s+/g, ' ').trim().slice(0, 120) };
+}
+
+/* Ce que coûte une visite qu'on annulerait : ses bons non payés. */
+export async function tableVisitCents(env, merchant, sessionId) {
+  const row = await env.DB.prepare(
+    "SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS n FROM orders WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL AND status <> 'rejected'"
+  ).bind(merchant, sessionId).first();
+  const cents = Math.round((Number(row && row.total) || 0) * 100);
+  return { cents: cents > 0 && cents <= 1e9 ? cents : 0, count: Number(row && row.n) || 0 };
+}
+export const lineCents = (line) => Math.round((Number(line && (line.unitPrice ?? line.price)) || 0) * Math.max(1, Math.round(Number(line && line.qty) || 1)) * 100);
+
+/* La règle du patron pour les annulations de salle, la même partout (ligne
+   envoyée, « − » sur un plat envoyé, table entière ; queue.js la passe par
+   ctx.ownerApprovals). Un accord vaut pour CE geste et pour un montant au plus
+   égal à celui que le patron a vu ; un code de responsable ne passe que si le
+   patron a laissé le repli ; un téléphone de serveur n'a pas de code.
+   { ok, approval } ou { ok: false, status, error, ask } ; ask dit à l'appareil
+   quoi demander au patron. */
+export async function ownerGate(env, merchant, { kind, ref, askRef, amountCents, approvalId, viaCode }) {
+  const cents = Math.max(0, Math.round(Number(amountCents) || 0));
+  if (approvalId) {
+    const row = await approvedFor(env, merchant, approvalId, kind, ref);
+    if (!row || Number(row.amount_cents) < cents) return { ok: false, status: 403, error: 'owner-approval-invalid' };
+    return { ok: true, approval: row };
+  }
+  let s;
+  try { s = await readSettings(env, merchant); } catch (_) { return { ok: false, status: 503, error: 'approval-unavailable' }; }
+  if (!needsApproval(s, kind, cents)) return { ok: true };
+  if (viaCode && s.managerFallback) return { ok: true };
+  return { ok: false, status: 403, error: 'owner-approval-required', ask: { kind, ref: String(askRef || ref), amountCents: cents } };
 }
 
 export function newApprovalId() {
@@ -267,9 +309,9 @@ export async function markUsed(env, merchant, id, now = Date.now()) {
 }
 
 const WORDS = {
-  fr: { 'cash-out': 'Sortie de caisse', 'void-sent': 'Annulation en cuisine', 'cancel-sale': 'Annulation de vente', asks: 'demande votre accord', till: 'La caisse' },
-  en: { 'cash-out': 'Cash out', 'void-sent': 'Kitchen cancellation', 'cancel-sale': 'Sale cancellation', asks: 'asks for your approval', till: 'The till' },
-  ar: { 'cash-out': 'سحب نقدي', 'void-sent': 'إلغاء في المطبخ', 'cancel-sale': 'إلغاء بيع', asks: 'يطلب موافقتك', till: 'الصندوق' },
+  fr: { 'cash-out': 'Sortie de caisse', 'void-sent': 'Annulation en cuisine', 'cancel-sale': 'Annulation de vente', 'cancel-table': 'Annulation de table', asks: 'demande votre accord', till: 'La caisse' },
+  en: { 'cash-out': 'Cash out', 'void-sent': 'Kitchen cancellation', 'cancel-sale': 'Sale cancellation', 'cancel-table': 'Table cancellation', asks: 'asks for your approval', till: 'The till' },
+  ar: { 'cash-out': 'سحب نقدي', 'void-sent': 'إلغاء في المطبخ', 'cancel-sale': 'إلغاء بيع', 'cancel-table': 'إلغاء طاولة', asks: 'يطلب موافقتك', till: 'الصندوق' },
 };
 export function mad(cents) {
   const v = (Number(cents) || 0) / 100;

@@ -90,3 +90,12 @@
   };
   window.addEventListener('kiwi-paired', reset);
 })();
+/* L'accord du patron sur les annulations de salle : ce fichier est chargé par
+   le téléphone du serveur et par la caisse, il emmène assets/owner-ask.js. */
+(function () {
+  if (typeof document === 'undefined') return;
+  const s = document.createElement('script');
+  s.src = 'assets/owner-ask.js?v=2';
+  s.defer = true;
+  document.head.appendChild(s);
+})();

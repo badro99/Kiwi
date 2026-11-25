@@ -13,10 +13,10 @@
           body: JSON.stringify(body),
         });
         const data = await res.json().catch(() => null);
-        if (!res.ok || !data?.ok) throw new Error(data?.error || `serveur ${res.status}`);
+        if (!res.ok || !data?.ok) throw Object.assign(new Error(data?.error || `serveur ${res.status}`), { ownerAnswer: !!data?.ownerApproval });
         return data;
       } catch (err) {
-        if (controller.signal.aborted) throw new Error('délai dépassé · vérifiez la commande après synchronisation avant de réessayer');
+        if (controller.signal.aborted && !err.ownerAnswer) throw new Error('délai dépassé · vérifiez la commande après synchronisation avant de réessayer');
         throw err;
       } finally { clearTimeout(timer); }
     }

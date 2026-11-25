@@ -170,21 +170,21 @@ export async function voidLine(ctx) {
       targetLine = legacy[0];
     }
     if (!targetLine) return json({ error: 'line-not-on-order' }, 404);
-    /* Une preuve au nom du patron (accord depuis son téléphone) ne couvre que
-       la ligne qu'il a vue : l'accord se relit ici contre CETTE ligne. */
-    /* Les outils viennent de la route (queue.js › ctx.ownerApprovals) ; sans eux,
-       la preuve du patron ne vaut rien (refus par défaut). */
-    let ownerApproval = null;
-    if (pinActor && pinActor.id === 'owner-approval') {
-      const A = ownerApprovals;
-      ownerApproval = A ? await A.approvedFor(env, merchant, String(b.voidLine.ownerApproval || ''), 'void-sent', A.voidRef(targetOrder.id, lineId)) : null;
-      if (!ownerApproval) return json({ error: 'owner-approval-invalid' }, 403);
-    }
-    else if (immediate && pinActor && ownerApprovals && ownerApprovals.codeMayAct) {
-      const lineCents = Math.round((Number(targetLine.unitPrice ?? targetLine.price) || 0) * Math.max(1, Number(targetLine.qty) || 1) * 100);
-      const may = await ownerApprovals.codeMayAct(env, merchant, 'void-sent', lineCents);
-      if (may === null) return json({ error: 'approval-unavailable' }, 503);
-      if (!may) return json({ error: 'owner-approval-required' }, 403);
+    /* La règle du patron (functions/api/_owner-approvals.js › ownerGate, passée
+       par queue.js dans ctx.ownerApprovals), pour tout appareil : caisse,
+       téléphone de serveur. Une preuve au nom du patron ne vaut qu'avec
+       l'accord de CETTE ligne ; sans les outils de la route, elle ne vaut rien.
+       L'accord se marque utilisé par la route, une fois le geste réussi. */
+    const A = ownerApprovals;
+    const ownerProof = !!(pinActor && pinActor.id === 'owner-approval');
+    const approvalId = String(b.voidLine.ownerApproval || '');
+    if (ownerProof && (!A || !approvalId)) return json({ error: 'owner-approval-invalid' }, 403);
+    if (A && A.gate) {
+      const gate = await A.gate(env, merchant, { kind: 'void-sent', ref: A.voidRef(targetOrder.id, lineId), askRef: lineId,
+        amountCents: A.lineCents({ ...targetLine, qty: Math.min(qtyToVoid, Math.max(1, Number(targetLine.qty) || 1)) }), approvalId,
+        viaCode: !!(immediate && pinActor && !ownerProof) });
+      if (!gate.ok) return json({ error: gate.error, ...(gate.ask ? { ask: gate.ask } : {}) }, gate.status);
+      if (gate.approval) ctx.ownerApprovalUsed = gate.approval;
     }
 
     const isFormula = targetLine.kind === 'formula' && !!targetLine.formulaUid;
@@ -258,7 +258,6 @@ export async function voidLine(ctx) {
       } catch (_) {
         return json({ error: 'item-cancellation-write-failed', retry: true }, 503);
       }
-      if (ownerApproval) await ownerApprovals.markUsed(env, merchant, ownerApproval.id, now);
 
       return json({
         ok: true,
@@ -283,7 +282,7 @@ export async function voidLine(ctx) {
 }
 
 export async function editLine(ctx) {
-  const { env, b, merchant, now, employee } = ctx;
+  const { env, b, merchant, now, employee, ownerApprovals } = ctx;
   const { pendingVoidResponse, dispatchPendingVoid } = voidDispatch(env, merchant, now);
   /* ── Modification d'une ligne envoyée (Serveur) ─────────────────────────
    * Si le plat n'est pas encore accepté par la cuisine :
@@ -341,6 +340,7 @@ export async function editLine(ctx) {
 
     const oldQty = Number(targetLine.qty) || 0;
     const newQty = b.editLine.qty != null ? Math.max(0, Number(b.editLine.qty)) : oldQty;
+    if (!Number.isFinite(newQty)) return json({ error: 'bad-qty' }, 400);   // revue Fable : « x » passait sous la règle du patron
     const oldNote = String(targetLine.note || '').trim();
     const newNote = b.editLine.note != null ? String(b.editLine.note).trim() : oldNote;
     const noteChanged = b.editLine.note != null && newNote !== oldNote;
@@ -352,6 +352,14 @@ export async function editLine(ctx) {
       : [targetLine];
 
     const isCooking = affectedLines.some(l => l.stationAccepted === true);
+
+    /* « − » sur un plat envoyé est une annulation : même règle du patron que voidLine. */
+    if (qtyDelta < 0 && ownerApprovals && ownerApprovals.gate) {
+      const gate = await ownerApprovals.gate(env, merchant, { kind: 'void-sent', ref: ownerApprovals.voidRef(targetOrder.id, lineId), askRef: lineId,
+        amountCents: ownerApprovals.lineCents({ ...targetLine, qty: Math.abs(qtyDelta) }), approvalId: String(b.editLine.ownerApproval || ''), viaCode: false });
+      if (!gate.ok) return json({ error: gate.error, ...(gate.ask ? { ask: gate.ask } : {}) }, gate.status);
+      if (gate.approval) ctx.ownerApprovalUsed = gate.approval;
+    }
 
     /* ── Plat déjà accepté : « − » demande l'annulation, « + » ajoute le delta ──
      * Ces deux gestes sont des deltas, pas une quantité visée : rejoués après un

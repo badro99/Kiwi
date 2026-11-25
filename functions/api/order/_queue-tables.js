@@ -10,7 +10,7 @@ import { visitCredits } from '../_visit-cover.js';
 import { deferCourse, operationId, atomicStatements, statement, employeeName } from './_queue-shared.js';
 
 export async function cancelTable(ctx) {
-  const { context, env, b, merchant, now, employee, pinActor } = ctx;
+  const { context, env, b, merchant, now, employee, pinActor, pairedTill, ownerApprovals } = ctx;
   /* Cancel the CURRENT visit as one operation. A local bill may know only one
    * of several kitchen tickets; cancelling that one and freeing the table
    * leaves the others payable (or reappearing on the next queue poll). The
@@ -20,9 +20,28 @@ export async function cancelTable(ctx) {
     const table = normTable(b.cancelTable.table || b.cancelTable);
     const expectedSession = String(b.cancelTable.expectedSession || '').trim();
     if (!table || !SESSION_ID.test(expectedSession)) return json({ error: 'session-required', retry: true }, 409);
-    if (!employee && !pinActor) return json({ error: 'operator-proof-required' }, 403);
-    const actorId = String(pinActor?.id || employee?.member?.id || '').slice(0, 80);
-    const actor = String(pinActor?.name || (employee && employeeName(employee.member)) || '').slice(0, 80);
+    /* La règle du patron (functions/api/_owner-approvals.js › ownerGate) : la
+       visite entière, pour un montant au plus égal à celui qu'il a vu. Avec son
+       accord, une caisse appairée n'a pas besoin d'un code ; un serveur n'en a
+       jamais eu, la règle le soumet comme la caisse. */
+    const approvalId = String(b.cancelTable.ownerApproval || '');
+    let visitSum = { cents: 0, count: 0 };
+    if (ownerApprovals && ownerApprovals.gate) {
+      try { visitSum = await ownerApprovals.tableVisitCents(env, merchant, expectedSession); }
+      catch (_) { return json({ error: 'approval-unavailable' }, 503); }
+    }
+    /* Une table ouverte par erreur, sans bon à payer, se libère sans sonner le patron. */
+    if (ownerApprovals && ownerApprovals.gate && visitSum.count > 0) {
+      const cents = visitSum.cents;
+      const gate = await ownerApprovals.gate(env, merchant, { kind: 'cancel-table', ref: expectedSession, amountCents: cents, approvalId,
+        viaCode: !!(pinActor && pinActor.id !== 'owner-approval') });
+      if (!gate.ok) return json({ error: gate.error, ...(gate.ask ? { ask: gate.ask } : {}) }, gate.status);
+      if (gate.approval) ctx.ownerApprovalUsed = gate.approval;
+    }
+    if (!employee && !pinActor && !(ctx.ownerApprovalUsed && pairedTill)) return json({ error: 'operator-proof-required' }, 403);
+    const byOwner = ctx.ownerApprovalUsed && !pinActor && !employee;
+    const actorId = String(pinActor?.id || employee?.member?.id || (byOwner ? 'owner-approval' : '')).slice(0, 80);
+    const actor = String(pinActor?.name || (employee && employeeName(employee.member)) || (byOwner ? (ctx.ownerApprovalUsed.decided_by || 'Propriétaire') : '')).slice(0, 80);
     try {
       const visit = await env.DB.prepare(
         `SELECT id FROM table_sessions WHERE id = ? AND merchant = ? AND table_no = ?

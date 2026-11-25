@@ -162,7 +162,7 @@ var SHELL = [
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
   '/assets/caisse-accounting.js?v=41',
-  '/assets/caisse-floor.js?v=26',
+  '/assets/caisse-floor.js?v=27',
   '/assets/caisse-kitchen.js?v=35',
   '/assets/caisse/receipts.js?v=5',
   '/assets/caisse/closing.js?v=2',
@@ -196,7 +196,7 @@ var SHELL = [
   '/assets/serveur-shell.css?v=12',
   /* Bundle serveur : service-runtime.js, payments.js et shift-report.js. */
   '/assets/serveur/payment-support.js?v=9',
-  '/assets/serveur/service.js?v=52',
+  '/assets/serveur/service.js?v=53',
   '/assets/serveur-app.js?v=36',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
@@ -546,7 +546,8 @@ var SHELL = [
   '/assets/orderpro-publish.js?v=10',
   '/assets/orderpro-panel.js?v=5',
   '/assets/orderpro-inbox.js?v=49',
-  '/assets/service-requests.js?v=2',
+  '/assets/service-requests.js?v=4',
+  '/assets/owner-ask.js?v=2',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */

@@ -56,7 +56,7 @@ import { cancelTable, transferTable, mergeTables } from './_queue-tables.js';
 import { createFloorTicket, createTicket } from './_queue-create.js';
 import { voidLine, editLine, ackVoid, recallTicket, stationCooking, stationReady } from './_queue-kitchen.js';
 import { closeVisit } from './_queue-payments.js';
-import { OWNER_ACTOR_ID, approvedFor, markUsed, voidRef, codeMayAct } from '../_owner-approvals.js';
+import { OWNER_ACTOR_ID, markUsed, voidRef, ownerGate, lineCents, tableVisitCents } from '../_owner-approvals.js';
 import { archiveTakeout, advanceOrder } from './_queue-status.js';
 
 /* ── OÙ VIT CHAQUE GESTE ─────────────────────────────────────────────────────
@@ -318,10 +318,12 @@ export async function onRequestPost(context) {
   /* Chaque geste rend sa réponse, ou null quand le corps ne le concerne pas.
    * L'ordre est celui d'origine et il compte : un corps qui porte deux gestes
    * est confié au premier de cette liste. */
-  const ctx = { context, request, env, b, merchant, now, employee, pairedTill, pinActor, ownerApprovals: { approvedFor, markUsed, voidRef, codeMayAct } };
+  const ctx = { context, request, env, b, merchant, now, employee, pairedTill, pinActor, ownerApprovals: { gate: ownerGate, voidRef, lineCents, tableVisitCents } };
+  /* Un accord du patron sert une fois : marqué utilisé dès que le geste a réussi. */
+  const settle = async (res) => { if (res && ctx.ownerApprovalUsed && res.status < 300) await markUsed(env, merchant, ctx.ownerApprovalUsed.id, now); return res; };
   /* La preuve au nom du patron ne passe QUE par l'annulation de ligne, avant
      tout autre geste que le corps porterait (revue : cancelTable passait avant). */
-  if (pinActor && pinActor.id === OWNER_ACTOR_ID) return (await voidLine(ctx)) || json({ error: 'owner-approval-invalid' }, 403);
+  if (pinActor && pinActor.id === OWNER_ACTOR_ID) return (await settle(await voidLine(ctx))) || json({ error: 'owner-approval-invalid' }, 403);
   const handled = await cancelTable(ctx)    // b.cancelTable
     || await createFloorTicket(ctx)         // b.create === true
     || await transferTable(ctx)             // b.transferTable
@@ -330,7 +332,7 @@ export async function onRequestPost(context) {
     || await editLine(ctx)                  // b.editLine
     || await ackVoid(ctx)                   // b.ackVoid
     || await closeVisit(ctx);               // b.closeSession / b.closeTable
-  if (handled) return handled;
+  if (handled) return settle(handled);
 
   /* ── Déposer un bon venu de la caisse ─────────────────────────────────────
    * Le serveur a tapé la commande d'une table (ou une vente à emporter) et

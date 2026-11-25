@@ -118,13 +118,13 @@
   {
     "file": "functions/api/order/queue.js",
     "fixture": "queue.js.gz",
-    "sha256": "3e0933a3219f264304631625272fefabe8731a4661088f697044d75bb2b98b8a",
+    "sha256": "48d8391e725213ccc0a3e73b6bae919e8e48be7367dcbc0f8a956317297904c9",
     "prefix": "import { pollQueue } from './_queue-poll.js';\nimport { serviceScope } from './_queue-service.js';\nimport { reopenedFloorBills } from './_queue-reopened.js';\nexport { reopenedFloorBills } from './_queue-reopened.js';\n",
     "segments": [
       {
         "file": "functions/api/order/_queue-service.js",
-        "start": 7360,
-        "end": 11052,
+        "start": 7374,
+        "end": 11066,
         "header": "import { activeServiceEmployee } from '../../auth/_lib.js';\nimport { normTable } from './_guest-tables.js';\nimport { employeeName } from './_queue-shared.js';\n// Contrat : requête authentifiée vers périmètre de service ; lecture seule.\n",
         "footer": "\nexport { serviceScope };\n",
         "marker": "/* Extraction privée : _queue-service */\n",
@@ -142,8 +142,8 @@
       },
       {
         "file": "functions/api/order/_queue-reopened.js",
-        "start": 12504,
-        "end": 14485,
+        "start": 12518,
+        "end": 14499,
         "header": "// Contrat : sessions actives vers projections des additions réouvertes ; lecture seule.\n",
         "footer": "",
         "marker": "/* Extraction privée : _queue-reopened */\n",
@@ -157,8 +157,8 @@
       },
       {
         "file": "functions/api/order/_queue-poll-policy.js",
-        "start": 5598,
-        "end": 7360,
+        "start": 5612,
+        "end": 7374,
         "header": "import { CURSOR_LAG_MS } from './_lib.js';\n// Contrat : validation du curseur et fenêtres de lecture ; aucune donnée marchande.\n",
         "footer": "\nexport { MAX_ROWS, readPageCursor, PENDING_TTL_MS, KITCHEN_TTL_MS, OPEN_VISIT_RECOVERY_MS, ARCHIVED_TOMBSTONE_MS, EXPIRED_MS, SERVICE_TOUCH_MS };\n",
         "marker": "/* Extraction privée : _queue-poll-policy */\n",
@@ -172,8 +172,8 @@
       },
       {
         "file": "functions/api/order/_queue-columns.js",
-        "start": 11052,
-        "end": 12504,
+        "start": 11066,
+        "end": 12518,
         "header": "// Contrat : variantes de projection SQL et diagnostics de colonnes ; aucune écriture.\n",
         "footer": "\nexport { COL_SETS, COL_SET_MISSING };\n",
         "marker": "/* Extraction privée : _queue-columns */\n",
@@ -185,8 +185,8 @@
       },
       {
         "file": "functions/api/order/_queue-poll.js",
-        "start": 17041,
-        "end": 40129,
+        "start": 17055,
+        "end": 40143,
         "header": "import { json } from '../../auth/_lib.js';\nimport { startOfDay } from './_guest-clock.js';\nimport { normTable } from './_guest-tables.js';\nimport { CURSOR_LAG_MS, pollCursor } from './_lib.js';\nimport { merchantZone } from '../_business-day.js';\nimport { visitCredits } from '../_visit-cover.js';\nimport { displayMoney, MAX_LINES } from './_queue-shared.js';\nimport { reopenedFloorBills } from './_queue-reopened.js';\nimport { COL_SETS, COL_SET_MISSING } from './_queue-columns.js';\nimport { settleServiceTable } from '../service/events.js';\nimport { MAX_ROWS, readPageCursor, PENDING_TTL_MS, KITCHEN_TTL_MS, OPEN_VISIT_RECOVERY_MS, ARCHIVED_TOMBSTONE_MS, EXPIRED_MS, SERVICE_TOUCH_MS } from './_queue-poll-policy.js';\n// Contrat : env, URL, marchand autorisé, rôle et périmètre déjà contrôlés ; sondage, expiration et présence des visites uniquement. La route garde les droits et le pointage du comptoir.\nexport async function pollQueue({ env, url, merchant, role, service }) {\n",
         "footer": "\n}\n",
         "marker": "  return pollQueue({ env, url, merchant, role, service });",
@@ -222,13 +222,13 @@
   {
     "file": "functions/api/order/_queue-kitchen.js",
     "fixture": "_queue-kitchen.js.gz",
-    "sha256": "13a6485090f702e6bdd0ba26acd26926b1f98de174b71000d6ab5b63fb29a9b1",
+    "sha256": "0a345516e1fa2fc6ddfbcb5bcbe9a933a865c3c1201b37e86fc40a39ca967c98",
     "prefix": "export { voidDispatch, voidLine, editLine, ackVoid } from './_queue-quantities.js';\nexport { recallTicket } from './_queue-recall.js';\nexport { stationCooking, stationReady } from './_queue-stations.js';\n",
     "segments": [
       {
         "file": "functions/api/order/_queue-quantities.js",
         "start": 580,
-        "end": 30840,
+        "end": 31579,
         "header": "import { json } from '../../auth/_lib.js';\nimport { normTable } from './_guest-tables.js';\nimport { storedOrderLines, atomicStatements, statement, employeeName } from './_queue-shared.js';\n// Contrat : ctx authentifié vers annulation, quantité ou accusé ; écrit uniquement les commandes et leurs lignes via les lots communs.\n",
         "footer": "",
         "marker": "/* Extraction privée : _queue-quantities */\n",
@@ -252,8 +252,8 @@
       },
       {
         "file": "functions/api/order/_queue-recall.js",
-        "start": 30840,
-        "end": 35469,
+        "start": 31579,
+        "end": 36208,
         "header": "import { json } from '../../auth/_lib.js';\nimport { operationId, atomicStatements, statement } from './_queue-shared.js';\n// Contrat : ctx, identifiant et état courant vers rappel explicite du bon ; aucune tarification convive.\n",
         "footer": "",
         "marker": "/* Extraction privée : _queue-recall */\n",
@@ -273,8 +273,8 @@
       },
       {
         "file": "functions/api/order/_queue-stations.js",
-        "start": 35469,
-        "end": 41249,
+        "start": 36208,
+        "end": 41988,
         "header": "import { json } from '../../auth/_lib.js';\nimport { recordOrderCourse } from './_course.js';\nimport { deferCourse } from './_queue-shared.js';\n// Contrat : ctx, identifiant et état courant vers avancement des postes ; aucune tarification convive.\n",
         "footer": "",
         "marker": "/* Extraction privée : _queue-stations */\n",

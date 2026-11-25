@@ -40,7 +40,7 @@ ok(/const canonicalUid = l\.uid \|\| l\.id \|\| ''[\s\S]{0,700}existing\.canonic
   'equal-value cashier lines still converge to the canonical server UID before cancellation');
 ok(/rp-item--sent[\s\S]{0,420}data-cart-action="dec"/.test(caisse), 'sent line remains cancellable after reopening the menu');
 ok(/function cancelSentTable[\s\S]{0,2600}canonicalNumberPromise[\s\S]{0,2600}cancelTable: \{ table: id, expectedSession \}, actorProof/.test(caisse)
-  && /if \(!employee && !pinActor\)/.test(queue), 'whole-table cancellation waits for kitchen relay and uses a proved server-authoritative visit');
+  && /if \(!employee && !pinActor && !\(ctx\.ownerApprovalUsed && pairedTill\)\)/.test(queue), 'whole-table cancellation waits for kitchen relay and uses a proved server-authoritative visit (a code, a waiter, or the owner\'s approval on the paired till)');
 ok(/cancelSentTable\(tid, who\)/.test(caisse), 'Annuler table routes sent orders through canonical cancellation');
 ok(/status <> 'rejected'/.test(queue), 'mobility leaves cancelled history at its original table');
 

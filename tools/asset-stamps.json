@@ -236,8 +236,8 @@
     "sha": "20476101ff223f1f"
   },
   "assets/caisse-floor.js": {
-    "v": "26",
-    "sha": "0d52d21aa7efee8a"
+    "v": "27",
+    "sha": "5dd161f038b7da28"
   },
   "assets/caisse-hardware.js": {
     "v": "16",
@@ -1555,6 +1555,10 @@
     "v": "3",
     "sha": "c90fdd830bfe634b"
   },
+  "assets/owner-ask.js": {
+    "v": "2",
+    "sha": "e3ccd1b99c87be3c"
+  },
   "assets/pages-pro-boutique.js": {
     "v": "67",
     "sha": "a804773dd3eafe17"
@@ -2472,12 +2476,12 @@
     "sha": "5911048d786d702a"
   },
   "assets/serveur/service.js": {
-    "v": "52",
-    "sha": "f2d40e9d3e44c064"
+    "v": "53",
+    "sha": "9ad6cb4650575457"
   },
   "assets/service-requests.js": {
-    "v": "2",
-    "sha": "5837b2072494ce58"
+    "v": "4",
+    "sha": "3dcc9ff9e5d11776"
   },
   "assets/simple-food-cost.js": {
     "v": "29",
