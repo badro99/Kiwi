@@ -5,9 +5,9 @@
  * stock (persistStock écrit aussi le journal des mouvements), son registre
  * d'avoirs et son bon d'avoir. Un fichier à part : inventory.js ne grossit pas. */
 import { openAvanceRestock, expiredAvances, retailModes } from '../retail-avance.js?v=6';
-import { merchantSlug, persistStock, stockAdd, AVOIRS, persistAvoirs, renderBadges, creditFromServer, toast, root } from '../pos-boutique.js?v=400';
-import { clById, openCamScan, esc } from './sales.js?v=293';
-import { catDB, normScan, armScanCapture, disarmScanCapture, openVoucher } from './checkout.js?v=293';
+import { merchantSlug, persistStock, stockAdd, AVOIRS, persistAvoirs, renderBadges, creditFromServer, toast, root } from '../pos-boutique.js?v=402';
+import { clById, openCamScan, esc } from './sales.js?v=295';
+import { catDB, normScan, armScanCapture, disarmScanCapture, openVoucher } from './checkout.js?v=295';
 
 const tr = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
 

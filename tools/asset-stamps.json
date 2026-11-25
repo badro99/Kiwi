@@ -1808,16 +1808,16 @@
     "sha": "bee5b88b8cabff28"
   },
   "assets/pos-boutique.css": {
-    "v": "400",
+    "v": "402",
     "sha": "779406d0c59205cb"
   },
   "assets/pos-boutique.js": {
-    "v": "400",
-    "sha": "3a628258d28b37b0"
+    "v": "402",
+    "sha": "f6daa24cb81b808d"
   },
   "assets/pos-boutique/avance-restock.js": {
-    "v": "52",
-    "sha": "934761a7111a2eba"
+    "v": "54",
+    "sha": "62c118bd9de3f974"
   },
   "assets/pos-boutique/bargain-ui.js": {
     "v": "4",
@@ -1836,8 +1836,8 @@
     "sha": "ed17a4acad2cb58c"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "293",
-    "sha": "b94d2218cf565c9e"
+    "v": "295",
+    "sha": "88b7d80a9ece2eef"
   },
   "assets/pos-boutique/cheque-sheet.js": {
     "v": "2",
@@ -1848,16 +1848,16 @@
     "sha": "c1c7e9fb01688344"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "211",
-    "sha": "4b09b189216232bd"
+    "v": "213",
+    "sha": "ef7fe36a2f5fcd4b"
   },
   "assets/pos-boutique/exch-combined.js": {
-    "v": "55",
-    "sha": "76b6501b5938a5c8"
+    "v": "57",
+    "sha": "3c6027740fcf94dd"
   },
   "assets/pos-boutique/exch-cut.js": {
-    "v": "4",
-    "sha": "e20f7d1ae1f2c8fa"
+    "v": "6",
+    "sha": "951577a70dcdb6d7"
   },
   "assets/pos-boutique/exchange.js": {
     "v": "6",
@@ -1876,8 +1876,8 @@
     "sha": "3bf3273561b9c4f7"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "293",
-    "sha": "b51c198a33cb1cc6"
+    "v": "295",
+    "sha": "bacc00340c799885"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "26",
@@ -1928,8 +1928,8 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "293",
-    "sha": "f7fa7d4a11b95a3c"
+    "v": "295",
+    "sha": "8ab90cedc00a117d"
   },
   "assets/pos-boutique/search.js": {
     "v": "20",
@@ -1980,8 +1980,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "537",
-    "sha": "2d2190b8100abec9"
+    "v": "539",
+    "sha": "2e1ac3692ed1f634"
   },
   "assets/pos-epicerie.css": {
     "v": "44",

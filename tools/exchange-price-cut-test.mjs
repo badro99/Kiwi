@@ -18,7 +18,7 @@
  *   node tools/exchange-price-cut-test.mjs */
 import assert from 'node:assert/strict';
 import { world, load } from './retail-money-harness.cjs';
-import { cutPay } from '../assets/pos-boutique/exch-cut.js';
+import { cutPay, cutFields } from '../assets/pos-boutique/exch-cut.js';
 
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
 let checks = 0;
@@ -82,6 +82,16 @@ await check('the server receives 150 with gross 169 and a 19 MAD commercial disc
   assert.equal(p.discountReason, 'commercial');
   assert.equal(p.grossAmountCents - p.discountAmountCents, Math.round(p.amount * 100), 'gross − discount = amount received');
   assert.equal(p.lines[0].total, 150);
+  assert.equal(p.agreedMaxPercent, 6, '19 off a 350 piece is 5,4 %, sent as 6 % like a negotiated sale price');
+});
+
+await check('a real till sends the signed proof of the seller on duty; a demo till sends none', async () => {
+  assert.deepEqual(cutFields({ diff: 169, pay: 150, base: 350, real: false }), { agreedMaxPercent: 6 });
+  globalThis.window = { KiwiStaff: { sellerProof: 'proof-abc' } };
+  try {
+    assert.deepEqual(cutFields({ diff: 169, pay: 150, base: 350, real: true }), { agreedMaxPercent: 6, seller: { proof: 'proof-abc' } });
+    assert.deepEqual(cutFields({ diff: 169, pay: 169, base: 350, real: true }), {}, 'nothing lowered, nothing sent');
+  } finally { delete globalThis.window; }
 });
 
 await check('nothing lowered: the whole difference, no discount on the ticket or the server', async () => {
@@ -92,6 +102,7 @@ await check('nothing lowered: the whole difference, no discount on the ticket or
   assert.equal(r.rec.remiseAuth, undefined);
   assert.equal(r.posted[0].ticketAmountCents, 16900);
   assert.equal(r.posted[0].discountAmountCents, undefined);
+  assert.equal(r.posted[0].agreedMaxPercent, undefined);
 });
 
 await check('cutPay reads what the seller types and refuses what lowers nothing', async () => {

@@ -1,7 +1,7 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=293';
-import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1'; import { mountExchCut } from './exch-cut.js?v=4'; import { mzSaleDiscount } from '../pos-maison/sale-discount.js?v=1';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=293';
-import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=400';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=295';
+import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1'; import { mountExchCut, cutFields } from './exch-cut.js?v=6'; import { mzSaleDiscount } from '../pos-maison/sale-discount.js?v=1';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=295';
+import { syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=402';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=9';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
@@ -14,7 +14,7 @@ import { receiptPrinterReady, receiptDocInput, waReceiptTotals } from './receipt
 import { retailModes, heldUntilText, accountOptionHtml, accountStep, avanceOptionHtml, avanceStep, dropOffMethods } from '../retail-avance.js?v=6';
 const M = globalThis.KiwiMoney;
 let CX = null, CQ = null;   /* chargés à part (ils importent la caisse, pas l'inverse) : l'échange groupé (essai Amira Boutique) et le chèque reçu, qui rejoint le portefeuille (cheque-sheet.js ; absent, il s'encaisse comme avant) */
-import('./exch-combined.js?v=55').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=57').then((m) => { CX = m; }).catch(() => {});
 import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
 
 
@@ -552,7 +552,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
                     id: rec.syncId,
                     amount: cashIn,
                     method,
-                    paymentParts: bqPaymentParts(parts), ticketAmountCents: M.toCents(pay), ...(pay < diff ? mzSaleDiscount({ amountCents: M.toCents(cashIn), totalCents: M.toCents(pay), remiseCents: M.toCents(diff) - M.toCents(pay), actorId: '' }) || {} : {}),
+                    paymentParts: bqPaymentParts(parts), ticketAmountCents: M.toCents(pay), ...(pay < diff ? mzSaleDiscount({ amountCents: M.toCents(cashIn), totalCents: M.toCents(pay), remiseCents: M.toCents(diff) - M.toCents(pay), actorId: '' }) || {} : {}), ...cutFields({ diff, pay, base: newUnit, real: !IS_DEMO }),
                     ...(cashIn <= 0 ? { settlementKind: isDelivery ? 'receivable' : 'store-credit',
                       creditAmountCents: M.sumCents((parts || []).filter(x => x.m === 'avoir').map(x => +x.amount || 0)) } : {}),
                     channel: isDelivery ? 'delivery' : 'counter',

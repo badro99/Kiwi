@@ -19,6 +19,7 @@ const PHRASES = {
   'Moins que {n}, sinon rien à baisser': ['Less than {n}, or nothing to lower', 'أقل من {n}، وإلا فلا تخفيض'],
   'Remise accordée · {n}': ['Discount given · {n}', 'تخفيض ممنوح · {n}'],
   'Encaisser {n}': ['Collect {n}', 'تحصيل {n}'],
+  'MAD': ['MAD', 'درهم'],
 };
 const tr = (s) => {
   const C = typeof window !== 'undefined' ? window.KiwiCaisseLang : null;
@@ -37,6 +38,21 @@ export function cutPay(diff, text) {
   if (!raw || !/^\d+(\.\d{1,2})?$/.test(raw)) return null;
   const c = cents(raw);
   return c > 0 && c < cents(diff) ? c / 100 : null;
+}
+
+/* Ce que la vente envoie au serveur en plus, comme un prix convenu de vente
+   (pos-boutique.js › agreedMaxPercent) : le taux effectif de la baisse sur le
+   prix de la pièce de remplacement, que /api/sale compare au plus haut taux du
+   patron et signale au-delà (jamais refusé, règle du 23 nov.), et la preuve
+   signée de la vendeuse en poste, pour que le signalement nomme qui l'a donnée. */
+export function cutFields({ diff, pay, base, real }) {
+  const off = cents(diff) - cents(pay), b = cents(base);
+  if (!(off > 0) || !(b > 0)) return {};
+  const out = { agreedMaxPercent: Math.min(100, Math.max(1, Math.ceil(off / b * 100 - 1e-9))) };
+  const staff = real && typeof window !== 'undefined' ? window.KiwiStaff : null;
+  const proof = staff && staff.sellerProof;
+  if (typeof proof === 'string' && proof) out.seller = { proof };
+  return out;
 }
 
 /* host : l'emplacement sous la différence ; modal : la fiche d'échange. */
