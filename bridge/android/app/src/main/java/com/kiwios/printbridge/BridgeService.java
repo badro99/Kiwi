@@ -79,19 +79,30 @@ public final class BridgeService extends Service {
                 JSONArray jobs = RelayClient.jobs(response);
                 int count = jobs == null ? 0 : jobs.length();
                 publish("En ligne · " + BridgeStore.merchant(this) + (count > 0 ? " · impression…" : ""));
+                // Une imprimante qui vient d'échouer n'est pas réessayée pour les
+                // tickets suivants du même lot : ils repartent tout de suite au
+                // serveur (« failed », rien n'est sorti), qui les remet en file,
+                // au lieu d'attendre chacun leur tour et de dépasser le bail.
+                java.util.Set<String> deadTargets = new java.util.HashSet<>();
                 for (int i = 0; i < count; i++) {
                     JSONObject job = jobs.getJSONObject(i);
-                    boolean ok = false; int bytes = 0; String error = "";
-                    try {
-                        bytes = RelayClient.print(job);
-                        ok = true;
-                        JSONObject target = job.optJSONObject("target");
-                        if (target != null && !target.optString("ip").isEmpty()) {
-                            BridgeStore.saveWarmTarget(this, target.optString("ip"), target.optInt("port", 9100));
+                    boolean ok = false, uncertain = false; int bytes = 0; String error = "";
+                    JSONObject target = job.optJSONObject("target");
+                    String key = target == null ? "" : target.optString("ip") + ":" + target.optInt("port", 9100);
+                    if (!key.isEmpty() && deadTargets.contains(key)) {
+                        error = "printer-unreachable " + key + " · skipped after a failure in the same batch";
+                    } else {
+                        try {
+                            bytes = RelayClient.print(job);
+                            ok = true;
+                            if (target != null && !target.optString("ip").isEmpty()) {
+                                BridgeStore.saveWarmTarget(this, target.optString("ip"), target.optInt("port", 9100));
+                            }
                         }
+                        catch (RelayClient.PrinterException e) { error = readable(e); uncertain = e.uncertain; if (!key.isEmpty()) deadTargets.add(key); }
+                        catch (Exception e) { error = readable(e); }
                     }
-                    catch (Exception e) { error = readable(e); }
-                    try { RelayClient.ack(token, job.optString("id"), ok, bytes, error); }
+                    try { RelayClient.ack(token, job.optString("id"), ok, bytes, error, uncertain); }
                     catch (Exception ignored) { /* le serveur conserve le claim ; ne jamais réimprimer à l'aveugle */ }
                     publish(ok ? "Imprimé · " + BridgeStore.merchant(this) : "Échec d’impression · " + error);
                 }

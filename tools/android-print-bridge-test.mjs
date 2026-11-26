@@ -26,10 +26,21 @@ check(service.includes('PARTIAL_WAKE_LOCK') && service.includes('WIFI_MODE_FULL_
 check(service.includes('finally {') && service.includes('RelayClient.keepPrinterWarm()'), 'LAN printer keepalive runs in finally block decoupled from WAN relay errors');
 check(mainAct.includes('ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS') && mainAct.includes('isIgnoringBatteryOptimizations'), 'MainActivity requests battery optimization exemption to survive OEM doze');
 check(relay.includes('/api/print/bridges') && relay.includes('/api/print/jobs'), 'APK reuses the existing Kiwi pairing and job relay');
-check(relay.includes('new InetSocketAddress(ip, port)') && relay.includes('8000'), 'LAN printing has a bounded raw TCP connection');
+check(relay.includes('new InetSocketAddress(ip, port)') && /PRINT_CONNECT_MS = 5000/.test(relay) && /WARM_CONNECT_MS = 2500/.test(relay), 'LAN printing has a bounded raw TCP connection (5 s for a ticket, 2.5 s for a warm-up)');
+// 1.0.6 · Pasta Corner, 26 Nov 2026: a printer that stopped reading froze the
+// 1.0.5 service for twelve minutes inside write(), tickets and drawer kicks
+// queued behind it. Every write is now bounded by a watchdog that closes the socket.
+check(/WRITE_DEADLINE_MS = 8000/.test(relay) && /private static void writeWithDeadline\(/.test(relay) && /WATCHDOG\.schedule\(/.test(relay) && /socket\.close\(\)/.test(relay),
+  'a printer write has a deadline: a printer that stops reading cannot freeze the bridge');
+check(/writeWithDeadline\(PRINTER_PROBE_BYTES, PROBE_WRITE_DEADLINE_MS\)/.test(relay) && !/printerOutput\.write\(data\)/.test(relay),
+  'no printer write (ticket or warm probe) bypasses the deadline');
+check(/new PrinterException\("printer-write-timeout", true\)/.test(relay) && /new PrinterException\("printer-unreachable /.test(relay) && /body\.put\("outcome", "uncertain"\)/.test(relay),
+  'a timed-out write is acked uncertain (never reprinted blind); an unreachable printer is acked failed so the server requeues it');
+check(/deadTargets\.contains\(key\)/.test(service) && /deadTargets\.add\(key\)/.test(service),
+  'after a printer fails, the rest of the batch for it is acked at once instead of each waiting past the 30 s lease');
 check(service.includes('RelayClient.ack') && service.includes('BridgeStore.clearPair'), 'jobs are acknowledged and revoked credentials are cleared');
-check(build.includes('versionCode 6') && build.includes("versionName '1.0.5'"), 'Android bridge build is bumped to v1.0.5 (code 6)');
-check(relay.includes('VERSION = "1.0.5"') && relay.includes('PRINTER_KEEPALIVE_MS = 10000'), 'RelayClient is v1.0.5 with 10s keepalive interval');
+check(build.includes('versionCode 7') && build.includes("versionName '1.0.6'"), 'Android bridge build is bumped to v1.0.6 (code 7)');
+check(relay.includes('VERSION = "1.0.6"') && relay.includes('PRINTER_KEEPALIVE_MS = 10000'), 'RelayClient is v1.0.6 with 10s keepalive interval');
 // The server paces every bridge (functions/api/print/jobs.js: 1 s in service, 5 s idle).
 // Up to 1.0.4 the APK slept a fixed second and ignored it: 86 400 polls a tablet a day.
 check(/sleep\(count > 0 \? 250 : RelayClient\.nextPollMs\(response\)\)/.test(service) && !/sleep\(count > 0 \? 250 : 1000\)/.test(service),

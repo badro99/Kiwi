@@ -11,9 +11,14 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 final class RelayClient {
-    static final String VERSION = "1.0.5";
+    static final String VERSION = "1.0.6";
     private static final long PRINTER_KEEPALIVE_MS = 10000;
     // Une journée couvrait la fermeture de nuit mais pas le jour de fermeture
     // hebdomadaire ni un week-end prolongé : au retour, le premier ticket
@@ -26,6 +31,32 @@ final class RelayClient {
     // que l'imprimante répond ou qu'un vrai ticket passe.
     private static final long PRINTER_WARM_BACKOFF_MAX_MS = 5 * 60 * 1000L;
     private static int printerWarmMisses;
+    /* 1.0.6 · Pasta Corner, 26 Nov 2026 : l'imprimante a cessé de lire ses
+       données à 14 h 39 ; une écriture sans limite a bloqué le service douze
+       minutes, tickets et tiroir compris, et chaque accusé arrivait après le
+       bail de 30 s du serveur. Désormais tout ce qui touche l'imprimante a une
+       borne : ouverture 5 s pour un ticket (2,5 s pour un simple réchauffage,
+       qui ne doit pas retenir la récupération des tickets), écriture 8 s. Un
+       ticket tient ainsi sous le bail, même avec une réouverture. */
+    private static final int PRINT_CONNECT_MS = 5000;
+    private static final int WARM_CONNECT_MS = 2500;
+    private static final long WRITE_DEADLINE_MS = 8000;
+    private static final long PROBE_WRITE_DEADLINE_MS = 2000;
+    private static final ScheduledExecutorService WATCHDOG = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "kiwi-printer-watchdog");
+        t.setDaemon(true);
+        return t;
+    });
+
+    /* Ce que le serveur doit faire du ticket. `uncertain` : des octets ont pu
+       partir vers l'imprimante, il ne faut pas le réimprimer à l'aveugle.
+       Sinon rien n'est sorti (imprimante injoignable) : le serveur le remet en
+       file et le retente. */
+    static final class PrinterException extends Exception {
+        final boolean uncertain;
+        PrinterException(String message, boolean uncertain) { super(message); this.uncertain = uncertain; }
+    }
+
     private static final byte[] PRINTER_PROBE_BYTES = new byte[] { 0x10, 0x04, 0x01 };
     private static Socket printerSocket;
     private static OutputStream printerOutput;
@@ -85,7 +116,7 @@ final class RelayClient {
         printerOutput = null;
     }
 
-    private static void connectPrinter(String ip, int port) throws Exception {
+    private static void connectPrinter(String ip, int port, int timeoutMs) throws Exception {
         if (printerSocket != null && printerSocket.isConnected() && !printerSocket.isClosed()
                 && printerOutput != null && ip.equals(printerIp) && port == printerPort) {
             lastReused = true;
@@ -95,8 +126,9 @@ final class RelayClient {
         closePrinterSocket();
         long t0 = System.currentTimeMillis();
         Socket socket = new Socket();
-        socket.connect(new InetSocketAddress(ip, port), 8000);
+        socket.connect(new InetSocketAddress(ip, port), timeoutMs);
         socket.setKeepAlive(true);
+        socket.setTcpNoDelay(true);
         lastConnectMs = System.currentTimeMillis() - t0;
         lastReused = false;
         printerSocket = socket;
@@ -105,14 +137,37 @@ final class RelayClient {
         printerPort = port;
     }
 
+    /* Une écriture TCP ne connaît pas de délai : si l'imprimante n'avale plus
+       rien, write() attend des minutes. Le chien de garde ferme la prise à
+       l'échéance, ce qui débloque write() par une exception. */
+    private static void writeWithDeadline(byte[] data, long deadlineMs) throws Exception {
+        final Socket socket = printerSocket;
+        final OutputStream out = printerOutput;
+        if (socket == null || out == null) throw new PrinterException("printer-not-connected", false);
+        final AtomicBoolean fired = new AtomicBoolean(false);
+        ScheduledFuture<?> guard = WATCHDOG.schedule(() -> {
+            fired.set(true);
+            try { socket.close(); } catch (Exception ignored) {}
+        }, deadlineMs, TimeUnit.MILLISECONDS);
+        try {
+            out.write(data);
+            out.flush();
+        } catch (Exception e) {
+            if (fired.get()) { closePrinterSocket(); throw new PrinterException("printer-write-timeout", true); }
+            throw e;
+        } finally {
+            guard.cancel(false);
+        }
+        if (fired.get()) { closePrinterSocket(); throw new PrinterException("printer-write-timeout", true); }
+    }
+
     private static boolean probePrinter() {
         if (printerSocket == null || !printerSocket.isConnected() || printerSocket.isClosed() || printerOutput == null) {
             return false;
         }
         try {
             printerSocket.setSoTimeout(1500);
-            printerOutput.write(PRINTER_PROBE_BYTES);
-            printerOutput.flush();
+            writeWithDeadline(PRINTER_PROBE_BYTES, PROBE_WRITE_DEADLINE_MS);
             InputStream in = printerSocket.getInputStream();
             int b = in.read();
             if (b < 0) {
@@ -136,7 +191,7 @@ final class RelayClient {
         try {
             // La sonde a échoué : on retente une ouverture franche. Réussir ici
             // veut dire que le canal était mort, pas l'imprimante.
-            connectPrinter(ip, port);
+            connectPrinter(ip, port, WARM_CONNECT_MS);
             return true;
         } catch (Exception ignored) {
             closePrinterSocket();
@@ -153,21 +208,42 @@ final class RelayClient {
         warmPrinter(ip, port);
     }
 
+    private static void openForPrint(String ip, int port) throws PrinterException {
+        try {
+            connectPrinter(ip, port, PRINT_CONNECT_MS);
+        } catch (Exception e) {
+            closePrinterSocket();
+            String m = e.getMessage();
+            throw new PrinterException("printer-unreachable " + ip + ":" + port + (m == null ? "" : " · " + m), false);
+        }
+    }
+
     private static void writePrinter(String ip, int port, byte[] data) throws Exception {
         long t0 = System.currentTimeMillis();
         long idle = printerLastWrite > 0 ? (t0 - printerLastWrite) : 0;
+        openForPrint(ip, port);
+        boolean reused = lastReused;
         try {
-            connectPrinter(ip, port);
-            printerOutput.write(data);
-            printerOutput.flush();
+            writeWithDeadline(data, WRITE_DEADLINE_MS);
+        } catch (PrinterException timeout) {
+            throw timeout;
         } catch (Exception first) {
+            // Une prise neuve qui casse en cours d'écriture a pu laisser sortir
+            // une partie du ticket : incertain, jamais renvoyé à l'aveugle.
+            if (!reused) { closePrinterSocket(); throw new PrinterException("printer-write-failed · " + first.getMessage(), true); }
             // A printer may close an idle socket without Java noticing. Reopen
             // once inside the same serialized service loop before surfacing the
             // failure to the durable server queue.
             closePrinterSocket();
-            connectPrinter(ip, port);
-            printerOutput.write(data);
-            printerOutput.flush();
+            openForPrint(ip, port);
+            try {
+                writeWithDeadline(data, WRITE_DEADLINE_MS);
+            } catch (PrinterException timeout) {
+                throw timeout;
+            } catch (Exception second) {
+                closePrinterSocket();
+                throw new PrinterException("printer-write-failed · " + second.getMessage(), true);
+            }
         }
         lastWriteMs = System.currentTimeMillis() - t0;
         lastIdleMs = idle;
@@ -210,8 +286,9 @@ final class RelayClient {
         printerWarmMisses = warmPrinter(printerIp, printerPort) ? 0 : printerWarmMisses + 1;
     }
 
-    static JSONObject ack(String token, String id, boolean ok, int bytes, String error) throws Exception {
+    static JSONObject ack(String token, String id, boolean ok, int bytes, String error, boolean uncertain) throws Exception {
         JSONObject body = new JSONObject().put("action", "ack").put("id", id).put("ok", ok).put("bytes", bytes);
+        if (!ok && uncertain) body.put("outcome", "uncertain");
         if (!ok) body.put("error", error == null ? "print-failed" : error.substring(0, Math.min(300, error.length())));
         JSONObject timing = new JSONObject()
                 .put("connectMs", lastConnectMs)
