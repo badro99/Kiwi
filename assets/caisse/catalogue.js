@@ -614,7 +614,8 @@
         return saved === 'en' || saved === 'ar' ? saved : 'fr';
       } catch (_) { return 'fr'; }
     }
-    function menuName(m) { const M = window.KiwiMenuI18n; return (M && m) ? M.name(m, carteLang()) : ((m && m.name) || ''); }
+    /* Plat : le nom du patron, sauf traduction écrite à la main (m) · « Browse Brunch » devenait « Découvrez le Brunch » (Browse, 26 nov.). */
+    function menuName(m) { const M = window.KiwiMenuI18n; return (M && M.dish && m) ? M.dish(m, carteLang()) : ((m && m.name) || ''); }
     function catLabelL(id) {
       const raw = catLabels[id] || id, M = window.KiwiMenuI18n;
       if (!M) return raw;
@@ -622,8 +623,7 @@
       return e ? M.name({ name: raw, i18n: e }, carteLang()) : M.t(raw, carteLang());
     }
     function subLabelL(m) { const M = window.KiwiMenuI18n; if (!m || !m.subLabel) return ''; return M ? M.name({ name: m.subLabel, i18n: m.subI18n || null }, carteLang()) : m.subLabel; }
-    function lineName(l) { const M = window.KiwiMenuI18n; return (M && l) ? M.t(String(l.name || ''), carteLang()) : ((l && l.name) || ''); }
-    
+    function lineName(l) { const M = window.KiwiMenuI18n; return (M && M.dish && l) ? M.dish(String(l.name || ''), carteLang(), l.id) : ((l && l.name) || ''); }
 
     function renderMenu() {
       const soldOutAll = Array.isArray(carteState.soldOut) ? carteState.soldOut : [];

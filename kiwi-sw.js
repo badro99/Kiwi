@@ -173,7 +173,7 @@ var SHELL = [
   '/assets/caisse/delivery.js?v=14', '/assets/caisse/counter-flow.js?v=2', '/assets/caisse-cash-recovery.js?v=1', '/assets/caisse-cash-refund.js?v=2',
   '/assets/caisse/workflows-loader.js?v=3',
   '/assets/caisse/dish-words.js?v=1',
-  '/assets/caisse/catalogue.js?v=33',
+  '/assets/caisse/catalogue.js?v=34',
   '/assets/staff-perms-till.js?v=11',
   '/assets/owner-approval.js?v=1',
   '/assets/caisse/till-frame.js?v=28',
